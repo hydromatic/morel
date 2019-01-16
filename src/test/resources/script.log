@@ -1,0 +1,87 @@
+Standard ML of New Jersey v110.79 [built: Tue Aug  8 23:21:20 2017]
+- val n = 66 : int
+val x = ~23.0 : real
+val s = "example" : string
+val b = true : bool
+val s = "example" : string
+val b = true : bool
+val t0 = () : unit
+val t3 = (3,"yes","yes") : int * string * string
+val t3b = (3,"yes",true) : int * string * bool
+val t2 = ((1,2),3) : (int * int) * int
+val pair = ("a","b") : string * string
+val a = "a" : string
+val b = "b" : string
+val also_a = "a" : string
+val r = {a=5,b="five"} : {a:int, b:string}
+val r2 = {a=5,b="five"} : {a:int, b:string}
+val it = true : bool
+val pair2 = ("a","b") : string * string
+val it = true : bool
+val factorial = fn : int -> int
+val it = 6 : int
+val factorial = fn : int -> int
+val it = 6 : int
+val sum = fn : int * int -> int
+val average = fn : int * int -> int
+infix averaged_with
+val averaged_with = fn : int * int -> int
+val five = 5 : int
+val pair = fn : int -> int * int
+val pair = fn : 'a -> 'a * 'a
+val swap = fn : 'a * 'b -> 'b * 'a
+val it = ("foo",1) : string * int
+val pair_map = fn : ('a -> 'b) * ('a * 'a) -> 'b * 'b
+val sum = fn : int -> int -> int
+val add_three = fn : int -> int
+val five = 5 : int
+val ten = 10 : int
+val gray_code = fn : int -> string list
+val gray_code_3 = ["000","001","011","010","110","111","101","100"]
+  : string list
+type int_pair = int * int
+val swap_int_pair = fn : int_pair -> int * int
+val swap_int_pair = fn : int * int -> int * int
+datatype int_or_string = INT of int | NEITHER | STRING of string
+val i = INT 3 : int_or_string
+val s = STRING "qq" : int_or_string
+val n = NEITHER : int_or_string
+val j = 3 : int
+datatype int_list = EMPTY | INT_LIST of int * int_list
+datatype 'a pair = PAIR of 'a * 'a
+datatype 'a list = :: of 'a * 'a list | nil
+val length = fn : 'a list -> int
+val it = 2 : int
+val it = 0 : int
+val rev = fn : 'a list -> 'a list
+val it = true :: false :: false :: nil : bool list
+exception StringException of string
+val e = StringException(-) : exn
+val s = "example" : string
+val reference = ref 12 : int ref
+val twelve = 12 : int
+val it = 12 : int
+val it = 12 : int
+val it = () : unit
+val it = 12 : int
+val it = 13 : int
+datatype suit = CLUBS | DIAMONDS | HEARTS | SPADES
+datatype int_pair = INT_PAIR of int * int
+datatype real_pair = REAL_PAIR of real * real
+datatype 'a option = NONE | SOME of 'a
+val suit0 = HEARTS : suit
+val ip = INT_PAIR (1,2) : int_pair
+val rp = REAL_PAIR (1.0,2.0) : real_pair
+val op0 = NONE : 'a option
+val op1 = SOME true : bool option
+val op2 = SOME 3.0 : real option
+val r = 5.0 : real
+val it = true : bool
+stdIn:157.4 Warning: calling polyEqual
+val it = true : bool
+stdIn:158.5 Warning: calling polyEqual
+val it = true : bool
+val it = true : bool
+val ilist = [999,999,999,9999,999999,999999,999999,999,999,999,999,999,...]
+  : int ?.list
+val ilist = [1,2,3,4,5,6,7,8,9,10,11,12,...] : int ?.list

@@ -29,15 +29,41 @@ import org.hamcrest.TypeSafeMatcher;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.io.StringReader;
 import java.math.BigDecimal;
+
+import static org.hamcrest.CoreMatchers.is;
 
 /**
  * Kick the tires.
  */
 public class MainTest {
-  @Test public void test() {
-    Main.main(new String[0]);
+  @Test public void testEmptyRepl() {
+    final String[] args = new String[0];
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try (PrintStream ps = new PrintStream(out)) {
+      final InputStream in = new ByteArrayInputStream(new byte[0]);
+      new Main(args, in, ps).run();
+    }
+    Assert.assertThat(out.size(), is(0));
+  }
+
+  @Test public void testRepl() {
+    final String[] args = new String[0];
+    final String ml = "val x = 5;\n"
+        + "x;\n";
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try (PrintStream ps = new PrintStream(out)) {
+      final InputStream in = new ByteArrayInputStream(ml.getBytes());
+      new Main(args, in, ps).run();
+    }
+    final String expected = "val x = 5\n"
+        + "x\n";
+    Assert.assertThat(out.toString(), is(expected));
   }
 
   @Test public void testParse() {

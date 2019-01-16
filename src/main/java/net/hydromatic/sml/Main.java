@@ -18,11 +18,19 @@
  */
 package net.hydromatic.sml;
 
+import net.hydromatic.sml.ast.AstNode;
+import net.hydromatic.sml.parse.ParseException;
+import net.hydromatic.sml.parse.SmlParserImpl;
+
 import java.io.InputStream;
 import java.io.PrintStream;
 
 /** Standard ML REPL. */
 public class Main {
+  private final String[] args;
+  private final InputStream in;
+  private final PrintStream out;
+
   /** Command-line entry point.
    *
    * @param args Command-line arguments */
@@ -37,10 +45,28 @@ public class Main {
   }
 
   /** Creates a Main. */
-  Main(String[] args, InputStream in, PrintStream out) {
+  public Main(String[] args, InputStream in, PrintStream out) {
+    this.args = args;
+    this.in = in;
+    this.out = out;
   }
 
-  void run() {
+  public void run() {
+    final SmlParserImpl parser = new SmlParserImpl(in);
+    for (;;) {
+      try {
+        final AstNode statement = parser.statementSemicolon();
+        out.println(statement);
+      } catch (ParseException e) {
+        final String message = e.getMessage();
+        if (message.startsWith("Encountered \"<EOF>\" ")) {
+          break;
+        }
+        e.printStackTrace(out);
+      } finally {
+        out.flush();
+      }
+    }
   }
 }
 

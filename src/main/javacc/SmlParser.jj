@@ -187,6 +187,15 @@ VarDecl varDecl() :
 }
 }
 
+/** Parses a declaration. */
+AstNode decl() :
+{
+  final AstNode n;
+}
+{
+  n = varDecl() { return n; }
+}
+
 /** Parses a pattern. */
 PatNode pat() :
 {
@@ -230,6 +239,24 @@ TypeNode namedType() :
   <IDENTIFIER> {
     return ast.namedType(pos(), token.image);
   }
+}
+
+AstNode statement() :
+{
+  final AstNode n;
+}
+{
+  n = expression() { return n; }
+|
+  n = decl() { return n; }
+}
+
+AstNode statementSemicolon() :
+{
+  final AstNode n;
+}
+{
+  n = statement() <SEMICOLON> { return n; }
 }
 
 <DEFAULT, DQID, BTID> TOKEN :
