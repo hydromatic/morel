@@ -1,0 +1,401 @@
+/*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ */
+
+options {
+  STATIC = false;
+  IGNORE_CASE = true;
+  UNICODE_INPUT = true;
+}
+
+PARSER_BEGIN(SmlParserImpl)
+
+package net.hydromatic.sml.parse;
+
+import net.hydromatic.sml.ast.*;
+
+import com.google.common.collect.ImmutableList;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Parser for Standard ML, generated from SmlParser.jj by JavaCC.
+ */
+public class SmlParserImpl implements SmlParser
+{
+  private static final Logger LOGGER =
+      LoggerFactory.getLogger("net.hydromatic.sml.parse");
+
+  public void setTabSize(int tabSize) {
+    jj_input_stream.setTabSize(tabSize);
+  }
+
+  public Pos getPos() {
+    return new Pos(token.beginLine, token.beginColumn,
+        token.endLine, token.endColumn);
+  }
+}
+
+PARSER_END(SmlParserImpl)
+
+/* For Debug */
+JAVACODE
+void debug_message1()
+{
+  LOGGER.info("{} , {}", getToken(0).image, getToken(1).image);
+}
+
+JAVACODE Pos pos() {
+  return new Pos(token.beginLine, token.beginColumn,
+    token.endLine, token.endColumn);
+}
+
+/** Parses a literal expression. */
+Literal literal() :
+{
+  final Literal e;
+}
+{
+  e = booleanLiteral() { return e; }
+|
+  e = numericLiteral() { return e; }
+|
+  e = stringLiteral() { return e; }
+}
+
+/** Parses a boolean literal */
+Literal booleanLiteral() :
+{
+}
+{
+  <TRUE> {
+    return Literal.createBoolean(pos(), true);
+  }
+|
+  <FALSE> {
+    return Literal.createBoolean(pos(), false);
+  }
+}
+
+/** Parses a numeric literal */
+Literal numericLiteral() :
+{
+}
+{
+  <INTEGER_LITERAL> {
+    return Literal.createExactNumeric(token.image, pos());
+  }
+|
+  <FLOAT_LITERAL> {
+    return Literal.createExactNumeric(token.image, pos());
+  }
+|
+  <SCIENTIFIC_LITERAL> {
+    return Literal.createExactNumeric(token.image, pos());
+  }
+}
+
+/** Parses a string literal. */
+Literal stringLiteral() :
+{
+}
+{
+  <QUOTED_STRING> {
+    return Literal.createString(pos(), token.image);
+  }
+}
+
+/** Parses an identifier. */
+Id identifier() :
+{
+}
+{
+  <IDENTIFIER> {
+    return new Id(pos(), token.image);
+  }
+}
+
+/** Parses an expression. */
+AstNode expression() :
+{
+  final Id id;
+  final Literal literal;
+}
+{
+  id = identifier() { return id; }
+|
+  literal = literal() { return literal; }
+}
+
+/** Parses a variable declaration. */
+VarDecl varDecl() :
+{
+  final Span span;
+  final Id v;
+  final AstNode e;
+}
+{
+  <VAL> { span = Span.of(getPos()); } v = identifier() <EQ> e = expression() {
+    return new VarDecl(span.end(this), v, e);
+  }
+}
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+  < AND: "AND" >
+| < FALSE: "FALSE" >
+| < OR: "OR" >
+| < TRUE: "TRUE" >
+| < VAL: "VAL" >
+}
+
+/* LITERALS */
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < INTEGER_LITERAL: ("~")?(["0"-"9"])+ >
+    |
+    < FLOAT_LITERAL: ("~")?(["0"-"9"])+ "." (["0"-"9"])+>
+    |
+    < SCIENTIFIC_LITERAL: ("~")?(["0"-"9"])+ ("." (["0"-"9"])+) "e" (["0"-"9"])+>
+    |
+    < #HEXDIGIT: ["0"-"9","a"-"f","A"-"F"] >
+    |
+    < #WHITESPACE:
+    [ " ","\t","\n","\r","\f" ]
+    >
+    |
+    < QUOTED_STRING: <DOUBLE_QUOTE> ( (~["\""]) | ("\"\""))* <DOUBLE_QUOTE> >
+}
+
+/* SEPARATORS */
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < LPAREN: "(">
+    | < RPAREN: ")">
+    | < LBRACE: "{" >
+    | < RBRACE: "}" >
+    | < LBRACKET: "[" >
+    | < RBRACKET: "]" >
+    | < SEMICOLON: ";" >
+    | < DOT: "." >
+    | < COMMA: "," >
+}
+
+/* OPERATORS */
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < EQ: "=" >
+    | < EQEQ: "==" >
+    | < GT: ">" >
+    | < LT: "<" >
+    | < HOOK: "?" >
+    | < COLON: ":" >
+    | < LE: "<=" >
+    | < GE: ">=" >
+    | < NE: "!=" >
+    | < PLUS: "+" >
+    | < MINUS: "-" >
+    | < STAR: "*" >
+    | < SLASH: "/" >
+    | < CONCAT: "||" >
+    | < DOUBLE_PERIOD: ".." >
+    | < QUOTE: "'" >
+    | < DOUBLE_QUOTE: "\"" >
+}
+
+
+/*****************************************
+ * Lexical Descriptions                  *
+ *****************************************/
+
+TOKEN_MGR_DECLS : {
+    List<Integer> lexicalStateStack = new ArrayList<Integer>();
+
+    void pushState() {
+      lexicalStateStack.add(curLexState);
+    }
+
+    void popState() {
+      SwitchTo(lexicalStateStack.remove(lexicalStateStack.size() - 1));
+    }
+}
+
+/*
+Lexical states:
+
+DEFAULT: Identifiers are quoted in brackets, e.g. [My Identifier]
+DQID:    Identifiers are double-quoted, e.g. "My Identifier"
+BTID:    Identifiers are enclosed in back-ticks, e.g. `My Identifier`
+IN_SINGLE_LINE_COMMENT:
+IN_FORMAL_COMMENT:
+IN_MULTI_LINE_COMMENT:
+
+DEFAULT, DQID, BTID are the 3 'normal states'. Behavior is identical except
+for how quoted identifiers are recognized.
+
+After a comment has completed, the lexer returns to the previous state, one
+of the 'normal states'.
+*/
+
+/* WHITE SPACE */
+
+<DEFAULT, DQID, BTID> SKIP :
+{
+    " "
+    | "\t"
+    | "\n"
+    | "\r"
+    | "\f"
+}
+
+/* COMMENTS */
+
+<DEFAULT, DQID, BTID> MORE :
+{
+    <"/**" ~["/"]> { pushState(); } : IN_FORMAL_COMMENT
+}
+
+<DEFAULT, DQID, BTID> MORE :
+{
+    "//" { pushState(); } : IN_SINGLE_LINE_COMMENT
+    |
+    "--" { pushState(); } : IN_SINGLE_LINE_COMMENT
+    |
+    "/*" { pushState(); } : IN_MULTI_LINE_COMMENT
+}
+
+<IN_SINGLE_LINE_COMMENT>
+SPECIAL_TOKEN :
+{
+    <SINGLE_LINE_COMMENT: "\n" | "\r" | "\r\n" > { popState(); }
+}
+
+<IN_FORMAL_COMMENT>
+SPECIAL_TOKEN :
+{
+    <FORMAL_COMMENT: "*/" > { popState(); }
+}
+
+<IN_MULTI_LINE_COMMENT>
+SPECIAL_TOKEN :
+{
+    <MULTI_LINE_COMMENT: "*/" > { popState(); }
+}
+
+<IN_SINGLE_LINE_COMMENT,IN_FORMAL_COMMENT,IN_MULTI_LINE_COMMENT>
+MORE :
+{
+    < ~[] >
+}
+
+
+/* IDENTIFIERS */
+
+<DEFAULT> TOKEN :
+{
+    < BRACKET_QUOTED_IDENTIFIER:
+    "["
+    (   (~["]","\n","\r"])
+        | ("]]")
+        )+
+    "]"
+    >
+}
+
+<DQID> TOKEN :
+{
+    < QUOTED_IDENTIFIER:
+    "\""
+    (   (~["\"","\n","\r"])
+        | ("\"\"")
+        )+
+    "\""
+    >
+}
+
+<BTID>  TOKEN :
+{
+    < BACK_QUOTED_IDENTIFIER:
+    "`"
+    (   (~["`","\n","\r"])
+        | ("``")
+        )+
+    "`"
+    >
+}
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < COLLATION_ID:
+    (<LETTER>|<DIGIT>)+ (<LETTER>|<DIGIT>|":"|"."|"-"|"_")*
+    "$"
+    (<LETTER>|"_")+
+    ("$" (<LETTER>|<DIGIT>|"_")+)?
+    >
+    |
+    < IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+    |
+    < UNICODE_QUOTED_IDENTIFIER: "U" "&" <QUOTED_IDENTIFIER> >
+    |
+    < #LETTER:
+    [
+        "\u0024",
+        "\u0041"-"\u005a",
+        "\u005f",
+        "\u0061"-"\u007a",
+        "\u00c0"-"\u00d6",
+        "\u00d8"-"\u00f6",
+        "\u00f8"-"\u00ff",
+        "\u0100"-"\u1fff",
+        "\u3040"-"\u318f",
+        "\u3300"-"\u337f",
+        "\u3400"-"\u3d2d",
+        "\u4e00"-"\u9fff",
+        "\uf900"-"\ufaff"
+    ]
+    >
+    |
+    < #DIGIT:
+    [
+        "\u0030"-"\u0039",
+        "\u0660"-"\u0669",
+        "\u06f0"-"\u06f9",
+        "\u0966"-"\u096f",
+        "\u09e6"-"\u09ef",
+        "\u0a66"-"\u0a6f",
+        "\u0ae6"-"\u0aef",
+        "\u0b66"-"\u0b6f",
+        "\u0be7"-"\u0bef",
+        "\u0c66"-"\u0c6f",
+        "\u0ce6"-"\u0cef",
+        "\u0d66"-"\u0d6f",
+        "\u0e50"-"\u0e59",
+        "\u0ed0"-"\u0ed9",
+        "\u1040"-"\u1049"
+    ]
+    >
+}
+
+// End SmlParser.jj
