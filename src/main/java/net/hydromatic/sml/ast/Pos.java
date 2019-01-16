@@ -135,6 +135,10 @@ public class Pos {
     }
     return new Pos(line, column, endLine, endColumn);
   }
+
+  public Pos plus(Pos pos) {
+    return new Pos(startLine, startColumn, pos.endLine, pos.endColumn);
+  }
 }
 
 // End Pos.java

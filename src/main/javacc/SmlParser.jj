@@ -27,13 +27,18 @@ PARSER_BEGIN(SmlParserImpl)
 
 package net.hydromatic.sml.parse;
 
-import net.hydromatic.sml.ast.*;
+import net.hydromatic.sml.ast.Ast;
+import net.hydromatic.sml.ast.Ast.*;
+import net.hydromatic.sml.ast.AstBuilder;
+import net.hydromatic.sml.ast.AstNode;
+import net.hydromatic.sml.ast.Pos;
 
 import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,6 +53,8 @@ public class SmlParserImpl implements SmlParser
   public void setTabSize(int tabSize) {
     jj_input_stream.setTabSize(tabSize);
   }
+
+  private final AstBuilder ast = AstBuilder.INSTANCE;
 
   public Pos getPos() {
     return new Pos(token.beginLine, token.beginColumn,
@@ -72,7 +79,7 @@ JAVACODE Pos pos() {
 /** Parses a literal expression. */
 Literal literal() :
 {
-  final Literal e;
+  final Ast.Literal e;
 }
 {
   e = booleanLiteral() { return e; }
@@ -88,11 +95,11 @@ Literal booleanLiteral() :
 }
 {
   <TRUE> {
-    return Literal.createBoolean(pos(), true);
+    return ast.boolLiteral(pos(), true);
   }
 |
   <FALSE> {
-    return Literal.createBoolean(pos(), false);
+    return ast.boolLiteral(pos(), false);
   }
 }
 
@@ -102,15 +109,33 @@ Literal numericLiteral() :
 }
 {
   <INTEGER_LITERAL> {
-    return Literal.createExactNumeric(token.image, pos());
+    final BigDecimal d;
+    if (token.image.startsWith("~")) {
+      d = new BigDecimal(token.image.substring(1)).negate();
+    } else {
+      d = new BigDecimal(token.image);
+    }
+    return ast.intLiteral(d, pos());
   }
 |
   <FLOAT_LITERAL> {
-    return Literal.createExactNumeric(token.image, pos());
+    final BigDecimal d;
+    if (token.image.startsWith("~")) {
+      d = new BigDecimal(token.image.substring(1)).negate();
+    } else {
+      d = new BigDecimal(token.image);
+    }
+    return ast.floatLiteral(d, pos());
   }
 |
   <SCIENTIFIC_LITERAL> {
-    return Literal.createExactNumeric(token.image, pos());
+    final BigDecimal d;
+    if (token.image.startsWith("~")) {
+      d = new BigDecimal(token.image.substring(1)).negate();
+    } else {
+      d = new BigDecimal(token.image);
+    }
+    return ast.floatLiteral(d, pos());
   }
 }
 
@@ -120,7 +145,10 @@ Literal stringLiteral() :
 }
 {
   <QUOTED_STRING> {
-    return Literal.createString(pos(), token.image);
+    assert token.image.charAt(0) == '"';
+    assert token.image.charAt(token.image.length() - 1) == '"';
+    String image = token.image.substring(1, token.image.length() - 1);
+    return ast.stringLiteral(pos(), image.replace("''", "'"));
   }
 }
 
@@ -130,15 +158,15 @@ Id identifier() :
 }
 {
   <IDENTIFIER> {
-    return new Id(pos(), token.image);
-  }
+  return new Ast.Id(pos(), token.image);
+}
 }
 
 /** Parses an expression. */
 AstNode expression() :
 {
   final Id id;
-  final Literal literal;
+  final Ast.Literal literal;
 }
 {
   id = identifier() { return id; }
@@ -150,12 +178,57 @@ AstNode expression() :
 VarDecl varDecl() :
 {
   final Span span;
-  final Id v;
+  final PatNode v;
   final AstNode e;
 }
 {
-  <VAL> { span = Span.of(getPos()); } v = identifier() <EQ> e = expression() {
-    return new VarDecl(span.end(this), v, e);
+  <VAL> { span = Span.of(getPos()); } v = pat() <EQ> e = expression() {
+  return new Ast.VarDecl(span.end(this), v, e);
+}
+}
+
+/** Parses a pattern. */
+PatNode pat() :
+{
+  PatNode pat;
+  Ast.TypeNode type;
+}
+{
+  pat = pat0()
+  (
+    <COLON> type = type() {
+      pat = ast.annotatedPat(pat.pos.plus(type.pos), pat, type);
+    }
+  )*
+  { return pat; }
+}
+
+/** Parses a pattern (not annotated by a type). */
+PatNode pat0() :
+{
+  final String name;
+}
+{
+  <IDENTIFIER> {
+    return ast.namedPat(pos(), token.image);
+  }
+}
+
+/** Parses a type. */
+TypeNode type() :
+{
+  final Ast.TypeNode type;
+}
+{
+  type = namedType() { return type; }
+}
+
+TypeNode namedType() :
+{
+}
+{
+  <IDENTIFIER> {
+    return ast.namedType(pos(), token.image);
   }
 }
 

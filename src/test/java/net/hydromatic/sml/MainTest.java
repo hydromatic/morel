@@ -18,9 +18,8 @@
  */
 package net.hydromatic.sml;
 
+import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
-import net.hydromatic.sml.ast.Literal;
-import net.hydromatic.sml.ast.VarDecl;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
 
@@ -48,12 +47,13 @@ public class MainTest {
     checkParseLiteral("false", isLiteral(false));
     checkParseLiteral("\"a string\"", isLiteral("a string"));
 
-    checkParseDecl("val x = 5", isAst(VarDecl.class, "val x = 5"));
+    checkParseDecl("val x = 5", isAst(Ast.VarDecl.class, "val x = 5"));
+    checkParseDecl("val x : int = 5", isAst(Ast.VarDecl.class, "val x : int = 5"));
   }
 
-  private void checkParseLiteral(String ml, Matcher<Literal> matcher) {
+  private void checkParseLiteral(String ml, Matcher<Ast.Literal> matcher) {
     try {
-      final Literal literal =
+      final Ast.Literal literal =
           new SmlParserImpl(new StringReader(ml)).literal();
       Assert.assertThat(literal, matcher);
     } catch (ParseException e) {
@@ -61,9 +61,9 @@ public class MainTest {
     }
   }
 
-  private void checkParseDecl(String ml, Matcher<VarDecl> matcher) {
+  private void checkParseDecl(String ml, Matcher<Ast.VarDecl> matcher) {
     try {
-      final VarDecl varDecl =
+      final Ast.VarDecl varDecl =
           new SmlParserImpl(new StringReader(ml)).varDecl();
       Assert.assertThat(varDecl, matcher);
     } catch (ParseException e) {
@@ -71,18 +71,20 @@ public class MainTest {
     }
   }
 
-  private static Matcher<Literal> isLiteral(Comparable comparable) {
-    return new TypeSafeMatcher<Literal>() {
-      protected boolean matchesSafely(Literal literal) {
+  /** Matches a literal by value. */
+  private static Matcher<Ast.Literal> isLiteral(Comparable comparable) {
+    return new TypeSafeMatcher<Ast.Literal>() {
+      protected boolean matchesSafely(Ast.Literal literal) {
         return literal.value.equals(comparable);
       }
 
-      @Override public void describeTo(Description description) {
+      public void describeTo(Description description) {
         description.appendText("literal with value " + comparable);
       }
     };
   }
 
+  /** Matches an AST node by its string representation. */
   private static <T extends AstNode> Matcher<T> isAst(Class<T> clazz,
       String expected) {
     return new TypeSafeMatcher<T>() {
@@ -90,7 +92,7 @@ public class MainTest {
         return t.toString().equals(expected);
       }
 
-      @Override public void describeTo(Description description) {
+      public void describeTo(Description description) {
         description.appendText("ast with value " + expected);
       }
     };
