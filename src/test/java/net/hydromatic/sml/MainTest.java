@@ -20,6 +20,10 @@ package net.hydromatic.sml;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
+import net.hydromatic.sml.compile.Compiler;
+import net.hydromatic.sml.eval.Code;
+import net.hydromatic.sml.eval.Environment;
+import net.hydromatic.sml.eval.Environments;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
 
@@ -35,6 +39,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.util.function.Consumer;
 
 import static org.hamcrest.CoreMatchers.is;
 
@@ -55,43 +60,107 @@ public class MainTest {
   @Test public void testRepl() {
     final String[] args = new String[0];
     final String ml = "val x = 5;\n"
-        + "x;\n";
+        + "x;\n"
+        + "it + 1;\n";
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(ml.getBytes());
       new Main(args, in, ps).run();
     }
-    final String expected = "val x = 5\n"
-        + "x\n";
+    final String expected = "val x = 5 : int\n"
+        + "val it = 5 : int\n"
+        + "val it = 6 : int\n";
     Assert.assertThat(out.toString(), is(expected));
   }
 
   @Test public void testParse() {
     checkParseLiteral("1", isLiteral(BigDecimal.ONE));
     checkParseLiteral("~3.5", isLiteral(new BigDecimal("-3.5")));
-    checkParseLiteral("true", isLiteral(true));
-    checkParseLiteral("false", isLiteral(false));
     checkParseLiteral("\"a string\"", isLiteral("a string"));
 
+    // true and false are variables, not actually literals
+    checkStmt("true", isAst(Ast.Id.class, "true"));
+    checkStmt("false", isAst(Ast.Id.class, "false"));
+
     checkParseDecl("val x = 5", isAst(Ast.VarDecl.class, "val x = 5"));
-    checkParseDecl("val x : int = 5", isAst(Ast.VarDecl.class, "val x : int = 5"));
+    checkParseDecl("val x : int = 5",
+        isAst(Ast.VarDecl.class, "val x : int = 5"));
+
+    // parentheses creating left precedence, which is the natural precedence for
+    // '+', can be removed
+    checkStmt("((1 + 2) + 3) + 4",
+        isAst(AstNode.class, "1 + 2 + 3 + 4"));
+
+    // parentheses creating right precedence can not be removed
+    checkStmt("1 + (2 + (3 + (4)))",
+        isAst(AstNode.class, "1 + (2 + (3 + 4))"));
+
+    checkStmt("let val x = 2 in x + (3 + x) + x end",
+        isAst(AstNode.class, "let val x = 2 in x + (3 + x) + x end"));
+
+    checkStmt("let val x = 2 and y = 3 in x + y end",
+        isAst(AstNode.class, "let val x = 2 and y = 3 in x + y end"));
+  }
+
+  @Test public void testEval() {
+    // literals
+    checkEval("1", is(1));
+    checkEval("~2", is(-2));
+    checkEval("\"a string\"", is("a string"));
+    checkEval("true", is(true));
+    checkEval("~10.25", is(-10.25f));
+
+    // operators
+    checkEval("2 + 3", is(5));
+
+    // let
+    checkEval("let val x = 1 in x + 2 end", is(3));
+
+    // let where variables shadow
+    final String letNested = "let\n"
+        + "  val x = 1\n"
+        + "in\n"
+        + "  let\n"
+        + "    val x = 2\n"
+        + "  in\n"
+        + "    x * 3\n"
+        + "  end + x\n"
+        + "end";
+    checkEval(letNested, is(2 * 3 + 1));
+  }
+
+  private void withParser(String ml, Consumer<SmlParserImpl> action) {
+    final SmlParserImpl parser = new SmlParserImpl(new StringReader(ml));
+    action.accept(parser);
   }
 
   private void checkParseLiteral(String ml, Matcher<Ast.Literal> matcher) {
-    try {
-      final Ast.Literal literal =
-          new SmlParserImpl(new StringReader(ml)).literal();
-      Assert.assertThat(literal, matcher);
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
+    withParser(ml, parser -> {
+      try {
+        final Ast.Literal literal = parser.literal();
+        Assert.assertThat(literal, matcher);
+      } catch (ParseException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
   private void checkParseDecl(String ml, Matcher<Ast.VarDecl> matcher) {
+    withParser(ml, parser -> {
+      try {
+        final Ast.VarDecl varDecl = parser.varDecl();
+        Assert.assertThat(varDecl, matcher);
+      } catch (ParseException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  private void checkStmt(String ml, Matcher<AstNode> matcher) {
     try {
-      final Ast.VarDecl varDecl =
-          new SmlParserImpl(new StringReader(ml)).varDecl();
-      Assert.assertThat(varDecl, matcher);
+      final AstNode statement =
+          new SmlParserImpl(new StringReader(ml)).statement();
+      Assert.assertThat(statement, matcher);
     } catch (ParseException e) {
       throw new RuntimeException(e);
     }
@@ -111,11 +180,11 @@ public class MainTest {
   }
 
   /** Matches an AST node by its string representation. */
-  private static <T extends AstNode> Matcher<T> isAst(Class<T> clazz,
+  private static <T extends AstNode> Matcher<T> isAst(Class<? extends T> clazz,
       String expected) {
     return new TypeSafeMatcher<T>() {
       protected boolean matchesSafely(T t) {
-        return t.toString().equals(expected);
+        return Ast.toString(t).equals(expected);
       }
 
       public void describeTo(Description description) {
@@ -124,6 +193,18 @@ public class MainTest {
     };
   }
 
+  private void checkEval(String ml, Matcher<Object> matcher) {
+    try {
+      final Ast.Exp expression =
+          new SmlParserImpl(new StringReader(ml)).expression();
+      final Code code = new Compiler().compile(expression);
+      final Environment env = Environments.empty();
+      final Object value = code.eval(env);
+      Assert.assertThat(value, matcher);
+    } catch (ParseException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }
 
 // End MainTest.java

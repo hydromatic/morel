@@ -26,7 +26,7 @@ import java.util.Objects;
 
 /** Position of a parse-tree node. */
 public class Pos {
-  private static final Pos ZERO = new Pos(0, 0, 0, 0);
+  public static final Pos ZERO = new Pos(0, 0, 0, 0);
 
   public final int startLine;
   public final int startColumn;

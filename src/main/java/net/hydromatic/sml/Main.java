@@ -19,11 +19,16 @@
 package net.hydromatic.sml;
 
 import net.hydromatic.sml.ast.AstNode;
+import net.hydromatic.sml.compile.Compiler;
+import net.hydromatic.sml.eval.Environment;
+import net.hydromatic.sml.eval.Environments;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
 
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Standard ML REPL. */
 public class Main {
@@ -53,10 +58,19 @@ public class Main {
 
   public void run() {
     final SmlParserImpl parser = new SmlParserImpl(in);
+    final Compiler compiler = new Compiler();
+    Environment env = Environments.empty();
+    final List<String> lines = new ArrayList<>();
     for (;;) {
       try {
         final AstNode statement = parser.statementSemicolon();
-        out.println(statement);
+        final Compiler.CompiledStatement compiled =
+            compiler.compileStatement(statement);
+        env = compiled.eval(env, lines);
+        for (String line : lines) {
+          out.println(line);
+        }
+        lines.clear();
       } catch (ParseException e) {
         final String message = e.getMessage();
         if (message.startsWith("Encountered \"<EOF>\" ")) {

@@ -16,23 +16,22 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.sml.ast;
+package net.hydromatic.sml.eval;
 
-import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
 
-/** Abstract syntax tree node. */
-public abstract class AstNode {
-  public final Pos pos;
-  public final Op op;
+/** Evaluation environment. */
+public class Environment {
+  final Map<String, Object> valueMap = new HashMap<>();
 
-  public AstNode(Pos pos, Op op) {
-    this.pos = Objects.requireNonNull(pos);
-    this.op = Objects.requireNonNull(op);
-  }
-
-  AstWriter unparse(AstWriter w, int left, int right) {
-    return w.append(toString());
+  public Object get(String name) {
+    final Object value = valueMap.get(name);
+    if (value == null) {
+      throw new AssertionError("expected value for " + name);
+    }
+    return value;
   }
 }
 
-// End AstNode.java
+// End Environment.java

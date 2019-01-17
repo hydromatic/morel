@@ -16,23 +16,11 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.sml.ast;
+package net.hydromatic.sml.eval;
 
-import java.util.Objects;
-
-/** Abstract syntax tree node. */
-public abstract class AstNode {
-  public final Pos pos;
-  public final Op op;
-
-  public AstNode(Pos pos, Op op) {
-    this.pos = Objects.requireNonNull(pos);
-    this.op = Objects.requireNonNull(op);
-  }
-
-  AstWriter unparse(AstWriter w, int left, int right) {
-    return w.append(toString());
-  }
+/** A compiled expression, that can be evaluated. */
+public interface Code {
+  Object eval(Environment env);
 }
 
-// End AstNode.java
+// End Code.java

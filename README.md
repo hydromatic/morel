@@ -53,6 +53,35 @@ On Windows, the last line is
 ```bash
 > mvnw install
 ```
+## Status
+
+Implemented:
+* Literals
+* Variables
+* `let`
+* `val`
+* Operators: + - * / ^
+
+Not implemented:
+* Type derivation
+* `fun` declaration
+* Generic types
+* Lambdas and closures
+* `let rec`
+* `type`
+* `datatype`
+* `local`
+* `handle`
+* `exception`
+* Patterns
+* Patterns in `let`
+* References, and operators `!` and `:=`
+* Operators: div mod ^ :: @ `before` `andalso` `orelse` `not`
+* User-defined operators
+* /0 exception
+* Type annotations in expressions and patterns
+* `true`, `false`, `nil`, `ref`, `it`, `::` should not be reserved,
+  but user should not be able to override them
 
 ## More information
 

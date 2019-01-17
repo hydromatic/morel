@@ -18,7 +18,10 @@
  */
 package net.hydromatic.sml.ast;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.math.BigDecimal;
+import java.util.Map;
 
 /** Builds parse tree nodes. */
 public enum AstBuilder {
@@ -26,22 +29,22 @@ public enum AstBuilder {
 
   /** Creates an {@code int} literal. */
   public Ast.Literal intLiteral(BigDecimal value, Pos pos) {
-    return new Ast.Literal(pos, value);
+    return new Ast.Literal(pos, Op.INT_LITERAL, value);
   }
 
   /** Creates a {@code float} literal. */
   public Ast.Literal floatLiteral(BigDecimal value, Pos pos) {
-    return new Ast.Literal(pos, value);
+    return new Ast.Literal(pos, Op.FLOAT_LITERAL, value);
   }
 
   /** Creates a string literal. */
   public Ast.Literal stringLiteral(Pos pos, String value) {
-    return new Ast.Literal(pos, value);
+    return new Ast.Literal(pos, Op.STRING_LITERAL, value);
   }
 
   /** Creates a boolean literal. */
   public Ast.Literal boolLiteral(Pos p, boolean b) {
-    return new Ast.Literal(p, b);
+    return new Ast.Literal(p, Op.BOOL_LITERAL, b);
   }
 
   public Ast.TypeNode namedType(Pos pos, String name) {
@@ -53,7 +56,35 @@ public enum AstBuilder {
   }
 
   public Ast.PatNode annotatedPat(Pos pos, Ast.PatNode pat, Ast.TypeNode type) {
-    return new Ast.AnnotatedPatNode(pos, pat, type);
+    return new Ast.AnnotatedPat(pos, pat, type);
+  }
+
+  public Ast.Exp plus(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.PLUS, a0, a1);
+  }
+
+  public Ast.Exp minus(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.MINUS, a0, a1);
+  }
+
+  public Ast.Exp times(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.TIMES, a0, a1);
+  }
+
+  public Ast.Exp divide(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.DIVIDE, a0, a1);
+  }
+
+  public Ast.Exp caret(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.CARET, a0, a1);
+  }
+
+  public Ast.LetExp let(Pos pos, Ast.VarDecl decl, Ast.Exp exp) {
+    return new Ast.LetExp(pos, decl, exp);
+  }
+
+  public Ast.VarDecl varDecl(Pos pos, Map<Ast.PatNode, Ast.Exp> patExps) {
+    return new Ast.VarDecl(pos, ImmutableMap.copyOf(patExps));
   }
 }
 

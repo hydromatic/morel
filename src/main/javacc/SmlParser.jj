@@ -40,7 +40,9 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Parser for Standard ML, generated from SmlParser.jj by JavaCC.
@@ -82,25 +84,9 @@ Literal literal() :
   final Ast.Literal e;
 }
 {
-  e = booleanLiteral() { return e; }
-|
   e = numericLiteral() { return e; }
 |
   e = stringLiteral() { return e; }
-}
-
-/** Parses a boolean literal */
-Literal booleanLiteral() :
-{
-}
-{
-  <TRUE> {
-    return ast.boolLiteral(pos(), true);
-  }
-|
-  <FALSE> {
-    return ast.boolLiteral(pos(), false);
-  }
 }
 
 /** Parses a numeric literal */
@@ -158,33 +144,115 @@ Id identifier() :
 }
 {
   <IDENTIFIER> {
-  return new Ast.Id(pos(), token.image);
-}
+    return new Ast.Id(pos(), token.image);
+  }
 }
 
-/** Parses an expression. */
-AstNode expression() :
+/** Parses a "let ... in expression end" expression. */
+Exp let() :
 {
-  final Id id;
-  final Ast.Literal literal;
+  final Span span;
+  final Exp e;
+  final VarDecl decl;
 }
 {
-  id = identifier() { return id; }
+  <LET> { span = Span.of(getPos()); }
+  decl = varDecl() <IN> e = expression() <END> {
+    return ast.let(span.end(this), decl, e);
+  }
+}
+
+/** Parses an expression.
+ *
+ * <p>7 is the highest level of precedence. */
+Exp expression() :
+{
+  Exp e;
+  Exp e2;
+}
+{
+  e = expression6()
+  (
+    <STAR> e2 = expression6() {
+      e = ast.times(e, e2);
+    }
+  |
+    <SLASH> e2 = expression6() {
+      e = ast.divide(e, e2);
+    }
+  )*
+  { return e; }
+}
+
+/** Parses an expression of precedence level 6 (+, -, ^). */
+Exp expression6() :
+{
+  Exp e;
+  Exp e2;
+}
+{
+  e = expression0()
+  (
+    <PLUS> e2 = expression0() {
+      e = ast.plus(e, e2);
+    }
+  |
+    <MINUS> e2 = expression0() {
+      e = ast.minus(e, e2);
+    }
+  |
+    <CARET> e2 = expression0() {
+      e = ast.caret(e, e2);
+    }
+  )*
+  { return e; }
+}
+
+/** Parses an atomic expression. */
+Exp expression0() :
+{
+  final Exp e;
+}
+{
+  e = identifier() { return e; }
 |
-  literal = literal() { return literal; }
+  e = literal() { return e; }
+|
+  e = let() { return e; }
+|
+  <LPAREN> e = expression() <RPAREN> { return e; }
+}
+
+/** Parses a variable declaration, and adds it to a list. */
+void addVarDecl(List decls) :
+{
+  final VarDecl decl;
+}
+{
+  decl = varDecl() {
+    decls.add(decl);
+  }
 }
 
 /** Parses a variable declaration. */
 VarDecl varDecl() :
 {
   final Span span;
-  final PatNode v;
-  final AstNode e;
+  final Map<PatNode, Exp> patExps = new LinkedHashMap<PatNode, Exp>();
+  PatNode v;
+  Exp e;
 }
 {
-  <VAL> { span = Span.of(getPos()); } v = pat() <EQ> e = expression() {
-  return new Ast.VarDecl(span.end(this), v, e);
-}
+  <VAL> { span = Span.of(getPos()); }
+  v = pat() <EQ> e = expression() {
+    patExps.put(v, e);
+  }
+  (
+    <AND> v = pat() <EQ> e = expression() {
+      patExps.put(v, e);
+    }
+  )*
+  { return ast.varDecl(span.end(this), patExps); }
 }
 
 /** Parses a declaration. */
@@ -262,9 +330,10 @@ AstNode statementSemicolon() :
 <DEFAULT, DQID, BTID> TOKEN :
 {
   < AND: "AND" >
-| < FALSE: "FALSE" >
+| < END: "END" >
+| < IN: "IN" >
+| < LET: "LET" >
 | < OR: "OR" >
-| < TRUE: "TRUE" >
 | < VAL: "VAL" >
 }
 
@@ -307,20 +376,17 @@ AstNode statementSemicolon() :
 <DEFAULT, DQID, BTID> TOKEN :
 {
     < EQ: "=" >
-    | < EQEQ: "==" >
     | < GT: ">" >
     | < LT: "<" >
-    | < HOOK: "?" >
     | < COLON: ":" >
     | < LE: "<=" >
     | < GE: ">=" >
-    | < NE: "!=" >
+    | < NE: "<>" >
     | < PLUS: "+" >
     | < MINUS: "-" >
+    | < CARET: "^" >
     | < STAR: "*" >
     | < SLASH: "/" >
-    | < CONCAT: "||" >
-    | < DOUBLE_PERIOD: ".." >
     | < QUOTE: "'" >
     | < DOUBLE_QUOTE: "\"" >
 }

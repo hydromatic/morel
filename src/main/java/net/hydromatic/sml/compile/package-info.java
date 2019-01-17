@@ -16,23 +16,10 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.sml.ast;
 
-import java.util.Objects;
+/** Validates programs (represented as {@link net.hydromatic.sml.ast.AstNode}),
+ * deduces their type,
+ * and compiles them into code that can be evaluated. */
+package net.hydromatic.sml.compile;
 
-/** Abstract syntax tree node. */
-public abstract class AstNode {
-  public final Pos pos;
-  public final Op op;
-
-  public AstNode(Pos pos, Op op) {
-    this.pos = Objects.requireNonNull(pos);
-    this.op = Objects.requireNonNull(op);
-  }
-
-  AstWriter unparse(AstWriter w, int left, int right) {
-    return w.append(toString());
-  }
-}
-
-// End AstNode.java
+// End package-info.java

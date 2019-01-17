@@ -22,6 +22,7 @@ import net.hydromatic.sml.ast.Pos;
 
 /** Parser for Standard ML. */
 public interface SmlParser {
+  /** Returns the position of the last token returned by the parser. */
   Pos getPos();
 }
 

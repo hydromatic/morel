@@ -16,23 +16,30 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.sml.ast;
+package net.hydromatic.sml.eval;
 
-import java.util.Objects;
+/** Helpers for {@link Environment}. */
+public abstract class Environments {
+  private Environments() {}
 
-/** Abstract syntax tree node. */
-public abstract class AstNode {
-  public final Pos pos;
-  public final Op op;
-
-  public AstNode(Pos pos, Op op) {
-    this.pos = Objects.requireNonNull(pos);
-    this.op = Objects.requireNonNull(op);
+  /** Creates an empty environment. */
+  public static Environment empty() {
+    final Environment env = new Environment();
+    env.valueMap.put("true", true);
+    env.valueMap.put("false", false);
+    // TODO: also add "nil", "ref", "!"
+    return env;
   }
 
-  AstWriter unparse(AstWriter w, int left, int right) {
-    return w.append(toString());
+  /** Creates an environment that is the same as a given environment, plus one
+   * more variable. */
+  public static Environment add(Environment env, String var, Object value) {
+    // Copying the entire table is not very efficient.
+    final Environment env2 = new Environment();
+    env2.valueMap.putAll(env.valueMap);
+    env2.valueMap.put(var, value);
+    return env2;
   }
 }
 
-// End AstNode.java
+// End Environments.java
