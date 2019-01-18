@@ -30,7 +30,6 @@ import net.hydromatic.sml.parse.SmlParserImpl;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -42,6 +41,7 @@ import java.math.BigDecimal;
 import java.util.function.Consumer;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
 /**
  * Kick the tires.
@@ -54,7 +54,7 @@ public class MainTest {
       final InputStream in = new ByteArrayInputStream(new byte[0]);
       new Main(args, in, ps).run();
     }
-    Assert.assertThat(out.size(), is(0));
+    assertThat(out.size(), is(0));
   }
 
   @Test public void testRepl() {
@@ -70,7 +70,7 @@ public class MainTest {
     final String expected = "val x = 5 : int\n"
         + "val it = 5 : int\n"
         + "val it = 6 : int\n";
-    Assert.assertThat(out.toString(), is(expected));
+    assertThat(out.toString(), is(expected));
   }
 
   @Test public void testParse() {
@@ -108,11 +108,12 @@ public class MainTest {
     assertType("1 + 2", is("int"));
     assertType("1.0 + ~2.0", is("real"));
     assertType("\"\"", is("string"));
+    assertType("true andalso false", is("bool"));
   }
 
   private void assertType(String ml, Matcher<String> matcher) {
     withPrepare(ml, compiledStatement -> {
-      Assert.assertThat(compiledStatement.getType().description(), matcher);
+      assertThat(compiledStatement.getType().description(), matcher);
     });
   }
 
@@ -130,6 +131,16 @@ public class MainTest {
 
     // operators
     checkEval("2 + 3", is(5));
+    checkEval("2 + 3 * 4", is(14));
+    checkEval("2 * 3 + 4 * 5", is(26));
+    checkEval("2 - 3", is(-1));
+    checkEval("2 * 3", is(6));
+    checkEval("20 / 3", is(6));
+    checkEval("20 / ~3", is(-6));
+    checkEval("true andalso false", is(false));
+    checkEval("true orelse false", is(true));
+    checkEval("false andalso false orelse true", is(true));
+    checkEval("false andalso true orelse true", is(true));
 
     // let
     checkEval("let val x = 1 in x + 2 end", is(3));
@@ -156,7 +167,7 @@ public class MainTest {
     withParser(ml, parser -> {
       try {
         final Ast.Literal literal = parser.literal();
-        Assert.assertThat(literal, matcher);
+        assertThat(literal, matcher);
       } catch (ParseException e) {
         throw new RuntimeException(e);
       }
@@ -167,7 +178,7 @@ public class MainTest {
     withParser(ml, parser -> {
       try {
         final Ast.VarDecl varDecl = parser.varDecl();
-        Assert.assertThat(varDecl, matcher);
+        assertThat(varDecl, matcher);
       } catch (ParseException e) {
         throw new RuntimeException(e);
       }
@@ -178,7 +189,7 @@ public class MainTest {
     try {
       final AstNode statement =
           new SmlParserImpl(new StringReader(ml)).statement();
-      Assert.assertThat(statement, matcher);
+      assertThat(statement, matcher);
     } catch (ParseException e) {
       throw new RuntimeException(e);
     }
@@ -218,7 +229,7 @@ public class MainTest {
       final Environment env = Environments.empty();
       final Code code = new Compiler().compile(env, expression);
       final Object value = code.eval(env);
-      Assert.assertThat(value, matcher);
+      assertThat(value, matcher);
     } catch (ParseException e) {
       throw new RuntimeException(e);
     }

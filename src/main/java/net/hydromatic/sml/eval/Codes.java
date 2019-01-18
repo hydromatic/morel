@@ -32,6 +32,18 @@ public abstract class Codes {
     return env -> value;
   }
 
+  /** Returns a Code that evaluates "andalso". */
+  public static Code andAlso(Code code0, Code code1) {
+    // Lazy evaluation. If code0 returns false, code1 is never evaluated.
+    return env -> (boolean) code0.eval(env) && (boolean) code1.eval(env);
+  }
+
+  /** Returns a Code that evaluates "orelse". */
+  public static Code orElse(Code code0, Code code1) {
+    // Lazy evaluation. If code0 returns true, code1 is never evaluated.
+    return env -> (boolean) code0.eval(env) || (boolean) code1.eval(env);
+  }
+
   /** Returns a Code that evaluates "+". */
   public static Code plus(Code code0, Code code1) {
     return env -> (int) code0.eval(env) + (int) code1.eval(env);

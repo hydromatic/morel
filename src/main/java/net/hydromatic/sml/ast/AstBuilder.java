@@ -59,6 +59,14 @@ public enum AstBuilder {
     return new Ast.AnnotatedPat(pos, pat, type);
   }
 
+  public Ast.Exp andAlso(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.ANDALSO, a0, a1);
+  }
+
+  public Ast.Exp orElse(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.ORELSE, a0, a1);
+  }
+
   public Ast.Exp plus(Ast.Exp a0, Ast.Exp a1) {
     return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.PLUS, a0, a1);
   }

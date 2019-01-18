@@ -173,19 +173,19 @@ Exp let() :
 /** Parses an expression.
  *
  * <p>7 is the highest level of precedence. */
-Exp expression() :
+Exp expression7() :
 {
   Exp e;
   Exp e2;
 }
 {
-  e = expression6()
+  e = atom()
   (
-    <STAR> e2 = expression6() {
+    <STAR> e2 = atom() {
       e = ast.times(e, e2);
     }
   |
-    <SLASH> e2 = expression6() {
+    <SLASH> e2 = atom() {
       e = ast.divide(e, e2);
     }
   )*
@@ -199,25 +199,65 @@ Exp expression6() :
   Exp e2;
 }
 {
-  e = expression0()
+  e = expression7()
   (
-    <PLUS> e2 = expression0() {
+    <PLUS> e2 = expression7() {
       e = ast.plus(e, e2);
     }
   |
-    <MINUS> e2 = expression0() {
+    <MINUS> e2 = expression7() {
       e = ast.minus(e, e2);
     }
   |
-    <CARET> e2 = expression0() {
+    <CARET> e2 = expression7() {
       e = ast.caret(e, e2);
     }
   )*
   { return e; }
 }
 
+/** Parses an expression of precedence level 2 (andalso). */
+Exp expression2() :
+{
+  Exp e;
+  Exp e2;
+}
+{
+  e = expression6()
+  (
+    <ANDALSO> e2 = expression6() {
+      e = ast.andAlso(e, e2);
+    }
+  )*
+  { return e; }
+}
+
+/** Parses an expression of precedence level 1 (orelse). */
+Exp expression1() :
+{
+  Exp e;
+  Exp e2;
+}
+{
+  e = expression2()
+  (
+    <ORELSE> e2 = expression2() {
+      e = ast.orElse(e, e2);
+    }
+  )*
+  { return e; }
+}
+
+Exp expression() :
+{
+  final Exp e;
+}
+{
+  e = expression1() { return e; }
+}
+
 /** Parses an atomic expression. */
-Exp expression0() :
+Exp atom() :
 {
   final Exp e;
 }
@@ -338,10 +378,11 @@ AstNode statementSemicolon() :
 <DEFAULT, DQID, BTID> TOKEN :
 {
   < AND: "AND" >
+| < ANDALSO: "ANDALSO" >
 | < END: "END" >
 | < IN: "IN" >
 | < LET: "LET" >
-| < OR: "OR" >
+| < ORELSE: "ORELSE" >
 | < VAL: "VAL" >
 }
 

@@ -92,6 +92,8 @@ public class Compiler {
     case STRING_LITERAL:
       return PrimitiveType.STRING;
     case BOOL_LITERAL:
+    case ANDALSO:
+    case ORELSE:
       return PrimitiveType.BOOL;
     case VAL_DECL:
       final Ast.VarDecl varDecl = (Ast.VarDecl) node;
@@ -158,6 +160,16 @@ public class Compiler {
       }
       final Code resultCode = compile(env, let.e);
       return Codes.let(varCodes, resultCode);
+    case ANDALSO:
+      call = (Ast.InfixCall) expression;
+      code0 = compile(env, call.a0);
+      code1 = compile(env, call.a1);
+      return Codes.andAlso(code0, code1);
+    case ORELSE:
+      call = (Ast.InfixCall) expression;
+      code0 = compile(env, call.a0);
+      code1 = compile(env, call.a1);
+      return Codes.orElse(code0, code1);
     case PLUS:
       call = (Ast.InfixCall) expression;
       code0 = compile(env, call.a0);

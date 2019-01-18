@@ -60,10 +60,10 @@ Implemented:
 * Variables
 * `let`
 * `val`
-* Operators: + - * / ^
+* Operators: + - * / ^ `andalso` `orelse`
+* Type derivation (for simple types)
 
 Not implemented:
-* Type derivation
 * `fun` declaration
 * Generic types
 * Lambdas and closures
@@ -76,8 +76,8 @@ Not implemented:
 * Patterns
 * Patterns in `let`
 * References, and operators `!` and `:=`
-* Operators: div mod ^ :: @ `before` `andalso` `orelse` `not`
-* User-defined operators
+* Operators: div mod ^ :: @ `before` `not`
+* User-defined operators (`infix`, `infixr`)
 * /0 exception
 * Type annotations in expressions and patterns
 * `true`, `false`, `nil`, `ref`, `it`, `::` should not be reserved,
