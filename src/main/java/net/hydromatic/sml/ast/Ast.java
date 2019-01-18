@@ -38,8 +38,8 @@ public class Ast {
    *
    * <p>For example, "x" in "val x = 5",
    * or "(x, y) in "val (x, y) = makePair 1 2". */
-  public abstract static class PatNode extends AstNode {
-    PatNode(Pos pos, Op op) {
+  public abstract static class Pat extends AstNode {
+    Pat(Pos pos, Op op) {
       super(pos, op);
     }
   }
@@ -47,7 +47,7 @@ public class Ast {
   /** Named pattern.
    *
    * <p>For example, "x" in "val x = 5". */
-  public static class NamedPat extends PatNode {
+  public static class NamedPat extends Pat {
     public final String name;
 
     NamedPat(Pos pos, String name) {
@@ -67,11 +67,11 @@ public class Ast {
   /** Pattern that is a pattern annotated with a type.
    *
    * <p>For example, "x : int" in "val x : int = 5". */
-  public static class AnnotatedPat extends PatNode {
-    private final PatNode pat;
+  public static class AnnotatedPat extends Pat {
+    private final Pat pat;
     private final TypeNode type;
 
-    AnnotatedPat(Pos pos, PatNode pat, TypeNode type) {
+    AnnotatedPat(Pos pos, Pat pat, TypeNode type) {
       super(pos, Op.ANNOTATED_PAT);
       this.pat = pat;
       this.type = type;
@@ -217,9 +217,9 @@ public class Ast {
 
   /** Parse tree node of a variable declaration. */
   public static class VarDecl extends AstNode {
-    public final Map<PatNode, Exp> patExps;
+    public final Map<Pat, Exp> patExps;
 
-    VarDecl(Pos pos, ImmutableMap<PatNode, Exp> patExps) {
+    VarDecl(Pos pos, ImmutableMap<Pat, Exp> patExps) {
       super(pos, Op.VAL_DECL);
       this.patExps = Objects.requireNonNull(patExps);
       Preconditions.checkArgument(!patExps.isEmpty());
@@ -241,7 +241,7 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       String sep = "val ";
-      for (Map.Entry<PatNode, Exp> patExp : patExps.entrySet()) {
+      for (Map.Entry<Pat, Exp> patExp : patExps.entrySet()) {
         w.append(sep);
         sep = " and ";
         patExp.getKey().unparse(w, 0, 0);
@@ -281,6 +281,52 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.binary("let ", decl, " in ", e, " end");
+    }
+  }
+
+  /** Match. */
+  public static class Match extends AstNode {
+    public final Pat pat;
+    public final Exp e;
+
+    Match(Pos pos, Pat pat, Exp e) {
+      super(pos, Op.MATCH);
+      this.pat = pat;
+      this.e = e;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(pat, 0, 0).append(" => ").append(e, 0, right);
+    }
+  }
+
+  /** Lambda expression. */
+  public static class Fn extends Exp {
+    public final Match match;
+
+    Fn(Pos pos, Match match) {
+      super(pos, Op.FN);
+      this.match = match;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("fn ").append(match, 0, right);
+    }
+  }
+
+  /** Application of a function to its argument. */
+  public static class Apply extends Exp {
+    public final Exp fn;
+    public final Exp arg;
+
+    Apply(Pos pos, Exp fn, Exp arg) {
+      super(pos, Op.APPLY);
+      this.fn = fn;
+      this.arg = arg;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.infix(left, fn, op, arg, right);
     }
   }
 }

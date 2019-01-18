@@ -86,6 +86,12 @@ public class MainTest {
     checkParseDecl("val x : int = 5",
         isAst(Ast.VarDecl.class, "val x : int = 5"));
 
+    checkParseDecl("val succ = fn x => x + 1",
+        isAst(Ast.VarDecl.class, "val succ = fn x => x + 1"));
+
+    checkParseDecl("val plus = fn x => fn y => x + y",
+        isAst(Ast.VarDecl.class, "val plus = fn x => fn y => x + y"));
+
     // parentheses creating left precedence, which is the natural precedence for
     // '+', can be removed
     checkStmt("((1 + 2) + 3) + 4",
@@ -109,6 +115,8 @@ public class MainTest {
     assertType("1.0 + ~2.0", is("real"));
     assertType("\"\"", is("string"));
     assertType("true andalso false", is("bool"));
+    assertType("fn x => x + 1", is("int -> int"));
+    assertType("fn x => fn y => x + y", is("int -> int -> int"));
   }
 
   private void assertType(String ml, Matcher<String> matcher) {
@@ -156,6 +164,14 @@ public class MainTest {
         + "  end + x\n"
         + "end";
     checkEval(letNested, is(2 * 3 + 1));
+  }
+
+  @Test public void testEvalFn() {
+    checkEval("(fn x => x + 1) 2", is(3));
+  }
+
+  @Test public void testEvalFnCurried() {
+    checkEval("(fn x => fn y => x + y) 2 3", is(5));
   }
 
   private void withParser(String ml, Consumer<SmlParserImpl> action) {

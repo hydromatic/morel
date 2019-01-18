@@ -51,7 +51,10 @@ public enum Op {
   ANDALSO(" andalso ", 2),
   ORELSE(" orelse ", 1),
   BEFORE(" before ", 0),
-  LET;
+  LET,
+  MATCH,
+  FN,
+  APPLY;
 
   /** Padded name, e.g. " : ". */
   public final String padded;

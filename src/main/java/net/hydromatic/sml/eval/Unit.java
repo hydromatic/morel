@@ -16,24 +16,15 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.sml.type;
+package net.hydromatic.sml.eval;
 
-import java.util.Locale;
-
-/** Primitive type. */
-public enum PrimitiveType implements Type {
-  BOOL,
-  CHAR,
-  INT,
-  REAL,
-  STRING,
-  UNIT;
-
-  private final String description = name().toLowerCase(Locale.ROOT);
-
-  public String description() {
-    return description;
-  }
+/** A placeholder value for the "unit" type.
+ *
+ * <p>We sometimes use it as a dummy value when we need to add a variable (and
+ * its type) to the compilation environment but we don't have a value (because
+ * it's not a runtime environment). */
+public enum Unit {
+  INSTANCE
 }
 
-// End PrimitiveType.java
+// End Unit.java

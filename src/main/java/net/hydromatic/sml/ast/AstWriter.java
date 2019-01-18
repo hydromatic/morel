@@ -63,6 +63,10 @@ public class AstWriter {
   @Override public String toString() {
     return b.toString();
   }
+
+  public AstWriter append(AstNode node, int left, int right) {
+    return node.unparse(this, left, right);
+  }
 }
 
 // End AstWriter.java

@@ -62,19 +62,18 @@ Implemented:
 * `val`
 * Operators: + - * / ^ `andalso` `orelse`
 * Type derivation (for simple types)
+* `fn`, function values, and function application
 
 Not implemented:
 * `fun` declaration
 * Generic types
-* Lambdas and closures
 * `let rec`
 * `type`
 * `datatype`
 * `local`
 * `handle`
 * `exception`
-* Patterns
-* Patterns in `let`
+* Patterns in `let` and `fn`
 * References, and operators `!` and `:=`
 * Operators: div mod ^ :: @ `before` `not`
 * User-defined operators (`infix`, `infixr`)

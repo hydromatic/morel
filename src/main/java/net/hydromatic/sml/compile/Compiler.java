@@ -28,12 +28,14 @@ import net.hydromatic.sml.eval.Code;
 import net.hydromatic.sml.eval.Codes;
 import net.hydromatic.sml.eval.Environment;
 import net.hydromatic.sml.eval.Environments;
+import net.hydromatic.sml.eval.Unit;
 import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.PrimitiveType;
 import net.hydromatic.sml.type.Type;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,7 @@ import java.util.Map;
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
   final AstBuilder ast = AstBuilder.INSTANCE;
+  final TypeSystem typeSystem = new TypeSystem();
 
   public CompiledStatement compileStatement(Environment env,
       AstNode statement) {
@@ -52,8 +55,8 @@ public class Compiler {
       decl = (Ast.VarDecl) statement;
     }
     final Map<String, TypeAndCode> varCodes = new LinkedHashMap<>();
-    for (Map.Entry<Ast.PatNode, Ast.Exp> e : decl.patExps.entrySet()) {
-      final Ast.PatNode pat = e.getKey();
+    for (Map.Entry<Ast.Pat, Ast.Exp> e : decl.patExps.entrySet()) {
+      final Ast.Pat pat = e.getKey();
       final String name = ((Ast.NamedPat) pat).name;
       final Ast.Exp exp = e.getValue();
       final Type type = deduceType(env, exp);
@@ -84,6 +87,7 @@ public class Compiler {
   }
 
   private Type deduceType(Environment env, AstNode node) {
+    final Ast.Exp exp;
     switch (node.op) {
     case INT_LITERAL:
       return PrimitiveType.INT;
@@ -97,8 +101,7 @@ public class Compiler {
       return PrimitiveType.BOOL;
     case VAL_DECL:
       final Ast.VarDecl varDecl = (Ast.VarDecl) node;
-      final Ast.Exp exp =
-          varDecl.patExps.entrySet().iterator().next().getValue();
+      exp = varDecl.patExps.entrySet().iterator().next().getValue();
       return deduceType(env, exp);
     case ID:
       final Ast.Id id = (Ast.Id) node;
@@ -107,6 +110,18 @@ public class Compiler {
         throw new AssertionError("not found: " + id.name);
       }
       return binding.type;
+    case FN:
+      final Ast.Fn fn = (Ast.Fn) node;
+      return deduceType(env, fn.match);
+    case MATCH:
+      final Ast.Match match = (Ast.Match) node;
+      final String parameter = ((Ast.NamedPat) match.pat).name;
+      final Type parameterType = PrimitiveType.INT; // TODO:
+      exp = match.e;
+      final Environment env2 =
+          Environments.add(env, parameter, parameterType, Unit.INSTANCE);
+      final Type expType = deduceType(env2, exp);
+      return typeSystem.fnType(parameterType, expType);
     case PLUS:
     case MINUS:
     case TIMES:
@@ -143,8 +158,8 @@ public class Compiler {
     case LET:
       final Ast.LetExp let = (Ast.LetExp) expression;
       final List<Codes.NameTypeCode> varCodes = new ArrayList<>();
-      for (Map.Entry<Ast.PatNode, Ast.Exp> e : let.decl.patExps.entrySet()) {
-        final Ast.PatNode pat = e.getKey();
+      for (Map.Entry<Ast.Pat, Ast.Exp> e : let.decl.patExps.entrySet()) {
+        final Ast.Pat pat = e.getKey();
         final String name;
         switch (pat.op) {
         case NAMED_PAT:
@@ -160,6 +175,19 @@ public class Compiler {
       }
       final Code resultCode = compile(env, let.e);
       return Codes.let(varCodes, resultCode);
+    case FN:
+      final Ast.Fn fn = (Ast.Fn) expression;
+      final String paramName = ((Ast.NamedPat) fn.match.pat).name;
+      final FnType fnType = (FnType) deduceType(env, fn);
+      final Environment env2 = Environments.add(env, paramName,
+          fnType.paramType, Unit.INSTANCE);
+      code0 = compile(env2, fn.match.e);
+      return Codes.fn(paramName, fnType.paramType, code0);
+    case APPLY:
+      final Ast.Apply apply = (Ast.Apply) expression;
+      final Code fnCode = compile(env, apply.fn);
+      final Code argCode = compile(env, apply.arg);
+      return Codes.apply(fnCode, argCode);
     case ANDALSO:
       call = (Ast.InfixCall) expression;
       code0 = compile(env, call.a0);
@@ -218,6 +246,59 @@ public class Compiler {
     private TypeAndCode(Type type, Code code) {
       this.type = type;
       this.code = code;
+    }
+  }
+
+  /** A table that contains all types in use, indexed by their description (e.g.
+   * "{@code int -> int}"). */
+  private static class TypeSystem {
+    final Map<String, Type> map = new HashMap<>();
+
+    TypeSystem() {
+      map.put("int", PrimitiveType.INT);
+      map.put("bool", PrimitiveType.BOOL);
+      map.put("string", PrimitiveType.STRING);
+      map.put("real", PrimitiveType.REAL);
+      map.put("unit", PrimitiveType.UNIT);
+    }
+
+    /** Creates a primitive type. */
+    Type primitiveType(String name) {
+      switch (name) {
+      case "bool": return PrimitiveType.BOOL;
+      case "CHAR": return PrimitiveType.CHAR;
+      case "int": return PrimitiveType.INT;
+      case "real": return PrimitiveType.REAL;
+      case "string": return PrimitiveType.STRING;
+      case "unit": return PrimitiveType.INT;
+      default:
+        throw new AssertionError("not a primitive type: " + name);
+      }
+    }
+
+    /** Creates a function type. */
+    Type fnType(Type paramType, Type resultType) {
+      final String description =
+          paramType.description() + " -> " + resultType.description();
+      return map.computeIfAbsent(description,
+          d -> new FnType(d, paramType, resultType));
+    }
+  }
+
+  /** The type of a function value. */
+  private static class FnType implements Type {
+    public final String description;
+    public final Type paramType;
+    public final Type resultType;
+
+    private FnType(String description, Type paramType, Type resultType) {
+      this.description = description;
+      this.paramType = paramType;
+      this.resultType = resultType;
+    }
+
+    public String description() {
+      return description;
     }
   }
 }

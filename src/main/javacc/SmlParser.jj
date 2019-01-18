@@ -170,6 +170,30 @@ Exp let() :
   }
 }
 
+/** Parses a "fn arg => expression" lambda expression. */
+Exp fn() :
+{
+  final Span span;
+  final Match match;
+}
+{
+  <FN> { span = Span.of(getPos()); } match = match() {
+    return ast.fn(span.end(this), match);
+  }
+}
+
+/** Parses a "pat => expression" match. */
+Match match() :
+{
+  final Pat pat;
+  final Exp e;
+}
+{
+  pat = pat() <RARROW> e = expression() {
+    return ast.match(pat.pos.plus(e.pos), pat, e);
+  }
+}
+
 /** Parses an expression.
  *
  * <p>7 is the highest level of precedence. */
@@ -250,10 +274,17 @@ Exp expression1() :
 
 Exp expression() :
 {
-  final Exp e;
+  Exp e;
+  Exp e2;
 }
 {
-  e = expression1() { return e; }
+  e = expression1()
+  (
+    e2 = expression1() {
+      e = ast.apply(e, e2);
+    }
+  )*
+  { return e; }
 }
 
 /** Parses an atomic expression. */
@@ -267,6 +298,8 @@ Exp atom() :
   e = literal() { return e; }
 |
   e = let() { return e; }
+|
+  e = fn() { return e; }
 |
   <LPAREN> e = expression() <RPAREN> { return e; }
 }
@@ -286,8 +319,8 @@ void addVarDecl(List decls) :
 VarDecl varDecl() :
 {
   final Span span;
-  final Map<PatNode, Exp> patExps = new LinkedHashMap<PatNode, Exp>();
-  PatNode v;
+  final Map<Pat, Exp> patExps = new LinkedHashMap<Pat, Exp>();
+  Pat v;
   Exp e;
 }
 {
@@ -313,9 +346,9 @@ AstNode decl() :
 }
 
 /** Parses a pattern. */
-PatNode pat() :
+Pat pat() :
 {
-  PatNode pat;
+  Pat pat;
   Ast.TypeNode type;
 }
 {
@@ -329,7 +362,7 @@ PatNode pat() :
 }
 
 /** Parses a pattern (not annotated by a type). */
-PatNode pat0() :
+Pat pat0() :
 {
   final String name;
 }
@@ -380,6 +413,7 @@ AstNode statementSemicolon() :
   < AND: "AND" >
 | < ANDALSO: "ANDALSO" >
 | < END: "END" >
+| < FN: "FN" >
 | < IN: "IN" >
 | < LET: "LET" >
 | < ORELSE: "ORELSE" >
@@ -420,6 +454,7 @@ AstNode statementSemicolon() :
     | < SEMICOLON: ";" >
     | < DOT: "." >
     | < COMMA: "," >
+    | < RARROW: "=>" >
 }
 
 /* OPERATORS */

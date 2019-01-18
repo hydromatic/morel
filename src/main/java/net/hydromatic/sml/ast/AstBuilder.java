@@ -51,11 +51,11 @@ public enum AstBuilder {
     return new Ast.NamedType(pos, name);
   }
 
-  public Ast.PatNode namedPat(Pos pos, String name) {
+  public Ast.Pat namedPat(Pos pos, String name) {
     return new Ast.NamedPat(pos, name);
   }
 
-  public Ast.PatNode annotatedPat(Pos pos, Ast.PatNode pat, Ast.TypeNode type) {
+  public Ast.Pat annotatedPat(Pos pos, Ast.Pat pat, Ast.TypeNode type) {
     return new Ast.AnnotatedPat(pos, pat, type);
   }
 
@@ -91,8 +91,20 @@ public enum AstBuilder {
     return new Ast.LetExp(pos, decl, exp);
   }
 
-  public Ast.VarDecl varDecl(Pos pos, Map<Ast.PatNode, Ast.Exp> patExps) {
+  public Ast.VarDecl varDecl(Pos pos, Map<Ast.Pat, Ast.Exp> patExps) {
     return new Ast.VarDecl(pos, ImmutableMap.copyOf(patExps));
+  }
+
+  public Ast.Match match(Pos pos, Ast.Pat pat, Ast.Exp e) {
+    return new Ast.Match(pos, pat, e);
+  }
+
+  public Ast.Fn fn(Pos pos, Ast.Match match) {
+    return new Ast.Fn(pos, match);
+  }
+
+  public Ast.Apply apply(Ast.Exp fn, Ast.Exp arg) {
+    return new Ast.Apply(fn.pos.plus(arg.pos), fn, arg);
   }
 }
 
