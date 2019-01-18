@@ -199,3 +199,15 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+
+-------
+Unifier is based upon code in https://github.com/google/CallBuilder.
+
+Copyright (C) 2015 Google, Inc.
+
+-------
+UnifierTest is based upon the comments in
+https://github.com/HeshamAlassaf/UnificationAlgorithmJava
+
+Copyright (C) 2017 Hesham Alassaf

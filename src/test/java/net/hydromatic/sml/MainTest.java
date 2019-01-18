@@ -30,6 +30,7 @@ import net.hydromatic.sml.parse.SmlParserImpl;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -47,6 +48,110 @@ import static org.junit.Assert.assertThat;
  * Kick the tires.
  */
 public class MainTest {
+  private void withParser(String ml, Consumer<SmlParserImpl> action) {
+    final SmlParserImpl parser = new SmlParserImpl(new StringReader(ml));
+    action.accept(parser);
+  }
+
+  private void checkParseLiteral(String ml, Matcher<Ast.Literal> matcher) {
+    withParser(ml, parser -> {
+      try {
+        final Ast.Literal literal = parser.literal();
+        assertThat(literal, matcher);
+      } catch (ParseException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  private void checkParseDecl(String ml, Matcher<Ast.VarDecl> matcher) {
+    withParser(ml, parser -> {
+      try {
+        final Ast.VarDecl varDecl = parser.varDecl();
+        assertThat(varDecl, matcher);
+      } catch (ParseException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  private void checkStmt(String ml, Matcher<AstNode> matcher) {
+    try {
+      final AstNode statement =
+          new SmlParserImpl(new StringReader(ml)).statement();
+      assertThat(statement, matcher);
+    } catch (ParseException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /** Checks that an expression can be parsed and returns the identical
+   * expression when unparsed. */
+  private void assertParseSame(String ml) {
+    checkStmt(ml, isAst(AstNode.class, ml));
+  }
+
+  /** Matches a literal by value. */
+  private static Matcher<Ast.Literal> isLiteral(Comparable comparable) {
+    return new TypeSafeMatcher<Ast.Literal>() {
+      protected boolean matchesSafely(Ast.Literal literal) {
+        return literal.value.equals(comparable);
+      }
+
+      public void describeTo(Description description) {
+        description.appendText("literal with value " + comparable);
+      }
+    };
+  }
+
+  /** Matches an AST node by its string representation. */
+  private static <T extends AstNode> Matcher<T> isAst(Class<? extends T> clazz,
+      String expected) {
+    return new TypeSafeMatcher<T>() {
+      protected boolean matchesSafely(T t) {
+        assertThat(clazz.isInstance(t), is(true));
+        return Ast.toString(t).equals(expected);
+      }
+
+      public void describeTo(Description description) {
+        description.appendText("ast with value " + expected);
+      }
+    };
+  }
+
+  private void withPrepare(String ml,
+      Consumer<Compiler.CompiledStatement> action) {
+    withParser(ml, parser -> {
+      try {
+        final AstNode statement = parser.statement();
+        final Environment env = Environments.empty();
+        final Compiler.CompiledStatement compiled =
+            new Compiler().compileStatement(env, statement);
+        action.accept(compiled);
+      } catch (ParseException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
+  private void assertType(String ml, Matcher<String> matcher) {
+    withPrepare(ml, compiledStatement ->
+        assertThat(compiledStatement.getType().description(), matcher));
+  }
+
+  private void checkEval(String ml, Matcher<Object> matcher) {
+    try {
+      final Ast.Exp expression =
+          new SmlParserImpl(new StringReader(ml)).expression();
+      final Environment env = Environments.empty();
+      final Code code = new Compiler().compile(env, expression);
+      final Object value = code.eval(env);
+      assertThat(value, matcher);
+    } catch (ParseException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   @Test public void testEmptyRepl() {
     final String[] args = new String[0];
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -112,10 +217,6 @@ public class MainTest {
     assertParseSame("if true then 1 else if false then 2 else 3");
   }
 
-  private void assertParseSame(String ml) {
-    checkStmt(ml, isAst(AstNode.class, ml));
-  }
-
   @Test public void testType() {
     assertType("1", is("int"));
     assertType("0e0", is("real"));
@@ -128,10 +229,13 @@ public class MainTest {
     assertType("if true then 1.0 else 2.0", is("real"));
   }
 
-  private void assertType(String ml, Matcher<String> matcher) {
-    withPrepare(ml, compiledStatement -> {
-      assertThat(compiledStatement.getType().description(), matcher);
-    });
+  @Ignore // enable this test when we have polymorphic type resolution
+  @Test public void testType2() {
+    // cannot be typed, since the parameter f is in a monomorphic position
+    assertType("fn f => (f true, f 0)", is("invalid"));
+    // f has been introduced in a let-expression and is therefore treated as
+    // polymorphic.
+    assertType("let val f = fn x => x in (f true, f 0) end", is("bool * int"));
   }
 
   @Test public void testEval() {
@@ -194,98 +298,6 @@ public class MainTest {
 
   @Test public void testEvalFnCurried() {
     checkEval("(fn x => fn y => x + y) 2 3", is(5));
-  }
-
-  private void withParser(String ml, Consumer<SmlParserImpl> action) {
-    final SmlParserImpl parser = new SmlParserImpl(new StringReader(ml));
-    action.accept(parser);
-  }
-
-  private void checkParseLiteral(String ml, Matcher<Ast.Literal> matcher) {
-    withParser(ml, parser -> {
-      try {
-        final Ast.Literal literal = parser.literal();
-        assertThat(literal, matcher);
-      } catch (ParseException e) {
-        throw new RuntimeException(e);
-      }
-    });
-  }
-
-  private void checkParseDecl(String ml, Matcher<Ast.VarDecl> matcher) {
-    withParser(ml, parser -> {
-      try {
-        final Ast.VarDecl varDecl = parser.varDecl();
-        assertThat(varDecl, matcher);
-      } catch (ParseException e) {
-        throw new RuntimeException(e);
-      }
-    });
-  }
-
-  private void checkStmt(String ml, Matcher<AstNode> matcher) {
-    try {
-      final AstNode statement =
-          new SmlParserImpl(new StringReader(ml)).statement();
-      assertThat(statement, matcher);
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /** Matches a literal by value. */
-  private static Matcher<Ast.Literal> isLiteral(Comparable comparable) {
-    return new TypeSafeMatcher<Ast.Literal>() {
-      protected boolean matchesSafely(Ast.Literal literal) {
-        return literal.value.equals(comparable);
-      }
-
-      public void describeTo(Description description) {
-        description.appendText("literal with value " + comparable);
-      }
-    };
-  }
-
-  /** Matches an AST node by its string representation. */
-  private static <T extends AstNode> Matcher<T> isAst(Class<? extends T> clazz,
-      String expected) {
-    return new TypeSafeMatcher<T>() {
-      protected boolean matchesSafely(T t) {
-        return Ast.toString(t).equals(expected);
-      }
-
-      public void describeTo(Description description) {
-        description.appendText("ast with value " + expected);
-      }
-    };
-  }
-
-  private void checkEval(String ml, Matcher<Object> matcher) {
-    try {
-      final Ast.Exp expression =
-          new SmlParserImpl(new StringReader(ml)).expression();
-      final Environment env = Environments.empty();
-      final Code code = new Compiler().compile(env, expression);
-      final Object value = code.eval(env);
-      assertThat(value, matcher);
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private void withPrepare(String ml,
-      Consumer<Compiler.CompiledStatement> action) {
-    withParser(ml, parser -> {
-      try {
-        final AstNode statement = parser.statement();
-        final Environment env = Environments.empty();
-        final Compiler.CompiledStatement compiled =
-            new Compiler().compileStatement(env, statement);
-        action.accept(compiled);
-      } catch (ParseException e) {
-        throw new RuntimeException(e);
-      }
-    });
   }
 }
 
