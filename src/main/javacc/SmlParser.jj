@@ -104,24 +104,32 @@ Literal numericLiteral() :
     return ast.intLiteral(d, pos());
   }
 |
-  <FLOAT_LITERAL> {
+  <REAL_LITERAL> {
     final BigDecimal d;
     if (token.image.startsWith("~")) {
       d = new BigDecimal(token.image.substring(1)).negate();
     } else {
       d = new BigDecimal(token.image);
     }
-    return ast.floatLiteral(d, pos());
+    return ast.realLiteral(d, pos());
   }
 |
   <SCIENTIFIC_LITERAL> {
     final BigDecimal d;
+    final int e = Math.max(token.image.indexOf("e"),
+      token.image.indexOf("E"));
     if (token.image.startsWith("~")) {
-      d = new BigDecimal(token.image.substring(1)).negate();
+      d = new BigDecimal(token.image.substring(1, e)).negate();
     } else {
-      d = new BigDecimal(token.image);
+      d = new BigDecimal(token.image.substring(0, e));
     }
-    return ast.floatLiteral(d, pos());
+    final int exponent;
+    if (token.image.startsWith("~", e + 1)) {
+      exponent = -Integer.valueOf(token.image.substring(e + 2));
+    } else {
+      exponent = Integer.valueOf(token.image.substring(e + 1));
+    }
+    return ast.realLiteral(d.scaleByPowerOfTen(exponent), pos());
   }
 }
 
@@ -343,9 +351,11 @@ AstNode statementSemicolon() :
 {
     < INTEGER_LITERAL: ("~")?(["0"-"9"])+ >
     |
-    < FLOAT_LITERAL: ("~")?(["0"-"9"])+ "." (["0"-"9"])+>
+    < REAL_LITERAL: ("~")?(["0"-"9"])+ "." (["0"-"9"])+>
     |
-    < SCIENTIFIC_LITERAL: ("~")?(["0"-"9"])+ ("." (["0"-"9"])+) "e" (["0"-"9"])+>
+    < SCIENTIFIC_LITERAL: ("~")?(["0"-"9"])+
+                          ("." (["0"-"9"])+)?
+                          "e" ("~")?(["0"-"9"])+>
     |
     < #HEXDIGIT: ["0"-"9","a"-"f","A"-"F"] >
     |

@@ -65,7 +65,7 @@ public class Main {
       try {
         final AstNode statement = parser.statementSemicolon();
         final Compiler.CompiledStatement compiled =
-            compiler.compileStatement(statement);
+            compiler.compileStatement(env, statement);
         env = compiled.eval(env, lines);
         for (String line : lines) {
           out.println(line);

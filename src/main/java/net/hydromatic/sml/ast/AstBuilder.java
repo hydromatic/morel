@@ -33,8 +33,8 @@ public enum AstBuilder {
   }
 
   /** Creates a {@code float} literal. */
-  public Ast.Literal floatLiteral(BigDecimal value, Pos pos) {
-    return new Ast.Literal(pos, Op.FLOAT_LITERAL, value);
+  public Ast.Literal realLiteral(BigDecimal value, Pos pos) {
+    return new Ast.Literal(pos, Op.REAL_LITERAL, value);
   }
 
   /** Creates a string literal. */

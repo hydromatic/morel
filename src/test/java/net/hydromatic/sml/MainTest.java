@@ -102,6 +102,20 @@ public class MainTest {
         isAst(AstNode.class, "let val x = 2 and y = 3 in x + y end"));
   }
 
+  @Test public void testType() {
+    assertType("1", is("int"));
+    assertType("0e0", is("real"));
+    assertType("1 + 2", is("int"));
+    assertType("1.0 + ~2.0", is("real"));
+    assertType("\"\"", is("string"));
+  }
+
+  private void assertType(String ml, Matcher<String> matcher) {
+    withPrepare(ml, compiledStatement -> {
+      Assert.assertThat(compiledStatement.getType().description(), matcher);
+    });
+  }
+
   @Test public void testEval() {
     // literals
     checkEval("1", is(1));
@@ -109,6 +123,10 @@ public class MainTest {
     checkEval("\"a string\"", is("a string"));
     checkEval("true", is(true));
     checkEval("~10.25", is(-10.25f));
+    checkEval("~10.25e3", is(-10_250f));
+    checkEval("~1.25e~3", is(-0.001_25f));
+    checkEval("~1.25E~3", is(-0.001_25f));
+    checkEval("0e0", is(0f));
 
     // operators
     checkEval("2 + 3", is(5));
@@ -197,13 +215,28 @@ public class MainTest {
     try {
       final Ast.Exp expression =
           new SmlParserImpl(new StringReader(ml)).expression();
-      final Code code = new Compiler().compile(expression);
       final Environment env = Environments.empty();
+      final Code code = new Compiler().compile(env, expression);
       final Object value = code.eval(env);
       Assert.assertThat(value, matcher);
     } catch (ParseException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private void withPrepare(String ml,
+      Consumer<Compiler.CompiledStatement> action) {
+    withParser(ml, parser -> {
+      try {
+        final AstNode statement = parser.statement();
+        final Environment env = Environments.empty();
+        final Compiler.CompiledStatement compiled =
+            new Compiler().compileStatement(env, statement);
+        action.accept(compiled);
+      } catch (ParseException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 }
 

@@ -16,25 +16,24 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.sml.eval;
+package net.hydromatic.sml.type;
 
-import net.hydromatic.sml.type.Binding;
+/** Primitive type. */
+public enum PrimitiveType implements Type {
+  INT("int"),
+  REAL("real"),
+  BOOL("bool"),
+  STRING("string");
 
-import java.util.HashMap;
-import java.util.Map;
+  private final String description;
 
-/** Evaluation environment. */
-public class Environment {
-  final Map<String, Binding> valueMap = new HashMap<>();
-
-  public Binding get(String name) {
-    final Binding value = valueMap.get(name);
-    if (value == null) {
-      throw new AssertionError("expected value for " + name);
-    }
-    return value;
+  PrimitiveType(String description) {
+    this.description = description;
   }
 
+  public String description() {
+    return description;
+  }
 }
 
-// End Environment.java
+// End PrimitiveType.java

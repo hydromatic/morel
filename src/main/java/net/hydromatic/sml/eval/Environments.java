@@ -18,6 +18,10 @@
  */
 package net.hydromatic.sml.eval;
 
+import net.hydromatic.sml.type.Binding;
+import net.hydromatic.sml.type.PrimitiveType;
+import net.hydromatic.sml.type.Type;
+
 /** Helpers for {@link Environment}. */
 public abstract class Environments {
   private Environments() {}
@@ -25,19 +29,22 @@ public abstract class Environments {
   /** Creates an empty environment. */
   public static Environment empty() {
     final Environment env = new Environment();
-    env.valueMap.put("true", true);
-    env.valueMap.put("false", false);
+    env.valueMap.put("true",
+        new Binding("true", PrimitiveType.BOOL, true));
+    env.valueMap.put("false",
+        new Binding("false", PrimitiveType.BOOL, false));
     // TODO: also add "nil", "ref", "!"
     return env;
   }
 
   /** Creates an environment that is the same as a given environment, plus one
    * more variable. */
-  public static Environment add(Environment env, String var, Object value) {
+  public static Environment add(Environment env, String var, Type type,
+      Object value) {
     // Copying the entire table is not very efficient.
     final Environment env2 = new Environment();
     env2.valueMap.putAll(env.valueMap);
-    env2.valueMap.put(var, value);
+    env2.valueMap.put(var, new Binding(var, type, value));
     return env2;
   }
 }

@@ -18,7 +18,10 @@
  */
 package net.hydromatic.sml.eval;
 
-import java.util.Map;
+import net.hydromatic.sml.type.Binding;
+import net.hydromatic.sml.type.Type;
+
+import java.util.List;
 
 /** Helpers for {@link Code}. */
 public abstract class Codes {
@@ -57,17 +60,33 @@ public abstract class Codes {
   /** Returns a Code that returns the value of variable "name" in the current
    * environment. */
   public static Code get(String name) {
-    return env -> env.get(name);
+    return env -> {
+      final Binding binding = env.get(name);
+      return binding.value;
+    };
   }
 
-  public static Code let(Map<String, Code> varCodes, Code e) {
+  public static Code let(List<NameTypeCode> varCodes, Code e) {
     return env -> {
-      for (Map.Entry<String, Code> varCode : varCodes.entrySet()) {
-        final Object value = varCode.getValue().eval(env);
-        env = Environments.add(env, varCode.getKey(), value);
+      for (NameTypeCode varCode : varCodes) {
+        final Object value = varCode.code.eval(env);
+        env = Environments.add(env, varCode.name, varCode.type, value);
       }
       return e.eval(env);
     };
+  }
+
+  /** A (name, type, code) triple. */
+  public static class NameTypeCode {
+    public final String name;
+    public final Type type;
+    public final Code code;
+
+    public NameTypeCode(String name, Type type, Code code) {
+      this.name = name;
+      this.type = type;
+      this.code = code;
+    }
   }
 }
 

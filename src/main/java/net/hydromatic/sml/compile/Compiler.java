@@ -28,8 +28,12 @@ import net.hydromatic.sml.eval.Code;
 import net.hydromatic.sml.eval.Codes;
 import net.hydromatic.sml.eval.Environment;
 import net.hydromatic.sml.eval.Environments;
+import net.hydromatic.sml.type.Binding;
+import net.hydromatic.sml.type.PrimitiveType;
+import net.hydromatic.sml.type.Type;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +42,8 @@ import java.util.Map;
 public class Compiler {
   final AstBuilder ast = AstBuilder.INSTANCE;
 
-  public CompiledStatement compileStatement(AstNode statement) {
+  public CompiledStatement compileStatement(Environment env,
+      AstNode statement) {
     final Ast.VarDecl decl;
     if (statement instanceof Ast.Exp) {
       decl = ast.varDecl(Pos.ZERO,
@@ -46,29 +51,71 @@ public class Compiler {
     } else {
       decl = (Ast.VarDecl) statement;
     }
-    final Map<String, Code> varCodes = new LinkedHashMap<>();
+    final Map<String, TypeAndCode> varCodes = new LinkedHashMap<>();
     for (Map.Entry<Ast.PatNode, Ast.Exp> e : decl.patExps.entrySet()) {
       final Ast.PatNode pat = e.getKey();
       final String name = ((Ast.NamedPat) pat).name;
       final Ast.Exp exp = e.getValue();
-      final Code code = compile(exp);
-      varCodes.put(name, code);
+      final Type type = deduceType(env, exp);
+      final Code code = compile(env, exp);
+      varCodes.put(name, new TypeAndCode(type, code));
     }
-    return (env, output) -> {
-      Environment resultEnvironment = env;
-      for (Map.Entry<String, Code> entry : varCodes.entrySet()) {
-        final String name = entry.getKey();
-        final Code code = entry.getValue();
-        final Object value = code.eval(env);
-        resultEnvironment =
-            Environments.add(resultEnvironment, name, value);
-        output.add("val " + name + " = " + value + " : int");
+    final Type type = deduceType(env, decl);
+
+    return new CompiledStatement() {
+      public Type getType() {
+        return type;
       }
-      return resultEnvironment;
+
+      public Environment eval(Environment env, List<String> output) {
+        Environment resultEnvironment = env;
+        for (Map.Entry<String, TypeAndCode> entry : varCodes.entrySet()) {
+          final String name = entry.getKey();
+          final Code code = entry.getValue().code;
+          final Type type = entry.getValue().type;
+          final Object value = code.eval(env);
+          resultEnvironment =
+              Environments.add(resultEnvironment, name, type, value);
+          output.add("val " + name + " = " + value + " : int");
+        }
+        return resultEnvironment;
+      }
     };
   }
 
-  public Code compile(Ast.Exp expression) {
+  private Type deduceType(Environment env, AstNode node) {
+    switch (node.op) {
+    case INT_LITERAL:
+      return PrimitiveType.INT;
+    case REAL_LITERAL:
+      return PrimitiveType.REAL;
+    case STRING_LITERAL:
+      return PrimitiveType.STRING;
+    case BOOL_LITERAL:
+      return PrimitiveType.BOOL;
+    case VAL_DECL:
+      final Ast.VarDecl varDecl = (Ast.VarDecl) node;
+      final Ast.Exp exp =
+          varDecl.patExps.entrySet().iterator().next().getValue();
+      return deduceType(env, exp);
+    case ID:
+      final Ast.Id id = (Ast.Id) node;
+      final Binding binding = env.get(id.name);
+      if (binding == null) {
+        throw new AssertionError("not found: " + id.name);
+      }
+      return binding.type;
+    case PLUS:
+    case MINUS:
+    case TIMES:
+    case DIVIDE:
+      return deduceType(env, ((Ast.InfixCall) node).a0);
+    default:
+      throw new AssertionError("cannot deduce type for " + node.op);
+    }
+  }
+
+  public Code compile(Environment env, Ast.Exp expression) {
     final Ast.Literal literal;
     final Ast.InfixCall call;
     final Code code0;
@@ -77,7 +124,7 @@ public class Compiler {
     case INT_LITERAL:
       literal = (Ast.Literal) expression;
       return Codes.constant(((BigDecimal) literal.value).intValue());
-    case FLOAT_LITERAL:
+    case REAL_LITERAL:
       literal = (Ast.Literal) expression;
       return Codes.constant(((BigDecimal) literal.value).floatValue());
     case BOOL_LITERAL:
@@ -93,7 +140,7 @@ public class Compiler {
       return Codes.get(id.name);
     case LET:
       final Ast.LetExp let = (Ast.LetExp) expression;
-      final Map<String, Code> varCodes = new LinkedHashMap<>();
+      final List<Codes.NameTypeCode> varCodes = new ArrayList<>();
       for (Map.Entry<Ast.PatNode, Ast.Exp> e : let.decl.patExps.entrySet()) {
         final Ast.PatNode pat = e.getKey();
         final String name;
@@ -104,35 +151,37 @@ public class Compiler {
         default:
           throw new AssertionError("TODO:");
         }
-        final Code initCode = compile(e.getValue());
-        varCodes.put(name, initCode);
+        final Ast.Exp exp = e.getValue();
+        final Type type = deduceType(env, exp);
+        final Code initCode = compile(env, exp);
+        varCodes.add(new Codes.NameTypeCode(name, type, initCode));
       }
-      final Code resultCode = compile(let.e);
+      final Code resultCode = compile(env, let.e);
       return Codes.let(varCodes, resultCode);
     case PLUS:
       call = (Ast.InfixCall) expression;
-      code0 = compile(call.a0);
-      code1 = compile(call.a1);
+      code0 = compile(env, call.a0);
+      code1 = compile(env, call.a1);
       return Codes.plus(code0, code1);
     case MINUS:
       call = (Ast.InfixCall) expression;
-      code0 = compile(call.a0);
-      code1 = compile(call.a1);
+      code0 = compile(env, call.a0);
+      code1 = compile(env, call.a1);
       return Codes.minus(code0, code1);
     case TIMES:
       call = (Ast.InfixCall) expression;
-      code0 = compile(call.a0);
-      code1 = compile(call.a1);
+      code0 = compile(env, call.a0);
+      code1 = compile(env, call.a1);
       return Codes.times(code0, code1);
     case DIVIDE:
       call = (Ast.InfixCall) expression;
-      code0 = compile(call.a0);
-      code1 = compile(call.a1);
+      code0 = compile(env, call.a0);
+      code1 = compile(env, call.a1);
       return Codes.divide(code0, code1);
     case CARET:
       call = (Ast.InfixCall) expression;
-      code0 = compile(call.a0);
-      code1 = compile(call.a1);
+      code0 = compile(env, call.a0);
+      code1 = compile(env, call.a1);
       return Codes.power(code0, code1);
     default:
       throw new AssertionError("op not handled: " + expression.op);
@@ -145,6 +194,19 @@ public class Compiler {
    * generates a line or two of output for the REPL. */
   public interface CompiledStatement {
     Environment eval(Environment environment, List<String> output);
+
+    Type getType();
+  }
+
+  /** A (type, code) pair. */
+  public static class TypeAndCode {
+    public final Type type;
+    public final Code code;
+
+    private TypeAndCode(Type type, Code code) {
+      this.type = type;
+      this.code = code;
+    }
   }
 }
 

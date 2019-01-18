@@ -16,25 +16,21 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.sml.eval;
+package net.hydromatic.sml.type;
 
-import net.hydromatic.sml.type.Binding;
+import java.util.Objects;
 
-import java.util.HashMap;
-import java.util.Map;
+/** Binding of a name to a type and a value. */
+public class Binding {
+  public final String name;
+  public final Type type;
+  public final Object value;
 
-/** Evaluation environment. */
-public class Environment {
-  final Map<String, Binding> valueMap = new HashMap<>();
-
-  public Binding get(String name) {
-    final Binding value = valueMap.get(name);
-    if (value == null) {
-      throw new AssertionError("expected value for " + name);
-    }
-    return value;
+  public Binding(String name, Type type, Object value) {
+    this.name = name;
+    this.type = Objects.requireNonNull(type);
+    this.value = Objects.requireNonNull(value);
   }
-
 }
 
-// End Environment.java
+// End Binding.java

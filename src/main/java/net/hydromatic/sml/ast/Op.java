@@ -28,7 +28,7 @@ public enum Op {
   NAMED_TYPE, ID,
   INT_LITERAL,
   BOOL_LITERAL,
-  FLOAT_LITERAL,
+  REAL_LITERAL,
   STRING_LITERAL,
   VAL_DECL(" = "),
   TIMES(" * ", 7),
