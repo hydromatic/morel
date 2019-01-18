@@ -107,6 +107,14 @@ public abstract class Codes {
     };
   }
 
+  public static Code ifThenElse(Code condition, Code ifTrue,
+      Code ifFalse) {
+    return env -> {
+      final boolean b = (Boolean) condition.eval(env);
+      return (b ? ifTrue : ifFalse).eval(env);
+    };
+  }
+
   /** A (name, type, code) triple. */
   public static class NameTypeCode {
     public final String name;

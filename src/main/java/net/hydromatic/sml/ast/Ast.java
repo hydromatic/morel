@@ -268,6 +268,26 @@ public class Ast {
     }
   }
 
+  /** If ... else expression. */
+  public static class If extends Exp {
+    public final Exp condition;
+    public final Exp ifTrue;
+    public final Exp ifFalse;
+
+    public If(Pos pos, Exp condition, Exp ifTrue, Exp ifFalse) {
+      super(pos, Op.IF);
+      this.condition = Objects.requireNonNull(condition);
+      this.ifTrue = Objects.requireNonNull(ifTrue);
+      this.ifFalse = Objects.requireNonNull(ifFalse);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("if ").append(condition, 0, 0)
+          .append(" then ").append(ifTrue, 0, 0)
+          .append(" else ").append(ifFalse, 0, right);
+    }
+  }
+
   /** "Let" expression. */
   public static class LetExp extends Exp {
     public final VarDecl decl;

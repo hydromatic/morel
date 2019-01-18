@@ -156,6 +156,22 @@ Id identifier() :
   }
 }
 
+/** Parses a "if ... then ... else ..." expression. */
+Exp ifThenElse() :
+{
+  final Span span;
+  final Exp condition;
+  final Exp ifTrue;
+  final Exp ifFalse;
+}
+{
+  <IF> { span = Span.of(getPos()); } condition = expression()
+  <THEN> ifTrue = expression()
+  <ELSE> ifFalse = expression() {
+    return ast.ifThenElse(span.end(this), condition, ifTrue, ifFalse);
+  }
+}
+
 /** Parses a "let ... in expression end" expression. */
 Exp let() :
 {
@@ -301,6 +317,8 @@ Exp atom() :
 |
   e = fn() { return e; }
 |
+  e = ifThenElse() { return e; }
+|
   <LPAREN> e = expression() <RPAREN> { return e; }
 }
 
@@ -412,11 +430,14 @@ AstNode statementSemicolon() :
 {
   < AND: "AND" >
 | < ANDALSO: "ANDALSO" >
+| < ELSE: "ELSE" >
 | < END: "END" >
 | < FN: "FN" >
+| < IF: "IF" >
 | < IN: "IN" >
 | < LET: "LET" >
 | < ORELSE: "ORELSE" >
+| < THEN: "THEN" >
 | < VAL: "VAL" >
 }
 

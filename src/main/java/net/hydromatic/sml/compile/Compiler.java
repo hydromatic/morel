@@ -110,6 +110,11 @@ public class Compiler {
         throw new AssertionError("not found: " + id.name);
       }
       return binding.type;
+    case IF:
+      // TODO: check that condition has type boolean
+      // TODO: check that ifTrue has same type as ifFalse
+      final Ast.If if_ = (Ast.If) node;
+      return deduceType(env, if_.ifTrue);
     case FN:
       final Ast.Fn fn = (Ast.Fn) node;
       return deduceType(env, fn.match);
@@ -155,6 +160,12 @@ public class Compiler {
     case ID:
       final Ast.Id id = (Ast.Id) expression;
       return Codes.get(id.name);
+    case IF:
+      final Ast.If if_ = (Ast.If) expression;
+      final Code conditionCode = compile(env, if_.condition);
+      final Code trueCode = compile(env, if_.ifTrue);
+      final Code falseCode = compile(env, if_.ifFalse);
+      return Codes.ifThenElse(conditionCode, trueCode, falseCode);
     case LET:
       final Ast.LetExp let = (Ast.LetExp) expression;
       final List<Codes.NameTypeCode> varCodes = new ArrayList<>();

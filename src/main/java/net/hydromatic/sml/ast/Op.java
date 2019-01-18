@@ -54,7 +54,8 @@ public enum Op {
   LET,
   MATCH,
   FN,
-  APPLY;
+  APPLY,
+  IF;
 
   /** Padded name, e.g. " : ". */
   public final String padded;

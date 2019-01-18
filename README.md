@@ -63,16 +63,20 @@ Implemented:
 * Operators: + - * / ^ `andalso` `orelse`
 * Type derivation (for simple types)
 * `fn`, function values, and function application
+* `if`
 
 Not implemented:
 * `fun` declaration
 * Generic types
+* Tuple types and record types
 * `let rec`
 * `type`
 * `datatype`
 * `local`
-* `handle`
+* `raise`, `handle`
 * `exception`
+* `while`
+* `case`
 * Patterns in `let` and `fn`
 * References, and operators `!` and `:=`
 * Operators: div mod ^ :: @ `before` `not`

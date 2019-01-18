@@ -101,11 +101,19 @@ public class MainTest {
     checkStmt("1 + (2 + (3 + (4)))",
         isAst(AstNode.class, "1 + (2 + (3 + 4))"));
 
-    checkStmt("let val x = 2 in x + (3 + x) + x end",
-        isAst(AstNode.class, "let val x = 2 in x + (3 + x) + x end"));
+    assertParseSame("let val x = 2 in x + (3 + x) + x end");
 
-    checkStmt("let val x = 2 and y = 3 in x + y end",
-        isAst(AstNode.class, "let val x = 2 and y = 3 in x + y end"));
+    assertParseSame("let val x = 2 and y = 3 in x + y end");
+
+    // if
+    assertParseSame("if true then 1 else 2");
+
+    // if ... else if
+    assertParseSame("if true then 1 else if false then 2 else 3");
+  }
+
+  private void assertParseSame(String ml) {
+    checkStmt(ml, isAst(AstNode.class, ml));
   }
 
   @Test public void testType() {
@@ -117,6 +125,7 @@ public class MainTest {
     assertType("true andalso false", is("bool"));
     assertType("fn x => x + 1", is("int -> int"));
     assertType("fn x => fn y => x + y", is("int -> int -> int"));
+    assertType("if true then 1.0 else 2.0", is("real"));
   }
 
   private void assertType(String ml, Matcher<String> matcher) {
@@ -149,6 +158,19 @@ public class MainTest {
     checkEval("true orelse false", is(true));
     checkEval("false andalso false orelse true", is(true));
     checkEval("false andalso true orelse true", is(true));
+
+    // if
+    checkEval("if true then 1 else 2", is(1));
+    checkEval("if false then 1 else if true then 2 else 3", is(2));
+    checkEval("if false\n"
+        + "then\n"
+        + "  if true then 2 else 3\n"
+        + "else 4", is(4));
+    checkEval("if false\n"
+        + "then\n"
+        + "  if true then 2 else 3\n"
+        + "else\n"
+        + "  if false then 4 else 5", is(5));
 
     // let
     checkEval("let val x = 1 in x + 2 end", is(3));

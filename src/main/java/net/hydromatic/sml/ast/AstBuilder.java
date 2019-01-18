@@ -106,6 +106,11 @@ public enum AstBuilder {
   public Ast.Apply apply(Ast.Exp fn, Ast.Exp arg) {
     return new Ast.Apply(fn.pos.plus(arg.pos), fn, arg);
   }
+
+  public Ast.Exp ifThenElse(Pos pos, Ast.Exp condition, Ast.Exp ifTrue,
+      Ast.Exp ifFalse) {
+    return new Ast.If(pos, condition, ifTrue, ifFalse);
+  }
 }
 
 // End AstBuilder.java
