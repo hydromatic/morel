@@ -21,6 +21,7 @@ package net.hydromatic.sml;
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.compile.Compiler;
+import net.hydromatic.sml.compile.TypeResolver;
 import net.hydromatic.sml.eval.Code;
 import net.hydromatic.sml.eval.Environment;
 import net.hydromatic.sml.eval.Environments;
@@ -39,6 +40,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -119,6 +121,20 @@ public class MainTest {
     };
   }
 
+  private void withValidate(String ml,
+      BiConsumer<Ast.Exp, TypeResolver.TypeMap> action) {
+    withParser(ml, parser -> {
+      try {
+        final Ast.Exp expression = parser.expression();
+        final TypeResolver.TypeMap typeMap =
+            Compiler.validateExpression(expression);
+        action.accept(expression, typeMap);
+      } catch (ParseException e) {
+        throw new RuntimeException(e);
+      }
+    });
+  }
+
   private void withPrepare(String ml,
       Consumer<Compiler.CompiledStatement> action) {
     withParser(ml, parser -> {
@@ -126,7 +142,7 @@ public class MainTest {
         final AstNode statement = parser.statement();
         final Environment env = Environments.empty();
         final Compiler.CompiledStatement compiled =
-            new Compiler().compileStatement(env, statement);
+            Compiler.prepareStatement(env, statement);
         action.accept(compiled);
       } catch (ParseException e) {
         throw new RuntimeException(e);
@@ -135,16 +151,19 @@ public class MainTest {
   }
 
   private void assertType(String ml, Matcher<String> matcher) {
-    withPrepare(ml, compiledStatement ->
-        assertThat(compiledStatement.getType().description(), matcher));
+    withValidate(ml, (exp, typeMap) ->
+        assertThat(typeMap.getType(exp).description(), matcher));
   }
 
   private void checkEval(String ml, Matcher<Object> matcher) {
     try {
       final Ast.Exp expression =
           new SmlParserImpl(new StringReader(ml)).expression();
+      final TypeResolver.TypeSystem typeSystem = new TypeResolver.TypeSystem();
       final Environment env = Environments.empty();
-      final Code code = new Compiler().compile(env, expression);
+      final TypeResolver.TypeMap typeMap =
+          TypeResolver.deduceType(env, expression, typeSystem);
+      final Code code = new Compiler(typeMap).compile(env, expression);
       final Object value = code.eval(env);
       assertThat(value, matcher);
     } catch (ParseException e) {
@@ -224,9 +243,15 @@ public class MainTest {
     assertType("1.0 + ~2.0", is("real"));
     assertType("\"\"", is("string"));
     assertType("true andalso false", is("bool"));
-    assertType("fn x => x + 1", is("int -> int"));
-    assertType("fn x => fn y => x + y", is("int -> int -> int"));
     assertType("if true then 1.0 else 2.0", is("real"));
+  }
+
+  @Test public void testTypeFn() {
+    assertType("fn x => x + 1", is("int -> int"));
+  }
+
+  @Test public void testTypeFn2() {
+    assertType("fn x => fn y => x + y", is("int -> int -> int"));
   }
 
   @Ignore // enable this test when we have polymorphic type resolution
@@ -278,6 +303,9 @@ public class MainTest {
 
     // let
     checkEval("let val x = 1 in x + 2 end", is(3));
+
+    // let with multiple variables
+    checkEval("let val x = 1 and y = 2 in x + y end", is(3));
 
     // let where variables shadow
     final String letNested = "let\n"

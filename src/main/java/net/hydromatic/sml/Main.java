@@ -58,14 +58,13 @@ public class Main {
 
   public void run() {
     final SmlParserImpl parser = new SmlParserImpl(in);
-    final Compiler compiler = new Compiler();
     Environment env = Environments.empty();
     final List<String> lines = new ArrayList<>();
     for (;;) {
       try {
         final AstNode statement = parser.statementSemicolon();
         final Compiler.CompiledStatement compiled =
-            compiler.compileStatement(env, statement);
+            Compiler.prepareStatement(env, statement);
         env = compiled.eval(env, lines);
         for (String line : lines) {
           out.println(line);

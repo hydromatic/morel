@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /** Various sub-classes of AST nodes. */
 public class Ast {
@@ -89,7 +90,7 @@ public class Ast {
   /** Base class for parse tree nodes that represent types. */
   public abstract static class TypeNode extends AstNode {
     /** Creates a type node. */
-    protected TypeNode(Pos pos, Op op) {
+    TypeNode(Pos pos, Op op) {
       super(pos, op);
     }
   }
@@ -157,7 +158,7 @@ public class Ast {
 
   /** Base class of expression ASTs. */
   public abstract static class Exp extends AstNode {
-    public Exp(Pos pos, Op op) {
+    Exp(Pos pos, Op op) {
       super(pos, op);
     }
   }
@@ -257,10 +258,15 @@ public class Ast {
     public final Exp a0;
     public final Exp a1;
 
-    public InfixCall(Pos pos, Op op, Exp a0, Exp a1) {
+    InfixCall(Pos pos, Op op, Exp a0, Exp a1) {
       super(pos, op);
       this.a0 = Objects.requireNonNull(a0);
       this.a1 = Objects.requireNonNull(a1);
+    }
+
+    public void forEachArg(Consumer<Exp> action) {
+      action.accept(a0);
+      action.accept(a1);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {

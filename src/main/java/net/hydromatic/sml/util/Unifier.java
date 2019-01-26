@@ -111,6 +111,10 @@ public abstract class Unifier {
     }
   }
 
+  public Substitution emptySubstitution() {
+    return new Substitution(ImmutableMap.of());
+  }
+
   /** The results of a successful unification. Gives access to the raw variable
    * mapping that resulted from the algorithm, but can also resolve a variable
    * to the fullest extent possible with the {@link #resolve} method. */
@@ -118,7 +122,7 @@ public abstract class Unifier {
     /** The result of the unification algorithm proper. This does not have
      * everything completely resolved: some variable substitutions are required
      * before getting the most atom-y representation. */
-    final Map<Variable, Term> resultMap;
+    public final Map<Variable, Term> resultMap;
 
     Substitution(Map<Variable, Term> resultMap) {
       this.resultMap =
@@ -187,6 +191,19 @@ public abstract class Unifier {
     /** Throws CycleException if expanding this term leads to a cycle. */
     void checkCycle(Map<Variable, Term> map, Map<Variable, Variable> active)
         throws CycleException;
+
+    <R> R accept(TermVisitor<R> visitor);
+  }
+
+  /** Visitor for terms.
+   *
+   * @param <R> return type
+   *
+   * @see Term#accept(TermVisitor) */
+  public interface TermVisitor<R> {
+    R visit(Atom atom);
+    R visit(Sequence sequence);
+    R visit(Variable variable);
   }
 
   /** Control flow exception, thrown by {@link Term#checkCycle(Map, Map)} if
@@ -196,7 +213,8 @@ public abstract class Unifier {
 
   /** A symbol that has no children. */
   public static final class Atom implements Term {
-    final String name;
+    public final String name;
+
     Atom(String name) {
       this.name = Objects.requireNonNull(name);
     }
@@ -216,6 +234,10 @@ public abstract class Unifier {
     public void checkCycle(Map<Variable, Term> map,
         Map<Variable, Variable> active) {
       // cycle not possible
+    }
+
+    public <R> R accept(TermVisitor<R> visitor) {
+      return visitor.visit(this);
     }
   }
 
@@ -251,6 +273,10 @@ public abstract class Unifier {
         active.remove(this);
       }
     }
+
+    public <R> R accept(TermVisitor<R> visitor) {
+      return visitor.visit(this);
+    }
   }
 
   /** A pair of terms. */
@@ -273,7 +299,7 @@ public abstract class Unifier {
    * <p>A sequence [a b c] is often printed "a(b, c)", as if "a" is the type of
    * node and "b" and "c" are its children. */
   public static final class Sequence implements Term {
-    final List<Term> terms;
+    public final List<Term> terms;
 
     Sequence(List<Term> terms) {
       this.terms = ImmutableList.copyOf(terms);
@@ -345,6 +371,10 @@ public abstract class Unifier {
         }
       }
       return false;
+    }
+
+    public <R> R accept(TermVisitor<R> visitor) {
+      return visitor.visit(this);
     }
   }
 }

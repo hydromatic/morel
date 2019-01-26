@@ -29,24 +29,36 @@ import net.hydromatic.sml.eval.Codes;
 import net.hydromatic.sml.eval.Environment;
 import net.hydromatic.sml.eval.Environments;
 import net.hydromatic.sml.eval.Unit;
-import net.hydromatic.sml.type.Binding;
-import net.hydromatic.sml.type.PrimitiveType;
 import net.hydromatic.sml.type.Type;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
-  final AstBuilder ast = AstBuilder.INSTANCE;
-  final TypeSystem typeSystem = new TypeSystem();
+  private final AstBuilder ast = AstBuilder.INSTANCE;
+  private TypeResolver.TypeMap typeMap;
 
-  public CompiledStatement compileStatement(Environment env,
+  public Compiler(TypeResolver.TypeMap typeMap) {
+    this.typeMap = typeMap;
+  }
+
+  /** Validates an expression, deducing its type. Used for testing. */
+  public static TypeResolver.TypeMap validateExpression(AstNode exp) {
+    final TypeResolver.TypeSystem typeSystem =
+        new TypeResolver.TypeSystem();
+    final Environment env = Environments.empty();
+    return TypeResolver.deduceType(env, exp, typeSystem);
+  }
+
+  /** Validates and compiles an expression or statement, and compiles it to
+   * code that can be evaluated by the interpreter. */
+  public static CompiledStatement prepareStatement(Environment env,
       AstNode statement) {
+    final AstBuilder ast = AstBuilder.INSTANCE;
     final Ast.VarDecl decl;
     if (statement instanceof Ast.Exp) {
       decl = ast.varDecl(Pos.ZERO,
@@ -54,16 +66,25 @@ public class Compiler {
     } else {
       decl = (Ast.VarDecl) statement;
     }
+    final TypeResolver.TypeSystem typeSystem =
+        new TypeResolver.TypeSystem();
+    final TypeResolver.TypeMap typeMap =
+        TypeResolver.deduceType(env, decl, typeSystem);
+    final Compiler compiler = new Compiler(typeMap);
+    return compiler.compileStatement(env, decl);
+  }
+
+  public CompiledStatement compileStatement(Environment env, Ast.VarDecl decl) {
     final Map<String, TypeAndCode> varCodes = new LinkedHashMap<>();
     for (Map.Entry<Ast.Pat, Ast.Exp> e : decl.patExps.entrySet()) {
       final Ast.Pat pat = e.getKey();
       final String name = ((Ast.NamedPat) pat).name;
       final Ast.Exp exp = e.getValue();
-      final Type type = deduceType(env, exp);
+      final Type type = typeMap.getType(exp);
       final Code code = compile(env, exp);
       varCodes.put(name, new TypeAndCode(type, code));
     }
-    final Type type = deduceType(env, decl);
+    final Type type = typeMap.getType(decl);
 
     return new CompiledStatement() {
       public Type getType() {
@@ -84,57 +105,6 @@ public class Compiler {
         return resultEnvironment;
       }
     };
-  }
-
-  private Type deduceType(Environment env, AstNode node) {
-    final Ast.Exp exp;
-    switch (node.op) {
-    case INT_LITERAL:
-      return PrimitiveType.INT;
-    case REAL_LITERAL:
-      return PrimitiveType.REAL;
-    case STRING_LITERAL:
-      return PrimitiveType.STRING;
-    case BOOL_LITERAL:
-    case ANDALSO:
-    case ORELSE:
-      return PrimitiveType.BOOL;
-    case VAL_DECL:
-      final Ast.VarDecl varDecl = (Ast.VarDecl) node;
-      exp = varDecl.patExps.entrySet().iterator().next().getValue();
-      return deduceType(env, exp);
-    case ID:
-      final Ast.Id id = (Ast.Id) node;
-      final Binding binding = env.get(id.name);
-      if (binding == null) {
-        throw new AssertionError("not found: " + id.name);
-      }
-      return binding.type;
-    case IF:
-      // TODO: check that condition has type boolean
-      // TODO: check that ifTrue has same type as ifFalse
-      final Ast.If if_ = (Ast.If) node;
-      return deduceType(env, if_.ifTrue);
-    case FN:
-      final Ast.Fn fn = (Ast.Fn) node;
-      return deduceType(env, fn.match);
-    case MATCH:
-      final Ast.Match match = (Ast.Match) node;
-      final String parameter = ((Ast.NamedPat) match.pat).name;
-      final Type parameterType = PrimitiveType.INT; // TODO:
-      exp = match.e;
-      final Environment env2 =
-          Environments.add(env, parameter, parameterType, Unit.INSTANCE);
-      final Type expType = deduceType(env2, exp);
-      return typeSystem.fnType(parameterType, expType);
-    case PLUS:
-    case MINUS:
-    case TIMES:
-    case DIVIDE:
-      return deduceType(env, ((Ast.InfixCall) node).a0);
-    default:
-      throw new AssertionError("cannot deduce type for " + node.op);
-    }
   }
 
   public Code compile(Environment env, Ast.Exp expression) {
@@ -180,7 +150,7 @@ public class Compiler {
           throw new AssertionError("TODO:");
         }
         final Ast.Exp exp = e.getValue();
-        final Type type = deduceType(env, exp);
+        final Type type = typeMap.getType(exp);
         final Code initCode = compile(env, exp);
         varCodes.add(new Codes.NameTypeCode(name, type, initCode));
       }
@@ -189,7 +159,8 @@ public class Compiler {
     case FN:
       final Ast.Fn fn = (Ast.Fn) expression;
       final String paramName = ((Ast.NamedPat) fn.match.pat).name;
-      final FnType fnType = (FnType) deduceType(env, fn);
+      final TypeResolver.FnType fnType =
+          (TypeResolver.FnType) typeMap.getType(fn);
       final Environment env2 = Environments.add(env, paramName,
           fnType.paramType, Unit.INSTANCE);
       code0 = compile(env2, fn.match.e);
@@ -260,58 +231,6 @@ public class Compiler {
     }
   }
 
-  /** A table that contains all types in use, indexed by their description (e.g.
-   * "{@code int -> int}"). */
-  private static class TypeSystem {
-    final Map<String, Type> map = new HashMap<>();
-
-    TypeSystem() {
-      map.put("int", PrimitiveType.INT);
-      map.put("bool", PrimitiveType.BOOL);
-      map.put("string", PrimitiveType.STRING);
-      map.put("real", PrimitiveType.REAL);
-      map.put("unit", PrimitiveType.UNIT);
-    }
-
-    /** Creates a primitive type. */
-    Type primitiveType(String name) {
-      switch (name) {
-      case "bool": return PrimitiveType.BOOL;
-      case "CHAR": return PrimitiveType.CHAR;
-      case "int": return PrimitiveType.INT;
-      case "real": return PrimitiveType.REAL;
-      case "string": return PrimitiveType.STRING;
-      case "unit": return PrimitiveType.INT;
-      default:
-        throw new AssertionError("not a primitive type: " + name);
-      }
-    }
-
-    /** Creates a function type. */
-    Type fnType(Type paramType, Type resultType) {
-      final String description =
-          paramType.description() + " -> " + resultType.description();
-      return map.computeIfAbsent(description,
-          d -> new FnType(d, paramType, resultType));
-    }
-  }
-
-  /** The type of a function value. */
-  private static class FnType implements Type {
-    public final String description;
-    public final Type paramType;
-    public final Type resultType;
-
-    private FnType(String description, Type paramType, Type resultType) {
-      this.description = description;
-      this.paramType = paramType;
-      this.resultType = resultType;
-    }
-
-    public String description() {
-      return description;
-    }
-  }
 }
 
 // End Compiler.java

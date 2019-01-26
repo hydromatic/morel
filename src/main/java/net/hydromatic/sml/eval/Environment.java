@@ -19,9 +19,11 @@
 package net.hydromatic.sml.eval;
 
 import net.hydromatic.sml.type.Binding;
+import net.hydromatic.sml.type.Type;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 /** Evaluation environment. */
 public class Environment {
@@ -35,6 +37,11 @@ public class Environment {
     return value;
   }
 
+  public void forEachType(BiConsumer<String, Type> consumer) {
+    for (Map.Entry<String, Binding> entry : valueMap.entrySet()) {
+      consumer.accept(entry.getKey(), entry.getValue().type);
+    }
+  }
 }
 
 // End Environment.java
