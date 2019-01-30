@@ -18,9 +18,9 @@
  */
 package net.hydromatic.sml.eval;
 
-import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.Type;
 
+import java.util.Arrays;
 import java.util.List;
 
 /** Helpers for {@link Code}. */
@@ -73,36 +73,29 @@ public abstract class Codes {
    * environment. */
   public static Code get(String name) {
     return env -> {
-      final Binding binding = env.get(name);
-      return binding.value;
+      return env.get(name);
     };
   }
 
-  public static Code let(List<NameTypeCode> varCodes, Code e) {
+  public static Code let(List<Code> fnCodes, Code argCode) {
     return env -> {
-      for (NameTypeCode varCode : varCodes) {
-        final Object value = varCode.code.eval(env);
-        env = Environments.add(env, varCode.name, varCode.type, value);
+      EvalEnv env2 = env;
+      for (Code fnCode : fnCodes) {
+        final Closure fnValue = (Closure) fnCode.eval(env);
+        final Object arg = fnValue.resultCode.eval(env2);
+        env2 = fnValue.bind(arg);
       }
-      return e.eval(env);
+      return argCode.eval(env2);
     };
-  }
-
-  public static Code fn(String paramName, Type paramType, Code code) {
-    // Evaluating a function returns a function value, regardless of the
-    // environment. The interesting stuff happens in apply.
-    return env -> new FunctionValue(paramName, paramType, code, env);
   }
 
   /** Generates the code for applying a function (or function value) to an
    * argument. */
   public static Code apply(Code fnCode, Code argCode) {
     return env -> {
-      final FunctionValue fnValue = (FunctionValue) fnCode.eval(env);
+      final Closure fnValue = (Closure) fnCode.eval(env);
       final Object argValue = argCode.eval(env);
-      final Environment env2 =
-          Environments.add(fnValue.env, fnValue.paramName, fnValue.paramType,
-              argValue);
+      final EvalEnv env2 = fnValue.bind(argValue);
       return fnValue.resultCode.eval(env2);
     };
   }
@@ -115,6 +108,34 @@ public abstract class Codes {
     };
   }
 
+  public static Code tuple(List<Code> codes) {
+    return env -> {
+      final Object[] values = new Object[codes.size()];
+      for (int i = 0; i < values.length; i++) {
+        values[i] = codes.get(i).eval(env);
+      }
+      return Arrays.asList(values);
+    };
+  }
+
+  /** Creates an empty evaluation environment. */
+  public static EvalEnv emptyEnv() {
+    final EvalEnv env = new EvalEnv();
+    env.valueMap.put("true", true);
+    env.valueMap.put("false", false);
+    return env;
+  }
+
+  /** Creates an evaluation environment that is the same as a given evaluation
+   * environment, plus one more variable. */
+  public static EvalEnv add(EvalEnv env, String var, Object value) {
+    // Copying the entire table is not very efficient.
+    final EvalEnv env2 = new EvalEnv();
+    env2.valueMap.putAll(env.valueMap);
+    env2.valueMap.put(var, value);
+    return env2;
+  }
+
   /** A (name, type, code) triple. */
   public static class NameTypeCode {
     public final String name;
@@ -125,27 +146,6 @@ public abstract class Codes {
       this.name = name;
       this.type = type;
       this.code = code;
-    }
-  }
-
-  /** Value that is sufficient for a function to bind its argument
-   * and evalute its body. */
-  private static class FunctionValue implements Comparable<FunctionValue> {
-    public final String paramName;
-    public final Type paramType;
-    public final Code resultCode;
-    public final Environment env;
-
-    private FunctionValue(String paramName, Type paramType, Code resultCode,
-        Environment env) {
-      this.paramName = paramName;
-      this.paramType = paramType;
-      this.resultCode = resultCode;
-      this.env = env;
-    }
-
-    public int compareTo(FunctionValue o) {
-      return 0;
     }
   }
 }

@@ -18,18 +18,20 @@
  */
 package net.hydromatic.sml.compile;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstBuilder;
 import net.hydromatic.sml.ast.AstNode;
+import net.hydromatic.sml.ast.Op;
 import net.hydromatic.sml.ast.Pos;
+import net.hydromatic.sml.eval.Closure;
 import net.hydromatic.sml.eval.Code;
 import net.hydromatic.sml.eval.Codes;
-import net.hydromatic.sml.eval.Environment;
-import net.hydromatic.sml.eval.Environments;
+import net.hydromatic.sml.eval.EvalEnv;
 import net.hydromatic.sml.eval.Unit;
 import net.hydromatic.sml.type.Type;
+import net.hydromatic.sml.util.Pair;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -39,8 +41,8 @@ import java.util.Map;
 
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
+  private final TypeResolver.TypeMap typeMap;
   private final AstBuilder ast = AstBuilder.INSTANCE;
-  private TypeResolver.TypeMap typeMap;
 
   public Compiler(TypeResolver.TypeMap typeMap) {
     this.typeMap = typeMap;
@@ -48,26 +50,28 @@ public class Compiler {
 
   /** Validates an expression, deducing its type. Used for testing. */
   public static TypeResolver.TypeMap validateExpression(AstNode exp) {
-    final TypeResolver.TypeSystem typeSystem =
-        new TypeResolver.TypeSystem();
+    final TypeResolver.TypeSystem typeSystem = new TypeResolver.TypeSystem();
     final Environment env = Environments.empty();
     return TypeResolver.deduceType(env, exp, typeSystem);
   }
 
-  /** Validates and compiles an expression or statement, and compiles it to
-   * code that can be evaluated by the interpreter. */
+  /**
+   * Validates and compiles an expression or statement, and compiles it to
+   * code that can be evaluated by the interpreter.
+   */
   public static CompiledStatement prepareStatement(Environment env,
       AstNode statement) {
     final AstBuilder ast = AstBuilder.INSTANCE;
     final Ast.VarDecl decl;
     if (statement instanceof Ast.Exp) {
       decl = ast.varDecl(Pos.ZERO,
-          ImmutableMap.of(ast.namedPat(Pos.ZERO, "it"), (Ast.Exp) statement));
+          ImmutableList.of(
+              ast.valBind(Pos.ZERO, ast.idPat(Pos.ZERO, "it"),
+                  (Ast.Exp) statement)));
     } else {
       decl = (Ast.VarDecl) statement;
     }
-    final TypeResolver.TypeSystem typeSystem =
-        new TypeResolver.TypeSystem();
+    final TypeResolver.TypeSystem typeSystem = new TypeResolver.TypeSystem();
     final TypeResolver.TypeMap typeMap =
         TypeResolver.deduceType(env, decl, typeSystem);
     final Compiler compiler = new Compiler(typeMap);
@@ -76,12 +80,10 @@ public class Compiler {
 
   public CompiledStatement compileStatement(Environment env, Ast.VarDecl decl) {
     final Map<String, TypeAndCode> varCodes = new LinkedHashMap<>();
-    for (Map.Entry<Ast.Pat, Ast.Exp> e : decl.patExps.entrySet()) {
-      final Ast.Pat pat = e.getKey();
-      final String name = ((Ast.NamedPat) pat).name;
-      final Ast.Exp exp = e.getValue();
-      final Type type = typeMap.getType(exp);
-      final Code code = compile(env, exp);
+    for (Ast.ValBind valBind : decl.valBinds) {
+      final String name = ((Ast.IdPat) valBind.pat).name;
+      final Type type = typeMap.getType(valBind.e);
+      final Code code = compile(env, valBind.e);
       varCodes.put(name, new TypeAndCode(type, code));
     }
     final Type type = typeMap.getType(decl);
@@ -92,17 +94,21 @@ public class Compiler {
       }
 
       public Environment eval(Environment env, List<String> output) {
-        Environment resultEnvironment = env;
+        Environment resultEnv = env;
+        final EvalEnv[] evalEnvs = {Codes.emptyEnv()};
+        env.forEachValue((name, value) ->
+            evalEnvs[0] = Codes.add(evalEnvs[0], name, value));
+        final EvalEnv evalEnv = evalEnvs[0];
         for (Map.Entry<String, TypeAndCode> entry : varCodes.entrySet()) {
           final String name = entry.getKey();
           final Code code = entry.getValue().code;
           final Type type = entry.getValue().type;
-          final Object value = code.eval(env);
-          resultEnvironment =
-              Environments.add(resultEnvironment, name, type, value);
-          output.add("val " + name + " = " + value + " : int");
+          final Object value = code.eval(evalEnv);
+          resultEnv = Environments.add(resultEnv, name, type, value);
+          output.add("val " + name + " = " + value + " : "
+              + type.description());
         }
-        return resultEnvironment;
+        return resultEnv;
       }
     };
   }
@@ -116,104 +122,173 @@ public class Compiler {
     case INT_LITERAL:
       literal = (Ast.Literal) expression;
       return Codes.constant(((BigDecimal) literal.value).intValue());
+
     case REAL_LITERAL:
       literal = (Ast.Literal) expression;
       return Codes.constant(((BigDecimal) literal.value).floatValue());
+
     case BOOL_LITERAL:
       literal = (Ast.Literal) expression;
       final Boolean boolValue = (Boolean) literal.value;
       return Codes.constant(boolValue);
+
     case STRING_LITERAL:
       literal = (Ast.Literal) expression;
       final String stringValue = (String) literal.value;
       return Codes.constant(stringValue);
+
+    case UNIT_LITERAL:
+      return Codes.constant(Unit.INSTANCE);
+
     case ID:
       final Ast.Id id = (Ast.Id) expression;
       return Codes.get(id.name);
+
     case IF:
       final Ast.If if_ = (Ast.If) expression;
       final Code conditionCode = compile(env, if_.condition);
       final Code trueCode = compile(env, if_.ifTrue);
       final Code falseCode = compile(env, if_.ifFalse);
       return Codes.ifThenElse(conditionCode, trueCode, falseCode);
+
     case LET:
       final Ast.LetExp let = (Ast.LetExp) expression;
-      final List<Codes.NameTypeCode> varCodes = new ArrayList<>();
-      for (Map.Entry<Ast.Pat, Ast.Exp> e : let.decl.patExps.entrySet()) {
-        final Ast.Pat pat = e.getKey();
-        final String name;
-        switch (pat.op) {
-        case NAMED_PAT:
-          name = ((Ast.NamedPat) pat).name;
-          break;
-        default:
-          throw new AssertionError("TODO:");
+      if (let.decl.valBinds.size() > 1) {
+        // Transform "let v1 = e1 and v2 = e2 in e"
+        // to "let (v1, v2) = (e1, e2) in e"
+        final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
+        for (Ast.ValBind valBind : let.decl.valBinds) {
+          flatten(matches, valBind.pat, valBind.e);
         }
-        final Ast.Exp exp = e.getValue();
-        final Type type = typeMap.getType(exp);
-        final Code initCode = compile(env, exp);
-        varCodes.add(new Codes.NameTypeCode(name, type, initCode));
+        final Ast.Pat pat = ast.tuplePat(let.pos, matches.keySet());
+        final Ast.Exp e = ast.tuple(let.pos, matches.values());
+        final Ast.VarDecl decl =
+            ast.varDecl(let.decl.pos, ast.valBind(let.pos, pat, e));
+        return compile(env, ast.let(let.pos, decl, let.e));
+      }
+      final List<Code> varCodes = new ArrayList<>();
+      for (Ast.ValBind valBind : let.decl.valBinds) {
+        varCodes.add(compileValBind(env, valBind));
       }
       final Code resultCode = compile(env, let.e);
       return Codes.let(varCodes, resultCode);
+
     case FN:
       final Ast.Fn fn = (Ast.Fn) expression;
-      final String paramName = ((Ast.NamedPat) fn.match.pat).name;
-      final TypeResolver.FnType fnType =
-          (TypeResolver.FnType) typeMap.getType(fn);
-      final Environment env2 = Environments.add(env, paramName,
-          fnType.paramType, Unit.INSTANCE);
-      code0 = compile(env2, fn.match.e);
-      return Codes.fn(paramName, fnType.paramType, code0);
+//      final TypeResolver.FnType fnType =
+//          (TypeResolver.FnType) typeMap.getType(fn);
+      return compileMatch(env, fn.match /* , fnType.paramType */);
+
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) expression;
       final Code fnCode = compile(env, apply.fn);
       final Code argCode = compile(env, apply.arg);
       return Codes.apply(fnCode, argCode);
+
+    case TUPLE:
+      final Ast.Tuple tuple = (Ast.Tuple) expression;
+      final List<Code> codes = new ArrayList<>();
+      for (Ast.Exp arg : tuple.args) {
+        codes.add(compile(env, arg));
+      }
+      return Codes.tuple(codes);
+
     case ANDALSO:
       call = (Ast.InfixCall) expression;
       code0 = compile(env, call.a0);
       code1 = compile(env, call.a1);
       return Codes.andAlso(code0, code1);
+
     case ORELSE:
       call = (Ast.InfixCall) expression;
       code0 = compile(env, call.a0);
       code1 = compile(env, call.a1);
       return Codes.orElse(code0, code1);
+
     case PLUS:
       call = (Ast.InfixCall) expression;
       code0 = compile(env, call.a0);
       code1 = compile(env, call.a1);
       return Codes.plus(code0, code1);
+
     case MINUS:
       call = (Ast.InfixCall) expression;
       code0 = compile(env, call.a0);
       code1 = compile(env, call.a1);
       return Codes.minus(code0, code1);
+
     case TIMES:
       call = (Ast.InfixCall) expression;
       code0 = compile(env, call.a0);
       code1 = compile(env, call.a1);
       return Codes.times(code0, code1);
+
     case DIVIDE:
       call = (Ast.InfixCall) expression;
       code0 = compile(env, call.a0);
       code1 = compile(env, call.a1);
       return Codes.divide(code0, code1);
+
     case CARET:
       call = (Ast.InfixCall) expression;
       code0 = compile(env, call.a0);
       code1 = compile(env, call.a1);
       return Codes.power(code0, code1);
+
     default:
       throw new AssertionError("op not handled: " + expression.op);
     }
   }
 
-  /** Statement that has been compiled and is ready to be run from the
+  private void flatten(Map<Ast.Pat, Ast.Exp> matches,
+      Ast.Pat pat, Ast.Exp exp) {
+    switch (pat.op) {
+    case TUPLE_PAT:
+      final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
+      if (exp.op == Op.TUPLE) {
+        final Ast.Tuple tuple = (Ast.Tuple) exp;
+        Pair.forEach(tuplePat.args, tuple.args,
+            (p, e) -> flatten(matches, p, e));
+        break;
+      }
+      // fall through
+    default:
+      matches.put(pat, exp);
+    }
+  }
+
+  private Code compileMatch(Environment env, Ast.Match match) {
+    final Environment[] envHolder = {env};
+    match.pat.visit(pat -> {
+      if (pat instanceof Ast.IdPat) {
+        final Type paramType = typeMap.getType(pat);
+        envHolder[0] = Environments.add(envHolder[0], ((Ast.IdPat) pat).name,
+            paramType, Unit.INSTANCE);
+      }
+    });
+    final Code code = compile(envHolder[0], match.e);
+    return evalEnv -> new Closure(evalEnv, code, match.pat);
+  }
+
+  private Code compileValBind(Environment env, Ast.ValBind valBind) {
+    final Environment[] envHolder = {env};
+    valBind.pat.visit(pat -> {
+      if (pat instanceof Ast.IdPat) {
+        final Type paramType = typeMap.getType(pat);
+        envHolder[0] = Environments.add(envHolder[0], ((Ast.IdPat) pat).name,
+            paramType, Unit.INSTANCE);
+      }
+    });
+    final Code code = compile(envHolder[0], valBind.e);
+    return evalEnv -> new Closure(evalEnv, code, valBind.pat);
+  }
+
+  /**
+   * Statement that has been compiled and is ready to be run from the
    * REPL. If a declaration, it evaluates an expression and also
    * creates a new environment (with new variables bound) and
-   * generates a line or two of output for the REPL. */
+   * generates a line or two of output for the REPL.
+   */
   public interface CompiledStatement {
     Environment eval(Environment environment, List<String> output);
 

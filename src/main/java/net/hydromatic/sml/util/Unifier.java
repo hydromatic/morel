@@ -39,7 +39,7 @@ public abstract class Unifier {
 
   private int varId;
   private final Map<String, Variable> variableMap = new HashMap<>();
-  private final Map<String, Atom> atomMap = new HashMap<>();
+  private final Map<String, Sequence> atomMap = new HashMap<>();
   private final Map<String, Sequence> sequenceMap = new HashMap<>();
 
   /** Whether this unifier checks for cycles in substitutions. */
@@ -48,10 +48,14 @@ public abstract class Unifier {
   }
 
   /** Creates a sequence, or returns an existing one with the same terms. */
-  public Sequence apply(String first, Term... args) {
+  public Sequence apply(String operator, Term... args) {
+    return apply(operator, ImmutableList.copyOf(args));
+  }
+
+  /** Creates a sequence, or returns an existing one with the same terms. */
+  public Sequence apply(String operator, Iterable<Term> args) {
     final Sequence sequence =
-        new Sequence(ImmutableList.<Term>builder().add(atom(first))
-            .add(args).build());
+        new Sequence(operator, ImmutableList.copyOf(args));
     return sequenceMap.computeIfAbsent(sequence.toString(), n -> sequence);
   }
 
@@ -73,8 +77,8 @@ public abstract class Unifier {
   }
 
   /** Creates an atom, or returns an existing one with the same name. */
-  public Atom atom(String name) {
-    return atomMap.computeIfAbsent(name, Atom::new);
+  public Term atom(String name) {
+    return atomMap.computeIfAbsent(name, Sequence::new);
   }
 
   /** Creates a substitution.
@@ -93,13 +97,13 @@ public abstract class Unifier {
     return new Substitution(mapBuilder.build());
   }
 
-  static Sequence sequenceApply(Map<Variable, Term> substitutions,
-      Iterable<Term> terms) {
+  static Sequence sequenceApply(String operator,
+      Map<Variable, Term> substitutions, Iterable<Term> terms) {
     final ImmutableList.Builder<Term> newTerms = ImmutableList.builder();
     for (Term term : terms) {
       newTerms.add(term.apply(substitutions));
     }
-    return new Sequence(newTerms.build());
+    return new Sequence(operator, newTerms.build());
   }
 
   public @Nullable abstract Substitution unify(List<TermTerm> termPairs);
@@ -109,10 +113,6 @@ public abstract class Unifier {
     for (Term term : map.values()) {
       term.checkCycle(map, active);
     }
-  }
-
-  public Substitution emptySubstitution() {
-    return new Substitution(ImmutableMap.of());
   }
 
   /** The results of a successful unification. Gives access to the raw variable
@@ -201,7 +201,6 @@ public abstract class Unifier {
    *
    * @see Term#accept(TermVisitor) */
   public interface TermVisitor<R> {
-    R visit(Atom atom);
     R visit(Sequence sequence);
     R visit(Variable variable);
   }
@@ -209,36 +208,6 @@ public abstract class Unifier {
   /** Control flow exception, thrown by {@link Term#checkCycle(Map, Map)} if
    * it finds a cycle in a substitution map. */
   private static class CycleException extends Exception {
-  }
-
-  /** A symbol that has no children. */
-  public static final class Atom implements Term {
-    public final String name;
-
-    Atom(String name) {
-      this.name = Objects.requireNonNull(name);
-    }
-
-    @Override public String toString() {
-      return name;
-    }
-
-    public Term apply(Map<Variable, Term> substitutions) {
-      return this;
-    }
-
-    public boolean contains(Variable variable) {
-      return false;
-    }
-
-    public void checkCycle(Map<Variable, Term> map,
-        Map<Variable, Variable> active) {
-      // cycle not possible
-    }
-
-    public <R> R accept(TermVisitor<R> visitor) {
-      return visitor.visit(this);
-    }
   }
 
   /** A variable that represents a symbol or a sequence; unification's
@@ -299,39 +268,46 @@ public abstract class Unifier {
    * <p>A sequence [a b c] is often printed "a(b, c)", as if "a" is the type of
    * node and "b" and "c" are its children. */
   public static final class Sequence implements Term {
+    public final String operator;
     public final List<Term> terms;
 
-    Sequence(List<Term> terms) {
+    Sequence(String operator, List<Term> terms) {
+      this.operator = Objects.requireNonNull(operator);
       this.terms = ImmutableList.copyOf(terms);
     }
 
+    Sequence(String operator) {
+      this(operator, ImmutableList.of());
+    }
+
     @Override public int hashCode() {
-      return terms.hashCode();
+      return Objects.hash(operator, terms);
     }
 
     @Override public boolean equals(Object obj) {
       return this == obj
           || obj instanceof Sequence
+          && operator.equals(((Sequence) obj).operator)
           && terms.equals(((Sequence) obj).terms);
     }
 
     @Override public String toString() {
-      if (terms.size() == 1) {
-        return terms.get(0).toString();
+      if (terms.isEmpty()) {
+        return operator;
       }
-      final StringBuilder builder = new StringBuilder();
+      final StringBuilder builder = new StringBuilder(operator).append('(');
       for (int i = 0; i < terms.size(); i++) {
         Term term = terms.get(i);
+        if (i > 0) {
+          builder.append(", ");
+        }
         builder.append(term);
-        builder.append(i == 0 ? "("
-            : i == terms.size() - 1 ? ")"
-                : ", ");
       }
-      return builder.toString();
+      return builder.append(')').toString();
     }
 
     public Term apply(Map<Variable, Term> substitutions) {
-      final Sequence sequence = sequenceApply(substitutions, terms);
+      final Sequence sequence = sequenceApply(operator, substitutions, terms);
       if (sequence.equalsShallow(this)) {
         return this;
       }

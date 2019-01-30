@@ -18,21 +18,26 @@
  */
 package net.hydromatic.sml.compile;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
-import net.hydromatic.sml.eval.Environment;
+import net.hydromatic.sml.ast.Op;
 import net.hydromatic.sml.type.PrimitiveType;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.util.MartelliUnifier;
+import net.hydromatic.sml.util.Ord;
 import net.hydromatic.sml.util.Unifier;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /** Resolves the type of an expression. */
 public class TypeResolver {
@@ -40,150 +45,268 @@ public class TypeResolver {
   final List<TermVariable> terms = new ArrayList<>();
   final Map<AstNode, Unifier.Term> map = new HashMap<>();
 
+  private static final String TUPLE_TY_CON = "*";
+  private static final String FN_TY_CON = "fn";
+
+  public TypeResolver() {
+  }
+
   public static TypeMap deduceType(Environment env,
       AstNode node, TypeSystem typeSystem) {
-    final TypeResolver typeResolver = new TypeResolver();
+    return new TypeResolver().deduceType_(env, node, typeSystem);
+  }
+
+  private TypeMap deduceType_(Environment env, AstNode node,
+      TypeSystem typeSystem) {
     TypeEnv[] typeEnvs = {EmptyTypeEnv.INSTANCE
-        .bind("true", typeResolver.atom(typeSystem.primitiveType("bool")))
-        .bind("false", typeResolver.atom(typeSystem.primitiveType("bool")))};
+        .bind("true", toTerm(typeSystem.primitiveType("bool")))
+        .bind("false", toTerm(typeSystem.primitiveType("bool")))};
     env.forEachType((name, type) ->
-        typeEnvs[0] = typeEnvs[0].bind(name, typeResolver.atom(type)));
+        typeEnvs[0] = typeEnvs[0].bind(name, toTerm(type)));
     final TypeEnv typeEnv = typeEnvs[0];
-    final Unifier.Term typeTerm = typeResolver.deduceType(typeEnv, node);
-    final Unifier.Substitution substitution;
+    final Unifier.Variable v = unifier.variable();
+    deduceType(typeEnv, node, v);
     final List<Unifier.TermTerm> termPairs = new ArrayList<>();
-    typeResolver.terms.forEach(tv ->
+    terms.forEach(tv ->
         termPairs.add(new Unifier.TermTerm(tv.term, tv.variable)));
-    substitution = typeResolver.unifier.unify(termPairs);
-    return new TypeMap(typeSystem, typeResolver.map, substitution);
+    final Unifier.Substitution substitution = unifier.unify(termPairs);
+    return new TypeMap(typeSystem, map, substitution);
   }
 
-  private Unifier.Term deduceType(TypeEnv env, AstNode node) {
-    final Unifier.Term term = deduceType2(env, node);
+  private boolean reg(AstNode node,
+      Unifier.Variable variable, Unifier.Term term) {
+    Objects.requireNonNull(node);
+    Objects.requireNonNull(term);
     map.put(node, term);
-    return term;
+    if (variable != null) {
+      equiv(term, variable);
+    }
+    return true;
   }
 
-  private Unifier.Term deduceType2(TypeEnv env, AstNode node) {
-    final Unifier.Variable v;
-    final Ast.Exp exp;
+  private boolean deduceType(TypeEnv env, AstNode node, Unifier.Variable v) {
+    final Unifier.Variable v2;
     switch (node.op) {
+    case BOOL_LITERAL:
+      return reg(node, v, toTerm(PrimitiveType.BOOL));
+
     case INT_LITERAL:
-      return atom(PrimitiveType.INT);
+      return reg(node, v, toTerm(PrimitiveType.INT));
 
     case REAL_LITERAL:
-      return atom(PrimitiveType.REAL);
+      return reg(node, v, toTerm(PrimitiveType.REAL));
 
     case STRING_LITERAL:
-      return atom(PrimitiveType.STRING);
+      return reg(node, v, toTerm(PrimitiveType.STRING));
 
-    case BOOL_LITERAL:
-      return atom(PrimitiveType.BOOL);
+    case UNIT_LITERAL:
+      return reg(node, v, toTerm(PrimitiveType.UNIT));
 
     case ANDALSO:
     case ORELSE:
-      return infix(env, (Ast.InfixCall) node, PrimitiveType.BOOL);
+      return infix(env, (Ast.InfixCall) node, v, PrimitiveType.BOOL);
 
     case VAL_DECL:
-      final Ast.VarDecl varDecl = (Ast.VarDecl) node;
-      for (Ast.Exp e : varDecl.patExps.values()) {
-        final Unifier.Term type = deduceType(env, e);
+      return deduceDeclType(env, (Ast.Decl) node, new LinkedHashMap<>());
+
+    case TUPLE:
+      final Ast.Tuple tuple = (Ast.Tuple) node;
+      final List<Unifier.Term> types = new ArrayList<>();
+      for (Ast.Exp arg : tuple.args) {
+        final Unifier.Variable vArg = unifier.variable();
+        deduceType(env, arg, vArg);
+        types.add(vArg);
       }
-      return atom(PrimitiveType.UNIT);
+      return reg(tuple, v, unifier.apply(TUPLE_TY_CON, types));
 
     case LET:
       final Ast.LetExp let = (Ast.LetExp) node;
-      final Unifier.Term declType = deduceType(env, let.decl);
-      assert declType == atom(PrimitiveType.UNIT);
-      TypeEnv env3 = env;
-      for (Map.Entry<Ast.Pat, Ast.Exp> e : let.decl.patExps.entrySet()) {
-        final Ast.Pat pat = e.getKey();
-        final Ast.Exp exp2 = e.getValue();
-        final Unifier.Term type = map.get(exp2);
-        env3 = env3.bind(((Ast.NamedPat) pat).name, type);
-      }
-      return deduceType(env3, let.e);
+      final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
+      deduceDeclType(env, let.decl, termMap);
+      deduceType(bindAll(env, termMap), let.e, v);
+      return reg(let, null, v);
 
     case ID:
       final Ast.Id id = (Ast.Id) node;
-      return env.get(id.name);
+      return reg(id, v, env.get(id.name));
 
     case IF:
       // TODO: check that condition has type boolean
       // TODO: check that ifTrue has same type as ifFalse
       final Ast.If if_ = (Ast.If) node;
-      final Unifier.Term trueTerm = deduceType(env, if_.ifTrue);
-      final Unifier.Term falseTerm = deduceType(env, if_.ifFalse);
-      v = unifier.variable();
-      equiv(trueTerm, v);
-      equiv(falseTerm, v);
-      return v;
+      v2 = unifier.variable();
+      deduceType(env, if_.condition, v2);
+      equiv(v2, toTerm(PrimitiveType.BOOL));
+      deduceType(env, if_.ifTrue, v);
+      deduceType(env, if_.ifFalse, v);
+      return reg(if_, null, v);
 
     case FN:
       final Ast.Fn fn = (Ast.Fn) node;
-      return deduceType(env, fn.match);
+      deduceType(env, fn.match, v);
+      return reg(fn, null, v);
 
     case MATCH:
       final Ast.Match match = (Ast.Match) node;
-      final String parameter = ((Ast.NamedPat) match.pat).name;
-      final Unifier.Variable parameterType = unifier.variable();
-      final TypeEnv env2 = env.bind(parameter, parameterType);
-      final Unifier.Term expType = deduceType(env2, match.e);
-      return unifier.apply("fn", parameterType, expType);
+      return deduceMatchType(env, match, new LinkedHashMap<>(), v);
 
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) node;
-      final Unifier.Term fnType = deduceType(env, apply.fn);
-      final Unifier.Term argType = deduceType(env, apply.arg);
-      return argType; // TODO:
+      final Unifier.Variable vFn = unifier.variable();
+      final Unifier.Variable vResult = unifier.variable();
+      final Unifier.Variable vArg = unifier.variable();
+      equiv(unifier.apply(FN_TY_CON, vArg, vResult), vFn);
+      deduceType(env, apply.fn, vFn);
+      deduceType(env, apply.arg, vArg);
+      return reg(apply, null, vResult);
 
     case PLUS:
     case MINUS:
     case TIMES:
     case DIVIDE:
-      return infixOverloaded(env, (Ast.InfixCall) node, PrimitiveType.INT);
+      return infixOverloaded(env, (Ast.InfixCall) node, v, PrimitiveType.INT);
 
     default:
       throw new AssertionError("cannot deduce type for " + node.op);
     }
   }
 
+  private boolean deduceMatchType(TypeEnv env, Ast.Match match,
+      Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable v) {
+    final Unifier.Variable vPat = unifier.variable();
+    deducePatType(env, match.pat, termMap, vPat);
+    TypeEnv env2 = bindAll(env, termMap);
+    final Unifier.Variable vResult = unifier.variable();
+    deduceType(env2, match.e, vResult);
+    return reg(match, v, unifier.apply(FN_TY_CON, vPat, vResult));
+  }
+
+  private boolean deduceValBindType(TypeEnv env, Ast.ValBind valBind,
+      Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable v) {
+    final Unifier.Variable vPat = unifier.variable();
+    deducePatType(env, valBind.pat, termMap, vPat);
+    deduceType(env, valBind.e, vPat);
+    return reg(valBind, v, unifier.apply(FN_TY_CON, vPat, vPat));
+  }
+
+  private static TypeEnv bindAll(TypeEnv env,
+      Map<Ast.IdPat, Unifier.Term> termMap) {
+    for (Map.Entry<Ast.IdPat, Unifier.Term> entry : termMap.entrySet()) {
+      env = env.bind(entry.getKey().name, entry.getValue());
+    }
+    return env;
+  }
+
+  private boolean deduceDeclType(TypeEnv env, Ast.Decl node,
+      Map<Ast.IdPat, Unifier.Term> termMap) {
+    switch (node.op) {
+    case VAL_DECL:
+      final Ast.VarDecl varDecl = (Ast.VarDecl) node;
+      for (Ast.ValBind valBind : varDecl.valBinds) {
+        deduceValBindType(env, valBind, termMap, unifier.variable());
+      }
+      map.put(node, toTerm(PrimitiveType.UNIT));
+      return true;
+
+    default:
+      throw new AssertionError("cannot deduce type for " + node.op);
+    }
+  }
+
+  /** Derives a type term for a pattern, collecting the names of pattern
+   * variables. */
+  private boolean deducePatType(TypeEnv env, Ast.Pat pat,
+      Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable v) {
+    switch (pat.op) {
+    case WILDCARD_PAT:
+      return true;
+
+    case ID_PAT:
+      termMap.put((Ast.IdPat) pat, v);
+      return reg(pat, null, v);
+
+    case TUPLE_PAT:
+      final List<Unifier.Term> typeTerms = new ArrayList<>();
+      final Ast.TuplePat tuple = (Ast.TuplePat) pat;
+      for (Ast.Pat arg : tuple.args) {
+        final Unifier.Variable vArg = unifier.variable();
+        deducePatType(env, arg, termMap, vArg);
+        typeTerms.add(vArg);
+      }
+      return reg(pat, v, unifier.apply(TUPLE_TY_CON, typeTerms));
+
+    default:
+      throw new AssertionError("cannot deduce type for pattern " + pat.op);
+    }
+  }
+
   /** Registers an infix operator whose type is a given type. */
-  private Unifier.Term infix(TypeEnv env, Ast.InfixCall call, Type type) {
-    final Unifier.Atom atom = atom(type);
-    Unifier.Variable v = unifier.variable();
-    equiv(atom, v);
-    call.forEachArg(arg -> equiv(deduceType(env, arg), v));
-    return atom;
+  private boolean infix(TypeEnv env, Ast.InfixCall call, Unifier.Variable v,
+      Type type) {
+    final Unifier.Term term = toTerm(type);
+    call.forEachArg((arg, i) -> deduceType(env, arg, v));
+    return reg(call, v, term);
   }
 
   /** Registers an infix operator whose type is the same as its arguments. */
-  private Unifier.Term infixOverloaded(TypeEnv env, Ast.InfixCall call,
-      Type defaultType) {
-    final List<Unifier.Term> argTypes = new ArrayList<>();
-    call.forEachArg(arg -> argTypes.add(deduceType(env, arg)));
-    final Unifier.Term resultType;
-    if (argTypes.get(0) instanceof Unifier.Atom) {
-      resultType = argTypes.get(0);
-    } else if (argTypes.get(1) instanceof Unifier.Atom) {
-      resultType = argTypes.get(1);
-    } else {
-      resultType = atom(defaultType);
-    }
-    for (Unifier.Term argType : argTypes) {
-      if (argType instanceof Unifier.Variable) {
-        equiv(resultType, (Unifier.Variable) argType);
+  private boolean infixOverloaded(TypeEnv env, Ast.InfixCall call,
+      Unifier.Variable v, Type defaultType) {
+    Type[] types = {defaultType};
+    call.forEachArg((arg, i) -> {
+      deduceType(env, arg, v);
+
+      // The following is for the "overloaded" operators '+', '*' etc.
+      // Ideally we would treat them as polymorphic (viz 'a + 'a) and then
+      // constraint 'a to be either int or real. But for now, we set the type
+      // to 'int' unless one of the arguments is obviously 'real'.
+      if (map.get(arg) instanceof Unifier.Sequence
+          && ((Unifier.Sequence) map.get(arg)).operator.equals("real")) {
+        types[0] = PrimitiveType.REAL;
       }
-    }
-    return resultType;
+    });
+    equiv(v, toTerm(types[0]));
+    return reg(call, null, v);
   }
 
   private void equiv(Unifier.Term term, Unifier.Variable atom) {
     terms.add(new TermVariable(term, atom));
   }
 
-  private Unifier.Atom atom(Type type) {
+  private void equiv(Unifier.Term term, Unifier.Term term2) {
+    if (term2 instanceof Unifier.Variable) {
+      equiv(term, (Unifier.Variable) term2);
+    } else if (term instanceof Unifier.Variable) {
+      equiv(term2, (Unifier.Variable) term);
+    } else {
+      final Unifier.Variable variable = unifier.variable();
+      equiv(term, variable);
+      equiv(term2, variable);
+    }
+  }
+
+  private Unifier.Term toTerm(PrimitiveType type) {
     return unifier.atom(type.description());
+  }
+
+  private Unifier.Term toTerm(Type type) {
+    switch (type.op()) {
+    case ID:
+      return toTerm((PrimitiveType) type);
+    case FN:
+      final FnType fnType = (FnType) type;
+      return unifier.apply(FN_TY_CON, toTerm(fnType.paramType),
+          toTerm(fnType.resultType));
+    case TIMES:
+      final TupleType tupleType = (TupleType) type;
+      return unifier.apply(FN_TY_CON, tupleType.argTypes.stream()
+          .map(this::toTerm).collect(Collectors.toList()));
+    default:
+      throw new AssertionError("unknown type: " + type);
+    }
+  }
+
+  static <E> List<E> skip(List<E> list) {
+    return list.subList(1, list.size());
   }
 
   /** Empty type environment. */
@@ -232,24 +355,33 @@ public class TypeResolver {
       this.substitution = substitution;
     }
 
-    public Type visit(Unifier.Atom atom) {
-      final Type type = typeSystem.map.get(atom.name);
-      if (type == null) {
-        throw new AssertionError("unknown type " + type);
-      }
-      return type;
-    }
-
     public Type visit(Unifier.Sequence sequence) {
-      final Unifier.Atom atom = (Unifier.Atom) sequence.terms.get(0);
-      switch (atom.name) {
+      switch (sequence.operator) {
       case "fn":
-        assert sequence.terms.size() == 3;
-        final Type paramType = sequence.terms.get(1).accept(this);
-        final Type resultType = sequence.terms.get(2).accept(this);
+        assert sequence.terms.size() == 2;
+        final Type paramType = sequence.terms.get(0).accept(this);
+        final Type resultType = sequence.terms.get(1).accept(this);
         return typeSystem.fnType(paramType, resultType);
+      case "*":
+        assert sequence.terms.size() >= 2;
+        final ImmutableList.Builder<Type> argTypes = ImmutableList.builder();
+        for (Unifier.Term term : sequence.terms) {
+          argTypes.add(term.accept(this));
+        }
+        return typeSystem.tupleType(argTypes.build());
+      case "bool":
+      case "int":
+      case "real":
+      case "string":
+      case "unit":
+        final Type type = typeSystem.map.get(sequence.operator);
+        if (type == null) {
+          throw new AssertionError("unknown type " + type);
+        }
+        return type;
       default:
-        throw new AssertionError("unknown type constructor " + atom);
+        throw new AssertionError("unknown type constructor "
+            + sequence.operator);
       }
     }
 
@@ -280,7 +412,7 @@ public class TypeResolver {
       case "int": return PrimitiveType.INT;
       case "real": return PrimitiveType.REAL;
       case "string": return PrimitiveType.STRING;
-      case "unit": return PrimitiveType.INT;
+      case "unit": return PrimitiveType.UNIT;
       default:
         throw new AssertionError("not a primitive type: " + name);
       }
@@ -289,26 +421,85 @@ public class TypeResolver {
     /** Creates a function type. */
     Type fnType(Type paramType, Type resultType) {
       final String description =
-          paramType.description() + " -> " + resultType.description();
+          unparseList(new StringBuilder(), Op.FN, 0, 0,
+              Arrays.asList(paramType, resultType)).toString();
       return map.computeIfAbsent(description,
           d -> new FnType(d, paramType, resultType));
     }
+
+    /** Creates a tuple type. */
+    Type tupleType(List<? extends Type> argTypes) {
+      final String description =
+          unparseList(new StringBuilder(), Op.TIMES, 0, 0, argTypes).toString();
+      return map.computeIfAbsent(description, d -> new TupleType(d, argTypes));
+    }
+
+    private static StringBuilder unparseList(StringBuilder builder, Op op,
+        int left, int right, List<? extends Type> argTypes) {
+      for (Ord<? extends Type> argType : Ord.zip(argTypes)) {
+        if (argType.i == 0) {
+          unparse(builder, argType.e, left, op.left);
+        } else {
+          builder.append(op.padded);
+          if (argType.i < argTypes.size() - 1) {
+            unparse(builder, argType.e, op.right, op.left);
+          } else {
+            unparse(builder, argType.e, op.right, right);
+          }
+        }
+      }
+      return builder;
+    }
+
+    private static StringBuilder unparse(StringBuilder builder, Type type,
+        int left, int right) {
+      final Op op = type.op();
+      if (left > op.left || op.right < right) {
+        return builder.append("(").append(type.description()).append(")");
+      } else {
+        return builder.append(type.description());
+      }
+    }
   }
 
-  /** The type of a function value. */
-  static class FnType implements Type {
-    public final String description;
-    public final Type paramType;
-    public final Type resultType;
+  /** Abstract implementation of Type. */
+  abstract static class BaseType implements Type {
+    final String description;
+    final Op op;
 
-    private FnType(String description, Type paramType, Type resultType) {
-      this.description = description;
-      this.paramType = paramType;
-      this.resultType = resultType;
+    protected BaseType(Op op, String description) {
+      this.op = Objects.requireNonNull(op);
+      this.description = Objects.requireNonNull(description);
     }
 
     public String description() {
       return description;
+    }
+
+    public Op op() {
+      return op;
+    }
+  }
+
+  /** The type of a function value. */
+  static class FnType extends BaseType {
+    public final Type paramType;
+    public final Type resultType;
+
+    private FnType(String description, Type paramType, Type resultType) {
+      super(Op.FN, description);
+      this.paramType = paramType;
+      this.resultType = resultType;
+    }
+  }
+
+  /** The type of a tuple value. */
+  static class TupleType extends BaseType {
+    public final List<Type> argTypes;
+
+    private TupleType(String description, Iterable<? extends Type> argTypes) {
+      super(Op.TUPLE, description);
+      this.argTypes = ImmutableList.copyOf(argTypes);
     }
   }
 
@@ -335,6 +526,18 @@ public class TypeResolver {
 
     @Override public TypeEnv bind(String name, Unifier.Term typeTerm) {
       return new BindTypeEnv(name, typeTerm, this);
+    }
+
+    @Override public String toString() {
+      final Map<String, Unifier.Term> map = new LinkedHashMap<>();
+      for (BindTypeEnv e = this;;) {
+        map.putIfAbsent(e.definedName, e.typeTerm);
+        if (e.parent instanceof BindTypeEnv) {
+          e = (BindTypeEnv) e.parent;
+        } else {
+          return map.toString();
+        }
+      }
     }
   }
 

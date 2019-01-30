@@ -18,10 +18,11 @@
  */
 package net.hydromatic.sml.ast;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
+
+import net.hydromatic.sml.eval.Unit;
 
 import java.math.BigDecimal;
-import java.util.Map;
 
 /** Builds parse tree nodes. */
 public enum AstBuilder {
@@ -47,16 +48,41 @@ public enum AstBuilder {
     return new Ast.Literal(p, Op.BOOL_LITERAL, b);
   }
 
+  /** Creates a unit literal. */
+  public Ast.Literal unitLiteral(Pos p) {
+    return new Ast.Literal(p, Op.UNIT_LITERAL, Unit.INSTANCE);
+  }
+
   public Ast.TypeNode namedType(Pos pos, String name) {
     return new Ast.NamedType(pos, name);
   }
 
-  public Ast.Pat namedPat(Pos pos, String name) {
-    return new Ast.NamedPat(pos, name);
+  public Ast.IdPat idPat(Pos pos, String name) {
+    return new Ast.IdPat(pos, name);
+  }
+
+  public Ast.LiteralPat literalPat(Pos pos, Op op, Comparable value) {
+    return new Ast.LiteralPat(pos, op, value);
+  }
+
+  public Ast.WildcardPat wildcardPat(Pos pos) {
+    return new Ast.WildcardPat(pos);
+  }
+
+  public Ast.TuplePat tuplePat(Pos pos, Iterable<? extends Ast.Pat> args) {
+    return new Ast.TuplePat(pos, ImmutableList.copyOf(args));
+  }
+
+  public Ast.TuplePat tuplePat(Pos pos, Ast.Pat... args) {
+    return new Ast.TuplePat(pos, ImmutableList.copyOf(args));
   }
 
   public Ast.Pat annotatedPat(Pos pos, Ast.Pat pat, Ast.TypeNode type) {
     return new Ast.AnnotatedPat(pos, pat, type);
+  }
+
+  public Ast.Tuple tuple(Pos pos, Iterable<? extends Ast.Exp> list) {
+    return new Ast.Tuple(pos, list);
   }
 
   public Ast.Exp andAlso(Ast.Exp a0, Ast.Exp a1) {
@@ -91,8 +117,17 @@ public enum AstBuilder {
     return new Ast.LetExp(pos, decl, exp);
   }
 
-  public Ast.VarDecl varDecl(Pos pos, Map<Ast.Pat, Ast.Exp> patExps) {
-    return new Ast.VarDecl(pos, ImmutableMap.copyOf(patExps));
+  public Ast.VarDecl varDecl(Pos pos,
+      Iterable<? extends Ast.ValBind> valBinds) {
+    return new Ast.VarDecl(pos, ImmutableList.copyOf(valBinds));
+  }
+
+  public Ast.VarDecl varDecl(Pos pos, Ast.ValBind... valBinds) {
+    return new Ast.VarDecl(pos, ImmutableList.copyOf(valBinds));
+  }
+
+  public Ast.ValBind valBind(Pos pos, Ast.Pat pat, Ast.Exp e) {
+    return new Ast.ValBind(pos, pat, e);
   }
 
   public Ast.Match match(Pos pos, Ast.Pat pat, Ast.Exp e) {

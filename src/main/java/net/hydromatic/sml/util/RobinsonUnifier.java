@@ -44,6 +44,9 @@ public class RobinsonUnifier extends Unifier {
     if (lhs.terms.size() != rhs.terms.size()) {
       return null;
     }
+    if (!lhs.operator.equals(rhs.operator)) {
+      return null;
+    }
     if (lhs.terms.isEmpty()) {
       return EMPTY;
     }
@@ -51,8 +54,10 @@ public class RobinsonUnifier extends Unifier {
     Term firstRhs = rhs.terms.get(0);
     Substitution subs1 = unify(firstLhs, firstRhs);
     if (subs1 != null) {
-      Sequence restLhs = sequenceApply(subs1.resultMap, skip(lhs.terms));
-      Sequence restRhs = sequenceApply(subs1.resultMap, skip(rhs.terms));
+      Sequence restLhs =
+          sequenceApply(lhs.operator, subs1.resultMap, skip(lhs.terms));
+      Sequence restRhs =
+          sequenceApply(rhs.operator, subs1.resultMap, skip(rhs.terms));
       Substitution subs2 = sequenceUnify(restLhs, restRhs);
       if (subs2 != null) {
         Map<Variable, Term> joined = new HashMap<>();
@@ -64,7 +69,7 @@ public class RobinsonUnifier extends Unifier {
     return null;
   }
 
-  private static <E> List<E> skip(List<E> list) {
+  static <E> List<E> skip(List<E> list) {
     return list.subList(1, list.size());
   }
 
@@ -77,16 +82,12 @@ public class RobinsonUnifier extends Unifier {
     }
   }
 
-
   public @Nullable Substitution unify(Term lhs, Term rhs) {
     if (lhs instanceof Variable) {
       return new Substitution(ImmutableMap.of((Variable) lhs, rhs));
     }
     if (rhs instanceof Variable) {
       return new Substitution(ImmutableMap.of((Variable) rhs, lhs));
-    }
-    if (lhs instanceof Atom && rhs instanceof Atom) {
-      return lhs == rhs ? EMPTY : null;
     }
     if (lhs instanceof Sequence && rhs instanceof Sequence) {
       return sequenceUnify((Sequence) lhs, (Sequence) rhs);

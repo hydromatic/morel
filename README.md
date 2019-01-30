@@ -64,11 +64,14 @@ Implemented:
 * Type derivation (for simple types)
 * `fn`, function values, and function application
 * `if`
+* Primitive and tuple types
+* Tuples and unit
+* Patterns (destructuring) in `let` and `fn`
 
 Not implemented:
 * `fun` declaration
 * Generic types
-* Tuple types and record types
+* Record types
 * `let rec`
 * `type`
 * `datatype`
@@ -77,7 +80,6 @@ Not implemented:
 * `exception`
 * `while`
 * `case`
-* Patterns in `let` and `fn`
 * References, and operators `!` and `:=`
 * Operators: div mod ^ :: @ `before` `not`
 * User-defined operators (`infix`, `infixr`)

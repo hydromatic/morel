@@ -18,6 +18,8 @@
  */
 package net.hydromatic.sml.type;
 
+import net.hydromatic.sml.eval.Unit;
+
 import java.util.Objects;
 
 /** Binding of a name to a type and a value. */
@@ -30,6 +32,14 @@ public class Binding {
     this.name = name;
     this.type = Objects.requireNonNull(type);
     this.value = Objects.requireNonNull(value);
+  }
+
+  @Override public String toString() {
+    if (value == Unit.INSTANCE) {
+      return type.description();
+    } else {
+      return value + ":" + type.description();
+    }
   }
 }
 

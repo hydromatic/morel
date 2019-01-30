@@ -28,6 +28,7 @@ import org.hamcrest.Matcher;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.notNullValue;
@@ -40,11 +41,15 @@ public abstract class UnifierTest {
 
   protected abstract Unifier createUnifier();
 
-  private Unifier.Sequence a(Unifier.Term... terms) {
+  Unifier.Sequence arrow(Unifier.Term t0, Unifier.Term t1) {
+    return unifier.apply("->", t0, t1);
+  }
+
+  Unifier.Sequence a(Unifier.Term... terms) {
     return unifier.apply("a", terms);
   }
 
-  private Unifier.Sequence b(Unifier.Term... terms) {
+  Unifier.Sequence b(Unifier.Term... terms) {
     return unifier.apply("b", terms);
   }
 
@@ -119,22 +124,40 @@ public abstract class UnifierTest {
   // Turn off checkstyle, because non-static fields are conventionally
   // lower-case.
   // CHECKSTYLE: IGNORE 4
-  private final Unifier.Variable X = unifier.variable("X");
+  final Unifier.Variable X = unifier.variable("X");
   private final Unifier.Variable Y = unifier.variable("Y");
   private final Unifier.Variable W = unifier.variable("W");
   private final Unifier.Variable Z = unifier.variable("Z");
 
   void assertThatUnify(Unifier.Term e1, Unifier.Term e2,
       Matcher<String> matcher) {
-    final Unifier.Substitution unify =
-        unifier.unify(ImmutableList.of(new Unifier.TermTerm(e1, e2)));
+    assertThatUnify(termPairs(e1, e2), matcher);
+  }
+
+  void assertThatUnify(List<Unifier.TermTerm> termPairs,
+      Matcher<String> matcher) {
+    final Unifier.Substitution unify = unifier.unify(termPairs);
     assertThat(unify, notNullValue());
     assertThat(unify.resolve().toString(), matcher);
   }
 
   void assertThatCannotUnify(Unifier.Term e1, Unifier.Term e2) {
-    assertThat(unifier.unify(ImmutableList.of(new Unifier.TermTerm(e1, e2))),
-        nullValue());
+    assertThatCannotUnify(termPairs(e1, e2));
+  }
+
+  /** Given [a, b, c, d], returns [(a, b), (c, d)]. */
+  List<Unifier.TermTerm> termPairs(Unifier.Term... terms) {
+    assert terms.length % 2 == 0;
+    final ImmutableList.Builder<Unifier.TermTerm> pairs =
+        ImmutableList.builder();
+    for (int i = 0; i < terms.length; i += 2) {
+      pairs.add(new Unifier.TermTerm(terms[i], terms[i + 1]));
+    }
+    return pairs.build();
+  }
+
+  void assertThatCannotUnify(List<Unifier.TermTerm> pairList) {
+    assertThat(unifier.unify(pairList), nullValue());
   }
 
   @Test public void test1() {
@@ -250,7 +273,7 @@ public abstract class UnifierTest {
     } else if (unifier instanceof RobinsonUnifier) {
       assertThatUnify(e1, e2, is("[Y/X, f(Y)/Y]"));
     } else {
-      assertThatUnify(e1, e2, is("[f(Y)/X]"));
+      assertThatCannotUnify(e1, e2);
     }
   }
 
@@ -297,13 +320,12 @@ public abstract class UnifierTest {
       final Unifier.Variable t8 = unifier.variable("T8");
       final Unifier.Variable t9 = unifier.variable("T9");
       final Unifier.TermTerm[] termTerms = {
-          new Unifier.TermTerm(t0, unifier.apply("->", t1, t2)),
-          new Unifier.TermTerm(t2, unifier.apply("->", t3, t4)),
-          new Unifier.TermTerm(t4, unifier.apply("->", t5, t6)),
-          new Unifier.TermTerm(t1,
-              unifier.apply("->", t8, unifier.apply("->", t7, t6))),
+          new Unifier.TermTerm(t0, arrow(t1, t2)),
+          new Unifier.TermTerm(t2, arrow(t3, t4)),
+          new Unifier.TermTerm(t4, arrow(t5, t6)),
+          new Unifier.TermTerm(t1, arrow(t8, arrow(t7, t6))),
           new Unifier.TermTerm(t8, t5),
-          new Unifier.TermTerm(unifier.apply("->", t9, t7), t3),
+          new Unifier.TermTerm(arrow(t9, t7), t3),
           new Unifier.TermTerm(t9, t5)
       };
       final Unifier.Substitution unify =
@@ -313,9 +335,19 @@ public abstract class UnifierTest {
           is("[->(T1, T2)/T0, ->(T8, ->(T7, T6))/T1, ->(T3, T4)/T2,"
               + " ->(T9, T7)/T3, ->(T5, T6)/T4, T5/T8, T5/T9]"));
     }
+
+    @Test public void testAtomEqAtom() {
+      assertThatCannotUnify(termPairs(b(), X, a(), X));
+    }
+
+    @Test public void testAtomEqAtom2() {
+      assertThatCannotUnify(termPairs(a(), X, a(), X, b(), X));
+    }
+
+    @Test public void testAtomEqAtom3() {
+      assertThatUnify(termPairs(a(), X, a(), X), is("[a/X]"));
+    }
   }
-
-
 }
 
 // End UnifierTest.java

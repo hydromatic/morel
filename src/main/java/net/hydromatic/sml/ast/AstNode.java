@@ -30,6 +30,20 @@ public abstract class AstNode {
     this.op = Objects.requireNonNull(op);
   }
 
+  /** Converts this node into an ML string.
+   *
+   * <p>The purpose of this string is debugging. If you want to generate an
+   * expression, use {@link #unparse}, which will insert parentheses as
+   * necessary for operator precedence.
+   *
+   * <p>Derived classes <em>may</em> override, but they must produce the same
+   * result; so the only reason to override is if they can do it more
+   * efficiently.
+   */
+  @Override public String toString() {
+    return unparse(new AstWriter(), 0, 0).toString();
+  }
+
   AstWriter unparse(AstWriter w, int left, int right) {
     return w.append(toString());
   }

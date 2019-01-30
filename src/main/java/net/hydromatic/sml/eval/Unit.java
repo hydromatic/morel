@@ -18,13 +18,29 @@
  */
 package net.hydromatic.sml.eval;
 
+import java.util.AbstractList;
+
 /** A placeholder value for the "unit" type.
  *
  * <p>We sometimes use it as a dummy value when we need to add a variable (and
  * its type) to the compilation environment but we don't have a value (because
  * it's not a runtime environment). */
-public enum Unit {
-  INSTANCE
+public class Unit extends AbstractList implements Comparable<Unit> {
+  public static final Unit INSTANCE = new Unit();
+
+  private Unit() {}
+
+  public Object get(int index) {
+    throw new IndexOutOfBoundsException();
+  }
+
+  public int size() {
+    return 0;
+  }
+
+  public int compareTo(Unit o) {
+    return 0;
+  }
 }
 
 // End Unit.java

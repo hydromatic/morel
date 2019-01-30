@@ -18,30 +18,22 @@
  */
 package net.hydromatic.sml.eval;
 
-import net.hydromatic.sml.type.Binding;
-import net.hydromatic.sml.type.Type;
+import net.hydromatic.sml.compile.Environment;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiConsumer;
 
-/** Evaluation environment. */
-public class Environment {
-  final Map<String, Binding> valueMap = new HashMap<>();
+/** Evaluation environment.
+ *
+ * <p>Whereas {@link Environment} contains both types and values,
+ * because it is used for validation/compilation, EvalEnv contains
+ * only values. */
+public class EvalEnv {
+  final Map<String, Object> valueMap = new HashMap<>();
 
-  public Binding get(String name) {
-    final Binding value = valueMap.get(name);
-    if (value == null) {
-      throw new AssertionError("expected value for " + name);
-    }
-    return value;
-  }
-
-  public void forEachType(BiConsumer<String, Type> consumer) {
-    for (Map.Entry<String, Binding> entry : valueMap.entrySet()) {
-      consumer.accept(entry.getKey(), entry.getValue().type);
-    }
+  Object get(String name) {
+    return valueMap.get(name);
   }
 }
 
-// End Environment.java
+// End EvalEnv.java

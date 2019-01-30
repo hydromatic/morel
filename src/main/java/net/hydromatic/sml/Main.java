@@ -20,8 +20,8 @@ package net.hydromatic.sml;
 
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.compile.Compiler;
-import net.hydromatic.sml.eval.Environment;
-import net.hydromatic.sml.eval.Environments;
+import net.hydromatic.sml.compile.Environment;
+import net.hydromatic.sml.compile.Environments;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
 

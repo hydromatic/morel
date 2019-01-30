@@ -16,7 +16,7 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.sml.eval;
+package net.hydromatic.sml.compile;
 
 import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.PrimitiveType;
@@ -44,7 +44,8 @@ public abstract class Environments {
     // Copying the entire table is not very efficient.
     final Environment env2 = new Environment();
     env2.valueMap.putAll(env.valueMap);
-    env2.valueMap.put(var, new Binding(var, type, value));
+    final Binding binding = new Binding(var, type, value);
+    env2.valueMap.put(var, binding);
     return env2;
   }
 }

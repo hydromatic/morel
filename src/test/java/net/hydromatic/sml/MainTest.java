@@ -21,10 +21,12 @@ package net.hydromatic.sml;
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.compile.Compiler;
+import net.hydromatic.sml.compile.Environment;
+import net.hydromatic.sml.compile.Environments;
 import net.hydromatic.sml.compile.TypeResolver;
 import net.hydromatic.sml.eval.Code;
-import net.hydromatic.sml.eval.Environment;
-import net.hydromatic.sml.eval.Environments;
+import net.hydromatic.sml.eval.Codes;
+import net.hydromatic.sml.eval.EvalEnv;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
 
@@ -40,6 +42,8 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -55,7 +59,7 @@ public class MainTest {
     action.accept(parser);
   }
 
-  private void checkParseLiteral(String ml, Matcher<Ast.Literal> matcher) {
+  private void assertParseLiteral(String ml, Matcher<Ast.Literal> matcher) {
     withParser(ml, parser -> {
       try {
         final Ast.Literal literal = parser.literal();
@@ -66,7 +70,7 @@ public class MainTest {
     });
   }
 
-  private void checkParseDecl(String ml, Matcher<Ast.VarDecl> matcher) {
+  private void assertParseDecl(String ml, Matcher<Ast.VarDecl> matcher) {
     withParser(ml, parser -> {
       try {
         final Ast.VarDecl varDecl = parser.varDecl();
@@ -77,7 +81,7 @@ public class MainTest {
     });
   }
 
-  private void checkStmt(String ml, Matcher<AstNode> matcher) {
+  private void assertStmt(String ml, Matcher<AstNode> matcher) {
     try {
       final AstNode statement =
           new SmlParserImpl(new StringReader(ml)).statement();
@@ -90,7 +94,7 @@ public class MainTest {
   /** Checks that an expression can be parsed and returns the identical
    * expression when unparsed. */
   private void assertParseSame(String ml) {
-    checkStmt(ml, isAst(AstNode.class, ml));
+    assertStmt(ml, isAst(AstNode.class, ml));
   }
 
   /** Matches a literal by value. */
@@ -112,7 +116,8 @@ public class MainTest {
     return new TypeSafeMatcher<T>() {
       protected boolean matchesSafely(T t) {
         assertThat(clazz.isInstance(t), is(true));
-        return Ast.toString(t).equals(expected);
+        final String s = Ast.toString(t);
+        return s.equals(expected) && s.equals(t.toString());
       }
 
       public void describeTo(Description description) {
@@ -155,7 +160,7 @@ public class MainTest {
         assertThat(typeMap.getType(exp).description(), matcher));
   }
 
-  private void checkEval(String ml, Matcher<Object> matcher) {
+  private void assertEval(String ml, Matcher<Object> matcher) {
     try {
       final Ast.Exp expression =
           new SmlParserImpl(new StringReader(ml)).expression();
@@ -164,7 +169,8 @@ public class MainTest {
       final TypeResolver.TypeMap typeMap =
           TypeResolver.deduceType(env, expression, typeSystem);
       final Code code = new Compiler(typeMap).compile(env, expression);
-      final Object value = code.eval(env);
+      final EvalEnv evalEnv = Codes.emptyEnv();
+      final Object value = code.eval(evalEnv);
       assertThat(value, matcher);
     } catch (ParseException e) {
       throw new RuntimeException(e);
@@ -185,7 +191,10 @@ public class MainTest {
     final String[] args = new String[0];
     final String ml = "val x = 5;\n"
         + "x;\n"
-        + "it + 1;\n";
+        + "it + 1;\n"
+        + "val f = fn x => x + 1;\n"
+        + "f;\n"
+        + "it x;\n";
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(ml.getBytes());
@@ -193,37 +202,42 @@ public class MainTest {
     }
     final String expected = "val x = 5 : int\n"
         + "val it = 5 : int\n"
+        + "val it = 6 : int\n"
+        + "val f = fn : int -> int\n"
+        + "val it = fn : int -> int\n"
         + "val it = 6 : int\n";
     assertThat(out.toString(), is(expected));
   }
 
   @Test public void testParse() {
-    checkParseLiteral("1", isLiteral(BigDecimal.ONE));
-    checkParseLiteral("~3.5", isLiteral(new BigDecimal("-3.5")));
-    checkParseLiteral("\"a string\"", isLiteral("a string"));
+    assertParseLiteral("1", isLiteral(BigDecimal.ONE));
+    assertParseLiteral("~3.5", isLiteral(new BigDecimal("-3.5")));
+    assertParseLiteral("\"a string\"", isLiteral("a string"));
 
     // true and false are variables, not actually literals
-    checkStmt("true", isAst(Ast.Id.class, "true"));
-    checkStmt("false", isAst(Ast.Id.class, "false"));
+    assertStmt("true", isAst(Ast.Id.class, "true"));
+    assertStmt("false", isAst(Ast.Id.class, "false"));
 
-    checkParseDecl("val x = 5", isAst(Ast.VarDecl.class, "val x = 5"));
-    checkParseDecl("val x : int = 5",
+    assertParseDecl("val x = 5", isAst(Ast.VarDecl.class, "val x = 5"));
+    assertParseDecl("val x : int = 5",
         isAst(Ast.VarDecl.class, "val x : int = 5"));
 
-    checkParseDecl("val succ = fn x => x + 1",
+    assertParseDecl("val succ = fn x => x + 1",
         isAst(Ast.VarDecl.class, "val succ = fn x => x + 1"));
 
-    checkParseDecl("val plus = fn x => fn y => x + y",
+    assertParseDecl("val plus = fn x => fn y => x + y",
         isAst(Ast.VarDecl.class, "val plus = fn x => fn y => x + y"));
 
     // parentheses creating left precedence, which is the natural precedence for
     // '+', can be removed
-    checkStmt("((1 + 2) + 3) + 4",
+    assertStmt("((1 + 2) + 3) + 4",
         isAst(AstNode.class, "1 + 2 + 3 + 4"));
 
     // parentheses creating right precedence can not be removed
-    checkStmt("1 + (2 + (3 + (4)))",
+    assertStmt("1 + (2 + (3 + (4)))",
         isAst(AstNode.class, "1 + (2 + (3 + 4))"));
+
+    assertParseSame("(1 + 2, 3, true, (5, 6))");
 
     assertParseSame("let val x = 2 in x + (3 + x) + x end");
 
@@ -234,6 +248,15 @@ public class MainTest {
 
     // if ... else if
     assertParseSame("if true then 1 else if false then 2 else 3");
+
+    // fn
+    assertParseSame("fn x => x + 1");
+    assertParseSame("fn x => x + (1 + 2)");
+    assertParseSame("fn (x, y) => x + y");
+    assertParseSame("fn _ => 42");
+
+    // apply
+    assertParseSame("(fn x => x + 1) 3");
   }
 
   @Test public void testType() {
@@ -244,14 +267,35 @@ public class MainTest {
     assertType("\"\"", is("string"));
     assertType("true andalso false", is("bool"));
     assertType("if true then 1.0 else 2.0", is("real"));
+    assertType("(1, true)", is("int * bool"));
+    assertType("(1, true, false andalso false)", is("int * bool * bool"));
+    assertType("(1)", is("int"));
+    assertType("()", is("unit"));
+    assertType("(fn x => x + 1, fn y => y + 1)",
+        is("(int -> int) * (int -> int)"));
+    assertType("let val x = 1.0 in x + 2.0 end", is("real"));
+    final String ml = "let val x = 1 in\n"
+        + "  let val y = 2 in\n"
+        + "    x + y\n"
+        + "  end\n"
+        + "end";
+    assertType(ml, is("int"));
   }
 
   @Test public void testTypeFn() {
     assertType("fn x => x + 1", is("int -> int"));
+    assertType("fn x => fn y => x + y", is("int -> int -> int"));
   }
 
-  @Test public void testTypeFn2() {
-    assertType("fn x => fn y => x + y", is("int -> int -> int"));
+  @Test public void testTypeFnTuple() {
+    assertType("fn (x, y) => (x + 1, y + 1)",
+        is("int * int -> int * int"));
+    assertType("(fn x => x + 1, fn y => y + 1)",
+        is("(int -> int) * (int -> int)"));
+    assertType("fn x => fn (y, z) => x + y + z",
+        is("int -> int * int -> int"));
+    assertType("fn (x, y) => (x + 1, fn z => (x + z, y + z), y)",
+        is("int * int -> int * (int -> int * int) * int"));
   }
 
   @Ignore // enable this test when we have polymorphic type resolution
@@ -261,51 +305,65 @@ public class MainTest {
     // f has been introduced in a let-expression and is therefore treated as
     // polymorphic.
     assertType("let val f = fn x => x in (f true, f 0) end", is("bool * int"));
+    assertType("fn _ => 42", is("'a -> int"));
+    assertEval("(fn _ => 42) 2", is(42));
   }
 
   @Test public void testEval() {
     // literals
-    checkEval("1", is(1));
-    checkEval("~2", is(-2));
-    checkEval("\"a string\"", is("a string"));
-    checkEval("true", is(true));
-    checkEval("~10.25", is(-10.25f));
-    checkEval("~10.25e3", is(-10_250f));
-    checkEval("~1.25e~3", is(-0.001_25f));
-    checkEval("~1.25E~3", is(-0.001_25f));
-    checkEval("0e0", is(0f));
+    assertEval("1", is(1));
+    assertEval("~2", is(-2));
+    assertEval("\"a string\"", is("a string"));
+    assertEval("true", is(true));
+    assertEval("~10.25", is(-10.25f));
+    assertEval("~10.25e3", is(-10_250f));
+    assertEval("~1.25e~3", is(-0.001_25f));
+    assertEval("~1.25E~3", is(-0.001_25f));
+    assertEval("0e0", is(0f));
 
     // operators
-    checkEval("2 + 3", is(5));
-    checkEval("2 + 3 * 4", is(14));
-    checkEval("2 * 3 + 4 * 5", is(26));
-    checkEval("2 - 3", is(-1));
-    checkEval("2 * 3", is(6));
-    checkEval("20 / 3", is(6));
-    checkEval("20 / ~3", is(-6));
-    checkEval("true andalso false", is(false));
-    checkEval("true orelse false", is(true));
-    checkEval("false andalso false orelse true", is(true));
-    checkEval("false andalso true orelse true", is(true));
+    assertEval("2 + 3", is(5));
+    assertEval("2 + 3 * 4", is(14));
+    assertEval("2 * 3 + 4 * 5", is(26));
+    assertEval("2 - 3", is(-1));
+    assertEval("2 * 3", is(6));
+    assertEval("20 / 3", is(6));
+    assertEval("20 / ~3", is(-6));
+    assertEval("true andalso false", is(false));
+    assertEval("true orelse false", is(true));
+    assertEval("false andalso false orelse true", is(true));
+    assertEval("false andalso true orelse true", is(true));
 
     // if
-    checkEval("if true then 1 else 2", is(1));
-    checkEval("if false then 1 else if true then 2 else 3", is(2));
-    checkEval("if false\n"
+    assertEval("if true then 1 else 2", is(1));
+    assertEval("if false then 1 else if true then 2 else 3", is(2));
+    assertEval("if false\n"
         + "then\n"
         + "  if true then 2 else 3\n"
         + "else 4", is(4));
-    checkEval("if false\n"
+    assertEval("if false\n"
         + "then\n"
         + "  if true then 2 else 3\n"
         + "else\n"
         + "  if false then 4 else 5", is(5));
 
     // let
-    checkEval("let val x = 1 in x + 2 end", is(3));
+    assertEval("let val x = 1 in x + 2 end", is(3));
+    // let with a tuple pattern
+    assertEval("let val (x, y) = (1, 2) in x + y end", is(3));
 
     // let with multiple variables
-    checkEval("let val x = 1 and y = 2 in x + y end", is(3));
+    assertEval("let val x = 1 and y = 2 in x + y end", is(3));
+    // let with multiple variables
+    assertEval("let val x = 1 and y = 2 and z = false in\n"
+        + "  if z then x else y\n"
+        + "end", is(2));
+    assertEval("let val x = 1 and y = 2 and z = true in\n"
+        + "  if z then x else y\n"
+        + "end", is(1));
+    assertEval("let val x = 1 and y = 2 and z = true and a = \"foo\" in\n"
+        + "  if z then x else y\n"
+        + "end", is(1));
 
     // let where variables shadow
     final String letNested = "let\n"
@@ -317,15 +375,72 @@ public class MainTest {
         + "    x * 3\n"
         + "  end + x\n"
         + "end";
-    checkEval(letNested, is(2 * 3 + 1));
+    assertEval(letNested, is(2 * 3 + 1));
+
+    // let with match
+    assertEval("(fn z => let val (x, y) = (z + 1, z + 2) in x + y end) 3",
+        is(9));
+
+    // tuple
+    assertEval("(1, 2)", is(Arrays.asList(1, 2)));
+    assertEval("(1, (2, true))", is(Arrays.asList(1, Arrays.asList(2, true))));
+    assertEval("()", is(Collections.emptyList()));
+    assertEval("(1, 2, 1, 4)", is(Arrays.asList(1, 2, 1, 4)));
+  }
+
+  @Ignore("requires 'let ... ;' and 'fun', not implemented yet")
+  @Test public void testLetSequentialDeclarations() {
+    // let with sequential declarations
+    assertEval("let val x = 1; val y = x + 1 in x + y end", is(3));
+
+    // let with val and fun
+    assertEval("let fun f x = 1 + x; val x = 2 in f x end", is(3));
   }
 
   @Test public void testEvalFn() {
-    checkEval("(fn x => x + 1) 2", is(3));
+    assertEval("(fn x => x + 1) 2", is(3));
   }
 
   @Test public void testEvalFnCurried() {
-    checkEval("(fn x => fn y => x + y) 2 3", is(5));
+    assertEval("(fn x => fn y => x + y) 2 3", is(5));
+  }
+
+  @Test public void testEvalFnTuple() {
+    assertEval("(fn (x, y) => x + y) (2, 3)", is(5));
+  }
+
+  @Ignore("requires generics")
+  @Test public void testEvalFnTupleGeneric() {
+    assertEval("(fn (x, y) => x) (2, 3)", is(2));
+    assertEval("(fn (x, y) => y) (3)", is(3));
+  }
+
+  @Ignore("requires records")
+  @Test public void testRecord() {
+    assertEval("{a = 1, b = 2}", is(""));
+    assertEval("#a {a = 1, b = 2}", is("1"));
+    assertEval("#b {a = 1, b = 2}", is("2"));
+    assertEval("#b {a = 1, b = {x = 3, y = 4}, z = true}",
+        is("{x = 3, y = 4}"));
+    assertError("#x #b {a = 1, b = {x = 3, y = 4}, z = true}",
+        is("Error: operator and operand don't agree [type mismatch]\n"
+            + "  operator domain: {x:'Y; 'Z}\n"
+            + "  operand:         {b:'W; 'X} -> 'W\n"
+            + "  in expression:\n"
+            + "    (fn {x=x,...} => x) (fn {b=b,...} => b)\n"));
+    assertEval("#x (#b {a = 1, b = {x = 3, y = 4}, z = true})",
+        is("3"));
+  }
+
+  @Test public void testError() {
+    assertError("fn x y => x + y",
+        is("Error: non-constructor applied to argument in pattern: x"));
+    assertError("let val x = 1 and y = x + 2 in x + y end",
+        is("Error: unbound variable or constructor: x"));
+  }
+
+  private void assertError(String ml, Matcher<String> matcher) {
+    // TODO: execute code, and check error occurs
   }
 }
 

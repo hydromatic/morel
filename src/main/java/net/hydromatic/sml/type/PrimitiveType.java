@@ -18,6 +18,8 @@
  */
 package net.hydromatic.sml.type;
 
+import net.hydromatic.sml.ast.Op;
+
 import java.util.Locale;
 
 /** Primitive type. */
@@ -33,6 +35,10 @@ public enum PrimitiveType implements Type {
 
   public String description() {
     return description;
+  }
+
+  public Op op() {
+    return Op.ID;
   }
 }
 

@@ -20,7 +20,7 @@ package net.hydromatic.sml.eval;
 
 /** A compiled expression, that can be evaluated. */
 public interface Code {
-  Object eval(Environment env);
+  Object eval(EvalEnv env);
 }
 
 // End Code.java

@@ -18,10 +18,15 @@
  */
 package net.hydromatic.sml.type;
 
+import net.hydromatic.sml.ast.Op;
+
 /** Type. */
 public interface Type {
-  /** Description of the type, e.g. "int", "int -> int". */
+  /** Description of the type, e.g. "{@code int}", "{@code int -> int}". */
   String description();
+
+  /** Type operator. */
+  Op op();
 }
 
 // End Type.java

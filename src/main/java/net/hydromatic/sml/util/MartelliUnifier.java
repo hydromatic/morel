@@ -70,12 +70,12 @@ public class MartelliUnifier extends Unifier {
         final Sequence left = (Sequence) pair.left;
         final Sequence right = (Sequence) pair.right;
 
-        if (left.terms.get(0) != right.terms.get(0)
+        if (!left.operator.equals(right.operator)
             || left.terms.size() != right.terms.size()) {
           return null; // conflict
         }
         termPairs.remove(i); // decompose
-        for (int j = 1; j < left.terms.size(); j++) {
+        for (int j = 0; j < left.terms.size(); j++) {
           termPairs.add(new TermTerm(left.terms.get(j), right.terms.get(j)));
         }
         continue;
@@ -99,14 +99,12 @@ public class MartelliUnifier extends Unifier {
         final Map<Variable, Term> map = ImmutableMap.of(variable, term);
         result.put(variable, term);
         for (int j = 0; j < termPairs.size(); j++) {
-          if (j != i) {
-            final TermTerm pair2 = termPairs.get(j);
-            final Term left2 = pair2.left.apply(map);
-            final Term right2 = pair2.right.apply(map);
-            if (left2 != pair2.left
-                || right2 != pair2.right) {
-              termPairs.set(j, new TermTerm(left2, right2));
-            }
+          final TermTerm pair2 = termPairs.get(j);
+          final Term left2 = pair2.left.apply(map);
+          final Term right2 = pair2.right.apply(map);
+          if (left2 != pair2.left
+              || right2 != pair2.right) {
+            termPairs.set(j, new TermTerm(left2, right2));
           }
         }
       }

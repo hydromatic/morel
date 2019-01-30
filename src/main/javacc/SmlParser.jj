@@ -186,7 +186,7 @@ Exp let() :
   }
 }
 
-/** Parses a "fn arg => expression" lambda expression. */
+/** Parses a "{@code fn arg => expression}" lambda expression. */
 Exp fn() :
 {
   final Span span;
@@ -198,7 +198,7 @@ Exp fn() :
   }
 }
 
-/** Parses a "pat => expression" match. */
+/** Parses a "{@code pat => expression}" match. */
 Match match() :
 {
   final Pat pat;
@@ -319,7 +319,29 @@ Exp atom() :
 |
   e = ifThenElse() { return e; }
 |
-  <LPAREN> e = expression() <RPAREN> { return e; }
+  <LPAREN> {
+    final Span span = Span.of(getPos());
+  }
+  (
+    <RPAREN> { return ast.unitLiteral(span.end(this)); }
+  |
+    e = expression()
+    (
+      <RPAREN> { return e; }
+    |
+      {
+        final List<Exp> list = new ArrayList<Exp>();
+        list.add(e);
+        Exp e2;
+      }
+      (
+        <COMMA> e2 = expression() { list.add(e2); }
+      )+
+      <RPAREN> {
+        return ast.tuple(span.end(this), list);
+      }
+    )
+  )
 }
 
 /** Parses a variable declaration, and adds it to a list. */
@@ -337,21 +359,25 @@ void addVarDecl(List decls) :
 VarDecl varDecl() :
 {
   final Span span;
-  final Map<Pat, Exp> patExps = new LinkedHashMap<Pat, Exp>();
-  Pat v;
+  final List<Ast.ValBind> valBinds = new ArrayList<ValBind>();
+}
+{
+  <VAL> { span = Span.of(getPos()); } valBind(valBinds)
+  (
+    <AND> valBind(valBinds)
+  )*
+  { return ast.varDecl(span.end(this), valBinds); }
+}
+
+void valBind(List<Ast.ValBind> valBinds) :
+{
+  Pat pat;
   Exp e;
 }
 {
-  <VAL> { span = Span.of(getPos()); }
-  v = pat() <EQ> e = expression() {
-    patExps.put(v, e);
+  pat = pat() <EQ> e = expression() {
+    valBinds.add(ast.valBind(pat.pos.plus(e.pos), pat, e));
   }
-  (
-    <AND> v = pat() <EQ> e = expression() {
-      patExps.put(v, e);
-    }
-  )*
-  { return ast.varDecl(span.end(this), patExps); }
 }
 
 /** Parses a declaration. */
@@ -370,7 +396,7 @@ Pat pat() :
   Ast.TypeNode type;
 }
 {
-  pat = pat0()
+  pat = atomPat()
   (
     <COLON> type = type() {
       pat = ast.annotatedPat(pat.pos.plus(type.pos), pat, type);
@@ -379,16 +405,43 @@ Pat pat() :
   { return pat; }
 }
 
-/** Parses a pattern (not annotated by a type). */
-Pat pat0() :
+/** Parses an atomic pattern. */
+Pat atomPat() :
 {
-  final String name;
+  final Ast.Id id;
+  final Ast.Literal literal;
+  final Ast.Pat p;
 }
 {
-  <IDENTIFIER> {
-    return ast.namedPat(pos(), token.image);
+  id = identifier() { return ast.idPat(id.pos, id.name); }
+|
+  literal = literal() {
+    return ast.literalPat(literal.pos, literal.op, literal.value);
   }
+|
+  "_" {
+    return ast.wildcardPat(pos());
+  }
+|
+  <LPAREN> p = pat()
+  (
+    <RPAREN> { return p; }
+  |
+    {
+      final Span span = Span.of(getPos());
+      final List<Pat> list = new ArrayList<Pat>();
+      list.add(p);
+      Pat p2;
+    }
+    (
+      <COMMA> p2 = pat() { list.add(p2); }
+    )+
+    <RPAREN> {
+      return ast.tuplePat(span.end(this), list);
+    }
+  )
 }
+
 
 /** Parses a type. */
 TypeNode type() :

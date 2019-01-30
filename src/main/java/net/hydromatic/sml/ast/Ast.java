@@ -19,11 +19,12 @@
 package net.hydromatic.sml.ast;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.ObjIntConsumer;
 
 /** Various sub-classes of AST nodes. */
 public class Ast {
@@ -37,22 +38,31 @@ public class Ast {
 
   /** Base class for a pattern.
    *
-   * <p>For example, "x" in "val x = 5",
-   * or "(x, y) in "val (x, y) = makePair 1 2". */
+   * <p>For example, "x" in "val x = 5" is a {@link IdPat};
+   * the "(x, y) in "val (x, y) = makePair 1 2" is a {@link TuplePat}. */
   public abstract static class Pat extends AstNode {
     Pat(Pos pos, Op op) {
       super(pos, op);
     }
+
+    public void forEachArg(ObjIntConsumer<Pat> action) {
+      // no args
+    }
+
+    public void visit(Consumer<Pat> consumer) {
+      consumer.accept(this);
+      forEachArg((arg, i) -> arg.visit(consumer));
+    }
   }
 
-  /** Named pattern.
+  /** Named pattern, the pattern analog of the {@link Id} expression.
    *
    * <p>For example, "x" in "val x = 5". */
-  public static class NamedPat extends Pat {
+  public static class IdPat extends Pat {
     public final String name;
 
-    NamedPat(Pos pos, String name) {
-      super(pos, Op.NAMED_PAT);
+    IdPat(Pos pos, String name) {
+      super(pos, Op.ID_PAT);
       this.name = name;
     }
 
@@ -62,6 +72,86 @@ public class Ast {
 
     @Override public String toString() {
       return name;
+    }
+  }
+
+  /** Literal pattern, the pattern analog of the {@link Literal} expression.
+   *
+   * <p>For example, "0" in "fun fact 0 = 1 | fact n = n * fact (n - 1)".*/
+  public static class LiteralPat extends Pat {
+    public final Comparable value;
+
+    LiteralPat(Pos pos, Op op, Comparable value) {
+      super(pos, op);
+      this.value = Objects.requireNonNull(value);
+      Preconditions.checkArgument(op == Op.INT_LITERAL_PAT
+          || op == Op.REAL_LITERAL_PAT
+          || op == Op.STRING_LITERAL_PAT
+          || op == Op.BOOL_LITERAL_PAT);
+    }
+
+    @Override public int hashCode() {
+      return value.hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof LiteralPat
+          && this.value.equals(((LiteralPat) o).value);
+    }
+
+    @Override public String toString() {
+      if (value instanceof String) {
+        return "\"" + ((String) value).replaceAll("\"", "\\\"") + "\"";
+      }
+      return value.toString();
+    }
+  }
+
+  /** Wildcard pattern.
+   *
+   * <p>For example, "{@code _}" in "{@code fn foo _ => 42}". */
+  public static class WildcardPat extends Pat {
+    WildcardPat(Pos pos) {
+      super(pos, Op.WILDCARD_PAT);
+    }
+
+    @Override public int hashCode() {
+      return "_".hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof WildcardPat;
+    }
+
+    @Override public String toString() {
+      return "_";
+    }
+  }
+
+  /** Tuple pattern, the pattern analog of the {@link Tuple} expression.
+   *
+   * <p>For example, "(x, y)" in "fun sum (x, y) = x + y". */
+  public static class TuplePat extends Pat {
+    public final List<Pat> args;
+
+    TuplePat(Pos pos, ImmutableList<Pat> args) {
+      super(pos, Op.TUPLE_PAT);
+      this.args = Objects.requireNonNull(args);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+      int i = 0;
+      for (Pat arg : args) {
+        action.accept(arg, i++);
+      }
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("(");
+      forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
+      return w.append(")");
     }
   }
 
@@ -82,8 +172,8 @@ public class Ast {
       return w.infix(left, pat, op, type, right);
     }
 
-    @Override public String toString() {
-      return pat + " : " + type;
+    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+      action.accept(pat, 0);
     }
   }
 
@@ -116,10 +206,6 @@ public class Ast {
           || obj instanceof AnnotatedExp
               && type.equals(((AnnotatedExp) obj).type)
               && expression.equals(((AnnotatedExp) obj).expression);
-    }
-
-    @Override public String toString() {
-      return expression + " : " + type;
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
@@ -160,6 +246,10 @@ public class Ast {
   public abstract static class Exp extends AstNode {
     Exp(Pos pos, Op op) {
       super(pos, op);
+    }
+
+    public void forEachArg(ObjIntConsumer<Exp> action) {
+      // no args
     }
   }
 
@@ -216,40 +306,66 @@ public class Ast {
     }
   }
 
-  /** Parse tree node of a variable declaration. */
-  public static class VarDecl extends AstNode {
-    public final Map<Pat, Exp> patExps;
+  /** Base class for declarations. */
+  public abstract static class Decl extends AstNode {
+    Decl(Pos pos, Op op) {
+      super(pos, op);
+    }
+  }
 
-    VarDecl(Pos pos, ImmutableMap<Pat, Exp> patExps) {
+  /** Parse tree node of a variable declaration. */
+  public static class VarDecl extends Decl {
+    public final List<Ast.ValBind> valBinds;
+
+    VarDecl(Pos pos, ImmutableList<Ast.ValBind> valBinds) {
       super(pos, Op.VAL_DECL);
-      this.patExps = Objects.requireNonNull(patExps);
-      Preconditions.checkArgument(!patExps.isEmpty());
+      this.valBinds = Objects.requireNonNull(valBinds);
+      Preconditions.checkArgument(!valBinds.isEmpty());
     }
 
     @Override public int hashCode() {
-      return patExps.hashCode();
+      return valBinds.hashCode();
     }
 
     @Override public boolean equals(Object o) {
       return o == this
           || o instanceof VarDecl
-          && this.patExps.equals(((VarDecl) o).patExps);
-    }
-
-    @Override public String toString() {
-      return "val " + patExps;
+          && this.valBinds.equals(((VarDecl) o).valBinds);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       String sep = "val ";
-      for (Map.Entry<Pat, Exp> patExp : patExps.entrySet()) {
+      for (ValBind valBind : valBinds) {
         w.append(sep);
         sep = " and ";
-        patExp.getKey().unparse(w, 0, 0);
+        valBind.pat.unparse(w, 0, 0);
         w.append(" = ");
-        patExp.getValue().unparse(w, 0, right);
+        valBind.e.unparse(w, 0, right);
       }
       return w;
+    }
+  }
+
+  /** Tuple. */
+  public static class Tuple extends Exp {
+    public final List<Exp> args;
+
+    Tuple(Pos pos, Iterable<? extends Exp> args) {
+      super(pos, Op.TUPLE);
+      this.args = ImmutableList.copyOf(args);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+      int i = 0;
+      for (Exp arg : args) {
+        action.accept(arg, i++);
+      }
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("(");
+      forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
+      return w.append(")");
     }
   }
 
@@ -264,9 +380,9 @@ public class Ast {
       this.a1 = Objects.requireNonNull(a1);
     }
 
-    public void forEachArg(Consumer<Exp> action) {
-      action.accept(a0);
-      action.accept(a1);
+    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+      action.accept(a0, 0);
+      action.accept(a1, 1);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -310,6 +426,22 @@ public class Ast {
     }
   }
 
+  /** Value bind. */
+  public static class ValBind extends AstNode {
+    public final Pat pat;
+    public final Exp e;
+
+    ValBind(Pos pos, Pat pat, Exp e) {
+      super(pos, Op.VAL_BIND);
+      this.pat = pat;
+      this.e = e;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(pat, 0, 0).append(" = ").append(e, 0, right);
+    }
+  }
+
   /** Match. */
   public static class Match extends AstNode {
     public final Pat pat;
@@ -336,7 +468,11 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append("fn ").append(match, 0, right);
+      if (left > op.left || op.right < right) {
+        return w.append("(").append(this, 0, 0).append(")");
+      } else {
+        return w.append("fn ").append(match, 0, right);
+      }
     }
   }
 
