@@ -29,7 +29,8 @@ import javax.annotation.Nullable;
 /** Unification algorithm due to Martelli, Montanari (1976) and
  * Paterson, Wegman (1978). */
 public class MartelliUnifier extends Unifier {
-  public @Nullable Substitution unify(List<TermTerm> termPairs) {
+  public @Nullable Substitution unify(List<TermTerm> termPairs,
+      Map<Variable, Action> termActions) {
 
     // delete: G u { t = t }
     //   => G
@@ -98,6 +99,10 @@ public class MartelliUnifier extends Unifier {
         }
         final Map<Variable, Term> map = ImmutableMap.of(variable, term);
         result.put(variable, term);
+        final Action action = termActions.get(variable);
+        if (action != null) {
+          action.accept(variable, term, termPairs);
+        }
         for (int j = 0; j < termPairs.size(); j++) {
           final TermTerm pair2 = termPairs.get(j);
           final Term left2 = pair2.left.apply(map);

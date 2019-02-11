@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 
+import java.util.AbstractList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -106,13 +108,20 @@ public abstract class Unifier {
     return new Sequence(operator, newTerms.build());
   }
 
-  public @Nullable abstract Substitution unify(List<TermTerm> termPairs);
+  public @Nullable abstract Substitution unify(List<TermTerm> termPairs,
+      Map<Variable, Action> termActions);
 
   private static void checkCycles(Map<Variable, Term> map,
       Map<Variable, Variable> active) throws CycleException {
     for (Term term : map.values()) {
       term.checkCycle(map, active);
     }
+  }
+
+  /** Called by the unifier when a Term's type becomes known. */
+  @FunctionalInterface
+  public interface Action {
+    void accept(Variable variable, Term term, List<TermTerm> termPairs);
   }
 
   /** The results of a successful unification. Gives access to the raw variable
@@ -351,6 +360,27 @@ public abstract class Unifier {
 
     public <R> R accept(TermVisitor<R> visitor) {
       return visitor.visit(this);
+    }
+
+    public List<String> fieldList() {
+      if (operator.equals("record")) {
+        return ImmutableList.of();
+      } else if (operator.startsWith("record:")) {
+        final String[] fields = operator.split(":");
+        return Arrays.asList(fields).subList(1, fields.length);
+      } else if (operator.equals("*")) {
+        return new AbstractList<String>() {
+          public int size() {
+            return terms.size();
+          }
+
+          public String get(int index) {
+            return Integer.toString(index + 1);
+          }
+        };
+      } else {
+        return null;
+      }
     }
   }
 }

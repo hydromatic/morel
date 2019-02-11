@@ -18,6 +18,9 @@
  */
 package net.hydromatic.sml.eval;
 
+import net.hydromatic.sml.ast.AstBuilder;
+import net.hydromatic.sml.ast.Pos;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -112,6 +115,17 @@ public abstract class Codes {
       }
       return Arrays.asList(values);
     };
+  }
+
+  /** Returns a code that returns the {@code slot}th field of a tuple or
+   * record. */
+  public static Code nth(int slot) {
+    return env -> new Closure(env,
+        env2 -> {
+          final List values = (List) env2.get("x");
+          return values.get(slot);
+        },
+        AstBuilder.INSTANCE.idPat(Pos.ZERO, "x"));
   }
 
   /** Creates an empty evaluation environment. */

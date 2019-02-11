@@ -95,7 +95,7 @@ Literal numericLiteral() :
   final BigDecimal d;
 }
 {
-  <INTEGER_LITERAL> {
+  (<NATURAL_LITERAL> | <INTEGER_LITERAL>) {
     if (token.image.startsWith("~")) {
       d = new BigDecimal(token.image.substring(1)).negate();
     } else {
@@ -151,6 +151,21 @@ Id identifier() :
 {
   <IDENTIFIER> {
     return ast.id(pos(), token.image);
+  }
+}
+
+/** Parses a record selector, e.g. "{@code #empno}".
+ *
+ * <p>You use it as a function to extract a field of a record;
+ * for example <code>#empno {empno=10, name="Fred"}</code>
+ * yields {@code 10}. */
+RecordSelector recordSelector() :
+{
+}
+{
+  <LABEL> {
+    assert token.image.startsWith("#");
+    return ast.recordSelector(pos(), token.image.substring(1));
   }
 }
 
@@ -310,6 +325,8 @@ Exp atom() :
 {
   e = identifier() { return e; }
 |
+  e = recordSelector() { return e; }
+|
   e = literal() { return e; }
 |
   e = let() { return e; }
@@ -341,6 +358,31 @@ Exp atom() :
       }
     )
   )
+|
+  <LBRACE> {
+    span = Span.of(getPos());
+    final Map<String, Exp> map = new LinkedHashMap<String, Exp>();
+  }
+  [
+    recordExp(map)
+    (
+      <COMMA> recordExp(map)
+    )*
+  ]
+  <RBRACE> {
+    return ast.record(span.end(this), map);
+  }
+}
+
+/** Parses a "label = expression" inside a record. */
+void recordExp(Map/*<String, Exp>*/ map) :
+{
+  final String id;
+  final Ast.Exp exp;
+}
+{
+  ( <NATURAL_LITERAL> | <IDENTIFIER> ) { id = token.image; }
+  <EQ> exp = expression() { map.put(id, exp); }
 }
 
 /** Parses a variable declaration, and adds it to a list. */
@@ -497,9 +539,11 @@ AstNode statementSemicolon() :
 
 <DEFAULT, DQID, BTID> TOKEN :
 {
+    < NATURAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+    |
     < INTEGER_LITERAL: ("~")?(["0"-"9"])+ >
     |
-    < REAL_LITERAL: ("~")?(["0"-"9"])+ "." (["0"-"9"])+>
+    < REAL_LITERAL: ("~")?(["0"-"9"])+ "." (["0"-"9"])+ >
     |
     < SCIENTIFIC_LITERAL: ("~")?(["0"-"9"])+
                           ("." (["0"-"9"])+)?
@@ -681,6 +725,8 @@ MORE :
     >
     |
     < IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+    |
+    < LABEL: "#" (<LETTER>|<DIGIT>)+ >
     |
     < UNICODE_QUOTED_IDENTIFIER: "U" "&" <QUOTED_IDENTIFIER> >
     |

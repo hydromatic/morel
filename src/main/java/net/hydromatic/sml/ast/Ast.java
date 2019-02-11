@@ -20,8 +20,10 @@ package net.hydromatic.sml.ast;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
@@ -273,6 +275,41 @@ public class Ast {
     }
   }
 
+  /** Parse tree node of a record selector. */
+  public static class RecordSelector extends Exp {
+    public final String name;
+
+    /** Set during validation, after the type of the argument has been deduced,
+     * contains the ordinal of the field in the record or tuple that is to be
+     * accessed.
+     *
+     * <p>A mutable field, it is not strictly a parse tree property, but just
+     * convenient storage for a value needed by the compiler. Use with care. */
+    public int slot = -1;
+
+    /** Creates a record selector. */
+    RecordSelector(Pos pos, String name) {
+      super(pos, Op.RECORD_SELECTOR);
+      this.name = Objects.requireNonNull(name);
+      assert !name.startsWith("#");
+    }
+
+    @Override public int hashCode() {
+      return name.hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof Id
+          && this.name.equals(((Id) o).name);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("#").append(name);
+    }
+
+  }
+
   /** Parse tree node of a literal (constant). */
   public static class Literal extends Exp {
     public final Comparable value;
@@ -364,6 +401,35 @@ public class Ast {
       w.append("(");
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
+    }
+  }
+
+  /** Record. */
+  public static class Record extends Exp {
+    public final Map<String, Exp> args;
+
+    Record(Pos pos, ImmutableMap<String, Exp> args) {
+      super(pos, Op.RECORD);
+      this.args = Objects.requireNonNull(args);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+      int i = 0;
+      for (Exp arg : args.values()) {
+        action.accept(arg, i++);
+      }
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("{");
+      int i = 0;
+      for (Map.Entry<String, Exp> entry : args.entrySet()) {
+        if (i++ > 0) {
+          w.append(", ");
+        }
+        w.append(entry.getKey()).append(" = ").append(entry.getValue(), 0, 0);
+      }
+      return w.append("}");
     }
   }
 

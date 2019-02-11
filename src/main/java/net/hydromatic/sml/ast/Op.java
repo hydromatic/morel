@@ -20,6 +20,18 @@ package net.hydromatic.sml.ast;
 
 /** Sub-types of {@link AstNode}. */
 public enum Op {
+  // identifiers
+  ID("", 99),
+  RECORD_SELECTOR,
+
+  // literals
+  INT_LITERAL,
+  BOOL_LITERAL,
+  REAL_LITERAL,
+  STRING_LITERAL,
+  UNIT_LITERAL,
+
+  // patterns
   ID_PAT,
   WILDCARD_PAT,
   TUPLE_PAT,
@@ -30,15 +42,14 @@ public enum Op {
   // annotated pattern "p: t"
   ANNOTATED_PAT(" : "),
 
+  // value constructors
+  TUPLE(" * ", 7),
+  RECORD,
+  FN(" -> ", 6, false),
+
   // annotated expression "e: t"
   ANNOTATED_EXP(" : "),
   NAMED_TYPE,
-  ID("", 99),
-  INT_LITERAL,
-  BOOL_LITERAL,
-  REAL_LITERAL,
-  STRING_LITERAL,
-  UNIT_LITERAL,
   VAL_DECL(" = "),
   TIMES(" * ", 7),
   DIVIDE(" / ", 7),
@@ -63,10 +74,8 @@ public enum Op {
   LET,
   MATCH,
   VAL_BIND,
-  FN(" -> ", 6, false),
   APPLY(" ", 8),
-  IF,
-  TUPLE(" * ", 7);
+  IF;
 
   /** Padded name, e.g. " : ". */
   public final String padded;

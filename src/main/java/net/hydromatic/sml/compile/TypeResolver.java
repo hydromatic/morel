@@ -18,8 +18,11 @@
  */
 package net.hydromatic.sml.compile;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Ordering;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
@@ -28,6 +31,7 @@ import net.hydromatic.sml.type.PrimitiveType;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.util.MartelliUnifier;
 import net.hydromatic.sml.util.Ord;
+import net.hydromatic.sml.util.Pair;
 import net.hydromatic.sml.util.Unifier;
 
 import java.util.ArrayList;
@@ -37,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SortedMap;
 import java.util.stream.Collectors;
 
 /** Resolves the type of an expression. */
@@ -44,9 +49,30 @@ public class TypeResolver {
   final Unifier unifier = new MartelliUnifier();
   final List<TermVariable> terms = new ArrayList<>();
   final Map<AstNode, Unifier.Term> map = new HashMap<>();
+  final Map<Unifier.Variable, Unifier.Action> actionMap = new HashMap<>();
 
   private static final String TUPLE_TY_CON = "*";
+  private static final String RECORD_TY_CON = "record";
   private static final String FN_TY_CON = "fn";
+
+  /** Ordering that compares integer values numerically,
+   * string values lexicographically,
+   * and integer values before string values.
+   *
+   * <p>Thus: 2, 22, 202, a, a2, a202, a22. */
+  private static final Ordering<String> ORDERING =
+      Ordering.from(
+          (o1, o2) -> {
+            Integer i1 = parseInt(o1);
+            Integer i2 = parseInt(o2);
+            if (i1 == null && i2 == null) {
+              return o1.compareTo(o2);
+            }
+            if (i1 != null && i2 != null) {
+              return i1.compareTo(i2);
+            }
+            return i1 != null ? -1 : 1;
+          });
 
   public TypeResolver() {
   }
@@ -54,6 +80,16 @@ public class TypeResolver {
   public static TypeMap deduceType(Environment env,
       AstNode node, TypeSystem typeSystem) {
     return new TypeResolver().deduceType_(env, node, typeSystem);
+  }
+
+  /** Parses a string that contains an integer value, or returns null if
+   * the string does not contain an integer. */
+  private static Integer parseInt(String s) {
+    try {
+      return Integer.parseInt(s);
+    } catch (NumberFormatException e) {
+      return null;
+    }
   }
 
   private TypeMap deduceType_(Environment env, AstNode node,
@@ -69,7 +105,8 @@ public class TypeResolver {
     final List<Unifier.TermTerm> termPairs = new ArrayList<>();
     terms.forEach(tv ->
         termPairs.add(new Unifier.TermTerm(tv.term, tv.variable)));
-    final Unifier.Substitution substitution = unifier.unify(termPairs);
+    final Unifier.Substitution substitution =
+        unifier.unify(termPairs, actionMap);
     return new TypeMap(typeSystem, map, substitution);
   }
 
@@ -119,6 +156,22 @@ public class TypeResolver {
       }
       return reg(tuple, v, unifier.apply(TUPLE_TY_CON, types));
 
+    case RECORD:
+      final Ast.Record record = (Ast.Record) node;
+      final Map<String, Unifier.Term> labelTypes = new LinkedHashMap<>();
+      record.args.forEach((name, exp) -> {
+        final Unifier.Variable vArg = unifier.variable();
+        deduceType(env, exp, vArg);
+        labelTypes.put(name, vArg);
+      });
+      final StringBuilder b = new StringBuilder(RECORD_TY_CON);
+      for (String label : labelTypes.keySet()) {
+        b.append(':').append(label);
+      }
+      final Unifier.Sequence recordTerm =
+          unifier.apply(b.toString(), labelTypes.values());
+      return reg(record, v, recordTerm);
+
     case LET:
       final Ast.LetExp let = (Ast.LetExp) node;
       final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
@@ -129,6 +182,12 @@ public class TypeResolver {
     case ID:
       final Ast.Id id = (Ast.Id) node;
       return reg(id, v, env.get(id.name));
+
+    case RECORD_SELECTOR:
+      final Ast.RecordSelector recordSelector = (Ast.RecordSelector) node;
+      throw new RuntimeException("Error: unresolved flex record\n"
+          + "   (can't tell what fields there are besides #"
+          + recordSelector.name + ")");
 
     case IF:
       // TODO: check that condition has type boolean
@@ -153,12 +212,16 @@ public class TypeResolver {
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) node;
       final Unifier.Variable vFn = unifier.variable();
-      final Unifier.Variable vResult = unifier.variable();
       final Unifier.Variable vArg = unifier.variable();
-      equiv(unifier.apply(FN_TY_CON, vArg, vResult), vFn);
-      deduceType(env, apply.fn, vFn);
+      equiv(unifier.apply(FN_TY_CON, vArg, v), vFn);
       deduceType(env, apply.arg, vArg);
-      return reg(apply, null, vResult);
+      if (apply.fn instanceof Ast.RecordSelector) {
+        deduceRecordSelectorType(env, v, vArg,
+            (Ast.RecordSelector) apply.fn);
+      } else {
+        deduceType(env, apply.fn, vFn);
+      }
+      return reg(apply, null, v);
 
     case PLUS:
     case MINUS:
@@ -169,6 +232,30 @@ public class TypeResolver {
     default:
       throw new AssertionError("cannot deduce type for " + node.op);
     }
+  }
+
+  private boolean deduceRecordSelectorType(TypeEnv env,
+      Unifier.Variable vResult, Unifier.Variable vArg,
+      Ast.RecordSelector recordSelector) {
+    actionMap.put(vArg, (v3, t, termPairs) -> {
+      // We now know that the type arg, say "{a: int, b: real}".
+      // So, now we can declare that the type of vResult, say "#b", is
+      // "real".
+      if (t instanceof Unifier.Sequence) {
+        final Unifier.Sequence sequence = (Unifier.Sequence) t;
+        final List<String> fieldList = sequence.fieldList();
+        if (fieldList != null) {
+          int i = fieldList.indexOf(recordSelector.name);
+          if (i >= 0) {
+            termPairs.add(
+                new Unifier.TermTerm(vResult,
+                    sequence.terms.get(i)));
+            recordSelector.slot = i;
+          }
+        }
+      }
+    });
+    return true;
   }
 
   private boolean deduceMatchType(TypeEnv env, Ast.Match match,
@@ -356,19 +443,22 @@ public class TypeResolver {
     }
 
     public Type visit(Unifier.Sequence sequence) {
+      final ImmutableList.Builder<Type> argTypes;
       switch (sequence.operator) {
       case "fn":
         assert sequence.terms.size() == 2;
         final Type paramType = sequence.terms.get(0).accept(this);
         final Type resultType = sequence.terms.get(1).accept(this);
         return typeSystem.fnType(paramType, resultType);
+
       case "*":
         assert sequence.terms.size() >= 2;
-        final ImmutableList.Builder<Type> argTypes = ImmutableList.builder();
+        argTypes = ImmutableList.builder();
         for (Unifier.Term term : sequence.terms) {
           argTypes.add(term.accept(this));
         }
         return typeSystem.tupleType(argTypes.build());
+
       case "bool":
       case "int":
       case "real":
@@ -379,7 +469,19 @@ public class TypeResolver {
           throw new AssertionError("unknown type " + type);
         }
         return type;
+
       default:
+        if (sequence.operator.startsWith(RECORD_TY_CON)) {
+          // E.g. "record:a:b" becomes record type "{a:t0, b:t1}".
+          final List<String> argNames = sequence.fieldList();
+          if (argNames != null) {
+            argTypes = ImmutableList.builder();
+            for (Unifier.Term term : sequence.terms) {
+              argTypes.add(term.accept(this));
+            }
+            return typeSystem.recordType(argNames, argTypes.build());
+          }
+        }
         throw new AssertionError("unknown type constructor "
             + sequence.operator);
       }
@@ -431,7 +533,44 @@ public class TypeResolver {
     Type tupleType(List<? extends Type> argTypes) {
       final String description =
           unparseList(new StringBuilder(), Op.TIMES, 0, 0, argTypes).toString();
-      return map.computeIfAbsent(description, d -> new TupleType(d, argTypes));
+      return map.computeIfAbsent(description,
+          d -> new TupleType(d, ImmutableList.copyOf(argTypes)));
+    }
+
+    /** Creates a record type. (Or a tuple type if the fields are named "1", "2"
+     * etc.; or "unit" if the field list is empty.) */
+    Type recordType(List<String> argNames, List<? extends Type> argTypes) {
+      Preconditions.checkArgument(argNames.size() == argTypes.size());
+      if (argNames.isEmpty()) {
+        return PrimitiveType.UNIT;
+      }
+      final ImmutableSortedMap.Builder<String, Type> mapBuilder =
+          ImmutableSortedMap.orderedBy(ORDERING);
+      Pair.forEach(argNames, argTypes, mapBuilder::put);
+      final StringBuilder builder = new StringBuilder("{");
+      final ImmutableSortedMap<String, Type> map = mapBuilder.build();
+      map.forEach((name, type) -> {
+        if (builder.length() > 1) {
+          builder.append(", ");
+        }
+        builder.append(name).append(':').append(type.description());
+      });
+      if (areContiguousIntegers(map.keySet())) {
+        return tupleType(ImmutableList.copyOf(map.values()));
+      }
+      final String description = builder.append('}').toString();
+      return this.map.computeIfAbsent(description, d -> new RecordType(d, map));
+    }
+
+    /** Returns whether the collection is ["1", "2", ... n]. */
+    private boolean areContiguousIntegers(Iterable<String> strings) {
+      int i = 1;
+      for (String string : strings) {
+        if (!string.equals(Integer.toString(i++))) {
+          return false;
+        }
+      }
+      return true;
     }
 
     private static StringBuilder unparseList(StringBuilder builder, Op op,
@@ -497,9 +636,22 @@ public class TypeResolver {
   static class TupleType extends BaseType {
     public final List<Type> argTypes;
 
-    private TupleType(String description, Iterable<? extends Type> argTypes) {
+    private TupleType(String description, ImmutableList<Type> argTypes) {
       super(Op.TUPLE, description);
-      this.argTypes = ImmutableList.copyOf(argTypes);
+      this.argTypes = Objects.requireNonNull(argTypes);
+    }
+  }
+
+  /** The type of a record value. */
+  static class RecordType extends BaseType {
+
+    public final SortedMap<String, Type> argNameTypes;
+
+    private RecordType(String description,
+        ImmutableSortedMap<String, Type> argNameTypes) {
+      super(Op.RECORD, description);
+      this.argNameTypes = Objects.requireNonNull(argNameTypes);
+      Preconditions.checkArgument(argNameTypes.comparator() == ORDERING);
     }
   }
 

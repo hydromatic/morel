@@ -179,6 +179,10 @@ public class Compiler {
 //          (TypeResolver.FnType) typeMap.getType(fn);
       return compileMatch(env, fn.match /* , fnType.paramType */);
 
+    case RECORD_SELECTOR:
+      final Ast.RecordSelector recordSelector = (Ast.RecordSelector) expression;
+      return Codes.nth(recordSelector.slot);
+
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) expression;
       final Code fnCode = compile(env, apply.fn);
@@ -192,6 +196,10 @@ public class Compiler {
         codes.add(compile(env, arg));
       }
       return Codes.tuple(codes);
+
+    case RECORD:
+      final Ast.Record record = (Ast.Record) expression;
+      return compile(env, ast.tuple(record.pos, record.args.values()));
 
     case ANDALSO:
       call = (Ast.InfixCall) expression;

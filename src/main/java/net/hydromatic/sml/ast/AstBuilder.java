@@ -19,10 +19,12 @@
 package net.hydromatic.sml.ast;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import net.hydromatic.sml.eval.Unit;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 /** Builds parse tree nodes. */
 public enum AstBuilder {
@@ -57,6 +59,10 @@ public enum AstBuilder {
     return new Ast.Id(pos, name);
   }
 
+  public Ast.RecordSelector recordSelector(Pos pos, String name) {
+    return new Ast.RecordSelector(pos, name);
+  }
+
   public Ast.TypeNode namedType(Pos pos, String name) {
     return new Ast.NamedType(pos, name);
   }
@@ -87,6 +93,10 @@ public enum AstBuilder {
 
   public Ast.Tuple tuple(Pos pos, Iterable<? extends Ast.Exp> list) {
     return new Ast.Tuple(pos, list);
+  }
+
+  public Ast.Exp record(Pos pos, Map<String, Ast.Exp> map) {
+    return new Ast.Record(pos, ImmutableMap.copyOf(map));
   }
 
   public Ast.Exp andAlso(Ast.Exp a0, Ast.Exp a1) {

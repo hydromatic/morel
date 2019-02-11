@@ -18,6 +18,8 @@
  */
 package net.hydromatic.sml;
 
+import com.google.common.collect.ImmutableList;
+
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.compile.Compiler;
@@ -243,6 +245,11 @@ public class MainTest {
 
     assertParseSame("let val x = 2 and y = 3 in x + y end");
 
+    // record
+    assertParseSame("{a = 1}");
+    assertParseSame("{a = 1, b = 2}");
+    assertParseSame("{a = 1, b = {c = 2, d = true}, e = true}");
+
     // if
     assertParseSame("if true then 1 else 2");
 
@@ -271,6 +278,7 @@ public class MainTest {
     assertType("(1, true, false andalso false)", is("int * bool * bool"));
     assertType("(1)", is("int"));
     assertType("()", is("unit"));
+    assertType("{a = 1, b = true}", is("{a:int, b:bool}"));
     assertType("(fn x => x + 1, fn y => y + 1)",
         is("(int -> int) * (int -> int)"));
     assertType("let val x = 1.0 in x + 2.0 end", is("real"));
@@ -415,21 +423,67 @@ public class MainTest {
     assertEval("(fn (x, y) => y) (3)", is(3));
   }
 
-  @Ignore("requires records")
   @Test public void testRecord() {
-    assertEval("{a = 1, b = 2}", is(""));
-    assertEval("#a {a = 1, b = 2}", is("1"));
-    assertEval("#b {a = 1, b = 2}", is("2"));
+    assertParseSame("{a = 1, b = {c = true, d = false}}");
+    assertParseSame("{a = 1, 1 = 2}");
+    assertParseSame("#b {a = 1, b = {c = true, d = false}}");
+    assertError("{0=1}", is("label must be positive"));
+    assertType("{a = 1, b = true}", is("{a:int, b:bool}"));
+    assertType("{b = true, a = 1}", is("{a:int, b:bool}"));
+    assertEval("{a = 1, b = 2}", is(Arrays.asList(1, 2)));
+    assertEval("{a = true, b = ~2}", is(Arrays.asList(true, -2)));
+    assertEval("{a = true, b = ~2, c = \"c\"}",
+        is(Arrays.asList(true, -2, "c")));
+    assertEval("{a = true, b = {c = 1, d = 2}}",
+        is(Arrays.asList(true, Arrays.asList(1, 2))));
+    assertType("#a {a = 1, b = true}", is("int"));
+    assertType("#b {a = 1, b = true}", is("bool"));
+    assertEval("#a {a = 1, b = true}", is(1));
+    assertEval("#b {a = 1, b = true}", is(true));
+    assertEval("#b {a = 1, b = 2}", is(2));
     assertEval("#b {a = 1, b = {x = 3, y = 4}, z = true}",
-        is("{x = 3, y = 4}"));
+        is(Arrays.asList(3, 4)));
+    assertEval("#x (#b {a = 1, b = {x = 3, y = 4}, z = true})",
+        is(3));
+  }
+
+  @Ignore
+  @Test public void testEquals() {
+    assertEval("{b = true, a = 1} = {a = 1, b = true}", is(true));
+    assertEval("{b = true, a = 0} = {a = 1, b = true}", is(false));
+  }
+
+  @Ignore("deduce type of #label")
+  @Test public void testRecord2() {
     assertError("#x #b {a = 1, b = {x = 3, y = 4}, z = true}",
         is("Error: operator and operand don't agree [type mismatch]\n"
             + "  operator domain: {x:'Y; 'Z}\n"
             + "  operand:         {b:'W; 'X} -> 'W\n"
             + "  in expression:\n"
             + "    (fn {x=x,...} => x) (fn {b=b,...} => b)\n"));
-    assertEval("#x (#b {a = 1, b = {x = 3, y = 4}, z = true})",
-        is("3"));
+  }
+
+  @Ignore("deduce type of #label")
+  @Test public void testRecordMatch() {
+    assertType("(fn {a=a1,b=b1} => a1) {a = 1, b = true}", is("int"));
+    assertType("(fn {a=a1,b=b1} => b1) {a = 1, b = true}", is("bool"));
+    assertEval("(fn {a=a1,b=b1} => a1) {a = 1, b = true}", is("1"));
+    assertEval("(fn {a=a1,b=b1} => b1) {a = 1, b = true}", is("true"));
+  }
+
+  @Test public void testRecordTuple() {
+    assertType("{ 1 = true, 2 = 0}", is("bool * int"));
+    assertType("{2=0,1=true}", is("bool * int"));
+    assertType("{3=0,1=true,11=false}", is("{1:bool, 3:int, 11:bool}"));
+    assertType("#1 {1=true,2=0}", is("bool"));
+    assertType("#1 (true, 0)", is("bool"));
+    assertType("#2 (true, 0)", is("int"));
+    assertEval("#2 (true, 0)", is(0));
+
+    // emtpy record = () = unit
+    assertType("()", is("unit"));
+    assertType("{}", is("unit"));
+    assertEval("{}", is(ImmutableList.of()));
   }
 
   @Test public void testError() {

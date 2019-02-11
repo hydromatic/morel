@@ -19,6 +19,7 @@
 package net.hydromatic.sml;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import net.hydromatic.sml.util.MartelliUnifier;
 import net.hydromatic.sml.util.RobinsonUnifier;
@@ -136,7 +137,8 @@ public abstract class UnifierTest {
 
   void assertThatUnify(List<Unifier.TermTerm> termPairs,
       Matcher<String> matcher) {
-    final Unifier.Substitution unify = unifier.unify(termPairs);
+    final Unifier.Substitution unify =
+        unifier.unify(termPairs, ImmutableMap.of());
     assertThat(unify, notNullValue());
     assertThat(unify.resolve().toString(), matcher);
   }
@@ -157,7 +159,7 @@ public abstract class UnifierTest {
   }
 
   void assertThatCannotUnify(List<Unifier.TermTerm> pairList) {
-    assertThat(unifier.unify(pairList), nullValue());
+    assertThat(unifier.unify(pairList, ImmutableMap.of()), nullValue());
   }
 
   @Test public void test1() {
@@ -329,7 +331,7 @@ public abstract class UnifierTest {
           new Unifier.TermTerm(t9, t5)
       };
       final Unifier.Substitution unify =
-          unifier.unify(Arrays.asList(termTerms));
+          unifier.unify(Arrays.asList(termTerms), ImmutableMap.of());
       assertThat(unify, notNullValue());
       assertThat(unify.toString(),
           is("[->(T1, T2)/T0, ->(T8, ->(T7, T6))/T1, ->(T3, T4)/T2,"

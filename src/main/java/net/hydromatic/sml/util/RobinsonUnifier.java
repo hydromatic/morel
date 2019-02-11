@@ -73,7 +73,8 @@ public class RobinsonUnifier extends Unifier {
     return list.subList(1, list.size());
   }
 
-  public @Nullable Substitution unify(List<TermTerm> termPairs) {
+  public @Nullable Substitution unify(List<TermTerm> termPairs,
+      Map<Variable, Action> termActions) {
     switch (termPairs.size()) {
     case 1:
       return unify(termPairs.get(0).left, termPairs.get(0).right);
