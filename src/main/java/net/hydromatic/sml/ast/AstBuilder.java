@@ -53,6 +53,10 @@ public enum AstBuilder {
     return new Ast.Literal(p, Op.UNIT_LITERAL, Unit.INSTANCE);
   }
 
+  public Ast.Id id(Pos pos, String name) {
+    return new Ast.Id(pos, name);
+  }
+
   public Ast.TypeNode namedType(Pos pos, String name) {
     return new Ast.NamedType(pos, name);
   }

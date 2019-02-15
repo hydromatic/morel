@@ -18,8 +18,6 @@
  */
 package net.hydromatic.sml.eval;
 
-import net.hydromatic.sml.type.Type;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -72,9 +70,7 @@ public abstract class Codes {
   /** Returns a Code that returns the value of variable "name" in the current
    * environment. */
   public static Code get(String name) {
-    return env -> {
-      return env.get(name);
-    };
+    return env -> env.get(name);
   }
 
   public static Code let(List<Code> fnCodes, Code argCode) {
@@ -134,19 +130,6 @@ public abstract class Codes {
     env2.valueMap.putAll(env.valueMap);
     env2.valueMap.put(var, value);
     return env2;
-  }
-
-  /** A (name, type, code) triple. */
-  public static class NameTypeCode {
-    public final String name;
-    public final Type type;
-    public final Code code;
-
-    public NameTypeCode(String name, Type type, Code code) {
-      this.name = name;
-      this.type = type;
-      this.code = code;
-    }
   }
 }
 

@@ -150,7 +150,7 @@ Id identifier() :
 }
 {
   <IDENTIFIER> {
-    return new Ast.Id(pos(), token.image);
+    return ast.id(pos(), token.image);
   }
 }
 

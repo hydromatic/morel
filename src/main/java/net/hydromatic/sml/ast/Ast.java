@@ -69,10 +69,6 @@ public class Ast {
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(name);
     }
-
-    @Override public String toString() {
-      return name;
-    }
   }
 
   /** Literal pattern, the pattern analog of the {@link Literal} expression.
@@ -100,11 +96,14 @@ public class Ast {
           && this.value.equals(((LiteralPat) o).value);
     }
 
-    @Override public String toString() {
+    AstWriter unparse(AstWriter w, int left, int right) {
       if (value instanceof String) {
-        return "\"" + ((String) value).replaceAll("\"", "\\\"") + "\"";
+        return w.append("\"")
+            .append(((String) value).replaceAll("\"", "\\\""))
+            .append("\"");
+      } else {
+        return w.append(value.toString());
       }
-      return value.toString();
     }
   }
 
@@ -125,8 +124,8 @@ public class Ast {
           || o instanceof WildcardPat;
     }
 
-    @Override public String toString() {
-      return "_";
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("_");
     }
   }
 
@@ -233,10 +232,6 @@ public class Ast {
           && name.equals(((NamedType) obj).name);
     }
 
-    @Override public String toString() {
-      return name;
-    }
-
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(name);
     }
@@ -258,7 +253,7 @@ public class Ast {
     public final String name;
 
     /** Creates an Id. */
-    public Id(Pos pos, String name) {
+    Id(Pos pos, String name) {
       super(pos, Op.ID);
       this.name = Objects.requireNonNull(name);
     }
@@ -273,8 +268,8 @@ public class Ast {
           && this.name.equals(((Id) o).name);
     }
 
-    @Override public String toString() {
-      return name;
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(name);
     }
   }
 
@@ -298,11 +293,14 @@ public class Ast {
           && this.value.equals(((Literal) o).value);
     }
 
-    @Override public String toString() {
+    AstWriter unparse(AstWriter w, int left, int right) {
       if (value instanceof String) {
-        return "\"" + ((String) value).replaceAll("\"", "\\\"") + "\"";
+        return w.append("\"")
+            .append(((String) value).replaceAll("\"", "\\\""))
+            .append("\"");
+      } else {
+        return w.append(value.toString());
       }
-      return value.toString();
     }
   }
 

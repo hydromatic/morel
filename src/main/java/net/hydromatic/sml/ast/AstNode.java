@@ -40,13 +40,12 @@ public abstract class AstNode {
    * result; so the only reason to override is if they can do it more
    * efficiently.
    */
-  @Override public String toString() {
+  @Override public final String toString() {
+    // Marked final because you should override unparse, not toString
     return unparse(new AstWriter(), 0, 0).toString();
   }
 
-  AstWriter unparse(AstWriter w, int left, int right) {
-    return w.append(toString());
-  }
+  abstract AstWriter unparse(AstWriter w, int left, int right);
 }
 
 // End AstNode.java
