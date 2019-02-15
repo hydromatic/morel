@@ -92,10 +92,10 @@ Literal literal() :
 /** Parses a numeric literal */
 Literal numericLiteral() :
 {
+  final BigDecimal d;
 }
 {
   <INTEGER_LITERAL> {
-    final BigDecimal d;
     if (token.image.startsWith("~")) {
       d = new BigDecimal(token.image.substring(1)).negate();
     } else {
@@ -105,7 +105,6 @@ Literal numericLiteral() :
   }
 |
   <REAL_LITERAL> {
-    final BigDecimal d;
     if (token.image.startsWith("~")) {
       d = new BigDecimal(token.image.substring(1)).negate();
     } else {
@@ -115,7 +114,6 @@ Literal numericLiteral() :
   }
 |
   <SCIENTIFIC_LITERAL> {
-    final BigDecimal d;
     final int e = Math.max(token.image.indexOf("e"),
       token.image.indexOf("E"));
     if (token.image.startsWith("~")) {
@@ -307,6 +305,7 @@ Exp expression() :
 Exp atom() :
 {
   final Exp e;
+  final Span span;
 }
 {
   e = identifier() { return e; }
@@ -320,7 +319,7 @@ Exp atom() :
   e = ifThenElse() { return e; }
 |
   <LPAREN> {
-    final Span span = Span.of(getPos());
+    span = Span.of(getPos());
   }
   (
     <RPAREN> { return ast.unitLiteral(span.end(this)); }
@@ -369,7 +368,7 @@ VarDecl varDecl() :
   { return ast.varDecl(span.end(this), valBinds); }
 }
 
-void valBind(List<Ast.ValBind> valBinds) :
+void valBind(List/*<Ast.ValBind>*/ valBinds) :
 {
   Pat pat;
   Exp e;

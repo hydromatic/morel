@@ -311,7 +311,7 @@ License.
               <includes>
                 <include>**/SmlParser.jj</include>
               </includes>
-              <lookAhead>2</lookAhead>
+              <lookAhead>1</lookAhead>
               <isStatic>false</isStatic>
             </configuration>
           </execution>
