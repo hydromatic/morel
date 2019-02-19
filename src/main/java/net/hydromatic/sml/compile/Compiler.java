@@ -115,9 +115,6 @@ public class Compiler {
 
   public Code compile(Environment env, Ast.Exp expression) {
     final Ast.Literal literal;
-    final Ast.InfixCall call;
-    final Code code0;
-    final Code code1;
     final Code argCode;
     switch (expression.op) {
     case INT_LITERAL:
@@ -209,49 +206,45 @@ public class Compiler {
       return compile(env, ast.tuple(record.pos, record.args.values()));
 
     case ANDALSO:
-      call = (Ast.InfixCall) expression;
-      code0 = compile(env, call.a0);
-      code1 = compile(env, call.a1);
-      return Codes.andAlso(code0, code1);
-
     case ORELSE:
-      call = (Ast.InfixCall) expression;
-      code0 = compile(env, call.a0);
-      code1 = compile(env, call.a1);
-      return Codes.orElse(code0, code1);
-
     case PLUS:
-      call = (Ast.InfixCall) expression;
-      code0 = compile(env, call.a0);
-      code1 = compile(env, call.a1);
-      return Codes.plus(code0, code1);
-
     case MINUS:
-      call = (Ast.InfixCall) expression;
-      code0 = compile(env, call.a0);
-      code1 = compile(env, call.a1);
-      return Codes.minus(code0, code1);
-
     case TIMES:
-      call = (Ast.InfixCall) expression;
-      code0 = compile(env, call.a0);
-      code1 = compile(env, call.a1);
-      return Codes.times(code0, code1);
-
     case DIVIDE:
-      call = (Ast.InfixCall) expression;
-      code0 = compile(env, call.a0);
-      code1 = compile(env, call.a1);
-      return Codes.divide(code0, code1);
-
+    case DIV:
+    case MOD:
     case CARET:
-      call = (Ast.InfixCall) expression;
-      code0 = compile(env, call.a0);
-      code1 = compile(env, call.a1);
-      return Codes.power(code0, code1);
+      return compileInfix(env, (Ast.InfixCall) expression);
 
     default:
       throw new AssertionError("op not handled: " + expression.op);
+    }
+  }
+
+  private Code compileInfix(Environment env, Ast.InfixCall call) {
+    final Code code0 = compile(env, call.a0);
+    final Code code1 = compile(env, call.a1);
+    switch (call.op) {
+    case ANDALSO:
+      return Codes.andAlso(code0, code1);
+    case ORELSE:
+      return Codes.orElse(code0, code1);
+    case PLUS:
+      return Codes.plus(code0, code1);
+    case MINUS:
+      return Codes.minus(code0, code1);
+    case TIMES:
+      return Codes.times(code0, code1);
+    case DIVIDE:
+      return Codes.divide(code0, code1);
+    case DIV:
+      return Codes.div(code0, code1);
+    case MOD:
+      return Codes.mod(code0, code1);
+    case CARET:
+      return Codes.caret(code0, code1);
+    default:
+      throw new AssertionError("unknown op " + call.op);
     }
   }
 

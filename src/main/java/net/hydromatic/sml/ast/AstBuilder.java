@@ -123,6 +123,14 @@ public enum AstBuilder {
     return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.DIVIDE, a0, a1);
   }
 
+  public Ast.Exp div(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.DIV, a0, a1);
+  }
+
+  public Ast.Exp mod(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.MOD, a0, a1);
+  }
+
   public Ast.Exp caret(Ast.Exp a0, Ast.Exp a1) {
     return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.CARET, a0, a1);
   }

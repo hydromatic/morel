@@ -336,7 +336,20 @@ public class MainTest {
     assertEval("~1.25E~3", is(-0.001_25f));
     assertEval("0e0", is(0f));
 
-    // operators
+    // boolean operators
+    assertEval("true andalso false", is(false));
+    assertEval("true orelse false", is(true));
+    assertEval("false andalso false orelse true", is(true));
+    assertEval("false andalso true orelse true", is(true));
+    assertEval("(not (true andalso false))", is(true));
+    assertEval("not true", is(false));
+    assertError("not not true",
+        is("operator and operand don't agree [tycon mismatch]\n"
+            + "  operator domain: bool\n"
+            + "  operand:         bool -> bool"));
+    assertEval("not (not true)", is(true));
+
+    // arithmetic operators
     assertEval("2 + 3", is(5));
     assertEval("2 + 3 * 4", is(14));
     assertEval("2 * 3 + 4 * 5", is(26));
@@ -344,10 +357,29 @@ public class MainTest {
     assertEval("2 * 3", is(6));
     assertEval("20 / 3", is(6));
     assertEval("20 / ~3", is(-6));
-    assertEval("true andalso false", is(false));
-    assertEval("true orelse false", is(true));
-    assertEval("false andalso false orelse true", is(true));
-    assertEval("false andalso true orelse true", is(true));
+
+    assertEval("10 mod 3", is(1));
+    assertEval("~10 mod 3", is(2));
+    assertEval("~10 mod ~3", is(-1));
+    assertEval("10 mod ~3", is(-2));
+    assertEval("0 mod 3", is(-0));
+    assertEval("0 mod ~3", is(0));
+    assertEval("19 div 3", is(6));
+    assertEval("20 div 3", is(6));
+    assertEval("~19 div 3", is(-7));
+    assertEval("~18 div 3", is(-6));
+    assertEval("19 div ~3", is(-7));
+    assertEval("~21 div 3", is(-7));
+    assertEval("~21 div ~3", is(7));
+    assertEval("0 div 3", is(0));
+
+    // string operators
+    assertEval("\"\" ^ \"\"", is(""));
+    assertEval("\"1\" ^ \"2\"", is("12"));
+    assertError("1 ^ 2",
+        is("operator and operand don't agree [overload conflict]\n"
+            + "  operator domain: string * string\n"
+            + "  operand:         [int ty] * [int ty]\n"));
 
     // if
     assertEval("if true then 1 else 2", is(1));
@@ -365,6 +397,13 @@ public class MainTest {
     // case
     assertType("case 1 of 0 => \"zero\" | _ => \"nonzero\"", is("string"));
     assertEval("case 1 of 0 => \"zero\" | _ => \"nonzero\"", is("nonzero"));
+    assertError("case 1 of x => x | y => y",
+        is("Error: match redundant\n"
+            + "          x => ...\n"
+            + "    -->   y => ...\n"));
+    assertError("case 1 of 1 => 2",
+        is("Warning: match nonexhaustive\n"
+            + "          1 => ...\n"));
 
     // let
     assertEval("let val x = 1 in x + 2 end", is(3));

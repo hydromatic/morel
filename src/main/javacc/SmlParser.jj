@@ -268,6 +268,14 @@ Exp expression7() :
     <SLASH> e2 = atom() {
       e = ast.divide(e, e2);
     }
+  |
+    <DIV> e2 = atom() {
+      e = ast.div(e, e2);
+    }
+  |
+    <MOD> e2 = atom() {
+      e = ast.mod(e, e2);
+    }
   )*
   { return e; }
 }
@@ -554,12 +562,14 @@ AstNode statementSemicolon() :
   < AND: "AND" >
 | < ANDALSO: "ANDALSO" >
 | < CASE: "CASE" >
+| < DIV: "DIV" >
 | < ELSE: "ELSE" >
 | < END: "END" >
 | < FN: "FN" >
 | < IF: "IF" >
 | < IN: "IN" >
 | < LET: "LET" >
+| < MOD: "MOD" >
 | < OF: "OF" >
 | < ORELSE: "ORELSE" >
 | < THEN: "THEN" >

@@ -94,9 +94,12 @@ public class TypeResolver {
 
   private TypeMap deduceType_(Environment env, AstNode node,
       TypeSystem typeSystem) {
+    final Type boolTerm = typeSystem.primitiveType("bool");
+    final Type boolToBool = typeSystem.fnType(boolTerm, boolTerm);
     TypeEnv[] typeEnvs = {EmptyTypeEnv.INSTANCE
-        .bind("true", toTerm(typeSystem.primitiveType("bool")))
-        .bind("false", toTerm(typeSystem.primitiveType("bool")))};
+        .bind("true", toTerm(boolTerm))
+        .bind("false", toTerm(boolTerm))
+        .bind("not", toTerm(boolToBool))};
     env.forEachType((name, type) ->
         typeEnvs[0] = typeEnvs[0].bind(name, toTerm(type)));
     final TypeEnv typeEnv = typeEnvs[0];
@@ -238,7 +241,12 @@ public class TypeResolver {
     case MINUS:
     case TIMES:
     case DIVIDE:
+    case DIV:
+    case MOD:
       return infixOverloaded(env, (Ast.InfixCall) node, v, PrimitiveType.INT);
+
+    case CARET:
+      return infix(env, (Ast.InfixCall) node, v, PrimitiveType.STRING);
 
     default:
       throw new AssertionError("cannot deduce type for " + node.op);

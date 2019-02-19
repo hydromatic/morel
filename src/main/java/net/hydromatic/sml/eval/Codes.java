@@ -70,9 +70,19 @@ public abstract class Codes {
     return env -> (int) code0.eval(env) / (int) code1.eval(env);
   }
 
-  /** Returns a Code that evaluates "^". */
-  public static Code power(Code code0, Code code1) {
-    return env -> (int) code0.eval(env) ^ (int) code1.eval(env);
+  /** Returns a Code that evaluates "div". */
+  public static Code div(Code code0, Code code1) {
+    return env -> Math.floorDiv((int) code0.eval(env), (int) code1.eval(env));
+  }
+
+  /** Returns a Code that evaluates "mod". */
+  public static Code mod(Code code0, Code code1) {
+    return env -> Math.floorMod((int) code0.eval(env), (int) code1.eval(env));
+  }
+
+  /** Returns a Code that evaluates "^" (string concatenation). */
+  public static Code caret(Code code0, Code code1) {
+    return env -> ((String) code0.eval(env)) + ((String) code1.eval(env));
   }
 
   /** Returns a Code that returns the value of variable "name" in the current
@@ -144,11 +154,21 @@ public abstract class Codes {
     return env -> new Closure(env, patCodes);
   }
 
+  /** Returns a code that negates a boolean value. */
+  public static Code not(Code arg) {
+    return env -> !(Boolean) arg.eval(env);
+  }
+
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
     final EvalEnv env = new EvalEnv();
+    final AstBuilder ast = AstBuilder.INSTANCE;
     env.valueMap.put("true", true);
     env.valueMap.put("false", false);
+    env.valueMap.put("not",
+        new Closure(env,
+            ImmutableList.of(
+                Pair.of(ast.idPat(Pos.ZERO, "x"), not(get("x"))))));
     return env;
   }
 

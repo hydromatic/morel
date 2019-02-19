@@ -60,7 +60,7 @@ Implemented:
 * Variables
 * `let`
 * `val`
-* Operators: + - * / ^ `andalso` `orelse`
+* Operators: + - * / div mod ^ `not` `andalso` `orelse`
 * Type derivation (for simple types)
 * `fn`, function values, and function application
 * `if`
@@ -81,7 +81,7 @@ Not implemented:
 * `while`
 * References, and operators `!` and `:=`
 * Match on record types
-* Operators: div mod ^ :: @ `before` `not`
+* Operators: :: @ `before`
 * User-defined operators (`infix`, `infixr`)
 * /0 exception
 * Type annotations in expressions and patterns
