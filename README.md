@@ -64,6 +64,7 @@ Implemented:
 * Type derivation (for simple types)
 * `fn`, function values, and function application
 * `if`
+* `case`
 * Primitive, tuple and record types
 * Tuples and unit
 * Patterns (destructuring) in `let` and `fn`
@@ -78,8 +79,8 @@ Not implemented:
 * `raise`, `handle`
 * `exception`
 * `while`
-* `case`
 * References, and operators `!` and `:=`
+* Match on record types
 * Operators: div mod ^ :: @ `before` `not`
 * User-defined operators (`infix`, `infixr`)
 * /0 exception

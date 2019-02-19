@@ -118,6 +118,7 @@ public class Compiler {
     final Ast.InfixCall call;
     final Code code0;
     final Code code1;
+    final Code argCode;
     switch (expression.op) {
     case INT_LITERAL:
       literal = (Ast.Literal) expression;
@@ -177,7 +178,13 @@ public class Compiler {
       final Ast.Fn fn = (Ast.Fn) expression;
 //      final TypeResolver.FnType fnType =
 //          (TypeResolver.FnType) typeMap.getType(fn);
-      return compileMatch(env, fn.match /* , fnType.paramType */);
+      return compileMatchList(env, fn.matchList/*, fnType.paramType */);
+
+    case CASE:
+      final Ast.Case case_ = (Ast.Case) expression;
+      final Code matchCode = compileMatchList(env, case_.matchList);
+      argCode = compile(env, case_.exp);
+      return Codes.apply(matchCode, argCode);
 
     case RECORD_SELECTOR:
       final Ast.RecordSelector recordSelector = (Ast.RecordSelector) expression;
@@ -186,7 +193,7 @@ public class Compiler {
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) expression;
       final Code fnCode = compile(env, apply.fn);
-      final Code argCode = compile(env, apply.arg);
+      argCode = compile(env, apply.arg);
       return Codes.apply(fnCode, argCode);
 
     case TUPLE:
@@ -265,17 +272,30 @@ public class Compiler {
     }
   }
 
-  private Code compileMatch(Environment env, Ast.Match match) {
-    final Environment[] envHolder = {env};
-    match.pat.visit(pat -> {
-      if (pat instanceof Ast.IdPat) {
-        final Type paramType = typeMap.getType(pat);
-        envHolder[0] = Environments.add(envHolder[0], ((Ast.IdPat) pat).name,
-            paramType, Unit.INSTANCE);
-      }
-    });
-    final Code code = compile(envHolder[0], match.e);
-    return evalEnv -> new Closure(evalEnv, code, match.pat);
+  /** Compiles a {@code match} expression.
+   *
+   * @param env Compile environment
+   * @param matchList List of Match
+   * @return Code for match
+   */
+  private Code compileMatchList(Environment env,
+      Iterable<Ast.Match> matchList) {
+    final ImmutableList.Builder<Pair<Ast.Pat, Code>> patCodeBuilder =
+        ImmutableList.builder();
+    for (Ast.Match match : matchList) {
+      final Environment[] envHolder = {env};
+      match.pat.visit(pat -> {
+        if (pat instanceof Ast.IdPat) {
+          final Type paramType = typeMap.getType(pat);
+          envHolder[0] = Environments.add(envHolder[0], ((Ast.IdPat) pat).name,
+              paramType, Unit.INSTANCE);
+        }
+      });
+      final Code code = compile(envHolder[0], match.e);
+      patCodeBuilder.add(Pair.of(match.pat, code));
+    }
+    final ImmutableList<Pair<Ast.Pat, Code>> patCodes = patCodeBuilder.build();
+    return evalEnv -> new Closure(evalEnv, patCodes);
   }
 
   private Code compileValBind(Environment env, Ast.ValBind valBind) {
@@ -288,7 +308,9 @@ public class Compiler {
       }
     });
     final Code code = compile(envHolder[0], valBind.e);
-    return evalEnv -> new Closure(evalEnv, code, valBind.pat);
+    final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
+        ImmutableList.of(Pair.of(valBind.pat, code));
+    return evalEnv -> new Closure(evalEnv, patCodes);
   }
 
   /**

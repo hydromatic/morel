@@ -29,10 +29,26 @@ import java.util.Map;
  * because it is used for validation/compilation, EvalEnv contains
  * only values. */
 public class EvalEnv {
-  final Map<String, Object> valueMap = new HashMap<>();
+  final Map<String, Object> valueMap;
+
+  // must be private - does not copy
+  private EvalEnv(Map<String, Object> valueMap) {
+    this.valueMap = valueMap;
+  }
+
+  /** Creates an empty EvalEnv. */
+  public EvalEnv() {
+    this(new HashMap<>());
+  }
 
   Object get(String name) {
     return valueMap.get(name);
+  }
+
+  /** Returns a mutable copy of this EvalEnv.
+   * Changes to the copy do not affect this EvalEnv. */
+  public EvalEnv copy() {
+    return new EvalEnv(new HashMap<>(valueMap));
   }
 }
 

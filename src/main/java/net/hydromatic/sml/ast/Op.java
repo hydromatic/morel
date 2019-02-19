@@ -47,6 +47,9 @@ public enum Op {
   RECORD,
   FN(" -> ", 6, false),
 
+  // miscellaneous
+  BAR(" | "),
+
   // annotated expression "e: t"
   ANNOTATED_EXP(" : "),
   NAMED_TYPE,
@@ -75,6 +78,7 @@ public enum Op {
   MATCH,
   VAL_BIND,
   APPLY(" ", 8),
+  CASE,
   IF;
 
   /** Padded name, e.g. " : ". */
@@ -106,6 +110,25 @@ public enum Op {
     this.padded = padded;
     this.left = left;
     this.right = right;
+  }
+
+  /** Converts the op of a literal or tuple expression to the corresponding op
+   * of a pattern. */
+  public Op toPat() {
+    switch (this) {
+    case INT_LITERAL:
+      return INT_LITERAL_PAT;
+    case STRING_LITERAL:
+      return STRING_LITERAL_PAT;
+    case REAL_LITERAL:
+      return REAL_LITERAL_PAT;
+    case BOOL_LITERAL:
+      return BOOL_LITERAL_PAT;
+    case TUPLE:
+      return TUPLE_PAT;
+    default:
+      throw new AssertionError("unknown op " + this);
+    }
   }
 }
 

@@ -256,11 +256,15 @@ public class MainTest {
     // if ... else if
     assertParseSame("if true then 1 else if false then 2 else 3");
 
+    // case
+    assertParseSame("case 1 of 0 => \"zero\" | _ => \"nonzero\"");
+
     // fn
     assertParseSame("fn x => x + 1");
     assertParseSame("fn x => x + (1 + 2)");
     assertParseSame("fn (x, y) => x + y");
     assertParseSame("fn _ => 42");
+    assertParseSame("fn x => case x of 0 => 1 | _ => 2");
 
     // apply
     assertParseSame("(fn x => x + 1) 3");
@@ -293,6 +297,9 @@ public class MainTest {
   @Test public void testTypeFn() {
     assertType("fn x => x + 1", is("int -> int"));
     assertType("fn x => fn y => x + y", is("int -> int -> int"));
+    assertType("fn x => case x of 0 => 1 | _ => 2", is("int -> int"));
+    assertType("fn x => case x of 0 => \"zero\" | _ => \"nonzero\"",
+        is("int -> string"));
   }
 
   @Test public void testTypeFnTuple() {
@@ -354,6 +361,10 @@ public class MainTest {
         + "  if true then 2 else 3\n"
         + "else\n"
         + "  if false then 4 else 5", is(5));
+
+    // case
+    assertType("case 1 of 0 => \"zero\" | _ => \"nonzero\"", is("string"));
+    assertEval("case 1 of 0 => \"zero\" | _ => \"nonzero\"", is("nonzero"));
 
     // let
     assertEval("let val x = 1 in x + 2 end", is(3));
@@ -480,7 +491,7 @@ public class MainTest {
     assertType("#2 (true, 0)", is("int"));
     assertEval("#2 (true, 0)", is(0));
 
-    // emtpy record = () = unit
+    // empty record = () = unit
     assertType("()", is("unit"));
     assertType("{}", is("unit"));
     assertEval("{}", is(ImmutableList.of()));

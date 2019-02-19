@@ -524,18 +524,40 @@ public class Ast {
 
   /** Lambda expression. */
   public static class Fn extends Exp {
-    public final Match match;
+    public final List<Match> matchList;
 
-    Fn(Pos pos, Match match) {
+    Fn(Pos pos, ImmutableList<Match> matchList) {
       super(pos, Op.FN);
-      this.match = match;
+      this.matchList = Objects.requireNonNull(matchList);
+      Preconditions.checkArgument(!matchList.isEmpty());
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       if (left > op.left || op.right < right) {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
-        return w.append("fn ").append(match, 0, right);
+        return w.append("fn ").appendAll(matchList, 0, Op.BAR, right);
+      }
+    }
+  }
+
+  /** Case expression. */
+  public static class Case extends Exp {
+    public final Exp exp;
+    public final List<Match> matchList;
+
+    Case(Pos pos, Exp exp, ImmutableList<Match> matchList) {
+      super(pos, Op.CASE);
+      this.exp = exp;
+      this.matchList = matchList;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      if (left > op.left || op.right < right) {
+        return w.append("(").append(this, 0, 0).append(")");
+      } else {
+        return w.append("case ").append(exp, 0, 0).append(" of ")
+            .appendAll(matchList, left, Op.BAR, right);
       }
     }
   }

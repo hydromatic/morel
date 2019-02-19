@@ -199,6 +199,20 @@ Exp let() :
   }
 }
 
+/** Parses a "{@code case exp of pat => exp | pat => exp}" expression. */
+Exp caseOf() :
+{
+  final Span span;
+  final Exp exp;
+  final List<Match> matchList;
+}
+{
+  <CASE> { span = Span.of(getPos()); } exp = expression() <OF>
+  matchList = matchList() {
+    return ast.caseOf(span.end(this), exp, matchList);
+  }
+}
+
 /** Parses a "{@code fn arg => expression}" lambda expression. */
 Exp fn() :
 {
@@ -209,6 +223,19 @@ Exp fn() :
   <FN> { span = Span.of(getPos()); } match = match() {
     return ast.fn(span.end(this), match);
   }
+}
+
+List/*<Match>*/ matchList() :
+{
+  Match match;
+  final List<Match> matchList = new ArrayList<Match>();
+}
+{
+  match = match() { matchList.add(match); }
+  (
+    <BAR> match = match() { matchList.add(match); }
+  )*
+  { return matchList; }
 }
 
 /** Parses a "{@code pat => expression}" match. */
@@ -335,6 +362,8 @@ Exp atom() :
 |
   e = ifThenElse() { return e; }
 |
+  e = caseOf() { return e; }
+|
   <LPAREN> {
     span = Span.of(getPos());
   }
@@ -457,7 +486,7 @@ Pat atomPat() :
   id = identifier() { return ast.idPat(id.pos, id.name); }
 |
   literal = literal() {
-    return ast.literalPat(literal.pos, literal.op, literal.value);
+    return ast.literalPat(literal.pos, literal.op.toPat(), literal.value);
   }
 |
   "_" {
@@ -524,12 +553,14 @@ AstNode statementSemicolon() :
 {
   < AND: "AND" >
 | < ANDALSO: "ANDALSO" >
+| < CASE: "CASE" >
 | < ELSE: "ELSE" >
 | < END: "END" >
 | < FN: "FN" >
 | < IF: "IF" >
 | < IN: "IN" >
 | < LET: "LET" >
+| < OF: "OF" >
 | < ORELSE: "ORELSE" >
 | < THEN: "THEN" >
 | < VAL: "VAL" >
@@ -569,6 +600,7 @@ AstNode statementSemicolon() :
     | < LBRACKET: "[" >
     | < RBRACKET: "]" >
     | < SEMICOLON: ";" >
+    | < BAR: "|" >
     | < DOT: "." >
     | < COMMA: "," >
     | < RARROW: "=>" >

@@ -200,14 +200,25 @@ public class TypeResolver {
       deduceType(env, if_.ifFalse, v);
       return reg(if_, null, v);
 
+    case CASE:
+      final Ast.Case case_ = (Ast.Case) node;
+      v2 = unifier.variable();
+      deduceType(env, case_.exp, v2);
+      deduceMatchListType(env, case_.matchList, v2, v);
+      return reg(case_, null, v);
+
     case FN:
       final Ast.Fn fn = (Ast.Fn) node;
-      deduceType(env, fn.match, v);
+      final Unifier.Variable resultVariable = unifier.variable();
+      for (Ast.Match match : fn.matchList) {
+        deduceMatchType(env, match, new HashMap<>(), v, resultVariable);
+      }
       return reg(fn, null, v);
 
     case MATCH:
       final Ast.Match match = (Ast.Match) node;
-      return deduceMatchType(env, match, new LinkedHashMap<>(), v);
+      return deduceMatchType(env, match, new LinkedHashMap<>(), v,
+          unifier.variable());
 
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) node;
@@ -259,13 +270,22 @@ public class TypeResolver {
   }
 
   private boolean deduceMatchType(TypeEnv env, Ast.Match match,
-      Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable v) {
+      Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable argVariable,
+      Unifier.Variable resultVariable) {
     final Unifier.Variable vPat = unifier.variable();
     deducePatType(env, match.pat, termMap, vPat);
     TypeEnv env2 = bindAll(env, termMap);
-    final Unifier.Variable vResult = unifier.variable();
-    deduceType(env2, match.e, vResult);
-    return reg(match, v, unifier.apply(FN_TY_CON, vPat, vResult));
+    deduceType(env2, match.e, resultVariable);
+    return reg(match, argVariable,
+        unifier.apply(FN_TY_CON, vPat, resultVariable));
+  }
+
+  private void deduceMatchListType(TypeEnv env, List<Ast.Match> matchList,
+      Unifier.Variable argVariable, Unifier.Variable resultVariable) {
+    for (Ast.Match match : matchList) {
+      deducePatType(env, match.pat, new HashMap<>(), argVariable);
+      deduceType(env, match.e, resultVariable);
+    }
   }
 
   private boolean deduceValBindType(TypeEnv env, Ast.ValBind valBind,
@@ -307,6 +327,9 @@ public class TypeResolver {
     switch (pat.op) {
     case WILDCARD_PAT:
       return true;
+
+    case INT_LITERAL_PAT:
+      return reg(pat, v, toTerm(PrimitiveType.INT));
 
     case ID_PAT:
       termMap.put((Ast.IdPat) pat, v);

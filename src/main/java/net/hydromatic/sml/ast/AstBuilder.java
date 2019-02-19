@@ -148,8 +148,13 @@ public enum AstBuilder {
     return new Ast.Match(pos, pat, e);
   }
 
+  public Ast.Case caseOf(Pos pos, Ast.Exp exp,
+      Iterable<? extends Ast.Match> matchList) {
+    return new Ast.Case(pos, exp, ImmutableList.copyOf(matchList));
+  }
+
   public Ast.Fn fn(Pos pos, Ast.Match match) {
-    return new Ast.Fn(pos, match);
+    return new Ast.Fn(pos, ImmutableList.of(match));
   }
 
   public Ast.Apply apply(Ast.Exp fn, Ast.Exp arg) {

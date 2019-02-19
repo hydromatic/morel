@@ -18,8 +18,13 @@
  */
 package net.hydromatic.sml.eval;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+
+import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstBuilder;
 import net.hydromatic.sml.ast.Pos;
+import net.hydromatic.sml.util.Pair;
 
 import java.util.Arrays;
 import java.util.List;
@@ -77,15 +82,25 @@ public abstract class Codes {
   }
 
   public static Code let(List<Code> fnCodes, Code argCode) {
-    return env -> {
-      EvalEnv env2 = env;
-      for (Code fnCode : fnCodes) {
+    if (fnCodes.size() == 1) {
+      // Use a more efficient runtime path if the list has only one element.
+      // The effect is the same.
+      final Code fnCode = Iterables.getOnlyElement(fnCodes);
+      return env -> {
         final Closure fnValue = (Closure) fnCode.eval(env);
-        final Object arg = fnValue.resultCode.eval(env2);
-        env2 = fnValue.bind(arg);
-      }
-      return argCode.eval(env2);
-    };
+        EvalEnv env2 = fnValue.evalBind(env.copy());
+        return argCode.eval(env2);
+      };
+    } else {
+      return env -> {
+        EvalEnv env2 = env.copy();
+        for (Code fnCode : fnCodes) {
+          final Closure fnValue = (Closure) fnCode.eval(env);
+          env2 = fnValue.evalBind(env2);
+        }
+        return argCode.eval(env2);
+      };
+    }
   }
 
   /** Generates the code for applying a function (or function value) to an
@@ -94,8 +109,7 @@ public abstract class Codes {
     return env -> {
       final Closure fnValue = (Closure) fnCode.eval(env);
       final Object argValue = argCode.eval(env);
-      final EvalEnv env2 = fnValue.bind(argValue);
-      return fnValue.resultCode.eval(env2);
+      return fnValue.bindEval(argValue);
     };
   }
 
@@ -120,12 +134,14 @@ public abstract class Codes {
   /** Returns a code that returns the {@code slot}th field of a tuple or
    * record. */
   public static Code nth(int slot) {
-    return env -> new Closure(env,
-        env2 -> {
-          final List values = (List) env2.get("x");
-          return values.get(slot);
-        },
-        AstBuilder.INSTANCE.idPat(Pos.ZERO, "x"));
+    final Ast.IdPat pat = AstBuilder.INSTANCE.idPat(Pos.ZERO, "x");
+    final Code code = env -> {
+      final List values = (List) env.get("x");
+      return values.get(slot);
+    };
+    final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
+        ImmutableList.of(Pair.of(pat, code));
+    return env -> new Closure(env, patCodes);
   }
 
   /** Creates an empty evaluation environment. */
@@ -140,8 +156,7 @@ public abstract class Codes {
    * environment, plus one more variable. */
   public static EvalEnv add(EvalEnv env, String var, Object value) {
     // Copying the entire table is not very efficient.
-    final EvalEnv env2 = new EvalEnv();
-    env2.valueMap.putAll(env.valueMap);
+    final EvalEnv env2 = env.copy();
     env2.valueMap.put(var, value);
     return env2;
   }
