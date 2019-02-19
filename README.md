@@ -60,7 +60,9 @@ Implemented:
 * Variables
 * `let`
 * `val`
-* Operators: + - * / div mod ^ `not` `andalso` `orelse`
+* Operators: `=` `<>` `<` `>` `<=` `>=`
+  `+` `-` `*` `/` `div` `mod` `^`
+  `not` `andalso` `orelse`
 * Type derivation (for simple types)
 * `fn`, function values, and function application
 * `if`

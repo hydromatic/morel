@@ -239,7 +239,10 @@ public class MainTest {
     assertStmt("1 + (2 + (3 + (4)))",
         isAst(AstNode.class, "1 + (2 + (3 + 4))"));
 
-    assertParseSame("(1 + 2, 3, true, (5, 6))");
+    assertStmt("1 + (2 + (3 + 4)) = 5 + 5",
+        isAst(AstNode.class, "1 + (2 + (3 + 4)) = 5 + 5"));
+
+    assertParseSame("(1 + 2, 3, true, (5, 6), 7 = 8)");
 
     assertParseSame("let val x = 2 in x + (3 + x) + x end");
 
@@ -348,6 +351,36 @@ public class MainTest {
             + "  operator domain: bool\n"
             + "  operand:         bool -> bool"));
     assertEval("not (not true)", is(true));
+
+    // comparisons
+    assertEval("1 = 1", is(true));
+    assertEval("1 = 2", is(false));
+    assertEval("\"a\" = \"a\"", is(true));
+    assertEval("\"a\" = \"ab\"", is(false));
+    assertEval("1 < 1", is(false));
+    assertEval("1 < 2", is(true));
+    assertEval("\"a\" < \"a\"", is(false));
+    assertEval("\"a\" < \"ab\"", is(true));
+    assertEval("1 > 1", is(false));
+    assertEval("1 > 2", is(false));
+    assertEval("1 > ~2", is(true));
+    assertEval("\"a\" > \"a\"", is(false));
+    assertEval("\"a\" > \"ab\"", is(false));
+    assertEval("\"ac\" > \"ab\"", is(true));
+    assertEval("1 <= 1", is(true));
+    assertEval("1 <= 2", is(true));
+    assertEval("\"a\" <= \"a\"", is(true));
+    assertEval("\"a\" <= \"ab\"", is(true));
+    assertEval("1 >= 1", is(true));
+    assertEval("1 >= 2", is(false));
+    assertEval("1 >= ~2", is(true));
+    assertEval("\"a\" >= \"a\"", is(true));
+    assertEval("\"a\" >= \"ab\"", is(false));
+    assertEval("\"ac\" >= \"ab\"", is(true));
+    assertEval("1 + 4 = 2 + 3", is(true));
+    assertEval("1 + 2 * 2 = 2 + 3", is(true));
+    assertEval("1 + 2 * 2 < 2 + 3", is(false));
+    assertEval("1 + 2 * 2 > 2 + 3", is(false));
 
     // arithmetic operators
     assertEval("2 + 3", is(5));

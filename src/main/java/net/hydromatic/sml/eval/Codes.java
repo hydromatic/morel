@@ -38,6 +38,52 @@ public abstract class Codes {
     return env -> value;
   }
 
+  /** Returns a Code that evaluates "{@code =}". */
+  public static Code eq(Code code0, Code code1) {
+    return env -> code0.eval(env).equals(code1.eval(env));
+  }
+
+  /** Returns a Code that evaluates "{@code <>}". */
+  public static Code ne(Code code0, Code code1) {
+    return env -> !code0.eval(env).equals(code1.eval(env));
+  }
+
+  /** Returns a Code that evaluates "{@code <}". */
+  public static Code lt(Code code0, Code code1) {
+    return env -> {
+      final Comparable v0 = (Comparable) code0.eval(env);
+      final Comparable v1 = (Comparable) code1.eval(env);
+      return v0.compareTo(v1) < 0;
+    };
+  }
+
+  /** Returns a Code that evaluates "{@code >}". */
+  public static Code gt(Code code0, Code code1) {
+    return env -> {
+      final Comparable v0 = (Comparable) code0.eval(env);
+      final Comparable v1 = (Comparable) code1.eval(env);
+      return v0.compareTo(v1) > 0;
+    };
+  }
+
+  /** Returns a Code that evaluates "{@code <=}". */
+  public static Code le(Code code0, Code code1) {
+    return env -> {
+      final Comparable v0 = (Comparable) code0.eval(env);
+      final Comparable v1 = (Comparable) code1.eval(env);
+      return v0.compareTo(v1) <= 0;
+    };
+  }
+
+  /** Returns a Code that evaluates "{@code >=}". */
+  public static Code ge(Code code0, Code code1) {
+    return env -> {
+      final Comparable v0 = (Comparable) code0.eval(env);
+      final Comparable v1 = (Comparable) code1.eval(env);
+      return v0.compareTo(v1) >= 0;
+    };
+  }
+
   /** Returns a Code that evaluates "andalso". */
   public static Code andAlso(Code code0, Code code1) {
     // Lazy evaluation. If code0 returns false, code1 is never evaluated.

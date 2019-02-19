@@ -214,6 +214,12 @@ public class Compiler {
     case DIV:
     case MOD:
     case CARET:
+    case EQ:
+    case NE:
+    case LT:
+    case GT:
+    case LE:
+    case GE:
       return compileInfix(env, (Ast.InfixCall) expression);
 
     default:
@@ -225,6 +231,18 @@ public class Compiler {
     final Code code0 = compile(env, call.a0);
     final Code code1 = compile(env, call.a1);
     switch (call.op) {
+    case EQ:
+      return Codes.eq(code0, code1);
+    case NE:
+      return Codes.ne(code0, code1);
+    case LT:
+      return Codes.lt(code0, code1);
+    case GT:
+      return Codes.gt(code0, code1);
+    case LE:
+      return Codes.le(code0, code1);
+    case GE:
+      return Codes.ge(code0, code1);
     case ANDALSO:
       return Codes.andAlso(code0, code1);
     case ORELSE:

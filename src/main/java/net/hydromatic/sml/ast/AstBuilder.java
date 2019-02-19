@@ -99,6 +99,30 @@ public enum AstBuilder {
     return new Ast.Record(pos, ImmutableMap.copyOf(map));
   }
 
+  public Ast.Exp equal(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.EQ, a0, a1);
+  }
+
+  public Ast.Exp notEqual(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.NE, a0, a1);
+  }
+
+  public Ast.Exp lessThan(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.LT, a0, a1);
+  }
+
+  public Ast.Exp greaterThan(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.GT, a0, a1);
+  }
+
+  public Ast.Exp lessThanOrEqual(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.LE, a0, a1);
+  }
+
+  public Ast.Exp greaterThanOrEqual(Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.GE, a0, a1);
+  }
+
   public Ast.Exp andAlso(Ast.Exp a0, Ast.Exp a1) {
     return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.ANDALSO, a0, a1);
   }

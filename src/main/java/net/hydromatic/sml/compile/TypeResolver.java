@@ -146,6 +146,14 @@ public class TypeResolver {
     case ORELSE:
       return infix(env, (Ast.InfixCall) node, v, PrimitiveType.BOOL);
 
+    case EQ:
+    case NE:
+    case LT:
+    case GT:
+    case LE:
+    case GE:
+      return comparison(env, (Ast.InfixCall) node, v);
+
     case VAL_DECL:
       return deduceDeclType(env, (Ast.Decl) node, new LinkedHashMap<>());
 
@@ -363,6 +371,16 @@ public class TypeResolver {
       Type type) {
     final Unifier.Term term = toTerm(type);
     call.forEachArg((arg, i) -> deduceType(env, arg, v));
+    return reg(call, v, term);
+  }
+
+  /** Registers an infix operator whose type is a given type
+   * and whose arguments are the same type. */
+  private boolean comparison(TypeEnv env, Ast.InfixCall call,
+      Unifier.Variable v) {
+    final Unifier.Term term = toTerm(PrimitiveType.BOOL);
+    final Unifier.Variable argVariable = unifier.variable();
+    call.forEachArg((arg, i) -> deduceType(env, arg, argVariable));
     return reg(call, v, term);
   }
 

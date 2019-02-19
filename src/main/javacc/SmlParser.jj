@@ -304,8 +304,8 @@ Exp expression6() :
   { return e; }
 }
 
-/** Parses an expression of precedence level 2 (andalso). */
-Exp expression2() :
+/** Parses an expression of precedence level 4 (+, -, ^). */
+Exp expression4() :
 {
   Exp e;
   Exp e2;
@@ -313,7 +313,43 @@ Exp expression2() :
 {
   e = expression6()
   (
-    <ANDALSO> e2 = expression6() {
+    <EQ> e2 = expression6() {
+      e = ast.equal(e, e2);
+    }
+  |
+    <NE> e2 = expression6() {
+      e = ast.notEqual(e, e2);
+    }
+  |
+    <LT> e2 = expression6() {
+      e = ast.lessThan(e, e2);
+    }
+  |
+    <GT> e2 = expression6() {
+      e = ast.greaterThan(e, e2);
+    }
+  |
+    <LE> e2 = expression6() {
+      e = ast.lessThanOrEqual(e, e2);
+    }
+  |
+    <GE> e2 = expression6() {
+      e = ast.greaterThanOrEqual(e, e2);
+    }
+  )*
+  { return e; }
+}
+
+/** Parses an expression of precedence level 2 (andalso). */
+Exp expression2() :
+{
+  Exp e;
+  Exp e2;
+}
+{
+  e = expression4()
+  (
+    <ANDALSO> e2 = expression4() {
       e = ast.andAlso(e, e2);
     }
   )*
