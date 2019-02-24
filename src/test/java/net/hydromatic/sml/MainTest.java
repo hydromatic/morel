@@ -50,6 +50,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -247,6 +248,8 @@ public class MainTest {
     assertParseSame("let val x = 2 in x + (3 + x) + x end");
 
     assertParseSame("let val x = 2 and y = 3 in x + y end");
+    assertParseSame("let val rec x = 2 and y = 3 in x + y end");
+    assertParseSame("let val x = 2 and rec y = 3 in x + y end");
 
     // record
     assertParseSame("{a = 1}");
@@ -314,6 +317,22 @@ public class MainTest {
         is("int -> int * int -> int"));
     assertType("fn (x, y) => (x + 1, fn z => (x + z, y + z), y)",
         is("int * int -> int * (int -> int * int) * int"));
+  }
+
+  @Test public void testTypeLetRecFn() {
+    final String ml = "let\n"
+        + "  val rec f = fn n => if n = 0 then 1 else n * (f (n - n))\n"
+        + "in\n"
+        + "  f 5\n"
+        + "end";
+    assertType(ml, is("int"));
+
+    final String ml2 = ml.replace(" rec", "");
+    assertThat(ml2, not(is(ml)));
+    assertError(ml2, is("fact not found"));
+
+    assertError("let val rec x = 1 and y = 2 in x + y end",
+        is("Error: fn expression required on rhs of val rec"));
   }
 
   @Ignore // enable this test when we have polymorphic type resolution
@@ -498,6 +517,15 @@ public class MainTest {
 
   @Test public void testEvalFnTuple() {
     assertEval("(fn (x, y) => x + y) (2, 3)", is(5));
+  }
+
+  @Test public void testEvalFnRec() {
+    final String ml = "let\n"
+        + "  val rec f = fn n => if n = 0 then 1 else n * (f (n - 1))\n"
+        + "in\n"
+        + "  f 5\n"
+        + "end";
+    assertEval(ml, is(120));
   }
 
   @Ignore("requires generics")

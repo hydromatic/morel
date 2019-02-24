@@ -485,12 +485,14 @@ VarDecl varDecl() :
 
 void valBind(List/*<Ast.ValBind>*/ valBinds) :
 {
-  Pat pat;
-  Exp e;
+  final Pat pat;
+  final Exp e;
+  boolean rec = false;
 }
 {
+  [ <REC> { rec = true; } ]
   pat = pat() <EQ> e = expression() {
-    valBinds.add(ast.valBind(pat.pos.plus(e.pos), pat, e));
+    valBinds.add(ast.valBind(pat.pos.plus(e.pos), rec, pat, e));
   }
 }
 
@@ -608,6 +610,7 @@ AstNode statementSemicolon() :
 | < MOD: "MOD" >
 | < OF: "OF" >
 | < ORELSE: "ORELSE" >
+| < REC: "REC" >
 | < THEN: "THEN" >
 | < VAL: "VAL" >
 }

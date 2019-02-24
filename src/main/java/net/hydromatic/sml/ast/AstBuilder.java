@@ -172,8 +172,8 @@ public enum AstBuilder {
     return new Ast.VarDecl(pos, ImmutableList.copyOf(valBinds));
   }
 
-  public Ast.ValBind valBind(Pos pos, Ast.Pat pat, Ast.Exp e) {
-    return new Ast.ValBind(pos, pat, e);
+  public Ast.ValBind valBind(Pos pos, boolean rec, Ast.Pat pat, Ast.Exp e) {
+    return new Ast.ValBind(pos, rec, pat, e);
   }
 
   public Ast.Match match(Pos pos, Ast.Pat pat, Ast.Exp e) {

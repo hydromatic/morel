@@ -373,9 +373,7 @@ public class Ast {
       for (ValBind valBind : valBinds) {
         w.append(sep);
         sep = " and ";
-        valBind.pat.unparse(w, 0, 0);
-        w.append(" = ");
-        valBind.e.unparse(w, 0, right);
+        valBind.unparse(w, 0, right);
       }
       return w;
     }
@@ -492,16 +490,21 @@ public class Ast {
 
   /** Value bind. */
   public static class ValBind extends AstNode {
+    public final boolean rec;
     public final Pat pat;
     public final Exp e;
 
-    ValBind(Pos pos, Pat pat, Exp e) {
+    ValBind(Pos pos, boolean rec, Pat pat, Exp e) {
       super(pos, Op.VAL_BIND);
+      this.rec = rec;
       this.pat = pat;
       this.e = e;
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
+      if (rec) {
+        w.append("rec ");
+      }
       return w.append(pat, 0, 0).append(" = ").append(e, 0, right);
     }
   }

@@ -308,7 +308,14 @@ public class TypeResolver {
       Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable v) {
     final Unifier.Variable vPat = unifier.variable();
     deducePatType(env, valBind.pat, termMap, vPat);
-    deduceType(env, valBind.e, vPat);
+    TypeEnv env2 = env;
+    if (valBind.rec
+        && valBind.pat instanceof Ast.IdPat) {
+      // If recursive, bind the value (presumably a function) to its type
+      // in the environment before we try to deduce the type of the expression.
+      env2 = env2.bind(((Ast.IdPat) valBind.pat).name, vPat);
+    }
+    deduceType(env2, valBind.e, vPat);
     return reg(valBind, v, unifier.apply(FN_TY_CON, vPat, vPat));
   }
 

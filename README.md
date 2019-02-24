@@ -59,7 +59,7 @@ Implemented:
 * Literals
 * Variables
 * `let`
-* `val`
+* `val` (including `val rec`)
 * Operators: `=` `<>` `<` `>` `<=` `>=`
   `+` `-` `*` `/` `div` `mod` `^`
   `not` `andalso` `orelse`
@@ -74,7 +74,6 @@ Implemented:
 Not implemented:
 * `fun` declaration
 * Generic types
-* `let rec`
 * `type`
 * `datatype`
 * `local`

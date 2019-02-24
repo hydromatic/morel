@@ -66,7 +66,7 @@ public class Compiler {
     if (statement instanceof Ast.Exp) {
       decl = ast.varDecl(Pos.ZERO,
           ImmutableList.of(
-              ast.valBind(Pos.ZERO, ast.idPat(Pos.ZERO, "it"),
+              ast.valBind(Pos.ZERO, false, ast.idPat(Pos.ZERO, "it"),
                   (Ast.Exp) statement)));
     } else {
       decl = (Ast.VarDecl) statement;
@@ -155,13 +155,15 @@ public class Compiler {
         // Transform "let v1 = e1 and v2 = e2 in e"
         // to "let (v1, v2) = (e1, e2) in e"
         final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
+        boolean rec = false;
         for (Ast.ValBind valBind : let.decl.valBinds) {
           flatten(matches, valBind.pat, valBind.e);
+          rec |= valBind.rec;
         }
         final Ast.Pat pat = ast.tuplePat(let.pos, matches.keySet());
         final Ast.Exp e = ast.tuple(let.pos, matches.values());
         final Ast.VarDecl decl =
-            ast.varDecl(let.decl.pos, ast.valBind(let.pos, pat, e));
+            ast.varDecl(let.decl.pos, ast.valBind(let.pos, rec, pat, e));
         return compile(env, ast.let(let.pos, decl, let.e));
       }
       final List<Code> varCodes = new ArrayList<>();
