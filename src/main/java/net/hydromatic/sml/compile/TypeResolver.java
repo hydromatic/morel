@@ -52,6 +52,7 @@ public class TypeResolver {
   final Map<Unifier.Variable, Unifier.Action> actionMap = new HashMap<>();
 
   private static final String TUPLE_TY_CON = "*";
+  private static final String LIST_TY_CON = "[]";
   private static final String RECORD_TY_CON = "record";
   private static final String FN_TY_CON = "fn";
 
@@ -167,6 +168,14 @@ public class TypeResolver {
       }
       return reg(tuple, v, unifier.apply(TUPLE_TY_CON, types));
 
+    case LIST:
+      final Ast.List list = (Ast.List) node;
+      final Unifier.Variable vArg2 = unifier.variable();
+      for (Ast.Exp arg : list.args) {
+        deduceType(env, arg, vArg2);
+      }
+      return reg(list, v, unifier.apply(LIST_TY_CON, vArg2));
+
     case RECORD:
       final Ast.Record record = (Ast.Record) node;
       final Map<String, Unifier.Term> labelTypes = new LinkedHashMap<>();
@@ -256,6 +265,9 @@ public class TypeResolver {
     case CARET:
       return infix(env, (Ast.InfixCall) node, v, PrimitiveType.STRING);
 
+    case CONS:
+      return deduceConsType(env, (Ast.InfixCall) node, v);
+
     default:
       throw new AssertionError("cannot deduce type for " + node.op);
     }
@@ -299,8 +311,10 @@ public class TypeResolver {
   private void deduceMatchListType(TypeEnv env, List<Ast.Match> matchList,
       Unifier.Variable argVariable, Unifier.Variable resultVariable) {
     for (Ast.Match match : matchList) {
-      deducePatType(env, match.pat, new HashMap<>(), argVariable);
-      deduceType(env, match.e, resultVariable);
+      final HashMap<Ast.IdPat, Unifier.Term> termMap = new HashMap<>();
+      deducePatType(env, match.pat, termMap, argVariable);
+      final TypeEnv env2 = bindAll(env, termMap);
+      deduceType(env2, match.e, resultVariable);
     }
   }
 
@@ -354,6 +368,9 @@ public class TypeResolver {
     case INT_LITERAL_PAT:
       return reg(pat, v, toTerm(PrimitiveType.INT));
 
+    case BOOL_LITERAL_PAT :
+      return reg(pat, v, toTerm(PrimitiveType.BOOL));
+
     case ID_PAT:
       termMap.put((Ast.IdPat) pat, v);
       return reg(pat, null, v);
@@ -367,6 +384,21 @@ public class TypeResolver {
         typeTerms.add(vArg);
       }
       return reg(pat, v, unifier.apply(TUPLE_TY_CON, typeTerms));
+
+    case LIST_PAT:
+      final Ast.ListPat list = (Ast.ListPat) pat;
+      final Unifier.Variable vArg2 = unifier.variable();
+      for (Ast.Pat arg : list.args) {
+        deducePatType(env, arg, termMap, vArg2);
+      }
+      return reg(list, v, unifier.apply(LIST_TY_CON, vArg2));
+
+    case CONS_PAT:
+      final Unifier.Variable elementType = unifier.variable();
+      final Ast.InfixPat call = (Ast.InfixPat) pat;
+      deducePatType(env, call.p0, termMap, elementType);
+      deducePatType(env, call.p1, termMap, v);
+      return reg(call, v, unifier.apply(LIST_TY_CON, elementType));
 
     default:
       throw new AssertionError("cannot deduce type for pattern " + pat.op);
@@ -409,6 +441,14 @@ public class TypeResolver {
     });
     equiv(v, toTerm(types[0]));
     return reg(call, null, v);
+  }
+
+  private boolean deduceConsType(TypeEnv env, Ast.InfixCall call,
+      Unifier.Variable v) {
+    final Unifier.Variable elementType = unifier.variable();
+    deduceType(env, call.a0, elementType);
+    deduceType(env, call.a1, v);
+    return reg(call, v, unifier.apply(LIST_TY_CON, elementType));
   }
 
   private void equiv(Unifier.Term term, Unifier.Variable atom) {
@@ -515,6 +555,11 @@ public class TypeResolver {
         }
         return typeSystem.tupleType(argTypes.build());
 
+      case "[]":
+        assert sequence.terms.size() == 1;
+        final Type elementType = sequence.terms.get(0).accept(this);
+        return typeSystem.listType(elementType);
+
       case "bool":
       case "int":
       case "real":
@@ -591,6 +636,16 @@ public class TypeResolver {
           unparseList(new StringBuilder(), Op.TIMES, 0, 0, argTypes).toString();
       return map.computeIfAbsent(description,
           d -> new TupleType(d, ImmutableList.copyOf(argTypes)));
+    }
+
+    /** Creates a list type. */
+    Type listType(Type elementType) {
+      final String description =
+          unparse(new StringBuilder(), elementType, 0, Op.LIST.right)
+              .append(" list")
+              .toString();
+      return map.computeIfAbsent(description,
+          d -> new ListType(d, elementType));
     }
 
     /** Creates a record type. (Or a tuple type if the fields are named "1", "2"
@@ -698,9 +753,18 @@ public class TypeResolver {
     }
   }
 
+  /** The type of a list value. */
+  static class ListType extends BaseType {
+    public final Type elementType;
+
+    private ListType(String description, Type elementType) {
+      super(Op.LIST, description);
+      this.elementType = Objects.requireNonNull(elementType);
+    }
+  }
+
   /** The type of a record value. */
   static class RecordType extends BaseType {
-
     public final SortedMap<String, Type> argNameTypes;
 
     private RecordType(String description,

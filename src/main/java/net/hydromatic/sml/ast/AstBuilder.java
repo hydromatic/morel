@@ -30,6 +30,11 @@ import java.util.Map;
 public enum AstBuilder {
   INSTANCE;
 
+  /** Creates a call to an infix operator. */
+  private Ast.InfixCall infix(Op op, Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(a0.pos.plus(a1.pos), op, a0, a1);
+  }
+
   /** Creates an {@code int} literal. */
   public Ast.Literal intLiteral(BigDecimal value, Pos pos) {
     return new Ast.Literal(pos, Op.INT_LITERAL, value);
@@ -67,8 +72,20 @@ public enum AstBuilder {
     return new Ast.NamedType(pos, name);
   }
 
-  public Ast.IdPat idPat(Pos pos, String name) {
-    return new Ast.IdPat(pos, name);
+  public Ast.Pat idPat(Pos pos, String name) {
+    // Don't treat built-in constants as identifiers.
+    // If we did, matching the pattern would rebind the name
+    // to some other value.
+    switch (name) {
+    case "false":
+      return literalPat(pos, Op.BOOL_LITERAL_PAT, false);
+    case "true":
+      return literalPat(pos, Op.BOOL_LITERAL_PAT, true);
+    case "nil":
+      return listPat(pos);
+    default:
+      return new Ast.IdPat(pos, name);
+    }
   }
 
   public Ast.LiteralPat literalPat(Pos pos, Op op, Comparable value) {
@@ -87,12 +104,32 @@ public enum AstBuilder {
     return new Ast.TuplePat(pos, ImmutableList.copyOf(args));
   }
 
+  public Ast.ListPat listPat(Pos pos, Iterable<? extends Ast.Pat> args) {
+    return new Ast.ListPat(pos, ImmutableList.copyOf(args));
+  }
+
+  public Ast.ListPat listPat(Pos pos, Ast.Pat... args) {
+    return new Ast.ListPat(pos, ImmutableList.copyOf(args));
+  }
+
+  public Ast.RecordPat recordPat(Pos pos, Map<String, ? extends Ast.Pat> args) {
+    return new Ast.RecordPat(pos, ImmutableMap.copyOf(args));
+  }
+
   public Ast.Pat annotatedPat(Pos pos, Ast.Pat pat, Ast.TypeNode type) {
     return new Ast.AnnotatedPat(pos, pat, type);
   }
 
+  public Ast.Pat consPat(Ast.Pat p0, Ast.Pat p1) {
+    return new Ast.InfixPat(p0.pos.plus(p1.pos), Op.CONS_PAT, p0, p1);
+  }
+
   public Ast.Tuple tuple(Pos pos, Iterable<? extends Ast.Exp> list) {
     return new Ast.Tuple(pos, list);
+  }
+
+  public Ast.List list(Pos pos, Iterable<? extends Ast.Exp> list) {
+    return new Ast.List(pos, list);
   }
 
   public Ast.Exp record(Pos pos, Map<String, Ast.Exp> map) {
@@ -100,63 +137,67 @@ public enum AstBuilder {
   }
 
   public Ast.Exp equal(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.EQ, a0, a1);
+    return infix(Op.EQ, a0, a1);
   }
 
   public Ast.Exp notEqual(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.NE, a0, a1);
+    return infix(Op.NE, a0, a1);
   }
 
   public Ast.Exp lessThan(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.LT, a0, a1);
+    return infix(Op.LT, a0, a1);
   }
 
   public Ast.Exp greaterThan(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.GT, a0, a1);
+    return infix(Op.GT, a0, a1);
   }
 
   public Ast.Exp lessThanOrEqual(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.LE, a0, a1);
+    return infix(Op.LE, a0, a1);
   }
 
   public Ast.Exp greaterThanOrEqual(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.GE, a0, a1);
+    return infix(Op.GE, a0, a1);
   }
 
   public Ast.Exp andAlso(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.ANDALSO, a0, a1);
+    return infix(Op.ANDALSO, a0, a1);
   }
 
   public Ast.Exp orElse(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.ORELSE, a0, a1);
+    return infix(Op.ORELSE, a0, a1);
   }
 
   public Ast.Exp plus(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.PLUS, a0, a1);
+    return infix(Op.PLUS, a0, a1);
   }
 
   public Ast.Exp minus(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.MINUS, a0, a1);
+    return infix(Op.MINUS, a0, a1);
   }
 
   public Ast.Exp times(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.TIMES, a0, a1);
+    return infix(Op.TIMES, a0, a1);
   }
 
   public Ast.Exp divide(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.DIVIDE, a0, a1);
+    return infix(Op.DIVIDE, a0, a1);
   }
 
   public Ast.Exp div(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.DIV, a0, a1);
+    return infix(Op.DIV, a0, a1);
   }
 
   public Ast.Exp mod(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.MOD, a0, a1);
+    return infix(Op.MOD, a0, a1);
   }
 
   public Ast.Exp caret(Ast.Exp a0, Ast.Exp a1) {
-    return new Ast.InfixCall(a0.pos.plus(a1.pos), Op.CARET, a0, a1);
+    return infix(Op.CARET, a0, a1);
+  }
+
+  public Ast.Exp cons(Ast.Exp a0, Ast.Exp a1) {
+    return infix(Op.CONS, a0, a1);
   }
 
   public Ast.LetExp let(Pos pos, Ast.VarDecl decl, Ast.Exp exp) {

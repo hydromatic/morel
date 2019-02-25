@@ -35,6 +35,9 @@ public enum Op {
   ID_PAT,
   WILDCARD_PAT,
   TUPLE_PAT,
+  LIST_PAT,
+  CONS_PAT(" :: "),
+  CHAR_LITERAL_PAT,
   INT_LITERAL_PAT,
   BOOL_LITERAL_PAT,
   STRING_LITERAL_PAT,
@@ -44,6 +47,7 @@ public enum Op {
 
   // value constructors
   TUPLE(" * ", 7),
+  LIST(" list", 8),
   RECORD,
   FN(" -> ", 6, false),
 

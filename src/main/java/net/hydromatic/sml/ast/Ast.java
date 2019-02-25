@@ -22,7 +22,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -131,11 +130,32 @@ public class Ast {
     }
   }
 
+  /** Pattern build from an infix operator applied to two patterns. */
+  public static class InfixPat extends Pat {
+    public final Pat p0;
+    public final Pat p1;
+
+    InfixPat(Pos pos, Op op, Pat p0, Pat p1) {
+      super(pos, op);
+      this.p0 = Objects.requireNonNull(p0);
+      this.p1 = Objects.requireNonNull(p1);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+      action.accept(p0, 0);
+      action.accept(p1, 1);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.infix(left, p0, op, p1, right);
+    }
+  }
+
   /** Tuple pattern, the pattern analog of the {@link Tuple} expression.
    *
    * <p>For example, "(x, y)" in "fun sum (x, y) = x + y". */
   public static class TuplePat extends Pat {
-    public final List<Pat> args;
+    public final java.util.List<Pat> args;
 
     TuplePat(Pos pos, ImmutableList<Pat> args) {
       super(pos, Op.TUPLE_PAT);
@@ -153,6 +173,60 @@ public class Ast {
       w.append("(");
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
+    }
+  }
+
+  /** List pattern, the pattern analog of the {@link List} expression.
+   *
+   * <p>For example, "(x, y)" in "fun sum (x, y) = x + y". */
+  public static class ListPat extends Pat {
+    public final java.util.List<Pat> args;
+
+    ListPat(Pos pos, ImmutableList<Pat> args) {
+      super(pos, Op.LIST_PAT);
+      this.args = Objects.requireNonNull(args);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+      int i = 0;
+      for (Pat arg : args) {
+        action.accept(arg, i++);
+      }
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("[");
+      forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
+      return w.append("]");
+    }
+  }
+
+  /** Record pattern. */
+  public static class RecordPat extends Pat {
+    public final Map<String, Pat> args;
+
+    RecordPat(Pos pos, ImmutableMap<String, Pat> args) {
+      super(pos, Op.RECORD);
+      this.args = Objects.requireNonNull(args);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+      int i = 0;
+      for (Pat arg : args.values()) {
+        action.accept(arg, i++);
+      }
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("{");
+      int i = 0;
+      for (Map.Entry<String, Pat> entry : args.entrySet()) {
+        if (i++ > 0) {
+          w.append(", ");
+        }
+        w.append(entry.getKey()).append(" = ").append(entry.getValue(), 0, 0);
+      }
+      return w.append("}");
     }
   }
 
@@ -350,7 +424,7 @@ public class Ast {
 
   /** Parse tree node of a variable declaration. */
   public static class VarDecl extends Decl {
-    public final List<Ast.ValBind> valBinds;
+    public final java.util.List<Ast.ValBind> valBinds;
 
     VarDecl(Pos pos, ImmutableList<Ast.ValBind> valBinds) {
       super(pos, Op.VAL_DECL);
@@ -381,7 +455,7 @@ public class Ast {
 
   /** Tuple. */
   public static class Tuple extends Exp {
-    public final List<Exp> args;
+    public final java.util.List<Exp> args;
 
     Tuple(Pos pos, Iterable<? extends Exp> args) {
       super(pos, Op.TUPLE);
@@ -399,6 +473,29 @@ public class Ast {
       w.append("(");
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
+    }
+  }
+
+  /** List. */
+  public static class List extends Exp {
+    public final java.util.List<Exp> args;
+
+    List(Pos pos, Iterable<? extends Exp> args) {
+      super(pos, Op.LIST);
+      this.args = ImmutableList.copyOf(args);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+      int i = 0;
+      for (Exp arg : args) {
+        action.accept(arg, i++);
+      }
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("[");
+      forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
+      return w.append("]");
     }
   }
 
@@ -527,7 +624,7 @@ public class Ast {
 
   /** Lambda expression. */
   public static class Fn extends Exp {
-    public final List<Match> matchList;
+    public final java.util.List<Match> matchList;
 
     Fn(Pos pos, ImmutableList<Match> matchList) {
       super(pos, Op.FN);
@@ -547,7 +644,7 @@ public class Ast {
   /** Case expression. */
   public static class Case extends Exp {
     public final Exp exp;
-    public final List<Match> matchList;
+    public final java.util.List<Match> matchList;
 
     Case(Pos pos, Exp exp, ImmutableList<Match> matchList) {
       super(pos, Op.CASE);

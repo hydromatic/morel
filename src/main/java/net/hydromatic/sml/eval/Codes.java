@@ -177,6 +177,10 @@ public abstract class Codes {
     };
   }
 
+  public static Code list(List<Code> codes) {
+    return tuple(codes);
+  }
+
   public static Code tuple(List<Code> codes) {
     return env -> {
       final Object[] values = new Object[codes.size()];
@@ -190,7 +194,7 @@ public abstract class Codes {
   /** Returns a code that returns the {@code slot}th field of a tuple or
    * record. */
   public static Code nth(int slot) {
-    final Ast.IdPat pat = AstBuilder.INSTANCE.idPat(Pos.ZERO, "x");
+    final Ast.Pat pat = AstBuilder.INSTANCE.idPat(Pos.ZERO, "x");
     final Code code = env -> {
       final List values = (List) env.get("x");
       return values.get(slot);

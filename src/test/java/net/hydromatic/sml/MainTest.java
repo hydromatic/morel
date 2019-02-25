@@ -243,6 +243,15 @@ public class MainTest {
     assertStmt("1 + (2 + (3 + 4)) = 5 + 5",
         isAst(AstNode.class, "1 + (2 + (3 + 4)) = 5 + 5"));
 
+    // :: is right-associative
+    assertStmt("1 :: 2 :: 3 :: []",
+        isAst(AstNode.class, "1 :: 2 :: 3 :: []"));
+    assertStmt("((1 :: 2) :: 3) :: []",
+        isAst(AstNode.class, "((1 :: 2) :: 3) :: []"));
+    assertStmt("1 :: (2 :: (3 :: []))",
+        isAst(AstNode.class, "1 :: 2 :: 3 :: []"));
+    assertParseSame("1 + 2 :: 3 + 4 * 5 :: 6");
+
     assertParseSame("(1 + 2, 3, true, (5, 6), 7 = 8)");
 
     assertParseSame("let val x = 2 in x + (3 + x) + x end");
@@ -280,6 +289,10 @@ public class MainTest {
     assertType("1", is("int"));
     assertType("0e0", is("real"));
     assertType("1 + 2", is("int"));
+    assertType("1 - 2", is("int"));
+    assertType("1 * 2", is("int"));
+    assertType("1 / 2", is("int"));
+    assertType("1 / ~2", is("int"));
     assertType("1.0 + ~2.0", is("real"));
     assertType("\"\"", is("string"));
     assertType("true andalso false", is("bool"));
@@ -595,6 +608,60 @@ public class MainTest {
     assertType("()", is("unit"));
     assertType("{}", is("unit"));
     assertEval("{}", is(ImmutableList.of()));
+  }
+
+  @Test public void testList() {
+    assertType("[1]", is("int list"));
+    assertType("[[1]]", is("int list list"));
+    assertType("[(1, true), (2, false)]", is("(int * bool) list"));
+    assertType("1 :: [2]", is("int list"));
+    assertType("1 :: [2, 3]", is("int list"));
+    assertType("[1] :: [[2], [3]]", is("int list list"));
+    assertType("1 :: []", is("int list"));
+    assertType("1 :: 2 :: []", is("int list"));
+  }
+
+  @Ignore("need patterns as arguments and generics")
+  @Test public void testList2() {
+    assertType("fn [] => 0", is("'a list -> int"));
+    assertType("fn x: 'b list => 0", is("'a list -> int"));
+  }
+
+  /** List length function exercises list pattern-matching and recursion. */
+  @Test public void testListLength() {
+    final String ml = "let\n"
+        + "  val rec len = fn x =>\n"
+        + "    case x of [] => 0\n"
+        + "            | head :: tail => 1 + (len tail)\n"
+        + "in\n"
+        + "  len [1, 2, 3]\n"
+        + "end";
+    assertEval(ml, is(3));
+  }
+
+  /** As {@link #testListLength()} but match reversed, which requires
+   * cautious matching of :: pattern. */
+  @Test public void testListLength2() {
+    final String ml = "let\n"
+        + "  val rec len = fn x =>\n"
+        + "    case x of head :: tail => 1 + (len tail)\n"
+        + "            | [] => 0\n"
+        + "in\n"
+        + "  len [1, 2, 3]\n"
+        + "end";
+    assertEval(ml, is(3));
+  }
+
+  @Test public void testMatchTuple() {
+    final String ml = "let\n"
+        + "  val rec sumIf = fn v =>\n"
+        + "    case v of (true, n) :: tail => n + (sumIf tail)\n"
+        + "            | (false, _) :: tail => sumIf tail\n"
+        + "            | _ => 0\n"
+        + "in\n"
+        + "  sumIf [(true, 2), (false, 3), (true, 5)]\n"
+        + "end";
+    assertEval(ml, is(7));
   }
 
   @Test public void testError() {

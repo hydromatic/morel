@@ -252,7 +252,16 @@ Match match() :
 
 /** Parses an expression.
  *
- * <p>7 is the highest level of precedence. */
+ * <p>7 is the highest level of precedence. The full list is as follows:
+ * <ul>
+ * <li>infix 7 {@code * / div mod}
+ * <li>infix 6 {@code + - ^}
+ * <li>infixr 5 {@code :: @}
+ * <li>infix 4 {@code = <> > >= < <=}
+ * <li>infix 3 {@code := o}
+ * <li>infix 0 {@code before}
+ * </ul>
+ */
 Exp expression7() :
 {
   Exp e;
@@ -304,36 +313,58 @@ Exp expression6() :
   { return e; }
 }
 
-/** Parses an expression of precedence level 4 (+, -, ^). */
+/** Parses an expression of precedence level 5 ({@code ::}),
+* right-associative. */
+Exp expression5() :
+{
+  Exp e;
+  final List<Exp> list = new ArrayList<Ast.Exp>();
+}
+{
+  e = expression6() { list.add(e); }
+  (
+    <CONS> e = expression6() { list.add(e); }
+  )*
+  {
+    e = list.get(list.size() - 1);
+    for (int i = list.size() - 2; i >= 0; i--) {
+      e = ast.cons(list.get(i), e);
+    }
+    return e;
+  }
+}
+
+/** Parses an expression of precedence level 4 ({@code =}, {@code <>},
+  * {@code >}, {@code >=}, {@code <}, {@code <=}). */
 Exp expression4() :
 {
   Exp e;
   Exp e2;
 }
 {
-  e = expression6()
+  e = expression5()
   (
-    <EQ> e2 = expression6() {
+    <EQ> e2 = expression5() {
       e = ast.equal(e, e2);
     }
   |
-    <NE> e2 = expression6() {
+    <NE> e2 = expression5() {
       e = ast.notEqual(e, e2);
     }
   |
-    <LT> e2 = expression6() {
+    <LT> e2 = expression5() {
       e = ast.lessThan(e, e2);
     }
   |
-    <GT> e2 = expression6() {
+    <GT> e2 = expression5() {
       e = ast.greaterThan(e, e2);
     }
   |
-    <LE> e2 = expression6() {
+    <LE> e2 = expression5() {
       e = ast.lessThanOrEqual(e, e2);
     }
   |
-    <GE> e2 = expression6() {
+    <GE> e2 = expression5() {
       e = ast.greaterThanOrEqual(e, e2);
     }
   )*
@@ -432,6 +463,21 @@ Exp atom() :
     )
   )
 |
+  <LBRACKET> {
+    span = Span.of(getPos());
+    final List<Exp> list = new ArrayList<Exp>();
+    Exp e2;
+  }
+  [
+    e2 = expression() { list.add(e2); }
+    (
+      <COMMA> e2 = expression() { list.add(e2); }
+    )*
+  ]
+  <RBRACKET> {
+    return ast.list(span.end(this), list);
+  }
+|
   <LBRACE> {
     span = Span.of(getPos());
     final Map<String, Exp> map = new LinkedHashMap<String, Exp>();
@@ -512,7 +558,7 @@ Pat pat() :
   Ast.TypeNode type;
 }
 {
-  pat = atomPat()
+  pat = pattern5()
   (
     <COLON> type = type() {
       pat = ast.annotatedPat(pat.pos.plus(type.pos), pat, type);
@@ -521,12 +567,35 @@ Pat pat() :
   { return pat; }
 }
 
+/** Parses an pattern of precedence level 5 ({@code ::}),
+* right-associative. */
+Pat pattern5() :
+{
+  Pat pat;
+  final List<Pat> list = new ArrayList<Ast.Pat>();
+}
+{
+  pat = atomPat() { list.add(pat); }
+  (
+    <CONS> pat = atomPat() { list.add(pat); }
+  )*
+  {
+    pat = list.get(list.size() - 1);
+    for (int i = list.size() - 2; i >= 0; i--) {
+      pat = ast.consPat(list.get(i), pat);
+    }
+    return pat;
+  }
+}
+
 /** Parses an atomic pattern. */
 Pat atomPat() :
 {
+  final Span span;
   final Ast.Id id;
   final Ast.Literal literal;
   final Ast.Pat p;
+  Pat p2;
 }
 {
   id = identifier() { return ast.idPat(id.pos, id.name); }
@@ -544,10 +613,9 @@ Pat atomPat() :
     <RPAREN> { return p; }
   |
     {
-      final Span span = Span.of(getPos());
+      span = Span.of(getPos());
       final List<Pat> list = new ArrayList<Pat>();
       list.add(p);
-      Pat p2;
     }
     (
       <COMMA> p2 = pat() { list.add(p2); }
@@ -556,8 +624,44 @@ Pat atomPat() :
       return ast.tuplePat(span.end(this), list);
     }
   )
+|
+  <LBRACKET> {
+    span = Span.of(getPos());
+    final List<Pat> list = new ArrayList<Pat>();
+  }
+  [
+    p2 = pat() { list.add(p2); }
+    (
+      <COMMA> p2 = pat() { list.add(p2); }
+    )*
+  ]
+  <RBRACKET> {
+    return ast.listPat(span.end(this), list);
+  }
+|
+  <LBRACE> p = pat() {
+    span = Span.of(getPos());
+    final Map<String, Pat> map = new LinkedHashMap<String, Pat>();
+  }
+  recordPat(map)
+  (
+    <COMMA> recordPat(map)
+  )*
+  <RBRACE> {
+    return ast.recordPat(span.end(this), map);
+  }
 }
 
+/** Parses a "label = pat" inside a record pattern. */
+void recordPat(Map/*<String, Pat>*/ map) :
+{
+  final String id;
+  final Ast.Pat pat;
+}
+{
+  ( <NATURAL_LITERAL> | <IDENTIFIER> ) { id = token.image; }
+  <EQ> pat = pat() { map.put(id, pat); }
+}
 
 /** Parses a type. */
 TypeNode type() :
@@ -595,7 +699,7 @@ AstNode statementSemicolon() :
   n = statement() <SEMICOLON> { return n; }
 }
 
-<DEFAULT, DQID, BTID> TOKEN :
+<DEFAULT> TOKEN :
 {
   < AND: "AND" >
 | < ANDALSO: "ANDALSO" >
@@ -617,7 +721,7 @@ AstNode statementSemicolon() :
 
 /* LITERALS */
 
-<DEFAULT, DQID, BTID> TOKEN :
+<DEFAULT> TOKEN :
 {
     < NATURAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
     |
@@ -640,7 +744,7 @@ AstNode statementSemicolon() :
 
 /* SEPARATORS */
 
-<DEFAULT, DQID, BTID> TOKEN :
+<DEFAULT> TOKEN :
 {
     < LPAREN: "(">
     | < RPAREN: ")">
@@ -657,7 +761,7 @@ AstNode statementSemicolon() :
 
 /* OPERATORS */
 
-<DEFAULT, DQID, BTID> TOKEN :
+<DEFAULT> TOKEN :
 {
     < EQ: "=" >
     | < GT: ">" >
@@ -671,6 +775,7 @@ AstNode statementSemicolon() :
     | < CARET: "^" >
     | < STAR: "*" >
     | < SLASH: "/" >
+    | < CONS: "::" >
     | < QUOTE: "'" >
     | < DOUBLE_QUOTE: "\"" >
 }
@@ -695,15 +800,12 @@ TOKEN_MGR_DECLS : {
 /*
 Lexical states:
 
-DEFAULT: Identifiers are quoted in brackets, e.g. [My Identifier]
-DQID:    Identifiers are double-quoted, e.g. "My Identifier"
-BTID:    Identifiers are enclosed in back-ticks, e.g. `My Identifier`
+DEFAULT:
 IN_SINGLE_LINE_COMMENT:
 IN_FORMAL_COMMENT:
 IN_MULTI_LINE_COMMENT:
 
-DEFAULT, DQID, BTID are the 3 'normal states'. Behavior is identical except
-for how quoted identifiers are recognized.
+DEFAULT is the normal state.
 
 After a comment has completed, the lexer returns to the previous state, one
 of the 'normal states'.
@@ -711,7 +813,7 @@ of the 'normal states'.
 
 /* WHITE SPACE */
 
-<DEFAULT, DQID, BTID> SKIP :
+<DEFAULT> SKIP :
 {
     " "
     | "\t"
@@ -722,12 +824,12 @@ of the 'normal states'.
 
 /* COMMENTS */
 
-<DEFAULT, DQID, BTID> MORE :
+<DEFAULT> MORE :
 {
     <"/**" ~["/"]> { pushState(); } : IN_FORMAL_COMMENT
 }
 
-<DEFAULT, DQID, BTID> MORE :
+<DEFAULT> MORE :
 {
     "//" { pushState(); } : IN_SINGLE_LINE_COMMENT
     |
@@ -765,39 +867,6 @@ MORE :
 
 <DEFAULT> TOKEN :
 {
-    < BRACKET_QUOTED_IDENTIFIER:
-    "["
-    (   (~["]","\n","\r"])
-        | ("]]")
-        )+
-    "]"
-    >
-}
-
-<DQID> TOKEN :
-{
-    < QUOTED_IDENTIFIER:
-    "\""
-    (   (~["\"","\n","\r"])
-        | ("\"\"")
-        )+
-    "\""
-    >
-}
-
-<BTID>  TOKEN :
-{
-    < BACK_QUOTED_IDENTIFIER:
-    "`"
-    (   (~["`","\n","\r"])
-        | ("``")
-        )+
-    "`"
-    >
-}
-
-<DEFAULT, DQID, BTID> TOKEN :
-{
     < COLLATION_ID:
     (<LETTER>|<DIGIT>)+ (<LETTER>|<DIGIT>|":"|"."|"-"|"_")*
     "$"
@@ -808,8 +877,6 @@ MORE :
     < IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
     |
     < LABEL: "#" (<LETTER>|<DIGIT>)+ >
-    |
-    < UNICODE_QUOTED_IDENTIFIER: "U" "&" <QUOTED_IDENTIFIER> >
     |
     < #LETTER:
     [

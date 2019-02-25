@@ -61,19 +61,24 @@ Implemented:
 * `let`
 * `val` (including `val rec`)
 * Operators: `=` `<>` `<` `>` `<=` `>=`
-  `+` `-` `*` `/` `div` `mod` `^`
-  `not` `andalso` `orelse`
-* Type derivation (for simple types)
+  `~` `+` `-` `*` `/` `div` `mod` `^`
+  `andalso` `orelse`
+  `::`
+* Built-in constants and functions:
+  `it` `true` `false` `not`
+* Type derivation
 * `fn`, function values, and function application
 * `if`
 * `case`
-* Primitive, tuple and record types
+* Primitive, list, tuple and record types
 * Tuples and unit
-* Patterns (destructuring) in `let` and `fn`
+* Lists
+* Patterns (destructuring) in `val` and `case`,
+  matching constants, wildcards, lists and tuples
 
 Not implemented:
+* Type variables (polymorphism)
 * `fun` declaration
-* Generic types
 * `type`
 * `datatype`
 * `local`
@@ -81,13 +86,19 @@ Not implemented:
 * `exception`
 * `while`
 * References, and operators `!` and `:=`
-* Match on record types
-* Operators: :: @ `before`
+* Patterns matching records
+* Operators: `@` `before`
+* Constants: `nil`
 * User-defined operators (`infix`, `infixr`)
-* /0 exception
 * Type annotations in expressions and patterns
-* `true`, `false`, `nil`, `ref`, `it`, `::` should not be reserved,
-  but user should not be able to override them
+
+Bugs:
+* Prevent user from overriding built-in constants and functions:
+  `true`, `false`, `nil`, `ref`, `it`, `::`; they should not be reserved
+* Access parameters and variables by offset into a fixed-size array;
+  currently we address them by name, in a map that is copied far too often
+* Runtime should throw when divide by zero
+* Validator should give good user error when it cannot type an expression
 
 ## More information
 

@@ -106,25 +106,58 @@ public class Closure implements Comparable<Closure> {
 
   private boolean bindRecurse(Ast.Pat pat, Map<String, Object> valueMap,
       Object argValue) {
+    final List<Object> listValue;
     switch (pat.op) {
     case ID_PAT:
       final Ast.IdPat idPat = (Ast.IdPat) pat;
       valueMap.put(idPat.name, argValue);
       return true;
 
-    case TUPLE_PAT:
-      final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
-      List listValue = (List) argValue;
-      tuplePat.forEachArg((arg, i) ->
-          bindRecurse(arg, valueMap, listValue.get(i)));
-      return true;
-
     case WILDCARD_PAT:
       return true;
 
+    case BOOL_LITERAL_PAT:
+    case CHAR_LITERAL_PAT:
     case INT_LITERAL_PAT:
+    case REAL_LITERAL_PAT:
+    case STRING_LITERAL_PAT:
       final Ast.LiteralPat literalPat = (Ast.LiteralPat) pat;
       return literalPat.value.equals(argValue);
+
+    case TUPLE_PAT:
+      final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
+      listValue = (List) argValue;
+      for (Pair<Ast.Pat, Object> pair : Pair.zip(tuplePat.args, listValue)) {
+        if (!bindRecurse(pair.left, valueMap, pair.right)) {
+          return false;
+        }
+      }
+      return true;
+
+    case LIST_PAT:
+      final Ast.ListPat listPat = (Ast.ListPat) pat;
+      listValue = (List) argValue;
+      if (listValue.size() != listPat.args.size()) {
+        return false;
+      }
+      for (Pair<Ast.Pat, Object> pair : Pair.zip(listPat.args, listValue)) {
+        if (!bindRecurse(pair.left, valueMap, pair.right)) {
+          return false;
+        }
+      }
+      return true;
+
+    case CONS_PAT:
+      final Ast.InfixPat infixPat = (Ast.InfixPat) pat;
+      @SuppressWarnings("unchecked") final List<Object> consValue =
+          (List) argValue;
+      if (consValue.isEmpty()) {
+        return false;
+      }
+      final Object head = consValue.get(0);
+      final List<Object> tail = consValue.subList(1, consValue.size());
+      return bindRecurse(infixPat.p0, valueMap, head)
+          && bindRecurse(infixPat.p1, valueMap, tail);
 
     default:
       throw new AssertionError("cannot compile pattern " + pat);

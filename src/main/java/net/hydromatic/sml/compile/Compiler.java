@@ -116,6 +116,7 @@ public class Compiler {
   public Code compile(Environment env, Ast.Exp expression) {
     final Ast.Literal literal;
     final Code argCode;
+    final List<Code> codes;
     switch (expression.op) {
     case INT_LITERAL:
       literal = (Ast.Literal) expression;
@@ -195,9 +196,17 @@ public class Compiler {
       argCode = compile(env, apply.arg);
       return Codes.apply(fnCode, argCode);
 
+    case LIST:
+      final Ast.List list = (Ast.List) expression;
+      codes = new ArrayList<>();
+      for (Ast.Exp arg : list.args) {
+        codes.add(compile(env, arg));
+      }
+      return Codes.list(codes);
+
     case TUPLE:
       final Ast.Tuple tuple = (Ast.Tuple) expression;
-      final List<Code> codes = new ArrayList<>();
+      codes = new ArrayList<>();
       for (Ast.Exp arg : tuple.args) {
         codes.add(compile(env, arg));
       }
