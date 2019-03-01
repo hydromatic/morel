@@ -81,10 +81,11 @@ public class Ast {
     LiteralPat(Pos pos, Op op, Comparable value) {
       super(pos, op);
       this.value = Objects.requireNonNull(value);
-      Preconditions.checkArgument(op == Op.INT_LITERAL_PAT
+      Preconditions.checkArgument(op == Op.BOOL_LITERAL_PAT
+          || op == Op.CHAR_LITERAL_PAT
+          || op == Op.INT_LITERAL_PAT
           || op == Op.REAL_LITERAL_PAT
-          || op == Op.STRING_LITERAL_PAT
-          || op == Op.BOOL_LITERAL_PAT);
+          || op == Op.STRING_LITERAL_PAT);
     }
 
     @Override public int hashCode() {
@@ -203,10 +204,12 @@ public class Ast {
 
   /** Record pattern. */
   public static class RecordPat extends Pat {
+    public final boolean ellipsis;
     public final Map<String, Pat> args;
 
-    RecordPat(Pos pos, ImmutableMap<String, Pat> args) {
-      super(pos, Op.RECORD);
+    RecordPat(Pos pos, boolean ellipsis, ImmutableMap<String, Pat> args) {
+      super(pos, Op.RECORD_PAT);
+      this.ellipsis = ellipsis;
       this.args = Objects.requireNonNull(args);
     }
 
@@ -225,6 +228,12 @@ public class Ast {
           w.append(", ");
         }
         w.append(entry.getKey()).append(" = ").append(entry.getValue(), 0, 0);
+      }
+      if (ellipsis) {
+        if (i++ > 0) {
+          w.append(", ");
+        }
+        w.append("...");
       }
       return w.append("}");
     }

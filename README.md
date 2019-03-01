@@ -74,7 +74,7 @@ Implemented:
 * Tuples and unit
 * Lists
 * Patterns (destructuring) in `val` and `case`,
-  matching constants, wildcards, lists and tuples
+  matching constants, wildcards, lists, records and tuples
 
 Not implemented:
 * Type variables (polymorphism)
@@ -86,7 +86,6 @@ Not implemented:
 * `exception`
 * `while`
 * References, and operators `!` and `:=`
-* Patterns matching records
 * Operators: `@` `before`
 * Constants: `nil`
 * User-defined operators (`infix`, `infixr`)

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.util.Pair;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -107,6 +108,7 @@ public class Closure implements Comparable<Closure> {
   private boolean bindRecurse(Ast.Pat pat, Map<String, Object> valueMap,
       Object argValue) {
     final List<Object> listValue;
+    final Ast.LiteralPat literalPat;
     switch (pat.op) {
     case ID_PAT:
       final Ast.IdPat idPat = (Ast.IdPat) pat;
@@ -118,16 +120,33 @@ public class Closure implements Comparable<Closure> {
 
     case BOOL_LITERAL_PAT:
     case CHAR_LITERAL_PAT:
-    case INT_LITERAL_PAT:
-    case REAL_LITERAL_PAT:
     case STRING_LITERAL_PAT:
-      final Ast.LiteralPat literalPat = (Ast.LiteralPat) pat;
+      literalPat = (Ast.LiteralPat) pat;
       return literalPat.value.equals(argValue);
+
+    case INT_LITERAL_PAT:
+      literalPat = (Ast.LiteralPat) pat;
+      return ((BigDecimal) literalPat.value).intValue() == (Integer) argValue;
+
+    case REAL_LITERAL_PAT:
+      literalPat = (Ast.LiteralPat) pat;
+      return ((BigDecimal) literalPat.value).doubleValue() == (Double) argValue;
 
     case TUPLE_PAT:
       final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
       listValue = (List) argValue;
       for (Pair<Ast.Pat, Object> pair : Pair.zip(tuplePat.args, listValue)) {
+        if (!bindRecurse(pair.left, valueMap, pair.right)) {
+          return false;
+        }
+      }
+      return true;
+
+    case RECORD_PAT:
+      final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
+      listValue = (List) argValue;
+      for (Pair<Ast.Pat, Object> pair
+          : Pair.zip(recordPat.args.values(), listValue)) {
         if (!bindRecurse(pair.left, valueMap, pair.right)) {
           return false;
         }
@@ -160,7 +179,7 @@ public class Closure implements Comparable<Closure> {
           && bindRecurse(infixPat.p1, valueMap, tail);
 
     default:
-      throw new AssertionError("cannot compile pattern " + pat);
+      throw new AssertionError("cannot compile " + pat.op + ": " + pat);
     }
   }
 }

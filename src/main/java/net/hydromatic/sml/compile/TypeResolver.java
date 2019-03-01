@@ -40,8 +40,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /** Resolves the type of an expression. */
@@ -131,6 +135,9 @@ public class TypeResolver {
     case BOOL_LITERAL:
       return reg(node, v, toTerm(PrimitiveType.BOOL));
 
+    case CHAR_LITERAL:
+      return reg(node, v, toTerm(PrimitiveType.CHAR));
+
     case INT_LITERAL:
       return reg(node, v, toTerm(PrimitiveType.INT));
 
@@ -178,18 +185,21 @@ public class TypeResolver {
 
     case RECORD:
       final Ast.Record record = (Ast.Record) node;
-      final Map<String, Unifier.Term> labelTypes = new LinkedHashMap<>();
+      final NavigableMap<String, Unifier.Term> labelTypes = new TreeMap<>();
       record.args.forEach((name, exp) -> {
         final Unifier.Variable vArg = unifier.variable();
         deduceType(env, exp, vArg);
         labelTypes.put(name, vArg);
       });
-      final StringBuilder b = new StringBuilder(RECORD_TY_CON);
-      for (String label : labelTypes.keySet()) {
-        b.append(':').append(label);
-      }
+//      final StringBuilder b = new StringBuilder(RECORD_TY_CON);
+//      for (String label : labelTypes.keySet()) {
+//        b.append(':').append(label);
+//      }
+//      final Unifier.Sequence recordTerm =
+//          unifier.apply(b.toString(), labelTypes.values());
       final Unifier.Sequence recordTerm =
-          unifier.apply(b.toString(), labelTypes.values());
+          unifier.apply(recordOp(labelTypes.navigableKeySet()),
+              labelTypes.values());
       return reg(record, v, recordTerm);
 
     case LET:
@@ -224,7 +234,15 @@ public class TypeResolver {
       final Ast.Case case_ = (Ast.Case) node;
       v2 = unifier.variable();
       deduceType(env, case_.exp, v2);
-      deduceMatchListType(env, case_.matchList, v2, v);
+      final NavigableSet<String> labelNames = new TreeSet<>();
+      final Unifier.Term argType = map.get(case_.exp);
+      if (argType instanceof Unifier.Sequence) {
+        final List<String> fieldList = ((Unifier.Sequence) argType).fieldList();
+        if (fieldList != null) {
+          labelNames.addAll(fieldList);
+        }
+      }
+      deduceMatchListType(env, case_.matchList, labelNames, v2, v);
       return reg(case_, null, v);
 
     case FN:
@@ -273,6 +291,14 @@ public class TypeResolver {
     }
   }
 
+  private String recordOp(NavigableSet<String> labelNames) {
+    final StringBuilder b = new StringBuilder(RECORD_TY_CON);
+    for (String label : labelNames) {
+      b.append(':').append(label);
+    }
+    return b.toString();
+  }
+
   private boolean deduceRecordSelectorType(TypeEnv env,
       Unifier.Variable vResult, Unifier.Variable vArg,
       Ast.RecordSelector recordSelector) {
@@ -301,7 +327,7 @@ public class TypeResolver {
       Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable argVariable,
       Unifier.Variable resultVariable) {
     final Unifier.Variable vPat = unifier.variable();
-    deducePatType(env, match.pat, termMap, vPat);
+    deducePatType(env, match.pat, termMap, null, vPat);
     TypeEnv env2 = bindAll(env, termMap);
     deduceType(env2, match.e, resultVariable);
     return reg(match, argVariable,
@@ -309,10 +335,16 @@ public class TypeResolver {
   }
 
   private void deduceMatchListType(TypeEnv env, List<Ast.Match> matchList,
-      Unifier.Variable argVariable, Unifier.Variable resultVariable) {
+      NavigableSet<String> labelNames, Unifier.Variable argVariable,
+      Unifier.Variable resultVariable) {
     for (Ast.Match match : matchList) {
-      final HashMap<Ast.IdPat, Unifier.Term> termMap = new HashMap<>();
-      deducePatType(env, match.pat, termMap, argVariable);
+      if (match.pat instanceof Ast.RecordPat) {
+        labelNames.addAll(((Ast.RecordPat) match.pat).args.keySet());
+      }
+    }
+    for (Ast.Match match : matchList) {
+      final Map<Ast.IdPat, Unifier.Term> termMap = new HashMap<>();
+      deducePatType(env, match.pat, termMap, labelNames, argVariable);
       final TypeEnv env2 = bindAll(env, termMap);
       deduceType(env2, match.e, resultVariable);
     }
@@ -321,7 +353,7 @@ public class TypeResolver {
   private boolean deduceValBindType(TypeEnv env, Ast.ValBind valBind,
       Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable v) {
     final Unifier.Variable vPat = unifier.variable();
-    deducePatType(env, valBind.pat, termMap, vPat);
+    deducePatType(env, valBind.pat, termMap, null, vPat);
     TypeEnv env2 = env;
     if (valBind.rec
         && valBind.pat instanceof Ast.IdPat) {
@@ -358,18 +390,36 @@ public class TypeResolver {
   }
 
   /** Derives a type term for a pattern, collecting the names of pattern
-   * variables. */
+   * variables.
+   *
+   * @param env Compile-time environment
+   * @param pat Pattern AST
+   * @param termMap Map from names to bound terms, populated by this method
+   * @param labelNames List of names of labels in this pattern and sibling
+   *   patterns in a {@code |} match, or null if not a record pattern
+   * @param v Type variable that this method should equate the type term that it
+   *   derives for this pattern */
   private boolean deducePatType(TypeEnv env, Ast.Pat pat,
-      Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable v) {
+      Map<Ast.IdPat, Unifier.Term> termMap, NavigableSet<String> labelNames,
+      Unifier.Variable v) {
     switch (pat.op) {
     case WILDCARD_PAT:
       return true;
 
+    case BOOL_LITERAL_PAT:
+      return reg(pat, v, toTerm(PrimitiveType.BOOL));
+
+    case CHAR_LITERAL_PAT:
+      return reg(pat, v, toTerm(PrimitiveType.CHAR));
+
     case INT_LITERAL_PAT:
       return reg(pat, v, toTerm(PrimitiveType.INT));
 
-    case BOOL_LITERAL_PAT :
-      return reg(pat, v, toTerm(PrimitiveType.BOOL));
+    case REAL_LITERAL_PAT:
+      return reg(pat, v, toTerm(PrimitiveType.REAL));
+
+    case STRING_LITERAL_PAT:
+      return reg(pat, v, toTerm(PrimitiveType.STRING));
 
     case ID_PAT:
       termMap.put((Ast.IdPat) pat, v);
@@ -380,24 +430,51 @@ public class TypeResolver {
       final Ast.TuplePat tuple = (Ast.TuplePat) pat;
       for (Ast.Pat arg : tuple.args) {
         final Unifier.Variable vArg = unifier.variable();
-        deducePatType(env, arg, termMap, vArg);
+        deducePatType(env, arg, termMap, null, vArg);
         typeTerms.add(vArg);
       }
       return reg(pat, v, unifier.apply(TUPLE_TY_CON, typeTerms));
+
+    case RECORD_PAT:
+      // First, determine the set of field names.
+      //
+      // If the pattern is in a 'case', we know the field names from the
+      // argument. But it we are in a function, we require at least one of the
+      // patterns to not be a wildcard and not have an ellipsis. For example, in
+      //
+      //  fun f {a=1,...} = 1 | f {b=2,...} = 2
+      //
+      // we cannot deduce whether a 'c' field is allowed.
+      final Ast.RecordPat record = (Ast.RecordPat) pat;
+      final NavigableMap<String, Unifier.Term> labelTerms = new TreeMap<>();
+      if (labelNames == null) {
+        labelNames = new TreeSet<>(record.args.keySet());
+      }
+      for (String labelName : labelNames) {
+        final Unifier.Variable vArg = unifier.variable();
+        labelTerms.put(labelName, vArg);
+        final Ast.Pat argPat = record.args.get(labelName);
+        if (argPat != null) {
+          deducePatType(env, argPat, termMap, null, vArg);
+        }
+      }
+      return reg(pat, v,
+          unifier.apply(recordOp(labelTerms.navigableKeySet()),
+              labelTerms.values()));
 
     case LIST_PAT:
       final Ast.ListPat list = (Ast.ListPat) pat;
       final Unifier.Variable vArg2 = unifier.variable();
       for (Ast.Pat arg : list.args) {
-        deducePatType(env, arg, termMap, vArg2);
+        deducePatType(env, arg, termMap, null, vArg2);
       }
       return reg(list, v, unifier.apply(LIST_TY_CON, vArg2));
 
     case CONS_PAT:
       final Unifier.Variable elementType = unifier.variable();
       final Ast.InfixPat call = (Ast.InfixPat) pat;
-      deducePatType(env, call.p0, termMap, elementType);
-      deducePatType(env, call.p1, termMap, v);
+      deducePatType(env, call.p0, termMap, null, elementType);
+      deducePatType(env, call.p1, termMap, null, v);
       return reg(call, v, unifier.apply(LIST_TY_CON, elementType));
 
     default:

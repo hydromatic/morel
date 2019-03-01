@@ -118,6 +118,16 @@ public class Compiler {
     final Code argCode;
     final List<Code> codes;
     switch (expression.op) {
+    case BOOL_LITERAL:
+      literal = (Ast.Literal) expression;
+      final Boolean boolValue = (Boolean) literal.value;
+      return Codes.constant(boolValue);
+
+    case CHAR_LITERAL:
+      literal = (Ast.Literal) expression;
+      final Character charValue = (Character) literal.value;
+      return Codes.constant(charValue);
+
     case INT_LITERAL:
       literal = (Ast.Literal) expression;
       return Codes.constant(((BigDecimal) literal.value).intValue());
@@ -125,11 +135,6 @@ public class Compiler {
     case REAL_LITERAL:
       literal = (Ast.Literal) expression;
       return Codes.constant(((BigDecimal) literal.value).floatValue());
-
-    case BOOL_LITERAL:
-      literal = (Ast.Literal) expression;
-      final Boolean boolValue = (Boolean) literal.value;
-      return Codes.constant(boolValue);
 
     case STRING_LITERAL:
       literal = (Ast.Literal) expression;
@@ -314,10 +319,35 @@ public class Compiler {
         }
       });
       final Code code = compile(envHolder[0], match.e);
-      patCodeBuilder.add(Pair.of(match.pat, code));
+      patCodeBuilder.add(Pair.of(expandRecordPattern(match.pat), code));
     }
     final ImmutableList<Pair<Ast.Pat, Code>> patCodes = patCodeBuilder.build();
     return evalEnv -> new Closure(evalEnv, patCodes);
+  }
+
+  /** Expands a pattern if it is a record pattern that has an ellipsis
+   * or if the arguments are not in the same order as the labels in the type. */
+  private Ast.Pat expandRecordPattern(Ast.Pat pat) {
+    switch (pat.op) {
+    case RECORD_PAT:
+      final TypeResolver.RecordType type =
+          (TypeResolver.RecordType) typeMap.getType(pat);
+      final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
+      final Map<String, Ast.Pat> args = new LinkedHashMap<>();
+      for (String label : type.argNameTypes.keySet()) {
+        args.put(label,
+            recordPat.args.getOrDefault(label, ast.wildcardPat(pat.pos)));
+      }
+      if (recordPat.ellipsis || !recordPat.args.equals(args)) {
+        // Only create an expanded pattern if it is different (no ellipsis,
+        // or arguments in a different order).
+        return ast.recordPat(recordPat.pos, false, args);
+      }
+      // fall through
+      return recordPat;
+    default:
+      return pat;
+    }
   }
 
   private Code compileValBind(Environment env, Ast.ValBind valBind) {

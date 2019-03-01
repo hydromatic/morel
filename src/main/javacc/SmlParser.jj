@@ -639,26 +639,29 @@ Pat atomPat() :
     return ast.listPat(span.end(this), list);
   }
 |
-  <LBRACE> p = pat() {
+  <LBRACE> {
     span = Span.of(getPos());
     final Map<String, Pat> map = new LinkedHashMap<String, Pat>();
+    final boolean[] ellipsis = {false};
   }
-  recordPat(map)
+  recordPat(ellipsis, map)
   (
-    <COMMA> recordPat(map)
+    <COMMA> recordPat(ellipsis, map)
   )*
   <RBRACE> {
-    return ast.recordPat(span.end(this), map);
+    return ast.recordPat(span.end(this), ellipsis[0], map);
   }
 }
 
 /** Parses a "label = pat" inside a record pattern. */
-void recordPat(Map/*<String, Pat>*/ map) :
+void recordPat(boolean[] ellipsis, Map/*<String, Pat>*/ map) :
 {
   final String id;
   final Ast.Pat pat;
 }
 {
+  <ELLIPSIS> { ellipsis[0] = true; }
+|
   ( <NATURAL_LITERAL> | <IDENTIFIER> ) { id = token.image; }
   <EQ> pat = pat() { map.put(id, pat); }
 }
@@ -776,6 +779,7 @@ AstNode statementSemicolon() :
     | < STAR: "*" >
     | < SLASH: "/" >
     | < CONS: "::" >
+    | < ELLIPSIS: "..." >
     | < QUOTE: "'" >
     | < DOUBLE_QUOTE: "\"" >
 }

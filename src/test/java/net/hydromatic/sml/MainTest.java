@@ -273,6 +273,10 @@ public class MainTest {
 
     // case
     assertParseSame("case 1 of 0 => \"zero\" | _ => \"nonzero\"");
+    assertParseSame("case {a = 1, b = 2} of {a = 1, ...} => 1");
+    assertParseSame("case {a = 1, b = 2} of {...} => 1");
+    assertStmt("case {a = 1, b = 2} of {..., a = 3} => 1",
+        isAst(AstNode.class, "case {a = 1, b = 2} of {a = 3, ...} => 1"));
 
     // fn
     assertParseSame("fn x => x + 1");
@@ -588,11 +592,31 @@ public class MainTest {
   }
 
   @Ignore("deduce type of #label")
-  @Test public void testRecordMatch() {
+  @Test public void testRecordFn() {
     assertType("(fn {a=a1,b=b1} => a1) {a = 1, b = true}", is("int"));
     assertType("(fn {a=a1,b=b1} => b1) {a = 1, b = true}", is("bool"));
     assertEval("(fn {a=a1,b=b1} => a1) {a = 1, b = true}", is("1"));
     assertEval("(fn {a=a1,b=b1} => b1) {a = 1, b = true}", is("true"));
+  }
+
+  @Test public void testRecordMatch() {
+    final String ml = "case {a=1, b=2, c=3}\n"
+        + "  of {a=2, b=2, c=3} => 0\n"
+        + "   | {a=1, ..., c=x} => x\n"
+        + "   | _ => ~1";
+    assertEval(ml, is(3));
+  }
+
+  @Test public void testRecordCase() {
+    assertEval("case {a=2,b=3} of {a=x,b=y} => x * y",
+        is(6));
+    assertEval("case {a=2,b=3,c=4} of {a=x,b=y,c=z} => x * y",
+        is(6));
+    assertEval("case {a=2,b=3,c=4} of {a=x,b=y,...} => x * y",
+        is(6));
+    // resolution of flex records is more lenient in case than in fun
+    assertEval("case {a=2,b=3,c=4} of {a=3,...} => 1 | {b=2,...} => 2 | _ => 3",
+        is(3));
   }
 
   @Test public void testRecordTuple() {
@@ -664,11 +688,58 @@ public class MainTest {
     assertEval(ml, is(7));
   }
 
+  @Ignore("fun is not implemented")
+  @Test public void testFun() {
+    assertType("fun f {a=x,b=1,...} = x\n"
+            + "  | f {b=y,c=2,...} = y\n"
+            + "  | f {a=x,b=y,c=z} = x+y+z",
+        is("val f = fn : {a:int, b:int, c:int} -> int"));
+    assertEval("let\n"
+            + "  fun f {a=x,b=1,...} = x\n"
+            + "    | f {b=y,c=2,...} = y\n"
+            + "    | f {a=x,b=y,c=z} = x+y+z\n"
+            + "in\n"
+            + "  f {a=1,b=2,c=3}\n"
+            + "end",
+        is(6));
+  }
+
   @Test public void testError() {
     assertError("fn x y => x + y",
         is("Error: non-constructor applied to argument in pattern: x"));
     assertError("let val x = 1 and y = x + 2 in x + y end",
         is("Error: unbound variable or constructor: x"));
+    assertError("- case {a=1,b=2,c=3} of {a=x,b=y} => x + y",
+        is("Error: case object and rules do not agree [tycon mismatch]\n"
+            + "  rule domain: {a:[+ ty], b:[+ ty]}\n"
+            + "  object: {a:[int ty], b:[int ty], c:[int ty]}\n"
+            + "  in expression:\n"
+            + "    (case {a=1,b=2,c=3}\n"
+            + "      of {a=x,b=y} => x + y)\n"));
+    assertError("fun f {a=x,b=y,...} = x+y",
+        is("Error: unresolved flex record (need to know the names of ALL the "
+            + "fields\n"
+            + " in this context)\n"
+            + "  type: {a:[+ ty], b:[+ ty]; 'Z}\n"));
+    assertError("fun f {a=x,...} = x | {b=y,...} = y;",
+        is("stdIn:1.24-1.33 Error: can't find function arguments in clause\n"
+        + "stdIn:1.24-1.33 Error: illegal function symbol in clause\n"
+        + "stdIn:1.6-1.37 Error: clauses do not all have same function name\n"
+        + "stdIn:1.36 Error: unbound variable or constructor: y\n"
+        + "stdIn:1.2-1.37 Error: unresolved flex record\n"
+        + "   (can't tell what fields there are besides #a)\n"));
+    assertError("fun f {a=x,...} = x | f {b=y,...} = y",
+        is("Error: unresolved flex record (need to know the names of ALL the "
+            + "fields\n"
+            + " in this context)\n"
+            + "  type: {a:'Y, b:'Y; 'Z}\n"));
+    assertError("fun f {a=x,...} = x\n"
+        + "  | f {b=y,...} = y\n"
+        + "  | f {a=x,b=y,c=z} = x+y+z",
+        is("stdIn:1.6-3.20 Error: match redundant\n"
+            + "          {a=x,b=_,c=_} => ...\n"
+            + "    -->   {a=_,b=y,c=_} => ...\n"
+            + "    -->   {a=x,b=y,c=z} => ...\n"));
   }
 
   private void assertError(String ml, Matcher<String> matcher) {

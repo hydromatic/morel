@@ -25,8 +25,9 @@ public enum Op {
   RECORD_SELECTOR,
 
   // literals
-  INT_LITERAL,
   BOOL_LITERAL,
+  CHAR_LITERAL,
+  INT_LITERAL,
   REAL_LITERAL,
   STRING_LITERAL,
   UNIT_LITERAL,
@@ -35,13 +36,14 @@ public enum Op {
   ID_PAT,
   WILDCARD_PAT,
   TUPLE_PAT,
+  RECORD_PAT,
   LIST_PAT,
   CONS_PAT(" :: "),
+  BOOL_LITERAL_PAT,
   CHAR_LITERAL_PAT,
   INT_LITERAL_PAT,
-  BOOL_LITERAL_PAT,
-  STRING_LITERAL_PAT,
   REAL_LITERAL_PAT,
+  STRING_LITERAL_PAT,
   // annotated pattern "p: t"
   ANNOTATED_PAT(" : "),
 
@@ -120,14 +122,16 @@ public enum Op {
    * of a pattern. */
   public Op toPat() {
     switch (this) {
-    case INT_LITERAL:
-      return INT_LITERAL_PAT;
-    case STRING_LITERAL:
-      return STRING_LITERAL_PAT;
-    case REAL_LITERAL:
-      return REAL_LITERAL_PAT;
     case BOOL_LITERAL:
       return BOOL_LITERAL_PAT;
+    case CHAR_LITERAL:
+      return CHAR_LITERAL_PAT;
+    case INT_LITERAL:
+      return INT_LITERAL_PAT;
+    case REAL_LITERAL:
+      return REAL_LITERAL_PAT;
+    case STRING_LITERAL:
+      return STRING_LITERAL_PAT;
     case TUPLE:
       return TUPLE_PAT;
     default:

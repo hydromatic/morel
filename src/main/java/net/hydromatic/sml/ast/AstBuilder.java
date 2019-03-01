@@ -35,6 +35,16 @@ public enum AstBuilder {
     return new Ast.InfixCall(a0.pos.plus(a1.pos), op, a0, a1);
   }
 
+  /** Creates a {@code boolean} literal. */
+  public Ast.Literal boolLiteral(Pos p, boolean b) {
+    return new Ast.Literal(p, Op.BOOL_LITERAL, b);
+  }
+
+  /** Creates a {@code char} literal. */
+  public Ast.Literal charLiteral(Pos p, char c) {
+    return new Ast.Literal(p, Op.CHAR_LITERAL, c);
+  }
+
   /** Creates an {@code int} literal. */
   public Ast.Literal intLiteral(BigDecimal value, Pos pos) {
     return new Ast.Literal(pos, Op.INT_LITERAL, value);
@@ -48,11 +58,6 @@ public enum AstBuilder {
   /** Creates a string literal. */
   public Ast.Literal stringLiteral(Pos pos, String value) {
     return new Ast.Literal(pos, Op.STRING_LITERAL, value);
-  }
-
-  /** Creates a boolean literal. */
-  public Ast.Literal boolLiteral(Pos p, boolean b) {
-    return new Ast.Literal(p, Op.BOOL_LITERAL, b);
   }
 
   /** Creates a unit literal. */
@@ -112,8 +117,9 @@ public enum AstBuilder {
     return new Ast.ListPat(pos, ImmutableList.copyOf(args));
   }
 
-  public Ast.RecordPat recordPat(Pos pos, Map<String, ? extends Ast.Pat> args) {
-    return new Ast.RecordPat(pos, ImmutableMap.copyOf(args));
+  public Ast.RecordPat recordPat(Pos pos, boolean ellipsis,
+      Map<String, ? extends Ast.Pat> args) {
+    return new Ast.RecordPat(pos, ellipsis, ImmutableMap.copyOf(args));
   }
 
   public Ast.Pat annotatedPat(Pos pos, Ast.Pat pat, Ast.TypeNode type) {
