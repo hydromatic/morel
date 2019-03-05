@@ -31,6 +31,12 @@ import java.util.Map;
 public enum AstBuilder {
   INSTANCE;
 
+  /** The singleton instance of the AST builder.
+   * The short name is convenient for use via 'import static',
+   * but checkstyle does not approve. */
+  // CHECKSTYLE: IGNORE 1
+  public static final AstBuilder ast = INSTANCE;
+
   /** Creates a call to an infix operator. */
   private Ast.InfixCall infix(Op op, Ast.Exp a0, Ast.Exp a1) {
     return new Ast.InfixCall(a0.pos.plus(a1.pos), op, a0, a1);
@@ -74,7 +80,7 @@ public enum AstBuilder {
     return new Ast.RecordSelector(pos, name);
   }
 
-  public Ast.TypeNode namedType(Pos pos, String name) {
+  public Ast.Type namedType(Pos pos, String name) {
     return new Ast.NamedType(pos, name);
   }
 
@@ -123,12 +129,12 @@ public enum AstBuilder {
     return new Ast.RecordPat(pos, ellipsis, ImmutableMap.copyOf(args));
   }
 
-  public Ast.Pat annotatedPat(Pos pos, Ast.Pat pat, Ast.TypeNode type) {
+  public Ast.Pat annotatedPat(Pos pos, Ast.Pat pat, Ast.Type type) {
     return new Ast.AnnotatedPat(pos, pat, type);
   }
 
   public Ast.Pat consPat(Ast.Pat p0, Ast.Pat p1) {
-    return new Ast.InfixPat(p0.pos.plus(p1.pos), Op.CONS_PAT, p0, p1);
+    return infixPat(p0.pos.plus(p1.pos), Op.CONS_PAT, p0, p1);
   }
 
   public Ast.Tuple tuple(Pos pos, Iterable<? extends Ast.Exp> list) {
@@ -207,8 +213,9 @@ public enum AstBuilder {
     return infix(Op.CONS, a0, a1);
   }
 
-  public Ast.LetExp let(Pos pos, Ast.VarDecl decl, Ast.Exp exp) {
-    return new Ast.LetExp(pos, decl, exp);
+  public Ast.LetExp let(Pos pos, Iterable<? extends Ast.Decl> decls,
+      Ast.Exp exp) {
+    return new Ast.LetExp(pos, ImmutableList.copyOf(decls), exp);
   }
 
   public Ast.VarDecl varDecl(Pos pos,
@@ -233,8 +240,28 @@ public enum AstBuilder {
     return new Ast.Case(pos, exp, ImmutableList.copyOf(matchList));
   }
 
-  public Ast.Fn fn(Pos pos, Ast.Match match) {
-    return new Ast.Fn(pos, ImmutableList.of(match));
+  public Ast.Fn fn(Pos pos, Ast.Match... matchList) {
+    return new Ast.Fn(pos, ImmutableList.copyOf(matchList));
+  }
+
+  public Ast.Fn fn(Pos pos,
+      Iterable<? extends Ast.Match> matchList) {
+    return new Ast.Fn(pos, ImmutableList.copyOf(matchList));
+  }
+
+  public Ast.FunDecl funDecl(Pos pos,
+      Iterable<? extends Ast.FunBind> valBinds) {
+    return new Ast.FunDecl(pos, ImmutableList.copyOf(valBinds));
+  }
+
+  public Ast.FunBind funBind(Pos pos,
+      Iterable<? extends Ast.FunMatch> matchList) {
+    return new Ast.FunBind(pos, ImmutableList.copyOf(matchList));
+  }
+
+  public Ast.FunMatch funMatch(Pos pos, String name,
+      Iterable<? extends Ast.Pat> patList, Ast.Exp exp) {
+    return new Ast.FunMatch(pos, name, ImmutableList.copyOf(patList), exp);
   }
 
   public Ast.Apply apply(Ast.Exp fn, Ast.Exp arg) {
@@ -244,6 +271,18 @@ public enum AstBuilder {
   public Ast.Exp ifThenElse(Pos pos, Ast.Exp condition, Ast.Exp ifTrue,
       Ast.Exp ifFalse) {
     return new Ast.If(pos, condition, ifTrue, ifFalse);
+  }
+
+  public Ast.InfixPat infixPat(Pos pos, Op op, Ast.Pat p0, Ast.Pat p1) {
+    return new Ast.InfixPat(pos, op, p0, p1);
+  }
+
+  public Ast.Exp annotatedExp(Pos pos, Ast.Type type, Ast.Exp expression) {
+    return new Ast.AnnotatedExp(pos, type, expression);
+  }
+
+  public Ast.Exp infixCall(Pos pos, Op op, Ast.Exp a0, Ast.Exp a1) {
+    return new Ast.InfixCall(pos, op, a0, a1);
   }
 }
 

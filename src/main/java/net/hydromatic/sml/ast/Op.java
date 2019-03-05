@@ -47,19 +47,23 @@ public enum Op {
   // annotated pattern "p: t"
   ANNOTATED_PAT(" : "),
 
+  // miscellaneous
+  BAR(" | "),
+  FUN_BIND(" and "),
+  FUN_MATCH,
+  FUN_DECL,
+  VAL_DECL(" = "),
+
   // value constructors
   TUPLE(" * ", 7),
   LIST(" list", 8),
   RECORD,
   FN(" -> ", 6, false),
 
-  // miscellaneous
-  BAR(" | "),
-
   // annotated expression "e: t"
   ANNOTATED_EXP(" : "),
   NAMED_TYPE,
-  VAL_DECL(" = "),
+
   TIMES(" * ", 7),
   DIVIDE(" / ", 7),
   DIV(" div ", 7),

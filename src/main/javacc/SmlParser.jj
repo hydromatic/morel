@@ -44,6 +44,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static net.hydromatic.sml.ast.AstBuilder.ast;
+
 /**
  * Parser for Standard ML, generated from SmlParser.jj by JavaCC.
  */
@@ -55,8 +57,6 @@ public class SmlParserImpl implements SmlParser
   public void setTabSize(int tabSize) {
     jj_input_stream.setTabSize(tabSize);
   }
-
-  private final AstBuilder ast = AstBuilder.INSTANCE;
 
   public Pos getPos() {
     return new Pos(token.beginLine, token.beginColumn,
@@ -190,12 +190,14 @@ Exp let() :
 {
   final Span span;
   final Exp e;
-  final VarDecl decl;
+  Decl decl;
+  final List<Decl> declList = new ArrayList<Decl>();
 }
 {
   <LET> { span = Span.of(getPos()); }
-  decl = varDecl() <IN> e = expression() <END> {
-    return ast.let(span.end(this), decl, e);
+  ( decl = decl() { declList.add(decl); } )+
+  <IN> e = expression() <END> {
+    return ast.let(span.end(this), declList, e);
   }
 }
 
@@ -543,19 +545,75 @@ void valBind(List/*<Ast.ValBind>*/ valBinds) :
 }
 
 /** Parses a declaration. */
-AstNode decl() :
+Ast.Decl decl() :
 {
-  final AstNode n;
+  final Ast.Decl n;
 }
 {
   n = varDecl() { return n; }
+|
+  n = funDecl() { return n; }
+}
+
+/** Parses a function declaration, e.g.
+* {@code fun f 1 y = y + 1 | f x y = 0 and g x = 0}. */
+Ast.FunDecl funDecl() :
+{
+  final Span span;
+  final List<FunBind> funBindList = new ArrayList<FunBind>();
+}
+{
+  <FUN> { span = Span.of(getPos()); }
+  funBind(funBindList)
+  (
+    <AND> funBind(funBindList)
+  )*
+  {
+    return ast.funDecl(span.end(this), funBindList);
+  }
+}
+
+/** Parses a function binding, e.g.
+* {@code f 1 y = y + 1 | f x y = 0},
+* and adds it to a list. */
+void funBind(List/*<FunBind>*/ list) :
+{
+  final List<FunMatch> matchList = new ArrayList<FunMatch>();
+}
+{
+  funMatch(matchList)
+  (
+    <BAR> funMatch(matchList)
+  )*
+  {
+    list.add(ast.funBind(Pos.sum(matchList), matchList));
+  }
+}
+
+/** Parses a function match, e.g.
+* {@code f 1 y = y + 1},
+* and adds it to a list. */
+void funMatch(List/*<FunMatch>*/ list) :
+{
+  final Ast.Id id;
+  Ast.Pat pat;
+  final List<Ast.Pat> patList = new ArrayList<Ast.Pat>();
+  final Ast.Exp expression;
+}
+{
+  id = identifier()
+  ( pat = pat() { patList.add(pat); } )+
+  <EQ> expression = expression() {
+    list.add(
+      ast.funMatch(id.pos.plus(expression.pos), id.name, patList, expression));
+  }
 }
 
 /** Parses a pattern. */
 Pat pat() :
 {
   Pat pat;
-  Ast.TypeNode type;
+  Type type;
 }
 {
   pat = pattern5()
@@ -667,15 +725,15 @@ void recordPat(boolean[] ellipsis, Map/*<String, Pat>*/ map) :
 }
 
 /** Parses a type. */
-TypeNode type() :
+Ast.Type type() :
 {
-  final Ast.TypeNode type;
+  final Type type;
 }
 {
   type = namedType() { return type; }
 }
 
-TypeNode namedType() :
+Ast.Type namedType() :
 {
 }
 {
@@ -711,6 +769,7 @@ AstNode statementSemicolon() :
 | < ELSE: "ELSE" >
 | < END: "END" >
 | < FN: "FN" >
+| < FUN: "FUN" >
 | < IF: "IF" >
 | < IN: "IN" >
 | < LET: "LET" >

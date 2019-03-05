@@ -51,6 +51,8 @@ public class Ast {
       // no args
     }
 
+    @Override public abstract Pat accept(Shuttle shuttle);
+
     public void visit(Consumer<Pat> consumer) {
       consumer.accept(this);
       forEachArg((arg, i) -> arg.visit(consumer));
@@ -66,6 +68,10 @@ public class Ast {
     IdPat(Pos pos, String name) {
       super(pos, Op.ID_PAT);
       this.name = name;
+    }
+
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
@@ -99,6 +105,10 @@ public class Ast {
           && this.value.equals(((LiteralPat) o).value);
     }
 
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     AstWriter unparse(AstWriter w, int left, int right) {
       if (value instanceof String) {
         return w.append("\"")
@@ -127,6 +137,10 @@ public class Ast {
           || o instanceof WildcardPat;
     }
 
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.append("_");
     }
@@ -141,6 +155,10 @@ public class Ast {
       super(pos, op);
       this.p0 = Objects.requireNonNull(p0);
       this.p1 = Objects.requireNonNull(p1);
+    }
+
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
@@ -162,6 +180,10 @@ public class Ast {
     TuplePat(Pos pos, ImmutableList<Pat> args) {
       super(pos, Op.TUPLE_PAT);
       this.args = Objects.requireNonNull(args);
+    }
+
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
@@ -189,6 +211,10 @@ public class Ast {
       this.args = Objects.requireNonNull(args);
     }
 
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
       int i = 0;
       for (Pat arg : args) {
@@ -212,6 +238,10 @@ public class Ast {
       super(pos, Op.RECORD_PAT);
       this.ellipsis = ellipsis;
       this.args = Objects.requireNonNull(args);
+    }
+
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
@@ -244,13 +274,17 @@ public class Ast {
    *
    * <p>For example, "x : int" in "val x : int = 5". */
   public static class AnnotatedPat extends Pat {
-    private final Pat pat;
-    private final TypeNode type;
+    public final Pat pat;
+    public final Type type;
 
-    AnnotatedPat(Pos pos, Pat pat, TypeNode type) {
+    AnnotatedPat(Pos pos, Pat pat, Type type) {
       super(pos, Op.ANNOTATED_PAT);
       this.pat = pat;
       this.type = type;
+    }
+
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
@@ -263,20 +297,22 @@ public class Ast {
   }
 
   /** Base class for parse tree nodes that represent types. */
-  public abstract static class TypeNode extends AstNode {
+  public abstract static class Type extends AstNode {
     /** Creates a type node. */
-    TypeNode(Pos pos, Op op) {
+    Type(Pos pos, Op op) {
       super(pos, op);
     }
+
+    @Override public abstract Type accept(Shuttle shuttle);
   }
 
   /** Parse tree node of an expression annotated with a type. */
-  public static class AnnotatedExp extends AstNode {
-    public final TypeNode type;
-    public final AstNode expression;
+  public static class AnnotatedExp extends Exp {
+    public final Type type;
+    public final Exp expression;
 
     /** Creates a type annotation. */
-    private AnnotatedExp(Pos pos, TypeNode type, AstNode expression) {
+    AnnotatedExp(Pos pos, Type type, Exp expression) {
       super(pos, Op.ANNOTATED_EXP);
       this.type = Objects.requireNonNull(type);
       this.expression = Objects.requireNonNull(expression);
@@ -293,13 +329,17 @@ public class Ast {
               && expression.equals(((AnnotatedExp) obj).expression);
     }
 
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, expression, op, type, right);
     }
   }
 
   /** Parse tree for a named type (e.g. "int"). */
-  public static class NamedType extends TypeNode {
+  public static class NamedType extends Type {
     private final String name;
 
     /** Creates a type. */
@@ -318,6 +358,10 @@ public class Ast {
           && name.equals(((NamedType) obj).name);
     }
 
+    public Type accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(name);
     }
@@ -332,6 +376,8 @@ public class Ast {
     public void forEachArg(ObjIntConsumer<Exp> action) {
       // no args
     }
+
+    @Override public abstract Exp accept(Shuttle shuttle);
   }
 
   /** Parse tree node of an identifier. */
@@ -352,6 +398,10 @@ public class Ast {
       return o == this
           || o instanceof Id
           && this.name.equals(((Id) o).name);
+    }
+
+    public Id accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
@@ -388,10 +438,13 @@ public class Ast {
           && this.name.equals(((Id) o).name);
     }
 
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.append("#").append(name);
     }
-
   }
 
   /** Parse tree node of a literal (constant). */
@@ -414,6 +467,10 @@ public class Ast {
           && this.value.equals(((Literal) o).value);
     }
 
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     AstWriter unparse(AstWriter w, int left, int right) {
       if (value instanceof String) {
         return w.append("\"")
@@ -430,13 +487,15 @@ public class Ast {
     Decl(Pos pos, Op op) {
       super(pos, op);
     }
+
+    @Override public abstract Decl accept(Shuttle shuttle);
   }
 
   /** Parse tree node of a variable declaration. */
   public static class VarDecl extends Decl {
-    public final java.util.List<Ast.ValBind> valBinds;
+    public final java.util.List<ValBind> valBinds;
 
-    VarDecl(Pos pos, ImmutableList<Ast.ValBind> valBinds) {
+    VarDecl(Pos pos, ImmutableList<ValBind> valBinds) {
       super(pos, Op.VAL_DECL);
       this.valBinds = Objects.requireNonNull(valBinds);
       Preconditions.checkArgument(!valBinds.isEmpty());
@@ -452,6 +511,10 @@ public class Ast {
           && this.valBinds.equals(((VarDecl) o).valBinds);
     }
 
+    public VarDecl accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       String sep = "val ";
       for (ValBind valBind : valBinds) {
@@ -460,6 +523,83 @@ public class Ast {
         valBind.unparse(w, 0, right);
       }
       return w;
+    }
+  }
+
+  /** Parse tree node of a function declaration. */
+  public static class FunDecl extends Decl {
+    public final java.util.List<FunBind> funBinds;
+
+    FunDecl(Pos pos, ImmutableList<FunBind> funBinds) {
+      super(pos, Op.FUN_DECL);
+      this.funBinds = Objects.requireNonNull(funBinds);
+      Preconditions.checkArgument(!funBinds.isEmpty());
+      // TODO: check that functions have the same name
+    }
+
+    @Override public int hashCode() {
+      return funBinds.hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof FunDecl
+          && this.funBinds.equals(((FunDecl) o).funBinds);
+    }
+
+    public Decl accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.appendAll(funBinds, "fun ", " | ", "");
+    }
+  }
+
+  /** One of the branches (separated by 'and') in a 'fun' function
+   * declaration. */
+  public static class FunBind extends AstNode {
+    public final ImmutableList<FunMatch> matchList;
+    public final String name;
+
+    FunBind(Pos pos, ImmutableList<FunMatch> matchList) {
+      super(pos, Op.FUN_BIND);
+      Preconditions.checkArgument(!matchList.isEmpty());
+      this.matchList = matchList;
+      // We assume that the function name is the same in all matches.
+      // We will check during validation.
+      this.name = matchList.get(0).name;
+    }
+
+    public FunBind accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.appendAll(matchList, " and ");
+    }
+  }
+
+  /** One of the branches (separated by '|') in a 'fun' function declaration. */
+  public static class FunMatch extends AstNode {
+    public final String name;
+    public final ImmutableList<Pat> patList;
+    public final Exp exp;
+
+    FunMatch(Pos pos, String name, ImmutableList<Pat> patList, Exp exp) {
+      super(pos, Op.FUN_MATCH);
+      this.name = name;
+      this.patList = patList;
+      this.exp = exp;
+    }
+
+    public FunMatch accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(name).appendAll(patList, " ", " ", " = ")
+          .append(exp, 0, right);
     }
   }
 
@@ -477,6 +617,10 @@ public class Ast {
       for (Exp arg : args) {
         action.accept(arg, i++);
       }
+    }
+
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -502,6 +646,10 @@ public class Ast {
       }
     }
 
+    public List accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("[");
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
@@ -523,6 +671,10 @@ public class Ast {
       for (Exp arg : args.values()) {
         action.accept(arg, i++);
       }
+    }
+
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -554,6 +706,10 @@ public class Ast {
       action.accept(a1, 1);
     }
 
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, a0, op, a1, right);
     }
@@ -572,6 +728,10 @@ public class Ast {
       this.ifFalse = Objects.requireNonNull(ifFalse);
     }
 
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.append("if ").append(condition, 0, 0)
           .append(" then ").append(ifTrue, 0, 0)
@@ -581,17 +741,22 @@ public class Ast {
 
   /** "Let" expression. */
   public static class LetExp extends Exp {
-    public final VarDecl decl;
+    public final java.util.List<Decl> decls;
     public final Exp e;
 
-    LetExp(Pos pos, VarDecl decl, Exp e) {
+    LetExp(Pos pos, ImmutableList<Decl> decls, Exp e) {
       super(pos, Op.LET);
-      this.decl = Objects.requireNonNull(decl);
+      this.decls = Objects.requireNonNull(decls);
       this.e = Objects.requireNonNull(e);
     }
 
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.binary("let ", decl, " in ", e, " end");
+      return w.appendAll(decls, "let ", "; ", " in ")
+          .append(e, 0, 0).append(" end");
     }
   }
 
@@ -606,6 +771,10 @@ public class Ast {
       this.rec = rec;
       this.pat = pat;
       this.e = e;
+    }
+
+    public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -627,6 +796,10 @@ public class Ast {
       this.e = e;
     }
 
+    public Match accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(pat, 0, 0).append(" => ").append(e, 0, right);
     }
@@ -640,6 +813,10 @@ public class Ast {
       super(pos, Op.FN);
       this.matchList = Objects.requireNonNull(matchList);
       Preconditions.checkArgument(!matchList.isEmpty());
+    }
+
+    public Fn accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -662,6 +839,10 @@ public class Ast {
       this.matchList = matchList;
     }
 
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       if (left > op.left || op.right < right) {
         return w.append("(").append(this, 0, 0).append(")");
@@ -681,6 +862,10 @@ public class Ast {
       super(pos, Op.APPLY);
       this.fn = fn;
       this.arg = arg;
+    }
+
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {

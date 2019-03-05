@@ -39,10 +39,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static net.hydromatic.sml.ast.AstBuilder.ast;
+
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
   private final TypeResolver.TypeMap typeMap;
-  private final AstBuilder ast = AstBuilder.INSTANCE;
 
   public Compiler(TypeResolver.TypeMap typeMap) {
     this.typeMap = typeMap;
@@ -157,27 +158,7 @@ public class Compiler {
 
     case LET:
       final Ast.LetExp let = (Ast.LetExp) expression;
-      if (let.decl.valBinds.size() > 1) {
-        // Transform "let v1 = e1 and v2 = e2 in e"
-        // to "let (v1, v2) = (e1, e2) in e"
-        final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
-        boolean rec = false;
-        for (Ast.ValBind valBind : let.decl.valBinds) {
-          flatten(matches, valBind.pat, valBind.e);
-          rec |= valBind.rec;
-        }
-        final Ast.Pat pat = ast.tuplePat(let.pos, matches.keySet());
-        final Ast.Exp e = ast.tuple(let.pos, matches.values());
-        final Ast.VarDecl decl =
-            ast.varDecl(let.decl.pos, ast.valBind(let.pos, rec, pat, e));
-        return compile(env, ast.let(let.pos, decl, let.e));
-      }
-      final List<Code> varCodes = new ArrayList<>();
-      for (Ast.ValBind valBind : let.decl.valBinds) {
-        varCodes.add(compileValBind(env, valBind));
-      }
-      final Code resultCode = compile(env, let.e);
-      return Codes.let(varCodes, resultCode);
+      return compileLet(env, let.decls, let.e);
 
     case FN:
       final Ast.Fn fn = (Ast.Fn) expression;
@@ -241,6 +222,38 @@ public class Compiler {
     default:
       throw new AssertionError("op not handled: " + expression.op);
     }
+  }
+
+  private Code compileLet(Environment env, List<Ast.Decl> decls, Ast.Exp exp) {
+    final List<Code> varCodes = new ArrayList<>();
+    for (Ast.Decl decl : decls) {
+      switch (decl.op) {
+      case VAL_DECL:
+        Ast.VarDecl varDecl = (Ast.VarDecl) decl;
+        if (varDecl.valBinds.size() > 1) {
+          // Transform "let val v1 = e1 and v2 = e2 in e"
+          // to "let val (v1, v2) = (e1, e2) in e"
+          final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
+          boolean rec = false;
+          for (Ast.ValBind valBind : varDecl.valBinds) {
+            flatten(matches, valBind.pat, valBind.e);
+            rec |= valBind.rec;
+          }
+          final Pos pos = varDecl.pos;
+          final Ast.Pat pat = ast.tuplePat(pos, matches.keySet());
+          final Ast.Exp e = ast.tuple(pos, matches.values());
+          varDecl = ast.varDecl(pos, ast.valBind(pos, rec, pat, e));
+        }
+        for (Ast.ValBind valBind : varDecl.valBinds) {
+          varCodes.add(compileValBind(env, valBind));
+        }
+        break;
+      default:
+        throw new AssertionError("unknown " + decl.op + "; " + decl);
+      }
+    }
+    final Code resultCode = compile(env, exp);
+    return Codes.let(varCodes, resultCode);
   }
 
   private Code compileInfix(Environment env, Ast.InfixCall call) {

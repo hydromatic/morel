@@ -18,11 +18,13 @@
  */
 package net.hydromatic.sml.ast;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import java.util.AbstractList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 /** Position of a parse-tree node. */
 public class Pos {
@@ -68,6 +70,15 @@ public class Pos {
             ? (List<Pos>) poses
             : Lists.newArrayList(poses);
     return sum_(list);
+  }
+
+  public static <E> Pos sum(Iterable<E> elements, Function<E, Pos> fn) {
+    //noinspection StaticPseudoFunctionalStyleMethod
+    return sum(Iterables.transform(elements, fn::apply));
+  }
+
+  public static Pos sum(List<? extends AstNode> nodes) {
+    return sum(nodes, node -> node.pos);
   }
 
   /**

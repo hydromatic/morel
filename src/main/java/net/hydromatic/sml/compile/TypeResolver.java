@@ -22,11 +22,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.ast.Op;
+import net.hydromatic.sml.ast.Pos;
+import net.hydromatic.sml.ast.Shuttle;
 import net.hydromatic.sml.type.PrimitiveType;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.util.MartelliUnifier;
@@ -34,6 +37,7 @@ import net.hydromatic.sml.util.Ord;
 import net.hydromatic.sml.util.Pair;
 import net.hydromatic.sml.util.Unifier;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,7 +52,10 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import static net.hydromatic.sml.ast.AstBuilder.ast;
+
 /** Resolves the type of an expression. */
+@SuppressWarnings("StaticPseudoFunctionalStyleMethod")
 public class TypeResolver {
   final Unifier unifier = new MartelliUnifier();
   final List<TermVariable> terms = new ArrayList<>();
@@ -95,6 +102,15 @@ public class TypeResolver {
     } catch (NumberFormatException e) {
       return null;
     }
+  }
+
+  public static Ast.Exp rewrite(Ast.Exp exp) {
+    return exp.accept(
+        new Shuttle() {
+          @Override protected Ast.Decl visit(Ast.FunDecl funDecl) {
+            return toVarDecl(funDecl);
+          }
+        });
   }
 
   private TypeMap deduceType_(Environment env, AstNode node,
@@ -205,7 +221,9 @@ public class TypeResolver {
     case LET:
       final Ast.LetExp let = (Ast.LetExp) node;
       final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
-      deduceDeclType(env, let.decl, termMap);
+      for (Ast.Decl decl : let.decls) {
+        deduceDeclType(env, decl, termMap);
+      }
       deduceType(bindAll(env, termMap), let.e, v);
       return reg(let, null, v);
 
@@ -384,9 +402,94 @@ public class TypeResolver {
       map.put(node, toTerm(PrimitiveType.UNIT));
       return true;
 
+    case FUN_DECL:
+      return deduceDeclType(env, toVarDecl((Ast.FunDecl) node), termMap);
+
     default:
-      throw new AssertionError("cannot deduce type for " + node.op);
+      throw new AssertionError("cannot deduce type for " + node.op + " ["
+          + node + "]");
     }
+  }
+
+  /** Converts a function declaration to a value declaration.
+   * In other words, {@code fun} is syntactic sugar, and this
+   * is the de-sugaring machine.
+   *
+   * <p>For example, {@code fun inc x = x + 1}
+   * becomes {@code val rec inc = fn x => x + 1}.
+   *
+   * <p>If there are multiple arguments, there is one {@code fn} for each
+   * argument: {@code fun sum x y = x + y}
+   * becomes {@code val rec sum = fn x => fn y => x + y}.
+   *
+   * <p>If there are multiple clauses, we generate {@code case}:
+   * {@code fun gcd a 0 = a | gcd a b = gcd b (a mod b)}
+   * becomes
+   * {@code val rec gcd = fn x => fn y =>
+   * case (x, y) of
+   *     (a, 0) => a
+   *   | (a, b) = gcd b (a mod b)}.
+   */
+  private static Ast.VarDecl toVarDecl(Ast.FunDecl funDecl) {
+    final List<Ast.ValBind> valBindList = new ArrayList<>();
+    for (Ast.FunBind funBind : funDecl.funBinds) {
+      valBindList.add(toValBind(funBind));
+    }
+    return ast.varDecl(funDecl.pos, valBindList);
+  }
+
+  private static Ast.ValBind toValBind(Ast.FunBind funBind) {
+    final List<Ast.Pat> vars;
+    Ast.Exp e;
+    if (funBind.matchList.size() == 1) {
+      e = funBind.matchList.get(0).exp;
+      vars = funBind.matchList.get(0).patList;
+    } else {
+      final int varCount = funBind.matchList.get(0).patList.size();
+      final List<String> varNames =
+          new AbstractList<String>() {
+            @Override public int size() {
+              return varCount;
+            }
+            @Override public String get(int index) {
+              return "v" + index;
+            }
+          };
+      vars = Lists.transform(varNames, v -> ast.idPat(Pos.ZERO, v));
+      final List<Ast.Match> matchList = new ArrayList<>();
+      for (Ast.FunMatch funMatch : funBind.matchList) {
+        matchList.add(
+            ast.match(funMatch.pos, patTuple(funMatch.patList), funMatch.exp));
+      }
+      e = ast.caseOf(Pos.ZERO, idTuple(varNames), matchList);
+    }
+    final Pos pos = funBind.pos;
+    for (Ast.Pat var : Lists.reverse(vars)) {
+      e = ast.fn(pos, ast.match(pos, var, e));
+    }
+    return ast.valBind(pos, true, ast.idPat(pos, funBind.name), e);
+  }
+
+  /** Converts a list of variable names to a variable or tuple.
+   *
+   * <p>For example, ["x"] becomes "{@code x}" (an {@link Ast.Id}),
+   * and ["x", "y"] becomes "{@code (x, y)}" (a {@link Ast.Tuple} of
+   * {@link Ast.Id Ids}). */
+  private static Ast.Exp idTuple(List<String> vars) {
+    final List<Ast.Id> idList =
+        Lists.transform(vars, v -> ast.id(Pos.ZERO, v));
+    if (idList.size() == 1) {
+      return idList.get(0);
+    }
+    return ast.tuple(Pos.ZERO, idList);
+  }
+
+  /** Converts a list of patterns to a singleton pattern or tuple pattern. */
+  private static Ast.Pat patTuple(List<Ast.Pat> patList) {
+    if (patList.size() == 1) {
+      return patList.get(0);
+    }
+    return ast.tuplePat(Pos.sum(patList), patList);
   }
 
   /** Derives a type term for a pattern, collecting the names of pattern

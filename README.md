@@ -58,8 +58,9 @@ On Windows, the last line is
 Implemented:
 * Literals
 * Variables
-* `let`
+* `let` (expression that lets you define local variables and functions)
 * `val` (including `val rec`)
+* `fun` (declare function)
 * Operators: `=` `<>` `<` `>` `<=` `>=`
   `~` `+` `-` `*` `/` `div` `mod` `^`
   `andalso` `orelse`
@@ -71,14 +72,12 @@ Implemented:
 * `if`
 * `case`
 * Primitive, list, tuple and record types
-* Tuples and unit
-* Lists
+* Tuples and unit, record and list values
 * Patterns (destructuring) in `val` and `case`,
   matching constants, wildcards, lists, records and tuples
 
 Not implemented:
 * Type variables (polymorphism)
-* `fun` declaration
 * `type`
 * `datatype`
 * `local`

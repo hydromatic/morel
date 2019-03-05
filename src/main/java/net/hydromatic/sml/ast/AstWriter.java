@@ -93,6 +93,27 @@ public class AstWriter {
     }
     return this;
   }
+
+  /** Appends a list of parse tree nodes separated by {@code sep}. */
+  public AstWriter appendAll(Iterable<? extends AstNode> list, String sep) {
+    return appendAll(list, "", sep, "");
+  }
+
+  /** Appends a list of parse tree nodes separated by {@code sep}, and also with
+   * prefix and suffix: {@code start node0 sep node1 ... sep nodeN end}. */
+  public AstWriter appendAll(Iterable<? extends AstNode> list, String start,
+      String sep, String end) {
+    append(start);
+    int i = 0;
+    for (AstNode node : list) {
+      if (i++ > 0) {
+        append(sep);
+      }
+      append(node, 0, 0);
+    }
+    append(end);
+    return this;
+  }
 }
 
 // End AstWriter.java

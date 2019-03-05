@@ -73,11 +73,11 @@ public class MainTest {
     });
   }
 
-  private void assertParseDecl(String ml, Matcher<Ast.VarDecl> matcher) {
+  private void assertParseDecl(String ml, Matcher<Ast.Decl> matcher) {
     withParser(ml, parser -> {
       try {
-        final Ast.VarDecl varDecl = parser.varDecl();
-        assertThat(varDecl, matcher);
+        final Ast.Decl decl = parser.decl();
+        assertThat(decl, matcher);
       } catch (ParseException e) {
         throw new RuntimeException(e);
       }
@@ -165,8 +165,9 @@ public class MainTest {
 
   private void assertEval(String ml, Matcher<Object> matcher) {
     try {
-      final Ast.Exp expression =
+      final Ast.Exp expression0 =
           new SmlParserImpl(new StringReader(ml)).expression();
+      final Ast.Exp expression = TypeResolver.rewrite(expression0);
       final TypeResolver.TypeSystem typeSystem = new TypeResolver.TypeSystem();
       final Environment env = Environments.empty();
       final TypeResolver.TypeMap typeMap =
@@ -230,6 +231,9 @@ public class MainTest {
 
     assertParseDecl("val plus = fn x => fn y => x + y",
         isAst(Ast.VarDecl.class, "val plus = fn x => fn y => x + y"));
+
+    assertParseDecl("fun plus x y = x + y",
+        isAst(Ast.FunDecl.class, "fun plus x y = x + y"));
 
     // parentheses creating left precedence, which is the natural precedence for
     // '+', can be removed
@@ -473,6 +477,8 @@ public class MainTest {
     assertError("case 1 of 1 => 2",
         is("Warning: match nonexhaustive\n"
             + "          1 => ...\n"));
+    assertEval("let val f = fn x => case x of x => x + 1 in f 2 end",
+        is(3));
 
     // let
     assertEval("let val x = 1 in x + 2 end", is(3));
@@ -515,7 +521,7 @@ public class MainTest {
     assertEval("(1, 2, 1, 4)", is(Arrays.asList(1, 2, 1, 4)));
   }
 
-  @Ignore("requires 'let ... ;' and 'fun', not implemented yet")
+  @Ignore("requires 'let ... ;', not implemented yet")
   @Test public void testLetSequentialDeclarations() {
     // let with sequential declarations
     assertEval("let val x = 1; val y = x + 1 in x + y end", is(3));
@@ -687,20 +693,63 @@ public class MainTest {
     assertEval(ml, is(7));
   }
 
-  @Ignore("fun is not implemented")
+  /** Function declaration. */
   @Test public void testFun() {
-    assertType("fun f {a=x,b=1,...} = x\n"
-            + "  | f {b=y,c=2,...} = y\n"
-            + "  | f {a=x,b=y,c=z} = x+y+z",
-        is("val f = fn : {a:int, b:int, c:int} -> int"));
-    assertEval("let\n"
-            + "  fun f {a=x,b=1,...} = x\n"
-            + "    | f {b=y,c=2,...} = y\n"
-            + "    | f {a=x,b=y,c=z} = x+y+z\n"
-            + "in\n"
-            + "  f {a=1,b=2,c=3}\n"
-            + "end",
-        is(6));
+    final String ml = "let\n"
+        + "  fun fact n = if n = 0 then 1 else n * (fact (n - 1))\n"
+        + "in\n"
+        + "  fact 5\n"
+        + "end";
+    assertEval(ml, is(120));
+  }
+
+  /** As {@link #testFun} but uses case. */
+  @Test public void testFun2() {
+    final String ml = "let\n"
+        + "  fun fact n = case n of 0 => 1 | _ => n * (fact (n - 1))\n"
+        + "in\n"
+        + "  fact 5\n"
+        + "end";
+    assertEval(ml, is(120));
+  }
+
+  /** As {@link #testFun} but uses a multi-clause function. */
+  @Test public void testFun3() {
+    final String ml = "let\n"
+        + "  fun fact 1 = 1 | fact n = n * (fact (n - 1))\n"
+        + "in\n"
+        + "  fact 5\n"
+        + "end";
+    assertEval(ml, is(120));
+  }
+
+  /** A function with two arguments. */
+  @Test public void testFunTwoArgs() {
+    final String ml = "let\n"
+        + "  fun sum x y = x + y\n"
+        + "in\n"
+        + "  sum 5 3\n"
+        + "end";
+    assertEval(ml, is(8));
+  }
+
+  @Test public void testFunRecord() {
+    final String ml = "let\n"
+        + "  fun f {a=x,b=1,...} = x\n"
+        + "    | f {b=y,c=2,...} = y\n"
+        + "    | f {a=x,b=y,c=z} = x+y+z\n"
+        + "in\n"
+        + "  f\n"
+        + "end";
+    assertType(ml, is("({a:int, b:int, c:int}) -> int"));
+    final String ml2 = "let\n"
+        + "  fun f {a=x,b=1,...} = x\n"
+        + "    | f {b=y,c=2,...} = y\n"
+        + "    | f {a=x,b=y,c=z} = x+y+z\n"
+        + "in\n"
+        + "  f {a=1,b=2,c=3}\n"
+        + "end";
+    assertEval(ml2,  is(6));
   }
 
   @Test public void testError() {
@@ -739,6 +788,8 @@ public class MainTest {
             + "          {a=x,b=_,c=_} => ...\n"
             + "    -->   {a=_,b=y,c=_} => ...\n"
             + "    -->   {a=x,b=y,c=z} => ...\n"));
+    assertError("fun f 1 = 1 | f n = n * (f (n - 1)) | g 2 = 2",
+        is("stdIn:3.5-3.46 Error: clauses don't all have same function name"));
   }
 
   private void assertError(String ml, Matcher<String> matcher) {

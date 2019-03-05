@@ -46,6 +46,11 @@ public abstract class AstNode {
   }
 
   abstract AstWriter unparse(AstWriter w, int left, int right);
+
+  /** Accepts a shuttle, calling the
+   * {@link net.hydromatic.sml.ast.Shuttle#visit}
+   * method appropriate to the type of this node, and returning the result. */
+  public abstract AstNode accept(Shuttle shuttle);
 }
 
 // End AstNode.java
