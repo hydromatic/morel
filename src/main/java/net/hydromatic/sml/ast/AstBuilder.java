@@ -20,6 +20,7 @@ package net.hydromatic.sml.ast;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 
 import net.hydromatic.sml.eval.Unit;
 
@@ -139,7 +140,7 @@ public enum AstBuilder {
   }
 
   public Ast.Exp record(Pos pos, Map<String, Ast.Exp> map) {
-    return new Ast.Record(pos, ImmutableMap.copyOf(map));
+    return new Ast.Record(pos, ImmutableSortedMap.copyOf(map));
   }
 
   public Ast.Exp equal(Ast.Exp a0, Ast.Exp a1) {

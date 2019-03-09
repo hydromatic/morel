@@ -21,6 +21,7 @@ package net.hydromatic.sml.ast;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 
 import java.util.Map;
 import java.util.Objects;
@@ -512,7 +513,7 @@ public class Ast {
   public static class Record extends Exp {
     public final Map<String, Exp> args;
 
-    Record(Pos pos, ImmutableMap<String, Exp> args) {
+    Record(Pos pos, ImmutableSortedMap<String, Exp> args) {
       super(pos, Op.RECORD);
       this.args = Objects.requireNonNull(args);
     }

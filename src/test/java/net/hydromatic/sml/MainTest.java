@@ -553,7 +553,7 @@ public class MainTest {
 
   @Test public void testRecord() {
     assertParseSame("{a = 1, b = {c = true, d = false}}");
-    assertParseSame("{a = 1, 1 = 2}");
+    assertStmt("{a = 1, 1 = 2}", isAst(Ast.Record.class, "{1 = 2, a = 1}"));
     assertParseSame("#b {a = 1, b = {c = true, d = false}}");
     assertError("{0=1}", is("label must be positive"));
     assertType("{a = 1, b = true}", is("{a:int, b:bool}"));
@@ -575,7 +575,6 @@ public class MainTest {
         is(3));
   }
 
-  @Ignore
   @Test public void testEquals() {
     assertEval("{b = true, a = 1} = {a = 1, b = true}", is(true));
     assertEval("{b = true, a = 0} = {a = 1, b = true}", is(false));
