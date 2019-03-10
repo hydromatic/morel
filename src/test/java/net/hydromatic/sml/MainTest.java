@@ -550,6 +550,26 @@ public class MainTest {
     };
   }
 
+  @Test public void testClosure() {
+    final String ml = "let\n"
+        + "  fun f x = 1 + x;\n"
+        + "  val x = f 2;\n"
+        + "  fun f y = x + y;\n"
+        + "  val x = 10\n"
+        + "in\n"
+        + " f x\n"
+        + "end";
+    assertEval(ml, is(13));
+    final String ml2 = "let\n"
+        + "  val x = 1;\n"
+        + "  fun f y = x + y;\n"
+        + "  val x = 10;\n"
+        + "in\n"
+        + " f x\n"
+        + "end";
+    assertEval(ml2, is(11));
+  }
+
   @Test public void testEvalFn() {
     assertEval("(fn x => x + 1) 2", is(3));
   }

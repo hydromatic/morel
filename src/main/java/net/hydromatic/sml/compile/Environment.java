@@ -34,6 +34,10 @@ public class Environment {
     return valueMap.toString();
   }
 
+  public Binding getOpt(String name) {
+    return valueMap.get(name);
+  }
+
   public Binding get(String name) {
     final Binding value = valueMap.get(name);
     if (value == null) {

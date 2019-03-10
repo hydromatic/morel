@@ -21,7 +21,6 @@ package net.hydromatic.sml.compile;
 import com.google.common.collect.ImmutableList;
 
 import net.hydromatic.sml.ast.Ast;
-import net.hydromatic.sml.ast.AstBuilder;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.ast.Op;
 import net.hydromatic.sml.ast.Pos;
@@ -30,11 +29,13 @@ import net.hydromatic.sml.eval.Code;
 import net.hydromatic.sml.eval.Codes;
 import net.hydromatic.sml.eval.EvalEnv;
 import net.hydromatic.sml.eval.Unit;
+import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.util.Pair;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +63,6 @@ public class Compiler {
    */
   public static CompiledStatement prepareStatement(Environment env,
       AstNode statement) {
-    final AstBuilder ast = AstBuilder.INSTANCE;
     final Ast.VarDecl decl;
     if (statement instanceof Ast.Exp) {
       decl = ast.varDecl(Pos.ZERO,
@@ -147,6 +147,10 @@ public class Compiler {
 
     case ID:
       final Ast.Id id = (Ast.Id) expression;
+      final Binding binding = env.getOpt(id.name);
+      if (binding != null && binding.value instanceof Code) {
+        return (Code) binding.value;
+      }
       return Codes.get(id.name);
 
     case IF:
@@ -365,17 +369,59 @@ public class Compiler {
 
   private Code compileValBind(Environment env, Ast.ValBind valBind) {
     final Environment[] envHolder = {env};
-    valBind.pat.visit(pat -> {
-      if (pat instanceof Ast.IdPat) {
-        final Type paramType = typeMap.getType(pat);
-        envHolder[0] = Environments.add(envHolder[0], ((Ast.IdPat) pat).name,
-            paramType, Unit.INSTANCE);
-      }
-    });
-    final Code code = compile(envHolder[0], valBind.e);
+    final Code code;
+    if (valBind.rec) {
+      final Map<Ast.IdPat, LinkCode> linkCodes = new IdentityHashMap<>();
+      valBind.pat.visit(pat -> {
+        if (pat instanceof Ast.IdPat) {
+          final Ast.IdPat idPat = (Ast.IdPat) pat;
+          final Type paramType = typeMap.getType(pat);
+          final LinkCode linkCode = new LinkCode();
+          linkCodes.put(idPat, linkCode);
+          envHolder[0] = Environments.add(envHolder[0], idPat.name, paramType,
+              linkCode);
+        }
+      });
+      code = compile(envHolder[0], valBind.e);
+      link(linkCodes, valBind.pat, code);
+    } else {
+      code = compile(envHolder[0], valBind.e);
+    }
     final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
         ImmutableList.of(Pair.of(valBind.pat, code));
     return evalEnv -> new Closure(evalEnv, patCodes);
+  }
+
+  private void link(Map<Ast.IdPat, LinkCode> linkCodes, Ast.Pat pat,
+      Code code) {
+    if (pat instanceof Ast.IdPat) {
+      final LinkCode linkCode = linkCodes.get(pat);
+      if (linkCode != null) {
+        linkCode.refCode = code; // link the reference to the definition
+      }
+    } else if (pat instanceof Ast.TuplePat) {
+      if (code instanceof Codes.TupleCode) {
+        // Recurse into the tuple, binding names to code in parallel
+        final List<Code> codes = ((Codes.TupleCode) code).codes;
+        final List<Ast.Pat> pats = ((Ast.TuplePat) pat).args;
+        Pair.forEach(codes, pats, (code1, pat1) ->
+            link(linkCodes, pat1, code1));
+      }
+    }
+  }
+
+  /** A piece of code that is references another piece of code.
+   * It is useful when defining recursive functions.
+   * The reference is mutable, and is fixed up when the
+   * function has been compiled.
+   */
+  private static class LinkCode implements Code {
+    private Code refCode;
+
+    public Object eval(EvalEnv env) {
+      assert refCode != null; // link should have completed by now
+      return refCode.eval(env);
+    }
   }
 
   /**

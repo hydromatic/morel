@@ -49,7 +49,7 @@ public class Closure implements Comparable<Closure> {
   /** Not a public API. */
   public Closure(EvalEnv evalEnv,
       ImmutableList<Pair<Ast.Pat, Code>> patCodes) {
-    this.evalEnv = Objects.requireNonNull(evalEnv);
+    this.evalEnv = Objects.requireNonNull(evalEnv.copy());
     this.patCodes = Objects.requireNonNull(patCodes);
   }
 

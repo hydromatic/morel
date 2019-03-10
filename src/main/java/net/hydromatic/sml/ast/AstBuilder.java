@@ -29,13 +29,11 @@ import java.util.Map;
 
 /** Builds parse tree nodes. */
 public enum AstBuilder {
-  INSTANCE;
-
   /** The singleton instance of the AST builder.
    * The short name is convenient for use via 'import static',
    * but checkstyle does not approve. */
   // CHECKSTYLE: IGNORE 1
-  public static final AstBuilder ast = INSTANCE;
+  ast;
 
   /** Creates a call to an infix operator. */
   private Ast.InfixCall infix(Op op, Ast.Exp a0, Ast.Exp a1) {

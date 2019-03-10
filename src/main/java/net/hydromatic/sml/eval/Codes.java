@@ -22,12 +22,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import net.hydromatic.sml.ast.Ast;
-import net.hydromatic.sml.ast.AstBuilder;
 import net.hydromatic.sml.ast.Pos;
 import net.hydromatic.sml.util.Pair;
 
 import java.util.Arrays;
 import java.util.List;
+
+import static net.hydromatic.sml.ast.AstBuilder.ast;
 
 /** Helpers for {@link Code}. */
 public abstract class Codes {
@@ -182,19 +183,13 @@ public abstract class Codes {
   }
 
   public static Code tuple(List<Code> codes) {
-    return env -> {
-      final Object[] values = new Object[codes.size()];
-      for (int i = 0; i < values.length; i++) {
-        values[i] = codes.get(i).eval(env);
-      }
-      return Arrays.asList(values);
-    };
+    return new TupleCode(codes);
   }
 
   /** Returns a code that returns the {@code slot}th field of a tuple or
    * record. */
   public static Code nth(int slot) {
-    final Ast.Pat pat = AstBuilder.INSTANCE.idPat(Pos.ZERO, "x");
+    final Ast.Pat pat = ast.idPat(Pos.ZERO, "x");
     final Code code = env -> {
       final List values = (List) env.get("x");
       return values.get(slot);
@@ -212,7 +207,6 @@ public abstract class Codes {
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
     final EvalEnv env = new EvalEnv();
-    final AstBuilder ast = AstBuilder.INSTANCE;
     env.valueMap.put("true", true);
     env.valueMap.put("false", false);
     env.valueMap.put("not",
@@ -229,6 +223,27 @@ public abstract class Codes {
     final EvalEnv env2 = env.copy();
     env2.valueMap.put(var, value);
     return env2;
+  }
+
+  /** A code that evaluates expressions and creates a tuple with the results.
+   *
+   * <p>An inner class so that we can pick apart the results of multiply
+   * defined functions: {@code fun f = ... and g = ...}.
+   */
+  public static class TupleCode implements Code {
+    public final List<Code> codes;
+
+    TupleCode(List<Code> codes) {
+      this.codes = codes;
+    }
+
+    public Object eval(EvalEnv env) {
+      final Object[] values = new Object[codes.size()];
+      for (int i = 0; i < values.length; i++) {
+        values[i] = codes.get(i).eval(env);
+      }
+      return Arrays.asList(values);
+    }
   }
 }
 
