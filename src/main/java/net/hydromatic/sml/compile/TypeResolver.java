@@ -221,10 +221,13 @@ public class TypeResolver {
     case LET:
       final Ast.LetExp let = (Ast.LetExp) node;
       final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
+      TypeEnv env2 = env;
       for (Ast.Decl decl : let.decls) {
-        deduceDeclType(env, decl, termMap);
+        deduceDeclType(env2, decl, termMap);
+        env2 = bindAll(env2, termMap);
+        termMap.clear();
       }
-      deduceType(bindAll(env, termMap), let.e, v);
+      deduceType(env2, let.e, v);
       return reg(let, null, v);
 
     case ID:
@@ -677,7 +680,7 @@ public class TypeResolver {
     INSTANCE;
 
     @Override public Unifier.Term get(String name) {
-      throw new AssertionError("not found: " + name);
+      throw new AssertionError("unbound variable or constructor: " + name);
     }
 
     @Override public TypeEnv bind(String name, Unifier.Term typeTerm) {

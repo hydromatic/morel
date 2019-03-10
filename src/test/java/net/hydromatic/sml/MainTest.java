@@ -32,6 +32,8 @@ import net.hydromatic.sml.eval.EvalEnv;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
 
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
@@ -52,6 +54,7 @@ import java.util.function.Consumer;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * Kick the tires.
@@ -521,13 +524,30 @@ public class MainTest {
     assertEval("(1, 2, 1, 4)", is(Arrays.asList(1, 2, 1, 4)));
   }
 
-  @Ignore("requires 'let ... ;', not implemented yet")
   @Test public void testLetSequentialDeclarations() {
     // let with sequential declarations
     assertEval("let val x = 1; val y = x + 1 in x + y end", is(3));
 
+    // semicolon is optional
+    assertEval("let val x = 1; val y = x + 1; in x + y end", is(3));
+    assertEval("let val x = 1 val y = x + 1 in x + y end", is(3));
+
+    // 'and' is executed in parallel, therefore 'x + 1' evaluates to 2, not 4
+    assertEval("let val x = 1; val x = 3 and y = x + 1 in x + y end", is(5));
+
+    assertError2("let val x = 1 and y = x + 2 in x + y end",
+        isError("Error: unbound variable or constructor: x"));
+
     // let with val and fun
     assertEval("let fun f x = 1 + x; val x = 2 in f x end", is(3));
+  }
+
+  private Matcher<Throwable> isError(String message) {
+    return new CustomTypeSafeMatcher<Throwable>("throwable: " + message) {
+      @Override protected boolean matchesSafely(Throwable item) {
+        return item.toString().contains(message);
+      }
+    };
   }
 
   @Test public void testEvalFn() {
@@ -755,8 +775,6 @@ public class MainTest {
   @Test public void testError() {
     assertError("fn x y => x + y",
         is("Error: non-constructor applied to argument in pattern: x"));
-    assertError("let val x = 1 and y = x + 2 in x + y end",
-        is("Error: unbound variable or constructor: x"));
     assertError("- case {a=1,b=2,c=3} of {a=x,b=y} => x + y",
         is("Error: case object and rules do not agree [tycon mismatch]\n"
             + "  rule domain: {a:[+ ty], b:[+ ty]}\n"
@@ -790,6 +808,15 @@ public class MainTest {
             + "    -->   {a=x,b=y,c=z} => ...\n"));
     assertError("fun f 1 = 1 | f n = n * (f (n - 1)) | g 2 = 2",
         is("stdIn:3.5-3.46 Error: clauses don't all have same function name"));
+  }
+
+  private void assertError2(String ml, Matcher<Throwable> matcher) {
+    try {
+      assertEval(ml, CoreMatchers.notNullValue());
+      fail("expected error");
+    } catch (Throwable e) {
+      assertThat(e, matcher);
+    }
   }
 
   private void assertError(String ml, Matcher<String> matcher) {

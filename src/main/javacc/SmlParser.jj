@@ -195,7 +195,7 @@ Exp let() :
 }
 {
   <LET> { span = Span.of(getPos()); }
-  ( decl = decl() { declList.add(decl); } )+
+  ( decl = decl() [ <SEMICOLON> ] { declList.add(decl); } )+
   <IN> e = expression() <END> {
     return ast.let(span.end(this), declList, e);
   }
