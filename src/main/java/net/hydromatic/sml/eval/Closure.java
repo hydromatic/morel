@@ -30,7 +30,7 @@ import java.util.Objects;
 
 /** Value that is sufficient for a function to bind its argument
  * and evaluate its body. */
-public class Closure implements Comparable<Closure> {
+public class Closure implements Comparable<Closure>, Applicable {
   /** Environment for evaluation. Contains the variables "captured" from the
    * environment when the closure was created. */
   private final EvalEnv evalEnv;
@@ -103,6 +103,10 @@ public class Closure implements Comparable<Closure> {
       }
     }
     throw new AssertionError("no match");
+  }
+
+  @Override public Object apply(EvalEnv env, Object argValue) {
+    return bindEval(argValue);
   }
 
   private boolean bindRecurse(Ast.Pat pat, Map<String, Object> valueMap,

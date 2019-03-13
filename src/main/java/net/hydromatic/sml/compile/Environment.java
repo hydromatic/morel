@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /** Evaluation environment.
  *
@@ -46,7 +47,7 @@ public abstract class Environment {
    *
    * <p>Bindings that are obscured by more recent bindings of the same name
    * are visited, but after the more obscuring bindings. */
-  abstract void visit(BiConsumer<String, Binding> consumer);
+  abstract void visit(Consumer<Binding> consumer);
 
   @Override public String toString() {
     return getValueMap().toString();
@@ -67,20 +68,20 @@ public abstract class Environment {
   /** Creates an environment that is the same as a given environment, plus one
    * more variable. */
   public Environment bind(String name, Type type, Object value) {
-    return bind(name, new Binding(name, type, value));
+    return bind(new Binding(name, type, value));
   }
 
-  private Environment bind(String name, Binding binding) {
-    return new Environments.SubEnvironment(this, name, binding);
+  private Environment bind(Binding binding) {
+    return new Environments.SubEnvironment(this, binding);
   }
 
   /** Calls a consumer for each variable and its type.
    * Does not visit obscured bindings. */
   public void forEachType(BiConsumer<String, Type> consumer) {
     final Set<String> names = new HashSet<>();
-    visit((name, binding) -> {
-      if (names.add(name)) {
-        consumer.accept(name, binding.type);
+    visit(binding -> {
+      if (names.add(binding.name)) {
+        consumer.accept(binding.name, binding.type);
       }
     });
   }
@@ -89,9 +90,9 @@ public abstract class Environment {
    * Does not visit obscured bindings, or bindings to {@link Unit#INSTANCE}. */
   public void forEachValue(BiConsumer<String, Object> consumer) {
     final Set<String> names = new HashSet<>();
-    visit((name, binding) -> {
-      if (names.add(name) && binding.value != Unit.INSTANCE) {
-        consumer.accept(name, binding.value);
+    visit(binding -> {
+      if (names.add(binding.name) && binding.value != Unit.INSTANCE) {
+        consumer.accept(binding.name, binding.value);
       }
     });
   }
@@ -99,8 +100,18 @@ public abstract class Environment {
   /** Returns a map of the values and bindings. */
   public final Map<String, Binding> getValueMap() {
     final Map<String, Binding> valueMap = new HashMap<>();
-    visit(valueMap::putIfAbsent);
+    visit(binding -> valueMap.putIfAbsent(binding.name, binding));
     return valueMap;
+  }
+
+  /** Creates an environment that is the same as this, plus the
+   * given bindings. */
+  public final Environment bindAll(Iterable<Binding> bindings) {
+    Environment env = this;
+    for (Binding binding : bindings) {
+      env = env.bind(binding.name, binding.type, binding.value);
+    }
+    return env;
   }
 }
 

@@ -22,15 +22,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import net.hydromatic.sml.ast.Ast;
-import net.hydromatic.sml.ast.Pos;
-import net.hydromatic.sml.util.Pair;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import static net.hydromatic.sml.ast.AstBuilder.ast;
 
 /** Helpers for {@link Code}. */
 public abstract class Codes {
@@ -38,7 +34,15 @@ public abstract class Codes {
 
   /** Returns a Code that evaluates to the same value in all environments. */
   public static Code constant(Comparable value) {
-    return env -> value;
+    return new Code() {
+      public Object eval(EvalEnv env) {
+        return value;
+      }
+
+      @Override public boolean isConstant() {
+        return true;
+      }
+    };
   }
 
   /** Returns a Code that evaluates "{@code =}". */
@@ -171,10 +175,19 @@ public abstract class Codes {
   /** Generates the code for applying a function (or function value) to an
    * argument. */
   public static Code apply(Code fnCode, Code argCode) {
+    assert !fnCode.isConstant(); // if constant, use "apply(Closure, Code)"
     return env -> {
-      final Closure fnValue = (Closure) fnCode.eval(env);
+      final Applicable fnValue = (Applicable) fnCode.eval(env);
       final Object argValue = argCode.eval(env);
-      return fnValue.bindEval(argValue);
+      return fnValue.apply(env, argValue);
+    };
+  }
+
+  /** Generates the code for applying a function value to an argument. */
+  public static Code apply(Applicable fnValue, Code argCode) {
+    return env -> {
+      final Object argValue = argCode.eval(env);
+      return fnValue.apply(env, argValue);
     };
   }
 
@@ -230,21 +243,14 @@ public abstract class Codes {
 
   /** Returns a code that returns the {@code slot}th field of a tuple or
    * record. */
-  public static Code nth(int slot) {
+  public static Applicable nth(int slot) {
     assert slot >= 0;
-    final Ast.Pat pat = ast.idPat(Pos.ZERO, "x");
-    final Code code = env -> {
-      final List values = (List) env.get("x");
-      return values.get(slot);
-    };
-    final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
-        ImmutableList.of(Pair.of(pat, code));
-    return env -> new Closure(env, patCodes);
+    return (env, argValue) -> ((List) argValue).get(slot);
   }
 
-  /** Returns a code that negates a boolean value. */
-  public static Code not(Code arg) {
-    return env -> !(Boolean) arg.eval(env);
+  /** Returns an applicable that negates a boolean value. */
+  public static Applicable not() {
+    return (env, argValue) -> !(Boolean) argValue;
   }
 
   /** Creates an empty evaluation environment. */
@@ -252,10 +258,7 @@ public abstract class Codes {
     final EvalEnv env = new EvalEnv();
     env.valueMap.put("true", true);
     env.valueMap.put("false", false);
-    env.valueMap.put("not",
-        new Closure(env,
-            ImmutableList.of(
-                Pair.of(ast.idPat(Pos.ZERO, "x"), not(get("x"))))));
+    env.valueMap.put("not", not());
     return env;
   }
 

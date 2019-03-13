@@ -21,6 +21,10 @@ package net.hydromatic.sml.eval;
 /** A compiled expression, that can be evaluated. */
 public interface Code {
   Object eval(EvalEnv env);
+
+  default boolean isConstant() {
+    return false;
+  }
 }
 
 // End Code.java

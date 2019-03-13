@@ -22,7 +22,7 @@ import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.PrimitiveType;
 
 import java.util.Objects;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /** Helpers for {@link Environment}. */
 public abstract class Environments {
@@ -45,24 +45,22 @@ public abstract class Environments {
    * binding. */
   static class SubEnvironment extends Environment {
     private final Environment parent;
-    private final String name;
     private final Binding binding;
 
-    SubEnvironment(Environment parent, String name, Binding binding) {
+    SubEnvironment(Environment parent, Binding binding) {
       this.parent = Objects.requireNonNull(parent);
-      this.name = Objects.requireNonNull(name);
       this.binding = Objects.requireNonNull(binding);
     }
 
     public Binding getOpt(String name) {
-      if (name.equals(this.name)) {
+      if (name.equals(binding.name)) {
         return binding;
       }
       return parent.getOpt(name);
     }
 
-    void visit(BiConsumer<String, Binding> consumer) {
-      consumer.accept(name, binding);
+    void visit(Consumer<Binding> consumer) {
+      consumer.accept(binding);
       parent.visit(consumer);
     }
   }
@@ -71,13 +69,14 @@ public abstract class Environments {
   private static class EmptyEnvironment extends Environment {
     static final EmptyEnvironment INSTANCE = new EmptyEnvironment();
 
-    void visit(BiConsumer<String, Binding> consumer) {
+    void visit(Consumer<Binding> consumer) {
     }
 
     public Binding getOpt(String name) {
       return null;
     }
   }
+
 }
 
 // End Environments.java

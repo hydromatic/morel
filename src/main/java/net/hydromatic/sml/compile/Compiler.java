@@ -24,6 +24,7 @@ import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.ast.Op;
 import net.hydromatic.sml.ast.Pos;
+import net.hydromatic.sml.eval.Applicable;
 import net.hydromatic.sml.eval.Closure;
 import net.hydromatic.sml.eval.Code;
 import net.hydromatic.sml.eval.Codes;
@@ -32,6 +33,7 @@ import net.hydromatic.sml.eval.Unit;
 import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.util.Pair;
+import net.hydromatic.sml.util.TailList;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -44,6 +46,8 @@ import static net.hydromatic.sml.ast.AstBuilder.ast;
 
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
+  private static final EvalEnv EMPTY_ENV = Codes.emptyEnv();
+
   private final TypeResolver.TypeMap typeMap;
 
   public Compiler(TypeResolver.TypeMap typeMap) {
@@ -166,9 +170,7 @@ public class Compiler {
 
     case FN:
       final Ast.Fn fn = (Ast.Fn) expression;
-//      final TypeResolver.FnType fnType =
-//          (TypeResolver.FnType) typeMap.getType(fn);
-      return compileMatchList(env, fn.matchList/*, fnType.paramType */);
+      return compileMatchList(env, fn.matchList);
 
     case CASE:
       final Ast.Case case_ = (Ast.Case) expression;
@@ -178,12 +180,16 @@ public class Compiler {
 
     case RECORD_SELECTOR:
       final Ast.RecordSelector recordSelector = (Ast.RecordSelector) expression;
-      return Codes.nth(recordSelector.slot);
+      return Codes.nth(recordSelector.slot).asCode();
 
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) expression;
       final Code fnCode = compile(env, apply.fn);
       argCode = compile(env, apply.arg);
+      if (fnCode.isConstant()) {
+        final Applicable fnValue = (Applicable) fnCode.eval(EMPTY_ENV);
+        return Codes.apply(fnValue, argCode);
+      }
       return Codes.apply(fnCode, argCode);
 
     case LIST:
@@ -257,6 +263,7 @@ public class Compiler {
 
   private Code compileLet(Environment env, List<Ast.Decl> decls, Ast.Exp exp) {
     final List<Code> varCodes = new ArrayList<>();
+    final List<Binding> bindings = new ArrayList<>();
     for (Ast.Decl decl : decls) {
       switch (decl.op) {
       case VAL_DECL:
@@ -276,14 +283,14 @@ public class Compiler {
           valDecl = ast.valDecl(pos, ast.valBind(pos, rec, pat, e));
         }
         for (Ast.ValBind valBind : valDecl.valBinds) {
-          varCodes.add(compileValBind(env, valBind));
+          varCodes.add(compileValBind(env, valBind, bindings));
         }
         break;
       default:
         throw new AssertionError("unknown " + decl.op + "; " + decl);
       }
     }
-    final Code resultCode = compile(env, exp);
+    final Code resultCode = compile(env.bindAll(bindings), exp);
     return Codes.let(varCodes, resultCode);
   }
 
@@ -396,8 +403,9 @@ public class Compiler {
     }
   }
 
-  private Code compileValBind(Environment env, Ast.ValBind valBind) {
-    final Environment[] envHolder = {env};
+  private Code compileValBind(Environment env, Ast.ValBind valBind,
+      List<Binding> bindings) {
+    final List<Binding> newBindings = new TailList<>(bindings, bindings.size());
     final Code code;
     if (valBind.rec) {
       final Map<Ast.IdPat, LinkCode> linkCodes = new IdentityHashMap<>();
@@ -407,14 +415,15 @@ public class Compiler {
           final Type paramType = typeMap.getType(pat);
           final LinkCode linkCode = new LinkCode();
           linkCodes.put(idPat, linkCode);
-          envHolder[0] = envHolder[0].bind(idPat.name, paramType, linkCode);
+          bindings.add(new Binding(idPat.name, paramType, linkCode));
         }
       });
-      code = compile(envHolder[0], valBind.e);
+      code = compile(env.bindAll(newBindings), valBind.e);
       link(linkCodes, valBind.pat, code);
     } else {
-      code = compile(envHolder[0], valBind.e);
+      code = compile(env.bindAll(newBindings), valBind.e);
     }
+    newBindings.clear();
     final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
         ImmutableList.of(Pair.of(valBind.pat, code));
     return evalEnv -> new Closure(evalEnv, patCodes);
