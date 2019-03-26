@@ -18,46 +18,89 @@
  */
 package net.hydromatic.sml.compile;
 
+import net.hydromatic.sml.eval.EvalEnv;
 import net.hydromatic.sml.eval.Unit;
 import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.Type;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
-/** Evaluation environment. */
-public class Environment {
-  final Map<String, Binding> valueMap = new HashMap<>();
+/** Evaluation environment.
+ *
+ * <p>Every environment is immutable; when you call {@link #bind}, a new
+ * environment is created that inherits from the previous environment.
+ * The new environment may obscure bindings in the old environment, but
+ * neither the new nor the old will ever change.
+ *
+ * <p>To create an empty environment, call {@link Environments#empty()}.
+ *
+ * @see TypeResolver.TypeEnv
+ * @see EvalEnv
+ */
+public abstract class Environment {
+  /** Visits every variable binding in this environment.
+   *
+   * <p>Bindings that are obscured by more recent bindings of the same name
+   * are visited, but after the more obscuring bindings. */
+  abstract void visit(BiConsumer<String, Binding> consumer);
 
   @Override public String toString() {
-    return valueMap.toString();
+    return getValueMap().toString();
   }
 
-  public Binding getOpt(String name) {
-    return valueMap.get(name);
-  }
+  /** Returns the binding of {@code name} if bound, null if not. */
+  public abstract Binding getOpt(String name);
 
+  /** Returns the binding of {@code name}; throws if not. */
   public Binding get(String name) {
-    final Binding value = valueMap.get(name);
-    if (value == null) {
+    final Binding binding = getOpt(name);
+    if (binding == null) {
       throw new AssertionError("expected value for " + name);
     }
-    return value;
+    return binding;
   }
 
+  /** Creates an environment that is the same as a given environment, plus one
+   * more variable. */
+  public Environment bind(String name, Type type, Object value) {
+    return bind(name, new Binding(name, type, value));
+  }
+
+  private Environment bind(String name, Binding binding) {
+    return new Environments.SubEnvironment(this, name, binding);
+  }
+
+  /** Calls a consumer for each variable and its type.
+   * Does not visit obscured bindings. */
   public void forEachType(BiConsumer<String, Type> consumer) {
-    for (Map.Entry<String, Binding> entry : valueMap.entrySet()) {
-      consumer.accept(entry.getKey(), entry.getValue().type);
-    }
+    final Set<String> names = new HashSet<>();
+    visit((name, binding) -> {
+      if (names.add(name)) {
+        consumer.accept(name, binding.type);
+      }
+    });
   }
 
+  /** Calls a consumer for each variable and its value.
+   * Does not visit obscured bindings, or bindings to {@link Unit#INSTANCE}. */
   public void forEachValue(BiConsumer<String, Object> consumer) {
-    for (Map.Entry<String, Binding> entry : valueMap.entrySet()) {
-      if (entry.getValue().value != Unit.INSTANCE) {
-        consumer.accept(entry.getKey(), entry.getValue().value);
+    final Set<String> names = new HashSet<>();
+    visit((name, binding) -> {
+      if (names.add(name) && binding.value != Unit.INSTANCE) {
+        consumer.accept(name, binding.value);
       }
-    }
+    });
+  }
+
+  /** Returns a map of the values and bindings. */
+  public final Map<String, Binding> getValueMap() {
+    final Map<String, Binding> valueMap = new HashMap<>();
+    visit(valueMap::putIfAbsent);
+    return valueMap;
   }
 }
 

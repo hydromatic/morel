@@ -20,33 +20,63 @@ package net.hydromatic.sml.compile;
 
 import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.PrimitiveType;
-import net.hydromatic.sml.type.Type;
+
+import java.util.Objects;
+import java.util.function.BiConsumer;
 
 /** Helpers for {@link Environment}. */
 public abstract class Environments {
+
+  /** An environment with the only the built-in stuff. */
+  private static final Environment BASIC_ENVIRONMENT =
+      EmptyEnvironment.INSTANCE
+          // Later, also add "nil", "ref", "!"
+          .bind("true", PrimitiveType.BOOL, true)
+          .bind("false", PrimitiveType.BOOL, false);
+
   private Environments() {}
 
   /** Creates an empty environment. */
   public static Environment empty() {
-    final Environment env = new Environment();
-    env.valueMap.put("true",
-        new Binding("true", PrimitiveType.BOOL, true));
-    env.valueMap.put("false",
-        new Binding("false", PrimitiveType.BOOL, false));
-    // TODO: also add "nil", "ref", "!"
-    return env;
+    return BASIC_ENVIRONMENT;
   }
 
-  /** Creates an environment that is the same as a given environment, plus one
-   * more variable. */
-  public static Environment add(Environment env, String var, Type type,
-      Object value) {
-    // Copying the entire table is not very efficient.
-    final Environment env2 = new Environment();
-    env2.valueMap.putAll(env.valueMap);
-    final Binding binding = new Binding(var, type, value);
-    env2.valueMap.put(var, binding);
-    return env2;
+  /** Environment that inherits from a parent environment and adds one
+   * binding. */
+  static class SubEnvironment extends Environment {
+    private final Environment parent;
+    private final String name;
+    private final Binding binding;
+
+    SubEnvironment(Environment parent, String name, Binding binding) {
+      this.parent = Objects.requireNonNull(parent);
+      this.name = Objects.requireNonNull(name);
+      this.binding = Objects.requireNonNull(binding);
+    }
+
+    public Binding getOpt(String name) {
+      if (name.equals(this.name)) {
+        return binding;
+      }
+      return parent.getOpt(name);
+    }
+
+    void visit(BiConsumer<String, Binding> consumer) {
+      consumer.accept(name, binding);
+      parent.visit(consumer);
+    }
+  }
+
+  /** Empty environment. */
+  private static class EmptyEnvironment extends Environment {
+    static final EmptyEnvironment INSTANCE = new EmptyEnvironment();
+
+    void visit(BiConsumer<String, Binding> consumer) {
+    }
+
+    public Binding getOpt(String name) {
+      return null;
+    }
   }
 }
 

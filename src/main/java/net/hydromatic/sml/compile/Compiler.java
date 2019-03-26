@@ -105,7 +105,7 @@ public class Compiler {
           final Code code = entry.getValue().code;
           final Type type = entry.getValue().type;
           final Object value = code.eval(evalEnv);
-          resultEnv = Environments.add(resultEnv, name, type, value);
+          resultEnv = resultEnv.bind(name, type, value);
           output.add("val " + name + " = " + value + " : "
               + type.description());
         }
@@ -331,7 +331,7 @@ public class Compiler {
       match.pat.visit(pat -> {
         if (pat instanceof Ast.IdPat) {
           final Type paramType = typeMap.getType(pat);
-          envHolder[0] = Environments.add(envHolder[0], ((Ast.IdPat) pat).name,
+          envHolder[0] = envHolder[0].bind(((Ast.IdPat) pat).name,
               paramType, Unit.INSTANCE);
         }
       });
@@ -378,8 +378,7 @@ public class Compiler {
           final Type paramType = typeMap.getType(pat);
           final LinkCode linkCode = new LinkCode();
           linkCodes.put(idPat, linkCode);
-          envHolder[0] = Environments.add(envHolder[0], idPat.name, paramType,
-              linkCode);
+          envHolder[0] = envHolder[0].bind(idPat.name, paramType, linkCode);
         }
       });
       code = compile(envHolder[0], valBind.e);
