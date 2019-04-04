@@ -666,6 +666,15 @@ public class TypeResolver {
       final TupleType tupleType = (TupleType) type;
       return unifier.apply(FN_TY_CON, tupleType.argTypes.stream()
           .map(this::toTerm).collect(Collectors.toList()));
+    case RECORD:
+      final RecordType recordType = (RecordType) type;
+      return unifier.apply(recordOp((NavigableSet) recordType.argNameTypes.keySet()),
+          recordType.argNameTypes.values().stream()
+          .map(this::toTerm).collect(Collectors.toList()));
+    case LIST:
+      final ListType listType = (ListType) type;
+      return unifier.apply(LIST_TY_CON,
+          toTerm(listType.elementType));
     default:
       throw new AssertionError("unknown type: " + type);
     }

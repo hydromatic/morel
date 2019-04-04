@@ -608,6 +608,7 @@ public class MainTest {
     assertEval("{a = true, b = ~2}", is(Arrays.asList(true, -2)));
     assertEval("{a = true, b = ~2, c = \"c\"}",
         is(Arrays.asList(true, -2, "c")));
+    assertEval("let val ab = {a = true, b = ~2} in #a ab end", is(true));
     assertEval("{a = true, b = {c = 1, d = 2}}",
         is(Arrays.asList(true, Arrays.asList(1, 2))));
     assertType("#a {a = 1, b = true}", is("int"));
