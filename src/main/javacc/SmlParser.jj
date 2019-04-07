@@ -506,19 +506,19 @@ void recordExp(Map/*<String, Exp>*/ map) :
   <EQ> exp = expression() { map.put(id, exp); }
 }
 
-/** Parses a variable declaration, and adds it to a list. */
-void addVarDecl(List decls) :
+/** Parses a value declaration, and adds it to a list. */
+void addValDecl(List decls) :
 {
-  final VarDecl decl;
+  final ValDecl decl;
 }
 {
-  decl = varDecl() {
+  decl = valDecl() {
     decls.add(decl);
   }
 }
 
-/** Parses a variable declaration. */
-VarDecl varDecl() :
+/** Parses a value declaration. */
+ValDecl valDecl() :
 {
   final Span span;
   final List<Ast.ValBind> valBinds = new ArrayList<ValBind>();
@@ -528,7 +528,7 @@ VarDecl varDecl() :
   (
     <AND> valBind(valBinds)
   )*
-  { return ast.varDecl(span.end(this), valBinds); }
+  { return ast.valDecl(span.end(this), valBinds); }
 }
 
 void valBind(List/*<Ast.ValBind>*/ valBinds) :
@@ -550,7 +550,7 @@ Ast.Decl decl() :
   final Ast.Decl n;
 }
 {
-  n = varDecl() { return n; }
+  n = valDecl() { return n; }
 |
   n = funDecl() { return n; }
 }

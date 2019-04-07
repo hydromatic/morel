@@ -170,8 +170,8 @@ public class Shuttle {
         visitList(funMatch.patList), funMatch.exp.accept(this));
   }
 
-  protected Ast.VarDecl visit(Ast.VarDecl varDecl) {
-    return ast.varDecl(varDecl.pos, visitList(varDecl.valBinds));
+  protected Ast.ValDecl visit(Ast.ValDecl valDecl) {
+    return ast.valDecl(valDecl.pos, visitList(valDecl.valBinds));
   }
 
   protected Ast.ValBind visit(Ast.ValBind valBind) {

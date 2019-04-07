@@ -491,11 +491,11 @@ public class Ast {
     @Override public abstract Decl accept(Shuttle shuttle);
   }
 
-  /** Parse tree node of a variable declaration. */
-  public static class VarDecl extends Decl {
+  /** Parse tree node of a value declaration. */
+  public static class ValDecl extends Decl {
     public final java.util.List<ValBind> valBinds;
 
-    VarDecl(Pos pos, ImmutableList<ValBind> valBinds) {
+    ValDecl(Pos pos, ImmutableList<ValBind> valBinds) {
       super(pos, Op.VAL_DECL);
       this.valBinds = Objects.requireNonNull(valBinds);
       Preconditions.checkArgument(!valBinds.isEmpty());
@@ -507,11 +507,11 @@ public class Ast {
 
     @Override public boolean equals(Object o) {
       return o == this
-          || o instanceof VarDecl
-          && this.valBinds.equals(((VarDecl) o).valBinds);
+          || o instanceof ValDecl
+          && this.valBinds.equals(((ValDecl) o).valBinds);
     }
 
-    public VarDecl accept(Shuttle shuttle) {
+    public ValDecl accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 

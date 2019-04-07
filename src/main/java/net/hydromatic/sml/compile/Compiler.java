@@ -63,14 +63,17 @@ public class Compiler {
    */
   public static CompiledStatement prepareStatement(Environment env,
       AstNode statement) {
-    final Ast.VarDecl decl;
     if (statement instanceof Ast.Exp) {
-      decl = ast.varDecl(Pos.ZERO,
+      statement = TypeResolver.rewrite((Ast.Exp) statement);
+    }
+    final Ast.ValDecl decl;
+    if (statement instanceof Ast.Exp) {
+      decl = ast.valDecl(Pos.ZERO,
           ImmutableList.of(
               ast.valBind(Pos.ZERO, false, ast.idPat(Pos.ZERO, "it"),
                   (Ast.Exp) statement)));
     } else {
-      decl = (Ast.VarDecl) statement;
+      decl = (Ast.ValDecl) statement;
     }
     final TypeResolver.TypeSystem typeSystem = new TypeResolver.TypeSystem();
     final TypeResolver.TypeMap typeMap =
@@ -79,7 +82,7 @@ public class Compiler {
     return compiler.compileStatement(env, decl);
   }
 
-  public CompiledStatement compileStatement(Environment env, Ast.VarDecl decl) {
+  public CompiledStatement compileStatement(Environment env, Ast.ValDecl decl) {
     final Map<String, TypeAndCode> varCodes = new LinkedHashMap<>();
     for (Ast.ValBind valBind : decl.valBinds) {
       final String name = ((Ast.IdPat) valBind.pat).name;
@@ -233,22 +236,22 @@ public class Compiler {
     for (Ast.Decl decl : decls) {
       switch (decl.op) {
       case VAL_DECL:
-        Ast.VarDecl varDecl = (Ast.VarDecl) decl;
-        if (varDecl.valBinds.size() > 1) {
+        Ast.ValDecl valDecl = (Ast.ValDecl) decl;
+        if (valDecl.valBinds.size() > 1) {
           // Transform "let val v1 = e1 and v2 = e2 in e"
           // to "let val (v1, v2) = (e1, e2) in e"
           final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
           boolean rec = false;
-          for (Ast.ValBind valBind : varDecl.valBinds) {
+          for (Ast.ValBind valBind : valDecl.valBinds) {
             flatten(matches, valBind.pat, valBind.e);
             rec |= valBind.rec;
           }
-          final Pos pos = varDecl.pos;
+          final Pos pos = valDecl.pos;
           final Ast.Pat pat = ast.tuplePat(pos, matches.keySet());
           final Ast.Exp e = ast.tuple(pos, matches.values());
-          varDecl = ast.varDecl(pos, ast.valBind(pos, rec, pat, e));
+          valDecl = ast.valDecl(pos, ast.valBind(pos, rec, pat, e));
         }
-        for (Ast.ValBind valBind : varDecl.valBinds) {
+        for (Ast.ValBind valBind : valDecl.valBinds) {
           varCodes.add(compileValBind(env, valBind));
         }
         break;

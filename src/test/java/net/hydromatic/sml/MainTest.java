@@ -225,15 +225,15 @@ public class MainTest {
     assertStmt("true", isAst(Ast.Id.class, "true"));
     assertStmt("false", isAst(Ast.Id.class, "false"));
 
-    assertParseDecl("val x = 5", isAst(Ast.VarDecl.class, "val x = 5"));
+    assertParseDecl("val x = 5", isAst(Ast.ValDecl.class, "val x = 5"));
     assertParseDecl("val x : int = 5",
-        isAst(Ast.VarDecl.class, "val x : int = 5"));
+        isAst(Ast.ValDecl.class, "val x : int = 5"));
 
     assertParseDecl("val succ = fn x => x + 1",
-        isAst(Ast.VarDecl.class, "val succ = fn x => x + 1"));
+        isAst(Ast.ValDecl.class, "val succ = fn x => x + 1"));
 
     assertParseDecl("val plus = fn x => fn y => x + y",
-        isAst(Ast.VarDecl.class, "val plus = fn x => fn y => x + y"));
+        isAst(Ast.ValDecl.class, "val plus = fn x => fn y => x + y"));
 
     assertParseDecl("fun plus x y = x + y",
         isAst(Ast.FunDecl.class, "fun plus x y = x + y"));

@@ -108,7 +108,7 @@ public class TypeResolver {
     return exp.accept(
         new Shuttle() {
           @Override protected Ast.Decl visit(Ast.FunDecl funDecl) {
-            return toVarDecl(funDecl);
+            return toValDecl(funDecl);
           }
         });
   }
@@ -398,15 +398,15 @@ public class TypeResolver {
       Map<Ast.IdPat, Unifier.Term> termMap) {
     switch (node.op) {
     case VAL_DECL:
-      final Ast.VarDecl varDecl = (Ast.VarDecl) node;
-      for (Ast.ValBind valBind : varDecl.valBinds) {
+      final Ast.ValDecl valDecl = (Ast.ValDecl) node;
+      for (Ast.ValBind valBind : valDecl.valBinds) {
         deduceValBindType(env, valBind, termMap, unifier.variable());
       }
       map.put(node, toTerm(PrimitiveType.UNIT));
       return true;
 
     case FUN_DECL:
-      return deduceDeclType(env, toVarDecl((Ast.FunDecl) node), termMap);
+      return deduceDeclType(env, toValDecl((Ast.FunDecl) node), termMap);
 
     default:
       throw new AssertionError("cannot deduce type for " + node.op + " ["
@@ -433,12 +433,12 @@ public class TypeResolver {
    *     (a, 0) => a
    *   | (a, b) = gcd b (a mod b)}.
    */
-  private static Ast.VarDecl toVarDecl(Ast.FunDecl funDecl) {
+  private static Ast.ValDecl toValDecl(Ast.FunDecl funDecl) {
     final List<Ast.ValBind> valBindList = new ArrayList<>();
     for (Ast.FunBind funBind : funDecl.funBinds) {
       valBindList.add(toValBind(funBind));
     }
-    return ast.varDecl(funDecl.pos, valBindList);
+    return ast.valDecl(funDecl.pos, valBindList);
   }
 
   private static Ast.ValBind toValBind(Ast.FunBind funBind) {
