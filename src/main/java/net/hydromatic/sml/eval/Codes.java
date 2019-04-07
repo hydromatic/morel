@@ -25,6 +25,7 @@ import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.Pos;
 import net.hydromatic.sml.util.Pair;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -132,6 +133,12 @@ public abstract class Codes {
     return env -> ((String) code0.eval(env)) + ((String) code1.eval(env));
   }
 
+  /** Returns a Code that evaluates "::" (list cons). */
+  public static Code cons(Code code0, Code code1) {
+    return env -> ImmutableList.builder().add(code0.eval(env))
+        .addAll((Iterable) code1.eval(env)).build();
+  }
+
   /** Returns a Code that returns the value of variable "name" in the current
    * environment. */
   public static Code get(String name) {
@@ -186,9 +193,26 @@ public abstract class Codes {
     return new TupleCode(codes);
   }
 
+  public static Code from(Code argCode, Ast.Id id, Code filterCode,
+      Code yieldCode) {
+    return env -> {
+      final Object o = argCode.eval(env);
+      final Iterable iterable = (Iterable) o;
+      final List list = new ArrayList();
+      for (Object o1 : iterable) {
+        EvalEnv env2 = add(env, id.name, o1);
+        if ((Boolean) filterCode.eval(env2)) {
+          list.add(yieldCode.eval(env2));
+        }
+      }
+      return list;
+    };
+  }
+
   /** Returns a code that returns the {@code slot}th field of a tuple or
    * record. */
   public static Code nth(int slot) {
+    assert slot >= 0;
     final Ast.Pat pat = ast.idPat(Pos.ZERO, "x");
     final Code code = env -> {
       final List values = (List) env.get("x");

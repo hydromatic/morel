@@ -215,6 +215,27 @@ Exp caseOf() :
   }
 }
 
+/** Parses a "{@code from exp as id yield exp}" expression. */
+Exp from() :
+{
+  final Span span;
+  final Exp exp;
+  final Id id;
+  Exp filterExp = null;
+  final Exp yieldExp;
+  final List<Match> matchList;
+}
+{
+  <FROM> { span = Span.of(getPos()); } exp = expression()
+  <AS> id = identifier()
+  [
+    <WHERE> filterExp = expression()
+  ]
+  <YIELD> yieldExp = expression() {
+    return ast.from(span.end(this), exp, id, filterExp, yieldExp);
+  }
+}
+
 /** Parses a "{@code fn arg => expression}" lambda expression. */
 Exp fn() :
 {
@@ -440,6 +461,8 @@ Exp atom() :
   e = ifThenElse() { return e; }
 |
   e = caseOf() { return e; }
+|
+  e = from() { return e; }
 |
   <LPAREN> {
     span = Span.of(getPos());
@@ -779,6 +802,12 @@ AstNode statementSemicolon() :
 | < REC: "REC" >
 | < THEN: "THEN" >
 | < VAL: "VAL" >
+
+// The following are relational extensions:
+| < AS: "AS" >
+| < FROM: "FROM" >
+| < WHERE: "WHERE" >
+| < YIELD: "YIELD" >
 }
 
 /* LITERALS */

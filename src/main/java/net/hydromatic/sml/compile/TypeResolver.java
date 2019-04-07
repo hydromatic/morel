@@ -104,7 +104,7 @@ public class TypeResolver {
     }
   }
 
-  public static Ast.Exp rewrite(Ast.Exp exp) {
+  public static AstNode rewrite(AstNode exp) {
     return exp.accept(
         new Shuttle() {
           @Override protected Ast.Decl visit(Ast.FunDecl funDecl) {
@@ -147,6 +147,9 @@ public class TypeResolver {
 
   private boolean deduceType(TypeEnv env, AstNode node, Unifier.Variable v) {
     final Unifier.Variable v2;
+    final Unifier.Variable v3;
+    final Unifier.Variable v4;
+    final TypeEnv env3;
     switch (node.op) {
     case BOOL_LITERAL:
       return reg(node, v, toTerm(PrimitiveType.BOOL));
@@ -265,6 +268,23 @@ public class TypeResolver {
       }
       deduceMatchListType(env, case_.matchList, labelNames, v2, v);
       return reg(case_, null, v);
+
+    case FROM:
+      // "(from exp: v2 as id: v3 [where filterExp: v5] yield yieldExp: v4): v"
+      final Ast.From from = (Ast.From) node;
+      v2 = unifier.variable();
+      v3 = unifier.variable();
+      v4 = unifier.variable();
+      deduceType(env, from.exp, v2);
+      reg(from.exp, v2, unifier.apply(LIST_TY_CON, v3));
+      env3 = env.bind(from.id.name, v3);
+      if (from.filterExp != null) {
+        final Unifier.Variable v5 = unifier.variable();
+        deduceType(env3, from.filterExp, v5);
+        equiv(v5, toTerm(PrimitiveType.BOOL));
+      }
+      deduceType(env3, from.yieldExp, v4);
+      return reg(from, v, unifier.apply(LIST_TY_CON, v4));
 
     case FN:
       final Ast.Fn fn = (Ast.Fn) node;
@@ -411,6 +431,17 @@ public class TypeResolver {
     default:
       throw new AssertionError("cannot deduce type for " + node.op + " ["
           + node + "]");
+    }
+  }
+
+  public static Ast.ValDecl toValDecl(Ast.Decl decl) {
+    switch (decl.op) {
+    case FUN_DECL:
+      return toValDecl((Ast.FunDecl) decl);
+    case VAL_DECL:
+      return (Ast.ValDecl) decl;
+    default:
+      throw new AssertionError(decl);
     }
   }
 
@@ -689,7 +720,7 @@ public class TypeResolver {
     INSTANCE;
 
     @Override public Unifier.Term get(String name) {
-      throw new AssertionError("unbound variable or constructor: " + name);
+      throw new RuntimeException("unbound variable or constructor: " + name);
     }
 
     @Override public TypeEnv bind(String name, Unifier.Term typeTerm) {

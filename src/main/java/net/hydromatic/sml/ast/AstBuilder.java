@@ -238,6 +238,11 @@ public enum AstBuilder {
     return new Ast.Case(pos, exp, ImmutableList.copyOf(matchList));
   }
 
+  public Ast.From from(Pos pos, Ast.Exp exp, Ast.Id id, Ast.Exp filterExp,
+      Ast.Exp yieldExp) {
+    return new Ast.From(pos, exp, id, filterExp, yieldExp);
+  }
+
   public Ast.Fn fn(Pos pos, Ast.Match... matchList) {
     return new Ast.Fn(pos, ImmutableList.copyOf(matchList));
   }

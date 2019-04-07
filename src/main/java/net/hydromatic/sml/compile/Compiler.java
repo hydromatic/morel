@@ -63,9 +63,7 @@ public class Compiler {
    */
   public static CompiledStatement prepareStatement(Environment env,
       AstNode statement) {
-    if (statement instanceof Ast.Exp) {
-      statement = TypeResolver.rewrite((Ast.Exp) statement);
-    }
+    statement = TypeResolver.rewrite(statement);
     final Ast.ValDecl decl;
     if (statement instanceof Ast.Exp) {
       decl = ast.valDecl(Pos.ZERO,
@@ -204,6 +202,18 @@ public class Compiler {
       }
       return Codes.list(codes);
 
+    case FROM:
+      final Ast.From from = (Ast.From) expression;
+      argCode = compile(env, from.exp);
+      final Environment env2 = env.bind(from.id.name, typeMap.getType(from.id),
+          Unit.INSTANCE);
+      final Ast.Exp filterExp = from.filterExp != null
+          ? from.filterExp
+          : ast.boolLiteral(from.pos, true);
+      final Code filterCode = compile(env2, filterExp);
+      final Code yieldCode = compile(env2, from.yieldExp);
+      return Codes.from(argCode, from.id, filterCode, yieldCode);
+
     case TUPLE:
       final Ast.Tuple tuple = (Ast.Tuple) expression;
       codes = new ArrayList<>();
@@ -225,6 +235,7 @@ public class Compiler {
     case DIV:
     case MOD:
     case CARET:
+    case CONS:
     case EQ:
     case NE:
     case LT:
@@ -304,6 +315,8 @@ public class Compiler {
       return Codes.mod(code0, code1);
     case CARET:
       return Codes.caret(code0, code1);
+    case CONS:
+      return Codes.cons(code0, code1);
     default:
       throw new AssertionError("unknown op " + call.op);
     }

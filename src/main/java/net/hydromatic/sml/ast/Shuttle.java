@@ -177,6 +177,10 @@ public class Shuttle {
   protected Ast.ValBind visit(Ast.ValBind valBind) {
     return ast.valBind(valBind.pos, valBind.rec, valBind.pat, valBind.e);
   }
+
+  public Ast.Exp visit(Ast.From from) {
+    return ast.from(from.pos, from.exp, from.id, from.filterExp, from.yieldExp);
+  }
 }
 
 // End Shuttle.java

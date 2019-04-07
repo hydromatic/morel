@@ -37,4 +37,38 @@ val emps =
     [emp0, emp1, emp2, emp3]
   end;
 
+from emps as e yield e;
+
+from emps as e yield #id e;
+
+from emps as e yield (#id e) - 100;
+
+from emps as e yield #deptno e;
+
+from emps as e yield {deptno = #deptno e, one = 1};
+
+from emps as e yield ((#id e) + (#deptno e));
+
+from (from emps as e yield #deptno e) as e2 yield e2 + 1;
+
+/* Disabled: '=' should have lower precedence than '#deptno e' fun application
+from emps as e where #deptno e = 30 yield #name e;
+*/
+
+from emps as e where false yield (#deptno e);
+
+fun range i j =
+  if i >= j then [] else i :: (range (i + 1) j);
+
+/* Disabled due to NPE in apply
+range 0 5;
+
+from range 0 5 as i where i mod 2 = 1 yield i;
+*/
+val integers = [0,1,2,3,4];
+
+from integers as i where i mod 2 = 1 yield i;
+
+from emps as e where (#deptno e) = 30 yield (#id e);
+
 // End relational.sml

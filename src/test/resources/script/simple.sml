@@ -35,4 +35,24 @@ in
   sum 2
 end;
 it 3;
+
+/* Disabled due to bug linking recursive functions at top-level
+fun str s 0 l = l
+  | str s i l = str ("a" ^ s) (i - 1) (s :: l);
+val str = fn : string -> int -> string list -> string list
+
+str "" 10 [];
+val it =
+  ["aaaaaaaaa","aaaaaaaa","aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",""]
+  : string list
+
+// Note how long lists are wrapped and abbreviated
+str "" 20 [];
+val it =
+  ["aaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaa",
+   "aaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaa","aaaaaaaaaaaaaa","aaaaaaaaaaaaa",
+   "aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa",...]
+  : string list
+*/
+
 // End simple.sml

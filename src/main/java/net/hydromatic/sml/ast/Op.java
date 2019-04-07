@@ -89,6 +89,7 @@ public enum Op {
   VAL_BIND,
   APPLY(" ", 8),
   CASE,
+  FROM,
   IF;
 
   /** Padded name, e.g. " : ". */

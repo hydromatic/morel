@@ -93,20 +93,17 @@ public class Main {
   }
 
   public void run() {
-    final Reader in2;
-    if (echo) {
-      in2 = new BufferingReader(in);
-    } else {
-      in2 = in;
-    }
+    final BufferingReader in2 = new BufferingReader(in);
     final SmlParserImpl parser = new SmlParserImpl(in2);
     Environment env = Environments.empty();
     final List<String> lines = new ArrayList<>();
     for (;;) {
+      String code = "";
       try {
         final AstNode statement = parser.statementSemicolon();
-        if (in2 instanceof BufferingReader) {
-          ((BufferingReader) in2).flush(out);
+        code = in2.flush();
+        if (echo) {
+          out.write(code);
           out.write("\n");
         }
         final Compiler.CompiledStatement compiled =
@@ -117,14 +114,21 @@ public class Main {
           out.write("\n");
         }
         lines.clear();
+      } catch (RuntimeException e) {
+        out.println("Error while executing statement:");
+        out.println(code);
+        e.printStackTrace(out);
+      } catch (Error e) {
+        out.println("Error while executing statement:");
+        out.println(code);
+        e.printStackTrace(out);
+        throw e;
       } catch (ParseException e) {
         final String message = e.getMessage();
         if (message.startsWith("Encountered \"<EOF>\" ")) {
           break;
         }
         e.printStackTrace(out);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
       } finally {
         out.flush();
       }
@@ -155,10 +159,10 @@ public class Main {
       return n;
     }
 
-    public void flush(Writer out) throws IOException {
-      String s = buf.toString();
+    public String flush() {
+      final String s = buf.toString();
       buf.setLength(0);
-      out.write(s);
+      return s;
     }
   }
 }

@@ -853,6 +853,39 @@ public class Ast {
     }
   }
 
+  /** From expression. */
+  public static class From extends Exp {
+    public final Exp exp;
+    public final Id id;
+    public final Exp filterExp;
+    public final Exp yieldExp;
+
+    From(Pos pos, Exp exp, Id id, Exp filterExp, Exp yieldExp) {
+      super(pos, Op.FROM);
+      this.exp = Objects.requireNonNull(exp);
+      this.id = Objects.requireNonNull(id);
+      this.filterExp = filterExp; // may be null
+      this.yieldExp = Objects.requireNonNull(yieldExp);
+    }
+
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      if (left > op.left || op.right < right) {
+        return w.append("(").append(this, 0, 0).append(")");
+      } else {
+        w.append("from ").append(exp, 0, 0)
+            .append(" as ").append(id, 0, 0);
+        if (filterExp != null) {
+          w.append(" where ").append(filterExp, 0, 0);
+        }
+        return w.append(" yield ").append(yieldExp, 0, 0);
+      }
+    }
+  }
+
   /** Application of a function to its argument. */
   public static class Apply extends Exp {
     public final Exp fn;

@@ -98,6 +98,46 @@ Bugs:
 * Runtime should throw when divide by zero
 * Validator should give good user error when it cannot type an expression
 
+## Relational extensions
+
+The `from` expression (and associated `as`, `where` and `yield` keywords)
+is a language extension to support relational algebra.
+It iterates over a list and generates another list.
+
+In a sense, `from` is syntactic sugar. For example, given a list of records
+
+```
+val emps =
+  [{id = 100, name = "Fred", deptno = 10},
+   {id = 101, name = "Velma", deptno = 20},
+   {id = 102, name = "Shaggy", deptno = 30};
+   {id = 103, name = "Scooby", deptno = 30}];
+```
+
+the expression
+
+```
+from emps as e where (#deptno e = 30) yield (#id e)
+```
+
+is equivalent to standard ML
+
+```
+map (fn e => (#id e)) (filter (fn e => (#deptno e) = 30) emps)
+```
+
+with the `where` and `yield` clauses emulating the `filter` and `map`
+higher-order functions without the need for lambdas (`fn`).
+
+Relational expressions are an experiment bringing the features of
+query languages such as SQL into a functional language.
+We believe that a little syntactic sugar, backed by a relational query
+planner, makes ML into a powerful and convenient tool for querying
+large data sets.
+Conversely, we want to see how SQL would look if it supported lambdas,
+function-values, polymorphism, pattern-matching, and removed the
+syntactic distinction between tables and collection-valued columns.
+
 ## More information
 
 * License: <a href="LICENSE">Apache License, Version 2.0</a>

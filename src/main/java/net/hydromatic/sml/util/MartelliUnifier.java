@@ -99,10 +99,7 @@ public class MartelliUnifier extends Unifier {
         }
         final Map<Variable, Term> map = ImmutableMap.of(variable, term);
         result.put(variable, term);
-        final Action action = termActions.get(variable);
-        if (action != null) {
-          action.accept(variable, term, termPairs);
-        }
+        act(variable, term, termPairs, termActions, 0);
         for (int j = 0; j < termPairs.size(); j++) {
           final TermTerm pair2 = termPairs.get(j);
           final Term left2 = pair2.left.apply(map);
@@ -112,6 +109,29 @@ public class MartelliUnifier extends Unifier {
             termPairs.set(j, new TermTerm(left2, right2));
           }
         }
+      }
+    }
+  }
+
+  private void act(Variable variable, Term term, List<TermTerm> termPairs,
+      Map<Variable, Action> termActions, int depth) {
+    final Action action = termActions.get(variable);
+    if (action != null) {
+      action.accept(variable, term, termPairs);
+    }
+    if (term instanceof Variable) {
+      // Copy list to prevent concurrent modification, in case the action
+      // appends to the list. Limit on depth, to prevent infinite recursion.
+      final List<TermTerm> termPairsCopy = new ArrayList<>(termPairs);
+      termPairsCopy.forEach(termPair -> {
+        if (termPair.left.equals(term) && depth < 2) {
+          act(variable, termPair.right, termPairs, termActions, depth + 1);
+        }
+      });
+      // If the term is a variable, recurse to see whether there is an
+      // action for that variable. Limit on depth to prevent swapping back.
+      if (depth < 1) {
+        act((Variable) term, variable, termPairs, termActions, depth + 1);
       }
     }
   }

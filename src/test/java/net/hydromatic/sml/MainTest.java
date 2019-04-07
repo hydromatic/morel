@@ -170,7 +170,7 @@ public class MainTest {
     try {
       final Ast.Exp expression0 =
           new SmlParserImpl(new StringReader(ml)).expression();
-      final Ast.Exp expression = TypeResolver.rewrite(expression0);
+      final Ast.Exp expression = (Ast.Exp) TypeResolver.rewrite(expression0);
       final TypeResolver.TypeSystem typeSystem = new TypeResolver.TypeSystem();
       final Environment env = Environments.empty();
       final TypeResolver.TypeMap typeMap =
@@ -536,7 +536,7 @@ public class MainTest {
     assertEval("let val x = 1; val x = 3 and y = x + 1 in x + y end", is(5));
 
     assertError2("let val x = 1 and y = x + 2 in x + y end",
-        isError("Error: unbound variable or constructor: x"));
+        isError("unbound variable or constructor: x"));
 
     // let with val and fun
     assertEval("let fun f x = 1 + x; val x = 2 in f x end", is(3));
@@ -689,6 +689,7 @@ public class MainTest {
     assertType("[1] :: [[2], [3]]", is("int list list"));
     assertType("1 :: []", is("int list"));
     assertType("1 :: 2 :: []", is("int list"));
+    assertEval("1 :: 2 :: []", is(Arrays.asList(1, 2)));
   }
 
   @Ignore("need patterns as arguments and generics")
@@ -791,6 +792,45 @@ public class MainTest {
         + "  f {a=1,b=2,c=3}\n"
         + "end";
     assertEval(ml2,  is(6));
+  }
+
+  @Test public void testFrom() {
+    final String ml = "let\n"
+        + "  val emps = [\n"
+        + "    {id = 100, name = \"Fred\", deptno = 10},\n"
+        + "    {id = 101, name = \"Velma\", deptno = 20},\n"
+        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+        + "in\n"
+        + "  from emps as e yield #deptno e\n"
+        + "end";
+    assertEval(ml,  is(Arrays.asList(10, 20, 30, 30)));
+  }
+
+  @Test public void testFromYieldExpression() {
+    final String ml = "let\n"
+        + "  val emps = [\n"
+        + "    {id = 100, name = \"Fred\", deptno = 10},\n"
+        + "    {id = 101, name = \"Velma\", deptno = 20},\n"
+        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+        + "in\n"
+        + "  from emps as e yield ((#id e) + (#deptno e))\n"
+        + "end";
+    assertEval(ml,  is(Arrays.asList(110, 121, 132, 133)));
+  }
+
+  @Test public void testFromWhere() {
+    final String ml = "let\n"
+        + "  val emps = [\n"
+        + "    {id = 100, name = \"Fred\", deptno = 10},\n"
+        + "    {id = 101, name = \"Velma\", deptno = 20},\n"
+        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+        + "in\n"
+        + "  from emps as e where (#deptno e) = 30 yield (#id e)\n"
+        + "end";
+    assertEval(ml,  is(Arrays.asList(102, 103)));
   }
 
   @Test public void testError() {
