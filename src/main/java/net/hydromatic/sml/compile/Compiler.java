@@ -103,14 +103,21 @@ public class Compiler {
         env.forEachValue((name, value) ->
             evalEnvs[0] = Codes.add(evalEnvs[0], name, value));
         final EvalEnv evalEnv = evalEnvs[0];
+        final StringBuilder buf = new StringBuilder();
         for (Map.Entry<String, TypeAndCode> entry : varCodes.entrySet()) {
           final String name = entry.getKey();
           final Code code = entry.getValue().code;
           final Type type = entry.getValue().type;
           final Object value = code.eval(evalEnv);
           resultEnv = resultEnv.bind(name, type, value);
-          output.add("val " + name + " = " + value + " : "
-              + type.description());
+          buf.append("val ")
+              .append(name)
+              .append(" = ");
+          Pretty.pretty(buf, type, value)
+              .append(" : ")
+              .append(type.description());
+          output.add(buf.toString());
+          buf.setLength(0);
         }
         return resultEnv;
       }

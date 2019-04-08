@@ -68,20 +68,28 @@ public class Main {
   /** Creates a Main. */
   public Main(String[] args, Reader in, Writer out) {
     this.args = args;
-    if (in instanceof BufferedReader) {
-      this.in = (BufferedReader) in;
-    } else {
-      this.in = new BufferedReader(in);
-    }
+    this.in = buffer(in);
+    this.out = buffer(out);
+    this.echo = Arrays.asList(args).contains("--echo");
+  }
+
+  private static PrintWriter buffer(Writer out) {
     if (out instanceof PrintWriter) {
-      this.out = (PrintWriter) out;
+      return (PrintWriter) out;
     } else {
       if (!(out instanceof BufferedWriter)) {
         out = new BufferedWriter(out);
       }
-      this.out = new PrintWriter(out);
+      return new PrintWriter(out);
     }
-    this.echo = Arrays.asList(args).contains("--echo");
+  }
+
+  private static BufferedReader buffer(Reader in) {
+    if (in instanceof BufferedReader) {
+      return (BufferedReader) in;
+    } else {
+      return new BufferedReader(in);
+    }
   }
 
   public void run() {
