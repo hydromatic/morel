@@ -104,7 +104,8 @@ The `from` expression (and associated `as`, `where` and `yield` keywords)
 is a language extension to support relational algebra.
 It iterates over a list and generates another list.
 
-In a sense, `from` is syntactic sugar. For example, given a list of records
+In a sense, `from` is syntactic sugar. For example, given `emps` and
+`depts`, relations defined as lists of records as follows
 
 ```
 val emps =
@@ -112,6 +113,11 @@ val emps =
    {id = 101, name = "Velma", deptno = 20},
    {id = 102, name = "Shaggy", deptno = 30};
    {id = 103, name = "Scooby", deptno = 30}];
+val depts =
+  [{deptno = 10, name = "Sales"},
+   {deptno = 20, name = "Marketing"},
+   {deptno = 30, name = "Engineering"},
+   {deptno = 40, name = "Support"}];
 ```
 
 the expression
@@ -137,6 +143,48 @@ large data sets.
 Conversely, we want to see how SQL would look if it supported lambdas,
 function-values, polymorphism, pattern-matching, and removed the
 syntactic distinction between tables and collection-valued columns.
+
+You can iterate over more than one collection, and therefore generate
+a join or a cartesian product:
+
+```
+from emps as e, depts as d
+  where (#deptno e) = (#deptno d)
+  yield {id = (#id e), deptno = (#deptno e), ename = (#name e), dname = (#name d)};
+```
+
+As in any ML expression, you can define functions within a `from` expression,
+and those functions can operate on lists. Thus we can implement equivalents of
+SQL's `IN` and `EXISTS` operators:
+
+```
+let
+  fun in_ e [] = false
+    | in_ e (h :: t) = e = h orelse (in_ e t)
+in
+  from emps as e
+  where in_ (#deptno e) (from depts as d
+                where (#name d) = "Engineering"
+                yield (#deptno d))
+  yield (#name e)
+end
+
+let
+  fun exists [] = false
+    | exists hd :: tl = true
+in
+  from emps as e
+  where exists (from depts as d
+                where (#deptno d) = (#deptno e)
+                andalso (#name d) = "Engineering")
+  yield (#name e)
+end
+```
+
+In the second query, note that the sub-query inside the `exists` is
+correlated (references the `e` variable from the enclosing query)
+and skips the `yield` clause (because it doesn't matter which columns
+the sub-query returns, just whether it returns any rows).
 
 ## More information
 

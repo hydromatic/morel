@@ -48,6 +48,7 @@ import java.io.StringReader;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -831,6 +832,36 @@ public class MainTest {
         + "  from emps as e where (#deptno e) = 30 yield (#id e)\n"
         + "end";
     assertEval(ml,  is(Arrays.asList(102, 103)));
+  }
+
+  @Test public void testFromNoYield() {
+    final String ml = "let\n"
+        + "  val emps =\n"
+        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+        + "     {id = 103, name = \"Scooby\", deptno = 30}]\n"
+        + "in\n"
+        + "  from emps as e where (#deptno e) = 30\n"
+        + "end";
+    assertEval(ml, is(Arrays.asList(Arrays.asList(30, 103, "Scooby"))));
+  }
+
+  @Test public void testFromJoinNoYield() {
+    final String ml = "let\n"
+        + "  val emps =\n"
+        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+        + "     {id = 101, name = \"Velma\", deptno = 20}]\n"
+        + "  val depts =\n"
+        + "    [{deptno = 10, name = \"Sales\"}]\n"
+        + "in\n"
+        + "  from emps as e, depts as d where (#deptno e) = (#deptno d)\n"
+        + "end";
+    assertType(ml,
+        is("({d:{deptno:int, name:string},"
+            + " e:{deptno:int, id:int, name:string}}) list"));
+    final List eRow = Arrays.asList(10, "Sales");
+    final List bRow = Arrays.asList(10, 100, "Fred");
+    assertEval(ml,
+        is(Collections.singletonList(Arrays.asList(eRow, bRow))));
   }
 
   @Test public void testError() {

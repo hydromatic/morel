@@ -37,6 +37,12 @@ val emps =
     [emp0, emp1, emp2, emp3]
   end;
 
+val depts =
+  [{deptno = 10, name = "Sales"},
+   {deptno = 20, name = "HR"},
+   {deptno = 30, name = "Engineering"},
+   {deptno = 40, name = "Support"}];
+
 from emps as e yield e;
 
 from emps as e yield #id e;
@@ -69,6 +75,45 @@ val integers = [0,1,2,3,4];
 
 from integers as i where i mod 2 = 1 yield i;
 
+// missing yield
+from integers as i where i mod 2 = 1;
+
 from emps as e where (#deptno e) = 30 yield (#id e);
+
+// cartesian product
+from emps as e, emps as e2 yield (#name e) ^ "-" ^ (#name e2);
+
+// cartesian product, missing yield
+from depts as d, integers as i;
+
+// join
+from emps as e, depts as d
+  where (#deptno e) = (#deptno d)
+  yield {id = (#id e), deptno = (#deptno e), ename = (#name e), dname = (#name d)};
+
+// exists (defining the "exists" function ourselves)
+// and correlated sub-query
+let
+  fun exists [] = false
+    | exists hd :: tl = true
+in
+  from emps as e
+  where exists (from depts as d
+                where (#deptno d) = (#deptno e)
+                andalso (#name d) = "Engineering")
+  yield (#name e)
+end;
+
+// in (defining the "in_" function ourselves)
+let
+  fun in_ e [] = false
+    | in_ e (h :: t) = e = h orelse (in_ e t)
+in
+  from emps as e
+  where in_ (#deptno e) (from depts as d
+                where (#name d) = "Engineering"
+                yield (#deptno d))
+  yield (#name e)
+end;
 
 // End relational.sml

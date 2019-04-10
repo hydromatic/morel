@@ -28,4 +28,12 @@ len [1];
 len [1,2];
 */
 
+// Should give
+//   Error: duplicate variable in pattern(s): e
+/*
+fun in_ e [] = false
+  | in_ e e :: tl = true
+  | in_ e hd :: tl = in_ e tl
+*/
+
 // End type.sml

@@ -219,20 +219,35 @@ Exp caseOf() :
 Exp from() :
 {
   final Span span;
-  final Exp exp;
-  final Id id;
+  final Map<Id, Exp> sources = new LinkedHashMap<Id, Exp>();
   Exp filterExp = null;
-  final Exp yieldExp;
-  final List<Match> matchList;
+  Exp yieldExp = null;
 }
 {
-  <FROM> { span = Span.of(getPos()); } exp = expression()
-  <AS> id = identifier()
+  <FROM> { span = Span.of(getPos()); }
+  fromSource(sources)
+  (
+    <COMMA> fromSource(sources)
+  )*
   [
     <WHERE> filterExp = expression()
   ]
-  <YIELD> yieldExp = expression() {
-    return ast.from(span.end(this), exp, id, filterExp, yieldExp);
+  [
+    <YIELD> yieldExp = expression()
+  ]
+  {
+    return ast.from(span.end(this), sources, filterExp, yieldExp);
+  }
+}
+
+void fromSource(Map/*<String, Exp>*/ sources) :
+{
+  final Exp exp;
+  final Id id;
+}
+{
+  exp = expression() <AS> id = identifier() {
+    sources.put(id, exp);
   }
 }
 

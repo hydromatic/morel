@@ -22,11 +22,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Iterables;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
+import java.util.stream.Collectors;
+
+import static net.hydromatic.sml.ast.AstBuilder.ast;
 
 /** Various sub-classes of AST nodes. */
 public class Ast {
@@ -855,17 +859,28 @@ public class Ast {
 
   /** From expression. */
   public static class From extends Exp {
-    public final Exp exp;
-    public final Id id;
+    public final Map<Id, Exp> sources;
     public final Exp filterExp;
     public final Exp yieldExp;
+    /** The expression in the yield clause, or the default yield expression
+     * if not specified; never null. */
+    public final Exp yieldExpOrDefault;
 
-    From(Pos pos, Exp exp, Id id, Exp filterExp, Exp yieldExp) {
+    From(Pos pos, ImmutableMap<Id, Exp> sources, Exp filterExp, Exp yieldExp) {
       super(pos, Op.FROM);
-      this.exp = Objects.requireNonNull(exp);
-      this.id = Objects.requireNonNull(id);
+      this.sources = Objects.requireNonNull(sources);
       this.filterExp = filterExp; // may be null
-      this.yieldExp = Objects.requireNonNull(yieldExp);
+      this.yieldExp = yieldExp; // may be null
+      if (yieldExp != null) {
+        this.yieldExpOrDefault = this.yieldExp;
+      } else if (sources.size() == 1) {
+        this.yieldExpOrDefault = Iterables.getOnlyElement(sources.keySet());
+      } else {
+        this.yieldExpOrDefault = ast.record(pos,
+            sources.keySet().stream()
+                .collect(Collectors.toMap(id -> id.name, id -> id)));
+      }
+      Objects.requireNonNull(this.yieldExpOrDefault);
     }
 
     public Exp accept(Shuttle shuttle) {
@@ -876,8 +891,13 @@ public class Ast {
       if (left > op.left || op.right < right) {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
-        w.append("from ").append(exp, 0, 0)
-            .append(" as ").append(id, 0, 0);
+        int i = 0;
+        for (Map.Entry<Id, Exp> entry : sources.entrySet()) {
+          final Exp exp = entry.getValue();
+          final Id id = entry.getKey();
+          w.append(i++ == 0 ? "from " : ", ").append(exp, 0, 0)
+              .append(" as ").append(id, 0, 0);
+        }
         if (filterExp != null) {
           w.append(" where ").append(filterExp, 0, 0);
         }

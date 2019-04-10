@@ -179,7 +179,7 @@ public class Shuttle {
   }
 
   public Ast.Exp visit(Ast.From from) {
-    return ast.from(from.pos, from.exp, from.id, from.filterExp, from.yieldExp);
+    return ast.from(from.pos, from.sources, from.filterExp, from.yieldExp);
   }
 }
 

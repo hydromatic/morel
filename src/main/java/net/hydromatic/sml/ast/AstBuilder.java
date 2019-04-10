@@ -238,9 +238,9 @@ public enum AstBuilder {
     return new Ast.Case(pos, exp, ImmutableList.copyOf(matchList));
   }
 
-  public Ast.From from(Pos pos, Ast.Exp exp, Ast.Id id, Ast.Exp filterExp,
+  public Ast.From from(Pos pos, Map<Ast.Id, Ast.Exp> sources, Ast.Exp filterExp,
       Ast.Exp yieldExp) {
-    return new Ast.From(pos, exp, id, filterExp, yieldExp);
+    return new Ast.From(pos, ImmutableMap.copyOf(sources), filterExp, yieldExp);
   }
 
   public Ast.Fn fn(Pos pos, Ast.Match... matchList) {

@@ -28,6 +28,7 @@ import net.hydromatic.sml.util.Pair;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static net.hydromatic.sml.ast.AstBuilder.ast;
 
@@ -193,19 +194,37 @@ public abstract class Codes {
     return new TupleCode(codes);
   }
 
-  public static Code from(Code argCode, Ast.Id id, Code filterCode,
+  public static Code from(Map<Ast.Id, Code> sources, Code filterCode,
       Code yieldCode) {
-    return env -> {
-      final Object o = argCode.eval(env);
-      final Iterable iterable = (Iterable) o;
-      final List list = new ArrayList();
-      for (Object o1 : iterable) {
-        EvalEnv env2 = add(env, id.name, o1);
-        if ((Boolean) filterCode.eval(env2)) {
-          list.add(yieldCode.eval(env2));
+    final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
+    return new Code() {
+      @Override public Object eval(EvalEnv env) {
+        final List<Iterable> values = new ArrayList<>();
+        for (Code code : sources.values()) {
+          values.add((Iterable) code.eval(env));
+        }
+        final List list = new ArrayList();
+        loop(0, values, env, list);
+        return list;
+      }
+
+      /** Generates the {@code i}th nested lopp of a cartesian product of the
+       * values in {@code iterables}. */
+      void loop(int i, List<Iterable> iterables, EvalEnv env,
+          List<Object> list) {
+        if (i == iterables.size()) {
+          if ((Boolean) filterCode.eval(env)) {
+            list.add(yieldCode.eval(env));
+          }
+        } else {
+          final String name = ids.get(i).name;
+          final Iterable iterable = iterables.get(i);
+          for (Object o : iterable) {
+            EvalEnv env2 = add(env, name, o);
+            loop(i + 1, iterables, env2, list);
+          }
         }
       }
-      return list;
     };
   }
 

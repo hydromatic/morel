@@ -153,14 +153,6 @@ public class Compiler {
     case UNIT_LITERAL:
       return Codes.constant(Unit.INSTANCE);
 
-    case ID:
-      final Ast.Id id = (Ast.Id) expression;
-      final Binding binding = env.getOpt(id.name);
-      if (binding != null && binding.value instanceof Code) {
-        return (Code) binding.value;
-      }
-      return Codes.get(id.name);
-
     case IF:
       final Ast.If if_ = (Ast.If) expression;
       final Code conditionCode = compile(env, if_.condition);
@@ -204,15 +196,29 @@ public class Compiler {
 
     case FROM:
       final Ast.From from = (Ast.From) expression;
-      argCode = compile(env, from.exp);
-      final Environment env2 = env.bind(from.id.name, typeMap.getType(from.id),
-          Unit.INSTANCE);
+      final Map<Ast.Id, Code> sourceCodes = new LinkedHashMap<>();
+      Environment env2 = env;
+      for (Map.Entry<Ast.Id, Ast.Exp> idExp : from.sources.entrySet()) {
+        final Code expCode = compile(env, idExp.getValue());
+        final Ast.Id id = idExp.getKey();
+        sourceCodes.put(id, expCode);
+        env2 = env.bind(id.name, typeMap.getType(id), Unit.INSTANCE);
+      }
       final Ast.Exp filterExp = from.filterExp != null
           ? from.filterExp
           : ast.boolLiteral(from.pos, true);
       final Code filterCode = compile(env2, filterExp);
-      final Code yieldCode = compile(env2, from.yieldExp);
-      return Codes.from(argCode, from.id, filterCode, yieldCode);
+      final Ast.Exp yieldExp = from.yieldExpOrDefault;
+      final Code yieldCode = compile(env2, yieldExp);
+      return Codes.from(sourceCodes, filterCode, yieldCode);
+
+    case ID:
+      final Ast.Id id = (Ast.Id) expression;
+      final Binding binding = env.getOpt(id.name);
+      if (binding != null && binding.value instanceof Code) {
+        return (Code) binding.value;
+      }
+      return Codes.get(id.name);
 
     case TUPLE:
       final Ast.Tuple tuple = (Ast.Tuple) expression;

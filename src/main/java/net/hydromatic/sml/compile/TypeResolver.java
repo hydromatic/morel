@@ -233,10 +233,6 @@ public class TypeResolver {
       deduceType(env2, let.e, v);
       return reg(let, null, v);
 
-    case ID:
-      final Ast.Id id = (Ast.Id) node;
-      return reg(id, v, env.get(id.name));
-
     case RECORD_SELECTOR:
       final Ast.RecordSelector recordSelector = (Ast.RecordSelector) node;
       throw new RuntimeException("Error: unresolved flex record\n"
@@ -270,21 +266,33 @@ public class TypeResolver {
       return reg(case_, null, v);
 
     case FROM:
-      // "(from exp: v2 as id: v3 [where filterExp: v5] yield yieldExp: v4): v"
+      // "(from exp: v50 as id: v60 [, exp: v51 as id: v61]...
+      //  [where filterExp: v5] [yield yieldExp: v4]): v"
       final Ast.From from = (Ast.From) node;
-      v2 = unifier.variable();
-      v3 = unifier.variable();
-      v4 = unifier.variable();
-      deduceType(env, from.exp, v2);
-      reg(from.exp, v2, unifier.apply(LIST_TY_CON, v3));
-      env3 = env.bind(from.id.name, v3);
+      env2 = env;
+      final Map<String, Unifier.Variable> fieldVars = new LinkedHashMap<>();
+      for (Map.Entry<Ast.Id, Ast.Exp> source : from.sources.entrySet()) {
+        final Ast.Id id = source.getKey();
+        final Ast.Exp exp = source.getValue();
+        final Unifier.Variable v5 = unifier.variable();
+        final Unifier.Variable v6 = unifier.variable();
+        deduceType(env, exp, v5);
+        reg(exp, v5, unifier.apply(LIST_TY_CON, v6));
+        env2 = env2.bind(id.name, v6);
+        fieldVars.put(id.name, v6);
+      }
       if (from.filterExp != null) {
         final Unifier.Variable v5 = unifier.variable();
-        deduceType(env3, from.filterExp, v5);
+        deduceType(env2, from.filterExp, v5);
         equiv(v5, toTerm(PrimitiveType.BOOL));
       }
-      deduceType(env3, from.yieldExp, v4);
+      v4 = unifier.variable();
+      deduceType(env2, from.yieldExpOrDefault, v4);
       return reg(from, v, unifier.apply(LIST_TY_CON, v4));
+
+    case ID:
+      final Ast.Id id = (Ast.Id) node;
+      return reg(id, v, env.get(id.name));
 
     case FN:
       final Ast.Fn fn = (Ast.Fn) node;

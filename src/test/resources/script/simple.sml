@@ -55,4 +55,22 @@ val it =
   : string list
 */
 
+// Bug: Fails due to lack of parentheses
+/*
+let
+  fun in_ e [] = false
+    | in_ e (h :: t) = e = h orelse in_ e t
+in
+  (in_ 3 [1,2,3], in_ 4 [1,2,3])
+end;
+*/
+
+// Succeeds when parentheses are added
+let
+  fun in_ e [] = false
+    | in_ e (h :: t) = e = h orelse (in_ e t)
+in
+  (in_ 3 [1,2,3], in_ 4 [1,2,3])
+end;
+
 // End simple.sml

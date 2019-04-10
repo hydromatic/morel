@@ -55,6 +55,16 @@ val emps =
    {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : ({deptno:int, id:int, name:string}) list
 
 
+val depts =
+  [{deptno = 10, name = "Sales"},
+   {deptno = 20, name = "HR"},
+   {deptno = 30, name = "Engineering"},
+   {deptno = 40, name = "Support"}];
+val depts =
+  [{deptno=10,name="Sales"},{deptno=20,name="HR"},{deptno=30,name="Engineering"},
+   {deptno=40,name="Support"}] : ({deptno:int, name:string}) list
+
+
 from emps as e yield e;
 val it =
   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
@@ -111,5 +121,74 @@ from integers as i where i mod 2 = 1 yield i;
 val it = [1,3] : int list
 
 
+// missing yield
+from integers as i where i mod 2 = 1;
+val it = [1,3] : int list
+
+
 from emps as e where (#deptno e) = 30 yield (#id e);
 val it = [102,103] : int list
+
+
+// cartesian product
+from emps as e, emps as e2 yield (#name e) ^ "-" ^ (#name e2);
+val it =
+  ["Fred-Fred","Fred-Velma","Fred-Shaggy","Fred-Scooby","Velma-Fred",
+   "Velma-Velma","Velma-Shaggy","Velma-Scooby","Shaggy-Fred","Shaggy-Velma",
+   "Shaggy-Shaggy","Shaggy-Scooby","Scooby-Fred","Scooby-Velma","Scooby-Shaggy",
+   "Scooby-Scooby"] : string list
+
+
+// cartesian product, missing yield
+from depts as d, integers as i;
+val it =
+  [{d={deptno=10,name="Sales"},i=0},{d={deptno=10,name="Sales"},i=1},
+   {d={deptno=10,name="Sales"},i=2},{d={deptno=10,name="Sales"},i=3},
+   {d={deptno=10,name="Sales"},i=4},{d={deptno=20,name="HR"},i=0},
+   {d={deptno=20,name="HR"},i=1},{d={deptno=20,name="HR"},i=2},
+   {d={deptno=20,name="HR"},i=3},{d={deptno=20,name="HR"},i=4},
+   {d={deptno=30,name="Engineering"},i=0},{d={deptno=30,name="Engineering"},i=1},
+   {d={deptno=30,name="Engineering"},i=2},{d={deptno=30,name="Engineering"},i=3},
+   {d={deptno=30,name="Engineering"},i=4},{d={deptno=40,name="Support"},i=0},
+   {d={deptno=40,name="Support"},i=1},{d={deptno=40,name="Support"},i=2},
+   {d={deptno=40,name="Support"},i=3},{d={deptno=40,name="Support"},i=4}] : ({d:{deptno:int, name:string}, i:int}) list
+
+
+// join
+from emps as e, depts as d
+  where (#deptno e) = (#deptno d)
+  yield {id = (#id e), deptno = (#deptno e), ename = (#name e), dname = (#name d)};
+val it =
+  [{deptno=10,dname="Sales",ename="Fred",id=100},
+   {deptno=20,dname="HR",ename="Velma",id=101},
+   {deptno=30,dname="Engineering",ename="Shaggy",id=102},
+   {deptno=30,dname="Engineering",ename="Scooby",id=103}] : ({deptno:int, dname:string, ename:string, id:int}) list
+
+
+// exists (defining the "exists" function ourselves)
+// and correlated sub-query
+let
+  fun exists [] = false
+    | exists hd :: tl = true
+in
+  from emps as e
+  where exists (from depts as d
+                where (#deptno d) = (#deptno e)
+                andalso (#name d) = "Engineering")
+  yield (#name e)
+end;
+val it = ["Shaggy","Scooby"] : string list
+
+
+// in (defining the "in_" function ourselves)
+let
+  fun in_ e [] = false
+    | in_ e (h :: t) = e = h orelse (in_ e t)
+in
+  from emps as e
+  where in_ (#deptno e) (from depts as d
+                where (#name d) = "Engineering"
+                yield (#deptno d))
+  yield (#name e)
+end;
+val it = ["Shaggy","Scooby"] : string list
