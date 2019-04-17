@@ -22,7 +22,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 
+import net.hydromatic.sml.compile.BuiltIn;
 import net.hydromatic.sml.eval.Unit;
+import net.hydromatic.sml.util.Pair;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -271,8 +273,11 @@ public enum AstBuilder {
   }
 
   public Ast.From from(Pos pos, Map<Ast.Id, Ast.Exp> sources, Ast.Exp filterExp,
-      Ast.Exp yieldExp) {
-    return new Ast.From(pos, ImmutableMap.copyOf(sources), filterExp, yieldExp);
+      Ast.Exp yieldExp, List<Pair<Ast.Exp, Ast.Id>> groupExps,
+      List<Ast.Aggregate> aggregates) {
+    return new Ast.From(pos, ImmutableMap.copyOf(sources), filterExp, yieldExp,
+        groupExps == null ? null : ImmutableList.copyOf(groupExps),
+        aggregates == null ? null : ImmutableList.copyOf(aggregates));
   }
 
   public Ast.Fn fn(Pos pos, Ast.Match... matchList) {
@@ -359,6 +364,15 @@ public enum AstBuilder {
       e = fold.apply(list.get(i), e);
     }
     return e;
+  }
+
+  public Ast.Aggregate aggregate(Pos pos, Ast.Exp aggregate, Ast.Exp argument,
+      Ast.Id id) {
+    return new Ast.Aggregate(pos, aggregate, argument, id);
+  }
+
+  public Ast.Exp map(Pos pos, Ast.Exp e1, Ast.Exp e2) {
+    return apply(apply(id(pos, BuiltIn.LIST_MAP.mlName), e1), e2);
   }
 }
 

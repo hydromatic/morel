@@ -61,6 +61,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import static net.hydromatic.sml.ast.AstBuilder.ast;
+import static net.hydromatic.sml.util.Static.toImmutableList;
 
 /** Resolves the type of an expression. */
 @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
@@ -265,7 +266,8 @@ public class TypeResolver {
           deduceType(env2, from.yieldExpOrDefault, v3);
       final Ast.Exp yieldExp2 =
           from.yieldExp == null ? null : yieldExpOrDefault2;
-      final Ast.From from2 = from.copy(from.sources, filter2, yieldExp2);
+      final Ast.From from2 = from.copy(from.sources, filter2, yieldExp2,
+          from.groupExps, from.aggregates);
       return reg(from2, v, unifier.apply(LIST_TY_CON, v3));
 
     case ID:
@@ -844,14 +846,14 @@ public class TypeResolver {
     case TUPLE_TYPE:
       final TupleType tupleType = (TupleType) type;
       return unifier.apply(TUPLE_TY_CON, tupleType.argTypes.stream()
-          .map(type1 -> toTerm(type1, subst)).collect(Collectors.toList()));
+          .map(type1 -> toTerm(type1, subst)).collect(toImmutableList()));
     case RECORD_TYPE:
       final RecordType recordType = (RecordType) type;
       //noinspection unchecked
       return unifier.apply(
           recordOp((NavigableSet) recordType.argNameTypes.keySet()),
           recordType.argNameTypes.values().stream()
-              .map(type1 -> toTerm(type1, subst)).collect(Collectors.toList()));
+              .map(type1 -> toTerm(type1, subst)).collect(toImmutableList()));
     case LIST:
       final ListType listType = (ListType) type;
       return unifier.apply(LIST_TY_CON,

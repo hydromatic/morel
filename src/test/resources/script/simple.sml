@@ -86,4 +86,12 @@ in
   (in_ 3 [1,2,3], in_ 4 [1,2,3])
 end;
 
+(*) Multiple functions
+let
+  fun f x = 1
+  fun g x = 2
+in
+  f (g 0)
+end;
+
 (*) End simple.sml

@@ -178,9 +178,28 @@ public class Compiler {
           ? from.filterExp
           : ast.boolLiteral(from.pos, true);
       final Code filterCode = compile(env2, filterExp);
-      final Ast.Exp yieldExp = from.yieldExpOrDefault;
-      final Code yieldCode = compile(env2, yieldExp);
-      return Codes.from(sourceCodes, filterCode, yieldCode);
+      if (from.groupExps != null) {
+        final ImmutableList.Builder<Code> groupCodes = ImmutableList.builder();
+        final ImmutableList.Builder<String> labels = ImmutableList.builder();
+        for (Pair<Ast.Exp, Ast.Id> pair : from.groupExps) {
+          groupCodes.add(compile(env, pair.left));
+          labels.add(pair.right.name);
+        }
+        final ImmutableList.Builder<Code> aggregateCodes =
+            ImmutableList.builder();
+        for (Ast.Aggregate aggregate : from.aggregates) {
+          final Code argumentCode = compile(env, aggregate.argument);
+          final Code aggregateCode = compile(env, aggregate.aggregate);
+          aggregateCodes.add(Codes.aggregate(env, aggregateCode, argumentCode));
+          labels.add(aggregate.id.name);
+        }
+        return Codes.fromGroup(sourceCodes, filterCode, groupCodes.build(),
+            aggregateCodes.build());
+      } else {
+        final Ast.Exp yieldExp = from.yieldExpOrDefault;
+        final Code yieldCode = compile(env2, yieldExp);
+        return Codes.from(sourceCodes, filterCode, yieldCode);
+      }
 
     case ID:
       final Ast.Id id = (Ast.Id) expression;
@@ -244,6 +263,10 @@ public class Compiler {
     } else {
       return null;
     }
+  }
+
+  private Code compileAggregate(Environment env, Ast.Aggregate aggregate) {
+    throw new UnsupportedOperationException(); // TODO
   }
 
   private Code compileLet(Environment env, List<Ast.Decl> decls, Ast.Exp e) {

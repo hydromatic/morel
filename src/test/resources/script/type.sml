@@ -36,4 +36,26 @@ fun in_ e [] = false
   | in_ e hd :: tl = in_ e tl
 *)
 
+(*) Should give
+(*) Error: operator and operand don't agree [tycon mismatch]
+(*)     operator domain: 'Z list list
+(*)     operand:         (({id:'X; 'Y} -> 'X) * ([+ ty] * [+ ty] -> [+ ty])) list
+(*)     in expression:
+(*)       aggregate (((fn <pat> => <exp>),sum) :: nil)
+(*
+let
+  fun foldl f start [] = start
+    | foldl f start (hd :: tl) = foldl f (f (start, hd)) tl;
+  fun map f [] = []
+    | map f (hd :: tl) = (f hd) :: (map f tl);
+  fun computeAgg (extractor, folder) list =
+      foldl folder (map extractor list);
+  fun aggregate aggFns list =
+      map (computeAgg list) aggFns;
+  fun sum (x, y) = x + y;
+in
+  aggregate [(#id, sum)] emps
+end;
+*)
+
 (*) End type.sml

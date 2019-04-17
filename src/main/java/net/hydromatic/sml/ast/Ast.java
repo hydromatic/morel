@@ -25,8 +25,10 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 
 import net.hydromatic.sml.util.Ord;
+import net.hydromatic.sml.util.Pair;
 
-import java.util.List;
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -304,12 +306,8 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      Ord.forEach(args, (i, k, v) -> {
-        if (i > 0) {
-          w.append(", ");
-        }
-        w.append(k).append(" = ").append(v, 0, 0);
-      });
+      Ord.forEach(args, (i, k, v) ->
+          w.append(i > 0 ? ", " : "").append(k).append(" = ").append(v, 0, 0));
       if (ellipsis) {
         if (!args.isEmpty()) {
           w.append(", ");
@@ -487,9 +485,8 @@ public class Ast {
 
     AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      final int[] i = {0};
-      fieldTypes.forEach((field, type) ->
-          w.append(i[0]++ > 0 ? ", " : "")
+      Ord.forEach(fieldTypes, (i, field, type) ->
+          w.append(i > 0 ? ", " : "")
               .append(field).append(": ").append(type, 0, 0));
       return w.append("}");
     }
@@ -1003,12 +1000,8 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      Ord.forEach(args, (i, k, v) -> {
-        if (i > 0) {
-          w.append(", ");
-        }
-        w.append(k).append(" = ").append(v, 0, 0);
-      });
+      Ord.forEach(args, (i, k, v) ->
+          w.append(i > 0 ? ", " : "").append(k).append(" = ").append(v, 0, 0));
       return w.append("}");
     }
   }
@@ -1217,13 +1210,40 @@ public class Ast {
     /** The expression in the yield clause, or the default yield expression
      * if not specified; never null. */
     public final Exp yieldExpOrDefault;
+    public final ImmutableList<Pair<Exp, Id>> groupExps;
+    public final ImmutableList<Aggregate> aggregates;
 
-    From(Pos pos, ImmutableMap<Id, Exp> sources, Exp filterExp, Exp yieldExp) {
+    From(Pos pos, ImmutableMap<Id, Exp> sources, Exp filterExp, Exp yieldExp,
+        ImmutableList<Pair<Exp, Id>> groupExps,
+        ImmutableList<Aggregate> aggregates) {
       super(pos, Op.FROM);
       this.sources = Objects.requireNonNull(sources);
       this.filterExp = filterExp; // may be null
       this.yieldExp = yieldExp; // may be null
-      if (yieldExp != null) {
+      if (groupExps != null) {
+        // The type of
+        //   from emps as e group by e1 as a, e2 as b compute sum of e3 as c
+        // is the same as the type of
+        //   {e1 as a, e2 as b, sum (map (fn e => c) list) as x}
+        assert yieldExp == null;
+        final Map<String, Exp> fields = new HashMap<>();
+        groupExps.forEach(pair -> fields.put(pair.right.name, pair.left));
+        final Literal aggResult = ast.intLiteral(BigDecimal.ZERO, pos); // FIXME
+        aggregates.forEach(aggregate -> {
+          final Map.Entry<Id, Exp> idSource =
+              sources.entrySet().iterator().next();
+          final Id id = idSource.getKey();
+          final Pat pat = ast.idPat(pos, id.name);
+          final Exp source = idSource.getValue();
+          fields.put(aggregate.id.name,
+              ast.apply(aggregate.aggregate,
+                  ast.map(pos,
+                      ast.fn(pos,
+                          ast.match(pos, pat, aggregate.argument)),
+                      source)));
+        });
+        this.yieldExpOrDefault = ast.record(pos, fields);
+      } else if (yieldExp != null) {
         this.yieldExpOrDefault = this.yieldExp;
       } else if (sources.size() == 1) {
         this.yieldExpOrDefault = Iterables.getOnlyElement(sources.keySet());
@@ -1233,6 +1253,8 @@ public class Ast {
                 .collect(Collectors.toMap(id -> id.name, id -> id)));
       }
       Objects.requireNonNull(this.yieldExpOrDefault);
+      this.groupExps = groupExps; // may be null
+      this.aggregates = aggregates; // may be null
     }
 
     public Exp accept(Shuttle shuttle) {
@@ -1240,24 +1262,51 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      Ord.forEach(sources, (i, id, exp) ->
-          w.append(i == 0 ? "from " : ", ").append(exp, 0, 0)
-              .append(" as ").append(id, 0, 0));
-      if (filterExp != null) {
-        w.append(" where ").append(filterExp, 0, 0);
+      if (left > op.left || op.right < right) {
+        return w.append("(").append(this, 0, 0).append(")");
+      } else {
+        Ord.forEach(sources, (i, id, exp) ->
+            w.append(i == 0 ? "from " : ", ")
+                .append(id, 0, 0).append(" in ").append(exp, 0, 0));
+        if (filterExp != null) {
+          w.append(" where ").append(filterExp, 0, 0);
+        }
+        if (groupExps != null) {
+          w.append(" group ");
+          Pair.forEachIndexed(groupExps, (i, exp, id) ->
+              w.append(i == 0 ? "" : ", ")
+                  .append(exp, 0, 0)
+                  .append(" as ")
+                  .append(id, 0, 0));
+          if (aggregates != null) {
+            Ord.forEach(aggregates, (aggregate, i) ->
+                w.append(i == 0 ? " compute " : ", ")
+                    .append(aggregate.aggregate, 0, 0)
+                    .append(" of ")
+                    .append(aggregate.argument, 0, 0)
+                    .append(" as ")
+                    .append(aggregate.id, 0, 0));
+          }
+        }
+        if (yieldExp != null) {
+          w.append(" yield ").append(yieldExp, 0, 0);
+        }
+        return w;
       }
-      return w.append(" yield ").append(yieldExp, 0, 0);
     }
 
     /** Creates a copy of this {@code From} with given contents,
      * or this if the contents are the same. */
     public From copy(Map<Ast.Id, Ast.Exp> sources, Ast.Exp filterExp,
-        Ast.Exp yieldExp) {
+        Ast.Exp yieldExp, java.util.List<Pair<Exp, Id>> groupExps,
+        java.util.List<Aggregate> aggregates) {
       return this.sources.equals(sources)
           && Objects.equals(this.filterExp, filterExp)
           && Objects.equals(this.yieldExp, yieldExp)
+          && Objects.equals(this.groupExps, groupExps)
+          && Objects.equals(this.aggregates, aggregates)
           ? this
-          : ast.from(pos, sources, filterExp, yieldExp);
+          : ast.from(pos, sources, filterExp, yieldExp, groupExps, aggregates);
     }
 
   }
@@ -1284,6 +1333,36 @@ public class Ast {
     public Apply copy(Exp fn, Exp arg) {
       return this.fn.equals(fn) && this.arg.equals(arg) ? this
           : new Apply(pos, fn, arg);
+    }
+  }
+
+  /** Call to an aggregate function in a {@code compute} clause.
+   *
+   * <p>For example, in {@code sum of #id e as sumId},
+   * {@code aggregate} is "sum", {@code argument} is "#id e",
+   * and {@code id} is "sumId". */
+  public static class Aggregate extends AstNode {
+    public final Exp aggregate;
+    public final Exp argument;
+    public final Id id;
+
+    public Aggregate(Pos pos, Exp aggregate, Exp argument, Id id) {
+      super(pos, Op.AGGREGATE);
+      this.aggregate = Objects.requireNonNull(aggregate);
+      this.argument = Objects.requireNonNull(argument);
+      this.id = Objects.requireNonNull(id);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(aggregate, 0, 0)
+          .append(" of ")
+          .append(argument, 0, 0)
+          .append(" as ")
+          .append(id.name);
+    }
+
+    public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
   }
 }

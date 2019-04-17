@@ -108,7 +108,9 @@ public enum Op {
   APPLY(" ", 8),
   CASE,
   FROM,
-  IF;
+  AGGREGATE,
+  IF,
+  MAP;
 
   /** Padded name, e.g. " : ". */
   public final String padded;

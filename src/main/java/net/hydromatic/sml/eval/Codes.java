@@ -18,13 +18,18 @@
  */
 package net.hydromatic.sml.eval;
 
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.primitives.Chars;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.compile.BuiltIn;
+import net.hydromatic.sml.compile.Environment;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.util.MapList;
 
@@ -255,6 +260,55 @@ public abstract class Codes {
     Objects.requireNonNull(dataType);
     Objects.requireNonNull(name);
     return (env, argValue) -> ImmutableList.of(name, argValue);
+  }
+
+  public static Code fromGroup(Map<Ast.Id, Code> sources, Code filterCode,
+      List<Code> groupCodes, List<Code> aggregateCodes) {
+    final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
+    final Code keyCode = tuple(groupCodes);
+    return new Code() {
+      @Override public Object eval(EvalEnv env) {
+        final List<Iterable> values = new ArrayList<>();
+        for (Code code : sources.values()) {
+          values.add((Iterable) code.eval(env));
+        }
+        final Object[] currentValues = new Object[sources.size()];
+        final ListMultimap<Object, Object> map = ArrayListMultimap.create();
+        loop(0, values, env, currentValues, map);
+
+        final List<List<Object>> list = new ArrayList<>();
+        for (Map.Entry<Object, List<Object>> entry
+            : Multimaps.asMap(map).entrySet()) {
+          final List<Object> tuple = new ArrayList<>();
+          tuple.addAll((List) entry.getKey());
+          final List<Object> rows = entry.getValue(); // rows in this bucket
+          for (Code aggregateCode : aggregateCodes) {
+            tuple.add(aggregateCode.eval(add(env, "list", rows)));
+          }
+          list.add(tuple);
+        }
+        return list;
+      }
+
+      /** Generates the {@code i}th nested loop of a cartesian product of the
+       * values in {@code iterables}. */
+      void loop(int i, List<Iterable> iterables, EvalEnv env,
+          Object[] currentValues, Multimap<Object, Object> map) {
+        if (i == iterables.size()) {
+          if ((Boolean) filterCode.eval(env)) {
+            map.put(keyCode.eval(env), ImmutableList.copyOf(currentValues));
+          }
+        } else {
+          final String name = ids.get(i).name;
+          final Iterable iterable = iterables.get(i);
+          for (Object o : iterable) {
+            EvalEnv env2 = add(env, name, o);
+            currentValues[i] = o;
+            loop(i + 1, iterables, env2, currentValues, map);
+          }
+        }
+      }
+    };
   }
 
   /** Returns an applicable that returns the {@code slot}th field of a tuple or
@@ -745,6 +799,15 @@ public abstract class Codes {
     final Set<E> set = new LinkedHashSet<>(set1);
     set.removeAll(set0);
     return set;
+  }
+
+  public static Code aggregate(Environment env, Code aggregate, Code argumentCode) {
+    return new Code() {
+      public Object eval(EvalEnv env) {
+        final List list = (List) env.get("list");
+        return 3;
+      }
+    };
   }
 
   /** A code that evaluates expressions and creates a tuple with the results.

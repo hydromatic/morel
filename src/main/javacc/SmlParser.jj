@@ -32,6 +32,7 @@ import net.hydromatic.sml.ast.Ast.*;
 import net.hydromatic.sml.ast.AstBuilder;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.ast.Pos;
+import net.hydromatic.sml.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 
@@ -304,6 +305,8 @@ Exp from() :
   final Map<Id, Exp> sources = new LinkedHashMap<Id, Exp>();
   Exp filterExp = null;
   Exp yieldExp = null;
+  final List<Pair<Exp, Id>> groupExps;
+  final List<Aggregate> aggregates;
 }
 {
   <FROM> { span = Span.of(getPos()); }
@@ -314,12 +317,30 @@ Exp from() :
   [
     <WHERE> filterExp = expression()
   ]
-  [
-    <YIELD> yieldExp = expression()
-  ]
-  {
-    return ast.from(span.end(this), sources, filterExp, yieldExp);
-  }
+  (
+    <GROUP>
+    (
+      groupExps = expressionAsCommaList()
+    |
+      { groupExps = ImmutableList.of(); }
+    )
+    (
+      <COMPUTE> aggregates = aggregateCommaList()
+    |
+      { aggregates = ImmutableList.of(); }
+    )
+    {
+      return ast.from(span.end(this), sources, filterExp, yieldExp, groupExps,
+          aggregates);
+    }
+  |
+    [
+      <YIELD> yieldExp = expression()
+    ]
+    {
+      return ast.from(span.end(this), sources, filterExp, yieldExp, null, null);
+    }
+  )
 }
 
 void fromSource(Map/*<String, Exp>*/ sources) :
@@ -330,6 +351,31 @@ void fromSource(Map/*<String, Exp>*/ sources) :
 {
   id = identifier() <IN> exp = expression() {
     sources.put(id, exp);
+  }
+}
+
+List/*<Aggregate>*/ aggregateCommaList() :
+{
+  final List<Aggregate> list = new ArrayList<Aggregate>();
+  Aggregate e;
+}
+{
+  e = aggregate() { list.add(e); }
+  (
+    <COMMA> e = aggregate() { list.add(e); }
+  )*
+  { return list; }
+}
+
+Aggregate aggregate() :
+{
+  final Exp folder;
+  final Exp argument;
+  final Id id;
+}
+{
+  folder = expression() <OF> argument = expression() <AS> id = identifier() {
+    return ast.aggregate(folder.pos.plus(id.pos), folder, argument, id);
   }
 }
 
@@ -541,6 +587,22 @@ Exp expression() :
 }
 {
   e = expression1() { return e; }
+}
+
+/** List of expressions "e1 as id1, e2 as id2, e3 as id3". */
+List/*<Pair<Exp, Id>>*/ expressionAsCommaList() :
+{
+  final List<Pair<Exp, Id>> list = new ArrayList<Pair<Exp, Id>>();
+  Exp e;
+  Id id;
+}
+{
+  e = expression() <AS> id = identifier() { list.add(Pair.of(e, id)); }
+  (
+    <COMMA>
+    e = expression() <AS> id = identifier() { list.add(Pair.of(e, id)); }
+  )*
+  { return list; }
 }
 
 /** Parses an atomic expression. */
@@ -1079,7 +1141,10 @@ AstNode statementSemicolon() :
 | < VAL: "VAL" >
 
 // The following are relational extensions:
+| < AS: "AS" >
+| < COMPUTE: "COMPUTE" >
 | < FROM: "FROM" >
+| < GROUP: "GROUP" >
 | < WHERE: "WHERE" >
 | < YIELD: "YIELD" >
 }

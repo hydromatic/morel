@@ -121,7 +121,9 @@ License.
       <property name="processJavadoc" value="true"/>
     </module>
     <module name="IllegalImport" />
-    <module name="AvoidStarImport" />
+    <module name="AvoidStarImport">
+      <property name="allowStaticMemberImports" value="true"/>
+    </module>
     <module name="ImportOrder">
       <property name="groups" value="org.apache.calcite,org.apache,au.com.,com.,io.,mondrian.,net.,org.,scala.,/^javax?\./"/>
       <property name="ordered" value="true"/>

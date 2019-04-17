@@ -165,12 +165,9 @@ public abstract class Unifier {
 
     @Override public String toString() {
       final StringBuilder builder = new StringBuilder("[");
-      Ord.forEach(resultMap.entrySet(), (e, i) -> {
-        if (i > 0) {
-          builder.append(", ");
-        }
-        builder.append(e.getValue()).append("/").append(e.getKey());
-      });
+      Pair.forEachIndexed(resultMap, (i, variable, term) ->
+          builder.append(i > 0 ? ", " : "").append(term)
+              .append("/").append(variable));
       return builder.append("]").toString();
     }
 
