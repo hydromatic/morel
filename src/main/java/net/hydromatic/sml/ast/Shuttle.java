@@ -80,6 +80,11 @@ public class Shuttle {
         infixCall.a0.accept(this), infixCall.a1.accept(this));
   }
 
+  public Ast.Exp visit(Ast.PrefixCall prefixCall) {
+    return ast.prefixCall(prefixCall.pos, prefixCall.op,
+        prefixCall.a.accept(this));
+  }
+
   // patterns
 
   protected Ast.Pat visit(Ast.IdPat idPat) {

@@ -116,11 +116,14 @@ public class TypeResolver {
   private TypeMap deduceType_(Environment env, AstNode node,
       TypeSystem typeSystem) {
     final Type boolTerm = typeSystem.primitiveType("bool");
+    final Type intTerm = typeSystem.primitiveType("int");
     final Type boolToBool = typeSystem.fnType(boolTerm, boolTerm);
+    final Type intToInt = typeSystem.fnType(intTerm, intTerm);
     TypeEnv[] typeEnvs = {EmptyTypeEnv.INSTANCE
         .bind("true", toTerm(boolTerm))
         .bind("false", toTerm(boolTerm))
-        .bind("not", toTerm(boolToBool))};
+        .bind("not", toTerm(boolToBool))
+        .bind("abs", toTerm(intToInt))};
     env.forEachType((name, type) ->
         typeEnvs[0] = typeEnvs[0].bind(name, toTerm(type)));
     final TypeEnv typeEnv = typeEnvs[0];
@@ -328,6 +331,9 @@ public class TypeResolver {
     case DIV:
     case MOD:
       return infixOverloaded(env, (Ast.InfixCall) node, v, PrimitiveType.INT);
+
+    case NEGATE:
+      return prefixOverloaded(env, (Ast.PrefixCall) node, v, PrimitiveType.INT);
 
     case CARET:
       return infix(env, (Ast.InfixCall) node, v, PrimitiveType.STRING);
@@ -645,8 +651,23 @@ public class TypeResolver {
     return reg(call, v, term);
   }
 
-  /** Registers an infix operator whose type is the same as its arguments. */
+  /** Registers an infix or prefix operator whose type is the same as its
+   * arguments. */
   private boolean infixOverloaded(TypeEnv env, Ast.InfixCall call,
+      Unifier.Variable v, Type defaultType) {
+    return opOverloaded(env, call, v, defaultType);
+  }
+
+  /** Registers an infix or prefix operator whose type is the same as its
+   * arguments. */
+  private boolean prefixOverloaded(TypeEnv env, Ast.PrefixCall call,
+      Unifier.Variable v, Type defaultType) {
+    return opOverloaded(env, call, v, defaultType);
+  }
+
+  /** Registers an infix or prefix operator whose type is the same as its
+   * arguments. */
+  private boolean opOverloaded(TypeEnv env, Ast.Exp call,
       Unifier.Variable v, Type defaultType) {
     Type[] types = {defaultType};
     call.forEachArg((arg, i) -> {

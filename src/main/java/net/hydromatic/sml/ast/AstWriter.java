@@ -50,6 +50,16 @@ public class AstWriter {
     return this;
   }
 
+  /** Appends a call to an prefix operator. */
+  public AstWriter prefix(int left, Op op, AstNode a, int right) {
+    if (left > op.left || op.right < right) {
+      return append("(").prefix(0, op, a, 0).append(")");
+    }
+    append(op.padded);
+    a.unparse(this, op.right, right);
+    return this;
+  }
+
   /** Appends a call to a binary operator (e.g. "val ... = ..."). */
   public AstWriter binary(String left, AstNode a0, String mid, AstNode a1,
       int right) {

@@ -486,6 +486,9 @@ public class MainTest {
 
     // let
     assertEval("let val x = 1 in x + 2 end", is(3));
+    assertEval("let val x = 1 in ~x end", is(-1));
+    assertEval("let val x = 1 in ~(abs(~x)) end", is(-1));
+
     // let with a tuple pattern
     assertEval("let val (x, y) = (1, 2) in x + y end", is(3));
 

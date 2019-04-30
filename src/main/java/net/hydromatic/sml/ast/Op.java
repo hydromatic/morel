@@ -71,6 +71,7 @@ public enum Op {
   PLUS(" + ", 6),
   MINUS(" - ", 6),
   CARET(" ^ ", 6),
+  NEGATE("~ "),
   CONS(" :: ", 5, false),
   AT(" @ ", 5, false),
   LE(" <= ", 4),

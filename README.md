@@ -75,6 +75,7 @@ Implemented:
 * Tuples and unit, record and list values
 * Patterns (destructuring) in `val` and `case`,
   matching constants, wildcards, lists, records and tuples
+* Basis library functions: `abs`
 
 Not implemented:
 * Type variables (polymorphism)

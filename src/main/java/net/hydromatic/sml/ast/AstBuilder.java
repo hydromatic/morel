@@ -40,6 +40,11 @@ public enum AstBuilder {
     return new Ast.InfixCall(a0.pos.plus(a1.pos), op, a0, a1);
   }
 
+  /** Creates a call to a prefix operator. */
+  public Ast.PrefixCall prefixCall(Pos p, Op op, Ast.Exp a) {
+    return new Ast.PrefixCall(p.plus(a.pos), op, a);
+  }
+
   /** Creates a {@code boolean} literal. */
   public Ast.Literal boolLiteral(Pos p, boolean b) {
     return new Ast.Literal(p, Op.BOOL_LITERAL, b);
@@ -205,6 +210,10 @@ public enum AstBuilder {
 
   public Ast.Exp caret(Ast.Exp a0, Ast.Exp a1) {
     return infix(Op.CARET, a0, a1);
+  }
+
+  public Ast.Exp negate(Pos p, Ast.Exp a) {
+    return prefixCall(p, Op.NEGATE, a);
   }
 
   public Ast.Exp cons(Ast.Exp a0, Ast.Exp a1) {

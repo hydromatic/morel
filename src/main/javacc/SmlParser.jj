@@ -306,6 +306,8 @@ Exp expression7() :
   Exp e2;
 }
 {
+  <TILDE> e = expression7() { return ast.negate(getPos(), e); }
+|
   e = atom()
   (
     <STAR> e2 = atom() {
@@ -881,6 +883,7 @@ AstNode statementSemicolon() :
     | < CARET: "^" >
     | < STAR: "*" >
     | < SLASH: "/" >
+    | < TILDE: "~" >
     | < CONS: "::" >
     | < ELLIPSIS: "..." >
     | < QUOTE: "'" >

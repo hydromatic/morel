@@ -253,12 +253,21 @@ public abstract class Codes {
     return (env, argValue) -> !(Boolean) argValue;
   }
 
+  /** Returns an applicable that returns the absolute value of an int. */
+  public static Applicable abs() {
+    return (env, argValue) -> {
+      final Integer integer = (Integer) argValue;
+      return integer >= 0 ? integer : -integer;
+    };
+  }
+
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
     final EvalEnv env = new EvalEnv();
     env.valueMap.put("true", true);
     env.valueMap.put("false", false);
     env.valueMap.put("not", not());
+    env.valueMap.put("abs", abs());
     return env;
   }
 
@@ -269,6 +278,10 @@ public abstract class Codes {
     final EvalEnv env2 = env.copy();
     env2.valueMap.put(var, value);
     return env2;
+  }
+
+  public static Code negate(Code code) {
+    return env -> -((Integer) code.eval(env));
   }
 
   /** A code that evaluates expressions and creates a tuple with the results.

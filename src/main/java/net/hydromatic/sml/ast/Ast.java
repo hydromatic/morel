@@ -382,6 +382,13 @@ public class Ast {
     }
 
     @Override public abstract Exp accept(Shuttle shuttle);
+
+    /** Returns a list of all arguments. */
+    public final java.util.List<Exp> args() {
+      final ImmutableList.Builder<Exp> args = ImmutableList.builder();
+      forEachArg((exp, value) -> args.add(exp));
+      return args.build();
+    }
   }
 
   /** Parse tree node of an identifier. */
@@ -716,6 +723,28 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, a0, op, a1, right);
+    }
+  }
+
+  /** Call to an prefix operator. */
+  public static class PrefixCall extends Exp {
+    public final Exp a;
+
+    PrefixCall(Pos pos, Op op, Exp a) {
+      super(pos, op);
+      this.a = Objects.requireNonNull(a);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+      action.accept(a, 0);
+    }
+
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.prefix(left, op, a, right);
     }
   }
 

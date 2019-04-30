@@ -256,6 +256,9 @@ public class Compiler {
     case GE:
       return compileInfix(env, (Ast.InfixCall) expression);
 
+    case NEGATE:
+      return compileUnary(env, expression);
+
     default:
       throw new AssertionError("op not handled: " + expression.op);
     }
@@ -330,6 +333,16 @@ public class Compiler {
       return Codes.caret(code0, code1);
     case CONS:
       return Codes.cons(code0, code1);
+    default:
+      throw new AssertionError("unknown op " + call.op);
+    }
+  }
+
+  private Code compileUnary(Environment env, Ast.Exp call) {
+    final Code code0 = compile(env, call.args().get(0));
+    switch (call.op) {
+    case NEGATE:
+      return Codes.negate(code0);
     default:
       throw new AssertionError("unknown op " + call.op);
     }
