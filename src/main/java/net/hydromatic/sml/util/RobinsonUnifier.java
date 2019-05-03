@@ -33,9 +33,7 @@ public class RobinsonUnifier extends Unifier {
   static Map<Variable, Term> compose(Map<Variable, Term> s1,
       Map<Variable, Term> s2) {
     Map<Variable, Term> composed = new HashMap<>(s1);
-    for (Map.Entry<Variable, Term> entry2 : s2.entrySet()) {
-      composed.put(entry2.getKey(), entry2.getValue().apply(s1));
-    }
+    s2.forEach((key, value) -> composed.put(key, value.apply(s1)));
     return composed;
   }
 

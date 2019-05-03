@@ -21,29 +21,29 @@ package net.hydromatic.sml.ast;
 /** Sub-types of {@link AstNode}. */
 public enum Op {
   // identifiers
-  ID("", 99),
-  RECORD_SELECTOR,
+  ID(true),
+  RECORD_SELECTOR(true),
 
   // literals
-  BOOL_LITERAL,
-  CHAR_LITERAL,
-  INT_LITERAL,
-  REAL_LITERAL,
-  STRING_LITERAL,
-  UNIT_LITERAL,
+  BOOL_LITERAL(true),
+  CHAR_LITERAL(true),
+  INT_LITERAL(true),
+  REAL_LITERAL(true),
+  STRING_LITERAL(true),
+  UNIT_LITERAL(true),
 
   // patterns
-  ID_PAT,
+  ID_PAT(true),
   WILDCARD_PAT,
-  TUPLE_PAT,
+  TUPLE_PAT(true),
   RECORD_PAT,
   LIST_PAT,
   CONS_PAT(" :: "),
-  BOOL_LITERAL_PAT,
-  CHAR_LITERAL_PAT,
-  INT_LITERAL_PAT,
-  REAL_LITERAL_PAT,
-  STRING_LITERAL_PAT,
+  BOOL_LITERAL_PAT(true),
+  CHAR_LITERAL_PAT(true),
+  INT_LITERAL_PAT(true),
+  REAL_LITERAL_PAT(true),
+  STRING_LITERAL_PAT(true),
   // annotated pattern "p: t"
   ANNOTATED_PAT(" : "),
 
@@ -51,18 +51,28 @@ public enum Op {
   BAR(" | "),
   FUN_BIND(" and "),
   FUN_MATCH,
+  TY_CON,
+  DATATYPE_DECL,
+  DATATYPE_BIND,
   FUN_DECL,
   VAL_DECL(" = "),
 
   // value constructors
-  TUPLE(" * ", 7),
+  TUPLE(true),
   LIST(" list", 8),
-  RECORD,
+  RECORD(true),
   FN(" -> ", 6, false),
+
+  // types
+  TY_VAR(true),
+  RECORD_TYPE(true),
+  TUPLE_TYPE(" * ", 7),
+  COMPOSITE_TYPE,
+  FUNCTION_TYPE(" -> ", 6, false),
+  NAMED_TYPE(" ", 8),
 
   // annotated expression "e: t"
   ANNOTATED_EXP(" : "),
-  NAMED_TYPE,
 
   TIMES(" * ", 7),
   DIVIDE(" / ", 7),
@@ -102,6 +112,11 @@ public enum Op {
 
   Op() {
     this(null, 0, 0);
+  }
+
+  Op(boolean atom) {
+    this("", 99);
+    assert atom;
   }
 
   Op(String padded) {

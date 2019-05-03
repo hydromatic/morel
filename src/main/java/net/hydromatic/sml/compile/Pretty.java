@@ -95,7 +95,7 @@ class Pretty {
       }
       return buf.append("]");
 
-    case RECORD:
+    case RECORD_TYPE:
       final TypeResolver.RecordType recordType =
           (TypeResolver.RecordType) type;
       //noinspection unchecked

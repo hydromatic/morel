@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 
+import net.hydromatic.sml.util.Ord;
+
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -191,10 +193,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
-      int i = 0;
-      for (Pat arg : args) {
-        action.accept(arg, i++);
-      }
+      Ord.forEach(args, action);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -220,10 +219,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
-      int i = 0;
-      for (Pat arg : args) {
-        action.accept(arg, i++);
-      }
+      Ord.forEach(args, action);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -249,23 +245,19 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
-      int i = 0;
-      for (Pat arg : args.values()) {
-        action.accept(arg, i++);
-      }
+      Ord.forEach(args.values(), action);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      int i = 0;
-      for (Map.Entry<String, Pat> entry : args.entrySet()) {
-        if (i++ > 0) {
+      Ord.forEach(args, (i, k, v) -> {
+        if (i > 0) {
           w.append(", ");
         }
-        w.append(entry.getKey()).append(" = ").append(entry.getValue(), 0, 0);
-      }
+        w.append(k).append(" = ").append(v, 0, 0);
+      });
       if (ellipsis) {
-        if (i++ > 0) {
+        if (!args.isEmpty()) {
           w.append(", ");
         }
         w.append("...");
@@ -342,23 +334,26 @@ public class Ast {
     }
   }
 
-  /** Parse tree for a named type (e.g. "int"). */
+  /** Parse tree for a named type (e.g. "int" or "(int, string) list"). */
   public static class NamedType extends Type {
-    private final String name;
+    public final java.util.List<Type> types;
+    public final String name;
 
     /** Creates a type. */
-    NamedType(Pos pos, String name) {
+    NamedType(Pos pos, ImmutableList<Type> types, String name) {
       super(pos, Op.NAMED_TYPE);
+      this.types = Objects.requireNonNull(types);
       this.name = Objects.requireNonNull(name);
     }
 
     @Override public int hashCode() {
-      return name.hashCode();
+      return Objects.hash(types, name);
     }
 
     @Override public boolean equals(Object obj) {
       return obj == this
           || obj instanceof NamedType
+          && types.equals(((NamedType) obj).types)
           && name.equals(((NamedType) obj).name);
     }
 
@@ -367,7 +362,154 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
+      switch (types.size()) {
+      case 0:
+        return w.append(name);
+      case 1:
+        return w.append(types.get(0), left, op.left)
+            .append(" ").append(name);
+      default:
+        w.append("(");
+        Ord.forEach(types, (type, i) ->
+            w.append(i == 0 ? "" : ", ").append(type, 0, 0));
+        return w.append(") ")
+            .append(name);
+      }
+    }
+  }
+
+  /** Parse tree node of a type variable. */
+  public static class TyVar extends Type {
+    public final String name;
+
+    /** Creates a TyVar. */
+    TyVar(Pos pos, String name) {
+      super(pos, Op.TY_VAR);
+      this.name = Objects.requireNonNull(name);
+    }
+
+    @Override public int hashCode() {
+      return name.hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof TyVar
+          && this.name.equals(((TyVar) o).name);
+    }
+
+    public TyVar accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(name);
+    }
+  }
+
+  /** Parse tree node of a record type. */
+  public static class RecordType extends Type {
+    public final Map<String, Type> fieldTypes;
+
+    /** Creates a TyVar. */
+    RecordType(Pos pos, ImmutableMap<String, Type> fieldTypes) {
+      super(pos, Op.RECORD_TYPE);
+      this.fieldTypes = Objects.requireNonNull(fieldTypes);
+    }
+
+    @Override public int hashCode() {
+      return fieldTypes.hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof RecordType
+          && this.fieldTypes.equals(((RecordType) o).fieldTypes);
+    }
+
+    public RecordType accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("{");
+      final int[] i = {0};
+      fieldTypes.forEach((field, type) ->
+          w.append(i[0]++ > 0 ? ", " : "")
+              .append(field).append(": ").append(type, 0, 0));
+      return w.append("}");
+    }
+  }
+
+  /** Tuple type. */
+  public static class TupleType extends Type {
+    public final java.util.List<Type> types;
+
+    TupleType(Pos pos, ImmutableList<Type> types) {
+      super(pos, Op.TUPLE_TYPE);
+      this.types = Objects.requireNonNull(types);
+    }
+
+    public Type accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      // "*" is non-associative. Elevate both left and right precedence
+      // to force parentheses if the inner expression is also "*".
+      Ord.forEach(types, (arg, i) ->
+          w.append(i == 0 ? "" : " * ")
+              .append(arg, op.left + 1, op.right + 1));
+      return w;
+    }
+  }
+
+  /** Not really a type, just a way for the parser to represent the type
+   * arguments to a type constructor.
+   *
+   * <p>For example, in {@code datatype foo = Pair of (int, string) list},
+   * {@code (int, string)} is briefly represented as a composite type,
+   * then {@code int} and {@code string} becomes the two type parameters to
+   * the {@code list} {@link NamedType}. */
+  public static class CompositeType extends Type {
+    public final java.util.List<Type> types;
+
+    CompositeType(Pos pos, ImmutableList<Type> types) {
+      super(pos, Op.TUPLE_TYPE);
+      this.types = Objects.requireNonNull(types);
+    }
+
+    public Type accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("(");
+      Ord.forEach(types, (arg, i) ->
+          w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
+      return w.append(")");
+    }
+  }
+
+  /** Function type. */
+  public static class FunctionType extends Type {
+    public final Type paramType;
+    public final Type resultType;
+
+    FunctionType(Pos pos, Type paramType, Type resultType) {
+      super(pos, Op.FUNCTION_TYPE);
+      this.paramType = Objects.requireNonNull(paramType);
+      this.resultType = Objects.requireNonNull(resultType);
+    }
+
+    public Type accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(paramType, left, op.left)
+          .append(" -> ")
+          .append(resultType, op.right, right);
     }
   }
 
@@ -502,6 +644,116 @@ public class Ast {
     @Override public abstract Decl accept(Shuttle shuttle);
   }
 
+  /** Parse tree node of a datatype declaration. */
+  public static class DatatypeDecl extends Decl {
+    public final java.util.List<DatatypeBind> binds;
+
+    DatatypeDecl(Pos pos, ImmutableList<DatatypeBind> binds) {
+      super(pos, Op.DATATYPE_DECL);
+      this.binds = Objects.requireNonNull(binds);
+      Preconditions.checkArgument(!this.binds.isEmpty());
+    }
+
+    @Override public int hashCode() {
+      return Objects.hash(binds);
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof DatatypeDecl
+          && binds.equals(((DatatypeDecl) o).binds);
+    }
+
+    public DatatypeDecl accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.appendAll(binds, "datatype ", " and ", "");
+    }
+  }
+
+  /** Parse tree node of a datatype binding.
+   *
+   * <p>Example: the datatype declaration
+   * {@code datatype 'a x = X and y = Y}
+   * consists of type bindings {@code 'a x = X} and {@code y = Y}. */
+  public static class DatatypeBind extends AstNode {
+    public final java.util.List<TyVar> tyVars;
+    public final Id name;
+    public final java.util.List<TyCon> tyCons;
+
+    DatatypeBind(Pos pos, ImmutableList<TyVar> tyVars, Id name,
+        ImmutableList<TyCon> tyCons) {
+      super(pos, Op.DATATYPE_DECL);
+      this.tyVars = Objects.requireNonNull(tyVars);
+      this.name = Objects.requireNonNull(name);
+      this.tyCons = Objects.requireNonNull(tyCons);
+      Preconditions.checkArgument(!this.tyCons.isEmpty());
+    }
+
+    @Override public int hashCode() {
+      return Objects.hash(tyVars, tyCons);
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof DatatypeBind
+          && name.equals(((DatatypeBind) o).name)
+          && tyVars.equals(((DatatypeBind) o).tyVars)
+          && tyCons.equals(((DatatypeBind) o).tyCons);
+    }
+
+    public DatatypeBind accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      switch (tyVars.size()) {
+      case 0:
+        break;
+      case 1:
+        w.append(tyVars.get(0), 0, 0).append(" ");
+        break;
+      default:
+        w.appendAll(tyVars, "(", ", ", ") ");
+      }
+      return w.append(name.name)
+          .appendAll(tyCons, " = ", " | ", "");
+    }
+  }
+
+  /** Type constructor.
+   *
+   * <p>For example, in the {@link DatatypeDecl datatype declaration}
+   * {@code datatype 'a option = NIL | SOME of 'a}, "NIL" and "SOME of 'a"
+   * are both type constructors.
+   */
+  public static class TyCon extends AstNode {
+    public final Id id;
+    public final Type type;
+
+    TyCon(Pos pos, Id id, Type type) {
+      super(pos, Op.TY_CON);
+      this.id = Objects.requireNonNull(id);
+      this.type = type; // optional
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      if (type != null) {
+        return w.append(id, left, op.left)
+            .append(" of ")
+            .append(type, op.right, right);
+      } else {
+        return w.append(id, left, right);
+      }
+    }
+
+    public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+  }
+
   /** Parse tree node of a value declaration. */
   public static class ValDecl extends Decl {
     public final java.util.List<ValBind> valBinds;
@@ -570,7 +822,7 @@ public class Ast {
   /** One of the branches (separated by 'and') in a 'fun' function
    * declaration. */
   public static class FunBind extends AstNode {
-    public final ImmutableList<FunMatch> matchList;
+    public final java.util.List<FunMatch> matchList;
     public final String name;
 
     FunBind(Pos pos, ImmutableList<FunMatch> matchList) {
@@ -594,7 +846,7 @@ public class Ast {
   /** One of the branches (separated by '|') in a 'fun' function declaration. */
   public static class FunMatch extends AstNode {
     public final String name;
-    public final ImmutableList<Pat> patList;
+    public final java.util.List<Pat> patList;
     public final Exp exp;
 
     FunMatch(Pos pos, String name, ImmutableList<Pat> patList, Exp exp) {
@@ -609,8 +861,11 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append(name).appendAll(patList, " ", " ", " = ")
-          .append(exp, 0, right);
+      w.append(name);
+      for (Pat pat : patList) {
+        w.append(" ").append(pat, Op.APPLY.left, Op.APPLY.right);
+      }
+      return w.append(" = ").append(exp, 0, right);
     }
   }
 
@@ -624,10 +879,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Exp> action) {
-      int i = 0;
-      for (Exp arg : args) {
-        action.accept(arg, i++);
-      }
+      Ord.forEach(args, action);
     }
 
     public Exp accept(Shuttle shuttle) {
@@ -651,10 +903,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Exp> action) {
-      int i = 0;
-      for (Exp arg : args) {
-        action.accept(arg, i++);
-      }
+      Ord.forEach(args, action);
     }
 
     public List accept(Shuttle shuttle) {
@@ -678,10 +927,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Exp> action) {
-      int i = 0;
-      for (Exp arg : args.values()) {
-        action.accept(arg, i++);
-      }
+      Ord.forEach(args.values(), action);
     }
 
     public Exp accept(Shuttle shuttle) {
@@ -690,13 +936,12 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      int i = 0;
-      for (Map.Entry<String, Exp> entry : args.entrySet()) {
-        if (i++ > 0) {
+      Ord.forEach(args, (i, k, v) -> {
+        if (i > 0) {
           w.append(", ");
         }
-        w.append(entry.getKey()).append(" = ").append(entry.getValue(), 0, 0);
-      }
+        w.append(k).append(" = ").append(v, 0, 0);
+      });
       return w.append("}");
     }
   }
@@ -853,11 +1098,7 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      if (left > op.left || op.right < right) {
-        return w.append("(").append(this, 0, 0).append(")");
-      } else {
-        return w.append("fn ").appendAll(matchList, 0, Op.BAR, right);
-      }
+      return w.append("fn ").appendAll(matchList, 0, Op.BAR, right);
     }
   }
 
@@ -877,12 +1118,8 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      if (left > op.left || op.right < right) {
-        return w.append("(").append(this, 0, 0).append(")");
-      } else {
-        return w.append("case ").append(exp, 0, 0).append(" of ")
-            .appendAll(matchList, left, Op.BAR, right);
-      }
+      return w.append("case ").append(exp, 0, 0).append(" of ")
+          .appendAll(matchList, left, Op.BAR, right);
     }
   }
 
@@ -917,21 +1154,13 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      if (left > op.left || op.right < right) {
-        return w.append("(").append(this, 0, 0).append(")");
-      } else {
-        int i = 0;
-        for (Map.Entry<Id, Exp> entry : sources.entrySet()) {
-          final Exp exp = entry.getValue();
-          final Id id = entry.getKey();
-          w.append(i++ == 0 ? "from " : ", ").append(exp, 0, 0)
-              .append(" as ").append(id, 0, 0);
-        }
-        if (filterExp != null) {
-          w.append(" where ").append(filterExp, 0, 0);
-        }
-        return w.append(" yield ").append(yieldExp, 0, 0);
+      Ord.forEach(sources, (i, id, exp) ->
+          w.append(i == 0 ? "from " : ", ").append(exp, 0, 0)
+              .append(" as ").append(id, 0, 0));
+      if (filterExp != null) {
+        w.append(" where ").append(filterExp, 0, 0);
       }
+      return w.append(" yield ").append(yieldExp, 0, 0);
     }
   }
 

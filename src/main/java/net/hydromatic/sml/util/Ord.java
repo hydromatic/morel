@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.RandomAccess;
+import java.util.function.BiConsumer;
+import java.util.function.ObjIntConsumer;
 
 /**
  * Pair of an element and an ordinal.
@@ -92,6 +94,28 @@ public class Ord<E> implements Map.Entry<Integer, E> {
     return elements instanceof RandomAccess
         ? new OrdRandomAccessList<>(elements)
         : new OrdList<>(elements);
+  }
+
+  /**
+   * Performs the given action for each element of the {@code Iterable}.
+   */
+  public static <E> void forEach(final Iterable<E> iterable,
+      ObjIntConsumer<E> consumer) {
+    int i = 0;
+    for (E e : iterable) {
+      consumer.accept(e, i++);
+    }
+  }
+
+  /**
+   * Performs the given action for each entry of a {@code Map}.
+   */
+  public static <K, V> void forEach(final Map<K, V> map,
+      IntObjObjConsumer<K, V> consumer) {
+    int i = 0;
+    for (Map.Entry<K, V> e : map.entrySet()) {
+      consumer.accept(i++, e.getKey(), e.getValue());
+    }
   }
 
   /**
@@ -188,6 +212,20 @@ public class Ord<E> implements Map.Entry<Integer, E> {
     @Override public int size() {
       return elements.length;
     }
+  }
+
+  /** Consumer that receives an ordinal, a key, and a value.
+   *
+   * <p>Analogous to {@link BiConsumer}, but with an extra ordinal.
+   *
+   * @see #forEach(Map, IntObjObjConsumer)
+   *
+   * @param <K> Key type
+   * @param <V> Value type
+   */
+  @FunctionalInterface
+  public interface IntObjObjConsumer<K, V> {
+    void accept(int i, K key, V value);
   }
 }
 

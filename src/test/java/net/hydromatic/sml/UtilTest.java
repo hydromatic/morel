@@ -18,6 +18,7 @@
  */
 package net.hydromatic.sml;
 
+import net.hydromatic.sml.util.Ord;
 import net.hydromatic.sml.util.TailList;
 
 import org.junit.Test;
@@ -68,6 +69,14 @@ public class UtilTest {
     assertThat(tailList.isEmpty(), is(true));
     assertThat(list.size(), is(2));
     assertThat(list.isEmpty(), is(false));
+  }
+
+  @Test public void testOrd() {
+    final List<String> abc = Arrays.asList("a", "b", "c");
+    final StringBuilder buf = new StringBuilder();
+    Ord.forEach(abc, (e, i) ->
+        buf.append(i).append("#").append(e).append(";"));
+    assertThat(buf.toString(), is("0#a;1#b;2#c;"));
   }
 }
 

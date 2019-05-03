@@ -718,15 +718,15 @@ public class TypeResolver {
     switch (type.op()) {
     case ID:
       return toTerm((PrimitiveType) type);
-    case FN:
+    case FUNCTION_TYPE:
       final FnType fnType = (FnType) type;
       return unifier.apply(FN_TY_CON, toTerm(fnType.paramType),
           toTerm(fnType.resultType));
-    case TIMES:
+    case TUPLE_TYPE:
       final TupleType tupleType = (TupleType) type;
       return unifier.apply(FN_TY_CON, tupleType.argTypes.stream()
           .map(this::toTerm).collect(Collectors.toList()));
-    case RECORD:
+    case RECORD_TYPE:
       final RecordType recordType = (RecordType) type;
       return unifier.apply(recordOp((NavigableSet) recordType.argNameTypes.keySet()),
           recordType.argNameTypes.values().stream()
@@ -876,7 +876,7 @@ public class TypeResolver {
     /** Creates a function type. */
     Type fnType(Type paramType, Type resultType) {
       final String description =
-          unparseList(new StringBuilder(), Op.FN, 0, 0,
+          unparseList(new StringBuilder(), Op.FUNCTION_TYPE, 0, 0,
               Arrays.asList(paramType, resultType)).toString();
       return map.computeIfAbsent(description,
           d -> new FnType(d, paramType, resultType));
@@ -938,18 +938,18 @@ public class TypeResolver {
 
     private static StringBuilder unparseList(StringBuilder builder, Op op,
         int left, int right, List<? extends Type> argTypes) {
-      for (Ord<? extends Type> argType : Ord.zip(argTypes)) {
-        if (argType.i == 0) {
-          unparse(builder, argType.e, left, op.left);
+      Ord.forEach(argTypes, (e, i) -> {
+        if (i == 0) {
+          unparse(builder, e, left, op.left);
         } else {
           builder.append(op.padded);
-          if (argType.i < argTypes.size() - 1) {
-            unparse(builder, argType.e, op.right, op.left);
+          if (i < argTypes.size() - 1) {
+            unparse(builder, e, op.right, op.left);
           } else {
-            unparse(builder, argType.e, op.right, right);
+            unparse(builder, e, op.right, right);
           }
         }
-      }
+      });
       return builder;
     }
 
@@ -989,7 +989,7 @@ public class TypeResolver {
     public final Type resultType;
 
     private FnType(String description, Type paramType, Type resultType) {
-      super(Op.FN, description);
+      super(Op.FUNCTION_TYPE, description);
       this.paramType = paramType;
       this.resultType = resultType;
     }
@@ -1000,7 +1000,7 @@ public class TypeResolver {
     public final List<Type> argTypes;
 
     private TupleType(String description, ImmutableList<Type> argTypes) {
-      super(Op.TUPLE, description);
+      super(Op.TUPLE_TYPE, description);
       this.argTypes = Objects.requireNonNull(argTypes);
     }
   }
@@ -1021,7 +1021,7 @@ public class TypeResolver {
 
     private RecordType(String description,
         ImmutableSortedMap<String, Type> argNameTypes) {
-      super(Op.RECORD, description);
+      super(Op.RECORD_TYPE, description);
       this.argNameTypes = Objects.requireNonNull(argNameTypes);
       Preconditions.checkArgument(argNameTypes.comparator() == ORDERING);
     }

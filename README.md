@@ -72,15 +72,15 @@ Implemented:
 * `if`
 * `case`
 * Primitive, list, tuple and record types
+* Type variables (polymorphism)
+* Enumerated types (`datatype`)
 * Tuples and unit, record and list values
 * Patterns (destructuring) in `val` and `case`,
   matching constants, wildcards, lists, records and tuples
 * Basis library functions: `abs`
 
 Not implemented:
-* Type variables (polymorphism)
 * `type`
-* `datatype`
 * `local`
 * `raise`, `handle`
 * `exception`

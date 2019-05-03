@@ -44,9 +44,9 @@ public class AstWriter {
     if (left > op.left || op.right < right) {
       return append("(").infix(0, a0, op, a1, 0).append(")");
     }
-    a0.unparse(this, left, op.left);
+    append(a0, left, op.left);
     append(op.padded);
-    a1.unparse(this, op.right, right);
+    append(a1, op.right, right);
     return this;
   }
 
@@ -83,7 +83,14 @@ public class AstWriter {
 
   /** Appends a parse tree node. */
   public AstWriter append(AstNode node, int left, int right) {
-    return node.unparse(this, left, right);
+    if (left > node.op.left || node.op.right < right) {
+      append("(");
+      node.unparse(this, 0, 0);
+      append(")");
+    } else {
+      node.unparse(this, left, right);
+    }
+    return this;
   }
 
   /** Appends a list of parse tree nodes. */
@@ -113,15 +120,26 @@ public class AstWriter {
    * prefix and suffix: {@code start node0 sep node1 ... sep nodeN end}. */
   public AstWriter appendAll(Iterable<? extends AstNode> list, String start,
       String sep, String end) {
-    append(start);
+    return appendAll(list, start, sep, end, "");
+  }
+
+  /** Appends a list of parse tree nodes separated by {@code sep}, and also with
+   * prefix and suffix: {@code start node0 sep node1 ... sep nodeN end}. */
+  public AstWriter appendAll(Iterable<? extends AstNode> list, String start,
+      String sep, String end, String empty) {
+    String s = start;
     int i = 0;
     for (AstNode node : list) {
-      if (i++ > 0) {
-        append(sep);
-      }
+      ++i;
+      append(s);
+      s = sep;
       append(node, 0, 0);
     }
-    append(end);
+    if (i == 0 && empty != null) {
+      append(empty);
+    } else {
+      append(end);
+    }
     return this;
   }
 }

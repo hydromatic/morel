@@ -37,9 +37,7 @@ public class Shuttle {
 
   private <K, E extends AstNode> Map<K, E> visitMap(Map<K, E> nodes) {
     final Map<K, E> map = new LinkedHashMap<>();
-    for (Map.Entry<K, E> entry : nodes.entrySet()) {
-      map.put(entry.getKey(), (E) entry.getValue().accept(this));
-    }
+    nodes.forEach((k, v) -> map.put(k, (E) v.accept(this)));
     return map;
   }
 
@@ -160,6 +158,10 @@ public class Shuttle {
     return namedType; // leaf
   }
 
+  protected Ast.TyVar visit(Ast.TyVar tyVar) {
+    return tyVar; // leaf
+  }
+
   // declarations
 
   protected Ast.Decl visit(Ast.FunDecl funDecl) {
@@ -185,6 +187,38 @@ public class Shuttle {
 
   public Ast.Exp visit(Ast.From from) {
     return ast.from(from.pos, from.sources, from.filterExp, from.yieldExp);
+  }
+
+  public Ast.DatatypeDecl visit(Ast.DatatypeDecl datatypeDecl) {
+    return ast.datatypeDecl(datatypeDecl.pos, visitList(datatypeDecl.binds));
+  }
+
+  public Ast.DatatypeBind visit(Ast.DatatypeBind datatypeBind) {
+    return ast.datatypeBind(datatypeBind.pos, datatypeBind.name.accept(this),
+        visitList(datatypeBind.tyVars), visitList(datatypeBind.tyCons));
+  }
+
+  public AstNode visit(Ast.TyCon tyCon) {
+    return ast.typeConstructor(tyCon.pos, tyCon.id.accept(this),
+        tyCon.type.accept(this));
+  }
+
+  public Ast.RecordType visit(Ast.RecordType recordType) {
+    return ast.recordType(recordType.pos, visitMap(recordType.fieldTypes));
+  }
+
+  public Ast.Type visit(Ast.TupleType tupleType) {
+    return ast.tupleType(tupleType.pos, visitList(tupleType.types));
+  }
+
+  public Ast.Type visit(Ast.FunctionType functionType) {
+    return ast.functionType(functionType.pos, functionType.paramType,
+        functionType.resultType);
+  }
+
+  public Ast.Type visit(Ast.CompositeType compositeType) {
+    return ast.compositeType(compositeType.pos,
+        visitList(compositeType.types));
   }
 }
 

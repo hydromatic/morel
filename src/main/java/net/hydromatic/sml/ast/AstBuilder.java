@@ -25,7 +25,9 @@ import com.google.common.collect.ImmutableSortedMap;
 import net.hydromatic.sml.eval.Unit;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 /** Builds parse tree nodes. */
 public enum AstBuilder {
@@ -79,12 +81,21 @@ public enum AstBuilder {
     return new Ast.Id(pos, name);
   }
 
+  public Ast.TyVar tyVar(Pos pos, String name) {
+    return new Ast.TyVar(pos, name);
+  }
+
+  public Ast.RecordType recordType(Pos pos, Map<String, Ast.Type> fieldTypes) {
+    return new Ast.RecordType(pos, ImmutableMap.copyOf(fieldTypes));
+  }
+
   public Ast.RecordSelector recordSelector(Pos pos, String name) {
     return new Ast.RecordSelector(pos, name);
   }
 
-  public Ast.Type namedType(Pos pos, String name) {
-    return new Ast.NamedType(pos, name);
+  public Ast.Type namedType(Pos pos, Iterable<? extends Ast.Type> types,
+      String name) {
+    return new Ast.NamedType(pos, ImmutableList.copyOf(types), name);
   }
 
   public Ast.Pat idPat(Pos pos, String name) {
@@ -220,6 +231,10 @@ public enum AstBuilder {
     return infix(Op.CONS, a0, a1);
   }
 
+  public Ast.Exp foldCons(List<Ast.Exp> list) {
+    return foldRight(list, this::cons);
+  }
+
   public Ast.LetExp let(Pos pos, Iterable<? extends Ast.Decl> decls,
       Ast.Exp exp) {
     return new Ast.LetExp(pos, ImmutableList.copyOf(decls), exp);
@@ -295,6 +310,47 @@ public enum AstBuilder {
 
   public Ast.Exp infixCall(Pos pos, Op op, Ast.Exp a0, Ast.Exp a1) {
     return new Ast.InfixCall(pos, op, a0, a1);
+  }
+
+  public Ast.DatatypeDecl datatypeDecl(Pos pos,
+      Iterable<Ast.DatatypeBind> binds) {
+    return new Ast.DatatypeDecl(pos, ImmutableList.copyOf(binds));
+  }
+
+  public Ast.DatatypeBind datatypeBind(Pos pos, Ast.Id name,
+      Iterable<Ast.TyVar> tyVars, Iterable<Ast.TyCon> tyCons) {
+    return new Ast.DatatypeBind(pos, ImmutableList.copyOf(tyVars), name,
+        ImmutableList.copyOf(tyCons));
+  }
+
+  public Ast.TyCon typeConstructor(Pos pos, Ast.Id id, Ast.Type type) {
+    return new Ast.TyCon(pos, id, type);
+  }
+
+  public Ast.Type tupleType(Pos pos, Iterable<Ast.Type> types) {
+    return new Ast.TupleType(pos, ImmutableList.copyOf(types));
+  }
+
+  public Ast.Type compositeType(Pos pos, Iterable<Ast.Type> types) {
+    return new Ast.CompositeType(pos, ImmutableList.copyOf(types));
+  }
+
+  public Ast.FunctionType functionType(Pos pos, Ast.Type fromType,
+      Ast.Type toType) {
+    return new Ast.FunctionType(pos, fromType, toType);
+  }
+
+  public Ast.Type foldFunctionType(List<Ast.Type> types) {
+    return foldRight(types, (t1,  t2) ->
+        functionType(t1.pos.plus(t2.pos), t1, t2));
+  }
+
+  private <E> E foldRight(List<E> list, BiFunction<E, E, E> fold) {
+    E e = list.get(list.size() - 1);
+    for (int i = list.size() - 2; i >= 0; i--) {
+      e = fold.apply(list.get(i), e);
+    }
+    return e;
   }
 }
 

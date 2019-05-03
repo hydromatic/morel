@@ -239,6 +239,48 @@ public class MainTest {
     assertParseDecl("fun plus x y = x + y",
         isAst(Ast.FunDecl.class, "fun plus x y = x + y"));
 
+    assertParseDecl("datatype 'a option = NONE | SOME of 'a",
+        isAst(Ast.DatatypeDecl.class,
+            "datatype 'a option = NONE | SOME of 'a"));
+
+    assertParseDecl("datatype color = RED | GREEN | BLUE",
+        isAst(Ast.DatatypeDecl.class, "datatype color = RED | GREEN | BLUE"));
+    assertParseDecl(""
+            + "datatype 'a tree = Empty | Node of 'a * 'a forest\n"
+            + "and      'a forest = Nil | Cons of 'a tree * 'a forest",
+        isAst(Ast.DatatypeDecl.class, "datatype 'a tree = Empty"
+            + " | Node of 'a * 'a forest "
+            + "and 'a forest = Nil"
+            + " | Cons of 'a tree * 'a forest"));
+
+    final String ml = "datatype ('a, 'b) choice ="
+        + " NEITHER"
+        + " | LEFT of 'a"
+        + " | RIGHT of 'b"
+        + " | BOTH of {a: 'a, b: 'b}";
+    assertParseSame(ml);
+
+    // -> is right-associative
+    assertParseSame("datatype x = X of int -> int -> int");
+    assertParseDecl("datatype x = X of (int -> int) -> int",
+        isAst(Ast.DatatypeDecl.class, "datatype x = X of (int -> int) -> int"));
+    assertParseDecl("datatype x = X of int -> (int -> int)",
+        isAst(Ast.DatatypeDecl.class, "datatype x = X of int -> int -> int"));
+
+    assertParseDecl("datatype x = X of int * int list",
+        isAst(Ast.DatatypeDecl.class, "datatype x = X of int * int list"));
+    assertParseDecl("datatype x = X of int * (int list)",
+        isAst(Ast.DatatypeDecl.class, "datatype x = X of int * int list"));
+    assertParseDecl("datatype x = X of (int * int) list",
+        isAst(Ast.DatatypeDecl.class, "datatype x = X of (int * int) list"));
+    assertParseDecl("datatype x = X of (int, int) pair",
+        isAst(Ast.DatatypeDecl.class, "datatype x = X of (int, int) pair"));
+
+    // "*" is non-associative; parentheses cannot be removed
+    assertParseSame("datatype ('a, 'b, 'c) foo = Triple of 'a * 'b * 'c");
+    assertParseSame("datatype ('a, 'b, 'c) foo = Triple of 'a * ('b * 'c)");
+    assertParseSame("datatype ('a, 'b, 'c) foo = Triple of ('a * 'b) * 'c");
+
     // parentheses creating left precedence, which is the natural precedence for
     // '+', can be removed
     assertStmt("((1 + 2) + 3) + 4",
@@ -687,6 +729,9 @@ public class MainTest {
   @Test public void testList() {
     assertType("[1]", is("int list"));
     assertType("[[1]]", is("int list list"));
+  }
+
+  @Test public void testTodo() {
     assertType("[(1, true), (2, false)]", is("(int * bool) list"));
     assertType("1 :: [2]", is("int list"));
     assertType("1 :: [2, 3]", is("int list"));
@@ -762,7 +807,7 @@ public class MainTest {
   /** As {@link #testFun} but uses a multi-clause function. */
   @Test public void testFun3() {
     final String ml = "let\n"
-        + "  fun fact 1 = 1 | fact n = n * (fact (n - 1))\n"
+        + "  fun fact 1 = 1 | fact n = n * fact (n - 1)\n"
         + "in\n"
         + "  fact 5\n"
         + "end";
@@ -787,7 +832,7 @@ public class MainTest {
         + "in\n"
         + "  f\n"
         + "end";
-    assertType(ml, is("({a:int, b:int, c:int}) -> int"));
+    assertType(ml, is("{a:int, b:int, c:int} -> int"));
     final String ml2 = "let\n"
         + "  fun f {a=x,b=1,...} = x\n"
         + "    | f {b=y,c=2,...} = y\n"
@@ -796,6 +841,15 @@ public class MainTest {
         + "  f {a=1,b=2,c=3}\n"
         + "end";
     assertEval(ml2,  is(6));
+  }
+
+  @Test public void testDatatype() {
+    final String ml = "let"
+        + " datatype 'a tree = NODE of 'a tree * 'a tree | LEAF of 'a "
+        + "in"
+        + " NODE (LEAF 1, NODE (LEAF 2, LEAF 3)) "
+        + "end";
+    assertParseSame(ml);
   }
 
   @Test public void testFrom() {
@@ -859,8 +913,8 @@ public class MainTest {
         + "  from emps as e, depts as d where (#deptno e) = (#deptno d)\n"
         + "end";
     assertType(ml,
-        is("({d:{deptno:int, name:string},"
-            + " e:{deptno:int, id:int, name:string}}) list"));
+        is("{d:{deptno:int, name:string},"
+            + " e:{deptno:int, id:int, name:string}} list"));
     final List eRow = Arrays.asList(10, "Sales");
     final List bRow = Arrays.asList(10, 100, "Fred");
     assertEval(ml,

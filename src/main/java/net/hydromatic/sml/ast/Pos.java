@@ -25,6 +25,7 @@ import java.util.AbstractList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
+import javax.annotation.Nonnull;
 
 /** Position of a parse-tree node. */
 public class Pos {
@@ -149,6 +150,15 @@ public class Pos {
 
   public Pos plus(Pos pos) {
     return new Pos(startLine, startColumn, pos.endLine, pos.endColumn);
+  }
+
+  public Pos plusAll(Iterable<Pos> poses) {
+    return sum(poses, startLine, startColumn, endLine, endColumn);
+  }
+
+  public Pos plusAll(@Nonnull List<? extends AstNode> nodes) {
+    //noinspection StaticPseudoFunctionalStyleMethod,ConstantConditions
+    return plusAll(Lists.transform(nodes, (AstNode node) -> node.pos));
   }
 }
 

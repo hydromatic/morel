@@ -150,12 +150,12 @@ public abstract class Unifier {
 
     @Override public String toString() {
       final StringBuilder builder = new StringBuilder("[");
-      for (Ord<Map.Entry<Variable, Term>> e : Ord.zip(resultMap.entrySet())) {
-        if (e.i > 0) {
+      Ord.forEach(resultMap.entrySet(), (e, i) -> {
+        if (i > 0) {
           builder.append(", ");
         }
-        builder.append(e.e.getValue()).append("/").append(e.e.getKey());
-      }
+        builder.append(e.getValue()).append("/").append(e.getKey());
+      });
       return builder.append("]").toString();
     }
 
@@ -184,9 +184,7 @@ public abstract class Unifier {
       }
       final ImmutableMap.Builder<Variable, Term> builder =
           ImmutableMap.builder();
-      for (Map.Entry<Variable, Term> entry : resultMap.entrySet()) {
-        builder.put(entry.getKey(), resolve(entry.getValue()));
-      }
+      resultMap.forEach((key, value) -> builder.put(key, resolve(value)));
       return new Substitution(builder.build());
     }
   }
