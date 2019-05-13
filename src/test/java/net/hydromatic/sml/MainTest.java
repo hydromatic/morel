@@ -102,7 +102,13 @@ public class MainTest {
   /** Checks that an expression can be parsed and returns the identical
    * expression when unparsed. */
   private void assertParseSame(String ml) {
-    assertStmt(ml, isAst(AstNode.class, ml));
+    assertParse(ml, ml.replaceAll("[\n ]+", " "));
+  }
+
+  /** Checks that an expression can be parsed and returns the given string when
+   * unparsed. */
+  private void assertParse(String ml, String expected) {
+    assertStmt(ml, isAst(AstNode.class, expected));
   }
 
   /** Matches a literal by value. */
@@ -121,15 +127,11 @@ public class MainTest {
   /** Matches an AST node by its string representation. */
   private static <T extends AstNode> Matcher<T> isAst(Class<? extends T> clazz,
       String expected) {
-    return new TypeSafeMatcher<T>() {
+    return new CustomTypeSafeMatcher<T>("ast with value " + expected) {
       protected boolean matchesSafely(T t) {
         assertThat(clazz.isInstance(t), is(true));
         final String s = Ast.toString(t);
         return s.equals(expected) && s.equals(t.toString());
-      }
-
-      public void describeTo(Description description) {
-        description.appendText("ast with value " + expected);
       }
     };
   }
@@ -139,9 +141,9 @@ public class MainTest {
     withParser(ml, parser -> {
       try {
         final Ast.Exp expression = parser.expression();
-        final TypeResolver.TypeMap typeMap =
+        final TypeResolver.Resolved<Ast.Exp> resolved =
             Compiler.validateExpression(expression);
-        action.accept(expression, typeMap);
+        action.accept(resolved.node, resolved.typeMap);
       } catch (ParseException e) {
         throw new RuntimeException(e);
       }
@@ -170,14 +172,13 @@ public class MainTest {
 
   private void assertEval(String ml, Matcher<Object> matcher) {
     try {
-      final Ast.Exp expression0 =
-          new SmlParserImpl(new StringReader(ml)).expression();
-      final Ast.Exp expression = (Ast.Exp) TypeResolver.rewrite(expression0);
+      final Ast.Exp e = new SmlParserImpl(new StringReader(ml)).expression();
       final TypeSystem typeSystem = new TypeSystem();
       final Environment env = Environments.empty();
-      final TypeResolver.TypeMap typeMap =
-          TypeResolver.deduceType(env, expression, typeSystem);
-      final Code code = new Compiler(typeMap).compile(env, expression);
+      final TypeResolver.Resolved<Ast.Exp> resolved =
+          TypeResolver.deduceType(env, e, typeSystem);
+      final Code code =
+          new Compiler(resolved.typeMap).compile(env, resolved.node);
       final EvalEnv evalEnv = Codes.emptyEnv();
       final Object value = code.eval(evalEnv);
       assertThat(value, matcher);
@@ -284,23 +285,17 @@ public class MainTest {
 
     // parentheses creating left precedence, which is the natural precedence for
     // '+', can be removed
-    assertStmt("((1 + 2) + 3) + 4",
-        isAst(AstNode.class, "1 + 2 + 3 + 4"));
+    assertParse("((1 + 2) + 3) + 4", "1 + 2 + 3 + 4");
 
     // parentheses creating right precedence can not be removed
-    assertStmt("1 + (2 + (3 + (4)))",
-        isAst(AstNode.class, "1 + (2 + (3 + 4))"));
+    assertParse("1 + (2 + (3 + (4)))", "1 + (2 + (3 + 4))");
 
-    assertStmt("1 + (2 + (3 + 4)) = 5 + 5",
-        isAst(AstNode.class, "1 + (2 + (3 + 4)) = 5 + 5"));
+    assertParse("1 + (2 + (3 + 4)) = 5 + 5", "1 + (2 + (3 + 4)) = 5 + 5");
 
     // :: is right-associative
-    assertStmt("1 :: 2 :: 3 :: []",
-        isAst(AstNode.class, "1 :: 2 :: 3 :: []"));
-    assertStmt("((1 :: 2) :: 3) :: []",
-        isAst(AstNode.class, "((1 :: 2) :: 3) :: []"));
-    assertStmt("1 :: (2 :: (3 :: []))",
-        isAst(AstNode.class, "1 :: 2 :: 3 :: []"));
+    assertParse("1 :: 2 :: 3 :: []", "1 :: 2 :: 3 :: []");
+    assertParse("((1 :: 2) :: 3) :: []", "((1 :: 2) :: 3) :: []");
+    assertParse("1 :: (2 :: (3 :: []))", "1 :: 2 :: 3 :: []");
     assertParseSame("1 + 2 :: 3 + 4 * 5 :: 6");
 
     assertParseSame("(1 + 2, 3, true, (5, 6), 7 = 8)");
@@ -326,8 +321,8 @@ public class MainTest {
     assertParseSame("case 1 of 0 => \"zero\" | _ => \"nonzero\"");
     assertParseSame("case {a = 1, b = 2} of {a = 1, ...} => 1");
     assertParseSame("case {a = 1, b = 2} of {...} => 1");
-    assertStmt("case {a = 1, b = 2} of {..., a = 3} => 1",
-        isAst(AstNode.class, "case {a = 1, b = 2} of {a = 3, ...} => 1"));
+    assertParse("case {a = 1, b = 2} of {..., a = 3} => 1",
+        "case {a = 1, b = 2} of {a = 3, ...} => 1");
 
     // fn
     assertParseSame("fn x => x + 1");
@@ -389,7 +384,7 @@ public class MainTest {
 
   @Test public void testTypeLetRecFn() {
     final String ml = "let\n"
-        + "  val rec f = fn n => if n = 0 then 1 else n * (f (n - n))\n"
+        + "  val rec f = fn n => if n = 0 then 1 else n * (f (n - 1))\n"
         + "in\n"
         + "  f 5\n"
         + "end";
@@ -397,7 +392,7 @@ public class MainTest {
 
     final String ml2 = ml.replace(" rec", "");
     assertThat(ml2, not(is(ml)));
-    assertError(ml2, is("fact not found"));
+    assertError(ml2, is("f not found"));
 
     assertError("let val rec x = 1 and y = 2 in x + y end",
         is("Error: fn expression required on rhs of val rec"));
@@ -631,7 +626,7 @@ public class MainTest {
 
   @Test public void testEvalFnRec() {
     final String ml = "let\n"
-        + "  val rec f = fn n => if n = 0 then 1 else n * (f (n - 1))\n"
+        + "  val rec f = fn n => if n = 0 then 1 else n * f (n - 1)\n"
         + "in\n"
         + "  f 5\n"
         + "end";
@@ -641,7 +636,7 @@ public class MainTest {
   @Ignore("requires generics")
   @Test public void testEvalFnTupleGeneric() {
     assertEval("(fn (x, y) => x) (2, 3)", is(2));
-    assertEval("(fn (x, y) => y) (3)", is(3));
+    assertEval("(fn (x, y) => y) 3", is(3));
   }
 
   @Test public void testRecord() {
@@ -753,7 +748,7 @@ public class MainTest {
     final String ml = "let\n"
         + "  val rec len = fn x =>\n"
         + "    case x of [] => 0\n"
-        + "            | head :: tail => 1 + (len tail)\n"
+        + "            | head :: tail => 1 + len tail\n"
         + "in\n"
         + "  len [1, 2, 3]\n"
         + "end";
@@ -765,8 +760,19 @@ public class MainTest {
   @Test public void testListLength2() {
     final String ml = "let\n"
         + "  val rec len = fn x =>\n"
-        + "    case x of head :: tail => 1 + (len tail)\n"
+        + "    case x of head :: tail => 1 + len tail\n"
         + "            | [] => 0\n"
+        + "in\n"
+        + "  len [1, 2, 3]\n"
+        + "end";
+    assertEval(ml, is(3));
+  }
+
+  /** As {link {@link #testListLength()} but using {@code fun}. */
+  @Test public void testListLength3() {
+    final String ml = "let\n"
+        + "  fun len [] = 0\n"
+        + "     | len (head :: tail) = 1 + len tail\n"
         + "in\n"
         + "  len [1, 2, 3]\n"
         + "end";
@@ -776,7 +782,7 @@ public class MainTest {
   @Test public void testMatchTuple() {
     final String ml = "let\n"
         + "  val rec sumIf = fn v =>\n"
-        + "    case v of (true, n) :: tail => n + (sumIf tail)\n"
+        + "    case v of (true, n) :: tail => n + sumIf tail\n"
         + "            | (false, _) :: tail => sumIf tail\n"
         + "            | _ => 0\n"
         + "in\n"
@@ -788,7 +794,7 @@ public class MainTest {
   /** Function declaration. */
   @Test public void testFun() {
     final String ml = "let\n"
-        + "  fun fact n = if n = 0 then 1 else n * (fact (n - 1))\n"
+        + "  fun fact n = if n = 0 then 1 else n * fact (n - 1)\n"
         + "in\n"
         + "  fact 5\n"
         + "end";
@@ -798,7 +804,7 @@ public class MainTest {
   /** As {@link #testFun} but uses case. */
   @Test public void testFun2() {
     final String ml = "let\n"
-        + "  fun fact n = case n of 0 => 1 | _ => n * (fact (n - 1))\n"
+        + "  fun fact n = case n of 0 => 1 | _ => n * fact (n - 1)\n"
         + "in\n"
         + "  fact 5\n"
         + "end";
@@ -812,6 +818,11 @@ public class MainTest {
         + "in\n"
         + "  fact 5\n"
         + "end";
+    final String expected = "let"
+        + " fun fact 1 = 1 "
+        + "| fact n = n * fact (n - 1) "
+        + "in fact 5 end";
+    assertParse(ml, expected);
     assertEval(ml, is(120));
   }
 
@@ -845,12 +856,91 @@ public class MainTest {
   }
 
   @Test public void testDatatype() {
-    final String ml = "let"
-        + " datatype 'a tree = NODE of 'a tree * 'a tree | LEAF of 'a "
-        + "in"
-        + " NODE (LEAF 1, NODE (LEAF 2, LEAF 3)) "
+    final String ml = "let\n"
+        + "  datatype 'a tree = NODE of 'a tree * 'a tree | LEAF of 'a\n"
+        + "in\n"
+        + "  NODE (LEAF 1, NODE (LEAF 2, LEAF 3))\n"
         + "end";
     assertParseSame(ml);
+  }
+
+  @Test public void testDatatype2() {
+    final String ml = "let\n"
+        + "  datatype number = ZERO | INTEGER of int | RATIONAL of int * int\n"
+        + "in\n"
+        + "  RATIONAL (2, 3)\n"
+        + "end";
+    assertParseSame(ml);
+    assertType(ml, is("(INTEGER of int | RATIONAL of int * int | ZERO)"));
+    assertEval(ml, is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
+  }
+
+  @Test public void testDatatype3() {
+    final String ml = "let\n"
+        + "datatype intoption = NONE | SOME of int;\n"
+        + "val score = fn z => case z of NONE => 0 | SOME x => x\n"
+        + "in"
+        + "  score (SOME 5)\n"
+        + "end";
+    assertParseSame(ml);
+    assertType(ml, is("int"));
+    assertEval(ml, is(5));
+  }
+
+  /** As {@link #testDatatype3()} but with {@code fun} rather than {@code fn}
+   *  ... {@code case}. */
+  @Test public void testDatatype3b() {
+    final String ml = "let\n"
+        + "datatype intoption = NONE | SOME of int;\n"
+        + "fun score NONE = 0\n"
+        + "  | score (SOME x) = x\n"
+        + "in"
+        + "  score (SOME 5)\n"
+        + "end";
+    assertParseSame(ml);
+    assertType(ml, is("int"));
+    assertEval(ml, is(5));
+  }
+
+  /** As {@link #testDatatype3b()} but use a nilary type constructor (NONE). */
+  @Test public void testDatatype3c() {
+    final String ml = "let\n"
+        + "datatype intoption = NONE | SOME of int;\n"
+        + "fun score NONE = 0\n"
+        + "  | score (SOME x) = x\n"
+        + "in"
+        + "  score NONE\n"
+        + "end";
+    assertParseSame(ml);
+    assertType(ml, is("int"));
+    assertEval(ml, is(0));
+  }
+
+  @Test public void testDatatype4() {
+    final String ml = "let\n"
+        + " datatype intlist = NIL | CONS of int * intlist;\n"
+        + " fun depth NIL = 0\n"
+        + "   | depth CONS (x, y) = 1 + depth y\n"
+        + "in\n"
+        + " depth NIL\n"
+        + "end";
+    assertParseSame(ml);
+    assertType(ml, is("int"));
+    assertEval(ml, is(0));
+  }
+
+  /** As {@link #testDatatype4()} but with deeper expression. */
+  @Test public void testDatatype4a() {
+    final String ml = "let\n"
+        + " datatype intlist = NIL | CONS of int * intlist;\n"
+        + " fun depth NIL = 0\n"
+        + "   | depth CONS (x, y) = 1 + depth y\n"
+        + "in\n"
+        + " depth (CONS (5, CONS (2, NIL)))\n"
+        + "end";
+    assertParseSame(ml);
+    assertType(ml, is("int"));
+    assertEval(ml, is(2));
   }
 
   @Test public void testFrom() {
@@ -874,7 +964,7 @@ public class MainTest {
         + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
         + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
         + "in\n"
-        + "  from emps as e yield ((#id e) + (#deptno e))\n"
+        + "  from emps as e yield (#id e + #deptno e)\n"
         + "end";
     assertEval(ml,  is(Arrays.asList(110, 121, 132, 133)));
   }
@@ -887,7 +977,7 @@ public class MainTest {
         + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
         + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
         + "in\n"
-        + "  from emps as e where (#deptno e) = 30 yield (#id e)\n"
+        + "  from emps as e where #deptno e = 30 yield #id e\n"
         + "end";
     assertEval(ml,  is(Arrays.asList(102, 103)));
   }
@@ -898,7 +988,7 @@ public class MainTest {
         + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
         + "     {id = 103, name = \"Scooby\", deptno = 30}]\n"
         + "in\n"
-        + "  from emps as e where (#deptno e) = 30\n"
+        + "  from emps as e where #deptno e = 30\n"
         + "end";
     assertEval(ml, is(Arrays.asList(Arrays.asList(30, 103, "Scooby"))));
   }
@@ -911,7 +1001,7 @@ public class MainTest {
         + "  val depts =\n"
         + "    [{deptno = 10, name = \"Sales\"}]\n"
         + "in\n"
-        + "  from emps as e, depts as d where (#deptno e) = (#deptno d)\n"
+        + "  from emps as e, depts as d where #deptno e = #deptno d\n"
         + "end";
     assertType(ml,
         is("{d:{deptno:int, name:string},"
@@ -956,7 +1046,7 @@ public class MainTest {
             + "          {a=x,b=_,c=_} => ...\n"
             + "    -->   {a=_,b=y,c=_} => ...\n"
             + "    -->   {a=x,b=y,c=z} => ...\n"));
-    assertError("fun f 1 = 1 | f n = n * (f (n - 1)) | g 2 = 2",
+    assertError("fun f 1 = 1 | f n = n * f (n - 1) | g 2 = 2",
         is("stdIn:3.5-3.46 Error: clauses don't all have same function name"));
   }
 

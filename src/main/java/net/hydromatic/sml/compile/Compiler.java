@@ -31,6 +31,7 @@ import net.hydromatic.sml.eval.Codes;
 import net.hydromatic.sml.eval.EvalEnv;
 import net.hydromatic.sml.eval.Unit;
 import net.hydromatic.sml.type.Binding;
+import net.hydromatic.sml.type.DataType;
 import net.hydromatic.sml.type.RecordType;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.type.TypeSystem;
@@ -38,6 +39,7 @@ import net.hydromatic.sml.util.Pair;
 import net.hydromatic.sml.util.TailList;
 
 import java.math.BigDecimal;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -57,8 +59,11 @@ public class Compiler {
     this.typeMap = typeMap;
   }
 
-  /** Validates an expression, deducing its type. Used for testing. */
-  public static TypeResolver.TypeMap validateExpression(AstNode exp) {
+  /** Validates an expression, deducing its type and perhaps rewriting the
+   * expression to a form that can more easily be compiled.
+   *
+   * <p>Used for testing. */
+  public static TypeResolver.Resolved<Ast.Exp> validateExpression(Ast.Exp exp) {
     final TypeSystem typeSystem = new TypeSystem();
     final Environment env = Environments.empty();
     return TypeResolver.deduceType(env, exp, typeSystem);
@@ -70,7 +75,6 @@ public class Compiler {
    */
   public static CompiledStatement prepareStatement(Environment env,
       AstNode statement) {
-    statement = TypeResolver.rewrite(statement);
     final Ast.ValDecl decl;
     if (statement instanceof Ast.Exp) {
       decl = ast.valDecl(Pos.ZERO,
@@ -81,10 +85,10 @@ public class Compiler {
       decl = (Ast.ValDecl) statement;
     }
     final TypeSystem typeSystem = new TypeSystem();
-    final TypeResolver.TypeMap typeMap =
+    final TypeResolver.Resolved<Ast.ValDecl> resolved =
         TypeResolver.deduceType(env, decl, typeSystem);
-    final Compiler compiler = new Compiler(typeMap);
-    return compiler.compileStatement(env, decl);
+    final Compiler compiler = new Compiler(resolved.typeMap);
+    return compiler.compileStatement(env, resolved.node);
   }
 
   public CompiledStatement compileStatement(Environment env, Ast.ValDecl decl) {
@@ -177,7 +181,7 @@ public class Compiler {
     case CASE:
       final Ast.Case case_ = (Ast.Case) expression;
       final Code matchCode = compileMatchList(env, case_.matchList);
-      argCode = compile(env, case_.exp);
+      argCode = compile(env, case_.e);
       return Codes.apply(matchCode, argCode);
 
     case RECORD_SELECTOR:
@@ -186,12 +190,12 @@ public class Compiler {
 
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) expression;
-      final Code fnCode = compile(env, apply.fn);
       argCode = compile(env, apply.arg);
-      if (fnCode.isConstant()) {
-        final Applicable fnValue = (Applicable) fnCode.eval(EMPTY_ENV);
+      final Applicable fnValue = compileApplicable(env, apply.fn);
+      if (fnValue != null) {
         return Codes.apply(fnValue, argCode);
       }
+      final Code fnCode = compile(env, apply.fn);
       return Codes.apply(fnCode, argCode);
 
     case LIST:
@@ -266,7 +270,25 @@ public class Compiler {
     }
   }
 
-  private Code compileLet(Environment env, List<Ast.Decl> decls, Ast.Exp exp) {
+  /** Compiles a function value to an {@link Applicable}, if possible, or
+   * returns null. */
+  private Applicable compileApplicable(Environment env, Ast.Exp fn) {
+    if (fn instanceof Ast.Id) {
+      final Binding binding = env.getOpt(((Ast.Id) fn).name);
+      if (binding != null
+          && binding.value instanceof Applicable) {
+        return (Applicable) binding.value;
+      }
+    }
+    final Code fnCode = compile(env, fn);
+    if (fnCode.isConstant()) {
+      return (Applicable) fnCode.eval(EMPTY_ENV);
+    } else {
+      return null;
+    }
+  }
+
+  private Code compileLet(Environment env, List<Ast.Decl> decls, Ast.Exp e) {
     final List<Code> varCodes = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
     for (Ast.Decl decl : decls) {
@@ -284,19 +306,44 @@ public class Compiler {
           }
           final Pos pos = valDecl.pos;
           final Ast.Pat pat = ast.tuplePat(pos, matches.keySet());
-          final Ast.Exp e = ast.tuple(pos, matches.values());
-          valDecl = ast.valDecl(pos, ast.valBind(pos, rec, pat, e));
+          final Ast.Exp e2 = ast.tuple(pos, matches.values());
+          valDecl = ast.valDecl(pos, ast.valBind(pos, rec, pat, e2));
         }
         for (Ast.ValBind valBind : valDecl.valBinds) {
           varCodes.add(compileValBind(env, valBind, bindings));
         }
         break;
+
+      case DATATYPE_DECL:
+        final Ast.DatatypeDecl datatypeDecl = (Ast.DatatypeDecl) decl;
+        for (Ast.DatatypeBind bind : datatypeDecl.binds) {
+          final Type dataType = typeMap.typeSystem.lookup(bind.name.name);
+          for (Ast.TyCon tyCon : bind.tyCons) {
+            compileTyCon(env, dataType, tyCon, bindings);
+          }
+        }
+        break;
+
       default:
         throw new AssertionError("unknown " + decl.op + "; " + decl);
       }
     }
-    final Code resultCode = compile(env.bindAll(bindings), exp);
+    final Code resultCode = compile(env.bindAll(bindings), e);
     return Codes.let(varCodes, resultCode);
+  }
+
+  private void compileTyCon(Environment env, Type dataType,
+      Ast.TyCon tyCon, List<Binding> bindings) {
+    if (typeMap.hasType(tyCon.id)) {
+      final Type type = Objects.requireNonNull(typeMap.getType(tyCon.id));
+      final Object value;
+      if (tyCon.type == null) {
+        value = Codes.constant(new ComparableSingletonList<>(tyCon.id.name));
+      } else {
+        value = Codes.tyCon(dataType, tyCon.id.name);
+      }
+      bindings.add(new Binding(tyCon.id.name, type, value));
+    }
   }
 
   private Code compileInfix(Environment env, Ast.InfixCall call) {
@@ -397,12 +444,21 @@ public class Compiler {
    * or if the arguments are not in the same order as the labels in the type. */
   private Ast.Pat expandRecordPattern(Ast.Pat pat) {
     switch (pat.op) {
+    case ID_PAT:
+      final Type type = typeMap.getType(pat);
+      final Ast.IdPat idPat = (Ast.IdPat) pat;
+      if (type.op() == Op.DATA_TYPE
+          && ((DataType) type).typeConstructors.containsKey(idPat.name)) {
+        return ast.con0Pat(idPat.pos, ast.id(idPat.pos, idPat.name));
+      }
+      return pat;
+
     case RECORD_PAT:
-      final RecordType type =
+      final RecordType recordType =
           (RecordType) typeMap.getType(pat);
       final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
       final Map<String, Ast.Pat> args = new LinkedHashMap<>();
-      for (String label : type.argNameTypes.keySet()) {
+      for (String label : recordType.argNameTypes.keySet()) {
         args.put(label,
             recordPat.args.getOrDefault(label, ast.wildcardPat(pat.pos)));
       }
@@ -511,6 +567,32 @@ public class Compiler {
     public EvalEnvHolder add(String name, Object value) {
       evalEnv = Codes.add(evalEnv, name, value);
       return this;
+    }
+  }
+
+  /** A comparable singleton list.
+   *
+   * @param <E> Element type */
+  private static class ComparableSingletonList<E extends Comparable<E>>
+      extends AbstractList<E>
+      implements Comparable<ComparableSingletonList<E>> {
+    private final E element;
+
+    ComparableSingletonList(E element) {
+      this.element = Objects.requireNonNull(element);
+    }
+
+    @Override public E get(int index) {
+      assert index == 0;
+      return element;
+    }
+
+    @Override public int size() {
+      return 1;
+    }
+
+    @Override public int compareTo(ComparableSingletonList<E> o) {
+      return element.compareTo(o.element);
     }
   }
 }

@@ -35,6 +35,8 @@ public enum Op {
   // patterns
   ID_PAT(true),
   WILDCARD_PAT,
+  CON_PAT(" "),
+  CON0_PAT(" "),
   TUPLE_PAT(true),
   RECORD_PAT,
   LIST_PAT,
@@ -66,6 +68,9 @@ public enum Op {
   // types
   TY_VAR(true),
   RECORD_TYPE(true),
+  DATA_TYPE(true),
+  /** Used internally, while resolving a self-referential DATA_TYPE. */
+  TEMPORARY_DATA_TYPE(true),
   TUPLE_TYPE(" * ", 7),
   COMPOSITE_TYPE,
   FUNCTION_TYPE(" -> ", 6, false),

@@ -796,7 +796,7 @@ Pat pat() :
   Type type;
 }
 {
-  pat = pattern5()
+  pat = pat5()
   (
     <COLON> type = type() {
       pat = ast.annotatedPat(pat.pos.plus(type.pos), pat, type);
@@ -805,17 +805,17 @@ Pat pat() :
   { return pat; }
 }
 
-/** Parses an pattern of precedence level 5 ({@code ::}),
+/** Parses a pattern of precedence level 5 ({@code ::}),
 * right-associative. */
-Pat pattern5() :
+Pat pat5() :
 {
   Pat pat;
   final List<Pat> list = new ArrayList<Ast.Pat>();
 }
 {
-  pat = atomPat() { list.add(pat); }
+  pat = pat4() { list.add(pat); }
   (
-    <CONS> pat = atomPat() { list.add(pat); }
+    <CONS> pat = pat4() { list.add(pat); }
   )*
   {
     pat = list.get(list.size() - 1);
@@ -825,6 +825,26 @@ Pat pattern5() :
     return pat;
   }
 }
+
+/** Parses a pattern that is a type constructor (an identifier) followed by a
+ * pattern. For now, assume that it has precedence level 4. */
+Pat pat4() :
+{
+  final Id id;
+  final Pat pat;
+}
+{
+  id = identifier()
+  (
+    pat = pat() { return ast.conPat(id.pos.plus(pat.pos), id, pat); }
+  |
+    // id was not followed by pattern: it must be pattern
+    { return ast.idPat(id.pos, id.name); }
+  )
+|
+  pat = atomPat() { return pat; }
+}
+
 
 /** Parses an atomic pattern. */
 Pat atomPat() :

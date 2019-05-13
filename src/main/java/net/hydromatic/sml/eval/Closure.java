@@ -182,6 +182,17 @@ public class Closure implements Comparable<Closure>, Applicable {
       return bindRecurse(infixPat.p0, valueMap, head)
           && bindRecurse(infixPat.p1, valueMap, tail);
 
+    case CON0_PAT:
+      final Ast.Con0Pat con0Pat = (Ast.Con0Pat) pat;
+      final List con0Value = (List) argValue;
+      return con0Value.get(0).equals(con0Pat.tyCon.name);
+
+    case CON_PAT:
+      final Ast.ConPat conPat = (Ast.ConPat) pat;
+      final List conValue = (List) argValue;
+      return conValue.get(0).equals(conPat.tyCon.name)
+          && bindRecurse(conPat.pat, valueMap, conValue.get(1));
+
     default:
       throw new AssertionError("cannot compile " + pat.op + ": " + pat);
     }

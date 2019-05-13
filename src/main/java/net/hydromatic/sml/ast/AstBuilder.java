@@ -122,6 +122,14 @@ public enum AstBuilder {
     return new Ast.WildcardPat(pos);
   }
 
+  public Ast.ConPat conPat(Pos pos, Ast.Id tyCon, Ast.Pat pat) {
+    return new Ast.ConPat(pos, tyCon, pat);
+  }
+
+  public Ast.Con0Pat con0Pat(Pos pos, Ast.Id tyCon) {
+    return new Ast.Con0Pat(pos, tyCon);
+  }
+
   public Ast.TuplePat tuplePat(Pos pos, Iterable<? extends Ast.Pat> args) {
     return new Ast.TuplePat(pos, ImmutableList.copyOf(args));
   }
@@ -236,8 +244,8 @@ public enum AstBuilder {
   }
 
   public Ast.LetExp let(Pos pos, Iterable<? extends Ast.Decl> decls,
-      Ast.Exp exp) {
-    return new Ast.LetExp(pos, ImmutableList.copyOf(decls), exp);
+      Ast.Exp e) {
+    return new Ast.LetExp(pos, ImmutableList.copyOf(decls), e);
   }
 
   public Ast.ValDecl valDecl(Pos pos,
@@ -257,9 +265,9 @@ public enum AstBuilder {
     return new Ast.Match(pos, pat, e);
   }
 
-  public Ast.Case caseOf(Pos pos, Ast.Exp exp,
+  public Ast.Case caseOf(Pos pos, Ast.Exp e,
       Iterable<? extends Ast.Match> matchList) {
-    return new Ast.Case(pos, exp, ImmutableList.copyOf(matchList));
+    return new Ast.Case(pos, e, ImmutableList.copyOf(matchList));
   }
 
   public Ast.From from(Pos pos, Map<Ast.Id, Ast.Exp> sources, Ast.Exp filterExp,
@@ -287,8 +295,8 @@ public enum AstBuilder {
   }
 
   public Ast.FunMatch funMatch(Pos pos, String name,
-      Iterable<? extends Ast.Pat> patList, Ast.Exp exp) {
-    return new Ast.FunMatch(pos, name, ImmutableList.copyOf(patList), exp);
+      Iterable<? extends Ast.Pat> patList, Ast.Exp e) {
+    return new Ast.FunMatch(pos, name, ImmutableList.copyOf(patList), e);
   }
 
   public Ast.Apply apply(Ast.Exp fn, Ast.Exp arg) {

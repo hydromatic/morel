@@ -177,6 +177,59 @@ public class Ast {
     }
   }
 
+  /** Type constructor pattern with an argument.
+   *
+   * <p>For example, in "fun nvl NIL = 0 | OPTION x = x",
+   * "OPTION x" is a type constructor pattern that binds "x";
+   * and "NIL" is a type constructor pattern whose {@link #pat} is null.
+   *
+   * @see Con0Pat */
+  public static class ConPat extends Pat {
+    public final Id tyCon;
+    public final Pat pat;
+
+    ConPat(Pos pos, Id tyCon, Pat pat) {
+      super(pos, Op.CON_PAT);
+      this.tyCon = Objects.requireNonNull(tyCon);
+      this.pat = Objects.requireNonNull(pat);
+    }
+
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+      action.accept(pat, 0);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.infix(left, tyCon, op, pat, right);
+    }
+  }
+
+  /** Type constructor pattern with no argument.
+   *
+   * <p>For example, in "fun nvl NIL = 0 | OPTION x = x",
+   * "NIL" is a zero-arg type constructor pattern.
+   *
+   * @see ConPat */
+  public static class Con0Pat extends Pat {
+    public final Id tyCon;
+
+    Con0Pat(Pos pos, Id tyCon) {
+      super(pos, Op.CON0_PAT);
+      this.tyCon = Objects.requireNonNull(tyCon);
+    }
+
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return tyCon.unparse(w, left, right);
+    }
+  }
+
   /** Tuple pattern, the pattern analog of the {@link Tuple} expression.
    *
    * <p>For example, "(x, y)" in "fun sum (x, y) = x + y". */
@@ -305,24 +358,24 @@ public class Ast {
   /** Parse tree node of an expression annotated with a type. */
   public static class AnnotatedExp extends Exp {
     public final Type type;
-    public final Exp expression;
+    public final Exp e;
 
     /** Creates a type annotation. */
-    AnnotatedExp(Pos pos, Type type, Exp expression) {
+    AnnotatedExp(Pos pos, Type type, Exp e) {
       super(pos, Op.ANNOTATED_EXP);
       this.type = Objects.requireNonNull(type);
-      this.expression = Objects.requireNonNull(expression);
+      this.e = Objects.requireNonNull(e);
     }
 
     @Override public int hashCode() {
-      return Objects.hash(type, expression);
+      return Objects.hash(type, e);
     }
 
     @Override public boolean equals(Object obj) {
       return this == obj
           || obj instanceof AnnotatedExp
               && type.equals(((AnnotatedExp) obj).type)
-              && expression.equals(((AnnotatedExp) obj).expression);
+              && e.equals(((AnnotatedExp) obj).e);
     }
 
     public Exp accept(Shuttle shuttle) {
@@ -330,7 +383,7 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.infix(left, expression, op, type, right);
+      return w.infix(left, e, op, type, right);
     }
   }
 
@@ -676,8 +729,9 @@ public class Ast {
   /** Parse tree node of a datatype binding.
    *
    * <p>Example: the datatype declaration
-   * {@code datatype 'a x = X and y = Y}
-   * consists of type bindings {@code 'a x = X} and {@code y = Y}. */
+   * {@code datatype 'a x = X1 of 'a | X2 and y = Y}
+   * consists of type bindings {@code 'a x = X1 of 'a | X2} and
+   * {@code y = Y}. */
   public static class DatatypeBind extends AstNode {
     public final java.util.List<TyVar> tyVars;
     public final Id name;
@@ -787,6 +841,14 @@ public class Ast {
       }
       return w;
     }
+
+    /** Creates a copy of this {@code ValDecl} with given contents,
+     * or this if the contents are the same. */
+    public ValDecl copy(Iterable<ValBind> valBinds) {
+      return Iterables.elementsEqual(this.valBinds, valBinds)
+          ? this
+          : ast.valDecl(pos, valBinds);
+    }
   }
 
   /** Parse tree node of a function declaration. */
@@ -815,7 +877,7 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.appendAll(funBinds, "fun ", " | ", "");
+      return w.appendAll(funBinds, "fun ", " and ", "");
     }
   }
 
@@ -839,7 +901,7 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.appendAll(matchList, " and ");
+      return w.appendAll(matchList, " | ");
     }
   }
 
@@ -847,13 +909,13 @@ public class Ast {
   public static class FunMatch extends AstNode {
     public final String name;
     public final java.util.List<Pat> patList;
-    public final Exp exp;
+    public final Exp e;
 
-    FunMatch(Pos pos, String name, ImmutableList<Pat> patList, Exp exp) {
+    FunMatch(Pos pos, String name, ImmutableList<Pat> patList, Exp e) {
       super(pos, Op.FUN_MATCH);
       this.name = name;
       this.patList = patList;
-      this.exp = exp;
+      this.e = e;
     }
 
     public FunMatch accept(Shuttle shuttle) {
@@ -865,7 +927,7 @@ public class Ast {
       for (Pat pat : patList) {
         w.append(" ").append(pat, Op.APPLY.left, Op.APPLY.right);
       }
-      return w.append(" = ").append(exp, 0, right);
+      return w.append(" = ").append(e, 0, right);
     }
   }
 
@@ -993,7 +1055,7 @@ public class Ast {
     }
   }
 
-  /** If ... else expression. */
+  /** "If ... else" expression. */
   public static class If extends Exp {
     public final Exp condition;
     public final Exp ifTrue;
@@ -1036,6 +1098,15 @@ public class Ast {
       return w.appendAll(decls, "let ", "; ", " in ")
           .append(e, 0, 0).append(" end");
     }
+
+    /** Creates a copy of this {@code LetExp} with given contents,
+     * or this if the contents are the same. */
+    public LetExp copy(Iterable<Decl> decls, Exp e) {
+      return Iterables.elementsEqual(this.decls, decls)
+          && Objects.equals(this.e, e)
+          ? this
+          : ast.let(pos, decls, e);
+    }
   }
 
   /** Value bind. */
@@ -1060,6 +1131,16 @@ public class Ast {
         w.append("rec ");
       }
       return w.append(pat, 0, 0).append(" = ").append(e, 0, right);
+    }
+
+    /** Creates a copy of this {@code ValBind} with given contents,
+     * or this if the contents are the same. */
+    public ValBind copy(boolean rec, Pat pat, Exp e) {
+      return this.rec == rec
+          && this.pat.equals(pat)
+          && this.e.equals(e)
+          ? this
+          : ast.valBind(pos, rec, pat, e);
     }
   }
 
@@ -1104,12 +1185,12 @@ public class Ast {
 
   /** Case expression. */
   public static class Case extends Exp {
-    public final Exp exp;
+    public final Exp e;
     public final java.util.List<Match> matchList;
 
-    Case(Pos pos, Exp exp, ImmutableList<Match> matchList) {
+    Case(Pos pos, Exp e, ImmutableList<Match> matchList) {
       super(pos, Op.CASE);
-      this.exp = exp;
+      this.e = e;
       this.matchList = matchList;
     }
 
@@ -1118,7 +1199,7 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append("case ").append(exp, 0, 0).append(" of ")
+      return w.append("case ").append(e, 0, 0).append(" of ")
           .appendAll(matchList, left, Op.BAR, right);
     }
   }

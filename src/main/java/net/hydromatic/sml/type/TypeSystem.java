@@ -37,15 +37,13 @@ import java.util.Objects;
 public class TypeSystem {
   private final Map<String, Type> typeByName = new HashMap<>();
 
+  private final Map<String, Pair<DataType, Type>> typeConstructorByName =
+      new HashMap<>();
+
   public TypeSystem() {
     for (PrimitiveType primitiveType : PrimitiveType.values()) {
       typeByName.put(primitiveType.description(), primitiveType);
     }
-  }
-
-  /** Looks up a primitive type. */
-  public PrimitiveType primitiveType(String name) {
-    return Objects.requireNonNull((PrimitiveType) typeByName.get(name));
   }
 
   /** Looks up a type by name. */
@@ -87,6 +85,21 @@ public class TypeSystem {
             .toString();
     return typeByName.computeIfAbsent(description,
         d -> new ListType(d, elementType));
+  }
+
+  /** Creates a data type. */
+  public DataType dataType(String name, List<TypeVar> typeVars,
+      Map<String, Type> tyCons) {
+    return (DataType) typeByName.computeIfAbsent(name,
+        name2 -> {
+          final DataType dataType = new DataType(name2,
+              DataType.computeDescription(tyCons),
+              ImmutableList.copyOf(typeVars),
+              ImmutableSortedMap.copyOf(tyCons));
+          tyCons.forEach((name3, type) ->
+              typeConstructorByName.put(name3, Pair.of(dataType, type)));
+          return dataType;
+        });
   }
 
   /** Creates a record type. (Or a tuple type if the fields are named "1", "2"
@@ -150,6 +163,53 @@ public class TypeSystem {
       return builder.append("(").append(type.description()).append(")");
     } else {
       return builder.append(type.description());
+    }
+  }
+
+  public TemporaryType temporaryType(String name) {
+    final TemporaryType temporaryType = new TemporaryType(this, name);
+    typeByName.put(name, temporaryType);
+    return temporaryType;
+  }
+
+  public Pair<DataType, Type> lookupTyCon(String tyConName) {
+    return typeConstructorByName.get(tyConName);
+  }
+
+  /** Placeholder for a type that is being recursively defined.
+   *
+   * <p>For example, while defining datatype "list" as follows,
+   *
+   * <blockquote>
+   *   <code>datatype 'a list = NIL | CONS of ('a, 'a list)</code>
+   * </blockquote>
+   *
+   * <p>we define a temporary type "list", it is used in {@code CONS}, and
+   * later we convert it to the real data type "list".
+   */
+  public static class TemporaryType implements NamedType {
+    private final TypeSystem typeSystem;
+    private final String name;
+
+    private TemporaryType(TypeSystem typeSystem, String name) {
+      this.typeSystem = Objects.requireNonNull(typeSystem);
+      this.name = Objects.requireNonNull(name);
+    }
+
+    @Override public String description() {
+      return "temp:" + name;
+    }
+
+    @Override public Op op() {
+      return Op.TEMPORARY_DATA_TYPE;
+    }
+
+    @Override public String name() {
+      return name;
+    }
+
+    public void delete() {
+      this.typeSystem.typeByName.remove(name);
     }
   }
 }

@@ -22,11 +22,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import net.hydromatic.sml.ast.Ast;
+import net.hydromatic.sml.type.Type;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /** Helpers for {@link Code}. */
 public abstract class Codes {
@@ -241,7 +243,15 @@ public abstract class Codes {
     };
   }
 
-  /** Returns a code that returns the {@code slot}th field of a tuple or
+  /** Returns an applicable that constructs an instance of a datatype.
+   * The instance is a list with two elements [constructorName, value]. */
+  public static Applicable tyCon(Type dataType, String name) {
+    Objects.requireNonNull(dataType);
+    Objects.requireNonNull(name);
+    return (env, argValue) -> ImmutableList.of(name, argValue);
+  }
+
+  /** Returns an applicable that returns the {@code slot}th field of a tuple or
    * record. */
   public static Applicable nth(int slot) {
     assert slot >= 0;

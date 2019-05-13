@@ -54,7 +54,7 @@ public class Shuttle {
   protected Ast.Exp visit(Ast.AnnotatedExp annotatedExp) {
     return ast.annotatedExp(annotatedExp.pos,
         annotatedExp.type.accept(this),
-        annotatedExp.expression.accept(this));
+        annotatedExp.e.accept(this));
   }
 
   protected Ast.Exp visit(Ast.If anIf) {
@@ -67,7 +67,7 @@ public class Shuttle {
   }
 
   protected Ast.Exp visit(Ast.Case kase) {
-    return ast.caseOf(kase.pos, kase.exp.accept(this),
+    return ast.caseOf(kase.pos, kase.e.accept(this),
         visitList(kase.matchList));
   }
 
@@ -174,7 +174,7 @@ public class Shuttle {
 
   protected Ast.FunMatch visit(Ast.FunMatch funMatch) {
     return ast.funMatch(funMatch.pos, funMatch.name,
-        visitList(funMatch.patList), funMatch.exp.accept(this));
+        visitList(funMatch.patList), funMatch.e.accept(this));
   }
 
   protected Ast.ValDecl visit(Ast.ValDecl valDecl) {
@@ -200,7 +200,7 @@ public class Shuttle {
 
   public AstNode visit(Ast.TyCon tyCon) {
     return ast.typeConstructor(tyCon.pos, tyCon.id.accept(this),
-        tyCon.type.accept(this));
+        tyCon.type == null ? null : tyCon.type.accept(this));
   }
 
   public Ast.RecordType visit(Ast.RecordType recordType) {
@@ -219,6 +219,15 @@ public class Shuttle {
   public Ast.Type visit(Ast.CompositeType compositeType) {
     return ast.compositeType(compositeType.pos,
         visitList(compositeType.types));
+  }
+
+  public Ast.ConPat visit(Ast.ConPat conPat) {
+    return ast.conPat(conPat.pos, conPat.tyCon.accept(this),
+        conPat.pat.accept(this));
+  }
+
+  public Ast.Pat visit(Ast.Con0Pat con0Pat) {
+    return ast.con0Pat(con0Pat.pos, con0Pat.tyCon.accept(this));
   }
 }
 
