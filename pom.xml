@@ -32,11 +32,11 @@ License.
 
   <name>smlj</name>
   <description>Standard ML interpreter, implemented in Java</description>
-  <url>http://github.com/julianhyde/smlj</url>
+  <url>https://github.com/julianhyde/smlj</url>
   <inceptionYear>2019</inceptionYear>
   <organization>
     <name>Julian Hyde</name>
-    <url>http://www.hydromatic.net</url>
+    <url>https://www.hydromatic.net</url>
   </organization>
   <licenses>
     <license>
@@ -67,7 +67,7 @@ License.
       <subscribe>dev-subscribe@calcite.apache.org</subscribe>
       <unsubscribe>dev-unsubscribe@calcite.apache.org</unsubscribe>
       <post>dev@calcite.apache.org</post>
-      <archive>http://mail-archives.apache.org/mod_mbox/calcite-dev</archive>
+      <archive>https://mail-archives.apache.org/mod_mbox/calcite-dev</archive>
     </mailingList>
   </mailingLists>
 

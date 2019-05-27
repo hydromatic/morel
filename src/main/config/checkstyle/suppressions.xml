@@ -19,7 +19,7 @@ License.
 -->
 <!DOCTYPE suppressions PUBLIC
         "-//Puppy Crawl//DTD Suppressions 1.1//EN"
-        "http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
+        "https://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
 <suppressions>
   <!-- Suppress checks on generated files. -->
   <suppress checks="Header" files="LICENSE"/>

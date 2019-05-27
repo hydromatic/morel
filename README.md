@@ -191,12 +191,12 @@ the sub-query returns, just whether it returns any rows).
 
 * License: <a href="LICENSE">Apache License, Version 2.0</a>
 * Author: Julian Hyde (<a href="https://twitter.com/julianhyde">@julianhyde</a>)
-* Project page: http://www.hydromatic.net/smlj
-* API: http://www.hydromatic.net/smlj/apidocs
-* Source code: http://github.com/julianhyde/smlj
+* Project page: https://www.hydromatic.net/smlj
+* API: https://www.hydromatic.net/smlj/apidocs
+* Source code: https://github.com/julianhyde/smlj
 * Developers list:
   <a href="mailto:dev@calcite.apache.org">dev at calcite.apache.org</a>
-  (<a href="http://mail-archives.apache.org/mod_mbox/calcite-dev/">archive</a>,
+  (<a href="https://mail-archives.apache.org/mod_mbox/calcite-dev/">archive</a>,
   <a href="mailto:dev-subscribe@calcite.apache.org">subscribe</a>)
 * Issues: https://github.com/julianhyde/smlj/issues
 * <a href="HISTORY.md">Release notes and history</a>

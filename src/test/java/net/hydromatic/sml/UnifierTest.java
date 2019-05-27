@@ -308,7 +308,7 @@ public abstract class UnifierTest {
 
     /** Solves the equations from the S combinator,
      * "{@code fn x => fn y => fn z => x z (z y)}", in [<a href=
-     * "http://web.cs.ucla.edu/~palsberg/course/cs239/reading/wand87.pdf">
+     * "https://web.cs.ucla.edu/~palsberg/course/cs239/reading/wand87.pdf">
      * Wand 87</a>]. */
     @Test public void test20() {
       final Unifier.Variable t0 = unifier.variable("T0");
