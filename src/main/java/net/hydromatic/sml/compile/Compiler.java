@@ -31,7 +31,9 @@ import net.hydromatic.sml.eval.Codes;
 import net.hydromatic.sml.eval.EvalEnv;
 import net.hydromatic.sml.eval.Unit;
 import net.hydromatic.sml.type.Binding;
+import net.hydromatic.sml.type.RecordType;
 import net.hydromatic.sml.type.Type;
+import net.hydromatic.sml.type.TypeSystem;
 import net.hydromatic.sml.util.Pair;
 import net.hydromatic.sml.util.TailList;
 
@@ -41,6 +43,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static net.hydromatic.sml.ast.AstBuilder.ast;
 
@@ -56,7 +59,7 @@ public class Compiler {
 
   /** Validates an expression, deducing its type. Used for testing. */
   public static TypeResolver.TypeMap validateExpression(AstNode exp) {
-    final TypeResolver.TypeSystem typeSystem = new TypeResolver.TypeSystem();
+    final TypeSystem typeSystem = new TypeSystem();
     final Environment env = Environments.empty();
     return TypeResolver.deduceType(env, exp, typeSystem);
   }
@@ -77,7 +80,7 @@ public class Compiler {
     } else {
       decl = (Ast.ValDecl) statement;
     }
-    final TypeResolver.TypeSystem typeSystem = new TypeResolver.TypeSystem();
+    final TypeSystem typeSystem = new TypeSystem();
     final TypeResolver.TypeMap typeMap =
         TypeResolver.deduceType(env, decl, typeSystem);
     final Compiler compiler = new Compiler(typeMap);
@@ -101,10 +104,9 @@ public class Compiler {
 
       public Environment eval(Environment env, List<String> output) {
         Environment resultEnv = env;
-        final EvalEnv[] evalEnvs = {Codes.emptyEnv()};
-        env.forEachValue((name, value) ->
-            evalEnvs[0] = Codes.add(evalEnvs[0], name, value));
-        final EvalEnv evalEnv = evalEnvs[0];
+        final EvalEnvHolder evalEnvs = new EvalEnvHolder(Codes.emptyEnv());
+        env.forEachValue(evalEnvs::add);
+        final EvalEnv evalEnv = evalEnvs.evalEnv;
         final StringBuilder buf = new StringBuilder();
         for (Map.Entry<String, TypeAndCode> entry : varCodes.entrySet()) {
           final String name = entry.getKey();
@@ -396,8 +398,8 @@ public class Compiler {
   private Ast.Pat expandRecordPattern(Ast.Pat pat) {
     switch (pat.op) {
     case RECORD_PAT:
-      final TypeResolver.RecordType type =
-          (TypeResolver.RecordType) typeMap.getType(pat);
+      final RecordType type =
+          (RecordType) typeMap.getType(pat);
       final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
       final Map<String, Ast.Pat> args = new LinkedHashMap<>();
       for (String label : type.argNameTypes.keySet()) {
@@ -497,6 +499,20 @@ public class Compiler {
     }
   }
 
+  /** Contains a {@link EvalEnv} and adds to it by calling
+   * {@link Codes#add}. */
+  private static class EvalEnvHolder {
+    private EvalEnv evalEnv;
+
+    EvalEnvHolder(EvalEnv evalEnv) {
+      this.evalEnv = Objects.requireNonNull(evalEnv);
+    }
+
+    public EvalEnvHolder add(String name, Object value) {
+      evalEnv = Codes.add(evalEnv, name, value);
+      return this;
+    }
+  }
 }
 
 // End Compiler.java

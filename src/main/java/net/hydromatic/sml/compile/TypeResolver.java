@@ -18,28 +18,26 @@
  */
 package net.hydromatic.sml.compile;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
-import net.hydromatic.sml.ast.Op;
 import net.hydromatic.sml.ast.Pos;
 import net.hydromatic.sml.ast.Shuttle;
+import net.hydromatic.sml.type.FnType;
+import net.hydromatic.sml.type.ListType;
 import net.hydromatic.sml.type.PrimitiveType;
+import net.hydromatic.sml.type.RecordType;
+import net.hydromatic.sml.type.TupleType;
 import net.hydromatic.sml.type.Type;
+import net.hydromatic.sml.type.TypeSystem;
 import net.hydromatic.sml.util.MartelliUnifier;
-import net.hydromatic.sml.util.Ord;
-import net.hydromatic.sml.util.Pair;
 import net.hydromatic.sml.util.Unifier;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,7 +45,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Objects;
-import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -67,41 +64,12 @@ public class TypeResolver {
   private static final String RECORD_TY_CON = "record";
   private static final String FN_TY_CON = "fn";
 
-  /** Ordering that compares integer values numerically,
-   * string values lexicographically,
-   * and integer values before string values.
-   *
-   * <p>Thus: 2, 22, 202, a, a2, a202, a22. */
-  private static final Ordering<String> ORDERING =
-      Ordering.from(
-          (o1, o2) -> {
-            Integer i1 = parseInt(o1);
-            Integer i2 = parseInt(o2);
-            if (i1 == null && i2 == null) {
-              return o1.compareTo(o2);
-            }
-            if (i1 != null && i2 != null) {
-              return i1.compareTo(i2);
-            }
-            return i1 != null ? -1 : 1;
-          });
-
   public TypeResolver() {
   }
 
   public static TypeMap deduceType(Environment env,
       AstNode node, TypeSystem typeSystem) {
     return new TypeResolver().deduceType_(env, node, typeSystem);
-  }
-
-  /** Parses a string that contains an integer value, or returns null if
-   * the string does not contain an integer. */
-  private static Integer parseInt(String s) {
-    try {
-      return Integer.parseInt(s);
-    } catch (NumberFormatException e) {
-      return null;
-    }
   }
 
   public static AstNode rewrite(AstNode exp) {
@@ -119,14 +87,14 @@ public class TypeResolver {
     final Type intTerm = typeSystem.primitiveType("int");
     final Type boolToBool = typeSystem.fnType(boolTerm, boolTerm);
     final Type intToInt = typeSystem.fnType(intTerm, intTerm);
-    TypeEnv[] typeEnvs = {EmptyTypeEnv.INSTANCE
-        .bind("true", toTerm(boolTerm))
-        .bind("false", toTerm(boolTerm))
-        .bind("not", toTerm(boolToBool))
-        .bind("abs", toTerm(intToInt))};
-    env.forEachType((name, type) ->
-        typeEnvs[0] = typeEnvs[0].bind(name, toTerm(type)));
-    final TypeEnv typeEnv = typeEnvs[0];
+    final TypeEnvHolder typeEnvs =
+        new TypeEnvHolder(EmptyTypeEnv.INSTANCE)
+            .bind("true", boolTerm)
+            .bind("false", boolTerm)
+            .bind("not", boolToBool)
+            .bind("abs", intToInt);
+    env.forEachType(typeEnvs::bind);
+    final TypeEnv typeEnv = typeEnvs.typeEnv;
     final Unifier.Variable v = unifier.variable();
     deduceType(typeEnv, node, v);
     final List<Unifier.TermTerm> termPairs = new ArrayList<>();
@@ -817,7 +785,7 @@ public class TypeResolver {
       case "real":
       case "string":
       case "unit":
-        final Type type = typeSystem.map.get(sequence.operator);
+        final Type type = typeSystem.lookupOpt(sequence.operator);
         if (type == null) {
           throw new AssertionError("unknown type " + type);
         }
@@ -843,187 +811,6 @@ public class TypeResolver {
     public Type visit(Unifier.Variable variable) {
       final Unifier.Term term = substitution.resultMap.get(variable);
       return term.accept(this);
-    }
-  }
-
-  /** A table that contains all types in use, indexed by their description (e.g.
-   * "{@code int -> int}"). */
-  public static class TypeSystem {
-    final Map<String, Type> map = new HashMap<>();
-
-    public TypeSystem() {
-      map.put("int", PrimitiveType.INT);
-      map.put("bool", PrimitiveType.BOOL);
-      map.put("string", PrimitiveType.STRING);
-      map.put("real", PrimitiveType.REAL);
-      map.put("unit", PrimitiveType.UNIT);
-    }
-
-    /** Creates a primitive type. */
-    Type primitiveType(String name) {
-      switch (name) {
-      case "bool": return PrimitiveType.BOOL;
-      case "CHAR": return PrimitiveType.CHAR;
-      case "int": return PrimitiveType.INT;
-      case "real": return PrimitiveType.REAL;
-      case "string": return PrimitiveType.STRING;
-      case "unit": return PrimitiveType.UNIT;
-      default:
-        throw new AssertionError("not a primitive type: " + name);
-      }
-    }
-
-    /** Creates a function type. */
-    Type fnType(Type paramType, Type resultType) {
-      final String description =
-          unparseList(new StringBuilder(), Op.FUNCTION_TYPE, 0, 0,
-              Arrays.asList(paramType, resultType)).toString();
-      return map.computeIfAbsent(description,
-          d -> new FnType(d, paramType, resultType));
-    }
-
-    /** Creates a tuple type. */
-    Type tupleType(List<? extends Type> argTypes) {
-      final String description =
-          unparseList(new StringBuilder(), Op.TIMES, 0, 0, argTypes).toString();
-      return map.computeIfAbsent(description,
-          d -> new TupleType(d, ImmutableList.copyOf(argTypes)));
-    }
-
-    /** Creates a list type. */
-    Type listType(Type elementType) {
-      final String description =
-          unparse(new StringBuilder(), elementType, 0, Op.LIST.right)
-              .append(" list")
-              .toString();
-      return map.computeIfAbsent(description,
-          d -> new ListType(d, elementType));
-    }
-
-    /** Creates a record type. (Or a tuple type if the fields are named "1", "2"
-     * etc.; or "unit" if the field list is empty.) */
-    Type recordType(List<String> argNames, List<? extends Type> argTypes) {
-      Preconditions.checkArgument(argNames.size() == argTypes.size());
-      if (argNames.isEmpty()) {
-        return PrimitiveType.UNIT;
-      }
-      final ImmutableSortedMap.Builder<String, Type> mapBuilder =
-          ImmutableSortedMap.orderedBy(ORDERING);
-      Pair.forEach(argNames, argTypes, mapBuilder::put);
-      final StringBuilder builder = new StringBuilder("{");
-      final ImmutableSortedMap<String, Type> map = mapBuilder.build();
-      map.forEach((name, type) -> {
-        if (builder.length() > 1) {
-          builder.append(", ");
-        }
-        builder.append(name).append(':').append(type.description());
-      });
-      if (areContiguousIntegers(map.keySet())) {
-        return tupleType(ImmutableList.copyOf(map.values()));
-      }
-      final String description = builder.append('}').toString();
-      return this.map.computeIfAbsent(description, d -> new RecordType(d, map));
-    }
-
-    /** Returns whether the collection is ["1", "2", ... n]. */
-    private boolean areContiguousIntegers(Iterable<String> strings) {
-      int i = 1;
-      for (String string : strings) {
-        if (!string.equals(Integer.toString(i++))) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    private static StringBuilder unparseList(StringBuilder builder, Op op,
-        int left, int right, List<? extends Type> argTypes) {
-      Ord.forEach(argTypes, (e, i) -> {
-        if (i == 0) {
-          unparse(builder, e, left, op.left);
-        } else {
-          builder.append(op.padded);
-          if (i < argTypes.size() - 1) {
-            unparse(builder, e, op.right, op.left);
-          } else {
-            unparse(builder, e, op.right, right);
-          }
-        }
-      });
-      return builder;
-    }
-
-    private static StringBuilder unparse(StringBuilder builder, Type type,
-        int left, int right) {
-      final Op op = type.op();
-      if (left > op.left || op.right < right) {
-        return builder.append("(").append(type.description()).append(")");
-      } else {
-        return builder.append(type.description());
-      }
-    }
-  }
-
-  /** Abstract implementation of Type. */
-  abstract static class BaseType implements Type {
-    final String description;
-    final Op op;
-
-    protected BaseType(Op op, String description) {
-      this.op = Objects.requireNonNull(op);
-      this.description = Objects.requireNonNull(description);
-    }
-
-    public String description() {
-      return description;
-    }
-
-    public Op op() {
-      return op;
-    }
-  }
-
-  /** The type of a function value. */
-  static class FnType extends BaseType {
-    public final Type paramType;
-    public final Type resultType;
-
-    private FnType(String description, Type paramType, Type resultType) {
-      super(Op.FUNCTION_TYPE, description);
-      this.paramType = paramType;
-      this.resultType = resultType;
-    }
-  }
-
-  /** The type of a tuple value. */
-  static class TupleType extends BaseType {
-    public final List<Type> argTypes;
-
-    private TupleType(String description, ImmutableList<Type> argTypes) {
-      super(Op.TUPLE_TYPE, description);
-      this.argTypes = Objects.requireNonNull(argTypes);
-    }
-  }
-
-  /** The type of a list value. */
-  static class ListType extends BaseType {
-    public final Type elementType;
-
-    private ListType(String description, Type elementType) {
-      super(Op.LIST, description);
-      this.elementType = Objects.requireNonNull(elementType);
-    }
-  }
-
-  /** The type of a record value. */
-  static class RecordType extends BaseType {
-    public final SortedMap<String, Type> argNameTypes;
-
-    private RecordType(String description,
-        ImmutableSortedMap<String, Type> argNameTypes) {
-      super(Op.RECORD_TYPE, description);
-      this.argNameTypes = Objects.requireNonNull(argNameTypes);
-      Preconditions.checkArgument(argNameTypes.comparator() == ORDERING);
     }
   }
 
@@ -1087,6 +874,21 @@ public class TypeResolver {
     public Type getType(AstNode node) {
       final Unifier.Term term = Objects.requireNonNull(nodeTypeTerms.get(node));
       return termToType(term, substitution);
+    }
+  }
+
+  /** Contains a {@link TypeEnv} and adds to it by calling
+   * {@link TypeEnv#bind(String, Unifier.Term)}. */
+  private class TypeEnvHolder {
+    private TypeEnv typeEnv;
+
+    TypeEnvHolder(TypeEnv typeEnv) {
+      this.typeEnv = Objects.requireNonNull(typeEnv);
+    }
+
+    TypeEnvHolder bind(String name, Type type) {
+      typeEnv = typeEnv.bind(name, toTerm(type));
+      return this;
     }
   }
 }

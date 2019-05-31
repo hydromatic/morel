@@ -18,7 +18,9 @@
  */
 package net.hydromatic.sml.compile;
 
+import net.hydromatic.sml.type.ListType;
 import net.hydromatic.sml.type.PrimitiveType;
+import net.hydromatic.sml.type.RecordType;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.util.Pair;
 
@@ -81,8 +83,8 @@ class Pretty {
       }
 
     case LIST:
-      final TypeResolver.ListType listType =
-          (TypeResolver.ListType) type;
+      final ListType listType =
+          (ListType) type;
       //noinspection unchecked
       list = (List) value;
       buf.append("[");
@@ -96,8 +98,8 @@ class Pretty {
       return buf.append("]");
 
     case RECORD_TYPE:
-      final TypeResolver.RecordType recordType =
-          (TypeResolver.RecordType) type;
+      final RecordType recordType =
+          (RecordType) type;
       //noinspection unchecked
       list = (List) value;
       buf.append("{");

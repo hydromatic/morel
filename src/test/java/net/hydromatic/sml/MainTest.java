@@ -31,6 +31,7 @@ import net.hydromatic.sml.eval.Codes;
 import net.hydromatic.sml.eval.EvalEnv;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
+import net.hydromatic.sml.type.TypeSystem;
 
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -172,7 +173,7 @@ public class MainTest {
       final Ast.Exp expression0 =
           new SmlParserImpl(new StringReader(ml)).expression();
       final Ast.Exp expression = (Ast.Exp) TypeResolver.rewrite(expression0);
-      final TypeResolver.TypeSystem typeSystem = new TypeResolver.TypeSystem();
+      final TypeSystem typeSystem = new TypeSystem();
       final Environment env = Environments.empty();
       final TypeResolver.TypeMap typeMap =
           TypeResolver.deduceType(env, expression, typeSystem);
