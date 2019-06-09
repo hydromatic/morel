@@ -89,11 +89,14 @@ License.
     <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
     <maven-enforcer-plugin.version>3.0.0-M1</maven-enforcer-plugin.version>
     <maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
-    <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-project-info-reports-plugin.version>2.9</maven-project-info-reports-plugin.version>
     <maven-site-plugin.version>3.7.1</maven-site-plugin.version>
     <maven-surefire-plugin.version>3.0.0-M3</maven-surefire-plugin.version>
     <slf4j.version>1.7.25</slf4j.version>
+
+    <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
+    <maven-javadoc-plugin.excludePackageNames>net.hydromatic.sml.parse</maven-javadoc-plugin.excludePackageNames>
+    <maven-javadoc-plugin.link>https://docs.oracle.com/javase/9/docs/api/</maven-javadoc-plugin.link>
   </properties>
 
   <!-- Environment settings. -->
@@ -160,8 +163,19 @@ License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <!-- This is the configuration used by "mvn javadoc:javadoc". It is
+             configured strict, so that it shows errors such as broken links in
+             javadoc on private methods. The configuration for "mvn site" is
+             under "reporting", and is more lenient. -->
         <configuration>
           <source>8</source>
+          <links>
+            <link>${maven-javadoc-plugin.link}</link>
+          </links>
+          <notimestamp>true</notimestamp>
+          <excludePackageNames>${maven-javadoc-plugin.excludePackageNames}</excludePackageNames>
+          <quiet>true</quiet>
+          <show>private</show>
         </configuration>
       </plugin>
       <plugin>
