@@ -18,6 +18,7 @@
  */
 package net.hydromatic.sml;
 
+import net.hydromatic.sml.util.MapList;
 import net.hydromatic.sml.util.Ord;
 import net.hydromatic.sml.util.TailList;
 
@@ -77,6 +78,15 @@ public class UtilTest {
     Ord.forEach(abc, (e, i) ->
         buf.append(i).append("#").append(e).append(";"));
     assertThat(buf.toString(), is("0#a;1#b;2#c;"));
+  }
+
+  @Test public void testMapList() {
+    final List<String> abc =
+        MapList.of(3, i -> "" + (char) ('a' + i));
+    assertThat(abc.size(), is(3));
+    assertThat(abc.get(0), is("a"));
+    assertThat(abc.get(2), is("c"));
+    assertThat(String.join(",", abc), is("a,b,c"));
   }
 }
 

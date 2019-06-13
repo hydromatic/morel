@@ -33,10 +33,10 @@ import net.hydromatic.sml.type.RecordType;
 import net.hydromatic.sml.type.TupleType;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.type.TypeSystem;
+import net.hydromatic.sml.util.MapList;
 import net.hydromatic.sml.util.MartelliUnifier;
 import net.hydromatic.sml.util.Unifier;
 
-import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -100,9 +100,17 @@ public class TypeResolver {
     final List<Unifier.TermTerm> termPairs = new ArrayList<>();
     terms.forEach(tv ->
         termPairs.add(new Unifier.TermTerm(tv.term, tv.variable)));
-    final Unifier.Substitution substitution =
+    final Unifier.Result result =
         unifier.unify(termPairs, actionMap);
-    return new TypeMap(typeSystem, map, substitution);
+    if (result instanceof Unifier.Substitution) {
+      return new TypeMap(typeSystem, map, (Unifier.Substitution) result);
+    } else {
+      throw new RuntimeException("Cannot deduce type: " + result
+          + ";\n"
+          + " term pairs:\n"
+          + terms.stream().map(Object::toString)
+              .collect(Collectors.joining("\n")));
+    }
   }
 
   private boolean reg(AstNode node,
@@ -461,16 +469,9 @@ public class TypeResolver {
       e = funBind.matchList.get(0).exp;
       vars = funBind.matchList.get(0).patList;
     } else {
-      final int varCount = funBind.matchList.get(0).patList.size();
       final List<String> varNames =
-          new AbstractList<String>() {
-            @Override public int size() {
-              return varCount;
-            }
-            @Override public String get(int index) {
-              return "v" + index;
-            }
-          };
+          MapList.of(funBind.matchList.get(0).patList.size(),
+              index -> "v" + index);
       vars = Lists.transform(varNames, v -> ast.idPat(Pos.ZERO, v));
       final List<Ast.Match> matchList = new ArrayList<>();
       for (Ast.FunMatch funMatch : funBind.matchList) {

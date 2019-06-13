@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /** Given pairs of terms, finds a substitution to minimize those pairs of
  * terms. */
@@ -108,7 +108,7 @@ public abstract class Unifier {
     return new Sequence(operator, newTerms.build());
   }
 
-  public @Nullable abstract Substitution unify(List<TermTerm> termPairs,
+  public @Nonnull abstract Result unify(List<TermTerm> termPairs,
       Map<Variable, Action> termActions);
 
   private static void checkCycles(Map<Variable, Term> map,
@@ -118,16 +118,33 @@ public abstract class Unifier {
     }
   }
 
+  protected Failure failure(String reason) {
+    return new Failure() {
+      @Override public String toString() {
+        return reason;
+      }
+    };
+  }
+
   /** Called by the unifier when a Term's type becomes known. */
   @FunctionalInterface
   public interface Action {
     void accept(Variable variable, Term term, List<TermTerm> termPairs);
   }
 
+  /** Result of attempting unification. A success is {@link Substitution},
+   * but there are other failures. */
+  public interface Result {
+  }
+
+  /** Result indicating that unification was not possible. */
+  public static class Failure implements Result {
+  }
+
   /** The results of a successful unification. Gives access to the raw variable
    * mapping that resulted from the algorithm, but can also resolve a variable
    * to the fullest extent possible with the {@link #resolve} method. */
-  public static final class Substitution {
+  public static final class Substitution implements Result {
     /** The result of the unification algorithm proper. This does not have
      * everything completely resolved: some variable substitutions are required
      * before getting the most atom-y representation. */

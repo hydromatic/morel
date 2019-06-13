@@ -32,8 +32,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.IsNull.notNullValue;
-import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
 
 /** Test for {@link RobinsonUnifier}. */
@@ -137,10 +138,11 @@ public abstract class UnifierTest {
 
   void assertThatUnify(List<Unifier.TermTerm> termPairs,
       Matcher<String> matcher) {
-    final Unifier.Substitution unify =
+    final Unifier.Result result =
         unifier.unify(termPairs, ImmutableMap.of());
-    assertThat(unify, notNullValue());
-    assertThat(unify.resolve().toString(), matcher);
+    assertThat(result, notNullValue());
+    assertThat(result instanceof Unifier.Substitution, is(true));
+    assertThat(((Unifier.Substitution) result).resolve().toString(), matcher);
   }
 
   void assertThatCannotUnify(Unifier.Term e1, Unifier.Term e2) {
@@ -159,7 +161,8 @@ public abstract class UnifierTest {
   }
 
   void assertThatCannotUnify(List<Unifier.TermTerm> pairList) {
-    assertThat(unifier.unify(pairList, ImmutableMap.of()), nullValue());
+    final Unifier.Result result = unifier.unify(pairList, ImmutableMap.of());
+    assertThat(result, not(instanceOf(Unifier.Substitution.class)));
   }
 
   @Test public void test1() {
@@ -330,9 +333,10 @@ public abstract class UnifierTest {
           new Unifier.TermTerm(arrow(t9, t7), t3),
           new Unifier.TermTerm(t9, t5)
       };
-      final Unifier.Substitution unify =
+      final Unifier.Result unify =
           unifier.unify(Arrays.asList(termTerms), ImmutableMap.of());
       assertThat(unify, notNullValue());
+      assertThat(unify instanceof Unifier.Substitution, is(true));
       assertThat(unify.toString(),
           is("[->(T1, T2)/T0, ->(T8, ->(T7, T6))/T1, ->(T3, T4)/T2,"
               + " ->(T9, T7)/T3, ->(T5, T6)/T4, T5/T8, T5/T9]"));

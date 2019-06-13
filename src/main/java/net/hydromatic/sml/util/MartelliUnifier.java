@@ -24,12 +24,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 /** Unification algorithm due to Martelli, Montanari (1976) and
  * Paterson, Wegman (1978). */
 public class MartelliUnifier extends Unifier {
-  public @Nullable Substitution unify(List<TermTerm> termPairs,
+  public @Nonnull Result unify(List<TermTerm> termPairs,
       Map<Variable, Action> termActions) {
 
     // delete: G u { t = t }
@@ -73,7 +73,7 @@ public class MartelliUnifier extends Unifier {
 
         if (!left.operator.equals(right.operator)
             || left.terms.size() != right.terms.size()) {
-          return null; // conflict
+          return failure("conflict");
         }
         termPairs.remove(i); // decompose
         for (int j = 0; j < left.terms.size(); j++) {
@@ -95,7 +95,7 @@ public class MartelliUnifier extends Unifier {
         final Variable variable = (Variable) pair.left;
         final Term term = pair.right;
         if (term.contains(variable)) {
-          return null; // check
+          return failure("cycle: variable " + variable + " in " + term);
         }
         final Map<Variable, Term> map = ImmutableMap.of(variable, term);
         result.put(variable, term);
