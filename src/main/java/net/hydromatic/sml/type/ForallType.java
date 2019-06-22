@@ -18,29 +18,31 @@
  */
 package net.hydromatic.sml.type;
 
+import com.google.common.collect.ImmutableList;
+
 import net.hydromatic.sml.ast.Op;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
-/** The type of a function value. */
-public class FnType extends BaseType {
-  public final Type paramType;
-  public final Type resultType;
+/** Universally quantified type. */
+public class ForallType extends BaseType {
+  public final List<TypeVar> typeVars;
+  public final Type type;
 
-  FnType(String description, Type paramType, Type resultType) {
-    super(Op.FUNCTION_TYPE, description);
-    this.paramType = paramType;
-    this.resultType = resultType;
+  ForallType(String description, ImmutableList<TypeVar> typeVars, Type type) {
+    super(Op.FORALL_TYPE, description);
+    this.typeVars = Objects.requireNonNull(typeVars);
+    this.type = Objects.requireNonNull(type);
   }
 
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
-    final Type paramType2 = paramType.copy(typeSystem, transform);
-    final Type resultType2 = resultType.copy(typeSystem, transform);
-    return paramType2 == paramType
-        && resultType2 == resultType
+    final Type type2 = type.copy(typeSystem, transform);
+    return type2 == type
         ? this
-        : typeSystem.fnType(paramType2, resultType2);
+        : typeSystem.forallType(typeVars, type2);
   }
 }
 
-// End FnType.java
+// End ForallType.java

@@ -207,12 +207,12 @@ public abstract class Codes {
     };
   }
 
-  public static Code list(List<Code> codes) {
+  public static Code list(Iterable<? extends Code> codes) {
     return tuple(codes);
   }
 
-  public static Code tuple(List<Code> codes) {
-    return new TupleCode(codes);
+  public static Code tuple(Iterable<? extends Code> codes) {
+    return new TupleCode(ImmutableList.copyOf(codes));
   }
 
   public static Code from(Map<Ast.Id, Code> sources, Code filterCode,
@@ -755,7 +755,7 @@ public abstract class Codes {
   public static class TupleCode implements Code {
     public final List<Code> codes;
 
-    TupleCode(List<Code> codes) {
+    private TupleCode(ImmutableList<Code> codes) {
       this.codes = codes;
     }
 

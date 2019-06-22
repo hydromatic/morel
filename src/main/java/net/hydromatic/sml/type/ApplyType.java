@@ -18,29 +18,33 @@
  */
 package net.hydromatic.sml.type;
 
+import com.google.common.collect.ImmutableList;
+
 import net.hydromatic.sml.ast.Op;
 
+import java.util.Objects;
 import java.util.function.Function;
 
-/** The type of a function value. */
-public class FnType extends BaseType {
-  public final Type paramType;
-  public final Type resultType;
+/** Type that is a polymorphic type applied to a set of types. */
+public class ApplyType extends BaseType {
+  public final Type type;
+  public final ImmutableList<Type> types;
 
-  FnType(String description, Type paramType, Type resultType) {
-    super(Op.FUNCTION_TYPE, description);
-    this.paramType = paramType;
-    this.resultType = resultType;
+  protected ApplyType(Type type, ImmutableList<Type> types,
+      String description) {
+    super(Op.APPLY_TYPE, description);
+    this.type = Objects.requireNonNull(type);
+    this.types = Objects.requireNonNull(types);
   }
 
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
-    final Type paramType2 = paramType.copy(typeSystem, transform);
-    final Type resultType2 = resultType.copy(typeSystem, transform);
-    return paramType2 == paramType
-        && resultType2 == resultType
-        ? this
-        : typeSystem.fnType(paramType2, resultType2);
+    final Type type2 = type.copy(typeSystem, transform);
+    final ImmutableList<Type> types2 =
+        types.stream().map(t -> t.copy(typeSystem, transform))
+            .collect(ImmutableList.toImmutableList());
+    return type == type2 && types.equals(types2) ? this
+        : typeSystem.apply(type2, types2);
   }
 }
 
-// End FnType.java
+// End ApplyType.java

@@ -150,7 +150,7 @@ public abstract class Unifier {
 
     Substitution(Map<Variable, Term> resultMap) {
       this.resultMap =
-          ImmutableSortedMap.copyOf(resultMap, Ordering.usingToString());
+          ImmutableSortedMap.copyOf(resultMap, Ordering.natural());
     }
 
     @Override public int hashCode() {
@@ -234,15 +234,37 @@ public abstract class Unifier {
 
   /** A variable that represents a symbol or a sequence; unification's
    * task is to find the substitutions for such variables. */
-  public static final class Variable implements Term {
+  public static final class Variable implements Term, Comparable<Variable> {
     final String name;
+
     Variable(String name) {
       this.name = Objects.requireNonNull(name);
-      Preconditions.checkArgument(!name.equals(name.toLowerCase(Locale.ROOT)));
+      Preconditions.checkArgument(name.equals(name.toUpperCase(Locale.ROOT)),
+          "must be upper case: %s", name);
     }
 
     @Override public String toString() {
       return name;
+    }
+
+    @Override public int compareTo(Variable o) {
+      final int i = ordinal();
+      final int i2 = o.ordinal();
+      int c = Integer.compare(i, i2);
+      if (c == 0) {
+        c = name.compareTo(o.name);
+      }
+      return c;
+    }
+
+    /** If the name is "T3", returns 3. If the name is not of the form
+     * "T{integer}" returns -1. */
+    private int ordinal() {
+      try {
+        return Integer.parseInt(name.substring(1));
+      } catch (NumberFormatException e) {
+        return -1;
+      }
     }
 
     public Term apply(Map<Variable, Term> substitutions) {

@@ -85,7 +85,7 @@ Implemented:
 * `if`
 * `case`
 * Primitive, list, tuple and record types
-* Type variables (polymorphism) (but see "bugs")
+* Type variables (polymorphism) (except in `let` and `datatype`)
 * Enumerated types (`datatype`)
 * Tuples and unit, record and list values
 * Patterns (destructuring) in `val` and `case`,
@@ -115,10 +115,7 @@ Not implemented:
 Bugs:
 * The `@` infix operator to concatenate lists is currently named `at` and is
   prefix;
-* Built-in operators for lists operate on `int` lists not `'a` lists;
 * Built-in operators do not use the `option` type;
-* Unbound type variables are not yet supported. For example, the
-  expression `[]` should have type `'a list` but currently fails
 * Prevent user from overriding built-in constants and functions:
   `true`, `false`, `nil`, `ref`, `it`, `::`; they should not be reserved
 * Access parameters and variables by offset into a fixed-size array;

@@ -54,7 +54,7 @@ public class RecordType extends BaseType {
     }
     return differenceCount == 0
         ? this
-        : new RecordType(description, argNameTypes2.build());
+        : typeSystem.recordType(argNameTypes2.build());
   }
 
   /** Ordering that compares integer values numerically,
@@ -62,7 +62,7 @@ public class RecordType extends BaseType {
    * and integer values before string values.
    *
    * <p>Thus: 2, 22, 202, a, a2, a202, a22. */
-  static final Ordering<String> ORDERING =
+  public static final Ordering<String> ORDERING =
       Ordering.from(
           (o1, o2) -> {
             Integer i1 = parseInt(o1);

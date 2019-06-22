@@ -36,7 +36,7 @@ public class ListType extends BaseType {
     final Type elementType2 = elementType.copy(typeSystem, transform);
     return elementType2 == elementType
         ? this
-        : new ListType(description, elementType2);
+        : typeSystem.listType(elementType2);
   }
 }
 

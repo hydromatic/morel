@@ -71,10 +71,12 @@ public enum Op {
   DATA_TYPE(true),
   /** Used internally, while resolving a self-referential DATA_TYPE. */
   TEMPORARY_DATA_TYPE(true),
+  APPLY_TYPE,
   TUPLE_TYPE(" * ", 7),
   COMPOSITE_TYPE,
   FUNCTION_TYPE(" -> ", 6, false),
   NAMED_TYPE(" ", 8),
+  FORALL_TYPE,
 
   // annotated expression "e: t"
   ANNOTATED_EXP(" : "),

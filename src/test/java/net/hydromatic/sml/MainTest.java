@@ -34,6 +34,7 @@ import net.hydromatic.sml.eval.EvalEnv;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
 import net.hydromatic.sml.type.TypeSystem;
+import net.hydromatic.sml.type.TypeVar;
 
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -57,6 +58,7 @@ import java.util.function.Consumer;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -172,6 +174,12 @@ public class MainTest {
   private void assertType(String ml, Matcher<String> matcher) {
     withValidate(ml, (exp, typeMap) ->
         assertThat(typeMap.getType(exp).description(), matcher));
+  }
+
+  private void assertTypeThrows(String ml, Matcher<Throwable> matcher) {
+    assertError(() ->
+            withValidate(ml, (exp, typeMap) -> fail("expected error")),
+        matcher);
   }
 
   private void assertEval(String ml, Matcher<Object> matcher) {
@@ -353,6 +361,26 @@ public class MainTest {
         + "3 *) 5 + 6", "5 + 6");
   }
 
+  /** Tests the name of {@link TypeVar}. */
+  @Test public void testTypeVarName() {
+    assertError(() -> new TypeVar(-1).description(),
+        throwsA(IllegalArgumentException.class, nullValue()));
+    assertThat(new TypeVar(0).description(), is("'a"));
+    assertThat(new TypeVar(1).description(), is("'b"));
+    assertThat(new TypeVar(2).description(), is("'c"));
+    assertThat(new TypeVar(25).description(), is("'z"));
+    assertThat(new TypeVar(26).description(), is("'ba"));
+    assertThat(new TypeVar(27).description(), is("'bb"));
+    assertThat(new TypeVar(51).description(), is("'bz"));
+    assertThat(new TypeVar(52).description(), is("'ca"));
+    assertThat(new TypeVar(53).description(), is("'cb"));
+    assertThat(new TypeVar(26 * 26 - 1).description(), is("'zz"));
+    assertThat(new TypeVar(26 * 26).description(), is("'baa"));
+    assertThat(new TypeVar(27 * 26 - 1).description(), is("'baz"));
+    assertThat(new TypeVar(26 * 26 * 26 - 1).description(), is("'zzz"));
+    assertThat(new TypeVar(26 * 26 * 26).description(), is("'baaa"));
+  }
+
   @Test public void testType() {
     assertType("1", is("int"));
     assertType("0e0", is("real"));
@@ -416,15 +444,50 @@ public class MainTest {
         is("Error: fn expression required on rhs of val rec"));
   }
 
-  @Ignore // enable this test when we have polymorphic type resolution
-  @Test public void testType2() {
+  @Test public void testApply() {
+    assertType("List_hd [\"abc\"]", is("string"));
+  }
+
+  @Test public void testApply2() {
+    assertType("List_map (fn x => String_size x) [\"abc\", \"de\"]",
+        is("int list"));
+  }
+
+  @Test public void testApplyIsMonomorphic() {
     // cannot be typed, since the parameter f is in a monomorphic position
-    assertType("fn f => (f true, f 0)", is("invalid"));
+    assertTypeThrows("fn f => (f true, f 0)",
+        throwsA(RuntimeException.class,
+            is("Cannot deduce type: conflict: int vs bool")));
+  }
+
+  @Ignore // enable this test when we have polymorphic type resolution
+  @Test public void testLetIsPolymorphic() {
     // f has been introduced in a let-expression and is therefore treated as
     // polymorphic.
     assertType("let val f = fn x => x in (f true, f 0) end", is("bool * int"));
+  }
+
+  @Test public void testTypeVariable() {
+    // constant
     assertType("fn _ => 42", is("'a -> int"));
     assertEval("(fn _ => 42) 2", is(42));
+    assertType("fn _ => fn _ => 42", is("'a -> 'b -> int"));
+
+    // identity
+    assertType("fn x => x", is("'a -> 'a"));
+    assertEval("(fn x => x) 2", is(2));
+    assertEval("(fn x => x) \"foo\"", is("foo"));
+    assertEval("(fn x => x) true", is(true));
+    assertType("let fun id x = x in id end", is("'a -> 'a"));
+
+    // first/second
+    assertType("fn x => fn y => x", is("'a -> 'b -> 'a"));
+    assertType("let fun first x y = x in first end", is("'a -> 'b -> 'a"));
+    assertType("let fun second x y = y in second end", is("'a -> 'b -> 'b"));
+    assertType("let fun choose b x y = if b then x else y in choose end",
+        is("bool -> 'a -> 'a -> 'a"));
+    assertType("let fun choose b (x, y) = if b then x else y in choose end",
+        is("bool -> 'a * 'a -> 'a"));
   }
 
   @Test public void testEval() {
@@ -595,17 +658,28 @@ public class MainTest {
     // 'and' is executed in parallel, therefore 'x + 1' evaluates to 2, not 4
     assertEval("let val x = 1; val x = 3 and y = x + 1 in x + y end", is(5));
 
-    assertError2("let val x = 1 and y = x + 2 in x + y end",
-        isError("unbound variable or constructor: x"));
+    assertEvalError("let val x = 1 and y = x + 2 in x + y end",
+        throwsA("unbound variable or constructor: x"));
 
     // let with val and fun
     assertEval("let fun f x = 1 + x; val x = 2 in f x end", is(3));
   }
 
-  private Matcher<Throwable> isError(String message) {
+  private Matcher<Throwable> throwsA(String message) {
     return new CustomTypeSafeMatcher<Throwable>("throwable: " + message) {
       @Override protected boolean matchesSafely(Throwable item) {
         return item.toString().contains(message);
+      }
+    };
+  }
+
+  private <T extends Throwable> Matcher<Throwable> throwsA(Class<T> clazz,
+      Matcher<?> messageMatcher) {
+    return new CustomTypeSafeMatcher<Throwable>(clazz + " with message "
+        + messageMatcher) {
+      @Override protected boolean matchesSafely(Throwable item) {
+        return clazz.isInstance(item)
+            && messageMatcher.matches(item.getMessage());
       }
     };
   }
@@ -651,10 +725,9 @@ public class MainTest {
     assertEval(ml, is(120));
   }
 
-  @Ignore("requires generics")
   @Test public void testEvalFnTupleGeneric() {
     assertEval("(fn (x, y) => x) (2, 3)", is(2));
-    assertEval("(fn (x, y) => y) 3", is(3));
+    assertEval("(fn (x, y) => y) (2, 3)", is(3));
   }
 
   @Test public void testRecord() {
@@ -697,12 +770,11 @@ public class MainTest {
             + "    (fn {x=x,...} => x) (fn {b=b,...} => b)\n"));
   }
 
-  @Ignore("deduce type of #label")
   @Test public void testRecordFn() {
     assertType("(fn {a=a1,b=b1} => a1) {a = 1, b = true}", is("int"));
     assertType("(fn {a=a1,b=b1} => b1) {a = 1, b = true}", is("bool"));
-    assertEval("(fn {a=a1,b=b1} => a1) {a = 1, b = true}", is("1"));
-    assertEval("(fn {a=a1,b=b1} => b1) {a = 1, b = true}", is("true"));
+    assertEval("(fn {a=a1,b=b1} => a1) {a = 1, b = true}", is(1));
+    assertEval("(fn {a=a1,b=b1} => b1) {a = 1, b = true}", is(true));
   }
 
   @Test public void testRecordMatch() {
@@ -743,9 +815,6 @@ public class MainTest {
   @Test public void testList() {
     assertType("[1]", is("int list"));
     assertType("[[1]]", is("int list list"));
-  }
-
-  @Test public void testTodo() {
     assertType("[(1, true), (2, false)]", is("(int * bool) list"));
     assertType("1 :: [2]", is("int list"));
     assertType("1 :: [2, 3]", is("int list"));
@@ -753,11 +822,11 @@ public class MainTest {
     assertType("1 :: []", is("int list"));
     assertType("1 :: 2 :: []", is("int list"));
     assertEval("1 :: 2 :: []", is(Arrays.asList(1, 2)));
+    assertType("fn [] => 0", is("'a list -> int"));
   }
 
-  @Ignore("need patterns as arguments and generics")
+  @Ignore("need type annotations")
   @Test public void testList2() {
-    assertType("fn [] => 0", is("'a list -> int"));
     assertType("fn x: 'b list => 0", is("'a list -> int"));
   }
 
@@ -873,6 +942,7 @@ public class MainTest {
     assertEval(ml2,  is(6));
   }
 
+  @Ignore("not working yet")
   @Test public void testDatatype() {
     final String ml = "let\n"
         + "  datatype 'a tree = NODE of 'a tree * 'a tree | LEAF of 'a\n"
@@ -880,6 +950,8 @@ public class MainTest {
         + "  NODE (LEAF 1, NODE (LEAF 2, LEAF 3))\n"
         + "end";
     assertParseSame(ml);
+    assertType(ml, is("(INTEGER of int | RATIONAL of int * int | ZERO)"));
+    assertEval(ml, is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
   }
 
   @Test public void testDatatype2() {
@@ -1068,9 +1140,18 @@ public class MainTest {
         is("stdIn:3.5-3.46 Error: clauses don't all have same function name"));
   }
 
-  private void assertError2(String ml, Matcher<Throwable> matcher) {
+  private void assertEvalError(String ml, Matcher<Throwable> matcher) {
     try {
       assertEval(ml, CoreMatchers.notNullValue());
+      fail("expected error");
+    } catch (Throwable e) {
+      assertThat(e, matcher);
+    }
+  }
+
+  private void assertError(Runnable runnable, Matcher<Throwable> matcher) {
+    try {
+      runnable.run();
       fail("expected error");
     } catch (Throwable e) {
       assertThat(e, matcher);

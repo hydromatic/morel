@@ -18,7 +18,6 @@
  */
 package net.hydromatic.sml.type;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
@@ -32,7 +31,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SortedMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** A table that contains all types in use, indexed by their description (e.g.
  * "{@code int -> int}"). */
@@ -83,11 +84,11 @@ public class TypeSystem {
   }
 
   /** Creates a function type. */
-  public Type fnType(Type paramType, Type resultType) {
+  public FnType fnType(Type paramType, Type resultType) {
     final String description =
         unparseList(new StringBuilder(), Op.FUNCTION_TYPE, 0, 0,
             Arrays.asList(paramType, resultType)).toString();
-    return typeByName.computeIfAbsent(description,
+    return (FnType) typeByName.computeIfAbsent(description,
         d -> new FnType(d, paramType, resultType));
   }
 
@@ -105,12 +106,12 @@ public class TypeSystem {
   }
 
   /** Creates a list type. */
-  public Type listType(Type elementType) {
+  public ListType listType(Type elementType) {
     final String description =
         unparse(new StringBuilder(), elementType, 0, Op.LIST.right)
             .append(" list")
             .toString();
-    return typeByName.computeIfAbsent(description,
+    return (ListType) typeByName.computeIfAbsent(description,
         d -> new ListType(d, elementType));
   }
 
@@ -132,28 +133,25 @@ public class TypeSystem {
 
   /** Creates a record type. (Or a tuple type if the fields are named "1", "2"
    * etc.; or "unit" if the field list is empty.) */
-  public Type recordType(List<String> argNames, List<? extends Type> argTypes) {
-    Preconditions.checkArgument(argNames.size() == argTypes.size());
-    if (argNames.isEmpty()) {
+  public Type recordType(SortedMap<String, ? extends Type> argNameTypes) {
+    if (argNameTypes.isEmpty()) {
       return PrimitiveType.UNIT;
     }
-    final ImmutableSortedMap.Builder<String, Type> mapBuilder =
-        ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-    Pair.forEach(argNames, argTypes, mapBuilder::put);
     final StringBuilder builder = new StringBuilder("{");
-    final ImmutableSortedMap<String, Type> map = mapBuilder.build();
-    map.forEach((name, type) -> {
+    final ImmutableSortedMap<String, Type> argNameTypes2 =
+        ImmutableSortedMap.copyOfSorted(argNameTypes);
+    argNameTypes2.forEach((name, type) -> {
       if (builder.length() > 1) {
         builder.append(", ");
       }
       builder.append(name).append(':').append(type.description());
     });
-    if (areContiguousIntegers(map.keySet())) {
-      return tupleType(ImmutableList.copyOf(map.values()));
+    if (areContiguousIntegers(argNameTypes2.keySet())) {
+      return tupleType(ImmutableList.copyOf(argNameTypes2.values()));
     }
     final String description = builder.append('}').toString();
     return this.typeByName.computeIfAbsent(description,
-        d -> new RecordType(d, map));
+        d -> new RecordType(d, argNameTypes2));
   }
 
   /** Returns whether the collection is ["1", "2", ... n]. */
@@ -165,6 +163,45 @@ public class TypeSystem {
       }
     }
     return true;
+  }
+
+  /** Creates a "forall" type. */
+  public Type forallType(int typeCount, Function<ForallHelper, Type> builder) {
+    final ImmutableList.Builder<TypeVar> typeVars = ImmutableList.builder();
+    for (int i = 0; i < typeCount; i++) {
+      typeVars.add(typeVariable(i));
+    }
+    final ImmutableList<TypeVar> typeVarList = typeVars.build();
+    final ForallHelper helper = new ForallHelper() {
+      public TypeVar get(int i) {
+        return typeVarList.get(i);
+      }
+
+      public ListType list(int i) {
+        return listType(get(i));
+      }
+
+      public FnType predicate(int i) {
+        return fnType(get(i), PrimitiveType.BOOL);
+      }
+    };
+    final Type type = builder.apply(helper);
+    return forallType(typeVarList, type);
+  }
+
+  /** Creates a "forall" type. */
+  public Type forallType(Iterable<TypeVar> typeVars, Type type) {
+    final StringBuilder b = new StringBuilder();
+    b.append("forall");
+    for (TypeVar typeVar : typeVars) {
+      b.append(' ').append(typeVar.description());
+    }
+    b.append(". ");
+    unparse(b, type, 0, 0);
+
+    final String description = b.toString();
+    return typeByName.computeIfAbsent(description,
+        d -> new ForallType(d, ImmutableList.copyOf(typeVars), type));
   }
 
   private static StringBuilder unparseList(StringBuilder builder, Op op,
@@ -204,8 +241,18 @@ public class TypeSystem {
     return typeConstructorByName.get(tyConName);
   }
 
-  public Type typeVariable(int ordinal) {
-    return PrimitiveType.INT; // TODO:
+  public Type apply(Type type, List<Type> types) {
+    final String description =
+        types.stream().map(Type::description)
+            .collect(Collectors.joining(",", "<", ">"))
+        + type.description();
+    return new ApplyType(type, ImmutableList.copyOf(types), description);
+  }
+
+  public TypeVar typeVariable(int ordinal) {
+    final String description = "'#" + ordinal;
+    return (TypeVar) typeByName.computeIfAbsent(description,
+        d -> new TypeVar(ordinal));
   }
 
   /** Placeholder for a type that is being recursively defined.
@@ -247,6 +294,14 @@ public class TypeSystem {
     public void delete() {
       this.typeSystem.typeByName.remove(name);
     }
+  }
+
+  /** Provides access to type variables from within a call to
+   * {@link TypeSystem#forallType(int, Function)}. */
+  public interface ForallHelper {
+    TypeVar get(int i);
+    ListType list(int i);
+    FnType predicate(int i);
   }
 }
 

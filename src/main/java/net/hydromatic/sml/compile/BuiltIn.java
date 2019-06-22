@@ -47,7 +47,7 @@ public enum BuiltIn {
   ABS("abs", ts -> ts.fnType(INT, INT)),
 
   /** Function "ignore", of type "&alpha; &rarr; unit". */
-  IGNORE("ignore", ts -> ts.fnType(alpha(ts), UNIT)),
+  IGNORE("ignore", ts -> ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
 
   /** Constant "String.maxSize", of type "int".
    *
@@ -166,19 +166,21 @@ public enum BuiltIn {
    *
    * <p>"nil" is the empty list.
    */
-  LIST_NIL("List.nil", BuiltIn::alphaList),
+  LIST_NIL("List.nil", ts -> ts.forallType(1, h -> h.list(0))),
 
   /** Function "List.null", of type "&alpha; list &rarr; bool".
    *
    * <p>"null l" returns true if the list l is empty.
    */
-  LIST_NULL("List.null", ts -> ts.fnType(alphaList(ts), BOOL)),
+  LIST_NULL("List.null", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
 
   /** Function "List.length", of type "&alpha; list &rarr; int".
    *
    * <p>"length l" returns the number of elements in the list l.
    */
-  LIST_LENGTH("List.length", ts -> ts.fnType(alphaList(ts), BOOL)),
+  LIST_LENGTH("List.length", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
 
   /** Function "List.at", of type "&alpha; list * &alpha; list &rarr; &alpha;
    * list".
@@ -187,28 +189,32 @@ public enum BuiltIn {
    */
   // TODO: make this infix "@" rather than prefix "at"
   LIST_AT("List.at", ts ->
-      ts.fnType(ts.tupleType(alphaList(ts), alphaList(ts)), alphaList(ts))),
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
 
   /** Function "List.hd", of type "&alpha; list &rarr; &alpha;".
    *
    * <p>"hd l" returns the first element of l. It raises {@code Empty} if l is
    * nil.
    */
-  LIST_HD("List.hd", ts -> ts.fnType(alphaList(ts), alpha(ts))),
+  LIST_HD("List.hd", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
 
   /** Function "List.tl", of type "&alpha; list &rarr; &alpha; list".
    *
    * <p>"tl l" returns all but the first element of l. It raises {@code Empty}
    * if l is nil.
    */
-  LIST_TL("List.tl", ts -> ts.fnType(alphaList(ts), alphaList(ts))),
+  LIST_TL("List.tl", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
 
   /** Function "List.last", of type "&alpha; list &rarr; &alpha;".
    *
    * <p>"last l" returns the last element of l. It raises {@code Empty} if l is
    * nil.
    */
-  LIST_LAST("List.last", ts -> ts.fnType(alphaList(ts), alpha(ts))),
+  LIST_LAST("List.last", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
 
   /** Function "List.getItem", of type "&alpha; list &rarr;
    * (&alpha; * &alpha; list) option".
@@ -221,7 +227,8 @@ public enum BuiltIn {
    */
   // TODO: make it return an option
   LIST_GET_ITEM("List.getItem", ts ->
-      ts.fnType(alphaList(ts), ts.tupleType(alpha(ts), alphaList(ts)))),
+      ts.forallType(1, h ->
+          ts.fnType(h.list(0), ts.tupleType(h.get(0), h.list(0))))),
 
   /** Function "List.nth", of type "&alpha; list * int &rarr; &alpha;".
    *
@@ -230,7 +237,7 @@ public enum BuiltIn {
    * nth(l,0) = hd l, ignoring exceptions.
    */
   LIST_NTH("List.nth", ts ->
-      ts.fnType(ts.tupleType(alphaList(ts), INT), alpha(ts))),
+      ts.forallType(1, h -> ts.fnType(ts.tupleType(h.list(0), INT), h.get(0)))),
 
   /** Function "List.take", of type "&alpha; list * int &rarr; &alpha; list".
    *
@@ -239,7 +246,8 @@ public enum BuiltIn {
    * We have take(l, length l) = l.
    */
   LIST_TAKE("List.take", ts ->
-      ts.fnType(ts.tupleType(alphaList(ts), INT), alphaList(ts))),
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.list(0), INT), h.list(0)))),
 
   /** Function "List.drop", of type "&alpha; list * int &rarr; &alpha; list".
    *
@@ -254,13 +262,15 @@ public enum BuiltIn {
    * <p>We also have {@code drop(l, length l) = []}.
    */
   LIST_DROP("List.drop", ts ->
-      ts.fnType(ts.tupleType(alphaList(ts), INT), alphaList(ts))),
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.list(0), INT), h.list(0)))),
 
   /** Function "List.rev", of type "&alpha; list &rarr; &alpha; list".
    *
    * <p>"rev l" returns a list consisting of l's elements in reverse order.
    */
-  LIST_REV("List.rev", ts -> ts.fnType(alphaList(ts), alphaList(ts))),
+  LIST_REV("List.rev", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
 
   /** Function "List.concat", of type "&alpha; list list &rarr; &alpha; list".
    *
@@ -269,7 +279,7 @@ public enum BuiltIn {
    * {@code concat[l1,l2,...ln] = l1 @ l2 @ ... @ ln}
    */
   LIST_CONCAT("List.concat", ts ->
-      ts.fnType(ts.listType(alphaList(ts)), alphaList(ts))),
+      ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
 
   /** Function "List.revAppend", of type "&alpha; list * &alpha; list &rarr;
    * &alpha; list".
@@ -277,7 +287,8 @@ public enum BuiltIn {
    * <p>"revAppend (l1, l2)" returns (rev l1) @ l2.
    */
   LIST_REV_APPEND("List.revAppend", ts ->
-      ts.fnType(ts.tupleType(alphaList(ts), alphaList(ts)), alphaList(ts))),
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
 
   /** Function "List.app", of type "(&alpha; &rarr; unit) &rarr; &alpha; list
    * &rarr; unit".
@@ -285,7 +296,8 @@ public enum BuiltIn {
    * <p>"app f l" applies f to the elements of l, from left to right.
    */
   LIST_APP("List.app", ts ->
-      ts.fnType(ts.fnType(alpha(ts), UNIT), alphaList(ts), UNIT)),
+      ts.forallType(1, h ->
+          ts.fnType(ts.fnType(h.get(0), UNIT), h.list(0), UNIT))),
 
   /** Function "List.map", of type
    * "(&alpha; &rarr; &beta;) &rarr; &alpha; list &rarr; &beta; list".
@@ -294,7 +306,9 @@ public enum BuiltIn {
    * the list of results.
    */
   LIST_MAP("List.map", "map", ts ->
-      ts.fnType(ts.fnType(alpha(ts), beta(ts)), alphaList(ts), betaList(ts))),
+      ts.forallType(2, t ->
+          ts.fnType(ts.fnType(t.get(0), t.get(1)),
+              ts.listType(t.get(0)), ts.listType(t.get(1))))),
 
   /** Function "List.mapPartial", of type
    * "(&alpha; &rarr; &beta; option) &rarr; &alpha; list &rarr; &beta; list".
@@ -307,7 +321,8 @@ public enum BuiltIn {
    */
   // TODO: make this take option
   LIST_MAP_PARTIAL("List.mapPartial", ts ->
-      ts.fnType(ts.fnType(alpha(ts), beta(ts)), alphaList(ts), betaList(ts))),
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(h.get(0), h.get(1)), h.list(0), h.list(1)))),
 
   /** Function "List.find", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
    * &rarr; &alpha; option".
@@ -317,7 +332,7 @@ public enum BuiltIn {
    * exists; otherwise it returns NONE.
    */
   LIST_FIND("List.find", ts ->
-      ts.fnType(alphaPredicate(ts), alphaList(ts), alpha(ts))),
+      ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), h.get(0)))),
 
   /** Function "List.filter", of type
    * "(&alpha; &rarr; bool) &rarr; &alpha; list &rarr; &alpha; list".
@@ -327,7 +342,7 @@ public enum BuiltIn {
    * same order as they occurred in the argument list.
    */
   LIST_FILTER("List.filter", ts ->
-      ts.fnType(alphaPredicate(ts), alphaList(ts), alphaList(ts))),
+      ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), h.list(0)))),
 
   /** Function "List.partition", of type "(&alpha; &rarr; bool) &rarr;
    * &alpha; list &rarr; &alpha; list * &alpha; list".
@@ -339,8 +354,9 @@ public enum BuiltIn {
    * relative order they possessed in l.
    */
   LIST_PARTITION("List.partition", ts ->
-      ts.fnType(alphaPredicate(ts), alphaList(ts),
-          ts.tupleType(alphaList(ts), alphaList(ts)))),
+      ts.forallType(1, h ->
+          ts.fnType(h.predicate(0), h.list(0),
+              ts.tupleType(h.list(0), h.list(0))))),
 
   /** Function "List.foldl", of type "(&alpha; * &beta; &rarr; &beta;) &rarr;
    *  &beta; &rarr; &alpha; list &rarr; &beta;".
@@ -350,8 +366,9 @@ public enum BuiltIn {
    * or {@code init} if the list is empty.
    */
   LIST_FOLDL("List.foldl", ts ->
-      ts.fnType(ts.fnType(ts.tupleType(alpha(ts), beta(ts)), beta(ts)),
-          beta(ts), alphaList(ts), beta(ts))),
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
+              h.get(1), h.list(0), h.get(1)))),
 
   /** Function "List.foldr", of type "(&alpha; * &beta; &rarr; &beta;) &rarr;
    *  &beta; &rarr; &alpha; list &rarr; &beta;".
@@ -361,8 +378,9 @@ public enum BuiltIn {
    * or {@code init} if the list is empty.
    */
   LIST_FOLDR("List.foldr", ts ->
-      ts.fnType(ts.fnType(ts.tupleType(alpha(ts), beta(ts)), beta(ts)),
-          beta(ts), alphaList(ts), beta(ts))),
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
+              h.get(1), h.list(0), h.get(1)))),
 
   /** Function "List.exists", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
    * &rarr; bool".
@@ -372,7 +390,7 @@ public enum BuiltIn {
    * exists and false otherwise.
    */
   LIST_EXISTS("List.exists", ts ->
-      ts.fnType(alphaPredicate(ts), alphaList(ts), BOOL)),
+      ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), BOOL))),
 
   /** Function "List.all", of type
    * "(&alpha; &rarr; bool) &rarr; &alpha; list &rarr; bool".
@@ -382,7 +400,7 @@ public enum BuiltIn {
    * and true otherwise. It is equivalent to not(exists (not o f) l)).
    */
   LIST_ALL("List.all", ts ->
-      ts.fnType(alphaPredicate(ts), alphaList(ts), BOOL)),
+      ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), BOOL))),
 
   /** Function "List.tabulate", of type
    * "int * (int &rarr; &alpha;) &rarr; &alpha; list".
@@ -392,7 +410,8 @@ public enum BuiltIn {
    * {@code Size} if n &lt; 0.
    */
   LIST_TABULATE("List.tabulate", ts ->
-      ts.fnType(ts.tupleType(INT, ts.fnType(INT, alpha(ts))), alphaList(ts))),
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.list(0)))),
 
   /** Function "List.collate", of type "(&alpha; * &alpha; &rarr; order)
    * &rarr; &alpha; list * &alpha; list &rarr; order".
@@ -402,9 +421,10 @@ public enum BuiltIn {
    */
   LIST_COLLATE("List.collate", ts -> {
     final Type order = INT; // TODO:
-    return ts.fnType(ts.fnType(ts.tupleType(alpha(ts), alpha(ts)), order),
-        ts.tupleType(alphaList(ts), alphaList(ts)),
-        order);
+    return ts.forallType(1, h ->
+        ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(0)), order),
+            ts.tupleType(h.list(0), h.list(0)),
+            order));
   });
 
   /** The name as it appears in ML's symbol table. */
@@ -439,26 +459,6 @@ public enum BuiltIn {
     this.mlName = mlName.replace('.', '_'); // until we can parse long-ids
     this.alias = alias;
     this.typeFunction = typeFunction;
-  }
-
-  private static Type alphaPredicate(TypeSystem ts) {
-    return ts.fnType(alpha(ts), BOOL);
-  }
-
-  private static Type alpha(TypeSystem ts) {
-    return ts.typeVariable(0);
-  }
-
-  private static Type alphaList(TypeSystem ts) {
-    return ts.listType(alpha(ts));
-  }
-
-  private static Type betaList(TypeSystem ts) {
-    return ts.listType(beta(ts));
-  }
-
-  private static Type beta(TypeSystem ts) {
-    return ts.typeVariable(1);
   }
 
   /** Calls a consumer once per value. */

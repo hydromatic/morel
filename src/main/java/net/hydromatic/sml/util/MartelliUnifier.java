@@ -73,7 +73,7 @@ public class MartelliUnifier extends Unifier {
 
         if (!left.operator.equals(right.operator)
             || left.terms.size() != right.terms.size()) {
-          return failure("conflict");
+          return failure("conflict: " + left + " vs " + right);
         }
         termPairs.remove(i); // decompose
         for (int j = 0; j < left.terms.size(); j++) {

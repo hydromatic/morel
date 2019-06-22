@@ -21,14 +21,17 @@ package net.hydromatic.sml.compile;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.ast.Pos;
+import net.hydromatic.sml.type.ApplyType;
 import net.hydromatic.sml.type.DataType;
 import net.hydromatic.sml.type.DummyType;
 import net.hydromatic.sml.type.FnType;
+import net.hydromatic.sml.type.ForallType;
 import net.hydromatic.sml.type.ListType;
 import net.hydromatic.sml.type.NamedType;
 import net.hydromatic.sml.type.PrimitiveType;
@@ -37,6 +40,7 @@ import net.hydromatic.sml.type.TupleType;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.type.TypeSystem;
 import net.hydromatic.sml.type.TypeVar;
+import net.hydromatic.sml.util.ConsList;
 import net.hydromatic.sml.util.MapList;
 import net.hydromatic.sml.util.MartelliUnifier;
 import net.hydromatic.sml.util.Pair;
@@ -66,11 +70,13 @@ public class TypeResolver {
   final List<TermVariable> terms = new ArrayList<>();
   final Map<AstNode, Unifier.Term> map = new HashMap<>();
   final Map<Unifier.Variable, Unifier.Action> actionMap = new HashMap<>();
+  final Map<String, TypeVar> tyVarMap = new HashMap<>();
 
   private static final String TUPLE_TY_CON = "tuple";
   private static final String LIST_TY_CON = "list";
   private static final String RECORD_TY_CON = "record";
   private static final String FN_TY_CON = "fn";
+  private static final String APPLY_TY_CON = "apply";
 
   private TypeResolver(TypeSystem typeSystem) {
     this.typeSystem = Objects.requireNonNull(typeSystem);
@@ -98,11 +104,11 @@ public class TypeResolver {
       return Resolved.of(decl, node2,
           new TypeMap(typeSystem, map, (Unifier.Substitution) result));
     } else {
-      throw new RuntimeException("Cannot deduce type: " + result
-          + ";\n"
+      final String extra = ";\n"
           + " term pairs:\n"
           + terms.stream().map(Object::toString)
-              .collect(Collectors.joining("\n")));
+          .collect(Collectors.joining("\n"));
+      throw new RuntimeException("Cannot deduce type: " + result);
     }
   }
 
@@ -264,7 +270,8 @@ public class TypeResolver {
 
     case ID:
       final Ast.Id id = (Ast.Id) node;
-      return reg(id, v, env.get(id.name));
+      final Unifier.Term term = env.get(id.name);
+      return reg(id, v, term);
 
     case FN:
       final Ast.Fn fn = (Ast.Fn) node;
@@ -473,8 +480,8 @@ public class TypeResolver {
         type = dataType;
       }
       termMap.put((Ast.IdPat) ast.idPat(tyCon.pos, tyCon.id.name),
-          toTerm(type));
-      map.put(tyCon, toTerm(type));
+          toTerm(type, Subst.EMPTY));
+      map.put(tyCon, toTerm(type, Subst.EMPTY));
     }
   }
 
@@ -486,12 +493,19 @@ public class TypeResolver {
 
     case NAMED_TYPE:
       final Ast.NamedType namedType = (Ast.NamedType) type;
+      final Type genericType = typeSystem.lookup(namedType.name);
       if (namedType.types.isEmpty()) {
-        return typeSystem.lookup(namedType.name);
+        return genericType;
       }
-      // fall through
-      final Type lookup = typeSystem.lookup(namedType.name);
-      return lookup;
+      //noinspection UnstableApiUsage
+      final List<Type> typeList = namedType.types.stream().map(this::toType)
+          .collect(ImmutableList.toImmutableList());
+      return typeSystem.apply(genericType, typeList);
+
+    case TY_VAR:
+      final Ast.TyVar tyVar = (Ast.TyVar) type;
+      return tyVarMap.computeIfAbsent(tyVar.name,
+          name -> typeSystem.typeVariable(tyVarMap.size()));
 
     default:
       throw new AssertionError("cannot convert type " + type);
@@ -687,8 +701,8 @@ public class TypeResolver {
       final Type argType = pair.right;
       final Unifier.Variable vArg = unifier.variable();
       deducePatType(env, conPat.pat, termMap, null, vArg);
-      equiv(vArg, toTerm(argType));
-      return reg(pat, v, toTerm(dataType));
+      equiv(vArg, toTerm(argType, Subst.EMPTY));
+      return reg(pat, v, toTerm(dataType, Subst.EMPTY));
 
     case CON0_PAT:
       final Ast.Con0Pat con0Pat = (Ast.Con0Pat) pat;
@@ -698,7 +712,7 @@ public class TypeResolver {
         throw new AssertionError();
       }
       final DataType dataType0 = pair0.left;
-      return reg(pat, v, toTerm(dataType0));
+      return reg(pat, v, toTerm(dataType0, Subst.EMPTY));
 
     case LIST_PAT:
       final Ast.ListPat list = (Ast.ListPat) pat;
@@ -723,7 +737,7 @@ public class TypeResolver {
   /** Registers an infix operator whose type is a given type. */
   private Ast.Exp infix(TypeEnv env, Ast.InfixCall call, Unifier.Variable v,
       Type type) {
-    final Unifier.Term term = toTerm(type);
+    final Unifier.Term term = toTerm(type, Subst.EMPTY);
     call.forEachArg((arg, i) -> deduceType(env, arg, v));
     return reg(call, v, term);
   }
@@ -769,7 +783,7 @@ public class TypeResolver {
         types[0] = PrimitiveType.REAL;
       }
     });
-    equiv(v, toTerm(types[0]));
+    equiv(v, toTerm(types[0], Subst.EMPTY));
     return reg(call, null, v);
   }
 
@@ -797,41 +811,61 @@ public class TypeResolver {
     }
   }
 
+  private List<Unifier.Term> toTerms(Iterable<? extends Type> types,
+      Subst subst) {
+    final ImmutableList.Builder<Unifier.Term> terms = ImmutableList.builder();
+    types.forEach(type -> terms.add(toTerm(type, subst)));
+    return terms.build();
+  }
+
   private Unifier.Term toTerm(PrimitiveType type) {
     return unifier.atom(type.description());
   }
 
-  private Unifier.Term toTerm(Type type) {
+  private Unifier.Term toTerm(Type type, Subst subst) {
     switch (type.op()) {
     case ID:
       return toTerm((PrimitiveType) type);
+    case TY_VAR:
+      final Unifier.Variable variable = subst.get((TypeVar) type);
+      return variable != null ? variable : unifier.variable();
     case DATA_TYPE:
     case TEMPORARY_DATA_TYPE:
       return unifier.atom(((NamedType) type).name());
     case FUNCTION_TYPE:
       final FnType fnType = (FnType) type;
-      return unifier.apply(FN_TY_CON, toTerm(fnType.paramType),
-          toTerm(fnType.resultType));
+      return unifier.apply(FN_TY_CON, toTerm(fnType.paramType, subst),
+          toTerm(fnType.resultType, subst));
+    case APPLY_TYPE:
+      final ApplyType applyType = (ApplyType) type;
+      final Unifier.Term term = toTerm(applyType.type, subst);
+      final List<Unifier.Term> terms = toTerms(applyType.types, subst);
+      return unifier.apply(APPLY_TY_CON, ConsList.of(term, terms));
     case TUPLE_TYPE:
       final TupleType tupleType = (TupleType) type;
       return unifier.apply(TUPLE_TY_CON, tupleType.argTypes.stream()
-          .map(this::toTerm).collect(Collectors.toList()));
+          .map(type1 -> toTerm(type1, subst)).collect(Collectors.toList()));
     case RECORD_TYPE:
       final RecordType recordType = (RecordType) type;
-      return unifier.apply(recordOp((NavigableSet) recordType.argNameTypes.keySet()),
+      //noinspection unchecked
+      return unifier.apply(
+          recordOp((NavigableSet) recordType.argNameTypes.keySet()),
           recordType.argNameTypes.values().stream()
-          .map(this::toTerm).collect(Collectors.toList()));
+              .map(type1 -> toTerm(type1, subst)).collect(Collectors.toList()));
     case LIST:
       final ListType listType = (ListType) type;
       return unifier.apply(LIST_TY_CON,
-          toTerm(listType.elementType));
+          toTerm(listType.elementType, subst));
+    case FORALL_TYPE:
+      final ForallType forallType = (ForallType) type;
+      Subst subst2 = subst;
+      for (TypeVar typeVar : forallType.typeVars) {
+        subst2 = subst2.plus(typeVar, unifier.variable());
+      }
+      return toTerm(forallType.type, subst2);
     default:
-      throw new AssertionError("unknown type: " + type);
+      throw new AssertionError("unknown type: " + type.description());
     }
-  }
-
-  static <E> List<E> skip(List<E> list) {
-    return list.subList(1, list.size());
   }
 
   /** Empty type environment. */
@@ -880,23 +914,21 @@ public class TypeResolver {
   /** Visitor that converts type terms into actual types. */
   private static class TermToTypeConverter
       implements Unifier.TermVisitor<Type> {
-    private TypeSystem typeSystem;
-    private final Unifier.Substitution substitution;
+    private final TypeMap typeMap;
 
-    TermToTypeConverter(TypeSystem typeSystem,
-        Unifier.Substitution substitution) {
-      this.typeSystem = typeSystem;
-      this.substitution = substitution;
+    TermToTypeConverter(TypeMap typeMap) {
+      this.typeMap = typeMap;
     }
 
     public Type visit(Unifier.Sequence sequence) {
       final ImmutableList.Builder<Type> argTypes;
+      final ImmutableSortedMap.Builder<String, Type> argNameTypes;
       switch (sequence.operator) {
       case FN_TY_CON:
         assert sequence.terms.size() == 2;
         final Type paramType = sequence.terms.get(0).accept(this);
         final Type resultType = sequence.terms.get(1).accept(this);
-        return typeSystem.fnType(paramType, resultType);
+        return typeMap.typeSystem.fnType(paramType, resultType);
 
       case TUPLE_TY_CON:
         assert sequence.terms.size() >= 2;
@@ -904,12 +936,12 @@ public class TypeResolver {
         for (Unifier.Term term : sequence.terms) {
           argTypes.add(term.accept(this));
         }
-        return typeSystem.tupleType(argTypes.build());
+        return typeMap.typeSystem.tupleType(argTypes.build());
 
       case LIST_TY_CON:
         assert sequence.terms.size() == 1;
         final Type elementType = sequence.terms.get(0).accept(this);
-        return typeSystem.listType(elementType);
+        return typeMap.typeSystem.listType(elementType);
 
       case "bool":
       case "char":
@@ -918,7 +950,7 @@ public class TypeResolver {
       case "string":
       case "unit":
       default:
-        final Type type = typeSystem.lookupOpt(sequence.operator);
+        final Type type = typeMap.typeSystem.lookupOpt(sequence.operator);
         if (type != null) {
           return type;
         }
@@ -926,11 +958,10 @@ public class TypeResolver {
           // E.g. "record:a:b" becomes record type "{a:t0, b:t1}".
           final List<String> argNames = fieldList(sequence);
           if (argNames != null) {
-            argTypes = ImmutableList.builder();
-            for (Unifier.Term term : sequence.terms) {
-              argTypes.add(term.accept(this));
-            }
-            return typeSystem.recordType(argNames, argTypes.build());
+            argNameTypes = ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+            Pair.forEach(argNames, sequence.terms, (name, term) ->
+                argNameTypes.put(name, term.accept(this)));
+            return typeMap.typeSystem.recordType(argNameTypes.build());
           }
         }
         throw new AssertionError("unknown type constructor "
@@ -939,7 +970,11 @@ public class TypeResolver {
     }
 
     public Type visit(Unifier.Variable variable) {
-      final Unifier.Term term = substitution.resultMap.get(variable);
+      final Unifier.Term term = typeMap.substitution.resultMap.get(variable);
+      if (term == null) {
+        return typeMap.typeVars.computeIfAbsent(variable.toString(),
+            varName -> new TypeVar(typeMap.typeVars.size()));
+      }
       return term.accept(this);
     }
   }
@@ -991,23 +1026,23 @@ public class TypeResolver {
     final TypeSystem typeSystem;
     final Map<AstNode, Unifier.Term> nodeTypeTerms;
     final Unifier.Substitution substitution;
+    final Map<String, TypeVar> typeVars = new HashMap<>();
 
     TypeMap(TypeSystem typeSystem, Map<AstNode, Unifier.Term> nodeTypeTerms,
         Unifier.Substitution substitution) {
       this.typeSystem = Objects.requireNonNull(typeSystem);
       this.nodeTypeTerms = ImmutableMap.copyOf(nodeTypeTerms);
-      this.substitution = Objects.requireNonNull(substitution);
+      this.substitution = Objects.requireNonNull(substitution.resolve());
     }
 
-    private Type termToType(Unifier.Term term,
-        Unifier.Substitution substitution) {
-      return term.accept(new TermToTypeConverter(typeSystem, substitution));
+    private Type termToType(Unifier.Term term) {
+      return term.accept(new TermToTypeConverter(this));
     }
 
     /** Returns a type of an AST node. */
     public Type getType(AstNode node) {
       final Unifier.Term term = Objects.requireNonNull(nodeTypeTerms.get(node));
-      return termToType(term, substitution);
+      return termToType(term);
     }
 
     /** Returns whether an AST node has a type.
@@ -1029,7 +1064,7 @@ public class TypeResolver {
     }
 
     TypeEnvHolder bind(String name, Type type) {
-      typeEnv = typeEnv.bind(name, toTerm(type));
+      typeEnv = typeEnv.bind(name, toTerm(type, Subst.EMPTY));
       return this;
     }
   }
@@ -1052,6 +1087,61 @@ public class TypeResolver {
     static Resolved of(Ast.Decl originalNode, Ast.Decl node, TypeMap typeMap) {
       return new Resolved(originalNode, node, typeMap);
     }
+  }
+
+  /** Substitution. */
+  private abstract static class Subst {
+    static final Subst EMPTY = new EmptySubst();
+
+    Subst plus(TypeVar typeVar, Unifier.Variable variable) {
+      return new PlusSubst(this, typeVar, variable);
+    }
+
+    abstract Unifier.Variable get(TypeVar typeVar);
+  }
+
+  /** Empty substitution. */
+  private static class EmptySubst extends Subst {
+    @Override public String toString() {
+      return "[]";
+    }
+
+    @Override Unifier.Variable get(TypeVar typeVar) {
+      return null;
+    }
+  }
+
+  /** Substitution that adds one (type, variable) assignment to a parent
+   * substitution. */
+  private static class PlusSubst extends Subst {
+    final Subst parent;
+    final TypeVar typeVar;
+    final Unifier.Variable variable;
+
+    PlusSubst(Subst parent, TypeVar typeVar, Unifier.Variable variable) {
+      this.parent = parent;
+      this.typeVar = typeVar;
+      this.variable = variable;
+    }
+
+    @Override Unifier.Variable get(TypeVar typeVar) {
+      return typeVar.equals(this.typeVar)
+          ? variable
+          : parent.get(typeVar);
+    }
+
+    @Override public String toString() {
+      final Map<TypeVar, Unifier.Term> map = new LinkedHashMap<>();
+      for (PlusSubst e = this;;) {
+        map.putIfAbsent(e.typeVar, e.variable);
+        if (e.parent instanceof PlusSubst) {
+          e = (PlusSubst) e.parent;
+        } else {
+          return map.toString();
+        }
+      }
+    }
+
   }
 }
 

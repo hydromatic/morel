@@ -22,7 +22,9 @@ import net.hydromatic.sml.eval.Unit;
 
 import java.util.Objects;
 
-/** Binding of a name to a type and a value. */
+/** Binding of a name to a type and a value.
+ *
+ * <p>Used in {@link net.hydromatic.sml.compile.Environment}. */
 public class Binding {
   public final String name;
   public final Type type;
