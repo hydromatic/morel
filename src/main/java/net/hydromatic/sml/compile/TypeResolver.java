@@ -815,7 +815,7 @@ public class TypeResolver {
     INSTANCE;
 
     @Override public Unifier.Term get(String name) {
-      throw new RuntimeException("unbound variable or constructor: " + name);
+      throw new CompileException("unbound variable or constructor: " + name);
     }
 
     @Override public boolean has(String name) {

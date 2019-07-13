@@ -85,6 +85,7 @@ License.
     <hydromatic-toolbox.version>0.3</hydromatic-toolbox.version>
     <java-diff.version>1.1.2</java-diff.version>
     <javacc-maven-plugin.version>2.4</javacc-maven-plugin.version>
+    <jline.version>3.12.1</jline.version>
     <junit.version>4.11</junit.version>
     <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
     <maven-enforcer-plugin.version>3.0.0-M1</maven-enforcer-plugin.version>
@@ -130,6 +131,11 @@ License.
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jline</groupId>
+      <artifactId>jline</artifactId>
+      <version>${jline.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
