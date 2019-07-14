@@ -42,7 +42,7 @@ import org.jline.utils.AttributedStyle;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.OutputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,6 +54,7 @@ public class Shell {
   private final boolean echo;
   private final Terminal terminal;
   private final boolean banner;
+  private final boolean system;
   private boolean help;
 
   /** Command-line entry point.
@@ -70,14 +71,14 @@ public class Shell {
   }
 
   /** Creates a Shell. */
-  public Shell(String[] args, InputStream in, PrintStream out)
+  public Shell(String[] args, InputStream in, OutputStream out)
       throws IOException {
     this.argList = ImmutableList.copyOf(args);
-    this.echo = argList.contains("--echo");
-    this.help = argList.contains("--help");
     this.banner = !argList.contains("--banner=false");
     final boolean dumb = argList.contains("--terminal=dumb");
-    final boolean system = !argList.contains("--system=false");
+    this.echo = argList.contains("--echo");
+    this.help = argList.contains("--help");
+    this.system = !argList.contains("--system=false");
 
     final TerminalBuilder builder = TerminalBuilder.builder();
     builder.streams(in, out);
@@ -154,7 +155,7 @@ public class Shell {
     final StringBuilder buf = new StringBuilder();
     final List<String> lines = new ArrayList<>();
     while (true) {
-      String line = null;
+      String line = "";
       try {
         final String prompt = buf.length() == 0 ? equalsPrompt : minusPrompt;
         final String rightPrompt = null;
@@ -165,18 +166,18 @@ public class Shell {
       } catch (EndOfFileException e) {
         return;
       }
-      if (line == null) {
+
+      // Ignore this line if it consists only of comments, spaces, and
+      // optionally semicolon, and if we are not on a continuation line.
+      line = line.replaceAll("\\(\\*.*\\*\\)", "").trim();
+      if (buf.length() == 0 && (line.isEmpty() || line.equals(";"))) {
         continue;
       }
-
-      line = line.trim();
 
       if (line.equalsIgnoreCase("quit") || line.equalsIgnoreCase("exit")) {
         break;
       }
-      ParsedLine pl = reader.getParser().parse(line, 0);
-      String[] argv = pl.words().subList(1, pl.words().size())
-          .toArray(new String[0]);
+      final ParsedLine pl = reader.getParser().parse(line, 0);
       try {
         if ("help".equals(pl.word()) || "?".equals(pl.word())) {
           help();

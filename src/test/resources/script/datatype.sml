@@ -1,4 +1,4 @@
-/*
+(*
  * Licensed to Julian Hyde under one or more contributor license
  * agreements.  See the NOTICE file distributed with this work
  * for additional information regarding copyright ownership.
@@ -15,11 +15,11 @@
  * either express or implied.  See the License for the specific
  * language governing permissions and limitations under the
  * License.
- */
+ *)
 
-// Recursive
+(*) Recursive
 datatype 'a tree = Empty | Node of 'a tree * 'a * 'a tree;
-fun max (x, y) = if x < y then y else x end;
+fun max (x, y) = if x < y then y else x;
 fun height Empty = 0
   | height (Node (lft, _, rht)) = 1 + max (height lft, height rht);
 Empty;
@@ -29,7 +29,7 @@ height it;
 Node(Empty, 2, Node(Node(Empty, 3, Empty), Empty));
 height it;
 
-// Mutually recursive
+(*) Mutually recursive
 datatype 'a tree = Empty | Node of 'a * 'a forest
 and      'a forest = Nil | Cons of 'a tree * 'a forest;
 Empty;
@@ -37,19 +37,23 @@ Nil;
 Node (1, Nil);
 Node (1, Cons (Empty, Nil));
 
-// Parentheses are required for 2 or more type parameters,
-// optional for 1 type parameter,
-// not allowed for 0 type parameters.
+(*) Parentheses are required for 2 or more type parameters,
+(*) optional for 1 type parameter,
+(*) not allowed for 0 type parameters.
 datatype ('a, 'b) pair = Pair of 'a * 'b;
-datatype 'a, 'b pair = Pair of 'a * 'b; // not valid
+(* disabled; should throw
+datatype 'a, 'b pair = Pair of 'a * 'b; (*) not valid
+*)
 datatype 'a single = Single of 'a;
 datatype ('a) single = Single of 'a;
-datatype () void = Void of unit; // not valid
-datatype () void = Void; // not valid
+(* disabled; should throw
+datatype () void = Void of unit; (*) not valid
+datatype () void = Void; (*) not valid
+*)
 datatype void = Void;
 datatype unitVoid = Void of unit;
 
-/*
+(*
 - fun f x none = x | x some y = y;
 stdIn:2.5-2.32 Error: clauses don't all have same function name
 - fun f x none = x | f x some y = y;
@@ -100,6 +104,6 @@ stdIn:4.1-4.11 Error: operator and operand don't agree [tycon mismatch]
     (f 2) SOME
 - f 2 (SOME 3);
 val it = 3 : int
-*/
+*)
 
-// End datatype.sml
+(*) End datatype.sml

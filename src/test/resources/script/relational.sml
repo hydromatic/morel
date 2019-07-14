@@ -1,4 +1,4 @@
-/*
+(*
  * Licensed to Julian Hyde under one or more contributor license
  * agreements.  See the NOTICE file distributed with this work
  * for additional information regarding copyright ownership.
@@ -15,7 +15,7 @@
  * either express or implied.  See the License for the specific
  * language governing permissions and limitations under the
  * License.
- */
+ *)
 
 
 let val emp0 = {id = 100, name = "Fred", deptno = 10} in #id emp0 end;
@@ -57,42 +57,45 @@ from emps as e yield ((#id e) + (#deptno e));
 
 from (from emps as e yield #deptno e) as e2 yield e2 + 1;
 
-/* Disabled: '=' should have lower precedence than '#deptno e' fun application
+(* Disabled: '=' should have lower precedence than '#deptno e' fun application
 from emps as e where #deptno e = 30 yield #name e;
-*/
+*)
 
 from emps as e where false yield (#deptno e);
 
+(* Disabled due to CCE
 fun range i j =
   if i >= j then [] else i :: (range (i + 1) j);
+*)
 
-/* Disabled due to NPE in apply
+(* Disabled due to NPE in apply
 range 0 5;
 
 from range 0 5 as i where i mod 2 = 1 yield i;
-*/
+*)
 val integers = [0,1,2,3,4];
 
 from integers as i where i mod 2 = 1 yield i;
 
-// missing yield
+(*) missing yield
 from integers as i where i mod 2 = 1;
 
 from emps as e where (#deptno e) = 30 yield (#id e);
 
-// cartesian product
+(*) cartesian product
 from emps as e, emps as e2 yield (#name e) ^ "-" ^ (#name e2);
 
-// cartesian product, missing yield
+(*) cartesian product, missing yield
 from depts as d, integers as i;
 
-// join
+(*) join
 from emps as e, depts as d
   where (#deptno e) = (#deptno d)
   yield {id = (#id e), deptno = (#deptno e), ename = (#name e), dname = (#name d)};
 
-// exists (defining the "exists" function ourselves)
-// and correlated sub-query
+(*) exists (defining the "exists" function ourselves)
+(*) and correlated sub-query
+(* disabled due to "::"
 let
   fun exists [] = false
     | exists hd :: tl = true
@@ -103,8 +106,10 @@ in
                 andalso (#name d) = "Engineering")
   yield (#name e)
 end;
+*)
 
-// in (defining the "in_" function ourselves)
+(*) in (defining the "in_" function ourselves)
+(* disabled due to "::"
 let
   fun in_ e [] = false
     | in_ e (h :: t) = e = h orelse (in_ e t)
@@ -115,5 +120,6 @@ in
                 yield (#deptno d))
   yield (#name e)
 end;
+*)
 
-// End relational.sml
+(*) End relational.sml

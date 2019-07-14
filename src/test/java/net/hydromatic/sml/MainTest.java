@@ -335,6 +335,16 @@ public class MainTest {
     assertParseSame("(fn x => x + 1) 3");
   }
 
+  @Test public void testParseComment() {
+    assertParse("1 + (* 2 + *) 3", "1 + 3");
+    assertParse("1 +\n"
+        + "(* 2 +\n"
+        + " *) 3", "1 + 3");
+    assertParse("(* 1 +\n"
+        + "2 +\n"
+        + "3 *) 5 + 6", "5 + 6");
+  }
+
   @Test public void testType() {
     assertType("1", is("int"));
     assertType("0e0", is("real"));

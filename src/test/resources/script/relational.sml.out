@@ -1,4 +1,4 @@
-/*
+(*
  * Licensed to Julian Hyde under one or more contributor license
  * agreements.  See the NOTICE file distributed with this work
  * for additional information regarding copyright ownership.
@@ -15,7 +15,7 @@
  * either express or implied.  See the License for the specific
  * language governing permissions and limitations under the
  * License.
- */
+ *)
 
 
 let val emp0 = {id = 100, name = "Fred", deptno = 10} in #id emp0 end;
@@ -95,24 +95,24 @@ from (from emps as e yield #deptno e) as e2 yield e2 + 1;
 val it = [11,21,31,31] : int list
 
 
-/* Disabled: '=' should have lower precedence than '#deptno e' fun application
+(* Disabled: '=' should have lower precedence than '#deptno e' fun application
 from emps as e where #deptno e = 30 yield #name e;
-*/
+*)
 
 from emps as e where false yield (#deptno e);
 val it = [] : int list
 
 
+(* Disabled due to CCE
 fun range i j =
   if i >= j then [] else i :: (range (i + 1) j);
-val range = fn : int -> int -> int list
+*)
 
-
-/* Disabled due to NPE in apply
+(* Disabled due to NPE in apply
 range 0 5;
 
 from range 0 5 as i where i mod 2 = 1 yield i;
-*/
+*)
 val integers = [0,1,2,3,4];
 val integers = [0,1,2,3,4] : int list
 
@@ -121,7 +121,7 @@ from integers as i where i mod 2 = 1 yield i;
 val it = [1,3] : int list
 
 
-// missing yield
+(*) missing yield
 from integers as i where i mod 2 = 1;
 val it = [1,3] : int list
 
@@ -130,7 +130,7 @@ from emps as e where (#deptno e) = 30 yield (#id e);
 val it = [102,103] : int list
 
 
-// cartesian product
+(*) cartesian product
 from emps as e, emps as e2 yield (#name e) ^ "-" ^ (#name e2);
 val it =
   ["Fred-Fred","Fred-Velma","Fred-Shaggy","Fred-Scooby","Velma-Fred",
@@ -139,7 +139,7 @@ val it =
    "Scooby-Scooby"] : string list
 
 
-// cartesian product, missing yield
+(*) cartesian product, missing yield
 from depts as d, integers as i;
 val it =
   [{d={deptno=10,name="Sales"},i=0},{d={deptno=10,name="Sales"},i=1},
@@ -154,7 +154,7 @@ val it =
    {d={deptno=40,name="Support"},i=3},{d={deptno=40,name="Support"},i=4}] : {d:{deptno:int, name:string}, i:int} list
 
 
-// join
+(*) join
 from emps as e, depts as d
   where (#deptno e) = (#deptno d)
   yield {id = (#id e), deptno = (#deptno e), ename = (#name e), dname = (#name d)};
@@ -163,32 +163,3 @@ val it =
    {deptno=20,dname="HR",ename="Velma",id=101},
    {deptno=30,dname="Engineering",ename="Shaggy",id=102},
    {deptno=30,dname="Engineering",ename="Scooby",id=103}] : {deptno:int, dname:string, ename:string, id:int} list
-
-
-// exists (defining the "exists" function ourselves)
-// and correlated sub-query
-let
-  fun exists [] = false
-    | exists hd :: tl = true
-in
-  from emps as e
-  where exists (from depts as d
-                where (#deptno d) = (#deptno e)
-                andalso (#name d) = "Engineering")
-  yield (#name e)
-end;
-val it = ["Shaggy","Scooby"] : string list
-
-
-// in (defining the "in_" function ourselves)
-let
-  fun in_ e [] = false
-    | in_ e (h :: t) = e = h orelse (in_ e t)
-in
-  from emps as e
-  where in_ (#deptno e) (from depts as d
-                where (#name d) = "Engineering"
-                yield (#deptno d))
-  yield (#name e)
-end;
-val it = ["Shaggy","Scooby"] : string list

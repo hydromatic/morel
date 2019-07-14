@@ -1,4 +1,4 @@
-/*
+(*
  * Licensed to Julian Hyde under one or more contributor license
  * agreements.  See the NOTICE file distributed with this work
  * for additional information regarding copyright ownership.
@@ -15,9 +15,9 @@
  * either express or implied.  See the License for the specific
  * language governing permissions and limitations under the
  * License.
- */
+ *)
 
-// Simple commands
+(*) Simple commands
 1;
 val it = 1 : int
 
@@ -48,7 +48,7 @@ it 3;
 val it = 5 : int
 
 
-/* Disabled due to bug linking recursive functions at top-level
+(* Disabled due to bug linking recursive functions at top-level
 fun str s 0 l = l
   | str s i l = str ("a" ^ s) (i - 1) (s :: l);
 val str = fn : string -> int -> string list -> string list
@@ -58,26 +58,26 @@ val it =
   ["aaaaaaaaa","aaaaaaaa","aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",""]
   : string list
 
-// Note how long lists are wrapped and abbreviated
+(*) Note how long lists are wrapped and abbreviated
 str "" 20 [];
 val it =
   ["aaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaa",
    "aaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaa","aaaaaaaaaaaaaa","aaaaaaaaaaaaa",
    "aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa",...]
   : string list
-*/
+*)
 
-// Bug: Fails due to lack of parentheses
-/*
+(*) Bug: Fails due to lack of parentheses
+(*
 let
   fun in_ e [] = false
     | in_ e (h :: t) = e = h orelse in_ e t
 in
   (in_ 3 [1,2,3], in_ 4 [1,2,3])
 end;
-*/
+*)
 
-// Succeeds when parentheses are added
+(*) Succeeds when parentheses are added
 let
   fun in_ e [] = false
     | in_ e (h :: t) = e = h orelse (in_ e t)

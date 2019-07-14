@@ -58,6 +58,7 @@ On Windows, the last line is
 Implemented:
 * Literals
 * Variables
+* Comments (`(* block *)` and `(*) line`)
 * `let` (expression that lets you define local variables and functions)
 * `val` (including `val rec`)
 * `fun` (declare function)

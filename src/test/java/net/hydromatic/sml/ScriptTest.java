@@ -130,7 +130,6 @@ public class ScriptTest {
 
   protected void checkRun(String path) throws Exception {
     Assume.assumeFalse(path.endsWith("datatype.sml"));
-    Assume.assumeFalse(path.endsWith("relational.sml"));
     final File inFile;
     final File outFile;
     final File f = new File(path);
