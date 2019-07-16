@@ -18,6 +18,7 @@
  */
 package net.hydromatic.sml.compile;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -73,13 +74,13 @@ public class TypeResolver {
     this.typeSystem = Objects.requireNonNull(typeSystem);
   }
 
-  public static <E extends AstNode> Resolved<E> deduceType(Environment env,
-      E node, TypeSystem typeSystem) {
-    return new TypeResolver(typeSystem).deduceType_(env, node);
+  /** Deduces the type of a declaration. */
+  public static Resolved deduceType(Environment env, Ast.Decl decl,
+      TypeSystem typeSystem) {
+    return new TypeResolver(typeSystem).deduceType_(env, decl);
   }
 
-  private <E extends AstNode> Resolved<E> deduceType_(Environment env,
-      E node) {
+  private Resolved deduceType_(Environment env, Ast.Decl decl) {
     final Type boolTerm = PrimitiveType.BOOL;
     final Type intTerm = PrimitiveType.INT;
     final Type boolToBool = typeSystem.fnType(boolTerm, boolTerm);
@@ -92,15 +93,15 @@ public class TypeResolver {
             .bind("abs", intToInt);
     env.forEachType(typeEnvs::bind);
     final TypeEnv typeEnv = typeEnvs.typeEnv;
-    final Unifier.Variable v = unifier.variable();
-    final AstNode node2 = deduceType(typeEnv, node, v);
+    final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
+    final Ast.Decl node2 = deduceDeclType(typeEnv, decl, termMap);
     final List<Unifier.TermTerm> termPairs = new ArrayList<>();
     terms.forEach(tv ->
         termPairs.add(new Unifier.TermTerm(tv.term, tv.variable)));
     final Unifier.Result result =
         unifier.unify(termPairs, actionMap);
     if (result instanceof Unifier.Substitution) {
-      return Resolved.of((E) node2,
+      return Resolved.of(decl, node2,
           new TypeMap(typeSystem, map, (Unifier.Substitution) result));
     } else {
       throw new RuntimeException("Cannot deduce type: " + result
@@ -122,9 +123,10 @@ public class TypeResolver {
     return node;
   }
 
-  private AstNode deduceType(TypeEnv env, AstNode node, Unifier.Variable v) {
+  private Ast.Exp deduceType(TypeEnv env, Ast.Exp node, Unifier.Variable v) {
     final Unifier.Variable v2;
     final Unifier.Variable v3;
+    final Map<Ast.IdPat, Unifier.Term> termMap;
     switch (node.op) {
     case BOOL_LITERAL:
       return reg(node, v, toTerm(PrimitiveType.BOOL));
@@ -155,9 +157,6 @@ public class TypeResolver {
     case LE:
     case GE:
       return comparison(env, (Ast.InfixCall) node, v);
-
-    case VAL_DECL:
-      return deduceDeclType(env, (Ast.Decl) node, new LinkedHashMap<>());
 
     case TUPLE:
       final Ast.Tuple tuple = (Ast.Tuple) node;
@@ -192,7 +191,7 @@ public class TypeResolver {
 
     case LET:
       final Ast.LetExp let = (Ast.LetExp) node;
-      final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
+      termMap = new LinkedHashMap<>();
       TypeEnv env2 = env;
       final List<Ast.Decl> decls = new ArrayList<>();
       for (Ast.Decl decl : let.decls) {
@@ -272,11 +271,6 @@ public class TypeResolver {
         deduceMatchType(env, match, new HashMap<>(), v, resultVariable);
       }
       return reg(fn, null, v);
-
-    case MATCH:
-      final Ast.Match match = (Ast.Match) node;
-      return deduceMatchType(env, match, new LinkedHashMap<>(), v,
-          unifier.variable());
 
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) node;
@@ -384,7 +378,7 @@ public class TypeResolver {
       // in the environment before we try to deduce the type of the expression.
       env2 = env2.bind(((Ast.IdPat) valBind.pat).name, vPat);
     }
-    final Ast.Exp e2 = (Ast.Exp) deduceType(env2, valBind.e, vPat);
+    final Ast.Exp e2 = deduceType(env2, valBind.e, vPat);
     final Ast.ValBind valBind2 = valBind.copy(valBind.rec, valBind.pat, e2);
     return reg(valBind2, v, unifier.apply(FN_TY_CON, vPat, vPat));
   }
@@ -399,23 +393,13 @@ public class TypeResolver {
 
   private Ast.Decl deduceDeclType(TypeEnv env, Ast.Decl node,
       Map<Ast.IdPat, Unifier.Term> termMap) {
-    final Ast.Decl node2;
     switch (node.op) {
     case VAL_DECL:
-      final Ast.ValDecl valDecl = (Ast.ValDecl) node;
-      final List<Ast.ValBind> valBinds = new ArrayList<>();
-      for (Ast.ValBind valBind : valDecl.valBinds) {
-        valBinds.add((Ast.ValBind)
-            deduceValBindType(env, valBind, termMap, unifier.variable()));
-      }
-      node2 = valDecl.copy(valBinds);
-      map.put(node2, toTerm(PrimitiveType.UNIT));
-      return node2;
+      return deduceValDeclType(env, (Ast.ValDecl) node, termMap);
 
     case FUN_DECL:
-      final Ast.FunDecl funDecl = (Ast.FunDecl) node;
-      node2 = toValDecl(env, funDecl);
-      return deduceDeclType(env, node2, termMap);
+      final Ast.ValDecl valDecl = toValDecl(env, (Ast.FunDecl) node);
+      return deduceValDeclType(env, valDecl, termMap);
 
     case DATATYPE_DECL:
       final Ast.DatatypeDecl datatypeDecl = (Ast.DatatypeDecl) node;
@@ -429,6 +413,19 @@ public class TypeResolver {
       throw new AssertionError("cannot deduce type for " + node.op + " ["
           + node + "]");
     }
+  }
+
+  private Ast.Decl deduceValDeclType(TypeEnv env, Ast.ValDecl valDecl,
+      Map<Ast.IdPat, Unifier.Term> termMap) {
+    Ast.Decl node2;
+    final List<Ast.ValBind> valBinds = new ArrayList<>();
+    for (Ast.ValBind valBind : valDecl.valBinds) {
+      valBinds.add((Ast.ValBind)
+          deduceValBindType(env, valBind, termMap, unifier.variable()));
+    }
+    node2 = valDecl.copy(valBinds);
+    map.put(node2, toTerm(PrimitiveType.UNIT));
+    return node2;
   }
 
   private void deduceDatatypeBindType(TypeEnv env,
@@ -445,15 +442,16 @@ public class TypeResolver {
     final DataType dataType =
         typeSystem.dataType(datatypeBind.name.name, typeVars, tyCons);
     for (Ast.TyCon tyCon : datatypeBind.tyCons) {
-      Type type = dataType;
+      final Type type;
       if (tyCon.type != null) {
-        type = typeSystem.fnType(toType(tyCon.type), type);
+        type = typeSystem.fnType(toType(tyCon.type), dataType);
+      } else {
+        type = dataType;
       }
       termMap.put((Ast.IdPat) ast.idPat(tyCon.pos, tyCon.id.name),
           toTerm(type));
+      map.put(tyCon, toTerm(type));
     }
-    env.bind(datatypeBind.name.name,
-        unifier.atom(dataType.description()));
   }
 
   private Type toType(Ast.Type type) {
@@ -468,6 +466,8 @@ public class TypeResolver {
         return typeSystem.lookup(namedType.name);
       }
       // fall through
+      final Type lookup = typeSystem.lookup(namedType.name);
+      return lookup;
 
     default:
       throw new AssertionError("cannot convert type " + type);
@@ -657,7 +657,7 @@ public class TypeResolver {
       final Pair<DataType, Type> pair =
           typeSystem.lookupTyCon(conPat.tyCon.name);
       if (pair == null) {
-        throw new AssertionError();
+        throw new AssertionError("not found: " + conPat.tyCon.name);
       }
       final DataType dataType = pair.left;
       final Type argType = pair.right;
@@ -697,7 +697,7 @@ public class TypeResolver {
   }
 
   /** Registers an infix operator whose type is a given type. */
-  private AstNode infix(TypeEnv env, Ast.InfixCall call, Unifier.Variable v,
+  private Ast.Exp infix(TypeEnv env, Ast.InfixCall call, Unifier.Variable v,
       Type type) {
     final Unifier.Term term = toTerm(type);
     call.forEachArg((arg, i) -> deduceType(env, arg, v));
@@ -706,7 +706,7 @@ public class TypeResolver {
 
   /** Registers an infix operator whose type is a given type
    * and whose arguments are the same type. */
-  private AstNode comparison(TypeEnv env, Ast.InfixCall call,
+  private Ast.Exp comparison(TypeEnv env, Ast.InfixCall call,
       Unifier.Variable v) {
     final Unifier.Term term = toTerm(PrimitiveType.BOOL);
     final Unifier.Variable argVariable = unifier.variable();
@@ -716,21 +716,21 @@ public class TypeResolver {
 
   /** Registers an infix or prefix operator whose type is the same as its
    * arguments. */
-  private AstNode infixOverloaded(TypeEnv env, Ast.InfixCall call,
+  private Ast.Exp infixOverloaded(TypeEnv env, Ast.InfixCall call,
       Unifier.Variable v, Type defaultType) {
     return opOverloaded(env, call, v, defaultType);
   }
 
   /** Registers an infix or prefix operator whose type is the same as its
    * arguments. */
-  private AstNode prefixOverloaded(TypeEnv env, Ast.PrefixCall call,
+  private Ast.Exp prefixOverloaded(TypeEnv env, Ast.PrefixCall call,
       Unifier.Variable v, Type defaultType) {
     return opOverloaded(env, call, v, defaultType);
   }
 
   /** Registers an infix or prefix operator whose type is the same as its
    * arguments. */
-  private AstNode opOverloaded(TypeEnv env, Ast.Exp call,
+  private Ast.Exp opOverloaded(TypeEnv env, Ast.Exp call,
       Unifier.Variable v, Type defaultType) {
     Type[] types = {defaultType};
     call.forEachArg((arg, i) -> {
@@ -749,7 +749,7 @@ public class TypeResolver {
     return reg(call, null, v);
   }
 
-  private AstNode deduceConsType(TypeEnv env, Ast.InfixCall call,
+  private Ast.Exp deduceConsType(TypeEnv env, Ast.InfixCall call,
       Unifier.Variable v) {
     final Unifier.Variable elementType = unifier.variable();
     deduceType(env, call.a0, elementType);
@@ -1009,20 +1009,23 @@ public class TypeResolver {
     }
   }
 
-  /** Result of validating a statement or expression.
-   *
-   * @param <E> Node type */
-  public static class Resolved<E extends AstNode> {
-    public final E node;
+  /** Result of validating a declaration. */
+  public static class Resolved {
+    public final Ast.Decl originalNode;
+    public final Ast.Decl node;
     public final TypeMap typeMap;
 
-    private Resolved(E node, TypeMap typeMap) {
+    private Resolved(Ast.Decl originalNode, Ast.Decl node, TypeMap typeMap) {
+      this.originalNode = Objects.requireNonNull(originalNode);
       this.node = Objects.requireNonNull(node);
       this.typeMap = Objects.requireNonNull(typeMap);
+      Preconditions.checkArgument(originalNode instanceof Ast.FunDecl
+          ? node instanceof Ast.ValDecl
+          : originalNode.getClass() == node.getClass());
     }
 
-    static <E2 extends AstNode> Resolved<E2> of(E2 node, TypeMap typeMap) {
-      return new Resolved<>(node, typeMap);
+    static Resolved of(Ast.Decl originalNode, Ast.Decl node, TypeMap typeMap) {
+      return new Resolved(originalNode, node, typeMap);
     }
   }
 }

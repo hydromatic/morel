@@ -36,9 +36,9 @@ public class Binding {
 
   @Override public String toString() {
     if (value == Unit.INSTANCE) {
-      return type.description();
+      return name + " = " + type.description();
     } else {
-      return value + ":" + type.description();
+      return name + " = " + value + ":" + type.description();
     }
   }
 }

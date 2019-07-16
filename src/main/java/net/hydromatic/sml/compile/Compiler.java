@@ -21,7 +21,6 @@ package net.hydromatic.sml.compile;
 import com.google.common.collect.ImmutableList;
 
 import net.hydromatic.sml.ast.Ast;
-import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.ast.Op;
 import net.hydromatic.sml.ast.Pos;
 import net.hydromatic.sml.eval.Applicable;
@@ -34,7 +33,6 @@ import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.DataType;
 import net.hydromatic.sml.type.RecordType;
 import net.hydromatic.sml.type.Type;
-import net.hydromatic.sml.type.TypeSystem;
 import net.hydromatic.sml.util.Pair;
 import net.hydromatic.sml.util.TailList;
 
@@ -59,46 +57,11 @@ public class Compiler {
     this.typeMap = typeMap;
   }
 
-  /** Validates an expression, deducing its type and perhaps rewriting the
-   * expression to a form that can more easily be compiled.
-   *
-   * <p>Used for testing. */
-  public static TypeResolver.Resolved<Ast.Exp> validateExpression(Ast.Exp exp) {
-    final TypeSystem typeSystem = new TypeSystem();
-    final Environment env = Environments.empty();
-    return TypeResolver.deduceType(env, exp, typeSystem);
-  }
-
-  /**
-   * Validates and compiles an expression or statement, and compiles it to
-   * code that can be evaluated by the interpreter.
-   */
-  public static CompiledStatement prepareStatement(Environment env,
-      AstNode statement) {
-    final Ast.ValDecl decl;
-    if (statement instanceof Ast.Exp) {
-      decl = ast.valDecl(Pos.ZERO,
-          ImmutableList.of(
-              ast.valBind(Pos.ZERO, false, ast.idPat(Pos.ZERO, "it"),
-                  (Ast.Exp) statement)));
-    } else {
-      decl = (Ast.ValDecl) statement;
-    }
-    final TypeSystem typeSystem = new TypeSystem();
-    final TypeResolver.Resolved<Ast.ValDecl> resolved =
-        TypeResolver.deduceType(env, decl, typeSystem);
-    final Compiler compiler = new Compiler(resolved.typeMap);
-    return compiler.compileStatement(env, resolved.node);
-  }
-
-  public CompiledStatement compileStatement(Environment env, Ast.ValDecl decl) {
-    final Map<String, TypeAndCode> varCodes = new LinkedHashMap<>();
-    for (Ast.ValBind valBind : decl.valBinds) {
-      final String name = ((Ast.IdPat) valBind.pat).name;
-      final Type type = typeMap.getType(valBind.e);
-      final Code code = compile(env, valBind.e);
-      varCodes.put(name, new TypeAndCode(type, code));
-    }
+  CompiledStatement compileStatement(Environment env, Ast.Decl decl) {
+    final List<Code> varCodes = new ArrayList<>();
+    final List<Binding> bindings = new ArrayList<>();
+    final List<Action> actions = new ArrayList<>();
+    compileDecl(env, decl, varCodes, bindings, actions);
     final Type type = typeMap.getType(decl);
 
     return new CompiledStatement() {
@@ -106,30 +69,25 @@ public class Compiler {
         return type;
       }
 
-      public Environment eval(Environment env, List<String> output) {
-        Environment resultEnv = env;
+      public void eval(Environment env, List<String> output,
+          List<Binding> bindings) {
         final EvalEnvHolder evalEnvs = new EvalEnvHolder(Codes.emptyEnv());
         env.forEachValue(evalEnvs::add);
         final EvalEnv evalEnv = evalEnvs.evalEnv;
-        final StringBuilder buf = new StringBuilder();
-        for (Map.Entry<String, TypeAndCode> entry : varCodes.entrySet()) {
-          final String name = entry.getKey();
-          final Code code = entry.getValue().code;
-          final Type type = entry.getValue().type;
-          final Object value = code.eval(evalEnv);
-          resultEnv = resultEnv.bind(name, type, value);
-          buf.append("val ")
-              .append(name)
-              .append(" = ");
-          Pretty.pretty(buf, type, value)
-              .append(" : ")
-              .append(type.description());
-          output.add(buf.toString());
-          buf.setLength(0);
+        for (Action entry : actions) {
+          entry.apply(output, bindings, evalEnv);
         }
-        return resultEnv;
       }
     };
+  }
+
+  /** Something that needs to happen when a declaration is evaluated.
+   *
+   * <p>Usually involves placing a type or value into the bindings that will
+   * make up the environment in which the next statement will be executed, and
+   * printing some text on the screen. */
+  private interface Action {
+    void apply(List<String> output, List<Binding> bindings, EvalEnv evalEnv);
   }
 
   public Code compile(Environment env, Ast.Exp expression) {
@@ -291,59 +249,82 @@ public class Compiler {
   private Code compileLet(Environment env, List<Ast.Decl> decls, Ast.Exp e) {
     final List<Code> varCodes = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
-    for (Ast.Decl decl : decls) {
-      switch (decl.op) {
-      case VAL_DECL:
-        Ast.ValDecl valDecl = (Ast.ValDecl) decl;
-        if (valDecl.valBinds.size() > 1) {
-          // Transform "let val v1 = e1 and v2 = e2 in e"
-          // to "let val (v1, v2) = (e1, e2) in e"
-          final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
-          boolean rec = false;
-          for (Ast.ValBind valBind : valDecl.valBinds) {
-            flatten(matches, valBind.pat, valBind.e);
-            rec |= valBind.rec;
-          }
-          final Pos pos = valDecl.pos;
-          final Ast.Pat pat = ast.tuplePat(pos, matches.keySet());
-          final Ast.Exp e2 = ast.tuple(pos, matches.values());
-          valDecl = ast.valDecl(pos, ast.valBind(pos, rec, pat, e2));
-        }
-        for (Ast.ValBind valBind : valDecl.valBinds) {
-          varCodes.add(compileValBind(env, valBind, bindings));
-        }
-        break;
-
-      case DATATYPE_DECL:
-        final Ast.DatatypeDecl datatypeDecl = (Ast.DatatypeDecl) decl;
-        for (Ast.DatatypeBind bind : datatypeDecl.binds) {
-          final Type dataType = typeMap.typeSystem.lookup(bind.name.name);
-          for (Ast.TyCon tyCon : bind.tyCons) {
-            compileTyCon(env, dataType, tyCon, bindings);
-          }
-        }
-        break;
-
-      default:
-        throw new AssertionError("unknown " + decl.op + "; " + decl);
-      }
-    }
+    compileDecls(env, decls, varCodes, bindings);
     final Code resultCode = compile(env.bindAll(bindings), e);
     return Codes.let(varCodes, resultCode);
   }
 
+  private void compileDecls(Environment env, List<Ast.Decl> decls,
+      List<Code> varCodes, List<Binding> bindings) {
+    decls.forEach(decl -> compileDecl(env, decl, varCodes, bindings, null));
+  }
+
+  private void compileDecl(Environment env, Ast.Decl decl, List<Code> varCodes,
+      List<Binding> bindings, List<Action> actions) {
+    switch (decl.op) {
+    case VAL_DECL:
+      compileValDecl(env, (Ast.ValDecl) decl, varCodes, bindings, actions);
+      break;
+    case DATATYPE_DECL:
+      final Ast.DatatypeDecl datatypeDecl = (Ast.DatatypeDecl) decl;
+      compileDatatypeDecl(env, datatypeDecl, bindings, actions);
+      break;
+    default:
+      throw new AssertionError("unknown " + decl.op + "; " + decl);
+    }
+  }
+
+  private void compileValDecl(Environment env, Ast.ValDecl valDecl,
+      List<Code> varCodes, List<Binding> bindings, List<Action> actions) {
+    if (valDecl.valBinds.size() > 1) {
+      // Transform "let val v1 = e1 and v2 = e2 in e"
+      // to "let val (v1, v2) = (e1, e2) in e"
+      final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
+      boolean rec = false;
+      for (Ast.ValBind valBind : valDecl.valBinds) {
+        flatten(matches, valBind.pat, valBind.e);
+        rec |= valBind.rec;
+      }
+      final Pos pos = valDecl.pos;
+      final Ast.Pat pat = ast.tuplePat(pos, matches.keySet());
+      final Ast.Exp e2 = ast.tuple(pos, matches.values());
+      valDecl = ast.valDecl(pos, ast.valBind(pos, rec, pat, e2));
+    }
+    for (Ast.ValBind valBind : valDecl.valBinds) {
+      compileValBind(env, valBind, varCodes, bindings, actions);
+    }
+  }
+
+  private void compileDatatypeDecl(Environment env,
+      Ast.DatatypeDecl datatypeDecl, List<Binding> bindings,
+      List<Action> actions) {
+    for (Ast.DatatypeBind bind : datatypeDecl.binds) {
+      final List<Binding> newBindings = new TailList<>(bindings);
+      final Type dataType = typeMap.typeSystem.lookup(bind.name.name);
+      for (Ast.TyCon tyCon : bind.tyCons) {
+        compileTyCon(env, dataType, tyCon, bindings);
+      }
+      if (actions != null) {
+        final List<Binding> immutableBindings =
+            ImmutableList.copyOf(newBindings);
+        actions.add((output, outBindings, evalEnv) -> {
+          output.add("datatype " + bind);
+          outBindings.addAll(immutableBindings);
+        });
+      }
+    }
+  }
+
   private void compileTyCon(Environment env, Type dataType,
       Ast.TyCon tyCon, List<Binding> bindings) {
-    if (typeMap.hasType(tyCon.id)) {
-      final Type type = Objects.requireNonNull(typeMap.getType(tyCon.id));
-      final Object value;
-      if (tyCon.type == null) {
-        value = Codes.constant(new ComparableSingletonList<>(tyCon.id.name));
-      } else {
-        value = Codes.tyCon(dataType, tyCon.id.name);
-      }
-      bindings.add(new Binding(tyCon.id.name, type, value));
+    final Type type = Objects.requireNonNull(typeMap.getType(tyCon));
+    final Object value;
+    if (tyCon.type == null) {
+      value = Codes.constant(new ComparableSingletonList<>(tyCon.id.name));
+    } else {
+      value = Codes.tyCon(dataType, tyCon.id.name);
     }
+    bindings.add(new Binding(tyCon.id.name, type, value));
   }
 
   private Code compileInfix(Environment env, Ast.InfixCall call) {
@@ -474,9 +455,9 @@ public class Compiler {
     }
   }
 
-  private Code compileValBind(Environment env, Ast.ValBind valBind,
-      List<Binding> bindings) {
-    final List<Binding> newBindings = new TailList<>(bindings, bindings.size());
+  private void compileValBind(Environment env, Ast.ValBind valBind,
+      List<Code> varCodes, List<Binding> bindings, List<Action> actions) {
+    final List<Binding> newBindings = new TailList<>(bindings);
     final Code code;
     if (valBind.rec) {
       final Map<Ast.IdPat, LinkCode> linkCodes = new IdentityHashMap<>();
@@ -497,7 +478,24 @@ public class Compiler {
     newBindings.clear();
     final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
         ImmutableList.of(Pair.of(valBind.pat, code));
-    return evalEnv -> new Closure(evalEnv, patCodes);
+    varCodes.add(evalEnv -> new Closure(evalEnv, patCodes));
+
+    if (actions != null) {
+      final String name = ((Ast.IdPat) valBind.pat).name;
+      final Type type = typeMap.getType(valBind.e);
+      actions.add((output, outBindings, evalEnv) -> {
+        final Object o = code.eval(evalEnv);
+        outBindings.add(new Binding(name, type, o));
+        final StringBuilder buf = new StringBuilder();
+        buf.append("val ")
+            .append(name)
+            .append(" = ");
+        Pretty.pretty(buf, type, o)
+            .append(" : ")
+            .append(type.description());
+        output.add(buf.toString());
+      });
+    }
   }
 
   private void link(Map<Ast.IdPat, LinkCode> linkCodes, Ast.Pat pat,
@@ -529,29 +527,6 @@ public class Compiler {
     public Object eval(EvalEnv env) {
       assert refCode != null; // link should have completed by now
       return refCode.eval(env);
-    }
-  }
-
-  /**
-   * Statement that has been compiled and is ready to be run from the
-   * REPL. If a declaration, it evaluates an expression and also
-   * creates a new environment (with new variables bound) and
-   * generates a line or two of output for the REPL.
-   */
-  public interface CompiledStatement {
-    Environment eval(Environment environment, List<String> output);
-
-    Type getType();
-  }
-
-  /** A (type, code) pair. */
-  public static class TypeAndCode {
-    public final Type type;
-    public final Code code;
-
-    private TypeAndCode(Type type, Code code) {
-      this.type = type;
-      this.code = code;
     }
   }
 

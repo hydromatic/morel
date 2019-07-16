@@ -1,4 +1,4 @@
-/*
+(*
  * Licensed to Julian Hyde under one or more contributor license
  * agreements.  See the NOTICE file distributed with this work
  * for additional information regarding copyright ownership.
@@ -15,30 +15,7 @@
  * either express or implied.  See the License for the specific
  * language governing permissions and limitations under the
  * License.
- */
-package net.hydromatic.sml.type;
+ *)
+"this is a simple script; modify it for debugging test cases";
 
-import net.hydromatic.sml.ast.Op;
-
-import java.util.function.Function;
-
-/** Type that is a place-holder for a type constructor that has no arguments;
- * for example, "NONE" in "datatype 'a option = NONE | SOME of 'a" would have
- * dummy type. */
-public enum DummyType implements Type {
-  INSTANCE;
-
-  public String description() {
-    return "dummy";
-  }
-
-  public Op op() {
-    return Op.NAMED_TYPE;
-  }
-
-  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
-    return transform.apply(this);
-  }
-}
-
-// End DummyType.java
+(*) End dummy.sml

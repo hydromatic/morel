@@ -20,6 +20,8 @@ package net.hydromatic.sml.type;
 
 import net.hydromatic.sml.ast.Op;
 
+import java.util.function.Function;
+
 /** Type. */
 public interface Type {
   /** Description of the type, e.g. "{@code int}", "{@code int -> int}". */
@@ -27,6 +29,10 @@ public interface Type {
 
   /** Type operator. */
   Op op();
+
+  /** Copies this type, applying a given transform to component types,
+   * and returning the original type if the component types are unchanged. */
+  Type copy(TypeSystem typeSystem, Function<Type, Type> transform);
 }
 
 // End Type.java

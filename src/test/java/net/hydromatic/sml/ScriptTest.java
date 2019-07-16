@@ -23,7 +23,6 @@ import com.google.common.io.PatternFilenameFilter;
 
 import org.incava.diff.Diff;
 import org.incava.diff.Difference;
-import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -129,7 +128,6 @@ public class ScriptTest {
   }
 
   protected void checkRun(String path) throws Exception {
-    Assume.assumeFalse(path.endsWith("datatype.sml"));
     final File inFile;
     final File outFile;
     final File f = new File(path);

@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 /** A table that contains all types in use, indexed by their description (e.g.
  * "{@code int -> int}"). */
@@ -92,10 +93,11 @@ public class TypeSystem {
       Map<String, Type> tyCons) {
     return (DataType) typeByName.computeIfAbsent(name,
         name2 -> {
-          final DataType dataType = new DataType(name2,
-              DataType.computeDescription(tyCons),
-              ImmutableList.copyOf(typeVars),
-              ImmutableSortedMap.copyOf(tyCons));
+          final DataType dataType =
+              new DataType(TypeSystem.this, name2,
+                  DataType.computeDescription(tyCons),
+                  ImmutableList.copyOf(typeVars),
+                  ImmutableSortedMap.copyOf(tyCons));
           tyCons.forEach((name3, type) ->
               typeConstructorByName.put(name3, Pair.of(dataType, type)));
           return dataType;
@@ -197,7 +199,7 @@ public class TypeSystem {
     }
 
     @Override public String description() {
-      return "temp:" + name;
+      return name;
     }
 
     @Override public Op op() {
@@ -206,6 +208,10 @@ public class TypeSystem {
 
     @Override public String name() {
       return name;
+    }
+
+    public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+      return transform.apply(this);
     }
 
     public void delete() {

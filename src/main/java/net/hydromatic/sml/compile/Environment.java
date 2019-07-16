@@ -50,7 +50,10 @@ public abstract class Environment {
   abstract void visit(Consumer<Binding> consumer);
 
   @Override public String toString() {
-    return getValueMap().toString();
+    final StringBuilder b = new StringBuilder();
+    getValueMap().forEach((k, v) ->
+        b.append(k).append(": ").append(v).append("\n"));
+    return b.toString();
   }
 
   /** Returns the binding of {@code name} if bound, null if not. */

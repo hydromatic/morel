@@ -22,7 +22,9 @@ import com.google.common.collect.ImmutableList;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
+import net.hydromatic.sml.compile.CompiledStatement;
 import net.hydromatic.sml.compile.Compiler;
+import net.hydromatic.sml.compile.Compiles;
 import net.hydromatic.sml.compile.Environment;
 import net.hydromatic.sml.compile.Environments;
 import net.hydromatic.sml.compile.TypeResolver;
@@ -141,9 +143,10 @@ public class MainTest {
     withParser(ml, parser -> {
       try {
         final Ast.Exp expression = parser.expression();
-        final TypeResolver.Resolved<Ast.Exp> resolved =
-            Compiler.validateExpression(expression);
-        action.accept(resolved.node, resolved.typeMap);
+        final TypeResolver.Resolved resolved =
+            Compiles.validateExpression(expression);
+        final Ast.Exp resolvedExp = Compiles.toExp((Ast.ValDecl) resolved.node);
+        action.accept(resolvedExp, resolved.typeMap);
       } catch (ParseException e) {
         throw new RuntimeException(e);
       }
@@ -151,13 +154,14 @@ public class MainTest {
   }
 
   private void withPrepare(String ml,
-      Consumer<Compiler.CompiledStatement> action) {
+      Consumer<CompiledStatement> action) {
     withParser(ml, parser -> {
       try {
+        final TypeSystem typeSystem = new TypeSystem();
         final AstNode statement = parser.statement();
         final Environment env = Environments.empty();
-        final Compiler.CompiledStatement compiled =
-            Compiler.prepareStatement(env, statement);
+        final CompiledStatement compiled =
+            Compiles.prepareStatement(typeSystem, env, statement);
         action.accept(compiled);
       } catch (ParseException e) {
         throw new RuntimeException(e);
@@ -175,10 +179,13 @@ public class MainTest {
       final Ast.Exp e = new SmlParserImpl(new StringReader(ml)).expression();
       final TypeSystem typeSystem = new TypeSystem();
       final Environment env = Environments.empty();
-      final TypeResolver.Resolved<Ast.Exp> resolved =
-          TypeResolver.deduceType(env, e, typeSystem);
+      final Ast.ValDecl valDecl = Compiles.toValDecl(e);
+      final TypeResolver.Resolved resolved =
+          TypeResolver.deduceType(env, valDecl, typeSystem);
+      final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
       final Code code =
-          new Compiler(resolved.typeMap).compile(env, resolved.node);
+          new Compiler(resolved.typeMap)
+              .compile(env, Compiles.toExp(valDecl2));
       final EvalEnv evalEnv = Codes.emptyEnv();
       final Object value = code.eval(evalEnv);
       assertThat(value, matcher);

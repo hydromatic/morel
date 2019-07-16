@@ -24,8 +24,10 @@ import com.google.common.collect.Ordering;
 
 import net.hydromatic.sml.ast.Op;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
+import java.util.function.Function;
 
 /** The type of a record value. */
 public class RecordType extends BaseType {
@@ -36,6 +38,23 @@ public class RecordType extends BaseType {
     super(Op.RECORD_TYPE, description);
     this.argNameTypes = Objects.requireNonNull(argNameTypes);
     Preconditions.checkArgument(argNameTypes.comparator() == ORDERING);
+  }
+
+  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+    int differenceCount = 0;
+    final ImmutableSortedMap.Builder<String, Type> argNameTypes2 =
+        ImmutableSortedMap.orderedBy(ORDERING);
+    for (Map.Entry<String, Type> entry : argNameTypes.entrySet()) {
+      final Type type = entry.getValue();
+      final Type type2 = type.copy(typeSystem, transform);
+      if (type != type2) {
+        ++differenceCount;
+      }
+      argNameTypes2.put(entry.getKey(), type2);
+    }
+    return differenceCount == 0
+        ? this
+        : new RecordType(description, argNameTypes2.build());
   }
 
   /** Ordering that compares integer values numerically,

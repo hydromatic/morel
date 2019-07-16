@@ -24,6 +24,7 @@ import net.hydromatic.sml.ast.Op;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 /** The type of a tuple value. */
 public class TupleType extends BaseType {
@@ -32,6 +33,21 @@ public class TupleType extends BaseType {
   TupleType(String description, ImmutableList<Type> argTypes) {
     super(Op.TUPLE_TYPE, description);
     this.argTypes = Objects.requireNonNull(argTypes);
+  }
+
+  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+    int differenceCount = 0;
+    final ImmutableList.Builder<Type> argTypes2 = ImmutableList.builder();
+    for (Type argType : argTypes) {
+      final Type argType2 = argType.copy(typeSystem, transform);
+      if (argType != argType2) {
+        ++differenceCount;
+      }
+      argTypes2.add(argType2);
+    }
+    return differenceCount == 0
+        ? this
+        : new TupleType(description, argTypes2.build());
   }
 }
 

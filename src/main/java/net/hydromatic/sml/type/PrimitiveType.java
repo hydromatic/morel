@@ -21,6 +21,7 @@ package net.hydromatic.sml.type;
 import net.hydromatic.sml.ast.Op;
 
 import java.util.Locale;
+import java.util.function.Function;
 
 /** Primitive type. */
 public enum PrimitiveType implements Type {
@@ -39,6 +40,10 @@ public enum PrimitiveType implements Type {
 
   public Op op() {
     return Op.ID;
+  }
+
+  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+    return transform.apply(this);
   }
 }
 

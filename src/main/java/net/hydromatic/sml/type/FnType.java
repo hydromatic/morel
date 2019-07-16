@@ -20,6 +20,8 @@ package net.hydromatic.sml.type;
 
 import net.hydromatic.sml.ast.Op;
 
+import java.util.function.Function;
+
 /** The type of a function value. */
 public class FnType extends BaseType {
   public final Type paramType;
@@ -29,6 +31,15 @@ public class FnType extends BaseType {
     super(Op.FUNCTION_TYPE, description);
     this.paramType = paramType;
     this.resultType = resultType;
+  }
+
+  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+    final Type paramType2 = paramType.copy(typeSystem, transform);
+    final Type resultType2 = resultType.copy(typeSystem, transform);
+    return paramType2 == paramType
+        && resultType2 == resultType
+        ? this
+        : new FnType(description, paramType2, resultType2);
   }
 }
 

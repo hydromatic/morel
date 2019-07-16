@@ -21,6 +21,7 @@ package net.hydromatic.sml.type;
 import net.hydromatic.sml.ast.Op;
 
 import java.util.Objects;
+import java.util.function.Function;
 
 /** The type of a list value. */
 public class ListType extends BaseType {
@@ -29,6 +30,13 @@ public class ListType extends BaseType {
   ListType(String description, Type elementType) {
     super(Op.LIST, description);
     this.elementType = Objects.requireNonNull(elementType);
+  }
+
+  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+    final Type elementType2 = elementType.copy(typeSystem, transform);
+    return elementType2 == elementType
+        ? this
+        : new ListType(description, elementType2);
   }
 }
 

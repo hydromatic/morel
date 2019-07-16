@@ -19,7 +19,6 @@
 package net.hydromatic.sml.type;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 
@@ -29,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
 
 /** Algebraic type. */
 public class DataType extends BaseType implements NamedType {
@@ -36,15 +37,45 @@ public class DataType extends BaseType implements NamedType {
   public final List<TypeVar> typeVars;
   public final SortedMap<String, Type> typeConstructors;
 
-  DataType(String name, String description,
-      ImmutableList<TypeVar> typeVars,
-      ImmutableSortedMap<String, Type> typeConstructors) {
+  /** Creates a DataType.
+   *
+   * <p>Called only from {@link TypeSystem#dataType(String, List, Map)}.
+   * If the {@code typeSystem} argument is specified, canonizes the types inside
+   * type-constructors. This also allows temporary types (necessary while
+   * creating self-referential data types) to be replaced with real DataType
+   * instances. */
+  DataType(TypeSystem typeSystem, String name, String description,
+      List<TypeVar> typeVars, SortedMap<String, Type> typeConstructors) {
     super(Op.DATA_TYPE, description);
     this.name = Objects.requireNonNull(name);
     this.typeVars = Objects.requireNonNull(typeVars);
-    this.typeConstructors = Objects.requireNonNull(typeConstructors);
+    if (typeSystem == null) {
+      this.typeConstructors = ImmutableSortedMap.copyOf(typeConstructors);
+    } else {
+      this.typeConstructors = copyTypes(typeSystem, typeConstructors,
+          t -> (t instanceof TypeSystem.TemporaryType
+                && ((TypeSystem.TemporaryType) t).name().equals(name))
+            ? DataType.this
+            : t);
+    }
     Preconditions.checkArgument(typeConstructors.comparator()
         == Ordering.natural());
+  }
+
+  private ImmutableSortedMap<String, Type> copyTypes(
+      @Nonnull TypeSystem typeSystem,
+      @Nonnull SortedMap<String, Type> typeConstructors,
+      @Nonnull Function<Type, Type> transform) {
+    final ImmutableSortedMap.Builder<String, Type> builder =
+        ImmutableSortedMap.naturalOrder();
+    typeConstructors.forEach((k, v) ->
+        builder.put(k, v.copy(typeSystem, transform)));
+    return builder.build();
+  }
+
+  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+    return new DataType(typeSystem, name, description, typeVars,
+        copyTypes(typeSystem, typeConstructors, transform));
   }
 
   public String name() {

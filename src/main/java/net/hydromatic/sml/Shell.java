@@ -22,11 +22,14 @@ import com.google.common.collect.ImmutableList;
 
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.compile.CompileException;
-import net.hydromatic.sml.compile.Compiler;
+import net.hydromatic.sml.compile.CompiledStatement;
+import net.hydromatic.sml.compile.Compiles;
 import net.hydromatic.sml.compile.Environment;
 import net.hydromatic.sml.compile.Environments;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
+import net.hydromatic.sml.type.Binding;
+import net.hydromatic.sml.type.TypeSystem;
 
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -151,9 +154,11 @@ public class Shell {
         .variable(LineReader.SECONDARY_PROMPT_PATTERN, minusPrompt)
         .build();
 
+    final TypeSystem typeSystem = new TypeSystem();
     Environment env = Environments.empty();
     final StringBuilder buf = new StringBuilder();
     final List<String> lines = new ArrayList<>();
+    final List<Binding> bindings = new ArrayList<>();
     while (true) {
       String line = "";
       try {
@@ -191,12 +196,14 @@ public class Shell {
           final AstNode statement;
           try {
             statement = smlParser.statementSemicolon();
-            final Compiler.CompiledStatement compiled =
-                Compiler.prepareStatement(env, statement);
-            env = compiled.eval(env, lines);
+            final CompiledStatement compiled =
+                Compiles.prepareStatement(typeSystem, env, statement);
+            compiled.eval(env, lines, bindings);
             printAll(lines);
             terminal.writer().flush();
             lines.clear();
+            env = env.bindAll(bindings);
+            bindings.clear();
           } catch (ParseException | CompileException e) {
             terminal.writer().println(e.getMessage());
           }
