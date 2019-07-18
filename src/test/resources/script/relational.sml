@@ -63,6 +63,16 @@ from e in emps where #deptno e = 30 yield #name e;
 
 from e in emps where false yield (#deptno e);
 
+(*) Function defined inside query
+from e in emps
+where #deptno e < 30
+yield
+  let
+    fun p1 x = x + 1
+  in
+    p1 (#id e)
+  end;
+
 (* Disabled due to CCE
 fun range i j =
   if i >= j then [] else i :: (range (i + 1) j);

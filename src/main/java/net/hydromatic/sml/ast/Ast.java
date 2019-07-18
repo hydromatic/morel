@@ -1248,6 +1248,18 @@ public class Ast {
       }
       return w.append(" yield ").append(yieldExp, 0, 0);
     }
+
+    /** Creates a copy of this {@code From} with given contents,
+     * or this if the contents are the same. */
+    public From copy(Map<Ast.Id, Ast.Exp> sources, Ast.Exp filterExp,
+        Ast.Exp yieldExp) {
+      return this.sources.equals(sources)
+          && Objects.equals(this.filterExp, filterExp)
+          && Objects.equals(this.yieldExp, yieldExp)
+          ? this
+          : ast.from(pos, sources, filterExp, yieldExp);
+    }
+
   }
 
   /** Application of a function to its argument. */

@@ -103,6 +103,18 @@ from e in emps where false yield (#deptno e);
 val it = [] : int list
 
 
+(*) Function defined inside query
+from e in emps
+where #deptno e < 30
+yield
+  let
+    fun p1 x = x + 1
+  in
+    p1 (#id e)
+  end;
+val it = [101,102] : int list
+
+
 (* Disabled due to CCE
 fun range i j =
   if i >= j then [] else i :: (range (i + 1) j);
