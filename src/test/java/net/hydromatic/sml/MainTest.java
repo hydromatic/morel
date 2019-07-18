@@ -961,7 +961,7 @@ public class MainTest {
         + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
         + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
         + "in\n"
-        + "  from emps as e yield #deptno e\n"
+        + "  from e in emps yield #deptno e\n"
         + "end";
     assertEval(ml,  is(Arrays.asList(10, 20, 30, 30)));
   }
@@ -974,7 +974,7 @@ public class MainTest {
         + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
         + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
         + "in\n"
-        + "  from emps as e yield (#id e + #deptno e)\n"
+        + "  from e in emps yield (#id e + #deptno e)\n"
         + "end";
     assertEval(ml,  is(Arrays.asList(110, 121, 132, 133)));
   }
@@ -987,7 +987,7 @@ public class MainTest {
         + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
         + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
         + "in\n"
-        + "  from emps as e where #deptno e = 30 yield #id e\n"
+        + "  from e in emps where #deptno e = 30 yield #id e\n"
         + "end";
     assertEval(ml,  is(Arrays.asList(102, 103)));
   }
@@ -998,7 +998,7 @@ public class MainTest {
         + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
         + "     {id = 103, name = \"Scooby\", deptno = 30}]\n"
         + "in\n"
-        + "  from emps as e where #deptno e = 30\n"
+        + "  from e in emps where #deptno e = 30\n"
         + "end";
     assertEval(ml, is(Arrays.asList(Arrays.asList(30, 103, "Scooby"))));
   }
@@ -1011,7 +1011,7 @@ public class MainTest {
         + "  val depts =\n"
         + "    [{deptno = 10, name = \"Sales\"}]\n"
         + "in\n"
-        + "  from emps as e, depts as d where #deptno e = #deptno d\n"
+        + "  from e in emps, d in depts where #deptno e = #deptno d\n"
         + "end";
     assertType(ml,
         is("{d:{deptno:int, name:string},"

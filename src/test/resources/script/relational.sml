@@ -43,25 +43,25 @@ val depts =
    {deptno = 30, name = "Engineering"},
    {deptno = 40, name = "Support"}];
 
-from emps as e yield e;
+from e in emps yield e;
 
-from emps as e yield #id e;
+from e in emps yield #id e;
 
-from emps as e yield (#id e) - 100;
+from e in emps yield (#id e) - 100;
 
-from emps as e yield #deptno e;
+from e in emps yield #deptno e;
 
-from emps as e yield {deptno = #deptno e, one = 1};
+from e in emps yield {deptno = #deptno e, one = 1};
 
-from emps as e yield ((#id e) + (#deptno e));
+from e in emps yield ((#id e) + (#deptno e));
 
-from (from emps as e yield #deptno e) as e2 yield e2 + 1;
+from e2 in (from e in emps yield #deptno e) yield e2 + 1;
 
 (* Disabled: '=' should have lower precedence than '#deptno e' fun application
-from emps as e where #deptno e = 30 yield #name e;
+from e in emps where #deptno e = 30 yield #name e;
 *)
 
-from emps as e where false yield (#deptno e);
+from e in emps where false yield (#deptno e);
 
 (* Disabled due to CCE
 fun range i j =
@@ -71,25 +71,25 @@ fun range i j =
 (* Disabled due to NPE in apply
 range 0 5;
 
-from range 0 5 as i where i mod 2 = 1 yield i;
+from i in range 0 5 where i mod 2 = 1 yield i;
 *)
 val integers = [0,1,2,3,4];
 
-from integers as i where i mod 2 = 1 yield i;
+from i in integers where i mod 2 = 1 yield i;
 
 (*) missing yield
-from integers as i where i mod 2 = 1;
+from i in integers where i mod 2 = 1;
 
-from emps as e where (#deptno e) = 30 yield (#id e);
+from e in emps where (#deptno e) = 30 yield (#id e);
 
 (*) cartesian product
-from emps as e, emps as e2 yield (#name e) ^ "-" ^ (#name e2);
+from e in emps, e2 in emps yield (#name e) ^ "-" ^ (#name e2);
 
 (*) cartesian product, missing yield
-from depts as d, integers as i;
+from d in depts, i in integers;
 
 (*) join
-from emps as e, depts as d
+from e in emps, d in depts
   where (#deptno e) = (#deptno d)
   yield {id = (#id e), deptno = (#deptno e), ename = (#name e), dname = (#name d)};
 
@@ -100,8 +100,8 @@ let
   fun exists [] = false
     | exists hd :: tl = true
 in
-  from emps as e
-  where exists (from depts as d
+  from e in emps
+  where exists (from d in depts
                 where (#deptno d) = (#deptno e)
                 andalso (#name d) = "Engineering")
   yield (#name e)
@@ -114,8 +114,8 @@ let
   fun in_ e [] = false
     | in_ e (h :: t) = e = h orelse (in_ e t)
 in
-  from emps as e
-  where in_ (#deptno e) (from depts as d
+  from e in emps
+  where in_ (#deptno e) (from d in depts
                 where (#name d) = "Engineering"
                 yield (#deptno d))
   yield (#name e)

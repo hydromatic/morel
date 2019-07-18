@@ -308,7 +308,7 @@ void fromSource(Map/*<String, Exp>*/ sources) :
   final Id id;
 }
 {
-  exp = expression() <AS> id = identifier() {
+  id = identifier() <IN> exp = expression() {
     sources.put(id, exp);
   }
 }
@@ -1059,7 +1059,6 @@ AstNode statementSemicolon() :
 | < VAL: "VAL" >
 
 // The following are relational extensions:
-| < AS: "AS" >
 | < FROM: "FROM" >
 | < WHERE: "WHERE" >
 | < YIELD: "YIELD" >

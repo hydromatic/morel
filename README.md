@@ -125,7 +125,7 @@ val depts =
 the expression
 
 ```
-from emps as e where (#deptno e = 30) yield (#id e)
+from e in emps where (#deptno e = 30) yield (#id e)
 ```
 
 is equivalent to standard ML
@@ -150,7 +150,7 @@ You can iterate over more than one collection, and therefore generate
 a join or a cartesian product:
 
 ```
-from emps as e, depts as d
+from e in emps, d in depts
   where (#deptno e) = (#deptno d)
   yield {id = (#id e), deptno = (#deptno e), ename = (#name e), dname = (#name d)};
 ```
@@ -164,8 +164,8 @@ let
   fun in_ e [] = false
     | in_ e (h :: t) = e = h orelse (in_ e t)
 in
-  from emps as e
-  where in_ (#deptno e) (from depts as d
+  from e in emps
+  where in_ (#deptno e) (from d in depts
                 where (#name d) = "Engineering"
                 yield (#deptno d))
   yield (#name e)
@@ -175,8 +175,8 @@ let
   fun exists [] = false
     | exists hd :: tl = true
 in
-  from emps as e
-  where exists (from depts as d
+  from e in emps
+  where exists (from d in depts
                 where (#deptno d) = (#deptno e)
                 andalso (#name d) = "Engineering")
   yield (#name e)
