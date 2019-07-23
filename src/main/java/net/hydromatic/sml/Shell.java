@@ -174,7 +174,9 @@ public class Shell {
 
       // Ignore this line if it consists only of comments, spaces, and
       // optionally semicolon, and if we are not on a continuation line.
-      line = line.replaceAll("\\(\\*.*\\*\\)", "").trim();
+      line = line.replaceAll("\\(\\*.*\\*\\)", "")
+          .replaceAll("\\(\\*\\) .*$", "")
+          .trim();
       if (buf.length() == 0 && (line.isEmpty() || line.equals(";"))) {
         continue;
       }

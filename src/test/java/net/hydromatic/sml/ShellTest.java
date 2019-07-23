@@ -107,6 +107,20 @@ public class ShellTest {
         + "\u001B[?2004l";
     assertShellOutput(argList, in, is(expected));
   }
+
+  /** Tests {@link Shell} with a single-line comment. */
+  @Test public void testSingleLineComment() throws IOException {
+    final String in = "(*) line comment\n"
+        + "1 + 2;\n";
+    final String expected = "(*) line comment\r\n"
+        + "1 + 2;\r\n"
+        + "= (*) line comment\r\r\n"
+        + "\u001B[?2004l= 1 + 2;\r\r\n"
+        + "\u001B[?2004lval it = 3 : int\r\n"
+        + "= \r\r\n"
+        + "\u001B[?2004l";
+    assertShellOutput(argList, in, is(expected));
+  }
 }
 
 // End ShellTest.java
