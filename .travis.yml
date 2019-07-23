@@ -26,10 +26,6 @@ matrix:
     - env: IMAGE=maven:3-jdk-10 SITE=Y
     - env: IMAGE=maven:3-jdk-9
     - env: IMAGE=maven:3-jdk-8 JDOC=Y
-branches:
-  only:
-    - master
-    - scratch
 env:
   global:
   - DOCKERRUN="docker run -it --rm -v $PWD:/src -v $HOME/.m2:/root/.m2 -w /src"

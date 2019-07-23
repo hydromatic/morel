@@ -153,15 +153,13 @@ public class ScriptTest {
     }
     final File refFile =
         new File(inFile.getParentFile(), inFile.getName() + ".out");
-    if (refFile.exists()) {
-      final String diff = Utils.diff(refFile, outFile);
-      if (!diff.isEmpty()) {
-        fail("Files differ: " + refFile + " " + outFile + "\n"
-            + diff);
-      }
-    } else {
-      fail("Reference file not found: " + refFile + "\n"
-          + "Out file is: " + outFile + "\n");
+    if (!refFile.exists()) {
+      System.out.println("Reference file not found: " + refFile);
+    }
+    final String diff = Utils.diff(refFile, outFile);
+    if (!diff.isEmpty()) {
+      fail("Files differ: " + refFile + " " + outFile + "\n"
+          + diff);
     }
   }
 
@@ -358,13 +356,17 @@ public class ScriptTest {
     }
 
     /**
-     * Returns a list of the lines in a given file.
+     * Returns a list of the lines in a given file, or an empty list if the file
+     * does not exist.
      *
      * @param file File
      * @return List of lines
      */
     private static List<String> fileLines(File file) {
       List<String> lines = new ArrayList<>();
+      if (!file.exists()) {
+        return lines;
+      }
       try (LineNumberReader r = new LineNumberReader(reader(file))) {
         String line;
         while ((line = r.readLine()) != null) {
