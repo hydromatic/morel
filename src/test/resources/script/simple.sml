@@ -17,8 +17,18 @@
  * License.
  *)
 
-(*) Simple commands
+(*) Literals
 1;
+~2;
+"a string";
+true;
+[1,2,3];
+(1,2);
+(1,(2,"three"),true);
+[(1,"a"),(2,"b"),(3,"c")];
+([1,2],["a","b","c"]);
+
+(*) Simple commands
 val x = 1;
 x + 2;
 let

@@ -21,6 +21,7 @@ package net.hydromatic.sml.compile;
 import net.hydromatic.sml.type.ListType;
 import net.hydromatic.sml.type.PrimitiveType;
 import net.hydromatic.sml.type.RecordType;
+import net.hydromatic.sml.type.TupleType;
 import net.hydromatic.sml.type.Type;
 import net.hydromatic.sml.util.Pair;
 
@@ -114,6 +115,21 @@ class Pretty {
             pretty1(buf, indent, lineEnd, nameType.getValue(), o);
           });
       return buf.append("}");
+
+    case TUPLE_TYPE:
+      final TupleType tupleType = (TupleType) type;
+      //noinspection unchecked
+      list = (List) value;
+      buf.append("(");
+      start = buf.length();
+      Pair.forEach(list, tupleType.argTypes,
+          (o, elementType) -> {
+            if (buf.length() > start) {
+              buf.append(",");
+            }
+            pretty1(buf, indent, lineEnd, elementType, o);
+          });
+      return buf.append(")");
 
     default:
       return buf.append(value);
