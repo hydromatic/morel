@@ -27,7 +27,7 @@ License.
   </parent>
 
   <artifactId>smlj</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.1.0</version>
   <packaging>jar</packaging>
 
   <name>smlj</name>
@@ -118,7 +118,7 @@ License.
     <connection>scm:git:git://github.com/julianhyde/smlj.git</connection>
     <developerConnection>scm:git:git@github.com:julianhyde/smlj.git</developerConnection>
     <url>scm:git:git://github.com/julianhyde/smlj.git</url>
-    <tag>HEAD</tag>
+    <tag>smlj-0.1.0</tag>
   </scm>
 
   <dependencies>
