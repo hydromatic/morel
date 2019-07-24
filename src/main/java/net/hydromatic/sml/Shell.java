@@ -117,7 +117,7 @@ public class Shell {
 
   /** Generates a banner to be shown on startup. */
   private String banner() {
-    return "smlj version 0.1-SNAPSHOT"
+    return "smlj version 0.1.0"
         + " (java version \"" + System.getProperty("java.version")
         + "\", JRE " + System.getProperty("java.vendor.version")
         + " (build " + System.getProperty("java.vm.version")

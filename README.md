@@ -36,7 +36,7 @@ Get smlj from
 <dependency>
   <groupId>net.hydromatic</groupId>
   <artifactId>smlj</artifactId>
-  <version>0.1</version>
+  <version>0.1.0</version>
 </dependency>
 ```
 
@@ -53,6 +53,18 @@ On Windows, the last line is
 ```bash
 > mvnw install
 ```
+
+### Run the shell
+
+```bash
+$ ./smlj
+smlj version 0.1.0 (java version "11.0.4", JLine terminal, xterm-256color)
+= "Hello, world!";
+val it = "Hello, world!" : string
+= exit
+$
+```
+
 ## Status
 
 Implemented:
@@ -73,7 +85,7 @@ Implemented:
 * `if`
 * `case`
 * Primitive, list, tuple and record types
-* Type variables (polymorphism)
+* Type variables (polymorphism) (but see "bugs")
 * Enumerated types (`datatype`)
 * Tuples and unit, record and list values
 * Patterns (destructuring) in `val` and `case`,
@@ -93,6 +105,8 @@ Not implemented:
 * Type annotations in expressions and patterns
 
 Bugs:
+* Unbound type variables are not yet supported. For example, the
+  expression `[]` should have type `'a list` but currently fails
 * Prevent user from overriding built-in constants and functions:
   `true`, `false`, `nil`, `ref`, `it`, `::`; they should not be reserved
 * Access parameters and variables by offset into a fixed-size array;
