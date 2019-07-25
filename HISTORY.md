@@ -26,7 +26,7 @@ For a full list of releases, see
 ## <a href="https://github.com/julianhyde/smlj/releases/tag/smlj-0.1">0.1</a> / 2019-07-24
 
 Initial release features the core language (primitive types, lists,
-tuples, records; `let`, `if`, `fn` and `match` expressions; `val`,
+tuples, records; `let`, `if`, `fn` and `case` expressions; `val`,
 `fun` and `datatype` declarations), an interactive shell `smlj`, and
 relational extensions (`from`).
 
