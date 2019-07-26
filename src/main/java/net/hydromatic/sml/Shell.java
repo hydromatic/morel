@@ -36,6 +36,7 @@ import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.MaskingCallback;
 import org.jline.reader.ParsedLine;
+import org.jline.reader.Parser;
 import org.jline.reader.UserInterruptException;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
@@ -65,7 +66,8 @@ public class Shell {
    * @param args Command-line arguments */
   public static void main(String[] args) {
     try {
-      final Shell main = new Shell(args, System.in, System.out);
+      final Shell main =
+          new Shell(ImmutableList.copyOf(args), System.in, System.out);
       main.run();
     } catch (Throwable e) {
       e.printStackTrace();
@@ -74,7 +76,7 @@ public class Shell {
   }
 
   /** Creates a Shell. */
-  public Shell(String[] args, InputStream in, OutputStream out)
+  public Shell(List<String> args, InputStream in, OutputStream out)
       throws IOException {
     this.argList = ImmutableList.copyOf(args);
     this.banner = !argList.contains("--banner=false");
@@ -131,10 +133,22 @@ public class Shell {
       return;
     }
 
-    final DefaultParser parser = new DefaultParser();
-    parser.setEofOnUnclosedQuote(true);
-    parser.setEofOnUnclosedBracket(DefaultParser.Bracket.CURLY,
-        DefaultParser.Bracket.ROUND, DefaultParser.Bracket.SQUARE);
+    final Parser parser = new DefaultParser() {
+      {
+        setEofOnUnclosedQuote(true);
+        setEofOnUnclosedBracket(DefaultParser.Bracket.CURLY,
+            DefaultParser.Bracket.ROUND, DefaultParser.Bracket.SQUARE);
+      }
+
+      @Override public ParsedLine parse(String line, int cursor,
+          ParseContext context) {
+        // Remove from "(*)" to end of line, if present
+        if (line.matches(".*\\(\\*\\).*")) {
+          line = line.replaceAll("\\(\\*\\).*$", "");
+        }
+        return super.parse(line, cursor, context);
+      }
+    };
 
     final String equalsPrompt = new AttributedStringBuilder()
         .style(AttributedStyle.DEFAULT.bold()).append("=")
@@ -149,6 +163,7 @@ public class Shell {
       terminal.writer().println(banner());
     }
     LineReader reader = LineReaderBuilder.builder()
+        .appName("smlj")
         .terminal(terminal)
         .parser(parser)
         .variable(LineReader.SECONDARY_PROMPT_PATTERN, minusPrompt)
@@ -174,10 +189,12 @@ public class Shell {
 
       // Ignore this line if it consists only of comments, spaces, and
       // optionally semicolon, and if we are not on a continuation line.
-      line = line.replaceAll("\\(\\*.*\\*\\)", "")
+      final String trimmedLine = line
+          .replaceAll("\\(\\*.*\\*\\)", "")
           .replaceAll("\\(\\*\\) .*$", "")
           .trim();
-      if (buf.length() == 0 && (line.isEmpty() || line.equals(";"))) {
+      if (buf.length() == 0
+          && (trimmedLine.isEmpty() || trimmedLine.equals(";"))) {
         continue;
       }
 
@@ -212,6 +229,8 @@ public class Shell {
           if (echo) {
             terminal.writer().println(code);
           }
+        } else {
+          buf.append("\n");
         }
       } catch (IllegalArgumentException e) {
         terminal.writer().println(e.getMessage());

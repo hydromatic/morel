@@ -47,9 +47,9 @@ public class ShellTest {
   private void assertShellOutput(List<String> argList, String inputString,
       Matcher<String> matcher) throws IOException {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    final Shell shell = new Shell(argList.toArray(new String[0]),
-        new ByteArrayInputStream(inputString.getBytes(UTF_8)),
-        baos);
+    final ByteArrayInputStream bais =
+        new ByteArrayInputStream(inputString.getBytes(UTF_8));
+    final Shell shell = new Shell(argList, bais, baos);
     shell.run();
     final String outString = baos.toString(UTF_8);
     assertThat(outString, matcher);
@@ -116,6 +116,44 @@ public class ShellTest {
         + "1 + 2;\r\n"
         + "= (*) line comment\r\r\n"
         + "\u001B[?2004l= 1 + 2;\r\r\n"
+        + "\u001B[?2004lval it = 3 : int\r\n"
+        + "= \r\r\n"
+        + "\u001B[?2004l";
+    assertShellOutput(argList, in, is(expected));
+  }
+
+  /** Tests {@link Shell} with a single-line comment that contains a quote. */
+  @Test public void testSingleLineCommentWithQuote() throws IOException {
+    final String in = "(*) it's a single-line comment with a quote\n"
+        + "2 + 3;\n";
+    final String expected = "(*) it's a single-line comment with a quote\r\n"
+        + "2 + 3;\r\n"
+        + "= (*) it's a single-line comment with a quote\r\r\n"
+        + "\u001B[?2004l= 2 + 3;\r\r\n"
+        + "\u001B[?2004lval it = 5 : int\r\n"
+        + "= \r\r\n"
+        + "\u001B[?2004l";
+    assertShellOutput(argList, in, is(expected));
+  }
+
+  /** Tests {@link Shell} with {@code let} statement spread over multiple
+   * lines. */
+  @Test public void testMultiLineLet() throws IOException {
+    final String in = "let\n"
+        + "  val x = 1\n"
+        + "in\n"
+        + "  x + 2\n"
+        + "end;\n";
+    final String expected = "let\r\n"
+        + "  val x = 1\r\n"
+        + "in\r\n"
+        + "  x + 2\r\n"
+        + "end;\r\n"
+        + "= let\r\r\n"
+        + "\u001B[?2004l-   val x = 1\r\r\n"
+        + "\u001B[?2004l- in\r\r\n"
+        + "\u001B[?2004l-   x + 2\r\r\n"
+        + "\u001B[?2004l- end;\r\r\n"
         + "\u001B[?2004lval it = 3 : int\r\n"
         + "= \r\r\n"
         + "\u001B[?2004l";
