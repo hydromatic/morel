@@ -19,7 +19,6 @@
 package net.hydromatic.sml;
 
 import org.hamcrest.Matcher;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -34,7 +33,6 @@ import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertThat;
 
 /** Tests the Shell. */
-@Ignore // disabled because it is non-deterministic; run manually
 public class ShellTest {
 
   private static final String UTF_8 = "utf-8";
@@ -49,7 +47,15 @@ public class ShellTest {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final ByteArrayInputStream bais =
         new ByteArrayInputStream(inputString.getBytes(UTF_8));
-    final Shell shell = new Shell(argList, bais, baos);
+    final Shell shell = new Shell(argList, bais, baos) {
+      @Override protected void pause() {
+        try {
+          Thread.sleep(10);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
     shell.run();
     final String outString = baos.toString(UTF_8);
     assertThat(outString, matcher);

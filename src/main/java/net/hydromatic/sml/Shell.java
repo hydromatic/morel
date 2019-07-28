@@ -111,6 +111,14 @@ public class Shell {
     printAll(Arrays.asList(helpLines));
   }
 
+  /** Pauses after creating the terminal.
+   *
+   * <p>Default implementation does nothing;
+   * derived class used in testing pauses for a few milliseconds,
+   * which gives classes time to load and makes test deterministic. */
+  protected void pause() {
+  }
+
   private void printAll(List<String> lines) {
     for (String line : lines) {
       terminal.writer().println(line);
@@ -169,6 +177,7 @@ public class Shell {
         .variable(LineReader.SECONDARY_PROMPT_PATTERN, minusPrompt)
         .build();
 
+    pause();
     final TypeSystem typeSystem = new TypeSystem();
     Environment env = Environments.empty();
     final StringBuilder buf = new StringBuilder();
