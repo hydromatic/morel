@@ -178,6 +178,10 @@ public class TypeSystem {
     return typeConstructorByName.get(tyConName);
   }
 
+  public Type typeVariable(int ordinal) {
+    return PrimitiveType.INT; // TODO:
+  }
+
   /** Placeholder for a type that is being recursively defined.
    *
    * <p>For example, while defining datatype "list" as follows,

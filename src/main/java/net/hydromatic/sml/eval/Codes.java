@@ -258,26 +258,36 @@ public abstract class Codes {
     return (env, argValue) -> ((List) argValue).get(slot);
   }
 
-  /** Returns an applicable that negates a boolean value. */
-  public static Applicable not() {
-    return (env, argValue) -> !(Boolean) argValue;
-  }
+  /** An applicable that negates a boolean value. */
+  static final Applicable NOT = (env, argValue) -> !(Boolean) argValue;
 
-  /** Returns an applicable that returns the absolute value of an int. */
-  public static Applicable abs() {
-    return (env, argValue) -> {
-      final Integer integer = (Integer) argValue;
-      return integer >= 0 ? integer : -integer;
+  /** An applicable that returns the absolute value of an int. */
+  public static final Applicable ABS = (env, argValue) -> {
+    final Integer integer = (Integer) argValue;
+    return integer >= 0 ? integer : -integer;
+  };
+
+  /** An applicable that applies a function to every element of a list. */
+  static final Applicable MAP = (env, argValue) -> {
+    final Applicable fn = (Applicable) argValue;
+    return (Applicable) (env2, argValue2) -> {
+      final List list = (List) argValue2;
+      final ImmutableList.Builder<Object> builder = ImmutableList.builder();
+      for (Object o : list) {
+        builder.add(fn.apply(env2, o));
+      }
+      return builder.build();
     };
-  }
+  };
 
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
     final EvalEnv env = new EvalEnv();
     env.valueMap.put("true", true);
     env.valueMap.put("false", false);
-    env.valueMap.put("not", not());
-    env.valueMap.put("abs", abs());
+    env.valueMap.put("not", NOT);
+    env.valueMap.put("abs", ABS);
+    env.valueMap.put("map", MAP);
     return env;
   }
 

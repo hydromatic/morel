@@ -81,16 +81,8 @@ public class TypeResolver {
   }
 
   private Resolved deduceType_(Environment env, Ast.Decl decl) {
-    final Type boolTerm = PrimitiveType.BOOL;
-    final Type intTerm = PrimitiveType.INT;
-    final Type boolToBool = typeSystem.fnType(boolTerm, boolTerm);
-    final Type intToInt = typeSystem.fnType(intTerm, intTerm);
-    final TypeEnvHolder typeEnvs =
-        new TypeEnvHolder(EmptyTypeEnv.INSTANCE)
-            .bind("true", boolTerm)
-            .bind("false", boolTerm)
-            .bind("not", boolToBool)
-            .bind("abs", intToInt);
+    final TypeEnvHolder typeEnvs = new TypeEnvHolder(EmptyTypeEnv.INSTANCE);
+    BuiltIn.forEachType(typeSystem, typeEnvs::bind);
     env.forEachType(typeEnvs::bind);
     final TypeEnv typeEnv = typeEnvs.typeEnv;
     final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
