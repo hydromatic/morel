@@ -20,15 +20,21 @@ package net.hydromatic.sml.eval;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Chars;
 
 import net.hydromatic.sml.ast.Ast;
+import net.hydromatic.sml.compile.BuiltIn;
 import net.hydromatic.sml.type.Type;
+import net.hydromatic.sml.util.MapList;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /** Helpers for {@link Code}. */
 public abstract class Codes {
@@ -267,28 +273,459 @@ public abstract class Codes {
     return integer >= 0 ? integer : -integer;
   };
 
-  /** An applicable that applies a function to every element of a list. */
-  static final Applicable MAP = (env, argValue) -> {
-    final Applicable fn = (Applicable) argValue;
-    return (Applicable) (env2, argValue2) -> {
-      final List list = (List) argValue2;
+  /** @see BuiltIn#IGNORE */
+  static final Applicable IGNORE = (env, argValue) -> Unit.INSTANCE;
+
+  /** @see BuiltIn#STRING_MAX_SIZE */
+  static final Integer STRING_MAX_SIZE = Integer.MAX_VALUE;
+
+  /** @see BuiltIn#STRING_SIZE */
+  static final Applicable STRING_SIZE = (env, argValue) ->
+      ((String) argValue).length();
+
+  /** @see BuiltIn#STRING_SUB */
+  static final Applicable STRING_SUB = (env, argValue) -> {
+    final List tuple = (List) argValue;
+    final String s = (String) tuple.get(0);
+    final int i = (Integer) tuple.get(1);
+    return s.charAt(i);
+  };
+
+  /** @see BuiltIn#STRING_EXTRACT */
+  static final Applicable STRING_EXTRACT = (env, argValue) -> {
+    final List tuple = (List) argValue;
+    final String s = (String) tuple.get(0);
+    final int i = (Integer) tuple.get(1);
+    return s.substring(i);
+  };
+
+  /** @see BuiltIn#STRING_SUBSTRING */
+  static final Applicable STRING_SUBSTRING = (env, argValue) -> {
+    final List tuple = (List) argValue;
+    final String s = (String) tuple.get(0);
+    final int i = (Integer) tuple.get(1);
+    final int j = (Integer) tuple.get(2);
+    return s.substring(i, i + j);
+  };
+
+  /** @see BuiltIn#STRING_CONCAT */
+  static final Applicable STRING_CONCAT = stringConcat("");
+
+  private static Applicable stringConcat(String separator) {
+    return (env, argValue) -> {
+      @SuppressWarnings("unchecked") final List<String> list = (List) argValue;
+      return String.join(separator, list);
+    };
+  }
+
+  /** @see BuiltIn#STRING_CONCAT_WITH */
+  static final Applicable STRING_CONCAT_WITH = (env, argValue) ->
+      stringConcat((String) argValue);
+
+  /** @see BuiltIn#STRING_STR */
+  static final Applicable STRING_STR = (env, argValue) ->
+      ((Character) argValue) + "";
+
+  /** @see BuiltIn#STRING_IMPLODE */
+  static final Applicable STRING_IMPLODE = (env, argValue) ->
+      String.valueOf(Chars.toArray((List) argValue));
+
+  /** @see BuiltIn#STRING_EXPLODE */
+  static final Applicable STRING_EXPLODE = (env, argValue) -> {
+    final String s = (String) argValue;
+    return MapList.of(s.length(), s::charAt);
+  };
+
+  /** @see BuiltIn#STRING_MAP */
+  static final Applicable STRING_MAP = (env, argValue) ->
+      stringMap((Applicable) argValue);
+
+  static Applicable stringMap(Applicable f) {
+    return (env, argValue) -> {
+      final String s = (String) argValue;
+      final StringBuilder buf = new StringBuilder();
+      for (int i = 0; i < s.length(); i++) {
+        final char c = s.charAt(i);
+        final char c2 = (Character) f.apply(env, c);
+        buf.append(c2);
+      }
+      return buf.toString();
+    };
+  }
+
+  /** @see BuiltIn#STRING_TRANSLATE */
+  static final Applicable STRING_TRANSLATE = (env, argValue) -> {
+    final Applicable f = (Applicable) argValue;
+    return translate(f);
+  };
+
+  static Applicable translate(Applicable f) {
+    return (env, argValue) -> {
+      final String s = (String) argValue;
+      final StringBuilder buf = new StringBuilder();
+      for (int i = 0; i < s.length(); i++) {
+        final char c = s.charAt(i);
+        final String c2 = (String) f.apply(env, c);
+        buf.append(c2);
+      }
+      return buf.toString();
+    };
+  }
+
+  /** @see BuiltIn#STRING_IS_PREFIX */
+  static final Applicable STRING_IS_PREFIX = (env, argValue) -> {
+    final String s = (String) argValue;
+    return isPrefix(s);
+  };
+
+  static Applicable isPrefix(String s) {
+    return (env, argValue) -> {
+      final String s2 = (String) argValue;
+      return s2.startsWith(s);
+    };
+  }
+
+  /** @see BuiltIn#STRING_IS_SUBSTRING */
+  static final Applicable STRING_IS_SUBSTRING = (env, argValue) -> {
+    final String s = (String) argValue;
+    return isSubstring(s);
+  };
+
+  static Applicable isSubstring(String s) {
+    return (env, argValue) -> {
+      final String s2 = (String) argValue;
+      return s2.contains(s);
+    };
+  }
+
+  /** @see BuiltIn#STRING_IS_SUFFIX */
+  static final Applicable STRING_IS_SUFFIX = (env, argValue) -> {
+    final String s = (String) argValue;
+    return isSuffix(s);
+  };
+
+  static Applicable isSuffix(String s) {
+    return (env, argValue) -> {
+      final String s2 = (String) argValue;
+      return s2.endsWith(s);
+    };
+  }
+
+  /** @see BuiltIn#LIST_NULL */
+  static final Applicable LIST_NULL = (env, argValue) ->
+      ((List) argValue).isEmpty();
+
+  /** @see BuiltIn#LIST_LENGTH */
+  static final Applicable LIST_LENGTH = (env, argValue) ->
+      ((List) argValue).size();
+
+  /** @see BuiltIn#LIST_AT */
+  static final Applicable LIST_AT = (env, argValue) -> {
+    final List tuple = (List) argValue;
+    final List list0 = (List) tuple.get(0);
+    final List list1 = (List) tuple.get(1);
+    return ImmutableList.builder().addAll(list0).addAll(list1).build();
+  };
+
+  /** @see BuiltIn#LIST_HD */
+  static final Applicable LIST_HD = (env, argValue) ->
+      ((List) argValue).get(0);
+
+  /** @see BuiltIn#LIST_TL */
+  static final Applicable LIST_TL = (env, argValue) ->
+      ((List) argValue).subList(1, ((List) argValue).size());
+
+  /** @see BuiltIn#LIST_LAST */
+  static final Applicable LIST_LAST = (env, argValue) ->
+      ((List) argValue).get(((List) argValue).size() - 1);
+
+  /** @see BuiltIn#LIST_GET_ITEM */
+  static final Applicable LIST_GET_ITEM = (env, argValue) -> {
+    final List list = (List) argValue;
+    return ImmutableList.of(list.get(0), list.subList(1, list.size()));
+  };
+
+  /** @see BuiltIn#LIST_NTH */
+  static final Applicable LIST_NTH = (env, argValue) -> {
+    final List tuple = (List) argValue;
+    final List list = (List) tuple.get(0);
+    final int i = (Integer) tuple.get(1);
+    return list.get(i);
+  };
+
+  /** @see BuiltIn#LIST_TAKE */
+  static final Applicable LIST_TAKE = (env, argValue) -> {
+    final List tuple = (List) argValue;
+    final List list = (List) tuple.get(0);
+    final int i = (Integer) tuple.get(1);
+    return list.subList(0, i);
+  };
+
+  /** @see BuiltIn#LIST_DROP */
+  static final Applicable LIST_DROP = (env, argValue) -> {
+    final List tuple = (List) argValue;
+    final List list = (List) tuple.get(0);
+    final int i = (Integer) tuple.get(1);
+    return list.subList(i, list.size());
+  };
+
+  /** @see BuiltIn#LIST_REV */
+  static final Applicable LIST_REV = (env, argValue) -> {
+    final List list = (List) argValue;
+    return Lists.reverse(list);
+  };
+
+  /** @see BuiltIn#LIST_CONCAT */
+  static final Applicable LIST_CONCAT = (env, argValue) -> {
+    final List list = (List) argValue;
+    final ImmutableList.Builder<Object> builder = ImmutableList.builder();
+    for (Object o : list) {
+      builder.addAll((List) o);
+    }
+    return builder.build();
+  };
+
+  /** @see BuiltIn#LIST_REV_APPEND */
+  static final Applicable LIST_REV_APPEND = (env, argValue) -> {
+    final List tuple = (List) argValue;
+    final List list0 = (List) tuple.get(0);
+    final List list1 = (List) tuple.get(1);
+    return ImmutableList.builder().addAll(Lists.reverse(list0))
+        .addAll(list1).build();
+  };
+
+  /** @see BuiltIn#LIST_APP */
+  static final Applicable LIST_APP = (env, argValue) ->
+      listApp((Applicable) argValue);
+
+  private static Applicable listApp(Applicable consumer) {
+    return (env, argValue) -> {
+      final List list = (List) argValue;
+      list.forEach(o -> consumer.apply(env, o));
+      return Unit.INSTANCE;
+    };
+  }
+
+  /** @see BuiltIn#LIST_MAP */
+  static final Applicable LIST_MAP = (env, argValue) ->
+      listMap((Applicable) argValue);
+
+  private static Applicable listMap(Applicable fn) {
+    return (env, argValue) -> {
+      final List list = (List) argValue;
       final ImmutableList.Builder<Object> builder = ImmutableList.builder();
       for (Object o : list) {
-        builder.add(fn.apply(env2, o));
+        builder.add(fn.apply(env, o));
       }
       return builder.build();
     };
+  }
+
+  /** @see BuiltIn#LIST_FIND */
+  static final Applicable LIST_FIND = (env, argValue) -> {
+    final Applicable fn = (Applicable) argValue;
+    return find(fn);
   };
+
+  static Applicable find(Applicable fn) {
+    return (env, argValue) -> {
+      final List list = (List) argValue;
+      for (Object o : list) {
+        if ((Boolean) fn.apply(env, o)) {
+          return o;
+        }
+      }
+      throw new RuntimeException("not found");
+    };
+  }
+
+  /** @see BuiltIn#LIST_FILTER */
+  static final Applicable LIST_FILTER = (env, argValue) -> {
+    final Applicable fn = (Applicable) argValue;
+    return listFilter(fn);
+  };
+
+  private static Applicable listFilter(Applicable fn) {
+    return (env, argValue) -> {
+      final List list = (List) argValue;
+      final ImmutableList.Builder builder = ImmutableList.builder();
+      for (Object o : list) {
+        if ((Boolean) fn.apply(env, o)) {
+          builder.add(o);
+        }
+      }
+      return builder.build();
+    };
+  }
+
+  /** @see BuiltIn#LIST_PARTITION */
+  static final Applicable LIST_PARTITION = (env, argValue) -> {
+    final Applicable fn = (Applicable) argValue;
+    return listPartition(fn);
+  };
+
+  private static Applicable listPartition(Applicable fn) {
+    return (env, argValue) -> {
+      final List list = (List) argValue;
+      final ImmutableList.Builder trueBuilder = ImmutableList.builder();
+      final ImmutableList.Builder falseBuilder = ImmutableList.builder();
+      for (Object o : list) {
+        ((Boolean) fn.apply(env, o) ? trueBuilder : falseBuilder).add(o);
+      }
+      return ImmutableList.of(trueBuilder.build(), falseBuilder.build());
+    };
+  }
+  /** @see BuiltIn#LIST_FOLDL */
+  static final Applicable LIST_FOLDL = (env, argValue) ->
+      listFold(true, (Applicable) argValue);
+
+  /** @see BuiltIn#LIST_FOLDR */
+  static final Applicable LIST_FOLDR = (env, argValue) ->
+      listFold(false, (Applicable) argValue);
+
+  private static Applicable listFold(boolean left, Applicable fn) {
+    return (env, argValue) -> listFold2(left, fn, argValue);
+  }
+
+  private static Applicable listFold2(boolean left, Applicable fn,
+      Object init) {
+    return (env, argValue) -> {
+      final List list = (List) argValue;
+      Object b = init;
+      for (Object a : left ? list : Lists.reverse(list)) {
+        b = fn.apply(env, ImmutableList.of(a, b));
+      }
+      return b;
+    };
+  }
+
+  /** @see BuiltIn#LIST_EXISTS */
+  static final Applicable LIST_EXISTS = (env, argValue) ->
+      listExists((Applicable) argValue);
+
+  private static Applicable listExists(Applicable fn) {
+    return (env, argValue) -> {
+      final List list = (List) argValue;
+      for (Object o : list) {
+        if ((Boolean) fn.apply(env, o)) {
+          return true;
+        }
+      }
+      return false;
+    };
+  }
+
+  /** @see BuiltIn#LIST_ALL */
+  static final Applicable LIST_ALL = (env, argValue) ->
+      listAll((Applicable) argValue);
+
+  private static Applicable listAll(Applicable fn) {
+    return (env, argValue) -> {
+      final List list = (List) argValue;
+      for (Object o : list) {
+        if (!(Boolean) fn.apply(env, o)) {
+          return false;
+        }
+      }
+      return true;
+    };
+  }
+
+  /** @see BuiltIn#LIST_TABULATE */
+  static final Applicable LIST_TABULATE = (env, argValue) -> {
+    final List tuple = (List) argValue;
+    final int count = (Integer) tuple.get(0);
+    final Applicable fn = (Applicable) tuple.get(1);
+    final ImmutableList.Builder<Object> builder = ImmutableList.builder();
+    for (int i = 0; i < count; i++) {
+      builder.add(fn.apply(env, i));
+    }
+    return builder.build();
+  };
+
+  /** @see BuiltIn#LIST_COLLATE */
+  static final Applicable LIST_COLLATE = (env, argValue) ->
+      collate((Applicable) argValue);
+
+  static Applicable collate(Applicable comparator) {
+    return (env, argValue) -> {
+      final List tuple = (List) argValue;
+      final List list0 = (List) tuple.get(0);
+      final List list1 = (List) tuple.get(1);
+      final int n = Math.min(list0.size(), list1.size());
+      for (int i = 0; i < n; i++) {
+        final Object element0 = list0.get(i);
+        final Object element1 = list1.get(i);
+        final int compare = (Integer) comparator.apply(env,
+            ImmutableList.of(element0, element1));
+        if (compare != 0) {
+          return compare;
+        }
+      }
+      return Integer.compare(list0.size(), list1.size());
+    };
+  }
 
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
     final EvalEnv env = new EvalEnv();
-    env.valueMap.put("true", true);
-    env.valueMap.put("false", false);
-    env.valueMap.put("not", NOT);
-    env.valueMap.put("abs", ABS);
-    env.valueMap.put("map", MAP);
+    add(env, BuiltIn.TRUE, true);
+    add(env, BuiltIn.FALSE, false);
+    add(env, BuiltIn.NOT, NOT);
+    add(env, BuiltIn.ABS, ABS);
+    add(env, BuiltIn.IGNORE, IGNORE);
+    add(env, BuiltIn.STRING_MAX_SIZE, STRING_MAX_SIZE);
+    add(env, BuiltIn.STRING_SIZE, STRING_SIZE);
+    add(env, BuiltIn.STRING_SUB, STRING_SUB);
+    add(env, BuiltIn.STRING_EXTRACT, STRING_EXTRACT);
+    add(env, BuiltIn.STRING_SUBSTRING, STRING_SUBSTRING);
+    add(env, BuiltIn.STRING_CONCAT, STRING_CONCAT);
+    add(env, BuiltIn.STRING_CONCAT_WITH, STRING_CONCAT_WITH);
+    add(env, BuiltIn.STRING_STR, STRING_STR);
+    add(env, BuiltIn.STRING_IMPLODE, STRING_IMPLODE);
+    add(env, BuiltIn.STRING_EXPLODE, STRING_EXPLODE);
+    add(env, BuiltIn.STRING_MAP, STRING_MAP);
+    add(env, BuiltIn.STRING_TRANSLATE, STRING_TRANSLATE);
+    add(env, BuiltIn.STRING_IS_PREFIX, STRING_IS_PREFIX);
+    add(env, BuiltIn.STRING_IS_SUBSTRING, STRING_IS_SUBSTRING);
+    add(env, BuiltIn.STRING_IS_SUFFIX, STRING_IS_SUFFIX);
+    add(env, BuiltIn.LIST_NIL, ImmutableList.of());
+    add(env, BuiltIn.LIST_NULL, LIST_NULL);
+    add(env, BuiltIn.LIST_LENGTH, LIST_LENGTH);
+    add(env, BuiltIn.LIST_AT, LIST_AT);
+    add(env, BuiltIn.LIST_HD, LIST_HD);
+    add(env, BuiltIn.LIST_TL, LIST_TL);
+    add(env, BuiltIn.LIST_LAST, LIST_LAST);
+    add(env, BuiltIn.LIST_GET_ITEM, LIST_GET_ITEM);
+    add(env, BuiltIn.LIST_NTH, LIST_NTH);
+    add(env, BuiltIn.LIST_TAKE, LIST_TAKE);
+    add(env, BuiltIn.LIST_DROP, LIST_DROP);
+    add(env, BuiltIn.LIST_REV, LIST_REV);
+    add(env, BuiltIn.LIST_CONCAT, LIST_CONCAT);
+    add(env, BuiltIn.LIST_REV_APPEND, LIST_REV_APPEND);
+    add(env, BuiltIn.LIST_APP, LIST_APP);
+    add(env, BuiltIn.LIST_MAP, LIST_MAP);
+    add(env, BuiltIn.LIST_MAP_PARTIAL, LIST_MAP);
+    add(env, BuiltIn.LIST_FIND, LIST_FIND);
+    add(env, BuiltIn.LIST_FILTER, LIST_FILTER);
+    add(env, BuiltIn.LIST_PARTITION, LIST_PARTITION);
+    add(env, BuiltIn.LIST_FOLDL, LIST_FOLDL);
+    add(env, BuiltIn.LIST_FOLDR, LIST_FOLDR);
+    add(env, BuiltIn.LIST_EXISTS, LIST_EXISTS);
+    add(env, BuiltIn.LIST_ALL, LIST_ALL);
+    add(env, BuiltIn.LIST_TABULATE, LIST_TABULATE);
+    add(env, BuiltIn.LIST_COLLATE, LIST_COLLATE);
+    assert env.valueMap.keySet().containsAll(BuiltIn.BY_ML_NAME.keySet())
+        : "no implementation for "
+        + minus(BuiltIn.BY_ML_NAME.keySet(), env.valueMap.keySet());
     return env;
+  }
+
+  private static void add(EvalEnv env, BuiltIn key, Object value) {
+    env.valueMap.put(key.mlName, value);
+    if (key.alias != null) {
+      env.valueMap.put(key.alias, value);
+    }
   }
 
   /** Creates an evaluation environment that is the same as a given evaluation
@@ -302,6 +739,12 @@ public abstract class Codes {
 
   public static Code negate(Code code) {
     return env -> -((Integer) code.eval(env));
+  }
+
+  private static <E> Set<E> minus(Set<E> set1, Set<E> set0) {
+    final Set<E> set = new LinkedHashSet<>(set1);
+    set.removeAll(set0);
+    return set;
   }
 
   /** A code that evaluates expressions and creates a tuple with the results.

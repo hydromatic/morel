@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 
 import net.hydromatic.sml.util.Ord;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -953,6 +954,10 @@ public class Ast {
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
     }
+
+    public Tuple copy(java.util.List<Exp> args) {
+      return this.args.equals(args) ? this : new Tuple(pos, args);
+    }
   }
 
   /** List. */
@@ -1262,6 +1267,11 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, fn, op, arg, right);
+    }
+
+    public Apply copy(Exp fn, Exp arg) {
+      return this.fn.equals(fn) && this.arg.equals(arg) ? this
+          : new Apply(pos, fn, arg);
     }
   }
 }

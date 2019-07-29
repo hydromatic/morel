@@ -1,0 +1,622 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *)
+
+(* Miscellaneous ----------------------------------------------- *)
+ignore;
+val it = fn : int -> unit
+
+ignore (1 + 2);
+val it = () : unit
+
+
+(*) map is alias for List_map
+map;
+val it = fn : (int -> int) -> int list -> int list
+
+map (fn x => x) [];
+val it = [] : int list
+
+
+(* String ------------------------------------------------------ *)
+
+(* TODO replace '_' with '.' when we can parse long identifiers;
+   e.g. 'String_maxSize' becomes 'String.maxSize' *)
+
+(*) val maxSize : int
+String_maxSize;
+val it = 2147483647 : int
+
+
+(*) val size : string -> int
+String_size;
+val it = fn : string -> int
+
+String_size "abc";
+val it = 3 : int
+
+String_size "";
+val it = 0 : int
+
+
+(*) val sub : string * int -> char
+String_sub;
+val it = fn : string * int -> char
+
+String_sub("abc", 0);
+val it = #"a" : char
+
+String_sub("abc", 2);
+val it = #"c" : char
+
+(* TODO: need exceptions
+String_sub("abc", 20);
+*)
+
+(*) val extract   : string * int * int option -> string
+(* TODO: support the 'int option' argument *)
+String_extract;
+val it = fn : string * int -> string
+
+String_extract("abc", 1);
+val it = "bc" : string
+
+
+(*) val substring : string * int * int -> string
+String_substring;
+val it = fn : string * int * int -> string
+
+String_substring("hello, world", 2, 7);
+val it = "llo, wo" : string
+
+String_substring("hello, world", 0, 1);
+val it = "h" : string
+
+String_substring("hello", 5, 0);
+val it = "" : string
+
+String_substring("", 0, 0);
+val it = "" : string
+
+
+(*) val ^ : string * string -> string
+(* TODO *)
+
+(*) val concat : string list -> string
+String_concat;
+val it = fn : string list -> string
+
+String_concat ["a", "bc", "def"];
+val it = "abcdef" : string
+
+String_concat ["a"];
+val it = "a" : string
+
+String_concat [];
+val it = "" : string
+
+
+(*) val concatWith : string -> string list -> string
+String_concatWith;
+val it = fn : string -> string list -> string
+
+String_concatWith "," ["a", "bc", "def"];
+val it = "a,bc,def" : string
+
+String_concatWith "," ["a"];
+val it = "a" : string
+
+String_concatWith "," ["", ""];
+val it = "," : string
+
+String_concatWith "," [];
+val it = "" : string
+
+
+(*) val str : char -> string
+String_str;
+val it = fn : char -> string
+
+String_str #"a";
+val it = "a" : string
+
+
+(*) val implode : char list -> string
+String_implode;
+val it = fn : char list -> string
+
+String_implode [#"a", #"b", #"c"];
+val it = "abc" : string
+
+String_implode [];
+val it = "" : string
+
+
+(*) val explode : string -> char list
+String_explode;
+val it = fn : string -> char list
+
+String_explode "abc";
+val it = [#"a",#"b",#"c"] : char list
+
+String_explode "";
+val it = [] : char list
+
+
+(*) val map : (char -> char) -> string -> string
+String_map;
+val it = fn : (char -> char) -> string -> string
+
+String_map (fn c => if c = #"a" then #"A" else if c = #"c" then #"C" else c) "abc";
+val it = "AbC" : string
+
+String_map (fn c => if c = #"a" then #"A" else if c = #"c" then #"C" else c) "";
+val it = "" : string
+
+
+(*) val translate : (char -> string) -> string -> string
+String_translate;
+val it = fn : (char -> string) -> string -> string
+
+String_translate (fn c => if c = #"a" then "AA" else if c = #"c" then "CCC" else "-") "abc";
+val it = "AA-CCC" : string
+
+String_translate (fn c => if c = #"a" then "AA" else if c = #"c" then "CCC" else "-") "";
+val it = "" : string
+
+
+(*) val tokens : (char -> bool) -> string -> string list
+(*) val fields : (char -> bool) -> string -> string list
+(*) val isPrefix    : string -> string -> bool
+String_isPrefix;
+val it = fn : string -> string -> bool
+
+String_isPrefix "he" "hello";
+val it = true : bool
+
+String_isPrefix "el" "hello";
+val it = false : bool
+
+String_isPrefix "lo" "hello";
+val it = false : bool
+
+String_isPrefix "bonjour" "hello";
+val it = false : bool
+
+String_isPrefix "el" "";
+val it = false : bool
+
+String_isPrefix "" "hello";
+val it = true : bool
+
+String_isPrefix "" "";
+val it = true : bool
+
+
+(*) val isSubstring : string -> string -> bool
+String_isSubstring;
+val it = fn : string -> string -> bool
+
+String_isSubstring "he" "hello";
+val it = true : bool
+
+String_isSubstring "el" "hello";
+val it = true : bool
+
+String_isSubstring "lo" "hello";
+val it = true : bool
+
+String_isSubstring "bonjour" "hello";
+val it = false : bool
+
+String_isSubstring "el" "";
+val it = false : bool
+
+String_isSubstring "" "hello";
+val it = true : bool
+
+String_isSubstring "" "";
+val it = true : bool
+
+
+(*) val isSuffix    : string -> string -> bool
+String_isSuffix;
+val it = fn : string -> string -> bool
+
+String_isSuffix "he" "hello";
+val it = false : bool
+
+String_isSuffix "el" "hello";
+val it = false : bool
+
+String_isSuffix "lo" "hello";
+val it = true : bool
+
+String_isSuffix "bonjour" "hello";
+val it = false : bool
+
+String_isSuffix "el" "";
+val it = false : bool
+
+String_isSuffix "" "hello";
+val it = true : bool
+
+String_isSuffix "" "";
+val it = true : bool
+
+
+(*) val compare : string * string -> order
+(*) val collate : (char * char -> order) -> string * string -> order
+(*) val <  : string * string -> bool
+(*) val <= : string * string -> bool
+(*) val >  : string * string -> bool
+(*) val >= : string * string -> bool
+
+(*) val toString : string -> String_string
+(*) val scan       : (char, 'a) StringCvt.reader
+(*)                    -> (string, 'a) StringCvt.reader
+(*) val fromString : String_string -> string option
+(*) val toCString : string -> String_string
+(*) val fromCString : String_string -> string option
+
+(* List -------------------------------------------------------- *)
+
+(*) val nil : 'a list
+List_nil;
+val it = [] : int list
+
+
+(*) val null : 'a list -> bool
+List_null;
+val it = fn : int list -> bool
+
+List_null [];
+val it = true : bool
+
+List_null [1];
+val it = false : bool
+
+
+(*) val length : 'a list -> int
+List_length;
+val it = fn : int list -> bool
+
+List_length [];
+val it = 0 : bool
+
+List_length [1,2];
+val it = 2 : bool
+
+
+(*) val @ : 'a list * 'a list -> 'a list
+List_at;
+val it = fn : int list * int list -> int list
+
+List_at ([1], [2, 3]);
+val it = [1,2,3] : int list
+
+List_at ([1], []);
+val it = [1] : int list
+
+List_at ([], [2]);
+val it = [2] : int list
+
+List_at ([], []);
+val it = [] : int list
+
+
+(*) val hd : 'a list -> 'a
+List_hd;
+val it = fn : int list -> int
+
+List_hd [1,2,3];
+val it = 1 : int
+
+
+(*) val tl : 'a list -> 'a list
+List_tl;
+val it = fn : int list -> int list
+
+List_tl [1,2,3];
+val it = [2,3] : int list
+
+
+(*) val last : 'a list -> 'a
+List_last;
+val it = fn : int list -> int
+
+List_last [1,2,3];
+val it = 3 : int
+
+
+(*) val getItem : 'a list -> ('a * 'a list) option
+List_getItem;
+val it = fn : int list -> int * int list
+
+List_getItem [1,2,3];
+val it = (1,[2,3]) : int * int list
+
+List_getItem [1];
+val it = (1,[]) : int * int list
+
+
+(*) val nth : 'a list * int -> 'a
+List_nth;
+val it = fn : int list * int -> int
+
+List_nth ([1,2,3], 2);
+val it = 3 : int
+
+List_nth ([1], 0);
+val it = 1 : int
+
+
+(*) val take : 'a list * int -> 'a list
+List_take;
+val it = fn : int list * int -> int list
+
+List_take ([1,2,3], 0);
+val it = [] : int list
+
+List_take ([1,2,3], 1);
+val it = [1] : int list
+
+List_take ([1,2,3], 3);
+val it = [1,2,3] : int list
+
+
+(*) val drop : 'a list * int -> 'a list
+List_drop;
+val it = fn : int list * int -> int list
+
+List_drop ([1,2,3], 0);
+val it = [1,2,3] : int list
+
+List_drop ([1,2,3], 1);
+val it = [2,3] : int list
+
+List_drop ([1,2,3], 3);
+val it = [] : int list
+
+
+(*) val rev : 'a list -> 'a list
+List_rev;
+val it = fn : int list -> int list
+
+List_rev [1,2,3];
+val it = [3,2,1] : int list
+
+List_rev [2,1];
+val it = [1,2] : int list
+
+List_rev [1];
+val it = [1] : int list
+
+List_rev [];
+val it = [] : int list
+
+
+(*) val concat : 'a list list -> 'a list
+List_concat;
+val it = fn : int list list -> int list
+
+List_concat [[1],[2,3],[4,5,6]];
+val it = [1,2,3,4,5,6] : int list
+
+List_concat [[1],[],[4,5,6]];
+val it = [1,4,5,6] : int list
+
+List_concat [[],[],[]];
+val it = [] : int list
+
+List_concat [];
+val it = [] : int list
+
+
+(*) val revAppend : 'a list * 'a list -> 'a list
+List_revAppend;
+val it = fn : int list * int list -> int list
+
+List_revAppend ([1,2],[3,4,5]);
+val it = [2,1,3,4,5] : int list
+
+List_revAppend ([1],[3,4,5]);
+val it = [1,3,4,5] : int list
+
+List_revAppend ([],[3,4,5]);
+val it = [3,4,5] : int list
+
+List_revAppend ([1,2],[]);
+val it = [2,1] : int list
+
+List_revAppend ([],[]);
+val it = [] : int list
+
+
+(*) val app : ('a -> unit) -> 'a list -> unit
+List_app;
+val it = fn : (int -> unit) -> int list -> unit
+
+List_app (fn x => ignore (x + 2)) [2,3,4];
+val it = () : unit
+
+List_app (fn x => ignore (x + 2)) [];
+val it = () : unit
+
+
+(*) val map : ('a -> 'b) -> 'a list -> 'b list
+List_map;
+val it = fn : (int -> int) -> int list -> int list
+
+List_map (fn x => x + 1) [1,2,3];
+val it = [2,3,4] : int list
+
+List_map (fn x => x + 1) [];
+val it = [] : int list
+
+
+(*) val mapPartial : ('a -> 'b option) -> 'a list -> 'b list
+List_mapPartial;
+val it = fn : (int -> int) -> int list -> int list
+
+List_mapPartial (fn x => x + 1) [1,2,3];
+val it = [2,3,4] : int list
+
+List_mapPartial (fn x => x + 1) [];
+val it = [] : int list
+
+
+(*) val find : ('a -> bool) -> 'a list -> 'a option
+List_find;
+val it = fn : (int -> bool) -> int list -> int
+
+List_find (fn x => x mod 7 = 0) [2,3,5,8,13,21,34];
+val it = 21 : int
+
+
+(*) val filter : ('a -> bool) -> 'a list -> 'a list
+List_filter;
+val it = fn : (int -> bool) -> int list -> int list
+
+List_filter (fn x => x mod 2 = 0) [0,1,2,3,4,5];
+val it = [0,2,4] : int list
+
+List_filter (fn x => x mod 2 = 0) [1,3];
+val it = [] : int list
+
+List_filter (fn x => x mod 2 = 0) [];
+val it = [] : int list
+
+
+(*) val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
+List_partition;
+val it = fn : (int -> bool) -> int list -> int list * int list
+
+List_partition (fn x => x mod 2 = 0) [0,1,2,3,4,5];
+val it = ([0,2,4],[1,3,5]) : int list * int list
+
+List_partition (fn x => x mod 2 = 0) [1];
+val it = ([],[1]) : int list * int list
+
+List_partition (fn x => x mod 2 = 0) [];
+val it = ([],[]) : int list * int list
+
+
+(*) val foldl : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+List_foldl;
+val it = fn : (int * int -> int) -> int -> int list -> int
+
+List_foldl (fn (a, b) => a + b) 0 [1,2,3];
+val it = 6 : int
+
+List_foldl (fn (a, b) => a + b) 0 [];
+val it = 0 : int
+
+List_foldl (fn (a, b) => b) 0 [1,2,3];
+val it = 0 : int
+
+List_foldl (fn (a, b) => a - b) 0 [1,2,3,4];
+val it = 2 : int
+
+
+(*) val foldr : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+List_foldr;
+val it = fn : (int * int -> int) -> int -> int list -> int
+
+List_foldr (fn (a, b) => a + b) 0 [1,2,3];
+val it = 6 : int
+
+List_foldr (fn (a, b) => a + b) 0 [];
+val it = 0 : int
+
+List_foldr (fn (a, b) => b) 0 [1,2,3];
+val it = 0 : int
+
+List_foldr (fn (a, b) => a - b) 0 [1,2,3,4];
+val it = ~2 : int
+
+
+(*) val exists : ('a -> bool) -> 'a list -> bool
+List_exists;
+val it = fn : (int -> bool) -> int list -> bool
+
+List_exists (fn x => x mod 2 = 0) [1,3,5];
+val it = false : bool
+
+List_exists (fn x => x mod 2 = 0) [2,4,6];
+val it = true : bool
+
+List_exists (fn x => x mod 2 = 0) [1,2,3];
+val it = true : bool
+
+List_exists (fn x => x mod 2 = 0) [];
+val it = false : bool
+
+
+(*) val all : ('a -> bool) -> 'a list -> bool
+List_all;
+val it = fn : (int -> bool) -> int list -> bool
+
+List_all (fn x => x mod 2 = 0) [1,3,5];
+val it = false : bool
+
+List_all (fn x => x mod 2 = 0) [2,4,6];
+val it = true : bool
+
+List_all (fn x => x mod 2 = 0) [1,2,3];
+val it = false : bool
+
+List_all (fn x => x mod 2 = 0) [];
+val it = true : bool
+
+
+(*) val tabulate : int * (int -> 'a) -> 'a list
+List_tabulate;
+val it = fn : int * (int -> int) -> int list
+
+List_tabulate (5, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+val it = [1,1,2,6,24] : int list
+
+List_tabulate (1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+val it = [1] : int list
+
+List_tabulate (0, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+val it = [] : int list
+
+
+(*) val collate : ('a * 'a -> order) -> 'a list * 'a list -> order
+List_collate;
+val it = fn : (int * int -> int) -> int list * int list -> int
+
+List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,3,4]);
+val it = ~1 : int
+
+List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2,2]);
+val it = 1 : int
+
+List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2]);
+val it = 1 : int
+
+List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2,3,4]);
+val it = ~1 : int
+
+List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], []);
+val it = 1 : int
+
+List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([], []);
+val it = 0 : int

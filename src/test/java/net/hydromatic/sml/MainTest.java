@@ -230,6 +230,7 @@ public class MainTest {
     assertParseLiteral("1", isLiteral(BigDecimal.ONE));
     assertParseLiteral("~3.5", isLiteral(new BigDecimal("-3.5")));
     assertParseLiteral("\"a string\"", isLiteral("a string"));
+    assertParseLiteral("#\"a\"", isLiteral('a'));
 
     // true and false are variables, not actually literals
     assertStmt("true", isAst(Ast.Id.class, "true"));

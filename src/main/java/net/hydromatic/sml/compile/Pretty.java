@@ -75,13 +75,37 @@ class Pretty {
     switch (type.op()) {
     case ID:
       switch ((PrimitiveType) type) {
+      case UNIT:
+        return buf.append("()");
+      case CHAR:
+        return buf.append("#\"").append((char) (Character) value).append("\"");
       case STRING:
         return buf.append('"')
             .append(((String) value).replace("\"", "\\\""))
             .append('"');
+      case INT:
+        Integer i = (Integer) value;
+        if (i < 0) {
+          if (i == Integer.MIN_VALUE) {
+            return buf.append("~2147483648");
+          }
+          buf.append('~');
+          i = -i;
+        }
+        return buf.append(i);
+      case REAL:
+        Float f = (Float) value;
+        if (f < 0) {
+          buf.append('~');
+          f = -f;
+        }
+        return buf.append(f);
       default:
         return buf.append(value);
       }
+
+    case FUNCTION_TYPE:
+      return buf.append("fn");
 
     case LIST:
       final ListType listType =

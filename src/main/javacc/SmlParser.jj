@@ -87,6 +87,8 @@ Literal literal() :
   e = numericLiteral() { return e; }
 |
   e = stringLiteral() { return e; }
+|
+  e = charLiteral() { return e; }
 }
 
 /** Parses a numeric literal */
@@ -141,6 +143,24 @@ Literal stringLiteral() :
     assert token.image.charAt(token.image.length() - 1) == '"';
     String image = token.image.substring(1, token.image.length() - 1);
     return ast.stringLiteral(pos(), image.replace("''", "'"));
+  }
+}
+
+/** Parses a char literal. */
+Literal charLiteral() :
+{
+}
+{
+  <CHAR_LITERAL> {
+    assert token.image.charAt(0) == '#';
+    assert token.image.charAt(1) == '"';
+    assert token.image.charAt(token.image.length() - 1) == '"';
+    final String image0 = token.image.substring(2, token.image.length() - 1);
+    final String image = image0.replace("''", "'");
+    if (image.length() != 1) {
+      throw new RuntimeException("Error: character constant not length 1");
+    }
+    return ast.charLiteral(pos(), image.charAt(0));
   }
 }
 
@@ -1085,6 +1105,8 @@ AstNode statementSemicolon() :
     >
     |
     < QUOTED_STRING: <DOUBLE_QUOTE> ( (~["\""]) | ("\"\""))* <DOUBLE_QUOTE> >
+    |
+    < CHAR_LITERAL: ("#") <QUOTED_STRING> >
 }
 
 /* SEPARATORS */

@@ -153,12 +153,13 @@ public class TypeResolver {
     case TUPLE:
       final Ast.Tuple tuple = (Ast.Tuple) node;
       final List<Unifier.Term> types = new ArrayList<>();
+      final List<Ast.Exp> args2 = new ArrayList<>();
       for (Ast.Exp arg : tuple.args) {
         final Unifier.Variable vArg = unifier.variable();
-        deduceType(env, arg, vArg);
+        args2.add(deduceType(env, arg, vArg));
         types.add(vArg);
       }
-      return reg(tuple, v, unifier.apply(TUPLE_TY_CON, types));
+      return reg(tuple.copy(args2), v, unifier.apply(TUPLE_TY_CON, types));
 
     case LIST:
       final Ast.List list = (Ast.List) node;
@@ -269,14 +270,15 @@ public class TypeResolver {
       final Unifier.Variable vFn = unifier.variable();
       final Unifier.Variable vArg = unifier.variable();
       equiv(unifier.apply(FN_TY_CON, vArg, v), vFn);
-      deduceType(env, apply.arg, vArg);
+      final Ast.Exp arg2 = deduceType(env, apply.arg, vArg);
+      final Ast.Exp fn2;
       if (apply.fn instanceof Ast.RecordSelector) {
-        deduceRecordSelectorType(env, v, vArg,
+        fn2 = deduceRecordSelectorType(env, v, vArg,
             (Ast.RecordSelector) apply.fn);
       } else {
-        deduceType(env, apply.fn, vFn);
+        fn2 = deduceType(env, apply.fn, vFn);
       }
-      return reg(apply, null, v);
+      return reg(apply.copy(fn2, arg2), null, v);
 
     case PLUS:
     case MINUS:
@@ -308,7 +310,7 @@ public class TypeResolver {
     return b.toString();
   }
 
-  private boolean deduceRecordSelectorType(TypeEnv env,
+  private Ast.RecordSelector deduceRecordSelectorType(TypeEnv env,
       Unifier.Variable vResult, Unifier.Variable vArg,
       Ast.RecordSelector recordSelector) {
     actionMap.put(vArg, (v, t, termPairs) -> {
@@ -329,7 +331,7 @@ public class TypeResolver {
         }
       }
     });
-    return true;
+    return recordSelector;
   }
 
   private AstNode deduceMatchType(TypeEnv env, Ast.Match match,
@@ -880,6 +882,7 @@ public class TypeResolver {
         return typeSystem.listType(elementType);
 
       case "bool":
+      case "char":
       case "int":
       case "real":
       case "string":

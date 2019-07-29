@@ -21,6 +21,7 @@ package net.hydromatic.sml.type;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Lists;
 
 import net.hydromatic.sml.ast.Op;
 import net.hydromatic.sml.util.Ord;
@@ -61,6 +62,26 @@ public class TypeSystem {
     return typeByName.get(name);
   }
 
+  /** Creates a multi-step function type.
+   *
+   * <p>For example, {@code fnType(a, b, c, d)} returns the same as
+   * {@code fnType(a, fnType(b, fnType(c, d)))},
+   * viz <code>a &rarr; b &rarr; c &rarr; d</code>. */
+  public Type fnType(Type paramType, Type type1, Type type2,
+      Type... moreTypes) {
+    final List<Type> types = ImmutableList.<Type>builder()
+        .add(paramType).add(type1).add(type2).add(moreTypes).build();
+    Type t = null;
+    for (Type type : Lists.reverse(types)) {
+      if (t == null) {
+        t = type;
+      } else {
+        t = fnType(type, t);
+      }
+    }
+    return Objects.requireNonNull(t);
+  }
+
   /** Creates a function type. */
   public Type fnType(Type paramType, Type resultType) {
     final String description =
@@ -68,6 +89,11 @@ public class TypeSystem {
             Arrays.asList(paramType, resultType)).toString();
     return typeByName.computeIfAbsent(description,
         d -> new FnType(d, paramType, resultType));
+  }
+
+  /** Creates a tuple type from an array of types. */
+  public Type tupleType(Type... argTypes) {
+    return tupleType(ImmutableList.copyOf(argTypes));
   }
 
   /** Creates a tuple type. */

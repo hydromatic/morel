@@ -53,10 +53,6 @@ public class Closure implements Comparable<Closure>, Applicable {
     this.patCodes = Objects.requireNonNull(patCodes);
   }
 
-  @Override public String toString() {
-    return "fn";
-  }
-
   public int compareTo(Closure o) {
     return 0;
   }

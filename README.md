@@ -79,7 +79,7 @@ Implemented:
   `andalso` `orelse`
   `::`
 * Built-in constants and functions:
-  `it` `true` `false` `not`
+  `it` `true` `false` `nil` `abs` `not` `ignore`
 * Type derivation
 * `fn`, function values, and function application
 * `if`
@@ -90,7 +90,16 @@ Implemented:
 * Tuples and unit, record and list values
 * Patterns (destructuring) in `val` and `case`,
   matching constants, wildcards, lists, records and tuples
-* Basis library functions: `abs`
+* Basis library functions:
+  * [Top](http://sml-family.org/Basis/top-level-chapter.html): `abs`
+  * [List](http://sml-family.org/Basis/list.html): `null`, `length`,
+    `@` (as prefix `at` for now), `hd`, `tl`, `last`, `getItem`, `nth`,
+    `take`, `drop`, `rev`, `concat`, `revAppend`, `app`, `map`, `mapPartial`,
+     `find`, `filter`, `partition`, `foldl`, `foldr`, `exists`, `all`,
+     `tabulate`, `collate`
+  * [String](http://sml-family.org/Basis/string.html): `maxSize`, `size`, `sub`,
+    `extract`, `substring`, `^`, `concat`, `concatWith`, `str`, `implode`,
+    `explode`, `map`, `translate`, `isPrefix`, `isSubstring`, `isSuffix`
 
 Not implemented:
 * `type`
@@ -99,12 +108,15 @@ Not implemented:
 * `exception`
 * `while`
 * References, and operators `!` and `:=`
-* Operators: `@` `before`
-* Constants: `nil`
+* Operators: `before` `o`
 * User-defined operators (`infix`, `infixr`)
 * Type annotations in expressions and patterns
 
 Bugs:
+* The `@` infix operator to concatenate lists is currently named `at` and is
+  prefix;
+* Built-in operators for lists operate on `int` lists not `'a` lists;
+* Built-in operators do not use the `option` type;
 * Unbound type variables are not yet supported. For example, the
   expression `[]` should have type `'a list` but currently fails
 * Prevent user from overriding built-in constants and functions:
