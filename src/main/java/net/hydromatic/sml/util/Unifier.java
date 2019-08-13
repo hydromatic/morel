@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 
-import java.util.AbstractList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -375,27 +373,6 @@ public abstract class Unifier {
 
     public <R> R accept(TermVisitor<R> visitor) {
       return visitor.visit(this);
-    }
-
-    public List<String> fieldList() {
-      if (operator.equals("record")) {
-        return ImmutableList.of();
-      } else if (operator.startsWith("record:")) {
-        final String[] fields = operator.split(":");
-        return Arrays.asList(fields).subList(1, fields.length);
-      } else if (operator.equals("*")) {
-        return new AbstractList<String>() {
-          public int size() {
-            return terms.size();
-          }
-
-          public String get(int index) {
-            return Integer.toString(index + 1);
-          }
-        };
-      } else {
-        return null;
-      }
     }
   }
 }

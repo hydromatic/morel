@@ -42,7 +42,9 @@ import net.hydromatic.sml.util.MartelliUnifier;
 import net.hydromatic.sml.util.Pair;
 import net.hydromatic.sml.util.Unifier;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -65,8 +67,8 @@ public class TypeResolver {
   final Map<AstNode, Unifier.Term> map = new HashMap<>();
   final Map<Unifier.Variable, Unifier.Action> actionMap = new HashMap<>();
 
-  private static final String TUPLE_TY_CON = "*";
-  private static final String LIST_TY_CON = "[]";
+  private static final String TUPLE_TY_CON = "tuple";
+  private static final String LIST_TY_CON = "list";
   private static final String RECORD_TY_CON = "record";
   private static final String FN_TY_CON = "fn";
 
@@ -220,7 +222,7 @@ public class TypeResolver {
       final NavigableSet<String> labelNames = new TreeSet<>();
       final Unifier.Term argType = map.get(case_.e);
       if (argType instanceof Unifier.Sequence) {
-        final List<String> fieldList = ((Unifier.Sequence) argType).fieldList();
+        final List<String> fieldList = fieldList((Unifier.Sequence) argType);
         if (fieldList != null) {
           labelNames.addAll(fieldList);
         }
@@ -326,7 +328,7 @@ public class TypeResolver {
       // "real".
       if (t instanceof Unifier.Sequence) {
         final Unifier.Sequence sequence = (Unifier.Sequence) t;
-        final List<String> fieldList = sequence.fieldList();
+        final List<String> fieldList = fieldList(sequence);
         if (fieldList != null) {
           int i = fieldList.indexOf(recordSelector.name);
           if (i >= 0) {
@@ -339,6 +341,27 @@ public class TypeResolver {
       }
     });
     return recordSelector;
+  }
+
+  private static List<String> fieldList(final Unifier.Sequence sequence) {
+    if (sequence.operator.equals(RECORD_TY_CON)) {
+      return ImmutableList.of();
+    } else if (sequence.operator.startsWith(RECORD_TY_CON + ":")) {
+      final String[] fields = sequence.operator.split(":");
+      return Arrays.asList(fields).subList(1, fields.length);
+    } else if (sequence.operator.equals(TUPLE_TY_CON)) {
+      return new AbstractList<String>() {
+        public int size() {
+          return sequence.terms.size();
+        }
+
+        public String get(int index) {
+          return Integer.toString(index + 1);
+        }
+      };
+    } else {
+      return null;
+    }
   }
 
   private AstNode deduceMatchType(TypeEnv env, Ast.Match match,
@@ -869,13 +892,13 @@ public class TypeResolver {
     public Type visit(Unifier.Sequence sequence) {
       final ImmutableList.Builder<Type> argTypes;
       switch (sequence.operator) {
-      case "fn":
+      case FN_TY_CON:
         assert sequence.terms.size() == 2;
         final Type paramType = sequence.terms.get(0).accept(this);
         final Type resultType = sequence.terms.get(1).accept(this);
         return typeSystem.fnType(paramType, resultType);
 
-      case "*":
+      case TUPLE_TY_CON:
         assert sequence.terms.size() >= 2;
         argTypes = ImmutableList.builder();
         for (Unifier.Term term : sequence.terms) {
@@ -883,7 +906,7 @@ public class TypeResolver {
         }
         return typeSystem.tupleType(argTypes.build());
 
-      case "[]":
+      case LIST_TY_CON:
         assert sequence.terms.size() == 1;
         final Type elementType = sequence.terms.get(0).accept(this);
         return typeSystem.listType(elementType);
@@ -901,7 +924,7 @@ public class TypeResolver {
         }
         if (sequence.operator.startsWith(RECORD_TY_CON)) {
           // E.g. "record:a:b" becomes record type "{a:t0, b:t1}".
-          final List<String> argNames = sequence.fieldList();
+          final List<String> argNames = fieldList(sequence);
           if (argNames != null) {
             argTypes = ImmutableList.builder();
             for (Unifier.Term term : sequence.terms) {
