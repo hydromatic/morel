@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.ast.Pos;
+import net.hydromatic.sml.eval.Codes;
 import net.hydromatic.sml.type.TypeSystem;
 
 import static net.hydromatic.sml.ast.AstBuilder.ast;
@@ -51,7 +52,9 @@ public abstract class Compiles {
     } else {
       decl = (Ast.Decl) statement;
     }
-    return prepareDecl(typeSystem, env, decl);
+    // Add in built-in functions (e.g. String.size, List.hd).
+    final Environment env2 = Codes.env(typeSystem, env);
+    return prepareDecl(typeSystem, env2, decl);
   }
 
   /**

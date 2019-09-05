@@ -20,17 +20,20 @@ package net.hydromatic.sml.eval;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.compile.BuiltIn;
 import net.hydromatic.sml.compile.Environment;
 import net.hydromatic.sml.type.Type;
+import net.hydromatic.sml.type.TypeSystem;
 import net.hydromatic.sml.util.MapList;
 
 import java.util.ArrayList;
@@ -234,7 +237,7 @@ public abstract class Codes {
         return list;
       }
 
-      /** Generates the {@code i}th nested lopp of a cartesian product of the
+      /** Generates the {@code i}th nested loop of a cartesian product of the
        * values in {@code iterables}. */
       void loop(int i, List<Iterable> iterables, EvalEnv env,
           List<Object> list) {
@@ -263,9 +266,14 @@ public abstract class Codes {
   }
 
   public static Code fromGroup(Map<Ast.Id, Code> sources, Code filterCode,
-      List<Code> groupCodes, List<Code> aggregateCodes) {
+      List<Code> groupCodes, List<Applicable> aggregateCodes,
+      List<String> labels) {
     final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
     final Code keyCode = tuple(groupCodes);
+    final List<Integer> permute = new ArrayList<>();
+    for (String sortedLabel : Ordering.natural().sortedCopy(labels)) {
+      permute.add(labels.indexOf(sortedLabel));
+    }
     return new Code() {
       @Override public Object eval(EvalEnv env) {
         final List<Iterable> values = new ArrayList<>();
@@ -277,17 +285,26 @@ public abstract class Codes {
         loop(0, values, env, currentValues, map);
 
         final List<List<Object>> list = new ArrayList<>();
+        final List<Object> tuple = new ArrayList<>();
         for (Map.Entry<Object, List<Object>> entry
             : Multimaps.asMap(map).entrySet()) {
-          final List<Object> tuple = new ArrayList<>();
           tuple.addAll((List) entry.getKey());
           final List<Object> rows = entry.getValue(); // rows in this bucket
-          for (Code aggregateCode : aggregateCodes) {
-            tuple.add(aggregateCode.eval(add(env, "list", rows)));
+          for (Applicable aggregateCode : aggregateCodes) {
+            tuple.add(aggregateCode.apply(env, rows));
           }
-          list.add(tuple);
+          list.add(permutedCopy(tuple));
+          tuple.clear();
         }
         return list;
+      }
+
+      private List<Object> permutedCopy(List<Object> tuple) {
+        final List<Object> tuple2 = new ArrayList<>(tuple.size());
+        for (Integer integer : permute) {
+          tuple2.add(tuple.get(integer));
+        }
+        return tuple2;
       }
 
       /** Generates the {@code i}th nested loop of a cartesian product of the
@@ -319,26 +336,26 @@ public abstract class Codes {
   }
 
   /** An applicable that negates a boolean value. */
-  static final Applicable NOT = (env, argValue) -> !(Boolean) argValue;
+  private static final Applicable NOT = (env, argValue) -> !(Boolean) argValue;
 
   /** An applicable that returns the absolute value of an int. */
-  public static final Applicable ABS = (env, argValue) -> {
+  private static final Applicable ABS = (env, argValue) -> {
     final Integer integer = (Integer) argValue;
     return integer >= 0 ? integer : -integer;
   };
 
   /** @see BuiltIn#IGNORE */
-  static final Applicable IGNORE = (env, argValue) -> Unit.INSTANCE;
+  private static final Applicable IGNORE = (env, argValue) -> Unit.INSTANCE;
 
   /** @see BuiltIn#STRING_MAX_SIZE */
-  static final Integer STRING_MAX_SIZE = Integer.MAX_VALUE;
+  private static final Integer STRING_MAX_SIZE = Integer.MAX_VALUE;
 
   /** @see BuiltIn#STRING_SIZE */
-  static final Applicable STRING_SIZE = (env, argValue) ->
+  private static final Applicable STRING_SIZE = (env, argValue) ->
       ((String) argValue).length();
 
   /** @see BuiltIn#STRING_SUB */
-  static final Applicable STRING_SUB = (env, argValue) -> {
+  private static final Applicable STRING_SUB = (env, argValue) -> {
     final List tuple = (List) argValue;
     final String s = (String) tuple.get(0);
     final int i = (Integer) tuple.get(1);
@@ -346,7 +363,7 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#STRING_EXTRACT */
-  static final Applicable STRING_EXTRACT = (env, argValue) -> {
+  private static final Applicable STRING_EXTRACT = (env, argValue) -> {
     final List tuple = (List) argValue;
     final String s = (String) tuple.get(0);
     final int i = (Integer) tuple.get(1);
@@ -354,7 +371,7 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#STRING_SUBSTRING */
-  static final Applicable STRING_SUBSTRING = (env, argValue) -> {
+  private static final Applicable STRING_SUBSTRING = (env, argValue) -> {
     final List tuple = (List) argValue;
     final String s = (String) tuple.get(0);
     final int i = (Integer) tuple.get(1);
@@ -363,7 +380,7 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#STRING_CONCAT */
-  static final Applicable STRING_CONCAT = stringConcat("");
+  private static final Applicable STRING_CONCAT = stringConcat("");
 
   private static Applicable stringConcat(String separator) {
     return (env, argValue) -> {
@@ -373,28 +390,28 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#STRING_CONCAT_WITH */
-  static final Applicable STRING_CONCAT_WITH = (env, argValue) ->
+  private static final Applicable STRING_CONCAT_WITH = (env, argValue) ->
       stringConcat((String) argValue);
 
   /** @see BuiltIn#STRING_STR */
-  static final Applicable STRING_STR = (env, argValue) ->
+  private static final Applicable STRING_STR = (env, argValue) ->
       ((Character) argValue) + "";
 
   /** @see BuiltIn#STRING_IMPLODE */
-  static final Applicable STRING_IMPLODE = (env, argValue) ->
+  private static final Applicable STRING_IMPLODE = (env, argValue) ->
       String.valueOf(Chars.toArray((List) argValue));
 
   /** @see BuiltIn#STRING_EXPLODE */
-  static final Applicable STRING_EXPLODE = (env, argValue) -> {
+  private static final Applicable STRING_EXPLODE = (env, argValue) -> {
     final String s = (String) argValue;
     return MapList.of(s.length(), s::charAt);
   };
 
   /** @see BuiltIn#STRING_MAP */
-  static final Applicable STRING_MAP = (env, argValue) ->
+  private static final Applicable STRING_MAP = (env, argValue) ->
       stringMap((Applicable) argValue);
 
-  static Applicable stringMap(Applicable f) {
+  private static Applicable stringMap(Applicable f) {
     return (env, argValue) -> {
       final String s = (String) argValue;
       final StringBuilder buf = new StringBuilder();
@@ -408,12 +425,12 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#STRING_TRANSLATE */
-  static final Applicable STRING_TRANSLATE = (env, argValue) -> {
+  private static final Applicable STRING_TRANSLATE = (env, argValue) -> {
     final Applicable f = (Applicable) argValue;
     return translate(f);
   };
 
-  static Applicable translate(Applicable f) {
+  private static Applicable translate(Applicable f) {
     return (env, argValue) -> {
       final String s = (String) argValue;
       final StringBuilder buf = new StringBuilder();
@@ -427,12 +444,12 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#STRING_IS_PREFIX */
-  static final Applicable STRING_IS_PREFIX = (env, argValue) -> {
+  private static final Applicable STRING_IS_PREFIX = (env, argValue) -> {
     final String s = (String) argValue;
     return isPrefix(s);
   };
 
-  static Applicable isPrefix(String s) {
+  private static Applicable isPrefix(String s) {
     return (env, argValue) -> {
       final String s2 = (String) argValue;
       return s2.startsWith(s);
@@ -440,12 +457,12 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#STRING_IS_SUBSTRING */
-  static final Applicable STRING_IS_SUBSTRING = (env, argValue) -> {
+  private static final Applicable STRING_IS_SUBSTRING = (env, argValue) -> {
     final String s = (String) argValue;
     return isSubstring(s);
   };
 
-  static Applicable isSubstring(String s) {
+  private static Applicable isSubstring(String s) {
     return (env, argValue) -> {
       final String s2 = (String) argValue;
       return s2.contains(s);
@@ -453,12 +470,12 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#STRING_IS_SUFFIX */
-  static final Applicable STRING_IS_SUFFIX = (env, argValue) -> {
+  private static final Applicable STRING_IS_SUFFIX = (env, argValue) -> {
     final String s = (String) argValue;
     return isSuffix(s);
   };
 
-  static Applicable isSuffix(String s) {
+  private static Applicable isSuffix(String s) {
     return (env, argValue) -> {
       final String s2 = (String) argValue;
       return s2.endsWith(s);
@@ -466,15 +483,15 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_NULL */
-  static final Applicable LIST_NULL = (env, argValue) ->
+  private static final Applicable LIST_NULL = (env, argValue) ->
       ((List) argValue).isEmpty();
 
   /** @see BuiltIn#LIST_LENGTH */
-  static final Applicable LIST_LENGTH = (env, argValue) ->
+  private static final Applicable LIST_LENGTH = (env, argValue) ->
       ((List) argValue).size();
 
   /** @see BuiltIn#LIST_AT */
-  static final Applicable LIST_AT = (env, argValue) -> {
+  private static final Applicable LIST_AT = (env, argValue) -> {
     final List tuple = (List) argValue;
     final List list0 = (List) tuple.get(0);
     final List list1 = (List) tuple.get(1);
@@ -482,25 +499,25 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_HD */
-  static final Applicable LIST_HD = (env, argValue) ->
+  private static final Applicable LIST_HD = (env, argValue) ->
       ((List) argValue).get(0);
 
   /** @see BuiltIn#LIST_TL */
-  static final Applicable LIST_TL = (env, argValue) ->
+  private static final Applicable LIST_TL = (env, argValue) ->
       ((List) argValue).subList(1, ((List) argValue).size());
 
   /** @see BuiltIn#LIST_LAST */
-  static final Applicable LIST_LAST = (env, argValue) ->
+  private static final Applicable LIST_LAST = (env, argValue) ->
       ((List) argValue).get(((List) argValue).size() - 1);
 
   /** @see BuiltIn#LIST_GET_ITEM */
-  static final Applicable LIST_GET_ITEM = (env, argValue) -> {
+  private static final Applicable LIST_GET_ITEM = (env, argValue) -> {
     final List list = (List) argValue;
     return ImmutableList.of(list.get(0), list.subList(1, list.size()));
   };
 
   /** @see BuiltIn#LIST_NTH */
-  static final Applicable LIST_NTH = (env, argValue) -> {
+  private static final Applicable LIST_NTH = (env, argValue) -> {
     final List tuple = (List) argValue;
     final List list = (List) tuple.get(0);
     final int i = (Integer) tuple.get(1);
@@ -508,7 +525,7 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_TAKE */
-  static final Applicable LIST_TAKE = (env, argValue) -> {
+  private static final Applicable LIST_TAKE = (env, argValue) -> {
     final List tuple = (List) argValue;
     final List list = (List) tuple.get(0);
     final int i = (Integer) tuple.get(1);
@@ -516,7 +533,7 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_DROP */
-  static final Applicable LIST_DROP = (env, argValue) -> {
+  private static final Applicable LIST_DROP = (env, argValue) -> {
     final List tuple = (List) argValue;
     final List list = (List) tuple.get(0);
     final int i = (Integer) tuple.get(1);
@@ -524,13 +541,13 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_REV */
-  static final Applicable LIST_REV = (env, argValue) -> {
+  private static final Applicable LIST_REV = (env, argValue) -> {
     final List list = (List) argValue;
     return Lists.reverse(list);
   };
 
   /** @see BuiltIn#LIST_CONCAT */
-  static final Applicable LIST_CONCAT = (env, argValue) -> {
+  private static final Applicable LIST_CONCAT = (env, argValue) -> {
     final List list = (List) argValue;
     final ImmutableList.Builder<Object> builder = ImmutableList.builder();
     for (Object o : list) {
@@ -540,7 +557,7 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_REV_APPEND */
-  static final Applicable LIST_REV_APPEND = (env, argValue) -> {
+  private static final Applicable LIST_REV_APPEND = (env, argValue) -> {
     final List tuple = (List) argValue;
     final List list0 = (List) tuple.get(0);
     final List list1 = (List) tuple.get(1);
@@ -549,7 +566,7 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_APP */
-  static final Applicable LIST_APP = (env, argValue) ->
+  private static final Applicable LIST_APP = (env, argValue) ->
       listApp((Applicable) argValue);
 
   private static Applicable listApp(Applicable consumer) {
@@ -561,7 +578,7 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_MAP */
-  static final Applicable LIST_MAP = (env, argValue) ->
+  private static final Applicable LIST_MAP = (env, argValue) ->
       listMap((Applicable) argValue);
 
   private static Applicable listMap(Applicable fn) {
@@ -576,12 +593,12 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_FIND */
-  static final Applicable LIST_FIND = (env, argValue) -> {
+  private static final Applicable LIST_FIND = (env, argValue) -> {
     final Applicable fn = (Applicable) argValue;
     return find(fn);
   };
 
-  static Applicable find(Applicable fn) {
+  private static Applicable find(Applicable fn) {
     return (env, argValue) -> {
       final List list = (List) argValue;
       for (Object o : list) {
@@ -594,7 +611,7 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_FILTER */
-  static final Applicable LIST_FILTER = (env, argValue) -> {
+  private static final Applicable LIST_FILTER = (env, argValue) -> {
     final Applicable fn = (Applicable) argValue;
     return listFilter(fn);
   };
@@ -613,7 +630,7 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_PARTITION */
-  static final Applicable LIST_PARTITION = (env, argValue) -> {
+  private static final Applicable LIST_PARTITION = (env, argValue) -> {
     final Applicable fn = (Applicable) argValue;
     return listPartition(fn);
   };
@@ -630,11 +647,11 @@ public abstract class Codes {
     };
   }
   /** @see BuiltIn#LIST_FOLDL */
-  static final Applicable LIST_FOLDL = (env, argValue) ->
+  private static final Applicable LIST_FOLDL = (env, argValue) ->
       listFold(true, (Applicable) argValue);
 
   /** @see BuiltIn#LIST_FOLDR */
-  static final Applicable LIST_FOLDR = (env, argValue) ->
+  private static final Applicable LIST_FOLDR = (env, argValue) ->
       listFold(false, (Applicable) argValue);
 
   private static Applicable listFold(boolean left, Applicable fn) {
@@ -654,7 +671,7 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_EXISTS */
-  static final Applicable LIST_EXISTS = (env, argValue) ->
+  private static final Applicable LIST_EXISTS = (env, argValue) ->
       listExists((Applicable) argValue);
 
   private static Applicable listExists(Applicable fn) {
@@ -670,7 +687,7 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_ALL */
-  static final Applicable LIST_ALL = (env, argValue) ->
+  private static final Applicable LIST_ALL = (env, argValue) ->
       listAll((Applicable) argValue);
 
   private static Applicable listAll(Applicable fn) {
@@ -686,7 +703,7 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_TABULATE */
-  static final Applicable LIST_TABULATE = (env, argValue) -> {
+  private static final Applicable LIST_TABULATE = (env, argValue) -> {
     final List tuple = (List) argValue;
     final int count = (Integer) tuple.get(0);
     final Applicable fn = (Applicable) tuple.get(1);
@@ -698,10 +715,10 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_COLLATE */
-  static final Applicable LIST_COLLATE = (env, argValue) ->
+  private static final Applicable LIST_COLLATE = (env, argValue) ->
       collate((Applicable) argValue);
 
-  static Applicable collate(Applicable comparator) {
+  private static Applicable collate(Applicable comparator) {
     return (env, argValue) -> {
       final List tuple = (List) argValue;
       final List list0 = (List) tuple.get(0);
@@ -720,59 +737,46 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#RELATIONAL_COUNT */
+  private static final Applicable RELATIONAL_COUNT = (env, argValue) ->
+      ((List) argValue).size();
+
+  /** @see BuiltIn#RELATIONAL_SUM */
+  private static final Applicable RELATIONAL_SUM = (env, argValue) -> {
+    @SuppressWarnings("unchecked") final List<? extends Number> list =
+        (List) argValue;
+    int sum = 0;
+    for (Number o : list) {
+      sum += o.intValue();
+    }
+    return sum;
+  };
+
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
     final EvalEnv env = new EvalEnv();
-    add(env, BuiltIn.TRUE, true);
-    add(env, BuiltIn.FALSE, false);
-    add(env, BuiltIn.NOT, NOT);
-    add(env, BuiltIn.ABS, ABS);
-    add(env, BuiltIn.IGNORE, IGNORE);
-    add(env, BuiltIn.STRING_MAX_SIZE, STRING_MAX_SIZE);
-    add(env, BuiltIn.STRING_SIZE, STRING_SIZE);
-    add(env, BuiltIn.STRING_SUB, STRING_SUB);
-    add(env, BuiltIn.STRING_EXTRACT, STRING_EXTRACT);
-    add(env, BuiltIn.STRING_SUBSTRING, STRING_SUBSTRING);
-    add(env, BuiltIn.STRING_CONCAT, STRING_CONCAT);
-    add(env, BuiltIn.STRING_CONCAT_WITH, STRING_CONCAT_WITH);
-    add(env, BuiltIn.STRING_STR, STRING_STR);
-    add(env, BuiltIn.STRING_IMPLODE, STRING_IMPLODE);
-    add(env, BuiltIn.STRING_EXPLODE, STRING_EXPLODE);
-    add(env, BuiltIn.STRING_MAP, STRING_MAP);
-    add(env, BuiltIn.STRING_TRANSLATE, STRING_TRANSLATE);
-    add(env, BuiltIn.STRING_IS_PREFIX, STRING_IS_PREFIX);
-    add(env, BuiltIn.STRING_IS_SUBSTRING, STRING_IS_SUBSTRING);
-    add(env, BuiltIn.STRING_IS_SUFFIX, STRING_IS_SUFFIX);
-    add(env, BuiltIn.LIST_NIL, ImmutableList.of());
-    add(env, BuiltIn.LIST_NULL, LIST_NULL);
-    add(env, BuiltIn.LIST_LENGTH, LIST_LENGTH);
-    add(env, BuiltIn.LIST_AT, LIST_AT);
-    add(env, BuiltIn.LIST_HD, LIST_HD);
-    add(env, BuiltIn.LIST_TL, LIST_TL);
-    add(env, BuiltIn.LIST_LAST, LIST_LAST);
-    add(env, BuiltIn.LIST_GET_ITEM, LIST_GET_ITEM);
-    add(env, BuiltIn.LIST_NTH, LIST_NTH);
-    add(env, BuiltIn.LIST_TAKE, LIST_TAKE);
-    add(env, BuiltIn.LIST_DROP, LIST_DROP);
-    add(env, BuiltIn.LIST_REV, LIST_REV);
-    add(env, BuiltIn.LIST_CONCAT, LIST_CONCAT);
-    add(env, BuiltIn.LIST_REV_APPEND, LIST_REV_APPEND);
-    add(env, BuiltIn.LIST_APP, LIST_APP);
-    add(env, BuiltIn.LIST_MAP, LIST_MAP);
-    add(env, BuiltIn.LIST_MAP_PARTIAL, LIST_MAP);
-    add(env, BuiltIn.LIST_FIND, LIST_FIND);
-    add(env, BuiltIn.LIST_FILTER, LIST_FILTER);
-    add(env, BuiltIn.LIST_PARTITION, LIST_PARTITION);
-    add(env, BuiltIn.LIST_FOLDL, LIST_FOLDL);
-    add(env, BuiltIn.LIST_FOLDR, LIST_FOLDR);
-    add(env, BuiltIn.LIST_EXISTS, LIST_EXISTS);
-    add(env, BuiltIn.LIST_ALL, LIST_ALL);
-    add(env, BuiltIn.LIST_TABULATE, LIST_TABULATE);
-    add(env, BuiltIn.LIST_COLLATE, LIST_COLLATE);
+    BUILT_IN_VALUES.forEach((key, value) -> {
+      env.valueMap.put(key.mlName, value);
+      if (key.alias != null) {
+        env.valueMap.put(key.alias, value);
+      }
+    });
     assert env.valueMap.keySet().containsAll(BuiltIn.BY_ML_NAME.keySet())
         : "no implementation for "
         + minus(BuiltIn.BY_ML_NAME.keySet(), env.valueMap.keySet());
     return env;
+  }
+
+  /** Creates a compilation environment. */
+  public static Environment env(TypeSystem typeSystem,
+      Environment environment) {
+    for (Map.Entry<BuiltIn, Object> entry : BUILT_IN_VALUES.entrySet()) {
+      BuiltIn key = entry.getKey();
+      environment =
+          environment.bind(key.mlName, key.typeFunction.apply(typeSystem),
+              entry.getValue());
+    }
+    return environment;
   }
 
   private static void add(EvalEnv env, BuiltIn key, Object value) {
@@ -801,14 +805,65 @@ public abstract class Codes {
     return set;
   }
 
-  public static Code aggregate(Environment env, Code aggregate, Code argumentCode) {
-    return new Code() {
-      public Object eval(EvalEnv env) {
-        final List list = (List) env.get("list");
-        return 3;
-      }
-    };
+  public static Applicable aggregate(Environment env, Code aggregate,
+      Code argumentCode) {
+    if (aggregate.isConstant()) {
+      int x = 0;
+    }
+    return RELATIONAL_COUNT;
   }
+
+  private static final ImmutableMap<BuiltIn, Object> BUILT_IN_VALUES =
+      ImmutableMap.<BuiltIn, Object>builder()
+          .put(BuiltIn.TRUE, true)
+          .put(BuiltIn.FALSE, false)
+          .put(BuiltIn.NOT, NOT)
+          .put(BuiltIn.ABS, ABS)
+          .put(BuiltIn.IGNORE, IGNORE)
+          .put(BuiltIn.STRING_MAX_SIZE, STRING_MAX_SIZE)
+          .put(BuiltIn.STRING_SIZE, STRING_SIZE)
+          .put(BuiltIn.STRING_SUB, STRING_SUB)
+          .put(BuiltIn.STRING_EXTRACT, STRING_EXTRACT)
+          .put(BuiltIn.STRING_SUBSTRING, STRING_SUBSTRING)
+          .put(BuiltIn.STRING_CONCAT, STRING_CONCAT)
+          .put(BuiltIn.STRING_CONCAT_WITH, STRING_CONCAT_WITH)
+          .put(BuiltIn.STRING_STR, STRING_STR)
+          .put(BuiltIn.STRING_IMPLODE, STRING_IMPLODE)
+          .put(BuiltIn.STRING_EXPLODE, STRING_EXPLODE)
+          .put(BuiltIn.STRING_MAP, STRING_MAP)
+          .put(BuiltIn.STRING_TRANSLATE, STRING_TRANSLATE)
+          .put(BuiltIn.STRING_IS_PREFIX, STRING_IS_PREFIX)
+          .put(BuiltIn.STRING_IS_SUBSTRING, STRING_IS_SUBSTRING)
+          .put(BuiltIn.STRING_IS_SUFFIX, STRING_IS_SUFFIX)
+          .put(BuiltIn.LIST_NIL, ImmutableList.of())
+          .put(BuiltIn.LIST_NULL, LIST_NULL)
+          .put(BuiltIn.LIST_LENGTH, LIST_LENGTH)
+          .put(BuiltIn.LIST_AT, LIST_AT)
+          .put(BuiltIn.LIST_HD, LIST_HD)
+          .put(BuiltIn.LIST_TL, LIST_TL)
+          .put(BuiltIn.LIST_LAST, LIST_LAST)
+          .put(BuiltIn.LIST_GET_ITEM, LIST_GET_ITEM)
+          .put(BuiltIn.LIST_NTH, LIST_NTH)
+          .put(BuiltIn.LIST_TAKE, LIST_TAKE)
+          .put(BuiltIn.LIST_DROP, LIST_DROP)
+          .put(BuiltIn.LIST_REV, LIST_REV)
+          .put(BuiltIn.LIST_CONCAT, LIST_CONCAT)
+          .put(BuiltIn.LIST_REV_APPEND, LIST_REV_APPEND)
+          .put(BuiltIn.LIST_APP, LIST_APP)
+          .put(BuiltIn.LIST_MAP, LIST_MAP)
+          .put(BuiltIn.LIST_MAP_PARTIAL, LIST_MAP)
+          .put(BuiltIn.LIST_FIND, LIST_FIND)
+          .put(BuiltIn.LIST_FILTER, LIST_FILTER)
+          .put(BuiltIn.LIST_PARTITION, LIST_PARTITION)
+          .put(BuiltIn.LIST_FOLDL, LIST_FOLDL)
+          .put(BuiltIn.LIST_FOLDR, LIST_FOLDR)
+          .put(BuiltIn.LIST_EXISTS, LIST_EXISTS)
+          .put(BuiltIn.LIST_ALL, LIST_ALL)
+          .put(BuiltIn.LIST_TABULATE, LIST_TABULATE)
+          .put(BuiltIn.LIST_COLLATE, LIST_COLLATE)
+          .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
+          .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
+          .build();
 
   /** A code that evaluates expressions and creates a tuple with the results.
    *

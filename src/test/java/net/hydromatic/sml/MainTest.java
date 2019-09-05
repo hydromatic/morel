@@ -482,11 +482,22 @@ public class MainTest {
             is("Cannot deduce type: conflict: int vs bool")));
   }
 
-  @Ignore // enable this test when we have polymorphic type resolution
+  @Ignore("disable failing test - enable when we have polymorphic types")
   @Test public void testLetIsPolymorphic() {
     // f has been introduced in a let-expression and is therefore treated as
     // polymorphic.
     assertType("let val f = fn x => x in (f true, f 0) end", is("bool * int"));
+  }
+
+  @Ignore("disable failing test - enable when we have polymorphic types")
+  @Test public void testHdIsPolymorphic() {
+    assertType("(List_hd [1, 2], List_hd [false, true])", is("int * bool"));
+    assertType("let\n"
+            + "  val h = List_hd\n"
+            + "in\n"
+            + "   (h [1, 2], h [false, true])\n"
+            + "end",
+        is("int * bool"));
   }
 
   @Test public void testTypeVariable() {
@@ -510,6 +521,35 @@ public class MainTest {
         is("bool -> 'a -> 'a -> 'a"));
     assertType("let fun choose b (x, y) = if b then x else y in choose end",
         is("bool -> 'a * 'a -> 'a"));
+  }
+
+  @Ignore("disable failing test - enable when we have polymorphic types")
+  @Test public void testExponentialType0() {
+    final String ml = "let\n"
+        + "  fun f x = (x, x)\n"
+        + "in\n"
+        + "  f (f 0)\n"
+        + "end";
+    assertType(ml, is("xx"));
+  }
+
+  @Ignore("until type-inference bug is fixed")
+  @Test public void testExponentialType() {
+    final String ml = "let\n"
+        + "  fun f x = (x, x, x)\n"
+        + "in\n"
+        + "   f (f (f (f (f 0))))\n"
+        + "end";
+    assertType(ml, is("xx"));
+  }
+
+  @Ignore("until type-inference bug is fixed")
+  @Test public void testExponentialType2() {
+    final String ml = "fun f x y z = (x, y, z)\n"
+        + "val p1 = (f, f, f)\n"
+        + "val p2 = (p1, p1, p1)\n"
+        + "val p3 = (p2, p2, p2)\n";
+    assertType(ml, is("xx"));
   }
 
   @Test public void testEval() {
@@ -704,6 +744,18 @@ public class MainTest {
             && messageMatcher.matches(item.getMessage());
       }
     };
+  }
+
+  /** Tests that in a {@code let} clause, we can see previously defined
+   * variables. */
+  @Test public void testLet2() {
+    final String ml = "let\n"
+        + "  val x = 1\n"
+        + "  val y = x + 2\n"
+        + "in\n"
+        + "  y + x + 3\n"
+        + "end";
+    assertEval(ml, is(7));
   }
 
   @Test public void testClosure() {
@@ -1171,9 +1223,9 @@ public class MainTest {
         + "end";
     assertParseDecl("val x = " + ml,
         isAst(Ast.ValDecl.class, "val x = " + expected));
-    abandon("type derivation not done");
     assertType(ml, is("{deptno:int, sumId:int} list"));
-    assertEval(ml, (Matcher) equalsUnordered(list(10), list(20)));
+    //noinspection unchecked
+    assertEval(ml, (Matcher) equalsUnordered(list(10, 2), list(20, 1)));
   }
 
   @Test public void testError() {

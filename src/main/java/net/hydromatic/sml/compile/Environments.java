@@ -28,11 +28,15 @@ import java.util.function.Consumer;
 public abstract class Environments {
 
   /** An environment with the only the built-in stuff. */
-  private static final Environment BASIC_ENVIRONMENT =
-      EmptyEnvironment.INSTANCE
-          // Later, also add "nil", "ref", "!"
-          .bind("true", PrimitiveType.BOOL, true)
-          .bind("false", PrimitiveType.BOOL, false);
+  private static final Environment BASIC_ENVIRONMENT = getBind();
+
+  private static Environment getBind() {
+    Environment e = EmptyEnvironment.INSTANCE;
+        // Later, also add "nil", "ref", "!"
+    e = e.bind("true", PrimitiveType.BOOL, true);
+    e = e.bind("false", PrimitiveType.BOOL, false);
+    return e;
+  }
 
   private Environments() {}
 

@@ -185,7 +185,7 @@ public class Compiler {
           groupCodes.add(compile(env, pair.left));
           labels.add(pair.right.name);
         }
-        final ImmutableList.Builder<Code> aggregateCodes =
+        final ImmutableList.Builder<Applicable> aggregateCodes =
             ImmutableList.builder();
         for (Ast.Aggregate aggregate : from.aggregates) {
           final Code argumentCode = compile(env, aggregate.argument);
@@ -194,7 +194,7 @@ public class Compiler {
           labels.add(aggregate.id.name);
         }
         return Codes.fromGroup(sourceCodes, filterCode, groupCodes.build(),
-            aggregateCodes.build());
+            aggregateCodes.build(), labels.build());
       } else {
         final Ast.Exp yieldExp = from.yieldExpOrDefault;
         final Code yieldCode = compile(env2, yieldExp);

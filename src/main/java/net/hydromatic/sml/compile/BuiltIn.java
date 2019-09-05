@@ -425,7 +425,37 @@ public enum BuiltIn {
         ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(0)), order),
             ts.tupleType(h.list(0), h.list(0)),
             order));
-  });
+  }),
+
+  /** Function "Relational.count", aka "count", of type "int list &rarr; int".
+   *
+   * <p>Often used with {@code group}:
+   *
+   * <blockquote>
+   *   <pre>
+   *     from e in emps
+   *     group (#deptno e) as deptno
+   *       compute sum of (#id e) as sumId
+   *   </pre>
+   * </blockquote>
+   */
+  RELATIONAL_COUNT("Relational.count", "count", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
+
+  /** Function "Relational.sum", aka "sum", of type "int list &rarr; int".
+   *
+   * <p>Often used with {@code group}:
+   *
+   * <blockquote>
+   *   <pre>
+   *     from e in emps
+   *     group (#deptno e) as deptno
+   *       compute sum of (#id e) as sumId
+   *   </pre>
+   * </blockquote>
+   */
+  RELATIONAL_SUM("Relational.sum", "sum", ts ->
+      ts.fnType(ts.listType(INT), INT));
 
   /** The name as it appears in ML's symbol table. */
   public final String mlName;

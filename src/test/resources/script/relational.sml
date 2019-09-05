@@ -160,11 +160,12 @@ end;
 *)
 
 (*) Basic 'group'
-(*
 from e in emps
 group (#deptno e) as deptno
   compute sum of (#id e) as sumId,
           count of e as count;
+
+(*
 val it =
   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
    {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
