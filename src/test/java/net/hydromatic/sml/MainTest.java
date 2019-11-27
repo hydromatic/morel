@@ -23,21 +23,8 @@ import com.google.common.collect.Sets;
 
 import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
-import net.hydromatic.sml.compile.CompiledStatement;
-import net.hydromatic.sml.compile.Compiler;
-import net.hydromatic.sml.compile.Compiles;
-import net.hydromatic.sml.compile.Environment;
-import net.hydromatic.sml.compile.Environments;
-import net.hydromatic.sml.compile.TypeResolver;
-import net.hydromatic.sml.eval.Code;
-import net.hydromatic.sml.eval.Codes;
-import net.hydromatic.sml.eval.EvalEnv;
-import net.hydromatic.sml.parse.ParseException;
-import net.hydromatic.sml.parse.SmlParserImpl;
-import net.hydromatic.sml.type.TypeSystem;
 import net.hydromatic.sml.type.TypeVar;
 
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -49,76 +36,24 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.io.StringReader;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
-import static net.hydromatic.sml.SmlTests.*;
+import static net.hydromatic.sml.Ml.assertError;
+import static net.hydromatic.sml.Ml.ml;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 
 /**
  * Kick the tires.
  */
 public class MainTest {
-  private void withParser(String ml, Consumer<SmlParserImpl> action) {
-    final SmlParserImpl parser = new SmlParserImpl(new StringReader(ml));
-    action.accept(parser);
-  }
-
-  private void assertParseLiteral(String ml, Matcher<Ast.Literal> matcher) {
-    withParser(ml, parser -> {
-      try {
-        final Ast.Literal literal = parser.literal();
-        assertThat(literal, matcher);
-      } catch (ParseException e) {
-        throw new RuntimeException(e);
-      }
-    });
-  }
-
-  private void assertParseDecl(String ml, Matcher<Ast.Decl> matcher) {
-    withParser(ml, parser -> {
-      try {
-        final Ast.Decl decl = parser.decl();
-        assertThat(decl, matcher);
-      } catch (ParseException e) {
-        throw new RuntimeException(e);
-      }
-    });
-  }
-
-  private void assertStmt(String ml, Matcher<AstNode> matcher) {
-    try {
-      final AstNode statement =
-          new SmlParserImpl(new StringReader(ml)).statement();
-      assertThat(statement, matcher);
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /** Checks that an expression can be parsed and returns the identical
-   * expression when unparsed. */
-  private void assertParseSame(String ml) {
-    assertParse(ml, ml.replaceAll("[\n ]+", " "));
-  }
-
-  /** Checks that an expression can be parsed and returns the given string when
-   * unparsed. */
-  private void assertParse(String ml, String expected) {
-    assertStmt(ml, isAst(AstNode.class, expected));
-  }
-
   /** Matches a literal by value. */
   private static Matcher<Ast.Literal> isLiteral(Comparable comparable) {
     return new TypeSafeMatcher<Ast.Literal>() {
@@ -133,7 +68,7 @@ public class MainTest {
   }
 
   /** Matches an AST node by its string representation. */
-  private static <T extends AstNode> Matcher<T> isAst(Class<? extends T> clazz,
+  static <T extends AstNode> Matcher<T> isAst(Class<? extends T> clazz,
       String expected) {
     return new CustomTypeSafeMatcher<T>("ast with value " + expected) {
       protected boolean matchesSafely(T t) {
@@ -142,68 +77,6 @@ public class MainTest {
         return s.equals(expected) && s.equals(t.toString());
       }
     };
-  }
-
-  private void withValidate(String ml,
-      BiConsumer<Ast.Exp, TypeResolver.TypeMap> action) {
-    withParser(ml, parser -> {
-      try {
-        final Ast.Exp expression = parser.expression();
-        final TypeResolver.Resolved resolved =
-            Compiles.validateExpression(expression);
-        final Ast.Exp resolvedExp = Compiles.toExp((Ast.ValDecl) resolved.node);
-        action.accept(resolvedExp, resolved.typeMap);
-      } catch (ParseException e) {
-        throw new RuntimeException(e);
-      }
-    });
-  }
-
-  private void withPrepare(String ml,
-      Consumer<CompiledStatement> action) {
-    withParser(ml, parser -> {
-      try {
-        final TypeSystem typeSystem = new TypeSystem();
-        final AstNode statement = parser.statement();
-        final Environment env = Environments.empty();
-        final CompiledStatement compiled =
-            Compiles.prepareStatement(typeSystem, env, statement);
-        action.accept(compiled);
-      } catch (ParseException e) {
-        throw new RuntimeException(e);
-      }
-    });
-  }
-
-  private void assertType(String ml, Matcher<String> matcher) {
-    withValidate(ml, (exp, typeMap) ->
-        assertThat(typeMap.getType(exp).description(), matcher));
-  }
-
-  private void assertTypeThrows(String ml, Matcher<Throwable> matcher) {
-    assertError(() ->
-            withValidate(ml, (exp, typeMap) -> fail("expected error")),
-        matcher);
-  }
-
-  private void assertEval(String ml, Matcher<Object> matcher) {
-    try {
-      final Ast.Exp e = new SmlParserImpl(new StringReader(ml)).expression();
-      final TypeSystem typeSystem = new TypeSystem();
-      final Environment env = Environments.empty();
-      final Ast.ValDecl valDecl = Compiles.toValDecl(e);
-      final TypeResolver.Resolved resolved =
-          TypeResolver.deduceType(env, valDecl, typeSystem);
-      final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
-      final Code code =
-          new Compiler(resolved.typeMap)
-              .compile(env, Compiles.toExp(valDecl2));
-      final EvalEnv evalEnv = Codes.emptyEnv();
-      final Object value = code.eval(evalEnv);
-      assertThat(value, matcher);
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   private static List<Object> list(Object... values) {
@@ -257,130 +130,145 @@ public class MainTest {
   }
 
   @Test public void testParse() {
-    assertParseLiteral("1", isLiteral(BigDecimal.ONE));
-    assertParseLiteral("~3.5", isLiteral(new BigDecimal("-3.5")));
-    assertParseLiteral("\"a string\"", isLiteral("a string"));
-    assertParseLiteral("#\"a\"", isLiteral('a'));
+    ml("1").assertParseLiteral(isLiteral(BigDecimal.ONE));
+    ml("~3.5").assertParseLiteral(isLiteral(new BigDecimal("-3.5")));
+    ml("\"a string\"").assertParseLiteral(isLiteral("a string"));
+    ml("#\"a\"").assertParseLiteral(isLiteral('a'));
 
     // true and false are variables, not actually literals
-    assertStmt("true", isAst(Ast.Id.class, "true"));
-    assertStmt("false", isAst(Ast.Id.class, "false"));
+    ml("true").assertStmt(Ast.Id.class, "true");
+    ml("false").assertStmt(Ast.Id.class, "false");
 
-    assertParseDecl("val x = 5", isAst(Ast.ValDecl.class, "val x = 5"));
-    assertParseDecl("val x : int = 5",
-        isAst(Ast.ValDecl.class, "val x : int = 5"));
+    ml("val x = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
+    ml("val x : int = 5")
+        .assertParseDecl(Ast.ValDecl.class, "val x : int = 5");
 
-    assertParseDecl("val succ = fn x => x + 1",
-        isAst(Ast.ValDecl.class, "val succ = fn x => x + 1"));
+    ml("val succ = fn x => x + 1")
+        .assertParseDecl(Ast.ValDecl.class, "val succ = fn x => x + 1");
 
-    assertParseDecl("val plus = fn x => fn y => x + y",
-        isAst(Ast.ValDecl.class, "val plus = fn x => fn y => x + y"));
+    ml("val plus = fn x => fn y => x + y")
+        .assertParseDecl(Ast.ValDecl.class, "val plus = fn x => fn y => x + y");
 
-    assertParseDecl("fun plus x y = x + y",
-        isAst(Ast.FunDecl.class, "fun plus x y = x + y"));
+    ml("fun plus x y = x + y")
+        .assertParseDecl(Ast.FunDecl.class, "fun plus x y = x + y");
 
-    assertParseDecl("datatype 'a option = NONE | SOME of 'a",
-        isAst(Ast.DatatypeDecl.class,
-            "datatype 'a option = NONE | SOME of 'a"));
+    ml("datatype 'a option = NONE | SOME of 'a")
+        .assertParseDecl(Ast.DatatypeDecl.class,
+            "datatype 'a option = NONE | SOME of 'a");
 
-    assertParseDecl("datatype color = RED | GREEN | BLUE",
-        isAst(Ast.DatatypeDecl.class, "datatype color = RED | GREEN | BLUE"));
-    assertParseDecl(""
-            + "datatype 'a tree = Empty | Node of 'a * 'a forest\n"
-            + "and      'a forest = Nil | Cons of 'a tree * 'a forest",
-        isAst(Ast.DatatypeDecl.class, "datatype 'a tree = Empty"
+    ml("datatype color = RED | GREEN | BLUE")
+        .assertParseDecl(Ast.DatatypeDecl.class,
+            "datatype color = RED | GREEN | BLUE");
+    ml("datatype 'a tree = Empty | Node of 'a * 'a forest\n"
+        + "and      'a forest = Nil | Cons of 'a tree * 'a forest")
+        .assertParseDecl(Ast.DatatypeDecl.class, "datatype 'a tree = Empty"
             + " | Node of 'a * 'a forest "
             + "and 'a forest = Nil"
-            + " | Cons of 'a tree * 'a forest"));
+            + " | Cons of 'a tree * 'a forest");
 
     final String ml = "datatype ('a, 'b) choice ="
         + " NEITHER"
         + " | LEFT of 'a"
         + " | RIGHT of 'b"
         + " | BOTH of {a: 'a, b: 'b}";
-    assertParseSame(ml);
+    ml(ml).assertParseSame();
 
     // -> is right-associative
-    assertParseSame("datatype x = X of int -> int -> int");
-    assertParseDecl("datatype x = X of (int -> int) -> int",
-        isAst(Ast.DatatypeDecl.class, "datatype x = X of (int -> int) -> int"));
-    assertParseDecl("datatype x = X of int -> (int -> int)",
-        isAst(Ast.DatatypeDecl.class, "datatype x = X of int -> int -> int"));
+    ml("datatype x = X of int -> int -> int").assertParseSame();
+    ml("datatype x = X of (int -> int) -> int")
+        .assertParseDecl(Ast.DatatypeDecl.class,
+            "datatype x = X of (int -> int) -> int");
+    ml("datatype x = X of int -> (int -> int)")
+        .assertParseDecl(Ast.DatatypeDecl.class,
+            "datatype x = X of int -> int -> int");
 
-    assertParseDecl("datatype x = X of int * int list",
-        isAst(Ast.DatatypeDecl.class, "datatype x = X of int * int list"));
-    assertParseDecl("datatype x = X of int * (int list)",
-        isAst(Ast.DatatypeDecl.class, "datatype x = X of int * int list"));
-    assertParseDecl("datatype x = X of (int * int) list",
-        isAst(Ast.DatatypeDecl.class, "datatype x = X of (int * int) list"));
-    assertParseDecl("datatype x = X of (int, int) pair",
-        isAst(Ast.DatatypeDecl.class, "datatype x = X of (int, int) pair"));
+    ml("datatype x = X of int * int list")
+        .assertParseDecl(Ast.DatatypeDecl.class,
+            "datatype x = X of int * int list");
+    ml("datatype x = X of int * (int list)")
+        .assertParseDecl(Ast.DatatypeDecl.class,
+            "datatype x = X of int * int list");
+    ml("datatype x = X of (int * int) list")
+        .assertParseDecl(Ast.DatatypeDecl.class,
+            "datatype x = X of (int * int) list");
+    ml("datatype x = X of (int, int) pair")
+        .assertParseDecl(Ast.DatatypeDecl.class,
+            "datatype x = X of (int, int) pair");
 
     // "*" is non-associative; parentheses cannot be removed
-    assertParseSame("datatype ('a, 'b, 'c) foo = Triple of 'a * 'b * 'c");
-    assertParseSame("datatype ('a, 'b, 'c) foo = Triple of 'a * ('b * 'c)");
-    assertParseSame("datatype ('a, 'b, 'c) foo = Triple of ('a * 'b) * 'c");
+    ml("datatype ('a, 'b, 'c) foo = Triple of 'a * 'b * 'c").assertParseSame();
+    ml("datatype ('a, 'b, 'c) foo = Triple of 'a * ('b * 'c)")
+        .assertParseSame();
+    ml("datatype ('a, 'b, 'c) foo = Triple of ('a * 'b) * 'c")
+        .assertParseSame();
 
     // parentheses creating left precedence, which is the natural precedence for
     // '+', can be removed
-    assertParse("((1 + 2) + 3) + 4", "1 + 2 + 3 + 4");
+    ml("((1 + 2) + 3) + 4")
+        .assertParse("1 + 2 + 3 + 4");
 
     // parentheses creating right precedence can not be removed
-    assertParse("1 + (2 + (3 + (4)))", "1 + (2 + (3 + 4))");
+    ml("1 + (2 + (3 + (4)))")
+        .assertParse("1 + (2 + (3 + 4))");
 
-    assertParse("1 + (2 + (3 + 4)) = 5 + 5", "1 + (2 + (3 + 4)) = 5 + 5");
+    ml("1 + (2 + (3 + 4)) = 5 + 5")
+        .assertParse("1 + (2 + (3 + 4)) = 5 + 5");
 
     // :: is right-associative
-    assertParse("1 :: 2 :: 3 :: []", "1 :: 2 :: 3 :: []");
-    assertParse("((1 :: 2) :: 3) :: []", "((1 :: 2) :: 3) :: []");
-    assertParse("1 :: (2 :: (3 :: []))", "1 :: 2 :: 3 :: []");
-    assertParseSame("1 + 2 :: 3 + 4 * 5 :: 6");
+    ml("1 :: 2 :: 3 :: []")
+        .assertParse("1 :: 2 :: 3 :: []");
+    ml("((1 :: 2) :: 3) :: []")
+        .assertParse("((1 :: 2) :: 3) :: []");
+    ml("1 :: (2 :: (3 :: []))")
+        .assertParse("1 :: 2 :: 3 :: []");
+    ml("1 + 2 :: 3 + 4 * 5 :: 6").assertParseSame();
 
-    assertParseSame("(1 + 2, 3, true, (5, 6), 7 = 8)");
+    ml("(1 + 2, 3, true, (5, 6), 7 = 8)").assertParseSame();
 
-    assertParseSame("let val x = 2 in x + (3 + x) + x end");
+    ml("let val x = 2 in x + (3 + x) + x end").assertParseSame();
 
-    assertParseSame("let val x = 2 and y = 3 in x + y end");
-    assertParseSame("let val rec x = 2 and y = 3 in x + y end");
-    assertParseSame("let val x = 2 and rec y = 3 in x + y end");
+    ml("let val x = 2 and y = 3 in x + y end").assertParseSame();
+    ml("let val rec x = 2 and y = 3 in x + y end").assertParseSame();
+    ml("let val x = 2 and rec y = 3 in x + y end").assertParseSame();
 
     // record
-    assertParseSame("{a = 1}");
-    assertParseSame("{a = 1, b = 2}");
-    assertParseSame("{a = 1, b = {c = 2, d = true}, e = true}");
+    ml("{a = 1}").assertParseSame();
+    ml("{a = 1, b = 2}").assertParseSame();
+    ml("{a = 1, b = {c = 2, d = true}, e = true}").assertParseSame();
 
     // if
-    assertParseSame("if true then 1 else 2");
+    ml("if true then 1 else 2").assertParseSame();
 
     // if ... else if
-    assertParseSame("if true then 1 else if false then 2 else 3");
+    ml("if true then 1 else if false then 2 else 3").assertParseSame();
 
     // case
-    assertParseSame("case 1 of 0 => \"zero\" | _ => \"nonzero\"");
-    assertParseSame("case {a = 1, b = 2} of {a = 1, ...} => 1");
-    assertParseSame("case {a = 1, b = 2} of {...} => 1");
-    assertParse("case {a = 1, b = 2} of {..., a = 3} => 1",
-        "case {a = 1, b = 2} of {a = 3, ...} => 1");
+    ml("case 1 of 0 => \"zero\" | _ => \"nonzero\"").assertParseSame();
+    ml("case {a = 1, b = 2} of {a = 1, ...} => 1").assertParseSame();
+    ml("case {a = 1, b = 2} of {...} => 1").assertParseSame();
+    ml("case {a = 1, b = 2} of {..., a = 3} => 1")
+        .assertParse("case {a = 1, b = 2} of {a = 3, ...} => 1");
 
     // fn
-    assertParseSame("fn x => x + 1");
-    assertParseSame("fn x => x + (1 + 2)");
-    assertParseSame("fn (x, y) => x + y");
-    assertParseSame("fn _ => 42");
-    assertParseSame("fn x => case x of 0 => 1 | _ => 2");
+    ml("fn x => x + 1").assertParseSame();
+    ml("fn x => x + (1 + 2)").assertParseSame();
+    ml("fn (x, y) => x + y").assertParseSame();
+    ml("fn _ => 42").assertParseSame();
+    ml("fn x => case x of 0 => 1 | _ => 2").assertParseSame();
 
     // apply
-    assertParseSame("(fn x => x + 1) 3");
+    ml("(fn x => x + 1) 3").assertParseSame();
   }
 
   @Test public void testParseComment() {
-    assertParse("1 + (* 2 + *) 3", "1 + 3");
-    assertParse("1 +\n"
+    ml("1 + (* 2 + *) 3")
+        .assertParse("1 + 3");
+    ml("1 +\n"
         + "(* 2 +\n"
-        + " *) 3", "1 + 3");
-    assertParse("(* 1 +\n"
+        + " *) 3").assertParse("1 + 3");
+    ml("(* 1 +\n"
         + "2 +\n"
-        + "3 *) 5 + 6", "5 + 6");
+        + "3 *) 5 + 6").assertParse("5 + 6");
   }
 
   /** Tests the name of {@link TypeVar}. */
@@ -404,50 +292,51 @@ public class MainTest {
   }
 
   @Test public void testType() {
-    assertType("1", is("int"));
-    assertType("0e0", is("real"));
-    assertType("1 + 2", is("int"));
-    assertType("1 - 2", is("int"));
-    assertType("1 * 2", is("int"));
-    assertType("1 / 2", is("int"));
-    assertType("1 / ~2", is("int"));
-    assertType("1.0 + ~2.0", is("real"));
-    assertType("\"\"", is("string"));
-    assertType("true andalso false", is("bool"));
-    assertType("if true then 1.0 else 2.0", is("real"));
-    assertType("(1, true)", is("int * bool"));
-    assertType("(1, true, false andalso false)", is("int * bool * bool"));
-    assertType("(1)", is("int"));
-    assertType("()", is("unit"));
-    assertType("{a = 1, b = true}", is("{a:int, b:bool}"));
-    assertType("(fn x => x + 1, fn y => y + 1)",
-        is("(int -> int) * (int -> int)"));
-    assertType("let val x = 1.0 in x + 2.0 end", is("real"));
+    ml("1").assertType("int");
+    ml("0e0").assertType("real");
+    ml("1 + 2").assertType("int");
+    ml("1 - 2").assertType("int");
+    ml("1 * 2").assertType("int");
+    ml("1 / 2").assertType("int");
+    ml("1 / ~2").assertType("int");
+    ml("1.0 + ~2.0").assertType("real");
+    ml("\"\"").assertType("string");
+    ml("true andalso false").assertType("bool");
+    ml("if true then 1.0 else 2.0").assertType("real");
+    ml("(1, true)").assertType("int * bool");
+    ml("(1, true, false andalso false)").assertType("int * bool * bool");
+    ml("(1)").assertType("int");
+    ml("()").assertType("unit");
+    ml("{a = 1, b = true}").assertType("{a:int, b:bool}");
+    ml("(fn x => x + 1, fn y => y + 1)")
+        .assertType("(int -> int) * (int -> int)");
+    ml("let val x = 1.0 in x + 2.0 end").assertType("real");
+
     final String ml = "let val x = 1 in\n"
         + "  let val y = 2 in\n"
         + "    x + y\n"
         + "  end\n"
         + "end";
-    assertType(ml, is("int"));
+    ml(ml).assertType("int");
   }
 
   @Test public void testTypeFn() {
-    assertType("fn x => x + 1", is("int -> int"));
-    assertType("fn x => fn y => x + y", is("int -> int -> int"));
-    assertType("fn x => case x of 0 => 1 | _ => 2", is("int -> int"));
-    assertType("fn x => case x of 0 => \"zero\" | _ => \"nonzero\"",
-        is("int -> string"));
+    ml("fn x => x + 1").assertType("int -> int");
+    ml("fn x => fn y => x + y").assertType("int -> int -> int");
+    ml("fn x => case x of 0 => 1 | _ => 2").assertType("int -> int");
+    ml("fn x => case x of 0 => \"zero\" | _ => \"nonzero\"")
+        .assertType("int -> string");
   }
 
   @Test public void testTypeFnTuple() {
-    assertType("fn (x, y) => (x + 1, y + 1)",
-        is("int * int -> int * int"));
-    assertType("(fn x => x + 1, fn y => y + 1)",
-        is("(int -> int) * (int -> int)"));
-    assertType("fn x => fn (y, z) => x + y + z",
-        is("int -> int * int -> int"));
-    assertType("fn (x, y) => (x + 1, fn z => (x + z, y + z), y)",
-        is("int * int -> int * (int -> int * int) * int"));
+    ml("fn (x, y) => (x + 1, y + 1)")
+        .assertType("int * int -> int * int");
+    ml("(fn x => x + 1, fn y => y + 1)")
+        .assertType("(int -> int) * (int -> int)");
+    ml("fn x => fn (y, z) => x + y + z")
+        .assertType("int -> int * int -> int");
+    ml("fn (x, y) => (x + 1, fn z => (x + z, y + z), y)")
+        .assertType("int * int -> int * (int -> int * int) * int");
   }
 
   @Test public void testTypeLetRecFn() {
@@ -456,71 +345,77 @@ public class MainTest {
         + "in\n"
         + "  f 5\n"
         + "end";
-    assertType(ml, is("int"));
+    ml(ml).assertType("int");
 
     final String ml2 = ml.replace(" rec", "");
     assertThat(ml2, not(is(ml)));
-    assertError(ml2, is("f not found"));
+    ml(ml2).assertError(is("f not found"));
 
-    assertError("let val rec x = 1 and y = 2 in x + y end",
-        is("Error: fn expression required on rhs of val rec"));
+    ml("let val rec x = 1 and y = 2 in x + y end")
+        .assertError("Error: fn expression required on rhs of val rec");
   }
 
   @Test public void testApply() {
-    assertType("List_hd [\"abc\"]", is("string"));
+    ml("List_hd [\"abc\"]")
+        .assertType("string");
   }
 
   @Test public void testApply2() {
-    assertType("List_map (fn x => String_size x) [\"abc\", \"de\"]",
-        is("int list"));
+    ml("List_map (fn x => String_size x) [\"abc\", \"de\"]")
+        .assertType("int list");
   }
 
   @Test public void testApplyIsMonomorphic() {
     // cannot be typed, since the parameter f is in a monomorphic position
-    assertTypeThrows("fn f => (f true, f 0)",
-        throwsA(RuntimeException.class,
-            is("Cannot deduce type: conflict: int vs bool")));
+    ml("fn f => (f true, f 0)")
+        .assertTypeThrows(
+            throwsA(RuntimeException.class,
+                is("Cannot deduce type: conflict: int vs bool")));
   }
 
   @Ignore("disable failing test - enable when we have polymorphic types")
   @Test public void testLetIsPolymorphic() {
     // f has been introduced in a let-expression and is therefore treated as
     // polymorphic.
-    assertType("let val f = fn x => x in (f true, f 0) end", is("bool * int"));
+    ml("let val f = fn x => x in (f true, f 0) end")
+        .assertType("bool * int");
   }
 
   @Ignore("disable failing test - enable when we have polymorphic types")
   @Test public void testHdIsPolymorphic() {
-    assertType("(List_hd [1, 2], List_hd [false, true])", is("int * bool"));
-    assertType("let\n"
-            + "  val h = List_hd\n"
-            + "in\n"
-            + "   (h [1, 2], h [false, true])\n"
-            + "end",
-        is("int * bool"));
+    ml("(List_hd [1, 2], List_hd [false, true])")
+        .assertType("int * bool");
+    ml("let\n"
+        + "  val h = List_hd\n"
+        + "in\n"
+        + "   (h [1, 2], h [false, true])\n"
+        + "end")
+        .assertType("int * bool");
   }
 
   @Test public void testTypeVariable() {
     // constant
-    assertType("fn _ => 42", is("'a -> int"));
-    assertEval("(fn _ => 42) 2", is(42));
-    assertType("fn _ => fn _ => 42", is("'a -> 'b -> int"));
+    ml("fn _ => 42").assertType("'a -> int");
+    ml("(fn _ => 42) 2").assertEval(is(42));
+    ml("fn _ => fn _ => 42").assertType("'a -> 'b -> int");
 
     // identity
-    assertType("fn x => x", is("'a -> 'a"));
-    assertEval("(fn x => x) 2", is(2));
-    assertEval("(fn x => x) \"foo\"", is("foo"));
-    assertEval("(fn x => x) true", is(true));
-    assertType("let fun id x = x in id end", is("'a -> 'a"));
+    ml("fn x => x").assertType("'a -> 'a");
+    ml("(fn x => x) 2").assertEval(is(2));
+    ml("(fn x => x) \"foo\"").assertEval(is("foo"));
+    ml("(fn x => x) true").assertEval(is(true));
+    ml("let fun id x = x in id end").assertType("'a -> 'a");
 
     // first/second
-    assertType("fn x => fn y => x", is("'a -> 'b -> 'a"));
-    assertType("let fun first x y = x in first end", is("'a -> 'b -> 'a"));
-    assertType("let fun second x y = y in second end", is("'a -> 'b -> 'b"));
-    assertType("let fun choose b x y = if b then x else y in choose end",
-        is("bool -> 'a -> 'a -> 'a"));
-    assertType("let fun choose b (x, y) = if b then x else y in choose end",
-        is("bool -> 'a * 'a -> 'a"));
+    ml("fn x => fn y => x").assertType("'a -> 'b -> 'a");
+    ml("let fun first x y = x in first end")
+        .assertType("'a -> 'b -> 'a");
+    ml("let fun second x y = y in second end")
+        .assertType("'a -> 'b -> 'b");
+    ml("let fun choose b x y = if b then x else y in choose end")
+        .assertType("bool -> 'a -> 'a -> 'a");
+    ml("let fun choose b (x, y) = if b then x else y in choose end")
+        .assertType("bool -> 'a * 'a -> 'a");
   }
 
   @Ignore("disable failing test - enable when we have polymorphic types")
@@ -530,7 +425,7 @@ public class MainTest {
         + "in\n"
         + "  f (f 0)\n"
         + "end";
-    assertType(ml, is("xx"));
+    ml(ml).assertType("xx");
   }
 
   @Ignore("until type-inference bug is fixed")
@@ -540,7 +435,7 @@ public class MainTest {
         + "in\n"
         + "   f (f (f (f (f 0))))\n"
         + "end";
-    assertType(ml, is("xx"));
+    ml(ml).assertType("xx");
   }
 
   @Ignore("until type-inference bug is fixed")
@@ -549,142 +444,142 @@ public class MainTest {
         + "val p1 = (f, f, f)\n"
         + "val p2 = (p1, p1, p1)\n"
         + "val p3 = (p2, p2, p2)\n";
-    assertType(ml, is("xx"));
+    ml(ml).assertType("xx");
   }
 
   @Test public void testEval() {
     // literals
-    assertEval("1", is(1));
-    assertEval("~2", is(-2));
-    assertEval("\"a string\"", is("a string"));
-    assertEval("true", is(true));
-    assertEval("~10.25", is(-10.25f));
-    assertEval("~10.25e3", is(-10_250f));
-    assertEval("~1.25e~3", is(-0.001_25f));
-    assertEval("~1.25E~3", is(-0.001_25f));
-    assertEval("0e0", is(0f));
+    ml("1").assertEval(is(1));
+    ml("~2").assertEval(is(-2));
+    ml("\"a string\"").assertEval(is("a string"));
+    ml("true").assertEval(is(true));
+    ml("~10.25").assertEval(is(-10.25f));
+    ml("~10.25e3").assertEval(is(-10_250f));
+    ml("~1.25e~3").assertEval(is(-0.001_25f));
+    ml("~1.25E~3").assertEval(is(-0.001_25f));
+    ml("0e0").assertEval(is(0f));
 
     // boolean operators
-    assertEval("true andalso false", is(false));
-    assertEval("true orelse false", is(true));
-    assertEval("false andalso false orelse true", is(true));
-    assertEval("false andalso true orelse true", is(true));
-    assertEval("(not (true andalso false))", is(true));
-    assertEval("not true", is(false));
-    assertError("not not true",
-        is("operator and operand don't agree [tycon mismatch]\n"
+    ml("true andalso false").assertEval(is(false));
+    ml("true orelse false").assertEval(is(true));
+    ml("false andalso false orelse true").assertEval(is(true));
+    ml("false andalso true orelse true").assertEval(is(true));
+    ml("(not (true andalso false))").assertEval(is(true));
+    ml("not true").assertEval(is(false));
+    ml("not not true")
+        .assertError("operator and operand don't agree [tycon mismatch]\n"
             + "  operator domain: bool\n"
-            + "  operand:         bool -> bool"));
-    assertEval("not (not true)", is(true));
+            + "  operand:         bool -> bool");
+    ml("not (not true)").assertEval(is(true));
 
     // comparisons
-    assertEval("1 = 1", is(true));
-    assertEval("1 = 2", is(false));
-    assertEval("\"a\" = \"a\"", is(true));
-    assertEval("\"a\" = \"ab\"", is(false));
-    assertEval("1 < 1", is(false));
-    assertEval("1 < 2", is(true));
-    assertEval("\"a\" < \"a\"", is(false));
-    assertEval("\"a\" < \"ab\"", is(true));
-    assertEval("1 > 1", is(false));
-    assertEval("1 > 2", is(false));
-    assertEval("1 > ~2", is(true));
-    assertEval("\"a\" > \"a\"", is(false));
-    assertEval("\"a\" > \"ab\"", is(false));
-    assertEval("\"ac\" > \"ab\"", is(true));
-    assertEval("1 <= 1", is(true));
-    assertEval("1 <= 2", is(true));
-    assertEval("\"a\" <= \"a\"", is(true));
-    assertEval("\"a\" <= \"ab\"", is(true));
-    assertEval("1 >= 1", is(true));
-    assertEval("1 >= 2", is(false));
-    assertEval("1 >= ~2", is(true));
-    assertEval("\"a\" >= \"a\"", is(true));
-    assertEval("\"a\" >= \"ab\"", is(false));
-    assertEval("\"ac\" >= \"ab\"", is(true));
-    assertEval("1 + 4 = 2 + 3", is(true));
-    assertEval("1 + 2 * 2 = 2 + 3", is(true));
-    assertEval("1 + 2 * 2 < 2 + 3", is(false));
-    assertEval("1 + 2 * 2 > 2 + 3", is(false));
+    ml("1 = 1").assertEval(is(true));
+    ml("1 = 2").assertEval(is(false));
+    ml("\"a\" = \"a\"").assertEval(is(true));
+    ml("\"a\" = \"ab\"").assertEval(is(false));
+    ml("1 < 1").assertEval(is(false));
+    ml("1 < 2").assertEval(is(true));
+    ml("\"a\" < \"a\"").assertEval(is(false));
+    ml("\"a\" < \"ab\"").assertEval(is(true));
+    ml("1 > 1").assertEval(is(false));
+    ml("1 > 2").assertEval(is(false));
+    ml("1 > ~2").assertEval(is(true));
+    ml("\"a\" > \"a\"").assertEval(is(false));
+    ml("\"a\" > \"ab\"").assertEval(is(false));
+    ml("\"ac\" > \"ab\"").assertEval(is(true));
+    ml("1 <= 1").assertEval(is(true));
+    ml("1 <= 2").assertEval(is(true));
+    ml("\"a\" <= \"a\"").assertEval(is(true));
+    ml("\"a\" <= \"ab\"").assertEval(is(true));
+    ml("1 >= 1").assertEval(is(true));
+    ml("1 >= 2").assertEval(is(false));
+    ml("1 >= ~2").assertEval(is(true));
+    ml("\"a\" >= \"a\"").assertEval(is(true));
+    ml("\"a\" >= \"ab\"").assertEval(is(false));
+    ml("\"ac\" >= \"ab\"").assertEval(is(true));
+    ml("1 + 4 = 2 + 3").assertEval(is(true));
+    ml("1 + 2 * 2 = 2 + 3").assertEval(is(true));
+    ml("1 + 2 * 2 < 2 + 3").assertEval(is(false));
+    ml("1 + 2 * 2 > 2 + 3").assertEval(is(false));
 
     // arithmetic operators
-    assertEval("2 + 3", is(5));
-    assertEval("2 + 3 * 4", is(14));
-    assertEval("2 * 3 + 4 * 5", is(26));
-    assertEval("2 - 3", is(-1));
-    assertEval("2 * 3", is(6));
-    assertEval("20 / 3", is(6));
-    assertEval("20 / ~3", is(-6));
+    ml("2 + 3").assertEval(is(5));
+    ml("2 + 3 * 4").assertEval(is(14));
+    ml("2 * 3 + 4 * 5").assertEval(is(26));
+    ml("2 - 3").assertEval(is(-1));
+    ml("2 * 3").assertEval(is(6));
+    ml("20 / 3").assertEval(is(6));
+    ml("20 / ~3").assertEval(is(-6));
 
-    assertEval("10 mod 3", is(1));
-    assertEval("~10 mod 3", is(2));
-    assertEval("~10 mod ~3", is(-1));
-    assertEval("10 mod ~3", is(-2));
-    assertEval("0 mod 3", is(-0));
-    assertEval("0 mod ~3", is(0));
-    assertEval("19 div 3", is(6));
-    assertEval("20 div 3", is(6));
-    assertEval("~19 div 3", is(-7));
-    assertEval("~18 div 3", is(-6));
-    assertEval("19 div ~3", is(-7));
-    assertEval("~21 div 3", is(-7));
-    assertEval("~21 div ~3", is(7));
-    assertEval("0 div 3", is(0));
+    ml("10 mod 3").assertEval(is(1));
+    ml("~10 mod 3").assertEval(is(2));
+    ml("~10 mod ~3").assertEval(is(-1));
+    ml("10 mod ~3").assertEval(is(-2));
+    ml("0 mod 3").assertEval(is(-0));
+    ml("0 mod ~3").assertEval(is(0));
+    ml("19 div 3").assertEval(is(6));
+    ml("20 div 3").assertEval(is(6));
+    ml("~19 div 3").assertEval(is(-7));
+    ml("~18 div 3").assertEval(is(-6));
+    ml("19 div ~3").assertEval(is(-7));
+    ml("~21 div 3").assertEval(is(-7));
+    ml("~21 div ~3").assertEval(is(7));
+    ml("0 div 3").assertEval(is(0));
 
     // string operators
-    assertEval("\"\" ^ \"\"", is(""));
-    assertEval("\"1\" ^ \"2\"", is("12"));
-    assertError("1 ^ 2",
-        is("operator and operand don't agree [overload conflict]\n"
+    ml("\"\" ^ \"\"").assertEval(is(""));
+    ml("\"1\" ^ \"2\"").assertEval(is("12"));
+    ml("1 ^ 2")
+        .assertError("operator and operand don't agree [overload conflict]\n"
             + "  operator domain: string * string\n"
-            + "  operand:         [int ty] * [int ty]\n"));
+            + "  operand:         [int ty] * [int ty]\n");
 
     // if
-    assertEval("if true then 1 else 2", is(1));
-    assertEval("if false then 1 else if true then 2 else 3", is(2));
-    assertEval("if false\n"
+    ml("if true then 1 else 2").assertEval(is(1));
+    ml("if false then 1 else if true then 2 else 3").assertEval(is(2));
+    ml("if false\n"
         + "then\n"
         + "  if true then 2 else 3\n"
-        + "else 4", is(4));
-    assertEval("if false\n"
+        + "else 4").assertEval(is(4));
+    ml("if false\n"
         + "then\n"
         + "  if true then 2 else 3\n"
         + "else\n"
-        + "  if false then 4 else 5", is(5));
+        + "  if false then 4 else 5").assertEval(is(5));
 
     // case
-    assertType("case 1 of 0 => \"zero\" | _ => \"nonzero\"", is("string"));
-    assertEval("case 1 of 0 => \"zero\" | _ => \"nonzero\"", is("nonzero"));
-    assertError("case 1 of x => x | y => y",
-        is("Error: match redundant\n"
+    ml("case 1 of 0 => \"zero\" | _ => \"nonzero\"")
+        .assertType("string")
+        .assertEval(is("nonzero"));
+    ml("case 1 of x => x | y => y")
+        .assertError("Error: match redundant\n"
             + "          x => ...\n"
-            + "    -->   y => ...\n"));
-    assertError("case 1 of 1 => 2",
-        is("Warning: match nonexhaustive\n"
-            + "          1 => ...\n"));
-    assertEval("let val f = fn x => case x of x => x + 1 in f 2 end",
-        is(3));
+            + "    -->   y => ...\n");
+    ml("case 1 of 1 => 2")
+        .assertError("Warning: match nonexhaustive\n"
+            + "          1 => ...\n");
+    ml("let val f = fn x => case x of x => x + 1 in f 2 end").assertEval(is(3));
 
     // let
-    assertEval("let val x = 1 in x + 2 end", is(3));
-    assertEval("let val x = 1 in ~x end", is(-1));
-    assertEval("let val x = 1 in ~(abs(~x)) end", is(-1));
+    ml("let val x = 1 in x + 2 end").assertEval(is(3));
+    ml("let val x = 1 in ~x end").assertEval(is(-1));
+    ml("let val x = 1 in ~(abs(~x)) end").assertEval(is(-1));
 
     // let with a tuple pattern
-    assertEval("let val (x, y) = (1, 2) in x + y end", is(3));
+    ml("let val (x, y) = (1, 2) in x + y end").assertEval(is(3));
 
     // let with multiple variables
-    assertEval("let val x = 1 and y = 2 in x + y end", is(3));
+    ml("let val x = 1 and y = 2 in x + y end").assertEval(is(3));
     // let with multiple variables
-    assertEval("let val x = 1 and y = 2 and z = false in\n"
+    ml("let val x = 1 and y = 2 and z = false in\n"
         + "  if z then x else y\n"
-        + "end", is(2));
-    assertEval("let val x = 1 and y = 2 and z = true in\n"
+        + "end").assertEval(is(2));
+    ml("let val x = 1 and y = 2 and z = true in\n"
         + "  if z then x else y\n"
-        + "end", is(1));
-    assertEval("let val x = 1 and y = 2 and z = true and a = \"foo\" in\n"
+        + "end").assertEval(is(1));
+    ml("let val x = 1 and y = 2 and z = true and a = \"foo\" in\n"
         + "  if z then x else y\n"
-        + "end", is(1));
+        + "end").assertEval(is(1));
 
     // let where variables shadow
     final String letNested = "let\n"
@@ -696,35 +591,36 @@ public class MainTest {
         + "    x * 3\n"
         + "  end + x\n"
         + "end";
-    assertEval(letNested, is(2 * 3 + 1));
+    ml(letNested).assertEval(is(2 * 3 + 1));
 
     // let with match
-    assertEval("(fn z => let val (x, y) = (z + 1, z + 2) in x + y end) 3",
-        is(9));
+    ml("(fn z => let val (x, y) = (z + 1, z + 2) in x + y end) 3")
+        .assertEval(is(9));
 
     // tuple
-    assertEval("(1, 2)", is(Arrays.asList(1, 2)));
-    assertEval("(1, (2, true))", is(Arrays.asList(1, Arrays.asList(2, true))));
-    assertEval("()", is(Collections.emptyList()));
-    assertEval("(1, 2, 1, 4)", is(Arrays.asList(1, 2, 1, 4)));
+    ml("(1, 2)").assertEval(is(Arrays.asList(1, 2)));
+    ml("(1, (2, true))")
+        .assertEval(is(Arrays.asList(1, Arrays.asList(2, true))));
+    ml("()").assertEval(is(Collections.emptyList()));
+    ml("(1, 2, 1, 4)").assertEval(is(Arrays.asList(1, 2, 1, 4)));
   }
 
   @Test public void testLetSequentialDeclarations() {
     // let with sequential declarations
-    assertEval("let val x = 1; val y = x + 1 in x + y end", is(3));
+    ml("let val x = 1; val y = x + 1 in x + y end").assertEval(is(3));
 
     // semicolon is optional
-    assertEval("let val x = 1; val y = x + 1; in x + y end", is(3));
-    assertEval("let val x = 1 val y = x + 1 in x + y end", is(3));
+    ml("let val x = 1; val y = x + 1; in x + y end").assertEval(is(3));
+    ml("let val x = 1 val y = x + 1 in x + y end").assertEval(is(3));
 
     // 'and' is executed in parallel, therefore 'x + 1' evaluates to 2, not 4
-    assertEval("let val x = 1; val x = 3 and y = x + 1 in x + y end", is(5));
+    ml("let val x = 1; val x = 3 and y = x + 1 in x + y end").assertEval(is(5));
 
-    assertEvalError("let val x = 1 and y = x + 2 in x + y end",
-        throwsA("unbound variable or constructor: x"));
+    ml("let val x = 1 and y = x + 2 in x + y end")
+        .assertEvalError(throwsA("unbound variable or constructor: x"));
 
     // let with val and fun
-    assertEval("let fun f x = 1 + x; val x = 2 in f x end", is(3));
+    ml("let fun f x = 1 + x; val x = 2 in f x end").assertEval(is(3));
   }
 
   private Matcher<Throwable> throwsA(String message) {
@@ -755,7 +651,7 @@ public class MainTest {
         + "in\n"
         + "  y + x + 3\n"
         + "end";
-    assertEval(ml, is(7));
+    ml(ml).assertEval(is(7));
   }
 
   @Test public void testClosure() {
@@ -767,7 +663,8 @@ public class MainTest {
         + "in\n"
         + " f x\n"
         + "end";
-    assertEval(ml, is(13));
+    ml(ml).assertEval(is(13));
+
     final String ml2 = "let\n"
         + "  val x = 1;\n"
         + "  fun f y = x + y;\n"
@@ -775,19 +672,19 @@ public class MainTest {
         + "in\n"
         + " f x\n"
         + "end";
-    assertEval(ml2, is(11));
+    ml(ml2).assertEval(is(11));
   }
 
   @Test public void testEvalFn() {
-    assertEval("(fn x => x + 1) 2", is(3));
+    ml("(fn x => x + 1) 2").assertEval(is(3));
   }
 
   @Test public void testEvalFnCurried() {
-    assertEval("(fn x => fn y => x + y) 2 3", is(5));
+    ml("(fn x => fn y => x + y) 2 3").assertEval(is(5));
   }
 
   @Test public void testEvalFnTuple() {
-    assertEval("(fn (x, y) => x + y) (2, 3)", is(5));
+    ml("(fn (x, y) => x + y) (2, 3)").assertEval(is(5));
   }
 
   @Test public void testEvalFnRec() {
@@ -796,59 +693,63 @@ public class MainTest {
         + "in\n"
         + "  f 5\n"
         + "end";
-    assertEval(ml, is(120));
+    ml(ml).assertEval(is(120));
   }
 
   @Test public void testEvalFnTupleGeneric() {
-    assertEval("(fn (x, y) => x) (2, 3)", is(2));
-    assertEval("(fn (x, y) => y) (2, 3)", is(3));
+    ml("(fn (x, y) => x) (2, 3)").assertEval(is(2));
+    ml("(fn (x, y) => y) (2, 3)").assertEval(is(3));
   }
 
   @Test public void testRecord() {
-    assertParseSame("{a = 1, b = {c = true, d = false}}");
-    assertStmt("{a = 1, 1 = 2}", isAst(Ast.Record.class, "{1 = 2, a = 1}"));
-    assertParseSame("#b {a = 1, b = {c = true, d = false}}");
-    assertError("{0=1}", is("label must be positive"));
-    assertType("{a = 1, b = true}", is("{a:int, b:bool}"));
-    assertType("{b = true, a = 1}", is("{a:int, b:bool}"));
-    assertEval("{a = 1, b = 2}", is(Arrays.asList(1, 2)));
-    assertEval("{a = true, b = ~2}", is(Arrays.asList(true, -2)));
-    assertEval("{a = true, b = ~2, c = \"c\"}",
-        is(Arrays.asList(true, -2, "c")));
-    assertEval("let val ab = {a = true, b = ~2} in #a ab end", is(true));
-    assertEval("{a = true, b = {c = 1, d = 2}}",
-        is(Arrays.asList(true, Arrays.asList(1, 2))));
-    assertType("#a {a = 1, b = true}", is("int"));
-    assertType("#b {a = 1, b = true}", is("bool"));
-    assertEval("#a {a = 1, b = true}", is(1));
-    assertEval("#b {a = 1, b = true}", is(true));
-    assertEval("#b {a = 1, b = 2}", is(2));
-    assertEval("#b {a = 1, b = {x = 3, y = 4}, z = true}",
-        is(Arrays.asList(3, 4)));
-    assertEval("#x (#b {a = 1, b = {x = 3, y = 4}, z = true})",
-        is(3));
+    ml("{a = 1, b = {c = true, d = false}}").assertParseSame();
+    ml("{a = 1, 1 = 2}")
+        .assertStmt(Ast.Record.class, "{1 = 2, a = 1}");
+    ml("#b {a = 1, b = {c = true, d = false}}").assertParseSame();
+    ml("{0=1}").assertError(is("label must be positive"));
+    ml("{a = 1, b = true}").assertType("{a:int, b:bool}");
+    ml("{b = true, a = 1}").assertType("{a:int, b:bool}");
+    ml("{a = 1, b = 2}").assertEval(is(Arrays.asList(1, 2)));
+    ml("{a = true, b = ~2}").assertEval(is(Arrays.asList(true, -2)));
+    ml("{a = true, b = ~2, c = \"c\"}")
+        .assertEval(is(Arrays.asList(true, -2, "c")));
+    ml("let val ab = {a = true, b = ~2} in #a ab end").assertEval(is(true));
+    ml("{a = true, b = {c = 1, d = 2}}")
+        .assertEval(is(Arrays.asList(true, Arrays.asList(1, 2))));
+    ml("#a {a = 1, b = true}")
+        .assertType("int")
+        .assertEval(is(1));
+    ml("#b {a = 1, b = true}")
+        .assertType("bool")
+        .assertEval(is(true));
+    ml("#b {a = 1, b = 2}").assertEval(is(2));
+    ml("#b {a = 1, b = {x = 3, y = 4}, z = true}")
+        .assertEval(is(Arrays.asList(3, 4)));
+    ml("#x (#b {a = 1, b = {x = 3, y = 4}, z = true})").assertEval(is(3));
   }
 
   @Test public void testEquals() {
-    assertEval("{b = true, a = 1} = {a = 1, b = true}", is(true));
-    assertEval("{b = true, a = 0} = {a = 1, b = true}", is(false));
+    ml("{b = true, a = 1} = {a = 1, b = true}").assertEval(is(true));
+    ml("{b = true, a = 0} = {a = 1, b = true}").assertEval(is(false));
   }
 
   @Ignore("deduce type of #label")
   @Test public void testRecord2() {
-    assertError("#x #b {a = 1, b = {x = 3, y = 4}, z = true}",
-        is("Error: operator and operand don't agree [type mismatch]\n"
+    ml("#x #b {a = 1, b = {x = 3, y = 4}, z = true}")
+        .assertError("Error: operator and operand don't agree [type mismatch]\n"
             + "  operator domain: {x:'Y; 'Z}\n"
             + "  operand:         {b:'W; 'X} -> 'W\n"
             + "  in expression:\n"
-            + "    (fn {x=x,...} => x) (fn {b=b,...} => b)\n"));
+            + "    (fn {x=x,...} => x) (fn {b=b,...} => b)\n");
   }
 
   @Test public void testRecordFn() {
-    assertType("(fn {a=a1,b=b1} => a1) {a = 1, b = true}", is("int"));
-    assertType("(fn {a=a1,b=b1} => b1) {a = 1, b = true}", is("bool"));
-    assertEval("(fn {a=a1,b=b1} => a1) {a = 1, b = true}", is(1));
-    assertEval("(fn {a=a1,b=b1} => b1) {a = 1, b = true}", is(true));
+    ml("(fn {a=a1,b=b1} => a1) {a = 1, b = true}")
+        .assertType("int")
+        .assertEval(is(1));
+    ml("(fn {a=a1,b=b1} => b1) {a = 1, b = true}")
+        .assertType("bool")
+        .assertEval(is(true));
   }
 
   @Test public void testRecordMatch() {
@@ -856,52 +757,52 @@ public class MainTest {
         + "  of {a=2, b=2, c=3} => 0\n"
         + "   | {a=1, ..., c=x} => x\n"
         + "   | _ => ~1";
-    assertEval(ml, is(3));
+    ml(ml).assertEval(is(3));
   }
 
   @Test public void testRecordCase() {
-    assertEval("case {a=2,b=3} of {a=x,b=y} => x * y",
-        is(6));
-    assertEval("case {a=2,b=3,c=4} of {a=x,b=y,c=z} => x * y",
-        is(6));
-    assertEval("case {a=2,b=3,c=4} of {a=x,b=y,...} => x * y",
-        is(6));
+    ml("case {a=2,b=3} of {a=x,b=y} => x * y").assertEval(is(6));
+    ml("case {a=2,b=3,c=4} of {a=x,b=y,c=z} => x * y").assertEval(is(6));
+    ml("case {a=2,b=3,c=4} of {a=x,b=y,...} => x * y").assertEval(is(6));
     // resolution of flex records is more lenient in case than in fun
-    assertEval("case {a=2,b=3,c=4} of {a=3,...} => 1 | {b=2,...} => 2 | _ => 3",
-        is(3));
+    ml("case {a=2,b=3,c=4} of {a=3,...} => 1 | {b=2,...} => 2 | _ => 3")
+        .assertEval(is(3));
   }
 
   @Test public void testRecordTuple() {
-    assertType("{ 1 = true, 2 = 0}", is("bool * int"));
-    assertType("{2=0,1=true}", is("bool * int"));
-    assertType("{3=0,1=true,11=false}", is("{1:bool, 3:int, 11:bool}"));
-    assertType("#1 {1=true,2=0}", is("bool"));
-    assertType("#1 (true, 0)", is("bool"));
-    assertType("#2 (true, 0)", is("int"));
-    assertEval("#2 (true, 0)", is(0));
+    ml("{ 1 = true, 2 = 0}").assertType("bool * int");
+    ml("{2=0,1=true}").assertType("bool * int");
+    ml("{3=0,1=true,11=false}").assertType("{1:bool, 3:int, 11:bool}");
+    ml("#1 {1=true,2=0}").assertType("bool");
+    ml("#1 (true, 0)").assertType("bool");
+    ml("#2 (true, 0)")
+        .assertType("int")
+        .assertEval(is(0));
 
     // empty record = () = unit
-    assertType("()", is("unit"));
-    assertType("{}", is("unit"));
-    assertEval("{}", is(ImmutableList.of()));
+    ml("()").assertType("unit");
+    ml("{}")
+        .assertType("unit")
+        .assertEval(is(ImmutableList.of()));
   }
 
   @Test public void testList() {
-    assertType("[1]", is("int list"));
-    assertType("[[1]]", is("int list list"));
-    assertType("[(1, true), (2, false)]", is("(int * bool) list"));
-    assertType("1 :: [2]", is("int list"));
-    assertType("1 :: [2, 3]", is("int list"));
-    assertType("[1] :: [[2], [3]]", is("int list list"));
-    assertType("1 :: []", is("int list"));
-    assertType("1 :: 2 :: []", is("int list"));
-    assertEval("1 :: 2 :: []", is(Arrays.asList(1, 2)));
-    assertType("fn [] => 0", is("'a list -> int"));
+    ml("[1]").assertType("int list");
+    ml("[[1]]").assertType("int list list");
+    ml("[(1, true), (2, false)]").assertType("(int * bool) list");
+    ml("1 :: [2]").assertType("int list");
+    ml("1 :: [2, 3]").assertType("int list");
+    ml("[1] :: [[2], [3]]").assertType("int list list");
+    ml("1 :: []").assertType("int list");
+    ml("1 :: 2 :: []")
+        .assertType("int list")
+        .assertEval(is(Arrays.asList(1, 2)));
+    ml("fn [] => 0").assertType("'a list -> int");
   }
 
   @Ignore("need type annotations")
   @Test public void testList2() {
-    assertType("fn x: 'b list => 0", is("'a list -> int"));
+    ml("fn x: 'b list => 0").assertType("'a list -> int");
   }
 
   /** List length function exercises list pattern-matching and recursion. */
@@ -913,7 +814,7 @@ public class MainTest {
         + "in\n"
         + "  len [1, 2, 3]\n"
         + "end";
-    assertEval(ml, is(3));
+    ml(ml).assertEval(is(3));
   }
 
   /** As {@link #testListLength()} but match reversed, which requires
@@ -926,7 +827,7 @@ public class MainTest {
         + "in\n"
         + "  len [1, 2, 3]\n"
         + "end";
-    assertEval(ml, is(3));
+    ml(ml).assertEval(is(3));
   }
 
   /** As {link {@link #testListLength()} but using {@code fun}. */
@@ -937,7 +838,7 @@ public class MainTest {
         + "in\n"
         + "  len [1, 2, 3]\n"
         + "end";
-    assertEval(ml, is(3));
+    ml(ml).assertEval(is(3));
   }
 
   @Test public void testMatchTuple() {
@@ -949,7 +850,7 @@ public class MainTest {
         + "in\n"
         + "  sumIf [(true, 2), (false, 3), (true, 5)]\n"
         + "end";
-    assertEval(ml, is(7));
+    ml(ml).assertEval(is(7));
   }
 
   /** Function declaration. */
@@ -959,7 +860,7 @@ public class MainTest {
         + "in\n"
         + "  fact 5\n"
         + "end";
-    assertEval(ml, is(120));
+    ml(ml).assertEval(is(120));
   }
 
   /** As {@link #testFun} but uses case. */
@@ -969,7 +870,7 @@ public class MainTest {
         + "in\n"
         + "  fact 5\n"
         + "end";
-    assertEval(ml, is(120));
+    ml(ml).assertEval(is(120));
   }
 
   /** As {@link #testFun} but uses a multi-clause function. */
@@ -983,8 +884,8 @@ public class MainTest {
         + " fun fact 1 = 1 "
         + "| fact n = n * fact (n - 1) "
         + "in fact 5 end";
-    assertParse(ml, expected);
-    assertEval(ml, is(120));
+    ml(ml).assertParse(expected);
+    ml(ml).assertEval(is(120));
   }
 
   /** A function with two arguments. */
@@ -994,7 +895,7 @@ public class MainTest {
         + "in\n"
         + "  sum 5 3\n"
         + "end";
-    assertEval(ml, is(8));
+    ml(ml).assertEval(is(8));
   }
 
   @Test public void testFunRecord() {
@@ -1005,7 +906,8 @@ public class MainTest {
         + "in\n"
         + "  f\n"
         + "end";
-    assertType(ml, is("{a:int, b:int, c:int} -> int"));
+    ml(ml).assertType("{a:int, b:int, c:int} -> int");
+
     final String ml2 = "let\n"
         + "  fun f {a=x,b=1,...} = x\n"
         + "    | f {b=y,c=2,...} = y\n"
@@ -1013,7 +915,7 @@ public class MainTest {
         + "in\n"
         + "  f {a=1,b=2,c=3}\n"
         + "end";
-    assertEval(ml2,  is(6));
+    ml(ml2).assertEval(is(6));
   }
 
   @Ignore("not working yet")
@@ -1023,9 +925,9 @@ public class MainTest {
         + "in\n"
         + "  NODE (LEAF 1, NODE (LEAF 2, LEAF 3))\n"
         + "end";
-    assertParseSame(ml);
-    assertType(ml, is("(INTEGER of int | RATIONAL of int * int | ZERO)"));
-    assertEval(ml, is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
+    ml(ml).assertParseSame()
+        .assertType("(INTEGER of int | RATIONAL of int * int | ZERO)")
+        .assertEval(is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
   }
 
   @Test public void testDatatype2() {
@@ -1034,9 +936,9 @@ public class MainTest {
         + "in\n"
         + "  RATIONAL (2, 3)\n"
         + "end";
-    assertParseSame(ml);
-    assertType(ml, is("(INTEGER of int | RATIONAL of int * int | ZERO)"));
-    assertEval(ml, is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
+    ml(ml).assertParseSame()
+        .assertType("(INTEGER of int | RATIONAL of int * int | ZERO)")
+        .assertEval(is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
   }
 
   @Test public void testDatatype3() {
@@ -1046,9 +948,9 @@ public class MainTest {
         + "in"
         + "  score (SOME 5)\n"
         + "end";
-    assertParseSame(ml);
-    assertType(ml, is("int"));
-    assertEval(ml, is(5));
+    ml(ml).assertParseSame()
+        .assertType("int")
+        .assertEval(is(5));
   }
 
   /** As {@link #testDatatype3()} but with {@code fun} rather than {@code fn}
@@ -1061,9 +963,9 @@ public class MainTest {
         + "in"
         + "  score (SOME 5)\n"
         + "end";
-    assertParseSame(ml);
-    assertType(ml, is("int"));
-    assertEval(ml, is(5));
+    ml(ml).assertParseSame()
+        .assertType("int")
+        .assertEval(is(5));
   }
 
   /** As {@link #testDatatype3b()} but use a nilary type constructor (NONE). */
@@ -1075,9 +977,9 @@ public class MainTest {
         + "in"
         + "  score NONE\n"
         + "end";
-    assertParseSame(ml);
-    assertType(ml, is("int"));
-    assertEval(ml, is(0));
+    ml(ml).assertParseSame()
+        .assertType("int")
+        .assertEval(is(0));
   }
 
   @Test public void testDatatype4() {
@@ -1088,9 +990,9 @@ public class MainTest {
         + "in\n"
         + " depth NIL\n"
         + "end";
-    assertParseSame(ml);
-    assertType(ml, is("int"));
-    assertEval(ml, is(0));
+    ml(ml).assertParseSame()
+        .assertType("int")
+        .assertEval(is(0));
   }
 
   /** As {@link #testDatatype4()} but with deeper expression. */
@@ -1102,9 +1004,9 @@ public class MainTest {
         + "in\n"
         + " depth (CONS (5, CONS (2, NIL)))\n"
         + "end";
-    assertParseSame(ml);
-    assertType(ml, is("int"));
-    assertEval(ml, is(2));
+    ml(ml).assertParseSame()
+        .assertType("int")
+        .assertEval(is(2));
   }
 
   @Test public void testFrom() {
@@ -1117,7 +1019,7 @@ public class MainTest {
         + "in\n"
         + "  from e in emps yield #deptno e\n"
         + "end";
-    assertEval(ml,  is(Arrays.asList(10, 20, 30, 30)));
+    ml(ml).assertEval(is(Arrays.asList(10, 20, 30, 30)));
   }
 
   @Test public void testFromYieldExpression() {
@@ -1130,7 +1032,7 @@ public class MainTest {
         + "in\n"
         + "  from e in emps yield (#id e + #deptno e)\n"
         + "end";
-    assertEval(ml,  is(Arrays.asList(110, 121, 132, 133)));
+    ml(ml).assertEval(is(Arrays.asList(110, 121, 132, 133)));
   }
 
   @Test public void testFromWhere() {
@@ -1143,7 +1045,7 @@ public class MainTest {
         + "in\n"
         + "  from e in emps where #deptno e = 30 yield #id e\n"
         + "end";
-    assertEval(ml,  is(Arrays.asList(102, 103)));
+    ml(ml).assertEval(is(Arrays.asList(102, 103)));
   }
 
   @Test public void testFromNoYield() {
@@ -1154,7 +1056,7 @@ public class MainTest {
         + "in\n"
         + "  from e in emps where #deptno e = 30\n"
         + "end";
-    assertEval(ml, is(Arrays.asList(Arrays.asList(30, 103, "Scooby"))));
+    ml(ml).assertEval(is(Arrays.asList(Arrays.asList(30, 103, "Scooby"))));
   }
 
   @Test public void testFromJoinNoYield() {
@@ -1167,13 +1069,12 @@ public class MainTest {
         + "in\n"
         + "  from e in emps, d in depts where #deptno e = #deptno d\n"
         + "end";
-    assertType(ml,
-        is("{d:{deptno:int, name:string},"
-            + " e:{deptno:int, id:int, name:string}} list"));
     final List eRow = Arrays.asList(10, "Sales");
     final List bRow = Arrays.asList(10, 100, "Fred");
-    assertEval(ml,
-        is(Collections.singletonList(Arrays.asList(eRow, bRow))));
+    ml(ml)
+        .assertType("{d:{deptno:int, name:string},"
+            + " e:{deptno:int, id:int, name:string}} list")
+        .assertEval(is(Collections.singletonList(Arrays.asList(eRow, bRow))));
   }
 
   @Test public void testFromGroupWithoutCompute() {
@@ -1193,10 +1094,10 @@ public class MainTest {
         + " from e in emps"
         + " group #deptno e as deptno "
         + "end";
-    assertParseDecl("val x = " + ml,
-        isAst(Ast.ValDecl.class, "val x = " + expected));
-    assertType(ml, is("{deptno:int} list"));
-    assertEval(ml, (Matcher) equalsUnordered(list(10), list(20)));
+    ml("val x = " + ml)
+        .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
+    ml(ml).assertType("{deptno:int} list")
+        .assertEval((Matcher) equalsUnordered(list(10), list(20)));
   }
 
   @Test public void testFromGroup() {
@@ -1221,72 +1122,56 @@ public class MainTest {
         + " group #deptno e as deptno"
         + " compute sum of #id e as sumId "
         + "end";
-    assertParseDecl("val x = " + ml,
-        isAst(Ast.ValDecl.class, "val x = " + expected));
-    assertType(ml, is("{deptno:int, sumId:int} list"));
+    ml("val x = " + ml)
+        .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
     //noinspection unchecked
-    assertEval(ml, (Matcher) equalsUnordered(list(10, 2), list(20, 1)));
+    ml(ml).assertType("{deptno:int, sumId:int} list")
+        .assertEval((Matcher) equalsUnordered(list(10, 2), list(20, 1)));
   }
 
   @Test public void testError() {
-    assertError("fn x y => x + y",
-        is("Error: non-constructor applied to argument in pattern: x"));
-    assertError("- case {a=1,b=2,c=3} of {a=x,b=y} => x + y",
-        is("Error: case object and rules do not agree [tycon mismatch]\n"
+    ml("fn x y => x + y")
+        .assertError(
+            "Error: non-constructor applied to argument in pattern: x");
+    ml("- case {a=1,b=2,c=3} of {a=x,b=y} => x + y")
+        .assertError("Error: case object and rules do not agree [tycon "
+            + "mismatch]\n"
             + "  rule domain: {a:[+ ty], b:[+ ty]}\n"
             + "  object: {a:[int ty], b:[int ty], c:[int ty]}\n"
             + "  in expression:\n"
             + "    (case {a=1,b=2,c=3}\n"
-            + "      of {a=x,b=y} => x + y)\n"));
-    assertError("fun f {a=x,b=y,...} = x+y",
-        is("Error: unresolved flex record (need to know the names of ALL the "
-            + "fields\n"
+            + "      of {a=x,b=y} => x + y)\n");
+    ml("fun f {a=x,b=y,...} = x+y")
+        .assertError("Error: unresolved flex record (need to know the names of "
+            + "ALL the fields\n"
             + " in this context)\n"
-            + "  type: {a:[+ ty], b:[+ ty]; 'Z}\n"));
-    assertError("fun f {a=x,...} = x | {b=y,...} = y;",
-        is("stdIn:1.24-1.33 Error: can't find function arguments in clause\n"
-        + "stdIn:1.24-1.33 Error: illegal function symbol in clause\n"
-        + "stdIn:1.6-1.37 Error: clauses do not all have same function name\n"
-        + "stdIn:1.36 Error: unbound variable or constructor: y\n"
-        + "stdIn:1.2-1.37 Error: unresolved flex record\n"
-        + "   (can't tell what fields there are besides #a)\n"));
-    assertError("fun f {a=x,...} = x | f {b=y,...} = y",
-        is("Error: unresolved flex record (need to know the names of ALL the "
-            + "fields\n"
+            + "  type: {a:[+ ty], b:[+ ty]; 'Z}\n");
+    ml("fun f {a=x,...} = x | {b=y,...} = y;")
+        .assertError("stdIn:1.24-1.33 Error: can't find function arguments in "
+            + "clause\n"
+            + "stdIn:1.24-1.33 Error: illegal function symbol in clause\n"
+            + "stdIn:1.6-1.37 Error: clauses do not all have same function "
+            + "name\n"
+            + "stdIn:1.36 Error: unbound variable or constructor: y\n"
+            + "stdIn:1.2-1.37 Error: unresolved flex record\n"
+            + "   (can't tell what fields there are besides #a)\n");
+    ml("fun f {a=x,...} = x | f {b=y,...} = y")
+        .assertError("Error: unresolved flex record (need to know the names of "
+            + "ALL the fields\n"
             + " in this context)\n"
-            + "  type: {a:'Y, b:'Y; 'Z}\n"));
-    assertError("fun f {a=x,...} = x\n"
+            + "  type: {a:'Y, b:'Y; 'Z}\n");
+    ml("fun f {a=x,...} = x\n"
         + "  | f {b=y,...} = y\n"
-        + "  | f {a=x,b=y,c=z} = x+y+z",
-        is("stdIn:1.6-3.20 Error: match redundant\n"
+        + "  | f {a=x,b=y,c=z} = x+y+z")
+        .assertError("stdIn:1.6-3.20 Error: match redundant\n"
             + "          {a=x,b=_,c=_} => ...\n"
             + "    -->   {a=_,b=y,c=_} => ...\n"
-            + "    -->   {a=x,b=y,c=z} => ...\n"));
-    assertError("fun f 1 = 1 | f n = n * f (n - 1) | g 2 = 2",
-        is("stdIn:3.5-3.46 Error: clauses don't all have same function name"));
+            + "    -->   {a=x,b=y,c=z} => ...\n");
+    ml("fun f 1 = 1 | f n = n * f (n - 1) | g 2 = 2")
+        .assertError("stdIn:3.5-3.46 Error: clauses don't all have same "
+            + "function name");
   }
 
-  private void assertEvalError(String ml, Matcher<Throwable> matcher) {
-    try {
-      assertEval(ml, CoreMatchers.notNullValue());
-      fail("expected error");
-    } catch (Throwable e) {
-      assertThat(e, matcher);
-    }
-  }
-
-  private void assertError(Runnable runnable, Matcher<Throwable> matcher) {
-    try {
-      runnable.run();
-      fail("expected error");
-    } catch (Throwable e) {
-      assertThat(e, matcher);
-    }
-  }
-
-  private void assertError(String ml, Matcher<String> matcher) {
-    // TODO: execute code, and check error occurs
-  }
 }
 
 // End MainTest.java
