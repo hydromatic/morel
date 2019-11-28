@@ -24,7 +24,13 @@ import net.hydromatic.sml.ast.Ast;
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.ast.Pos;
 import net.hydromatic.sml.eval.Codes;
+import net.hydromatic.sml.foreign.ForeignValue;
+import net.hydromatic.sml.type.Binding;
 import net.hydromatic.sml.type.TypeSystem;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import static net.hydromatic.sml.ast.AstBuilder.ast;
 
@@ -34,10 +40,26 @@ public abstract class Compiles {
    * expression to a form that can more easily be compiled.
    *
    * <p>Used for testing. */
-  public static TypeResolver.Resolved validateExpression(Ast.Exp exp) {
+  public static TypeResolver.Resolved validateExpression(Ast.Exp exp,
+      Map<String, ForeignValue> valueMap) {
     final TypeSystem typeSystem = new TypeSystem();
-    final Environment env = Environments.empty();
+    final Environment env = createEnvironment(typeSystem, valueMap);
     return TypeResolver.deduceType(env, toValDecl(exp), typeSystem);
+  }
+
+  /** Creates an environment containing the given foreign values. */
+  public static Environment createEnvironment(TypeSystem typeSystem,
+      Map<String, ForeignValue> valueMap) {
+    return Environments.empty()
+        .bindAll(bindings(typeSystem, valueMap));
+  }
+
+  private static Iterable<Binding> bindings(TypeSystem typeSystem,
+      Map<String, ForeignValue> map) {
+    final List<Binding> bindings = new ArrayList<>();
+    map.forEach((name, value) ->
+        bindings.add(new Binding(name, value.type(typeSystem), value.value())));
+    return bindings;
   }
 
   /**

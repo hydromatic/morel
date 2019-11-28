@@ -147,7 +147,7 @@ public class ScriptTest {
     final String[] args = {"--echo"};
     try (Reader reader = Utils.reader(inFile);
          Writer writer = Utils.printWriter(outFile)) {
-      new Main(args, reader, writer).run();
+      new Main(args, reader, writer, new DataSet.Dictionary()).run();
     }
     final File refFile =
         new File(inFile.getParentFile(), inFile.getName() + ".out");

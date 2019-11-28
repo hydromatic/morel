@@ -19,6 +19,7 @@
 package net.hydromatic.sml;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import net.hydromatic.sml.ast.Ast;
@@ -102,7 +103,7 @@ public class MainTest {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(new byte[0]);
-      new Main(args, in, ps).run();
+      new Main(args, in, ps, ImmutableMap.of()).run();
     }
     assertThat(out.size(), is(0));
   }
@@ -118,7 +119,7 @@ public class MainTest {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(ml.getBytes());
-      new Main(args, in, ps).run();
+      new Main(args, in, ps, ImmutableMap.of()).run();
     }
     final String expected = "val x = 5 : int\n"
         + "val it = 5 : int\n"
@@ -1187,6 +1188,55 @@ public class MainTest {
     //noinspection unchecked
     ml(ml).assertType("{deptno:int, sumId:int} list")
         .assertEval((Matcher) equalsUnordered(list(10, 2), list(20, 1)));
+  }
+
+  /** Tests a program that uses an external collection from the "scott" JDBC
+   * database. */
+  @Test public void testScott() {
+    final String ml = "let\n"
+        + "  val emps = #emp scott\n"
+        + "in\n"
+        + "  from e in emps yield #deptno e\n"
+        + "end\n";
+    ml(ml)
+        .withBinding("scott", DataSet.SCOTT.foreignValue())
+        .assertType("int list")
+        .assertEval(
+            is(list(20, 30, 30, 20, 30, 30, 10, 20, 10, 30, 20, 30, 20, 10)));
+  }
+
+  @Test public void testScottJoin() {
+    final String ml = "let\n"
+        + "  val emps = #emp scott\n"
+        + "  and depts = #dept scott\n"
+        + "in\n"
+        + "  from e in emps, d in depts\n"
+        + "    where #deptno e = #deptno d\n"
+        + "    andalso #empno e >= 7900\n"
+        + "    yield {empno = #empno e, dname = #dname d}\n"
+        + "end\n";
+    ml(ml)
+        .withBinding("scott", DataSet.SCOTT.foreignValue())
+        .assertType("{dname:string, empno:int} list")
+        .assertEval(
+            is(
+                list(list("SALES", 7900), list("RESEARCH", 7902),
+                    list("ACCOUNTING", 7934))));
+  }
+
+  /** As {@link #testScottJoin()} but without intermediate variables. */
+  @Test public void testScottJoin2() {
+    final String ml = "from e in #emp scott, d in #dept scott\n"
+        + "  where #deptno e = #deptno d\n"
+        + "  andalso #empno e >= 7900\n"
+        + "  yield {empno = #empno e, dname = #dname d}\n";
+    ml(ml)
+        .withBinding("scott", DataSet.SCOTT.foreignValue())
+        .assertType("{dname:string, empno:int} list")
+        .assertEval(
+            is(
+                list(list("SALES", 7900), list("RESEARCH", 7902),
+                    list("ACCOUNTING", 7934))));
   }
 
   @Test public void testError() {

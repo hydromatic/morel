@@ -18,11 +18,13 @@
  */
 package net.hydromatic.sml;
 
+import com.google.common.collect.ImmutableMap;
+
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.compile.CompiledStatement;
 import net.hydromatic.sml.compile.Compiles;
 import net.hydromatic.sml.compile.Environment;
-import net.hydromatic.sml.compile.Environments;
+import net.hydromatic.sml.foreign.ForeignValue;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
 import net.hydromatic.sml.type.Binding;
@@ -42,6 +44,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /** Standard ML REPL. */
 public class Main {
@@ -49,12 +52,13 @@ public class Main {
   private final BufferedReader in;
   private final PrintWriter out;
   private final boolean echo;
+  private final Map<String, ForeignValue> valueMap;
 
   /** Command-line entry point.
    *
    * @param args Command-line arguments */
   public static void main(String[] args) {
-    final Main main = new Main(args, System.in, System.out);
+    final Main main = new Main(args, System.in, System.out, ImmutableMap.of());
     try {
       main.run();
     } catch (Throwable e) {
@@ -64,16 +68,20 @@ public class Main {
   }
 
   /** Creates a Main. */
-  public Main(String[] args, InputStream in, PrintStream out) {
-    this(args, new InputStreamReader(in), new OutputStreamWriter(out));
+  public Main(String[] args, InputStream in, PrintStream out,
+      Map<String, ForeignValue> valueMap) {
+    this(args, new InputStreamReader(in), new OutputStreamWriter(out),
+        valueMap);
   }
 
   /** Creates a Main. */
-  public Main(String[] args, Reader in, Writer out) {
+  public Main(String[] args, Reader in, Writer out,
+      Map<String, ForeignValue> valueMap) {
     this.args = args;
     this.in = buffer(in);
     this.out = buffer(out);
     this.echo = Arrays.asList(args).contains("--echo");
+    this.valueMap = ImmutableMap.copyOf(valueMap);
   }
 
   private static PrintWriter buffer(Writer out) {
@@ -99,7 +107,7 @@ public class Main {
     final TypeSystem typeSystem = new TypeSystem();
     final BufferingReader in2 = new BufferingReader(in);
     final SmlParserImpl parser = new SmlParserImpl(in2);
-    Environment env = Environments.empty();
+    Environment env = Compiles.createEnvironment(typeSystem, valueMap);
     final List<String> lines = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
     for (;;) {

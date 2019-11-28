@@ -71,9 +71,7 @@ public class Compiler {
 
       public void eval(Environment env, List<String> output,
           List<Binding> bindings) {
-        final EvalEnvHolder evalEnvs = new EvalEnvHolder(Codes.emptyEnv());
-        env.forEachValue(evalEnvs::add);
-        final EvalEnv evalEnv = evalEnvs.evalEnv;
+        final EvalEnv evalEnv = Codes.emptyEnvWith(env);
         for (Action entry : actions) {
           entry.apply(output, bindings, evalEnv);
         }
@@ -554,21 +552,6 @@ public class Compiler {
     public Object eval(EvalEnv env) {
       assert refCode != null; // link should have completed by now
       return refCode.eval(env);
-    }
-  }
-
-  /** Contains a {@link EvalEnv} and adds to it by calling
-   * {@link Codes#add}. */
-  private static class EvalEnvHolder {
-    private EvalEnv evalEnv;
-
-    EvalEnvHolder(EvalEnv evalEnv) {
-      this.evalEnv = Objects.requireNonNull(evalEnv);
-    }
-
-    public EvalEnvHolder add(String name, Object value) {
-      evalEnv = Codes.add(evalEnv, name, value);
-      return this;
     }
   }
 

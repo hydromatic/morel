@@ -18,6 +18,7 @@
  */
 package net.hydromatic.sml.compile;
 
+import net.hydromatic.sml.foreign.RelList;
 import net.hydromatic.sml.type.ListType;
 import net.hydromatic.sml.type.PrimitiveType;
 import net.hydromatic.sml.type.RecordType;
@@ -112,6 +113,10 @@ class Pretty {
           (ListType) type;
       //noinspection unchecked
       list = (List) value;
+      if (list instanceof RelList) {
+        // Do not attempt to print the elements of a foreign list. It might be huge.
+        return buf.append("<relation>");
+      }
       buf.append("[");
       start = buf.length();
       for (Object o : list) {

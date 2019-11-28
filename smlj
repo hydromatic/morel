@@ -37,8 +37,9 @@ if [ ! -f target/classpath.txt ]; then
         compile
 fi
 
-CP=target/classes
-CP="${CP}:$(cat target/classpath.txt)"
+CP="target/classes:\
+target/test-classes:\
+$(cat target/classpath.txt)"
 
 VM_OPTS=
 if [ "$cygwin" ]; then
@@ -50,6 +51,6 @@ fi
 
 export JAVA_OPTS=-Djavax.xml.parsers.DocumentBuilderFactory=com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl
 
-exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.sml.Shell "$@"
+exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.sml.Shell --foreign='net.hydromatic.sml.DataSet$Dictionary' "$@"
 
 # End smlj

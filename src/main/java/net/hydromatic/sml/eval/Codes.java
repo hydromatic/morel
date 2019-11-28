@@ -754,17 +754,25 @@ public abstract class Codes {
 
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
-    final EvalEnv env = new EvalEnv();
+    final EvalEnv evalEnv = new EvalEnv();
     BUILT_IN_VALUES.forEach((key, value) -> {
-      env.valueMap.put(key.mlName, value);
+      evalEnv.valueMap.put(key.mlName, value);
       if (key.alias != null) {
-        env.valueMap.put(key.alias, value);
+        evalEnv.valueMap.put(key.alias, value);
       }
     });
-    assert env.valueMap.keySet().containsAll(BuiltIn.BY_ML_NAME.keySet())
+    assert evalEnv.valueMap.keySet().containsAll(BuiltIn.BY_ML_NAME.keySet())
         : "no implementation for "
-        + minus(BuiltIn.BY_ML_NAME.keySet(), env.valueMap.keySet());
-    return env;
+        + minus(BuiltIn.BY_ML_NAME.keySet(), evalEnv.valueMap.keySet());
+    return evalEnv;
+  }
+
+  /** Creates an evaluation environment that contains the bound values from a
+   * compilation environment. */
+  public static EvalEnv emptyEnvWith(Environment env) {
+    final EvalEnv evalEnv = emptyEnv();
+    env.forEachValue(evalEnv.valueMap::put);
+    return evalEnv;
   }
 
   /** Creates a compilation environment. */

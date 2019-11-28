@@ -19,13 +19,14 @@
 package net.hydromatic.sml;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import net.hydromatic.sml.ast.AstNode;
 import net.hydromatic.sml.compile.CompileException;
 import net.hydromatic.sml.compile.CompiledStatement;
 import net.hydromatic.sml.compile.Compiles;
 import net.hydromatic.sml.compile.Environment;
-import net.hydromatic.sml.compile.Environments;
+import net.hydromatic.sml.foreign.ForeignValue;
 import net.hydromatic.sml.parse.ParseException;
 import net.hydromatic.sml.parse.SmlParserImpl;
 import net.hydromatic.sml.type.Binding;
@@ -48,9 +49,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /** Command shell for ML, powered by JLine3. */
 public class Shell {
@@ -59,6 +62,7 @@ public class Shell {
   private final Terminal terminal;
   private final boolean banner;
   private final boolean system;
+  private final ImmutableMap<String, ForeignValue> valueMap;
   private boolean help;
 
   /** Command-line entry point.
@@ -84,6 +88,23 @@ public class Shell {
     this.echo = argList.contains("--echo");
     this.help = argList.contains("--help");
     this.system = !argList.contains("--system=false");
+    final ImmutableMap.Builder<String, ForeignValue> valueMapBuilder =
+        ImmutableMap.builder();
+    for (String arg : args) {
+      if (arg.startsWith("--foreign=")) {
+        final String className = arg.substring("--foreign=".length());
+        try {
+          final Class<?> aClass = Class.forName(className);
+          valueMapBuilder.putAll((Map<String, ForeignValue>)
+              aClass.getConstructor().newInstance());
+        } catch (InstantiationException | IllegalAccessException
+            | InvocationTargetException | NoSuchMethodException
+            | ClassNotFoundException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+    this.valueMap = valueMapBuilder.build();
 
     final TerminalBuilder builder = TerminalBuilder.builder();
     builder.streams(in, out);
@@ -179,7 +200,7 @@ public class Shell {
 
     pause();
     final TypeSystem typeSystem = new TypeSystem();
-    Environment env = Environments.empty();
+    Environment env = Compiles.createEnvironment(typeSystem, valueMap);
     final StringBuilder buf = new StringBuilder();
     final List<String> lines = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
