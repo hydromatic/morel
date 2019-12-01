@@ -52,7 +52,7 @@ public abstract class Environment {
   @Override public String toString() {
     final StringBuilder b = new StringBuilder();
     getValueMap().forEach((k, v) ->
-        b.append(k).append(": ").append(v).append("\n"));
+        b.append(v).append("\n"));
     return b.toString();
   }
 

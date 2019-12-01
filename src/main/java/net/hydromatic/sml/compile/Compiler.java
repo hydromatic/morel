@@ -172,7 +172,7 @@ public class Compiler {
         final Code expCode = compile(env, idExp.getValue());
         final Ast.Id id = idExp.getKey();
         sourceCodes.put(id, expCode);
-        env2 = env.bind(id.name, typeMap.getType(id), Unit.INSTANCE);
+        env2 = env2.bind(id.name, typeMap.getType(id), Unit.INSTANCE);
       }
       final Ast.Exp filterExp = from.filterExp != null
           ? from.filterExp
@@ -312,6 +312,10 @@ public class Compiler {
       final Ast.Pat pat = ast.tuplePat(pos, matches.keySet());
       final Ast.Exp e2 = ast.tuple(pos, matches.values());
       valDecl = ast.valDecl(pos, ast.valBind(pos, rec, pat, e2));
+      matches.forEach((key, value) ->
+          bindings.add(
+              new Binding(((Ast.IdPat) key).name, typeMap.getType(value),
+                  Unit.INSTANCE)));
     }
     for (Ast.ValBind valBind : valDecl.valBinds) {
       compileValBind(env, valBind, varCodes, bindings, actions);

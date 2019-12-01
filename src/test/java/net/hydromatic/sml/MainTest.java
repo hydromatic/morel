@@ -654,6 +654,33 @@ public class MainTest {
     ml(ml).assertEval(is(7));
   }
 
+  /** As {@link #testLet2()}, but using 'and'. */
+  @Test public void testLet3() {
+    final String ml = "let\n"
+        + "  val x = 1\n"
+        + "  and y = 2\n"
+        + "in\n"
+        + "  y + x + 3\n"
+        + "end";
+    ml(ml).assertEval(is(6));
+  }
+
+  /** Tests that 'and' assignments occur simultaneously. */
+  @Test public void testLet4() {
+    final String ml = "let\n"
+        + "  val x = 5\n"
+        + "  and y = 1\n"
+        + "in\n"
+        + "  let\n"
+        + "    val x = y (* new x = old y = 1 *)\n"
+        + "    and y = x + 2 (* new y = old x + 2 = 5 + 2 = 7 *)\n"
+        + "  in\n"
+        + "    y + x + 3 (* new y + new x + 3 = 7 + 1 + 3 = 11 *)\n"
+        + "  end\n"
+        + "end";
+    ml(ml).assertEval(is(11));
+  }
+
   @Test public void testClosure() {
     final String ml = "let\n"
         + "  fun f x = 1 + x;\n"
@@ -884,8 +911,41 @@ public class MainTest {
         + " fun fact 1 = 1 "
         + "| fact n = n * fact (n - 1) "
         + "in fact 5 end";
-    ml(ml).assertParse(expected);
-    ml(ml).assertEval(is(120));
+    ml(ml).assertParse(expected)
+        .assertEval(is(120));
+  }
+
+  /** Simultaneous functions. */
+  @Test public void testFun4() {
+    final String ml = "let\n"
+        + "  val x = 1\n"
+        + "in\n"
+        + "  let\n"
+        + "    val x = 17\n"
+        + "    and inc1 = fn n => n + x\n"
+        + "    and inc2 = fn n => n + x + x\n"
+        + "  in\n"
+        + "    inc2 (inc1 x)\n"
+        + "  end\n"
+        + "end";
+    ml(ml).assertType("int")
+        .assertEval(is(20));
+  }
+
+  /** Mutually recursive functions: the definition of 'even' references 'odd'
+   * and the definition of 'odd' references 'even'. */
+  @Ignore("not working yet")
+  @Test public void testMutuallyRecursiveFunctions() {
+    final String ml = "let\n"
+        + "  fun even 0 = true\n"
+        + "    | even n = odd (n - 1)\n"
+        + "  and odd 0 = false\n"
+        + "    | odd n = even (n - 1)\n"
+        + "in\n"
+        + "  odd 7\n"
+        + "end";
+    ml(ml).assertType("boolean")
+        .assertEval(is(true));
   }
 
   /** A function with two arguments. */
