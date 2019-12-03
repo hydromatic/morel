@@ -180,7 +180,7 @@ public enum BuiltIn {
    * <p>"length l" returns the number of elements in the list l.
    */
   LIST_LENGTH("List.length", ts ->
-      ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
+      ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
 
   /** Function "List.at", of type "&alpha; list * &alpha; list &rarr; &alpha;
    * list".

@@ -294,13 +294,13 @@ val it = false : bool
 
 (*) val length : 'a list -> int
 List_length;
-val it = fn : 'a list -> bool
+val it = fn : 'a list -> int
 
 List_length [];
-val it = 0 : bool
+val it = 0 : int
 
 List_length [1,2];
-val it = 2 : bool
+val it = 2 : int
 
 
 (*) val @ : 'a list * 'a list -> 'a list
