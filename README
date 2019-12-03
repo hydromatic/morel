@@ -1,6 +1,6 @@
-smlj release 0.1.0
+Morel release 0.1.0
 
-This is a source or binary distribution of smlj.
+This is a source or binary distribution of Morel.
 
 Changes since the previous release are described in the
 HISTORY.md file.
@@ -10,5 +10,5 @@ The LICENSE and NOTICE files contain license information.
 If this is a source distribution, you can find instructions how to
 build the release in the "Building" section in README.md.
 
-Further information about smlj is available at its web site,
-https://github.com/julianhyde/smlj.
+Further information about Morel is available at its web site,
+https://github.com/julianhyde/morel.

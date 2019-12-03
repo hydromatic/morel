@@ -23,7 +23,7 @@ function changeTime(t, arg) {
   delta = t - tPrev
 
   cutDeltaPrev = cutDelta
-  if (FILENAME ~ "/smlj-0.1.0.cast") {
+  if (FILENAME ~ "/morel-0.1.0.cast") {
     cut(t, 80.6, 87.2)
   }
 
@@ -68,7 +68,7 @@ BEGIN {
     verb = matches[2]
     arg = matches[3]
     changeTime(t, arg)
-    if (FILENAME ~ "/smlj-0.1.0.cast") {
+    if (FILENAME ~ "/morel-0.1.0.cast") {
       if (index(arg, "SLF4J:") > 0) {
         next
       }

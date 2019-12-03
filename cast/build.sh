@@ -2,10 +2,10 @@
 #
 # Generates an asciinema screencast from a script.
 # You must install asciinema first; try 'brew install asciinema'.
-# Note that this script destroys ~/smlj.
+# Note that this script destroys ~/morel.
 # Use terminal of height 16, width 72.
 # Usage:
-#   build.sh ~/dev/smlj/cast/smlj-0.1.0.txt
+#   build.sh ~/dev/morel/cast/morel-0.1.0.txt
 DIR=$(cd $(dirname $0); pwd)
 INFILE="$1"
 OUTFILE=$(dirname "${INFILE}")/$(basename "${INFILE}" .txt).cast
@@ -17,7 +17,7 @@ cat ${INFILE} |
     ${DIR}/play.sh |
     (
         cd ~
-        rm -rf ~/smlj
-        asciinema rec -t"smlj 0.1.0" --stdin --overwrite "${OUTFILE}"
+        rm -rf ~/morel
+        asciinema rec -t"morel 0.1.0" --stdin --overwrite "${OUTFILE}"
     )
 # End build.sh

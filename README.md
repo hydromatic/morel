@@ -18,18 +18,20 @@ language governing permissions and limitations under the
 License.
 {% endcomment %}
 -->
-# smlj
-Standard ML interpreter, implemented in Java
+# Morel
+Standard ML interpreter, with relational extensions, implemented in Java
+
+(Until version 0.1, Morel was known as smlj.)
 
 ## Requirements
 
 Java version 8 or higher.
 
-## Get smlj
+## Get Morel
 
 ### From Maven
 
-Get smlj from
+Get Morel from
 <a href="https://search.maven.org/#search%7Cga%7C1%7Cg%3Anet.hydromatic%20a%3Asmlj">Maven Central</a>:
 
 ```xml
@@ -43,8 +45,8 @@ Get smlj from
 ### Download and build
 
 ```bash
-$ git clone git://github.com/julianhyde/smlj.git
-$ cd smlj
+$ git clone git://github.com/julianhyde/morel.git
+$ cd morel
 $ ./mvnw install
 ```
 
@@ -57,8 +59,8 @@ On Windows, the last line is
 ### Run the shell
 
 ```bash
-$ ./smlj
-smlj version 0.1.0 (java version "11.0.4", JLine terminal, xterm-256color)
+$ ./morel
+morel version 0.1.0 (java version "11.0.4", JLine terminal, xterm-256color)
 = "Hello, world!";
 val it = "Hello, world!" : string
 = exit
@@ -215,12 +217,12 @@ the sub-query returns, just whether it returns any rows).
 
 * License: <a href="LICENSE">Apache License, Version 2.0</a>
 * Author: Julian Hyde (<a href="https://twitter.com/julianhyde">@julianhyde</a>)
-* Project page: https://www.hydromatic.net/smlj
-* API: https://www.hydromatic.net/smlj/apidocs
-* Source code: https://github.com/julianhyde/smlj
+* Project page: https://www.hydromatic.net/morel
+* API: https://www.hydromatic.net/morel/apidocs
+* Source code: https://github.com/julianhyde/morel
 * Developers list:
   <a href="mailto:dev@calcite.apache.org">dev at calcite.apache.org</a>
   (<a href="https://mail-archives.apache.org/mod_mbox/calcite-dev/">archive</a>,
   <a href="mailto:dev-subscribe@calcite.apache.org">subscribe</a>)
-* Issues: https://github.com/julianhyde/smlj/issues
+* Issues: https://github.com/julianhyde/morel/issues
 * <a href="HISTORY.md">Release notes and history</a>

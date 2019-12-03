@@ -18,7 +18,7 @@ language governing permissions and limitations under the
 License.
 {% endcomment %}
 -->
-# smlj HOWTO
+# Morel HOWTO
 
 ## How to make a release (for committers)
 
@@ -57,18 +57,18 @@ mvn -Prelease -DskipTests release:perform
 Stage the release:
 * Go to https://oss.sonatype.org and log in.
 * Under "Build Promotion", click on "Staging Repositories".
-* Select the line "smlj-nnnn", and click "Close". You might need to
+* Select the line "morel-nnnn", and click "Close". You might need to
   click "Refresh" a couple of times before it closes.
 
 After testing, publish the release:
 * Go to https://oss.sonatype.org and log in.
 * Under "Build Promotion", click on "Staging Repositories".
-* Select the line "smlj-nnnn", and click "Release".
+* Select the line "morel-nnnn", and click "Release".
 
 Wait a couple of hours for the artifacts to appear on Maven central,
 and announce the release.
 
-Update the [github release list](https://github.com/julianhyde/smlj/releases).
+Update the [github release list](https://github.com/julianhyde/morel/releases).
 
 ## Cleaning up after a failed release attempt (for committers)
 
@@ -78,8 +78,8 @@ Update the [github release list](https://github.com/julianhyde/smlj/releases).
 git tag
 
 # If the tag exists, delete it locally and remotely
-git tag -d smlj-X.Y.Z
-git push origin :refs/tags/smlj-X.Y.Z
+git tag -d morel-X.Y.Z
+git push origin :refs/tags/morel-X.Y.Z
 
 # Remove modified files
 mvn release:clean

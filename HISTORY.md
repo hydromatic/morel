@@ -18,12 +18,12 @@ language governing permissions and limitations under the
 License.
 {% endcomment %}
 -->
-# smlj release history and change log
+# Morel release history and change log
 
 For a full list of releases, see
-<a href="https://github.com/julianhyde/smlj/releases">github</a>.
+<a href="https://github.com/julianhyde/morel/releases">github</a>.
 
-## <a href="https://github.com/julianhyde/smlj/releases/tag/smlj-0.1">0.1</a> / 2019-07-24
+## <a href="https://github.com/julianhyde/morel/releases/tag/smlj-0.1">0.1</a> / 2019-07-24
 
 Initial release features the core language (primitive types, lists,
 tuples, records; `let`, `if`, `fn` and `case` expressions; `val`,

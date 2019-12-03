@@ -26,13 +26,13 @@ License.
     <version>0.1</version>
   </parent>
 
-  <artifactId>smlj</artifactId>
+  <artifactId>morel</artifactId>
   <version>0.2.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>smlj</name>
-  <description>Standard ML interpreter, implemented in Java</description>
-  <url>https://github.com/julianhyde/smlj</url>
+  <name>morel</name>
+  <description>Standard ML interpreter, with relational extensions, implemented in Java</description>
+  <url>https://github.com/julianhyde/morel</url>
   <inceptionYear>2019</inceptionYear>
   <organization>
     <name>Julian Hyde</name>
@@ -100,28 +100,28 @@ License.
     <slf4j.version>1.7.25</slf4j.version>
 
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
-    <maven-javadoc-plugin.excludePackageNames>net.hydromatic.sml.parse</maven-javadoc-plugin.excludePackageNames>
+    <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
     <maven-javadoc-plugin.link>https://docs.oracle.com/javase/9/docs/api/</maven-javadoc-plugin.link>
   </properties>
 
   <!-- Environment settings. -->
   <distributionManagement>
     <site>
-      <id>smlj.website</id>
-      <name>smlj web site</name>
-      <url>file:/home/jhyde/web2/smlj</url>
+      <id>morel.website</id>
+      <name>morel web site</name>
+      <url>file:/home/jhyde/web2/morel</url>
     </site>
   </distributionManagement>
 
   <issueManagement>
     <system>github</system>
-    <url>https://github.com/julianhyde/smlj/issues</url>
+    <url>https://github.com/julianhyde/morel/issues</url>
   </issueManagement>
 
   <scm>
-    <connection>scm:git:git://github.com/julianhyde/smlj.git</connection>
-    <developerConnection>scm:git:git@github.com:julianhyde/smlj.git</developerConnection>
-    <url>scm:git:git://github.com/julianhyde/smlj.git</url>
+    <connection>scm:git:git://github.com/julianhyde/morel.git</connection>
+    <developerConnection>scm:git:git@github.com:julianhyde/morel.git</developerConnection>
+    <url>scm:git:git://github.com/julianhyde/morel.git</url>
     <tag>HEAD</tag>
   </scm>
 
@@ -366,7 +366,7 @@ License.
             </goals>
             <configuration>
               <includes>
-                <include>**/SmlParser.jj</include>
+                <include>**/MorelParser.jj</include>
               </includes>
               <lookAhead>1</lookAhead>
               <isStatic>false</isStatic>
