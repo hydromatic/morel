@@ -33,8 +33,9 @@ esac
 # (To force rebuild, remove target/classpath.txt, or just "mvn clean".)
 cd $(dirname $0)
 if [ ! -f target/classpath.txt ]; then
-    mvn dependency:build-classpath -Dmdep.outputFile=target/classpath.txt \
-        compile
+    mvn -DskipTests \
+        dependency:build-classpath -Dmdep.outputFile=target/classpath.txt \
+        compile test
 fi
 
 CP="target/classes:\
