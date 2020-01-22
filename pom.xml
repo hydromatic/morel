@@ -193,6 +193,7 @@ License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${maven-javadoc-plugin.version}</version>
         <!-- This is the configuration used by "mvn javadoc:javadoc". It is
              configured strict, so that it shows errors such as broken links in
              javadoc on private methods. The configuration for "mvn site" is
