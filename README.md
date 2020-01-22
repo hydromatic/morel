@@ -125,6 +125,21 @@ Bugs:
 * Runtime should throw when divide by zero
 * Validator should give good user error when it cannot type an expression
 
+## Postfix labels
+
+As an extension to Standard ML, Morel allows '.' for field references.
+Thus `e.deptno` is equivalent to `#deptno e`.
+
+(Postfix labels are implemented as syntactic sugar; both expressions
+become an application of label `#deptno` to expression `e`.)
+
+Because '.' is left-associative, it is a more convenient syntax for
+chained references. In the standard syntax, `e.address.zipcode` would
+be written `#zipcode (#address e)`.
+
+The following relational examples use postfix labels, but the syntax
+is available in any Morel expression.
+
 ## Relational extensions
 
 The `from` expression (and associated `as`, `where` and `yield` keywords)
@@ -150,7 +165,7 @@ val depts =
 the expression
 
 ```
-from e in emps where (#deptno e = 30) yield (#id e)
+from e in emps where e.deptno = 30 yield e.id
 ```
 
 is equivalent to standard ML
@@ -176,8 +191,8 @@ a join or a cartesian product:
 
 ```
 from e in emps, d in depts
-  where (#deptno e) = (#deptno d)
-  yield {id = (#id e), deptno = (#deptno e), ename = (#name e), dname = (#name d)};
+  where e.deptno = d.deptno
+  yield {id = e.id, deptno = e.deptno, ename = e.name, dname = d.name};
 ```
 
 As in any ML expression, you can define functions within a `from` expression,
@@ -190,10 +205,10 @@ let
     | in_ e (h :: t) = e = h orelse (in_ e t)
 in
   from e in emps
-  where in_ (#deptno e) (from d in depts
-                where (#name d) = "Engineering"
-                yield (#deptno d))
-  yield (#name e)
+  where in_ e.deptno (from d in depts
+                where d.name = "Engineering"
+                yield d.deptno)
+  yield e.name
 end
 
 let
@@ -202,9 +217,9 @@ let
 in
   from e in emps
   where exists (from d in depts
-                where (#deptno d) = (#deptno e)
-                andalso (#name d) = "Engineering")
-  yield (#name e)
+                where d.deptno = e.deptno
+                andalso d.name = "Engineering")
+  yield e.name
 end
 ```
 

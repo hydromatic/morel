@@ -418,8 +418,12 @@ Match match() :
 
 /** Parses an expression.
  *
- * <p>8 is the highest level of precedence. The full list is as follows:
+ * <p>8 is the highest level of precedence in standard ML,
+ and the '.field' extension is at level 9.
+ The full list is as follows:
+ *
  * <ul>
+ * <li>infix 9 {@code .}
  * <li>infix 8 (application)
  * <li>infix 7 {@code * / div mod}
  * <li>infix 6 {@code + - ^}
@@ -429,21 +433,39 @@ Match match() :
  * <li>infix 0 {@code before}
  * </ul>
  */
+Exp expression9() :
+{
+  Exp e;
+  Id id;
+}
+{
+  e = atom()
+  (
+    <DOT> id = identifier() {
+      final Exp s = ast.recordSelector(pos(), id.name);
+      e = ast.apply(s, e);
+    }
+  )*
+  { return e; }
+}
+
+/** Parses an expression of precedence level 8 (function application). */
 Exp expression8() :
 {
   Exp e;
   Exp e2;
 }
 {
-  e = atom()
+  e = expression9()
   (
-    e2 = atom() {
+    e2 = expression9() {
       e = ast.apply(e, e2);
     }
   )*
   { return e; }
 }
 
+/** Parses an expression of precedence level 7 (*, /, div, mod). */
 Exp expression7() :
 {
   Exp e;

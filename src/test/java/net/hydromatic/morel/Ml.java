@@ -139,6 +139,17 @@ class Ml {
     return assertParse(ml.replaceAll("[\n ]+", " "));
   }
 
+  Ml assertParseThrows(Matcher<Throwable> matcher) {
+    try {
+      final AstNode statement =
+          new MorelParserImpl(new StringReader(ml)).statement();
+      fail("expected error, got " + statement);
+    } catch (Throwable e) {
+      assertThat(e, matcher);
+    }
+    return this;
+  }
+
   private Ml withValidate(BiConsumer<Ast.Exp, TypeResolver.TypeMap> action) {
     return withParser(parser -> {
       try {

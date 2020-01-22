@@ -24,6 +24,7 @@ import com.google.common.collect.Sets;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.TypeVar;
 
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -46,6 +47,7 @@ import java.util.Set;
 import static net.hydromatic.morel.Ml.assertError;
 import static net.hydromatic.morel.Ml.ml;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -270,6 +272,37 @@ public class MainTest {
     ml("(* 1 +\n"
         + "2 +\n"
         + "3 *) 5 + 6").assertParse("5 + 6");
+  }
+
+  /** Tests that the syntactic sugar "exp.field" is de-sugared to
+   * "#field exp". */
+  @Test public void testParseDot() {
+    ml("a . b")
+        .assertParse("#b a");
+    ml("a . b . c")
+        .assertParse("#c (#b a)");
+    ml("a . b + c . d")
+        .assertParse("#b a + #d c");
+    ml("a.b+c.d")
+        .assertParse("#b a + #d c");
+    ml("(a.b+c.d*e.f.g).h")
+        .assertParse("#h (#b a + #d c * #g (#f e))");
+    ml("a b")
+        .assertParse("a b");
+    ml("a b.c")
+        .assertParse("a (#c b)");
+    ml("a.b c.d e.f")
+        .assertParse("#b a (#d c) (#f e)");
+    ml("(a.b) (c.d) (e.f)")
+        .assertParse("#b a (#d c) (#f e)");
+    ml("(a.(b (c.d) (e.f))")
+        .assertParseThrows(
+            throwsA(ParseException.class,
+                containsString("Encountered \"(\" at line 1, column 4.")));
+    ml("(a.b c.(d (e.f)))")
+        .assertParseThrows(
+            throwsA(ParseException.class,
+                containsString("Encountered \"(\" at line 1, column 8.")));
   }
 
   /** Tests the name of {@link TypeVar}. */
@@ -1230,6 +1263,22 @@ public class MainTest {
         + "  where #deptno e = #deptno d\n"
         + "  andalso #empno e >= 7900\n"
         + "  yield {empno = #empno e, dname = #dname d}\n";
+    ml(ml)
+        .withBinding("scott", DataSet.SCOTT.foreignValue())
+        .assertType("{dname:string, empno:int} list")
+        .assertEval(
+            is(
+                list(list("SALES", 7900), list("RESEARCH", 7902),
+                    list("ACCOUNTING", 7934))));
+  }
+
+  /** As {@link #testScottJoin2()} but using dot notation ('e.field' rather
+   * than '#field e'). */
+  @Test public void testScottJoin2Dot() {
+    final String ml = "from e in scott.emp, d in scott.dept\n"
+        + "  where e.deptno = d.deptno\n"
+        + "  andalso e.empno >= 7900\n"
+        + "  yield {empno = e.empno, dname = d.dname}\n";
     ml(ml)
         .withBinding("scott", DataSet.SCOTT.foreignValue())
         .assertType("{dname:string, empno:int} list")
