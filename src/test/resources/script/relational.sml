@@ -59,6 +59,8 @@ from e in emps yield {deptno = #deptno e, one = 1};
 
 from e in emps yield {deptno = e.deptno, one = 1};
 
+from e in emps yield {e.deptno, one = 1};
+
 from e in emps yield ((#id e) + (#deptno e));
 
 from e in emps yield (e.id + e.deptno);
@@ -112,6 +114,11 @@ from d in depts, i in integers;
 from e in emps, d in depts
   where e.deptno = d.deptno
   yield {id = e.id, deptno = e.deptno, ename = e.name, dname = d.name};
+
+(*) as above, using abbreviated record syntax
+from e in emps, d in depts
+  where e.deptno = d.deptno
+  yield {e.id, e.deptno, ename = e.name, dname = d.name};
 
 (*) exists (defining the "exists" function ourselves)
 (*) and correlated sub-query
@@ -230,7 +237,7 @@ group (#deptno e) as deptno
   compute sum of e.id as sumId,
           count of e as count
   as g
-yield {deptno = (#deptno g), avgId = (#sumId g) / (#count g)}
+yield {(#deptno g), avgId = (#sumId g) / (#count g)}
 *)
 
 (*) End relational.sml

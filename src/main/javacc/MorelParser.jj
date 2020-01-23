@@ -711,8 +711,14 @@ void recordExp(Map/*<String, Exp>*/ map) :
   final Ast.Exp exp;
 }
 {
+  LOOKAHEAD(2)
   ( <NATURAL_LITERAL> | <IDENTIFIER> ) { id = token.image; }
   <EQ> exp = expression() { map.put(id, exp); }
+|
+  exp = expression() {
+    final String label = ast.implicitLabel(exp);
+    map.put(label, exp);
+  }
 }
 
 /** Parses a value declaration, and adds it to a list. */

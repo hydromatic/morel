@@ -25,6 +25,21 @@ val it = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>} :
 #dept scott;
 val it = <relation> : {deptno:int, dname:string, loc:string} list
 
+scott.dept;
+val it = <relation> : {deptno:int, dname:string, loc:string} list
+
+from d in scott.dept;
+val it =
+  [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+   {deptno=20,dname="RESEARCH",loc="DALLAS"},
+   {deptno=30,dname="SALES",loc="CHICAGO"},
+   {deptno=40,dname="OPERATIONS",loc="BOSTON"}] : {deptno:int, dname:string, loc:string} list
+
+from d in scott.dept yield {d.dname, d.loc};
+val it =
+  [{dname="ACCOUNTING",loc="NEW YORK"},{dname="RESEARCH",loc="DALLAS"},
+   {dname="SALES",loc="CHICAGO"},{dname="OPERATIONS",loc="BOSTON"}] : {dname:string, loc:string} list
+
 foodmart;
 val it =
   {account=<relation>,agg_c_10_sales_fact_1997=<relation>,agg_c_14_sales_fact_1997=

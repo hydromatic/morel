@@ -99,6 +99,10 @@ from e in emps yield {deptno = e.deptno, one = 1};
 val it = [{deptno=10,one=1},{deptno=20,one=1},{deptno=30,one=1},{deptno=30,one=1}] : {deptno:int, one:int} list
 
 
+from e in emps yield {e.deptno, one = 1};
+val it = [{deptno=10,one=1},{deptno=20,one=1},{deptno=30,one=1},{deptno=30,one=1}] : {deptno:int, one:int} list
+
+
 from e in emps yield ((#id e) + (#deptno e));
 val it = [110,121,132,133] : int list
 
@@ -190,6 +194,17 @@ val it =
 from e in emps, d in depts
   where e.deptno = d.deptno
   yield {id = e.id, deptno = e.deptno, ename = e.name, dname = d.name};
+val it =
+  [{deptno=10,dname="Sales",ename="Fred",id=100},
+   {deptno=20,dname="HR",ename="Velma",id=101},
+   {deptno=30,dname="Engineering",ename="Shaggy",id=102},
+   {deptno=30,dname="Engineering",ename="Scooby",id=103}] : {deptno:int, dname:string, ename:string, id:int} list
+
+
+(*) as above, using abbreviated record syntax
+from e in emps, d in depts
+  where e.deptno = d.deptno
+  yield {e.id, e.deptno, ename = e.name, dname = d.name};
 val it =
   [{deptno=10,dname="Sales",ename="Fred",id=100},
    {deptno=20,dname="HR",ename="Velma",id=101},

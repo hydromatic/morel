@@ -125,9 +125,17 @@ Bugs:
 * Runtime should throw when divide by zero
 * Validator should give good user error when it cannot type an expression
 
-## Postfix labels
+## Extensions
 
-As an extension to Standard ML, Morel allows '.' for field references.
+Morel has a few extensions to Standard ML: postfix labels,
+implicit labels in record expressions, and relational extensions.
+Postfix labels and implicit labels are intended to make relational
+expressions more concise and more similar to SQL but they can be used
+anywhere in Morel, not just in relational expressions.
+
+### Postfix labels
+
+Morel allows '.' for field references.
 Thus `e.deptno` is equivalent to `#deptno e`.
 
 (Postfix labels are implemented as syntactic sugar; both expressions
@@ -137,12 +145,24 @@ Because '.' is left-associative, it is a more convenient syntax for
 chained references. In the standard syntax, `e.address.zipcode` would
 be written `#zipcode (#address e)`.
 
-The following relational examples use postfix labels, but the syntax
-is available in any Morel expression.
+### Implicit labels in record expressions
 
-## Relational extensions
+In standard ML, a record expression is of the form
+`{label1 = exp1, label2 = exp2, ...}`; in Morel, you can omit `label =`
+if the expression is an identifier, label application, or field reference.
 
-The `from` expression (and associated `as`, `where` and `yield` keywords)
+Thus
+```
+{#deptno e, e.name, d}
+```
+is short-hand for
+```
+{deptno = #deptno e, name = e.name, d = d}
+```
+
+### Relational extensions
+
+The `from` expression (and associated `in`, `where` and `yield` keywords)
 is a language extension to support relational algebra.
 It iterates over a list and generates another list.
 
@@ -192,7 +212,7 @@ a join or a cartesian product:
 ```
 from e in emps, d in depts
   where e.deptno = d.deptno
-  yield {id = e.id, deptno = e.deptno, ename = e.name, dname = d.name};
+  yield {e.id, e.deptno, ename = e.name, dname = d.name};
 ```
 
 As in any ML expression, you can define functions within a `from` expression,

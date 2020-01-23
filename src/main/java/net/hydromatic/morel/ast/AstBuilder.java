@@ -39,6 +39,21 @@ public enum AstBuilder {
   // CHECKSTYLE: IGNORE 1
   ast;
 
+  public String implicitLabel(Ast.Exp e) {
+    if (e instanceof Ast.Apply) {
+      final Ast.Apply apply = (Ast.Apply) e;
+      if (apply.fn instanceof Ast.RecordSelector) {
+        final Ast.RecordSelector selector = (Ast.RecordSelector) apply.fn;
+        return selector.name;
+      }
+    }
+    if (e instanceof Ast.Id) {
+      return ((Ast.Id) e).name;
+    }
+    throw new IllegalArgumentException("cannot derive label for expression "
+        + e);
+  }
+
   /** Creates a call to an infix operator. */
   private Ast.InfixCall infix(Op op, Ast.Exp a0, Ast.Exp a1) {
     return new Ast.InfixCall(a0.pos.plus(a1.pos), op, a0, a1);

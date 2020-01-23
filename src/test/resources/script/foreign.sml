@@ -21,6 +21,9 @@
 
 scott;
 #dept scott;
+scott.dept;
+from d in scott.dept;
+from d in scott.dept yield {d.dname, d.loc};
 foodmart;
 #days foodmart;
 

@@ -305,6 +305,25 @@ public class MainTest {
                 containsString("Encountered \"(\" at line 1, column 8.")));
   }
 
+  /** Tests that the abbreviated record syntax "{a, e.b, #c e, d = e}"
+   * is expanded to "{a = a, b = e.b, c = #c e, d = e}". */
+  @Test public void testParseAbbreviatedRecord() {
+    ml("{a, e.b, #c e, #d (e + 1), e = f + g}")
+        .assertParse("{a = a, b = #b e, c = #c e, d = #d (e + 1), e = f + g}");
+    ml("{v = a, w = e.b, x = #c e, y = #d (e + 1), z = (#f 2)}")
+        .assertParse("{v = a, w = #b e, x = #c e, y = #d (e + 1), z = #f 2}");
+    ml("{w = a = b + c, a = b + c}")
+        .assertParse("{a = b + c, w = a = b + c}");
+    ml("{1}")
+        .assertParseThrows(
+            throwsA(IllegalArgumentException.class,
+                is("cannot derive label for expression 1")));
+    ml("{a, b + c}")
+        .assertParseThrows(
+            throwsA(IllegalArgumentException.class,
+                is("cannot derive label for expression b + c")));
+  }
+
   /** Tests the name of {@link TypeVar}. */
   @Test public void testTypeVarName() {
     assertError(() -> new TypeVar(-1).description(),
