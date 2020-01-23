@@ -20,6 +20,7 @@ package net.hydromatic.morel;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import net.hydromatic.morel.ast.Ast;
@@ -58,6 +59,7 @@ import static org.junit.Assert.assertThat;
  */
 public class MainTest {
   /** Matches a literal by value. */
+  @SuppressWarnings("rawtypes")
   private static Matcher<Ast.Literal> isLiteral(Comparable comparable) {
     return new TypeSafeMatcher<Ast.Literal>() {
       protected boolean matchesSafely(Ast.Literal literal) {
@@ -91,11 +93,26 @@ public class MainTest {
     final Set<E> expectedSet = Sets.newHashSet(elements);
     return new TypeSafeMatcher<Iterable<E>>() {
       protected boolean matchesSafely(Iterable<E> item) {
+        //noinspection rawtypes
         return Sets.newHashSet((Iterable) item).equals(expectedSet);
       }
 
       public void describeTo(Description description) {
         description.appendText("equalsUnordered").appendValue(expectedSet);
+      }
+    };
+  }
+
+  @SafeVarargs
+  private static <E> Matcher<Iterable<E>> equalsOrdered(E... elements) {
+    final List<E> expectedList = Arrays.asList(elements);
+    return new TypeSafeMatcher<Iterable<E>>() {
+      protected boolean matchesSafely(Iterable<E> item) {
+        return Lists.newArrayList(item).equals(expectedList);
+      }
+
+      public void describeTo(Description description) {
+        description.appendText("equalsOrdered").appendValue(expectedList);
       }
     };
   }
@@ -651,11 +668,10 @@ public class MainTest {
         .assertEval(is(9));
 
     // tuple
-    ml("(1, 2)").assertEval(is(Arrays.asList(1, 2)));
-    ml("(1, (2, true))")
-        .assertEval(is(Arrays.asList(1, Arrays.asList(2, true))));
+    ml("(1, 2)").assertEval(is(list(1, 2)));
+    ml("(1, (2, true))").assertEval(is(list(1, list(2, true))));
     ml("()").assertEval(is(Collections.emptyList()));
-    ml("(1, 2, 1, 4)").assertEval(is(Arrays.asList(1, 2, 1, 4)));
+    ml("(1, 2, 1, 4)").assertEval(is(list(1, 2, 1, 4)));
   }
 
   @Test public void testLetSequentialDeclarations() {
@@ -789,13 +805,12 @@ public class MainTest {
     ml("{0=1}").assertError(is("label must be positive"));
     ml("{a = 1, b = true}").assertType("{a:int, b:bool}");
     ml("{b = true, a = 1}").assertType("{a:int, b:bool}");
-    ml("{a = 1, b = 2}").assertEval(is(Arrays.asList(1, 2)));
-    ml("{a = true, b = ~2}").assertEval(is(Arrays.asList(true, -2)));
-    ml("{a = true, b = ~2, c = \"c\"}")
-        .assertEval(is(Arrays.asList(true, -2, "c")));
+    ml("{a = 1, b = 2}").assertEval(is(list(1, 2)));
+    ml("{a = true, b = ~2}").assertEval(is(list(true, -2)));
+    ml("{a = true, b = ~2, c = \"c\"}").assertEval(is(list(true, -2, "c")));
     ml("let val ab = {a = true, b = ~2} in #a ab end").assertEval(is(true));
     ml("{a = true, b = {c = 1, d = 2}}")
-        .assertEval(is(Arrays.asList(true, Arrays.asList(1, 2))));
+        .assertEval(is(list(true, list(1, 2))));
     ml("#a {a = 1, b = true}")
         .assertType("int")
         .assertEval(is(1));
@@ -803,8 +818,7 @@ public class MainTest {
         .assertType("bool")
         .assertEval(is(true));
     ml("#b {a = 1, b = 2}").assertEval(is(2));
-    ml("#b {a = 1, b = {x = 3, y = 4}, z = true}")
-        .assertEval(is(Arrays.asList(3, 4)));
+    ml("#b {a = 1, b = {x = 3, y = 4}, z = true}").assertEval(is(list(3, 4)));
     ml("#x (#b {a = 1, b = {x = 3, y = 4}, z = true})").assertEval(is(3));
   }
 
@@ -876,7 +890,7 @@ public class MainTest {
     ml("1 :: []").assertType("int list");
     ml("1 :: 2 :: []")
         .assertType("int list")
-        .assertEval(is(Arrays.asList(1, 2)));
+        .assertEval(is(list(1, 2)));
     ml("fn [] => 0").assertType("'a list -> int");
   }
 
@@ -1132,7 +1146,7 @@ public class MainTest {
         + "in\n"
         + "  from e in emps yield #deptno e\n"
         + "end";
-    ml(ml).assertEval(is(Arrays.asList(10, 20, 30, 30)));
+    ml(ml).assertEvalIter(equalsOrdered(10, 20, 30, 30));
   }
 
   @Test public void testFromYieldExpression() {
@@ -1145,7 +1159,7 @@ public class MainTest {
         + "in\n"
         + "  from e in emps yield (#id e + #deptno e)\n"
         + "end";
-    ml(ml).assertEval(is(Arrays.asList(110, 121, 132, 133)));
+    ml(ml).assertEvalIter(equalsOrdered(110, 121, 132, 133));
   }
 
   @Test public void testFromWhere() {
@@ -1158,7 +1172,7 @@ public class MainTest {
         + "in\n"
         + "  from e in emps where #deptno e = 30 yield #id e\n"
         + "end";
-    ml(ml).assertEval(is(Arrays.asList(102, 103)));
+    ml(ml).assertEvalIter(equalsOrdered(102, 103));
   }
 
   @Test public void testFromNoYield() {
@@ -1169,7 +1183,7 @@ public class MainTest {
         + "in\n"
         + "  from e in emps where #deptno e = 30\n"
         + "end";
-    ml(ml).assertEval(is(Arrays.asList(Arrays.asList(30, 103, "Scooby"))));
+    ml(ml).assertEvalIter(equalsOrdered(list(30, 103, "Scooby")));
   }
 
   @Test public void testFromJoinNoYield() {
@@ -1182,12 +1196,11 @@ public class MainTest {
         + "in\n"
         + "  from e in emps, d in depts where #deptno e = #deptno d\n"
         + "end";
-    final List eRow = Arrays.asList(10, "Sales");
-    final List bRow = Arrays.asList(10, 100, "Fred");
     ml(ml)
         .assertType("{d:{deptno:int, name:string},"
             + " e:{deptno:int, id:int, name:string}} list")
-        .assertEval(is(Collections.singletonList(Arrays.asList(eRow, bRow))));
+        .assertEvalIter(
+            equalsOrdered(list(list(10, "Sales"), list(10, 100, "Fred"))));
   }
 
   @Test public void testFromGroupWithoutCompute() {
@@ -1210,7 +1223,7 @@ public class MainTest {
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
     ml(ml).assertType("{deptno:int} list")
-        .assertEval((Matcher) equalsUnordered(list(10), list(20)));
+        .assertEvalIter(equalsUnordered(list(10), list(20)));
   }
 
   @Test public void testFromGroup() {
@@ -1237,9 +1250,44 @@ public class MainTest {
         + "end";
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
-    //noinspection unchecked
     ml(ml).assertType("{deptno:int, sumId:int} list")
-        .assertEval((Matcher) equalsUnordered(list(10, 2), list(20, 1)));
+        .assertEvalIter(equalsUnordered(list(10, 2), list(20, 1)));
+  }
+
+  /** Tests that Morel throws if there are duplicate names in 'group' or
+   * 'compute' clauses. */
+  @Test public void testGroupDuplicates() {
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "group e.x as a")
+        .assertEvalIter(equalsUnordered(list(0), list(1)));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "group e.x as a, e.x as b")
+        .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "group e.x as a, e.y as a")
+        .assertEvalError(
+            // TODO: better error; dup column 'a'
+            throwsA(AssertionError.class, nullValue()));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "group e.x as a\n"
+        + "compute sum of e.y as b")
+        .assertEvalIter(equalsUnordered(list(0, 1), list(1, 2)));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "group e.x as a\n"
+        + "compute sum of e.y as a")
+        .assertEvalError(
+            // TODO: better error; dup column 'a'
+            throwsA(AssertionError.class, nullValue()));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "group e.x as a\n"
+        + "compute sum of e.y as b, sum of e.x as c")
+        .assertEvalIter(equalsUnordered(list(0, 1, 1), list(1, 2, 2)));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "group e.x as a\n"
+        + "compute sum of e.y as c, sum of e.x as c")
+        .assertEvalError(
+            // TODO: better error; dup column 'c'
+            throwsA(AssertionError.class, nullValue()));
   }
 
   /** Tests a program that uses an external collection from the "scott" JDBC
@@ -1253,8 +1301,9 @@ public class MainTest {
     ml(ml)
         .withBinding("scott", DataSet.SCOTT.foreignValue())
         .assertType("int list")
-        .assertEval(
-            is(list(20, 30, 30, 20, 30, 30, 10, 20, 10, 30, 20, 30, 20, 10)));
+        .assertEvalIter(
+            equalsOrdered(20, 30, 30, 20, 30, 30, 10, 20, 10, 30, 20, 30, 20,
+                10));
   }
 
   @Test public void testScottJoin() {
@@ -1270,10 +1319,9 @@ public class MainTest {
     ml(ml)
         .withBinding("scott", DataSet.SCOTT.foreignValue())
         .assertType("{dname:string, empno:int} list")
-        .assertEval(
-            is(
-                list(list("SALES", 7900), list("RESEARCH", 7902),
-                    list("ACCOUNTING", 7934))));
+        .assertEvalIter(
+            equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
+                list("ACCOUNTING", 7934)));
   }
 
   /** As {@link #testScottJoin()} but without intermediate variables. */
@@ -1285,10 +1333,9 @@ public class MainTest {
     ml(ml)
         .withBinding("scott", DataSet.SCOTT.foreignValue())
         .assertType("{dname:string, empno:int} list")
-        .assertEval(
-            is(
-                list(list("SALES", 7900), list("RESEARCH", 7902),
-                    list("ACCOUNTING", 7934))));
+        .assertEvalIter(
+            equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
+                list("ACCOUNTING", 7934)));
   }
 
   /** As {@link #testScottJoin2()} but using dot notation ('e.field' rather
@@ -1301,10 +1348,9 @@ public class MainTest {
     ml(ml)
         .withBinding("scott", DataSet.SCOTT.foreignValue())
         .assertType("{dname:string, empno:int} list")
-        .assertEval(
-            is(
-                list(list("SALES", 7900), list("RESEARCH", 7902),
-                    list("ACCOUNTING", 7934))));
+        .assertEvalIter(
+            equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
+                list("ACCOUNTING", 7934)));
   }
 
   @Test public void testError() {

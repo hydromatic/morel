@@ -182,12 +182,6 @@ group e.deptno as deptno
   compute sum of e.id as sumId,
           count of e as count;
 
-(*
-val it =
-  [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
-   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
-*)
-
 (*) 'group' with no aggregates
 from e in emps
 group e.deptno as deptno;
@@ -202,42 +196,42 @@ from e in emps
 where e.deptno < 30
 group e.deptno as deptno
   compute sum of e.id as sumId,
-          min of e.id + e.deptno as minIdPlusDeptno;
+          sum of e.id + e.deptno as sumIdPlusDeptno;
 val it = [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"}] : {deptno:int, id:int, name:string} list
 *)
 
 (*) 'group' with join
-(*
 from e in emps, d in depts
 where e.deptno = d.deptno
 group e.deptno as deptno,
- e.name as dname
+ e.name as ename,
+ d.name as dname
 compute sum of e.id as sumId;
-val it =
-  [{d={deptno=10,name="Sales"},e={deptno=10,id=100,name="Fred"}},
-   {d={deptno=20,name="HR"},e={deptno=20,id=101,name="Velma"}},
-   {d={deptno=30,name="Engineering"},e={deptno=30,id=102,name="Shaggy"}},
-   {d={deptno=30,name="Engineering"},e={deptno=30,id=103,name="Scooby"}}] : {d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}} list
-*)
 
 (*) empty 'group'
-(*
 from e in emps
 group compute sum of e.id as sumId;
-val it =
-  [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
-   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
-*)
 
 (*) Should we allow 'yield' following 'group'? Here's a possible syntax.
 (*) We need to introduce a variable name, but "as g" syntax isn't great.
 (*
-from emps as e
-group (#deptno e) as deptno
+from e in emps
+group e.deptno as deptno
   compute sum of e.id as sumId,
           count of e as count
   as g
-yield {(#deptno g), avgId = (#sumId g) / (#count g)}
+yield {g.deptno, avgId = g.sumId / g.count}
 *)
+
+(*) Or just use a sub-from:
+from g in (
+  from e in emps
+  group e.deptno as deptno
+    compute sum of e.id as sumId,
+            count of e as count)
+yield {g.deptno, avgId = g.sumId / g.count};
+
+(*) dummy
+from message in ["the end"];
 
 (*) End relational.sml

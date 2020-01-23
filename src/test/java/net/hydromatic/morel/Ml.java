@@ -196,6 +196,10 @@ class Ml {
     });
   }
 
+  <E> Ml assertEvalIter(Matcher<Iterable<E>> matcher) {
+    return assertEval((Matcher) matcher);
+  }
+
   Ml assertEval(Matcher<Object> matcher) {
     try {
       final Ast.Exp e = new MorelParserImpl(new StringReader(ml)).expression();
