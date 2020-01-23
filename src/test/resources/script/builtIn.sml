@@ -301,4 +301,8 @@ List.collate (fn (x,y) => if x < y then LESS else if x = y then EQUAL else GREAT
 val it = LESS : order
  *)
 
+(*) val env : unit -> string list
+Sys_env;
+Sys_env ();
+
 (*) End builtIn.sml

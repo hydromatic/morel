@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 
 /** Helpers for {@link Code}. */
 public abstract class Codes {
@@ -752,6 +753,12 @@ public abstract class Codes {
     return sum;
   };
 
+  /** @see BuiltIn#SYS_ENV */
+  private static final Applicable SYS_ENV = (env, argValue) -> {
+    assert argValue instanceof Unit;
+    return new ArrayList<>(new TreeSet<>(env.valueMap.keySet()));
+  };
+
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
     final EvalEnv evalEnv = new EvalEnv();
@@ -871,6 +878,7 @@ public abstract class Codes {
           .put(BuiltIn.LIST_COLLATE, LIST_COLLATE)
           .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
+          .put(BuiltIn.SYS_ENV, SYS_ENV)
           .build();
 
   /** A code that evaluates expressions and creates a tuple with the results.
