@@ -30,6 +30,10 @@ public class Unit extends AbstractList implements Comparable<Unit> {
 
   private Unit() {}
 
+  @Override public String toString() {
+    return "()";
+  }
+
   public Object get(int index) {
     throw new IndexOutOfBoundsException();
   }
