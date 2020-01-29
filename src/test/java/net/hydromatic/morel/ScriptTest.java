@@ -18,8 +18,11 @@
  */
 package net.hydromatic.morel;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.PatternFilenameFilter;
+
+import net.hydromatic.morel.foreign.ForeignValue;
 
 import org.incava.diff.Diff;
 import org.incava.diff.Difference;
@@ -54,6 +57,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.fail;
 
@@ -145,9 +149,12 @@ public class ScriptTest {
     }
     Utils.discard(outFile.getParentFile().mkdirs());
     final String[] args = {"--echo"};
+    final boolean loadDictionary = inFile.getPath().contains("foreign.sml");
+    final Map<String, ForeignValue> dictionary =
+        loadDictionary ? new DataSet.Dictionary() : ImmutableMap.of();
     try (Reader reader = Utils.reader(inFile);
          Writer writer = Utils.printWriter(outFile)) {
-      new Main(args, reader, writer, new DataSet.Dictionary()).run();
+      new Main(args, reader, writer, dictionary).run();
     }
     final File refFile =
         new File(inFile.getParentFile(), inFile.getName() + ".out");
