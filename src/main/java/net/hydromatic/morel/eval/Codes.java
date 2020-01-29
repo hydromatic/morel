@@ -787,9 +787,11 @@ public abstract class Codes {
       Environment environment) {
     for (Map.Entry<BuiltIn, Object> entry : BUILT_IN_VALUES.entrySet()) {
       BuiltIn key = entry.getKey();
-      environment =
-          environment.bind(key.mlName, key.typeFunction.apply(typeSystem),
-              entry.getValue());
+      final Type type = key.typeFunction.apply(typeSystem);
+      environment = environment.bind(key.mlName, type, entry.getValue());
+      if (key.alias != null) {
+        environment = environment.bind(key.alias, type, entry.getValue());
+      }
     }
     return environment;
   }
