@@ -459,7 +459,7 @@ public enum BuiltIn {
 
   /** Function "Sys.env", aka "env", of type "unit &rarr; string list". */
   SYS_ENV("Sys.env", "env", ts ->
-      ts.fnType(UNIT, ts.listType(STRING)));
+      ts.fnType(UNIT, ts.listType(ts.tupleType(STRING, STRING))));
 
   /** The name as it appears in ML's symbol table. */
   public final String mlName;

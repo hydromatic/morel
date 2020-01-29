@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-/** Evaluation environment.
+/** Environment for validation/compilation.
  *
  * <p>Every environment is immutable; when you call {@link #bind}, a new
  * environment is created that inherits from the previous environment.

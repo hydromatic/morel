@@ -252,6 +252,12 @@ public class Compiler {
     if (fn instanceof Ast.Id) {
       final Binding binding = env.getOpt(((Ast.Id) fn).name);
       if (binding != null
+          && binding.value instanceof Macro) {
+        final Ast.Exp e = ((Macro) binding.value).expand(env);
+        final Code code = compile(env, e);
+        return (evalEnv, argValue) -> code.eval(evalEnv);
+      }
+      if (binding != null
           && binding.value instanceof Applicable) {
         return (Applicable) binding.value;
       }
@@ -601,6 +607,7 @@ public class Compiler {
       return element.compareTo(o.element);
     }
   }
+
 }
 
 // End Compiler.java

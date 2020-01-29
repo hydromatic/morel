@@ -30,8 +30,10 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 
 import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
@@ -44,7 +46,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.stream.Collectors;
+
+import static net.hydromatic.morel.ast.AstBuilder.ast;
 
 /** Helpers for {@link Code}. */
 public abstract class Codes {
@@ -781,10 +785,17 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#SYS_ENV */
-  private static final Applicable SYS_ENV = (env, argValue) -> {
-    assert argValue instanceof Unit;
-    return new ArrayList<>(new TreeSet<>(env.valueMap().keySet()));
-  };
+  private static final Macro SYS_ENV = env ->
+      ast.list(Pos.ZERO,
+          env.getValueMap().entrySet().stream()
+              .sorted(Map.Entry.comparingByKey())
+              .map(entry ->
+                  ast.tuple(Pos.ZERO,
+                      ImmutableList.of(
+                          ast.stringLiteral(Pos.ZERO, entry.getKey()),
+                          ast.stringLiteral(Pos.ZERO,
+                              entry.getValue().type.description()))))
+              .collect(Collectors.toList()));
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
     BUILT_IN_VALUES.forEach((key, value) -> {
