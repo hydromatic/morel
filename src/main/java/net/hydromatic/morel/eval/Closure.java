@@ -53,6 +53,10 @@ public class Closure implements Comparable<Closure>, Applicable {
     this.patCodes = Objects.requireNonNull(patCodes);
   }
 
+  @Override public String toString() {
+    return "Closure(evalEnv = " + evalEnv + ", patCodes = " + patCodes + ")";
+  }
+
   public int compareTo(Closure o) {
     return 0;
   }
@@ -78,11 +82,12 @@ public class Closure implements Comparable<Closure>, Applicable {
 
   /** Similar to {@link #bind}, but evaluates an expression first. */
   EvalEnv evalBind(EvalEnv env) {
+    EvalEnv env2 = evalEnv.copy();
     for (Pair<Ast.Pat, Code> patCode : patCodes) {
       final Object argValue = patCode.right.eval(env);
       final Ast.Pat pat = patCode.left;
-      if (bindRecurse(pat, env.valueMap, argValue)) {
-        return env;
+      if (bindRecurse(pat, env2.valueMap, argValue)) {
+        return env2;
       }
     }
     throw new AssertionError("no match");

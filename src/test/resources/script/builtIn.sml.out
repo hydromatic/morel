@@ -642,5 +642,21 @@ val it =
    "String_explode","String_extract","String_implode","String_isPrefix",
    "String_isSubstring","String_isSuffix","String_map","String_maxSize",
    "String_size","String_str","String_sub","String_substring","String_translate",
-   "Sys_env","abs","count","env","false","foodmart","ignore","it","map","not",
-   "scott","sum","true"] : string list
+   "Sys_env","abs","count","env","false","ignore","it","map","not","sum","true"] : string list
+
+
+env;
+val it = fn : unit -> string list
+
+env ();
+val it =
+  ["List_all","List_app","List_at","List_collate","List_concat","List_drop",
+   "List_exists","List_filter","List_find","List_foldl","List_foldr",
+   "List_getItem","List_hd","List_last","List_length","List_map",
+   "List_mapPartial","List_nil","List_nth","List_null","List_partition",
+   "List_rev","List_revAppend","List_tabulate","List_take","List_tl",
+   "Relational_count","Relational_sum","String_concat","String_concatWith",
+   "String_explode","String_extract","String_implode","String_isPrefix",
+   "String_isSubstring","String_isSuffix","String_map","String_maxSize",
+   "String_size","String_str","String_sub","String_substring","String_translate",
+   "Sys_env","abs","count","env","false","ignore","it","map","not","sum","true"] : string list

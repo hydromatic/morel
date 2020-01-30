@@ -19,6 +19,7 @@
 package net.hydromatic.morel.compile;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Op;
@@ -268,16 +269,26 @@ public class Compiler {
   }
 
   private Code compileLet(Environment env, List<Ast.Decl> decls, Ast.Exp e) {
+    final Ast.LetExp letExp = flattenLet(decls, e);
+    return compileLet(env, Iterables.getOnlyElement(letExp.decls), letExp.e);
+  }
+
+  private Code compileLet(Environment env, Ast.Decl decl, Ast.Exp e) {
     final List<Code> varCodes = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
-    compileDecls(env, decls, varCodes, bindings);
-    final Code resultCode = compile(env.bindAll(bindings), e);
+    compileDecl(env, decl, varCodes, bindings, null);
+    Environment env2 = env.bindAll(bindings);
+    final Code resultCode = compile(env2, e);
     return Codes.let(varCodes, resultCode);
   }
 
-  private void compileDecls(Environment env, List<Ast.Decl> decls,
-      List<Code> varCodes, List<Binding> bindings) {
-    decls.forEach(decl -> compileDecl(env, decl, varCodes, bindings, null));
+  private Ast.LetExp flattenLet(List<Ast.Decl> decls, Ast.Exp e) {
+    if (decls.size() == 1) {
+      return ast.let(e.pos, decls, e);
+    } else {
+      return ast.let(e.pos, decls.subList(0, 1),
+          flattenLet(decls.subList(1, decls.size()), e));
+    }
   }
 
   private void compileDecl(Environment env, Ast.Decl decl, List<Code> varCodes,
@@ -314,6 +325,16 @@ public class Compiler {
           bindings.add(
               new Binding(((Ast.IdPat) key).name, typeMap.getType(value),
                   Unit.INSTANCE)));
+    } else {
+      valDecl.valBinds.forEach(valBind ->
+          valBind.pat.visit(pat -> {
+            if (pat instanceof Ast.IdPat) {
+              final Type paramType = typeMap.getType(pat);
+              bindings.add(
+                  new Binding(((Ast.IdPat) pat).name, paramType,
+                      Unit.INSTANCE));
+            }
+          }));
     }
     for (Ast.ValBind valBind : valDecl.valBinds) {
       compileValBind(env, valBind, varCodes, bindings, actions);
@@ -495,10 +516,10 @@ public class Compiler {
           bindings.add(new Binding(idPat.name, paramType, linkCode));
         }
       });
-      code = compile(env.bindAll(newBindings), valBind.e);
+      code = compile(env.bindAll(bindings), valBind.e);
       link(linkCodes, valBind.pat, code);
     } else {
-      code = compile(env.bindAll(newBindings), valBind.e);
+      code = compile(env.bindAll(bindings), valBind.e);
     }
     newBindings.clear();
     final ImmutableList<Pair<Ast.Pat, Code>> patCodes =

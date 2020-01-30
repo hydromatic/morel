@@ -168,16 +168,21 @@ public abstract class Codes {
   }
 
   public static Code let(List<Code> fnCodes, Code argCode) {
-    if (fnCodes.size() == 1) {
+    switch (fnCodes.size()) {
+    case 0:
+      return argCode;
+
+    case 1:
       // Use a more efficient runtime path if the list has only one element.
       // The effect is the same.
-      final Code fnCode = Iterables.getOnlyElement(fnCodes);
+      final Code fnCode0 = Iterables.getOnlyElement(fnCodes);
       return env -> {
-        final Closure fnValue = (Closure) fnCode.eval(env);
+        final Closure fnValue = (Closure) fnCode0.eval(env);
         EvalEnv env2 = fnValue.evalBind(env.copy());
         return argCode.eval(env2);
       };
-    } else {
+
+    default:
       return env -> {
         EvalEnv env2 = env.copy();
         for (Code fnCode : fnCodes) {

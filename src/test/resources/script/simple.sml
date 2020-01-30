@@ -94,4 +94,71 @@ in
   f (g 0)
 end;
 
+(*) Closure
+let
+  fun f x = 1 + x;
+  val x = f 2;
+  fun f y = x + y;
+  val x = 10
+in
+  f x
+end;
+
+(*) As "Closure", but each 'fun' is replaced with a lambda.
+let
+  val f = fn x => 1 + x;
+  val x = f 2;
+  val f = fn y => x + y;
+  val x = 10
+in
+  f x
+end;
+
+(*) As "Closure", but converted to nested 'let' expressions.
+let
+  fun f x = 1 + x
+in
+  let
+    val x = f 2
+  in
+    let
+      fun g y = x + y
+    in
+      let
+        val x = 10
+      in
+        g x
+      end
+    end
+  end
+end;
+
+(*) Similar to "Closure", but a simpler expression.
+let
+  val x = 1;
+  fun f y = x + y;
+  val x = 10;
+in
+  f x
+end;
+
+(*) Similar to "Closure", but the two occurrences of 'x'
+(*) have different data types, so that the bug is more obvious.
+let
+  val x = "abc";
+  fun g y = String_size x + y;
+  val x = 10
+in
+  g x
+end;
+
+(*) As previous, but converting 'fun' to a lambda.
+let
+  val x = "abc";
+  val g = fn y => String_size x + y;
+  val x = 10
+in
+  g x
+end;
+
 (*) End simple.sml

@@ -203,8 +203,8 @@ public class TypeResolver {
         env2 = bindAll(env2, termMap);
         termMap.clear();
       }
-      final Ast.LetExp let2 = let.copy(decls, let.e);
-      deduceType(env2, let2.e, v);
+      final Ast.Exp e2 = deduceType(env2, let.e, v);
+      final Ast.LetExp let2 = let.copy(decls, e2);
       return reg(let2, null, v);
 
     case RECORD_SELECTOR:

@@ -750,25 +750,17 @@ public class MainTest {
     ml(ml).assertEval(is(11));
   }
 
+  /** Tests a closure that uses one variable "x", called in an environment
+   * with a different value of "x" (of a different type, to flush out bugs). */
   @Test public void testClosure() {
     final String ml = "let\n"
-        + "  fun f x = 1 + x;\n"
-        + "  val x = f 2;\n"
-        + "  fun f y = x + y;\n"
+        + "  val x = \"abc\";\n"
+        + "  fun g y = String_size x + y;\n"
         + "  val x = 10\n"
         + "in\n"
-        + " f x\n"
+        + "  g x\n"
         + "end";
     ml(ml).assertEval(is(13));
-
-    final String ml2 = "let\n"
-        + "  val x = 1;\n"
-        + "  fun f y = x + y;\n"
-        + "  val x = 10;\n"
-        + "in\n"
-        + " f x\n"
-        + "end";
-    ml(ml2).assertEval(is(11));
   }
 
   @Test public void testEvalFn() {

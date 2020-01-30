@@ -41,6 +41,10 @@ public class EvalEnv {
     this(new HashMap<>());
   }
 
+  @Override public String toString() {
+    return valueMap.toString();
+  }
+
   Object get(String name) {
     return valueMap.get(name);
   }
