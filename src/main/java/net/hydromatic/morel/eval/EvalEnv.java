@@ -22,37 +22,39 @@ import net.hydromatic.morel.compile.Environment;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 /** Evaluation environment.
  *
  * <p>Whereas {@link Environment} contains both types and values,
  * because it is used for validation/compilation, EvalEnv contains
  * only values. */
-public class EvalEnv {
-  final Map<String, Object> valueMap;
-
-  // must be private - does not copy
-  private EvalEnv(Map<String, Object> valueMap) {
-    this.valueMap = valueMap;
-  }
-
-  /** Creates an empty EvalEnv. */
-  public EvalEnv() {
-    this(new HashMap<>());
-  }
+public abstract class EvalEnv {
 
   @Override public String toString() {
-    return valueMap.toString();
+    return valueMap().toString();
   }
 
-  Object get(String name) {
-    return valueMap.get(name);
+  /** Returns the binding of {@code name} if bound, null if not. */
+  abstract Object getOpt(String name);
+
+  /** Creates an environment that has the same content as this one, plus
+   * the binding (name, value). */
+  public EvalEnv bind(String name, Object value) {
+    return new EvalEnvs.SubEvalEnv(this, name, value);
   }
 
-  /** Returns a mutable copy of this EvalEnv.
-   * Changes to the copy do not affect this EvalEnv. */
-  public EvalEnv copy() {
-    return new EvalEnv(new HashMap<>(valueMap));
+  /** Visits every variable binding in this environment.
+   *
+   * <p>Bindings that are obscured by more recent bindings of the same name
+   * are visited, but after the more obscuring bindings. */
+  abstract void visit(BiConsumer<String, Object> consumer);
+
+  /** Returns a map of the values and bindings. */
+  public final Map<String, Object> valueMap() {
+    final Map<String, Object> valueMap = new HashMap<>();
+    visit(valueMap::putIfAbsent);
+    return valueMap;
   }
 }
 

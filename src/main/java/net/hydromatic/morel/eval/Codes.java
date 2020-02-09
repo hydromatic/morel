@@ -38,6 +38,7 @@ import net.hydromatic.morel.util.MapList;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -164,7 +165,7 @@ public abstract class Codes {
   /** Returns a Code that returns the value of variable "name" in the current
    * environment. */
   public static Code get(String name) {
-    return env -> env.get(name);
+    return env -> env.getOpt(name);
   }
 
   public static Code let(List<Code> fnCodes, Code argCode) {
@@ -178,13 +179,13 @@ public abstract class Codes {
       final Code fnCode0 = Iterables.getOnlyElement(fnCodes);
       return env -> {
         final Closure fnValue = (Closure) fnCode0.eval(env);
-        EvalEnv env2 = fnValue.evalBind(env.copy());
+        EvalEnv env2 = fnValue.evalBind(env);
         return argCode.eval(env2);
       };
 
     default:
       return env -> {
-        EvalEnv env2 = env.copy();
+        EvalEnv env2 = env;
         for (Code fnCode : fnCodes) {
           final Closure fnValue = (Closure) fnCode.eval(env);
           env2 = fnValue.evalBind(env2);
@@ -255,7 +256,7 @@ public abstract class Codes {
           final String name = ids.get(i).name;
           final Iterable iterable = iterables.get(i);
           for (Object o : iterable) {
-            EvalEnv env2 = add(env, name, o);
+            EvalEnv env2 = env.bind(name, o);
             loop(i + 1, iterables, env2, list);
           }
         }
@@ -325,7 +326,7 @@ public abstract class Codes {
           final String name = ids.get(i).name;
           final Iterable iterable = iterables.get(i);
           for (Object o : iterable) {
-            EvalEnv env2 = add(env, name, o);
+            EvalEnv env2 = env.bind(name, o);
             currentValues[i] = o;
             loop(i + 1, iterables, env2, currentValues, map);
           }
@@ -761,30 +762,35 @@ public abstract class Codes {
   /** @see BuiltIn#SYS_ENV */
   private static final Applicable SYS_ENV = (env, argValue) -> {
     assert argValue instanceof Unit;
-    return new ArrayList<>(new TreeSet<>(env.valueMap.keySet()));
+    return new ArrayList<>(new TreeSet<>(env.valueMap().keySet()));
   };
+
+  private static void populateBuiltIns(Map<String, Object> valueMap) {
+    BUILT_IN_VALUES.forEach((key, value) -> {
+      valueMap.put(key.mlName, value);
+      if (key.alias != null) {
+        valueMap.put(key.alias, value);
+      }
+    });
+    assert valueMap.keySet().containsAll(BuiltIn.BY_ML_NAME.keySet())
+        : "no implementation for "
+        + minus(BuiltIn.BY_ML_NAME.keySet(), valueMap.keySet());
+  }
 
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
-    final EvalEnv evalEnv = new EvalEnv();
-    BUILT_IN_VALUES.forEach((key, value) -> {
-      evalEnv.valueMap.put(key.mlName, value);
-      if (key.alias != null) {
-        evalEnv.valueMap.put(key.alias, value);
-      }
-    });
-    assert evalEnv.valueMap.keySet().containsAll(BuiltIn.BY_ML_NAME.keySet())
-        : "no implementation for "
-        + minus(BuiltIn.BY_ML_NAME.keySet(), evalEnv.valueMap.keySet());
-    return evalEnv;
+    final Map<String, Object> map = new HashMap<>();
+    populateBuiltIns(map);
+    return EvalEnvs.copyOf(map);
   }
 
   /** Creates an evaluation environment that contains the bound values from a
    * compilation environment. */
   public static EvalEnv emptyEnvWith(Environment env) {
-    final EvalEnv evalEnv = emptyEnv();
-    env.forEachValue(evalEnv.valueMap::put);
-    return evalEnv;
+    final Map<String, Object> map = new HashMap<>();
+    populateBuiltIns(map);
+    env.forEachValue(map::put);
+    return EvalEnvs.copyOf(map);
   }
 
   /** Creates a compilation environment. */
@@ -799,22 +805,6 @@ public abstract class Codes {
       }
     }
     return environment;
-  }
-
-  private static void add(EvalEnv env, BuiltIn key, Object value) {
-    env.valueMap.put(key.mlName, value);
-    if (key.alias != null) {
-      env.valueMap.put(key.alias, value);
-    }
-  }
-
-  /** Creates an evaluation environment that is the same as a given evaluation
-   * environment, plus one more variable. */
-  public static EvalEnv add(EvalEnv env, String var, Object value) {
-    // Copying the entire table is not very efficient.
-    final EvalEnv env2 = env.copy();
-    env2.valueMap.put(var, value);
-    return env2;
   }
 
   public static Code negate(Code code) {

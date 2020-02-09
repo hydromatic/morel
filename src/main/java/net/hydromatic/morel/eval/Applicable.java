@@ -39,7 +39,7 @@ public interface Applicable {
   default Code asCode() {
     final Ast.Pat pat = ast.idPat(Pos.ZERO, "x");
     final Code code = env -> {
-      final Object argValue = env.get("x");
+      final Object argValue = env.getOpt("x");
       return apply(env, argValue);
     };
     final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
