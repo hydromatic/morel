@@ -235,29 +235,38 @@ public abstract class Codes {
     final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
     return new Code() {
       @Override public Object eval(EvalEnv env) {
-        final List<Iterable> values = new ArrayList<>();
+        final List<Iterable<Object>> values = new ArrayList<>();
+        final List<MutableEvalEnv> mutableEvalEnvs = new ArrayList<>();
         for (Code code : sources.values()) {
-          values.add((Iterable) code.eval(env));
+          final MutableEvalEnv mutableEnv =
+              env.bindMutable(ids.get(values.size()).name);
+          mutableEvalEnvs.add(mutableEnv);
+          env = mutableEnv;
+          //noinspection unchecked
+          values.add((Iterable<Object>) code.eval(env));
         }
-        final List list = new ArrayList();
-        loop(0, values, env, list);
+        final List<Object> list = new ArrayList<>();
+        loop(0, values, mutableEvalEnvs, list);
         return list;
       }
 
       /** Generates the {@code i}th nested loop of a cartesian product of the
        * values in {@code iterables}. */
-      void loop(int i, List<Iterable> iterables, EvalEnv env,
-          List<Object> list) {
-        if (i == iterables.size()) {
-          if ((Boolean) filterCode.eval(env)) {
-            list.add(yieldCode.eval(env));
+      void loop(int i, List<Iterable<Object>> iterables,
+          List<MutableEvalEnv> mutableEvalEnvs, List<Object> list) {
+        final Iterable<Object> iterable = iterables.get(i);
+        final MutableEvalEnv mutableEvalEnv = mutableEvalEnvs.get(i);
+        if (i + 1 == iterables.size()) {
+          for (Object o : iterable) {
+            mutableEvalEnv.set(o);
+            if ((Boolean) filterCode.eval(mutableEvalEnv)) {
+              list.add(yieldCode.eval(mutableEvalEnv));
+            }
           }
         } else {
-          final String name = ids.get(i).name;
-          final Iterable iterable = iterables.get(i);
           for (Object o : iterable) {
-            EvalEnv env2 = env.bind(name, o);
-            loop(i + 1, iterables, env2, list);
+            mutableEvalEnv.set(o);
+            loop(i + 1, iterables, mutableEvalEnvs, list);
           }
         }
       }
@@ -283,13 +292,19 @@ public abstract class Codes {
     }
     return new Code() {
       @Override public Object eval(EvalEnv env) {
-        final List<Iterable> values = new ArrayList<>();
+        final List<Iterable<Object>> values = new ArrayList<>();
+        final List<MutableEvalEnv> mutableEvalEnvs = new ArrayList<>();
         for (Code code : sources.values()) {
-          values.add((Iterable) code.eval(env));
+          final MutableEvalEnv mutableEnv =
+              env.bindMutable(ids.get(values.size()).name);
+          mutableEvalEnvs.add(mutableEnv);
+          env = mutableEnv;
+          //noinspection unchecked
+          values.add((Iterable<Object>) code.eval(env));
         }
         final Object[] currentValues = new Object[sources.size()];
         final ListMultimap<Object, Object> map = ArrayListMultimap.create();
-        loop(0, values, env, currentValues, map);
+        loop(0, values, mutableEvalEnvs, currentValues, map);
 
         final List<List<Object>> list = new ArrayList<>();
         final List<Object> tuple = new ArrayList<>();
@@ -316,19 +331,25 @@ public abstract class Codes {
 
       /** Generates the {@code i}th nested loop of a cartesian product of the
        * values in {@code iterables}. */
-      void loop(int i, List<Iterable> iterables, EvalEnv env,
+      void loop(int i, List<Iterable<Object>> iterables,
+          List<MutableEvalEnv> mutableEvalEnvs,
           Object[] currentValues, Multimap<Object, Object> map) {
-        if (i == iterables.size()) {
-          if ((Boolean) filterCode.eval(env)) {
-            map.put(keyCode.eval(env), ImmutableList.copyOf(currentValues));
+        final Iterable<Object> iterable = iterables.get(i);
+        final MutableEvalEnv mutableEvalEnv = mutableEvalEnvs.get(i);
+        if (i + 1 == iterables.size()) {
+          for (Object o : iterable) {
+            mutableEvalEnv.set(o);
+            if ((Boolean) filterCode.eval(mutableEvalEnv)) {
+              currentValues[i] = o;
+              map.put(keyCode.eval(mutableEvalEnv),
+                  ImmutableList.copyOf(currentValues));
+            }
           }
         } else {
-          final String name = ids.get(i).name;
-          final Iterable iterable = iterables.get(i);
           for (Object o : iterable) {
-            EvalEnv env2 = env.bind(name, o);
+            mutableEvalEnv.set(o);
             currentValues[i] = o;
-            loop(i + 1, iterables, env2, currentValues, map);
+            loop(i + 1, iterables, mutableEvalEnvs, currentValues, map);
           }
         }
       }

@@ -29,33 +29,36 @@ import java.util.function.BiConsumer;
  * <p>Whereas {@link Environment} contains both types and values,
  * because it is used for validation/compilation, EvalEnv contains
  * only values. */
-public abstract class EvalEnv {
-
-  @Override public String toString() {
-    return valueMap().toString();
-  }
+public interface EvalEnv {
 
   /** Returns the binding of {@code name} if bound, null if not. */
-  abstract Object getOpt(String name);
+  Object getOpt(String name);
 
   /** Creates an environment that has the same content as this one, plus
    * the binding (name, value). */
-  public EvalEnv bind(String name, Object value) {
+  default EvalEnv bind(String name, Object value) {
     return new EvalEnvs.SubEvalEnv(this, name, value);
+  }
+
+  /** Creates an evaluation environment that has the same content as this one,
+   * plus a mutable slot. */
+  default MutableEvalEnv bindMutable(String name) {
+    return new EvalEnvs.MutableSubEvalEnv(this, name);
   }
 
   /** Visits every variable binding in this environment.
    *
    * <p>Bindings that are obscured by more recent bindings of the same name
    * are visited, but after the more obscuring bindings. */
-  abstract void visit(BiConsumer<String, Object> consumer);
+  void visit(BiConsumer<String, Object> consumer);
 
   /** Returns a map of the values and bindings. */
-  public final Map<String, Object> valueMap() {
+  default Map<String, Object> valueMap() {
     final Map<String, Object> valueMap = new HashMap<>();
     visit(valueMap::putIfAbsent);
     return valueMap;
   }
+
 }
 
 // End EvalEnv.java

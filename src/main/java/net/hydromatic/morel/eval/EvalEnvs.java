@@ -34,10 +34,10 @@ public class EvalEnvs {
 
   /** Evaluation environment that inherits from a parent environment and adds
    * one binding. */
-  static class SubEvalEnv extends EvalEnv {
+  static class SubEvalEnv implements EvalEnv {
     private final EvalEnv parentEnv;
     private final String name;
-    private final Object value;
+    protected Object value;
 
     SubEvalEnv(EvalEnv parentEnv, String name, Object value) {
       this.parentEnv = parentEnv;
@@ -45,12 +45,16 @@ public class EvalEnvs {
       this.value = value;
     }
 
-    void visit(BiConsumer<String, Object> consumer) {
+    @Override public String toString() {
+      return valueMap().toString();
+    }
+
+    public void visit(BiConsumer<String, Object> consumer) {
       consumer.accept(name, value);
       parentEnv.visit(consumer);
     }
 
-    Object getOpt(String name) {
+    public Object getOpt(String name) {
       for (SubEvalEnv e = this;;) {
         if (name.equals(e.name)) {
           return e.value;
@@ -64,19 +68,34 @@ public class EvalEnvs {
     }
   }
 
+  /** Similar to {@link SubEvalEnv} but mutable. */
+  static class MutableSubEvalEnv extends SubEvalEnv implements MutableEvalEnv {
+    MutableSubEvalEnv(EvalEnv parentEnv, String name) {
+      super(parentEnv, name, null);
+    }
+
+    public void set(Object value) {
+      this.value = value;
+    }
+  }
+
   /** Evaluation environment that reads from a map. */
-  static class MapEvalEnv extends EvalEnv {
+  static class MapEvalEnv implements EvalEnv {
     final Map<String, Object> valueMap;
 
     MapEvalEnv(Map<String, Object> valueMap) {
       this.valueMap = ImmutableMap.copyOf(valueMap);
     }
 
-    Object getOpt(String name) {
+    @Override public String toString() {
+      return valueMap().toString();
+    }
+
+    public Object getOpt(String name) {
       return valueMap.get(name);
     }
 
-    void visit(BiConsumer<String, Object> consumer) {
+    public void visit(BiConsumer<String, Object> consumer) {
       valueMap.forEach(consumer);
     }
   }
