@@ -1257,9 +1257,8 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a, e.y as a")
-        .assertEvalError(
-            // TODO: better error; dup column 'a'
-            throwsA(AssertionError.class, nullValue()));
+        // TODO: should give error; dup column 'a'
+        .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1), list(1, 1)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as b")
@@ -1267,9 +1266,8 @@ public class MainTest {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as a")
-        .assertEvalError(
-            // TODO: better error; dup column 'a'
-            throwsA(AssertionError.class, nullValue()));
+        // TODO: should give error; dup column 'a'
+        .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as b, sum of e.x as c")
@@ -1277,9 +1275,8 @@ public class MainTest {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as c, sum of e.x as c")
-        .assertEvalError(
-            // TODO: better error; dup column 'c'
-            throwsA(AssertionError.class, nullValue()));
+        // TODO: should give error; dup column 'c'
+        .assertEvalIter(equalsUnordered(list(0, 1, 1), list(1, 2, 2)));
   }
 
   /** Tests a program that uses an external collection from the "scott" JDBC

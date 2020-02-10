@@ -363,7 +363,7 @@ public abstract class Codes {
   /** Returns an applicable that returns the {@code slot}th field of a tuple or
    * record. */
   public static Applicable nth(int slot) {
-    assert slot >= 0;
+    assert slot >= 0 : slot;
     return (env, argValue) -> ((List) argValue).get(slot);
   }
 

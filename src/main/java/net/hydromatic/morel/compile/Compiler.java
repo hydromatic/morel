@@ -147,6 +147,7 @@ public class Compiler {
 
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) expression;
+      assignSelector(apply);
       argCode = compile(env, apply.arg);
       final Applicable fnValue = compileApplicable(env, apply.fn);
       if (fnValue != null) {
@@ -243,6 +244,21 @@ public class Compiler {
 
     default:
       throw new AssertionError("op not handled: " + expression.op);
+    }
+  }
+
+  private void assignSelector(Ast.Apply apply) {
+    if (apply.fn instanceof Ast.RecordSelector) {
+      final Ast.RecordSelector selector = (Ast.RecordSelector) apply.fn;
+      if (selector.slot < 0) {
+        final Type argType = typeMap.getType(apply.arg);
+        if (argType instanceof RecordType) {
+          RecordType recordType = (RecordType) argType;
+          selector.slot =
+              Iterables.indexOf(recordType.argNameTypes.keySet(), n ->
+                  Objects.equals(selector.name, n));
+        }
+      }
     }
   }
 

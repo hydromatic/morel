@@ -231,6 +231,20 @@ from g in (
             count of e as count)
 yield {g.deptno, avgId = g.sumId / g.count};
 
+(*) Temporary functions
+let
+  fun abbrev s =
+    if String_size s > 5
+    then (String_substring (s, 0, 3)) ^ "."
+    else s;
+  fun shouldPromote e =
+    e.id < e.deptno * 4
+in
+  from e in emps
+  where shouldPromote e
+  yield {e.id, e.deptno, abbrev_name = abbrev e.name}
+end;
+
 (*) dummy
 from message in ["the end"];
 
