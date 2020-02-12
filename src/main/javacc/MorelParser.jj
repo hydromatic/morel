@@ -615,16 +615,35 @@ Exp expression() :
 List/*<Pair<Exp, Id>>*/ expressionAsCommaList() :
 {
   final List<Pair<Exp, Id>> list = new ArrayList<Pair<Exp, Id>>();
-  Exp e;
-  Id id;
+  Pair<Exp, Id> p;
 }
 {
-  e = expression() <AS> id = identifier() { list.add(Pair.of(e, id)); }
+  p = expressionAs() { list.add(p); }
   (
     <COMMA>
-    e = expression() <AS> id = identifier() { list.add(Pair.of(e, id)); }
+    p = expressionAs() { list.add(p); }
   )*
   { return list; }
+}
+
+/** Expression with optional "as", e.g. "e1 as id1";
+ * "#deptno e" and "e.deptno" are equivalent to "e.deptno as deptno";
+ * "x" is equivalent to "x as x". */
+Pair/*<Exp, Id>*/ expressionAs() :
+{
+  final Exp exp;
+  final Id id;
+}
+{
+  exp = expression()
+  (
+    <AS> id = identifier() { return Pair.of(exp, id); }
+  |
+    {
+      final String label = ast.implicitLabel(exp);
+      return Pair.of(exp, ast.id(exp.pos, label));
+    }
+  )
 }
 
 /** Parses an atomic expression. */

@@ -280,15 +280,30 @@ val it =
    {count=2,deptno=30,sumId=2}] : {count:int, deptno:int, sumId:int} list
 
 
+(*) As previous, without the implied "as deptno" in "group"
+from e in emps
+group e.deptno
+  compute sum of e.id as sumId,
+          count of e as count;
+val it =
+  [{count=1,deptno=20,sumId=1},{count=1,deptno=10,sumId=1},
+   {count=2,deptno=30,sumId=2}] : {count:int, deptno:int, sumId:int} list
+
+
 (*) 'group' with no aggregates
 from e in emps
 group e.deptno as deptno;
 val it = [{deptno=20},{deptno=10},{deptno=30}] : {deptno:int} list
 
 
+from e in emps
+group e.deptno;
+val it = [{deptno=20},{deptno=10},{deptno=30}] : {deptno:int} list
+
+
 (*) composite 'group' with no aggregates
 from e in emps
-group e.deptno as deptno, e.id mod 2 as idMod2;
+group e.deptno, e.id mod 2 as idMod2;
 val it =
   [{deptno=30,idMod2=0},{deptno=30,idMod2=1},{deptno=10,idMod2=0},
    {deptno=20,idMod2=1}] : {deptno:int, idMod2:int} list
@@ -307,7 +322,7 @@ val it = [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"}] : {dep
 (*) 'group' with join
 from e in emps, d in depts
 where e.deptno = d.deptno
-group e.deptno as deptno,
+group e.deptno,
  e.name as ename,
  d.name as dname
 compute sum of e.id as sumId;
@@ -328,7 +343,7 @@ val it = [{sumId=4}] : {sumId:int} list
 (*) We need to introduce a variable name, but "as g" syntax isn't great.
 (*
 from e in emps
-group e.deptno as deptno
+group e.deptno
   compute sum of e.id as sumId,
           count of e as count
   as g
@@ -338,7 +353,7 @@ yield {g.deptno, avgId = g.sumId / g.count}
 (*) Or just use a sub-from:
 from g in (
   from e in emps
-  group e.deptno as deptno
+  group e.deptno
     compute sum of e.id as sumId,
             count of e as count)
 yield {g.deptno, avgId = g.sumId / g.count};

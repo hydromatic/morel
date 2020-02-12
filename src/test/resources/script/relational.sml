@@ -182,13 +182,22 @@ group e.deptno as deptno
   compute sum of e.id as sumId,
           count of e as count;
 
+(*) As previous, without the implied "as deptno" in "group"
+from e in emps
+group e.deptno
+  compute sum of e.id as sumId,
+          count of e as count;
+
 (*) 'group' with no aggregates
 from e in emps
 group e.deptno as deptno;
 
+from e in emps
+group e.deptno;
+
 (*) composite 'group' with no aggregates
 from e in emps
-group e.deptno as deptno, e.id mod 2 as idMod2;
+group e.deptno, e.id mod 2 as idMod2;
 
 (*) 'group' with 'where' and complex argument to 'sum'
 (*
@@ -203,7 +212,7 @@ val it = [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"}] : {dep
 (*) 'group' with join
 from e in emps, d in depts
 where e.deptno = d.deptno
-group e.deptno as deptno,
+group e.deptno,
  e.name as ename,
  d.name as dname
 compute sum of e.id as sumId;
@@ -216,7 +225,7 @@ group compute sum of e.id as sumId;
 (*) We need to introduce a variable name, but "as g" syntax isn't great.
 (*
 from e in emps
-group e.deptno as deptno
+group e.deptno
   compute sum of e.id as sumId,
           count of e as count
   as g
@@ -226,7 +235,7 @@ yield {g.deptno, avgId = g.sumId / g.count}
 (*) Or just use a sub-from:
 from g in (
   from e in emps
-  group e.deptno as deptno
+  group e.deptno
     compute sum of e.id as sumId,
             count of e as count)
 yield {g.deptno, avgId = g.sumId / g.count};

@@ -1202,7 +1202,7 @@ public class MainTest {
         + "     {id = 101, name = \"Velma\", deptno = 20},\n"
         + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
         + "in\n"
-        + "  from e in emps group #deptno e as deptno\n"
+        + "  from e in emps group #deptno e\n"
         + "end";
     final String expected = "let val emps = "
         + "[{deptno = 10, id = 100, name = \"Fred\"},"
@@ -1227,7 +1227,7 @@ public class MainTest {
         + "  fun sum [] = 0 | sum (h::t) = h + (sum t)\n"
         + "in\n"
         + "  from e in emps\n"
-        + "    group #deptno e as deptno\n"
+        + "    group #deptno e\n"
         + "    compute sum of #id e as sumId\n"
         + "end";
     final String expected = "let val emps = "
@@ -1244,6 +1244,24 @@ public class MainTest {
         .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
     ml(ml).assertType("{deptno:int, sumId:int} list")
         .assertEvalIter(equalsUnordered(list(10, 2), list(20, 1)));
+  }
+
+  @Test public void testGroupAs() {
+    final String ml0 = "from e in emp\n"
+        + "group e.deptno as deptno";
+    final String ml1 = "from e in emp\n"
+        + "group e.deptno";
+    final String ml2 = "from e in emp\n"
+        + "group #deptno e";
+    final String expected = "from e in emp group #deptno e as deptno";
+    ml(ml0).assertParse(expected);
+    ml(ml1).assertParse(expected);
+    ml(ml2).assertParse(expected);
+
+    final String ml3 = "from e in emp\n"
+        + "group e, f + e.g as h";
+    final String expected3 = "from e in emp group e as e, f + #g e as h";
+    ml(ml3).assertParse(expected3);
   }
 
   /** Tests that Morel throws if there are duplicate names in 'group' or
