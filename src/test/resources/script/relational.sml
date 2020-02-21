@@ -221,6 +221,16 @@ compute sum of e.id as sumId;
 from e in emps
 group compute sum of e.id as sumId;
 
+(*) user-defined aggregate function
+let
+  fun siz [] = 0
+    | siz (ht :: tl) = 1 + (siz tl)
+in
+  from e in emps
+  group e.deptno as deptno
+  compute siz of e.id as size
+end;
+
 (*) Should we allow 'yield' following 'group'? Here's a possible syntax.
 (*) We need to introduce a variable name, but "as g" syntax isn't great.
 (*

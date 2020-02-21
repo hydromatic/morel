@@ -339,6 +339,18 @@ group compute sum of e.id as sumId;
 val it = [{sumId=4}] : {sumId:int} list
 
 
+(*) user-defined aggregate function
+let
+  fun siz [] = 0
+    | siz (ht :: tl) = 1 + (siz tl)
+in
+  from e in emps
+  group e.deptno as deptno
+  compute siz of e.id as size
+end;
+val it = [{deptno=20,size=1},{deptno=10,size=1},{deptno=30,size=2}] : {deptno:int, size:int} list
+
+
 (*) Should we allow 'yield' following 'group'? Here's a possible syntax.
 (*) We need to introduce a variable name, but "as g" syntax isn't great.
 (*
