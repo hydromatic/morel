@@ -405,4 +405,35 @@ License.
     </plugins>
   </build>
 
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${maven-javadoc-plugin.version}</version>
+        <configuration>
+          <source>8</source>
+          <links>
+            <link>${maven-javadoc-plugin.link}</link>
+          </links>
+          <notimestamp>true</notimestamp>
+          <excludePackageNames>${maven-javadoc-plugin.excludePackageNames}</excludePackageNames>
+          <quiet>true</quiet>
+        </configuration>
+      </plugin>
+    </plugins>
+  </reporting>
+
+  <profiles>
+    <profile>
+      <id>java8</id>
+      <activation>
+        <jdk>1.8</jdk>
+      </activation>
+      <properties>
+        <!-- Java 1.8 does not support -html5, so we pass another harmless option -->
+        <maven-javadoc-html5>-notimestamp</maven-javadoc-html5>
+      </properties>
+    </profile>
+  </profiles>
 </project>
