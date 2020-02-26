@@ -18,6 +18,8 @@ language governing permissions and limitations under the
 License.
 {% endcomment %}
 -->
+<img align="right" alt="Morel mushroom (credit: OldDesignShop.com)" src="etc/morel.jpg">
+
 # Morel
 Standard ML interpreter, with relational extensions, implemented in Java
 
@@ -252,8 +254,9 @@ the sub-query returns, just whether it returns any rows).
 
 * License: <a href="LICENSE">Apache License, Version 2.0</a>
 * Author: Julian Hyde (<a href="https://twitter.com/julianhyde">@julianhyde</a>)
-* Project page: https://www.hydromatic.net/morel
-* API: https://www.hydromatic.net/morel/apidocs
+* Blog: http://blog.hydromatic.net
+* Project page: http://www.hydromatic.net/morel
+* API: http://www.hydromatic.net/morel/apidocs
 * Source code: https://github.com/julianhyde/morel
 * Developers list:
   <a href="mailto:dev@calcite.apache.org">dev at calcite.apache.org</a>
