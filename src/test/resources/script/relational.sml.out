@@ -212,6 +212,57 @@ val it =
    {deptno=30,dname="Engineering",ename="Scooby",id=103}] : {deptno:int, dname:string, ename:string, id:int} list
 
 
+(*) join, no yield
+from e in emps, d in depts;
+val it =
+  [{d={deptno=10,name="Sales"},e={deptno=10,id=100,name="Fred"}},
+   {d={deptno=20,name="HR"},e={deptno=10,id=100,name="Fred"}},
+   {d={deptno=30,name="Engineering"},e={deptno=10,id=100,name="Fred"}},
+   {d={deptno=40,name="Support"},e={deptno=10,id=100,name="Fred"}},
+   {d={deptno=10,name="Sales"},e={deptno=20,id=101,name="Velma"}},
+   {d={deptno=20,name="HR"},e={deptno=20,id=101,name="Velma"}},
+   {d={deptno=30,name="Engineering"},e={deptno=20,id=101,name="Velma"}},
+   {d={deptno=40,name="Support"},e={deptno=20,id=101,name="Velma"}},
+   {d={deptno=10,name="Sales"},e={deptno=30,id=102,name="Shaggy"}},
+   {d={deptno=20,name="HR"},e={deptno=30,id=102,name="Shaggy"}},
+   {d={deptno=30,name="Engineering"},e={deptno=30,id=102,name="Shaggy"}},
+   {d={deptno=40,name="Support"},e={deptno=30,id=102,name="Shaggy"}},
+   {d={deptno=10,name="Sales"},e={deptno=30,id=103,name="Scooby"}},
+   {d={deptno=20,name="HR"},e={deptno=30,id=103,name="Scooby"}},
+   {d={deptno=30,name="Engineering"},e={deptno=30,id=103,name="Scooby"}},
+   {d={deptno=40,name="Support"},e={deptno=30,id=103,name="Scooby"}}] : {d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}} list
+
+
+(*) join where neither variable is referenced
+from e in emps, d in depts
+  yield 0;
+val it = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] : int list
+
+
+(*) join where right variable is not referenced
+from e in emps, d in depts
+  yield e.id;
+val it = [100,100,100,100,101,101,101,101,102,102,102,102,103,103,103,103] : int list
+
+
+(*) join where left variable is not referenced
+from e in emps, d in depts
+  yield d.deptno;
+val it = [10,20,30,40,10,20,30,40,10,20,30,40,10,20,30,40] : int list
+
+
+(*) join group where neither variable is referenced
+from e in emps, d in depts
+  group compute sum of 1 as count;
+val it = [{count=16}] : {count:int} list
+
+
+(*) join group where right variable is not referenced
+from e in emps, d in depts
+  group e.deptno compute sum of 1 as count;
+val it = [{count=4,deptno=20},{count=4,deptno=10},{count=8,deptno=30}] : {count:int, deptno:int} list
+
+
 (*) exists (defining the "exists" function ourselves)
 (*) and correlated sub-query
 (* disabled due to "::"

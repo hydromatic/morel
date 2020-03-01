@@ -120,6 +120,29 @@ from e in emps, d in depts
   where e.deptno = d.deptno
   yield {e.id, e.deptno, ename = e.name, dname = d.name};
 
+(*) join, no yield
+from e in emps, d in depts;
+
+(*) join where neither variable is referenced
+from e in emps, d in depts
+  yield 0;
+
+(*) join where right variable is not referenced
+from e in emps, d in depts
+  yield e.id;
+
+(*) join where left variable is not referenced
+from e in emps, d in depts
+  yield d.deptno;
+
+(*) join group where neither variable is referenced
+from e in emps, d in depts
+  group compute sum of 1 as count;
+
+(*) join group where right variable is not referenced
+from e in emps, d in depts
+  group e.deptno compute sum of 1 as count;
+
 (*) exists (defining the "exists" function ourselves)
 (*) and correlated sub-query
 (* disabled due to "::"

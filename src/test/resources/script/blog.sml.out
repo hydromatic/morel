@@ -1,0 +1,649 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * This script contains Morel fragments that are used in Morel's
+ * web site, documentation, and blog posts. Just, you know, to keep
+ * us honest.
+ *)
+
+(*) === README.md ===================================================
+
+(*) Auxiliary declarations
+val e = {deptno = 10, name = "Fred"};
+val e = {deptno=10,name="Fred"} : {deptno:int, name:string}
+
+val d = 10;
+val d = 10 : int
+
+val filter = List_filter;
+val filter = fn : ('a -> bool) -> 'a list -> 'a list
+
+
+"Hello, world!";
+val it = "Hello, world!" : string
+
+
+(*) In Morel, you can omit label = if the expression is an identifier,
+(*) label application, or field reference. Thus
+{#deptno e, e.name, d};
+val it = {d=10,deptno=10,name="Fred"} : {d:int, deptno:int, name:string}
+
+(*) is short-hand for
+{deptno = #deptno e, name = e.name, d = d};
+val it = {d=10,deptno=10,name="Fred"} : {d:int, deptno:int, name:string}
+
+
+(*) In a sense, from is syntactic sugar. For example, given emps and
+(*) depts, relations defined as lists of records as follows
+val emps =
+  [{id = 100, name = "Fred", deptno = 10},
+   {id = 101, name = "Velma", deptno = 20},
+   {id = 102, name = "Shaggy", deptno = 30},
+   {id = 103, name = "Scooby", deptno = 30}];
+val emps =
+  [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+
+val depts =
+  [{deptno = 10, name = "Sales"},
+   {deptno = 20, name = "Marketing"},
+   {deptno = 30, name = "Engineering"},
+   {deptno = 40, name = "Support"}];
+val depts =
+  [{deptno=10,name="Sales"},{deptno=20,name="Marketing"},
+   {deptno=30,name="Engineering"},{deptno=40,name="Support"}] : {deptno:int, name:string} list
+
+(*) the expression
+from e in emps where e.deptno = 30 yield e.id;
+val it = [102,103] : int list
+
+(*) is equivalent to standard ML
+(* FIXME
+map (fn e => (#id e)) (filter (fn e => (#deptno e) = 30) emps);
+*)
+
+(*) You can iterate over more than one collection, and therefore
+(*) generate a join or a cartesian product:
+from e in emps, d in depts
+  where e.deptno = d.deptno
+  yield {e.id, e.deptno, ename = e.name, dname = d.name};
+val it =
+  [{deptno=10,dname="Sales",ename="Fred",id=100},
+   {deptno=20,dname="Marketing",ename="Velma",id=101},
+   {deptno=30,dname="Engineering",ename="Shaggy",id=102},
+   {deptno=30,dname="Engineering",ename="Scooby",id=103}] : {deptno:int, dname:string, ename:string, id:int} list
+
+(*) As in any ML expression, you can define functions within a from
+(*) expression, and those functions can operate on lists. Thus we can
+(*) implement equivalents of SQL's IN and EXISTS operators:
+(* FIXME
+let
+  fun in_ e [] = false
+    | in_ e (h :: t) = e = h orelse (in_ e t)
+in
+  from e in emps
+  where in_ e.deptno (from d in depts
+                where d.name = "Engineering"
+                yield d.deptno)
+  yield e.name
+end;
+*)
+(* FIXME
+let
+  fun exists [] = false
+    | exists hd :: tl = true
+in
+  from e in emps
+  where exists (from d in depts
+                where d.deptno = e.deptno
+                andalso d.name = "Engineering")
+  yield e.name
+end;
+*)
+
+(*) === Screen cast =================================================
+
+(*) Now we're in smlj's shell, for interactive commands.
+(*) First of all, we need to talk about comments.
+
+(* This is a block comment, which can span multiple lines... *)
+
+(*) ... and this is a single-line comment.
+
+(*) Now, the basics.
+(*) Everything in ML is an expression.
+"a string literal";
+val it = "a string literal" : string
+
+1 + 2;
+val it = 3 : int
+
+
+(*) The smlj shell deduces the type of each expression,
+(*) and assigns it to a variable called "it".
+(*) We can use "it" in the next expression...
+it + 4;
+val it = 7 : int
+
+
+(*) We just saw string and int expressions.
+(*) There are also boolean, list, record and tuple types:
+1 = 2;
+val it = false : bool
+
+[1, 2, 3];
+val it = [1,2,3] : int list
+
+{id = 10, name = "Alex"};
+val it = {id=10,name="Alex"} : {id:int, name:string}
+
+(1, true, "yes");
+val it = (1,true,"yes") : int * bool * string
+
+
+(*) You can assign values to variables.
+val x = 7;
+val x = 7 : int
+
+val y =  x mod 3;
+val y = 1 : int
+
+
+(*) Functions are expressions, too.
+(*) "fn" makes a lambda expression.
+val plusOne = fn x => x + 1;
+val plusOne = fn : int -> int
+
+plusOne 2;
+val it = 3 : int
+
+
+(*) Functions are widely used, so they have a shorthand.
+(*) "fun" is short for "val ... = fn".
+fun plusOne x = x + 1;
+val plusOne = fn : int -> int
+
+plusOne 1000;
+val it = 1001 : int
+
+
+(*) Functions can have multiple arguments, separated by spaces.
+fun plus x y = x + y;
+val plus = fn : int -> int -> int
+
+plus 3 4;
+val it = 7 : int
+
+
+(*) If we supply too few arguments, we get a closure that captures
+(*) the argument value and can be applied later.
+val plusTen = plus 10;
+val plusTen = fn : int -> int
+
+plusTen 2;
+val it = 12 : int
+
+
+(*) Functions can be recursive.
+fun fact n = if n = 1 then 1 else n * fact (n - 1);
+val fact = fn : int -> int
+
+fact 1;
+val it = 1 : int
+
+fact 5;
+val it = 120 : int
+
+
+(*) A higher-order function is a function that operates on other
+(*) functions. Here are a couple.
+
+(*) "map" applies another function to each element of a list
+let
+  fun map f [] = []
+    | map f (head :: tail) = (f head) :: (map f tail)
+  fun double n = n * 2
+in
+  map double [1, 2, 3, 4]
+end;
+val it = [2,4,6,8] : int list
+
+
+(*) "filter" keeps only those elements of a list for which
+(*) a predicate evaluates to true.
+let
+  fun filter p [] = []
+    | filter p (head :: tail) =
+      if (p head) then
+        (head :: (filter p tail))
+      else
+        (filter p tail)
+  fun even n = n mod 2 = 0
+in
+  filter even [1, 2, 3, 4]
+end;
+val it = [2,4] : int list
+
+
+(*) You may notice that "map" and "filter" are very similar to the
+(*) "select" and "where" clauses of a SQL statement.
+(*)
+(*) This is no surprise: relational algebra, which underlies SQL, is
+(*) basically a collection of higher-order functions applied to
+(*) lists of records (relations).
+(*)
+(*) Can we extend ML syntax to make it easier to write relational
+(*) algebra expressions? You bet!
+
+(*) Let's start by defining "emp" and "dept" relations as lists of
+(*) records.
+val emps =
+  [{id = 100, name = "Fred", deptno = 10},
+   {id = 101, name = "Velma", deptno = 20},
+   {id = 102, name = "Shaggy", deptno = 30},
+   {id = 103, name = "Scooby", deptno = 30}];
+val emps =
+  [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+
+val depts =
+  [{deptno = 10, name = "Sales"},
+   {deptno = 20, name = "HR"},
+   {deptno = 30, name = "Engineering"},
+   {deptno = 40, name = "Support"}];
+val depts =
+  [{deptno=10,name="Sales"},{deptno=20,name="HR"},{deptno=30,name="Engineering"},
+   {deptno=40,name="Support"}] : {deptno:int, name:string} list
+
+
+(*) Now our first query, equivalent to "select * from emps as e".
+from e in emps yield e;
+val it =
+  [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+
+
+(*) Now "select e.id from emps as e where e.deptno = 30"
+from e in emps where (#deptno e) = 30 yield (#id e);
+val it = [102,103] : int list
+
+
+(*) Join two relations
+from e in emps, d in depts
+  where (#deptno e) = (#deptno d)
+  yield {id = (#id e), deptno = (#deptno e),
+         ename = (#name e), dname = (#name d)};
+val it =
+  [{deptno=10,dname="Sales",ename="Fred",id=100},
+   {deptno=20,dname="HR",ename="Velma",id=101},
+   {deptno=30,dname="Engineering",ename="Shaggy",id=102},
+   {deptno=30,dname="Engineering",ename="Scooby",id=103}] : {deptno:int, dname:string, ename:string, id:int} list
+
+
+(*) A query with "exists" and a correlated sub-query.
+(*) We define the "exists" function ourselves: no need for a
+(*) built-in!
+let
+  fun exists [] = false
+    | exists (head :: tail) = true
+in
+  from e in emps
+    where exists (from d in depts
+                  where (#deptno d) = (#deptno e)
+                  andalso (#name d) = "Engineering")
+    yield (#name e)
+end;
+val it = ["Shaggy","Scooby"] : string list
+
+
+(*) That's all, folks!
+(*) To recap, smlj has:
+(*)  * expressions of int, string, boolean, float, char, list,
+(*)    tuple and record types;
+(*)  * lambda expressions and recursive functions;
+(*)  * algebraic datatypes and pattern-matching;
+(*)  * polymorphism and powerful type-inference;
+(*)  * relational expressions (an extension to Standard ML).
+(*)
+(*) Follow our progress at https://github.com/julianhyde/smlj.
+(*) This is only release 0.1, so there's more to come!
+
+(*) === 2020/02/25: Morel: A functional language for data ===========
+
+(*) Auxiliary declarations
+val hr = {
+  emps = [
+    {id = 100, deptno = 10, name = "SCOTT"}],
+  depts = [
+    {deptno = 10, name = "SALES"}]};
+val hr = {depts=[{deptno=10,name="SALES"}],emps=[{deptno=10,id=100,name="SCOTT"}]} : {depts:{deptno:int, name:string} list, emps:{deptno:int, id:int, name:string} list}
+
+
+(*) here is a query in Morel:
+from e in hr.emps,
+    d in hr.depts
+where e.deptno = d.deptno
+yield {e.id, e.deptno, ename = e.name, dname = d.name};
+val it = [{deptno=10,dname="SALES",ename="SCOTT",id=100}] : {deptno:int, dname:string, ename:string, id:int} list
+
+
+(*) === 2020/03/03: Morel: The basic language =======================
+
+(* As a functional language, everything in Morel is an expression.
+The basic types are `bool`, `int`, `float`, `string` and `char`.  Here
+are literals in each. *)
+false;
+val it = false : bool
+
+10;
+val it = 10 : int
+
+~4.5;
+val it = ~4.5 : real
+
+"morel";
+val it = "morel" : string
+
+#"a";
+val it = #"a" : char
+
+();
+val it = () : unit
+
+
+(* As you'd expect, there are built-in operators for each data
+type. Here are a few examples: *)
+true andalso false;
+val it = false : bool
+
+true orelse false;
+val it = true : bool
+
+not false;
+val it = true : bool
+
+1 + 2;
+val it = 3 : int
+
+~(5 - 2);
+val it = ~3 : int
+
+10 mod 3;
+val it = 1 : int
+
+"mo" ^ "rel";
+val it = "morel" : string
+
+
+(* You can assign values to variables. *)
+val x = 7;
+val x = 7 : int
+
+val y = x mod 3;
+val y = 1 : int
+
+x + y;
+val it = 8 : int
+
+
+(* The shell deduces the type of each expression,
+   and assigns it to a variable called `it`.
+   We can use `it` in the next expression. *)
+"morel";
+val it = "morel" : string
+
+String_size it;
+val it = 5 : int
+
+it + 4;
+val it = 9 : int
+
+
+(* A let expression binds one or more values and evaluates an expression *)
+let
+  val x = 3
+  val y = 2
+in
+  x + y
+end;
+val it = 5 : int
+
+
+(* In addition to primitive types, there are list, record and tuple
+   types. *)
+[1, 2, 3];
+val it = [1,2,3] : int list
+
+{id = 10, name = "Scooby"};
+val it = {id=10,name="Scooby"} : {id:int, name:string}
+
+(1, true, "yes");
+val it = (1,true,"yes") : int * bool * string
+
+
+(* Tuples are actually just records with fields named "1", "2",
+   etc.: *)
+(1, true, "yes");
+val it = (1,true,"yes") : int * bool * string
+
+{1 = 1, 2 = true, 3 = "yes"};
+val it = (1,true,"yes") : int * bool * string
+
+(1, true, "yes") = {1 = 1, 2 = true, 3 = "yes"};
+val it = true : bool
+
+
+(* The empty record and empty tuple are equal, and are the only value
+   of the type unit. *)
+{};
+val it = () : unit
+
+();
+val it = () : unit
+
+{} = ();
+val it = true : bool
+
+
+(* Functions are expressions, too.  `fn` makes a lambda expression.
+   After we have bound the lambda value to `plusOne`, we can use
+   `plusOne` as a function. *)
+val plusOne = fn x => x + 1;
+val plusOne = fn : int -> int
+
+plusOne 2;
+val it = 3 : int
+
+
+(* Functions declarations are common, so the `fun` keyword provides a
+   shorthand. *)
+fun plusOne x = x + 1;
+val plusOne = fn : int -> int
+
+plusOne 2;
+val it = 3 : int
+
+
+(* Functions can have multiple arguments, separated by spaces. *)
+fun plus x y = x + y;
+val plus = fn : int -> int -> int
+
+plus 3 4;
+val it = 7 : int
+
+
+(* If we supply too few arguments, we get a closure that captures the
+   argument value and can be applied later. *)
+val plusTen = plus 10;
+val plusTen = fn : int -> int
+
+plusTen 2;
+val it = 12 : int
+
+
+(* Functions can be recursive. *)
+fun factorial n =
+  if n = 1 then
+    1
+  else
+     n * factorial (n - 1);
+val factorial = fn : int -> int
+
+factorial 1;
+val it = 1 : int
+
+factorial 5;
+val it = 120 : int
+
+
+(* A higher-order function is a function that operates on other
+   functions. Here are a couple of examples.
+
+   The map function applies a given function `f` to each element of a
+   list, returning a list. *)
+fun map f [] = []
+  | map f (head :: tail) = (f head) :: (map f tail);
+val map = fn : ('a -> 'b) -> 'a list -> 'b list
+
+fun double n = n * 2;
+val double = fn : int -> int
+
+map double [1, 2, 3, 4];
+val it = [2,4,6,8] : int list
+
+
+(* The filter function keeps only those elements of a list for which a
+   predicate `p` evaluates to true. *)
+fun filter p [] = []
+  | filter p (head :: tail) =
+    if (p head) then
+      (head :: (filter p tail))
+    else
+      (filter p tail);
+val filter = fn : ('a -> bool) -> 'a list -> 'a list
+
+fun even n = n mod 2 = 0;
+val even = fn : int -> bool
+
+filter even [1, 2, 3, 4];
+val it = [2,4] : int list
+
+
+(* Let’s start by defining emps and depts relations as lists of
+   records. *)
+
+val emps =
+  [{id = 100, name = "Fred", deptno = 10},
+   {id = 101, name = "Velma", deptno = 20},
+   {id = 102, name = "Shaggy", deptno = 30},
+   {id = 103, name = "Scooby", deptno = 30}];
+val emps =
+  [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+
+val depts =
+  [{deptno = 10, name = "Sales"},
+   {deptno = 20, name = "HR"},
+   {deptno = 30, name = "Engineering"},
+   {deptno = 40, name = "Support"}];
+val depts =
+  [{deptno=10,name="Sales"},{deptno=20,name="HR"},{deptno=30,name="Engineering"},
+   {deptno=40,name="Support"}] : {deptno:int, name:string} list
+
+
+(* Now let's run our first query. *)
+from e in emps yield e;
+val it =
+  [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+
+
+(* There is no difference between a query, a table and a list-valued
+   expression, so we could have instead written just `emps`. *)
+emps;
+val it =
+  [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+
+
+(* A where clause filters out rows. *)
+from e in emps
+  where #deptno e = 30
+  yield {id = #id e};
+val it = [{id=102},{id=103}] : {id:int} list
+
+
+(* The following is equivalent. *)
+from e in emps
+  where e.deptno = 30
+  yield {e.id};
+val it = [{id=102},{id=103}] : {id:int} list
+
+
+(* If you omit 'yield' you get the raw values of 'e'. *)
+from e in emps
+  where #deptno e = 30;
+val it = [{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+
+
+(* Shorthand. The following 3 queries are equivalent. *)
+from e in emps
+  yield {e = #id e};
+val it = [{e=100},{e=101},{e=102},{e=103}] : {e:int} list
+
+from e in emps
+  yield {e = e.id};
+val it = [{e=100},{e=101},{e=102},{e=103}] : {e:int} list
+
+from e in emps
+  yield {e.id};
+val it = [{id=100},{id=101},{id=102},{id=103}] : {id:int} list
+
+
+(* Joins and sub-queries. *)
+from e in emps,
+    d in depts
+  where e.deptno = d.deptno
+  yield {e.id, e.deptno, ename = e.name, dname = d.name};
+val it =
+  [{deptno=10,dname="Sales",ename="Fred",id=100},
+   {deptno=20,dname="HR",ename="Velma",id=101},
+   {deptno=30,dname="Engineering",ename="Shaggy",id=102},
+   {deptno=30,dname="Engineering",ename="Scooby",id=103}] : {deptno:int, dname:string, ename:string, id:int} list
+
+
+(* The following query would, in SQL, be described as having 'EXISTS
+   and a correlated sub-query'. But 'exists' is not a built-in keyword
+   in Morel, just a function that we define in the query, and a
+   sub-query is just an expression that happens to return a list. *)
+let
+  fun exists [] = false
+    | exists (head :: tail) = true
+in
+  from e in emps
+    where exists (from d in depts
+                  where d.deptno = e.deptno
+                  andalso d.name = "Engineering")
+    yield e.name
+end;
+val it = ["Shaggy","Scooby"] : string list
+
+
+(*) === Coda ========================================================
+from message in ["the end"];
+val it = ["the end"] : string list
