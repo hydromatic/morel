@@ -169,7 +169,7 @@ public class Compiler {
       final Map<Ast.Id, Code> sourceCodes = new LinkedHashMap<>();
       Environment env2 = env;
       for (Map.Entry<Ast.Id, Ast.Exp> idExp : from.sources.entrySet()) {
-        final Code expCode = compile(env, idExp.getValue());
+        final Code expCode = compile(env2, idExp.getValue());
         final Ast.Id id = idExp.getKey();
         sourceCodes.put(id, expCode);
         env2 = env2.bind(id.name, typeMap.getType(id), Unit.INSTANCE);

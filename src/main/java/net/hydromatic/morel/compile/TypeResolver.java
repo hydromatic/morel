@@ -249,8 +249,9 @@ public class TypeResolver {
         final Ast.Exp exp = source.getValue();
         final Unifier.Variable v5 = unifier.variable();
         final Unifier.Variable v6 = unifier.variable();
-        deduceType(env, exp, v5);
+        deduceType(env2, exp, v5);
         reg(exp, v5, unifier.apply(LIST_TY_CON, v6));
+        reg(id, null, v6);
         env2 = env2.bind(id.name, v6);
         fieldVars.put(id.name, v6);
       }

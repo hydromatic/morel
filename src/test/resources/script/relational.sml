@@ -264,6 +264,60 @@ in
   yield {e.id, e.deptno, abbrev_name = abbrev e.name}
 end;
 
+(*) There's no flatMap in the standard library, so define one
+(*) TODO: fix type (currently 'a list, should be char list)
+fun flatMap f l = List_concat (List_map f l);
+
+flatMap String_explode ["ab", "", "def"];
+
+(*) A function that runs a query and returns the result
+fun employeesIn deptno =
+  from e in emps
+  where e.deptno = deptno;
+
+employeesIn 10;
+employeesIn 25;
+employeesIn 30;
+
+(*) Using 'map' to stick together results
+List_map employeesIn [10, 25, 30];
+
+(*) Same, using 'from'
+from deptno in [10, 25, 30]
+  yield employeesIn deptno;
+
+(*) Flatten (using flatMap)
+(*) TODO: fix type, as above
+flatMap employeesIn [10, 25, 30];
+
+(*) Flatten (using a lateral join); compare to SQL 'CROSS APPLY'
+from deptno in [10, 25, 30],
+    e in employeesIn deptno
+  yield e;
+
+(*) A deep nested loop
+from e in
+  (from e in
+    (from e in
+      (from e in
+        (from e in
+          (from e in
+            (from e in
+              (from e in
+                (from e in
+                  (from e in
+                    (from e in emps
+                     yield e)
+                   yield e)
+                 yield e)
+               yield e)
+             yield e)
+           yield e)
+         yield e)
+       yield e)
+     yield e)
+   yield e);
+
 (*) dummy
 from message in ["the end"];
 

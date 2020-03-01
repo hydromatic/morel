@@ -37,6 +37,7 @@ import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
+import net.hydromatic.morel.util.Ord;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -237,20 +238,21 @@ public abstract class Codes {
   public static Code from(Map<Ast.Id, Code> sources, Code filterCode,
       Code yieldCode) {
     final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
+    final ImmutableList<Code> codes = ImmutableList.copyOf(sources.values());
     return new Code() {
       @Override public Object eval(EvalEnv env) {
-        final List<Iterable<Object>> values = new ArrayList<>();
+        final List<Iterable<Object>> iterables = new ArrayList<>();
         final List<MutableEvalEnv> mutableEvalEnvs = new ArrayList<>();
-        for (Code code : sources.values()) {
+        for (Ord<Code> code : Ord.zip(codes)) {
           final MutableEvalEnv mutableEnv =
-              env.bindMutable(ids.get(values.size()).name);
+              env.bindMutable(ids.get(code.i).name);
           mutableEvalEnvs.add(mutableEnv);
           env = mutableEnv;
-          //noinspection unchecked
-          values.add((Iterable<Object>) code.eval(env));
+          iterables.add(null);
         }
         final List<Object> list = new ArrayList<>();
-        loop(0, values, mutableEvalEnvs, list);
+        iterables.set(0, (Iterable<Object>) codes.get(0).eval(env));
+        loop(0, iterables, mutableEvalEnvs, list);
         return list;
       }
 
@@ -260,7 +262,8 @@ public abstract class Codes {
           List<MutableEvalEnv> mutableEvalEnvs, List<Object> list) {
         final Iterable<Object> iterable = iterables.get(i);
         final MutableEvalEnv mutableEvalEnv = mutableEvalEnvs.get(i);
-        if (i + 1 == iterables.size()) {
+        final int next = i + 1;
+        if (next == iterables.size()) {
           for (Object o : iterable) {
             mutableEvalEnv.set(o);
             if ((Boolean) filterCode.eval(mutableEvalEnv)) {
@@ -270,7 +273,10 @@ public abstract class Codes {
         } else {
           for (Object o : iterable) {
             mutableEvalEnv.set(o);
-            loop(i + 1, iterables, mutableEvalEnvs, list);
+            //noinspection unchecked
+            iterables.set(next, (Iterable<Object>)
+                codes.get(next).eval(mutableEvalEnvs.get(next)));
+            loop(next, iterables, mutableEvalEnvs, list);
           }
         }
       }
@@ -289,6 +295,7 @@ public abstract class Codes {
       List<Code> groupCodes, List<Applicable> aggregateCodes,
       List<String> labels) {
     final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
+    final ImmutableList<Code> codes = ImmutableList.copyOf(sources.values());
     final Code keyCode = tuple(groupCodes);
     final List<Integer> permute = new ArrayList<>();
     for (String sortedLabel : Ordering.natural().sortedCopy(labels)) {
@@ -296,19 +303,19 @@ public abstract class Codes {
     }
     return new Code() {
       @Override public Object eval(EvalEnv env) {
-        final List<Iterable<Object>> values = new ArrayList<>();
+        final List<Iterable<Object>> iterables = new ArrayList<>();
         final List<MutableEvalEnv> mutableEvalEnvs = new ArrayList<>();
-        for (Code code : sources.values()) {
-          final MutableEvalEnv mutableEnv =
-              env.bindMutable(ids.get(values.size()).name);
+        for (Ast.Id id : ids) {
+          final MutableEvalEnv mutableEnv = env.bindMutable(id.name);
           mutableEvalEnvs.add(mutableEnv);
           env = mutableEnv;
-          //noinspection unchecked
-          values.add((Iterable<Object>) code.eval(env));
+          iterables.add(null);
         }
         final Object[] currentValues = new Object[sources.size()];
         final ListMultimap<Object, Object> map = ArrayListMultimap.create();
-        loop(0, values, mutableEvalEnvs, currentValues, map);
+        //noinspection unchecked
+        iterables.set(0, (Iterable<Object>) codes.get(0).eval(env));
+        loop(0, iterables, mutableEvalEnvs, currentValues, map);
 
         final List<List<Object>> list = new ArrayList<>();
         final List<Object> tuple = new ArrayList<>();
@@ -340,7 +347,8 @@ public abstract class Codes {
           Object[] currentValues, Multimap<Object, Object> map) {
         final Iterable<Object> iterable = iterables.get(i);
         final MutableEvalEnv mutableEvalEnv = mutableEvalEnvs.get(i);
-        if (i + 1 == iterables.size()) {
+        final int next = i + 1;
+        if (next == iterables.size()) {
           for (Object o : iterable) {
             mutableEvalEnv.set(o);
             if ((Boolean) filterCode.eval(mutableEvalEnv)) {
@@ -353,7 +361,10 @@ public abstract class Codes {
           for (Object o : iterable) {
             mutableEvalEnv.set(o);
             currentValues[i] = o;
-            loop(i + 1, iterables, mutableEvalEnvs, currentValues, map);
+            //noinspection unchecked
+            iterables.set(next, (Iterable<Object>)
+                codes.get(next).eval(mutableEvalEnvs.get(next)));
+            loop(next, iterables, mutableEvalEnvs, currentValues, map);
           }
         }
       }

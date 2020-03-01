@@ -1195,6 +1195,38 @@ public class MainTest {
             equalsOrdered(list(list(10, "Sales"), list(10, 100, "Fred"))));
   }
 
+  /** Analogous to SQL "CROSS APPLY" which calls a table-valued function
+   * for each row in an outer loop. */
+  @Test public void testCrossApply() {
+    final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
+        + "    c in String_explode s\n"
+        + "  yield s ^ \":\" ^ String_str c";
+    ml(ml).assertEvalIter(equalsOrdered("abc:a", "abc:b", "abc:c", "d:d"));
+  }
+
+  @Test public void testCrossApplyGroup() {
+    final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
+        + "    c in String_explode s\n"
+        + "  group s compute sum of 1 as count";
+    ml(ml).assertEvalIter(equalsOrdered(list(3, "abc"), list(1, "d")));
+  }
+
+  @Test public void testJoinLateral() {
+    final String ml = "let\n"
+        + "  val emps = [{name = \"Shaggy\",\n"
+        + "               pets = [{name = \"Scooby\", species = \"Dog\"},\n"
+        + "                       {name = \"Scrappy\", species = \"Dog\"}]},\n"
+        + "              {name = \"Charlie\",\n"
+        + "               pets = [{name = \"Snoopy\", species = \"Dog\"}]},\n"
+        + "              {name = \"Danny\", pets = []}]"
+        + "in"
+        + "  from e in emps,\n"
+        + "      p in e.pets\n"
+        + "    yield p.name\n"
+        + "end";
+    ml(ml).assertEvalIter(equalsOrdered("Scooby", "Scrappy", "Snoopy"));
+  }
+
   @Test public void testFromGroupWithoutCompute() {
     final String ml = "let\n"
         + "  val emps =\n"
