@@ -17,6 +17,21 @@
  * License.
  *)
 
+(*) Record and tuple are equivalent.
+{1 = "a", 2 = true};
+("a", true);
+("a", true) = {1 = "a", 2 = true};
+{1 = "a", 2 = true} = ("a", true);
+("a", true) = {2 = true, 1 = "a"};
+("a", true) = {2 = true, 1 = "b"};
+("a", false) = {1 = "a", 2 = true};
+
+(*) Empty record and empty tuple are equivalent, and of type 'unit'.
+{};
+();
+{} = ();
+() = {};
+
 (*) Has polymorphic type
 (*
 val rec len = fn x =>

@@ -80,6 +80,8 @@ public class TypeResolver {
   private static final String RECORD_TY_CON = "record";
   private static final String FN_TY_CON = "fn";
   private static final String APPLY_TY_CON = "apply";
+  private static final String[] INT_STRINGS =
+      {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
 
   private TypeResolver(TypeSystem typeSystem) {
     this.typeSystem = Objects.requireNonNull(typeSystem);
@@ -170,7 +172,7 @@ public class TypeResolver {
         args2.add(deduceType(env, arg, vArg));
         types.add(vArg);
       }
-      return reg(tuple.copy(args2), v, unifier.apply(TUPLE_TY_CON, types));
+      return reg(tuple.copy(args2), v, tuple(types));
 
     case LIST:
       final Ast.List list = (Ast.List) node;
@@ -188,10 +190,7 @@ public class TypeResolver {
         deduceType(env, exp, vArg);
         labelTypes.put(name, vArg);
       });
-      final Unifier.Sequence recordTerm =
-          unifier.apply(recordOp(labelTypes.navigableKeySet()),
-              labelTypes.values());
-      return reg(record, v, recordTerm);
+      return reg(record, v, record(labelTypes));
 
     case LET:
       final Ast.LetExp let = (Ast.LetExp) node;
@@ -322,12 +321,40 @@ public class TypeResolver {
     }
   }
 
-  private String recordOp(NavigableSet<String> labelNames) {
-    final StringBuilder b = new StringBuilder(RECORD_TY_CON);
-    for (String label : labelNames) {
-      b.append(':').append(label);
+  private Unifier.Term record(NavigableMap<String, Unifier.Term> labelTypes) {
+    if (labelTypes.isEmpty()) {
+      return toTerm(PrimitiveType.UNIT);
+    } else if (isContiguousIntegers(labelTypes.navigableKeySet())) {
+      return unifier.apply(TUPLE_TY_CON, labelTypes.values());
+    } else {
+      final StringBuilder b = new StringBuilder(RECORD_TY_CON);
+      for (String label : labelTypes.navigableKeySet()) {
+        b.append(':').append(label);
+      }
+      return unifier.apply(b.toString(), labelTypes.values());
     }
-    return b.toString();
+  }
+
+  private Unifier.Sequence tuple(List<Unifier.Term> types) {
+    return unifier.apply(TUPLE_TY_CON, types);
+  }
+
+  /** Returns whether a collection consists of ["1", "2", ... "n"]. */
+  private boolean isContiguousIntegers(NavigableSet<String> names) {
+    int i = 1;
+    for (String name : names) {
+      if (!name.equals(str(i++))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Converts an integer to its string representation, using a cached value
+   * if possible. */
+  private static String str(int i) {
+    return i >= 0 && i < INT_STRINGS.length ? INT_STRINGS[i]
+        : Integer.toString(i);
   }
 
   private Ast.RecordSelector deduceRecordSelectorType(TypeEnv env,
@@ -367,7 +394,7 @@ public class TypeResolver {
         }
 
         public String get(int index) {
-          return Integer.toString(index + 1);
+          return str(index + 1);
         }
       };
     } else {
@@ -664,7 +691,7 @@ public class TypeResolver {
         deducePatType(env, arg, termMap, null, vArg);
         typeTerms.add(vArg);
       }
-      return reg(pat, v, unifier.apply(TUPLE_TY_CON, typeTerms));
+      return reg(pat, v, tuple(typeTerms));
 
     case RECORD_PAT:
       // First, determine the set of field names.
@@ -689,9 +716,7 @@ public class TypeResolver {
           deducePatType(env, argPat, termMap, null, vArg);
         }
       }
-      return reg(pat, v,
-          unifier.apply(recordOp(labelTerms.navigableKeySet()),
-              labelTerms.values()));
+      return reg(pat, v, record(labelTerms));
 
     case CON_PAT:
       final Ast.ConPat conPat = (Ast.ConPat) pat;
@@ -852,8 +877,22 @@ public class TypeResolver {
     case RECORD_TYPE:
       final RecordType recordType = (RecordType) type;
       //noinspection unchecked
+      String result;
+      NavigableSet<String> labelNames =
+          (NavigableSet) recordType.argNameTypes.keySet();
+      if (labelNames.isEmpty()) {
+        result = PrimitiveType.UNIT.name();
+      } else if (isContiguousIntegers(labelNames)) {
+        result = TUPLE_TY_CON;
+      } else {
+        final StringBuilder b = new StringBuilder(RECORD_TY_CON);
+        for (String label : labelNames) {
+          b.append(':').append(label);
+        }
+        result = b.toString();
+      }
       return unifier.apply(
-          recordOp((NavigableSet) recordType.argNameTypes.keySet()),
+          result,
           recordType.argNameTypes.values().stream()
               .map(type1 -> toTerm(type1, subst)).collect(toImmutableList()));
     case LIST:
@@ -948,7 +987,7 @@ public class TypeResolver {
         return typeMap.typeSystem.fnType(paramType, resultType);
 
       case TUPLE_TY_CON:
-        assert sequence.terms.size() >= 2;
+        assert sequence.terms.size() != 1;
         argTypes = ImmutableList.builder();
         for (Unifier.Term term : sequence.terms) {
           argTypes.add(term.accept(this));
