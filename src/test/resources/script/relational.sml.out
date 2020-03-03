@@ -389,13 +389,12 @@ val it = [{abbrev_name="Sha.",deptno=30,id=102},{abbrev_name="Sco.",deptno=30,id
 
 
 (*) There's no flatMap in the standard library, so define one
-(*) TODO: fix type (currently 'a list, should be char list)
 fun flatMap f l = List_concat (List_map f l);
 val flatMap = fn : ('a -> 'b list) -> 'a list -> 'b list
 
 
 flatMap String_explode ["ab", "", "def"];
-val it = [a,b,d,e,f] : 'a list
+val it = [#"a",#"b",#"d",#"e",#"f"] : char list
 
 
 (*) A function that runs a query and returns the result
@@ -431,9 +430,10 @@ val it =
 
 
 (*) Flatten (using flatMap)
-(*) TODO: fix type, as above
 flatMap employeesIn [10, 25, 30];
-val it = [[10, 100, Fred],[30, 102, Shaggy],[30, 103, Scooby]] : 'a list
+val it =
+  [{deptno=10,id=100,name="Fred"},{deptno=30,id=102,name="Shaggy"},
+   {deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
 
 
 (*) Flatten (using a lateral join); compare to SQL 'CROSS APPLY'

@@ -32,6 +32,10 @@ public class ListType extends BaseType {
     this.elementType = Objects.requireNonNull(elementType);
   }
 
+  public <R> R accept(TypeVisitor<R> typeVisitor) {
+    return typeVisitor.visit(this);
+  }
+
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
     final Type elementType2 = elementType.copy(typeSystem, transform);
     return elementType2 == elementType

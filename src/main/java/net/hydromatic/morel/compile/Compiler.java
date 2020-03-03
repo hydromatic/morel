@@ -550,7 +550,8 @@ public class Compiler {
 
     if (actions != null) {
       final String name = ((Ast.IdPat) valBind.pat).name;
-      final Type type = typeMap.getType(valBind.e);
+      final Type type0 = typeMap.getType(valBind.e);
+      final Type type = typeMap.typeSystem.ensureClosed(type0);
       actions.add((output, outBindings, evalEnv) -> {
         final Object o = code.eval(evalEnv);
         outBindings.add(new Binding(name, type, o));
@@ -560,7 +561,7 @@ public class Compiler {
             .append(" = ");
         Pretty.pretty(buf, type, o)
             .append(" : ")
-            .append(type.description());
+            .append(type0.description());
         output.add(buf.toString());
       });
     }

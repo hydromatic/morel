@@ -28,9 +28,11 @@ import net.hydromatic.morel.util.Pair;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -258,6 +260,30 @@ public class TypeSystem {
         d -> new TypeVar(ordinal));
   }
 
+  /** Converts a type into a {@link ForallType} if it has free type
+   * variables. */
+  public Type ensureClosed(Type type) {
+    final VariableCollector collector = new VariableCollector();
+    type.accept(collector);
+    if (collector.vars.isEmpty()) {
+      return type;
+    }
+    final TypeSystem ts = this;
+    return forallType(collector.vars.size(), h ->
+        type.copy(ts, t ->
+            t instanceof TypeVar ? h.get(((TypeVar) t).ordinal) : t));
+  }
+
+  /** Visitor that finds all {@link TypeVar} instances within a {@link Type}. */
+  private static class VariableCollector extends TypeVisitor<Void> {
+    final Set<TypeVar> vars = new LinkedHashSet<>();
+
+    @Override public Void visit(TypeVar typeVar) {
+      vars.add(typeVar);
+      return super.visit(typeVar);
+    }
+  }
+
   /** Placeholder for a type that is being recursively defined.
    *
    * <p>For example, while defining datatype "list" as follows,
@@ -292,6 +318,10 @@ public class TypeSystem {
 
     public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
       return transform.apply(this);
+    }
+
+    public <R> R accept(TypeVisitor<R> typeVisitor) {
+      throw new UnsupportedOperationException();
     }
 
     public void delete() {

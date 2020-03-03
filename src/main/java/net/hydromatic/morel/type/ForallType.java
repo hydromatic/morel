@@ -37,6 +37,10 @@ public class ForallType extends BaseType {
     this.type = Objects.requireNonNull(type);
   }
 
+  public <R> R accept(TypeVisitor<R> typeVisitor) {
+    return typeVisitor.visit(this);
+  }
+
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
     final Type type2 = type.copy(typeSystem, transform);
     return type2 == type

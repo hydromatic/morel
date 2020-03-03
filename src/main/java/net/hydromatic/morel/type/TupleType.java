@@ -35,6 +35,10 @@ public class TupleType extends BaseType {
     this.argTypes = Objects.requireNonNull(argTypes);
   }
 
+  public <R> R accept(TypeVisitor<R> typeVisitor) {
+    return typeVisitor.visit(this);
+  }
+
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
     int differenceCount = 0;
     final ImmutableList.Builder<Type> argTypes2 = ImmutableList.builder();

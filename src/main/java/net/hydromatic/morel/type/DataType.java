@@ -73,6 +73,10 @@ public class DataType extends BaseType implements NamedType {
     return builder.build();
   }
 
+  public <R> R accept(TypeVisitor<R> typeVisitor) {
+    return typeVisitor.visit(this);
+  }
+
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
     return new DataType(typeSystem, name, description, typeVars,
         copyTypes(typeSystem, typeConstructors, transform));

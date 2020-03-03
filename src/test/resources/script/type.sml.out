@@ -52,3 +52,35 @@ val it = true : bool
 
 () = {};
 val it = true : bool
+
+
+(*) Variable with polymorphic type
+val x = List_map;
+val x = fn : ('a -> 'b) -> 'a list -> 'b list
+
+x String_explode ["ab", "c"];
+val it = [[#"a",#"b"],[#"c"]] : char list list
+
+
+(*) Has polymorphic type
+val rec len = fn x =>
+    case x of head :: tail => 1 + (len tail)
+            | [] => 0;
+val len = fn : 'a list -> int
+
+
+len [];
+val it = 0 : int
+
+len [1];
+val it = 1 : int
+
+len [1,2];
+val it = 2 : int
+
+
+List_map len (List_map String_explode ["ab", "", "cde"]);
+val it = [2,0,3] : int list
+
+List_map (fn s => len (String_explode s)) ["ab", "", "cde"];
+val it = [2,0,3] : int list

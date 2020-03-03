@@ -42,6 +42,10 @@ public enum PrimitiveType implements Type {
     return Op.ID;
   }
 
+  public <R> R accept(TypeVisitor<R> typeVisitor) {
+    return typeVisitor.visit(this);
+  }
+
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
     return transform.apply(this);
   }

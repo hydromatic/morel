@@ -19,6 +19,7 @@
 package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.foreign.RelList;
+import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
@@ -159,6 +160,9 @@ class Pretty {
             pretty1(buf, indent, lineEnd, elementType, o);
           });
       return buf.append(")");
+
+    case FORALL_TYPE:
+      return pretty2(buf, indent, lineEnd, ((ForallType) type).type, value);
 
     default:
       return buf.append(value);

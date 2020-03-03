@@ -33,6 +33,10 @@ public class FnType extends BaseType {
     this.resultType = resultType;
   }
 
+  public <R> R accept(TypeVisitor<R> typeVisitor) {
+    return typeVisitor.visit(this);
+  }
+
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
     final Type paramType2 = paramType.copy(typeSystem, transform);
     final Type resultType2 = resultType.copy(typeSystem, transform);

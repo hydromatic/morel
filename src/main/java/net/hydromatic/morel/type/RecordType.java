@@ -40,6 +40,10 @@ public class RecordType extends BaseType {
     Preconditions.checkArgument(argNameTypes.comparator() == ORDERING);
   }
 
+  public <R> R accept(TypeVisitor<R> typeVisitor) {
+    return typeVisitor.visit(this);
+  }
+
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
     int differenceCount = 0;
     final ImmutableSortedMap.Builder<String, Type> argNameTypes2 =

@@ -51,6 +51,10 @@ public class TypeVar implements Type {
     return "'#" + ordinal;
   }
 
+  public <R> R accept(TypeVisitor<R> typeVisitor) {
+    return typeVisitor.visit(this);
+  }
+
   /** Generates a name for a type variable.
    *
    * <p>0 &rarr; 'a, 1 &rarr; 'b, 26 &rarr; 'z, 27 &rarr; 'ba, 28 &rarr; 'bb,

@@ -265,7 +265,6 @@ in
 end;
 
 (*) There's no flatMap in the standard library, so define one
-(*) TODO: fix type (currently 'a list, should be char list)
 fun flatMap f l = List_concat (List_map f l);
 
 flatMap String_explode ["ab", "", "def"];
@@ -287,7 +286,6 @@ from deptno in [10, 25, 30]
   yield employeesIn deptno;
 
 (*) Flatten (using flatMap)
-(*) TODO: fix type, as above
 flatMap employeesIn [10, 25, 30];
 
 (*) Flatten (using a lateral join); compare to SQL 'CROSS APPLY'
