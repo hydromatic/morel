@@ -69,6 +69,15 @@ val it = "Hello, world!" : string
 $
 ```
 
+## Documentation
+
+* [Morel language reference](docs/reference.md)
+* ["How to" guide](docs/howto.md)
+* [Change log](HISTORY.md)
+* Reading [test reference logs](src/test/resources/script)
+  can be instructive; try, for example,
+  [relational.sml.out](src/test/resources/script/relational.sml.out)
+
 ## Status
 
 Implemented:
