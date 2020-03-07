@@ -49,24 +49,27 @@ in
 end;
 it 3;
 
-(* Disabled due to bug linking recursive functions at top-level
 fun str s 0 l = l
   | str s i l = str ("a" ^ s) (i - 1) (s :: l);
-val str = fn : string -> int -> string list -> string list
 
-str "" 10 [];
-val it =
-  ["aaaaaaaaa","aaaaaaaa","aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",""]
-  : string list
-
-(*) Note how long lists are wrapped and abbreviated
+str "" 3 [];
+str "" 8 [];
+str "" 9 [];
+str "" 12 [];
+str "" 13 [];
 str "" 20 [];
-val it =
-  ["aaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaa",
-   "aaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaa","aaaaaaaaaaaaaa","aaaaaaaaaaaaa",
-   "aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa",...]
-  : string list
+
+[{a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",d="ddddddddd"}];
+[{a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",d="ddddddddd"},{a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",d="ddddddddd"}];
+{a=1,b=2,c=3,d=4,e=5,f=6,g=7,h=8,i=9,j=10,k=11,l=12,m=13,n=14,o=15,p=16};
+(*
+sml prints the following, but we cannot split types yet:
+
+val it = {a=1,b={a=2,b={a=3,b={a=4,b={a=#,b=#}}}}}
+  : {a:int,
+     b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:unit}}}}}}}
 *)
+{a=1,b={a=2,b={a=3,b={a=4,b={a=5,b={a=6,b={a=7,b={}}}}}}}};
 
 (*) Bug: Fails due to lack of parentheses
 (*

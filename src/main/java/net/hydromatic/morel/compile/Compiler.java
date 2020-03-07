@@ -556,12 +556,7 @@ public class Compiler {
         final Object o = code.eval(evalEnv);
         outBindings.add(new Binding(name, type, o));
         final StringBuilder buf = new StringBuilder();
-        buf.append("val ")
-            .append(name)
-            .append(" = ");
-        Pretty.pretty(buf, type, o)
-            .append(" : ")
-            .append(type0.description());
+        Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
         output.add(buf.toString());
       });
     }

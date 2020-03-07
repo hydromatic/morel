@@ -57,7 +57,8 @@ val emps =
    {id = 103, name = "Scooby", deptno = 30}];
 val emps =
   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
-   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
+  : {deptno:int, id:int, name:string} list
 
 val depts =
   [{deptno = 10, name = "Sales"},
@@ -66,7 +67,8 @@ val depts =
    {deptno = 40, name = "Support"}];
 val depts =
   [{deptno=10,name="Sales"},{deptno=20,name="Marketing"},
-   {deptno=30,name="Engineering"},{deptno=40,name="Support"}] : {deptno:int, name:string} list
+   {deptno=30,name="Engineering"},{deptno=40,name="Support"}]
+  : {deptno:int, name:string} list
 
 (*) the expression
 from e in emps where e.deptno = 30 yield e.id;
@@ -86,7 +88,8 @@ val it =
   [{deptno=10,dname="Sales",ename="Fred",id=100},
    {deptno=20,dname="Marketing",ename="Velma",id=101},
    {deptno=30,dname="Engineering",ename="Shaggy",id=102},
-   {deptno=30,dname="Engineering",ename="Scooby",id=103}] : {deptno:int, dname:string, ename:string, id:int} list
+   {deptno=30,dname="Engineering",ename="Scooby",id=103}]
+  : {deptno:int, dname:string, ename:string, id:int} list
 
 (*) As in any ML expression, you can define functions within a from
 (*) expression, and those functions can operate on lists. Thus we can
@@ -259,7 +262,8 @@ val emps =
    {id = 103, name = "Scooby", deptno = 30}];
 val emps =
   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
-   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
+  : {deptno:int, id:int, name:string} list
 
 val depts =
   [{deptno = 10, name = "Sales"},
@@ -267,15 +271,17 @@ val depts =
    {deptno = 30, name = "Engineering"},
    {deptno = 40, name = "Support"}];
 val depts =
-  [{deptno=10,name="Sales"},{deptno=20,name="HR"},{deptno=30,name="Engineering"},
-   {deptno=40,name="Support"}] : {deptno:int, name:string} list
+  [{deptno=10,name="Sales"},{deptno=20,name="HR"},
+   {deptno=30,name="Engineering"},{deptno=40,name="Support"}]
+  : {deptno:int, name:string} list
 
 
 (*) Now our first query, equivalent to "select * from emps as e".
 from e in emps yield e;
 val it =
   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
-   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
+  : {deptno:int, id:int, name:string} list
 
 
 (*) Now "select e.id from emps as e where e.deptno = 30"
@@ -292,7 +298,8 @@ val it =
   [{deptno=10,dname="Sales",ename="Fred",id=100},
    {deptno=20,dname="HR",ename="Velma",id=101},
    {deptno=30,dname="Engineering",ename="Shaggy",id=102},
-   {deptno=30,dname="Engineering",ename="Scooby",id=103}] : {deptno:int, dname:string, ename:string, id:int} list
+   {deptno=30,dname="Engineering",ename="Scooby",id=103}]
+  : {deptno:int, dname:string, ename:string, id:int} list
 
 
 (*) A query with "exists" and a correlated sub-query.
@@ -331,7 +338,9 @@ val hr = {
     {id = 100, deptno = 10, name = "SCOTT"}],
   depts = [
     {deptno = 10, name = "SALES"}]};
-val hr = {depts=[{deptno=10,name="SALES"}],emps=[{deptno=10,id=100,name="SCOTT"}]} : {depts:{deptno:int, name:string} list, emps:{deptno:int, id:int, name:string} list}
+val hr =
+  {depts=[{deptno=10,name="SALES"}],emps=[{deptno=10,id=100,name="SCOTT"}]}
+  : {depts:{deptno:int, name:string} list, emps:{deptno:int, id:int, name:string} list}
 
 
 (*) here is a query in Morel:
@@ -339,7 +348,8 @@ from e in hr.emps,
     d in hr.depts
 where e.deptno = d.deptno
 yield {e.id, e.deptno, ename = e.name, dname = d.name};
-val it = [{deptno=10,dname="SALES",ename="SCOTT",id=100}] : {deptno:int, dname:string, ename:string, id:int} list
+val it = [{deptno=10,dname="SALES",ename="SCOTT",id=100}]
+  : {deptno:int, dname:string, ename:string, id:int} list
 
 
 (*) === 2020/03/03: Morel: The basic language =======================
@@ -554,7 +564,8 @@ val emps =
    {id = 103, name = "Scooby", deptno = 30}];
 val emps =
   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
-   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
+  : {deptno:int, id:int, name:string} list
 
 val depts =
   [{deptno = 10, name = "Sales"},
@@ -562,15 +573,17 @@ val depts =
    {deptno = 30, name = "Engineering"},
    {deptno = 40, name = "Support"}];
 val depts =
-  [{deptno=10,name="Sales"},{deptno=20,name="HR"},{deptno=30,name="Engineering"},
-   {deptno=40,name="Support"}] : {deptno:int, name:string} list
+  [{deptno=10,name="Sales"},{deptno=20,name="HR"},
+   {deptno=30,name="Engineering"},{deptno=40,name="Support"}]
+  : {deptno:int, name:string} list
 
 
 (* Now let's run our first query. *)
 from e in emps yield e;
 val it =
   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
-   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
+  : {deptno:int, id:int, name:string} list
 
 
 (* There is no difference between a query, a table and a list-valued
@@ -578,7 +591,8 @@ val it =
 emps;
 val it =
   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
-   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
+  : {deptno:int, id:int, name:string} list
 
 
 (* A where clause filters out rows. *)
@@ -598,7 +612,8 @@ val it = [{id=102},{id=103}] : {id:int} list
 (* If you omit 'yield' you get the raw values of 'e'. *)
 from e in emps
   where #deptno e = 30;
-val it = [{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
+val it = [{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
+  : {deptno:int, id:int, name:string} list
 
 
 (* Shorthand. The following 3 queries are equivalent. *)
@@ -624,7 +639,8 @@ val it =
   [{deptno=10,dname="Sales",ename="Fred",id=100},
    {deptno=20,dname="HR",ename="Velma",id=101},
    {deptno=30,dname="Engineering",ename="Shaggy",id=102},
-   {deptno=30,dname="Engineering",ename="Scooby",id=103}] : {deptno:int, dname:string, ename:string, id:int} list
+   {deptno=30,dname="Engineering",ename="Scooby",id=103}]
+  : {deptno:int, dname:string, ename:string, id:int} list
 
 
 (* The following query would, in SQL, be described as having 'EXISTS

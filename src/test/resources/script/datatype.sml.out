@@ -38,7 +38,8 @@ height Empty;
 val it = 0 : int
 
 Node(Empty, 1, Empty);
-val it = [Node, [[Empty], 1, [Empty]]] : (Empty | Node of inttree * int * inttree)
+val it = [Node, [[Empty], 1, [Empty]]]
+  : (Empty | Node of inttree * int * inttree)
 
 height it;
 val it = 1 : int
@@ -47,7 +48,9 @@ height (Node(Empty, 1, Empty));
 val it = 1 : int
 
 Node(Empty, 2, Node(Node(Empty, 3, Empty), 4, Empty));
-val it = [Node, [[Empty], 2, [Node, [[Node, [[Empty], 3, [Empty]]], 4, [Empty]]]]] : (Empty | Node of inttree * int * inttree)
+val it =
+  [Node, [[Empty], 2, [Node, [[Node, [[Empty], 3, [Empty]]], 4, [Empty]]]]]
+  : (Empty | Node of inttree * int * inttree)
 
 height it;
 val it = 3 : int
