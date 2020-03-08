@@ -34,13 +34,13 @@ Java version 8 or higher.
 ### From Maven
 
 Get Morel from
-<a href="https://search.maven.org/#search%7Cga%7C1%7Cg%3Anet.hydromatic%20a%3Asmlj">Maven Central</a>:
+<a href="https://search.maven.org/#search%7Cga%7C1%7Cg%3Anet.hydromatic%20a%3Amorel">Maven Central</a>:
 
 ```xml
 <dependency>
   <groupId>net.hydromatic</groupId>
-  <artifactId>smlj</artifactId>
-  <version>0.1.0</version>
+  <artifactId>morel</artifactId>
+  <version>0.2.0</version>
 </dependency>
 ```
 
@@ -62,7 +62,7 @@ On Windows, the last line is
 
 ```bash
 $ ./morel
-morel version 0.1.0 (java version "11.0.4", JLine terminal, xterm-256color)
+morel version 0.2.0 (java version "13", JLine terminal, xterm-256color)
 = "Hello, world!";
 val it = "Hello, world!" : string
 = exit

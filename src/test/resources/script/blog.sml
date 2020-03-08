@@ -90,7 +90,7 @@ end;
 
 (*) === Screen cast =================================================
 
-(*) Now we're in smlj's shell, for interactive commands.
+(*) Now we're in morel's shell, for interactive commands.
 (*) First of all, we need to talk about comments.
 
 (* This is a block comment, which can span multiple lines... *)
@@ -102,7 +102,7 @@ end;
 "a string literal";
 1 + 2;
 
-(*) The smlj shell deduces the type of each expression,
+(*) The Morel shell deduces the type of each expression,
 (*) and assigns it to a variable called "it".
 (*) We can use "it" in the next expression...
 it + 4;
@@ -218,7 +218,7 @@ in
 end;
 
 (*) That's all, folks!
-(*) To recap, smlj has:
+(*) To recap, Morel has:
 (*)  * expressions of int, string, boolean, float, char, list,
 (*)    tuple and record types;
 (*)  * lambda expressions and recursive functions;
@@ -226,7 +226,7 @@ end;
 (*)  * polymorphism and powerful type-inference;
 (*)  * relational expressions (an extension to Standard ML).
 (*)
-(*) Follow our progress at https://github.com/julianhyde/smlj.
+(*) Follow our progress at https://github.com/julianhyde/morel.
 (*) This is only release 0.1, so there's more to come!
 
 (*) === 2020/02/25: Morel: A functional language for data ===========

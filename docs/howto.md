@@ -23,7 +23,7 @@ License.
 ## How to make a release (for committers)
 
 Make sure `mvn clean install`, `mvn site`, and
-`mvn javadoc:javadoc javadoc:test-javadoc` pass under JDK 8 - 12.
+`mvn javadoc:javadoc javadoc:test-javadoc` pass under JDK 8 - 14.
 
 Write release notes. Run the
 [relNotes](https://github.com/julianhyde/share/blob/master/tools/relNotes)
