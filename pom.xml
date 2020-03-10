@@ -27,7 +27,7 @@ License.
   </parent>
 
   <artifactId>morel</artifactId>
-  <version>0.2.0</version>
+  <version>0.3.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>morel</name>
@@ -122,7 +122,7 @@ License.
     <connection>scm:git:git://github.com/julianhyde/morel.git</connection>
     <developerConnection>scm:git:git@github.com:julianhyde/morel.git</developerConnection>
     <url>scm:git:git://github.com/julianhyde/morel.git</url>
-    <tag>morel-0.2.0</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <dependencies>
