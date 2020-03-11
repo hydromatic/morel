@@ -20,6 +20,7 @@ package net.hydromatic.morel.ast;
 
 import com.google.common.collect.Lists;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /** Context for writing an AST out as a string. */
@@ -139,6 +140,29 @@ public class AstWriter {
       append(empty);
     } else {
       append(end);
+    }
+    return this;
+  }
+
+  public AstWriter appendLiteral(Comparable value) {
+    if (value instanceof String) {
+      append("\"")
+          .append(((String) value).replaceAll("\"", "\\\""))
+          .append("\"");
+    } else if (value instanceof Character) {
+      final Character c = (Character) value;
+      append("#\"")
+          .append(c == '"' ? "\\\"" : c.toString())
+          .append("\"");
+    } else if (value instanceof BigDecimal) {
+      BigDecimal c = (BigDecimal) value;
+      if (c.compareTo(BigDecimal.ZERO) < 0) {
+        append("~");
+        c = c.negate();
+      }
+      append(c.toString());
+    } else {
+      append(value.toString());
     }
     return this;
   }

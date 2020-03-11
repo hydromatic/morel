@@ -119,13 +119,7 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      if (value instanceof String) {
-        return w.append("\"")
-            .append(((String) value).replaceAll("\"", "\\\""))
-            .append("\"");
-      } else {
-        return w.append(value.toString());
-      }
+      return w.appendLiteral(value);
     }
   }
 
@@ -676,13 +670,7 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      if (value instanceof String) {
-        return w.append("\"")
-            .append(((String) value).replaceAll("\"", "\\\""))
-            .append("\"");
-      } else {
-        return w.append(value.toString());
-      }
+      return w.appendLiteral(value);
     }
   }
 

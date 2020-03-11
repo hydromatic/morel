@@ -60,14 +60,18 @@ import static org.junit.Assert.assertThat;
 public class MainTest {
   /** Matches a literal by value. */
   @SuppressWarnings("rawtypes")
-  private static Matcher<Ast.Literal> isLiteral(Comparable comparable) {
+  private static Matcher<Ast.Literal> isLiteral(Comparable comparable,
+      String ml) {
     return new TypeSafeMatcher<Ast.Literal>() {
       protected boolean matchesSafely(Ast.Literal literal) {
-        return literal.value.equals(comparable);
+        final String actualMl = Ast.toString(literal);
+        return literal.value.equals(comparable)
+            && actualMl.equals(ml);
       }
 
       public void describeTo(Description description) {
-        description.appendText("literal with value " + comparable);
+        description.appendText("literal with value " + comparable
+            + " and ML " + ml);
       }
     };
   }
@@ -150,10 +154,12 @@ public class MainTest {
   }
 
   @Test public void testParse() {
-    ml("1").assertParseLiteral(isLiteral(BigDecimal.ONE));
-    ml("~3.5").assertParseLiteral(isLiteral(new BigDecimal("-3.5")));
-    ml("\"a string\"").assertParseLiteral(isLiteral("a string"));
-    ml("#\"a\"").assertParseLiteral(isLiteral('a'));
+    ml("1").assertParseLiteral(isLiteral(BigDecimal.ONE, "1"));
+    ml("~3.5").assertParseLiteral(isLiteral(new BigDecimal("-3.5"), "~3.5"));
+    ml("\"a string\"")
+        .assertParseLiteral(isLiteral("a string", "\"a string\""));
+    ml("\"\"").assertParseLiteral(isLiteral("", "\"\""));
+    ml("#\"a\"").assertParseLiteral(isLiteral('a', "#\"a\""));
 
     // true and false are variables, not actually literals
     ml("true").assertStmt(Ast.Id.class, "true");
