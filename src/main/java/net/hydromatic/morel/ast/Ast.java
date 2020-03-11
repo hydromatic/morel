@@ -829,7 +829,7 @@ public class Ast {
     }
 
     /** Creates a copy of this {@code ValDecl} with given contents,
-     * or this if the contents are the same. */
+     * or {@code this} if the contents are the same. */
     public ValDecl copy(Iterable<ValBind> valBinds) {
       return Iterables.elementsEqual(this.valBinds, valBinds)
           ? this
@@ -1086,7 +1086,7 @@ public class Ast {
     }
 
     /** Creates a copy of this {@code LetExp} with given contents,
-     * or this if the contents are the same. */
+     * or {@code this} if the contents are the same. */
     public LetExp copy(Iterable<Decl> decls, Exp e) {
       return Iterables.elementsEqual(this.decls, decls)
           && Objects.equals(this.e, e)
@@ -1120,7 +1120,7 @@ public class Ast {
     }
 
     /** Creates a copy of this {@code ValBind} with given contents,
-     * or this if the contents are the same. */
+     * or {@code this} if the contents are the same. */
     public ValBind copy(boolean rec, Pat pat, Exp e) {
       return this.rec == rec
           && this.pat.equals(pat)
@@ -1148,6 +1148,15 @@ public class Ast {
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(pat, 0, 0).append(" => ").append(e, 0, right);
     }
+
+    /** Creates a copy of this {@code Match} with given contents,
+     * or {@code this} if the contents are the same. */
+    public Match copy(Pat pat, Exp e) {
+      return this.pat.equals(pat)
+          && this.e.equals(e)
+          ? this
+          : ast.match(pos, pat, e);
+    }
   }
 
   /** Lambda expression. */
@@ -1166,6 +1175,14 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.append("fn ").appendAll(matchList, 0, Op.BAR, right);
+    }
+
+    /** Creates a copy of this {@code Fn} with given contents,
+     * or this if the contents are the same. */
+    public Fn copy(java.util.List<Match> matchList) {
+      return this.matchList.equals(matchList)
+          ? this
+          : ast.fn(pos, matchList);
     }
   }
 
@@ -1284,7 +1301,7 @@ public class Ast {
     }
 
     /** Creates a copy of this {@code From} with given contents,
-     * or this if the contents are the same. */
+     * or {@code this} if the contents are the same. */
     public From copy(Map<Ast.Id, Ast.Exp> sources, Ast.Exp filterExp,
         Ast.Exp yieldExp, java.util.List<Pair<Exp, Id>> groupExps,
         java.util.List<Aggregate> aggregates) {

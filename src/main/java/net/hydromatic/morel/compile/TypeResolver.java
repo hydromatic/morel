@@ -280,10 +280,13 @@ public class TypeResolver {
     case FN:
       final Ast.Fn fn = (Ast.Fn) node;
       final Unifier.Variable resultVariable = unifier.variable();
+      final List<Ast.Match> matchList = new ArrayList<>();
       for (Ast.Match match : fn.matchList) {
-        deduceMatchType(env, match, new HashMap<>(), v, resultVariable);
+        matchList.add(
+            deduceMatchType(env, match, new HashMap<>(), v, resultVariable));
       }
-      return reg(fn, null, v);
+      final Ast.Fn fn2b = fn.copy(matchList);
+      return reg(fn2b, null, v);
 
     case APPLY:
       final Ast.Apply apply = (Ast.Apply) node;
@@ -403,14 +406,15 @@ public class TypeResolver {
     }
   }
 
-  private AstNode deduceMatchType(TypeEnv env, Ast.Match match,
+  private Ast.Match deduceMatchType(TypeEnv env, Ast.Match match,
       Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable argVariable,
       Unifier.Variable resultVariable) {
     final Unifier.Variable vPat = unifier.variable();
-    deducePatType(env, match.pat, termMap, null, vPat);
+    Ast.Pat pat2 = deducePatType(env, match.pat, termMap, null, vPat);
     TypeEnv env2 = bindAll(env, termMap);
-    deduceType(env2, match.e, resultVariable);
-    return reg(match, argVariable,
+    Ast.Exp e2 = deduceType(env2, match.e, resultVariable);
+    Ast.Match match2 = match.copy(pat2, e2);
+    return reg(match2, argVariable,
         unifier.apply(FN_TY_CON, vPat, resultVariable));
   }
 

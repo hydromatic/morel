@@ -323,8 +323,11 @@ public class Compiler {
       final Ast.DatatypeDecl datatypeDecl = (Ast.DatatypeDecl) decl;
       compileDatatypeDecl(env, datatypeDecl, bindings, actions);
       break;
+    case FUN_DECL:
+      throw new AssertionError("unknown " + decl.op + " [" + decl
+          + "] (did you remember to call TypeResolver.toValDecl?)");
     default:
-      throw new AssertionError("unknown " + decl.op + "; " + decl);
+      throw new AssertionError("unknown " + decl.op + " [" + decl + "]");
     }
   }
 
