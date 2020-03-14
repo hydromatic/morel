@@ -30,10 +30,10 @@ case $(uname -s) in
 esac
 
 # Build classpath on first call.
-# (To force rebuild, remove target/classpath.txt, or just "mvn clean".)
+# (To force rebuild, remove target/classpath.txt, or just "./mvnw clean".)
 cd $(dirname $0)
 if [ ! -f target/classpath.txt ]; then
-    mvn -DskipTests \
+    ./mvnw -DskipTests \
         dependency:build-classpath -Dmdep.outputFile=target/classpath.txt \
         compile test
 fi
