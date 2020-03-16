@@ -1252,8 +1252,27 @@ public class MainTest {
         + "end";
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
-    ml(ml).assertType("{deptno:int} list")
-        .assertEvalIter(equalsUnordered(list(10), list(20)));
+    // The implicit yield expression is "deptno". It is not a record,
+    // "{deptno = deptno}", because there is only one variable defined (the
+    // "group" clause defines "deptno" and hides the "e" from the "from"
+    // clause).
+    ml(ml).assertType("int list")
+        .assertEvalIter(equalsUnordered(10, 20));
+  }
+
+  /** As {@link #testFromGroupWithoutCompute()} but composite key, therefore
+   * result is a list of records. */
+  @Test public void testFromGroupWithoutCompute2() {
+    final String ml = "let\n"
+        + "  val emps =\n"
+        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+        + "     {id = 101, name = \"Velma\", deptno = 20},\n"
+        + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
+        + "in\n"
+        + "  from e in emps group #deptno e, e.id mod 2 as parity\n"
+        + "end";
+    ml(ml).assertType("{deptno:int, parity:int} list")
+        .assertEvalIter(equalsUnordered(list(10, 0), list(20, 1)));
   }
 
   @Test public void testFromGroup() {
@@ -1307,14 +1326,15 @@ public class MainTest {
   @Test public void testGroupDuplicates() {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a")
-        .assertEvalIter(equalsUnordered(list(0), list(1)));
+        .assertEvalIter(equalsUnordered(0, 1));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a, e.x as b")
         .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a, e.y as a")
-        // TODO: should give error; dup column 'a'
-        .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1), list(1, 1)));
+        .assertTypeThrows(
+            throwsA(RuntimeException.class,
+                is("Duplicate field name 'a' in group")));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as b")
@@ -1322,8 +1342,9 @@ public class MainTest {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as a")
-        // TODO: should give error; dup column 'a'
-        .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
+        .assertTypeThrows(
+            throwsA(RuntimeException.class,
+                is("Duplicate field name 'a' in group")));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as b, sum of e.x as c")
@@ -1331,8 +1352,32 @@ public class MainTest {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as c, sum of e.x as c")
-        // TODO: should give error; dup column 'c'
-        .assertEvalIter(equalsUnordered(list(0, 1, 1), list(1, 2, 2)));
+        .assertTypeThrows(
+            throwsA(RuntimeException.class,
+                is("Duplicate field name 'c' in group")));
+  }
+
+  @Test public void testGroupYield() {
+    final String ml = "from r in [{a=2,b=3}]\n"
+        + "group r.a compute sum of r.b as sb\n"
+        + "yield {a, a2 = a + a, sb}";
+    final String expected = "from r in [{a = 2, b = 3}]"
+        + " group #a r as a compute sum of #b r as sb"
+        + " yield {a = a, a2 = a + a, sb = sb}";
+    ml(ml).assertParse(expected)
+        .assertEvalIter(equalsOrdered(list(2, 4, 1)));
+  }
+
+  @Test public void testGroupGroup() {
+    final String ml = "from r in [{a=2,b=3}]\n"
+        + "group r.a as a1, r.b as b1\n"
+        + "group a1 + b1 as c2 compute sum of a1 as s2";
+    final String expected = "from r in [{a = 2, b = 3}]"
+        + " group #a r as a1, #b r as b1"
+        + " group a1 + b1 as c2 compute sum of a1 as s2";
+    ml(ml).assertParse(expected)
+        .assertType(is("{c2:int, s2:int} list"))
+        .assertEvalIter(equalsOrdered(list(5, 1)));
   }
 
   /** Tests a program that uses an external collection from the "scott" JDBC

@@ -137,13 +137,8 @@ In Standard ML but not in Morel:
     | <b>case</b> <i>exp</i> <b>of</b> <i>match</i>         case analysis
     | <b>fn</b> <i>match</i>                  function
     | <b>from</b> <i>fromSource<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>fromSource<sub>s</sub></i>
-      [ <b>where</b> <i>exp</i> ]
-      [
-        <b>yield</b> <i>exp</i>
-      | <b>group</b> <i>groupkey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupkey<sub>g</sub></i>
-        [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]
-      ]
-                                from (<i>s</i> &ge; 1, <i>g</i> &ge; 0, <i>a</i> &ge; 1)
+      (<i>fromFilter</i> | <i>fromGroup</i>)* [ <b>yield</b> <i>exp</i> ]
+                                from (<i>s</i> &ge; 1)
 <i>exprow</i> &rarr; <i>exprowItem</i> [<b>,</b> <i>exprowItem</i> ]*
                                 expression row
 <i>exprowItem</i> &rarr; [<i>lab</i> <b>=</b>] <i>exp</i>
@@ -151,6 +146,10 @@ In Standard ML but not in Morel:
                                 match
 <i>matchItem</i> &rarr; <i>pat</i> <b>=&gt;</b> <i>exp</i>
 <i>fromSource</i> &rarr; <i>id</i> <b>in</b> <i>exp</i>
+<i>fromFilter</i> &rarr; <b>where</b> <i>exp</i>          filter clause
+<i>fromGroup</i> &rarr; <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
+      [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]
+                                group clause (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
 <i>groupKey</i> &rarr; <i>exp</i> [ <b>as</b> <i>id</i> ]
 <i>agg</i> &rarr; <i>exp</i> <b>of</b> <i>exp</i> <b>as</b> <i>id</i>
 </pre>

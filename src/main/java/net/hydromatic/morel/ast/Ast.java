@@ -28,9 +28,10 @@ import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import java.util.stream.Collectors;
@@ -1210,56 +1211,47 @@ public class Ast {
   /** From expression. */
   public static class From extends Exp {
     public final Map<Id, Exp> sources;
-    public final Exp filterExp;
+    public final ImmutableList<FromStep> steps;
     public final Exp yieldExp;
     /** The expression in the yield clause, or the default yield expression
      * if not specified; never null. */
     public final Exp yieldExpOrDefault;
-    public final ImmutableList<Pair<Exp, Id>> groupExps;
-    public final ImmutableList<Aggregate> aggregates;
 
-    From(Pos pos, ImmutableMap<Id, Exp> sources, Exp filterExp, Exp yieldExp,
-        ImmutableList<Pair<Exp, Id>> groupExps,
-        ImmutableList<Aggregate> aggregates) {
+    From(Pos pos, ImmutableMap<Id, Exp> sources, ImmutableList<FromStep> steps,
+        Exp yieldExp) {
       super(pos, Op.FROM);
       this.sources = Objects.requireNonNull(sources);
-      this.filterExp = filterExp; // may be null
-      this.yieldExp = yieldExp; // may be null
-      if (groupExps != null) {
-        // The type of
-        //   from emps as e group by e1 as a, e2 as b compute sum of e3 as c
-        // is the same as the type of
-        //   {e1 as a, e2 as b, sum (map (fn e => c) list) as x}
-        assert yieldExp == null;
-        final Map<String, Exp> fields = new HashMap<>();
-        groupExps.forEach(pair -> fields.put(pair.right.name, pair.left));
-        final Literal aggResult = ast.intLiteral(BigDecimal.ZERO, pos); // FIXME
-        aggregates.forEach(aggregate -> {
-          final Map.Entry<Id, Exp> idSource =
-              sources.entrySet().iterator().next();
-          final Id id = idSource.getKey();
-          final Pat pat = ast.idPat(pos, id.name);
-          final Exp source = idSource.getValue();
-          fields.put(aggregate.id.name,
-              ast.apply(aggregate.aggregate,
-                  ast.map(pos,
-                      ast.fn(pos,
-                          ast.match(pos, pat, aggregate.argument)),
-                      source)));
-        });
-        this.yieldExpOrDefault = ast.record(pos, fields);
-      } else if (yieldExp != null) {
+      this.steps = Objects.requireNonNull(steps);
+      Set<Id> fields = sources.keySet();
+      for (FromStep step : steps) {
+        if (step instanceof Group) {
+          final Group group = (Group) step;
+          final ImmutableList<Pair<Id, Exp>> groupExps = group.groupExps;
+          final ImmutableList<Aggregate> aggregates = group.aggregates;
+
+          // The type of
+          //   from emps as e group by e1 as a, e2 as b compute sum of e3 as c
+          // is the same as the type of
+          //   {e1 as a, e2 as b, sum (map (fn e => c) list) as x}
+          final Set<Id> nextFields = new HashSet<>(Pair.left(groupExps));
+          groupExps.forEach(pair -> nextFields.add(pair.left));
+          final Literal aggResult =
+              ast.intLiteral(BigDecimal.ZERO, pos); // FIXME
+          aggregates.forEach(aggregate -> nextFields.add(aggregate.id));
+          fields = nextFields;
+        }
+      }
+      this.yieldExp = yieldExp;
+      if (yieldExp != null) {
         this.yieldExpOrDefault = this.yieldExp;
-      } else if (sources.size() == 1) {
-        this.yieldExpOrDefault = Iterables.getOnlyElement(sources.keySet());
+      } else if (fields.size() == 1) {
+        this.yieldExpOrDefault = Iterables.getOnlyElement(fields);
       } else {
-        this.yieldExpOrDefault = ast.record(pos,
-            sources.keySet().stream()
+        this.yieldExpOrDefault =
+            ast.record(pos, fields.stream()
                 .collect(Collectors.toMap(id -> id.name, id -> id)));
       }
       Objects.requireNonNull(this.yieldExpOrDefault);
-      this.groupExps = groupExps; // may be null
-      this.aggregates = aggregates; // may be null
     }
 
     public Exp accept(Shuttle shuttle) {
@@ -1273,25 +1265,9 @@ public class Ast {
         Ord.forEach(sources, (i, id, exp) ->
             w.append(i == 0 ? "from " : ", ")
                 .append(id, 0, 0).append(" in ").append(exp, 0, 0));
-        if (filterExp != null) {
-          w.append(" where ").append(filterExp, 0, 0);
-        }
-        if (groupExps != null) {
-          w.append(" group ");
-          Pair.forEachIndexed(groupExps, (i, exp, id) ->
-              w.append(i == 0 ? "" : ", ")
-                  .append(exp, 0, 0)
-                  .append(" as ")
-                  .append(id, 0, 0));
-          if (aggregates != null) {
-            Ord.forEach(aggregates, (aggregate, i) ->
-                w.append(i == 0 ? " compute " : ", ")
-                    .append(aggregate.aggregate, 0, 0)
-                    .append(" of ")
-                    .append(aggregate.argument, 0, 0)
-                    .append(" as ")
-                    .append(aggregate.id, 0, 0));
-          }
+        for (FromStep step : steps) {
+          w.append(" ");
+          step.unparse(w, 0, 0);
         }
         if (yieldExp != null) {
           w.append(" yield ").append(yieldExp, 0, 0);
@@ -1302,18 +1278,85 @@ public class Ast {
 
     /** Creates a copy of this {@code From} with given contents,
      * or {@code this} if the contents are the same. */
-    public From copy(Map<Ast.Id, Ast.Exp> sources, Ast.Exp filterExp,
-        Ast.Exp yieldExp, java.util.List<Pair<Exp, Id>> groupExps,
-        java.util.List<Aggregate> aggregates) {
+    public From copy(Map<Ast.Id, Ast.Exp> sources,
+        java.util.List<FromStep> steps, Ast.Exp yieldExp) {
       return this.sources.equals(sources)
-          && Objects.equals(this.filterExp, filterExp)
+          && this.steps.equals(steps)
           && Objects.equals(this.yieldExp, yieldExp)
-          && Objects.equals(this.groupExps, groupExps)
-          && Objects.equals(this.aggregates, aggregates)
           ? this
-          : ast.from(pos, sources, filterExp, yieldExp, groupExps, aggregates);
+          : ast.from(pos, sources, steps, yieldExp);
+    }
+  }
+
+  /** A step in a {@code from} expression - {@code where}, {@code group}
+   * or {@code order}. */
+  public abstract static class FromStep extends AstNode {
+    FromStep(Pos pos, Op op) {
+      super(pos, op);
+    }
+  }
+
+  /** A {@code where} clause in a {@code from} expression. */
+  public static class Where extends FromStep {
+    public final Exp exp;
+
+    Where(Pos pos, Exp exp) {
+      super(pos, Op.WHERE);
+      this.exp = exp;
     }
 
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("where ").append(exp, 0, 0);
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    public Where copy(Exp exp) {
+      return this.exp.equals(exp) ? this : new Where(pos, exp);
+    }
+  }
+
+  /** A {@code group} clause in a {@code from} expression. */
+  public static class Group extends FromStep {
+    public final ImmutableList<Pair<Id, Exp>> groupExps;
+    public final ImmutableList<Aggregate> aggregates;
+
+    Group(Pos pos, ImmutableList<Pair<Id, Exp>> groupExps,
+        ImmutableList<Aggregate> aggregates) {
+      super(pos, Op.GROUP);
+      this.groupExps = groupExps;
+      this.aggregates = aggregates;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      Pair.forEachIndexed(groupExps, (i, id, exp) ->
+          w.append(i == 0 ? "group " : ", ")
+              .append(exp, 0, 0)
+              .append(" as ")
+              .append(id, 0, 0));
+      Ord.forEach(aggregates, (aggregate, i) ->
+          w.append(i == 0 ? " compute " : ", ")
+              .append(aggregate.aggregate, 0, 0)
+              .append(" of ")
+              .append(aggregate.argument, 0, 0)
+              .append(" as ")
+              .append(aggregate.id, 0, 0));
+      return w;
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    public Group copy(java.util.List<Pair<Id, Exp>> groupExps,
+        java.util.List<Aggregate> aggregates) {
+      return this.groupExps.equals(groupExps)
+          && this.aggregates.equals(aggregates)
+          ? this
+          : ast.group(pos, groupExps, aggregates);
+    }
   }
 
   /** Application of a function to its argument. */
@@ -1368,6 +1411,24 @@ public class Ast {
 
     public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
+    }
+
+    /** Creates a fake expression that has the same type as this Aggregate. */
+    Apply getApply(Set<Id> idSet, Exp source) {
+      Id id = idSet.iterator().next(); // FIXME
+      return ast.apply(aggregate,
+          ast.map(pos,
+              ast.fn(pos,
+                  ast.match(pos, ast.idPat(pos, id.name), argument)),
+              source));
+    }
+
+    public Aggregate copy(Exp aggregate, Exp argument, Id id) {
+      return this.aggregate.equals(aggregate)
+          && this.argument.equals(argument)
+          && this.id.equals(id)
+          ? this
+          : ast.aggregate(pos, aggregate, argument, id);
     }
   }
 }

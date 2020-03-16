@@ -184,7 +184,7 @@ public enum AstBuilder {
     return new Ast.List(pos, list);
   }
 
-  public Ast.Exp record(Pos pos, Map<String, Ast.Exp> map) {
+  public Ast.Record record(Pos pos, Map<String, Ast.Exp> map) {
     return new Ast.Record(pos, ImmutableSortedMap.copyOf(map));
   }
 
@@ -287,12 +287,10 @@ public enum AstBuilder {
     return new Ast.Case(pos, e, ImmutableList.copyOf(matchList));
   }
 
-  public Ast.From from(Pos pos, Map<Ast.Id, Ast.Exp> sources, Ast.Exp filterExp,
-      Ast.Exp yieldExp, List<Pair<Ast.Exp, Ast.Id>> groupExps,
-      List<Ast.Aggregate> aggregates) {
-    return new Ast.From(pos, ImmutableMap.copyOf(sources), filterExp, yieldExp,
-        groupExps == null ? null : ImmutableList.copyOf(groupExps),
-        aggregates == null ? null : ImmutableList.copyOf(aggregates));
+  public Ast.From from(Pos pos, Map<Ast.Id, Ast.Exp> sources,
+      List<Ast.FromStep> steps, Ast.Exp yieldExp) {
+    return new Ast.From(pos, ImmutableMap.copyOf(sources),
+        ImmutableList.copyOf(steps), yieldExp);
   }
 
   public Ast.Fn fn(Pos pos, Ast.Match... matchList) {
@@ -388,6 +386,15 @@ public enum AstBuilder {
 
   public Ast.Exp map(Pos pos, Ast.Exp e1, Ast.Exp e2) {
     return apply(apply(id(pos, BuiltIn.LIST_MAP.mlName), e1), e2);
+  }
+
+  public Ast.Group group(Pos pos, List<Pair<Ast.Id, Ast.Exp>> groupExps,
+      List<Ast.Aggregate> aggregates) {
+    return new Ast.Group(pos, ImmutableList.copyOf(groupExps),
+        ImmutableList.copyOf(aggregates));
+  }
+  public Ast.FromStep where(Pos pos, Ast.Exp exp) {
+    return new Ast.Where(pos, exp);
   }
 }
 

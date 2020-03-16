@@ -262,7 +262,7 @@ val it = [10,20,30,40,10,20,30,40,10,20,30,40,...] : int list
 (*) join group where neither variable is referenced
 from e in emps, d in depts
   group compute sum of 1 as count;
-val it = [{count=16}] : {count:int} list
+val it = [16] : int list
 
 
 (*) join group where right variable is not referenced
@@ -353,12 +353,12 @@ val it =
 (*) 'group' with no aggregates
 from e in emps
 group e.deptno as deptno;
-val it = [{deptno=20},{deptno=10},{deptno=30}] : {deptno:int} list
+val it = [20,10,30] : int list
 
 
 from e in emps
 group e.deptno;
-val it = [{deptno=20},{deptno=10},{deptno=30}] : {deptno:int} list
+val it = [20,10,30] : int list
 
 
 (*) composite 'group' with no aggregates
@@ -397,7 +397,7 @@ val it =
 (*) empty 'group'
 from e in emps
 group compute sum of e.id as sumId;
-val it = [{sumId=4}] : {sumId:int} list
+val it = [4] : int list
 
 
 (*) user-defined aggregate function

@@ -45,6 +45,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
@@ -174,32 +175,9 @@ public class Compiler {
         sourceCodes.put(id, expCode);
         env2 = env2.bind(id.name, typeMap.getType(id), Unit.INSTANCE);
       }
-      final Ast.Exp filterExp = from.filterExp != null
-          ? from.filterExp
-          : ast.boolLiteral(from.pos, true);
-      final Code filterCode = compile(env2, filterExp);
-      if (from.groupExps != null) {
-        final ImmutableList.Builder<Code> groupCodes = ImmutableList.builder();
-        final ImmutableList.Builder<String> labels = ImmutableList.builder();
-        for (Pair<Ast.Exp, Ast.Id> pair : from.groupExps) {
-          groupCodes.add(compile(env, pair.left));
-          labels.add(pair.right.name);
-        }
-        final ImmutableList.Builder<Applicable> aggregateCodes =
-            ImmutableList.builder();
-        for (Ast.Aggregate aggregate : from.aggregates) {
-          final Code argumentCode = compile(env, aggregate.argument);
-          final Code aggregateCode = compile(env, aggregate.aggregate);
-          aggregateCodes.add(Codes.aggregate(env, aggregateCode, argumentCode));
-          labels.add(aggregate.id.name);
-        }
-        return Codes.fromGroup(sourceCodes, filterCode, groupCodes.build(),
-            aggregateCodes.build(), labels.build());
-      } else {
-        final Ast.Exp yieldExp = from.yieldExpOrDefault;
-        final Code yieldCode = compile(env2, yieldExp);
-        return Codes.from(sourceCodes, filterCode, yieldCode);
-      }
+      Supplier<Codes.RowSink> rowSinkFactory =
+          createRowSinkFactory(env2, from.steps, from.yieldExpOrDefault);
+      return Codes.from(sourceCodes, rowSinkFactory);
 
     case ID:
       final Ast.Id id = (Ast.Id) expression;
@@ -244,6 +222,50 @@ public class Compiler {
 
     default:
       throw new AssertionError("op not handled: " + expression.op);
+    }
+  }
+
+  private Supplier<Codes.RowSink> createRowSinkFactory(Environment env,
+      List<Ast.FromStep> steps, Ast.Exp yieldExp) {
+    if (steps.isEmpty()) {
+      final Code yieldCode = compile(env, yieldExp);
+      return () -> Codes.yieldRowSink(yieldCode);
+    }
+    final Ast.FromStep firstStep = steps.get(0);
+    final Supplier<Codes.RowSink> nextFactory =
+        createRowSinkFactory(env, steps.subList(1, steps.size()), yieldExp);
+    switch (firstStep.op) {
+    case WHERE:
+      final Ast.Where where = (Ast.Where) firstStep;
+      final Code filterCode = compile(env, where.exp);
+      return () -> Codes.whereRowSink(filterCode, nextFactory.get());
+
+    case GROUP:
+      final Ast.Group group = (Ast.Group) firstStep;
+      final ImmutableList.Builder<Code> groupCodesB = ImmutableList.builder();
+      final ImmutableList.Builder<String> labelsB = ImmutableList.builder();
+      for (Pair<Ast.Id, Ast.Exp> pair : group.groupExps) {
+        groupCodesB.add(compile(env, pair.right));
+        labelsB.add(pair.left.name);
+      }
+      final ImmutableList.Builder<Applicable> aggregateCodesB =
+          ImmutableList.builder();
+      for (Ast.Aggregate aggregate : group.aggregates) {
+        final Code argumentCode = compile(env, aggregate.argument);
+        final Code aggregateCode = compile(env, aggregate.aggregate);
+        aggregateCodesB.add(Codes.aggregate(env, aggregateCode, argumentCode));
+        labelsB.add(aggregate.id.name);
+      }
+      final ImmutableList<Code> groupCodes = groupCodesB.build();
+      final Code keyCode = Codes.tuple(groupCodes);
+      final ImmutableList.Builder<Integer> permuteB = ImmutableList.builder();
+      final ImmutableList<String> labels = labelsB.build();
+      final ImmutableList<Applicable> aggregateCodes = aggregateCodesB.build();
+      return () -> Codes.groupRowSink(keyCode, aggregateCodes, labels,
+          nextFactory.get());
+
+    default:
+      throw new AssertionError("unknown step type " + firstStep.op);
     }
   }
 

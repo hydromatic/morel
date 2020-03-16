@@ -108,6 +108,8 @@ public enum Op {
   APPLY(" ", 8),
   CASE,
   FROM,
+  WHERE,
+  GROUP,
   AGGREGATE,
   IF,
   MAP;

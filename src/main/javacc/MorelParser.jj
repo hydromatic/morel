@@ -302,11 +302,13 @@ Exp caseOf() :
 Exp from() :
 {
   final Span span;
+  Span stepSpan;
   final Map<Id, Exp> sources = new LinkedHashMap<Id, Exp>();
-  Exp filterExp = null;
+  final List<FromStep> steps = new ArrayList<FromStep>();
+  Exp filterExp;
   Exp yieldExp = null;
-  final List<Pair<Exp, Id>> groupExps;
-  final List<Aggregate> aggregates;
+  List<Pair<Id, Exp>> groupExps;
+  List<Aggregate> aggregates;
 }
 {
   <FROM> { span = Span.of(getPos()); }
@@ -314,11 +316,12 @@ Exp from() :
   (
     <COMMA> fromSource(sources)
   )*
-  [
-    <WHERE> filterExp = expression()
-  ]
   (
-    <GROUP>
+    <WHERE> { stepSpan = Span.of(getPos()); } filterExp = expression() {
+      steps.add(ast.where(stepSpan.end(this), filterExp));
+    }
+  |
+    <GROUP> { stepSpan = Span.of(getPos()); }
     (
       groupExps = expressionAsCommaList()
     |
@@ -330,17 +333,15 @@ Exp from() :
       { aggregates = ImmutableList.of(); }
     )
     {
-      return ast.from(span.end(this), sources, filterExp, yieldExp, groupExps,
-          aggregates);
+      steps.add(ast.group(stepSpan.end(this), groupExps, aggregates));
     }
-  |
-    [
-      <YIELD> yieldExp = expression()
-    ]
-    {
-      return ast.from(span.end(this), sources, filterExp, yieldExp, null, null);
-    }
-  )
+  )*
+  [
+    <YIELD> yieldExp = expression()
+  ]
+  {
+    return ast.from(span.end(this), sources, steps, yieldExp);
+  }
 }
 
 void fromSource(Map/*<String, Exp>*/ sources) :
@@ -612,7 +613,7 @@ Exp expression() :
 }
 
 /** List of expressions "e1 as id1, e2 as id2, e3 as id3". */
-List/*<Pair<Exp, Id>>*/ expressionAsCommaList() :
+List/*<Pair<Id, Exp>>*/ expressionAsCommaList() :
 {
   final List<Pair<Exp, Id>> list = new ArrayList<Pair<Exp, Id>>();
   Pair<Exp, Id> p;
@@ -629,7 +630,7 @@ List/*<Pair<Exp, Id>>*/ expressionAsCommaList() :
 /** Expression with optional "as", e.g. "e1 as id1";
  * "#deptno e" and "e.deptno" are equivalent to "e.deptno as deptno";
  * "x" is equivalent to "x as x". */
-Pair/*<Exp, Id>*/ expressionAs() :
+Pair/*<Id, Exp>*/ expressionAs() :
 {
   final Exp exp;
   final Id id;
@@ -637,11 +638,11 @@ Pair/*<Exp, Id>*/ expressionAs() :
 {
   exp = expression()
   (
-    <AS> id = identifier() { return Pair.of(exp, id); }
+    <AS> id = identifier() { return Pair.of(id, exp); }
   |
     {
       final String label = ast.implicitLabel(exp);
-      return Pair.of(exp, ast.id(exp.pos, label));
+      return Pair.of(ast.id(exp.pos, label), exp);
     }
   )
 }

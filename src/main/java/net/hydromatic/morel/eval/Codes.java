@@ -24,9 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 
 import net.hydromatic.morel.ast.Ast;
@@ -37,7 +35,6 @@ import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
-import net.hydromatic.morel.util.Ord;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
@@ -235,54 +233,6 @@ public abstract class Codes {
     return new TupleCode(ImmutableList.copyOf(codes));
   }
 
-  public static Code from(Map<Ast.Id, Code> sources, Code filterCode,
-      Code yieldCode) {
-    final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
-    final ImmutableList<Code> codes = ImmutableList.copyOf(sources.values());
-    return new Code() {
-      @Override public Object eval(EvalEnv env) {
-        final List<Iterable<Object>> iterables = new ArrayList<>();
-        final List<MutableEvalEnv> mutableEvalEnvs = new ArrayList<>();
-        for (Ord<Code> code : Ord.zip(codes)) {
-          final MutableEvalEnv mutableEnv =
-              env.bindMutable(ids.get(code.i).name);
-          mutableEvalEnvs.add(mutableEnv);
-          env = mutableEnv;
-          iterables.add(null);
-        }
-        final List<Object> list = new ArrayList<>();
-        iterables.set(0, (Iterable<Object>) codes.get(0).eval(env));
-        loop(0, iterables, mutableEvalEnvs, list);
-        return list;
-      }
-
-      /** Generates the {@code i}th nested loop of a cartesian product of the
-       * values in {@code iterables}. */
-      void loop(int i, List<Iterable<Object>> iterables,
-          List<MutableEvalEnv> mutableEvalEnvs, List<Object> list) {
-        final Iterable<Object> iterable = iterables.get(i);
-        final MutableEvalEnv mutableEvalEnv = mutableEvalEnvs.get(i);
-        final int next = i + 1;
-        if (next == iterables.size()) {
-          for (Object o : iterable) {
-            mutableEvalEnv.set(o);
-            if ((Boolean) filterCode.eval(mutableEvalEnv)) {
-              list.add(yieldCode.eval(mutableEvalEnv));
-            }
-          }
-        } else {
-          for (Object o : iterable) {
-            mutableEvalEnv.set(o);
-            //noinspection unchecked
-            iterables.set(next, (Iterable<Object>)
-                codes.get(next).eval(mutableEvalEnvs.get(next)));
-            loop(next, iterables, mutableEvalEnvs, list);
-          }
-        }
-      }
-    };
-  }
-
   /** Returns an applicable that constructs an instance of a datatype.
    * The instance is a list with two elements [constructorName, value]. */
   public static Applicable tyCon(Type dataType, String name) {
@@ -291,84 +241,34 @@ public abstract class Codes {
     return (env, argValue) -> ImmutableList.of(name, argValue);
   }
 
-  public static Code fromGroup(Map<Ast.Id, Code> sources, Code filterCode,
-      List<Code> groupCodes, List<Applicable> aggregateCodes,
-      List<String> labels) {
+  public static Code from(Map<Ast.Id, Code> sources,
+      Supplier<RowSink> rowSinkFactory) {
     final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
     final ImmutableList<Code> codes = ImmutableList.copyOf(sources.values());
-    final Code keyCode = tuple(groupCodes);
-    final List<Integer> permute = new ArrayList<>();
-    for (String sortedLabel : Ordering.natural().sortedCopy(labels)) {
-      permute.add(labels.indexOf(sortedLabel));
-    }
-    return new Code() {
-      @Override public Object eval(EvalEnv env) {
-        final List<Iterable<Object>> iterables = new ArrayList<>();
-        final List<MutableEvalEnv> mutableEvalEnvs = new ArrayList<>();
-        for (Ast.Id id : ids) {
-          final MutableEvalEnv mutableEnv = env.bindMutable(id.name);
-          mutableEvalEnvs.add(mutableEnv);
-          env = mutableEnv;
-          iterables.add(null);
-        }
-        final Object[] currentValues = new Object[sources.size()];
-        final ListMultimap<Object, Object> map = ArrayListMultimap.create();
-        //noinspection unchecked
-        iterables.set(0, (Iterable<Object>) codes.get(0).eval(env));
-        loop(0, iterables, mutableEvalEnvs, currentValues, map);
-
-        final List<List<Object>> list = new ArrayList<>();
-        final List<Object> tuple = new ArrayList<>();
-        for (Map.Entry<Object, List<Object>> entry
-            : Multimaps.asMap(map).entrySet()) {
-          tuple.addAll((List) entry.getKey());
-          final List<Object> rows = entry.getValue(); // rows in this bucket
-          for (Applicable aggregateCode : aggregateCodes) {
-            tuple.add(aggregateCode.apply(env, rows));
-          }
-          list.add(permutedCopy(tuple));
-          tuple.clear();
-        }
-        return list;
-      }
-
-      private List<Object> permutedCopy(List<Object> tuple) {
-        final List<Object> tuple2 = new ArrayList<>(tuple.size());
-        for (Integer integer : permute) {
-          tuple2.add(tuple.get(integer));
-        }
-        return tuple2;
-      }
-
-      /** Generates the {@code i}th nested loop of a cartesian product of the
-       * values in {@code iterables}. */
-      void loop(int i, List<Iterable<Object>> iterables,
-          List<MutableEvalEnv> mutableEvalEnvs,
-          Object[] currentValues, Multimap<Object, Object> map) {
-        final Iterable<Object> iterable = iterables.get(i);
-        final MutableEvalEnv mutableEvalEnv = mutableEvalEnvs.get(i);
-        final int next = i + 1;
-        if (next == iterables.size()) {
-          for (Object o : iterable) {
-            mutableEvalEnv.set(o);
-            if ((Boolean) filterCode.eval(mutableEvalEnv)) {
-              currentValues[i] = o;
-              map.put(keyCode.eval(mutableEvalEnv),
-                  ImmutableList.copyOf(currentValues));
-            }
-          }
-        } else {
-          for (Object o : iterable) {
-            mutableEvalEnv.set(o);
-            currentValues[i] = o;
-            //noinspection unchecked
-            iterables.set(next, (Iterable<Object>)
-                codes.get(next).eval(mutableEvalEnvs.get(next)));
-            loop(next, iterables, mutableEvalEnvs, currentValues, map);
-          }
-        }
-      }
+    return env -> {
+      final RowSink rowSink = rowSinkFactory.get();
+      final Looper looper = new Looper(ids, codes, env, rowSink);
+      looper.loop(0);
+      return rowSink.result(env);
     };
+  }
+
+  /** Creates a {@link RowSink} for a {@code where} clause. */
+  public static RowSink whereRowSink(Code filterCode, RowSink rowSink) {
+    return new WhereRowSink(filterCode, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a {@code group} clause. */
+  public static RowSink groupRowSink(Code keyCode,
+      Iterable<? extends Applicable> aggregateCodes, Iterable<String> labels,
+      RowSink rowSink) {
+    return new GroupRowSink(keyCode, ImmutableList.copyOf(aggregateCodes),
+        ImmutableList.copyOf(labels), rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a {@code yield} clause. */
+  public static RowSink yieldRowSink(Code yieldCode) {
+    return new YieldRowSink(yieldCode);
   }
 
   /** Returns an applicable that returns the {@code slot}th field of a tuple or
@@ -939,6 +839,147 @@ public abstract class Codes {
         values[i] = codes.get(i).eval(env);
       }
       return Arrays.asList(values);
+    }
+  }
+
+  /** Implements the {@code from} clause, iterating over several variables
+   * and then calling a {@link RowSink} to complete the next step or steps. */
+  private static class Looper {
+    final List<Iterable<Object>> iterables = new ArrayList<>();
+    final List<MutableEvalEnv> mutableEvalEnvs = new ArrayList<>();
+    private final ImmutableList<Code> codes;
+    private final RowSink rowSink;
+
+    Looper(ImmutableList<Ast.Id> ids, ImmutableList<Code> codes, EvalEnv env,
+        RowSink rowSink) {
+      this.codes = codes;
+      this.rowSink = rowSink;
+      for (Ast.Id id : ids) {
+        final MutableEvalEnv mutableEnv = env.bindMutable(id.name);
+        mutableEvalEnvs.add(mutableEnv);
+        env = mutableEnv;
+        iterables.add(null);
+      }
+      //noinspection unchecked
+      iterables.set(0, (Iterable<Object>) codes.get(0).eval(env));
+    }
+
+    /** Generates the {@code i}th nested loop of a cartesian product of the
+     * values in {@code iterables}. */
+    void loop(int i) {
+      final Iterable<Object> iterable = iterables.get(i);
+      final MutableEvalEnv mutableEvalEnv = mutableEvalEnvs.get(i);
+      final int next = i + 1;
+      if (next == iterables.size()) {
+        for (Object o : iterable) {
+          mutableEvalEnv.set(o);
+          rowSink.accept(mutableEvalEnv);
+        }
+      } else {
+        for (Object o : iterable) {
+          mutableEvalEnv.set(o);
+          //noinspection unchecked
+          iterables.set(next, (Iterable<Object>)
+              codes.get(next).eval(mutableEvalEnvs.get(next)));
+          loop(next);
+        }
+      }
+    }
+  }
+
+  /** Accepts rows produced by a supplier as part of a {@code from} clause. */
+  public interface RowSink {
+    void accept(EvalEnv env);
+    List<Object> result(EvalEnv env);
+  }
+
+  /** Implementation of {@link RowSink} for a {@code where} clause. */
+  static class WhereRowSink implements RowSink {
+    final Code filterCode;
+    final RowSink rowSink;
+
+    WhereRowSink(Code filterCode, RowSink rowSink) {
+      this.filterCode = filterCode;
+      this.rowSink = rowSink;
+    }
+
+    public void accept(EvalEnv env) {
+      if ((Boolean) filterCode.eval(env)) {
+        rowSink.accept(env);
+      }
+    }
+
+    public List<Object> result(EvalEnv env) {
+      return rowSink.result(env);
+    }
+  }
+
+  /** Implementation of {@link RowSink} for a {@code group} clause. */
+  private static class GroupRowSink implements RowSink {
+    final Code keyCode;
+    /** group names followed by aggregate names */
+    final ImmutableList<String> labels;
+    final ImmutableList<Applicable> aggregateCodes;
+    final RowSink rowSink;
+    final ListMultimap<Object, Object> map = ArrayListMultimap.create();
+    final Object[] values;
+
+    GroupRowSink(Code keyCode, ImmutableList<Applicable> aggregateCodes,
+        ImmutableList<String> labels, RowSink rowSink) {
+      this.keyCode = keyCode;
+      this.aggregateCodes = aggregateCodes;
+      this.labels = labels;
+      this.rowSink = rowSink;
+      this.values = new Object[labels.size()];
+    }
+
+    public void accept(EvalEnv env) {
+      for (int i = 0; i < labels.size(); i++) {
+        values[i] = env.getOpt(labels.get(i));
+      }
+      map.put(keyCode.eval(env), values.clone());
+    }
+
+    public List<Object> result(EvalEnv env) {
+      final EvalEnv env0 = env;
+      EvalEnv env2 = env0;
+      final MutableEvalEnv[] groupEnvs = new MutableEvalEnv[labels.size()];
+      int i = 0;
+      for (String name : labels) {
+        env2 = groupEnvs[i++] = env2.bindMutable(name);
+      }
+      for (Map.Entry<Object, List<Object>> entry
+          : Multimaps.asMap(map).entrySet()) {
+        final List list = (List) entry.getKey();
+        for (i = 0; i < list.size(); i++) {
+          groupEnvs[i].set(list.get(i));
+        }
+        final List<Object> rows = entry.getValue(); // rows in this bucket
+        for (Applicable aggregateCode : aggregateCodes) {
+          groupEnvs[i++].set(aggregateCode.apply(env, rows));
+        }
+        rowSink.accept(env2);
+      }
+      return rowSink.result(env0);
+    }
+  }
+
+  /** Implementation of {@link RowSink} for a {@code yield} clause. */
+  private static class YieldRowSink implements RowSink {
+    final List<Object> list;
+    private final Code yieldCode;
+
+    YieldRowSink(Code yieldCode) {
+      this.yieldCode = yieldCode;
+      list = new ArrayList<>();
+    }
+
+    public void accept(EvalEnv env) {
+      list.add(yieldCode.eval(env));
+    }
+
+    public List<Object> result(EvalEnv env) {
+      return list;
     }
   }
 }

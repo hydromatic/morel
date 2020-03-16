@@ -186,8 +186,15 @@ public class Shuttle {
   }
 
   public Ast.Exp visit(Ast.From from) {
-    return ast.from(from.pos, from.sources, from.filterExp, from.yieldExp,
-        from.groupExps, from.aggregates);
+    return ast.from(from.pos, from.sources, from.steps, from.yieldExp);
+  }
+
+  public AstNode visit(Ast.Where where) {
+    return ast.where(where.pos, where.exp.accept(this));
+  }
+
+  public AstNode visit(Ast.Group group) {
+    return ast.group(group.pos, group.groupExps, group.aggregates);
   }
 
   public AstNode visit(Ast.Aggregate aggregate) {

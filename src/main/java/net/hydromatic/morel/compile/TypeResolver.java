@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.compile;
 
+import org.apache.calcite.util.Util;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -243,7 +245,7 @@ public class TypeResolver {
       //  [where filterExp: v5] [yield yieldExp: v4]): v"
       final Ast.From from = (Ast.From) node;
       env2 = env;
-      final Map<String, Unifier.Variable> fieldVars = new LinkedHashMap<>();
+      final Map<Ast.Id, Unifier.Variable> fieldVars = new LinkedHashMap<>();
       for (Map.Entry<Ast.Id, Ast.Exp> source : from.sources.entrySet()) {
         final Ast.Id id = source.getKey();
         final Ast.Exp exp = source.getValue();
@@ -253,23 +255,67 @@ public class TypeResolver {
         reg(exp, v5, unifier.apply(LIST_TY_CON, v6));
         reg(id, null, v6);
         env2 = env2.bind(id.name, v6);
-        fieldVars.put(id.name, v6);
+        fieldVars.put(id, v6);
       }
-      final Ast.Exp filter2;
-      if (from.filterExp != null) {
-        final Unifier.Variable v5 = unifier.variable();
-        filter2 = deduceType(env2, from.filterExp, v5);
-        equiv(v5, toTerm(PrimitiveType.BOOL));
-      } else {
-        filter2 = null;
+      final List<Ast.FromStep> fromSteps = new ArrayList<>();
+      for (Ast.FromStep step : from.steps) {
+        switch (step.op) {
+        case WHERE:
+          final Ast.Where where = (Ast.Where) step;
+          final Unifier.Variable v5 = unifier.variable();
+          final Ast.Exp filter2 = deduceType(env2, where.exp, v5);
+          equiv(v5, toTerm(PrimitiveType.BOOL));
+          fromSteps.add(where.copy(filter2));
+          break;
+
+        case GROUP:
+          final Ast.Group group = (Ast.Group) step;
+          validateGroup(group);
+          TypeEnv env3 = env;
+          fieldVars.clear();
+          final List<Pair<Ast.Id, Ast.Exp>> groupExps = new ArrayList<>();
+          for (Pair<Ast.Id, Ast.Exp> groupExp : group.groupExps) {
+            final Ast.Id id = groupExp.getKey();
+            final Ast.Exp exp = groupExp.getValue();
+            final Unifier.Variable v7 = unifier.variable();
+            final Ast.Exp exp2 = deduceType(env2, exp, v7);
+            reg(id, null, v7);
+            env3 = env3.bind(id.name, v7);
+            fieldVars.put(id, v7);
+            groupExps.add(Pair.of(id, exp2));
+          }
+          final List<Ast.Aggregate> aggregates = new ArrayList<>();
+          for (Ast.Aggregate aggregate : group.aggregates) {
+            final Ast.Id id = aggregate.id;
+            final Unifier.Variable v8 = unifier.variable();
+            reg(id, null, v8);
+            final Unifier.Variable v9 = unifier.variable();
+            final Ast.Exp aggregate2 =
+                deduceType(env2, aggregate.aggregate, v9);
+            final Unifier.Variable v10 = unifier.variable();
+            final Ast.Exp arg2 =
+                deduceType(env2, aggregate.argument, v10);
+            reg(aggregate.aggregate, null, v9);
+            equiv(unifier.apply(FN_TY_CON, unifier.apply(LIST_TY_CON, v10), v8),
+                v9);
+            env3 = env3.bind(id.name, v8);
+            fieldVars.put(id, v8);
+            aggregates.add(aggregate.copy(aggregate2, arg2, aggregate.id));
+          }
+          fromSteps.add(group.copy(groupExps, aggregates));
+          env2 = env3;
+          break;
+
+        default:
+          throw new AssertionError("unknown step type " + step.op);
+        }
       }
       v3 = unifier.variable();
       final Ast.Exp yieldExpOrDefault2 =
           deduceType(env2, from.yieldExpOrDefault, v3);
       final Ast.Exp yieldExp2 =
           from.yieldExp == null ? null : yieldExpOrDefault2;
-      final Ast.From from2 = from.copy(from.sources, filter2, yieldExp2,
-          from.groupExps, from.aggregates);
+      final Ast.From from2 = from.copy(from.sources, fromSteps, yieldExp2);
       return reg(from2, v, unifier.apply(LIST_TY_CON, v3));
 
     case ID:
@@ -322,6 +368,19 @@ public class TypeResolver {
 
     default:
       throw new AssertionError("cannot deduce type for " + node.op);
+    }
+  }
+
+  /** Validates a {@code Group}. Throws if there are duplicate names among
+   * the keys and aggregates. */
+  private void validateGroup(Ast.Group group) {
+    final List<String> names = new ArrayList<>();
+    group.groupExps.forEach(pair -> names.add(pair.left.name));
+    group.aggregates.forEach(aggregate -> names.add(aggregate.id.name));
+    int duplicate = Util.firstDuplicate(names);
+    if (duplicate >= 0) {
+      throw new RuntimeException("Duplicate field name '"
+          + names.get(duplicate) + "' in group");
     }
   }
 
