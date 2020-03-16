@@ -1294,6 +1294,15 @@ public class Ast {
     FromStep(Pos pos, Op op) {
       super(pos, op);
     }
+
+    /** Returns the names of the fields produced by this step, given the names
+     * of the fields that are input to this step.
+     *
+     * <p>By default, a step outputs the same fields as it inputs.
+     */
+    public java.util.List<String> names(java.util.List<String> inNames) {
+      return inNames;
+    }
   }
 
   /** A {@code where} clause in a {@code from} expression. */
@@ -1348,6 +1357,14 @@ public class Ast {
 
     @Override public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
+    }
+
+    @Override public java.util.List<String> names(
+        java.util.List<String> inNames) {
+      final ImmutableList.Builder<String> names = ImmutableList.builder();
+      groupExps.forEach(idExp -> names.add(idExp.left.name));
+      aggregates.forEach(aggregate -> names.add(aggregate.id.name));
+      return names.build();
     }
 
     public Group copy(java.util.List<Pair<Id, Exp>> groupExps,

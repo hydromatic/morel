@@ -223,14 +223,11 @@ from e in emps
 group e.deptno, e.id mod 2 as idMod2;
 
 (*) 'group' with 'where' and complex argument to 'sum'
-(*
 from e in emps
 where e.deptno < 30
 group e.deptno as deptno
   compute sum of e.id as sumId,
           sum of e.id + e.deptno as sumIdPlusDeptno;
-val it = [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"}] : {deptno:int, id:int, name:string} list
-*)
 
 (*) 'group' with join
 from e in emps, d in depts
@@ -254,24 +251,54 @@ in
   compute siz of e.id as size
 end;
 
-(*) Should we allow 'yield' following 'group'? Here's a possible syntax.
-(*) We need to introduce a variable name, but "as g" syntax isn't great.
-(*
+(*) Group followed by yield
 from e in emps
 group e.deptno
   compute sum of e.id as sumId,
           count of e as count
-  as g
-yield {g.deptno, avgId = g.sumId / g.count}
-*)
+yield {deptno, avgId = sumId / count};
 
-(*) Or just use a sub-from:
+(*) Similar, using a sub-from:
 from g in (
   from e in emps
   group e.deptno
     compute sum of e.id as sumId,
             count of e as count)
 yield {g.deptno, avgId = g.sumId / g.count};
+
+(*) Group followed by group
+from e in emps
+  group e.deptno, e.deptno mod 2 as parity
+    compute sum of e.id as sumId
+  group parity
+    compute sum of sumId as sumSumId;
+
+(*) Group followed by group followed by yield
+from e in emps
+  group e.deptno, e.deptno mod 2 as parity
+    compute sum of e.id as sumId
+  group parity
+    compute sum of sumId as sumSumId
+  yield sumSumId * parity;
+
+(*) Join followed by composite group
+from e in emps,
+    d in depts
+  where e.deptno = d.deptno
+  group e.id + d.deptno as x, e.deptno
+    compute sum of e.id as sumId;
+
+(*) Join followed by single group (from right input)
+from e in emps,
+    d in depts
+  where e.deptno = d.deptno
+  group d.deptno;
+
+(*) Join followed by single group (from left input)
+from e in emps,
+    d in depts
+  where e.deptno = d.deptno
+  group e.deptno;
 
 (*) Temporary functions
 let

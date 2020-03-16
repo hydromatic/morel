@@ -168,15 +168,18 @@ public class Compiler {
     case FROM:
       final Ast.From from = (Ast.From) expression;
       final Map<Ast.Id, Code> sourceCodes = new LinkedHashMap<>();
+      final ImmutableList.Builder<String> names = ImmutableList.builder();
       Environment env2 = env;
       for (Map.Entry<Ast.Id, Ast.Exp> idExp : from.sources.entrySet()) {
         final Code expCode = compile(env2, idExp.getValue());
         final Ast.Id id = idExp.getKey();
         sourceCodes.put(id, expCode);
+        names.add(id.name);
         env2 = env2.bind(id.name, typeMap.getType(id), Unit.INSTANCE);
       }
       Supplier<Codes.RowSink> rowSinkFactory =
-          createRowSinkFactory(env2, from.steps, from.yieldExpOrDefault);
+          createRowSinkFactory(env2, names.build(), from.steps,
+              from.yieldExpOrDefault);
       return Codes.from(sourceCodes, rowSinkFactory);
 
     case ID:
@@ -226,14 +229,19 @@ public class Compiler {
   }
 
   private Supplier<Codes.RowSink> createRowSinkFactory(Environment env,
-      List<Ast.FromStep> steps, Ast.Exp yieldExp) {
+      ImmutableList<String> names, List<Ast.FromStep> steps,
+      Ast.Exp yieldExp) {
     if (steps.isEmpty()) {
       final Code yieldCode = compile(env, yieldExp);
       return () -> Codes.yieldRowSink(yieldCode);
     }
     final Ast.FromStep firstStep = steps.get(0);
+    final ImmutableList<String> outNames =
+        ImmutableList.copyOf(firstStep.names(names));
+
     final Supplier<Codes.RowSink> nextFactory =
-        createRowSinkFactory(env, steps.subList(1, steps.size()), yieldExp);
+        createRowSinkFactory(env, outNames, steps.subList(1, steps.size()),
+            yieldExp);
     switch (firstStep.op) {
     case WHERE:
       final Ast.Where where = (Ast.Where) firstStep;
@@ -243,26 +251,22 @@ public class Compiler {
     case GROUP:
       final Ast.Group group = (Ast.Group) firstStep;
       final ImmutableList.Builder<Code> groupCodesB = ImmutableList.builder();
-      final ImmutableList.Builder<String> labelsB = ImmutableList.builder();
       for (Pair<Ast.Id, Ast.Exp> pair : group.groupExps) {
         groupCodesB.add(compile(env, pair.right));
-        labelsB.add(pair.left.name);
       }
       final ImmutableList.Builder<Applicable> aggregateCodesB =
           ImmutableList.builder();
       for (Ast.Aggregate aggregate : group.aggregates) {
         final Code argumentCode = compile(env, aggregate.argument);
         final Code aggregateCode = compile(env, aggregate.aggregate);
-        aggregateCodesB.add(Codes.aggregate(env, aggregateCode, argumentCode));
-        labelsB.add(aggregate.id.name);
+        aggregateCodesB.add(
+            Codes.aggregate(env, aggregateCode, names, argumentCode));
       }
       final ImmutableList<Code> groupCodes = groupCodesB.build();
       final Code keyCode = Codes.tuple(groupCodes);
-      final ImmutableList.Builder<Integer> permuteB = ImmutableList.builder();
-      final ImmutableList<String> labels = labelsB.build();
       final ImmutableList<Applicable> aggregateCodes = aggregateCodesB.build();
-      return () -> Codes.groupRowSink(keyCode, aggregateCodes, labels,
-          nextFactory.get());
+      return () -> Codes.groupRowSink(keyCode, aggregateCodes, names,
+          outNames, nextFactory.get());
 
     default:
       throw new AssertionError("unknown step type " + firstStep.op);

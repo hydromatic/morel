@@ -18,8 +18,10 @@
  */
 package net.hydromatic.morel.eval;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
@@ -76,6 +78,42 @@ public class EvalEnvs {
 
     public void set(Object value) {
       this.value = value;
+    }
+  }
+
+  /** Similar to {@link MutableEvalEnv} but binds several names. */
+  static class MutableArraySubEvalEnv implements MutableEvalEnv {
+    private final EvalEnv parentEnv;
+    private final ImmutableList<String> names;
+    protected Object[] values;
+
+    MutableArraySubEvalEnv(EvalEnv parentEnv, List<String> names) {
+      this.parentEnv = parentEnv;
+      this.names = ImmutableList.copyOf(names);
+    }
+
+    @Override public String toString() {
+      return valueMap().toString();
+    }
+
+    public void set(Object value) {
+      values = (Object[]) value;
+      assert values.length == names.size();
+    }
+
+    public void visit(BiConsumer<String, Object> consumer) {
+      for (int i = 0; i < names.size(); i++) {
+        consumer.accept(names.get(i), values[i]);
+      }
+      parentEnv.visit(consumer);
+    }
+
+    public Object getOpt(String name) {
+      final int i = names.indexOf(name);
+      if (i >= 0) {
+        return values[i];
+      }
+      return parentEnv.getOpt(name);
     }
   }
 

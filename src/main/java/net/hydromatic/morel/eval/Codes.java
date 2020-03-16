@@ -168,7 +168,7 @@ public abstract class Codes {
   /** Returns a Code that returns the value of variable "name" in the current
    * environment. */
   public static Code get(String name) {
-    return env -> env.getOpt(name);
+    return new GetCode(name);
   }
 
   public static Code let(List<Code> fnCodes, Code argCode) {
@@ -260,10 +260,10 @@ public abstract class Codes {
 
   /** Creates a {@link RowSink} for a {@code group} clause. */
   public static RowSink groupRowSink(Code keyCode,
-      Iterable<? extends Applicable> aggregateCodes, Iterable<String> labels,
-      RowSink rowSink) {
-    return new GroupRowSink(keyCode, ImmutableList.copyOf(aggregateCodes),
-        ImmutableList.copyOf(labels), rowSink);
+      ImmutableList<Applicable> aggregateCodes, ImmutableList<String> inNames,
+      ImmutableList<String> outNames, RowSink rowSink) {
+    return new GroupRowSink(keyCode, aggregateCodes, inNames, outNames,
+        rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code yield} clause. */
@@ -760,12 +760,22 @@ public abstract class Codes {
     return set;
   }
 
-  public static Applicable aggregate(Environment env, Code aggregate,
-      Code argumentCode) {
-    if (aggregate.isConstant()) {
+  public static Applicable aggregate(Environment env, Code aggregateCode,
+      List<String> names, Code argumentCode) {
+    if (aggregateCode.isConstant()) {
       int x = 0;
     }
-    return RELATIONAL_COUNT;
+    return (env1, argValue) -> {
+      final List rows = (List) argValue;
+      final MutableEvalEnv env2 = env1.bindMutableArray(names);
+      final List<Object> argRows = new ArrayList<>(rows.size());
+      for (Object row : rows) {
+        env2.set(row);
+        argRows.add(argumentCode.eval(env2));
+      }
+      final Applicable aggregate = (Applicable) aggregateCode.eval(env1);
+      return aggregate.apply(env1, argRows);
+    };
   }
 
   private static final ImmutableMap<BuiltIn, Object> BUILT_IN_VALUES =
@@ -917,35 +927,42 @@ public abstract class Codes {
   /** Implementation of {@link RowSink} for a {@code group} clause. */
   private static class GroupRowSink implements RowSink {
     final Code keyCode;
+    final ImmutableList<String> inNames;
     /** group names followed by aggregate names */
-    final ImmutableList<String> labels;
+    final ImmutableList<String> outNames;
     final ImmutableList<Applicable> aggregateCodes;
     final RowSink rowSink;
     final ListMultimap<Object, Object> map = ArrayListMultimap.create();
     final Object[] values;
 
     GroupRowSink(Code keyCode, ImmutableList<Applicable> aggregateCodes,
-        ImmutableList<String> labels, RowSink rowSink) {
-      this.keyCode = keyCode;
-      this.aggregateCodes = aggregateCodes;
-      this.labels = labels;
-      this.rowSink = rowSink;
-      this.values = new Object[labels.size()];
+        ImmutableList<String> inNames, ImmutableList<String> outNames,
+        RowSink rowSink) {
+      this.keyCode = Objects.requireNonNull(keyCode);
+      this.aggregateCodes = Objects.requireNonNull(aggregateCodes);
+      this.inNames = Objects.requireNonNull(inNames);
+      this.outNames = Objects.requireNonNull(outNames);
+      this.rowSink = Objects.requireNonNull(rowSink);
+      this.values = inNames.size() == 1 ? null : new Object[inNames.size()];
     }
 
     public void accept(EvalEnv env) {
-      for (int i = 0; i < labels.size(); i++) {
-        values[i] = env.getOpt(labels.get(i));
+      if (inNames.size() == 1) {
+        map.put(keyCode.eval(env), env.getOpt(inNames.get(0)));
+      } else {
+        for (int i = 0; i < inNames.size(); i++) {
+          values[i] = env.getOpt(inNames.get(i));
+        }
+        map.put(keyCode.eval(env), values.clone());
       }
-      map.put(keyCode.eval(env), values.clone());
     }
 
     public List<Object> result(EvalEnv env) {
       final EvalEnv env0 = env;
       EvalEnv env2 = env0;
-      final MutableEvalEnv[] groupEnvs = new MutableEvalEnv[labels.size()];
+      final MutableEvalEnv[] groupEnvs = new MutableEvalEnv[outNames.size()];
       int i = 0;
-      for (String name : labels) {
+      for (String name : outNames) {
         env2 = groupEnvs[i++] = env2.bindMutable(name);
       }
       for (Map.Entry<Object, List<Object>> entry
@@ -980,6 +997,23 @@ public abstract class Codes {
 
     public List<Object> result(EvalEnv env) {
       return list;
+    }
+  }
+
+  /** Code that retrieves the value of a variable from the environment. */
+  private static class GetCode implements Code {
+    private final String name;
+
+    GetCode(String name) {
+      this.name = Objects.requireNonNull(name);
+    }
+
+    @Override public String toString() {
+      return "get(" + name + ")";
+    }
+
+    public Object eval(EvalEnv env) {
+      return env.getOpt(name);
     }
   }
 }

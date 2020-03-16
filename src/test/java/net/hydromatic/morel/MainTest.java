@@ -1300,7 +1300,7 @@ public class MainTest {
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
     ml(ml).assertType("{deptno:int, sumId:int} list")
-        .assertEvalIter(equalsUnordered(list(10, 2), list(20, 1)));
+        .assertEvalIter(equalsUnordered(list(10, 202), list(20, 101)));
   }
 
   @Test public void testGroupAs() {
@@ -1338,7 +1338,7 @@ public class MainTest {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as b")
-        .assertEvalIter(equalsUnordered(list(0, 1), list(1, 2)));
+        .assertEvalIter(equalsUnordered(list(0, 1), list(1, 6)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as a")
@@ -1348,7 +1348,7 @@ public class MainTest {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as b, sum of e.x as c")
-        .assertEvalIter(equalsUnordered(list(0, 1, 1), list(1, 2, 2)));
+        .assertEvalIter(equalsUnordered(list(0, 1, 0), list(1, 6, 2)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group e.x as a\n"
         + "compute sum of e.y as c, sum of e.x as c")
@@ -1365,7 +1365,20 @@ public class MainTest {
         + " group #a r as a compute sum of #b r as sb"
         + " yield {a = a, a2 = a + a, sb = sb}";
     ml(ml).assertParse(expected)
-        .assertEvalIter(equalsOrdered(list(2, 4, 1)));
+        .assertEvalIter(equalsOrdered(list(2, 4, 3)));
+  }
+
+  @Test public void testJoinGroup() {
+    final String ml = "from e in [{empno=100,deptno=10}],\n"
+        + "  d in [{deptno=10,altitude=3500}]\n"
+        + "group e.deptno compute sum of e.empno + d.altitude as s";
+    final String expected = "from e in [{deptno = 10, empno = 100}],"
+        + " d in [{altitude = 3500, deptno = 10}]"
+        + " group #deptno e as deptno"
+        + " compute sum of #empno e + #altitude d as s";
+    ml(ml).assertParse(expected)
+        .assertType("{deptno:int, s:int} list")
+        .assertEvalIter(equalsOrdered(list(10, 3600)));
   }
 
   @Test public void testGroupGroup() {
@@ -1377,7 +1390,7 @@ public class MainTest {
         + " group a1 + b1 as c2 compute sum of a1 as s2";
     ml(ml).assertParse(expected)
         .assertType(is("{c2:int, s2:int} list"))
-        .assertEvalIter(equalsOrdered(list(5, 1)));
+        .assertEvalIter(equalsOrdered(list(5, 2)));
   }
 
   /** Tests a program that uses an external collection from the "scott" JDBC

@@ -21,6 +21,7 @@ package net.hydromatic.morel.eval;
 import net.hydromatic.morel.compile.Environment;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
@@ -44,6 +45,20 @@ public interface EvalEnv {
    * plus a mutable slot. */
   default MutableEvalEnv bindMutable(String name) {
     return new EvalEnvs.MutableSubEvalEnv(this, name);
+  }
+
+  /** Creates an evaluation environment that has the same content as this one,
+   * plus a mutable slot or slots.
+   *
+   * <p>If {@code names} has one element, calling
+   * {@link MutableEvalEnv#set(Object)} will populate the slot will be filled by
+   * an object; if {@code names} has more than one element, {@code set} will
+   * expect to be given an array with the same number of elements. */
+  default MutableEvalEnv bindMutableArray(List<String> names) {
+    if (names.size() == 1) {
+      return bindMutable(names.get(0));
+    }
+    return new EvalEnvs.MutableArraySubEvalEnv(this, names);
   }
 
   /** Visits every variable binding in this environment.
