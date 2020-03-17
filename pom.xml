@@ -86,7 +86,8 @@ License.
     <hydromatic-toolbox.version>0.3</hydromatic-toolbox.version>
     <hydromatic-toolbox.version>0.3</hydromatic-toolbox.version>
     <java-diff.version>1.1.2</java-diff.version>
-    <javacc-maven-plugin.version>2.4</javacc-maven-plugin.version>
+    <javacc-maven-plugin.version>3.0.0</javacc-maven-plugin.version>
+    <javacc.version>7.0.5</javacc.version>
     <jline.version>3.12.1</jline.version>
     <junit.version>4.11</junit.version>
     <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
@@ -356,9 +357,16 @@ License.
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
+        <groupId>org.javacc.plugin</groupId>
         <artifactId>javacc-maven-plugin</artifactId>
         <version>${javacc-maven-plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>net.java.dev.javacc</groupId>
+            <artifactId>javacc</artifactId>
+            <version>${javacc.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <id>javacc</id>

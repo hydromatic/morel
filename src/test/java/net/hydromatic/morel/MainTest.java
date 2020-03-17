@@ -321,11 +321,11 @@ public class MainTest {
     ml("(a.(b (c.d) (e.f))")
         .assertParseThrows(
             throwsA(ParseException.class,
-                containsString("Encountered \"(\" at line 1, column 4.")));
+                containsString("Encountered \" \"(\" \"( \"\" at line 1, column 4.")));
     ml("(a.b c.(d (e.f)))")
         .assertParseThrows(
             throwsA(ParseException.class,
-                containsString("Encountered \"(\" at line 1, column 8.")));
+                containsString("Encountered \" \"(\" \"( \"\" at line 1, column 8.")));
   }
 
   /** Tests that the abbreviated record syntax "{a, e.b, #c e, d = e}"

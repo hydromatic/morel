@@ -98,7 +98,7 @@ Literal numericLiteral() :
   final BigDecimal d;
 }
 {
-  (<NATURAL_LITERAL> | <INTEGER_LITERAL>) {
+  (<POSITIVE_INTEGER_LITERAL> | <NEGATIVE_INTEGER_LITERAL> | <ZERO_INTEGER_LITERAL> ) {
     if (token.image.startsWith("~")) {
       d = new BigDecimal(token.image.substring(1)).negate();
     } else {
@@ -203,14 +203,14 @@ TyVar tyVar() :
 
 /** Parses a type variable, or a list of 1 or more type variables in
  *  parentheses, or empty. Valid examples: "", "'a", "('a)", "('a, 'b)". */
-List/*<TyVar>*/ tyVarOptionalList() :
+List<TyVar> tyVarOptionalList() :
 {
   TyVar tyVar;
 }
 {
   tyVar = tyVar() { return ImmutableList.of(tyVar); }
 |
-  <LPAREN> { List<TyVar> tyVars = new ArrayList<TyVar>(); }
+  <LPAREN> { List<TyVar> tyVars = new ArrayList<>(); }
   tyVar = tyVar() { tyVars.add(tyVar); }
   (
     <COMMA> tyVar = tyVar() { tyVars.add(tyVar); }
@@ -228,7 +228,7 @@ RecordType recordType() :
 {
   <LBRACE> {
     span = Span.of(getPos());
-    final Map<String, Type> map = new LinkedHashMap<String, Type>();
+    final Map<String, Type> map = new LinkedHashMap<>();
   }
   [
     fieldType(map)
@@ -241,7 +241,7 @@ RecordType recordType() :
   }
 }
 
-void fieldType(Map/*<String, Type>*/ map) :
+void fieldType(Map<String, Type> map) :
 {
   final Id id;
   final Type type;
@@ -274,7 +274,7 @@ Exp let() :
   final Span span;
   final Exp e;
   Decl decl;
-  final List<Decl> declList = new ArrayList<Decl>();
+  final List<Decl> declList = new ArrayList<>();
 }
 {
   <LET> { span = Span.of(getPos()); }
@@ -303,8 +303,8 @@ Exp from() :
 {
   final Span span;
   Span stepSpan;
-  final Map<Id, Exp> sources = new LinkedHashMap<Id, Exp>();
-  final List<FromStep> steps = new ArrayList<FromStep>();
+  final Map<Id, Exp> sources = new LinkedHashMap<>();
+  final List<FromStep> steps = new ArrayList<>();
   Exp filterExp;
   Exp yieldExp = null;
   List<Pair<Id, Exp>> groupExps;
@@ -344,7 +344,7 @@ Exp from() :
   }
 }
 
-void fromSource(Map/*<String, Exp>*/ sources) :
+void fromSource(Map<Id, Exp> sources) :
 {
   final Exp exp;
   final Id id;
@@ -355,9 +355,9 @@ void fromSource(Map/*<String, Exp>*/ sources) :
   }
 }
 
-List/*<Aggregate>*/ aggregateCommaList() :
+List<Aggregate> aggregateCommaList() :
 {
-  final List<Aggregate> list = new ArrayList<Aggregate>();
+  final List<Aggregate> list = new ArrayList<>();
   Aggregate e;
 }
 {
@@ -392,10 +392,10 @@ Exp fn() :
   }
 }
 
-List/*<Match>*/ matchList() :
+List<Match> matchList() :
 {
   Match match;
-  final List<Match> matchList = new ArrayList<Match>();
+  final List<Match> matchList = new ArrayList<>();
 }
 {
   match = match() { matchList.add(match); }
@@ -525,7 +525,7 @@ Exp expression6() :
 Exp expression5() :
 {
   Exp e;
-  final List<Exp> list = new ArrayList<Ast.Exp>();
+  final List<Exp> list = new ArrayList<>();
 }
 {
   e = expression6() { list.add(e); }
@@ -613,10 +613,10 @@ Exp expression() :
 }
 
 /** List of expressions "e1 as id1, e2 as id2, e3 as id3". */
-List/*<Pair<Id, Exp>>*/ expressionAsCommaList() :
+List<Pair<Id, Exp>> expressionAsCommaList() :
 {
-  final List<Pair<Exp, Id>> list = new ArrayList<Pair<Exp, Id>>();
-  Pair<Exp, Id> p;
+  final List<Pair<Id, Exp>> list = new ArrayList<>();
+  Pair<Id, Exp> p;
 }
 {
   p = expressionAs() { list.add(p); }
@@ -630,7 +630,7 @@ List/*<Pair<Id, Exp>>*/ expressionAsCommaList() :
 /** Expression with optional "as", e.g. "e1 as id1";
  * "#deptno e" and "e.deptno" are equivalent to "e.deptno as deptno";
  * "x" is equivalent to "x as x". */
-Pair/*<Id, Exp>*/ expressionAs() :
+Pair<Id, Exp> expressionAs() :
 {
   final Exp exp;
   final Id id;
@@ -681,7 +681,7 @@ Exp atom() :
       <RPAREN> { return e; }
     |
       {
-        final List<Exp> list = new ArrayList<Exp>();
+        final List<Exp> list = new ArrayList<>();
         list.add(e);
         Exp e2;
       }
@@ -696,7 +696,7 @@ Exp atom() :
 |
   <LBRACKET> {
     span = Span.of(getPos());
-    final List<Exp> list = new ArrayList<Exp>();
+    final List<Exp> list = new ArrayList<>();
     Exp e2;
   }
   [
@@ -711,7 +711,7 @@ Exp atom() :
 |
   <LBRACE> {
     span = Span.of(getPos());
-    final Map<String, Exp> map = new LinkedHashMap<String, Exp>();
+    final Map<String, Exp> map = new LinkedHashMap<>();
   }
   [
     recordExp(map)
@@ -725,14 +725,18 @@ Exp atom() :
 }
 
 /** Parses a "label = expression" inside a record. */
-void recordExp(Map/*<String, Exp>*/ map) :
+void recordExp(Map<String, Exp> map) :
 {
   final String id;
   final Ast.Exp exp;
 }
 {
-  LOOKAHEAD(2)
-  ( <NATURAL_LITERAL> | <IDENTIFIER> ) { id = token.image; }
+  LOOKAHEAD(<POSITIVE_INTEGER_LITERAL> <EQ>)
+  <POSITIVE_INTEGER_LITERAL> { id = token.image; }
+  <EQ> exp = expression() { map.put(id, exp); }
+|
+  LOOKAHEAD( <IDENTIFIER> <EQ>)
+  <IDENTIFIER> { id = token.image; }
   <EQ> exp = expression() { map.put(id, exp); }
 |
   exp = expression() {
@@ -756,7 +760,7 @@ void addValDecl(List decls) :
 ValDecl valDecl() :
 {
   final Span span;
-  final List<Ast.ValBind> valBinds = new ArrayList<ValBind>();
+  final List<Ast.ValBind> valBinds = new ArrayList<>();
 }
 {
   <VAL> { span = Span.of(getPos()); } valBind(valBinds)
@@ -766,7 +770,7 @@ ValDecl valDecl() :
   { return ast.valDecl(span.end(this), valBinds); }
 }
 
-void valBind(List/*<Ast.ValBind>*/ valBinds) :
+void valBind(List<Ast.ValBind> valBinds) :
 {
   final Pat pat;
   final Exp e;
@@ -798,7 +802,7 @@ Ast.Decl decl() :
 Ast.DatatypeDecl datatypeDecl() :
 {
   final Span span;
-  final List<DatatypeBind> binds = new ArrayList<DatatypeBind>();
+  final List<DatatypeBind> binds = new ArrayList<>();
 }
 {
   <DATATYPE> { span = Span.of(getPos()); }
@@ -809,12 +813,12 @@ Ast.DatatypeDecl datatypeDecl() :
   { return ast.datatypeDecl(span.end(this), binds); }
 }
 
-void datatypeBind(List/*<Ast.DatatypeBind>*/ datatypeBinds) :
+void datatypeBind(List<Ast.DatatypeBind> datatypeBinds) :
 {
-  final List<TyVar> tyVars = new ArrayList<TyVar>();
+  final List<TyVar> tyVars = new ArrayList<>();
   TyVar tyVar;
   final Ast.Id id;
-  final List<TyCon> tyCons = new ArrayList<TyCon>();
+  final List<TyCon> tyCons = new ArrayList<>();
   TyCon tyCon;
 }
 {
@@ -870,7 +874,7 @@ Ast.TyCon typeConstructor() :
 Ast.FunDecl funDecl() :
 {
   final Span span;
-  final List<FunBind> funBindList = new ArrayList<FunBind>();
+  final List<FunBind> funBindList = new ArrayList<>();
 }
 {
   <FUN> { span = Span.of(getPos()); }
@@ -886,9 +890,9 @@ Ast.FunDecl funDecl() :
 /** Parses a function binding, e.g.
 * {@code f 1 y = y + 1 | f x y = 0},
 * and adds it to a list. */
-void funBind(List/*<FunBind>*/ list) :
+void funBind(List<FunBind> list) :
 {
-  final List<FunMatch> matchList = new ArrayList<FunMatch>();
+  final List<FunMatch> matchList = new ArrayList<>();
 }
 {
   funMatch(matchList)
@@ -903,11 +907,11 @@ void funBind(List/*<FunBind>*/ list) :
 /** Parses a function match, e.g.
 * {@code f 1 y = y + 1},
 * and adds it to a list. */
-void funMatch(List/*<FunMatch>*/ list) :
+void funMatch(List<FunMatch> list) :
 {
   final Ast.Id id;
   Ast.Pat pat;
-  final List<Ast.Pat> patList = new ArrayList<Ast.Pat>();
+  final List<Ast.Pat> patList = new ArrayList<>();
   final Ast.Exp expression;
 }
 {
@@ -940,7 +944,7 @@ Pat pat() :
 Pat pat5() :
 {
   Pat pat;
-  final List<Pat> list = new ArrayList<Ast.Pat>();
+  final List<Pat> list = new ArrayList<>();
 }
 {
   pat = pat4() { list.add(pat); }
@@ -1002,7 +1006,7 @@ Pat atomPat() :
   |
     {
       span = Span.of(getPos());
-      final List<Pat> list = new ArrayList<Pat>();
+      final List<Pat> list = new ArrayList<>();
       list.add(p);
     }
     (
@@ -1015,7 +1019,7 @@ Pat atomPat() :
 |
   <LBRACKET> {
     span = Span.of(getPos());
-    final List<Pat> list = new ArrayList<Pat>();
+    final List<Pat> list = new ArrayList<>();
   }
   [
     p2 = pat() { list.add(p2); }
@@ -1029,7 +1033,7 @@ Pat atomPat() :
 |
   <LBRACE> {
     span = Span.of(getPos());
-    final Map<String, Pat> map = new LinkedHashMap<String, Pat>();
+    final Map<String, Pat> map = new LinkedHashMap<>();
     final boolean[] ellipsis = {false};
   }
   recordPat(ellipsis, map)
@@ -1042,7 +1046,7 @@ Pat atomPat() :
 }
 
 /** Parses a "label = pat" inside a record pattern. */
-void recordPat(boolean[] ellipsis, Map/*<String, Pat>*/ map) :
+void recordPat(boolean[] ellipsis, Map<String, Pat> map) :
 {
   final String id;
   final Ast.Pat pat;
@@ -1050,7 +1054,7 @@ void recordPat(boolean[] ellipsis, Map/*<String, Pat>*/ map) :
 {
   <ELLIPSIS> { ellipsis[0] = true; }
 |
-  ( <NATURAL_LITERAL> | <IDENTIFIER> ) { id = token.image; }
+  ( <POSITIVE_INTEGER_LITERAL> | <IDENTIFIER> ) { id = token.image; }
   <EQ> pat = pat() { map.put(id, pat); }
 }
 
@@ -1076,7 +1080,7 @@ Ast.Type atomicType() :
       <RPAREN> { return type; }
     |
       {
-        final List<Type> list = new ArrayList<Type>();
+        final List<Type> list = new ArrayList<>();
         list.add(type);
         Type type2;
       }
@@ -1110,7 +1114,7 @@ Ast.Type type7() :
 
 Ast.Type type6() :
 {
-  final List<Type> types = new ArrayList<Type>();
+  final List<Type> types = new ArrayList<>();
   Type t;
 }
 {
@@ -1126,7 +1130,7 @@ Ast.Type type6() :
 
 Ast.Type type() :
 {
-  final List<Type> types = new ArrayList<Type>();
+  final List<Type> types = new ArrayList<>();
   Type t;
 }
 {
@@ -1201,9 +1205,11 @@ AstNode statementSemicolon() :
 
 <DEFAULT> TOKEN :
 {
-    < NATURAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+    < POSITIVE_INTEGER_LITERAL: ["1"-"9"] (["0"-"9"])* >
     |
-    < INTEGER_LITERAL: ("~")?(["0"-"9"])+ >
+    < NEGATIVE_INTEGER_LITERAL: "~"(["0"-"9"])+ >
+    |
+    < ZERO_INTEGER_LITERAL: (["0"-"9"])+ >
     |
     < REAL_LITERAL: ("~")?(["0"-"9"])+ "." (["0"-"9"])+ >
     |
@@ -1269,7 +1275,7 @@ AstNode statementSemicolon() :
  *****************************************/
 
 TOKEN_MGR_DECLS : {
-    List<Integer> lexicalStateStack = new ArrayList<Integer>();
+    List<Integer> lexicalStateStack = new ArrayList<>();
 
     void pushState() {
       lexicalStateStack.add(curLexState);
