@@ -189,6 +189,14 @@ public class Shuttle {
     return ast.from(from.pos, from.sources, from.steps, from.yieldExp);
   }
 
+  public AstNode visit(Ast.Order order) {
+    return ast.order(order.pos, order.orderItems);
+  }
+
+  public AstNode visit(Ast.OrderItem orderItem) {
+    return ast.orderItem(orderItem.pos, orderItem.exp, orderItem.direction);
+  }
+
   public AstNode visit(Ast.Where where) {
     return ast.where(where.pos, where.exp.accept(this));
   }

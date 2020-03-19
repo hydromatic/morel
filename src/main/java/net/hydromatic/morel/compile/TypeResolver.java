@@ -268,6 +268,18 @@ public class TypeResolver {
           fromSteps.add(where.copy(filter2));
           break;
 
+        case ORDER:
+          final Ast.Order order = (Ast.Order) step;
+          final List<Ast.OrderItem> orderItems = new ArrayList<>();
+          for (Ast.OrderItem orderItem : order.orderItems) {
+            orderItems.add(
+                orderItem.copy(
+                    deduceType(env2, orderItem.exp, unifier.variable()),
+                    orderItem.direction));
+          }
+          fromSteps.add(order.copy(orderItems));
+          break;
+
         case GROUP:
           final Ast.Group group = (Ast.Group) step;
           validateGroup(group);

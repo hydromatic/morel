@@ -1393,6 +1393,19 @@ public class MainTest {
         .assertEvalIter(equalsOrdered(list(5, 2)));
   }
 
+  @Test public void testFromOrderYield() {
+    final String ml = "from r in [{a=1,b=2},{a=1,b=0},{a=2,b=1}]\n"
+        + "  order r.a desc, r.b\n"
+        + "  yield {r.a, b10 = r.b * 10}";
+    final String expected = "from r in"
+        + " [{a = 1, b = 2}, {a = 1, b = 0}, {a = 2, b = 1}]"
+        + " order #a r desc, #b r"
+        + " yield {a = #a r, b10 = #b r * 10}";
+    ml(ml).assertParse(expected)
+        .assertType(is("{a:int, b10:int} list"))
+        .assertEvalIter(equalsOrdered(list(2, 10), list(1, 0), list(1, 20)));
+  }
+
   /** Tests a program that uses an external collection from the "scott" JDBC
    * database. */
   @Test public void testScott() {

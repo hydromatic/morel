@@ -388,6 +388,14 @@ public enum AstBuilder {
     return apply(apply(id(pos, BuiltIn.LIST_MAP.mlName), e1), e2);
   }
 
+  public Ast.Order order(Pos pos, Iterable<Ast.OrderItem> orderItems) {
+    return new Ast.Order(pos, ImmutableList.copyOf(orderItems));
+  }
+
+  public Ast.OrderItem orderItem(Pos pos, Ast.Exp exp, Ast.Direction direction) {
+    return new Ast.OrderItem(pos, exp, direction);
+  }
+
   public Ast.Group group(Pos pos, List<Pair<Ast.Id, Ast.Exp>> groupExps,
       List<Ast.Aggregate> aggregates) {
     return new Ast.Group(pos, ImmutableList.copyOf(groupExps),

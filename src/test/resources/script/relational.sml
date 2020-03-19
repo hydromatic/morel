@@ -266,6 +266,14 @@ from g in (
             count of e as count)
 yield {g.deptno, avgId = g.sumId / g.count};
 
+(*) Group followed by order and yield
+from e in emps
+group e.deptno
+  compute sum of e.id as sumId,
+          count of e as count
+order deptno desc
+yield {deptno, avgId = sumId / count};
+
 (*) Group followed by group
 from e in emps
   group e.deptno, e.deptno mod 2 as parity
@@ -299,6 +307,26 @@ from e in emps,
     d in depts
   where e.deptno = d.deptno
   group e.deptno;
+
+(*) Join followed by single group and order
+from e in emps,
+    d in depts
+  where e.deptno = d.deptno
+  group e.deptno
+  order deptno desc;
+
+(*) Join followed by order
+from e in emps,
+    d in depts
+  where e.deptno = d.deptno
+  order e.deptno desc, e.name;
+
+(*) Join followed by order and yield
+from e in emps,
+    d in depts
+  where e.deptno = d.deptno
+  order e.deptno desc, e.name
+  yield e.name;
 
 (*) Temporary functions
 let

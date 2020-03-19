@@ -47,7 +47,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import static net.hydromatic.morel.ast.Ast.Direction.DESC;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.util.Static.toImmutableList;
 
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
@@ -247,6 +249,14 @@ public class Compiler {
       final Ast.Where where = (Ast.Where) firstStep;
       final Code filterCode = compile(env, where.exp);
       return () -> Codes.whereRowSink(filterCode, nextFactory.get());
+
+    case ORDER:
+      final Ast.Order order = (Ast.Order) firstStep;
+      final ImmutableList<Pair<Code, Boolean>> codes =
+          order.orderItems.stream()
+              .map(i -> Pair.of(compile(env, i.exp), i.direction == DESC))
+              .collect(toImmutableList());
+      return () -> Codes.orderRowSink(codes, names, nextFactory.get());
 
     case GROUP:
       final Ast.Group group = (Ast.Group) firstStep;

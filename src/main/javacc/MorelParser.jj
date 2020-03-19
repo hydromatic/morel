@@ -309,6 +309,7 @@ Exp from() :
   Exp yieldExp = null;
   List<Pair<Id, Exp>> groupExps;
   List<Aggregate> aggregates;
+  List<OrderItem> orderItems;
 }
 {
   <FROM> { span = Span.of(getPos()); }
@@ -334,6 +335,10 @@ Exp from() :
     )
     {
       steps.add(ast.group(stepSpan.end(this), groupExps, aggregates));
+    }
+  |
+    <ORDER> { stepSpan = Span.of(getPos()); } orderItems = orderItemCommaList() {
+      steps.add(ast.order(stepSpan.end(this), orderItems));
     }
   )*
   [
@@ -378,6 +383,36 @@ Aggregate aggregate() :
   folder = expression() <OF> argument = expression() <AS> id = identifier() {
     return ast.aggregate(folder.pos.plus(id.pos), folder, argument, id);
   }
+}
+
+/** List of order items "e1 desc, e2, e3 desc". */
+List<OrderItem> orderItemCommaList() :
+{
+  final List<OrderItem> list = new ArrayList<>();
+  OrderItem i;
+}
+{
+  i = orderItem() { list.add(i); }
+  (
+    <COMMA>
+    i = orderItem() { list.add(i); }
+  )*
+  { return list; }
+}
+
+/** Order item. An expression optionally followed by "desc". */
+OrderItem orderItem() :
+{
+  final Span span;
+  final Exp exp;
+}
+{
+  exp = expression() { span = Span.of(getPos()); }
+  (
+    <DESC> { return ast.orderItem(span.end(this), exp, Ast.Direction.DESC); }
+  |
+    { return ast.orderItem(span.end(this), exp, Ast.Direction.ASC); }
+  )
 }
 
 /** Parses a "{@code fn arg => expression}" lambda expression. */
@@ -1195,8 +1230,10 @@ AstNode statementSemicolon() :
 // The following are relational extensions:
 | < AS: "AS" >
 | < COMPUTE: "COMPUTE" >
+| < DESC: "DESC" >
 | < FROM: "FROM" >
 | < GROUP: "GROUP" >
+| < ORDER: "ORDER" >
 | < WHERE: "WHERE" >
 | < YIELD: "YIELD" >
 }

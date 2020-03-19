@@ -35,6 +35,7 @@ import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
+import net.hydromatic.morel.util.Pair;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -256,6 +257,12 @@ public abstract class Codes {
   /** Creates a {@link RowSink} for a {@code where} clause. */
   public static RowSink whereRowSink(Code filterCode, RowSink rowSink) {
     return new WhereRowSink(filterCode, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a {@code order} clause. */
+  public static RowSink orderRowSink(ImmutableList<Pair<Code, Boolean>> codes,
+      ImmutableList<String> labels, RowSink rowSink) {
+    return new OrderRowSink(codes, labels, rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code group} clause. */
@@ -978,6 +985,57 @@ public abstract class Codes {
         rowSink.accept(env2);
       }
       return rowSink.result(env0);
+    }
+  }
+
+  /** Implementation of {@link RowSink} for an {@code order} clause. */
+  static class OrderRowSink implements RowSink {
+    final List<Pair<Code, Boolean>> codes;
+    final ImmutableList<String> names;
+    final RowSink rowSink;
+    final List<Object> rows = new ArrayList<>();
+    final Object[] values;
+
+    OrderRowSink(List<Pair<Code, Boolean>> codes,
+        ImmutableList<String> names, RowSink rowSink) {
+      this.codes = codes;
+      this.names = names;
+      this.rowSink = rowSink;
+      this.values = names.size() == 1 ? null : new Object[names.size()];
+    }
+
+    public void accept(EvalEnv env) {
+      if (names.size() == 1) {
+        rows.add(env.getOpt(names.get(0)));
+      } else {
+        for (int i = 0; i < names.size(); i++) {
+          values[i] = env.getOpt(names.get(i));
+        }
+        rows.add(values.clone());
+      }
+    }
+
+    public List<Object> result(final EvalEnv env) {
+      final MutableEvalEnv leftEnv = env.bindMutableArray(names);
+      final MutableEvalEnv rightEnv = env.bindMutableArray(names);
+      rows.sort((left, right) -> {
+        leftEnv.set(left);
+        rightEnv.set(right);
+        for (Pair<Code, Boolean> code : codes) {
+          final Comparable leftVal = (Comparable) code.left.eval(leftEnv);
+          final Comparable rightVal = (Comparable) code.left.eval(rightEnv);
+          int c = leftVal.compareTo(rightVal);
+          if (c != 0) {
+            return code.right ? -c : c;
+          }
+        }
+        return 0;
+      });
+      for (Object row : rows) {
+        leftEnv.set(row);
+        rowSink.accept(leftEnv);
+      }
+      return rowSink.result(env);
     }
   }
 

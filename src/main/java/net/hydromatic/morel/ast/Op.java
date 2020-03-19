@@ -110,6 +110,8 @@ public enum Op {
   FROM,
   WHERE,
   GROUP,
+  ORDER,
+  ORDER_ITEM,
   AGGREGATE,
   IF,
   MAP;
