@@ -1406,6 +1406,14 @@ public class MainTest {
         .assertEvalIter(equalsOrdered(list(2, 10), list(1, 0), list(1, 20)));
   }
 
+  @Test public void testFromEmpty() {
+    final String ml = "from";
+    final String expected = "from";
+    ml(ml).assertParse(expected)
+        .assertType(is("unit list"))
+        .assertEvalIter(equalsOrdered(list()));
+  }
+
   /** Tests a program that uses an external collection from the "scott" JDBC
    * database. */
   @Test public void testScott() {

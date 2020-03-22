@@ -1262,8 +1262,9 @@ public class Ast {
       if (left > op.left || op.right < right) {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
+        w.append("from");
         Ord.forEach(sources, (i, id, exp) ->
-            w.append(i == 0 ? "from " : ", ")
+            w.append(i == 0 ? " " : ", ")
                 .append(id, 0, 0).append(" in ").append(exp, 0, 0));
         for (FromStep step : steps) {
           w.append(" ");

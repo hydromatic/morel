@@ -313,10 +313,12 @@ Exp from() :
 }
 {
   <FROM> { span = Span.of(getPos()); }
-  fromSource(sources)
-  (
-    <COMMA> fromSource(sources)
-  )*
+  [
+    fromSource(sources)
+    (
+      <COMMA> fromSource(sources)
+    )*
+  ]
   (
     <WHERE> { stepSpan = Span.of(getPos()); } filterExp = expression() {
       steps.add(ast.where(stepSpan.end(this), filterExp));

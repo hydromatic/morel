@@ -244,6 +244,13 @@ public abstract class Codes {
 
   public static Code from(Map<Ast.Id, Code> sources,
       Supplier<RowSink> rowSinkFactory) {
+    if (sources.size() == 0) {
+      return env -> {
+        final RowSink rowSink = rowSinkFactory.get();
+        rowSink.accept(env);
+        return rowSink.result(env);
+      };
+    }
     final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
     final ImmutableList<Code> codes = ImmutableList.copyOf(sources.values());
     return env -> {

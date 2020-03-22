@@ -138,7 +138,7 @@ In Standard ML but not in Morel:
     | <b>fn</b> <i>match</i>                  function
     | <b>from</b> <i>fromSource<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>fromSource<sub>s</sub></i>
       (<i>fromFilter</i> | <i>fromGroup</i> | <i>fromOrder</i> )*
-      [ <b>yield</b> <i>exp</i> ]             relational expression (<i>s</i> &ge; 1)
+      [ <b>yield</b> <i>exp</i> ]             relational expression (<i>s</i> &ge; 0)
 <i>exprow</i> &rarr; <i>exprowItem</i> [<b>,</b> <i>exprowItem</i> ]*
                                 expression row
 <i>exprowItem</i> &rarr; [<i>lab</i> <b>=</b>] <i>exp</i>

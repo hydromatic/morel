@@ -525,6 +525,69 @@ from e in emps,
 val it = ["Scooby","Shaggy","Velma","Fred"] : string list
 
 
+(*) Empty from
+from;
+val it = [()] : unit list
+
+
+(*) Empty from with where
+from where true;
+val it = [()] : unit list
+
+
+from where false;
+val it = [] : unit list
+
+
+let
+  val b = 1 < 2
+in
+  from
+    where b
+end;
+val it = [()] : unit list
+
+
+(*) Empty from with yield
+let
+  val ten = 6 + 4;
+in
+  from
+    yield {ten, nine = ten - 1}
+end;
+val it = [{nine=9,ten=10}] : {nine:int, ten:int} list
+
+
+(*) Empty from with empty group
+from
+  group;
+val it = [()] : unit list
+
+
+(*) Empty from with empty group and one aggregate function
+from
+  group compute count of "a" as c;
+val it = [1] : int list
+
+
+(*) Empty from with group
+let
+  val ten = 6 + 4;
+  val eleven = ten + 1;
+in
+  from
+    group ten compute sum of eleven as sumEleven
+end;
+val it = [{sumEleven=11,ten=10}] : {sumEleven:int, ten:int} list
+
+
+(*) Empty from with group and yield
+from
+  group 1 as one compute sum of 2 as two, sum of 3 as three
+  yield {c1 = one, c5 = two + three};
+val it = [{c1=1,c5=5}] : {c1:int, c5:int} list
+
+
 (*) Temporary functions
 let
   fun abbrev s =

@@ -328,6 +328,51 @@ from e in emps,
   order e.deptno desc, e.name
   yield e.name;
 
+(*) Empty from
+from;
+
+(*) Empty from with where
+from where true;
+
+from where false;
+
+let
+  val b = 1 < 2
+in
+  from
+    where b
+end;
+
+(*) Empty from with yield
+let
+  val ten = 6 + 4;
+in
+  from
+    yield {ten, nine = ten - 1}
+end;
+
+(*) Empty from with empty group
+from
+  group;
+
+(*) Empty from with empty group and one aggregate function
+from
+  group compute count of "a" as c;
+
+(*) Empty from with group
+let
+  val ten = 6 + 4;
+  val eleven = ten + 1;
+in
+  from
+    group ten compute sum of eleven as sumEleven
+end;
+
+(*) Empty from with group and yield
+from
+  group 1 as one compute sum of 2 as two, sum of 3 as three
+  yield {c1 = one, c5 = two + three};
+
 (*) Temporary functions
 let
   fun abbrev s =
