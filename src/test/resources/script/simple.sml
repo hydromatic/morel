@@ -183,7 +183,7 @@ fun wordcount lines =
   in
     from line in lines,
         word in split(line)
-    group word compute count of 1 as count
+    group word compute count = count of 1
   end;
 wordcount ["michael where mary had had had",
   "had had had had",

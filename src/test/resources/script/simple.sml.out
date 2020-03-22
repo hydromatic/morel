@@ -279,7 +279,7 @@ fun wordcount lines =
   in
     from line in lines,
         word in split(line)
-    group word compute count of 1 as count
+    group word compute count = count of 1
   end;
 val wordcount = fn : string list -> {count:int, word:string} list
 

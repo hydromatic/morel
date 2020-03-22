@@ -1213,7 +1213,7 @@ public class MainTest {
   @Test public void testCrossApplyGroup() {
     final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
         + "    c in String_explode s\n"
-        + "  group s compute sum of 1 as count";
+        + "  group s compute count = sum of 1";
     ml(ml).assertEvalIter(equalsOrdered(list(3, "abc"), list(1, "d")));
   }
 
@@ -1248,7 +1248,7 @@ public class MainTest {
         + " {deptno = 10, id = 102, name = \"Shaggy\"}] "
         + "in"
         + " from e in emps"
-        + " group #deptno e as deptno "
+        + " group deptno = #deptno e "
         + "end";
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
@@ -1269,7 +1269,7 @@ public class MainTest {
         + "     {id = 101, name = \"Velma\", deptno = 20},\n"
         + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
         + "in\n"
-        + "  from e in emps group #deptno e, e.id mod 2 as parity\n"
+        + "  from e in emps group #deptno e, parity = e.id mod 2\n"
         + "end";
     ml(ml).assertType("{deptno:int, parity:int} list")
         .assertEvalIter(equalsUnordered(list(10, 0), list(20, 1)));
@@ -1285,7 +1285,7 @@ public class MainTest {
         + "in\n"
         + "  from e in emps\n"
         + "    group #deptno e\n"
-        + "    compute sum of #id e as sumId\n"
+        + "    compute sumId = sum of #id e\n"
         + "end";
     final String expected = "let val emps = "
         + "[{deptno = 10, id = 100, name = \"Fred\"},"
@@ -1294,8 +1294,8 @@ public class MainTest {
         + "fun sum ([]) = 0 | sum (h :: t) = h + sum t "
         + "in"
         + " from e in emps"
-        + " group #deptno e as deptno"
-        + " compute sum of #id e as sumId "
+        + " group deptno = #deptno e"
+        + " compute sumId = sum of #id e "
         + "end";
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
@@ -1305,30 +1305,58 @@ public class MainTest {
 
   @Test public void testGroupAs() {
     final String ml0 = "from e in emp\n"
-        + "group e.deptno as deptno";
+        + "group deptno = e.deptno";
     final String ml1 = "from e in emp\n"
         + "group e.deptno";
     final String ml2 = "from e in emp\n"
         + "group #deptno e";
-    final String expected = "from e in emp group #deptno e as deptno";
+    final String expected = "from e in emp group deptno = #deptno e";
     ml(ml0).assertParse(expected);
     ml(ml1).assertParse(expected);
     ml(ml2).assertParse(expected);
 
     final String ml3 = "from e in emp\n"
-        + "group e, f + e.g as h";
-    final String expected3 = "from e in emp group e as e, f + #g e as h";
+        + "group e, h = f + e.g";
+    final String expected3 = "from e in emp group e = e, h = f + #g e";
     ml(ml3).assertParse(expected3);
+  }
+
+  @Test public void testGroupAs2() {
+    ml("from e in emp group e.deptno, e.deptno + e.empid")
+        .assertParseThrows(
+            throwsA(IllegalArgumentException.class,
+                is("cannot derive label for expression #deptno e + #empid e")));
+    ml("from e in emp group 1")
+        .assertParseThrows(
+            throwsA(IllegalArgumentException.class,
+                is("cannot derive label for expression 1")));
+    ml("from e in emp group e.deptno compute (fn x => x) of e.job")
+        .assertParseThrows(
+            throwsA(IllegalArgumentException.class,
+                is("cannot derive label for expression fn x => x")));
+    // Require that we can derive a name for the expression even though there
+    // is only one, and therefore we would not use the name.
+    // (We could revisit this requirement.)
+    ml("from e in emp group compute (fn x => x) of e.job")
+        .assertParseThrows(
+            throwsA(IllegalArgumentException.class,
+                is("cannot derive label for expression fn x => x")));
+    ml("from e in [{x = 1, y = 5}]\n"
+        + "  group compute sum of e.x")
+        .assertType(is("int list"));
+    ml("from e in [1, 2, 3]\n"
+        + "  group compute sum of e")
+        .assertType(is("int list"));
   }
 
   @Test public void testGroupSansOf() {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "  group compute count as c")
+        + "  group compute c = count")
         .assertType(is("int list"))
         .assertEvalIter(equalsUnordered(3));
 
     ml("from e in [{a = 1, b = 5}, {a = 0, b = 1}, {a = 1, b = 1}]\n"
-        + "  group e.a compute (fn x => x) as rows")
+        + "  group e.a compute rows = (fn x => x)")
         .assertType(is("{a:int, rows:{a:int, b:int} list} list"))
         .assertEvalIter(
             equalsUnordered(
@@ -1340,33 +1368,44 @@ public class MainTest {
    * 'compute' clauses. */
   @Test public void testGroupDuplicates() {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group e.x as a")
+        + "group a = e.x")
         .assertEvalIter(equalsUnordered(0, 1));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group e.x as a, e.x as b")
+        + "group a = e.x, b = e.x")
         .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group e.x as a, e.y as a")
+        + "group a = e.x, a = e.y")
         .assertTypeThrows(
             throwsA(RuntimeException.class,
                 is("Duplicate field name 'a' in group")));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group e.x as a\n"
-        + "compute sum of e.y as b")
+        + "group e.x, x = e.y")
+        .assertTypeThrows(
+            throwsA(RuntimeException.class,
+                is("Duplicate field name 'x' in group")));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "group a = e.x\n"
+        + "compute b = sum of e.y")
         .assertEvalIter(equalsUnordered(list(0, 1), list(1, 6)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group e.x as a\n"
-        + "compute sum of e.y as a")
+        + "group a = e.x\n"
+        + "compute a = sum of e.y")
         .assertTypeThrows(
             throwsA(RuntimeException.class,
                 is("Duplicate field name 'a' in group")));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group e.x as a\n"
-        + "compute sum of e.y as b, sum of e.x as c")
+        + "group sum = e.x\n"
+        + "compute sum of e.y")
+        .assertTypeThrows(
+            throwsA(RuntimeException.class,
+                is("Duplicate field name 'sum' in group")));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "group a = e.x\n"
+        + "compute b = sum of e.y, c = sum of e.x")
         .assertEvalIter(equalsUnordered(list(0, 1, 0), list(1, 6, 2)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group e.x as a\n"
-        + "compute sum of e.y as c, sum of e.x as c")
+        + "group a = e.x\n"
+        + "compute c = sum of e.y, c = sum of e.x")
         .assertTypeThrows(
             throwsA(RuntimeException.class,
                 is("Duplicate field name 'c' in group")));
@@ -1374,10 +1413,10 @@ public class MainTest {
 
   @Test public void testGroupYield() {
     final String ml = "from r in [{a=2,b=3}]\n"
-        + "group r.a compute sum of r.b as sb\n"
+        + "group r.a compute sb = sum of r.b\n"
         + "yield {a, a2 = a + a, sb}";
     final String expected = "from r in [{a = 2, b = 3}]"
-        + " group #a r as a compute sum of #b r as sb"
+        + " group a = #a r compute sb = sum of #b r"
         + " yield {a = a, a2 = a + a, sb = sb}";
     ml(ml).assertParse(expected)
         .assertEvalIter(equalsOrdered(list(2, 4, 3)));
@@ -1386,11 +1425,11 @@ public class MainTest {
   @Test public void testJoinGroup() {
     final String ml = "from e in [{empno=100,deptno=10}],\n"
         + "  d in [{deptno=10,altitude=3500}]\n"
-        + "group e.deptno compute sum of e.empno + d.altitude as s";
+        + "group e.deptno compute s = sum of e.empno + d.altitude";
     final String expected = "from e in [{deptno = 10, empno = 100}],"
         + " d in [{altitude = 3500, deptno = 10}]"
-        + " group #deptno e as deptno"
-        + " compute sum of #empno e + #altitude d as s";
+        + " group deptno = #deptno e"
+        + " compute s = sum of #empno e + #altitude d";
     ml(ml).assertParse(expected)
         .assertType("{deptno:int, s:int} list")
         .assertEvalIter(equalsOrdered(list(10, 3600)));
@@ -1398,11 +1437,11 @@ public class MainTest {
 
   @Test public void testGroupGroup() {
     final String ml = "from r in [{a=2,b=3}]\n"
-        + "group r.a as a1, r.b as b1\n"
-        + "group a1 + b1 as c2 compute sum of a1 as s2";
+        + "group a1 = r.a, b1 = r.b\n"
+        + "group c2 = a1 + b1 compute s2 = sum of a1";
     final String expected = "from r in [{a = 2, b = 3}]"
-        + " group #a r as a1, #b r as b1"
-        + " group a1 + b1 as c2 compute sum of a1 as s2";
+        + " group a1 = #a r, b1 = #b r"
+        + " group c2 = a1 + b1 compute s2 = sum of a1";
     ml(ml).assertParse(expected)
         .assertType(is("{c2:int, s2:int} list"))
         .assertEvalIter(equalsOrdered(list(5, 2)));

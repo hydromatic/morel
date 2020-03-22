@@ -326,7 +326,7 @@ Exp from() :
   |
     <GROUP> { stepSpan = Span.of(getPos()); }
     (
-      groupExps = expressionAsCommaList()
+      groupExps = namedExpressionCommaList()
     |
       { groupExps = ImmutableList.of(); }
     )
@@ -377,19 +377,20 @@ List<Aggregate> aggregateCommaList() :
 
 Aggregate aggregate() :
 {
-  final Exp aggregate;
+  final Pair<Id, Exp> aggregateId;
   final Exp argument;
-  final Id id;
 }
 {
-  aggregate = expression()
+  aggregateId = namedExpression()
   (
     <OF> argument = expression()
   |
     { argument = null; }
   )
-  <AS> id = identifier() {
-    return ast.aggregate(aggregate.pos.plus(id.pos), aggregate, argument, id);
+  {
+    final Id id = aggregateId.left;
+    final Exp aggregate = aggregateId.right;
+    return ast.aggregate(id.pos.plus(getPos()), aggregate, argument, id);
   }
 }
 
@@ -656,38 +657,38 @@ Exp expression() :
 }
 
 /** List of expressions "e1 as id1, e2 as id2, e3 as id3". */
-List<Pair<Id, Exp>> expressionAsCommaList() :
+List<Pair<Id, Exp>> namedExpressionCommaList() :
 {
   final List<Pair<Id, Exp>> list = new ArrayList<>();
   Pair<Id, Exp> p;
 }
 {
-  p = expressionAs() { list.add(p); }
+  p = namedExpression() { list.add(p); }
   (
     <COMMA>
-    p = expressionAs() { list.add(p); }
+    p = namedExpression() { list.add(p); }
   )*
   { return list; }
 }
 
-/** Expression with optional "as", e.g. "e1 as id1";
- * "#deptno e" and "e.deptno" are equivalent to "e.deptno as deptno";
- * "x" is equivalent to "x as x". */
-Pair<Id, Exp> expressionAs() :
+/** Expression with optional "id =", e.g. "id1 = e1";
+ * "#deptno e" and "e.deptno" are equivalent to "deptno = e.deptno";
+ * "x" is equivalent to "x = x". */
+Pair<Id, Exp> namedExpression() :
 {
   final Exp exp;
   final Id id;
 }
 {
-  exp = expression()
-  (
-    <AS> id = identifier() { return Pair.of(id, exp); }
-  |
-    {
-      final String label = ast.implicitLabel(exp);
-      return Pair.of(ast.id(exp.pos, label), exp);
-    }
-  )
+  LOOKAHEAD(<IDENTIFIER> <EQ>)
+  id = identifier() <EQ> exp = expression() {
+    return Pair.of(id, exp);
+  }
+|
+  exp = expression() {
+    final String name = ast.implicitLabel(exp);
+    return Pair.of(ast.id(exp.pos, name), exp);
+  }
 }
 
 /** Parses an atomic expression. */
@@ -778,7 +779,7 @@ void recordExp(Map<String, Exp> map) :
   <POSITIVE_INTEGER_LITERAL> { id = token.image; }
   <EQ> exp = expression() { map.put(id, exp); }
 |
-  LOOKAHEAD( <IDENTIFIER> <EQ>)
+  LOOKAHEAD(<IDENTIFIER> <EQ>)
   <IDENTIFIER> { id = token.image; }
   <EQ> exp = expression() { map.put(id, exp); }
 |

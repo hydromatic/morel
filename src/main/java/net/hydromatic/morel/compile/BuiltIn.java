@@ -434,8 +434,8 @@ public enum BuiltIn {
    * <blockquote>
    *   <pre>
    *     from e in emps
-   *     group (#deptno e) as deptno
-   *       compute sum of (#id e) as sumId
+   *     group deptno = (#deptno e)
+   *       compute sumId = sum of (#id e)
    *   </pre>
    * </blockquote>
    */
@@ -449,8 +449,8 @@ public enum BuiltIn {
    * <blockquote>
    *   <pre>
    *     from e in emps
-   *     group (#deptno e) as deptno
-   *       compute sum of (#id e) as sumId
+   *     group deptno = (#deptno e)
+   *       compute sumId = sum of (#id e)
    *   </pre>
    * </blockquote>
    */

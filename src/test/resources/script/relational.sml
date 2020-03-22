@@ -137,15 +137,15 @@ from e in emps, d in depts
 
 (*) join group where neither variable is referenced
 from e in emps, d in depts
-  group compute sum of 1 as count;
+  group compute count = sum of 1;
 
 (*) as above, without 'of'
 from e in emps, d in depts
-  group compute count as count;
+  group compute count = count;
 
 (*) join group where right variable is not referenced
 from e in emps, d in depts
-  group e.deptno compute sum of 1 as count;
+  group e.deptno compute count = sum of 1;
 
 (*) exists (defining the "exists" function ourselves)
 (*) and correlated sub-query
@@ -205,45 +205,44 @@ end;
 
 (*) Basic 'group'
 from e in emps
-group e.deptno as deptno
-  compute sum of e.id as sumId,
-          count as count;
+group deptno = e.deptno
+  compute sum = sum of e.id,
+          count = count;
 
-(*) As previous, without the implied "as deptno" in "group"
+(*) As previous, without the implied "deptno =" in "group",
+(*) and "sum =" and "count =" in "compute".
 from e in emps
 group e.deptno
-  compute sum of e.id as sumId,
-          count as count;
+  compute sum of e.id,
+          count;
 
 (*) 'group' with no aggregates
 from e in emps
-group e.deptno as deptno;
+group deptno = e.deptno;
 
 from e in emps
 group e.deptno;
 
 (*) composite 'group' with no aggregates
 from e in emps
-group e.deptno, e.id mod 2 as idMod2;
+group e.deptno, idMod2 = e.id mod 2;
 
 (*) 'group' with 'where' and complex argument to 'sum'
 from e in emps
 where e.deptno < 30
-group e.deptno as deptno
-  compute sum of e.id as sumId,
-          sum of e.id + e.deptno as sumIdPlusDeptno;
+group deptno = e.deptno
+  compute sumId = sum of e.id,
+          sumIdPlusDeptno = sum of e.id + e.deptno;
 
 (*) 'group' with join
 from e in emps, d in depts
 where e.deptno = d.deptno
-group e.deptno,
- e.name as ename,
- d.name as dname
-compute sum of e.id as sumId;
+group e.deptno, ename = e.name, dname = d.name
+  compute sumId = sum of e.id;
 
 (*) empty 'group'
 from e in emps
-group compute sum of e.id as sumId;
+group compute sumId = sum of e.id;
 
 (*) user-defined aggregate function
 let
@@ -251,8 +250,8 @@ let
     | siz (ht :: tl) = 1 + (siz tl)
 in
   from e in emps
-  group e.deptno as deptno
-  compute siz of e.id as size
+  group deptno = e.deptno
+  compute size = siz of e.id
 end;
 
 (*) Identity aggregate function (equivalent to SQL's COLLECT)
@@ -260,7 +259,7 @@ let
   fun id x = x
 in
   from e in emps
-  group e.deptno compute id of e as rows
+  group e.deptno compute rows = id of e
 end;
 
 (*) Identity aggregate function, without 'of'
@@ -268,63 +267,63 @@ let
   fun id x = x
 in
   from e in emps
-  group e.deptno compute id as rows
+  group e.deptno compute rows = id
 end;
 
 (*) Identity aggregate function, using lambda
 from e in emps
-group e.deptno compute (fn x => x) as rows;
+group e.deptno compute rows = (fn x => x);
 
 (*) Identity aggregate function with multiple input variables
 from e in emps, d in depts
 where e.deptno = d.deptno
-group e.deptno compute (fn x => x) as rows;
+group e.deptno compute rows = (fn x => x);
 
 (*) Group followed by yield
 from e in emps
 group e.deptno
-  compute sum of e.id as sumId,
-          count of e as count
+  compute sumId = sum of e.id,
+          count = count of e
 yield {deptno, avgId = sumId / count};
 
 (*) Similar, using a sub-from:
 from g in (
   from e in emps
   group e.deptno
-    compute sum of e.id as sumId,
-            count of e as count)
+    compute sumId = sum of e.id,
+            count = count of e)
 yield {g.deptno, avgId = g.sumId / g.count};
 
 (*) Group followed by order and yield
 from e in emps
 group e.deptno
-  compute sum of e.id as sumId,
-          count of e as count
+  compute sumId = sum of e.id,
+          count = count of e
 order deptno desc
 yield {deptno, avgId = sumId / count};
 
 (*) Group followed by group
 from e in emps
-  group e.deptno, e.deptno mod 2 as parity
-    compute sum of e.id as sumId
+  group e.deptno, parity = e.deptno mod 2
+    compute sumId = sum of e.id
   group parity
-    compute sum of sumId as sumSumId,
-      count as c;
+    compute sumSumId = sum of sumId,
+      c = count;
 
 (*) Group followed by group followed by yield
 from e in emps
-  group e.deptno, e.deptno mod 2 as parity
-    compute sum of e.id as sumId
+  group e.deptno, parity = e.deptno mod 2
+    compute sumId = sum of e.id
   group parity
-    compute sum of sumId as sumSumId
+    compute sumSumId = sum of sumId
   yield sumSumId * parity;
 
 (*) Join followed by composite group
 from e in emps,
     d in depts
   where e.deptno = d.deptno
-  group e.id + d.deptno as x, e.deptno
-    compute sum of e.id as sumId;
+  group x = e.id + d.deptno, e.deptno
+    compute sumId = sum of e.id;
 
 (*) Join followed by single group (from right input)
 from e in emps,
@@ -387,7 +386,7 @@ from
 
 (*) Empty from with empty group and one aggregate function
 from
-  group compute count of "a" as c;
+  group compute c = count of "a";
 
 (*) Empty from with group
 let
@@ -395,19 +394,19 @@ let
   val eleven = ten + 1;
 in
   from
-    group ten compute sum of eleven as sumEleven
+    group ten compute sumEleven = sum of eleven
 end;
 
 (*) Empty from with composite group
 from
-  group "a" as x, 6 as y;
+  group x = "a", y = 6;
 
 from
-  group "a" as z, 6 as y;
+  group z = "a", y = 6;
 
 (*) Empty from with group and yield
 from
-  group 1 as one compute sum of 2 as two, sum of 3 as three
+  group one = 1 compute two = sum of 2, three = sum of 3
   yield {c1 = one, c5 = two + three};
 
 (*) Temporary functions

@@ -171,6 +171,19 @@ is short-hand for
 {deptno = #deptno e, name = e.name, d = d}
 ```
 
+In the relational extensions, `group` and `compute` expressions also use
+implicit labels. For instance,
+```
+from e in emps
+group e.deptno compute sum of e.salary, count
+```
+is short-hand for
+```
+from e in emps
+group deptno = e.deptno compute sum = sum of e.salary, count = count
+```
+and both expressions have type `{count:int,deptno:int,sum:int} list`.
+
 ### Relational extensions
 
 The `from` expression (and associated `in`, `where` and `yield` keywords)

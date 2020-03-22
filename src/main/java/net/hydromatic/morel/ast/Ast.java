@@ -1231,7 +1231,7 @@ public class Ast {
           final ImmutableList<Aggregate> aggregates = group.aggregates;
 
           // The type of
-          //   from emps as e group by e1 as a, e2 as b compute sum of e3 as c
+          //   from emps as e group by a = e1, b = e2 compute c = sum of e3
           // is the same as the type of
           //   {e1 as a, e2 as b, sum (map (fn e => c) list) as x}
           final Set<Id> nextFields = new HashSet<>(Pair.left(groupExps));
@@ -1402,16 +1402,12 @@ public class Ast {
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       Pair.forEachIndexed(groupExps, (i, id, exp) ->
           w.append(i == 0 ? "group " : ", ")
-              .append(exp, 0, 0)
-              .append(" as ")
-              .append(id, 0, 0));
+              .append(id, 0, 0)
+              .append(" = ")
+              .append(exp, 0, 0));
       Ord.forEach(aggregates, (aggregate, i) ->
           w.append(i == 0 ? " compute " : ", ")
-              .append(aggregate.aggregate, 0, 0)
-              .append(" of ")
-              .append(aggregate.argument, 0, 0)
-              .append(" as ")
-              .append(aggregate.id, 0, 0));
+              .append(aggregate, 0, 0));
       return w;
     }
 
@@ -1479,13 +1475,14 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      w.append(aggregate, 0, 0);
+      w.append(id.name)
+          .append(" = ")
+          .append(aggregate, 0, 0);
       if (argument != null) {
         w.append(" of ")
             .append(argument, 0, 0);
       }
-      return w.append(" as ")
-          .append(id.name);
+      return w;
     }
 
     public AstNode accept(Shuttle shuttle) {
