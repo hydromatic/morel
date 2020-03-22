@@ -47,6 +47,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
@@ -775,17 +776,29 @@ public abstract class Codes {
   }
 
   public static Applicable aggregate(Environment env, Code aggregateCode,
-      List<String> names, Code argumentCode) {
+      List<String> names, @Nullable Code argumentCode) {
     if (aggregateCode.isConstant()) {
       int x = 0;
     }
     return (env1, argValue) -> {
       final List rows = (List) argValue;
-      final MutableEvalEnv env2 = env1.bindMutableArray(names);
-      final List<Object> argRows = new ArrayList<>(rows.size());
-      for (Object row : rows) {
-        env2.set(row);
-        argRows.add(argumentCode.eval(env2));
+      final List<Object> argRows;
+      if (argumentCode != null) {
+        final MutableEvalEnv env2 = env1.bindMutableArray(names);
+        argRows = new ArrayList<>(rows.size());
+        for (Object row : rows) {
+          env2.set(row);
+          argRows.add(argumentCode.eval(env2));
+        }
+      } else if (names.size() != 1) {
+        // Reconcile the fact that we internally represent rows as arrays when
+        // we're buffering for "group", lists at other times.
+        //noinspection unchecked
+        argRows = Lists.transform(rows,
+            row -> (Object) Arrays.asList((Object []) row));
+      } else {
+        //noinspection unchecked
+        argRows = rows;
       }
       final Applicable aggregate = (Applicable) aggregateCode.eval(env1);
       return aggregate.apply(env1, argRows);

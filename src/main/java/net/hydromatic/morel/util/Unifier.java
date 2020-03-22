@@ -53,7 +53,7 @@ public abstract class Unifier {
   }
 
   /** Creates a sequence, or returns an existing one with the same terms. */
-  public Sequence apply(String operator, Iterable<Term> args) {
+  public Sequence apply(String operator, Iterable<? extends Term> args) {
     final Sequence sequence =
         new Sequence(operator, ImmutableList.copyOf(args));
     return sequenceMap.computeIfAbsent(sequence.toString(), n -> sequence);

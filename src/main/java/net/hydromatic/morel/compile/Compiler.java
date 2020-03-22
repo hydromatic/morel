@@ -267,7 +267,8 @@ public class Compiler {
       final ImmutableList.Builder<Applicable> aggregateCodesB =
           ImmutableList.builder();
       for (Ast.Aggregate aggregate : group.aggregates) {
-        final Code argumentCode = compile(env, aggregate.argument);
+        final Code argumentCode = aggregate.argument == null ? null
+            : compile(env, aggregate.argument);
         final Code aggregateCode = compile(env, aggregate.aggregate);
         aggregateCodesB.add(
             Codes.aggregate(env, aggregateCode, names, argumentCode));

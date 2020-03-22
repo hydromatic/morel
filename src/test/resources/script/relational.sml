@@ -139,6 +139,10 @@ from e in emps, d in depts
 from e in emps, d in depts
   group compute sum of 1 as count;
 
+(*) as above, without 'of'
+from e in emps, d in depts
+  group compute count as count;
+
 (*) join group where right variable is not referenced
 from e in emps, d in depts
   group e.deptno compute sum of 1 as count;
@@ -203,13 +207,13 @@ end;
 from e in emps
 group e.deptno as deptno
   compute sum of e.id as sumId,
-          count of e as count;
+          count as count;
 
 (*) As previous, without the implied "as deptno" in "group"
 from e in emps
 group e.deptno
   compute sum of e.id as sumId,
-          count of e as count;
+          count as count;
 
 (*) 'group' with no aggregates
 from e in emps
@@ -251,6 +255,31 @@ in
   compute siz of e.id as size
 end;
 
+(*) Identity aggregate function (equivalent to SQL's COLLECT)
+let
+  fun id x = x
+in
+  from e in emps
+  group e.deptno compute id of e as rows
+end;
+
+(*) Identity aggregate function, without 'of'
+let
+  fun id x = x
+in
+  from e in emps
+  group e.deptno compute id as rows
+end;
+
+(*) Identity aggregate function, using lambda
+from e in emps
+group e.deptno compute (fn x => x) as rows;
+
+(*) Identity aggregate function with multiple input variables
+from e in emps, d in depts
+where e.deptno = d.deptno
+group e.deptno compute (fn x => x) as rows;
+
 (*) Group followed by yield
 from e in emps
 group e.deptno
@@ -279,7 +308,8 @@ from e in emps
   group e.deptno, e.deptno mod 2 as parity
     compute sum of e.id as sumId
   group parity
-    compute sum of sumId as sumSumId;
+    compute sum of sumId as sumSumId,
+      count as c;
 
 (*) Group followed by group followed by yield
 from e in emps
@@ -367,6 +397,13 @@ in
   from
     group ten compute sum of eleven as sumEleven
 end;
+
+(*) Empty from with composite group
+from
+  group "a" as x, 6 as y;
+
+from
+  group "a" as z, 6 as y;
 
 (*) Empty from with group and yield
 from

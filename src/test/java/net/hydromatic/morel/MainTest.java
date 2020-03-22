@@ -1321,6 +1321,21 @@ public class MainTest {
     ml(ml3).assertParse(expected3);
   }
 
+  @Test public void testGroupSansOf() {
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+        + "  group compute count as c")
+        .assertType(is("int list"))
+        .assertEvalIter(equalsUnordered(3));
+
+    ml("from e in [{a = 1, b = 5}, {a = 0, b = 1}, {a = 1, b = 1}]\n"
+        + "  group e.a compute (fn x => x) as rows")
+        .assertType(is("{a:int, rows:{a:int, b:int} list} list"))
+        .assertEvalIter(
+            equalsUnordered(
+                list(1, list(list(1, 5), list(1, 1))),
+                list(0, list(list(0, 1)))));
+  }
+
   /** Tests that Morel throws if there are duplicate names in 'group' or
    * 'compute' clauses. */
   @Test public void testGroupDuplicates() {

@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import net.hydromatic.morel.ast.Ast;
@@ -284,6 +285,8 @@ public class TypeResolver {
           final Ast.Group group = (Ast.Group) step;
           validateGroup(group);
           TypeEnv env3 = env;
+          final Map<Ast.Id, Unifier.Variable> inFieldVars =
+              ImmutableMap.copyOf(fieldVars);
           fieldVars.clear();
           final List<Pair<Ast.Id, Ast.Exp>> groupExps = new ArrayList<>();
           for (Pair<Ast.Id, Ast.Exp> groupExp : group.groupExps) {
@@ -304,11 +307,19 @@ public class TypeResolver {
             final Unifier.Variable v9 = unifier.variable();
             final Ast.Exp aggregate2 =
                 deduceType(env2, aggregate.aggregate, v9);
-            final Unifier.Variable v10 = unifier.variable();
-            final Ast.Exp arg2 =
-                deduceType(env2, aggregate.argument, v10);
+            final Ast.Exp arg2;
+            final Unifier.Term term;
+            if (aggregate.argument == null) {
+              arg2 = null;
+              term = fieldRecord(inFieldVars);
+            } else {
+              final Unifier.Variable v10 = unifier.variable();
+              arg2 = deduceType(env2, aggregate.argument, v10);
+              term = v10;
+            }
             reg(aggregate.aggregate, null, v9);
-            equiv(unifier.apply(FN_TY_CON, unifier.apply(LIST_TY_CON, v10), v8),
+            equiv(
+                unifier.apply(FN_TY_CON, unifier.apply(LIST_TY_CON, term), v8),
                 v9);
             env3 = env3.bind(id.name, v8);
             fieldVars.put(id, v8);
@@ -396,7 +407,21 @@ public class TypeResolver {
     }
   }
 
-  private Unifier.Term record(NavigableMap<String, Unifier.Term> labelTypes) {
+  private Unifier.Term fieldRecord(Map<Ast.Id, Unifier.Variable> fieldVars) {
+    switch (fieldVars.size()) {
+    case 0:
+      return toTerm(PrimitiveType.UNIT);
+    case 1:
+      return Iterables.getOnlyElement(fieldVars.values());
+    default:
+      final TreeMap<String, Unifier.Variable> map = new TreeMap<>();
+      fieldVars.forEach((k, v) -> map.put(k.name, v));
+      return record(map);
+    }
+  }
+
+  private Unifier.Term record(
+      NavigableMap<String, ? extends Unifier.Term> labelTypes) {
     if (labelTypes.isEmpty()) {
       return toTerm(PrimitiveType.UNIT);
     } else if (isContiguousIntegers(labelTypes.navigableKeySet())) {

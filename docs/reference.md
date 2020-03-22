@@ -151,7 +151,7 @@ In Standard ML but not in Morel:
       [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]
                                 group clause (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
 <i>groupKey</i> &rarr; <i>exp</i> [ <b>as</b> <i>id</i> ]
-<i>agg</i> &rarr; <i>exp</i> <b>of</b> <i>exp</i> <b>as</b> <i>id</i>
+<i>agg</i> &rarr; <i>exp</i> [ <b>of</b> <i>exp</i> ] <b>as</b> <i>id</i>
 <i>fromOrder</i> &rarr; <b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>
                                 order clause (<i>o</i> &ge; 1)
 <i>orderItem</i> &rarr; <i>exp</i> [ <b>desc</b> ]

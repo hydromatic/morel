@@ -377,13 +377,19 @@ List<Aggregate> aggregateCommaList() :
 
 Aggregate aggregate() :
 {
-  final Exp folder;
+  final Exp aggregate;
   final Exp argument;
   final Id id;
 }
 {
-  folder = expression() <OF> argument = expression() <AS> id = identifier() {
-    return ast.aggregate(folder.pos.plus(id.pos), folder, argument, id);
+  aggregate = expression()
+  (
+    <OF> argument = expression()
+  |
+    { argument = null; }
+  )
+  <AS> id = identifier() {
+    return ast.aggregate(aggregate.pos.plus(id.pos), aggregate, argument, id);
   }
 }
 

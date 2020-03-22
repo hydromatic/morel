@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
@@ -1470,18 +1471,20 @@ public class Ast {
     public final Exp argument;
     public final Id id;
 
-    public Aggregate(Pos pos, Exp aggregate, Exp argument, Id id) {
+    Aggregate(Pos pos, Exp aggregate, @Nullable Exp argument, Id id) {
       super(pos, Op.AGGREGATE);
       this.aggregate = Objects.requireNonNull(aggregate);
-      this.argument = Objects.requireNonNull(argument);
+      this.argument = argument;
       this.id = Objects.requireNonNull(id);
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append(aggregate, 0, 0)
-          .append(" of ")
-          .append(argument, 0, 0)
-          .append(" as ")
+      w.append(aggregate, 0, 0);
+      if (argument != null) {
+        w.append(" of ")
+            .append(argument, 0, 0);
+      }
+      return w.append(" as ")
           .append(id.name);
     }
 
@@ -1489,19 +1492,9 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    /** Creates a fake expression that has the same type as this Aggregate. */
-    Apply getApply(Set<Id> idSet, Exp source) {
-      Id id = idSet.iterator().next(); // FIXME
-      return ast.apply(aggregate,
-          ast.map(pos,
-              ast.fn(pos,
-                  ast.match(pos, ast.idPat(pos, id.name), argument)),
-              source));
-    }
-
     public Aggregate copy(Exp aggregate, Exp argument, Id id) {
       return this.aggregate.equals(aggregate)
-          && this.argument.equals(argument)
+          && Objects.equals(this.argument, argument)
           && this.id.equals(id)
           ? this
           : ast.aggregate(pos, aggregate, argument, id);
