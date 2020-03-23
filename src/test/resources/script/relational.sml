@@ -254,6 +254,26 @@ in
   compute size = siz of e.id
 end;
 
+(*) as previous, but 'e' rather than 'e.id'
+let
+  fun siz [] = 0
+    | siz (ht :: tl) = 1 + (siz tl)
+in
+  from e in emps
+  group deptno = e.deptno
+  compute size = siz of e
+end;
+
+(*) user-defined aggregate function #3
+let
+  fun my_sum [] = 0
+    | my_sum (head :: tail) = head + (my_sum tail)
+in
+  from e in emps
+  group e.deptno
+  compute my_sum of e.id
+end;
+
 (*) Identity aggregate function (equivalent to SQL's COLLECT)
 let
   fun id x = x
@@ -425,8 +445,11 @@ end;
 
 (*) There's no flatMap in the standard library, so define one
 fun flatMap f l = List_concat (List_map f l);
-
 flatMap String_explode ["ab", "", "def"];
+
+(*) Here's another way to define flatMap
+fun flatMap2 f l = List_foldl List_at [] (List_map f l);
+flatMap2 String_explode ["ab", "", "def"];
 
 (*) A function that runs a query and returns the result
 fun employeesIn deptno =

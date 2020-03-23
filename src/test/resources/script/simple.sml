@@ -177,20 +177,4 @@ fun foo arg =
   end;
 foo 3;
 
-(*) More complex test case for [MOREL-19]
-fun wordcount lines =
-  let
-    fun split0 [] word words = word :: words
-      | split0 (#" " :: s) word words = split0 s "" (word :: words)
-      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
-    fun split s = List_rev (split0 (String_explode s) "" [])
-  in
-    from line in lines,
-        word in split(line)
-    group word compute count = count of 1
-  end;
-wordcount ["michael where mary had had had",
-  "had had had had",
-  "had had had had the teacher's approval"];
-
 (*) End simple.sml

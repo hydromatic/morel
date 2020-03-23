@@ -418,6 +418,81 @@ in
     yield e.name
 end;
 
+(*) === 2020/03/03: Morel: The basic language =======================
+
+(*) WordCount in Standard ML
+(* Note: The blog post used Standard ML. Here, to accommodate missing
+   language features in Morel, we have changed "List.rev" to
+   "List_rev" (etc.) and "(op +)" to "(fn (x, y) => x + y)". *)
+fun mapReduce mapper reducer list =
+  let
+    fun update (key, value, []) = [(key, [value])]
+      | update (key, value, ((key2, values) :: tail)) =
+          if key = key2 then
+            (key, (value :: values)) :: tail
+          else
+            (key2, values) :: (update (key, value, tail))
+    fun dedup ([], dict) = dict
+      | dedup ((key, value) :: tail, dict) =
+          dedup (tail, update (key, value, dict))
+    fun flatMap f list = List_foldl List_at [] (List_map f list)
+    val keyValueList = flatMap mapper list
+    val keyValuesList = dedup (keyValueList, [])
+  in
+    List_map (fn (key, values) => (key, reducer (key, values))) keyValuesList
+  end;
+
+fun wc_mapper line =
+  let
+    fun split0 [] word words = word :: words
+      | split0 (#" " :: s) word words = split0 s "" (word :: words)
+      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
+    fun split s = List_rev (split0 (String_explode s) "" [])
+  in
+    List_map (fn w => (w, 1)) (split line)
+  end;
+fun wc_reducer (key, values) = List_foldl (fn (x, y) => x + y) 0 values;
+
+(*) Check that they work on discrete values
+wc_mapper "a skunk sat on a stump";
+wc_reducer ("hello", [1, 4, 2]);
+
+(*) Bind them to mapReduce, and run
+fun wordCount lines = mapReduce wc_mapper wc_reducer lines;
+wordCount ["a skunk sat on a stump",
+    "and thunk the stump stunk",
+    "but the stump thunk the skunk stunk"];
+
+(*) WordCount in Morel
+val lines = ["a skunk sat on a stump",
+  "and thunk the stump stunk",
+  "but the stump thunk the skunk stunk"];
+fun split s =
+  let
+    fun split0 [] word words = word :: words
+      | split0 (#" " :: s) word words = split0 s "" (word :: words)
+      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
+  in
+    List_rev (split0 (String_explode s) "" [])
+  end;
+from line in lines,
+    word in split line
+  group word compute count;
+
+(*) A more complete solution
+fun wordCount lines =
+  let
+    fun split0 [] word words = word :: words
+      | split0 (#" " :: s) word words = split0 s "" (word :: words)
+      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
+    fun split s = List_rev (split0 (String_explode s) "" [])
+  in
+    from line in lines,
+        word in split line
+    group word compute count
+  end;
+wordCount lines;
+
 (*) === Coda ========================================================
 from message in ["the end"];
 
