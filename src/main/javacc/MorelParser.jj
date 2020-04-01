@@ -1030,8 +1030,8 @@ Pat atomPat() :
   final Span span;
   final Ast.Id id;
   final Ast.Literal literal;
-  final Ast.Pat p;
-  Pat p2;
+  Ast.Pat p;
+  final List<Pat> list = new ArrayList<>();
 }
 {
   id = identifier() { return ast.idPat(id.pos, id.name); }
@@ -1044,31 +1044,28 @@ Pat atomPat() :
     return ast.wildcardPat(pos());
   }
 |
-  <LPAREN> p = pat()
-  (
-    <RPAREN> { return p; }
-  |
-    {
-      span = Span.of(getPos());
-      final List<Pat> list = new ArrayList<>();
-      list.add(p);
-    }
+  <LPAREN> { span = Span.of(getPos()); }
+  [
+    p = pat() { list.add(p); }
     (
-      <COMMA> p2 = pat() { list.add(p2); }
-    )+
-    <RPAREN> {
+      <COMMA> p = pat() { list.add(p); }
+    )*
+  ]
+  <RPAREN> {
+    if (list.size() == 1) {
+      return list.get(0);
+    } else {
       return ast.tuplePat(span.end(this), list);
     }
-  )
+  }
 |
   <LBRACKET> {
     span = Span.of(getPos());
-    final List<Pat> list = new ArrayList<>();
   }
   [
-    p2 = pat() { list.add(p2); }
+    p = pat() { list.add(p); }
     (
-      <COMMA> p2 = pat() { list.add(p2); }
+      <COMMA> p = pat() { list.add(p); }
     )*
   ]
   <RBRACKET> {

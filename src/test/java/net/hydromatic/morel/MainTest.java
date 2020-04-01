@@ -281,6 +281,7 @@ public class MainTest {
     ml("fn (x, y) => x + y").assertParseSame();
     ml("fn _ => 42").assertParseSame();
     ml("fn x => case x of 0 => 1 | _ => 2").assertParseSame();
+    ml("fn () => 42").assertParseSame();
 
     // apply
     ml("(fn x => x + 1) 3").assertParseSame();

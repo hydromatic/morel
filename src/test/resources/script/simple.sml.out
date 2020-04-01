@@ -167,6 +167,14 @@ end;
 val it = (true,false) : bool * bool
 
 
+(*) Lambda on unit
+fn () => 1;
+val it = fn : unit -> int
+
+it ();
+val it = 1 : int
+
+
 (*) Multiple functions
 let
   fun f x = 1

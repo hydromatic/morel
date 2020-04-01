@@ -89,6 +89,10 @@ in
   (in_ 3 [1,2,3], in_ 4 [1,2,3])
 end;
 
+(*) Lambda on unit
+fn () => 1;
+it ();
+
 (*) Multiple functions
 let
   fun f x = 1
