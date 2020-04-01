@@ -38,6 +38,7 @@ import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Pair;
 
@@ -922,15 +923,27 @@ public abstract class Codes {
               .collect(Collectors.toList()));
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
-    BUILT_IN_VALUES.forEach((key, value) -> {
-      valueMap.put(key.mlName, value);
+    // Dummy type system, thrown away after this method
+    final TypeSystem typeSystem = new TypeSystem();
+
+    BuiltIn.forEach(typeSystem, (key, type) -> {
+      final Object value = BUILT_IN_VALUES.get(key);
+      if (value == null) {
+        throw new AssertionError("no implementation for " + key);
+      }
+      if (key.structure == null) {
+        valueMap.put(key.mlName, value);
+      }
       if (key.alias != null) {
         valueMap.put(key.alias, value);
       }
     });
-    assert valueMap.keySet().containsAll(BuiltIn.BY_ML_NAME.keySet())
-        : "no implementation for "
-        + minus(BuiltIn.BY_ML_NAME.keySet(), valueMap.keySet());
+    //noinspection UnstableApiUsage
+    BuiltIn.forEachStructure(typeSystem, (structure, type) ->
+        valueMap.put(structure.name,
+            structure.memberMap.values().stream()
+                .map(BUILT_IN_VALUES::get)
+                .collect(ImmutableList.toImmutableList())));
   }
 
   /** Creates an empty evaluation environment. */
@@ -964,6 +977,31 @@ public abstract class Codes {
   /** Implements {@link #OP_NEGATE} for type {@code int}. */
   private static int negateInt(EvalEnv env, Object arg) {
     return -((Integer) arg);
+  }
+
+  /** Creates a compilation environment. */
+  public static Environment env(TypeSystem typeSystem,
+      Environment environment) {
+    final Environment[] hEnv = {environment};
+    BUILT_IN_VALUES.forEach((key, value) -> {
+      final Type type = key.typeFunction.apply(typeSystem);
+      if (key.structure == null) {
+        hEnv[0] = hEnv[0].bind(key.mlName, type, value);
+      }
+      if (key.alias != null) {
+        hEnv[0] = hEnv[0].bind(key.alias, type, value);
+      }
+    });
+
+    final List<Object> valueList = new ArrayList<>();
+    BuiltIn.forEachStructure(typeSystem, (structure, type) -> {
+      valueList.clear();
+      structure.memberMap.values()
+          .forEach(builtIn -> valueList.add(BUILT_IN_VALUES.get(builtIn)));
+      hEnv[0] = hEnv[0]
+          .bind(structure.name, type, ImmutableList.copyOf(valueList));
+    });
+    return hEnv[0];
   }
 
   /** Implements {@link #OP_NEGATE} for type {@code real}. */

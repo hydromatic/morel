@@ -30,7 +30,7 @@ val e = {deptno=10,name="Fred"} : {deptno:int, name:string}
 val d = 10;
 val d = 10 : int
 
-val filter = List_filter;
+val filter = List.filter;
 val filter = fn : ('a -> bool) -> 'a list -> 'a list
 
 
@@ -417,7 +417,7 @@ val it = 8 : int
 "morel";
 val it = "morel" : string
 
-String_size it;
+String.size it;
 val it = 5 : int
 
 it + 4;
@@ -665,7 +665,7 @@ val it = ["Shaggy","Scooby"] : string list
 (*) WordCount in Standard ML
 (* Note: The blog post used Standard ML. Here, to accommodate missing
    language features in Morel, we have changed "List.rev" to
-   "List_rev" (etc.) and "(op +)" to "(fn (x, y) => x + y)". *)
+   "List.rev" (etc.) and "(op +)" to "(fn (x, y) => x + y)". *)
 fun mapReduce mapper reducer list =
   let
     fun update (key, value, []) = [(key, [value])]
@@ -677,11 +677,11 @@ fun mapReduce mapper reducer list =
     fun dedup ([], dict) = dict
       | dedup ((key, value) :: tail, dict) =
           dedup (tail, update (key, value, dict))
-    fun flatMap f list = List_foldl List_at [] (List_map f list)
+    fun flatMap f list = List.foldl List.at [] (List.map f list)
     val keyValueList = flatMap mapper list
     val keyValuesList = dedup (keyValueList, [])
   in
-    List_map (fn (key, values) => (key, reducer (key, values))) keyValuesList
+    List.map (fn (key, values) => (key, reducer (key, values))) keyValuesList
   end;
 val mapReduce = fn
   : ('a -> ('b * 'c) list) -> ('b * 'c list -> 'd) -> 'a list -> ('b * 'd) list
@@ -691,14 +691,14 @@ fun wc_mapper line =
   let
     fun split0 [] word words = word :: words
       | split0 (#" " :: s) word words = split0 s "" (word :: words)
-      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
-    fun split s = List_rev (split0 (String_explode s) "" [])
+      | split0 (c :: s) word words = split0 s (word ^ (String.str c)) words
+    fun split s = List.rev (split0 (String.explode s) "" [])
   in
-    List_map (fn w => (w, 1)) (split line)
+    List.map (fn w => (w, 1)) (split line)
   end;
 val wc_mapper = fn : string -> (string * int) list
 
-fun wc_reducer (key, values) = List_foldl (fn (x, y) => x + y) 0 values;
+fun wc_reducer (key, values) = List.foldl (fn (x, y) => x + y) 0 values;
 val wc_reducer = fn : 'a * int list -> int
 
 
@@ -735,9 +735,9 @@ fun split s =
   let
     fun split0 [] word words = word :: words
       | split0 (#" " :: s) word words = split0 s "" (word :: words)
-      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
+      | split0 (c :: s) word words = split0 s (word ^ (String.str c)) words
   in
-    List_rev (split0 (String_explode s) "" [])
+    List.rev (split0 (String.explode s) "" [])
   end;
 val split = fn : string -> string list
 
@@ -756,8 +756,8 @@ fun wordCount lines =
   let
     fun split0 [] word words = word :: words
       | split0 (#" " :: s) word words = split0 s "" (word :: words)
-      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
-    fun split s = List_rev (split0 (String_explode s) "" [])
+      | split0 (c :: s) word words = split0 s (word ^ (String.str c)) words
+    fun split s = List.rev (split0 (String.explode s) "" [])
   in
     from line in lines,
         word in split line

@@ -163,7 +163,7 @@ end;
 (*) have different data types, so that the bug is more obvious.
 let
   val x = "abc";
-  fun g y = String_size x + y;
+  fun g y = String.size x + y;
   val x = 10
 in
   g x
@@ -172,7 +172,7 @@ end;
 (*) As previous, but converting 'fun' to a lambda.
 let
   val x = "abc";
-  val g = fn y => String_size x + y;
+  val g = fn y => String.size x + y;
   val x = 10
 in
   g x

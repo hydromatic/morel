@@ -554,8 +554,8 @@ listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
 (*) Temporary functions
 let
   fun abbrev s =
-    if String_size s > 5
-    then (String_substring (s, 0, 3)) ^ "."
+    if String.size s > 5
+    then (String.substring (s, 0, 3)) ^ "."
     else s;
   fun shouldPromote e =
     e.id < e.deptno * 4
@@ -566,12 +566,12 @@ in
 end;
 
 (*) There's no flatMap in the standard library, so define one
-fun flatMap f l = List_concat (List_map f l);
-flatMap String_explode ["ab", "", "def"];
+fun flatMap f l = List.concat (List.map f l);
+flatMap String.explode ["ab", "", "def"];
 
 (*) Here's another way to define flatMap
-fun flatMap2 f l = List_foldl List_at [] (List_map f l);
-flatMap2 String_explode ["ab", "", "def"];
+fun flatMap2 f l = List.foldl List.at [] (List.map f l);
+flatMap2 String.explode ["ab", "", "def"];
 
 (*) A function that runs a query and returns the result
 fun employeesIn deptno =
@@ -583,7 +583,7 @@ employeesIn 25;
 employeesIn 30;
 
 (*) Using 'map' to stick together results
-List_map employeesIn [10, 25, 30];
+List.map employeesIn [10, 25, 30];
 
 (*) Same, using 'from'
 from deptno in [10, 25, 30]

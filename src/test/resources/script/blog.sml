@@ -26,7 +26,7 @@
 (*) Auxiliary declarations
 val e = {deptno = 10, name = "Fred"};
 val d = 10;
-val filter = List_filter;
+val filter = List.filter;
 
 "Hello, world!";
 
@@ -275,7 +275,7 @@ x + y;
    and assigns it to a variable called `it`.
    We can use `it` in the next expression. *)
 "morel";
-String_size it;
+String.size it;
 it + 4;
 
 (* A let expression binds one or more values and evaluates an expression *)
@@ -423,7 +423,7 @@ end;
 (*) WordCount in Standard ML
 (* Note: The blog post used Standard ML. Here, to accommodate missing
    language features in Morel, we have changed "List.rev" to
-   "List_rev" (etc.) and "(op +)" to "(fn (x, y) => x + y)". *)
+   "List.rev" (etc.) and "(op +)" to "(fn (x, y) => x + y)". *)
 fun mapReduce mapper reducer list =
   let
     fun update (key, value, []) = [(key, [value])]
@@ -435,23 +435,23 @@ fun mapReduce mapper reducer list =
     fun dedup ([], dict) = dict
       | dedup ((key, value) :: tail, dict) =
           dedup (tail, update (key, value, dict))
-    fun flatMap f list = List_foldl List_at [] (List_map f list)
+    fun flatMap f list = List.foldl List.at [] (List.map f list)
     val keyValueList = flatMap mapper list
     val keyValuesList = dedup (keyValueList, [])
   in
-    List_map (fn (key, values) => (key, reducer (key, values))) keyValuesList
+    List.map (fn (key, values) => (key, reducer (key, values))) keyValuesList
   end;
 
 fun wc_mapper line =
   let
     fun split0 [] word words = word :: words
       | split0 (#" " :: s) word words = split0 s "" (word :: words)
-      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
-    fun split s = List_rev (split0 (String_explode s) "" [])
+      | split0 (c :: s) word words = split0 s (word ^ (String.str c)) words
+    fun split s = List.rev (split0 (String.explode s) "" [])
   in
-    List_map (fn w => (w, 1)) (split line)
+    List.map (fn w => (w, 1)) (split line)
   end;
-fun wc_reducer (key, values) = List_foldl (fn (x, y) => x + y) 0 values;
+fun wc_reducer (key, values) = List.foldl (fn (x, y) => x + y) 0 values;
 
 (*) Check that they work on discrete values
 wc_mapper "a skunk sat on a stump";
@@ -471,9 +471,9 @@ fun split s =
   let
     fun split0 [] word words = word :: words
       | split0 (#" " :: s) word words = split0 s "" (word :: words)
-      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
+      | split0 (c :: s) word words = split0 s (word ^ (String.str c)) words
   in
-    List_rev (split0 (String_explode s) "" [])
+    List.rev (split0 (String.explode s) "" [])
   end;
 from line in lines,
     word in split line
@@ -484,8 +484,8 @@ fun wordCount lines =
   let
     fun split0 [] word words = word :: words
       | split0 (#" " :: s) word words = split0 s "" (word :: words)
-      | split0 (c :: s) word words = split0 s (word ^ (String_str c)) words
-    fun split s = List_rev (split0 (String_explode s) "" [])
+      | split0 (c :: s) word words = split0 s (word ^ (String.str c)) words
+    fun split s = List.rev (split0 (String.explode s) "" [])
   in
     from line in lines,
         word in split line

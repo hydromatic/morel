@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.util.Ord;
 
 import java.util.Map;
 import java.util.Objects;
@@ -88,6 +89,18 @@ public class RecordType extends BaseType {
     } catch (NumberFormatException e) {
       return null;
     }
+  }
+
+  /** Returns the index of a given field, or -1. */
+  public Ord<Type> lookupField(String fieldName) {
+    int i = 0;
+    for (Map.Entry<String, Type> e : argNameTypes.entrySet()) {
+      if (e.getKey().equals(fieldName)) {
+        return Ord.of(i, e.getValue());
+      }
+      ++i;
+    }
+    return null;
   }
 }
 

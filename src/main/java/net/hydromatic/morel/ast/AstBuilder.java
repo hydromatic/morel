@@ -407,8 +407,19 @@ public enum AstBuilder {
     return new Ast.Aggregate(pos, aggregate, argument, id);
   }
 
+  /** Returns a reference to a built-in: either a name (e.g. "true")
+   * or a field reference (e.g. "#hd List"). */
+  private Ast.Exp ref(Pos pos, BuiltIn builtIn) {
+    if (builtIn.structure == null) {
+      return id(pos, builtIn.mlName);
+    } else {
+      return apply(id(pos, builtIn.structure),
+          id(pos, builtIn.mlName));
+    }
+  }
+
   public Ast.Exp map(Pos pos, Ast.Exp e1, Ast.Exp e2) {
-    return apply(apply(id(pos, BuiltIn.LIST_MAP.mlName), e1), e2);
+    return apply(apply(ref(pos, BuiltIn.LIST_MAP), e1), e2);
   }
 
   public Ast.Order order(Pos pos, Iterable<Ast.OrderItem> orderItems) {

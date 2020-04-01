@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -65,16 +66,24 @@ public abstract class Environments {
     for (Map.Entry<BuiltIn, Object> entry : Codes.BUILT_IN_VALUES.entrySet()) {
       BuiltIn key = entry.getKey();
       final Type type = key.typeFunction.apply(typeSystem);
-      bindings.add(Binding.of(key.mlName, type, entry.getValue()));
+      if (key.structure == null) {
+        bindings.add(Binding.of(key.mlName, type, entry.getValue()));
+      }
       if (key.alias != null) {
         bindings.add(Binding.of(key.alias, type, entry.getValue()));
       }
     }
-    bindings(typeSystem, valueMap, bindings);
+
+    final EvalEnv emptyEnv = Codes.emptyEnv();
+    BuiltIn.forEachStructure(typeSystem, (structure, type) ->
+        bindings.add(
+            Binding.of(structure.name, type, emptyEnv.getOpt(structure.name))));
+
+    foreignBindings(typeSystem, valueMap, bindings);
     return bind(environment, bindings);
   }
 
-  private static void bindings(TypeSystem typeSystem,
+  private static void foreignBindings(TypeSystem typeSystem,
       Map<String, ForeignValue> map, List<Binding> bindings) {
     map.forEach((name, value) ->
         bindings.add(Binding.of(name, value.type(typeSystem), value.value())));

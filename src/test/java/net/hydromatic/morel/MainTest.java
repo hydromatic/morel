@@ -433,12 +433,12 @@ public class MainTest {
   }
 
   @Test public void testApply() {
-    ml("List_hd [\"abc\"]")
+    ml("List.hd [\"abc\"]")
         .assertType("string");
   }
 
   @Test public void testApply2() {
-    ml("List_map (fn x => String_size x) [\"abc\", \"de\"]")
+    ml("List.map (fn x => String.size x) [\"abc\", \"de\"]")
         .assertType("int list");
   }
 
@@ -460,10 +460,10 @@ public class MainTest {
 
   @Ignore("disable failing test - enable when we have polymorphic types")
   @Test public void testHdIsPolymorphic() {
-    ml("(List_hd [1, 2], List_hd [false, true])")
+    ml("(List.hd [1, 2], List.hd [false, true])")
         .assertType("int * bool");
     ml("let\n"
-        + "  val h = List_hd\n"
+        + "  val h = List.hd\n"
         + "in\n"
         + "   (h [1, 2], h [false, true])\n"
         + "end")
@@ -762,7 +762,7 @@ public class MainTest {
   @Test public void testClosure() {
     final String ml = "let\n"
         + "  val x = \"abc\";\n"
-        + "  fun g y = String_size x + y;\n"
+        + "  fun g y = String.size x + y;\n"
         + "  val x = 10\n"
         + "in\n"
         + "  g x\n"
@@ -1231,14 +1231,14 @@ public class MainTest {
    * for each row in an outer loop. */
   @Test public void testCrossApply() {
     final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
-        + "    c in String_explode s\n"
-        + "  yield s ^ \":\" ^ String_str c";
+        + "    c in String.explode s\n"
+        + "  yield s ^ \":\" ^ String.str c";
     ml(ml).assertEvalIter(equalsOrdered("abc:a", "abc:b", "abc:c", "d:d"));
   }
 
   @Test public void testCrossApplyGroup() {
     final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
-        + "    c in String_explode s\n"
+        + "    c in String.explode s\n"
         + "  group s compute count = sum of 1";
     ml(ml).assertEvalIter(equalsOrdered(list(3, "abc"), list(1, "d")));
   }

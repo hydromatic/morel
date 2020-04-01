@@ -101,7 +101,16 @@ public class TypeResolver {
 
   private Resolved deduceType_(Environment env, Ast.Decl decl) {
     final TypeEnvHolder typeEnvs = new TypeEnvHolder(EmptyTypeEnv.INSTANCE);
-    BuiltIn.forEachType(typeSystem, typeEnvs);
+    BuiltIn.forEach(typeSystem, (builtIn, type) -> {
+      if (builtIn.structure == null) {
+        typeEnvs.accept(builtIn.mlName, type);
+      }
+      if (builtIn.alias != null) {
+        typeEnvs.accept(builtIn.alias, type);
+      }
+    });
+    BuiltIn.forEachStructure(typeSystem, (structure, type) ->
+        typeEnvs.accept(structure.name, type));
     env.forEachType(typeEnvs);
     final TypeEnv typeEnv = typeEnvs.typeEnv;
     final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
@@ -989,8 +998,7 @@ public class TypeResolver {
         }
         result = b.toString();
       }
-      return unifier.apply(
-          result,
+      return unifier.apply(result,
           recordType.argNameTypes.values().stream()
               .map(type1 -> toTerm(type1, subst)).collect(toImmutableList()));
     case LIST:

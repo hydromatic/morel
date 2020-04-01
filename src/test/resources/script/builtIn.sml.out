@@ -25,7 +25,7 @@ ignore (1 + 2);
 val it = () : unit
 
 
-(*) map is alias for List_map
+(*) map is alias for List.map
 map;
 val it = fn : ('a -> 'b) -> 'a list -> 'b list
 
@@ -33,64 +33,85 @@ map (fn x => x) [];
 val it = [] : 'a list
 
 
+(* Structures -------------------------------------------------- *)
+List;
+val it =
+  {all=fn,app=fn,at=fn,collate=fn,concat=fn,drop=fn,exists=fn,filter=fn,
+   find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,last=fn,length=fn,map=fn,
+   mapPartial=fn,nil=[],nth=fn,null=fn,partition=fn,rev=fn,revAppend=fn,
+   tabulate=fn,take=fn,tl=fn}
+  : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> int) -> 'd list * 'd list -> int, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> 'n * 'n list, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, partition:('y -> bool) -> 'y list -> 'y list * 'y list, rev:'z list -> 'z list, revAppend:'ba list * 'ba list -> 'ba list, tabulate:int * (int -> 'bb) -> 'bb list, take:'bc list * int -> 'bc list, tl:'bd list -> 'bd list}
+
+List.rev;
+val it = fn : 'a list -> 'a list
+
+List.rev [1,2,3];
+val it = [3,2,1] : int list
+
+
+String;
+val it =
+  {concat=fn,concatWith=fn,explode=fn,extract=fn,implode=fn,isPrefix=fn,
+   isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,
+   substring=fn,translate=fn}
+  : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
+
+
 (* String ------------------------------------------------------ *)
 
-(* TODO replace '_' with '.' when we can parse long identifiers;
-   e.g. 'String_maxSize' becomes 'String.maxSize' *)
-
 (*) val maxSize : int
-String_maxSize;
+String.maxSize;
 val it = 2147483647 : int
 
 
 (*) val size : string -> int
-String_size;
+String.size;
 val it = fn : string -> int
 
-String_size "abc";
+String.size "abc";
 val it = 3 : int
 
-String_size "";
+String.size "";
 val it = 0 : int
 
 
 (*) val sub : string * int -> char
-String_sub;
+String.sub;
 val it = fn : string * int -> char
 
-String_sub("abc", 0);
+String.sub("abc", 0);
 val it = #"a" : char
 
-String_sub("abc", 2);
+String.sub("abc", 2);
 val it = #"c" : char
 
 (* TODO: need exceptions
-String_sub("abc", 20);
+String.sub("abc", 20);
 *)
 
 (*) val extract   : string * int * int option -> string
 (* TODO: support the 'int option' argument *)
-String_extract;
+String.extract;
 val it = fn : string * int -> string
 
-String_extract("abc", 1);
+String.extract("abc", 1);
 val it = "bc" : string
 
 
 (*) val substring : string * int * int -> string
-String_substring;
+String.substring;
 val it = fn : string * int * int -> string
 
-String_substring("hello, world", 2, 7);
+String.substring("hello, world", 2, 7);
 val it = "llo, wo" : string
 
-String_substring("hello, world", 0, 1);
+String.substring("hello, world", 0, 1);
 val it = "h" : string
 
-String_substring("hello", 5, 0);
+String.substring("hello", 5, 0);
 val it = "" : string
 
-String_substring("", 0, 0);
+String.substring("", 0, 0);
 val it = "" : string
 
 
@@ -98,165 +119,165 @@ val it = "" : string
 (* TODO *)
 
 (*) val concat : string list -> string
-String_concat;
+String.concat;
 val it = fn : string list -> string
 
-String_concat ["a", "bc", "def"];
+String.concat ["a", "bc", "def"];
 val it = "abcdef" : string
 
-String_concat ["a"];
+String.concat ["a"];
 val it = "a" : string
 
-String_concat [];
+String.concat [];
 val it = "" : string
 
 
 (*) val concatWith : string -> string list -> string
-String_concatWith;
+String.concatWith;
 val it = fn : string -> string list -> string
 
-String_concatWith "," ["a", "bc", "def"];
+String.concatWith "," ["a", "bc", "def"];
 val it = "a,bc,def" : string
 
-String_concatWith "," ["a"];
+String.concatWith "," ["a"];
 val it = "a" : string
 
-String_concatWith "," ["", ""];
+String.concatWith "," ["", ""];
 val it = "," : string
 
-String_concatWith "," [];
+String.concatWith "," [];
 val it = "" : string
 
 
 (*) val str : char -> string
-String_str;
+String.str;
 val it = fn : char -> string
 
-String_str #"a";
+String.str #"a";
 val it = "a" : string
 
 
 (*) val implode : char list -> string
-String_implode;
+String.implode;
 val it = fn : char list -> string
 
-String_implode [#"a", #"b", #"c"];
+String.implode [#"a", #"b", #"c"];
 val it = "abc" : string
 
-String_implode [];
+String.implode [];
 val it = "" : string
 
 
 (*) val explode : string -> char list
-String_explode;
+String.explode;
 val it = fn : string -> char list
 
-String_explode "abc";
+String.explode "abc";
 val it = [#"a",#"b",#"c"] : char list
 
-String_explode "";
+String.explode "";
 val it = [] : char list
 
 
 (*) val map : (char -> char) -> string -> string
-String_map;
+String.map;
 val it = fn : (char -> char) -> string -> string
 
-String_map (fn c => if c = #"a" then #"A" else if c = #"c" then #"C" else c) "abc";
+String.map (fn c => if c = #"a" then #"A" else if c = #"c" then #"C" else c) "abc";
 val it = "AbC" : string
 
-String_map (fn c => if c = #"a" then #"A" else if c = #"c" then #"C" else c) "";
+String.map (fn c => if c = #"a" then #"A" else if c = #"c" then #"C" else c) "";
 val it = "" : string
 
 
 (*) val translate : (char -> string) -> string -> string
-String_translate;
+String.translate;
 val it = fn : (char -> string) -> string -> string
 
-String_translate (fn c => if c = #"a" then "AA" else if c = #"c" then "CCC" else "-") "abc";
+String.translate (fn c => if c = #"a" then "AA" else if c = #"c" then "CCC" else "-") "abc";
 val it = "AA-CCC" : string
 
-String_translate (fn c => if c = #"a" then "AA" else if c = #"c" then "CCC" else "-") "";
+String.translate (fn c => if c = #"a" then "AA" else if c = #"c" then "CCC" else "-") "";
 val it = "" : string
 
 
 (*) val tokens : (char -> bool) -> string -> string list
 (*) val fields : (char -> bool) -> string -> string list
 (*) val isPrefix    : string -> string -> bool
-String_isPrefix;
+String.isPrefix;
 val it = fn : string -> string -> bool
 
-String_isPrefix "he" "hello";
+String.isPrefix "he" "hello";
 val it = true : bool
 
-String_isPrefix "el" "hello";
+String.isPrefix "el" "hello";
 val it = false : bool
 
-String_isPrefix "lo" "hello";
+String.isPrefix "lo" "hello";
 val it = false : bool
 
-String_isPrefix "bonjour" "hello";
+String.isPrefix "bonjour" "hello";
 val it = false : bool
 
-String_isPrefix "el" "";
+String.isPrefix "el" "";
 val it = false : bool
 
-String_isPrefix "" "hello";
+String.isPrefix "" "hello";
 val it = true : bool
 
-String_isPrefix "" "";
+String.isPrefix "" "";
 val it = true : bool
 
 
 (*) val isSubstring : string -> string -> bool
-String_isSubstring;
+String.isSubstring;
 val it = fn : string -> string -> bool
 
-String_isSubstring "he" "hello";
+String.isSubstring "he" "hello";
 val it = true : bool
 
-String_isSubstring "el" "hello";
+String.isSubstring "el" "hello";
 val it = true : bool
 
-String_isSubstring "lo" "hello";
+String.isSubstring "lo" "hello";
 val it = true : bool
 
-String_isSubstring "bonjour" "hello";
+String.isSubstring "bonjour" "hello";
 val it = false : bool
 
-String_isSubstring "el" "";
+String.isSubstring "el" "";
 val it = false : bool
 
-String_isSubstring "" "hello";
+String.isSubstring "" "hello";
 val it = true : bool
 
-String_isSubstring "" "";
+String.isSubstring "" "";
 val it = true : bool
 
 
 (*) val isSuffix    : string -> string -> bool
-String_isSuffix;
+String.isSuffix;
 val it = fn : string -> string -> bool
 
-String_isSuffix "he" "hello";
+String.isSuffix "he" "hello";
 val it = false : bool
 
-String_isSuffix "el" "hello";
+String.isSuffix "el" "hello";
 val it = false : bool
 
-String_isSuffix "lo" "hello";
+String.isSuffix "lo" "hello";
 val it = true : bool
 
-String_isSuffix "bonjour" "hello";
+String.isSuffix "bonjour" "hello";
 val it = false : bool
 
-String_isSuffix "el" "";
+String.isSuffix "el" "";
 val it = false : bool
 
-String_isSuffix "" "hello";
+String.isSuffix "" "hello";
 val it = true : bool
 
-String_isSuffix "" "";
+String.isSuffix "" "";
 val it = true : bool
 
 
@@ -267,358 +288,358 @@ val it = true : bool
 (*) val >  : string * string -> bool
 (*) val >= : string * string -> bool
 
-(*) val toString : string -> String_string
+(*) val toString : string -> String.string
 (*) val scan       : (char, 'a) StringCvt.reader
 (*)                    -> (string, 'a) StringCvt.reader
-(*) val fromString : String_string -> string option
-(*) val toCString : string -> String_string
-(*) val fromCString : String_string -> string option
+(*) val fromString : String.string -> string option
+(*) val toCString : string -> String.string
+(*) val fromCString : String.string -> string option
 
 (* List -------------------------------------------------------- *)
 
 (*) val nil : 'a list
-List_nil;
+List.nil;
 val it = [] : 'a list
 
 
 (*) val null : 'a list -> bool
-List_null;
+List.null;
 val it = fn : 'a list -> bool
 
-List_null [];
+List.null [];
 val it = true : bool
 
-List_null [1];
+List.null [1];
 val it = false : bool
 
 
 (*) val length : 'a list -> int
-List_length;
+List.length;
 val it = fn : 'a list -> int
 
-List_length [];
+List.length [];
 val it = 0 : int
 
-List_length [1,2];
+List.length [1,2];
 val it = 2 : int
 
 
 (*) val @ : 'a list * 'a list -> 'a list
-List_at;
+List.at;
 val it = fn : 'a list * 'a list -> 'a list
 
-List_at ([1], [2, 3]);
+List.at ([1], [2, 3]);
 val it = [1,2,3] : int list
 
-List_at ([1], []);
+List.at ([1], []);
 val it = [1] : int list
 
-List_at ([], [2]);
+List.at ([], [2]);
 val it = [2] : int list
 
-List_at ([], []);
+List.at ([], []);
 val it = [] : 'a list
 
 
 (*) val hd : 'a list -> 'a
-List_hd;
+List.hd;
 val it = fn : 'a list -> 'a
 
-List_hd [1,2,3];
+List.hd [1,2,3];
 val it = 1 : int
 
 
 (*) val tl : 'a list -> 'a list
-List_tl;
+List.tl;
 val it = fn : 'a list -> 'a list
 
-List_tl [1,2,3];
+List.tl [1,2,3];
 val it = [2,3] : int list
 
 
 (*) val last : 'a list -> 'a
-List_last;
+List.last;
 val it = fn : 'a list -> 'a
 
-List_last [1,2,3];
+List.last [1,2,3];
 val it = 3 : int
 
 
 (*) val getItem : 'a list -> ('a * 'a list) option
-List_getItem;
+List.getItem;
 val it = fn : 'a list -> 'a * 'a list
 
-List_getItem [1,2,3];
+List.getItem [1,2,3];
 val it = (1,[2,3]) : int * int list
 
-List_getItem [1];
+List.getItem [1];
 val it = (1,[]) : int * int list
 
 
 (*) val nth : 'a list * int -> 'a
-List_nth;
+List.nth;
 val it = fn : 'a list * int -> 'a
 
-List_nth ([1,2,3], 2);
+List.nth ([1,2,3], 2);
 val it = 3 : int
 
-List_nth ([1], 0);
+List.nth ([1], 0);
 val it = 1 : int
 
 
 (*) val take : 'a list * int -> 'a list
-List_take;
+List.take;
 val it = fn : 'a list * int -> 'a list
 
-List_take ([1,2,3], 0);
+List.take ([1,2,3], 0);
 val it = [] : int list
 
-List_take ([1,2,3], 1);
+List.take ([1,2,3], 1);
 val it = [1] : int list
 
-List_take ([1,2,3], 3);
+List.take ([1,2,3], 3);
 val it = [1,2,3] : int list
 
 
 (*) val drop : 'a list * int -> 'a list
-List_drop;
+List.drop;
 val it = fn : 'a list * int -> 'a list
 
-List_drop ([1,2,3], 0);
+List.drop ([1,2,3], 0);
 val it = [1,2,3] : int list
 
-List_drop ([1,2,3], 1);
+List.drop ([1,2,3], 1);
 val it = [2,3] : int list
 
-List_drop ([1,2,3], 3);
+List.drop ([1,2,3], 3);
 val it = [] : int list
 
 
 (*) val rev : 'a list -> 'a list
-List_rev;
+List.rev;
 val it = fn : 'a list -> 'a list
 
-List_rev [1,2,3];
+List.rev [1,2,3];
 val it = [3,2,1] : int list
 
-List_rev [2,1];
+List.rev [2,1];
 val it = [1,2] : int list
 
-List_rev [1];
+List.rev [1];
 val it = [1] : int list
 
-List_rev [];
+List.rev [];
 val it = [] : 'a list
 
 
 (*) val concat : 'a list list -> 'a list
-List_concat;
+List.concat;
 val it = fn : 'a list list -> 'a list
 
-List_concat [[1],[2,3],[4,5,6]];
+List.concat [[1],[2,3],[4,5,6]];
 val it = [1,2,3,4,5,6] : int list
 
-List_concat [[1],[],[4,5,6]];
+List.concat [[1],[],[4,5,6]];
 val it = [1,4,5,6] : int list
 
-List_concat [[],[],[]];
+List.concat [[],[],[]];
 val it = [] : 'a list
 
-List_concat [];
+List.concat [];
 val it = [] : 'a list
 
 
 (*) val revAppend : 'a list * 'a list -> 'a list
-List_revAppend;
+List.revAppend;
 val it = fn : 'a list * 'a list -> 'a list
 
-List_revAppend ([1,2],[3,4,5]);
+List.revAppend ([1,2],[3,4,5]);
 val it = [2,1,3,4,5] : int list
 
-List_revAppend ([1],[3,4,5]);
+List.revAppend ([1],[3,4,5]);
 val it = [1,3,4,5] : int list
 
-List_revAppend ([],[3,4,5]);
+List.revAppend ([],[3,4,5]);
 val it = [3,4,5] : int list
 
-List_revAppend ([1,2],[]);
+List.revAppend ([1,2],[]);
 val it = [2,1] : int list
 
-List_revAppend ([],[]);
+List.revAppend ([],[]);
 val it = [] : 'a list
 
 
 (*) val app : ('a -> unit) -> 'a list -> unit
-List_app;
+List.app;
 val it = fn : ('a -> unit) -> 'a list -> unit
 
-List_app (fn x => ignore (x + 2)) [2,3,4];
+List.app (fn x => ignore (x + 2)) [2,3,4];
 val it = () : unit
 
-List_app (fn x => ignore (x + 2)) [];
+List.app (fn x => ignore (x + 2)) [];
 val it = () : unit
 
 
 (*) val map : ('a -> 'b) -> 'a list -> 'b list
-List_map;
+List.map;
 val it = fn : ('a -> 'b) -> 'a list -> 'b list
 
-List_map (fn x => x + 1) [1,2,3];
+List.map (fn x => x + 1) [1,2,3];
 val it = [2,3,4] : int list
 
-List_map (fn x => x + 1) [];
+List.map (fn x => x + 1) [];
 val it = [] : int list
 
 
 (*) val mapPartial : ('a -> 'b option) -> 'a list -> 'b list
-List_mapPartial;
+List.mapPartial;
 val it = fn : ('a -> 'b) -> 'a list -> 'b list
 
-List_mapPartial (fn x => x + 1) [1,2,3];
+List.mapPartial (fn x => x + 1) [1,2,3];
 val it = [2,3,4] : int list
 
-List_mapPartial (fn x => x + 1) [];
+List.mapPartial (fn x => x + 1) [];
 val it = [] : int list
 
 
 (*) val find : ('a -> bool) -> 'a list -> 'a option
-List_find;
+List.find;
 val it = fn : ('a -> bool) -> 'a list -> 'a
 
-List_find (fn x => x mod 7 = 0) [2,3,5,8,13,21,34];
+List.find (fn x => x mod 7 = 0) [2,3,5,8,13,21,34];
 val it = 21 : int
 
 
 (*) val filter : ('a -> bool) -> 'a list -> 'a list
-List_filter;
+List.filter;
 val it = fn : ('a -> bool) -> 'a list -> 'a list
 
-List_filter (fn x => x mod 2 = 0) [0,1,2,3,4,5];
+List.filter (fn x => x mod 2 = 0) [0,1,2,3,4,5];
 val it = [0,2,4] : int list
 
-List_filter (fn x => x mod 2 = 0) [1,3];
+List.filter (fn x => x mod 2 = 0) [1,3];
 val it = [] : int list
 
-List_filter (fn x => x mod 2 = 0) [];
+List.filter (fn x => x mod 2 = 0) [];
 val it = [] : int list
 
 
 (*) val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
-List_partition;
+List.partition;
 val it = fn : ('a -> bool) -> 'a list -> 'a list * 'a list
 
-List_partition (fn x => x mod 2 = 0) [0,1,2,3,4,5];
+List.partition (fn x => x mod 2 = 0) [0,1,2,3,4,5];
 val it = ([0,2,4],[1,3,5]) : int list * int list
 
-List_partition (fn x => x mod 2 = 0) [1];
+List.partition (fn x => x mod 2 = 0) [1];
 val it = ([],[1]) : int list * int list
 
-List_partition (fn x => x mod 2 = 0) [];
+List.partition (fn x => x mod 2 = 0) [];
 val it = ([],[]) : int list * int list
 
 
 (*) val foldl : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
-List_foldl;
+List.foldl;
 val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
 
-List_foldl (fn (a, b) => a + b) 0 [1,2,3];
+List.foldl (fn (a, b) => a + b) 0 [1,2,3];
 val it = 6 : int
 
-List_foldl (fn (a, b) => a + b) 0 [];
+List.foldl (fn (a, b) => a + b) 0 [];
 val it = 0 : int
 
-List_foldl (fn (a, b) => b) 0 [1,2,3];
+List.foldl (fn (a, b) => b) 0 [1,2,3];
 val it = 0 : int
 
-List_foldl (fn (a, b) => a - b) 0 [1,2,3,4];
+List.foldl (fn (a, b) => a - b) 0 [1,2,3,4];
 val it = 2 : int
 
 
 (*) val foldr : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
-List_foldr;
+List.foldr;
 val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
 
-List_foldr (fn (a, b) => a + b) 0 [1,2,3];
+List.foldr (fn (a, b) => a + b) 0 [1,2,3];
 val it = 6 : int
 
-List_foldr (fn (a, b) => a + b) 0 [];
+List.foldr (fn (a, b) => a + b) 0 [];
 val it = 0 : int
 
-List_foldr (fn (a, b) => b) 0 [1,2,3];
+List.foldr (fn (a, b) => b) 0 [1,2,3];
 val it = 0 : int
 
-List_foldr (fn (a, b) => a - b) 0 [1,2,3,4];
+List.foldr (fn (a, b) => a - b) 0 [1,2,3,4];
 val it = ~2 : int
 
 
 (*) val exists : ('a -> bool) -> 'a list -> bool
-List_exists;
+List.exists;
 val it = fn : ('a -> bool) -> 'a list -> bool
 
-List_exists (fn x => x mod 2 = 0) [1,3,5];
+List.exists (fn x => x mod 2 = 0) [1,3,5];
 val it = false : bool
 
-List_exists (fn x => x mod 2 = 0) [2,4,6];
+List.exists (fn x => x mod 2 = 0) [2,4,6];
 val it = true : bool
 
-List_exists (fn x => x mod 2 = 0) [1,2,3];
+List.exists (fn x => x mod 2 = 0) [1,2,3];
 val it = true : bool
 
-List_exists (fn x => x mod 2 = 0) [];
+List.exists (fn x => x mod 2 = 0) [];
 val it = false : bool
 
 
 (*) val all : ('a -> bool) -> 'a list -> bool
-List_all;
+List.all;
 val it = fn : ('a -> bool) -> 'a list -> bool
 
-List_all (fn x => x mod 2 = 0) [1,3,5];
+List.all (fn x => x mod 2 = 0) [1,3,5];
 val it = false : bool
 
-List_all (fn x => x mod 2 = 0) [2,4,6];
+List.all (fn x => x mod 2 = 0) [2,4,6];
 val it = true : bool
 
-List_all (fn x => x mod 2 = 0) [1,2,3];
+List.all (fn x => x mod 2 = 0) [1,2,3];
 val it = false : bool
 
-List_all (fn x => x mod 2 = 0) [];
+List.all (fn x => x mod 2 = 0) [];
 val it = true : bool
 
 
 (*) val tabulate : int * (int -> 'a) -> 'a list
-List_tabulate;
+List.tabulate;
 val it = fn : int * (int -> 'a) -> 'a list
 
-List_tabulate (5, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+List.tabulate (5, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
 val it = [1,1,2,6,24] : int list
 
-List_tabulate (1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+List.tabulate (1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
 val it = [1] : int list
 
-List_tabulate (0, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+List.tabulate (0, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
 val it = [] : int list
 
 
 (*) val collate : ('a * 'a -> order) -> 'a list * 'a list -> order
-List_collate;
+List.collate;
 val it = fn : ('a * 'a -> int) -> 'a list * 'a list -> int
 
-List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,3,4]);
+List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,3,4]);
 val it = ~1 : int
 
-List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2,2]);
+List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2,2]);
 val it = 1 : int
 
-List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2]);
+List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2]);
 val it = 1 : int
 
-List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2,3,4]);
+List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2,3,4]);
 val it = ~1 : int
 
-List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], []);
+List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], []);
 val it = 1 : int
 
-List_collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([], []);
+List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([], []);
 val it = 0 : int
 
 
@@ -629,46 +650,46 @@ val it = LESS : order
 
 (* Relational -------------------------------------------------- *)
 
-Relational_count [1, 2, 3];
+Relational.count [1, 2, 3];
 val it = 3 : int
 
-Relational_count [];
+Relational.count [];
 val it = 0 : int
 
-Relational_count [false];
+Relational.count [false];
 val it = 1 : int
 
 
-Relational_sum [1, 2, 3];
+Relational.sum [1, 2, 3];
 val it = 6 : int
 
-Relational_sum [1.0, 2.5, 3.5];
+Relational.sum [1.0, 2.5, 3.5];
 val it = 7.0 : real
 
 
-Relational_max [1, 2, 3];
+Relational.max [1, 2, 3];
 val it = 3 : int
 
-Relational_max [1.0, 2.5, 3.5];
+Relational.max [1.0, 2.5, 3.5];
 val it = 3.5 : real
 
-Relational_max ["a", "bc", "ab"];
+Relational.max ["a", "bc", "ab"];
 val it = "bc" : string
 
-Relational_max [false, true];
+Relational.max [false, true];
 val it = true : bool
 
 
-Relational_min [1, 2, 3];
+Relational.min [1, 2, 3];
 val it = 1 : int
 
-Relational_min [1.0, 2.5, 3.5];
+Relational.min [1.0, 2.5, 3.5];
 val it = 1.0 : real
 
-Relational_min ["a", "bc", "ab"];
+Relational.min ["a", "bc", "ab"];
 val it = "a" : string
 
-Relational_min [false, true];
+Relational.min [false, true];
 val it = false : bool
 
 
@@ -767,24 +788,24 @@ val it = true : bool
 (* Sys --------------------------------------------------------- *)
 
 (*) val env : unit -> string list
-Sys_env;
+Sys.env;
 val it = fn : unit -> (string * string) list
 
-Sys_env ();
+Sys.env ();
 val it =
-  [("List_all","forall 'a. ('a -> bool) -> 'a list -> bool"),
-   ("List_app","forall 'a. ('a -> unit) -> 'a list -> unit"),
-   ("List_at","forall 'a. 'a list * 'a list -> 'a list"),
-   ("List_collate","forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int"),
-   ("List_concat","forall 'a. 'a list list -> 'a list"),
-   ("List_drop","forall 'a. 'a list * int -> 'a list"),
-   ("List_exists","forall 'a. ('a -> bool) -> 'a list -> bool"),
-   ("List_filter","forall 'a. ('a -> bool) -> 'a list -> 'a list"),
-   ("List_find","forall 'a. ('a -> bool) -> 'a list -> 'a"),
-   ("List_foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
-   ("List_foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
-   ("List_getItem","forall 'a. 'a list -> 'a * 'a list"),...]
-  : (string * string) list
+  [
+   ("List",
+   "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+   ("Relational",
+   "{count:forall 'a. 'a list -> int, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+   ("String",
+   "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
+   ("Sys","{env:unit -> (string * string) list}"),("abs","int -> int"),
+   ("count","forall 'a. 'a list -> int"),
+   ("env","unit -> (string * string) list"),("false","bool"),
+   ("ignore","forall 'a. 'a -> unit"),("it","(string * string) list"),
+   ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
+   ("max","forall 'a. 'a list -> 'a"),...] : (string * string) list
 
 
 env;
@@ -792,16 +813,16 @@ val it = fn : unit -> (string * string) list
 
 env ();
 val it =
-  [("List_all","forall 'a. ('a -> bool) -> 'a list -> bool"),
-   ("List_app","forall 'a. ('a -> unit) -> 'a list -> unit"),
-   ("List_at","forall 'a. 'a list * 'a list -> 'a list"),
-   ("List_collate","forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int"),
-   ("List_concat","forall 'a. 'a list list -> 'a list"),
-   ("List_drop","forall 'a. 'a list * int -> 'a list"),
-   ("List_exists","forall 'a. ('a -> bool) -> 'a list -> bool"),
-   ("List_filter","forall 'a. ('a -> bool) -> 'a list -> 'a list"),
-   ("List_find","forall 'a. ('a -> bool) -> 'a list -> 'a"),
-   ("List_foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
-   ("List_foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
-   ("List_getItem","forall 'a. 'a list -> 'a * 'a list"),...]
-  : (string * string) list
+  [
+   ("List",
+   "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+   ("Relational",
+   "{count:forall 'a. 'a list -> int, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+   ("String",
+   "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
+   ("Sys","{env:unit -> (string * string) list}"),("abs","int -> int"),
+   ("count","forall 'a. 'a list -> int"),
+   ("env","unit -> (string * string) list"),("false","bool"),
+   ("ignore","forall 'a. 'a -> unit"),("it","(string * string) list"),
+   ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
+   ("max","forall 'a. 'a list -> 'a"),...] : (string * string) list

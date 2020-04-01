@@ -165,9 +165,9 @@ fixp as100 ~1.0;
 
 (*) Given a list of strings, 'prefixes' returns a list of their
 (*) prefixes that are one character shorter.
-val prefixes = List_map (fn s =>
+val prefixes = List.map (fn s =>
   if s = "" then s
-  else String_substring(s, 0, String_size s - 1));
+  else String.substring(s, 0, String.size s - 1));
 prefixes ["cat", "dog", "", "car", "cart"];
 
 (*) Fixed-point over union.
@@ -192,9 +192,9 @@ fixu_naive prefixes ["cat", "dog", "", "car", "cart"];
 fun fixu_semi_naive (f, a, n) =
   let
     fun contains (list, e) =
-      List_exists (fn e2 => e = e2) list
+      List.exists (fn e2 => e = e2) list
     fun minus (list1, list2) =
-      List_filter (fn e => not (contains (list2, e))) list1
+      List.filter (fn e => not (contains (list2, e))) list1
     fun fixInc (a, delta, i) =
       let
         val a2 = f delta

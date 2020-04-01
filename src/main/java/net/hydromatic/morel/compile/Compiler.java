@@ -34,6 +34,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.TailList;
 
@@ -311,10 +312,9 @@ public class Compiler {
       if (selector.slot < 0) {
         final Type argType = typeMap.getType(apply.arg);
         if (argType instanceof RecordType) {
-          RecordType recordType = (RecordType) argType;
-          selector.slot =
-              Iterables.indexOf(recordType.argNameTypes.keySet(), n ->
-                  Objects.equals(selector.name, n));
+          final RecordType recordType = (RecordType) argType;
+          final Ord<Type> field = recordType.lookupField(selector.name);
+          selector.slot = field.i;
         }
       }
     }
@@ -324,10 +324,9 @@ public class Compiler {
    * returns null. */
   private Applicable compileApplicable(Environment env, Ast.Exp fn,
       Type argType) {
-    if (fn instanceof Ast.Id) {
-      final Binding binding = env.getOpt(((Ast.Id) fn).name);
-      if (binding != null
-          && binding.value instanceof Macro) {
+    final Binding binding = getConstant(env, fn);
+    if (binding != null) {
+      if (binding.value instanceof Macro) {
         final Ast.Exp e = ((Macro) binding.value).expand(env, argType);
         switch (e.op) {
         case WRAPPED_APPLICABLE:
@@ -336,8 +335,7 @@ public class Compiler {
         final Code code = compile(env, e);
         return (evalEnv, argValue) -> code.eval(evalEnv);
       }
-      if (binding != null
-          && binding.value instanceof Applicable) {
+      if (binding.value instanceof Applicable) {
         return (Applicable) binding.value;
       }
     }
@@ -345,6 +343,33 @@ public class Compiler {
     if (fnCode.isConstant()) {
       return (Applicable) fnCode.eval(EMPTY_ENV);
     } else {
+      return null;
+    }
+  }
+
+  private Binding getConstant(Environment env, Ast.Exp fn) {
+    switch (fn.op) {
+    case ID:
+      return env.getOpt(((Ast.Id) fn).name);
+    case APPLY:
+      final Ast.Apply apply = (Ast.Apply) fn;
+      if (apply.fn.op == Op.RECORD_SELECTOR) {
+        final Ast.RecordSelector recordSelector = (Ast.RecordSelector) apply.fn;
+        final Binding argBinding = getConstant(env, apply.arg);
+        if (argBinding != null
+            && argBinding.value != Unit.INSTANCE
+            && argBinding.type instanceof RecordType) {
+          final RecordType recordType = (RecordType) argBinding.type;
+          final Ord<Type> field = recordType.lookupField(recordSelector.name);
+          if (field != null) {
+            @SuppressWarnings("rawtypes")
+            final List list = (List) argBinding.value;
+            return Binding.of(recordSelector.name, field.e, list.get(field.i));
+          }
+        }
+      }
+      // fall through
+    default:
       return null;
     }
   }

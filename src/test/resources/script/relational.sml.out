@@ -869,8 +869,8 @@ val it = [2,4,5] : int list
 (*) Temporary functions
 let
   fun abbrev s =
-    if String_size s > 5
-    then (String_substring (s, 0, 3)) ^ "."
+    if String.size s > 5
+    then (String.substring (s, 0, 3)) ^ "."
     else s;
   fun shouldPromote e =
     e.id < e.deptno * 4
@@ -885,18 +885,18 @@ val it =
 
 
 (*) There's no flatMap in the standard library, so define one
-fun flatMap f l = List_concat (List_map f l);
+fun flatMap f l = List.concat (List.map f l);
 val flatMap = fn : ('a -> 'b list) -> 'a list -> 'b list
 
-flatMap String_explode ["ab", "", "def"];
+flatMap String.explode ["ab", "", "def"];
 val it = [#"a",#"b",#"d",#"e",#"f"] : char list
 
 
 (*) Here's another way to define flatMap
-fun flatMap2 f l = List_foldl List_at [] (List_map f l);
+fun flatMap2 f l = List.foldl List.at [] (List.map f l);
 val flatMap2 = fn : ('a -> 'b list) -> 'a list -> 'b list
 
-flatMap2 String_explode ["ab", "", "def"];
+flatMap2 String.explode ["ab", "", "def"];
 val it = [#"d",#"e",#"f",#"a",#"b"] : char list
 
 
@@ -920,7 +920,7 @@ val it = [{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
 
 
 (*) Using 'map' to stick together results
-List_map employeesIn [10, 25, 30];
+List.map employeesIn [10, 25, 30];
 val it =
   [[{deptno=10,id=100,name="Fred"}],[],
    [{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]]

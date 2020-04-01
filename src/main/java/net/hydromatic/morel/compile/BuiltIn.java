@@ -19,11 +19,16 @@
 package net.hydromatic.morel.compile;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
+import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -39,145 +44,147 @@ import static net.hydromatic.morel.type.PrimitiveType.UNIT;
 /** Built-in constants and functions. */
 public enum BuiltIn {
   /** Literal "true", of type "bool". */
-  TRUE("true", ts -> BOOL),
+  TRUE(null, "true", ts -> BOOL),
 
   /** Literal "false", of type "bool". */
-  FALSE("false", ts -> BOOL),
+  FALSE(null, "false", ts -> BOOL),
 
   /** Function "not", of type "bool &rarr; bool". */
-  NOT("not", ts -> ts.fnType(BOOL, BOOL)),
+  NOT(null, "not", ts -> ts.fnType(BOOL, BOOL)),
 
   /** Function "abs", of type "int &rarr; int". */
-  ABS("abs", ts -> ts.fnType(INT, INT)),
+  ABS(null, "abs", ts -> ts.fnType(INT, INT)),
 
   /** Function "ignore", of type "&alpha; &rarr; unit". */
-  IGNORE("ignore", ts -> ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
+  IGNORE(null, "ignore", ts ->
+      ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
 
   /** Infix operator "^", of type "string * string &rarr; string". */
-  OP_CARET("op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
+  OP_CARET(null, "op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
 
   /** Infix operator "except", of type "&alpha; list * &alpha; list &rarr;
    * &alpha; list". */
-  OP_EXCEPT("op except", ts ->
+  OP_EXCEPT(null, "op except", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(ts.listType(h.get(0)), ts.listType(h.get(0))),
               ts.listType(h.get(0))))),
 
   /** Infix operator "intersect", of type "&alpha; list * &alpha; list &rarr;
    * &alpha; list". */
-  OP_INTERSECT("op intersect", ts ->
+  OP_INTERSECT(null, "op intersect", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(ts.listType(h.get(0)), ts.listType(h.get(0))),
               ts.listType(h.get(0))))),
 
   /** Infix operator "union", of type "&alpha; list * &alpha; list &rarr;
    * &alpha; list". */
-  OP_UNION("op union", ts ->
+  OP_UNION(null, "op union", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(ts.listType(h.get(0)), ts.listType(h.get(0))),
               ts.listType(h.get(0))))),
 
   /** Infix operator "::" (list cons), of type
    * "&alpha; * &alpha; list &rarr; &alpha; list". */
-  OP_CONS("op ::", ts ->
+  OP_CONS(null, "op ::", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), ts.listType(h.get(0))),
               ts.listType(h.get(0))))),
 
   /** Infix operator "div", of type "int * int &rarr; int". */
-  OP_DIV("op div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+  OP_DIV(null, "op div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
   /** Infix operator "/", of type "&alpha; * &alpha; &rarr; &alpha;"
    * (where &alpha; must be numeric). */
-  OP_DIVIDE("op /", PrimitiveType.INT, ts ->
+  OP_DIVIDE(null, "op /", PrimitiveType.INT, ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
   /** Infix operator "=", of type "&alpha; * &alpha; &rarr; bool". */
-  OP_EQ("op =", ts ->
+  OP_EQ(null, "op =", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
 
   /** Infix operator "&ge;", of type "&alpha; * &alpha; &rarr; bool"
    * (where &alpha; must be comparable). */
-  OP_GE("op >=", ts ->
+  OP_GE(null, "op >=", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
 
   /** Infix operator "&gt;", of type "&alpha; * &alpha; &rarr; bool"
    * (where &alpha; must be comparable). */
-  OP_GT("op >", ts ->
+  OP_GT(null, "op >", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
 
   /** Infix operator "&le;", of type "&alpha; * &alpha; &rarr; bool"
    * (where &alpha; must be comparable). */
-  OP_LE("op <=", ts ->
+  OP_LE(null, "op <=", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
 
   /** Infix operator "&lt;", of type "&alpha; * &alpha; &rarr; bool"
    * (where &alpha; must be comparable). */
-  OP_LT("op <", ts ->
+  OP_LT(null, "op <", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
 
   /** Infix operator "&lt;&gt;", of type "&alpha; * &alpha; &rarr; bool". */
-  OP_NE("op <>", ts ->
+  OP_NE(null, "op <>", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
 
   /** Infix operator "elem", of type "&alpha; * &alpha; list; &rarr; bool". */
-  OP_ELEM("op elem", ts ->
+  OP_ELEM(null, "op elem", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), ts.listType(h.get(0))), BOOL))),
 
   /** Infix operator "notElem", of type "&alpha; * &alpha; list; &rarr;
    * bool". */
-  OP_NOT_ELEM("op notElem", ts ->
+  OP_NOT_ELEM(null, "op notElem", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), ts.listType(h.get(0))), BOOL))),
 
   /** Infix operator "-", of type "&alpha; * &alpha; &rarr; &alpha;"
    * (where &alpha; must be numeric). */
-  OP_MINUS("op -", PrimitiveType.INT, ts ->
+  OP_MINUS(null, "op -", PrimitiveType.INT, ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
   /** Infix operator "mod", of type "int * int &rarr; int". */
-  OP_MOD("op mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+  OP_MOD(null, "op mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
   /** Infix operator "+", of type "&alpha; * &alpha; &rarr; &alpha;"
    * (where &alpha; must be numeric). */
-  OP_PLUS("op +", PrimitiveType.INT, ts ->
+  OP_PLUS(null, "op +", PrimitiveType.INT, ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
   /** Prefix operator "~", of type "&alpha; &rarr; &alpha;"
    * (where &alpha; must be numeric). */
-  OP_NEGATE("op ~", ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0)))),
+  OP_NEGATE(null, "op ~", ts ->
+      ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0)))),
 
   /** Infix operator "-", of type "&alpha; * &alpha; &rarr; &alpha;"
    * (where &alpha; must be numeric). */
-  OP_TIMES("op *", PrimitiveType.INT, ts ->
+  OP_TIMES(null, "op *", PrimitiveType.INT, ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
   /** Constant "String.maxSize", of type "int".
    *
    * <p>"The longest allowed size of a string". */
-  STRING_MAX_SIZE("String.maxSize", ts -> INT),
+  STRING_MAX_SIZE("String", "maxSize", ts -> INT),
 
   /** Function "String.size", of type "string &rarr; int".
    *
    * <p>"size s" returns |s|, the number of characters in string s. */
-  STRING_SIZE("String.size", ts -> ts.fnType(STRING, INT)),
+  STRING_SIZE("String", "size", ts -> ts.fnType(STRING, INT)),
 
   /** Function "String.sub", of type "string * int &rarr; char".
    *
    * <p>"sub (s, i)" returns the i(th) character of s, counting from zero. This
    * raises {@code Subscript} if i &lt; 0 or |s| &le; i. */
-  STRING_SUB("String.sub", ts -> ts.fnType(ts.tupleType(STRING, INT), CHAR)),
+  STRING_SUB("String", "sub", ts -> ts.fnType(ts.tupleType(STRING, INT), CHAR)),
 
   /** Function "String.extract", of type "string * int * int option &rarr;
    * string".
@@ -193,7 +200,7 @@ public enum BuiltIn {
    * i.e., the string s[i..i+j-1]. It raises {@code Subscript} if i &lt; 0 or j
    * &lt; 0 or |s| &lt; i + j. Note that, if defined, extract returns the empty
    * string when i = |s|. */
-  STRING_EXTRACT("String.extract", ts ->
+  STRING_EXTRACT("String", "extract", ts ->
       ts.fnType(ts.tupleType(STRING, INT), STRING)),
 
   /** Function "String.substring", of type "string * int * int &rarr; string".
@@ -201,14 +208,15 @@ public enum BuiltIn {
    * <p>"substring (s, i, j)" returns the substring s[i..i+j-1], i.e., the
    * substring of size j starting at index i. This is equivalent to
    * extract(s, i, SOME j). */
-  STRING_SUBSTRING("String.substring", ts ->
+  STRING_SUBSTRING("String", "substring", ts ->
       ts.fnType(ts.tupleType(STRING, INT, INT), STRING)),
 
   /** Function "String.concat", of type "string list &rarr; string".
    *
    * <p>"concat l" is the concatenation of all the strings in l. This raises
    * {@code Size} if the sum of all the sizes is greater than maxSize.  */
-  STRING_CONCAT("String.concat", ts -> ts.fnType(ts.listType(STRING), STRING)),
+  STRING_CONCAT("String", "concat", ts ->
+      ts.fnType(ts.listType(STRING), STRING)),
 
   /** Function "String.concatWith", of type "string &rarr; string list &rarr;
    * string".
@@ -216,25 +224,27 @@ public enum BuiltIn {
    * <p>"concatWith s l" returns the concatenation of the strings in the list l
    * using the string s as a separator. This raises {@code Size} if the size of
    * the resulting string would be greater than maxSize. */
-  STRING_CONCAT_WITH("String.concatWith", ts ->
+  STRING_CONCAT_WITH("String", "concatWith", ts ->
       ts.fnType(STRING, ts.listType(STRING), STRING)),
 
   /** Function "String.str", of type "char &rarr; string".
    *
    * <p>"str c" is the string of size one containing the character c. */
-  STRING_STR("String.str", ts -> ts.fnType(CHAR, STRING)),
+  STRING_STR("String", "str", ts -> ts.fnType(CHAR, STRING)),
 
   /** Function "String.implode", of type "char list &rarr; string".
    *
    * <p>"implode l" generates the string containing the characters in the list
    * l. This is equivalent to concat (List.map str l). This raises {@code Size}
    * if the resulting string would have size greater than maxSize. */
-  STRING_IMPLODE("String.implode", ts -> ts.fnType(ts.listType(CHAR), STRING)),
+  STRING_IMPLODE("String", "implode", ts ->
+      ts.fnType(ts.listType(CHAR), STRING)),
 
   /** Function "String.explode", of type "string &rarr; char list".
    *
    * <p>"explode s" is the list of characters in the string s. */
-  STRING_EXPLODE("String.explode", ts -> ts.fnType(STRING, ts.listType(CHAR))),
+  STRING_EXPLODE("String", "explode", ts ->
+      ts.fnType(STRING, ts.listType(CHAR))),
 
   /** Function "String.map", of type "(char &rarr; char) &rarr; string
    * &rarr; string".
@@ -242,7 +252,7 @@ public enum BuiltIn {
    * <p>"map f s" applies f to each element of s from left to right, returning
    * the resulting string. It is equivalent to
    * {@code implode(List.map f (explode s))}.  */
-  STRING_MAP("String.map", ts ->
+  STRING_MAP("String", "map", ts ->
       ts.fnType(ts.fnType(CHAR, CHAR), STRING, STRING)),
 
   /** Function "String.translate", of type "(char &rarr; string) &rarr; string
@@ -251,7 +261,7 @@ public enum BuiltIn {
    * <p>"translate f s" returns the string generated from s by mapping each
    * character in s by f. It is equivalent to
    * {code concat(List.map f (explode s))}. */
-  STRING_TRANSLATE("String.translate", ts ->
+  STRING_TRANSLATE("String", "translate", ts ->
       ts.fnType(ts.fnType(CHAR, STRING), STRING, STRING)),
 
   /** Function "String.isPrefix", of type "string &rarr; string &rarr; bool".
@@ -259,14 +269,14 @@ public enum BuiltIn {
    * <p>"isPrefix s1 s2" returns true if the string s1 is a prefix of the string
    * s2. Note that the empty string is a prefix of any string, and that a string
    * is a prefix of itself. */
-  STRING_IS_PREFIX("String.isPrefix", ts -> ts.fnType(STRING, STRING, BOOL)),
+  STRING_IS_PREFIX("String", "isPrefix", ts -> ts.fnType(STRING, STRING, BOOL)),
 
   /** Function "String.isSubstring", of type "string &rarr; string &rarr; bool".
    *
    * <p>"isSubstring s1 s2" returns true if the string s1 is a substring of the
    * string s2. Note that the empty string is a substring of any string, and
    * that a string is a substring of itself. */
-  STRING_IS_SUBSTRING("String.isSubstring", ts ->
+  STRING_IS_SUBSTRING("String", "isSubstring", ts ->
       ts.fnType(STRING, STRING, BOOL)),
 
   /** Function "String.isSuffix", of type "string &rarr; string &rarr; bool".
@@ -274,26 +284,26 @@ public enum BuiltIn {
    * <p>"isSuffix s1 s2" returns true if the string s1 is a suffix of the string
    * s2. Note that the empty string is a suffix of any string, and that a string
    * is a suffix of itself. */
-  STRING_IS_SUFFIX("String.isSuffix", ts -> ts.fnType(STRING, STRING, BOOL)),
+  STRING_IS_SUFFIX("String", "isSuffix", ts -> ts.fnType(STRING, STRING, BOOL)),
 
   /** Constant "List.nil", of type "&alpha; list".
    *
    * <p>"nil" is the empty list.
    */
-  LIST_NIL("List.nil", ts -> ts.forallType(1, h -> h.list(0))),
+  LIST_NIL("List", "nil", ts -> ts.forallType(1, h -> h.list(0))),
 
   /** Function "List.null", of type "&alpha; list &rarr; bool".
    *
    * <p>"null l" returns true if the list l is empty.
    */
-  LIST_NULL("List.null", ts ->
+  LIST_NULL("List", "null", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
 
   /** Function "List.length", of type "&alpha; list &rarr; int".
    *
    * <p>"length l" returns the number of elements in the list l.
    */
-  LIST_LENGTH("List.length", ts ->
+  LIST_LENGTH("List", "length", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
 
   /** Function "List.at", of type "&alpha; list * &alpha; list &rarr; &alpha;
@@ -302,7 +312,7 @@ public enum BuiltIn {
    * <p>"l1 @ l2" returns the list that is the concatenation of l1 and l2.
    */
   // TODO: make this infix "@" rather than prefix "at"
-  LIST_AT("List.at", ts ->
+  LIST_AT("List", "at", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
 
@@ -311,7 +321,7 @@ public enum BuiltIn {
    * <p>"hd l" returns the first element of l. It raises {@code Empty} if l is
    * nil.
    */
-  LIST_HD("List.hd", ts ->
+  LIST_HD("List", "hd", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
 
   /** Function "List.tl", of type "&alpha; list &rarr; &alpha; list".
@@ -319,7 +329,7 @@ public enum BuiltIn {
    * <p>"tl l" returns all but the first element of l. It raises {@code Empty}
    * if l is nil.
    */
-  LIST_TL("List.tl", ts ->
+  LIST_TL("List", "tl", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
 
   /** Function "List.last", of type "&alpha; list &rarr; &alpha;".
@@ -327,7 +337,7 @@ public enum BuiltIn {
    * <p>"last l" returns the last element of l. It raises {@code Empty} if l is
    * nil.
    */
-  LIST_LAST("List.last", ts ->
+  LIST_LAST("List", "last", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
 
   /** Function "List.getItem", of type "&alpha; list &rarr;
@@ -340,7 +350,7 @@ public enum BuiltIn {
    * and can be used to scan decimal integers from lists of characters.
    */
   // TODO: make it return an option
-  LIST_GET_ITEM("List.getItem", ts ->
+  LIST_GET_ITEM("List", "getItem", ts ->
       ts.forallType(1, h ->
           ts.fnType(h.list(0), ts.tupleType(h.get(0), h.list(0))))),
 
@@ -350,7 +360,7 @@ public enum BuiltIn {
    * It raises {@code Subscript} if i &lt; 0 or i &ge; length l. We have
    * nth(l,0) = hd l, ignoring exceptions.
    */
-  LIST_NTH("List.nth", ts ->
+  LIST_NTH("List", "nth", ts ->
       ts.forallType(1, h -> ts.fnType(ts.tupleType(h.list(0), INT), h.get(0)))),
 
   /** Function "List.take", of type "&alpha; list * int &rarr; &alpha; list".
@@ -359,7 +369,7 @@ public enum BuiltIn {
    * {@code Subscript} if i &lt; 0 or i &gt; length l.
    * We have take(l, length l) = l.
    */
-  LIST_TAKE("List.take", ts ->
+  LIST_TAKE("List", "take", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.list(0), INT), h.list(0)))),
 
@@ -375,7 +385,7 @@ public enum BuiltIn {
    *
    * <p>We also have {@code drop(l, length l) = []}.
    */
-  LIST_DROP("List.drop", ts ->
+  LIST_DROP("List", "drop", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.list(0), INT), h.list(0)))),
 
@@ -383,7 +393,7 @@ public enum BuiltIn {
    *
    * <p>"rev l" returns a list consisting of l's elements in reverse order.
    */
-  LIST_REV("List.rev", ts ->
+  LIST_REV("List", "rev", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
 
   /** Function "List.concat", of type "&alpha; list list &rarr; &alpha; list".
@@ -392,7 +402,7 @@ public enum BuiltIn {
    * in l in order.
    * {@code concat[l1,l2,...ln] = l1 @ l2 @ ... @ ln}
    */
-  LIST_CONCAT("List.concat", ts ->
+  LIST_CONCAT("List", "concat", ts ->
       ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
 
   /** Function "List.revAppend", of type "&alpha; list * &alpha; list &rarr;
@@ -400,7 +410,7 @@ public enum BuiltIn {
    *
    * <p>"revAppend (l1, l2)" returns (rev l1) @ l2.
    */
-  LIST_REV_APPEND("List.revAppend", ts ->
+  LIST_REV_APPEND("List", "revAppend", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
 
@@ -409,7 +419,7 @@ public enum BuiltIn {
    *
    * <p>"app f l" applies f to the elements of l, from left to right.
    */
-  LIST_APP("List.app", ts ->
+  LIST_APP("List", "app", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.fnType(h.get(0), UNIT), h.list(0), UNIT))),
 
@@ -419,7 +429,7 @@ public enum BuiltIn {
    * <p>"map f l" applies f to each element of l from left to right, returning
    * the list of results.
    */
-  LIST_MAP("List.map", "map", ts ->
+  LIST_MAP("List", "map", "map", ts ->
       ts.forallType(2, t ->
           ts.fnType(ts.fnType(t.get(0), t.get(1)),
               ts.listType(t.get(0)), ts.listType(t.get(1))))),
@@ -434,7 +444,7 @@ public enum BuiltIn {
    * {@code ((map valOf) o (filter isSome) o (map f)) l}
    */
   // TODO: make this take option
-  LIST_MAP_PARTIAL("List.mapPartial", ts ->
+  LIST_MAP_PARTIAL("List", "mapPartial", ts ->
       ts.forallType(2, h ->
           ts.fnType(ts.fnType(h.get(0), h.get(1)), h.list(0), h.list(1)))),
 
@@ -445,7 +455,7 @@ public enum BuiltIn {
    * right, until {@code f x} evaluates to true. It returns SOME(x) if such an x
    * exists; otherwise it returns NONE.
    */
-  LIST_FIND("List.find", ts ->
+  LIST_FIND("List", "find", ts ->
       ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), h.get(0)))),
 
   /** Function "List.filter", of type
@@ -455,7 +465,7 @@ public enum BuiltIn {
    * returns the list of those x for which {@code f x} evaluated to true, in the
    * same order as they occurred in the argument list.
    */
-  LIST_FILTER("List.filter", ts ->
+  LIST_FILTER("List", "filter", ts ->
       ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), h.list(0)))),
 
   /** Function "List.partition", of type "(&alpha; &rarr; bool) &rarr;
@@ -467,7 +477,7 @@ public enum BuiltIn {
    * {@code f x} evaluated to false. The elements of pos and neg retain the same
    * relative order they possessed in l.
    */
-  LIST_PARTITION("List.partition", ts ->
+  LIST_PARTITION("List", "partition", ts ->
       ts.forallType(1, h ->
           ts.fnType(h.predicate(0), h.list(0),
               ts.tupleType(h.list(0), h.list(0))))),
@@ -479,7 +489,7 @@ public enum BuiltIn {
    * {@code f(xn,...,f(x2, f(x1, init))...)}
    * or {@code init} if the list is empty.
    */
-  LIST_FOLDL("List.foldl", ts ->
+  LIST_FOLDL("List", "foldl", ts ->
       ts.forallType(2, h ->
           ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
               h.get(1), h.list(0), h.get(1)))),
@@ -491,7 +501,7 @@ public enum BuiltIn {
    * {@code f(x1, f(x2, ..., f(xn, init)...))}
    * or {@code init} if the list is empty.
    */
-  LIST_FOLDR("List.foldr", ts ->
+  LIST_FOLDR("List", "foldr", ts ->
       ts.forallType(2, h ->
           ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
               h.get(1), h.list(0), h.get(1)))),
@@ -503,7 +513,7 @@ public enum BuiltIn {
    * right, until {@code f x} evaluates to true; it returns true if such an x
    * exists and false otherwise.
    */
-  LIST_EXISTS("List.exists", ts ->
+  LIST_EXISTS("List", "exists", ts ->
       ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), BOOL))),
 
   /** Function "List.all", of type
@@ -513,7 +523,7 @@ public enum BuiltIn {
    * until {@code f x} evaluates to false; it returns false if such an x exists
    * and true otherwise. It is equivalent to not(exists (not o f) l)).
    */
-  LIST_ALL("List.all", ts ->
+  LIST_ALL("List", "all", ts ->
       ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), BOOL))),
 
   /** Function "List.tabulate", of type
@@ -523,7 +533,7 @@ public enum BuiltIn {
    * {@code [f(0), f(1), ..., f(n-1)]}, created from left to right. It raises
    * {@code Size} if n &lt; 0.
    */
-  LIST_TABULATE("List.tabulate", ts ->
+  LIST_TABULATE("List", "tabulate", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.list(0)))),
 
@@ -533,7 +543,7 @@ public enum BuiltIn {
    * <p>"collate f (l1, l2)" performs lexicographic comparison of the two lists
    * using the given ordering f on the list elements.
    */
-  LIST_COLLATE("List.collate", ts -> {
+  LIST_COLLATE("List", "collate", ts -> {
     final Type order = INT; // TODO:
     return ts.forallType(1, h ->
         ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(0)), order),
@@ -553,7 +563,7 @@ public enum BuiltIn {
    *   </pre>
    * </blockquote>
    */
-  RELATIONAL_COUNT("Relational.count", "count", ts ->
+  RELATIONAL_COUNT("Relational", "count", "count", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
 
   /** Function "Relational.sum", aka "sum", of type
@@ -569,80 +579,124 @@ public enum BuiltIn {
    *   </pre>
    * </blockquote>
    */
-  RELATIONAL_SUM("Relational.sum", "sum", ts ->
+  RELATIONAL_SUM("Relational", "sum", "sum", ts ->
       ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
 
   /** Function "Relational.max", aka "max", of type
    *  "&alpha; list &rarr; &alpha;" (where &alpha; must be comparable). */
-  RELATIONAL_MAX("Relational.max", "max", ts ->
+  RELATIONAL_MAX("Relational", "max", "max", ts ->
       ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
 
   /** Function "Relational.min", aka "min", of type
    *  "&alpha; list &rarr; &alpha;" (where &alpha; must be comparable). */
-  RELATIONAL_MIN("Relational.min", "min", ts ->
+  RELATIONAL_MIN("Relational", "min", "min", ts ->
       ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
 
   /** Function "Sys.env", aka "env", of type "unit &rarr; string list". */
-  SYS_ENV("Sys.env", "env", ts ->
+  SYS_ENV("Sys", "env", "env", ts ->
       ts.fnType(UNIT, ts.listType(ts.tupleType(STRING, STRING))));
 
-  /** The name as it appears in ML's symbol table. */
+  /** Name of the structure (e.g. "List", "String"), or null. */
+  public final String structure;
+
+  /** Unqualified name, e.g. "map" (for "List.map") or "true". */
   public final String mlName;
 
-  /** An alias, or null. For example, "List_map" has an alias "map". */
+  /** An alias, or null. For example, "List.map" has an alias "map". */
   public final String alias;
 
   /** Derives a type, in a particular type system, for this constant or
    * function. */
   public final Function<TypeSystem, Type> typeFunction;
 
+  private final PrimitiveType preferredType;
+
   public static final ImmutableMap<String, BuiltIn> BY_ML_NAME;
+
+  public static final SortedMap<String, Structure> BY_STRUCTURE;
 
   static {
     ImmutableMap.Builder<String, BuiltIn> byMlName = ImmutableMap.builder();
+    final SortedMap<String, ImmutableSortedMap.Builder<String, BuiltIn>> map =
+        new TreeMap<>();
     for (BuiltIn builtIn : values()) {
-      byMlName.put(builtIn.mlName, builtIn);
       if (builtIn.alias != null) {
         byMlName.put(builtIn.alias, builtIn);
       }
+      if (builtIn.structure == null) {
+        byMlName.put(builtIn.mlName, builtIn);
+      } else {
+        map.compute(builtIn.structure, (name, mapBuilder) -> {
+          if (mapBuilder == null) {
+            mapBuilder = ImmutableSortedMap.naturalOrder();
+          }
+          return mapBuilder.put(builtIn.mlName, builtIn);
+        });
+      }
     }
     BY_ML_NAME = byMlName.build();
+    final ImmutableSortedMap.Builder<String, Structure> b =
+        ImmutableSortedMap.naturalOrder();
+    map.forEach((structure, mapBuilder) ->
+        b.put(structure, new Structure(structure, mapBuilder.build())));
+    BY_STRUCTURE = b.build();
   }
 
-  private final PrimitiveType preferredType;
-
-  BuiltIn(String mlName, Function<TypeSystem, Type> typeFunction) {
-    this(mlName, null, typeFunction, null);
-  }
-
-  BuiltIn(String mlName, @Nonnull PrimitiveType preferredType,
+  BuiltIn(@Nullable String structure, String mlName,
       Function<TypeSystem, Type> typeFunction) {
-    this(mlName, null, typeFunction, preferredType);
+    this(structure, mlName, null, typeFunction, null);
   }
 
-  BuiltIn(String mlName, String alias,
+  BuiltIn(@Nullable String structure, String mlName,
+      @Nonnull PrimitiveType preferredType,
       Function<TypeSystem, Type> typeFunction) {
-    this(mlName, alias, typeFunction, null);
+    this(structure, mlName, null, typeFunction, preferredType);
   }
 
-  BuiltIn(String mlName, String alias,
-      Function<TypeSystem, Type> typeFunction,
+  BuiltIn(@Nullable String structure, String mlName,
+      @Nullable String alias, Function<TypeSystem, Type> typeFunction) {
+    this(structure, mlName, alias, typeFunction, null);
+  }
+
+  BuiltIn(@Nullable String structure, String mlName,
+      @Nullable String alias, Function<TypeSystem, Type> typeFunction,
       @Nullable PrimitiveType preferredType) {
-    this.mlName = mlName.replace('.', '_'); // until we can parse long-ids
+    this.structure = structure;
+    this.mlName = Objects.requireNonNull(mlName);
     this.alias = alias;
-    this.typeFunction = typeFunction;
+    this.typeFunction = Objects.requireNonNull(typeFunction);
     this.preferredType = preferredType;
   }
 
   /** Calls a consumer once per value. */
-  public static void forEachType(TypeSystem typeSystem,
-      BiConsumer<String, Type> consumer) {
+  public static void forEach(TypeSystem typeSystem,
+      BiConsumer<BuiltIn, Type> consumer) {
     for (BuiltIn builtIn : values()) {
       final Type type = builtIn.typeFunction.apply(typeSystem);
-      consumer.accept(builtIn.mlName, type);
-      if (builtIn.alias != null) {
-        consumer.accept(builtIn.alias, type);
-      }
+      consumer.accept(builtIn, type);
+    }
+  }
+
+  /** Calls a consumer once per structure. */
+  public static void forEachStructure(TypeSystem typeSystem,
+      BiConsumer<Structure, Type> consumer) {
+    final TreeMap<String, Type> nameTypes = new TreeMap<>(RecordType.ORDERING);
+    BY_STRUCTURE.values().forEach(structure -> {
+      nameTypes.clear();
+      structure.memberMap.forEach((name, builtIn) ->
+          nameTypes.put(name, builtIn.typeFunction.apply(typeSystem)));
+      consumer.accept(structure, typeSystem.recordType(nameTypes));
+    });
+  }
+
+  /** Built-in structure. */
+  public static class Structure {
+    public final String name;
+    public final SortedMap<String, BuiltIn> memberMap;
+
+    Structure(String name, SortedMap<String, BuiltIn> memberMap) {
+      this.name = Objects.requireNonNull(name);
+      this.memberMap = ImmutableSortedMap.copyOf(memberMap);
     }
   }
 

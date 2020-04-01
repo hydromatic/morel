@@ -55,10 +55,10 @@ val it = true : bool
 
 
 (*) Variable with polymorphic type
-val x = List_map;
+val x = List.map;
 val x = fn : ('a -> 'b) -> 'a list -> 'b list
 
-x String_explode ["ab", "c"];
+x String.explode ["ab", "c"];
 val it = [[#"a",#"b"],[#"c"]] : char list list
 
 
@@ -79,8 +79,8 @@ len [1,2];
 val it = 2 : int
 
 
-List_map len (List_map String_explode ["ab", "", "cde"]);
+List.map len (List.map String.explode ["ab", "", "cde"]);
 val it = [2,0,3] : int list
 
-List_map (fn s => len (String_explode s)) ["ab", "", "cde"];
+List.map (fn s => len (String.explode s)) ["ab", "", "cde"];
 val it = [2,0,3] : int list

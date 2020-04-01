@@ -33,8 +33,8 @@
 () = {};
 
 (*) Variable with polymorphic type
-val x = List_map;
-x String_explode ["ab", "c"];
+val x = List.map;
+x String.explode ["ab", "c"];
 
 (*) Has polymorphic type
 val rec len = fn x =>
@@ -45,8 +45,8 @@ len [];
 len [1];
 len [1,2];
 
-List_map len (List_map String_explode ["ab", "", "cde"]);
-List_map (fn s => len (String_explode s)) ["ab", "", "cde"];
+List.map len (List.map String.explode ["ab", "", "cde"]);
+List.map (fn s => len (String.explode s)) ["ab", "", "cde"];
 
 (*) Should give
 (*)  Error: duplicate variable in pattern(s): e
