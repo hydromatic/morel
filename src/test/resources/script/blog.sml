@@ -493,6 +493,36 @@ fun wordCount lines =
   end;
 wordCount lines;
 
+(*) === Aggregate functions =========================================
+
+val emps = scott.emp;
+val depts = scott.dept;
+
+from e in emps
+  group e.deptno compute sumSal = sum of e.sal;
+
+from e in emps,
+    d in depts
+  where e.deptno = d.deptno
+  group e.deptno, d.dname, e.job
+    compute sumSal = sum of e.sal,
+      minRemuneration = min of e.sal + e.comm;
+
+(*) In this example, we define our own version of the `sum` function:
+let
+  fun my_sum [] = 0
+    | my_sum (head :: tail) = head + (my_sum tail)
+in
+  from e in emps
+    group e.deptno
+    compute sumEmpno = my_sum of e.empno
+end;
+
+(*) The equivalent of SQL's COLLECT aggregate function is trivial
+from e in emps
+  group e.deptno
+  compute names = (fn x => x) of e.ename;
+
 (*) === Coda ========================================================
 from message in ["the end"];
 

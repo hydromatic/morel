@@ -149,7 +149,9 @@ public class ScriptTest {
     }
     Utils.discard(outFile.getParentFile().mkdirs());
     final String[] args = {"--echo"};
-    final boolean loadDictionary = inFile.getPath().contains("foreign.sml");
+    final boolean loadDictionary =
+        inFile.getPath().contains("foreign.sml")
+            || inFile.getPath().contains("blog.sml");
     final Map<String, ForeignValue> dictionary =
         loadDictionary ? new DataSet.Dictionary() : ImmutableMap.of();
     try (Reader reader = Utils.reader(inFile);
