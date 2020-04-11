@@ -81,6 +81,9 @@ public enum Op {
   // annotated expression "e: t"
   ANNOTATED_EXP(" : "),
 
+  // internal
+  WRAPPED_APPLICABLE,
+
   TIMES(" * ", 7),
   DIVIDE(" / ", 7),
   DIV(" div ", 7),

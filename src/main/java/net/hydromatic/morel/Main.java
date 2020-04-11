@@ -24,6 +24,7 @@ import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.compile.Environments;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
@@ -107,7 +108,7 @@ public class Main {
     final TypeSystem typeSystem = new TypeSystem();
     final BufferingReader in2 = new BufferingReader(in);
     final MorelParserImpl parser = new MorelParserImpl(in2);
-    Environment env = Compiles.createEnvironment(typeSystem, valueMap);
+    Environment env = Environments.env(typeSystem, valueMap);
     final List<String> lines = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
     for (;;) {

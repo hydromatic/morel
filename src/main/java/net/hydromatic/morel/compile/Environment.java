@@ -71,7 +71,7 @@ public abstract class Environment {
   /** Creates an environment that is the same as a given environment, plus one
    * more variable. */
   public Environment bind(String name, Type type, Object value) {
-    return bind(new Binding(name, type, value));
+    return bind(Binding.of(name, type, value));
   }
 
   private Environment bind(Binding binding) {
@@ -110,12 +110,9 @@ public abstract class Environment {
   /** Creates an environment that is the same as this, plus the
    * given bindings. */
   public final Environment bindAll(Iterable<Binding> bindings) {
-    Environment env = this;
-    for (Binding binding : bindings) {
-      env = env.bind(binding.name, binding.type, binding.value);
-    }
-    return env;
+    return Environments.bind(this, bindings);
   }
+
 }
 
 // End Environment.java

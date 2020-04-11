@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 
+import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 
@@ -32,6 +34,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import java.util.stream.Collectors;
@@ -1302,8 +1305,10 @@ public class Ast {
      *
      * <p>By default, a step outputs the same fields as it inputs.
      */
-    public java.util.List<String> names(java.util.List<String> inNames) {
-      return inNames;
+    public void deriveOutBindings(Iterable<Binding> inBindings,
+        BiFunction<String, AstNode, Binding> binder,
+        Consumer<Binding> outBindings) {
+      inBindings.forEach(outBindings);
     }
   }
 
@@ -1415,12 +1420,13 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public java.util.List<String> names(
-        java.util.List<String> inNames) {
-      final ImmutableList.Builder<String> names = ImmutableList.builder();
-      groupExps.forEach(idExp -> names.add(idExp.left.name));
-      aggregates.forEach(aggregate -> names.add(aggregate.id.name));
-      return names.build();
+    @Override public void deriveOutBindings(Iterable<Binding> inBindings,
+        BiFunction<String, AstNode, Binding> binder,
+        Consumer<Binding> outBindings) {
+      groupExps.forEach(idExp ->
+          outBindings.accept(binder.apply(idExp.left.name, idExp.left)));
+      aggregates.forEach(aggregate ->
+          outBindings.accept(binder.apply(aggregate.id.name, aggregate)));
     }
 
     public Group copy(java.util.List<Pair<Id, Exp>> groupExps,
@@ -1495,6 +1501,27 @@ public class Ast {
           && this.id.equals(id)
           ? this
           : ast.aggregate(pos, aggregate, argument, id);
+    }
+  }
+
+  /** Expression that is a wrapped {@link Applicable}.
+   *
+   * <p>Does not occur in the output of the parser, only as an intermediate
+   * value during compilation. */
+  public static class ApplicableExp extends Ast.Exp {
+    public final Applicable applicable;
+
+    ApplicableExp(Applicable applicable) {
+      super(Pos.ZERO, Op.WRAPPED_APPLICABLE);
+      this.applicable = Objects.requireNonNull(applicable);
+    }
+
+    public Ast.Exp accept(Shuttle shuttle) {
+      return this;
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w;
     }
   }
 }

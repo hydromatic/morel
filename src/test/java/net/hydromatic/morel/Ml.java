@@ -204,7 +204,7 @@ class Ml {
     try {
       final Ast.Exp e = new MorelParserImpl(new StringReader(ml)).expression();
       final TypeSystem typeSystem = new TypeSystem();
-      final Environment env = Compiles.createEnvironment(typeSystem, valueMap);
+      final Environment env = Environments.env(typeSystem, valueMap);
       final Ast.ValDecl valDecl = Compiles.toValDecl(e);
       final TypeResolver.Resolved resolved =
           TypeResolver.deduceType(env, valDecl, typeSystem);

@@ -19,6 +19,7 @@
 package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.type.Type;
 
 /** A function that is 'called' at compile time,
  * and generates an expanded parse tree.
@@ -28,7 +29,7 @@ import net.hydromatic.morel.ast.Ast;
  * Its type is derived before expansion.
  * Expansion must preserve the type. */
 public interface Macro {
-  Ast.Exp expand(Environment env);
+  Ast.Exp expand(Environment env, Type argType);
 }
 
 // End Macro.java

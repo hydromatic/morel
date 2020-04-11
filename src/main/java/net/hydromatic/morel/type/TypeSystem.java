@@ -20,6 +20,7 @@ package net.hydromatic.morel.type;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import net.hydromatic.morel.ast.Op;
@@ -134,6 +135,18 @@ public class TypeSystem {
               typeConstructorByName.put(name3, Pair.of(dataType, type)));
           return dataType;
         });
+  }
+
+  /** Creates a record type, or returns a scalar type if {@code argNameTypes}
+   * has one entry. */
+  public Type recordOrScalarType(
+      SortedMap<String, ? extends Type> argNameTypes) {
+    switch (argNameTypes.size()) {
+    case 1:
+      return Iterables.getOnlyElement(argNameTypes.values());
+    default:
+      return recordType(argNameTypes);
+    }
   }
 
   /** Creates a record type. (Or a tuple type if the fields are named "1", "2"

@@ -23,13 +23,9 @@ import com.google.common.collect.ImmutableList;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Pos;
-import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.foreign.ForeignValue;
-import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
@@ -43,23 +39,8 @@ public abstract class Compiles {
   public static TypeResolver.Resolved validateExpression(Ast.Exp exp,
       Map<String, ForeignValue> valueMap) {
     final TypeSystem typeSystem = new TypeSystem();
-    final Environment env = createEnvironment(typeSystem, valueMap);
+    final Environment env = Environments.env(typeSystem, valueMap);
     return TypeResolver.deduceType(env, toValDecl(exp), typeSystem);
-  }
-
-  /** Creates an environment containing the given foreign values. */
-  public static Environment createEnvironment(TypeSystem typeSystem,
-      Map<String, ForeignValue> valueMap) {
-    return Environments.empty()
-        .bindAll(bindings(typeSystem, valueMap));
-  }
-
-  private static Iterable<Binding> bindings(TypeSystem typeSystem,
-      Map<String, ForeignValue> map) {
-    final List<Binding> bindings = new ArrayList<>();
-    map.forEach((name, value) ->
-        bindings.add(new Binding(name, value.type(typeSystem), value.value())));
-    return bindings;
   }
 
   /**
@@ -74,9 +55,7 @@ public abstract class Compiles {
     } else {
       decl = (Ast.Decl) statement;
     }
-    // Add in built-in functions (e.g. String.size, List.hd).
-    final Environment env2 = Codes.env(typeSystem, env);
-    return prepareDecl(typeSystem, env2, decl);
+    return prepareDecl(typeSystem, env, decl);
   }
 
   /**

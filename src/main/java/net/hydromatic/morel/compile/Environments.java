@@ -18,31 +18,80 @@
  */
 package net.hydromatic.morel.compile;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+
+import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeSystem;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
 /** Helpers for {@link Environment}. */
 public abstract class Environments {
 
-  /** An environment with the only the built-in stuff. */
-  private static final Environment BASIC_ENVIRONMENT = getBind();
-
-  private static Environment getBind() {
-    Environment e = EmptyEnvironment.INSTANCE;
-        // Later, also add "nil", "ref", "!"
-    e = e.bind("true", PrimitiveType.BOOL, true);
-    e = e.bind("false", PrimitiveType.BOOL, false);
-    return e;
-  }
+  /** An environment with only "true" and "false". */
+  private static final Environment BASIC_ENVIRONMENT =
+      EmptyEnvironment.INSTANCE
+          .bind("true", PrimitiveType.BOOL, true)
+          .bind("false", PrimitiveType.BOOL, false);
 
   private Environments() {}
 
   /** Creates an empty environment. */
   public static Environment empty() {
     return BASIC_ENVIRONMENT;
+  }
+
+  /** Creates an environment containing built-ins and the given foreign
+   * values. */
+  public static Environment env(TypeSystem typeSystem,
+      Map<String, ForeignValue> valueMap) {
+    return env(EmptyEnvironment.INSTANCE, typeSystem, valueMap);
+  }
+
+  /** Creates a compilation environment, including built-ins and foreign
+   * values. */
+  private static Environment env(Environment environment, TypeSystem typeSystem,
+      Map<String, ForeignValue> valueMap) {
+    final List<Binding> bindings = new ArrayList<>();
+    for (Map.Entry<BuiltIn, Object> entry : Codes.BUILT_IN_VALUES.entrySet()) {
+      BuiltIn key = entry.getKey();
+      final Type type = key.typeFunction.apply(typeSystem);
+      bindings.add(Binding.of(key.mlName, type, entry.getValue()));
+      if (key.alias != null) {
+        bindings.add(Binding.of(key.alias, type, entry.getValue()));
+      }
+    }
+    bindings(typeSystem, valueMap, bindings);
+    return bind(environment, bindings);
+  }
+
+  private static void bindings(TypeSystem typeSystem,
+      Map<String, ForeignValue> map, List<Binding> bindings) {
+    map.forEach((name, value) ->
+        bindings.add(Binding.of(name, value.type(typeSystem), value.value())));
+  }
+
+  /** Creates an environment that is a given environment plus bindings. */
+  static Environment bind(Environment env, Iterable<Binding> bindings) {
+    if (Iterables.size(bindings) < 5) {
+      for (Binding binding : bindings) {
+        env = env.bind(binding.name, binding.type, binding.value);
+      }
+      return env;
+    } else {
+      final ImmutableMap.Builder<String, Binding> b = ImmutableMap.builder();
+      bindings.forEach(binding -> b.put(binding.name, binding));
+      return new MapEnvironment(env, b.build());
+    }
   }
 
   /** Environment that inherits from a parent environment and adds one
@@ -81,6 +130,26 @@ public abstract class Environments {
     }
   }
 
+  /** Environment that keeps bindings in a map. */
+  private static class MapEnvironment extends Environment {
+    private final Environment parent;
+    private final Map<String, Binding> map;
+
+    MapEnvironment(Environment parent, ImmutableMap<String, Binding> map) {
+      this.parent = Objects.requireNonNull(parent);
+      this.map = Objects.requireNonNull(map);
+    }
+
+    void visit(Consumer<Binding> consumer) {
+      map.values().forEach(consumer);
+      parent.visit(consumer);
+    }
+
+    public Binding getOpt(String name) {
+      final Binding binding = map.get(name);
+      return binding != null ? binding : parent.getOpt(name);
+    }
+  }
 }
 
 // End Environments.java

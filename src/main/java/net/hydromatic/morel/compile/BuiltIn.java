@@ -442,7 +442,8 @@ public enum BuiltIn {
   RELATIONAL_COUNT("Relational.count", "count", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
 
-  /** Function "Relational.sum", aka "sum", of type "int list &rarr; int".
+  /** Function "Relational.sum", aka "sum", of type
+   *  "&alpha; list &rarr; &alpha;" (where &alpha; must be numeric).
    *
    * <p>Often used with {@code group}:
    *
@@ -455,7 +456,17 @@ public enum BuiltIn {
    * </blockquote>
    */
   RELATIONAL_SUM("Relational.sum", "sum", ts ->
-      ts.fnType(ts.listType(INT), INT)),
+      ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
+
+  /** Function "Relational.max", aka "max", of type
+   *  "&alpha; list &rarr; &alpha;" (where &alpha; must be comparable). */
+  RELATIONAL_MAX("Relational.max", "max", ts ->
+      ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
+
+  /** Function "Relational.min", aka "min", of type
+   *  "&alpha; list &rarr; &alpha;" (where &alpha; must be comparable). */
+  RELATIONAL_MIN("Relational.min", "min", ts ->
+      ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
 
   /** Function "Sys.env", aka "env", of type "unit &rarr; string list". */
   SYS_ENV("Sys.env", "env", ts ->

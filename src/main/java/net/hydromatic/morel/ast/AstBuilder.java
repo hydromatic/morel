@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.util.Pair;
 
@@ -403,6 +404,10 @@ public enum AstBuilder {
   }
   public Ast.FromStep where(Pos pos, Ast.Exp exp) {
     return new Ast.Where(pos, exp);
+  }
+
+  public Ast.ApplicableExp wrapApplicable(Applicable applicable) {
+    return new Ast.ApplicableExp(applicable);
   }
 }
 

@@ -30,10 +30,18 @@ public class Binding {
   public final Type type;
   public final Object value;
 
-  public Binding(String name, Type type, Object value) {
+  Binding(String name, Type type, Object value) {
     this.name = name;
     this.type = Objects.requireNonNull(type);
     this.value = Objects.requireNonNull(value);
+  }
+
+  public static Binding of(String name, Type type) {
+    return new Binding(name, type, Unit.INSTANCE);
+  }
+
+  public static Binding of(String name, Type type, Object value) {
+    return new Binding(name, type, value);
   }
 
   @Override public String toString() {

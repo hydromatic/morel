@@ -45,6 +45,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.Supplier;
 
 import static net.hydromatic.morel.ast.Ast.Direction.DESC;
@@ -152,7 +154,8 @@ public class Compiler {
       final Ast.Apply apply = (Ast.Apply) expression;
       assignSelector(apply);
       argCode = compile(env, apply.arg);
-      final Applicable fnValue = compileApplicable(env, apply.fn);
+      final Type argType = typeMap.getType(apply.arg);
+      final Applicable fnValue = compileApplicable(env, apply.fn, argType);
       if (fnValue != null) {
         return Codes.apply(fnValue, argCode);
       }
@@ -170,17 +173,15 @@ public class Compiler {
     case FROM:
       final Ast.From from = (Ast.From) expression;
       final Map<Ast.Id, Code> sourceCodes = new LinkedHashMap<>();
-      final ImmutableList.Builder<String> names = ImmutableList.builder();
-      Environment env2 = env;
+      final List<Binding> bindings = new ArrayList<>();
       for (Map.Entry<Ast.Id, Ast.Exp> idExp : from.sources.entrySet()) {
-        final Code expCode = compile(env2, idExp.getValue());
+        final Code expCode = compile(env.bindAll(bindings), idExp.getValue());
         final Ast.Id id = idExp.getKey();
         sourceCodes.put(id, expCode);
-        names.add(id.name);
-        env2 = env2.bind(id.name, typeMap.getType(id), Unit.INSTANCE);
+        bindings.add(Binding.of(id.name, typeMap.getType(id)));
       }
       Supplier<Codes.RowSink> rowSinkFactory =
-          createRowSinkFactory(env2, names.build(), from.steps,
+          createRowSinkFactory(env, ImmutableList.copyOf(bindings), from.steps,
               from.yieldExpOrDefault);
       return Codes.from(sourceCodes, rowSinkFactory);
 
@@ -230,20 +231,24 @@ public class Compiler {
     }
   }
 
-  private Supplier<Codes.RowSink> createRowSinkFactory(Environment env,
-      ImmutableList<String> names, List<Ast.FromStep> steps,
+  private Supplier<Codes.RowSink> createRowSinkFactory(Environment env0,
+      ImmutableList<Binding> bindings, List<Ast.FromStep> steps,
       Ast.Exp yieldExp) {
+    final Environment env = env0.bindAll(bindings);
     if (steps.isEmpty()) {
       final Code yieldCode = compile(env, yieldExp);
       return () -> Codes.yieldRowSink(yieldCode);
     }
     final Ast.FromStep firstStep = steps.get(0);
-    final ImmutableList<String> outNames =
-        ImmutableList.copyOf(firstStep.names(names));
-
+    final ImmutableList.Builder<Binding> outBindingBuilder =
+        ImmutableList.builder();
+    firstStep.deriveOutBindings(bindings,
+        (name, ast) -> Binding.of(name, typeMap.getType(ast)),
+        outBindingBuilder::add);
+    final ImmutableList<Binding> outBindings = outBindingBuilder.build();
     final Supplier<Codes.RowSink> nextFactory =
-        createRowSinkFactory(env, outNames, steps.subList(1, steps.size()),
-            yieldExp);
+        createRowSinkFactory(env, outBindings,
+            steps.subList(1, steps.size()), yieldExp);
     switch (firstStep.op) {
     case WHERE:
       final Ast.Where where = (Ast.Where) firstStep;
@@ -256,7 +261,7 @@ public class Compiler {
           order.orderItems.stream()
               .map(i -> Pair.of(compile(env, i.exp), i.direction == DESC))
               .collect(toImmutableList());
-      return () -> Codes.orderRowSink(codes, names, nextFactory.get());
+      return () -> Codes.orderRowSink(codes, bindings, nextFactory.get());
 
     case GROUP:
       final Ast.Group group = (Ast.Group) firstStep;
@@ -264,24 +269,50 @@ public class Compiler {
       for (Pair<Ast.Id, Ast.Exp> pair : group.groupExps) {
         groupCodesB.add(compile(env, pair.right));
       }
+      final ImmutableList<String> names = bindingNames(bindings);
       final ImmutableList.Builder<Applicable> aggregateCodesB =
           ImmutableList.builder();
       for (Ast.Aggregate aggregate : group.aggregates) {
-        final Code argumentCode = aggregate.argument == null ? null
-            : compile(env, aggregate.argument);
-        final Code aggregateCode = compile(env, aggregate.aggregate);
+        final Code argumentCode;
+        final Type argumentType;
+        if (aggregate.argument == null) {
+          final SortedMap<String, Type> argNameTypes =
+              new TreeMap<>(RecordType.ORDERING);
+          bindings.forEach(b -> argNameTypes.put(b.name, b.type));
+          argumentType = typeMap.typeSystem.recordOrScalarType(argNameTypes);
+          argumentCode = null;
+        } else {
+          argumentType = typeMap.getType(aggregate.argument);
+          argumentCode = compile(env, aggregate.argument);
+        }
+        final Applicable aggregateApplicable =
+            compileApplicable(env, aggregate.aggregate,
+                typeMap.typeSystem.listType(argumentType));
+        final Code aggregateCode;
+        if (aggregateApplicable == null) {
+          aggregateCode = compile(env, aggregate.aggregate);
+        } else {
+          aggregateCode = aggregateApplicable.asCode();
+        }
         aggregateCodesB.add(
             Codes.aggregate(env, aggregateCode, names, argumentCode));
       }
       final ImmutableList<Code> groupCodes = groupCodesB.build();
       final Code keyCode = Codes.tuple(groupCodes);
       final ImmutableList<Applicable> aggregateCodes = aggregateCodesB.build();
+      final ImmutableList<String> outNames = bindingNames(outBindings);
       return () -> Codes.groupRowSink(keyCode, aggregateCodes, names,
           outNames, nextFactory.get());
 
     default:
       throw new AssertionError("unknown step type " + firstStep.op);
     }
+  }
+
+  private ImmutableList<String> bindingNames(List<Binding> bindings) {
+    //noinspection UnstableApiUsage
+    return bindings.stream().map(b -> b.name)
+        .collect(ImmutableList.toImmutableList());
   }
 
   private void assignSelector(Ast.Apply apply) {
@@ -301,12 +332,17 @@ public class Compiler {
 
   /** Compiles a function value to an {@link Applicable}, if possible, or
    * returns null. */
-  private Applicable compileApplicable(Environment env, Ast.Exp fn) {
+  private Applicable compileApplicable(Environment env, Ast.Exp fn,
+      Type argType) {
     if (fn instanceof Ast.Id) {
       final Binding binding = env.getOpt(((Ast.Id) fn).name);
       if (binding != null
           && binding.value instanceof Macro) {
-        final Ast.Exp e = ((Macro) binding.value).expand(env);
+        final Ast.Exp e = ((Macro) binding.value).expand(env, argType);
+        switch (e.op) {
+        case WRAPPED_APPLICABLE:
+          return ((Ast.ApplicableExp) e).applicable;
+        }
         final Code code = compile(env, e);
         return (evalEnv, argValue) -> code.eval(evalEnv);
       }
@@ -385,16 +421,14 @@ public class Compiler {
       valDecl = ast.valDecl(pos, ast.valBind(pos, rec, pat, e2));
       matches.forEach((key, value) ->
           bindings.add(
-              new Binding(((Ast.IdPat) key).name, typeMap.getType(value),
+              Binding.of(((Ast.IdPat) key).name, typeMap.getType(value),
                   Unit.INSTANCE)));
     } else {
       valDecl.valBinds.forEach(valBind ->
           valBind.pat.visit(pat -> {
             if (pat instanceof Ast.IdPat) {
               final Type paramType = typeMap.getType(pat);
-              bindings.add(
-                  new Binding(((Ast.IdPat) pat).name, paramType,
-                      Unit.INSTANCE));
+              bindings.add(Binding.of(((Ast.IdPat) pat).name, paramType));
             }
           }));
     }
@@ -432,7 +466,7 @@ public class Compiler {
     } else {
       value = Codes.tyCon(dataType, tyCon.id.name);
     }
-    bindings.add(new Binding(tyCon.id.name, type, value));
+    bindings.add(Binding.of(tyCon.id.name, type, value));
   }
 
   private Code compileInfix(Environment env, Ast.InfixCall call) {
@@ -575,7 +609,7 @@ public class Compiler {
           final Type paramType = typeMap.getType(pat);
           final LinkCode linkCode = new LinkCode();
           linkCodes.put(idPat, linkCode);
-          bindings.add(new Binding(idPat.name, paramType, linkCode));
+          bindings.add(Binding.of(idPat.name, paramType, linkCode));
         }
       });
       code = compile(env.bindAll(bindings), valBind.e);
@@ -594,7 +628,7 @@ public class Compiler {
       final Type type = typeMap.typeSystem.ensureClosed(type0);
       actions.add((output, outBindings, evalEnv) -> {
         final Object o = code.eval(evalEnv);
-        outBindings.add(new Binding(name, type, o));
+        outBindings.add(Binding.of(name, type, o));
         final StringBuilder buf = new StringBuilder();
         Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
         output.add(buf.toString());

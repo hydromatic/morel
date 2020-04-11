@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 
 import net.hydromatic.morel.ast.Ast;
@@ -32,8 +33,10 @@ import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
+import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.ListType;
+import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Pair;
 
@@ -269,7 +272,10 @@ public abstract class Codes {
 
   /** Creates a {@link RowSink} for a {@code order} clause. */
   public static RowSink orderRowSink(ImmutableList<Pair<Code, Boolean>> codes,
-      ImmutableList<String> labels, RowSink rowSink) {
+      ImmutableList<Binding> bindings, RowSink rowSink) {
+    @SuppressWarnings("UnstableApiUsage")
+    final ImmutableList<String> labels = bindings.stream().map(b -> b.name)
+        .collect(ImmutableList.toImmutableList());
     return new OrderRowSink(codes, labels, rowSink);
   }
 
@@ -699,8 +705,8 @@ public abstract class Codes {
   private static final Applicable RELATIONAL_COUNT = (env, argValue) ->
       ((List) argValue).size();
 
-  /** @see BuiltIn#RELATIONAL_SUM */
-  private static final Applicable RELATIONAL_SUM = (env, argValue) -> {
+  /** Implements {@link #RELATIONAL_SUM} for type {@code int list}. */
+  private static final Applicable RELATIONAL_SUM_INT = (env, argValue) -> {
     @SuppressWarnings("unchecked") final List<? extends Number> list =
         (List) argValue;
     int sum = 0;
@@ -710,8 +716,40 @@ public abstract class Codes {
     return sum;
   };
 
+  /** Implements {@link #RELATIONAL_SUM} for type {@code real list}. */
+  private static final Applicable RELATIONAL_SUM_REAL = (env, argValue) -> {
+    @SuppressWarnings("unchecked") final List<? extends Number> list =
+        (List) argValue;
+    float sum = 0;
+    for (Number o : list) {
+      sum += o.floatValue();
+    }
+    return sum;
+  };
+
+  /** @see BuiltIn#RELATIONAL_SUM */
+  private static final Macro RELATIONAL_SUM = (env, argType) -> {
+    if (argType instanceof ListType) {
+      if (((ListType) argType).elementType == PrimitiveType.INT) {
+        return ast.wrapApplicable(RELATIONAL_SUM_INT);
+      }
+      if (((ListType) argType).elementType == PrimitiveType.REAL) {
+        return ast.wrapApplicable(RELATIONAL_SUM_REAL);
+      }
+    }
+    throw new AssertionError("bad type " + argType);
+  };
+
+  /** @see BuiltIn#RELATIONAL_MIN */
+  private static final Applicable RELATIONAL_MIN = (env, argValue) ->
+      Ordering.natural().min((List) argValue);
+
+  /** @see BuiltIn#RELATIONAL_MAX */
+  private static final Applicable RELATIONAL_MAX = (env, argValue) ->
+      Ordering.natural().max((List) argValue);
+
   /** @see BuiltIn#SYS_ENV */
-  private static final Macro SYS_ENV = env ->
+  private static final Macro SYS_ENV = (env, argType) ->
       ast.list(Pos.ZERO,
           env.getValueMap().entrySet().stream()
               .sorted(Map.Entry.comparingByKey())
@@ -751,20 +789,6 @@ public abstract class Codes {
     return EvalEnvs.copyOf(map);
   }
 
-  /** Creates a compilation environment. */
-  public static Environment env(TypeSystem typeSystem,
-      Environment environment) {
-    for (Map.Entry<BuiltIn, Object> entry : BUILT_IN_VALUES.entrySet()) {
-      BuiltIn key = entry.getKey();
-      final Type type = key.typeFunction.apply(typeSystem);
-      environment = environment.bind(key.mlName, type, entry.getValue());
-      if (key.alias != null) {
-        environment = environment.bind(key.alias, type, entry.getValue());
-      }
-    }
-    return environment;
-  }
-
   public static Code negate(Code code) {
     return env -> -((Integer) code.eval(env));
   }
@@ -777,9 +801,6 @@ public abstract class Codes {
 
   public static Applicable aggregate(Environment env, Code aggregateCode,
       List<String> names, @Nullable Code argumentCode) {
-    if (aggregateCode.isConstant()) {
-      int x = 0;
-    }
     return (env1, argValue) -> {
       final List rows = (List) argValue;
       final List<Object> argRows;
@@ -805,7 +826,7 @@ public abstract class Codes {
     };
   }
 
-  private static final ImmutableMap<BuiltIn, Object> BUILT_IN_VALUES =
+  public static final ImmutableMap<BuiltIn, Object> BUILT_IN_VALUES =
       ImmutableMap.<BuiltIn, Object>builder()
           .put(BuiltIn.TRUE, true)
           .put(BuiltIn.FALSE, false)
@@ -854,6 +875,8 @@ public abstract class Codes {
           .put(BuiltIn.LIST_TABULATE, LIST_TABULATE)
           .put(BuiltIn.LIST_COLLATE, LIST_COLLATE)
           .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
+          .put(BuiltIn.RELATIONAL_MAX, RELATIONAL_MAX)
+          .put(BuiltIn.RELATIONAL_MIN, RELATIONAL_MIN)
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
           .put(BuiltIn.SYS_ENV, SYS_ENV)
           .build();

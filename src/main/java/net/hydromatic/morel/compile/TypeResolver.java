@@ -305,7 +305,7 @@ public class TypeResolver {
             final Unifier.Variable v8 = unifier.variable();
             reg(id, null, v8);
             final Unifier.Variable v9 = unifier.variable();
-            final Ast.Exp aggregate2 =
+            final Ast.Exp aggregateFn2 =
                 deduceType(env2, aggregate.aggregate, v9);
             final Ast.Exp arg2;
             final Unifier.Term term;
@@ -323,7 +323,10 @@ public class TypeResolver {
                 v9);
             env3 = env3.bind(id.name, v8);
             fieldVars.put(id, v8);
-            aggregates.add(aggregate.copy(aggregate2, arg2, aggregate.id));
+            final Ast.Aggregate aggregate2 =
+                aggregate.copy(aggregateFn2, arg2, aggregate.id);
+            aggregates.add(aggregate2);
+            reg(aggregate, null, v8);
           }
           fromSteps.add(group.copy(groupExps, aggregates));
           env2 = env3;

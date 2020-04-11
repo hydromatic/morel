@@ -301,6 +301,27 @@ List.collate (fn (x,y) => if x < y then LESS else if x = y then EQUAL else GREAT
 val it = LESS : order
  *)
 
+(* Relational -------------------------------------------------- *)
+
+Relational_count [1, 2, 3];
+Relational_count [];
+Relational_count [false];
+
+Relational_sum [1, 2, 3];
+Relational_sum [1.0, 2.5, 3.5];
+
+Relational_max [1, 2, 3];
+Relational_max [1.0, 2.5, 3.5];
+Relational_max ["a", "bc", "ab"];
+Relational_max [false, true];
+
+Relational_min [1, 2, 3];
+Relational_min [1.0, 2.5, 3.5];
+Relational_min ["a", "bc", "ab"];
+Relational_min [false, true];
+
+(* Sys --------------------------------------------------------- *)
+
 (*) val env : unit -> string list
 Sys_env;
 Sys_env ();
