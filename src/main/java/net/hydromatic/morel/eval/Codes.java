@@ -36,6 +36,7 @@ import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Pair;
@@ -71,50 +72,66 @@ public abstract class Codes {
     };
   }
 
-  /** Returns a Code that evaluates "{@code =}". */
-  public static Code eq(Code code0, Code code1) {
-    return env -> code0.eval(env).equals(code1.eval(env));
+  /** @see BuiltIn#OP_EQ */
+  private static final Applicable OP_EQ = Codes::eq;
+
+  /** Implements {@link #OP_EQ}. */
+  private static boolean eq(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return list.get(0).equals(list.get(1));
   }
 
-  /** Returns a Code that evaluates "{@code <>}". */
-  public static Code ne(Code code0, Code code1) {
-    return env -> !code0.eval(env).equals(code1.eval(env));
+  /** @see BuiltIn#OP_NE */
+  private static final Applicable OP_NE = Codes::ne;
+
+  /** Implements {@link #OP_NE}. */
+  private static boolean ne(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return !list.get(0).equals(list.get(1));
   }
 
-  /** Returns a Code that evaluates "{@code <}". */
-  public static Code lt(Code code0, Code code1) {
-    return env -> {
-      final Comparable v0 = (Comparable) code0.eval(env);
-      final Comparable v1 = (Comparable) code1.eval(env);
-      return v0.compareTo(v1) < 0;
-    };
+  /** @see BuiltIn#OP_LT */
+  private static final Applicable OP_LT = Codes::lt;
+
+  /** Implements {@link #OP_LT}. */
+  private static boolean lt(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    final Comparable v0 = (Comparable) list.get(0);
+    final Comparable v1 = (Comparable) list.get(1);
+    return v0.compareTo(v1) < 0;
   }
 
-  /** Returns a Code that evaluates "{@code >}". */
-  public static Code gt(Code code0, Code code1) {
-    return env -> {
-      final Comparable v0 = (Comparable) code0.eval(env);
-      final Comparable v1 = (Comparable) code1.eval(env);
-      return v0.compareTo(v1) > 0;
-    };
+  /** @see BuiltIn#OP_GT */
+  private static final Applicable OP_GT = Codes::gt;
+
+  /** Implements {@link #OP_GT}. */
+  private static boolean gt(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    final Comparable v0 = (Comparable) list.get(0);
+    final Comparable v1 = (Comparable) list.get(1);
+    return v0.compareTo(v1) > 0;
   }
 
-  /** Returns a Code that evaluates "{@code <=}". */
-  public static Code le(Code code0, Code code1) {
-    return env -> {
-      final Comparable v0 = (Comparable) code0.eval(env);
-      final Comparable v1 = (Comparable) code1.eval(env);
-      return v0.compareTo(v1) <= 0;
-    };
+  /** @see BuiltIn#OP_LE */
+  private static final Applicable OP_LE = Codes::le;
+
+  /** Implements {@link #OP_LE}. */
+  private static boolean le(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    final Comparable v0 = (Comparable) list.get(0);
+    final Comparable v1 = (Comparable) list.get(1);
+    return v0.compareTo(v1) <= 0;
   }
 
-  /** Returns a Code that evaluates "{@code >=}". */
-  public static Code ge(Code code0, Code code1) {
-    return env -> {
-      final Comparable v0 = (Comparable) code0.eval(env);
-      final Comparable v1 = (Comparable) code1.eval(env);
-      return v0.compareTo(v1) >= 0;
-    };
+  /** @see BuiltIn#OP_GE */
+  private static final Applicable OP_GE = Codes::ge;
+
+  /** Implements {@link #OP_GE}. */
+  private static boolean ge(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    final Comparable v0 = (Comparable) list.get(0);
+    final Comparable v1 = (Comparable) list.get(1);
+    return v0.compareTo(v1) >= 0;
   }
 
   /** Returns a Code that evaluates "andalso". */
@@ -129,45 +146,95 @@ public abstract class Codes {
     return env -> (boolean) code0.eval(env) || (boolean) code1.eval(env);
   }
 
-  /** Returns a Code that evaluates "+". */
-  public static Code plus(Code code0, Code code1) {
-    return env -> (int) code0.eval(env) + (int) code1.eval(env);
+  /** Implements {@link #OP_PLUS} for type {@code int}. */
+  private static int plusInt(EvalEnv env, Object arg) {
+    return (int) ((List) arg).get(0) + (int) ((List) arg).get(1);
   }
 
-  /** Returns a Code that evaluates "-". */
-  public static Code minus(Code code0, Code code1) {
-    return env -> (int) code0.eval(env) - (int) code1.eval(env);
+  /** Implements {@link #OP_PLUS} for type {@code real}. */
+  private static float plusReal(EvalEnv env, Object arg) {
+    return (float) ((List) arg).get(0) + (float) ((List) arg).get(1);
   }
 
-  /** Returns a Code that evaluates "*". */
-  public static Code times(Code code0, Code code1) {
-    return env -> (int) code0.eval(env) * (int) code1.eval(env);
+  /** Implements {@link #OP_MINUS} for type {@code int}. */
+  private static int minusInt(EvalEnv env, Object arg) {
+    return (int) ((List) arg).get(0) - (int) ((List) arg).get(1);
   }
 
-  /** Returns a Code that evaluates "/". */
-  public static Code divide(Code code0, Code code1) {
-    return env -> (int) code0.eval(env) / (int) code1.eval(env);
+  /** Implements {@link #OP_MINUS} for type {@code real}. */
+  private static float minusReal(EvalEnv env, Object arg) {
+    return (float) ((List) arg).get(0) - (float) ((List) arg).get(1);
   }
 
-  /** Returns a Code that evaluates "div". */
-  public static Code div(Code code0, Code code1) {
-    return env -> Math.floorDiv((int) code0.eval(env), (int) code1.eval(env));
+  /** Implements {@link #OP_MOD}. */
+  private static int mod(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return Math.floorMod((int) list.get(0), (int) list.get(1));
   }
 
-  /** Returns a Code that evaluates "mod". */
-  public static Code mod(Code code0, Code code1) {
-    return env -> Math.floorMod((int) code0.eval(env), (int) code1.eval(env));
+  /** Implements {@link #OP_TIMES} for type {@code int}. */
+  private static int timesInt(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return (int) list.get(0) * (int) list.get(1);
   }
 
-  /** Returns a Code that evaluates "^" (string concatenation). */
-  public static Code caret(Code code0, Code code1) {
-    return env -> ((String) code0.eval(env)) + ((String) code1.eval(env));
+  /** Implements {@link #OP_TIMES} for type {@code real}. */
+  private static float timesReal(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return (float) list.get(0) * (float) list.get(1);
   }
 
-  /** Returns a Code that evaluates "::" (list cons). */
-  public static Code cons(Code code0, Code code1) {
-    return env -> ImmutableList.builder().add(code0.eval(env))
-        .addAll((Iterable) code1.eval(env)).build();
+  /** @see BuiltIn#OP_DIVIDE */
+  private static final Macro OP_DIVIDE = (env, argType) -> {
+    switch ((PrimitiveType) ((TupleType) argType).argTypes.get(0)) {
+    case INT:
+      return ast.wrapApplicable(Codes::divideInt);
+    case REAL:
+      return ast.wrapApplicable(Codes::divideReal);
+    default:
+      throw new AssertionError("bad type " + argType);
+    }
+  };
+
+  /** Implements {@link #OP_DIVIDE} for type {@code int}. */
+  private static int divideInt(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return (int) list.get(0) / (int) list.get(1);
+  }
+
+  /** Implements {@link #OP_DIVIDE} for type {@code real}. */
+  private static float divideReal(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return (float) list.get(0) / (float) list.get(1);
+  }
+
+  /** @see BuiltIn#OP_DIV */
+  private static final Applicable OP_DIV = Codes::div;
+
+  /** Implements {@link #OP_DIV}. */
+  private static int div(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return Math.floorDiv((int) list.get(0), (int) list.get(1));
+  }
+
+  /** @see BuiltIn#OP_CARET */
+  private static final Applicable OP_CARET = Codes::caret;
+
+  /** Implements {@link #OP_CARET}. */
+  private static String caret(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return (String) list.get(0) + (String) list.get(1);
+  }
+
+  /** @see BuiltIn#OP_CONS */
+  private static final Applicable OP_CONS = Codes::cons;
+
+  /** Implements {@link #OP_CONS}. */
+  private static List cons(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    return ImmutableList.builder().add(list.get(0))
+        .addAll((Iterable) list.get(1))
+        .build();
   }
 
   /** Returns a Code that returns the value of variable "name" in the current
@@ -209,16 +276,16 @@ public abstract class Codes {
     assert !fnCode.isConstant(); // if constant, use "apply(Closure, Code)"
     return env -> {
       final Applicable fnValue = (Applicable) fnCode.eval(env);
-      final Object argValue = argCode.eval(env);
-      return fnValue.apply(env, argValue);
+      final Object arg = argCode.eval(env);
+      return fnValue.apply(env, arg);
     };
   }
 
   /** Generates the code for applying a function value to an argument. */
   public static Code apply(Applicable fnValue, Code argCode) {
     return env -> {
-      final Object argValue = argCode.eval(env);
-      return fnValue.apply(env, argValue);
+      final Object arg = argCode.eval(env);
+      return fnValue.apply(env, arg);
     };
   }
 
@@ -243,7 +310,7 @@ public abstract class Codes {
   public static Applicable tyCon(Type dataType, String name) {
     Objects.requireNonNull(dataType);
     Objects.requireNonNull(name);
-    return (env, argValue) -> ImmutableList.of(name, argValue);
+    return (env, arg) -> ImmutableList.of(name, arg);
   }
 
   public static Code from(Map<Ast.Id, Code> sources,
@@ -296,47 +363,86 @@ public abstract class Codes {
    * record. */
   public static Applicable nth(int slot) {
     assert slot >= 0 : slot;
-    return (env, argValue) -> ((List) argValue).get(slot);
+    return (env, arg) -> ((List) arg).get(slot);
   }
 
   /** An applicable that negates a boolean value. */
-  private static final Applicable NOT = (env, argValue) -> !(Boolean) argValue;
+  private static final Applicable NOT = (env, arg) -> !(Boolean) arg;
 
   /** An applicable that returns the absolute value of an int. */
-  private static final Applicable ABS = (env, argValue) -> {
-    final Integer integer = (Integer) argValue;
+  private static final Applicable ABS = (env, arg) -> {
+    final Integer integer = (Integer) arg;
     return integer >= 0 ? integer : -integer;
   };
 
   /** @see BuiltIn#IGNORE */
-  private static final Applicable IGNORE = (env, argValue) -> Unit.INSTANCE;
+  private static final Applicable IGNORE = (env, arg) -> Unit.INSTANCE;
+
+  /** @see BuiltIn#OP_MINUS */
+  private static final Macro OP_MINUS = (env, argType) -> {
+    switch ((PrimitiveType) ((TupleType) argType).argTypes.get(0)) {
+    case INT:
+      return ast.wrapApplicable(Codes::minusInt);
+    case REAL:
+      return ast.wrapApplicable(Codes::minusReal);
+    default:
+      throw new AssertionError("bad type " + argType);
+    }
+  };
+
+  /** @see BuiltIn#OP_MOD */
+  private static final Applicable OP_MOD = Codes::mod;
+
+  /** @see BuiltIn#OP_PLUS */
+  private static final Macro OP_PLUS = (env, argType) -> {
+    switch ((PrimitiveType) ((TupleType) argType).argTypes.get(0)) {
+    case INT:
+      return ast.wrapApplicable(Codes::plusInt);
+    case REAL:
+      return ast.wrapApplicable(Codes::plusReal);
+    default:
+      throw new AssertionError("bad type " + argType);
+    }
+  };
+
+  /** @see BuiltIn#OP_TIMES */
+  private static final Macro OP_TIMES = (env, argType) -> {
+    switch ((PrimitiveType) ((TupleType) argType).argTypes.get(0)) {
+    case INT:
+      return ast.wrapApplicable(Codes::timesInt);
+    case REAL:
+      return ast.wrapApplicable(Codes::timesReal);
+    default:
+      throw new AssertionError("bad type " + argType);
+    }
+  };
 
   /** @see BuiltIn#STRING_MAX_SIZE */
   private static final Integer STRING_MAX_SIZE = Integer.MAX_VALUE;
 
   /** @see BuiltIn#STRING_SIZE */
-  private static final Applicable STRING_SIZE = (env, argValue) ->
-      ((String) argValue).length();
+  private static final Applicable STRING_SIZE = (env, arg) ->
+      ((String) arg).length();
 
   /** @see BuiltIn#STRING_SUB */
-  private static final Applicable STRING_SUB = (env, argValue) -> {
-    final List tuple = (List) argValue;
+  private static final Applicable STRING_SUB = (env, arg) -> {
+    final List tuple = (List) arg;
     final String s = (String) tuple.get(0);
     final int i = (Integer) tuple.get(1);
     return s.charAt(i);
   };
 
   /** @see BuiltIn#STRING_EXTRACT */
-  private static final Applicable STRING_EXTRACT = (env, argValue) -> {
-    final List tuple = (List) argValue;
+  private static final Applicable STRING_EXTRACT = (env, arg) -> {
+    final List tuple = (List) arg;
     final String s = (String) tuple.get(0);
     final int i = (Integer) tuple.get(1);
     return s.substring(i);
   };
 
   /** @see BuiltIn#STRING_SUBSTRING */
-  private static final Applicable STRING_SUBSTRING = (env, argValue) -> {
-    final List tuple = (List) argValue;
+  private static final Applicable STRING_SUBSTRING = (env, arg) -> {
+    final List tuple = (List) arg;
     final String s = (String) tuple.get(0);
     final int i = (Integer) tuple.get(1);
     final int j = (Integer) tuple.get(2);
@@ -347,37 +453,37 @@ public abstract class Codes {
   private static final Applicable STRING_CONCAT = stringConcat("");
 
   private static Applicable stringConcat(String separator) {
-    return (env, argValue) -> {
-      @SuppressWarnings("unchecked") final List<String> list = (List) argValue;
+    return (env, arg) -> {
+      @SuppressWarnings("unchecked") final List<String> list = (List) arg;
       return String.join(separator, list);
     };
   }
 
   /** @see BuiltIn#STRING_CONCAT_WITH */
-  private static final Applicable STRING_CONCAT_WITH = (env, argValue) ->
-      stringConcat((String) argValue);
+  private static final Applicable STRING_CONCAT_WITH = (env, arg) ->
+      stringConcat((String) arg);
 
   /** @see BuiltIn#STRING_STR */
-  private static final Applicable STRING_STR = (env, argValue) ->
-      ((Character) argValue) + "";
+  private static final Applicable STRING_STR = (env, arg) ->
+      ((Character) arg) + "";
 
   /** @see BuiltIn#STRING_IMPLODE */
-  private static final Applicable STRING_IMPLODE = (env, argValue) ->
-      String.valueOf(Chars.toArray((List) argValue));
+  private static final Applicable STRING_IMPLODE = (env, arg) ->
+      String.valueOf(Chars.toArray((List) arg));
 
   /** @see BuiltIn#STRING_EXPLODE */
-  private static final Applicable STRING_EXPLODE = (env, argValue) -> {
-    final String s = (String) argValue;
+  private static final Applicable STRING_EXPLODE = (env, arg) -> {
+    final String s = (String) arg;
     return MapList.of(s.length(), s::charAt);
   };
 
   /** @see BuiltIn#STRING_MAP */
-  private static final Applicable STRING_MAP = (env, argValue) ->
-      stringMap((Applicable) argValue);
+  private static final Applicable STRING_MAP = (env, arg) ->
+      stringMap((Applicable) arg);
 
   private static Applicable stringMap(Applicable f) {
-    return (env, argValue) -> {
-      final String s = (String) argValue;
+    return (env, arg) -> {
+      final String s = (String) arg;
       final StringBuilder buf = new StringBuilder();
       for (int i = 0; i < s.length(); i++) {
         final char c = s.charAt(i);
@@ -389,14 +495,14 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#STRING_TRANSLATE */
-  private static final Applicable STRING_TRANSLATE = (env, argValue) -> {
-    final Applicable f = (Applicable) argValue;
+  private static final Applicable STRING_TRANSLATE = (env, arg) -> {
+    final Applicable f = (Applicable) arg;
     return translate(f);
   };
 
   private static Applicable translate(Applicable f) {
-    return (env, argValue) -> {
-      final String s = (String) argValue;
+    return (env, arg) -> {
+      final String s = (String) arg;
       final StringBuilder buf = new StringBuilder();
       for (int i = 0; i < s.length(); i++) {
         final char c = s.charAt(i);
@@ -408,111 +514,111 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#STRING_IS_PREFIX */
-  private static final Applicable STRING_IS_PREFIX = (env, argValue) -> {
-    final String s = (String) argValue;
+  private static final Applicable STRING_IS_PREFIX = (env, arg) -> {
+    final String s = (String) arg;
     return isPrefix(s);
   };
 
   private static Applicable isPrefix(String s) {
-    return (env, argValue) -> {
-      final String s2 = (String) argValue;
+    return (env, arg) -> {
+      final String s2 = (String) arg;
       return s2.startsWith(s);
     };
   }
 
   /** @see BuiltIn#STRING_IS_SUBSTRING */
-  private static final Applicable STRING_IS_SUBSTRING = (env, argValue) -> {
-    final String s = (String) argValue;
+  private static final Applicable STRING_IS_SUBSTRING = (env, arg) -> {
+    final String s = (String) arg;
     return isSubstring(s);
   };
 
   private static Applicable isSubstring(String s) {
-    return (env, argValue) -> {
-      final String s2 = (String) argValue;
+    return (env, arg) -> {
+      final String s2 = (String) arg;
       return s2.contains(s);
     };
   }
 
   /** @see BuiltIn#STRING_IS_SUFFIX */
-  private static final Applicable STRING_IS_SUFFIX = (env, argValue) -> {
-    final String s = (String) argValue;
+  private static final Applicable STRING_IS_SUFFIX = (env, arg) -> {
+    final String s = (String) arg;
     return isSuffix(s);
   };
 
   private static Applicable isSuffix(String s) {
-    return (env, argValue) -> {
-      final String s2 = (String) argValue;
+    return (env, arg) -> {
+      final String s2 = (String) arg;
       return s2.endsWith(s);
     };
   }
 
   /** @see BuiltIn#LIST_NULL */
-  private static final Applicable LIST_NULL = (env, argValue) ->
-      ((List) argValue).isEmpty();
+  private static final Applicable LIST_NULL = (env, arg) ->
+      ((List) arg).isEmpty();
 
   /** @see BuiltIn#LIST_LENGTH */
-  private static final Applicable LIST_LENGTH = (env, argValue) ->
-      ((List) argValue).size();
+  private static final Applicable LIST_LENGTH = (env, arg) ->
+      ((List) arg).size();
 
   /** @see BuiltIn#LIST_AT */
-  private static final Applicable LIST_AT = (env, argValue) -> {
-    final List tuple = (List) argValue;
+  private static final Applicable LIST_AT = (env, arg) -> {
+    final List tuple = (List) arg;
     final List list0 = (List) tuple.get(0);
     final List list1 = (List) tuple.get(1);
     return ImmutableList.builder().addAll(list0).addAll(list1).build();
   };
 
   /** @see BuiltIn#LIST_HD */
-  private static final Applicable LIST_HD = (env, argValue) ->
-      ((List) argValue).get(0);
+  private static final Applicable LIST_HD = (env, arg) ->
+      ((List) arg).get(0);
 
   /** @see BuiltIn#LIST_TL */
-  private static final Applicable LIST_TL = (env, argValue) ->
-      ((List) argValue).subList(1, ((List) argValue).size());
+  private static final Applicable LIST_TL = (env, arg) ->
+      ((List) arg).subList(1, ((List) arg).size());
 
   /** @see BuiltIn#LIST_LAST */
-  private static final Applicable LIST_LAST = (env, argValue) ->
-      ((List) argValue).get(((List) argValue).size() - 1);
+  private static final Applicable LIST_LAST = (env, arg) ->
+      ((List) arg).get(((List) arg).size() - 1);
 
   /** @see BuiltIn#LIST_GET_ITEM */
-  private static final Applicable LIST_GET_ITEM = (env, argValue) -> {
-    final List list = (List) argValue;
+  private static final Applicable LIST_GET_ITEM = (env, arg) -> {
+    final List list = (List) arg;
     return ImmutableList.of(list.get(0), list.subList(1, list.size()));
   };
 
   /** @see BuiltIn#LIST_NTH */
-  private static final Applicable LIST_NTH = (env, argValue) -> {
-    final List tuple = (List) argValue;
+  private static final Applicable LIST_NTH = (env, arg) -> {
+    final List tuple = (List) arg;
     final List list = (List) tuple.get(0);
     final int i = (Integer) tuple.get(1);
     return list.get(i);
   };
 
   /** @see BuiltIn#LIST_TAKE */
-  private static final Applicable LIST_TAKE = (env, argValue) -> {
-    final List tuple = (List) argValue;
+  private static final Applicable LIST_TAKE = (env, arg) -> {
+    final List tuple = (List) arg;
     final List list = (List) tuple.get(0);
     final int i = (Integer) tuple.get(1);
     return list.subList(0, i);
   };
 
   /** @see BuiltIn#LIST_DROP */
-  private static final Applicable LIST_DROP = (env, argValue) -> {
-    final List tuple = (List) argValue;
+  private static final Applicable LIST_DROP = (env, arg) -> {
+    final List tuple = (List) arg;
     final List list = (List) tuple.get(0);
     final int i = (Integer) tuple.get(1);
     return list.subList(i, list.size());
   };
 
   /** @see BuiltIn#LIST_REV */
-  private static final Applicable LIST_REV = (env, argValue) -> {
-    final List list = (List) argValue;
+  private static final Applicable LIST_REV = (env, arg) -> {
+    final List list = (List) arg;
     return Lists.reverse(list);
   };
 
   /** @see BuiltIn#LIST_CONCAT */
-  private static final Applicable LIST_CONCAT = (env, argValue) -> {
-    final List list = (List) argValue;
+  private static final Applicable LIST_CONCAT = (env, arg) -> {
+    final List list = (List) arg;
     final ImmutableList.Builder<Object> builder = ImmutableList.builder();
     for (Object o : list) {
       builder.addAll((List) o);
@@ -521,8 +627,8 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_REV_APPEND */
-  private static final Applicable LIST_REV_APPEND = (env, argValue) -> {
-    final List tuple = (List) argValue;
+  private static final Applicable LIST_REV_APPEND = (env, arg) -> {
+    final List tuple = (List) arg;
     final List list0 = (List) tuple.get(0);
     final List list1 = (List) tuple.get(1);
     return ImmutableList.builder().addAll(Lists.reverse(list0))
@@ -530,24 +636,24 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_APP */
-  private static final Applicable LIST_APP = (env, argValue) ->
-      listApp((Applicable) argValue);
+  private static final Applicable LIST_APP = (env, arg) ->
+      listApp((Applicable) arg);
 
   private static Applicable listApp(Applicable consumer) {
-    return (env, argValue) -> {
-      final List list = (List) argValue;
+    return (env, arg) -> {
+      final List list = (List) arg;
       list.forEach(o -> consumer.apply(env, o));
       return Unit.INSTANCE;
     };
   }
 
   /** @see BuiltIn#LIST_MAP */
-  private static final Applicable LIST_MAP = (env, argValue) ->
-      listMap((Applicable) argValue);
+  private static final Applicable LIST_MAP = (env, arg) ->
+      listMap((Applicable) arg);
 
   private static Applicable listMap(Applicable fn) {
-    return (env, argValue) -> {
-      final List list = (List) argValue;
+    return (env, arg) -> {
+      final List list = (List) arg;
       final ImmutableList.Builder<Object> builder = ImmutableList.builder();
       for (Object o : list) {
         builder.add(fn.apply(env, o));
@@ -557,14 +663,14 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_FIND */
-  private static final Applicable LIST_FIND = (env, argValue) -> {
-    final Applicable fn = (Applicable) argValue;
+  private static final Applicable LIST_FIND = (env, arg) -> {
+    final Applicable fn = (Applicable) arg;
     return find(fn);
   };
 
   private static Applicable find(Applicable fn) {
-    return (env, argValue) -> {
-      final List list = (List) argValue;
+    return (env, arg) -> {
+      final List list = (List) arg;
       for (Object o : list) {
         if ((Boolean) fn.apply(env, o)) {
           return o;
@@ -575,14 +681,14 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_FILTER */
-  private static final Applicable LIST_FILTER = (env, argValue) -> {
-    final Applicable fn = (Applicable) argValue;
+  private static final Applicable LIST_FILTER = (env, arg) -> {
+    final Applicable fn = (Applicable) arg;
     return listFilter(fn);
   };
 
   private static Applicable listFilter(Applicable fn) {
-    return (env, argValue) -> {
-      final List list = (List) argValue;
+    return (env, arg) -> {
+      final List list = (List) arg;
       final ImmutableList.Builder builder = ImmutableList.builder();
       for (Object o : list) {
         if ((Boolean) fn.apply(env, o)) {
@@ -594,14 +700,14 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_PARTITION */
-  private static final Applicable LIST_PARTITION = (env, argValue) -> {
-    final Applicable fn = (Applicable) argValue;
+  private static final Applicable LIST_PARTITION = (env, arg) -> {
+    final Applicable fn = (Applicable) arg;
     return listPartition(fn);
   };
 
   private static Applicable listPartition(Applicable fn) {
-    return (env, argValue) -> {
-      final List list = (List) argValue;
+    return (env, arg) -> {
+      final List list = (List) arg;
       final ImmutableList.Builder trueBuilder = ImmutableList.builder();
       final ImmutableList.Builder falseBuilder = ImmutableList.builder();
       for (Object o : list) {
@@ -611,21 +717,21 @@ public abstract class Codes {
     };
   }
   /** @see BuiltIn#LIST_FOLDL */
-  private static final Applicable LIST_FOLDL = (env, argValue) ->
-      listFold(true, (Applicable) argValue);
+  private static final Applicable LIST_FOLDL = (env, arg) ->
+      listFold(true, (Applicable) arg);
 
   /** @see BuiltIn#LIST_FOLDR */
-  private static final Applicable LIST_FOLDR = (env, argValue) ->
-      listFold(false, (Applicable) argValue);
+  private static final Applicable LIST_FOLDR = (env, arg) ->
+      listFold(false, (Applicable) arg);
 
   private static Applicable listFold(boolean left, Applicable fn) {
-    return (env, argValue) -> listFold2(left, fn, argValue);
+    return (env, arg) -> listFold2(left, fn, arg);
   }
 
   private static Applicable listFold2(boolean left, Applicable fn,
       Object init) {
-    return (env, argValue) -> {
-      final List list = (List) argValue;
+    return (env, arg) -> {
+      final List list = (List) arg;
       Object b = init;
       for (Object a : left ? list : Lists.reverse(list)) {
         b = fn.apply(env, ImmutableList.of(a, b));
@@ -635,12 +741,12 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_EXISTS */
-  private static final Applicable LIST_EXISTS = (env, argValue) ->
-      listExists((Applicable) argValue);
+  private static final Applicable LIST_EXISTS = (env, arg) ->
+      listExists((Applicable) arg);
 
   private static Applicable listExists(Applicable fn) {
-    return (env, argValue) -> {
-      final List list = (List) argValue;
+    return (env, arg) -> {
+      final List list = (List) arg;
       for (Object o : list) {
         if ((Boolean) fn.apply(env, o)) {
           return true;
@@ -651,12 +757,12 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_ALL */
-  private static final Applicable LIST_ALL = (env, argValue) ->
-      listAll((Applicable) argValue);
+  private static final Applicable LIST_ALL = (env, arg) ->
+      listAll((Applicable) arg);
 
   private static Applicable listAll(Applicable fn) {
-    return (env, argValue) -> {
-      final List list = (List) argValue;
+    return (env, arg) -> {
+      final List list = (List) arg;
       for (Object o : list) {
         if (!(Boolean) fn.apply(env, o)) {
           return false;
@@ -667,8 +773,8 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_TABULATE */
-  private static final Applicable LIST_TABULATE = (env, argValue) -> {
-    final List tuple = (List) argValue;
+  private static final Applicable LIST_TABULATE = (env, arg) -> {
+    final List tuple = (List) arg;
     final int count = (Integer) tuple.get(0);
     final Applicable fn = (Applicable) tuple.get(1);
     final ImmutableList.Builder<Object> builder = ImmutableList.builder();
@@ -679,12 +785,12 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_COLLATE */
-  private static final Applicable LIST_COLLATE = (env, argValue) ->
-      collate((Applicable) argValue);
+  private static final Applicable LIST_COLLATE = (env, arg) ->
+      collate((Applicable) arg);
 
   private static Applicable collate(Applicable comparator) {
-    return (env, argValue) -> {
-      final List tuple = (List) argValue;
+    return (env, arg) -> {
+      final List tuple = (List) arg;
       final List list0 = (List) tuple.get(0);
       final List list1 = (List) tuple.get(1);
       final int n = Math.min(list0.size(), list1.size());
@@ -702,13 +808,13 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#RELATIONAL_COUNT */
-  private static final Applicable RELATIONAL_COUNT = (env, argValue) ->
-      ((List) argValue).size();
+  private static final Applicable RELATIONAL_COUNT = (env, arg) ->
+      ((List) arg).size();
 
   /** Implements {@link #RELATIONAL_SUM} for type {@code int list}. */
-  private static final Applicable RELATIONAL_SUM_INT = (env, argValue) -> {
+  private static final Applicable RELATIONAL_SUM_INT = (env, arg) -> {
     @SuppressWarnings("unchecked") final List<? extends Number> list =
-        (List) argValue;
+        (List) arg;
     int sum = 0;
     for (Number o : list) {
       sum += o.intValue();
@@ -717,9 +823,9 @@ public abstract class Codes {
   };
 
   /** Implements {@link #RELATIONAL_SUM} for type {@code real list}. */
-  private static final Applicable RELATIONAL_SUM_REAL = (env, argValue) -> {
+  private static final Applicable RELATIONAL_SUM_REAL = (env, arg) -> {
     @SuppressWarnings("unchecked") final List<? extends Number> list =
-        (List) argValue;
+        (List) arg;
     float sum = 0;
     for (Number o : list) {
       sum += o.floatValue();
@@ -730,10 +836,10 @@ public abstract class Codes {
   /** @see BuiltIn#RELATIONAL_SUM */
   private static final Macro RELATIONAL_SUM = (env, argType) -> {
     if (argType instanceof ListType) {
-      if (((ListType) argType).elementType == PrimitiveType.INT) {
+      switch ((PrimitiveType) ((ListType) argType).elementType) {
+      case INT:
         return ast.wrapApplicable(RELATIONAL_SUM_INT);
-      }
-      if (((ListType) argType).elementType == PrimitiveType.REAL) {
+      case REAL:
         return ast.wrapApplicable(RELATIONAL_SUM_REAL);
       }
     }
@@ -741,12 +847,12 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#RELATIONAL_MIN */
-  private static final Applicable RELATIONAL_MIN = (env, argValue) ->
-      Ordering.natural().min((List) argValue);
+  private static final Applicable RELATIONAL_MIN = (env, arg) ->
+      Ordering.natural().min((List) arg);
 
   /** @see BuiltIn#RELATIONAL_MAX */
-  private static final Applicable RELATIONAL_MAX = (env, argValue) ->
-      Ordering.natural().max((List) argValue);
+  private static final Applicable RELATIONAL_MAX = (env, arg) ->
+      Ordering.natural().max((List) arg);
 
   /** @see BuiltIn#SYS_ENV */
   private static final Macro SYS_ENV = (env, argType) ->
@@ -789,8 +895,26 @@ public abstract class Codes {
     return EvalEnvs.copyOf(map);
   }
 
-  public static Code negate(Code code) {
-    return env -> -((Integer) code.eval(env));
+  /** @see BuiltIn#OP_NEGATE */
+  private static final Macro OP_NEGATE = (env, argType) -> {
+    switch ((PrimitiveType) argType) {
+    case INT:
+      return ast.wrapApplicable(Codes::negateInt);
+    case REAL:
+      return ast.wrapApplicable(Codes::negateReal);
+    default:
+      throw new AssertionError("bad type " + argType);
+    }
+  };
+
+  /** Implements {@link #OP_NEGATE} for type {@code int}. */
+  private static int negateInt(EvalEnv env, Object arg) {
+    return -((Integer) arg);
+  }
+
+  /** Implements {@link #OP_NEGATE} for type {@code real}. */
+  private static float negateReal(EvalEnv env, Object arg) {
+    return -((Float) arg);
   }
 
   private static <E> Set<E> minus(Set<E> set1, Set<E> set0) {
@@ -801,8 +925,8 @@ public abstract class Codes {
 
   public static Applicable aggregate(Environment env, Code aggregateCode,
       List<String> names, @Nullable Code argumentCode) {
-    return (env1, argValue) -> {
-      final List rows = (List) argValue;
+    return (env1, arg) -> {
+      final List rows = (List) arg;
       final List<Object> argRows;
       if (argumentCode != null) {
         final MutableEvalEnv env2 = env1.bindMutableArray(names);
@@ -833,6 +957,21 @@ public abstract class Codes {
           .put(BuiltIn.NOT, NOT)
           .put(BuiltIn.ABS, ABS)
           .put(BuiltIn.IGNORE, IGNORE)
+          .put(BuiltIn.OP_CARET, OP_CARET)
+          .put(BuiltIn.OP_CONS, OP_CONS)
+          .put(BuiltIn.OP_DIV, OP_DIV)
+          .put(BuiltIn.OP_DIVIDE, OP_DIVIDE)
+          .put(BuiltIn.OP_EQ, OP_EQ)
+          .put(BuiltIn.OP_GE, OP_GE)
+          .put(BuiltIn.OP_GT, OP_GT)
+          .put(BuiltIn.OP_LE, OP_LE)
+          .put(BuiltIn.OP_LT, OP_LT)
+          .put(BuiltIn.OP_NE, OP_NE)
+          .put(BuiltIn.OP_MINUS, OP_MINUS)
+          .put(BuiltIn.OP_MOD, OP_MOD)
+          .put(BuiltIn.OP_NEGATE, OP_NEGATE)
+          .put(BuiltIn.OP_PLUS, OP_PLUS)
+          .put(BuiltIn.OP_TIMES, OP_TIMES)
           .put(BuiltIn.STRING_MAX_SIZE, STRING_MAX_SIZE)
           .put(BuiltIn.STRING_SIZE, STRING_SIZE)
           .put(BuiltIn.STRING_SUB, STRING_SUB)

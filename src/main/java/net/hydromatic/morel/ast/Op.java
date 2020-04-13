@@ -125,6 +125,8 @@ public enum Op {
   public final int left;
   /** Right precedence */
   public final int right;
+  /** Operator name. Sometimes null, sometimes something like "op +". */
+  public final String opName;
 
   Op() {
     this(null, 0, 0);
@@ -153,6 +155,9 @@ public enum Op {
     this.padded = padded;
     this.left = left;
     this.right = right;
+    this.opName = padded == null || padded.equals("")
+        ? null
+        : "op " + padded.trim();
   }
 
   /** Converts the op of a literal or tuple expression to the corresponding op

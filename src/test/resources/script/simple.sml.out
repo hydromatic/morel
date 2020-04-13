@@ -274,4 +274,4 @@ fun foo arg =
 val foo = fn : 'a -> 'a
 
 foo 3;
-val it = 3 : 'a
+val it = 3 : int

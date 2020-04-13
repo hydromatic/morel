@@ -17,6 +17,46 @@
  * License.
  *)
 
+(*) Basic operations on 'int'
+2 + 3;
+2 - 3;
+2 * 3;
+2 / 3;
+3 / 2;
+3 mod 2;
+~2 * 3;
+~(2 + 3);
+2 < 3;
+2 <= 3;
+2 > 3;
+2 >= 3;
+2 = 3;
+2 <> 3;
+
+(*) Basic operations on 'real'
+2.0 + 3.0;
+2.0 - 3.0;
+2.0 * 3.0;
+2.0 / 3.0;
+3.0 / 2.0;
+~2.0 * 3.0;
+~(2.0 + 3.0);
+2.0 < 3.0;
+2.0 <= 3.0;
+2.0 > 3.0;
+2.0 >= 3.0;
+2.0 = 3.0;
+2.0 <> 3.0;
+
+(*) Three different kinds of 'max'
+fun max_alpha (x, y) = if x < y then y else x;
+max_alpha (2, 3);
+max_alpha (2.0, 3.0);
+fun max_int (x, y) = if x < y then y + 0 else x;
+max_int (2, 3);
+fun max_real (x, y) = if x < y then y + 0.0 else x;
+max_real (2.0, 3.0);
+
 (*) A recursive type, without generics
 datatype inttree = Empty | Node of inttree * int * inttree;
 fun max (x, y) = if x < y then y + 0 else x;

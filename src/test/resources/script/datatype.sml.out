@@ -17,6 +17,114 @@
  * License.
  *)
 
+(*) Basic operations on 'int'
+2 + 3;
+val it = 5 : int
+
+2 - 3;
+val it = ~1 : int
+
+2 * 3;
+val it = 6 : int
+
+2 / 3;
+val it = 0 : int
+
+3 / 2;
+val it = 1 : int
+
+3 mod 2;
+val it = 1 : int
+
+~2 * 3;
+val it = ~6 : int
+
+~(2 + 3);
+val it = ~5 : int
+
+2 < 3;
+val it = true : bool
+
+2 <= 3;
+val it = true : bool
+
+2 > 3;
+val it = false : bool
+
+2 >= 3;
+val it = false : bool
+
+2 = 3;
+val it = false : bool
+
+2 <> 3;
+val it = true : bool
+
+
+(*) Basic operations on 'real'
+2.0 + 3.0;
+val it = 5.0 : real
+
+2.0 - 3.0;
+val it = ~1.0 : real
+
+2.0 * 3.0;
+val it = 6.0 : real
+
+2.0 / 3.0;
+val it = 0.6666667 : real
+
+3.0 / 2.0;
+val it = 1.5 : real
+
+~2.0 * 3.0;
+val it = ~6.0 : real
+
+~(2.0 + 3.0);
+val it = ~5.0 : real
+
+2.0 < 3.0;
+val it = true : bool
+
+2.0 <= 3.0;
+val it = true : bool
+
+2.0 > 3.0;
+val it = false : bool
+
+2.0 >= 3.0;
+val it = false : bool
+
+2.0 = 3.0;
+val it = false : bool
+
+2.0 <> 3.0;
+val it = true : bool
+
+
+(*) Three different kinds of 'max'
+fun max_alpha (x, y) = if x < y then y else x;
+val max_alpha = fn : 'a * 'a -> 'a
+
+max_alpha (2, 3);
+val it = 3 : int
+
+max_alpha (2.0, 3.0);
+val it = 3.0 : real
+
+fun max_int (x, y) = if x < y then y + 0 else x;
+val max_int = fn : int * int -> int
+
+max_int (2, 3);
+val it = 3 : int
+
+fun max_real (x, y) = if x < y then y + 0.0 else x;
+val max_real = fn : real * real -> real
+
+max_real (2.0, 3.0);
+val it = 3.0 : real
+
+
 (*) A recursive type, without generics
 datatype inttree = Empty | Node of inttree * int * inttree;
 datatype inttree = Empty | Node of inttree * int * inttree

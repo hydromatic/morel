@@ -207,24 +207,9 @@ public class Compiler {
 
     case ANDALSO:
     case ORELSE:
-    case PLUS:
-    case MINUS:
-    case TIMES:
-    case DIVIDE:
-    case DIV:
-    case MOD:
-    case CARET:
     case CONS:
-    case EQ:
-    case NE:
-    case LT:
-    case GT:
-    case LE:
-    case GE:
-      return compileInfix(env, (Ast.InfixCall) expression);
-
-    case NEGATE:
-      return compileUnary(env, expression);
+      return compileInfix(env, (Ast.InfixCall) expression,
+          typeMap.getType(expression));
 
     default:
       throw new AssertionError("op not handled: " + expression.op);
@@ -469,52 +454,14 @@ public class Compiler {
     bindings.add(Binding.of(tyCon.id.name, type, value));
   }
 
-  private Code compileInfix(Environment env, Ast.InfixCall call) {
+  private Code compileInfix(Environment env, Ast.InfixCall call, Type type) {
     final Code code0 = compile(env, call.a0);
     final Code code1 = compile(env, call.a1);
     switch (call.op) {
-    case EQ:
-      return Codes.eq(code0, code1);
-    case NE:
-      return Codes.ne(code0, code1);
-    case LT:
-      return Codes.lt(code0, code1);
-    case GT:
-      return Codes.gt(code0, code1);
-    case LE:
-      return Codes.le(code0, code1);
-    case GE:
-      return Codes.ge(code0, code1);
     case ANDALSO:
       return Codes.andAlso(code0, code1);
     case ORELSE:
       return Codes.orElse(code0, code1);
-    case PLUS:
-      return Codes.plus(code0, code1);
-    case MINUS:
-      return Codes.minus(code0, code1);
-    case TIMES:
-      return Codes.times(code0, code1);
-    case DIVIDE:
-      return Codes.divide(code0, code1);
-    case DIV:
-      return Codes.div(code0, code1);
-    case MOD:
-      return Codes.mod(code0, code1);
-    case CARET:
-      return Codes.caret(code0, code1);
-    case CONS:
-      return Codes.cons(code0, code1);
-    default:
-      throw new AssertionError("unknown op " + call.op);
-    }
-  }
-
-  private Code compileUnary(Environment env, Ast.Exp call) {
-    final Code code0 = compile(env, call.args().get(0));
-    switch (call.op) {
-    case NEGATE:
-      return Codes.negate(code0);
     default:
       throw new AssertionError("unknown op " + call.op);
     }

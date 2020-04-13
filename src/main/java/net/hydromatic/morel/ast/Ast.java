@@ -315,6 +315,13 @@ public class Ast {
       }
       return w.append("}");
     }
+
+    public RecordPat copy(boolean ellipsis, Map<String, ? extends Pat> args) {
+      return this.ellipsis == ellipsis
+          && this.args.equals(args)
+          ? this
+          : ast.recordPat(pos, ellipsis, args);
+    }
   }
 
   /** Pattern that is a pattern annotated with a type.
@@ -997,6 +1004,10 @@ public class Ast {
           w.append(i > 0 ? ", " : "").append(k).append(" = ").append(v, 0, 0));
       return w.append("}");
     }
+
+    public Record copy(Map<String, Ast.Exp> map) {
+      return ast.record(pos, map);
+    }
   }
 
   /** Call to an infix operator. */
@@ -1021,6 +1032,15 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, a0, op, a1, right);
+    }
+
+    /** Creates a copy of this {@code InfixCall} with given contents,
+     * or {@code this} if the contents are the same. */
+    public InfixCall copy(Exp a0, Exp a1) {
+      return this.a0.equals(a0)
+          && this.a1.equals(a1)
+          ? this
+          : new InfixCall(pos, op, a0, a1);
     }
   }
 
@@ -1067,6 +1087,16 @@ public class Ast {
       return w.append("if ").append(condition, 0, 0)
           .append(" then ").append(ifTrue, 0, 0)
           .append(" else ").append(ifFalse, 0, right);
+    }
+
+    /** Creates a copy of this {@code If} with given contents,
+     * or {@code this} if the contents are the same. */
+    public If copy(Exp condition, Exp ifTrue, Exp ifFalse) {
+      return this.condition.equals(condition)
+          && this.ifTrue.equals(ifTrue)
+          && this.ifFalse.equals(ifFalse)
+          ? this
+          : new If(pos, condition, ifTrue, ifFalse);
     }
   }
 
@@ -1209,6 +1239,13 @@ public class Ast {
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.append("case ").append(e, 0, 0).append(" of ")
           .appendAll(matchList, left, Op.BAR, right);
+    }
+
+    public Case copy(Exp e, java.util.List<Match> matchList) {
+      return this.e.equals(e)
+          && this.matchList.equals(matchList)
+          ? this
+          : ast.caseOf(pos, e, matchList);
     }
   }
 

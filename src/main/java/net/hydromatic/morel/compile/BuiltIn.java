@@ -20,11 +20,15 @@ package net.hydromatic.morel.compile;
 
 import com.google.common.collect.ImmutableMap;
 
+import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.type.PrimitiveType.BOOL;
 import static net.hydromatic.morel.type.PrimitiveType.CHAR;
@@ -48,6 +52,84 @@ public enum BuiltIn {
 
   /** Function "ignore", of type "&alpha; &rarr; unit". */
   IGNORE("ignore", ts -> ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
+
+  /** Infix operator "^", of type "string * string &rarr; string". */
+  OP_CARET("op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
+
+  /** Infix operator "::" (list cons), of type
+   * "&alpha; * &alpha; list &rarr; &alpha; list". */
+  OP_CONS("op ::", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), ts.listType(h.get(0))),
+              ts.listType(h.get(0))))),
+
+  /** Infix operator "div", of type "int * int &rarr; int". */
+  OP_DIV("op div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Infix operator "/", of type "&alpha; * &alpha; &rarr; &alpha;"
+   * (where &alpha; must be numeric). */
+  OP_DIVIDE("op /", PrimitiveType.INT, ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
+
+  /** Infix operator "=", of type "&alpha; * &alpha; &rarr; bool". */
+  OP_EQ("op =", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
+
+  /** Infix operator "&ge;", of type "&alpha; * &alpha; &rarr; bool"
+   * (where &alpha; must be comparable). */
+  OP_GE("op >=", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
+
+  /** Infix operator "&gt;", of type "&alpha; * &alpha; &rarr; bool"
+   * (where &alpha; must be comparable). */
+  OP_GT("op >", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
+
+  /** Infix operator "&le;", of type "&alpha; * &alpha; &rarr; bool"
+   * (where &alpha; must be comparable). */
+  OP_LE("op <=", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
+
+  /** Infix operator "&lt;", of type "&alpha; * &alpha; &rarr; bool"
+   * (where &alpha; must be comparable). */
+  OP_LT("op <", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
+
+  /** Infix operator "&lt;&gt;", of type "&alpha; * &alpha; &rarr; bool". */
+  OP_NE("op <>", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
+
+  /** Infix operator "-", of type "&alpha; * &alpha; &rarr; &alpha;"
+   * (where &alpha; must be numeric). */
+  OP_MINUS("op -", PrimitiveType.INT, ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
+
+  /** Infix operator "mod", of type "int * int &rarr; int". */
+  OP_MOD("op mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Infix operator "+", of type "&alpha; * &alpha; &rarr; &alpha;"
+   * (where &alpha; must be numeric). */
+  OP_PLUS("op +", PrimitiveType.INT, ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
+
+  /** Prefix operator "~", of type "&alpha; &rarr; &alpha;"
+   * (where &alpha; must be numeric). */
+  OP_NEGATE("op ~", ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0)))),
+
+  /** Infix operator "-", of type "&alpha; * &alpha; &rarr; &alpha;"
+   * (where &alpha; must be numeric). */
+  OP_TIMES("op *", PrimitiveType.INT, ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
   /** Constant "String.maxSize", of type "int".
    *
@@ -495,15 +577,29 @@ public enum BuiltIn {
     BY_ML_NAME = byMlName.build();
   }
 
+  private final PrimitiveType preferredType;
+
   BuiltIn(String mlName, Function<TypeSystem, Type> typeFunction) {
-    this(mlName, null, typeFunction);
+    this(mlName, null, typeFunction, null);
+  }
+
+  BuiltIn(String mlName, @Nonnull PrimitiveType preferredType,
+      Function<TypeSystem, Type> typeFunction) {
+    this(mlName, null, typeFunction, preferredType);
   }
 
   BuiltIn(String mlName, String alias,
       Function<TypeSystem, Type> typeFunction) {
+    this(mlName, alias, typeFunction, null);
+  }
+
+  BuiltIn(String mlName, String alias,
+      Function<TypeSystem, Type> typeFunction,
+      @Nullable PrimitiveType preferredType) {
     this.mlName = mlName.replace('.', '_'); // until we can parse long-ids
     this.alias = alias;
     this.typeFunction = typeFunction;
+    this.preferredType = preferredType;
   }
 
   /** Calls a consumer once per value. */
@@ -515,6 +611,12 @@ public enum BuiltIn {
       if (builtIn.alias != null) {
         consumer.accept(builtIn.alias, type);
       }
+    }
+  }
+
+  public void prefer(Consumer<PrimitiveType> consumer) {
+    if (preferredType != null) {
+      consumer.accept(preferredType);
     }
   }
 }
