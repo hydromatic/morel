@@ -258,12 +258,14 @@ public class TypeResolver {
       final Ast.From from = (Ast.From) node;
       env2 = env;
       final Map<Ast.Id, Unifier.Variable> fieldVars = new LinkedHashMap<>();
+      final Map<Ast.Id, Ast.Exp> fromSources = new LinkedHashMap<>();
       for (Map.Entry<Ast.Id, Ast.Exp> source : from.sources.entrySet()) {
         final Ast.Id id = source.getKey();
         final Ast.Exp exp = source.getValue();
         final Unifier.Variable v5 = unifier.variable();
         final Unifier.Variable v6 = unifier.variable();
-        deduceType(env2, exp, v5);
+        final Ast.Exp exp2 = deduceType(env2, exp, v5);
+        fromSources.put(id, exp2);
         reg(exp, v5, unifier.apply(LIST_TY_CON, v6));
         reg(id, null, v6);
         env2 = env2.bind(id.name, v6);
@@ -352,7 +354,7 @@ public class TypeResolver {
           deduceType(env2, from.yieldExpOrDefault, v3);
       final Ast.Exp yieldExp2 =
           from.yieldExp == null ? null : yieldExpOrDefault2;
-      final Ast.From from2 = from.copy(from.sources, fromSteps, yieldExp2);
+      final Ast.From from2 = from.copy(fromSources, fromSteps, yieldExp2);
       return reg(from2, v, unifier.apply(LIST_TY_CON, v3));
 
     case ID:
