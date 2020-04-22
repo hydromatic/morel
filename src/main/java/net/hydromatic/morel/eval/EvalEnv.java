@@ -18,8 +18,10 @@
  */
 package net.hydromatic.morel.eval;
 
+import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.compile.Environment;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +47,22 @@ public interface EvalEnv {
    * plus a mutable slot. */
   default MutableEvalEnv bindMutable(String name) {
     return new EvalEnvs.MutableSubEvalEnv(this, name);
+  }
+
+  /** Creates an evaluation environment that has the same content as this one,
+   * plus mutable slots for each name in a pattern. */
+  default MutableEvalEnv bindMutablePat(Ast.Pat pat) {
+    if (pat instanceof Ast.IdPat) {
+      // Pattern is simple; use a simple implementation.
+      return bindMutable(((Ast.IdPat) pat).name);
+    }
+    final List<String> names = new ArrayList<>();
+    pat.visit(p -> {
+      if (p instanceof Ast.IdPat) {
+        names.add(((Ast.IdPat) p).name);
+      }
+    });
+    return new EvalEnvs.MutablePatSubEvalEnv(this, pat, names);
   }
 
   /** Creates an evaluation environment that has the same content as this one,

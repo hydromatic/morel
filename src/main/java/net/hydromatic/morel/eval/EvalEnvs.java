@@ -21,6 +21,10 @@ package net.hydromatic.morel.eval;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.util.Pair;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -114,6 +118,119 @@ public class EvalEnvs {
         return values[i];
       }
       return parentEnv.getOpt(name);
+    }
+  }
+
+  /** Evaluation environment that binds several slots based on a pattern. */
+  static class MutablePatSubEvalEnv extends MutableArraySubEvalEnv {
+    private final Ast.Pat pat;
+    private int slot;
+
+    MutablePatSubEvalEnv(EvalEnv parentEnv, Ast.Pat pat, List<String> names) {
+      super(parentEnv, names);
+      this.pat = pat;
+      this.values = new Object[names.size()];
+      assert !(pat instanceof Ast.IdPat);
+    }
+
+    @Override public void set(Object value) {
+      if (!setOpt(value)) {
+        // If this error happens, perhaps your code should be calling "setOpt"
+        // and handling a false result appropriately.
+        throw new AssertionError("bind failed");
+      }
+    }
+
+    @Override public boolean setOpt(Object value) {
+      slot = 0;
+      return bindRecurse(pat, value);
+    }
+
+    boolean bindRecurse(Ast.Pat pat, Object argValue) {
+      final List<Object> listValue;
+      final Ast.LiteralPat literalPat;
+      switch (pat.op) {
+      case ID_PAT:
+        this.values[slot++] = argValue;
+        return true;
+
+      case WILDCARD_PAT:
+        return true;
+
+      case BOOL_LITERAL_PAT:
+      case CHAR_LITERAL_PAT:
+      case STRING_LITERAL_PAT:
+        literalPat = (Ast.LiteralPat) pat;
+        return literalPat.value.equals(argValue);
+
+      case INT_LITERAL_PAT:
+        literalPat = (Ast.LiteralPat) pat;
+        return ((BigDecimal) literalPat.value).intValue() == (Integer) argValue;
+
+      case REAL_LITERAL_PAT:
+        literalPat = (Ast.LiteralPat) pat;
+        return ((BigDecimal) literalPat.value).doubleValue() == (Double) argValue;
+
+      case TUPLE_PAT:
+        final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
+        listValue = (List) argValue;
+        for (Pair<Ast.Pat, Object> pair : Pair.zip(tuplePat.args, listValue)) {
+          if (!bindRecurse(pair.left, pair.right)) {
+            return false;
+          }
+        }
+        return true;
+
+      case RECORD_PAT:
+        final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
+        listValue = (List) argValue;
+        for (Pair<Ast.Pat, Object> pair
+            : Pair.zip(recordPat.args.values(), listValue)) {
+          if (!bindRecurse(pair.left, pair.right)) {
+            return false;
+          }
+        }
+        return true;
+
+      case LIST_PAT:
+        final Ast.ListPat listPat = (Ast.ListPat) pat;
+        listValue = (List) argValue;
+        if (listValue.size() != listPat.args.size()) {
+          return false;
+        }
+        for (Pair<Ast.Pat, Object> pair : Pair.zip(listPat.args, listValue)) {
+          if (!bindRecurse(pair.left, pair.right)) {
+            return false;
+          }
+        }
+        return true;
+
+      case CONS_PAT:
+        final Ast.InfixPat infixPat = (Ast.InfixPat) pat;
+        @SuppressWarnings("unchecked") final List<Object> consValue =
+            (List) argValue;
+        if (consValue.isEmpty()) {
+          return false;
+        }
+        final Object head = consValue.get(0);
+        final List<Object> tail = consValue.subList(1, consValue.size());
+        return bindRecurse(infixPat.p0, head)
+            && bindRecurse(infixPat.p1, tail);
+
+      case CON0_PAT:
+        final Ast.Con0Pat con0Pat = (Ast.Con0Pat) pat;
+        final List con0Value = (List) argValue;
+        return con0Value.get(0).equals(con0Pat.tyCon.name);
+
+      case CON_PAT:
+        final Ast.ConPat conPat = (Ast.ConPat) pat;
+        final List conValue = (List) argValue;
+        return conValue.get(0).equals(conPat.tyCon.name)
+            && bindRecurse(conPat.pat, conValue.get(1));
+
+      default:
+        throw new AssertionError("cannot compile " + pat.op + ": " + pat);
+      }
     }
   }
 

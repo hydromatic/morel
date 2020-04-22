@@ -1469,6 +1469,15 @@ public class MainTest {
         .assertEvalIter(equalsOrdered(list()));
   }
 
+  @Test public void testFromPattern() {
+    final String ml = "from (x, y) in [(1,2),(3,4),(3,0)] group sum = x + y";
+    final String expected = "from (x, y) in [(1, 2), (3, 4), (3, 0)] "
+        + "group sum = x + y";
+    ml(ml).assertParse(expected)
+        .assertType(is("int list"))
+        .assertEvalIter(equalsUnordered(3, 7));
+  }
+
   /** Tests a program that uses an external collection from the "scott" JDBC
    * database. */
   @Test public void testScott() {

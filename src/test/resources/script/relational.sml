@@ -429,6 +429,29 @@ from
   group one = 1 compute two = sum of 2, three = sum of 3
   yield {c1 = one, c5 = two + three};
 
+(*) Patterns left of 'in'
+fun sumPairs pairs =
+  from (left, right) in pairs
+  yield left + right;
+sumPairs [];
+sumPairs [(1, 2), (3, 4)];
+
+(*) Skip rows that do not match the pattern
+from (left, 2) in [(1, 2), (3, 4), (5, 2)]
+  yield left;
+
+fun listHeads lists =
+  from hd :: tl in lists
+  yield hd + 1;
+listHeads [];
+listHeads [[1, 2], [3], [4, 5, 6]];
+
+fun listFields lists =
+  from {a = x, b = y} in lists
+  yield x + 1;
+listFields [];
+listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
+
 (*) Temporary functions
 let
   fun abbrev s =

@@ -172,13 +172,18 @@ public class Compiler {
 
     case FROM:
       final Ast.From from = (Ast.From) expression;
-      final Map<Ast.Id, Code> sourceCodes = new LinkedHashMap<>();
+      final Map<Ast.Pat, Code> sourceCodes = new LinkedHashMap<>();
       final List<Binding> bindings = new ArrayList<>();
-      for (Map.Entry<Ast.Id, Ast.Exp> idExp : from.sources.entrySet()) {
-        final Code expCode = compile(env.bindAll(bindings), idExp.getValue());
-        final Ast.Id id = idExp.getKey();
-        sourceCodes.put(id, expCode);
-        bindings.add(Binding.of(id.name, typeMap.getType(id)));
+      for (Map.Entry<Ast.Pat, Ast.Exp> patExp : from.sources.entrySet()) {
+        final Code expCode = compile(env.bindAll(bindings), patExp.getValue());
+        final Ast.Pat pat = patExp.getKey();
+        sourceCodes.put(pat, expCode);
+        pat.visit(p -> {
+          if (p instanceof Ast.IdPat) {
+            final Ast.IdPat idPat = (Ast.IdPat) p;
+            bindings.add(Binding.of(idPat.name, typeMap.getType(pat)));
+          }
+        });
       }
       Supplier<Codes.RowSink> rowSinkFactory =
           createRowSinkFactory(env, ImmutableList.copyOf(bindings), from.steps,
@@ -491,23 +496,26 @@ public class Compiler {
    * @return Code for match
    */
   private Code compileMatchList(Environment env,
-      Iterable<Ast.Match> matchList) {
-    final ImmutableList.Builder<Pair<Ast.Pat, Code>> patCodeBuilder =
-        ImmutableList.builder();
-    for (Ast.Match match : matchList) {
-      final Environment[] envHolder = {env};
-      match.pat.visit(pat -> {
-        if (pat instanceof Ast.IdPat) {
-          final Type paramType = typeMap.getType(pat);
-          envHolder[0] = envHolder[0].bind(((Ast.IdPat) pat).name,
-              paramType, Unit.INSTANCE);
-        }
-      });
-      final Code code = compile(envHolder[0], match.e);
-      patCodeBuilder.add(Pair.of(expandRecordPattern(match.pat), code));
-    }
-    final ImmutableList<Pair<Ast.Pat, Code>> patCodes = patCodeBuilder.build();
+      List<Ast.Match> matchList) {
+    @SuppressWarnings("UnstableApiUsage")
+    final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
+        matchList.stream()
+            .map(match -> compileMatch(env, match))
+            .collect(ImmutableList.toImmutableList());
     return evalEnv -> new Closure(evalEnv, patCodes);
+  }
+
+  private Pair<Ast.Pat, Code> compileMatch(Environment env, Ast.Match match) {
+    final Environment[] envHolder = {env};
+    match.pat.visit(pat -> {
+      if (pat instanceof Ast.IdPat) {
+        final Type paramType = typeMap.getType(pat);
+        envHolder[0] = envHolder[0].bind(((Ast.IdPat) pat).name,
+            paramType, Unit.INSTANCE);
+      }
+    });
+    final Code code = compile(envHolder[0], match.e);
+    return Pair.of(expandRecordPattern(match.pat), code);
   }
 
   /** Expands a pattern if it is a record pattern that has an ellipsis

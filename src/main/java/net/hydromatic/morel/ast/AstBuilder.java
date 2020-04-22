@@ -288,7 +288,7 @@ public enum AstBuilder {
     return new Ast.Case(pos, e, ImmutableList.copyOf(matchList));
   }
 
-  public Ast.From from(Pos pos, Map<Ast.Id, Ast.Exp> sources,
+  public Ast.From from(Pos pos, Map<Ast.Pat, Ast.Exp> sources,
       List<Ast.FromStep> steps, Ast.Exp yieldExp) {
     return new Ast.From(pos, ImmutableMap.copyOf(sources),
         ImmutableList.copyOf(steps), yieldExp);

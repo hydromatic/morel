@@ -20,7 +20,20 @@ package net.hydromatic.morel.eval;
 
 /** An evaluation environment whose last entry is mutable. */
 public interface MutableEvalEnv extends EvalEnv {
+  /** Puts a value into this environment. */
   void set(Object value);
+
+  /** Puts a value into this environment in a way that may not succeed.
+   *
+   * <p>For example, if this environment is based on the pattern (x, 2)
+   * then (1, 2) will succeed and will bind x to 1, but (3, 4) will fail.
+   *
+   * <p>The default implementation calls {@link #set} and always succeeds.
+   */
+  default boolean setOpt(Object value) {
+    set(value);
+    return true;
+  }
 }
 
 // End MutableEvalEnv.java

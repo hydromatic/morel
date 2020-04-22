@@ -145,7 +145,7 @@ In Standard ML but not in Morel:
 <i>match</i> &rarr; <i>matchItem</i> [ '<b>|</b>' <i>matchItem</i> ]*
                                 match
 <i>matchItem</i> &rarr; <i>pat</i> <b>=&gt;</b> <i>exp</i>
-<i>fromSource</i> &rarr; <i>id</i> <b>in</b> <i>exp</i>
+<i>fromSource</i> &rarr; <i>pat</i> <b>in</b> <i>exp</i>
 <i>fromFilter</i> &rarr; <b>where</b> <i>exp</i>          filter clause
 <i>fromGroup</i> &rarr; <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
       [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]

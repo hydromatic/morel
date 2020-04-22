@@ -258,18 +258,23 @@ public class TypeResolver {
       final Ast.From from = (Ast.From) node;
       env2 = env;
       final Map<Ast.Id, Unifier.Variable> fieldVars = new LinkedHashMap<>();
-      final Map<Ast.Id, Ast.Exp> fromSources = new LinkedHashMap<>();
-      for (Map.Entry<Ast.Id, Ast.Exp> source : from.sources.entrySet()) {
-        final Ast.Id id = source.getKey();
+      final Map<Ast.Pat, Ast.Exp> fromSources = new LinkedHashMap<>();
+      for (Map.Entry<Ast.Pat, Ast.Exp> source : from.sources.entrySet()) {
+        final Ast.Pat pat = source.getKey();
         final Ast.Exp exp = source.getValue();
         final Unifier.Variable v5 = unifier.variable();
         final Unifier.Variable v6 = unifier.variable();
         final Ast.Exp exp2 = deduceType(env2, exp, v5);
-        fromSources.put(id, exp2);
+        final Map<Ast.IdPat, Unifier.Term> termMap1 = new HashMap<>();
+        final Ast.Pat pat2 =
+            deducePatType(env2, pat, termMap1, null, v6);
+        fromSources.put(pat2, exp2);
         reg(exp, v5, unifier.apply(LIST_TY_CON, v6));
-        reg(id, null, v6);
-        env2 = env2.bind(id.name, v6);
-        fieldVars.put(id, v6);
+        for (Map.Entry<Ast.IdPat, Unifier.Term> e : termMap1.entrySet()) {
+          env2 = env2.bind(e.getKey().name, e.getValue());
+          fieldVars.put(ast.id(Pos.ZERO, e.getKey().name),
+              (Unifier.Variable) e.getValue());
+        }
       }
       final List<Ast.FromStep> fromSteps = new ArrayList<>();
       for (Ast.FromStep step : from.steps) {

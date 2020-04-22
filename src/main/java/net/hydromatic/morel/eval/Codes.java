@@ -313,7 +313,7 @@ public abstract class Codes {
     return (env, arg) -> ImmutableList.of(name, arg);
   }
 
-  public static Code from(Map<Ast.Id, Code> sources,
+  public static Code from(Map<Ast.Pat, Code> sources,
       Supplier<RowSink> rowSinkFactory) {
     if (sources.size() == 0) {
       return env -> {
@@ -322,11 +322,11 @@ public abstract class Codes {
         return rowSink.result(env);
       };
     }
-    final ImmutableList<Ast.Id> ids = ImmutableList.copyOf(sources.keySet());
+    final ImmutableList<Ast.Pat> pats = ImmutableList.copyOf(sources.keySet());
     final ImmutableList<Code> codes = ImmutableList.copyOf(sources.values());
     return env -> {
       final RowSink rowSink = rowSinkFactory.get();
-      final Looper looper = new Looper(ids, codes, env, rowSink);
+      final Looper looper = new Looper(pats, codes, env, rowSink);
       looper.loop(0);
       return rowSink.result(env);
     };
@@ -1049,12 +1049,12 @@ public abstract class Codes {
     private final ImmutableList<Code> codes;
     private final RowSink rowSink;
 
-    Looper(ImmutableList<Ast.Id> ids, ImmutableList<Code> codes, EvalEnv env,
+    Looper(ImmutableList<Ast.Pat> pats, ImmutableList<Code> codes, EvalEnv env,
         RowSink rowSink) {
       this.codes = codes;
       this.rowSink = rowSink;
-      for (Ast.Id id : ids) {
-        final MutableEvalEnv mutableEnv = env.bindMutable(id.name);
+      for (Ast.Pat pat : pats) {
+        final MutableEvalEnv mutableEnv = env.bindMutablePat(pat);
         mutableEvalEnvs.add(mutableEnv);
         env = mutableEnv;
         iterables.add(null);
@@ -1071,16 +1071,18 @@ public abstract class Codes {
       final int next = i + 1;
       if (next == iterables.size()) {
         for (Object o : iterable) {
-          mutableEvalEnv.set(o);
-          rowSink.accept(mutableEvalEnv);
+          if (mutableEvalEnv.setOpt(o)) {
+            rowSink.accept(mutableEvalEnv);
+          }
         }
       } else {
         for (Object o : iterable) {
-          mutableEvalEnv.set(o);
-          //noinspection unchecked
-          iterables.set(next, (Iterable<Object>)
-              codes.get(next).eval(mutableEvalEnvs.get(next)));
-          loop(next);
+          if (mutableEvalEnv.setOpt(o)) {
+            //noinspection unchecked
+            iterables.set(next, (Iterable<Object>)
+                codes.get(next).eval(mutableEvalEnvs.get(next)));
+            loop(next);
+          }
         }
       }
     }

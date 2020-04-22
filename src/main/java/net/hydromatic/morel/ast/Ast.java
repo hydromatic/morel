@@ -1251,19 +1251,26 @@ public class Ast {
 
   /** From expression. */
   public static class From extends Exp {
-    public final Map<Id, Exp> sources;
+    public final Map<Pat, Exp> sources;
     public final ImmutableList<FromStep> steps;
     public final Exp yieldExp;
     /** The expression in the yield clause, or the default yield expression
      * if not specified; never null. */
     public final Exp yieldExpOrDefault;
 
-    From(Pos pos, ImmutableMap<Id, Exp> sources, ImmutableList<FromStep> steps,
+    From(Pos pos, ImmutableMap<Pat, Exp> sources, ImmutableList<FromStep> steps,
         Exp yieldExp) {
       super(pos, Op.FROM);
       this.sources = Objects.requireNonNull(sources);
       this.steps = Objects.requireNonNull(steps);
-      Set<Id> fields = sources.keySet();
+      final Set<Id> firstFields = new HashSet<>();
+      sources.keySet().forEach(pat ->
+          pat.visit(p -> {
+            if (p instanceof IdPat) {
+              firstFields.add(ast.id(Pos.ZERO, ((IdPat) p).name));
+            }
+          }));
+      Set<Id> fields = firstFields;
       for (FromStep step : steps) {
         if (step instanceof Group) {
           final Group group = (Group) step;
@@ -1320,7 +1327,7 @@ public class Ast {
 
     /** Creates a copy of this {@code From} with given contents,
      * or {@code this} if the contents are the same. */
-    public From copy(Map<Ast.Id, Ast.Exp> sources,
+    public From copy(Map<Ast.Pat, Ast.Exp> sources,
         java.util.List<FromStep> steps, Ast.Exp yieldExp) {
       return this.sources.equals(sources)
           && this.steps.equals(steps)

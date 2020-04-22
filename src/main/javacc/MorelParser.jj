@@ -303,7 +303,7 @@ Exp from() :
 {
   final Span span;
   Span stepSpan;
-  final Map<Id, Exp> sources = new LinkedHashMap<>();
+  final Map<Pat, Exp> sources = new LinkedHashMap<>();
   final List<FromStep> steps = new ArrayList<>();
   Exp filterExp;
   Exp yieldExp = null;
@@ -351,14 +351,14 @@ Exp from() :
   }
 }
 
-void fromSource(Map<Id, Exp> sources) :
+void fromSource(Map<Pat, Exp> sources) :
 {
   final Exp exp;
-  final Id id;
+  final Pat pat;
 }
 {
-  id = identifier() <IN> exp = expression() {
-    sources.put(id, exp);
+  pat = pat() <IN> exp = expression() {
+    sources.put(pat, exp);
   }
 }
 
