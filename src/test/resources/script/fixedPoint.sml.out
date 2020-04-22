@@ -124,19 +124,19 @@ val it = ["GA","AL"] : string list
 (*) Is a state adjacent to another?
 fun is_adjacent x y =
   case (from p in pairs where p.state = x andalso p.adjacent = y) of
-    [] => true
-  | _ => false;
+    [] => false
+  | _ => true;
 val is_adjacent = fn : string -> string -> bool
 
 
 is_adjacent "CA" "NY";
-val it = true : bool
-
-is_adjacent "CA" "OR";
 val it = false : bool
 
-is_adjacent "OR" "OR";
+is_adjacent "CA" "OR";
 val it = true : bool
+
+is_adjacent "OR" "OR";
+val it = false : bool
 
 
 (*) States that are n hops of a given state
@@ -335,3 +335,59 @@ val it = [48] : int list
 
 from s in states_within2 "CA" 11 group compute count;
 val it = [49] : int list
+
+
+(*) Floyd-Warshall algorithm (shortest path in weighted graph)
+(*) Data from https://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
+val edges =
+ [{source="b", target="a", weight=4},
+  {source="a", target="c", weight=~2},
+  {source="b", target="c", weight=3},
+  {source="c", target="d", weight=2},
+  {source="d", target="b", weight=~1}];
+val edges =
+  [{source="b",target="a",weight=4},{source="a",target="c",weight=~2},
+   {source="b",target="c",weight=3},{source="c",target="d",weight=2},
+   {source="d",target="b",weight=~1}]
+  : {source:string, target:string, weight:int} list
+
+fun shortest_path edges =
+  let
+    val vertices =
+      from v in List_at (from {source = s, target = _, weight = _} in edges yield s,
+          from {source = _, target = t, weight = _} in edges yield t)
+        group v
+    val edges0 =
+      from e in List_at (edges,
+          from v in vertices yield {source = v, target = v, weight = 0})
+        group e.source, e.target compute weight = min of e.weight
+    fun sp (paths, []) = paths
+      | sp (paths, v :: vs) =
+        let
+          val paths2 =
+            from p1 in paths,
+                p2 in paths
+              where p1.target = v
+              andalso p2.source = v
+              yield {p1.source, p2.target, weight = p1.weight + p2.weight}
+          val paths3 =
+            from p in List_at (paths, paths2)
+              group p.source, p.target compute weight = min of p.weight
+        in
+          sp (paths3, vs)
+        end
+  in
+    from p in sp (edges0, vertices) order p.source, p.target
+  end;
+val shortest_path = fn
+  : {source:'a, target:'a, weight:int} list -> {source:'b, target:'c, weight:int} list
+
+shortest_path edges;
+val it =
+  [{source=a,target=a,weight=0},{source=a,target=b,weight=~1},
+   {source=a,target=c,weight=~2},{source=a,target=d,weight=0},
+   {source=b,target=a,weight=4},{source=b,target=b,weight=0},
+   {source=b,target=c,weight=2},{source=b,target=d,weight=4},
+   {source=c,target=a,weight=5},{source=c,target=b,weight=1},
+   {source=c,target=c,weight=0},{source=c,target=d,weight=2},...]
+  : {source:'a, target:'b, weight:int} list

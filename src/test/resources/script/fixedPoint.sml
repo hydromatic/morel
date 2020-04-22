@@ -98,8 +98,8 @@ from p in pairs,
 (*) Is a state adjacent to another?
 fun is_adjacent x y =
   case (from p in pairs where p.state = x andalso p.adjacent = y) of
-    [] => true
-  | _ => false;
+    [] => false
+  | _ => true;
 
 is_adjacent "CA" "NY";
 is_adjacent "CA" "OR";
@@ -224,5 +224,43 @@ from s in states_within2 "CA" 8 group compute count;
 from s in states_within2 "CA" 9 group compute count;
 from s in states_within2 "CA" 10 group compute count;
 from s in states_within2 "CA" 11 group compute count;
+
+(*) Floyd-Warshall algorithm (shortest path in weighted graph)
+(*) Data from https://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
+val edges =
+ [{source="b", target="a", weight=4},
+  {source="a", target="c", weight=~2},
+  {source="b", target="c", weight=3},
+  {source="c", target="d", weight=2},
+  {source="d", target="b", weight=~1}];
+fun shortest_path edges =
+  let
+    val vertices =
+      from v in List_at (from {source = s, target = _, weight = _} in edges yield s,
+          from {source = _, target = t, weight = _} in edges yield t)
+        group v
+    val edges0 =
+      from e in List_at (edges,
+          from v in vertices yield {source = v, target = v, weight = 0})
+        group e.source, e.target compute weight = min of e.weight
+    fun sp (paths, []) = paths
+      | sp (paths, v :: vs) =
+        let
+          val paths2 =
+            from p1 in paths,
+                p2 in paths
+              where p1.target = v
+              andalso p2.source = v
+              yield {p1.source, p2.target, weight = p1.weight + p2.weight}
+          val paths3 =
+            from p in List_at (paths, paths2)
+              group p.source, p.target compute weight = min of p.weight
+        in
+          sp (paths3, vs)
+        end
+  in
+    from p in sp (edges0, vertices) order p.source, p.target
+  end;
+shortest_path edges;
 
 (*) End fixedPoint.sml
