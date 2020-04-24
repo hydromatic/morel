@@ -413,6 +413,9 @@ public class TypeResolver {
     case LE:
     case LT:
     case CONS:
+    case UNION:
+    case INTERSECT:
+    case EXCEPT:
       return infix(env, (Ast.InfixCall) node, v);
 
     case NEGATE:

@@ -1135,6 +1135,31 @@ public class MainTest {
         .assertEval(is(2));
   }
 
+  /** Tests set operators (union, except, intersect).
+   * These are Morel extensions to Standard ML,
+   * intended to help relational expressions,
+   * but not part of the {@code from} expression. */
+  @Test public void testSetOp() {
+    ml("a union b").assertParseSame();
+    ml("a union b union c").assertParseSame();
+    ml("(a union b) union c").assertParse("a union b union c");
+    ml("a union (b union c)").assertParseSame();
+    final String ueui = "a union b except c union d intersect e";
+    ml(ueui).assertParseSame();
+    ml("((a union b) except c) union (d intersect e)")
+        .assertParse(ueui);
+    ml("from x in emps union depts where deptno = 10")
+        .assertParseSame();
+    final String fuf =
+        "(from x in emps) union (from x in depts where #deptno x = 10)";
+    ml(fuf).assertParseSame();
+    ml("(from x in emps) union from x in depts where #deptno x = 10")
+        .assertParse(fuf);
+
+    ml("[1, 2, 3] union [2, 3, 4]")
+        .assertEvalIter(equalsUnordered(1, 2, 3, 2, 3, 4));
+  }
+
   @Test public void testFrom() {
     final String ml = "let\n"
         + "  val emps = [\n"

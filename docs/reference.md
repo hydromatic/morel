@@ -38,6 +38,7 @@ Contributions are welcome!
 
 In Morel but not Standard ML:
 * `from` expression
+* `union`, `except`, `intersect` operators
 * "*lab* `=`" is optional in `exprow`
 
 In Standard ML but not in Morel:
@@ -239,9 +240,12 @@ This grammar uses the following notation:
 | /        |    infix 7 | Division
 | div      |    infix 7 | Integer division
 | mod      |    infix 7 | Modulo
+| intersect |   infix 7 | List intersect
 | +        |    infix 6 | Plus
 | -        |    infix 6 | Minus
 | ^        |    infix 6 | String concatenate
+| union    |    infix 6 | List union
+| except   |    infix 6 | List difference
 | ~        |   prefix 6 | Negate
 | ::       |   infixr 5 | List cons
 | @        |   infixr 5 | List append

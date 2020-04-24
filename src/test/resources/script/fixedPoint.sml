@@ -176,7 +176,7 @@ prefixes ["cat", "dog", "", "car", "cart"];
 fun fixu_naive f a =
   let
     val a2 = f a
-    val a3 = from i in List_at (a, a2) group i
+    val a3 = from i in a union a2 group i
   in
     if a3 = a then
       a
@@ -203,7 +203,7 @@ fun fixu_semi_naive (f, a, n) =
         if newDelta = [] orelse i = n then
           a
         else
-          fixInc (List_at (a, newDelta), newDelta, i + 1)
+          fixInc (a union newDelta, newDelta, i + 1)
       end
   in
     fixInc ([], a, 0)
@@ -236,12 +236,14 @@ val edges =
 fun shortest_path edges =
   let
     val vertices =
-      from v in List_at (from {source = s, target = _, weight = _} in edges yield s,
-          from {source = _, target = t, weight = _} in edges yield t)
+      from v in (from {source = s, target = _, weight = _} in edges yield s)
+          union
+          (from {source = _, target = t, weight = _} in edges yield t)
         group v
     val edges0 =
-      from e in List_at (edges,
-          from v in vertices yield {source = v, target = v, weight = 0})
+      from e in edges
+          union
+          from v in vertices yield {source = v, target = v, weight = 0}
         group e.source, e.target compute weight = min of e.weight
     fun sp (paths, []) = paths
       | sp (paths, v :: vs) =
@@ -253,7 +255,7 @@ fun shortest_path edges =
               andalso p2.source = v
               yield {p1.source, p2.target, weight = p1.weight + p2.weight}
           val paths3 =
-            from p in List_at (paths, paths2)
+            from p in paths union paths2
               group p.source, p.target compute weight = min of p.weight
         in
           sp (paths3, vs)

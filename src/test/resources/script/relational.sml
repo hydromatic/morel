@@ -149,10 +149,9 @@ from e in emps, d in depts
 
 (*) exists (defining the "exists" function ourselves)
 (*) and correlated sub-query
-(* disabled due to "::"
 let
   fun exists [] = false
-    | exists hd :: tl = true
+    | exists (hd :: tl) = true
 in
   from e in emps
   where exists (from d in depts
@@ -160,11 +159,8 @@ in
                 andalso d.name = "Engineering")
   yield e.name
 end;
-val it = ["Shaggy","Scooby"] : string list
-*)
 
 (*) in (defining the "in_" function ourselves)
-(* disabled due to "::"
 let
   fun in_ e [] = false
     | in_ e (h :: t) = e = h orelse (in_ e t)
@@ -175,8 +171,83 @@ in
                 yield d.deptno)
   yield e.name
 end;
-val it = ["Shaggy","Scooby"] : string list
-*)
+
+(*) union (matches SQL's UNION ALL)
+(from e in emps yield e.deptno)
+union
+(from d in depts yield d.deptno);
+
+(*) simulate SQL's UNION DISTINCT
+from deptno in (
+  (from e in emps yield e.deptno)
+  union
+  (from d in depts yield d.deptno))
+group deptno;
+
+(*) except
+(from d in depts yield d.deptno)
+except
+(from e in emps yield e.deptno);
+
+(*) simulate SQL's EXCEPT DISTINCT
+fun exceptDistinct l1 l2 =
+  from v in l1 except l2
+  group v;
+exceptDistinct (from e in emps yield e.deptno)
+  (from d in depts where d.deptno <> 20 yield d.deptno);
+
+(*) simulate SQL's EXCEPT ALL
+fun exceptAll l1 l2 =
+  from e in (
+      from e in
+        (from v in l1 yield {v, c = 1})
+        union
+        (from v in l2 yield {v, c = ~1})
+      group e.v compute c = sum of e.c
+      where c > 0),
+    r in (
+      let
+        fun units 0 = []
+          | units n = () :: (units (n - 1))
+      in
+        units e.c
+      end)
+    yield e.v;
+exceptAll (from e in emps yield e.deptno)
+  (from d in depts yield d.deptno);
+
+(*) intersect
+(from e in emps yield e.deptno)
+intersect
+(from d in depts yield d.deptno);
+
+(*) simulate SQL's INTERSECT DISTINCT
+fun intersectDistinct l1 l2 =
+  from v in l1 intersect l2
+  group v;
+intersectDistinct (from e in emps yield e.deptno)
+  (from d in depts yield d.deptno);
+
+(*) simulate SQL's INTERSECT ALL
+fun intersectAll l1 l2 =
+  from e in (
+      from e in
+        (from v in l1 group v compute c = count)
+        union
+        (from v in l2 group v compute c = count)
+      group e.v compute c = min of e.c, c2 = count
+      where c2 = 2
+      yield {v, c}),
+    r in (
+      let
+        fun units 0 = []
+          | units n = () :: (units (n - 1))
+      in
+        units e.c
+      end)
+    yield e.v;
+intersectAll (from e in emps yield e.deptno)
+  (from d in depts yield d.deptno);
 
 (*) foldl function (built into SML)
 let

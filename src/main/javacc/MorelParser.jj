@@ -470,8 +470,8 @@ Match match() :
  * <ul>
  * <li>infix 9 {@code .}
  * <li>infix 8 (application)
- * <li>infix 7 {@code * / div mod}
- * <li>infix 6 {@code + - ^}
+ * <li>infix 7 {@code * / div mod intersect}
+ * <li>infix 6 {@code + - ^ union except}
  * <li>infixr 5 {@code :: @}
  * <li>infix 4 {@code = <> > >= < <=}
  * <li>infix 3 {@code := o}
@@ -533,6 +533,10 @@ Exp expression7() :
       e = ast.div(e, e2);
     }
   |
+    <INTERSECT> e2 = expression8() {
+      e = ast.intersect(e, e2);
+    }
+  |
     <MOD> e2 = expression8() {
       e = ast.mod(e, e2);
     }
@@ -540,7 +544,7 @@ Exp expression7() :
   { return e; }
 }
 
-/** Parses an expression of precedence level 6 (+, -, ^). */
+/** Parses an expression of precedence level 6 (+, -, ^, except, union). */
 Exp expression6() :
 {
   Exp e;
@@ -559,6 +563,14 @@ Exp expression6() :
   |
     <CARET> e2 = expression7() {
       e = ast.caret(e, e2);
+    }
+  |
+    <EXCEPT> e2 = expression7() {
+      e = ast.except(e, e2);
+    }
+  |
+    <UNION> e2 = expression7() {
+      e = ast.union(e, e2);
     }
   )*
   { return e; }
@@ -1220,17 +1232,20 @@ AstNode statementSemicolon() :
 | < DATATYPE: "DATATYPE" >
 | < DIV: "DIV" >
 | < ELSE: "ELSE" >
+| < EXCEPT: "EXCEPT" >
 | < END: "END" >
 | < FN: "FN" >
 | < FUN: "FUN" >
 | < IF: "IF" >
 | < IN: "IN" >
+| < INTERSECT: "INTERSECT" >
 | < LET: "LET" >
 | < MOD: "MOD" >
 | < OF: "OF" >
 | < ORELSE: "ORELSE" >
 | < REC: "REC" >
 | < THEN: "THEN" >
+| < UNION: "UNION" >
 | < VAL: "VAL" >
 
 // The following are relational extensions:

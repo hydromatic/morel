@@ -672,6 +672,54 @@ Relational_min [false, true];
 val it = false : bool
 
 
+[1, 2] union [3] union [] union [4, 2, 5];
+val it = [1,2,3,4,2,5] : int list
+
+[] union [];
+val it = [] : 'a list
+
+
+[1, 2] except [2] except [3] except [];
+val it = [1] : int list
+
+[] except [];
+val it = [] : 'a list
+
+["a"] except ["a"];
+val it = [] : string list
+
+["a", "b", "c", "a"] except ["a"];
+val it = ["b","c"] : string list
+
+["a", "b", "c", "a"] except ["c", "b", "c"];
+val it = ["a","a"] : string list
+
+["a", "b"] except ["a", "c"] except ["a"];
+val it = ["b"] : string list
+
+
+[1, 2] intersect [2] intersect [0, 2, 4];
+val it = [2] : int list
+
+[1, 2] intersect [];
+val it = [] : int list
+
+[] intersect [1, 2];
+val it = [] : int list
+
+["a", "b", "a"] intersect ["b", "a"];
+val it = ["a","b","a"] : string list
+
+[(1, 2), (2, 3)] intersect [(2, 4), (1, 2)];
+val it = [(1,2)] : (int * int) list
+
+[1, 2, 3] intersect [2, 3, 4] except [1, 3, 5];
+val it = [2] : int list
+
+[1, 2, 3] except [1, 3, 5] intersect [2, 3, 4];
+val it = [1,2] : int list
+
+
 (* Sys --------------------------------------------------------- *)
 
 (*) val env : unit -> string list

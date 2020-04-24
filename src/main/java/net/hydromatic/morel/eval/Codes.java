@@ -44,6 +44,7 @@ import net.hydromatic.morel.util.Pair;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -235,6 +236,36 @@ public abstract class Codes {
     return ImmutableList.builder().add(list.get(0))
         .addAll((Iterable) list.get(1))
         .build();
+  }
+
+  /** @see BuiltIn#OP_EXCEPT */
+  private static final Applicable OP_EXCEPT = Codes::except;
+
+  /** Implements {@link #OP_EXCEPT}. */
+  private static List except(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    final List list0 = (List) list.get(0);
+    List collection = new ArrayList(list0);
+    final Set set = new HashSet((List) list.get(1));
+    if (!collection.removeAll(set)) {
+      collection = list0;
+    }
+    return ImmutableList.copyOf(collection);
+  }
+
+  /** @see BuiltIn#OP_INTERSECT */
+  private static final Applicable OP_INTERSECT = Codes::intersect;
+
+  /** Implements {@link #OP_INTERSECT}. */
+  private static List intersect(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    final List list0 = (List) list.get(0);
+    List collection = new ArrayList(list0);
+    final Set set = new HashSet((List) list.get(1));
+    if (!collection.retainAll(set)) {
+      collection = list0;
+    }
+    return ImmutableList.copyOf(collection);
   }
 
   /** Returns a Code that returns the value of variable "name" in the current
@@ -560,7 +591,8 @@ public abstract class Codes {
   private static final Applicable LIST_LENGTH = (env, arg) ->
       ((List) arg).size();
 
-  /** @see BuiltIn#LIST_AT */
+  /** @see BuiltIn#LIST_AT
+   * @see BuiltIn#OP_UNION */
   private static final Applicable LIST_AT = (env, arg) -> {
     final List tuple = (List) arg;
     final List list0 = (List) tuple.get(0);
@@ -972,6 +1004,9 @@ public abstract class Codes {
           .put(BuiltIn.OP_NEGATE, OP_NEGATE)
           .put(BuiltIn.OP_PLUS, OP_PLUS)
           .put(BuiltIn.OP_TIMES, OP_TIMES)
+          .put(BuiltIn.OP_EXCEPT, OP_EXCEPT)
+          .put(BuiltIn.OP_INTERSECT, OP_INTERSECT)
+          .put(BuiltIn.OP_UNION, LIST_AT) // union == @
           .put(BuiltIn.STRING_MAX_SIZE, STRING_MAX_SIZE)
           .put(BuiltIn.STRING_SIZE, STRING_SIZE)
           .put(BuiltIn.STRING_SUB, STRING_SUB)

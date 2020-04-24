@@ -249,6 +249,18 @@ public enum AstBuilder {
     return infix(Op.CARET, a0, a1);
   }
 
+  public Ast.Exp except(Ast.Exp a0, Ast.Exp a1) {
+    return infix(Op.EXCEPT, a0, a1);
+  }
+
+  public Ast.Exp intersect(Ast.Exp a0, Ast.Exp a1) {
+    return infix(Op.INTERSECT, a0, a1);
+  }
+
+  public Ast.Exp union(Ast.Exp a0, Ast.Exp a1) {
+    return infix(Op.UNION, a0, a1);
+  }
+
   public Ast.Exp negate(Pos p, Ast.Exp a) {
     return prefixCall(p, Op.NEGATE, a);
   }

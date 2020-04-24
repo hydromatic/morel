@@ -56,6 +56,27 @@ public enum BuiltIn {
   /** Infix operator "^", of type "string * string &rarr; string". */
   OP_CARET("op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
 
+  /** Infix operator "except", of type "&alpha; list * &alpha; list &rarr;
+   * &alpha; list". */
+  OP_EXCEPT("op except", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(ts.listType(h.get(0)), ts.listType(h.get(0))),
+              ts.listType(h.get(0))))),
+
+  /** Infix operator "intersect", of type "&alpha; list * &alpha; list &rarr;
+   * &alpha; list". */
+  OP_INTERSECT("op intersect", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(ts.listType(h.get(0)), ts.listType(h.get(0))),
+              ts.listType(h.get(0))))),
+
+  /** Infix operator "union", of type "&alpha; list * &alpha; list &rarr;
+   * &alpha; list". */
+  OP_UNION("op union", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(ts.listType(h.get(0)), ts.listType(h.get(0))),
+              ts.listType(h.get(0))))),
+
   /** Infix operator "::" (list cons), of type
    * "&alpha; * &alpha; list &rarr; &alpha; list". */
   OP_CONS("op ::", ts ->

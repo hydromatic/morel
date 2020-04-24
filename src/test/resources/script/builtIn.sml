@@ -320,6 +320,24 @@ Relational_min [1.0, 2.5, 3.5];
 Relational_min ["a", "bc", "ab"];
 Relational_min [false, true];
 
+[1, 2] union [3] union [] union [4, 2, 5];
+[] union [];
+
+[1, 2] except [2] except [3] except [];
+[] except [];
+["a"] except ["a"];
+["a", "b", "c", "a"] except ["a"];
+["a", "b", "c", "a"] except ["c", "b", "c"];
+["a", "b"] except ["a", "c"] except ["a"];
+
+[1, 2] intersect [2] intersect [0, 2, 4];
+[1, 2] intersect [];
+[] intersect [1, 2];
+["a", "b", "a"] intersect ["b", "a"];
+[(1, 2), (2, 3)] intersect [(2, 4), (1, 2)];
+[1, 2, 3] intersect [2, 3, 4] except [1, 3, 5];
+[1, 2, 3] except [1, 3, 5] intersect [2, 3, 4];
+
 (* Sys --------------------------------------------------------- *)
 
 (*) val env : unit -> string list
