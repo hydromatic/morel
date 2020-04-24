@@ -135,6 +135,28 @@ public abstract class Codes {
     return v0.compareTo(v1) >= 0;
   }
 
+  /** @see BuiltIn#OP_ELEM */
+  private static final Applicable OP_ELEM = Codes::elem;
+
+  /** Implements {@link #OP_ELEM}. */
+  private static boolean elem(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    final Object v0 = list.get(0);
+    final List v1 = (List) list.get(1);
+    return v1.contains(v0);
+  }
+
+  /** @see BuiltIn#OP_NOT_ELEM */
+  private static final Applicable OP_NOT_ELEM = Codes::notElem;
+
+  /** Implements {@link #OP_NOT_ELEM}. */
+  private static boolean notElem(EvalEnv env, Object arg) {
+    final List list = (List) arg;
+    final Object v0 = list.get(0);
+    final List v1 = (List) list.get(1);
+    return !v1.contains(v0);
+  }
+
   /** Returns a Code that evaluates "andalso". */
   public static Code andAlso(Code code0, Code code1) {
     // Lazy evaluation. If code0 returns false, code1 is never evaluated.
@@ -993,6 +1015,7 @@ public abstract class Codes {
           .put(BuiltIn.OP_CONS, OP_CONS)
           .put(BuiltIn.OP_DIV, OP_DIV)
           .put(BuiltIn.OP_DIVIDE, OP_DIVIDE)
+          .put(BuiltIn.OP_ELEM, OP_ELEM)
           .put(BuiltIn.OP_EQ, OP_EQ)
           .put(BuiltIn.OP_GE, OP_GE)
           .put(BuiltIn.OP_GT, OP_GT)
@@ -1002,6 +1025,7 @@ public abstract class Codes {
           .put(BuiltIn.OP_MINUS, OP_MINUS)
           .put(BuiltIn.OP_MOD, OP_MOD)
           .put(BuiltIn.OP_NEGATE, OP_NEGATE)
+          .put(BuiltIn.OP_NOT_ELEM, OP_NOT_ELEM)
           .put(BuiltIn.OP_PLUS, OP_PLUS)
           .put(BuiltIn.OP_TIMES, OP_TIMES)
           .put(BuiltIn.OP_EXCEPT, OP_EXCEPT)

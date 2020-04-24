@@ -38,7 +38,7 @@ Contributions are welcome!
 
 In Morel but not Standard ML:
 * `from` expression
-* `union`, `except`, `intersect` operators
+* `union`, `except`, `intersect`, `inside`, `elem`, `notElem` operators
 * "*lab* `=`" is optional in `exprow`
 
 In Standard ML but not in Morel:
@@ -255,8 +255,12 @@ This grammar uses the following notation:
 | &gt;     |    infix 4 | Greater than
 | =        |    infix 4 | Equal
 | &lt;&gt; |    infix 4 | Not equal
+| elem     |    infix 4 | Member of list
+| notElem  |    infix 4 | Not member of list
 | :=       |    infix 3 | Assign
 | o        |    infix 3 | Compose
+| andalso  |    infix 2 | Logical and
+| orelse   |    infix 1 | Logical or
 
 ## Built-in functions
 

@@ -720,6 +720,50 @@ val it = [2] : int list
 val it = [1,2] : int list
 
 
+1 elem [1, 2, 3];
+val it = true : bool
+
+1 elem [2, 3, 4];
+val it = false : bool
+
+1 elem [];
+val it = false : bool
+
+[] elem [[0], [1, 2]];
+val it = false : bool
+
+[] elem [[0], [], [1, 2]];
+val it = true : bool
+
+(1, 2) elem [(0, 1), (1, 2)];
+val it = true : bool
+
+(1, 2) elem [(0, 1), (2, 3)];
+val it = false : bool
+
+
+1 notElem [1, 2, 3];
+val it = false : bool
+
+1 notElem [2, 3, 4];
+val it = true : bool
+
+1 notElem [];
+val it = true : bool
+
+[] notElem [[0], [1, 2]];
+val it = true : bool
+
+[] notElem [[0], [], [1, 2]];
+val it = false : bool
+
+(1, 2) notElem [(0, 1), (1, 2)];
+val it = false : bool
+
+(1, 2) notElem [(0, 1), (2, 3)];
+val it = true : bool
+
+
 (* Sys --------------------------------------------------------- *)
 
 (*) val env : unit -> string list

@@ -103,6 +103,8 @@ public enum Op {
   GT(" > ", 4),
   EQ(" = ", 4),
   NE(" <> ", 4),
+  ELEM(" elem ", 4),
+  NOT_ELEM(" notElem ", 4),
   ASSIGN(" := ", 3),
   COMPOSE(" o ", 3),
   ANDALSO(" andalso ", 2),

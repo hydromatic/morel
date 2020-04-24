@@ -412,6 +412,8 @@ public class TypeResolver {
     case GT:
     case LE:
     case LT:
+    case ELEM:
+    case NOT_ELEM:
     case CONS:
     case UNION:
     case INTERSECT:

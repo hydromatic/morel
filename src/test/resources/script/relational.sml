@@ -172,6 +172,34 @@ in
   yield e.name
 end;
 
+(*) elem (equivalent to SQL's IN)
+from e in emps
+  where e.deptno elem (from d in depts
+    where d.name = "Engineering"
+    yield d.deptno)
+yield e.name;
+
+(*) notElem (equivalent to SQL's NOT IN, also to 'not ... elem')
+from e in emps
+  where e.deptno notElem (from d in depts
+    where d.name = "Engineering"
+    yield d.deptno)
+yield e.name;
+
+(*) equivalent to previous
+from e in emps
+  where not (e.deptno elem (from d in depts
+    where d.name = "Engineering"
+    yield d.deptno))
+yield e.name;
+
+(*) equivalent to previous
+from e in emps
+  where e.deptno elem (from d in depts
+    where d.name = "Engineering"
+    yield d.deptno) = false
+yield e.name;
+
 (*) union (matches SQL's UNION ALL)
 (from e in emps yield e.deptno)
 union

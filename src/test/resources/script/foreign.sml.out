@@ -66,3 +66,21 @@ val it =
 
 #days foodmart;
 val it = <relation> : {day:int, week_day:string} list
+
+
+from d in scott.dept
+where d.deptno elem (from e in scott.emp
+                     where e.job elem ["ANALYST", "PRESIDENT"]
+                     yield e.deptno);
+val it =
+  [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+   {deptno=20,dname="RESEARCH",loc="DALLAS"}]
+  : {deptno:int, dname:string, loc:string} list
+
+
+from d in scott.dept
+where d.deptno notElem (from e in scott.emp
+                        where e.job notElem ["ANALYST", "PRESIDENT"]
+                        yield e.deptno);
+val it = [{deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+  : {deptno:int, dname:string, loc:string} list

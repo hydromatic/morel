@@ -27,4 +27,14 @@ from d in scott.dept yield {d.dname, d.loc};
 foodmart;
 #days foodmart;
 
+from d in scott.dept
+where d.deptno elem (from e in scott.emp
+                     where e.job elem ["ANALYST", "PRESIDENT"]
+                     yield e.deptno);
+
+from d in scott.dept
+where d.deptno notElem (from e in scott.emp
+                        where e.job notElem ["ANALYST", "PRESIDENT"]
+                        yield e.deptno);
+
 (*) End foreign.sml

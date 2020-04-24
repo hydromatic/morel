@@ -624,6 +624,14 @@ Exp expression4() :
     <GE> e2 = expression5() {
       e = ast.greaterThanOrEqual(e, e2);
     }
+  |
+    <ELEM> e2 = expression5() {
+      e = ast.elem(e, e2);
+    }
+  |
+    <NOT_ELEM> e2 = expression5() {
+      e = ast.notElem(e, e2);
+    }
   )*
   { return e; }
 }
@@ -1231,6 +1239,7 @@ AstNode statementSemicolon() :
 | < CASE: "CASE" >
 | < DATATYPE: "DATATYPE" >
 | < DIV: "DIV" >
+| < ELEM: "ELEM" >
 | < ELSE: "ELSE" >
 | < EXCEPT: "EXCEPT" >
 | < END: "END" >
@@ -1241,6 +1250,7 @@ AstNode statementSemicolon() :
 | < INTERSECT: "INTERSECT" >
 | < LET: "LET" >
 | < MOD: "MOD" >
+| < NOT_ELEM: "NOTELEM" >
 | < OF: "OF" >
 | < ORELSE: "ORELSE" >
 | < REC: "REC" >
