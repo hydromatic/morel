@@ -164,7 +164,8 @@ public class TypeSystem {
       }
       builder.append(name).append(':').append(type.description());
     });
-    if (areContiguousIntegers(argNameTypes2.keySet())) {
+    if (areContiguousIntegers(argNameTypes2.keySet())
+        && argNameTypes2.size() != 1) {
       return tupleType(ImmutableList.copyOf(argNameTypes2.values()));
     }
     final String description = builder.append('}').toString();

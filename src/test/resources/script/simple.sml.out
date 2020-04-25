@@ -54,6 +54,21 @@ val it = [(1,"a"),(2,"b"),(3,"c")] : (int * string) list
 ([1,2],["a","b","c"]);
 val it = ([1,2],["a","b","c"]) : int list * string list
 
+{a=1, b="two"};
+val it = {a=1,b="two"} : {a:int, b:string}
+
+{1="a", 2=true, 3=(3,4,5)};
+val it = ("a",true,(3,4,5)) : string * bool * (int * int * int)
+
+("a", true, (3,4,5));
+val it = ("a",true,(3,4,5)) : string * bool * (int * int * int)
+
+{1="a"};
+val it = {1="a"} : {1:string}
+
+("a");
+val it = "a" : string
+
 
 (*) Simple commands
 val x = 1;

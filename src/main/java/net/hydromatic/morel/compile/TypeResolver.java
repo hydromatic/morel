@@ -458,7 +458,8 @@ public class TypeResolver {
       NavigableMap<String, ? extends Unifier.Term> labelTypes) {
     if (labelTypes.isEmpty()) {
       return toTerm(PrimitiveType.UNIT);
-    } else if (isContiguousIntegers(labelTypes.navigableKeySet())) {
+    } else if (isContiguousIntegers(labelTypes.navigableKeySet())
+        && labelTypes.size() != 1) {
       return unifier.apply(TUPLE_TY_CON, labelTypes.values());
     } else {
       final StringBuilder b = new StringBuilder(RECORD_TY_CON);
