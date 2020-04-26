@@ -458,7 +458,7 @@ public class TypeResolver {
       NavigableMap<String, ? extends Unifier.Term> labelTypes) {
     if (labelTypes.isEmpty()) {
       return toTerm(PrimitiveType.UNIT);
-    } else if (isContiguousIntegers(labelTypes.navigableKeySet())
+    } else if (TypeSystem.areContiguousIntegers(labelTypes.navigableKeySet())
         && labelTypes.size() != 1) {
       return unifier.apply(TUPLE_TY_CON, labelTypes.values());
     } else {
@@ -472,17 +472,6 @@ public class TypeResolver {
 
   private Unifier.Sequence tuple(List<Unifier.Term> types) {
     return unifier.apply(TUPLE_TY_CON, types);
-  }
-
-  /** Returns whether a collection consists of ["1", "2", ... "n"]. */
-  private boolean isContiguousIntegers(NavigableSet<String> names) {
-    int i = 1;
-    for (String name : names) {
-      if (!name.equals(str(i++))) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /** Converts an integer to its string representation, using a cached value
@@ -985,7 +974,7 @@ public class TypeResolver {
       final String result;
       if (labelNames.isEmpty()) {
         result = PrimitiveType.UNIT.name();
-      } else if (isContiguousIntegers(labelNames)) {
+      } else if (TypeSystem.areContiguousIntegers(labelNames)) {
         result = TUPLE_TY_CON;
       } else {
         final StringBuilder b = new StringBuilder(RECORD_TY_CON);

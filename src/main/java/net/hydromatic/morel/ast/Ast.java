@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.type.RecordType.ORDERING;
 
 /** Various sub-classes of AST nodes. */
 public class Ast {
@@ -988,6 +989,7 @@ public class Ast {
     Record(Pos pos, ImmutableSortedMap<String, Exp> args) {
       super(pos, Op.RECORD);
       this.args = Objects.requireNonNull(args);
+      Preconditions.checkArgument(args.comparator() == ORDERING);
     }
 
     @Override public void forEachArg(ObjIntConsumer<Exp> action) {

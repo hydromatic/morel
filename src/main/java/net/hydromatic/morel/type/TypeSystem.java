@@ -174,7 +174,7 @@ public class TypeSystem {
   }
 
   /** Returns whether the collection is ["1", "2", ... n]. */
-  private boolean areContiguousIntegers(Iterable<String> strings) {
+  public static boolean areContiguousIntegers(Iterable<String> strings) {
     int i = 1;
     for (String string : strings) {
       if (!string.equals(Integer.toString(i++))) {

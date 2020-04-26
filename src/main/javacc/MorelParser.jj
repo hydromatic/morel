@@ -98,7 +98,7 @@ Literal numericLiteral() :
   final BigDecimal d;
 }
 {
-  (<POSITIVE_INTEGER_LITERAL> | <NEGATIVE_INTEGER_LITERAL> | <ZERO_INTEGER_LITERAL> ) {
+  (<NON_NEGATIVE_INTEGER_LITERAL> | <NEGATIVE_INTEGER_LITERAL>) {
     if (token.image.startsWith("~")) {
       d = new BigDecimal(token.image.substring(1)).negate();
     } else {
@@ -795,8 +795,8 @@ void recordExp(Map<String, Exp> map) :
   final Ast.Exp exp;
 }
 {
-  LOOKAHEAD(<POSITIVE_INTEGER_LITERAL> <EQ>)
-  <POSITIVE_INTEGER_LITERAL> { id = token.image; }
+  LOOKAHEAD(<NON_NEGATIVE_INTEGER_LITERAL> <EQ>)
+  <NON_NEGATIVE_INTEGER_LITERAL> { id = token.image; }
   <EQ> exp = expression() { map.put(id, exp); }
 |
   LOOKAHEAD(<IDENTIFIER> <EQ>)
@@ -1115,7 +1115,7 @@ void recordPat(boolean[] ellipsis, Map<String, Pat> map) :
 {
   <ELLIPSIS> { ellipsis[0] = true; }
 |
-  ( <POSITIVE_INTEGER_LITERAL> | <IDENTIFIER> ) { id = token.image; }
+  ( <NON_NEGATIVE_INTEGER_LITERAL> | <IDENTIFIER> ) { id = token.image; }
   <EQ> pat = pat() { map.put(id, pat); }
 }
 
@@ -1273,11 +1273,9 @@ AstNode statementSemicolon() :
 
 <DEFAULT> TOKEN :
 {
-    < POSITIVE_INTEGER_LITERAL: ["1"-"9"] (["0"-"9"])* >
+    < NON_NEGATIVE_INTEGER_LITERAL: (["0"-"9"])+ >
     |
     < NEGATIVE_INTEGER_LITERAL: "~"(["0"-"9"])+ >
-    |
-    < ZERO_INTEGER_LITERAL: (["0"-"9"])+ >
     |
     < REAL_LITERAL: ("~")?(["0"-"9"])+ "." (["0"-"9"])+ >
     |
