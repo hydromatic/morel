@@ -27,6 +27,7 @@ import net.hydromatic.morel.compile.Compiler;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.compile.TypeMap;
 import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
@@ -150,7 +151,7 @@ class Ml {
     return this;
   }
 
-  private Ml withValidate(BiConsumer<Ast.Exp, TypeResolver.TypeMap> action) {
+  private Ml withValidate(BiConsumer<Ast.Exp, TypeMap> action) {
     return withParser(parser -> {
       try {
         final Ast.Exp expression = parser.expression();

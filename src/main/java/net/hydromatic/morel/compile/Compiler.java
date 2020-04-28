@@ -57,9 +57,9 @@ import static net.hydromatic.morel.util.Static.toImmutableList;
 public class Compiler {
   private static final EvalEnv EMPTY_ENV = Codes.emptyEnv();
 
-  private final TypeResolver.TypeMap typeMap;
+  private final TypeMap typeMap;
 
-  public Compiler(TypeResolver.TypeMap typeMap) {
+  public Compiler(TypeMap typeMap) {
     this.typeMap = typeMap;
   }
 

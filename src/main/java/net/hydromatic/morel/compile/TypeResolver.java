@@ -23,7 +23,6 @@ import org.apache.calcite.util.Util;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -71,19 +70,20 @@ import static net.hydromatic.morel.util.Static.toImmutableList;
 /** Resolves the type of an expression. */
 @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
 public class TypeResolver {
-  final TypeSystem typeSystem;
-  final Unifier unifier = new MartelliUnifier();
-  final List<TermVariable> terms = new ArrayList<>();
-  final Map<AstNode, Unifier.Term> map = new HashMap<>();
-  final Map<Unifier.Variable, Unifier.Action> actionMap = new HashMap<>();
-  final Map<String, TypeVar> tyVarMap = new HashMap<>();
-  final List<Pair<Unifier.Variable, PrimitiveType>> preferredTypes =
+  private final TypeSystem typeSystem;
+  private final Unifier unifier = new MartelliUnifier();
+  private final List<TermVariable> terms = new ArrayList<>();
+  private final Map<AstNode, Unifier.Term> map = new HashMap<>();
+  private final Map<Unifier.Variable, Unifier.Action> actionMap =
+      new HashMap<>();
+  private final Map<String, TypeVar> tyVarMap = new HashMap<>();
+  private final List<Pair<Unifier.Variable, PrimitiveType>> preferredTypes =
       new ArrayList<>();
 
-  private static final String TUPLE_TY_CON = "tuple";
-  private static final String LIST_TY_CON = "list";
-  private static final String RECORD_TY_CON = "record";
-  private static final String FN_TY_CON = "fn";
+  static final String TUPLE_TY_CON = "tuple";
+  static final String LIST_TY_CON = "list";
+  static final String RECORD_TY_CON = "record";
+  static final String FN_TY_CON = "fn";
   private static final String APPLY_TY_CON = "apply";
   private static final String[] INT_STRINGS =
       {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
@@ -505,7 +505,7 @@ public class TypeResolver {
     return recordSelector;
   }
 
-  private static List<String> fieldList(final Unifier.Sequence sequence) {
+  static List<String> fieldList(final Unifier.Sequence sequence) {
     if (sequence.operator.equals(RECORD_TY_CON)) {
       return ImmutableList.of();
     } else if (sequence.operator.startsWith(RECORD_TY_CON + ":")) {
@@ -1059,74 +1059,6 @@ public class TypeResolver {
     }
   }
 
-  /** Visitor that converts type terms into actual types. */
-  private static class TermToTypeConverter
-      implements Unifier.TermVisitor<Type> {
-    private final TypeMap typeMap;
-
-    TermToTypeConverter(TypeMap typeMap) {
-      this.typeMap = typeMap;
-    }
-
-    public Type visit(Unifier.Sequence sequence) {
-      final ImmutableList.Builder<Type> argTypes;
-      final ImmutableSortedMap.Builder<String, Type> argNameTypes;
-      switch (sequence.operator) {
-      case FN_TY_CON:
-        assert sequence.terms.size() == 2;
-        final Type paramType = sequence.terms.get(0).accept(this);
-        final Type resultType = sequence.terms.get(1).accept(this);
-        return typeMap.typeSystem.fnType(paramType, resultType);
-
-      case TUPLE_TY_CON:
-        assert sequence.terms.size() != 1;
-        argTypes = ImmutableList.builder();
-        for (Unifier.Term term : sequence.terms) {
-          argTypes.add(term.accept(this));
-        }
-        return typeMap.typeSystem.tupleType(argTypes.build());
-
-      case LIST_TY_CON:
-        assert sequence.terms.size() == 1;
-        final Type elementType = sequence.terms.get(0).accept(this);
-        return typeMap.typeSystem.listType(elementType);
-
-      case "bool":
-      case "char":
-      case "int":
-      case "real":
-      case "string":
-      case "unit":
-      default:
-        final Type type = typeMap.typeSystem.lookupOpt(sequence.operator);
-        if (type != null) {
-          return type;
-        }
-        if (sequence.operator.startsWith(RECORD_TY_CON)) {
-          // E.g. "record:a:b" becomes record type "{a:t0, b:t1}".
-          final List<String> argNames = fieldList(sequence);
-          if (argNames != null) {
-            argNameTypes = ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-            Pair.forEach(argNames, sequence.terms, (name, term) ->
-                argNameTypes.put(name, term.accept(this)));
-            return typeMap.typeSystem.recordType(argNameTypes.build());
-          }
-        }
-        throw new AssertionError("unknown type constructor "
-            + sequence.operator);
-      }
-    }
-
-    public Type visit(Unifier.Variable variable) {
-      final Unifier.Term term = typeMap.substitution.resultMap.get(variable);
-      if (term == null) {
-        return typeMap.typeVars.computeIfAbsent(variable.toString(),
-            varName -> new TypeVar(typeMap.typeVars.size()));
-      }
-      return term.accept(this);
-    }
-  }
-
   /** A type environment that consists of a type environment plus one
    * binding. */
   private static class BindTypeEnv implements TypeEnv {
@@ -1171,39 +1103,6 @@ public class TypeResolver {
           return map.toString();
         }
       }
-    }
-  }
-
-  /** The result of type resolution, a map from AST nodes to types. */
-  public static class TypeMap {
-    final TypeSystem typeSystem;
-    final Map<AstNode, Unifier.Term> nodeTypeTerms;
-    final Unifier.Substitution substitution;
-    final Map<String, TypeVar> typeVars = new HashMap<>();
-
-    TypeMap(TypeSystem typeSystem, Map<AstNode, Unifier.Term> nodeTypeTerms,
-        Unifier.Substitution substitution) {
-      this.typeSystem = Objects.requireNonNull(typeSystem);
-      this.nodeTypeTerms = ImmutableMap.copyOf(nodeTypeTerms);
-      this.substitution = Objects.requireNonNull(substitution.resolve());
-    }
-
-    private Type termToType(Unifier.Term term) {
-      return term.accept(new TermToTypeConverter(this));
-    }
-
-    /** Returns a type of an AST node. */
-    public Type getType(AstNode node) {
-      final Unifier.Term term = Objects.requireNonNull(nodeTypeTerms.get(node));
-      return termToType(term);
-    }
-
-    /** Returns whether an AST node has a type.
-     *
-     * <p>If it does not, perhaps it was ignored by the unification algorithm
-     * because it is not relevant to the program. */
-    public boolean hasType(AstNode node) {
-      return nodeTypeTerms.containsKey(node);
     }
   }
 
