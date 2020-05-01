@@ -46,6 +46,7 @@ import net.hydromatic.morel.util.ConsList;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MartelliUnifier;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.Unifier;
 
 import java.util.AbstractList;
@@ -105,13 +106,17 @@ public class TypeResolver {
     final TypeEnv typeEnv = typeEnvs.typeEnv;
     final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
     final Ast.Decl node2 = deduceDeclType(typeEnv, decl, termMap);
+    final boolean debug = false;
+    final Unifier.Tracer tracer = debug
+        ? Tracers.printTracer(System.out)
+        : Tracers.nullTracer();
     tryAgain:
     for (;;) {
       final List<Unifier.TermTerm> termPairs = new ArrayList<>();
       terms.forEach(tv ->
           termPairs.add(new Unifier.TermTerm(tv.term, tv.variable)));
       final Unifier.Result result =
-          unifier.unify(termPairs, actionMap);
+          unifier.unify(termPairs, actionMap, tracer);
       if (!(result instanceof Unifier.Substitution)) {
         final String extra = ";\n"
             + " term pairs:\n"

@@ -30,6 +30,8 @@ import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Unifier;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,20 @@ public class TypeMap {
     this.typeSystem = Objects.requireNonNull(typeSystem);
     this.nodeTypeTerms = ImmutableMap.copyOf(nodeTypeTerms);
     this.substitution = Objects.requireNonNull(substitution.resolve());
+  }
+
+  @Override public String toString() {
+    final StringBuilder b = new StringBuilder();
+    b.append("terms:\n");
+    final List<Map.Entry<AstNode, Unifier.Term>> nodeTerms =
+        new ArrayList<>(nodeTypeTerms.entrySet());
+    nodeTerms.sort(Comparator.comparing(o -> o.getValue().toString()));
+    nodeTerms.forEach(pair ->
+        b.append(pair.getValue()).append(": ").append(pair.getKey())
+            .append('\n'));
+    b.append("substitution:\n");
+    substitution.accept(b);
+    return b.toString();
   }
 
   Type termToType(Unifier.Term term) {

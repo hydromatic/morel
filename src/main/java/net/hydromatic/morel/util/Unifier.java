@@ -107,7 +107,7 @@ public abstract class Unifier {
   }
 
   public @Nonnull abstract Result unify(List<TermTerm> termPairs,
-      Map<Variable, Action> termActions);
+      Map<Variable, Action> termActions, Tracer tracer);
 
   private static void checkCycles(Map<Variable, Term> map,
       Map<Variable, Variable> active) throws CycleException {
@@ -164,11 +164,15 @@ public abstract class Unifier {
     }
 
     @Override public String toString() {
-      final StringBuilder builder = new StringBuilder("[");
+      return accept(new StringBuilder()).toString();
+    }
+
+    public StringBuilder accept(StringBuilder b) {
+      b.append("[");
       Pair.forEachIndexed(resultMap, (i, variable, term) ->
-          builder.append(i > 0 ? ", " : "").append(term)
+          b.append(i > 0 ? ", " : "").append(term)
               .append("/").append(variable));
-      return builder.append("]").toString();
+      return b.append("]");
     }
 
     Term resolve(Term term) {
@@ -393,6 +397,17 @@ public abstract class Unifier {
     public <R> R accept(TermVisitor<R> visitor) {
       return visitor.visit(this);
     }
+  }
+
+  /** Called on various events during unification. */
+  public interface Tracer {
+    void onDelete(Term left, Term right);
+    void onConflict(Sequence left, Sequence right);
+    void onSequence(Sequence left, Sequence right);
+    void onSwap(Term left, Term right);
+    void onCycle(Variable variable, Term term);
+    void onVariable(Variable variable, Term term);
+    void onSubstitute(Term left, Term right, Term left2, Term right2);
   }
 }
 

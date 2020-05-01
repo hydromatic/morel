@@ -75,7 +75,7 @@ public class RobinsonUnifier extends Unifier {
   }
 
   public @Nonnull Result unify(List<TermTerm> termPairs,
-      Map<Variable, Action> termActions) {
+      Map<Variable, Action> termActions, Tracer tracer) {
     switch (termPairs.size()) {
     case 1:
       return unify(termPairs.get(0).left, termPairs.get(0).right);

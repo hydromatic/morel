@@ -30,7 +30,7 @@ import javax.annotation.Nonnull;
  * Paterson, Wegman (1978). */
 public class MartelliUnifier extends Unifier {
   public @Nonnull Result unify(List<TermTerm> termPairs,
-      Map<Variable, Action> termActions) {
+      Map<Variable, Action> termActions, Tracer tracer) {
 
     // delete: G u { t = t }
     //   => G
@@ -61,7 +61,8 @@ public class MartelliUnifier extends Unifier {
       }
       int i = findDelete(termPairs);
       if (i >= 0) {
-        termPairs.remove(i); // delete
+        final TermTerm pair = termPairs.remove(i); // delete
+        tracer.onDelete(pair.left, pair.right);
         continue;
       }
 
@@ -73,9 +74,11 @@ public class MartelliUnifier extends Unifier {
 
         if (!left.operator.equals(right.operator)
             || left.terms.size() != right.terms.size()) {
+          tracer.onConflict(left, right);
           return failure("conflict: " + left + " vs " + right);
         }
         termPairs.remove(i); // decompose
+        tracer.onSequence(left, right);
         for (int j = 0; j < left.terms.size(); j++) {
           termPairs.add(new TermTerm(left.terms.get(j), right.terms.get(j)));
         }
@@ -86,6 +89,7 @@ public class MartelliUnifier extends Unifier {
       if (i >= 0) {
         final TermTerm pair = termPairs.get(i);
         termPairs.set(i, new TermTerm(pair.right, pair.left));
+        tracer.onSwap(pair.left, pair.right);
         continue; // swap
       }
 
@@ -95,8 +99,10 @@ public class MartelliUnifier extends Unifier {
         final Variable variable = (Variable) pair.left;
         final Term term = pair.right;
         if (term.contains(variable)) {
+          tracer.onCycle(variable, term);
           return failure("cycle: variable " + variable + " in " + term);
         }
+        tracer.onVariable(variable, term);
         final Map<Variable, Term> map = ImmutableMap.of(variable, term);
         result.put(variable, term);
         act(variable, term, termPairs, termActions, 0);
@@ -106,6 +112,7 @@ public class MartelliUnifier extends Unifier {
           final Term right2 = pair2.right.apply(map);
           if (left2 != pair2.left
               || right2 != pair2.right) {
+            tracer.onSubstitute(pair2.left, pair2.right, left2, right2);
             termPairs.set(j, new TermTerm(left2, right2));
           }
         }

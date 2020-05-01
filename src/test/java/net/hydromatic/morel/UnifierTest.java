@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 
 import net.hydromatic.morel.util.MartelliUnifier;
 import net.hydromatic.morel.util.RobinsonUnifier;
+import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.Unifier;
 
 import org.hamcrest.Matcher;
@@ -139,7 +140,7 @@ public abstract class UnifierTest {
   void assertThatUnify(List<Unifier.TermTerm> termPairs,
       Matcher<String> matcher) {
     final Unifier.Result result =
-        unifier.unify(termPairs, ImmutableMap.of());
+        unifier.unify(termPairs, ImmutableMap.of(), Tracers.nullTracer());
     assertThat(result, notNullValue());
     assertThat(result instanceof Unifier.Substitution, is(true));
     assertThat(((Unifier.Substitution) result).resolve().toString(), matcher);
@@ -161,7 +162,8 @@ public abstract class UnifierTest {
   }
 
   void assertThatCannotUnify(List<Unifier.TermTerm> pairList) {
-    final Unifier.Result result = unifier.unify(pairList, ImmutableMap.of());
+    final Unifier.Result result = unifier.unify(pairList, ImmutableMap.of(),
+        Tracers.nullTracer());
     assertThat(result, not(instanceOf(Unifier.Substitution.class)));
   }
 
@@ -334,7 +336,8 @@ public abstract class UnifierTest {
           new Unifier.TermTerm(t9, t5)
       };
       final Unifier.Result unify =
-          unifier.unify(Arrays.asList(termTerms), ImmutableMap.of());
+          unifier.unify(Arrays.asList(termTerms), ImmutableMap.of(),
+              Tracers.nullTracer());
       assertThat(unify, notNullValue());
       assertThat(unify instanceof Unifier.Substitution, is(true));
       assertThat(unify.toString(),
