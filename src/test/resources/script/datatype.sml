@@ -57,6 +57,26 @@ max_int (2, 3);
 fun max_real (x, y) = if x < y then y + 0.0 else x;
 max_real (2.0, 3.0);
 
+(*) Tuple type with a polymorphic member
+let
+  val r = (fn x => x, 2)
+in
+  (#1 r) 1
+end;
+
+(*) Record type with a polymorphic member
+let
+  val r = {a = fn x => x, b = 2}
+in
+  r.a 1
+end;
+
+let
+  val r = {a = fn x => x, b = 2}
+in
+  (r.a "x", r.b)
+end;
+
 (*) A recursive type, without generics
 datatype inttree = Empty | Node of inttree * int * inttree;
 fun max (x, y) = if x < y then y + 0 else x;

@@ -57,7 +57,7 @@ public class MartelliUnifier extends Unifier {
     final Map<Variable, Term> result = new LinkedHashMap<>();
     for (;;) {
       if (termPairs.isEmpty()) {
-        return new Substitution(result);
+        return SubstitutionResult.create(result);
       }
       int i = findDelete(termPairs);
       if (i >= 0) {
@@ -103,28 +103,35 @@ public class MartelliUnifier extends Unifier {
           return failure("cycle: variable " + variable + " in " + term);
         }
         tracer.onVariable(variable, term);
-        final Map<Variable, Term> map = ImmutableMap.of(variable, term);
         result.put(variable, term);
-        act(variable, term, termPairs, termActions, 0);
-        for (int j = 0; j < termPairs.size(); j++) {
-          final TermTerm pair2 = termPairs.get(j);
-          final Term left2 = pair2.left.apply(map);
-          final Term right2 = pair2.right.apply(map);
-          if (left2 != pair2.left
-              || right2 != pair2.right) {
-            tracer.onSubstitute(pair2.left, pair2.right, left2, right2);
-            termPairs.set(j, new TermTerm(left2, right2));
-          }
-        }
+        act(variable, term, termPairs, new Substitution(result),
+            termActions, 0);
+        substituteList(termPairs, tracer, ImmutableMap.of(variable, term));
+      }
+    }
+  }
+
+  /** Applies a mapping to all term pairs in a list, modifying them in place. */
+  private void substituteList(List<TermTerm> termPairs, Tracer tracer,
+      Map<Variable, Term> map) {
+    for (int j = 0; j < termPairs.size(); j++) {
+      final TermTerm pair2 = termPairs.get(j);
+      final Term left2 = pair2.left.apply(map);
+      final Term right2 = pair2.right.apply(map);
+      if (left2 != pair2.left
+          || right2 != pair2.right) {
+        tracer.onSubstitute(pair2.left, pair2.right, left2, right2);
+        termPairs.set(j, new TermTerm(left2, right2));
       }
     }
   }
 
   private void act(Variable variable, Term term, List<TermTerm> termPairs,
-      Map<Variable, Action> termActions, int depth) {
+      Substitution substitution, Map<Variable, Action> termActions,
+      int depth) {
     final Action action = termActions.get(variable);
     if (action != null) {
-      action.accept(variable, term, termPairs);
+      action.accept(variable, term, substitution, termPairs);
     }
     if (term instanceof Variable) {
       // Copy list to prevent concurrent modification, in case the action
@@ -132,13 +139,15 @@ public class MartelliUnifier extends Unifier {
       final List<TermTerm> termPairsCopy = new ArrayList<>(termPairs);
       termPairsCopy.forEach(termPair -> {
         if (termPair.left.equals(term) && depth < 2) {
-          act(variable, termPair.right, termPairs, termActions, depth + 1);
+          act(variable, termPair.right, termPairs, substitution, termActions,
+              depth + 1);
         }
       });
       // If the term is a variable, recurse to see whether there is an
       // action for that variable. Limit on depth to prevent swapping back.
       if (depth < 1) {
-        act((Variable) term, variable, termPairs, termActions, depth + 1);
+        act((Variable) term, variable, termPairs, substitution, termActions,
+            depth + 1);
       }
     }
   }

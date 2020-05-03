@@ -18,7 +18,7 @@
  */
 package net.hydromatic.morel.util;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +46,7 @@ public class RobinsonUnifier extends Unifier {
       return failure("sequences have different operator: " + lhs + ", " + rhs);
     }
     if (lhs.terms.isEmpty()) {
-      return EMPTY;
+      return SubstitutionResult.EMPTY;
     }
     Term firstLhs = lhs.terms.get(0);
     Term firstRhs = rhs.terms.get(0);
@@ -64,10 +64,12 @@ public class RobinsonUnifier extends Unifier {
       return r2;
     }
     final Substitution subs2 = (Substitution) r2;
-    Map<Variable, Term> joined = new HashMap<>();
-    joined.putAll(subs1.resultMap);
-    joined.putAll(subs2.resultMap);
-    return new Substitution(joined);
+    final Map<Variable, Term> joined =
+        ImmutableSortedMap.<Variable, Term>naturalOrder()
+            .putAll(subs1.resultMap)
+            .putAll(subs2.resultMap)
+            .build();
+    return SubstitutionResult.create(joined);
   }
 
   static <E> List<E> skip(List<E> list) {
@@ -86,10 +88,10 @@ public class RobinsonUnifier extends Unifier {
 
   public @Nonnull Result unify(Term lhs, Term rhs) {
     if (lhs instanceof Variable) {
-      return new Substitution(ImmutableMap.of((Variable) lhs, rhs));
+      return SubstitutionResult.create((Variable) lhs, rhs);
     }
     if (rhs instanceof Variable) {
-      return new Substitution(ImmutableMap.of((Variable) rhs, lhs));
+      return SubstitutionResult.create((Variable) rhs, lhs);
     }
     if (lhs instanceof Sequence && rhs instanceof Sequence) {
       return sequenceUnify((Sequence) lhs, (Sequence) rhs);

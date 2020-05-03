@@ -125,6 +125,32 @@ max_real (2.0, 3.0);
 val it = 3.0 : real
 
 
+(*) Tuple type with a polymorphic member
+let
+  val r = (fn x => x, 2)
+in
+  (#1 r) 1
+end;
+val it = 1 : int
+
+
+(*) Record type with a polymorphic member
+let
+  val r = {a = fn x => x, b = 2}
+in
+  r.a 1
+end;
+val it = 1 : int
+
+
+let
+  val r = {a = fn x => x, b = 2}
+in
+  (r.a "x", r.b)
+end;
+val it = ("x",2) : string * int
+
+
 (*) A recursive type, without generics
 datatype inttree = Empty | Node of inttree * int * inttree;
 datatype inttree = Empty | Node of inttree * int * inttree

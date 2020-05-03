@@ -35,8 +35,6 @@ import javax.annotation.Nonnull;
 /** Given pairs of terms, finds a substitution to minimize those pairs of
  * terms. */
 public abstract class Unifier {
-  static final Substitution EMPTY = new Substitution(ImmutableMap.of());
-
   private int varId;
   private final Map<String, Variable> variableMap = new HashMap<>();
   private final Map<String, Sequence> atomMap = new HashMap<>();
@@ -127,7 +125,8 @@ public abstract class Unifier {
   /** Called by the unifier when a Term's type becomes known. */
   @FunctionalInterface
   public interface Action {
-    void accept(Variable variable, Term term, List<TermTerm> termPairs);
+    void accept(Variable variable, Term term, Substitution substitution,
+        List<TermTerm> termPairs);
   }
 
   /** Result of attempting unification. A success is {@link Substitution},
@@ -142,15 +141,40 @@ public abstract class Unifier {
   /** The results of a successful unification. Gives access to the raw variable
    * mapping that resulted from the algorithm, but can also resolve a variable
    * to the fullest extent possible with the {@link #resolve} method. */
-  public static final class Substitution implements Result {
+  public static final class SubstitutionResult extends Substitution
+      implements Result {
+    private SubstitutionResult(Map<Variable, Term> resultMap) {
+      super(ImmutableSortedMap.copyOf(resultMap, Ordering.natural()));
+    }
+
+    /** Empty substitution result. */
+    public static final SubstitutionResult EMPTY =
+        create(ImmutableSortedMap.of());
+
+    /** Creates a substitution result from a map. */
+    public static SubstitutionResult create(Map<Variable, Term> resultMap) {
+      return new SubstitutionResult(
+          ImmutableSortedMap.copyOf(resultMap, Ordering.natural()));
+    }
+
+    /** Creates a substitution result with one (variable, term) entry. */
+    public static SubstitutionResult create(Variable v, Term t) {
+      return new SubstitutionResult(ImmutableSortedMap.of(v, t));
+    }
+  }
+
+  /** Map from variables to terms.
+   *
+   * <p>Quicker to create than its sub-class {@link SubstitutionResult}
+   * because the map is mutable and not sorted. */
+  public static class Substitution {
     /** The result of the unification algorithm proper. This does not have
      * everything completely resolved: some variable substitutions are required
      * before getting the most atom-y representation. */
     public final Map<Variable, Term> resultMap;
 
     Substitution(Map<Variable, Term> resultMap) {
-      this.resultMap =
-          ImmutableSortedMap.copyOf(resultMap, Ordering.natural());
+      this.resultMap = resultMap;
     }
 
     @Override public int hashCode() {
@@ -175,7 +199,7 @@ public abstract class Unifier {
       return b.append("]");
     }
 
-    Term resolve(Term term) {
+    public Term resolve(Term term) {
       Term previous;
       Term current = term;
       do {
