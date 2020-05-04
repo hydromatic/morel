@@ -92,6 +92,10 @@ public interface EvalEnv {
     return valueMap;
   }
 
+  /** Converts this environment to a non-mutable environment. */
+  default EvalEnv fix() {
+    return this;
+  }
 }
 
 // End EvalEnv.java

@@ -37,4 +37,16 @@ where d.deptno notElem (from e in scott.emp
                         where e.job notElem ["ANALYST", "PRESIDENT"]
                         yield e.deptno);
 
+(*) Functions
+(*) Clerks get a 20% raise each year; everyone else gets 5%
+val emp2 =
+  from e in scott.emp
+  yield {e.deptno, e.job, e.ename,
+    salIn = fn year => e.sal
+       + e.sal
+         * (year - 2019.0)
+         * if e.job = "CLERK" then 0.2 else 0.05};
+from e in emp2
+  yield {e.ename, e.job, salIn2020 = e.salIn 2020.0, salIn2021 = e.salIn 2021.0};
+
 (*) End foreign.sml

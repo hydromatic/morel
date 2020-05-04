@@ -597,6 +597,27 @@ from deptno in [10, 25, 30],
     e in employeesIn deptno
   yield e;
 
+(*) Function in yield
+let
+  val intFns = from a in [2, 3, 4] yield {a, f = fn x => x + a}
+in
+  from intFn in intFns yield {intFn.a, f1 = intFn.f 1, f2 = intFn.f 2}
+end;
+
+(*) Function in order
+val triples =
+  from t in [{x=1,y=2}, {x=2,y=6}, {x=3, y=5}]
+    yield {t.x, t.y, foo = fn z => t.x * z + t.y};
+from t in triples order t.foo 1; (* 1+2 < 2+6 = 3+5 *)
+from t in triples order t.foo 1, t.x; (* (1+2,1) < (2+6,2) < (3+5,3) *)
+from t in triples order t.foo 1, t.x desc; (* (1+2,~1) < (3+5,~3) < (2+6,~2) *)
+from t in triples order t.foo ~1, t.y; (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
+from {foo=foo,x=x,y=y} in triples
+  order foo ~1, x; (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
+from t1 in triples, t2 in triples
+  where t1.y = t2.y
+  order t1.foo ~1, t2.x; (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
+
 (*) A deep nested loop
 from e in
   (from e in

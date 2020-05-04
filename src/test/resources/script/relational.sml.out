@@ -952,6 +952,54 @@ val it =
    {deptno=30,id=103,name="Scooby"}] : {deptno:int, id:int, name:string} list
 
 
+(*) Function in yield
+let
+  val intFns = from a in [2, 3, 4] yield {a, f = fn x => x + a}
+in
+  from intFn in intFns yield {intFn.a, f1 = intFn.f 1, f2 = intFn.f 2}
+end;
+val it = [{a=2,f1=3,f2=4},{a=3,f1=4,f2=5},{a=4,f1=5,f2=6}]
+  : {a:int, f1:int, f2:int} list
+
+
+(*) Function in order
+val triples =
+  from t in [{x=1,y=2}, {x=2,y=6}, {x=3, y=5}]
+    yield {t.x, t.y, foo = fn z => t.x * z + t.y};
+val triples = [{foo=fn,x=1,y=2},{foo=fn,x=2,y=6},{foo=fn,x=3,y=5}]
+  : {foo:int -> int, x:int, y:int} list
+
+from t in triples order t.foo 1;
+val it = [{foo=fn,x=1,y=2},{foo=fn,x=2,y=6},{foo=fn,x=3,y=5}]
+  : {foo:int -> int, x:int, y:int} list
+ (* 1+2 < 2+6 = 3+5 *)
+from t in triples order t.foo 1, t.x;
+val it = [{foo=fn,x=1,y=2},{foo=fn,x=2,y=6},{foo=fn,x=3,y=5}]
+  : {foo:int -> int, x:int, y:int} list
+ (* (1+2,1) < (2+6,2) < (3+5,3) *)
+from t in triples order t.foo 1, t.x desc;
+val it = [{foo=fn,x=1,y=2},{foo=fn,x=3,y=5},{foo=fn,x=2,y=6}]
+  : {foo:int -> int, x:int, y:int} list
+ (* (1+2,~1) < (3+5,~3) < (2+6,~2) *)
+from t in triples order t.foo ~1, t.y;
+val it = [{foo=fn,x=1,y=2},{foo=fn,x=3,y=5},{foo=fn,x=2,y=6}]
+  : {foo:int -> int, x:int, y:int} list
+ (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
+from {foo=foo,x=x,y=y} in triples
+  order foo ~1, x;
+val it = [{foo=fn,x=1,y=2},{foo=fn,x=3,y=5},{foo=fn,x=2,y=6}]
+  : {foo:int -> int, x:int, y:int} list
+ (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
+from t1 in triples, t2 in triples
+  where t1.y = t2.y
+  order t1.foo ~1, t2.x;
+val it =
+  [{t1={foo=fn,x=1,y=2},t2={foo=fn,x=1,y=2}},
+   {t1={foo=fn,x=3,y=5},t2={foo=fn,x=3,y=5}},
+   {t1={foo=fn,x=2,y=6},t2={foo=fn,x=2,y=6}}]
+  : {t1:{foo:int -> int, x:int, y:int}, t2:{foo:int -> int, x:int, y:int}} list
+ (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
+
 (*) A deep nested loop
 from e in
   (from e in

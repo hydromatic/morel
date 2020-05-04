@@ -48,7 +48,7 @@ public class Closure implements Comparable<Closure>, Applicable {
   /** Not a public API. */
   public Closure(EvalEnv evalEnv,
       ImmutableList<Pair<Ast.Pat, Code>> patCodes) {
-    this.evalEnv = Objects.requireNonNull(evalEnv);
+    this.evalEnv = Objects.requireNonNull(evalEnv).fix();
     this.patCodes = Objects.requireNonNull(patCodes);
   }
 

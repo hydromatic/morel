@@ -84,3 +84,45 @@ where d.deptno notElem (from e in scott.emp
                         yield e.deptno);
 val it = [{deptno=40,dname="OPERATIONS",loc="BOSTON"}]
   : {deptno:int, dname:string, loc:string} list
+
+
+(*) Functions
+(*) Clerks get a 20% raise each year; everyone else gets 5%
+val emp2 =
+  from e in scott.emp
+  yield {e.deptno, e.job, e.ename,
+    salIn = fn year => e.sal
+       + e.sal
+         * (year - 2019.0)
+         * if e.job = "CLERK" then 0.2 else 0.05};
+val emp2 =
+  [{deptno=20,ename="SMITH",job="CLERK",salIn=fn},
+   {deptno=30,ename="ALLEN",job="SALESMAN",salIn=fn},
+   {deptno=30,ename="WARD",job="SALESMAN",salIn=fn},
+   {deptno=20,ename="JONES",job="MANAGER",salIn=fn},
+   {deptno=30,ename="MARTIN",job="SALESMAN",salIn=fn},
+   {deptno=30,ename="BLAKE",job="MANAGER",salIn=fn},
+   {deptno=10,ename="CLARK",job="MANAGER",salIn=fn},
+   {deptno=20,ename="SCOTT",job="ANALYST",salIn=fn},
+   {deptno=10,ename="KING",job="PRESIDENT",salIn=fn},
+   {deptno=30,ename="TURNER",job="SALESMAN",salIn=fn},
+   {deptno=20,ename="ADAMS",job="CLERK",salIn=fn},
+   {deptno=30,ename="JAMES",job="CLERK",salIn=fn},...]
+  : {deptno:int, ename:string, job:string, salIn:real -> real} list
+
+from e in emp2
+  yield {e.ename, e.job, salIn2020 = e.salIn 2020.0, salIn2021 = e.salIn 2021.0};
+val it =
+  [{ename="SMITH",job="CLERK",salIn2020=960.0,salIn2021=1120.0},
+   {ename="ALLEN",job="SALESMAN",salIn2020=1680.0,salIn2021=1760.0},
+   {ename="WARD",job="SALESMAN",salIn2020=1312.5,salIn2021=1375.0},
+   {ename="JONES",job="MANAGER",salIn2020=3123.75,salIn2021=3272.5},
+   {ename="MARTIN",job="SALESMAN",salIn2020=1312.5,salIn2021=1375.0},
+   {ename="BLAKE",job="MANAGER",salIn2020=2992.5,salIn2021=3135.0},
+   {ename="CLARK",job="MANAGER",salIn2020=2572.5,salIn2021=2695.0},
+   {ename="SCOTT",job="ANALYST",salIn2020=3150.0,salIn2021=3300.0},
+   {ename="KING",job="PRESIDENT",salIn2020=5250.0,salIn2021=5500.0},
+   {ename="TURNER",job="SALESMAN",salIn2020=1575.0,salIn2021=1650.0},
+   {ename="ADAMS",job="CLERK",salIn2020=1320.0,salIn2021=1540.0},
+   {ename="JAMES",job="CLERK",salIn2020=1140.0,salIn2021=1330.0},...]
+  : {ename:string, job:string, salIn2020:real, salIn2021:real} list

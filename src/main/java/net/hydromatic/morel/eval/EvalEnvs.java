@@ -27,6 +27,7 @@ import net.hydromatic.morel.util.Pair;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /** Helpers for {@link EvalEnv}. */
@@ -41,8 +42,8 @@ public class EvalEnvs {
   /** Evaluation environment that inherits from a parent environment and adds
    * one binding. */
   static class SubEvalEnv implements EvalEnv {
-    private final EvalEnv parentEnv;
-    private final String name;
+    protected final EvalEnv parentEnv;
+    protected final String name;
     protected Object value;
 
     SubEvalEnv(EvalEnv parentEnv, String name, Object value) {
@@ -83,26 +84,27 @@ public class EvalEnvs {
     public void set(Object value) {
       this.value = value;
     }
+
+    @Override public EvalEnv fix() {
+      return new SubEvalEnv(parentEnv, name, value);
+    }
   }
 
   /** Similar to {@link MutableEvalEnv} but binds several names. */
-  static class MutableArraySubEvalEnv implements MutableEvalEnv {
-    private final EvalEnv parentEnv;
-    private final ImmutableList<String> names;
+  static class ArraySubEvalEnv implements EvalEnv {
+    protected final EvalEnv parentEnv;
+    protected final ImmutableList<String> names;
     protected Object[] values;
 
-    MutableArraySubEvalEnv(EvalEnv parentEnv, List<String> names) {
-      this.parentEnv = parentEnv;
-      this.names = ImmutableList.copyOf(names);
+    ArraySubEvalEnv(EvalEnv parentEnv, ImmutableList<String> names,
+        Object[] values) {
+      this.parentEnv = Objects.requireNonNull(parentEnv);
+      this.names = Objects.requireNonNull(names);
+      this.values = values; // may be null
     }
 
     @Override public String toString() {
       return valueMap().toString();
-    }
-
-    public void set(Object value) {
-      values = (Object[]) value;
-      assert values.length == names.size();
     }
 
     public void visit(BiConsumer<String, Object> consumer) {
@@ -121,16 +123,52 @@ public class EvalEnvs {
     }
   }
 
+  /** Similar to {@link MutableEvalEnv} but binds several names;
+   * extends {@link ArraySubEvalEnv} adding mutability. */
+  static class MutableArraySubEvalEnv extends ArraySubEvalEnv
+      implements MutableEvalEnv {
+    MutableArraySubEvalEnv(EvalEnv parentEnv, List<String> names) {
+      super(parentEnv, ImmutableList.copyOf(names), null);
+    }
+
+    @Override public String toString() {
+      return valueMap().toString();
+    }
+
+    public void set(Object value) {
+      values = (Object[]) value;
+      assert values.length == names.size();
+    }
+
+    @Override public ArraySubEvalEnv fix() {
+      return new ArraySubEvalEnv(parentEnv, names, values.clone());
+    }
+  }
+
+  /** Immutable copy of {@link MutablePatSubEvalEnv}. */
+  static class PatSubEvalEnv extends ArraySubEvalEnv {
+    protected final Ast.Pat pat;
+
+    PatSubEvalEnv(EvalEnv parentEnv, Ast.Pat pat, ImmutableList<String> names,
+        Object[] values) {
+      super(parentEnv, ImmutableList.copyOf(names), values);
+      this.pat = Objects.requireNonNull(pat);
+      assert !(pat instanceof Ast.IdPat);
+    }
+  }
+
   /** Evaluation environment that binds several slots based on a pattern. */
-  static class MutablePatSubEvalEnv extends MutableArraySubEvalEnv {
-    private final Ast.Pat pat;
+  static class MutablePatSubEvalEnv extends PatSubEvalEnv
+      implements MutableEvalEnv {
     private int slot;
 
     MutablePatSubEvalEnv(EvalEnv parentEnv, Ast.Pat pat, List<String> names) {
-      super(parentEnv, names);
-      this.pat = pat;
-      this.values = new Object[names.size()];
-      assert !(pat instanceof Ast.IdPat);
+      super(parentEnv, pat, ImmutableList.copyOf(names),
+          new Object[names.size()]);
+    }
+
+    @Override public EvalEnv fix() {
+      return new PatSubEvalEnv(parentEnv, pat, names, values.clone());
     }
 
     @Override public void set(Object value) {
