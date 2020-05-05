@@ -167,14 +167,15 @@ public enum AstBuilder {
 
   public Ast.RecordPat recordPat(Pos pos, boolean ellipsis,
       Map<String, ? extends Ast.Pat> args) {
-    return new Ast.RecordPat(pos, ellipsis, ImmutableMap.copyOf(args));
+    return new Ast.RecordPat(pos, ellipsis,
+        ImmutableSortedMap.copyOf(args, RecordType.ORDERING));
   }
 
-  public Ast.Pat annotatedPat(Pos pos, Ast.Pat pat, Ast.Type type) {
+  public Ast.AnnotatedPat annotatedPat(Pos pos, Ast.Pat pat, Ast.Type type) {
     return new Ast.AnnotatedPat(pos, pat, type);
   }
 
-  public Ast.Pat consPat(Ast.Pat p0, Ast.Pat p1) {
+  public Ast.InfixPat consPat(Ast.Pat p0, Ast.Pat p1) {
     return infixPat(p0.pos.plus(p1.pos), Op.CONS_PAT, p0, p1);
   }
 

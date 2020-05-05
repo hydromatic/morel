@@ -32,6 +32,7 @@ import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.util.Ord;
@@ -177,12 +178,14 @@ public class Compiler {
       final List<Binding> bindings = new ArrayList<>();
       for (Map.Entry<Ast.Pat, Ast.Exp> patExp : from.sources.entrySet()) {
         final Code expCode = compile(env.bindAll(bindings), patExp.getValue());
-        final Ast.Pat pat = patExp.getKey();
+        final Ast.Pat pat0 = patExp.getKey();
+        final ListType listType = (ListType) typeMap.getType(patExp.getValue());
+        final Ast.Pat pat = expandRecordPattern(pat0, listType.elementType);
         sourceCodes.put(pat, expCode);
         pat.visit(p -> {
           if (p instanceof Ast.IdPat) {
             final Ast.IdPat idPat = (Ast.IdPat) p;
-            bindings.add(Binding.of(idPat.name, typeMap.getType(pat)));
+            bindings.add(Binding.of(idPat.name, typeMap.getType(p)));
           }
         });
       }
@@ -540,15 +543,15 @@ public class Compiler {
       }
     });
     final Code code = compile(envHolder[0], match.e);
-    return Pair.of(expandRecordPattern(match.pat), code);
+    final Type type = typeMap.getTypeOpt(match.pat);
+    return Pair.of(expandRecordPattern(match.pat, type), code);
   }
 
   /** Expands a pattern if it is a record pattern that has an ellipsis
    * or if the arguments are not in the same order as the labels in the type. */
-  private Ast.Pat expandRecordPattern(Ast.Pat pat) {
+  private Ast.Pat expandRecordPattern(Ast.Pat pat, Type type) {
     switch (pat.op) {
     case ID_PAT:
-      final Type type = typeMap.getType(pat);
       final Ast.IdPat idPat = (Ast.IdPat) pat;
       if (type.op() == Op.DATA_TYPE
           && ((DataType) type).typeConstructors.containsKey(idPat.name)) {
@@ -557,8 +560,7 @@ public class Compiler {
       return pat;
 
     case RECORD_PAT:
-      final RecordType recordType =
-          (RecordType) typeMap.getType(pat);
+      final RecordType recordType = (RecordType) type;
       final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
       final Map<String, Ast.Pat> args = new LinkedHashMap<>();
       for (String label : recordType.argNameTypes.keySet()) {

@@ -45,6 +45,7 @@ import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.ConsList;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MartelliUnifier;
+import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.Unifier;
@@ -848,11 +849,12 @@ public class TypeResolver {
       //
       // we cannot deduce whether a 'c' field is allowed.
       final Ast.RecordPat record = (Ast.RecordPat) pat;
-      final NavigableMap<String, Unifier.Term> labelTerms = new TreeMap<>();
+      final NavigableMap<String, Unifier.Term> labelTerms =
+          new TreeMap<>(RecordType.ORDERING);
       if (labelNames == null) {
         labelNames = new TreeSet<>(record.args.keySet());
       }
-      final Map<String, Ast.Pat> args = new TreeMap<>();
+      final Map<String, Ast.Pat> args = new TreeMap<>(RecordType.ORDERING);
       for (String labelName : labelNames) {
         final Unifier.Variable vArg = unifier.variable();
         labelTerms.put(labelName, vArg);
@@ -861,7 +863,34 @@ public class TypeResolver {
           args.put(labelName, deducePatType(env, argPat, termMap, null, vArg));
         }
       }
-      return reg(record.copy(record.ellipsis, args), v, record(labelTerms));
+      final Unifier.Variable v2;
+      if (record.ellipsis) {
+        v2 = unifier.variable();
+        actionMap.put(v, (v3, t, substitution, termPairs) -> {
+          // We now know the type of the source record, say "{a: int, b: real}".
+          // So, now we can fill out the ellipsis.
+          assert v == v3;
+          if (t instanceof Unifier.Sequence) {
+            final Unifier.Sequence sequence = (Unifier.Sequence) t;
+            final List<String> fieldList = fieldList(sequence);
+            if (fieldList != null) {
+              final NavigableMap<String, Unifier.Term> labelTerms2 =
+                  new TreeMap<>(RecordType.ORDERING);
+              Ord.forEach(fieldList, (fieldName, i) -> {
+                if (labelTerms.containsKey(fieldName)) {
+                  labelTerms2.put(fieldName, sequence.terms.get(i));
+                }
+              });
+              final Unifier.Term result2 = substitution.resolve(v2);
+              final Unifier.Term term2 = record(labelTerms2);
+              termPairs.add(new Unifier.TermTerm(result2, term2));
+            }
+          }
+        });
+      } else {
+        v2 = v;
+      }
+      return reg(record.copy(record.ellipsis, args), v2, record(labelTerms));
 
     case CON_PAT:
       final Ast.ConPat conPat = (Ast.ConPat) pat;

@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import javax.annotation.Nullable;
 
 /** The result of type resolution, a map from AST nodes to types. */
 public class TypeMap {
@@ -69,10 +70,16 @@ public class TypeMap {
     return term.accept(new TermToTypeConverter(this));
   }
 
-  /** Returns a type of an AST node. */
+  /** Returns the type of an AST node. */
   public Type getType(AstNode node) {
     final Unifier.Term term = Objects.requireNonNull(nodeTypeTerms.get(node));
     return termToType(term);
+  }
+
+  /** Returns the type of an AST node, or null if no type is known. */
+  public @Nullable Type getTypeOpt(AstNode node) {
+    final Unifier.Term term = nodeTypeTerms.get(node);
+    return term == null ? null : termToType(term);
   }
 
   /** Returns whether an AST node has a type.

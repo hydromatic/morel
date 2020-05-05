@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
@@ -178,6 +179,16 @@ public class Ast {
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, p0, op, p1, right);
     }
+
+    /** Creates a copy of this {@code InfixPat} with given contents
+     * and same operator,
+     * or {@code this} if the contents are the same. */
+    public InfixPat copy(Pat p0, Pat p1) {
+      return this.p0.equals(p0)
+          && this.p1.equals(p1)
+          ? this
+          : ast.infixPat(pos, op, p0, p1);
+    }
   }
 
   /** Type constructor pattern with an argument.
@@ -208,6 +219,15 @@ public class Ast {
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, tyCon, op, pat, right);
     }
+
+    /** Creates a copy of this {@code ConPat} with given contents,
+     * or {@code this} if the contents are the same. */
+    public ConPat copy(Id tyCon, Pat pat) {
+      return this.tyCon.equals(tyCon)
+          && this.pat.equals(pat)
+          ? this
+          : ast.conPat(pos, tyCon, pat);
+    }
   }
 
   /** Type constructor pattern with no argument.
@@ -230,6 +250,14 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return tyCon.unparse(w, left, right);
+    }
+
+    /** Creates a copy of this {@code Con0Pat} with given contents,
+     * or {@code this} if the contents are the same. */
+    public Con0Pat copy(Id tyCon) {
+      return this.tyCon.equals(tyCon)
+          ? this
+          : ast.con0Pat(pos, tyCon);
     }
   }
 
@@ -257,11 +285,19 @@ public class Ast {
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
     }
+
+    /** Creates a copy of this {@code TuplePat} with given contents,
+     * or {@code this} if the contents are the same. */
+    public TuplePat copy(java.util.List<Pat> args) {
+      return this.args.equals(args)
+          ? this
+          : ast.tuplePat(pos, args);
+    }
   }
 
   /** List pattern, the pattern analog of the {@link List} expression.
    *
-   * <p>For example, "(x, y)" in "fun sum (x, y) = x + y". */
+   * <p>For example, "[x, y]" in "fun sum [x, y] = x + y". */
   public static class ListPat extends Pat {
     public final java.util.List<Pat> args;
 
@@ -283,17 +319,26 @@ public class Ast {
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append("]");
     }
+
+    /** Creates a copy of this {@code ListPat} with given contents,
+     * or {@code this} if the contents are the same. */
+    public ListPat copy(java.util.List<Pat> args) {
+      return this.args.equals(args)
+          ? this
+          : ast.listPat(pos, args);
+    }
   }
 
   /** Record pattern. */
   public static class RecordPat extends Pat {
     public final boolean ellipsis;
-    public final Map<String, Pat> args;
+    public final SortedMap<String, Pat> args;
 
-    RecordPat(Pos pos, boolean ellipsis, ImmutableMap<String, Pat> args) {
+    RecordPat(Pos pos, boolean ellipsis, ImmutableSortedMap<String, Pat> args) {
       super(pos, Op.RECORD_PAT);
       this.ellipsis = ellipsis;
       this.args = Objects.requireNonNull(args);
+      Preconditions.checkArgument(args.comparator() == ORDERING);
     }
 
     public Pat accept(Shuttle shuttle) {
@@ -348,6 +393,15 @@ public class Ast {
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
       action.accept(pat, 0);
+    }
+
+    /** Creates a copy of this {@code AnnotatedPat} with given contents,
+     * or {@code this} if the contents are the same. */
+    public AnnotatedPat copy(Pat pat, Type type) {
+      return this.pat.equals(pat)
+          && this.type.equals(type)
+          ? this
+          : ast.annotatedPat(pos, pat, type);
     }
   }
 
@@ -984,7 +1038,7 @@ public class Ast {
 
   /** Record. */
   public static class Record extends Exp {
-    public final Map<String, Exp> args;
+    public final SortedMap<String, Exp> args;
 
     Record(Pos pos, ImmutableSortedMap<String, Exp> args) {
       super(pos, Op.RECORD);

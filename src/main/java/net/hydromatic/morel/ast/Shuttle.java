@@ -98,26 +98,32 @@ public class Shuttle {
   }
 
   protected Ast.Pat visit(Ast.InfixPat infixPat) {
-    return ast.infixPat(infixPat.pos, infixPat.op, infixPat.p0.accept(this),
-        infixPat.p1.accept(this));
+    return infixPat.copy(infixPat.p0.accept(this), infixPat.p1.accept(this));
   }
 
   protected Ast.Pat visit(Ast.TuplePat tuplePat) {
-    return ast.tuplePat(tuplePat.pos, visitList(tuplePat.args));
+    return tuplePat.copy(visitList(tuplePat.args));
   }
 
   protected Ast.Pat visit(Ast.ListPat listPat) {
-    return ast.listPat(listPat.pos, visitList(listPat.args));
+    return listPat.copy(visitList(listPat.args));
   }
 
   protected Ast.Pat visit(Ast.RecordPat recordPat) {
-    return ast.recordPat(recordPat.pos, recordPat.ellipsis,
-        visitMap(recordPat.args));
+    return recordPat.copy(recordPat.ellipsis, visitMap(recordPat.args));
   }
 
   protected Ast.Pat visit(Ast.AnnotatedPat annotatedPat) {
-    return ast.annotatedPat(annotatedPat.pos, annotatedPat.pat.accept(this),
+    return annotatedPat.copy(annotatedPat.pat.accept(this),
         annotatedPat.type.accept(this));
+  }
+
+  public Ast.ConPat visit(Ast.ConPat conPat) {
+    return conPat.copy(conPat.tyCon.accept(this), conPat.pat.accept(this));
+  }
+
+  public Ast.Con0Pat visit(Ast.Con0Pat con0Pat) {
+    return con0Pat.copy(con0Pat.tyCon.accept(this));
   }
 
   // value constructors
@@ -240,15 +246,6 @@ public class Shuttle {
   public Ast.Type visit(Ast.CompositeType compositeType) {
     return ast.compositeType(compositeType.pos,
         visitList(compositeType.types));
-  }
-
-  public Ast.ConPat visit(Ast.ConPat conPat) {
-    return ast.conPat(conPat.pos, conPat.tyCon.accept(this),
-        conPat.pat.accept(this));
-  }
-
-  public Ast.Pat visit(Ast.Con0Pat con0Pat) {
-    return ast.con0Pat(con0Pat.pos, con0Pat.tyCon.accept(this));
   }
 }
 

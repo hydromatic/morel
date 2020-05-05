@@ -539,6 +539,32 @@ sumPairs [(1, 2), (3, 4)];
 from (left, 2) in [(1, 2), (3, 4), (5, 2)]
   yield left;
 
+(*) Record pattern
+from {b = b, a = a} in [{a=1,b=2}];
+from {a = a, b = b} in [{a=1,b=2}];
+from {b = a, a = b} in [{a=1,b=2}];
+from {b = c, c = a, a = b} in [{a=1,b=2,c=3}];
+from {b = a, c = b, a = c} in [{a=1,b=2,c=3}];
+from {c = b, a = c, b = a} in [{a=1,b=2,c=3}];
+from {a = c, b = a, c = b} in [{a=1,b=2,c=3}];
+
+(*) Record with wildcards
+from {a = a, ...} in [{a=1,b=2}];
+from {a = a, b = true, c = c} in [{a=1,b=true,c=3}];
+from {a = c, b = true, c = a} in [{a=1,b=true,c=3}];
+from {a = c, b = true, c = a} in [{a=1,b=true,c=3},{a=1,b=true,c=4}] group c compute sum of a;
+from {a = a, b = b, c = _} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+from {a = a, b = b, c = _} in [{a=1,b=true,c=3},{a=1,b=true,c=4}], d in ["a", "b"];
+from {a = a, ..., b = b} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+from {a = a, ..., c = c} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+from {a = a, c = c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+from {b = y, ...} in [{a=1,b=2}];
+from {b = y, a = (p, q)} in [{a=(1,true),b=2}];
+from {b = y, a = (2, q)} in [{a=(1,true),b=2},{a=(2,false),b=3}];
+from {b = y, a = x} in [{a=1,b=2}];
+from {a = x, ...} in [{a=1,b=2,c=3}];
+from {a = x, b = y, ...} in [{a=1,b=2,c=3}];
+
 fun listHeads lists =
   from hd :: tl in lists
   yield hd + 1;
