@@ -1095,28 +1095,36 @@ Pat atomPat() :
   <LBRACE> {
     span = Span.of(getPos());
     final Map<String, Pat> map = new LinkedHashMap<>();
-    final boolean[] ellipsis = {false};
+    boolean ellipsis = false;
   }
-  recordPat(ellipsis, map)
-  (
-    <COMMA> recordPat(ellipsis, map)
-  )*
+  [
+    <ELLIPSIS> { ellipsis = true; }
+  |
+    recordPat(map)
+    (
+      LOOKAHEAD(2)
+      <COMMA> recordPat(map)
+    )*
+    [ <COMMA> <ELLIPSIS> { ellipsis = true; } ]
+  ]
   <RBRACE> {
-    return ast.recordPat(span.end(this), ellipsis[0], map);
+    return ast.recordPat(span.end(this), ellipsis, map);
   }
 }
 
 /** Parses a "label = pat" inside a record pattern. */
-void recordPat(boolean[] ellipsis, Map<String, Pat> map) :
+void recordPat(Map<String, Pat> map) :
 {
   final String id;
   final Ast.Pat pat;
 }
 {
-  <ELLIPSIS> { ellipsis[0] = true; }
-|
   ( <NON_NEGATIVE_INTEGER_LITERAL> | <IDENTIFIER> ) { id = token.image; }
-  <EQ> pat = pat() { map.put(id, pat); }
+  (
+    <EQ> pat = pat() { map.put(id, pat); }
+  |
+    { map.put(id, ast.idPat(getPos(), id)); }
+  )
 }
 
 /** Parses a type. */
@@ -1135,23 +1143,21 @@ Ast.Type atomicType() :
   <LPAREN> {
     span = Span.of(getPos());
   }
+  type = type()
   (
-    type = type()
+    <RPAREN> { return type; }
+  |
+    {
+      final List<Type> list = new ArrayList<>();
+      list.add(type);
+      Type type2;
+    }
     (
-      <RPAREN> { return type; }
-    |
-      {
-        final List<Type> list = new ArrayList<>();
-        list.add(type);
-        Type type2;
-      }
-      (
-        <COMMA> type2 = type() { list.add(type2); }
-      )+
-      <RPAREN> {
-        return ast.compositeType(span.end(this), list);
-      }
-    )
+      <COMMA> type2 = type() { list.add(type2); }
+    )+
+    <RPAREN> {
+      return ast.compositeType(span.end(this), list);
+    }
   )
 }
 

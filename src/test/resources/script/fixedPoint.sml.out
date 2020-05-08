@@ -354,9 +354,9 @@ val edges =
 fun shortest_path edges =
   let
     val vertices =
-      from v in (from {source = s, target = _, weight = _} in edges yield s)
+      from v in (from {source, target, weight} in edges yield source)
           union
-          (from {source = _, target = t, weight = _} in edges yield t)
+          (from {source, target, weight} in edges yield target)
         group v
     val edges0 =
       from e in edges

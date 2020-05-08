@@ -272,7 +272,7 @@ public class MainTest {
     ml("case 1 of 0 => \"zero\" | _ => \"nonzero\"").assertParseSame();
     ml("case {a = 1, b = 2} of {a = 1, ...} => 1").assertParseSame();
     ml("case {a = 1, b = 2} of {...} => 1").assertParseSame();
-    ml("case {a = 1, b = 2} of {..., a = 3} => 1")
+    ml("case {a = 1, b = 2} of {a = 3, ...} => 1")
         .assertParse("case {a = 1, b = 2} of {a = 3, ...} => 1");
 
     // fn
@@ -346,6 +346,13 @@ public class MainTest {
         .assertParseThrows(
             throwsA(IllegalArgumentException.class,
                 is("cannot derive label for expression b + c")));
+
+    ml("case x of {a = a, b} => a + b")
+        .assertParse("case x of {a = a, b = b} => a + b");
+    ml("case x of {a, b = 2, ...} => a + b")
+        .assertParse("case x of {a = a, b = 2, ...} => a + b");
+    ml("fn {a, b = 2, ...} => a + b")
+        .assertParse("fn {a = a, b = 2, ...} => a + b");
   }
 
   /** Tests the name of {@link TypeVar}. */
@@ -414,6 +421,8 @@ public class MainTest {
         .assertType("int -> int * int -> int");
     ml("fn (x, y) => (x + 1, fn z => (x + z, y + z), y)")
         .assertType("int * int -> int * (int -> int * int) * int");
+    ml("fn {a = x, b = y, c} => x + y")
+        .assertType("{a:int, b:int, c:'a} -> int");
   }
 
   @Test public void testTypeLetRecFn() {
@@ -848,9 +857,19 @@ public class MainTest {
   @Test public void testRecordMatch() {
     final String ml = "case {a=1, b=2, c=3}\n"
         + "  of {a=2, b=2, c=3} => 0\n"
-        + "   | {a=1, ..., c=x} => x\n"
+        + "   | {a=1, c=x, ...} => x\n"
         + "   | _ => ~1";
     ml(ml).assertEval(is(3));
+    ml("fn {} => 0").assertParseSame();
+    ml("fn {a=1, ..., c=2}")
+        .assertParseThrows(
+            throwsA(ParseException.class,
+                containsString("Encountered \" \",\" \", \"\" at line 1, "
+                    + "column 13.")));
+    ml("fn {...} => 0").assertParseSame();
+    ml("fn {a = a, ...} => 0").assertParseSame();
+    ml("fn {a, b = {c, d}, ...} => 0")
+        .assertParse("fn {a = a, b = {c = c, d = d}, ...} => 0");
   }
 
   @Test public void testRecordCase() {

@@ -541,6 +541,7 @@ from (left, 2) in [(1, 2), (3, 4), (5, 2)]
 
 (*) Record pattern
 from {b = b, a = a} in [{a=1,b=2}];
+from {b, a} in [{a=1,b=2}];
 from {a = a, b = b} in [{a=1,b=2}];
 from {b = a, a = b} in [{a=1,b=2}];
 from {b = c, c = a, a = b} in [{a=1,b=2,c=3}];
@@ -555,8 +556,9 @@ from {a = c, b = true, c = a} in [{a=1,b=true,c=3}];
 from {a = c, b = true, c = a} in [{a=1,b=true,c=3},{a=1,b=true,c=4}] group c compute sum of a;
 from {a = a, b = b, c = _} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 from {a = a, b = b, c = _} in [{a=1,b=true,c=3},{a=1,b=true,c=4}], d in ["a", "b"];
-from {a = a, ..., b = b} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
-from {a = a, ..., c = c} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+from {a = a, b = b, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+from {a = a, c = c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+from {a, c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 from {a = a, c = c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 from {b = y, ...} in [{a=1,b=2}];
 from {b = y, a = (p, q)} in [{a=(1,true),b=2}];
@@ -574,6 +576,13 @@ listHeads [[1, 2], [3], [4, 5, 6]];
 fun listFields lists =
   from {a = x, b = y} in lists
   yield x + 1;
+listFields [];
+listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
+
+(*) As above, using abbreviated record pattern
+fun listFields2 lists =
+  from {a, b} in lists
+  yield a + 1;
 listFields [];
 listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
 
@@ -638,7 +647,7 @@ from t in triples order t.foo 1; (* 1+2 < 2+6 = 3+5 *)
 from t in triples order t.foo 1, t.x; (* (1+2,1) < (2+6,2) < (3+5,3) *)
 from t in triples order t.foo 1, t.x desc; (* (1+2,~1) < (3+5,~3) < (2+6,~2) *)
 from t in triples order t.foo ~1, t.y; (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
-from {foo=foo,x=x,y=y} in triples
+from {foo,x,y} in triples
   order foo ~1, x; (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
 from t1 in triples, t2 in triples
   where t1.y = t2.y

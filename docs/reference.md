@@ -172,7 +172,7 @@ In Standard ML but not in Morel:
     | '<b>[</b>' <i>pat<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>pat<sub>n</sub></i> '<b>]</b>' list (n &ge; 0)
 <i>patrow</i> &rarr; '<b>...</b>'                  wildcard
     | <i>lab</i> <b>=</b> <i>pat</i> [<b>,</b> <i>patrow</i>]      pattern
-    | <i>id</i> [<b>,</b> <i>patrow</i>]             variable
+    | <i>id</i> [<b>,</b> <i>patrow</i>]             label as variable
 </pre>
 
 ### Types

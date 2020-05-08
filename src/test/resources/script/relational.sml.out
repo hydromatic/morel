@@ -846,6 +846,9 @@ val it = [1,5] : int list
 from {b = b, a = a} in [{a=1,b=2}];
 val it = [{a=1,b=2}] : {a:int, b:int} list
 
+from {b, a} in [{a=1,b=2}];
+val it = [{a=1,b=2}] : {a:int, b:int} list
+
 from {a = a, b = b} in [{a=1,b=2}];
 val it = [{a=1,b=2}] : {a:int, b:int} list
 
@@ -886,10 +889,13 @@ val it =
   [{a=1,b=true,d="a"},{a=1,b=true,d="b"},{a=1,b=true,d="a"},{a=1,b=true,d="b"}]
   : {a:int, b:bool, d:string} list
 
-from {a = a, ..., b = b} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+from {a = a, b = b, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 val it = [{a=1,b=true},{a=1,b=true}] : {a:int, b:bool} list
 
-from {a = a, ..., c = c} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+from {a = a, c = c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
+val it = [{a=1,c=3},{a=1,c=4}] : {a:int, c:int} list
+
+from {a, c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 val it = [{a=1,c=3},{a=1,c=4}] : {a:int, c:int} list
 
 from {a = a, c = c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
@@ -930,6 +936,19 @@ fun listFields lists =
   from {a = x, b = y} in lists
   yield x + 1;
 val listFields = fn : {a:int, b:'a} list -> int list
+
+listFields [];
+val it = [] : int list
+
+listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
+val it = [2,4,5] : int list
+
+
+(*) As above, using abbreviated record pattern
+fun listFields2 lists =
+  from {a, b} in lists
+  yield a + 1;
+val listFields2 = fn : {a:int, b:'a} list -> int list
 
 listFields [];
 val it = [] : int list
@@ -1057,7 +1076,7 @@ from t in triples order t.foo ~1, t.y;
 val it = [{foo=fn,x=1,y=2},{foo=fn,x=3,y=5},{foo=fn,x=2,y=6}]
   : {foo:int -> int, x:int, y:int} list
  (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
-from {foo=foo,x=x,y=y} in triples
+from {foo,x,y} in triples
   order foo ~1, x;
 val it = [{foo=fn,x=1,y=2},{foo=fn,x=3,y=5},{foo=fn,x=2,y=6}]
   : {foo:int -> int, x:int, y:int} list
