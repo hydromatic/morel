@@ -241,6 +241,17 @@ public abstract class Codes {
     return Math.floorDiv((int) list.get(0), (int) list.get(1));
   }
 
+  /** @see BuiltIn#GENERAL_OP_O */
+  private static final Applicable GENERAL_OP_O = Codes::compose;
+
+  /** Implements {@link #GENERAL_OP_O}. */
+  private static Applicable compose(EvalEnv evalEnv, Object arg) {
+    @SuppressWarnings("rawtypes") final List list = (List) arg;
+    final Applicable f = (Applicable) list.get(0);
+    final Applicable g = (Applicable) list.get(1);
+    return (evalEnv2, arg2) -> f.apply(evalEnv2, g.apply(evalEnv2, arg2));
+  }
+
   /** @see BuiltIn#OP_CARET */
   private static final Applicable OP_CARET = Codes::caret;
 
@@ -1049,6 +1060,7 @@ public abstract class Codes {
           .put(BuiltIn.NOT, NOT)
           .put(BuiltIn.ABS, ABS)
           .put(BuiltIn.IGNORE, IGNORE)
+          .put(BuiltIn.GENERAL_OP_O, GENERAL_OP_O)
           .put(BuiltIn.OP_CARET, OP_CARET)
           .put(BuiltIn.OP_CONS, OP_CONS)
           .put(BuiltIn.OP_DIV, OP_DIV)
@@ -1088,6 +1100,7 @@ public abstract class Codes {
           .put(BuiltIn.LIST_NULL, LIST_NULL)
           .put(BuiltIn.LIST_LENGTH, LIST_LENGTH)
           .put(BuiltIn.LIST_AT, LIST_AT)
+          .put(BuiltIn.LIST_OP_AT, LIST_AT) // op @ == List.at
           .put(BuiltIn.LIST_HD, LIST_HD)
           .put(BuiltIn.LIST_TL, LIST_TL)
           .put(BuiltIn.LIST_LAST, LIST_LAST)

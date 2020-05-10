@@ -260,6 +260,10 @@ public enum AstBuilder {
     return infix(Op.CARET, a0, a1);
   }
 
+  public Ast.Exp o(Ast.Exp a0, Ast.Exp a1) {
+    return infix(Op.COMPOSE, a0, a1);
+  }
+
   public Ast.Exp except(Ast.Exp a0, Ast.Exp a1) {
     return infix(Op.EXCEPT, a0, a1);
   }

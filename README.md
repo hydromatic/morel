@@ -88,9 +88,8 @@ Implemented:
 * `val` (including `val rec`)
 * `fun` (declare function)
 * Operators: `=` `<>` `<` `>` `<=` `>=`
-  `~` `+` `-` `*` `/` `div` `mod` `^`
+  `~` `+` `-` `*` `/` `div` `mod` `^` `::` `o` `@`
   `andalso` `orelse`
-  `::`
 * Built-in constants and functions:
   `it` `true` `false` `nil` `abs` `not` `ignore`
 * Type derivation
@@ -121,7 +120,7 @@ Not implemented:
 * `exception`
 * `while`
 * References, and operators `!` and `:=`
-* Operators: `before` `o`
+* Operators: `before`
 * User-defined operators (`infix`, `infixr`)
 * Type annotations in expressions and patterns
 

@@ -170,6 +170,18 @@ public enum BuiltIn {
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
+  /** Operator "General.op o", of type "(&beta; &rarr; &gamma;) *
+   * (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma;"
+   *
+   * <p>"f o g" is the function composition of "f" and "g". Thus, "(f o g) a"
+   * is equivalent to "f (g a)". */
+  GENERAL_OP_O("General", "op o", "op o", ts ->
+      ts.forallType(3, h ->
+          ts.fnType(
+              ts.tupleType(ts.fnType(h.get(1), h.get(2)),
+                  ts.fnType(h.get(0), h.get(1))),
+              ts.fnType(h.get(0), h.get(2))))),
+
   /** Constant "String.maxSize", of type "int".
    *
    * <p>"The longest allowed size of a string". */
@@ -311,8 +323,17 @@ public enum BuiltIn {
    *
    * <p>"l1 @ l2" returns the list that is the concatenation of l1 and l2.
    */
-  // TODO: make this infix "@" rather than prefix "at"
+  // TODO: remove
   LIST_AT("List", "at", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
+
+  /** Operator "List.op @", of type "&alpha; list * &alpha; list &rarr; &alpha;
+   * list".
+   *
+   * <p>"l1 @ l2" returns the list that is the concatenation of l1 and l2.
+   */
+  LIST_OP_AT("List", "op @", "op @", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
 

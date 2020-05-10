@@ -18,6 +18,9 @@
  */
 package net.hydromatic.morel;
 
+import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.util.Folder;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.TailList;
@@ -27,6 +30,8 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static net.hydromatic.morel.ast.AstBuilder.ast;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -87,6 +92,19 @@ public class UtilTest {
     assertThat(abc.get(0), is("a"));
     assertThat(abc.get(2), is("c"));
     assertThat(String.join(",", abc), is("a,b,c"));
+  }
+
+  @Test public void testFolder() {
+    final List<Folder<Ast.Exp>> list = new ArrayList<>();
+    Folder.start(list, ast.stringLiteral(Pos.ZERO, "a"));
+    Folder.at(list, ast.stringLiteral(Pos.ZERO, "b"));
+    Folder.at(list, ast.stringLiteral(Pos.ZERO, "c"));
+    assertThat(Folder.combineAll(list).toString(), is("\"a\" @ \"b\" @ \"c\""));
+
+    list.clear();
+    Folder.start(list, ast.stringLiteral(Pos.ZERO, "a"));
+    Folder.cons(list, ast.stringLiteral(Pos.ZERO, "b"));
+    assertThat(Folder.combineAll(list).toString(), is("\"a\" :: \"b\""));
   }
 }
 

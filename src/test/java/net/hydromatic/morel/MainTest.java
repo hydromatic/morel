@@ -249,6 +249,29 @@ public class MainTest {
         .assertParse("1 :: 2 :: 3 :: []");
     ml("1 + 2 :: 3 + 4 * 5 :: 6").assertParseSame();
 
+    // o is left-associative;
+    // lower precedence than "=" (4), higher than "andalso" (2)
+    ml("f o g").assertParseSame();
+    ml("f o g o h").assertParseSame();
+    ml("f o (g o h)").assertParseSame();
+    ml("(f o g) o h").assertParse("f o g o h");
+
+    ml("a = f o g andalso c = d").assertParseSame();
+    ml("a = (f o g) andalso (c = d)").assertParse("a = (f o g) andalso c = d");
+    ml("(a = f) o g andalso (c = d)").assertParse("a = f o g andalso c = d");
+
+    // @ is right-associative;
+    // lower precedence than "+" (6), higher than "=" (4)
+    ml("f @ g").assertParseSame();
+    ml("f @ g @ h").assertParseSame();
+    ml("f @ (g @ h)").assertParse("f @ g @ h");
+    ml("(f @ g) @ h").assertParseSame();
+
+    // ^ is left-associative;
+    // lower precedence than "*" (7), higher than "@" (5)
+    ml("a * f ^ g @ b").assertParseSame();
+    ml("(a * f) ^ (g @ b)").assertParse("a * f ^ (g @ b)");
+
     ml("(1 + 2, 3, true, (5, 6), 7 = 8)").assertParseSame();
 
     ml("let val x = 2 in x + (3 + x) + x end").assertParseSame();

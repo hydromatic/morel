@@ -17,6 +17,18 @@
  * License.
  *)
 
+(* Operators --------------------------------------------------- *)
+
+(*) op o - function composition
+val plusOne = fn x => x + 1;
+val timesTwo = fn x => x * 2;
+val plusThree = fn x => x + 3;
+plusOne o timesTwo;
+(plusOne o timesTwo) 3;
+plusOne o timesTwo o plusThree;
+((plusOne o timesTwo) o plusThree) 3;
+(plusOne o (timesTwo o plusThree)) 3;
+
 (* Miscellaneous ----------------------------------------------- *)
 ignore;
 ignore (1 + 2);
@@ -169,6 +181,9 @@ List.at ([1], [2, 3]);
 List.at ([1], []);
 List.at ([], [2]);
 List.at ([], []);
+
+[1] @ [2, 3];
+[] @ [];
 
 (*) val hd : 'a list -> 'a
 List.hd;

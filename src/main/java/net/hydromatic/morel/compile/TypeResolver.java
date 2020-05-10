@@ -414,7 +414,9 @@ public class TypeResolver {
       }
       return reg(apply.copy(fn2, arg2), null, v);
 
+    case AT:
     case CARET:
+    case COMPOSE:
     case PLUS:
     case MINUS:
     case TIMES:
