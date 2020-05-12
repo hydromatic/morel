@@ -24,6 +24,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.util.ComparableSingletonList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 
@@ -35,8 +37,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /** A table that contains all types in use, indexed by their description (e.g.
  * "{@code int -> int}"). */
@@ -48,8 +50,28 @@ public class TypeSystem {
 
   public TypeSystem() {
     for (PrimitiveType primitiveType : PrimitiveType.values()) {
-      typeByName.put(primitiveType.description(), primitiveType);
+      typeByName.put(primitiveType.moniker, primitiveType);
     }
+  }
+
+  /** Creates a binding of a type constructor value. */
+  public Binding bindTyCon(DataType dataType, String tyConName) {
+    final Type type = dataType.typeConstructors.get(tyConName);
+    if (type == DummyType.INSTANCE) {
+      return Binding.of(tyConName, dataType,
+          Codes.constant(ComparableSingletonList.of(tyConName)));
+    } else {
+      return Binding.of(tyConName, wrap(dataType, fnType(type, dataType)),
+          Codes.tyCon(dataType, tyConName));
+    }
+  }
+
+  private Type wrap(DataType dataType, Type type) {
+    @SuppressWarnings("UnstableApiUsage") final List<TypeVar> typeVars =
+        dataType.typeVars.stream().filter(t -> t instanceof TypeVar)
+            .map(t -> (TypeVar) t)
+            .collect(ImmutableList.toImmutableList());
+    return typeVars.isEmpty() ? type : forallType(typeVars, type);
   }
 
   /** Looks up a type by name. */
@@ -122,18 +144,35 @@ public class TypeSystem {
   }
 
   /** Creates a data type. */
-  public DataType dataType(String name, List<TypeVar> typeVars,
+  public DataType dataType(String name, List<? extends Type> types,
       Map<String, Type> tyCons) {
-    return (DataType) typeByName.computeIfAbsent(name,
-        name2 -> {
-          final DataType dataType = new DataType(TypeSystem.this, name2,
-              DataType.computeDescription(tyCons),
-              ImmutableList.copyOf(typeVars),
-              ImmutableSortedMap.copyOf(tyCons));
+    final boolean allVars = types.stream().allMatch(t -> t instanceof TypeVar);
+    String moniker = DataType.computeMoniker(name, types);
+    final DataType dataType0 = (DataType) typeByName.computeIfAbsent(moniker,
+        moniker2 -> {
+          final DataType dataType;
+          final String description = DataType.computeDescription(tyCons);
+          if (allVars) {
+            @SuppressWarnings("unchecked") final List<TypeVar> typeVars =
+                (List) types;
+            dataType = new PolymorphicDataType(TypeSystem.this, name,
+                description, ImmutableList.copyOf(typeVars),
+                ImmutableSortedMap.copyOf(tyCons));
+          } else {
+            dataType = new DataType(TypeSystem.this, name,
+                description, ImmutableList.copyOf(types),
+                ImmutableSortedMap.copyOf(tyCons));
+          }
           tyCons.forEach((name3, type) ->
               typeConstructorByName.put(name3, Pair.of(dataType, type)));
           return dataType;
         });
+    if (allVars) {
+      // We have just created an entry for the moniker "'a option", so now
+      // create an entry for the name "option".
+      typeByName.putIfAbsent(name, dataType0);
+    }
+    return dataType0;
   }
 
   /** Creates a record type, or returns a scalar type if {@code argNameTypes}
@@ -161,7 +200,7 @@ public class TypeSystem {
       if (builder.length() > 1) {
         builder.append(", ");
       }
-      builder.append(name).append(':').append(type.description());
+      builder.append(name).append(':').append(type.moniker());
     });
     if (areContiguousIntegers(argNameTypes2.keySet())
         && argNameTypes2.size() != 1) {
@@ -199,6 +238,10 @@ public class TypeSystem {
         return listType(get(i));
       }
 
+      public Type option(int i) {
+        return apply(lookup("'a option"), get(i));
+      }
+
       public FnType predicate(int i) {
         return fnType(get(i), PrimitiveType.BOOL);
       }
@@ -212,7 +255,7 @@ public class TypeSystem {
     final StringBuilder b = new StringBuilder();
     b.append("forall");
     for (TypeVar typeVar : typeVars) {
-      b.append(' ').append(typeVar.description());
+      b.append(' ').append(typeVar.moniker());
     }
     b.append(". ");
     unparse(b, type, 0, 0);
@@ -243,9 +286,9 @@ public class TypeSystem {
       int left, int right) {
     final Op op = type.op();
     if (left > op.left || op.right < right) {
-      return builder.append("(").append(type.description()).append(")");
+      return builder.append("(").append(type.moniker()).append(")");
     } else {
-      return builder.append(type.description());
+      return builder.append(type.moniker());
     }
   }
 
@@ -259,11 +302,27 @@ public class TypeSystem {
     return typeConstructorByName.get(tyConName);
   }
 
+  public Type apply(Type type, Type... types) {
+    return apply(type, ImmutableList.copyOf(types));
+  }
+
   public Type apply(Type type, List<Type> types) {
-    final String description =
-        types.stream().map(Type::description)
-            .collect(Collectors.joining(",", "<", ">"))
-        + type.description();
+    if (type instanceof PolymorphicDataType) {
+      // Create a copy of the datatype with type variables substituted with
+      // actual types.
+      final PolymorphicDataType dataType = (PolymorphicDataType) type;
+      assert types.size() == dataType.typeVars.size();
+      final TypeVisitor<Type> typeVisitor = new TypeVisitor<Type>() {
+        @Override public Type visit(TypeVar typeVar) {
+          return types.get(typeVar.ordinal);
+        }
+      };
+      final SortedMap<String, Type> typeConstructors = new TreeMap<>();
+      dataType.typeConstructors.forEach((tyConName, tyConType) ->
+          typeConstructors.put(tyConName, tyConType.accept(typeVisitor)));
+      return dataType(dataType.name, types, typeConstructors);
+    }
+    final String description = ApplyType.computeDescription(type, types);
     return new ApplyType(type, ImmutableList.copyOf(types), description);
   }
 
@@ -349,6 +408,8 @@ public class TypeSystem {
     TypeVar get(int i);
     /** Creates type {@code `i list}. */
     ListType list(int i);
+    /** Creates type {@code `i option}. */
+    Type option(int i);
     /** Creates type <code>`i &rarr; bool</code>. */
     FnType predicate(int i);
   }

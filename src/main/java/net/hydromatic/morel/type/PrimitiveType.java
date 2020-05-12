@@ -33,10 +33,10 @@ public enum PrimitiveType implements Type {
   UNIT;
 
   /** The name in the language, e.g. {@code bool}. */
-  public final String description = name().toLowerCase(Locale.ROOT);
+  public final String moniker = name().toLowerCase(Locale.ROOT);
 
   public String description() {
-    return description;
+    return moniker;
   }
 
   public Op op() {

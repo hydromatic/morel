@@ -168,7 +168,7 @@ class Ml {
 
   Ml assertType(Matcher<String> matcher) {
     return withValidate((exp, typeMap) ->
-        assertThat(typeMap.getType(exp).description(), matcher));
+        assertThat(typeMap.getType(exp).moniker(), matcher));
   }
 
   Ml assertType(String expected) {

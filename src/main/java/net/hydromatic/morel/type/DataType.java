@@ -19,6 +19,7 @@
 package net.hydromatic.morel.type;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 
@@ -34,7 +35,8 @@ import javax.annotation.Nonnull;
 /** Algebraic type. */
 public class DataType extends BaseType implements NamedType {
   public final String name;
-  public final List<TypeVar> typeVars;
+  public final String moniker;
+  public final List<? extends Type> typeVars;
   public final SortedMap<String, Type> typeConstructors;
 
   /** Creates a DataType.
@@ -45,10 +47,11 @@ public class DataType extends BaseType implements NamedType {
    * creating self-referential data types) to be replaced with real DataType
    * instances. */
   DataType(TypeSystem typeSystem, String name, String description,
-      List<TypeVar> typeVars, SortedMap<String, Type> typeConstructors) {
+      List<? extends Type> typeVars, SortedMap<String, Type> typeConstructors) {
     super(Op.DATA_TYPE, description);
     this.name = Objects.requireNonNull(name);
-    this.typeVars = Objects.requireNonNull(typeVars);
+    this.moniker = computeMoniker(name, typeVars);
+    this.typeVars = ImmutableList.copyOf(typeVars);
     if (typeSystem == null) {
       this.typeConstructors = ImmutableSortedMap.copyOf(typeConstructors);
     } else {
@@ -62,7 +65,16 @@ public class DataType extends BaseType implements NamedType {
         == Ordering.natural());
   }
 
-  private ImmutableSortedMap<String, Type> copyTypes(
+  static String computeMoniker(String name, List<? extends Type> typeVars) {
+    if (typeVars.isEmpty()) {
+      return name;
+    }
+    final StringBuilder b = new StringBuilder();
+    typeVars.forEach(t -> b.append(t.moniker()).append(' '));
+    return b.append(name).toString();
+  }
+
+  protected ImmutableSortedMap<String, Type> copyTypes(
       @Nonnull TypeSystem typeSystem,
       @Nonnull SortedMap<String, Type> typeConstructors,
       @Nonnull Function<Type, Type> transform) {
@@ -86,6 +98,10 @@ public class DataType extends BaseType implements NamedType {
     return name;
   }
 
+  @Override public String moniker() {
+    return moniker;
+  }
+
   static String computeDescription(Map<String, Type> tyCons) {
     final StringBuilder buf = new StringBuilder("(");
     tyCons.forEach((tyConName, tyConType) -> {
@@ -95,7 +111,7 @@ public class DataType extends BaseType implements NamedType {
       buf.append(tyConName);
       if (tyConType != DummyType.INSTANCE) {
         buf.append(" of ");
-        buf.append(tyConType.description());
+        buf.append(tyConType.moniker());
       }
     });
     return buf.append(")").toString();

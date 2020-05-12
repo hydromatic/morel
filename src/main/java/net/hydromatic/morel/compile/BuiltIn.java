@@ -21,17 +21,26 @@ package net.hydromatic.morel.compile;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 
+import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.DummyType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypeVar;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -203,8 +212,6 @@ public enum BuiltIn {
   /** Function "String.extract", of type "string * int * int option &rarr;
    * string".
    *
-   * <p>TODO: The current implementation ignores the "int option" last argument.
-   *
    * <p>"extract (s, i, NONE)" and "extract (s, i, SOME j)" return substrings of
    * s. The first returns the substring of s from the i(th) character to the end
    * of the string, i.e., the string s[i..|s|-1]. This raises
@@ -217,7 +224,9 @@ public enum BuiltIn {
    * if i &lt; 0 or j &lt; 0 or |s| &lt; i + j. Note that, if defined, extract
    * returns the empty string when i = |s|. */
   STRING_EXTRACT("String", "extract", ts ->
-      ts.fnType(ts.tupleType(STRING, INT), STRING)),
+      ts.fnType(
+          ts.tupleType(STRING, INT, ts.apply(ts.lookup("option"), INT)),
+          STRING)),
 
   /** Function "String.substring", of type "string * int * int &rarr; string".
    *
@@ -381,10 +390,11 @@ public enum BuiltIn {
    * {@code (int, char list) StringCvt.reader}
    * and can be used to scan decimal integers from lists of characters.
    */
-  // TODO: make it return an option
   LIST_GET_ITEM("List", "getItem", ts ->
       ts.forallType(1, h ->
-          ts.fnType(h.list(0), ts.tupleType(h.get(0), h.list(0))))),
+          ts.fnType(h.list(0),
+              ts.apply(ts.lookup("option"),
+                  ts.tupleType(h.get(0), h.list(0)))))),
 
   /** Function "List.nth", of type "&alpha; list * int &rarr; &alpha;".
    *
@@ -480,10 +490,9 @@ public enum BuiltIn {
    * The above expression is equivalent to:
    * {@code ((map valOf) o (filter isSome) o (map f)) l}
    */
-  // TODO: make this take option
   LIST_MAP_PARTIAL("List", "mapPartial", ts ->
       ts.forallType(2, h ->
-          ts.fnType(ts.fnType(h.get(0), h.get(1)), h.list(0), h.list(1)))),
+          ts.fnType(ts.fnType(h.get(0), h.option(1)), h.list(0), h.list(1)))),
 
   /** Function "List.find", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
    * &rarr; &alpha; option".
@@ -493,7 +502,8 @@ public enum BuiltIn {
    * exists; otherwise it returns NONE.
    */
   LIST_FIND("List", "find", ts ->
-      ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), h.get(0)))),
+      ts.forallType(1, h ->
+          ts.fnType(h.predicate(0), h.list(0), h.option(0)))),
 
   /** Function "List.filter", of type
    * "(&alpha; &rarr; bool) &rarr; &alpha; list &rarr; &alpha; list".
@@ -588,6 +598,113 @@ public enum BuiltIn {
             ts.tupleType(h.list(0), h.list(0)),
             order));
   }),
+
+  /** Function "Option.getOpt", of type
+   * "&alpha; option * &alpha; &rarr; &alpha;".
+   *
+   * <p>{@code getOpt(opt, a)} returns v if opt is SOME(v); otherwise it
+   * returns a. */
+  OPTION_GET_OPT("Option", "getOpt", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.option(0), h.get(0)),
+              h.get(0)))),
+
+  /** Function "Option.isSome", of type
+   * "&alpha; option &rarr; bool".
+   *
+   * <p>{@code isSome opt} returns true if opt is SOME(v); otherwise it returns
+   * false. */
+  OPTION_IS_SOME("Option", "isSome", ts ->
+      ts.forallType(1, h -> ts.fnType(h.option(0), BOOL))),
+
+  /** Function "Option.valOf", of type
+   * "&alpha; option &rarr; &alpha;".
+   *
+   * <p>{@code valOf opt} returns v if opt is SOME(v); otherwise it raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#OPTION Option}. */
+  OPTION_VAL_OF("Option", "valOf", ts ->
+      ts.forallType(1, h -> ts.fnType(h.option(0), h.get(0)))),
+
+  /** Function "Option.filter", of type
+   * "(&alpha; &rarr; bool) &rarr; &alpha; &rarr; &alpha; option".
+   *
+   * <p>{@code filter f a} returns SOME(a) if f(a) is true and NONE
+   * otherwise. */
+  OPTION_FILTER("Option", "filter", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.fnType(h.get(0), BOOL), h.get(0), h.option(0)))),
+
+  /** Function "Option.join", of type
+   * "&alpha; option option &rarr; &alpha; option".
+   *
+   * <p>{@code join opt} maps NONE to NONE and SOME(v) to v.*/
+  OPTION_JOIN("Option", "join", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.apply(ts.lookup("'a option"), h.option(0)),
+              h.option(0)))),
+
+  /** Function "Option.app", of type
+   * "(&alpha; &rarr; unit) &rarr; &alpha; option &rarr; unit".
+   *
+   * <p>{@code app f opt} applies the function f to the value v if opt is
+   * SOME(v), and otherwise does nothing. */
+  OPTION_APP("Option", "app", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.fnType(h.option(0), UNIT), h.option(0), UNIT))),
+
+  /** Function "Option.map", of type
+   * "(&alpha; &rarr; &beta;) &rarr; &alpha; option &rarr; &beta; option".
+   *
+   * <p>{@code map f opt} maps NONE to NONE and SOME(v) to SOME(f v). */
+  OPTION_MAP("Option", "map", ts ->
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(h.get(0), h.get(1)),
+              h.option(0), h.option(1)))),
+
+  /** Function "Option.mapPartial", of type
+   * "(&alpha; &rarr; &beta; option) &rarr; &alpha; option &rarr; &beta;
+   * option".
+   *
+   * <p>{@code mapPartial f opt} maps NONE to NONE and SOME(v) to f (v). */
+  OPTION_MAP_PARTIAL("Option", "mapPartial", ts ->
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(h.get(0), h.option(1)),
+              h.option(0), h.option(1)))),
+
+  /** Function "Option.compose", of type
+   * "(&alpha; &rarr; &beta;) * (&gamma; &rarr; &alpha; option)
+   * &rarr; &gamma; &rarr; &beta; option".
+   *
+   * <p>{@code compose (f, g) a} returns NONE if g(a) is NONE; otherwise, if
+   * g(a) is SOME(v), it returns SOME(f v).
+   *
+   * <p>Thus, the compose function composes {@code f} with the partial
+   * function {@code g} to produce another partial function. The expression
+   * compose {@code (f, g)} is equivalent to {@code (map f) o g}. */
+  OPTION_COMPOSE("Option", "compose", ts ->
+      ts.forallType(3, h ->
+          ts.fnType(
+              ts.tupleType(ts.fnType(h.get(0), h.get(1)),
+                  ts.fnType(h.get(2), h.option(0))),
+              h.get(2), h.option(1)))),
+
+  /** Function "Option.composePartial", of type
+   * "(&alpha; &rarr; &beta; option) * (&gamma; &rarr; &alpha; option)
+   * &rarr; &gamma; &rarr; &beta; option".
+   *
+   * <p>{@code composePartial (f, g) a} returns NONE if g(a) is NONE; otherwise,
+   * if g(a) is SOME(v), it returns f(v).
+   *
+   * <p>Thus, the {@code composePartial} function composes the two partial
+   * functions {@code f} and {@code g} to produce another partial function.
+   * The expression {@code composePartial (f, g)} is equivalent to
+   * {@code (mapPartial f) o g}. */
+  OPTION_COMPOSE_PARTIAL("Option", "composePartial", ts ->
+      ts.forallType(3, h ->
+          ts.fnType(
+              ts.tupleType(ts.fnType(h.get(0), h.option(1)),
+                  ts.fnType(h.get(2), h.option(0))),
+              h.get(2), h.option(1)))),
 
   /** Function "Relational.count", aka "count", of type "int list &rarr; int".
    *
@@ -725,6 +842,45 @@ public enum BuiltIn {
           nameTypes.put(name, builtIn.typeFunction.apply(typeSystem)));
       consumer.accept(structure, typeSystem.recordType(nameTypes));
     });
+  }
+
+  /** Defines built-in {@code datatype} instances, e.g. {@code option}. */
+  public static void dataTypes(TypeSystem ts, List<Binding> bindings) {
+    defineDataType(ts, bindings, "option", 1, h ->
+        h.tyCon("NONE").tyCon("SOME", h.get(0)));
+  }
+
+  private static void defineDataType(TypeSystem ts, List<Binding> bindings,
+      String name, int varCount, UnaryOperator<DataTypeHelper> transform) {
+    final List<TypeVar> tyVars = new ArrayList<>();
+    for (int i = 0; i < varCount; i++) {
+      tyVars.add(ts.typeVariable(i));
+    }
+    final Map<String, Type> tyCons = new LinkedHashMap<>();
+    transform.apply(new DataTypeHelper() {
+      public DataTypeHelper tyCon(String name, Type type) {
+        tyCons.put(name, type);
+        return this;
+      }
+
+      public DataTypeHelper tyCon(String name) {
+        return tyCon(name, DummyType.INSTANCE);
+      }
+
+      public TypeVar get(int i) {
+        return tyVars.get(i);
+      }
+    });
+    final DataType dataType = ts.dataType(name, tyVars, tyCons);
+    tyCons.keySet().forEach(tyConName ->
+        bindings.add(ts.bindTyCon(dataType, tyConName)));
+  }
+
+  /** Callback used when defining a datatype. */
+  private interface DataTypeHelper {
+    DataTypeHelper tyCon(String name);
+    DataTypeHelper tyCon(String name, Type type);
+    TypeVar get(int i);
   }
 
   /** Built-in structure. */

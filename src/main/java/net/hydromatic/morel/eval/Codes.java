@@ -61,6 +61,11 @@ import static net.hydromatic.morel.ast.AstBuilder.ast;
 public abstract class Codes {
   private Codes() {}
 
+  /** Value of {@code NONE}.
+   *
+   * @see #optionSome(Object) */
+  private static final List OPTION_NONE = ImmutableList.of("NONE");
+
   /** Returns a Code that evaluates to the same value in all environments. */
   public static Code constant(Comparable value) {
     return new Code() {
@@ -508,10 +513,19 @@ public abstract class Codes {
     if (i < 0) {
       throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
     }
-    if (i > s.length()) {
-      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+    final List jOpt = (List) tuple.get(2);
+    if (jOpt.size() == 2) {
+      final int j = (Integer) jOpt.get(1);
+      if (j < 0 || i + j > s.length()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+      }
+      return s.substring(i, i + j);
+    } else {
+      if (i > s.length()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+      }
+      return s.substring(i);
     }
-    return s.substring(i);
   };
 
   /** @see BuiltIn#STRING_SUBSTRING */
@@ -689,7 +703,12 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_GET_ITEM */
   private static final Applicable LIST_GET_ITEM = (env, arg) -> {
     final List list = (List) arg;
-    return ImmutableList.of(list.get(0), list.subList(1, list.size()));
+    if (list.isEmpty()) {
+      return OPTION_NONE;
+    } else {
+      return optionSome(
+          ImmutableList.of(list.get(0), list.subList(1, list.size())));
+    }
   };
 
   /** @see BuiltIn#LIST_NTH */
@@ -774,6 +793,24 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#LIST_MAP_PARTIAL */
+  private static final Applicable LIST_MAP_PARTIAL = (env, arg) ->
+      listMapPartial((Applicable) arg);
+
+  private static Applicable listMapPartial(Applicable fn) {
+    return (env, arg) -> {
+      final List list = (List) arg;
+      final ImmutableList.Builder<Object> builder = ImmutableList.builder();
+      for (Object o : list) {
+        final List opt = (List) fn.apply(env, o);
+        if (opt.size() == 2) {
+          builder.add(opt.get(1));
+        }
+      }
+      return builder.build();
+    };
+  }
+
   /** @see BuiltIn#LIST_FIND */
   private static final Applicable LIST_FIND = (env, arg) -> {
     final Applicable fn = (Applicable) arg;
@@ -785,10 +822,10 @@ public abstract class Codes {
       final List list = (List) arg;
       for (Object o : list) {
         if ((Boolean) fn.apply(env, o)) {
-          return o;
+          return optionSome(o);
         }
       }
-      throw new RuntimeException("not found");
+      return OPTION_NONE;
     };
   }
 
@@ -922,6 +959,144 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#OPTION_APP */
+  private static final Applicable OPTION_APP = Codes::optionApp;
+
+  /** Implements {@link #OPTION_APP}. */
+  private static Applicable optionApp(EvalEnv env, Object arg) {
+    final Applicable f = (Applicable) arg;
+    return (env2, arg2) -> {
+      final List a = (List) arg2;
+      if (a.size() == 2) {
+        f.apply(env2, a.get(1));
+      }
+      return Unit.INSTANCE;
+    };
+  }
+
+  /** @see BuiltIn#OPTION_GET_OPT */
+  private static final Applicable OPTION_GET_OPT = (env, arg) -> {
+    final List tuple = (List) arg;
+    final List opt = (List) tuple.get(0);
+    if (opt.size() == 2) {
+      assert opt.get(0).equals("SOME");
+      return opt.get(1); // SOME has 2 elements, NONE has 1
+    }
+    return tuple.get(1);
+  };
+
+  /** @see BuiltIn#OPTION_IS_SOME */
+  private static final Applicable OPTION_IS_SOME = (env, arg) -> {
+    final List opt = (List) arg;
+    return opt.size() == 2; // SOME has 2 elements, NONE has 1
+  };
+
+  /** @see BuiltIn#OPTION_VAL_OF */
+  private static final Applicable OPTION_VAL_OF = (env, arg) -> {
+    final List opt = (List) arg;
+    if (opt.size() == 2) { // SOME has 2 elements, NONE has 1
+      return opt.get(1);
+    } else {
+      throw new MorelRuntimeException(BuiltInExn.OPTION);
+    }
+  };
+
+  /** @see BuiltIn#OPTION_FILTER */
+  private static final Applicable OPTION_FILTER = Codes::optionFilter;
+
+  /** Implementation of {@link #OPTION_FILTER}. */
+  private static Applicable optionFilter(EvalEnv env, Object arg) {
+    final Applicable f = (Applicable) arg;
+    return (env2, arg2) -> {
+      final Object a = arg2;
+      if ((Boolean) f.apply(env, a)) {
+        return optionSome(a);
+      } else {
+        return OPTION_NONE;
+      }
+    };
+  }
+
+  /** @see BuiltIn#OPTION_JOIN */
+  private static final Applicable OPTION_JOIN = (env, arg) -> {
+    final List opt = (List) arg;
+    return opt.size() == 2
+        ? opt.get(1) // SOME(SOME(v)) -> SOME(v), SOME(NONE) -> NONE
+        : opt; // NONE -> NONE
+  };
+
+  /** @see BuiltIn#OPTION_MAP */
+  private static final Applicable OPTION_MAP = Codes::optionMap;
+
+  /** Implements {@link #OPTION_MAP}. */
+  private static Applicable optionMap(EvalEnv env, Object arg) {
+    final Applicable f = (Applicable) arg;
+    return (env2, arg2) -> {
+      final List a = (List) arg2;
+      if (a.size() == 2) { // SOME v
+        return optionSome(f.apply(env2, a.get(1))); // SOME (f v)
+      }
+      return a; // NONE
+    };
+  }
+
+  /** Creates a value of {@code SOME v}.
+   *
+   * @see #OPTION_NONE */
+  private static List optionSome(Object o) {
+    return ImmutableList.of("SOME", o);
+  }
+
+  /** @see BuiltIn#OPTION_MAP_PARTIAL */
+  private static final Applicable OPTION_MAP_PARTIAL = Codes::optionMapPartial;
+
+  /** Implements {@link #OPTION_MAP_PARTIAL}. */
+  private static Applicable optionMapPartial(EvalEnv env, Object arg) {
+    final Applicable f = (Applicable) arg;
+    return (env2, arg2) -> {
+      final List a = (List) arg2;
+      if (a.size() == 2) { // SOME v
+        return f.apply(env2, a.get(1)); // f v
+      }
+      return a; // NONE
+    };
+  }
+
+  /** @see BuiltIn#OPTION_COMPOSE */
+  private static final Applicable OPTION_COMPOSE = Codes::optionCompose;
+
+  /** Implements {@link #OPTION_COMPOSE}. */
+  private static Applicable optionCompose(EvalEnv env, Object arg) {
+    final List tuple = (List) arg;
+    final Applicable f = (Applicable) tuple.get(0);
+    final Applicable g = (Applicable) tuple.get(1);
+    return (env2, a) -> {
+      final List ga = (List) g.apply(env2, a); // g (a)
+      if (ga.size() == 2) { // SOME v
+        return optionSome(f.apply(env2, ga.get(1))); // SOME (f (v))
+      }
+      return ga; // NONE
+    };
+  }
+
+  /** @see BuiltIn#OPTION_COMPOSE_PARTIAL */
+  private static final Applicable OPTION_COMPOSE_PARTIAL =
+      Codes::optionComposePartial;
+
+  /** Implements {@link #OPTION_COMPOSE_PARTIAL}. */
+  private static Applicable optionComposePartial(EvalEnv env, Object arg) {
+    final List tuple = (List) arg;
+    final Applicable f = (Applicable) tuple.get(0);
+    final Applicable g = (Applicable) tuple.get(1);
+    return (env2, a) -> {
+      final List ga = (List) g.apply(env2, a); // g (a)
+      if (ga.size() == 2) { // SOME v
+        return f.apply(env2, ga.get(1)); // f (v)
+      }
+      return ga; // NONE
+    };
+  }
+
   /** @see BuiltIn#RELATIONAL_COUNT */
   private static final Applicable RELATIONAL_COUNT = (env, arg) ->
       ((List) arg).size();
@@ -979,12 +1154,13 @@ public abstract class Codes {
                       ImmutableList.of(
                           ast.stringLiteral(Pos.ZERO, entry.getKey()),
                           ast.stringLiteral(Pos.ZERO,
-                              entry.getValue().type.description()))))
+                              entry.getValue().type.moniker()))))
               .collect(Collectors.toList()));
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
     // Dummy type system, thrown away after this method
     final TypeSystem typeSystem = new TypeSystem();
+    BuiltIn.dataTypes(typeSystem, new ArrayList<>());
     BuiltIn.forEach(typeSystem, (key, type) -> {
       final Object value = BUILT_IN_VALUES.get(key);
       if (value == null) {
@@ -1161,7 +1337,7 @@ public abstract class Codes {
           .put(BuiltIn.LIST_REV_APPEND, LIST_REV_APPEND)
           .put(BuiltIn.LIST_APP, LIST_APP)
           .put(BuiltIn.LIST_MAP, LIST_MAP)
-          .put(BuiltIn.LIST_MAP_PARTIAL, LIST_MAP)
+          .put(BuiltIn.LIST_MAP_PARTIAL, LIST_MAP_PARTIAL)
           .put(BuiltIn.LIST_FIND, LIST_FIND)
           .put(BuiltIn.LIST_FILTER, LIST_FILTER)
           .put(BuiltIn.LIST_PARTITION, LIST_PARTITION)
@@ -1171,6 +1347,16 @@ public abstract class Codes {
           .put(BuiltIn.LIST_ALL, LIST_ALL)
           .put(BuiltIn.LIST_TABULATE, LIST_TABULATE)
           .put(BuiltIn.LIST_COLLATE, LIST_COLLATE)
+          .put(BuiltIn.OPTION_APP, OPTION_APP)
+          .put(BuiltIn.OPTION_COMPOSE, OPTION_COMPOSE)
+          .put(BuiltIn.OPTION_COMPOSE_PARTIAL, OPTION_COMPOSE_PARTIAL)
+          .put(BuiltIn.OPTION_FILTER, OPTION_FILTER)
+          .put(BuiltIn.OPTION_GET_OPT, OPTION_GET_OPT)
+          .put(BuiltIn.OPTION_IS_SOME, OPTION_IS_SOME)
+          .put(BuiltIn.OPTION_JOIN, OPTION_JOIN)
+          .put(BuiltIn.OPTION_MAP, OPTION_MAP)
+          .put(BuiltIn.OPTION_MAP_PARTIAL, OPTION_MAP_PARTIAL)
+          .put(BuiltIn.OPTION_VAL_OF, OPTION_VAL_OF)
           .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
           .put(BuiltIn.RELATIONAL_MAX, RELATIONAL_MAX)
           .put(BuiltIn.RELATIONAL_MIN, RELATIONAL_MIN)
@@ -1435,6 +1621,7 @@ public abstract class Codes {
   /** Definitions of Morel built-in exceptions. */
   public enum BuiltInExn {
     EMPTY("List", "Empty"),
+    OPTION("Option", "Option"),
     SIZE("General", "Size"),
     SUBSCRIPT("General", "Subscript [subscript out of bounds]");
 

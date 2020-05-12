@@ -29,6 +29,13 @@ Relational;
 2 + 3;
 2 * 3;
 
+(* Datatypes --------------------------------------------------- *)
+
+(*) datatype option
+SOME 1;
+NONE;
+SOME (SOME true);
+
 (* General ----------------------------------------------------- *)
 
 (*) op o - function composition
@@ -62,13 +69,18 @@ String.sub("abc", 20);
 String.sub("abc", 3);
 String.sub("abc", ~1);
 
-(*) val extract   : string * int * int option -> string
-(* TODO: support the 'int option' argument *)
+(*) val extract: string * int * int option -> string
 String.extract;
-String.extract("abc", 1);
-String.extract("abc", 3);
-String.extract("abc", 4);
-String.extract("abc", ~1);
+String.extract("abc", 1, NONE);
+String.extract("abc", 1, SOME 2);
+String.extract("abc", 3, NONE);
+String.extract("abc", 3, SOME 0);
+String.extract("abc", 4, NONE);
+String.extract("abc", ~1, NONE);
+String.extract("abc", 4, SOME 2);
+String.extract("abc", ~1, SOME 2);
+String.extract("abc", 1, SOME ~1);
+String.extract("abc", 1, SOME 99);
 
 (*) val substring : string * int * int -> string
 String.substring;
@@ -273,12 +285,13 @@ map (fn x => x) [];
 
 (*) val mapPartial : ('a -> 'b option) -> 'a list -> 'b list
 List.mapPartial;
-List.mapPartial (fn x => x + 1) [1,2,3];
-List.mapPartial (fn x => x + 1) [];
+List.mapPartial (fn x => if x mod 2 = 0 then NONE else SOME (x + 1)) [1,2,3,5,8];
+List.mapPartial (fn x => if x mod 2 = 0 then NONE else SOME (x + 1)) [];
 
 (*) val find : ('a -> bool) -> 'a list -> 'a option
 List.find;
 List.find (fn x => x mod 7 = 0) [2,3,5,8,13,21,34];
+List.find (fn x => x mod 11 = 0) [2,3,5,8,13,21,34];
 
 (*) val filter : ('a -> bool) -> 'a list -> 'a list
 List.filter;
@@ -325,6 +338,7 @@ List.tabulate;
 List.tabulate (5, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
 List.tabulate (1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
 List.tabulate (0, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+List.tabulate (~1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
 
 (*) val collate : ('a * 'a -> order) -> 'a list * 'a list -> order
 List.collate;
@@ -339,6 +353,73 @@ List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([], []
 List.collate (fn (x,y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], [1,2,3,4]);
 val it = LESS : order
  *)
+
+(* Option ------------------------------------------------------ *)
+(*) val getOpt : 'a option * 'a -> 'a
+Option.getOpt (SOME 1, 2);
+Option.getOpt (NONE, 2);
+
+(*) val isSome : 'a option -> bool
+Option.isSome (SOME 1);
+Option.isSome NONE;
+
+(*) val valOf : 'a option -> 'a
+Option.valOf (SOME 1);
+(* sml-nj gives:
+    stdIn:6.1-6.18 Warning: type vars not generalized because of
+       value restriction are instantiated to dummy types (X1,X2,...)
+ *)
+Option.valOf NONE;
+val noneInt = if true then NONE else SOME 0;
+Option.valOf noneInt;
+
+(*) val filter : ('a -> bool) -> 'a -> 'a option
+Option.filter (fn x => x mod 2 = 0) 1;
+Option.filter (fn x => x mod 2 = 0) 2;
+
+(*) val join : 'a option option -> 'a option
+Option.join (SOME (SOME 1));
+Option.join (SOME noneInt);
+(* sml-nj gives
+  stdIn:1.2-1.18 Warning: type vars not generalized because of
+     value restriction are instantiated to dummy types (X1,X2,...)
+*)
+Option.join NONE;
+
+(*) val app : ('a -> unit) -> 'a option -> unit
+Option.app General.ignore (SOME 1);
+Option.app General.ignore NONE;
+
+(*) val map : ('a -> 'b) -> 'a option -> 'b option
+Option.map String.size (SOME "xyz");
+Option.map String.size NONE;
+
+(*) val mapPartial : ('a -> 'b option) -> 'a option -> 'b option
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) (SOME "xyz");
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) NONE;
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) (SOME "");
+
+(*) val compose : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 1, String.size s))))
+               "";
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 0, String.size s))))
+               "a";
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 0, String.size s))))
+               "";
+
+(*) val composePartial : ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option
+Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
+                       fn s => if s = "" then NONE else SOME (String.size s))
+                      "abc";
+Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
+                       fn s => if s = "" then NONE else SOME (String.size s))
+                      "";
 
 (* Relational -------------------------------------------------- *)
 

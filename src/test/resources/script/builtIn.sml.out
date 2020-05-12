@@ -28,7 +28,7 @@ val it =
    find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,last=fn,length=fn,map=fn,
    mapPartial=fn,nil=[],nth=fn,null=fn,op @=fn,partition=fn,rev=fn,
    revAppend=fn,tabulate=fn,take=fn,tl=fn}
-  : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> int) -> 'd list * 'd list -> int, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> 'n * 'n list, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, op @:'y list * 'y list -> 'y list, partition:('z -> bool) -> 'z list -> 'z list * 'z list, rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list, tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list, tl:'be list -> 'be list}
+  : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> int) -> 'd list * 'd list -> int, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i option, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> 'n * 'n list option, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u option) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, op @:'y list * 'y list -> 'y list, partition:('z -> bool) -> 'z list -> 'z list * 'z list, rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list, tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list, tl:'be list -> 'be list}
 
 List.rev;
 val it = fn : 'a list -> 'a list
@@ -41,7 +41,7 @@ val it =
   {concat=fn,concatWith=fn,explode=fn,extract=fn,implode=fn,isPrefix=fn,
    isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,
    substring=fn,translate=fn}
-  : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
+  : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
 
 Relational;
 val it = {count=fn,max=fn,min=fn,sum=fn}
@@ -54,6 +54,19 @@ val it = 5 : int
 
 2 * 3;
 val it = 6 : int
+
+
+(* Datatypes --------------------------------------------------- *)
+
+(*) datatype option
+SOME 1;
+val it = SOME 1 : int option
+
+NONE;
+val it = NONE : 'a option
+
+SOME (SOME true);
+val it = SOME SOME true : bool option option
 
 
 (* General ----------------------------------------------------- *)
@@ -129,21 +142,38 @@ String.sub("abc", ~1);
 uncaught exception Subscript [subscript out of bounds]
 
 
-(*) val extract   : string * int * int option -> string
-(* TODO: support the 'int option' argument *)
+(*) val extract: string * int * int option -> string
 String.extract;
-val it = fn : string * int -> string
+val it = fn : string * int * int option -> string
 
-String.extract("abc", 1);
+String.extract("abc", 1, NONE);
 val it = "bc" : string
 
-String.extract("abc", 3);
+String.extract("abc", 1, SOME 2);
+val it = "bc" : string
+
+String.extract("abc", 3, NONE);
 val it = "" : string
 
-String.extract("abc", 4);
+String.extract("abc", 3, SOME 0);
+val it = "" : string
+
+String.extract("abc", 4, NONE);
 uncaught exception Subscript [subscript out of bounds]
 
-String.extract("abc", ~1);
+String.extract("abc", ~1, NONE);
+uncaught exception Subscript [subscript out of bounds]
+
+String.extract("abc", 4, SOME 2);
+uncaught exception Subscript [subscript out of bounds]
+
+String.extract("abc", ~1, SOME 2);
+uncaught exception Subscript [subscript out of bounds]
+
+String.extract("abc", 1, SOME ~1);
+uncaught exception Subscript [subscript out of bounds]
+
+String.extract("abc", 1, SOME 99);
 uncaught exception Subscript [subscript out of bounds]
 
 
@@ -452,13 +482,13 @@ uncaught exception Empty
 
 (*) val getItem : 'a list -> ('a * 'a list) option
 List.getItem;
-val it = fn : 'a list -> 'a * 'a list
+val it = fn : 'a list -> 'a * 'a list option
 
 List.getItem [1,2,3];
-val it = (1,[2,3]) : int * int list
+val it = SOME (1,[2,3]) : int * int list option
 
 List.getItem [1];
-val it = (1,[]) : int * int list
+val it = SOME (1,[]) : int * int list option
 
 
 (*) val nth : 'a list * int -> 'a
@@ -598,21 +628,24 @@ val it = [] : 'a list
 
 (*) val mapPartial : ('a -> 'b option) -> 'a list -> 'b list
 List.mapPartial;
-val it = fn : ('a -> 'b) -> 'a list -> 'b list
+val it = fn : ('a -> 'b option) -> 'a list -> 'b list
 
-List.mapPartial (fn x => x + 1) [1,2,3];
-val it = [2,3,4] : int list
+List.mapPartial (fn x => if x mod 2 = 0 then NONE else SOME (x + 1)) [1,2,3,5,8];
+val it = [2,4,6] : int list
 
-List.mapPartial (fn x => x + 1) [];
+List.mapPartial (fn x => if x mod 2 = 0 then NONE else SOME (x + 1)) [];
 val it = [] : int list
 
 
 (*) val find : ('a -> bool) -> 'a list -> 'a option
 List.find;
-val it = fn : ('a -> bool) -> 'a list -> 'a
+val it = fn : ('a -> bool) -> 'a list -> 'a option
 
 List.find (fn x => x mod 7 = 0) [2,3,5,8,13,21,34];
-val it = 21 : int
+val it = SOME 21 : int option
+
+List.find (fn x => x mod 11 = 0) [2,3,5,8,13,21,34];
+val it = NONE : int option
 
 
 (*) val filter : ('a -> bool) -> 'a list -> 'a list
@@ -724,6 +757,9 @@ val it = [1] : int list
 List.tabulate (0, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
 val it = [] : int list
 
+List.tabulate (~1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+uncaught exception Size
+
 
 (*) val collate : ('a * 'a -> order) -> 'a list * 'a list -> order
 List.collate;
@@ -752,6 +788,123 @@ val it = 0 : int
 List.collate (fn (x,y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], [1,2,3,4]);
 val it = LESS : order
  *)
+
+(* Option ------------------------------------------------------ *)
+(*) val getOpt : 'a option * 'a -> 'a
+Option.getOpt (SOME 1, 2);
+val it = 1 : int
+
+Option.getOpt (NONE, 2);
+val it = 2 : int
+
+
+(*) val isSome : 'a option -> bool
+Option.isSome (SOME 1);
+val it = true : bool
+
+Option.isSome NONE;
+val it = false : bool
+
+
+(*) val valOf : 'a option -> 'a
+Option.valOf (SOME 1);
+val it = 1 : int
+
+(* sml-nj gives:
+    stdIn:6.1-6.18 Warning: type vars not generalized because of
+       value restriction are instantiated to dummy types (X1,X2,...)
+ *)
+Option.valOf NONE;
+uncaught exception Option
+
+val noneInt = if true then NONE else SOME 0;
+val noneInt = NONE : int option
+
+Option.valOf noneInt;
+uncaught exception Option
+
+
+(*) val filter : ('a -> bool) -> 'a -> 'a option
+Option.filter (fn x => x mod 2 = 0) 1;
+val it = NONE : int option
+
+Option.filter (fn x => x mod 2 = 0) 2;
+val it = SOME 2 : int option
+
+
+(*) val join : 'a option option -> 'a option
+Option.join (SOME (SOME 1));
+val it = SOME 1 : int option
+
+Option.join (SOME noneInt);
+val it = NONE : int option
+
+(* sml-nj gives
+  stdIn:1.2-1.18 Warning: type vars not generalized because of
+     value restriction are instantiated to dummy types (X1,X2,...)
+*)
+Option.join NONE;
+val it = NONE : 'a option
+
+
+(*) val app : ('a -> unit) -> 'a option -> unit
+Option.app General.ignore (SOME 1);
+val it = () : unit
+
+Option.app General.ignore NONE;
+val it = () : unit
+
+
+(*) val map : ('a -> 'b) -> 'a option -> 'b option
+Option.map String.size (SOME "xyz");
+val it = SOME 3 : int option
+
+Option.map String.size NONE;
+val it = NONE : int option
+
+
+(*) val mapPartial : ('a -> 'b option) -> 'a option -> 'b option
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) (SOME "xyz");
+val it = SOME 3 : int option
+
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) NONE;
+val it = NONE : int option
+
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) (SOME "");
+val it = NONE : int option
+
+
+(*) val compose : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 1, String.size s))))
+               "";
+val it = NONE : int option
+
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 0, String.size s))))
+               "a";
+val it = SOME 1 : int option
+
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 0, String.size s))))
+               "";
+val it = NONE : int option
+
+
+(*) val composePartial : ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option
+Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
+                       fn s => if s = "" then NONE else SOME (String.size s))
+                      "abc";
+val it = SOME 3 : int option
+
+Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
+                       fn s => if s = "" then NONE else SOME (String.size s))
+                      "";
+val it = NONE : int option
+
 
 (* Relational -------------------------------------------------- *)
 
@@ -902,16 +1055,18 @@ val it =
    ("General",
    "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
    ("List",
-   "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+   "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+   ("NONE","'a option"),
+   ("Option",
+   "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
    ("Relational",
    "{count:forall 'a. 'a list -> int, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+   ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
-   "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
+   "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
    ("Sys","{env:unit -> (string * string) list}"),("abs","int -> int"),
    ("count","forall 'a. 'a list -> int"),
-   ("env","unit -> (string * string) list"),("false","bool"),
-   ("ignore","forall 'a. 'a -> unit"),("it","(string * string) list"),
-   ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),...]
+   ("env","unit -> (string * string) list"),("false","bool"),...]
   : (string * string) list
 
 
@@ -924,14 +1079,16 @@ val it =
    ("General",
    "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
    ("List",
-   "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+   "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+   ("NONE","'a option"),
+   ("Option",
+   "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
    ("Relational",
    "{count:forall 'a. 'a list -> int, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+   ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
-   "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
+   "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
    ("Sys","{env:unit -> (string * string) list}"),("abs","int -> int"),
    ("count","forall 'a. 'a list -> int"),
-   ("env","unit -> (string * string) list"),("false","bool"),
-   ("ignore","forall 'a. 'a -> unit"),("it","(string * string) list"),
-   ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),...]
+   ("env","unit -> (string * string) list"),("false","bool"),...]
   : (string * string) list

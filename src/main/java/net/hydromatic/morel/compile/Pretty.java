@@ -127,7 +127,7 @@ class Pretty {
       pretty1(buf, indent + 2, lineEnd, depth + 1, type, typedVal.o);
       buf.append(' ');
       pretty1(buf, indent + 2, lineEnd, depth + 1, PrimitiveType.BOOL,
-          ": " + typedVal.type.description());
+          ": " + typedVal.type.moniker());
       return buf;
     }
     if (value instanceof NamedVal) {

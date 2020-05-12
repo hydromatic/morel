@@ -24,8 +24,21 @@ import java.util.function.Function;
 
 /** Type. */
 public interface Type {
-  /** Description of the type, e.g. "{@code int}", "{@code int -> int}". */
+  /** Description of the type, e.g. "{@code int}", "{@code int -> int}",
+   * "{@code NONE | SOME of 'a}". */
   String description();
+
+  /** Key of the type.
+   *
+   * <p>Often the same as {@link #description()}, but an exception is datatype.
+   * For example, datatype "{@code 'a option}" has moniker and name
+   * "{@code option}" and description "{@code NONE | SOME of 'a}".
+   *
+   * <p>Use the description if you are looking for a type that is structurally
+   * equivalent. Use the moniker to identify it when printing. */
+  default String moniker() {
+    return description();
+  }
 
   /** Type operator. */
   Op op();

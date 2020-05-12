@@ -1105,7 +1105,7 @@ public class MainTest {
         + "  RATIONAL (2, 3)\n"
         + "end";
     ml(ml).assertParseSame()
-        .assertType("(INTEGER of int | RATIONAL of int * int | ZERO)")
+        .assertType("number")
         .assertEval(is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
   }
 

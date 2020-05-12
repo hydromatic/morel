@@ -986,7 +986,7 @@ public class TypeResolver {
   }
 
   private Unifier.Term toTerm(PrimitiveType type) {
-    return unifier.atom(type.description());
+    return unifier.atom(type.moniker);
   }
 
   private Unifier.Term toTerm(Type type, Subst subst) {
@@ -997,6 +997,8 @@ public class TypeResolver {
       final Unifier.Variable variable = subst.get((TypeVar) type);
       return variable != null ? variable : unifier.variable();
     case DATA_TYPE:
+      final DataType dataType = (DataType) type;
+      return unifier.apply(dataType.name(), toTerms(dataType.typeVars, subst));
     case TEMPORARY_DATA_TYPE:
       return unifier.atom(((NamedType) type).name());
     case FUNCTION_TYPE:
@@ -1044,7 +1046,7 @@ public class TypeResolver {
       }
       return toTerm(forallType.type, subst2);
     default:
-      throw new AssertionError("unknown type: " + type.description());
+      throw new AssertionError("unknown type: " + type.moniker());
     }
   }
 
@@ -1167,7 +1169,7 @@ public class TypeResolver {
         }
 
         @Override public String toString() {
-          return type.description();
+          return type.moniker();
         }
       });
     }

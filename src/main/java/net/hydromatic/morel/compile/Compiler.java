@@ -35,7 +35,6 @@ import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.util.ComparableSingletonList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.TailList;
@@ -46,7 +45,6 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Supplier;
@@ -460,9 +458,10 @@ public class Compiler {
       List<Action> actions) {
     for (Ast.DatatypeBind bind : datatypeDecl.binds) {
       final List<Binding> newBindings = new TailList<>(bindings);
-      final Type dataType = typeMap.typeSystem.lookup(bind.name.name);
+      final DataType dataType =
+          (DataType) typeMap.typeSystem.lookup(bind.name.name);
       for (Ast.TyCon tyCon : bind.tyCons) {
-        compileTyCon(env, dataType, tyCon, bindings);
+        bindings.add(typeMap.typeSystem.bindTyCon(dataType, tyCon.id.name));
       }
       if (actions != null) {
         final List<Binding> immutableBindings =
@@ -473,18 +472,6 @@ public class Compiler {
         });
       }
     }
-  }
-
-  private void compileTyCon(Environment env, Type dataType,
-      Ast.TyCon tyCon, List<Binding> bindings) {
-    final Type type = Objects.requireNonNull(typeMap.getType(tyCon));
-    final Object value;
-    if (tyCon.type == null) {
-      value = Codes.constant(ComparableSingletonList.of(tyCon.id.name));
-    } else {
-      value = Codes.tyCon(dataType, tyCon.id.name);
-    }
-    bindings.add(Binding.of(tyCon.id.name, type, value));
   }
 
   private Code compileInfix(Environment env, Ast.InfixCall call, Type type) {

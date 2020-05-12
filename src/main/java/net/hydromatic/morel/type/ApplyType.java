@@ -22,8 +22,10 @@ import com.google.common.collect.ImmutableList;
 
 import net.hydromatic.morel.ast.Op;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** Type that is a polymorphic type applied to a set of types. */
 public class ApplyType extends BaseType {
@@ -35,6 +37,12 @@ public class ApplyType extends BaseType {
     super(Op.APPLY_TYPE, description);
     this.type = Objects.requireNonNull(type);
     this.types = Objects.requireNonNull(types);
+  }
+
+  static String computeDescription(Type type, List<Type> types) {
+    return types.stream().map(Type::moniker)
+        .collect(Collectors.joining(",", "<", ">"))
+        + type.moniker();
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {

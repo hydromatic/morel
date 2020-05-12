@@ -63,6 +63,7 @@ public abstract class Environments {
   private static Environment env(Environment environment, TypeSystem typeSystem,
       Map<String, ForeignValue> valueMap) {
     final List<Binding> bindings = new ArrayList<>();
+    BuiltIn.dataTypes(typeSystem, bindings);
     for (Map.Entry<BuiltIn, Object> entry : Codes.BUILT_IN_VALUES.entrySet()) {
       BuiltIn key = entry.getKey();
       final Type type = key.typeFunction.apply(typeSystem);
