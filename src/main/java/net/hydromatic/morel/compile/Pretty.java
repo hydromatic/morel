@@ -19,6 +19,7 @@
 package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.foreign.RelList;
+import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -238,6 +239,20 @@ class Pretty {
     case FORALL_TYPE:
       return pretty2(buf, indent, lineEnd, depth + 1, ((ForallType) type).type,
           value);
+
+    case DATA_TYPE:
+      final DataType dataType = (DataType) type;
+      //noinspection unchecked
+      list = (List) value;
+      final String tyConName = (String) list.get(0);
+      buf.append(tyConName);
+      final Type typeConArgType = dataType.typeConstructors.get(tyConName);
+      if (list.size() == 2) {
+        final Object arg = list.get(1);
+        buf.append(' ');
+        pretty2(buf, indent, lineEnd, depth + 1, typeConArgType, arg);
+      }
+      return buf;
 
     default:
       return buf.append(value);

@@ -17,7 +17,19 @@
  * License.
  *)
 
+(* Structures -------------------------------------------------- *)
+General;
+List;
+List.rev;
+List.rev [1,2,3];
+String;
+Relational;
+
 (* Operators --------------------------------------------------- *)
+2 + 3;
+2 * 3;
+
+(* General ----------------------------------------------------- *)
 
 (*) op o - function composition
 val plusOne = fn x => x + 1;
@@ -29,20 +41,8 @@ plusOne o timesTwo o plusThree;
 ((plusOne o timesTwo) o plusThree) 3;
 (plusOne o (timesTwo o plusThree)) 3;
 
-(* Miscellaneous ----------------------------------------------- *)
 ignore;
 ignore (1 + 2);
-
-(*) map is alias for List.map
-map;
-map (fn x => x) [];
-
-(* Structures -------------------------------------------------- *)
-List;
-List.rev;
-List.rev [1,2,3];
-
-String;
 
 (* String ------------------------------------------------------ *)
 
@@ -58,24 +58,33 @@ String.size "";
 String.sub;
 String.sub("abc", 0);
 String.sub("abc", 2);
-(* TODO: need exceptions
 String.sub("abc", 20);
-*)
+String.sub("abc", 3);
+String.sub("abc", ~1);
 
 (*) val extract   : string * int * int option -> string
 (* TODO: support the 'int option' argument *)
 String.extract;
 String.extract("abc", 1);
+String.extract("abc", 3);
+String.extract("abc", 4);
+String.extract("abc", ~1);
 
 (*) val substring : string * int * int -> string
 String.substring;
 String.substring("hello, world", 2, 7);
 String.substring("hello, world", 0, 1);
 String.substring("hello", 5, 0);
+String.substring("hello", 1, 4);
 String.substring("", 0, 0);
+String.substring("hello", ~1, 0);
+String.substring("hello", 1, ~1);
+String.substring("hello", 1, 5);
 
 (*) val ^ : string * string -> string
-(* TODO *)
+"a" ^ "bc";
+"a" ^ "";
+"a" ^ "bc" ^ "" ^ "def";
 
 (*) val concat : string list -> string
 String.concat;
@@ -188,14 +197,17 @@ List.at ([], []);
 (*) val hd : 'a list -> 'a
 List.hd;
 List.hd [1,2,3];
+List.hd [];
 
 (*) val tl : 'a list -> 'a list
 List.tl;
 List.tl [1,2,3];
+List.tl [];
 
 (*) val last : 'a list -> 'a
 List.last;
 List.last [1,2,3];
+List.last [];
 
 (*) val getItem : 'a list -> ('a * 'a list) option
 List.getItem;
@@ -206,12 +218,16 @@ List.getItem [1];
 List.nth;
 List.nth ([1,2,3], 2);
 List.nth ([1], 0);
+List.nth ([1,2,3], 3);
+List.nth ([1,2,3], ~1);
 
 (*) val take : 'a list * int -> 'a list
 List.take;
 List.take ([1,2,3], 0);
 List.take ([1,2,3], 1);
 List.take ([1,2,3], 3);
+List.take ([1,2,3], 4);
+List.take ([1,2,3], ~1);
 
 (*) val drop : 'a list * int -> 'a list
 List.drop;
@@ -250,6 +266,10 @@ List.app (fn x => ignore (x + 2)) [];
 List.map;
 List.map (fn x => x + 1) [1,2,3];
 List.map (fn x => x + 1) [];
+
+(*) map is alias for List.map
+map;
+map (fn x => x) [];
 
 (*) val mapPartial : ('a -> 'b option) -> 'a list -> 'b list
 List.mapPartial;

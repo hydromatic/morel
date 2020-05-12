@@ -55,10 +55,6 @@ public enum BuiltIn {
   /** Function "abs", of type "int &rarr; int". */
   ABS(null, "abs", ts -> ts.fnType(INT, INT)),
 
-  /** Function "ignore", of type "&alpha; &rarr; unit". */
-  IGNORE(null, "ignore", ts ->
-      ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
-
   /** Infix operator "^", of type "string * string &rarr; string". */
   OP_CARET(null, "op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
 
@@ -170,6 +166,10 @@ public enum BuiltIn {
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
+  /** Function "General.ignore", of type "&alpha; &rarr; unit". */
+  IGNORE("General", "ignore", "ignore", ts ->
+      ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
+
   /** Operator "General.op o", of type "(&beta; &rarr; &gamma;) *
    * (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma;"
    *
@@ -195,7 +195,9 @@ public enum BuiltIn {
   /** Function "String.sub", of type "string * int &rarr; char".
    *
    * <p>"sub (s, i)" returns the i(th) character of s, counting from zero. This
-   * raises {@code Subscript} if i &lt; 0 or |s| &le; i. */
+   * raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
+   * if i &lt; 0 or |s| &le; i. */
   STRING_SUB("String", "sub", ts -> ts.fnType(ts.tupleType(STRING, INT), CHAR)),
 
   /** Function "String.extract", of type "string * int * int option &rarr;
@@ -205,13 +207,15 @@ public enum BuiltIn {
    *
    * <p>"extract (s, i, NONE)" and "extract (s, i, SOME j)" return substrings of
    * s. The first returns the substring of s from the i(th) character to the end
-   * of the string, i.e., the string s[i..|s|-1]. This raises {@code Subscript}
+   * of the string, i.e., the string s[i..|s|-1]. This raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
    * if i &lt; 0 * or |s| &lt; i.
    *
    * <p>The second form returns the substring of size j starting at index i,
-   * i.e., the string s[i..i+j-1]. It raises {@code Subscript} if i &lt; 0 or j
-   * &lt; 0 or |s| &lt; i + j. Note that, if defined, extract returns the empty
-   * string when i = |s|. */
+   * i.e., the string s[i..i+j-1]. It raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
+   * if i &lt; 0 or j &lt; 0 or |s| &lt; i + j. Note that, if defined, extract
+   * returns the empty string when i = |s|. */
   STRING_EXTRACT("String", "extract", ts ->
       ts.fnType(ts.tupleType(STRING, INT), STRING)),
 
@@ -226,7 +230,8 @@ public enum BuiltIn {
   /** Function "String.concat", of type "string list &rarr; string".
    *
    * <p>"concat l" is the concatenation of all the strings in l. This raises
-   * {@code Size} if the sum of all the sizes is greater than maxSize.  */
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
+   * if the sum of all the sizes is greater than maxSize.  */
   STRING_CONCAT("String", "concat", ts ->
       ts.fnType(ts.listType(STRING), STRING)),
 
@@ -234,8 +239,9 @@ public enum BuiltIn {
    * string".
    *
    * <p>"concatWith s l" returns the concatenation of the strings in the list l
-   * using the string s as a separator. This raises {@code Size} if the size of
-   * the resulting string would be greater than maxSize. */
+   * using the string s as a separator. This raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
+   * if the size of the resulting string would be greater than maxSize. */
   STRING_CONCAT_WITH("String", "concatWith", ts ->
       ts.fnType(STRING, ts.listType(STRING), STRING)),
 
@@ -247,7 +253,8 @@ public enum BuiltIn {
   /** Function "String.implode", of type "char list &rarr; string".
    *
    * <p>"implode l" generates the string containing the characters in the list
-   * l. This is equivalent to concat (List.map str l). This raises {@code Size}
+   * l. This is equivalent to {@code concat (List.map str l)}. This raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
    * if the resulting string would have size greater than maxSize. */
   STRING_IMPLODE("String", "implode", ts ->
       ts.fnType(ts.listType(CHAR), STRING)),
@@ -339,15 +346,17 @@ public enum BuiltIn {
 
   /** Function "List.hd", of type "&alpha; list &rarr; &alpha;".
    *
-   * <p>"hd l" returns the first element of l. It raises {@code Empty} if l is
-   * nil.
+   * <p>"hd l" returns the first element of l. It raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty}
+   * if l is nil.
    */
   LIST_HD("List", "hd", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
 
   /** Function "List.tl", of type "&alpha; list &rarr; &alpha; list".
    *
-   * <p>"tl l" returns all but the first element of l. It raises {@code Empty}
+   * <p>"tl l" returns all but the first element of l. It raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY empty}
    * if l is nil.
    */
   LIST_TL("List", "tl", ts ->
@@ -355,8 +364,9 @@ public enum BuiltIn {
 
   /** Function "List.last", of type "&alpha; list &rarr; &alpha;".
    *
-   * <p>"last l" returns the last element of l. It raises {@code Empty} if l is
-   * nil.
+   * <p>"last l" returns the last element of l. It raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY empty}
+   * if l is nil.
    */
   LIST_LAST("List", "last", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
@@ -366,8 +376,9 @@ public enum BuiltIn {
    *
    * <p>"getItem l" returns {@code NONE} if the list is empty, and
    * {@code SOME(hd l,tl l)} otherwise. This function is particularly useful for
-   * creating value readers from lists of characters. For example, Int.scan
-   * StringCvt.DEC getItem has the type {@code (int,char list) StringCvt.reader}
+   * creating value readers from lists of characters. For example,
+   * {@code Int.scan StringCvt.DEC getItem} has the type
+   * {@code (int, char list) StringCvt.reader}
    * and can be used to scan decimal integers from lists of characters.
    */
   // TODO: make it return an option
@@ -378,8 +389,10 @@ public enum BuiltIn {
   /** Function "List.nth", of type "&alpha; list * int &rarr; &alpha;".
    *
    * <p>"nth (l, i)" returns the i(th) element of the list l, counting from 0.
-   * It raises {@code Subscript} if i &lt; 0 or i &ge; length l. We have
-   * nth(l,0) = hd l, ignoring exceptions.
+   * It raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
+   * if i &lt; 0 or i &ge; length l.
+   * We have {@code nth(l,0) = hd l}, ignoring exceptions.
    */
   LIST_NTH("List", "nth", ts ->
       ts.forallType(1, h -> ts.fnType(ts.tupleType(h.list(0), INT), h.get(0)))),
@@ -387,8 +400,9 @@ public enum BuiltIn {
   /** Function "List.take", of type "&alpha; list * int &rarr; &alpha; list".
    *
    * <p>"take (l, i)" returns the first i elements of the list l. It raises
-   * {@code Subscript} if i &lt; 0 or i &gt; length l.
-   * We have take(l, length l) = l.
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
+   * if i &lt; 0 or i &gt; length l.
+   * We have {@code take(l, length l) = l}.
    */
   LIST_TAKE("List", "take", ts ->
       ts.forallType(1, h ->
@@ -399,7 +413,9 @@ public enum BuiltIn {
    * <p>"drop (l, i)" returns what is left after dropping the first i elements
    * of the list l.
    *
-   * <p>It raises {@code Subscript} if i &lt; 0 or i &gt; length l.
+   * <p>It raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
+   * if i &lt; 0 or i &gt; length l.
    *
    * <p>It holds that
    * {@code take(l, i) @ drop(l, i) = l} when 0 &le; i &le; length l.
@@ -552,7 +568,8 @@ public enum BuiltIn {
    *
    * <p>"tabulate (n, f)" returns a list of length n equal to
    * {@code [f(0), f(1), ..., f(n-1)]}, created from left to right. It raises
-   * {@code Size} if n &lt; 0.
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
+   * if n &lt; 0.
    */
   LIST_TABULATE("List", "tabulate", ts ->
       ts.forallType(1, h ->

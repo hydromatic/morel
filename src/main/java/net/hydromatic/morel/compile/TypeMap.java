@@ -21,6 +21,7 @@ package net.hydromatic.morel.compile;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Lists;
 
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.type.RecordType;
@@ -131,7 +132,12 @@ public class TypeMap {
       default:
         final Type type = typeMap.typeSystem.lookupOpt(sequence.operator);
         if (type != null) {
-          return type;
+          if (sequence.terms.isEmpty()) {
+            return type;
+          }
+          final List<Type> types =
+              Lists.transform(sequence.terms, t -> t.accept(this));
+          return typeMap.typeSystem.apply(type, types);
         }
         if (sequence.operator.startsWith(TypeResolver.RECORD_TY_CON)) {
           // E.g. "record:a:b" becomes record type "{a:t0, b:t1}".

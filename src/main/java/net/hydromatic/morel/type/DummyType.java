@@ -37,7 +37,7 @@ public enum DummyType implements Type {
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {
-    throw new UnsupportedOperationException();
+    return (R) this;
   }
 
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {

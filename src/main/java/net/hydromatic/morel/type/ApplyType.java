@@ -43,6 +43,7 @@ public class ApplyType extends BaseType {
 
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
     final Type type2 = type.copy(typeSystem, transform);
+    //noinspection UnstableApiUsage
     final ImmutableList<Type> types2 =
         types.stream().map(t -> t.copy(typeSystem, transform))
             .collect(ImmutableList.toImmutableList());

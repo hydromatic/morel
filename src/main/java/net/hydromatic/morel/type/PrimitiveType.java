@@ -32,7 +32,8 @@ public enum PrimitiveType implements Type {
   STRING,
   UNIT;
 
-  private final String description = name().toLowerCase(Locale.ROOT);
+  /** The name in the language, e.g. {@code bool}. */
+  public final String description = name().toLowerCase(Locale.ROOT);
 
   public String description() {
     return description;

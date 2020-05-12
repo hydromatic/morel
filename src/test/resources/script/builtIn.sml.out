@@ -17,7 +17,46 @@
  * License.
  *)
 
+(* Structures -------------------------------------------------- *)
+General;
+val it = {ignore=fn,op o=fn}
+  : {ignore:'a -> unit, op o:('b -> 'c) * ('d -> 'b) -> 'd -> 'c}
+
+List;
+val it =
+  {all=fn,app=fn,at=fn,collate=fn,concat=fn,drop=fn,exists=fn,filter=fn,
+   find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,last=fn,length=fn,map=fn,
+   mapPartial=fn,nil=[],nth=fn,null=fn,op @=fn,partition=fn,rev=fn,
+   revAppend=fn,tabulate=fn,take=fn,tl=fn}
+  : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> int) -> 'd list * 'd list -> int, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> 'n * 'n list, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, op @:'y list * 'y list -> 'y list, partition:('z -> bool) -> 'z list -> 'z list * 'z list, rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list, tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list, tl:'be list -> 'be list}
+
+List.rev;
+val it = fn : 'a list -> 'a list
+
+List.rev [1,2,3];
+val it = [3,2,1] : int list
+
+String;
+val it =
+  {concat=fn,concatWith=fn,explode=fn,extract=fn,implode=fn,isPrefix=fn,
+   isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,
+   substring=fn,translate=fn}
+  : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
+
+Relational;
+val it = {count=fn,max=fn,min=fn,sum=fn}
+  : {count:'a list -> int, max:'b list -> 'b, min:'c list -> 'c, sum:'d list -> 'd}
+
+
 (* Operators --------------------------------------------------- *)
+2 + 3;
+val it = 5 : int
+
+2 * 3;
+val it = 6 : int
+
+
+(* General ----------------------------------------------------- *)
 
 (*) op o - function composition
 val plusOne = fn x => x + 1;
@@ -45,44 +84,11 @@ val it = 13 : int
 val it = 13 : int
 
 
-(* Miscellaneous ----------------------------------------------- *)
 ignore;
 val it = fn : 'a -> unit
 
 ignore (1 + 2);
 val it = () : unit
-
-
-(*) map is alias for List.map
-map;
-val it = fn : ('a -> 'b) -> 'a list -> 'b list
-
-map (fn x => x) [];
-val it = [] : 'a list
-
-
-(* Structures -------------------------------------------------- *)
-List;
-val it =
-  {all=fn,app=fn,at=fn,collate=fn,concat=fn,drop=fn,exists=fn,filter=fn,
-   find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,last=fn,length=fn,map=fn,
-   mapPartial=fn,nil=[],nth=fn,null=fn,op @=fn,partition=fn,rev=fn,
-   revAppend=fn,tabulate=fn,take=fn,tl=fn}
-  : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> int) -> 'd list * 'd list -> int, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> 'n * 'n list, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, op @:'y list * 'y list -> 'y list, partition:('z -> bool) -> 'z list -> 'z list * 'z list, rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list, tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list, tl:'be list -> 'be list}
-
-List.rev;
-val it = fn : 'a list -> 'a list
-
-List.rev [1,2,3];
-val it = [3,2,1] : int list
-
-
-String;
-val it =
-  {concat=fn,concatWith=fn,explode=fn,extract=fn,implode=fn,isPrefix=fn,
-   isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,
-   substring=fn,translate=fn}
-  : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
 
 
 (* String ------------------------------------------------------ *)
@@ -113,9 +119,15 @@ val it = #"a" : char
 String.sub("abc", 2);
 val it = #"c" : char
 
-(* TODO: need exceptions
 String.sub("abc", 20);
-*)
+uncaught exception Subscript [subscript out of bounds]
+
+String.sub("abc", 3);
+uncaught exception Subscript [subscript out of bounds]
+
+String.sub("abc", ~1);
+uncaught exception Subscript [subscript out of bounds]
+
 
 (*) val extract   : string * int * int option -> string
 (* TODO: support the 'int option' argument *)
@@ -124,6 +136,15 @@ val it = fn : string * int -> string
 
 String.extract("abc", 1);
 val it = "bc" : string
+
+String.extract("abc", 3);
+val it = "" : string
+
+String.extract("abc", 4);
+uncaught exception Subscript [subscript out of bounds]
+
+String.extract("abc", ~1);
+uncaught exception Subscript [subscript out of bounds]
 
 
 (*) val substring : string * int * int -> string
@@ -139,12 +160,32 @@ val it = "h" : string
 String.substring("hello", 5, 0);
 val it = "" : string
 
+String.substring("hello", 1, 4);
+val it = "ello" : string
+
 String.substring("", 0, 0);
 val it = "" : string
 
+String.substring("hello", ~1, 0);
+uncaught exception Subscript [subscript out of bounds]
+
+String.substring("hello", 1, ~1);
+uncaught exception Subscript [subscript out of bounds]
+
+String.substring("hello", 1, 5);
+uncaught exception Subscript [subscript out of bounds]
+
 
 (*) val ^ : string * string -> string
-(* TODO *)
+"a" ^ "bc";
+val it = "abc" : string
+
+"a" ^ "";
+val it = "a" : string
+
+"a" ^ "bc" ^ "" ^ "def";
+val it = "abcdef" : string
+
 
 (*) val concat : string list -> string
 String.concat;
@@ -383,6 +424,9 @@ val it = fn : 'a list -> 'a
 List.hd [1,2,3];
 val it = 1 : int
 
+List.hd [];
+uncaught exception Empty
+
 
 (*) val tl : 'a list -> 'a list
 List.tl;
@@ -391,6 +435,9 @@ val it = fn : 'a list -> 'a list
 List.tl [1,2,3];
 val it = [2,3] : int list
 
+List.tl [];
+uncaught exception Empty
+
 
 (*) val last : 'a list -> 'a
 List.last;
@@ -398,6 +445,9 @@ val it = fn : 'a list -> 'a
 
 List.last [1,2,3];
 val it = 3 : int
+
+List.last [];
+uncaught exception Empty
 
 
 (*) val getItem : 'a list -> ('a * 'a list) option
@@ -421,6 +471,12 @@ val it = 3 : int
 List.nth ([1], 0);
 val it = 1 : int
 
+List.nth ([1,2,3], 3);
+uncaught exception Subscript [subscript out of bounds]
+
+List.nth ([1,2,3], ~1);
+uncaught exception Subscript [subscript out of bounds]
+
 
 (*) val take : 'a list * int -> 'a list
 List.take;
@@ -434,6 +490,12 @@ val it = [1] : int list
 
 List.take ([1,2,3], 3);
 val it = [1,2,3] : int list
+
+List.take ([1,2,3], 4);
+uncaught exception Subscript [subscript out of bounds]
+
+List.take ([1,2,3], ~1);
+uncaught exception Subscript [subscript out of bounds]
 
 
 (*) val drop : 'a list * int -> 'a list
@@ -524,6 +586,14 @@ val it = [2,3,4] : int list
 
 List.map (fn x => x + 1) [];
 val it = [] : int list
+
+
+(*) map is alias for List.map
+map;
+val it = fn : ('a -> 'b) -> 'a list -> 'b list
+
+map (fn x => x) [];
+val it = [] : 'a list
 
 
 (*) val mapPartial : ('a -> 'b option) -> 'a list -> 'b list
@@ -828,7 +898,9 @@ val it = fn : unit -> (string * string) list
 
 Sys.env ();
 val it =
-  [("General","{op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
+  [
+   ("General",
+   "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
    ("List",
    "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
    ("Relational",
@@ -848,7 +920,9 @@ val it = fn : unit -> (string * string) list
 
 env ();
 val it =
-  [("General","{op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
+  [
+   ("General",
+   "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
    ("List",
    "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> int) -> 'a list * 'a list -> int, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> 'a * 'a list, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
    ("Relational",

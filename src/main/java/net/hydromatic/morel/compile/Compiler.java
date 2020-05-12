@@ -35,12 +35,12 @@ import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.util.ComparableSingletonList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.TailList;
 
 import java.math.BigDecimal;
-import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -480,7 +480,7 @@ public class Compiler {
     final Type type = Objects.requireNonNull(typeMap.getType(tyCon));
     final Object value;
     if (tyCon.type == null) {
-      value = Codes.constant(new ComparableSingletonList<>(tyCon.id.name));
+      value = Codes.constant(ComparableSingletonList.of(tyCon.id.name));
     } else {
       value = Codes.tyCon(dataType, tyCon.id.name);
     }
@@ -609,10 +609,14 @@ public class Compiler {
       final Type type0 = typeMap.getType(valBind.e);
       final Type type = typeMap.typeSystem.ensureClosed(type0);
       actions.add((output, outBindings, evalEnv) -> {
-        final Object o = code.eval(evalEnv);
-        outBindings.add(Binding.of(name, type, o));
         final StringBuilder buf = new StringBuilder();
-        Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
+        try {
+          final Object o = code.eval(evalEnv);
+          outBindings.add(Binding.of(name, type, o));
+          Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
+        } catch (Codes.MorelRuntimeException e) {
+          e.describeTo(buf);
+        }
         output.add(buf.toString());
       });
     }
@@ -649,33 +653,6 @@ public class Compiler {
       return refCode.eval(env);
     }
   }
-
-  /** A comparable singleton list.
-   *
-   * @param <E> Element type */
-  private static class ComparableSingletonList<E extends Comparable<E>>
-      extends AbstractList<E>
-      implements Comparable<ComparableSingletonList<E>> {
-    private final E element;
-
-    ComparableSingletonList(E element) {
-      this.element = Objects.requireNonNull(element);
-    }
-
-    @Override public E get(int index) {
-      assert index == 0;
-      return element;
-    }
-
-    @Override public int size() {
-      return 1;
-    }
-
-    @Override public int compareTo(ComparableSingletonList<E> o) {
-      return element.compareTo(o.element);
-    }
-  }
-
 }
 
 // End Compiler.java

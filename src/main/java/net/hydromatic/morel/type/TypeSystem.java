@@ -126,11 +126,10 @@ public class TypeSystem {
       Map<String, Type> tyCons) {
     return (DataType) typeByName.computeIfAbsent(name,
         name2 -> {
-          final DataType dataType =
-              new DataType(TypeSystem.this, name2,
-                  DataType.computeDescription(tyCons),
-                  ImmutableList.copyOf(typeVars),
-                  ImmutableSortedMap.copyOf(tyCons));
+          final DataType dataType = new DataType(TypeSystem.this, name2,
+              DataType.computeDescription(tyCons),
+              ImmutableList.copyOf(typeVars),
+              ImmutableSortedMap.copyOf(tyCons));
           tyCons.forEach((name3, type) ->
               typeConstructorByName.put(name3, Pair.of(dataType, type)));
           return dataType;
@@ -346,8 +345,11 @@ public class TypeSystem {
   /** Provides access to type variables from within a call to
    * {@link TypeSystem#forallType(int, Function)}. */
   public interface ForallHelper {
+    /** Creates type {@code `i}. */
     TypeVar get(int i);
+    /** Creates type {@code `i list}. */
     ListType list(int i);
+    /** Creates type <code>`i &rarr; bool</code>. */
     FnType predicate(int i);
   }
 }

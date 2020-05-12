@@ -494,6 +494,9 @@ public abstract class Codes {
     final List tuple = (List) arg;
     final String s = (String) tuple.get(0);
     final int i = (Integer) tuple.get(1);
+    if (i < 0 || i >= s.length()) {
+      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+    }
     return s.charAt(i);
   };
 
@@ -502,6 +505,12 @@ public abstract class Codes {
     final List tuple = (List) arg;
     final String s = (String) tuple.get(0);
     final int i = (Integer) tuple.get(1);
+    if (i < 0) {
+      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+    }
+    if (i > s.length()) {
+      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+    }
     return s.substring(i);
   };
 
@@ -511,6 +520,9 @@ public abstract class Codes {
     final String s = (String) tuple.get(0);
     final int i = (Integer) tuple.get(1);
     final int j = (Integer) tuple.get(2);
+    if (i < 0 || j < 0 || i + j > s.length()) {
+      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+    }
     return s.substring(i, i + j);
   };
 
@@ -520,6 +532,14 @@ public abstract class Codes {
   private static Applicable stringConcat(String separator) {
     return (env, arg) -> {
       @SuppressWarnings("unchecked") final List<String> list = (List) arg;
+      long n = 0;
+      for (String s : list) {
+        n += s.length();
+        n += separator.length();
+      }
+      if (n > STRING_MAX_SIZE) {
+        throw new MorelRuntimeException(BuiltInExn.SIZE);
+      }
       return String.join(separator, list);
     };
   }
@@ -534,6 +554,9 @@ public abstract class Codes {
 
   /** @see BuiltIn#STRING_IMPLODE */
   private static final Applicable STRING_IMPLODE = (env, arg) ->
+      // Note: In theory this function should raise Size, but it is not
+      // possible in practice because List.size() is never larger than
+      // Integer.MAX_VALUE.
       String.valueOf(Chars.toArray((List) arg));
 
   /** @see BuiltIn#STRING_EXPLODE */
@@ -635,16 +658,33 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#LIST_HD */
-  private static final Applicable LIST_HD = (env, arg) ->
-      ((List) arg).get(0);
+  private static final Applicable LIST_HD = (env, arg) -> {
+    final List list = (List) arg;
+    if (list.isEmpty()) {
+      throw new MorelRuntimeException(BuiltInExn.EMPTY);
+    }
+    return list.get(0);
+  };
 
   /** @see BuiltIn#LIST_TL */
-  private static final Applicable LIST_TL = (env, arg) ->
-      ((List) arg).subList(1, ((List) arg).size());
+  private static final Applicable LIST_TL = (env, arg) -> {
+    final List list = (List) arg;
+    final int size = list.size();
+    if (size == 0) {
+      throw new MorelRuntimeException(BuiltInExn.EMPTY);
+    }
+    return list.subList(1, size);
+  };
 
   /** @see BuiltIn#LIST_LAST */
-  private static final Applicable LIST_LAST = (env, arg) ->
-      ((List) arg).get(((List) arg).size() - 1);
+  private static final Applicable LIST_LAST = (env, arg) -> {
+    final List list = (List) arg;
+    final int size = list.size();
+    if (size == 0) {
+      throw new MorelRuntimeException(BuiltInExn.EMPTY);
+    }
+    return list.get(size - 1);
+  };
 
   /** @see BuiltIn#LIST_GET_ITEM */
   private static final Applicable LIST_GET_ITEM = (env, arg) -> {
@@ -657,6 +697,9 @@ public abstract class Codes {
     final List tuple = (List) arg;
     final List list = (List) tuple.get(0);
     final int i = (Integer) tuple.get(1);
+    if (i < 0 || i >= list.size()) {
+      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+    }
     return list.get(i);
   };
 
@@ -665,6 +708,9 @@ public abstract class Codes {
     final List tuple = (List) arg;
     final List list = (List) tuple.get(0);
     final int i = (Integer) tuple.get(1);
+    if (i < 0 || i > list.size()) {
+      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+    }
     return list.subList(0, i);
   };
 
@@ -842,6 +888,9 @@ public abstract class Codes {
   private static final Applicable LIST_TABULATE = (env, arg) -> {
     final List tuple = (List) arg;
     final int count = (Integer) tuple.get(0);
+    if (count < 0) {
+      throw new MorelRuntimeException(BuiltInExn.SIZE);
+    }
     final Applicable fn = (Applicable) tuple.get(1);
     final ImmutableList.Builder<Object> builder = ImmutableList.builder();
     for (int i = 0; i < count; i++) {
@@ -936,7 +985,6 @@ public abstract class Codes {
   private static void populateBuiltIns(Map<String, Object> valueMap) {
     // Dummy type system, thrown away after this method
     final TypeSystem typeSystem = new TypeSystem();
-
     BuiltIn.forEach(typeSystem, (key, type) -> {
       final Object value = BUILT_IN_VALUES.get(key);
       if (value == null) {
@@ -1366,6 +1414,36 @@ public abstract class Codes {
 
     public Object eval(EvalEnv env) {
       return env.getOpt(name);
+    }
+  }
+
+  /** Java exception that wraps an exception thrown by the Morel runtime. */
+  public static class MorelRuntimeException extends RuntimeException {
+    private final BuiltInExn e;
+
+    /** Creates a MorelRuntimeException. */
+    public MorelRuntimeException(BuiltInExn e) {
+      this.e = Objects.requireNonNull(e);
+    }
+
+    public StringBuilder describeTo(StringBuilder buf) {
+      return buf.append("uncaught exception ")
+          .append(e.mlName);
+    }
+  }
+
+  /** Definitions of Morel built-in exceptions. */
+  public enum BuiltInExn {
+    EMPTY("List", "Empty"),
+    SIZE("General", "Size"),
+    SUBSCRIPT("General", "Subscript [subscript out of bounds]");
+
+    public final String structure;
+    public final String mlName;
+
+    BuiltInExn(String structure, String mlName) {
+      this.structure = structure;
+      this.mlName = mlName;
     }
   }
 }
