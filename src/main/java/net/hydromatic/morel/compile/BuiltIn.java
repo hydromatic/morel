@@ -203,8 +203,8 @@ public enum BuiltIn {
 
   /** Function "String.sub", of type "string * int &rarr; char".
    *
-   * <p>"sub (s, i)" returns the i(th) character of s, counting from zero. This
-   * raises
+   * <p>"sub (s, i)" returns the {@code i}<sup>th</sup> character of s, counting
+   * from zero. This raises
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
    * if i &lt; 0 or |s| &le; i. */
   STRING_SUB("String", "sub", ts -> ts.fnType(ts.tupleType(STRING, INT), CHAR)),
@@ -213,20 +213,19 @@ public enum BuiltIn {
    * string".
    *
    * <p>"extract (s, i, NONE)" and "extract (s, i, SOME j)" return substrings of
-   * s. The first returns the substring of s from the i(th) character to the end
-   * of the string, i.e., the string s[i..|s|-1]. This raises
+   * {@code s}. The first returns the substring of {@code s} from the
+   * {@code i}<sup>th</sup> character to the end of the string, i.e., the string
+   * {@code s[i..|s|-1]}. This raises
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
-   * if i &lt; 0 * or |s| &lt; i.
+   * if {@code i < 0} or {@code |s| < i}.
    *
-   * <p>The second form returns the substring of size j starting at index i,
-   * i.e., the string s[i..i+j-1]. It raises
+   * <p>The second form returns the substring of size {@code j} starting at
+   * index {@code i}, i.e., the {@code string s[i..i+j-1]}. It raises
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
-   * if i &lt; 0 or j &lt; 0 or |s| &lt; i + j. Note that, if defined, extract
-   * returns the empty string when i = |s|. */
+   * if {@code i < 0} or {@code j < 0} or {@code |s| < i + j}. Note that, if
+   * defined, extract returns the empty string when {@code i = |s|}. */
   STRING_EXTRACT("String", "extract", ts ->
-      ts.fnType(
-          ts.tupleType(STRING, INT, ts.apply(ts.lookup("option"), INT)),
-          STRING)),
+      ts.fnType(ts.tupleType(STRING, INT, ts.option(INT)), STRING)),
 
   /** Function "String.substring", of type "string * int * int &rarr; string".
    *
@@ -393,15 +392,14 @@ public enum BuiltIn {
   LIST_GET_ITEM("List", "getItem", ts ->
       ts.forallType(1, h ->
           ts.fnType(h.list(0),
-              ts.apply(ts.lookup("option"),
-                  ts.tupleType(h.get(0), h.list(0)))))),
+              ts.option(ts.tupleType(h.get(0), h.list(0)))))),
 
   /** Function "List.nth", of type "&alpha; list * int &rarr; &alpha;".
    *
-   * <p>"nth (l, i)" returns the i(th) element of the list l, counting from 0.
-   * It raises
+   * <p>"nth (l, i)" returns the {@code i}<sup>th</sup> element of the list
+   * {@code l}, counting from 0. It raises
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
-   * if i &lt; 0 or i &ge; length l.
+   * if {@code i < 0} or {@code i >= length l}.
    * We have {@code nth(l,0) = hd l}, ignoring exceptions.
    */
   LIST_NTH("List", "nth", ts ->
@@ -591,13 +589,12 @@ public enum BuiltIn {
    * <p>"collate f (l1, l2)" performs lexicographic comparison of the two lists
    * using the given ordering f on the list elements.
    */
-  LIST_COLLATE("List", "collate", ts -> {
-    final Type order = INT; // TODO:
-    return ts.forallType(1, h ->
-        ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(0)), order),
+  LIST_COLLATE("List", "collate", ts ->
+    ts.forallType(1, h ->
+        ts.fnType(
+            ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.lookup("order")),
             ts.tupleType(h.list(0), h.list(0)),
-            order));
-  }),
+            ts.lookup("order")))),
 
   /** Function "Option.getOpt", of type
    * "&alpha; option * &alpha; &rarr; &alpha;".
@@ -639,9 +636,7 @@ public enum BuiltIn {
    *
    * <p>{@code join opt} maps NONE to NONE and SOME(v) to v.*/
   OPTION_JOIN("Option", "join", ts ->
-      ts.forallType(1, h ->
-          ts.fnType(ts.apply(ts.lookup("'a option"), h.option(0)),
-              h.option(0)))),
+      ts.forallType(1, h -> ts.fnType(ts.option(h.option(0)), h.option(0)))),
 
   /** Function "Option.app", of type
    * "(&alpha; &rarr; unit) &rarr; &alpha; option &rarr; unit".
@@ -749,7 +744,261 @@ public enum BuiltIn {
 
   /** Function "Sys.env", aka "env", of type "unit &rarr; string list". */
   SYS_ENV("Sys", "env", "env", ts ->
-      ts.fnType(UNIT, ts.listType(ts.tupleType(STRING, STRING))));
+      ts.fnType(UNIT, ts.listType(ts.tupleType(STRING, STRING)))),
+
+  /** Constant "Vector.maxLen" of type "int".
+   *
+   * <p>The maximum length of vectors supported by this implementation. Attempts
+   * to create larger vectors will result in the
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
+   * exception being raised. */
+  VECTOR_MAX_LEN("Vector", "maxLen", ts -> INT),
+
+  /** Function "Vector.fromList" of type "&alpha; list &rarr; &alpha; vector".
+   *
+   * <p>{@code fromList l} creates a new vector from {@code l}, whose length is
+   * {@code length l} and with the {@code i}<sup>th</sup> element of {@code l}
+   * used as the {@code i}<sup>th</sup> element of the vector. If the length of
+   * the list is greater than {@code maxLen}, then the
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
+   * exception is raised. */
+  VECTOR_FROM_LIST("Vector", "fromList", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), h.vector(0)))),
+
+  /** Function "Vector.tabulate" of type
+   * "int * (int &rarr; &alpha;) &rarr; &alpha; vector".
+   *
+   * <p>{@code tabulate (n, f)} creates a vector of {@code n} elements, where
+   * the elements are defined in order of increasing index by applying {@code f}
+   * to the element's index. This is equivalent to the expression:
+   *
+   * <blockquote>{@code fromList (List.tabulate (n, f))}</blockquote>
+   *
+   * <p>If {@code n < 0} or {@code maxLen < n}, then the
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
+   * exception is raised. */
+  VECTOR_TABULATE("Vector", "tabulate", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.vector(0)))),
+
+  /** Function "Vector.length" of type "&alpha; vector &rarr; int".
+   *
+   * <p>{@code length vec} returns {@code |vec|}, the length of the vector
+   * {@code vec}. */
+  VECTOR_LENGTH("Vector", "length", ts ->
+      ts.forallType(1, h -> ts.fnType(h.vector(0), INT))),
+
+  /** Function "Vector.sub" of type "&alpha; vector * int &rarr; &alpha;".
+   *
+   * <p>{@code sub (vec, i)} returns the {@code i}<sup>th</sup> element of the
+   * vector {@code vec}. If {@code i < 0} or {@code |vec| <= i}, then the
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
+   * exception is raised. */
+  VECTOR_SUB("Vector", "sub", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.vector(0), INT), h.get(0)))),
+
+  /** Function "Vector.update" of type
+   * "&alpha; vector * int * &alpha; &rarr; &alpha; vector".
+   *
+   * <p>{@code update (vec, i, x)} returns a new vector, identical to
+   * {@code vec}, except the {@code i}<sup>th</sup> element of {@code vec} is
+   * set to {@code x}. If {@code i < 0} or {@code |vec| <= i}, then the
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript}
+   * exception is raised. */
+  VECTOR_UPDATE("Vector", "update", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.tupleType(h.vector(0), INT, h.get(0)), h.vector(0)))),
+
+  /** Function "Vector.concat" of type
+   * "&alpha; vector list &rarr; &alpha; vector".
+   *
+   * <p>{@code concat l}
+   * returns the vector that is the concatenation of the vectors in the list
+   * {@code l}. If the total length of these vectors exceeds {@code maxLen},
+   * then the {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
+   * exception is raised. */
+  VECTOR_CONCAT("Vector", "concat", ts ->
+      ts.forallType(1, h -> ts.fnType(ts.listType(h.vector(0)), h.vector(0)))),
+
+  /** Function "Vector.appi" of type
+   * "(int * &alpha; &rarr; unit) &rarr; &alpha; vector &rarr; unit".
+   *
+   * <p>{@code appi f vec} applies the function {@code f} to the elements of
+   * a vector in left to right order (i.e., in order of increasing indices).
+   * The {@code appi} function is more general than {@code app}, and supplies
+   * both the element and the element's index to the function {@code f}.
+   * Equivalent to:
+   *
+   * <blockquote>
+   *   {@code List.app f (foldri (fn (i,a,l) => (i,a)::l) [] vec)}
+   * </blockquote> */
+  VECTOR_APPI("Vector", "appi", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.fnType(ts.tupleType(INT, h.get(0)), UNIT),
+              h.vector(0), UNIT))),
+
+  /** Function "Vector.app" of type
+   * "(&alpha; &rarr; unit) &rarr; &alpha; vector &rarr; unit".
+   *
+   * <p>{@code app f vec} applies the function {@code f} to the elements of
+   * a vector in left to right order (i.e., in order of increasing indices).
+   * Equivalent to:
+   *
+   * <blockquote>
+   *   {@code List.app f (foldr (fn (a,l) => a::l) [] vec)}
+   * </blockquote> */
+  VECTOR_APP("Vector", "app", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.fnType(h.get(0), UNIT), h.vector(0), UNIT))),
+
+  /** Function "Vector.mapi" of type "(int * &alpha; &rarr; &beta;) &rarr;
+   * &alpha; vector &rarr; &beta; vector".
+   *
+   * <p>{@code mapi f vec} produces a new vector by mapping the function
+   * {@code f} from left to right over the argument vector. The form
+   * {@code mapi} is more general, and supplies {@code f} with the vector
+   * index of an element along with the element. Equivalent to:
+   *
+   * <blockquote>
+   * {@code fromList (List.map f (foldri (fn (i,a,l) => (i,a)::l) [] vec))}
+   * </blockquote> */
+  VECTOR_MAPI("Vector", "mapi", ts ->
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(ts.tupleType(INT, h.get(0)), h.get(1)),
+              h.vector(0), h.vector(1)))),
+
+  /** Function "Vector.map" of type "(&alpha; &rarr; &beta;) &rarr;
+   * &alpha; vector &rarr; &beta; vector".
+   *
+   * <p>{@code map f vec} produces a new vector by mapping the function
+   * {@code f} from left to right over the argument vector. Equivalent to:
+   *
+   * <blockquote>
+   * {@code fromList (List.map f (foldr (fn (a,l) => a::l) [] vec))}
+   * </blockquote> */
+  VECTOR_MAP("Vector", "map", ts ->
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(h.get(0), h.get(1)), h.vector(0), h.vector(1)))),
+
+  /** Function "Vector.foldli" of type "(int * &alpha; * &beta; &rarr; &beta;)
+   * &rarr; &beta; &rarr; &alpha; vector &rarr; &beta;".
+   *
+   * <p>{@code foldli f init vec} folds the function {@code f} over all the
+   * elements of a vector, using the value {@code init} as the initial value.
+   * Applies the function {@code f} from left to right (increasing indices).
+   * The functions {@code foldli} and {@code foldri} are more general, and
+   * supply both the element and the element's index to the function f. */
+  VECTOR_FOLDLI("Vector", "foldli", ts ->
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(ts.tupleType(INT, h.get(0), h.get(1)), h.get(1)),
+              h.get(1), h.vector(0), h.get(1)))),
+
+  /** Function "Vector.foldri" of type "(int * &alpha; * &beta; &rarr; &beta;)
+   * &rarr; &beta; &rarr; &alpha; vector &rarr; &beta;".
+   *
+   * <p>{@code foldri f init vec} folds the function {@code f} over all the
+   * elements of a vector, using the value {@code init} as the initial value.
+   * Applies the function {@code f} from right to left (decreasing indices).
+   * The functions {@code foldli} and {@code foldri} are more general, and
+   * supply both the element and the element's index to the function f. */
+  VECTOR_FOLDRI("Vector", "foldri", ts ->
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(ts.tupleType(INT, h.get(0), h.get(1)), h.get(1)),
+              h.get(1), h.vector(0), h.get(1)))),
+
+  /** Function "Vector.foldl" of type "(&alpha; * &beta; &rarr; &beta;) &rarr;
+   * &beta; &rarr; &alpha; vector &rarr; &beta;".
+   *
+   * <p>{@code foldl f init vec} folds the function {@code f} over all the
+   * elements of a vector, using the value {@code init} as the initial value.
+   * Applies the function {@code f} from left to right (increasing indices).
+   * Equivalent to
+   *
+   * <blockquote>
+   *   {@code foldli (fn (_, a, x) => f(a, x)) init vec}
+   * </blockquote> */
+  VECTOR_FOLDL("Vector", "foldl", ts ->
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
+              h.get(1), h.vector(0), h.get(1)))),
+
+  /** Function "Vector.foldr" of type "(&alpha; * &beta; &rarr; &beta;) &rarr;
+   * &beta; &rarr; &alpha; vector &rarr; &beta;".
+   *
+   * <p>{@code foldr f init vec} folds the function {@code f} over all the
+   * elements of a vector, using the value {@code init} as the initial value.
+   * Applies the function {@code f} from right to left (decreasing indices).
+   * Equivalent to
+   *
+   * <blockquote>
+   *   {@code foldri (fn (_, a, x) => f(a, x)) init vec}
+   * </blockquote> */
+  VECTOR_FOLDR("Vector", "foldr", ts ->
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
+              h.get(1), h.vector(0), h.get(1)))),
+
+  /** Function "Vector.findi" of type "(int * &alpha; &rarr; bool) &rarr;
+   * &alpha; vector &rarr; (int * &alpha;) option".
+   *
+   * <p>{@code findi f vec} applies {@code f} to each element of the vector
+   * {@code vec}, from left to right (i.e., increasing indices), until a
+   * {@code true} value is returned. If this occurs, the function returns the
+   * element; otherwise, it return {@code NONE}. The function {@code findi} is
+   * more general than {@code find}, and also supplies {@code f} with the vector
+   * index of the element and, upon finding an entry satisfying the predicate,
+   * returns that index with the element. */
+  VECTOR_FINDI("Vector", "findi", ts ->
+      ts.forallType(2, h ->
+          ts.fnType(ts.fnType(ts.tupleType(INT, h.get(0)), BOOL),
+              h.vector(0), ts.option(ts.tupleType(INT, h.get(0)))))),
+
+  /** Function "Vector.find" of type
+   * "(&alpha; &rarr; bool) &rarr; &alpha; vector &rarr; &alpha; option".
+   *
+   * <p>{@code find f vec} applies {@code f} to each element of the vector
+   * {@code vec}, from left to right (i.e., increasing indices), until a
+   * {@code true} value is returned. If this occurs, the function returns the
+   * element; otherwise, it returns {@code NONE}. */
+  VECTOR_FIND("Vector", "find", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.fnType(h.get(0), BOOL), h.vector(0), h.option(0)))),
+
+  /** Function "Vector.exists" of type
+   * "(&alpha; &rarr; bool) &rarr; &alpha; vector &rarr; bool".
+   *
+   * <p>{@code exists f vec} applies {@code f} to each element {@code x} of the
+   * vector {@code vec}, from left to right (i.e., increasing indices), until
+   * {@code f(x)} evaluates to {@code true}; it returns {@code true} if such
+   * an {@code x} exists and {@code false} otherwise. */
+  VECTOR_EXISTS("Vector", "exists", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.fnType(h.get(0), BOOL), h.vector(0), BOOL))),
+
+  /** Function "Vector.all" of type
+   * "(&alpha; &rarr; bool) &rarr; &alpha; vector &rarr; bool".
+   *
+   * <p>{@code all f vec} applies {@code f} to each element {@code x} of the
+   * vector {@code vec}, from left to right (i.e., increasing indices), until
+   * {@code f(x)} evaluates to {@code false}; it returns {@code false} if such
+   * an {@code x} exists and {@code true} otherwise. It is equivalent to
+   * {@code not (exists (not o f ) vec))}. */
+  VECTOR_ALL("Vector", "all", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(ts.fnType(h.get(0), BOOL), h.vector(0), BOOL))),
+
+  /** Function "Vector.collate" of type "(&alpha; * &alpha; &rarr; order) &rarr;
+   * &alpha; vector * &alpha; vector &rarr; order".
+   *
+   * <p>{@code collate f (v1, v2)} performs lexicographic comparison of the two
+   * vectors using the given ordering {@code f} on elements. */
+  VECTOR_COLLATE("Vector", "collate", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(
+              ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.lookup("order")),
+              ts.tupleType(h.vector(0), h.vector(0)),
+              ts.lookup("order"))));
 
   /** Name of the structure (e.g. "List", "String"), or null. */
   public final String structure;
@@ -844,10 +1093,18 @@ public enum BuiltIn {
     });
   }
 
-  /** Defines built-in {@code datatype} instances, e.g. {@code option}. */
+  /** Defines built-in {@code datatype} and {@code eqtype} instances, e.g.
+   *  {@code option}, {@code vector}. */
   public static void dataTypes(TypeSystem ts, List<Binding> bindings) {
+    defineDataType(ts, bindings, "order", 0, h ->
+        h.tyCon("LESS").tyCon("EQUAL").tyCon("GREATER"));
     defineDataType(ts, bindings, "option", 1, h ->
         h.tyCon("NONE").tyCon("SOME", h.get(0)));
+    defineEqType(ts, "vector", 1);
+  }
+
+  private static void defineEqType(TypeSystem ts, String name, int varCount) {
+    defineDataType(ts, new ArrayList<>(), name, varCount, h -> h);
   }
 
   private static void defineDataType(TypeSystem ts, List<Binding> bindings,

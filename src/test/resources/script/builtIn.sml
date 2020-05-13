@@ -342,17 +342,12 @@ List.tabulate (~1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fac
 
 (*) val collate : ('a * 'a -> order) -> 'a list * 'a list -> order
 List.collate;
-List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,3,4]);
-List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2,2]);
-List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2]);
-List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], [1,2,3,4]);
-List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([1,2,3], []);
-List.collate (fn (x, y) => if x < y then ~1 else if x = y then 0 else 1) ([], []);
-
-(* Note: real ML uses "order" not "int", for example
-List.collate (fn (x,y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], [1,2,3,4]);
-val it = LESS : order
- *)
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1, 2,3], [1,3,4]);
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], [1,2,2]);
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], [1,2]);
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], [1,2,3,4]);
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], []);
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([], []);
 
 (* Option ------------------------------------------------------ *)
 (*) val getOpt : 'a option * 'a -> 'a
@@ -482,5 +477,104 @@ Sys.env ();
 
 env;
 env ();
+
+(* Vector ------------------------------------------------------ *)
+
+(*) Vector.fromList : 'a list -> 'a vector
+Vector.fromList;
+Vector.fromList [1,2];
+
+(* supported in sml-nj but not morel:
+ #[1,2];
+ *)
+
+(* sml-nj says:
+  stdIn:3.1-3.19 Warning: type vars not generalized because of
+     value restriction are instantiated to dummy types (X1,X2,...)
+  val it = #[] : ?.X1 vector
+*)
+Vector.fromList [];
+
+(*) Vector.maxLen: int
+Vector.maxLen;
+
+(*) Vector.tabulate : int * (int -> 'a) -> 'a vector
+Vector.tabulate;
+Vector.tabulate (5, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+
+(*) Vector.length : 'a vector -> int
+Vector.length;
+Vector.length (Vector.fromList [1,2,3]);
+
+(*) Vector.sub : 'a vector * int -> 'a
+Vector.sub;
+Vector.sub (Vector.fromList [3,6,9], 2);
+Vector.sub (Vector.fromList [3,6,9], ~1);
+Vector.sub (Vector.fromList [3,6,9], 3);
+
+(*) Vector.update : 'a vector * int * 'a -> 'a vector
+Vector.update;
+Vector.update (Vector.fromList ["a","b","c"], 1, "baz");
+Vector.update (Vector.fromList ["a","b","c"], ~1, "baz");
+Vector.update (Vector.fromList ["a","b","c"], 3, "baz");
+
+(*) Vector.concat : 'a vector list -> 'a vector
+Vector.concat;
+Vector.concat [Vector.fromList ["a","b"],
+  Vector.fromList [], Vector.fromList ["c"]];
+
+(*) Vector.appi : (int * 'a -> unit) -> 'a vector -> unit
+Vector.appi;
+Vector.appi (fn (i,s) => ignore s) (Vector.fromList ["a", "b", "c"]);
+
+(*) Vector.app  : ('a -> unit) -> 'a vector -> unit
+Vector.app;
+Vector.app (fn s => ignore s) (Vector.fromList ["a", "b", "c"]);
+
+(*) Vector.mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector
+Vector.mapi;
+Vector.mapi (fn (i, s) => String.sub (s, i)) (Vector.fromList ["abc", "xyz"]);
+
+(*) Vector.map  : ('a -> 'b) -> 'a vector -> 'b vector
+Vector.map;
+Vector.map (fn s => String.sub (s, 0)) (Vector.fromList ["abc", "xyz"]);
+
+(*) Vector.foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldli;
+Vector.foldli (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
+
+(*) Vector.foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldri;
+Vector.foldri (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
+
+(*) Vector.foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldl;
+Vector.foldl (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
+
+(*) Vector.foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldr;
+Vector.foldr (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
+
+(*) Vector.findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option
+Vector.findi;
+Vector.findi (fn (i,j) => j < i) (Vector.fromList [10,8,6,4,2]);
+
+(*) Vector.find  : ('a -> bool) -> 'a vector -> 'a option
+Vector.find;
+Vector.find (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
+
+(*) Vector.exists : ('a -> bool) -> 'a vector -> bool
+Vector.exists;
+Vector.exists (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
+
+(*) Vector.all : ('a -> bool) -> 'a vector -> bool
+Vector.all;
+Vector.all (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
+
+(*) Vector.collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order
+Vector.collate;
+Vector.collate
+  (fn (i,j) => if i < j then LESS else if i = j then EQUAL else GREATER)
+  (Vector.fromList [1,3,5], Vector.fromList [1,3,6]);
 
 (*) End builtIn.sml

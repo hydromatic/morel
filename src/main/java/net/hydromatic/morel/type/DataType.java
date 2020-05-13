@@ -70,7 +70,14 @@ public class DataType extends BaseType implements NamedType {
       return name;
     }
     final StringBuilder b = new StringBuilder();
-    typeVars.forEach(t -> b.append(t.moniker()).append(' '));
+    typeVars.forEach(t -> {
+      if (t instanceof TupleType) {
+        b.append('(').append(t.moniker()).append(')');
+      } else {
+        b.append(t.moniker());
+      }
+      b.append(' ');
+    });
     return b.append(name).toString();
   }
 

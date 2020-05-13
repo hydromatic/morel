@@ -238,8 +238,12 @@ public class TypeSystem {
         return listType(get(i));
       }
 
+      public Type vector(int i) {
+        return TypeSystem.this.vector(get(i));
+      }
+
       public Type option(int i) {
-        return apply(lookup("'a option"), get(i));
+        return TypeSystem.this.option(get(i));
       }
 
       public FnType predicate(int i) {
@@ -292,6 +296,10 @@ public class TypeSystem {
     }
   }
 
+  /** Creates a temporary type.
+   *
+   * <p>(Temporary types exist for a brief period while defining a recursive
+   * {@code datatype}.) */
   public TemporaryType temporaryType(String name) {
     final TemporaryType temporaryType = new TemporaryType(this, name);
     typeByName.put(name, temporaryType);
@@ -326,10 +334,27 @@ public class TypeSystem {
     return new ApplyType(type, ImmutableList.copyOf(types), description);
   }
 
+  /** Creates a type variable. */
   public TypeVar typeVariable(int ordinal) {
     final String description = "'#" + ordinal;
     return (TypeVar) typeByName.computeIfAbsent(description,
         d -> new TypeVar(ordinal));
+  }
+
+  /** Creates an "option" type.
+   *
+   * <p>"option(type)" is short-hand for "apply(lookup("option"), type)". */
+  public Type option(Type type) {
+    final Type optionType = lookup("option");
+    return apply(optionType, type);
+  }
+
+  /** Creates a "vector" type.
+   *
+   * <p>"vector(type)" is short-hand for "apply(lookup("vector"), type)". */
+  public Type vector(Type type) {
+    final Type vectorType = lookup("vector");
+    return apply(vectorType, type);
   }
 
   /** Converts a type into a {@link ForallType} if it has free type
@@ -408,6 +433,8 @@ public class TypeSystem {
     TypeVar get(int i);
     /** Creates type {@code `i list}. */
     ListType list(int i);
+    /** Creates type {@code `i vector}. */
+    Type vector(int i);
     /** Creates type {@code `i option}. */
     Type option(int i);
     /** Creates type <code>`i &rarr; bool</code>. */

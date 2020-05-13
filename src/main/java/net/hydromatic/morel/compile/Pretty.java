@@ -179,30 +179,14 @@ class Pretty {
       return buf.append("fn");
 
     case LIST:
-      final ListType listType =
-          (ListType) type;
+      final ListType listType = (ListType) type;
       //noinspection unchecked
       list = (List) value;
       if (list instanceof RelList) {
         // Do not attempt to print the elements of a foreign list. It might be huge.
         return buf.append("<relation>");
       }
-      buf.append("[");
-      start = buf.length();
-      for (Ord<Object> o : Ord.zip(list)) {
-        if (buf.length() > start) {
-          buf.append(",");
-        }
-        if (o.i >= LIST_LENGTH) {
-          pretty1(buf, indent + 1, lineEnd, depth + 1, PrimitiveType.BOOL,
-              "...");
-          break;
-        } else {
-          pretty1(buf, indent + 1, lineEnd, depth + 1, listType.elementType,
-              o.e);
-        }
-      }
-      return buf.append("]");
+      return printList(buf, indent, lineEnd, depth, listType.elementType, list);
 
     case RECORD_TYPE:
       final RecordType recordType =
@@ -244,6 +228,10 @@ class Pretty {
       final DataType dataType = (DataType) type;
       //noinspection unchecked
       list = (List) value;
+      if (dataType.name.equals("vector")) {
+        return printList(buf.append('#'), indent, lineEnd, depth,
+            dataType.typeVars.get(0), list);
+      }
       final String tyConName = (String) list.get(0);
       buf.append(tyConName);
       final Type typeConArgType = dataType.typeConstructors.get(tyConName);
@@ -257,6 +245,26 @@ class Pretty {
     default:
       return buf.append(value);
     }
+  }
+
+  private static StringBuilder printList(@Nonnull StringBuilder buf,
+      int indent, int[] lineEnd, int depth, @Nonnull Type elementType,
+      @Nonnull List<Object> list) {
+    buf.append("[");
+    int start = buf.length();
+    for (Ord<Object> o : Ord.zip(list)) {
+      if (buf.length() > start) {
+        buf.append(",");
+      }
+      if (o.i >= LIST_LENGTH) {
+        pretty1(buf, indent + 1, lineEnd, depth + 1, PrimitiveType.BOOL,
+            "...");
+        break;
+      } else {
+        pretty1(buf, indent + 1, lineEnd, depth + 1, elementType, o.e);
+      }
+    }
+    return buf.append("]");
   }
 
   /** Wrapper that indicates that a value should be printed

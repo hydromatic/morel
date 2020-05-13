@@ -88,52 +88,74 @@ Implemented:
 * `val` (including `val rec`)
 * `fun` (declare function)
 * Operators: `=` `<>` `<` `>` `<=` `>=`
-  `~` `+` `-` `*` `/` `div` `mod` `^` `::` `o` `@`
+  `~` `abs` `+` `-` `*` `/` `div` `mod` `^` `::` `o` `@`
   `andalso` `orelse`
-* Built-in constants and functions:
-  `it` `true` `false` `nil` `abs` `not` `ignore`
 * Type derivation
 * `fn`, function values, and function application
 * `if`
 * `case`
 * Primitive, list, tuple and record types
 * Type variables (polymorphism) (except in `let` and `datatype`)
-* Enumerated types (`datatype`)
-* Tuples and unit, record and list values
-* Patterns (destructuring) in `val` and `case`,
-  matching constants, wildcards, lists, records and tuples
-* Basis library functions:
-  * [Top](http://sml-family.org/Basis/top-level-chapter.html): `abs`
-  * [List](http://sml-family.org/Basis/list.html): `null`, `length`,
-    `@` (as prefix `at` for now), `hd`, `tl`, `last`, `getItem`, `nth`,
+* Algebraic types (`datatype`)
+* Tuples and unit, record, list, and vector values
+* Patterns (destructuring) in `val`, `case`, `fun` and `from`,
+  matching constants, wildcards, tuples, records, and lists
+* Basis library types and functions:
+  * [Top](https://smlfamily.github.io/Basis/top-level-chapter.html):
+    `eqtype int`,
+    `eqtype word`,
+    `type real`,
+    `datatype bool = false | true`
+  * [General](https://smlfamily.github.io/Basis/general.html):
+    `eqtype unit`,
+    `exception Size`,
+    `exception Subscript`,
+    `datatype order` (`LESS`, `EQUAL`, `GREATER`),
+    `o`, `ignore`
+  * [List](https://smlfamily.github.io/Basis/list.html):
+    `exception Empty`,
+    `datatype 'a list = nil | :: of ('a * 'a list)`,
+    `null`, `length`, `@`, `hd`, `tl`, `last`, `getItem`, `nth`,
     `take`, `drop`, `rev`, `concat`, `revAppend`, `app`, `map`, `mapPartial`,
-     `find`, `filter`, `partition`, `foldl`, `foldr`, `exists`, `all`,
-     `tabulate`, `collate`
-  * [String](http://sml-family.org/Basis/string.html): `maxSize`, `size`, `sub`,
-    `extract`, `substring`, `^`, `concat`, `concatWith`, `str`, `implode`,
-    `explode`, `map`, `translate`, `isPrefix`, `isSubstring`, `isSuffix`
+    `find`, `filter`, `partition`, `foldl`, `foldr`, `exists`, `all`,
+    `tabulate`, `collate`
+  * [Option](https://smlfamily.github.io/Basis/option.html):
+    `exception Option`,
+    `datatype 'a option = NONE | SOME of 'a`,
+    `getOpt`, `isSome`, `valOf`, `filter`, `join`, `app`,
+    `map`, `mapPartial`, `compose`, `composePartial`
+  * [String](https://smlfamily.github.io/Basis/string.html):
+    `eqtype char`,
+    `eqtype string`,
+    `maxSize`, `size`, `sub`, `extract`, `substring`, `^`,
+    `concat`, `concatWith`, `str`, `implode`, `explode`,
+    `map`, `translate`, `isPrefix`, `isSubstring`, `isSuffix`
+  * [Vector](https://smlfamily.github.io/Basis/vector.html):
+    `eqtype 'a vector`,
+    `maxLen`, `fromList`, `tabulate`, `length`, `sub`, `update`, `concat`,
+    `appi`, `app`, `mapi`, `map`, `foldli`, `foldri`, `foldl`, `foldr`,
+    `findi`, `find`, `exists`, `all`, `collate`
 
 Not implemented:
-* `type`
+* `type`, `eqtype`, `exception`
+* `structure`, `struct`, `signature`, `sig`, `open`
 * `local`
 * `raise`, `handle`
-* `exception`
 * `while`
+* `use`
 * References, and operators `!` and `:=`
 * Operators: `before`
 * User-defined operators (`infix`, `infixr`)
 * Type annotations in expressions and patterns
 
 Bugs:
-* The `@` infix operator to concatenate lists is currently named `at` and is
-  prefix;
-* Built-in operators do not use the `option` type;
 * Prevent user from overriding built-in constants and functions:
   `true`, `false`, `nil`, `ref`, `it`, `::`; they should not be reserved
 * Access parameters and variables by offset into a fixed-size array;
   currently we address them by name, in a map that is copied far too often
-* Runtime should throw when divide by zero
+* Runtime should raise `Div` when divide by zero
 * Validator should give good user error when it cannot type an expression
+* See also [GitHub issues](https://github.com/julianhyde/morel/issues)
 
 ## Extensions
 

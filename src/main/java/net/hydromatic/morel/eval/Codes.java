@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.eval;
 
+import org.apache.calcite.runtime.FlatLists;
+
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,6 +42,7 @@ import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
+import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 
 import java.util.ArrayList;
@@ -945,17 +948,19 @@ public abstract class Codes {
       final List tuple = (List) arg;
       final List list0 = (List) tuple.get(0);
       final List list1 = (List) tuple.get(1);
-      final int n = Math.min(list0.size(), list1.size());
+      final int n0 = list0.size();
+      final int n1 = list1.size();
+      final int n = Math.min(n0, n1);
       for (int i = 0; i < n; i++) {
         final Object element0 = list0.get(i);
         final Object element1 = list1.get(i);
-        final int compare = (Integer) comparator.apply(env,
+        final List compare = (List) comparator.apply(env,
             ImmutableList.of(element0, element1));
-        if (compare != 0) {
+        if (!compare.get(0).equals("EQUAL")) {
           return compare;
         }
       }
-      return Integer.compare(list0.size(), list1.size());
+      return n0 < n1 ? ORDER_LESS : n0 == n1 ? ORDER_EQUAL : ORDER_GREATER;
     };
   }
 
@@ -1157,6 +1162,195 @@ public abstract class Codes {
                               entry.getValue().type.moniker()))))
               .collect(Collectors.toList()));
 
+  private static final List ORDER_LESS = ImmutableList.of("LESS");
+  private static final List ORDER_EQUAL = ImmutableList.of("EQUAL");
+  private static final List ORDER_GREATER = ImmutableList.of("GREATER");
+
+  /** @see BuiltIn#VECTOR_MAX_LEN */
+  private static final int VECTOR_MAX_LEN = (1 << 24) - 1;
+
+  /** @see BuiltIn#VECTOR_FROM_LIST */
+  private static final Applicable VECTOR_FROM_LIST = (env, arg) -> arg;
+
+  /** @see BuiltIn#VECTOR_TABULATE */
+  private static final Applicable VECTOR_TABULATE = LIST_TABULATE;
+
+  /** @see BuiltIn#VECTOR_LENGTH */
+  private static final Applicable VECTOR_LENGTH = LIST_LENGTH;
+
+  /** @see BuiltIn#VECTOR_SUB */
+  private static final Applicable VECTOR_SUB = LIST_NTH;
+
+  /** @see BuiltIn#VECTOR_UPDATE */
+  private static final Applicable VECTOR_UPDATE = (env, arg) -> {
+    final List tuple = (List) arg;
+    final List vec = (List) tuple.get(0);
+    final int i = (Integer) tuple.get(1);
+    if (i < 0 || i >= vec.size()) {
+      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+    }
+    final Object x = tuple.get(2);
+    final Object[] elements = vec.toArray();
+    elements[i] = x;
+    return ImmutableList.copyOf(elements);
+  };
+
+  /** @see BuiltIn#VECTOR_CONCAT */
+  private static final Applicable VECTOR_CONCAT = (env, arg) -> {
+    @SuppressWarnings("unchecked") final List<List<Object>> lists =
+        (List<List<Object>>) arg;
+    final ImmutableList.Builder<Object> b = ImmutableList.builder();
+    for (List<Object> list : lists) {
+      b.addAll(list);
+    }
+    return b.build();
+  };
+
+  /** @see BuiltIn#VECTOR_APPI */
+  private static final Applicable VECTOR_APPI = Codes::vectorAppi;
+
+  /** Implements {@link #VECTOR_APPI}. */
+  private static Applicable vectorAppi(EvalEnv env, Object arg) {
+    final Applicable f = (Applicable) arg;
+    return (env2, arg2) -> {
+      @SuppressWarnings("unchecked") final List<Object> vec =
+          (List<Object>) arg2;
+      Ord.forEach(vec, (e, i) -> f.apply(env2, FlatLists.of(i, e)));
+      return Unit.INSTANCE;
+    };
+  };
+
+  /** @see BuiltIn#VECTOR_APP */
+  private static final Applicable VECTOR_APP = Codes::vectorApp;
+
+  /** Implements {@link #VECTOR_APP}. */
+  private static Applicable vectorApp(EvalEnv env, Object arg) {
+    final Applicable f = (Applicable) arg;
+    return (env2, arg2) -> {
+      @SuppressWarnings("unchecked") final List<Object> vec =
+          (List<Object>) arg2;
+      vec.forEach(e -> f.apply(env2, e));
+      return Unit.INSTANCE;
+    };
+  }
+
+  /** @see BuiltIn#VECTOR_MAPI */
+  private static final Applicable VECTOR_MAPI = Codes::vectorMapi;
+
+  /** Implements {@link #VECTOR_MAPI}. */
+  private static Applicable vectorMapi(EvalEnv env, Object arg) {
+    final Applicable f = (Applicable) arg;
+    return (env2, arg2) -> {
+      @SuppressWarnings("unchecked") final List<Object> vec =
+          (List<Object>) arg2;
+      final ImmutableList.Builder<Object> b = ImmutableList.builder();
+      Ord.forEach(vec, (e, i) -> b.add(f.apply(env2, FlatLists.of(i, e))));
+      return b.build();
+    };
+  }
+
+  /** @see BuiltIn#VECTOR_MAP */
+  private static final Applicable VECTOR_MAP = Codes::vectorMap;
+
+  /** Implements {@link #VECTOR_MAP}. */
+  private static Applicable vectorMap(EvalEnv env, Object arg) {
+    final Applicable f = (Applicable) arg;
+    return (env2, arg2) -> {
+      @SuppressWarnings("unchecked") final List<Object> vec =
+          (List<Object>) arg2;
+      final ImmutableList.Builder<Object> b = ImmutableList.builder();
+      vec.forEach(e -> b.add(f.apply(env2, e)));
+      return b.build();
+    };
+  }
+
+  /** @see BuiltIn#VECTOR_FOLDLI */
+  private static final Applicable VECTOR_FOLDLI = (env, arg) ->
+      (Applicable) (env2, init) ->
+          (Applicable) (env3, arg3) -> {
+            final Applicable f = (Applicable) arg;
+            @SuppressWarnings("unchecked") final List<Object> vec =
+                (List<Object>) arg3;
+            Object acc = init;
+            for (int i = 0, n = vec.size(); i < n; i++) {
+              acc = f.apply(env3, FlatLists.of(i, vec.get(i), acc));
+            }
+            return acc;
+          };
+
+  /** @see BuiltIn#VECTOR_FOLDRI */
+  private static final Applicable VECTOR_FOLDRI = (env, arg) ->
+      (Applicable) (env2, init) ->
+          (Applicable) (env3, arg3) -> {
+            final Applicable f = (Applicable) arg;
+            @SuppressWarnings("unchecked") final List<Object> vec =
+                (List<Object>) arg3;
+            Object acc = init;
+            for (int i = vec.size() - 1; i >= 0; i--) {
+              acc = f.apply(env3, FlatLists.of(i, vec.get(i), acc));
+            }
+            return acc;
+          };
+
+  /** @see BuiltIn#VECTOR_FOLDL */
+  private static final Applicable VECTOR_FOLDL = (env, arg) ->
+      (Applicable) (env2, init) ->
+          (Applicable) (env3, arg3) -> {
+            final Applicable f = (Applicable) arg;
+            @SuppressWarnings("unchecked") final List<Object> vec =
+                (List<Object>) arg3;
+            Object acc = init;
+            for (Object o : vec) {
+              acc = f.apply(env3, FlatLists.of(o, acc));
+            }
+            return acc;
+          };
+
+  /** @see BuiltIn#VECTOR_FOLDR */
+  private static final Applicable VECTOR_FOLDR = (env, arg) ->
+      (Applicable) (env2, init) ->
+          (Applicable) (env3, arg3) -> {
+            final Applicable f = (Applicable) arg;
+            @SuppressWarnings("unchecked") final List<Object> vec =
+                (List<Object>) arg3;
+            Object acc = init;
+            for (int i = vec.size() - 1; i >= 0; i--) {
+              acc = f.apply(env3, FlatLists.of(vec.get(i), acc));
+            }
+            return acc;
+          };
+
+  /** @see BuiltIn#VECTOR_FINDI */
+  private static final Applicable VECTOR_FINDI = Codes::vectorFindi;
+
+  /** Implements {@link #VECTOR_FINDI}. */
+  private static Applicable vectorFindi(EvalEnv env, Object arg) {
+    final Applicable f = (Applicable) arg;
+    return (env2, arg2) -> {
+      @SuppressWarnings("unchecked") final List<Object> vec =
+          (List<Object>) arg2;
+      for (int i = 0, n = vec.size(); i < n; i++) {
+        final List<Object> tuple = FlatLists.of(i, vec.get(i));
+        if ((Boolean) f.apply(env2, tuple)) {
+          return optionSome(tuple);
+        }
+      }
+      return OPTION_NONE;
+    };
+  }
+
+  /** @see BuiltIn#VECTOR_FIND */
+  private static final Applicable VECTOR_FIND = LIST_FIND;
+
+  /** @see BuiltIn#VECTOR_EXISTS */
+  private static final Applicable VECTOR_EXISTS = LIST_EXISTS;
+
+  /** @see BuiltIn#VECTOR_ALL */
+  private static final Applicable VECTOR_ALL = LIST_ALL;
+
+  /** @see BuiltIn#VECTOR_COLLATE */
+  private static final Applicable VECTOR_COLLATE = LIST_COLLATE;
+
   private static void populateBuiltIns(Map<String, Object> valueMap) {
     // Dummy type system, thrown away after this method
     final TypeSystem typeSystem = new TypeSystem();
@@ -1253,7 +1447,8 @@ public abstract class Codes {
   public static Applicable aggregate(Environment env, Code aggregateCode,
       List<String> names, @Nullable Code argumentCode) {
     return (env1, arg) -> {
-      final List rows = (List) arg;
+      @SuppressWarnings("unchecked") final List<Object> rows =
+          (List<Object>) arg;
       final List<Object> argRows;
       if (argumentCode != null) {
         final MutableEvalEnv env2 = env1.bindMutableArray(names);
@@ -1362,6 +1557,26 @@ public abstract class Codes {
           .put(BuiltIn.RELATIONAL_MIN, RELATIONAL_MIN)
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
           .put(BuiltIn.SYS_ENV, SYS_ENV)
+          .put(BuiltIn.VECTOR_MAX_LEN, VECTOR_MAX_LEN)
+          .put(BuiltIn.VECTOR_FROM_LIST, VECTOR_FROM_LIST)
+          .put(BuiltIn.VECTOR_TABULATE, VECTOR_TABULATE)
+          .put(BuiltIn.VECTOR_LENGTH, VECTOR_LENGTH)
+          .put(BuiltIn.VECTOR_SUB, VECTOR_SUB)
+          .put(BuiltIn.VECTOR_UPDATE, VECTOR_UPDATE)
+          .put(BuiltIn.VECTOR_CONCAT, VECTOR_CONCAT)
+          .put(BuiltIn.VECTOR_APPI, VECTOR_APPI)
+          .put(BuiltIn.VECTOR_APP, VECTOR_APP)
+          .put(BuiltIn.VECTOR_MAPI, VECTOR_MAPI)
+          .put(BuiltIn.VECTOR_MAP, VECTOR_MAP)
+          .put(BuiltIn.VECTOR_FOLDLI, VECTOR_FOLDLI)
+          .put(BuiltIn.VECTOR_FOLDRI, VECTOR_FOLDRI)
+          .put(BuiltIn.VECTOR_FOLDL, VECTOR_FOLDL)
+          .put(BuiltIn.VECTOR_FOLDR, VECTOR_FOLDR)
+          .put(BuiltIn.VECTOR_FINDI, VECTOR_FINDI)
+          .put(BuiltIn.VECTOR_FIND, VECTOR_FIND)
+          .put(BuiltIn.VECTOR_EXISTS, VECTOR_EXISTS)
+          .put(BuiltIn.VECTOR_ALL, VECTOR_ALL)
+          .put(BuiltIn.VECTOR_COLLATE, VECTOR_COLLATE)
           .build();
 
   /** A code that evaluates expressions and creates a tuple with the results.
