@@ -22,6 +22,8 @@ General;
 List;
 List.rev;
 List.rev [1,2,3];
+Option;
+Option.compose;
 String;
 Relational;
 

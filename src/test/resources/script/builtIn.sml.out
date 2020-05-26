@@ -36,6 +36,15 @@ val it = fn : 'a list -> 'a list
 List.rev [1,2,3];
 val it = [3,2,1] : int list
 
+Option;
+val it =
+  {app=fn,compose=fn,composePartial=fn,filter=fn,getOpt=fn,isSome=fn,join=fn,
+   map=fn,mapPartial=fn,valOf=fn}
+  : {app:('a option -> unit) -> 'a option -> unit, compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option, composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option, filter:('h -> bool) -> 'h -> 'h option, getOpt:'i option * 'i -> 'i, isSome:'j option -> bool, join:'k option option -> 'k option, map:('l -> 'm) -> 'l option -> 'm option, mapPartial:('n -> 'o option) -> 'n option -> 'o option, valOf:'p option -> 'p}
+
+Option.compose;
+val it = fn : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
+
 String;
 val it =
   {concat=fn,concatWith=fn,explode=fn,extract=fn,implode=fn,isPrefix=fn,

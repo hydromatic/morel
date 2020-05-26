@@ -61,6 +61,7 @@ public class TypeVisitor<R> {
 
   /** Visits a {@link DataType}. */
   public R visit(DataType dataType) {
+    dataType.typeVars.forEach(t -> t.accept(this));
     return null;
   }
 
