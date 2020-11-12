@@ -20,15 +20,27 @@ package net.hydromatic.morel.foreign;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.interpreter.Interpreter;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.QueryProvider;
+import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
 
 import com.google.common.collect.ImmutableMap;
 
+import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.eval.Code;
+import net.hydromatic.morel.eval.Describer;
+import net.hydromatic.morel.eval.EvalEnv;
+import net.hydromatic.morel.type.Type;
+
+import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /** Runtime context. */
 public class Calcite {
@@ -54,6 +66,30 @@ public class Calcite {
   /** Creates a runtime context with the given data sets. */
   public static Calcite withDataSets(Map<String, DataSet> dataSetMap) {
     return new CalciteMap(dataSetMap);
+  }
+
+  /** Creates an empty RelBuilder. */
+  public RelBuilder relBuilder() {
+    return relBuilder.transform(c -> c);
+  }
+
+  /** Creates a {@code Code} that evaluates a Calcite relational expression,
+   * converting it to Morel list type {@code type}. */
+  public Code code(Environment env, RelNode rel, Type type) {
+    final Function<Enumerable<Object[]>, List<Object>> converter =
+        Converters.fromEnumerable(rel, type);
+    return new Code() {
+      @Override public Describer describe(Describer describer) {
+        return describer.start("calcite", d ->
+            d.arg("plan", RelOptUtil.toString(rel)));
+      }
+
+      @Override public Object eval(EvalEnv evalEnv) {
+        final Interpreter interpreter =
+            new Interpreter(dataContext, rel);
+        return converter.apply(interpreter);
+      }
+    };
   }
 
   /** Extension to Calcite context that remembers the foreign value

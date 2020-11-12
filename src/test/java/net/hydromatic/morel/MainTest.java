@@ -1499,69 +1499,6 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(3, 7));
   }
 
-  /** Tests a program that uses an external collection from the "scott" JDBC
-   * database. */
-  @Test void testScott() {
-    final String ml = "let\n"
-        + "  val emps = #emp scott\n"
-        + "in\n"
-        + "  from e in emps yield #deptno e\n"
-        + "end\n";
-    ml(ml)
-        .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("int list")
-        .assertEvalIter(
-            equalsOrdered(20, 30, 30, 20, 30, 30, 10, 20, 10, 30, 20, 30, 20,
-                10));
-  }
-
-  @Test void testScottJoin() {
-    final String ml = "let\n"
-        + "  val emps = #emp scott\n"
-        + "  and depts = #dept scott\n"
-        + "in\n"
-        + "  from e in emps, d in depts\n"
-        + "    where #deptno e = #deptno d\n"
-        + "    andalso #empno e >= 7900\n"
-        + "    yield {empno = #empno e, dname = #dname d}\n"
-        + "end\n";
-    ml(ml)
-        .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{dname:string, empno:int} list")
-        .assertEvalIter(
-            equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
-                list("ACCOUNTING", 7934)));
-  }
-
-  /** As {@link #testScottJoin()} but without intermediate variables. */
-  @Test void testScottJoin2() {
-    final String ml = "from e in #emp scott, d in #dept scott\n"
-        + "  where #deptno e = #deptno d\n"
-        + "  andalso #empno e >= 7900\n"
-        + "  yield {empno = #empno e, dname = #dname d}\n";
-    ml(ml)
-        .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{dname:string, empno:int} list")
-        .assertEvalIter(
-            equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
-                list("ACCOUNTING", 7934)));
-  }
-
-  /** As {@link #testScottJoin2()} but using dot notation ('e.field' rather
-   * than '#field e'). */
-  @Test void testScottJoin2Dot() {
-    final String ml = "from e in scott.emp, d in scott.dept\n"
-        + "  where e.deptno = d.deptno\n"
-        + "  andalso e.empno >= 7900\n"
-        + "  yield {empno = e.empno, dname = d.dname}\n";
-    ml(ml)
-        .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{dname:string, empno:int} list")
-        .assertEvalIter(
-            equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
-                list("ACCOUNTING", 7934)));
-  }
-
   @Test void testToCoreAndBack() {
     final String[] expressions = {
         "()", null,

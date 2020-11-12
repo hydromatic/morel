@@ -93,7 +93,7 @@ public class Compiler {
    * <p>Usually involves placing a type or value into the bindings that will
    * make up the environment in which the next statement will be executed, and
    * printing some text on the screen. */
-  private interface Action {
+  interface Action {
     void apply(List<String> output, List<Binding> bindings, EvalEnv evalEnv);
   }
 
@@ -604,12 +604,9 @@ public class Compiler {
     }
 
     @Override public Describer describe(Describer describer) {
-      return describer.start("match", d -> {
-        patCodes.forEach(p -> {
-          d.arg("", p.left.toString());
-          d.arg("", p.right);
-        });
-      });
+      return describer.start("match", d ->
+          patCodes.forEach(p ->
+              d.arg("", p.left.toString()).arg("", p.right)));
     }
 
     @Override public Object eval(EvalEnv evalEnv) {

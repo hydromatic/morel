@@ -75,9 +75,9 @@ from e in emps where e.deptno = 30 yield e.id;
 val it = [102,103] : int list
 
 (*) is equivalent to standard ML
-(* FIXME
 map (fn e => (#id e)) (filter (fn e => (#deptno e) = 30) emps);
-*)
+val it = [102,103] : int list
+
 
 (*) You can iterate over more than one collection, and therefore
 (*) generate a join or a cartesian product:
