@@ -1340,7 +1340,7 @@ public class Ast {
           final Set<Id> nextFields = new HashSet<>(Pair.left(groupExps));
           groupExps.forEach(pair -> nextFields.add(pair.left));
           final Literal aggResult =
-              ast.intLiteral(BigDecimal.ZERO, pos); // FIXME
+              ast.intLiteral(pos, BigDecimal.ZERO); // FIXME
           aggregates.forEach(aggregate -> nextFields.add(aggregate.id));
           fields = nextFields;
         }

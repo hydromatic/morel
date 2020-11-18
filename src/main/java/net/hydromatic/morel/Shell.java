@@ -27,6 +27,8 @@ import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.foreign.Calcite;
+import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
@@ -55,6 +57,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
 
 /** Command shell for ML, powered by JLine3. */
 public class Shell {
@@ -94,15 +97,8 @@ public class Shell {
     for (String arg : args) {
       if (arg.startsWith("--foreign=")) {
         final String className = arg.substring("--foreign=".length());
-        try {
-          final Class<?> aClass = Class.forName(className);
-          valueMapBuilder.putAll((Map<String, ForeignValue>)
-              aClass.getConstructor().newInstance());
-        } catch (InstantiationException | IllegalAccessException
-            | InvocationTargetException | NoSuchMethodException
-            | ClassNotFoundException e) {
-          e.printStackTrace();
-        }
+        final Map<String, DataSet> map = instantiate(className, Map.class);
+        valueMapBuilder.putAll(Calcite.withDataSets(map).foreignValues());
       }
     }
     this.valueMap = valueMapBuilder.build();
@@ -266,6 +262,20 @@ public class Shell {
       } catch (IllegalArgumentException e) {
         terminal.writer().println(e.getMessage());
       }
+    }
+  }
+
+  /** Instantiates a class.
+   *
+   * <p>Assumes that the class has a public no-arguments constructor. */
+  @Nonnull private static <T> T instantiate(String className, Class<T> clazz) {
+    try {
+      final Class<?> aClass = Class.forName(className);
+      return clazz.cast(aClass.getConstructor().newInstance());
+    } catch (ClassNotFoundException | NoSuchMethodException
+        | InstantiationException | InvocationTargetException
+        | IllegalAccessException e) {
+      throw new RuntimeException("Cannot load class: " + className, e);
     }
   }
 }

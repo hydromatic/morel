@@ -31,7 +31,7 @@ esac
 
 # Build classpath on first call.
 # (To force rebuild, remove target/classpath.txt, or just "./mvnw clean".)
-cd $(dirname $0)
+cd "$(dirname "$0")" || exit
 if [ ! -f target/classpath.txt ]; then
     ./mvnw -DskipTests \
         dependency:build-classpath -Dmdep.outputFile=target/classpath.txt \
@@ -52,6 +52,6 @@ fi
 
 export JAVA_OPTS=-Djavax.xml.parsers.DocumentBuilderFactory=com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl
 
-exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell --foreign='net.hydromatic.morel.DataSet$Dictionary' "$@"
+exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell --foreign='net.hydromatic.morel.BuiltInDataSet$Dictionary' "$@"
 
 # End morel

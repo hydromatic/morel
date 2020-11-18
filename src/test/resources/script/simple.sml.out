@@ -311,3 +311,14 @@ val foo = fn : 'a -> 'a
 
 foo 3;
 val it = 3 : int
+
+
+(*) Define a function using higher-order functions
+val longest = List.foldl (fn (s, t) => if String.size s > String.size t then s else t) "";
+val longest = fn : string list -> string
+
+longest ["ab", "cde", "", "f"];
+val it = "cde" : string
+
+longest [];
+val it = "" : string

@@ -18,17 +18,13 @@
  */
 package net.hydromatic.morel.foreign;
 
-import org.apache.calcite.DataContext;
-import org.apache.calcite.adapter.java.JavaTypeFactory;
-import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.linq4j.function.Function1;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Table;
-import org.apache.calcite.tools.Frameworks;
-import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableNullableList;
 
 import com.google.common.collect.ImmutableList;
@@ -53,26 +49,15 @@ import java.util.Objects;
  * <p>In ML, it appears as a record with a field for each table.
  */
 public class CalciteForeignValue implements ForeignValue {
+  private final Calcite calcite;
   private final SchemaPlus schema;
   private final boolean lower;
-  private final RelBuilder relBuilder;
 
   /** Creates a CalciteForeignValue. */
-  public CalciteForeignValue(SchemaPlus schema, boolean lower) {
+  public CalciteForeignValue(Calcite calcite, SchemaPlus schema, boolean lower) {
+    this.calcite = calcite;
     this.schema = Objects.requireNonNull(schema);
     this.lower = lower;
-    this.relBuilder = RelBuilder.create(Frameworks.newConfigBuilder()
-        .defaultSchema(rootSchema(schema))
-        .build());
-  }
-
-  private static SchemaPlus rootSchema(SchemaPlus schema) {
-    for (;;) {
-      if (schema.getParentSchema() == null) {
-        return schema;
-      }
-      schema = schema.getParentSchema();
-    }
   }
 
   public Type type(TypeSystem typeSystem) {
@@ -87,7 +72,7 @@ public class CalciteForeignValue implements ForeignValue {
   private Type toType(Table table, TypeSystem typeSystem) {
     final ImmutableSortedMap.Builder<String, Type> fields =
         ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-    table.getRowType(relBuilder.getTypeFactory())
+    table.getRowType(calcite.typeFactory)
         .getFieldList()
         .forEach(field ->
             fields.put(convert(field.getName()),
@@ -171,12 +156,12 @@ public class CalciteForeignValue implements ForeignValue {
     final ImmutableList.Builder<List<Object>> fieldValues =
         ImmutableList.builder();
     final List<String> names = Schemas.path(schema).names();
-    schema.getTableNames().forEach(tableName ->
-        fieldValues.add(
-            new RelList(relBuilder.scan(plus(names, tableName)).build(),
-                new EmptyDataContext((JavaTypeFactory) relBuilder.getTypeFactory(),
-                    rootSchema(schema)),
-                new Converter(relBuilder.scan(plus(names, tableName)).build().getRowType()))));
+    schema.getTableNames().forEach(tableName -> {
+      final RelNode scan =
+          calcite.relBuilder.scan(plus(names, tableName)).build();
+      final Converter converter = new Converter(scan.getRowType());
+      fieldValues.add(new RelList(scan, calcite.dataContext, converter));
+    });
     return fieldValues.build();
   }
 
@@ -210,33 +195,6 @@ public class CalciteForeignValue implements ForeignValue {
         tempValues[i] = fieldConverters[i].convertFrom(a);
       }
       return ImmutableNullableList.copyOf(tempValues);
-    }
-  }
-
-  /** Data context that has no variables. */
-  private static class EmptyDataContext implements DataContext {
-    private final JavaTypeFactory typeFactory;
-    private final SchemaPlus rootSchema;
-
-    EmptyDataContext(JavaTypeFactory typeFactory, SchemaPlus rootSchema) {
-      this.typeFactory = typeFactory;
-      this.rootSchema = rootSchema;
-    }
-
-    public SchemaPlus getRootSchema() {
-      return rootSchema;
-    }
-
-    public JavaTypeFactory getTypeFactory() {
-      return typeFactory;
-    }
-
-    public QueryProvider getQueryProvider() {
-      throw new UnsupportedOperationException();
-    }
-
-    public Object get(String name) {
-      return null;
     }
   }
 

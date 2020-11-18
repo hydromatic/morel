@@ -32,7 +32,7 @@ import java.util.function.Supplier;
 /** A list whose contents are computed by evaluating a relational
  * expression. */
 public class RelList extends AbstractList<Object> {
-  private final RelNode rel;
+  public final RelNode rel;
 
   private final Supplier<List<List<Object>>> supplier;
 

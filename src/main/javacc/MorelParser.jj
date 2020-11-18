@@ -29,7 +29,6 @@ package net.hydromatic.morel.parse;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Ast.*;
-import net.hydromatic.morel.ast.AstBuilder;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.util.Folder;import net.hydromatic.morel.util.Pair;
@@ -104,7 +103,7 @@ Literal numericLiteral() :
     } else {
       d = new BigDecimal(token.image);
     }
-    return ast.intLiteral(d, pos());
+    return ast.intLiteral(pos(), d);
   }
 |
   <REAL_LITERAL> {
@@ -113,7 +112,7 @@ Literal numericLiteral() :
     } else {
       d = new BigDecimal(token.image);
     }
-    return ast.realLiteral(d, pos());
+    return ast.realLiteral(pos(), d);
   }
 |
   <SCIENTIFIC_LITERAL> {
@@ -130,7 +129,7 @@ Literal numericLiteral() :
     } else {
       exponent = Integer.valueOf(token.image.substring(e + 1));
     }
-    return ast.realLiteral(d.scaleByPowerOfTen(exponent), pos());
+    return ast.realLiteral(pos(), d.scaleByPowerOfTen(exponent));
   }
 }
 

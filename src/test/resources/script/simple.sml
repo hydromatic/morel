@@ -187,4 +187,9 @@ fun foo arg =
   end;
 foo 3;
 
+(*) Define a function using higher-order functions
+val longest = List.foldl (fn (s, t) => if String.size s > String.size t then s else t) "";
+longest ["ab", "cde", "", "f"];
+longest [];
+
 (*) End simple.sml

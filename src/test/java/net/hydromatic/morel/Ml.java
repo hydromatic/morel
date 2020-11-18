@@ -32,7 +32,8 @@ import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
-import net.hydromatic.morel.foreign.ForeignValue;
+import net.hydromatic.morel.foreign.Calcite;
+import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.TypeSystem;
@@ -52,11 +53,11 @@ import static org.junit.Assert.fail;
 /** Fluent test helper. */
 class Ml {
   private final String ml;
-  private final Map<String, ForeignValue> valueMap;
+  private final Map<String, DataSet> dataSetMap;
 
-  Ml(String ml, Map<String, ForeignValue> valueMap) {
+  Ml(String ml, Map<String, DataSet> dataSetMap) {
     this.ml = ml;
-    this.valueMap = ImmutableMap.copyOf(valueMap);
+    this.dataSetMap = ImmutableMap.copyOf(dataSetMap);
   }
 
   /** Creates an {@code Ml}. */
@@ -155,8 +156,9 @@ class Ml {
     return withParser(parser -> {
       try {
         final Ast.Exp expression = parser.expression();
+        final Calcite calcite = Calcite.withDataSets(dataSetMap);
         final TypeResolver.Resolved resolved =
-            Compiles.validateExpression(expression, valueMap);
+            Compiles.validateExpression(expression, calcite.foreignValues());
         final Ast.Exp resolvedExp =
             Compiles.toExp((Ast.ValDecl) resolved.node);
         action.accept(resolvedExp, resolved.typeMap);
@@ -205,7 +207,9 @@ class Ml {
     try {
       final Ast.Exp e = new MorelParserImpl(new StringReader(ml)).expression();
       final TypeSystem typeSystem = new TypeSystem();
-      final Environment env = Environments.env(typeSystem, valueMap);
+      final Calcite calcite = Calcite.withDataSets(dataSetMap);
+      final Environment env =
+          Environments.env(typeSystem, calcite.foreignValues());
       final Ast.ValDecl valDecl = Compiles.toValDecl(e);
       final TypeResolver.Resolved resolved =
           TypeResolver.deduceType(env, valDecl, typeSystem);
@@ -241,8 +245,8 @@ class Ml {
     return assertError(is(expected));
   }
 
-  Ml withBinding(String name, ForeignValue schema) {
-    return new Ml(ml, plus(valueMap, name, schema));
+  Ml withBinding(String name, DataSet dataSet) {
+    return new Ml(ml, plus(dataSetMap, name, dataSet));
   }
 
   /** Returns a map plus one (key, value) entry. */

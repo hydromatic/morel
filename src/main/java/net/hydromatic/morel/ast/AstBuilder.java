@@ -77,12 +77,12 @@ public enum AstBuilder {
   }
 
   /** Creates an {@code int} literal. */
-  public Ast.Literal intLiteral(BigDecimal value, Pos pos) {
+  public Ast.Literal intLiteral(Pos pos, BigDecimal value) {
     return new Ast.Literal(pos, Op.INT_LITERAL, value);
   }
 
   /** Creates a {@code float} literal. */
-  public Ast.Literal realLiteral(BigDecimal value, Pos pos) {
+  public Ast.Literal realLiteral(Pos pos, BigDecimal value) {
     return new Ast.Literal(pos, Op.REAL_LITERAL, value);
   }
 

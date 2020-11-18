@@ -49,7 +49,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1436,12 +1435,6 @@ public abstract class Codes {
   /** Implements {@link #OP_NEGATE} for type {@code real}. */
   private static float negateReal(EvalEnv env, Object arg) {
     return -((Float) arg);
-  }
-
-  private static <E> Set<E> minus(Set<E> set1, Set<E> set0) {
-    final Set<E> set = new LinkedHashSet<>(set1);
-    set.removeAll(set0);
-    return set;
   }
 
   public static Applicable aggregate(Environment env, Code aggregateCode,

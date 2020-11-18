@@ -1554,7 +1554,7 @@ public class MainTest {
         + "  from e in emps yield #deptno e\n"
         + "end\n";
     ml(ml)
-        .withBinding("scott", DataSet.SCOTT.foreignValue())
+        .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("int list")
         .assertEvalIter(
             equalsOrdered(20, 30, 30, 20, 30, 30, 10, 20, 10, 30, 20, 30, 20,
@@ -1572,7 +1572,7 @@ public class MainTest {
         + "    yield {empno = #empno e, dname = #dname d}\n"
         + "end\n";
     ml(ml)
-        .withBinding("scott", DataSet.SCOTT.foreignValue())
+        .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{dname:string, empno:int} list")
         .assertEvalIter(
             equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
@@ -1586,7 +1586,7 @@ public class MainTest {
         + "  andalso #empno e >= 7900\n"
         + "  yield {empno = #empno e, dname = #dname d}\n";
     ml(ml)
-        .withBinding("scott", DataSet.SCOTT.foreignValue())
+        .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{dname:string, empno:int} list")
         .assertEvalIter(
             equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
@@ -1601,7 +1601,7 @@ public class MainTest {
         + "  andalso e.empno >= 7900\n"
         + "  yield {empno = e.empno, dname = d.dname}\n";
     ml(ml)
-        .withBinding("scott", DataSet.SCOTT.foreignValue())
+        .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{dname:string, empno:int} list")
         .assertEvalIter(
             equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
