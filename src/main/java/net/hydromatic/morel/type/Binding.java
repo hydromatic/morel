@@ -54,9 +54,9 @@ public class Binding {
 
   @Override public String toString() {
     if (value == Unit.INSTANCE) {
-      return name + " = " + type.moniker();
+      return name + " : " + type.moniker();
     } else {
-      return name + " = " + value + ":" + type.moniker();
+      return name + " = " + value + " : " + type.moniker();
     }
   }
 }

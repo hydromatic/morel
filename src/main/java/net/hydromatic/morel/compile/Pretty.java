@@ -189,8 +189,7 @@ class Pretty {
       return printList(buf, indent, lineEnd, depth, listType.elementType, list);
 
     case RECORD_TYPE:
-      final RecordType recordType =
-          (RecordType) type;
+      final RecordType recordType = (RecordType) type;
       //noinspection unchecked
       list = (List) value;
       buf.append("{");

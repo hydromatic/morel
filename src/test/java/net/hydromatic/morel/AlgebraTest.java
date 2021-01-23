@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel;
 
+import net.hydromatic.morel.eval.Prop;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.stream.Stream;
@@ -185,6 +187,11 @@ public class AlgebraTest {
             + "  andalso e.sal < g.hisal\n"
             + "  andalso d.deptno = e.deptno\n"
             + "group g.grade compute c = count",
+        "from x in (from e in scott.emp yield {e.deptno, z = 1})\n"
+            + "  union (from d in scott.dept yield {d.deptno, z = 2})",
+        "#from x in (from e in scott.emp yield e.deptno)\n"
+            + "  union (from d in scott.dept yield d.deptno)\n"
+            + "group x compute c = count",
         "[1, 2, 3] union [2, 3, 4]",
         "[10, 15, 20] union (from d in scott.dept yield d.deptno)",
         "[10, 15, 20] except (from d in scott.dept yield d.deptno)",
@@ -192,14 +199,14 @@ public class AlgebraTest {
 
         // the following 4 are equivalent
         "from e in scott.emp where e.deptno = 30 yield e.empno",
-        "#let\n"
+        "let\n"
             + "  val emps = #emp scott\n"
             + "in\n"
             + "  from e in emps\n"
             + "  where e.deptno = 30\n"
             + "  yield e.empno\n"
             + "end",
-        "#let\n"
+        "let\n"
             + "  val emps = #emp scott\n"
             + "  val thirty = 30\n"
             + "in\n"
@@ -208,7 +215,7 @@ public class AlgebraTest {
             + "  yield e.empno\n"
             + "end",
         "#map (fn e => (#empno e))\n"
-            + "  (filter (fn e => (#deptno e) = 30) (#emp scott))",
+            + "  (List.filter (fn e => (#deptno e) = 30) (#emp scott))",
     };
     Stream.of(queries).filter(q -> !q.startsWith("#")).forEach(query -> {
       try {
@@ -219,8 +226,178 @@ public class AlgebraTest {
     });
   }
 
-  void checkEqual(String ml) {
-    ml(ml).withBinding("scott", BuiltInDataSet.SCOTT).assertEvalSame();
+  /** Translates a hybrid expression. The leaf cannot be translated to Calcite
+   * and therefore becomes a Morel table function; the root can. */
+  @Test void testNative() {
+    String query = ""
+        + "from r in\n"
+        + "  List.tabulate (6, fn i =>\n"
+        + "    {i, j = i + 3, s = String.substring (\"morel\", 0, i)})\n"
+        + "yield {r.j, r.s}";
+    ml(query).withBinding("scott", BuiltInDataSet.SCOTT).assertEvalSame();
+  }
+
+  /** Tests a query that can mostly be executed in Calcite, but is followed by
+   * List.filter, which must be implemented in Morel. Therefore Morel calls
+   * into the internal "calcite" function, passing the Calcite plan to be
+   * executed. */
+  @Test void testHybridCalciteToMorel() {
+    final String ml = "List.filter\n"
+        + "  (fn x => x.empno < 7500)\n"
+        + "  (from e in scott.emp\n"
+        + "  where e.job = \"CLERK\"\n"
+        + "  yield {e.empno, e.deptno, d5 = e.deptno + 5})";
+    String plan = ""
+        + "apply("
+        + "fnCode apply(fnValue List.filter, "
+        + "argCode match(x, apply(fnValue <, "
+        + "argCode tuple(apply(fnValue nth:2, argCode get(name x)),"
+        + " constant(7500))))), "
+        + "argCode calcite("
+        + "plan LogicalProject(d5=[+($1, 5)], deptno=[$1], empno=[$2])\n"
+        + "  LogicalFilter(condition=[=($5, 'CLERK')])\n"
+        + "    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], "
+        + "hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
+        + "      JdbcTableScan(table=[[scott, EMP]])\n"
+        + "))";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .with(Prop.HYBRID, true)
+        .assertType("{d5:int, deptno:int, empno:int} list")
+        .assertEvalIter(equalsOrdered(list(25, 20, 7369)))
+        .assertPlan(is(plan));
+  }
+
+  /** Tests a query that can be fully executed in Calcite. */
+  @Test void testFullCalcite() {
+    final String ml = "from e in scott.emp\n"
+        + "  where e.empno < 7500\n"
+        + "  yield {e.empno, e.deptno, d5 = e.deptno + 5}";
+    String plan = "calcite("
+        + "plan LogicalProject(d5=[+($1, 5)], deptno=[$1], empno=[$2])\n"
+        + "  LogicalFilter(condition=[<($2, 7500)])\n"
+        + "    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], "
+        + "hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
+        + "      JdbcTableScan(table=[[scott, EMP]])\n"
+        + ")";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .with(Prop.HYBRID, true)
+        .assertType("{d5:int, deptno:int, empno:int} list")
+        .assertEvalIter(equalsOrdered(list(25, 20, 7369), list(35, 30, 7499)))
+        .assertPlan(is(plan));
+  }
+
+  /** Tests a query that is "from" over no variables. The result has one row
+   * and zero columns. */
+  @Test void testCalciteFrom() {
+    final String ml = "from";
+    String plan = "calcite(plan LogicalValues(tuples=[[{  }]])\n)";
+    ml(ml)
+        .with(Prop.HYBRID, true)
+        .assertType("unit list")
+        .assertPlan(is(plan))
+        .assertEvalIter(equalsOrdered(list()));
+  }
+
+  /** Tests a query that is executed in Calcite except for a variable, 'five',
+   * whose value happens to always be 5. */
+  @Test void testCalciteWithVariable() {
+    final String ml = "let\n"
+        + "  val five = 5\n"
+        + "  val ten = five + five\n"
+        + "in\n"
+        + "  from e in scott.emp\n"
+        + "  where e.empno < 7500 + ten\n"
+        + "  yield {e.empno, e.deptno, d5 = e.deptno + five}\n"
+        + "end";
+    String plan = "let(matchCode0 match(five, constant(5)), "
+        + "resultCode let("
+        + "matchCode0 match(ten, apply(fnValue +, "
+        + "argCode tuple(get(name five), get(name five)))), "
+        + "resultCode calcite(plan "
+        + "LogicalProject(d5=[+($1, morelScalar('five', '{\n"
+        + "  \"type\": \"INTEGER\",\n"
+        + "  \"nullable\": false\n"
+        + "}'))], deptno=[$1], empno=[$2])\n"
+        + "  LogicalFilter(condition=[<($2, +(7500, morelScalar('ten', '{\n"
+        + "  \"type\": \"INTEGER\",\n"
+        + "  \"nullable\": false\n"
+        + "}')))])\n"
+        + "    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], "
+        + "hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
+        + "      JdbcTableScan(table=[[scott, EMP]])\n"
+        + ")))";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .with(Prop.HYBRID, true)
+        .assertType("{d5:int, deptno:int, empno:int} list")
+        .assertPlan(is(plan))
+        .assertEvalIter(equalsOrdered(list(25, 20, 7369), list(35, 30, 7499)));
+  }
+
+  /** Tests a query that is executed in Calcite except for a function,
+   * 'twice'. */
+  @Test void testCalciteWithFunction() {
+    final String ml = "let\n"
+        + "  fun twice x = x + x\n"
+        + "in\n"
+        + "  from d in scott.dept\n"
+        + "  yield twice d.deptno\n"
+        + "end";
+    String plan = "let(matchCode0 match(twice, match(x, "
+        + "apply(fnValue +, argCode tuple(get(name x), get(name x))))), "
+        + "resultCode calcite(plan "
+        + "LogicalProject($f0=[morelScalar('int', "
+        + "morelScalar('twice', '{\n"
+        + "  \"type\": \"ANY\",\n"
+        + "  \"nullable\": false,\n"
+        + "  \"precision\": -1,\n"
+        + "  \"scale\": -1\n"
+        + "}'), $0)])\n"
+        + "  JdbcTableScan(table=[[scott, DEPT]])\n"
+        + "))";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .with(Prop.HYBRID, true)
+        .assertType("int list")
+        .assertPlan(is(plan))
+        .assertEvalIter(equalsOrdered(20, 40, 60, 80));
+  }
+
+  /** Tests a query that is executed in Calcite except for a function,
+   * 'plus'; one of its arguments comes from a relational record, and another
+   * from the Morel environment. */
+  @Test void testCalciteWithHybridFunction() {
+    final String ml = "let\n"
+        + "  fun plus (x, y) = x + y\n"
+        + "  val five = 5\n"
+        + "in\n"
+        + "  from d in scott.dept\n"
+        + "  yield plus (d.deptno, five)\n"
+        + "end";
+    String plan = "let(matchCode0 match(plus, match((x, y), "
+        + "apply(fnValue +, argCode tuple(get(name x), get(name y))))), "
+        + "resultCode let(matchCode0 match(five, constant(5)), "
+        + "resultCode calcite(plan "
+        + "LogicalProject($f0=[morelScalar('int * int', "
+        + "morelScalar('plus', '{\n"
+        + "  \"type\": \"ANY\",\n"
+        + "  \"nullable\": false,\n"
+        + "  \"precision\": -1,\n"
+        + "  \"scale\": -1\n"
+        + "}'), ROW($0, morelScalar('five', '{\n"
+        + "  \"type\": \"INTEGER\",\n"
+        + "  \"nullable\": false\n"
+        + "}')))])\n"
+        + "  JdbcTableScan(table=[[scott, DEPT]])\n"
+        + ")))";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .with(Prop.HYBRID, true)
+        .assertType("int list")
+        .assertPlan(is(plan))
+        .assertEvalIter(equalsOrdered(15, 25, 35, 45));
   }
 }
 

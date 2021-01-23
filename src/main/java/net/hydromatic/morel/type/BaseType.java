@@ -32,6 +32,10 @@ abstract class BaseType implements Type {
     this.description = Objects.requireNonNull(description);
   }
 
+  @Override public String toString() {
+    return description;
+  }
+
   public String description() {
     return description;
   }

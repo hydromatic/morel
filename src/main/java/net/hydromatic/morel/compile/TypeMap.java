@@ -41,7 +41,7 @@ import javax.annotation.Nullable;
 
 /** The result of type resolution, a map from AST nodes to types. */
 public class TypeMap {
-  final TypeSystem typeSystem;
+  public final TypeSystem typeSystem;
   private final Map<AstNode, Unifier.Term> nodeTypeTerms;
   final Unifier.Substitution substitution;
   private final Map<String, TypeVar> typeVars = new HashMap<>();

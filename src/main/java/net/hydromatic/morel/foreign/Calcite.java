@@ -37,6 +37,7 @@ import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.util.ThreadLocals;
 
 import java.util.List;
 import java.util.Map;
@@ -85,9 +86,15 @@ public class Calcite {
       }
 
       @Override public Object eval(EvalEnv evalEnv) {
-        final Interpreter interpreter =
-            new Interpreter(dataContext, rel);
-        return converter.apply(interpreter);
+        return ThreadLocals.let(CalciteFunctions.THREAD_EVAL_ENV,
+            evalEnv, () ->
+                ThreadLocals.mutate(CalciteFunctions.THREAD_ENV,
+                    c -> c.withEnv(env),
+                    () -> {
+                      final Interpreter interpreter =
+                          new Interpreter(dataContext, rel);
+                      return converter.apply(interpreter);
+                    }));
       }
     };
   }

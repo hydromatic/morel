@@ -22,6 +22,7 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
@@ -61,6 +62,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
+
+import static java.util.Objects.requireNonNull;
 
 /** Fluent test helper. */
 class Ml {
@@ -232,6 +235,7 @@ class Ml {
       final RelNode rel =
           new CalciteCompiler(typeSystem, calcite)
               .toRel(env, Compiles.toExp(valDecl3));
+      requireNonNull(rel);
       final String relString = RelOptUtil.toString(rel);
       assertThat(relString, matcher);
       return this;
@@ -293,6 +297,7 @@ class Ml {
     }
   }
 
+  @CanIgnoreReturnValue
   private Object eval(Session session, Environment env,
       TypeSystem typeSystem, Ast.Exp e,
       @Nullable Matcher<Object> resultMatcher,
@@ -331,7 +336,6 @@ class Ml {
     }
     return this;
   }
-
 
   Ml assertEvalSame() {
     final Matchers.LearningMatcher<Object> resultMatcher =

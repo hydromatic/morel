@@ -30,6 +30,7 @@ import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.eval.Unit;
+import net.hydromatic.morel.foreign.CalciteFunctions;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -38,6 +39,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.TailList;
+import net.hydromatic.morel.util.ThreadLocals;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -72,6 +74,7 @@ public class Compiler {
     final Type type = decl instanceof Core.ValDecl
         ? ((Core.ValDecl) decl).pat.type
         : PrimitiveType.UNIT;
+    final CalciteFunctions.Context context = createContext(env);
 
     return new CompiledStatement() {
       public Type getType() {
@@ -80,12 +83,34 @@ public class Compiler {
 
       public void eval(Session session, Environment env, List<String> output,
           List<Binding> bindings) {
-        final EvalEnv evalEnv = Codes.emptyEnvWith(session, env);
-        for (Action entry : actions) {
-          entry.apply(output, bindings, evalEnv);
-        }
+        ThreadLocals.let(CalciteFunctions.THREAD_ENV, context,
+            () -> {
+              final EvalEnv evalEnv = Codes.emptyEnvWith(session, env);
+              for (Action action : actions) {
+                action.apply(output, bindings, evalEnv);
+              }
+            });
       }
     };
+  }
+
+  /** Creates a context.
+   *
+   * <p>The whole way we provide compilation environments (including
+   * Environment) to generated code is a mess:
+   * <ul>
+   * <li>This method is protected so that CalciteCompiler can override and get
+   * a Calcite type factory.
+   * <li>User-defined functions should have a 'prepare' phase, where they use
+   * a type factory and environment, that is distinct from the 'eval' phase.
+   * <li>We should pass compile and runtime environments via parameters, not
+   * thread-locals.
+   * <li>The dummy session is there because session is mandatory, but we have
+   * not created a session yet. Lifecycle confusion.
+   * </ul> */
+  protected CalciteFunctions.Context createContext(Environment env) {
+    final Session dummySession = new Session();
+    return new CalciteFunctions.Context(dummySession, env, typeSystem, null);
   }
 
   /** Something that needs to happen when a declaration is evaluated.

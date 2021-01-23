@@ -1142,6 +1142,75 @@ val it =
   : {deptno:int, id:int, name:string} list
 
 
+(*) Hybrid
+Sys.set ("hybrid", false);
+val it = () : unit
+
+from r in
+  List.tabulate (6, fn i =>
+    {i, j = i + 3, s = String.substring ("morel", 0, i)})
+yield {r.j, r.s};
+val it =
+  [{j=3,s=""},{j=4,s="m"},{j=5,s="mo"},{j=6,s="mor"},{j=7,s="more"},
+   {j=8,s="morel"}] : {j:'a, s:string} list
+
+Sys.plan();
+val it =
+  "from(r, apply(fnValue List.tabulate, argCode tuple(constant(6), match(i, tuple(get(name i), apply(fnValue +, argCode tuple(get(name i), constant(3))), apply(fnValue String.substring, argCode tuple(constant(morel), constant(0), get(name i))))))))"
+  : string
+
+
+Sys.set ("hybrid", true);
+val it = () : unit
+
+from r in
+  List.tabulate (6, fn i =>
+    {i, j = i + 3, s = String.substring ("morel", 0, i)})
+yield {r.j, r.s};
+val it =
+  [{j=3,s=""},{j=4,s="m"},{j=5,s="mo"},{j=6,s="mor"},{j=7,s="more"},
+   {j=8,s="morel"}] : {j:'a, s:string} list
+
+Sys.plan();
+val it =
+  "calcite(plan LogicalProject(j=[$1], s=[$2])
+  LogicalTableFunctionScan(invocation=[morelTable('#tabulate List (6, fn i => (i, i + 3, #substring String (\"morel\", 0, i)))', '{
+  \"fields\": [
+    {
+      \"type\": \"INTEGER\",
+      \"nullable\": false,
+      \"name\": \"i\"
+    },
+    {
+      \"type\": \"INTEGER\",
+      \"nullable\": false,
+      \"name\": \"j\"
+    },
+    {
+      \"type\": \"VARCHAR\",
+      \"nullable\": false,
+      \"precision\": -1,
+      \"name\": \"s\"
+    }
+  ],
+  \"nullable\": false
+}')], rowType=[RecordType(INTEGER i, INTEGER j, VARCHAR s)])
+)"
+  : string
+
+
+(*) List expression in Hybrid mode (0% Calcite), with various
+(*) row types: record, tuple, primitive
+List.filter (fn {i, j} => i mod 2 = 0) [{i = 1, j = 1}, {i = 2, j = 2}, {i = 3, j = 3}, {i = 4, j = 5}];
+val it = [{i=2,j=2},{i=4,j=5}] : {i:int, j:int} list
+
+List.filter (fn (i, j) => i mod 2 = 0) [(1, 1), (2, 2), (3, 3), (4, 5)];
+val it = [(2,2),(4,5)] : (int * int) list
+
+List.filter (fn i => i mod 2 = 0) [1, 2, 3, 4];
+val it = [2,4] : int list
+
+
 (*) dummy
 from message in ["the end"];
 val it = ["the end"] : string list

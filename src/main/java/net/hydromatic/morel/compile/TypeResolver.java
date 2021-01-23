@@ -100,6 +100,11 @@ public class TypeResolver {
     return new TypeResolver(typeSystem).deduceType_(env, decl);
   }
 
+  /** Converts a type AST to a type. */
+  public static Type toType(Ast.Type type, TypeSystem typeSystem) {
+    return new TypeResolver(typeSystem).toType(type);
+  }
+
   private Resolved deduceType_(Environment env, Ast.Decl decl) {
     final TypeEnvHolder typeEnvs = new TypeEnvHolder(EmptyTypeEnv.INSTANCE);
     BuiltIn.forEach(typeSystem, (builtIn, type) -> {

@@ -43,6 +43,10 @@ public enum PrimitiveType implements RecordLikeType {
   /** The name in the language, e.g. {@code bool}. */
   public final String moniker = name().toLowerCase(Locale.ROOT);
 
+  @Override public String toString() {
+    return moniker;
+  }
+
   public String description() {
     return moniker;
   }

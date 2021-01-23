@@ -19,13 +19,16 @@
 package net.hydromatic.morel.compile;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
+import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
@@ -60,7 +63,7 @@ public abstract class Compiles {
     } else {
       decl = (Ast.Decl) statement;
     }
-    return prepareDecl(typeSystem, env, decl);
+    return prepareDecl(typeSystem, session, env, decl);
   }
 
   /**
@@ -68,14 +71,21 @@ public abstract class Compiles {
    * code that can be evaluated by the interpreter.
    */
   private static CompiledStatement prepareDecl(TypeSystem typeSystem,
-      Environment env, Ast.Decl decl) {
+      Session session, Environment env, Ast.Decl decl) {
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, decl, typeSystem);
+    final boolean hybrid = Prop.HYBRID.booleanValue(session.map);
     final Resolver resolver = new Resolver(resolved.typeMap);
     final Core.Decl coreDecl = resolver.toCore(resolved.node);
     final Inliner inliner = Inliner.of(typeSystem, env);
     final Core.Decl coreDecl2 = coreDecl.accept(inliner);
-    final Compiler compiler = new Compiler(typeSystem);
+    final Compiler compiler;
+    if (hybrid) {
+      final Calcite calcite = Calcite.withDataSets(ImmutableMap.of());
+      compiler = new CalciteCompiler(typeSystem, calcite);
+    } else {
+      compiler = new Compiler(typeSystem);
+    }
     return compiler.compileStatement(env, coreDecl2);
   }
 

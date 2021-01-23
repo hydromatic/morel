@@ -386,33 +386,12 @@ public abstract class Codes {
    * argument. */
   public static Code apply(Code fnCode, Code argCode) {
     assert !fnCode.isConstant(); // if constant, use "apply(Closure, Code)"
-    return new Code() {
-      @Override public Describer describe(Describer describer) {
-        return describer.start("apply",
-            d -> d.arg("fnCode", fnCode).arg("argCode", argCode));
-      }
-
-      @Override public Object eval(EvalEnv env) {
-        final Applicable fnValue = (Applicable) fnCode.eval(env);
-        final Object arg = argCode.eval(env);
-        return fnValue.apply(env, arg);
-      }
-    };
+    return new ApplyCodeCode(fnCode, argCode);
   }
 
   /** Generates the code for applying a function value to an argument. */
   public static Code apply(Applicable fnValue, Code argCode) {
-    return new Code() {
-      @Override public Object eval(EvalEnv env) {
-        final Object arg = argCode.eval(env);
-        return fnValue.apply(env, arg);
-      }
-
-      @Override public Describer describe(Describer describer) {
-        return describer.start("apply", d ->
-            d.arg("fnValue", fnValue).arg("argCode", argCode));
-      }
-    };
+    return new ApplyCode(fnValue, argCode);
   }
 
   public static Code ifThenElse(Code condition, Code ifTrue,
@@ -1524,7 +1503,7 @@ public abstract class Codes {
       new ApplicableImpl("Sys.plan") {
         @Override public Object apply(EvalEnv env, Object arg) {
           final Session session = (Session) env.getOpt(EvalEnv.SESSION);
-          return session.code.describe(new DescriberImpl()).toString();
+          return Codes.describe(session.code);
         }
       };
 
@@ -2460,6 +2439,52 @@ public abstract class Codes {
         evalEnv2 = fnValue.evalBind(evalEnv2);
       }
       return resultCode.eval(evalEnv2);
+    }
+  }
+
+  /** Applies an {@link Applicable} to a {@link Code}. */
+  private static class ApplyCode implements Code {
+    private final Applicable fnValue;
+    private final Code argCode;
+
+    ApplyCode(Applicable fnValue, Code argCode) {
+      this.fnValue = fnValue;
+      this.argCode = argCode;
+    }
+
+    @Override public Object eval(EvalEnv env) {
+      final Object arg = argCode.eval(env);
+      return fnValue.apply(env, arg);
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("apply", d ->
+          d.arg("fnValue", fnValue).arg("argCode", argCode));
+    }
+  }
+
+  /** Applies a {@link Code} to a {@link Code}.
+   *
+   * <p>If {@link #fnCode} is constant, you should use {@link ApplyCode}
+   * instead. */
+  static class ApplyCodeCode implements Code {
+    public final Code fnCode;
+    public final Code argCode;
+
+    ApplyCodeCode(Code fnCode, Code argCode) {
+      this.fnCode = fnCode;
+      this.argCode = argCode;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("apply",
+          d -> d.arg("fnCode", fnCode).arg("argCode", argCode));
+    }
+
+    @Override public Object eval(EvalEnv env) {
+      final Applicable fnValue = (Applicable) fnCode.eval(env);
+      final Object arg = argCode.eval(env);
+      return fnValue.apply(env, arg);
     }
   }
 }

@@ -20,28 +20,35 @@ package net.hydromatic.morel.foreign;
 
 import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.Enumerable;
+import org.apache.calcite.linq4j.EnumerableDefaults;
 import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableNullableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import net.hydromatic.morel.eval.Unit;
+import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.Pair;
 
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.AbstractList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -150,6 +157,36 @@ public class Converters {
     return FieldConverter.toType(field.getType()).mlType;
   }
 
+  public static RelDataType toCalciteType(Type type,
+      RelDataTypeFactory typeFactory) {
+    return C2m.forMorel(type, typeFactory, false, true).calciteType;
+  }
+
+  /** Returns a function that converts from Morel objects to an Enumerable
+   * over Calcite rows. */
+  public static Function<Object, Enumerable<Object[]>> toCalciteEnumerable(
+      Type type, RelDataTypeFactory typeFactory) {
+    final C2m converter =
+        C2m.forMorel(type, typeFactory, false, true);
+    return converter::toCalciteEnumerable;
+  }
+
+  /** Returns a function that converts from Morel objects to Calcite objects. */
+  public static Function<Object, Object> toCalcite(Type type,
+      RelDataTypeFactory typeFactory) {
+    final C2m converter =
+        C2m.forMorel(type, typeFactory, false, true);
+    return converter::toCalciteObject;
+  }
+
+  /** Returns a function that converts from Calcite objects to Morel objects. */
+  public static Function<Object, Object> toMorel(Type type,
+      RelDataTypeFactory typeFactory) {
+    final C2m converter =
+        C2m.forMorel(type, typeFactory, false, true);
+    return converter.toMorelObjectFunction();
+  }
+
   /** Converts a field from Calcite to Morel format. */
   enum FieldConverter {
     FROM_BOOLEAN(PrimitiveType.BOOL) {
@@ -229,6 +266,170 @@ public class Converters {
       case CHAR:
       default:
         return FROM_STRING;
+      }
+    }
+  }
+
+  /** Converter from Calcite types to Morel types. */
+  private static class C2m {
+    final RelDataType calciteType;
+    final Type morelType;
+
+    C2m(RelDataType calciteType, Type morelType) {
+      this.calciteType = calciteType;
+      this.morelType = morelType;
+    }
+
+    /** Creates a converter for a given Morel type, in the process deducing the
+     * corresponding Calcite type. */
+    static C2m forMorel(Type type, RelDataTypeFactory typeFactory,
+        boolean nullable, boolean recordList) {
+      final RelDataTypeFactory.Builder typeBuilder;
+      switch (type.op()) {
+      case DATA_TYPE:
+        final DataType dataType = (DataType) type;
+        if (dataType.name.equals("option")) {
+          return forMorel(dataType.typeVars.get(0), typeFactory, true,
+              false);
+        }
+        throw new AssertionError("unknown type " + type);
+
+      case FUNCTION_TYPE:
+        // Represent Morel functions (and closures) as SQL type ANY. UDFs have a
+        // parameter of type Object, and the value is cast to Closure.
+        return new C2m(typeFactory.createSqlType(SqlTypeName.ANY), type);
+
+      case LIST:
+        final ListType listType = (ListType) type;
+        RelDataType elementType =
+            forMorel(listType.elementType, typeFactory, nullable, false)
+                .calciteType;
+        if (recordList && !elementType.isStruct()) {
+          elementType = typeFactory.builder()
+              .add("1", elementType)
+              .build();
+        }
+        return new C2m(
+            typeFactory.createMultisetType(elementType, -1),
+            type);
+
+      case RECORD_TYPE:
+      case TUPLE_TYPE:
+        typeBuilder = typeFactory.builder();
+        final RecordLikeType recordType = (RecordLikeType) type;
+        recordType.argNameTypes().forEach((name, argType) ->
+            typeBuilder.add(name,
+                forMorel(argType, typeFactory, nullable, recordList)
+                    .calciteType));
+        return new C2m(typeBuilder.build(), type);
+
+      case ID:
+        final PrimitiveType primitiveType = (PrimitiveType) type;
+        switch (primitiveType) {
+        case BOOL:
+          return new C2m(
+              typeFactory.createTypeWithNullability(
+                  typeFactory.createSqlType(SqlTypeName.BOOLEAN), nullable),
+              type);
+        case INT:
+          return new C2m(
+              typeFactory.createTypeWithNullability(
+                  typeFactory.createSqlType(SqlTypeName.INTEGER), nullable),
+              type);
+        case REAL:
+          return new C2m(
+              typeFactory.createTypeWithNullability(
+                  typeFactory.createSqlType(SqlTypeName.REAL), nullable),
+              type);
+        case CHAR:
+          return new C2m(
+              typeFactory.createTypeWithNullability(
+                  typeFactory.createSqlType(SqlTypeName.SMALLINT), nullable),
+              type);
+        case UNIT:
+          return new C2m(
+              typeFactory.createTypeWithNullability(
+              typeFactory.createSqlType(SqlTypeName.TINYINT), nullable),
+              type);
+        case STRING:
+          return new C2m(
+              typeFactory.createTypeWithNullability(
+                  typeFactory.createSqlType(SqlTypeName.VARCHAR, -1), nullable),
+              type);
+        default:
+          throw new AssertionError("unknown type " + type);
+        }
+      }
+      throw new UnsupportedOperationException("cannot convert type " + type);
+    }
+
+    public Object toCalciteObject(Object v) {
+      return v;
+    }
+
+    public Enumerable<Object[]> toCalciteEnumerable(Object v) {
+      @SuppressWarnings("unchecked")
+      final Enumerable<Object> enumerable =
+          Linq4j.asEnumerable((List<Object>) v);
+      switch (morelType.op()) {
+      case LIST:
+        final ListType listType = (ListType) morelType;
+        final C2m c =
+            new C2m(calciteType.getComponentType(),
+                listType.elementType);
+        if (c.calciteType.isStruct() && c.morelType instanceof PrimitiveType) {
+          return EnumerableDefaults.select(enumerable, c::scalarToArray);
+        } else {
+          return EnumerableDefaults.select(enumerable, c::listToArray);
+        }
+      default:
+        throw new AssertionError("cannot convert " + morelType);
+      }
+    }
+
+    private Object[] listToArray(Object o) {
+      @SuppressWarnings("unchecked")
+      List<Object> list = (List<Object>) o;
+      return list.toArray();
+    }
+
+    private Object[] scalarToArray(Object o) {
+      return new Object[] {o};
+    }
+
+    public Function<Object, Object> toMorelObjectFunction() {
+      switch (morelType.op()) {
+      case TUPLE_TYPE:
+        final ImmutableList.Builder<Function<Object, Object>> b =
+            ImmutableList.builder();
+        Pair.forEach(calciteType.getFieldList(),
+            ((TupleType) morelType).argTypes, (field, argType) ->
+                b.add(new C2m(field.getType(), argType)
+                    .toMorelObjectFunction()));
+        final ImmutableList<Function<Object, Object>> converters = b.build();
+        return v -> {
+          final Object[] values = (Object[]) v;
+          return new AbstractList<Object>() {
+            @Override public int size() {
+              return values.length;
+            }
+
+            @Override public Object get(int index) {
+              return converters.get(index).apply(values[index]);
+            }
+          };
+        };
+
+      case ID: // primitive type, e.g. int
+        switch ((PrimitiveType) morelType) {
+        case INT:
+          return v -> ((Number) v).intValue();
+        default:
+          return v -> v;
+        }
+
+      default:
+        throw new AssertionError("unknown type " + morelType);
       }
     }
   }
