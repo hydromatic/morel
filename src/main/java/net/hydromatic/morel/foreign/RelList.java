@@ -20,13 +20,13 @@ package net.hydromatic.morel.foreign;
 
 import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.Interpreter;
-import org.apache.calcite.linq4j.function.Function1;
 import org.apache.calcite.rel.RelNode;
 
 import com.google.common.base.Suppliers;
 
 import java.util.AbstractList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /** A list whose contents are computed by evaluating a relational
@@ -34,14 +34,14 @@ import java.util.function.Supplier;
 public class RelList extends AbstractList<Object> {
   public final RelNode rel;
 
-  private final Supplier<List<List<Object>>> supplier;
+  private final Supplier<List<Object>> supplier;
 
   RelList(RelNode rel, DataContext dataContext,
-      Function1<Object[], List<Object>> converter) {
+      Function<Object[], Object> converter) {
     this.rel = rel;
     supplier = Suppliers.memoize(() ->
         new Interpreter(dataContext, rel)
-            .select(converter)
+            .select(converter::apply)
             .toList());
   }
 
