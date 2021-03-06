@@ -42,6 +42,15 @@ public class AstWriter {
 
   /** Appends a call to an infix operator. */
   public AstWriter infix(int left, AstNode a0, Op op, AstNode a1, int right) {
+    if (op == Op.APPLY && a0.op == Op.ID) {
+      final Op op2 = Op.BY_OP_NAME.get(((Ast.Id) a0).name);
+      if (op2 != null && op2.left > 0) {
+        final List<Ast.Exp> args = ((Ast.Tuple) a1).args;
+        final Ast.InfixCall call =
+            new Ast.InfixCall(Pos.ZERO, op2, args.get(0), args.get(1));
+        return call.unparse(this, left, right);
+      }
+    }
     if (left > op.left || op.right < right) {
       return append("(").infix(0, a0, op, a1, 0).append(")");
     }

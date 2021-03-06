@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.ast;
 
+import com.google.common.collect.ImmutableMap;
+
 /** Sub-types of {@link AstNode}. */
 public enum Op {
   // identifiers
@@ -132,6 +134,23 @@ public enum Op {
   public final int right;
   /** Operator name. Sometimes null, sometimes something like "op +". */
   public final String opName;
+
+  public static final ImmutableMap<String, Op> BY_OP_NAME;
+
+  static {
+    final ImmutableMap.Builder<String, Op> b = ImmutableMap.builder();
+    for (Op op : values()) {
+      if (op.opName != null
+          && op.opName.startsWith("op ")
+          && !op.opName.equals("op ")
+          && !op.name().endsWith("_TYPE")
+          && !op.name().endsWith("_PAT")
+          && !op.name().endsWith("_DECL")) {
+        b.put(op.opName, op);
+      }
+    }
+    BY_OP_NAME = b.build();
+  }
 
   Op() {
     this(null, 0, 0);
