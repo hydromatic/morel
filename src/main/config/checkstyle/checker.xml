@@ -248,6 +248,7 @@ License.
       <!-- Whitespace around tokens is required -->
     <module name="WhitespaceAround">
         <property name="allowEmptyConstructors" value="true"/>
+        <property name="allowEmptyLambdas" value="true"/>
         <property name="allowEmptyMethods" value="true"/>
     </module>
     <module name="ParenPad"/>

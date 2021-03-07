@@ -18,13 +18,15 @@
  */
 package net.hydromatic.morel.eval;
 
-/** A compiled expression, that can be evaluated. */
-public interface Code extends Describable {
-  Object eval(EvalEnv evalEnv);
-
-  default boolean isConstant() {
-    return false;
-  }
+/** Session environment.
+ *
+ * <p>Accessible from {@link EvalEnv#getOpt(String)} via the hidden "$session"
+ * variable. */
+public class Session {
+  /** The plan of the previous command. */
+  public Code code;
+  /** The output of the previous command. */
+  public String out;
 }
 
-// End Code.java
+// End Session.java

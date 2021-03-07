@@ -109,6 +109,10 @@ public class Closure implements Comparable<Closure>, Applicable {
     return bindEval(argValue);
   }
 
+  @Override public Describer describe(Describer describer) {
+    return describer.start("closure", d -> {});
+  }
+
   private boolean bindRecurse(Ast.Pat pat, EvalEnv[] envRef,
       Object argValue) {
     final List<Object> listValue;

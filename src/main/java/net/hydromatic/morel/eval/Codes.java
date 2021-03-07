@@ -60,6 +60,7 @@ import javax.annotation.Nullable;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
 /** Helpers for {@link Code}. */
+@SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Codes {
   private Codes() {}
 
@@ -70,244 +71,290 @@ public abstract class Codes {
 
   /** Returns a Code that evaluates to the same value in all environments. */
   public static Code constant(Comparable value) {
-    return new Code() {
-      public Object eval(EvalEnv env) {
-        return value;
-      }
-
-      @Override public boolean isConstant() {
-        return true;
-      }
-    };
+    return new ConstantCode(value);
   }
 
   /** @see BuiltIn#OP_EQ */
-  private static final Applicable OP_EQ = Codes::eq;
-
-  /** Implements {@link #OP_EQ}. */
-  private static boolean eq(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return list.get(0).equals(list.get(1));
-  }
+  private static final Applicable OP_EQ =
+      new ApplicableImpl("=") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return list.get(0).equals(list.get(1));
+        }
+      };
 
   /** @see BuiltIn#OP_NE */
-  private static final Applicable OP_NE = Codes::ne;
-
-  /** Implements {@link #OP_NE}. */
-  private static boolean ne(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return !list.get(0).equals(list.get(1));
-  }
+  private static final Applicable OP_NE =
+      new ApplicableImpl("<>") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return !list.get(0).equals(list.get(1));
+        }
+      };
 
   /** @see BuiltIn#OP_LT */
-  private static final Applicable OP_LT = Codes::lt;
-
-  /** Implements {@link #OP_LT}. */
-  private static boolean lt(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    final Comparable v0 = (Comparable) list.get(0);
-    final Comparable v1 = (Comparable) list.get(1);
-    return v0.compareTo(v1) < 0;
-  }
+  private static final Applicable OP_LT =
+      new ApplicableImpl("<") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final Comparable v0 = (Comparable) list.get(0);
+          final Comparable v1 = (Comparable) list.get(1);
+          return v0.compareTo(v1) < 0;
+        }
+      };
 
   /** @see BuiltIn#OP_GT */
-  private static final Applicable OP_GT = Codes::gt;
-
-  /** Implements {@link #OP_GT}. */
-  private static boolean gt(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    final Comparable v0 = (Comparable) list.get(0);
-    final Comparable v1 = (Comparable) list.get(1);
-    return v0.compareTo(v1) > 0;
-  }
+  private static final Applicable OP_GT =
+      new ApplicableImpl(">") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final Comparable v0 = (Comparable) list.get(0);
+          final Comparable v1 = (Comparable) list.get(1);
+          return v0.compareTo(v1) > 0;
+        }
+      };
 
   /** @see BuiltIn#OP_LE */
-  private static final Applicable OP_LE = Codes::le;
-
-  /** Implements {@link #OP_LE}. */
-  private static boolean le(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    final Comparable v0 = (Comparable) list.get(0);
-    final Comparable v1 = (Comparable) list.get(1);
-    return v0.compareTo(v1) <= 0;
-  }
+  private static final Applicable OP_LE =
+      new ApplicableImpl("<=") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final Comparable v0 = (Comparable) list.get(0);
+          final Comparable v1 = (Comparable) list.get(1);
+          return v0.compareTo(v1) <= 0;
+        }
+      };
 
   /** @see BuiltIn#OP_GE */
-  private static final Applicable OP_GE = Codes::ge;
-
-  /** Implements {@link #OP_GE}. */
-  private static boolean ge(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    final Comparable v0 = (Comparable) list.get(0);
-    final Comparable v1 = (Comparable) list.get(1);
-    return v0.compareTo(v1) >= 0;
-  }
+  private static final Applicable OP_GE =
+      new ApplicableImpl(">=") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final Comparable v0 = (Comparable) list.get(0);
+          final Comparable v1 = (Comparable) list.get(1);
+          return v0.compareTo(v1) >= 0;
+        }
+      };
 
   /** @see BuiltIn#OP_ELEM */
-  private static final Applicable OP_ELEM = Codes::elem;
-
-  /** Implements {@link #OP_ELEM}. */
-  private static boolean elem(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    final Object v0 = list.get(0);
-    final List v1 = (List) list.get(1);
-    return v1.contains(v0);
-  }
+  private static final Applicable OP_ELEM =
+      new ApplicableImpl("elem") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final Object v0 = list.get(0);
+          final List v1 = (List) list.get(1);
+          return v1.contains(v0);
+        }
+      };
 
   /** @see BuiltIn#OP_NOT_ELEM */
-  private static final Applicable OP_NOT_ELEM = Codes::notElem;
-
-  /** Implements {@link #OP_NOT_ELEM}. */
-  private static boolean notElem(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    final Object v0 = list.get(0);
-    final List v1 = (List) list.get(1);
-    return !v1.contains(v0);
-  }
+  private static final Applicable OP_NOT_ELEM =
+      new ApplicableImpl("nonElem") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final Object v0 = list.get(0);
+          final List v1 = (List) list.get(1);
+          return !v1.contains(v0);
+        }
+      };
 
   /** Returns a Code that evaluates "andalso". */
   public static Code andAlso(Code code0, Code code1) {
-    // Lazy evaluation. If code0 returns false, code1 is never evaluated.
-    return env -> (boolean) code0.eval(env) && (boolean) code1.eval(env);
+    return new AndAlsoCode(code0, code1);
   }
 
   /** Returns a Code that evaluates "orelse". */
   public static Code orElse(Code code0, Code code1) {
-    // Lazy evaluation. If code0 returns true, code1 is never evaluated.
-    return env -> (boolean) code0.eval(env) || (boolean) code1.eval(env);
+    return new OrElseCode(code0, code1);
   }
+
+  /** Implements {@link #OP_NEGATE} for type {@code int}. */
+  private static final Applicable NEGATE_INT =
+      new ApplicableImpl("~") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return -((Integer) arg);
+        }
+      };
+
+  /** Implements {@link #OP_NEGATE} for type {@code real}. */
+  private static final Applicable NEGATE_REAL =
+      new ApplicableImpl("~") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return -((Float) arg);
+        }
+      };
 
   /** Implements {@link #OP_PLUS} for type {@code int}. */
-  private static int plusInt(EvalEnv env, Object arg) {
-    return (int) ((List) arg).get(0) + (int) ((List) arg).get(1);
-  }
+  private static final Applicable PLUS_INT =
+      new ApplicableImpl("+") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (int) list.get(0) + (int) list.get(1);
+        }
+      };
 
   /** Implements {@link #OP_PLUS} for type {@code real}. */
-  private static float plusReal(EvalEnv env, Object arg) {
-    return (float) ((List) arg).get(0) + (float) ((List) arg).get(1);
-  }
+  private static final Applicable PLUS_REAL =
+      new ApplicableImpl("+") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (float) list.get(0) + (float) list.get(1);
+        }
+      };
 
   /** Implements {@link #OP_MINUS} for type {@code int}. */
-  private static int minusInt(EvalEnv env, Object arg) {
-    return (int) ((List) arg).get(0) - (int) ((List) arg).get(1);
-  }
+  private static final Applicable MINUS_INT =
+      new ApplicableImpl("-") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (int) list.get(0) - (int) list.get(1);
+        }
+      };
 
   /** Implements {@link #OP_MINUS} for type {@code real}. */
-  private static float minusReal(EvalEnv env, Object arg) {
-    return (float) ((List) arg).get(0) - (float) ((List) arg).get(1);
-  }
-
-  /** Implements {@link #OP_MOD}. */
-  private static int mod(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return Math.floorMod((int) list.get(0), (int) list.get(1));
-  }
+  private static final Applicable MINUS_REAL =
+      new ApplicableImpl("-") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (float) list.get(0) - (float) list.get(1);
+        }
+      };
 
   /** Implements {@link #OP_TIMES} for type {@code int}. */
-  private static int timesInt(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return (int) list.get(0) * (int) list.get(1);
-  }
+  private static final Applicable TIMES_INT =
+      new ApplicableImpl("*") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (int) list.get(0) * (int) list.get(1);
+        }
+      };
 
   /** Implements {@link #OP_TIMES} for type {@code real}. */
-  private static float timesReal(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return (float) list.get(0) * (float) list.get(1);
-  }
+  private static final Applicable TIMES_REAL =
+      new ApplicableImpl("*") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (float) list.get(0) * (float) list.get(1);
+        }
+      };
 
-  /** @see BuiltIn#OP_DIVIDE */
-  private static final Macro OP_DIVIDE = (env, argType) -> {
-    switch ((PrimitiveType) ((TupleType) argType).argTypes.get(0)) {
+  /** Implements {@link #OP_DIVIDE} for type {@code int}. */
+  private static final Applicable DIVIDE_INT =
+      new ApplicableImpl("/") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (int) list.get(0) / (int) list.get(1);
+        }
+      };
+
+  /** Implements {@link #OP_DIVIDE} for type {@code real}. */
+  private static final Applicable DIVIDE_REAL =
+      new ApplicableImpl("/") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (float) list.get(0) / (float) list.get(1);
+        }
+      };
+
+  /** @see BuiltIn#OP_NEGATE */
+  private static final Macro OP_NEGATE = (env, argType) -> {
+    switch ((PrimitiveType) argType) {
     case INT:
-      return ast.wrapApplicable(Codes::divideInt);
+      return ast.wrapApplicable(NEGATE_INT);
     case REAL:
-      return ast.wrapApplicable(Codes::divideReal);
+      return ast.wrapApplicable(NEGATE_REAL);
     default:
       throw new AssertionError("bad type " + argType);
     }
   };
 
-  /** Implements {@link #OP_DIVIDE} for type {@code int}. */
-  private static int divideInt(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return (int) list.get(0) / (int) list.get(1);
-  }
-
-  /** Implements {@link #OP_DIVIDE} for type {@code real}. */
-  private static float divideReal(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return (float) list.get(0) / (float) list.get(1);
-  }
+  /** @see BuiltIn#OP_DIVIDE */
+  private static final Macro OP_DIVIDE = (env, argType) -> {
+    switch ((PrimitiveType) ((TupleType) argType).argTypes.get(0)) {
+    case INT:
+      return ast.wrapApplicable(DIVIDE_INT);
+    case REAL:
+      return ast.wrapApplicable(DIVIDE_REAL);
+    default:
+      throw new AssertionError("bad type " + argType);
+    }
+  };
 
   /** @see BuiltIn#OP_DIV */
-  private static final Applicable OP_DIV = Codes::div;
-
-  /** Implements {@link #OP_DIV}. */
-  private static int div(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return Math.floorDiv((int) list.get(0), (int) list.get(1));
-  }
+  private static final Applicable OP_DIV =
+      new ApplicableImpl("div") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return Math.floorDiv((int) list.get(0), (int) list.get(1));
+        }
+      };
 
   /** @see BuiltIn#GENERAL_OP_O */
-  private static final Applicable GENERAL_OP_O = Codes::compose;
-
-  /** Implements {@link #GENERAL_OP_O}. */
-  private static Applicable compose(EvalEnv evalEnv, Object arg) {
-    @SuppressWarnings("rawtypes") final List list = (List) arg;
-    final Applicable f = (Applicable) list.get(0);
-    final Applicable g = (Applicable) list.get(1);
-    return (evalEnv2, arg2) -> f.apply(evalEnv2, g.apply(evalEnv2, arg2));
-  }
+  private static final Applicable GENERAL_OP_O =
+      new ApplicableImpl("o") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          @SuppressWarnings("rawtypes") final List tuple = (List) arg;
+          final Applicable f = (Applicable) tuple.get(0);
+          final Applicable g = (Applicable) tuple.get(1);
+          return new ApplicableImpl("o$f$g") {
+            @Override public Object apply(EvalEnv env, Object arg) {
+              return f.apply(env, g.apply(env, arg));
+            }
+          };
+        }
+      };
 
   /** @see BuiltIn#OP_CARET */
-  private static final Applicable OP_CARET = Codes::caret;
-
-  /** Implements {@link #OP_CARET}. */
-  private static String caret(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return (String) list.get(0) + (String) list.get(1);
-  }
+  private static final Applicable OP_CARET =
+      new ApplicableImpl("^") {
+        @Override public String apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final String arg0 = (String) tuple.get(0);
+          final String arg1 = (String) tuple.get(1);
+          return arg0 + arg1;
+        }
+      };
 
   /** @see BuiltIn#OP_CONS */
-  private static final Applicable OP_CONS = Codes::cons;
-
-  /** Implements {@link #OP_CONS}. */
-  private static List cons(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    return ImmutableList.builder().add(list.get(0))
-        .addAll((Iterable) list.get(1))
-        .build();
-  }
+  private static final Applicable OP_CONS =
+      new ApplicableImpl("::") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return ImmutableList.builder().add(list.get(0))
+              .addAll((Iterable) list.get(1))
+              .build();
+        }
+      };
 
   /** @see BuiltIn#OP_EXCEPT */
-  private static final Applicable OP_EXCEPT = Codes::except;
-
-  /** Implements {@link #OP_EXCEPT}. */
-  private static List except(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    final List list0 = (List) list.get(0);
-    List collection = new ArrayList(list0);
-    final Set set = new HashSet((List) list.get(1));
-    if (!collection.removeAll(set)) {
-      collection = list0;
-    }
-    return ImmutableList.copyOf(collection);
-  }
+  private static final Applicable OP_EXCEPT =
+      new ApplicableImpl("except") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final List list0 = (List) list.get(0);
+          List collection = new ArrayList(list0);
+          final Set set = new HashSet((List) list.get(1));
+          if (!collection.removeAll(set)) {
+            collection = list0;
+          }
+          return ImmutableList.copyOf(collection);
+        }
+      };
 
   /** @see BuiltIn#OP_INTERSECT */
-  private static final Applicable OP_INTERSECT = Codes::intersect;
-
-  /** Implements {@link #OP_INTERSECT}. */
-  private static List intersect(EvalEnv env, Object arg) {
-    final List list = (List) arg;
-    final List list0 = (List) list.get(0);
-    List collection = new ArrayList(list0);
-    final Set set = new HashSet((List) list.get(1));
-    if (!collection.retainAll(set)) {
-      collection = list0;
-    }
-    return ImmutableList.copyOf(collection);
-  }
+  private static final Applicable OP_INTERSECT =
+      new ApplicableImpl("intersect") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final List list0 = (List) list.get(0);
+          List collection = new ArrayList(list0);
+          final Set set = new HashSet((List) list.get(1));
+          if (!collection.retainAll(set)) {
+            collection = list0;
+          }
+          return ImmutableList.copyOf(collection);
+        }
+      };
 
   /** Returns a Code that returns the value of variable "name" in the current
    * environment. */
@@ -324,21 +371,10 @@ public abstract class Codes {
       // Use a more efficient runtime path if the list has only one element.
       // The effect is the same.
       final Code fnCode0 = Iterables.getOnlyElement(fnCodes);
-      return env -> {
-        final Closure fnValue = (Closure) fnCode0.eval(env);
-        EvalEnv env2 = fnValue.evalBind(env);
-        return argCode.eval(env2);
-      };
+      return new Let1Code(fnCode0, argCode);
 
     default:
-      return env -> {
-        EvalEnv env2 = env;
-        for (Code fnCode : fnCodes) {
-          final Closure fnValue = (Closure) fnCode.eval(env);
-          env2 = fnValue.evalBind(env2);
-        }
-        return argCode.eval(env2);
-      };
+      return new LetCode(ImmutableList.copyOf(fnCodes), argCode);
     }
   }
 
@@ -346,26 +382,49 @@ public abstract class Codes {
    * argument. */
   public static Code apply(Code fnCode, Code argCode) {
     assert !fnCode.isConstant(); // if constant, use "apply(Closure, Code)"
-    return env -> {
-      final Applicable fnValue = (Applicable) fnCode.eval(env);
-      final Object arg = argCode.eval(env);
-      return fnValue.apply(env, arg);
+    return new Code() {
+      @Override public Describer describe(Describer describer) {
+        return describer.start("apply",
+            d -> d.arg("fnCode", fnCode).arg("argCode", argCode));
+      }
+
+      @Override public Object eval(EvalEnv env) {
+        final Applicable fnValue = (Applicable) fnCode.eval(env);
+        final Object arg = argCode.eval(env);
+        return fnValue.apply(env, arg);
+      }
     };
   }
 
   /** Generates the code for applying a function value to an argument. */
   public static Code apply(Applicable fnValue, Code argCode) {
-    return env -> {
-      final Object arg = argCode.eval(env);
-      return fnValue.apply(env, arg);
+    return new Code() {
+      @Override public Object eval(EvalEnv env) {
+        final Object arg = argCode.eval(env);
+        return fnValue.apply(env, arg);
+      }
+
+      @Override public Describer describe(Describer describer) {
+        return describer.start("apply", d ->
+            d.arg("fnValue", fnValue).arg("argCode", argCode));
+      }
     };
   }
 
   public static Code ifThenElse(Code condition, Code ifTrue,
       Code ifFalse) {
-    return env -> {
-      final boolean b = (Boolean) condition.eval(env);
-      return (b ? ifTrue : ifFalse).eval(env);
+    return new Code() {
+      @Override public Describer describe(Describer describer) {
+        return describer.start("if",
+            d -> d.arg("condition", condition)
+                .arg("ifTrue", ifTrue)
+                .arg("ifFalse", ifFalse));
+      }
+
+      @Override public Object eval(EvalEnv env) {
+        final boolean b = (Boolean) condition.eval(env);
+        return (b ? ifTrue : ifFalse).eval(env);
+      }
     };
   }
 
@@ -382,25 +441,43 @@ public abstract class Codes {
   public static Applicable tyCon(Type dataType, String name) {
     Objects.requireNonNull(dataType);
     Objects.requireNonNull(name);
-    return (env, arg) -> ImmutableList.of(name, arg);
+    return new ApplicableImpl("tyCon") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        return ImmutableList.of(name, arg);
+      }
+    };
   }
 
   public static Code from(Map<Ast.Pat, Code> sources,
       Supplier<RowSink> rowSinkFactory) {
     if (sources.size() == 0) {
-      return env -> {
-        final RowSink rowSink = rowSinkFactory.get();
-        rowSink.accept(env);
-        return rowSink.result(env);
+      return new Code() {
+        @Override public Describer describe(Describer describer) {
+          return describer.start("from0", d -> {});
+        }
+
+        @Override public Object eval(EvalEnv env) {
+          final RowSink rowSink = rowSinkFactory.get();
+          rowSink.accept(env);
+          return rowSink.result(env);
+        }
       };
     }
     final ImmutableList<Ast.Pat> pats = ImmutableList.copyOf(sources.keySet());
     final ImmutableList<Code> codes = ImmutableList.copyOf(sources.values());
-    return env -> {
-      final RowSink rowSink = rowSinkFactory.get();
-      final Looper looper = new Looper(pats, codes, env, rowSink);
-      looper.loop(0);
-      return rowSink.result(env);
+    return new Code() {
+      @Override public Describer describe(Describer describer) {
+        return describer.start("from", d ->
+            sources.forEach((pat, code) ->
+                d.arg("", pat.toString()).arg("", code)));
+      }
+
+      @Override public Object eval(EvalEnv env) {
+        final RowSink rowSink = rowSinkFactory.get();
+        final Looper looper = new Looper(pats, codes, env, rowSink);
+        looper.loop(0);
+        return rowSink.result(env);
+      }
     };
   }
 
@@ -435,43 +512,66 @@ public abstract class Codes {
    * record. */
   public static Applicable nth(int slot) {
     assert slot >= 0 : slot;
-    return (env, arg) -> ((List) arg).get(slot);
+    return new ApplicableImpl("nth") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        return ((List) arg).get(slot);
+      }
+    };
   }
 
   /** An applicable that negates a boolean value. */
-  private static final Applicable NOT = (env, arg) -> !(Boolean) arg;
+  private static final Applicable NOT =
+      new ApplicableImpl("not") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return !(Boolean) arg;
+        }
+      };
 
   /** An applicable that returns the absolute value of an int. */
-  private static final Applicable ABS = (env, arg) -> {
-    final Integer integer = (Integer) arg;
-    return integer >= 0 ? integer : -integer;
-  };
+  private static final Applicable ABS =
+      new ApplicableImpl("abs") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Integer integer = (Integer) arg;
+          return integer >= 0 ? integer : -integer;
+        }
+      };
 
   /** @see BuiltIn#IGNORE */
-  private static final Applicable IGNORE = (env, arg) -> Unit.INSTANCE;
+  private static final Applicable IGNORE =
+      new ApplicableImpl("General.ignore") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return Unit.INSTANCE;
+        }
+      };
 
   /** @see BuiltIn#OP_MINUS */
   private static final Macro OP_MINUS = (env, argType) -> {
     switch ((PrimitiveType) ((TupleType) argType).argTypes.get(0)) {
     case INT:
-      return ast.wrapApplicable(Codes::minusInt);
+      return ast.wrapApplicable(MINUS_INT);
     case REAL:
-      return ast.wrapApplicable(Codes::minusReal);
+      return ast.wrapApplicable(MINUS_REAL);
     default:
       throw new AssertionError("bad type " + argType);
     }
   };
 
   /** @see BuiltIn#OP_MOD */
-  private static final Applicable OP_MOD = Codes::mod;
+  private static final Applicable OP_MOD =
+      new ApplicableImpl("mod") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return Math.floorMod((int) list.get(0), (int) list.get(1));
+        }
+      };
 
   /** @see BuiltIn#OP_PLUS */
   private static final Macro OP_PLUS = (env, argType) -> {
     switch ((PrimitiveType) ((TupleType) argType).argTypes.get(0)) {
     case INT:
-      return ast.wrapApplicable(Codes::plusInt);
+      return ast.wrapApplicable(PLUS_INT);
     case REAL:
-      return ast.wrapApplicable(Codes::plusReal);
+      return ast.wrapApplicable(PLUS_REAL);
     default:
       throw new AssertionError("bad type " + argType);
     }
@@ -481,9 +581,9 @@ public abstract class Codes {
   private static final Macro OP_TIMES = (env, argType) -> {
     switch ((PrimitiveType) ((TupleType) argType).argTypes.get(0)) {
     case INT:
-      return ast.wrapApplicable(Codes::timesInt);
+      return ast.wrapApplicable(TIMES_INT);
     case REAL:
-      return ast.wrapApplicable(Codes::timesReal);
+      return ast.wrapApplicable(TIMES_REAL);
     default:
       throw new AssertionError("bad type " + argType);
     }
@@ -493,554 +593,759 @@ public abstract class Codes {
   private static final Integer STRING_MAX_SIZE = Integer.MAX_VALUE;
 
   /** @see BuiltIn#STRING_SIZE */
-  private static final Applicable STRING_SIZE = (env, arg) ->
-      ((String) arg).length();
+  private static final Applicable STRING_SIZE =
+      new ApplicableImpl("String.size") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return ((String) arg).length();
+        }
+      };
 
   /** @see BuiltIn#STRING_SUB */
-  private static final Applicable STRING_SUB = (env, arg) -> {
-    final List tuple = (List) arg;
-    final String s = (String) tuple.get(0);
-    final int i = (Integer) tuple.get(1);
-    if (i < 0 || i >= s.length()) {
-      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-    }
-    return s.charAt(i);
-  };
+  private static final Applicable STRING_SUB =
+      new ApplicableImpl("String.sub") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final String s = (String) tuple.get(0);
+          final int i = (Integer) tuple.get(1);
+          if (i < 0 || i >= s.length()) {
+            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+          }
+          return s.charAt(i);
+        }
+      };
 
   /** @see BuiltIn#STRING_EXTRACT */
-  private static final Applicable STRING_EXTRACT = (env, arg) -> {
-    final List tuple = (List) arg;
-    final String s = (String) tuple.get(0);
-    final int i = (Integer) tuple.get(1);
-    if (i < 0) {
-      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-    }
-    final List jOpt = (List) tuple.get(2);
-    if (jOpt.size() == 2) {
-      final int j = (Integer) jOpt.get(1);
-      if (j < 0 || i + j > s.length()) {
-        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-      }
-      return s.substring(i, i + j);
-    } else {
-      if (i > s.length()) {
-        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-      }
-      return s.substring(i);
-    }
-  };
+  private static final Applicable STRING_EXTRACT =
+      new ApplicableImpl("String.extract") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final String s = (String) tuple.get(0);
+          final int i = (Integer) tuple.get(1);
+          if (i < 0) {
+            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+          }
+          final List jOpt = (List) tuple.get(2);
+          if (jOpt.size() == 2) {
+            final int j = (Integer) jOpt.get(1);
+            if (j < 0 || i + j > s.length()) {
+              throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+            }
+            return s.substring(i, i + j);
+          } else {
+            if (i > s.length()) {
+              throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+            }
+            return s.substring(i);
+          }
+        }
+      };
 
   /** @see BuiltIn#STRING_SUBSTRING */
-  private static final Applicable STRING_SUBSTRING = (env, arg) -> {
-    final List tuple = (List) arg;
-    final String s = (String) tuple.get(0);
-    final int i = (Integer) tuple.get(1);
-    final int j = (Integer) tuple.get(2);
-    if (i < 0 || j < 0 || i + j > s.length()) {
-      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-    }
-    return s.substring(i, i + j);
-  };
+  private static final Applicable STRING_SUBSTRING =
+      new ApplicableImpl("String.substring") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final String s = (String) tuple.get(0);
+          final int i = (Integer) tuple.get(1);
+          final int j = (Integer) tuple.get(2);
+          if (i < 0 || j < 0 || i + j > s.length()) {
+            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+          }
+          return s.substring(i, i + j);
+        }
+      };
 
   /** @see BuiltIn#STRING_CONCAT */
-  private static final Applicable STRING_CONCAT = stringConcat("");
-
-  private static Applicable stringConcat(String separator) {
-    return (env, arg) -> {
-      @SuppressWarnings("unchecked") final List<String> list = (List) arg;
-      long n = 0;
-      for (String s : list) {
-        n += s.length();
-        n += separator.length();
-      }
-      if (n > STRING_MAX_SIZE) {
-        throw new MorelRuntimeException(BuiltInExn.SIZE);
-      }
-      return String.join(separator, list);
-    };
-  }
+  private static final Applicable STRING_CONCAT =
+      new ApplicableImpl("String.concat") {
+        @SuppressWarnings("unchecked")
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return stringConcat("", (List<String>) arg);
+        }
+      };
 
   /** @see BuiltIn#STRING_CONCAT_WITH */
-  private static final Applicable STRING_CONCAT_WITH = (env, arg) ->
-      stringConcat((String) arg);
+  private static final Applicable STRING_CONCAT_WITH =
+      new ApplicableImpl("String.concatWith") {
+        @Override public Object apply(EvalEnv env, Object argValue) {
+          final String separator = (String) argValue;
+          return new ApplicableImpl("String.concatWith$separator") {
+            @SuppressWarnings("unchecked")
+            @Override public Object apply(EvalEnv env, Object arg) {
+              return stringConcat(separator, (List<String>) arg);
+            }
+          };
+        }
+      };
+
+  private static String stringConcat(String separator, List<String> list) {
+    long n = 0;
+    for (String s : list) {
+      n += s.length();
+      n += separator.length();
+    }
+    if (n > STRING_MAX_SIZE) {
+      throw new MorelRuntimeException(BuiltInExn.SIZE);
+    }
+    return String.join(separator, list);
+  }
 
   /** @see BuiltIn#STRING_STR */
-  private static final Applicable STRING_STR = (env, arg) ->
-      ((Character) arg) + "";
+  private static final Applicable STRING_STR =
+      new ApplicableImpl("String.str") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Character character = (Character) arg;
+          return character + "";
+        }
+      };
 
   /** @see BuiltIn#STRING_IMPLODE */
-  private static final Applicable STRING_IMPLODE = (env, arg) ->
-      // Note: In theory this function should raise Size, but it is not
-      // possible in practice because List.size() is never larger than
-      // Integer.MAX_VALUE.
-      String.valueOf(Chars.toArray((List) arg));
+  private static final Applicable STRING_IMPLODE =
+      new ApplicableImpl("String.implode") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          // Note: In theory this function should raise Size, but it is not
+          // possible in practice because List.size() is never larger than
+          // Integer.MAX_VALUE.
+          return String.valueOf(Chars.toArray((List) arg));
+        }
+      };
 
   /** @see BuiltIn#STRING_EXPLODE */
-  private static final Applicable STRING_EXPLODE = (env, arg) -> {
-    final String s = (String) arg;
-    return MapList.of(s.length(), s::charAt);
-  };
+  private static final Applicable STRING_EXPLODE =
+      new ApplicableImpl("String.explode") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final String s = (String) arg;
+          return MapList.of(s.length(), s::charAt);
+        }
+      };
 
   /** @see BuiltIn#STRING_MAP */
-  private static final Applicable STRING_MAP = (env, arg) ->
-      stringMap((Applicable) arg);
+  private static final Applicable STRING_MAP =
+      new ApplicableImpl("String.map") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return stringMap((Applicable) arg);
+        }
+      };
 
   private static Applicable stringMap(Applicable f) {
-    return (env, arg) -> {
-      final String s = (String) arg;
-      final StringBuilder buf = new StringBuilder();
-      for (int i = 0; i < s.length(); i++) {
-        final char c = s.charAt(i);
-        final char c2 = (Character) f.apply(env, c);
-        buf.append(c2);
+    return new ApplicableImpl("String.map$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final String s = (String) arg;
+        final StringBuilder buf = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+          final char c = s.charAt(i);
+          final char c2 = (Character) f.apply(env, c);
+          buf.append(c2);
+        }
+        return buf.toString();
       }
-      return buf.toString();
     };
   }
 
   /** @see BuiltIn#STRING_TRANSLATE */
-  private static final Applicable STRING_TRANSLATE = (env, arg) -> {
-    final Applicable f = (Applicable) arg;
-    return translate(f);
-  };
+  private static final Applicable STRING_TRANSLATE =
+      new ApplicableImpl("String.translate") {
+        @Override public Applicable apply(EvalEnv env, Object arg) {
+          final Applicable f = (Applicable) arg;
+          return translate(f);
+        }
+      };
 
   private static Applicable translate(Applicable f) {
-    return (env, arg) -> {
-      final String s = (String) arg;
-      final StringBuilder buf = new StringBuilder();
-      for (int i = 0; i < s.length(); i++) {
-        final char c = s.charAt(i);
-        final String c2 = (String) f.apply(env, c);
-        buf.append(c2);
+    return new ApplicableImpl("String.translate$f") {
+      @Override public String apply(EvalEnv env, Object arg) {
+        final String s = (String) arg;
+        final StringBuilder buf = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+          final char c = s.charAt(i);
+          final String c2 = (String) f.apply(env, c);
+          buf.append(c2);
+        }
+        return buf.toString();
       }
-      return buf.toString();
     };
   }
 
   /** @see BuiltIn#STRING_IS_PREFIX */
-  private static final Applicable STRING_IS_PREFIX = (env, arg) -> {
-    final String s = (String) arg;
-    return isPrefix(s);
-  };
+  private static final Applicable STRING_IS_PREFIX =
+      new ApplicableImpl("String.isPrefix") {
+        @Override public Applicable apply(EvalEnv env, Object arg) {
+          final String s = (String) arg;
+          return isPrefix(s);
+        }
+      };
 
   private static Applicable isPrefix(String s) {
-    return (env, arg) -> {
-      final String s2 = (String) arg;
-      return s2.startsWith(s);
+    return new ApplicableImpl("String.isPrefix$s") {
+      @Override public Boolean apply(EvalEnv env, Object arg) {
+        final String s2 = (String) arg;
+        return s2.startsWith(s);
+      }
     };
   }
 
   /** @see BuiltIn#STRING_IS_SUBSTRING */
-  private static final Applicable STRING_IS_SUBSTRING = (env, arg) -> {
-    final String s = (String) arg;
-    return isSubstring(s);
-  };
+  private static final Applicable STRING_IS_SUBSTRING =
+      new ApplicableImpl("String.isSubstring") {
+        @Override public Applicable apply(EvalEnv env, Object arg) {
+          final String s = (String) arg;
+          return isSubstring(s);
+        }
+      };
 
   private static Applicable isSubstring(String s) {
-    return (env, arg) -> {
-      final String s2 = (String) arg;
-      return s2.contains(s);
+    return new ApplicableImpl("String.isSubstring$s") {
+      @Override public Boolean apply(EvalEnv env, Object arg) {
+        final String s2 = (String) arg;
+        return s2.contains(s);
+      }
     };
   }
 
   /** @see BuiltIn#STRING_IS_SUFFIX */
-  private static final Applicable STRING_IS_SUFFIX = (env, arg) -> {
-    final String s = (String) arg;
-    return isSuffix(s);
-  };
+  private static final Applicable STRING_IS_SUFFIX =
+      new ApplicableImpl("String.isSuffix") {
+        @Override public Applicable apply(EvalEnv env, Object arg) {
+          final String s = (String) arg;
+          return isSuffix(s);
+        }
+      };
 
   private static Applicable isSuffix(String s) {
-    return (env, arg) -> {
-      final String s2 = (String) arg;
-      return s2.endsWith(s);
+    return new ApplicableImpl("String.isSuffix$s") {
+      @Override public Boolean apply(EvalEnv env, Object arg) {
+        final String s2 = (String) arg;
+        return s2.endsWith(s);
+      }
     };
   }
 
   /** @see BuiltIn#LIST_NULL */
-  private static final Applicable LIST_NULL = (env, arg) ->
-      ((List) arg).isEmpty();
+  private static final Applicable LIST_NULL =
+      new ApplicableImpl("List.null") {
+        @Override public Boolean apply(EvalEnv env, Object arg) {
+          return ((List) arg).isEmpty();
+        }
+      };
 
   /** @see BuiltIn#LIST_LENGTH */
-  private static final Applicable LIST_LENGTH = (env, arg) ->
-      ((List) arg).size();
+  private static final Applicable LIST_LENGTH =
+      new ApplicableImpl("List.length") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return ((List) arg).size();
+        }
+      };
 
   /** @see BuiltIn#LIST_AT
    * @see BuiltIn#OP_UNION */
-  private static final Applicable LIST_AT = (env, arg) -> {
-    final List tuple = (List) arg;
-    final List list0 = (List) tuple.get(0);
-    final List list1 = (List) tuple.get(1);
-    return ImmutableList.builder().addAll(list0).addAll(list1).build();
-  };
+  private static final Applicable LIST_AT =
+      new ApplicableImpl("List.at") {
+        @Override public List apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final List list0 = (List) tuple.get(0);
+          final List list1 = (List) tuple.get(1);
+          return ImmutableList.builder().addAll(list0).addAll(list1).build();
+        }
+      };
 
   /** @see BuiltIn#LIST_HD */
-  private static final Applicable LIST_HD = (env, arg) -> {
-    final List list = (List) arg;
-    if (list.isEmpty()) {
-      throw new MorelRuntimeException(BuiltInExn.EMPTY);
-    }
-    return list.get(0);
-  };
+  private static final Applicable LIST_HD =
+      new ApplicableImpl("List.hd") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          if (list.isEmpty()) {
+            throw new MorelRuntimeException(BuiltInExn.EMPTY);
+          }
+          return list.get(0);
+        }
+      };
 
   /** @see BuiltIn#LIST_TL */
-  private static final Applicable LIST_TL = (env, arg) -> {
-    final List list = (List) arg;
-    final int size = list.size();
-    if (size == 0) {
-      throw new MorelRuntimeException(BuiltInExn.EMPTY);
-    }
-    return list.subList(1, size);
-  };
+  private static final Applicable LIST_TL =
+      new ApplicableImpl("List.tl") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final int size = list.size();
+          if (size == 0) {
+            throw new MorelRuntimeException(BuiltInExn.EMPTY);
+          }
+          return list.subList(1, size);
+        }
+      };
 
   /** @see BuiltIn#LIST_LAST */
-  private static final Applicable LIST_LAST = (env, arg) -> {
-    final List list = (List) arg;
-    final int size = list.size();
-    if (size == 0) {
-      throw new MorelRuntimeException(BuiltInExn.EMPTY);
-    }
-    return list.get(size - 1);
-  };
+  private static final Applicable LIST_LAST =
+      new ApplicableImpl("List.last") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final int size = list.size();
+          if (size == 0) {
+            throw new MorelRuntimeException(BuiltInExn.EMPTY);
+          }
+          return list.get(size - 1);
+        }
+      };
 
   /** @see BuiltIn#LIST_GET_ITEM */
-  private static final Applicable LIST_GET_ITEM = (env, arg) -> {
-    final List list = (List) arg;
-    if (list.isEmpty()) {
-      return OPTION_NONE;
-    } else {
-      return optionSome(
-          ImmutableList.of(list.get(0), list.subList(1, list.size())));
-    }
-  };
+  private static final Applicable LIST_GET_ITEM =
+      new ApplicableImpl("List.getItem") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          if (list.isEmpty()) {
+            return OPTION_NONE;
+          } else {
+            return optionSome(
+                ImmutableList.of(list.get(0), list.subList(1, list.size())));
+          }
+        }
+      };
 
   /** @see BuiltIn#LIST_NTH */
-  private static final Applicable LIST_NTH = (env, arg) -> {
-    final List tuple = (List) arg;
-    final List list = (List) tuple.get(0);
-    final int i = (Integer) tuple.get(1);
-    if (i < 0 || i >= list.size()) {
-      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-    }
-    return list.get(i);
-  };
+  private static final Applicable LIST_NTH =
+      new ApplicableImpl("List.nth") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final List list = (List) tuple.get(0);
+          final int i = (Integer) tuple.get(1);
+          if (i < 0 || i >= list.size()) {
+            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+          }
+          return list.get(i);
+        }
+      };
 
   /** @see BuiltIn#LIST_TAKE */
-  private static final Applicable LIST_TAKE = (env, arg) -> {
-    final List tuple = (List) arg;
-    final List list = (List) tuple.get(0);
-    final int i = (Integer) tuple.get(1);
-    if (i < 0 || i > list.size()) {
-      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-    }
-    return list.subList(0, i);
-  };
+  private static final Applicable LIST_TAKE =
+      new ApplicableImpl("List.take") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final List list = (List) tuple.get(0);
+          final int i = (Integer) tuple.get(1);
+          if (i < 0 || i > list.size()) {
+            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+          }
+          return list.subList(0, i);
+        }
+      };
 
   /** @see BuiltIn#LIST_DROP */
-  private static final Applicable LIST_DROP = (env, arg) -> {
-    final List tuple = (List) arg;
-    final List list = (List) tuple.get(0);
-    final int i = (Integer) tuple.get(1);
-    return list.subList(i, list.size());
-  };
+  private static final Applicable LIST_DROP =
+      new ApplicableImpl("List.drop") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final List list = (List) tuple.get(0);
+          final int i = (Integer) tuple.get(1);
+          return list.subList(i, list.size());
+        }
+      };
 
   /** @see BuiltIn#LIST_REV */
-  private static final Applicable LIST_REV = (env, arg) -> {
-    final List list = (List) arg;
-    return Lists.reverse(list);
-  };
+  private static final Applicable LIST_REV =
+      new ApplicableImpl("List.rev") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return Lists.reverse(list);
+        }
+      };
 
   /** @see BuiltIn#LIST_CONCAT */
-  private static final Applicable LIST_CONCAT = (env, arg) -> {
-    final List list = (List) arg;
-    final ImmutableList.Builder<Object> builder = ImmutableList.builder();
-    for (Object o : list) {
-      builder.addAll((List) o);
-    }
-    return builder.build();
-  };
+  private static final Applicable LIST_CONCAT =
+      new ApplicableImpl("List.concat") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          final ImmutableList.Builder<Object> builder = ImmutableList.builder();
+          for (Object o : list) {
+            builder.addAll((List) o);
+          }
+          return builder.build();
+        }
+      };
 
   /** @see BuiltIn#LIST_REV_APPEND */
-  private static final Applicable LIST_REV_APPEND = (env, arg) -> {
-    final List tuple = (List) arg;
-    final List list0 = (List) tuple.get(0);
-    final List list1 = (List) tuple.get(1);
-    return ImmutableList.builder().addAll(Lists.reverse(list0))
-        .addAll(list1).build();
-  };
+  private static final Applicable LIST_REV_APPEND =
+      new ApplicableImpl("List.revAppend") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final List list0 = (List) tuple.get(0);
+          final List list1 = (List) tuple.get(1);
+          return ImmutableList.builder().addAll(Lists.reverse(list0))
+              .addAll(list1).build();
+        }
+      };
 
   /** @see BuiltIn#LIST_APP */
-  private static final Applicable LIST_APP = (env, arg) ->
-      listApp((Applicable) arg);
+  private static final Applicable LIST_APP =
+      new ApplicableImpl("List.app") {
+        @Override public Applicable apply(EvalEnv env, Object arg) {
+          return listApp((Applicable) arg);
+        }
+      };
 
   private static Applicable listApp(Applicable consumer) {
-    return (env, arg) -> {
-      final List list = (List) arg;
-      list.forEach(o -> consumer.apply(env, o));
-      return Unit.INSTANCE;
+    return new ApplicableImpl("List.app$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List list = (List) arg;
+        list.forEach(o -> consumer.apply(env, o));
+        return Unit.INSTANCE;
+      }
     };
   }
 
   /** @see BuiltIn#LIST_MAP */
-  private static final Applicable LIST_MAP = (env, arg) ->
-      listMap((Applicable) arg);
+  private static final Applicable LIST_MAP =
+      new ApplicableImpl("List.map") {
+        @Override public Applicable apply(EvalEnv env, Object arg) {
+          return listMap((Applicable) arg);
+        }
+      };
 
   private static Applicable listMap(Applicable fn) {
-    return (env, arg) -> {
-      final List list = (List) arg;
-      final ImmutableList.Builder<Object> builder = ImmutableList.builder();
-      for (Object o : list) {
-        builder.add(fn.apply(env, o));
+    return new ApplicableImpl("List.map$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List list = (List) arg;
+        final ImmutableList.Builder<Object> builder = ImmutableList.builder();
+        for (Object o : list) {
+          builder.add(fn.apply(env, o));
+        }
+        return builder.build();
       }
-      return builder.build();
     };
   }
 
   /** @see BuiltIn#LIST_MAP_PARTIAL */
-  private static final Applicable LIST_MAP_PARTIAL = (env, arg) ->
-      listMapPartial((Applicable) arg);
-
-  private static Applicable listMapPartial(Applicable fn) {
-    return (env, arg) -> {
-      final List list = (List) arg;
-      final ImmutableList.Builder<Object> builder = ImmutableList.builder();
-      for (Object o : list) {
-        final List opt = (List) fn.apply(env, o);
-        if (opt.size() == 2) {
-          builder.add(opt.get(1));
+  private static final Applicable LIST_MAP_PARTIAL =
+      new ApplicableImpl("List.mapPartial") {
+        @Override public Applicable apply(EvalEnv env, Object arg) {
+          return listMapPartial((Applicable) arg);
         }
+      };
+
+  private static Applicable listMapPartial(Applicable f) {
+    return new ApplicableImpl("List.mapPartial$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List list = (List) arg;
+        final ImmutableList.Builder<Object> builder = ImmutableList.builder();
+        for (Object o : list) {
+          final List opt = (List) f.apply(env, o);
+          if (opt.size() == 2) {
+            builder.add(opt.get(1));
+          }
+        }
+        return builder.build();
       }
-      return builder.build();
     };
   }
 
   /** @see BuiltIn#LIST_FIND */
-  private static final Applicable LIST_FIND = (env, arg) -> {
-    final Applicable fn = (Applicable) arg;
-    return find(fn);
-  };
-
-  private static Applicable find(Applicable fn) {
-    return (env, arg) -> {
-      final List list = (List) arg;
-      for (Object o : list) {
-        if ((Boolean) fn.apply(env, o)) {
-          return optionSome(o);
+  private static final Applicable LIST_FIND =
+      new ApplicableImpl("List.find") {
+        @Override public Applicable apply(EvalEnv env, Object arg) {
+          final Applicable fn = (Applicable) arg;
+          return find(fn);
         }
-      }
-      return OPTION_NONE;
-    };
-  }
+      };
 
-  /** @see BuiltIn#LIST_FILTER */
-  private static final Applicable LIST_FILTER = (env, arg) -> {
-    final Applicable fn = (Applicable) arg;
-    return listFilter(fn);
-  };
-
-  private static Applicable listFilter(Applicable fn) {
-    return (env, arg) -> {
-      final List list = (List) arg;
-      final ImmutableList.Builder builder = ImmutableList.builder();
-      for (Object o : list) {
-        if ((Boolean) fn.apply(env, o)) {
-          builder.add(o);
+  private static Applicable find(Applicable f) {
+    return new ApplicableImpl("List.find$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List list = (List) arg;
+        for (Object o : list) {
+          if ((Boolean) f.apply(env, o)) {
+            return optionSome(o);
+          }
         }
-      }
-      return builder.build();
-    };
-  }
-
-  /** @see BuiltIn#LIST_PARTITION */
-  private static final Applicable LIST_PARTITION = (env, arg) -> {
-    final Applicable fn = (Applicable) arg;
-    return listPartition(fn);
-  };
-
-  private static Applicable listPartition(Applicable fn) {
-    return (env, arg) -> {
-      final List list = (List) arg;
-      final ImmutableList.Builder trueBuilder = ImmutableList.builder();
-      final ImmutableList.Builder falseBuilder = ImmutableList.builder();
-      for (Object o : list) {
-        ((Boolean) fn.apply(env, o) ? trueBuilder : falseBuilder).add(o);
-      }
-      return ImmutableList.of(trueBuilder.build(), falseBuilder.build());
-    };
-  }
-  /** @see BuiltIn#LIST_FOLDL */
-  private static final Applicable LIST_FOLDL = (env, arg) ->
-      listFold(true, (Applicable) arg);
-
-  /** @see BuiltIn#LIST_FOLDR */
-  private static final Applicable LIST_FOLDR = (env, arg) ->
-      listFold(false, (Applicable) arg);
-
-  private static Applicable listFold(boolean left, Applicable fn) {
-    return (env, arg) -> listFold2(left, fn, arg);
-  }
-
-  private static Applicable listFold2(boolean left, Applicable fn,
-      Object init) {
-    return (env, arg) -> {
-      final List list = (List) arg;
-      Object b = init;
-      for (Object a : left ? list : Lists.reverse(list)) {
-        b = fn.apply(env, ImmutableList.of(a, b));
-      }
-      return b;
-    };
-  }
-
-  /** @see BuiltIn#LIST_EXISTS */
-  private static final Applicable LIST_EXISTS = (env, arg) ->
-      listExists((Applicable) arg);
-
-  private static Applicable listExists(Applicable fn) {
-    return (env, arg) -> {
-      final List list = (List) arg;
-      for (Object o : list) {
-        if ((Boolean) fn.apply(env, o)) {
-          return true;
-        }
-      }
-      return false;
-    };
-  }
-
-  /** @see BuiltIn#LIST_ALL */
-  private static final Applicable LIST_ALL = (env, arg) ->
-      listAll((Applicable) arg);
-
-  private static Applicable listAll(Applicable fn) {
-    return (env, arg) -> {
-      final List list = (List) arg;
-      for (Object o : list) {
-        if (!(Boolean) fn.apply(env, o)) {
-          return false;
-        }
-      }
-      return true;
-    };
-  }
-
-  /** @see BuiltIn#LIST_TABULATE */
-  private static final Applicable LIST_TABULATE = (env, arg) -> {
-    final List tuple = (List) arg;
-    final int count = (Integer) tuple.get(0);
-    if (count < 0) {
-      throw new MorelRuntimeException(BuiltInExn.SIZE);
-    }
-    final Applicable fn = (Applicable) tuple.get(1);
-    final ImmutableList.Builder<Object> builder = ImmutableList.builder();
-    for (int i = 0; i < count; i++) {
-      builder.add(fn.apply(env, i));
-    }
-    return builder.build();
-  };
-
-  /** @see BuiltIn#LIST_COLLATE */
-  private static final Applicable LIST_COLLATE = (env, arg) ->
-      collate((Applicable) arg);
-
-  private static Applicable collate(Applicable comparator) {
-    return (env, arg) -> {
-      final List tuple = (List) arg;
-      final List list0 = (List) tuple.get(0);
-      final List list1 = (List) tuple.get(1);
-      final int n0 = list0.size();
-      final int n1 = list1.size();
-      final int n = Math.min(n0, n1);
-      for (int i = 0; i < n; i++) {
-        final Object element0 = list0.get(i);
-        final Object element1 = list1.get(i);
-        final List compare = (List) comparator.apply(env,
-            ImmutableList.of(element0, element1));
-        if (!compare.get(0).equals("EQUAL")) {
-          return compare;
-        }
-      }
-      return n0 < n1 ? ORDER_LESS : n0 == n1 ? ORDER_EQUAL : ORDER_GREATER;
-    };
-  }
-
-  /** @see BuiltIn#OPTION_APP */
-  private static final Applicable OPTION_APP = Codes::optionApp;
-
-  /** Implements {@link #OPTION_APP}. */
-  private static Applicable optionApp(EvalEnv env, Object arg) {
-    final Applicable f = (Applicable) arg;
-    return (env2, arg2) -> {
-      final List a = (List) arg2;
-      if (a.size() == 2) {
-        f.apply(env2, a.get(1));
-      }
-      return Unit.INSTANCE;
-    };
-  }
-
-  /** @see BuiltIn#OPTION_GET_OPT */
-  private static final Applicable OPTION_GET_OPT = (env, arg) -> {
-    final List tuple = (List) arg;
-    final List opt = (List) tuple.get(0);
-    if (opt.size() == 2) {
-      assert opt.get(0).equals("SOME");
-      return opt.get(1); // SOME has 2 elements, NONE has 1
-    }
-    return tuple.get(1);
-  };
-
-  /** @see BuiltIn#OPTION_IS_SOME */
-  private static final Applicable OPTION_IS_SOME = (env, arg) -> {
-    final List opt = (List) arg;
-    return opt.size() == 2; // SOME has 2 elements, NONE has 1
-  };
-
-  /** @see BuiltIn#OPTION_VAL_OF */
-  private static final Applicable OPTION_VAL_OF = (env, arg) -> {
-    final List opt = (List) arg;
-    if (opt.size() == 2) { // SOME has 2 elements, NONE has 1
-      return opt.get(1);
-    } else {
-      throw new MorelRuntimeException(BuiltInExn.OPTION);
-    }
-  };
-
-  /** @see BuiltIn#OPTION_FILTER */
-  private static final Applicable OPTION_FILTER = Codes::optionFilter;
-
-  /** Implementation of {@link #OPTION_FILTER}. */
-  private static Applicable optionFilter(EvalEnv env, Object arg) {
-    final Applicable f = (Applicable) arg;
-    return (env2, arg2) -> {
-      final Object a = arg2;
-      if ((Boolean) f.apply(env, a)) {
-        return optionSome(a);
-      } else {
         return OPTION_NONE;
       }
     };
   }
 
+  /** @see BuiltIn#LIST_FILTER */
+  private static final Applicable LIST_FILTER =
+      new ApplicableImpl("List.filter") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Applicable fn = (Applicable) arg;
+          return listFilter(fn);
+        }
+      };
+
+  private static Applicable listFilter(Applicable f) {
+    return new ApplicableImpl("List.filter$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List list = (List) arg;
+        final ImmutableList.Builder builder = ImmutableList.builder();
+        for (Object o : list) {
+          if ((Boolean) f.apply(env, o)) {
+            builder.add(o);
+          }
+        }
+        return builder.build();
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_PARTITION */
+  private static final Applicable LIST_PARTITION =
+      new ApplicableImpl("List.partition") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Applicable fn = (Applicable) arg;
+          return listPartition(fn);
+        }
+      };
+
+  private static Applicable listPartition(Applicable f) {
+    return new ApplicableImpl("List.partition$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List list = (List) arg;
+        final ImmutableList.Builder trueBuilder = ImmutableList.builder();
+        final ImmutableList.Builder falseBuilder = ImmutableList.builder();
+        for (Object o : list) {
+          ((Boolean) f.apply(env, o) ? trueBuilder : falseBuilder).add(o);
+        }
+        return ImmutableList.of(trueBuilder.build(), falseBuilder.build());
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_FOLDL */
+  private static final Applicable LIST_FOLDL =
+      new ApplicableImpl("List.foldl") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return listFold(true, (Applicable) arg);
+        }
+      };
+
+  /** @see BuiltIn#LIST_FOLDR */
+  private static final Applicable LIST_FOLDR =
+      new ApplicableImpl("List.foldr") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return listFold(false, (Applicable) arg);
+        }
+      };
+
+  private static Applicable listFold(boolean left, Applicable f) {
+    return new ApplicableImpl("List.fold$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        return listFold2(left, f, arg);
+      }
+    };
+  }
+
+  private static Applicable listFold2(boolean left, Applicable f,
+      Object init) {
+    return new ApplicableImpl("List.fold$f$init") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List list = (List) arg;
+        Object b = init;
+        for (Object a : left ? list : Lists.reverse(list)) {
+          b = f.apply(env, ImmutableList.of(a, b));
+        }
+        return b;
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_EXISTS */
+  private static final Applicable LIST_EXISTS =
+      new ApplicableImpl("List.exists") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return listExists((Applicable) arg);
+        }
+      };
+
+  private static Applicable listExists(Applicable f) {
+    return new ApplicableImpl("List.exists$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List list = (List) arg;
+        for (Object o : list) {
+          if ((Boolean) f.apply(env, o)) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_ALL */
+  private static final Applicable LIST_ALL =
+      new ApplicableImpl("List.all") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return listAll((Applicable) arg);
+        }
+      };
+
+  private static Applicable listAll(Applicable f) {
+    return new ApplicableImpl("List.all$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List list = (List) arg;
+        for (Object o : list) {
+          if (!(Boolean) f.apply(env, o)) {
+            return false;
+          }
+        }
+        return true;
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_TABULATE */
+  private static final Applicable LIST_TABULATE =
+      new ApplicableImpl("List.tabulate") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final int count = (Integer) tuple.get(0);
+          if (count < 0) {
+            throw new MorelRuntimeException(BuiltInExn.SIZE);
+          }
+          final Applicable fn = (Applicable) tuple.get(1);
+          final ImmutableList.Builder<Object> builder = ImmutableList.builder();
+          for (int i = 0; i < count; i++) {
+            builder.add(fn.apply(env, i));
+          }
+          return builder.build();
+        }
+      };
+
+  /** @see BuiltIn#LIST_COLLATE */
+  private static final Applicable LIST_COLLATE =
+      new ApplicableImpl("List.collate") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return collate((Applicable) arg);
+        }
+      };
+
+  private static Applicable collate(Applicable comparator) {
+    return new ApplicableImpl("List.collate$comparator") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List tuple = (List) arg;
+        final List list0 = (List) tuple.get(0);
+        final List list1 = (List) tuple.get(1);
+        final int n0 = list0.size();
+        final int n1 = list1.size();
+        final int n = Math.min(n0, n1);
+        for (int i = 0; i < n; i++) {
+          final Object element0 = list0.get(i);
+          final Object element1 = list1.get(i);
+          final List compare = (List) comparator.apply(env,
+              ImmutableList.of(element0, element1));
+          if (!compare.get(0).equals("EQUAL")) {
+            return compare;
+          }
+        }
+        return n0 < n1 ? ORDER_LESS : n0 == n1 ? ORDER_EQUAL : ORDER_GREATER;
+      }
+    };
+  }
+
+  /** @see BuiltIn#OPTION_APP */
+  private static final Applicable OPTION_APP =
+      new ApplicableImpl("Option.app") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Applicable f = (Applicable) arg;
+          return optionApp(f);
+        }
+      };
+
+  /** Implements {@link #OPTION_APP}. */
+  private static Applicable optionApp(Applicable f) {
+    return new ApplicableImpl("Option.app$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List a = (List) arg;
+        if (a.size() == 2) {
+          f.apply(env, a.get(1));
+        }
+        return Unit.INSTANCE;
+      }
+    };
+  }
+
+  /** @see BuiltIn#OPTION_GET_OPT */
+  private static final Applicable OPTION_GET_OPT =
+      new ApplicableImpl("Option.getOpt") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final List opt = (List) tuple.get(0);
+          if (opt.size() == 2) {
+            assert opt.get(0).equals("SOME");
+            return opt.get(1); // SOME has 2 elements, NONE has 1
+          }
+          return tuple.get(1);
+        }
+      };
+
+  /** @see BuiltIn#OPTION_IS_SOME */
+  private static final Applicable OPTION_IS_SOME =
+      new ApplicableImpl("Option.isSome") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List opt = (List) arg;
+          return opt.size() == 2; // SOME has 2 elements, NONE has 1
+        }
+      };
+
+  /** @see BuiltIn#OPTION_VAL_OF */
+  private static final Applicable OPTION_VAL_OF =
+      new ApplicableImpl("Option.valOf") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List opt = (List) arg;
+          if (opt.size() == 2) { // SOME has 2 elements, NONE has 1
+            return opt.get(1);
+          } else {
+            throw new MorelRuntimeException(BuiltInExn.OPTION);
+          }
+        }
+      };
+
+  /** @see BuiltIn#OPTION_FILTER */
+  private static final Applicable OPTION_FILTER =
+      new ApplicableImpl("Option.filter") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Applicable f = (Applicable) arg;
+          return optionFilter(f);
+        }
+      };
+
+  /** Implementation of {@link #OPTION_FILTER}. */
+  private static Applicable optionFilter(Applicable f) {
+    return new ApplicableImpl("Option.filter$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        if ((Boolean) f.apply(env, arg)) {
+          return optionSome(arg);
+        } else {
+          return OPTION_NONE;
+        }
+      }
+    };
+  }
+
   /** @see BuiltIn#OPTION_JOIN */
-  private static final Applicable OPTION_JOIN = (env, arg) -> {
-    final List opt = (List) arg;
-    return opt.size() == 2
-        ? opt.get(1) // SOME(SOME(v)) -> SOME(v), SOME(NONE) -> NONE
-        : opt; // NONE -> NONE
-  };
+  private static final Applicable OPTION_JOIN =
+      new ApplicableImpl("Option.join") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List opt = (List) arg;
+          return opt.size() == 2
+              ? opt.get(1) // SOME(SOME(v)) -> SOME(v), SOME(NONE) -> NONE
+              : opt; // NONE -> NONE
+        }
+      };
 
   /** @see BuiltIn#OPTION_MAP */
-  private static final Applicable OPTION_MAP = Codes::optionMap;
+  private static final Applicable OPTION_MAP =
+      new ApplicableImpl("Option.map") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return optionMap((Applicable) arg);
+        }
+      };
 
   /** Implements {@link #OPTION_MAP}. */
-  private static Applicable optionMap(EvalEnv env, Object arg) {
-    final Applicable f = (Applicable) arg;
-    return (env2, arg2) -> {
-      final List a = (List) arg2;
-      if (a.size() == 2) { // SOME v
-        return optionSome(f.apply(env2, a.get(1))); // SOME (f v)
+  private static Applicable optionMap(Applicable f) {
+    return new ApplicableImpl("Option.map") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List a = (List) arg;
+        if (a.size() == 2) { // SOME v
+          return optionSome(f.apply(env, a.get(1))); // SOME (f v)
+        }
+        return a; // NONE
       }
-      return a; // NONE
     };
   }
 
@@ -1052,80 +1357,109 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#OPTION_MAP_PARTIAL */
-  private static final Applicable OPTION_MAP_PARTIAL = Codes::optionMapPartial;
+  private static final Applicable OPTION_MAP_PARTIAL =
+      new ApplicableImpl("Option.mapPartial") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return optionMapPartial((Applicable) arg);
+        }
+      };
 
   /** Implements {@link #OPTION_MAP_PARTIAL}. */
-  private static Applicable optionMapPartial(EvalEnv env, Object arg) {
-    final Applicable f = (Applicable) arg;
-    return (env2, arg2) -> {
-      final List a = (List) arg2;
-      if (a.size() == 2) { // SOME v
-        return f.apply(env2, a.get(1)); // f v
+  private static Applicable optionMapPartial(Applicable f) {
+    return new ApplicableImpl("Option.mapPartial$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List a = (List) arg;
+        if (a.size() == 2) { // SOME v
+          return f.apply(env, a.get(1)); // f v
+        }
+        return a; // NONE
       }
-      return a; // NONE
     };
   }
 
   /** @see BuiltIn#OPTION_COMPOSE */
-  private static final Applicable OPTION_COMPOSE = Codes::optionCompose;
+  private static final Applicable OPTION_COMPOSE =
+      new ApplicableImpl("Option.compose") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final Applicable f = (Applicable) tuple.get(0);
+          final Applicable g = (Applicable) tuple.get(1);
+          return optionCompose(f, g);
+        }
+      };
 
   /** Implements {@link #OPTION_COMPOSE}. */
-  private static Applicable optionCompose(EvalEnv env, Object arg) {
-    final List tuple = (List) arg;
-    final Applicable f = (Applicable) tuple.get(0);
-    final Applicable g = (Applicable) tuple.get(1);
-    return (env2, a) -> {
-      final List ga = (List) g.apply(env2, a); // g (a)
-      if (ga.size() == 2) { // SOME v
-        return optionSome(f.apply(env2, ga.get(1))); // SOME (f (v))
+  private static Applicable optionCompose(Applicable f, Applicable g) {
+    return new ApplicableImpl("Option.compose$f$g") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List ga = (List) g.apply(env, arg); // g (a)
+        if (ga.size() == 2) { // SOME v
+          return optionSome(f.apply(env, ga.get(1))); // SOME (f (v))
+        }
+        return ga; // NONE
       }
-      return ga; // NONE
     };
   }
 
   /** @see BuiltIn#OPTION_COMPOSE_PARTIAL */
   private static final Applicable OPTION_COMPOSE_PARTIAL =
-      Codes::optionComposePartial;
+      new ApplicableImpl("Option.composePartial") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final Applicable f = (Applicable) tuple.get(0);
+          final Applicable g = (Applicable) tuple.get(1);
+          return optionComposePartial(f, g);
+        }
+      };
 
   /** Implements {@link #OPTION_COMPOSE_PARTIAL}. */
-  private static Applicable optionComposePartial(EvalEnv env, Object arg) {
-    final List tuple = (List) arg;
-    final Applicable f = (Applicable) tuple.get(0);
-    final Applicable g = (Applicable) tuple.get(1);
-    return (env2, a) -> {
-      final List ga = (List) g.apply(env2, a); // g (a)
-      if (ga.size() == 2) { // SOME v
-        return f.apply(env2, ga.get(1)); // f (v)
+  private static Applicable optionComposePartial(Applicable f, Applicable g) {
+    return new ApplicableImpl("Option.composePartial$f$g") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        final List ga = (List) g.apply(env, arg); // g (a)
+        if (ga.size() == 2) { // SOME v
+          return f.apply(env, ga.get(1)); // f (v)
+        }
+        return ga; // NONE
       }
-      return ga; // NONE
     };
   }
 
   /** @see BuiltIn#RELATIONAL_COUNT */
-  private static final Applicable RELATIONAL_COUNT = (env, arg) ->
-      ((List) arg).size();
+  private static final Applicable RELATIONAL_COUNT =
+      new ApplicableImpl("Relational.count") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return ((List) arg).size();
+        }
+      };
 
   /** Implements {@link #RELATIONAL_SUM} for type {@code int list}. */
-  private static final Applicable RELATIONAL_SUM_INT = (env, arg) -> {
-    @SuppressWarnings("unchecked") final List<? extends Number> list =
-        (List) arg;
-    int sum = 0;
-    for (Number o : list) {
-      sum += o.intValue();
-    }
-    return sum;
-  };
+  private static final Applicable RELATIONAL_SUM_INT =
+      new ApplicableImpl("Relational.sum$int") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          @SuppressWarnings("unchecked") final List<? extends Number> list =
+              (List) arg;
+          int sum = 0;
+          for (Number o : list) {
+            sum += o.intValue();
+          }
+          return sum;
+        }
+      };
 
   /** Implements {@link #RELATIONAL_SUM} for type {@code real list}. */
-  private static final Applicable RELATIONAL_SUM_REAL = (env, arg) -> {
-    @SuppressWarnings("unchecked") final List<? extends Number> list =
-        (List) arg;
-    float sum = 0;
-    for (Number o : list) {
-      sum += o.floatValue();
-    }
-    return sum;
-  };
+  private static final Applicable RELATIONAL_SUM_REAL =
+      new ApplicableImpl("Relational.sum$real") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          @SuppressWarnings("unchecked") final List<? extends Number> list =
+              (List) arg;
+          float sum = 0;
+          for (Number o : list) {
+            sum += o.floatValue();
+          }
+          return sum;
+        }
+      };
 
   /** @see BuiltIn#RELATIONAL_SUM */
   private static final Macro RELATIONAL_SUM = (env, argType) -> {
@@ -1141,25 +1475,45 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#RELATIONAL_MIN */
-  private static final Applicable RELATIONAL_MIN = (env, arg) ->
-      Ordering.natural().min((List) arg);
+  private static final Applicable RELATIONAL_MIN =
+      new ApplicableImpl("Relational.min") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return Ordering.natural().min((List) arg);
+        }
+      };
 
   /** @see BuiltIn#RELATIONAL_MAX */
-  private static final Applicable RELATIONAL_MAX = (env, arg) ->
-      Ordering.natural().max((List) arg);
+  private static final Applicable RELATIONAL_MAX =
+      new ApplicableImpl("Relational.max") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return Ordering.natural().max((List) arg);
+        }
+      };
 
   /** @see BuiltIn#SYS_ENV */
-  private static final Macro SYS_ENV = (env, argType) ->
-      ast.list(Pos.ZERO,
-          env.getValueMap().entrySet().stream()
-              .sorted(Map.Entry.comparingByKey())
-              .map(entry ->
-                  ast.tuple(Pos.ZERO,
-                      ImmutableList.of(
-                          ast.stringLiteral(Pos.ZERO, entry.getKey()),
-                          ast.stringLiteral(Pos.ZERO,
-                              entry.getValue().type.moniker()))))
-              .collect(Collectors.toList()));
+  private static Ast.Exp sysEnv(Environment env, Type argType) {
+    return ast.list(Pos.ZERO,
+        env.getValueMap()
+            .entrySet()
+            .stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry ->
+                ast.tuple(Pos.ZERO,
+                    ImmutableList.of(
+                        ast.stringLiteral(Pos.ZERO, entry.getKey()),
+                        ast.stringLiteral(Pos.ZERO,
+                            entry.getValue().type.moniker()))))
+            .collect(Collectors.toList()));
+  }
+
+  /** @see BuiltIn#SYS_PLAN */
+  private static final Applicable SYS_PLAN =
+      new ApplicableImpl("Sys.plan") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          return session.code.describe(new DescriberImpl()).toString();
+        }
+      };
 
   private static final List ORDER_LESS = ImmutableList.of("LESS");
   private static final List ORDER_EQUAL = ImmutableList.of("EQUAL");
@@ -1169,7 +1523,12 @@ public abstract class Codes {
   private static final int VECTOR_MAX_LEN = (1 << 24) - 1;
 
   /** @see BuiltIn#VECTOR_FROM_LIST */
-  private static final Applicable VECTOR_FROM_LIST = (env, arg) -> arg;
+  private static final Applicable VECTOR_FROM_LIST =
+      new ApplicableImpl("Vector.fromList") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return arg; // vector and list have the same implementation in Java
+        }
+      };
 
   /** @see BuiltIn#VECTOR_TABULATE */
   private static final Applicable VECTOR_TABULATE = LIST_TABULATE;
@@ -1181,160 +1540,232 @@ public abstract class Codes {
   private static final Applicable VECTOR_SUB = LIST_NTH;
 
   /** @see BuiltIn#VECTOR_UPDATE */
-  private static final Applicable VECTOR_UPDATE = (env, arg) -> {
-    final List tuple = (List) arg;
-    final List vec = (List) tuple.get(0);
-    final int i = (Integer) tuple.get(1);
-    if (i < 0 || i >= vec.size()) {
-      throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-    }
-    final Object x = tuple.get(2);
-    final Object[] elements = vec.toArray();
-    elements[i] = x;
-    return ImmutableList.copyOf(elements);
-  };
+  private static final Applicable VECTOR_UPDATE =
+      new ApplicableImpl("Vector.update") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List tuple = (List) arg;
+          final List vec = (List) tuple.get(0);
+          final int i = (Integer) tuple.get(1);
+          if (i < 0 || i >= vec.size()) {
+            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
+          }
+          final Object x = tuple.get(2);
+          final Object[] elements = vec.toArray();
+          elements[i] = x;
+          return ImmutableList.copyOf(elements);
+        }
+      };
 
   /** @see BuiltIn#VECTOR_CONCAT */
-  private static final Applicable VECTOR_CONCAT = (env, arg) -> {
-    @SuppressWarnings("unchecked") final List<List<Object>> lists =
-        (List<List<Object>>) arg;
-    final ImmutableList.Builder<Object> b = ImmutableList.builder();
-    for (List<Object> list : lists) {
-      b.addAll(list);
-    }
-    return b.build();
-  };
+  private static final Applicable VECTOR_CONCAT =
+      new ApplicableImpl("Vector.concat") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          @SuppressWarnings("unchecked") final List<List<Object>> lists =
+              (List<List<Object>>) arg;
+          final ImmutableList.Builder<Object> b = ImmutableList.builder();
+          for (List<Object> list : lists) {
+            b.addAll(list);
+          }
+          return b.build();
+        }
+      };
 
   /** @see BuiltIn#VECTOR_APPI */
-  private static final Applicable VECTOR_APPI = Codes::vectorAppi;
+  private static final Applicable VECTOR_APPI =
+      new ApplicableImpl("Vector.appi") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return vectorAppi((Applicable) arg);
+        }
+      };
 
   /** Implements {@link #VECTOR_APPI}. */
-  private static Applicable vectorAppi(EvalEnv env, Object arg) {
-    final Applicable f = (Applicable) arg;
-    return (env2, arg2) -> {
-      @SuppressWarnings("unchecked") final List<Object> vec =
-          (List<Object>) arg2;
-      Ord.forEach(vec, (e, i) -> f.apply(env2, FlatLists.of(i, e)));
-      return Unit.INSTANCE;
+  private static Applicable vectorAppi(Applicable f) {
+    return new ApplicableImpl("Vector.appi$f") {
+      @Override public Unit apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked") final List<Object> vec =
+            (List<Object>) arg;
+        Ord.forEach(vec, (e, i) -> f.apply(env, FlatLists.of(i, e)));
+        return Unit.INSTANCE;
+      }
     };
-  };
+  }
 
   /** @see BuiltIn#VECTOR_APP */
-  private static final Applicable VECTOR_APP = Codes::vectorApp;
+  private static final Applicable VECTOR_APP =
+      new ApplicableImpl("Vector.app") {
+        @Override public Applicable apply(EvalEnv env, Object arg) {
+          return vectorApp((Applicable) arg);
+        }
+      };
 
   /** Implements {@link #VECTOR_APP}. */
-  private static Applicable vectorApp(EvalEnv env, Object arg) {
-    final Applicable f = (Applicable) arg;
-    return (env2, arg2) -> {
-      @SuppressWarnings("unchecked") final List<Object> vec =
-          (List<Object>) arg2;
-      vec.forEach(e -> f.apply(env2, e));
-      return Unit.INSTANCE;
+  private static Applicable vectorApp(Applicable f) {
+    return new ApplicableImpl("Vector.app$f") {
+      @Override public Unit apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked") final List<Object> vec =
+            (List<Object>) arg;
+        vec.forEach(e -> f.apply(env, e));
+        return Unit.INSTANCE;
+      }
     };
   }
 
   /** @see BuiltIn#VECTOR_MAPI */
-  private static final Applicable VECTOR_MAPI = Codes::vectorMapi;
+  private static final Applicable VECTOR_MAPI =
+      new ApplicableImpl("Vector.mapi") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return vectorMapi((Applicable) arg);
+        }
+      };
 
   /** Implements {@link #VECTOR_MAPI}. */
-  private static Applicable vectorMapi(EvalEnv env, Object arg) {
-    final Applicable f = (Applicable) arg;
-    return (env2, arg2) -> {
-      @SuppressWarnings("unchecked") final List<Object> vec =
-          (List<Object>) arg2;
-      final ImmutableList.Builder<Object> b = ImmutableList.builder();
-      Ord.forEach(vec, (e, i) -> b.add(f.apply(env2, FlatLists.of(i, e))));
-      return b.build();
+  private static Applicable vectorMapi(Applicable f) {
+    return new ApplicableImpl("Vector.map$f") {
+      @Override public List apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked") final List<Object> vec =
+            (List<Object>) arg;
+        ImmutableList.Builder<Object> b = ImmutableList.builder();
+        Ord.forEach(vec, (e, i) -> b.add(f.apply(env, FlatLists.of(i, e))));
+        return b.build();
+      }
     };
   }
 
   /** @see BuiltIn#VECTOR_MAP */
-  private static final Applicable VECTOR_MAP = Codes::vectorMap;
+  private static final Applicable VECTOR_MAP =
+      new ApplicableImpl("Vector.map") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return vectorMap((Applicable) arg);
+        }
+      };
 
   /** Implements {@link #VECTOR_MAP}. */
-  private static Applicable vectorMap(EvalEnv env, Object arg) {
-    final Applicable f = (Applicable) arg;
-    return (env2, arg2) -> {
-      @SuppressWarnings("unchecked") final List<Object> vec =
-          (List<Object>) arg2;
-      final ImmutableList.Builder<Object> b = ImmutableList.builder();
-      vec.forEach(e -> b.add(f.apply(env2, e)));
-      return b.build();
+  private static Applicable vectorMap(Applicable f) {
+    return new ApplicableImpl("Vector.map$f") {
+      @Override public List apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked") final List<Object> vec =
+            (List<Object>) arg;
+        ImmutableList.Builder<Object> b = ImmutableList.builder();
+        vec.forEach(e -> b.add(f.apply(env, e)));
+        return b.build();
+      }
     };
   }
 
   /** @see BuiltIn#VECTOR_FOLDLI */
-  private static final Applicable VECTOR_FOLDLI = (env, arg) ->
-      (Applicable) (env2, init) ->
-          (Applicable) (env3, arg3) -> {
-            final Applicable f = (Applicable) arg;
-            @SuppressWarnings("unchecked") final List<Object> vec =
-                (List<Object>) arg3;
-            Object acc = init;
-            for (int i = 0, n = vec.size(); i < n; i++) {
-              acc = f.apply(env3, FlatLists.of(i, vec.get(i), acc));
+  private static final Applicable VECTOR_FOLDLI =
+      new ApplicableImpl("Vector.foldli") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Applicable f = (Applicable) arg;
+          return new ApplicableImpl("Vector.foldli$f") {
+            @Override public Object apply(EvalEnv env2, Object init) {
+              return new ApplicableImpl("Vector.foldli$f$init") {
+                @Override public Object apply(EvalEnv env3, Object arg3) {
+                  @SuppressWarnings("unchecked") final List<Object> vec =
+                      (List<Object>) arg3;
+                  Object acc = init;
+                  for (int i = 0, n = vec.size(); i < n; i++) {
+                    acc = f.apply(env3, FlatLists.of(i, vec.get(i), acc));
+                  }
+                  return acc;
+                }
+              };
             }
-            return acc;
           };
+        }
+      };
 
   /** @see BuiltIn#VECTOR_FOLDRI */
-  private static final Applicable VECTOR_FOLDRI = (env, arg) ->
-      (Applicable) (env2, init) ->
-          (Applicable) (env3, arg3) -> {
-            final Applicable f = (Applicable) arg;
-            @SuppressWarnings("unchecked") final List<Object> vec =
-                (List<Object>) arg3;
-            Object acc = init;
-            for (int i = vec.size() - 1; i >= 0; i--) {
-              acc = f.apply(env3, FlatLists.of(i, vec.get(i), acc));
+  private static final Applicable VECTOR_FOLDRI =
+      new ApplicableImpl("Vector.foldri") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Applicable f = (Applicable) arg;
+          return new ApplicableImpl("Vector.foldri$f") {
+            @Override public Object apply(EvalEnv env2, Object init) {
+              return new ApplicableImpl("Vector.foldri$f$init") {
+                @Override public Object apply(EvalEnv env3, Object arg3) {
+                  @SuppressWarnings("unchecked") final List<Object> vec =
+                      (List<Object>) arg3;
+                  Object acc = init;
+                  for (int i = vec.size() - 1; i >= 0; i--) {
+                    acc = f.apply(env3, FlatLists.of(i, vec.get(i), acc));
+                  }
+                  return acc;
+                }
+              };
             }
-            return acc;
           };
+        }
+      };
 
   /** @see BuiltIn#VECTOR_FOLDL */
-  private static final Applicable VECTOR_FOLDL = (env, arg) ->
-      (Applicable) (env2, init) ->
-          (Applicable) (env3, arg3) -> {
-            final Applicable f = (Applicable) arg;
-            @SuppressWarnings("unchecked") final List<Object> vec =
-                (List<Object>) arg3;
-            Object acc = init;
-            for (Object o : vec) {
-              acc = f.apply(env3, FlatLists.of(o, acc));
+  private static final Applicable VECTOR_FOLDL =
+      new ApplicableImpl("Vector.foldl") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Applicable f = (Applicable) arg;
+          return new ApplicableImpl("Vector.foldl$f") {
+            @Override public Object apply(EvalEnv env2, Object init) {
+              return new ApplicableImpl("Vector.foldl$f$init") {
+                @Override public Object apply(EvalEnv env3, Object arg3) {
+                  @SuppressWarnings("unchecked") final List<Object> vec =
+                      (List<Object>) arg3;
+                  Object acc = init;
+                  for (Object o : vec) {
+                    acc = f.apply(env3, FlatLists.of(o, acc));
+                  }
+                  return acc;
+                }
+              };
             }
-            return acc;
           };
+        }
+      };
 
   /** @see BuiltIn#VECTOR_FOLDR */
-  private static final Applicable VECTOR_FOLDR = (env, arg) ->
-      (Applicable) (env2, init) ->
-          (Applicable) (env3, arg3) -> {
-            final Applicable f = (Applicable) arg;
-            @SuppressWarnings("unchecked") final List<Object> vec =
-                (List<Object>) arg3;
-            Object acc = init;
-            for (int i = vec.size() - 1; i >= 0; i--) {
-              acc = f.apply(env3, FlatLists.of(vec.get(i), acc));
+  private static final Applicable VECTOR_FOLDR =
+      new ApplicableImpl("Vector.foldr") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final Applicable f = (Applicable) arg;
+          return new ApplicableImpl("Vector.foldlr$f") {
+            @Override public Object apply(EvalEnv env2, Object init) {
+              return new ApplicableImpl("Vector.foldr$f$init") {
+                @Override public Object apply(EvalEnv env3, Object arg3) {
+                  @SuppressWarnings("unchecked") final List<Object> vec =
+                      (List<Object>) arg3;
+                  Object acc = init;
+                  for (int i = vec.size() - 1; i >= 0; i--) {
+                    acc = f.apply(env3, FlatLists.of(vec.get(i), acc));
+                  }
+                  return acc;
+                }
+              };
             }
-            return acc;
           };
+        }
+      };
 
   /** @see BuiltIn#VECTOR_FINDI */
-  private static final Applicable VECTOR_FINDI = Codes::vectorFindi;
+  private static final Applicable VECTOR_FINDI =
+      new ApplicableImpl("Vector.findi") {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return vectorFindi((Applicable) arg);
+        }
+      };
 
   /** Implements {@link #VECTOR_FINDI}. */
-  private static Applicable vectorFindi(EvalEnv env, Object arg) {
-    final Applicable f = (Applicable) arg;
-    return (env2, arg2) -> {
-      @SuppressWarnings("unchecked") final List<Object> vec =
-          (List<Object>) arg2;
-      for (int i = 0, n = vec.size(); i < n; i++) {
-        final List<Object> tuple = FlatLists.of(i, vec.get(i));
-        if ((Boolean) f.apply(env2, tuple)) {
-          return optionSome(tuple);
+  private static Applicable vectorFindi(Applicable f) {
+    return new ApplicableImpl("Vector.findi$f") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked") final List<Object> vec =
+            (List<Object>) arg;
+        for (int i = 0, n = vec.size(); i < n; i++) {
+          final List<Object> tuple = FlatLists.of(i, vec.get(i));
+          if ((Boolean) f.apply(env, tuple)) {
+            return optionSome(tuple);
+          }
         }
+        return OPTION_NONE;
       }
-      return OPTION_NONE;
     };
   }
 
@@ -1383,28 +1814,12 @@ public abstract class Codes {
 
   /** Creates an evaluation environment that contains the bound values from a
    * compilation environment. */
-  public static EvalEnv emptyEnvWith(Environment env) {
+  public static EvalEnv emptyEnvWith(Session session, Environment env) {
     final Map<String, Object> map = new HashMap<>();
     populateBuiltIns(map);
     env.forEachValue(map::put);
+    map.put(EvalEnv.SESSION, session);
     return EvalEnvs.copyOf(map);
-  }
-
-  /** @see BuiltIn#OP_NEGATE */
-  private static final Macro OP_NEGATE = (env, argType) -> {
-    switch ((PrimitiveType) argType) {
-    case INT:
-      return ast.wrapApplicable(Codes::negateInt);
-    case REAL:
-      return ast.wrapApplicable(Codes::negateReal);
-    default:
-      throw new AssertionError("bad type " + argType);
-    }
-  };
-
-  /** Implements {@link #OP_NEGATE} for type {@code int}. */
-  private static int negateInt(EvalEnv env, Object arg) {
-    return -((Integer) arg);
   }
 
   /** Creates a compilation environment. */
@@ -1432,36 +1847,31 @@ public abstract class Codes {
     return hEnv[0];
   }
 
-  /** Implements {@link #OP_NEGATE} for type {@code real}. */
-  private static float negateReal(EvalEnv env, Object arg) {
-    return -((Float) arg);
-  }
-
-  public static Applicable aggregate(Environment env, Code aggregateCode,
+  public static Applicable aggregate(Environment env0, Code aggregateCode,
       List<String> names, @Nullable Code argumentCode) {
-    return (env1, arg) -> {
-      @SuppressWarnings("unchecked") final List<Object> rows =
-          (List<Object>) arg;
-      final List<Object> argRows;
-      if (argumentCode != null) {
-        final MutableEvalEnv env2 = env1.bindMutableArray(names);
-        argRows = new ArrayList<>(rows.size());
-        for (Object row : rows) {
-          env2.set(row);
-          argRows.add(argumentCode.eval(env2));
+    return new ApplicableImpl("aggregate") {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked") final List<Object> rows =
+            (List<Object>) arg;
+        final List<Object> argRows;
+        if (argumentCode != null) {
+          final MutableEvalEnv env2 = env.bindMutableArray(names);
+          argRows = new ArrayList<>(rows.size());
+          for (Object row : rows) {
+            env2.set(row);
+            argRows.add(argumentCode.eval(env2));
+          }
+        } else if (names.size() != 1) {
+          // Reconcile the fact that we internally represent rows as arrays when
+          // we're buffering for "group", lists at other times.
+          argRows = Lists.transform(rows,
+              row -> Arrays.asList((Object []) row));
+        } else {
+          argRows = rows;
         }
-      } else if (names.size() != 1) {
-        // Reconcile the fact that we internally represent rows as arrays when
-        // we're buffering for "group", lists at other times.
-        //noinspection unchecked
-        argRows = Lists.transform(rows,
-            row -> (Object) Arrays.asList((Object []) row));
-      } else {
-        //noinspection unchecked
-        argRows = rows;
+        final Applicable aggregate = (Applicable) aggregateCode.eval(env);
+        return aggregate.apply(env, argRows);
       }
-      final Applicable aggregate = (Applicable) aggregateCode.eval(env1);
-      return aggregate.apply(env1, argRows);
     };
   }
 
@@ -1549,7 +1959,8 @@ public abstract class Codes {
           .put(BuiltIn.RELATIONAL_MAX, RELATIONAL_MAX)
           .put(BuiltIn.RELATIONAL_MIN, RELATIONAL_MIN)
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
-          .put(BuiltIn.SYS_ENV, SYS_ENV)
+          .put(BuiltIn.SYS_ENV, (Macro) Codes::sysEnv)
+          .put(BuiltIn.SYS_PLAN, SYS_PLAN)
           .put(BuiltIn.VECTOR_MAX_LEN, VECTOR_MAX_LEN)
           .put(BuiltIn.VECTOR_FROM_LIST, VECTOR_FROM_LIST)
           .put(BuiltIn.VECTOR_TABULATE, VECTOR_TABULATE)
@@ -1582,6 +1993,11 @@ public abstract class Codes {
 
     private TupleCode(ImmutableList<Code> codes) {
       this.codes = codes;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("tuple", d ->
+          codes.forEach(code -> d.arg("", code)));
     }
 
     public Object eval(EvalEnv env) {
@@ -1700,9 +2116,8 @@ public abstract class Codes {
       }
     }
 
-    public List<Object> result(EvalEnv env) {
-      final EvalEnv env0 = env;
-      EvalEnv env2 = env0;
+    public List<Object> result(final EvalEnv env) {
+      EvalEnv env2 = env;
       final MutableEvalEnv[] groupEnvs = new MutableEvalEnv[outNames.size()];
       int i = 0;
       for (String name : outNames) {
@@ -1720,7 +2135,7 @@ public abstract class Codes {
         }
         rowSink.accept(env2);
       }
-      return rowSink.result(env0);
+      return rowSink.result(env);
     }
   }
 
@@ -1802,6 +2217,10 @@ public abstract class Codes {
       this.name = Objects.requireNonNull(name);
     }
 
+    @Override public Describer describe(Describer describer) {
+      return describer.start("get", d -> d.arg("name", name));
+    }
+
     @Override public String toString() {
       return "get(" + name + ")";
     }
@@ -1839,6 +2258,117 @@ public abstract class Codes {
     BuiltInExn(String structure, String mlName) {
       this.structure = structure;
       this.mlName = mlName;
+    }
+  }
+
+  /** Code that implements a constant. */
+  @SuppressWarnings("rawtypes")
+  private static class ConstantCode implements Code {
+    private final Comparable value;
+
+    ConstantCode(Comparable value) {
+      this.value = value;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("constant", d -> d.arg("", value));
+    }
+
+    public Comparable eval(EvalEnv env) {
+      return value;
+    }
+
+    @Override public boolean isConstant() {
+      return true;
+    }
+  }
+
+  /** Code that implements {@link #andAlso(Code, Code)}. */
+  private static class AndAlsoCode implements Code {
+    private final Code code0;
+    private final Code code1;
+
+    AndAlsoCode(Code code0, Code code1) {
+      this.code0 = code0;
+      this.code1 = code1;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("andalso", d -> d.arg("", code0).arg("", code1));
+    }
+
+    @Override public Object eval(EvalEnv evalEnv) {
+      // Lazy evaluation. If code0 returns false, code1 is never evaluated.
+      return (boolean) code0.eval(evalEnv) && (boolean) code1.eval(evalEnv);
+    }
+  }
+
+  /** Code that implements {@link #orElse(Code, Code)}. */
+  private static class OrElseCode implements Code {
+    private final Code code0;
+    private final Code code1;
+
+    OrElseCode(Code code0, Code code1) {
+      this.code0 = code0;
+      this.code1 = code1;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("orelse", d -> d.arg("", code0).arg("", code1));
+    }
+
+    @Override public Object eval(EvalEnv evalEnv) {
+      // Lazy evaluation. If code0 returns true, code1 is never evaluated.
+      return (boolean) code0.eval(evalEnv) || (boolean) code1.eval(evalEnv);
+    }
+  }
+
+  /** Code that implements {@link #let(List, Code)} with one argument. */
+  private static class Let1Code implements Code {
+    private final Code fnCode0;
+    private final Code argCode;
+
+    Let1Code(Code fnCode0, Code argCode) {
+      this.fnCode0 = fnCode0;
+      this.argCode = argCode;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("let1", d ->
+          d.arg("fnCode", fnCode0).arg("argCode", argCode));
+    }
+
+    @Override public Object eval(EvalEnv evalEnv) {
+      final Closure fnValue = (Closure) fnCode0.eval(evalEnv);
+      EvalEnv env2 = fnValue.evalBind(evalEnv);
+      return argCode.eval(env2);
+    }
+  }
+
+  /** Code that implements {@link #let(List, Code)} with multiple arguments. */
+  private static class LetCode implements Code {
+    private final ImmutableList<Code> fnCodes;
+    private final Code argCode;
+
+    LetCode(ImmutableList<Code> fnCodes, Code argCode) {
+      this.fnCodes = fnCodes;
+      this.argCode = argCode;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("let", d -> {
+        Ord.forEach(fnCodes, (fnCode, i) -> d.arg("fnCode" + i, fnCode));
+        d.arg("argCode", argCode);
+      });
+    }
+
+    @Override public Object eval(EvalEnv evalEnv) {
+      EvalEnv evalEnv2 = evalEnv;
+      for (Code fnCode : fnCodes) {
+        final Closure fnValue = (Closure) fnCode.eval(evalEnv);
+        evalEnv2 = fnValue.evalBind(evalEnv2);
+      }
+      return argCode.eval(evalEnv2);
     }
   }
 }

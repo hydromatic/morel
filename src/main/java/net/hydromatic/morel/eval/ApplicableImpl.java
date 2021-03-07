@@ -18,13 +18,18 @@
  */
 package net.hydromatic.morel.eval;
 
-/** A compiled expression, that can be evaluated. */
-public interface Code extends Describable {
-  Object eval(EvalEnv evalEnv);
+/** Abstract implementation of {@link Applicable} that describes itself
+ * with a constant name. */
+abstract class ApplicableImpl implements Applicable {
+  private final String name;
 
-  default boolean isConstant() {
-    return false;
+  protected ApplicableImpl(String name) {
+    this.name = name;
+  }
+
+  @Override public Describer describe(Describer describer) {
+    return describer.start(name, d -> {});
   }
 }
 
-// End Code.java
+// End ApplicableImpl.java

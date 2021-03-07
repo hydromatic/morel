@@ -27,6 +27,7 @@ import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.foreign.ForeignValue;
@@ -201,6 +202,7 @@ public class Shell {
     final StringBuilder buf = new StringBuilder();
     final List<String> lines = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
+    final Session session = new Session();
     while (true) {
       String line = "";
       try {
@@ -244,7 +246,7 @@ public class Shell {
             statement = smlParser.statementSemicolon();
             final CompiledStatement compiled =
                 Compiles.prepareStatement(typeSystem, env, statement);
-            compiled.eval(env, lines, bindings);
+            compiled.eval(session, env, lines, bindings);
             printAll(lines);
             terminal.writer().flush();
             lines.clear();

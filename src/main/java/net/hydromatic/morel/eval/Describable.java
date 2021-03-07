@@ -18,13 +18,11 @@
  */
 package net.hydromatic.morel.eval;
 
-/** A compiled expression, that can be evaluated. */
-public interface Code extends Describable {
-  Object eval(EvalEnv evalEnv);
-
-  default boolean isConstant() {
-    return false;
-  }
+/** Can be visited by a {@link Describer}.
+ *
+ * <p>(There are no plans for an {@code interface Indescribable}. */
+public interface Describable {
+  Describer describe(Describer describer);
 }
 
-// End Code.java
+// End Describable.java

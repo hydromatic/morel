@@ -32,6 +32,7 @@ import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
+import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.parse.MorelParserImpl;
@@ -217,13 +218,20 @@ class Ml {
       final Code code =
           new Compiler(resolved.typeMap)
               .compile(env, Compiles.toExp(valDecl2));
-      final EvalEnv evalEnv = Codes.emptyEnvWith(env);
+      final EvalEnv evalEnv = Codes.emptyEnvWith(new Session(), env);
       final Object value = code.eval(evalEnv);
       assertThat(value, matcher);
       return this;
     } catch (ParseException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private Object eval(Environment env, TypeResolver.Resolved resolved,
+      Ast.Exp e) {
+    final Code code = new Compiler(resolved.typeMap).compile(env, e);
+    final EvalEnv evalEnv = Codes.emptyEnvWith(new Session(), env);
+    return code.eval(evalEnv);
   }
 
   Ml assertEvalError(Matcher<Throwable> matcher) {

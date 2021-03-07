@@ -746,6 +746,9 @@ public enum BuiltIn {
   SYS_ENV("Sys", "env", "env", ts ->
       ts.fnType(UNIT, ts.listType(ts.tupleType(STRING, STRING)))),
 
+  /** Function "Sys.plan", aka "plan", of type "unit &rarr; string". */
+  SYS_PLAN("Sys", "plan", "plan", ts -> ts.fnType(UNIT, STRING)),
+
   /** Constant "Vector.maxLen" of type "int".
    *
    * <p>The maximum length of vectors supported by this implementation. Attempts

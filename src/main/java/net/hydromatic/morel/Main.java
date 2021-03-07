@@ -25,6 +25,7 @@ import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
@@ -111,6 +112,7 @@ public class Main {
     Environment env = Environments.env(typeSystem, valueMap);
     final List<String> lines = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
+    final Session session = new Session();
     for (;;) {
       String code = "";
       try {
@@ -122,7 +124,7 @@ public class Main {
         }
         final CompiledStatement compiled =
             Compiles.prepareStatement(typeSystem, env, statement);
-        compiled.eval(env, lines, bindings);
+        compiled.eval(session, env, lines, bindings);
         for (String line : lines) {
           out.write(line);
           out.write("\n");

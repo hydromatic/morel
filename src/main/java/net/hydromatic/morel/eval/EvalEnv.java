@@ -34,6 +34,9 @@ import java.util.function.BiConsumer;
  * only values. */
 public interface EvalEnv {
 
+  /** The name of the variable that contains the {@link Session}. */
+  String SESSION = "$session";
+
   /** Returns the binding of {@code name} if bound, null if not. */
   Object getOpt(String name);
 

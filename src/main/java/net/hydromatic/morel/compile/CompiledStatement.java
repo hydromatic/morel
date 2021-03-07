@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.compile;
 
+import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Type;
 
@@ -37,11 +38,12 @@ public interface CompiledStatement {
    * {@code bindings}. The environment for the next statement can be
    * constructed from the bindings.
    *
+   * @param session Session
    * @param environment Evaluation environment
    * @param output List to which to append lines of output
    * @param bindings List to which to append bound variables and types
    */
-  void eval(Environment environment, List<String> output,
+  void eval(Session session, Environment environment, List<String> output,
       List<Binding> bindings);
 
   Type getType();

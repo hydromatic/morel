@@ -31,21 +31,33 @@ import static net.hydromatic.morel.ast.AstBuilder.ast;
  * <p>Similar to {@link Code} but more efficient, because it does not require
  * creating a new runtime environment.
  */
-public interface Applicable {
+public interface Applicable extends Describable {
   Object apply(EvalEnv env, Object argValue);
 
   /** Converts this Applicable to a Code that has similar effect
    * (but is less efficient). */
   default Code asCode() {
     final Ast.Pat pat = ast.idPat(Pos.ZERO, "x");
-    final Code code = env -> {
-      final Object argValue = env.getOpt("x");
-      return apply(env, argValue);
+    final Code code = new Code() {
+      @Override public Describer describe(Describer describer) {
+        return describer.start("code", d ->
+            d.arg("applicable", Applicable.this));
+      }
+
+      @Override public Object eval(EvalEnv env) {
+        final Object argValue = env.getOpt("x");
+        return apply(env, argValue);
+      }
     };
     final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
         ImmutableList.of(Pair.of(pat, code));
     return new Code() {
-      public Object eval(EvalEnv env) {
+      @Override public Describer describe(Describer describer) {
+        return describer.start("code2", d ->
+            d.arg("applicable", Applicable.this));
+      }
+
+      @Override public Object eval(EvalEnv env) {
         return Applicable.this;
       }
 

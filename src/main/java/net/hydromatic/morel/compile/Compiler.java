@@ -28,7 +28,9 @@ import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.eval.EvalEnv;
+import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
@@ -75,9 +77,9 @@ public class Compiler {
         return type;
       }
 
-      public void eval(Environment env, List<String> output,
+      public void eval(Session session, Environment env, List<String> output,
           List<Binding> bindings) {
-        final EvalEnv evalEnv = Codes.emptyEnvWith(env);
+        final EvalEnv evalEnv = Codes.emptyEnvWith(session, env);
         for (Action entry : actions) {
           entry.apply(output, bindings, evalEnv);
         }
@@ -334,7 +336,15 @@ public class Compiler {
           return ((Ast.ApplicableExp) e).applicable;
         }
         final Code code = compile(env, e);
-        return (evalEnv, argValue) -> code.eval(evalEnv);
+        return new Applicable() {
+          @Override public Describer describe(Describer describer) {
+            return code.describe(describer);
+          }
+
+          @Override public Object apply(EvalEnv evalEnv, Object arg) {
+            return code.eval(evalEnv);
+          }
+        };
       }
       if (binding.value instanceof Applicable) {
         return (Applicable) binding.value;
@@ -517,7 +527,7 @@ public class Compiler {
         matchList.stream()
             .map(match -> compileMatch(env, match))
             .collect(ImmutableList.toImmutableList());
-    return evalEnv -> new Closure(evalEnv, patCodes);
+    return new MatchCode(patCodes);
   }
 
   private Pair<Ast.Pat, Code> compileMatch(Environment env, Ast.Match match) {
@@ -589,7 +599,7 @@ public class Compiler {
     newBindings.clear();
     final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
         ImmutableList.of(Pair.of(valBind.pat, code));
-    varCodes.add(evalEnv -> new Closure(evalEnv, patCodes));
+    varCodes.add(new MatchCode(patCodes));
 
     if (actions != null) {
       final String name = ((Ast.IdPat) valBind.pat).name;
@@ -604,7 +614,11 @@ public class Compiler {
         } catch (Codes.MorelRuntimeException e) {
           e.describeTo(buf);
         }
-        output.add(buf.toString());
+        final String out = buf.toString();
+        final Session session = (Session) evalEnv.getOpt(EvalEnv.SESSION);
+        session.code = code;
+        session.out = out;
+        output.add(out);
       });
     }
   }
@@ -635,9 +649,40 @@ public class Compiler {
   private static class LinkCode implements Code {
     private Code refCode;
 
+    @Override public Describer describe(Describer describer) {
+      return describer.start("link", d -> {
+        if (false) {
+          // Don't recurse into refCode... or we'll never get out alive.
+          d.arg("refCode", refCode);
+        }
+      });
+    }
+
     public Object eval(EvalEnv env) {
       assert refCode != null; // link should have completed by now
       return refCode.eval(env);
+    }
+  }
+
+  /** Code that implements {@link #compileMatchList(Environment, List)}. */
+  private static class MatchCode implements Code {
+    private final ImmutableList<Pair<Ast.Pat, Code>> patCodes;
+
+    MatchCode(ImmutableList<Pair<Ast.Pat, Code>> patCodes) {
+      this.patCodes = patCodes;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("match", d -> {
+        patCodes.forEach(p -> {
+          d.arg("", p.left.toString());
+          d.arg("", p.right);
+        });
+      });
+    }
+
+    @Override public Object eval(EvalEnv evalEnv) {
+      return new Closure(evalEnv, patCodes);
     }
   }
 }

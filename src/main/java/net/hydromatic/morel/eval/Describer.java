@@ -18,13 +18,17 @@
  */
 package net.hydromatic.morel.eval;
 
-/** A compiled expression, that can be evaluated. */
-public interface Code extends Describable {
-  Object eval(EvalEnv evalEnv);
+import java.util.function.Consumer;
 
-  default boolean isConstant() {
-    return false;
+/** Describes a plan (tree of {@link Code} or {@link Applicable} objects). */
+public interface Describer {
+  Describer start(String name, Consumer<Detail> detail);
+
+  /** Provided as a callback while describing a node. */
+  interface Detail {
+    Detail arg(String name, Comparable value);
+    Detail arg(String name, Describable describable);
   }
 }
 
-// End Code.java
+// End Describer.java
