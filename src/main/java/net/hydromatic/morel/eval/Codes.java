@@ -1515,6 +1515,42 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#SYS_SET */
+  private static final Applicable SYS_SET =
+      new ApplicableImpl("Sys.plan") {
+        @Override public Unit apply(EvalEnv env, Object arg) {
+          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final List list = (List) arg;
+          final String property = (String) list.get(0);
+          final Object value = list.get(1);
+          session.map.put(property, value);
+          return Unit.INSTANCE;
+        }
+      };
+
+  /** @see BuiltIn#SYS_SHOW */
+  private static final Applicable SYS_SHOW =
+      new ApplicableImpl("Sys.show") {
+        @Override public List apply(EvalEnv env, Object arg) {
+          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final String property = (String) arg;
+          final Object value = session.map.get(property);
+          return value == null ? OPTION_NONE : optionSome(value.toString());
+        }
+      };
+
+  /** @see BuiltIn#SYS_UNSET */
+  private static final Applicable SYS_UNSET =
+      new ApplicableImpl("Sys.unset") {
+        @Override public Unit apply(EvalEnv env, Object arg) {
+          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final String property = (String) arg;
+          @SuppressWarnings("unused") final Object value =
+              session.map.remove(property);
+          return Unit.INSTANCE;
+        }
+      };
+
   private static final List ORDER_LESS = ImmutableList.of("LESS");
   private static final List ORDER_EQUAL = ImmutableList.of("EQUAL");
   private static final List ORDER_GREATER = ImmutableList.of("GREATER");
@@ -1961,6 +1997,9 @@ public abstract class Codes {
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
           .put(BuiltIn.SYS_ENV, (Macro) Codes::sysEnv)
           .put(BuiltIn.SYS_PLAN, SYS_PLAN)
+          .put(BuiltIn.SYS_SET, SYS_SET)
+          .put(BuiltIn.SYS_SHOW, SYS_SHOW)
+          .put(BuiltIn.SYS_UNSET, SYS_UNSET)
           .put(BuiltIn.VECTOR_MAX_LEN, VECTOR_MAX_LEN)
           .put(BuiltIn.VECTOR_FROM_LIST, VECTOR_FROM_LIST)
           .put(BuiltIn.VECTOR_TABULATE, VECTOR_TABULATE)

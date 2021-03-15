@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.TypeSystem;
 
@@ -48,7 +49,7 @@ public abstract class Compiles {
    * compiles it to code that can be evaluated by the interpreter.
    */
   public static CompiledStatement prepareStatement(TypeSystem typeSystem,
-      Environment env, AstNode statement) {
+      Session session, Environment env, AstNode statement) {
     Ast.Decl decl;
     if (statement instanceof Ast.Exp) {
       decl = toValDecl((Ast.Exp) statement);

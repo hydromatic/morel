@@ -549,9 +549,28 @@ Sys.env ();
 env;
 env ();
 
-(*) val plan : string
+(*) val plan : unit -> string
 Sys.plan;
 1 + 2;
+Sys.plan ();
+
+(*) val set : string * 'a -> unit
+Sys.set;
+Sys.set ("hybrid", false);
+Sys.plan ();
+
+(*) val show : string -> string option
+Sys.show;
+Sys.show "hybrid";
+Sys.set ("hybrid", true);
+Sys.show "hybrid";
+Sys.show "missing";
+Sys.plan ();
+
+(*) val unset : string -> unit
+Sys.unset;
+Sys.unset "hybrid";
+Sys.unset "missing";
 Sys.plan ();
 
 (* Vector ------------------------------------------------------ *)

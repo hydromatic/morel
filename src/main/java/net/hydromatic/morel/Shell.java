@@ -245,7 +245,7 @@ public class Shell {
           try {
             statement = smlParser.statementSemicolon();
             final CompiledStatement compiled =
-                Compiles.prepareStatement(typeSystem, env, statement);
+                Compiles.prepareStatement(typeSystem, session, env, statement);
             compiled.eval(session, env, lines, bindings);
             printAll(lines);
             terminal.writer().flush();

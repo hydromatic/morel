@@ -191,8 +191,9 @@ class Ml {
         final TypeSystem typeSystem = new TypeSystem();
         final AstNode statement = parser.statement();
         final Environment env = Environments.empty();
+        final Session session = new Session();
         final CompiledStatement compiled =
-            Compiles.prepareStatement(typeSystem, env, statement);
+            Compiles.prepareStatement(typeSystem, session, env, statement);
         action.accept(compiled);
       } catch (ParseException e) {
         throw new RuntimeException(e);

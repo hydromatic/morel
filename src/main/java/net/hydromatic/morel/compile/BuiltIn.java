@@ -749,6 +749,16 @@ public enum BuiltIn {
   /** Function "Sys.plan", aka "plan", of type "unit &rarr; string". */
   SYS_PLAN("Sys", "plan", "plan", ts -> ts.fnType(UNIT, STRING)),
 
+  /** Function "Sys.set", aka "set", of type "string * &alpha; &rarr; unit". */
+  SYS_SET("Sys", "set", "set", ts ->
+      ts.forallType(1, h -> ts.fnType(ts.tupleType(STRING, h.get(0)), UNIT))),
+
+  /** Function "Sys.show", aka "set", of type "string &rarr; string option". */
+  SYS_SHOW("Sys", "show", "show", ts -> ts.fnType(STRING, ts.option(STRING))),
+
+  /** Function "Sys.unset", aka "unset", of type "string &rarr; unit". */
+  SYS_UNSET("Sys", "unset", "unset", ts -> ts.fnType(STRING, UNIT)),
+
   /** Constant "Vector.maxLen" of type "int".
    *
    * <p>The maximum length of vectors supported by this implementation. Attempts

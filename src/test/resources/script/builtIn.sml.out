@@ -1363,7 +1363,8 @@ val it =
    ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
-   ("Sys","{env:unit -> (string * string) list, plan:unit -> string}"),
+   ("Sys",
+   "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
    ("Vector",
    "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
    ...] : (string * string) list
@@ -1388,13 +1389,14 @@ val it =
    ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
-   ("Sys","{env:unit -> (string * string) list, plan:unit -> string}"),
+   ("Sys",
+   "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
    ("Vector",
    "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
    ...] : (string * string) list
 
 
-(*) val plan : string
+(*) val plan : unit -> string
 Sys.plan;
 val it = fn : unit -> string
 
@@ -1403,6 +1405,53 @@ val it = 3 : int
 
 Sys.plan ();
 val it = "apply(fnValue +, argCode tuple(constant(1), constant(2)))" : string
+
+
+(*) val set : string * 'a -> unit
+Sys.set;
+val it = fn : string * 'a -> unit
+
+Sys.set ("hybrid", false);
+val it = () : unit
+
+Sys.plan ();
+val it =
+  "apply(fnValue Sys.plan, argCode tuple(constant(hybrid), get(name false)))"
+  : string
+
+
+(*) val show : string -> string option
+Sys.show;
+val it = fn : string -> string option
+
+Sys.show "hybrid";
+val it = SOME "false" : string option
+
+Sys.set ("hybrid", true);
+val it = () : unit
+
+Sys.show "hybrid";
+val it = SOME "true" : string option
+
+Sys.show "missing";
+val it = NONE : string option
+
+Sys.plan ();
+val it = "apply(fnValue Sys.show, argCode constant(missing))" : string
+
+
+(*) val unset : string -> unit
+Sys.unset;
+val it = fn : string -> unit
+
+Sys.unset "hybrid";
+val it = () : unit
+
+Sys.unset "missing";
+val it = () : unit
+
+Sys.plan ();
+val it = "apply(fnValue Sys.unset, argCode constant(missing))" : string
 
 
 (* Vector ------------------------------------------------------ *)

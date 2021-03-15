@@ -18,6 +18,9 @@
  */
 package net.hydromatic.morel.eval;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /** Session environment.
  *
  * <p>Accessible from {@link EvalEnv#getOpt(String)} via the hidden "$session"
@@ -27,6 +30,8 @@ public class Session {
   public Code code;
   /** The output of the previous command. */
   public String out;
+  /** Property values. */
+  public final Map<String, Object> map = new LinkedHashMap<>();
 }
 
 // End Session.java
