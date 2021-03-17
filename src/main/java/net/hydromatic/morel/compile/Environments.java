@@ -19,6 +19,7 @@
 package net.hydromatic.morel.compile;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import net.hydromatic.morel.eval.Codes;
@@ -33,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /** Helpers for {@link Environment}. */
@@ -100,7 +102,10 @@ public abstract class Environments {
     } else {
       final ImmutableMap.Builder<String, Binding> b = ImmutableMap.builder();
       bindings.forEach(binding -> b.put(binding.name, binding));
-      return new MapEnvironment(env, b.build());
+      final ImmutableMap<String, Binding> map = b.build();
+      final ImmutableSet<String> names = map.keySet();
+      env = env.nearestAncestorNotObscuredBy(names);
+      return new MapEnvironment(env, map);
     }
   }
 
@@ -122,9 +127,34 @@ public abstract class Environments {
       return parent.getOpt(name);
     }
 
+    @Override protected Environment bind(Binding binding) {
+      Environment e;
+      if (this.binding.name.equals(binding.name)) {
+        // The new binding will obscure the current environment's binding,
+        // because it binds a variable of the same name. Bind the parent
+        // environment instead. This strategy is worthwhile because it tends to
+        // prevent long chains from forming, and allows obscured values to be
+        // garbage-collected.
+        e = parent;
+        while (e instanceof SubEnvironment
+            && ((SubEnvironment) e).binding.name.equals(binding.name)) {
+          e = ((SubEnvironment) e).parent;
+        }
+      } else {
+        e = this;
+      }
+      return new Environments.SubEnvironment(e, binding);
+    }
+
     void visit(Consumer<Binding> consumer) {
       consumer.accept(binding);
       parent.visit(consumer);
+    }
+
+    @Override Environment nearestAncestorNotObscuredBy(Set<String> names) {
+      return names.contains(binding.name)
+          ? parent.nearestAncestorNotObscuredBy(names)
+          : this;
     }
   }
 
@@ -138,10 +168,14 @@ public abstract class Environments {
     public Binding getOpt(String name) {
       return null;
     }
+
+    @Override Environment nearestAncestorNotObscuredBy(Set<String> names) {
+      return this;
+    }
   }
 
   /** Environment that keeps bindings in a map. */
-  private static class MapEnvironment extends Environment {
+  static class MapEnvironment extends Environment {
     private final Environment parent;
     private final Map<String, Binding> map;
 
@@ -158,6 +192,12 @@ public abstract class Environments {
     public Binding getOpt(String name) {
       final Binding binding = map.get(name);
       return binding != null ? binding : parent.getOpt(name);
+    }
+
+    @Override Environment nearestAncestorNotObscuredBy(Set<String> names) {
+      return names.containsAll(map.keySet())
+          ? parent.nearestAncestorNotObscuredBy(names)
+          : this;
     }
   }
 }

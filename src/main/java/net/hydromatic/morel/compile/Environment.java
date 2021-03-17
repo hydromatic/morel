@@ -74,7 +74,7 @@ public abstract class Environment {
     return bind(Binding.of(name, type, value));
   }
 
-  private Environment bind(Binding binding) {
+  protected Environment bind(Binding binding) {
     return new Environments.SubEnvironment(this, binding);
   }
 
@@ -113,6 +113,9 @@ public abstract class Environment {
     return Environments.bind(this, bindings);
   }
 
+  /** If this environment only defines bindings in the given set, returns
+   * its parent. Never returns null. The empty environment returns itself. */
+  abstract Environment nearestAncestorNotObscuredBy(Set<String> names);
 }
 
 // End Environment.java
