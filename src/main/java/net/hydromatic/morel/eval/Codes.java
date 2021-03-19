@@ -1521,9 +1521,9 @@ public abstract class Codes {
         @Override public Unit apply(EvalEnv env, Object arg) {
           final Session session = (Session) env.getOpt(EvalEnv.SESSION);
           final List list = (List) arg;
-          final String property = (String) list.get(0);
+          final String propName = (String) list.get(0);
           final Object value = list.get(1);
-          session.map.put(property, value);
+          Prop.lookup(propName).set(session.map, value);
           return Unit.INSTANCE;
         }
       };
@@ -1533,8 +1533,8 @@ public abstract class Codes {
       new ApplicableImpl("Sys.show") {
         @Override public List apply(EvalEnv env, Object arg) {
           final Session session = (Session) env.getOpt(EvalEnv.SESSION);
-          final String property = (String) arg;
-          final Object value = session.map.get(property);
+          final String propName = (String) arg;
+          final Object value = Prop.lookup(propName).get(session.map);
           return value == null ? OPTION_NONE : optionSome(value.toString());
         }
       };
@@ -1544,9 +1544,10 @@ public abstract class Codes {
       new ApplicableImpl("Sys.unset") {
         @Override public Unit apply(EvalEnv env, Object arg) {
           final Session session = (Session) env.getOpt(EvalEnv.SESSION);
-          final String property = (String) arg;
+          final String propName = (String) arg;
+          final Prop prop = Prop.lookup(propName);
           @SuppressWarnings("unused") final Object value =
-              session.map.remove(property);
+              prop.remove(session.map);
           return Unit.INSTANCE;
         }
       };

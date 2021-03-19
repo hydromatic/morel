@@ -564,13 +564,16 @@ Sys.show;
 Sys.show "hybrid";
 Sys.set ("hybrid", true);
 Sys.show "hybrid";
-Sys.show "missing";
+Sys.show "optionalInt";
 Sys.plan ();
+
+Sys.set ("optionalInt", ~5);
+Sys.show "optionalInt";
 
 (*) val unset : string -> unit
 Sys.unset;
 Sys.unset "hybrid";
-Sys.unset "missing";
+Sys.unset "optionalInt";
 Sys.plan ();
 
 (* Vector ------------------------------------------------------ *)

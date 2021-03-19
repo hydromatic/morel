@@ -1433,11 +1433,18 @@ val it = () : unit
 Sys.show "hybrid";
 val it = SOME "true" : string option
 
-Sys.show "missing";
+Sys.show "optionalInt";
 val it = NONE : string option
 
 Sys.plan ();
-val it = "apply(fnValue Sys.show, argCode constant(missing))" : string
+val it = "apply(fnValue Sys.show, argCode constant(optionalInt))" : string
+
+
+Sys.set ("optionalInt", ~5);
+val it = () : unit
+
+Sys.show "optionalInt";
+val it = SOME "-5" : string option
 
 
 (*) val unset : string -> unit
@@ -1447,11 +1454,11 @@ val it = fn : string -> unit
 Sys.unset "hybrid";
 val it = () : unit
 
-Sys.unset "missing";
+Sys.unset "optionalInt";
 val it = () : unit
 
 Sys.plan ();
-val it = "apply(fnValue Sys.unset, argCode constant(missing))" : string
+val it = "apply(fnValue Sys.unset, argCode constant(optionalInt))" : string
 
 
 (* Vector ------------------------------------------------------ *)

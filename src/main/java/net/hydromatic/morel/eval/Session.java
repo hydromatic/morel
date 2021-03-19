@@ -31,7 +31,7 @@ public class Session {
   /** The output of the previous command. */
   public String out;
   /** Property values. */
-  public final Map<String, Object> map = new LinkedHashMap<>();
+  public final Map<Prop, Object> map = new LinkedHashMap<>();
 }
 
 // End Session.java

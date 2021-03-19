@@ -1,0 +1,121 @@
+/*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ */
+package net.hydromatic.morel.eval;
+
+import com.google.common.base.CaseFormat;
+import com.google.common.collect.ImmutableMap;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/** Property.
+ *
+ * @see Session#map
+ */
+public enum Prop {
+  /** Boolean property "hybrid" controls whether to try to create a hybrid
+   * execution plan that uses Apache Calcite relational algebra wherever
+   * possible. Default is false. */
+  HYBRID("hybrid", Boolean.class, false),
+
+  /** Integer property "optionalInt" is for testing. Default is null. */
+  OPTIONAL_INT("optionalInt", Integer.class, null);
+
+  public final String camelName;
+  private final Class<?> type;
+  private final Object defaultValue;
+
+  public static final ImmutableMap<String, Prop> BY_NAME;
+
+  static {
+    final Map<String, Prop> map = new LinkedHashMap<>();
+    for (Prop value : values()) {
+      map.put(value.name(), value);
+      map.put(value.camelName, value);
+    }
+    BY_NAME = ImmutableMap.copyOf(map);
+  }
+
+  Prop(String camelName, Class<?> type, Object defaultValue) {
+    this.camelName = camelName;
+    this.type = type;
+    this.defaultValue = defaultValue;
+    assert CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, camelName)
+        .equals(name());
+    if (type == Boolean.class) {
+      assert defaultValue == null || defaultValue.getClass() == type;
+    } else if (type == Integer.class) {
+      assert defaultValue == null || defaultValue.getClass() == type;
+    } else {
+      throw new AssertionError("not a valid property type: "
+          + type);
+    }
+  }
+
+  /** Looks up a property by name. Throws if not found; never returns null. */
+  public static Prop lookup(String propName) {
+    Prop prop = BY_NAME.get(propName);
+    if (prop == null) {
+      throw new RuntimeException("property " + propName + " not found");
+    }
+    return prop;
+  }
+
+  /** Returns the value of a property. */
+  public Object get(Map<Prop, Object> map) {
+    Object o = map.get(this);
+    return o != null ? o : defaultValue;
+  }
+
+  /** Returns the value of a boolean property. */
+  public boolean booleanValue(Map<Prop, Object> map) {
+    assert type == Boolean.class;
+    Object o = map.get(this);
+    return this.<Boolean>typeValue(o);
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> T typeValue(Object o) {
+    if (o == null) {
+      if (defaultValue == null) {
+        throw new RuntimeException("no value for property " + camelName
+            + " and no default value");
+      }
+      return (T) defaultValue;
+    }
+    return (T) o;
+  }
+
+  /** Sets the value of a property.
+   * Checks that its type is valid. */
+  public void set(Map<Prop, Object> map, Object value) {
+    if (value != null && !type.isInstance(value)) {
+      throw new RuntimeException("value for property must have type " + type);
+    }
+    map.put(this, value);
+  }
+
+  /** Removes the value of this property from a map, returning the previous
+   * value or null. */
+  public Object remove(Map<Prop, Object> map) {
+    return map.remove(this);
+  }
+}
+
+// End Prop.java
