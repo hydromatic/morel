@@ -23,7 +23,6 @@ import org.apache.calcite.runtime.FlatLists;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
@@ -362,19 +361,18 @@ public abstract class Codes {
     return new GetCode(name);
   }
 
-  public static Code let(List<Code> fnCodes, Code argCode) {
-    switch (fnCodes.size()) {
+  public static Code let(List<Code> matchCodes, Code resultCode) {
+    switch (matchCodes.size()) {
     case 0:
-      return argCode;
+      return resultCode;
 
     case 1:
       // Use a more efficient runtime path if the list has only one element.
       // The effect is the same.
-      final Code fnCode0 = Iterables.getOnlyElement(fnCodes);
-      return new Let1Code(fnCode0, argCode);
+      return new Let1Code(matchCodes.get(0), resultCode);
 
     default:
-      return new LetCode(ImmutableList.copyOf(fnCodes), argCode);
+      return new LetCode(ImmutableList.copyOf(matchCodes), resultCode);
     }
   }
 
@@ -2365,50 +2363,51 @@ public abstract class Codes {
 
   /** Code that implements {@link #let(List, Code)} with one argument. */
   private static class Let1Code implements Code {
-    private final Code fnCode0;
-    private final Code argCode;
+    private final Code matchCode;
+    private final Code resultCode;
 
-    Let1Code(Code fnCode0, Code argCode) {
-      this.fnCode0 = fnCode0;
-      this.argCode = argCode;
+    Let1Code(Code matchCode, Code resultCode) {
+      this.matchCode = matchCode;
+      this.resultCode = resultCode;
     }
 
     @Override public Describer describe(Describer describer) {
       return describer.start("let1", d ->
-          d.arg("fnCode", fnCode0).arg("argCode", argCode));
+          d.arg("matchCode", matchCode).arg("resultCode", resultCode));
     }
 
     @Override public Object eval(EvalEnv evalEnv) {
-      final Closure fnValue = (Closure) fnCode0.eval(evalEnv);
+      final Closure fnValue = (Closure) matchCode.eval(evalEnv);
       EvalEnv env2 = fnValue.evalBind(evalEnv);
-      return argCode.eval(env2);
+      return resultCode.eval(env2);
     }
   }
 
   /** Code that implements {@link #let(List, Code)} with multiple arguments. */
   private static class LetCode implements Code {
-    private final ImmutableList<Code> fnCodes;
-    private final Code argCode;
+    private final ImmutableList<Code> matchCodes;
+    private final Code resultCode;
 
-    LetCode(ImmutableList<Code> fnCodes, Code argCode) {
-      this.fnCodes = fnCodes;
-      this.argCode = argCode;
+    LetCode(ImmutableList<Code> matchCodes, Code resultCode) {
+      this.matchCodes = matchCodes;
+      this.resultCode = resultCode;
     }
 
     @Override public Describer describe(Describer describer) {
       return describer.start("let", d -> {
-        Ord.forEach(fnCodes, (fnCode, i) -> d.arg("fnCode" + i, fnCode));
-        d.arg("argCode", argCode);
+        Ord.forEach(matchCodes, (matchCode, i) ->
+            d.arg("matchCode" + i, matchCode));
+        d.arg("resultCode", resultCode);
       });
     }
 
     @Override public Object eval(EvalEnv evalEnv) {
       EvalEnv evalEnv2 = evalEnv;
-      for (Code fnCode : fnCodes) {
-        final Closure fnValue = (Closure) fnCode.eval(evalEnv);
+      for (Code matchCode : matchCodes) {
+        final Closure fnValue = (Closure) matchCode.eval(evalEnv);
         evalEnv2 = fnValue.evalBind(evalEnv2);
       }
-      return argCode.eval(evalEnv2);
+      return resultCode.eval(evalEnv2);
     }
   }
 }

@@ -969,7 +969,7 @@ uncaught exception Size
 
 Sys.plan ();
 val it =
-  "apply(fnValue List.tabulate, argCode tuple(constant(-1), let1(fnCode match(fact, match(n, if(condition apply(fnValue =, argCode tuple(get(name n), constant(0))), ifTrue constant(1), ifFalse apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))))), argCode get(name fact))))"
+  "apply(fnValue List.tabulate, argCode tuple(constant(-1), let1(matchCode match(fact, match(n, if(condition apply(fnValue =, argCode tuple(get(name n), constant(0))), ifTrue constant(1), ifFalse apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))))), resultCode get(name fact))))"
   : string
 
 
@@ -1509,7 +1509,7 @@ val it = #[1,1,2,6,24] : int vector
 
 Sys.plan ();
 val it =
-  "apply(fnValue List.tabulate, argCode tuple(constant(5), let1(fnCode match(fact, match(n, if(condition apply(fnValue =, argCode tuple(get(name n), constant(0))), ifTrue constant(1), ifFalse apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))))), argCode get(name fact))))"
+  "apply(fnValue List.tabulate, argCode tuple(constant(5), let1(matchCode match(fact, match(n, if(condition apply(fnValue =, argCode tuple(get(name n), constant(0))), ifTrue constant(1), ifFalse apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))))), resultCode get(name fact))))"
   : string
 
 
