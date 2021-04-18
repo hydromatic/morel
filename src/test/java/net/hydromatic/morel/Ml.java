@@ -320,9 +320,20 @@ class Ml {
     return new Ml(ml, dataSetMap, plus(propMap, prop, value));
   }
 
-  /** Returns a map plus one (key, value) entry. */
+  /** Returns a map plus (adding or overwriting) one (key, value) entry. */
   private static <K, V> Map<K, V> plus(Map<K, V> map, K k, V v) {
-    return ImmutableMap.<K, V>builder().putAll(map).put(k, v).build();
+    final ImmutableMap.Builder<K, V> builder = ImmutableMap.builder();
+    if (map.containsKey(k)) {
+      map.forEach((k2, v2) -> {
+        if (!k2.equals(k)) {
+          builder.put(k, v);
+        }
+      });
+    } else {
+      builder.putAll(map);
+    }
+    builder.put(k, v);
+    return builder.build();
   }
 }
 

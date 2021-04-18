@@ -26,11 +26,14 @@ import com.google.common.collect.Sets;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 
+import org.hamcrest.BaseMatcher;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+import org.hamcrest.core.Is;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -142,6 +145,73 @@ public abstract class Matchers {
             && messageMatcher.matches(item.getMessage());
       }
     };
+  }
+
+  /** Creates a Matcher that behaves the same as a given delegate Matcher,
+   * but remembers the value that was compared.
+   *
+   * @param <T> Type of expected item */
+  public static <T> LearningMatcher<T> learning(Class<T> type) {
+    return new LearningMatcherImpl<>(Is.isA(type));
+  }
+
+  /** Matcher that remembers the actual value it was.
+   *
+   * @param <T> Type of expected item */
+  public interface LearningMatcher<T> extends Matcher<T> {
+    T get();
+  }
+
+  /** Matcher that performs an action when a value is matched.
+   *
+   * @param <T> Type of expected item */
+  private abstract static class MatcherWithConsumer<T> extends BaseMatcher<T> {
+    final Matcher<T> matcher;
+
+    MatcherWithConsumer(Matcher<T> matcher) {
+      this.matcher = matcher;
+    }
+
+    protected abstract void consume(T t);
+
+    @SuppressWarnings("unchecked")
+    @Override public boolean matches(Object o) {
+      if (matcher.matches(o)) {
+        consume((T) o);
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    @Override public void describeMismatch(Object o,
+        Description description) {
+      matcher.describeMismatch(o, description);
+    }
+
+    @Override public void describeTo(Description description) {
+      matcher.describeTo(description);
+    }
+  }
+
+  /** Implementation of {@link LearningMatcher}.
+   *
+   * @param <T> Type of expected item */
+  private static class LearningMatcherImpl<T> extends MatcherWithConsumer<T>
+      implements LearningMatcher<T> {
+    final List<T> list = new ArrayList<>();
+
+    LearningMatcherImpl(Matcher<T> matcher) {
+      super(matcher);
+    }
+
+    @Override public T get() {
+      return list.get(0);
+    }
+
+    @Override protected void consume(T t) {
+      list.add(t);
+    }
   }
 }
 
