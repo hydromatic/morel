@@ -22,30 +22,35 @@ import com.google.common.collect.ImmutableMap;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.compile.CompiledStatement;
-import net.hydromatic.morel.compile.Compiler;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.compile.Inliner;
+import net.hydromatic.morel.compile.Resolver;
 import net.hydromatic.morel.compile.TypeMap;
 import net.hydromatic.morel.compile.TypeResolver;
-import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
-import net.hydromatic.morel.eval.EvalEnv;
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
+import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
 
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -55,15 +60,18 @@ import static org.junit.jupiter.api.Assertions.fail;
 class Ml {
   private final String ml;
   private final Map<String, DataSet> dataSetMap;
+  private final Map<Prop, Object> propMap;
 
-  Ml(String ml, Map<String, DataSet> dataSetMap) {
+  Ml(String ml, Map<String, DataSet> dataSetMap,
+      Map<Prop, Object> propMap) {
     this.ml = ml;
     this.dataSetMap = ImmutableMap.copyOf(dataSetMap);
+    this.propMap = ImmutableMap.copyOf(propMap);
   }
 
   /** Creates an {@code Ml}. */
   static Ml ml(String ml) {
-    return new Ml(ml, ImmutableMap.of());
+    return new Ml(ml, ImmutableMap.of(), ImmutableMap.of());
   }
 
   /** Runs a task and checks that it throws an exception.
@@ -160,8 +168,8 @@ class Ml {
         final Calcite calcite = Calcite.withDataSets(dataSetMap);
         final TypeResolver.Resolved resolved =
             Compiles.validateExpression(expression, calcite.foreignValues());
-        final Ast.Exp resolvedExp =
-            Compiles.toExp((Ast.ValDecl) resolved.node);
+        final Ast.ValDecl valDecl = (Ast.ValDecl) resolved.node;
+        final Ast.Exp resolvedExp = valDecl.valBinds.get(0).e;
         action.accept(resolvedExp, resolved.typeMap);
       } catch (ParseException e) {
         throw new RuntimeException(e);
@@ -201,38 +209,86 @@ class Ml {
     });
   }
 
+  /** Asserts that after parsing the current expression and converting it to
+   * Core, the Core string converts to the expected value. Which is usually
+   * the original string. */
+  public void assertCoreString(Matcher<String> matcher) {
+    final Ast.Exp e;
+    try {
+      e = new MorelParserImpl(new StringReader(ml)).expression();
+    } catch (ParseException parseException) {
+      throw new RuntimeException(parseException);
+    }
+    final TypeSystem typeSystem = new TypeSystem();
+
+    final Environment env =
+        Environments.env(typeSystem, ImmutableMap.of());
+    final Ast.ValDecl valDecl = Compiles.toValDecl(e);
+    final TypeResolver.Resolved resolved =
+        TypeResolver.deduceType(env, valDecl, typeSystem);
+    final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
+    final Resolver resolver = new Resolver(resolved.typeMap);
+    final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
+    final Core.ValDecl valDecl4 = valDecl3.accept(Inliner.of(typeSystem, env));
+    final String coreString = valDecl4.e.toString();
+    assertThat(coreString, matcher);
+  }
+
+  Ml assertPlan(Matcher<String> planMatcher) {
+    return assertEval(null, planMatcher);
+  }
+
   <E> Ml assertEvalIter(Matcher<Iterable<E>> matcher) {
     return assertEval((Matcher) matcher);
   }
 
-  Ml assertEval(Matcher<Object> matcher) {
+  Ml assertEval(Matcher<Object> resultMatcher) {
+    return assertEval(resultMatcher, null);
+  }
+
+  Ml assertEval(Matcher<Object> resultMatcher, Matcher<String> planMatcher) {
     try {
       final Ast.Exp e = new MorelParserImpl(new StringReader(ml)).expression();
       final TypeSystem typeSystem = new TypeSystem();
       final Calcite calcite = Calcite.withDataSets(dataSetMap);
       final Environment env =
           Environments.env(typeSystem, calcite.foreignValues());
-      final Ast.ValDecl valDecl = Compiles.toValDecl(e);
-      final TypeResolver.Resolved resolved =
-          TypeResolver.deduceType(env, valDecl, typeSystem);
-      final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
-      final Code code =
-          new Compiler(resolved.typeMap)
-              .compile(env, Compiles.toExp(valDecl2));
-      final EvalEnv evalEnv = Codes.emptyEnvWith(new Session(), env);
-      final Object value = code.eval(evalEnv);
-      assertThat(value, matcher);
+      final Session session = new Session();
+      session.map.putAll(propMap);
+      eval(session, env, typeSystem, e, resultMatcher, planMatcher);
       return this;
     } catch (ParseException e) {
       throw new RuntimeException(e);
     }
   }
 
-  private Object eval(Environment env, TypeResolver.Resolved resolved,
-      Ast.Exp e) {
-    final Code code = new Compiler(resolved.typeMap).compile(env, e);
-    final EvalEnv evalEnv = Codes.emptyEnvWith(new Session(), env);
-    return code.eval(evalEnv);
+  private Object eval(Session session, Environment env,
+      TypeSystem typeSystem, Ast.Exp e,
+      @Nullable Matcher<Object> resultMatcher,
+      @Nullable Matcher<String> planMatcher) {
+    CompiledStatement compiledStatement =
+        Compiles.prepareStatement(typeSystem, session, env, e);
+    final List<String> output = new ArrayList<>();
+    final List<Binding> bindings = new ArrayList<>();
+    compiledStatement.eval(session, env, output, bindings);
+    final Object result = getIt(bindings);
+    if (resultMatcher != null) {
+      assertThat(result, resultMatcher);
+    }
+    if (planMatcher != null) {
+      final String plan = Codes.describe(session.code);
+      assertThat(plan, planMatcher);
+    }
+    return result;
+  }
+
+  private Object getIt(List<Binding> bindings) {
+    for (Binding binding : bindings) {
+      if (binding.name.equals("it")) {
+        return binding.value;
+      }
+    }
+    return null;
   }
 
   Ml assertEvalError(Matcher<Throwable> matcher) {
@@ -255,7 +311,11 @@ class Ml {
   }
 
   Ml withBinding(String name, DataSet dataSet) {
-    return new Ml(ml, plus(dataSetMap, name, dataSet));
+    return new Ml(ml, plus(dataSetMap, name, dataSet), propMap);
+  }
+
+  Ml with(Prop prop, Object value) {
+    return new Ml(ml, dataSetMap, plus(propMap, prop, value));
   }
 
   /** Returns a map plus one (key, value) entry. */

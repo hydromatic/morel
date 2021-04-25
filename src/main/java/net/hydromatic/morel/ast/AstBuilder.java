@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 
 import net.hydromatic.morel.compile.BuiltIn;
-import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.util.Pair;
@@ -183,8 +182,8 @@ public enum AstBuilder {
     return new Ast.Tuple(pos, list);
   }
 
-  public Ast.List list(Pos pos, Iterable<? extends Ast.Exp> list) {
-    return new Ast.List(pos, list);
+  public Ast.ListExp list(Pos pos, Iterable<? extends Ast.Exp> list) {
+    return new Ast.ListExp(pos, list);
   }
 
   public Ast.Record record(Pos pos, Map<String, Ast.Exp> map) {
@@ -288,9 +287,9 @@ public enum AstBuilder {
     return foldRight(list, this::cons);
   }
 
-  public Ast.LetExp let(Pos pos, Iterable<? extends Ast.Decl> decls,
+  public Ast.Let let(Pos pos, Iterable<? extends Ast.Decl> decls,
       Ast.Exp e) {
-    return new Ast.LetExp(pos, ImmutableList.copyOf(decls), e);
+    return new Ast.Let(pos, ImmutableList.copyOf(decls), e);
   }
 
   public Ast.ValDecl valDecl(Pos pos,
@@ -319,6 +318,12 @@ public enum AstBuilder {
       List<Ast.FromStep> steps, Ast.Exp yieldExp) {
     return new Ast.From(pos, ImmutableMap.copyOf(sources),
         ImmutableList.copyOf(steps), yieldExp);
+  }
+
+  public Ast.From from(Pos pos, Map<Ast.Pat, Ast.Exp> sources,
+      List<Ast.FromStep> steps, Ast.Exp yieldExp, Ast.Exp yieldExpOrDefault) {
+    return new Ast.From(pos, ImmutableMap.copyOf(sources),
+        ImmutableList.copyOf(steps), yieldExp, yieldExpOrDefault);
   }
 
   public Ast.Fn fn(Pos pos, Ast.Match... matchList) {
@@ -440,12 +445,9 @@ public enum AstBuilder {
     return new Ast.Group(pos, ImmutableList.copyOf(groupExps),
         ImmutableList.copyOf(aggregates));
   }
+
   public Ast.FromStep where(Pos pos, Ast.Exp exp) {
     return new Ast.Where(pos, exp);
-  }
-
-  public Ast.ApplicableExp wrapApplicable(Applicable applicable) {
-    return new Ast.ApplicableExp(applicable);
   }
 }
 

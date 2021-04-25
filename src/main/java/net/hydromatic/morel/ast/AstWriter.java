@@ -20,6 +20,8 @@ package net.hydromatic.morel.ast;
 
 import com.google.common.collect.Lists;
 
+import net.hydromatic.morel.compile.BuiltIn;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -40,15 +42,34 @@ public class AstWriter {
     return this;
   }
 
+  /** Appends an identifier to the output. */
+  public AstWriter id(String s) {
+    b.append(s);
+    return this;
+  }
+
   /** Appends a call to an infix operator. */
   public AstWriter infix(int left, AstNode a0, Op op, AstNode a1, int right) {
     if (op == Op.APPLY && a0.op == Op.ID) {
-      final Op op2 = Op.BY_OP_NAME.get(((Ast.Id) a0).name);
-      if (op2 != null && op2.left > 0) {
-        final List<Ast.Exp> args = ((Ast.Tuple) a1).args;
-        final Ast.InfixCall call =
-            new Ast.InfixCall(Pos.ZERO, op2, args.get(0), args.get(1));
-        return call.unparse(this, left, right);
+      if (a0 instanceof Ast.Id) {
+        final Op op2 = Op.BY_OP_NAME.get(((Ast.Id) a0).name);
+        if (op2 != null && op2.left > 0) {
+          final List<Ast.Exp> args = ((Ast.Tuple) a1).args;
+          final Ast.InfixCall call =
+              new Ast.InfixCall(Pos.ZERO, op2, args.get(0), args.get(1));
+          return call.unparse(this, left, right);
+        }
+      }
+      if (a0 instanceof Core.Id) {
+        // TODO: obsolete Core.Id for these purposes. The operator should
+        // be a function literal, and we would use a reverse mapping to
+        // figure out which built-in operator it implements, and whether it
+        // is infix (e.g. "+") or in a namespace (e.g. "#translate String")
+        final Op op2 = Op.BY_OP_NAME.get(((Core.Id) a0).name);
+        if (op2 != null && op2.left > 0) {
+          final List<Core.Exp> args = ((Core.Tuple) a1).args;
+          return infix(left, args.get(0), op2, args.get(1), right);
+        }
       }
     }
     if (left > op.left || op.right < right) {
@@ -170,6 +191,8 @@ public class AstWriter {
         c = c.negate();
       }
       append(c.toString());
+    } else if (value instanceof BuiltIn) {
+      append(((BuiltIn) value).mlName);
     } else {
       append(value.toString());
     }

@@ -46,6 +46,16 @@ public class TypeVar implements Type {
     this.ordinal = ordinal;
   }
 
+  @Override public int hashCode() {
+    return ordinal + 6563;
+  }
+
+  @Override public boolean equals(Object obj) {
+    return obj == this
+        || obj instanceof TypeVar
+        && this.ordinal == ((TypeVar) obj).ordinal;
+  }
+
   /** Returns a string for debugging; see also {@link #description()}. */
   @Override public String toString() {
     return "'#" + ordinal;

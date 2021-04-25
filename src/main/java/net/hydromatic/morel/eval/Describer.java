@@ -26,7 +26,7 @@ public interface Describer {
 
   /** Provided as a callback while describing a node. */
   interface Detail {
-    Detail arg(String name, Comparable value);
+    Detail arg(String name, Object value);
     Detail arg(String name, Describable describable);
   }
 }

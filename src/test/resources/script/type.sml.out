@@ -54,6 +54,37 @@ val it = true : bool
 val it = true : bool
 
 
+(*) Pattern-match on record
+fun f {a = c, b} = b + c;
+val f = fn : {a:int, b:int} -> int
+
+f {a = 5, b = 6};
+val it = 11 : int
+
+
+fun f2 {a = 1, b} = b * 2
+  | f2 {a, b} = b * 3;
+val f2 = fn : {a:int, b:int} -> int
+
+f2 {a = 1, b = 6};
+val it = 12 : int
+
+f2 {a = 2, b = 6};
+val it = 18 : int
+
+
+fun f3 {a = 1, b} = b * 2;
+val f3 = fn : {a:int, b:int} -> int
+
+f3 {a = 1, b = 6};
+val it = 12 : int
+
+
+(*) The following correctly throws
+(*)   unbound variable or constructor: a
+(*) Disabled because error stacks made tests brittle.
+(*) fun f4 {a = 1, b} = a + b;
+
 (*) Variable with polymorphic type
 val x = List.map;
 val x = fn : ('a -> 'b) -> 'a list -> 'b list

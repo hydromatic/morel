@@ -118,18 +118,18 @@ public class TypeSystem {
   }
 
   /** Creates a tuple type from an array of types. */
-  public Type tupleType(Type... argTypes) {
-    return tupleType(ImmutableList.copyOf(argTypes));
+  public TupleType tupleType(Type argType0, Type... argTypes) {
+    return (TupleType) tupleType(Lists.asList(argType0, argTypes));
   }
 
   /** Creates a tuple type. */
-  public Type tupleType(List<? extends Type> argTypes) {
+  public RecordLikeType tupleType(List<? extends Type> argTypes) {
     if (argTypes.isEmpty()) {
       return PrimitiveType.UNIT;
     }
     final String description =
         unparseList(new StringBuilder(), Op.TIMES, 0, 0, argTypes).toString();
-    return typeByName.computeIfAbsent(description,
+    return (RecordLikeType) typeByName.computeIfAbsent(description,
         d -> new TupleType(d, ImmutableList.copyOf(argTypes)));
   }
 
@@ -189,7 +189,7 @@ public class TypeSystem {
 
   /** Creates a record type. (Or a tuple type if the fields are named "1", "2"
    * etc.; or "unit" if the field list is empty.) */
-  public Type recordType(SortedMap<String, ? extends Type> argNameTypes) {
+  public RecordLikeType recordType(SortedMap<String, ? extends Type> argNameTypes) {
     if (argNameTypes.isEmpty()) {
       return PrimitiveType.UNIT;
     }
@@ -207,7 +207,7 @@ public class TypeSystem {
       return tupleType(ImmutableList.copyOf(argNameTypes2.values()));
     }
     final String description = builder.append('}').toString();
-    return this.typeByName.computeIfAbsent(description,
+    return (RecordLikeType) this.typeByName.computeIfAbsent(description,
         d -> new RecordType(d, argNameTypes2));
   }
 

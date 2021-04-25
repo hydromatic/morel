@@ -19,20 +19,30 @@
 package net.hydromatic.morel.type;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedMap;
 
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.util.Ord;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.SortedMap;
 import java.util.function.Function;
 
 /** The type of a tuple value. */
-public class TupleType extends BaseType {
+public class TupleType extends BaseType implements RecordLikeType {
   public final List<Type> argTypes;
 
   TupleType(String description, ImmutableList<Type> argTypes) {
     super(Op.TUPLE_TYPE, description);
     this.argTypes = Objects.requireNonNull(argTypes);
+  }
+
+  @Override public SortedMap<String, Type> argNameTypes() {
+    final ImmutableSortedMap.Builder<String, Type> map =
+        ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+    Ord.forEach(argTypes, (t, i) -> map.put(Integer.toString(i + 1), t));
+    return map.build();
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {

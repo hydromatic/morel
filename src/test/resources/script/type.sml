@@ -32,6 +32,23 @@
 {} = ();
 () = {};
 
+(*) Pattern-match on record
+fun f {a = c, b} = b + c;
+f {a = 5, b = 6};
+
+fun f2 {a = 1, b} = b * 2
+  | f2 {a, b} = b * 3;
+f2 {a = 1, b = 6};
+f2 {a = 2, b = 6};
+
+fun f3 {a = 1, b} = b * 2;
+f3 {a = 1, b = 6};
+
+(*) The following correctly throws
+(*)   unbound variable or constructor: a
+(*) Disabled because error stacks made tests brittle.
+(*) fun f4 {a = 1, b} = a + b;
+
 (*) Variable with polymorphic type
 val x = List.map;
 x String.explode ["ab", "c"];

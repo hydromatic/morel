@@ -444,6 +444,30 @@ intersectAll (from e in emps yield e.deptno)
 val it = [20,10,30] : 'a list
 
 
+(*) union followed by group
+from x in (from e in emps yield e.deptno)
+    union (from d in depts yield d.deptno)
+group x compute c = count
+order c, x;
+val it = [{c=1,x=40},{c=2,x=10},{c=2,x=20},{c=3,x=30}] : {c:int, x:int} list
+
+
+(*) except followed by group
+from x in (from e in emps yield e.deptno)
+    except (from d in depts yield d.deptno)
+group x compute c = count
+order c, x;
+val it = [] : {c:int, x:int} list
+
+
+(*) intersect followed by group
+from x in (from e in emps yield e.deptno)
+    intersect (from d in depts yield d.deptno)
+group x compute c = count
+order c, x;
+val it = [{c=1,x=10},{c=1,x=20},{c=2,x=30}] : {c:int, x:int} list
+
+
 (*) foldl function (built into SML)
 let
   fun foldl f start [] = start
@@ -527,11 +551,12 @@ val it =
 from e in emps, d in depts
 where e.deptno = d.deptno
 group e.deptno, ename = e.name, dname = d.name
-  compute sumId = sum of e.id;
+  compute sumId = sum of e.id
+order ename;
 val it =
-  [{deptno=30,dname="Engineering",ename="Scooby",sumId=103},
+  [{deptno=10,dname="Sales",ename="Fred",sumId=100},
+   {deptno=30,dname="Engineering",ename="Scooby",sumId=103},
    {deptno=30,dname="Engineering",ename="Shaggy",sumId=102},
-   {deptno=10,dname="Sales",ename="Fred",sumId=100},
    {deptno=20,dname="HR",ename="Velma",sumId=101}]
   : {deptno:int, dname:string, ename:string, sumId:int} list
 
@@ -695,7 +720,8 @@ from e in emps,
     d in depts
   where e.deptno = d.deptno
   group x = e.id + d.deptno, e.deptno
-    compute sumId = sum of e.id;
+    compute sumId = sum of e.id
+  order x desc;
 val it =
   [{deptno=30,sumId=103,x=133},{deptno=30,sumId=102,x=132},
    {deptno=20,sumId=101,x=121},{deptno=10,sumId=100,x=110}]
@@ -896,9 +922,6 @@ from {a = a, c = c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 val it = [{a=1,c=3},{a=1,c=4}] : {a:int, c:int} list
 
 from {a, c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
-val it = [{a=1,c=3},{a=1,c=4}] : {a:int, c:int} list
-
-from {a = a, c = c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 val it = [{a=1,c=3},{a=1,c=4}] : {a:int, c:int} list
 
 from {b = y, ...} in [{a=1,b=2}];

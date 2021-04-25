@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel;
 
+import org.apache.calcite.util.Util;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -45,6 +47,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static net.hydromatic.morel.Matchers.equalsOrdered;
+import static net.hydromatic.morel.Matchers.equalsUnordered;
+import static net.hydromatic.morel.Matchers.isLiteral;
+import static net.hydromatic.morel.Matchers.isUnordered;
+import static net.hydromatic.morel.Matchers.list;
+import static net.hydromatic.morel.Matchers.throwsA;
 import static net.hydromatic.morel.Ml.assertError;
 import static net.hydromatic.morel.Ml.ml;
 
@@ -792,6 +800,39 @@ public class MainTest {
         + "  end\n"
         + "end";
     ml(ml).assertEval(is(11));
+  }
+
+  /** Tests a closure in a let. */
+  @Test void testLet5() {
+    final String ml = "let\n"
+        + "  val plus = fn x => fn y => x + y\n"
+        + "  val plusTwo = plus 2\n"
+        + "in\n"
+        + "  plusTwo 3\n"
+        + "end";
+    ml(ml).assertEval(is(5));
+  }
+
+  /** Tests that you can use the same variable name in different parts of the
+   * program without the types getting confused. */
+  @Test void testSameVariableName() {
+    final String ml = "List.filter\n"
+        + " (fn e => e.x + 2 * e.y > 16)\n"
+        + " (List.map\n"
+        + "   (fn e => {x = e - 1, y = 10 - e})\n"
+        + "   [1, 2, 3, 4, 5])";
+    ml(ml).assertEval(isUnordered(list(list(0, 9), list(1, 8))));
+  }
+
+  /** As {@link #testSameVariableName()} but both variables are records. */
+  @Disabled("TODO fix type resolution bug")
+  @Test void testSameVariableName2() {
+    final String ml = "List.filter\n"
+        + " (fn e => e.x + 2 * e.y > 16)\n"
+        + " (List.map\n"
+        + "   (fn e => {x = e.a - 1, y = 10 - e.a})\n"
+        + "   [1, 2, 3, 4, 5])";
+    ml(ml).assertEval(isUnordered(list(list(0, 9), list(1, 8))));
   }
 
   /** Tests a closure that uses one variable "x", called in an environment
@@ -1611,6 +1652,32 @@ public class MainTest {
         .assertEvalIter(
             equalsOrdered(list("SALES", 7900), list("RESEARCH", 7902),
                 list("ACCOUNTING", 7934)));
+  }
+
+  @Test void testToCoreAndBack() {
+    final String[] expressions = {
+        "()", null,
+        "true andalso not false", null,
+        "true orelse false", null,
+        "1", null,
+        "[1, 2]", null,
+        "1 :: 2 :: []", null,
+        "1 + ~2", null,
+        "(\"hello\", 2, 3)", null,
+        "String.substring (\"hello\", 2, 3)",
+        "#substring String (\"hello\", 2, 3)",
+        "{a = 1, b = true, c = \"d\"}", "(1, true, \"d\")",
+        "fn x => 1 + x + 3", null,
+        "List.tabulate (6, fn i =>"
+            + " {i, j = i + 3, s = String.substring (\"morel\", 0, i)})",
+        "#tabulate List (6, fn i =>"
+            + " (i, i + 3, #substring String (\"morel\", 0, i)))",
+    };
+    for (int i = 0; i < expressions.length / 2; i++) {
+      String ml = expressions[i * 2];
+      String expected = Util.first(expressions[i  * 2 + 1], ml);
+      ml(ml).assertCoreString(is(expected));
+    }
   }
 
   @Test void testError() {

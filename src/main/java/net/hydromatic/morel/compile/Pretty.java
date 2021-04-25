@@ -127,7 +127,7 @@ class Pretty {
       pretty1(buf, indent + 2, lineEnd, depth + 1, type, typedVal.o);
       buf.append(' ');
       pretty1(buf, indent + 2, lineEnd, depth + 1, PrimitiveType.BOOL,
-          ": " + typedVal.type.moniker());
+          ": " + unqualified(typedVal.type).moniker());
       return buf;
     }
     if (value instanceof NamedVal) {
@@ -245,6 +245,11 @@ class Pretty {
     default:
       return buf.append(value);
     }
+  }
+
+  private static Type unqualified(Type type) {
+    return type instanceof ForallType ? unqualified(((ForallType) type).type)
+        : type;
   }
 
   private static StringBuilder printList(@Nonnull StringBuilder buf,

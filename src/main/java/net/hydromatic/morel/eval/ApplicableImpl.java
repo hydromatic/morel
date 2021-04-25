@@ -27,6 +27,10 @@ abstract class ApplicableImpl implements Applicable {
     this.name = name;
   }
 
+  @Override public String toString() {
+    return name;
+  }
+
   @Override public Describer describe(Describer describer) {
     return describer.start(name, d -> {});
   }

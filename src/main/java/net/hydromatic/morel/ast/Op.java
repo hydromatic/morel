@@ -33,6 +33,10 @@ public enum Op {
   REAL_LITERAL(true),
   STRING_LITERAL(true),
   UNIT_LITERAL(true),
+  /** Literal whose value is a {@link net.hydromatic.morel.compile.BuiltIn}. */
+  FN_LITERAL(true), // occurs in Core, not in Ast
+  /** Literal whose value is a non-atomic value, such as a record or list. */
+  VALUE_LITERAL(true), // occurs in Core, not in Ast
 
   // patterns
   ID_PAT(true),
@@ -82,9 +86,6 @@ public enum Op {
 
   // annotated expression "e: t"
   ANNOTATED_EXP(" : "),
-
-  // internal
-  WRAPPED_APPLICABLE,
 
   TIMES(" * ", 7),
   DIVIDE(" / ", 7),

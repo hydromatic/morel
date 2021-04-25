@@ -42,7 +42,7 @@ class DescriberImpl implements Describer {
   private class DetailImpl implements Detail {
     final int start = buf.length();
 
-    @Override public Detail arg(String name, Comparable value) {
+    @Override public Detail arg(String name, Object value) {
       buf.append(buf.length() == start ? "(" : ", ")
           .append(name)
           .append(name.equals("") ? "" : " ")

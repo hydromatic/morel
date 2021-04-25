@@ -21,7 +21,7 @@ package net.hydromatic.morel.eval;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.util.Pair;
 
 import java.math.BigDecimal;
@@ -147,13 +147,13 @@ public class EvalEnvs {
 
   /** Immutable copy of {@link MutablePatSubEvalEnv}. */
   static class PatSubEvalEnv extends ArraySubEvalEnv {
-    protected final Ast.Pat pat;
+    protected final Core.Pat pat;
 
-    PatSubEvalEnv(EvalEnv parentEnv, Ast.Pat pat, ImmutableList<String> names,
+    PatSubEvalEnv(EvalEnv parentEnv, Core.Pat pat, ImmutableList<String> names,
         Object[] values) {
       super(parentEnv, ImmutableList.copyOf(names), values);
       this.pat = Objects.requireNonNull(pat);
-      assert !(pat instanceof Ast.IdPat);
+      assert !(pat instanceof Core.IdPat);
     }
   }
 
@@ -162,7 +162,7 @@ public class EvalEnvs {
       implements MutableEvalEnv {
     private int slot;
 
-    MutablePatSubEvalEnv(EvalEnv parentEnv, Ast.Pat pat, List<String> names) {
+    MutablePatSubEvalEnv(EvalEnv parentEnv, Core.Pat pat, List<String> names) {
       super(parentEnv, pat, ImmutableList.copyOf(names),
           new Object[names.size()]);
     }
@@ -184,9 +184,9 @@ public class EvalEnvs {
       return bindRecurse(pat, value);
     }
 
-    boolean bindRecurse(Ast.Pat pat, Object argValue) {
+    boolean bindRecurse(Core.Pat pat, Object argValue) {
       final List<Object> listValue;
-      final Ast.LiteralPat literalPat;
+      final Core.LiteralPat literalPat;
       switch (pat.op) {
       case ID_PAT:
         this.values[slot++] = argValue;
@@ -198,21 +198,21 @@ public class EvalEnvs {
       case BOOL_LITERAL_PAT:
       case CHAR_LITERAL_PAT:
       case STRING_LITERAL_PAT:
-        literalPat = (Ast.LiteralPat) pat;
+        literalPat = (Core.LiteralPat) pat;
         return literalPat.value.equals(argValue);
 
       case INT_LITERAL_PAT:
-        literalPat = (Ast.LiteralPat) pat;
+        literalPat = (Core.LiteralPat) pat;
         return ((BigDecimal) literalPat.value).intValue() == (Integer) argValue;
 
       case REAL_LITERAL_PAT:
-        literalPat = (Ast.LiteralPat) pat;
+        literalPat = (Core.LiteralPat) pat;
         return ((BigDecimal) literalPat.value).doubleValue() == (Double) argValue;
 
       case TUPLE_PAT:
-        final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
+        final Core.TuplePat tuplePat = (Core.TuplePat) pat;
         listValue = (List) argValue;
-        for (Pair<Ast.Pat, Object> pair : Pair.zip(tuplePat.args, listValue)) {
+        for (Pair<Core.Pat, Object> pair : Pair.zip(tuplePat.args, listValue)) {
           if (!bindRecurse(pair.left, pair.right)) {
             return false;
           }
@@ -220,10 +220,10 @@ public class EvalEnvs {
         return true;
 
       case RECORD_PAT:
-        final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
+        final Core.RecordPat recordPat = (Core.RecordPat) pat;
         listValue = (List) argValue;
-        for (Pair<Ast.Pat, Object> pair
-            : Pair.zip(recordPat.args.values(), listValue)) {
+        for (Pair<Core.Pat, Object> pair
+            : Pair.zip(recordPat.args, listValue)) {
           if (!bindRecurse(pair.left, pair.right)) {
             return false;
           }
@@ -231,12 +231,12 @@ public class EvalEnvs {
         return true;
 
       case LIST_PAT:
-        final Ast.ListPat listPat = (Ast.ListPat) pat;
+        final Core.ListPat listPat = (Core.ListPat) pat;
         listValue = (List) argValue;
         if (listValue.size() != listPat.args.size()) {
           return false;
         }
-        for (Pair<Ast.Pat, Object> pair : Pair.zip(listPat.args, listValue)) {
+        for (Pair<Core.Pat, Object> pair : Pair.zip(listPat.args, listValue)) {
           if (!bindRecurse(pair.left, pair.right)) {
             return false;
           }
@@ -244,7 +244,7 @@ public class EvalEnvs {
         return true;
 
       case CONS_PAT:
-        final Ast.InfixPat infixPat = (Ast.InfixPat) pat;
+        final Core.ConPat infixPat = (Core.ConPat) pat;
         @SuppressWarnings("unchecked") final List<Object> consValue =
             (List) argValue;
         if (consValue.isEmpty()) {
@@ -252,18 +252,19 @@ public class EvalEnvs {
         }
         final Object head = consValue.get(0);
         final List<Object> tail = consValue.subList(1, consValue.size());
-        return bindRecurse(infixPat.p0, head)
-            && bindRecurse(infixPat.p1, tail);
+        List<Core.Pat> patArgs = ((Core.TuplePat) infixPat.pat).args;
+        return bindRecurse(patArgs.get(0), head)
+            && bindRecurse(patArgs.get(1), tail);
 
       case CON0_PAT:
-        final Ast.Con0Pat con0Pat = (Ast.Con0Pat) pat;
+        final Core.Con0Pat con0Pat = (Core.Con0Pat) pat;
         final List con0Value = (List) argValue;
-        return con0Value.get(0).equals(con0Pat.tyCon.name);
+        return con0Value.get(0).equals(con0Pat.tyCon);
 
       case CON_PAT:
-        final Ast.ConPat conPat = (Ast.ConPat) pat;
+        final Core.ConPat conPat = (Core.ConPat) pat;
         final List conValue = (List) argValue;
-        return conValue.get(0).equals(conPat.tyCon.name)
+        return conValue.get(0).equals(conPat.tyCon)
             && bindRecurse(conPat.pat, conValue.get(1));
 
       default:

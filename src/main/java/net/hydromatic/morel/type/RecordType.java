@@ -31,7 +31,7 @@ import java.util.SortedMap;
 import java.util.function.Function;
 
 /** The type of a record value. */
-public class RecordType extends BaseType {
+public class RecordType extends BaseType implements RecordLikeType {
   public final SortedMap<String, Type> argNameTypes;
 
   RecordType(String description,
@@ -39,6 +39,10 @@ public class RecordType extends BaseType {
     super(Op.RECORD_TYPE, description);
     this.argNameTypes = Objects.requireNonNull(argNameTypes);
     Preconditions.checkArgument(argNameTypes.comparator() == ORDERING);
+  }
+
+  @Override public SortedMap<String, Type> argNameTypes() {
+    return argNameTypes;
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {

@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /** The type of a list value. */
+// TODO: remove this, and use datatype?
 public class ListType extends BaseType {
   public final Type elementType;
 

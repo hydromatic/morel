@@ -162,6 +162,7 @@ public class TypeResolver {
   }
 
   private Ast.Exp deduceType(TypeEnv env, Ast.Exp node, Unifier.Variable v) {
+    final List<Ast.Exp> args2;
     final Unifier.Variable v2;
     final Unifier.Variable v3;
     final Map<Ast.IdPat, Unifier.Term> termMap;
@@ -191,7 +192,7 @@ public class TypeResolver {
     case TUPLE:
       final Ast.Tuple tuple = (Ast.Tuple) node;
       final List<Unifier.Term> types = new ArrayList<>();
-      final List<Ast.Exp> args2 = new ArrayList<>();
+      args2 = new ArrayList<>();
       for (Ast.Exp arg : tuple.args) {
         final Unifier.Variable vArg = unifier.variable();
         args2.add(deduceType(env, arg, vArg));
@@ -200,12 +201,13 @@ public class TypeResolver {
       return reg(tuple.copy(args2), v, tuple(types));
 
     case LIST:
-      final Ast.List list = (Ast.List) node;
+      final Ast.ListExp list = (Ast.ListExp) node;
       final Unifier.Variable vArg2 = unifier.variable();
+      args2 = new ArrayList<>();
       for (Ast.Exp arg : list.args) {
-        deduceType(env, arg, vArg2);
+        args2.add(deduceType(env, arg, vArg2));
       }
-      return reg(list, v, unifier.apply(LIST_TY_CON, vArg2));
+      return reg(list.copy(args2), v, unifier.apply(LIST_TY_CON, vArg2));
 
     case RECORD:
       final Ast.Record record = (Ast.Record) node;
@@ -220,7 +222,7 @@ public class TypeResolver {
       return reg(record.copy(map2), v, record(labelTypes));
 
     case LET:
-      final Ast.LetExp let = (Ast.LetExp) node;
+      final Ast.Let let = (Ast.Let) node;
       termMap = new LinkedHashMap<>();
       TypeEnv env2 = env;
       final List<Ast.Decl> decls = new ArrayList<>();
@@ -230,7 +232,7 @@ public class TypeResolver {
         termMap.clear();
       }
       final Ast.Exp e2 = deduceType(env2, let.e, v);
-      final Ast.LetExp let2 = let.copy(decls, e2);
+      final Ast.Let let2 = let.copy(decls, e2);
       return reg(let2, null, v);
 
     case RECORD_SELECTOR:
@@ -374,7 +376,8 @@ public class TypeResolver {
           deduceType(env2, from.yieldExpOrDefault, v3);
       final Ast.Exp yieldExp2 =
           from.yieldExp == null ? null : yieldExpOrDefault2;
-      final Ast.From from2 = from.copy(fromSources, fromSteps, yieldExp2);
+      final Ast.From from2 =
+          from.copy(fromSources, fromSteps, yieldExp2, yieldExpOrDefault2);
       return reg(from2, v, unifier.apply(LIST_TY_CON, v3));
 
     case ID:
@@ -519,6 +522,7 @@ public class TypeResolver {
   private Ast.RecordSelector deduceRecordSelectorType(TypeEnv env,
       Unifier.Variable vResult, Unifier.Variable vArg,
       Ast.RecordSelector recordSelector) {
+    final String fieldName = recordSelector.name;
     actionMap.put(vArg, (v, t, substitution, termPairs) -> {
       // We now know that the type arg, say "{a: int, b: real}".
       // So, now we can declare that the type of vResult, say "#b", is
@@ -527,13 +531,12 @@ public class TypeResolver {
         final Unifier.Sequence sequence = (Unifier.Sequence) t;
         final List<String> fieldList = fieldList(sequence);
         if (fieldList != null) {
-          int i = fieldList.indexOf(recordSelector.name);
+          int i = fieldList.indexOf(fieldName);
           if (i >= 0) {
             final Unifier.Term result2 = substitution.resolve(vResult);
             final Unifier.Term term = sequence.terms.get(i);
             final Unifier.Term term2 = substitution.resolve(term);
             termPairs.add(new Unifier.TermTerm(result2, term2));
-            recordSelector.slot = i;
           }
         }
       }
@@ -826,9 +829,6 @@ public class TypeResolver {
       Map<Ast.IdPat, Unifier.Term> termMap, NavigableSet<String> labelNames,
       Unifier.Variable v) {
     switch (pat.op) {
-    case WILDCARD_PAT:
-      return pat;
-
     case BOOL_LITERAL_PAT:
       return reg(pat, v, toTerm(PrimitiveType.BOOL));
 
@@ -846,6 +846,9 @@ public class TypeResolver {
 
     case ID_PAT:
       termMap.put((Ast.IdPat) pat, v);
+      // fall through
+
+    case WILDCARD_PAT:
       return reg(pat, null, v);
 
     case TUPLE_PAT:
@@ -868,49 +871,51 @@ public class TypeResolver {
       //  fun f {a=1,...} = 1 | f {b=2,...} = 2
       //
       // we cannot deduce whether a 'c' field is allowed.
-      final Ast.RecordPat record = (Ast.RecordPat) pat;
+      final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
       final NavigableMap<String, Unifier.Term> labelTerms =
           new TreeMap<>(RecordType.ORDERING);
       if (labelNames == null) {
-        labelNames = new TreeSet<>(record.args.keySet());
+        labelNames = new TreeSet<>(recordPat.args.keySet());
       }
       final Map<String, Ast.Pat> args = new TreeMap<>(RecordType.ORDERING);
       for (String labelName : labelNames) {
         final Unifier.Variable vArg = unifier.variable();
         labelTerms.put(labelName, vArg);
-        final Ast.Pat argPat = record.args.get(labelName);
+        final Ast.Pat argPat = recordPat.args.get(labelName);
         if (argPat != null) {
-          args.put(labelName, deducePatType(env, argPat, termMap, null, vArg));
+          args.put(labelName,
+              deducePatType(env, argPat, termMap, null, vArg));
         }
       }
-      final Unifier.Variable v2;
-      if (record.ellipsis) {
-        v2 = unifier.variable();
-        actionMap.put(v, (v3, t, substitution, termPairs) -> {
-          // We now know the type of the source record, say "{a: int, b: real}".
-          // So, now we can fill out the ellipsis.
-          assert v == v3;
-          if (t instanceof Unifier.Sequence) {
-            final Unifier.Sequence sequence = (Unifier.Sequence) t;
-            final List<String> fieldList = fieldList(sequence);
-            if (fieldList != null) {
-              final NavigableMap<String, Unifier.Term> labelTerms2 =
-                  new TreeMap<>(RecordType.ORDERING);
-              Ord.forEach(fieldList, (fieldName, i) -> {
-                if (labelTerms.containsKey(fieldName)) {
-                  labelTerms2.put(fieldName, sequence.terms.get(i));
-                }
-              });
-              final Unifier.Term result2 = substitution.resolve(v2);
-              final Unifier.Term term2 = record(labelTerms2);
-              termPairs.add(new Unifier.TermTerm(result2, term2));
-            }
-          }
-        });
-      } else {
-        v2 = v;
+      final Unifier.Term record = record(labelTerms);
+      final Ast.RecordPat recordPat2 = recordPat.copy(recordPat.ellipsis, args);
+      if (!recordPat.ellipsis) {
+        return reg(recordPat2, v, record);
       }
-      return reg(record.copy(record.ellipsis, args), v2, record(labelTerms));
+      final Unifier.Variable v2 = unifier.variable();
+      equiv(record, v2);
+      actionMap.put(v, (v3, t, substitution, termPairs) -> {
+        // We now know the type of the source record, say "{a: int, b: real}".
+        // So, now we can fill out the ellipsis.
+        assert v == v3;
+        if (t instanceof Unifier.Sequence) {
+          final Unifier.Sequence sequence = (Unifier.Sequence) t;
+          final List<String> fieldList = fieldList(sequence);
+          if (fieldList != null) {
+            final NavigableMap<String, Unifier.Term> labelTerms2 =
+                new TreeMap<>(RecordType.ORDERING);
+            Ord.forEach(fieldList, (fieldName, i) -> {
+              if (labelTerms.containsKey(fieldName)) {
+                labelTerms2.put(fieldName, sequence.terms.get(i));
+              }
+            });
+            final Unifier.Term result2 = substitution.resolve(v2);
+            final Unifier.Term term2 = record(labelTerms2);
+            termPairs.add(new Unifier.TermTerm(result2, term2));
+          }
+        }
+      });
+      return reg(recordPat2, null, record);
 
     case CON_PAT:
       final Ast.ConPat conPat = (Ast.ConPat) pat;

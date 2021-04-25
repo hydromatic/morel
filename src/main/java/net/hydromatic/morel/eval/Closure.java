@@ -20,12 +20,13 @@ package net.hydromatic.morel.eval;
 
 import com.google.common.collect.ImmutableList;
 
-import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.util.Pair;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /** Value that is sufficient for a function to bind its argument
  * and evaluate its body. */
@@ -43,13 +44,13 @@ public class Closure implements Comparable<Closure>, Applicable {
    * to the value {@code 1}, the first pattern ({@code 0} fails) but the second
    * pattern pattern ({@code _}) succeeds, and therefore we evaluate the second
    * code {@code "no"}. */
-  private final ImmutableList<Pair<Ast.Pat, Code>> patCodes;
+  private final ImmutableList<Pair<Core.Pat, Code>> patCodes;
 
   /** Not a public API. */
   public Closure(EvalEnv evalEnv,
-      ImmutableList<Pair<Ast.Pat, Code>> patCodes) {
-    this.evalEnv = Objects.requireNonNull(evalEnv).fix();
-    this.patCodes = Objects.requireNonNull(patCodes);
+      ImmutableList<Pair<Core.Pat, Code>> patCodes) {
+    this.evalEnv = requireNonNull(evalEnv).fix();
+    this.patCodes = requireNonNull(patCodes);
   }
 
   @Override public String toString() {
@@ -70,8 +71,8 @@ public class Closure implements Comparable<Closure>, Applicable {
    * sets {@code x} to 3 and {@code y} to 4. */
   EvalEnv bind(Object argValue) {
     final EvalEnv[] envRef = {evalEnv};
-    for (Pair<Ast.Pat, Code> patCode : patCodes) {
-      final Ast.Pat pat = patCode.left;
+    for (Pair<Core.Pat, Code> patCode : patCodes) {
+      final Core.Pat pat = patCode.left;
       if (bindRecurse(pat, envRef, argValue)) {
         return envRef[0];
       }
@@ -82,9 +83,9 @@ public class Closure implements Comparable<Closure>, Applicable {
   /** Similar to {@link #bind}, but evaluates an expression first. */
   EvalEnv evalBind(EvalEnv env) {
     final EvalEnv[] envRef = {evalEnv};
-    for (Pair<Ast.Pat, Code> patCode : patCodes) {
+    for (Pair<Core.Pat, Code> patCode : patCodes) {
       final Object argValue = patCode.right.eval(env);
-      final Ast.Pat pat = patCode.left;
+      final Core.Pat pat = patCode.left;
       if (bindRecurse(pat, envRef, argValue)) {
         return envRef[0];
       }
@@ -95,14 +96,14 @@ public class Closure implements Comparable<Closure>, Applicable {
   /** Similar to {@link #bind}, but also evaluates. */
   Object bindEval(Object argValue) {
     final EvalEnv[] envRef = {evalEnv};
-    for (Pair<Ast.Pat, Code> patCode : patCodes) {
-      final Ast.Pat pat = patCode.left;
+    for (Pair<Core.Pat, Code> patCode : patCodes) {
+      final Core.Pat pat = patCode.left;
       if (bindRecurse(pat, envRef, argValue)) {
         final Code code = patCode.right;
         return code.eval(envRef[0]);
       }
     }
-    throw new AssertionError("no match");
+    throw new AssertionError("no match: " + Pair.left(patCodes));
   }
 
   @Override public Object apply(EvalEnv env, Object argValue) {
@@ -113,13 +114,13 @@ public class Closure implements Comparable<Closure>, Applicable {
     return describer.start("closure", d -> {});
   }
 
-  private boolean bindRecurse(Ast.Pat pat, EvalEnv[] envRef,
+  private boolean bindRecurse(Core.Pat pat, EvalEnv[] envRef,
       Object argValue) {
     final List<Object> listValue;
-    final Ast.LiteralPat literalPat;
+    final Core.LiteralPat literalPat;
     switch (pat.op) {
     case ID_PAT:
-      final Ast.IdPat idPat = (Ast.IdPat) pat;
+      final Core.IdPat idPat = (Core.IdPat) pat;
       envRef[0] = envRef[0].bind(idPat.name, argValue);
       return true;
 
@@ -129,21 +130,21 @@ public class Closure implements Comparable<Closure>, Applicable {
     case BOOL_LITERAL_PAT:
     case CHAR_LITERAL_PAT:
     case STRING_LITERAL_PAT:
-      literalPat = (Ast.LiteralPat) pat;
+      literalPat = (Core.LiteralPat) pat;
       return literalPat.value.equals(argValue);
 
     case INT_LITERAL_PAT:
-      literalPat = (Ast.LiteralPat) pat;
+      literalPat = (Core.LiteralPat) pat;
       return ((BigDecimal) literalPat.value).intValue() == (Integer) argValue;
 
     case REAL_LITERAL_PAT:
-      literalPat = (Ast.LiteralPat) pat;
+      literalPat = (Core.LiteralPat) pat;
       return ((BigDecimal) literalPat.value).doubleValue() == (Double) argValue;
 
     case TUPLE_PAT:
-      final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
+      final Core.TuplePat tuplePat = (Core.TuplePat) pat;
       listValue = (List) argValue;
-      for (Pair<Ast.Pat, Object> pair : Pair.zip(tuplePat.args, listValue)) {
+      for (Pair<Core.Pat, Object> pair : Pair.zip(tuplePat.args, listValue)) {
         if (!bindRecurse(pair.left, envRef, pair.right)) {
           return false;
         }
@@ -151,10 +152,9 @@ public class Closure implements Comparable<Closure>, Applicable {
       return true;
 
     case RECORD_PAT:
-      final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
+      final Core.RecordPat recordPat = (Core.RecordPat) pat;
       listValue = (List) argValue;
-      for (Pair<Ast.Pat, Object> pair
-          : Pair.zip(recordPat.args.values(), listValue)) {
+      for (Pair<Core.Pat, Object> pair : Pair.zip(recordPat.args, listValue)) {
         if (!bindRecurse(pair.left, envRef, pair.right)) {
           return false;
         }
@@ -162,12 +162,12 @@ public class Closure implements Comparable<Closure>, Applicable {
       return true;
 
     case LIST_PAT:
-      final Ast.ListPat listPat = (Ast.ListPat) pat;
+      final Core.ListPat listPat = (Core.ListPat) pat;
       listValue = (List) argValue;
       if (listValue.size() != listPat.args.size()) {
         return false;
       }
-      for (Pair<Ast.Pat, Object> pair : Pair.zip(listPat.args, listValue)) {
+      for (Pair<Core.Pat, Object> pair : Pair.zip(listPat.args, listValue)) {
         if (!bindRecurse(pair.left, envRef, pair.right)) {
           return false;
         }
@@ -175,7 +175,7 @@ public class Closure implements Comparable<Closure>, Applicable {
       return true;
 
     case CONS_PAT:
-      final Ast.InfixPat infixPat = (Ast.InfixPat) pat;
+      final Core.ConPat consPat = (Core.ConPat) pat;
       @SuppressWarnings("unchecked") final List<Object> consValue =
           (List) argValue;
       if (consValue.isEmpty()) {
@@ -183,18 +183,19 @@ public class Closure implements Comparable<Closure>, Applicable {
       }
       final Object head = consValue.get(0);
       final List<Object> tail = consValue.subList(1, consValue.size());
-      return bindRecurse(infixPat.p0, envRef, head)
-          && bindRecurse(infixPat.p1, envRef, tail);
+      List<Core.Pat> patArgs = ((Core.TuplePat) consPat.pat).args;
+      return bindRecurse(patArgs.get(0), envRef, head)
+          && bindRecurse(patArgs.get(1), envRef, tail);
 
     case CON0_PAT:
-      final Ast.Con0Pat con0Pat = (Ast.Con0Pat) pat;
+      final Core.Con0Pat con0Pat = (Core.Con0Pat) pat;
       final List con0Value = (List) argValue;
-      return con0Value.get(0).equals(con0Pat.tyCon.name);
+      return con0Value.get(0).equals(con0Pat.tyCon);
 
     case CON_PAT:
-      final Ast.ConPat conPat = (Ast.ConPat) pat;
+      final Core.ConPat conPat = (Core.ConPat) pat;
       final List conValue = (List) argValue;
-      return conValue.get(0).equals(conPat.tyCon.name)
+      return conValue.get(0).equals(conPat.tyCon)
           && bindRecurse(conPat.pat, envRef, conValue.get(1));
 
     default:

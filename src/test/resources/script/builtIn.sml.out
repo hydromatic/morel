@@ -143,7 +143,7 @@ String.maxSize;
 val it = 2147483647 : int
 
 Sys.plan ();
-val it = "apply(fnValue nth, argCode get(name String))" : string
+val it = "constant(2147483647)" : string
 
 
 (*) val size : string -> int
@@ -365,7 +365,7 @@ val it = "" : string
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue String.map, argCode match(c, if(condition apply(fnValue =, argCode tuple(get(name c), constant(a))), ifTrue constant(A), ifFalse if(condition apply(fnValue =, argCode tuple(get(name c), constant(c))), ifTrue constant(C), ifFalse get(name c))))), argCode constant())"
+  "apply(fnCode apply(fnValue String.map, argCode match(c, apply(fnCode match(true, constant(A), _, apply(fnCode match(true, constant(C), _, get(name c)), argCode apply(fnValue =, argCode tuple(get(name c), constant(c))))), argCode apply(fnValue =, argCode tuple(get(name c), constant(a)))))), argCode constant())"
   : string
 
 
@@ -381,7 +381,7 @@ val it = "" : string
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue String.translate, argCode match(c, if(condition apply(fnValue =, argCode tuple(get(name c), constant(a))), ifTrue constant(AA), ifFalse if(condition apply(fnValue =, argCode tuple(get(name c), constant(c))), ifTrue constant(CCC), ifFalse constant(-))))), argCode constant())"
+  "apply(fnCode apply(fnValue String.translate, argCode match(c, apply(fnCode match(true, constant(AA), _, apply(fnCode match(true, constant(CCC), _, constant(-)), argCode apply(fnValue =, argCode tuple(get(name c), constant(c))))), argCode apply(fnValue =, argCode tuple(get(name c), constant(a)))))), argCode constant())"
   : string
 
 
@@ -501,7 +501,7 @@ List.nil;
 val it = [] : 'a list
 
 Sys.plan ();
-val it = "apply(fnValue nth, argCode get(name List))" : string
+val it = "constant([])" : string
 
 
 (*) val null : 'a list -> bool
@@ -805,7 +805,7 @@ val it = [] : int list
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue List.mapPartial, argCode match(x, if(condition apply(fnValue =, argCode tuple(apply(fnValue mod, argCode tuple(get(name x), constant(2))), constant(0))), ifTrue constant([NONE]), ifFalse apply(fnValue tyCon, argCode apply(fnValue +, argCode tuple(get(name x), constant(1))))))), argCode tuple)"
+  "apply(fnCode apply(fnValue List.mapPartial, argCode match(x, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue +, argCode tuple(get(name x), constant(1))))), argCode apply(fnValue =, argCode tuple(apply(fnValue mod, argCode tuple(get(name x), constant(2))), constant(0)))))), argCode tuple)"
   : string
 
 
@@ -969,7 +969,7 @@ uncaught exception Size
 
 Sys.plan ();
 val it =
-  "apply(fnValue List.tabulate, argCode tuple(constant(-1), let1(matchCode match(fact, match(n, if(condition apply(fnValue =, argCode tuple(get(name n), constant(0))), ifTrue constant(1), ifFalse apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))))), resultCode get(name fact))))"
+  "apply(fnValue List.tabulate, argCode tuple(constant(-1), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))), argCode apply(fnValue =, argCode tuple(get(name n), constant(0)))))), resultCode get(name fact))))"
   : string
 
 
@@ -997,7 +997,7 @@ val it = EQUAL : order
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue List.collate, argCode match((x, y), if(condition apply(fnValue <, argCode tuple(get(name x), get(name y))), ifTrue constant([LESS]), ifFalse if(condition apply(fnValue =, argCode tuple(get(name x), get(name y))), ifTrue constant([EQUAL]), ifFalse constant([GREATER]))))), argCode tuple(tuple, tuple))"
+  "apply(fnCode apply(fnValue List.collate, argCode match((x, y), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply(fnValue =, argCode tuple(get(name x), get(name y))))), argCode apply(fnValue <, argCode tuple(get(name x), get(name y)))))), argCode tuple(tuple, tuple))"
   : string
 
 
@@ -1044,7 +1044,7 @@ Option.valOf noneInt;
 uncaught exception Option
 
 Sys.plan ();
-val it = "apply(fnValue Option.valOf, argCode get(name noneInt))" : string
+val it = "apply(fnValue Option.valOf, argCode constant([NONE]))" : string
 
 
 (*) val filter : ('a -> bool) -> 'a -> 'a option
@@ -1087,7 +1087,7 @@ val it = () : unit
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue Option.app, argCode apply(fnValue nth, argCode get(name General))), argCode constant([NONE]))"
+  "apply(fnCode apply(fnValue Option.app, argCode constant(General.ignore)), argCode constant([NONE]))"
   : string
 
 
@@ -1100,7 +1100,7 @@ val it = NONE : int option
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue Option.map, argCode apply(fnValue nth, argCode get(name String))), argCode constant([NONE]))"
+  "apply(fnCode apply(fnValue Option.map, argCode constant(String.size)), argCode constant([NONE]))"
   : string
 
 
@@ -1116,7 +1116,7 @@ val it = NONE : int option
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue Option.mapPartial, argCode match(s, if(condition apply(fnValue =, argCode tuple(get(name s), constant())), ifTrue constant([NONE]), ifFalse apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))))), argCode apply(fnValue tyCon, argCode constant()))"
+  "apply(fnCode apply(fnValue Option.mapPartial, argCode match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply(fnValue =, argCode tuple(get(name s), constant()))))), argCode apply(fnValue tyCon, argCode constant()))"
   : string
 
 
@@ -1141,7 +1141,7 @@ val it = NONE : int option
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue Option.compose, argCode tuple(apply(fnValue nth, argCode get(name String)), match(s, if(condition apply(fnValue =, argCode tuple(get(name s), constant())), ifTrue constant([NONE]), ifFalse apply(fnValue tyCon, argCode apply(fnValue String.substring, argCode tuple(get(name s), constant(0), apply(fnValue String.size, argCode get(name s))))))))), argCode constant())"
+  "apply(fnCode apply(fnValue Option.compose, argCode tuple(constant(String.size), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.substring, argCode tuple(get(name s), constant(0), apply(fnValue String.size, argCode get(name s)))))), argCode apply(fnValue =, argCode tuple(get(name s), constant())))))), argCode constant())"
   : string
 
 
@@ -1158,7 +1158,7 @@ val it = NONE : int option
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue Option.composePartial, argCode tuple(match(i, if(condition apply(fnValue =, argCode tuple(get(name i), constant(0))), ifTrue constant([NONE]), ifFalse apply(fnValue tyCon, argCode get(name i)))), match(s, if(condition apply(fnValue =, argCode tuple(get(name s), constant())), ifTrue constant([NONE]), ifFalse apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s))))))), argCode constant())"
+  "apply(fnCode apply(fnValue Option.composePartial, argCode tuple(match(i, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode get(name i))), argCode apply(fnValue =, argCode tuple(get(name i), constant(0))))), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply(fnValue =, argCode tuple(get(name s), constant())))))), argCode constant())"
   : string
 
 
@@ -1174,7 +1174,7 @@ Relational.count [false];
 val it = 1 : int
 
 Sys.plan ();
-val it = "apply(fnValue Relational.count, argCode tuple(get(name false)))"
+val it = "apply(fnValue Relational.count, argCode tuple(constant(false)))"
   : string
 
 
@@ -1204,7 +1204,7 @@ val it = true : bool
 
 Sys.plan ();
 val it =
-  "apply(fnValue Relational.max, argCode tuple(get(name false), get(name true)))"
+  "apply(fnValue Relational.max, argCode tuple(constant(false), constant(true)))"
   : string
 
 
@@ -1222,7 +1222,7 @@ val it = false : bool
 
 Sys.plan ();
 val it =
-  "apply(fnValue Relational.min, argCode tuple(get(name false), get(name true)))"
+  "apply(fnValue Relational.min, argCode tuple(constant(false), constant(true)))"
   : string
 
 
@@ -1416,7 +1416,7 @@ val it = () : unit
 
 Sys.plan ();
 val it =
-  "apply(fnValue Sys.plan, argCode tuple(constant(hybrid), get(name false)))"
+  "apply(fnValue Sys.plan, argCode tuple(constant(hybrid), constant(false)))"
   : string
 
 
@@ -1497,7 +1497,7 @@ Vector.maxLen;
 val it = 16777215 : int
 
 Sys.plan ();
-val it = "apply(fnValue nth, argCode get(name Vector))" : string
+val it = "constant(16777215)" : string
 
 
 (*) Vector.tabulate : int * (int -> 'a) -> 'a vector
@@ -1509,7 +1509,7 @@ val it = #[1,1,2,6,24] : int vector
 
 Sys.plan ();
 val it =
-  "apply(fnValue List.tabulate, argCode tuple(constant(5), let1(matchCode match(fact, match(n, if(condition apply(fnValue =, argCode tuple(get(name n), constant(0))), ifTrue constant(1), ifFalse apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))))), resultCode get(name fact))))"
+  "apply(fnValue List.tabulate, argCode tuple(constant(5), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))), argCode apply(fnValue =, argCode tuple(get(name n), constant(0)))))), resultCode get(name fact))))"
   : string
 
 
@@ -1745,5 +1745,5 @@ val it = LESS : order
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue List.collate, argCode match((i, j), if(condition apply(fnValue <, argCode tuple(get(name i), get(name j))), ifTrue constant([LESS]), ifFalse if(condition apply(fnValue =, argCode tuple(get(name i), get(name j))), ifTrue constant([EQUAL]), ifFalse constant([GREATER]))))), argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
+  "apply(fnCode apply(fnValue List.collate, argCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply(fnValue =, argCode tuple(get(name i), get(name j))))), argCode apply(fnValue <, argCode tuple(get(name i), get(name j)))))), argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
   : string

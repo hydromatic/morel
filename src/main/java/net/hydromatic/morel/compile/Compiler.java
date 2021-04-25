@@ -19,11 +19,9 @@
 package net.hydromatic.morel.compile;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 
-import net.hydromatic.morel.ast.Ast;
-import net.hydromatic.morel.ast.Op;
-import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
@@ -34,10 +32,10 @@ import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
-import net.hydromatic.morel.type.ListType;
+import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.TailList;
 
@@ -50,27 +48,30 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Supplier;
+import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.Ast.Direction.DESC;
-import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
-  private static final EvalEnv EMPTY_ENV = Codes.emptyEnv();
+  protected static final EvalEnv EMPTY_ENV = Codes.emptyEnv();
 
-  private final TypeMap typeMap;
+  protected final TypeSystem typeSystem;
 
-  public Compiler(TypeMap typeMap) {
-    this.typeMap = typeMap;
+  public Compiler(TypeSystem typeSystem) {
+    this.typeSystem = typeSystem;
   }
 
-  CompiledStatement compileStatement(Environment env, Ast.Decl decl) {
-    final List<Code> varCodes = new ArrayList<>();
+  CompiledStatement compileStatement(Environment env, Core.Decl decl) {
+    final List<Code> matchCodes = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
     final List<Action> actions = new ArrayList<>();
-    compileDecl(env, decl, varCodes, bindings, actions);
-    final Type type = typeMap.getType(decl);
+    final Context cx = Context.of(env);
+    compileDecl(cx, decl, matchCodes, bindings, actions);
+    final Type type = decl instanceof Core.ValDecl
+        ? ((Core.ValDecl) decl).pat.type
+        : PrimitiveType.UNIT;
 
     return new CompiledStatement() {
       public Type getType() {
@@ -96,200 +97,233 @@ public class Compiler {
     void apply(List<String> output, List<Binding> bindings, EvalEnv evalEnv);
   }
 
-  public Code compile(Environment env, Ast.Exp expression) {
-    final Ast.Literal literal;
+  /** Compilation context. */
+  static class Context {
+    final Environment env;
+
+    Context(Environment env) {
+      this.env = env;
+    }
+
+    static Context of(Environment env) {
+      return new Context(env);
+    }
+
+    Context bindAll(Iterable<Binding> bindings) {
+      return of(env.bindAll(bindings));
+    }
+
+    Context bind(String name, Type type, Object value) {
+      return of(env.bind(name, type, value));
+    }
+  }
+
+  public final Code compile(Environment env, Core.Exp expression) {
+    return compile(Context.of(env), expression);
+  }
+
+  /** Compiles the argument to "apply". */
+  public Code compileArg(Context cx, Core.Exp expression) {
+    return compile(cx, expression);
+  }
+
+  /** Compiles the tuple arguments to "apply". */
+  public List<Code> compileArgs(Context cx,
+      Iterable<? extends Core.Exp> expressions) {
+    final ImmutableList.Builder<Code> b = ImmutableList.builder();
+    expressions.forEach(e -> b.add(compile(cx, e)));
+    return b.build();
+  }
+
+  public Code compile(Context cx, Core.Exp expression) {
+    final Core.Literal literal;
     final Code argCode;
     final List<Code> codes;
     switch (expression.op) {
     case BOOL_LITERAL:
-      literal = (Ast.Literal) expression;
+      literal = (Core.Literal) expression;
       final Boolean boolValue = (Boolean) literal.value;
       return Codes.constant(boolValue);
 
     case CHAR_LITERAL:
-      literal = (Ast.Literal) expression;
+      literal = (Core.Literal) expression;
       final Character charValue = (Character) literal.value;
       return Codes.constant(charValue);
 
     case INT_LITERAL:
-      literal = (Ast.Literal) expression;
+      literal = (Core.Literal) expression;
       return Codes.constant(((BigDecimal) literal.value).intValue());
 
     case REAL_LITERAL:
-      literal = (Ast.Literal) expression;
+      literal = (Core.Literal) expression;
       return Codes.constant(((BigDecimal) literal.value).floatValue());
 
     case STRING_LITERAL:
-      literal = (Ast.Literal) expression;
+      literal = (Core.Literal) expression;
       final String stringValue = (String) literal.value;
       return Codes.constant(stringValue);
 
     case UNIT_LITERAL:
       return Codes.constant(Unit.INSTANCE);
 
-    case IF:
-      final Ast.If if_ = (Ast.If) expression;
-      final Code conditionCode = compile(env, if_.condition);
-      final Code trueCode = compile(env, if_.ifTrue);
-      final Code falseCode = compile(env, if_.ifFalse);
-      return Codes.ifThenElse(conditionCode, trueCode, falseCode);
+    case FN_LITERAL:
+      literal = (Core.Literal) expression;
+      return Codes.constant(literal.value);
+
+    case VALUE_LITERAL:
+      literal = (Core.Literal) expression;
+      return Codes.constant(literal.unwrap());
 
     case LET:
-      final Ast.LetExp let = (Ast.LetExp) expression;
-      return compileLet(env, let.decls, let.e);
+      return compileLet(cx, (Core.Let) expression);
 
     case FN:
-      final Ast.Fn fn = (Ast.Fn) expression;
-      return compileMatchList(env, fn.matchList);
+      final Core.Fn fn = (Core.Fn) expression;
+      return compileMatchList(cx, fn.matchList);
 
     case CASE:
-      final Ast.Case case_ = (Ast.Case) expression;
-      final Code matchCode = compileMatchList(env, case_.matchList);
-      argCode = compile(env, case_.e);
+      final Core.Case case_ = (Core.Case) expression;
+      final Code matchCode = compileMatchList(cx, case_.matchList);
+      argCode = compile(cx, case_.e);
       return Codes.apply(matchCode, argCode);
 
     case RECORD_SELECTOR:
-      final Ast.RecordSelector recordSelector = (Ast.RecordSelector) expression;
+      final Core.RecordSelector recordSelector = (Core.RecordSelector) expression;
       return Codes.nth(recordSelector.slot).asCode();
 
     case APPLY:
-      final Ast.Apply apply = (Ast.Apply) expression;
-      assignSelector(apply);
-      argCode = compile(env, apply.arg);
-      final Type argType = typeMap.getType(apply.arg);
-      final Applicable fnValue = compileApplicable(env, apply.fn, argType);
-      if (fnValue != null) {
-        return Codes.apply(fnValue, argCode);
-      }
-      final Code fnCode = compile(env, apply.fn);
-      return Codes.apply(fnCode, argCode);
-
-    case LIST:
-      final Ast.List list = (Ast.List) expression;
-      codes = new ArrayList<>();
-      for (Ast.Exp arg : list.args) {
-        codes.add(compile(env, arg));
-      }
-      return Codes.list(codes);
+      return compileApply(cx, (Core.Apply) expression);
 
     case FROM:
-      final Ast.From from = (Ast.From) expression;
-      final Map<Ast.Pat, Code> sourceCodes = new LinkedHashMap<>();
-      final List<Binding> bindings = new ArrayList<>();
-      for (Map.Entry<Ast.Pat, Ast.Exp> patExp : from.sources.entrySet()) {
-        final Code expCode = compile(env.bindAll(bindings), patExp.getValue());
-        final Ast.Pat pat0 = patExp.getKey();
-        final ListType listType = (ListType) typeMap.getType(patExp.getValue());
-        final Ast.Pat pat = expandRecordPattern(pat0, listType.elementType);
-        sourceCodes.put(pat, expCode);
-        pat.visit(p -> {
-          if (p instanceof Ast.IdPat) {
-            final Ast.IdPat idPat = (Ast.IdPat) p;
-            bindings.add(Binding.of(idPat.name, typeMap.getType(p)));
-          }
-        });
-      }
-      Supplier<Codes.RowSink> rowSinkFactory =
-          createRowSinkFactory(env, ImmutableList.copyOf(bindings), from.steps,
-              from.yieldExpOrDefault);
-      return Codes.from(sourceCodes, rowSinkFactory);
+      return compileFrom(cx, (Core.From) expression);
 
     case ID:
-      final Ast.Id id = (Ast.Id) expression;
-      final Binding binding = env.getOpt(id.name);
+      final Core.Id id = (Core.Id) expression;
+      final Binding binding = cx.env.getOpt(id.name);
       if (binding != null && binding.value instanceof Code) {
         return (Code) binding.value;
       }
       return Codes.get(id.name);
 
     case TUPLE:
-      final Ast.Tuple tuple = (Ast.Tuple) expression;
+      final Core.Tuple tuple = (Core.Tuple) expression;
       codes = new ArrayList<>();
-      for (Ast.Exp arg : tuple.args) {
-        codes.add(compile(env, arg));
+      for (Core.Exp arg : tuple.args) {
+        codes.add(compile(cx, arg));
       }
       return Codes.tuple(codes);
-
-    case RECORD:
-      final Ast.Record record = (Ast.Record) expression;
-      return compile(env, ast.tuple(record.pos, record.args.values()));
-
-    case ANDALSO:
-    case ORELSE:
-    case CONS:
-      return compileInfix(env, (Ast.InfixCall) expression,
-          typeMap.getType(expression));
 
     default:
       throw new AssertionError("op not handled: " + expression.op);
     }
   }
 
-  private Supplier<Codes.RowSink> createRowSinkFactory(Environment env0,
-      ImmutableList<Binding> bindings, List<Ast.FromStep> steps,
-      Ast.Exp yieldExp) {
-    final Environment env = env0.bindAll(bindings);
+  protected Code compileApply(Context cx, Core.Apply apply) {
+    // Is this is a call to a built-in operator?
+    switch (apply.fn.op) {
+    case FN_LITERAL:
+      final Core.Literal literal = (Core.Literal) apply.fn;
+      final BuiltIn builtIn = (BuiltIn) literal.value;
+      return compileCall(cx, builtIn, apply.arg);
+    }
+    final Code argCode = compileArg(cx, apply.arg);
+    final Type argType = apply.arg.type;
+    final Applicable fnValue = compileApplicable(cx, apply.fn, argType);
+    if (fnValue != null) {
+      return finishCompileApply(cx, fnValue, argCode, argType);
+    }
+    final Code fnCode = compile(cx, apply.fn);
+    return finishCompileApply(cx, fnCode, argCode, argType);
+  }
+
+  protected Code finishCompileApply(Context cx, Applicable fnValue,
+      Code argCode, Type argType) {
+    return Codes.apply(fnValue, argCode);
+  }
+
+  protected Code finishCompileApply(Context cx, Code fnCode, Code argCode,
+      Type argType) {
+    return Codes.apply(fnCode, argCode);
+  }
+
+  protected Code compileFrom(Context cx, Core.From from) {
+    final Map<Core.Pat, Code> sourceCodes = new LinkedHashMap<>();
+    final List<Binding> bindings = new ArrayList<>();
+    from.sources.forEach((pat, exp) -> {
+      final Code expCode = compile(cx.bindAll(bindings), exp);
+      sourceCodes.put(pat, expCode);
+      pat.accept(Compiles.binding(typeSystem, bindings));
+    });
+    Supplier<Codes.RowSink> rowSinkFactory =
+        createRowSinkFactory(cx, ImmutableList.copyOf(bindings), from.steps,
+            from.yieldExp);
+    return Codes.from(sourceCodes, rowSinkFactory);
+  }
+
+  protected Supplier<Codes.RowSink> createRowSinkFactory(Context cx0,
+      ImmutableList<Binding> bindings, List<Core.FromStep> steps,
+      Core.Exp yieldExp) {
+    final Context cx = cx0.bindAll(bindings);
     if (steps.isEmpty()) {
-      final Code yieldCode = compile(env, yieldExp);
+      final Code yieldCode = compile(cx, yieldExp);
       return () -> Codes.yieldRowSink(yieldCode);
     }
-    final Ast.FromStep firstStep = steps.get(0);
+    final Core.FromStep firstStep = steps.get(0);
     final ImmutableList.Builder<Binding> outBindingBuilder =
         ImmutableList.builder();
-    firstStep.deriveOutBindings(bindings,
-        (name, ast) -> Binding.of(name, typeMap.getType(ast)),
+    firstStep.deriveOutBindings(bindings, Binding::of,
         outBindingBuilder::add);
     final ImmutableList<Binding> outBindings = outBindingBuilder.build();
     final Supplier<Codes.RowSink> nextFactory =
-        createRowSinkFactory(env, outBindings,
+        createRowSinkFactory(cx, outBindings,
             steps.subList(1, steps.size()), yieldExp);
     switch (firstStep.op) {
     case WHERE:
-      final Ast.Where where = (Ast.Where) firstStep;
-      final Code filterCode = compile(env, where.exp);
+      final Core.Where where = (Core.Where) firstStep;
+      final Code filterCode = compile(cx, where.exp);
       return () -> Codes.whereRowSink(filterCode, nextFactory.get());
 
     case ORDER:
-      final Ast.Order order = (Ast.Order) firstStep;
+      final Core.Order order = (Core.Order) firstStep;
       final ImmutableList<Pair<Code, Boolean>> codes =
           order.orderItems.stream()
-              .map(i -> Pair.of(compile(env, i.exp), i.direction == DESC))
+              .map(i -> Pair.of(compile(cx, i.exp), i.direction == DESC))
               .collect(toImmutableList());
       return () -> Codes.orderRowSink(codes, bindings, nextFactory.get());
 
     case GROUP:
-      final Ast.Group group = (Ast.Group) firstStep;
+      final Core.Group group = (Core.Group) firstStep;
       final ImmutableList.Builder<Code> groupCodesB = ImmutableList.builder();
-      for (Pair<Ast.Id, Ast.Exp> pair : group.groupExps) {
-        groupCodesB.add(compile(env, pair.right));
+      for (Core.Exp exp : group.groupExps.values()) {
+        groupCodesB.add(compile(cx, exp));
       }
       final ImmutableList<String> names = bindingNames(bindings);
       final ImmutableList.Builder<Applicable> aggregateCodesB =
           ImmutableList.builder();
-      for (Ast.Aggregate aggregate : group.aggregates) {
+      for (Core.Aggregate aggregate : group.aggregates.values()) {
         final Code argumentCode;
         final Type argumentType;
         if (aggregate.argument == null) {
           final SortedMap<String, Type> argNameTypes =
               new TreeMap<>(RecordType.ORDERING);
           bindings.forEach(b -> argNameTypes.put(b.name, b.type));
-          argumentType = typeMap.typeSystem.recordOrScalarType(argNameTypes);
+          argumentType = typeSystem.recordOrScalarType(argNameTypes);
           argumentCode = null;
         } else {
-          argumentType = typeMap.getType(aggregate.argument);
-          argumentCode = compile(env, aggregate.argument);
+          argumentType = aggregate.argument.type;
+          argumentCode = compile(cx, aggregate.argument);
         }
         final Applicable aggregateApplicable =
-            compileApplicable(env, aggregate.aggregate,
-                typeMap.typeSystem.listType(argumentType));
+            compileApplicable(cx, aggregate.aggregate,
+                typeSystem.listType(argumentType));
         final Code aggregateCode;
         if (aggregateApplicable == null) {
-          aggregateCode = compile(env, aggregate.aggregate);
+          aggregateCode = compile(cx, aggregate.aggregate);
         } else {
           aggregateCode = aggregateApplicable.asCode();
         }
         aggregateCodesB.add(
-            Codes.aggregate(env, aggregateCode, names, argumentCode));
+            Codes.aggregate(cx.env, aggregateCode, names, argumentCode));
       }
       final ImmutableList<Code> groupCodes = groupCodesB.build();
       final Code keyCode = Codes.tuple(groupCodes);
@@ -309,302 +343,199 @@ public class Compiler {
         .collect(ImmutableList.toImmutableList());
   }
 
-  private void assignSelector(Ast.Apply apply) {
-    if (apply.fn instanceof Ast.RecordSelector) {
-      final Ast.RecordSelector selector = (Ast.RecordSelector) apply.fn;
-      if (selector.slot < 0) {
-        final Type argType = typeMap.getType(apply.arg);
-        if (argType instanceof RecordType) {
-          final RecordType recordType = (RecordType) argType;
-          final Ord<Type> field = recordType.lookupField(selector.name);
-          selector.slot = field.i;
-        }
-      }
-    }
-  }
-
   /** Compiles a function value to an {@link Applicable}, if possible, or
    * returns null. */
-  private Applicable compileApplicable(Environment env, Ast.Exp fn,
-      Type argType) {
-    final Binding binding = getConstant(env, fn);
-    if (binding != null) {
-      if (binding.value instanceof Macro) {
-        final Ast.Exp e = ((Macro) binding.value).expand(env, argType);
-        switch (e.op) {
-        case WRAPPED_APPLICABLE:
-          return ((Ast.ApplicableExp) e).applicable;
-        }
-        final Code code = compile(env, e);
-        return new Applicable() {
-          @Override public Describer describe(Describer describer) {
-            return code.describe(describer);
-          }
-
-          @Override public Object apply(EvalEnv evalEnv, Object arg) {
-            return code.eval(evalEnv);
-          }
-        };
-      }
-      if (binding.value instanceof Applicable) {
-        return (Applicable) binding.value;
-      }
-    }
-    final Code fnCode = compile(env, fn);
-    if (fnCode.isConstant()) {
-      return (Applicable) fnCode.eval(EMPTY_ENV);
-    } else {
-      return null;
-    }
-  }
-
-  private Binding getConstant(Environment env, Ast.Exp fn) {
+  private Applicable compileApplicable(Context cx, Core.Exp fn, Type argType) {
     switch (fn.op) {
+    case FN_LITERAL:
+      final BuiltIn builtIn = (BuiltIn) ((Core.Literal) fn).value;
+      final Object o = Codes.BUILT_IN_VALUES.get(builtIn);
+      return toApplicable(cx, o, argType);
+
+    case VALUE_LITERAL:
+      final Core.Literal literal = (Core.Literal) fn;
+      return toApplicable(cx, literal.unwrap(), argType);
+
     case ID:
-      return env.getOpt(((Ast.Id) fn).name);
-    case APPLY:
-      final Ast.Apply apply = (Ast.Apply) fn;
-      if (apply.fn.op == Op.RECORD_SELECTOR) {
-        final Ast.RecordSelector recordSelector = (Ast.RecordSelector) apply.fn;
-        final Binding argBinding = getConstant(env, apply.arg);
-        if (argBinding != null
-            && argBinding.value != Unit.INSTANCE
-            && argBinding.type instanceof RecordType) {
-          final RecordType recordType = (RecordType) argBinding.type;
-          final Ord<Type> field = recordType.lookupField(recordSelector.name);
-          if (field != null) {
-            @SuppressWarnings("rawtypes")
-            final List list = (List) argBinding.value;
-            return Binding.of(recordSelector.name, field.e, list.get(field.i));
-          }
-        }
+      final Binding binding = cx.env.getOpt(((Core.Id) fn).name);
+      if (binding == null
+          || binding.value instanceof LinkCode
+          || binding.value == Unit.INSTANCE) {
+        return null;
       }
-      // fall through
+      return toApplicable(cx, binding.value, argType);
+
+    case RECORD_SELECTOR:
+      final Core.RecordSelector recordSelector = (Core.RecordSelector) fn;
+      return Codes.nth(recordSelector.slot);
+
     default:
       return null;
     }
   }
 
-  private Code compileAggregate(Environment env, Ast.Aggregate aggregate) {
-    throw new UnsupportedOperationException(); // TODO
-  }
-
-  private Code compileLet(Environment env, List<Ast.Decl> decls, Ast.Exp e) {
-    final Ast.LetExp letExp = flattenLet(decls, e);
-    return compileLet(env, Iterables.getOnlyElement(letExp.decls), letExp.e);
-  }
-
-  private Code compileLet(Environment env, Ast.Decl decl, Ast.Exp e) {
-    final List<Code> varCodes = new ArrayList<>();
-    final List<Binding> bindings = new ArrayList<>();
-    compileDecl(env, decl, varCodes, bindings, null);
-    Environment env2 = env.bindAll(bindings);
-    final Code resultCode = compile(env2, e);
-    return Codes.let(varCodes, resultCode);
-  }
-
-  private Ast.LetExp flattenLet(List<Ast.Decl> decls, Ast.Exp e) {
-    if (decls.size() == 1) {
-      return ast.let(e.pos, decls, e);
-    } else {
-      return ast.let(e.pos, decls.subList(0, 1),
-          flattenLet(decls.subList(1, decls.size()), e));
+  private @Nullable Applicable toApplicable(Context cx, Object o,
+      Type argType) {
+    if (o instanceof Applicable) {
+      return (Applicable) o;
     }
+    if (o instanceof Macro) {
+      final Macro value = (Macro) o;
+      final Core.Exp e = value.expand(typeSystem, cx.env, argType);
+      switch (e.op) {
+      case FN_LITERAL:
+        final Core.Literal literal = (Core.Literal) e;
+        final BuiltIn builtIn = (BuiltIn) literal.value;
+        return (Applicable) Codes.BUILT_IN_VALUES.get(builtIn);
+      }
+      final Code code = compile(cx, e);
+      return new Applicable() {
+        @Override public Describer describe(Describer describer) {
+          return code.describe(describer);
+        }
+
+        @Override public Object apply(EvalEnv evalEnv, Object arg) {
+          return code.eval(evalEnv);
+        }
+      };
+    }
+    return null;
   }
 
-  private void compileDecl(Environment env, Ast.Decl decl, List<Code> varCodes,
+  private Code compileLet(Context cx, Core.Let let) {
+    final List<Code> matchCodes = new ArrayList<>();
+    final List<Binding> bindings = new ArrayList<>();
+    compileDecl(cx, let.decl, matchCodes, bindings, null);
+    Context cx2 = cx.bindAll(bindings);
+    final Code resultCode = compile(cx2, let.e);
+    return finishCompileLet(cx2, matchCodes, resultCode, let.type);
+  }
+
+  protected Code finishCompileLet(Context cx, List<Code> matchCodes,
+      Code resultCode, Type resultType) {
+    return Codes.let(matchCodes, resultCode);
+  }
+
+  void compileDecl(Context cx, Core.Decl decl, List<Code> matchCodes,
       List<Binding> bindings, List<Action> actions) {
     switch (decl.op) {
     case VAL_DECL:
-      compileValDecl(env, (Ast.ValDecl) decl, varCodes, bindings, actions);
+      compileValDecl(cx, (Core.ValDecl) decl, matchCodes, bindings, actions);
       break;
+
     case DATATYPE_DECL:
-      final Ast.DatatypeDecl datatypeDecl = (Ast.DatatypeDecl) decl;
-      compileDatatypeDecl(env, datatypeDecl, bindings, actions);
+      compileDatatypeDecl((Core.DatatypeDecl) decl, bindings, actions);
       break;
-    case FUN_DECL:
-      throw new AssertionError("unknown " + decl.op + " [" + decl
-          + "] (did you remember to call TypeResolver.toValDecl?)");
+
     default:
       throw new AssertionError("unknown " + decl.op + " [" + decl + "]");
     }
   }
 
-  private void compileValDecl(Environment env, Ast.ValDecl valDecl,
-      List<Code> varCodes, List<Binding> bindings, List<Action> actions) {
-    if (valDecl.valBinds.size() > 1) {
-      // Transform "let val v1 = e1 and v2 = e2 in e"
-      // to "let val (v1, v2) = (e1, e2) in e"
-      final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
-      boolean rec = false;
-      for (Ast.ValBind valBind : valDecl.valBinds) {
-        flatten(matches, valBind.pat, valBind.e);
-        rec |= valBind.rec;
-      }
-      final Pos pos = valDecl.pos;
-      final Ast.Pat pat = ast.tuplePat(pos, matches.keySet());
-      final Ast.Exp e2 = ast.tuple(pos, matches.values());
-      valDecl = ast.valDecl(pos, ast.valBind(pos, rec, pat, e2));
-      matches.forEach((key, value) ->
-          bindings.add(
-              Binding.of(((Ast.IdPat) key).name, typeMap.getType(value),
-                  Unit.INSTANCE)));
-    } else {
-      valDecl.valBinds.forEach(valBind ->
-          valBind.pat.visit(pat -> {
-            if (pat instanceof Ast.IdPat) {
-              final Type paramType = typeMap.getType(pat);
-              bindings.add(Binding.of(((Ast.IdPat) pat).name, paramType));
-            }
-          }));
-    }
-    for (Ast.ValBind valBind : valDecl.valBinds) {
-      compileValBind(env, valBind, varCodes, bindings, actions);
-    }
+  private void compileValDecl(Context cx, Core.ValDecl valDecl,
+      List<Code> matchCodes, List<Binding> bindings, List<Action> actions) {
+    valDecl.pat.accept(Compiles.binding(typeSystem, bindings));
+    compileValBind(cx, valDecl, matchCodes, bindings, actions);
   }
 
-  private void compileDatatypeDecl(Environment env,
-      Ast.DatatypeDecl datatypeDecl, List<Binding> bindings,
-      List<Action> actions) {
-    for (Ast.DatatypeBind bind : datatypeDecl.binds) {
+  private void compileDatatypeDecl(Core.DatatypeDecl datatypeDecl,
+      List<Binding> bindings, List<Action> actions) {
+    for (DataType dataType : datatypeDecl.dataTypes) {
       final List<Binding> newBindings = new TailList<>(bindings);
-      final DataType dataType =
-          (DataType) typeMap.typeSystem.lookup(bind.name.name);
-      for (Ast.TyCon tyCon : bind.tyCons) {
-        bindings.add(typeMap.typeSystem.bindTyCon(dataType, tyCon.id.name));
-      }
+      dataType.typeConstructors.keySet().forEach(name ->
+          bindings.add(typeSystem.bindTyCon(dataType, name)));
       if (actions != null) {
         final List<Binding> immutableBindings =
             ImmutableList.copyOf(newBindings);
         actions.add((output, outBindings, evalEnv) -> {
-          output.add("datatype " + bind);
+          String description = dataType.description();
+          output.add("datatype " + dataType.name + " = "
+              + description.substring(1, description.length() - 1));
           outBindings.addAll(immutableBindings);
         });
       }
     }
   }
 
-  private Code compileInfix(Environment env, Ast.InfixCall call, Type type) {
-    final Code code0 = compile(env, call.a0);
-    final Code code1 = compile(env, call.a1);
-    switch (call.op) {
-    case ANDALSO:
-      return Codes.andAlso(code0, code1);
-    case ORELSE:
-      return Codes.orElse(code0, code1);
+  private Code compileCall(Context cx, BuiltIn builtIn, Core.Exp arg) {
+    final List<Code> argCodes;
+    switch (builtIn) {
+    case Z_ANDALSO:
+      // Argument for a built-in infix operator such as "andalso" is always a
+      // tuple; operators are never curried, nor do they evaluate an expression
+      // to yield the tuple of arguments.
+      argCodes = compileArgs(cx, ((Core.Tuple) arg).args);
+      return Codes.andAlso(argCodes.get(0), argCodes.get(1));
+    case Z_ORELSE:
+      argCodes = compileArgs(cx, ((Core.Tuple) arg).args);
+      return Codes.orElse(argCodes.get(0), argCodes.get(1));
+    case Z_LIST:
+      argCodes = compileArgs(cx, ((Core.Tuple) arg).args);
+      return Codes.list(argCodes);
     default:
-      throw new AssertionError("unknown op " + call.op);
-    }
-  }
-
-  private void flatten(Map<Ast.Pat, Ast.Exp> matches,
-      Ast.Pat pat, Ast.Exp exp) {
-    switch (pat.op) {
-    case TUPLE_PAT:
-      final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
-      if (exp.op == Op.TUPLE) {
-        final Ast.Tuple tuple = (Ast.Tuple) exp;
-        Pair.forEach(tuplePat.args, tuple.args,
-            (p, e) -> flatten(matches, p, e));
-        break;
+      final Object o = Codes.BUILT_IN_VALUES.get(builtIn);
+      if (o instanceof Applicable) {
+        final Code argCode = compile(cx, arg);
+        return Codes.apply((Applicable) o, argCode);
       }
-      // fall through
-    default:
-      matches.put(pat, exp);
+      throw new AssertionError("unknown " + builtIn);
     }
   }
 
   /** Compiles a {@code match} expression.
    *
-   * @param env Compile environment
+   * @param cx Compile context
    * @param matchList List of Match
    * @return Code for match
    */
-  private Code compileMatchList(Environment env,
-      List<Ast.Match> matchList) {
+  private Code compileMatchList(Context cx,
+      List<Core.Match> matchList) {
     @SuppressWarnings("UnstableApiUsage")
-    final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
+    final ImmutableList<Pair<Core.Pat, Code>> patCodes =
         matchList.stream()
-            .map(match -> compileMatch(env, match))
+            .map(match -> compileMatch(cx, match))
             .collect(ImmutableList.toImmutableList());
     return new MatchCode(patCodes);
   }
 
-  private Pair<Ast.Pat, Code> compileMatch(Environment env, Ast.Match match) {
-    final Environment[] envHolder = {env};
-    match.pat.visit(pat -> {
-      if (pat instanceof Ast.IdPat) {
-        final Type paramType = typeMap.getType(pat);
-        envHolder[0] = envHolder[0].bind(((Ast.IdPat) pat).name,
-            paramType, Unit.INSTANCE);
-      }
-    });
-    final Code code = compile(envHolder[0], match.e);
-    final Type type = typeMap.getTypeOpt(match.pat);
-    return Pair.of(expandRecordPattern(match.pat, type), code);
+  private Pair<Core.Pat, Code> compileMatch(Context cx, Core.Match match) {
+    final List<Binding> bindings = new ArrayList<>();
+    match.pat.accept(Compiles.binding(typeSystem, bindings));
+    final Code code = compile(cx.bindAll(bindings), match.e);
+    return Pair.of(match.pat, code);
   }
 
-  /** Expands a pattern if it is a record pattern that has an ellipsis
-   * or if the arguments are not in the same order as the labels in the type. */
-  private Ast.Pat expandRecordPattern(Ast.Pat pat, Type type) {
-    switch (pat.op) {
-    case ID_PAT:
-      final Ast.IdPat idPat = (Ast.IdPat) pat;
-      if (type.op() == Op.DATA_TYPE
-          && ((DataType) type).typeConstructors.containsKey(idPat.name)) {
-        return ast.con0Pat(idPat.pos, ast.id(idPat.pos, idPat.name));
-      }
-      return pat;
-
-    case RECORD_PAT:
-      final RecordType recordType = (RecordType) type;
-      final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
-      final Map<String, Ast.Pat> args = new LinkedHashMap<>();
-      for (String label : recordType.argNameTypes.keySet()) {
-        args.put(label,
-            recordPat.args.getOrDefault(label, ast.wildcardPat(pat.pos)));
-      }
-      if (recordPat.ellipsis || !recordPat.args.equals(args)) {
-        // Only create an expanded pattern if it is different (no ellipsis,
-        // or arguments in a different order).
-        return ast.recordPat(recordPat.pos, false, args);
-      }
-      // fall through
-      return recordPat;
-    default:
-      return pat;
-    }
-  }
-
-  private void compileValBind(Environment env, Ast.ValBind valBind,
-      List<Code> varCodes, List<Binding> bindings, List<Action> actions) {
+  private void compileValBind(Context cx, Core.ValDecl valBind,
+      List<Code> matchCodes, List<Binding> bindings, List<Action> actions) {
     final List<Binding> newBindings = new TailList<>(bindings);
-    final Code code;
+    final Map<Core.IdPat, LinkCode> linkCodes = new IdentityHashMap<>();
     if (valBind.rec) {
-      final Map<Ast.IdPat, LinkCode> linkCodes = new IdentityHashMap<>();
-      valBind.pat.visit(pat -> {
-        if (pat instanceof Ast.IdPat) {
-          final Ast.IdPat idPat = (Ast.IdPat) pat;
-          final Type paramType = typeMap.getType(pat);
-          final LinkCode linkCode = new LinkCode();
-          linkCodes.put(idPat, linkCode);
-          bindings.add(Binding.of(idPat.name, paramType, linkCode));
-        }
-      });
-      code = compile(env.bindAll(bindings), valBind.e);
+      valBind.pat.accept(
+          new Visitor() {
+            @Override protected void visit(Core.IdPat idPat) {
+              final LinkCode linkCode = new LinkCode();
+              linkCodes.put(idPat, linkCode);
+              bindings.add(Binding.of(idPat.name, idPat.type, linkCode));
+            }
+          });
+    }
+    final Context cx1 = cx.bindAll(bindings);
+    // Using 'compileArg' rather than 'compile' encourages CalciteCompiler
+    // to use a pure Calcite implementation if possible, and has no effect
+    // in the basic Compiler.
+    final Code code = compileArg(cx1, valBind.e);
+    if (!linkCodes.isEmpty()) {
       link(linkCodes, valBind.pat, code);
-    } else {
-      code = compile(env.bindAll(bindings), valBind.e);
     }
     newBindings.clear();
-    final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
+    final ImmutableList<Pair<Core.Pat, Code>> patCodes =
         ImmutableList.of(Pair.of(valBind.pat, code));
-    varCodes.add(new MatchCode(patCodes));
+    matchCodes.add(new MatchCode(patCodes));
 
     if (actions != null) {
-      final String name = ((Ast.IdPat) valBind.pat).name;
-      final Type type0 = typeMap.getType(valBind.e);
-      final Type type = typeMap.typeSystem.ensureClosed(type0);
+      final String name = ((Core.IdPat) valBind.pat).name;
+      final Type type0 = valBind.e.type;
+      final Type type = typeSystem.ensureClosed(type0);
       actions.add((output, outBindings, evalEnv) -> {
         final StringBuilder buf = new StringBuilder();
         try {
@@ -623,18 +554,18 @@ public class Compiler {
     }
   }
 
-  private void link(Map<Ast.IdPat, LinkCode> linkCodes, Ast.Pat pat,
+  private void link(Map<Core.IdPat, LinkCode> linkCodes, Core.Pat pat,
       Code code) {
-    if (pat instanceof Ast.IdPat) {
+    if (pat instanceof Core.IdPat) {
       final LinkCode linkCode = linkCodes.get(pat);
       if (linkCode != null) {
         linkCode.refCode = code; // link the reference to the definition
       }
-    } else if (pat instanceof Ast.TuplePat) {
+    } else if (pat instanceof Core.TuplePat) {
       if (code instanceof Codes.TupleCode) {
         // Recurse into the tuple, binding names to code in parallel
         final List<Code> codes = ((Codes.TupleCode) code).codes;
-        final List<Ast.Pat> pats = ((Ast.TuplePat) pat).args;
+        final List<Core.Pat> pats = ((Core.TuplePat) pat).args;
         Pair.forEach(codes, pats, (code1, pat1) ->
             link(linkCodes, pat1, code1));
       }
@@ -664,11 +595,11 @@ public class Compiler {
     }
   }
 
-  /** Code that implements {@link #compileMatchList(Environment, List)}. */
+  /** Code that implements {@link Compiler#compileMatchList(Context, List)}. */
   private static class MatchCode implements Code {
-    private final ImmutableList<Pair<Ast.Pat, Code>> patCodes;
+    private final ImmutableList<Pair<Core.Pat, Code>> patCodes;
 
-    MatchCode(ImmutableList<Pair<Ast.Pat, Code>> patCodes) {
+    MatchCode(ImmutableList<Pair<Core.Pat, Code>> patCodes) {
       this.patCodes = patCodes;
     }
 

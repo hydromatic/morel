@@ -16,21 +16,13 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.morel.compile;
+package net.hydromatic.morel.type;
 
-import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.type.TypeSystem;
+import java.util.SortedMap;
 
-/** A function that is 'called' at compile time,
- * and generates an expanded parse tree.
- *
- * <p>Currently, Macros are internal.
- * Also, the macro is validated as if it were a function.
- * Its type is derived before expansion.
- * Expansion must preserve the type. */
-public interface Macro {
-  Core.Exp expand(TypeSystem typeSystem, Environment env, Type argType);
+/** A type that has named fields, as a record type does. */
+public interface RecordLikeType extends Type {
+  SortedMap<String, Type> argNameTypes();
 }
 
-// End Macro.java
+// End RecordLikeType.java

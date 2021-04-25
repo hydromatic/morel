@@ -29,19 +29,27 @@ public class Binding {
   public final String name;
   public final Type type;
   public final Object value;
+  /** If true, the binding is ignored by inlining. */
+  public final boolean parameter;
 
-  Binding(String name, Type type, Object value) {
+  Binding(String name, Type type, Object value, boolean parameter) {
     this.name = name;
     this.type = Objects.requireNonNull(type);
     this.value = Objects.requireNonNull(value);
+    this.parameter = parameter;
   }
 
   public static Binding of(String name, Type type) {
-    return new Binding(name, type, Unit.INSTANCE);
+    return new Binding(name, type, Unit.INSTANCE, false);
   }
 
   public static Binding of(String name, Type type, Object value) {
-    return new Binding(name, type, value);
+    return new Binding(name, type, value, false);
+  }
+
+  public static Binding of(String name, Type type, Object value,
+      boolean parameter) {
+    return new Binding(name, type, value, parameter);
   }
 
   @Override public String toString() {

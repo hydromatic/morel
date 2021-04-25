@@ -713,14 +713,14 @@ val it = 7 : int
 
 (*) Bind them to mapReduce, and run
 fun wordCount lines = mapReduce wc_mapper wc_reducer lines;
-val wordCount = fn : 'a list -> ('b * 'c) list
+val wordCount = fn : string list -> (string * int) list
 
 wordCount ["a skunk sat on a stump",
     "and thunk the stump stunk",
     "but the stump thunk the skunk stunk"];
 val it =
-  [(but,1),(the,3),(stump,3),(thunk,2),(skunk,2),(stunk,2),(and,1),(a,2),
-   (sat,1),(on,1)] : ('a * 'b) list
+  [("but",1),("the",3),("stump",3),("thunk",2),("skunk",2),("stunk",2),
+   ("and",1),("a",2),("sat",1),("on",1)] : (string * int) list
 
 
 (*) WordCount in Morel

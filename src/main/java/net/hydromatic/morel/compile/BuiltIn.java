@@ -47,6 +47,7 @@ import javax.annotation.Nullable;
 import static net.hydromatic.morel.type.PrimitiveType.BOOL;
 import static net.hydromatic.morel.type.PrimitiveType.CHAR;
 import static net.hydromatic.morel.type.PrimitiveType.INT;
+import static net.hydromatic.morel.type.PrimitiveType.REAL;
 import static net.hydromatic.morel.type.PrimitiveType.STRING;
 import static net.hydromatic.morel.type.PrimitiveType.UNIT;
 
@@ -1011,7 +1012,55 @@ public enum BuiltIn {
           ts.fnType(
               ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.lookup("order")),
               ts.tupleType(h.vector(0), h.vector(0)),
-              ts.lookup("order"))));
+              ts.lookup("order")))),
+
+  /** Internal operator "andalso", of type "bool * bool &rarr; bool". */
+  Z_ANDALSO("$", "andalso", ts ->
+      ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
+
+  /** Internal operator "orelse", of type "bool * bool &rarr; bool". */
+  Z_ORELSE("$", "orelse", ts ->
+      ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
+
+  /** Internal unary negation operator "~", of type "int &rarr; int". */
+  Z_NEGATE_INT("$", "~:int", ts -> ts.fnType(INT, INT)),
+
+  /** Internal unary negation operator "~", of type "real &rarr; real". */
+  Z_NEGATE_REAL("$", "~:real", ts -> ts.fnType(REAL, REAL)),
+
+  /** Internal divide operator "/", of type "int * int &rarr; int". */
+  Z_DIVIDE_INT("$", "/:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Internal divide operator "/", of type "real * real &rarr; real". */
+  Z_DIVIDE_REAL("$", "/:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Internal minus operator "-", of type "int * int &rarr; int". */
+  Z_MINUS_INT("$", "-:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Internal minus operator "-", of type "real * real &rarr; real". */
+  Z_MINUS_REAL("$", "-:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Internal plus operator "+", of type "int * int &rarr; int". */
+  Z_PLUS_INT("$", "+:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Internal plus operator "+", of type "real * real &rarr; real". */
+  Z_PLUS_REAL("$", "+:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Internal times operator "*", of type "int * int &rarr; int". */
+  Z_TIMES_INT("$", "*:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Internal times operator "*", of type "real * real &rarr; real". */
+  Z_TIMES_REAL("$", "*:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Internal relational sum operator "sum", of type "int * int &rarr; int". */
+  Z_SUM_INT("$", "sum:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Internal relational sum operator "sum", of type "real * real &rarr; real". */
+  Z_SUM_REAL("$", "sum:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Internal list constructor, e.g. "list (1 + 2, 3)" implements "[1 + 2, 3]".
+   * It cannot be assigned a type, because the tuplie is variadic. */
+  Z_LIST("$", "list", ts -> UNIT);
 
   /** Name of the structure (e.g. "List", "String"), or null. */
   public final String structure;
@@ -1042,6 +1091,8 @@ public enum BuiltIn {
       }
       if (builtIn.structure == null) {
         byMlName.put(builtIn.mlName, builtIn);
+      } else if (builtIn.structure.equals("$")) {
+        // ignore internal operators such as "list"
       } else {
         map.compute(builtIn.structure, (name, mapBuilder) -> {
           if (mapBuilder == null) {

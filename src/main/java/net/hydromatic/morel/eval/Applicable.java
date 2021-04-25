@@ -18,14 +18,6 @@
  */
 package net.hydromatic.morel.eval;
 
-import com.google.common.collect.ImmutableList;
-
-import net.hydromatic.morel.ast.Ast;
-import net.hydromatic.morel.ast.Pos;
-import net.hydromatic.morel.util.Pair;
-
-import static net.hydromatic.morel.ast.AstBuilder.ast;
-
 /** A compiled expression that can be evaluated by applying to an argument.
  *
  * <p>Similar to {@link Code} but more efficient, because it does not require
@@ -37,20 +29,6 @@ public interface Applicable extends Describable {
   /** Converts this Applicable to a Code that has similar effect
    * (but is less efficient). */
   default Code asCode() {
-    final Ast.Pat pat = ast.idPat(Pos.ZERO, "x");
-    final Code code = new Code() {
-      @Override public Describer describe(Describer describer) {
-        return describer.start("code", d ->
-            d.arg("applicable", Applicable.this));
-      }
-
-      @Override public Object eval(EvalEnv env) {
-        final Object argValue = env.getOpt("x");
-        return apply(env, argValue);
-      }
-    };
-    final ImmutableList<Pair<Ast.Pat, Code>> patCodes =
-        ImmutableList.of(Pair.of(pat, code));
     return new Code() {
       @Override public Describer describe(Describer describer) {
         return describer.start("code2", d ->

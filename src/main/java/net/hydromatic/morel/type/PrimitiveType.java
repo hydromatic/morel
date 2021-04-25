@@ -18,19 +18,27 @@
  */
 package net.hydromatic.morel.type;
 
+import com.google.common.collect.ImmutableSortedMap;
+
 import net.hydromatic.morel.ast.Op;
 
 import java.util.Locale;
+import java.util.SortedMap;
 import java.util.function.Function;
 
 /** Primitive type. */
-public enum PrimitiveType implements Type {
+public enum PrimitiveType implements RecordLikeType {
   BOOL,
   CHAR,
   INT,
   REAL,
   STRING,
-  UNIT;
+  UNIT {
+    @Override public SortedMap<String, Type> argNameTypes() {
+      // "unit" behaves like a record/tuple type with no fields
+      return ImmutableSortedMap.of();
+    }
+  };
 
   /** The name in the language, e.g. {@code bool}. */
   public final String moniker = name().toLowerCase(Locale.ROOT);
@@ -49,6 +57,10 @@ public enum PrimitiveType implements Type {
 
   public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
     return transform.apply(this);
+  }
+
+  @Override public SortedMap<String, Type> argNameTypes() {
+    throw new UnsupportedOperationException();
   }
 }
 

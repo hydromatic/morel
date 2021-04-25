@@ -277,6 +277,24 @@ fun intersectAll l1 l2 =
 intersectAll (from e in emps yield e.deptno)
   (from d in depts yield d.deptno);
 
+(*) union followed by group
+from x in (from e in emps yield e.deptno)
+    union (from d in depts yield d.deptno)
+group x compute c = count
+order c, x;
+
+(*) except followed by group
+from x in (from e in emps yield e.deptno)
+    except (from d in depts yield d.deptno)
+group x compute c = count
+order c, x;
+
+(*) intersect followed by group
+from x in (from e in emps yield e.deptno)
+    intersect (from d in depts yield d.deptno)
+group x compute c = count
+order c, x;
+
 (*) foldl function (built into SML)
 let
   fun foldl f start [] = start
@@ -337,7 +355,8 @@ group deptno = e.deptno
 from e in emps, d in depts
 where e.deptno = d.deptno
 group e.deptno, ename = e.name, dname = d.name
-  compute sumId = sum of e.id;
+  compute sumId = sum of e.id
+order ename;
 
 (*) empty 'group'
 from e in emps
@@ -442,7 +461,8 @@ from e in emps,
     d in depts
   where e.deptno = d.deptno
   group x = e.id + d.deptno, e.deptno
-    compute sumId = sum of e.id;
+    compute sumId = sum of e.id
+  order x desc;
 
 (*) Join followed by single group (from right input)
 from e in emps,
@@ -559,7 +579,6 @@ from {a = a, b = b, c = _} in [{a=1,b=true,c=3},{a=1,b=true,c=4}], d in ["a", "b
 from {a = a, b = b, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 from {a = a, c = c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 from {a, c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
-from {a = a, c = c, ...} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 from {b = y, ...} in [{a=1,b=2}];
 from {b = y, a = (p, q)} in [{a=(1,true),b=2}];
 from {b = y, a = (2, q)} in [{a=(1,true),b=2},{a=(2,false),b=3}];
