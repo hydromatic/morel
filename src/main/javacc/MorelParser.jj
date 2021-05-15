@@ -31,7 +31,8 @@ import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Ast.*;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Pos;
-import net.hydromatic.morel.util.Folder;import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.Folder;
+import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 
