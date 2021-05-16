@@ -49,7 +49,11 @@ public abstract class Environment {
    * are visited, but after the more obscuring bindings. */
   abstract void visit(Consumer<Binding> consumer);
 
-  @Override public String toString() {
+  /** Converts this environment to a string.
+   *
+   * <p>This method does not override the {@link #toString()} method; if we did,
+   * debuggers would invoke it automatically, burning lots of CPU and memory. */
+  public String asString() {
     final StringBuilder b = new StringBuilder();
     getValueMap().forEach((k, v) ->
         b.append(v).append("\n"));

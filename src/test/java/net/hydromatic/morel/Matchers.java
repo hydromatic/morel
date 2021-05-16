@@ -47,7 +47,7 @@ public abstract class Matchers {
   static Matcher<Ast.Literal> isLiteral(Comparable comparable, String ml) {
     return new TypeSafeMatcher<Ast.Literal>() {
       protected boolean matchesSafely(Ast.Literal literal) {
-        final String actualMl = Ast.toString(literal);
+        final String actualMl = literal.toString();
         return literal.value.equals(comparable)
             && actualMl.equals(ml);
       }
@@ -65,7 +65,7 @@ public abstract class Matchers {
     return new CustomTypeSafeMatcher<T>("ast with value " + expected) {
       protected boolean matchesSafely(T t) {
         assertThat(clazz.isInstance(t), is(true));
-        final String s = Ast.toString(t);
+        final String s = t.toString();
         return s.equals(expected) && s.equals(t.toString());
       }
     };
