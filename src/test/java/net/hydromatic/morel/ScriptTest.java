@@ -19,7 +19,6 @@
 package net.hydromatic.morel;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.io.PatternFilenameFilter;
 
 import net.hydromatic.morel.foreign.Calcite;
@@ -27,9 +26,9 @@ import net.hydromatic.morel.foreign.ForeignValue;
 
 import org.incava.diff.Diff;
 import org.incava.diff.Difference;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -56,25 +55,17 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test that runs files and checks the results.
  */
-@RunWith(Parameterized.class)
 public class ScriptTest {
-  protected final String path;
-  protected final Method method;
-
-  /** Creates a ScriptTest. Public per {@link Parameterized}. */
-  @SuppressWarnings("WeakerAccess")
-  public ScriptTest(String path) {
-    this.path = path;
-    this.method = findMethod(path);
+  public ScriptTest() {
   }
 
   /** Runs a test from the command line.
@@ -86,21 +77,21 @@ public class ScriptTest {
    * </blockquote> */
   public static void main(String[] args) throws Exception {
     for (String arg : args) {
-      new ScriptTest(arg).test();
+      new ScriptTest().test(arg);
     }
   }
 
-  /** For {@link Parameterized} runner. */
-  @Parameterized.Parameters(name = "{index}: script({0})")
-  public static Collection<Object[]> data() {
+  /** For {@link ParameterizedTest} runner. */
+  static Stream<Arguments> data() {
     // Start with a test file we know exists, then find the directory and list
     // its files.
     final String first = "script/simple.sml";
-    return data(first);
+    return data_(first);
   }
 
-  @Test
-  public void test() throws Exception {
+  @ParameterizedTest @MethodSource("data") void test(String path)
+      throws Exception {
+    Method method = findMethod(path);
     if (method != null) {
       try {
         method.invoke(this);
@@ -173,20 +164,18 @@ public class ScriptTest {
     }
   }
 
-  protected static Collection<Object[]> data(String first) {
+  protected static Stream<Arguments> data_(String first) {
     // inUrl = "file:/home/fred/morel/target/test-classes/script/agg.sml"
     final URL inUrl = MainTest.class.getResource("/" + Utils.n2u(first));
     final File firstFile = Utils.urlToFile(inUrl);
     final int commonPrefixLength =
         firstFile.getAbsolutePath().length() - first.length();
     final File dir = firstFile.getParentFile();
-    final List<String> paths = new ArrayList<>();
     final FilenameFilter filter = new PatternFilenameFilter(".*\\.sml$");
     File[] files = dir.listFiles(filter);
-    for (File f : Utils.first(files, new File[0])) {
-      paths.add(f.getAbsolutePath().substring(commonPrefixLength));
-    }
-    return Lists.transform(paths, path -> new Object[] {path});
+    return Stream.of(Utils.first(files, new File[0]))
+        .map(f ->
+            Arguments.of(f.getAbsolutePath().substring(commonPrefixLength)));
   }
 
   /** Utility methods. */

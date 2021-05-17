@@ -25,7 +25,7 @@ import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.TailList;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,13 +33,13 @@ import java.util.List;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 
 /** Tests for various utility classes. */
 public class UtilTest {
   /** Tests {@link TailList}. */
-  @Test public void testTailList() {
+  @Test void testTailList() {
     final List<String> list = new ArrayList<>();
     list.add("a");
     list.add("b");
@@ -77,7 +77,7 @@ public class UtilTest {
     assertThat(list.isEmpty(), is(false));
   }
 
-  @Test public void testOrd() {
+  @Test void testOrd() {
     final List<String> abc = Arrays.asList("a", "b", "c");
     final StringBuilder buf = new StringBuilder();
     Ord.forEach(abc, (e, i) ->
@@ -85,7 +85,7 @@ public class UtilTest {
     assertThat(buf.toString(), is("0#a;1#b;2#c;"));
   }
 
-  @Test public void testMapList() {
+  @Test void testMapList() {
     final List<String> abc =
         MapList.of(3, i -> "" + (char) ('a' + i));
     assertThat(abc.size(), is(3));
@@ -94,7 +94,7 @@ public class UtilTest {
     assertThat(String.join(",", abc), is("a,b,c"));
   }
 
-  @Test public void testFolder() {
+  @Test void testFolder() {
     final List<Folder<Ast.Exp>> list = new ArrayList<>();
     Folder.start(list, ast.stringLiteral(Pos.ZERO, "a"));
     Folder.at(list, ast.stringLiteral(Pos.ZERO, "b"));

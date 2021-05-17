@@ -32,8 +32,8 @@ import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -52,7 +52,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Kick the tires.
@@ -121,7 +121,7 @@ public class MainTest {
     };
   }
 
-  @Test public void testEmptyRepl() {
+  @Test void testEmptyRepl() {
     final String[] args = new String[0];
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
@@ -131,7 +131,7 @@ public class MainTest {
     assertThat(out.size(), is(0));
   }
 
-  @Test public void testRepl() {
+  @Test void testRepl() {
     final String[] args = new String[0];
     final String ml = "val x = 5;\n"
         + "x;\n"
@@ -153,7 +153,7 @@ public class MainTest {
     assertThat(out.toString(), is(expected));
   }
 
-  @Test public void testParse() {
+  @Test void testParse() {
     ml("1").assertParseLiteral(isLiteral(BigDecimal.ONE, "1"));
     ml("~3.5").assertParseLiteral(isLiteral(new BigDecimal("-3.5"), "~3.5"));
     ml("\"a string\"")
@@ -310,7 +310,7 @@ public class MainTest {
     ml("(fn x => x + 1) 3").assertParseSame();
   }
 
-  @Test public void testParseComment() {
+  @Test void testParseComment() {
     ml("1 + (* 2 + *) 3")
         .assertParse("1 + 3");
     ml("1 +\n"
@@ -323,7 +323,7 @@ public class MainTest {
 
   /** Tests that the syntactic sugar "exp.field" is de-sugared to
    * "#field exp". */
-  @Test public void testParseDot() {
+  @Test void testParseDot() {
     ml("a . b")
         .assertParse("#b a");
     ml("a . b . c")
@@ -354,7 +354,7 @@ public class MainTest {
 
   /** Tests that the abbreviated record syntax "{a, e.b, #c e, d = e}"
    * is expanded to "{a = a, b = e.b, c = #c e, d = e}". */
-  @Test public void testParseAbbreviatedRecord() {
+  @Test void testParseAbbreviatedRecord() {
     ml("{a, e.b, #c e, #d (e + 1), e = f + g}")
         .assertParse("{a = a, b = #b e, c = #c e, d = #d (e + 1), e = f + g}");
     ml("{v = a, w = e.b, x = #c e, y = #d (e + 1), z = (#f 2)}")
@@ -379,7 +379,7 @@ public class MainTest {
   }
 
   /** Tests the name of {@link TypeVar}. */
-  @Test public void testTypeVarName() {
+  @Test void testTypeVarName() {
     assertError(() -> new TypeVar(-1).description(),
         throwsA(IllegalArgumentException.class, nullValue()));
     assertThat(new TypeVar(0).description(), is("'a"));
@@ -398,7 +398,7 @@ public class MainTest {
     assertThat(new TypeVar(26 * 26 * 26).description(), is("'baaa"));
   }
 
-  @Test public void testType() {
+  @Test void testType() {
     ml("1").assertType("int");
     ml("0e0").assertType("real");
     ml("1 + 2").assertType("int");
@@ -427,7 +427,7 @@ public class MainTest {
     ml(ml).assertType("int");
   }
 
-  @Test public void testTypeFn() {
+  @Test void testTypeFn() {
     ml("fn x => x + 1").assertType("int -> int");
     ml("fn x => fn y => x + y").assertType("int -> int -> int");
     ml("fn x => case x of 0 => 1 | _ => 2").assertType("int -> int");
@@ -435,7 +435,7 @@ public class MainTest {
         .assertType("int -> string");
   }
 
-  @Test public void testTypeFnTuple() {
+  @Test void testTypeFnTuple() {
     ml("fn (x, y) => (x + 1, y + 1)")
         .assertType("int * int -> int * int");
     ml("(fn x => x + 1, fn y => y + 1)")
@@ -448,7 +448,7 @@ public class MainTest {
         .assertType("{a:int, b:int, c:'a} -> int");
   }
 
-  @Test public void testTypeLetRecFn() {
+  @Test void testTypeLetRecFn() {
     final String ml = "let\n"
         + "  val rec f = fn n => if n = 0 then 1 else n * (f (n - 1))\n"
         + "in\n"
@@ -464,22 +464,22 @@ public class MainTest {
         .assertError("Error: fn expression required on rhs of val rec");
   }
 
-  @Test public void testRecordType() {
+  @Test void testRecordType() {
     final String ml = "map #empno [{empno = 10, name = \"Shaggy\"}]";
     ml(ml).assertType("int list");
   }
 
-  @Test public void testApply() {
+  @Test void testApply() {
     ml("List.hd [\"abc\"]")
         .assertType("string");
   }
 
-  @Test public void testApply2() {
+  @Test void testApply2() {
     ml("List.map (fn x => String.size x) [\"abc\", \"de\"]")
         .assertType("int list");
   }
 
-  @Test public void testApplyIsMonomorphic() {
+  @Test void testApplyIsMonomorphic() {
     // cannot be typed, since the parameter f is in a monomorphic position
     ml("fn f => (f true, f 0)")
         .assertTypeThrows(
@@ -487,16 +487,16 @@ public class MainTest {
                 is("Cannot deduce type: conflict: int vs bool")));
   }
 
-  @Ignore("disable failing test - enable when we have polymorphic types")
-  @Test public void testLetIsPolymorphic() {
+  @Disabled("disable failing test - enable when we have polymorphic types")
+  @Test void testLetIsPolymorphic() {
     // f has been introduced in a let-expression and is therefore treated as
     // polymorphic.
     ml("let val f = fn x => x in (f true, f 0) end")
         .assertType("bool * int");
   }
 
-  @Ignore("disable failing test - enable when we have polymorphic types")
-  @Test public void testHdIsPolymorphic() {
+  @Disabled("disable failing test - enable when we have polymorphic types")
+  @Test void testHdIsPolymorphic() {
     ml("(List.hd [1, 2], List.hd [false, true])")
         .assertType("int * bool");
     ml("let\n"
@@ -507,7 +507,7 @@ public class MainTest {
         .assertType("int * bool");
   }
 
-  @Test public void testTypeVariable() {
+  @Test void testTypeVariable() {
     // constant
     ml("fn _ => 42").assertType("'a -> int");
     ml("(fn _ => 42) 2").assertEval(is(42));
@@ -532,8 +532,8 @@ public class MainTest {
         .assertType("bool -> 'a * 'a -> 'a");
   }
 
-  @Ignore("disable failing test - enable when we have polymorphic types")
-  @Test public void testExponentialType0() {
+  @Disabled("disable failing test - enable when we have polymorphic types")
+  @Test void testExponentialType0() {
     final String ml = "let\n"
         + "  fun f x = (x, x)\n"
         + "in\n"
@@ -542,8 +542,8 @@ public class MainTest {
     ml(ml).assertType("xx");
   }
 
-  @Ignore("until type-inference bug is fixed")
-  @Test public void testExponentialType() {
+  @Disabled("until type-inference bug is fixed")
+  @Test void testExponentialType() {
     final String ml = "let\n"
         + "  fun f x = (x, x, x)\n"
         + "in\n"
@@ -552,8 +552,8 @@ public class MainTest {
     ml(ml).assertType("xx");
   }
 
-  @Ignore("until type-inference bug is fixed")
-  @Test public void testExponentialType2() {
+  @Disabled("until type-inference bug is fixed")
+  @Test void testExponentialType2() {
     final String ml = "fun f x y z = (x, y, z)\n"
         + "val p1 = (f, f, f)\n"
         + "val p2 = (p1, p1, p1)\n"
@@ -561,7 +561,7 @@ public class MainTest {
     ml(ml).assertType("xx");
   }
 
-  @Test public void testEval() {
+  @Test void testEval() {
     // literals
     ml("1").assertEval(is(1));
     ml("~2").assertEval(is(-2));
@@ -718,7 +718,7 @@ public class MainTest {
     ml("(1, 2, 1, 4)").assertEval(is(list(1, 2, 1, 4)));
   }
 
-  @Test public void testLetSequentialDeclarations() {
+  @Test void testLetSequentialDeclarations() {
     // let with sequential declarations
     ml("let val x = 1; val y = x + 1 in x + y end").assertEval(is(3));
 
@@ -757,7 +757,7 @@ public class MainTest {
 
   /** Tests that in a {@code let} clause, we can see previously defined
    * variables. */
-  @Test public void testLet2() {
+  @Test void testLet2() {
     final String ml = "let\n"
         + "  val x = 1\n"
         + "  val y = x + 2\n"
@@ -768,7 +768,7 @@ public class MainTest {
   }
 
   /** As {@link #testLet2()}, but using 'and'. */
-  @Test public void testLet3() {
+  @Test void testLet3() {
     final String ml = "let\n"
         + "  val x = 1\n"
         + "  and y = 2\n"
@@ -779,7 +779,7 @@ public class MainTest {
   }
 
   /** Tests that 'and' assignments occur simultaneously. */
-  @Test public void testLet4() {
+  @Test void testLet4() {
     final String ml = "let\n"
         + "  val x = 5\n"
         + "  and y = 1\n"
@@ -796,7 +796,7 @@ public class MainTest {
 
   /** Tests a closure that uses one variable "x", called in an environment
    * with a different value of "x" (of a different type, to flush out bugs). */
-  @Test public void testClosure() {
+  @Test void testClosure() {
     final String ml = "let\n"
         + "  val x = \"abc\";\n"
         + "  fun g y = String.size x + y;\n"
@@ -807,19 +807,19 @@ public class MainTest {
     ml(ml).assertEval(is(13));
   }
 
-  @Test public void testEvalFn() {
+  @Test void testEvalFn() {
     ml("(fn x => x + 1) 2").assertEval(is(3));
   }
 
-  @Test public void testEvalFnCurried() {
+  @Test void testEvalFnCurried() {
     ml("(fn x => fn y => x + y) 2 3").assertEval(is(5));
   }
 
-  @Test public void testEvalFnTuple() {
+  @Test void testEvalFnTuple() {
     ml("(fn (x, y) => x + y) (2, 3)").assertEval(is(5));
   }
 
-  @Test public void testEvalFnRec() {
+  @Test void testEvalFnRec() {
     final String ml = "let\n"
         + "  val rec f = fn n => if n = 0 then 1 else n * f (n - 1)\n"
         + "in\n"
@@ -828,12 +828,12 @@ public class MainTest {
     ml(ml).assertEval(is(120));
   }
 
-  @Test public void testEvalFnTupleGeneric() {
+  @Test void testEvalFnTupleGeneric() {
     ml("(fn (x, y) => x) (2, 3)").assertEval(is(2));
     ml("(fn (x, y) => y) (2, 3)").assertEval(is(3));
   }
 
-  @Test public void testRecord() {
+  @Test void testRecord() {
     ml("{a = 1, b = {c = true, d = false}}").assertParseSame();
     ml("{a = 1, 1 = 2}")
         .assertStmt(Ast.Record.class, "{1 = 2, a = 1}");
@@ -858,13 +858,13 @@ public class MainTest {
     ml("#x (#b {a = 1, b = {x = 3, y = 4}, z = true})").assertEval(is(3));
   }
 
-  @Test public void testEquals() {
+  @Test void testEquals() {
     ml("{b = true, a = 1} = {a = 1, b = true}").assertEval(is(true));
     ml("{b = true, a = 0} = {a = 1, b = true}").assertEval(is(false));
   }
 
-  @Ignore("deduce type of #label")
-  @Test public void testRecord2() {
+  @Disabled("deduce type of #label")
+  @Test void testRecord2() {
     ml("#x #b {a = 1, b = {x = 3, y = 4}, z = true}")
         .assertError("Error: operator and operand don't agree [type mismatch]\n"
             + "  operator domain: {x:'Y; 'Z}\n"
@@ -873,7 +873,7 @@ public class MainTest {
             + "    (fn {x=x,...} => x) (fn {b=b,...} => b)\n");
   }
 
-  @Test public void testRecordFn() {
+  @Test void testRecordFn() {
     ml("(fn {a=a1,b=b1} => a1) {a = 1, b = true}")
         .assertType("int")
         .assertEval(is(1));
@@ -882,7 +882,7 @@ public class MainTest {
         .assertEval(is(true));
   }
 
-  @Test public void testRecordMatch() {
+  @Test void testRecordMatch() {
     final String ml = "case {a=1, b=2, c=3}\n"
         + "  of {a=2, b=2, c=3} => 0\n"
         + "   | {a=1, c=x, ...} => x\n"
@@ -900,7 +900,7 @@ public class MainTest {
         .assertParse("fn {a = a, b = {c = c, d = d}, ...} => 0");
   }
 
-  @Test public void testRecordCase() {
+  @Test void testRecordCase() {
     ml("case {a=2,b=3} of {a=x,b=y} => x * y").assertEval(is(6));
     ml("case {a=2,b=3,c=4} of {a=x,b=y,c=z} => x * y").assertEval(is(6));
     ml("case {a=2,b=3,c=4} of {a=x,b=y,...} => x * y").assertEval(is(6));
@@ -909,7 +909,7 @@ public class MainTest {
         .assertEval(is(3));
   }
 
-  @Test public void testRecordTuple() {
+  @Test void testRecordTuple() {
     ml("{ 1 = true, 2 = 0}").assertType("bool * int");
     ml("{2=0,1=true}").assertType("bool * int");
     ml("{3=0,1=true,11=false}").assertType("{1:bool, 3:int, 11:bool}");
@@ -926,7 +926,7 @@ public class MainTest {
         .assertEval(is(ImmutableList.of()));
   }
 
-  @Test public void testList() {
+  @Test void testList() {
     ml("[1]").assertType("int list");
     ml("[[1]]").assertType("int list list");
     ml("[(1, true), (2, false)]").assertType("(int * bool) list");
@@ -940,13 +940,13 @@ public class MainTest {
     ml("fn [] => 0").assertType("'a list -> int");
   }
 
-  @Ignore("need type annotations")
-  @Test public void testList2() {
+  @Disabled("need type annotations")
+  @Test void testList2() {
     ml("fn x: 'b list => 0").assertType("'a list -> int");
   }
 
   /** List length function exercises list pattern-matching and recursion. */
-  @Test public void testListLength() {
+  @Test void testListLength() {
     final String ml = "let\n"
         + "  val rec len = fn x =>\n"
         + "    case x of [] => 0\n"
@@ -959,7 +959,7 @@ public class MainTest {
 
   /** As {@link #testListLength()} but match reversed, which requires
    * cautious matching of :: pattern. */
-  @Test public void testListLength2() {
+  @Test void testListLength2() {
     final String ml = "let\n"
         + "  val rec len = fn x =>\n"
         + "    case x of head :: tail => 1 + len tail\n"
@@ -971,7 +971,7 @@ public class MainTest {
   }
 
   /** As {link {@link #testListLength()} but using {@code fun}. */
-  @Test public void testListLength3() {
+  @Test void testListLength3() {
     final String ml = "let\n"
         + "  fun len [] = 0\n"
         + "     | len (head :: tail) = 1 + len tail\n"
@@ -981,7 +981,7 @@ public class MainTest {
     ml(ml).assertEval(is(3));
   }
 
-  @Test public void testMatchTuple() {
+  @Test void testMatchTuple() {
     final String ml = "let\n"
         + "  val rec sumIf = fn v =>\n"
         + "    case v of (true, n) :: tail => n + sumIf tail\n"
@@ -994,7 +994,7 @@ public class MainTest {
   }
 
   /** Function declaration. */
-  @Test public void testFun() {
+  @Test void testFun() {
     final String ml = "let\n"
         + "  fun fact n = if n = 0 then 1 else n * fact (n - 1)\n"
         + "in\n"
@@ -1004,7 +1004,7 @@ public class MainTest {
   }
 
   /** As {@link #testFun} but uses case. */
-  @Test public void testFun2() {
+  @Test void testFun2() {
     final String ml = "let\n"
         + "  fun fact n = case n of 0 => 1 | _ => n * fact (n - 1)\n"
         + "in\n"
@@ -1014,7 +1014,7 @@ public class MainTest {
   }
 
   /** As {@link #testFun} but uses a multi-clause function. */
-  @Test public void testFun3() {
+  @Test void testFun3() {
     final String ml = "let\n"
         + "  fun fact 1 = 1 | fact n = n * fact (n - 1)\n"
         + "in\n"
@@ -1029,7 +1029,7 @@ public class MainTest {
   }
 
   /** Simultaneous functions. */
-  @Test public void testFun4() {
+  @Test void testFun4() {
     final String ml = "let\n"
         + "  val x = 1\n"
         + "in\n"
@@ -1047,8 +1047,8 @@ public class MainTest {
 
   /** Mutually recursive functions: the definition of 'even' references 'odd'
    * and the definition of 'odd' references 'even'. */
-  @Ignore("not working yet")
-  @Test public void testMutuallyRecursiveFunctions() {
+  @Disabled("not working yet")
+  @Test void testMutuallyRecursiveFunctions() {
     final String ml = "let\n"
         + "  fun even 0 = true\n"
         + "    | even n = odd (n - 1)\n"
@@ -1062,7 +1062,7 @@ public class MainTest {
   }
 
   /** A function with two arguments. */
-  @Test public void testFunTwoArgs() {
+  @Test void testFunTwoArgs() {
     final String ml = "let\n"
         + "  fun sum x y = x + y\n"
         + "in\n"
@@ -1071,7 +1071,7 @@ public class MainTest {
     ml(ml).assertEval(is(8));
   }
 
-  @Test public void testFunRecord() {
+  @Test void testFunRecord() {
     final String ml = "let\n"
         + "  fun f {a=x,b=1,...} = x\n"
         + "    | f {b=y,c=2,...} = y\n"
@@ -1091,8 +1091,8 @@ public class MainTest {
     ml(ml2).assertEval(is(6));
   }
 
-  @Ignore("not working yet")
-  @Test public void testDatatype() {
+  @Disabled("not working yet")
+  @Test void testDatatype() {
     final String ml = "let\n"
         + "  datatype 'a tree = NODE of 'a tree * 'a tree | LEAF of 'a\n"
         + "in\n"
@@ -1103,7 +1103,7 @@ public class MainTest {
         .assertEval(is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
   }
 
-  @Test public void testDatatype2() {
+  @Test void testDatatype2() {
     final String ml = "let\n"
         + "  datatype number = ZERO | INTEGER of int | RATIONAL of int * int\n"
         + "in\n"
@@ -1114,7 +1114,7 @@ public class MainTest {
         .assertEval(is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
   }
 
-  @Test public void testDatatype3() {
+  @Test void testDatatype3() {
     final String ml = "let\n"
         + "datatype intoption = NONE | SOME of int;\n"
         + "val score = fn z => case z of NONE => 0 | SOME x => x\n"
@@ -1128,7 +1128,7 @@ public class MainTest {
 
   /** As {@link #testDatatype3()} but with {@code fun} rather than {@code fn}
    *  ... {@code case}. */
-  @Test public void testDatatype3b() {
+  @Test void testDatatype3b() {
     final String ml = "let\n"
         + "datatype intoption = NONE | SOME of int;\n"
         + "fun score NONE = 0\n"
@@ -1142,7 +1142,7 @@ public class MainTest {
   }
 
   /** As {@link #testDatatype3b()} but use a nilary type constructor (NONE). */
-  @Test public void testDatatype3c() {
+  @Test void testDatatype3c() {
     final String ml = "let\n"
         + "datatype intoption = NONE | SOME of int;\n"
         + "fun score NONE = 0\n"
@@ -1155,7 +1155,7 @@ public class MainTest {
         .assertEval(is(0));
   }
 
-  @Test public void testDatatype4() {
+  @Test void testDatatype4() {
     final String ml = "let\n"
         + " datatype intlist = NIL | CONS of int * intlist;\n"
         + " fun depth NIL = 0\n"
@@ -1169,7 +1169,7 @@ public class MainTest {
   }
 
   /** As {@link #testDatatype4()} but with deeper expression. */
-  @Test public void testDatatype4a() {
+  @Test void testDatatype4a() {
     final String ml = "let\n"
         + " datatype intlist = NIL | CONS of int * intlist;\n"
         + " fun depth NIL = 0\n"
@@ -1186,7 +1186,7 @@ public class MainTest {
    * These are Morel extensions to Standard ML,
    * intended to help relational expressions,
    * but not part of the {@code from} expression. */
-  @Test public void testSetOp() {
+  @Test void testSetOp() {
     ml("a union b").assertParseSame();
     ml("a union b union c").assertParseSame();
     ml("(a union b) union c").assertParse("a union b union c");
@@ -1207,7 +1207,7 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(1, 2, 3, 2, 3, 4));
   }
 
-  @Test public void testFrom() {
+  @Test void testFrom() {
     final String ml = "let\n"
         + "  val emps = [\n"
         + "    {id = 100, name = \"Fred\", deptno = 10},\n"
@@ -1220,7 +1220,7 @@ public class MainTest {
     ml(ml).assertEvalIter(equalsOrdered(10, 20, 30, 30));
   }
 
-  @Test public void testFromYieldExpression() {
+  @Test void testFromYieldExpression() {
     final String ml = "let\n"
         + "  val emps = [\n"
         + "    {id = 100, name = \"Fred\", deptno = 10},\n"
@@ -1233,7 +1233,7 @@ public class MainTest {
     ml(ml).assertEvalIter(equalsOrdered(110, 121, 132, 133));
   }
 
-  @Test public void testFromWhere() {
+  @Test void testFromWhere() {
     final String ml = "let\n"
         + "  val emps = [\n"
         + "    {id = 100, name = \"Fred\", deptno = 10},\n"
@@ -1246,7 +1246,7 @@ public class MainTest {
     ml(ml).assertEvalIter(equalsOrdered(102, 103));
   }
 
-  @Test public void testFromNoYield() {
+  @Test void testFromNoYield() {
     final String ml = "let\n"
         + "  val emps =\n"
         + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
@@ -1257,7 +1257,7 @@ public class MainTest {
     ml(ml).assertEvalIter(equalsOrdered(list(30, 103, "Scooby")));
   }
 
-  @Test public void testFromJoinNoYield() {
+  @Test void testFromJoinNoYield() {
     final String ml = "let\n"
         + "  val emps =\n"
         + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
@@ -1276,21 +1276,21 @@ public class MainTest {
 
   /** Analogous to SQL "CROSS APPLY" which calls a table-valued function
    * for each row in an outer loop. */
-  @Test public void testCrossApply() {
+  @Test void testCrossApply() {
     final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
         + "    c in String.explode s\n"
         + "  yield s ^ \":\" ^ String.str c";
     ml(ml).assertEvalIter(equalsOrdered("abc:a", "abc:b", "abc:c", "d:d"));
   }
 
-  @Test public void testCrossApplyGroup() {
+  @Test void testCrossApplyGroup() {
     final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
         + "    c in String.explode s\n"
         + "  group s compute count = sum of 1";
     ml(ml).assertEvalIter(equalsOrdered(list(3, "abc"), list(1, "d")));
   }
 
-  @Test public void testJoinLateral() {
+  @Test void testJoinLateral() {
     final String ml = "let\n"
         + "  val emps = [{name = \"Shaggy\",\n"
         + "               pets = [{name = \"Scooby\", species = \"Dog\"},\n"
@@ -1306,7 +1306,7 @@ public class MainTest {
     ml(ml).assertEvalIter(equalsOrdered("Scooby", "Scrappy", "Snoopy"));
   }
 
-  @Test public void testFromGroupWithoutCompute() {
+  @Test void testFromGroupWithoutCompute() {
     final String ml = "let\n"
         + "  val emps =\n"
         + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
@@ -1335,7 +1335,7 @@ public class MainTest {
 
   /** As {@link #testFromGroupWithoutCompute()} but composite key, therefore
    * result is a list of records. */
-  @Test public void testFromGroupWithoutCompute2() {
+  @Test void testFromGroupWithoutCompute2() {
     final String ml = "let\n"
         + "  val emps =\n"
         + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
@@ -1348,7 +1348,7 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(list(10, 0), list(20, 1)));
   }
 
-  @Test public void testFromGroup() {
+  @Test void testFromGroup() {
     final String ml = "let\n"
         + "  val emps =\n"
         + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
@@ -1376,7 +1376,7 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(list(10, 202), list(20, 101)));
   }
 
-  @Test public void testGroupAs() {
+  @Test void testGroupAs() {
     final String ml0 = "from e in emp\n"
         + "group deptno = e.deptno";
     final String ml1 = "from e in emp\n"
@@ -1394,7 +1394,7 @@ public class MainTest {
     ml(ml3).assertParse(expected3);
   }
 
-  @Test public void testGroupAs2() {
+  @Test void testGroupAs2() {
     ml("from e in emp group e.deptno, e.deptno + e.empid")
         .assertParseThrows(
             throwsA(IllegalArgumentException.class,
@@ -1422,7 +1422,7 @@ public class MainTest {
         .assertType(is("int list"));
   }
 
-  @Test public void testGroupSansOf() {
+  @Test void testGroupSansOf() {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "  group compute c = count")
         .assertType(is("int list"))
@@ -1439,7 +1439,7 @@ public class MainTest {
 
   /** Tests that Morel throws if there are duplicate names in 'group' or
    * 'compute' clauses. */
-  @Test public void testGroupDuplicates() {
+  @Test void testGroupDuplicates() {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
         + "group a = e.x")
         .assertEvalIter(equalsUnordered(0, 1));
@@ -1484,7 +1484,7 @@ public class MainTest {
                 is("Duplicate field name 'c' in group")));
   }
 
-  @Test public void testGroupYield() {
+  @Test void testGroupYield() {
     final String ml = "from r in [{a=2,b=3}]\n"
         + "group r.a compute sb = sum of r.b\n"
         + "yield {a, a2 = a + a, sb}";
@@ -1495,7 +1495,7 @@ public class MainTest {
         .assertEvalIter(equalsOrdered(list(2, 4, 3)));
   }
 
-  @Test public void testJoinGroup() {
+  @Test void testJoinGroup() {
     final String ml = "from e in [{empno=100,deptno=10}],\n"
         + "  d in [{deptno=10,altitude=3500}]\n"
         + "group e.deptno compute s = sum of e.empno + d.altitude";
@@ -1508,7 +1508,7 @@ public class MainTest {
         .assertEvalIter(equalsOrdered(list(10, 3600)));
   }
 
-  @Test public void testGroupGroup() {
+  @Test void testGroupGroup() {
     final String ml = "from r in [{a=2,b=3}]\n"
         + "group a1 = r.a, b1 = r.b\n"
         + "group c2 = a1 + b1 compute s2 = sum of a1";
@@ -1520,7 +1520,7 @@ public class MainTest {
         .assertEvalIter(equalsOrdered(list(5, 2)));
   }
 
-  @Test public void testFromOrderYield() {
+  @Test void testFromOrderYield() {
     final String ml = "from r in [{a=1,b=2},{a=1,b=0},{a=2,b=1}]\n"
         + "  order r.a desc, r.b\n"
         + "  yield {r.a, b10 = r.b * 10}";
@@ -1533,7 +1533,7 @@ public class MainTest {
         .assertEvalIter(equalsOrdered(list(2, 10), list(1, 0), list(1, 20)));
   }
 
-  @Test public void testFromEmpty() {
+  @Test void testFromEmpty() {
     final String ml = "from";
     final String expected = "from";
     ml(ml).assertParse(expected)
@@ -1541,7 +1541,7 @@ public class MainTest {
         .assertEvalIter(equalsOrdered(list()));
   }
 
-  @Test public void testFromPattern() {
+  @Test void testFromPattern() {
     final String ml = "from (x, y) in [(1,2),(3,4),(3,0)] group sum = x + y";
     final String expected = "from (x, y) in [(1, 2), (3, 4), (3, 0)] "
         + "group sum = x + y";
@@ -1552,7 +1552,7 @@ public class MainTest {
 
   /** Tests a program that uses an external collection from the "scott" JDBC
    * database. */
-  @Test public void testScott() {
+  @Test void testScott() {
     final String ml = "let\n"
         + "  val emps = #emp scott\n"
         + "in\n"
@@ -1566,7 +1566,7 @@ public class MainTest {
                 10));
   }
 
-  @Test public void testScottJoin() {
+  @Test void testScottJoin() {
     final String ml = "let\n"
         + "  val emps = #emp scott\n"
         + "  and depts = #dept scott\n"
@@ -1585,7 +1585,7 @@ public class MainTest {
   }
 
   /** As {@link #testScottJoin()} but without intermediate variables. */
-  @Test public void testScottJoin2() {
+  @Test void testScottJoin2() {
     final String ml = "from e in #emp scott, d in #dept scott\n"
         + "  where #deptno e = #deptno d\n"
         + "  andalso #empno e >= 7900\n"
@@ -1600,7 +1600,7 @@ public class MainTest {
 
   /** As {@link #testScottJoin2()} but using dot notation ('e.field' rather
    * than '#field e'). */
-  @Test public void testScottJoin2Dot() {
+  @Test void testScottJoin2Dot() {
     final String ml = "from e in scott.emp, d in scott.dept\n"
         + "  where e.deptno = d.deptno\n"
         + "  andalso e.empno >= 7900\n"
@@ -1613,7 +1613,7 @@ public class MainTest {
                 list("ACCOUNTING", 7934)));
   }
 
-  @Test public void testError() {
+  @Test void testError() {
     ml("fn x y => x + y")
         .assertError(
             "Error: non-constructor applied to argument in pattern: x");

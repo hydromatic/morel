@@ -18,9 +18,9 @@
  */
 package net.hydromatic.morel;
 
-import org.junit.Assume;
+import org.junit.jupiter.api.Assumptions;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** Utilities for writing tests. */
 public class MorelTests {
@@ -28,12 +28,13 @@ public class MorelTests {
 
   /** Aborts the test with a given message.
    * Use this method if you want to abandon a test case half way through.
-   * The test will "succeed", because this is an {@link Assume} failure.
+   * The test will "succeed", because this is an {@link Assumptions} failure.
    *
    * @param message Message
    */
+  @SuppressWarnings("ConstantConditions")
   public static void abandon(String message) {
-    assumeTrue(message, false);
+    assumeTrue(false, message);
   }
 }
 

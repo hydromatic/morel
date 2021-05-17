@@ -24,14 +24,14 @@ import net.hydromatic.morel.type.PrimitiveType;
 
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
-import static org.junit.Assert.assertThat;
 
 /**
  * Tests for {@link net.hydromatic.morel.compile.Environment}.
@@ -39,7 +39,7 @@ import static org.junit.Assert.assertThat;
 public class EnvironmentTest {
   /** Tests that if you call {@link Environment#bind} twice with the same name,
    * the binding chain does not get longer. */
-  @Test public void testOptimizeSubEnvironment() {
+  @Test void testOptimizeSubEnvironment() {
     final Environment e0 = Environments.empty()
         .bind("a", PrimitiveType.INT, 0)
         .bind("b", PrimitiveType.INT, 1)
