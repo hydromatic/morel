@@ -398,11 +398,29 @@ public class TypeResolver {
       final Unifier.Variable vFn = unifier.variable();
       final Unifier.Variable vArg = unifier.variable();
       equiv(unifier.apply(FN_TY_CON, vArg, v), vFn);
-      final Ast.Exp arg2 = deduceType(env, apply.arg, vArg);
+      final Ast.Exp arg2;
+      if (apply.arg instanceof Ast.RecordSelector) {
+        // node is "f #field" and has type "v"
+        // "f" has type "vArg -> v" and also "vFn"
+        // "#field" has type "vArg" and also "vRec -> vField"
+        // When we resolve "vRec" we can then deduce "vField".
+        final Unifier.Variable vRec = unifier.variable();
+        final Unifier.Variable vField = unifier.variable();
+        deduceRecordSelectorType(env, vField, vRec,
+            (Ast.RecordSelector) apply.arg);
+        arg2 = reg(apply.arg, vArg, unifier.apply(FN_TY_CON, vRec, vField));
+      } else {
+        arg2 = deduceType(env, apply.arg, vArg);
+      }
       final Ast.Exp fn2;
       if (apply.fn instanceof Ast.RecordSelector) {
-        fn2 = deduceRecordSelectorType(env, v, vArg,
+        // node is "#field arg" and has type "v"
+        // "#field" has type "vArg -> v"
+        // "arg" has type "vArg"
+        // When we resolve "vArg" we can then deduce "v".
+        deduceRecordSelectorType(env, v, vArg,
             (Ast.RecordSelector) apply.fn);
+        fn2 = apply.fn;
       } else {
         fn2 = deduceType(env, apply.fn, vFn);
       }

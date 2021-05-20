@@ -464,6 +464,11 @@ public class MainTest {
         .assertError("Error: fn expression required on rhs of val rec");
   }
 
+  @Test public void testRecordType() {
+    final String ml = "map #empno [{empno = 10, name = \"Shaggy\"}]";
+    ml(ml).assertType("int list");
+  }
+
   @Test public void testApply() {
     ml("List.hd [\"abc\"]")
         .assertType("string");

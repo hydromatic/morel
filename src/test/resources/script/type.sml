@@ -48,6 +48,18 @@ len [1,2];
 List.map len (List.map String.explode ["ab", "", "cde"]);
 List.map (fn s => len (String.explode s)) ["ab", "", "cde"];
 
+(*) Type resolution involving record selectors
+val emps =
+  [{id = 100, name = "Fred", deptno = 10},
+   {id = 101, name = "Velma", deptno = 20},
+   {id = 102, name = "Shaggy", deptno = 30},
+   {id = 103, name = "Scooby", deptno = 30}];
+map #deptno emps;
+map #deptno (List.filter (fn e => #deptno e > 10) emps);
+map #2 [(1,2),(3,1)];
+List.filter #1 [(true,1),(false,2),(true,3)];
+map #2 (List.filter #1 [(true,1),(false,2),(true,3)]);
+
 (*) Should give
 (*)  Error: duplicate variable in pattern(s): e
 (*
