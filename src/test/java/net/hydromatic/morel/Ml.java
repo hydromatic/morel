@@ -41,7 +41,6 @@ import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
 
 import java.io.StringReader;
@@ -52,7 +51,10 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
+import static net.hydromatic.morel.Matchers.isAst;
+
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -119,29 +121,29 @@ class Ml {
 
   Ml assertParseDecl(Class<? extends Ast.Decl> clazz,
       String expected) {
-    return assertParseDecl(MainTest.isAst(clazz, expected));
+    return assertParseDecl(isAst(clazz, expected));
   }
 
-  Ml assertStmt(Matcher<AstNode> matcher) {
-    try {
-      final AstNode statement =
-          new MorelParserImpl(new StringReader(ml)).statement();
-      assertThat(statement, matcher);
-      return this;
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
+  Ml assertParseStmt(Matcher<AstNode> matcher) {
+    return withParser(parser -> {
+      try {
+        final AstNode statement = parser.statement();
+        assertThat(statement, matcher);
+      } catch (ParseException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
-  Ml assertStmt(Class<? extends AstNode> clazz,
+  Ml assertParseStmt(Class<? extends AstNode> clazz,
       String expected) {
-    return assertStmt(MainTest.isAst(clazz, expected));
+    return assertParseStmt(isAst(clazz, expected));
   }
 
   /** Checks that an expression can be parsed and returns the given string
    * when unparsed. */
   Ml assertParse(String expected) {
-    return assertStmt(AstNode.class, expected);
+    return assertParseStmt(AstNode.class, expected);
   }
 
   /** Checks that an expression can be parsed and returns the identical
@@ -293,7 +295,7 @@ class Ml {
 
   Ml assertEvalError(Matcher<Throwable> matcher) {
     try {
-      assertEval(CoreMatchers.notNullValue());
+      assertEval(notNullValue());
       fail("expected error");
     } catch (Throwable e) {
       assertThat(e, matcher);

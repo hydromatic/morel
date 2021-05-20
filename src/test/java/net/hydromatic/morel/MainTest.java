@@ -22,18 +22,11 @@ import org.apache.calcite.util.Util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 import net.hydromatic.morel.ast.Ast;
-import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.TypeVar;
 
-import org.hamcrest.CustomTypeSafeMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -42,10 +35,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-import java.util.Set;
 
 import static net.hydromatic.morel.Matchers.equalsOrdered;
 import static net.hydromatic.morel.Matchers.equalsUnordered;
@@ -66,68 +56,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * Kick the tires.
  */
 public class MainTest {
-  /** Matches a literal by value. */
-  @SuppressWarnings("rawtypes")
-  private static Matcher<Ast.Literal> isLiteral(Comparable comparable,
-      String ml) {
-    return new TypeSafeMatcher<Ast.Literal>() {
-      protected boolean matchesSafely(Ast.Literal literal) {
-        final String actualMl = Ast.toString(literal);
-        return literal.value.equals(comparable)
-            && actualMl.equals(ml);
-      }
-
-      public void describeTo(Description description) {
-        description.appendText("literal with value " + comparable
-            + " and ML " + ml);
-      }
-    };
-  }
-
-  /** Matches an AST node by its string representation. */
-  static <T extends AstNode> Matcher<T> isAst(Class<? extends T> clazz,
-      String expected) {
-    return new CustomTypeSafeMatcher<T>("ast with value " + expected) {
-      protected boolean matchesSafely(T t) {
-        assertThat(clazz.isInstance(t), is(true));
-        final String s = Ast.toString(t);
-        return s.equals(expected) && s.equals(t.toString());
-      }
-    };
-  }
-
-  private static List<Object> list(Object... values) {
-    return Arrays.asList(values);
-  }
-
-  @SafeVarargs
-  private static <E> Matcher<Iterable<E>> equalsUnordered(E... elements) {
-    final Set<E> expectedSet = Sets.newHashSet(elements);
-    return new TypeSafeMatcher<Iterable<E>>() {
-      protected boolean matchesSafely(Iterable<E> item) {
-        //noinspection rawtypes
-        return Sets.newHashSet((Iterable) item).equals(expectedSet);
-      }
-
-      public void describeTo(Description description) {
-        description.appendText("equalsUnordered").appendValue(expectedSet);
-      }
-    };
-  }
-
-  @SafeVarargs
-  private static <E> Matcher<Iterable<E>> equalsOrdered(E... elements) {
-    final List<E> expectedList = Arrays.asList(elements);
-    return new TypeSafeMatcher<Iterable<E>>() {
-      protected boolean matchesSafely(Iterable<E> item) {
-        return Lists.newArrayList(item).equals(expectedList);
-      }
-
-      public void describeTo(Description description) {
-        description.appendText("equalsOrdered").appendValue(expectedList);
-      }
-    };
-  }
 
   @Test void testEmptyRepl() {
     final String[] args = new String[0];
@@ -170,8 +98,8 @@ public class MainTest {
     ml("#\"a\"").assertParseLiteral(isLiteral('a', "#\"a\""));
 
     // true and false are variables, not actually literals
-    ml("true").assertStmt(Ast.Id.class, "true");
-    ml("false").assertStmt(Ast.Id.class, "false");
+    ml("true").assertParseStmt(Ast.Id.class, "true");
+    ml("false").assertParseStmt(Ast.Id.class, "false");
 
     ml("val x = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
     ml("val x : int = 5")
@@ -744,25 +672,6 @@ public class MainTest {
     ml("let fun f x = 1 + x; val x = 2 in f x end").assertEval(is(3));
   }
 
-  private Matcher<Throwable> throwsA(String message) {
-    return new CustomTypeSafeMatcher<Throwable>("throwable: " + message) {
-      @Override protected boolean matchesSafely(Throwable item) {
-        return item.toString().contains(message);
-      }
-    };
-  }
-
-  private <T extends Throwable> Matcher<Throwable> throwsA(Class<T> clazz,
-      Matcher<?> messageMatcher) {
-    return new CustomTypeSafeMatcher<Throwable>(clazz + " with message "
-        + messageMatcher) {
-      @Override protected boolean matchesSafely(Throwable item) {
-        return clazz.isInstance(item)
-            && messageMatcher.matches(item.getMessage());
-      }
-    };
-  }
-
   /** Tests that in a {@code let} clause, we can see previously defined
    * variables. */
   @Test void testLet2() {
@@ -876,8 +785,7 @@ public class MainTest {
 
   @Test void testRecord() {
     ml("{a = 1, b = {c = true, d = false}}").assertParseSame();
-    ml("{a = 1, 1 = 2}")
-        .assertStmt(Ast.Record.class, "{1 = 2, a = 1}");
+    ml("{a = 1, 1 = 2}").assertParseStmt(Ast.Record.class, "{1 = 2, a = 1}");
     ml("#b {a = 1, b = {c = true, d = false}}").assertParseSame();
     ml("{0=1}").assertError(is("label must be positive"));
     ml("{a = 1, b = true}").assertType("{a:int, b:bool}");
