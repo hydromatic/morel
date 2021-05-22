@@ -716,6 +716,29 @@ List.filter (fn {i, j} => i mod 2 = 0) [{i = 1, j = 1}, {i = 2, j = 2}, {i = 3, 
 List.filter (fn (i, j) => i mod 2 = 0) [(1, 1), (2, 2), (3, 3), (4, 5)];
 List.filter (fn i => i mod 2 = 0) [1, 2, 3, 4];
 
+(*) Parameterized view
+Sys.set ("hybrid", false);
+let
+  fun empsIn (emps, deptno) =
+    from e in emps
+    where e.deptno = deptno
+in
+  from e in (empsIn (emps, 30))
+  yield e.name
+end;
+Sys.plan();
+
+(*) Same, via a predicate
+let
+  fun empsIn emps predicate =
+    from e in emps
+    where predicate e
+in
+  from e in (empsIn emps (fn e => e.deptno = 30))
+  yield e.name
+end;
+Sys.plan();
+
 (*) dummy
 from message in ["the end"];
 

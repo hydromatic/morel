@@ -36,7 +36,6 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
 import net.hydromatic.morel.compile.Inliner;
 import net.hydromatic.morel.compile.Resolver;
-import net.hydromatic.morel.compile.TypeMap;
 import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
@@ -54,7 +53,6 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
@@ -172,16 +170,14 @@ class Ml {
     return this;
   }
 
-  private Ml withValidate(BiConsumer<Ast.Exp, TypeMap> action) {
+  private Ml withValidate(Consumer<TypeResolver.Resolved> action) {
     return withParser(parser -> {
       try {
         final AstNode statement = parser.statement();
         final Calcite calcite = Calcite.withDataSets(dataSetMap);
         final TypeResolver.Resolved resolved =
             Compiles.validateExpression(statement, calcite.foreignValues());
-        final Ast.ValDecl valDecl = (Ast.ValDecl) resolved.node;
-        final Ast.Exp resolvedExp = valDecl.valBinds.get(0).exp;
-        action.accept(resolvedExp, resolved.typeMap);
+        action.accept(resolved);
       } catch (ParseException e) {
         throw new RuntimeException(e);
       }
@@ -189,8 +185,9 @@ class Ml {
   }
 
   Ml assertType(Matcher<String> matcher) {
-    return withValidate((exp, typeMap) ->
-        assertThat(typeMap.getType(exp).moniker(), matcher));
+    return withValidate(resolved ->
+        assertThat(resolved.typeMap.getType(resolved.exp()).moniker(),
+            matcher));
   }
 
   Ml assertType(String expected) {
@@ -198,8 +195,7 @@ class Ml {
   }
 
   Ml assertTypeThrows(Matcher<Throwable> matcher) {
-    assertError(() ->
-            withValidate((exp, typeMap) -> fail("expected error")),
+    assertError(() -> withValidate(resolved -> fail("expected error")),
         matcher);
     return this;
   }
@@ -227,11 +223,9 @@ class Ml {
       final TypeSystem typeSystem = new TypeSystem();
 
       final Calcite calcite = Calcite.withDataSets(dataSetMap);
-      final Environment env =
-          Environments.env(typeSystem, calcite.foreignValues());
-      final Ast.ValDecl valDecl = Compiles.toValDecl(statement);
       final TypeResolver.Resolved resolved =
-          TypeResolver.deduceType(env, valDecl, typeSystem);
+          Compiles.validateExpression(statement, calcite.foreignValues());
+      final Environment env = resolved.env;
       final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
       final Resolver resolver = Resolver.of(resolved.typeMap, env);
       final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
@@ -250,7 +244,15 @@ class Ml {
   /** Asserts that after parsing the current expression and converting it to
    * Core, the Core string converts to the expected value. Which is usually
    * the original string. */
-  public void assertCoreString(Matcher<String> matcher) {
+  public Ml assertCoreString(Matcher<String> matcher) {
+    return assertCoreString(null, matcher, null);
+  }
+
+  /** As {@link #assertCoreString(Matcher)} but also checks how the Core
+   * string has changed after inlining. */
+  public Ml assertCoreString(@Nullable Matcher<String> beforeMatcher,
+      Matcher<String> matcher,
+      @Nullable Matcher<String> inlinedMatcher) {
     final AstNode statement;
     try {
       final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
@@ -258,22 +260,43 @@ class Ml {
     } catch (ParseException parseException) {
       throw new RuntimeException(parseException);
     }
-    final TypeSystem typeSystem = new TypeSystem();
 
-    final Environment env =
-        Environments.env(typeSystem, ImmutableMap.of());
-    final Ast.ValDecl valDecl = Compiles.toValDecl(statement);
+    final Calcite calcite = Calcite.withDataSets(dataSetMap);
     final TypeResolver.Resolved resolved =
-        TypeResolver.deduceType(env, valDecl, typeSystem);
+        Compiles.validateExpression(statement, calcite.foreignValues());
+    final TypeSystem typeSystem = resolved.typeMap.typeSystem;
+    final Environment env = resolved.env;
     final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
     final Resolver resolver = Resolver.of(resolved.typeMap, env);
     final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
-    final Analyzer.Analysis analysis =
-        Analyzer.analyze(typeSystem, env, valDecl3);
-    final Inliner inliner = Inliner.of(typeSystem, env, analysis);
-    final Core.ValDecl valDecl4 = valDecl3.accept(inliner);
-    final String coreString = valDecl4.exp.toString();
-    assertThat(coreString, matcher);
+
+    if (beforeMatcher != null) {
+      // "beforeMatcher", if present, checks the expression before any inlining
+      assertThat(valDecl3.exp.toString(), beforeMatcher);
+    }
+
+    final int inlineCount = inlinedMatcher == null ? 1 : 4;
+    Core.ValDecl valDecl4 = valDecl3;
+    for (int i = 0; i < inlineCount; i++) {
+      final Analyzer.Analysis analysis =
+          Analyzer.analyze(typeSystem, env, valDecl3);
+      final Inliner inliner = Inliner.of(typeSystem, env, analysis);
+      final Core.ValDecl valDecl5 = valDecl4;
+      valDecl4 = valDecl5.accept(inliner);
+      if (i == 0) {
+        // "matcher" checks the expression after one inlining pass
+        assertThat(valDecl4.exp.toString(), matcher);
+      }
+      if (valDecl4 == valDecl5) {
+        break;
+      }
+    }
+    if (inlinedMatcher != null) {
+      // "inlinedMatcher", if present, checks the expression after all inlining
+      // passes
+      assertThat(valDecl4.exp.toString(), inlinedMatcher);
+    }
+    return this;
   }
 
   Ml assertAnalyze(Matcher<Object> matcher) {
@@ -313,20 +336,12 @@ class Ml {
   }
 
   Ml assertEval(Matcher<Object> resultMatcher, Matcher<String> planMatcher) {
-    try {
-      final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
-      final AstNode statement = parser.statement();
-      final TypeSystem typeSystem = new TypeSystem();
-      final Calcite calcite = Calcite.withDataSets(dataSetMap);
-      final Environment env =
-          Environments.env(typeSystem, calcite.foreignValues());
+    return withValidate(resolved -> {
       final Session session = new Session();
       session.map.putAll(propMap);
-      eval(session, env, typeSystem, statement, resultMatcher, planMatcher);
-      return this;
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
+      eval(session, resolved.env, resolved.typeMap.typeSystem, resolved.node,
+          resultMatcher, planMatcher);
+    });
   }
 
   @CanIgnoreReturnValue

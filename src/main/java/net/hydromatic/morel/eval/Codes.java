@@ -452,7 +452,9 @@ public abstract class Codes {
       @Override public Describer describe(Describer describer) {
         return describer.start("from", d ->
             sources.forEach((pat, code) ->
-                d.arg("", pat.toString()).arg("", code)));
+                d.arg("", pat.toString())
+                    .arg("", code)
+                    .arg("sink", rowSinkFactory.get())));
       }
 
       @Override public Object eval(EvalEnv env) {
@@ -2130,7 +2132,7 @@ public abstract class Codes {
   }
 
   /** Accepts rows produced by a supplier as part of a {@code from} clause. */
-  public interface RowSink {
+  public interface RowSink extends Describable {
     void accept(EvalEnv env);
     List<Object> result(EvalEnv env);
   }
@@ -2143,6 +2145,12 @@ public abstract class Codes {
     WhereRowSink(Code filterCode, RowSink rowSink) {
       this.filterCode = filterCode;
       this.rowSink = rowSink;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("where", d ->
+          d.arg("condition", filterCode)
+              .arg("sink", rowSink));
     }
 
     public void accept(EvalEnv env) {
@@ -2176,6 +2184,14 @@ public abstract class Codes {
       this.outNames = Objects.requireNonNull(outNames);
       this.rowSink = Objects.requireNonNull(rowSink);
       this.values = inNames.size() == 1 ? null : new Object[inNames.size()];
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("group", d -> {
+        d.arg("key", keyCode);
+        aggregateCodes.forEach(a -> d.arg("agg", a));
+        d.arg("sink", rowSink);
+      });
     }
 
     public void accept(EvalEnv env) {
@@ -2228,6 +2244,14 @@ public abstract class Codes {
       this.values = names.size() == 1 ? null : new Object[names.size()];
     }
 
+    @Override public Describer describe(Describer describer) {
+      return describer.start("order", d -> {
+        codes.forEach(kv -> d.arg(kv.right ? "desc" : "asc", kv.left));
+        Pair.forEach(codes, (k, v) -> d.arg(v ? "desc" : "asc", k));
+        d.arg("sink", rowSink);
+      });
+    }
+
     public void accept(EvalEnv env) {
       if (names.size() == 1) {
         rows.add(env.getOpt(names.get(0)));
@@ -2271,6 +2295,10 @@ public abstract class Codes {
     YieldRowSink(Code yieldCode) {
       this.yieldCode = yieldCode;
       list = new ArrayList<>();
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("yield", d -> d.arg("code", yieldCode));
     }
 
     public void accept(EvalEnv env) {

@@ -214,7 +214,7 @@ public class AlgebraTest {
             + "  where e.deptno = thirty\n"
             + "  yield e.empno\n"
             + "end",
-        "#map (fn e => (#empno e))\n"
+        "map (fn e => (#empno e))\n"
             + "  (List.filter (fn e => (#deptno e) = 30) (#emp scott))",
     };
     Stream.of(queries).filter(q -> !q.startsWith("#")).forEach(query -> {
@@ -273,8 +273,38 @@ public class AlgebraTest {
     final String ml = "from e in scott.emp\n"
         + "  where e.empno < 7500\n"
         + "  yield {e.empno, e.deptno, d5 = e.deptno + 5}";
-    String plan = "calcite("
-        + "plan LogicalProject(d5=[+($1, 5)], deptno=[$1], empno=[$2])\n"
+    checkFullCalcite(ml);
+  }
+
+  /** As {@link #testFullCalcite()} but table is via a {@code let}. */
+  @Test void testFullCalcite2() {
+    final String ml = "let\n"
+        + "  val emp = scott.emp\n"
+        + "in\n"
+        + "  from e in scott.emp\n"
+        + "  where e.empno < 7500\n"
+        + "  yield {e.empno, e.deptno, d5 = e.deptno + 5}\n"
+        + "end";
+    checkFullCalcite(ml);
+  }
+
+  /** As {@link #testFullCalcite()} but query is a function, and table is
+   * passed via an argument. */
+  @Test void testFullCalcite3() {
+    final String ml = "let\n"
+        + "  fun query emp =\n"
+        + "    from e in emp\n"
+        + "    where e.empno < 7500\n"
+        + "    yield {e.empno, e.deptno, d5 = e.deptno + 5}\n"
+        + "in\n"
+        + "  query scott.emp\n"
+        + "end";
+    checkFullCalcite(ml);
+  }
+
+  private void checkFullCalcite(String ml) {
+    String plan = "calcite(plan "
+        + "LogicalProject(d5=[+($1, 5)], deptno=[$1], empno=[$2])\n"
         + "  LogicalFilter(condition=[<($2, 7500)])\n"
         + "    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], "
         + "hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"

@@ -20,6 +20,7 @@ package net.hydromatic.morel;
 
 import org.junit.jupiter.api.Test;
 
+import static net.hydromatic.morel.Matchers.list;
 import static net.hydromatic.morel.Matchers.whenAppliedTo;
 import static net.hydromatic.morel.Ml.ml;
 
@@ -72,6 +73,14 @@ public class InlineTest {
         "match(x, apply(fnValue +, argCode tuple(get(name x), constant(1))))";
     ml(ml).assertPlan(is(plan))
         .assertEval(whenAppliedTo(2, is(3)));
+  }
+
+  @Test void testInlineFnUnit() {
+    final String ml = "fun f () = String.size \"abc\"";
+    final String core = "fn v0 => #size String \"abc\"";
+    ml(ml)
+        .assertEval(whenAppliedTo(list(), is(3)))
+        .assertCoreString(is(core));
   }
 
   @Test void testInlineChained() {
@@ -135,6 +144,71 @@ public class InlineTest {
   private String v(int i) {
     return "x" + i;
   }
+
+  /** Tests that a predicate is inlined inside {@code where}. */
+  @Test void testFromPredicate() {
+    final String ml = "let\n"
+        + "  fun isEven n = n mod 2 = 0\n"
+        + "in\n"
+        + "  from e in scott.emp\n"
+        + "  where isEven e.empno\n"
+        + "  yield e.deptno\n"
+        + "end";
+    final String core0 = "let "
+        + "val rec isEven = fn n => op = (op mod (n, 2), 0) "
+        + "in "
+        + "from e in #emp scott "
+        + "where isEven (#empno e) yield #deptno e end";
+    final String core1 = "from e in #emp scott "
+        + "where let val n = #empno e in op mod (n, 2) = 0 end yield #deptno e";
+    final String core2 = "from e in #emp scott "
+        + "where op mod (#empno e, 2) = 0 yield #deptno e";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertCoreString(is(core0), is(core1), is(core2))
+        .assertEval(is(list(20, 30, 30, 10, 20, 30, 20, 30, 20, 10)));
+  }
+
+  /** Tests that a predicate is inlined inside {@code where}. */
+  @Test void testFromView() {
+    final String ml = "let\n"
+        + "  fun evenEmp x =\n"
+        + "    from e in scott.emp\n"
+        + "    where e.empno mod 2 = 0\n"
+        + "in\n"
+        + "  from e in (evenEmp 1)\n"
+        + "  where e.deptno = 10\n"
+        + "  yield e.ename\n"
+        + "end";
+    final String core0 = "let"
+        + " val rec evenEmp = fn x =>"
+        + " from e in #emp scott"
+        + " where op = (op mod (#empno e, 2), 0)"
+        + " yield e "
+        + "in"
+        + " from e#1 in evenEmp 1"
+        + " where op = (#deptno e#1, 10)"
+        + " yield #ename e#1 "
+        + "end";
+    final String core1 = "from e#1 in"
+        + " let val x = 1"
+        + " in from e in #emp scott"
+        + " where op mod (#empno e, 2) = 0"
+        + " yield e "
+        + "end"
+        + " where #deptno e#1 = 10"
+        + " yield #ename e#1";
+    final String core2 = "from e#1 in"
+        + " from e in #emp scott"
+        + " where op mod (#empno e, 2) = 0"
+        + " yield e "
+        + "where #deptno e#1 = 10 "
+        + "yield #ename e#1";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertCoreString(is(core0), is(core1), is(core2));
+  }
+
 }
 
 // End InlineTest.java

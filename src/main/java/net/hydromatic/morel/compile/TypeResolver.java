@@ -151,7 +151,7 @@ public class TypeResolver {
           continue tryAgain;
         }
       }
-      return Resolved.of(decl, node2, typeMap);
+      return Resolved.of(env, decl, node2, typeMap);
     }
   }
 
@@ -1209,11 +1209,14 @@ public class TypeResolver {
 
   /** Result of validating a declaration. */
   public static class Resolved {
+    public final Environment env;
     public final Ast.Decl originalNode;
     public final Ast.Decl node;
     public final TypeMap typeMap;
 
-    private Resolved(Ast.Decl originalNode, Ast.Decl node, TypeMap typeMap) {
+    private Resolved(Environment env,
+        Ast.Decl originalNode, Ast.Decl node, TypeMap typeMap) {
+      this.env = env;
       this.originalNode = Objects.requireNonNull(originalNode);
       this.node = Objects.requireNonNull(node);
       this.typeMap = Objects.requireNonNull(typeMap);
@@ -1222,8 +1225,20 @@ public class TypeResolver {
           : originalNode.getClass() == node.getClass());
     }
 
-    static Resolved of(Ast.Decl originalNode, Ast.Decl node, TypeMap typeMap) {
-      return new Resolved(originalNode, node, typeMap);
+    static Resolved of(Environment env, Ast.Decl originalNode, Ast.Decl node,
+        TypeMap typeMap) {
+      return new Resolved(env, originalNode, node, typeMap);
+    }
+
+    public Ast.Exp exp() {
+      if (node instanceof Ast.ValDecl) {
+        final Ast.ValDecl valDecl = (Ast.ValDecl) this.node;
+        if (valDecl.valBinds.size() == 1) {
+          final Ast.ValBind valBind = valDecl.valBinds.get(0);
+          return valBind.exp;
+        }
+      }
+      throw new AssertionError("not an expression: " + node);
     }
   }
 

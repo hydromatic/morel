@@ -1599,8 +1599,15 @@ public class MainTest {
     final String expected = "from r in [{a = 2, b = 3}]"
         + " group a = #a r compute sb = sum of #b r"
         + " yield {a = a, a2 = a + a, sb = sb}";
+    final String plan = "from(r, tuple(tuple(constant(2), constant(3))), "
+        + "sink group(key tuple(apply(fnValue nth:0, argCode get(name r))), "
+        + "agg aggregate, "
+        + "sink yield(code tuple(get(name a), "
+        + "apply(fnValue +, argCode tuple(get(name a), get(name a))), "
+        + "get(name sb)))))";
     ml(ml).assertParse(expected)
-        .assertEvalIter(equalsOrdered(list(2, 4, 3)));
+        .assertEvalIter(equalsOrdered(list(2, 4, 3)))
+        .assertPlan(is(plan));
   }
 
   @Test void testJoinGroup() {
