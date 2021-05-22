@@ -354,7 +354,7 @@ public class CalciteCompiler extends Compiler {
           final RelNode expCode = cx2.relBuilder.build();
           final Core.Pat pat = patExp.getKey();
           sourceCodes.put(pat, expCode);
-          pat.accept(Compiles.binding(typeSystem, bindings));
+          Compiles.bindPattern(typeSystem, bindings, pat);
         }
         final Map<String, Function<RelBuilder, RexNode>> map = new HashMap<>();
         if (sourceCodes.size() == 0) {
@@ -486,20 +486,20 @@ public class CalciteCompiler extends Compiler {
       // In 'from e in emps yield e', 'e' expands to a record,
       // '{e.deptno, e.ename}'
       final Core.Id id = (Core.Id) exp;
-      final Binding binding = cx.env.getOpt(id.name);
+      final Binding binding = cx.env.getOpt(id.idPat.name);
       if (binding != null && binding.value != Unit.INSTANCE) {
         final Core.Literal coreLiteral =
-            core.literal((PrimitiveType) binding.type, binding.value);
+            core.literal((PrimitiveType) binding.id.type, binding.value);
         return translate(cx, coreLiteral);
       }
       record = toRecord(cx, id);
       if (record != null) {
         return translate(cx, record);
       }
-      if (cx.map.containsKey(id.name)) {
+      if (cx.map.containsKey(id.idPat.name)) {
         // Not a record, so must be a scalar. It is represented in Calcite
         // as a record with one field.
-        final Function<RelBuilder, RexNode> fn = cx.map.get(id.name);
+        final Function<RelBuilder, RexNode> fn = cx.map.get(id.idPat.name);
         return fn.apply(cx.relBuilder);
       }
       break;
@@ -519,10 +519,10 @@ public class CalciteCompiler extends Compiler {
       }
       if (apply.fn instanceof Core.RecordSelector
           && apply.arg instanceof Core.Id
-          && cx.map.containsKey(((Core.Id) apply.arg).name)) {
+          && cx.map.containsKey(((Core.Id) apply.arg).idPat.name)) {
         // Something like '#deptno e',
         final RexNode range =
-            cx.map.get(((Core.Id) apply.arg).name).apply(cx.relBuilder);
+            cx.map.get(((Core.Id) apply.arg).idPat.name).apply(cx.relBuilder);
         final Core.RecordSelector selector = (Core.RecordSelector) apply.fn;
         return cx.relBuilder.field(range, selector.fieldName());
       }
@@ -557,8 +557,8 @@ public class CalciteCompiler extends Compiler {
     final Set<String> varNames = new LinkedHashSet<>();
     node.accept(new Visitor() {
       @Override protected void visit(Core.Id id) {
-        if (map.containsKey(id.name)) {
-          varNames.add(id.name);
+        if (map.containsKey(id.idPat.name)) {
+          varNames.add(id.idPat.name);
         }
       }
     });
@@ -592,7 +592,7 @@ public class CalciteCompiler extends Compiler {
   }
 
   private Core.Tuple toRecord(RelContext cx, Core.Id id) {
-    final Type type = cx.env.get(id.name).type;
+    final Type type = cx.env.get(id.idPat.name).id.type;
     if (type instanceof RecordType) {
       final RecordType recordType = (RecordType) type;
       final List<Core.Exp> args = new ArrayList<>();
@@ -637,23 +637,23 @@ public class CalciteCompiler extends Compiler {
     final List<Binding> bindings = new ArrayList<>();
     final List<RexNode> nodes = new ArrayList<>();
     final List<String> names = new ArrayList<>();
-    group.groupExps.forEach((name, exp) -> {
-      bindings.add(Binding.of(name, exp.type));
+    group.groupExps.forEach((idPat, exp) -> {
+      bindings.add(Binding.of(idPat));
       nodes.add(translate(cx, exp));
-      names.add(name);
+      names.add(idPat.name);
     });
     final RelBuilder.GroupKey groupKey = cx.relBuilder.groupKey(nodes);
     final List<RelBuilder.AggCall> aggregateCalls = new ArrayList<>();
-    group.aggregates.forEach((name, aggregate) -> {
-      bindings.add(Binding.of(name, aggregate.type));
+    group.aggregates.forEach((idPat, aggregate) -> {
+      bindings.add(Binding.of(idPat));
       final SqlAggFunction op = aggOp(aggregate.aggregate);
       final ImmutableList.Builder<RexNode> args = ImmutableList.builder();
       if (aggregate.argument != null) {
         args.add(translate(cx, aggregate.argument));
       }
       aggregateCalls.add(
-          cx.relBuilder.aggregateCall(op, args.build()).as(name));
-      names.add(name);
+          cx.relBuilder.aggregateCall(op, args.build()).as(idPat.name));
+      names.add(idPat.name);
     });
 
     // Create an Aggregate operator.
@@ -719,13 +719,10 @@ public class CalciteCompiler extends Compiler {
       this.inputCount = inputCount;
     }
 
-    @Override RelContext bind(String name, Type type, Object value) {
-      return new RelContext(env.bind(name, type, value), relBuilder,
-          map, inputCount);
-    }
-
     @Override RelContext bindAll(Iterable<Binding> bindings) {
-      return new RelContext(env.bindAll(bindings), relBuilder, map, inputCount);
+      final Environment env2 = env.bindAll(bindings);
+      return env2 == env ? this
+          : new RelContext(env2, relBuilder, map, inputCount);
     }
   }
 

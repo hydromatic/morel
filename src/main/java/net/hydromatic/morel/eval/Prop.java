@@ -34,6 +34,9 @@ public enum Prop {
    * possible. Default is false. */
   HYBRID("hybrid", Boolean.class, false),
 
+  /** Maximum number of inlining passes. */
+  INLINE_PASS_COUNT("inlinePassCount", Integer.class, 5),
+
   /** Integer property "optionalInt" is for testing. Default is null. */
   OPTIONAL_INT("optionalInt", Integer.class, null);
 
@@ -88,6 +91,13 @@ public enum Prop {
     assert type == Boolean.class;
     Object o = map.get(this);
     return this.<Boolean>typeValue(o);
+  }
+
+  /** Returns the value of an integer property. */
+  public int intValue(Map<Prop, Object> map) {
+    assert type == Integer.class;
+    Object o = map.get(this);
+    return this.<Integer>typeValue(o);
   }
 
   @SuppressWarnings("unchecked")

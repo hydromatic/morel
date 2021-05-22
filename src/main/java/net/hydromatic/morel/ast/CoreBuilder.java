@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
@@ -121,8 +122,8 @@ public enum CoreBuilder {
   }
 
   /** Creates a reference to a value. */
-  public Core.Id id(Type type, String name) {
-    return new Core.Id(name, type);
+  public Core.Id id(Core.IdPat idPat) {
+    return new Core.Id(idPat);
   }
 
   public Core.RecordSelector recordSelector(TypeSystem typeSystem,
@@ -144,8 +145,19 @@ public enum CoreBuilder {
     return new Core.RecordSelector(fnType, slot);
   }
 
-  public Core.Pat idPat(Type type, String name) {
-    return new Core.IdPat(type, name);
+  public Core.IdPat idPat(Type type, String name, int i) {
+    return new Core.IdPat(type, name, i);
+  }
+
+  public Core.IdPat idPat(Type type, String name, NameGenerator nameGenerator) {
+    final int i;
+    if (name.equals("")) {
+      name = nameGenerator.get();
+      i = 0;
+    } else {
+      i = nameGenerator.inc(name);
+    }
+    return new Core.IdPat(type, name, i);
   }
 
   @SuppressWarnings("rawtypes")
@@ -241,11 +253,15 @@ public enum CoreBuilder {
     return new Core.Tuple(tupleType, argList);
   }
 
-  public Core.Let let(Core.Decl decl, Core.Exp exp) {
+  public Core.Let let(Core.ValDecl decl, Core.Exp exp) {
     return new Core.Let(decl, exp);
   }
 
-  public Core.ValDecl valDecl(boolean rec, Core.Pat pat, Core.Exp exp) {
+  public Core.Local local(DataType dataType, Core.Exp exp) {
+    return new Core.Local(dataType, exp);
+  }
+
+  public Core.ValDecl valDecl(boolean rec, Core.IdPat pat, Core.Exp exp) {
     return new Core.ValDecl(rec, pat, exp);
   }
 
@@ -264,12 +280,8 @@ public enum CoreBuilder {
         ImmutableList.copyOf(steps), yieldExp);
   }
 
-  public Core.Fn fn(FnType type, Core.Match... matchList) {
-    return new Core.Fn(type, ImmutableList.copyOf(matchList));
-  }
-
-  public Core.Fn fn(FnType type, Iterable<? extends Core.Match> matchList) {
-    return new Core.Fn(type, ImmutableList.copyOf(matchList));
+  public Core.Fn fn(FnType type, Core.IdPat idPat, Core.Exp exp) {
+    return new Core.Fn(type, idPat, exp);
   }
 
   public Core.Apply apply(Type type, Core.Exp fn, Core.Exp arg) {
@@ -302,10 +314,10 @@ public enum CoreBuilder {
     return new Core.OrderItem(exp, direction);
   }
 
-  public Core.Group group(Map<String, Core.Exp> groupExps,
-      Map<String, Core.Aggregate> aggregates) {
-    return new Core.Group(ImmutableSortedMap.copyOf(groupExps),
-        ImmutableSortedMap.copyOf(aggregates));
+  public Core.Group group(SortedMap<Core.IdPat, Core.Exp> groupExps,
+      SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
+    return new Core.Group(ImmutableSortedMap.copyOfSorted(groupExps),
+        ImmutableSortedMap.copyOfSorted(aggregates));
   }
 
   public Core.Where where(Core.Exp exp) {

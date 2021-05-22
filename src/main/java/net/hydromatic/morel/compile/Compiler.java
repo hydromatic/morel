@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.compile;
 
+import org.apache.calcite.util.Util;
+
 import com.google.common.collect.ImmutableList;
 
 import net.hydromatic.morel.ast.Core;
@@ -43,7 +45,7 @@ import net.hydromatic.morel.util.ThreadLocals;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +55,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.Ast.Direction.DESC;
+import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 
 /** Compiles an expression to code that can be evaluated. */
@@ -137,10 +140,6 @@ public class Compiler {
     Context bindAll(Iterable<Binding> bindings) {
       return of(env.bindAll(bindings));
     }
-
-    Context bind(String name, Type type, Object value) {
-      return of(env.bind(name, type, value));
-    }
   }
 
   public final Code compile(Environment env, Core.Exp expression) {
@@ -202,9 +201,13 @@ public class Compiler {
     case LET:
       return compileLet(cx, (Core.Let) expression);
 
+    case LOCAL:
+      return compileLocal(cx, (Core.Local) expression);
+
     case FN:
       final Core.Fn fn = (Core.Fn) expression;
-      return compileMatchList(cx, fn.matchList);
+      return compileMatchList(cx,
+          ImmutableList.of(core.match(fn.idPat, fn.exp)));
 
     case CASE:
       final Core.Case case_ = (Core.Case) expression;
@@ -224,11 +227,11 @@ public class Compiler {
 
     case ID:
       final Core.Id id = (Core.Id) expression;
-      final Binding binding = cx.env.getOpt(id.name);
+      final Binding binding = cx.env.getOpt(id.idPat.name);
       if (binding != null && binding.value instanceof Code) {
         return (Code) binding.value;
       }
-      return Codes.get(id.name);
+      return Codes.get(id.idPat.name);
 
     case TUPLE:
       final Core.Tuple tuple = (Core.Tuple) expression;
@@ -277,7 +280,7 @@ public class Compiler {
     from.sources.forEach((pat, exp) -> {
       final Code expCode = compile(cx.bindAll(bindings), exp);
       sourceCodes.put(pat, expCode);
-      pat.accept(Compiles.binding(typeSystem, bindings));
+      Compiles.bindPattern(typeSystem, bindings, pat);
     });
     Supplier<Codes.RowSink> rowSinkFactory =
         createRowSinkFactory(cx, ImmutableList.copyOf(bindings), from.steps,
@@ -296,12 +299,10 @@ public class Compiler {
     final Core.FromStep firstStep = steps.get(0);
     final ImmutableList.Builder<Binding> outBindingBuilder =
         ImmutableList.builder();
-    firstStep.deriveOutBindings(bindings, Binding::of,
-        outBindingBuilder::add);
+    firstStep.deriveOutBindings(bindings, Binding::of, outBindingBuilder::add);
     final ImmutableList<Binding> outBindings = outBindingBuilder.build();
     final Supplier<Codes.RowSink> nextFactory =
-        createRowSinkFactory(cx, outBindings,
-            steps.subList(1, steps.size()), yieldExp);
+        createRowSinkFactory(cx, outBindings, Util.skip(steps), yieldExp);
     switch (firstStep.op) {
     case WHERE:
       final Core.Where where = (Core.Where) firstStep;
@@ -331,7 +332,7 @@ public class Compiler {
         if (aggregate.argument == null) {
           final SortedMap<String, Type> argNameTypes =
               new TreeMap<>(RecordType.ORDERING);
-          bindings.forEach(b -> argNameTypes.put(b.name, b.type));
+          bindings.forEach(b -> argNameTypes.put(b.id.name, b.id.type));
           argumentType = typeSystem.recordOrScalarType(argNameTypes);
           argumentCode = null;
         } else {
@@ -364,7 +365,7 @@ public class Compiler {
 
   private ImmutableList<String> bindingNames(List<Binding> bindings) {
     //noinspection UnstableApiUsage
-    return bindings.stream().map(b -> b.name)
+    return bindings.stream().map(b -> b.id.name)
         .collect(ImmutableList.toImmutableList());
   }
 
@@ -382,7 +383,7 @@ public class Compiler {
       return toApplicable(cx, literal.unwrap(), argType);
 
     case ID:
-      final Binding binding = cx.env.getOpt(((Core.Id) fn).name);
+      final Binding binding = cx.env.getOpt(((Core.Id) fn).idPat.name);
       if (binding == null
           || binding.value instanceof LinkCode
           || binding.value == Unit.INSTANCE) {
@@ -430,7 +431,7 @@ public class Compiler {
   private Code compileLet(Context cx, Core.Let let) {
     final List<Code> matchCodes = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
-    compileDecl(cx, let.decl, matchCodes, bindings, null);
+    compileValDecl(cx, let.decl, matchCodes, bindings, null);
     Context cx2 = cx.bindAll(bindings);
     final Code resultCode = compile(cx2, let.exp);
     return finishCompileLet(cx2, matchCodes, resultCode, let.type);
@@ -441,15 +442,24 @@ public class Compiler {
     return Codes.let(matchCodes, resultCode);
   }
 
+  private Code compileLocal(Context cx, Core.Local local) {
+    final List<Binding> bindings = new ArrayList<>();
+    compileDatatypeDecl(ImmutableList.of(local.dataType), bindings, null);
+    Context cx2 = cx.bindAll(bindings);
+    return compile(cx2, local.exp);
+  }
+
   void compileDecl(Context cx, Core.Decl decl, List<Code> matchCodes,
       List<Binding> bindings, List<Action> actions) {
     switch (decl.op) {
     case VAL_DECL:
-      compileValDecl(cx, (Core.ValDecl) decl, matchCodes, bindings, actions);
+      final Core.ValDecl valDecl = (Core.ValDecl) decl;
+      compileValDecl(cx, valDecl, matchCodes, bindings, actions);
       break;
 
     case DATATYPE_DECL:
-      compileDatatypeDecl((Core.DatatypeDecl) decl, bindings, actions);
+      final Core.DatatypeDecl datatypeDecl = (Core.DatatypeDecl) decl;
+      compileDatatypeDecl(datatypeDecl.dataTypes, bindings, actions);
       break;
 
     default:
@@ -457,15 +467,9 @@ public class Compiler {
     }
   }
 
-  private void compileValDecl(Context cx, Core.ValDecl valDecl,
-      List<Code> matchCodes, List<Binding> bindings, List<Action> actions) {
-    valDecl.pat.accept(Compiles.binding(typeSystem, bindings));
-    compileValBind(cx, valDecl, matchCodes, bindings, actions);
-  }
-
-  private void compileDatatypeDecl(Core.DatatypeDecl datatypeDecl,
+  private void compileDatatypeDecl(List<DataType> dataTypes,
       List<Binding> bindings, List<Action> actions) {
-    for (DataType dataType : datatypeDecl.dataTypes) {
+    for (DataType dataType : dataTypes) {
       final List<Binding> newBindings = new TailList<>(bindings);
       dataType.typeConstructors.keySet().forEach(name ->
           bindings.add(typeSystem.bindTyCon(dataType, name)));
@@ -525,22 +529,28 @@ public class Compiler {
 
   private Pair<Core.Pat, Code> compileMatch(Context cx, Core.Match match) {
     final List<Binding> bindings = new ArrayList<>();
-    match.pat.accept(Compiles.binding(typeSystem, bindings));
+    Compiles.bindPattern(typeSystem, bindings, match.pat);
     final Code code = compile(cx.bindAll(bindings), match.exp);
     return Pair.of(match.pat, code);
   }
 
-  private void compileValBind(Context cx, Core.ValDecl valBind,
+  private void compileValDecl(Context cx, Core.ValDecl valDecl,
       List<Code> matchCodes, List<Binding> bindings, List<Action> actions) {
+    Compiles.bindPattern(typeSystem, bindings, valDecl);
     final List<Binding> newBindings = new TailList<>(bindings);
-    final Map<Core.IdPat, LinkCode> linkCodes = new IdentityHashMap<>();
-    if (valBind.rec) {
-      valBind.pat.accept(
+    final Map<Core.IdPat, LinkCode> linkCodes = new HashMap<>();
+    if (valDecl.rec) {
+      // Currently, valDecl.pat has type IdPat, so the visit below is trivial.
+      // But in future, a recursive ValDecl will bind several variables (in
+      // order to support mutual recursion, possibly via a new sub-class). So
+      // for now we keep the code as a visitor, and expect to turn it into a
+      // loop someday.
+      valDecl.pat.accept(
           new Visitor() {
             @Override protected void visit(Core.IdPat idPat) {
               final LinkCode linkCode = new LinkCode();
               linkCodes.put(idPat, linkCode);
-              bindings.add(Binding.of(idPat.name, idPat.type, linkCode));
+              bindings.add(Binding.of(idPat, linkCode));
             }
           });
     }
@@ -548,24 +558,22 @@ public class Compiler {
     // Using 'compileArg' rather than 'compile' encourages CalciteCompiler
     // to use a pure Calcite implementation if possible, and has no effect
     // in the basic Compiler.
-    final Code code = compileArg(cx1, valBind.exp);
+    final Code code = compileArg(cx1, valDecl.exp);
     if (!linkCodes.isEmpty()) {
-      link(linkCodes, valBind.pat, code);
+      link(linkCodes, valDecl.pat, code);
     }
     newBindings.clear();
-    final ImmutableList<Pair<Core.Pat, Code>> patCodes =
-        ImmutableList.of(Pair.of(valBind.pat, code));
-    matchCodes.add(new MatchCode(patCodes));
+    matchCodes.add(new MatchCode(ImmutableList.of(Pair.of(valDecl.pat, code))));
 
     if (actions != null) {
-      final String name = ((Core.IdPat) valBind.pat).name;
-      final Type type0 = valBind.exp.type;
+      final String name = valDecl.pat.name;
+      final Type type0 = valDecl.exp.type;
       final Type type = typeSystem.ensureClosed(type0);
       actions.add((output, outBindings, evalEnv) -> {
         final StringBuilder buf = new StringBuilder();
         try {
           final Object o = code.eval(evalEnv);
-          outBindings.add(Binding.of(name, type, o));
+          outBindings.add(Binding.of(valDecl.pat.withType(type), o));
           Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
         } catch (Codes.MorelRuntimeException e) {
           e.describeTo(buf);

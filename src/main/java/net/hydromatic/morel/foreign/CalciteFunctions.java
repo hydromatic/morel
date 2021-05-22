@@ -218,7 +218,7 @@ public class CalciteFunctions {
             TypeResolver.deduceType(env, valDecl, typeSystem);
         final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
         final Core.ValDecl valDecl3 =
-            new Resolver(resolved.typeMap).toCore(valDecl2);
+            Resolver.of(resolved.typeMap, env).toCore(valDecl2);
         final Core.Exp e3 = Compiles.toExp(valDecl3);
         code = new Compiler(typeSystem).compile(env, e3);
         evalEnv = Codes.emptyEnvWith(session, env);
@@ -277,7 +277,7 @@ public class CalciteFunctions {
             TypeResolver.deduceType(env, valDecl, typeSystem);
         final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
         final Core.ValDecl valDecl3 =
-            new Resolver(resolved.typeMap).toCore(valDecl2);
+            Resolver.of(resolved.typeMap, env).toCore(valDecl2);
         final Core.Exp e3 = Compiles.toExp(valDecl3);
         code = new Compiler(typeSystem).compile(env, e3);
         f = Converters.toCalcite(e3.type, typeFactory);

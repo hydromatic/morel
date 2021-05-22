@@ -25,6 +25,8 @@ import com.google.common.collect.Sets;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.eval.Codes;
 
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -35,7 +37,9 @@ import org.hamcrest.core.Is;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -76,6 +80,14 @@ public abstract class Matchers {
 
   static List<Object> list(Object... values) {
     return Arrays.asList(values);
+  }
+
+  static Map<Object, Object> map(Object... keyValues) {
+    final LinkedHashMap<Object, Object> map = new LinkedHashMap<>();
+    for (int i = 0; i < keyValues.length / 2; i++) {
+      map.put(keyValues[i * 2], keyValues[i + 2 + 1]);
+    }
+    return map;
   }
 
   @SafeVarargs
@@ -155,6 +167,13 @@ public abstract class Matchers {
     return new LearningMatcherImpl<>(Is.isA(type));
   }
 
+  /** Creates a Matcher that matches an Applicable, calls it with the given
+   * argument, and checks the result. */
+  static Matcher<Object> whenAppliedTo(Object arg,
+      Matcher<Object> resultMatcher) {
+    return new CallingMatcher(arg, resultMatcher);
+  }
+
   /** Matcher that remembers the actual value it was.
    *
    * @param <T> Type of expected item */
@@ -211,6 +230,33 @@ public abstract class Matchers {
 
     @Override protected void consume(T t) {
       list.add(t);
+    }
+  }
+
+  /** Helper for {@link #whenAppliedTo(Object, Matcher)}. */
+  private static class CallingMatcher extends BaseMatcher<Object> {
+    private final Object arg;
+    private final Matcher<Object> resultMatcher;
+
+    CallingMatcher(Object arg, Matcher<Object> resultMatcher) {
+      this.arg = arg;
+      this.resultMatcher = resultMatcher;
+    }
+
+    @Override public void describeTo(Description description) {
+      description.appendText("calls with ")
+          .appendValue(arg)
+          .appendText(" and returns ")
+          .appendDescriptionOf(resultMatcher);
+    }
+
+    @Override public boolean matches(Object o) {
+      if (!(o instanceof Applicable)) {
+        return false;
+      }
+      final Applicable applicable = (Applicable) o;
+      final Object result = applicable.apply(Codes.emptyEnv(), arg);
+      return resultMatcher.matches(result);
     }
   }
 }

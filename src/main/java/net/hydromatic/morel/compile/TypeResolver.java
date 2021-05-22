@@ -558,7 +558,7 @@ public class TypeResolver {
       return ImmutableList.of();
     } else if (sequence.operator.startsWith(RECORD_TY_CON + ":")) {
       final String[] fields = sequence.operator.split(":");
-      return Arrays.asList(fields).subList(1, fields.length);
+      return Util.skip(Arrays.asList(fields));
     } else if (sequence.operator.equals(TUPLE_TY_CON)) {
       return new AbstractList<String>() {
         public int size() {

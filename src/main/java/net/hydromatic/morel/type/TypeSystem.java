@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.util.ComparableSingletonList;
 import net.hydromatic.morel.util.Ord;
@@ -40,6 +41,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Function;
 
+import static net.hydromatic.morel.ast.CoreBuilder.core;
+
 /** A table that contains all types in use, indexed by their description (e.g.
  * "{@code int -> int}"). */
 public class TypeSystem {
@@ -47,6 +50,8 @@ public class TypeSystem {
 
   private final Map<String, Pair<DataType, Type>> typeConstructorByName =
       new HashMap<>();
+
+  public final NameGenerator nameGenerator = new NameGenerator();
 
   public TypeSystem() {
     for (PrimitiveType primitiveType : PrimitiveType.values()) {
@@ -58,10 +63,11 @@ public class TypeSystem {
   public Binding bindTyCon(DataType dataType, String tyConName) {
     final Type type = dataType.typeConstructors.get(tyConName);
     if (type == DummyType.INSTANCE) {
-      return Binding.of(tyConName, dataType,
+      return Binding.of(core.idPat(dataType, tyConName, nameGenerator),
           Codes.constant(ComparableSingletonList.of(tyConName)));
     } else {
-      return Binding.of(tyConName, wrap(dataType, fnType(type, dataType)),
+      final Type type2 = wrap(dataType, fnType(type, dataType));
+      return Binding.of(core.idPat(type2, tyConName, nameGenerator),
           Codes.tyCon(dataType, tyConName));
     }
   }

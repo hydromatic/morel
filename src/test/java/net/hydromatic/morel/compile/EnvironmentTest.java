@@ -29,6 +29,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static net.hydromatic.morel.ast.CoreBuilder.core;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
@@ -41,9 +43,9 @@ public class EnvironmentTest {
    * the binding chain does not get longer. */
   @Test void testOptimizeSubEnvironment() {
     final Environment e0 = Environments.empty()
-        .bind("a", PrimitiveType.INT, 0)
-        .bind("b", PrimitiveType.INT, 1)
-        .bind("c", PrimitiveType.INT, 2);
+        .bind(core.idPat(PrimitiveType.INT, "a", 0), 0)
+        .bind(core.idPat(PrimitiveType.INT, "b", 0), 1)
+        .bind(core.idPat(PrimitiveType.INT, "c", 0), 2);
     assertThat(e0, instanceOf(Environments.SubEnvironment.class));
     checkOptimizeSubEnvironment(e0);
 
@@ -61,24 +63,28 @@ public class EnvironmentTest {
     assertThat(e0, hasEnvLength(5));
 
     // Overwrite "true"; there are still 5 values, but 6 bindings.
-    final Environment e1 = e0.bind("true", PrimitiveType.STRING, "yes");
+    final Environment e1 =
+        e0.bind(core.idPat(PrimitiveType.STRING, "true", 0), "yes");
     assertThat(e1.getValueMap().keySet(), is(nameSet));
     assertThat(e1, hasEnvLength(6));
 
     // Overwrite "true" again; still 5 values, and still 6 bindings.
-    final Environment e2 = e1.bind("true", PrimitiveType.STRING, "no");
+    final Environment e2 =
+        e1.bind(core.idPat(PrimitiveType.STRING, "true", 0), "no");
     assertThat(e2.getValueMap().keySet(), is(nameSet));
     assertThat(e2, hasEnvLength(6));
 
     // Add "foo". Value count and binding count increase.
-    final Environment e3 = e2.bind("foo", PrimitiveType.STRING, "baz");
+    final Environment e3 =
+        e2.bind(core.idPat(PrimitiveType.STRING, "foo", 0), "baz");
     assertThat(e3.getValueMap().keySet(), is(namePlusFooSet));
     assertThat(e3, hasEnvLength(7));
 
     // Add "true". Value count stays at 7, binding count increases.
     // (We do not look beyond the "foo" for the "true"; such optimization would
     // be nice, but is expensive, so we do not do it.)
-    final Environment e4 = e3.bind("true", PrimitiveType.STRING, "yes");
+    final Environment e4 =
+        e3.bind(core.idPat(PrimitiveType.STRING, "true", 0), "yes");
     assertThat(e4.getValueMap().keySet(), is(namePlusFooSet));
     assertThat(e4, hasEnvLength(8));
   }

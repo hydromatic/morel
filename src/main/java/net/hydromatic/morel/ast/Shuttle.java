@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
@@ -46,6 +48,13 @@ public class Shuttle {
 
   protected <K, E extends AstNode> Map<K, E> visitMap(Map<K, E> nodes) {
     final Map<K, E> map = new LinkedHashMap<>();
+    nodes.forEach((k, v) -> map.put(k, (E) v.accept(this)));
+    return map;
+  }
+
+  protected <K, E extends AstNode> SortedMap<K, E> visitSortedMap(
+      SortedMap<K, E> nodes) {
+    final SortedMap<K, E> map = new TreeMap<>(nodes.comparator());
     nodes.forEach((k, v) -> map.put(k, (E) v.accept(this)));
     return map;
   }
@@ -284,6 +293,10 @@ public class Shuttle {
     return let.copy(let.decl.accept(this), let.exp.accept(this));
   }
 
+  protected Core.Exp visit(Core.Local local) {
+    return local.copy(local.dataType, local.exp.accept(this));
+  }
+
   protected Core.DatatypeDecl visit(Core.DatatypeDecl datatypeDecl) {
     return datatypeDecl;
   }
@@ -293,7 +306,7 @@ public class Shuttle {
         valDecl.exp.accept(this));
   }
 
-  protected Core.Pat visit(Core.IdPat idPat) {
+  protected Core.IdPat visit(Core.IdPat idPat) {
     return idPat;
   }
 
@@ -327,7 +340,7 @@ public class Shuttle {
   }
 
   protected Core.Exp visit(Core.Fn fn) {
-    return fn.copy(visitList(fn.matchList));
+    return fn.copy((Core.IdPat) fn.idPat.accept(this), fn.exp.accept(this));
   }
 
   protected Core.Exp visit(Core.Case caseOf) {
@@ -348,7 +361,8 @@ public class Shuttle {
   }
 
   protected Core.Group visit(Core.Group group) {
-    return group.copy(visitMap(group.groupExps), visitMap(group.aggregates));
+    return group.copy(visitSortedMap(group.groupExps),
+        visitSortedMap(group.aggregates));
   }
 
   protected Core.Aggregate visit(Core.Aggregate aggregate) {

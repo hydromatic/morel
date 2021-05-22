@@ -43,6 +43,7 @@ import static net.hydromatic.morel.Matchers.isLiteral;
 import static net.hydromatic.morel.Matchers.isUnordered;
 import static net.hydromatic.morel.Matchers.list;
 import static net.hydromatic.morel.Matchers.throwsA;
+import static net.hydromatic.morel.Matchers.whenAppliedTo;
 import static net.hydromatic.morel.Ml.assertError;
 import static net.hydromatic.morel.Ml.ml;
 
@@ -455,16 +456,19 @@ public class MainTest {
     ml("(fn x => x) \"foo\"").assertEval(is("foo"));
     ml("(fn x => x) true").assertEval(is(true));
     ml("let fun id x = x in id end").assertType("'a -> 'a");
+    ml("fun id x = x").assertType("'a -> 'a");
 
     // first/second
     ml("fn x => fn y => x").assertType("'a -> 'b -> 'a");
     ml("let fun first x y = x in first end")
         .assertType("'a -> 'b -> 'a");
-    ml("let fun second x y = y in second end")
+    ml("fun first x y = x")
+        .assertType("'a -> 'b -> 'a");
+    ml("fun second x y = y")
         .assertType("'a -> 'b -> 'b");
-    ml("let fun choose b x y = if b then x else y in choose end")
+    ml("fun choose b x y = if b then x else y")
         .assertType("bool -> 'a -> 'a -> 'a");
-    ml("let fun choose b (x, y) = if b then x else y in choose end")
+    ml("fun choose b (x, y) = if b then x else y")
         .assertType("bool -> 'a * 'a -> 'a");
   }
 
@@ -695,6 +699,31 @@ public class MainTest {
     ml(ml).assertEval(is(6));
   }
 
+  /** As {@link #testLet3()}, but a tuple is being assigned. */
+  @Test void testLet3b() {
+    // The intermediate form will have nested tuples, something like this:
+    //   val v = (1, (2, 4)) in case v of (x, (y, z)) => y + 3 + x
+    final String ml = "let\n"
+        + "  val x = 1\n"
+        + "  and (y, z) = (2, 4)\n"
+        + "in\n"
+        + "  y + x + 3\n"
+        + "end";
+    ml(ml).assertEval(is(6));
+  }
+
+  @Test void testLet3c() {
+    // The intermediate form will have nested tuples, something like this:
+    //   val v = (1, (2, 4)) in case v of (x, (y, z)) => y + 3 + x
+    final String ml = "let\n"
+        + "  val x1 :: x2 :: xs = [1, 5, 9, 13, 17]\n"
+        + "  and (y, z) = (2, 4)\n"
+        + "in\n"
+        + "  y + x1 + x2 + 3\n"
+        + "end";
+    ml(ml).assertEval(is(11));
+  }
+
   /** Tests that 'and' assignments occur simultaneously. */
   @Test void testLet4() {
     final String ml = "let\n"
@@ -720,6 +749,110 @@ public class MainTest {
         + "  plusTwo 3\n"
         + "end";
     ml(ml).assertEval(is(5));
+  }
+
+  /** Tests a predicate in a let. */
+  @Test void testLet6() {
+    final String ml = "let\n"
+        + "  fun isZero x = x = 0\n"
+        + "in\n"
+        + "  fn i => i = 10 andalso isZero i\n"
+        + "end";
+    // With inlining, we want the plan to simplify to "fn i => false"
+    final String plan = "match(i, andalso(apply("
+        + "fnValue =, argCode tuple(get(name i), constant(10))), "
+        + "apply(fnValue =, argCode tuple(get(name i), constant(0)))))";
+    ml(ml)
+        .assertEval(whenAppliedTo(0, is(false)))
+        .assertEval(whenAppliedTo(10, is(false)))
+        .assertEval(whenAppliedTo(15, is(false)))
+        .assertPlan(is(plan));
+  }
+
+  /** Tests a function in a let. (From <a
+   * href="https://www.microsoft.com/en-us/research/wp-content/uploads/2002/07/inline.pdf">Secrets
+   * of the Glasgow Haskell Compiler inliner</a> (GHC inlining), section 2.3. */
+  @Test void testLet7() {
+    final String ml = "fun g (a, b, c) =\n"
+        + "  let\n"
+        + "    fun f x = x * 3\n"
+        + "  in\n"
+        + "    f (a + b) - c\n"
+        + "  end";
+    // With inlining, we want the plan to simplify to
+    // "fn (a, b, c) => (a + b) * 3 - c"
+    final String plan = "match(v0, apply(fnCode match((a, b, c), "
+        + "apply(fnValue -, argCode tuple(apply(fnValue *, argCode "
+        + "tuple(apply(fnValue +, argCode "
+        + "tuple(get(name a), get(name b))), constant(3))), get(name c)))), "
+        + "argCode get(name v0)))";
+    ml(ml)
+        // g (4, 3, 2) = (4 + 3) * 3 - 2 = 19
+        .assertEval(whenAppliedTo(list(4, 3, 2), is(19)))
+        .assertPlan(is(plan));
+  }
+
+  /** Tests that name capture does not occur during inlining.
+   * (Example is from GHC inlining, section 3.) */
+  @Test void testNameCapture() {
+    final String ml = "fn (a, b) =>\n"
+        + "  let val x = a + b in\n"
+        + "    let val a = 7 in\n"
+        + "      x + a\n"
+        + "    end\n"
+        + "  end";
+    ml(ml)
+        // result should be x + a = (1 + 2) + 7 = 10
+        // if 'a' were wrongly captured, result would be (7 + 2) + 7 = 16
+        .assertEval(whenAppliedTo(list(1, 2), is(10)));
+  }
+
+  @Disabled("until mutual recursion bug is fixed")
+  @Test void testMutualRecursion() {
+    final String ml = "let\n"
+        + "  fun f i = g (i * 2)\n"
+        + "  and g i = if i > 10 then i else f (i + 3)\n"
+        + "in\n"
+        + "  f\n"
+        + "end";
+    ml(ml)
+        // answers checked on SMLJ
+        .assertEval(whenAppliedTo(1, is(26)))
+        .assertEval(whenAppliedTo(2, is(14)))
+        .assertEval(whenAppliedTo(3, is(18)));
+  }
+
+  /** Tests that inlining of mutually recursive functions does not prevent
+   * compilation from terminating.
+   *
+   * <p>Per GHC inlining, (f, g, h), (g, p, q) are strongly connected components
+   * of the dependency graph. In each group, the inliner should choose one
+   * function as 'loop-breaker' that will not be inlined; say f and q. */
+  @Disabled("until mutual recursion bug is fixed")
+  @Test void testMutualRecursionComplex() {
+    final String ml0 = "let\n"
+        + "  fun f i = g (i + 1)\n"
+        + "  and g i = h (i + 2) + p (i + 4)\n"
+        + "  and h i = if i > 100 then i + 8 else f (i + 16)\n"
+        + "  and p i = q (i + 32)\n"
+        + "  and q i = if i > 200 then i + 64 else g (i + 128)\n"
+        + "in\n"
+        + "  g 7\n"
+        + "end";
+    final String ml = "let\n"
+        + "  val rec f = fn i => g (i + 1)\n"
+        + "  and g = fn i => h (i + 2) + p (i + 4)\n"
+        + "  and h = fn i => if i > 100 then i + 8 else f (i + 16)\n"
+        + "  and p = fn i => q (i + 32)\n"
+        + "  and q = fn i => if i > 200 then i + 64 else g (i + 128)\n"
+        + "in\n"
+        + "  g 7\n"
+        + "end";
+    ml(ml)
+        // answers checked on SMLJ
+        .assertEval(whenAppliedTo(1, is(4003)))
+        .assertEval(whenAppliedTo(6, is(3381)))
+        .assertEval(whenAppliedTo(7, is(3394)));
   }
 
   /** Tests that you can use the same variable name in different parts of the
@@ -960,6 +1093,26 @@ public class MainTest {
     ml(ml).assertEval(is(120));
   }
 
+  /** As {@link #testFun()} but not applied to a value. */
+  @Test void testFunValue() {
+    final String ml = "let\n"
+        + "  fun fact n = if n = 0 then 1 else n * fact (n - 1)\n"
+        + "in\n"
+        + "  fact\n"
+        + "end";
+    ml(ml).assertEval(whenAppliedTo(5, is(120)));
+  }
+
+  /** As {@link #testFunValue()} but without "let".
+   *
+   * <p>This is mainly a test for the test framework. We want to handle bindings
+   * ({@code fun}) as well as values ({@code let} and {@code fn}). So people can
+   * write tests more concisely. */
+  @Test void testFunValueSansLet() {
+    final String ml = "fun fact n = if n = 0 then 1 else n * fact (n - 1)";
+    ml(ml).assertEval(whenAppliedTo(5, is(120)));
+  }
+
   /** As {@link #testFun} but uses case. */
   @Test void testFun2() {
     final String ml = "let\n"
@@ -1029,14 +1182,12 @@ public class MainTest {
   }
 
   @Test void testFunRecord() {
-    final String ml = "let\n"
-        + "  fun f {a=x,b=1,...} = x\n"
-        + "    | f {b=y,c=2,...} = y\n"
-        + "    | f {a=x,b=y,c=z} = x+y+z\n"
-        + "in\n"
-        + "  f\n"
-        + "end";
-    ml(ml).assertType("{a:int, b:int, c:int} -> int");
+    final String ml = ""
+        + "fun f {a=x,b=1,...} = x\n"
+        + "  | f {b=y,c=2,...} = y\n"
+        + "  | f {a=x,b=y,c=z} = x+y+z";
+    ml(ml).assertType("{a:int, b:int, c:int} -> int")
+        .assertEval(whenAppliedTo(list(1, 2, 3), is(6)));
 
     final String ml2 = "let\n"
         + "  fun f {a=x,b=1,...} = x\n"
@@ -1073,9 +1224,9 @@ public class MainTest {
 
   @Test void testDatatype3() {
     final String ml = "let\n"
-        + "datatype intoption = NONE | SOME of int;\n"
-        + "val score = fn z => case z of NONE => 0 | SOME x => x\n"
-        + "in"
+        + "  datatype intoption = NONE | SOME of int;\n"
+        + "  val score = fn z => case z of NONE => 0 | SOME x => x\n"
+        + "in\n"
         + "  score (SOME 5)\n"
         + "end";
     ml(ml).assertParseSame()
@@ -1087,10 +1238,10 @@ public class MainTest {
    *  ... {@code case}. */
   @Test void testDatatype3b() {
     final String ml = "let\n"
-        + "datatype intoption = NONE | SOME of int;\n"
-        + "fun score NONE = 0\n"
-        + "  | score (SOME x) = x\n"
-        + "in"
+        + "  datatype intoption = NONE | SOME of int;\n"
+        + "  fun score NONE = 0\n"
+        + "    | score (SOME x) = x\n"
+        + "in\n"
         + "  score (SOME 5)\n"
         + "end";
     ml(ml).assertParseSame()
@@ -1101,10 +1252,10 @@ public class MainTest {
   /** As {@link #testDatatype3b()} but use a nilary type constructor (NONE). */
   @Test void testDatatype3c() {
     final String ml = "let\n"
-        + "datatype intoption = NONE | SOME of int;\n"
-        + "fun score NONE = 0\n"
-        + "  | score (SOME x) = x\n"
-        + "in"
+        + "  datatype intoption = NONE | SOME of int;\n"
+        + "  fun score NONE = 0\n"
+        + "    | score (SOME x) = x\n"
+        + "in\n"
         + "  score NONE\n"
         + "end";
     ml(ml).assertParseSame()
@@ -1255,7 +1406,7 @@ public class MainTest {
         + "              {name = \"Charlie\",\n"
         + "               pets = [{name = \"Snoopy\", species = \"Dog\"}]},\n"
         + "              {name = \"Danny\", pets = []}]"
-        + "in"
+        + "in\n"
         + "  from e in emps,\n"
         + "      p in e.pets\n"
         + "    yield p.name\n"

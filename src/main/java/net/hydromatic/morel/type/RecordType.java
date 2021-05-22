@@ -72,18 +72,20 @@ public class RecordType extends BaseType implements RecordLikeType {
    *
    * <p>Thus: 2, 22, 202, a, a2, a202, a22. */
   public static final Ordering<String> ORDERING =
-      Ordering.from(
-          (o1, o2) -> {
-            Integer i1 = parseInt(o1);
-            Integer i2 = parseInt(o2);
-            if (i1 == null && i2 == null) {
-              return o1.compareTo(o2);
-            }
-            if (i1 != null && i2 != null) {
-              return i1.compareTo(i2);
-            }
-            return i1 != null ? -1 : 1;
-          });
+      Ordering.from(RecordType::compareNames);
+
+  /** Helper for {@link #ORDERING}. */
+  public static int compareNames(String o1, String o2) {
+    Integer i1 = parseInt(o1);
+    Integer i2 = parseInt(o2);
+    if (i1 == null && i2 == null) {
+      return o1.compareTo(o2);
+    }
+    if (i1 != null && i2 != null) {
+      return i1.compareTo(i2);
+    }
+    return i1 != null ? -1 : 1;
+  }
 
   /** Parses a string that contains an integer value, or returns null if
    * the string does not contain an integer. */

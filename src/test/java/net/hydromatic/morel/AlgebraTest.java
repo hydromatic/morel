@@ -303,6 +303,47 @@ public class AlgebraTest {
   /** Tests a query that is executed in Calcite except for a variable, 'five',
    * whose value happens to always be 5. */
   @Test void testCalciteWithVariable() {
+    final String plan = "let(matchCode0 match(five, constant(5)), "
+        + "resultCode calcite(plan "
+        + "LogicalProject(d5=[+($1, morelScalar('five', '{\n"
+        + "  \"type\": \"INTEGER\",\n"
+        + "  \"nullable\": false\n"
+        + "}'))], deptno=[$1], empno=[$2])\n"
+        + "  LogicalFilter(condition=[<($2, +(7500, +(morelScalar('five', '{\n"
+        + "  \"type\": \"INTEGER\",\n"
+        + "  \"nullable\": false\n"
+        + "}'), morelScalar('five', '{\n"
+        + "  \"type\": \"INTEGER\",\n"
+        + "  \"nullable\": false\n"
+        + "}'))))])\n"
+        + "    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], "
+        + "hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
+        + "      JdbcTableScan(table=[[scott, EMP]])\n"
+        + "))";
+    final int inlinePassCount = 1; // limit inlining
+    checkCalciteWithVariable(inlinePassCount, plan);
+  }
+
+  @Test void testCalciteWithVariableNoInlining() {
+    final String plan = "let(matchCode0 match(five, constant(5)), resultCode "
+        + "let(matchCode0 match(ten, "
+        + "apply(fnValue +, argCode tuple(get(name five), get(name five)))), "
+        + "resultCode calcite(plan "
+        + "LogicalProject(d5=[+($1, morelScalar('five', '{\n"
+        + "  \"type\": \"INTEGER\",\n"
+        + "  \"nullable\": false\n}'))], deptno=[$1], empno=[$2])\n"
+        + "  LogicalFilter(condition=[<($2, +(7500, morelScalar('ten', '{\n"
+        + "  \"type\": \"INTEGER\",\n"
+        + "  \"nullable\": false\n}')))])\n"
+        + "    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], "
+        + "hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
+        + "      JdbcTableScan(table=[[scott, EMP]])\n"
+        + ")))";
+    final int inlinePassCount = 0;
+    checkCalciteWithVariable(inlinePassCount, plan);
+  }
+
+  private void checkCalciteWithVariable(int inlinePassCount, String plan) {
     final String ml = "let\n"
         + "  val five = 5\n"
         + "  val ten = five + five\n"
@@ -311,26 +352,10 @@ public class AlgebraTest {
         + "  where e.empno < 7500 + ten\n"
         + "  yield {e.empno, e.deptno, d5 = e.deptno + five}\n"
         + "end";
-    String plan = "let(matchCode0 match(five, constant(5)), "
-        + "resultCode let("
-        + "matchCode0 match(ten, apply(fnValue +, "
-        + "argCode tuple(get(name five), get(name five)))), "
-        + "resultCode calcite(plan "
-        + "LogicalProject(d5=[+($1, morelScalar('five', '{\n"
-        + "  \"type\": \"INTEGER\",\n"
-        + "  \"nullable\": false\n"
-        + "}'))], deptno=[$1], empno=[$2])\n"
-        + "  LogicalFilter(condition=[<($2, +(7500, morelScalar('ten', '{\n"
-        + "  \"type\": \"INTEGER\",\n"
-        + "  \"nullable\": false\n"
-        + "}')))])\n"
-        + "    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], "
-        + "hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
-        + "      JdbcTableScan(table=[[scott, EMP]])\n"
-        + ")))";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .with(Prop.HYBRID, true)
+        .with(Prop.INLINE_PASS_COUNT, inlinePassCount)
         .assertType("{d5:int, deptno:int, empno:int} list")
         .assertPlan(is(plan))
         .assertEvalIter(equalsOrdered(list(25, 20, 7369), list(35, 30, 7499)));
@@ -360,6 +385,7 @@ public class AlgebraTest {
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .with(Prop.HYBRID, true)
+        .with(Prop.INLINE_PASS_COUNT, 0)
         .assertType("int list")
         .assertPlan(is(plan))
         .assertEvalIter(equalsOrdered(20, 40, 60, 80));
@@ -376,8 +402,10 @@ public class AlgebraTest {
         + "  from d in scott.dept\n"
         + "  yield plus (d.deptno, five)\n"
         + "end";
-    String plan = "let(matchCode0 match(plus, match((x, y), "
-        + "apply(fnValue +, argCode tuple(get(name x), get(name y))))), "
+    String plan = "let(matchCode0 match(plus, match(v0, "
+        + "apply(fnCode match((x, y), apply(fnValue +, "
+        + "argCode tuple(get(name x), get(name y)))), "
+        + "argCode get(name v0)))), "
         + "resultCode let(matchCode0 match(five, constant(5)), "
         + "resultCode calcite(plan "
         + "LogicalProject($f0=[morelScalar('int * int', "
@@ -395,6 +423,7 @@ public class AlgebraTest {
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .with(Prop.HYBRID, true)
+        .with(Prop.INLINE_PASS_COUNT, 0)
         .assertType("int list")
         .assertPlan(is(plan))
         .assertEvalIter(equalsOrdered(15, 25, 35, 45));

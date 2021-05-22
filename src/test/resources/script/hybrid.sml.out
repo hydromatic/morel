@@ -113,11 +113,11 @@ val it = [7369,7566,7788,7876,7902] : int list
 
 Sys.plan();
 val it =
-  "let(matchCode0 match(twenty, constant(20)), resultCode calcite(plan LogicalProject(empno=[$2])
+  "calcite(plan LogicalProject(empno=[$2])
   LogicalFilter(condition=[=($1, 20)])
     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
       JdbcTableScan(table=[[scott, EMP]])
-))"
+)"
   : string
 
 
@@ -135,17 +135,17 @@ val it = [7372,7569,7791,7879,7905] : int list
 
 Sys.plan();
 val it =
-  "let(matchCode0 match(ten, constant(10)), resultCode let(matchCode0 match(deptNos, apply(fnValue ::, argCode tuple(get(name ten), apply(fnValue ::, argCode tuple(constant(20), apply(fnValue ::, argCode tuple(constant(30), tuple(constant(40))))))))), resultCode calcite(plan LogicalProject($f0=[+($2, MOD(13, morelScalar('ten', '{
+  "let(matchCode0 match(ten, constant(10)), resultCode calcite(plan LogicalProject($f0=[+($2, MOD(13, morelScalar('ten', '{
   \"type\": \"INTEGER\",
   \"nullable\": false
 }')))])
-  LogicalFilter(condition=[=($1, morelScalar('#nth List (deptNos, 1)', '{
+  LogicalFilter(condition=[=($1, morelScalar('#nth List (ten :: 20 :: 30 :: [40], 1)', '{
   \"type\": \"INTEGER\",
   \"nullable\": false
 }'))])
     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
       JdbcTableScan(table=[[scott, EMP]])
-)))"
+))"
   : string
 
 
@@ -161,14 +161,9 @@ val it = [20,40,60,80] : int list
 
 Sys.plan();
 val it =
-  "let(matchCode0 match(double, match(x, apply(fnValue *, argCode tuple(get(name x), constant(2))))), resultCode calcite(plan LogicalProject($f0=[morelScalar('int', morelScalar('double', '{
-  \"type\": \"ANY\",
-  \"nullable\": false,
-  \"precision\": -1,
-  \"scale\": -1
-}'), $0)])
+  "calcite(plan LogicalProject($f0=[*($0, 2)])
   JdbcTableScan(table=[[scott, DEPT]])
-))"
+)"
   : string
 
 
@@ -198,9 +193,11 @@ val it = [7499,7521,7654,7698,7844,7900] : int list
 
 Sys.plan();
 val it =
-  "let(matchCode0 match(emps, calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
-  JdbcTableScan(table=[[scott, EMP]])
-)), resultCode from(e, get(name emps)))"
+  "calcite(plan LogicalProject(empno=[$2])
+  LogicalFilter(condition=[=($1, 30)])
+    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+      JdbcTableScan(table=[[scott, EMP]])
+)"
   : string
 
 
@@ -217,9 +214,11 @@ val it = [7499,7521,7654,7698,7844,7900] : int list
 
 Sys.plan();
 val it =
-  "let(matchCode0 match(emps, calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
-  JdbcTableScan(table=[[scott, EMP]])
-)), resultCode let(matchCode0 match(thirty, constant(30)), resultCode from(e, get(name emps))))"
+  "calcite(plan LogicalProject(empno=[$2])
+  LogicalFilter(condition=[=($1, 30)])
+    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+      JdbcTableScan(table=[[scott, EMP]])
+)"
   : string
 
 
@@ -230,7 +229,7 @@ val it = [7499,7521,7654,7698,7844,7900] : int list
 
 Sys.plan();
 val it =
-  "apply(fnCode apply(fnValue List.map, argCode match(e, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue List.filter, argCode match(e, apply(fnValue =, argCode tuple(apply(fnValue nth:1, argCode get(name e)), constant(30))))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+  "apply(fnCode apply(fnValue List.map, argCode match(e#1, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue List.filter, argCode match(e, apply(fnValue =, argCode tuple(apply(fnValue nth:1, argCode get(name e)), constant(30))))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
   JdbcTableScan(table=[[scott, EMP]])
 )))"
   : string

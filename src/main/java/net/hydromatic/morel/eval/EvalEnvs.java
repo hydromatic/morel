@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.eval;
 
+import org.apache.calcite.util.Util;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -240,7 +242,7 @@ public class EvalEnvs {
           return false;
         }
         final Object head = consValue.get(0);
-        final List<Object> tail = consValue.subList(1, consValue.size());
+        final List<Object> tail = Util.skip(consValue);
         List<Core.Pat> patArgs = ((Core.TuplePat) infixPat.pat).args;
         return bindRecurse(patArgs.get(0), head)
             && bindRecurse(patArgs.get(1), tail);

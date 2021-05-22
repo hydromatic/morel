@@ -21,6 +21,7 @@ package net.hydromatic.morel.compile;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.foreign.ForeignValue;
@@ -37,14 +38,16 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import static net.hydromatic.morel.ast.CoreBuilder.core;
+
 /** Helpers for {@link Environment}. */
 public abstract class Environments {
 
   /** An environment with only "true" and "false". */
   private static final Environment BASIC_ENVIRONMENT =
       EmptyEnvironment.INSTANCE
-          .bind("true", PrimitiveType.BOOL, true)
-          .bind("false", PrimitiveType.BOOL, false);
+          .bind(core.idPat(PrimitiveType.BOOL, "true", 0), true)
+          .bind(core.idPat(PrimitiveType.BOOL, "false", 0), false);
 
   private Environments() {}
 
@@ -66,23 +69,25 @@ public abstract class Environments {
       Map<String, ForeignValue> valueMap) {
     final List<Binding> bindings = new ArrayList<>();
     BuiltIn.dataTypes(typeSystem, bindings);
+    final NameGenerator nameGen = typeSystem.nameGenerator;
     Codes.BUILT_IN_VALUES.forEach((key, value) -> {
       if ("$".equals(key.structure)) {
         return; // ignore Z_ANDALSO, Z_LIST, etc.
       }
       final Type type = key.typeFunction.apply(typeSystem);
       if (key.structure == null) {
-        bindings.add(Binding.of(key.mlName, type, value));
+        bindings.add(Binding.of(core.idPat(type, key.mlName, nameGen), value));
       }
       if (key.alias != null) {
-        bindings.add(Binding.of(key.alias, type, value));
+        bindings.add(Binding.of(core.idPat(type, key.alias, nameGen), value));
       }
     });
 
     final EvalEnv emptyEnv = Codes.emptyEnv();
     BuiltIn.forEachStructure(typeSystem, (structure, type) ->
         bindings.add(
-            Binding.of(structure.name, type, emptyEnv.getOpt(structure.name))));
+            Binding.of(core.idPat(type, structure.name, nameGen),
+                emptyEnv.getOpt(structure.name))));
 
     foreignBindings(typeSystem, valueMap, bindings);
     return bind(environment, bindings);
@@ -90,9 +95,11 @@ public abstract class Environments {
 
   private static void foreignBindings(TypeSystem typeSystem,
       Map<String, ForeignValue> map, List<Binding> bindings) {
-    map.forEach((name, value) ->
-        bindings.add(
-            Binding.of(name, value.type(typeSystem), value.value(), true)));
+    map.forEach((name, value) -> bindings.add(
+        Binding.of(
+            core.idPat(value.type(typeSystem), name, typeSystem.nameGenerator),
+            value.value())
+            .withParameter(true)));
   }
 
   /** Creates an environment that is a given environment plus bindings. */
@@ -103,8 +110,10 @@ public abstract class Environments {
       }
       return env;
     } else {
+      // We assume that the set of bindings does not include two Core.IdPat
+      // instances with the same name but different ordinals.
       final ImmutableMap.Builder<String, Binding> b = ImmutableMap.builder();
-      bindings.forEach(binding -> b.put(binding.name, binding));
+      bindings.forEach(binding -> b.put(binding.id.name, binding));
       final ImmutableMap<String, Binding> map = b.build();
       final ImmutableSet<String> names = map.keySet();
       env = env.nearestAncestorNotObscuredBy(names);
@@ -123,16 +132,23 @@ public abstract class Environments {
       this.binding = Objects.requireNonNull(binding);
     }
 
-    public Binding getOpt(String name) {
-      if (name.equals(binding.name)) {
+    @Override public Binding getOpt(String name) {
+      if (name.equals(binding.id.name)) {
         return binding;
       }
       return parent.getOpt(name);
     }
 
+    @Override public Binding getOpt(Core.IdPat id) {
+      if (id.equals(binding.id)) {
+        return binding;
+      }
+      return parent.getOpt(id);
+    }
+
     @Override protected Environment bind(Binding binding) {
       Environment env;
-      if (this.binding.name.equals(binding.name)) {
+      if (this.binding.id.name.equals(binding.id.name)) {
         // The new binding will obscure the current environment's binding,
         // because it binds a variable of the same name. Bind the parent
         // environment instead. This strategy is worthwhile because it tends to
@@ -140,7 +156,7 @@ public abstract class Environments {
         // garbage-collected.
         env = parent;
         while (env instanceof SubEnvironment
-            && ((SubEnvironment) env).binding.name.equals(binding.name)) {
+            && ((SubEnvironment) env).binding.id.name.equals(binding.id.name)) {
           env = ((SubEnvironment) env).parent;
         }
       } else {
@@ -155,7 +171,7 @@ public abstract class Environments {
     }
 
     @Override Environment nearestAncestorNotObscuredBy(Set<String> names) {
-      return names.contains(binding.name)
+      return names.contains(binding.id.name)
           ? parent.nearestAncestorNotObscuredBy(names)
           : this;
     }
@@ -168,7 +184,11 @@ public abstract class Environments {
     void visit(Consumer<Binding> consumer) {
     }
 
-    public Binding getOpt(String name) {
+    @Override public Binding getOpt(String name) {
+      return null;
+    }
+
+    @Override public Binding getOpt(Core.IdPat id) {
       return null;
     }
 
@@ -195,6 +215,12 @@ public abstract class Environments {
     public Binding getOpt(String name) {
       final Binding binding = map.get(name);
       return binding != null ? binding : parent.getOpt(name);
+    }
+
+    public Binding getOpt(Core.IdPat id) {
+      final Binding binding = map.get(id.name);
+      return binding != null && binding.id.i == id.i ? binding
+          : parent.getOpt(id);
     }
 
     @Override Environment nearestAncestorNotObscuredBy(Set<String> names) {

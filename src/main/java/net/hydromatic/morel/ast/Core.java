@@ -43,8 +43,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.ObjIntConsumer;
 import javax.annotation.Nullable;
 
@@ -104,25 +104,56 @@ public class Core {
 
   /** Named pattern.
    *
+   * <p>Implements {@link Comparable} so that names are sorted correctly
+   * for record fields (see {@link RecordType#ORDERING}).
+   *
    * @see Ast.Id */
-  public static class IdPat extends Pat {
+  public static class IdPat extends Pat implements Comparable<IdPat> {
     public final String name;
+    public final int i;
 
-    IdPat(Type type, String name) {
+    IdPat(Type type, String name, int i) {
       super(Op.ID_PAT, type);
       this.name = name;
+      this.i = i;
+    }
+
+    @Override public int hashCode() {
+      return name.hashCode() + i;
+    }
+
+    @Override public boolean equals(Object obj) {
+      return obj == this
+          || obj instanceof IdPat
+          && ((IdPat) obj).name.equals(name)
+          && ((IdPat) obj).i == i;
+    }
+
+    /** {@inheritDoc}
+     *
+     * <p>Collate first on name, then on ordinal. */
+    @Override public int compareTo(IdPat o) {
+      final int c = RecordType.compareNames(name, o.name);
+      if (c != 0) {
+        return c;
+      }
+      return Integer.compare(i, o.i);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.id(name);
+      return w.id(name, i);
     }
 
-    @Override public Pat accept(Shuttle shuttle) {
+    @Override public IdPat accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
     @Override public void accept(Visitor visitor) {
       visitor.visit(this);
+    }
+
+    public IdPat withType(Type type) {
+      return type == this.type ? this : new IdPat(type, name, i);
     }
   }
 
@@ -406,22 +437,22 @@ public class Core {
    * Core; for example, compare {@link Ast.Con0Pat#tyCon}
    * with {@link Con0Pat#tyCon}. */
   public static class Id extends Exp {
-    public final String name;
+    public final IdPat idPat;
 
     /** Creates an Id. */
-    Id(String name, Type type) {
-      super(Op.ID, type);
-      this.name = requireNonNull(name);
+    Id(IdPat idPat) {
+      super(Op.ID, idPat.type);
+      this.idPat = requireNonNull(idPat);
     }
 
     @Override public int hashCode() {
-      return name.hashCode();
+      return idPat.hashCode();
     }
 
     @Override public boolean equals(Object o) {
       return o == this
           || o instanceof Id
-          && this.name.equals(((Id) o).name);
+          && this.idPat.equals(((Id) o).idPat);
     }
 
     @Override public Exp accept(Shuttle shuttle) {
@@ -433,7 +464,7 @@ public class Core {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.id(name);
+      return w.id(idPat.name, idPat.i);
     }
   }
 
@@ -565,7 +596,7 @@ public class Core {
       return w;
     }
 
-    @Override public Decl accept(Shuttle shuttle) {
+    @Override public DatatypeDecl accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
@@ -577,10 +608,10 @@ public class Core {
   /** Value declaration. */
   public static class ValDecl extends Decl {
     public final boolean rec;
-    public final Pat pat;
+    public final IdPat pat;
     public final Exp exp;
 
-    ValDecl(boolean rec, Pat pat, Exp exp) {
+    ValDecl(boolean rec, IdPat pat, Exp exp) {
       super(Op.VAL_DECL);
       this.rec = rec;
       this.pat = pat;
@@ -612,7 +643,7 @@ public class Core {
       visitor.visit(this);
     }
 
-    public ValDecl copy(boolean rec, Pat pat, Exp exp) {
+    public ValDecl copy(boolean rec, IdPat pat, Exp exp) {
       return rec == this.rec && pat == this.pat && exp == this.exp ? this
           : core.valDecl(rec, pat, exp);
     }
@@ -658,10 +689,10 @@ public class Core {
 
   /** "Let" expression. */
   public static class Let extends Exp {
-    public final Decl decl;
+    public final ValDecl decl;
     public final Exp exp;
 
-    Let(Decl decl, Exp exp) {
+    Let(ValDecl decl, Exp exp) {
       super(Op.LET, exp.type);
       this.decl = requireNonNull(decl);
       this.exp = requireNonNull(exp);
@@ -681,13 +712,50 @@ public class Core {
       visitor.visit(this);
     }
 
-    public Exp copy(Decl decl, Exp exp) {
+    public Exp copy(ValDecl decl, Exp exp) {
       return decl == this.decl && exp == this.exp ? this
           : core.let(decl, exp);
     }
   }
 
-  /** Match. */
+  /** "Local" expression. */
+  public static class Local extends Exp {
+    public final DataType dataType;
+    public final Exp exp;
+
+    Local(DataType dataType, Exp exp) {
+      super(Op.LOCAL, exp.type);
+      this.dataType = requireNonNull(dataType);
+      this.exp = requireNonNull(exp);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("local datatype ").append(dataType.toString())
+          .append(" in ").append(exp, 0, 0)
+          .append(" end");
+    }
+
+    @Override public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Exp copy(DataType dataType, Exp exp) {
+      return dataType == this.dataType && exp == this.exp ? this
+          : core.local(dataType, exp);
+    }
+  }
+
+  /** Match.
+   *
+   * <p>In AST, there are several places that can deconstruct values via
+   * patterns: {@link Ast.FunDecl fun}, {@link Ast.Fn fn}, {@link Ast.Let let},
+   * {@link Ast.Case case}. But in Core, there is only {@code Match}, and
+   * {@code Match} only occurs within {@link Ast.Case case}. This makes the Core
+   * language a little more verbose than AST but a lot more uniform. */
   public static class Match extends BaseNode {
     public final Pat pat;
     public final Exp exp;
@@ -718,12 +786,13 @@ public class Core {
 
   /** Lambda expression. */
   public static class Fn extends Exp {
-    public final List<Match> matchList;
+    public final IdPat idPat;
+    public final Exp exp;
 
-    Fn(FnType type, ImmutableList<Match> matchList) {
+    Fn(FnType type, IdPat idPat, Exp exp) {
       super(Op.FN, type);
-      this.matchList = requireNonNull(matchList);
-      checkArgument(!matchList.isEmpty());
+      this.idPat = requireNonNull(idPat);
+      this.exp = requireNonNull(exp);
     }
 
     @Override public FnType type() {
@@ -731,7 +800,8 @@ public class Core {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append("fn ").appendAll(matchList, 0, Op.BAR, right);
+      return w.append("fn ")
+          .append(idPat, 0, 0).append(" => ").append(exp, 0, right);
     }
 
     @Override public Exp accept(Shuttle shuttle) {
@@ -742,9 +812,9 @@ public class Core {
       visitor.visit(this);
     }
 
-    public Exp copy(List<Match> matchList) {
-      return matchList.equals(this.matchList) ? this
-          : core.fn(type(), matchList);
+    public Fn copy(IdPat idPat, Exp exp) {
+      return idPat == this.idPat && exp == this.exp ? this
+          : core.fn(type(), idPat, exp);
     }
   }
 
@@ -850,8 +920,7 @@ public class Core {
      * <p>By default, a step outputs the same fields as it inputs.
      */
     public void deriveOutBindings(Iterable<Binding> inBindings,
-        BiFunction<String, Type, Binding> binder,
-        Consumer<Binding> outBindings) {
+        Function<IdPat, Binding> binder, Consumer<Binding> outBindings) {
       inBindings.forEach(outBindings);
     }
 
@@ -944,11 +1013,11 @@ public class Core {
 
   /** A {@code group} clause in a {@code from} expression. */
   public static class Group extends FromStep {
-    public final SortedMap<String, Exp> groupExps;
-    public final SortedMap<String, Aggregate> aggregates;
+    public final SortedMap<Core.IdPat, Exp> groupExps;
+    public final SortedMap<Core.IdPat, Aggregate> aggregates;
 
-    Group(ImmutableSortedMap<String, Exp> groupExps,
-        ImmutableSortedMap<String, Aggregate> aggregates) {
+    Group(ImmutableSortedMap<Core.IdPat, Exp> groupExps,
+        ImmutableSortedMap<Core.IdPat, Aggregate> aggregates) {
       super(Op.GROUP);
       this.groupExps = groupExps;
       this.aggregates = aggregates;
@@ -965,24 +1034,21 @@ public class Core {
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       Pair.forEachIndexed(groupExps, (i, id, exp) ->
           w.append(i == 0 ? "group " : ", ")
-              .id(id).append(" = ").append(exp, 0, 0));
+              .append(id, 0, 0).append(" = ").append(exp, 0, 0));
       Pair.forEachIndexed(aggregates, (i, name, aggregate) ->
           w.append(i == 0 ? " compute " : ", ")
-              .id(name).append(" = ").append(aggregate, 0, 0));
+              .append(name, 0, 0).append(" = ").append(aggregate, 0, 0));
       return w;
     }
 
     @Override public void deriveOutBindings(Iterable<Binding> inBindings,
-        BiFunction<String, Type, Binding> binder,
-        Consumer<Binding> outBindings) {
-      groupExps.forEach((id, exp) ->
-          outBindings.accept(binder.apply(id, exp.type)));
-      aggregates.forEach((id, aggregate) ->
-          outBindings.accept(binder.apply(id, aggregate.type)));
+        Function<Core.IdPat, Binding> binder, Consumer<Binding> outBindings) {
+      groupExps.keySet().forEach(id -> outBindings.accept(binder.apply(id)));
+      aggregates.keySet().forEach(id -> outBindings.accept(binder.apply(id)));
     }
 
-    public Group copy(Map<String, Exp> groupExps,
-        Map<String, Aggregate> aggregates) {
+    public Group copy(SortedMap<Core.IdPat, Exp> groupExps,
+        SortedMap<Core.IdPat, Aggregate> aggregates) {
       return groupExps.equals(this.groupExps)
           && aggregates.equals(this.aggregates)
           ? this
@@ -1101,7 +1167,7 @@ public class Core {
         return false;
       }
       if (o instanceof Id) {
-        final String name = ((Id) exp).name;
+        final String name = ((Id) exp).idPat.name;
         return !("true".equals(name) || "false".equals(name));
       }
       return true;

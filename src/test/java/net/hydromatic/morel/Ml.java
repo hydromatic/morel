@@ -22,11 +22,13 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.compile.Analyzer;
 import net.hydromatic.morel.compile.CalciteCompiler;
 import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
@@ -161,8 +163,8 @@ class Ml {
 
   Ml assertParseThrows(Matcher<Throwable> matcher) {
     try {
-      final AstNode statement =
-          new MorelParserImpl(new StringReader(ml)).statement();
+      final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
+      final AstNode statement = parser.statement();
       fail("expected error, got " + statement);
     } catch (Throwable e) {
       assertThat(e, matcher);
@@ -173,7 +175,7 @@ class Ml {
   private Ml withValidate(BiConsumer<Ast.Exp, TypeMap> action) {
     return withParser(parser -> {
       try {
-        final Ast.Exp statement = parser.expression();
+        final AstNode statement = parser.statement();
         final Calcite calcite = Calcite.withDataSets(dataSetMap);
         final TypeResolver.Resolved resolved =
             Compiles.validateExpression(statement, calcite.foreignValues());
@@ -220,8 +222,8 @@ class Ml {
 
   Ml assertCalcite(Matcher<String> matcher) {
     try {
-      final Ast.Exp statement =
-          new MorelParserImpl(new StringReader(ml)).expression();
+      final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
+      final AstNode statement = parser.statement();
       final TypeSystem typeSystem = new TypeSystem();
 
       final Calcite calcite = Calcite.withDataSets(dataSetMap);
@@ -231,7 +233,7 @@ class Ml {
       final TypeResolver.Resolved resolved =
           TypeResolver.deduceType(env, valDecl, typeSystem);
       final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
-      final Resolver resolver = new Resolver(resolved.typeMap);
+      final Resolver resolver = Resolver.of(resolved.typeMap, env);
       final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
       final RelNode rel =
           new CalciteCompiler(typeSystem, calcite)
@@ -249,9 +251,10 @@ class Ml {
    * Core, the Core string converts to the expected value. Which is usually
    * the original string. */
   public void assertCoreString(Matcher<String> matcher) {
-    final Ast.Exp statement;
+    final AstNode statement;
     try {
-      statement = new MorelParserImpl(new StringReader(ml)).expression();
+      final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
+      statement = parser.statement();
     } catch (ParseException parseException) {
       throw new RuntimeException(parseException);
     }
@@ -263,11 +266,38 @@ class Ml {
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, valDecl, typeSystem);
     final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
-    final Resolver resolver = new Resolver(resolved.typeMap);
+    final Resolver resolver = Resolver.of(resolved.typeMap, env);
     final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
-    final Core.ValDecl valDecl4 = valDecl3.accept(Inliner.of(typeSystem, env));
+    final Analyzer.Analysis analysis =
+        Analyzer.analyze(typeSystem, env, valDecl3);
+    final Inliner inliner = Inliner.of(typeSystem, env, analysis);
+    final Core.ValDecl valDecl4 = valDecl3.accept(inliner);
     final String coreString = valDecl4.exp.toString();
     assertThat(coreString, matcher);
+  }
+
+  Ml assertAnalyze(Matcher<Object> matcher) {
+    final AstNode statement;
+    try {
+      final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
+      statement = parser.statement();
+    } catch (ParseException parseException) {
+      throw new RuntimeException(parseException);
+    }
+    final TypeSystem typeSystem = new TypeSystem();
+
+    final Environment env =
+        Environments.env(typeSystem, ImmutableMap.of());
+    final Ast.ValDecl valDecl = Compiles.toValDecl(statement);
+    final TypeResolver.Resolved resolved =
+        TypeResolver.deduceType(env, valDecl, typeSystem);
+    final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
+    final Resolver resolver = Resolver.of(resolved.typeMap, env);
+    final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
+    final Analyzer.Analysis analysis =
+        Analyzer.analyze(typeSystem, env, valDecl3);
+    assertThat(ImmutableSortedMap.copyOf(analysis.map).toString(), matcher);
+    return this;
   }
 
   Ml assertPlan(Matcher<String> planMatcher) {
@@ -284,8 +314,8 @@ class Ml {
 
   Ml assertEval(Matcher<Object> resultMatcher, Matcher<String> planMatcher) {
     try {
-      final Ast.Exp statement =
-          new MorelParserImpl(new StringReader(ml)).expression();
+      final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
+      final AstNode statement = parser.statement();
       final TypeSystem typeSystem = new TypeSystem();
       final Calcite calcite = Calcite.withDataSets(dataSetMap);
       final Environment env =
@@ -301,7 +331,7 @@ class Ml {
 
   @CanIgnoreReturnValue
   private Object eval(Session session, Environment env,
-      TypeSystem typeSystem, Ast.Exp statement,
+      TypeSystem typeSystem, AstNode statement,
       @Nullable Matcher<Object> resultMatcher,
       @Nullable Matcher<String> planMatcher) {
     CompiledStatement compiledStatement =
@@ -309,7 +339,12 @@ class Ml {
     final List<String> output = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
     compiledStatement.eval(session, env, output, bindings);
-    final Object result = getIt(bindings);
+    final Object result;
+    if (statement instanceof Ast.Exp) {
+      result = bindingValue(bindings, "it");
+    } else {
+      result = bindings.get(0).value;
+    }
     if (resultMatcher != null) {
       assertThat(result, resultMatcher);
     }
@@ -320,9 +355,9 @@ class Ml {
     return result;
   }
 
-  private Object getIt(List<Binding> bindings) {
+  private Object bindingValue(List<Binding> bindings, String name) {
     for (Binding binding : bindings) {
-      if (binding.name.equals("it")) {
+      if (binding.id.name.equals(name)) {
         return binding.value;
       }
     }

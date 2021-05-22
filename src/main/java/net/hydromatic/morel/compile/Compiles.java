@@ -31,6 +31,7 @@ import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.TypeSystem;
 
 import java.util.List;
@@ -40,15 +41,15 @@ import static net.hydromatic.morel.ast.AstBuilder.ast;
 
 /** Helpers for {@link Compiler} and {@link TypeResolver}. */
 public abstract class Compiles {
-  /** Validates an expression, deducing its type and perhaps rewriting the
-   * expression to a form that can more easily be compiled.
+  /** Validates an expression or declaration, deducing its type and perhaps
+   * rewriting the expression to a form that can more easily be compiled.
    *
    * <p>Used for testing. */
-  public static TypeResolver.Resolved validateExpression(Ast.Exp exp,
+  public static TypeResolver.Resolved validateExpression(AstNode statement,
       Map<String, ForeignValue> valueMap) {
     final TypeSystem typeSystem = new TypeSystem();
     final Environment env = Environments.env(typeSystem, valueMap);
-    return TypeResolver.deduceType(env, toValDecl(exp), typeSystem);
+    return TypeResolver.deduceType(env, toDecl(statement), typeSystem);
   }
 
   /**
@@ -75,10 +76,30 @@ public abstract class Compiles {
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, decl, typeSystem);
     final boolean hybrid = Prop.HYBRID.booleanValue(session.map);
-    final Resolver resolver = new Resolver(resolved.typeMap);
-    final Core.Decl coreDecl = resolver.toCore(resolved.node);
-    final Inliner inliner = Inliner.of(typeSystem, env);
-    final Core.Decl coreDecl2 = coreDecl.accept(inliner);
+    final int inlinePassCount =
+        Math.max(Prop.INLINE_PASS_COUNT.intValue(session.map), 0);
+    final Resolver resolver = Resolver.of(resolved.typeMap, env);
+    final Core.Decl coreDecl0 = resolver.toCore(resolved.node);
+
+    Core.Decl coreDecl;
+    if (inlinePassCount == 0) {
+      // Inlining is disabled. Use the Inliner in a limited mode.
+      final Inliner inliner = Inliner.of(typeSystem, env, null);
+      coreDecl = coreDecl0.accept(inliner);
+    } else {
+      // Inline few times, or until we reach fixed point, whichever is sooner.
+      coreDecl = coreDecl0;
+      for (int i = 0; i < inlinePassCount; i++) {
+        final Analyzer.Analysis analysis =
+            Analyzer.analyze(typeSystem, env, coreDecl);
+        final Inliner inliner = Inliner.of(typeSystem, env, analysis);
+        final Core.Decl coreDecl1 = coreDecl;
+        coreDecl = coreDecl1.accept(inliner);
+        if (coreDecl == coreDecl1) {
+          break;
+        }
+      }
+    }
     final Compiler compiler;
     if (hybrid) {
       final Calcite calcite = Calcite.withDataSets(ImmutableMap.of());
@@ -86,7 +107,7 @@ public abstract class Compiles {
     } else {
       compiler = new Compiler(typeSystem);
     }
-    return compiler.compileStatement(env, coreDecl2);
+    return compiler.compileStatement(env, coreDecl);
   }
 
   /** Converts {@code e} to {@code val = e}. */
@@ -97,14 +118,63 @@ public abstract class Compiles {
             ast.valBind(pos, false, ast.idPat(pos, "it"), statement)));
   }
 
+  /** Converts an expression or value declaration to a value declaration. */
+  public static Ast.ValDecl toValDecl(AstNode statement) {
+    return statement instanceof Ast.ValDecl ? (Ast.ValDecl) statement
+        : toValDecl((Ast.Exp) statement);
+  }
+
+  /** Converts an expression or declaration to a declaration. */
+  public static Ast.Decl toDecl(AstNode statement) {
+    return statement instanceof Ast.Decl ? (Ast.Decl) statement
+        : toValDecl((Ast.Exp) statement);
+  }
+
   /** Converts {@code val = e} to {@code e};
    * the converse of {@link #toValDecl(Ast.Exp)}. */
   public static Core.Exp toExp(Core.ValDecl decl) {
     return decl.exp;
   }
 
+  static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
+      Core.DatatypeDecl datatypeDecl) {
+    datatypeDecl.accept(binding(typeSystem, bindings));
+  }
+
+  /** Richer than {@link #bindPattern(TypeSystem, List, Core.Pat)} because
+   * we have the expression. */
+  static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
+      Core.ValDecl valDecl) {
+    bindings.add(Binding.of(valDecl.pat, valDecl.exp));
+  }
+
+  static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
+      Core.Pat pat) {
+    pat.accept(binding(typeSystem, bindings));
+  }
+
+  static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
+      Core.IdPat idPat) {
+    bindings.add(Binding.of(idPat));
+  }
+
+  public static void bindDataType(TypeSystem typeSystem, List<Binding> bindings,
+      DataType dataType) {
+    dataType.typeConstructors.keySet().forEach(name ->
+        bindings.add(typeSystem.bindTyCon(dataType, name)));
+  }
+
   static PatternBinder binding(TypeSystem typeSystem, List<Binding> bindings) {
     return new PatternBinder(typeSystem, bindings);
+  }
+
+  /** Visits a pattern, adding bindings to a list.
+   *
+   * <p>If the pattern is an {@link net.hydromatic.morel.ast.Core.IdPat},
+   * don't use this method: just bind directly. */
+  public static void acceptBinding(TypeSystem typeSystem, Core.Pat pat,
+      List<Binding> bindings) {
+    pat.accept(binding(typeSystem, bindings));
   }
 
   /** Visitor that adds a {@link Binding} each time it see an
@@ -119,7 +189,7 @@ public abstract class Compiles {
     }
 
     @Override public void visit(Core.IdPat idPat) {
-      bindings.add(Binding.of(idPat.name, idPat.type));
+      bindPattern(typeSystem, bindings, idPat);
     }
 
     @Override protected void visit(Core.ValDecl valBind) {
@@ -129,8 +199,11 @@ public abstract class Compiles {
 
     @Override protected void visit(Core.DatatypeDecl datatypeDecl) {
       datatypeDecl.dataTypes.forEach(dataType ->
-          dataType.typeConstructors.keySet().forEach(name ->
-              bindings.add(typeSystem.bindTyCon(dataType, name))));
+          bindDataType(typeSystem, bindings, dataType));
+    }
+
+    @Override protected void visit(Core.Local local) {
+      bindDataType(typeSystem, bindings, local.dataType);
     }
   }
 }

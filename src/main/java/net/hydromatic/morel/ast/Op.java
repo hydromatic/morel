@@ -114,6 +114,7 @@ public enum Op {
   ORELSE(" orelse ", 1),
   BEFORE(" before ", 0),
   LET,
+  LOCAL,
   MATCH,
   VAL_BIND,
   APPLY(" ", 8),

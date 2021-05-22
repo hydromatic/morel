@@ -473,7 +473,7 @@ public abstract class Codes {
   public static RowSink orderRowSink(ImmutableList<Pair<Code, Boolean>> codes,
       ImmutableList<Binding> bindings, RowSink rowSink) {
     @SuppressWarnings("UnstableApiUsage")
-    final ImmutableList<String> labels = bindings.stream().map(b -> b.name)
+    final ImmutableList<String> labels = bindings.stream().map(b -> b.id.name)
         .collect(ImmutableList.toImmutableList());
     return new OrderRowSink(codes, labels, rowSink);
   }
@@ -1489,9 +1489,8 @@ public abstract class Codes {
                 core.tuple(
                     typeSystem.tupleType(PrimitiveType.STRING,
                         PrimitiveType.STRING),
-                    ImmutableList.of(
-                        core.stringLiteral(entry.getKey()),
-                        core.stringLiteral(entry.getValue().type.moniker()))))
+                    core.stringLiteral(entry.getKey()),
+                    core.stringLiteral(entry.getValue().id.type.moniker())))
             .collect(Collectors.toList());
     return core.apply(typeSystem.listType(argType),
         core.functionLiteral(typeSystem, BuiltIn.Z_LIST),
@@ -1867,10 +1866,14 @@ public abstract class Codes {
     BUILT_IN_VALUES.forEach((key, value) -> {
       final Type type = key.typeFunction.apply(typeSystem);
       if (key.structure == null) {
-        hEnv[0] = hEnv[0].bind(key.mlName, type, value);
+        final Core.IdPat idPat =
+            core.idPat(type, key.mlName, typeSystem.nameGenerator);
+        hEnv[0] = hEnv[0].bind(idPat, value);
       }
       if (key.alias != null) {
-        hEnv[0] = hEnv[0].bind(key.alias, type, value);
+        final Core.IdPat idPat =
+            core.idPat(type, key.alias, typeSystem.nameGenerator);
+        hEnv[0] = hEnv[0].bind(idPat, value);
       }
     });
 
@@ -1879,8 +1882,9 @@ public abstract class Codes {
       valueList.clear();
       structure.memberMap.values()
           .forEach(builtIn -> valueList.add(BUILT_IN_VALUES.get(builtIn)));
-      hEnv[0] = hEnv[0]
-          .bind(structure.name, type, ImmutableList.copyOf(valueList));
+      final Core.IdPat idPat =
+          core.idPat(type, structure.name, typeSystem.nameGenerator);
+      hEnv[0] = hEnv[0].bind(idPat, ImmutableList.copyOf(valueList));
     });
     return hEnv[0];
   }

@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
@@ -60,9 +61,46 @@ public class Resolver {
       Init.INSTANCE.builtInOpMap;
 
   final TypeMap typeMap;
+  private final NameGenerator nameGenerator;
+  private final Environment env;
 
-  public Resolver(TypeMap typeMap) {
+  /** Contains variable declarations whose type at the point they are used is
+   * different (more specific) than in their declaration.
+   *
+   * <p>For example, the infix operator "op +" has type
+   * "&alpha; * &alpha; &rarr;" in the base environment, but at point of use
+   * might instead be "int * int &rarr; int". This map will contain a new
+   * {@link Core.IdPat} for all points that use it with that second type.
+   * Effectively, it is a phantom declaration, in a {@code let} that doesn't
+   * exist. Without this shared declaration, all points have their own distinct
+   * {@link Core.IdPat}, which the {@link Analyzer} will think is used just
+   * once.
+   */
+  private final Map<Pair<Core.IdPat, Type>, Core.IdPat> variantIdMap;
+
+  private Resolver(TypeMap typeMap, NameGenerator nameGenerator,
+      Map<Pair<Core.IdPat, Type>, Core.IdPat> variantIdMap, Environment env) {
     this.typeMap = typeMap;
+    this.nameGenerator = nameGenerator;
+    this.variantIdMap = variantIdMap;
+    this.env = env;
+  }
+
+  /** Creates a root Resolver. */
+  public static Resolver of(TypeMap typeMap, Environment env) {
+    return new Resolver(typeMap, new NameGenerator(), new HashMap<>(), env);
+  }
+
+  /** Binds a Resolver to a new environment. */
+  public Resolver withEnv(Environment env) {
+    return env == this.env ? this
+        : new Resolver(typeMap, nameGenerator, variantIdMap, env);
+  }
+
+  /** Binds a Resolver to an environment that consists of the current
+   * environment plus some bindings. */
+  public final Resolver withEnv(Iterable<Binding> bindings) {
+    return withEnv(Environments.bind(env, bindings));
   }
 
   private static <E, T> ImmutableList<T> transform(Iterable<? extends E> elements,
@@ -85,36 +123,84 @@ public class Resolver {
     }
   }
 
+  /** Converts a simple {@link net.hydromatic.morel.ast.Ast.ValDecl},
+   *  of the form {@code val v = e},
+   *  to a Core {@link net.hydromatic.morel.ast.Core.ValDecl}.
+   *
+   *  <p>Declarations such as {@code val (x, y) = (1, 2)}
+   *  and {@code val emp :: rest = emps} are considered complex,
+   *  and are not handled by this method. */
   public Core.ValDecl toCore(Ast.ValDecl valDecl) {
+    final List<Binding> bindings = new ArrayList<>(); // discard
+    final ResolvedValDecl resolvedValDecl = resolveValDecl(valDecl, bindings);
+    return core.valDecl(resolvedValDecl.rec, (Core.IdPat) resolvedValDecl.pat,
+        resolvedValDecl.exp);
+  }
+
+  public Core.DatatypeDecl toCore(Ast.DatatypeDecl datatypeDecl) {
+    final List<Binding> bindings = new ArrayList<>(); // populated, never read
+    final ResolvedDatatypeDecl resolvedDatatypeDecl =
+        resolveDatatypeDecl(datatypeDecl, bindings);
+    return resolvedDatatypeDecl.toDecl();
+  }
+
+  private ResolvedDecl resolve(Ast.Decl decl, List<Binding> bindings) {
+    if (decl instanceof Ast.DatatypeDecl) {
+      return resolveDatatypeDecl((Ast.DatatypeDecl) decl, bindings);
+    } else {
+      return resolveValDecl((Ast.ValDecl) decl, bindings);
+    }
+  }
+
+  private ResolvedDatatypeDecl resolveDatatypeDecl(Ast.DatatypeDecl decl,
+      List<Binding> bindings) {
+    final List<DataType> dataTypes = new ArrayList<>();
+    for (Ast.DatatypeBind bind : decl.binds) {
+      final DataType dataType = toCore(bind);
+      dataTypes.add(dataType);
+      dataType.typeConstructors.keySet().forEach(name ->
+          bindings.add(typeMap.typeSystem.bindTyCon(dataType, name)));
+    }
+    return new ResolvedDatatypeDecl(ImmutableList.copyOf(dataTypes));
+  }
+
+  private ResolvedValDecl resolveValDecl(Ast.ValDecl valDecl,
+      List<Binding> bindings) {
+    final boolean rec;
+    final Core.Pat pat2;
+    final Core.Exp exp2;
     if (valDecl.valBinds.size() > 1) {
-      // Transform "let val v1 = e1 and v2 = e2 in e"
-      // to "let val (v1, v2) = (e1, e2) in e"
+      // Transform "let val v1 = E1 and v2 = E2 in E end"
+      // to "let val v = (v1, v2) in case v of (E1, E2) => E end"
       final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
-      boolean rec = false;
+      boolean rec0 = false;
       for (Ast.ValBind valBind : valDecl.valBinds) {
         flatten(matches, valBind.pat, valBind.exp);
-        rec |= valBind.rec;
+        rec0 |= valBind.rec;
       }
+      rec = rec0;
       final List<Type> types = new ArrayList<>();
       final List<Core.Pat> pats = new ArrayList<>();
       final List<Core.Exp> exps = new ArrayList<>();
       matches.forEach((pat, exp) -> {
         types.add(typeMap.getType(pat));
         pats.add(toCore(pat));
-        exps.add(toCore(exp));
       });
       final RecordLikeType tupleType = typeMap.typeSystem.tupleType(types);
-      final Core.Pat pat = core.tuplePat(tupleType, pats);
-      final Core.Exp e2 = core.tuple(tupleType, exps);
-      return core.valDecl(rec, pat, e2);
+      pat2 = core.tuplePat(tupleType, pats);
+      Compiles.acceptBinding(typeMap.typeSystem, pat2, bindings);
+      final Resolver r = rec ? withEnv(bindings) : this;
+      matches.forEach((pat, exp) -> exps.add(r.toCore(exp)));
+      exp2 = core.tuple(tupleType, exps);
     } else {
-      Ast.ValBind valBind = valDecl.valBinds.get(0);
-      return core.valDecl(valBind.rec, toCore(valBind.pat), toCore(valBind.exp));
+      final Ast.ValBind valBind = valDecl.valBinds.get(0);
+      rec = valBind.rec;
+      pat2 = toCore(valBind.pat);
+      Compiles.acceptBinding(typeMap.typeSystem, pat2, bindings);
+      final Resolver r = rec ? withEnv(bindings) : this;
+      exp2 = r.toCore(valBind.exp);
     }
-  }
-
-  private Core.DatatypeDecl toCore(Ast.DatatypeDecl datatypeDecl) {
-    return core.datatypeDecl(transform(datatypeDecl.binds, this::toCore));
+    return new ResolvedValDecl(rec, pat2, exp2);
   }
 
   private DataType toCore(Ast.DatatypeBind bind) {
@@ -166,7 +252,30 @@ public class Resolver {
   }
 
   private Core.Id toCore(Ast.Id id) {
-    return core.id(typeMap.getType(id), id.name);
+    final Binding binding = env.get(id.name);
+    assert binding != null;
+    final Core.IdPat idPat = getIdPat(id, binding);
+    return core.id(idPat);
+  }
+
+  /** Converts an id in a declaration to Core. */
+  private Core.IdPat toCorePat(Ast.Id id) {
+    final Type type = typeMap.getType(id);
+    return core.idPat(type, id.name, nameGenerator);
+  }
+
+  /** Converts an Id that is a reference to a variable into an IdPat that
+   * represents its declaration. */
+  private Core.IdPat getIdPat(Ast.Id id, Binding binding) {
+    final Type type = typeMap.getType(id);
+    if (type == binding.id.type) {
+      return binding.id;
+    }
+    // The required type is different from the binding type, presumably more
+    // specific. Create a new IdPat, reusing an existing IdPat if there was
+    // one for the same type.
+    return variantIdMap.computeIfAbsent(Pair.of(binding.id, type),
+        k -> k.left.withType(k.right));
   }
 
   private Core.Tuple toCore(Ast.Tuple tuple) {
@@ -221,8 +330,28 @@ public class Resolver {
   }
 
   private Core.Fn toCore(Ast.Fn fn) {
-    return core.fn((FnType) typeMap.getType(fn),
-        transform(fn.matchList, this::toCore));
+    final FnType type = (FnType) typeMap.getType(fn);
+    final ImmutableList<Core.Match> matchList =
+        transform(fn.matchList, this::toCore);
+    if (matchList.size() == 1) {
+      final Core.Match match = matchList.get(0);
+      if (match.pat instanceof Core.IdPat) {
+        // Simple function, "fn x => exp". Does not need 'case'.
+        return core.fn(type, (Core.IdPat) match.pat, match.exp);
+      }
+      if (match.pat instanceof Core.TuplePat
+          && ((Core.TuplePat) match.pat).args.isEmpty()) {
+        // Simple function with unit arg, "fn () => exp";
+        // needs a new variable, but doesn't need case, "fn (v0: unit) => exp"
+        final Core.IdPat idPat = core.idPat(type.paramType, "", nameGenerator);
+        return core.fn(type, idPat, match.exp);
+      }
+    }
+    // Complex function, "fn (x, y) => exp";
+    // needs intermediate variable and case, "fn v => case v of (x, y) => exp"
+    final Core.IdPat idPat = core.idPat(type.paramType, "", nameGenerator);
+    final Core.Id id = core.id(idPat);
+    return core.fn(type, idPat, core.caseOf(type.resultType, id, matchList));
   }
 
   private Core.Case toCore(Ast.If if_) {
@@ -231,21 +360,26 @@ public class Resolver {
   }
 
   private Core.Case toCore(Ast.Case case_) {
-    Iterable<? extends Ast.Match> matchList = case_.matchList;
-    Function<Ast.Match, Core.Match> toCore = this::toCore;
     return core.caseOf(typeMap.getType(case_), toCore(case_.exp),
-        transform(matchList, toCore));
+        transform(case_.matchList, this::toCore));
   }
 
-  private Core.Let toCore(Ast.Let let) {
+  private Core.Exp toCore(Ast.Let let) {
     return flattenLet(let.decls, let.exp);
   }
 
-  private Core.Let flattenLet(List<Ast.Decl> decls, Ast.Exp exp) {
-    final Core.Exp e2 = decls.size() == 1
-        ? toCore(exp)
-        : flattenLet(decls.subList(1, decls.size()), exp);
-    return core.let(toCore(decls.get(0)), e2);
+  private Core.Exp flattenLet(List<Ast.Decl> decls, Ast.Exp exp) {
+    //   flattenLet(val x :: xs = [1, 2, 3] and (y, z) = (2, 4), x + y)
+    // becomes
+    //   let v = ([1, 2, 3], (2, 4)) in case v of (x :: xs, (y, z)) => x + y end
+    if (decls.size() == 0) {
+      return toCore(exp);
+    }
+    final Ast.Decl decl = decls.get(0);
+    final List<Binding> bindings = new ArrayList<>();
+    final ResolvedDecl resolvedDecl = resolve(decl, bindings);
+    final Core.Exp e2 = withEnv(bindings).flattenLet(Util.skip(decls), exp);
+    return resolvedDecl.toExp(e2);
   }
 
   private void flatten(Map<Ast.Pat, Ast.Exp> matches,
@@ -298,7 +432,7 @@ public class Resolver {
           && ((DataType) type).typeConstructors.containsKey(idPat.name)) {
         return core.con0Pat((DataType) type, idPat.name);
       }
-      return core.idPat(type, idPat.name);
+      return core.idPat(type, idPat.name, nameGenerator);
 
     case CON_PAT:
       final Ast.ConPat conPat = (Ast.ConPat) pat;
@@ -345,17 +479,25 @@ public class Resolver {
   }
 
   private Core.Match toCore(Ast.Match match) {
-    return core.match(toCore(match.pat), toCore(match.exp));
+    final Core.Pat pat = toCore(match.pat);
+    final List<Binding> bindings = new ArrayList<>();
+    Compiles.acceptBinding(typeMap.typeSystem, pat, bindings);
+    final Core.Exp exp = withEnv(bindings).toCore(match.exp);
+    return core.match(pat, exp);
   }
 
   Core.From toCore(Ast.From from) {
     final Map<Core.Pat, Core.Exp> sources = new LinkedHashMap<>();
+    final List<Binding> bindings = new ArrayList<>();
     from.sources.forEach((pat, exp) -> {
-      Core.Exp coreExp = toCore(exp);
-      Core.Pat corePat = toCore(pat, ((ListType) coreExp.type).elementType);
+      final Resolver r = withEnv(bindings);
+      Core.Exp coreExp = r.toCore(exp);
+      Core.Pat corePat = r.toCore(pat, ((ListType) coreExp.type).elementType);
+      Compiles.acceptBinding(typeMap.typeSystem, corePat, bindings);
       sources.put(corePat, coreExp);
     });
-    return fromStepToCore(sources, from.steps,
+
+    return fromStepToCore(sources, bindings, from.steps,
         ImmutableList.of(), from.yieldExpOrDefault);
   }
 
@@ -367,10 +509,11 @@ public class Resolver {
   }
 
   private Core.From fromStepToCore(Map<Core.Pat, Core.Exp> sources,
-      List<Ast.FromStep> steps, List<Core.FromStep> coreSteps,
-      Ast.Exp yieldExp) {
+      List<Binding> bindings, List<Ast.FromStep> steps,
+      List<Core.FromStep> coreSteps, Ast.Exp yieldExp) {
+    final Resolver r = withEnv(bindings);
     if (steps.isEmpty()) {
-      final Core.Exp coreYieldExp = toCore(yieldExp);
+      final Core.Exp coreYieldExp = r.toCore(yieldExp);
       final ListType listType = typeMap.typeSystem.listType(coreYieldExp.type);
       return core.from(listType, sources, coreSteps, coreYieldExp);
     }
@@ -378,35 +521,41 @@ public class Resolver {
     switch (step.op) {
     case WHERE:
       final Ast.Where where = (Ast.Where) step;
-      final Core.FromStep coreWhere = core.where(toCore(where.exp));
-      return fromStepToCore(sources, Util.skip(steps),
-          append(coreSteps, coreWhere), yieldExp);
+      return fromStep2(sources, bindings, steps, coreSteps,
+          core.where(r.toCore(where.exp)), yieldExp);
 
     case ORDER:
       final Ast.Order order = (Ast.Order) step;
-      final Core.FromStep coreOrder =
-          core.order(transform(order.orderItems, this::toCore));
-      return fromStepToCore(sources, Util.skip(steps),
-          append(coreSteps, coreOrder), yieldExp);
+      return fromStep2(sources, bindings, steps, coreSteps,
+          core.order(transform(order.orderItems, r::toCore)), yieldExp);
 
     case GROUP:
       final Ast.Group group = (Ast.Group) step;
-      final ImmutableSortedMap.Builder<String, Core.Exp> groupExps =
-          ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-      final ImmutableSortedMap.Builder<String, Core.Aggregate> aggregates =
-          ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+      final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExps =
+          ImmutableSortedMap.naturalOrder();
+      final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates =
+          ImmutableSortedMap.naturalOrder();
       Pair.forEach(group.groupExps, (id, exp) ->
-          groupExps.put(id.name, toCore(exp)));
+          groupExps.put(toCorePat(id), r.toCore(exp)));
       group.aggregates.forEach(aggregate ->
-          aggregates.put(aggregate.id.name, toCore(aggregate)));
-      final Core.FromStep coreGroup =
-          core.group(groupExps.build(), aggregates.build());
-      return fromStepToCore(sources, Util.skip(steps),
-          append(coreSteps, coreGroup), yieldExp);
+          aggregates.put(toCorePat(aggregate.id), r.toCore(aggregate)));
+      return fromStep2(sources, bindings, steps, coreSteps,
+          core.group(groupExps.build(), aggregates.build()), yieldExp);
 
     default:
       throw new AssertionError("unknown step type " + step.op);
     }
+  }
+
+  private Core.From fromStep2(Map<Core.Pat, Core.Exp> sources,
+      List<Binding> bindings, List<Ast.FromStep> steps,
+      List<Core.FromStep> coreSteps,
+      Core.FromStep coreStep, Ast.Exp yieldExp) {
+    final List<Binding> prevBindings = ImmutableList.copyOf(bindings);
+    bindings.clear();
+    coreStep.deriveOutBindings(prevBindings, Binding::of, bindings::add);
+    return fromStepToCore(sources, bindings, Util.skip(steps),
+        append(coreSteps, coreStep), yieldExp);
   }
 
   private Core.Aggregate toCore(Ast.Aggregate aggregate) {
@@ -456,6 +605,82 @@ public class Resolver {
       opBuiltInMap = ImmutableMap.copyOf(o2b);
     }
   }
+
+  /** Resolved declaration. It can be converted to an expression given a
+   * result expression; depending on sub-type, that expression will either be
+   * a {@code let} (for a {@link net.hydromatic.morel.ast.Ast.ValDecl} or a
+   * {@code local} (for a {@link net.hydromatic.morel.ast.Ast.DatatypeDecl}. */
+  public abstract static class ResolvedDecl {
+    /** Converts the declaration to a {@code let} or a {@code local}. */
+    abstract Core.Exp toExp(Core.Exp resultExp);
+  }
+
+  /** Resolved value declaration. */
+  class ResolvedValDecl extends ResolvedDecl {
+    final boolean rec;
+    final Core.Pat pat;
+    final Core.Exp exp;
+
+    ResolvedValDecl(boolean rec, Core.Pat pat, Core.Exp exp) {
+      this.rec = rec;
+      this.pat = pat;
+      this.exp = exp;
+    }
+
+    @Override Core.Let toExp(Core.Exp resultExp) {
+      if (pat instanceof Core.IdPat) {
+        return core.let(core.valDecl(rec, (Core.IdPat) pat, exp), resultExp);
+      } else {
+        // This is a complex pattern. Allocate an intermediate variable.
+        final String name = nameGenerator.get();
+        final Core.IdPat idPat = core.idPat(pat.type, name, nameGenerator);
+        final Core.Id id = core.id(idPat);
+        return core.let(core.valDecl(rec, idPat, exp),
+            core.caseOf(resultExp.type, id,
+                ImmutableList.of(core.match(pat, resultExp))));
+      }
+    }
+  }
+
+  /** Resolved datatype declaration. */
+  static class ResolvedDatatypeDecl extends ResolvedDecl {
+    private final ImmutableList<DataType> dataTypes;
+
+    ResolvedDatatypeDecl(ImmutableList<DataType> dataTypes) {
+      this.dataTypes = dataTypes;
+    }
+
+    @Override Core.Exp toExp(Core.Exp resultExp) {
+      return toExp(dataTypes, resultExp);
+    }
+
+    private Core.Exp toExp(List<DataType> dataTypes, Core.Exp resultExp) {
+      if (dataTypes.isEmpty()) {
+        return resultExp;
+      } else {
+        return core.local(dataTypes.get(0),
+            toExp(Util.skip(dataTypes), resultExp));
+      }
+    }
+
+    /** Creates a datatype declaration that may have multiple datatypes.
+     *
+     * <p>Only the REPL needs this. Because datatypes are not recursive,
+     * a composite declaration
+     *
+     * <pre>{@code
+     * datatype d1 ... and d2 ...}</pre>
+     *
+     * <p>can always be converted to a chained local,
+     *
+     * <pre>{@code
+     * local datatype d1 ... in local datatype d2 ... end end}</pre>
+     */
+    public Core.DatatypeDecl toDecl() {
+      return core.datatypeDecl(dataTypes);
+    }
+  }
+
 }
 
 // End Resolver.java

@@ -1159,12 +1159,12 @@ public enum BuiltIn {
 
   /** Defines built-in {@code datatype} and {@code eqtype} instances, e.g.
    *  {@code option}, {@code vector}. */
-  public static void dataTypes(TypeSystem ts, List<Binding> bindings) {
-    defineDataType(ts, bindings, "order", 0, h ->
+  public static void dataTypes(TypeSystem typeSystem, List<Binding> bindings) {
+    defineDataType(typeSystem, bindings, "order", 0, h ->
         h.tyCon("LESS").tyCon("EQUAL").tyCon("GREATER"));
-    defineDataType(ts, bindings, "option", 1, h ->
+    defineDataType(typeSystem, bindings, "option", 1, h ->
         h.tyCon("NONE").tyCon("SOME", h.get(0)));
-    defineEqType(ts, "vector", 1);
+    defineEqType(typeSystem, "vector", 1);
   }
 
   private static void defineEqType(TypeSystem ts, String name, int varCount) {

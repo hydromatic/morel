@@ -18,45 +18,53 @@
  */
 package net.hydromatic.morel.type;
 
+import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Unit;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 /** Binding of a name to a type and a value.
  *
  * <p>Used in {@link net.hydromatic.morel.compile.Environment}. */
 public class Binding {
-  public final String name;
-  public final Type type;
+  public final Core.IdPat id;
+  public final Core.Exp exp;
   public final Object value;
   /** If true, the binding is ignored by inlining. */
   public final boolean parameter;
 
-  Binding(String name, Type type, Object value, boolean parameter) {
-    this.name = name;
-    this.type = Objects.requireNonNull(type);
-    this.value = Objects.requireNonNull(value);
+  private Binding(Core.IdPat id, Core.Exp exp, Object value,
+      boolean parameter) {
+    this.id = requireNonNull(id);
+    this.exp = exp;
+    this.value = requireNonNull(value);
+    assert !(value instanceof Core.IdPat);
     this.parameter = parameter;
   }
 
-  public static Binding of(String name, Type type) {
-    return new Binding(name, type, Unit.INSTANCE, false);
+  public static Binding of(Core.IdPat id) {
+    return new Binding(id, null, Unit.INSTANCE, false);
   }
 
-  public static Binding of(String name, Type type, Object value) {
-    return new Binding(name, type, value, false);
+  public static Binding of(Core.IdPat id, Core.Exp exp) {
+    return new Binding(id, exp, Unit.INSTANCE, false);
   }
 
-  public static Binding of(String name, Type type, Object value,
-      boolean parameter) {
-    return new Binding(name, type, value, parameter);
+  public static Binding of(Core.IdPat id, Object value) {
+    return new Binding(id, null, value, false);
+  }
+
+  public Binding withParameter(boolean parameter) {
+    return new Binding(id, exp, value, parameter);
   }
 
   @Override public String toString() {
-    if (value == Unit.INSTANCE) {
-      return name + " : " + type.moniker();
+    if (exp != null) {
+      return id.name + " = " + exp;
+    } else if (value == Unit.INSTANCE) {
+      return id.name + " : " + id.type.moniker();
     } else {
-      return name + " = " + value + " : " + type.moniker();
+      return id.name + " = " + value + " : " + id.type.moniker();
     }
   }
 }

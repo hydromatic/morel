@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.eval;
 
+import org.apache.calcite.util.Util;
+
 import com.google.common.collect.ImmutableList;
 
 import net.hydromatic.morel.ast.Core;
@@ -182,7 +184,7 @@ public class Closure implements Comparable<Closure>, Applicable {
         return false;
       }
       final Object head = consValue.get(0);
-      final List<Object> tail = consValue.subList(1, consValue.size());
+      final List<Object> tail = Util.skip(consValue);
       List<Core.Pat> patArgs = ((Core.TuplePat) consPat.pat).args;
       return bindRecurse(patArgs.get(0), envRef, head)
           && bindRecurse(patArgs.get(1), envRef, tail);

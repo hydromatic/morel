@@ -48,6 +48,18 @@ public class AstWriter {
     return this;
   }
 
+  /** Appends a ordinal-qualified-identifier to the output.
+   *
+   * <p>Prints "v" for {@code id("v", 0)}, "v#1" for {@code id("v", 1)},
+   * and so forth. */
+  public AstWriter id(String s, int i) {
+    b.append(s);
+    if (i > 0) {
+      b.append('#').append(i);
+    }
+    return this;
+  }
+
   /** Appends a call to an infix operator. */
   public AstWriter infix(int left, AstNode a0, Op op, AstNode a1, int right) {
     if (op == Op.APPLY && a0.op == Op.ID) {
@@ -65,7 +77,7 @@ public class AstWriter {
         // be a function literal, and we would use a reverse mapping to
         // figure out which built-in operator it implements, and whether it
         // is infix (e.g. "+") or in a namespace (e.g. "#translate String")
-        final Op op2 = Op.BY_OP_NAME.get(((Core.Id) a0).name);
+        final Op op2 = Op.BY_OP_NAME.get(((Core.Id) a0).idPat);
         if (op2 != null && op2.left > 0) {
           final List<Core.Exp> args = ((Core.Tuple) a1).args;
           return infix(left, args.get(0), op2, args.get(1), right);
