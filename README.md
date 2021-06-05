@@ -18,6 +18,7 @@ language governing permissions and limitations under the
 License.
 {% endcomment %}
 -->
+[![Build Status](https://travis-ci.com/julianhyde/morel.svg?branch=main)](https://travis-ci.com/julianhyde/morel)
 <img align="right" alt="Morel mushroom (credit: OldDesignShop.com)" src="etc/morel.jpg">
 
 # Morel
