@@ -18,22 +18,32 @@
  */
 package net.hydromatic.morel;
 
+import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Util;
+
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.util.Folder;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
 
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.Is.is;
 
 /** Tests for various utility classes. */
@@ -105,6 +115,59 @@ public class UtilTest {
     Folder.start(list, ast.stringLiteral(Pos.ZERO, "a"));
     Folder.cons(list, ast.stringLiteral(Pos.ZERO, "b"));
     assertThat(Folder.combineAll(list).toString(), is("\"a\" :: \"b\""));
+  }
+
+  /** Tests {@link Static#shorterThan(Iterable, int)}. */
+  @Test void testShorterThan() {
+    // A list of length n is shorter than n + 1, but not shorter than n
+    final List<Integer> list2 = Arrays.asList(0, 1);
+    assertThat(Static.shorterThan(list2, 1), is(false));
+    assertThat(Static.shorterThan(list2, 2), is(false));
+    assertThat(Static.shorterThan(list2, 3), is(true));
+
+    // Collections of length 3
+    final List<Integer> list3 = ImmutableIntList.identity(3);
+    final HashSet<Integer> set3 = new HashSet<>(list3);
+    final Iterable<Integer> iterable3 = list3::iterator;
+    assertThat(iterable3, not(instanceOf(Collection.class)));
+    checkShorterThan(list3, 3);
+    checkShorterThan(set3, 3);
+    checkShorterThan(iterable3, 3);
+
+    // Collections of length 1
+    final Set<String> set1 = Collections.singleton("x");
+    final List<String> list1 = new ArrayList<>(set1);
+    final Iterable<String> iterable1 = list1::iterator;
+    assertThat(iterable1, not(instanceOf(Collection.class)));
+    checkShorterThan(list1, 1);
+    checkShorterThan(set1, 1);
+    checkShorterThan(iterable1, 1);
+
+    // Empty collections
+    final Set<String> set0 = Collections.emptySet();
+    final List<String> list0 = Collections.emptyList();
+    final Iterable<String> iterable0 = set0::iterator;
+    assertThat(iterable0, not(instanceOf(Collection.class)));
+    checkShorterThan(list0, 0);
+    checkShorterThan(set0, 0);
+    checkShorterThan(iterable0, 0);
+
+    // Very large collections (too large to materialize)
+    final int bigSize = Integer.MAX_VALUE - 10;
+    final List<Integer> listBig = Util.range(bigSize);
+    final Iterable<Integer> iterableBig = listBig::iterator;
+    assertThat(iterableBig, not(instanceOf(Collection.class)));
+    checkShorterThan(listBig, bigSize);
+  }
+
+  private <E> void checkShorterThan(Iterable<E> iterable, int size) {
+    assertThat(Static.shorterThan(iterable, -1), is(size < -1));
+    assertThat(Static.shorterThan(iterable, 0), is(size < 0));
+    assertThat(Static.shorterThan(iterable, 1), is(size < 1));
+    assertThat(Static.shorterThan(iterable, 2), is(size < 2));
+    assertThat(Static.shorterThan(iterable, 3), is(size < 3));
+    assertThat(Static.shorterThan(iterable, 4), is(size < 4));
+    assertThat(Static.shorterThan(iterable, 1_000_000), is(size < 1_000_000));
   }
 }
 

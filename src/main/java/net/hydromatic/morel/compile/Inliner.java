@@ -48,13 +48,11 @@ public class Inliner extends EnvShuttle {
   }
 
   @Override protected Inliner bind(List<Binding> bindingList) {
-    // The "!bindingList.isEmpty()" and "env2 != env" checks are optimizations.
-    // If you remove them, this method will have the same effect, just slower.
-    if (!bindingList.isEmpty()) {
-      final Environment env2 = env.bindAll(bindingList);
-      if (env2 != env) {
-        return new Inliner(typeSystem, env2);
-      }
+    // The "env2 != env" check is an optimization. If you remove it, this method
+    // will have the same effect, just slower.
+    final Environment env2 = env.bindAll(bindingList);
+    if (env2 != env) {
+      return new Inliner(typeSystem, env2);
     }
     return this;
   }

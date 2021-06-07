@@ -20,7 +20,6 @@ package net.hydromatic.morel.compile;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
@@ -29,6 +28,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.Static;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -97,9 +97,9 @@ public abstract class Environments {
 
   /** Creates an environment that is a given environment plus bindings. */
   static Environment bind(Environment env, Iterable<Binding> bindings) {
-    if (Iterables.size(bindings) < 5) {
+    if (Static.shorterThan(bindings, 5)) {
       for (Binding binding : bindings) {
-        env = env.bind(binding.name, binding.type, binding.value);
+        env = env.bind(binding);
       }
       return env;
     } else {

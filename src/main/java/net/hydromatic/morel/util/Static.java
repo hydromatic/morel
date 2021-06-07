@@ -20,6 +20,8 @@ package net.hydromatic.morel.util;
 
 import com.google.common.collect.ImmutableList;
 
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.stream.Collector;
 
 /**
@@ -28,6 +30,7 @@ import java.util.stream.Collector;
 public class Static {
   private Static() {
   }
+
   /**
    * Returns a {@code Collector} that accumulates the input elements into a
    * Guava {@link ImmutableList} via a {@link ImmutableList.Builder}.
@@ -48,6 +51,27 @@ public class Static {
           return t;
         },
         ImmutableList.Builder::build);
+  }
+
+  /** Returns whether an {@link Iterable} has fewer than {@code n} elements.
+   *
+   * @param <E> Element type
+   */
+  public static <E> boolean shorterThan(Iterable<E> iterable, int n) {
+    if (iterable instanceof Collection) {
+      return ((Collection<E>) iterable).size() < n;
+    }
+    if (n <= 0) {
+      return false;
+    }
+    int i = 0;
+    for (Iterator<E> iterator = iterable.iterator(); iterator.hasNext();
+         iterator.next()) {
+      if (++i == n) {
+        return false;
+      }
+    }
+    return true;
   }
 }
 
