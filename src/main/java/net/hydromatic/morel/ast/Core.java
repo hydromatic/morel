@@ -578,17 +578,17 @@ public class Core {
   public static class ValDecl extends Decl {
     public final boolean rec;
     public final Pat pat;
-    public final Exp e;
+    public final Exp exp;
 
-    ValDecl(boolean rec, Pat pat, Exp e) {
+    ValDecl(boolean rec, Pat pat, Exp exp) {
       super(Op.VAL_DECL);
       this.rec = rec;
       this.pat = pat;
-      this.e = e;
+      this.exp = exp;
     }
 
     @Override public int hashCode() {
-      return Objects.hash(rec, pat, e);
+      return Objects.hash(rec, pat, exp);
     }
 
     @Override public boolean equals(Object o) {
@@ -596,12 +596,12 @@ public class Core {
           || o instanceof ValDecl
           && rec == ((ValDecl) o).rec
           && pat.equals(((ValDecl) o).pat)
-          && e.equals(((ValDecl) o).e);
+          && exp.equals(((ValDecl) o).exp);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(rec ? "val rec " : "val ")
-          .append(pat, 0, 0).append(" = ").append(e, 0, right);
+          .append(pat, 0, 0).append(" = ").append(exp, 0, right);
     }
 
     @Override public ValDecl accept(Shuttle shuttle) {
@@ -612,9 +612,9 @@ public class Core {
       visitor.visit(this);
     }
 
-    public ValDecl copy(boolean rec, Pat pat, Exp e) {
-      return rec == this.rec && pat == this.pat && e == this.e ? this
-          : core.valDecl(rec, pat, e);
+    public ValDecl copy(boolean rec, Pat pat, Exp exp) {
+      return rec == this.rec && pat == this.pat && exp == this.exp ? this
+          : core.valDecl(rec, pat, exp);
     }
   }
 
@@ -659,17 +659,17 @@ public class Core {
   /** "Let" expression. */
   public static class Let extends Exp {
     public final Decl decl;
-    public final Exp e;
+    public final Exp exp;
 
-    Let(Decl decl, Exp e) {
-      super(Op.LET, e.type);
+    Let(Decl decl, Exp exp) {
+      super(Op.LET, exp.type);
       this.decl = requireNonNull(decl);
-      this.e = requireNonNull(e);
+      this.exp = requireNonNull(exp);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       return w.append("let ").append(decl, 0, 0)
-          .append(" in ").append(e, 0, 0)
+          .append(" in ").append(exp, 0, 0)
           .append(" end");
     }
 
@@ -681,21 +681,21 @@ public class Core {
       visitor.visit(this);
     }
 
-    public Exp copy(Decl decl, Exp e) {
-      return decl == this.decl && e == this.e ? this
-          : core.let(decl, e);
+    public Exp copy(Decl decl, Exp exp) {
+      return decl == this.decl && exp == this.exp ? this
+          : core.let(decl, exp);
     }
   }
 
   /** Match. */
   public static class Match extends BaseNode {
     public final Pat pat;
-    public final Exp e;
+    public final Exp exp;
 
-    Match(Pat pat, Exp e) {
+    Match(Pat pat, Exp exp) {
       super(Op.MATCH);
       this.pat = pat;
-      this.e = e;
+      this.exp = exp;
     }
 
     @Override public Match accept(Shuttle shuttle) {
@@ -707,12 +707,12 @@ public class Core {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append(pat, 0, 0).append(" => ").append(e, 0, right);
+      return w.append(pat, 0, 0).append(" => ").append(exp, 0, right);
     }
 
-    public Match copy(Pat pat, Exp e) {
-      return pat == this.pat && e == this.e ? this
-          : core.match(pat, e);
+    public Match copy(Pat pat, Exp exp) {
+      return pat == this.pat && exp == this.exp ? this
+          : core.match(pat, exp);
     }
   }
 
@@ -752,17 +752,17 @@ public class Core {
    *
    * <p>Also implements {@link Ast.If}. */
   public static class Case extends Exp {
-    public final Exp e;
+    public final Exp exp;
     public final List<Match> matchList;
 
-    Case(Type type, Exp e, ImmutableList<Match> matchList) {
+    Case(Type type, Exp exp, ImmutableList<Match> matchList) {
       super(Op.CASE, type);
-      this.e = e;
+      this.exp = exp;
       this.matchList = matchList;
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append("case ").append(e, 0, 0).append(" of ")
+      return w.append("case ").append(exp, 0, 0).append(" of ")
           .appendAll(matchList, left, Op.BAR, right);
     }
 
@@ -774,9 +774,9 @@ public class Core {
       visitor.visit(this);
     }
 
-    public Case copy(Exp e, List<Match> matchList) {
-      return e == this.e && matchList.equals(this.matchList) ? this
-          : core.caseOf(type, e, matchList);
+    public Case copy(Exp exp, List<Match> matchList) {
+      return exp == this.exp && matchList.equals(this.matchList) ? this
+          : core.caseOf(type, exp, matchList);
     }
   }
 

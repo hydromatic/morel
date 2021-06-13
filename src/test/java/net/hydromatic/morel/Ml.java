@@ -173,12 +173,12 @@ class Ml {
   private Ml withValidate(BiConsumer<Ast.Exp, TypeMap> action) {
     return withParser(parser -> {
       try {
-        final Ast.Exp expression = parser.expression();
+        final Ast.Exp statement = parser.expression();
         final Calcite calcite = Calcite.withDataSets(dataSetMap);
         final TypeResolver.Resolved resolved =
-            Compiles.validateExpression(expression, calcite.foreignValues());
+            Compiles.validateExpression(statement, calcite.foreignValues());
         final Ast.ValDecl valDecl = (Ast.ValDecl) resolved.node;
-        final Ast.Exp resolvedExp = valDecl.valBinds.get(0).e;
+        final Ast.Exp resolvedExp = valDecl.valBinds.get(0).exp;
         action.accept(resolvedExp, resolved.typeMap);
       } catch (ParseException e) {
         throw new RuntimeException(e);
@@ -220,13 +220,14 @@ class Ml {
 
   Ml assertCalcite(Matcher<String> matcher) {
     try {
-      final Ast.Exp e = new MorelParserImpl(new StringReader(ml)).expression();
+      final Ast.Exp statement =
+          new MorelParserImpl(new StringReader(ml)).expression();
       final TypeSystem typeSystem = new TypeSystem();
 
       final Calcite calcite = Calcite.withDataSets(dataSetMap);
       final Environment env =
           Environments.env(typeSystem, calcite.foreignValues());
-      final Ast.ValDecl valDecl = Compiles.toValDecl(e);
+      final Ast.ValDecl valDecl = Compiles.toValDecl(statement);
       final TypeResolver.Resolved resolved =
           TypeResolver.deduceType(env, valDecl, typeSystem);
       final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
@@ -248,9 +249,9 @@ class Ml {
    * Core, the Core string converts to the expected value. Which is usually
    * the original string. */
   public void assertCoreString(Matcher<String> matcher) {
-    final Ast.Exp e;
+    final Ast.Exp statement;
     try {
-      e = new MorelParserImpl(new StringReader(ml)).expression();
+      statement = new MorelParserImpl(new StringReader(ml)).expression();
     } catch (ParseException parseException) {
       throw new RuntimeException(parseException);
     }
@@ -258,14 +259,14 @@ class Ml {
 
     final Environment env =
         Environments.env(typeSystem, ImmutableMap.of());
-    final Ast.ValDecl valDecl = Compiles.toValDecl(e);
+    final Ast.ValDecl valDecl = Compiles.toValDecl(statement);
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, valDecl, typeSystem);
     final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
     final Resolver resolver = new Resolver(resolved.typeMap);
     final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
     final Core.ValDecl valDecl4 = valDecl3.accept(Inliner.of(typeSystem, env));
-    final String coreString = valDecl4.e.toString();
+    final String coreString = valDecl4.exp.toString();
     assertThat(coreString, matcher);
   }
 
@@ -283,14 +284,15 @@ class Ml {
 
   Ml assertEval(Matcher<Object> resultMatcher, Matcher<String> planMatcher) {
     try {
-      final Ast.Exp e = new MorelParserImpl(new StringReader(ml)).expression();
+      final Ast.Exp statement =
+          new MorelParserImpl(new StringReader(ml)).expression();
       final TypeSystem typeSystem = new TypeSystem();
       final Calcite calcite = Calcite.withDataSets(dataSetMap);
       final Environment env =
           Environments.env(typeSystem, calcite.foreignValues());
       final Session session = new Session();
       session.map.putAll(propMap);
-      eval(session, env, typeSystem, e, resultMatcher, planMatcher);
+      eval(session, env, typeSystem, statement, resultMatcher, planMatcher);
       return this;
     } catch (ParseException e) {
       throw new RuntimeException(e);
@@ -299,11 +301,11 @@ class Ml {
 
   @CanIgnoreReturnValue
   private Object eval(Session session, Environment env,
-      TypeSystem typeSystem, Ast.Exp e,
+      TypeSystem typeSystem, Ast.Exp statement,
       @Nullable Matcher<Object> resultMatcher,
       @Nullable Matcher<String> planMatcher) {
     CompiledStatement compiledStatement =
-        Compiles.prepareStatement(typeSystem, session, env, e);
+        Compiles.prepareStatement(typeSystem, session, env, statement);
     final List<String> output = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
     compiledStatement.eval(session, env, output, bindings);

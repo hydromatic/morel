@@ -35,7 +35,7 @@ public class Visitor {
   }
 
   protected void visit(Ast.AnnotatedExp annotatedExp) {
-    annotatedExp.e.accept(this);
+    annotatedExp.exp.accept(this);
     annotatedExp.type.accept(this);
   }
 
@@ -47,11 +47,11 @@ public class Visitor {
 
   protected void visit(Ast.Let let) {
     let.decls.forEach(this::accept);
-    let.e.accept(this);
+    let.exp.accept(this);
   }
 
   protected void visit(Ast.Case kase) {
-    kase.e.accept(this);
+    kase.exp.accept(this);
     kase.matchList.forEach(this::accept);
   }
 
@@ -138,7 +138,7 @@ public class Visitor {
 
   protected void visit(Ast.Match match) {
     match.pat.accept(this);
-    match.e.accept(this);
+    match.exp.accept(this);
   }
 
   // types
@@ -162,7 +162,7 @@ public class Visitor {
 
   protected void visit(Ast.FunMatch funMatch) {
     funMatch.patList.forEach(this::accept);
-    funMatch.e.accept(this);
+    funMatch.exp.accept(this);
   }
 
   protected void visit(Ast.ValDecl valDecl) {
@@ -171,7 +171,7 @@ public class Visitor {
 
   protected void visit(Ast.ValBind valBind) {
     valBind.pat.accept(this);
-    valBind.e.accept(this);
+    valBind.exp.accept(this);
   }
 
   protected void visit(Ast.From from) {
@@ -254,11 +254,11 @@ public class Visitor {
 
   protected void visit(Core.Let let) {
     let.decl.accept(this);
-    let.e.accept(this);
+    let.exp.accept(this);
   }
 
   protected void visit(Core.Case kase) {
-    kase.e.accept(this);
+    kase.exp.accept(this);
     kase.matchList.forEach(this::accept);
   }
 
@@ -283,7 +283,7 @@ public class Visitor {
 
   protected void visit(Core.Match match) {
     match.pat.accept(this);
-    match.e.accept(this);
+    match.exp.accept(this);
   }
 
   protected void visit(Core.From from) {
@@ -301,7 +301,7 @@ public class Visitor {
 
   protected void visit(Core.ValDecl valDecl) {
     valDecl.pat.accept(this);
-    valDecl.e.accept(this);
+    valDecl.exp.accept(this);
   }
 
   protected void visit(Core.Group group) {

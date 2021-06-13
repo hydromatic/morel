@@ -241,21 +241,21 @@ public enum CoreBuilder {
     return new Core.Tuple(tupleType, argList);
   }
 
-  public Core.Let let(Core.Decl decl, Core.Exp e) {
-    return new Core.Let(decl, e);
+  public Core.Let let(Core.Decl decl, Core.Exp exp) {
+    return new Core.Let(decl, exp);
   }
 
-  public Core.ValDecl valDecl(boolean rec, Core.Pat pat, Core.Exp e) {
-    return new Core.ValDecl(rec, pat, e);
+  public Core.ValDecl valDecl(boolean rec, Core.Pat pat, Core.Exp exp) {
+    return new Core.ValDecl(rec, pat, exp);
   }
 
-  public Core.Match match(Core.Pat pat, Core.Exp e) {
-    return new Core.Match(pat, e);
+  public Core.Match match(Core.Pat pat, Core.Exp exp) {
+    return new Core.Match(pat, exp);
   }
 
-  public Core.Case caseOf(Type type, Core.Exp e,
+  public Core.Case caseOf(Type type, Core.Exp exp,
       Iterable<? extends Core.Match> matchList) {
-    return new Core.Case(type, e, ImmutableList.copyOf(matchList));
+    return new Core.Case(type, exp, ImmutableList.copyOf(matchList));
   }
 
   public Core.From from(ListType type, Map<Core.Pat, Core.Exp> sources,

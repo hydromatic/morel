@@ -271,15 +271,15 @@ public class TypeSystem {
 
   private static StringBuilder unparseList(StringBuilder builder, Op op,
       int left, int right, List<? extends Type> argTypes) {
-    Ord.forEach(argTypes, (e, i) -> {
+    Ord.forEach(argTypes, (type, i) -> {
       if (i == 0) {
-        unparse(builder, e, left, op.left);
+        unparse(builder, type, left, op.left);
       } else {
         builder.append(op.padded);
         if (i < argTypes.size() - 1) {
-          unparse(builder, e, op.right, op.left);
+          unparse(builder, type, op.right, op.left);
         } else {
-          unparse(builder, e, op.right, right);
+          unparse(builder, type, op.right, right);
         }
       }
     });

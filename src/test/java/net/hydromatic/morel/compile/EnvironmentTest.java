@@ -89,9 +89,9 @@ public class EnvironmentTest {
         return depth(env) == i;
       }
 
-      private int depth(Environment e) {
+      private int depth(Environment env) {
         final AtomicInteger c = new AtomicInteger();
-        e.visit(b -> c.incrementAndGet());
+        env.visit(b -> c.incrementAndGet());
         return c.get();
       }
     };

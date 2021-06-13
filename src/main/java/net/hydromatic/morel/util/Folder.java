@@ -55,13 +55,13 @@ public abstract class Folder<E> {
   }
 
   /** Appends an element using "@". */
-  public static void at(List<Folder<Ast.Exp>> list, Ast.Exp e) {
-    append(list, e, e1 -> op(e1, Op.AT));
+  public static void at(List<Folder<Ast.Exp>> list, Ast.Exp exp) {
+    append(list, exp, e1 -> op(e1, Op.AT));
   }
 
   /** Appends an element using "::". */
-  public static void cons(List<Folder<Ast.Exp>> list, Ast.Exp e) {
-    append(list, e, e1 -> op(e1, Op.CONS));
+  public static void cons(List<Folder<Ast.Exp>> list, Ast.Exp exp) {
+    append(list, exp, e1 -> op(e1, Op.CONS));
   }
 
   /** Adds an element to an empty list. */
@@ -86,8 +86,8 @@ public abstract class Folder<E> {
 
   /** Creates a folder that combines an expression with whatever follows
    * using an infix operator. */
-  private static Folder<Ast.Exp> op(Ast.Exp e, final Op at) {
-    return new Folder<Ast.Exp>(e) {
+  private static Folder<Ast.Exp> op(Ast.Exp exp, final Op at) {
+    return new Folder<Ast.Exp>(exp) {
       Ast.Exp combine(List<Folder<Ast.Exp>> list) {
         final Ast.Exp rest = combineAll(list);
         return ast.infixCall(e.pos.plus(rest.pos), at, e, rest);

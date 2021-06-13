@@ -40,19 +40,19 @@ public enum AstBuilder {
   // CHECKSTYLE: IGNORE 1
   ast;
 
-  public String implicitLabel(Ast.Exp e) {
-    if (e instanceof Ast.Apply) {
-      final Ast.Apply apply = (Ast.Apply) e;
+  public String implicitLabel(Ast.Exp exp) {
+    if (exp instanceof Ast.Apply) {
+      final Ast.Apply apply = (Ast.Apply) exp;
       if (apply.fn instanceof Ast.RecordSelector) {
         final Ast.RecordSelector selector = (Ast.RecordSelector) apply.fn;
         return selector.name;
       }
     }
-    if (e instanceof Ast.Id) {
-      return ((Ast.Id) e).name;
+    if (exp instanceof Ast.Id) {
+      return ((Ast.Id) exp).name;
     }
     throw new IllegalArgumentException("cannot derive label for expression "
-        + e);
+        + exp);
   }
 
   /** Creates a call to an infix operator. */
@@ -287,9 +287,8 @@ public enum AstBuilder {
     return foldRight(list, this::cons);
   }
 
-  public Ast.Let let(Pos pos, Iterable<? extends Ast.Decl> decls,
-      Ast.Exp e) {
-    return new Ast.Let(pos, ImmutableList.copyOf(decls), e);
+  public Ast.Let let(Pos pos, Iterable<? extends Ast.Decl> decls, Ast.Exp exp) {
+    return new Ast.Let(pos, ImmutableList.copyOf(decls), exp);
   }
 
   public Ast.ValDecl valDecl(Pos pos,
@@ -301,17 +300,17 @@ public enum AstBuilder {
     return new Ast.ValDecl(pos, ImmutableList.copyOf(valBinds));
   }
 
-  public Ast.ValBind valBind(Pos pos, boolean rec, Ast.Pat pat, Ast.Exp e) {
-    return new Ast.ValBind(pos, rec, pat, e);
+  public Ast.ValBind valBind(Pos pos, boolean rec, Ast.Pat pat, Ast.Exp exp) {
+    return new Ast.ValBind(pos, rec, pat, exp);
   }
 
-  public Ast.Match match(Pos pos, Ast.Pat pat, Ast.Exp e) {
-    return new Ast.Match(pos, pat, e);
+  public Ast.Match match(Pos pos, Ast.Pat pat, Ast.Exp exp) {
+    return new Ast.Match(pos, pat, exp);
   }
 
-  public Ast.Case caseOf(Pos pos, Ast.Exp e,
+  public Ast.Case caseOf(Pos pos, Ast.Exp exp,
       Iterable<? extends Ast.Match> matchList) {
-    return new Ast.Case(pos, e, ImmutableList.copyOf(matchList));
+    return new Ast.Case(pos, exp, ImmutableList.copyOf(matchList));
   }
 
   public Ast.From from(Pos pos, Map<Ast.Pat, Ast.Exp> sources,
@@ -346,8 +345,8 @@ public enum AstBuilder {
   }
 
   public Ast.FunMatch funMatch(Pos pos, String name,
-      Iterable<? extends Ast.Pat> patList, Ast.Exp e) {
-    return new Ast.FunMatch(pos, name, ImmutableList.copyOf(patList), e);
+      Iterable<? extends Ast.Pat> patList, Ast.Exp exp) {
+    return new Ast.FunMatch(pos, name, ImmutableList.copyOf(patList), exp);
   }
 
   public Ast.Apply apply(Ast.Exp fn, Ast.Exp arg) {

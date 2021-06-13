@@ -51,13 +51,13 @@ abstract class EnvShuttle extends Shuttle {
     final List<Binding> bindings = new ArrayList<>();
     final Core.Pat pat2 = match.pat.accept(this);
     pat2.accept(Compiles.binding(typeSystem, bindings));
-    return core.match(pat2, match.e.accept(bind(bindings)));
+    return core.match(pat2, match.exp.accept(bind(bindings)));
   }
 
   @Override public Core.Exp visit(Core.Let let) {
     final List<Binding> bindings = new ArrayList<>();
     let.decl.accept(Compiles.binding(typeSystem, bindings));
-    return let.copy(let.decl.accept(this), let.e.accept(bind(bindings)));
+    return let.copy(let.decl.accept(this), let.exp.accept(bind(bindings)));
   }
 
   @Override public Core.Exp visit(Core.From from) {

@@ -63,7 +63,7 @@ public class Shuttle {
   protected Ast.Exp visit(Ast.AnnotatedExp annotatedExp) {
     return ast.annotatedExp(annotatedExp.pos,
         annotatedExp.type.accept(this),
-        annotatedExp.e.accept(this));
+        annotatedExp.exp.accept(this));
   }
 
   protected Ast.Exp visit(Ast.If ifThenElse) {
@@ -72,11 +72,11 @@ public class Shuttle {
   }
 
   protected Ast.Let visit(Ast.Let let) {
-    return ast.let(let.pos, visitList(let.decls), let.e);
+    return ast.let(let.pos, visitList(let.decls), let.exp);
   }
 
   protected Ast.Exp visit(Ast.Case caseOf) {
-    return ast.caseOf(caseOf.pos, caseOf.e.accept(this),
+    return ast.caseOf(caseOf.pos, caseOf.exp.accept(this),
         visitList(caseOf.matchList));
   }
 
@@ -164,7 +164,7 @@ public class Shuttle {
   }
 
   protected Ast.Match visit(Ast.Match match) {
-    return ast.match(match.pos, match.pat.accept(this), match.e.accept(this));
+    return ast.match(match.pos, match.pat.accept(this), match.exp.accept(this));
   }
 
   // types
@@ -189,7 +189,7 @@ public class Shuttle {
 
   protected Ast.FunMatch visit(Ast.FunMatch funMatch) {
     return ast.funMatch(funMatch.pos, funMatch.name,
-        visitList(funMatch.patList), funMatch.e.accept(this));
+        visitList(funMatch.patList), funMatch.exp.accept(this));
   }
 
   protected Ast.ValDecl visit(Ast.ValDecl valDecl) {
@@ -197,7 +197,7 @@ public class Shuttle {
   }
 
   protected Ast.ValBind visit(Ast.ValBind valBind) {
-    return ast.valBind(valBind.pos, valBind.rec, valBind.pat, valBind.e);
+    return ast.valBind(valBind.pos, valBind.rec, valBind.pat, valBind.exp);
   }
 
   protected Ast.Exp visit(Ast.From from) {
@@ -281,7 +281,7 @@ public class Shuttle {
   }
 
   protected Core.Exp visit(Core.Let let) {
-    return let.copy(let.decl.accept(this), let.e.accept(this));
+    return let.copy(let.decl.accept(this), let.exp.accept(this));
   }
 
   protected Core.DatatypeDecl visit(Core.DatatypeDecl datatypeDecl) {
@@ -290,7 +290,7 @@ public class Shuttle {
 
   protected Core.ValDecl visit(Core.ValDecl valDecl) {
     return valDecl.copy(valDecl.rec, valDecl.pat.accept(this),
-        valDecl.e.accept(this));
+        valDecl.exp.accept(this));
   }
 
   protected Core.Pat visit(Core.IdPat idPat) {
@@ -331,11 +331,11 @@ public class Shuttle {
   }
 
   protected Core.Exp visit(Core.Case caseOf) {
-    return caseOf.copy(caseOf.e.accept(this), visitList(caseOf.matchList));
+    return caseOf.copy(caseOf.exp.accept(this), visitList(caseOf.matchList));
   }
 
   protected Core.Match visit(Core.Match match) {
-    return match.copy(match.pat.accept(this), match.e.accept(this));
+    return match.copy(match.pat.accept(this), match.exp.accept(this));
   }
 
   protected Core.Exp visit(Core.From from) {

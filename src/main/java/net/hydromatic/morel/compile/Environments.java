@@ -131,22 +131,22 @@ public abstract class Environments {
     }
 
     @Override protected Environment bind(Binding binding) {
-      Environment e;
+      Environment env;
       if (this.binding.name.equals(binding.name)) {
         // The new binding will obscure the current environment's binding,
         // because it binds a variable of the same name. Bind the parent
         // environment instead. This strategy is worthwhile because it tends to
         // prevent long chains from forming, and allows obscured values to be
         // garbage-collected.
-        e = parent;
-        while (e instanceof SubEnvironment
-            && ((SubEnvironment) e).binding.name.equals(binding.name)) {
-          e = ((SubEnvironment) e).parent;
+        env = parent;
+        while (env instanceof SubEnvironment
+            && ((SubEnvironment) env).binding.name.equals(binding.name)) {
+          env = ((SubEnvironment) env).parent;
         }
       } else {
-        e = this;
+        env = this;
       }
-      return new Environments.SubEnvironment(e, binding);
+      return new Environments.SubEnvironment(env, binding);
     }
 
     void visit(Consumer<Binding> consumer) {

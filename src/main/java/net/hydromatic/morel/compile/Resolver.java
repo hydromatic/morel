@@ -92,7 +92,7 @@ public class Resolver {
       final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
       boolean rec = false;
       for (Ast.ValBind valBind : valDecl.valBinds) {
-        flatten(matches, valBind.pat, valBind.e);
+        flatten(matches, valBind.pat, valBind.exp);
         rec |= valBind.rec;
       }
       final List<Type> types = new ArrayList<>();
@@ -109,7 +109,7 @@ public class Resolver {
       return core.valDecl(rec, pat, e2);
     } else {
       Ast.ValBind valBind = valDecl.valBinds.get(0);
-      return core.valDecl(valBind.rec, toCore(valBind.pat), toCore(valBind.e));
+      return core.valDecl(valBind.rec, toCore(valBind.pat), toCore(valBind.exp));
     }
   }
 
@@ -121,47 +121,47 @@ public class Resolver {
     return (DataType) typeMap.typeSystem.lookup(bind.name.name);
   }
 
-  private Core.Exp toCore(Ast.Exp e) {
-    switch (e.op) {
+  private Core.Exp toCore(Ast.Exp exp) {
+    switch (exp.op) {
     case BOOL_LITERAL:
-      return core.boolLiteral((Boolean) ((Ast.Literal) e).value);
+      return core.boolLiteral((Boolean) ((Ast.Literal) exp).value);
     case CHAR_LITERAL:
-      return core.charLiteral((Character) ((Ast.Literal) e).value);
+      return core.charLiteral((Character) ((Ast.Literal) exp).value);
     case INT_LITERAL:
-      return core.intLiteral((BigDecimal) ((Ast.Literal) e).value);
+      return core.intLiteral((BigDecimal) ((Ast.Literal) exp).value);
     case REAL_LITERAL:
-      return core.realLiteral((BigDecimal) ((Ast.Literal) e).value);
+      return core.realLiteral((BigDecimal) ((Ast.Literal) exp).value);
     case STRING_LITERAL:
-      return core.stringLiteral((String) ((Ast.Literal) e).value);
+      return core.stringLiteral((String) ((Ast.Literal) exp).value);
     case UNIT_LITERAL:
       return core.unitLiteral();
     case ID:
-      return toCore((Ast.Id) e);
+      return toCore((Ast.Id) exp);
     case ANDALSO:
     case ORELSE:
-      return toCore((Ast.InfixCall) e);
+      return toCore((Ast.InfixCall) exp);
     case APPLY:
-      return toCore((Ast.Apply) e);
+      return toCore((Ast.Apply) exp);
     case FN:
-      return toCore((Ast.Fn) e);
+      return toCore((Ast.Fn) exp);
     case IF:
-      return toCore((Ast.If) e);
+      return toCore((Ast.If) exp);
     case CASE:
-      return toCore((Ast.Case) e);
+      return toCore((Ast.Case) exp);
     case LET:
-      return toCore((Ast.Let) e);
+      return toCore((Ast.Let) exp);
     case FROM:
-      return toCore((Ast.From) e);
+      return toCore((Ast.From) exp);
     case TUPLE:
-      return toCore((Ast.Tuple) e);
+      return toCore((Ast.Tuple) exp);
     case RECORD:
-      return toCore((Ast.Record) e);
+      return toCore((Ast.Record) exp);
     case RECORD_SELECTOR:
-      return toCore((Ast.RecordSelector) e);
+      return toCore((Ast.RecordSelector) exp);
     case LIST:
-      return toCore((Ast.ListExp) e);
+      return toCore((Ast.ListExp) exp);
     default:
-      throw new AssertionError("unknown exp " + e.op);
+      throw new AssertionError("unknown exp " + exp.op);
     }
   }
 
@@ -233,18 +233,18 @@ public class Resolver {
   private Core.Case toCore(Ast.Case case_) {
     Iterable<? extends Ast.Match> matchList = case_.matchList;
     Function<Ast.Match, Core.Match> toCore = this::toCore;
-    return core.caseOf(typeMap.getType(case_), toCore(case_.e),
+    return core.caseOf(typeMap.getType(case_), toCore(case_.exp),
         transform(matchList, toCore));
   }
 
   private Core.Let toCore(Ast.Let let) {
-    return flattenLet(let.decls, let.e);
+    return flattenLet(let.decls, let.exp);
   }
 
-  private Core.Let flattenLet(List<Ast.Decl> decls, Ast.Exp e) {
+  private Core.Let flattenLet(List<Ast.Decl> decls, Ast.Exp exp) {
     final Core.Exp e2 = decls.size() == 1
-        ? toCore(e)
-        : flattenLet(decls.subList(1, decls.size()), e);
+        ? toCore(exp)
+        : flattenLet(decls.subList(1, decls.size()), exp);
     return core.let(toCore(decls.get(0)), e2);
   }
 
@@ -345,7 +345,7 @@ public class Resolver {
   }
 
   private Core.Match toCore(Ast.Match match) {
-    return core.match(toCore(match.pat), toCore(match.e));
+    return core.match(toCore(match.pat), toCore(match.exp));
   }
 
   Core.From toCore(Ast.From from) {

@@ -236,7 +236,7 @@ public class TypeResolver {
         env2 = bindAll(env2, termMap);
         termMap.clear();
       }
-      final Ast.Exp e2 = deduceType(env2, let.e, v);
+      final Ast.Exp e2 = deduceType(env2, let.exp, v);
       final Ast.Let let2 = let.copy(decls, e2);
       return reg(let2, null, v);
 
@@ -261,7 +261,7 @@ public class TypeResolver {
     case CASE:
       final Ast.Case case_ = (Ast.Case) node;
       v2 = unifier.variable();
-      final Ast.Exp e2b = deduceType(env, case_.e, v2);
+      final Ast.Exp e2b = deduceType(env, case_.exp, v2);
       final NavigableSet<String> labelNames = new TreeSet<>();
       final Unifier.Term argType = map.get(e2b);
       if (argType instanceof Unifier.Sequence) {
@@ -576,7 +576,7 @@ public class TypeResolver {
     final Unifier.Variable vPat = unifier.variable();
     Ast.Pat pat2 = deducePatType(env, match.pat, termMap, null, vPat);
     TypeEnv env2 = bindAll(env, termMap);
-    Ast.Exp e2 = deduceType(env2, match.e, resultVariable);
+    Ast.Exp e2 = deduceType(env2, match.exp, resultVariable);
     Ast.Match match2 = match.copy(pat2, e2);
     return reg(match2, argVariable,
         unifier.apply(FN_TY_CON, vPat, resultVariable));
@@ -596,7 +596,7 @@ public class TypeResolver {
       final Ast.Pat pat2 =
           deducePatType(env, match.pat, termMap, labelNames, argVariable);
       final TypeEnv env2 = bindAll(env, termMap);
-      final Ast.Exp e2 = deduceType(env2, match.e, resultVariable);
+      final Ast.Exp e2 = deduceType(env2, match.exp, resultVariable);
       matchList2.add(match.copy(pat2, e2));
     }
     return matchList2;
@@ -613,7 +613,7 @@ public class TypeResolver {
       // in the environment before we try to deduce the type of the expression.
       env2 = env2.bind(((Ast.IdPat) valBind.pat).name, vPat);
     }
-    final Ast.Exp e2 = deduceType(env2, valBind.e, vPat);
+    final Ast.Exp e2 = deduceType(env2, valBind.exp, vPat);
     final Ast.ValBind valBind2 = valBind.copy(valBind.rec, valBind.pat, e2);
     return reg(valBind2, v, unifier.apply(FN_TY_CON, vPat, vPat));
   }
@@ -750,9 +750,9 @@ public class TypeResolver {
 
   private Ast.ValBind toValBind(TypeEnv env, Ast.FunBind funBind) {
     final List<Ast.Pat> vars;
-    Ast.Exp e;
+    Ast.Exp exp;
     if (funBind.matchList.size() == 1) {
-      e = funBind.matchList.get(0).e;
+      exp = funBind.matchList.get(0).exp;
       vars = funBind.matchList.get(0).patList;
     } else {
       final List<String> varNames =
@@ -763,15 +763,15 @@ public class TypeResolver {
       for (Ast.FunMatch funMatch : funBind.matchList) {
         matchList.add(
             ast.match(funMatch.pos, patTuple(env, funMatch.patList),
-                funMatch.e));
+                funMatch.exp));
       }
-      e = ast.caseOf(Pos.ZERO, idTuple(varNames), matchList);
+      exp = ast.caseOf(Pos.ZERO, idTuple(varNames), matchList);
     }
     final Pos pos = funBind.pos;
     for (Ast.Pat var : Lists.reverse(vars)) {
-      e = ast.fn(pos, ast.match(pos, var, e));
+      exp = ast.fn(pos, ast.match(pos, var, exp));
     }
-    return ast.valBind(pos, true, ast.idPat(pos, funBind.name), e);
+    return ast.valBind(pos, true, ast.idPat(pos, funBind.name), exp);
   }
 
   /** Converts a list of variable names to a variable or tuple.

@@ -100,7 +100,7 @@ public abstract class Compiles {
   /** Converts {@code val = e} to {@code e};
    * the converse of {@link #toValDecl(Ast.Exp)}. */
   public static Core.Exp toExp(Core.ValDecl decl) {
-    return decl.e;
+    return decl.exp;
   }
 
   static PatternBinder binding(TypeSystem typeSystem, List<Binding> bindings) {

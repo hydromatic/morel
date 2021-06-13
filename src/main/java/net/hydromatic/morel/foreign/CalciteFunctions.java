@@ -207,13 +207,13 @@ public class CalciteFunctions {
 
       Compiled(String ml, String typeJson, RelDataTypeFactory typeFactory,
           Environment env, TypeSystem typeSystem, Session session) {
-        final Ast.Exp e;
+        final Ast.Exp exp;
         try {
-          e = new MorelParserImpl(new StringReader(ml)).expression();
+          exp = new MorelParserImpl(new StringReader(ml)).expression();
         } catch (ParseException pe) {
           throw new RuntimeException(pe);
         }
-        final Ast.ValDecl valDecl = Compiles.toValDecl(e);
+        final Ast.ValDecl valDecl = Compiles.toValDecl(exp);
         final TypeResolver.Resolved resolved =
             TypeResolver.deduceType(env, valDecl, typeSystem);
         final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
@@ -266,13 +266,13 @@ public class CalciteFunctions {
 
       Compiled(Environment env, TypeSystem typeSystem,
           RelDataTypeFactory typeFactory, String ml, String typeJson) {
-        final Ast.Exp e;
+        final Ast.Exp exp;
         try {
-          e = new MorelParserImpl(new StringReader(ml)).expression();
+          exp = new MorelParserImpl(new StringReader(ml)).expression();
         } catch (ParseException pe) {
           throw new RuntimeException(pe);
         }
-        final Ast.ValDecl valDecl = Compiles.toValDecl(e);
+        final Ast.ValDecl valDecl = Compiles.toValDecl(exp);
         final TypeResolver.Resolved resolved =
             TypeResolver.deduceType(env, valDecl, typeSystem);
         final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;

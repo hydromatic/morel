@@ -209,7 +209,7 @@ public class Compiler {
     case CASE:
       final Core.Case case_ = (Core.Case) expression;
       final Code matchCode = compileMatchList(cx, case_.matchList);
-      argCode = compile(cx, case_.e);
+      argCode = compile(cx, case_.exp);
       return Codes.apply(matchCode, argCode);
 
     case RECORD_SELECTOR:
@@ -406,14 +406,14 @@ public class Compiler {
     }
     if (o instanceof Macro) {
       final Macro value = (Macro) o;
-      final Core.Exp e = value.expand(typeSystem, cx.env, argType);
-      switch (e.op) {
+      final Core.Exp exp = value.expand(typeSystem, cx.env, argType);
+      switch (exp.op) {
       case FN_LITERAL:
-        final Core.Literal literal = (Core.Literal) e;
+        final Core.Literal literal = (Core.Literal) exp;
         final BuiltIn builtIn = (BuiltIn) literal.value;
         return (Applicable) Codes.BUILT_IN_VALUES.get(builtIn);
       }
-      final Code code = compile(cx, e);
+      final Code code = compile(cx, exp);
       return new Applicable() {
         @Override public Describer describe(Describer describer) {
           return code.describe(describer);
@@ -432,7 +432,7 @@ public class Compiler {
     final List<Binding> bindings = new ArrayList<>();
     compileDecl(cx, let.decl, matchCodes, bindings, null);
     Context cx2 = cx.bindAll(bindings);
-    final Code resultCode = compile(cx2, let.e);
+    final Code resultCode = compile(cx2, let.exp);
     return finishCompileLet(cx2, matchCodes, resultCode, let.type);
   }
 
@@ -526,7 +526,7 @@ public class Compiler {
   private Pair<Core.Pat, Code> compileMatch(Context cx, Core.Match match) {
     final List<Binding> bindings = new ArrayList<>();
     match.pat.accept(Compiles.binding(typeSystem, bindings));
-    final Code code = compile(cx.bindAll(bindings), match.e);
+    final Code code = compile(cx.bindAll(bindings), match.exp);
     return Pair.of(match.pat, code);
   }
 
@@ -548,7 +548,7 @@ public class Compiler {
     // Using 'compileArg' rather than 'compile' encourages CalciteCompiler
     // to use a pure Calcite implementation if possible, and has no effect
     // in the basic Compiler.
-    final Code code = compileArg(cx1, valBind.e);
+    final Code code = compileArg(cx1, valBind.exp);
     if (!linkCodes.isEmpty()) {
       link(linkCodes, valBind.pat, code);
     }
@@ -559,7 +559,7 @@ public class Compiler {
 
     if (actions != null) {
       final String name = ((Core.IdPat) valBind.pat).name;
-      final Type type0 = valBind.e.type;
+      final Type type0 = valBind.exp.type;
       final Type type = typeSystem.ensureClosed(type0);
       actions.add((output, outBindings, evalEnv) -> {
         final StringBuilder buf = new StringBuilder();
