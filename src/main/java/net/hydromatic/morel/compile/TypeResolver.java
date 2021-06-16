@@ -513,8 +513,12 @@ public class TypeResolver {
     }
   }
 
-  private Unifier.Sequence tuple(List<Unifier.Term> types) {
-    return unifier.apply(TUPLE_TY_CON, types);
+  private Unifier.Term tuple(List<Unifier.Term> types) {
+    if (types.isEmpty()) {
+      return toTerm(PrimitiveType.UNIT);
+    } else {
+      return unifier.apply(TUPLE_TY_CON, types);
+    }
   }
 
   /** Converts an integer to its string representation, using a cached value

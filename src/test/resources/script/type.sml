@@ -32,6 +32,16 @@
 {} = ();
 () = {};
 
+(*) Function with unit arg
+fun one () = 1;
+one ();
+one {};
+let
+  fun one () = 1
+in
+  one ()
+end;
+
 (*) Pattern-match on record
 fun f {a = c, b} = b + c;
 f {a = 5, b = 6};

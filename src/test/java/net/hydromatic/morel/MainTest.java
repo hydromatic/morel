@@ -929,6 +929,15 @@ public class MainTest {
     ml(ml).assertEval(is(3));
   }
 
+  @Test void testFunUnit() {
+    final String ml = "let\n"
+        + "  fun one () = 1\n"
+        + "in\n"
+        + "  one () + 2\n"
+        + "end";
+    ml(ml).assertEval(is(3));
+  }
+
   @Test void testMatchTuple() {
     final String ml = "let\n"
         + "  val rec sumIf = fn v =>\n"

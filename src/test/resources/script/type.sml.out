@@ -54,6 +54,24 @@ val it = true : bool
 val it = true : bool
 
 
+(*) Function with unit arg
+fun one () = 1;
+val one = fn : unit -> int
+
+one ();
+val it = 1 : int
+
+one {};
+val it = 1 : int
+
+let
+  fun one () = 1
+in
+  one ()
+end;
+val it = 1 : int
+
+
 (*) Pattern-match on record
 fun f {a = c, b} = b + c;
 val f = fn : {a:int, b:int} -> int
