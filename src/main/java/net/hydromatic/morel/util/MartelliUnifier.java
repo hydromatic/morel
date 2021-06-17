@@ -150,6 +150,14 @@ public class MartelliUnifier extends Unifier {
             depth + 1);
       }
     }
+    substitution.resultMap.forEach((variable2, v) -> {
+      // Substitution contains "variable2 -> variable"; call the actions of
+      // "variable2", because it too has just been unified.
+      if (v.equals(variable)) {
+        act(variable2, term, termPairs, substitution, termActions,
+            depth + 1);
+      }
+    });
   }
 
   private int findDelete(List<TermTerm> termPairs) {

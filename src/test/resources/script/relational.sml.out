@@ -394,11 +394,11 @@ fun exceptAll l1 l2 =
         units e.c
       end)
     yield e.v;
-val exceptAll = fn : 'a list -> 'a list -> 'b list
+val exceptAll = fn : 'a list -> 'a list -> 'a list
 
 exceptAll (from e in emps yield e.deptno)
   (from d in depts yield d.deptno);
-val it = [30] : 'a list
+val it = [30] : int list
 
 
 (*) intersect
@@ -437,11 +437,11 @@ fun intersectAll l1 l2 =
         units e.c
       end)
     yield e.v;
-val intersectAll = fn : 'a list -> 'a list -> 'b list
+val intersectAll = fn : 'a list -> 'a list -> 'a list
 
 intersectAll (from e in emps yield e.deptno)
   (from d in depts yield d.deptno);
-val it = [20,10,30] : 'a list
+val it = [20,10,30] : int list
 
 
 (*) union followed by group
@@ -1152,7 +1152,7 @@ from r in
 yield {r.j, r.s};
 val it =
   [{j=3,s=""},{j=4,s="m"},{j=5,s="mo"},{j=6,s="mor"},{j=7,s="more"},
-   {j=8,s="morel"}] : {j:'a, s:string} list
+   {j=8,s="morel"}] : {j:int, s:string} list
 
 Sys.plan();
 val it =
@@ -1169,7 +1169,7 @@ from r in
 yield {r.j, r.s};
 val it =
   [{j=3,s=""},{j=4,s="m"},{j=5,s="mo"},{j=6,s="mor"},{j=7,s="more"},
-   {j=8,s="morel"}] : {j:'a, s:string} list
+   {j=8,s="morel"}] : {j:int, s:string} list
 
 Sys.plan();
 val it =

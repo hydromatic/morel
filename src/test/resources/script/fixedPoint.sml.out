@@ -382,14 +382,14 @@ fun shortest_path edges =
     from p in sp (edges0, vertices) order p.source, p.target
   end;
 val shortest_path = fn
-  : {source:'a, target:'a, weight:int} list -> {source:'b, target:'c, weight:int} list
+  : {source:'a, target:'a, weight:int} list -> {source:'a, target:'a, weight:int} list
 
 shortest_path edges;
 val it =
-  [{source=a,target=a,weight=0},{source=a,target=b,weight=~1},
-   {source=a,target=c,weight=~2},{source=a,target=d,weight=0},
-   {source=b,target=a,weight=4},{source=b,target=b,weight=0},
-   {source=b,target=c,weight=2},{source=b,target=d,weight=4},
-   {source=c,target=a,weight=5},{source=c,target=b,weight=1},
-   {source=c,target=c,weight=0},{source=c,target=d,weight=2},...]
-  : {source:'a, target:'b, weight:int} list
+  [{source="a",target="a",weight=0},{source="a",target="b",weight=~1},
+   {source="a",target="c",weight=~2},{source="a",target="d",weight=0},
+   {source="b",target="a",weight=4},{source="b",target="b",weight=0},
+   {source="b",target="c",weight=2},{source="b",target="d",weight=4},
+   {source="c",target="a",weight=5},{source="c",target="b",weight=1},
+   {source="c",target="c",weight=0},{source="c",target="d",weight=2},...]
+  : {source:string, target:string, weight:int} list

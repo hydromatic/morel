@@ -162,8 +162,8 @@ public abstract class UnifierTest {
   }
 
   void assertThatCannotUnify(List<Unifier.TermTerm> pairList) {
-    final Unifier.Result result = unifier.unify(pairList, ImmutableMap.of(),
-        Tracers.nullTracer());
+    final Unifier.Result result =
+        unifier.unify(pairList, ImmutableMap.of(), Tracers.nullTracer());
     assertThat(result, not(instanceOf(Unifier.Substitution.class)));
   }
 

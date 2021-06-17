@@ -734,13 +734,12 @@ public class MainTest {
   }
 
   /** As {@link #testSameVariableName()} but both variables are records. */
-  @Disabled("TODO fix type resolution bug")
   @Test void testSameVariableName2() {
     final String ml = "List.filter\n"
         + " (fn e => e.x + 2 * e.y > 16)\n"
         + " (List.map\n"
         + "   (fn e => {x = e.a - 1, y = 10 - e.a})\n"
-        + "   [1, 2, 3, 4, 5])";
+        + "   [{a=1}, {a=2}, {a=3}, {a=4}, {a=5}])";
     ml(ml).assertEval(isUnordered(list(list(0, 9), list(1, 8))));
   }
 
@@ -1497,6 +1496,19 @@ public class MainTest {
     ml(ml).assertParse(expected)
         .assertType(is("int list"))
         .assertEvalIter(equalsUnordered(3, 7));
+  }
+
+  @Test void testFunFrom() {
+    final String ml = "let\n"
+        + "  fun query emp =\n"
+        + "    from e in emp\n"
+        + "    yield {e.deptno,e.empno,e.ename}\n"
+        + "in\n"
+        + "  query scott.emp\n"
+        + "end";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("{deptno:int, empno:int, ename:string} list");
   }
 
   @Test void testToCoreAndBack() {
