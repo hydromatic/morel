@@ -1,0 +1,247 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests queries that are to execute mostly in Calcite.
+ *)
+
+(*) Query in Hybrid mode (100% Calcite)
+Sys.set ("hybrid", true);
+val it = () : unit
+
+from e in scott.emp
+where e.deptno = 20
+yield e.empno;
+val it = [7369,7566,7788,7876,7902] : int list
+
+Sys.plan();
+val it =
+  "calcite(plan LogicalProject(empno=[$2])
+  LogicalFilter(condition=[=($1, 20)])
+    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+      JdbcTableScan(table=[[scott, EMP]])
+)"
+  : string
+
+
+(*) Query in Hybrid mode (20% Morel -> 80% Calcite)
+from e in (List.filter (fn e2 => e2.empno < 7700) scott.emp)
+where e.deptno = 20
+yield e.empno;
+val it = [7369,7566] : int list
+
+Sys.plan();
+val it =
+  "calcite(plan LogicalProject(empno=[$2])
+  LogicalFilter(condition=[=($1, 20)])
+    LogicalTableFunctionScan(invocation=[morelTable('#filter List (fn e2 => #empno e2 < 7700) (#emp scott)', '{
+  \"fields\": [
+    {
+      \"type\": \"REAL\",
+      \"nullable\": false,
+      \"name\": \"comm\"
+    },
+    {
+      \"type\": \"INTEGER\",
+      \"nullable\": false,
+      \"name\": \"deptno\"
+    },
+    {
+      \"type\": \"INTEGER\",
+      \"nullable\": false,
+      \"name\": \"empno\"
+    },
+    {
+      \"type\": \"VARCHAR\",
+      \"nullable\": false,
+      \"precision\": -1,
+      \"name\": \"ename\"
+    },
+    {
+      \"type\": \"VARCHAR\",
+      \"nullable\": false,
+      \"precision\": -1,
+      \"name\": \"hiredate\"
+    },
+    {
+      \"type\": \"VARCHAR\",
+      \"nullable\": false,
+      \"precision\": -1,
+      \"name\": \"job\"
+    },
+    {
+      \"type\": \"INTEGER\",
+      \"nullable\": false,
+      \"name\": \"mgr\"
+    },
+    {
+      \"type\": \"REAL\",
+      \"nullable\": false,
+      \"name\": \"sal\"
+    }
+  ],
+  \"nullable\": false
+}')], rowType=[RecordType(REAL comm, INTEGER deptno, INTEGER empno, VARCHAR ename, VARCHAR hiredate, VARCHAR job, INTEGER mgr, REAL sal)])
+)"
+  : string
+
+
+(*) Query in Hybrid mode (99% Calcite; there is a variable but it is not
+(*) referenced by Calcite code)
+let
+  val twenty = 20
+in
+  from e in scott.emp
+  where e.deptno = 20
+  yield e.empno
+end;
+val it = [7369,7566,7788,7876,7902] : int list
+
+Sys.plan();
+val it =
+  "let(matchCode0 match(twenty, constant(20)), resultCode calcite(plan LogicalProject(empno=[$2])
+  LogicalFilter(condition=[=($1, 20)])
+    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+      JdbcTableScan(table=[[scott, EMP]])
+))"
+  : string
+
+
+(*) Query in Hybrid mode (90% Calcite; Calcite code references a variable
+(*) and an expression from the enclosing environment)
+let
+  val ten = 10
+  val deptNos = ten :: 20 :: 30 :: [40]
+in
+  from e in scott.emp
+  where e.deptno = List.nth (deptNos, 1)
+  yield e.empno + 13 mod ten
+end;
+val it = [7372,7569,7791,7879,7905] : int list
+
+Sys.plan();
+val it =
+  "let(matchCode0 match(ten, constant(10)), resultCode let(matchCode0 match(deptNos, apply(fnValue ::, argCode tuple(get(name ten), apply(fnValue ::, argCode tuple(constant(20), apply(fnValue ::, argCode tuple(constant(30), tuple(constant(40))))))))), resultCode calcite(plan LogicalProject($f0=[+($2, MOD(13, morelScalar('ten', '{
+  \"type\": \"INTEGER\",
+  \"nullable\": false
+}')))])
+  LogicalFilter(condition=[=($1, morelScalar('#nth List (deptNos, 1)', '{
+  \"type\": \"INTEGER\",
+  \"nullable\": false
+}'))])
+    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+      JdbcTableScan(table=[[scott, EMP]])
+)))"
+  : string
+
+
+(*) Query in Hybrid mode (90% Calcite; Calcite code references a function
+(*) from the enclosing environment)
+let
+  fun double x = x * 2
+in
+  from d in scott.dept
+  yield double d.deptno
+end;
+val it = [20,40,60,80] : int list
+
+Sys.plan();
+val it =
+  "let(matchCode0 match(double, match(x, apply(fnValue *, argCode tuple(get(name x), constant(2))))), resultCode calcite(plan LogicalProject($f0=[morelScalar('int', morelScalar('double', '{
+  \"type\": \"ANY\",
+  \"nullable\": false,
+  \"precision\": -1,
+  \"scale\": -1
+}'), $0)])
+  JdbcTableScan(table=[[scott, DEPT]])
+))"
+  : string
+
+
+(*) Simple query with scan, filter, project
+from e in scott.emp where e.deptno = 30 yield e.empno;
+val it = [7499,7521,7654,7698,7844,7900] : int list
+
+Sys.plan();
+val it =
+  "calcite(plan LogicalProject(empno=[$2])
+  LogicalFilter(condition=[=($1, 30)])
+    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+      JdbcTableScan(table=[[scott, EMP]])
+)"
+  : string
+
+
+(*) Equivalent #1; result and plan should be the same
+let
+  val emps = #emp scott
+in
+  from e in emps
+  where e.deptno = 30
+  yield e.empno
+end;
+val it = [7499,7521,7654,7698,7844,7900] : int list
+
+Sys.plan();
+val it =
+  "let(matchCode0 match(emps, calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+  JdbcTableScan(table=[[scott, EMP]])
+)), resultCode from(e, get(name emps)))"
+  : string
+
+
+(*) Equivalent #2; result and plan should be the same
+let
+  val emps = #emp scott
+  val thirty = 30
+in
+  from e in emps
+  where e.deptno = thirty
+  yield e.empno
+end;
+val it = [7499,7521,7654,7698,7844,7900] : int list
+
+Sys.plan();
+val it =
+  "let(matchCode0 match(emps, calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+  JdbcTableScan(table=[[scott, EMP]])
+)), resultCode let(matchCode0 match(thirty, constant(30)), resultCode from(e, get(name emps))))"
+  : string
+
+
+(*) Equivalent #3; result and plan should be the same
+map (fn e => (#empno e))
+  (List.filter (fn e => (#deptno e) = 30) (#emp scott));
+val it = [7499,7521,7654,7698,7844,7900] : int list
+
+Sys.plan();
+val it =
+  "apply(fnCode apply(fnValue List.map, argCode match(e, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue List.filter, argCode match(e, apply(fnValue =, argCode tuple(apply(fnValue nth:1, argCode get(name e)), constant(30))))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+  JdbcTableScan(table=[[scott, EMP]])
+)))"
+  : string
+
+
+(*) Union followed by group
+(*
+from x in (from e in scott.emp yield e.deptno)
+  union (from d in scott.dept yield d.deptno)
+group x compute c = count;
+*)
+
+"end";
+val it = "end" : string

@@ -49,50 +49,5 @@ val emp2 =
 from e in emp2
   yield {e.ename, e.job, salIn2020 = e.salIn 2020.0, salIn2021 = e.salIn 2021.0};
 
-(*) Query in Hybrid mode (100% Calcite)
-Sys.set ("hybrid", true);
-from e in scott.emp
-where e.deptno = 20
-yield e.empno;
-Sys.plan();
-
-(*) Query in Hybrid mode (20% Morel -> 80% Calcite)
-from e in (List.filter (fn e2 => e2.empno < 7700) scott.emp)
-where e.deptno = 20
-yield e.empno;
-Sys.plan();
-
-(*) Query in Hybrid mode (99% Calcite; there is a variable but it is not
-(*) referenced by Calcite code)
-let
-  val twenty = 20
-in
-  from e in scott.emp
-  where e.deptno = 20
-  yield e.empno
-end;
-Sys.plan();
-
-(*) Query in Hybrid mode (90% Calcite; Calcite code references a variable
-(*) and an expression from the enclosing environment)
-let
-  val ten = 10
-  val deptNos = ten :: 20 :: 30 :: [40]
-in
-  from e in scott.emp
-  where e.deptno = List.nth (deptNos, 1)
-  yield e.empno + 13 mod ten
-end;
-Sys.plan();
-
-(*) Query in Hybrid mode (90% Calcite; Calcite code references a function
-(*) from the enclosing environment)
-let
-  fun double x = x * 2
-in
-  from d in scott.dept
-  yield double d.deptno
-end;
-Sys.plan();
-
+"end";
 (*) End foreign.sml

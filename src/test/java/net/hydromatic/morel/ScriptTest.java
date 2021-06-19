@@ -142,7 +142,7 @@ public class ScriptTest {
     Utils.discard(outFile.getParentFile().mkdirs());
     final String[] args = {"--echo"};
     final boolean loadDictionary =
-        inFile.getPath().matches(".*/(blog|dummy|foreign)\\.sml");
+        inFile.getPath().matches(".*/(blog|dummy|foreign|hybrid)\\.sml");
     final Map<String, ForeignValue> dictionary =
         loadDictionary
             ? Calcite.withDataSets(BuiltInDataSet.DICTIONARY).foreignValues()
