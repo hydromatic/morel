@@ -19,6 +19,7 @@
 package net.hydromatic.morel.ast;
 
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
@@ -307,6 +308,16 @@ public enum CoreBuilder {
     final ListType type = typeSystem.listType(elementType);
     return from(type, ImmutableMap.copyOf(sources),
         ImmutableList.copyOf(bindings), ImmutableList.copyOf(steps));
+  }
+
+  /** Derives the initial bindings, then calls
+   * {@link #from(TypeSystem, Map, Iterable, List)}. */
+  public Core.From from(TypeSystem typeSystem, Map<Core.Pat, Core.Exp> sources,
+      List<Core.FromStep> steps) {
+    final List<Binding> bindings = new ArrayList<>();
+    sources.keySet().forEach(pat ->
+        Compiles.acceptBinding(typeSystem, pat, bindings));
+    return from(typeSystem, sources, bindings, steps);
   }
 
   /** Returns what would be the yield expression if we created a

@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.eval;
 
+import net.hydromatic.morel.compile.BuiltIn;
+
 /** Abstract implementation of {@link Applicable} that describes itself
  * with a constant name. */
 abstract class ApplicableImpl implements Applicable {
@@ -25,6 +27,14 @@ abstract class ApplicableImpl implements Applicable {
 
   protected ApplicableImpl(String name) {
     this.name = name;
+  }
+
+  /** Creates an ApplicableImpl that directly implements a BuiltIn.
+   * The parameter is currently only for provenance purposes. */
+  protected ApplicableImpl(BuiltIn builtIn) {
+    this(builtIn.mlName.startsWith("op ")
+        ? builtIn.mlName.substring("op ".length())
+        : builtIn.structure + "." + builtIn.mlName);
   }
 
   @Override public String toString() {

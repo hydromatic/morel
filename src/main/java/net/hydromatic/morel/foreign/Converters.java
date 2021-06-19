@@ -166,7 +166,7 @@ public class Converters {
   public static Function<Object, Enumerable<Object[]>> toCalciteEnumerable(
       Type type, RelDataTypeFactory typeFactory) {
     final C2m converter =
-        C2m.forMorel(type, typeFactory, false, true);
+        C2m.forMorel(type, typeFactory, false, false);
     return converter::toCalciteEnumerable;
   }
 
@@ -367,17 +367,21 @@ public class Converters {
     }
 
     public Enumerable<Object[]> toCalciteEnumerable(Object v) {
-      @SuppressWarnings("unchecked")
-      final Enumerable<Object> enumerable =
-          Linq4j.asEnumerable((List<Object>) v);
+      @SuppressWarnings({"unchecked", "rawtypes"})
+      final Enumerable<Object> enumerable = Linq4j.asEnumerable((List) v);
       switch (morelType.op()) {
       case LIST:
         final ListType listType = (ListType) morelType;
         final C2m c =
             new C2m(calciteType.getComponentType(),
                 listType.elementType);
-        if (c.calciteType.isStruct() && c.morelType instanceof PrimitiveType) {
-          return EnumerableDefaults.select(enumerable, c::scalarToArray);
+        if (c.morelType instanceof PrimitiveType) {
+          if (c.calciteType.isStruct()) {
+            return EnumerableDefaults.select(enumerable, c::scalarToArray);
+          } else {
+            //noinspection unchecked
+            return (Enumerable) enumerable;
+          }
         } else {
           return EnumerableDefaults.select(enumerable, c::listToArray);
         }

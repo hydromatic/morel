@@ -20,6 +20,7 @@ package net.hydromatic.morel.foreign;
 
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.eval.Code;
+import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.type.Type;
@@ -76,26 +77,7 @@ public class Calcite {
   /** Creates a {@code Code} that evaluates a Calcite relational expression,
    * converting it to Morel list type {@code type}. */
   public Code code(Environment env, RelNode rel, Type type) {
-    final Function<Enumerable<Object[]>, List<Object>> converter =
-        Converters.fromEnumerable(rel, type);
-    return new Code() {
-      @Override public Describer describe(Describer describer) {
-        return describer.start("calcite", d ->
-            d.arg("plan", RelOptUtil.toString(rel)));
-      }
-
-      @Override public Object eval(EvalEnv evalEnv) {
-        return ThreadLocals.let(CalciteFunctions.THREAD_EVAL_ENV,
-            evalEnv, () ->
-                ThreadLocals.mutate(CalciteFunctions.THREAD_ENV,
-                    c -> c.withEnv(env),
-                    () -> {
-                      final Interpreter interpreter =
-                          new Interpreter(dataContext, rel);
-                      return converter.apply(interpreter);
-                    }));
-      }
-    };
+    return new CalciteCode(dataContext, rel, type, env);
   }
 
   /** Extension to Calcite context that remembers the foreign value
@@ -140,6 +122,45 @@ public class Calcite {
 
     public Object get(String name) {
       return null;
+    }
+  }
+
+  /** Evaluates a Calcite relational expression,
+   * converting it to Morel list type {@code type}. */
+  private static class CalciteCode implements Code {
+    final DataContext dataContext;
+    final RelNode rel;
+    final Environment env;
+    final Function<Enumerable<Object[]>, List<Object>> converter;
+
+    CalciteCode(DataContext dataContext, RelNode rel, Type type,
+        Environment env) {
+      this.dataContext = dataContext;
+      this.rel = rel;
+      this.env = env;
+      converter = Converters.fromEnumerable(rel, type);
+    }
+
+    // to help with debugging
+    @Override public String toString() {
+      return Codes.describe(this);
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("calcite", d ->
+          d.arg("plan", RelOptUtil.toString(rel)));
+    }
+
+    @Override public Object eval(EvalEnv evalEnv) {
+      return ThreadLocals.let(CalciteFunctions.THREAD_EVAL_ENV,
+          evalEnv, () ->
+              ThreadLocals.mutate(CalciteFunctions.THREAD_ENV,
+                  c -> c.withEnv(env),
+                  () -> {
+                    final Interpreter interpreter =
+                        new Interpreter(dataContext, rel);
+                    return converter.apply(interpreter);
+                  }));
     }
   }
 }

@@ -515,12 +515,11 @@ public class CalciteCompiler extends Compiler {
       case FN_LITERAL:
         BuiltIn op = (BuiltIn) ((Core.Literal) apply.fn).value;
         final SqlOperator operator = INFIX_OPERATORS.get(op);
-        assert apply.arg.op == Op.TUPLE;
-        return cx.relBuilder.call(operator,
-            translateList(cx, ((Core.Tuple) apply.arg).args));
-
-      default:
-        // fall through
+        if (operator != null) {
+          assert apply.arg.op == Op.TUPLE;
+          return cx.relBuilder.call(operator,
+              translateList(cx, ((Core.Tuple) apply.arg).args));
+        }
       }
       if (apply.fn instanceof Core.RecordSelector
           && apply.arg instanceof Core.Id

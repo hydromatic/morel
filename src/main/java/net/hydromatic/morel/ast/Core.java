@@ -1065,7 +1065,10 @@ public class Core {
     }
 
     public Yield copy(List<Binding> bindings, Exp exp) {
-      return core.yield_(bindings, exp);
+      return bindings.equals(this.bindings)
+          && exp == this.exp
+          ? this
+          : core.yield_(bindings, exp);
     }
   }
 

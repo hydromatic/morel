@@ -28,6 +28,7 @@ import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
 import net.hydromatic.morel.compile.Inliner;
+import net.hydromatic.morel.compile.Relationalizer;
 import net.hydromatic.morel.compile.Resolver;
 import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Codes;
@@ -273,7 +274,8 @@ class Ml {
       assertThat(valDecl3.exp.toString(), beforeMatcher);
     }
 
-    final int inlineCount = inlinedMatcher == null ? 1 : 4;
+    final int inlineCount = inlinedMatcher == null ? 1 : 6;
+    final Relationalizer relationalizer = Relationalizer.of(typeSystem, env);
     Core.ValDecl valDecl4 = valDecl3;
     for (int i = 0; i < inlineCount; i++) {
       final Analyzer.Analysis analysis =
@@ -281,6 +283,7 @@ class Ml {
       final Inliner inliner = Inliner.of(typeSystem, env, analysis);
       final Core.ValDecl valDecl5 = valDecl4;
       valDecl4 = valDecl5.accept(inliner);
+      valDecl4 = valDecl4.accept(relationalizer);
       if (i == 0) {
         // "matcher" checks the expression after one inlining pass
         assertThat(valDecl4.exp.toString(), matcher);

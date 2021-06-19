@@ -127,6 +127,14 @@ public class Inliner extends EnvShuttle {
       final Core.RecordSelector selector = (Core.RecordSelector) apply2.fn;
       final List list = (List) ((Core.Literal) apply2.arg).unwrap();
       final Object o = list.get(selector.slot);
+      if (o instanceof Applicable || o instanceof Macro) {
+        // E.g. apply is '#filter List', o is Codes.LIST_FILTER,
+        // builtIn is BuiltIn.LIST_FILTER.
+        final BuiltIn builtIn = Codes.BUILT_IN_MAP.get(o);
+        if (builtIn != null) {
+          return core.functionLiteral(typeSystem, builtIn);
+        }
+      }
       return core.valueLiteral(apply2, o);
     }
     if (apply2.fn.op == Op.FN) {

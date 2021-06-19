@@ -204,7 +204,14 @@ public class AstWriter {
       }
       append(c.toString());
     } else if (value instanceof BuiltIn) {
-      append(((BuiltIn) value).mlName);
+      final BuiltIn builtIn = (BuiltIn) value;
+      if (builtIn.structure != null) {
+        // E.g. "#find List" for the List.find function
+        append("#").append(builtIn.mlName)
+            .append(" ").append(builtIn.structure);
+      } else {
+        append(builtIn.mlName);
+      }
     } else {
       append(value.toString());
     }

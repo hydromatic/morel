@@ -503,7 +503,7 @@ public class Resolver {
   /** Returns a list with one element appended.
    *
    * @see ConsList */
-  private static <E> List<E> append(List<E> list, E e) {
+  static <E> List<E> append(List<E> list, E e) {
     return ImmutableList.<E>builder().addAll(list).add(e).build();
   }
 

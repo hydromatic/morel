@@ -1233,7 +1233,7 @@ val it = [1,2,3,4,2,5] : int list
 val it = [] : 'a list
 
 Sys.plan ();
-val it = "apply(fnValue List.at, argCode tuple(tuple, tuple))" : string
+val it = "apply(fnValue union, argCode tuple(tuple, tuple))" : string
 
 
 [1, 2] except [2] except [3] except [];
@@ -1337,7 +1337,7 @@ val it = true : bool
 
 Sys.plan ();
 val it =
-  "apply(fnValue nonElem, argCode tuple(tuple(constant(1), constant(2)), tuple(tuple(constant(0), constant(1)), tuple(constant(2), constant(3)))))"
+  "apply(fnValue notElem, argCode tuple(tuple(constant(1), constant(2)), tuple(tuple(constant(0), constant(1)), tuple(constant(2), constant(3)))))"
   : string
 
 
@@ -1416,7 +1416,7 @@ val it = () : unit
 
 Sys.plan ();
 val it =
-  "apply(fnValue Sys.plan, argCode tuple(constant(hybrid), constant(false)))"
+  "apply(fnValue Sys.set, argCode tuple(constant(hybrid), constant(false)))"
   : string
 
 
@@ -1509,7 +1509,7 @@ val it = #[1,1,2,6,24] : int vector
 
 Sys.plan ();
 val it =
-  "apply(fnValue List.tabulate, argCode tuple(constant(5), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))), argCode apply(fnValue =, argCode tuple(get(name n), constant(0)))))), resultCode get(name fact))))"
+  "apply(fnValue Vector.tabulate, argCode tuple(constant(5), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply(fnValue *, argCode tuple(get(name n), apply(fnCode link, argCode apply(fnValue -, argCode tuple(get(name n), constant(1))))))), argCode apply(fnValue =, argCode tuple(get(name n), constant(0)))))), resultCode get(name fact))))"
   : string
 
 
@@ -1522,7 +1522,7 @@ val it = 3 : int
 
 Sys.plan ();
 val it =
-  "apply(fnValue List.length, argCode apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(2), constant(3))))"
+  "apply(fnValue Vector.length, argCode apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(2), constant(3))))"
   : string
 
 
@@ -1541,7 +1541,7 @@ uncaught exception Subscript [subscript out of bounds]
 
 Sys.plan ();
 val it =
-  "apply(fnValue List.nth, argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(6), constant(9))), constant(3)))"
+  "apply(fnValue Vector.sub, argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(6), constant(9))), constant(3)))"
   : string
 
 
@@ -1704,7 +1704,7 @@ val it = SOME 8 : int option
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue List.find, argCode match(j, apply(fnValue =, argCode tuple(apply(fnValue mod, argCode tuple(get(name j), constant(2))), constant(0))))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+  "apply(fnCode apply(fnValue Vector.find, argCode match(j, apply(fnValue =, argCode tuple(apply(fnValue mod, argCode tuple(get(name j), constant(2))), constant(0))))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
   : string
 
 
@@ -1717,7 +1717,7 @@ val it = true : bool
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue List.exists, argCode match(j, apply(fnValue =, argCode tuple(apply(fnValue mod, argCode tuple(get(name j), constant(2))), constant(0))))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+  "apply(fnCode apply(fnValue Vector.exists, argCode match(j, apply(fnValue =, argCode tuple(apply(fnValue mod, argCode tuple(get(name j), constant(2))), constant(0))))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
   : string
 
 
@@ -1730,7 +1730,7 @@ val it = false : bool
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue List.all, argCode match(j, apply(fnValue =, argCode tuple(apply(fnValue mod, argCode tuple(get(name j), constant(2))), constant(0))))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+  "apply(fnCode apply(fnValue Vector.all, argCode match(j, apply(fnValue =, argCode tuple(apply(fnValue mod, argCode tuple(get(name j), constant(2))), constant(0))))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
   : string
 
 
@@ -1745,5 +1745,5 @@ val it = LESS : order
 
 Sys.plan ();
 val it =
-  "apply(fnCode apply(fnValue List.collate, argCode match(v0, apply(fnCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply(fnValue =, argCode tuple(get(name i), get(name j))))), argCode apply(fnValue <, argCode tuple(get(name i), get(name j))))), argCode get(name v0)))), argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
+  "apply(fnCode apply(fnValue Vector.collate, argCode match(v0, apply(fnCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply(fnValue =, argCode tuple(get(name i), get(name j))))), argCode apply(fnValue <, argCode tuple(get(name i), get(name j))))), argCode get(name v0)))), argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
   : string

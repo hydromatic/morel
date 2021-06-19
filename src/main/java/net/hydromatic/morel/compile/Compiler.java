@@ -191,7 +191,8 @@ public class Compiler {
 
     case FN_LITERAL:
       literal = (Core.Literal) expression;
-      return Codes.constant(literal.value);
+      final BuiltIn builtIn = (BuiltIn) literal.value;
+      return Codes.constant(Codes.BUILT_IN_VALUES.get(builtIn));
 
     case VALUE_LITERAL:
       literal = (Core.Literal) expression;

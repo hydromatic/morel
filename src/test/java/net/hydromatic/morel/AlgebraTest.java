@@ -189,7 +189,7 @@ public class AlgebraTest {
             + "group g.grade compute c = count",
         "from x in (from e in scott.emp yield {e.deptno, z = 1})\n"
             + "  union (from d in scott.dept yield {d.deptno, z = 2})",
-        "#from x in (from e in scott.emp yield e.deptno)\n"
+        "from x in (from e in scott.emp yield e.deptno)\n"
             + "  union (from d in scott.dept yield d.deptno)\n"
             + "group x compute c = count",
         "[1, 2, 3] union [2, 3, 4]",
