@@ -1600,7 +1600,7 @@ public class MainTest {
     final String plan = "from(r, tuple(tuple(constant(2), constant(3))), "
         + "sink group(key tuple(apply(fnValue nth:0, argCode get(name r))), "
         + "agg aggregate, "
-        + "sink yield(code tuple(get(name a), "
+        + "sink collect(tuple(get(name a), "
         + "apply(fnValue +, argCode tuple(get(name a), get(name a))), "
         + "get(name sb)))))";
     ml(ml).assertParse(expected)

@@ -23,8 +23,6 @@ import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 
-import com.google.common.collect.ImmutableList;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,21 +71,18 @@ abstract class EnvVisitor extends Visitor {
   }
 
   @Override protected void visit(Core.From from) {
-    final List<Binding> bindings = new ArrayList<>();
+    final List<Binding> initialBindings = new ArrayList<>();
     from.sources.forEach((pat, source) -> {
-      source.accept(bind(bindings));
-      Compiles.bindPattern(typeSystem, bindings, pat);
+      source.accept(bind(initialBindings));
+      Compiles.bindPattern(typeSystem, initialBindings, pat);
       pat.accept(this);
     });
 
+    List<Binding> bindings = initialBindings;
     for (Core.FromStep step : from.steps) {
       step.accept(bind(bindings));
-      final List<Binding> previousBindings = ImmutableList.copyOf(bindings);
-      bindings.clear();
-      step.deriveOutBindings(previousBindings, Binding::of, bindings::add);
+      bindings = step.bindings;
     }
-
-    from.yieldExp.accept(bind(bindings));
   }
 }
 

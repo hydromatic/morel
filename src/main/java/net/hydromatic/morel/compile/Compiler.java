@@ -282,31 +282,42 @@ public class Compiler {
       Compiles.bindPattern(typeSystem, bindings, pat);
     });
     Supplier<Codes.RowSink> rowSinkFactory =
-        createRowSinkFactory(cx, ImmutableList.copyOf(bindings), from.steps,
-            from.yieldExp);
+        createRowSinkFactory(cx, ImmutableList.copyOf(bindings), from.steps);
     return Codes.from(sourceCodes, rowSinkFactory);
   }
 
   protected Supplier<Codes.RowSink> createRowSinkFactory(Context cx0,
-      ImmutableList<Binding> bindings, List<Core.FromStep> steps,
-      Core.Exp yieldExp) {
+      ImmutableList<Binding> bindings, List<Core.FromStep> steps) {
     final Context cx = cx0.bindAll(bindings);
     if (steps.isEmpty()) {
-      final Code yieldCode = compile(cx, yieldExp);
-      return () -> Codes.yieldRowSink(yieldCode);
+      final ImmutableList<String> fieldNames =
+          bindings.stream().map(b -> b.id.name).collect(Util.toImmutableList());
+      final Code code;
+      if (fieldNames.size() == 1) {
+        code = Codes.get(fieldNames.get(0));
+      } else {
+        code = Codes.getTuple(fieldNames);
+      }
+      return () -> Codes.collectRowSink(code);
     }
     final Core.FromStep firstStep = steps.get(0);
-    final ImmutableList.Builder<Binding> outBindingBuilder =
-        ImmutableList.builder();
-    firstStep.deriveOutBindings(bindings, Binding::of, outBindingBuilder::add);
-    final ImmutableList<Binding> outBindings = outBindingBuilder.build();
     final Supplier<Codes.RowSink> nextFactory =
-        createRowSinkFactory(cx, outBindings, Util.skip(steps), yieldExp);
+        createRowSinkFactory(cx, firstStep.bindings, Util.skip(steps));
     switch (firstStep.op) {
     case WHERE:
       final Core.Where where = (Core.Where) firstStep;
       final Code filterCode = compile(cx, where.exp);
       return () -> Codes.whereRowSink(filterCode, nextFactory.get());
+
+    case YIELD:
+      final Core.Yield yield = (Core.Yield) firstStep;
+      final Code yieldCode = compile(cx, yield.exp);
+      if (steps.size() == 1) {
+        // Last step. Use a Collect row sink, and we're done.
+        return () -> Codes.collectRowSink(yieldCode);
+      } else {
+        return () -> Codes.yieldRowSink(yieldCode, nextFactory.get());
+      }
 
     case ORDER:
       final Core.Order order = (Core.Order) firstStep;
@@ -353,7 +364,7 @@ public class Compiler {
       final ImmutableList<Code> groupCodes = groupCodesB.build();
       final Code keyCode = Codes.tuple(groupCodes);
       final ImmutableList<Applicable> aggregateCodes = aggregateCodesB.build();
-      final ImmutableList<String> outNames = bindingNames(outBindings);
+      final ImmutableList<String> outNames = bindingNames(firstStep.bindings);
       return () -> Codes.groupRowSink(keyCode, aggregateCodes, names,
           outNames, nextFactory.get());
 

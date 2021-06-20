@@ -342,13 +342,13 @@ public class Resolver {
           && ((Core.TuplePat) match.pat).args.isEmpty()) {
         // Simple function with unit arg, "fn () => exp";
         // needs a new variable, but doesn't need case, "fn (v0: unit) => exp"
-        final Core.IdPat idPat = core.idPat(type.paramType, "", nameGenerator);
+        final Core.IdPat idPat = core.idPat(type.paramType, nameGenerator);
         return core.fn(type, idPat, match.exp);
       }
     }
     // Complex function, "fn (x, y) => exp";
     // needs intermediate variable and case, "fn v => case v of (x, y) => exp"
-    final Core.IdPat idPat = core.idPat(type.paramType, "", nameGenerator);
+    final Core.IdPat idPat = core.idPat(type.paramType, nameGenerator);
     final Core.Id id = core.id(idPat);
     return core.fn(type, idPat, core.caseOf(type.resultType, id, matchList));
   }
@@ -513,20 +513,28 @@ public class Resolver {
     final Resolver r = withEnv(bindings);
     if (steps.isEmpty()) {
       final Core.Exp coreYieldExp = r.toCore(yieldExp);
-      final ListType listType = typeMap.typeSystem.listType(coreYieldExp.type);
-      return core.from(listType, sources, coreSteps, coreYieldExp);
+      final Core.Exp defaultYieldExp =
+          core.defaultYieldExp(typeMap.typeSystem, bindings, coreSteps);
+      if (!coreYieldExp.equals(defaultYieldExp)) {
+        coreSteps =
+            append(coreSteps, core.yield_(typeMap.typeSystem, coreYieldExp));
+      }
+      return core.from(typeMap.typeSystem, sources, bindings, coreSteps);
     }
     final Ast.FromStep step = steps.get(0);
     switch (step.op) {
     case WHERE:
       final Ast.Where where = (Ast.Where) step;
-      return fromStep2(sources, bindings, steps, coreSteps,
-          core.where(r.toCore(where.exp)), yieldExp);
+      final Core.Where coreWhere = core.where(bindings, r.toCore(where.exp));
+      return fromStepToCore(sources, coreWhere.bindings, Util.skip(steps),
+          append(coreSteps, coreWhere), yieldExp);
 
     case ORDER:
       final Ast.Order order = (Ast.Order) step;
-      return fromStep2(sources, bindings, steps, coreSteps,
-          core.order(transform(order.orderItems, r::toCore)), yieldExp);
+      final Core.Order coreOrder =
+          core.order(bindings, transform(order.orderItems, r::toCore));
+      return fromStepToCore(sources, coreOrder.bindings, Util.skip(steps),
+          append(coreSteps, coreOrder), yieldExp);
 
     case GROUP:
       final Ast.Group group = (Ast.Group) step;
@@ -538,23 +546,14 @@ public class Resolver {
           groupExps.put(toCorePat(id), r.toCore(exp)));
       group.aggregates.forEach(aggregate ->
           aggregates.put(toCorePat(aggregate.id), r.toCore(aggregate)));
-      return fromStep2(sources, bindings, steps, coreSteps,
-          core.group(groupExps.build(), aggregates.build()), yieldExp);
+      final Core.Group coreGroup =
+          core.group(groupExps.build(), aggregates.build());
+      return fromStepToCore(sources, coreGroup.bindings, Util.skip(steps),
+          append(coreSteps, coreGroup), yieldExp);
 
     default:
       throw new AssertionError("unknown step type " + step.op);
     }
-  }
-
-  private Core.From fromStep2(Map<Core.Pat, Core.Exp> sources,
-      List<Binding> bindings, List<Ast.FromStep> steps,
-      List<Core.FromStep> coreSteps,
-      Core.FromStep coreStep, Ast.Exp yieldExp) {
-    final List<Binding> prevBindings = ImmutableList.copyOf(bindings);
-    bindings.clear();
-    coreStep.deriveOutBindings(prevBindings, Binding::of, bindings::add);
-    return fromStepToCore(sources, bindings, Util.skip(steps),
-        append(coreSteps, coreStep), yieldExp);
   }
 
   private Core.Aggregate toCore(Ast.Aggregate aggregate) {

@@ -124,9 +124,9 @@ public enum Op {
   GROUP,
   ORDER,
   ORDER_ITEM,
+  YIELD,
   AGGREGATE,
-  IF,
-  MAP;
+  IF;
 
   /** Padded name, e.g. " : ". */
   public final String padded;

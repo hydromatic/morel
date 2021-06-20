@@ -49,13 +49,14 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+
+import static java.util.Objects.requireNonNull;
 
 /** Helpers for {@link Code}. */
 @SuppressWarnings({"rawtypes", "unchecked"})
@@ -366,6 +367,12 @@ public abstract class Codes {
     return new GetCode(name);
   }
 
+  /** Returns a Code that returns a tuple consisting of the values of variables
+   * "name0", ... "nameN" in the current environment. */
+  public static Code getTuple(Iterable<String> names) {
+    return new GetTupleCode(ImmutableList.copyOf(names));
+  }
+
   public static Code let(List<Code> matchCodes, Code resultCode) {
     switch (matchCodes.size()) {
     case 0:
@@ -393,23 +400,6 @@ public abstract class Codes {
     return new ApplyCode(fnValue, argCode);
   }
 
-  public static Code ifThenElse(Code condition, Code ifTrue,
-      Code ifFalse) {
-    return new Code() {
-      @Override public Describer describe(Describer describer) {
-        return describer.start("if",
-            d -> d.arg("condition", condition)
-                .arg("ifTrue", ifTrue)
-                .arg("ifFalse", ifFalse));
-      }
-
-      @Override public Object eval(EvalEnv env) {
-        final boolean b = (Boolean) condition.eval(env);
-        return (b ? ifTrue : ifFalse).eval(env);
-      }
-    };
-  }
-
   public static Code list(Iterable<? extends Code> codes) {
     return tuple(codes);
   }
@@ -421,8 +411,8 @@ public abstract class Codes {
   /** Returns an applicable that constructs an instance of a datatype.
    * The instance is a list with two elements [constructorName, value]. */
   public static Applicable tyCon(Type dataType, String name) {
-    Objects.requireNonNull(dataType);
-    Objects.requireNonNull(name);
+    requireNonNull(dataType);
+    requireNonNull(name);
     return new ApplicableImpl("tyCon") {
       @Override public Object apply(EvalEnv env, Object arg) {
         return ImmutableList.of(name, arg);
@@ -487,9 +477,15 @@ public abstract class Codes {
         rowSink);
   }
 
-  /** Creates a {@link RowSink} for a {@code yield} clause. */
-  public static RowSink yieldRowSink(Code yieldCode) {
-    return new YieldRowSink(yieldCode);
+  /** Creates a {@link RowSink} for a non-terminal {@code yield} step. */
+  public static RowSink yieldRowSink(Code yieldCode, RowSink rowSink) {
+    return new YieldRowSink(yieldCode, rowSink);
+  }
+
+  /** Creates a {@link RowSink} to collect the results of a {@code from}
+   * expression. */
+  public static RowSink collectRowSink(Code code) {
+    return new CollectRowSink(code);
   }
 
   /** Returns an applicable that returns the {@code slot}th field of a tuple or
@@ -2177,11 +2173,11 @@ public abstract class Codes {
     GroupRowSink(Code keyCode, ImmutableList<Applicable> aggregateCodes,
         ImmutableList<String> inNames, ImmutableList<String> outNames,
         RowSink rowSink) {
-      this.keyCode = Objects.requireNonNull(keyCode);
-      this.aggregateCodes = Objects.requireNonNull(aggregateCodes);
-      this.inNames = Objects.requireNonNull(inNames);
-      this.outNames = Objects.requireNonNull(outNames);
-      this.rowSink = Objects.requireNonNull(rowSink);
+      this.keyCode = requireNonNull(keyCode);
+      this.aggregateCodes = requireNonNull(aggregateCodes);
+      this.inNames = requireNonNull(inNames);
+      this.outNames = requireNonNull(outNames);
+      this.rowSink = requireNonNull(rowSink);
       this.values = inNames.size() == 1 ? null : new Object[inNames.size()];
     }
 
@@ -2295,25 +2291,57 @@ public abstract class Codes {
     }
   }
 
-  /** Implementation of {@link RowSink} for a {@code yield} clause. */
+  /** Implementation of {@link RowSink} for a {@code yield} step.
+   *
+   * <p>If this is the last step, use instead a {@link CollectRowSink}. It
+   * is more efficient; there is no downstream row sink; and a terminal yield
+   * step is allowed to generate expressions that are not records. Non-record
+   * expressions (e.g. {@code int} expressions) do not have a name, and
+   * therefore the value cannot be passed via the {@link EvalEnv}. */
   private static class YieldRowSink implements RowSink {
-    final List<Object> list;
     private final Code yieldCode;
+    private final RowSink rowSink;
 
-    YieldRowSink(Code yieldCode) {
+    YieldRowSink(Code yieldCode, RowSink rowSink) {
       this.yieldCode = yieldCode;
-      list = new ArrayList<>();
+      this.rowSink = rowSink;
     }
 
     @Override public Describer describe(Describer describer) {
-      return describer.start("yield", d -> d.arg("code", yieldCode));
+      return describer.start("yield", d ->
+          d.arg("code", yieldCode)
+              .arg("sink", rowSink));
     }
 
-    public void accept(EvalEnv env) {
-      list.add(yieldCode.eval(env));
+    @Override public void accept(EvalEnv env) {
+      yieldCode.eval(env);
+      rowSink.accept(env);
     }
 
-    public List<Object> result(EvalEnv env) {
+    @Override public List<Object> result(EvalEnv env) {
+      return rowSink.result(env);
+    }
+  }
+
+  /** Implementation of {@link RowSink} that the last step of a {@code from}
+   * writes into. */
+  private static class CollectRowSink implements RowSink {
+    final List<Object> list = new ArrayList<>();
+    final Code code;
+
+    CollectRowSink(Code code) {
+      this.code = requireNonNull(code);
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("collect", d -> d.arg("", code));
+    }
+
+    @Override public void accept(EvalEnv env) {
+      list.add(code.eval(env));
+    }
+
+    @Override public List<Object> result(EvalEnv env) {
       return list;
     }
   }
@@ -2323,7 +2351,7 @@ public abstract class Codes {
     private final String name;
 
     GetCode(String name) {
-      this.name = Objects.requireNonNull(name);
+      this.name = requireNonNull(name);
     }
 
     @Override public Describer describe(Describer describer) {
@@ -2339,13 +2367,40 @@ public abstract class Codes {
     }
   }
 
+  /** Code that retrieves, as a tuple, the value of several variables from the
+   * environment. */
+  private static class GetTupleCode implements Code {
+    private final ImmutableList<String> names;
+    private final Object[] values; // work space
+
+    GetTupleCode(ImmutableList<String> names) {
+      this.names = requireNonNull(names);
+      this.values = new Object[names.size()];
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("getTuple", d -> d.arg("names", names));
+    }
+
+    @Override public String toString() {
+      return "getTuple(" + names + ")";
+    }
+
+    @Override public Object eval(EvalEnv env) {
+      for (int i = 0; i < names.size(); i++) {
+        values[i] = env.getOpt(names.get(i));
+      }
+      return Arrays.asList(values.clone());
+    }
+  }
+
   /** Java exception that wraps an exception thrown by the Morel runtime. */
   public static class MorelRuntimeException extends RuntimeException {
     private final BuiltInExn e;
 
     /** Creates a MorelRuntimeException. */
     public MorelRuntimeException(BuiltInExn e) {
-      this.e = Objects.requireNonNull(e);
+      this.e = requireNonNull(e);
     }
 
     public StringBuilder describeTo(StringBuilder buf) {

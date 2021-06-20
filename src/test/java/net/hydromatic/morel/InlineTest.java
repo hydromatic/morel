@@ -199,8 +199,7 @@ public class InlineTest {
     final String core0 = "let"
         + " val rec evenEmp = fn x =>"
         + " from e in #emp scott"
-        + " where op = (op mod (#empno e, 2), 0)"
-        + " yield e "
+        + " where op = (op mod (#empno e, 2), 0) "
         + "in"
         + " from e#1 in evenEmp 1"
         + " where op = (#deptno e#1, 10)"
@@ -209,15 +208,13 @@ public class InlineTest {
     final String core1 = "from e#1 in"
         + " let val x = 1"
         + " in from e in #emp scott"
-        + " where op mod (#empno e, 2) = 0"
-        + " yield e "
+        + " where op mod (#empno e, 2) = 0 "
         + "end"
         + " where #deptno e#1 = 10"
         + " yield #ename e#1";
     final String core2 = "from e#1 in"
         + " from e in #emp scott"
-        + " where op mod (#empno e, 2) = 0"
-        + " yield e "
+        + " where op mod (#empno e, 2) = 0 "
         + "where #deptno e#1 = 10 "
         + "yield #ename e#1";
     ml(ml)

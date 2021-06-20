@@ -352,12 +352,13 @@ public class Shuttle {
   }
 
   protected Core.Exp visit(Core.From from) {
-    return from.copy(typeSystem, visitMap(from.sources), visitList(from.steps),
-        from.yieldExp.accept(this));
+    // TODO: recompute initialElementType if sources change
+    return from.copy(typeSystem, visitMap(from.sources),
+        from.initialBindings, visitList(from.steps));
   }
 
   protected Core.Where visit(Core.Where where) {
-    return where.copy(where.exp.accept(this));
+    return where.copy(where.exp.accept(this), where.bindings);
   }
 
   protected Core.Group visit(Core.Group group) {
@@ -371,11 +372,15 @@ public class Shuttle {
   }
 
   protected Core.Order visit(Core.Order order) {
-    return order.copy(visitList(order.orderItems));
+    return order.copy(order.bindings, visitList(order.orderItems));
   }
 
   protected Core.OrderItem visit(Core.OrderItem orderItem) {
     return orderItem.copy(orderItem.exp.accept(this), orderItem.direction);
+  }
+
+  protected Core.Yield visit(Core.Yield yield) {
+    return yield.copy(yield.bindings, yield.exp.accept(this));
   }
 }
 

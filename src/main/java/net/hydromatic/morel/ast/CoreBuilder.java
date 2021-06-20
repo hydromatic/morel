@@ -21,6 +21,7 @@ package net.hydromatic.morel.ast;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Unit;
+import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
@@ -34,15 +35,19 @@ import net.hydromatic.morel.util.Pair;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.util.Util;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import javax.annotation.Nullable;
+
+import static net.hydromatic.morel.type.RecordType.ORDERING;
 
 /** Builds parse tree nodes. */
 public enum CoreBuilder {
@@ -144,19 +149,22 @@ public enum CoreBuilder {
     return new Core.RecordSelector(fnType, slot);
   }
 
+  /** Creates an IdPat with a given name and ordinal. You must ensure that the
+   * ordinal is unique for this name in this program. */
   public Core.IdPat idPat(Type type, String name, int i) {
     return new Core.IdPat(type, name, i);
   }
 
+  /** Creates an IdPat with a system-generated unique name. */
+  public Core.IdPat idPat(Type type, NameGenerator nameGenerator) {
+    return idPat(type, nameGenerator.get(), 0);
+  }
+
+  /** Creates an IdPat with a given name, generating an ordinal to distinguish
+   * it from other declarations with the same name elsewhere in the program. */
   public Core.IdPat idPat(Type type, String name, NameGenerator nameGenerator) {
-    final int i;
-    if (name.equals("")) {
-      name = nameGenerator.get();
-      i = 0;
-    } else {
-      i = nameGenerator.inc(name);
-    }
-    return new Core.IdPat(type, name, i);
+    assert name.length() > 0;
+    return idPat(type, name, nameGenerator.inc(name));
   }
 
   @SuppressWarnings("rawtypes")
@@ -216,7 +224,7 @@ public enum CoreBuilder {
   public Core.Pat recordPat(TypeSystem typeSystem, Set<String> argNames,
       List<Core.Pat> args) {
     final ImmutableSortedMap.Builder<String, Type> argNameTypes =
-        ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+        ImmutableSortedMap.orderedBy(ORDERING);
     Pair.forEach(argNames, args, (argName, arg) ->
         argNameTypes.put(argName, arg.type));
     return recordPat((RecordType) typeSystem.recordType(argNameTypes.build()),
@@ -242,7 +250,7 @@ public enum CoreBuilder {
     final RecordLikeType tupleType;
     if (type instanceof RecordType) {
       final SortedMap<String, Type> argNameTypes =
-          new TreeMap<>(RecordType.ORDERING);
+          new TreeMap<>(ORDERING);
       Pair.forEach(type.argNameTypes().keySet(), argList, (name, arg) ->
           argNameTypes.put(name, arg.type));
       tupleType = typeSystem.recordType(argNameTypes);
@@ -274,9 +282,65 @@ public enum CoreBuilder {
   }
 
   public Core.From from(ListType type, Map<Core.Pat, Core.Exp> sources,
-      List<Core.FromStep> steps, Core.Exp yieldExp) {
+      Iterable<? extends Binding> bindings, List<Core.FromStep> steps) {
     return new Core.From(type, ImmutableMap.copyOf(sources),
-        ImmutableList.copyOf(steps), yieldExp);
+        ImmutableList.copyOf(bindings), ImmutableList.copyOf(steps));
+  }
+
+  /** Derives the result type, then calls
+   * {@link #from(ListType, Map, Iterable, List)}. */
+  public Core.From from(TypeSystem typeSystem, Map<Core.Pat, Core.Exp> sources,
+      Iterable<? extends Binding> bindings, List<Core.FromStep> steps) {
+    final Type elementType;
+    if (!steps.isEmpty() && Iterables.getLast(steps) instanceof Core.Yield) {
+      elementType = ((Core.Yield) Iterables.getLast(steps)).exp.type;
+    } else {
+      final List<Binding> lastBindings = core.lastBindings(bindings, steps);
+      if (lastBindings.size() == 1) {
+        elementType = lastBindings.get(0).id.type;
+      } else {
+        final SortedMap<String, Type> argNameTypes = new TreeMap<>(ORDERING);
+        lastBindings.forEach(b -> argNameTypes.put(b.id.name, b.id.type));
+        elementType = typeSystem.recordType(argNameTypes);
+      }
+    }
+    final ListType type = typeSystem.listType(elementType);
+    return from(type, ImmutableMap.copyOf(sources),
+        ImmutableList.copyOf(bindings), ImmutableList.copyOf(steps));
+  }
+
+  /** Returns what would be the yield expression if we created a
+   * {@link Core.From} from the given sources and steps.
+   *
+   * <p>Examples:
+   * <ul>
+   * <li>{@code defaultYieldExp(sources=(a=E:t), steps=[])}
+   *     is {@code a} (a {@link Core.Id});
+   * <li>{@code defaultYieldExp(sources=(a=E:t, b=E2:t2), steps=[])}
+   *     is {@code {a = a, b = b}} (a record).
+   * </ul> */
+  public Core.Exp defaultYieldExp(TypeSystem typeSystem,
+      List<Binding> initialBindings, List<Core.FromStep> steps) {
+    final List<Binding> bindings = lastBindings(initialBindings, steps);
+    if (bindings.size() == 1) {
+      return core.id(Iterables.getOnlyElement(bindings).id);
+    } else {
+      final SortedMap<Core.IdPat, Core.Exp> map = new TreeMap<>();
+      final SortedMap<String, Type> argNameTypes = new TreeMap<>(ORDERING);
+      bindings.forEach(b -> {
+        map.put(b.id, core.id(b.id));
+        argNameTypes.put(b.id.name, b.id.type);
+      });
+      return core.tuple(typeSystem.recordType(argNameTypes), map.values());
+    }
+  }
+
+  public ImmutableList<Binding> lastBindings(
+      Iterable<? extends Binding> initialBindings,
+      List<? extends Core.FromStep> steps) {
+    return steps.isEmpty()
+        ? ImmutableList.copyOf(initialBindings)
+        : Iterables.getLast(steps).bindings;
   }
 
   public Core.Fn fn(FnType type, Core.IdPat idPat, Core.Exp exp) {
@@ -305,8 +369,10 @@ public enum CoreBuilder {
     return new Core.Aggregate(type, aggregate, argument);
   }
 
-  public Core.Order order(Iterable<Core.OrderItem> orderItems) {
-    return new Core.Order(ImmutableList.copyOf(orderItems));
+  public Core.Order order(List<Binding> bindings,
+      Iterable<Core.OrderItem> orderItems) {
+    return new Core.Order(ImmutableList.copyOf(bindings),
+        ImmutableList.copyOf(orderItems));
   }
 
   public Core.OrderItem orderItem(Core.Exp exp, Ast.Direction direction) {
@@ -315,12 +381,36 @@ public enum CoreBuilder {
 
   public Core.Group group(SortedMap<Core.IdPat, Core.Exp> groupExps,
       SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
-    return new Core.Group(ImmutableSortedMap.copyOfSorted(groupExps),
+    final List<Binding> bindings = new ArrayList<>();
+    groupExps.keySet().forEach(id -> bindings.add(Binding.of(id)));
+    aggregates.keySet().forEach(id -> bindings.add(Binding.of(id)));
+    return new Core.Group(ImmutableList.copyOf(bindings),
+        ImmutableSortedMap.copyOfSorted(groupExps),
         ImmutableSortedMap.copyOfSorted(aggregates));
   }
 
-  public Core.Where where(Core.Exp exp) {
-    return new Core.Where(exp);
+  public Core.Where where(List<Binding> bindings, Core.Exp exp) {
+    return new Core.Where(ImmutableList.copyOf(bindings), exp);
+  }
+
+  public Core.Yield yield_(List<Binding> bindings, Core.Exp exp) {
+    return new Core.Yield(ImmutableList.copyOf(bindings), exp);
+  }
+
+  /** Derives bindings, then calls {@link #yield_(List, Core.Exp)}. */
+  public Core.Yield yield_(TypeSystem typeSystem, Core.Exp exp) {
+    final List<Binding> bindings = new ArrayList<>();
+    switch (exp.type.op()) {
+    case RECORD_TYPE:
+    case TUPLE_TYPE:
+      ((RecordLikeType) exp.type).argNameTypes().forEach((name, type) ->
+          bindings.add(
+              Binding.of(core.idPat(type, name, typeSystem.nameGenerator))));
+      break;
+    default:
+      bindings.add(Binding.of(core.idPat(exp.type, typeSystem.nameGenerator)));
+    }
+    return yield_(bindings, exp);
   }
 
 }

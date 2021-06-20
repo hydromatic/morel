@@ -297,7 +297,6 @@ public class Visitor {
       exp.accept(this);
     });
     from.steps.forEach(step -> step.accept(this));
-    from.yieldExp.accept(this);
   }
 
   protected void visit(Core.Where where) {
@@ -327,6 +326,10 @@ public class Visitor {
 
   protected void visit(Core.OrderItem orderItem) {
     orderItem.exp.accept(this);
+  }
+
+  protected void visit(Core.Yield yield) {
+    yield.exp.accept(this);
   }
 
   protected void visit(Core.TuplePat tuplePat) {

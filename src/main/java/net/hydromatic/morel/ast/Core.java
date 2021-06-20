@@ -43,8 +43,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.ObjIntConsumer;
 import javax.annotation.Nullable;
 
@@ -853,16 +851,16 @@ public class Core {
   /** From expression. */
   public static class From extends Exp {
     public final Map<Pat, Exp> sources;
+    public final ImmutableList<Binding> initialBindings;
     public final ImmutableList<FromStep> steps;
-    public final Exp yieldExp;
 
     From(ListType type, ImmutableMap<Pat, Exp> sources,
-        ImmutableList<FromStep> steps, Exp yieldExp) {
+        ImmutableList<Binding> initialBindings,
+        ImmutableList<FromStep> steps) {
       super(Op.FROM, type);
       this.sources = requireNonNull(sources);
+      this.initialBindings = initialBindings;
       this.steps = requireNonNull(steps);
-      this.yieldExp = requireNonNull(yieldExp);
-      checkArgument(type.elementType.equals(yieldExp.type));
     }
 
     @Override public ListType type() {
@@ -889,39 +887,27 @@ public class Core {
           w.append(" ");
           step.unparse(w, 0, 0);
         }
-        if (yieldExp != null) {
-          w.append(" yield ").append(yieldExp, 0, 0);
-        }
         return w;
       }
     }
 
     public Exp copy(TypeSystem typeSystem, Map<Pat, Exp> sources,
-        List<FromStep> steps, Exp yieldExp) {
+        List<Binding> initialBindings, List<FromStep> steps) {
       return sources.equals(this.sources)
           && steps.equals(this.steps)
-          && yieldExp.equals(this.yieldExp)
           ? this
-          : core.from(typeSystem.listType(yieldExp.type), sources, steps,
-              yieldExp);
+          : core.from(typeSystem, sources, initialBindings, steps);
     }
   }
 
   /** A step in a {@code from} expression - {@code where}, {@code group}
    * or {@code order}. */
   public abstract static class FromStep extends BaseNode {
-    FromStep(Op op) {
-      super(op);
-    }
+    public final ImmutableList<Binding> bindings;
 
-    /** Returns the names of the fields produced by this step, given the names
-     * of the fields that are input to this step.
-     *
-     * <p>By default, a step outputs the same fields as it inputs.
-     */
-    public void deriveOutBindings(Iterable<Binding> inBindings,
-        Function<IdPat, Binding> binder, Consumer<Binding> outBindings) {
-      inBindings.forEach(outBindings);
+    FromStep(Op op, ImmutableList<Binding> bindings) {
+      super(op);
+      this.bindings = bindings;
     }
 
     @Override public abstract FromStep accept(Shuttle shuttle);
@@ -931,8 +917,8 @@ public class Core {
   public static class Where extends FromStep {
     public final Exp exp;
 
-    Where(Exp exp) {
-      super(Op.WHERE);
+    Where(ImmutableList<Binding> bindings, Exp exp) {
+      super(Op.WHERE, bindings);
       this.exp = exp;
     }
 
@@ -948,9 +934,11 @@ public class Core {
       return w.append("where ").append(exp, 0, 0);
     }
 
-    public Where copy(Exp exp) {
-      return exp == this.exp ? this
-          : core.where(exp);
+    public Where copy(Exp exp, List<Binding> bindings) {
+      return exp == this.exp
+          && bindings.equals(this.bindings)
+          ? this
+          : core.where(bindings, exp);
     }
   }
 
@@ -958,8 +946,9 @@ public class Core {
   public static class Order extends FromStep {
     public final ImmutableList<OrderItem> orderItems;
 
-    Order(ImmutableList<OrderItem> orderItems) {
-      super(Op.ORDER);
+    Order(ImmutableList<Binding> bindings,
+        ImmutableList<OrderItem> orderItems) {
+      super(Op.ORDER, bindings);
       this.orderItems = requireNonNull(orderItems);
     }
 
@@ -975,9 +964,12 @@ public class Core {
       return w.append("order ").appendAll(orderItems, ", ");
     }
 
-    public Order copy(List<OrderItem> orderItems) {
-      return orderItems.equals(this.orderItems) ? this
-          : core.order(orderItems);
+    public Order copy(List<Binding> bindings,
+        List<OrderItem> orderItems) {
+      return bindings.equals(this.bindings)
+          && orderItems.equals(this.orderItems)
+          ? this
+          : core.order(bindings, orderItems);
     }
   }
 
@@ -1016,9 +1008,10 @@ public class Core {
     public final SortedMap<Core.IdPat, Exp> groupExps;
     public final SortedMap<Core.IdPat, Aggregate> aggregates;
 
-    Group(ImmutableSortedMap<Core.IdPat, Exp> groupExps,
+    Group(ImmutableList<Binding> bindings,
+        ImmutableSortedMap<Core.IdPat, Exp> groupExps,
         ImmutableSortedMap<Core.IdPat, Aggregate> aggregates) {
-      super(Op.GROUP);
+      super(Op.GROUP, bindings);
       this.groupExps = groupExps;
       this.aggregates = aggregates;
     }
@@ -1041,18 +1034,38 @@ public class Core {
       return w;
     }
 
-    @Override public void deriveOutBindings(Iterable<Binding> inBindings,
-        Function<Core.IdPat, Binding> binder, Consumer<Binding> outBindings) {
-      groupExps.keySet().forEach(id -> outBindings.accept(binder.apply(id)));
-      aggregates.keySet().forEach(id -> outBindings.accept(binder.apply(id)));
-    }
-
     public Group copy(SortedMap<Core.IdPat, Exp> groupExps,
         SortedMap<Core.IdPat, Aggregate> aggregates) {
       return groupExps.equals(this.groupExps)
           && aggregates.equals(this.aggregates)
           ? this
           : core.group(groupExps, aggregates);
+    }
+  }
+
+  /** Step that computes an expression. */
+  public static class Yield extends FromStep {
+    public final Exp exp;
+
+    Yield(ImmutableList<Binding> bindings, Exp exp) {
+      super(Op.YIELD, bindings);
+      this.exp = exp;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("yield ").append(exp, 0, 0);
+    }
+
+    @Override public Yield accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Yield copy(List<Binding> bindings, Exp exp) {
+      return core.yield_(bindings, exp);
     }
   }
 
