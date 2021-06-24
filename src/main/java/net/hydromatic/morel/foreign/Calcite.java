@@ -30,15 +30,21 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.interpreter.Interpreter;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.QueryProvider;
+import org.apache.calcite.plan.RelOptLattice;
+import org.apache.calcite.plan.RelOptMaterialization;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql2rel.RelDecorrelator;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
@@ -84,13 +90,34 @@ public class Calcite {
   public Code code(Environment env, RelNode rel, Type type) {
     // Transform the relational expression, converting sub-queries. For example,
     // RexSubQuery.IN becomes a Join.
-    final Program program = Programs.SUB_QUERY_PROGRAM;
+    final Program program =
+        Programs.sequence(
+            Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
+            new DecorrelateProgram());
     final RelOptPlanner planner = rel.getCluster().getPlanner();
     final RelTraitSet traitSet = rel.getCluster().traitSet();
     final RelNode rel2 = program.run(planner, rel, traitSet,
         ImmutableList.of(), ImmutableList.of());
 
     return new CalciteCode(dataContext, rel2, type, env);
+  }
+
+  /** Copied from {@link Programs}. */
+  private static class DecorrelateProgram implements Program {
+    @Override public RelNode run(RelOptPlanner planner, RelNode rel,
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices) {
+      final CalciteConnectionConfig config =
+          planner.getContext().maybeUnwrap(CalciteConnectionConfig.class)
+              .orElse(CalciteConnectionConfig.DEFAULT);
+      if (config.forceDecorrelate()) {
+        final RelBuilder relBuilder =
+            RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
+        return RelDecorrelator.decorrelateQuery(rel, relBuilder);
+      }
+      return rel;
+    }
   }
 
   /** Extension to Calcite context that remembers the foreign value

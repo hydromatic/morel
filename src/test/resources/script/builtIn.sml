@@ -485,6 +485,16 @@ Relational.count [];
 Relational.count [false];
 Sys.plan ();
 
+Relational.exists [1, 2, 3];
+Relational.exists [];
+Relational.exists [false];
+Sys.plan ();
+
+Relational.notExists [1, 2, 3];
+Relational.notExists [];
+Relational.notExists [false];
+Sys.plan ();
+
 Relational.sum [1, 2, 3];
 Relational.sum [1.0, 2.5, 3.5];
 Sys.plan ();

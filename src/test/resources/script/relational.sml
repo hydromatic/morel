@@ -382,6 +382,13 @@ group deptno = e.deptno
   compute sumId = sum of e.id,
           sumIdPlusDeptno = sum of e.id + e.deptno;
 
+(*) 'group' with 'exists' as an aggregate function
+from e in emps
+group e.deptno
+  compute sumId = sum of e.id,
+          existsId = exists of e.id,
+          existsStar = exists;
+
 (*) 'group' with join
 from e in emps, d in depts
 where e.deptno = d.deptno

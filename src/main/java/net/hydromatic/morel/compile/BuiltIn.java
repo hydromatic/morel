@@ -717,6 +717,42 @@ public enum BuiltIn {
   RELATIONAL_COUNT("Relational", "count", "count", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
 
+  /** Function "Relational.exists", aka "exists", of type "&alpha; list
+   * &rarr; bool".
+   *
+   * <p>For example,
+   *
+   * <pre>{@code
+   * from d in depts
+   * where exists (
+   *   from e in emps
+   *   where e.deptno = d.deptno
+   *   andalso e.job = 'CLERK')
+   * }</pre>
+   */
+  RELATIONAL_EXISTS("Relational", "exists", "exists", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
+
+  /** Function "Relational.notExists", aka "notExists", of type "&alpha; list
+   * &rarr; bool".
+   *
+   * <p>For example,
+   *
+   * <pre>{@code
+   * from d in depts
+   * where notExists (
+   *   from e in emps
+   *   where e.deptno = d.deptno
+   *   andalso e.job = 'CLERK')
+   * }</pre>
+   *
+   * <p>{@code notExists list} is equivalent to {@code not (exists list)},
+   * but the former may be more convenient, because it requires fewer
+   * parentheses.
+   */
+  RELATIONAL_NOT_EXISTS("Relational", "notExists", "notExists", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
+
   /** Function "Relational.sum", aka "sum", of type
    *  "&alpha; list &rarr; &alpha;" (where &alpha; must be numeric).
    *

@@ -592,6 +592,19 @@ val it =
   : {deptno:int, sumId:int, sumIdPlusDeptno:int} list
 
 
+(*) 'group' with 'exists' as an aggregate function
+from e in emps
+group e.deptno
+  compute sumId = sum of e.id,
+          existsId = exists of e.id,
+          existsStar = exists;
+val it =
+  [{deptno=20,existsId=true,existsStar=true,sumId=101},
+   {deptno=10,existsId=true,existsStar=true,sumId=100},
+   {deptno=30,existsId=true,existsStar=true,sumId=205}]
+  : {deptno:int, existsId:bool, existsStar:bool, sumId:int} list
+
+
 (*) 'group' with join
 from e in emps, d in depts
 where e.deptno = d.deptno

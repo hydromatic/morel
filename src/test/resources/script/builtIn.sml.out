@@ -53,8 +53,8 @@ val it =
   : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
 
 Relational;
-val it = {count=fn,max=fn,min=fn,sum=fn}
-  : {count:'a list -> int, max:'b list -> 'b, min:'c list -> 'c, sum:'d list -> 'd}
+val it = {count=fn,exists=fn,max=fn,min=fn,notExists=fn,sum=fn}
+  : {count:'a list -> int, exists:'b list -> bool, max:'c list -> 'c, min:'d list -> 'd, notExists:'e list -> bool, sum:'f list -> 'f}
 
 
 (* Operators --------------------------------------------------- *)
@@ -1178,6 +1178,34 @@ val it = "apply(fnValue Relational.count, argCode tuple(constant(false)))"
   : string
 
 
+Relational.exists [1, 2, 3];
+val it = true : bool
+
+Relational.exists [];
+val it = false : bool
+
+Relational.exists [false];
+val it = true : bool
+
+Sys.plan ();
+val it = "apply(fnValue Relational.exists, argCode tuple(constant(false)))"
+  : string
+
+
+Relational.notExists [1, 2, 3];
+val it = false : bool
+
+Relational.notExists [];
+val it = true : bool
+
+Relational.notExists [false];
+val it = false : bool
+
+Sys.plan ();
+val it = "apply(fnValue Relational.notExists, argCode tuple(constant(false)))"
+  : string
+
+
 Relational.sum [1, 2, 3];
 val it = 6 : int
 
@@ -1359,7 +1387,7 @@ val it =
    ("Option",
    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
    ("Relational",
-   "{count:forall 'a. 'a list -> int, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+   "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, sum:forall 'a. 'a list -> 'a}"),
    ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
@@ -1385,7 +1413,7 @@ val it =
    ("Option",
    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
    ("Relational",
-   "{count:forall 'a. 'a list -> int, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+   "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, sum:forall 'a. 'a list -> 'a}"),
    ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),

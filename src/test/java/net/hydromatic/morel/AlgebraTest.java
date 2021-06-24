@@ -547,6 +547,113 @@ public class AlgebraTest {
     fn.apply(ml(ml0));
     fn.apply(ml(ml1));
   }
+
+  /** Tests that {@code exists} is pushed down to Calcite.
+   * (There are no correlating variables.) */
+  @Test void testExists() {
+    final String ml = "from d in scott.dept\n"
+        + "where exists (\n"
+        + "  from e in scott.emp\n"
+        + "  where e.job = \"CLERK\")\n"
+        + "yield d.deptno";
+    String plan = "calcite(plan "
+        + "LogicalProject(deptno=[$0])\n"
+        + "  LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n"
+        + "    LogicalJoin(condition=[true], joinType=[inner])\n"
+        + "      LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n"
+        + "        JdbcTableScan(table=[[scott, DEPT]])\n"
+        + "      LogicalAggregate(group=[{0}])\n"
+        + "        LogicalProject(i=[true])\n"
+        + "          LogicalFilter(condition=[=($5, 'CLERK')])\n"
+        + "            LogicalProject(comm=[$6], deptno=[$7], empno=[$0], "
+        + "ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
+        + "              JdbcTableScan(table=[[scott, EMP]])\n"
+        + ")";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .with(Prop.HYBRID, true)
+        .assertType("int list")
+        .assertPlan(isFullyCalcite())
+        .assertPlan(isCode(plan))
+        .assertEvalIter(equalsOrdered(10, 20, 30, 40));
+  }
+
+  /** Tests that {@code not exists} (uncorrelated), also {@code notExists} and
+   * {@code List.null}, is pushed down to Calcite. */
+  @Test void testNotExists() {
+    final UnaryOperator<Ml> fn = ml ->
+        ml.withBinding("scott", BuiltInDataSet.SCOTT)
+            .with(Prop.HYBRID, true)
+            .assertType("int list")
+            .assertPlan(isFullyCalcite())
+            .assertEvalIter(equalsOrdered(10, 20, 30, 40));
+    final String ml0 = "from d in scott.dept\n"
+        + "where not (exists (\n"
+        + "  from e in scott.emp\n"
+        + "  where e.job = \"CLARK KENT\"))\n"
+        + "yield d.deptno";
+    final String plan0 = "calcite(plan "
+        + "LogicalProject(deptno=[$0])\n"
+        + "  LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n"
+        + "    LogicalFilter(condition=[IS NULL($3)])\n"
+        + "      LogicalJoin(condition=[true], joinType=[left])\n"
+        + "        LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n"
+        + "          JdbcTableScan(table=[[scott, DEPT]])\n"
+        + "        LogicalAggregate(group=[{0}])\n"
+        + "          LogicalProject(i=[true])\n"
+        + "            LogicalFilter(condition=[=($5, 'CLARK KENT')])\n"
+        + "              LogicalProject(comm=[$6], deptno=[$7], empno=[$0], "
+        + "ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
+        + "                JdbcTableScan(table=[[scott, EMP]])\n"
+        + ")";
+    final String ml1 = "from d in scott.dept\n"
+        + "where notExists (\n"
+        + "  from e in scott.emp\n"
+        + "  where e.job = \"CLARK KENT\")\n"
+        + "yield d.deptno";
+    final String ml2 = "from d in scott.dept\n"
+        + "where List.null (\n"
+        + "  from e in scott.emp\n"
+        + "  where e.job = \"CLARK KENT\")\n"
+        + "yield d.deptno";
+    fn.apply(ml(ml0))
+        .assertPlan(isCode(plan0));
+    fn.apply(ml(ml1));
+    fn.apply(ml(ml2));
+  }
+
+  /** Tests that correlated {@code exists} is pushed down to Calcite. */
+  @Test void testExistsCorrelated() {
+    final String ml = "from d in scott.dept\n"
+        + "where exists (\n"
+        + "  from e in scott.emp\n"
+        + "  where e.deptno = d.deptno\n"
+        + "  andalso e.job = \"CLERK\")";
+    String plan = "calcite(plan "
+        + "LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n"
+        + "  LogicalJoin(condition=[=($0, $3)], joinType=[inner])\n"
+        + "    LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n"
+        + "      JdbcTableScan(table=[[scott, DEPT]])\n"
+        + "    LogicalProject(deptno=[$0], $f1=[true])\n"
+        + "      LogicalAggregate(group=[{0}])\n"
+        + "        LogicalProject(deptno=[$1])\n"
+        + "          LogicalFilter(condition=[AND(=($5, 'CLERK'), "
+        + "IS NOT NULL($1))])\n"
+        + "            LogicalProject(comm=[$6], deptno=[$7], empno=[$0], "
+        + "ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
+        + "              JdbcTableScan(table=[[scott, EMP]])\n"
+        + ")";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .with(Prop.HYBRID, true)
+        .assertType("{deptno:int, dname:string, loc:string} list")
+        .assertPlan(isFullyCalcite())
+        .assertPlan(isCode(plan))
+        .assertEvalIter(
+            equalsOrdered(list(10, "ACCOUNTING", "NEW YORK"),
+                list(20, "RESEARCH", "DALLAS"),
+                list(30, "SALES", "CHICAGO")));
+  }
 }
 
 // End AlgebraTest.java
