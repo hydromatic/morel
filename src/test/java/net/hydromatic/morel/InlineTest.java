@@ -18,8 +18,11 @@
  */
 package net.hydromatic.morel;
 
+import net.hydromatic.morel.eval.Unit;
+
 import org.junit.jupiter.api.Test;
 
+import static net.hydromatic.morel.Matchers.isUnordered;
 import static net.hydromatic.morel.Matchers.list;
 import static net.hydromatic.morel.Matchers.whenAppliedTo;
 import static net.hydromatic.morel.Ml.ml;
@@ -171,7 +174,7 @@ public class InlineTest {
         + "  yield e.deptno\n"
         + "end";
     final String core0 = "let "
-        + "val rec isEven = fn n => op = (op mod (n, 2), 0) "
+        + "val rec isEven = fn n => n mod 2 = 0 "
         + "in "
         + "from e in #emp scott "
         + "where isEven (#empno e) yield #deptno e end";
@@ -199,27 +202,28 @@ public class InlineTest {
     final String core0 = "let"
         + " val rec evenEmp = fn x =>"
         + " from e in #emp scott"
-        + " where op = (op mod (#empno e, 2), 0) "
+        + " where #empno e mod 2 = 0 "
         + "in"
         + " from e#1 in evenEmp 1"
-        + " where op = (#deptno e#1, 10)"
+        + " where #deptno e#1 = 10"
         + " yield #ename e#1 "
         + "end";
-    final String core1 = "from e#1 in"
-        + " let val x = 1"
+    final String core1 = "from e#1 in "
+        + "(let val x = 1"
         + " in from e in #emp scott"
         + " where op mod (#empno e, 2) = 0 "
-        + "end"
+        + "end)"
         + " where #deptno e#1 = 10"
         + " yield #ename e#1";
-    final String core2 = "from e#1 in"
-        + " from e in #emp scott"
-        + " where op mod (#empno e, 2) = 0 "
+    final String core2 = "from e in #emp scott "
+        + "where op mod (#empno e, 2) = 0 "
+        + "yield {e = e} "
         + "where #deptno e#1 = 10 "
         + "yield #ename e#1";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertCoreString(is(core0), is(core1), is(core2));
+        .assertCoreString(is(core0), is(core1), is(core2))
+        .assertEval(isUnordered(list("CLARK", "MILLER")));
   }
 
   /** Tests that an expression involving 'map' and 'filter'
@@ -228,16 +232,90 @@ public class InlineTest {
     final String ml = "map (fn e => (#empno e))\n"
         + "  (List.filter (fn e => (#deptno e) = 30) (#emp scott))";
     final String core0 = "map (fn e#1 => #empno e#1) "
-        + "(#filter List (fn e => op = (#deptno e, 30)) "
+        + "(#filter List (fn e => #deptno e = 30) "
         + "(#emp scott))";
     final String core1 = "from v0 in "
         + "#filter List (fn e => #deptno e = 30) (#emp scott) "
         + "yield (fn e#1 => #empno e#1) v0";
-    final String core2 = "from v0 in "
-        + "from v2 in #emp scott where #deptno v2 = 30 yield #empno v0";
+    final String core2 = "from v2 in #emp scott "
+        + "where #deptno v2 = 30 "
+        + "yield {v0 = v2} "
+        + "yield #empno v0";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertCoreString(is(core0), is(core1), is(core2));
+        .assertCoreString(is(core0), is(core1), is(core2))
+        .assertEval(isUnordered(list(7499, 7521, 7654, 7698, 7844, 7900)));
+  }
+
+  /** Tests that an expression involving 'filter' then 'map' then 'filter' then
+   * 'map' is converted to a 'from' expression. */
+  @Test void testFilterMapFilterMapToFrom() {
+    final String ml = ""
+        + "map (fn r => r + 100)\n"
+        + "  (map (fn r => #x r + #z r)\n"
+        + "    (List.filter (fn r => #y r > #z r)\n"
+        + "      (map (fn e => {x = #empno e, y = #deptno e, z = 15})\n"
+        + "        (List.filter (fn e => #deptno e = 30)\n"
+        + "          (#emp scott)))))";
+    final String core0 = "map (fn r#2 => r#2 + 100)"
+        + " (map (fn r#1 => #x r#1 + #z r#1)"
+        + " (#filter List (fn r => #y r > #z r)"
+        + " (map (fn e#1 => {x = #empno e#1, y = #deptno e#1, z = 15})"
+        + " (#filter List (fn e => #deptno e = 30) (#emp scott)))))";
+    final String core1 = "from v0 in #map List (fn r#1 => #x r#1 + #z r#1)"
+        + " (#filter List (fn r => #y r > #z r)"
+        + " (#map List (fn e#1 => {x = #empno e#1, y = #deptno e#1, z = 15})"
+        + " (#filter List (fn e => #deptno e = 30) (#emp scott)))) "
+        + "yield (fn r#2 => r#2 + 100) v0";
+    final String core2 = "from v6 in #emp scott "
+        + "where #deptno v6 = 30 "
+        + "yield {v5 = v6} "
+        + "yield {v4 = {x = #empno v5, y = #deptno v5, z = 15}} "
+        + "where #y v4 > #z v4 "
+        + "yield {v2 = v4} "
+        + "yield {v0 = #x v2 + #z v2} "
+        + "yield v0 + 100";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertCoreString(is(core0), is(core1), is(core2))
+        .assertEval(isUnordered(list(7614, 7636, 7769, 7813, 7959, 8015)));
+  }
+
+  @Test void testFromFrom() {
+    final String ml = "from i in (\n"
+        + "  from e in scott.emp\n"
+        + "  yield e.deptno)\n"
+        + "where i > 10\n"
+        + "yield i / 10";
+    final String core0 = "from i in"
+        + " (from e in #emp scott"
+        + " yield #deptno e) "
+        + "where i > 10 "
+        + "yield i / 10";
+    final String core1 = "from e in #emp scott "
+        + "yield {i = #deptno e} "
+        + "where i > 10 "
+        + "yield /:int (i, 10)";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertCoreString(is(core0), is(core1), is(core1))
+        .assertEval(isUnordered(list(2, 3, 3, 2, 3, 3, 2, 3, 2, 3, 2)));
+  }
+
+  @Test void testFromEmptyFrom() {
+    final String ml = "from u in (from)\n"
+        + "where 3 < 4\n"
+        + "yield {u, v = 10}";
+    final String core0 = "from u in (from) "
+        + "where 3 < 4 "
+        + "yield {u = u, v = 10}";
+    final String core1 = "from "
+        + "yield {u = ()} "
+        + "where 3 < 4 "
+        + "yield {u = u, v = 10}";
+    ml(ml)
+        .assertCoreString(is(core0), is(core1), is(core1))
+        .assertEval(isUnordered(list(list(Unit.INSTANCE, 10))));
   }
 }
 

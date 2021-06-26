@@ -79,6 +79,8 @@ public enum CoreBuilder {
           : BigDecimal.valueOf(((Number) value).doubleValue()));
     case STRING:
       return stringLiteral((String) value);
+    case UNIT:
+      return unitLiteral();
     default:
       throw new AssertionError("unexpected " + type);
     }
@@ -325,12 +327,12 @@ public enum CoreBuilder {
    *
    * <p>Examples:
    * <ul>
-   * <li>{@code defaultYieldExp(sources=(a=E:t), steps=[])}
+   * <li>{@code implicitYieldExp(sources=(a=E:t), steps=[])}
    *     is {@code a} (a {@link Core.Id});
-   * <li>{@code defaultYieldExp(sources=(a=E:t, b=E2:t2), steps=[])}
+   * <li>{@code implicitYieldExp(sources=(a=E:t, b=E2:t2), steps=[])}
    *     is {@code {a = a, b = b}} (a record).
    * </ul> */
-  public Core.Exp defaultYieldExp(TypeSystem typeSystem,
+  public Core.Exp implicitYieldExp(TypeSystem typeSystem,
       List<Binding> initialBindings, List<Core.FromStep> steps) {
     final List<Binding> bindings = lastBindings(initialBindings, steps);
     if (bindings.size() == 1) {

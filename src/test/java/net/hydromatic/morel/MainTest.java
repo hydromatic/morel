@@ -1380,6 +1380,21 @@ public class MainTest {
             equalsOrdered(list(list(10, "Sales"), list(10, 100, "Fred"))));
   }
 
+  @Test void testYieldYield() {
+    final String ml = "let\n"
+        + "  val emps =\n"
+        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+        + "     {id = 101, name = \"Velma\", deptno = 20}]\n"
+        + "in\n"
+        + "  from e in emps\n"
+        + "  yield {x = e.id + e.deptno, y = e.id - e.deptno}\n"
+        + "  yield x + y\n"
+        + "end";
+    ml(ml)
+        .assertType("int list")
+        .assertEvalIter(equalsOrdered(200, 202));
+  }
+
   /** Analogous to SQL "CROSS APPLY" which calls a table-valued function
    * for each row in an outer loop. */
   @Test void testCrossApply() {
@@ -1688,12 +1703,12 @@ public class MainTest {
         "(\"hello\", 2, 3)", null,
         "String.substring (\"hello\", 2, 3)",
         "#substring String (\"hello\", 2, 3)",
-        "{a = 1, b = true, c = \"d\"}", "(1, true, \"d\")",
+        "{a = 1, b = true, c = \"d\"}", null,
         "fn x => 1 + x + 3", null,
         "List.tabulate (6, fn i =>"
             + " {i, j = i + 3, s = String.substring (\"morel\", 0, i)})",
         "#tabulate List (6, fn i =>"
-            + " (i, i + 3, #substring String (\"morel\", 0, i)))",
+            + " {i = i, j = i + 3, s = #substring String (\"morel\", 0, i)})",
     };
     for (int i = 0; i < expressions.length / 2; i++) {
       String ml = expressions[i * 2];

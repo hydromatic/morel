@@ -125,7 +125,7 @@ public class AlgebraTest {
             + "i = 3, r = 3.14, "
             // + "u = (), "
             + "s = \"hello\"}",
-        // "from e in scott.emp yield ()",
+        "from e in scott.emp yield ()",
         "from e in scott.emp yield e",
         "from e in scott.emp where e.job = \"CLERK\" yield e",
         "from n in [1,2,3] yield n",

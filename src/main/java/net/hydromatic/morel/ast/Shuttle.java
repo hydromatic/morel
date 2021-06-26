@@ -210,8 +210,7 @@ public class Shuttle {
   }
 
   protected Ast.Exp visit(Ast.From from) {
-    return ast.from(from.pos, from.sources, from.steps, from.yieldExp,
-        from.yieldExpOrDefault);
+    return ast.from(from.pos, from.sources, from.steps);
   }
 
   protected AstNode visit(Ast.Order order) {
@@ -224,6 +223,10 @@ public class Shuttle {
 
   protected AstNode visit(Ast.Where where) {
     return ast.where(where.pos, where.exp.accept(this));
+  }
+
+  protected AstNode visit(Ast.Yield yield) {
+    return ast.yield(yield.pos, yield.exp.accept(this));
   }
 
   protected AstNode visit(Ast.Group group) {

@@ -180,8 +180,8 @@ public class Visitor {
       exp.accept(this);
     });
     from.steps.forEach(this::accept);
-    if (from.yieldExp != null) {
-      from.yieldExp.accept(this);
+    if (from.implicitYieldExp != null) {
+      from.implicitYieldExp.accept(this);
     }
   }
 
@@ -195,6 +195,10 @@ public class Visitor {
 
   protected void visit(Ast.Where where) {
     where.exp.accept(this);
+  }
+
+  protected void visit(Ast.Yield yield) {
+    yield.exp.accept(this);
   }
 
   protected void visit(Ast.Group group) {

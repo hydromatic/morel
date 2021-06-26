@@ -674,9 +674,18 @@ public class Core {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      w.append("(");
-      forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
-      return w.append(")");
+      if (type instanceof RecordType) {
+        w.append("{");
+        Pair.forEachIndexed(type().argNameTypes().keySet(), args,
+            (i, name, exp) ->
+                w.append(i > 0 ? ", " : "").append(name).append(" = ")
+                    .append(exp, 0, 0));
+        return w.append("}");
+      } else {
+        w.append("(");
+        forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
+        return w.append(")");
+      }
     }
 
     public Tuple copy(TypeSystem typeSystem, List<Exp> args) {
@@ -882,7 +891,9 @@ public class Core {
         w.append("from");
         Ord.forEach(sources, (i, id, exp) ->
             w.append(i == 0 ? " " : ", ")
-                .append(id, 0, 0).append(" in ").append(exp, 0, 0));
+                // for these purposes 'in' has same precedence as '='
+                .append(id, 0, Op.EQ.left)
+                .append(" in ").append(exp, Op.EQ.right, 0));
         for (FromStep step : steps) {
           w.append(" ");
           step.unparse(w, 0, 0);

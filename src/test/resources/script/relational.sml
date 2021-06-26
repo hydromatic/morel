@@ -69,11 +69,28 @@ from e2 in (from e in emps yield #deptno e) yield e2 + 1;
 
 from e2 in (from e in emps yield e.deptno) yield e2 + 1;
 
-(* Disabled: '=' should have lower precedence than '#deptno e' fun application
 from e in emps where #deptno e = 30 yield #name e;
-*)
 
 from e in emps where false yield e.deptno;
+
+from e in emps
+  yield {x = e.id + e.deptno, y = e.id - e.deptno}
+  yield x + y;
+
+from e in emps
+  where e.deptno < 30
+  yield {x = e.id + e.deptno, y = e.id - e.deptno}
+  where x > 120
+  yield x + y;
+
+from e in emps
+  yield
+    let
+      val x = e.id + e.deptno
+      and y = e.id - e.deptno
+    in
+      x + y
+    end;
 
 (*) Function defined inside query
 from e in emps

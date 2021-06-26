@@ -243,7 +243,7 @@ fun shortest_path edges =
     val edges0 =
       from e in edges
           union
-          from v in vertices yield {source = v, target = v, weight = 0}
+          (from v in vertices yield {source = v, target = v, weight = 0})
         group e.source, e.target compute weight = min of e.weight
     fun sp (paths, []) = paths
       | sp (paths, v :: vs) =

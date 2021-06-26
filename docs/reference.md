@@ -138,8 +138,8 @@ In Standard ML but not in Morel:
     | <b>case</b> <i>exp</i> <b>of</b> <i>match</i>         case analysis
     | <b>fn</b> <i>match</i>                  function
     | <b>from</b> <i>fromSource<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>fromSource<sub>s</sub></i>
-      (<i>fromFilter</i> | <i>fromGroup</i> | <i>fromOrder</i> )*
-      [ <b>yield</b> <i>exp</i> ]             relational expression (<i>s</i> &ge; 0)
+      ( <i>fromWhere</i> | <i>fromGroup</i> | <i>fromOrder</i> | <i>fromYield</i> )*
+                                relational expression (<i>s</i> &ge; 0)
 <i>exprow</i> &rarr; <i>exprowItem</i> [<b>,</b> <i>exprowItem</i> ]*
                                 expression row
 <i>exprowItem</i> &rarr; [<i>lab</i> <b>=</b>] <i>exp</i>
@@ -156,6 +156,7 @@ In Standard ML but not in Morel:
 <i>fromOrder</i> &rarr; <b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>
                                 order clause (<i>o</i> &ge; 1)
 <i>orderItem</i> &rarr; <i>exp</i> [ <b>desc</b> ]
+<i>fromYield</i> &rarr; <b>yield</b> <i>exp</i>
 </pre>
 
 ### Patterns

@@ -274,7 +274,7 @@ class Ml {
       assertThat(valDecl3.exp.toString(), beforeMatcher);
     }
 
-    final int inlineCount = inlinedMatcher == null ? 1 : 6;
+    final int inlineCount = inlinedMatcher == null ? 1 : 10;
     final Relationalizer relationalizer = Relationalizer.of(typeSystem, env);
     Core.ValDecl valDecl4 = valDecl3;
     for (int i = 0; i < inlineCount; i++) {

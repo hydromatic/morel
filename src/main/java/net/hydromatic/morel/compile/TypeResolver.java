@@ -20,6 +20,7 @@ package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.type.ApplyType;
 import net.hydromatic.morel.type.DataType;
@@ -168,7 +169,7 @@ public class TypeResolver {
   private Ast.Exp deduceType(TypeEnv env, Ast.Exp node, Unifier.Variable v) {
     final List<Ast.Exp> args2;
     final Unifier.Variable v2;
-    final Unifier.Variable v3;
+    Unifier.Variable v3 = null;
     final Map<Ast.IdPat, Unifier.Term> termMap;
     switch (node.op) {
     case BOOL_LITERAL:
@@ -308,6 +309,23 @@ public class TypeResolver {
           fromSteps.add(where.copy(filter2));
           break;
 
+        case YIELD:
+          final Ast.Yield yield = (Ast.Yield) step;
+          final Unifier.Variable v6 = unifier.variable();
+          v3 = v6;
+          final Ast.Exp yieldExp2 = deduceType(env2, yield.exp, v6);
+          fromSteps.add(yield.copy(yieldExp2));
+          if (yieldExp2.op == Op.RECORD) {
+            final Unifier.Sequence sequence =
+                (Unifier.Sequence) map.get(yieldExp2);
+            final Ast.Record record2 = (Ast.Record) yieldExp2;
+            final TypeEnv[] envs = {env};
+            Pair.forEach(record2.args.keySet(), sequence.terms, (name, term) ->
+                envs[0] = envs[0].bind(name, term));
+            env2 = envs[0];
+          }
+          break;
+
         case ORDER:
           final Ast.Order order = (Ast.Order) step;
           final List<Ast.OrderItem> orderItems = new ArrayList<>();
@@ -375,13 +393,17 @@ public class TypeResolver {
           throw new AssertionError("unknown step type " + step.op);
         }
       }
-      v3 = unifier.variable();
-      final Ast.Exp yieldExpOrDefault2 =
-          deduceType(env2, from.yieldExpOrDefault, v3);
-      final Ast.Exp yieldExp2 =
-          from.yieldExp == null ? null : yieldExpOrDefault2;
+      final Ast.Exp yieldExp2;
+      if (from.implicitYieldExp != null) {
+        v3 = unifier.variable();
+        yieldExp2 = deduceType(env2, from.implicitYieldExp, v3);
+      } else {
+        Objects.requireNonNull(v3);
+        yieldExp2 = null;
+      }
       final Ast.From from2 =
-          from.copy(fromSources, fromSteps, yieldExp2, yieldExpOrDefault2);
+          from.copy(fromSources, fromSteps,
+              from.implicitYieldExp != null ? yieldExp2 : null);
       return reg(from2, v, unifier.apply(LIST_TY_CON, v3));
 
     case ID:

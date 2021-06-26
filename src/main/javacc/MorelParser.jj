@@ -298,7 +298,7 @@ Exp caseOf() :
   }
 }
 
-/** Parses a "{@code from exp as id yield exp}" expression. */
+/** Parses a "{@code from id in exp yield exp}" expression. */
 Exp from() :
 {
   final Span span;
@@ -342,12 +342,13 @@ Exp from() :
     <ORDER> { stepSpan = Span.of(getPos()); } orderItems = orderItemCommaList() {
       steps.add(ast.order(stepSpan.end(this), orderItems));
     }
+  |
+    <YIELD> { stepSpan = Span.of(getPos()); } yieldExp = expression() {
+      steps.add(ast.yield(stepSpan.end(this), yieldExp));
+    }
   )*
-  [
-    <YIELD> yieldExp = expression()
-  ]
   {
-    return ast.from(span.end(this), sources, steps, yieldExp);
+    return ast.from(span.end(this), sources, steps);
   }
 }
 

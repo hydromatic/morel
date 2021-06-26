@@ -131,12 +131,37 @@ from e2 in (from e in emps yield e.deptno) yield e2 + 1;
 val it = [11,21,31,31] : int list
 
 
-(* Disabled: '=' should have lower precedence than '#deptno e' fun application
 from e in emps where #deptno e = 30 yield #name e;
-*)
+val it = ["Shaggy","Scooby"] : string list
+
 
 from e in emps where false yield e.deptno;
 val it = [] : int list
+
+
+from e in emps
+  yield {x = e.id + e.deptno, y = e.id - e.deptno}
+  yield x + y;
+val it = [200,202,204,206] : int list
+
+
+from e in emps
+  where e.deptno < 30
+  yield {x = e.id + e.deptno, y = e.id - e.deptno}
+  where x > 120
+  yield x + y;
+val it = [202] : int list
+
+
+from e in emps
+  yield
+    let
+      val x = e.id + e.deptno
+      and y = e.id - e.deptno
+    in
+      x + y
+    end;
+val it = [200,202,204,206] : int list
 
 
 (*) Function defined inside query
@@ -1194,7 +1219,7 @@ val it =
 Sys.plan();
 val it =
   "calcite(plan LogicalProject(j=[$1], s=[$2])
-  LogicalTableFunctionScan(invocation=[morelTable('#tabulate List (6, fn i => (i, i + 3, #substring String (\"morel\", 0, i)))', '{
+  LogicalTableFunctionScan(invocation=[morelTable('#tabulate List (6, fn i => {i = i, j = i + 3, s = #substring String (\"morel\", 0, i)})', '{
   \"fields\": [
     {
       \"type\": \"INTEGER\",

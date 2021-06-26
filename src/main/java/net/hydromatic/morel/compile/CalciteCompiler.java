@@ -445,6 +445,13 @@ public class CalciteCompiler extends Compiler {
             throw new AssertionError(fromStep);
           }
         }
+        if (from.steps.isEmpty()
+            || Util.last(from.steps).op != Op.YIELD) {
+          final Core.Exp implicitYieldExp =
+              core.implicitYieldExp(typeSystem, from.initialBindings,
+                  from.steps);
+          cx = yield_(cx, implicitYieldExp);
+        }
         return true;
       }
     };

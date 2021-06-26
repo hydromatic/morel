@@ -19,15 +19,24 @@
 package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
+import net.hydromatic.morel.type.RecordLikeType;
+import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Iterables;
+import org.apache.calcite.util.Util;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.compile.Resolver.append;
@@ -82,7 +91,7 @@ public class Relationalizer extends EnvShuttle {
           // step. We will have to inline the yield expression as a let.
           final Core.Yield yieldStep = core.yield_(typeSystem,
               core.apply(fnType.resultType, f,
-                  core.defaultYieldExp(typeSystem,
+                  core.implicitYieldExp(typeSystem,
                       from.initialBindings, from.steps)));
           return core.from(typeSystem, from.sources, from.initialBindings,
               append(from.steps, yieldStep));
@@ -97,7 +106,7 @@ public class Relationalizer extends EnvShuttle {
           final Core.Where whereStep =
               core.where(core.lastBindings(from.initialBindings, from.steps),
                   core.apply(fnType.resultType, f,
-                      core.defaultYieldExp(typeSystem,
+                      core.implicitYieldExp(typeSystem,
                           from.initialBindings, from.steps)));
           return core.from(typeSystem, from.sources, from.initialBindings,
               append(from.steps, whereStep));
@@ -118,6 +127,40 @@ public class Relationalizer extends EnvShuttle {
       return core.from(typeSystem, ImmutableMap.of(id, exp),
           ImmutableList.of());
     }
+  }
+
+  @Override public Core.Exp visit(Core.From from) {
+    final Core.From from2 = (Core.From) super.visit(from);
+    if (from2.sources.size() == 1) {
+      final Map.Entry<Core.Pat, Core.Exp> source =
+          Iterables.getOnlyElement(from2.sources.entrySet());
+      if (source.getValue().op == Op.FROM
+          && source.getKey().op == Op.ID_PAT) {
+        final Core.From from3 = (Core.From) source.getValue();
+        final Core.IdPat idPat3 = (Core.IdPat) source.getKey();
+        final List<Core.FromStep> steps = new ArrayList<>(from3.steps);
+        final Core.Exp exp;
+        if (steps.isEmpty()) {
+          exp = core.unitLiteral();
+        } else if (Util.last(steps) instanceof Core.Yield) {
+          exp = ((Core.Yield) steps.remove(steps.size() - 1)).exp;
+        } else {
+          exp =
+              core.implicitYieldExp(typeSystem, from3.initialBindings,
+                  from3.steps);
+        }
+        final ImmutableSortedMap.Builder<String, Type> argNameTypes =
+            ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+        RecordLikeType recordType =
+            typeSystem.recordType(argNameTypes
+                .put(idPat3.name, exp.type).build());
+        steps.add(
+            core.yield_(typeSystem, core.tuple(recordType, exp)));
+        steps.addAll(from2.steps);
+        return core.from(typeSystem, from3.sources, steps);
+      }
+    }
+    return from2;
   }
 }
 

@@ -31,6 +31,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import javax.annotation.Nullable;
 
 /** Builds parse tree nodes. */
 public enum AstBuilder {
@@ -314,15 +315,17 @@ public enum AstBuilder {
   }
 
   public Ast.From from(Pos pos, Map<Ast.Pat, Ast.Exp> sources,
-      List<Ast.FromStep> steps, Ast.Exp yieldExp) {
-    return new Ast.From(pos, ImmutableMap.copyOf(sources),
-        ImmutableList.copyOf(steps), yieldExp);
+      List<Ast.FromStep> steps) {
+    final Ast.Exp implicitYieldExp =
+        Ast.From.implicitYieldExp(pos, sources, steps);
+    return from(pos, ImmutableMap.copyOf(sources), ImmutableList.copyOf(steps),
+        implicitYieldExp);
   }
 
   public Ast.From from(Pos pos, Map<Ast.Pat, Ast.Exp> sources,
-      List<Ast.FromStep> steps, Ast.Exp yieldExp, Ast.Exp yieldExpOrDefault) {
+      List<Ast.FromStep> steps, @Nullable Ast.Exp implicitYieldExp) {
     return new Ast.From(pos, ImmutableMap.copyOf(sources),
-        ImmutableList.copyOf(steps), yieldExp, yieldExpOrDefault);
+        ImmutableList.copyOf(steps), implicitYieldExp);
   }
 
   public Ast.Fn fn(Pos pos, Ast.Match... matchList) {
@@ -447,6 +450,10 @@ public enum AstBuilder {
 
   public Ast.FromStep where(Pos pos, Ast.Exp exp) {
     return new Ast.Where(pos, exp);
+  }
+
+  public Ast.FromStep yield(Pos pos, Ast.Exp exp) {
+    return new Ast.Yield(pos, exp);
   }
 }
 

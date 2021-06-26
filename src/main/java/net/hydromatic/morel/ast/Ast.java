@@ -1438,30 +1438,25 @@ public class Ast {
   public static class From extends Exp {
     public final Map<Pat, Exp> sources;
     public final ImmutableList<FromStep> steps;
-    public final Exp yieldExp;
-    /** The expression in the yield clause, or the default yield expression
-     * if not specified; never null. */
-    public final Exp yieldExpOrDefault;
+    /** An implicit yield expression, if the last step is not a {@link Yield};
+     * null if the last step is a {@link Yield}. */
+    public final @Nullable Exp implicitYieldExp;
 
     From(Pos pos, ImmutableMap<Pat, Exp> sources, ImmutableList<FromStep> steps,
-        @Nullable Exp yieldExp, Exp yieldExpOrDefault) {
+        @Nullable Exp implicitYieldExp) {
       super(pos, Op.FROM);
       this.sources = requireNonNull(sources);
       this.steps = requireNonNull(steps);
-      this.yieldExp = yieldExp;
-      this.yieldExpOrDefault = requireNonNull(yieldExpOrDefault);
-      Preconditions.checkArgument(yieldExp == null
-          || yieldExp == yieldExpOrDefault);
+      this.implicitYieldExp = implicitYieldExp;
     }
 
-    From(Pos pos, ImmutableMap<Pat, Exp> sources, ImmutableList<FromStep> steps,
-        @Nullable Exp yieldExp) {
-      this(pos, sources, steps, yieldExp,
-          defaultYieldExp(pos, sources, steps, yieldExp));
-    }
-
-    private static Exp defaultYieldExp(Pos pos, ImmutableMap<Pat, Exp> sources,
-        ImmutableList<FromStep> steps, @Nullable Exp yieldExp) {
+    static @Nullable Exp implicitYieldExp(Pos pos, Map<Pat, Exp> sources,
+        List<FromStep> steps) {
+      if (!steps.isEmpty()
+          && Iterables.getLast(steps) instanceof Ast.Yield) {
+        // No implicit yield is needed; the last step is an explicit yield
+        return null;
+      }
       final Set<Id> firstFields = new HashSet<>();
       sources.keySet().forEach(pat ->
           pat.visit(p -> {
@@ -1486,9 +1481,7 @@ public class Ast {
           fields = nextFields;
         }
       }
-      if (yieldExp != null) {
-        return yieldExp;
-      } else if (fields.size() == 1) {
+      if (fields.size() == 1) {
         return Iterables.getOnlyElement(fields);
       } else {
         final SortedMap<String, Exp> map = new TreeMap<>(ORDERING);
@@ -1517,23 +1510,18 @@ public class Ast {
           w.append(" ");
           step.unparse(w, 0, 0);
         }
-        if (yieldExp != null) {
-          w.append(" yield ").append(yieldExp, 0, 0);
-        }
         return w;
       }
     }
 
     /** Creates a copy of this {@code From} with given contents,
      * or {@code this} if the contents are the same. */
-    public From copy(Map<Pat, Exp> sources,
-        List<FromStep> steps, Exp yieldExp, Exp yieldExpOrDefault) {
+    public From copy(Map<Pat, Exp> sources, List<FromStep> steps,
+        @Nullable Exp implicitYieldExp) {
       return this.sources.equals(sources)
           && this.steps.equals(steps)
-          && Objects.equals(this.yieldExp, yieldExp)
-          && Objects.equals(this.yieldExpOrDefault, yieldExpOrDefault)
           ? this
-          : ast.from(pos, sources, steps, yieldExp, yieldExpOrDefault);
+          : ast.from(pos, sources, steps, implicitYieldExp);
     }
   }
 
@@ -1568,6 +1556,32 @@ public class Ast {
 
     public Where copy(Exp exp) {
       return this.exp.equals(exp) ? this : new Where(pos, exp);
+    }
+  }
+
+  /** A {@code yield} clause in a {@code from} expression. */
+  public static class Yield extends FromStep {
+    public final Exp exp;
+
+    Yield(Pos pos, Exp exp) {
+      super(pos, Op.YIELD);
+      this.exp = exp;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("yield ").append(exp, 0, 0);
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Yield copy(Exp exp) {
+      return this.exp.equals(exp) ? this : new Yield(pos, exp);
     }
   }
 

@@ -496,8 +496,7 @@ public class Resolver {
       sources.put(corePat, coreExp);
     });
 
-    return fromStepToCore(sources, bindings, from.steps,
-        ImmutableList.of(), from.yieldExpOrDefault);
+    return fromStepToCore(sources, bindings, from.steps, ImmutableList.of());
   }
 
   /** Returns a list with one element appended.
@@ -509,16 +508,9 @@ public class Resolver {
 
   private Core.From fromStepToCore(Map<Core.Pat, Core.Exp> sources,
       List<Binding> bindings, List<Ast.FromStep> steps,
-      List<Core.FromStep> coreSteps, Ast.Exp yieldExp) {
+      List<Core.FromStep> coreSteps) {
     final Resolver r = withEnv(bindings);
     if (steps.isEmpty()) {
-      final Core.Exp coreYieldExp = r.toCore(yieldExp);
-      final Core.Exp defaultYieldExp =
-          core.defaultYieldExp(typeMap.typeSystem, bindings, coreSteps);
-      if (!coreYieldExp.equals(defaultYieldExp)) {
-        coreSteps =
-            append(coreSteps, core.yield_(typeMap.typeSystem, coreYieldExp));
-      }
       return core.from(typeMap.typeSystem, sources, bindings, coreSteps);
     }
     final Ast.FromStep step = steps.get(0);
@@ -527,14 +519,21 @@ public class Resolver {
       final Ast.Where where = (Ast.Where) step;
       final Core.Where coreWhere = core.where(bindings, r.toCore(where.exp));
       return fromStepToCore(sources, coreWhere.bindings, Util.skip(steps),
-          append(coreSteps, coreWhere), yieldExp);
+          append(coreSteps, coreWhere));
+
+    case YIELD:
+      final Ast.Yield yield = (Ast.Yield) step;
+      final Core.Yield coreYield =
+          core.yield_(typeMap.typeSystem, r.toCore(yield.exp));
+      return fromStepToCore(sources, coreYield.bindings, Util.skip(steps),
+          append(coreSteps, coreYield));
 
     case ORDER:
       final Ast.Order order = (Ast.Order) step;
       final Core.Order coreOrder =
           core.order(bindings, transform(order.orderItems, r::toCore));
       return fromStepToCore(sources, coreOrder.bindings, Util.skip(steps),
-          append(coreSteps, coreOrder), yieldExp);
+          append(coreSteps, coreOrder));
 
     case GROUP:
       final Ast.Group group = (Ast.Group) step;
@@ -549,7 +548,7 @@ public class Resolver {
       final Core.Group coreGroup =
           core.group(groupExps.build(), aggregates.build());
       return fromStepToCore(sources, coreGroup.bindings, Util.skip(steps),
-          append(coreSteps, coreGroup), yieldExp);
+          append(coreSteps, coreGroup));
 
     default:
       throw new AssertionError("unknown step type " + step.op);

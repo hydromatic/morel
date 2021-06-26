@@ -35,6 +35,7 @@ import net.hydromatic.morel.util.Pair;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
@@ -373,6 +374,9 @@ public abstract class Codes {
   /** Returns a Code that returns a tuple consisting of the values of variables
    * "name0", ... "nameN" in the current environment. */
   public static Code getTuple(Iterable<String> names) {
+    if (Iterables.isEmpty(names)) {
+      return new ConstantCode(Unit.INSTANCE);
+    }
     return new GetTupleCode(ImmutableList.copyOf(names));
   }
 
@@ -481,8 +485,10 @@ public abstract class Codes {
   }
 
   /** Creates a {@link RowSink} for a non-terminal {@code yield} step. */
-  public static RowSink yieldRowSink(Code yieldCode, RowSink rowSink) {
-    return new YieldRowSink(yieldCode, rowSink);
+  public static RowSink yieldRowSink(Map<String, Code> yieldCodes,
+      RowSink rowSink) {
+    return new YieldRowSink(ImmutableList.copyOf(yieldCodes.keySet()),
+        ImmutableList.copyOf(yieldCodes.values()), rowSink);
   }
 
   /** Creates a {@link RowSink} to collect the results of a {@code from}
@@ -2324,23 +2330,32 @@ public abstract class Codes {
    * expressions (e.g. {@code int} expressions) do not have a name, and
    * therefore the value cannot be passed via the {@link EvalEnv}. */
   private static class YieldRowSink implements RowSink {
-    private final Code yieldCode;
+    private final ImmutableList<String> names;
+    private final ImmutableList<Code> codes;
     private final RowSink rowSink;
+    private final Object[] values;
 
-    YieldRowSink(Code yieldCode, RowSink rowSink) {
-      this.yieldCode = yieldCode;
+    YieldRowSink(ImmutableList<String> names, ImmutableList<Code> codes,
+        RowSink rowSink) {
+      this.names = names;
+      this.codes = codes;
       this.rowSink = rowSink;
+      this.values = new Object[names.size()];
     }
 
     @Override public Describer describe(Describer describer) {
       return describer.start("yield", d ->
-          d.arg("code", yieldCode)
+          d.arg("codes", codes)
               .arg("sink", rowSink));
     }
 
     @Override public void accept(EvalEnv env) {
-      yieldCode.eval(env);
-      rowSink.accept(env);
+      final MutableEvalEnv env2 = env.bindMutableArray(names);
+      for (int i = 0; i < codes.size(); i++) {
+        values[i] = codes.get(i).eval(env);
+      }
+      env2.set(values);
+      rowSink.accept(env2);
     }
 
     @Override public List<Object> result(EvalEnv env) {
