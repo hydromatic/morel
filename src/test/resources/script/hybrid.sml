@@ -46,7 +46,7 @@ Sys.plan();
 (*) Query in Hybrid mode (90% Calcite; Calcite code references a variable
 (*) and an expression from the enclosing environment)
 let
-  val ten = 10
+  val ten = 7 + 3
   val deptNos = ten :: 20 :: 30 :: [40]
 in
   from e in scott.emp

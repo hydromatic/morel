@@ -331,9 +331,10 @@ public class AlgebraTest {
   }
 
   /** Tests a query that is executed in Calcite except for a variable, 'five',
-   * whose value happens to always be 5. */
+   * whose value happens to always be '2 + 3'. */
   @Test void testCalciteWithVariable() {
-    final String plan = "let(matchCode0 match(five, constant(5)), "
+    final String plan = "let(matchCode0 match(five, "
+        + "apply(fnValue +, argCode tuple(constant(2), constant(3)))), "
         + "resultCode calcite(plan "
         + "LogicalProject(d5=[+($1, morelScalar('five', '{\n"
         + "  \"type\": \"INTEGER\",\n"
@@ -355,8 +356,9 @@ public class AlgebraTest {
   }
 
   @Test void testCalciteWithVariableNoInlining() {
-    final String plan = "let(matchCode0 match(five, constant(5)), resultCode "
-        + "let(matchCode0 match(ten, "
+    final String plan = "let(matchCode0 match(five, "
+        + "apply(fnValue +, argCode tuple(constant(2), constant(3)))), "
+        + "resultCode let(matchCode0 match(ten, "
         + "apply(fnValue +, argCode tuple(get(name five), get(name five)))), "
         + "resultCode calcite(plan "
         + "LogicalProject(d5=[+($1, morelScalar('five', '{\n"
@@ -375,7 +377,7 @@ public class AlgebraTest {
 
   private void checkCalciteWithVariable(int inlinePassCount, String plan) {
     final String ml = "let\n"
-        + "  val five = 5\n"
+        + "  val five = 2 + 3\n"
         + "  val ten = five + five\n"
         + "in\n"
         + "  from e in scott.emp\n"

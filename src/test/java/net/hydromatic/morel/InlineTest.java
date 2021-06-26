@@ -33,23 +33,24 @@ public class InlineTest {
   @Test void testAnalyze() {
     final String ml = "let\n"
         + "  val aUnused = 0\n"
-        + "  val bOnce = 1\n"
-        + "  val cOnce = 2\n"
-        + "  val dOnce = 3\n"
+        + "  val bOnce = 1 + 1\n"
+        + "  val cOnce = 2 + 2\n"
+        + "  val dOnce = 3 + 3\n"
         + "  val eTwice = bOnce + cOnce\n"
-        + "  val fMultiSafe = dOnce\n"
+        + "  val fMultiSafe = dOnce + 4\n"
+        + "  val gAtomic = 5\n"
         + "  val x = [1, 2]\n"
         + "  val z = case x of\n"
-        + "     []            => fMultiSafe + 1\n"
+        + "     []            => fMultiSafe + gAtomic\n"
         + "   | 1 :: x2 :: x3 => 2\n"
-        + "   | x0 :: xs      => fMultiSafe + x0\n"
+        + "   | x0 :: xs      => fMultiSafe + x0 + gAtomic\n"
         + "in\n"
         + "  eTwice + eTwice\n"
         + "end";
     final String map = "{aUnused=DEAD, bOnce=ONCE_SAFE, cOnce=ONCE_SAFE, "
         + "dOnce=ONCE_SAFE, eTwice=MULTI_UNSAFE, fMultiSafe=MULTI_SAFE, "
-        + "it=MULTI_UNSAFE, op +=MULTI_UNSAFE, x=ONCE_SAFE, x0=ONCE_SAFE, "
-        + "x2=DEAD, x3=DEAD, xs=DEAD, z=DEAD}";
+        + "gAtomic=ATOMIC, it=MULTI_UNSAFE, op +=MULTI_UNSAFE, "
+        + "x=ONCE_SAFE, x0=ONCE_SAFE, x2=DEAD, x3=DEAD, xs=DEAD, z=DEAD}";
     ml(ml)
         .assertAnalyze(is(map));
   }
@@ -80,6 +81,21 @@ public class InlineTest {
     final String core = "fn v0 => #size String \"abc\"";
     ml(ml)
         .assertEval(whenAppliedTo(list(), is(3)))
+        .assertCoreString(is(core));
+  }
+
+  /** We inline a variable (y), even though it is used twice, because its
+   * value is atomic (x). */
+  @Test void testLetAtomic() {
+    final String ml = "fun f x =\n"
+        + "  let\n"
+        + "    val y = x\n"
+        + "  in\n"
+        + "    y + 1 + y\n"
+        + "  end";
+    final String core = "fn x => x + 1 + x";
+    ml(ml)
+        .assertEval(whenAppliedTo(2, is(5)))
         .assertCoreString(is(core));
   }
 

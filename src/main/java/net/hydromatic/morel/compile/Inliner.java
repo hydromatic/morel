@@ -79,6 +79,7 @@ public class Inliner extends EnvShuttle {
             analysis == null ? Analyzer.Use.MULTI_UNSAFE
                 : analysis.map.get(id.idPat);
         switch (use) {
+        case ATOMIC:
         case ONCE_SAFE:
           return binding.exp.accept(this);
         }
@@ -149,6 +150,7 @@ public class Inliner extends EnvShuttle {
       // This declaration has no uses; remove it
       return let.exp;
 
+    case ATOMIC:
     case ONCE_SAFE:
       // This declaration has one use; remove the declaration, and replace its
       // use inside the expression.

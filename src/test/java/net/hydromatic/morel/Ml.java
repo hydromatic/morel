@@ -279,7 +279,7 @@ class Ml {
     Core.ValDecl valDecl4 = valDecl3;
     for (int i = 0; i < inlineCount; i++) {
       final Analyzer.Analysis analysis =
-          Analyzer.analyze(typeSystem, env, valDecl3);
+          Analyzer.analyze(typeSystem, env, valDecl4);
       final Inliner inliner = Inliner.of(typeSystem, env, analysis);
       final Core.ValDecl valDecl5 = valDecl4;
       valDecl4 = valDecl5.accept(inliner);

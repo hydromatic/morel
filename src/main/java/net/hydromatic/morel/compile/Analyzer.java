@@ -96,6 +96,29 @@ public class Analyzer extends EnvVisitor {
     return map.computeIfAbsent(name, k -> new MutableUse());
   }
 
+  @Override protected void visit(Core.ValDecl valDecl) {
+    super.visit(valDecl);
+    if (isAtom(valDecl.exp)) {
+      use(valDecl.pat).atomic = true;
+    }
+  }
+
+
+  private static boolean isAtom(Core.Exp exp) {
+    switch (exp.op) {
+    case ID:
+    case BOOL_LITERAL:
+    case CHAR_LITERAL:
+    case INT_LITERAL:
+    case REAL_LITERAL:
+    case STRING_LITERAL:
+    case UNIT_LITERAL:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   @Override protected void visit(Core.Case kase) {
     kase.exp.accept(this);
     if (kase.matchList.size() == 1) {
@@ -148,6 +171,11 @@ public class Analyzer extends EnvVisitor {
      * it duplicates neither code nor work. */
     ONCE_SAFE,
 
+    /** The binding is an atom (variable or literal). Regardless of how many
+     * times it is used, inlining is unconditionally safe;
+     * it duplicates neither code nor work. */
+    ATOMIC,
+
     /** The binding occurs at most once in each of several distinct case
      * branches; none of these occurrences is inside a lambda. For example:
      *
@@ -191,6 +219,7 @@ public class Analyzer extends EnvVisitor {
    * have been found, call {@link #fix} to convert this into a {@link Use}. */
   private static class MutableUse {
     boolean top;
+    boolean atomic;
     boolean parallel;
     int useCount;
 
@@ -209,6 +238,7 @@ public class Analyzer extends EnvVisitor {
     Use fix() {
       return top ? Use.MULTI_UNSAFE
           : useCount == 0 ? Use.DEAD
+          : atomic ? Use.ATOMIC
           : useCount == 1 ? (parallel ? Use.MULTI_SAFE : Use.ONCE_SAFE)
           : Use.MULTI_UNSAFE;
     }
