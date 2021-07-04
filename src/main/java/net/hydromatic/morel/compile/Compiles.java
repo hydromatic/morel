@@ -36,6 +36,7 @@ import com.google.common.collect.ImmutableMap;
 
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
@@ -57,14 +58,15 @@ public abstract class Compiles {
    * compiles it to code that can be evaluated by the interpreter.
    */
   public static CompiledStatement prepareStatement(TypeSystem typeSystem,
-      Session session, Environment env, AstNode statement) {
+      Session session, Environment env, AstNode statement,
+      @Nullable Calcite calcite) {
     Ast.Decl decl;
     if (statement instanceof Ast.Exp) {
       decl = toValDecl((Ast.Exp) statement);
     } else {
       decl = (Ast.Decl) statement;
     }
-    return prepareDecl(typeSystem, session, env, decl);
+    return prepareDecl(typeSystem, session, env, calcite, decl);
   }
 
   /**
@@ -72,7 +74,8 @@ public abstract class Compiles {
    * code that can be evaluated by the interpreter.
    */
   private static CompiledStatement prepareDecl(TypeSystem typeSystem,
-      Session session, Environment env, Ast.Decl decl) {
+      Session session, Environment env, @Nullable Calcite calcite,
+      Ast.Decl decl) {
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, decl, typeSystem);
     final boolean hybrid = Prop.HYBRID.booleanValue(session.map);
@@ -102,7 +105,9 @@ public abstract class Compiles {
     }
     final Compiler compiler;
     if (hybrid) {
-      final Calcite calcite = Calcite.withDataSets(ImmutableMap.of());
+      if (calcite == null) {
+        calcite = Calcite.withDataSets(ImmutableMap.of());
+      }
       compiler = new CalciteCompiler(typeSystem, calcite);
     } else {
       compiler = new Compiler(typeSystem);

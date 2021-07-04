@@ -26,6 +26,7 @@ import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.util.ThreadLocals;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -33,10 +34,14 @@ import org.apache.calcite.interpreter.Interpreter;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.QueryProvider;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.Frameworks;
+import org.apache.calcite.tools.Program;
+import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 
 import java.util.List;
@@ -77,7 +82,15 @@ public class Calcite {
   /** Creates a {@code Code} that evaluates a Calcite relational expression,
    * converting it to Morel list type {@code type}. */
   public Code code(Environment env, RelNode rel, Type type) {
-    return new CalciteCode(dataContext, rel, type, env);
+    // Transform the relational expression, converting sub-queries. For example,
+    // RexSubQuery.IN becomes a Join.
+    final Program program = Programs.SUB_QUERY_PROGRAM;
+    final RelOptPlanner planner = rel.getCluster().getPlanner();
+    final RelTraitSet traitSet = rel.getCluster().traitSet();
+    final RelNode rel2 = program.run(planner, rel, traitSet,
+        ImmutableList.of(), ImmutableList.of());
+
+    return new CalciteCode(dataContext, rel2, type, env);
   }
 
   /** Extension to Calcite context that remembers the foreign value

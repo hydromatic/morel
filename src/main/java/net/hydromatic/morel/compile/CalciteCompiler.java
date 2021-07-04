@@ -57,6 +57,7 @@ import org.apache.calcite.rel.externalize.RelJson;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSubQuery;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -82,10 +83,18 @@ import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 
+import static java.util.Objects.requireNonNull;
+
 /** Compiles an expression to code that can be evaluated. */
 public class CalciteCompiler extends Compiler {
-  /** Morel operators and their exact equivalents in Calcite. */
-  static final Map<BuiltIn, SqlOperator> INFIX_OPERATORS =
+  /** Morel prefix and suffix operators and their exact equivalents in Calcite. */
+  static final Map<BuiltIn, SqlOperator> UNARY_OPERATORS =
+      ImmutableMap.<BuiltIn, SqlOperator>builder()
+          .put(BuiltIn.NOT, SqlStdOperatorTable.NOT)
+          .build();
+
+  /** Morel infix operators and their exact equivalents in Calcite. */
+  static final Map<BuiltIn, SqlOperator> BINARY_OPERATORS =
       ImmutableMap.<BuiltIn, SqlOperator>builder()
           .put(BuiltIn.OP_EQ, SqlStdOperatorTable.EQUALS)
           .put(BuiltIn.OP_NE, SqlStdOperatorTable.NOT_EQUALS)
@@ -94,6 +103,8 @@ public class CalciteCompiler extends Compiler {
           .put(BuiltIn.OP_GT, SqlStdOperatorTable.GREATER_THAN)
           .put(BuiltIn.OP_GE, SqlStdOperatorTable.GREATER_THAN_OR_EQUAL)
           .put(BuiltIn.OP_NEGATE, SqlStdOperatorTable.UNARY_MINUS)
+          .put(BuiltIn.OP_ELEM, SqlStdOperatorTable.IN)
+          .put(BuiltIn.OP_NOT_ELEM, SqlStdOperatorTable.NOT_IN)
           .put(BuiltIn.Z_NEGATE_INT, SqlStdOperatorTable.UNARY_MINUS)
           .put(BuiltIn.Z_NEGATE_REAL, SqlStdOperatorTable.UNARY_MINUS)
           .put(BuiltIn.OP_PLUS, SqlStdOperatorTable.PLUS)
@@ -118,7 +129,7 @@ public class CalciteCompiler extends Compiler {
 
   public CalciteCompiler(TypeSystem typeSystem, Calcite calcite) {
     super(typeSystem);
-    this.calcite = calcite;
+    this.calcite = requireNonNull(calcite, "calcite");
   }
 
   public @Nullable RelNode toRel(Environment env, Core.Exp expression) {
@@ -542,11 +553,34 @@ public class CalciteCompiler extends Compiler {
       switch (apply.fn.op) {
       case FN_LITERAL:
         BuiltIn op = (BuiltIn) ((Core.Literal) apply.fn).value;
-        final SqlOperator operator = INFIX_OPERATORS.get(op);
-        if (operator != null) {
+
+        // Is it a unary operator with a Calcite equivalent? E.g. not => NOT
+        final SqlOperator unaryOp = UNARY_OPERATORS.get(op);
+        if (unaryOp != null) {
+          return cx.relBuilder.call(unaryOp, translate(cx, apply.arg));
+        }
+
+        // Is it a binary operator with a Calcite equivalent? E.g. + => PLUS
+        final SqlOperator binaryOp = BINARY_OPERATORS.get(op);
+        if (binaryOp != null) {
           assert apply.arg.op == Op.TUPLE;
-          return cx.relBuilder.call(operator,
-              translateList(cx, ((Core.Tuple) apply.arg).args));
+          final List<Core.Exp> args = ((Core.Tuple) apply.arg).args;
+          switch (op) {
+          case OP_ELEM:
+          case OP_NOT_ELEM:
+            final RelNode r = toRel2(cx, args.get(1));
+            if (r != null) {
+              final RexNode e = translate(cx, args.get(0));
+              final RexSubQuery in = RexSubQuery.in(r, ImmutableList.of(e));
+              switch (op) {
+              case OP_NOT_ELEM:
+                return cx.relBuilder.not(in);
+              default:
+                return in;
+              }
+            }
+          }
+          return cx.relBuilder.call(binaryOp, translateList(cx, args));
         }
       }
       if (apply.fn instanceof Core.RecordSelector

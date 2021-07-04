@@ -123,7 +123,8 @@ public class Main {
           out.write("\n");
         }
         final CompiledStatement compiled =
-            Compiles.prepareStatement(typeSystem, session, env, statement);
+            Compiles.prepareStatement(typeSystem, session, env, statement,
+                null);
         compiled.eval(session, env, lines, bindings);
         for (String line : lines) {
           out.write(line);

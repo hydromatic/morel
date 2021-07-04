@@ -22,6 +22,7 @@ import net.hydromatic.morel.eval.Unit;
 
 import org.junit.jupiter.api.Test;
 
+import static net.hydromatic.morel.Matchers.isCode;
 import static net.hydromatic.morel.Matchers.isUnordered;
 import static net.hydromatic.morel.Matchers.list;
 import static net.hydromatic.morel.Matchers.whenAppliedTo;
@@ -63,7 +64,7 @@ public class InlineTest {
     final String plan = "match(x, apply(fnValue +, argCode "
         + "tuple(apply(fnValue +, argCode tuple(get(name x), constant(1))), "
         + "constant(2))))";
-    ml(ml).assertPlan(is(plan));
+    ml(ml).assertPlan(isCode(plan));
   }
 
   @Test void testInlineFn() {
@@ -75,7 +76,7 @@ public class InlineTest {
         + "  end";
     final String plan =
         "match(x, apply(fnValue +, argCode tuple(get(name x), constant(1))))";
-    ml(ml).assertPlan(is(plan))
+    ml(ml).assertPlan(isCode(plan))
         .assertEval(whenAppliedTo(2, is(3)));
   }
 

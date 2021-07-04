@@ -37,8 +37,9 @@ just because they take effort to build.
 Contributions are welcome!
 
 In Morel but not Standard ML:
-* `from` expression
-* `union`, `except`, `intersect`, `inside`, `elem`, `notElem` operators
+* `from` expression with `where`, `group`, `order`, `yield` clauses
+  (and `compute`, `desc` sub-clauses)
+* `union`, `except`, `intersect`, `elem`, `notElem` operators
 * "*lab* `=`" is optional in `exprow`
 
 In Standard ML but not in Morel:

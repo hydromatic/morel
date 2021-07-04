@@ -21,6 +21,7 @@ package net.hydromatic.morel;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 
 import com.google.common.collect.ImmutableMultiset;
@@ -73,6 +74,28 @@ public abstract class Matchers {
         assertThat(clazz.isInstance(t), is(true));
         final String s = t.toString();
         return s.equals(expected) && s.equals(t.toString());
+      }
+    };
+  }
+
+  /** Matches an Code node by its string representation. */
+  static Matcher<Code> isCode(String expected) {
+    return new CustomTypeSafeMatcher<Code>("code " + expected) {
+      protected boolean matchesSafely(Code code) {
+        final String plan = Codes.describe(code);
+        return plan.equals(expected);
+      }
+    };
+  }
+
+  /** Matches a Code if it is wholly within Calcite. */
+  static Matcher<Code> isFullyCalcite() {
+    return new CustomTypeSafeMatcher<Code>("code is all Calcite") {
+      protected boolean matchesSafely(Code code) {
+        final String plan = Codes.describe(code);
+        return plan.startsWith("calcite(") // instanceof CalciteCode
+            && !plan.contains("morelScalar")
+            && !plan.contains("morelTable");
       }
     };
   }

@@ -60,6 +60,8 @@ import static net.hydromatic.morel.ast.Ast.Direction.DESC;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 
+import static java.util.Objects.requireNonNull;
+
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
   protected static final EvalEnv EMPTY_ENV = Codes.emptyEnv();
@@ -67,7 +69,7 @@ public class Compiler {
   protected final TypeSystem typeSystem;
 
   public Compiler(TypeSystem typeSystem) {
-    this.typeSystem = typeSystem;
+    this.typeSystem = requireNonNull(typeSystem, "typeSystem");
   }
 
   CompiledStatement compileStatement(Environment env, Core.Decl decl) {

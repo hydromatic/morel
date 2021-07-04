@@ -1285,7 +1285,6 @@ AstNode statementSemicolon() :
 | < VAL: "VAL" >
 
 // The following are relational extensions:
-| < AS: "AS" >
 | < COMPUTE: "COMPUTE" >
 | < DESC: "DESC" >
 | < FROM: "FROM" >

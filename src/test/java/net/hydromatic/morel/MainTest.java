@@ -37,6 +37,7 @@ import java.util.Collections;
 
 import static net.hydromatic.morel.Matchers.equalsOrdered;
 import static net.hydromatic.morel.Matchers.equalsUnordered;
+import static net.hydromatic.morel.Matchers.isCode;
 import static net.hydromatic.morel.Matchers.isLiteral;
 import static net.hydromatic.morel.Matchers.isUnordered;
 import static net.hydromatic.morel.Matchers.list;
@@ -764,7 +765,7 @@ public class MainTest {
         .assertEval(whenAppliedTo(0, is(false)))
         .assertEval(whenAppliedTo(10, is(false)))
         .assertEval(whenAppliedTo(15, is(false)))
-        .assertPlan(is(plan));
+        .assertPlan(isCode(plan));
   }
 
   /** Tests a function in a let. (From <a
@@ -787,7 +788,7 @@ public class MainTest {
     ml(ml)
         // g (4, 3, 2) = (4 + 3) * 3 - 2 = 19
         .assertEval(whenAppliedTo(list(4, 3, 2), is(19)))
-        .assertPlan(is(plan));
+        .assertPlan(isCode(plan));
   }
 
   /** Tests that name capture does not occur during inlining.
@@ -1620,7 +1621,7 @@ public class MainTest {
         + "get(name sb)))))";
     ml(ml).assertParse(expected)
         .assertEvalIter(equalsOrdered(list(2, 4, 3)))
-        .assertPlan(is(plan));
+        .assertPlan(isCode(plan));
   }
 
   @Test void testJoinGroup() {
