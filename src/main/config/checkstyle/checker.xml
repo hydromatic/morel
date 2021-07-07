@@ -125,7 +125,7 @@ License.
       <property name="allowStaticMemberImports" value="true"/>
     </module>
     <module name="ImportOrder">
-      <property name="groups" value="org.apache.calcite,org.apache,au.com.,com.,io.,mondrian.,net.,org.,scala.,/^javax?\./"/>
+      <property name="groups" value="net.hydromatic.morel,*,/^javax?/"/>
       <property name="ordered" value="true"/>
       <property name="separated" value="true"/>
       <property name="option" value="bottom"/>

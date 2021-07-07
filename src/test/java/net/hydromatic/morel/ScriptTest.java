@@ -18,12 +18,11 @@
  */
 package net.hydromatic.morel;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.PatternFilenameFilter;
-
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.ForeignValue;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.PatternFilenameFilter;
 import org.incava.diff.Diff;
 import org.incava.diff.Difference;
 import org.junit.jupiter.params.ParameterizedTest;

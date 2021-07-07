@@ -18,11 +18,6 @@
  */
 package net.hydromatic.morel.ast;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Iterables;
-
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Resolver;
 import net.hydromatic.morel.eval.Closure;
@@ -38,6 +33,11 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Iterables;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -48,10 +48,10 @@ import java.util.function.Function;
 import java.util.function.ObjIntConsumer;
 import javax.annotation.Nullable;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.ast.Pos.ZERO;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 import static java.util.Objects.requireNonNull;
 

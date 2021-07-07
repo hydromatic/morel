@@ -18,11 +18,10 @@
  */
 package net.hydromatic.morel.foreign;
 
+import com.google.common.base.Suppliers;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.Interpreter;
 import org.apache.calcite.rel.RelNode;
-
-import com.google.common.base.Suppliers;
 
 import java.util.AbstractList;
 import java.util.List;

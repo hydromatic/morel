@@ -18,6 +18,14 @@
  */
 package net.hydromatic.morel.foreign;
 
+import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.eval.Code;
+import net.hydromatic.morel.eval.Describer;
+import net.hydromatic.morel.eval.EvalEnv;
+import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.util.ThreadLocals;
+
+import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.interpreter.Interpreter;
@@ -29,15 +37,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.RelBuilder;
-
-import com.google.common.collect.ImmutableMap;
-
-import net.hydromatic.morel.compile.Environment;
-import net.hydromatic.morel.eval.Code;
-import net.hydromatic.morel.eval.Describer;
-import net.hydromatic.morel.eval.EvalEnv;
-import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.util.ThreadLocals;
 
 import java.util.List;
 import java.util.Map;

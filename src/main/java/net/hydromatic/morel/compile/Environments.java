@@ -18,9 +18,6 @@
  */
 package net.hydromatic.morel.compile;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
@@ -30,6 +27,9 @@ import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Static;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import java.util.ArrayList;
 import java.util.List;

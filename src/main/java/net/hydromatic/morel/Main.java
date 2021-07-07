@@ -18,8 +18,6 @@
  */
 package net.hydromatic.morel;
 
-import com.google.common.collect.ImmutableMap;
-
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
@@ -31,6 +29,8 @@ import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
+
+import com.google.common.collect.ImmutableMap;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

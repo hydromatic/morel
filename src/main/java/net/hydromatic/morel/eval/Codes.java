@@ -18,17 +18,6 @@
  */
 package net.hydromatic.morel.eval;
 
-import org.apache.calcite.runtime.FlatLists;
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Chars;
-
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
@@ -42,6 +31,16 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.Ordering;
+import com.google.common.primitives.Chars;
+import org.apache.calcite.runtime.FlatLists;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -18,12 +18,12 @@
  */
 package net.hydromatic.morel.compile;
 
-import com.google.common.collect.ImmutableList;
-
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Shuttle;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
+
+import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

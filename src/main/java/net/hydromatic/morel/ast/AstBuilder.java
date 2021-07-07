@@ -18,14 +18,14 @@
  */
 package net.hydromatic.morel.ast;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
-
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.util.Pair;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 
 import java.math.BigDecimal;
 import java.util.List;

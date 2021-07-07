@@ -18,11 +18,6 @@
  */
 package net.hydromatic.morel.compile;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Lists;
-
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
@@ -30,6 +25,11 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Unifier;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Comparator;

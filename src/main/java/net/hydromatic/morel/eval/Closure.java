@@ -18,12 +18,11 @@
  */
 package net.hydromatic.morel.eval;
 
-import org.apache.calcite.util.Util;
-
-import com.google.common.collect.ImmutableList;
-
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.util.Pair;
+
+import com.google.common.collect.ImmutableList;
+import org.apache.calcite.util.Util;
 
 import java.math.BigDecimal;
 import java.util.List;

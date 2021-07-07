@@ -18,9 +18,9 @@
  */
 package net.hydromatic.morel.type;
 
-import com.google.common.collect.ImmutableSortedMap;
-
 import net.hydromatic.morel.ast.Op;
+
+import com.google.common.collect.ImmutableSortedMap;
 
 import java.util.Locale;
 import java.util.SortedMap;

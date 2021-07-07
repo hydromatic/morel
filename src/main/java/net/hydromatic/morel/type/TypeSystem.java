@@ -18,17 +18,17 @@
  */
 package net.hydromatic.morel.type;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.util.ComparableSingletonList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import java.util.Arrays;
 import java.util.HashMap;

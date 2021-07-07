@@ -18,6 +18,19 @@
  */
 package net.hydromatic.morel.foreign;
 
+import net.hydromatic.morel.eval.Unit;
+import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.ListType;
+import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RecordLikeType;
+import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.type.TupleType;
+import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.Pair;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.EnumerableDefaults;
@@ -29,20 +42,6 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableNullableList;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-
-import net.hydromatic.morel.eval.Unit;
-import net.hydromatic.morel.type.DataType;
-import net.hydromatic.morel.type.ListType;
-import net.hydromatic.morel.type.PrimitiveType;
-import net.hydromatic.morel.type.RecordLikeType;
-import net.hydromatic.morel.type.RecordType;
-import net.hydromatic.morel.type.TupleType;
-import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.util.Ord;
-import net.hydromatic.morel.util.Pair;
 
 import java.math.BigDecimal;
 import java.sql.Date;

@@ -18,14 +18,13 @@
  */
 package net.hydromatic.morel;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-
 import net.hydromatic.morel.util.MartelliUnifier;
 import net.hydromatic.morel.util.RobinsonUnifier;
 import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.Unifier;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 

@@ -18,15 +18,13 @@
  */
 package net.hydromatic.morel;
 
-import org.apache.calcite.util.Util;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.TypeVar;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.util.Util;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 

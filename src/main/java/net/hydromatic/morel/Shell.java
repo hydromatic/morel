@@ -18,9 +18,6 @@
  */
 package net.hydromatic.morel;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.CompiledStatement;
@@ -36,6 +33,8 @@ import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;

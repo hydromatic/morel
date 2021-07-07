@@ -18,9 +18,9 @@
  */
 package net.hydromatic.morel.type;
 
-import com.google.common.collect.ImmutableList;
-
 import net.hydromatic.morel.ast.Op;
+
+import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 import java.util.Objects;

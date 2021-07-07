@@ -18,20 +18,19 @@
  */
 package net.hydromatic.morel.foreign;
 
+import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.Ord;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.tools.RelBuilder;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedMap;
-
-import net.hydromatic.morel.type.RecordType;
-import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.Ord;
 
 import java.util.List;
 import java.util.Locale;

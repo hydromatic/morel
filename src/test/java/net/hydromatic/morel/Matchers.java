@@ -18,16 +18,15 @@
  */
 package net.hydromatic.morel;
 
-import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Sets;
-
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Codes;
 
+import com.google.common.collect.ImmutableMultiset;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Sets;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Description;

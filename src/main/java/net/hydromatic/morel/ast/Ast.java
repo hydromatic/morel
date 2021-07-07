@@ -18,14 +18,14 @@
  */
 package net.hydromatic.morel.ast;
 
+import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.Pair;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
-
-import net.hydromatic.morel.util.Ord;
-import net.hydromatic.morel.util.Pair;
 
 import java.util.HashSet;
 import java.util.List;

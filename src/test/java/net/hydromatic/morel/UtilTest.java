@@ -18,9 +18,6 @@
  */
 package net.hydromatic.morel;
 
-import org.apache.calcite.util.ImmutableIntList;
-import org.apache.calcite.util.Util;
-
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.util.Folder;
@@ -29,6 +26,8 @@ import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
 
+import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Util;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

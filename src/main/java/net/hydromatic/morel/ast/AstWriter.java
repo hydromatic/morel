@@ -18,9 +18,9 @@
  */
 package net.hydromatic.morel.ast;
 
-import com.google.common.collect.Lists;
-
 import net.hydromatic.morel.compile.BuiltIn;
+
+import com.google.common.collect.Lists;
 
 import java.math.BigDecimal;
 import java.util.List;

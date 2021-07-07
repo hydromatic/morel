@@ -18,15 +18,15 @@
  */
 package net.hydromatic.morel;
 
-import org.apache.calcite.adapter.jdbc.JdbcSchema;
-import org.apache.calcite.schema.SchemaPlus;
-
-import net.hydromatic.foodmart.data.hsqldb.FoodmartHsqldb;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.CalciteForeignValue;
 import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.foreign.ForeignValue;
+
+import net.hydromatic.foodmart.data.hsqldb.FoodmartHsqldb;
 import net.hydromatic.scott.data.hsqldb.ScottHsqldb;
+import org.apache.calcite.adapter.jdbc.JdbcSchema;
+import org.apache.calcite.schema.SchemaPlus;
 
 import java.util.AbstractMap;
 import java.util.Locale;

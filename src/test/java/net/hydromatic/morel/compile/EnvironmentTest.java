@@ -18,10 +18,9 @@
  */
 package net.hydromatic.morel.compile;
 
-import com.google.common.collect.ImmutableSet;
-
 import net.hydromatic.morel.type.PrimitiveType;
 
+import com.google.common.collect.ImmutableSet;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;

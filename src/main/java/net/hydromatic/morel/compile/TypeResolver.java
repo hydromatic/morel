@@ -18,14 +18,6 @@
  */
 package net.hydromatic.morel.compile;
 
-import org.apache.calcite.util.Util;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Pos;
@@ -49,6 +41,13 @@ import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.Unifier;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import org.apache.calcite.util.Util;
 
 import java.util.AbstractList;
 import java.util.ArrayList;

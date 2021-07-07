@@ -18,6 +18,23 @@
  */
 package net.hydromatic.morel.foreign;
 
+import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.compile.Compiler;
+import net.hydromatic.morel.compile.Compiles;
+import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.compile.Resolver;
+import net.hydromatic.morel.compile.TypeResolver;
+import net.hydromatic.morel.eval.Closure;
+import net.hydromatic.morel.eval.Code;
+import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.EvalEnv;
+import net.hydromatic.morel.eval.Session;
+import net.hydromatic.morel.parse.MorelParserImpl;
+import net.hydromatic.morel.parse.ParseException;
+import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeSystem;
+
 import org.apache.calcite.DataContext;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.linq4j.Enumerable;
@@ -46,23 +63,6 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlUserDefinedFunction;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableFunction;
-
-import net.hydromatic.morel.ast.Ast;
-import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.compile.Compiler;
-import net.hydromatic.morel.compile.Compiles;
-import net.hydromatic.morel.compile.Environment;
-import net.hydromatic.morel.compile.Resolver;
-import net.hydromatic.morel.compile.TypeResolver;
-import net.hydromatic.morel.eval.Closure;
-import net.hydromatic.morel.eval.Code;
-import net.hydromatic.morel.eval.Codes;
-import net.hydromatic.morel.eval.EvalEnv;
-import net.hydromatic.morel.eval.Session;
-import net.hydromatic.morel.parse.MorelParserImpl;
-import net.hydromatic.morel.parse.ParseException;
-import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.type.TypeSystem;
 
 import java.io.IOException;
 import java.io.StringReader;

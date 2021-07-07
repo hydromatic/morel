@@ -18,12 +18,12 @@
  */
 package net.hydromatic.morel.type;
 
+import net.hydromatic.morel.ast.Op;
+
 import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-
-import net.hydromatic.morel.ast.Op;
 
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;

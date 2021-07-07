@@ -18,12 +18,6 @@
  */
 package net.hydromatic.morel.compile;
 
-import org.apache.calcite.util.Util;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
-
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
@@ -37,6 +31,11 @@ import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.util.ConsList;
 import net.hydromatic.morel.util.Pair;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import org.apache.calcite.util.Util;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
