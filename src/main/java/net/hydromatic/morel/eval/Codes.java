@@ -2211,8 +2211,17 @@ public abstract class Codes {
       for (String name : outNames) {
         env2 = groupEnvs[i++] = env2.bindMutable(name);
       }
-      for (Map.Entry<Object, List<Object>> entry
-          : Multimaps.asMap(map).entrySet()) {
+      final Map<Object, List<Object>> map2;
+      if (map.isEmpty()
+          && keyCode instanceof TupleCode
+          && ((TupleCode) keyCode).codes.isEmpty()) {
+        // There are no keys, and there were no input rows.
+        map2 = ImmutableMap.of(ImmutableList.of(), ImmutableList.of());
+      } else {
+        //noinspection UnstableApiUsage
+        map2 = Multimaps.asMap(map);
+      }
+      for (Map.Entry<Object, List<Object>> entry : map2.entrySet()) {
         final List list = (List) entry.getKey();
         for (i = 0; i < list.size(); i++) {
           groupEnvs[i].set(list.get(i));

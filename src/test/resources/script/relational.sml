@@ -344,6 +344,20 @@ group e.deptno;
 from e in emps
 group e.deptno, idMod2 = e.id mod 2;
 
+(*) 'group' with empty key produces one output row
+from e in emps
+group compute count, sid = sum of e.id;
+
+(*) 'group' with empty key produces one output row even if input is empty
+from e in emps
+where false
+group compute count;
+
+(*) 'group' with empty key, empty input, no aggregate functions
+from e in emps
+where false
+group;
+
 (*) 'group' with 'where' and complex argument to 'sum'
 from e in emps
 where e.deptno < 30

@@ -535,6 +535,26 @@ val it =
    {deptno=20,idMod2=1}] : {deptno:int, idMod2:int} list
 
 
+(*) 'group' with empty key produces one output row
+from e in emps
+group compute count, sid = sum of e.id;
+val it = [{count=4,sid=406}] : {count:int, sid:int} list
+
+
+(*) 'group' with empty key produces one output row even if input is empty
+from e in emps
+where false
+group compute count;
+val it = [0] : int list
+
+
+(*) 'group' with empty key, empty input, no aggregate functions
+from e in emps
+where false
+group;
+val it = [()] : unit list
+
+
 (*) 'group' with 'where' and complex argument to 'sum'
 from e in emps
 where e.deptno < 30
