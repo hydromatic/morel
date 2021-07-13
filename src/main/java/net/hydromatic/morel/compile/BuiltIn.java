@@ -753,6 +753,27 @@ public enum BuiltIn {
   RELATIONAL_NOT_EXISTS("Relational", "notExists", "notExists", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
 
+  /** Function "Relational.only", aka "only", of type "&alpha; list
+   * &rarr; &alpha;".
+   *
+   * <p>"only list" returns the only element of {@code list}. It raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty}
+   * if {@code list} is nil,
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
+   * if {@code list} has more than one element.
+   *
+   * <p>"only" allows you to write the equivalent of a scalar sub-query:
+   *
+   * <pre>{@code
+   * from e in emps
+   * yield {e.ename, dname = only (from d in depts
+   *                               where d.deptno = e.deptno
+   *                               yield d.dname)}
+   * }</pre>
+   */
+  RELATIONAL_ONLY("Relational", "only", "only", ts ->
+      ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
+
   /** Function "Relational.sum", aka "sum", of type
    *  "&alpha; list &rarr; &alpha;" (where &alpha; must be numeric).
    *

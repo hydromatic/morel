@@ -1468,6 +1468,21 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#RELATIONAL_ONLY */
+  private static final Applicable RELATIONAL_ONLY =
+      new ApplicableImpl(BuiltIn.RELATIONAL_ONLY) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          if (list.isEmpty()) {
+            throw new MorelRuntimeException(BuiltInExn.EMPTY);
+          }
+          if (list.size() > 1) {
+            throw new MorelRuntimeException(BuiltInExn.SIZE);
+          }
+          return list.get(0);
+        }
+      };
+
   /** Implements {@link #RELATIONAL_SUM} for type {@code int list}. */
   private static final Applicable Z_SUM_INT =
       new ApplicableImpl("Relational.sum$int") {
@@ -2051,6 +2066,7 @@ public abstract class Codes {
           .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
           .put(BuiltIn.RELATIONAL_EXISTS, RELATIONAL_EXISTS)
           .put(BuiltIn.RELATIONAL_NOT_EXISTS, RELATIONAL_NOT_EXISTS)
+          .put(BuiltIn.RELATIONAL_ONLY, RELATIONAL_ONLY)
           .put(BuiltIn.RELATIONAL_MAX, RELATIONAL_MAX)
           .put(BuiltIn.RELATIONAL_MIN, RELATIONAL_MIN)
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)

@@ -654,6 +654,42 @@ public class AlgebraTest {
                 list(20, "RESEARCH", "DALLAS"),
                 list(30, "SALES", "CHICAGO")));
   }
+
+  @Test void testCorrelatedListSubQuery() {
+    final String ml = "from d in scott.dept\n"
+        + "yield {d.dname, empCount = (from e in scott.emp\n"
+        + "                            group e.deptno compute c = count\n"
+        + "                            where deptno = d.deptno\n"
+        + "                            yield c)}";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        // TODO: enable in hybrid; will require new method RexSubQuery.array
+        // .with(Prop.HYBRID, true)
+        .assertType("{dname:string, empCount:int list} list")
+        .assertEvalIter(
+            equalsOrdered(list("ACCOUNTING", list(3)),
+                list("RESEARCH", list(5)),
+                list("SALES", list(6)),
+                list("OPERATIONS", list())));
+  }
+
+  @Test void testCorrelatedScalar() {
+    final String ml = "from d in scott.dept\n"
+        + "yield {d.dname, empCount =\n"
+        + "    only (from e in scott.emp\n"
+        + "          where e.deptno = d.deptno\n"
+        + "          group compute count)}";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .with(Prop.HYBRID, true)
+        .assertType("{dname:string, empCount:int} list")
+        .assertPlan(isFullyCalcite())
+        .assertEvalIter(
+            equalsOrdered(list("ACCOUNTING", 3),
+                list("RESEARCH", 5),
+                list("SALES", 6),
+                list("OPERATIONS", 0)));
+  }
 }
 
 // End AlgebraTest.java

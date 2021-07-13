@@ -511,6 +511,11 @@ Relational.min ["a", "bc", "ab"];
 Relational.min [false, true];
 Sys.plan ();
 
+Relational.only [2];
+Relational.only [1, 2, 3];
+Relational.only [];
+Sys.plan ();
+
 [1, 2] union [3] union [] union [4, 2, 5];
 [] union [];
 Sys.plan ();

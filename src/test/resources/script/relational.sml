@@ -624,6 +624,23 @@ from e in emps,
   order e.deptno desc, e.name
   yield e.name;
 
+(*) Only (scalar sub-query)
+from e in emps
+  yield only (from d in depts
+              where d.deptno = e.deptno
+              yield d.name);
+
+from e in emps
+  yield {ename = e.name,
+         dname = only (from d in depts
+                       where d.deptno = e.deptno
+                       yield d.name)};
+
+from e in emps
+  yield {ename = e.name,
+         dname = (only (from d in depts
+                        where d.deptno = e.deptno)).name};
+
 (*) Empty from
 from;
 

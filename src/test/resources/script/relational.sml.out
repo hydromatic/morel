@@ -976,6 +976,35 @@ from e in emps,
 val it = ["Scooby","Shaggy","Velma","Fred"] : string list
 
 
+(*) Only (scalar sub-query)
+from e in emps
+  yield only (from d in depts
+              where d.deptno = e.deptno
+              yield d.name);
+val it = ["Sales","HR","Engineering","Engineering"] : string list
+
+
+from e in emps
+  yield {ename = e.name,
+         dname = only (from d in depts
+                       where d.deptno = e.deptno
+                       yield d.name)};
+val it =
+  [{dname="Sales",ename="Fred"},{dname="HR",ename="Velma"},
+   {dname="Engineering",ename="Shaggy"},{dname="Engineering",ename="Scooby"}]
+  : {dname:string, ename:string} list
+
+
+from e in emps
+  yield {ename = e.name,
+         dname = (only (from d in depts
+                        where d.deptno = e.deptno)).name};
+val it =
+  [{dname="Sales",ename="Fred"},{dname="HR",ename="Velma"},
+   {dname="Engineering",ename="Shaggy"},{dname="Engineering",ename="Scooby"}]
+  : {dname:string, ename:string} list
+
+
 (*) Empty from
 from;
 val it = [()] : unit list

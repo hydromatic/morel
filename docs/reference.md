@@ -367,6 +367,7 @@ Exception:
 | Relational.count, count | int list &rarr; int | "count list" returns the number of elements in `list`. Often used with `group`, for example `from e in emps group e.deptno compute countId = count`.
 | Relational.exists | &alpha; list &rarr; bool | "exists list" returns whether the list has at least one element, for example `from d in depts where exists (from e where e.deptno = d.deptno)`.
 | Relational.notExists | &alpha; list &rarr; bool | "notExists list" returns whether the list is empty, for example `from d in depts where notExists (from e where e.deptno = d.deptno)`.
+| Relational.only | &alpha; list &rarr; &alpha; | "only list" returns the sole element of list, for example `from e in emps yield only (from d where d.deptno = e.deptno)`.
 | Relational.max, max | &alpha; list &rarr; &alpha; | "max list" returns the greatest element of `list`. Often used with `group`, for example `from e in emps group e.deptno compute maxId = max of e.id`.
 | Relational.min, min | &alpha; list &rarr; &alpha; | "min list" returns the least element of `list`. Often used with `group`, for example `from e in emps group e.deptno compute minId = min of e.id`.
 | Relational.sum, sum | int list &rarr; int | "sum list" returns the sum of the elements of `list`. Often used with `group`, for example `from e in emps group e.deptno compute sumId = sum of e.id`.

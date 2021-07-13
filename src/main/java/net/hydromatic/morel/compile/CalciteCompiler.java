@@ -97,6 +97,7 @@ public class CalciteCompiler extends Compiler {
           .put(BuiltIn.LIST_NULL, SqlStdOperatorTable.EXISTS)
           .put(BuiltIn.RELATIONAL_EXISTS, SqlStdOperatorTable.EXISTS)
           .put(BuiltIn.RELATIONAL_NOT_EXISTS, SqlStdOperatorTable.EXISTS)
+          .put(BuiltIn.RELATIONAL_ONLY, SqlStdOperatorTable.SCALAR_QUERY)
           .build();
 
   /** Morel infix operators and their exact equivalents in Calcite. */
@@ -567,6 +568,7 @@ public class CalciteCompiler extends Compiler {
           case LIST_NULL:
           case RELATIONAL_EXISTS:
           case RELATIONAL_NOT_EXISTS:
+          case RELATIONAL_ONLY:
             final RelNode r = toRel2(cx, apply.arg);
             if (r != null) {
               switch (op) {
@@ -575,6 +577,8 @@ public class CalciteCompiler extends Compiler {
                 return cx.relBuilder.not(RexSubQuery.exists(r));
               case RELATIONAL_EXISTS:
                 return RexSubQuery.exists(r);
+              case RELATIONAL_ONLY:
+                return RexSubQuery.scalar(r);
               default:
                 throw new AssertionError("unknown " + op);
               }
@@ -618,6 +622,16 @@ public class CalciteCompiler extends Compiler {
       final RexNode fnRex = translate(cx, apply.fn);
       final RexNode argRex = translate(cx, apply.arg);
       return morelApply(cx, apply.type, apply.arg.type, fnRex, argRex);
+
+    case FROM:
+      final Core.From from = (Core.From) exp;
+      final RelNode r = toRel2(cx, from);
+      if (r != null && 1 != 2) {
+        // TODO: add RexSubQuery.array and RexSubQuery.multiset methods
+        return cx.relBuilder.call(SqlStdOperatorTable.ARRAY_QUERY,
+            RexSubQuery.scalar(r));
+      }
+      break;
 
     case TUPLE:
       final Core.Tuple tuple = (Core.Tuple) exp;
