@@ -167,6 +167,39 @@ val it =
   : string
 
 
+(*) Query on an empty list
+from e in []
+  yield {a = 1, b = true};
+val it = [] : {a:int, b:bool} list
+
+Sys.plan();
+val it = "calcite(plan LogicalValues(tuples=[[]])
+)" : string
+
+
+(*) Query on an empty list whose element is referenced
+from e in []
+  yield {a = 1 + e, b = true};
+val it = [] : {a:int, b:bool} list
+
+Sys.plan();
+val it =
+  "calcite(plan LogicalProject(a=[+(1, $0)], b=[true])
+  LogicalValues(tuples=[[]])
+)"
+  : string
+
+
+(*) Query on a singleton list whose element is not referenced
+from e in [0]
+  yield {a = 1, b = true};
+val it = [{a=1,b=true}] : {a:int, b:bool} list
+
+Sys.plan();
+val it = "calcite(plan LogicalValues(tuples=[[{ 1, true }]])
+)" : string
+
+
 (*) Simple query with scan, filter, project
 from e in scott.emp where e.deptno = 30 yield e.empno;
 val it = [7499,7521,7654,7698,7844,7900] : int list

@@ -65,6 +65,21 @@ in
 end;
 Sys.plan();
 
+(*) Query on an empty list
+from e in []
+  yield {a = 1, b = true};
+Sys.plan();
+
+(*) Query on an empty list whose element is referenced
+from e in []
+  yield {a = 1 + e, b = true};
+Sys.plan();
+
+(*) Query on a singleton list whose element is not referenced
+from e in [0]
+  yield {a = 1, b = true};
+Sys.plan();
+
 (*) Simple query with scan, filter, project
 from e in scott.emp where e.deptno = 30 yield e.empno;
 Sys.plan();

@@ -40,6 +40,7 @@ import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.ThreadLocals;
 
@@ -47,6 +48,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import org.apache.calcite.rel.RelNode;
@@ -229,11 +231,18 @@ public class CalciteCompiler extends Compiler {
           switch (builtIn) {
           case Z_LIST:
             final List<Core.Exp> args = ((Core.Tuple) apply.arg).args;
-            for (Core.Exp arg : args) {
-              cx.relBuilder.values(new String[] {"T"}, true);
-              yield_(cx, arg);
+            if (args.isEmpty()) {
+              final RelDataType calciteType =
+                  Converters.toCalciteType(removeTypeVars(apply.type),
+                      cx.relBuilder.getTypeFactory());
+              cx.relBuilder.values(calciteType.getComponentType());
+            } else {
+              for (Core.Exp arg : args) {
+                cx.relBuilder.values(new String[]{"T"}, true);
+                yield_(cx, arg);
+              }
+              cx.relBuilder.union(true, args.size());
             }
-            cx.relBuilder.union(true, args.size());
             return true;
 
           case OP_UNION:
@@ -286,6 +295,18 @@ public class CalciteCompiler extends Compiler {
         return true;
       }
     };
+  }
+
+  /** Converts each type variable in a type to a dummy record type,
+   * {@code {b: bool}}. */
+  private Type removeTypeVars(Type type) {
+    return type.copy(typeSystem,
+        t -> t instanceof TypeVar
+            ? typeSystem.recordType(
+            ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
+                .put("b", PrimitiveType.BOOL)
+                .build())
+            : t);
   }
 
   @Override protected Code finishCompileApply(Context cx, Code fnCode,
