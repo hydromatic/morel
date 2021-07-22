@@ -55,7 +55,7 @@ public class AstWriter {
   public AstWriter id(String s, int i) {
     b.append(s);
     if (i > 0) {
-      b.append('#').append(i);
+      b.append('_').append(i);
     }
     return this;
   }

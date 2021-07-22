@@ -205,22 +205,22 @@ public class InlineTest {
         + " from e in #emp scott"
         + " where #empno e mod 2 = 0 "
         + "in"
-        + " from e#1 in evenEmp 1"
-        + " where #deptno e#1 = 10"
-        + " yield #ename e#1 "
+        + " from e_1 in evenEmp 1"
+        + " where #deptno e_1 = 10"
+        + " yield #ename e_1 "
         + "end";
-    final String core1 = "from e#1 in "
+    final String core1 = "from e_1 in "
         + "(let val x = 1"
         + " in from e in #emp scott"
         + " where op mod (#empno e, 2) = 0 "
         + "end)"
-        + " where #deptno e#1 = 10"
-        + " yield #ename e#1";
+        + " where #deptno e_1 = 10"
+        + " yield #ename e_1";
     final String core2 = "from e in #emp scott "
         + "where op mod (#empno e, 2) = 0 "
         + "yield {e = e} "
-        + "where #deptno e#1 = 10 "
-        + "yield #ename e#1";
+        + "where #deptno e_1 = 10 "
+        + "yield #ename e_1";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertCoreString(is(core0), is(core1), is(core2))
@@ -232,12 +232,12 @@ public class InlineTest {
   @Test void testMapFilterToFrom() {
     final String ml = "map (fn e => (#empno e))\n"
         + "  (List.filter (fn e => (#deptno e) = 30) (#emp scott))";
-    final String core0 = "map (fn e#1 => #empno e#1) "
+    final String core0 = "map (fn e_1 => #empno e_1) "
         + "(#filter List (fn e => #deptno e = 30) "
         + "(#emp scott))";
     final String core1 = "from v0 in "
         + "#filter List (fn e => #deptno e = 30) (#emp scott) "
-        + "yield (fn e#1 => #empno e#1) v0";
+        + "yield (fn e_1 => #empno e_1) v0";
     final String core2 = "from v2 in #emp scott "
         + "where #deptno v2 = 30 "
         + "yield {v0 = v2} "
@@ -258,16 +258,16 @@ public class InlineTest {
         + "      (map (fn e => {x = #empno e, y = #deptno e, z = 15})\n"
         + "        (List.filter (fn e => #deptno e = 30)\n"
         + "          (#emp scott)))))";
-    final String core0 = "map (fn r#2 => r#2 + 100)"
-        + " (map (fn r#1 => #x r#1 + #z r#1)"
+    final String core0 = "map (fn r_2 => r_2 + 100)"
+        + " (map (fn r_1 => #x r_1 + #z r_1)"
         + " (#filter List (fn r => #y r > #z r)"
-        + " (map (fn e#1 => {x = #empno e#1, y = #deptno e#1, z = 15})"
+        + " (map (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
         + " (#filter List (fn e => #deptno e = 30) (#emp scott)))))";
-    final String core1 = "from v0 in #map List (fn r#1 => #x r#1 + #z r#1)"
+    final String core1 = "from v0 in #map List (fn r_1 => #x r_1 + #z r_1)"
         + " (#filter List (fn r => #y r > #z r)"
-        + " (#map List (fn e#1 => {x = #empno e#1, y = #deptno e#1, z = 15})"
+        + " (#map List (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
         + " (#filter List (fn e => #deptno e = 30) (#emp scott)))) "
-        + "yield (fn r#2 => r#2 + 100) v0";
+        + "yield (fn r_2 => r_2 + 100) v0";
     final String core2 = "from v6 in #emp scott "
         + "where #deptno v6 = 30 "
         + "yield {v5 = v6} "

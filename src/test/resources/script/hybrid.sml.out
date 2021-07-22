@@ -262,7 +262,7 @@ val it = [7499,7521,7654,7698,7844,7900] : int list
 
 Sys.plan();
 val it =
-  "apply(fnCode apply(fnValue List.map, argCode match(e#1, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue List.filter, argCode match(e, apply(fnValue =, argCode tuple(apply(fnValue nth:1, argCode get(name e)), constant(30))))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+  "apply(fnCode apply(fnValue List.map, argCode match(e_1, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue List.filter, argCode match(e, apply(fnValue =, argCode tuple(apply(fnValue nth:1, argCode get(name e)), constant(30))))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
   JdbcTableScan(table=[[scott, EMP]])
 )))"
   : string
