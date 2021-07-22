@@ -800,13 +800,9 @@ public class CalciteCompiler extends Compiler {
       this.top = top(relBuilder);
     }
 
-    // TODO: add an optional peek method to RelBuilder
     private static @Nullable RelNode top(RelBuilder relBuilder) {
-      try {
-        return relBuilder.peek();
-      } catch (NullPointerException npe) {
-        return null;
-      }
+      return relBuilder.size() == 0 ? null
+          : relBuilder.peek();
     }
 
     @Override RelContext bindAll(Iterable<Binding> bindings) {
