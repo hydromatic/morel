@@ -690,6 +690,68 @@ public class AlgebraTest {
                 list("SALES", 6),
                 list("OPERATIONS", 0)));
   }
+
+  /** Tests a recursive query that computes a transitive closure by successive
+   * union operations. We cannot execute hybrid yet. */
+  @Test void testRecursive() {
+    final String ml = "let\n"
+        + "  fun descendants2 descendants newDescendants =\n"
+        + "    if List.null newDescendants then\n"
+        + "      descendants\n"
+        + "    else\n"
+        + "      descendants2 (descendants union newDescendants)\n"
+        + "          (from d in newDescendants,\n"
+        + "              e in scott.emp\n"
+        + "            where e.mgr = d.e.empno\n"
+        + "            yield {e, level = d.level + 1})\n"
+        + "in\n"
+        + "  from d in descendants2 []\n"
+        + "      (from e in scott.emp\n"
+        + "        where e.mgr = 0\n"
+        + "        yield {e, level = 0})\n"
+        + "    yield {d.e.empno, d.e.mgr, d.e.ename, d.level}\n"
+        + "end";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("{empno:int, ename:string, level:int, mgr:int} list")
+        .assertEvalIter(
+            equalsOrdered(list(7839, "KING", 0, 0),
+                list(7566, "JONES", 1, 7839), list(7698, "BLAKE", 1, 7839),
+                list(7782, "CLARK", 1, 7839), list(7788, "SCOTT", 2, 7566),
+                list(7902, "FORD", 2, 7566), list(7499, "ALLEN", 2, 7698),
+                list(7521, "WARD", 2, 7698), list(7654, "MARTIN", 2, 7698),
+                list(7844, "TURNER", 2, 7698), list(7900, "JAMES", 2, 7698),
+                list(7934, "MILLER", 2, 7782), list(7876, "ADAMS", 3, 7788),
+                list(7369, "SMITH", 3, 7902)));
+  }
+
+  /** Similar to {@link #testRecursive()} but uses the
+   * {@link net.hydromatic.morel.compile.BuiltIn#RELATIONAL_ITERATE Relatonal.iterate}
+   * function. */
+  @Test void testRecursive2() {
+    final String ml = "from i in iterate\n"
+        + "    (from e in scott.emp\n"
+        + "      where e.mgr = 0\n"
+        + "      yield {e, level = 0})\n"
+        + "    fn (oldList, newList) =>\n"
+        + "      (from d in newList,\n"
+        + "          e in scott.emp\n"
+        + "        where e.mgr = d.e.empno\n"
+        + "        yield {e, level = d.level + 1})\n"
+        + "  yield {i.e.empno, i.e.ename, i.level, i.e.mgr}";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("{empno:int, ename:string, level:int, mgr:int} list")
+        .assertEvalIter(
+            equalsOrdered(list(7839, "KING", 0, 0),
+                list(7566, "JONES", 1, 7839), list(7698, "BLAKE", 1, 7839),
+                list(7782, "CLARK", 1, 7839), list(7788, "SCOTT", 2, 7566),
+                list(7902, "FORD", 2, 7566), list(7499, "ALLEN", 2, 7698),
+                list(7521, "WARD", 2, 7698), list(7654, "MARTIN", 2, 7698),
+                list(7844, "TURNER", 2, 7698), list(7900, "JAMES", 2, 7698),
+                list(7934, "MILLER", 2, 7782), list(7876, "ADAMS", 3, 7788),
+                list(7369, "SMITH", 3, 7902)));
+  }
 }
 
 // End AlgebraTest.java

@@ -117,5 +117,66 @@ from x in (from e in scott.emp yield e.deptno)
 group x compute c = count;
 *)
 
+(*) Recursive query
+(*
+let
+  fun descendants level oldEmps newEmps =
+    let
+      val pred =
+        if (exists prev) then
+          fn e => e.mgr in (from p in newEmps
+                            yield p.empno)
+        else
+          fn e => e.mgr = 0
+      val nextEmps = from e in scott.emp
+        where (pred e)
+        yield {level, e.empno}
+    in
+      if (exists nextEmps) then
+        descendants (level + 1) (oldEmps union newEmps) nextEmps
+      else
+        (oldEmps union newEmps)
+    end
+  in
+end;
+*)
+
+(*) Recursive query, 2
+(*
+let
+  fun descendants () =
+    (from e in scott.emp
+      where e.mgr = 0
+      yield {e, level = 0})
+    union
+    (from d in descendants (),
+        e in scott.emp
+      where e.mgr = d.e.empno
+      yield {e, level = d.level + 1});
+in
+  descendants ()
+end;
+*)
+
+(*) Recursive query, 3
+Sys.set ("hybrid", false);
+let
+  fun descendants2 descendants newDescendants =
+    if List.null newDescendants then
+      descendants
+    else
+      descendants2 (descendants union newDescendants)
+          (from d in newDescendants,
+              e in scott.emp
+            where e.mgr = d.e.empno
+            yield {e, level = d.level + 1})
+in
+  from d in descendants2 []
+      (from e in scott.emp
+        where e.mgr = 0
+        yield {e, level = 0})
+    yield {d.e.empno, d.e.mgr, d.e.ename, d.level}
+end;
+
 "end";
 (*) End hybrid.sml

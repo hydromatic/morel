@@ -56,8 +56,9 @@ val it =
   : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
 
 Relational;
-val it = {count=fn,exists=fn,max=fn,min=fn,notExists=fn,only=fn,sum=fn}
-  : {count:'a list -> int, exists:'b list -> bool, max:'c list -> 'c, min:'d list -> 'd, notExists:'e list -> bool, only:'f list -> 'f, sum:'g list -> 'g}
+val it =
+  {count=fn,exists=fn,iterate=fn,max=fn,min=fn,notExists=fn,only=fn,sum=fn}
+  : {count:'a list -> int, exists:'b list -> bool, iterate:'c list -> ('c list * 'c list -> 'c list) -> 'c list, max:'d list -> 'd, min:'e list -> 'e, notExists:'f list -> bool, only:'g list -> 'g, sum:'h list -> 'h}
 
 
 (* Operators --------------------------------------------------- *)
@@ -1225,6 +1226,52 @@ val it = "apply(fnValue Relational.notExists, argCode tuple(constant(false)))"
   : string
 
 
+val emp = [
+  {empno=7839, ename="KING", mgr=0},
+  {empno=7566, ename="JONES", mgr=7839},
+  {empno=7698, ename="BLAKE", mgr=7839},
+  {empno=7782, ename="CLARK", mgr=7839},
+  {empno=7788, ename="SCOTT", mgr=7566},
+  {empno=7902, ename="FORD", mgr=7566},
+  {empno=7499, ename="ALLEN", mgr=7698},
+  {empno=7521, ename="WARD", mgr=7698},
+  {empno=7654, ename="MARTIN", mgr=7698},
+  {empno=7844, ename="TURNER", mgr=7698},
+  {empno=7900, ename="JAMES", mgr=7698},
+  {empno=7934, ename="MILLER", mgr=7782},
+  {empno=7876, ename="ADAMS", mgr=7788},
+  {empno=7369, ename="SMITH", mgr=7902}];
+val emp =
+  [{empno=7839,ename="KING",mgr=0},{empno=7566,ename="JONES",mgr=7839},
+   {empno=7698,ename="BLAKE",mgr=7839},{empno=7782,ename="CLARK",mgr=7839},
+   {empno=7788,ename="SCOTT",mgr=7566},{empno=7902,ename="FORD",mgr=7566},
+   {empno=7499,ename="ALLEN",mgr=7698},{empno=7521,ename="WARD",mgr=7698},
+   {empno=7654,ename="MARTIN",mgr=7698},{empno=7844,ename="TURNER",mgr=7698},
+   {empno=7900,ename="JAMES",mgr=7698},{empno=7934,ename="MILLER",mgr=7782},
+   ...] : {empno:int, ename:string, mgr:int} list
+
+Relational.iterate
+  (from e in emp where e.mgr = 0)
+  fn (oldList, newList) =>
+      (from d in newList,
+          e in emp
+      where e.mgr = d.empno
+      yield e);
+val it =
+  [{empno=7839,ename="KING",mgr=0},{empno=7566,ename="JONES",mgr=7839},
+   {empno=7698,ename="BLAKE",mgr=7839},{empno=7782,ename="CLARK",mgr=7839},
+   {empno=7788,ename="SCOTT",mgr=7566},{empno=7902,ename="FORD",mgr=7566},
+   {empno=7499,ename="ALLEN",mgr=7698},{empno=7521,ename="WARD",mgr=7698},
+   {empno=7654,ename="MARTIN",mgr=7698},{empno=7844,ename="TURNER",mgr=7698},
+   {empno=7900,ename="JAMES",mgr=7698},{empno=7934,ename="MILLER",mgr=7782},
+   ...] : {empno:int, ename:string, mgr:int} list
+
+Sys.plan ();
+val it =
+  "apply(fnCode apply(fnValue Relational.iterate, argCode from(sink join(op join, pat e_1, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply(fnValue =, argCode tuple(apply(fnValue nth:2, argCode get(name e)), constant(0))), sink collect(get(name e)))))), argCode match(v0, apply(fnCode match((oldList, newList), from(sink join(op join, pat d, exp get(name newList), sink join(op join, pat e, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply(fnValue =, argCode tuple(apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name d)))), sink collect(get(name e))))))), argCode get(name v0))))"
+  : string
+
+
 Relational.sum [1, 2, 3];
 val it = 6 : int
 
@@ -1419,7 +1466,7 @@ val it =
    ("Option",
    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
    ("Relational",
-   "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+   "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
    ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
@@ -1443,7 +1490,7 @@ val it =
    ("Option",
    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
    ("Relational",
-   "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+   "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
    ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),

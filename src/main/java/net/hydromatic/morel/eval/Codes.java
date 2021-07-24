@@ -1467,6 +1467,38 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#RELATIONAL_ITERATE */
+  private static final Applicable RELATIONAL_ITERATE =
+      new ApplicableImpl(BuiltIn.RELATIONAL_ITERATE) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List initialList = (List) arg;
+          return new ApplicableImpl("Relational.iterate$list") {
+            @Override public Object apply(EvalEnv env, Object argValue) {
+              final Applicable update = (Applicable) argValue;
+              List list = initialList;
+              List newList = list;
+              for (;;) {
+                List nextList = (List) update.apply(env,
+                    FlatLists.of(list, newList));
+                if (nextList.isEmpty()) {
+                  return list;
+                }
+                // REVIEW:
+                // 1. should we eliminate duplicates when computing "oldList
+                //   union newList"?
+                // 2. should we subtract oldList before checking whether newList
+                //    is empty?
+                // 3. add an "iterateDistinct" variant?
+                list =
+                    ImmutableList.builder().addAll(list).addAll(nextList)
+                        .build();
+                newList = nextList;
+              }
+            }
+          };
+        }
+      };
+
   /** @see BuiltIn#RELATIONAL_ONLY */
   private static final Applicable RELATIONAL_ONLY =
       new ApplicableImpl(BuiltIn.RELATIONAL_ONLY) {
@@ -2066,6 +2098,7 @@ public abstract class Codes {
           .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
           .put(BuiltIn.RELATIONAL_EXISTS, RELATIONAL_EXISTS)
           .put(BuiltIn.RELATIONAL_NOT_EXISTS, RELATIONAL_NOT_EXISTS)
+          .put(BuiltIn.RELATIONAL_ITERATE, RELATIONAL_ITERATE)
           .put(BuiltIn.RELATIONAL_ONLY, RELATIONAL_ONLY)
           .put(BuiltIn.RELATIONAL_MAX, RELATIONAL_MAX)
           .put(BuiltIn.RELATIONAL_MIN, RELATIONAL_MIN)

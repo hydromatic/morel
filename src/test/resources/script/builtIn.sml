@@ -504,6 +504,30 @@ Relational.notExists [];
 Relational.notExists [false];
 Sys.plan ();
 
+val emp = [
+  {empno=7839, ename="KING", mgr=0},
+  {empno=7566, ename="JONES", mgr=7839},
+  {empno=7698, ename="BLAKE", mgr=7839},
+  {empno=7782, ename="CLARK", mgr=7839},
+  {empno=7788, ename="SCOTT", mgr=7566},
+  {empno=7902, ename="FORD", mgr=7566},
+  {empno=7499, ename="ALLEN", mgr=7698},
+  {empno=7521, ename="WARD", mgr=7698},
+  {empno=7654, ename="MARTIN", mgr=7698},
+  {empno=7844, ename="TURNER", mgr=7698},
+  {empno=7900, ename="JAMES", mgr=7698},
+  {empno=7934, ename="MILLER", mgr=7782},
+  {empno=7876, ename="ADAMS", mgr=7788},
+  {empno=7369, ename="SMITH", mgr=7902}];
+Relational.iterate
+  (from e in emp where e.mgr = 0)
+  fn (oldList, newList) =>
+      (from d in newList,
+          e in emp
+      where e.mgr = d.empno
+      yield e);
+Sys.plan ();
+
 Relational.sum [1, 2, 3];
 Relational.sum [1.0, 2.5, 3.5];
 Sys.plan ();

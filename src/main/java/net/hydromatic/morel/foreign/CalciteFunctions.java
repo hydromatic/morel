@@ -148,7 +148,7 @@ public class CalciteFunctions {
         String ml = (String) args.get(0);
         String typeJson = (String) args.get(1);
         compiled =
-            new Compiled(ml, typeJson, cx.typeFactory, cx.env, cx.typeSystem,
+            Compiled.create(ml, typeJson, cx.typeFactory, cx.env, cx.typeSystem,
                 cx.session);
       } else {
         compiled = null;
@@ -164,7 +164,7 @@ public class CalciteFunctions {
     public ScannableTable eval(String ml, String typeJson) {
       final Compiled compiled =
           this.compiled != null ? this.compiled
-              : new Compiled(ml, typeJson, cx.typeFactory, cx.env,
+              : Compiled.create(ml, typeJson, cx.typeFactory, cx.env,
                   cx.typeSystem, cx.session);
       return new ScannableTable() {
         @Override public RelDataType getRowType(RelDataTypeFactory factory) {
@@ -205,13 +205,22 @@ public class CalciteFunctions {
       final EvalEnv evalEnv;
       final Function<Object, Enumerable<Object[]>> f;
 
-      Compiled(String ml, String typeJson, RelDataTypeFactory typeFactory,
-          Environment env, TypeSystem typeSystem, Session session) {
+      Compiled(String ml, Code code, EvalEnv evalEnv,
+          Function<Object, Enumerable<Object[]>> f) {
+        this.code = code;
+        this.evalEnv = evalEnv;
+        this.f = f;
+      }
+
+      static Compiled create(String ml, String typeJson,
+          RelDataTypeFactory typeFactory, Environment env,
+          TypeSystem typeSystem, Session session) {
         final Ast.Exp exp;
         try {
           exp = new MorelParserImpl(new StringReader(ml)).expression();
         } catch (ParseException pe) {
-          throw new RuntimeException(pe);
+          throw new RuntimeException("Error while parsing\n"
+              + ml, pe);
         }
         final Ast.ValDecl valDecl = Compiles.toValDecl(exp);
         final TypeResolver.Resolved resolved =
@@ -220,9 +229,10 @@ public class CalciteFunctions {
         final Core.ValDecl valDecl3 =
             Resolver.of(resolved.typeMap, env).toCore(valDecl2);
         final Core.Exp e3 = Compiles.toExp(valDecl3);
-        code = new Compiler(typeSystem).compile(env, e3);
-        evalEnv = Codes.emptyEnvWith(session, env);
-        f = Converters.toCalciteEnumerable(e3.type, typeFactory);
+        final Compiler compiler = new Compiler(typeSystem);
+        return new Compiled(ml, compiler.compile(env, e3),
+            Codes.emptyEnvWith(session, env),
+            Converters.toCalciteEnumerable(e3.type, typeFactory));
       }
     }
   }

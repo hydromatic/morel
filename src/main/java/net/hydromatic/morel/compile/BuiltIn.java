@@ -784,6 +784,18 @@ public enum BuiltIn {
   RELATIONAL_ONLY("Relational", "only", "only", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
 
+  /** Function "Relational.iterate", aka "iterate", of type "&alpha; list
+   * &rarr; (&alpha; list &rarr; &alpha; list &rarr; &alpha; list)
+   * &rarr; &alpha; list".
+   *
+   * <p>"iterate initialList listUpdate" computes a fixed point, starting
+   * with a list and iterating by passing it to a function. */
+  RELATIONAL_ITERATE("Relational", "iterate", "iterate", ts ->
+      ts.forallType(1, h ->
+          ts.fnType(h.list(0),
+              ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)),
+              h.list(0)))),
+
   /** Function "Relational.sum", aka "sum", of type
    *  "&alpha; list &rarr; &alpha;" (where &alpha; must be numeric).
    *

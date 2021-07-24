@@ -275,5 +275,83 @@ from x in (from e in scott.emp yield e.deptno)
 group x compute c = count;
 *)
 
+(*) Recursive query
+(*
+let
+  fun descendants level oldEmps newEmps =
+    let
+      val pred =
+        if (exists prev) then
+          fn e => e.mgr in (from p in newEmps
+                            yield p.empno)
+        else
+          fn e => e.mgr = 0
+      val nextEmps = from e in scott.emp
+        where (pred e)
+        yield {level, e.empno}
+    in
+      if (exists nextEmps) then
+        descendants (level + 1) (oldEmps union newEmps) nextEmps
+      else
+        (oldEmps union newEmps)
+    end
+  in
+end;
+*)
+
+(*) Recursive query, 2
+(*
+let
+  fun descendants () =
+    (from e in scott.emp
+      where e.mgr = 0
+      yield {e, level = 0})
+    union
+    (from d in descendants (),
+        e in scott.emp
+      where e.mgr = d.e.empno
+      yield {e, level = d.level + 1});
+in
+  descendants ()
+end;
+*)
+
+(*) Recursive query, 3
+Sys.set ("hybrid", false);
+val it = () : unit
+
+let
+  fun descendants2 descendants newDescendants =
+    if List.null newDescendants then
+      descendants
+    else
+      descendants2 (descendants union newDescendants)
+          (from d in newDescendants,
+              e in scott.emp
+            where e.mgr = d.e.empno
+            yield {e, level = d.level + 1})
+in
+  from d in descendants2 []
+      (from e in scott.emp
+        where e.mgr = 0
+        yield {e, level = 0})
+    yield {d.e.empno, d.e.mgr, d.e.ename, d.level}
+end;
+val it =
+  [{empno=7839,ename="KING",level=0,mgr=0},
+   {empno=7566,ename="JONES",level=1,mgr=7839},
+   {empno=7698,ename="BLAKE",level=1,mgr=7839},
+   {empno=7782,ename="CLARK",level=1,mgr=7839},
+   {empno=7788,ename="SCOTT",level=2,mgr=7566},
+   {empno=7902,ename="FORD",level=2,mgr=7566},
+   {empno=7499,ename="ALLEN",level=2,mgr=7698},
+   {empno=7521,ename="WARD",level=2,mgr=7698},
+   {empno=7654,ename="MARTIN",level=2,mgr=7698},
+   {empno=7844,ename="TURNER",level=2,mgr=7698},
+   {empno=7900,ename="JAMES",level=2,mgr=7698},
+   {empno=7934,ename="MILLER",level=2,mgr=7782},...]
+  : {empno:int, ename:string, level:int, mgr:int} list
+
+
 "end";
 val it = "end" : string
