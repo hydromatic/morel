@@ -32,6 +32,7 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.Static;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -60,6 +61,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Static.toImmutableList;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -464,9 +466,8 @@ public abstract class Codes {
   /** Creates a {@link RowSink} for a {@code order} clause. */
   public static RowSink orderRowSink(ImmutableList<Pair<Code, Boolean>> codes,
       ImmutableList<Binding> bindings, RowSink rowSink) {
-    @SuppressWarnings("UnstableApiUsage")
     final ImmutableList<String> labels = bindings.stream().map(b -> b.id.name)
-        .collect(ImmutableList.toImmutableList());
+        .collect(toImmutableList());
     return new OrderRowSink(codes, labels, rowSink);
   }
 
@@ -2379,6 +2380,9 @@ public abstract class Codes {
       };
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
+    if (Static.SKIP) {
+      return;
+    }
     // Dummy type system, thrown away after this method
     final TypeSystem typeSystem = new TypeSystem();
     BuiltIn.dataTypes(typeSystem, new ArrayList<>());
@@ -2394,26 +2398,22 @@ public abstract class Codes {
         valueMap.put(key.alias, value);
       }
     });
-    //noinspection UnstableApiUsage
     BuiltIn.forEachStructure(typeSystem, (structure, type) ->
         valueMap.put(structure.name,
             structure.memberMap.values().stream()
                 .map(BUILT_IN_VALUES::get)
-                .collect(ImmutableList.toImmutableList())));
+                .collect(toImmutableList())));
   }
 
   /** Creates an empty evaluation environment. */
   public static EvalEnv emptyEnv() {
-    final Map<String, Object> map = new HashMap<>();
-    populateBuiltIns(map);
-    return EvalEnvs.copyOf(map);
+    return EMPTY_ENV;
   }
 
   /** Creates an evaluation environment that contains the bound values from a
    * compilation environment. */
   public static EvalEnv emptyEnvWith(Session session, Environment env) {
-    final Map<String, Object> map = new HashMap<>();
-    populateBuiltIns(map);
+    final Map<String, Object> map = EMPTY_ENV.valueMap();
     env.forEachValue(map::put);
     map.put(EvalEnv.SESSION, session);
     return EvalEnvs.copyOf(map);
@@ -2664,6 +2664,9 @@ public abstract class Codes {
   public static final Map<Applicable, BuiltIn> BUILT_IN_MAP =
       ((Supplier<Map<Applicable, BuiltIn>>) Codes::get).get();
 
+  private static final EvalEnv EMPTY_ENV =
+      ((Supplier<EvalEnv>) Codes::makeEmptyEnv).get();
+
   private static Map<Applicable, BuiltIn> get() {
     final IdentityHashMap<Applicable, BuiltIn> b = new IdentityHashMap<>();
     BUILT_IN_VALUES.forEach((builtIn, o) -> {
@@ -2672,6 +2675,12 @@ public abstract class Codes {
       }
     });
     return ImmutableMap.copyOf(b);
+  }
+
+  private static EvalEnv makeEmptyEnv() {
+    final Map<String, Object> map = new HashMap<>();
+    populateBuiltIns(map);
+    return EvalEnvs.copyOf(map);
   }
 
   public static StringBuilder appendFloat(StringBuilder buf, float f) {

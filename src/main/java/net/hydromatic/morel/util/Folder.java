@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.util.Static.skip;
 
 /**
  * Enable creating right-deep trees.
@@ -46,7 +47,7 @@ public abstract class Folder<E> {
       throw new AssertionError();
     }
     final Folder<E> head = list.get(0);
-    final List<Folder<E>> tail = list.subList(1, list.size());
+    final List<Folder<E>> tail = skip(list);
     return head.combine(tail);
   }
 

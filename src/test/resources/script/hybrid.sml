@@ -67,9 +67,13 @@ in
 end;
 Sys.plan();
 
-(*) Query on an empty list
+(*) Query on an empty list whose element is not referenced
 from e in []
   yield {a = 1, b = true};
+Sys.plan();
+
+(*) Equivalent, using map
+map (fn e => {a = 1, b = true}) [];
 Sys.plan();
 
 (*) Query on an empty list whose element is referenced
@@ -77,9 +81,17 @@ from e in []
   yield {a = 1 + e, b = true};
 Sys.plan();
 
+(*) Equivalent, using map
+map (fn e => {a = 1 + e, b = true}) [];
+Sys.plan();
+
 (*) Query on a singleton list whose element is not referenced
 from e in [0]
   yield {a = 1, b = true};
+Sys.plan();
+
+(*) Equivalent, using map
+map (fn e => {a = 1, b = true}) [0];
 Sys.plan();
 
 (*) Simple query with scan, filter, project

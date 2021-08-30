@@ -24,6 +24,8 @@ import net.hydromatic.morel.ast.AstWriter;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.Type;
 
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Lists;
@@ -33,6 +35,7 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.hamcrest.core.Is;
 
@@ -216,6 +219,56 @@ public abstract class Matchers {
   static Matcher<Object> whenAppliedTo(Object arg,
       Matcher<Object> resultMatcher) {
     return new CallingMatcher(arg, resultMatcher);
+  }
+
+  /** Creates a Matcher that matches a Type based on {@link Type#moniker()}. */
+  static Matcher<Type> hasMoniker(String expectedMoniker) {
+    return new CustomTypeSafeMatcher<Type>("type with moniker ["
+        + expectedMoniker + "]") {
+      @Override protected boolean matchesSafely(Type type) {
+        return type.moniker().equals(expectedMoniker);
+      }
+    };
+  }
+
+  /** Creates a Matcher that matches a {@link DataType} with given type
+   * constructors. */
+  static Matcher<DataType> hasTypeConstructors(String expected) {
+    return new CustomTypeSafeMatcher<DataType>("datatype with constructors "
+        + expected) {
+      @Override protected boolean matchesSafely(DataType type) {
+        return type.typeConstructors.toString().equals(expected);
+      }
+    };
+  }
+
+  /** Creates a Matcher that tests for a sub-class and then makes another
+   * test.
+   *
+   * @param <T> Value type
+   * @param <T2> Required subtype */
+  static <T, T2 extends T> Matcher<T> instanceOfAnd(Class<T2> expectedClass,
+      Matcher<T2> matcher) {
+    return new TypeSafeDiagnosingMatcher<T>() {
+      @Override protected boolean matchesSafely(T item,
+          Description mismatchDescription) {
+        if (!expectedClass.isInstance(item)) {
+          mismatchDescription.appendText("expected instance of " + expectedClass
+              + " but was " + item + " (a " + item.getClass() + ")");
+          return false;
+        }
+        if (!matcher.matches(item)) {
+          matcher.describeMismatch(item, mismatchDescription);
+          return false;
+        }
+        return true;
+      }
+
+      @Override public void describeTo(Description description) {
+        description.appendText("instance of " + expectedClass + " and ");
+        matcher.describeTo(description);
+      }
+    };
   }
 
   /** Matcher that remembers the actual value it was.

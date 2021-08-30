@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
 
+import static net.hydromatic.morel.util.Static.skip;
+
 /** Robinson's unification algorithm. */
 public class RobinsonUnifier extends Unifier {
   /**
@@ -70,10 +72,6 @@ public class RobinsonUnifier extends Unifier {
             .putAll(subs2.resultMap)
             .build();
     return SubstitutionResult.create(joined);
-  }
-
-  static <E> List<E> skip(List<E> list) {
-    return list.subList(1, list.size());
   }
 
   public @Nonnull Result unify(List<TermTerm> termPairs,

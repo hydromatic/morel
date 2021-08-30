@@ -67,6 +67,9 @@ public abstract class Environments {
    * values. */
   private static Environment env(Environment environment, TypeSystem typeSystem,
       Map<String, ForeignValue> valueMap) {
+    if (Static.SKIP) {
+      return environment;
+    }
     final List<Binding> bindings = new ArrayList<>();
     BuiltIn.dataTypes(typeSystem, bindings);
     final NameGenerator nameGen = typeSystem.nameGenerator;

@@ -58,6 +58,7 @@ public enum Op {
 
   // miscellaneous
   BAR(" | "),
+  COMMA(", "),
   FUN_BIND(" and "),
   FUN_MATCH,
   TY_CON,
@@ -79,10 +80,10 @@ public enum Op {
   // types
   TY_VAR(true),
   RECORD_TYPE(true),
-  DATA_TYPE(true),
+  DATA_TYPE(" ", 8),
   /** Used internally, while resolving a self-referential DATA_TYPE. */
   TEMPORARY_DATA_TYPE(true),
-  APPLY_TYPE,
+  APPLY_TYPE(" ", 8),
   TUPLE_TYPE(" * ", 7),
   COMPOSITE_TYPE,
   FUNCTION_TYPE(" -> ", 6, false),

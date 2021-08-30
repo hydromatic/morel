@@ -61,7 +61,7 @@ public class TypeVisitor<R> {
 
   /** Visits a {@link DataType}. */
   public R visit(DataType dataType) {
-    dataType.typeVars.forEach(t -> t.accept(this));
+    dataType.parameterTypes.forEach(t -> t.accept(this));
     return null;
   }
 
@@ -86,6 +86,11 @@ public class TypeVisitor<R> {
       r = typeVar.accept(this);
     }
     return r;
+  }
+
+  /** Visits a {@link DummyType}. */
+  public R visit(DummyType dummyType) {
+    return null;
   }
 }
 

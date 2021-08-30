@@ -18,8 +18,10 @@
  */
 package net.hydromatic.morel.compile;
 
+import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.foreign.RelList;
+import net.hydromatic.morel.type.ApplyType;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
@@ -27,24 +29,30 @@ import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import java.util.List;
 import javax.annotation.Nonnull;
 
+import static java.util.Objects.requireNonNull;
+
 /** Prints values. */
 class Pretty {
 
+  private final TypeSystem typeSystem;
   private final int lineWidth;
   private final int printLength;
   private final int printDepth;
   private final int stringDepth;
 
-  static final Pretty DEFAULT = new Pretty(78, 12, 5, 79);
-
-  Pretty(int lineWidth, int printLength, int printDepth,
+  Pretty(TypeSystem typeSystem, int lineWidth, int printLength, int printDepth,
       int stringDepth) {
+    this.typeSystem = requireNonNull(typeSystem);
     this.lineWidth = lineWidth;
     this.printLength = printLength;
     this.printDepth = printDepth;
@@ -65,7 +73,7 @@ class Pretty {
       int[] lineEnd, int depth, @Nonnull Type type, @Nonnull Object value) {
     final int start = buf.length();
     final int end = lineEnd[0];
-    pretty2(buf, indent, lineEnd, depth, type, value);
+    pretty2(buf, indent, lineEnd, depth, type, ImmutableList.of(), value);
     if (end >= 0 && buf.length() > end) {
       // Reset to start, remove trailing whitespace, add newline
       buf.setLength(start);
@@ -80,7 +88,7 @@ class Pretty {
 
       lineEnd[0] = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
       indent(buf, indent);
-      pretty2(buf, indent, lineEnd, depth, type, value);
+      pretty2(buf, indent, lineEnd, depth, type, ImmutableList.of(), value);
     }
     return buf;
   }
@@ -93,12 +101,13 @@ class Pretty {
 
   private StringBuilder pretty2(@Nonnull StringBuilder buf,
       int indent, int[] lineEnd, int depth,
-      @Nonnull Type type, @Nonnull Object value) {
+      @Nonnull Type type, List<? extends Type> argTypes,
+      @Nonnull Object value) {
     if (value instanceof TypedVal) {
       final TypedVal typedVal = (TypedVal) value;
       pretty1(buf, indent, lineEnd, depth, PrimitiveType.BOOL,
           "val " + typedVal.name + " = ");
-      pretty1(buf, indent + 2, lineEnd, depth + 1, type, typedVal.o);
+      pretty1(buf, indent + 2, lineEnd, depth + 1, typedVal.type, typedVal.o);
       buf.append(' ');
       pretty1(buf, indent + 2, lineEnd, depth, PrimitiveType.BOOL,
           ": " + unqualified(typedVal.type).moniker());
@@ -199,15 +208,21 @@ class Pretty {
 
     case FORALL_TYPE:
       return pretty2(buf, indent, lineEnd, depth + 1, ((ForallType) type).type,
-          value);
+          ImmutableList.of(), value);
+
+    case APPLY_TYPE:
+      final ApplyType applyType = (ApplyType) type;
+      return pretty2(buf, indent, lineEnd, depth + 1, applyType.type,
+          applyType.types, value);
 
     case DATA_TYPE:
       final DataType dataType = (DataType) type;
       //noinspection unchecked,rawtypes
       list = (List) value;
       if (dataType.name.equals("vector")) {
-        return printList(buf.append('#'), indent, lineEnd, depth,
-            dataType.typeVars.get(0), list);
+        final Type argType = Iterables.getOnlyElement(dataType.parameterTypes);
+        return printList(buf.append('#'), indent, lineEnd, depth, argType,
+            list);
       }
       final String tyConName = (String) list.get(0);
       buf.append(tyConName);
@@ -215,7 +230,18 @@ class Pretty {
       if (list.size() == 2) {
         final Object arg = list.get(1);
         buf.append(' ');
-        pretty2(buf, indent, lineEnd, depth + 1, typeConArgType, arg);
+        final boolean needParentheses =
+            (typeConArgType.op() == Op.APPLY_TYPE
+                || typeConArgType.op() == Op.DATA_TYPE)
+                && arg instanceof List;
+        if (needParentheses) {
+          buf.append('(');
+        }
+        pretty2(buf, indent, lineEnd, depth + 1, typeConArgType,
+            ImmutableList.of(), arg);
+        if (needParentheses) {
+          buf.append(')');
+        }
       }
       return buf;
 

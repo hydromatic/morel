@@ -21,107 +21,135 @@ package net.hydromatic.morel.type;
 import net.hydromatic.morel.ast.Op;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
+import org.apache.calcite.util.Util;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
-import java.util.function.Function;
-import javax.annotation.Nonnull;
+import java.util.TreeMap;
+import java.util.function.UnaryOperator;
 
 /** Algebraic type. */
-public class DataType extends BaseType implements NamedType {
-  public final String name;
-  public final String moniker;
-  public final List<? extends Type> typeVars;
+public class DataType extends ParameterizedType {
+  private final Key key;
   public final SortedMap<String, Type> typeConstructors;
 
   /** Creates a DataType.
    *
-   * <p>Called only from {@link TypeSystem#dataType(String, List, Map)}.
-   * If the {@code typeSystem} argument is specified, canonizes the types inside
-   * type-constructors. This also allows temporary types (necessary while
+   * <p>Called only from {@link TypeSystem#dataTypes(List)}.
+   *
+   * <p>If the {@code typeSystem} argument is specified, canonizes the types
+   * inside type-constructors. This also allows temporary types (necessary while
    * creating self-referential data types) to be replaced with real DataType
-   * instances. */
-  DataType(TypeSystem typeSystem, String name, String description,
-      List<? extends Type> typeVars, SortedMap<String, Type> typeConstructors) {
-    super(Op.DATA_TYPE, description);
-    this.name = Objects.requireNonNull(name);
-    this.moniker = computeMoniker(name, typeVars);
-    this.typeVars = ImmutableList.copyOf(typeVars);
-    if (typeSystem == null) {
-      this.typeConstructors = ImmutableSortedMap.copyOf(typeConstructors);
-    } else {
-      this.typeConstructors = copyTypes(typeSystem, typeConstructors,
-          t -> (t instanceof TypeSystem.TemporaryType
-                && ((TypeSystem.TemporaryType) t).name().equals(name))
-            ? DataType.this
-            : t);
-    }
-    Preconditions.checkArgument(typeConstructors.comparator()
-        == Ordering.natural());
+   * instances.
+   *
+   * <p>During replacement, if a type matches {@code placeholderType} it is
+   * replaced with {@code this}. This allows cyclic graphs to be copied. */
+  DataType(String name, Key key,
+      List<? extends Type> parameterTypes,
+      SortedMap<String, Type> typeConstructors) {
+    this(Op.DATA_TYPE, name, key, parameterTypes, typeConstructors);
   }
 
-  static String computeMoniker(String name, List<? extends Type> typeVars) {
-    if (typeVars.isEmpty()) {
-      return name;
-    }
-    final StringBuilder b = new StringBuilder();
-    typeVars.forEach(t -> {
-      if (t instanceof TupleType) {
-        b.append('(').append(t.moniker()).append(')');
-      } else {
-        b.append(t.moniker());
-      }
-      b.append(' ');
-    });
-    return b.append(name).toString();
+  /** Called only from DataType and TemporaryType constructor. */
+  protected DataType(Op op, String name, Key key,
+      List<? extends Type> parameterTypes,
+      SortedMap<String, Type> typeConstructors) {
+    super(op, name, computeMoniker(name, parameterTypes),
+        parameterTypes);
+    this.key = key;
+    this.typeConstructors = Objects.requireNonNull(typeConstructors);
+    Preconditions.checkArgument(typeConstructors.comparator() == null
+        || typeConstructors.comparator() == Ordering.natural());
   }
 
-  protected ImmutableSortedMap<String, Type> copyTypes(
-      @Nonnull TypeSystem typeSystem,
-      @Nonnull SortedMap<String, Type> typeConstructors,
-      @Nonnull Function<Type, Type> transform) {
-    final ImmutableSortedMap.Builder<String, Type> builder =
-        ImmutableSortedMap.naturalOrder();
-    typeConstructors.forEach((k, v) ->
-        builder.put(k, v.copy(typeSystem, transform)));
-    return builder.build();
+  @Override public Key key() {
+    return key;
+  }
+
+  public Keys.DataTypeDef def() {
+    return Keys.dataTypeDef(name, parameterTypes, typeConstructors, true);
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {
     return typeVisitor.visit(this);
   }
 
-  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
-    return new DataType(typeSystem, name, description, typeVars,
-        copyTypes(typeSystem, typeConstructors, transform));
+  @Override public DataType copy(TypeSystem typeSystem,
+      UnaryOperator<Type> transform) {
+    final List<Type> parameterTypes =
+        Util.transform(this.parameterTypes, transform);
+    final ImmutableSortedMap<String, Type> typeConstructors =
+        typeSystem.copyTypeConstructors(this.typeConstructors, transform);
+    if (parameterTypes.equals(this.parameterTypes)
+        && typeConstructors.equals(this.typeConstructors)) {
+      return this;
+    }
+    return new DataType(name, key, parameterTypes, typeConstructors);
   }
 
-  public String name() {
-    return name;
+  @Override public Type substitute(TypeSystem typeSystem,
+      List<? extends Type> types, TypeSystem.Transaction transaction) {
+    // Create a copy of this datatype with type variables substituted with
+    // actual types.
+    assert types.size() == parameterTypes.size();
+    if (types.equals(parameterTypes)) {
+      return this;
+    }
+    final String moniker = computeMoniker(name, types);
+    final Type lookup = typeSystem.lookupOpt(moniker);
+    if (lookup != null) {
+      return lookup;
+    }
+    return substitute2(typeSystem, types, transaction);
   }
 
-  @Override public String moniker() {
-    return moniker;
-  }
-
-  static String computeDescription(Map<String, Type> tyCons) {
-    final StringBuilder buf = new StringBuilder("(");
-    tyCons.forEach((tyConName, tyConType) -> {
-      if (buf.length() > 1) {
-        buf.append(" | ");
+  /** Second part of the implementation of
+   * {@link #substitute(TypeSystem, List, TypeSystem.Transaction)}, called
+   * if there is not already a type of the given description. */
+  protected Type substitute2(TypeSystem typeSystem,
+      List<? extends Type> types, TypeSystem.Transaction transaction) {
+    final List<Keys.DataTypeDef> defs = new ArrayList<>();
+    final Map<String, TemporaryType> temporaryTypeMap = new HashMap<>();
+    final TypeShuttle typeVisitor = new TypeShuttle(typeSystem) {
+      @Override public Type visit(TypeVar typeVar) {
+        return types.get(typeVar.ordinal);
       }
-      buf.append(tyConName);
-      if (tyConType != DummyType.INSTANCE) {
-        buf.append(" of ");
-        buf.append(tyConType.moniker());
+
+      @Override public Type visit(DataType dataType) {
+        final String moniker1 = computeMoniker(dataType.name, types);
+        final Type type = typeSystem.lookupOpt(moniker1);
+        if (type != null) {
+          return type;
+        }
+        final Type type2 = temporaryTypeMap.get(moniker1);
+        if (type2 != null) {
+          return type2;
+        }
+        final TemporaryType temporaryType =
+            typeSystem.temporaryType(dataType.name, types, transaction, false);
+        temporaryTypeMap.put(moniker1, temporaryType);
+        final SortedMap<String, Type> typeConstructors = new TreeMap<>();
+        dataType.typeConstructors.forEach((tyConName, tyConType) ->
+            typeConstructors.put(tyConName, tyConType.accept(this)));
+        defs.add(
+            Keys.dataTypeDef(dataType.name, types, typeConstructors, true));
+        return temporaryType;
       }
-    });
-    return buf.append(")").toString();
+    };
+    accept(typeVisitor);
+    final List<Type> types1 = typeSystem.dataTypes(defs);
+    final int i = defs.size() == 1
+        ? 0
+        : Iterables.indexOf(defs, def ->
+            def.name.equals(name) && def.types.equals(types));
+    return types1.get(i);
   }
 }
 

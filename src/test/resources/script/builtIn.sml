@@ -48,7 +48,12 @@ val nan = Real.posInf / Real.negInf;
 (*) datatype option
 SOME 1;
 NONE;
+NONE = NONE;
+NONE = SOME 1;
+SOME "a" = NONE;
 SOME (SOME true);
+SOME (SOME [1,2,3]);
+SOME (SOME {a=1, b=true});
 
 (* Top-level environment --------------------------------------- *)
 (* A few functions and operators belong to signatures but can be

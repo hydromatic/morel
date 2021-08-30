@@ -78,6 +78,22 @@ in
   (r.a "x", r.b)
 end;
 
+(*) A datatype whose constructor overwrites another datatype's constructor
+datatype foo = W | X | Y of int;
+X;
+Y;
+Y 0;
+datatype bar = X of int | Y of int * bool | Z;
+X;
+Y;
+Y (1, true);
+Z;
+
+(*) The following is syntax error:
+(*
+datatype bar = X of int | Y of (int, bool) | Z;
+*)
+
 (*) A recursive type, without generics
 datatype inttree = Empty | Node of inttree * int * inttree;
 fun max (x, y) = if x < y then y + 0 else x;
@@ -93,8 +109,7 @@ Node(Empty, 2, Node(Node(Empty, 3, Empty), 4, Empty));
 height it;
 
 (*) Recursive
-(*  disabled - need generics
-datatype 'a tree = Empty | Node of 'a tree * 'a * 'a tree;
+datatype 'x tree = Empty | Node of 'x tree * 'x * 'x tree;
 fun max (x, y) = if x < y then y else x;
 fun height Empty = 0
   | height (Node (lft, _, rht)) = 1 + max (height lft, height rht);
@@ -102,39 +117,51 @@ Empty;
 height it;
 Node(Empty, 1, Empty);
 height it;
-Node(Empty, 2, Node(Node(Empty, 3, Empty), Empty));
+Node(Empty, 2, Node(Node(Empty, 3, Empty), 4, Empty));
 height it;
-*)
+
+(*) Two type parameters
+datatype ('y, 'x) tree =
+   Empty
+ | Node of ('y, 'x) tree * 'x * 'y * ('y, 'x) tree;
+Empty;
+Node (Empty, true, "yes", Empty);
+
+datatype ('a, 'b) Union = A of 'a | B of 'b;
+A 1;
+B true;
 
 (*) Mutually recursive
-(*  disabled - need generics
 datatype 'a tree = Empty | Node of 'a * 'a forest
 and      'a forest = Nil | Cons of 'a tree * 'a forest;
 Empty;
 Nil;
 Node (1, Nil);
 Node (1, Cons (Empty, Nil));
-*)
+Cons (Empty, Nil);
+Cons (Empty, Cons (Node (true, Nil), Nil));
 
 (*) Parentheses are required for 2 or more type parameters,
 (*) optional for 1 type parameter,
 (*) not allowed for 0 type parameters.
-(*  disabled - need generics
 datatype ('a, 'b) pair = Pair of 'a * 'b;
-*)
 (* disabled; should throw
 datatype 'a, 'b pair = Pair of 'a * 'b; (*) not valid
 *)
-(*  disabled - need generics
 datatype 'a single = Single of 'a;
 datatype ('a) single = Single of 'a;
-*)
 (* disabled; should throw
 datatype () void = Void of unit; (*) not valid
 datatype () void = Void; (*) not valid
 *)
 datatype void = Void;
 datatype unitVoid = Void of unit;
+
+(*) Recursive datatype with 2 type parameters
+datatype ('a, 'b) tree = EMPTY | NODE of 'a * 'b * ('a, 'b) tree;
+EMPTY;
+NODE (1, true, EMPTY);
+NODE (1, true, NODE (2, false, EMPTY));
 
 (*
 - fun f x none = x | x some y = y;

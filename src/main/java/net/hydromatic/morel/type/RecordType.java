@@ -28,15 +28,14 @@ import com.google.common.collect.Ordering;
 import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /** The type of a record value. */
 public class RecordType extends BaseType implements RecordLikeType {
   public final SortedMap<String, Type> argNameTypes;
 
-  RecordType(String description,
-      ImmutableSortedMap<String, Type> argNameTypes) {
-    super(Op.RECORD_TYPE, description);
+  RecordType(ImmutableSortedMap<String, Type> argNameTypes) {
+    super(Op.RECORD_TYPE);
     this.argNameTypes = Objects.requireNonNull(argNameTypes);
     Preconditions.checkArgument(argNameTypes.comparator() == ORDERING);
   }
@@ -49,7 +48,12 @@ public class RecordType extends BaseType implements RecordLikeType {
     return typeVisitor.visit(this);
   }
 
-  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+  public Key key() {
+    return Keys.record(argNameTypes);
+  }
+
+  @Override public RecordType copy(TypeSystem typeSystem,
+      UnaryOperator<Type> transform) {
     int differenceCount = 0;
     final ImmutableSortedMap.Builder<String, Type> argNameTypes2 =
         ImmutableSortedMap.orderedBy(ORDERING);
@@ -63,7 +67,7 @@ public class RecordType extends BaseType implements RecordLikeType {
     }
     return differenceCount == 0
         ? this
-        : typeSystem.recordType(argNameTypes2.build());
+        : (RecordType) typeSystem.recordType(argNameTypes2.build());
   }
 
   /** Ordering that compares integer values numerically,

@@ -24,24 +24,29 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /** Universally quantified type. */
 public class ForallType extends BaseType {
   public final List<TypeVar> typeVars;
   public final Type type;
 
-  ForallType(String description, ImmutableList<TypeVar> typeVars, Type type) {
-    super(Op.FORALL_TYPE, description);
+  ForallType(ImmutableList<TypeVar> typeVars, Type type) {
+    super(Op.FORALL_TYPE);
     this.typeVars = Objects.requireNonNull(typeVars);
     this.type = Objects.requireNonNull(type);
+  }
+
+  public Key key() {
+    return Keys.forall(type, typeVars);
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {
     return typeVisitor.visit(this);
   }
 
-  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+  @Override public ForallType copy(TypeSystem typeSystem,
+      UnaryOperator<Type> transform) {
     final Type type2 = type.copy(typeSystem, transform);
     return type2 == type
         ? this

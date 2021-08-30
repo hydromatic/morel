@@ -22,39 +22,37 @@ import net.hydromatic.morel.ast.Op;
 
 import com.google.common.collect.ImmutableList;
 
-import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.function.UnaryOperator;
+
+import static net.hydromatic.morel.util.Static.toImmutableList;
 
 /** Type that is a polymorphic type applied to a set of types. */
 public class ApplyType extends BaseType {
-  public final Type type;
+  public final ParameterizedType type;
   public final ImmutableList<Type> types;
 
-  protected ApplyType(Type type, ImmutableList<Type> types,
-      String description) {
-    super(Op.APPLY_TYPE, description);
+  protected ApplyType(ParameterizedType type, ImmutableList<Type> types) {
+    super(Op.APPLY_TYPE);
     this.type = Objects.requireNonNull(type);
     this.types = Objects.requireNonNull(types);
+    assert !(type instanceof DataType);
   }
 
-  static String computeDescription(Type type, List<Type> types) {
-    return types.stream().map(Type::moniker)
-        .collect(Collectors.joining(",", "<", ">"))
-        + type.moniker();
+  public Key key() {
+    return Keys.apply(type, types);
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {
     return typeVisitor.visit(this);
   }
 
-  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+  @Override public Type copy(TypeSystem typeSystem,
+      UnaryOperator<Type> transform) {
     final Type type2 = type.copy(typeSystem, transform);
-    //noinspection UnstableApiUsage
     final ImmutableList<Type> types2 =
         types.stream().map(t -> t.copy(typeSystem, transform))
-            .collect(ImmutableList.toImmutableList());
+            .collect(toImmutableList());
     return type == type2 && types.equals(types2) ? this
         : typeSystem.apply(type2, types2);
   }

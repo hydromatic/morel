@@ -154,6 +154,40 @@ end;
 val it = ("x",2) : string * int
 
 
+(*) A datatype whose constructor overwrites another datatype's constructor
+datatype foo = W | X | Y of int;
+datatype foo = W | X | Y of int
+
+X;
+val it = X : foo
+
+Y;
+val it = fn : int -> foo
+
+Y 0;
+val it = Y 0 : foo
+
+datatype bar = X of int | Y of int * bool | Z;
+datatype bar = X of int | Y of int * bool | Z
+
+X;
+val it = fn : int -> bar
+
+Y;
+val it = fn : int * bool -> bar
+
+Y (1, true);
+val it = Y (1,true) : bar
+
+Z;
+val it = Z : bar
+
+
+(*) The following is syntax error:
+(*
+datatype bar = X of int | Y of (int, bool) | Z;
+*)
+
 (*) A recursive type, without generics
 datatype inttree = Empty | Node of inttree * int * inttree;
 datatype inttree = Empty | Node of inttree * int * inttree
@@ -191,42 +225,98 @@ val it = 3 : int
 
 
 (*) Recursive
-(*  disabled - need generics
-datatype 'a tree = Empty | Node of 'a tree * 'a * 'a tree;
+datatype 'x tree = Empty | Node of 'x tree * 'x * 'x tree;
+datatype 'a tree = Empty | Node of 'a tree * 'a * 'a tree
+
 fun max (x, y) = if x < y then y else x;
+val max = fn : 'a * 'a -> 'a
+
 fun height Empty = 0
   | height (Node (lft, _, rht)) = 1 + max (height lft, height rht);
+val height = fn : 'a tree -> int
+
 Empty;
+val it = Empty : 'a tree
+
 height it;
+val it = 0 : int
+
 Node(Empty, 1, Empty);
+val it = Node (Empty,1,Empty) : int tree
+
 height it;
-Node(Empty, 2, Node(Node(Empty, 3, Empty), Empty));
+val it = 1 : int
+
+Node(Empty, 2, Node(Node(Empty, 3, Empty), 4, Empty));
+val it = Node (Empty,2,Node (Node (Empty,3,Empty),4,Empty)) : int tree
+
 height it;
-*)
+val it = 3 : int
+
+
+(*) Two type parameters
+datatype ('y, 'x) tree =
+   Empty
+ | Node of ('y, 'x) tree * 'x * 'y * ('y, 'x) tree;
+datatype ('a,'b) tree = Empty | Node of ('a,'b) tree * 'b * 'a * ('a,'b) tree
+
+Empty;
+val it = Empty : ('a,'b) tree
+
+Node (Empty, true, "yes", Empty);
+val it = Node (Empty,true,"yes",Empty) : (string,bool) tree
+
+
+datatype ('a, 'b) Union = A of 'a | B of 'b;
+datatype ('a,'b) Union = A of 'a | B of 'b
+
+A 1;
+val it = A 1 : (int,'a) Union
+
+B true;
+val it = B true : ('a,bool) Union
+
 
 (*) Mutually recursive
-(*  disabled - need generics
 datatype 'a tree = Empty | Node of 'a * 'a forest
 and      'a forest = Nil | Cons of 'a tree * 'a forest;
+datatype 'a tree = Empty | Node of 'a * 'a forest
+datatype 'a forest = Cons of 'a tree * 'a forest | Nil
+
 Empty;
+val it = Empty : 'a tree
+
 Nil;
+val it = Nil : 'a forest
+
 Node (1, Nil);
+val it = Node (1,Nil) : int tree
+
 Node (1, Cons (Empty, Nil));
-*)
+val it = Node (1,Cons (Empty,Nil)) : int tree
+
+Cons (Empty, Nil);
+val it = Cons (Empty,Nil) : 'a forest
+
+Cons (Empty, Cons (Node (true, Nil), Nil));
+val it = Cons (Empty,Cons (Node (true,Nil),Nil)) : bool forest
+
 
 (*) Parentheses are required for 2 or more type parameters,
 (*) optional for 1 type parameter,
 (*) not allowed for 0 type parameters.
-(*  disabled - need generics
 datatype ('a, 'b) pair = Pair of 'a * 'b;
-*)
+datatype ('a,'b) pair = Pair of 'a * 'b
+
 (* disabled; should throw
 datatype 'a, 'b pair = Pair of 'a * 'b; (*) not valid
 *)
-(*  disabled - need generics
 datatype 'a single = Single of 'a;
+datatype 'a single = Single of 'a
+
 datatype ('a) single = Single of 'a;
-*)
+datatype 'a single = Single of 'a
+
 (* disabled; should throw
 datatype () void = Void of unit; (*) not valid
 datatype () void = Void; (*) not valid
@@ -236,6 +326,20 @@ datatype void = Void
 
 datatype unitVoid = Void of unit;
 datatype unitVoid = Void of unit
+
+
+(*) Recursive datatype with 2 type parameters
+datatype ('a, 'b) tree = EMPTY | NODE of 'a * 'b * ('a, 'b) tree;
+datatype ('a,'b) tree = EMPTY | NODE of 'a * 'b * ('a,'b) tree
+
+EMPTY;
+val it = EMPTY : ('a,'b) tree
+
+NODE (1, true, EMPTY);
+val it = NODE (1,true,EMPTY) : (int,bool) tree
+
+NODE (1, true, NODE (2, false, EMPTY));
+val it = NODE (1,true,NODE (2,false,EMPTY)) : (int,bool) tree
 
 
 (*

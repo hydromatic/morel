@@ -39,6 +39,8 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
+import static net.hydromatic.morel.util.Static.skip;
+
 /** The result of type resolution, a map from AST nodes to types. */
 public class TypeMap {
   public final TypeSystem typeSystem;
@@ -103,6 +105,7 @@ public class TypeMap {
     public Type visit(Unifier.Sequence sequence) {
       final ImmutableList.Builder<Type> argTypes;
       final ImmutableSortedMap.Builder<String, Type> argNameTypes;
+      final Type type;
       switch (sequence.operator) {
       case TypeResolver.FN_TY_CON:
         assert sequence.terms.size() == 2;
@@ -123,6 +126,15 @@ public class TypeMap {
         final Type elementType = sequence.terms.get(0).accept(this);
         return typeMap.typeSystem.listType(elementType);
 
+      case TypeResolver.APPLY_TY_CON:
+        assert sequence.terms.size() == 2;
+        type = sequence.terms.get(0).accept(this);
+        argTypes = ImmutableList.builder();
+        for (Unifier.Term term : skip(sequence.terms)) {
+          argTypes.add(term.accept(this));
+        }
+        return typeMap.typeSystem.apply(type, argTypes.build());
+
       case "bool":
       case "char":
       case "int":
@@ -130,7 +142,7 @@ public class TypeMap {
       case "string":
       case "unit":
       default:
-        final Type type = typeMap.typeSystem.lookupOpt(sequence.operator);
+        type = typeMap.typeSystem.lookupOpt(sequence.operator);
         if (type != null) {
           if (sequence.terms.isEmpty()) {
             return type;

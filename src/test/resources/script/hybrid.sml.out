@@ -173,7 +173,7 @@ val it =
   : string
 
 
-(*) Query on an empty list
+(*) Query on an empty list whose element is not referenced
 from e in []
   yield {a = 1, b = true};
 val it = [] : {a:int, b:bool} list
@@ -181,6 +181,17 @@ val it = [] : {a:int, b:bool} list
 Sys.plan();
 val it = "calcite(plan LogicalValues(tuples=[[]])
 )" : string
+
+
+(*) Equivalent, using map
+map (fn e => {a = 1, b = true}) [];
+val it = [] : {a:int, b:bool} list
+
+Sys.plan();
+val it =
+  "apply(fnCode apply(fnValue List.map, argCode match(e, tuple(constant(1), constant(true)))), argCode calcite(plan LogicalValues(tuples=[[]])
+))"
+  : string
 
 
 (*) Query on an empty list whose element is referenced
@@ -196,6 +207,17 @@ val it =
   : string
 
 
+(*) Equivalent, using map
+map (fn e => {a = 1 + e, b = true}) [];
+val it = [] : {a:int, b:bool} list
+
+Sys.plan();
+val it =
+  "apply(fnCode apply(fnValue List.map, argCode match(e, tuple(apply2(fnValue +, constant(1), get(name e)), constant(true)))), argCode calcite(plan LogicalValues(tuples=[[]])
+))"
+  : string
+
+
 (*) Query on a singleton list whose element is not referenced
 from e in [0]
   yield {a = 1, b = true};
@@ -204,6 +226,17 @@ val it = [{a=1,b=true}] : {a:int, b:bool} list
 Sys.plan();
 val it = "calcite(plan LogicalValues(tuples=[[{ 1, true }]])
 )" : string
+
+
+(*) Equivalent, using map
+map (fn e => {a = 1, b = true}) [0];
+val it = [{a=1,b=true}] : {a:int, b:bool} list
+
+Sys.plan();
+val it =
+  "apply(fnCode apply(fnValue List.map, argCode match(e, tuple(constant(1), constant(true)))), argCode calcite(plan LogicalValues(tuples=[[{ 0 }]])
+))"
+  : string
 
 
 (*) Simple query with scan, filter, project

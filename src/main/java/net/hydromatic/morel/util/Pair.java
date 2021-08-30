@@ -212,8 +212,10 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   /** Calls a consumer for each pair of items in two iterables. */
   public static <K, V> void forEach(Iterable<K> ks, Iterable<V> vs,
       BiConsumer<K, V> consumer) {
-    for (Pair<K, V> pair : zip(ks, vs)) {
-      consumer.accept(pair.left, pair.right);
+    final Iterator<K> ki = ks.iterator();
+    final Iterator<V> vi = vs.iterator();
+    while (ki.hasNext() && vi.hasNext()) {
+      consumer.accept(ki.next(), vi.next());
     }
   }
 
@@ -222,8 +224,10 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   public static <K, V> void forEachIndexed(Iterable<K> ks, Iterable<V> vs,
       PairWithOrdinalConsumer<K, V> consumer) {
     int i = 0;
-    for (Pair<K, V> pair : zip(ks, vs)) {
-      consumer.accept(i++, pair.left, pair.right);
+    final Iterator<K> ki = ks.iterator();
+    final Iterator<V> vi = vs.iterator();
+    while (ki.hasNext() && vi.hasNext()) {
+      consumer.accept(i++, ki.next(), vi.next());
     }
   }
 

@@ -20,24 +20,25 @@ package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
 
-import java.util.function.Function;
+import java.util.List;
+import java.util.function.UnaryOperator;
 
 /** Type. */
 public interface Type {
   /** Description of the type, e.g. "{@code int}", "{@code int -> int}",
    * "{@code NONE | SOME of 'a}". */
-  String description();
+  Key key();
 
   /** Key of the type.
    *
-   * <p>Often the same as {@link #description()}, but an exception is datatype.
+   * <p>Often the same as {@link #key()}, but an exception is datatype.
    * For example, datatype "{@code 'a option}" has moniker and name
    * "{@code option}" and description "{@code NONE | SOME of 'a}".
    *
    * <p>Use the description if you are looking for a type that is structurally
    * equivalent. Use the moniker to identify it when printing. */
   default String moniker() {
-    return description();
+    return key().moniker();
   }
 
   /** Type operator. */
@@ -45,9 +46,38 @@ public interface Type {
 
   /** Copies this type, applying a given transform to component types,
    * and returning the original type if the component types are unchanged. */
-  Type copy(TypeSystem typeSystem, Function<Type, Type> transform);
+  Type copy(TypeSystem typeSystem, UnaryOperator<Type> transform);
 
   <R> R accept(TypeVisitor<R> typeVisitor);
+
+  /** Returns a copy of this type, specialized by substituting type
+   * parameters. */
+  default Type substitute(TypeSystem typeSystem, List<? extends Type> types,
+      TypeSystem.Transaction transaction) {
+    if (!types.isEmpty()) {
+      throw new IllegalArgumentException("too many type parameters, "
+          + types + " (expected 0)");
+    }
+    return this;
+  }
+
+  /** Structural identifier of a type. */
+  interface Key {
+    Type toType(TypeSystem typeSystem);
+
+    default String moniker() {
+      return describe(new StringBuilder(), 0, 0).toString();
+    }
+
+    StringBuilder describe(StringBuilder buf, int left, int right);
+  }
+
+  /** Definition of a type. */
+  interface Def {
+    StringBuilder describe(StringBuilder buf);
+
+    DataType toType(TypeSystem typeSystem);
+  }
 }
 
 // End Type.java

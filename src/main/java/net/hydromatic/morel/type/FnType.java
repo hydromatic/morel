@@ -20,24 +20,29 @@ package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
 
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /** The type of a function value. */
 public class FnType extends BaseType {
   public final Type paramType;
   public final Type resultType;
 
-  FnType(String description, Type paramType, Type resultType) {
-    super(Op.FUNCTION_TYPE, description);
+  FnType(Type paramType, Type resultType) {
+    super(Op.FUNCTION_TYPE);
     this.paramType = paramType;
     this.resultType = resultType;
+  }
+
+  public Key key() {
+    return Keys.fn(paramType, resultType);
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {
     return typeVisitor.visit(this);
   }
 
-  public Type copy(TypeSystem typeSystem, Function<Type, Type> transform) {
+  @Override public FnType copy(TypeSystem typeSystem,
+      UnaryOperator<Type> transform) {
     final Type paramType2 = paramType.copy(typeSystem, transform);
     final Type resultType2 = resultType.copy(typeSystem, transform);
     return paramType2 == paramType

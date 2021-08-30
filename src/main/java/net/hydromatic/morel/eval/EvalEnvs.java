@@ -23,7 +23,6 @@ import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.util.Util;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -31,6 +30,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import javax.annotation.Nullable;
+
+import static net.hydromatic.morel.util.Static.skip;
 
 /** Helpers for {@link EvalEnv}. */
 public class EvalEnvs {
@@ -251,7 +252,7 @@ public class EvalEnvs {
           return false;
         }
         final Object head = consValue.get(0);
-        final List<Object> tail = Util.skip(consValue);
+        final List<Object> tail = skip(consValue);
         List<Core.Pat> patArgs = ((Core.TuplePat) infixPat.pat).args;
         return bindRecurse(patArgs.get(0), head)
             && bindRecurse(patArgs.get(1), tail);

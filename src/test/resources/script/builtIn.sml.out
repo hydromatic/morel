@@ -119,8 +119,23 @@ val it = SOME 1 : int option
 NONE;
 val it = NONE : 'a option
 
+NONE = NONE;
+val it = true : bool
+
+NONE = SOME 1;
+val it = false : bool
+
+SOME "a" = NONE;
+val it = false : bool
+
 SOME (SOME true);
-val it = SOME SOME true : bool option option
+val it = SOME (SOME true) : bool option option
+
+SOME (SOME [1,2,3]);
+val it = SOME (SOME [1,2,3]) : int list option option
+
+SOME (SOME {a=1, b=true});
+val it = SOME (SOME {a=1,b=true}) : {a:int, b:bool} option option
 
 
 (* Top-level environment --------------------------------------- *)

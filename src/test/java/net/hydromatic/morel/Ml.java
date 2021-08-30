@@ -40,6 +40,7 @@ import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
 import com.google.common.collect.ImmutableMap;
@@ -58,6 +59,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
+import static net.hydromatic.morel.Matchers.hasMoniker;
 import static net.hydromatic.morel.Matchers.isAst;
 import static net.hydromatic.morel.Matchers.throwsA;
 
@@ -202,14 +204,13 @@ class Ml {
     });
   }
 
-  Ml assertType(Matcher<String> matcher) {
+  Ml assertType(Matcher<Type> matcher) {
     return withValidate((resolved, calcite) ->
-        assertThat(resolved.typeMap.getType(resolved.exp()).moniker(),
-            matcher));
+        assertThat(resolved.typeMap.getType(resolved.exp()), matcher));
   }
 
   Ml assertType(String expected) {
-    return assertType(is(expected));
+    return assertType(hasMoniker(expected));
   }
 
   Ml assertTypeThrows(Matcher<Throwable> matcher) {

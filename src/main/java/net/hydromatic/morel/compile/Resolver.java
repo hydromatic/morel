@@ -25,6 +25,7 @@ import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
+import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
@@ -248,7 +249,10 @@ public class Resolver {
   }
 
   private DataType toCore(Ast.DatatypeBind bind) {
-    return (DataType) typeMap.typeSystem.lookup(bind.name.name);
+    final Type type = typeMap.typeSystem.lookup(bind.name.name);
+    return type instanceof ForallType
+        ? (DataType) ((ForallType) type).type
+        : (DataType) type;
   }
 
   /** Visitor that finds all references to unbound variables in an expression. */

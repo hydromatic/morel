@@ -42,6 +42,21 @@ in
   one ()
 end;
 
+(*) A function with a type that is tricky to unparse correctly:
+(*)   'a list -> ('a * 'a list) option
+fun g [] = NONE
+  | g (h :: t) = SOME (h, t);
+
+(*) Ditto:
+(*)   'a list -> ('a * 'a list option) option
+fun g [] = NONE
+  | g (h :: t) = SOME (h, SOME t);
+
+(*) Ditto:
+(*)   'a list -> ('a option * 'a list option) option
+fun g [] = NONE
+  | g (h :: t) = SOME (SOME h, SOME t);
+
 (*) Pattern-match on record
 fun f {a = c, b} = b + c;
 f {a = 5, b = 6};
@@ -116,5 +131,27 @@ in
   aggregate [(#id, sum)] emps
 end;
 *)
+
+(*) Record containing polymorphic functions:
+(*)  val it = {a=fn,b=fn}
+(*) : {a:'a list -> ('a * 'a list) option, b:'b list -> ('b * 'b list) option}
+{a = fn x => case x of [] => NONE | (h :: t) => SOME (h, t),
+ b = fn x => case x of [] => NONE | (h :: t) => SOME (h, t)};
+
+(*) Similar, expressed via 'fun'.
+(* sml/nj gives:
+stdIn:1.2-1.66 Warning: type vars not generalized because of
+   value restriction are instantiated to dummy types (X1,X2,...)
+val it = {a=1,b=fn} : {a:int, b:?.X1 list -> (?.X1 * ?.X1 list) option}
+*)
+let
+  fun g [] = NONE
+    | g (h :: t) = SOME (h, t)
+in
+  {a=1, b=g}
+end;
+
+(*) as above
+{a = 1, b = let fun g [] = NONE | g (h :: t) = SOME (h, t) in g end};
 
 (*) End type.sml

@@ -24,24 +24,18 @@ import java.util.Objects;
 
 /** Abstract implementation of Type. */
 abstract class BaseType implements Type {
-  final String description;
   final Op op;
 
-  protected BaseType(Op op, String description) {
+  protected BaseType(Op op) {
     this.op = Objects.requireNonNull(op);
-    this.description = Objects.requireNonNull(description);
-  }
-
-  @Override public String toString() {
-    return description;
-  }
-
-  public String description() {
-    return description;
   }
 
   public Op op() {
     return op;
+  }
+
+  @Override public String toString() {
+    return key().moniker();
   }
 }
 

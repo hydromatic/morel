@@ -288,7 +288,7 @@ public class Converters {
       case DATA_TYPE:
         final DataType dataType = (DataType) type;
         if (dataType.name.equals("option")) {
-          return forMorel(dataType.typeVars.get(0), typeFactory, true,
+          return forMorel(dataType.parameterTypes.get(0), typeFactory, true,
               false);
         }
         throw new AssertionError("unknown type " + type);
@@ -321,6 +321,14 @@ public class Converters {
                 forMorel(argType, typeFactory, nullable, recordList)
                     .calciteType));
         return new C2m(typeBuilder.build(), type);
+
+      case TY_VAR:
+        // The reason that a type variable is present is because the type
+        // doesn't matter. For example, in 'map (fn x => 1) []' it doesn't
+        // matter what the element type of the empty list is, because the
+        // lambda doesn't look at the elements. So, pretend the type is 'bool'.
+        type = PrimitiveType.BOOL;
+        // fall through
 
       case ID:
         final PrimitiveType primitiveType = (PrimitiveType) type;
@@ -358,8 +366,10 @@ public class Converters {
         default:
           throw new AssertionError("unknown type " + type);
         }
+
+      default:
+        throw new UnsupportedOperationException("cannot convert type " + type);
       }
-      throw new UnsupportedOperationException("cannot convert type " + type);
     }
 
     public Object toCalciteObject(Object v) {
