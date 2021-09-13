@@ -219,7 +219,7 @@ In a sense, `from` is syntactic sugar. For example, given `emps` and
 val emps =
   [{id = 100, name = "Fred", deptno = 10},
    {id = 101, name = "Velma", deptno = 20},
-   {id = 102, name = "Shaggy", deptno = 30};
+   {id = 102, name = "Shaggy", deptno = 30},
    {id = 103, name = "Scooby", deptno = 30}];
 val depts =
   [{deptno = 10, name = "Sales"},
