@@ -420,8 +420,8 @@ end;
 
 (*) WordCount in Standard ML
 (* Note: The blog post used Standard ML. Here, to accommodate missing
-   language features in Morel, we have changed "List.rev" to
-   "List.rev" (etc.) and "(op +)" to "(fn (x, y) => x + y)". *)
+   language features in Morel, we have changed "(op +)" to
+   "(fn (x, y) => x + y)". *)
 fun mapReduce mapper reducer list =
   let
     fun update (key, value, []) = [(key, [value])]
@@ -520,6 +520,197 @@ end;
 from e in emps
   group e.deptno
   compute names = (fn x => x) of e.ename;
+
+(*) === StrangeLoop 2021 talk =======================================
+(*) Standard ML: values
+"Hello, world!";
+1 + 2;
+~1.5;
+[1, 1, 2, 3, 5];
+fn i => i mod 2 = 1;
+(1, "a");
+{name = "Fred", empno = 100};
+
+(*) Standard ML: types
+true;
+#"a";
+~1;
+3.14;
+"foo";
+();
+String.size;
+fn (x, y) => x + y * y;
+(10, "Fred");
+{empno=10, name="Fred"};
+[1, 2, 3];
+[(true, fn i => i + 1)];
+List.length;
+
+(*) Standard ML: variables and functions
+val x = 1;
+val isOdd = fn i => i mod 2 = 1;
+fun isOdd i = i mod 2 = 0;
+isOdd x;
+let
+  val x = 6
+  fun isOdd i = i mod 2 = 1
+in
+  isOdd x
+end;
+
+(*) Algebraic data types, case, and recursion
+(* TODO fix bug in parameterized datatype, and remove intTree below
+datatype 'a tree =
+    EMPTY
+  | LEAF of 'a
+  | NODE of ('a * 'a tree * 'a tree);
+*)
+datatype intTree =
+    EMPTY
+  | LEAF of int
+  | NODE of (int * intTree * intTree);
+fun sumTree EMPTY = 0
+  | sumTree (LEAF i) = i
+  | sumTree (NODE (i, l, r)) =
+        i + sumTree l + sumTree r;
+val t = NODE (1, LEAF 2, NODE (3, EMPTY, LEAF 7));
+sumTree t;
+val rec sumTree = fn t =>
+  case t of EMPTY => 0
+    | LEAF i => i
+    | NODE (i, l, r) => i + sumTree l + sumTree r;
+
+(*) Relations and higher-order functions
+val emps = [
+  {id = 100, name = "Fred", deptno = 10},
+  {id = 101, name = "Velma", deptno = 20},
+  {id = 102, name = "Shaggy", deptno = 30},
+  {id = 103, name = "Scooby", deptno = 30}];
+List.filter (fn e => #deptno e = 30) emps;
+
+(*) Implementing Join using higher-order functions
+val depts = [
+  {deptno = 10, name = "Sales"},
+  {deptno = 20, name = "Marketing"},
+  {deptno = 30, name = "R&D"}];
+fun flatMap f xs = List.concat (List.map f xs);
+List.map
+  (fn (d, e) => {deptno = #deptno d, name = #name e})
+  (List.filter
+    (fn (d, e) => #deptno d = #deptno e)
+    (flatMap
+      (fn e => (List.map (fn d => (d, e)) depts))
+      emps));
+
+(*) Implementing Join in Morel using `from`
+from e in emps,
+    d in depts
+  where e.deptno = d.deptno
+  yield {d.deptno, e.name};
+from e in emps,
+    d in depts
+  where #deptno e = #deptno d
+  yield {deptno = #deptno d, name = #name e};
+
+(*) WordCount
+let
+  fun split0 [] word words = word :: words
+    | split0 (#" " :: s) word words = split0 s "" (word :: words)
+    | split0 (c :: s) word words = split0 s (word ^ (String.str c)) words
+  fun split s = List.rev (split0 (String.explode s) "" [])
+in
+  from line in lines,
+    word in split line
+  group word compute c = count
+end;
+wordCount ["a skunk sat on a stump",
+    "and thunk the stump stunk",
+    "but the stump thunk the skunk stunk"];
+
+(*) Functions as views, functions as values
+fun emps2 () =
+   from e in emps
+     yield {e.id,
+       e.name,
+       e.deptno,
+       comp = fn revenue => case e.deptno of
+           30 => e.id + revenue / 2
+         | _ => e.id};
+from e in emps2 ()
+  yield {e.name, e.id, c = e.comp 1000};
+
+(*) Chaining relational operators
+from e in emps;
+from e in emps
+  order e.deptno, e.id desc;
+from e in emps
+  order e.deptno, e.id desc
+  yield {e.name, nameLength = String.size e.name, e.id, e.deptno};
+from e in emps
+  order e.deptno, e.id desc
+  yield {e.name, nameLength = String.size e.name, e.id, e.deptno}
+  where nameLength > 4;
+from e in emps
+  order e.deptno, e.id desc
+  yield {e.name, nameLength = String.size e.name, e.id, e.deptno}
+  where nameLength > 4
+  group deptno compute c = count, s = sum of nameLength;
+from e in emps
+  order e.deptno, e.id desc
+  yield {e.name, nameLength = String.size e.name, e.id, e.deptno}
+  where nameLength > 4
+  group deptno compute c = count, s = sum of nameLength
+  where s > 10;
+from e in emps
+  order e.deptno, e.id desc
+  yield {e.name, nameLength = String.size e.name, e.id, e.deptno}
+  where nameLength > 4
+  group deptno compute c = count, s = sum of nameLength
+  where s > 10
+  yield c + s;
+
+(*) Integration with Apache Calcite - schemas
+foodmart;
+scott;
+scott.dept;
+from d in scott.dept
+  where notExists (from e in scott.emp
+    where e.deptno = d.deptno
+    andalso e.job = "CLERK");
+
+(*) Integration with Apache Calcite - relational algebra
+Sys.set ("hybrid", true);
+from d in scott.dept
+  where notExists (from e in scott.emp
+    where e.deptno = d.deptno
+    andalso e.job = "CLERK");
+Sys.plan();
+
+(*) Functional programming <=> relational programming
+fun squareList [] = []
+  | squareList (x :: xs) = x * x :: squareList xs;
+squareList [1, 2, 3];
+fun squareList xs = List.map (fn x => x * 2) xs;
+squareList [1, 2, 3];
+fun squareList xs =
+  from x in xs
+    yield x * x;
+squareList [1, 2, 3];
+
+(*) wordCount again
+fun mapReduce mapper reducer list =
+  from e in list,
+      (k, v) in mapper e
+    group k compute c = (fn vs => reducer (k, vs)) of v;
+fun wc_mapper line =
+  List.map (fn w => (w, 1)) (split line);
+fun wc_reducer (key, values) =
+  List.foldl (fn (x, y) => x + y) 0 values;
+val wordCount = mapReduce wc_mapper wc_reducer;
+wordCount lines;
+from line in lines,
+   word in split line
+ group word compute c = count;
 
 (*) === Coda ========================================================
 from message in ["the end"];

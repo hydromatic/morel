@@ -139,6 +139,24 @@ from e in emps where false yield e.deptno;
 val it = [] : int list
 
 
+(*) 'yield' uses 'case' to deconstruct a tuple
+from p in [(1, 2), (3, 5)]
+  yield case p of (x, y) => {x, y};
+val it = [{x=1,y=2},{x=3,y=5}] : {x:int, y:int} list
+
+
+(*) 'yield' uses 'case' to deconstruct a record
+from p in [{x = 1, y = 2}, {x = 3, y = 5}]
+  yield case p of {x=x, y=y} => (x, y);
+val it = [(1,2),(3,5)] : (int * int) list
+
+
+(*) 'yield' uses 'case' to deconstruct a record using shorthand syntax
+from p in [{x = 1, y = 2},{x = 3, y = 5}]
+  yield case p of {x, y} => (x, y);
+val it = [(1,2),(3,5)] : (int * int) list
+
+
 from e in emps
   yield {x = e.id + e.deptno, y = e.id - e.deptno}
   yield x + y;

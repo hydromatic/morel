@@ -73,6 +73,18 @@ from e in emps where #deptno e = 30 yield #name e;
 
 from e in emps where false yield e.deptno;
 
+(*) 'yield' uses 'case' to deconstruct a tuple
+from p in [(1, 2), (3, 5)]
+  yield case p of (x, y) => {x, y};
+
+(*) 'yield' uses 'case' to deconstruct a record
+from p in [{x = 1, y = 2}, {x = 3, y = 5}]
+  yield case p of {x=x, y=y} => (x, y);
+
+(*) 'yield' uses 'case' to deconstruct a record using shorthand syntax
+from p in [{x = 1, y = 2},{x = 3, y = 5}]
+  yield case p of {x, y} => (x, y);
+
 from e in emps
   yield {x = e.id + e.deptno, y = e.id - e.deptno}
   yield x + y;
