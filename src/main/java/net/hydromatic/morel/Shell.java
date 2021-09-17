@@ -192,7 +192,7 @@ public class Shell {
         .appName("morel")
         .terminal(terminal)
         .parser(parser)
-        .variable(LineReader.SECONDARY_PROMPT_PATTERN, minusPrompt)
+        .variable(LineReader.SECONDARY_PROMPT_PATTERN, equalsPrompt)
         .build();
 
     pause();
@@ -205,7 +205,7 @@ public class Shell {
     while (true) {
       String line = "";
       try {
-        final String prompt = buf.length() == 0 ? equalsPrompt : minusPrompt;
+        final String prompt = buf.length() == 0 ? minusPrompt : equalsPrompt;
         final String rightPrompt = null;
         line = reader.readLine(prompt, rightPrompt, (MaskingCallback) null,
             null);

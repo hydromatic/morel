@@ -69,16 +69,16 @@ public class ShellTest {
 
   /** Tests {@link Shell} with empty input and banner disabled. */
   @Test void testShellNoBanner() throws IOException {
-    assertShellOutput(argList, "", containsString("= \r\r\n"));
+    assertShellOutput(argList, "", containsString("- \r\r\n"));
   }
 
   /** Tests {@link Shell} with one line. */
   @Test void testOneLine() throws IOException {
     final String in = "1 + 2;\n";
     final String expected = "1 + 2;\r\n"
-        + "= 1 + 2;\r\r\n"
+        + "- 1 + 2;\r\r\n"
         + "\u001B[?2004lval it = 3 : int\r\n"
-        + "= \r\r\n"
+        + "- \r\r\n"
         + "\u001B[?2004l";
     assertShellOutput(argList, in, is(expected));
   }
@@ -89,10 +89,10 @@ public class ShellTest {
         + "2;\n";
     final String expected = "1 +\r\n"
         + "2;\r\n"
-        + "= 1 +\r\r\n"
-        + "\u001B[?2004l- 2;\r\r\n"
+        + "- 1 +\r\r\n"
+        + "\u001B[?2004l= 2;\r\r\n"
         + "\u001B[?2004lval it = 3 : int\r\n"
-        + "= \r\r\n"
+        + "- \r\r\n"
         + "\u001B[?2004l";
     assertShellOutput(argList, in, is(expected));
   }
@@ -106,10 +106,10 @@ public class ShellTest {
     final String expected = "(* a comment followed by empty *)\r\n"
         + "\r\n"
         + ";\r\n"
-        + "= (* a comment followed by empty *)\r\r\n"
-        + "\u001B[?2004l= \r\r\n"
-        + "\u001B[?2004l= ;\r\r\n"
-        + "\u001B[?2004l= \r\r\n"
+        + "- (* a comment followed by empty *)\r\r\n"
+        + "\u001B[?2004l- \r\r\n"
+        + "\u001B[?2004l- ;\r\r\n"
+        + "\u001B[?2004l- \r\r\n"
         + "\u001B[?2004l";
     assertShellOutput(argList, in, is(expected));
   }
@@ -120,10 +120,10 @@ public class ShellTest {
         + "1 + 2;\n";
     final String expected = "(*) line comment\r\n"
         + "1 + 2;\r\n"
-        + "= (*) line comment\r\r\n"
-        + "\u001B[?2004l= 1 + 2;\r\r\n"
+        + "- (*) line comment\r\r\n"
+        + "\u001B[?2004l- 1 + 2;\r\r\n"
         + "\u001B[?2004lval it = 3 : int\r\n"
-        + "= \r\r\n"
+        + "- \r\r\n"
         + "\u001B[?2004l";
     assertShellOutput(argList, in, is(expected));
   }
@@ -134,10 +134,10 @@ public class ShellTest {
         + "2 + 3;\n";
     final String expected = "(*) it's a single-line comment with a quote\r\n"
         + "2 + 3;\r\n"
-        + "= (*) it's a single-line comment with a quote\r\r\n"
-        + "\u001B[?2004l= 2 + 3;\r\r\n"
+        + "- (*) it's a single-line comment with a quote\r\r\n"
+        + "\u001B[?2004l- 2 + 3;\r\r\n"
         + "\u001B[?2004lval it = 5 : int\r\n"
-        + "= \r\r\n"
+        + "- \r\r\n"
         + "\u001B[?2004l";
     assertShellOutput(argList, in, is(expected));
   }
@@ -155,13 +155,13 @@ public class ShellTest {
         + "in\r\n"
         + "  x + 2\r\n"
         + "end;\r\n"
-        + "= let\r\r\n"
-        + "\u001B[?2004l-   val x = 1\r\r\n"
-        + "\u001B[?2004l- in\r\r\n"
-        + "\u001B[?2004l-   x + 2\r\r\n"
-        + "\u001B[?2004l- end;\r\r\n"
+        + "- let\r\r\n"
+        + "\u001B[?2004l=   val x = 1\r\r\n"
+        + "\u001B[?2004l= in\r\r\n"
+        + "\u001B[?2004l=   x + 2\r\r\n"
+        + "\u001B[?2004l= end;\r\r\n"
         + "\u001B[?2004lval it = 3 : int\r\n"
-        + "= \r\r\n"
+        + "- \r\r\n"
         + "\u001B[?2004l";
     assertShellOutput(argList, in, is(expected));
   }

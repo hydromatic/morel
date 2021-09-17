@@ -64,9 +64,9 @@ On Windows, the last line is
 ```bash
 $ ./morel
 morel version 0.2.0 (java version "13", JLine terminal, xterm-256color)
-= "Hello, world!";
+- "Hello, world!";
 val it = "Hello, world!" : string
-= exit
+- exit
 $
 ```
 
