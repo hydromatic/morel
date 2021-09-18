@@ -57,6 +57,8 @@ import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import static java.util.Objects.requireNonNull;
 
 /** Helpers for {@link Code}. */
@@ -479,9 +481,10 @@ public abstract class Codes {
   /** Creates a {@link RowSink} for a {@code group} clause. */
   public static RowSink groupRowSink(Code keyCode,
       ImmutableList<Applicable> aggregateCodes, ImmutableList<String> inNames,
+      ImmutableList<String> keyNames,
       ImmutableList<String> outNames, RowSink rowSink) {
-    return new GroupRowSink(keyCode, aggregateCodes, inNames, outNames,
-        rowSink);
+    return new GroupRowSink(keyCode, aggregateCodes, inNames, keyNames,
+        outNames, rowSink);
   }
 
   /** Creates a {@link RowSink} for a non-terminal {@code yield} step. */
@@ -2216,6 +2219,7 @@ public abstract class Codes {
   private static class GroupRowSink implements RowSink {
     final Code keyCode;
     final ImmutableList<String> inNames;
+    final ImmutableList<String> keyNames;
     /** group names followed by aggregate names */
     final ImmutableList<String> outNames;
     final ImmutableList<Applicable> aggregateCodes;
@@ -2224,14 +2228,21 @@ public abstract class Codes {
     final Object[] values;
 
     GroupRowSink(Code keyCode, ImmutableList<Applicable> aggregateCodes,
-        ImmutableList<String> inNames, ImmutableList<String> outNames,
-        RowSink rowSink) {
+        ImmutableList<String> inNames, ImmutableList<String> keyNames,
+        ImmutableList<String> outNames, RowSink rowSink) {
       this.keyCode = requireNonNull(keyCode);
       this.aggregateCodes = requireNonNull(aggregateCodes);
       this.inNames = requireNonNull(inNames);
+      this.keyNames = requireNonNull(keyNames);
       this.outNames = requireNonNull(outNames);
       this.rowSink = requireNonNull(rowSink);
       this.values = inNames.size() == 1 ? null : new Object[inNames.size()];
+      checkArgument(isPrefix(keyNames, outNames));
+    }
+
+    private static <E> boolean isPrefix(List<E> list0, List<E> list1) {
+      return list0.size() <= list1.size()
+          && list0.equals(list1.subList(0, list0.size()));
     }
 
     @Override public Describer describe(Describer describer) {
@@ -2254,12 +2265,20 @@ public abstract class Codes {
     }
 
     public List<Object> result(final EvalEnv env) {
+      // Derive env2, the environment for our consumer. It consists of our input
+      // environment plus output names.
       EvalEnv env2 = env;
       final MutableEvalEnv[] groupEnvs = new MutableEvalEnv[outNames.size()];
       int i = 0;
       for (String name : outNames) {
         env2 = groupEnvs[i++] = env2.bindMutable(name);
       }
+
+      // Also derive env3, the environment wherein the aggregate functions are
+      // evaluated.
+      final EvalEnv env3 =
+          keyNames.isEmpty() ? env : groupEnvs[keyNames.size() - 1];
+
       final Map<Object, List<Object>> map2;
       if (map.isEmpty()
           && keyCode instanceof TupleCode
@@ -2277,7 +2296,7 @@ public abstract class Codes {
         }
         final List<Object> rows = entry.getValue(); // rows in this bucket
         for (Applicable aggregateCode : aggregateCodes) {
-          groupEnvs[i++].set(aggregateCode.apply(env, rows));
+          groupEnvs[i++].set(aggregateCode.apply(env3, rows));
         }
         rowSink.accept(env2);
       }

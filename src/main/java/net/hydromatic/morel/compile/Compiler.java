@@ -380,7 +380,9 @@ public class Compiler {
       final Code keyCode = Codes.tuple(groupCodes);
       final ImmutableList<Applicable> aggregateCodes = aggregateCodesB.build();
       final ImmutableList<String> outNames = bindingNames(firstStep.bindings);
-      return () -> Codes.groupRowSink(keyCode, aggregateCodes, names,
+      final ImmutableList<String> keyNames =
+          outNames.subList(0, group.groupExps.size());
+      return () -> Codes.groupRowSink(keyCode, aggregateCodes, names, keyNames,
           outNames, nextFactory.get());
 
     default:

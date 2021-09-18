@@ -400,6 +400,25 @@ order ename;
 from e in emps
 group compute sumId = sum of e.id;
 
+(*) 'group' with aggregate function that references the key
+from (k, v) in [(1, 5), (1, 6), (2, 7), (2, 10)]
+group k compute x = (fn vs => k + (sum vs)) of v;
+
+from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
+  group x compute z = (fn ys => String.concat (x :: ys)) of y;
+
+(*) similar, but with composite key
+from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
+  group x, z compute a = (fn ys => x ^ ":" ^ z ^ ":" ^ (String.concat ys)) of y;
+
+(*) similar, but aggregate does not reference key
+from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
+  group x compute z = (fn ys => String.concat ys) of y;
+
+(*) equivalent to previous
+from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
+  group x compute z = String.concat of y;
+
 (*) user-defined aggregate function
 let
   fun siz [] = 0
