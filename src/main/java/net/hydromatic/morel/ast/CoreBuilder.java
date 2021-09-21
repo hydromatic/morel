@@ -50,6 +50,8 @@ import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
+
 /** Builds parse tree nodes. */
 public enum CoreBuilder {
   /** The singleton instance of the CORE builder.
@@ -300,7 +302,7 @@ public enum CoreBuilder {
     } else {
       final List<Binding> lastBindings = core.lastBindings(bindings, steps);
       if (lastBindings.size() == 1) {
-        elementType = lastBindings.get(0).id.type;
+        elementType = getOnlyElement(lastBindings).id.type;
       } else {
         final SortedMap<String, Type> argNameTypes = new TreeMap<>(ORDERING);
         lastBindings.forEach(b -> argNameTypes.put(b.id.name, b.id.type));
@@ -336,7 +338,7 @@ public enum CoreBuilder {
       List<Binding> initialBindings, List<Core.FromStep> steps) {
     final List<Binding> bindings = lastBindings(initialBindings, steps);
     if (bindings.size() == 1) {
-      return core.id(Iterables.getOnlyElement(bindings).id);
+      return core.id(getOnlyElement(bindings).id);
     } else {
       final SortedMap<Core.IdPat, Core.Exp> map = new TreeMap<>();
       final SortedMap<String, Type> argNameTypes = new TreeMap<>(ORDERING);

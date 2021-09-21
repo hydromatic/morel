@@ -2329,7 +2329,7 @@ public abstract class Codes {
     }
 
     public void accept(EvalEnv env) {
-      if (names.size() == 1) {
+      if (values == null) {
         rows.add(env.getOpt(names.get(0)));
       } else {
         for (int i = 0; i < names.size(); i++) {
@@ -2381,7 +2381,7 @@ public abstract class Codes {
       this.names = names;
       this.codes = codes;
       this.rowSink = rowSink;
-      this.values = new Object[names.size()];
+      this.values = names.size() == 1 ? null : new Object[names.size()];
     }
 
     @Override public Describer describe(Describer describer) {
@@ -2392,10 +2392,15 @@ public abstract class Codes {
 
     @Override public void accept(EvalEnv env) {
       final MutableEvalEnv env2 = env.bindMutableArray(names);
-      for (int i = 0; i < codes.size(); i++) {
-        values[i] = codes.get(i).eval(env);
+      if (values == null) {
+        final Object value = codes.get(0).eval(env);
+        env2.set(value);
+      } else {
+        for (int i = 0; i < codes.size(); i++) {
+          values[i] = codes.get(i).eval(env);
+        }
+        env2.set(values);
       }
-      env2.set(values);
       rowSink.accept(env2);
     }
 

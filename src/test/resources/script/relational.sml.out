@@ -154,6 +154,101 @@ val it = [202] : int list
 
 
 from e in emps
+  yield {e.deptno, e.name}
+  order deptno desc;
+val it =
+  [{deptno=30,name="Shaggy"},{deptno=30,name="Scooby"},
+   {deptno=20,name="Velma"},{deptno=10,name="Fred"}]
+  : {deptno:int, name:string} list
+
+
+from e in emps
+  yield {e.deptno}
+  order deptno desc;
+val it = [{deptno=30},{deptno=30},{deptno=20},{deptno=10}] : {deptno:int} list
+
+
+(*) 'yield' followed by 'order'
+from e in emps
+  yield {e.deptno, x = e.deptno, e.name}
+  order deptno desc, name;
+val it =
+  [{deptno=30,name="Scooby",x=30},{deptno=30,name="Shaggy",x=30},
+   {deptno=20,name="Velma",x=20},{deptno=10,name="Fred",x=10}]
+  : {deptno:int, name:string, x:int} list
+
+
+(*) 'yield' followed by 'order', then 'yield', then 'order'
+from e in emps
+  yield {e.deptno, x = e.deptno, e.name}
+  order deptno, name desc
+  yield {name = x, x = name, z = x + 1}
+  order z desc;
+val it =
+  [{name=30,x="Shaggy",z=31},{name=30,x="Scooby",z=31},
+   {name=20,x="Velma",z=21},{name=10,x="Fred",z=11}]
+  : {name:int, x:string, z:int} list
+
+
+(*) singleton record 'yield' followed by 'where'
+from e in emps
+  yield {d = e.deptno}
+  where d > 10;
+val it = [{d=20},{d=30},{d=30}] : {d:int} list
+
+
+(*) singleton record 'yield' followed by singleton 'group'
+from e in emps
+  yield {d = e.deptno}
+  group d;
+val it = [20,10,30] : int list
+
+
+(*) singleton record 'yield' followed by 'group'
+from e in emps
+  yield {d = e.deptno}
+  group d compute c = count;
+val it = [{c=1,d=20},{c=1,d=10},{c=2,d=30}] : {c:int, d:int} list
+
+
+(*) singleton record 'yield' followed by 'order'
+from e in emps
+  yield {d = e.deptno}
+  order d desc;
+val it = [{d=30},{d=30},{d=20},{d=10}] : {d:int} list
+
+
+(*) singleton record 'yield' followed by 'order' then 'yield'
+from e in emps
+  yield {d = e.deptno}
+  order d desc
+  yield {tens = d / 10, units = d mod 10};
+val it = [{tens=3,units=0},{tens=3,units=0},{tens=2,units=0},{tens=1,units=0}]
+  : {tens:int, units:int} list
+
+
+(*) record whose only field is a record with only one field
+from x in [{a = {a = 1}}, {a = {a = 2}}]
+  yield {b = x.a};
+val it = [{b={a=1}},{b={a=2}}] : {b:{a:int}} list
+
+
+from x in [{a = {a = 1}}, {a = {a = 2}}]
+  yield {b = x.a.a};
+val it = [{b=1},{b=2}] : {b:int} list
+
+
+from x in [{a = {a = 1}}, {a = {a = 2}}]
+  yield {x.a};
+val it = [{a={a=1}},{a={a=2}}] : {a:{a:int}} list
+
+
+from i in [1, 2, 3]
+  yield {i = {i = i}};
+val it = [{i={i=1}},{i={i=2}},{i={i=3}}] : {i:{i:int}} list
+
+
+from e in emps
   yield
     let
       val x = e.id + e.deptno

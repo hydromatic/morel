@@ -1396,6 +1396,16 @@ public class MainTest {
         .assertEvalIter(equalsOrdered(200, 202));
   }
 
+  @Test void testYieldSingletonRecord() {
+    final String ml = "from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
+        + "  yield {z=e.x}\n"
+        + "  where z > 2\n"
+        + "  order z desc";
+    ml(ml)
+        .assertType("{z:int} list")
+        .assertEvalIter(equalsOrdered(list(5), list(3)));
+  }
+
   /** Analogous to SQL "CROSS APPLY" which calls a table-valued function
    * for each row in an outer loop. */
   @Test void testCrossApply() {

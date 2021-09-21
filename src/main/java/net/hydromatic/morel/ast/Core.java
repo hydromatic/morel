@@ -907,7 +907,7 @@ public class Core {
       return sources.equals(this.sources)
           && steps.equals(this.steps)
           ? this
-          : core.from(typeSystem, sources, initialBindings, steps);
+          : core.from(type(), sources, initialBindings, steps);
     }
   }
 
@@ -1036,8 +1036,9 @@ public class Core {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("group");
       Pair.forEachIndexed(groupExps, (i, id, exp) ->
-          w.append(i == 0 ? "group " : ", ")
+          w.append(i == 0 ? " " : ", ")
               .append(id, 0, 0).append(" = ").append(exp, 0, 0));
       Pair.forEachIndexed(aggregates, (i, name, aggregate) ->
           w.append(i == 0 ? " compute " : ", ")

@@ -36,6 +36,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
@@ -1465,8 +1466,10 @@ public class Ast {
             }
           }));
       Set<Id> fields = firstFields;
+      boolean record = firstFields.size() != 1;
       for (FromStep step : steps) {
-        if (step instanceof Group) {
+        switch (step.op) {
+        case GROUP:
           final Group group = (Group) step;
           final ImmutableList<Pair<Id, Exp>> groupExps = group.groupExps;
           final ImmutableList<Aggregate> aggregates = group.aggregates;
@@ -1479,9 +1482,25 @@ public class Ast {
           groupExps.forEach(pair -> nextFields.add(pair.left));
           aggregates.forEach(aggregate -> nextFields.add(aggregate.id));
           fields = nextFields;
+          record = fields.size() != 1;
+          break;
+
+        case YIELD:
+          final Yield yield = (Yield) step;
+          if (yield.exp instanceof Record) {
+            fields =
+                ((Record) yield.exp).args.keySet()
+                    .stream()
+                    .map(label -> ast.id(Pos.ZERO, label))
+                    .collect(Collectors.toSet());
+            record = true;
+          } else {
+            record = false;
+          }
+          break;
         }
       }
-      if (fields.size() == 1) {
+      if (!record) {
         return Iterables.getOnlyElement(fields);
       } else {
         final SortedMap<String, Exp> map = new TreeMap<>(ORDERING);
@@ -1664,8 +1683,9 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("group");
       Pair.forEachIndexed(groupExps, (i, id, exp) ->
-          w.append(i == 0 ? "group " : ", ")
+          w.append(i == 0 ? " " : ", ")
               .append(id, 0, 0)
               .append(" = ")
               .append(exp, 0, 0));
