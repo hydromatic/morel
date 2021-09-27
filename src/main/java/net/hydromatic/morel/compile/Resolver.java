@@ -245,6 +245,8 @@ public class Resolver {
       return toCore((Ast.RecordSelector) exp);
     case LIST:
       return toCore((Ast.ListExp) exp);
+    case FROM_EQ:
+      return toCoreFromEq(((Ast.PrefixCall) exp).a);
     default:
       throw new AssertionError("unknown exp " + exp.op);
     }
@@ -293,6 +295,16 @@ public class Resolver {
         core.functionLiteral(typeMap.typeSystem, BuiltIn.Z_LIST),
         core.tuple(typeMap.typeSystem, null,
             transform(list.args, this::toCore)));
+  }
+
+  /** Translates "x" in "from e = x". Desugar to the same as if they had
+   * written "from e in [x]". */
+  private Core.Exp toCoreFromEq(Ast.Exp exp) {
+    final Type type = typeMap.getType(exp);
+    final ListType listType = typeMap.typeSystem.listType(type);
+    return core.apply(listType,
+        core.functionLiteral(typeMap.typeSystem, BuiltIn.Z_LIST),
+        core.tuple(typeMap.typeSystem, null, ImmutableList.of(toCore(exp))));
   }
 
   private Core.Apply toCore(Ast.Apply apply) {

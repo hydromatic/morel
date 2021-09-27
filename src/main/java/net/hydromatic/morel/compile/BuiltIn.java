@@ -1116,7 +1116,7 @@ public enum BuiltIn {
   Z_SUM_REAL("$", "sum:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
   /** Internal list constructor, e.g. "list (1 + 2, 3)" implements "[1 + 2, 3]".
-   * It cannot be assigned a type, because the tuplie is variadic. */
+   * It cannot be assigned a type, because the tuple is variadic. */
   Z_LIST("$", "list", ts -> UNIT);
 
   /** Name of the structure (e.g. "List", "String"), or null. */

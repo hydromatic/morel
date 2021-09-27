@@ -358,9 +358,16 @@ void fromSource(Map<Pat, Exp> sources) :
   final Pat pat;
 }
 {
-  pat = pat() <IN> exp = expression() {
-    sources.put(pat, exp);
-  }
+  pat = pat()
+  (
+    <IN> exp = expression() {
+      sources.put(pat, exp);
+    }
+  |
+    <EQ> exp = expression() {
+      sources.put(pat, ast.fromEq(exp));
+    }
+  )
 }
 
 List<Aggregate> aggregateCommaList() :

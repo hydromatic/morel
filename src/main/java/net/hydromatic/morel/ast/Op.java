@@ -65,6 +65,9 @@ public enum Op {
   FUN_DECL,
   VAL_DECL(" = "),
 
+  // internal
+  FROM_EQ("$FROM_EQ "),
+
   // value constructors
   TUPLE(true),
   LIST(" list", 8),

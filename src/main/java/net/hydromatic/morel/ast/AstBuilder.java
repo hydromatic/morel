@@ -328,6 +328,11 @@ public enum AstBuilder {
         ImmutableList.copyOf(steps), implicitYieldExp);
   }
 
+  /** Wraps an expression to distinguish "from x = e" from "from x in e". */
+  public Ast.Exp fromEq(Ast.Exp exp) {
+    return new Ast.PrefixCall(exp.pos, Op.FROM_EQ, exp);
+  }
+
   public Ast.Fn fn(Pos pos, Ast.Match... matchList) {
     return new Ast.Fn(pos, ImmutableList.copyOf(matchList));
   }

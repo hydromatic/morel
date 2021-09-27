@@ -1522,9 +1522,17 @@ public class Ast {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
         w.append("from");
-        Ord.forEach(sources, (i, id, exp) ->
-            w.append(i == 0 ? " " : ", ")
-                .append(id, 0, 0).append(" in ").append(exp, 0, 0));
+        Ord.forEach(sources, (i, id, exp) -> {
+          String op = " in ";
+          if (exp.op == Op.FROM_EQ) {
+            op = " = ";
+            exp = ((PrefixCall) exp).a;
+          }
+          w.append(i == 0 ? " " : ", ")
+              .append(id, 0, 0)
+              .append(op)
+              .append(exp, 0, 0);
+        });
         for (FromStep step : steps) {
           w.append(" ");
           step.unparse(w, 0, 0);

@@ -283,15 +283,23 @@ public class TypeResolver {
       final Map<Ast.Pat, Ast.Exp> fromSources = new LinkedHashMap<>();
       for (Map.Entry<Ast.Pat, Ast.Exp> source : from.sources.entrySet()) {
         final Ast.Pat pat = source.getKey();
-        final Ast.Exp exp = source.getValue();
+        final boolean eq;
+        final Ast.Exp exp;
+        if (source.getValue().op == Op.FROM_EQ) {
+          eq = true;
+          exp = ((Ast.PrefixCall) source.getValue()).a;
+        } else {
+          eq = false;
+          exp = source.getValue();
+        }
         final Unifier.Variable v5 = unifier.variable();
         final Unifier.Variable v6 = unifier.variable();
         final Ast.Exp exp2 = deduceType(env2, exp, v5);
         final Map<Ast.IdPat, Unifier.Term> termMap1 = new HashMap<>();
         final Ast.Pat pat2 =
             deducePatType(env2, pat, termMap1, null, v6);
-        fromSources.put(pat2, exp2);
-        reg(exp, v5, unifier.apply(LIST_TY_CON, v6));
+        fromSources.put(pat2, eq ? ast.fromEq(exp2) : exp2);
+        reg(exp, v5, eq ? v6 : unifier.apply(LIST_TY_CON, v6));
         for (Map.Entry<Ast.IdPat, Unifier.Term> e : termMap1.entrySet()) {
           env2 = env2.bind(e.getKey().name, e.getValue());
           fieldVars.put(ast.id(Pos.ZERO, e.getKey().name),

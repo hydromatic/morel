@@ -1210,6 +1210,33 @@ listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
 val it = [2,4,5] : int list
 
 
+(*) '=' in from
+from x = 1;
+val it = [1] : int list
+
+from x = 1 yield x + 2;
+val it = [3] : int list
+
+from (x, y, z) = (1, 2, 3);
+val it = [{x=1,y=2,z=3}] : {x:int, y:int, z:int} list
+
+from (x, y, z) = (1, 2, 3) yield x + 2 * z;
+val it = [7] : int list
+
+from x in [1, 2],
+    y = x + 1
+  where x = 2
+  yield y;
+val it = [3] : int list
+
+from x in [1, 2],
+    y = x + 1,
+    z = y + 2
+  group x, y, z compute c = count;
+val it = [{c=1,x=1,y=2,z=4},{c=1,x=2,y=3,z=5}]
+  : {c:int, x:int, y:int, z:int} list
+
+
 (*) Temporary functions
 let
   fun abbrev s =

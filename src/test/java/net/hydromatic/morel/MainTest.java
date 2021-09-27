@@ -1689,6 +1689,16 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(3, 7));
   }
 
+  @Test void testFromEquals() {
+    final String ml = "from x in [\"a\", \"b\"], y = \"c\", z in [\"d\"]\n"
+        + "  yield x ^ y ^ z";
+    final String expected = "from x in [\"a\", \"b\"], y = \"c\", z in [\"d\"]"
+        + " yield x ^ y ^ z";
+    ml(ml).assertParse(expected)
+        .assertType(is("string list"))
+        .assertEvalIter(equalsUnordered("acd", "bcd"));
+  }
+
   @Test void testFunFrom() {
     final String ml = "let\n"
         + "  fun query emp =\n"

@@ -750,6 +750,20 @@ fun listFields2 lists =
 listFields [];
 listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
 
+(*) '=' in from
+from x = 1;
+from x = 1 yield x + 2;
+from (x, y, z) = (1, 2, 3);
+from (x, y, z) = (1, 2, 3) yield x + 2 * z;
+from x in [1, 2],
+    y = x + 1
+  where x = 2
+  yield y;
+from x in [1, 2],
+    y = x + 1,
+    z = y + 2
+  group x, y, z compute c = count;
+
 (*) Temporary functions
 let
   fun abbrev s =
