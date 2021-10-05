@@ -123,6 +123,8 @@ public enum Op {
   APPLY(" ", 8),
   CASE,
   FROM,
+  SCAN(" "),
+  INNER_JOIN(" join "),
   WHERE,
   GROUP,
   ORDER,

@@ -314,18 +314,16 @@ public enum AstBuilder {
     return new Ast.Case(pos, exp, ImmutableList.copyOf(matchList));
   }
 
-  public Ast.From from(Pos pos, Map<Ast.Pat, Ast.Exp> sources,
-      List<Ast.FromStep> steps) {
+  public Ast.From from(Pos pos, List<Ast.FromStep> steps) {
     final Ast.Exp implicitYieldExp =
-        Ast.From.implicitYieldExp(pos, sources, steps);
-    return from(pos, ImmutableMap.copyOf(sources), ImmutableList.copyOf(steps),
+        Ast.From.implicitYieldExp(pos, steps);
+    return from(pos, ImmutableList.copyOf(steps),
         implicitYieldExp);
   }
 
-  public Ast.From from(Pos pos, Map<Ast.Pat, Ast.Exp> sources,
-      List<Ast.FromStep> steps, @Nullable Ast.Exp implicitYieldExp) {
-    return new Ast.From(pos, ImmutableMap.copyOf(sources),
-        ImmutableList.copyOf(steps), implicitYieldExp);
+  public Ast.From from(Pos pos, List<Ast.FromStep> steps,
+      @Nullable Ast.Exp implicitYieldExp) {
+    return new Ast.From(pos, ImmutableList.copyOf(steps), implicitYieldExp);
   }
 
   /** Wraps an expression to distinguish "from x = e" from "from x in e". */
@@ -437,6 +435,11 @@ public enum AstBuilder {
 
   public Ast.Exp map(Pos pos, Ast.Exp e1, Ast.Exp e2) {
     return apply(apply(ref(pos, BuiltIn.LIST_MAP), e1), e2);
+  }
+
+  public Ast.Scan scan(Pos pos, Op op, Ast.Pat pat, Ast.Exp exp,
+      @Nullable Ast.Exp condition) {
+    return new Ast.Scan(pos, op, pat, exp, condition);
   }
 
   public Ast.Order order(Pos pos, Iterable<Ast.OrderItem> orderItems) {

@@ -24,9 +24,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 
@@ -74,14 +72,7 @@ abstract class EnvShuttle extends Shuttle {
   }
 
   @Override public Core.Exp visit(Core.From from) {
-    final List<Binding> initialBindings = new ArrayList<>();
-    final Map<Core.Pat, Core.Exp> sources = new LinkedHashMap<>();
-    from.sources.forEach((pat, source) -> {
-      sources.put(pat, source.accept(bind(initialBindings)));
-      pat.accept(Compiles.binding(typeSystem, initialBindings));
-    });
-
-    List<Binding> bindings = initialBindings;
+    List<Binding> bindings = new ArrayList<>();
     final List<Core.FromStep> steps = new ArrayList<>();
     for (Core.FromStep step : from.steps) {
       final Core.FromStep step2 = step.accept(bind(bindings));
@@ -89,7 +80,7 @@ abstract class EnvShuttle extends Shuttle {
       bindings = step2.bindings;
     }
 
-    return from.copy(typeSystem, sources, initialBindings, steps);
+    return from.copy(typeSystem, steps);
   }
 
 }

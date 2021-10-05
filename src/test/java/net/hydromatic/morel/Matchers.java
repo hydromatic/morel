@@ -97,9 +97,15 @@ public abstract class Matchers {
   /** Matches an Code node by its string representation. */
   static Matcher<Code> isCode(String expected) {
     return new CustomTypeSafeMatcher<Code>("code " + expected) {
-      protected boolean matchesSafely(Code code) {
+      @Override protected boolean matchesSafely(Code code) {
         final String plan = Codes.describe(code);
         return plan.equals(expected);
+      }
+
+      @Override protected void describeMismatchSafely(Code code,
+          Description description) {
+        final String plan = Codes.describe(code);
+        description.appendText("was ").appendValue(plan);
       }
     };
   }

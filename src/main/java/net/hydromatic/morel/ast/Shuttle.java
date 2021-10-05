@@ -210,7 +210,7 @@ public class Shuttle {
   }
 
   protected Ast.Exp visit(Ast.From from) {
-    return ast.from(from.pos, from.sources, from.steps);
+    return ast.from(from.pos, from.steps);
   }
 
   protected AstNode visit(Ast.Order order) {
@@ -219,6 +219,12 @@ public class Shuttle {
 
   protected AstNode visit(Ast.OrderItem orderItem) {
     return ast.orderItem(orderItem.pos, orderItem.exp, orderItem.direction);
+  }
+
+  protected Ast.Scan visit(Ast.Scan scan) {
+    return ast.scan(scan.pos, scan.op, scan.pat.accept(this),
+        scan.exp.accept(this),
+        scan.condition == null ? null : scan.condition.accept(this));
   }
 
   protected AstNode visit(Ast.Where where) {
@@ -355,9 +361,13 @@ public class Shuttle {
   }
 
   protected Core.Exp visit(Core.From from) {
-    // TODO: recompute initialElementType if sources change
-    return from.copy(typeSystem, visitMap(from.sources),
-        from.initialBindings, visitList(from.steps));
+    return from.copy(typeSystem, visitList(from.steps));
+  }
+
+  protected Core.Scan visit(Core.Scan scan) {
+    return scan.copy(scan.bindings, scan.pat.accept(this),
+        scan.exp.accept(this),
+        scan.condition == null ? null : scan.condition.accept(this));
   }
 
   protected Core.Where visit(Core.Where where) {

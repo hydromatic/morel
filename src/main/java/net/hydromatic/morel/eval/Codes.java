@@ -19,6 +19,7 @@
 package net.hydromatic.morel.eval;
 
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
@@ -50,6 +51,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -429,39 +431,25 @@ public abstract class Codes {
     };
   }
 
-  public static Code from(Map<Core.Pat, Code> sources,
-      Supplier<RowSink> rowSinkFactory) {
-    if (sources.size() == 0) {
-      return new Code() {
-        @Override public Describer describe(Describer describer) {
-          return describer.start("from0", d -> {});
-        }
-
-        @Override public Object eval(EvalEnv env) {
-          final RowSink rowSink = rowSinkFactory.get();
-          rowSink.accept(env);
-          return rowSink.result(env);
-        }
-      };
-    }
-    final ImmutableList<Core.Pat> pats = ImmutableList.copyOf(sources.keySet());
-    final ImmutableList<Code> codes = ImmutableList.copyOf(sources.values());
+  public static Code from(Supplier<RowSink> rowSinkFactory) {
     return new Code() {
       @Override public Describer describe(Describer describer) {
         return describer.start("from", d ->
-            sources.forEach((pat, code) ->
-                d.arg("", pat.toString())
-                    .arg("", code)
-                    .arg("sink", rowSinkFactory.get())));
+            d.arg("sink", rowSinkFactory.get()));
       }
 
       @Override public Object eval(EvalEnv env) {
         final RowSink rowSink = rowSinkFactory.get();
-        final Looper looper = new Looper(pats, codes, env, rowSink);
-        looper.loop(0);
+        rowSink.accept(env);
         return rowSink.result(env);
       }
     };
+  }
+
+  /** Creates a {@link RowSink} for a {@code join} clause. */
+  public static RowSink scanRowSink(Op op, Core.Pat pat, Code code,
+      Code conditionCode, RowSink rowSink) {
+    return new ScanRowSink(op, pat, code, conditionCode, rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code where} clause. */
@@ -2151,57 +2139,60 @@ public abstract class Codes {
     }
   }
 
-  /** Implements the {@code from} clause, iterating over several variables
-   * and then calling a {@link RowSink} to complete the next step or steps. */
-  private static class Looper {
-    final List<Iterable<Object>> iterables = new ArrayList<>();
-    final List<MutableEvalEnv> mutableEvalEnvs = new ArrayList<>();
-    private final ImmutableList<Code> codes;
-    private final RowSink rowSink;
-
-    Looper(ImmutableList<Core.Pat> pats, ImmutableList<Code> codes, EvalEnv env,
-        RowSink rowSink) {
-      this.codes = codes;
-      this.rowSink = rowSink;
-      for (Core.Pat pat : pats) {
-        final MutableEvalEnv mutableEnv = env.bindMutablePat(pat);
-        mutableEvalEnvs.add(mutableEnv);
-        env = mutableEnv;
-        iterables.add(null);
-      }
-      //noinspection unchecked
-      iterables.set(0, (Iterable<Object>) codes.get(0).eval(env));
-    }
-
-    /** Generates the {@code i}th nested loop of a cartesian product of the
-     * values in {@code iterables}. */
-    void loop(int i) {
-      final Iterable<Object> iterable = iterables.get(i);
-      final MutableEvalEnv mutableEvalEnv = mutableEvalEnvs.get(i);
-      final int next = i + 1;
-      if (next == iterables.size()) {
-        for (Object o : iterable) {
-          if (mutableEvalEnv.setOpt(o)) {
-            rowSink.accept(mutableEvalEnv);
-          }
-        }
-      } else {
-        for (Object o : iterable) {
-          if (mutableEvalEnv.setOpt(o)) {
-            //noinspection unchecked
-            iterables.set(next, (Iterable<Object>)
-                codes.get(next).eval(mutableEvalEnvs.get(next)));
-            loop(next);
-          }
-        }
-      }
-    }
-  }
-
   /** Accepts rows produced by a supplier as part of a {@code from} clause. */
   public interface RowSink extends Describable {
     void accept(EvalEnv env);
     List<Object> result(EvalEnv env);
+  }
+
+  /** Implementation of {@link RowSink} for a {@code join} clause. */
+  static class ScanRowSink implements RowSink {
+    final Op op; // inner, left, right, full
+    private final Core.Pat pat;
+    private final Code code;
+    final Code conditionCode;
+    final RowSink rowSink;
+
+    ScanRowSink(Op op, Core.Pat pat, Code code, Code conditionCode,
+        RowSink rowSink) {
+      checkArgument(op == Op.INNER_JOIN);
+      this.op = op;
+      this.pat = pat;
+      this.code = code;
+      this.conditionCode = conditionCode;
+      this.rowSink = rowSink;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("join", d ->
+          d.arg("op", op.padded.trim())
+              .arg("pat", pat)
+              .arg("exp", code)
+              .argIf("condition", conditionCode, !isConstantTrue(conditionCode))
+              .arg("sink", rowSink));
+    }
+
+    private static boolean isConstantTrue(Code code) {
+      return code.isConstant()
+          && Objects.equals(code.eval(null), true);
+    }
+
+    public void accept(EvalEnv env) {
+      final MutableEvalEnv mutableEvalEnv = env.bindMutablePat(pat);
+      final Iterable<Object> elements = (Iterable<Object>) code.eval(env);
+      for (Object element : elements) {
+        if (mutableEvalEnv.setOpt(element)) {
+          Boolean b = (Boolean) conditionCode.eval(mutableEvalEnv);
+          if (b != null && b) {
+            rowSink.accept(mutableEvalEnv);
+          }
+        }
+      }
+    }
+
+    public List<Object> result(EvalEnv env) {
+      return rowSink.result(env);
+    }
   }
 
   /** Implementation of {@link RowSink} for a {@code where} clause. */

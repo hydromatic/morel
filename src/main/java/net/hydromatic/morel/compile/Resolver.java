@@ -498,18 +498,9 @@ public class Resolver {
   }
 
   Core.From toCore(Ast.From from) {
-    final Map<Core.Pat, Core.Exp> sources = new LinkedHashMap<>();
     final List<Binding> bindings = new ArrayList<>();
-    from.sources.forEach((pat, exp) -> {
-      final Resolver r = withEnv(bindings);
-      Core.Exp coreExp = r.toCore(exp);
-      Core.Pat corePat = r.toCore(pat, ((ListType) coreExp.type).elementType);
-      Compiles.acceptBinding(typeMap.typeSystem, corePat, bindings);
-      sources.put(corePat, coreExp);
-    });
-
     final ListType type = (ListType) typeMap.getType(from);
-    return fromStepToCore(sources, bindings, type, from.steps,
+    return fromStepToCore(bindings, type, from.steps,
         ImmutableList.of());
   }
 
@@ -520,34 +511,52 @@ public class Resolver {
     return ImmutableList.<E>builder().addAll(list).add(e).build();
   }
 
-  private Core.From fromStepToCore(Map<Core.Pat, Core.Exp> sources,
-      List<Binding> bindings, ListType type, List<Ast.FromStep> steps,
-      List<Core.FromStep> coreSteps) {
+  private Core.From fromStepToCore(List<Binding> bindings, ListType type,
+      List<Ast.FromStep> steps, List<Core.FromStep> coreSteps) {
     final Resolver r = withEnv(bindings);
     if (steps.isEmpty()) {
-      return core.from(type, sources, bindings, coreSteps);
+      return core.from(type, coreSteps);
     }
     final Ast.FromStep step = steps.get(0);
     switch (step.op) {
+    case SCAN:
+    case INNER_JOIN:
+      final Ast.Scan scan = (Ast.Scan) step;
+      final Core.Exp coreExp = r.toCore(scan.exp);
+      final ListType listType = (ListType) coreExp.type;
+      final Core.Pat corePat = r.toCore(scan.pat, listType.elementType);
+      final Op op = step.op == Op.SCAN
+          ? Op.INNER_JOIN
+          : step.op;
+      final List<Binding> bindings2 = new ArrayList<>(bindings);
+      Compiles.acceptBinding(typeMap.typeSystem, corePat, bindings2);
+      Core.Exp coreCondition = scan.condition == null
+          ? core.boolLiteral(true)
+          : r.withEnv(bindings2).toCore(scan.condition);
+      final Core.Scan coreScan =
+          core.scan(op, bindings2, corePat, coreExp, coreCondition);
+      return fromStepToCore(coreScan.bindings, type,
+          Util.skip(steps), append(coreSteps, coreScan));
+
     case WHERE:
       final Ast.Where where = (Ast.Where) step;
       final Core.Where coreWhere =
           core.where(bindings, r.toCore(where.exp));
-      return fromStepToCore(sources, coreWhere.bindings, type,
+      return fromStepToCore(coreWhere.bindings, type,
           Util.skip(steps), append(coreSteps, coreWhere));
 
     case YIELD:
       final Ast.Yield yield = (Ast.Yield) step;
       final Core.Yield coreYield =
           core.yield_(typeMap.typeSystem, r.toCore(yield.exp));
-      return fromStepToCore(sources, coreYield.bindings, type,
+      return fromStepToCore(coreYield.bindings, type,
           Util.skip(steps), append(coreSteps, coreYield));
 
     case ORDER:
       final Ast.Order order = (Ast.Order) step;
       final Core.Order coreOrder =
           core.order(bindings, transform(order.orderItems, r::toCore));
-      return fromStepToCore(sources, coreOrder.bindings, type,
+      return fromStepToCore(coreOrder.bindings, type,
           Util.skip(steps), append(coreSteps, coreOrder));
 
     case GROUP:
@@ -562,7 +571,7 @@ public class Resolver {
           aggregates.put(toCorePat(aggregate.id), r.toCore(aggregate)));
       final Core.Group coreGroup =
           core.group(groupExps.build(), aggregates.build());
-      return fromStepToCore(sources, coreGroup.bindings, type,
+      return fromStepToCore(coreGroup.bindings, type,
           Util.skip(steps), append(coreSteps, coreGroup));
 
     default:

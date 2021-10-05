@@ -175,13 +175,17 @@ public class Visitor {
   }
 
   protected void visit(Ast.From from) {
-    from.sources.forEach((pat, exp) -> {
-      pat.accept(this);
-      exp.accept(this);
-    });
     from.steps.forEach(this::accept);
     if (from.implicitYieldExp != null) {
       from.implicitYieldExp.accept(this);
+    }
+  }
+
+  protected void visit(Ast.Scan scan) {
+    scan.pat.accept(this);
+    scan.exp.accept(this);
+    if (scan.condition != null) {
+      scan.condition.accept(this);
     }
   }
 
@@ -296,11 +300,15 @@ public class Visitor {
   }
 
   protected void visit(Core.From from) {
-    from.sources.forEach((pat, exp) -> {
-      pat.accept(this);
-      exp.accept(this);
-    });
     from.steps.forEach(step -> step.accept(this));
+  }
+
+  protected void visit(Core.Scan scan) {
+    scan.pat.accept(this);
+    scan.exp.accept(this);
+    if (scan.condition != null) {
+      scan.condition.accept(this);
+    }
   }
 
   protected void visit(Core.Where where) {

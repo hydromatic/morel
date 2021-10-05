@@ -198,6 +198,28 @@ from e in emps, e2 in emps yield e.name ^ "-" ^ e2.name;
 (*) cartesian product, missing yield
 from d in depts, i in integers;
 
+(*) 3-way comma join
+from x in ["a", "b"],
+    y in ["c", "d"],
+    z in ["e", "f"];
+
+(*) same, using 'join'
+from x in ["a", "b"]
+  join y in ["c", "d"]
+  join z in ["e", "f"];
+
+(*) 'join' with '='
+from x in [1, 2]
+  join y = 3;
+
+(*) 'join' with '=' and 'on'
+from x in [1, 2]
+  join y = 3 on y = x + 1;
+
+(*) 'join' with '=' and 'on false'
+from x in [1, 2]
+  join y = 3 on false;
+
 (*) join
 from e in emps, d in depts
   where e.deptno = d.deptno
@@ -234,6 +256,31 @@ from e in emps, d in depts
 (*) join group where right variable is not referenced
 from e in emps, d in depts
   group e.deptno compute count = sum of 1;
+
+(*) join with intervening 'where'
+(*) we can't write ', d in depts' after 'where'
+from e in emps
+  where e.name elem ["Shaggy", "Fred"]
+  join d in depts
+  where e.deptno = d.deptno;
+
+(*) 'where' then 'join on'
+from x in [0,3,6,9,12]
+where x > 1
+join y in [0,2,4,6,8,10,12] on x = y;
+
+(*) join with intervening 'group'
+(* TODO: resolve ambiguity
+from e in emps
+  group e.deptno compute count
+  join d in depts
+  where deptno = d.deptno;
+
+(*) as previous, using 'on' rather than 'where'
+from e in emps
+  group e.deptno compute count
+  join d in depts on deptno = d.deptno;
+*)
 
 (*) exists (defining the "exists" function ourselves)
 (*) and correlated sub-query
@@ -459,6 +506,12 @@ group e.deptno
   compute sumId = sum of e.id,
           existsId = exists of e.id,
           existsStar = exists;
+
+(*) 'group' with record key
+(*) (useful if we want to refer to 'e' later in the pipeline)
+from e in emps
+group e = {e.deptno, odd = e.id mod 2 = 1} compute c = count
+yield {e.deptno, c1 = c + 1};
 
 (*) 'group' with join
 from e in emps, d in depts
@@ -695,14 +748,14 @@ from
 
 (*) Patterns left of 'in'
 fun sumPairs pairs =
-  from (left, right) in pairs
-  yield left + right;
+  from (l, r) in pairs
+  yield l + r;
 sumPairs [];
 sumPairs [(1, 2), (3, 4)];
 
 (*) Skip rows that do not match the pattern
-from (left, 2) in [(1, 2), (3, 4), (5, 2)]
-  yield left;
+from (l, 2) in [(1, 2), (3, 4), (5, 2)]
+  yield l;
 
 (*) Record pattern
 from {b = b, a = a} in [{a=1,b=2}];

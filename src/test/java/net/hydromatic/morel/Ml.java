@@ -58,6 +58,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.Matchers.isAst;
+import static net.hydromatic.morel.Matchers.throwsA;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -164,6 +165,14 @@ class Ml {
    * expression when unparsed. */
   Ml assertParseSame() {
     return assertParse(ml.replaceAll("[\n ]+", " "));
+  }
+
+  Ml assertParseThrowsParseException(Matcher<String> matcher) {
+    return assertParseThrows(throwsA(ParseException.class, matcher));
+  }
+
+  Ml assertParseThrowsIllegalArgumentException(Matcher<String> matcher) {
+    return assertParseThrows(throwsA(IllegalArgumentException.class, matcher));
   }
 
   Ml assertParseThrows(Matcher<Throwable> matcher) {

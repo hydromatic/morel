@@ -19,7 +19,6 @@
 package net.hydromatic.morel.ast;
 
 import net.hydromatic.morel.compile.BuiltIn;
-import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
@@ -34,7 +33,6 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.util.Util;
@@ -286,21 +284,18 @@ public enum CoreBuilder {
     return new Core.Case(type, exp, ImmutableList.copyOf(matchList));
   }
 
-  public Core.From from(ListType type, Map<Core.Pat, Core.Exp> sources,
-      Iterable<? extends Binding> bindings, List<Core.FromStep> steps) {
-    return new Core.From(type, ImmutableMap.copyOf(sources),
-        ImmutableList.copyOf(bindings), ImmutableList.copyOf(steps));
+  public Core.From from(ListType type, List<Core.FromStep> steps) {
+    return new Core.From(type, ImmutableList.copyOf(steps));
   }
 
   /** Derives the result type, then calls
-   * {@link #from(ListType, Map, Iterable, List)}. */
-  public Core.From from(TypeSystem typeSystem, Map<Core.Pat, Core.Exp> sources,
-      Iterable<? extends Binding> bindings, List<Core.FromStep> steps) {
+   * {@link #from(ListType, List)}. */
+  public Core.From from(TypeSystem typeSystem, List<Core.FromStep> steps) {
     final Type elementType;
     if (!steps.isEmpty() && Iterables.getLast(steps) instanceof Core.Yield) {
       elementType = ((Core.Yield) Iterables.getLast(steps)).exp.type;
     } else {
-      final List<Binding> lastBindings = core.lastBindings(bindings, steps);
+      final List<Binding> lastBindings = core.lastBindings(steps);
       if (lastBindings.size() == 1) {
         elementType = getOnlyElement(lastBindings).id.type;
       } else {
@@ -310,33 +305,22 @@ public enum CoreBuilder {
       }
     }
     final ListType type = typeSystem.listType(elementType);
-    return from(type, ImmutableMap.copyOf(sources),
-        ImmutableList.copyOf(bindings), ImmutableList.copyOf(steps));
-  }
-
-  /** Derives the initial bindings, then calls
-   * {@link #from(TypeSystem, Map, Iterable, List)}. */
-  public Core.From from(TypeSystem typeSystem, Map<Core.Pat, Core.Exp> sources,
-      List<Core.FromStep> steps) {
-    final List<Binding> bindings = new ArrayList<>();
-    sources.keySet().forEach(pat ->
-        Compiles.acceptBinding(typeSystem, pat, bindings));
-    return from(typeSystem, sources, bindings, steps);
+    return from(type, ImmutableList.copyOf(steps));
   }
 
   /** Returns what would be the yield expression if we created a
-   * {@link Core.From} from the given sources and steps.
+   * {@link Core.From} from the given steps.
    *
    * <p>Examples:
    * <ul>
-   * <li>{@code implicitYieldExp(sources=(a=E:t), steps=[])}
+   * <li>{@code implicitYieldExp(steps=[scan(a=E:t)])}
    *     is {@code a} (a {@link Core.Id});
-   * <li>{@code implicitYieldExp(sources=(a=E:t, b=E2:t2), steps=[])}
+   * <li>{@code implicitYieldExp(steps=[scan(a=E:t), scan(b=E2:t2)])}
    *     is {@code {a = a, b = b}} (a record).
    * </ul> */
   public Core.Exp implicitYieldExp(TypeSystem typeSystem,
-      List<Binding> initialBindings, List<Core.FromStep> steps) {
-    final List<Binding> bindings = lastBindings(initialBindings, steps);
+      List<Core.FromStep> steps) {
+    final List<Binding> bindings = lastBindings(steps);
     if (bindings.size() == 1) {
       return core.id(getOnlyElement(bindings).id);
     } else {
@@ -351,10 +335,9 @@ public enum CoreBuilder {
   }
 
   public ImmutableList<Binding> lastBindings(
-      Iterable<? extends Binding> initialBindings,
       List<? extends Core.FromStep> steps) {
     return steps.isEmpty()
-        ? ImmutableList.copyOf(initialBindings)
+        ? ImmutableList.of()
         : Iterables.getLast(steps).bindings;
   }
 
@@ -377,6 +360,12 @@ public enum CoreBuilder {
 
   public Core.DatatypeDecl datatypeDecl(Iterable<DataType> dataTypes) {
     return new Core.DatatypeDecl(ImmutableList.copyOf(dataTypes));
+  }
+
+  public Core.Scan scan(Op op, List<Binding> bindings, Core.Pat pat,
+      Core.Exp exp, Core.Exp condition) {
+    return new Core.Scan(op, ImmutableList.copyOf(bindings), pat, exp,
+        condition);
   }
 
   public Core.Aggregate aggregate(Type type, Core.Exp aggregate,

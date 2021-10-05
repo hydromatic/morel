@@ -47,7 +47,6 @@ import org.apache.calcite.util.Util;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -282,17 +281,10 @@ public class Compiler {
   }
 
   protected Code compileFrom(Context cx, Core.From from) {
-    final Map<Core.Pat, Code> sourceCodes = new LinkedHashMap<>();
-    final List<Binding> bindings = new ArrayList<>();
-    from.sources.forEach((pat, exp) -> {
-      final Code expCode = compile(cx.bindAll(bindings), exp);
-      sourceCodes.put(pat, expCode);
-      Compiles.bindPattern(typeSystem, bindings, pat);
-    });
     Supplier<Codes.RowSink> rowSinkFactory =
-        createRowSinkFactory(cx, ImmutableList.copyOf(bindings), from.steps,
+        createRowSinkFactory(cx, ImmutableList.of(), from.steps,
             from.type().elementType);
-    return Codes.from(sourceCodes, rowSinkFactory);
+    return Codes.from(rowSinkFactory);
   }
 
   protected Supplier<Codes.RowSink> createRowSinkFactory(Context cx0,
@@ -317,6 +309,13 @@ public class Compiler {
         createRowSinkFactory(cx, firstStep.bindings, Util.skip(steps),
             elementType);
     switch (firstStep.op) {
+    case INNER_JOIN:
+      final Core.Scan scan = (Core.Scan) firstStep;
+      final Code code = compile(cx, scan.exp);
+      final Code conditionCode = compile(cx, scan.condition);
+      return () -> Codes.scanRowSink(firstStep.op, scan.pat, code,
+          conditionCode, nextFactory.get());
+
     case WHERE:
       final Core.Where where = (Core.Where) firstStep;
       final Code filterCode = compile(cx, where.exp);

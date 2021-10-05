@@ -28,6 +28,10 @@ public interface Describer {
   interface Detail {
     Detail arg(String name, Object value);
     Detail arg(String name, Describable describable);
+    default Detail argIf(String name, Describable describable,
+        boolean condition) {
+      return condition ? arg(name, describable) : this;
+    }
   }
 }
 

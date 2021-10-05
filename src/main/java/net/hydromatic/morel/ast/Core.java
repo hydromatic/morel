@@ -34,12 +34,10 @@ import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
@@ -859,16 +857,10 @@ public class Core {
 
   /** From expression. */
   public static class From extends Exp {
-    public final Map<Pat, Exp> sources;
-    public final ImmutableList<Binding> initialBindings;
     public final ImmutableList<FromStep> steps;
 
-    From(ListType type, ImmutableMap<Pat, Exp> sources,
-        ImmutableList<Binding> initialBindings,
-        ImmutableList<FromStep> steps) {
+    From(ListType type, ImmutableList<FromStep> steps) {
       super(Op.FROM, type);
-      this.sources = requireNonNull(sources);
-      this.initialBindings = initialBindings;
       this.steps = requireNonNull(steps);
     }
 
@@ -889,25 +881,15 @@ public class Core {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
         w.append("from");
-        Ord.forEach(sources, (i, id, exp) ->
-            w.append(i == 0 ? " " : ", ")
-                // for these purposes 'in' has same precedence as '='
-                .append(id, 0, Op.EQ.left)
-                .append(" in ").append(exp, Op.EQ.right, 0));
-        for (FromStep step : steps) {
-          w.append(" ");
-          step.unparse(w, 0, 0);
-        }
+        Ord.forEach(steps, (step, i) -> step.unparse(w, this, i, 0, 0));
         return w;
       }
     }
 
-    public Exp copy(TypeSystem typeSystem, Map<Pat, Exp> sources,
-        List<Binding> initialBindings, List<FromStep> steps) {
-      return sources.equals(this.sources)
-          && steps.equals(this.steps)
+    public Exp copy(TypeSystem typeSystem, List<FromStep> steps) {
+      return steps.equals(this.steps)
           ? this
-          : core.from(type(), sources, initialBindings, steps);
+          : core.from(type(), steps);
     }
   }
 
@@ -921,7 +903,75 @@ public class Core {
       this.bindings = bindings;
     }
 
+    @Override final AstWriter unparse(AstWriter w, int left, int right) {
+      return unparse(w, null, -1, left, right);
+    }
+
+    protected abstract AstWriter unparse(AstWriter w, From from, int ordinal,
+        int left, int right);
+
     @Override public abstract FromStep accept(Shuttle shuttle);
+  }
+
+  /** A {@code join} or {@code v in listExpr} or {@code v = expr} clause in a
+   *  {@code from} expression. */
+  public static class Scan extends FromStep {
+    public final Pat pat;
+    public final Exp exp;
+    public final Exp condition;
+
+    Scan(Op op, ImmutableList<Binding> bindings, Pat pat, Exp exp,
+        Exp condition) {
+      super(op, bindings);
+      switch (op) {
+      case INNER_JOIN:
+        break;
+      default:
+        // SCAN and CROSS_JOIN are valid in ast, not core.
+        throw new AssertionError("not a join type " + op);
+      }
+      this.pat = pat;
+      this.exp = exp;
+      this.condition = condition;
+    }
+
+    @Override public Scan accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
+        int left, int right) {
+      if (ordinal == 0) {
+        w.append(" ");
+      } else {
+        w.append(op.padded);
+      }
+      // for these purposes 'in' has same precedence as '='
+      w.append(pat, 0, Op.EQ.left)
+          .append(" in ").append(exp, Op.EQ.right, 0);
+      if (!isLiteralTrue()) {
+        w.append("on").append(condition, 0, 0);
+      }
+      return w;
+    }
+
+    private boolean isLiteralTrue() {
+      return condition instanceof Literal
+          && ((Literal) condition).value.equals(true);
+    }
+
+    public Scan copy(List<Binding> bindings, Pat pat, Exp exp, Exp condition) {
+      return pat == this.pat
+          && exp == this.exp
+          && condition == this.condition
+          && bindings.equals(this.bindings)
+          ? this
+          : core.scan(op, bindings, pat, exp, condition);
+    }
   }
 
   /** A {@code where} clause in a {@code from} expression. */
@@ -941,8 +991,9 @@ public class Core {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append("where ").append(exp, 0, 0);
+    @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
+        int left, int right) {
+      return w.append(" where ").append(exp, 0, 0);
     }
 
     public Where copy(Exp exp, List<Binding> bindings) {
@@ -971,7 +1022,8 @@ public class Core {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
+        int left, int right) {
       return w.append("order ").appendAll(orderItems, ", ");
     }
 
@@ -1035,7 +1087,8 @@ public class Core {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
+        int left, int right) {
       w.append("group");
       Pair.forEachIndexed(groupExps, (i, id, exp) ->
           w.append(i == 0 ? " " : ", ")
@@ -1064,8 +1117,9 @@ public class Core {
       this.exp = exp;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append("yield ").append(exp, 0, 0);
+    @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
+        int left, int right) {
+      return w.append(" yield ").append(exp, 0, 0);
     }
 
     @Override public Yield accept(Shuttle shuttle) {
