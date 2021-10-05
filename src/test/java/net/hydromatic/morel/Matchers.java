@@ -20,6 +20,7 @@ package net.hydromatic.morel;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.ast.AstWriter;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
@@ -67,13 +68,28 @@ public abstract class Matchers {
   }
 
   /** Matches an AST node by its string representation. */
+  static Matcher<AstNode> isAst(boolean parenthesize, String expected) {
+    return isAst(AstNode.class, parenthesize, expected);
+  }
+
+  /** Matches an AST node by its string representation. */
   static <T extends AstNode> Matcher<T> isAst(Class<? extends T> clazz,
-      String expected) {
-    return new CustomTypeSafeMatcher<T>("ast with value " + expected) {
+      boolean parenthesize, String expected) {
+    return new CustomTypeSafeMatcher<T>("ast with value [" + expected + "]") {
       protected boolean matchesSafely(T t) {
         assertThat(clazz.isInstance(t), is(true));
-        final String s = t.toString();
-        return s.equals(expected) && s.equals(t.toString());
+        final String s =
+            stringValue(t);
+        return s.equals(expected);
+      }
+
+      private String stringValue(T t) {
+        return t.unparse(new AstWriter().withParenthesize(parenthesize));
+      }
+
+      @Override protected void describeMismatchSafely(T item,
+          Description description) {
+        description.appendText("was ").appendValue(stringValue(item));
       }
     };
   }

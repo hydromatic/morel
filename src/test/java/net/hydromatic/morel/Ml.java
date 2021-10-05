@@ -129,7 +129,7 @@ class Ml {
 
   Ml assertParseDecl(Class<? extends Ast.Decl> clazz,
       String expected) {
-    return assertParseDecl(isAst(clazz, expected));
+    return assertParseDecl(isAst(clazz, false, expected));
   }
 
   Ml assertParseStmt(Matcher<AstNode> matcher) {
@@ -145,13 +145,19 @@ class Ml {
 
   Ml assertParseStmt(Class<? extends AstNode> clazz,
       String expected) {
-    return assertParseStmt(isAst(clazz, expected));
+    return assertParseStmt(isAst(clazz, false, expected));
   }
 
   /** Checks that an expression can be parsed and returns the given string
    * when unparsed. */
   Ml assertParse(String expected) {
-    return assertParseStmt(AstNode.class, expected);
+    return assertParse(false, expected);
+  }
+
+  /** Checks that an expression can be parsed and returns the given string
+   * when unparsed, optionally with full parentheses. */
+  Ml assertParse(boolean parenthesized, String expected) {
+    return assertParseStmt(isAst(AstNode.class, parenthesized, expected));
   }
 
   /** Checks that an expression can be parsed and returns the identical

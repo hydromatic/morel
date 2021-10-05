@@ -50,6 +50,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
@@ -255,6 +256,40 @@ public class MainTest {
     ml("(* 1 +\n"
         + "2 +\n"
         + "3 *) 5 + 6").assertParse("5 + 6");
+  }
+
+  @Test void testParseCase() {
+    // SML/NJ allows 'e' and 'E'
+    ml("1e2").assertParse("1E+2");
+    ml("1E2").assertParse("1E+2");
+
+    // keywords such as 'val' and 'in' are case sensitive
+    ml("let val x = 1 in x + 1 end").assertParseSame();
+    ml("let VAL x = 1 in x + 1 end")
+        .assertParseThrows(
+            throwsA(ParseException.class,
+                startsWith("Encountered \" <IDENTIFIER> \"VAL \"")));
+    ml("let val x = 1 IN x + 1 end")
+        .assertParseThrows(
+            throwsA(ParseException.class,
+                startsWith("Encountered \" \"end\" \"end \"")));
+
+    // 'notElem' is an infix operator.
+    ml("1 + f notElem g * 2")
+        .assertParse(true, "((((1) + (f))) notElem (((g) * (2))))");
+    ml("1 + f notelem g * 2")
+        .assertParse(true, "((1) + (((((((f) (notelem))) (g))) * (2))))");
+    ml("1 + f NOTELEM g * 2")
+        .assertParse(true, "((1) + (((((((f) (NOTELEM))) (g))) * (2))))");
+
+    // 'o' is an infix operator;
+    // 'O' is presumed to be just another value.
+    ml("1 + f o g + 2")
+        .assertParse(true, "((((1) + (f))) o (((g) + (2))))");
+    ml("1 + F o G + 2")
+        .assertParse(true, "((((1) + (F))) o (((G) + (2))))");
+    ml("1 + f O g + 2")
+        .assertParse(true, "((((1) + (((((f) (O))) (g))))) + (2))");
   }
 
   /** Tests that the syntactic sugar "exp.field" is de-sugared to

@@ -42,7 +42,12 @@ public abstract class AstNode {
    */
   @Override public final String toString() {
     // Marked final because you should override unparse, not toString
-    return unparse(new AstWriter(), 0, 0).toString();
+    return unparse(new AstWriter());
+  }
+
+  /** Converts this node into an ML string, with a given writer. */
+  public final String unparse(AstWriter w) {
+    return unparse(w, 0, 0).toString();
   }
 
   abstract AstWriter unparse(AstWriter w, int left, int right);

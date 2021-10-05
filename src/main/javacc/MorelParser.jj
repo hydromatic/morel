@@ -19,7 +19,7 @@
 
 options {
   STATIC = false;
-  IGNORE_CASE = true;
+  IGNORE_CASE = false;
   UNICODE_INPUT = true;
 }
 
@@ -1266,39 +1266,39 @@ AstNode statementSemicolon() :
 
 <DEFAULT> TOKEN :
 {
-  < AND: "AND" >
-| < ANDALSO: "ANDALSO" >
-| < CASE: "CASE" >
-| < DATATYPE: "DATATYPE" >
-| < DIV: "DIV" >
-| < ELEM: "ELEM" >
-| < ELSE: "ELSE" >
-| < EXCEPT: "EXCEPT" >
-| < END: "END" >
-| < FN: "FN" >
-| < FUN: "FUN" >
-| < IF: "IF" >
-| < IN: "IN" >
-| < INTERSECT: "INTERSECT" >
-| < LET: "LET" >
-| < MOD: "MOD" >
-| < NOT_ELEM: "NOTELEM" >
-| < O: "O" >
-| < OF: "OF" >
-| < ORELSE: "ORELSE" >
-| < REC: "REC" >
-| < THEN: "THEN" >
-| < UNION: "UNION" >
-| < VAL: "VAL" >
+  < AND: "and" >
+| < ANDALSO: "andalso" >
+| < CASE: "case" >
+| < DATATYPE: "datatype" >
+| < DIV: "div" >
+| < ELEM: "elem" >
+| < ELSE: "else" >
+| < EXCEPT: "except" >
+| < END: "end" >
+| < FN: "fn" >
+| < FUN: "fun" >
+| < IF: "if" >
+| < IN: "in" >
+| < INTERSECT: "intersect" >
+| < LET: "let" >
+| < MOD: "mod" >
+| < NOT_ELEM: "notElem" >
+| < O: "o" >
+| < OF: "of" >
+| < ORELSE: "orelse" >
+| < REC: "rec" >
+| < THEN: "then" >
+| < UNION: "union" >
+| < VAL: "val" >
 
 // The following are relational extensions:
-| < COMPUTE: "COMPUTE" >
-| < DESC: "DESC" >
-| < FROM: "FROM" >
-| < GROUP: "GROUP" >
-| < ORDER: "ORDER" >
-| < WHERE: "WHERE" >
-| < YIELD: "YIELD" >
+| < COMPUTE: "compute" >
+| < DESC: "desc" >
+| < FROM: "from" >
+| < GROUP: "group" >
+| < ORDER: "order" >
+| < WHERE: "where" >
+| < YIELD: "yield" >
 }
 
 /* LITERALS */
@@ -1313,7 +1313,7 @@ AstNode statementSemicolon() :
     |
     < SCIENTIFIC_LITERAL: ("~")?(["0"-"9"])+
                           ("." (["0"-"9"])+)?
-                          "e" ("~")?(["0"-"9"])+>
+                          ["e", "E"] ("~")?(["0"-"9"])+>
     |
     < #HEXDIGIT: ["0"-"9","a"-"f","A"-"F"] >
     |
