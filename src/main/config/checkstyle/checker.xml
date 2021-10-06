@@ -228,9 +228,9 @@ License.
       <property name="max" value="100"/>
       <property name="ignorePattern" value="^import|@see|@link|@BaseMessage|href|^[ +]*&quot;.*&quot;[);,]*$"/>
     </module>
-      <!-- Over time, we will revise this down -->
+
     <module name="MethodLength">
-      <property name="max" value="370"/>
+      <property name="max" value="250"/>
     </module>
 
     <!-- Checks for whitespace (tree walker)                 -->

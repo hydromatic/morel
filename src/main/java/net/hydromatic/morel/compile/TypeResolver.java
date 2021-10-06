@@ -308,98 +308,10 @@ public class TypeResolver {
       }
       final List<Ast.FromStep> fromSteps = new ArrayList<>();
       for (Ast.FromStep step : from.steps) {
-        switch (step.op) {
-        case WHERE:
-          final Ast.Where where = (Ast.Where) step;
-          final Unifier.Variable v5 = unifier.variable();
-          final Ast.Exp filter2 = deduceType(env2, where.exp, v5);
-          equiv(v5, toTerm(PrimitiveType.BOOL));
-          fromSteps.add(where.copy(filter2));
-          break;
-
-        case YIELD:
-          final Ast.Yield yield = (Ast.Yield) step;
-          final Unifier.Variable v6 = unifier.variable();
-          v3 = v6;
-          final Ast.Exp yieldExp2 = deduceType(env2, yield.exp, v6);
-          fromSteps.add(yield.copy(yieldExp2));
-          if (yieldExp2.op == Op.RECORD) {
-            final Unifier.Sequence sequence =
-                (Unifier.Sequence) map.get(yieldExp2);
-            final Ast.Record record2 = (Ast.Record) yieldExp2;
-            final TypeEnv[] envs = {env};
-            Pair.forEach(record2.args.keySet(), sequence.terms, (name, term) ->
-                envs[0] = envs[0].bind(name, term));
-            env2 = envs[0];
-          }
-          break;
-
-        case ORDER:
-          final Ast.Order order = (Ast.Order) step;
-          final List<Ast.OrderItem> orderItems = new ArrayList<>();
-          for (Ast.OrderItem orderItem : order.orderItems) {
-            orderItems.add(
-                orderItem.copy(
-                    deduceType(env2, orderItem.exp, unifier.variable()),
-                    orderItem.direction));
-          }
-          fromSteps.add(order.copy(orderItems));
-          break;
-
-        case GROUP:
-          final Ast.Group group = (Ast.Group) step;
-          validateGroup(group);
-          TypeEnv env3 = env;
-          final Map<Ast.Id, Unifier.Variable> inFieldVars =
-              ImmutableMap.copyOf(fieldVars);
-          fieldVars.clear();
-          final List<Pair<Ast.Id, Ast.Exp>> groupExps = new ArrayList<>();
-          for (Pair<Ast.Id, Ast.Exp> groupExp : group.groupExps) {
-            final Ast.Id id = groupExp.getKey();
-            final Ast.Exp exp = groupExp.getValue();
-            final Unifier.Variable v7 = unifier.variable();
-            final Ast.Exp exp2 = deduceType(env2, exp, v7);
-            reg(id, null, v7);
-            env3 = env3.bind(id.name, v7);
-            fieldVars.put(id, v7);
-            groupExps.add(Pair.of(id, exp2));
-          }
-          final List<Ast.Aggregate> aggregates = new ArrayList<>();
-          for (Ast.Aggregate aggregate : group.aggregates) {
-            final Ast.Id id = aggregate.id;
-            final Unifier.Variable v8 = unifier.variable();
-            reg(id, null, v8);
-            final Unifier.Variable v9 = unifier.variable();
-            final Ast.Exp aggregateFn2 =
-                deduceType(env2, aggregate.aggregate, v9);
-            final Ast.Exp arg2;
-            final Unifier.Term term;
-            if (aggregate.argument == null) {
-              arg2 = null;
-              term = fieldRecord(inFieldVars);
-            } else {
-              final Unifier.Variable v10 = unifier.variable();
-              arg2 = deduceType(env2, aggregate.argument, v10);
-              term = v10;
-            }
-            reg(aggregate.aggregate, null, v9);
-            equiv(
-                unifier.apply(FN_TY_CON, unifier.apply(LIST_TY_CON, term), v8),
-                v9);
-            env3 = env3.bind(id.name, v8);
-            fieldVars.put(id, v8);
-            final Ast.Aggregate aggregate2 =
-                aggregate.copy(aggregateFn2, arg2, aggregate.id);
-            aggregates.add(aggregate2);
-            reg(aggregate2, null, v8);
-          }
-          fromSteps.add(group.copy(groupExps, aggregates));
-          env2 = env3;
-          break;
-
-        default:
-          throw new AssertionError("unknown step type " + step.op);
-        }
+        Pair<TypeEnv, Unifier.Variable> p =
+            deduceStepType(env, step, v3, env2, fieldVars, fromSteps);
+        env2 = p.left;
+        v3 = p.right;
       }
       final Ast.Exp yieldExp2;
       if (from.implicitYieldExp != null) {
@@ -497,6 +409,103 @@ public class TypeResolver {
 
     default:
       throw new AssertionError("cannot deduce type for " + node.op);
+    }
+  }
+
+  private Pair<TypeEnv, Unifier.Variable> deduceStepType(TypeEnv env,
+      Ast.FromStep step, Unifier.Variable v, final TypeEnv env2,
+      Map<Ast.Id, Unifier.Variable> fieldVars, List<Ast.FromStep> fromSteps) {
+    switch (step.op) {
+    case WHERE:
+      final Ast.Where where = (Ast.Where) step;
+      final Unifier.Variable v5 = unifier.variable();
+      final Ast.Exp filter2 = deduceType(env2, where.exp, v5);
+      equiv(v5, toTerm(PrimitiveType.BOOL));
+      fromSteps.add(where.copy(filter2));
+      return Pair.of(env2, v);
+
+    case YIELD:
+      final Ast.Yield yield = (Ast.Yield) step;
+      final Unifier.Variable v6 = unifier.variable();
+      v = v6;
+      final Ast.Exp yieldExp2 = deduceType(env2, yield.exp, v6);
+      fromSteps.add(yield.copy(yieldExp2));
+      if (yieldExp2.op == Op.RECORD) {
+        final Unifier.Sequence sequence =
+            (Unifier.Sequence) map.get(yieldExp2);
+        final Ast.Record record2 = (Ast.Record) yieldExp2;
+        final TypeEnv[] envs = {env};
+        Pair.forEach(record2.args.keySet(), sequence.terms, (name, term) ->
+            envs[0] = envs[0].bind(name, term));
+        return Pair.of(envs[0], v);
+      } else {
+        return Pair.of(env2, v);
+      }
+
+    case ORDER:
+      final Ast.Order order = (Ast.Order) step;
+      final List<Ast.OrderItem> orderItems = new ArrayList<>();
+      for (Ast.OrderItem orderItem : order.orderItems) {
+        orderItems.add(
+            orderItem.copy(
+                deduceType(env2, orderItem.exp, unifier.variable()),
+                orderItem.direction));
+      }
+      fromSteps.add(order.copy(orderItems));
+      return Pair.of(env2, v);
+
+    case GROUP:
+      final Ast.Group group = (Ast.Group) step;
+      validateGroup(group);
+      TypeEnv env3 = env;
+      final Map<Ast.Id, Unifier.Variable> inFieldVars =
+          ImmutableMap.copyOf(fieldVars);
+      fieldVars.clear();
+      final List<Pair<Ast.Id, Ast.Exp>> groupExps = new ArrayList<>();
+      for (Pair<Ast.Id, Ast.Exp> groupExp : group.groupExps) {
+        final Ast.Id id = groupExp.getKey();
+        final Ast.Exp exp = groupExp.getValue();
+        final Unifier.Variable v7 = unifier.variable();
+        final Ast.Exp exp2 = deduceType(env2, exp, v7);
+        reg(id, null, v7);
+        env3 = env3.bind(id.name, v7);
+        fieldVars.put(id, v7);
+        groupExps.add(Pair.of(id, exp2));
+      }
+      final List<Ast.Aggregate> aggregates = new ArrayList<>();
+      for (Ast.Aggregate aggregate : group.aggregates) {
+        final Ast.Id id = aggregate.id;
+        final Unifier.Variable v8 = unifier.variable();
+        reg(id, null, v8);
+        final Unifier.Variable v9 = unifier.variable();
+        final Ast.Exp aggregateFn2 =
+            deduceType(env2, aggregate.aggregate, v9);
+        final Ast.Exp arg2;
+        final Unifier.Term term;
+        if (aggregate.argument == null) {
+          arg2 = null;
+          term = fieldRecord(inFieldVars);
+        } else {
+          final Unifier.Variable v10 = unifier.variable();
+          arg2 = deduceType(env2, aggregate.argument, v10);
+          term = v10;
+        }
+        reg(aggregate.aggregate, null, v9);
+        equiv(
+            unifier.apply(FN_TY_CON, unifier.apply(LIST_TY_CON, term), v8),
+            v9);
+        env3 = env3.bind(id.name, v8);
+        fieldVars.put(id, v8);
+        final Ast.Aggregate aggregate2 =
+            aggregate.copy(aggregateFn2, arg2, aggregate.id);
+        aggregates.add(aggregate2);
+        reg(aggregate2, null, v8);
+      }
+      fromSteps.add(group.copy(groupExps, aggregates));
+      return Pair.of(env3, v);
+
+    default:
+      throw new AssertionError("unknown step type " + step.op);
     }
   }
 
