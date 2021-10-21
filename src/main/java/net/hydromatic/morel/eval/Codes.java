@@ -1332,9 +1332,9 @@ public abstract class Codes {
     };
   }
 
-  /** @see BuiltIn#OPTION_JOIN */
-  private static final Applicable OPTION_JOIN =
-      new ApplicableImpl(BuiltIn.OPTION_JOIN) {
+  /** @see BuiltIn#OPTION_FLATTEN */
+  private static final Applicable OPTION_FLATTEN =
+      new ApplicableImpl(BuiltIn.OPTION_FLATTEN) {
         @Override public Object apply(EvalEnv env, Object arg) {
           final List opt = (List) arg;
           return opt.size() == 2
@@ -2059,7 +2059,7 @@ public abstract class Codes {
           .put(BuiltIn.OPTION_FILTER, OPTION_FILTER)
           .put(BuiltIn.OPTION_GET_OPT, OPTION_GET_OPT)
           .put(BuiltIn.OPTION_IS_SOME, OPTION_IS_SOME)
-          .put(BuiltIn.OPTION_JOIN, OPTION_JOIN)
+          .put(BuiltIn.OPTION_FLATTEN, OPTION_FLATTEN)
           .put(BuiltIn.OPTION_MAP, OPTION_MAP)
           .put(BuiltIn.OPTION_MAP_PARTIAL, OPTION_MAP_PARTIAL)
           .put(BuiltIn.OPTION_VAL_OF, OPTION_VAL_OF)

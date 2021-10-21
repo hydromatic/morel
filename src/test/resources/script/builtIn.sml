@@ -428,14 +428,15 @@ Option.filter (fn x => x mod 2 = 0) 1;
 Option.filter (fn x => x mod 2 = 0) 2;
 Sys.plan ();
 
-(*) val join : 'a option option -> 'a option
-Option.join (SOME (SOME 1));
-Option.join (SOME noneInt);
+(*) val flatten : 'a option option -> 'a option
+(*) (This function is called "Option.join" in the Standard ML basis library.)
+Option.flatten (SOME (SOME 1));
+Option.flatten (SOME noneInt);
 (* sml-nj gives
   stdIn:1.2-1.18 Warning: type vars not generalized because of
      value restriction are instantiated to dummy types (X1,X2,...)
 *)
-Option.join NONE;
+Option.flatten NONE;
 Sys.plan ();
 
 (*) val app : ('a -> unit) -> 'a option -> unit

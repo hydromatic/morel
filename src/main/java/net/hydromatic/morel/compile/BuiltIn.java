@@ -632,11 +632,15 @@ public enum BuiltIn {
       ts.forallType(1, h ->
           ts.fnType(ts.fnType(h.get(0), BOOL), h.get(0), h.option(0)))),
 
-  /** Function "Option.join", of type
+  /** Function "Option.flatten", of type
    * "&alpha; option option &rarr; &alpha; option".
    *
-   * <p>{@code join opt} maps NONE to NONE and SOME(v) to v.*/
-  OPTION_JOIN("Option", "join", ts ->
+   * <p>{@code flatten opt} maps NONE to NONE and SOME(v) to v.
+   *
+   * <p>Note: In the Standard ML basis library, this function is called
+   * "{@code join}". We cannot use that name, because {@code join} is a keyword
+   * in Morel. */
+  OPTION_FLATTEN("Option", "flatten", ts ->
       ts.forallType(1, h -> ts.fnType(ts.option(h.option(0)), h.option(0)))),
 
   /** Function "Option.app", of type
