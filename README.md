@@ -275,18 +275,18 @@ in
                 where d.name = "Engineering"
                 yield d.deptno)
   yield e.name
-end
+end;
 
 let
   fun exists [] = false
-    | exists hd :: tl = true
+    | exists (hd :: tl) = true
 in
   from e in emps
   where exists (from d in depts
                 where d.deptno = e.deptno
                 andalso d.name = "Engineering")
   yield e.name
-end
+end;
 ```
 
 In the second query, note that the sub-query inside the `exists` is
