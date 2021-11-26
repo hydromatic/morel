@@ -19,6 +19,7 @@
 
 (* Structures -------------------------------------------------- *)
 General;
+Interact;
 List;
 List.rev;
 List.rev [1,2,3];
@@ -58,6 +59,12 @@ Sys.plan ();
 ignore;
 ignore (1 + 2);
 Sys.plan ();
+
+(* Interact ---------------------------------------------------- *)
+
+(*) use - load source from a file
+Interact.use;
+use;
 
 (* String ------------------------------------------------------ *)
 
@@ -420,6 +427,7 @@ Option.valOf (SOME 1);
  *)
 Option.valOf NONE;
 val noneInt = if true then NONE else SOME 0;
+Sys.plan ();
 Option.valOf noneInt;
 Sys.plan ();
 

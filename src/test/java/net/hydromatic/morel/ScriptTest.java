@@ -132,6 +132,7 @@ public class ScriptTest {
     }
     TestUtils.discard(outFile.getParentFile().mkdirs());
     final List<String> argList = ImmutableList.of("--echo");
+    final File directory = inFile.getParentFile();
     final boolean loadDictionary =
         inFile.getPath().matches(".*/(blog|dummy|foreign|hybrid)\\.sml");
     final Map<String, ForeignValue> dictionary =
@@ -140,7 +141,7 @@ public class ScriptTest {
             : ImmutableMap.of();
     try (Reader reader = TestUtils.reader(inFile);
          Writer writer = TestUtils.printWriter(outFile)) {
-      new Main(argList, reader, writer, dictionary).run();
+      new Main(argList, reader, writer, dictionary, directory).run();
     }
     final File refFile =
         new File(inFile.getParentFile(), inFile.getName() + ".out");

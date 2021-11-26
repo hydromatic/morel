@@ -18,8 +18,13 @@
  */
 package net.hydromatic.morel.eval;
 
+import net.hydromatic.morel.compile.CompileException;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
+
+import static java.util.Objects.requireNonNull;
 
 /** Session environment.
  *
@@ -32,6 +37,63 @@ public class Session {
   public String out;
   /** Property values. */
   public final Map<Prop, Object> map = new LinkedHashMap<>();
+
+  /** Implementation of "use". */
+  private Shell shell = DefaultShell.INSTANCE;
+
+  /** Calls some code with a new value of {@link Shell}. */
+  public void withShell(Shell shell, Consumer<String> outLines,
+      Consumer<Session> consumer) {
+    final Shell prevShell = this.shell;
+    try {
+      this.shell = requireNonNull(shell, "shell");
+      consumer.accept(this);
+    } catch (RuntimeException e) {
+      final StringBuilder buf = new StringBuilder();
+      prevShell.handle(e, buf);
+      outLines.accept(buf.toString());
+    } finally {
+      this.shell = prevShell;
+    }
+  }
+
+  public void use(String fileName) {
+    shell.use(fileName);
+  }
+
+  public void handle(Codes.MorelRuntimeException e, StringBuilder buf) {
+    shell.handle(e, buf);
+  }
+
+  /** Callback to implement "use" command. */
+  public interface Shell {
+    void use(String fileName);
+
+    /** Handles an exception. Particular implementations may re-throw the
+     * exception, or may format the exception to a buffer that will be added to
+     * the output. Typically the a root shell will handle the exception, and
+     * sub-shells will re-throw. */
+    void handle(RuntimeException e, StringBuilder buf);
+  }
+
+  /** Default implementation of {@link Shell}. */
+  private enum DefaultShell implements Shell {
+    INSTANCE;
+
+    @Override public void use(String fileName) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override public void handle(RuntimeException e, StringBuilder buf) {
+      if (e instanceof Codes.MorelRuntimeException) {
+        ((Codes.MorelRuntimeException) e).describeTo(buf);
+      } else if (e instanceof CompileException) {
+        buf.append(e.getMessage());
+      } else {
+        buf.append(e);
+      }
+    }
+  }
 }
 
 // End Session.java

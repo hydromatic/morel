@@ -19,10 +19,12 @@
 package net.hydromatic.morel;
 
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.parse.MorelParserImpl;
@@ -35,6 +37,8 @@ import com.google.common.collect.ImmutableMap;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
 import java.io.FilterReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,8 +49,12 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+
+import static java.util.Objects.requireNonNull;
 
 /** Standard ML REPL. */
 public class Main {
@@ -54,6 +62,9 @@ public class Main {
   private final PrintWriter out;
   private final boolean echo;
   private final Map<String, ForeignValue> valueMap;
+  final TypeSystem typeSystem = new TypeSystem();
+  final File directory;
+  final Session session = new Session();
 
   /** Command-line entry point.
    *
@@ -61,7 +72,7 @@ public class Main {
   public static void main(String[] args) {
     final Main main =
         new Main(ImmutableList.copyOf(args), System.in, System.out,
-            ImmutableMap.of());
+            ImmutableMap.of(), new File(System.getProperty("user.dir")));
     try {
       main.run();
     } catch (Throwable e) {
@@ -72,18 +83,19 @@ public class Main {
 
   /** Creates a Main. */
   public Main(List<String> args, InputStream in, PrintStream out,
-      Map<String, ForeignValue> valueMap) {
+      Map<String, ForeignValue> valueMap, File directory) {
     this(args, new InputStreamReader(in), new OutputStreamWriter(out),
-        valueMap);
+        valueMap, directory);
   }
 
   /** Creates a Main. */
   public Main(List<String> argList, Reader in, Writer out,
-      Map<String, ForeignValue> valueMap) {
+      Map<String, ForeignValue> valueMap, File directory) {
     this.in = buffer(in);
     this.out = buffer(out);
     this.echo = argList.contains("--echo");
     this.valueMap = ImmutableMap.copyOf(valueMap);
+    this.directory = requireNonNull(directory, "directory");
   }
 
   private static PrintWriter buffer(Writer out) {
@@ -106,50 +118,115 @@ public class Main {
   }
 
   public void run() {
-    final TypeSystem typeSystem = new TypeSystem();
-    final BufferingReader in2 = new BufferingReader(in);
-    final MorelParserImpl parser = new MorelParserImpl(in2);
     Environment env = Environments.env(typeSystem, valueMap);
-    final List<String> lines = new ArrayList<>();
-    final List<Binding> bindings = new ArrayList<>();
-    final Session session = new Session();
-    for (;;) {
-      String code = "";
+    final Consumer<String> outLines = out::println;
+    final Map<String, Binding> outBindings = new LinkedHashMap<>();
+    final Shell shell = new Shell(this, env, outLines, outBindings);
+    session.withShell(shell, outLines, session1 ->
+        shell.run(session1, new BufferingReader(in)));
+    out.flush();
+  }
+
+  /** Shell (or sub-shell created via
+   * {@link use net.hydromatic.morel.compile.BuiltIn#INTERACT_USE}) that can
+   * execute commands and handle errors. */
+  static class Shell implements Session.Shell {
+    protected final Main main;
+    protected final Environment env0;
+    protected final Consumer<String> outLines;
+    protected final Map<String, Binding> bindingMap;
+
+    Shell(Main main, Environment env0, Consumer<String> outLines,
+        Map<String, Binding> bindingMap) {
+      this.main = main;
+      this.env0 = env0;
+      this.outLines = outLines;
+      this.bindingMap = bindingMap;
+    }
+
+    void run(Session session, BufferingReader in2) {
+      final MorelParserImpl parser = new MorelParserImpl(in2);
+      final SubShell subShell =
+          new SubShell(main, outLines, bindingMap, env0);
+      for (;;) {
+        try {
+          final AstNode statement = parser.statementSemicolon();
+          String code = in2.flush();
+          if (main.echo) {
+            outLines.accept(code);
+          }
+          session.withShell(subShell, outLines, session1 ->
+              subShell.command(statement, outLines));
+        } catch (ParseException e) {
+          final String message = e.getMessage();
+          if (message.startsWith("Encountered \"<EOF>\" ")) {
+            break;
+          }
+          outLines.accept(message);
+        }
+      }
+    }
+
+    @Override public void use(String fileName) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override public void handle(RuntimeException e, StringBuilder buf) {
+      if (e instanceof Codes.MorelRuntimeException) {
+        ((Codes.MorelRuntimeException) e).describeTo(buf);
+      } else if (e instanceof CompileException) {
+        buf.append(e.getMessage());
+      } else {
+        buf.append(e);
+      }
+    }
+  }
+
+  /** Shell that is created via the
+   * {@link use net.hydromatic.morel.compile.BuiltIn#INTERACT_USE}) command.
+   * Like a top-level shell, it can execute commands and handle errors. But its
+   * input is a file, and its output is to the same output as its parent
+   * shell. */
+  static class SubShell extends Shell {
+
+    SubShell(Main main, Consumer<String> outLines,
+        Map<String, Binding> outBindings, Environment env0) {
+      super(main, env0, outLines, outBindings);
+    }
+
+    @Override public void use(String fileName) {
+      outLines.accept("[opening " + fileName + "]");
+      File file = new File(fileName);
+      if (!file.isAbsolute()) {
+        file = new File(main.directory, fileName);
+      }
+      if (!file.exists()) {
+        outLines.accept("[use failed: Io: openIn failed on "
+            + fileName
+            + ", No such file or directory]");
+        throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR);
+      }
+      try (FileReader fileReader = new FileReader(file);
+           BufferedReader bufferedReader = new BufferedReader(fileReader)) {
+        run(main.session, new BufferingReader(bufferedReader));
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+
+    void command(AstNode statement, Consumer<String> outLines) {
       try {
-        final AstNode statement = parser.statementSemicolon();
-        code = in2.flush();
-        if (echo) {
-          out.write(code);
-          out.write("\n");
-        }
+        final Environment env = env0.bindAll(bindingMap.values());
         final CompiledStatement compiled =
-            Compiles.prepareStatement(typeSystem, session, env, statement,
-                null);
-        compiled.eval(session, env, lines::add, bindings::add);
-        for (String line : lines) {
-          out.write(line);
-          out.write("\n");
-        }
-        lines.clear();
-        env = env.bindAll(bindings);
-        bindings.clear();
-      } catch (RuntimeException e) {
-        out.println("Error while executing statement:");
-        out.println(code);
-        e.printStackTrace(out);
-      } catch (Error e) {
-        out.println("Error while executing statement:");
-        out.println(code);
-        e.printStackTrace(out);
-        throw e;
-      } catch (ParseException e) {
-        final String message = e.getMessage();
-        if (message.startsWith("Encountered \"<EOF>\" ")) {
-          break;
-        }
-        e.printStackTrace(out);
-      } finally {
-        out.flush();
+            Compiles.prepareStatement(main.typeSystem, main.session, env,
+                statement, null);
+        final List<Binding> bindings = new ArrayList<>();
+        compiled.eval(main.session, env, outLines, bindings::add);
+        bindings.forEach(b -> this.bindingMap.put(b.id.name, b));
+      } catch (Codes.MorelRuntimeException e) {
+        final StringBuilder buf = new StringBuilder();
+        main.session.handle(e, buf);
+        outLines.accept(buf.toString());
       }
     }
   }

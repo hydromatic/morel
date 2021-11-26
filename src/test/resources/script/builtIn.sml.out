@@ -22,6 +22,9 @@ General;
 val it = {ignore=fn,op o=fn}
   : {ignore:'a -> unit, op o:('b -> 'c) * ('d -> 'b) -> 'd -> 'c}
 
+Interact;
+val it = {use=fn} : {use:string -> unit}
+
 List;
 val it =
   {all=fn,app=fn,at=fn,collate=fn,concat=fn,drop=fn,exists=fn,filter=fn,
@@ -134,6 +137,16 @@ Sys.plan ();
 val it =
   "apply(fnValue General.ignore, argCode apply(fnValue +, argCode tuple(constant(1), constant(2))))"
   : string
+
+
+(* Interact ---------------------------------------------------- *)
+
+(*) use - load source from a file
+Interact.use;
+val it = fn : string -> unit
+
+use;
+val it = fn : string -> unit
 
 
 (* String ------------------------------------------------------ *)
@@ -1040,6 +1053,11 @@ uncaught exception Option
 val noneInt = if true then NONE else SOME 0;
 val noneInt = NONE : int option
 
+Sys.plan ();
+val it =
+  "apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode constant(0))), argCode constant(true))"
+  : string
+
 Option.valOf noneInt;
 uncaught exception Option
 
@@ -1394,7 +1412,7 @@ val it =
   [("EQUAL","order"),("GREATER","order"),
    ("General",
    "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
-   ("LESS","order"),
+   ("Interact","{use:string -> unit}"),("LESS","order"),
    ("List",
    "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
    ("NONE","'a option"),
@@ -1407,8 +1425,6 @@ val it =
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
    ("Sys",
    "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
-   ("Vector",
-   "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
    ...] : (string * string) list
 
 
@@ -1420,7 +1436,7 @@ val it =
   [("EQUAL","order"),("GREATER","order"),
    ("General",
    "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
-   ("LESS","order"),
+   ("Interact","{use:string -> unit}"),("LESS","order"),
    ("List",
    "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
    ("NONE","'a option"),
@@ -1433,8 +1449,6 @@ val it =
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
    ("Sys",
    "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
-   ("Vector",
-   "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
    ...] : (string * string) list
 
 

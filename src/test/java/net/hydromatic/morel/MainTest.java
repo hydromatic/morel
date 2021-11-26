@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
@@ -60,16 +61,18 @@ public class MainTest {
 
   @Test void testEmptyRepl() {
     final List<String> argList = ImmutableList.of();
+    final File directory = new File("");
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(new byte[0]);
-      new Main(argList, in, ps, ImmutableMap.of()).run();
+      new Main(argList, in, ps, ImmutableMap.of(), directory).run();
     }
     assertThat(out.size(), is(0));
   }
 
   @Test void testRepl() {
     final List<String> argList = ImmutableList.of();
+    final File directory = new File("");
     final String ml = "val x = 5;\n"
         + "x;\n"
         + "it + 1;\n"
@@ -79,7 +82,7 @@ public class MainTest {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(ml.getBytes());
-      new Main(argList, in, ps, ImmutableMap.of()).run();
+      new Main(argList, in, ps, ImmutableMap.of(), directory).run();
     }
     final String expected = "val x = 5 : int\n"
         + "val it = 5 : int\n"

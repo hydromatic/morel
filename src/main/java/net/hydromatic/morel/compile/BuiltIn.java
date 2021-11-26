@@ -192,6 +192,12 @@ public enum BuiltIn {
                   ts.fnType(h.get(0), h.get(1))),
               ts.fnType(h.get(0), h.get(2))))),
 
+  /** Function "Interact.use" of type "string &rarr; unit"
+   *
+   * <p>"use f" loads source text from the file named `f`. */
+  INTERACT_USE("Interact", "use", "use", ts ->
+      ts.fnType(STRING, UNIT)),
+
   /** Constant "String.maxSize", of type "int".
    *
    * <p>"The longest allowed size of a string". */

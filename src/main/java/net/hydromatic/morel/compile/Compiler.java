@@ -611,7 +611,7 @@ public class Compiler {
           outBindings.accept(Binding.of(valDecl.pat.withType(type), o));
           Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
         } catch (Codes.MorelRuntimeException e) {
-          e.describeTo(buf);
+          session.handle(e, buf);
         }
         final String out = buf.toString();
         session.code = code;

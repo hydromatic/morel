@@ -292,6 +292,7 @@ Exception:
 | abs | int &rarr; int | "abs n" returns the absolute value of `n`.
 | General.ignore | &alpha; &rarr; unit | "ignore x" always returns `unit`. The function evaluates its argument but throws away the value.
 | General.op o | (&beta; &rarr; &gamma;) (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma; | "f o g" is the function composition of `f` and `g`. Thus, `(f o g) a` is equivalent to `f (g a)`.
+| Interact.use | string &rarr; unit | "use f" loads source text from the file named `f`.
 | String.maxSize | int | The longest allowed size of a string.
 | String.size | string &rarr; int | "size s" returns \|`s`\|, the number of characters in string `s`.
 | String.sub | string * int &rarr; char | "sub (s, i)" returns the `i`(th) character of `s`, counting from zero. This raises `Subscript` if `i` &lt; 0 or \|`s`\| &le; `i`.

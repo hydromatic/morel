@@ -1,0 +1,171 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Script that calls other scripts; tests the "use" command.
+ *)
+
+(*) First, let's check that plans are assigned, but variables
+(*) are not assigned, when there are exceptions.
+
+val a = 2 + 3;
+val a = 5 : int
+
+Sys.plan();
+val it = "apply(fnValue +, argCode tuple(constant(2), constant(3)))" : string
+
+val b = 20;
+val b = 20 : int
+
+(*) throws Subscript:
+val a = String.sub("abc", b);
+uncaught exception Subscript [subscript out of bounds]
+
+(*) plan is for the unsuccessful statement:
+Sys.plan();
+val it =
+  "apply(fnValue String.sub, argCode tuple(constant(abc), constant(20)))"
+  : string
+
+String.sub("xyz", b - 1);
+uncaught exception Subscript [subscript out of bounds]
+
+(*) plan is for the unsuccessful expression:
+Sys.plan();
+val it =
+  "apply(fnValue String.sub, argCode tuple(constant(xyz), apply(fnValue -, argCode tuple(constant(20), constant(1)))))"
+  : string
+
+(*) a is still an int:
+a;
+val it = 5 : int
+
+
+"entering use.sml";
+val it = "entering use.sml" : string
+
+val x = "step 1";
+val x = "step 1" : string
+
+
+(*) Include a script that uses x, and then defines x and plus3.
+use "use-1.sml";
+[opening use-1.sml]
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Called by use.sml (which we assume has defined 'x');
+ * also called standalone. Some commands fail if 'x' is not
+ * defined, but the script continues to the end.
+ *)
+
+"entering use-1.sml";
+val it = "entering use-1.sml" : string
+
+val y = x ^ ", ";
+val y = "step 1, " : string
+
+val x = y ^ "step 2";
+val x = "step 1, step 2" : string
+
+fun plus3 n = n + 3;
+val plus3 = fn : int -> int
+
+plus3 ~1;
+val it = 2 : int
+
+"leaving use-1.sml";
+val it = "leaving use-1.sml" : string
+val it = () : unit
+
+"x is now " ^ x;
+val it = "x is now step 1, step 2" : string
+
+plus3 7;
+val it = 10 : int
+
+
+(*) Now, define x as an integer, which will cause failures in the invoked
+(*) script, but the script won't bail out.
+val x = 10;
+val x = 10 : int
+
+use "use-1.sml";
+[opening use-1.sml]
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Called by use.sml (which we assume has defined 'x');
+ * also called standalone. Some commands fail if 'x' is not
+ * defined, but the script continues to the end.
+ *)
+
+"entering use-1.sml";
+val it = "entering use-1.sml" : string
+
+val y = x ^ ", ";
+java.lang.RuntimeException: Cannot deduce type: conflict: int vs string
+
+val x = y ^ "step 2";
+val x = "step 1, step 2" : string
+
+fun plus3 n = n + 3;
+val plus3 = fn : int -> int
+
+plus3 ~1;
+val it = 2 : int
+
+"leaving use-1.sml";
+val it = "leaving use-1.sml" : string
+val it = () : unit
+
+"x is now " ^ x;
+val it = "x is now step 1, step 2" : string
+
+
+"leaving use.sml";
+val it = "leaving use.sml" : string

@@ -70,6 +70,13 @@ val it = "Hello, world!" : string
 $
 ```
 
+Within the shell, the `use` function reads and evaluates source from a
+file:
+
+```bash
+- use "script.sml";
+```
+
 ## Documentation
 
 * [Morel language reference](docs/reference.md)
@@ -143,7 +150,6 @@ Not implemented:
 * `local`
 * `raise`, `handle`
 * `while`
-* `use`
 * References, and operators `!` and `:=`
 * Operators: `before`
 * User-defined operators (`infix`, `infixr`)

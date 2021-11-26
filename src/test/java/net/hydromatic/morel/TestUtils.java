@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import com.google.common.collect.ImmutableList;
 import org.incava.diff.Diff;
 import org.incava.diff.Difference;
 
@@ -42,6 +43,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /** Utility methods for testing. */
 class TestUtils {
@@ -106,6 +110,13 @@ class TestUtils {
     }
     // See https://stackoverflow.com/a/17870390/1261287
     return Paths.get(uri).toFile();
+  }
+
+  /** Returns the root directory of test resources. */
+  static File findDirectory() {
+    final URL inUrl = MainTest.class.getResource("/");
+    assertThat(inUrl, notNullValue());
+    return urlToFile(inUrl);
   }
 
   @SuppressWarnings("unused")
@@ -240,6 +251,14 @@ class TestUtils {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /** Returns a list plus one element. */
+  public static <E> ImmutableList<E> plus(List<E> elements, E element) {
+    return ImmutableList.<E>builder()
+        .addAll(elements)
+        .add(element)
+        .build();
   }
 }
 

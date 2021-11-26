@@ -314,6 +314,17 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#INTERACT_USE */
+  private static final Applicable INTERACT_USE =
+      new ApplicableImpl(BuiltIn.INTERACT_USE) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final String f = (String) arg;
+          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          session.use(f);
+          return Unit.INSTANCE;
+        }
+      };
+
   /** @see BuiltIn#OP_CARET */
   private static final Applicable OP_CARET =
       new ApplicableImpl(BuiltIn.OP_CARET) {
@@ -1979,6 +1990,7 @@ public abstract class Codes {
           .put(BuiltIn.ABS, ABS)
           .put(BuiltIn.IGNORE, IGNORE)
           .put(BuiltIn.GENERAL_OP_O, GENERAL_OP_O)
+          .put(BuiltIn.INTERACT_USE, INTERACT_USE)
           .put(BuiltIn.OP_CARET, OP_CARET)
           .put(BuiltIn.OP_CONS, OP_CONS)
           .put(BuiltIn.OP_DIV, OP_DIV)
@@ -2506,6 +2518,7 @@ public abstract class Codes {
   public enum BuiltInExn {
     EMPTY("List", "Empty"),
     OPTION("Option", "Option"),
+    ERROR("Interact", "Error"), // not in standard basis
     SIZE("General", "Size"),
     SUBSCRIPT("General", "Subscript [subscript out of bounds]");
 
