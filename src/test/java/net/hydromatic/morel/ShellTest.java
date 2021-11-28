@@ -18,13 +18,13 @@
  */
 package net.hydromatic.morel;
 
+import com.google.common.collect.ImmutableList;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,59 +32,45 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.StringContains.containsString;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
+
 /** Tests the Shell. */
 public class ShellTest {
 
-  private static final String UTF_8 = "utf-8";
-
-  private final List<String> argList =
-      Arrays.asList("--prompt=false", "--system=false", "--banner=false",
-          "--terminal=dumb");
-
-  @SuppressWarnings("CharsetObjectCanBeUsed")
-  private void assertShellOutput(List<String> argList, String inputString,
-      Matcher<String> matcher) throws IOException {
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    final ByteArrayInputStream bais =
-        new ByteArrayInputStream(inputString.getBytes(UTF_8));
-    final Shell shell = new Shell(argList, bais, baos) {
-      @Override protected void pause() {
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    };
-    shell.run();
-    final String outString = baos.toString(UTF_8);
-    assertThat(outString, matcher);
+  /** Creates a Fixture. */
+  static Fixture fixture() {
+    return new FixtureImpl(Fixture.DEFAULT_ARG_LIST, "?");
   }
 
   /** Tests {@link Shell} with empty input. */
-  @Test void testShell() throws IOException {
+  @Test void testShell() {
     final List<String> argList = Collections.singletonList("--system=false");
-    assertShellOutput(argList, "", containsString("morel version"));
+    fixture().withArgList(argList)
+        .withInputString("")
+        .assertOutput(containsString("morel version"));
   }
 
   /** Tests {@link Shell} with empty input and banner disabled. */
-  @Test void testShellNoBanner() throws IOException {
-    assertShellOutput(argList, "", containsString("- \r\r\n"));
+  @Test void testShellNoBanner() {
+    fixture()
+        .withInputString("")
+        .assertOutput(containsString("- \r\r\n"));
   }
 
   /** Tests {@link Shell} with one line. */
-  @Test void testOneLine() throws IOException {
+  @Test void testOneLine() {
     final String in = "1 + 2;\n";
     final String expected = "1 + 2;\r\n"
         + "- 1 + 2;\r\r\n"
         + "\u001B[?2004lval it = 3 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    assertShellOutput(argList, in, is(expected));
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /** Tests {@link Shell} with a continued line. */
-  @Test void testTwoLines() throws IOException {
+  @Test void testTwoLines() {
     final String in = "1 +\n"
         + "2;\n";
     final String expected = "1 +\r\n"
@@ -94,12 +80,12 @@ public class ShellTest {
         + "\u001B[?2004lval it = 3 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    assertShellOutput(argList, in, is(expected));
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /** Tests {@link Shell} with a line that is a comment, another that is empty,
    *  and another that has only a semicolon; all are treated as empty. */
-  @Test void testEmptyLines() throws IOException {
+  @Test void testEmptyLines() {
     final String in = "(* a comment followed by empty *)\n"
         + "\n"
         + ";\n";
@@ -111,11 +97,11 @@ public class ShellTest {
         + "\u001B[?2004l- ;\r\r\n"
         + "\u001B[?2004l- \r\r\n"
         + "\u001B[?2004l";
-    assertShellOutput(argList, in, is(expected));
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /** Tests {@link Shell} with a single-line comment. */
-  @Test void testSingleLineComment() throws IOException {
+  @Test void testSingleLineComment() {
     final String in = "(*) line comment\n"
         + "1 + 2;\n";
     final String expected = "(*) line comment\r\n"
@@ -125,11 +111,11 @@ public class ShellTest {
         + "\u001B[?2004lval it = 3 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    assertShellOutput(argList, in, is(expected));
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /** Tests {@link Shell} with a single-line comment that contains a quote. */
-  @Test void testSingleLineCommentWithQuote() throws IOException {
+  @Test void testSingleLineCommentWithQuote() {
     final String in = "(*) it's a single-line comment with a quote\n"
         + "2 + 3;\n";
     final String expected = "(*) it's a single-line comment with a quote\r\n"
@@ -139,12 +125,12 @@ public class ShellTest {
         + "\u001B[?2004lval it = 5 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    assertShellOutput(argList, in, is(expected));
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /** Tests {@link Shell} with {@code let} statement spread over multiple
    * lines. */
-  @Test void testMultiLineLet() throws IOException {
+  @Test void testMultiLineLet() {
     final String in = "let\n"
         + "  val x = 1\n"
         + "in\n"
@@ -163,7 +149,77 @@ public class ShellTest {
         + "\u001B[?2004lval it = 3 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    assertShellOutput(argList, in, is(expected));
+    fixture().withInputString(in).assertOutput(is(expected));
+  }
+
+  /** Fixture for testing the shell.
+   *
+   * @see #fixture */
+  interface Fixture {
+    ImmutableList<String> DEFAULT_ARG_LIST =
+        ImmutableList.of("--prompt=false", "--system=false", "--banner=false",
+            "--terminal=dumb");
+
+    List<String> argList();
+
+    Fixture withArgList(List<String> argList);
+
+    String inputString();
+
+    Fixture withInputString(String inputString);
+
+    @SuppressWarnings("UnusedReturnValue")
+    default Fixture assertOutput(Matcher<String> matcher) {
+      try {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        final ByteArrayInputStream bais =
+            new ByteArrayInputStream(inputString().getBytes(UTF_8));
+        final Shell shell = new Shell(argList(), bais, baos) {
+          @Override protected void pause() {
+            try {
+              Thread.sleep(10);
+            } catch (InterruptedException e) {
+              throw new RuntimeException(e);
+            }
+          }
+        };
+        shell.run();
+        final String outString = baos.toString(UTF_8.name());
+        assertThat(outString, matcher);
+        return this;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  /** Implementation of Fixture. */
+  private static class FixtureImpl implements Fixture {
+    final ImmutableList<String> argList;
+    final String inputString;
+
+    FixtureImpl(ImmutableList<String> argList, String inputString) {
+      this.argList = requireNonNull(argList, "argList");
+      this.inputString = requireNonNull(inputString, "inputString");
+    }
+
+    @Override public List<String> argList() {
+      return argList;
+    }
+
+    @Override public Fixture withArgList(List<String> argList) {
+      return this.argList.equals(argList) ? this
+          : new FixtureImpl(ImmutableList.copyOf(argList), inputString);
+    }
+
+    @Override public String inputString() {
+      return inputString;
+    }
+
+    @Override public Fixture withInputString(String inputString) {
+      return this.inputString.equals(inputString) ? this
+          : new FixtureImpl(ImmutableList.copyOf(argList), inputString);
+    }
   }
 }
 
