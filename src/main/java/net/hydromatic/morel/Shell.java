@@ -35,6 +35,7 @@ import net.hydromatic.morel.type.TypeSystem;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Runnables;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -59,23 +60,22 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
 
+import static java.util.Objects.requireNonNull;
+
 /** Command shell for ML, powered by JLine3. */
 public class Shell {
-  private final List<String> argList;
-  private final boolean echo;
+  private final ConfigImpl config;
   private final Terminal terminal;
-  private final boolean banner;
-  private final boolean system;
-  private final ImmutableMap<String, ForeignValue> valueMap;
-  private boolean help;
 
   /** Command-line entry point.
    *
    * @param args Command-line arguments */
   public static void main(String[] args) {
     try {
-      final Shell main =
-          new Shell(ImmutableList.copyOf(args), System.in, System.out);
+      final Config config =
+          parse(ConfigImpl.DEFAULT,
+              ImmutableList.copyOf(args));
+      final Shell main = create(config, System.in, System.out);
       main.run();
     } catch (Throwable e) {
       e.printStackTrace();
@@ -84,33 +84,63 @@ public class Shell {
   }
 
   /** Creates a Shell. */
-  public Shell(List<String> args, InputStream in, OutputStream out)
-      throws IOException {
-    this.argList = ImmutableList.copyOf(args);
-    this.banner = !argList.contains("--banner=false");
-    final boolean dumb = argList.contains("--terminal=dumb");
-    this.echo = argList.contains("--echo");
-    this.help = argList.contains("--help");
-    this.system = !argList.contains("--system=false");
+  public static Shell create(List<String> args, InputStream in,
+      OutputStream out) throws IOException {
+    final Config config = parse(ConfigImpl.DEFAULT, args);
+    return create(config, in, out);
+  }
+
+  /** Creates a Shell. */
+  public static Shell create(Config config, InputStream in,
+      OutputStream out) throws IOException {
+    final TerminalBuilder builder = TerminalBuilder.builder();
+    builder.streams(in, out);
+    final ConfigImpl configImpl = (ConfigImpl) config;
+    builder.system(configImpl.system);
+    builder.dumb(configImpl.dumb);
+    if (configImpl.dumb) {
+      builder.type("dumb");
+    }
+    final Terminal terminal = builder.build();
+    return new Shell(config, terminal);
+  }
+
+  /** Creates a Shell. */
+  public Shell(Config config, Terminal terminal) {
+    this.config = (ConfigImpl) config;
+    this.terminal = terminal;
+  }
+
+  /** Parses an argument list to an equivalent Config. */
+  public static Config parse(Config config, List<String> argList) {
+    ConfigImpl c = (ConfigImpl) config;
     final ImmutableMap.Builder<String, ForeignValue> valueMapBuilder =
         ImmutableMap.builder();
-    for (String arg : args) {
+    for (String arg : argList) {
+      if (arg.equals("--banner=false")) {
+        c = c.withBanner(false);
+      }
+      if (arg.equals("--terminal=dumb")) {
+        c = c.withDumb(true);
+      }
+      if (arg.equals("--echo")) {
+        c = c.withEcho(true);
+      }
+      if (arg.equals("--help")) {
+        c = c.withHelp(true);
+      }
+      if (arg.equals("--system=false")) {
+        c = c.withSystem(false);
+      }
       if (arg.startsWith("--foreign=")) {
         final String className = arg.substring("--foreign=".length());
-        final Map<String, DataSet> map = instantiate(className, Map.class);
+        @SuppressWarnings("unchecked") final Map<String, DataSet> map =
+            instantiate(className, Map.class);
         valueMapBuilder.putAll(Calcite.withDataSets(map).foreignValues());
       }
     }
-    this.valueMap = valueMapBuilder.build();
 
-    final TerminalBuilder builder = TerminalBuilder.builder();
-    builder.streams(in, out);
-    builder.system(system);
-    builder.dumb(dumb);
-    if (dumb) {
-      builder.type("dumb");
-    }
-    terminal = builder.build();
+    return c.withValueMap(valueMapBuilder.build());
   }
 
   void usage() {
@@ -131,10 +161,12 @@ public class Shell {
 
   /** Pauses after creating the terminal.
    *
-   * <p>Default implementation does nothing;
-   * derived class used in testing pauses for a few milliseconds,
+   * <p>Calls the value set by {@link Config#withPauseFn(Runnable)} which,
+   * for the default config, does nothing;
+   * the instance used in testing pauses for a few milliseconds,
    * which gives classes time to load and makes test deterministic. */
-  protected void pause() {
+  protected final void pause() {
+    config.pauseFn.run();
   }
 
   private void printAll(List<String> lines) {
@@ -154,7 +186,7 @@ public class Shell {
   }
 
   public void run() {
-    if (help) {
+    if (config.help) {
       usage();
       return;
     }
@@ -185,7 +217,7 @@ public class Shell {
         .style(AttributedStyle.DEFAULT).append(" ")
         .toAnsi(terminal);
 
-    if (banner) {
+    if (config.banner) {
       terminal.writer().println(banner());
     }
     LineReader reader = LineReaderBuilder.builder()
@@ -197,7 +229,7 @@ public class Shell {
 
     pause();
     final TypeSystem typeSystem = new TypeSystem();
-    Environment env = Environments.env(typeSystem, valueMap);
+    Environment env = Environments.env(typeSystem, config.valueMap);
     final StringBuilder buf = new StringBuilder();
     final List<String> lines = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
@@ -255,7 +287,7 @@ public class Shell {
           } catch (ParseException | CompileException e) {
             terminal.writer().println(e.getMessage());
           }
-          if (echo) {
+          if (config.echo) {
             terminal.writer().println(code);
           }
         } else {
@@ -270,7 +302,8 @@ public class Shell {
   /** Instantiates a class.
    *
    * <p>Assumes that the class has a public no-arguments constructor. */
-  @Nonnull private static <T> T instantiate(String className, Class<T> clazz) {
+  @Nonnull private static <T> T instantiate(String className,
+      @SuppressWarnings("SameParameterValue") Class<T> clazz) {
     try {
       final Class<?> aClass = Class.forName(className);
       return clazz.cast(aClass.getConstructor().newInstance());
@@ -278,6 +311,105 @@ public class Shell {
         | InstantiationException | InvocationTargetException
         | IllegalAccessException e) {
       throw new RuntimeException("Cannot load class: " + className, e);
+    }
+  }
+
+  /** Shell configuration. */
+  @SuppressWarnings("unused")
+  public interface Config {
+    @SuppressWarnings("UnstableApiUsage")
+    Config DEFAULT =
+        new ConfigImpl(true, false, true, false, false, ImmutableMap.of(),
+            Runnables.doNothing());
+
+    Config withBanner(boolean banner);
+    Config withDumb(boolean dumb);
+    Config withSystem(boolean system);
+    Config withEcho(boolean echo);
+    Config withHelp(boolean help);
+    Config withValueMap(Map<String, ForeignValue> valueMap);
+    Config withPauseFn(Runnable runnable);
+  }
+
+  /** Implementation of {@link Config}. */
+  private static class ConfigImpl implements Config {
+    private final boolean banner;
+    private final boolean dumb;
+    private final boolean echo;
+    private final boolean help;
+    private final boolean system;
+    private final ImmutableMap<String, ForeignValue> valueMap;
+    private final Runnable pauseFn;
+
+    private ConfigImpl(boolean banner, boolean dumb, boolean system,
+        boolean echo, boolean help, ImmutableMap<String, ForeignValue> valueMap,
+        Runnable pauseFn) {
+      this.banner = banner;
+      this.dumb = dumb;
+      this.system = system;
+      this.echo = echo;
+      this.help = help;
+      this.valueMap = requireNonNull(valueMap, "valueMap");
+      this.pauseFn = requireNonNull(pauseFn, "pauseFn");
+    }
+
+    @Override public ConfigImpl withBanner(boolean banner) {
+      if (this.banner == banner) {
+        return this;
+      }
+      return new ConfigImpl(banner, dumb, system, echo, help, valueMap,
+          pauseFn);
+    }
+
+    @Override public ConfigImpl withDumb(boolean dumb) {
+      if (this.dumb == dumb) {
+        return this;
+      }
+      return new ConfigImpl(banner, dumb, system, echo, help, valueMap,
+          pauseFn);
+    }
+
+    @Override public ConfigImpl withSystem(boolean system) {
+      if (this.system == system) {
+        return this;
+      }
+      return new ConfigImpl(banner, dumb, system, echo, help, valueMap,
+          pauseFn);
+    }
+
+    @Override public ConfigImpl withEcho(boolean echo) {
+      if (this.echo == echo) {
+        return this;
+      }
+      return new ConfigImpl(banner, dumb, system, echo, help, valueMap,
+          pauseFn);
+    }
+
+    @Override public ConfigImpl withHelp(boolean help) {
+      if (this.help == help) {
+        return this;
+      }
+      return new ConfigImpl(banner, dumb, system, echo, help, valueMap,
+          pauseFn);
+    }
+
+    @Override public ConfigImpl withValueMap(
+        Map<String, ForeignValue> valueMap) {
+      if (this.valueMap.equals(valueMap)) {
+        return this;
+      }
+      final ImmutableMap<String, ForeignValue> immutableValueMap =
+          ImmutableMap.copyOf(valueMap);
+      return new ConfigImpl(banner, dumb, system, echo, help, immutableValueMap,
+          pauseFn);
+    }
+
+    @Override public Config withPauseFn(Runnable pauseFn) {
+      if (this.pauseFn.equals(pauseFn)) {
+        return this;
+      }
+      return new ConfigImpl(banner, dumb, system, echo, help, valueMap,
+          pauseFn);
     }
   }
 }

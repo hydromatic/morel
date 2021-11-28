@@ -43,6 +43,14 @@ public class ShellTest {
     return new FixtureImpl(Fixture.DEFAULT_ARG_LIST, "?");
   }
 
+  static void pauseForTenMilliseconds() {
+    try {
+      Thread.sleep(10);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   /** Tests {@link Shell} with empty input. */
   @Test void testShell() {
     final List<String> argList = Collections.singletonList("--system=false");
@@ -174,15 +182,9 @@ public class ShellTest {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final ByteArrayInputStream bais =
             new ByteArrayInputStream(inputString().getBytes(UTF_8));
-        final Shell shell = new Shell(argList(), bais, baos) {
-          @Override protected void pause() {
-            try {
-              Thread.sleep(10);
-            } catch (InterruptedException e) {
-              throw new RuntimeException(e);
-            }
-          }
-        };
+        final Shell.Config config = Shell.parse(Shell.Config.DEFAULT, argList())
+            .withPauseFn(ShellTest::pauseForTenMilliseconds);
+        final Shell shell = Shell.create(config, bais, baos);
         shell.run();
         final String outString = baos.toString(UTF_8.name());
         assertThat(outString, matcher);
