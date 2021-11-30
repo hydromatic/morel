@@ -1251,6 +1251,135 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#MATH_ACOS */
+  private static final Applicable MATH_ACOS =
+      new ApplicableImpl(BuiltIn.MATH_ACOS) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.acos((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_ASIN */
+  private static final Applicable MATH_ASIN =
+      new ApplicableImpl(BuiltIn.MATH_ASIN) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.asin((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_ATAN */
+  private static final Applicable MATH_ATAN =
+      new ApplicableImpl(BuiltIn.MATH_ATAN) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.atan((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_ATAN2 */
+  private static final Applicable MATH_ATAN2 =
+      new ApplicableImpl(BuiltIn.MATH_ATAN2) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (float) Math.atan2((Float) list.get(0), (Float) list.get(1));
+        }
+      };
+
+  /** @see BuiltIn#MATH_COS */
+  private static final Applicable MATH_COS =
+      new ApplicableImpl(BuiltIn.MATH_COS) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.cos((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_COSH */
+  private static final Applicable MATH_COSH =
+      new ApplicableImpl(BuiltIn.MATH_COSH) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.cosh((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_E */
+  private static final float MATH_E = (float) Math.E;
+
+  /** @see BuiltIn#MATH_EXP */
+  private static final Applicable MATH_EXP =
+      new ApplicableImpl(BuiltIn.MATH_EXP) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.exp((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_LN */
+  private static final Applicable MATH_LN =
+      new ApplicableImpl(BuiltIn.MATH_LN) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.log((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_LOG10 */
+  private static final Applicable MATH_LOG10 =
+      new ApplicableImpl(BuiltIn.MATH_LOG10) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.log10((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_PI */
+  private static final float MATH_PI = (float) Math.PI;
+
+  /** @see BuiltIn#MATH_POW */
+  private static final Applicable MATH_POW =
+      new ApplicableImpl(BuiltIn.MATH_POW) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final List list = (List) arg;
+          return (float) Math.pow((Float) list.get(0), (Float) list.get(1));
+        }
+      };
+
+  /** @see BuiltIn#MATH_SIN */
+  private static final Applicable MATH_SIN =
+      new ApplicableImpl(BuiltIn.MATH_SIN) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.sin((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_SINH */
+  private static final Applicable MATH_SINH =
+      new ApplicableImpl(BuiltIn.MATH_SINH) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.sinh((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_SQRT */
+  private static final Applicable MATH_SQRT =
+      new ApplicableImpl(BuiltIn.MATH_SQRT) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.sqrt((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_TAN */
+  private static final Applicable MATH_TAN =
+      new ApplicableImpl(BuiltIn.MATH_TAN) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.tan((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#MATH_TANH */
+  private static final Applicable MATH_TANH =
+      new ApplicableImpl(BuiltIn.MATH_TANH) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return (float) Math.tanh((Float) arg);
+        }
+      };
+
+
   /** @see BuiltIn#OPTION_APP */
   private static final Applicable OPTION_APP =
       new ApplicableImpl(BuiltIn.OPTION_APP) {
@@ -2091,6 +2220,23 @@ public abstract class Codes {
           .put(BuiltIn.LIST_ALL, LIST_ALL)
           .put(BuiltIn.LIST_TABULATE, LIST_TABULATE)
           .put(BuiltIn.LIST_COLLATE, LIST_COLLATE)
+          .put(BuiltIn.MATH_ACOS, MATH_ACOS)
+          .put(BuiltIn.MATH_ASIN, MATH_ASIN)
+          .put(BuiltIn.MATH_ATAN, MATH_ATAN)
+          .put(BuiltIn.MATH_ATAN2, MATH_ATAN2)
+          .put(BuiltIn.MATH_COS, MATH_COS)
+          .put(BuiltIn.MATH_COSH, MATH_COSH)
+          .put(BuiltIn.MATH_E, MATH_E)
+          .put(BuiltIn.MATH_EXP, MATH_EXP)
+          .put(BuiltIn.MATH_LN, MATH_LN)
+          .put(BuiltIn.MATH_LOG10, MATH_LOG10)
+          .put(BuiltIn.MATH_PI, MATH_PI)
+          .put(BuiltIn.MATH_POW, MATH_POW)
+          .put(BuiltIn.MATH_SIN, MATH_SIN)
+          .put(BuiltIn.MATH_SINH, MATH_SINH)
+          .put(BuiltIn.MATH_SQRT, MATH_SQRT)
+          .put(BuiltIn.MATH_TAN, MATH_TAN)
+          .put(BuiltIn.MATH_TANH, MATH_TANH)
           .put(BuiltIn.OPTION_APP, OPTION_APP)
           .put(BuiltIn.OPTION_COMPOSE, OPTION_COMPOSE)
           .put(BuiltIn.OPTION_COMPOSE_PARTIAL, OPTION_COMPOSE_PARTIAL)

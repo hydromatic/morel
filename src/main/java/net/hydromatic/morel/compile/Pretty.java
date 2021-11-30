@@ -39,7 +39,7 @@ class Pretty {
   private static final int LIST_LENGTH = 12;
   private static final int DEPTH_LIMIT = 5;
 
-  private static final long NEGATIVE_ZERO_FLOAT_BITS = Float.floatToRawIntBits(-0.0f);
+  private static final int NEGATIVE_ZERO_FLOAT_BITS = Float.floatToRawIntBits(-0.0f);
 
   private Pretty() {}
 

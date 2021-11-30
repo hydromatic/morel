@@ -23,6 +23,7 @@ Interact;
 List;
 List.rev;
 List.rev [1,2,3];
+Math;
 Option;
 Option.compose;
 String;
@@ -409,6 +410,236 @@ List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREA
 List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], []);
 List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([], []);
 Sys.plan ();
+
+(* Math -------------------------------------------------------- *)
+(* The signature MATH specifies basic mathematical constants, the square root
+   function, and trigonometric, hyperbolic, exponential, and logarithmic
+   functions based on a real type. The functions defined here have roughly the
+   same semantics as their counterparts in ISO C's math.h.
+
+   In the functions below, unless specified otherwise, if any argument is a NaN,
+   the return value is a NaN. In a list of rules specifying the behavior of a
+   function in special cases, the first matching rule defines the semantics. *)
+
+(* "acos x" returns the arc cosine of x. acos is the inverse of cos.
+   Its result is guaranteed to be in the closed interval [0, pi]. If
+   the magnitude of x exceeds 1.0, returns NaN. *)
+Math.acos;
+Math.acos 1.0;
+Sys.plan ();
+List.map (fn x => (x, Math.acos x))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, Math.sqrt 0.5, 2.0, Real.posInf, Real.negInf, nan];
+
+(* "asin x" returns the arc sine of x. asin is the inverse of sin. Its
+   result is guaranteed to be in the closed interval [-pi / 2, pi / 2].
+   If the magnitude of x exceeds 1.0, returns NaN. *)
+Math.asin;
+Math.asin 1.0;
+Sys.plan ();
+List.map (fn x => (x, Math.asin x))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, Math.sqrt 0.5, 2.0, Real.posInf, Real.negInf, nan];
+
+(* "atan x" returns the arc tangent of x. atan is the inverse of
+   tan. For finite arguments, the result is guaranteed to be in the
+   open interval (-pi / 2, pi / 2). If x is +infinity, it returns pi / 2;
+   if x is -infinity, it returns -pi / 2. *)
+Math.atan;
+Math.atan 0.0;
+Sys.plan ();
+List.map (fn x => (x, Math.atan x))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, Math.sqrt 0.5, 2.0, Real.posInf, Real.negInf, nan];
+
+(* "atan2 (y, x)" returns the arc tangent of (y / x) in the closed
+   interval [-pi, pi], corresponding to angles within +-180
+   degrees. The quadrant of the resulting angle is determined using
+   the signs of both x and y, and is the same as the quadrant of the
+   point (x, y). When x = 0, this corresponds to an angle of 90
+   degrees, and the result is (real (sign y)) * pi / 2.0. It holds
+   that
+     sign (cos (atan2 (y, x))) = sign (x)
+   and
+     sign (sin (atan2 (y, x))) = sign (y)
+   except for inaccuracies incurred by the finite precision of real
+   and the approximation algorithms used to compute the mathematical
+   functions.  Rules for exceptional cases are specified in the
+   following table.
+
+   y                 x         atan2(y, x)
+   ================= ========= ==========
+   +-0               0 < x     +-0
+   +-0               +0        +-0
+   +-0               x < 0     +-pi
+   +-0               -0        +-pi
+   y, 0 < y          +-0       pi/2
+   y, y < 0          +-0       -pi/2
+   +-y, finite y > 0 +infinity +-0
+   +-y, finite y > 0 -infinity +-pi
+   +-infinity        finite x  +-pi/2
+   +-infinity        +infinity +-pi/4
+   +-infinity        -infinity +-3pi/4
+*)
+Math.atan2;
+Math.atan2 (0.0, 1.0);
+Sys.plan ();
+List.map (fn x => (x, Math.atan2 (x, 1.0)))
+  [1.0, 0.0, ~1.0, 0.5, Math.sqrt 0.5, 2.0, Real.posInf, Real.negInf, nan];
+List.map (fn (x, y) => (x, y, Math.atan2 (x, y)))
+  [(0.0, 1.0), (~0.0, 1.0),
+   (0.0, 0.0), (~0.0, 0.0),
+   (0.0, ~1.0), (~0.0, ~1.0),
+   (2.5, 0.0), (2.5, ~0.0),
+   (~2.5, 0.0), (~2.5, ~0.0),
+   (3.0, Real.posInf), (~3.0, Real.posInf),
+   (4.0, Real.negInf), (~4.0, Real.negInf),
+   (Real.posInf, 5.0), (Real.negInf, 5.0),
+   (Real.posInf, Real.posInf), (Real.negInf, Real.posInf),
+   (Real.posInf, Real.negInf), (Real.negInf, Real.negInf),
+   (0.0, nan), (1.0, nan), (~1.0, nan), (Real.posInf, nan), (Real.negInf, nan),
+   (nan, 0.0), (nan, 1.0), (nan, ~1.0), (nan, Real.posInf), (nan, Real.negInf),
+   (nan, nan)];
+
+(* "cos x" returns the cosine of x, measured in radians. If x is an infinity,
+   returns NaN. *)
+Math.cos;
+Math.cos 0.0;
+Sys.plan ();
+List.map (fn x => (x, Math.cos x))
+  [0.0, ~0.0, Math.pi, Math.pi * 0.5, ~Math.pi, Math.pi * 5.0, Real.posInf, Real.negInf, nan];
+
+(* "cosh x" returns the hyperbolic cosine of x, that is, (e(x) + e(-x)) / 2.
+   It has the properties cosh +-0 = 1, cosh +-infinity = +-infinity. *)
+Math.cosh;
+Math.cosh 0.0;
+Sys.plan ();
+List.map (fn x => (x, Math.cosh x))
+  [0.0, ~0.0, 1.0, Real.posInf, Real.negInf, nan];
+
+(* "val e : real" The base e (2.718281828...) of the natural logarithm. *)
+Math.e;
+Sys.plan ();
+
+(* "exp x" returns e(x), i.e., e raised to the x(th) power. If x is
+   +infinity, it returns +infinity; if x is -infinity, it returns 0. *)
+Math.exp;
+Math.exp 0.0;
+Sys.plan ();
+List.map (fn x => (x, Math.exp x))
+  [0.0, ~0.0, 1.0, ~2.0, Real.posInf, Real.negInf, nan];
+
+(* "ln x" returns the natural logarithm (base e) of x. If x < 0,
+   returns NaN; if x = 0, returns -infinity; if x is infinity, returns
+   infinity. *)
+Math.ln;
+Math.ln 1.0;
+Sys.plan ();
+List.map (fn x => (x, Math.ln x))
+  [1.0, 2.718, Math.e, 0.0, ~0.0, ~3.0, Real.posInf, Real.negInf, nan];
+
+(* "log10 x" returns the decimal logarithm (base 10) of x. If x < 0,
+   returns NaN; if x = 0, returns -infinity; if x is infinity, returns
+   infinity. *)
+Math.log10;
+Math.log10 1.0;
+Sys.plan ();
+List.map (fn x => (x, Math.log10 x))
+  [1.0, 10.0, 1000.0, 0.0, ~0.0, ~3.0, Real.posInf, Real.negInf, nan];
+
+(* "val pi : real" The constant pi (3.141592653...). *)
+Math.pi;
+Sys.plan ();
+
+(* "pow (x, y)" returns x(y), i.e., x raised to the y(th) power. For
+   finite x and y, this is well-defined when x > 0, or when x < 0 and
+   y is integral. Rules for exceptional cases are specified below.
+
+   x                 y                             pow(x,y)
+   ================= ============================= ==========
+   x, including NaN  0                             1
+   |x| > 1           +infinity                     +infinity
+   |x| < 1           +infinity                     +0
+   |x| > 1           -infinity                     +0
+   |x| < 1           -infinity                     +infinity
+   +infinity         y > 0                         +infinity
+   +infinity         y < 0                         +0
+   -infinity         y > 0, odd integer            -infinity
+   -infinity         y > 0, not odd integer        +infinity
+   -infinity         y < 0, odd integer            -0
+   -infinity         y < 0, not odd integer        +0
+   x                 NaN                           NaN
+   NaN               y <> 0                        NaN
+   +-1               +-infinity                    NaN
+   finite x < 0      finite non-integer y          NaN
+   +-0               y < 0, odd integer            +-infinity
+   +-0               finite y < 0, not odd integer +infinity
+   +-0               y > 0, odd integer            +-0
+   +-0               y > 0, not odd integer        +0
+*)
+Math.pow;
+Math.pow (2.0, 3.0);
+Math.pow (2.0, ~4.0);
+Math.pow (100.0, 0.5);
+Sys.plan ();
+List.map (fn (x, y) => (x, y, Math.pow (x, y)))
+  [(0.0, 0.0), (nan, 0.0),
+   (2.0, Real.posInf), (~2.0, Real.posInf),
+   (0.5, Real.posInf), (~0.5, Real.posInf),
+   (3.0, Real.negInf), (~3.0, Real.negInf),
+   (0.25, Real.negInf), (~0.25, Real.negInf),
+   (Real.posInf, 0.5),
+   (Real.posInf, ~0.5),
+   (Real.negInf, 7.0),
+   (Real.negInf, 8.0),
+   (Real.negInf, ~7.0),
+   (Real.negInf, ~8.0),
+   (9.5, nan),
+   (nan, 9.6),
+   (1.0, Real.posInf), (~1.0, Real.posInf), (1.0, Real.negInf), (~1.0, Real.negInf),
+   (~9.8, 2.5),
+   (0.0, ~9.0), (~0.0, ~9.0),
+   (0.0, ~10.0), (~0.0, ~10.0),
+   (0.0, 11.0), (~0.0, 11.0),
+   (0.0, 12.0), (~0.0, 12.0)];
+
+(* "sin x" returns the sine of x, measured in radians.
+   If x is an infinity, returns NaN. *)
+Math.sin;
+Math.sin 0.0;
+Sys.plan ();
+List.map (fn x => (x, Math.sin x))
+  [0.0, ~0.0, Math.pi, Math.pi * 0.5, ~Math.pi, Math.pi * 5.0, Real.posInf, Real.negInf, nan];
+
+(* "sinh x" returns the hyperbolic sine of x, that is, (e(x) - e(-x)) / 2.
+   It has the property sinh +-0 = +-0, sinh +-infinity = +-infinity. *)
+Math.sinh;
+Math.sinh 0.0;
+Sys.plan ();
+List.map (fn x => (x, Math.sinh x))
+  [0.0, ~0.0, 1.0, Real.posInf, Real.negInf, nan];
+
+(* "sqrt x" returns the square root of x. sqrt (~0.0) = ~0.0.
+   If x < 0, returns NaN. *)
+Math.sqrt;
+Math.sqrt 4.0;
+Sys.plan ();
+List.map (fn x => (x, Math.sqrt x))
+  [4.0, 0.0, ~0.0, ~9.0, Real.posInf, Real.negInf, nan];
+
+(* "tan x" returns the tangent of x, measured in radians. If x is an
+   infinity, returns NaN. Produces infinities at various finite values,
+   roughly corresponding to the singularities of the tangent function. *)
+Math.tan;
+Math.tan 0.0;
+Sys.plan ();
+List.map (fn x => (x, Math.tan x))
+  [0.0, ~0.0, Math.pi, Math.pi * 0.5, ~Math.pi, Math.pi * 5.0, Real.posInf, Real.negInf, nan];
+
+(* "tanh x" returns the hyperbolic tangent of x, that is, (sinh x) / (cosh x).
+   It has the properties tanh +-0 = +-0, tanh +-infinity = +-1. *)
+Math.tanh;
+Math.tanh 0.0;
+Sys.plan ();
+List.map (fn x => (x, Math.tanh x))
+  [0.0, ~0.0, 1.0, Real.posInf, Real.negInf, nan];
 
 (* Option ------------------------------------------------------ *)
 (*) val getOpt : 'a option * 'a -> 'a

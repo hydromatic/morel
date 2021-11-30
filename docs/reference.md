@@ -322,6 +322,23 @@ Exception:
 | List.all | (&alpha; &rarr; bool) &rarr; &alpha; list &rarr; bool | "all f l" applies `f` to each element `x` of the list `l`, from left to right, `f(x)` evaluates to `false`; it returns `false` if such an `x` exists and `true` otherwise. It is equivalent to `not(exists (not o f) l))`. |
 | List.tabulate | int * (int &rarr; &alpha;) &rarr; &alpha; list | "tabulate (n, f)" returns a list of length `n` equal to `[f(0), f(1), ..., f(n-1)]`, created from left to right. Raises `Size` if `n` &lt; 0. |
 | List.collate | (&alpha; * &alpha; &rarr; order) &rarr; &alpha; list * &alpha; list &rarr; order | "collate f (l1, l2)" performs lexicographic comparison of the two lists using the given ordering `f` on the list elements. |
+| Math.acos | real &rarr; real | "acos x" returns the arc cosine of `x`. `acos` is the inverse of `cos`. Its result is guaranteed to be in the closed interval [0, pi]. If the magnitude of `x` exceeds 1.0, returns NaN. |
+| Math.asin | real &rarr; real | "asin x" returns the arc sine of `x`. `asin` is the inverse of `sin`. Its result is guaranteed to be in the closed interval [-pi / 2, pi / 2]. If the magnitude of `x` exceeds 1.0, returns NaN. |
+| Math.atan | real &rarr; real | "atan x" returns the arc tangent of `x`. `atan` is the inverse of `tan`. For finite arguments, the result is guaranteed to be in the open interval (-pi / 2, pi / 2). If `x` is +infinity, it returns pi / 2; if `x` is -infinity, it returns -pi / 2. |
+| Math.atan2 | real * real &rarr; real | "atan2 (y, x)" returns the arc tangent of `(y / x)` in the closed interval [-pi, pi], corresponding to angles within +-180 degrees. The quadrant of the resulting angle is determined using the signs of both `x` and `y`, and is the same as the quadrant of the point `(x, y)`. When `x` = 0, this corresponds to an angle of 90 degrees, and the result is `(real (sign y)) * pi / 2.0`. |
+| Math.cos | real &rarr; real | "cos x" returns the cosine of `x`, measured in radians. If `x` is an infinity, returns NaN. |
+| Math.cosh | real &rarr; real | "cosh x" returns the hyperbolic cosine of `x`, that is, `(e(x) + e(-x)) / 2`. Among its properties, cosh +-0 = 1, cosh +-infinity = +-infinity. |
+| Math.e | real | "e" is base e (2.718281828...) of the natural logarithm. |
+| Math.exp | real &rarr; real | "exp x" returns `e(x)`, i.e., `e` raised to the `x`<sup>th</sup> power. If `x` is +infinity, returns +infinity; if `x` is -infinity, returns 0. |
+| Math.ln | real &rarr; real | "ln x" returns the natural logarithm (base e) of `x`. If `x` &lt; 0, returns NaN; if `x` = 0, returns -infinity; if `x` is infinity, returns infinity. |
+| Math.log10 | real &rarr; real | "log10 x" returns the decimal logarithm (base 10) of `x`. If `x` &lt; 0, returns NaN; if `x` = 0, returns -infinity; if `x` is infinity, returns infinity. |
+| Math.pi | real | "pi" is the constant pi (3.141592653...). |
+| Math.pow | real * real &rarr; real | "pow (x, y)" returns `x(y)`, i.e., `x` raised to the `y`<sup>th</sup> power. For finite `x` and `y`, this is well-defined when `x` &gt; 0, or when `x` &lt; 0 and `y` is integral. |
+| Math.sin | real &rarr; real | "sin x" returns the sine of `x`, measured in radians. If `x` is an infinity, returns NaN. |
+| Math.sinh | real &rarr; real | "sinh x" returns the hyperbolic sine of `x`, that is, `(e(x) - e(-x)) / 2`. Among its properties, sinh +-0 = +-0, sinh +-infinity = +-infinity. |
+| Math.sqrt | real &rarr; real | "sqrt x" returns the square root of `x`. sqrt (~0.0) = ~0.0. If `x` &lt; 0, returns NaN. |
+| Math.tan | real &rarr; real | "tan x" returns the tangent of `x`, measured in radians. If `x` is an infinity, returns NaN. Produces infinities at various finite values, roughly corresponding to the singularities of the tangent function. |
+| Math.tanh | real &rarr; real | "tanh x" returns the hyperbolic tangent of `x`, that is, `(sinh x) / (cosh x)`. Among its properties, tanh +-0 = +-0, tanh +-infinity = +-1. |
 | Option.app | (&alpha; &rarr; unit) &rarr; &alpha; option &rarr; unit | "app f opt" applies the function `f` to the value `v` if `opt` is `SOME v`, and otherwise does nothing |
 | Option.compose | (&alpha; &rarr; &beta;) * (&gamma; &rarr; &alpha; option) &rarr; &gamma; &rarr; &beta; option | "compose (f, g) a" returns `NONE` if `g(a)` is `NONE`; otherwise, if `g(a)` is `SOME v`, it returns `SOME (f v)`. |
 | Option.composePartial | (&alpha; &rarr; &beta; option) * (&gamma; &rarr; &alpha; option) &rarr; &gamma; &rarr; &beta; option | "composePartial (f, g) a" returns `NONE` if `g(a)` is `NONE`; otherwise, if `g(a)` is `SOME v`, returns `f(v)`. |
