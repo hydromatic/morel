@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -89,13 +90,13 @@ public class Compiler {
         return type;
       }
 
-      public void eval(Session session, Environment env, List<String> output,
-          List<Binding> bindings) {
+      public void eval(Session session, Environment env,
+          Consumer<String> outLines, Consumer<Binding> outBindings) {
         ThreadLocals.let(CalciteFunctions.THREAD_ENV, context,
             () -> {
               final EvalEnv evalEnv = Codes.emptyEnvWith(session, env);
               for (Action action : actions) {
-                action.apply(output, bindings, evalEnv);
+                action.apply(outLines, outBindings, evalEnv);
               }
             });
       }
@@ -127,7 +128,8 @@ public class Compiler {
    * make up the environment in which the next statement will be executed, and
    * printing some text on the screen. */
   interface Action {
-    void apply(List<String> output, List<Binding> bindings, EvalEnv evalEnv);
+    void apply(Consumer<String> outLines, Consumer<Binding> outBindings,
+        EvalEnv evalEnv);
   }
 
   /** Compilation context. */
@@ -508,11 +510,11 @@ public class Compiler {
       if (actions != null) {
         final List<Binding> immutableBindings =
             ImmutableList.copyOf(newBindings);
-        actions.add((output, outBindings, evalEnv) -> {
+        actions.add((outLines, outBindings, evalEnv) -> {
           String description = dataType.description();
-          output.add("datatype " + dataType.name + " = "
+          outLines.accept("datatype " + dataType.name + " = "
               + description.substring(1, description.length() - 1));
-          outBindings.addAll(immutableBindings);
+          immutableBindings.forEach(outBindings);
         });
       }
     }
@@ -601,20 +603,20 @@ public class Compiler {
       final String name = valDecl.pat.name;
       final Type type0 = valDecl.exp.type;
       final Type type = typeSystem.ensureClosed(type0);
-      actions.add((output, outBindings, evalEnv) -> {
+      actions.add((outLines, outBindings, evalEnv) -> {
+        final Session session = (Session) evalEnv.getOpt(EvalEnv.SESSION);
         final StringBuilder buf = new StringBuilder();
         try {
           final Object o = code.eval(evalEnv);
-          outBindings.add(Binding.of(valDecl.pat.withType(type), o));
+          outBindings.accept(Binding.of(valDecl.pat.withType(type), o));
           Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
         } catch (Codes.MorelRuntimeException e) {
           e.describeTo(buf);
         }
         final String out = buf.toString();
-        final Session session = (Session) evalEnv.getOpt(EvalEnv.SESSION);
         session.code = code;
         session.out = out;
-        output.add(out);
+        outLines.accept(out);
       });
     }
   }

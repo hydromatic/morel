@@ -22,7 +22,7 @@ import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Type;
 
-import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Statement that has been compiled and is ready to be run from the
@@ -40,11 +40,11 @@ public interface CompiledStatement {
    *
    * @param session Session
    * @param environment Evaluation environment
-   * @param output List to which to append lines of output
-   * @param bindings List to which to append bound variables and types
+   * @param outLines List to which to append lines of output
+   * @param outBindings List to which to append bound variables and types
    */
-  void eval(Session session, Environment environment, List<String> output,
-      List<Binding> bindings);
+  void eval(Session session, Environment environment, Consumer<String> outLines,
+      Consumer<Binding> outBindings);
 
   Type getType();
 }

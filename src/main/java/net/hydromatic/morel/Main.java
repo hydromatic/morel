@@ -30,6 +30,7 @@ import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import java.io.BufferedReader;
@@ -44,13 +45,11 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 /** Standard ML REPL. */
 public class Main {
-  private final String[] args;
   private final BufferedReader in;
   private final PrintWriter out;
   private final boolean echo;
@@ -60,7 +59,9 @@ public class Main {
    *
    * @param args Command-line arguments */
   public static void main(String[] args) {
-    final Main main = new Main(args, System.in, System.out, ImmutableMap.of());
+    final Main main =
+        new Main(ImmutableList.copyOf(args), System.in, System.out,
+            ImmutableMap.of());
     try {
       main.run();
     } catch (Throwable e) {
@@ -70,19 +71,18 @@ public class Main {
   }
 
   /** Creates a Main. */
-  public Main(String[] args, InputStream in, PrintStream out,
+  public Main(List<String> args, InputStream in, PrintStream out,
       Map<String, ForeignValue> valueMap) {
     this(args, new InputStreamReader(in), new OutputStreamWriter(out),
         valueMap);
   }
 
   /** Creates a Main. */
-  public Main(String[] args, Reader in, Writer out,
+  public Main(List<String> argList, Reader in, Writer out,
       Map<String, ForeignValue> valueMap) {
-    this.args = args;
     this.in = buffer(in);
     this.out = buffer(out);
-    this.echo = Arrays.asList(args).contains("--echo");
+    this.echo = argList.contains("--echo");
     this.valueMap = ImmutableMap.copyOf(valueMap);
   }
 
@@ -125,7 +125,7 @@ public class Main {
         final CompiledStatement compiled =
             Compiles.prepareStatement(typeSystem, session, env, statement,
                 null);
-        compiled.eval(session, env, lines, bindings);
+        compiled.eval(session, env, lines::add, bindings::add);
         for (String line : lines) {
           out.write(line);
           out.write("\n");

@@ -21,6 +21,7 @@ package net.hydromatic.morel;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.ForeignValue;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.PatternFilenameFilter;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,6 +35,7 @@ import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -129,7 +131,7 @@ public class ScriptTest {
           u2n("surefire/") + path + ".out");
     }
     TestUtils.discard(outFile.getParentFile().mkdirs());
-    final String[] args = {"--echo"};
+    final List<String> argList = ImmutableList.of("--echo");
     final boolean loadDictionary =
         inFile.getPath().matches(".*/(blog|dummy|foreign|hybrid)\\.sml");
     final Map<String, ForeignValue> dictionary =
@@ -138,7 +140,7 @@ public class ScriptTest {
             : ImmutableMap.of();
     try (Reader reader = TestUtils.reader(inFile);
          Writer writer = TestUtils.printWriter(outFile)) {
-      new Main(args, reader, writer, dictionary).run();
+      new Main(argList, reader, writer, dictionary).run();
     }
     final File refFile =
         new File(inFile.getParentFile(), inFile.getName() + ".out");

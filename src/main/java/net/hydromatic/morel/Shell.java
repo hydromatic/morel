@@ -58,6 +58,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 import static java.util.Objects.requireNonNull;
@@ -143,20 +144,20 @@ public class Shell {
     return c.withValueMap(valueMapBuilder.build());
   }
 
-  void usage() {
+  static void usage(Consumer<String> outLines) {
     String[] usageLines = {
         "Usage: java " + Shell.class.getName(),
     };
-    printAll(Arrays.asList(usageLines));
+    Arrays.asList(usageLines).forEach(outLines);
   }
 
-  void help() {
+  static void help(Consumer<String> outLines) {
     String[] helpLines = {
         "List of available commands:",
         "    help   Print this help",
         "    quit   Quit shell",
     };
-    printAll(Arrays.asList(helpLines));
+    Arrays.asList(helpLines).forEach(outLines);
   }
 
   /** Pauses after creating the terminal.
@@ -167,12 +168,6 @@ public class Shell {
    * which gives classes time to load and makes test deterministic. */
   protected final void pause() {
     config.pauseFn.run();
-  }
-
-  private void printAll(List<String> lines) {
-    for (String line : lines) {
-      terminal.writer().println(line);
-    }
   }
 
   /** Generates a banner to be shown on startup. */
@@ -187,7 +182,7 @@ public class Shell {
 
   public void run() {
     if (config.help) {
-      usage();
+      usage(terminal.writer()::println);
       return;
     }
 
@@ -220,7 +215,7 @@ public class Shell {
     if (config.banner) {
       terminal.writer().println(banner());
     }
-    LineReader reader = LineReaderBuilder.builder()
+    LineReader lineReader = LineReaderBuilder.builder()
         .appName("morel")
         .terminal(terminal)
         .parser(parser)
@@ -239,7 +234,7 @@ public class Shell {
       try {
         final String prompt = buf.length() == 0 ? minusPrompt : equalsPrompt;
         final String rightPrompt = null;
-        line = reader.readLine(prompt, rightPrompt, (MaskingCallback) null,
+        line = lineReader.readLine(prompt, rightPrompt, (MaskingCallback) null,
             null);
       } catch (UserInterruptException e) {
         // Ignore
@@ -261,10 +256,10 @@ public class Shell {
       if (line.equalsIgnoreCase("quit") || line.equalsIgnoreCase("exit")) {
         break;
       }
-      final ParsedLine pl = reader.getParser().parse(line, 0);
+      final ParsedLine pl = lineReader.getParser().parse(line, 0);
       try {
         if ("help".equals(pl.word()) || "?".equals(pl.word())) {
-          help();
+          help(lines::add);
         }
         buf.append(pl.line());
         if (pl.line().endsWith(";")) {
@@ -278,8 +273,8 @@ public class Shell {
             final CompiledStatement compiled =
                 Compiles.prepareStatement(typeSystem, session, env, statement,
                     null);
-            compiled.eval(session, env, lines, bindings);
-            printAll(lines);
+            compiled.eval(session, env, lines::add, bindings::add);
+            lines.forEach(terminal.writer()::println);
             terminal.writer().flush();
             lines.clear();
             env = env.bindAll(bindings);

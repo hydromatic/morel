@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.List;
 
 import static net.hydromatic.morel.Matchers.equalsOrdered;
 import static net.hydromatic.morel.Matchers.equalsUnordered;
@@ -58,17 +59,17 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class MainTest {
 
   @Test void testEmptyRepl() {
-    final String[] args = new String[0];
+    final List<String> argList = ImmutableList.of();
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(new byte[0]);
-      new Main(args, in, ps, ImmutableMap.of()).run();
+      new Main(argList, in, ps, ImmutableMap.of()).run();
     }
     assertThat(out.size(), is(0));
   }
 
   @Test void testRepl() {
-    final String[] args = new String[0];
+    final List<String> argList = ImmutableList.of();
     final String ml = "val x = 5;\n"
         + "x;\n"
         + "it + 1;\n"
@@ -78,7 +79,7 @@ public class MainTest {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(ml.getBytes());
-      new Main(args, in, ps, ImmutableMap.of()).run();
+      new Main(argList, in, ps, ImmutableMap.of()).run();
     }
     final String expected = "val x = 5 : int\n"
         + "val it = 5 : int\n"

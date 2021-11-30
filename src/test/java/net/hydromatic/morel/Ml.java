@@ -372,9 +372,8 @@ class Ml {
       @Nullable Matcher<Code> planMatcher) {
     CompiledStatement compiledStatement =
         Compiles.prepareStatement(typeSystem, session, env, statement, calcite);
-    final List<String> output = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
-    compiledStatement.eval(session, env, output, bindings);
+    compiledStatement.eval(session, env, line -> {}, bindings::add);
     final Object result;
     if (statement instanceof Ast.Exp) {
       result = bindingValue(bindings, "it");
