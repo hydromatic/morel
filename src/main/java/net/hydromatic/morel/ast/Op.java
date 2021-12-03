@@ -127,6 +127,7 @@ public enum Op {
   INNER_JOIN(" join "),
   WHERE,
   GROUP,
+  COMPUTE,
   ORDER,
   ORDER_ITEM,
   YIELD,

@@ -694,6 +694,17 @@ from e in emps
          dname = (only (from d in depts
                         where d.deptno = e.deptno)).name};
 
+(*) Single-row aggregates using 'only' function and 'compute' clause
+from e in emps
+  group compute si = sum of e.id, c = count, si1 = sum of e.id + 1;
+(*) similar to previous, but the 'only' function converts a singleton set to a record
+only (
+  from e in emps
+    group compute si = sum of e.id, c = count, si1 = sum of e.id + 1);
+(*) equivalent to previous, using group-less 'compute' rather than 'only'
+from e in emps
+  compute si = sum of e.id, c = count, si1 = sum of e.id + 1;
+
 (*) Empty from
 from;
 

@@ -131,6 +131,7 @@ Implemented:
     `exception Option`,
     `datatype 'a option = NONE | SOME of 'a`,
     `getOpt`, `isSome`, `valOf`, `filter`, `join`, `app`,
+    `flatten`, `valOf`,
     `map`, `mapPartial`, `compose`, `composePartial`
   * [String](https://smlfamily.github.io/Basis/string.html):
     `eqtype char`,
@@ -143,6 +144,13 @@ Implemented:
     `maxLen`, `fromList`, `tabulate`, `length`, `sub`, `update`, `concat`,
     `appi`, `app`, `mapi`, `map`, `foldli`, `foldri`, `foldl`, `foldr`,
     `findi`, `find`, `exists`, `all`, `collate`
+* Non-basis built-ins:
+  * Interact:
+    `use`
+  * Relational:
+    `count`, `only`, `max`, `min`, `sum`
+  * System:
+    `env`, `plan`, `set`, `show`, `unset`
 
 Not implemented:
 * `type`, `eqtype`, `exception`
@@ -203,18 +211,19 @@ In the relational extensions, `group` and `compute` expressions also use
 implicit labels. For instance,
 ```
 from e in emps
-group e.deptno compute sum of e.salary, count
+  group e.deptno compute sum of e.salary, count
 ```
 is short-hand for
 ```
 from e in emps
-group deptno = e.deptno compute sum = sum of e.salary, count = count
+  group deptno = e.deptno compute sum = sum of e.salary, count = count
 ```
 and both expressions have type `{count:int,deptno:int,sum:int} list`.
 
 ### Relational extensions
 
-The `from` expression (and associated `in`, `where` and `yield` keywords)
+The `from` expression (and associated `in`, `join`, `where`,
+`group`, `compute`, `order` and `yield` keywords)
 is a language extension to support relational algebra.
 It iterates over a list and generates another list.
 
@@ -262,7 +271,8 @@ You can iterate over more than one collection, and therefore generate
 a join or a cartesian product:
 
 ```
-from e in emps, d in depts
+from e in emps,
+    d in depts
   where e.deptno = d.deptno
   yield {e.id, e.deptno, ename = e.name, dname = d.name};
 ```
@@ -277,10 +287,10 @@ let
     | in_ e (h :: t) = e = h orelse (in_ e t)
 in
   from e in emps
-  where in_ e.deptno (from d in depts
-                where d.name = "Engineering"
-                yield d.deptno)
-  yield e.name
+    where in_ e.deptno (from d in depts
+        where d.name = "Engineering"
+        yield d.deptno)
+    yield e.name
 end;
 
 let
@@ -288,10 +298,10 @@ let
     | exists (hd :: tl) = true
 in
   from e in emps
-  where exists (from d in depts
-                where d.deptno = e.deptno
-                andalso d.name = "Engineering")
-  yield e.name
+    where exists (from d in depts
+        where d.deptno = e.deptno
+        andalso d.name = "Engineering")
+    yield e.name
 end;
 ```
 
@@ -299,6 +309,20 @@ In the second query, note that the sub-query inside the `exists` is
 correlated (references the `e` variable from the enclosing query)
 and skips the `yield` clause (because it doesn't matter which columns
 the sub-query returns, just whether it returns any rows).
+
+There are now built-in operators `elem` and `exists`, so you can write
+```
+from e in emps
+  where e.deptno elem (from d in depts
+      where d.name = "Engineering"
+      yield d.deptno)
+  yield e.name;
+
+from e in emps
+  where exists (from d in depts
+      where d.deptno = e.deptno
+      andalso d.name = "Engineering");
+```
 
 ## More information
 

@@ -133,6 +133,7 @@ public enum AstBuilder {
     }
   }
 
+  @SuppressWarnings("rawtypes")
   public Ast.LiteralPat literalPat(Pos pos, Op op, Comparable value) {
     return new Ast.LiteralPat(pos, op, value);
   }
@@ -450,9 +451,13 @@ public enum AstBuilder {
     return new Ast.OrderItem(pos, exp, direction);
   }
 
+  public Ast.Compute compute(Pos pos, List<Ast.Aggregate> aggregates) {
+    return new Ast.Compute(pos, ImmutableList.copyOf(aggregates));
+  }
+
   public Ast.Group group(Pos pos, List<Pair<Ast.Id, Ast.Exp>> groupExps,
       List<Ast.Aggregate> aggregates) {
-    return new Ast.Group(pos, ImmutableList.copyOf(groupExps),
+    return new Ast.Group(pos, Op.GROUP, ImmutableList.copyOf(groupExps),
         ImmutableList.copyOf(aggregates));
   }
 

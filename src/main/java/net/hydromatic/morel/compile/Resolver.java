@@ -393,6 +393,7 @@ public class Resolver {
     return resolvedDecl.toExp(e2);
   }
 
+  @SuppressWarnings("SwitchStatementWithTooFewBranches")
   private void flatten(Map<Ast.Pat, Ast.Exp> matches,
       Ast.Pat pat, Ast.Exp exp) {
     switch (pat.op) {
@@ -497,11 +498,21 @@ public class Resolver {
     return core.match(pat, exp);
   }
 
-  Core.From toCore(Ast.From from) {
+  Core.Exp toCore(Ast.From from) {
     final List<Binding> bindings = new ArrayList<>();
-    final ListType type = (ListType) typeMap.getType(from);
-    return fromStepToCore(bindings, type, from.steps,
-        ImmutableList.of());
+    final Type type = typeMap.getType(from);
+    if (from.isCompute()) {
+      final ListType listType = typeMap.typeSystem.listType(type);
+      final Core.From coreFrom =
+          fromStepToCore(bindings, listType, from.steps,
+              ImmutableList.of());
+      return core.apply(type,
+          core.functionLiteral(typeMap.typeSystem, BuiltIn.RELATIONAL_ONLY),
+          coreFrom);
+    } else {
+      return fromStepToCore(bindings, (ListType) type, from.steps,
+          ImmutableList.of());
+    }
   }
 
   /** Returns a list with one element appended.
@@ -560,6 +571,7 @@ public class Resolver {
           Util.skip(steps), append(coreSteps, coreOrder));
 
     case GROUP:
+    case COMPUTE:
       final Ast.Group group = (Ast.Group) step;
       final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExps =
           ImmutableSortedMap.naturalOrder();

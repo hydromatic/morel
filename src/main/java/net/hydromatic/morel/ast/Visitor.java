@@ -205,6 +205,10 @@ public class Visitor {
     yield.exp.accept(this);
   }
 
+  protected void visit(Ast.Compute compute) {
+    compute.aggregates.forEach(this::accept);
+  }
+
   protected void visit(Ast.Group group) {
     group.groupExps.forEach(p -> {
       p.left.accept(this);

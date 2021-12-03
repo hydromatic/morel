@@ -122,6 +122,7 @@ public class TypeResolver {
     final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
     final Ast.Decl node2 = deduceDeclType(typeEnv, decl, termMap);
     final boolean debug = false;
+    @SuppressWarnings("ConstantConditions")
     final Unifier.Tracer tracer = debug
         ? Tracers.printTracer(System.out)
         : Tracers.nullTracer();
@@ -281,9 +282,13 @@ public class TypeResolver {
       env2 = env;
       final Map<Ast.Id, Unifier.Variable> fieldVars = new LinkedHashMap<>();
       final List<Ast.FromStep> fromSteps = new ArrayList<>();
-      for (Ast.FromStep step : from.steps) {
+      for (Ord<Ast.FromStep> step : Ord.zip(from.steps)) {
         Pair<TypeEnv, Unifier.Variable> p =
-            deduceStepType(env, step, v3, env2, fieldVars, fromSteps);
+            deduceStepType(env, step.e, v3, env2, fieldVars, fromSteps);
+        if (step.e.op == Op.COMPUTE
+            && step.i != from.steps.size() - 1) {
+          throw new AssertionError("'compute' step must be last in 'from'");
+        }
         env2 = p.left;
         v3 = p.right;
       }
@@ -298,7 +303,8 @@ public class TypeResolver {
       final Ast.From from2 =
           from.copy(fromSteps,
               from.implicitYieldExp != null ? yieldExp2 : null);
-      return reg(from2, v, unifier.apply(LIST_TY_CON, v3));
+      return reg(from2, v,
+          from.isCompute() ? v3 : unifier.apply(LIST_TY_CON, v3));
 
     case ID:
       final Ast.Id id = (Ast.Id) node;
@@ -466,6 +472,7 @@ public class TypeResolver {
       return Pair.of(env2, v);
 
     case GROUP:
+    case COMPUTE:
       final Ast.Group group = (Ast.Group) step;
       validateGroup(group);
       TypeEnv env3 = env;
@@ -512,7 +519,9 @@ public class TypeResolver {
         aggregates.add(aggregate2);
         reg(aggregate2, null, v8);
       }
-      fromSteps.add(group.copy(groupExps, aggregates));
+      fromSteps.add(step.op == Op.GROUP
+          ? group.copy(groupExps, aggregates)
+          : ((Ast.Compute) step).copy(aggregates));
       return Pair.of(env3, v);
 
     default:
@@ -842,6 +851,7 @@ public class TypeResolver {
   }
 
   /** Converts a list of patterns to a singleton pattern or tuple pattern. */
+  @SuppressWarnings("SwitchStatementWithTooFewBranches")
   private Ast.Pat patTuple(TypeEnv env, List<Ast.Pat> patList) {
     final List<Ast.Pat> list2 = new ArrayList<>();
     for (int i = 0; i < patList.size(); i++) {
@@ -1097,7 +1107,7 @@ public class TypeResolver {
           .map(type1 -> toTerm(type1, subst)).collect(toImmutableList()));
     case RECORD_TYPE:
       final RecordType recordType = (RecordType) type;
-      //noinspection unchecked
+      @SuppressWarnings({"rawtypes", "unchecked"})
       final NavigableSet<String> labelNames =
           (NavigableSet) recordType.argNameTypes.keySet();
       final String result;

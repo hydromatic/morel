@@ -19,6 +19,7 @@
 package net.hydromatic.morel;
 
 import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.TypeVar;
 
 import com.google.common.collect.ImmutableList;
@@ -1711,6 +1712,45 @@ public class MainTest {
         .assertTypeThrows(
             throwsA(RuntimeException.class,
                 is("Duplicate field name 'c' in group")));
+  }
+
+  /** Tests query with 'compute' without 'group'. Such a query does not return
+   * a collection, but returns the value of the aggregate function. Technically,
+   * it is a monoid comprehension, and an aggregate function is a monoid. */
+  @Test void testCompute() {
+    ml("from i in [1, 2, 3] compute sum of i")
+        .assertParse("from i in [1, 2, 3] compute sum = sum of i")
+        .assertType("int")
+        .assertEval(is(6));
+    ml("from i in [1, 2, 3] compute sum of i, count")
+        .assertParse("from i in [1, 2, 3] "
+            + "compute sum = sum of i, count = count")
+        .assertType("{count:int, sum:int}");
+    // there must be at least one aggregate function
+    ml("from i in [1, 2, 3] compute")
+        .assertParseThrows(
+            throwsA(ParseException.class,
+                startsWith("Encountered \"<EOF>\" at ")));
+
+    // Theoretically a "group" without a "compute" can be followed by a
+    // "compute" step. So, the following is ambiguous. We treat it as a single
+    // "group ... compute" step. Under the two-step interpretation, the type
+    // would have been "int".
+    ml("from (i, j) in [(1, 1), (2, 3), (3, 4)]\n"
+        + "  group j = i mod 2\n"
+        + "  compute sum of j")
+        .assertType("{j:int, sum:int} list")
+        .assertEval(is(list(list(1, 5), list(0, 3))));
+
+    // "compute" must not be followed by other steps
+    ml("from i in [1, 2, 3] compute s = sum of i yield s + 2")
+        .assertTypeThrows(
+            throwsA(AssertionError.class,
+                is("'compute' step must be last in 'from'")));
+    // similar, but valid
+    ml("(from i in [1, 2, 3] compute s = sum of i) + 2")
+        .assertType(is("int"))
+        .assertEval(is(8));
   }
 
   @Test void testGroupYield() {

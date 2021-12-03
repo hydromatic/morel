@@ -41,6 +41,7 @@ public class Shuttle {
   protected <E extends AstNode> List<E> visitList(List<E> nodes) {
     final List<E> list = new ArrayList<>();
     for (E node : nodes) {
+      //noinspection unchecked
       list.add((E) node.accept(this));
     }
     return list;
@@ -48,6 +49,7 @@ public class Shuttle {
 
   protected <K, E extends AstNode> Map<K, E> visitMap(Map<K, E> nodes) {
     final Map<K, E> map = new LinkedHashMap<>();
+    //noinspection unchecked
     nodes.forEach((k, v) -> map.put(k, (E) v.accept(this)));
     return map;
   }
@@ -55,6 +57,7 @@ public class Shuttle {
   protected <K, E extends AstNode> SortedMap<K, E> visitSortedMap(
       SortedMap<K, E> nodes) {
     final SortedMap<K, E> map = new TreeMap<>(nodes.comparator());
+    //noinspection unchecked
     nodes.forEach((k, v) -> map.put(k, (E) v.accept(this)));
     return map;
   }
@@ -235,6 +238,10 @@ public class Shuttle {
     return ast.yield(yield.pos, yield.exp.accept(this));
   }
 
+  protected AstNode visit(Ast.Compute compute) {
+    return ast.compute(compute.pos, compute.aggregates);
+  }
+
   protected AstNode visit(Ast.Group group) {
     return ast.group(group.pos, group.groupExps, group.aggregates);
   }
@@ -349,7 +356,7 @@ public class Shuttle {
   }
 
   protected Core.Exp visit(Core.Fn fn) {
-    return fn.copy((Core.IdPat) fn.idPat.accept(this), fn.exp.accept(this));
+    return fn.copy(fn.idPat.accept(this), fn.exp.accept(this));
   }
 
   protected Core.Exp visit(Core.Case caseOf) {

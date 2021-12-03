@@ -37,8 +37,8 @@ just because they take effort to build.
 Contributions are welcome!
 
 In Morel but not Standard ML:
-* `from` expression with `where`, `group`, `order`, `yield` clauses
-  (and `compute`, `desc` sub-clauses)
+* `from` expression with `join`, `where`, `group`, `compute`, `order`, `yield`
+  clauses
 * `union`, `except`, `intersect`, `elem`, `notElem` operators
 * "*lab* `=`" is optional in `exprow`
 
@@ -152,6 +152,8 @@ In Standard ML but not in Morel:
     | <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
       [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]
                                 group clause (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
+    | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>
+                                compute clause (<i>a</i> &gt; 1)
     | <b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>
                                 order clause (<i>o</i> &ge; 1)
     | <b>yield</b> <i>exp</i>

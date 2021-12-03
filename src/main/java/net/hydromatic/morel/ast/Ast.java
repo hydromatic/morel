@@ -98,6 +98,7 @@ public class Ast {
   /** Literal pattern, the pattern analog of the {@link Literal} expression.
    *
    * <p>For example, "0" in "fun fact 0 = 1 | fact n = n * fact (n - 1)".*/
+  @SuppressWarnings("rawtypes")
   public static class LiteralPat extends Pat {
     public final Comparable value;
 
@@ -147,8 +148,7 @@ public class Ast {
     }
 
     @Override public boolean equals(Object o) {
-      return o == this
-          || o instanceof WildcardPat;
+      return o instanceof WildcardPat;
     }
 
     public Pat accept(Shuttle shuttle) {
@@ -764,6 +764,7 @@ public class Ast {
   }
 
   /** Parse tree node of a literal (constant). */
+  @SuppressWarnings("rawtypes")
   public static class Literal extends Exp {
     public final Comparable value;
 
@@ -1476,10 +1477,11 @@ public class Ast {
           record = nextFields.size() != 1;
           break;
 
+        case COMPUTE:
         case GROUP:
           final Group group = (Group) step;
-          final ImmutableList<Pair<Id, Exp>> groupExps = group.groupExps;
-          final ImmutableList<Aggregate> aggregates = group.aggregates;
+          final List<Pair<Id, Exp>> groupExps = group.groupExps;
+          final List<Aggregate> aggregates = group.aggregates;
 
           // The type of
           //   from emps as e group by a = e1, b = e2 compute c = sum of e3
@@ -1546,6 +1548,14 @@ public class Ast {
       return this.steps.equals(steps)
           ? this
           : ast.from(pos, steps, implicitYieldExp);
+    }
+
+    /** Returns whether this {@code from} expression ends with a {@code compute}
+     * step. If so, it is a <em>monoid</em> comprehension, not a <em>monad</em>
+     * comprehension, and its type is a scalar value (or record), not a list. */
+    public boolean isCompute() {
+      return !steps.isEmpty()
+          && steps.get(steps.size() - 1).op == Op.COMPUTE;
     }
   }
 
@@ -1739,15 +1749,17 @@ public class Ast {
     public final ImmutableList<Pair<Id, Exp>> groupExps;
     public final ImmutableList<Aggregate> aggregates;
 
-    Group(Pos pos, ImmutableList<Pair<Id, Exp>> groupExps,
+    Group(Pos pos, Op op, ImmutableList<Pair<Id, Exp>> groupExps,
         ImmutableList<Aggregate> aggregates) {
-      super(pos, Op.GROUP);
+      super(pos, op);
       this.groupExps = groupExps;
       this.aggregates = aggregates;
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      w.append(" group");
+      if (op == Op.GROUP) {
+        w.append(" group");
+      }
       Pair.forEachIndexed(groupExps, (i, id, exp) ->
           w.append(i == 0 ? " " : ", ")
               .append(id, 0, 0)
@@ -1769,10 +1781,36 @@ public class Ast {
 
     public Group copy(List<Pair<Id, Exp>> groupExps,
         List<Aggregate> aggregates) {
+      checkArgument(op == Op.GROUP, "use Compute.copy instead?");
       return this.groupExps.equals(groupExps)
           && this.aggregates.equals(aggregates)
           ? this
           : ast.group(pos, groupExps, aggregates);
+    }
+  }
+
+  /** A {@code compute} clause in a {@code from} expression.
+   *
+   * <p>Because {@code compute} and {@code group} are structurally similar, this
+   * is a  sub-class of {@link Group}, with an empty list of group keys. But
+   * remember that the type derivation rules are different. */
+  public static class Compute extends Group {
+    Compute(Pos pos, ImmutableList<Aggregate> aggregates) {
+      super(pos, Op.COMPUTE, ImmutableList.of(), aggregates);
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Compute copy(List<Aggregate> aggregates) {
+      return this.aggregates.equals(aggregates)
+          ? this
+          : ast.compute(pos, aggregates);
     }
   }
 

@@ -1086,6 +1086,23 @@ val it =
   : {dname:string, ename:string} list
 
 
+(*) Single-row aggregates using 'only' function and 'compute' clause
+from e in emps
+  group compute si = sum of e.id, c = count, si1 = sum of e.id + 1;
+val it = [{c=4,si=406,si1=410}] : {c:int, si:int, si1:int} list
+
+(*) similar to previous, but the 'only' function converts a singleton set to a record
+only (
+  from e in emps
+    group compute si = sum of e.id, c = count, si1 = sum of e.id + 1);
+val it = {c=4,si=406,si1=410} : {c:int, si:int, si1:int}
+
+(*) equivalent to previous, using group-less 'compute' rather than 'only'
+from e in emps
+  compute si = sum of e.id, c = count, si1 = sum of e.id + 1;
+val it = {c=4,si=406,si1=410} : {c:int, si:int, si1:int}
+
+
 (*) Empty from
 from;
 val it = [()] : unit list
