@@ -93,6 +93,15 @@ Literal literal() :
   e = charLiteral() { return e; }
 }
 
+/** Parses a literal expression followed by end-of-file. */
+Literal literalEof() :
+{
+  final Literal n;
+}
+{
+  n = literal() <EOF> { return n; }
+}
+
 /** Parses a numeric literal */
 Literal numericLiteral() :
 {
@@ -127,9 +136,9 @@ Literal numericLiteral() :
     }
     final int exponent;
     if (token.image.startsWith("~", e + 1)) {
-      exponent = -Integer.valueOf(token.image.substring(e + 2));
+      exponent = -Integer.parseInt(token.image.substring(e + 2));
     } else {
-      exponent = Integer.valueOf(token.image.substring(e + 1));
+      exponent = Integer.parseInt(token.image.substring(e + 1));
     }
     return ast.realLiteral(pos(), d.scaleByPowerOfTen(exponent));
   }
@@ -920,6 +929,15 @@ Ast.Decl decl() :
   n = funDecl() { return n; }
 }
 
+/** Parses a declaration followed by end-of-file. */
+Ast.Decl declEof() :
+{
+  Ast.Decl d;
+}
+{
+  d = decl() <EOF> { return d; }
+}
+
 /** Parses a type declaration, e.g.
  * {@code datatype 'a option = NONE | SOME of 'a}
  */
@@ -1296,6 +1314,15 @@ AstNode statementSemicolon() :
 }
 {
   n = statement() <SEMICOLON> { return n; }
+}
+
+/** Parses a statement followed by end-of-file. */
+AstNode statementEof() :
+{
+  final AstNode n;
+}
+{
+  n = statement() <EOF> { return n; }
 }
 
 <DEFAULT> TOKEN :

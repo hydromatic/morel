@@ -1784,7 +1784,7 @@ public class MainTest {
             + "group sum = x + y")
         .assertType(is("int list"))
         .assertEvalIter(equalsUnordered(3, 7));
-    ml("from {c, a, ...} in [{a=1.0,b=true,c=3},{a=1.5,b=true,c=4}];")
+    ml("from {c, a, ...} in [{a=1.0,b=true,c=3},{a=1.5,b=true,c=4}]")
         .assertParse("from {a = a, c = c, ...}"
             + " in [{a = 1.0, b = true, c = 3}, {a = 1.5, b = true, c = 4}]")
         .assertType("{a:real, c:int} list");

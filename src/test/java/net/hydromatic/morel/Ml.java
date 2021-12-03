@@ -109,7 +109,7 @@ class Ml {
   Ml assertParseLiteral(Matcher<Ast.Literal> matcher) {
     return withParser(parser -> {
       try {
-        final Ast.Literal literal = parser.literal();
+        final Ast.Literal literal = parser.literalEof();
         assertThat(literal, matcher);
       } catch (ParseException e) {
         throw new RuntimeException(e);
@@ -120,7 +120,7 @@ class Ml {
   Ml assertParseDecl(Matcher<Ast.Decl> matcher) {
     return withParser(parser -> {
       try {
-        final Ast.Decl decl = parser.decl();
+        final Ast.Decl decl = parser.declEof();
         assertThat(decl, matcher);
       } catch (ParseException e) {
         throw new RuntimeException(e);
@@ -136,7 +136,7 @@ class Ml {
   Ml assertParseStmt(Matcher<AstNode> matcher) {
     return withParser(parser -> {
       try {
-        final AstNode statement = parser.statement();
+        final AstNode statement = parser.statementEof();
         assertThat(statement, matcher);
       } catch (ParseException e) {
         throw new RuntimeException(e);
@@ -178,7 +178,7 @@ class Ml {
   Ml assertParseThrows(Matcher<Throwable> matcher) {
     try {
       final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
-      final AstNode statement = parser.statement();
+      final AstNode statement = parser.statementEof();
       fail("expected error, got " + statement);
     } catch (Throwable e) {
       assertThat(e, matcher);
@@ -189,7 +189,7 @@ class Ml {
   private Ml withValidate(BiConsumer<TypeResolver.Resolved, Calcite> action) {
     return withParser(parser -> {
       try {
-        final AstNode statement = parser.statement();
+        final AstNode statement = parser.statementEof();
         final Calcite calcite = Calcite.withDataSets(dataSetMap);
         final TypeResolver.Resolved resolved =
             Compiles.validateExpression(statement, calcite.foreignValues());
@@ -222,7 +222,7 @@ class Ml {
     return withParser(parser -> {
       try {
         final TypeSystem typeSystem = new TypeSystem();
-        final AstNode statement = parser.statement();
+        final AstNode statement = parser.statementEof();
         final Environment env = Environments.empty();
         final Session session = new Session();
         final CompiledStatement compiled =
@@ -238,7 +238,7 @@ class Ml {
   Ml assertCalcite(Matcher<String> matcher) {
     try {
       final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
-      final AstNode statement = parser.statement();
+      final AstNode statement = parser.statementEof();
       final TypeSystem typeSystem = new TypeSystem();
 
       final Calcite calcite = Calcite.withDataSets(dataSetMap);
@@ -275,7 +275,7 @@ class Ml {
     final AstNode statement;
     try {
       final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
-      statement = parser.statement();
+      statement = parser.statementEof();
     } catch (ParseException parseException) {
       throw new RuntimeException(parseException);
     }
@@ -324,7 +324,7 @@ class Ml {
     final AstNode statement;
     try {
       final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
-      statement = parser.statement();
+      statement = parser.statementEof();
     } catch (ParseException parseException) {
       throw new RuntimeException(parseException);
     }
@@ -348,6 +348,7 @@ class Ml {
     return assertEval(null, planMatcher);
   }
 
+  @SuppressWarnings({"unchecked", "rawtypes"})
   <E> Ml assertEvalIter(Matcher<Iterable<E>> matcher) {
     return assertEval((Matcher) matcher);
   }
