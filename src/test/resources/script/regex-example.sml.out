@@ -1,0 +1,268 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Example of matching regular expressions using combinators.
+ *
+ * Code and text is based upon sections 3.2 and 3.3 of "Seminaïve Evaluation for
+ * a Higher-Order Functional Language" (Arntzenius, Krishnaswami, 2020).
+ *)
+
+(* "chars" splits a string into a list of (index, character) pairs. *)
+fun chars s =
+    List.tabulate (String.size s, fn i => (i, String.sub (s, i)));
+val chars = fn : string -> (int * char) list
+
+chars "abc";
+val it = [(0,#"a"),(1,#"b"),(2,#"c")] : (int * char) list
+
+
+(* The type of regular expression matchers:
+     type re = string -> int * int
+   A regular expression takes a string "s" and returns the set of all
+   pairs "(i, j)" such that the substring "si, . . . , sj − 1" matches the
+   regular expression. *)
+
+(*) Prints a solution
+fun matchStrings matches s =
+    from (i, j) in matches
+      yield String.substring (s, i, j - i);
+val matchStrings = fn : (int * int) list -> string -> string list
+
+
+(* "sym" finds all matches for a single character "c"; it
+    returns the range "(i, i + 1)" whenever "(i, c) is in "chars s": *)
+fun sym c s =
+    from (i, c2) in chars s
+      where c2 = c
+      yield (i, i + 1);
+val sym = fn : char -> string -> (int * int) list
+
+sym #"l" "hello";
+val it = [(2,3),(3,4)] : (int * int) list
+
+sym #"z" "hello";
+val it = [] : (int * int) list
+
+
+(* "epsilon" finds all matches for the empty regex, i.e. all empty substrings,
+   including the one "beyond the last character" *)
+fun epsilon s =
+    List.tabulate ((String.size s) + 1, fn i => (i, i));
+val epsilon = fn : string -> (int * int) list
+
+epsilon "";
+val it = [(0,0)] : (int * int) list
+
+epsilon "abc";
+val it = [(0,0),(1,1),(2,2),(3,3)] : (int * int) list
+
+
+(* Appending regexes r1, r2 amounts to relation composition, since we wish to
+   find all substrings consisting of adjacent substrings "si . . . sj − 1" and
+   "sj . . . sk − 1" matching r1 and r2 respectively: *)
+fun seq r1 r2 s =
+    from (i, j) in r1 s,
+        (j2, k) in r2 s
+      where j = j2 + 0
+      yield (i + 0, k + 0);
+val seq = fn
+  : ('a -> (int * int) list) -> ('a -> (int * int) list) -> 'a -> (int * int) list
+
+(*) match "l" followed by "o" in "hello"
+seq (sym #"l") (sym #"o") "hello";
+val it = [(3,5)] : (int * int) list
+
+
+(*) Match a string by converting it into a sequence of character matches.
+fun syms cs s =
+    List.foldr (fn (c, r) => seq (sym c) r) epsilon (String.explode cs) s;
+val syms = fn : string -> string -> (int * int) list
+
+syms "el" "hello";
+val it = [(1,3)] : (int * int) list
+
+
+(* Similarly, regex alternation "r1 | r2" is accomplished by unioning all
+   matches of each: *)
+fun alt r1 r2 s = (r1 s) union (r2 s);
+val alt = fn : ('a -> 'b list) -> ('a -> 'b list) -> 'a -> 'b list
+
+(*) match "e" or "o" in "hello"
+val matches = alt (sym #"e") (sym #"o") "hello";
+val matches = [(1,2),(4,5)] : (int * int) list
+
+matchStrings matches "hello";
+val it = ["e","o"] : string list
+
+
+(*) Transitive closure
+fun trans edges =
+    Relational.iterate edges
+        fn (oldEdges, newEdges) =>
+            from (i, j) in newEdges,
+                (j2, k) in edges
+              where j = j2
+              yield (i, k);
+val trans = fn : ('a * 'a) list -> ('a * 'a) list
+
+trans [(1, 2), (4, 6), (2, 5), (2, 3)];
+val it = [(1,2),(4,6),(2,5),(2,3),(1,5),(1,3)] : (int * int) list
+
+
+(* The most interesting regular expression combinator is Kleene star. Thinking
+   relationally, if we consider the set of pairs "(i, j)" matching some regex
+   "r", then "r*" matches its reflexive, transitive closure. This can be
+   accomplished by combining "epsilon" and "trans". *)
+fun star r s =
+    (epsilon s) union (trans (r s));
+val star = fn : (string -> (int * int) list) -> string -> (int * int) list
+
+val matches = star (sym #"l") "hello";
+val matches = [(0,0),(1,1),(2,2),(3,3),(4,4),(5,5),(2,3),(3,4),(2,4)]
+  : (int * int) list
+
+matchStrings matches "hello";
+val it = ["","","","","","","l","l","ll"] : string list
+
+
+(*) regex "(e | r) l*" applied to "hello world"
+val matches =
+    seq (alt (sym #"e") (sym #"r")) (star (sym #"l")) "hello world";
+val matches = [(1,2),(1,3),(1,4),(8,9),(8,10)] : (int * int) list
+
+matchStrings matches "hello world";
+val it = ["e","el","ell","r","rl"] : string list
+
+
+(* -------------------------------------------------------------------------- *)
+(* The combinators in the previous section found all matches within a given
+   substring, but often we are not interested in all matches: we only want to
+   know if a string can match starting at a particular location. We can easily
+   refactor the combinators above to work in this style, which illustrates
+   the benefits of tightly integrating functional and relational styles of
+   programming – we can use functions to manage strict input/output divisions,
+   and relations to manage nondeterminism and search.
+
+     type re = (string * int) -> int list
+
+   Our new type of combinators takes a string and a starting position, and
+   returns a set of ending positions. For example, "sym c" checks if "c" occurs
+   at the start position "i", yielding "[i + 1]" if it does and the empty set
+   otherwise, while epsilon simply returns the start position i. *)
+
+(* "matchStringsPos" iterates over all positions in a string, returning
+    print a pair (index, substring) for each match. It helps with testing. *)
+fun range n =
+    List.tabulate (n, fn i => i);
+val range = fn : int -> int list
+
+fun matchStringsPos r s =
+  from i in range (String.size s),
+      j in r (s, i)
+    yield (i, String.substring (s, i, j - i));
+val matchStringsPos = fn
+  : (string * int -> int list) -> string -> (int * string) list
+
+
+fun symPos c (s, i) =
+    from (i2, c2) in chars s
+      where i2 = i andalso c2 = c
+      yield i + 1;
+val symPos = fn : char -> string * int -> int list
+
+val r = symPos #"l";
+val r = fn : string * int -> int list
+
+r ("hello", 1);
+val it = [] : int list
+
+r ("hello", 2);
+val it = [3] : int list
+
+r ("hello", 3);
+val it = [4] : int list
+
+matchStringsPos r "hello";
+val it = [(2,"l"),(3,"l")] : (int * string) list
+
+
+fun epsilonPos (s, i) = [i];
+val epsilonPos = fn : 'a * 'b -> 'b list
+
+val r = epsilonPos;
+val r = fn : 'a * 'b -> 'b list
+
+matchStringsPos r "hello";
+val it = [(0,""),(1,""),(2,""),(3,""),(4,"")] : (int * string) list
+
+
+(* Appending regexes "seq r1 r2" simply applies "r2" starting from every ending
+   position that "r1" can find: *)
+fun seqPos r1 r2 (s, i) =
+    from j in r1 (s, i),
+        k in r2 (s, j)
+      yield k;
+val seqPos = fn
+  : ('a * 'b -> 'c list) -> ('a * 'c -> 'd list) -> 'a * 'b -> 'd list
+
+val r = seqPos (symPos #"l") (symPos #"o");
+val r = fn : string * int -> int list
+
+matchStringsPos r "hello";
+val it = [(3,"lo")] : (int * string) list
+
+
+(* Regex alternation "alt" is effectively unchanged: *)
+fun altPos r1 r2 x = (r1 x) union (r2 x);
+val altPos = fn : ('a -> 'b list) -> ('a -> 'b list) -> 'a -> 'b list
+
+val r = altPos (symPos #"e") (symPos #"o");
+val r = fn : string * int -> int list
+
+matchStringsPos r "hello";
+val it = [(1,"e"),(4,"o")] : (int * string) list
+
+
+(* Finally, Kleene star is implemented by recursively appending r to a set x of
+   matches found so far. It’s worth noting that this definition is effectively
+   left-recursive – it takes the endpoints from the fixed point x, and then
+   continues matching using the argument r. This should make clear that this is
+   not just plain old functional programming – we are genuinely relying upon the
+   fixed point semantics. *)
+fun starPos r (s, i) =
+    Relational.iterate [i]
+        fn (oldList, newList) =>
+            from j in newList,
+                k in r (s, j)
+              yield k;
+val starPos = fn : ('a * 'b -> 'b list) -> 'a * 'b -> 'b list
+
+val r = starPos (symPos #"l");
+val r = fn : string * int -> int list
+
+matchStringsPos r "hello";
+val it = [(0,""),(1,""),(2,""),(2,"l"),(2,"ll"),(3,""),(3,"l"),(4,"")]
+  : (int * string) list
+
+
+(*) regex "(e | r) l*" applied to "hello world"
+val r = seqPos (altPos (symPos #"e") (symPos #"r")) (starPos (symPos #"l"));
+val r = fn : string * int -> int list
+
+matchStringsPos r "hello world";
+val it = [(1,"e"),(1,"el"),(1,"ell"),(8,"r"),(8,"rl")] : (int * string) list
