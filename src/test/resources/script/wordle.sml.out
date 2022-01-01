@@ -1644,6 +1644,10 @@ val words = [
   "zoons", "zooty", "zoppa", "zoppo", "zoril", "zoris", "zorro", "zouks",
   "zowee", "zowie", "zulus", "zupan", "zupas", "zuppa", "zurfs", "zuzim",
   "zygal", "zygon", "zymes", "zymic"];
+val words =
+  ["aahed","aalii","aargh","aarti","abaca","abaci","aback","abacs","abaft",
+   "abaka","abamp","aband",...] : string list
+
 val answers = [
   2009, 8991, 10069, 5232, 678, 1224, 3940, 3503, 7366, 9818, 4942, 3236,
   7025, 5704, 10731, 4590, 8786, 976, 15, 3681, 6648, 2669, 4046, 2462,
@@ -1838,6 +1842,9 @@ val answers = [
   12065, 7787, 3706, 5899, 3542, 2227, 97, 12525, 8403, 8955, 10140, 3585,
   11534, 6748, 6853, 11246, 10192, 9220, 11799, 8049, 3929, 1793, 6409, 3322,
   9258, 9230, 11940, 9039, 445, 128, 5614, 9359, 568, 9424, 9873];
+val answers =
+  [2009,8991,10069,5232,678,1224,3940,3503,7366,9818,4942,3236,...] : int list
+
 
 fun mask (guess, answer) =
   let
@@ -1850,17 +1857,29 @@ fun mask (guess, answer) =
   in
     mask2 (0, 0, String.explode guess, answer)
   end;
+val mask = fn : string * string -> int
+
 
 (*) should be 0 (no letters in common)
 mask ("abcde", "troll");
+val it = 0 : int
+
 (*) should be 2 (last letter is correct)
 mask ("abcde", "sprue");
+val it = 2 : int
+
 (*) should be 1 (last letter exists)
 mask ("abcde", "sprew");
+val it = 1 : int
+
 (*) should be 2 (last letter is correct and exists elsewhere)
 mask ("abcde", "spree");
+val it = 2 : int
+
 (*) should be 6 (second to last latter is correct)
 mask ("abcde", "spuds");
+val it = 6 : int
+
 
 fun maskToString m =
   let
@@ -1875,11 +1894,21 @@ fun maskToString m =
   in
     maskToString2 (m, "", 5)
   end;
+val maskToString = fn : int -> string
+
 
 maskToString 0;
+val it = "bbbbb" : string
+
 maskToString 1;
+val it = "bbbby" : string
+
 maskToString 5;
+val it = "bbbyg" : string
+
 maskToString (mask ("abcde", "spuds"));
+val it = "bbbgb" : string
+
 
 (* For a guess, returns the number of mask groups.
    The expected size of a mask group is the number of remaining
@@ -1890,6 +1919,8 @@ fun f (guess, remainingWords) =
   from w in remainingWords
     group m = mask (guess, w) compute c = count
     compute count;
+val f = fn : string * string list -> int
+
 
 (* Returns the best guesses in "sampleWords".
    A good guess is one that, in the worst case scenario,
@@ -1899,12 +1930,22 @@ fun bestGuesses2 (sampleWords, remainingWords) =
   from w in sampleWords,
     f = f (w, remainingWords)
     order f desc;
+val bestGuesses2 = fn : string list * string list -> {f:int, w:string} list
+
 
 fun bestGuesses words =
   bestGuesses2 (words, words);
+val bestGuesses = fn : string list -> {f:int, w:string} list
+
 
 (*) Run on a sample of 500 words; faster than the full set of 12,972 words.
 bestGuesses2 (List.take (words, 500), words);
+val it =
+  [{f=191,w="apres"},{f=189,w="airts"},{f=183,w="antis"},{f=181,w="aired"},
+   {f=179,w="acres"},{f=179,w="apers"},{f=178,w="antes"},{f=177,w="aides"},
+   {f=177,w="airns"},{f=177,w="apert"},{f=175,w="aider"},{f=175,w="aline"},...]
+  : {f:int, w:string} list
+
 
 (* Returns the words left after applying a set of filters from previous
    guesses. *)
@@ -1912,26 +1953,54 @@ fun remaining (words, []) = words
   | remaining (words, (guess, m) :: rest) =
       from w in (remaining (words, rest))
         where maskToString (mask (guess, w)) = m;
+val remaining = fn : string list * (string * string) list -> string list
+
 
 fun remaining2 (words, guess, m) =
   from w in words
     where mask (guess, w) = m;
+val remaining2 = fn : string list * string * int -> string list
+
 
 (*) Solve puzzle #164 by guessing "stage", "tumor" then "troll".
 remaining (words, [("stage", "bybbb")]);
+val it =
+  ["bhoot","binit","biont","birth","bitch","bitou","bitty","blitz","blunt",
+   "blurt","booth","booty",...] : string list
+
 remaining (words, [("stage", "bybbb"),
                    ("tumor", "gbbyy")]);
+val it =
+  ["thorn","thoro","thorp","torch","toric","torii","trock","troll","tronc",
+   "tronk","troth"] : string list
+
 remaining (words, [("stage", "bybbb"),
                    ("tumor", "gbbyy"),
                    ("troll", "ggggg")]);
+val it = ["troll"] : string list
+
 
 (*) Solve puzzle #164 by taking the best guess at each step.
 bestGuesses (remaining (words, [("serai", "bbybb")]));
+val it =
+  [{f=57,w="court"},{f=52,w="courd"},{f=51,w="tronc"},{f=50,w="brond"},
+   {f=50,w="crout"},{f=49,w="prunt"},{f=49,w="thorn"},{f=48,w="brunt"},
+   {f=48,w="drony"},{f=48,w="gourd"},{f=48,w="grunt"},{f=48,w="yourt"},...]
+  : {f:int, w:string} list
+
 bestGuesses (remaining (words, [("serai", "bbybb"),
                                 ("brunt", "bgbby")]));
+val it =
+  [{f=8,w="troop"},{f=7,w="crwth"},{f=7,w="tromp"},{f=6,w="froth"},
+   {f=6,w="proto"},{f=6,w="trooz"},{f=6,w="troth"},{f=6,w="wroth"},
+   {f=5,w="ortho"},{f=5,w="trock"},{f=5,w="troll"}] : {f:int, w:string} list
+
 bestGuesses (remaining (words, [("serai", "bbybb"),
                                 ("brunt", "bgbby"),
                                 ("proto", "bggyy")]));
+val it = [{f=2,w="trock"},{f=2,w="troll"},{f=2,w="trooz"}]
+  : {f:int, w:string} list
+
 
 (*) Solves the puzzle from a starting word.
 fun solve (firstGuess, answer, words) =
@@ -1951,5 +2020,8 @@ fun solve (firstGuess, answer, words) =
   in
     solve3 (firstGuess, words, [])
   end;
+unbound variable or constructor: solve3
+
 
 solve ("tares", "unify", words);
+unbound variable or constructor: solve
