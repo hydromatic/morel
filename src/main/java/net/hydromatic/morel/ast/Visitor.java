@@ -319,9 +319,13 @@ public class Visitor {
     where.exp.accept(this);
   }
 
-  protected void visit(Core.ValDecl valDecl) {
+  protected void visit(Core.NonRecValDecl valDecl) {
     valDecl.pat.accept(this);
     valDecl.exp.accept(this);
+  }
+
+  protected void visit(Core.RecValDecl recValDecl) {
+    recValDecl.list.forEach(this::accept);
   }
 
   protected void visit(Core.Group group) {

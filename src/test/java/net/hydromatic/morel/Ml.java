@@ -18,6 +18,12 @@
  */
 package net.hydromatic.morel;
 
+import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.rel.RelNode;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
@@ -41,31 +47,24 @@ import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.rel.RelNode;
 import org.hamcrest.Matcher;
 
+import javax.annotation.Nullable;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import javax.annotation.Nullable;
 
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.Matchers.isAst;
 import static net.hydromatic.morel.Matchers.throwsA;
-
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
-
-import static java.util.Objects.requireNonNull;
 
 /** Fluent test helper. */
 class Ml {
@@ -248,9 +247,10 @@ class Ml {
       final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
       final Resolver resolver = Resolver.of(resolved.typeMap, env);
       final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
+      assertThat(valDecl3, instanceOf(Core.NonRecValDecl.class));
       final RelNode rel =
           new CalciteCompiler(typeSystem, calcite)
-              .toRel(env, Compiles.toExp(valDecl3));
+              .toRel(env, Compiles.toExp((Core.NonRecValDecl) valDecl3));
       requireNonNull(rel);
       final String relString = RelOptUtil.toString(rel);
       assertThat(relString, matcher);
@@ -291,7 +291,8 @@ class Ml {
 
     if (beforeMatcher != null) {
       // "beforeMatcher", if present, checks the expression before any inlining
-      assertThat(valDecl3.exp.toString(), beforeMatcher);
+      assertThat(valDecl3, instanceOf(Core.NonRecValDecl.class));
+      assertThat(((Core.NonRecValDecl) valDecl3).exp.toString(), beforeMatcher);
     }
 
     final int inlineCount = inlinedMatcher == null ? 1 : 10;
@@ -306,7 +307,8 @@ class Ml {
       valDecl4 = valDecl4.accept(relationalizer);
       if (i == 0) {
         // "matcher" checks the expression after one inlining pass
-        assertThat(valDecl4.exp.toString(), matcher);
+        assertThat(valDecl4, instanceOf(Core.NonRecValDecl.class));
+        assertThat(((Core.NonRecValDecl) valDecl4).exp.toString(), matcher);
       }
       if (valDecl4 == valDecl5) {
         break;
@@ -315,7 +317,8 @@ class Ml {
     if (inlinedMatcher != null) {
       // "inlinedMatcher", if present, checks the expression after all inlining
       // passes
-      assertThat(valDecl4.exp.toString(), inlinedMatcher);
+      assertThat(valDecl4, instanceOf(Core.NonRecValDecl.class));
+      assertThat(((Core.NonRecValDecl) valDecl4).exp.toString(), inlinedMatcher);
     }
     return this;
   }

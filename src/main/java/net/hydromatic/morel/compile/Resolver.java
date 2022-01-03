@@ -21,14 +21,17 @@ package net.hydromatic.morel.compile;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
+import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.ConsList;
 import net.hydromatic.morel.util.Pair;
 
@@ -40,9 +43,11 @@ import org.apache.calcite.util.Util;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
@@ -123,17 +128,23 @@ public class Resolver {
   }
 
   /** Converts a simple {@link net.hydromatic.morel.ast.Ast.ValDecl},
-   *  of the form {@code val v = e},
-   *  to a Core {@link net.hydromatic.morel.ast.Core.ValDecl}.
+   * of the form {@code val v = e},
+   * to a Core {@link net.hydromatic.morel.ast.Core.ValDecl}.
    *
-   *  <p>Declarations such as {@code val (x, y) = (1, 2)}
-   *  and {@code val emp :: rest = emps} are considered complex,
-   *  and are not handled by this method. */
+   * <p>Declarations such as {@code val (x, y) = (1, 2)}
+   * and {@code val emp :: rest = emps} are considered complex,
+   * and are not handled by this method.
+   *
+   * <p>Likewise recursive declarations. */
   public Core.ValDecl toCore(Ast.ValDecl valDecl) {
     final List<Binding> bindings = new ArrayList<>(); // discard
     final ResolvedValDecl resolvedValDecl = resolveValDecl(valDecl, bindings);
-    return core.valDecl(resolvedValDecl.rec, (Core.IdPat) resolvedValDecl.pat,
-        resolvedValDecl.exp);
+    Core.NonRecValDecl nonRecValDecl =
+        core.nonRecValDecl((Core.IdPat) resolvedValDecl.pat(),
+            resolvedValDecl.exp());
+    return resolvedValDecl.rec
+        ? core.recValDecl(ImmutableList.of(nonRecValDecl))
+        : nonRecValDecl;
   }
 
   public Core.DatatypeDecl toCore(Ast.DatatypeDecl datatypeDecl) {
@@ -165,45 +176,106 @@ public class Resolver {
 
   private ResolvedValDecl resolveValDecl(Ast.ValDecl valDecl,
       List<Binding> bindings) {
-    final boolean rec;
+    final boolean composite = valDecl.valBinds.size() > 1;
+    final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
+    valDecl.valBinds.forEach(valBind ->
+        flatten(matches, composite, valBind.pat, valBind.exp));
+    final List<Type> types = new ArrayList<>();
+    final List<Core.Pat> pats = new ArrayList<>();
+    final List<Core.Exp> exps = new ArrayList<>();
+    matches.forEach((pat, exp) -> {
+      types.add(typeMap.getType(pat));
+      pats.add(toCore(pat));
+    });
+
+    final RecordLikeType tupleType;
     final Core.Pat pat2;
-    final Core.Exp exp2;
-    if (valDecl.valBinds.size() > 1) {
+    if (composite) {
       // Transform "let val v1 = E1 and v2 = E2 in E end"
       // to "let val v = (v1, v2) in case v of (E1, E2) => E end"
-      final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
-      boolean rec0 = false;
-      for (Ast.ValBind valBind : valDecl.valBinds) {
-        flatten(matches, valBind.pat, valBind.exp);
-        rec0 |= valBind.rec;
-      }
-      rec = rec0;
-      final List<Type> types = new ArrayList<>();
-      final List<Core.Pat> pats = new ArrayList<>();
-      final List<Core.Exp> exps = new ArrayList<>();
-      matches.forEach((pat, exp) -> {
-        types.add(typeMap.getType(pat));
-        pats.add(toCore(pat));
-      });
-      final RecordLikeType tupleType = typeMap.typeSystem.tupleType(types);
+      tupleType = typeMap.typeSystem.tupleType(types);
       pat2 = core.tuplePat(tupleType, pats);
-      Compiles.acceptBinding(typeMap.typeSystem, pat2, bindings);
-      final Resolver r = rec ? withEnv(bindings) : this;
-      matches.forEach((pat, exp) -> exps.add(r.toCore(exp)));
+    } else {
+      tupleType = PrimitiveType.UNIT; // not used
+      pat2 = pats.get(0);
+    }
+
+    Compiles.acceptBinding(typeMap.typeSystem, pat2, bindings);
+    final Resolver r = valDecl.rec ? withEnv(bindings) : this;
+    matches.forEach((pat, exp) -> exps.add(r.toCore(exp)));
+    final Core.Exp exp2;
+    if (composite) {
       exp2 = core.tuple(tupleType, exps);
     } else {
-      final Ast.ValBind valBind = valDecl.valBinds.get(0);
-      rec = valBind.rec;
-      pat2 = toCore(valBind.pat);
-      Compiles.acceptBinding(typeMap.typeSystem, pat2, bindings);
-      final Resolver r = rec ? withEnv(bindings) : this;
-      exp2 = r.toCore(valBind.exp);
+      exp2 = exps.get(0);
     }
-    return new ResolvedValDecl(rec, pat2, exp2);
+
+    // Convert recursive to non-recursive if the bound variable is not
+    // referenced in its definition. For example,
+    //   val rec inc = fn i => i + 1
+    // can be converted to
+    //   val inc = fn i => i + 1
+    // because "i + 1" does not reference "inc".
+    boolean rec = valDecl.rec
+        && references(exps, pats);
+    return new ResolvedValDecl(rec, composite, ImmutableList.copyOf(pats),
+        ImmutableList.copyOf(exps), pat2, exp2);
+  }
+
+  /** Returns whether any of the expressions in {@code exps} references
+   * and of the variables defined in {@code pats}.
+   *
+   * <p>This method is used to decide whether it is safe to convert a recursive
+   * declaration into a non-recursive one. */
+  private boolean references(List<Core.Exp> exps, List<Core.Pat> pats) {
+    final Set<Core.IdPat> refSet = new HashSet<>();
+    final ReferenceFinder finder =
+        new ReferenceFinder(typeMap.typeSystem, Environments.empty(), refSet);
+    exps.forEach(e -> e.accept(finder));
+
+    final Set<Core.IdPat> defSet = new HashSet<>();
+    final Visitor v = new Visitor() {
+      @Override protected void visit(Core.IdPat idPat) {
+        defSet.add(idPat);
+      }
+    };
+    pats.forEach(p -> p.accept(v));
+
+    return Util.intersects(refSet, defSet);
   }
 
   private DataType toCore(Ast.DatatypeBind bind) {
     return (DataType) typeMap.typeSystem.lookup(bind.name.name);
+  }
+
+  static class ReferenceFinder extends EnvVisitor {
+    final Set<Core.IdPat> set;
+
+    protected ReferenceFinder(TypeSystem typeSystem, Environment env, Set<Core.IdPat> set) {
+      super(typeSystem, env);
+      this.set = set;
+    }
+
+    @Override protected ReferenceFinder bind(Binding binding) {
+      return new ReferenceFinder(typeSystem, env.bind(binding), set);
+    }
+
+    @Override protected ReferenceFinder bind(List<Binding> bindingList) {
+      // The "env2 != env" check is an optimization.
+      // If you remove it, this method will have the same effect, just slower.
+      final Environment env2 = env.bindAll(bindingList);
+      if (env2 != env) {
+        return new ReferenceFinder(typeSystem, env2, set);
+      }
+      return this;
+    }
+
+    @Override protected void visit(Core.Id id) {
+      if (env.getOpt(id.idPat) == null) {
+        set.add(id.idPat);
+      }
+      super.visit(id);
+    }
   }
 
   private Core.Exp toCore(Ast.Exp exp) {
@@ -393,20 +465,12 @@ public class Resolver {
     return resolvedDecl.toExp(e2);
   }
 
-  @SuppressWarnings("SwitchStatementWithTooFewBranches")
-  private void flatten(Map<Ast.Pat, Ast.Exp> matches,
+  private void flatten(Map<Ast.Pat, Ast.Exp> matches, boolean flatten,
       Ast.Pat pat, Ast.Exp exp) {
-    switch (pat.op) {
-    case TUPLE_PAT:
-      final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
-      if (exp.op == Op.TUPLE) {
-        final Ast.Tuple tuple = (Ast.Tuple) exp;
-        Pair.forEach(tuplePat.args, tuple.args,
-            (p, e) -> flatten(matches, p, e));
-        break;
-      }
-      // fall through
-    default:
+    if (flatten && pat.op == Op.TUPLE_PAT && exp.op == Op.TUPLE) {
+      Pair.forEach(((Ast.TuplePat) pat).args, ((Ast.Tuple) exp).args,
+          (p, e) -> flatten(matches, true, p, e));
+    } else {
       matches.put(pat, exp);
     }
   }
@@ -651,24 +715,49 @@ public class Resolver {
   /** Resolved value declaration. */
   class ResolvedValDecl extends ResolvedDecl {
     final boolean rec;
+    final boolean composite;
+    final ImmutableList<Core.Pat> pats;
+    final ImmutableList<Core.Exp> exps;
     final Core.Pat pat;
     final Core.Exp exp;
 
-    ResolvedValDecl(boolean rec, Core.Pat pat, Core.Exp exp) {
+    ResolvedValDecl(boolean rec, boolean composite,
+        ImmutableList<Core.Pat> pats,
+        ImmutableList<Core.Exp> exps,
+        Core.Pat pat, Core.Exp exp) {
       this.rec = rec;
+      this.composite = pats.size() > 1;
+      this.pats = pats;
+      this.exps = exps;
       this.pat = pat;
       this.exp = exp;
     }
 
+    Core.Pat pat() {
+      return composite ? core.tuplePat(typeMap.typeSystem, pats) : pats.get(0);
+    }
+
+    Core.Exp exp() {
+      return composite
+          ? core.tuple((RecordLikeType) pat().type, exps)
+          : exps.get(0);
+    }
+
     @Override Core.Let toExp(Core.Exp resultExp) {
       if (pat instanceof Core.IdPat) {
-        return core.let(core.valDecl(rec, (Core.IdPat) pat, exp), resultExp);
+        Core.NonRecValDecl valDecl = core.nonRecValDecl((Core.IdPat) pat, exp);
+        return rec
+            ? core.let(core.recValDecl(ImmutableList.of(valDecl)), resultExp)
+            : core.let(valDecl, resultExp);
       } else {
+        if (rec) {
+          throw new UnsupportedOperationException();
+        }
         // This is a complex pattern. Allocate an intermediate variable.
         final String name = nameGenerator.get();
         final Core.IdPat idPat = core.idPat(pat.type, name, nameGenerator);
         final Core.Id id = core.id(idPat);
-        return core.let(core.valDecl(rec, idPat, exp),
+        return core.let(core.nonRecValDecl(idPat, exp),
             core.caseOf(resultExp.type, id,
                 ImmutableList.of(core.match(pat, resultExp))));
       }

@@ -52,8 +52,8 @@ public class Analyzer extends EnvVisitor {
     final Analyzer analyzer = new Analyzer(typeSystem, env, map);
 
     // Mark all top-level bindings so that they will not be removed
-    if (node instanceof Core.ValDecl) {
-      analyzer.use(((Core.ValDecl) node).pat).top = true;
+    if (node instanceof Core.NonRecValDecl) {
+      analyzer.use(((Core.NonRecValDecl) node).pat).top = true;
     }
     node.accept(analyzer);
     return analyzer.result();
@@ -96,13 +96,12 @@ public class Analyzer extends EnvVisitor {
     return map.computeIfAbsent(name, k -> new MutableUse());
   }
 
-  @Override protected void visit(Core.ValDecl valDecl) {
+  @Override protected void visit(Core.NonRecValDecl valDecl) {
     super.visit(valDecl);
     if (isAtom(valDecl.exp)) {
       use(valDecl.pat).atomic = true;
     }
   }
-
 
   private static boolean isAtom(Core.Exp exp) {
     switch (exp.op) {

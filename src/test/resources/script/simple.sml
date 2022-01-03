@@ -192,4 +192,22 @@ val longest = List.foldl (fn (s, t) => if String.size s > String.size t then s e
 longest ["ab", "cde", "", "f"];
 longest [];
 
+(*) Mutually recursive functions
+let
+  fun f i = g (i * 2)
+  and g i = if i > 10 then i else f (i + 3)
+in
+  f
+end;
+it 1;
+
+(*) Same as previous, using 'val rec'
+let
+  val rec f = fn i => g (i * 2)
+  and g = fn i => if i > 10 then i else f (i + 3)
+in
+  f
+end;
+it 1;
+
 (*) End simple.sml

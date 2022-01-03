@@ -931,21 +931,24 @@ public class Ast {
 
   /** Parse tree node of a value declaration. */
   public static class ValDecl extends Decl {
+    public final boolean rec;
     public final List<ValBind> valBinds;
 
-    protected ValDecl(Pos pos, ImmutableList<ValBind> valBinds) {
+    protected ValDecl(Pos pos, boolean rec, ImmutableList<ValBind> valBinds) {
       super(pos, Op.VAL_DECL);
+      this.rec = rec;
       this.valBinds = requireNonNull(valBinds);
       checkArgument(!valBinds.isEmpty());
     }
 
     @Override public int hashCode() {
-      return valBinds.hashCode();
+      return Objects.hash(rec, valBinds);
     }
 
     @Override public boolean equals(Object o) {
       return o == this
           || o instanceof ValDecl
+          && this.rec == ((ValDecl) o).rec
           && this.valBinds.equals(((ValDecl) o).valBinds);
     }
 
@@ -958,7 +961,7 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      String sep = "val ";
+      String sep = rec ? "val rec " : "val ";
       for (ValBind valBind : valBinds) {
         w.append(sep);
         sep = " and ";
@@ -972,7 +975,7 @@ public class Ast {
     public ValDecl copy(Iterable<ValBind> valBinds) {
       return Iterables.elementsEqual(this.valBinds, valBinds)
           ? this
-          : ast.valDecl(pos, valBinds);
+          : ast.valDecl(pos, rec, valBinds);
     }
   }
 
@@ -1305,13 +1308,11 @@ public class Ast {
 
   /** Value bind. */
   public static class ValBind extends AstNode {
-    public final boolean rec;
     public final Pat pat;
     public final Exp exp;
 
-    ValBind(Pos pos, boolean rec, Pat pat, Exp exp) {
+    ValBind(Pos pos, Pat pat, Exp exp) {
       super(pos, Op.VAL_BIND);
-      this.rec = rec;
       this.pat = pat;
       this.exp = exp;
     }
@@ -1325,20 +1326,16 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      if (rec) {
-        w.append("rec ");
-      }
       return w.append(pat, 0, 0).append(" = ").append(exp, 0, right);
     }
 
     /** Creates a copy of this {@code ValBind} with given contents,
      * or {@code this} if the contents are the same. */
-    public ValBind copy(boolean rec, Pat pat, Exp exp) {
-      return this.rec == rec
-          && this.pat.equals(pat)
+    public ValBind copy(Pat pat, Exp exp) {
+      return this.pat.equals(pat)
           && this.exp.equals(exp)
           ? this
-          : ast.valBind(pos, rec, pat, exp);
+          : ast.valBind(pos, pat, exp);
     }
   }
 

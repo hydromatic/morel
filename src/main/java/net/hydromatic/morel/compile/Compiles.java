@@ -118,9 +118,8 @@ public abstract class Compiles {
   /** Converts {@code e} to {@code val = e}. */
   public static Ast.ValDecl toValDecl(Ast.Exp statement) {
     final Pos pos = statement.pos;
-    return ast.valDecl(pos,
-        ImmutableList.of(
-            ast.valBind(pos, false, ast.idPat(pos, "it"), statement)));
+    return ast.valDecl(pos, false,
+        ImmutableList.of(ast.valBind(pos, ast.idPat(pos, "it"), statement)));
   }
 
   /** Converts an expression or value declaration to a value declaration. */
@@ -137,7 +136,7 @@ public abstract class Compiles {
 
   /** Converts {@code val = e} to {@code e};
    * the converse of {@link #toValDecl(Ast.Exp)}. */
-  public static Core.Exp toExp(Core.ValDecl decl) {
+  public static Core.Exp toExp(Core.NonRecValDecl decl) {
     return decl.exp;
   }
 
@@ -150,7 +149,8 @@ public abstract class Compiles {
    * we have the expression. */
   static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
       Core.ValDecl valDecl) {
-    bindings.add(Binding.of(valDecl.pat, valDecl.exp));
+    valDecl.forEachBinding((pat, exp) ->
+        bindings.add(Binding.of(pat, exp)));
   }
 
   static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
@@ -197,7 +197,7 @@ public abstract class Compiles {
       bindPattern(typeSystem, bindings, idPat);
     }
 
-    @Override protected void visit(Core.ValDecl valBind) {
+    @Override protected void visit(Core.NonRecValDecl valBind) {
       // The super method visits valBind.e; we do not
       valBind.pat.accept(this);
     }

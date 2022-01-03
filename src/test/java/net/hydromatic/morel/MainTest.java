@@ -219,7 +219,10 @@ public class MainTest {
 
     ml("let val x = 2 and y = 3 in x + y end").assertParseSame();
     ml("let val rec x = 2 and y = 3 in x + y end").assertParseSame();
-    ml("let val x = 2 and rec y = 3 in x + y end").assertParseSame();
+    ml("let val x = 2 and rec y = 3 in x + y end")
+        .assertParseThrowsParseException(
+            containsString(
+                "Encountered \" \"rec\" \"rec \"\" at line 1, column 19."));
 
     // record
     ml("{a = 1}").assertParseSame();
@@ -839,7 +842,6 @@ public class MainTest {
         .assertEval(whenAppliedTo(list(1, 2), is(10)));
   }
 
-  @Disabled("until mutual recursion bug is fixed")
   @Test void testMutualRecursion() {
     final String ml = "let\n"
         + "  fun f i = g (i * 2)\n"
