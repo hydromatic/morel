@@ -19,7 +19,7 @@
 package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.ast.Visitor;
+import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
@@ -80,8 +80,8 @@ public class Compiler {
     final List<Action> actions = new ArrayList<>();
     final Context cx = Context.of(env);
     compileDecl(cx, decl, matchCodes, bindings, actions);
-    final Type type = decl instanceof Core.ValDecl
-        ? ((Core.ValDecl) decl).pat.type
+    final Type type = decl instanceof Core.NonRecValDecl
+        ? ((Core.NonRecValDecl) decl).pat.type
         : PrimitiveType.UNIT;
     final CalciteFunctions.Context context = createContext(env);
 
@@ -487,6 +487,7 @@ public class Compiler {
       List<Binding> bindings, List<Action> actions) {
     switch (decl.op) {
     case VAL_DECL:
+    case REC_VAL_DECL:
       final Core.ValDecl valDecl = (Core.ValDecl) decl;
       compileValDecl(cx, valDecl, matchCodes, bindings, actions);
       break;
@@ -573,52 +574,49 @@ public class Compiler {
     Compiles.bindPattern(typeSystem, bindings, valDecl);
     final List<Binding> newBindings = new TailList<>(bindings);
     final Map<Core.IdPat, LinkCode> linkCodes = new HashMap<>();
-    if (valDecl.rec) {
-      // Currently, valDecl.pat has type IdPat, so the visit below is trivial.
-      // But in future, a recursive ValDecl will bind several variables (in
-      // order to support mutual recursion, possibly via a new sub-class). So
-      // for now we keep the code as a visitor, and expect to turn it into a
-      // loop someday.
-      valDecl.pat.accept(
-          new Visitor() {
-            @Override protected void visit(Core.IdPat idPat) {
-              final LinkCode linkCode = new LinkCode();
-              linkCodes.put(idPat, linkCode);
-              bindings.add(Binding.of(idPat, linkCode));
-            }
-          });
-    }
-    final Context cx1 = cx.bindAll(bindings);
-    // Using 'compileArg' rather than 'compile' encourages CalciteCompiler
-    // to use a pure Calcite implementation if possible, and has no effect
-    // in the basic Compiler.
-    final Code code = compileArg(cx1, valDecl.exp);
-    if (!linkCodes.isEmpty()) {
-      link(linkCodes, valDecl.pat, code);
-    }
-    newBindings.clear();
-    matchCodes.add(new MatchCode(ImmutableList.of(Pair.of(valDecl.pat, code))));
-
-    if (actions != null) {
-      final String name = valDecl.pat.name;
-      final Type type0 = valDecl.exp.type;
-      final Type type = typeSystem.ensureClosed(type0);
-      actions.add((outLines, outBindings, evalEnv) -> {
-        final Session session = (Session) evalEnv.getOpt(EvalEnv.SESSION);
-        final StringBuilder buf = new StringBuilder();
-        try {
-          final Object o = code.eval(evalEnv);
-          outBindings.accept(Binding.of(valDecl.pat.withType(type), o));
-          Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
-        } catch (Codes.MorelRuntimeException e) {
-          session.handle(e, buf);
-        }
-        final String out = buf.toString();
-        session.code = code;
-        session.out = out;
-        outLines.accept(out);
+    if (valDecl.op == Op.REC_VAL_DECL) {
+      valDecl.forEachBinding((idPat, exp) -> {
+        final LinkCode linkCode = new LinkCode();
+        linkCodes.put(idPat, linkCode);
+        bindings.add(Binding.of(idPat, linkCode));
       });
     }
+
+    final Context cx1 = cx.bindAll(newBindings);
+    valDecl.forEachBinding((pat, exp) -> {
+
+      // Using 'compileArg' rather than 'compile' encourages CalciteCompiler
+      // to use a pure Calcite implementation if possible, and has no effect
+      // in the basic Compiler.
+      final Code code = compileArg(cx1, exp);
+      if (!linkCodes.isEmpty()) {
+        link(linkCodes, pat, code);
+      }
+      matchCodes.add(new MatchCode(ImmutableList.of(Pair.of(pat, code))));
+
+      if (actions != null) {
+        final String name = pat.name;
+        final Type type0 = exp.type;
+        final Type type = typeSystem.ensureClosed(type0);
+        actions.add((outLines, outBindings, evalEnv) -> {
+          final Session session = (Session) evalEnv.getOpt(EvalEnv.SESSION);
+          final StringBuilder buf = new StringBuilder();
+          try {
+            final Object o = code.eval(evalEnv);
+            outBindings.accept(Binding.of(pat.withType(type), o));
+            Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
+          } catch (Codes.MorelRuntimeException e) {
+            session.handle(e, buf);
+          }
+          final String out = buf.toString();
+          session.code = code;
+          session.out = out;
+          outLines.accept(out);
+        });
+      }
+    });
+
+    newBindings.clear();
   }
 
   private void link(Map<Core.IdPat, LinkCode> linkCodes, Core.Pat pat,

@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.function.BiConsumer;
 import java.util.function.ObjIntConsumer;
 import javax.annotation.Nullable;
 
@@ -562,8 +563,6 @@ public class Core {
     }
 
     @Override public abstract Decl accept(Shuttle shuttle);
-
-    @Override public abstract void accept(Visitor visitor);
   }
 
   /** Datatype declaration. */
@@ -601,37 +600,47 @@ public class Core {
     }
   }
 
-  /** Value declaration. */
-  public static class ValDecl extends Decl {
-    public final boolean rec;
+  /** Abstract (recursive or non-recursive) value declaration. */
+  public abstract static class ValDecl extends Decl {
+    ValDecl(Op op) {
+      super(op);
+    }
+
+    @Override public abstract ValDecl accept(Shuttle shuttle);
+
+    public abstract void forEachBinding(BiConsumer<IdPat, Exp> consumer);
+  }
+
+  /** Non-recursive value declaration.
+   *
+   * @see RecValDecl#list */
+  public static class NonRecValDecl extends ValDecl {
     public final IdPat pat;
     public final Exp exp;
 
-    ValDecl(boolean rec, IdPat pat, Exp exp) {
+    NonRecValDecl(IdPat pat, Exp exp) {
       super(Op.VAL_DECL);
-      this.rec = rec;
       this.pat = pat;
       this.exp = exp;
     }
 
     @Override public int hashCode() {
-      return Objects.hash(rec, pat, exp);
+      return Objects.hash(pat, exp);
     }
 
     @Override public boolean equals(Object o) {
       return o == this
-          || o instanceof ValDecl
-          && rec == ((ValDecl) o).rec
-          && pat.equals(((ValDecl) o).pat)
-          && exp.equals(((ValDecl) o).exp);
+          || o instanceof NonRecValDecl
+          && pat.equals(((NonRecValDecl) o).pat)
+          && exp.equals(((NonRecValDecl) o).exp);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append(rec ? "val rec " : "val ")
+      return w.append("val ")
           .append(pat, 0, 0).append(" = ").append(exp, 0, right);
     }
 
-    @Override public ValDecl accept(Shuttle shuttle) {
+    @Override public NonRecValDecl accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
@@ -639,9 +648,58 @@ public class Core {
       visitor.visit(this);
     }
 
-    public ValDecl copy(boolean rec, IdPat pat, Exp exp) {
-      return rec == this.rec && pat == this.pat && exp == this.exp ? this
-          : core.valDecl(rec, pat, exp);
+    public NonRecValDecl copy(IdPat pat, Exp exp) {
+      return pat == this.pat && exp == this.exp ? this
+          : core.nonRecValDecl(pat, exp);
+    }
+
+    @Override public void forEachBinding(BiConsumer<IdPat, Exp> consumer) {
+      consumer.accept(pat, exp);
+    }
+  }
+
+  /** Recursive value declaration. */
+  public static class RecValDecl extends ValDecl {
+    public final ImmutableList<NonRecValDecl> list;
+
+    RecValDecl(ImmutableList<NonRecValDecl> list) {
+      super(Op.REC_VAL_DECL);
+      this.list = requireNonNull(list);
+    }
+
+    @Override public int hashCode() {
+      return list.hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+      return o == this
+          || o instanceof RecValDecl
+          && list.equals(((RecValDecl) o).list);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("val rec ");
+      Ord.forEach(list, (decl, i) ->
+          w.append(i == 0 ? "" : " and ").append(decl.pat, 0, 0)
+              .append(" = ").append(decl.exp, 0, right));
+      return w;
+    }
+
+    @Override public RecValDecl accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override public void forEachBinding(BiConsumer<IdPat, Exp> consumer) {
+      list.forEach(b -> b.forEachBinding(consumer));
+    }
+
+    public RecValDecl copy(List<NonRecValDecl> list) {
+      return list.equals(this.list) ? this
+          : core.recValDecl(list);
     }
   }
 

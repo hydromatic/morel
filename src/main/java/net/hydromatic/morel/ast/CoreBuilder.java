@@ -271,8 +271,13 @@ public enum CoreBuilder {
     return new Core.Local(dataType, exp);
   }
 
-  public Core.ValDecl valDecl(boolean rec, Core.IdPat pat, Core.Exp exp) {
-    return new Core.ValDecl(rec, pat, exp);
+  public Core.NonRecValDecl nonRecValDecl(Core.IdPat pat, Core.Exp exp) {
+    return new Core.NonRecValDecl(pat, exp);
+  }
+
+  public Core.RecValDecl recValDecl(
+      Iterable<? extends Core.NonRecValDecl> list) {
+    return new Core.RecValDecl(ImmutableList.copyOf(list));
   }
 
   public Core.Match match(Core.Pat pat, Core.Exp exp) {

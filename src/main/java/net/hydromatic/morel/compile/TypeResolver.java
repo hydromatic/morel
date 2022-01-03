@@ -44,10 +44,12 @@ import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.Unifier;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.Util;
 
 import java.util.AbstractList;
@@ -64,6 +66,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
@@ -665,18 +668,11 @@ public class TypeResolver {
   }
 
   private AstNode deduceValBindType(TypeEnv env, Ast.ValBind valBind,
-      Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable v) {
-    final Unifier.Variable vPat = unifier.variable();
+      Map<Ast.IdPat, Unifier.Term> termMap, Unifier.Variable v,
+      Unifier.Variable vPat) {
     deducePatType(env, valBind.pat, termMap, null, vPat);
-    TypeEnv env2 = env;
-    if (valBind.rec
-        && valBind.pat instanceof Ast.IdPat) {
-      // If recursive, bind the value (presumably a function) to its type
-      // in the environment before we try to deduce the type of the expression.
-      env2 = env2.bind(((Ast.IdPat) valBind.pat).name, vPat);
-    }
-    final Ast.Exp e2 = deduceType(env2, valBind.exp, vPat);
-    final Ast.ValBind valBind2 = valBind.copy(valBind.rec, valBind.pat, e2);
+    final Ast.Exp e2 = deduceType(env, valBind.exp, vPat);
+    final Ast.ValBind valBind2 = valBind.copy(valBind.pat, e2);
     return reg(valBind2, v, unifier.apply(FN_TY_CON, vPat, vPat));
   }
 
@@ -714,13 +710,27 @@ public class TypeResolver {
 
   private Ast.Decl deduceValDeclType(TypeEnv env, Ast.ValDecl valDecl,
       Map<Ast.IdPat, Unifier.Term> termMap) {
-    Ast.Decl node2;
+    final Holder<TypeEnv> envHolder = Holder.of(env);
+    final Map<Ast.ValBind, Supplier<Unifier.Variable>> map0 =
+        new LinkedHashMap<>();
+    valDecl.valBinds.forEach(b ->
+        map0.put(b, Suppliers.memoize(unifier::variable)));
+    map0.forEach((valBind, vPatSupplier) -> {
+      // If recursive, bind each value (presumably a function) to its type
+      // in the environment before we try to deduce the type of the expression.
+      if (valDecl.rec && valBind.pat instanceof Ast.IdPat) {
+        envHolder.set(
+            envHolder.get().bind(
+                ((Ast.IdPat) valBind.pat).name, vPatSupplier.get()));
+      }
+    });
     final List<Ast.ValBind> valBinds = new ArrayList<>();
-    for (Ast.ValBind valBind : valDecl.valBinds) {
-      valBinds.add((Ast.ValBind)
-          deduceValBindType(env, valBind, termMap, unifier.variable()));
-    }
-    node2 = valDecl.copy(valBinds);
+    final TypeEnv env2 = envHolder.get();
+    map0.forEach((valBind, vPatSupplier) ->
+        valBinds.add((Ast.ValBind)
+            deduceValBindType(env2, valBind, termMap, unifier.variable(),
+                vPatSupplier.get())));
+    Ast.Decl node2 = valDecl.copy(valBinds);
     map.put(node2, toTerm(PrimitiveType.UNIT));
     return node2;
   }
@@ -807,7 +817,7 @@ public class TypeResolver {
     for (Ast.FunBind funBind : funDecl.funBinds) {
       valBindList.add(toValBind(env, funBind));
     }
-    return ast.valDecl(funDecl.pos, valBindList);
+    return ast.valDecl(funDecl.pos, true, valBindList);
   }
 
   private Ast.ValBind toValBind(TypeEnv env, Ast.FunBind funBind) {
@@ -833,7 +843,7 @@ public class TypeResolver {
     for (Ast.Pat var : Lists.reverse(vars)) {
       exp = ast.fn(pos, ast.match(pos, var, exp));
     }
-    return ast.valBind(pos, true, ast.idPat(pos, funBind.name), exp);
+    return ast.valBind(pos, ast.idPat(pos, funBind.name), exp);
   }
 
   /** Converts a list of variable names to a variable or tuple.

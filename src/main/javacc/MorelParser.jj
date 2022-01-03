@@ -897,26 +897,27 @@ void addValDecl(List decls) :
 ValDecl valDecl() :
 {
   final Span span;
+  boolean rec = false;
   final List<Ast.ValBind> valBinds = new ArrayList<>();
 }
 {
-  <VAL> { span = Span.of(getPos()); } valBind(valBinds)
+  <VAL> { span = Span.of(getPos()); }
+  [ <REC> { rec = true; } ]
+  valBind(valBinds)
   (
     <AND> valBind(valBinds)
   )*
-  { return ast.valDecl(span.end(this), valBinds); }
+  { return ast.valDecl(span.end(this), rec, valBinds); }
 }
 
 void valBind(List<Ast.ValBind> valBinds) :
 {
   final Pat pat;
   final Exp e;
-  boolean rec = false;
 }
 {
-  [ <REC> { rec = true; } ]
   pat = pat() <EQ> e = expression() {
-    valBinds.add(ast.valBind(pat.pos.plus(e.pos), rec, pat, e));
+    valBinds.add(ast.valBind(pat.pos.plus(e.pos), pat, e));
   }
 }
 

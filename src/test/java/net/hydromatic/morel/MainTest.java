@@ -219,7 +219,10 @@ public class MainTest {
 
     ml("let val x = 2 and y = 3 in x + y end").assertParseSame();
     ml("let val rec x = 2 and y = 3 in x + y end").assertParseSame();
-    ml("let val x = 2 and rec y = 3 in x + y end").assertParseSame();
+    ml("let val x = 2 and rec y = 3 in x + y end")
+        .assertParseThrowsParseException(
+            containsString(
+                "Encountered \" \"rec\" \"rec \"\" at line 1, column 19."));
 
     // record
     ml("{a = 1}").assertParseSame();
@@ -839,7 +842,6 @@ public class MainTest {
         .assertEval(whenAppliedTo(list(1, 2), is(10)));
   }
 
-  @Disabled("until mutual recursion bug is fixed")
   @Test void testMutualRecursion() {
     final String ml = "let\n"
         + "  fun f i = g (i * 2)\n"
@@ -852,6 +854,32 @@ public class MainTest {
         .assertEval(whenAppliedTo(1, is(26)))
         .assertEval(whenAppliedTo(2, is(14)))
         .assertEval(whenAppliedTo(3, is(18)));
+  }
+
+  @Test void testMutualRecursion3() {
+    final String ml = "let\n"
+        + "  fun isZeroMod3 0 = true | isZeroMod3 n = isTwoMod3 (n - 1)\n"
+        + "  and isOneMod3 0 = false | isOneMod3 n = isZeroMod3 (n - 1)\n"
+        + "  and isTwoMod3 0 = false | isTwoMod3 n = isOneMod3 (n - 1)\n"
+        + "in\n"
+        + "  fn n => (isZeroMod3 n, isOneMod3 n, isTwoMod3 n)\n"
+        + "end";
+    ml(ml)
+        .assertEval(whenAppliedTo(17, is(list(false, false, true))))
+        .assertEval(whenAppliedTo(18, is(list(true, false, false))));
+  }
+
+  /** Tests a recursive {@code let} that includes a pattern. I'm not sure
+   * whether this is valid Standard ML; SML-NJ doesn't like it. */
+  @Disabled("until mutual recursion bug is fixed")
+  @Test void testCompositeRecursiveLet() {
+    final String ml = "let\n"
+        + "  val rec (x, y) = (1, 2)\n"
+        + "  and f = fn n => if n = 1 then 1 else n * f (n - 1)\n"
+        + "in\n"
+        + "  x + f 5 + y\n"
+        + "end";
+    ml(ml).assertEval(is(123));
   }
 
   /** Tests that inlining of mutually recursive functions does not prevent

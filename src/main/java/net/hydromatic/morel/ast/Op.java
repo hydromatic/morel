@@ -64,6 +64,7 @@ public enum Op {
   DATATYPE_BIND,
   FUN_DECL,
   VAL_DECL(" = "),
+  REC_VAL_DECL(" = "),
 
   // internal
   FROM_EQ("$FROM_EQ "),

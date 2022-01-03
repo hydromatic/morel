@@ -144,15 +144,18 @@ public class Inliner extends EnvShuttle {
       //   let x = A in E end
       final Core.Fn fn = (Core.Fn) apply2.fn;
       return core.let(
-          core.valDecl(false, fn.idPat, apply2.arg), fn.exp);
+          core.nonRecValDecl(fn.idPat, apply2.arg), fn.exp);
     }
     return apply2;
   }
 
   @Override public Core.Exp visit(Core.Let let) {
     final Analyzer.Use use =
-        analysis == null ? Analyzer.Use.MULTI_UNSAFE
-            : analysis.map.get(let.decl.pat);
+        analysis == null
+            ? Analyzer.Use.MULTI_UNSAFE
+            : let.decl instanceof Core.NonRecValDecl
+                ? analysis.map.get(((Core.NonRecValDecl) let.decl).pat)
+                : Analyzer.Use.MULTI_UNSAFE;
     switch (use) {
     case DEAD:
       // This declaration has no uses; remove it

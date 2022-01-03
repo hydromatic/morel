@@ -293,17 +293,17 @@ public enum AstBuilder {
     return new Ast.Let(pos, ImmutableList.copyOf(decls), exp);
   }
 
-  public Ast.ValDecl valDecl(Pos pos,
+  public Ast.ValDecl valDecl(Pos pos, boolean rec,
       Iterable<? extends Ast.ValBind> valBinds) {
-    return new Ast.ValDecl(pos, ImmutableList.copyOf(valBinds));
+    return new Ast.ValDecl(pos, rec, ImmutableList.copyOf(valBinds));
   }
 
-  public Ast.ValDecl valDecl(Pos pos, Ast.ValBind... valBinds) {
-    return new Ast.ValDecl(pos, ImmutableList.copyOf(valBinds));
+  public Ast.ValDecl valDecl(Pos pos, boolean rec, Ast.ValBind... valBinds) {
+    return new Ast.ValDecl(pos, rec, ImmutableList.copyOf(valBinds));
   }
 
-  public Ast.ValBind valBind(Pos pos, boolean rec, Ast.Pat pat, Ast.Exp exp) {
-    return new Ast.ValBind(pos, rec, pat, exp);
+  public Ast.ValBind valBind(Pos pos, Ast.Pat pat, Ast.Exp exp) {
+    return new Ast.ValBind(pos, pat, exp);
   }
 
   public Ast.Match match(Pos pos, Ast.Pat pat, Ast.Exp exp) {

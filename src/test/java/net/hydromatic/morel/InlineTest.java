@@ -175,7 +175,7 @@ public class InlineTest {
         + "  yield e.deptno\n"
         + "end";
     final String core0 = "let "
-        + "val rec isEven = fn n => n mod 2 = 0 "
+        + "val isEven = fn n => n mod 2 = 0 "
         + "in "
         + "from e in #emp scott "
         + "where isEven (#empno e) yield #deptno e end";
@@ -201,7 +201,7 @@ public class InlineTest {
         + "  yield e.ename\n"
         + "end";
     final String core0 = "let"
-        + " val rec evenEmp = fn x =>"
+        + " val evenEmp = fn x =>"
         + " from e in #emp scott"
         + " where #empno e mod 2 = 0 "
         + "in"

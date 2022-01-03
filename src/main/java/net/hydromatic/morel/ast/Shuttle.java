@@ -205,11 +205,11 @@ public class Shuttle {
   }
 
   protected Ast.ValDecl visit(Ast.ValDecl valDecl) {
-    return ast.valDecl(valDecl.pos, visitList(valDecl.valBinds));
+    return ast.valDecl(valDecl.pos, valDecl.rec, visitList(valDecl.valBinds));
   }
 
   protected Ast.ValBind visit(Ast.ValBind valBind) {
-    return ast.valBind(valBind.pos, valBind.rec, valBind.pat, valBind.exp);
+    return ast.valBind(valBind.pos, valBind.pat, valBind.exp);
   }
 
   protected Ast.Exp visit(Ast.From from) {
@@ -317,9 +317,13 @@ public class Shuttle {
     return datatypeDecl;
   }
 
-  protected Core.ValDecl visit(Core.ValDecl valDecl) {
-    return valDecl.copy(valDecl.rec, valDecl.pat.accept(this),
+  protected Core.NonRecValDecl visit(Core.NonRecValDecl valDecl) {
+    return valDecl.copy(valDecl.pat.accept(this),
         valDecl.exp.accept(this));
+  }
+
+  protected Core.RecValDecl visit(Core.RecValDecl valDecl) {
+    return valDecl.copy(visitList(valDecl.list));
   }
 
   protected Core.IdPat visit(Core.IdPat idPat) {
