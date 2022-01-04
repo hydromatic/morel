@@ -856,6 +856,19 @@ public class MainTest {
         .assertEval(whenAppliedTo(3, is(18)));
   }
 
+  /** Tests a recursive {@code let} that includes a pattern. I'm not sure
+   * whether this is valid Standard ML; SML-NJ doesn't like it. */
+  @Disabled("until mutual recursion bug is fixed")
+  @Test void testCompositeRecursiveLet() {
+    final String ml = "let\n"
+        + "  val rec (x, y) = (1, 2)\n"
+        + "  and f = fn n => if n = 1 then 1 else n * f (n - 1)\n"
+        + "in\n"
+        + "  x + f 5 + y\n"
+        + "end";
+    ml(ml).assertEval(is(123));
+  }
+
   /** Tests that inlining of mutually recursive functions does not prevent
    * compilation from terminating.
    *

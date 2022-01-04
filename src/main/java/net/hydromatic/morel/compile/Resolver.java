@@ -180,34 +180,20 @@ public class Resolver {
     final Map<Ast.Pat, Ast.Exp> matches = new LinkedHashMap<>();
     valDecl.valBinds.forEach(valBind ->
         flatten(matches, composite, valBind.pat, valBind.exp));
-    final List<Type> types = new ArrayList<>();
+
     final List<Core.Pat> pats = new ArrayList<>();
     final List<Core.Exp> exps = new ArrayList<>();
-    matches.forEach((pat, exp) -> {
-      types.add(typeMap.getType(pat));
-      pats.add(toCore(pat));
-    });
-
-    final RecordLikeType tupleType;
-    final Core.Pat pat2;
-    if (composite) {
-      // Transform "let val v1 = E1 and v2 = E2 in E end"
-      // to "let val v = (v1, v2) in case v of (E1, E2) => E end"
-      tupleType = typeMap.typeSystem.tupleType(types);
-      pat2 = core.tuplePat(tupleType, pats);
+    if (valDecl.rec) {
+      matches.forEach((pat, exp) -> pats.add(toCore(pat)));
+      pats.forEach(p -> Compiles.acceptBinding(typeMap.typeSystem, p, bindings));
+      final Resolver r = withEnv(bindings);
+      matches.forEach((pat, exp) -> exps.add(r.toCore(exp)));
     } else {
-      tupleType = PrimitiveType.UNIT; // not used
-      pat2 = pats.get(0);
-    }
-
-    Compiles.acceptBinding(typeMap.typeSystem, pat2, bindings);
-    final Resolver r = valDecl.rec ? withEnv(bindings) : this;
-    matches.forEach((pat, exp) -> exps.add(r.toCore(exp)));
-    final Core.Exp exp2;
-    if (composite) {
-      exp2 = core.tuple(tupleType, exps);
-    } else {
-      exp2 = exps.get(0);
+      matches.forEach((pat, exp) -> {
+        pats.add(toCore(pat));
+        exps.add(toCore(exp));
+      });
+      pats.forEach(p -> Compiles.acceptBinding(typeMap.typeSystem, p, bindings));
     }
 
     // Convert recursive to non-recursive if the bound variable is not
@@ -218,8 +204,8 @@ public class Resolver {
     // because "i + 1" does not reference "inc".
     boolean rec = valDecl.rec
         && references(exps, pats);
-    return new ResolvedValDecl(rec, composite, ImmutableList.copyOf(pats),
-        ImmutableList.copyOf(exps), pat2, exp2);
+    return new ResolvedValDecl(rec, ImmutableList.copyOf(pats),
+        ImmutableList.copyOf(exps));
   }
 
   /** Returns whether any of the expressions in {@code exps} references
@@ -718,23 +704,23 @@ public class Resolver {
     final boolean composite;
     final ImmutableList<Core.Pat> pats;
     final ImmutableList<Core.Exp> exps;
-    final Core.Pat pat;
-    final Core.Exp exp;
 
-    ResolvedValDecl(boolean rec, boolean composite,
+    ResolvedValDecl(boolean rec,
         ImmutableList<Core.Pat> pats,
-        ImmutableList<Core.Exp> exps,
-        Core.Pat pat, Core.Exp exp) {
+        ImmutableList<Core.Exp> exps) {
       this.rec = rec;
       this.composite = pats.size() > 1;
       this.pats = pats;
       this.exps = exps;
-      this.pat = pat;
-      this.exp = exp;
+      assert pats.size() == exps.size();
     }
 
     Core.Pat pat() {
-      return composite ? core.tuplePat(typeMap.typeSystem, pats) : pats.get(0);
+      // Transform "let val v1 = E1 and v2 = E2 in E end"
+      // to "let val v = (v1, v2) in case v of (E1, E2) => E end"
+      return composite
+          ? core.tuplePat(typeMap.typeSystem, pats)
+          : pats.get(0);
     }
 
     Core.Exp exp() {
@@ -744,8 +730,14 @@ public class Resolver {
     }
 
     @Override Core.Let toExp(Core.Exp resultExp) {
-      if (pat instanceof Core.IdPat) {
-        Core.NonRecValDecl valDecl = core.nonRecValDecl((Core.IdPat) pat, exp);
+      if (rec) {
+        final List<Core.NonRecValDecl> valDecls = new ArrayList<>();
+        Pair.forEach(pats, exps, (pat, exp) ->
+            valDecls.add(core.nonRecValDecl((Core.IdPat) pat, exp)));
+        return core.let(core.recValDecl(valDecls), resultExp);
+      }
+      if (!composite && pats.get(0) instanceof Core.IdPat) {
+        Core.NonRecValDecl valDecl = core.nonRecValDecl((Core.IdPat) pats.get(0), exps.get(0));
         return rec
             ? core.let(core.recValDecl(ImmutableList.of(valDecl)), resultExp)
             : core.let(valDecl, resultExp);
@@ -755,11 +747,11 @@ public class Resolver {
         }
         // This is a complex pattern. Allocate an intermediate variable.
         final String name = nameGenerator.get();
-        final Core.IdPat idPat = core.idPat(pat.type, name, nameGenerator);
+        final Core.IdPat idPat = core.idPat(pat().type, name, nameGenerator);
         final Core.Id id = core.id(idPat);
-        return core.let(core.nonRecValDecl(idPat, exp),
+        return core.let(core.nonRecValDecl(idPat, exp()),
             core.caseOf(resultExp.type, id,
-                ImmutableList.of(core.match(pat, resultExp))));
+                ImmutableList.of(core.match(pat(), resultExp))));
       }
     }
   }
