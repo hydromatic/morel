@@ -856,6 +856,19 @@ public class MainTest {
         .assertEval(whenAppliedTo(3, is(18)));
   }
 
+  @Test void testMutualRecursion3() {
+    final String ml = "let\n"
+        + "  fun isZeroMod3 0 = true | isZeroMod3 n = isTwoMod3 (n - 1)\n"
+        + "  and isOneMod3 0 = false | isOneMod3 n = isZeroMod3 (n - 1)\n"
+        + "  and isTwoMod3 0 = false | isTwoMod3 n = isOneMod3 (n - 1)\n"
+        + "in\n"
+        + "  fn n => (isZeroMod3 n, isOneMod3 n, isTwoMod3 n)\n"
+        + "end";
+    ml(ml)
+        .assertEval(whenAppliedTo(17, is(list(false, false, true))))
+        .assertEval(whenAppliedTo(18, is(list(true, false, false))));
+  }
+
   /** Tests a recursive {@code let} that includes a pattern. I'm not sure
    * whether this is valid Standard ML; SML-NJ doesn't like it. */
   @Disabled("until mutual recursion bug is fixed")

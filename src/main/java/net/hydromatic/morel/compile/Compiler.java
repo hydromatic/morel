@@ -18,10 +18,8 @@
  */
 package net.hydromatic.morel.compile;
 
-import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
-import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
@@ -584,7 +582,7 @@ public class Compiler {
       });
     }
 
-    final Context cx1 = cx.bindAll(bindings);
+    final Context cx1 = cx.bindAll(newBindings);
     valDecl.forEachBinding((pat, exp) -> {
 
       // Using 'compileArg' rather than 'compile' encourages CalciteCompiler

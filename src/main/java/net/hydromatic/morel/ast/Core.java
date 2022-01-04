@@ -601,7 +601,7 @@ public class Core {
   }
 
   /** Abstract (recursive or non-recursive) value declaration. */
-  public static abstract class ValDecl extends Decl {
+  public abstract static class ValDecl extends Decl {
     ValDecl(Op op) {
       super(op);
     }

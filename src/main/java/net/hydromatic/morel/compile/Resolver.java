@@ -26,7 +26,6 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
-import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
@@ -234,10 +233,12 @@ public class Resolver {
     return (DataType) typeMap.typeSystem.lookup(bind.name.name);
   }
 
+  /** Visitor that finds all references to unbound variables in an expression. */
   static class ReferenceFinder extends EnvVisitor {
     final Set<Core.IdPat> set;
 
-    protected ReferenceFinder(TypeSystem typeSystem, Environment env, Set<Core.IdPat> set) {
+    protected ReferenceFinder(TypeSystem typeSystem, Environment env,
+        Set<Core.IdPat> set) {
       super(typeSystem, env);
       this.set = set;
     }

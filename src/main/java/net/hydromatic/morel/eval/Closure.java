@@ -83,7 +83,7 @@ public class Closure implements Comparable<Closure>, Applicable {
 
   /** Similar to {@link #bind}, but evaluates an expression first. */
   EvalEnv evalBind(EvalEnv env) {
-    final EvalEnv[] envRef = {evalEnv};
+    final EvalEnv[] envRef = {env};
     for (Pair<Core.Pat, Code> patCode : patCodes) {
       final Object argValue = patCode.right.eval(env);
       final Core.Pat pat = patCode.left;
