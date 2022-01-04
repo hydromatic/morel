@@ -1942,14 +1942,19 @@ fun solve (firstGuess, answer, words) =
       case (bestGuesses remainingWords) of
           [] => "*" :: steps
         | {f, w = guess} :: guesses =>
-            solve3 (remainingWords, guess, steps)
-    fun solve3 (guess, remainingWords, steps) =
-      solve2 (remaining2 (remainingWords,
-                          guess,
-                          mask (guess, answer)),
-              guess :: steps)
+            solve3 (guess, remainingWords, steps)
+    and solve3 (guess, remainingWords, steps) =
+      if guess = answer then
+        guess :: steps
+      else
+        solve2 (remaining2 (remainingWords,
+                            guess,
+                            mask (guess, answer)),
+                guess :: steps)
   in
-    solve3 (firstGuess, words, [])
+    List.rev (solve3 (firstGuess, words, []))
   end;
 
 solve ("tares", "unify", words);
+solve ("paseo", "unify", words);
+solve ("xenon", "unify", words);
