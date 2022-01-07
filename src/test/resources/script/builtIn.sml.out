@@ -70,6 +70,16 @@ val it =
    substring=fn,translate=fn}
   : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
 
+Real;
+val it =
+  {abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,fromInt=fn,
+   fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,max=fn,
+   maxFinite=3.4028235E38,min=fn,minNormalPos=1.17549435E~38,minPos=1.4E~45,
+   negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,realFloor=fn,
+   realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,sameSign=fn,sign=fn,
+   signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,unordered=fn}
+  : {abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}
+
 Relational;
 val it =
   {count=fn,exists=fn,iterate=fn,max=fn,min=fn,notExists=fn,only=fn,sum=fn}
@@ -517,10 +527,8 @@ val it =
 (*) val >  : string * string -> bool
 (*) val >= : string * string -> bool
 
-(*) val toString : string -> String.string
 (*) val scan       : (char, 'a) StringCvt.reader
 (*)                    -> (string, 'a) StringCvt.reader
-(*) val fromString : String.string -> string option
 (*) val toCString : string -> String.string
 (*) val fromCString : String.string -> string option
 
@@ -1187,7 +1195,7 @@ val it = "apply(fnValue Math.cos, argCode constant(0.0))" : string
 List.map (fn x => (x, Math.cos x))
   [0.0, ~0.0, Math.pi, Math.pi * 0.5, ~Math.pi, Math.pi * 5.0, Real.posInf, Real.negInf, nan];
 val it =
-  [(0.0,1.0),(~0.0,1.0),(3.1415927,~1.0),(1.5707964,~4.371139E-8),
+  [(0.0,1.0),(~0.0,1.0),(3.1415927,~1.0),(1.5707964,~4.371139E~8),
    (~3.1415927,~1.0),(15.707964,~1.0),(inf,nan),(~inf,nan),(nan,nan)]
   : (real * real) list
 
@@ -1367,8 +1375,8 @@ val it = "apply(fnValue Math.sin, argCode constant(0.0))" : string
 List.map (fn x => (x, Math.sin x))
   [0.0, ~0.0, Math.pi, Math.pi * 0.5, ~Math.pi, Math.pi * 5.0, Real.posInf, Real.negInf, nan];
 val it =
-  [(0.0,0.0),(~0.0,~0.0),(3.1415927,~8.742278E-8),(1.5707964,1.0),
-   (~3.1415927,8.742278E-8),(15.707964,~6.755325E-7),(inf,nan),(~inf,nan),
+  [(0.0,0.0),(~0.0,~0.0),(3.1415927,~8.742278E~8),(1.5707964,1.0),
+   (~3.1415927,8.742278E~8),(15.707964,~6.755325E~7),(inf,nan),(~inf,nan),
    (nan,nan)] : (real * real) list
 
 
@@ -1423,8 +1431,8 @@ val it = "apply(fnValue Math.tan, argCode constant(0.0))" : string
 List.map (fn x => (x, Math.tan x))
   [0.0, ~0.0, Math.pi, Math.pi * 0.5, ~Math.pi, Math.pi * 5.0, Real.posInf, Real.negInf, nan];
 val it =
-  [(0.0,0.0),(~0.0,~0.0),(3.1415927,8.742278E-8),(1.5707964,~2.2877332E7),
-   (~3.1415927,~8.742278E-8),(15.707964,6.755325E-7),(inf,nan),(~inf,nan),
+  [(0.0,0.0),(~0.0,~0.0),(3.1415927,8.742278E~8),(1.5707964,~2.2877332E7),
+   (~3.1415927,~8.742278E~8),(15.707964,6.755325E~7),(inf,nan),(~inf,nan),
    (nan,nan)] : (real * real) list
 
 
@@ -1615,6 +1623,31 @@ val it =
 
 (* Real -------------------------------------------------------- *)
 
+(*) val radix : int
+Real.radix;
+val it = 2 : int
+
+
+(*) val precision : int
+Real.precision;
+val it = 24 : int
+
+
+(*) val maxFinite : real
+Real.maxFinite;
+val it = 3.4028235E38 : real
+
+
+(*) val minPos : real
+Real.minPos;
+val it = 1.4E~45 : real
+
+
+(*) val minNormalPos : real
+Real.minNormalPos;
+val it = 1.17549435E~38 : real
+
+
 (*) val posInf : real
 Real.posInf;
 val it = inf : real
@@ -1624,6 +1657,1320 @@ val it = inf : real
 Real.negInf;
 val it = ~inf : real
 
+
+(* "r1 + r2" and "r1 - r2" are the sum and difference of r1 and r2. If one
+   argument is finite and the other infinite, the result is infinite with the
+   correct sign, e.g., 5 - (-infinity) = infinity. We also have infinity +
+   infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any other
+   combination of two infinities produces NaN. *)
+1.0 + ~3.5;
+val it = ~2.5 : real
+
+
+1.0 + Real.posInf;
+val it = inf : real
+
+Real.posInf + 2.5;
+val it = inf : real
+
+Real.posInf - Real.posInf;
+val it = nan : real
+
+Real.posInf + Real.posInf;
+val it = inf : real
+
+Real.posInf + Real.negInf;
+val it = nan : real
+
+Real.negInf + Real.negInf;
+val it = ~inf : real
+
+5.0 - Real.negInf;
+val it = inf : real
+
+
+(* "r1 * r2" is the product of r1 and r2. The product of zero and an infinity
+   produces NaN. Otherwise, if one argument is infinite, the result is infinite
+   with the correct sign, e.g., -5 * (-infinity) = infinity, infinity *
+   (-infinity) = -infinity. *)
+0.0 * Real.posInf;
+val it = nan : real
+
+0.0 * Real.negInf;
+val it = nan : real
+
+~0.0 * Real.negInf;
+val it = nan : real
+
+0.5 * 34.6;
+val it = 17.3 : real
+
+Real.posInf * 2.0;
+val it = inf : real
+
+Real.posInf * Real.negInf;
+val it = ~inf : real
+
+Real.negInf * Real.negInf;
+val it = inf : real
+
+
+(* "r1 / r2" denotes the quotient of r1 and r2. We have 0 / 0 = NaN and
+   +-infinity / +-infinity = NaN. Dividing a finite, non-zero number by a zero,
+   or an infinity by a finite number produces an infinity with the correct sign.
+   (Note that zeros are signed.) A finite number divided by an infinity is 0
+   with the correct sign. *)
+0.0 / 0.0;
+val it = nan : real
+
+Real.posInf / Real.negInf;
+val it = nan : real
+
+1.5 / Real.posInf;
+val it = 0.0 : real
+
+1.5 / Real.negInf;
+val it = ~0.0 : real
+
+~1.5 / Real.negInf;
+val it = 0.0 : real
+
+~0.0 + ~0.0;
+val it = ~0.0 : real
+
+~0.0 + 0.0;
+val it = 0.0 : real
+
+0.0 + ~0.0;
+val it = 0.0 : real
+
+
+(* "rem (x, y)" returns the remainder x - n * y, where n = trunc (x / y). The
+    result has the same sign as x and has absolute value less than the absolute
+    value of y. If x is an infinity or y is 0, rem returns NaN. If y is an
+    infinity, rem returns x. *)
+Real.rem;
+val it = fn : real * real -> real
+
+Real.rem (13.0, 5.0);
+val it = 3.0 : real
+
+Real.rem (~13.0, 5.0);
+val it = ~3.0 : real
+
+Real.rem (13.0, ~5.0);
+val it = 3.0 : real
+
+Real.rem (~13.0, ~5.0);
+val it = ~3.0 : real
+
+Real.rem (13.0, 0.0);
+val it = nan : real
+
+Real.rem (13.0, ~0.0);
+val it = nan : real
+
+(*) In the following, Morel returns 13.0 per the spec; sml-nj returns nan.
+Real.rem (13.0, Real.negInf);
+val it = 13.0 : real
+
+(*) In the following, Morel returns 13.0 per the spec; sml-nj returns nan.
+Real.rem (13.0, Real.posInf);
+val it = 13.0 : real
+
+Sys.plan ();
+val it = "apply2(fnValue Real.rem, constant(13.0), constant(Infinity))"
+  : string
+
+
+(* "*+ (a, b, c)" and "*- (a, b, c)" return a * b + c and a * b - c,
+   respectively. Their behaviors on infinities follow from the behaviors derived
+   from addition, subtraction, and multiplication. *)
+(*) TODO Real.*+ (2.0, 3.0, 7.0);
+(*) TODO val it = 13.0 : real
+(*) TODO Real.*- (2.0, 3.0, 7.0);
+(*) TODO val it = ~1.0 : real
+
+(* "~ r" produces the negation of r.
+   ~ (+-infinity) = -+infinity. *)
+~ 2.0;
+val it = ~2.0 : real
+
+~ ~3.5;
+val it = 3.5 : real
+
+~ Real.posInf;
+val it = ~inf : real
+
+~ Real.negInf;
+val it = inf : real
+
+~ nan;
+val it = nan : real
+
+
+(* "abs r" returns the absolute value |r| of r.
+    abs (+-0.0) = +0.0;
+    abs (+-infinity) = +infinity;
+    abs (+-NaN) = +NaN *)
+Real.abs;
+val it = fn : real -> real
+
+Real.abs ~5.5;
+val it = 5.5 : real
+
+Real.abs Real.posInf;
+val it = inf : real
+
+Real.abs Real.negInf;
+val it = inf : real
+
+Real.abs nan;
+val it = nan : real
+
+Sys.plan ();
+val it = "apply(fnValue Real.abs, argCode constant(NaN))" : string
+
+
+(* val min : real * real -> real
+   val max : real * real -> real
+   These return the smaller (respectively, larger) of the arguments. If exactly
+   one argument is NaN, they return the other argument. If both arguments are
+   NaN, they return NaN. *)
+Real.min;
+val it = fn : real * real -> real
+
+Real.min (3.5, 4.5);
+val it = 3.5 : real
+
+Real.min (3.5, ~4.5);
+val it = ~4.5 : real
+
+Real.min (nan, 4.5);
+val it = 4.5 : real
+
+Real.min (~5.5, nan);
+val it = ~5.5 : real
+
+Real.min (Real.posInf, 4.5);
+val it = 4.5 : real
+
+Real.min (Real.negInf, 4.5);
+val it = ~inf : real
+
+Sys.plan ();
+val it = "apply2(fnValue Real.min, constant(-Infinity), constant(4.5))"
+  : string
+
+
+Real.max;
+val it = fn : real * real -> real
+
+Real.max (3.5, 4.5);
+val it = 4.5 : real
+
+Real.max (3.5, ~4.5);
+val it = 3.5 : real
+
+Real.max (nan, 4.5);
+val it = 4.5 : real
+
+Real.max (Real.posInf, 4.5);
+val it = inf : real
+
+Real.max (Real.negInf, 4.5);
+val it = 4.5 : real
+
+Sys.plan ();
+val it = "apply2(fnValue Real.max, constant(-Infinity), constant(4.5))"
+  : string
+
+
+(* "sign r" returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive.
+    An infinity returns its sign; a zero returns 0 regardless of its sign.
+    It raises Domain on NaN. *)
+Real.sign;
+val it = fn : real -> int
+
+Real.sign 2.0;
+val it = 1 : int
+
+Real.sign ~3.0;
+val it = ~1 : int
+
+Real.sign 0.0;
+val it = 0 : int
+
+Real.sign ~0.0;
+val it = 0 : int
+
+Real.sign Real.posInf;
+val it = 1 : int
+
+Real.sign Real.negInf;
+val it = ~1 : int
+
+Real.sign nan;
+uncaught exception Domain
+
+Sys.plan ();
+val it = "apply(fnValue Real.sign, argCode constant(NaN))" : string
+
+
+(* "signBit r" returns true if and only if the sign of r (infinities, zeros,
+   and NaN, included) is negative. *)
+Real.signBit;
+val it = fn : real -> bool
+
+Real.signBit 2.0;
+val it = false : bool
+
+Real.signBit ~3.5;
+val it = true : bool
+
+Real.signBit 0.0;
+val it = false : bool
+
+Real.signBit ~0.0;
+val it = true : bool
+
+Real.signBit Real.posInf;
+val it = false : bool
+
+Real.signBit Real.negInf;
+val it = true : bool
+
+(*) Morel and SMLNJ return true, but spec would suggest false
+Real.signBit nan;
+val it = true : bool
+
+(*) Morel and SMLNJ return false, but spec would suggest true
+Real.signBit (~nan);
+val it = false : bool
+
+Sys.plan ();
+val it =
+  "apply(fnValue Real.signBit, argCode apply(fnValue ~, argCode constant(NaN)))"
+  : string
+
+
+(* "sameSign (r1, r2)" returns true if and only if signBit r1 equals
+   signBit r2. *)
+Real.sameSign;
+val it = fn : real * real -> bool
+
+Real.sameSign (2.0, 3.5);
+val it = true : bool
+
+Real.sameSign (~2.0, Real.negInf);
+val it = true : bool
+
+Real.sameSign (2.0, nan);
+val it = false : bool
+
+Real.sameSign (~2.0, nan);
+val it = true : bool
+
+Real.sameSign (nan, nan);
+val it = true : bool
+
+Sys.plan ();
+val it = "apply2(fnValue Real.sameSign, constant(NaN), constant(NaN))"
+  : string
+
+
+(* "copySign (x, y)" returns x with the sign of y, even if y is NaN. *)
+Real.copySign;
+val it = fn : real * real -> real
+
+Real.copySign (2.0, Real.posInf);
+val it = 2.0 : real
+
+Real.copySign (2.0, Real.negInf);
+val it = ~2.0 : real
+
+Real.copySign (2.0, nan);
+val it = ~2.0 : real
+
+Real.copySign (~3.5, ~nan);
+val it = 3.5 : real
+
+Real.copySign (~3.5, nan);
+val it = ~3.5 : real
+
+Real.copySign (2.0, ~0.0);
+val it = ~2.0 : real
+
+Sys.plan ();
+val it = "apply2(fnValue Real.copySign, constant(2.0), constant(-0.0))"
+  : string
+
+
+(* "val compare : real * real -> order" returns LESS, EQUAL, or GREATER
+   according to whether its first argument is less than, equal to, or
+   greater than the second. It raises IEEEReal.Unordered on unordered
+   arguments. *)
+Real.compare;
+val it = fn : real * real -> order
+
+Real.compare (2.0, 2.0);
+val it = EQUAL : order
+
+Real.compare (~0.0, 0.0);
+val it = EQUAL : order
+
+Real.compare (~5.0, Real.posInf);
+val it = LESS : order
+
+Real.compare (~5.0, Real.negInf);
+val it = GREATER : order
+
+Real.compare (Real.negInf, Real.negInf);
+val it = EQUAL : order
+
+Real.compare (Real.negInf, nan);
+uncaught exception Unordered
+
+Real.compare (nan, nan);
+uncaught exception Unordered
+
+Sys.plan ();
+val it = "apply2(fnValue Real.compare, constant(NaN), constant(NaN))" : string
+
+
+(* "val compareReal : real * real -> IEEEReal.real_order" behaves similarly to
+   "Real.compare" except that the values it returns have the extended type
+   IEEEReal.real_order and it returns IEEEReal.UNORDERED on unordered
+   arguments. *)
+(*) TODO Real.compareReal (2.0, 2.0);
+(*) TODO val it = EQUAL : IEEEReal.real_order
+(*) TODO Real.compareReal (~0.0, 0.0);
+(*) TODO val it = EQUAL : IEEEReal.real_order
+(*) TODO Real.compareReal (~5.0, Real.posInf);
+(*) TODO val it = LESS : IEEEReal.real_order
+(*) TODO Real.compareReal (~5.0, Real.negInf);
+(*) TODO val it = GREATER : IEEEReal.real_order
+(*) TODO Real.compareReal (Real.negInf, Real.negInf);
+(*) TODO val it = EQUAL : IEEEReal.real_order
+(*) TODO Real.compareReal (Real.negInf, nan);
+(*) TODO val it = UNORDERED : IEEEReal.real_order
+(*) TODO Real.compareReal (nan, nan);
+(*) TODO val it = UNORDERED : IEEEReal.real_order
+(*) TODO Real.compareReal (~nan, nan);
+(*) TODO val it = UNORDERED : IEEEReal.real_order
+(*) TODO Real.compareReal (0.0, ~nan);
+(*) TODO val it = UNORDERED : IEEEReal.real_order
+
+(* val < : real * real -> bool
+   val <= : real * real -> bool
+   val > : real * real -> bool
+   val >= : real * real -> bool
+   These return true if the corresponding relation holds between the two reals.
+  Note that these operators return false on unordered arguments, i.e., if
+  either argument is NaN, so that the usual reversal of comparison under
+  negation does not hold, e.g., a < b is not the same as not (a >= b). *)
+3.0 < 3.0;
+val it = false : bool
+
+3.0 < 5.0;
+val it = true : bool
+
+3.0 < nan;
+val it = false : bool
+
+nan < 5.0;
+val it = false : bool
+
+3.0 < Real.posInf;
+val it = true : bool
+
+3.0 < Real.negInf;
+val it = false : bool
+
+Real.posInf < Real.posInf;
+val it = false : bool
+
+
+3.0 <= 3.0;
+val it = true : bool
+
+3.0 <= 5.0;
+val it = true : bool
+
+3.0 <= nan;
+val it = false : bool
+
+nan <= 5.0;
+val it = false : bool
+
+3.0 <= Real.posInf;
+val it = true : bool
+
+3.0 <= Real.negInf;
+val it = false : bool
+
+Real.posInf <= Real.posInf;
+val it = true : bool
+
+
+3.0 > 3.0;
+val it = false : bool
+
+3.0 > 5.0;
+val it = false : bool
+
+3.0 > nan;
+val it = false : bool
+
+nan > 5.0;
+val it = false : bool
+
+3.0 > Real.posInf;
+val it = false : bool
+
+3.0 > Real.negInf;
+val it = true : bool
+
+Real.posInf > Real.posInf;
+val it = false : bool
+
+
+3.0 >= 3.0;
+val it = true : bool
+
+3.0 >= 5.0;
+val it = false : bool
+
+3.0 >= nan;
+val it = false : bool
+
+nan >= 5.0;
+val it = false : bool
+
+3.0 >= Real.posInf;
+val it = false : bool
+
+3.0 >= Real.negInf;
+val it = true : bool
+
+Real.posInf >= Real.posInf;
+val it = true : bool
+
+
+(* "== (x, y)" eturns true if and only if neither y nor x is NaN, and y and x
+   are equal, ignoring signs on zeros. This is equivalent to the IEEE =
+   operator. *)
+(*) TODO
+
+(* "!= (x, y)" is equivalent to not o op == and the IEEE ?<> operator. *)
+(*) TODO
+
+(* "val ?= : real * real -> bool" returns true if either argument is NaN or if
+   the arguments are bitwise equal, ignoring signs on zeros. It is equivalent
+   to the IEEE ?= operator. *)
+(*) TODO
+
+(* "unordered (x, y)" returns true if x and y are unordered, i.e., at least one
+   of x and y is NaN. *)
+Real.unordered;
+val it = fn : real * real -> bool
+
+Real.unordered (1.0, 1.0);
+val it = false : bool
+
+Real.unordered (~1.0, 1.0);
+val it = false : bool
+
+Real.unordered (Real.negInf, Real.posInf);
+val it = false : bool
+
+Real.unordered (nan, 1.0);
+val it = true : bool
+
+Real.unordered (0.0, nan);
+val it = true : bool
+
+
+(* "isFinite x" returns true if x is neither NaN nor an infinity. *)
+Real.isFinite;
+val it = fn : real -> bool
+
+Real.isFinite 0.0;
+val it = true : bool
+
+Real.isFinite ~0.0;
+val it = true : bool
+
+Real.isFinite 1.5;
+val it = true : bool
+
+Real.isFinite Real.posInf;
+val it = false : bool
+
+Real.isFinite Real.negInf;
+val it = false : bool
+
+Real.isFinite nan;
+val it = false : bool
+
+
+(* "isNan x" returns true if x is NaN. *)
+Real.isNan;
+val it = fn : real -> bool
+
+Real.isNan 0.0;
+val it = false : bool
+
+Real.isNan ~0.0;
+val it = false : bool
+
+Real.isNan 1.5;
+val it = false : bool
+
+Real.isNan Real.posInf;
+val it = false : bool
+
+Real.isNan Real.negInf;
+val it = false : bool
+
+Real.isNan Real.minNormalPos;
+val it = false : bool
+
+Real.isNan Real.minPos;
+val it = false : bool
+
+Real.isNan nan;
+val it = true : bool
+
+
+(* "isNormal x" returns true if x is normal, i.e., neither zero, subnormal,
+   infinite nor NaN. *)
+Real.isNormal;
+val it = fn : real -> bool
+
+Real.isNormal 0.0;
+val it = false : bool
+
+Real.isNormal ~0.0;
+val it = false : bool
+
+Real.isNormal 1.5;
+val it = true : bool
+
+Real.isNormal ~0.1;
+val it = true : bool
+
+Real.isNormal Real.posInf;
+val it = false : bool
+
+Real.isNormal Real.negInf;
+val it = false : bool
+
+Real.isNormal Real.minNormalPos;
+val it = true : bool
+
+Real.isNormal Real.minPos;
+val it = false : bool
+
+Real.isNormal nan;
+val it = false : bool
+
+
+(* "class x" returns the IEEEReal.float_class to which x belongs. *)
+(*) TODO
+
+(* "toManExp r" returns {man, exp}, where man and exp are the mantissa and
+   exponent of r, respectively. Specifically, we have the relation
+     r = man * radix(exp)
+   where 1.0 <= man * radix < radix. This function is comparable to frexp in
+   the C library. If r is +-0, man is +-0 and exp is +0. If r is +-infinity,
+   man is +-infinity and exp is unspecified. If r is NaN, man is NaN and exp
+   is unspecified. *)
+Real.toManExp;
+val it = fn : real -> {exp:int, man:real}
+
+Real.toManExp 0.0;
+val it = {exp=~126,man=0.0} : {exp:int, man:real}
+
+Sys.plan ();
+val it = "apply(fnValue Real.toManExp, argCode constant(0.0))" : string
+
+Real.toManExp ~0.0;
+val it = {exp=~126,man=~0.0} : {exp:int, man:real}
+
+Real.toManExp 0.5;
+val it = {exp=0,man=0.5} : {exp:int, man:real}
+
+Real.toManExp 1.0;
+val it = {exp=1,man=0.5} : {exp:int, man:real}
+
+Real.toManExp 2.0;
+val it = {exp=2,man=0.5} : {exp:int, man:real}
+
+Real.toManExp 1.25;
+val it = {exp=1,man=0.625} : {exp:int, man:real}
+
+Real.toManExp 2.5;
+val it = {exp=2,man=0.625} : {exp:int, man:real}
+
+Real.toManExp ~2.5;
+val it = {exp=2,man=~0.625} : {exp:int, man:real}
+
+Real.toManExp nan;
+val it = {exp=129,man=nan} : {exp:int, man:real}
+
+Real.toManExp Real.posInf;
+val it = {exp=129,man=inf} : {exp:int, man:real}
+
+Real.toManExp Real.negInf;
+val it = {exp=129,man=~inf} : {exp:int, man:real}
+
+Real.toManExp Real.maxFinite;
+val it = {exp=128,man=0.99999994} : {exp:int, man:real}
+
+Real.toManExp (~Real.maxFinite);
+val it = {exp=128,man=~0.99999994} : {exp:int, man:real}
+
+Real.toManExp Real.minNormalPos;
+val it = {exp=~125,man=0.5} : {exp:int, man:real}
+
+Real.toManExp (~Real.minNormalPos);
+val it = {exp=~125,man=~0.5} : {exp:int, man:real}
+
+Real.toManExp (Real.minNormalPos / 2.0);
+val it = {exp=~126,man=0.5} : {exp:int, man:real}
+
+Real.toManExp (Real.minNormalPos / 4.0);
+val it = {exp=~126,man=0.25} : {exp:int, man:real}
+
+Real.toManExp Real.minPos;
+val it = {exp=~126,man=1.1920929E~7} : {exp:int, man:real}
+
+Real.minNormalPos / Real.minPos;
+val it = 8388608.0 : real
+
+List.map (fn x => (x, Real.toManExp x, Real.fromManExp (Real.toManExp x)))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
+   0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
+   Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
+   Real.posInf, Real.negInf, nan];
+val it =
+  [(1.0,{exp=1,man=0.5},1.0),(0.0,{exp=~126,man=0.0},0.0),
+   (~0.0,{exp=~126,man=~0.0},~0.0),(~1.0,{exp=1,man=~0.5},~1.0),
+   (0.5,{exp=0,man=0.5},0.5),(2.0,{exp=2,man=0.5},2.0),
+   (1.23456E~5,{exp=~16,man=0.80908126},1.23456E~5),
+   (1.23456E~6,{exp=~19,man=0.647265},1.23456E~6),
+   (1.23456E~7,{exp=~22,man=0.517812},1.23456E~7),
+   (~1.23456E~6,{exp=~19,man=~0.647265},~1.23456E~6),
+   (1.4E~45,{exp=~126,man=1.1920929E~7},1.4E~45),
+   (1.17549435E~38,{exp=~125,man=0.5},1.17549435E~38),
+   (3.4028235E38,{exp=128,man=0.99999994},3.4028235E38),
+   (~3.4028235E38,{exp=128,man=~0.99999994},~3.4028235E38),
+   (inf,{exp=129,man=inf},inf),(~inf,{exp=129,man=~inf},~inf),
+   (nan,{exp=129,man=nan},nan)] : (real * {exp:int, man:real} * real) list
+
+
+(* "fromManExp {man, exp}" returns man * radix(exp). This function is comparable
+   to ldexp in the C library. Note that, even if man is a non-zero, finite real
+   value, the result of fromManExp can be zero or infinity because of underflows
+   and overflows. If man is +-0, the result is +-0. If man is +-infinity, the
+   result is +-infinity. If man is NaN, the result is NaN. *)
+Real.fromManExp;
+val it = fn : {exp:int, man:real} -> real
+
+Real.fromManExp {man = 1.0, exp = 0};
+val it = 1.0 : real
+
+Sys.plan ();
+val it = "apply2(fnValue Real.fromManExp, constant(0), constant(1.0))"
+  : string
+
+Real.fromManExp {man = ~1.0, exp = 0};
+val it = ~1.0 : real
+
+Real.fromManExp {man = 1.0, exp = 2};
+val it = 4.0 : real
+
+Real.fromManExp {man = 1.0, exp = ~3};
+val it = 0.125 : real
+
+List.map (fn x => (x, Real.fromManExp (Real.toManExp x)))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
+   0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
+   Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
+   Real.posInf, Real.negInf, nan];
+val it =
+  [(1.0,1.0),(0.0,0.0),(~0.0,~0.0),(~1.0,~1.0),(0.5,0.5),(2.0,2.0),
+   (1.23456E~5,1.23456E~5),(1.23456E~6,1.23456E~6),(1.23456E~7,1.23456E~7),
+   (~1.23456E~6,~1.23456E~6),(1.4E~45,1.4E~45),(1.17549435E~38,1.17549435E~38),
+   (3.4028235E38,3.4028235E38),(~3.4028235E38,~3.4028235E38),(inf,inf),
+   (~inf,~inf),(nan,nan)] : (real * real) list
+
+
+(* "split r" returns {whole, frac}, where frac and whole are the fractional and
+   integral parts of r, respectively. Specifically, whole is integral,
+   |frac| < 1.0, whole and frac have the same sign as r, and r = whole + frac.
+   This function is comparable to modf in the C library. If r is +-infinity,
+   whole is +-infinity and frac is +-0. If r is NaN, both whole and frac are
+   NaN. *)
+Real.split;
+val it = fn : real -> {frac:real, whole:real}
+
+Real.split 2.0;
+val it = {frac=0.0,whole=2.0} : {frac:real, whole:real}
+
+Real.split 0.0;
+val it = {frac=0.0,whole=0.0} : {frac:real, whole:real}
+
+Real.split ~0.0;
+val it = {frac=~0.0,whole=0.0} : {frac:real, whole:real}
+
+Real.split 2.75;
+val it = {frac=0.75,whole=2.0} : {frac:real, whole:real}
+
+Real.split ~12.25;
+val it = {frac=~0.25,whole=~12.0} : {frac:real, whole:real}
+
+Real.split Real.posInf;
+val it = {frac=0.0,whole=inf} : {frac:real, whole:real}
+
+Real.split Real.negInf;
+val it = {frac=~0.0,whole=~inf} : {frac:real, whole:real}
+
+Real.split nan;
+val it = {frac=nan,whole=nan} : {frac:real, whole:real}
+
+Sys.plan ();
+val it = "apply(fnValue Real.split, argCode constant(NaN))" : string
+
+
+(* "realMod r" returns the fractional part of r. "realMod" is equivalent to
+   "#frac o split". *)
+Real.realMod;
+val it = fn : real -> real
+
+Real.realMod 2.0;
+val it = 0.0 : real
+
+Real.realMod 0.0;
+val it = 0.0 : real
+
+Real.realMod ~0.0;
+val it = ~0.0 : real
+
+Real.realMod 2.75;
+val it = 0.75 : real
+
+Real.realMod ~12.25;
+val it = ~0.25 : real
+
+Real.realMod Real.posInf;
+val it = 0.0 : real
+
+Real.realMod Real.negInf;
+val it = ~0.0 : real
+
+Real.realMod nan;
+val it = nan : real
+
+Sys.plan ();
+val it = "apply(fnValue Real.realMod, argCode constant(NaN))" : string
+
+
+(* "nextAfter (r, t)" returns the next representable real after r in the
+   direction of t. Thus, if t is less than r, nextAfter returns the largest
+   representable floating-point number less than r. If r = t then it returns
+   r. If either argument is NaN, this returns NaN. If r is +-infinity, it
+   returns +-infinity. *)
+(*) TODO
+
+(* "checkFloat x" raises Overflow if x is an infinity, and raises Div if x is
+   NaN. Otherwise, it returns its argument. This can be used to synthesize
+   trapping arithmetic from the non-trapping operations given here. Note,
+   however, that infinities can be converted to NaNs by some operations, so
+   that if accurate exceptions are required, checks must be done after each
+   operation. *)
+Real.checkFloat;
+val it = fn : real -> real
+
+Real.checkFloat 0.0;
+val it = 0.0 : real
+
+Real.checkFloat ~0.0;
+val it = ~0.0 : real
+
+Real.checkFloat 1.5;
+val it = 1.5 : real
+
+Real.checkFloat Real.posInf;
+uncaught exception Overflow
+
+Real.checkFloat Real.negInf;
+uncaught exception Overflow
+
+Real.checkFloat Real.minNormalPos;
+val it = 1.17549435E~38 : real
+
+Real.checkFloat Real.minPos;
+val it = 1.4E~45 : real
+
+Real.checkFloat nan;
+uncaught exception Div
+
+
+(* "realFloor r", "realCeil r", "realTrunc r", "realRound r" convert real values
+   to integer-valued reals. realFloor produces floor(r), the largest integer not
+   larger than r. realCeil produces ceil(r), the smallest integer not less than r.
+   realTrunc rounds r towards zero, and realRound rounds to the integer-valued
+   real value that is nearest to r. If r is NaN or an infinity, these functions
+   return r. *)
+Real.realFloor;
+val it = fn : real -> real
+
+Real.realCeil;
+val it = fn : real -> real
+
+Real.realTrunc;
+val it = fn : real -> real
+
+Real.realRound;
+val it = fn : real -> real
+
+fun f x = (Real.realFloor x, Real.realCeil x, Real.realTrunc x, Real.realRound x);
+val f = fn : real -> real * real * real * real
+
+f 0.0;
+val it = (0.0,0.0,0.0,0.0) : real * real * real * real
+
+f ~2.0;
+val it = (~2.0,~2.0,~2.0,~2.0) : real * real * real * real
+
+f ~1.75;
+val it = (~2.0,~1.0,~1.0,~2.0) : real * real * real * real
+
+f ~2.25;
+val it = (~3.0,~2.0,~2.0,~2.0) : real * real * real * real
+
+f ~2.5;
+val it = (~3.0,~2.0,~2.0,~2.0) : real * real * real * real
+
+f ~3.5;
+val it = (~4.0,~3.0,~3.0,~4.0) : real * real * real * real
+
+f Real.negInf;
+val it = (~inf,~inf,nan,~inf) : real * real * real * real
+
+f Real.posInf;
+val it = (inf,inf,nan,inf) : real * real * real * real
+
+f nan;
+val it = (nan,nan,nan,nan) : real * real * real * real
+
+
+(* "floor r", "ceil r", "trunc r", "round r" convert reals to integers.
+   floor produces floor(r), the largest int not larger than r.
+   ceil produces ceil(r), the smallest int not less than r.
+   trunc rounds r towards zero.
+   round yields the integer nearest to r. In the case of a tie, it rounds to the
+   nearest even integer.
+
+   They raise Overflow if the resulting value cannot be represented as an int,
+   for example, on infinity. They raise Domain on NaN arguments.
+
+   These are respectively equivalent to:
+     toInt IEEEReal.TO_NEGINF r
+     toInt IEEEReal.TO_POSINF r
+     toInt IEEEReal.TO_ZERO r
+     toInt IEEEReal.TO_NEAREST r *)
+Real.floor;
+val it = fn : real -> int
+
+Real.ceil;
+val it = fn : real -> int
+
+Real.trunc;
+val it = fn : real -> int
+
+Real.round;
+val it = fn : real -> int
+
+fun f x = (Real.floor x, Real.ceil x, Real.trunc x, Real.round x);
+val f = fn : real -> int * int * int * int
+
+f 0.0;
+val it = (0,0,0,0) : int * int * int * int
+
+f ~2.0;
+val it = (~2,~2,~2,~2) : int * int * int * int
+
+f ~1.75;
+val it = (~2,~2,~1,~2) : int * int * int * int
+
+f ~2.25;
+val it = (~2,~2,~2,~2) : int * int * int * int
+
+f ~2.5;
+val it = (~2,~3,~2,~2) : int * int * int * int
+
+f ~3.5;
+val it = (~3,~4,~3,~3) : int * int * int * int
+
+f Real.negInf;
+val it = (~2147483648,~2147483647,~2147483648,~2147483648)
+  : int * int * int * int
+
+f Real.posInf;
+val it = (~2147483648,2147483647,2147483647,2147483647)
+  : int * int * int * int
+
+f nan;
+val it = (0,0,0,0) : int * int * int * int
+
+
+(* "toInt mode x", "toLargeInt mode x" convert the argument x to an integral
+   type using the specified rounding mode. They raise Overflow if the result
+   is not representable, in particular, if x is an infinity. They raise
+   Domain if the input real is NaN. *)
+(*) TODO
+
+(* "fromInt i", "fromLargeInt i" convert the integer i to a real value. If the
+   absolute value of i is larger than maxFinite, then the appropriate infinity
+   is returned. If i cannot be exactly represented as a real value, then the
+   current rounding mode is used to determine the resulting value. The top-level
+   function real is an alias for Real.fromInt. *)
+Real.fromInt;
+val it = fn : int -> real
+
+Real.fromInt 1;
+val it = 1.0 : real
+
+Real.fromInt ~2;
+val it = ~2.0 : real
+
+Sys.plan ();
+val it = "apply(fnValue Real.fromInt, argCode constant(-2))" : string
+
+
+(*) real is a synonym for Real.fromInt
+real;
+val it = fn : int -> real
+
+real ~2;
+val it = ~2.0 : real
+
+Sys.plan ();
+val it = "apply(fnValue Real.fromInt, argCode constant(-2))" : string
+
+
+(*  "fromString s" scans a `real` value from a string. Returns `SOME(r)` if a
+    `real` value can be scanned from a prefix of `s`, ignoring any initial
+    whitespace; otherwise, it returns `NONE`. This function is equivalent to
+    `StringCvt.scanString scan`. *)
+Real.fromString;
+val it = fn : string -> real option
+
+Real.fromString "~0.0";
+val it = SOME ~0.0 : real option
+
+Sys.plan ();
+val it = "apply(fnValue Real.fromString, argCode constant(~0.0))" : string
+
+Real.fromString "~23.45e~06";
+val it = SOME ~2.345E~5 : real option
+
+(*) sml-nj allows both '-' and '~', both 'E' and 'e', and 0s after 'E'.
+Real.fromString "-1.5";
+val it = SOME ~1.5 : real option
+
+Real.fromString "~1.5";
+val it = SOME ~1.5 : real option
+
+Real.fromString "-1.5e-9";
+val it = SOME ~1.5E~9 : real option
+
+Real.fromString "-1.5e-09";
+val it = SOME ~1.5E~9 : real option
+
+Real.fromString "-1.5E-9";
+val it = SOME ~1.5E~9 : real option
+
+Real.fromString "-1.5E~9";
+val it = SOME ~1.5E~9 : real option
+
+Real.fromString "-1.5E~09";
+val it = SOME ~1.5E~9 : real option
+
+Real.fromString "-1.5e~09";
+val it = SOME ~1.5E~9 : real option
+
+(*) In sml-nj, ".", ".e", ".e-", "e5", ".e7" are invalid
+Real.fromString ".";
+val it = NONE : real option
+
+Real.fromString ".x";
+val it = NONE : real option
+
+Real.fromString ".e";
+val it = NONE : real option
+
+Real.fromString ".e~";
+val it = NONE : real option
+
+Real.fromString "e5";
+val it = NONE : real option
+
+Real.fromString ".e7";
+val it = NONE : real option
+
+(*) Letters and whitespace at the end, and whitespace at the start, are ignored
+Real.fromString "1.5x";
+val it = SOME 1.5 : real option
+
+Real.fromString " 1.5 x ";
+val it = SOME 1.5 : real option
+
+Real.fromString "1.5e";
+val it = SOME 1.5 : real option
+
+Real.fromString "1.5e~";
+val it = SOME 1.5 : real option
+
+Real.fromString "1.5e~0";
+val it = SOME 1.5 : real option
+
+Real.fromString "1.5e2";
+val it = SOME 150.0 : real option
+
+Real.fromString "1.5e2e";
+val it = SOME 150.0 : real option
+
+Real.fromString "1.5e2e3";
+val it = SOME 150.0 : real option
+
+Real.fromString "2e3.4";
+val it = SOME 2000.0 : real option
+
+Real.fromString "  2e3.4";
+val it = SOME 2000.0 : real option
+
+Real.fromString "2.x";
+val it = SOME 2.0 : real option
+
+(*) fromString cannot parse "inf", "nan" etc.
+Real.fromString "inf";
+val it = NONE : real option
+
+Real.fromString "~inf";
+val it = NONE : real option
+
+Real.fromString "-inf";
+val it = NONE : real option
+
+Real.fromString "nan";
+val it = NONE : real option
+
+
+List.map (fn x => (x, Real.fromString (Real.toString x)))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
+   0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
+   Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
+   Real.posInf, Real.negInf, nan];
+val it =
+  [(1.0,SOME 1.0),(0.0,SOME 0.0),(~0.0,SOME ~0.0),(~1.0,SOME ~1.0),
+   (0.5,SOME 0.5),(2.0,SOME 2.0),(1.23456E~5,SOME 1.23456E~5),
+   (1.23456E~6,SOME 1.23456E~6),(1.23456E~7,SOME 1.23456E~7),
+   (~1.23456E~6,SOME ~1.23456E~6),(1.4E~45,SOME 1.4E~45),
+   (1.17549435E~38,SOME 1.17549435E~38),(3.4028235E38,SOME 3.4028235E38),
+   (~3.4028235E38,SOME ~3.4028235E38),(inf,NONE),(~inf,NONE),(nan,NONE)]
+  : (real * real option) list
+
+
+(* "toLarge r", "fromLarge r" convert between values of type real and type
+   LargeReal.real. If r is too small or too large to be represented as a real,
+   fromLarge will convert it to a zero or an infinity.
+
+   Note that SMLNJ diverges from the the spec. The spec:
+      Real.toLarge : real -> LargeReal.real
+      Real.fromLarge : LargeReal.real -> real
+   SMLNJ:
+      Real.toLarge : real -> real
+      Real.fromLarge : IEEEReal.rounding_mode -> real -> real *)
+(*) TODO
+
+(* "fmt spec r", "toString r" convert reals into strings. The conversion
+   provided by the function fmt is parameterized by spec, which has the
+   following forms and interpretations.
+
+   SCI arg
+     Scientific notation:
+       [~]?[0-9].[0-9]+?E[0-9]+
+     where there is always one digit before the decimal point, nonzero if the
+     number is nonzero. arg specifies the number of digits to appear after the
+     decimal point, with 6 the default if arg is NONE. If arg is SOME(0), no
+     fractional digits and no decimal point are printed.
+   FIX arg
+     Fixed-point notation:
+       [~]?[0-9]+.[0-9]+?
+     arg specifies the number of digits to appear after the decimal point, with
+     6 the default if arg is NONE. If arg is SOME(0), no fractional digits and
+     no decimal point are printed.
+   GEN arg
+     Adaptive notation: the notation used is either scientific or fixed-point
+     depending on the value converted. arg specifies the maximum number of
+     significant digits used, with 12 the default if arg is NONE.
+   EXACT
+     Exact decimal notation: refer to IEEEReal.toString for a complete
+     description of this format.
+   In all cases, positive and negative infinities are converted to "inf" and
+   "~inf", respectively, and NaN values are converted to the string "nan".
+
+   Refer to StringCvt.realfmt for more details concerning these formats,
+   especially the adaptive format GEN.
+
+   fmt raises Size if spec is an invalid precision, i.e., if spec is
+     SCI (SOME i) with i < 0
+     FIX (SOME i) with i < 0
+     GEN (SOME i) with i < 1
+   The exception should be raised when fmt spec is evaluated.
+
+  The fmt function allows the user precise control as to the form of the
+  resulting string. Note, therefore, that it is possible for fmt to produce
+  a result that is not a valid SML string representation of a real value.
+
+  The value returned by toString is equivalent to:
+    (fmt (StringCvt.GEN NONE) r)
+ *)
+(*) TODO Real.fmt
+
+Real.toString;
+val it = fn : real -> string
+
+Real.toString 0.0;
+val it = "0.0" : string
+
+Sys.plan ();
+val it = "apply(fnValue Real.toString, argCode constant(0.0))" : string
+
+Real.toString ~0.0;
+val it = "~0.0" : string
+
+Real.toString 0.01;
+val it = "0.01" : string
+
+Real.toString Real.minPos;
+val it = "1.4E~45" : string
+
+Real.toString Real.minNormalPos;
+val it = "1.17549435E~38" : string
+
+Real.toString 1234567890123.45;
+val it = "1.23456795E12" : string
+
+Real.toString 123456789012.3;
+val it = "1.23456791E11" : string
+
+Real.toString 12345678901.23;
+val it = "1.23456788E10" : string
+
+Real.toString 123456789.0123;
+val it = "1.23456792E8" : string
+
+(*) We return '1.23456E~6' but sml-nj returns '1.23456E~06'.
+Real.toString 0.00000123456;
+val it = "1.23456E~6" : string
+
+Real.toString 0.0000123456;
+val it = "1.23456E~5" : string
+
+Real.toString 0.000123456;
+val it = "1.23456E~4" : string
+
+Real.toString 0.0001234567;
+val it = "1.234567E~4" : string
+
+Real.toString 0.00012345678;
+val it = "1.2345678E~4" : string
+
+Real.toString 0.0000123;
+val it = "1.23E~5" : string
+
+Real.toString ~0.000065432;
+val it = "~6.5432E~5" : string
+
+Real.toString nan;
+val it = "nan" : string
+
+Real.toString Real.negInf;
+val it = "~inf" : string
+
+Real.toString Real.posInf;
+val it = "inf" : string
+
+List.map (fn x => (x, Real.toString x))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
+   0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
+   Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
+   Real.posInf, Real.negInf, nan];
+val it =
+  [(1.0,"1.0"),(0.0,"0.0"),(~0.0,"~0.0"),(~1.0,"~1.0"),(0.5,"0.5"),(2.0,"2.0"),
+   (1.23456E~5,"1.23456E~5"),(1.23456E~6,"1.23456E~6"),
+   (1.23456E~7,"1.23456E~7"),(~1.23456E~6,"~1.23456E~6"),(1.4E~45,"1.4E~45"),
+   (1.17549435E~38,"1.17549435E~38"),(3.4028235E38,"3.4028235E38"),
+   (~3.4028235E38,"~3.4028235E38"),(inf,"inf"),(~inf,"~inf"),(nan,"nan")]
+  : (real * string) list
+
+
+(* "scan getc strm", "fromString s" scan a real value from character source. The
+   first version reads from ARG/strm/ using reader getc, ignoring initial
+   whitespace. It returns SOME(r,rest) if successful, where r is the scanned
+   real value and rest is the unused portion of the character stream strm.
+   Values of too large a magnitude are represented as infinities; values of too
+   small a magnitude are represented as zeros. The second version returns
+   SOME(r) if a real value can be scanned from a prefix of s, ignoring any
+   initial whitespace; otherwise, it returns NONE. This function is equivalent
+   to StringCvt.scanString scan.
+
+   The functions accept real numbers with the following format:
+     [+~-]?([0-9]+.[0-9]+? | .[0-9]+)(e | E)[+~-]?[0-9]+?
+
+   It also accepts the following string representations of non-finite values:
+     [+~-]?(inf | infinity | nan)
+   where the alphabetic characters are case-insensitive. *)
+(*) TODO
+
+(* "toDecimal r", "fromDecimal d" convert between real values and decimal
+   approximations. Decimal approximations are to be converted using the
+   IEEEReal.TO_NEAREST rounding mode. toDecimal should produce only as many
+   digits as are necessary for fromDecimal to convert back to the same number.
+   In particular, for any normal or subnormal real value r, we have the bit-wise
+   equality:
+     fromDecimal (toDecimal r) = r.
+
+   For toDecimal, when the r is not normal or subnormal, then the exp field is
+   set to 0 and the digits field is the empty list. In all cases, the sign and
+   class field capture the sign and class of r.
+
+  For fromDecimal, if class is ZERO or INF, the resulting real is the
+  appropriate signed zero or infinity. If class is NAN, a signed NaN is
+  generated. If class is NORMAL or SUBNORMAL, the sign, digits and exp fields
+  are used to produce a real number whose value is
+
+    s * 0.d(1)d(2)...d(n) 10(exp)
+
+  where digits = [d(1), d(2), ..., d(n)] and where s is -1 if sign is true and 1
+  otherwise. Note that the conversion itself should ignore the class field, so
+  that the resulting value might have class NORMAL, SUBNORMAL, ZERO, or INF. For
+  example, if digits is empty or a list of all 0's, the result should be a
+  signed zero. More generally, very large or small magnitudes are converted to
+  infinities or zeros.
+
+  If the argument to fromDecimal does not have a valid format, i.e., if the
+  digits field contains integers outside the range [0,9], it returns NONE.
+
+  Implementation note: Algorithms for accurately and efficiently converting
+  between binary and decimal real representations are readily available, e.g.,
+  see the technical report by Gay[CITE]. *)
+(*) TODO
 
 (* Relational -------------------------------------------------- *)
 
@@ -1912,7 +3259,8 @@ val it =
    ("NONE","'a option"),
    ("Option",
    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
-   ("Real","{negInf:real, posInf:real}"),
+   ("Real",
+   "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
    ("Relational",
    "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
    ("SOME","forall 'a. 'a -> 'a option"),
@@ -1925,7 +3273,8 @@ val it =
    ("abs","int -> int"),("count","forall 'a. 'a list -> int"),
    ("emp","{empno:int, ename:string, mgr:int} list"),
    ("env","unit -> (string * string) list"),
-   ("exists","forall 'a. 'a list -> bool"),("false","bool"),
+   ("exists","forall 'a. 'a list -> bool"),
+   ("f","real -> int * int * int * int"),("false","bool"),
    ("ignore","forall 'a. 'a -> unit"),("it","unit -> (string * string) list"),
    ("iterate",
    "forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list"),
@@ -1952,11 +3301,10 @@ val it =
    ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
    ("op union","forall 'a. 'a list * 'a list -> 'a list"),
    ("op ~","forall 'a. 'a -> 'a"),("plan","unit -> string"),
-   ("plusOne","int -> int"),("plusThree","int -> int"),
+   ("plusOne","int -> int"),("plusThree","int -> int"),("real","int -> real"),
    ("set","forall 'a. string * 'a -> unit"),("show","string -> string option"),
    ("sum","forall 'a. 'a list -> 'a"),("timesTwo","int -> int"),
-   ("true","bool"),("unset","string -> unit"),("use","string -> unit")]
-  : (string * string) list
+   ("true","bool"),...] : (string * string) list
 
 
 env;
@@ -1975,7 +3323,8 @@ val it =
    ("NONE","'a option"),
    ("Option",
    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
-   ("Real","{negInf:real, posInf:real}"),
+   ("Real",
+   "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
    ("Relational",
    "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
    ("SOME","forall 'a. 'a -> 'a option"),
@@ -1988,7 +3337,8 @@ val it =
    ("abs","int -> int"),("count","forall 'a. 'a list -> int"),
    ("emp","{empno:int, ename:string, mgr:int} list"),
    ("env","unit -> (string * string) list"),
-   ("exists","forall 'a. 'a list -> bool"),("false","bool"),
+   ("exists","forall 'a. 'a list -> bool"),
+   ("f","real -> int * int * int * int"),("false","bool"),
    ("ignore","forall 'a. 'a -> unit"),("it","unit -> (string * string) list"),
    ("iterate",
    "forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list"),
@@ -2015,11 +3365,10 @@ val it =
    ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
    ("op union","forall 'a. 'a list * 'a list -> 'a list"),
    ("op ~","forall 'a. 'a -> 'a"),("plan","unit -> string"),
-   ("plusOne","int -> int"),("plusThree","int -> int"),
+   ("plusOne","int -> int"),("plusThree","int -> int"),("real","int -> real"),
    ("set","forall 'a. string * 'a -> unit"),("show","string -> string option"),
    ("sum","forall 'a. 'a list -> 'a"),("timesTwo","int -> int"),
-   ("true","bool"),("unset","string -> unit"),("use","string -> unit")]
-  : (string * string) list
+   ("true","bool"),...] : (string * string) list
 
 
 (*) val plan : unit -> string

@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.compile;
 
+import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ForallType;
@@ -39,9 +40,6 @@ class Pretty {
   private final int printLength;
   private final int printDepth;
   private final int stringDepth;
-
-  private static final int NEGATIVE_ZERO_FLOAT_BITS =
-      Float.floatToRawIntBits(-0.0f);
 
   static final Pretty DEFAULT = new Pretty(78, 12, 5, 79);
 
@@ -91,10 +89,6 @@ class Pretty {
     for (int i = 0; i < indent; i++) {
       buf.append(' ');
     }
-  }
-
-  private static boolean isNegativeZero(float f) {
-    return Float.floatToRawIntBits(f) == NEGATIVE_ZERO_FLOAT_BITS;
   }
 
   private StringBuilder pretty2(@Nonnull StringBuilder buf,
@@ -154,25 +148,7 @@ class Pretty {
         }
         return buf.append(i);
       case REAL:
-        float f = (Float) value;
-        if (Float.isFinite(f)) {
-          if (f < 0 || isNegativeZero(f)) {
-            buf.append('~');
-            f = Math.abs(f);
-          }
-          return buf.append(f);
-        } else {
-          if (f == Float.POSITIVE_INFINITY) {
-            s = "inf";
-          } else if (f == Float.NEGATIVE_INFINITY) {
-            s = "~inf";
-          } else if (Float.isNaN(f)) {
-            s = "nan";
-          } else {
-            throw new AssertionError("unknown float " + f);
-          }
-          return buf.append(s);
-        }
+        return Codes.appendFloat(buf, (Float) value);
       default:
         return buf.append(value);
       }

@@ -880,6 +880,86 @@ public enum BuiltIn {
                   ts.fnType(h.get(2), h.option(0))),
               h.get(2), h.option(1)))),
 
+  /** Function "Real.abs", of type "real &rarr; real".
+   *
+   * <p>Returns the absolute value of {@code r}. */
+  REAL_ABS("Real", "abs", ts -> ts.fnType(REAL, REAL)),
+
+  /** Function "Real.ceil", of type "real &rarr; int".
+   *
+   * <p>Returns largest int not larger than {@code r}. */
+  REAL_CEIL("Real", "ceil", ts -> ts.fnType(REAL, INT)),
+
+  /** Function "Real.checkFloat", of type "real &rarr; real".
+   *
+   * <p>"checkFloat x" raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#OVERFLOW Overflow}
+   * if {@code x} is an infinity, and raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#DIV Div}
+   * if {@code x} is NaN. Otherwise, it returns its argument. */
+  REAL_CHECK_FLOAT("Real", "checkFloat", ts -> ts.fnType(REAL, REAL)),
+
+  /** Function "Real.compare", of type "real * real &rarr; real".
+   *
+   * <p>Returns {@code x} with the sign of {@code y}, even if y is NaN. */
+  REAL_COMPARE("Real", "compare", ts ->
+      ts.fnType(ts.tupleType(REAL, REAL), ts.lookup("order"))),
+
+  /** Function "Real.copySign", of type "real * real &rarr; real".
+   *
+   * <p>Returns {@code x} with the sign of {@code y}, even if y is NaN. */
+  REAL_COPY_SIGN("Real", "copySign", ts ->
+      ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Function "Real.floor", of type "real &rarr; int".
+   *
+   * <p>Returns smallest int not less than {@code r}. */
+  REAL_FLOOR("Real", "floor", ts -> ts.fnType(REAL, INT)),
+
+  /** Function "Real.fromInt", of type "int &rarr; real". Converts the integer
+   * {@code i} to a {@code real} value. If the absolute value of {@code i} is
+   * larger than {@code maxFinite}, then the appropriate infinity is returned.
+   * If {@code i} cannot be exactly represented as a {@code real} value, then
+   * the current rounding mode is used to determine the resulting value. The
+   * top-level function {@code real} is an alias for {@code Real.fromInt}. */
+  REAL_FROM_INT("Real", "fromInt", "real", ts -> ts.fnType(INT, REAL)),
+
+  /** Function "Real.fromManExp r", of type "{exp:int, man:real} &rarr; real"
+   * returns <code>{man, exp}</code>, where {@code man} and {@code exp} are the
+   * mantissa and exponent of r, respectively. */
+  REAL_FROM_MAN_EXP("Real", "fromManExp", ts ->
+      ts.fnType(
+          ts.recordType(
+              ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
+                  .put("exp", INT)
+                  .put("man", REAL)
+                  .build()), REAL)),
+
+  /** Function "Real.fromString s", of type "string &rarr; real option",
+   * scans a {@code real} value from a {@code string}. Returns {@code SOME(r)}
+   * if a {@code real} value can be scanned from a prefix of {@code s}, ignoring
+   * any initial whitespace; otherwise, it returns {@code NONE}. This function
+   * is equivalent to {@code StringCvt.scanString scan}. */
+  REAL_FROM_STRING("Real", "fromString", ts ->
+      ts.fnType(STRING, ts.option(REAL))),
+
+  /** Function "Real.isFinite", of type "real &rarr; bool".
+   *
+   * <p>"isFinite x" returns true if {@code x} is neither NaN nor an
+   * infinity. */
+  REAL_IS_FINITE("Real", "isFinite", ts -> ts.fnType(REAL, BOOL)),
+
+  /** Function "Real.isNan", of type "real &rarr; bool".
+   *
+   * <p>"isNan x" returns true if {@code x} is NaN. */
+  REAL_IS_NAN("Real", "isNan", ts -> ts.fnType(REAL, BOOL)),
+
+  /** Function "Real.isNormal", of type "real &rarr; bool".
+   *
+   * <p>"isNormal x" returns true if {@code x} is normal, i.e., neither zero,
+   * subnormal, infinite nor NaN. */
+  REAL_IS_NORMAL("Real", "isNormal", ts -> ts.fnType(REAL, BOOL)),
+
   /** Constant "Real.negInf", of type "real".
    *
    * <p>The negative infinity value. */
@@ -889,6 +969,165 @@ public enum BuiltIn {
    *
    * <p>The positive infinity value. */
   REAL_POS_INF("Real", "posInf", ts -> REAL),
+
+  /** Constant "Real.radix", of type "int".
+   *
+   * <p>The base of the representation, e.g., 2 or 10 for IEEE floating
+   * point. */
+  REAL_RADIX("Real", "radix", ts -> INT),
+
+  /** Constant "Real.precision", of type "int".
+   *
+   * <p>The number of digits, each between 0 and {@code radix - 1}, in the
+   * mantissa. Note that the precision includes the implicit (or hidden) bit
+   * used in the IEEE representation (e.g., the value of Real64.precision is
+   * 53). */
+  REAL_PRECISION("Real", "precision", ts -> INT),
+
+  /** Function "Real.max", of type "real * real &rarr; real".
+   *
+   * <p>Returns the returns the larger of the arguments. If exactly one argument
+   * is NaN, returns the other argument. If both arguments are NaN, returns
+   * NaN. */
+  REAL_MAX("Real", "max", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Constant "Real.maxFinite", of type "real".
+   *
+   * <p>The maximum finite number. */
+  REAL_MAX_FINITE("Real", "maxFinite", ts -> REAL),
+
+  /** Function "Real.min", of type "real * real &rarr; real".
+   *
+   * <p>Returns the returns the larger of the arguments. If exactly one argument
+   * is NaN, returns the other argument. If both arguments are NaN, returns
+   * NaN. */
+  REAL_MIN("Real", "min", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Constant "Real.minPos", of type "real".
+   *
+   * <p>The minimum non-zero positive number. */
+  REAL_MIN_POS("Real", "minPos", ts -> REAL),
+
+  /** Constant "Real.minNormalPos", of type "real".
+   *
+   * <p>The minimum non-zero normalized number. */
+  REAL_MIN_NORMAL_POS("Real", "minNormalPos", ts -> REAL),
+
+  /** Function "Real.realMod", of type "real * real &rarr; real".
+   *
+   * <p>Returns the fractional part of r. "realMod" is equivalent to
+   * "#frac o split". */
+  REAL_REAL_MOD("Real", "realMod", ts -> ts.fnType(REAL, REAL)),
+
+  /** Function "Real.realCeil", of type "real &rarr; real".
+   *
+   * <p>Returns the smallest integer-valued real not less than {@code r}. */
+  REAL_REAL_CEIL("Real", "realCeil", ts -> ts.fnType(REAL, REAL)),
+
+  /** Function "Real.realFloor", of type "real &rarr; real".
+   *
+   * <p>Returns the largest integer-valued real not larger than {@code r}. */
+  REAL_REAL_FLOOR("Real", "realFloor", ts -> ts.fnType(REAL, REAL)),
+
+  /** Function "Real.realRound", of type "real &rarr; real".
+   *
+   * <p>Returns the integer-valued real nearest to {@code r}. In the case of a
+   * tie, it rounds to the nearest even integer. */
+  REAL_REAL_ROUND("Real", "realRound", ts -> ts.fnType(REAL, REAL)),
+
+  /** Function "Real.realTrunc", of type "real &rarr; real".
+   *
+   * <p>Returns the {@code r} rounded towards zero. */
+  REAL_REAL_TRUNC("Real", "realTrunc", ts -> ts.fnType(REAL, REAL)),
+
+  /** Function "Real.rem", of type "real * real &rarr; real".
+   *
+   * <p>Returns the remainder {@code x - n * y}, where
+   * {@code n = trunc (x / y)}. The result has the same sign as {@code x} and
+   * has absolute value less than the absolute value of {@code y}. If {@code x}
+   * is an infinity or {@code y} is 0, returns NaN. If {@code y} is an infinity,
+   * returns {@code x}. */
+  REAL_REM("Real", "rem", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Function "Real.round", of type "real &rarr; int".
+   *
+   * <p>Returns the integer nearest to {@code r}. In the case of a tie, it
+   * rounds to the nearest even integer. */
+  REAL_ROUND("Real", "round", ts -> ts.fnType(REAL, INT)),
+
+  /** Function "Real.sameSign", of type "real * real &rarr; bool".
+   *
+   * <p>Returns true if and only if {@code signBit r1} equals
+   * {@code signBit r2}. */
+  REAL_SAME_SIGN("Real", "sameSign", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
+
+  /** Function "Real.sign", of type "real &rarr; int".
+   *
+   * <p>Returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive.
+   * An infinity returns its sign; a zero returns 0 regardless of its sign.
+   * It raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#DOMAIN Domain}
+   * on NaN. */
+  REAL_SIGN("Real", "sign", ts -> ts.fnType(REAL, INT)),
+
+  /** Function "Real.signBit", of type "real &rarr; bool".
+   *
+   * <p>Returns true if and only if the sign of {@code r} (infinities, zeros,
+   * and NaN, included) is negative. */
+  REAL_SIGN_BIT("Real", "signBit", ts -> ts.fnType(REAL, BOOL)),
+
+  /** Function "Real.split", of type "real &rarr; {frac:real, whole:real}".
+   *
+   * <p>Returns <code>{frac, whole}</code>, where {@code frac} and {@code whole}
+   * are the fractional and integral parts of {@code r}, respectively.
+   * Specifically, {@code whole} is integral, {@code |frac| < 1.0},
+   * {@code whole} and {@code frac} have the same sign as {@code r}, and
+   * {@code r = whole + frac}.
+   *
+   * <p>This function is comparable to {@code modf} in the C library. If
+   * {@code r} is +-infinity, {@code whole} is +-infinity and {@code frac} is
+   * +-0. If {@code r} is NaN, both {@code whole} and {@code frac} are NaN. */
+  REAL_SPLIT("Real", "split", ts ->
+      ts.fnType(REAL,
+          ts.recordType(
+              ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
+                  .put("frac", REAL)
+                  .put("whole", REAL)
+                  .build()))),
+
+  /** Function "Real.fromManExp r", of type "{exp:int, man:real} &rarr; real"
+   * returns <code>{man, exp}</code>, where {@code man} and {@code exp} are the
+   * mantissa and exponent of r, respectively. */
+  REAL_TO_MAN_EXP("Real", "toManExp", ts ->
+      ts.fnType(REAL,
+          ts.recordType(
+              ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
+                  .put("exp", INT)
+                  .put("man", REAL)
+                  .build()))),
+
+  /** Function "Real.toString", of type "real &rarr; string".
+   *
+   * <p>"toString r" converts reals into strings. The value returned by
+   * {@code toString t} is equivalent to:
+   *
+   * <pre>{@code
+   * (fmt (StringCvt.GEN NONE) r)
+   * }</pre>
+   */
+  REAL_TO_STRING("Real", "toString", ts -> ts.fnType(REAL, STRING)),
+
+  /** Function "Real.trunc", of type "real &rarr; int".
+   *
+   * <p>Returns {@code r} rounded towards zero. */
+  REAL_TRUNC("Real", "trunc", ts -> ts.fnType(REAL, INT)),
+
+  /** Function "Real.unordered", of type "real * real &rarr; bool".
+   *
+   * <p>"unordered (x, y) returns true if {@code x} and {@code y} are unordered,
+   * i.e., at least one of {@code x} and {@code y} is NaN. */
+  REAL_UNORDERED("Real", "unordered", ts ->
+      ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
 
   /** Function "Relational.count", aka "count", of type "int list &rarr; int".
    *

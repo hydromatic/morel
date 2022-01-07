@@ -54,6 +54,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
@@ -66,6 +68,7 @@ import static java.util.Objects.requireNonNull;
 /** Helpers for {@link Code}. */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Codes {
+
   private Codes() {}
 
   /** Describes a {@link Code}. */
@@ -103,6 +106,10 @@ public abstract class Codes {
   private static final Applicable OP_LT =
       new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LT) {
         @Override public Boolean apply(Comparable a0, Comparable a1) {
+          if (a0 instanceof Float && Float.isNaN((Float) a0)
+              || a1 instanceof Float && Float.isNaN((Float) a1)) {
+            return false;
+          }
           return a0.compareTo(a1) < 0;
         }
       };
@@ -111,6 +118,10 @@ public abstract class Codes {
   private static final Applicable OP_GT =
       new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GT) {
         @Override public Boolean apply(Comparable a0, Comparable a1) {
+          if (a0 instanceof Float && Float.isNaN((Float) a0)
+              || a1 instanceof Float && Float.isNaN((Float) a1)) {
+            return false;
+          }
           return a0.compareTo(a1) > 0;
         }
       };
@@ -119,6 +130,10 @@ public abstract class Codes {
   private static final Applicable OP_LE =
       new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LE) {
         @Override public Boolean apply(Comparable a0, Comparable a1) {
+          if (a0 instanceof Float && Float.isNaN((Float) a0)
+              || a1 instanceof Float && Float.isNaN((Float) a1)) {
+            return false;
+          }
           return a0.compareTo(a1) <= 0;
         }
       };
@@ -127,6 +142,10 @@ public abstract class Codes {
   private static final Applicable OP_GE =
       new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GE) {
         @Override public Boolean apply(Comparable a0, Comparable a1) {
+          if (a0 instanceof Float && Float.isNaN((Float) a0)
+              || a1 instanceof Float && Float.isNaN((Float) a1)) {
+            return false;
+          }
           return a0.compareTo(a1) >= 0;
         }
       };
@@ -1514,11 +1533,378 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#REAL_ABS */
+  private static final Applicable REAL_ABS =
+      new ApplicableImpl(BuiltIn.REAL_ABS) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return Math.abs((float) arg);
+        }
+      };
+
+  /** @see BuiltIn#REAL_CEIL */
+  private static final Applicable REAL_CEIL =
+      new ApplicableImpl(BuiltIn.REAL_CEIL) {
+        @Override public Integer apply(EvalEnv env, Object arg) {
+          float f = (float) arg;
+          if (f >= 0) {
+            return Math.round(f);
+          } else {
+            return -Math.round(-f);
+          }
+        }
+      };
+
+  /** @see BuiltIn#REAL_CHECK_FLOAT */
+  private static final Applicable REAL_CHECK_FLOAT =
+      new ApplicableImpl(BuiltIn.REAL_CHECK_FLOAT) {
+        @Override public Float apply(EvalEnv env, Object arg) {
+          final Float f = (Float) arg;
+          if (Float.isFinite(f)) {
+            return f;
+          }
+          if (Float.isNaN(f)) {
+            throw new MorelRuntimeException(BuiltInExn.DIV);
+          } else {
+            throw new MorelRuntimeException(BuiltInExn.OVERFLOW);
+          }
+        }
+      };
+
+  /** @see BuiltIn#REAL_COMPARE */
+  private static final Applicable REAL_COMPARE =
+      new Applicable2<List, Float, Float>(BuiltIn.REAL_COMPARE) {
+        @Override public List apply(Float f0, Float f1) {
+          if (Float.isNaN(f0) || Float.isNaN(f1)) {
+            throw new MorelRuntimeException(BuiltInExn.UNORDERED);
+          }
+          if (f0 < f1) {
+            return ORDER_LESS;
+          }
+          if (f0 > f1) {
+            return ORDER_GREATER;
+          }
+          // In particular, compare (~0.0, 0) returns ORDER_EQUAL
+          return ORDER_EQUAL;
+        }
+      };
+
+  /** @see BuiltIn#REAL_COPY_SIGN */
+  private static final Applicable REAL_COPY_SIGN =
+      new Applicable2<Float, Float, Float>(BuiltIn.REAL_COPY_SIGN) {
+        @Override public Float apply(Float f0, Float f1) {
+          return Math.copySign(f0, f1);
+        }
+      };
+
+  /** @see BuiltIn#REAL_FLOOR */
+  private static final Applicable REAL_FLOOR =
+      new ApplicableImpl(BuiltIn.REAL_FLOOR) {
+        @Override public Integer apply(EvalEnv env, Object arg) {
+          float f = (float) arg;
+          if (f >= 0) {
+            return -Math.round(-f);
+          } else {
+            return Math.round(f);
+          }
+        }
+      };
+
+  /** @see BuiltIn#REAL_FROM_INT */
+  private static final Applicable REAL_FROM_INT =
+      new ApplicableImpl(BuiltIn.REAL_FROM_INT) {
+        @Override public Float apply(EvalEnv env, Object arg) {
+          return (float) ((Integer) arg);
+        }
+      };
+
+  /** @see BuiltIn#REAL_FROM_MAN_EXP */
+  private static final Applicable REAL_FROM_MAN_EXP =
+      new Applicable2<Float, Integer, Float>(BuiltIn.REAL_FROM_MAN_EXP) {
+        @Override public Float apply(Integer exp, Float mantissa) {
+          if (!Float.isFinite(mantissa)) {
+            return mantissa;
+          }
+          if (exp >= Float.MAX_EXPONENT) {
+            final int exp2 = (exp - Float.MIN_EXPONENT) & 0xFF;
+            final int bits = Float.floatToRawIntBits(mantissa);
+            final int bits2 = (bits & ~(0xFF << 23)) | (exp2 << 23);
+            return Float.intBitsToFloat(bits2);
+          }
+          final int exp2 = (exp - Float.MIN_EXPONENT + 1) & 0xFF;
+          final float exp3 = Float.intBitsToFloat(exp2 << 23); // 2 ^ exp
+          return mantissa * exp3;
+        }
+      };
+
+  /** Pattern for floating point numbers (after '~' has been converted to '-').
+   * ".", ".e", ".e-", ".e5", "e7" are invalid;
+   * "2.", ".5", "2.e5", "2.e" are valid. */
+  static final Pattern FLOAT_PATTERN =
+      Pattern.compile("^ *-?([0-9]*\\.)?[0-9]+([Ee]-?[0-9]+)?");
+
+  /** @see BuiltIn#REAL_FROM_STRING */
+  private static final Applicable REAL_FROM_STRING =
+      new ApplicableImpl(BuiltIn.REAL_FROM_STRING) {
+        @Override public List apply(EvalEnv env, Object arg) {
+          final String s = (String) arg;
+          final String s2 = s.replace('~', '-');
+          final Matcher matcher = FLOAT_PATTERN.matcher(s2);
+          if (!matcher.find(0)) {
+            return OPTION_NONE;
+          }
+          final String s3 = s2.substring(0, matcher.end());
+          try {
+            final float f = Float.parseFloat(s3);
+            return optionSome(f);
+          } catch (NumberFormatException e) {
+            // We should not have reached this point. The pattern
+            // should not have matched the input.
+            throw new AssertionError(e);
+          }
+        }
+      };
+
+  /** @see BuiltIn#REAL_IS_FINITE */
+  private static final Applicable REAL_IS_FINITE =
+      new ApplicableImpl(BuiltIn.REAL_IS_FINITE) {
+        @Override public Boolean apply(EvalEnv env, Object arg) {
+          return Float.isFinite((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#REAL_IS_NAN */
+  private static final Applicable REAL_IS_NAN =
+      new ApplicableImpl(BuiltIn.REAL_IS_NAN) {
+        @Override public Boolean apply(EvalEnv env, Object arg) {
+          return Float.isNaN((Float) arg);
+        }
+      };
+
+  /** @see BuiltIn#REAL_IS_NORMAL */
+  private static final Applicable REAL_IS_NORMAL =
+      new ApplicableImpl(BuiltIn.REAL_IS_NORMAL) {
+        @Override public Boolean apply(EvalEnv env, Object arg) {
+          final Float f = (Float) arg;
+          return Float.isFinite(f)
+              && (f >= Float.MIN_NORMAL || f <= -Float.MIN_NORMAL);
+        }
+      };
+
   /** @see BuiltIn#REAL_NEG_INF */
   private static final float REAL_NEG_INF = Float.NEGATIVE_INFINITY;
 
   /** @see BuiltIn#REAL_POS_INF */
   private static final float REAL_POS_INF = Float.POSITIVE_INFINITY;
+
+  /** @see BuiltIn#REAL_RADIX */
+  private static final int REAL_RADIX = 2;
+
+  /** @see BuiltIn#REAL_PRECISION */
+  // value is from jdk.internal.math.FloatConsts#SIGNIFICAND_WIDTH
+  // (32 bit IEEE floating point is 1 sign bit, 8 bit exponent,
+  // 23 bit mantissa)
+  private static final int REAL_PRECISION = 24;
+
+  /** @see BuiltIn#REAL_MIN */
+  private static final Applicable REAL_MIN =
+      new Applicable2<Float, Float, Float>(BuiltIn.REAL_MIN) {
+        @Override public Float apply(Float f0, Float f1) {
+          return Float.isNaN(f0) ? f1
+              : Float.isNaN(f1) ? f0
+              : Math.min(f0, f1);
+        }
+      };
+
+  /** @see BuiltIn#REAL_MAX */
+  private static final Applicable REAL_MAX =
+      new Applicable2<Float, Float, Float>(BuiltIn.REAL_MAX) {
+        @Override public Float apply(Float f0, Float f1) {
+          return Float.isNaN(f0) ? f1
+              : Float.isNaN(f1) ? f0
+              : Math.max(f0, f1);
+        }
+      };
+
+  /** @see BuiltIn#REAL_MAX_FINITE */
+  private static final float REAL_MAX_FINITE = Float.MAX_VALUE;
+
+  /** @see BuiltIn#REAL_MIN_POS */
+  private static final float REAL_MIN_POS = Float.MIN_VALUE;
+
+  /** @see BuiltIn#REAL_MIN_NORMAL_POS */
+  private static final float REAL_MIN_NORMAL_POS = Float.MIN_NORMAL;
+
+  /** @see BuiltIn#REAL_REAL_MOD */
+  private static final Applicable REAL_REAL_MOD =
+      new ApplicableImpl(BuiltIn.REAL_REAL_MOD) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final float f = (Float) arg;
+          if (Float.isInfinite(f)) {
+            // realMod posInf  => 0.0
+            // realMod negInf  => ~0.0
+            return f > 0f ? 0f : -0f;
+          }
+          return f % 1;
+        }
+      };
+
+  /** @see BuiltIn#REAL_REAL_CEIL */
+  private static final Applicable REAL_REAL_CEIL =
+      new ApplicableImpl(BuiltIn.REAL_REAL_CEIL) {
+        @Override public Float apply(EvalEnv env, Object arg) {
+          return (float) Math.ceil((float) arg);
+        }
+      };
+
+  /** @see BuiltIn#REAL_REAL_FLOOR */
+  private static final Applicable REAL_REAL_FLOOR =
+      new ApplicableImpl(BuiltIn.REAL_REAL_FLOOR) {
+        @Override public Float apply(EvalEnv env, Object arg) {
+          return (float) Math.floor((float) arg);
+        }
+      };
+
+  /** @see BuiltIn#REAL_REAL_ROUND */
+  private static final Applicable REAL_REAL_ROUND =
+      new ApplicableImpl(BuiltIn.REAL_REAL_ROUND) {
+        @Override public Float apply(EvalEnv env, Object arg) {
+          return (float) Math.rint((float) arg);
+        }
+      };
+
+  /** @see BuiltIn#REAL_REAL_TRUNC */
+  private static final Applicable REAL_REAL_TRUNC =
+      new ApplicableImpl(BuiltIn.REAL_REAL_TRUNC) {
+        @Override public Float apply(EvalEnv env, Object arg) {
+          final float f = (float) arg;
+          final float frac = f % 1;
+          return f - frac;
+        }
+      };
+
+  /** @see BuiltIn#REAL_REM */
+  private static final Applicable REAL_REM =
+      new Applicable2<Float, Float, Float>(BuiltIn.REAL_REM) {
+        @Override public Float apply(Float x, Float y) {
+          return x % y;
+        }
+      };
+
+  /** @see BuiltIn#REAL_ROUND */
+  private static final Applicable REAL_ROUND =
+      new ApplicableImpl(BuiltIn.REAL_ROUND) {
+        @Override public Integer apply(EvalEnv env, Object arg) {
+          return Math.round((float) arg);
+        }
+      };
+
+  /** @see BuiltIn#REAL_SAME_SIGN */
+  private static final Applicable REAL_SAME_SIGN =
+      new Applicable2<Boolean, Float, Float>(BuiltIn.REAL_SAME_SIGN) {
+        @Override public Boolean apply(Float x, Float y) {
+          return (Float.floatToRawIntBits(x) & 0x8000_0000)
+              == (Float.floatToRawIntBits(y) & 0x8000_0000);
+        }
+      };
+
+  /** @see BuiltIn#REAL_SIGN */
+  private static final Applicable REAL_SIGN =
+      new ApplicableImpl(BuiltIn.REAL_SIGN) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final float f = (Float) arg;
+          if (Float.isNaN(f)) {
+            throw new MorelRuntimeException(BuiltInExn.DOMAIN);
+          }
+          return f == 0f ? 0 // positive or negative zero
+              : (f > 0f) ? 1 // positive number or positive infinity
+                  : -1; // negative number or negative infinity
+        }
+      };
+
+  /** @see BuiltIn#REAL_SIGN_BIT */
+  private static final Applicable REAL_SIGN_BIT =
+      new ApplicableImpl(BuiltIn.REAL_SIGN_BIT) {
+        @Override public Boolean apply(EvalEnv env, Object arg) {
+          return (Float.floatToRawIntBits((float) arg) & 0x8000_0000) != 0;
+        }
+      };
+
+  /** @see BuiltIn#REAL_SPLIT */
+  private static final Applicable REAL_SPLIT =
+      new ApplicableImpl(BuiltIn.REAL_SPLIT) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final float f = (Float) arg;
+          final float frac;
+          final float whole;
+          if (Float.isInfinite(f)) {
+            // realMod posInf  => 0.0
+            // realMod negInf  => ~0.0
+            frac = f > 0f ? 0f : -0f;
+            whole = f;
+          } else {
+            frac = f % 1;
+            whole = f - frac;
+          }
+          return ImmutableList.of(frac, whole);
+        }
+      };
+
+  /** @see BuiltIn#REAL_TO_MAN_EXP */
+  private static final Applicable REAL_TO_MAN_EXP =
+      new ApplicableImpl(BuiltIn.REAL_TO_MAN_EXP) {
+        @Override public List apply(EvalEnv env, Object arg) {
+          // In IEEE 32 bit floating point,
+          // bit 31 is the sign (1 bit);
+          // bits 30 - 23 are the exponent (8 bits);
+          // bits 22 - 0 are the mantissa (23 bits).
+          float f = (Float) arg;
+          final int bits = Float.floatToRawIntBits(f);
+          final int exp = (bits >> 23) & 0xFF;
+          final float mantissa;
+          if (exp == 0) {
+            // Exponent = 0 indicates that f is a very small number (0 < abs(f)
+            // <= MIN_NORMAL). The mantissa has leading zeros, so we have to use
+            // a different algorithm to get shift it into range.
+            mantissa = f / Float.MIN_NORMAL;
+          } else if (Float.isFinite(f)) {
+            // Set the exponent to 126 (which is the exponent for 1.0). First
+            // remove all set bits, then OR in the value 126.
+            final int bits2 = (bits & ~(0xFF << 23)) | (0x7E << 23);
+            mantissa = Float.intBitsToFloat(bits2);
+          } else {
+            mantissa = f;
+          }
+          return ImmutableList.of(exp + Float.MIN_EXPONENT, mantissa);
+        }
+      };
+
+  /** @see BuiltIn#REAL_TO_STRING */
+  private static final Applicable REAL_TO_STRING =
+      new ApplicableImpl(BuiltIn.REAL_TO_STRING) {
+        @Override public String apply(EvalEnv env, Object arg) {
+          // Java's formatting is reasonably close to ML's formatting,
+          // if we replace minus signs.
+          Float f = (Float) arg;
+          return floatToString(f);
+        }
+      };
+
+  /** @see BuiltIn#REAL_TRUNC */
+  private static final Applicable REAL_TRUNC =
+      new ApplicableImpl(BuiltIn.REAL_TRUNC) {
+        @Override public Integer apply(EvalEnv env, Object arg) {
+          float f = (float) arg;
+          return (int) f;
+        }
+      };
+
+  /** @see BuiltIn#REAL_UNORDERED */
+  private static final Applicable REAL_UNORDERED =
+      new Applicable2<Boolean, Float, Float>(BuiltIn.REAL_UNORDERED) {
+        @Override public Boolean apply(Float f0, Float f1) {
+          return Float.isNaN(f0) ||  Float.isNaN(f1);
+        }
+      };
 
   /** @see BuiltIn#RELATIONAL_COUNT */
   private static final Applicable RELATIONAL_COUNT =
@@ -2189,8 +2575,42 @@ public abstract class Codes {
           .put(BuiltIn.OPTION_MAP, OPTION_MAP)
           .put(BuiltIn.OPTION_MAP_PARTIAL, OPTION_MAP_PARTIAL)
           .put(BuiltIn.OPTION_VAL_OF, OPTION_VAL_OF)
+          .put(BuiltIn.REAL_ABS, REAL_ABS)
+          .put(BuiltIn.REAL_CEIL, REAL_CEIL)
+          .put(BuiltIn.REAL_CHECK_FLOAT, REAL_CHECK_FLOAT)
+          .put(BuiltIn.REAL_COMPARE, REAL_COMPARE)
+          .put(BuiltIn.REAL_COPY_SIGN, REAL_COPY_SIGN)
+          .put(BuiltIn.REAL_FLOOR, REAL_FLOOR)
+          .put(BuiltIn.REAL_FROM_INT, REAL_FROM_INT)
+          .put(BuiltIn.REAL_FROM_MAN_EXP, REAL_FROM_MAN_EXP)
+          .put(BuiltIn.REAL_FROM_STRING, REAL_FROM_STRING)
+          .put(BuiltIn.REAL_IS_FINITE, REAL_IS_FINITE)
+          .put(BuiltIn.REAL_IS_NAN, REAL_IS_NAN)
+          .put(BuiltIn.REAL_IS_NORMAL, REAL_IS_NORMAL)
+          .put(BuiltIn.REAL_MAX, REAL_MAX)
+          .put(BuiltIn.REAL_MAX_FINITE, REAL_MAX_FINITE)
+          .put(BuiltIn.REAL_MIN, REAL_MIN)
+          .put(BuiltIn.REAL_MIN_POS, REAL_MIN_POS)
+          .put(BuiltIn.REAL_MIN_NORMAL_POS, REAL_MIN_NORMAL_POS)
           .put(BuiltIn.REAL_NEG_INF, REAL_NEG_INF)
           .put(BuiltIn.REAL_POS_INF, REAL_POS_INF)
+          .put(BuiltIn.REAL_PRECISION, REAL_PRECISION)
+          .put(BuiltIn.REAL_RADIX, REAL_RADIX)
+          .put(BuiltIn.REAL_REAL_MOD, REAL_REAL_MOD)
+          .put(BuiltIn.REAL_REAL_CEIL, REAL_REAL_CEIL)
+          .put(BuiltIn.REAL_REAL_FLOOR, REAL_REAL_FLOOR)
+          .put(BuiltIn.REAL_REAL_ROUND, REAL_REAL_ROUND)
+          .put(BuiltIn.REAL_REAL_TRUNC, REAL_REAL_TRUNC)
+          .put(BuiltIn.REAL_REM, REAL_REM)
+          .put(BuiltIn.REAL_ROUND, REAL_ROUND)
+          .put(BuiltIn.REAL_SAME_SIGN, REAL_SAME_SIGN)
+          .put(BuiltIn.REAL_SIGN, REAL_SIGN)
+          .put(BuiltIn.REAL_SIGN_BIT, REAL_SIGN_BIT)
+          .put(BuiltIn.REAL_SPLIT, REAL_SPLIT)
+          .put(BuiltIn.REAL_TO_MAN_EXP, REAL_TO_MAN_EXP)
+          .put(BuiltIn.REAL_TO_STRING, REAL_TO_STRING)
+          .put(BuiltIn.REAL_TRUNC, REAL_TRUNC)
+          .put(BuiltIn.REAL_UNORDERED, REAL_UNORDERED)
           .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
           .put(BuiltIn.RELATIONAL_EXISTS, RELATIONAL_EXISTS)
           .put(BuiltIn.RELATIONAL_NOT_EXISTS, RELATIONAL_NOT_EXISTS)
@@ -2252,6 +2672,26 @@ public abstract class Codes {
       }
     });
     return ImmutableMap.copyOf(b);
+  }
+
+  public static StringBuilder appendFloat(StringBuilder buf, float f) {
+    return buf.append(floatToString(f));
+  }
+
+  /** Converts a Java {@code float} to the format expected of Standard ML
+   * {@code real} values. */
+  static String floatToString(float f) {
+    if (Float.isFinite(f)) {
+      return Float.toString(f).replace('-', '~');
+    } else if (f == Float.POSITIVE_INFINITY) {
+      return "inf";
+    } else if (f == Float.NEGATIVE_INFINITY) {
+      return "~inf";
+    } else if (Float.isNaN(f)) {
+      return "nan";
+    } else {
+      throw new AssertionError("unknown float " + f);
+    }
   }
 
   /** A code that evaluates expressions and creates a tuple with the results.
@@ -2646,10 +3086,14 @@ public abstract class Codes {
   /** Definitions of Morel built-in exceptions. */
   public enum BuiltInExn {
     EMPTY("List", "Empty"),
+    DIV("General", "Div"),
+    DOMAIN("General", "Domain"),
     OPTION("Option", "Option"),
+    OVERFLOW("General", "Overflow"),
     ERROR("Interact", "Error"), // not in standard basis
     SIZE("General", "Size"),
-    SUBSCRIPT("General", "Subscript [subscript out of bounds]");
+    SUBSCRIPT("General", "Subscript [subscript out of bounds]"),
+    UNORDERED("IEEEReal", "Unordered");
 
     public final String structure;
     public final String mlName;
