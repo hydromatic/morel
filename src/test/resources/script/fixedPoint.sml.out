@@ -243,7 +243,7 @@ fixp as100 1.0;
 val it = 10.0 : real
 
 fixp as100 0.0;
-val it = Infinity : real
+val it = inf : real
 
 fixp as100 ~1.0;
 val it = ~10.0 : real

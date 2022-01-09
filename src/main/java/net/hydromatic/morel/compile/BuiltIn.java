@@ -712,6 +712,16 @@ public enum BuiltIn {
                   ts.fnType(h.get(2), h.option(0))),
               h.get(2), h.option(1)))),
 
+  /** Constant "Real.negInf", of type "real".
+   *
+   * <p>The negative infinity value. */
+  REAL_NEG_INF("Real", "negInf", ts -> REAL),
+
+  /** Constant "Real.posInf", of type "real".
+   *
+   * <p>The positive infinity value. */
+  REAL_POS_INF("Real", "posInf", ts -> REAL),
+
   /** Function "Relational.count", aka "count", of type "int list &rarr; int".
    *
    * <p>Often used with {@code group}:

@@ -187,7 +187,7 @@ public class Compiler {
 
     case REAL_LITERAL:
       literal = (Core.Literal) expression;
-      return Codes.constant(((BigDecimal) literal.value).floatValue());
+      return Codes.constant(((Number) literal.value).floatValue());
 
     case STRING_LITERAL:
       literal = (Core.Literal) expression;

@@ -1439,6 +1439,12 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#REAL_NEG_INF */
+  private static final float REAL_NEG_INF = Float.NEGATIVE_INFINITY;
+
+  /** @see BuiltIn#REAL_POS_INF */
+  private static final float REAL_POS_INF = Float.POSITIVE_INFINITY;
+
   /** @see BuiltIn#RELATIONAL_COUNT */
   private static final Applicable RELATIONAL_COUNT =
       length(BuiltIn.RELATIONAL_COUNT);
@@ -2095,6 +2101,8 @@ public abstract class Codes {
           .put(BuiltIn.OPTION_MAP, OPTION_MAP)
           .put(BuiltIn.OPTION_MAP_PARTIAL, OPTION_MAP_PARTIAL)
           .put(BuiltIn.OPTION_VAL_OF, OPTION_VAL_OF)
+          .put(BuiltIn.REAL_NEG_INF, REAL_NEG_INF)
+          .put(BuiltIn.REAL_POS_INF, REAL_POS_INF)
           .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
           .put(BuiltIn.RELATIONAL_EXISTS, RELATIONAL_EXISTS)
           .put(BuiltIn.RELATIONAL_NOT_EXISTS, RELATIONAL_NOT_EXISTS)

@@ -274,7 +274,9 @@ public class Resolver {
     case INT_LITERAL:
       return core.intLiteral((BigDecimal) ((Ast.Literal) exp).value);
     case REAL_LITERAL:
-      return core.realLiteral((BigDecimal) ((Ast.Literal) exp).value);
+      return ((Ast.Literal) exp).value instanceof BigDecimal
+          ? core.realLiteral((BigDecimal) ((Ast.Literal) exp).value)
+          : core.realLiteral((Float) ((Ast.Literal) exp).value);
     case STRING_LITERAL:
       return core.stringLiteral((String) ((Ast.Literal) exp).value);
     case UNIT_LITERAL:

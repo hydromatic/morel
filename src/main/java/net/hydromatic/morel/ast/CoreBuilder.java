@@ -75,6 +75,10 @@ public enum CoreBuilder {
       return intLiteral(value instanceof BigDecimal ? (BigDecimal) value
           : BigDecimal.valueOf(((Number) value).longValue()));
     case REAL:
+      if (value instanceof Float
+          && ((Float) value).isNaN()) {
+        return new Core.Literal(Op.REAL_LITERAL, PrimitiveType.REAL, (Float) value);
+      }
       return realLiteral(value instanceof BigDecimal ? (BigDecimal) value
           : BigDecimal.valueOf(((Number) value).doubleValue()));
     case STRING:
@@ -103,6 +107,11 @@ public enum CoreBuilder {
 
   /** Creates a {@code float} literal. */
   public Core.Literal realLiteral(BigDecimal value) {
+    return new Core.Literal(Op.REAL_LITERAL, PrimitiveType.REAL, value);
+  }
+
+  /** Creates a {@code float} literal with a non-normal value. */
+  public Core.Literal realLiteral(Float value) {
     return new Core.Literal(Op.REAL_LITERAL, PrimitiveType.REAL, value);
   }
 

@@ -102,6 +102,21 @@ public class ShellTest {
     fixture().withInputString(in).assertOutput(is(expected));
   }
 
+  /** Tests {@link Shell} printing some tricky real values. */
+  @Test void testReal() {
+    final String in = "val nan = Real.posInf / Real.negInf;\n"
+        + "(nan, Real.posInf, Real.negInf, 0.0, ~0.0);\n";
+    final String expected = "val nan = Real.posInf / Real.negInf;\r\n"
+        + "(nan, Real.posInf, Real.negInf, 0.0, ~0.0);\r\n"
+        + "- val nan = Real.posInf / Real.negInf;\r\r\n"
+        + "\u001B[?2004lval nan = nan : real\r\n"
+        + "- (nan, Real.posInf, Real.negInf, 0.0, ~0.0);\r\r\n"
+        + "\u001B[?2004lval it = (nan,inf,~inf,0.0,~0.0) : real * real * real * real * real\r\n"
+        + "- \r\r\n"
+        + "\u001B[?2004l";
+    fixture().withInputString(in).assertOutput(is(expected));
+  }
+
   /** Tests {@link Shell} with a line that is a comment, another that is empty,
    *  and another that has only a semicolon; all are treated as empty. */
   @Test void testEmptyLines() {

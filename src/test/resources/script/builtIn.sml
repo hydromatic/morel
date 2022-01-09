@@ -36,6 +36,8 @@ Sys.plan ();
 fn x => x + 1;
 Sys.plan ();
 
+val nan = Real.posInf / Real.negInf;
+
 (* Datatypes --------------------------------------------------- *)
 
 (*) datatype option
@@ -486,6 +488,14 @@ Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
                        fn s => if s = "" then NONE else SOME (String.size s))
                       "";
 Sys.plan ();
+
+(* Real -------------------------------------------------------- *)
+
+(*) val posInf : real
+Real.posInf;
+
+(*) val negInf : real
+Real.negInf;
 
 (* Relational -------------------------------------------------- *)
 

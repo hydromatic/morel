@@ -86,6 +86,12 @@ public enum AstBuilder {
     return new Ast.Literal(pos, Op.REAL_LITERAL, value);
   }
 
+  /** Creates a {@code float} literal for a special IEEE floating point value:
+   * NaN, negative zero, positive and negative infinity. */
+  public Ast.Literal realLiteral(Pos pos, Float value) {
+    return new Ast.Literal(pos, Op.REAL_LITERAL, value);
+  }
+
   /** Creates a string literal. */
   public Ast.Literal stringLiteral(Pos pos, String value) {
     return new Ast.Literal(pos, Op.STRING_LITERAL, value);

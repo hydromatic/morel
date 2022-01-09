@@ -120,6 +120,11 @@ Literal numericLiteral() :
   <REAL_LITERAL> {
     if (token.image.startsWith("~")) {
       d = new BigDecimal(token.image.substring(1)).negate();
+      if (d.compareTo(BigDecimal.ZERO) == 0) {
+        // In IEEE floating point, and ML's 'real' type, negative zero is
+        // different from positive zero.
+        return ast.realLiteral(pos(), -0.f);
+      }
     } else {
       d = new BigDecimal(token.image);
     }
@@ -131,6 +136,11 @@ Literal numericLiteral() :
       token.image.indexOf("E"));
     if (token.image.startsWith("~")) {
       d = new BigDecimal(token.image.substring(1, e)).negate();
+      if (d.compareTo(BigDecimal.ZERO) == 0) {
+        // In IEEE floating point, and ML's 'real' type, negative zero is
+        // different from positive zero.
+        return ast.realLiteral(pos(), -0.f);
+      }
     } else {
       d = new BigDecimal(token.image.substring(0, e));
     }

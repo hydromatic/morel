@@ -82,6 +82,10 @@ val it = "match(x, apply(fnValue +, argCode tuple(get(name x), constant(1))))"
   : string
 
 
+val nan = Real.posInf / Real.negInf;
+val nan = nan : real
+
+
 (* Datatypes --------------------------------------------------- *)
 
 (*) datatype option
@@ -1182,6 +1186,18 @@ val it =
   : string
 
 
+(* Real -------------------------------------------------------- *)
+
+(*) val posInf : real
+Real.posInf;
+val it = inf : real
+
+
+(*) val negInf : real
+Real.negInf;
+val it = ~inf : real
+
+
 (* Relational -------------------------------------------------- *)
 
 Relational.count [1, 2, 3];
@@ -1465,13 +1481,12 @@ val it =
    ("NONE","'a option"),
    ("Option",
    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
+   ("Real","{negInf:real, posInf:real}"),
    ("Relational",
    "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
    ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
-   ("Sys",
-   "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
    ...] : (string * string) list
 
 
@@ -1489,13 +1504,12 @@ val it =
    ("NONE","'a option"),
    ("Option",
    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
+   ("Real","{negInf:real, posInf:real}"),
    ("Relational",
    "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
    ("SOME","forall 'a. 'a -> 'a option"),
    ("String",
    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
-   ("Sys",
-   "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
    ...] : (string * string) list
 
 

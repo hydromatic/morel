@@ -39,6 +39,8 @@ class Pretty {
   private static final int LIST_LENGTH = 12;
   private static final int DEPTH_LIMIT = 5;
 
+  private static final long NEGATIVE_ZERO_FLOAT_BITS = Float.floatToRawIntBits(-0.0f);
+
   private Pretty() {}
 
   /** Prints a value to a buffer. */
@@ -117,6 +119,10 @@ class Pretty {
     return buf.length() - 1 - i;
   }
 
+  private static boolean isNegativeZero(float f) {
+    return Float.floatToRawIntBits(f) == NEGATIVE_ZERO_FLOAT_BITS;
+  }
+
   private static StringBuilder pretty2(@Nonnull StringBuilder buf,
       int indent, int[] lineEnd, int depth,
       @Nonnull Type type, @Nonnull Object value) {
@@ -165,12 +171,26 @@ class Pretty {
         }
         return buf.append(i);
       case REAL:
-        Float f = (Float) value;
-        if (f < 0) {
-          buf.append('~');
-          f = -f;
+        float f = (Float) value;
+        if (Float.isFinite(f)) {
+          if (f < 0 || isNegativeZero(f)) {
+            buf.append('~');
+            f = Math.abs(f);
+          }
+          return buf.append(f);
+        } else {
+          String s;
+          if (f == Float.POSITIVE_INFINITY) {
+            s = "inf";
+          } else if (f == Float.NEGATIVE_INFINITY) {
+            s = "~inf";
+          } else if (Float.isNaN(f)) {
+            s = "nan";
+          } else {
+            throw new AssertionError("unknown float " + f);
+          }
+          return buf.append(s);
         }
-        return buf.append(f);
       default:
         return buf.append(value);
       }
