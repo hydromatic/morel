@@ -141,7 +141,8 @@ public class ScriptTest {
             : ImmutableMap.of();
     try (Reader reader = TestUtils.reader(inFile);
          Writer writer = TestUtils.printWriter(outFile)) {
-      new Main(argList, reader, writer, dictionary, directory).run();
+      Main main = new Main(argList, reader, writer, dictionary, directory);
+      main.run();
     }
     final File refFile =
         new File(inFile.getParentFile(), inFile.getName() + ".out");

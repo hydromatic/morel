@@ -16,6 +16,9 @@
  * language governing permissions and limitations under the
  * License.
  *)
+Sys.set ("printDepth", ~1);
+val it = () : unit
+
 
 (*) Basic operations on 'int'
 2 + 3;
@@ -181,7 +184,7 @@ height (Node(Empty, 1, Empty));
 val it = 1 : int
 
 Node(Empty, 2, Node(Node(Empty, 3, Empty), 4, Empty));
-val it = Node (Empty,2,Node (Node #,4,Empty)) : inttree
+val it = Node (Empty,2,Node (Node (Empty,3,Empty),4,Empty)) : inttree
 
 height it;
 val it = 3 : int

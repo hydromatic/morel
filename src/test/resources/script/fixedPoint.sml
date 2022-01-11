@@ -21,6 +21,7 @@
  * State adjacency data is based upon
  * https://writeonly.wordpress.com/2009/03/20/adjacency-list-of-states-of-the-united-states-us/
  *)
+Sys.set ("printLength", 64);
 
 (*) State adjacency
 val adjacent_states =

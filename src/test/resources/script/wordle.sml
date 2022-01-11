@@ -21,6 +21,8 @@
  * choosing the optimal guess given the information from previous
  * guesses.
  *)
+Sys.set ("lineWidth", 78);
+Sys.set ("printLength", 64);
 
 (*) Set this to false in tests, true if you want to do some slow/clever stuff.
 val slow = false;

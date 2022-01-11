@@ -16,6 +16,7 @@
  * language governing permissions and limitations under the
  * License.
  *)
+Sys.set ("lineWidth", 78);
 
 (*) Literals
 1;

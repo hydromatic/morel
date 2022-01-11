@@ -26,6 +26,7 @@ import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.eval.EvalEnv;
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.foreign.CalciteFunctions;
@@ -604,7 +605,12 @@ public class Compiler {
           try {
             final Object o = code.eval(evalEnv);
             outBindings.accept(Binding.of(pat.withType(type), o));
-            Pretty.pretty(buf, type, new Pretty.TypedVal(name, o, type0));
+            int stringDepth = Prop.STRING_DEPTH.intValue(session.map);
+            int lineWidth = Prop.LINE_WIDTH.intValue(session.map);
+            int printDepth = Prop.PRINT_DEPTH.intValue(session.map);
+            int printLength = Prop.PRINT_LENGTH.intValue(session.map);
+            new Pretty(lineWidth, printLength, printDepth, stringDepth)
+                .pretty(buf, type, new Pretty.TypedVal(name, o, type0));
           } catch (Codes.MorelRuntimeException e) {
             session.handle(e, buf);
           }

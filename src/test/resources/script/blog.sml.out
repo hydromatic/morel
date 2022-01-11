@@ -20,6 +20,15 @@
  * web site, documentation, and blog posts. Just, you know, to keep
  * us honest.
  *)
+Sys.set ("printDepth", ~1);
+val it = () : unit
+
+Sys.set ("lineWidth", 78);
+val it = () : unit
+
+Sys.set ("stringDepth", ~1);
+val it = () : unit
+
 
 (*) === README.md ===================================================
 
@@ -948,7 +957,7 @@ fun sumTree EMPTY = 0
 val sumTree = fn : intTree -> int
 
 val t = NODE (1, LEAF 2, NODE (3, EMPTY, LEAF 7));
-val t = NODE (1,LEAF 2,NODE (3,EMPTY,LEAF #)) : intTree
+val t = NODE (1,LEAF 2,NODE (3,EMPTY,LEAF 7)) : intTree
 
 sumTree t;
 val it = 13 : int

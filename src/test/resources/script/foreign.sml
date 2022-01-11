@@ -18,6 +18,8 @@
  *
  * Tests for foreign data sources ("scott" and "foodmart").
  *)
+Sys.set ("printLength", 64);
+Sys.set ("lineWidth", 78);
 
 scott;
 #dept scott;

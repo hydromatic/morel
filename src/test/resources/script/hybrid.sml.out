@@ -18,6 +18,12 @@
  *
  * Tests queries that are to execute mostly in Calcite.
  *)
+Sys.set ("printLength", 64);
+val it = () : unit
+
+Sys.set ("stringDepth", ~1);
+val it = () : unit
+
 
 (*) Query in Hybrid mode (100% Calcite)
 Sys.set ("hybrid", true);
@@ -349,7 +355,9 @@ val it =
    {empno=7654,ename="MARTIN",level=2,mgr=7698},
    {empno=7844,ename="TURNER",level=2,mgr=7698},
    {empno=7900,ename="JAMES",level=2,mgr=7698},
-   {empno=7934,ename="MILLER",level=2,mgr=7782},...]
+   {empno=7934,ename="MILLER",level=2,mgr=7782},
+   {empno=7876,ename="ADAMS",level=3,mgr=7788},
+   {empno=7369,ename="SMITH",level=3,mgr=7902}]
   : {empno:int, ename:string, level:int, mgr:int} list
 
 

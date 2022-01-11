@@ -38,7 +38,44 @@ public enum Prop {
   INLINE_PASS_COUNT("inlinePassCount", Integer.class, 5),
 
   /** Integer property "optionalInt" is for testing. Default is null. */
-  OPTIONAL_INT("optionalInt", Integer.class, null);
+  OPTIONAL_INT("optionalInt", Integer.class, null),
+
+  /** Integer property "printDepth" controls printing.
+   * The depth of nesting of recursive data structure at which ellipsis begins.
+   *
+   * <p>It is based upon the "printDepth" property in the
+   * <a href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL signature</a>
+   * of the Standard Basis Library.
+   * Default is 5. */
+  PRINT_DEPTH("printDepth", Integer.class, 5),
+
+  /** Integer property "printLength" controls printing.
+   * The length of lists at which ellipsis begins.
+   *
+   * <p>It is based upon the "printLength" property in the
+   * <a href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL signature</a>
+   * of the Standard Basis Library.
+   *
+   * Default is 12. */
+  PRINT_LENGTH("printLength", Integer.class, 12),
+
+  /** Integer property "stringDepth" is
+   * the length of strings at which ellipsis begins.
+   *
+   * <p>It is based upon the "stringDepth" property in the
+   * <a href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL signature</a>
+   * of the Standard Basis Library.
+   * Default is 70. */
+  STRING_DEPTH("stringDepth", Integer.class, 70),
+
+  /** Integer property "lineWidth" controls printing.
+   * The length at which lines are wrapped.
+   *
+   * <p>It is based upon the "linewidth" property in the
+   * <a href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL signature</a>
+   * of the Standard Basis Library.
+   * Default is 79. */
+  LINE_WIDTH("lineWidth", Integer.class, 79);
 
   public final String camelName;
   private final Class<?> type;

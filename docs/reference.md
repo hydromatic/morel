@@ -375,7 +375,7 @@ Exception:
 | String.translate | (char &rarr; string) &rarr; string &rarr; string | "translate f s" returns the string generated from `s` by mapping each character in `s` by `f`. It is equivalent to `concat(List.map f (explode s))`. |
 | Sys.env, env | unit &rarr; string list | "env ()" prints the environment. |
 | Sys.plan | unit &rarr; string | "plan ()" print the plan of the most recently executed expression. |
-| Sys.set | string * &alpha; &rarr; unit | "set (property, value)" sets the value of `property` to `value`. |
+| Sys.set | string * &alpha; &rarr; unit | "set (property, value)" sets the value of `property` to `value`. (See [Properties](#properties) below.) |
 | Sys.show | string &rarr; string option | "show property" returns the current the value of `property`, as a string, or `NONE` if unset. |
 | Sys.unset | string &rarr; unit | "unset property" clears the current the value of `property`. |
 | Vector.all |
@@ -398,3 +398,18 @@ Exception:
 | Vector.sub | &alpha; vector * int &rarr; &alpha; | "sub (vec, i)" returns the `i`<sup>th</sup> element of vector `vec`. Raises `Subscript` if `i` &lt; 0 or `size vec` &le; `i`. |
 | Vector.tabulate | int * (int &rarr; &alpha;) &rarr; &alpha; vector | "tabulate (n, f)" returns a vector of length `n` equal to `[f(0), f(1), ..., f(n-1)]`, created from left to right. Raises `Size` if `n` &lt; 0 or `maxLen` &lt; `n`. |
 | Vector.update | &alpha; vector * int * &alpha; &rarr; &alpha; vector | "update (vec, i, x)" returns  a new vector, identical to `vec`, except the `i`<sup>th</sup> element of `vec` is set to `x`. Raises `Subscript` if `i` &lt; 0 or `size vec` &le; `i`. |
+
+## Properties
+
+Each property is set using the function `Sys.set (name, value)`,
+displayed using `Sys.show name`,
+and unset using `Sys.unset name`.
+
+| Name             | Type | Default | Description |
+| ---------------- | ---- | ------- | ----------- |
+| hybrid           | bool | false   | Whether to try to create a hybrid execution plan that uses Apache Calcite relational algebra. |
+| inlinePassCount  | int  | 5       | Maximum number of inlining passes. |
+| lineWidth        | int  | 79      | When printing, the length at which lines are wrapped. |
+| printDepth       | int  | 5       | When printing, the depth of nesting of recursive data structure at which ellipsis begins. |
+| printLength      | int  | 12      | When printing, the length of lists at which ellipsis begins. |
+| stringDepth      | int  | 70      | When printing, the length of strings at which ellipsis begins. |

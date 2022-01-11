@@ -16,6 +16,9 @@
  * language governing permissions and limitations under the
  * License.
  *)
+Sys.set ("lineWidth", 78);
+Sys.set ("printLength", 64);
+Sys.set ("stringDepth", ~1);
 
 (* Structures -------------------------------------------------- *)
 General;

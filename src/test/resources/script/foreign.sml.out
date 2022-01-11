@@ -18,6 +18,12 @@
  *
  * Tests for foreign data sources ("scott" and "foodmart").
  *)
+Sys.set ("printLength", 64);
+val it = () : unit
+
+Sys.set ("lineWidth", 78);
+val it = () : unit
+
 
 scott;
 val it = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
@@ -107,7 +113,9 @@ val emp2 =
    {deptno=10,ename="KING",job="PRESIDENT",salIn=fn},
    {deptno=30,ename="TURNER",job="SALESMAN",salIn=fn},
    {deptno=20,ename="ADAMS",job="CLERK",salIn=fn},
-   {deptno=30,ename="JAMES",job="CLERK",salIn=fn},...]
+   {deptno=30,ename="JAMES",job="CLERK",salIn=fn},
+   {deptno=20,ename="FORD",job="ANALYST",salIn=fn},
+   {deptno=10,ename="MILLER",job="CLERK",salIn=fn}]
   : {deptno:int, ename:string, job:string, salIn:real -> real} list
 
 from e in emp2
@@ -124,7 +132,9 @@ val it =
    {ename="KING",job="PRESIDENT",salIn2020=5250.0,salIn2021=5500.0},
    {ename="TURNER",job="SALESMAN",salIn2020=1575.0,salIn2021=1650.0},
    {ename="ADAMS",job="CLERK",salIn2020=1320.0,salIn2021=1540.0},
-   {ename="JAMES",job="CLERK",salIn2020=1140.0,salIn2021=1330.0},...]
+   {ename="JAMES",job="CLERK",salIn2020=1140.0,salIn2021=1330.0},
+   {ename="FORD",job="ANALYST",salIn2020=3150.0,salIn2021=3300.0},
+   {ename="MILLER",job="CLERK",salIn2020=1560.0,salIn2021=1820.0}]
   : {ename:string, job:string, salIn2020:real, salIn2021:real} list
 
 

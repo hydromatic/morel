@@ -16,6 +16,17 @@
  * language governing permissions and limitations under the
  * License.
  *)
+Sys.set ("lineWidth", 78);
+val it = () : unit
+
+Sys.set ("printDepth", 5);
+val it = () : unit
+
+Sys.set ("printLength", 64);
+val it = () : unit
+
+Sys.set ("stringDepth", ~1);
+val it = () : unit
 
 
 let val emp0 = {id = 100, name = "Fred", deptno = 10} in #id emp0 end;
@@ -321,7 +332,8 @@ from e in emps, e2 in emps yield e.name ^ "-" ^ e2.name;
 val it =
   ["Fred-Fred","Fred-Velma","Fred-Shaggy","Fred-Scooby","Velma-Fred",
    "Velma-Velma","Velma-Shaggy","Velma-Scooby","Shaggy-Fred","Shaggy-Velma",
-   "Shaggy-Shaggy","Shaggy-Scooby",...] : string list
+   "Shaggy-Shaggy","Shaggy-Scooby","Scooby-Fred","Scooby-Velma",
+   "Scooby-Shaggy","Scooby-Scooby"] : string list
 
 
 (*) cartesian product, missing yield
@@ -333,7 +345,12 @@ val it =
    {d={deptno=20,name="HR"},i=1},{d={deptno=20,name="HR"},i=2},
    {d={deptno=20,name="HR"},i=3},{d={deptno=20,name="HR"},i=4},
    {d={deptno=30,name="Engineering"},i=0},
-   {d={deptno=30,name="Engineering"},i=1},...]
+   {d={deptno=30,name="Engineering"},i=1},
+   {d={deptno=30,name="Engineering"},i=2},
+   {d={deptno=30,name="Engineering"},i=3},
+   {d={deptno=30,name="Engineering"},i=4},{d={deptno=40,name="Support"},i=0},
+   {d={deptno=40,name="Support"},i=1},{d={deptno=40,name="Support"},i=2},
+   {d={deptno=40,name="Support"},i=3},{d={deptno=40,name="Support"},i=4}]
   : {d:{deptno:int, name:string}, i:int} list
 
 
@@ -415,26 +432,31 @@ val it =
    {d={deptno=10,name="Sales"},e={deptno=30,id=102,name="Shaggy"}},
    {d={deptno=20,name="HR"},e={deptno=30,id=102,name="Shaggy"}},
    {d={deptno=30,name="Engineering"},e={deptno=30,id=102,name="Shaggy"}},
-   {d={deptno=40,name="Support"},e={deptno=30,id=102,name="Shaggy"}},...]
+   {d={deptno=40,name="Support"},e={deptno=30,id=102,name="Shaggy"}},
+   {d={deptno=10,name="Sales"},e={deptno=30,id=103,name="Scooby"}},
+   {d={deptno=20,name="HR"},e={deptno=30,id=103,name="Scooby"}},
+   {d={deptno=30,name="Engineering"},e={deptno=30,id=103,name="Scooby"}},
+   {d={deptno=40,name="Support"},e={deptno=30,id=103,name="Scooby"}}]
   : {d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}} list
 
 
 (*) join where neither variable is referenced
 from e in emps, d in depts
   yield 0;
-val it = [0,0,0,0,0,0,0,0,0,0,0,0,...] : int list
+val it = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] : int list
 
 
 (*) join where right variable is not referenced
 from e in emps, d in depts
   yield e.id;
-val it = [100,100,100,100,101,101,101,101,102,102,102,102,...] : int list
+val it = [100,100,100,100,101,101,101,101,102,102,102,102,103,103,103,103]
+  : int list
 
 
 (*) join where left variable is not referenced
 from e in emps, d in depts
   yield d.deptno;
-val it = [10,20,30,40,10,20,30,40,10,20,30,40,...] : int list
+val it = [10,20,30,40,10,20,30,40,10,20,30,40,10,20,30,40] : int list
 
 
 (*) join group where neither variable is referenced

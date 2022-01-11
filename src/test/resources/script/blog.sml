@@ -20,6 +20,9 @@
  * web site, documentation, and blog posts. Just, you know, to keep
  * us honest.
  *)
+Sys.set ("printDepth", ~1);
+Sys.set ("lineWidth", 78);
+Sys.set ("stringDepth", ~1);
 
 (*) === README.md ===================================================
 

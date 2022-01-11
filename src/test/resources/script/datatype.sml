@@ -16,6 +16,7 @@
  * language governing permissions and limitations under the
  * License.
  *)
+Sys.set ("printDepth", ~1);
 
 (*) Basic operations on 'int'
 2 + 3;

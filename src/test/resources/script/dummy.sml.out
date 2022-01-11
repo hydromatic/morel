@@ -17,8 +17,7 @@
  * License.
  *)
 "this is a simple script; modify it for debugging test cases";
-val it = "this is a simple script; modify it for debugging test cases"
-  : string
+val it = "this is a simple script; modify it for debugging test cases" : string
 
 
 (*) End dummy.sml

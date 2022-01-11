@@ -18,6 +18,8 @@
  *
  * Tests queries that are to execute mostly in Calcite.
  *)
+Sys.set ("printLength", 64);
+Sys.set ("stringDepth", ~1);
 
 (*) Query in Hybrid mode (100% Calcite)
 Sys.set ("hybrid", true);

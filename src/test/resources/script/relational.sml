@@ -16,7 +16,10 @@
  * language governing permissions and limitations under the
  * License.
  *)
-
+Sys.set ("lineWidth", 78);
+Sys.set ("printDepth", 5);
+Sys.set ("printLength", 64);
+Sys.set ("stringDepth", ~1);
 
 let val emp0 = {id = 100, name = "Fred", deptno = 10} in #id emp0 end;
 

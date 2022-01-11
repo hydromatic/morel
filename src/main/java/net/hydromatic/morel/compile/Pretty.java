@@ -35,30 +35,40 @@ import javax.annotation.Nonnull;
 /** Prints values. */
 class Pretty {
 
-  private static final int LINE_LENGTH = 78;
-  private static final int LIST_LENGTH = 12;
-  private static final int DEPTH_LIMIT = 5;
+  private final int lineWidth;
+  private final int printLength;
+  private final int printDepth;
+  private final int stringDepth;
 
-  private static final int NEGATIVE_ZERO_FLOAT_BITS = Float.floatToRawIntBits(-0.0f);
+  private static final int NEGATIVE_ZERO_FLOAT_BITS =
+      Float.floatToRawIntBits(-0.0f);
 
-  private Pretty() {}
+  static final Pretty DEFAULT = new Pretty(78, 12, 5, 79);
+
+  Pretty(int lineWidth, int printLength, int printDepth,
+      int stringDepth) {
+    this.lineWidth = lineWidth;
+    this.printLength = printLength;
+    this.printDepth = printDepth;
+    this.stringDepth = stringDepth;
+  }
 
   /** Prints a value to a buffer. */
-  static StringBuilder pretty(@Nonnull StringBuilder buf,
+  StringBuilder pretty(@Nonnull StringBuilder buf,
       @Nonnull Type type, @Nonnull Object value) {
-    return pretty1(buf, 0, new int[] {buf.length() + LINE_LENGTH}, 0, type,
-        value);
+    int lineEnd = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
+    return pretty1(buf, 0, new int[] {lineEnd}, 0, type, value);
   }
 
   /** Prints a value to a buffer. If the first attempt goes beyond
    * {@code lineEnd}, back-tracks, adds a newline and indent, and
    * tries again one time. */
-  private static StringBuilder pretty1(@Nonnull StringBuilder buf, int indent,
+  private StringBuilder pretty1(@Nonnull StringBuilder buf, int indent,
       int[] lineEnd, int depth, @Nonnull Type type, @Nonnull Object value) {
     final int start = buf.length();
     final int end = lineEnd[0];
     pretty2(buf, indent, lineEnd, depth, type, value);
-    if (buf.length() > end) {
+    if (end >= 0 && buf.length() > end) {
       // Reset to start, remove trailing whitespace, add newline
       buf.setLength(start);
       while (buf.length() > 0
@@ -70,39 +80,11 @@ class Pretty {
         buf.append("\n");
       }
 
-      lineEnd[0] = buf.length() + LINE_LENGTH;
+      lineEnd[0] = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
       indent(buf, indent);
       pretty2(buf, indent, lineEnd, depth, type, value);
     }
     return buf;
-  }
-
-  private static boolean endsWithSpaces(StringBuilder buf, int n) {
-    if (buf.length() < n) {
-      return false;
-    }
-    for (int i = 0; i < n; i++) {
-      if (buf.charAt(buf.length() - 1 - i) != ' ') {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private static boolean hasIndent(StringBuilder buf, int n) {
-    int i = buf.length() - 1 - n;
-    if (i < 0) {
-      return false;
-    }
-    if (buf.charAt(i) != '\n') {
-      return false;
-    }
-    for (; i < buf.length(); i++) {
-      if (buf.charAt(i) != ' ') {
-        return false;
-      }
-    }
-    return true;
   }
 
   private static void indent(@Nonnull StringBuilder buf, int indent) {
@@ -111,28 +93,20 @@ class Pretty {
     }
   }
 
-  private static int currentIndent(StringBuilder buf) {
-    int i = buf.length() - 1;
-    while (i > 0 && buf.charAt(i) != '\n') {
-      --i;
-    }
-    return buf.length() - 1 - i;
-  }
-
   private static boolean isNegativeZero(float f) {
     return Float.floatToRawIntBits(f) == NEGATIVE_ZERO_FLOAT_BITS;
   }
 
-  private static StringBuilder pretty2(@Nonnull StringBuilder buf,
+  private StringBuilder pretty2(@Nonnull StringBuilder buf,
       int indent, int[] lineEnd, int depth,
       @Nonnull Type type, @Nonnull Object value) {
     if (value instanceof TypedVal) {
       final TypedVal typedVal = (TypedVal) value;
-      pretty1(buf, indent, lineEnd, depth + 1, PrimitiveType.BOOL,
+      pretty1(buf, indent, lineEnd, depth, PrimitiveType.BOOL,
           "val " + typedVal.name + " = ");
       pretty1(buf, indent + 2, lineEnd, depth + 1, type, typedVal.o);
       buf.append(' ');
-      pretty1(buf, indent + 2, lineEnd, depth + 1, PrimitiveType.BOOL,
+      pretty1(buf, indent + 2, lineEnd, depth, PrimitiveType.BOOL,
           ": " + unqualified(typedVal.type).moniker());
       return buf;
     }
@@ -143,7 +117,7 @@ class Pretty {
       pretty1(buf, indent, lineEnd, depth, type, namedVal.o);
       return buf;
     }
-    if (depth > DEPTH_LIMIT) {
+    if (printDepth >= 0 && depth > printDepth) {
       buf.append('#');
       return buf;
     }
@@ -163,6 +137,9 @@ class Pretty {
             .append('"');
       case STRING:
         s = (String) value;
+        if (stringDepth >= 0 && s.length() > stringDepth) {
+          s = s.substring(0, stringDepth) + "#";
+        }
         return buf.append('"')
             .append(s.replace("\\", "\\\\").replace("\"", "\\\""))
             .append('"');
@@ -276,7 +253,7 @@ class Pretty {
         : type;
   }
 
-  private static StringBuilder printList(@Nonnull StringBuilder buf,
+  private StringBuilder printList(@Nonnull StringBuilder buf,
       int indent, int[] lineEnd, int depth, @Nonnull Type elementType,
       @Nonnull List<Object> list) {
     buf.append("[");
@@ -285,7 +262,7 @@ class Pretty {
       if (buf.length() > start) {
         buf.append(",");
       }
-      if (o.i >= LIST_LENGTH) {
+      if (printLength >= 0 && o.i >= printLength) {
         pretty1(buf, indent + 1, lineEnd, depth + 1, PrimitiveType.BOOL,
             "...");
         break;

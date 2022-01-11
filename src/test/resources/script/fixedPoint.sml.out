@@ -21,6 +21,9 @@
  * State adjacency data is based upon
  * https://writeonly.wordpress.com/2009/03/20/adjacency-list-of-states-of-the-united-states-us/
  *)
+Sys.set ("printLength", 64);
+val it = () : unit
+
 
 (*) State adjacency
 val adjacent_states =
@@ -84,7 +87,43 @@ val adjacent_states =
    {adjacents=["NY","MA","RI"],state="CT"},{adjacents=["MD","VA"],state="DC"},
    {adjacents=["MD","PA","NJ"],state="DE"},{adjacents=["AL","GA"],state="FL"},
    {adjacents=["FL","AL","TN","NC","SC"],state="GA"},{adjacents=[],state="HI"},
-   ...] : {adjacents:string list, state:string} list
+   {adjacents=["MN","WI","IL","MO","NE","SD"],state="IA"},
+   {adjacents=["MT","WY","UT","NV","OR","WA"],state="ID"},
+   {adjacents=["IN","KY","MO","IA","WI"],state="IL"},
+   {adjacents=["MI","OH","KY","IL"],state="IN"},
+   {adjacents=["NE","MO","OK","CO"],state="KS"},
+   {adjacents=["IN","OH","WV","VA","TN","MO","IL"],state="KY"},
+   {adjacents=["TX","AR","MS"],state="LA"},
+   {adjacents=["RI","CT","NY","NH","VT"],state="MA"},
+   {adjacents=["VA","WV","PA","DC","DE"],state="MD"},
+   {adjacents=["NH"],state="ME"},{adjacents=["WI","IN","OH"],state="MI"},
+   {adjacents=["WI","IA","SD","ND"],state="MN"},
+   {adjacents=["IA","IL","KY","TN","AR","OK","KS","NE"],state="MO"},
+   {adjacents=["LA","AR","TN","AL"],state="MS"},
+   {adjacents=["ND","SD","WY","ID"],state="MT"},
+   {adjacents=["VA","TN","GA","SC"],state="NC"},
+   {adjacents=["MN","SD","MT"],state="ND"},
+   {adjacents=["SD","IA","MO","KS","CO","WY"],state="NE"},
+   {adjacents=["VT","ME","MA"],state="NH"},
+   {adjacents=["DE","PA","NY"],state="NJ"},
+   {adjacents=["AZ","UT","CO","OK","TX"],state="NM"},
+   {adjacents=["ID","UT","AZ","CA","OR"],state="NV"},
+   {adjacents=["NJ","PA","VT","MA","CT"],state="NY"},
+   {adjacents=["PA","WV","KY","IN","MI"],state="OH"},
+   {adjacents=["KS","MO","AR","TX","NM","CO"],state="OK"},
+   {adjacents=["CA","NV","ID","WA"],state="OR"},
+   {adjacents=["NY","NJ","DE","MD","WV","OH"],state="PA"},
+   {adjacents=["CT","MA"],state="RI"},{adjacents=["GA","NC"],state="SC"},
+   {adjacents=["ND","MN","IA","NE","WY","MT"],state="SD"},
+   {adjacents=["KY","VA","NC","GA","AL","MS","AR","MO"],state="TN"},
+   {adjacents=["NM","OK","AR","LA"],state="TX"},
+   {adjacents=["ID","WY","CO","NM","AZ","NV"],state="UT"},
+   {adjacents=["NC","TN","KY","WV","MD","DC"],state="VA"},
+   {adjacents=["NY","NH","MA"],state="VT"},{adjacents=["ID","OR"],state="WA"},
+   {adjacents=["MI","MN","IA","IL"],state="WI"},
+   {adjacents=["OH","PA","MD","VA","KY"],state="WV"},
+   {adjacents=["MT","SD","NE","CO","UT","ID"],state="WY"}]
+  : {adjacents:string list, state:string} list
 
 
 (*) Coastal states
@@ -92,8 +131,8 @@ val coastal_states = ["WA", "OR", "CA", "TX", "LA", "MS",
   "AL", "GA", "FL", "SC", "NC", "VA", "MD", "DE", "NJ",
   "NY", "CT", "RI", "MA", "ME", "NH", "AK", "HI"];
 val coastal_states =
-  ["WA","OR","CA","TX","LA","MS","AL","GA","FL","SC","NC","VA",...]
-  : string list
+  ["WA","OR","CA","TX","LA","MS","AL","GA","FL","SC","NC","VA","MD","DE","NJ",
+   "NY","CT","RI","MA","ME","NH","AK","HI"] : string list
 
 
 (*) Pairs of states that share a border
@@ -107,7 +146,33 @@ val pairs =
    {adjacent="MO",state="AR"},{adjacent="TN",state="AR"},
    {adjacent="MS",state="AR"},{adjacent="LA",state="AR"},
    {adjacent="TX",state="AR"},{adjacent="OK",state="AR"},
-   {adjacent="CA",state="AZ"},{adjacent="NV",state="AZ"},...]
+   {adjacent="CA",state="AZ"},{adjacent="NV",state="AZ"},
+   {adjacent="UT",state="AZ"},{adjacent="CO",state="AZ"},
+   {adjacent="NM",state="AZ"},{adjacent="OR",state="CA"},
+   {adjacent="NV",state="CA"},{adjacent="AZ",state="CA"},
+   {adjacent="WY",state="CO"},{adjacent="NE",state="CO"},
+   {adjacent="KS",state="CO"},{adjacent="OK",state="CO"},
+   {adjacent="NM",state="CO"},{adjacent="AZ",state="CO"},
+   {adjacent="UT",state="CO"},{adjacent="NY",state="CT"},
+   {adjacent="MA",state="CT"},{adjacent="RI",state="CT"},
+   {adjacent="MD",state="DC"},{adjacent="VA",state="DC"},
+   {adjacent="MD",state="DE"},{adjacent="PA",state="DE"},
+   {adjacent="NJ",state="DE"},{adjacent="AL",state="FL"},
+   {adjacent="GA",state="FL"},{adjacent="FL",state="GA"},
+   {adjacent="AL",state="GA"},{adjacent="TN",state="GA"},
+   {adjacent="NC",state="GA"},{adjacent="SC",state="GA"},
+   {adjacent="MN",state="IA"},{adjacent="WI",state="IA"},
+   {adjacent="IL",state="IA"},{adjacent="MO",state="IA"},
+   {adjacent="NE",state="IA"},{adjacent="SD",state="IA"},
+   {adjacent="MT",state="ID"},{adjacent="WY",state="ID"},
+   {adjacent="UT",state="ID"},{adjacent="NV",state="ID"},
+   {adjacent="OR",state="ID"},{adjacent="WA",state="ID"},
+   {adjacent="IN",state="IL"},{adjacent="KY",state="IL"},
+   {adjacent="MO",state="IL"},{adjacent="IA",state="IL"},
+   {adjacent="WI",state="IL"},{adjacent="MI",state="IN"},
+   {adjacent="OH",state="IN"},{adjacent="KY",state="IN"},
+   {adjacent="IL",state="IN"},{adjacent="NE",state="KS"},
+   {adjacent="MO",state="KS"},{adjacent="OK",state="KS"},...]
   : {adjacent:string, state:string} list
 
 
@@ -391,7 +456,9 @@ val it =
    {source="b",target="a",weight=4},{source="b",target="b",weight=0},
    {source="b",target="c",weight=2},{source="b",target="d",weight=4},
    {source="c",target="a",weight=5},{source="c",target="b",weight=1},
-   {source="c",target="c",weight=0},{source="c",target="d",weight=2},...]
+   {source="c",target="c",weight=0},{source="c",target="d",weight=2},
+   {source="d",target="a",weight=3},{source="d",target="b",weight=~1},
+   {source="d",target="c",weight=1},{source="d",target="d",weight=0}]
   : {source:string, target:string, weight:int} list
 
 
