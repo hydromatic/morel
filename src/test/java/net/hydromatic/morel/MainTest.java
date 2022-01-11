@@ -100,7 +100,11 @@ public class MainTest {
     ml("\"a string\"")
         .assertParseLiteral(isLiteral("a string", "\"a string\""));
     ml("\"\"").assertParseLiteral(isLiteral("", "\"\""));
+    ml("\"a\\\\b\\\"c\"")
+        .assertParseLiteral(isLiteral("a\\b\"c", "\"a\\\\b\\\"c\""));
     ml("#\"a\"").assertParseLiteral(isLiteral('a', "#\"a\""));
+    ml("#\"\\\"\"").assertParseLiteral(isLiteral('"', "#\"\\\"\""));
+    ml("#\"\\\\\"").assertParseLiteral(isLiteral('\\', "#\"\\\\\""));
 
     // true and false are variables, not actually literals
     ml("true").assertParseStmt(Ast.Id.class, "true");

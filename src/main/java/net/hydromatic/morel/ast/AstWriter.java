@@ -218,12 +218,16 @@ public class AstWriter {
   public AstWriter appendLiteral(Comparable value) {
     if (value instanceof String) {
       append("\"")
-          .append(((String) value).replaceAll("\"", "\\\""))
+          .append(((String) value)
+              .replace("\\", "\\\\")
+              .replace("\"", "\\\""))
           .append("\"");
     } else if (value instanceof Character) {
       final Character c = (Character) value;
       append("#\"")
-          .append(c == '"' ? "\\\"" : c.toString())
+          .append(c == '"' ? "\\\""
+              : c == '\\' ? "\\\\"
+                  : c.toString())
           .append("\"");
     } else if (value instanceof BigDecimal) {
       BigDecimal c = (BigDecimal) value;

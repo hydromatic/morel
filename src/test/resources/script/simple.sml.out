@@ -36,6 +36,21 @@ val it = 2147483647 : int
 "a string";
 val it = "a string" : string
 
+"a \"quoted\" string\\with backslash";
+val it = "a \"quoted\" string\\with backslash" : string
+
+"";
+val it = "" : string
+
+#"a";
+val it = #"a" : char
+
+#"\"";
+val it = #"\"" : char
+
+#"\\";
+val it = #"\\" : char
+
 true;
 val it = true : bool
 

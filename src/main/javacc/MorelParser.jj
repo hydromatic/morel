@@ -162,8 +162,9 @@ Literal stringLiteral() :
   <QUOTED_STRING> {
     assert token.image.charAt(0) == '"';
     assert token.image.charAt(token.image.length() - 1) == '"';
-    String image = token.image.substring(1, token.image.length() - 1);
-    return ast.stringLiteral(pos(), image.replace("''", "'"));
+    String image = token.image.substring(1, token.image.length() - 1)
+        .replace("\\\\", "\\").replace("\\\"", "\"");
+    return ast.stringLiteral(pos(), image);
   }
 }
 
@@ -176,8 +177,8 @@ Literal charLiteral() :
     assert token.image.charAt(0) == '#';
     assert token.image.charAt(1) == '"';
     assert token.image.charAt(token.image.length() - 1) == '"';
-    final String image0 = token.image.substring(2, token.image.length() - 1);
-    final String image = image0.replace("''", "'");
+    String image = token.image.substring(2, token.image.length() - 1)
+        .replace("\\\\", "\\").replace("\\\"", "\"");
     if (image.length() != 1) {
       throw new RuntimeException("Error: character constant not length 1");
     }
@@ -1411,7 +1412,7 @@ AstNode statementEof() :
     [ " ","\t","\n","\r","\f" ]
     >
     |
-    < QUOTED_STRING: <DOUBLE_QUOTE> ( (~["\""]) | ("\"\""))* <DOUBLE_QUOTE> >
+    < QUOTED_STRING: <DOUBLE_QUOTE> ( (~["\"", "\\"]) | ("\\" "\"") | ("\\" "\\") )* <DOUBLE_QUOTE> >
     |
     < CHAR_LITERAL: ("#") <QUOTED_STRING> >
 }

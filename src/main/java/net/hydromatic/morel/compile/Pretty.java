@@ -149,16 +149,22 @@ class Pretty {
     }
     final List<Object> list;
     final int start;
+    String s;
     switch (type.op()) {
     case ID:
       switch ((PrimitiveType) type) {
       case UNIT:
         return buf.append("()");
       case CHAR:
-        return buf.append("#\"").append((char) (Character) value).append("\"");
+        s = ((Character) value).toString();
+        return buf.append('#')
+            .append('"')
+            .append(s.replace("\\", "\\\\").replace("\"", "\\\""))
+            .append('"');
       case STRING:
+        s = (String) value;
         return buf.append('"')
-            .append(((String) value).replace("\"", "\\\""))
+            .append(s.replace("\\", "\\\\").replace("\"", "\\\""))
             .append('"');
       case INT:
         Integer i = (Integer) value;
@@ -179,7 +185,6 @@ class Pretty {
           }
           return buf.append(f);
         } else {
-          String s;
           if (f == Float.POSITIVE_INFINITY) {
             s = "inf";
           } else if (f == Float.NEGATIVE_INFINITY) {
@@ -200,7 +205,7 @@ class Pretty {
 
     case LIST:
       final ListType listType = (ListType) type;
-      //noinspection unchecked
+      //noinspection unchecked,rawtypes
       list = (List) value;
       if (list instanceof RelList) {
         // Do not attempt to print the elements of a foreign list. It might be huge.
@@ -210,7 +215,7 @@ class Pretty {
 
     case RECORD_TYPE:
       final RecordType recordType = (RecordType) type;
-      //noinspection unchecked
+      //noinspection unchecked,rawtypes
       list = (List) value;
       buf.append("{");
       start = buf.length();
@@ -226,7 +231,7 @@ class Pretty {
 
     case TUPLE_TYPE:
       final TupleType tupleType = (TupleType) type;
-      //noinspection unchecked
+      //noinspection unchecked,rawtypes
       list = (List) value;
       buf.append("(");
       start = buf.length();
@@ -245,7 +250,7 @@ class Pretty {
 
     case DATA_TYPE:
       final DataType dataType = (DataType) type;
-      //noinspection unchecked
+      //noinspection unchecked,rawtypes
       list = (List) value;
       if (dataType.name.equals("vector")) {
         return printList(buf.append('#'), indent, lineEnd, depth,
