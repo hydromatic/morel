@@ -105,6 +105,9 @@ val it = 2 : int
 
 "leaving use-1.sml";
 val it = "leaving use-1.sml" : string
+
+
+(*) End use-1.sml
 val it = () : unit
 
 "x is now " ^ x;
@@ -161,6 +164,9 @@ val it = 2 : int
 
 "leaving use-1.sml";
 val it = "leaving use-1.sml" : string
+
+
+(*) End use-1.sml
 val it = () : unit
 
 "x is now " ^ x;
@@ -169,3 +175,6 @@ val it = "x is now step 1, step 2" : string
 
 "leaving use.sml";
 val it = "leaving use.sml" : string
+
+
+(*) End use.sml

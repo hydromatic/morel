@@ -1331,6 +1331,18 @@ AstNode statementSemicolon() :
   n = statement() <SEMICOLON> { return n; }
 }
 
+/** Parses a statement followed by semicolon or end-of-file.
+ * Returns null if there is no statement. */
+AstNode statementSemicolonOrEof() :
+{
+  final AstNode n;
+}
+{
+  <EOF> { return null; }
+|
+  n = statement() ( <SEMICOLON> | <EOF> ) { return n; }
+}
+
 /** Parses a statement followed by end-of-file. */
 AstNode statementEof() :
 {

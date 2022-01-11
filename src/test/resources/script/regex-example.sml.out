@@ -266,3 +266,6 @@ val r = fn : string * int -> int list
 
 matchStringsPos r "hello world";
 val it = [(1,"e"),(1,"el"),(1,"ell"),(8,"r"),(8,"rl")] : (int * string) list
+
+
+(*) End regex-example.sml

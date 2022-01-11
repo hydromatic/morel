@@ -372,3 +372,6 @@ in
   (isZeroMod3 17, isOneMod3 17, isTwoMod3 17)
 end;
 val it = (false,false,true) : bool * bool * bool
+
+
+(*) End simple.sml

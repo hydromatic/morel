@@ -150,10 +150,16 @@ public class Main {
           new SubShell(main, outLines, bindingMap, env0);
       for (;;) {
         try {
-          final AstNode statement = parser.statementSemicolon();
+          final AstNode statement = parser.statementSemicolonOrEof();
           String code = in2.flush();
+          if (statement == null && code.endsWith("\n")) {
+            code = code.substring(0, code.length() - 1);
+          }
           if (main.echo) {
             outLines.accept(code);
+          }
+          if (statement == null) {
+            break;
           }
           session.withShell(subShell, outLines, session1 ->
               subShell.command(statement, outLines));
@@ -162,7 +168,16 @@ public class Main {
           if (message.startsWith("Encountered \"<EOF>\" ")) {
             break;
           }
+          String code = in2.flush();
+          if (main.echo) {
+            outLines.accept(code);
+          }
           outLines.accept(message);
+          if (code.length() == 0) {
+            // If we consumed no input, we're not making progress, so we'll
+            // never finish. Abort.
+            break;
+          }
         }
       }
     }

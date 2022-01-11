@@ -393,3 +393,6 @@ val it =
    {source="c",target="a",weight=5},{source="c",target="b",weight=1},
    {source="c",target="c",weight=0},{source="c",target="d",weight=2},...]
   : {source:string, target:string, weight:int} list
+
+
+(*) End fixedPoint.sml

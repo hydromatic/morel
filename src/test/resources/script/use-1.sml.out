@@ -38,3 +38,6 @@ val it = 2 : int
 
 "leaving use-1.sml";
 val it = "leaving use-1.sml" : string
+
+
+(*) End use-1.sml

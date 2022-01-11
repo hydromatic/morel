@@ -2278,3 +2278,6 @@ Sys.plan ();
 val it =
   "apply(fnCode apply(fnValue Vector.collate, argCode match(v0, apply(fnCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply(fnValue =, argCode tuple(get(name i), get(name j))))), argCode apply(fnValue <, argCode tuple(get(name i), get(name j))))), argCode get(name v0)))), argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
   : string
+
+
+(*) End builtIn.sml

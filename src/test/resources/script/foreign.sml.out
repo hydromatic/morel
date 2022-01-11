@@ -130,3 +130,5 @@ val it =
 
 "end";
 val it = "end" : string
+
+(*) End foreign.sml
