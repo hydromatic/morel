@@ -356,7 +356,7 @@ public class Compiler {
       for (Core.Exp exp : group.groupExps.values()) {
         groupCodesB.add(compile(cx, exp));
       }
-      final ImmutableList<String> names = bindingNames(bindings);
+      final ImmutableList<String> names = bindingNamesSorted(bindings);
       final ImmutableList.Builder<Applicable> aggregateCodesB =
           ImmutableList.builder();
       for (Core.Aggregate aggregate : group.aggregates.values()) {
@@ -396,6 +396,10 @@ public class Compiler {
     default:
       throw new AssertionError("unknown step type " + firstStep.op);
     }
+  }
+
+  private ImmutableList<String> bindingNamesSorted(List<Binding> bindings) {
+    return RecordType.ORDERING.immutableSortedCopy(bindingNames(bindings));
   }
 
   private ImmutableList<String> bindingNames(List<Binding> bindings) {

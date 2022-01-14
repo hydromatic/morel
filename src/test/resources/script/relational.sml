@@ -17,7 +17,7 @@
  * License.
  *)
 Sys.set ("lineWidth", 78);
-Sys.set ("printDepth", 5);
+Sys.set ("printDepth", 6);
 Sys.set ("printLength", 64);
 Sys.set ("stringDepth", ~1);
 
