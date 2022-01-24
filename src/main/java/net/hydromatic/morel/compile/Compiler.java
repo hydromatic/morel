@@ -21,6 +21,8 @@ package net.hydromatic.morel.compile;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.eval.Applicable2;
+import net.hydromatic.morel.eval.Applicable3;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
@@ -545,6 +547,24 @@ public class Compiler {
       final Object o = Codes.BUILT_IN_VALUES.get(builtIn);
       if (o instanceof Applicable) {
         final Code argCode = compile(cx, arg);
+        if (argCode instanceof Codes.TupleCode) {
+          final Codes.TupleCode tupleCode = (Codes.TupleCode) argCode;
+          if (tupleCode.codes.size() == 2
+              && o instanceof Applicable2) {
+            //noinspection rawtypes
+            return Codes.apply2((Applicable2) o,
+                tupleCode.codes.get(0),
+                tupleCode.codes.get(1));
+          }
+          if (tupleCode.codes.size() == 3
+              && o instanceof Applicable3) {
+            //noinspection rawtypes
+            return Codes.apply3((Applicable3) o,
+                tupleCode.codes.get(0),
+                tupleCode.codes.get(1),
+                tupleCode.codes.get(2));
+          }
+        }
         return Codes.apply((Applicable) o, argCode);
       }
       throw new AssertionError("unknown " + builtIn);

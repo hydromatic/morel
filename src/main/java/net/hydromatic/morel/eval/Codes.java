@@ -85,85 +85,65 @@ public abstract class Codes {
 
   /** @see BuiltIn#OP_EQ */
   private static final Applicable OP_EQ =
-      new ApplicableImpl(BuiltIn.OP_EQ) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return list.get(0).equals(list.get(1));
+      new Applicable2<Boolean, Object, Object>(BuiltIn.OP_EQ) {
+        @Override public Boolean apply(Object a0, Object a1) {
+          return a0.equals(a1);
         }
       };
 
   /** @see BuiltIn#OP_NE */
   private static final Applicable OP_NE =
-      new ApplicableImpl(BuiltIn.OP_NE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return !list.get(0).equals(list.get(1));
+      new Applicable2<Boolean, Object, Object>(BuiltIn.OP_NE) {
+        @Override public Boolean apply(Object a0, Object a1) {
+          return !a0.equals(a1);
         }
       };
 
   /** @see BuiltIn#OP_LT */
   private static final Applicable OP_LT =
-      new ApplicableImpl(BuiltIn.OP_LT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final Comparable v0 = (Comparable) list.get(0);
-          final Comparable v1 = (Comparable) list.get(1);
-          return v0.compareTo(v1) < 0;
+      new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LT) {
+        @Override public Boolean apply(Comparable a0, Comparable a1) {
+          return a0.compareTo(a1) < 0;
         }
       };
 
   /** @see BuiltIn#OP_GT */
   private static final Applicable OP_GT =
-      new ApplicableImpl(BuiltIn.OP_GT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final Comparable v0 = (Comparable) list.get(0);
-          final Comparable v1 = (Comparable) list.get(1);
-          return v0.compareTo(v1) > 0;
+      new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GT) {
+        @Override public Boolean apply(Comparable a0, Comparable a1) {
+          return a0.compareTo(a1) > 0;
         }
       };
 
   /** @see BuiltIn#OP_LE */
   private static final Applicable OP_LE =
-      new ApplicableImpl(BuiltIn.OP_LE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final Comparable v0 = (Comparable) list.get(0);
-          final Comparable v1 = (Comparable) list.get(1);
-          return v0.compareTo(v1) <= 0;
+      new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LE) {
+        @Override public Boolean apply(Comparable a0, Comparable a1) {
+          return a0.compareTo(a1) <= 0;
         }
       };
 
   /** @see BuiltIn#OP_GE */
   private static final Applicable OP_GE =
-      new ApplicableImpl(BuiltIn.OP_GE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final Comparable v0 = (Comparable) list.get(0);
-          final Comparable v1 = (Comparable) list.get(1);
-          return v0.compareTo(v1) >= 0;
+      new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GE) {
+        @Override public Boolean apply(Comparable a0, Comparable a1) {
+          return a0.compareTo(a1) >= 0;
         }
       };
 
   /** @see BuiltIn#OP_ELEM */
   private static final Applicable OP_ELEM =
-      new ApplicableImpl(BuiltIn.OP_ELEM) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final Object v0 = list.get(0);
-          final List v1 = (List) list.get(1);
-          return v1.contains(v0);
+      new Applicable2<Boolean, Object, List>(BuiltIn.OP_ELEM) {
+        @Override public Boolean apply(Object a0, List a1) {
+          return a1.contains(a0);
         }
       };
 
   /** @see BuiltIn#OP_NOT_ELEM */
   private static final Applicable OP_NOT_ELEM =
-      new ApplicableImpl(BuiltIn.OP_NOT_ELEM) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final Object v0 = list.get(0);
-          final List v1 = (List) list.get(1);
-          return !v1.contains(v0);
+      new Applicable2<Boolean, Object, List>(BuiltIn.OP_NOT_ELEM) {
+        @Override public Boolean apply(Object a0, List a1) {
+          return !a1.contains(a0);
         }
       };
 
@@ -195,73 +175,65 @@ public abstract class Codes {
 
   /** Implements {@link #OP_PLUS} for type {@code int}. */
   private static final Applicable Z_PLUS_INT =
-      new ApplicableImpl(BuiltIn.OP_PLUS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (int) list.get(0) + (int) list.get(1);
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_PLUS) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return a0 + a1;
         }
       };
 
   /** Implements {@link #OP_PLUS} for type {@code real}. */
   private static final Applicable Z_PLUS_REAL =
-      new ApplicableImpl(BuiltIn.OP_PLUS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (float) list.get(0) + (float) list.get(1);
+      new Applicable2<Float, Float, Float>(BuiltIn.OP_PLUS) {
+        @Override public Float apply(Float a0, Float a1) {
+          return a0 + a1;
         }
       };
 
   /** Implements {@link #OP_MINUS} for type {@code int}. */
   private static final Applicable Z_MINUS_INT =
-      new ApplicableImpl(BuiltIn.OP_MINUS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (int) list.get(0) - (int) list.get(1);
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_MINUS) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return a0 - a1;
         }
       };
 
   /** Implements {@link #OP_MINUS} for type {@code real}. */
   private static final Applicable Z_MINUS_REAL =
-      new ApplicableImpl(BuiltIn.OP_MINUS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (float) list.get(0) - (float) list.get(1);
+      new Applicable2<Float, Float, Float>(BuiltIn.OP_MINUS) {
+        @Override public Float apply(Float a0, Float a1) {
+          return a0 - a1;
         }
       };
 
   /** Implements {@link #OP_TIMES} for type {@code int}. */
   private static final Applicable Z_TIMES_INT =
-      new ApplicableImpl(BuiltIn.OP_TIMES) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (int) list.get(0) * (int) list.get(1);
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_TIMES) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return a0 * a1;
         }
       };
 
   /** Implements {@link #OP_TIMES} for type {@code real}. */
   private static final Applicable Z_TIMES_REAL =
-      new ApplicableImpl(BuiltIn.OP_TIMES) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (float) list.get(0) * (float) list.get(1);
+      new Applicable2<Float, Float, Float>(BuiltIn.OP_TIMES) {
+        @Override public Float apply(Float a0, Float a1) {
+          return a0 * a1;
         }
       };
 
   /** Implements {@link #OP_DIVIDE} for type {@code int}. */
   private static final Applicable Z_DIVIDE_INT =
-      new ApplicableImpl(BuiltIn.OP_DIVIDE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (int) list.get(0) / (int) list.get(1);
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_DIVIDE) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return a0 / a1;
         }
       };
 
   /** Implements {@link #OP_DIVIDE} for type {@code real}. */
   private static final Applicable Z_DIVIDE_REAL =
-      new ApplicableImpl(BuiltIn.OP_DIVIDE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (float) list.get(0) / (float) list.get(1);
+      new Applicable2<Float, Float, Float>(BuiltIn.OP_DIVIDE) {
+        @Override public Float apply(Float a0, Float a1) {
+          return a0 / a1;
         }
       };
 
@@ -292,10 +264,9 @@ public abstract class Codes {
 
   /** @see BuiltIn#OP_DIV */
   private static final Applicable OP_DIV =
-      new ApplicableImpl(BuiltIn.OP_DIV) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return Math.floorDiv((int) list.get(0), (int) list.get(1));
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_DIV) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return Math.floorDiv(a0, a1);
         }
       };
 
@@ -327,34 +298,28 @@ public abstract class Codes {
 
   /** @see BuiltIn#OP_CARET */
   private static final Applicable OP_CARET =
-      new ApplicableImpl(BuiltIn.OP_CARET) {
-        @Override public String apply(EvalEnv env, Object arg) {
-          final List tuple = (List) arg;
-          final String arg0 = (String) tuple.get(0);
-          final String arg1 = (String) tuple.get(1);
-          return arg0 + arg1;
+      new Applicable2<String, String, String>(BuiltIn.OP_CARET) {
+        @Override public String apply(String a0, String a1) {
+          return a0 + a1;
         }
       };
 
   /** @see BuiltIn#OP_CONS */
   private static final Applicable OP_CONS =
-      new ApplicableImpl(BuiltIn.OP_CONS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return ImmutableList.builder().add(list.get(0))
-              .addAll((Iterable) list.get(1))
+      new Applicable2<List, Object, Iterable>(BuiltIn.OP_CONS) {
+        @Override public List apply(Object e, Iterable iterable) {
+          return ImmutableList.builder().add(e)
+              .addAll(iterable)
               .build();
         }
       };
 
   /** @see BuiltIn#OP_EXCEPT */
   private static final Applicable OP_EXCEPT =
-      new ApplicableImpl(BuiltIn.OP_EXCEPT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final List list0 = (List) list.get(0);
+      new Applicable2<List, List, List>(BuiltIn.OP_EXCEPT) {
+        @Override public List apply(List list0, List list1) {
           List collection = new ArrayList(list0);
-          final Set set = new HashSet((List) list.get(1));
+          final Set set = new HashSet(list1);
           if (!collection.removeAll(set)) {
             collection = list0;
           }
@@ -364,12 +329,10 @@ public abstract class Codes {
 
   /** @see BuiltIn#OP_INTERSECT */
   private static final Applicable OP_INTERSECT =
-      new ApplicableImpl(BuiltIn.OP_INTERSECT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final List list0 = (List) list.get(0);
+      new Applicable2<List, List, List>(BuiltIn.OP_INTERSECT) {
+        @Override public List apply(List list0, List list1) {
           List collection = new ArrayList(list0);
-          final Set set = new HashSet((List) list.get(1));
+          final Set set = new HashSet(list1);
           if (!collection.retainAll(set)) {
             collection = list0;
           }
@@ -420,6 +383,17 @@ public abstract class Codes {
   /** Generates the code for applying a function value to an argument. */
   public static Code apply(Applicable fnValue, Code argCode) {
     return new ApplyCode(fnValue, argCode);
+  }
+
+  /** Generates the code for applying a function value to two arguments. */
+  public static Code apply2(Applicable2 fnValue, Code argCode0, Code argCode1) {
+    return new ApplyCode2(fnValue, argCode0, argCode1);
+  }
+
+  /** Generates the code for applying a function value to three arguments. */
+  public static Code apply3(Applicable3 fnValue, Code argCode0, Code argCode1,
+      Code argCode2) {
+    return new ApplyCode3(fnValue, argCode0, argCode1, argCode2);
   }
 
   public static Code list(Iterable<? extends Code> codes) {
@@ -550,10 +524,9 @@ public abstract class Codes {
 
   /** @see BuiltIn#OP_MOD */
   private static final Applicable OP_MOD =
-      new ApplicableImpl(BuiltIn.OP_MOD) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return Math.floorMod((int) list.get(0), (int) list.get(1));
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_MOD) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return Math.floorMod(a0, a1);
         }
       };
 
@@ -596,11 +569,8 @@ public abstract class Codes {
 
   /** @see BuiltIn#STRING_SUB */
   private static final Applicable STRING_SUB =
-      new ApplicableImpl(BuiltIn.STRING_SUB) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List tuple = (List) arg;
-          final String s = (String) tuple.get(0);
-          final int i = (Integer) tuple.get(1);
+      new Applicable2<Character, String, Integer>(BuiltIn.STRING_SUB) {
+        @Override public Character apply(String s, Integer i) {
           if (i < 0 || i >= s.length()) {
             throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
           }
@@ -610,15 +580,11 @@ public abstract class Codes {
 
   /** @see BuiltIn#STRING_EXTRACT */
   private static final Applicable STRING_EXTRACT =
-      new ApplicableImpl(BuiltIn.STRING_EXTRACT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List tuple = (List) arg;
-          final String s = (String) tuple.get(0);
-          final int i = (Integer) tuple.get(1);
+      new Applicable3<String, String, Integer, List>(BuiltIn.STRING_EXTRACT) {
+        @Override public String apply(String s, Integer i, List jOpt) {
           if (i < 0) {
             throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
           }
-          final List jOpt = (List) tuple.get(2);
           if (jOpt.size() == 2) {
             final int j = (Integer) jOpt.get(1);
             if (j < 0 || i + j > s.length()) {
@@ -636,12 +602,9 @@ public abstract class Codes {
 
   /** @see BuiltIn#STRING_SUBSTRING */
   private static final Applicable STRING_SUBSTRING =
-      new ApplicableImpl(BuiltIn.STRING_SUBSTRING) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List tuple = (List) arg;
-          final String s = (String) tuple.get(0);
-          final int i = (Integer) tuple.get(1);
-          final int j = (Integer) tuple.get(2);
+      new Applicable3<String, String, Integer, Integer>(
+          BuiltIn.STRING_SUBSTRING) {
+        @Override public String apply(String s, Integer i, Integer j) {
           if (i < 0 || j < 0 || i + j > s.length()) {
             throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
           }
@@ -833,11 +796,8 @@ public abstract class Codes {
   private static final Applicable LIST_AT = union(BuiltIn.LIST_AT);
 
   private static ApplicableImpl union(final BuiltIn builtIn) {
-    return new ApplicableImpl(builtIn) {
-      @Override public List apply(EvalEnv env, Object arg) {
-        final List tuple = (List) arg;
-        final List list0 = (List) tuple.get(0);
-        final List list1 = (List) tuple.get(1);
+    return new Applicable2<List, List, List>(builtIn) {
+      @Override public List apply(List list0, List list1) {
         return ImmutableList.builder().addAll(list0).addAll(list1).build();
       }
     };
@@ -899,11 +859,8 @@ public abstract class Codes {
   private static final Applicable LIST_NTH = nth(BuiltIn.LIST_NTH);
 
   private static ApplicableImpl nth(BuiltIn builtIn) {
-    return new ApplicableImpl(builtIn) {
-      @Override public Object apply(EvalEnv env, Object arg) {
-        final List tuple = (List) arg;
-        final List list = (List) tuple.get(0);
-        final int i = (Integer) tuple.get(1);
+    return new Applicable2<Object, List, Integer>(builtIn) {
+      @Override public Object apply(List list, Integer i) {
         if (i < 0 || i >= list.size()) {
           throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
         }
@@ -914,11 +871,8 @@ public abstract class Codes {
 
   /** @see BuiltIn#LIST_TAKE */
   private static final Applicable LIST_TAKE =
-      new ApplicableImpl(BuiltIn.LIST_TAKE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List tuple = (List) arg;
-          final List list = (List) tuple.get(0);
-          final int i = (Integer) tuple.get(1);
+      new Applicable2<List, List, Integer>(BuiltIn.LIST_TAKE) {
+        @Override public List apply(List list, Integer i) {
           if (i < 0 || i > list.size()) {
             throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
           }
@@ -928,11 +882,8 @@ public abstract class Codes {
 
   /** @see BuiltIn#LIST_DROP */
   private static final Applicable LIST_DROP =
-      new ApplicableImpl(BuiltIn.LIST_DROP) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List tuple = (List) arg;
-          final List list = (List) tuple.get(0);
-          final int i = (Integer) tuple.get(1);
+      new Applicable2<List, List, Integer>(BuiltIn.LIST_DROP) {
+        @Override public List apply(List list, Integer i) {
           return list.subList(i, list.size());
         }
       };
@@ -961,11 +912,8 @@ public abstract class Codes {
 
   /** @see BuiltIn#LIST_REV_APPEND */
   private static final Applicable LIST_REV_APPEND =
-      new ApplicableImpl(BuiltIn.LIST_REV_APPEND) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List tuple = (List) arg;
-          final List list0 = (List) tuple.get(0);
-          final List list1 = (List) tuple.get(1);
+      new Applicable2<List, List, List>(BuiltIn.LIST_REV_APPEND) {
+        @Override public List apply(List list0, List list1) {
           return ImmutableList.builder().addAll(Lists.reverse(list0))
               .addAll(list1).build();
         }
@@ -1277,10 +1225,9 @@ public abstract class Codes {
 
   /** @see BuiltIn#MATH_ATAN2 */
   private static final Applicable MATH_ATAN2 =
-      new ApplicableImpl(BuiltIn.MATH_ATAN2) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (float) Math.atan2((Float) list.get(0), (Float) list.get(1));
+      new Applicable2<Float, Float, Float>(BuiltIn.MATH_ATAN2) {
+        @Override public Float apply(Float arg0, Float arg1) {
+          return (float) Math.atan2(arg0, arg1);
         }
       };
 
@@ -1332,10 +1279,9 @@ public abstract class Codes {
 
   /** @see BuiltIn#MATH_POW */
   private static final Applicable MATH_POW =
-      new ApplicableImpl(BuiltIn.MATH_POW) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          return (float) Math.pow((Float) list.get(0), (Float) list.get(1));
+      new Applicable2<Float, Float, Float>(BuiltIn.MATH_POW) {
+        @Override public Float apply(Float arg0, Float arg1) {
+          return (float) Math.pow(arg0, arg1);
         }
       };
 
@@ -1800,15 +1746,11 @@ public abstract class Codes {
 
   /** @see BuiltIn#VECTOR_UPDATE */
   private static final Applicable VECTOR_UPDATE =
-      new ApplicableImpl(BuiltIn.VECTOR_UPDATE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List tuple = (List) arg;
-          final List vec = (List) tuple.get(0);
-          final int i = (Integer) tuple.get(1);
+      new Applicable3<List, List, Integer, Object>(BuiltIn.VECTOR_UPDATE) {
+        @Override public List apply(List vec, Integer i, Object x) {
           if (i < 0 || i >= vec.size()) {
             throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
           }
-          final Object x = tuple.get(2);
           final Object[] elements = vec.toArray();
           elements[i] = x;
           return ImmutableList.copyOf(elements);
@@ -2850,6 +2792,63 @@ public abstract class Codes {
     }
   }
 
+  /** Applies an {@link Applicable2} to two {@link Code} arguments. */
+  private static class ApplyCode2 implements Code {
+    private final Applicable2 fnValue;
+    private final Code argCode0;
+    private final Code argCode1;
+
+    ApplyCode2(Applicable2 fnValue, Code argCode0, Code argCode1) {
+      this.fnValue = fnValue;
+      this.argCode0 = argCode0;
+      this.argCode1 = argCode1;
+    }
+
+    @Override public Object eval(EvalEnv env) {
+      final Object arg0 = argCode0.eval(env);
+      final Object arg1 = argCode1.eval(env);
+      return fnValue.apply(arg0, arg1);
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("apply2", d ->
+          d.arg("fnValue", fnValue)
+              .arg("", argCode0)
+              .arg("", argCode1));
+    }
+  }
+
+  /** Applies an {@link Applicable3} to three {@link Code} arguments. */
+  private static class ApplyCode3 implements Code {
+    private final Applicable3 fnValue;
+    private final Code argCode0;
+    private final Code argCode1;
+    private final Code argCode2;
+
+    ApplyCode3(Applicable3 fnValue, Code argCode0, Code argCode1,
+        Code argCode2) {
+      this.fnValue = fnValue;
+      this.argCode0 = argCode0;
+      this.argCode1 = argCode1;
+      this.argCode2 = argCode2;
+    }
+
+    @Override public Object eval(EvalEnv env) {
+      final Object arg0 = argCode0.eval(env);
+      final Object arg1 = argCode1.eval(env);
+      final Object arg2 = argCode2.eval(env);
+      return fnValue.apply(arg0, arg1, arg2);
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("apply3", d ->
+          d.arg("fnValue", fnValue)
+              .arg("", argCode0)
+              .arg("", argCode1)
+              .arg("", argCode2));
+    }
+  }
+
   /** Applies a {@link Code} to a {@link Code}.
    *
    * <p>If {@link #fnCode} is constant, you should use {@link ApplyCode}
@@ -2874,6 +2873,7 @@ public abstract class Codes {
       return fnValue.apply(env, arg);
     }
   }
+
 }
 
 // End Codes.java

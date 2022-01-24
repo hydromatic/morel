@@ -141,7 +141,7 @@ val it = [7372,7569,7791,7879,7905] : int list
 
 Sys.plan();
 val it =
-  "let(matchCode0 match(ten, apply(fnValue +, argCode tuple(constant(7), constant(3)))), resultCode calcite(plan LogicalProject($f0=[+($2, MOD(13, morelScalar('ten', '{
+  "let(matchCode0 match(ten, apply2(fnValue +, constant(7), constant(3))), resultCode calcite(plan LogicalProject($f0=[+($2, MOD(13, morelScalar('ten', '{
   \"type\": \"INTEGER\",
   \"nullable\": false
 }')))])
@@ -268,7 +268,7 @@ val it = [7499,7521,7654,7698,7844,7900] : int list
 
 Sys.plan();
 val it =
-  "apply(fnCode apply(fnValue List.map, argCode match(e_1, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue List.filter, argCode match(e, apply(fnValue =, argCode tuple(apply(fnValue nth:1, argCode get(name e)), constant(30))))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+  "apply(fnCode apply(fnValue List.map, argCode match(e_1, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue List.filter, argCode match(e, apply2(fnValue =, apply(fnValue nth:1, argCode get(name e)), constant(30)))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
   JdbcTableScan(table=[[scott, EMP]])
 )))"
   : string

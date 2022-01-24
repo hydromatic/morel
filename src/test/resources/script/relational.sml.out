@@ -1536,7 +1536,7 @@ val it =
 
 Sys.plan();
 val it =
-  "from(sink join(op join, pat r, exp apply(fnValue List.tabulate, argCode tuple(constant(6), match(i, tuple(get(name i), apply(fnValue +, argCode tuple(get(name i), constant(3))), apply(fnValue String.substring, argCode tuple(constant(morel), constant(0), get(name i))))))), sink collect(tuple(apply(fnValue nth:1, argCode get(name r)), apply(fnValue nth:2, argCode get(name r))))))"
+  "from(sink join(op join, pat r, exp apply(fnValue List.tabulate, argCode tuple(constant(6), match(i, tuple(get(name i), apply2(fnValue +, get(name i), constant(3)), apply3(fnValue String.substring, constant(morel), constant(0), get(name i)))))), sink collect(tuple(apply(fnValue nth:1, argCode get(name r)), apply(fnValue nth:2, argCode get(name r))))))"
   : string
 
 
@@ -1607,7 +1607,7 @@ val it = ["Shaggy","Scooby"] : string list
 
 Sys.plan();
 val it =
-  "from(sink join(op join, pat e_1, exp apply(fnCode match((emps, deptno), from(sink join(op join, pat e, exp get(name emps), sink where(condition apply(fnValue =, argCode tuple(apply(fnValue nth:0, argCode get(name e)), get(name deptno))), sink collect(get(name e)))))), argCode tuple(constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), constant(30))), sink collect(apply(fnValue nth:2, argCode get(name e)))))"
+  "from(sink join(op join, pat e_1, exp apply(fnCode match((emps, deptno), from(sink join(op join, pat e, exp get(name emps), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e)), get(name deptno)), sink collect(get(name e)))))), argCode tuple(constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), constant(30))), sink collect(apply(fnValue nth:2, argCode get(name e)))))"
   : string
 
 
@@ -1624,7 +1624,7 @@ val it = ["Shaggy","Scooby"] : string list
 
 Sys.plan();
 val it =
-  "from(sink join(op join, pat e_2, exp from(sink join(op join, pat e, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply(fnValue =, argCode tuple(apply(fnValue nth:0, argCode get(name e)), constant(30))), sink collect(get(name e))))), sink collect(apply(fnValue nth:2, argCode get(name e)))))"
+  "from(sink join(op join, pat e_2, exp from(sink join(op join, pat e, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e)), constant(30)), sink collect(get(name e))))), sink collect(apply(fnValue nth:2, argCode get(name e)))))"
   : string
 
 

@@ -29,7 +29,7 @@ val a = 2 + 3;
 val a = 5 : int
 
 Sys.plan();
-val it = "apply(fnValue +, argCode tuple(constant(2), constant(3)))" : string
+val it = "apply2(fnValue +, constant(2), constant(3))" : string
 
 val b = 20;
 val b = 20 : int
@@ -40,9 +40,7 @@ uncaught exception Subscript [subscript out of bounds]
 
 (*) plan is for the unsuccessful statement:
 Sys.plan();
-val it =
-  "apply(fnValue String.sub, argCode tuple(constant(abc), constant(20)))"
-  : string
+val it = "apply2(fnValue String.sub, constant(abc), constant(20))" : string
 
 String.sub("xyz", b - 1);
 uncaught exception Subscript [subscript out of bounds]
@@ -50,7 +48,7 @@ uncaught exception Subscript [subscript out of bounds]
 (*) plan is for the unsuccessful expression:
 Sys.plan();
 val it =
-  "apply(fnValue String.sub, argCode tuple(constant(xyz), apply(fnValue -, argCode tuple(constant(20), constant(1)))))"
+  "apply2(fnValue String.sub, constant(xyz), apply2(fnValue -, constant(20), constant(1)))"
   : string
 
 (*) a is still an int:

@@ -798,9 +798,9 @@ public class MainTest {
         + "  fn i => i = 10 andalso isZero i\n"
         + "end";
     // With inlining, we want the plan to simplify to "fn i => false"
-    final String plan = "match(i, andalso(apply("
-        + "fnValue =, argCode tuple(get(name i), constant(10))), "
-        + "apply(fnValue =, argCode tuple(get(name i), constant(0)))))";
+    final String plan = "match(i, andalso(apply2("
+        + "fnValue =, get(name i), constant(10)), "
+        + "apply2(fnValue =, get(name i), constant(0))))";
     ml(ml)
         .assertEval(whenAppliedTo(0, is(false)))
         .assertEval(whenAppliedTo(10, is(false)))
@@ -821,14 +821,34 @@ public class MainTest {
     // With inlining, we want the plan to simplify to
     // "fn (a, b, c) => (a + b) * 3 - c"
     final String plan = "match(v0, apply(fnCode match((a, b, c), "
-        + "apply(fnValue -, argCode tuple(apply(fnValue *, argCode "
-        + "tuple(apply(fnValue +, argCode "
-        + "tuple(get(name a), get(name b))), constant(3))), get(name c)))), "
-        + "argCode get(name v0)))";
+        + "apply2(fnValue -, apply2(fnValue *, "
+        + "apply2(fnValue +, get(name a), get(name b)), "
+        + "constant(3)), get(name c))), argCode get(name v0)))";
     ml(ml)
         // g (4, 3, 2) = (4 + 3) * 3 - 2 = 19
         .assertEval(whenAppliedTo(list(4, 3, 2), is(19)))
         .assertPlan(isCode(plan));
+  }
+
+  /** Tests that a simple eager function ({@code Math.pow}) uses
+   * direct application ({@code apply2}) when its arguments are a tuple. */
+  @Test void testEvalApply2() {
+    final String ml = "Math.pow (2.0, 3.0)";
+    final String plan =
+        "apply2(fnValue Math.pow, constant(2.0), constant(3.0))";
+    ml(ml)
+        .assertEval(is(8f))
+        .assertPlan(isCode(plan));
+
+    // When the argument tuple is returned from a function call, we evaluate
+    // the long way ('apply').
+    final String ml2 = "Math.pow (List.hd [(2.0, 3.0)])";
+    final String plan2 = "apply(fnValue Math.pow,"
+        + " argCode apply(fnValue List.hd, "
+        + "argCode tuple(tuple(constant(2.0), constant(3.0)))))";
+    ml(ml2)
+        .assertEval(is(8f))
+        .assertPlan(isCode(plan2));
   }
 
   /** Tests that name capture does not occur during inlining.
@@ -1797,7 +1817,7 @@ public class MainTest {
         + "sink group(key tuple(apply(fnValue nth:0, argCode get(name r))), "
         + "agg aggregate, "
         + "sink collect(tuple(get(name a), "
-        + "apply(fnValue +, argCode tuple(get(name a), get(name a))), "
+        + "apply2(fnValue +, get(name a), get(name a)), "
         + "get(name sb))))))";
     ml(ml).assertParse(expected)
         .assertEvalIter(equalsOrdered(list(2, 4, 3)))
