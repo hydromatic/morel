@@ -49,7 +49,6 @@ In Standard ML but not in Morel:
 * references (`ref` and operators `!` and `:=`)
 * exceptions (`raise`, `handle`, `exception`)
 * `while` loop
-* `as` (layered patterns)
 * data type replication (`type`)
 * `withtype` in `datatype` declaration
 * abstract type (`abstype`)
@@ -174,6 +173,7 @@ In Standard ML but not in Morel:
     | '<b>(</b>' <i>pat<sub>1</sub></i> , ... , <i>pat<sub>n</sub></i> '<b>)</b>' tuple (n &ne; 1)
     | <b>{</b> [ <i>patrow</i> ] <b>}</b>            record
     | '<b>[</b>' <i>pat<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>pat<sub>n</sub></i> '<b>]</b>' list (n &ge; 0)
+    | <i>id</i> <b>as</b> <i>pat</i>                 layered
 <i>patrow</i> &rarr; '<b>...</b>'                  wildcard
     | <i>lab</i> <b>=</b> <i>pat</i> [<b>,</b> <i>patrow</i>]      pattern
     | <i>id</i> [<b>,</b> <i>patrow</i>]             label as variable

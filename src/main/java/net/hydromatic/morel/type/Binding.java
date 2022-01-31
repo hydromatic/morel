@@ -27,13 +27,13 @@ import static java.util.Objects.requireNonNull;
  *
  * <p>Used in {@link net.hydromatic.morel.compile.Environment}. */
 public class Binding {
-  public final Core.IdPat id;
+  public final Core.NamedPat id;
   public final Core.Exp exp;
   public final Object value;
   /** If true, the binding is ignored by inlining. */
   public final boolean parameter;
 
-  private Binding(Core.IdPat id, Core.Exp exp, Object value,
+  private Binding(Core.NamedPat id, Core.Exp exp, Object value,
       boolean parameter) {
     this.id = requireNonNull(id);
     this.exp = exp;
@@ -42,15 +42,15 @@ public class Binding {
     this.parameter = parameter;
   }
 
-  public static Binding of(Core.IdPat id) {
+  public static Binding of(Core.NamedPat id) {
     return new Binding(id, null, Unit.INSTANCE, false);
   }
 
-  public static Binding of(Core.IdPat id, Core.Exp exp) {
+  public static Binding of(Core.NamedPat id, Core.Exp exp) {
     return new Binding(id, exp, Unit.INSTANCE, false);
   }
 
-  public static Binding of(Core.IdPat id, Object value) {
+  public static Binding of(Core.NamedPat id, Object value) {
     return new Binding(id, null, value, false);
   }
 

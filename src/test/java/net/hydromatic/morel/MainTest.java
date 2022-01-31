@@ -43,6 +43,7 @@ import static net.hydromatic.morel.Matchers.isCode;
 import static net.hydromatic.morel.Matchers.isLiteral;
 import static net.hydromatic.morel.Matchers.isUnordered;
 import static net.hydromatic.morel.Matchers.list;
+import static net.hydromatic.morel.Matchers.map;
 import static net.hydromatic.morel.Matchers.throwsA;
 import static net.hydromatic.morel.Matchers.whenAppliedTo;
 import static net.hydromatic.morel.Ml.assertError;
@@ -227,6 +228,11 @@ public class MainTest {
         .assertParseThrowsParseException(
             containsString(
                 "Encountered \" \"rec\" \"rec \"\" at line 1, column 19."));
+
+    // pattern
+    ml("let val (x, y) = (1, 2) in x + y end").assertParseSame();
+    ml("let val w as (x, y) = (1, 2) in #1 w + #2 w + x + y end")
+        .assertParseSame();
 
     // record
     ml("{a = 1}").assertParseSame();
@@ -660,6 +666,14 @@ public class MainTest {
 
     // let with a tuple pattern
     ml("let val (x, y) = (1, 2) in x + y end").assertEval(is(3));
+    ml("let val w as (x, y) = (1, 2) in #1 w + #2 w + x + y end")
+        .assertEval(is(6));
+
+    // composite val
+    ml("val x = 1 and y = 2").assertEval(is(map("x", 1, "y", 2)));
+    ml("val (x, y) = (1, true)").assertEval(is(map("x", 1, "y", true)));
+    ml("val w as (x, y) = (2, false)")
+        .assertEval(is(map("x", 2, "y", false, "w", list(2, false))));
 
     // let with multiple variables
     ml("let val x = 1 and y = 2 in x + y end").assertEval(is(3));

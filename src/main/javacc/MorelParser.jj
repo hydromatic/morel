@@ -1128,6 +1128,12 @@ Pat pat4() :
 {
   id = identifier()
   (
+    // layered pattern
+    <AS> pat = pat() {
+      return ast.asPat(id.pos.plus(pat.pos),
+          (Ast.IdPat) ast.idPat(id.pos, id.name), pat);
+    }
+  |
     pat = pat() { return ast.conPat(id.pos.plus(pat.pos), id, pat); }
   |
     // id was not followed by pattern: it must be pattern
@@ -1136,7 +1142,6 @@ Pat pat4() :
 |
   pat = atomPat() { return pat; }
 }
-
 
 /** Parses an atomic pattern. */
 Pat atomPat() :
@@ -1357,6 +1362,7 @@ AstNode statementEof() :
 {
   < AND: "and" >
 | < ANDALSO: "andalso" >
+| < AS: "as" >
 | < CASE: "case" >
 | < DATATYPE: "datatype" >
 | < DIV: "div" >

@@ -139,6 +139,11 @@ public class Shuttle {
         annotatedPat.type.accept(this));
   }
 
+  protected Ast.Pat visit(Ast.AsPat asPat) {
+    return asPat.copy((Ast.IdPat) asPat.id.accept(this),
+        asPat.pat.accept(this));
+  }
+
   protected Ast.ConPat visit(Ast.ConPat conPat) {
     return conPat.copy(conPat.tyCon.accept(this), conPat.pat.accept(this));
   }
@@ -328,6 +333,10 @@ public class Shuttle {
 
   protected Core.IdPat visit(Core.IdPat idPat) {
     return idPat;
+  }
+
+  protected Core.AsPat visit(Core.AsPat asPat) {
+    return asPat.copy(asPat.name, asPat.i, asPat.pat.accept(this));
   }
 
   protected Core.Pat visit(Core.LiteralPat literalPat) {

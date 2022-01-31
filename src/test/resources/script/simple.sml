@@ -236,4 +236,56 @@ in
   (isZeroMod3 17, isOneMod3 17, isTwoMod3 17)
 end;
 
+(*) Composite declarations
+let
+  val (x, y) = (1, 2)
+in
+  x + y
+end;
+val (x, y) = (1, 2);
+it;
+val (x, 2) = (1, 2);
+it;
+val h :: t = [1, 2, 3];
+it;
+val _ = 3;
+
+val SOME i = SOME 1;
+val SOME i = NONE;
+val SOME (p as (1, i), SOME true) = SOME ((1, 2), SOME true);
+(* TODO
+val SOME (i, NONE) = SOME (1, SOME false);
+*)
+
+val (i, true) = (1, true);
+val (i, false) = (1, true);
+let
+  val (i, false) = (1, true)
+in
+  i + 1
+end;
+
+(*) Patterns
+
+(*) The following example is from "Introduction to Standard ML" by Robert Harper.
+val x = (( "foo", true ), 17 );
+val ( l as (ll,lr), r ) = x;
+
+fun f (true, []) = ~1
+  | f (true, l as (hd :: tl)) = List.length l
+  | f (false, list) = 0;
+f (true, ["a","b","c"]);
+
+let
+  val w as (x, y) = (1, 2)
+in
+  #1 w + #2 w + x + y
+end;
+
+val x as (y, z) = (1, 2);
+val x as h :: t = [1,2,3];
+val x as y as (h,i) :: t = [(1,2),(3,4),(5,6)];
+val a as SOME (b as (c, d)) = SOME (1, 2);
+val x as y as z = 3;
+
 (*) End simple.sml

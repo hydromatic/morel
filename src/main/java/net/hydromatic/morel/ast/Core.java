@@ -99,20 +99,45 @@ public class Core {
     @Override public abstract Pat accept(Shuttle shuttle);
   }
 
-  /** Named pattern.
+  /** Base class for named patterns ({@link IdPat} and {@link AsPat}).
    *
    * <p>Implements {@link Comparable} so that names are sorted correctly
    * for record fields (see {@link RecordType#ORDERING}).
    *
-   * @see Ast.Id */
-  public static class IdPat extends Pat implements Comparable<IdPat> {
+   * <p>A {@link Core.ValDecl} must be one of these. */
+  public abstract static class NamedPat extends Pat
+      implements Comparable<NamedPat> {
     public final String name;
     public final int i;
 
-    IdPat(Type type, String name, int i) {
-      super(Op.ID_PAT, type);
+    NamedPat(Op op, Type type, String name, int i) {
+      super(op, type);
       this.name = name;
       this.i = i;
+    }
+
+    /** {@inheritDoc}
+     *
+     * <p>Collate first on name, then on ordinal. */
+    @Override public int compareTo(NamedPat o) {
+      final int c = RecordType.compareNames(name, o.name);
+      if (c != 0) {
+        return c;
+      }
+      return Integer.compare(i, o.i);
+    }
+
+    public abstract NamedPat withType(Type type);
+
+    @Override public abstract NamedPat accept(Shuttle shuttle);
+  }
+
+  /** Named pattern.
+   *
+   * @see Ast.Id */
+  public static class IdPat extends NamedPat {
+    IdPat(Type type, String name, int i) {
+      super(Op.ID_PAT, type, name, i);
     }
 
     @Override public int hashCode() {
@@ -124,17 +149,6 @@ public class Core {
           || obj instanceof IdPat
           && ((IdPat) obj).name.equals(name)
           && ((IdPat) obj).i == i;
-    }
-
-    /** {@inheritDoc}
-     *
-     * <p>Collate first on name, then on ordinal. */
-    @Override public int compareTo(IdPat o) {
-      final int c = RecordType.compareNames(name, o.name);
-      if (c != 0) {
-        return c;
-      }
-      return Integer.compare(i, o.i);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -149,7 +163,7 @@ public class Core {
       visitor.visit(this);
     }
 
-    public IdPat withType(Type type) {
+    @Override public IdPat withType(Type type) {
       return type == this.type ? this : new IdPat(type, name, i);
     }
   }
@@ -220,6 +234,42 @@ public class Core {
 
     @Override public void accept(Visitor visitor) {
       visitor.visit(this);
+    }
+  }
+
+  /** Layered pattern. */
+  public static class AsPat extends NamedPat {
+    public final Pat pat;
+
+    protected AsPat(Type type, String name, int i, Pat pat) {
+      super(Op.AS_PAT, type, name, i);
+      this.pat = requireNonNull(pat);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.id(name).append(" as ").append(pat, 0, 0);
+    }
+
+    @Override public AsPat withType(Type type) {
+      return type == this.type ? this : new AsPat(type, name, i, pat);
+    }
+
+    @Override public AsPat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    /** Creates a copy of this {@code AsPat} with given contents,
+     * or {@code this} if the contents are the same. */
+    public Core.AsPat copy(String name, int i, Core.Pat pat) {
+      return this.name.equals(name)
+          && this.i == i
+          && this.pat.equals(pat)
+          ? this
+          : new AsPat(type, name, i, pat);
     }
   }
 
@@ -434,10 +484,10 @@ public class Core {
    * Core; for example, compare {@link Ast.Con0Pat#tyCon}
    * with {@link Con0Pat#tyCon}. */
   public static class Id extends Exp {
-    public final IdPat idPat;
+    public final NamedPat idPat;
 
     /** Creates an Id. */
-    Id(IdPat idPat) {
+    Id(NamedPat idPat) {
       super(Op.ID, idPat.type);
       this.idPat = requireNonNull(idPat);
     }
@@ -608,17 +658,17 @@ public class Core {
 
     @Override public abstract ValDecl accept(Shuttle shuttle);
 
-    public abstract void forEachBinding(BiConsumer<IdPat, Exp> consumer);
+    public abstract void forEachBinding(BiConsumer<NamedPat, Exp> consumer);
   }
 
   /** Non-recursive value declaration.
    *
    * @see RecValDecl#list */
   public static class NonRecValDecl extends ValDecl {
-    public final IdPat pat;
+    public final NamedPat pat;
     public final Exp exp;
 
-    NonRecValDecl(IdPat pat, Exp exp) {
+    NonRecValDecl(NamedPat pat, Exp exp) {
       super(Op.VAL_DECL);
       this.pat = pat;
       this.exp = exp;
@@ -648,12 +698,12 @@ public class Core {
       visitor.visit(this);
     }
 
-    public NonRecValDecl copy(IdPat pat, Exp exp) {
+    public NonRecValDecl copy(NamedPat pat, Exp exp) {
       return pat == this.pat && exp == this.exp ? this
           : core.nonRecValDecl(pat, exp);
     }
 
-    @Override public void forEachBinding(BiConsumer<IdPat, Exp> consumer) {
+    @Override public void forEachBinding(BiConsumer<NamedPat, Exp> consumer) {
       consumer.accept(pat, exp);
     }
   }
@@ -693,7 +743,7 @@ public class Core {
       visitor.visit(this);
     }
 
-    @Override public void forEachBinding(BiConsumer<IdPat, Exp> consumer) {
+    @Override public void forEachBinding(BiConsumer<NamedPat, Exp> consumer) {
       list.forEach(b -> b.forEachBinding(consumer));
     }
 

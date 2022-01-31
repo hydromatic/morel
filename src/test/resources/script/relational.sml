@@ -817,6 +817,19 @@ fun listFields2 lists =
 listFields [];
 listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
 
+(*) Layered patterns
+fun listHeads2 lists =
+  from list as (hd :: tl) in lists
+  yield hd + 1 + (List.length list);
+listHeads2 [];
+listHeads2 [[1, 2], [3], [4, 5, 6]];
+
+fun sumPairs2 pairs =
+  from p as (l, r) in pairs
+  yield (#1 p) + l + r;
+sumPairs2 [];
+sumPairs2 [(1, 2), (3, 4)];
+
 (*) '=' in from
 from x = 1;
 from x = 1 yield x + 2;

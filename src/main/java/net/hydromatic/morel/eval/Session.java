@@ -21,6 +21,7 @@ package net.hydromatic.morel.eval;
 import net.hydromatic.morel.compile.CompileException;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -33,8 +34,8 @@ import static java.util.Objects.requireNonNull;
 public class Session {
   /** The plan of the previous command. */
   public Code code;
-  /** The output of the previous command. */
-  public String out;
+  /** The output lines of the previous command. */
+  public List<String> out;
   /** Property values. */
   public final Map<Prop, Object> map = new LinkedHashMap<>();
 

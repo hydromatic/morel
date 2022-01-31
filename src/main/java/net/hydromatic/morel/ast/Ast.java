@@ -246,6 +246,48 @@ public class Ast {
     }
   }
 
+  /** Layered pattern.
+   *
+   * <p>For example, in "val h as (i, j) = (1, 2)",
+   * if the pattern matches, "h" is assigned the whole tuple,
+   * and "i" and "j" are assigned the left and right members of the tuple. */
+  public static class AsPat extends Pat {
+    public final IdPat id;
+    public final Pat pat;
+
+    AsPat(Pos pos, IdPat id, Pat pat) {
+      super(pos, Op.AS_PAT);
+      this.id = requireNonNull(id);
+      this.pat = requireNonNull(pat);
+    }
+
+    public Pat accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+      action.accept(id, 0);
+      action.accept(pat, 1);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.infix(left, id, op, pat, right);
+    }
+
+    /** Creates a copy of this {@code AsPat} with given contents,
+     * or {@code this} if the contents are the same. */
+    public AsPat copy(IdPat id, Pat pat) {
+      return this.id.equals(id)
+          && this.pat.equals(pat)
+          ? this
+          : ast.asPat(pos, id, pat);
+    }
+  }
+
   /** Type constructor pattern with no argument.
    *
    * <p>For example, in "fun nvl NIL = 0 | OPTION x = x",

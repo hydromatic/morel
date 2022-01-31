@@ -139,7 +139,7 @@ public abstract class Environments {
       return parent.getOpt(name);
     }
 
-    @Override public Binding getOpt(Core.IdPat id) {
+    @Override public Binding getOpt(Core.NamedPat id) {
       if (id.equals(binding.id)) {
         return binding;
       }
@@ -188,7 +188,7 @@ public abstract class Environments {
       return null;
     }
 
-    @Override public Binding getOpt(Core.IdPat id) {
+    @Override public Binding getOpt(Core.NamedPat id) {
       return null;
     }
 
@@ -217,7 +217,7 @@ public abstract class Environments {
       return binding != null ? binding : parent.getOpt(name);
     }
 
-    public Binding getOpt(Core.IdPat id) {
+    public Binding getOpt(Core.NamedPat id) {
       final Binding binding = map.get(id.name);
       return binding != null && binding.id.i == id.i ? binding
           : parent.getOpt(id);

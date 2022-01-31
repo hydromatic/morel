@@ -392,4 +392,122 @@ end;
 val it = (false,false,true) : bool * bool * bool
 
 
+(*) Composite declarations
+let
+  val (x, y) = (1, 2)
+in
+  x + y
+end;
+val it = 3 : int
+
+val (x, y) = (1, 2);
+val x = 1 : int
+val y = 2 : int
+
+it;
+val it = (1,2) : int * int
+
+val (x, 2) = (1, 2);
+val x = 1 : int
+
+it;
+val it = (1,2) : int * int
+
+val h :: t = [1, 2, 3];
+val h = 1 : int
+val t = [2,3] : int list
+
+it;
+val it = [1,2,3] : int list
+
+val _ = 3;
+
+
+val SOME i = SOME 1;
+val i = 1 : 'a
+
+val SOME i = NONE;
+uncaught exception Bind
+
+val SOME (p as (1, i), SOME true) = SOME ((1, 2), SOME true);
+val p = (1,2) : int * 'a
+val i = 2 : 'a
+
+(* TODO
+val SOME (i, NONE) = SOME (1, SOME false);
+*)
+
+val (i, true) = (1, true);
+val i = 1 : int
+
+val (i, false) = (1, true);
+uncaught exception Bind
+
+let
+  val (i, false) = (1, true)
+in
+  i + 1
+end;
+uncaught exception Bind
+
+
+(*) Patterns
+
+(*) The following example is from "Introduction to Standard ML" by Robert Harper.
+val x = (( "foo", true ), 17 );
+val x = (("foo",true),17) : string * bool * int
+
+val ( l as (ll,lr), r ) = x;
+val l = ("foo",true) : string * bool
+val ll = "foo" : string
+val lr = true : bool
+val r = 17 : int
+
+
+fun f (true, []) = ~1
+  | f (true, l as (hd :: tl)) = List.length l
+  | f (false, list) = 0;
+val f = fn : bool * 'a list -> int
+
+f (true, ["a","b","c"]);
+val it = 3 : int
+
+
+let
+  val w as (x, y) = (1, 2)
+in
+  #1 w + #2 w + x + y
+end;
+val it = 6 : int
+
+
+val x as (y, z) = (1, 2);
+val x = (1,2) : int * int
+val y = 1 : int
+val z = 2 : int
+
+val x as h :: t = [1,2,3];
+val x = [1,2,3] : int list
+val h = 1 : int
+val t = [2,3] : int list
+
+val x as y as (h,i) :: t = [(1,2),(3,4),(5,6)];
+val x = [(1,2),(3,4),(5,6)] : (int * int) list
+val y = [(1,2),(3,4),(5,6)] : (int * int) list
+val h = 1 : int
+val i = 2 : int
+val t = [(3,4),(5,6)] : (int * int) list
+
+val a as SOME (b as (c, d)) = SOME (1, 2);
+val a = SOME (1,2) : (int * int) option
+val b = (1,2) : 'a * 'b
+val c = 1 : 'a
+val d = 2 : 'b
+
+val x as y as z = 3;
+val x = 3 : int
+val y = 3 : int
+val z = 3 : int
+
+
 (*) End simple.sml

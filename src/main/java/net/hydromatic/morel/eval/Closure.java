@@ -26,6 +26,7 @@ import org.apache.calcite.util.Util;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 import static java.util.Objects.requireNonNull;
 
@@ -43,7 +44,7 @@ public class Closure implements Comparable<Closure>, Applicable {
    * <p>For example, when applying
    * {@code fn x => case x of 0 => "yes" | _ => "no"}
    * to the value {@code 1}, the first pattern ({@code 0} fails) but the second
-   * pattern pattern ({@code _}) succeeds, and therefore we evaluate the second
+   * pattern ({@code _}) succeeds, and therefore we evaluate the second
    * code {@code "no"}. */
   private final ImmutableList<Pair<Core.Pat, Code>> patCodes;
 
@@ -71,11 +72,11 @@ public class Closure implements Comparable<Closure>, Applicable {
    * when you invoke {@code (fn (x, y) => x + y) (3, 4)}, the binder
    * sets {@code x} to 3 and {@code y} to 4. */
   EvalEnv bind(Object argValue) {
-    final EvalEnv[] envRef = {evalEnv};
+    final EvalEnvHolder envRef = new EvalEnvHolder(evalEnv);
     for (Pair<Core.Pat, Code> patCode : patCodes) {
       final Core.Pat pat = patCode.left;
-      if (bindRecurse(pat, envRef, argValue)) {
-        return envRef[0];
+      if (bindRecurse(pat, argValue, envRef)) {
+        return envRef.env;
       }
     }
     throw new AssertionError("no match");
@@ -83,12 +84,12 @@ public class Closure implements Comparable<Closure>, Applicable {
 
   /** Similar to {@link #bind}, but evaluates an expression first. */
   EvalEnv evalBind(EvalEnv env) {
-    final EvalEnv[] envRef = {env};
+    final EvalEnvHolder envRef = new EvalEnvHolder(env);
     for (Pair<Core.Pat, Code> patCode : patCodes) {
       final Object argValue = patCode.right.eval(env);
       final Core.Pat pat = patCode.left;
-      if (bindRecurse(pat, envRef, argValue)) {
-        return envRef[0];
+      if (bindRecurse(pat, argValue, envRef)) {
+        return envRef.env;
       }
     }
     throw new AssertionError("no match");
@@ -96,15 +97,15 @@ public class Closure implements Comparable<Closure>, Applicable {
 
   /** Similar to {@link #bind}, but also evaluates. */
   Object bindEval(Object argValue) {
-    final EvalEnv[] envRef = {evalEnv};
+    final EvalEnvHolder envRef = new EvalEnvHolder(evalEnv);
     for (Pair<Core.Pat, Code> patCode : patCodes) {
       final Core.Pat pat = patCode.left;
-      if (bindRecurse(pat, envRef, argValue)) {
+      if (bindRecurse(pat, argValue, envRef)) {
         final Code code = patCode.right;
-        return code.eval(envRef[0]);
+        return code.eval(envRef.env);
       }
     }
-    throw new AssertionError("no match: " + Pair.left(patCodes));
+    throw new Codes.MorelRuntimeException(Codes.BuiltInExn.BIND);
   }
 
   @Override public Object apply(EvalEnv env, Object argValue) {
@@ -115,18 +116,29 @@ public class Closure implements Comparable<Closure>, Applicable {
     return describer.start("closure", d -> {});
   }
 
-  private boolean bindRecurse(Core.Pat pat, EvalEnv[] envRef,
-      Object argValue) {
+  /** Attempts to bind a value to a pattern. Returns whether it has succeeded in
+   * matching the whole pattern.
+   *
+   * <p>Each time it matches a name, calls a consumer. It's possible that the
+   * consumer is called a few times even if the whole pattern ultimately fails
+   * to match. */
+  public static boolean bindRecurse(Core.Pat pat, Object argValue,
+      BiConsumer<Core.NamedPat, Object> envRef) {
     final List<Object> listValue;
     final Core.LiteralPat literalPat;
     switch (pat.op) {
     case ID_PAT:
       final Core.IdPat idPat = (Core.IdPat) pat;
-      envRef[0] = envRef[0].bind(idPat.name, argValue);
+      envRef.accept(idPat, argValue);
       return true;
 
     case WILDCARD_PAT:
       return true;
+
+    case AS_PAT:
+      final Core.AsPat asPat = (Core.AsPat) pat;
+      envRef.accept(asPat, argValue);
+      return bindRecurse(asPat.pat, argValue, envRef);
 
     case BOOL_LITERAL_PAT:
     case CHAR_LITERAL_PAT:
@@ -146,7 +158,7 @@ public class Closure implements Comparable<Closure>, Applicable {
       final Core.TuplePat tuplePat = (Core.TuplePat) pat;
       listValue = (List) argValue;
       for (Pair<Core.Pat, Object> pair : Pair.zip(tuplePat.args, listValue)) {
-        if (!bindRecurse(pair.left, envRef, pair.right)) {
+        if (!bindRecurse(pair.left, pair.right, envRef)) {
           return false;
         }
       }
@@ -156,7 +168,7 @@ public class Closure implements Comparable<Closure>, Applicable {
       final Core.RecordPat recordPat = (Core.RecordPat) pat;
       listValue = (List) argValue;
       for (Pair<Core.Pat, Object> pair : Pair.zip(recordPat.args, listValue)) {
-        if (!bindRecurse(pair.left, envRef, pair.right)) {
+        if (!bindRecurse(pair.left, pair.right, envRef)) {
           return false;
         }
       }
@@ -169,7 +181,7 @@ public class Closure implements Comparable<Closure>, Applicable {
         return false;
       }
       for (Pair<Core.Pat, Object> pair : Pair.zip(listPat.args, listValue)) {
-        if (!bindRecurse(pair.left, envRef, pair.right)) {
+        if (!bindRecurse(pair.left, pair.right, envRef)) {
           return false;
         }
       }
@@ -185,8 +197,8 @@ public class Closure implements Comparable<Closure>, Applicable {
       final Object head = consValue.get(0);
       final List<Object> tail = Util.skip(consValue);
       List<Core.Pat> patArgs = ((Core.TuplePat) consPat.pat).args;
-      return bindRecurse(patArgs.get(0), envRef, head)
-          && bindRecurse(patArgs.get(1), envRef, tail);
+      return bindRecurse(patArgs.get(0), head, envRef)
+          && bindRecurse(patArgs.get(1), tail, envRef);
 
     case CON0_PAT:
       final Core.Con0Pat con0Pat = (Core.Con0Pat) pat;
@@ -197,10 +209,25 @@ public class Closure implements Comparable<Closure>, Applicable {
       final Core.ConPat conPat = (Core.ConPat) pat;
       final List conValue = (List) argValue;
       return conValue.get(0).equals(conPat.tyCon)
-          && bindRecurse(conPat.pat, envRef, conValue.get(1));
+          && bindRecurse(conPat.pat, conValue.get(1), envRef);
 
     default:
       throw new AssertionError("cannot compile " + pat.op + ": " + pat);
+    }
+  }
+
+  /** Callback for {@link #bindRecurse(Core.Pat, Object, BiConsumer)} that
+   * modifies an environment. */
+  private static class EvalEnvHolder
+      implements BiConsumer<Core.NamedPat, Object> {
+    EvalEnv env;
+
+    EvalEnvHolder(EvalEnv env) {
+      this.env = env;
+    }
+
+    @Override public void accept(Core.NamedPat namedPat, Object o) {
+      env = env.bind(namedPat.name, o);
     }
   }
 }

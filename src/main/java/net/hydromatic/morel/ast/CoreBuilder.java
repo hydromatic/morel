@@ -138,7 +138,7 @@ public enum CoreBuilder {
   }
 
   /** Creates a reference to a value. */
-  public Core.Id id(Core.IdPat idPat) {
+  public Core.Id id(Core.NamedPat idPat) {
     return new Core.Id(idPat);
   }
 
@@ -186,6 +186,18 @@ public enum CoreBuilder {
 
   public Core.WildcardPat wildcardPat(Type type) {
     return new Core.WildcardPat(type);
+  }
+
+  public Core.AsPat asPat(Type type, String name, int i, Core.Pat pat) {
+    return new Core.AsPat(type, name, i, pat);
+  }
+
+  /** Creates an AsPat with a given name, generating an ordinal to distinguish
+   * it from other declarations with the same name elsewhere in the program. */
+  public Core.AsPat asPat(Type type, String name, NameGenerator nameGenerator,
+      Core.Pat pat) {
+    assert name.length() > 0;
+    return asPat(type, name, nameGenerator.inc(name), pat);
   }
 
   public Core.ConPat consPat(Type type, String tyCon, Core.Pat pat) {
@@ -280,7 +292,7 @@ public enum CoreBuilder {
     return new Core.Local(dataType, exp);
   }
 
-  public Core.NonRecValDecl nonRecValDecl(Core.IdPat pat, Core.Exp exp) {
+  public Core.NonRecValDecl nonRecValDecl(Core.NamedPat pat, Core.Exp exp) {
     return new Core.NonRecValDecl(pat, exp);
   }
 
@@ -338,7 +350,7 @@ public enum CoreBuilder {
     if (bindings.size() == 1) {
       return core.id(getOnlyElement(bindings).id);
     } else {
-      final SortedMap<Core.IdPat, Core.Exp> map = new TreeMap<>();
+      final SortedMap<Core.NamedPat, Core.Exp> map = new TreeMap<>();
       final SortedMap<String, Type> argNameTypes = new TreeMap<>(ORDERING);
       bindings.forEach(b -> {
         map.put(b.id, core.id(b.id));

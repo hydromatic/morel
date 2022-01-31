@@ -542,7 +542,7 @@ public class CalciteCompiler extends Compiler {
       if (apply.fn instanceof Core.RecordSelector
           && apply.arg instanceof Core.Id) {
         // Something like '#deptno e'
-        final Core.IdPat idPat = ((Core.Id) apply.arg).idPat;
+        final Core.NamedPat idPat = ((Core.Id) apply.arg).idPat;
         final @Nullable RexNode range = cx.var(idPat.name);
         if (range != null) {
           final Core.RecordSelector selector = (Core.RecordSelector) apply.fn;

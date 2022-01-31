@@ -65,7 +65,7 @@ public abstract class Environment {
   public abstract Binding getOpt(String name);
 
   /** Returns the binding of {@code id} if bound, null if not. */
-  public abstract Binding getOpt(Core.IdPat id);
+  public abstract Binding getOpt(Core.NamedPat id);
 
   /** Returns the binding of {@code name}; throws if not. */
   public Binding get(String name) {

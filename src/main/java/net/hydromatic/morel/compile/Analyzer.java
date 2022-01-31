@@ -36,11 +36,11 @@ import java.util.Map;
  * Shuttle that counts how many times each expression is used.
  */
 public class Analyzer extends EnvVisitor {
-  private final Map<Core.IdPat, MutableUse> map;
+  private final Map<Core.NamedPat, MutableUse> map;
 
   /** Private constructor. */
   private Analyzer(TypeSystem typeSystem, Environment env,
-      Map<Core.IdPat, MutableUse> map) {
+      Map<Core.NamedPat, MutableUse> map) {
     super(typeSystem, env);
     this.map = map;
   }
@@ -48,7 +48,7 @@ public class Analyzer extends EnvVisitor {
   /** Analyzes an expression. */
   public static Analysis analyze(TypeSystem typeSystem, Environment env,
       AstNode node) {
-    final Map<Core.IdPat, MutableUse> map = new HashMap<>();
+    final Map<Core.NamedPat, MutableUse> map = new HashMap<>();
     final Analyzer analyzer = new Analyzer(typeSystem, env, map);
 
     // Mark all top-level bindings so that they will not be removed
@@ -61,7 +61,7 @@ public class Analyzer extends EnvVisitor {
 
   /** Returns the result of an analysis. */
   private Analysis result() {
-    final ImmutableMap.Builder<Core.IdPat, Use> b = ImmutableMap.builder();
+    final ImmutableMap.Builder<Core.NamedPat, Use> b = ImmutableMap.builder();
     map.forEach((k, v) -> b.put(k, v.fix()));
     return new Analysis(b.build());
   }
@@ -92,7 +92,7 @@ public class Analyzer extends EnvVisitor {
   }
 
   /** Gets or creates a {@link MutableUse} for a given name. */
-  private MutableUse use(Core.IdPat name) {
+  private MutableUse use(Core.NamedPat name) {
     return map.computeIfAbsent(name, k -> new MutableUse());
   }
 
@@ -118,12 +118,12 @@ public class Analyzer extends EnvVisitor {
     }
   }
 
-  @Override protected void visit(Core.Case kase) {
-    kase.exp.accept(this);
-    if (kase.matchList.size() == 1) {
+  @Override protected void visit(Core.Case case_) {
+    case_.exp.accept(this);
+    if (case_.matchList.size() == 1) {
       // When there is a single branch, we don't need to check for a single use
       // on multiple branches, so we can expedite.
-      kase.matchList.get(0).accept(this);
+      case_.matchList.get(0).accept(this);
     } else {
       // Create a multi-map of all of the uses of bindings along the separate
       // branches. Example:
@@ -135,10 +135,11 @@ public class Analyzer extends EnvVisitor {
       // a has use counts [1, 2] and is therefore MULTI_UNSAFE
       // b has use counts [1] and is therefore ONCE_SAFE
       // c has use counts [1, 1] and is therefore MULTI_SAFE
-      final Multimap<Core.IdPat, MutableUse> multimap = HashMultimap.create();
-      final Map<Core.IdPat, MutableUse> subMap = new HashMap<>();
+      final Multimap<Core.NamedPat, MutableUse> multimap =
+          HashMultimap.create();
+      final Map<Core.NamedPat, MutableUse> subMap = new HashMap<>();
       final Analyzer analyzer = new Analyzer(typeSystem, env, subMap);
-      kase.matchList.forEach(e -> {
+      case_.matchList.forEach(e -> {
         subMap.clear();
         e.accept(analyzer);
         subMap.forEach(multimap::put);
@@ -245,9 +246,9 @@ public class Analyzer extends EnvVisitor {
 
   /** Result of an analysis. */
   public static class Analysis {
-    public final ImmutableMap<Core.IdPat, Use> map;
+    public final ImmutableMap<Core.NamedPat, Use> map;
 
-    Analysis(ImmutableMap<Core.IdPat, Use> map) {
+    Analysis(ImmutableMap<Core.NamedPat, Use> map) {
       this.map = map;
     }
   }

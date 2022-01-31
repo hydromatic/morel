@@ -129,7 +129,7 @@ public abstract class Matchers {
   static Map<Object, Object> map(Object... keyValues) {
     final LinkedHashMap<Object, Object> map = new LinkedHashMap<>();
     for (int i = 0; i < keyValues.length / 2; i++) {
-      map.put(keyValues[i * 2], keyValues[i + 2 + 1]);
+      map.put(keyValues[i * 2], keyValues[i * 2 + 1]);
     }
     return map;
   }

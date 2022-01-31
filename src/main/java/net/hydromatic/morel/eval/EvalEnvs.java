@@ -182,6 +182,16 @@ public class EvalEnvs {
         this.values[slot++] = argValue;
         return true;
 
+      case AS_PAT:
+        final Core.AsPat asPat = (Core.AsPat) pat;
+        final int oldSlot = slot++;
+        if (bindRecurse(asPat.pat, argValue)) {
+          this.values[oldSlot] = argValue;
+          return true;
+        } else {
+          return false;
+        }
+
       case WILDCARD_PAT:
         return true;
 

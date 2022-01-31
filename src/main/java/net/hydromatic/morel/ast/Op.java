@@ -41,6 +41,7 @@ public enum Op {
   // patterns
   ID_PAT(true),
   WILDCARD_PAT,
+  AS_PAT(" as "),
   CON_PAT(" "),
   CON0_PAT(" "),
   TUPLE_PAT(true),

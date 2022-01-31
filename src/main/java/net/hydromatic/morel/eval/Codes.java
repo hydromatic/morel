@@ -3086,6 +3086,7 @@ public abstract class Codes {
   /** Definitions of Morel built-in exceptions. */
   public enum BuiltInExn {
     EMPTY("List", "Empty"),
+    BIND("General", "Bind"),
     DIV("General", "Div"),
     DOMAIN("General", "Domain"),
     OPTION("Option", "Option"),

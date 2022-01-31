@@ -79,10 +79,11 @@ public class Resolver {
    * {@link Core.IdPat}, which the {@link Analyzer} will think is used just
    * once.
    */
-  private final Map<Pair<Core.IdPat, Type>, Core.IdPat> variantIdMap;
+  private final Map<Pair<Core.NamedPat, Type>, Core.NamedPat> variantIdMap;
 
   private Resolver(TypeMap typeMap, NameGenerator nameGenerator,
-      Map<Pair<Core.IdPat, Type>, Core.IdPat> variantIdMap, Environment env) {
+      Map<Pair<Core.NamedPat, Type>, Core.NamedPat> variantIdMap,
+      Environment env) {
     this.typeMap = typeMap;
     this.nameGenerator = nameGenerator;
     this.variantIdMap = variantIdMap;
@@ -139,8 +140,7 @@ public class Resolver {
     final List<Binding> bindings = new ArrayList<>(); // discard
     final ResolvedValDecl resolvedValDecl = resolveValDecl(valDecl, bindings);
     Core.NonRecValDecl nonRecValDecl =
-        core.nonRecValDecl((Core.IdPat) resolvedValDecl.pat(),
-            resolvedValDecl.exp());
+        core.nonRecValDecl(resolvedValDecl.pat, resolvedValDecl.exp);
     return resolvedValDecl.rec
         ? core.recValDecl(ImmutableList.of(nonRecValDecl))
         : nonRecValDecl;
@@ -203,8 +203,26 @@ public class Resolver {
     // because "i + 1" does not reference "inc".
     boolean rec = valDecl.rec
         && references(exps, pats);
+    // Transform "let val v1 = E1 and v2 = E2 in E end"
+    // to "let val v = (v1, v2) in case v of (E1, E2) => E end"
+    final Core.Pat pat0;
+    final Core.Exp exp;
+    if (composite) {
+      pat0 = core.tuplePat(typeMap.typeSystem, pats);
+      exp = core.tuple((RecordLikeType) pat0.type, exps);
+    } else {
+      pat0 = pats.get(0);
+      exp = exps.get(0);
+    }
+    final Core.NamedPat pat;
+    if (pat0 instanceof Core.NamedPat) {
+      pat = (Core.NamedPat) pat0;
+    } else {
+      pat = core.asPat(exp.type, "it", nameGenerator, pat0);
+    }
+
     return new ResolvedValDecl(rec, ImmutableList.copyOf(pats),
-        ImmutableList.copyOf(exps));
+        ImmutableList.copyOf(exps), pat, exp);
   }
 
   /** Returns whether any of the expressions in {@code exps} references
@@ -213,12 +231,12 @@ public class Resolver {
    * <p>This method is used to decide whether it is safe to convert a recursive
    * declaration into a non-recursive one. */
   private boolean references(List<Core.Exp> exps, List<Core.Pat> pats) {
-    final Set<Core.IdPat> refSet = new HashSet<>();
+    final Set<Core.NamedPat> refSet = new HashSet<>();
     final ReferenceFinder finder =
         new ReferenceFinder(typeMap.typeSystem, Environments.empty(), refSet);
     exps.forEach(e -> e.accept(finder));
 
-    final Set<Core.IdPat> defSet = new HashSet<>();
+    final Set<Core.NamedPat> defSet = new HashSet<>();
     final Visitor v = new Visitor() {
       @Override protected void visit(Core.IdPat idPat) {
         defSet.add(idPat);
@@ -235,10 +253,10 @@ public class Resolver {
 
   /** Visitor that finds all references to unbound variables in an expression. */
   static class ReferenceFinder extends EnvVisitor {
-    final Set<Core.IdPat> set;
+    final Set<Core.NamedPat> set;
 
     protected ReferenceFinder(TypeSystem typeSystem, Environment env,
-        Set<Core.IdPat> set) {
+        Set<Core.NamedPat> set) {
       super(typeSystem, env);
       this.set = set;
     }
@@ -316,7 +334,7 @@ public class Resolver {
   private Core.Id toCore(Ast.Id id) {
     final Binding binding = env.get(id.name);
     assert binding != null;
-    final Core.IdPat idPat = getIdPat(id, binding);
+    final Core.NamedPat idPat = getIdPat(id, binding);
     return core.id(idPat);
   }
 
@@ -328,7 +346,7 @@ public class Resolver {
 
   /** Converts an Id that is a reference to a variable into an IdPat that
    * represents its declaration. */
-  private Core.IdPat getIdPat(Ast.Id id, Binding binding) {
+  private Core.NamedPat getIdPat(Ast.Id id, Binding binding) {
     final Type type = typeMap.getType(id);
     if (type == binding.id.type) {
       return binding.id;
@@ -498,6 +516,10 @@ public class Resolver {
         return core.con0Pat((DataType) type, idPat.name);
       }
       return core.idPat(type, idPat.name, nameGenerator);
+
+    case AS_PAT:
+      final Ast.AsPat asPat = (Ast.AsPat) pat;
+      return core.asPat(type, asPat.id.name, nameGenerator, toCore(asPat.pat));
 
     case CON_PAT:
       final Ast.ConPat conPat = (Ast.ConPat) pat;
@@ -707,29 +729,20 @@ public class Resolver {
     final boolean composite;
     final ImmutableList<Core.Pat> pats;
     final ImmutableList<Core.Exp> exps;
+    final Core.NamedPat pat;
+    final Core.Exp exp;
 
     ResolvedValDecl(boolean rec,
         ImmutableList<Core.Pat> pats,
-        ImmutableList<Core.Exp> exps) {
+        ImmutableList<Core.Exp> exps,
+        Core.NamedPat pat, Core.Exp exp) {
       this.rec = rec;
       this.composite = pats.size() > 1;
       this.pats = pats;
       this.exps = exps;
       assert pats.size() == exps.size();
-    }
-
-    Core.Pat pat() {
-      // Transform "let val v1 = E1 and v2 = E2 in E end"
-      // to "let val v = (v1, v2) in case v of (E1, E2) => E end"
-      return composite
-          ? core.tuplePat(typeMap.typeSystem, pats)
-          : pats.get(0);
-    }
-
-    Core.Exp exp() {
-      return composite
-          ? core.tuple((RecordLikeType) pat().type, exps)
-          : exps.get(0);
+      this.pat = pat;
+      this.exp = exp;
     }
 
     @Override Core.Let toExp(Core.Exp resultExp) {
@@ -750,11 +763,11 @@ public class Resolver {
         }
         // This is a complex pattern. Allocate an intermediate variable.
         final String name = nameGenerator.get();
-        final Core.IdPat idPat = core.idPat(pat().type, name, nameGenerator);
+        final Core.IdPat idPat = core.idPat(pat.type, name, nameGenerator);
         final Core.Id id = core.id(idPat);
-        return core.let(core.nonRecValDecl(idPat, exp()),
+        return core.let(core.nonRecValDecl(idPat, exp),
             core.caseOf(resultExp.type, id,
-                ImmutableList.of(core.match(pat(), resultExp))));
+                ImmutableList.of(core.match(pat, resultExp))));
       }
     }
   }

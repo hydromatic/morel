@@ -99,6 +99,11 @@ public class Visitor {
     annotatedPat.type.accept(this);
   }
 
+  protected void visit(Ast.AsPat asPat) {
+    asPat.id.accept(this);
+    asPat.pat.accept(this);
+  }
+
   protected void visit(Ast.ConPat conPat) {
     conPat.tyCon.accept(this);
     conPat.pat.accept(this);
@@ -372,6 +377,10 @@ public class Visitor {
   }
 
   protected void visit(Core.IdPat idPat) {
+  }
+
+  protected void visit(Core.AsPat asPat) {
+    asPat.pat.accept(this);
   }
 
   protected void visit(Core.LiteralPat idPat) {

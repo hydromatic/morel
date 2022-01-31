@@ -51,6 +51,7 @@ import org.hamcrest.Matcher;
 
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -383,8 +384,16 @@ class Ml {
     final Object result;
     if (statement instanceof Ast.Exp) {
       result = bindingValue(bindings, "it");
-    } else {
+    } else if (bindings.size() == 1) {
       result = bindings.get(0).value;
+    } else {
+      Map<String, Object> map = new LinkedHashMap<>();
+      bindings.forEach(b -> {
+        if (!b.id.name.equals("it")) {
+          map.put(b.id.name, b.value);
+        }
+      });
+      result = map;
     }
     if (resultMatcher != null) {
       assertThat(result, resultMatcher);

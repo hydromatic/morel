@@ -66,7 +66,8 @@ public abstract class Compiles {
     } else {
       decl = (Ast.Decl) statement;
     }
-    return prepareDecl(typeSystem, session, env, calcite, decl);
+    return prepareDecl(typeSystem, session, env, calcite, decl,
+        decl == statement);
   }
 
   /**
@@ -75,7 +76,7 @@ public abstract class Compiles {
    */
   private static CompiledStatement prepareDecl(TypeSystem typeSystem,
       Session session, Environment env, @Nullable Calcite calcite,
-      Ast.Decl decl) {
+      Ast.Decl decl, boolean isDecl) {
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, decl, typeSystem);
     final boolean hybrid = Prop.HYBRID.booleanValue(session.map);
@@ -112,7 +113,7 @@ public abstract class Compiles {
     } else {
       compiler = new Compiler(typeSystem);
     }
-    return compiler.compileStatement(env, coreDecl);
+    return compiler.compileStatement(env, coreDecl, isDecl);
   }
 
   /** Converts {@code e} to {@code val = e}. */
@@ -149,8 +150,11 @@ public abstract class Compiles {
    * we have the expression. */
   static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
       Core.ValDecl valDecl) {
-    valDecl.forEachBinding((pat, exp) ->
-        bindings.add(Binding.of(pat, exp)));
+    valDecl.forEachBinding((pat, exp) -> {
+      if (pat instanceof Core.IdPat) {
+        bindings.add(Binding.of((Core.IdPat) pat, exp));
+      }
+    });
   }
 
   static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
@@ -159,8 +163,8 @@ public abstract class Compiles {
   }
 
   static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
-      Core.IdPat idPat) {
-    bindings.add(Binding.of(idPat));
+      Core.NamedPat namedPat) {
+    bindings.add(Binding.of(namedPat));
   }
 
   public static void bindDataType(TypeSystem typeSystem, List<Binding> bindings,
@@ -183,7 +187,7 @@ public abstract class Compiles {
   }
 
   /** Visitor that adds a {@link Binding} each time it see an
-   * {@link Core.IdPat}. */
+   * {@link Core.IdPat} or {@link Core.AsPat}. */
   private static class PatternBinder extends Visitor {
     private final TypeSystem typeSystem;
     private final List<Binding> bindings;
@@ -195,6 +199,11 @@ public abstract class Compiles {
 
     @Override public void visit(Core.IdPat idPat) {
       bindPattern(typeSystem, bindings, idPat);
+    }
+
+    @Override public void visit(Core.AsPat asPat) {
+      bindPattern(typeSystem, bindings, asPat);
+      super.visit(asPat);
     }
 
     @Override protected void visit(Core.NonRecValDecl valBind) {

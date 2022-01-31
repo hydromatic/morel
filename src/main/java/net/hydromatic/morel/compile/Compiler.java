@@ -50,10 +50,12 @@ import org.apache.calcite.util.Util;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -77,12 +79,13 @@ public class Compiler {
     this.typeSystem = requireNonNull(typeSystem, "typeSystem");
   }
 
-  CompiledStatement compileStatement(Environment env, Core.Decl decl) {
+  CompiledStatement compileStatement(Environment env, Core.Decl decl,
+      boolean isDecl) {
     final List<Code> matchCodes = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
     final List<Action> actions = new ArrayList<>();
     final Context cx = Context.of(env);
-    compileDecl(cx, decl, matchCodes, bindings, actions);
+    compileDecl(cx, decl, isDecl, matchCodes, bindings, actions);
     final Type type = decl instanceof Core.NonRecValDecl
         ? ((Core.NonRecValDecl) decl).pat.type
         : PrimitiveType.UNIT;
@@ -472,7 +475,7 @@ public class Compiler {
   private Code compileLet(Context cx, Core.Let let) {
     final List<Code> matchCodes = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
-    compileValDecl(cx, let.decl, matchCodes, bindings, null);
+    compileValDecl(cx, let.decl, true, matchCodes, bindings, null);
     Context cx2 = cx.bindAll(bindings);
     final Code resultCode = compile(cx2, let.exp);
     return finishCompileLet(cx2, matchCodes, resultCode, let.type);
@@ -490,13 +493,13 @@ public class Compiler {
     return compile(cx2, local.exp);
   }
 
-  void compileDecl(Context cx, Core.Decl decl, List<Code> matchCodes,
-      List<Binding> bindings, List<Action> actions) {
+  void compileDecl(Context cx, Core.Decl decl, boolean isDecl,
+      List<Code> matchCodes, List<Binding> bindings, List<Action> actions) {
     switch (decl.op) {
     case VAL_DECL:
     case REC_VAL_DECL:
       final Core.ValDecl valDecl = (Core.ValDecl) decl;
-      compileValDecl(cx, valDecl, matchCodes, bindings, actions);
+      compileValDecl(cx, valDecl, isDecl, matchCodes, bindings, actions);
       break;
 
     case DATATYPE_DECL:
@@ -594,16 +597,16 @@ public class Compiler {
     return Pair.of(match.pat, code);
   }
 
-  private void compileValDecl(Context cx, Core.ValDecl valDecl,
+  private void compileValDecl(Context cx, Core.ValDecl valDecl, boolean isDecl,
       List<Code> matchCodes, List<Binding> bindings, List<Action> actions) {
     Compiles.bindPattern(typeSystem, bindings, valDecl);
     final List<Binding> newBindings = new TailList<>(bindings);
-    final Map<Core.IdPat, LinkCode> linkCodes = new HashMap<>();
+    final Map<Core.NamedPat, LinkCode> linkCodes = new HashMap<>();
     if (valDecl.op == Op.REC_VAL_DECL) {
-      valDecl.forEachBinding((idPat, exp) -> {
+      valDecl.forEachBinding((pat, exp) -> {
         final LinkCode linkCode = new LinkCode();
-        linkCodes.put(idPat, linkCode);
-        bindings.add(Binding.of(idPat, linkCode));
+        linkCodes.put(pat, linkCode);
+        bindings.add(Binding.of(pat, linkCode));
       });
     }
 
@@ -620,28 +623,44 @@ public class Compiler {
       matchCodes.add(new MatchCode(ImmutableList.of(Pair.of(pat, code))));
 
       if (actions != null) {
-        final String name = pat.name;
         final Type type0 = exp.type;
         final Type type = typeSystem.ensureClosed(type0);
         actions.add((outLines, outBindings, evalEnv) -> {
           final Session session = (Session) evalEnv.getOpt(EvalEnv.SESSION);
           final StringBuilder buf = new StringBuilder();
+          final List<String> outs = new ArrayList<>();
           try {
             final Object o = code.eval(evalEnv);
-            outBindings.accept(Binding.of(pat.withType(type), o));
-            int stringDepth = Prop.STRING_DEPTH.intValue(session.map);
-            int lineWidth = Prop.LINE_WIDTH.intValue(session.map);
-            int printDepth = Prop.PRINT_DEPTH.intValue(session.map);
-            int printLength = Prop.PRINT_LENGTH.intValue(session.map);
-            new Pretty(lineWidth, printLength, printDepth, stringDepth)
-                .pretty(buf, type, new Pretty.TypedVal(name, o, type0));
+            final Map<Core.NamedPat, Object> pairs = new LinkedHashMap<>();
+            if (!Closure.bindRecurse(pat.withType(type), o, pairs::put)) {
+              throw new Codes.MorelRuntimeException(Codes.BuiltInExn.BIND);
+            }
+            pairs.forEach((pat2, o2) -> {
+              outBindings.accept(Binding.of(pat2, o2));
+              if (!isDecl || !pat2.name.equals("it")) {
+                int stringDepth = Prop.STRING_DEPTH.intValue(session.map);
+                int lineWidth = Prop.LINE_WIDTH.intValue(session.map);
+                int printDepth = Prop.PRINT_DEPTH.intValue(session.map);
+                int printLength = Prop.PRINT_LENGTH.intValue(session.map);
+                final Pretty pretty =
+                    new Pretty(lineWidth, printLength, printDepth, stringDepth);
+                pretty.pretty(buf, pat2.type,
+                    new Pretty.TypedVal(pat2.name, o2, pat2.type));
+                final String out = buf.toString();
+                buf.setLength(0);
+                outs.add(out);
+                outLines.accept(out);
+              }
+            });
           } catch (Codes.MorelRuntimeException e) {
             session.handle(e, buf);
+            final String out = buf.toString();
+            buf.setLength(0);
+            outs.add(out);
+            outLines.accept(out);
           }
-          final String out = buf.toString();
           session.code = code;
-          session.out = out;
-          outLines.accept(out);
+          session.out = ImmutableList.copyOf(outs);
         });
       }
     });
@@ -649,7 +668,42 @@ public class Compiler {
     newBindings.clear();
   }
 
-  private void link(Map<Core.IdPat, LinkCode> linkCodes, Core.Pat pat,
+  private void shredValue(Core.Pat pat, Object o,
+      BiConsumer<Core.NamedPat, Object> consumer) {
+    switch (pat.op) {
+    case ID_PAT:
+      consumer.accept((Core.IdPat) pat, o);
+      return;
+    case AS_PAT:
+      final Core.AsPat asPat = (Core.AsPat) pat;
+      consumer.accept(asPat, o);
+      shredValue(asPat.pat, o, consumer);
+      return;
+    case TUPLE_PAT:
+      final Core.TuplePat tuplePat = (Core.TuplePat) pat;
+      Pair.forEach(tuplePat.args, (List) o, (pat2, o2) ->
+          shredValue(pat2, o2, consumer));
+      return;
+    case RECORD_PAT:
+      final Core.RecordPat recordPat = (Core.RecordPat) pat;
+      Pair.forEach(recordPat.args, (List) o, (pat2, o2) ->
+          shredValue(pat2, o2, consumer));
+      return;
+    case CON_PAT:
+      final Core.ConPat conPat = (Core.ConPat) pat;
+      shredValue(conPat.pat, ((List) o).get(1), consumer);
+      return;
+    case CONS_PAT:
+      final Core.ConPat consPat = (Core.ConPat) pat;
+      final List list = (List) o;
+      final Object head = list.get(0);
+      final List tail = list.subList(1, list.size());
+      shredValue(consPat.pat, ImmutableList.of(head, tail), consumer);
+      return;
+    }
+  }
+
+  private void link(Map<Core.NamedPat, LinkCode> linkCodes, Core.Pat pat,
       Code code) {
     if (pat instanceof Core.IdPat) {
       final LinkCode linkCode = linkCodes.get(pat);

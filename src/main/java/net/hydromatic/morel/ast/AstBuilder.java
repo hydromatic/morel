@@ -148,6 +148,10 @@ public enum AstBuilder {
     return new Ast.WildcardPat(pos);
   }
 
+  public Ast.AsPat asPat(Pos pos, Ast.IdPat id, Ast.Pat pat) {
+    return new Ast.AsPat(pos, id, pat);
+  }
+
   public Ast.ConPat conPat(Pos pos, Ast.Id tyCon, Ast.Pat pat) {
     return new Ast.ConPat(pos, tyCon, pat);
   }

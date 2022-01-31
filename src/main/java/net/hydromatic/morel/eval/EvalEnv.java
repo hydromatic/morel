@@ -65,6 +65,10 @@ public interface EvalEnv {
       @Override protected void visit(Core.IdPat idPat) {
         names.add(idPat.name);
       }
+      @Override protected void visit(Core.AsPat asPat) {
+        names.add(asPat.name);
+        super.visit(asPat);
+      }
     });
     return new EvalEnvs.MutablePatSubEvalEnv(this, pat, names);
   }
