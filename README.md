@@ -119,7 +119,7 @@ Implemented:
     `exception Size`,
     `exception Subscript`,
     `datatype order` (`LESS`, `EQUAL`, `GREATER`),
-    `o`, `ignore`
+    `op o`, `ignore`
   * [List](https://smlfamily.github.io/Basis/list.html):
     `exception Empty`,
     `datatype 'a list = nil | :: of ('a * 'a list)`,
@@ -127,12 +127,77 @@ Implemented:
     `take`, `drop`, `rev`, `concat`, `revAppend`, `app`, `map`, `mapPartial`,
     `find`, `filter`, `partition`, `foldl`, `foldr`, `exists`, `all`,
     `tabulate`, `collate`
+  * [Math](https://smlfamily.github.io/Basis/math.html):
+    `type real`,
+    `acos`,
+    `asin`,
+    `atan`,
+    `atan2`,
+    `cos`,
+    `cosh`,
+    `e`,
+    `exp`,
+    `ln`,
+    `log10`,
+    `pi`,
+    `pow`,
+    `sin`,
+    `sinh`,
+    `sqrt`,
+    `tan`,
+    `tanh`
   * [Option](https://smlfamily.github.io/Basis/option.html):
     `exception Option`,
     `datatype 'a option = NONE | SOME of 'a`,
     `getOpt`, `isSome`, `valOf`, `filter`, `join`, `app`,
     `flatten`, `valOf`,
     `map`, `mapPartial`, `compose`, `composePartial`
+  * [Real](https://smlfamily.github.io/Basis/real.html):
+    `op *`,
+    `op +`,
+    `op -`,
+    `op /`,
+    `op &lt;`,
+    `op &lt;=`,
+    `op &gt;`,
+    `op &gt;=`,
+    `op ~`,
+    `abs`,
+    `ceil`,
+    `checkFloat`,
+    `compare`,
+    `copySign`,
+    `floor`,
+    `fromInt, real`,
+    `fromManExp`,
+    `fromString`,
+    `isFinite`,
+    `isNan`,
+    `isNormal`,
+    `max`,
+    `maxFinite`,
+    `min`,
+    `minNormalPos`,
+    `minPos`,
+    `negInf`,
+    `posInf`,
+    `precision`,
+    `radix`,
+    `realCeil`,
+    `realFloor`,
+    `realMod`,
+    `realRound`,
+    `realTrunc`,
+    `rem`,
+    `round`,
+    `sameSign`,
+    `sign`,
+    `signBit`,
+    `split`,
+    `trunc`,
+    `toManExp`,
+    `toString`,
+    `unordered`
   * [String](https://smlfamily.github.io/Basis/string.html):
     `eqtype char`,
     `eqtype string`,
@@ -148,7 +213,8 @@ Implemented:
   * Interact:
     `use`
   * Relational:
-    `count`, `only`, `max`, `min`, `sum`
+    `count`, `op elem`, `op notElem`, `exists`, `notExists`,
+    `only`, `max`, `min`, `sum`
   * System:
     `env`, `plan`, `set`, `show`, `unset`
 
