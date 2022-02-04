@@ -164,7 +164,7 @@ end;
 Sys.set ("hybrid", false);
 let
   fun descendants2 descendants newDescendants =
-    if List.null newDescendants then
+    if null newDescendants then
       descendants
     else
       descendants2 (descendants union newDescendants)

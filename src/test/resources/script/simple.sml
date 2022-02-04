@@ -65,15 +65,15 @@ in
 end;
 it 3;
 
-fun str s 0 l = l
-  | str s i l = str ("a" ^ s) (i - 1) (s :: l);
+fun strTimes s 0 l = l
+  | strTimes s i l = strTimes ("a" ^ s) (i - 1) (s :: l);
 
-str "" 3 [];
-str "" 8 [];
-str "" 9 [];
-str "" 12 [];
-str "" 13 [];
-str "" 20 [];
+strTimes "" 3 [];
+strTimes "" 8 [];
+strTimes "" 9 [];
+strTimes "" 12 [];
+strTimes "" 13 [];
+strTimes "" 20 [];
 
 [{a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",d="ddddddddd"}];
 [{a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",d="ddddddddd"},{a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",d="ddddddddd"}];
@@ -169,7 +169,7 @@ end;
 (*) have different data types, so that the bug is more obvious.
 let
   val x = "abc";
-  fun g y = String.size x + y;
+  fun g y = size x + y;
   val x = 10
 in
   g x
@@ -178,7 +178,7 @@ end;
 (*) As previous, but converting 'fun' to a lambda.
 let
   val x = "abc";
-  val g = fn y => String.size x + y;
+  val g = fn y => size x + y;
   val x = 10
 in
   g x
@@ -194,7 +194,7 @@ fun foo arg =
 foo 3;
 
 (*) Define a function using higher-order functions
-val longest = List.foldl (fn (s, t) => if String.size s > String.size t then s else t) "";
+val longest = foldl (fn (s, t) => if size s > size t then s else t) "";
 longest ["ab", "cde", "", "f"];
 longest [];
 
@@ -250,10 +250,17 @@ val h :: t = [1, 2, 3];
 it;
 val _ = 3;
 
+(* TODO fix in [MOREL-43]
 val SOME i = SOME 1;
+val i = 1 : 'a
+*)
 val SOME i = NONE;
+(* TODO fix in [MOREL-43]
 val SOME (p as (1, i), SOME true) = SOME ((1, 2), SOME true);
-(* TODO
+val p = (1,2) : int * 'a
+val i = 2 : 'a
+*)
+(* TODO fix in [MOREL-43]
 val SOME (i, NONE) = SOME (1, SOME false);
 *)
 
@@ -272,7 +279,7 @@ val x = (( "foo", true ), 17 );
 val ( l as (ll,lr), r ) = x;
 
 fun f (true, []) = ~1
-  | f (true, l as (hd :: tl)) = List.length l
+  | f (true, l as (hd :: tl)) = length l
   | f (false, list) = 0;
 f (true, ["a","b","c"]);
 
@@ -285,7 +292,13 @@ end;
 val x as (y, z) = (1, 2);
 val x as h :: t = [1,2,3];
 val x as y as (h,i) :: t = [(1,2),(3,4),(5,6)];
+(* TODO fix in [MOREL-43]
 val a as SOME (b as (c, d)) = SOME (1, 2);
+val a = SOME (1,2) : (int * int) option
+val b = (1,2) : 'a * 'b
+val c = 1 : 'a
+val d = 2 : 'b
+*)
 val x as y as z = 3;
 
 (*) End simple.sml

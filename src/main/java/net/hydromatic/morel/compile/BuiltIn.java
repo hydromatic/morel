@@ -206,7 +206,7 @@ public enum BuiltIn {
   /** Function "String.size", of type "string &rarr; int".
    *
    * <p>"size s" returns |s|, the number of characters in string s. */
-  STRING_SIZE("String", "size", ts -> ts.fnType(STRING, INT)),
+  STRING_SIZE("String", "size", "size", ts -> ts.fnType(STRING, INT)),
 
   /** Function "String.sub", of type "string * int &rarr; char".
    *
@@ -239,7 +239,7 @@ public enum BuiltIn {
    * <p>"substring (s, i, j)" returns the substring s[i..i+j-1], i.e., the
    * substring of size j starting at index i. This is equivalent to
    * extract(s, i, SOME j). */
-  STRING_SUBSTRING("String", "substring", ts ->
+  STRING_SUBSTRING("String", "substring", "substring", ts ->
       ts.fnType(ts.tupleType(STRING, INT, INT), STRING)),
 
   /** Function "String.concat", of type "string list &rarr; string".
@@ -247,7 +247,7 @@ public enum BuiltIn {
    * <p>"concat l" is the concatenation of all the strings in l. This raises
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
    * if the sum of all the sizes is greater than maxSize.  */
-  STRING_CONCAT("String", "concat", ts ->
+  STRING_CONCAT("String", "concat", "concat", ts ->
       ts.fnType(ts.listType(STRING), STRING)),
 
   /** Function "String.concatWith", of type "string &rarr; string list &rarr;
@@ -263,7 +263,7 @@ public enum BuiltIn {
   /** Function "String.str", of type "char &rarr; string".
    *
    * <p>"str c" is the string of size one containing the character c. */
-  STRING_STR("String", "str", ts -> ts.fnType(CHAR, STRING)),
+  STRING_STR("String", "str", "str", ts -> ts.fnType(CHAR, STRING)),
 
   /** Function "String.implode", of type "char list &rarr; string".
    *
@@ -271,13 +271,13 @@ public enum BuiltIn {
    * l. This is equivalent to {@code concat (List.map str l)}. This raises
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
    * if the resulting string would have size greater than maxSize. */
-  STRING_IMPLODE("String", "implode", ts ->
+  STRING_IMPLODE("String", "implode", "implode", ts ->
       ts.fnType(ts.listType(CHAR), STRING)),
 
   /** Function "String.explode", of type "string &rarr; char list".
    *
    * <p>"explode s" is the list of characters in the string s. */
-  STRING_EXPLODE("String", "explode", ts ->
+  STRING_EXPLODE("String", "explode", "explode", ts ->
       ts.fnType(STRING, ts.listType(CHAR))),
 
   /** Function "String.map", of type "(char &rarr; char) &rarr; string
@@ -330,14 +330,14 @@ public enum BuiltIn {
    *
    * <p>"null l" returns true if the list l is empty.
    */
-  LIST_NULL("List", "null", ts ->
+  LIST_NULL("List", "null", "null", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
 
   /** Function "List.length", of type "&alpha; list &rarr; int".
    *
    * <p>"length l" returns the number of elements in the list l.
    */
-  LIST_LENGTH("List", "length", ts ->
+  LIST_LENGTH("List", "length", "length", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
 
   /** Function "List.at", of type "&alpha; list * &alpha; list &rarr; &alpha;
@@ -365,7 +365,7 @@ public enum BuiltIn {
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty}
    * if l is nil.
    */
-  LIST_HD("List", "hd", ts ->
+  LIST_HD("List", "hd", "hd", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
 
   /** Function "List.tl", of type "&alpha; list &rarr; &alpha; list".
@@ -374,7 +374,7 @@ public enum BuiltIn {
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY empty}
    * if l is nil.
    */
-  LIST_TL("List", "tl", ts ->
+  LIST_TL("List", "tl", "tl", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
 
   /** Function "List.last", of type "&alpha; list &rarr; &alpha;".
@@ -445,7 +445,7 @@ public enum BuiltIn {
    *
    * <p>"rev l" returns a list consisting of l's elements in reverse order.
    */
-  LIST_REV("List", "rev", ts ->
+  LIST_REV("List", "rev", "rev", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
 
   /** Function "List.concat", of type "&alpha; list list &rarr; &alpha; list".
@@ -471,7 +471,7 @@ public enum BuiltIn {
    *
    * <p>"app f l" applies f to the elements of l, from left to right.
    */
-  LIST_APP("List", "app", ts ->
+  LIST_APP("List", "app", "app", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.fnType(h.get(0), UNIT), h.list(0), UNIT))),
 
@@ -541,7 +541,7 @@ public enum BuiltIn {
    * {@code f(xn,...,f(x2, f(x1, init))...)}
    * or {@code init} if the list is empty.
    */
-  LIST_FOLDL("List", "foldl", ts ->
+  LIST_FOLDL("List", "foldl", "foldl", ts ->
       ts.forallType(2, h ->
           ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
               h.get(1), h.list(0), h.get(1)))),
@@ -553,7 +553,7 @@ public enum BuiltIn {
    * {@code f(x1, f(x2, ..., f(xn, init)...))}
    * or {@code init} if the list is empty.
    */
-  LIST_FOLDR("List", "foldr", ts ->
+  LIST_FOLDR("List", "foldr", "foldr", ts ->
       ts.forallType(2, h ->
           ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
               h.get(1), h.list(0), h.get(1)))),
@@ -776,7 +776,7 @@ public enum BuiltIn {
    *
    * <p>{@code getOpt(opt, a)} returns v if opt is SOME(v); otherwise it
    * returns a. */
-  OPTION_GET_OPT("Option", "getOpt", ts ->
+  OPTION_GET_OPT("Option", "getOpt", "getOpt", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.option(0), h.get(0)),
               h.get(0)))),
@@ -786,7 +786,7 @@ public enum BuiltIn {
    *
    * <p>{@code isSome opt} returns true if opt is SOME(v); otherwise it returns
    * false. */
-  OPTION_IS_SOME("Option", "isSome", ts ->
+  OPTION_IS_SOME("Option", "isSome", "isSome", ts ->
       ts.forallType(1, h -> ts.fnType(h.option(0), BOOL))),
 
   /** Function "Option.valOf", of type
@@ -794,7 +794,7 @@ public enum BuiltIn {
    *
    * <p>{@code valOf opt} returns v if opt is SOME(v); otherwise it raises
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#OPTION Option}. */
-  OPTION_VAL_OF("Option", "valOf", ts ->
+  OPTION_VAL_OF("Option", "valOf", "valOf", ts ->
       ts.forallType(1, h -> ts.fnType(h.option(0), h.get(0)))),
 
   /** Function "Option.filter", of type
@@ -888,7 +888,7 @@ public enum BuiltIn {
   /** Function "Real.ceil", of type "real &rarr; int".
    *
    * <p>Returns largest int not larger than {@code r}. */
-  REAL_CEIL("Real", "ceil", ts -> ts.fnType(REAL, INT)),
+  REAL_CEIL("Real", "ceil", "ceil", ts -> ts.fnType(REAL, INT)),
 
   /** Function "Real.checkFloat", of type "real &rarr; real".
    *
@@ -914,7 +914,7 @@ public enum BuiltIn {
   /** Function "Real.floor", of type "real &rarr; int".
    *
    * <p>Returns smallest int not less than {@code r}. */
-  REAL_FLOOR("Real", "floor", ts -> ts.fnType(REAL, INT)),
+  REAL_FLOOR("Real", "floor", "floor", ts -> ts.fnType(REAL, INT)),
 
   /** Function "Real.fromInt", of type "int &rarr; real". Converts the integer
    * {@code i} to a {@code real} value. If the absolute value of {@code i} is
@@ -1053,7 +1053,7 @@ public enum BuiltIn {
    *
    * <p>Returns the integer nearest to {@code r}. In the case of a tie, it
    * rounds to the nearest even integer. */
-  REAL_ROUND("Real", "round", ts -> ts.fnType(REAL, INT)),
+  REAL_ROUND("Real", "round", "round", ts -> ts.fnType(REAL, INT)),
 
   /** Function "Real.sameSign", of type "real * real &rarr; bool".
    *
@@ -1120,7 +1120,7 @@ public enum BuiltIn {
   /** Function "Real.trunc", of type "real &rarr; int".
    *
    * <p>Returns {@code r} rounded towards zero. */
-  REAL_TRUNC("Real", "trunc", ts -> ts.fnType(REAL, INT)),
+  REAL_TRUNC("Real", "trunc", "trunc", ts -> ts.fnType(REAL, INT)),
 
   /** Function "Real.unordered", of type "real * real &rarr; bool".
    *
@@ -1272,7 +1272,7 @@ public enum BuiltIn {
    * the list is greater than {@code maxLen}, then the
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
    * exception is raised. */
-  VECTOR_FROM_LIST("Vector", "fromList", ts ->
+  VECTOR_FROM_LIST("Vector", "fromList", "vector", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), h.vector(0)))),
 
   /** Function "Vector.tabulate" of type

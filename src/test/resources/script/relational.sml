@@ -532,19 +532,19 @@ from (k, v) in [(1, 5), (1, 6), (2, 7), (2, 10)]
 group k compute x = (fn vs => k + (sum vs)) of v;
 
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x compute z = (fn ys => String.concat (x :: ys)) of y;
+  group x compute z = (fn ys => concat (x :: ys)) of y;
 
 (*) similar, but with composite key
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x, z compute a = (fn ys => x ^ ":" ^ z ^ ":" ^ (String.concat ys)) of y;
+  group x, z compute a = (fn ys => x ^ ":" ^ z ^ ":" ^ (concat ys)) of y;
 
 (*) similar, but aggregate does not reference key
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x compute z = (fn ys => String.concat ys) of y;
+  group x compute z = (fn ys => concat ys) of y;
 
 (*) equivalent to previous
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x compute z = String.concat of y;
+  group x compute z = concat of y;
 
 (*) user-defined aggregate function
 let
@@ -820,7 +820,7 @@ listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
 (*) Layered patterns
 fun listHeads2 lists =
   from list as (hd :: tl) in lists
-  yield hd + 1 + (List.length list);
+  yield hd + 1 + (length list);
 listHeads2 [];
 listHeads2 [[1, 2], [3], [4, 5, 6]];
 
@@ -847,8 +847,8 @@ from x in [1, 2],
 (*) Temporary functions
 let
   fun abbrev s =
-    if String.size s > 5
-    then (String.substring (s, 0, 3)) ^ "."
+    if size s > 5
+    then (substring (s, 0, 3)) ^ "."
     else s;
   fun shouldPromote e =
     e.id < e.deptno * 4
@@ -859,12 +859,12 @@ in
 end;
 
 (*) There's no flatMap in the standard library, so define one
-fun flatMap f l = List.concat (List.map f l);
-flatMap String.explode ["ab", "", "def"];
+fun flatMap f l = List.concat (map f l);
+flatMap explode ["ab", "", "def"];
 
 (*) Here's another way to define flatMap
-fun flatMap2 f l = List.foldl List.at [] (List.map f l);
-flatMap2 String.explode ["ab", "", "def"];
+fun flatMap2 f l = foldl List.at [] (map f l);
+flatMap2 explode ["ab", "", "def"];
 
 (*) A function that runs a query and returns the result
 fun employeesIn deptno =
@@ -876,7 +876,7 @@ employeesIn 25;
 employeesIn 30;
 
 (*) Using 'map' to stick together results
-List.map employeesIn [10, 25, 30];
+map employeesIn [10, 25, 30];
 
 (*) Same, using 'from'
 from deptno in [10, 25, 30]
@@ -938,14 +938,14 @@ from e in
 Sys.set ("hybrid", false);
 from r in
   List.tabulate (6, fn i =>
-    {i, j = i + 3, s = String.substring ("morel", 0, i)})
+    {i, j = i + 3, s = substring ("morel", 0, i)})
 yield {r.j, r.s};
 Sys.plan();
 
 Sys.set ("hybrid", true);
 from r in
   List.tabulate (6, fn i =>
-    {i, j = i + 3, s = String.substring ("morel", 0, i)})
+    {i, j = i + 3, s = substring ("morel", 0, i)})
 yield {r.j, r.s};
 Sys.plan();
 

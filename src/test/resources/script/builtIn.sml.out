@@ -123,6 +123,145 @@ SOME (SOME true);
 val it = SOME SOME true : bool option option
 
 
+(* Top-level environment --------------------------------------- *)
+(* A few functions and operators belong to signatures but can be
+   used unqualified. For example, "hd" is shorthand for "List.hd".
+   The following are all of the top-level functions and operators
+   defined by Standard ML. *)
+
+(* "val ! : 'a ref -> 'a" maps to "General.!" *)
+(*) TODO !;
+(* "val := : 'a ref * 'a -> unit" maps to "General.:=" *)
+(*) TODO :=;
+(* "val @ : ('a list * 'a list) -> 'a list" maps to "List.@" *)
+(*) TODO @;
+(* "val ^ : string * string -> string" maps to "String.^" *)
+(*) TODO ^;
+(* "val app : ('a -> unit) -> 'a list -> unit" maps to "List.app" *)
+app;
+val it = fn : ('a -> unit) -> 'a list -> unit
+
+(* "val before : 'a * unit -> 'a" maps to "General.before" *)
+(*) TODO before;
+(* "val ceil : real -> int" maps to "Real.ceil" *)
+ceil;
+val it = fn : real -> int
+
+(* "val chr : int -> char" maps to "Char.chr" *)
+(*) TODO chr;
+(* "val concat : string list -> string" maps to "String.concat" *)
+concat;
+val it = fn : string list -> string
+
+(* "val exnMessage : exn -> string" maps to "General.exnMessage" *)
+(*) TODO exnMessage;
+(* "val exnName : exn -> string" maps to "General.exnName" *)
+(*) TODO exnName;
+(* "val explode : string -> char list" maps to "String.explode" *)
+explode;
+val it = fn : string -> char list
+
+(* "val floor : real -> int" maps to "Real.floor" *)
+floor;
+val it = fn : real -> int
+
+(* "val foldl : ('a*'b->'b)-> 'b -> 'a list -> 'b" maps to "List.foldl" *)
+foldl;
+val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+
+(* "val foldr : ('a*'b->'b)-> 'b -> 'a list -> 'b" maps to "List.foldr" *)
+foldr;
+val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+
+(* "val getOpt : ('a option * 'a) -> 'a" maps to "Option.getOpt" *)
+getOpt;
+val it = fn : 'a option * 'a -> 'a
+
+(* "val hd : 'a list -> 'a" maps to "List.hd" *)
+hd;
+val it = fn : 'a list -> 'a
+
+(* "val ignore : 'a -> unit" maps to "General.ignore" *)
+ignore;
+val it = fn : 'a -> unit
+
+(* "val implode : char list -> string" maps to "String.implode" *)
+implode;
+val it = fn : char list -> string
+
+(* "val isSome : 'a option -> bool" maps to "Option.isSome" *)
+isSome;
+val it = fn : 'a option -> bool
+
+(* "val length : 'a list -> int" maps to "List.length" *)
+length;
+val it = fn : 'a list -> int
+
+(* "val map : ('a -> 'b) -> 'a list -> 'b list" maps to "List.map" *)
+map;
+val it = fn : ('a -> 'b) -> 'a list -> 'b list
+
+(* "val not : bool -> bool" maps to "Bool.not" *)
+not;
+val it = fn : bool -> bool
+
+(* "val null : 'a list -> bool" maps to "List.null" *)
+null;
+val it = fn : 'a list -> bool
+
+(* "val o : ('a->'b) * ('c->'a) -> 'c->'b" maps to "General.o" *)
+(*) TODO o;
+(* "val ord : char -> int" maps to "Char.ord" *)
+(*) TODO ord;
+(* "val print : string -> unit" maps to "TextIO.print" *)
+(*) TODO print;
+(* "val real : int -> real" maps to "Real.fromInt" *)
+real;
+val it = fn : int -> real
+
+(* "val ref : 'a -> 'a ref" maps to "primitive" *)
+(*) TODO ref;
+(* "val rev : 'a list -> 'a list" maps to "List.rev" *)
+rev;
+val it = fn : 'a list -> 'a list
+
+(* "val round : real -> int" maps to "Real.round" *)
+round;
+val it = fn : real -> int
+
+(* "val size : string -> int" maps to "String.size" *)
+size;
+val it = fn : string -> int
+
+(* "val str : char -> string" maps to "String.str" *)
+str;
+val it = fn : char -> string
+
+(* "val substring : string * int * int -> string" maps to "String.substring" *)
+substring;
+val it = fn : string * int * int -> string
+
+(* "val tl : 'a list -> 'a list" maps to "List.tl" *)
+tl;
+val it = fn : 'a list -> 'a list
+
+(* "val trunc : real -> int" maps to "Real.trunc" *)
+trunc;
+val it = fn : real -> int
+
+(* "val use : string -> unit" maps to "implementation dependent" *)
+use;
+val it = fn : string -> unit
+
+(* "val valOf : 'a option -> 'a" maps to "Option.valOf" *)
+valOf;
+val it = fn : 'a option -> 'a
+
+(* "val vector : 'a list -> 'a vector" maps to "Vector.fromList" *)
+vector;
+val it = fn : 'a list -> 'a vector
+
+
 (* General ----------------------------------------------------- *)
 
 (*) op o - function composition
@@ -3270,21 +3409,30 @@ val it =
    "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
    ("Vector",
    "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
-   ("abs","int -> int"),("count","forall 'a. 'a list -> int"),
+   ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
+   ("ceil","real -> int"),("concat","string list -> string"),
+   ("count","forall 'a. 'a list -> int"),
    ("emp","{empno:int, ename:string, mgr:int} list"),
    ("env","unit -> (string * string) list"),
-   ("exists","forall 'a. 'a list -> bool"),
+   ("exists","forall 'a. 'a list -> bool"),("explode","string -> char list"),
    ("f","real -> int * int * int * int"),("false","bool"),
-   ("ignore","forall 'a. 'a -> unit"),("it","unit -> (string * string) list"),
+   ("floor","real -> int"),
+   ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
+   ("foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
+   ("getOpt","forall 'a. 'a option * 'a -> 'a"),
+   ("hd","forall 'a. 'a list -> 'a"),("ignore","forall 'a. 'a -> unit"),
+   ("implode","char list -> string"),("isSome","forall 'a. 'a option -> bool"),
+   ("it","unit -> (string * string) list"),
    ("iterate",
    "forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list"),
+   ("length","forall 'a. 'a list -> int"),
    ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
    ("max","forall 'a. 'a list -> 'a"),("min","forall 'a. 'a list -> 'a"),
    ("nan","real"),("noneInt","int option"),("not","bool -> bool"),
    ("notExists","forall 'a. 'a list -> bool"),
-   ("only","forall 'a. 'a list -> 'a"),("op *","forall 'a. 'a * 'a -> 'a"),
-   ("op +","forall 'a. 'a * 'a -> 'a"),("op -","forall 'a. 'a * 'a -> 'a"),
-   ("op /","forall 'a. 'a * 'a -> 'a"),
+   ("null","forall 'a. 'a list -> bool"),("only","forall 'a. 'a list -> 'a"),
+   ("op *","forall 'a. 'a * 'a -> 'a"),("op +","forall 'a. 'a * 'a -> 'a"),
+   ("op -","forall 'a. 'a * 'a -> 'a"),("op /","forall 'a. 'a * 'a -> 'a"),
    ("op ::","forall 'a. 'a * 'a list -> 'a list"),
    ("op <","forall 'a. 'a * 'a -> bool"),
    ("op <=","forall 'a. 'a * 'a -> bool"),
@@ -3296,15 +3444,7 @@ val it =
    ("op elem","forall 'a. 'a * 'a list -> bool"),
    ("op except","forall 'a. 'a list * 'a list -> 'a list"),
    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),
-   ("op mod","int * int -> int"),
-   ("op notElem","forall 'a. 'a * 'a list -> bool"),
-   ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
-   ("op union","forall 'a. 'a list * 'a list -> 'a list"),
-   ("op ~","forall 'a. 'a -> 'a"),("plan","unit -> string"),
-   ("plusOne","int -> int"),("plusThree","int -> int"),("real","int -> real"),
-   ("set","forall 'a. string * 'a -> unit"),("show","string -> string option"),
-   ("sum","forall 'a. 'a list -> 'a"),("timesTwo","int -> int"),
-   ("true","bool"),...] : (string * string) list
+   ("op mod","int * int -> int"),...] : (string * string) list
 
 
 env;
@@ -3334,21 +3474,30 @@ val it =
    "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
    ("Vector",
    "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
-   ("abs","int -> int"),("count","forall 'a. 'a list -> int"),
+   ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
+   ("ceil","real -> int"),("concat","string list -> string"),
+   ("count","forall 'a. 'a list -> int"),
    ("emp","{empno:int, ename:string, mgr:int} list"),
    ("env","unit -> (string * string) list"),
-   ("exists","forall 'a. 'a list -> bool"),
+   ("exists","forall 'a. 'a list -> bool"),("explode","string -> char list"),
    ("f","real -> int * int * int * int"),("false","bool"),
-   ("ignore","forall 'a. 'a -> unit"),("it","unit -> (string * string) list"),
+   ("floor","real -> int"),
+   ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
+   ("foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
+   ("getOpt","forall 'a. 'a option * 'a -> 'a"),
+   ("hd","forall 'a. 'a list -> 'a"),("ignore","forall 'a. 'a -> unit"),
+   ("implode","char list -> string"),("isSome","forall 'a. 'a option -> bool"),
+   ("it","unit -> (string * string) list"),
    ("iterate",
    "forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list"),
+   ("length","forall 'a. 'a list -> int"),
    ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
    ("max","forall 'a. 'a list -> 'a"),("min","forall 'a. 'a list -> 'a"),
    ("nan","real"),("noneInt","int option"),("not","bool -> bool"),
    ("notExists","forall 'a. 'a list -> bool"),
-   ("only","forall 'a. 'a list -> 'a"),("op *","forall 'a. 'a * 'a -> 'a"),
-   ("op +","forall 'a. 'a * 'a -> 'a"),("op -","forall 'a. 'a * 'a -> 'a"),
-   ("op /","forall 'a. 'a * 'a -> 'a"),
+   ("null","forall 'a. 'a list -> bool"),("only","forall 'a. 'a list -> 'a"),
+   ("op *","forall 'a. 'a * 'a -> 'a"),("op +","forall 'a. 'a * 'a -> 'a"),
+   ("op -","forall 'a. 'a * 'a -> 'a"),("op /","forall 'a. 'a * 'a -> 'a"),
    ("op ::","forall 'a. 'a * 'a list -> 'a list"),
    ("op <","forall 'a. 'a * 'a -> bool"),
    ("op <=","forall 'a. 'a * 'a -> bool"),
@@ -3360,15 +3509,7 @@ val it =
    ("op elem","forall 'a. 'a * 'a list -> bool"),
    ("op except","forall 'a. 'a list * 'a list -> 'a list"),
    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),
-   ("op mod","int * int -> int"),
-   ("op notElem","forall 'a. 'a * 'a list -> bool"),
-   ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
-   ("op union","forall 'a. 'a list * 'a list -> 'a list"),
-   ("op ~","forall 'a. 'a -> 'a"),("plan","unit -> string"),
-   ("plusOne","int -> int"),("plusThree","int -> int"),("real","int -> real"),
-   ("set","forall 'a. string * 'a -> unit"),("show","string -> string option"),
-   ("sum","forall 'a. 'a list -> 'a"),("timesTwo","int -> int"),
-   ("true","bool"),...] : (string * string) list
+   ("op mod","int * int -> int"),...] : (string * string) list
 
 
 (*) val plan : unit -> string
@@ -3449,6 +3590,11 @@ Sys.plan ();
 val it =
   "apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(2)))"
   : string
+
+
+(*) "vector" is shorthand for "Vector.fromList"
+vector [1,2];
+val it = #[1,2] : int vector
 
 
 (* supported in sml-nj but not morel:

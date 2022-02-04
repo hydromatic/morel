@@ -1851,10 +1851,10 @@ fun mask (guess, answer) =
       | mask2 (m, i, letter :: rest, answer) =
           mask2 ((m * 3
             + (if String.sub (answer, i) = letter then 2
-             else if String.isSubstring (String.str letter) answer then 1
+             else if String.isSubstring (str letter) answer then 1
              else 0)), i + 1, rest, answer)
   in
-    mask2 (0, 0, String.explode guess, answer)
+    mask2 (0, 0, explode guess, answer)
   end;
 
 (*) should be 0 (no letters in common)

@@ -24,7 +24,7 @@
 
 (* "chars" splits a string into a list of (index, character) pairs. *)
 fun chars s =
-    List.tabulate (String.size s, fn i => (i, String.sub (s, i)));
+    List.tabulate (size s, fn i => (i, String.sub (s, i)));
 val chars = fn : string -> (int * char) list
 
 chars "abc";
@@ -40,7 +40,7 @@ val it = [(0,#"a"),(1,#"b"),(2,#"c")] : (int * char) list
 (*) Prints a solution
 fun matchStrings matches s =
     from (i, j) in matches
-      yield String.substring (s, i, j - i);
+      yield substring (s, i, j - i);
 val matchStrings = fn : (int * int) list -> string -> string list
 
 
@@ -62,7 +62,7 @@ val it = [] : (int * int) list
 (* "epsilon" finds all matches for the empty regex, i.e. all empty substrings,
    including the one "beyond the last character" *)
 fun epsilon s =
-    List.tabulate ((String.size s) + 1, fn i => (i, i));
+    List.tabulate ((size s) + 1, fn i => (i, i));
 val epsilon = fn : string -> (int * int) list
 
 epsilon "";
@@ -90,7 +90,7 @@ val it = [(3,5)] : (int * int) list
 
 (*) Match a string by converting it into a sequence of character matches.
 fun syms cs s =
-    List.foldr (fn (c, r) => seq (sym c) r) epsilon (String.explode cs) s;
+    foldr (fn (c, r) => seq (sym c) r) epsilon (explode cs) s;
 val syms = fn : string -> string -> (int * int) list
 
 syms "el" "hello";
@@ -172,9 +172,9 @@ fun range n =
 val range = fn : int -> int list
 
 fun matchStringsPos r s =
-  from i in range (String.size s),
+  from i in range (size s),
       j in r (s, i)
-    yield (i, String.substring (s, i, j - i));
+    yield (i, substring (s, i, j - i));
 val matchStringsPos = fn
   : (string * int -> int list) -> string -> (int * string) list
 

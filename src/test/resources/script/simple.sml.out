@@ -137,32 +137,32 @@ it 3;
 val it = 5 : int
 
 
-fun str s 0 l = l
-  | str s i l = str ("a" ^ s) (i - 1) (s :: l);
-val str = fn : string -> int -> string list -> string list
+fun strTimes s 0 l = l
+  | strTimes s i l = strTimes ("a" ^ s) (i - 1) (s :: l);
+val strTimes = fn : string -> int -> string list -> string list
 
 
-str "" 3 [];
+strTimes "" 3 [];
 val it = ["aa","a",""] : string list
 
-str "" 8 [];
+strTimes "" 8 [];
 val it = ["aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",""] : string list
 
-str "" 9 [];
+strTimes "" 9 [];
 val it = ["aaaaaaaa","aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",""]
   : string list
 
-str "" 12 [];
+strTimes "" 12 [];
 val it =
   ["aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa","aaaaaaa","aaaaaa",
    "aaaaa","aaaa","aaa","aa","a",""] : string list
 
-str "" 13 [];
+strTimes "" 13 [];
 val it =
   ["aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa","aaaaaaa",
    "aaaaaa","aaaaa","aaaa","aaa","aa","a",...] : string list
 
-str "" 20 [];
+strTimes "" 20 [];
 val it =
   ["aaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaa",
    "aaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaa","aaaaaaaaaaaaaa","aaaaaaaaaaaaa",
@@ -299,7 +299,7 @@ val it = 11 : int
 (*) have different data types, so that the bug is more obvious.
 let
   val x = "abc";
-  fun g y = String.size x + y;
+  fun g y = size x + y;
   val x = 10
 in
   g x
@@ -310,7 +310,7 @@ val it = 13 : int
 (*) As previous, but converting 'fun' to a lambda.
 let
   val x = "abc";
-  val g = fn y => String.size x + y;
+  val g = fn y => size x + y;
   val x = 10
 in
   g x
@@ -332,7 +332,7 @@ val it = 3 : int
 
 
 (*) Define a function using higher-order functions
-val longest = List.foldl (fn (s, t) => if String.size s > String.size t then s else t) "";
+val longest = foldl (fn (s, t) => if size s > size t then s else t) "";
 val longest = fn : string list -> string
 
 longest ["ab", "cde", "", "f"];
@@ -423,17 +423,19 @@ val it = [1,2,3] : int list
 val _ = 3;
 
 
+(* TODO fix in [MOREL-43]
 val SOME i = SOME 1;
 val i = 1 : 'a
-
+*)
 val SOME i = NONE;
 uncaught exception Bind
 
+(* TODO fix in [MOREL-43]
 val SOME (p as (1, i), SOME true) = SOME ((1, 2), SOME true);
 val p = (1,2) : int * 'a
 val i = 2 : 'a
-
-(* TODO
+*)
+(* TODO fix in [MOREL-43]
 val SOME (i, NONE) = SOME (1, SOME false);
 *)
 
@@ -465,7 +467,7 @@ val r = 17 : int
 
 
 fun f (true, []) = ~1
-  | f (true, l as (hd :: tl)) = List.length l
+  | f (true, l as (hd :: tl)) = length l
   | f (false, list) = 0;
 val f = fn : bool * 'a list -> int
 
@@ -498,12 +500,13 @@ val h = 1 : int
 val i = 2 : int
 val t = [(3,4),(5,6)] : (int * int) list
 
+(* TODO fix in [MOREL-43]
 val a as SOME (b as (c, d)) = SOME (1, 2);
 val a = SOME (1,2) : (int * int) option
 val b = (1,2) : 'a * 'b
 val c = 1 : 'a
 val d = 2 : 'b
-
+*)
 val x as y as z = 3;
 val x = 3 : int
 val y = 3 : int

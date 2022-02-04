@@ -848,26 +848,26 @@ val it = [{k=1,x=12},{k=2,x=19}] : {k:int, x:int} list
 
 
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x compute z = (fn ys => String.concat (x :: ys)) of y;
+  group x compute z = (fn ys => concat (x :: ys)) of y;
 val it = [{x="a",z="aplw"},{x="m",z="ma"}] : {x:string, z:string} list
 
 
 (*) similar, but with composite key
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x, z compute a = (fn ys => x ^ ":" ^ z ^ ":" ^ (String.concat ys)) of y;
+  group x, z compute a = (fn ys => x ^ ":" ^ z ^ ":" ^ (concat ys)) of y;
 val it = [{a="m:n:a",x="m",z="n"},{a="a:e:plw",x="a",z="e"}]
   : {a:string, x:string, z:string} list
 
 
 (*) similar, but aggregate does not reference key
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x compute z = (fn ys => String.concat ys) of y;
+  group x compute z = (fn ys => concat ys) of y;
 val it = [{x="a",z="plw"},{x="m",z="a"}] : {x:string, z:string} list
 
 
 (*) equivalent to previous
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x compute z = String.concat of y;
+  group x compute z = concat of y;
 val it = [{x="a",z="plw"},{x="m",z="a"}] : {x:string, z:string} list
 
 
@@ -1336,7 +1336,7 @@ val it = [2,4,5] : int list
 (*) Layered patterns
 fun listHeads2 lists =
   from list as (hd :: tl) in lists
-  yield hd + 1 + (List.length list);
+  yield hd + 1 + (length list);
 val listHeads2 = fn : int list list -> int list
 
 listHeads2 [];
@@ -1388,8 +1388,8 @@ val it = [{c=1,x=1,y=2,z=4},{c=1,x=2,y=3,z=5}]
 (*) Temporary functions
 let
   fun abbrev s =
-    if String.size s > 5
-    then (String.substring (s, 0, 3)) ^ "."
+    if size s > 5
+    then (substring (s, 0, 3)) ^ "."
     else s;
   fun shouldPromote e =
     e.id < e.deptno * 4
@@ -1404,18 +1404,18 @@ val it =
 
 
 (*) There's no flatMap in the standard library, so define one
-fun flatMap f l = List.concat (List.map f l);
+fun flatMap f l = List.concat (map f l);
 val flatMap = fn : ('a -> 'b list) -> 'a list -> 'b list
 
-flatMap String.explode ["ab", "", "def"];
+flatMap explode ["ab", "", "def"];
 val it = [#"a",#"b",#"d",#"e",#"f"] : char list
 
 
 (*) Here's another way to define flatMap
-fun flatMap2 f l = List.foldl List.at [] (List.map f l);
+fun flatMap2 f l = foldl List.at [] (map f l);
 val flatMap2 = fn : ('a -> 'b list) -> 'a list -> 'b list
 
-flatMap2 String.explode ["ab", "", "def"];
+flatMap2 explode ["ab", "", "def"];
 val it = [#"d",#"e",#"f",#"a",#"b"] : char list
 
 
@@ -1439,7 +1439,7 @@ val it = [{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
 
 
 (*) Using 'map' to stick together results
-List.map employeesIn [10, 25, 30];
+map employeesIn [10, 25, 30];
 val it =
   [[{deptno=10,id=100,name="Fred"}],[],
    [{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]]
@@ -1553,7 +1553,7 @@ val it = () : unit
 
 from r in
   List.tabulate (6, fn i =>
-    {i, j = i + 3, s = String.substring ("morel", 0, i)})
+    {i, j = i + 3, s = substring ("morel", 0, i)})
 yield {r.j, r.s};
 val it =
   [{j=3,s=""},{j=4,s="m"},{j=5,s="mo"},{j=6,s="mor"},{j=7,s="more"},
@@ -1570,7 +1570,7 @@ val it = () : unit
 
 from r in
   List.tabulate (6, fn i =>
-    {i, j = i + 3, s = String.substring ("morel", 0, i)})
+    {i, j = i + 3, s = substring ("morel", 0, i)})
 yield {r.j, r.s};
 val it =
   [{j=3,s=""},{j=4,s="m"},{j=5,s="mo"},{j=6,s="mor"},{j=7,s="more"},

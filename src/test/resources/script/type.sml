@@ -60,8 +60,8 @@ f3 {a = 1, b = 6};
 (*) fun f4 {a = 1, b} = a + b;
 
 (*) Variable with polymorphic type
-val x = List.map;
-x String.explode ["ab", "c"];
+val x = map;
+x explode ["ab", "c"];
 
 (*) Has polymorphic type
 val rec len = fn x =>
@@ -72,8 +72,8 @@ len [];
 len [1];
 len [1,2];
 
-List.map len (List.map String.explode ["ab", "", "cde"]);
-List.map (fn s => len (String.explode s)) ["ab", "", "cde"];
+map len (map explode ["ab", "", "cde"]);
+map (fn s => len (explode s)) ["ab", "", "cde"];
 
 (*) Type resolution involving record selectors
 val emps =

@@ -452,12 +452,12 @@ public class MainTest {
   }
 
   @Test void testApply() {
-    ml("List.hd [\"abc\"]")
+    ml("hd [\"abc\"]")
         .assertType("string");
   }
 
   @Test void testApply2() {
-    ml("List.map (fn x => String.size x) [\"abc\", \"de\"]")
+    ml("map (fn x => String.size x) [\"abc\", \"de\"]")
         .assertType("int list");
   }
 
@@ -479,10 +479,10 @@ public class MainTest {
 
   @Disabled("disable failing test - enable when we have polymorphic types")
   @Test void testHdIsPolymorphic() {
-    ml("(List.hd [1, 2], List.hd [false, true])")
+    ml("(hd [1, 2], hd [false, true])")
         .assertType("int * bool");
     ml("let\n"
-        + "  val h = List.hd\n"
+        + "  val h = hd\n"
         + "in\n"
         + "   (h [1, 2], h [false, true])\n"
         + "end")
@@ -856,7 +856,7 @@ public class MainTest {
 
     // When the argument tuple is returned from a function call, we evaluate
     // the long way ('apply').
-    final String ml2 = "Math.pow (List.hd [(2.0, 3.0)])";
+    final String ml2 = "Math.pow (hd [(2.0, 3.0)])";
     final String plan2 = "apply(fnValue Math.pow,"
         + " argCode apply(fnValue List.hd, "
         + "argCode tuple(tuple(constant(2.0), constant(3.0)))))";
@@ -958,7 +958,7 @@ public class MainTest {
   @Test void testSameVariableName() {
     final String ml = "List.filter\n"
         + " (fn e => e.x + 2 * e.y > 16)\n"
-        + " (List.map\n"
+        + " (map\n"
         + "   (fn e => {x = e - 1, y = 10 - e})\n"
         + "   [1, 2, 3, 4, 5])";
     ml(ml).assertEval(isUnordered(list(list(0, 9), list(1, 8))));
@@ -968,7 +968,7 @@ public class MainTest {
   @Test void testSameVariableName2() {
     final String ml = "List.filter\n"
         + " (fn e => e.x + 2 * e.y > 16)\n"
-        + " (List.map\n"
+        + " (map\n"
         + "   (fn e => {x = e.a - 1, y = 10 - e.a})\n"
         + "   [{a=1}, {a=2}, {a=3}, {a=4}, {a=5}])";
     ml(ml).assertEval(isUnordered(list(list(0, 9), list(1, 8))));
@@ -979,7 +979,7 @@ public class MainTest {
   @Test void testClosure() {
     final String ml = "let\n"
         + "  val x = \"abc\";\n"
-        + "  fun g y = String.size x + y;\n"
+        + "  fun g y = size x + y;\n"
         + "  val x = 10\n"
         + "in\n"
         + "  g x\n"
@@ -1578,14 +1578,14 @@ public class MainTest {
    * for each row in an outer loop. */
   @Test void testCrossApply() {
     final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
-        + "    c in String.explode s\n"
-        + "  yield s ^ \":\" ^ String.str c";
+        + "    c in explode s\n"
+        + "  yield s ^ \":\" ^ str c";
     ml(ml).assertEvalIter(equalsOrdered("abc:a", "abc:b", "abc:c", "d:d"));
   }
 
   @Test void testCrossApplyGroup() {
     final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
-        + "    c in String.explode s\n"
+        + "    c in explode s\n"
         + "  group s compute count = sum of 1";
     ml(ml).assertEvalIter(equalsOrdered(list(3, "abc"), list(1, "d")));
   }
@@ -1931,10 +1931,12 @@ public class MainTest {
         "(\"hello\", 2, 3)", null,
         "String.substring (\"hello\", 2, 3)",
         "#substring String (\"hello\", 2, 3)",
+        "substring (\"hello\", 4, 1)",
+        "#substring String (\"hello\", 4, 1)",
         "{a = 1, b = true, c = \"d\"}", null,
         "fn x => 1 + x + 3", null,
         "List.tabulate (6, fn i =>"
-            + " {i, j = i + 3, s = String.substring (\"morel\", 0, i)})",
+            + " {i, j = i + 3, s = substring (\"morel\", 0, i)})",
         "#tabulate List (6, fn i =>"
             + " {i = i, j = i + 3, s = #substring String (\"morel\", 0, i)})",
     };

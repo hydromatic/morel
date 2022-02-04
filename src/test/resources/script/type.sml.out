@@ -104,10 +104,10 @@ val it = 12 : int
 (*) fun f4 {a = 1, b} = a + b;
 
 (*) Variable with polymorphic type
-val x = List.map;
+val x = map;
 val x = fn : ('a -> 'b) -> 'a list -> 'b list
 
-x String.explode ["ab", "c"];
+x explode ["ab", "c"];
 val it = [[#"a",#"b"],[#"c"]] : char list list
 
 
@@ -128,10 +128,10 @@ len [1,2];
 val it = 2 : int
 
 
-List.map len (List.map String.explode ["ab", "", "cde"]);
+map len (map explode ["ab", "", "cde"]);
 val it = [2,0,3] : int list
 
-List.map (fn s => len (String.explode s)) ["ab", "", "cde"];
+map (fn s => len (explode s)) ["ab", "", "cde"];
 val it = [2,0,3] : int list
 
 

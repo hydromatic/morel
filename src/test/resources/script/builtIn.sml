@@ -50,6 +50,91 @@ SOME 1;
 NONE;
 SOME (SOME true);
 
+(* Top-level environment --------------------------------------- *)
+(* A few functions and operators belong to signatures but can be
+   used unqualified. For example, "hd" is shorthand for "List.hd".
+   The following are all of the top-level functions and operators
+   defined by Standard ML. *)
+
+(* "val ! : 'a ref -> 'a" maps to "General.!" *)
+(*) TODO !;
+(* "val := : 'a ref * 'a -> unit" maps to "General.:=" *)
+(*) TODO :=;
+(* "val @ : ('a list * 'a list) -> 'a list" maps to "List.@" *)
+(*) TODO @;
+(* "val ^ : string * string -> string" maps to "String.^" *)
+(*) TODO ^;
+(* "val app : ('a -> unit) -> 'a list -> unit" maps to "List.app" *)
+app;
+(* "val before : 'a * unit -> 'a" maps to "General.before" *)
+(*) TODO before;
+(* "val ceil : real -> int" maps to "Real.ceil" *)
+ceil;
+(* "val chr : int -> char" maps to "Char.chr" *)
+(*) TODO chr;
+(* "val concat : string list -> string" maps to "String.concat" *)
+concat;
+(* "val exnMessage : exn -> string" maps to "General.exnMessage" *)
+(*) TODO exnMessage;
+(* "val exnName : exn -> string" maps to "General.exnName" *)
+(*) TODO exnName;
+(* "val explode : string -> char list" maps to "String.explode" *)
+explode;
+(* "val floor : real -> int" maps to "Real.floor" *)
+floor;
+(* "val foldl : ('a*'b->'b)-> 'b -> 'a list -> 'b" maps to "List.foldl" *)
+foldl;
+(* "val foldr : ('a*'b->'b)-> 'b -> 'a list -> 'b" maps to "List.foldr" *)
+foldr;
+(* "val getOpt : ('a option * 'a) -> 'a" maps to "Option.getOpt" *)
+getOpt;
+(* "val hd : 'a list -> 'a" maps to "List.hd" *)
+hd;
+(* "val ignore : 'a -> unit" maps to "General.ignore" *)
+ignore;
+(* "val implode : char list -> string" maps to "String.implode" *)
+implode;
+(* "val isSome : 'a option -> bool" maps to "Option.isSome" *)
+isSome;
+(* "val length : 'a list -> int" maps to "List.length" *)
+length;
+(* "val map : ('a -> 'b) -> 'a list -> 'b list" maps to "List.map" *)
+map;
+(* "val not : bool -> bool" maps to "Bool.not" *)
+not;
+(* "val null : 'a list -> bool" maps to "List.null" *)
+null;
+(* "val o : ('a->'b) * ('c->'a) -> 'c->'b" maps to "General.o" *)
+(*) TODO o;
+(* "val ord : char -> int" maps to "Char.ord" *)
+(*) TODO ord;
+(* "val print : string -> unit" maps to "TextIO.print" *)
+(*) TODO print;
+(* "val real : int -> real" maps to "Real.fromInt" *)
+real;
+(* "val ref : 'a -> 'a ref" maps to "primitive" *)
+(*) TODO ref;
+(* "val rev : 'a list -> 'a list" maps to "List.rev" *)
+rev;
+(* "val round : real -> int" maps to "Real.round" *)
+round;
+(* "val size : string -> int" maps to "String.size" *)
+size;
+(* "val str : char -> string" maps to "String.str" *)
+str;
+(* "val substring : string * int * int -> string" maps to "String.substring" *)
+substring;
+(* "val tl : 'a list -> 'a list" maps to "List.tl" *)
+tl;
+(* "val trunc : real -> int" maps to "Real.trunc" *)
+trunc;
+(* "val use : string -> unit" maps to "implementation dependent" *)
+use;
+(* "val valOf : 'a option -> 'a" maps to "Option.valOf" *)
+valOf;
+(* "val vector : 'a list -> 'a vector" maps to "Vector.fromList" *)
+vector;
+
 (* General ----------------------------------------------------- *)
 
 (*) op o - function composition
@@ -1539,6 +1624,9 @@ Sys.plan ();
 Vector.fromList;
 Vector.fromList [1,2];
 Sys.plan ();
+
+(*) "vector" is shorthand for "Vector.fromList"
+vector [1,2];
 
 (* supported in sml-nj but not morel:
  #[1,2];

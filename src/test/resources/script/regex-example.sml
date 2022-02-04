@@ -24,7 +24,7 @@
 
 (* "chars" splits a string into a list of (index, character) pairs. *)
 fun chars s =
-    List.tabulate (String.size s, fn i => (i, String.sub (s, i)));
+    List.tabulate (size s, fn i => (i, String.sub (s, i)));
 chars "abc";
 
 (* The type of regular expression matchers:
@@ -36,7 +36,7 @@ chars "abc";
 (*) Prints a solution
 fun matchStrings matches s =
     from (i, j) in matches
-      yield String.substring (s, i, j - i);
+      yield substring (s, i, j - i);
 
 (* "sym" finds all matches for a single character "c"; it
     returns the range "(i, i + 1)" whenever "(i, c) is in "chars s": *)
@@ -50,7 +50,7 @@ sym #"z" "hello";
 (* "epsilon" finds all matches for the empty regex, i.e. all empty substrings,
    including the one "beyond the last character" *)
 fun epsilon s =
-    List.tabulate ((String.size s) + 1, fn i => (i, i));
+    List.tabulate ((size s) + 1, fn i => (i, i));
 epsilon "";
 epsilon "abc";
 
@@ -67,7 +67,7 @@ seq (sym #"l") (sym #"o") "hello";
 
 (*) Match a string by converting it into a sequence of character matches.
 fun syms cs s =
-    List.foldr (fn (c, r) => seq (sym c) r) epsilon (String.explode cs) s;
+    foldr (fn (c, r) => seq (sym c) r) epsilon (explode cs) s;
 syms "el" "hello";
 
 (* Similarly, regex alternation "r1 | r2" is accomplished by unioning all
@@ -122,9 +122,9 @@ matchStrings matches "hello world";
 fun range n =
     List.tabulate (n, fn i => i);
 fun matchStringsPos r s =
-  from i in range (String.size s),
+  from i in range (size s),
       j in r (s, i)
-    yield (i, String.substring (s, i, j - i));
+    yield (i, substring (s, i, j - i));
 
 fun symPos c (s, i) =
     from (i2, c2) in chars s
