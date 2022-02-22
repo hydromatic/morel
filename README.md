@@ -24,7 +24,9 @@ License.
 # Morel
 Standard ML interpreter, with relational extensions, implemented in Java
 
-(Until version 0.1, Morel was known as smlj.)
+(Morel was known as smlj until version 0.1, and hosted at
+[GitHub/julianhyde](https://github.com/julianhyde/morel)
+until version 0.2.)
 
 ## Requirements
 
@@ -48,7 +50,7 @@ Get Morel from
 ### Download and build
 
 ```bash
-$ git clone git://github.com/julianhyde/morel.git
+$ git clone git://github.com/hydromatic/morel.git
 $ cd morel
 $ ./mvnw install
 ```
@@ -262,7 +264,7 @@ Bugs:
   currently we address them by name, in a map that is copied far too often
 * Runtime should raise `Div` when divide by zero
 * Validator should give good user error when it cannot type an expression
-* See also [GitHub issues](https://github.com/julianhyde/morel/issues)
+* See also [GitHub issues](https://github.com/hydromatic/morel/issues)
 
 ## Extensions
 
@@ -423,10 +425,10 @@ from e in emps
 * Blog: http://blog.hydromatic.net
 * Project page: http://www.hydromatic.net/morel
 * API: http://www.hydromatic.net/morel/apidocs
-* Source code: https://github.com/julianhyde/morel
+* Source code: https://github.com/hydromatic/morel
 * Developers list:
   <a href="mailto:dev@calcite.apache.org">dev at calcite.apache.org</a>
   (<a href="https://mail-archives.apache.org/mod_mbox/calcite-dev/">archive</a>,
   <a href="mailto:dev-subscribe@calcite.apache.org">subscribe</a>)
-* Issues: https://github.com/julianhyde/morel/issues
+* Issues: https://github.com/hydromatic/morel/issues
 * <a href="HISTORY.md">Release notes and history</a>

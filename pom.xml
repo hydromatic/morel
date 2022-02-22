@@ -32,7 +32,7 @@ License.
 
   <name>morel</name>
   <description>Standard ML interpreter, with relational extensions, implemented in Java</description>
-  <url>https://github.com/julianhyde/morel</url>
+  <url>https://github.com/hydromatic/morel</url>
   <inceptionYear>2019</inceptionYear>
   <organization>
     <name>Julian Hyde</name>
@@ -115,13 +115,13 @@ License.
 
   <issueManagement>
     <system>github</system>
-    <url>https://github.com/julianhyde/morel/issues</url>
+    <url>https://github.com/hydromatic/morel/issues</url>
   </issueManagement>
 
   <scm>
-    <connection>scm:git:git://github.com/julianhyde/morel.git</connection>
-    <developerConnection>scm:git:git@github.com:julianhyde/morel.git</developerConnection>
-    <url>scm:git:git://github.com/julianhyde/morel.git</url>
+    <connection>scm:git:git://github.com/hydromatic/morel.git</connection>
+    <developerConnection>scm:git:git@github.com:hydromatic/morel.git</developerConnection>
+    <url>scm:git:git://github.com/hydromatic/morel.git</url>
     <tag>HEAD</tag>
   </scm>
 

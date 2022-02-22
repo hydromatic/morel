@@ -336,7 +336,7 @@ val it = ["Shaggy","Scooby"] : string list
 (*)  * polymorphism and powerful type-inference;
 (*)  * relational expressions (an extension to Standard ML).
 (*)
-(*) Follow our progress at https://github.com/julianhyde/morel.
+(*) Follow our progress at https://github.com/hydromatic/morel.
 (*) This is only release 0.1, so there's more to come!
 
 (*) === 2020/02/25: Morel: A functional language for data ===========
