@@ -43,6 +43,7 @@ import static net.hydromatic.morel.TestUtils.plus;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.StringContains.containsString;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -61,6 +62,17 @@ public class ShellTest {
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /** Throws "assumption failed" if the environment variable 'morel.ci'
+   * is set and is not 0 or false. Allows us to skip tests that are
+   * non-deterministic when run in GitHub actions or Travis CI. */
+  static void assumeNotInCi() {
+    final String ci = System.getProperty("morel.ci");
+    assumeTrue(ci == null
+            || ci.equalsIgnoreCase("false")
+            || ci.equals("0"),
+        "test skipped during CI (morel.ci is " + ci + ")");
   }
 
   static File getUseDirectory() {
@@ -120,6 +132,7 @@ public class ShellTest {
   /** Tests {@link Shell} with a line that is a comment, another that is empty,
    *  and another that has only a semicolon; all are treated as empty. */
   @Test void testEmptyLines() {
+    assumeNotInCi();
     final String in = "(* a comment followed by empty *)\n"
         + "\n"
         + ";\n";
@@ -136,6 +149,7 @@ public class ShellTest {
 
   /** Tests {@link Shell} with a single-line comment. */
   @Test void testSingleLineComment() {
+    assumeNotInCi();
     final String in = "(*) line comment\n"
         + "1 + 2;\n";
     final String expected = "(*) line comment\r\n"
@@ -150,6 +164,7 @@ public class ShellTest {
 
   /** Tests {@link Shell} with a single-line comment that contains a quote. */
   @Test void testSingleLineCommentWithQuote() {
+    assumeNotInCi();
     final String in = "(*) it's a single-line comment with a quote\n"
         + "2 + 3;\n";
     final String expected = "(*) it's a single-line comment with a quote\r\n"
@@ -165,6 +180,7 @@ public class ShellTest {
   /** Tests {@link Shell} with {@code let} statement spread over multiple
    * lines. */
   @Test void testMultiLineLet() {
+    assumeNotInCi();
     final String in = "let\n"
         + "  val x = 1\n"
         + "in\n"
@@ -188,6 +204,7 @@ public class ShellTest {
 
   /** Tests the {@code use} function. */
   @Test void testUse() {
+    assumeNotInCi();
     // In SML-NJ, given x.sml as follows:
     //   val x = 2;
     //   val y = x + 3;
@@ -258,6 +275,7 @@ public class ShellTest {
 
   /** Tests the {@code use} function on an empty file. */
   @Test void testUseEmpty() {
+    assumeNotInCi();
     final String in = "use \"empty.sml\";\n";
     final String expected = "use \"empty.sml\";\r\n"
         + "- use \"empty.sml\";\r\r\n"
@@ -273,6 +291,7 @@ public class ShellTest {
 
   /** Tests the {@code use} function on a missing file. */
   @Test void testUseMissing() {
+    assumeNotInCi();
     // SML-NJ gives:
     //   [opening missing.sml]
     //   [use failed: Io: openIn failed on "missing.sml", No such file or
@@ -297,6 +316,7 @@ public class ShellTest {
 
   /** Tests the {@code use} function on a file that uses itself. */
   @Test void testUseSelfReferential() {
+    assumeNotInCi();
     // SML-NJ gives:
     //   [opening self-referential.sml]
     //   [use failed: Io: openIn failed on "self-referential.sml", Too many
