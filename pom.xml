@@ -97,7 +97,7 @@ License.
     <maven-site-plugin.version>3.7.1</maven-site-plugin.version>
     <maven-surefire-plugin.version>3.0.0-M3</maven-surefire-plugin.version>
     <scott-data-hsqldb.version>0.1</scott-data-hsqldb.version>
-    <slf4j.version>1.7.25</slf4j.version>
+    <slf4j.version>2.0.2</slf4j.version>
 
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
