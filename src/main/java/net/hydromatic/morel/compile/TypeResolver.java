@@ -744,8 +744,9 @@ public class TypeResolver {
     final Holder<TypeEnv> envHolder = Holder.of(env);
     final Map<Ast.ValBind, Supplier<Unifier.Variable>> map0 =
         new LinkedHashMap<>();
+    //noinspection FunctionalExpressionCanBeFolded
     valDecl.valBinds.forEach(b ->
-        map0.put(b, Suppliers.memoize(unifier::variable)));
+        map0.put(b, Suppliers.memoize(unifier::variable)::get));
     map0.forEach((valBind, vPatSupplier) -> {
       // If recursive, bind each value (presumably a function) to its type
       // in the environment before we try to deduce the type of the expression.

@@ -724,12 +724,11 @@ val it = 7 : int
 fun wordCount lines = mapReduce wc_mapper wc_reducer lines;
 val wordCount = fn : string list -> (string * int) list
 
-wordCount ["a skunk sat on a stump",
+from p in wordCount ["a skunk sat on a stump",
     "and thunk the stump stunk",
-    "but the stump thunk the skunk stunk"];
-val it =
-  [("but",1),("the",3),("stump",3),("thunk",2),("skunk",2),("stunk",2),
-   ("and",1),("a",2),("sat",1),("on",1)] : (string * int) list
+    "but the stump thunk the skunk stunk"]
+order p.word;
+java.lang.IllegalArgumentException: no field 'word' in type 'string * int'
 
 
 (*) WordCount in Morel
@@ -752,12 +751,13 @@ val split = fn : string -> string list
 
 from line in lines,
     word in split line
-  group word compute count;
+  group word compute count
+  order word;
 val it =
-  [{count=2,word="a"},{count=3,word="the"},{count=1,word="but"},
-   {count=1,word="sat"},{count=1,word="and"},{count=2,word="stunk"},
-   {count=3,word="stump"},{count=1,word="on"},{count=2,word="thunk"},
-   {count=2,word="skunk"}] : {count:int, word:string} list
+  [{count=2,word="a"},{count=1,word="and"},{count=1,word="but"},
+   {count=1,word="on"},{count=1,word="sat"},{count=2,word="skunk"},
+   {count=3,word="stump"},{count=2,word="stunk"},{count=3,word="the"},
+   {count=2,word="thunk"}] : {count:int, word:string} list
 
 
 (*) A more complete solution
@@ -774,12 +774,12 @@ fun wordCount lines =
   end;
 val wordCount = fn : string list -> {count:int, word:string} list
 
-wordCount lines;
+from p in wordCount lines order p.word;
 val it =
-  [{count=2,word="a"},{count=3,word="the"},{count=1,word="but"},
-   {count=1,word="sat"},{count=1,word="and"},{count=2,word="stunk"},
-   {count=3,word="stump"},{count=1,word="on"},{count=2,word="thunk"},
-   {count=2,word="skunk"}] : {count:int, word:string} list
+  [{count=2,word="a"},{count=1,word="and"},{count=1,word="but"},
+   {count=1,word="on"},{count=1,word="sat"},{count=2,word="skunk"},
+   {count=3,word="stump"},{count=2,word="stunk"},{count=3,word="the"},
+   {count=2,word="thunk"}] : {count:int, word:string} list
 
 
 (*) === Aggregate functions =========================================
@@ -793,9 +793,10 @@ val depts = <relation> : {deptno:int, dname:string, loc:string} list
 
 
 from e in emps
-  group e.deptno compute sumSal = sum of e.sal;
+  group e.deptno compute sumSal = sum of e.sal
+  order deptno;
 val it =
-  [{deptno=20,sumSal=10875.0},{deptno=10,sumSal=8750.0},
+  [{deptno=10,sumSal=8750.0},{deptno=20,sumSal=10875.0},
    {deptno=30,sumSal=9400.0}] : {deptno:int, sumSal:real} list
 
 
@@ -804,22 +805,23 @@ from e in emps,
   where e.deptno = d.deptno
   group e.deptno, d.dname, e.job
     compute sumSal = sum of e.sal,
-      minRemuneration = min of e.sal + e.comm;
+      minRemuneration = min of e.sal + e.comm
+  order deptno, job;
 val it =
   [
-   {deptno=30,dname="SALES",job="MANAGER",minRemuneration=2850.0,sumSal=2850.0},
-   {deptno=20,dname="RESEARCH",job="CLERK",minRemuneration=800.0,sumSal=1900.0},
-   {deptno=10,dname="ACCOUNTING",job="PRESIDENT",minRemuneration=5000.0,
-    sumSal=5000.0},
-   {deptno=10,dname="ACCOUNTING",job="MANAGER",minRemuneration=2450.0,
-    sumSal=2450.0},
-   {deptno=20,dname="RESEARCH",job="ANALYST",minRemuneration=3000.0,
-    sumSal=6000.0},
-   {deptno=30,dname="SALES",job="CLERK",minRemuneration=950.0,sumSal=950.0},
    {deptno=10,dname="ACCOUNTING",job="CLERK",minRemuneration=1300.0,
     sumSal=1300.0},
+   {deptno=10,dname="ACCOUNTING",job="MANAGER",minRemuneration=2450.0,
+    sumSal=2450.0},
+   {deptno=10,dname="ACCOUNTING",job="PRESIDENT",minRemuneration=5000.0,
+    sumSal=5000.0},
+   {deptno=20,dname="RESEARCH",job="ANALYST",minRemuneration=3000.0,
+    sumSal=6000.0},
+   {deptno=20,dname="RESEARCH",job="CLERK",minRemuneration=800.0,sumSal=1900.0},
    {deptno=20,dname="RESEARCH",job="MANAGER",minRemuneration=2975.0,
     sumSal=2975.0},
+   {deptno=30,dname="SALES",job="CLERK",minRemuneration=950.0,sumSal=950.0},
+   {deptno=30,dname="SALES",job="MANAGER",minRemuneration=2850.0,sumSal=2850.0},
    {deptno=30,dname="SALES",job="SALESMAN",minRemuneration=1500.0,
     sumSal=5600.0}]
   : {deptno:int, dname:string, job:string, minRemuneration:real, sumSal:real} list
@@ -833,19 +835,21 @@ in
   from e in emps
     group e.deptno
     compute sumEmpno = my_sum of e.empno
+    order deptno
 end;
 val it =
-  [{deptno=20,sumEmpno=38501},{deptno=10,sumEmpno=23555},
+  [{deptno=10,sumEmpno=23555},{deptno=20,sumEmpno=38501},
    {deptno=30,sumEmpno=46116}] : {deptno:int, sumEmpno:int} list
 
 
 (*) The equivalent of SQL's COLLECT aggregate function is trivial
 from e in emps
   group e.deptno
-  compute names = (fn x => x) of e.ename;
+  compute names = (fn x => x) of e.ename
+  order deptno;
 val it =
-  [{deptno=20,names=["SMITH","JONES","SCOTT","ADAMS","FORD"]},
-   {deptno=10,names=["CLARK","KING","MILLER"]},
+  [{deptno=10,names=["CLARK","KING","MILLER"]},
+   {deptno=20,names=["SMITH","JONES","SCOTT","ADAMS","FORD"]},
    {deptno=30,names=["ALLEN","WARD","MARTIN","BLAKE","TURNER","JAMES"]}]
   : {deptno:int, names:string list} list
 
@@ -1037,20 +1041,22 @@ in
   from line in lines,
     word in split line
   group word compute c = count
+  order word
 end;
 val it =
-  [{c=2,word="a"},{c=3,word="the"},{c=1,word="but"},{c=1,word="sat"},
-   {c=1,word="and"},{c=2,word="stunk"},{c=3,word="stump"},{c=1,word="on"},
-   {c=2,word="thunk"},{c=2,word="skunk"}] : {c:int, word:string} list
+  [{c=2,word="a"},{c=1,word="and"},{c=1,word="but"},{c=1,word="on"},
+   {c=1,word="sat"},{c=2,word="skunk"},{c=3,word="stump"},{c=2,word="stunk"},
+   {c=3,word="the"},{c=2,word="thunk"}] : {c:int, word:string} list
 
-wordCount ["a skunk sat on a stump",
+from p in wordCount ["a skunk sat on a stump",
     "and thunk the stump stunk",
-    "but the stump thunk the skunk stunk"];
+    "but the stump thunk the skunk stunk"]
+order p.word;
 val it =
-  [{count=2,word="a"},{count=3,word="the"},{count=1,word="but"},
-   {count=1,word="sat"},{count=1,word="and"},{count=2,word="stunk"},
-   {count=3,word="stump"},{count=1,word="on"},{count=2,word="thunk"},
-   {count=2,word="skunk"}] : {count:int, word:string} list
+  [{count=2,word="a"},{count=1,word="and"},{count=1,word="but"},
+   {count=1,word="on"},{count=1,word="sat"},{count=2,word="skunk"},
+   {count=3,word="stump"},{count=2,word="stunk"},{count=3,word="the"},
+   {count=2,word="thunk"}] : {count:int, word:string} list
 
 
 (*) Functions as views, functions as values
@@ -1240,19 +1246,20 @@ val wc_reducer = fn : 'a * int list -> int
 val wordCount = mapReduce wc_mapper wc_reducer;
 val wordCount = fn : string list -> {c:int, k:string} list
 
-wordCount lines;
+from p in wordCount lines order p.k;
 val it =
-  [{c=2,k="a"},{c=3,k="the"},{c=1,k="but"},{c=1,k="sat"},{c=1,k="and"},
-   {c=2,k="stunk"},{c=3,k="stump"},{c=1,k="on"},{c=2,k="thunk"},
-   {c=2,k="skunk"}] : {c:int, k:string} list
+  [{c=2,k="a"},{c=1,k="and"},{c=1,k="but"},{c=1,k="on"},{c=1,k="sat"},
+   {c=2,k="skunk"},{c=3,k="stump"},{c=2,k="stunk"},{c=3,k="the"},
+   {c=2,k="thunk"}] : {c:int, k:string} list
 
 from line in lines,
    word in split line
- group word compute c = count;
+ group word compute c = count
+ order word;
 val it =
-  [{c=2,word="a"},{c=3,word="the"},{c=1,word="but"},{c=1,word="sat"},
-   {c=1,word="and"},{c=2,word="stunk"},{c=3,word="stump"},{c=1,word="on"},
-   {c=2,word="thunk"},{c=2,word="skunk"}] : {c:int, word:string} list
+  [{c=2,word="a"},{c=1,word="and"},{c=1,word="but"},{c=1,word="on"},
+   {c=1,word="sat"},{c=2,word="skunk"},{c=3,word="stump"},{c=2,word="stunk"},
+   {c=3,word="the"},{c=2,word="thunk"}] : {c:int, word:string} list
 
 
 (*) === Coda ========================================================

@@ -38,10 +38,11 @@ public class RelList extends AbstractList<Object> {
   RelList(RelNode rel, DataContext dataContext,
       Function<Object[], Object> converter) {
     this.rel = rel;
+    //noinspection FunctionalExpressionCanBeFolded
     supplier = Suppliers.memoize(() ->
         new Interpreter(dataContext, rel)
             .select(converter::apply)
-            .toList());
+            .toList())::get;
   }
 
   public Object get(int index) {
