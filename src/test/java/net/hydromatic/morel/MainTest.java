@@ -119,6 +119,14 @@ public class MainTest {
     ml("val x : int = 5")
         .assertParseDecl(Ast.ValDecl.class, "val x : int = 5");
 
+    // other valid identifiers
+    ml("val x' = 5").assertParseDecl(Ast.ValDecl.class, "val x' = 5");
+    ml("val x'' = 5").assertParseDecl(Ast.ValDecl.class, "val x'' = 5");
+    ml("val x'y = 5").assertParseDecl(Ast.ValDecl.class, "val x'y = 5");
+    ml("val ABC123 = 5").assertParseDecl(Ast.ValDecl.class, "val ABC123 = 5");
+    ml("val Abc_123 = 6").assertParseDecl(Ast.ValDecl.class, "val Abc_123 = 6");
+    ml("val Abc_ = 7").assertParseDecl(Ast.ValDecl.class, "val Abc_ = 7");
+
     ml("val succ = fn x => x + 1")
         .assertParseDecl(Ast.ValDecl.class, "val succ = fn x => x + 1");
 

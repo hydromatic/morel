@@ -47,6 +47,31 @@ true;
 {0=0,1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11};
 {1=1,2=2,3=3,5=5,6=6,7=7,8=8,9=9,10=10,11=11};
 
+(*) Identifiers
+val x = 1
+and x' = 2
+and x'' = 3
+and x'y = 4
+and ABC123 = 5
+and Abc_123 = 6
+and Abc_ = 7;
+
+fun foo x
+  x'
+  x''
+  x'y
+  ABC123
+  Abc_123
+  Abc_ = 1;
+
+{x = 1,
+ x' = 2,
+ x'' = 3,
+ x'y = 4,
+ ABC123 = 5,
+ Abc_123 = 6,
+ Abc_ = 7};
+
 (*) Simple commands
 val x = 1;
 x + 2;
@@ -235,6 +260,11 @@ let
 in
   (isZeroMod3 17, isOneMod3 17, isTwoMod3 17)
 end;
+
+(*) An example where identifiers with primes (') are more readable
+fun distance (x, y) (x', y') =
+  Math.sqrt ((x - x') * (x - x') + (y - y') * (y - y'));
+distance (0.0, 1.0) (4.0, 4.0);
 
 (*) Composite declarations
 let
