@@ -80,7 +80,7 @@ License.
     <checkstyle.version>7.8.2</checkstyle.version>
     <findbugs.version>3.0.2</findbugs.version>
     <foodmart-data-hsqldb.version>0.4</foodmart-data-hsqldb.version>
-    <!-- We support guava versions 19.0 to 27.1-jre. -->
+    <!-- We support guava 19.0 to 31.1-jre; 23.0 is just the default. -->
     <guava.version>23.0</guava.version>
     <hamcrest.version>2.2</hamcrest.version>
     <hsqldb.version>2.3.1</hsqldb.version>

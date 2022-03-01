@@ -126,12 +126,14 @@ from e in emps
 (*) singleton record 'yield' followed by singleton 'group'
 from e in emps
   yield {d = e.deptno}
-  group d;
+  group d
+  order d;
 
 (*) singleton record 'yield' followed by 'group'
 from e in emps
   yield {d = e.deptno}
-  group d compute c = count;
+  group d compute c = count
+  order d;
 
 (*) singleton record 'yield' followed by 'order'
 from e in emps
@@ -253,7 +255,8 @@ from e in emps, d in depts
 
 (*) join group where right variable is not referenced
 from e in emps, d in depts
-  group e.deptno compute count = sum of 1;
+  group e.deptno compute count = sum of 1
+  order deptno;
 
 (*) join with intervening 'where'
 (*) we can't write ', d in depts' after 'where'
@@ -343,7 +346,8 @@ from deptno in (
   (from e in emps yield e.deptno)
   union
   (from d in depts yield d.deptno))
-group deptno;
+group deptno
+order deptno;
 
 (*) except
 (from d in depts yield d.deptno)
@@ -386,8 +390,9 @@ intersect
 fun intersectDistinct l1 l2 =
   from v in l1 intersect l2
   group v;
-intersectDistinct (from e in emps yield e.deptno)
-  (from d in depts yield d.deptno);
+from d in intersectDistinct (from e in emps yield e.deptno)
+    (from d in depts yield d.deptno)
+  order d;
 
 (*) simulate SQL's INTERSECT ALL
 fun intersectAll l1 l2 =
@@ -407,8 +412,9 @@ fun intersectAll l1 l2 =
         units e.c
       end)
     yield e.v;
-intersectAll (from e in emps yield e.deptno)
-  (from d in depts yield d.deptno);
+from d in intersectAll (from e in emps yield e.deptno)
+    (from d in depts yield d.deptno)
+  order d;
 
 (*) union followed by group
 from x in (from e in emps yield e.deptno)
@@ -457,25 +463,30 @@ end;
 from e in emps
 group deptno = e.deptno
   compute sum = sum of e.id,
-          count = count;
+          count = count
+order deptno;
 
 (*) As previous, without the implied "deptno =" in "group",
 (*) and "sum =" and "count =" in "compute".
 from e in emps
 group e.deptno
   compute sum of e.id,
-          count;
+          count
+order deptno;
 
 (*) 'group' with no aggregates
 from e in emps
-group deptno = e.deptno;
+group deptno = e.deptno
+order deptno;
 
 from e in emps
-group e.deptno;
+group e.deptno
+order deptno;
 
 (*) composite 'group' with no aggregates
 from e in emps
-group e.deptno, idMod2 = e.id mod 2;
+group e.deptno, idMod2 = e.id mod 2
+order deptno;
 
 (*) 'group' with empty key produces one output row
 from e in emps
@@ -496,20 +507,23 @@ from e in emps
 where e.deptno < 30
 group deptno = e.deptno
   compute sumId = sum of e.id,
-          sumIdPlusDeptno = sum of e.id + e.deptno;
+          sumIdPlusDeptno = sum of e.id + e.deptno
+order deptno;
 
 (*) 'group' with 'exists' as an aggregate function
 from e in emps
 group e.deptno
   compute sumId = sum of e.id,
           existsId = exists of e.id,
-          existsStar = exists;
+          existsStar = exists
+order deptno;
 
 (*) 'group' with record key
 (*) (useful if we want to refer to 'e' later in the pipeline)
 from e in emps
 group e = {e.deptno, odd = e.id mod 2 = 1} compute c = count
-yield {e.deptno, c1 = c + 1};
+yield {e.deptno, c1 = c + 1}
+order deptno;
 
 (*) 'group' with join
 from e in emps, d in depts
@@ -547,8 +561,8 @@ let
     | siz (ht :: tl) = 1 + (siz tl)
 in
   from e in emps
-  group deptno = e.deptno
-  compute size = siz of e.id
+  group deptno = e.deptno compute size = siz of e.id
+  order deptno
 end;
 
 (*) as previous, but 'e' rather than 'e.id'
@@ -557,8 +571,8 @@ let
     | siz (ht :: tl) = 1 + (siz tl)
 in
   from e in emps
-  group deptno = e.deptno
-  compute size = siz of e
+  group deptno = e.deptno compute size = siz of e
+  order deptno
 end;
 
 (*) user-defined aggregate function #3
@@ -567,8 +581,8 @@ let
     | my_sum (head :: tail) = head + (my_sum tail)
 in
   from e in emps
-  group e.deptno
-  compute my_sum of e.id
+  group e.deptno compute my_sum of e.id
+  order deptno
 end;
 
 (*) Identity aggregate function (equivalent to SQL's COLLECT)
@@ -577,6 +591,7 @@ let
 in
   from e in emps
   group e.deptno compute rows = id of e
+  order deptno
 end;
 
 (*) Identity aggregate function, without 'of'
@@ -585,23 +600,27 @@ let
 in
   from e in emps
   group e.deptno compute rows = id
+  order deptno
 end;
 
 (*) Identity aggregate function, using lambda
 from e in emps
-group e.deptno compute rows = (fn x => x);
+group e.deptno compute rows = (fn x => x)
+order deptno;
 
 (*) Identity aggregate function with multiple input variables
 from e in emps, d in depts
 where e.deptno = d.deptno
-group e.deptno compute rows = (fn x => x);
+group e.deptno compute rows = (fn x => x)
+order deptno;
 
 (*) Group followed by yield
 from e in emps
 group e.deptno
   compute sumId = sum of e.id,
           count = count of e
-yield {deptno, avgId = sumId / count};
+yield {deptno, avgId = sumId / count}
+order deptno;
 
 (*) Similar, using a sub-from:
 from g in (
@@ -609,7 +628,8 @@ from g in (
   group e.deptno
     compute sumId = sum of e.id,
             count = count of e)
-yield {g.deptno, avgId = g.sumId / g.count};
+yield {g.deptno, avgId = g.sumId / g.count}
+order deptno;
 
 (*) Group followed by order and yield
 from e in emps
@@ -647,13 +667,15 @@ from e in emps,
 from e in emps,
     d in depts
   where e.deptno = d.deptno
-  group d.deptno;
+  group d.deptno
+  order deptno;
 
 (*) Join followed by single group (from left input)
 from e in emps,
     d in depts
   where e.deptno = d.deptno
-  group e.deptno;
+  group e.deptno
+  order deptno;
 
 (*) Join followed by single group and order
 from e in emps,

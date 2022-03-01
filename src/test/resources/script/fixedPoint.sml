@@ -118,21 +118,21 @@ fun states_within x 0 = [x]
      group a);
 
 states_within "CA" 0;
-states_within "CA" 1;
-states_within "CA" 2;
+from s in states_within "CA" 1 order s;
+from s in states_within "CA" 2 order s;
 from s in states_within "CA" 2 group compute count;
 from s in states_within "CA" 3 group compute count;
 (* It takes 11 steps to reach to all 48 contiguous states plus DC.
    But it takes 2 minutes, so the following expression is disabled.
    See later, the same expression computed efficiently using semi-naive. *)
 if true then [49] else from s in states_within "CA" 11 group compute count;
-states_within "HI" 0;
-states_within "HI" 1;
-states_within "HI" 100;
-states_within "ME" 0;
-states_within "ME" 1;
-states_within "ME" 2;
-states_within "ME" 3; (*) maine is not 3 steps from itself
+from s in states_within "HI" 0 order s;
+from s in states_within "HI" 1 order s;
+from s in states_within "HI" 100 order s;
+from s in states_within "ME" 0 order s;
+from s in states_within "ME" 1 order s;
+from s in states_within "ME" 2 order s;
+from s in states_within "ME" 3 order s; (*) maine is not 3 steps from itself
 
 (*) Finding a square root using the Babylonian method
 (*) (An example of a scalar fixed-point query.)
@@ -184,7 +184,7 @@ fun fixu_naive f a =
     else
       fixu_naive f a3
   end;
-fixu_naive prefixes ["cat", "dog", "", "car", "cart"];
+from p in fixu_naive prefixes ["cat", "dog", "", "car", "cart"] order p;
 
 (*) Fixed-point over union, with an iteration limit 'n'.
 (*) A semi-naive algorithm applies the function only to
@@ -219,8 +219,8 @@ fun states_within2 s n =
         p in pairs
       where p.state = s
       group p.adjacent), [s], n);
-states_within2 "CA" 1;
-states_within2 "CA" 2;
+from s in states_within2 "CA" 1 order s;
+from s in states_within2 "CA" 2 order s;
 from s in states_within2 "CA" 8 group compute count;
 from s in states_within2 "CA" 9 group compute count;
 from s in states_within2 "CA" 10 group compute count;

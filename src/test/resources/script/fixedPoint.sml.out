@@ -220,11 +220,11 @@ val states_within = fn : string -> int -> string list
 states_within "CA" 0;
 val it = ["CA"] : string list
 
-states_within "CA" 1;
-val it = ["OR","NV","AZ"] : string list
+from s in states_within "CA" 1 order s;
+val it = ["AZ","NV","OR"] : string list
 
-states_within "CA" 2;
-val it = ["OR","NV","AZ","WA","ID","CO","CA","UT","NM"] : string list
+from s in states_within "CA" 2 order s;
+val it = ["AZ","CA","CO","ID","NM","NV","OR","UT","WA"] : string list
 
 from s in states_within "CA" 2 group compute count;
 val it = [9] : int list
@@ -238,26 +238,26 @@ val it = [15] : int list
 if true then [49] else from s in states_within "CA" 11 group compute count;
 val it = [49] : int list
 
-states_within "HI" 0;
+from s in states_within "HI" 0 order s;
 val it = ["HI"] : string list
 
-states_within "HI" 1;
+from s in states_within "HI" 1 order s;
 val it = [] : string list
 
-states_within "HI" 100;
+from s in states_within "HI" 100 order s;
 val it = [] : string list
 
-states_within "ME" 0;
+from s in states_within "ME" 0 order s;
 val it = ["ME"] : string list
 
-states_within "ME" 1;
+from s in states_within "ME" 1 order s;
 val it = ["NH"] : string list
 
-states_within "ME" 2;
+from s in states_within "ME" 2 order s;
 val it = ["MA","ME","VT"] : string list
 
-states_within "ME" 3;
-val it = ["CT","MA","RI","NH","NY","VT"] : string list
+from s in states_within "ME" 3 order s;
+val it = ["CT","MA","NH","NY","RI","VT"] : string list
  (*) maine is not 3 steps from itself
 
 (*) Finding a square root using the Babylonian method
@@ -340,8 +340,8 @@ fun fixu_naive f a =
   end;
 val fixu_naive = fn : ('a list -> 'a list) -> 'a list -> 'a list
 
-fixu_naive prefixes ["cat", "dog", "", "car", "cart"];
-val it = ["cart","car","c","d","cat","dog","do","ca",""] : string list
+from p in fixu_naive prefixes ["cat", "dog", "", "car", "cart"] order p;
+val it = ["","c","ca","car","cart","cat","d","do","dog"] : string list
 
 
 (*) Fixed-point over union, with an iteration limit 'n'.
@@ -383,11 +383,11 @@ fun states_within2 s n =
       group p.adjacent), [s], n);
 val states_within2 = fn : string -> int -> string list
 
-states_within2 "CA" 1;
-val it = ["OR","NV","AZ"] : string list
+from s in states_within2 "CA" 1 order s;
+val it = ["AZ","NV","OR"] : string list
 
-states_within2 "CA" 2;
-val it = ["OR","NV","AZ","WA","ID","CO","CA","UT","NM"] : string list
+from s in states_within2 "CA" 2 order s;
+val it = ["AZ","CA","CO","ID","NM","NV","OR","UT","WA"] : string list
 
 from s in states_within2 "CA" 8 group compute count;
 val it = [43] : int list

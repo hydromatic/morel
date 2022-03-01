@@ -25,11 +25,19 @@ jobs:
 
     strategy:
       matrix:
-        java-version: [ 8, 11, 17 ]
+        java-version: [ "8" ]
+        guava-version: [ "21.0" ]
         javadoc: [ false ]
         include:
-          - java-version: 17
+          - java-version: "11"
+            guava-version: "19.0"
+            javadoc: false
+          - java-version: "17"
+            guava-version: "23.0"
             javadoc: true
+          - java-version: "17"
+            guava-version: "31.1-jre"
+            javadoc: false
 
     steps:
       - uses: actions/checkout@v2
@@ -47,6 +55,11 @@ jobs:
           then
             GOALS="$GOALS javadoc:javadoc javadoc:test-javadoc"
           fi
-          mvn -Dmorel.ci --batch-mode --update-snapshots $GOALS
+          DEFS="-Dmorel.ci"
+          if [ "${{ matrix.guava-version }}" ]
+          then
+            DEFS="$DEFS -Dguava.version=${{ matrix.guava-version }}"
+          fi
+          mvn $DEFS --batch-mode --update-snapshots $GOALS
 
 # End main.yml

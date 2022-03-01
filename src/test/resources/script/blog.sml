@@ -460,9 +460,10 @@ wc_reducer ("hello", [1, 4, 2]);
 
 (*) Bind them to mapReduce, and run
 fun wordCount lines = mapReduce wc_mapper wc_reducer lines;
-wordCount ["a skunk sat on a stump",
+from p in wordCount ["a skunk sat on a stump",
     "and thunk the stump stunk",
-    "but the stump thunk the skunk stunk"];
+    "but the stump thunk the skunk stunk"]
+order p.word;
 
 (*) WordCount in Morel
 val lines = ["a skunk sat on a stump",
@@ -478,7 +479,8 @@ fun split s =
   end;
 from line in lines,
     word in split line
-  group word compute count;
+  group word compute count
+  order word;
 
 (*) A more complete solution
 fun wordCount lines =
@@ -492,7 +494,7 @@ fun wordCount lines =
         word in split line
     group word compute count
   end;
-wordCount lines;
+from p in wordCount lines order p.word;
 
 (*) === Aggregate functions =========================================
 
@@ -500,14 +502,16 @@ val emps = scott.emp;
 val depts = scott.dept;
 
 from e in emps
-  group e.deptno compute sumSal = sum of e.sal;
+  group e.deptno compute sumSal = sum of e.sal
+  order deptno;
 
 from e in emps,
     d in depts
   where e.deptno = d.deptno
   group e.deptno, d.dname, e.job
     compute sumSal = sum of e.sal,
-      minRemuneration = min of e.sal + e.comm;
+      minRemuneration = min of e.sal + e.comm
+  order deptno, job;
 
 (*) In this example, we define our own version of the `sum` function:
 let
@@ -517,12 +521,14 @@ in
   from e in emps
     group e.deptno
     compute sumEmpno = my_sum of e.empno
+    order deptno
 end;
 
 (*) The equivalent of SQL's COLLECT aggregate function is trivial
 from e in emps
   group e.deptno
-  compute names = (fn x => x) of e.ename;
+  compute names = (fn x => x) of e.ename
+  order deptno;
 
 (*) === StrangeLoop 2021 talk =======================================
 (*) Standard ML: values
@@ -625,10 +631,12 @@ in
   from line in lines,
     word in split line
   group word compute c = count
+  order word
 end;
-wordCount ["a skunk sat on a stump",
+from p in wordCount ["a skunk sat on a stump",
     "and thunk the stump stunk",
-    "but the stump thunk the skunk stunk"];
+    "but the stump thunk the skunk stunk"]
+order p.word;
 
 (*) Functions as views, functions as values
 fun emps2 () =
@@ -710,10 +718,11 @@ fun wc_mapper line =
 fun wc_reducer (key, values) =
   List.foldl (fn (x, y) => x + y) 0 values;
 val wordCount = mapReduce wc_mapper wc_reducer;
-wordCount lines;
+from p in wordCount lines order p.k;
 from line in lines,
    word in split line
- group word compute c = count;
+ group word compute c = count
+ order word;
 
 (*) === Coda ========================================================
 from message in ["the end"];
