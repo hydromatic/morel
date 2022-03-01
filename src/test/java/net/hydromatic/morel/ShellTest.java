@@ -109,6 +109,7 @@ public class ShellTest {
 
   /** Tests {@link Shell} with a continued line. */
   @Test void testTwoLines() {
+    assumeNotInCi();
     final String in = "1 +\n"
         + "2;\n";
     final String expected = "1 +\r\n"
