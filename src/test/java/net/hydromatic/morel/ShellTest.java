@@ -97,6 +97,7 @@ public class ShellTest {
 
   /** Tests {@link Shell} with one line. */
   @Test void testOneLine() {
+    assumeNotInCi();
     final String in = "1 + 2;\n";
     final String expected = "1 + 2;\r\n"
         + "- 1 + 2;\r\r\n"
