@@ -88,7 +88,7 @@ License.
     <java-diff.version>1.1.2</java-diff.version>
     <javacc-maven-plugin.version>3.0.0</javacc-maven-plugin.version>
     <javacc.version>7.0.10</javacc.version>
-    <jline.version>3.16.0</jline.version>
+    <jline.version>3.21.0</jline.version>
     <junit-jupiter.version>5.8.2</junit-jupiter.version>
     <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
     <maven-enforcer-plugin.version>3.0.0-M1</maven-enforcer-plugin.version>
