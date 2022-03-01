@@ -87,7 +87,7 @@ License.
     <hydromatic-toolbox.version>0.3</hydromatic-toolbox.version>
     <java-diff.version>1.1.2</java-diff.version>
     <javacc-maven-plugin.version>3.0.0</javacc-maven-plugin.version>
-    <javacc.version>7.0.5</javacc.version>
+    <javacc.version>7.0.10</javacc.version>
     <jline.version>3.16.0</jline.version>
     <junit-jupiter.version>5.7.2</junit-jupiter.version>
     <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
