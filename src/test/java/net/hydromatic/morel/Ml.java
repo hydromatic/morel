@@ -21,6 +21,7 @@ package net.hydromatic.morel;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.Analyzer;
 import net.hydromatic.morel.compile.CalciteCompiler;
 import net.hydromatic.morel.compile.CompiledStatement;
@@ -57,6 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.Matchers.hasMoniker;
@@ -74,19 +76,35 @@ import static java.util.Objects.requireNonNull;
 /** Fluent test helper. */
 class Ml {
   private final String ml;
+  @Nullable private final Pos pos;
   private final Map<String, DataSet> dataSetMap;
   private final Map<Prop, Object> propMap;
 
-  Ml(String ml, Map<String, DataSet> dataSetMap,
+  Ml(String ml, @Nullable Pos pos, Map<String, DataSet> dataSetMap,
       Map<Prop, Object> propMap) {
     this.ml = ml;
+    this.pos = pos;
     this.dataSetMap = ImmutableMap.copyOf(dataSetMap);
     this.propMap = ImmutableMap.copyOf(propMap);
   }
 
   /** Creates an {@code Ml}. */
   static Ml ml(String ml) {
-    return new Ml(ml, ImmutableMap.of(), ImmutableMap.of());
+    return new Ml(ml, null, ImmutableMap.of(), ImmutableMap.of());
+  }
+
+  /** Creates an {@code Ml} with an error position in it. */
+  static Ml ml(String ml, char delimiter) {
+    final int i = ml.indexOf(delimiter);
+    final int j = ml.indexOf(delimiter, i + 1);
+    final int k = ml.indexOf(delimiter, j + 1);
+    assertThat("expected exactly two occurrences of " + delimiter,
+        i >= 0 && j > i && k < 0, is(true));
+    final String ml2 = ml.substring(0, i)
+        + ml.substring(i + 1, j)
+        + ml.substring(j + 1);
+    final Pos pos = Pos.of(ml2, "stdIn", i, j - 1);
+    return new Ml(ml2, pos, ImmutableMap.of(), ImmutableMap.of());
   }
 
   /** Runs a task and checks that it throws an exception.
@@ -193,6 +211,7 @@ class Ml {
   private Ml withValidate(BiConsumer<TypeResolver.Resolved, Calcite> action) {
     return withParser(parser -> {
       try {
+        parser.zero("stdIn");
         final AstNode statement = parser.statementEof();
         final Calcite calcite = Calcite.withDataSets(dataSetMap);
         final TypeResolver.Resolved resolved =
@@ -381,7 +400,8 @@ class Ml {
     CompiledStatement compiledStatement =
         Compiles.prepareStatement(typeSystem, session, env, statement, calcite);
     final List<Binding> bindings = new ArrayList<>();
-    compiledStatement.eval(session, env, line -> {}, bindings::add);
+    session.withoutHandlingExceptions(session1 ->
+        compiledStatement.eval(session1, env, line -> {}, bindings::add));
     final Object result;
     if (statement instanceof Ast.Exp) {
       result = bindingValue(bindings, "it");
@@ -415,7 +435,9 @@ class Ml {
     return null;
   }
 
-  Ml assertEvalError(Matcher<Throwable> matcher) {
+  Ml assertEvalError(Function<Pos, Matcher<Throwable>> matcherSupplier) {
+    assertThat(pos, notNullValue());
+    final Matcher<Throwable> matcher = matcherSupplier.apply(pos);
     try {
       assertEval(notNullValue());
       fail("expected error");
@@ -444,11 +466,11 @@ class Ml {
   }
 
   Ml withBinding(String name, DataSet dataSet) {
-    return new Ml(ml, plus(dataSetMap, name, dataSet), propMap);
+    return new Ml(ml, pos, plus(dataSetMap, name, dataSet), propMap);
   }
 
   Ml with(Prop prop, Object value) {
-    return new Ml(ml, dataSetMap, plus(propMap, prop, value));
+    return new Ml(ml, pos, dataSetMap, plus(propMap, prop, value));
   }
 
   /** Returns a map plus (adding or overwriting) one (key, value) entry. */

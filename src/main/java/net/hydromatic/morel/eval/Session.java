@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.eval;
 
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.CompileException;
 
 import java.util.LinkedHashMap;
@@ -40,7 +41,7 @@ public class Session {
   public final Map<Prop, Object> map = new LinkedHashMap<>();
 
   /** Implementation of "use". */
-  private Shell shell = DefaultShell.INSTANCE;
+  private Shell shell = Shells.INSTANCE;
 
   /** Calls some code with a new value of {@link Shell}. */
   public void withShell(Shell shell, Consumer<String> outLines,
@@ -58,8 +59,19 @@ public class Session {
     }
   }
 
-  public void use(String fileName) {
-    shell.use(fileName);
+  /** Calls some code with a {@link Shell} that does not handle errors. */
+  public void withoutHandlingExceptions(Consumer<Session> consumer) {
+    final Shell prevShell = this.shell;
+    try {
+      this.shell = Shells.BARF;
+      consumer.accept(this);
+    } finally {
+      this.shell = prevShell;
+    }
+  }
+
+  public void use(String fileName, Pos pos) {
+    shell.use(fileName, pos);
   }
 
   public void handle(Codes.MorelRuntimeException e, StringBuilder buf) {
@@ -68,31 +80,39 @@ public class Session {
 
   /** Callback to implement "use" command. */
   public interface Shell {
-    void use(String fileName);
+    void use(String fileName, Pos pos);
 
     /** Handles an exception. Particular implementations may re-throw the
      * exception, or may format the exception to a buffer that will be added to
-     * the output. Typically the a root shell will handle the exception, and
+     * the output. Typically, a root shell will handle the exception, and
      * sub-shells will re-throw. */
     void handle(RuntimeException e, StringBuilder buf);
   }
 
-  /** Default implementation of {@link Shell}. */
-  private enum DefaultShell implements Shell {
-    INSTANCE;
-
-    @Override public void use(String fileName) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override public void handle(RuntimeException e, StringBuilder buf) {
-      if (e instanceof Codes.MorelRuntimeException) {
-        ((Codes.MorelRuntimeException) e).describeTo(buf);
-      } else if (e instanceof CompileException) {
-        buf.append(e.getMessage());
-      } else {
-        buf.append(e);
+  /** Various implementations of {@link Shell}. */
+  private enum Shells implements Shell {
+    /** Default instance of Shell. */
+    INSTANCE {
+      @Override public void handle(RuntimeException e, StringBuilder buf) {
+        if (e instanceof Codes.MorelRuntimeException) {
+          ((Codes.MorelRuntimeException) e).describeTo(buf);
+        } else if (e instanceof CompileException) {
+          buf.append(e.getMessage());
+        } else {
+          buf.append(e);
+        }
       }
+    },
+
+    /** Instance of Shell that does not handle exceptions. */
+    BARF {
+      @Override public void handle(RuntimeException e, StringBuilder buf) {
+        throw e;
+      }
+    };
+
+    @Override public void use(String fileName, Pos pos) {
+      throw new UnsupportedOperationException();
     }
   }
 }

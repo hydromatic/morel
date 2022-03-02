@@ -292,8 +292,9 @@ public enum CoreBuilder {
     return new Core.Local(dataType, exp);
   }
 
-  public Core.NonRecValDecl nonRecValDecl(Core.NamedPat pat, Core.Exp exp) {
-    return new Core.NonRecValDecl(pat, exp);
+  public Core.NonRecValDecl nonRecValDecl(Core.NamedPat pat, Core.Exp exp,
+      Pos pos) {
+    return new Core.NonRecValDecl(pat, exp, pos);
   }
 
   public Core.RecValDecl recValDecl(
@@ -301,8 +302,8 @@ public enum CoreBuilder {
     return new Core.RecValDecl(ImmutableList.copyOf(list));
   }
 
-  public Core.Match match(Core.Pat pat, Core.Exp exp) {
-    return new Core.Match(pat, exp);
+  public Core.Match match(Core.Pat pat, Core.Exp exp, Pos pos) {
+    return new Core.Match(pos, pat, exp);
   }
 
   public Core.Case caseOf(Type type, Core.Exp exp,
@@ -371,17 +372,18 @@ public enum CoreBuilder {
     return new Core.Fn(type, idPat, exp);
   }
 
-  public Core.Apply apply(Type type, Core.Exp fn, Core.Exp arg) {
-    return new Core.Apply(type, fn, arg);
+  public Core.Apply apply(Pos pos, Type type, Core.Exp fn, Core.Exp arg) {
+    return new Core.Apply(pos, type, fn, arg);
   }
 
   public Core.Case ifThenElse(Core.Exp condition, Core.Exp ifTrue,
       Core.Exp ifFalse) {
     // Translate "if c then a else b"
-    // as if user had written "case c of true => a | _ => b"
+    // as if user had written "case c of true => a | _ => b".
+    // Pos.ZERO is ok becuase match failure is impossible.
     return new Core.Case(ifTrue.type, condition,
-        ImmutableList.of(match(truePat, ifTrue),
-            match(boolWildcardPat, ifFalse)));
+        ImmutableList.of(match(truePat, ifTrue, Pos.ZERO),
+            match(boolWildcardPat, ifFalse, Pos.ZERO)));
   }
 
   public Core.DatatypeDecl datatypeDecl(Iterable<DataType> dataTypes) {

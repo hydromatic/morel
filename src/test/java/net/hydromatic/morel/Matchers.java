@@ -21,11 +21,13 @@ package net.hydromatic.morel;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.AstWriter;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.util.MorelException;
 
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Lists;
@@ -44,7 +46,9 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -97,7 +101,7 @@ public abstract class Matchers {
     };
   }
 
-  /** Matches an Code node by its string representation. */
+  /** Matches a Code node by its string representation. */
   static Matcher<Code> isCode(String expected) {
     return new CustomTypeSafeMatcher<Code>("code " + expected) {
       @Override protected boolean matchesSafely(Code code) {
@@ -191,6 +195,24 @@ public abstract class Matchers {
     return new CustomTypeSafeMatcher<Throwable>("throwable: " + message) {
       @Override protected boolean matchesSafely(Throwable item) {
         return item.toString().contains(message);
+      }
+    };
+  }
+
+  static Matcher<Throwable> throwsA(String message, Pos position) {
+    return new CustomTypeSafeMatcher<Throwable>("throwable [" + message
+        + "] at position [" + position + "]") {
+      @Override protected boolean matchesSafely(Throwable item) {
+        return item.toString().contains(message)
+            && Objects.equals(positionString(item), position.toString());
+      }
+
+      @Nullable String positionString(Throwable e) {
+        if (e instanceof MorelException) {
+          return ((MorelException) e).pos()
+              .describeTo(new StringBuilder()).toString();
+        }
+        return null;
       }
     };
   }

@@ -150,9 +150,9 @@ public abstract class Compiles {
    * we have the expression. */
   static void bindPattern(TypeSystem typeSystem, List<Binding> bindings,
       Core.ValDecl valDecl) {
-    valDecl.forEachBinding((pat, exp) -> {
+    valDecl.forEachBinding((pat, exp, pos) -> {
       if (pat instanceof Core.IdPat) {
-        bindings.add(Binding.of((Core.IdPat) pat, exp));
+        bindings.add(Binding.of(pat, exp));
       }
     });
   }

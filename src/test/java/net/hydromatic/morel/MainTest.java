@@ -19,6 +19,7 @@
 package net.hydromatic.morel;
 
 import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.TypeVar;
@@ -370,6 +371,21 @@ public class MainTest {
         .assertParse("case x of {a = a, b = 2, ...} => a + b");
     ml("fn {a, b = 2, ...} => a + b")
         .assertParse("fn {a = a, b = 2, ...} => a + b");
+  }
+
+  @Test void testParseErrorPosition() {
+    ml("let val x = 1 and y = $x$ + 2 in x + y end", '$')
+        .assertEvalError(pos ->
+            throwsA("unbound variable or constructor: x", pos));
+  }
+
+  @Test void testRuntimeErrorPosition() {
+    ml("\"x\" ^\n"
+        + "  $String.substring(\"hello\",\n"
+        + "    1, 15)$ ^\n"
+        + "  \"y\"\n", '$')
+        .assertEvalError(pos ->
+            throwsA(Codes.BuiltInExn.SUBSCRIPT.mlName, pos));
   }
 
   /** Tests the name of {@link TypeVar}. */
@@ -741,8 +757,8 @@ public class MainTest {
     // 'and' is executed in parallel, therefore 'x + 1' evaluates to 2, not 4
     ml("let val x = 1; val x = 3 and y = x + 1 in x + y end").assertEval(is(5));
 
-    ml("let val x = 1 and y = x + 2 in x + y end")
-        .assertEvalError(throwsA("unbound variable or constructor: x"));
+    ml("let val x = 1 and y = $x$ + 2 in x + y end", '$')
+        .assertEvalError(pos -> throwsA("unbound variable or constructor: x"));
 
     // let with val and fun
     ml("let fun f x = 1 + x; val x = 2 in f x end").assertEval(is(3));

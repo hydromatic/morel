@@ -20,6 +20,7 @@ package net.hydromatic.morel.ast;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.calcite.util.mapping.IntPair;
 
 import java.util.AbstractList;
 import java.util.List;
@@ -29,19 +30,28 @@ import javax.annotation.Nonnull;
 
 /** Position of a parse-tree node. */
 public class Pos {
-  public static final Pos ZERO = new Pos(0, 0, 0, 0);
+  public static final Pos ZERO = new Pos("", 0, 0, 0, 0);
 
+  public final String file;
   public final int startLine;
   public final int startColumn;
   public final int endLine;
   public final int endColumn;
 
   /** Creates a Pos. */
-  public Pos(int startLine, int startColumn, int endLine, int endColumn) {
+  public Pos(String file, int startLine, int startColumn, int endLine, int endColumn) {
+    this.file = file;
     this.startLine = startLine;
     this.startColumn = startColumn;
     this.endLine = endLine;
     this.endColumn = endColumn;
+  }
+
+  /** Creates a Pos from two offsets. */
+  public static Pos of(String ml, String file, int startOffset, int endOffset) {
+    IntPair start = lineCol(ml, startOffset);
+    IntPair end = lineCol(ml, endOffset);
+    return new Pos(file, start.source, start.target, end.source, end.target);
   }
 
   @Override public int hashCode() {
@@ -58,7 +68,22 @@ public class Pos {
   }
 
   @Override public String toString() {
-    return "line " + startLine + ", column " + startColumn;
+    return describeTo(new StringBuilder()).toString();
+  }
+
+  public StringBuilder describeTo(StringBuilder buf) {
+    buf.append(file)
+        .append(file.isEmpty() ? "" : ":")
+        .append(startLine)
+        .append('.')
+        .append(startColumn);
+    if (endColumn != startColumn + 1 || endLine != startLine) {
+      buf.append('-')
+          .append(endLine)
+          .append('.')
+          .append(endColumn);
+    }
+    return buf;
   }
 
   /**
@@ -127,10 +152,12 @@ public class Pos {
       int endColumn) {
     int testLine;
     int testColumn;
+    String file = Pos.ZERO.file;
     for (Pos pos : poses) {
       if (pos == null || pos.equals(Pos.ZERO)) {
         continue;
       }
+      file = pos.file;
       testLine = pos.startLine;
       testColumn = pos.startColumn;
       if (testLine < line || testLine == line && testColumn < column) {
@@ -145,11 +172,27 @@ public class Pos {
         endColumn = testColumn;
       }
     }
-    return new Pos(line, column, endLine, endColumn);
+    return new Pos(file, line, column, endLine, endColumn);
   }
 
   public Pos plus(Pos pos) {
-    return new Pos(startLine, startColumn, pos.endLine, pos.endColumn);
+    int startLine = this.startLine;
+    int startColumn = this.startColumn;
+    if (pos.startLine < startLine
+        || pos.startLine == startLine
+        && pos.startColumn < startColumn) {
+      startLine = pos.startLine;
+      startColumn = pos.startColumn;
+    }
+    int endLine = pos.endLine;
+    int endColumn = pos.endColumn;
+    if (this.endLine > endLine
+        || this.endLine == endLine
+        && this.endColumn > endColumn) {
+      endLine = this.endLine;
+      endColumn = this.endColumn;
+    }
+    return new Pos(file, startLine, startColumn, endLine, endColumn);
   }
 
   public Pos plusAll(Iterable<Pos> poses) {
@@ -159,6 +202,22 @@ public class Pos {
   public Pos plusAll(@Nonnull List<? extends AstNode> nodes) {
     //noinspection StaticPseudoFunctionalStyleMethod,ConstantConditions
     return plusAll(Lists.transform(nodes, (AstNode node) -> node.pos));
+  }
+
+  /** Returns the 1-based line. */
+  private static IntPair lineCol(String s, int offset) {
+    int line = 1;
+    int lineStart = 0;
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == '\n') {
+        ++line;
+        lineStart = i + 1;
+      }
+      if (i == offset) {
+        return IntPair.of(line, offset - lineStart + 1);
+      }
+    }
+    throw new IllegalArgumentException("not found");
   }
 }
 

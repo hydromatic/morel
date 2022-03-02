@@ -311,7 +311,9 @@ public class TypeResolver {
 
     case ID:
       final Ast.Id id = (Ast.Id) node;
-      final Unifier.Term term = env.get(typeSystem, id.name);
+      final Unifier.Term term = env.get(typeSystem, id.name, name ->
+          new CompileException("unbound variable or constructor: " + name,
+              id.pos));
       return reg(id, v, term);
 
     case FN:
@@ -895,7 +897,8 @@ public class TypeResolver {
       case ID_PAT:
         final Ast.IdPat idPat = (Ast.IdPat) pat;
         if (env.has(idPat.name)) {
-          final Unifier.Term term = env.get(typeSystem, idPat.name);
+          final Unifier.Term term = env.get(typeSystem, idPat.name, name ->
+              new RuntimeException("oops, should have " + idPat.name));
           if (term instanceof Unifier.Sequence
               && ((Unifier.Sequence) term).operator.equals(FN_TY_CON)) {
             list2.add(
@@ -1187,8 +1190,9 @@ public class TypeResolver {
   enum EmptyTypeEnv implements TypeEnv {
     INSTANCE;
 
-    @Override public Unifier.Term get(TypeSystem typeSystem, String name) {
-      throw new CompileException("unbound variable or constructor: " + name);
+    @Override public Unifier.Term get(TypeSystem typeSystem, String name,
+        Function<String, RuntimeException> exceptionFactory) {
+      throw exceptionFactory.apply(name);
     }
 
     @Override public boolean has(String name) {
@@ -1207,7 +1211,8 @@ public class TypeResolver {
 
   /** Type environment. */
   interface TypeEnv {
-    Unifier.Term get(TypeSystem typeSystem, String name);
+    Unifier.Term get(TypeSystem typeSystem, String name,
+        Function<String, RuntimeException> exceptionFactory);
     boolean has(String name);
     TypeEnv bind(String name, Function<TypeSystem, Unifier.Term> termFactory);
 
@@ -1253,13 +1258,14 @@ public class TypeResolver {
       this.parent = Objects.requireNonNull(parent);
     }
 
-    @Override public Unifier.Term get(TypeSystem typeSystem, String name) {
+    @Override public Unifier.Term get(TypeSystem typeSystem, String name,
+        Function<String, RuntimeException> exceptionFactory) {
       for (BindTypeEnv e = this;; e = (BindTypeEnv) e.parent) {
         if (e.definedName.equals(name)) {
           return e.termFactory.apply(typeSystem);
         }
         if (!(e.parent instanceof BindTypeEnv)) {
-          return e.parent.get(typeSystem, name);
+          return e.parent.get(typeSystem, name, exceptionFactory);
         }
       }
     }

@@ -113,7 +113,7 @@ public final class Span {
    * and returns this Span. */
   public Span add(MorelParser parser) {
     try {
-      final Pos pos = parser.getPos();
+      final Pos pos = parser.pos();
       return add(pos);
     } catch (Exception e) {
       // getPos does not really throw an exception
