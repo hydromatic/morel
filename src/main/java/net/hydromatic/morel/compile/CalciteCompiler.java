@@ -22,6 +22,7 @@ import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Code;
@@ -635,7 +636,7 @@ public class CalciteCompiler extends Compiler {
       final List<Core.Exp> args = new ArrayList<>();
       recordType.argNameTypes.forEach((field, fieldType) ->
           args.add(
-              core.apply(fieldType,
+              core.apply(Pos.ZERO, fieldType,
                   core.recordSelector(typeSystem, recordType, field),
                   id)));
       return core.tuple(recordType, args);

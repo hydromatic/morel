@@ -41,12 +41,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.function.BiConsumer;
 import java.util.function.ObjIntConsumer;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.ast.Pos.ZERO;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -64,8 +62,8 @@ public class Core {
 
   /** Abstract base class of Core nodes. */
   abstract static class BaseNode extends AstNode {
-    BaseNode(Op op) {
-      super(ZERO, op);
+    BaseNode(Pos pos, Op op) {
+      super(pos, op);
     }
 
     @Override public AstNode accept(Shuttle shuttle) {
@@ -87,7 +85,7 @@ public class Core {
     public final Type type;
 
     Pat(Op op, Type type) {
-      super(op);
+      super(Pos.ZERO, op);
       this.type = requireNonNull(type);
     }
 
@@ -459,8 +457,8 @@ public class Core {
   public abstract static class Exp extends BaseNode {
     public final Type type;
 
-    Exp(Op op, Type type) {
-      super(op);
+    Exp(Pos pos, Op op, Type type) {
+      super(pos, op);
       this.type = requireNonNull(type);
     }
 
@@ -488,7 +486,7 @@ public class Core {
 
     /** Creates an Id. */
     Id(NamedPat idPat) {
-      super(Op.ID, idPat.type);
+      super(Pos.ZERO, Op.ID, idPat.type);
       this.idPat = requireNonNull(idPat);
     }
 
@@ -523,7 +521,7 @@ public class Core {
 
     /** Creates a record selector. */
     RecordSelector(FnType fnType, int slot) {
-      super(Op.RECORD_SELECTOR, fnType);
+      super(Pos.ZERO, Op.RECORD_SELECTOR, fnType);
       this.slot = slot;
     }
 
@@ -567,7 +565,7 @@ public class Core {
 
     /** Creates a Literal. */
     Literal(Op op, Type type, Comparable value) {
-      super(op, type);
+      super(Pos.ZERO, op, type);
       this.value = requireNonNull(value);
     }
 
@@ -608,8 +606,8 @@ public class Core {
 
   /** Base class for declarations. */
   public abstract static class Decl extends BaseNode {
-    Decl(Op op) {
-      super(op);
+    Decl(Pos pos, Op op) {
+      super(pos, op);
     }
 
     @Override public abstract Decl accept(Shuttle shuttle);
@@ -620,7 +618,7 @@ public class Core {
     public final List<DataType> dataTypes;
 
     DatatypeDecl(ImmutableList<DataType> dataTypes) {
-      super(Op.DATATYPE_DECL);
+      super(Pos.ZERO, Op.DATATYPE_DECL);
       this.dataTypes = requireNonNull(dataTypes);
       checkArgument(!this.dataTypes.isEmpty());
     }
@@ -652,13 +650,19 @@ public class Core {
 
   /** Abstract (recursive or non-recursive) value declaration. */
   public abstract static class ValDecl extends Decl {
-    ValDecl(Op op) {
-      super(op);
+    ValDecl(Pos pos, Op op) {
+      super(pos, op);
     }
 
     @Override public abstract ValDecl accept(Shuttle shuttle);
 
-    public abstract void forEachBinding(BiConsumer<NamedPat, Exp> consumer);
+    public abstract void forEachBinding(BindingConsumer consumer);
+  }
+
+  /** Consumer of bindings. */
+  @FunctionalInterface
+  public interface BindingConsumer {
+    void accept(NamedPat namedPat, Exp exp, Pos pos);
   }
 
   /** Non-recursive value declaration.
@@ -668,8 +672,8 @@ public class Core {
     public final NamedPat pat;
     public final Exp exp;
 
-    NonRecValDecl(NamedPat pat, Exp exp) {
-      super(Op.VAL_DECL);
+    NonRecValDecl(NamedPat pat, Exp exp, Pos pos) {
+      super(pos, Op.VAL_DECL);
       this.pat = pat;
       this.exp = exp;
     }
@@ -700,11 +704,11 @@ public class Core {
 
     public NonRecValDecl copy(NamedPat pat, Exp exp) {
       return pat == this.pat && exp == this.exp ? this
-          : core.nonRecValDecl(pat, exp);
+          : core.nonRecValDecl(pat, exp, pos);
     }
 
-    @Override public void forEachBinding(BiConsumer<NamedPat, Exp> consumer) {
-      consumer.accept(pat, exp);
+    @Override public void forEachBinding(BindingConsumer consumer) {
+      consumer.accept(pat, exp, pos);
     }
   }
 
@@ -713,7 +717,7 @@ public class Core {
     public final ImmutableList<NonRecValDecl> list;
 
     RecValDecl(ImmutableList<NonRecValDecl> list) {
-      super(Op.REC_VAL_DECL);
+      super(Pos.ZERO, Op.REC_VAL_DECL);
       this.list = requireNonNull(list);
     }
 
@@ -743,7 +747,7 @@ public class Core {
       visitor.visit(this);
     }
 
-    @Override public void forEachBinding(BiConsumer<NamedPat, Exp> consumer) {
+    @Override public void forEachBinding(BindingConsumer consumer) {
       list.forEach(b -> b.forEachBinding(consumer));
     }
 
@@ -759,7 +763,7 @@ public class Core {
     public final List<Exp> args;
 
     Tuple(RecordLikeType type, ImmutableList<Exp> args) {
-      super(Op.TUPLE, type);
+      super(Pos.ZERO, Op.TUPLE, type);
       this.args = ImmutableList.copyOf(args);
     }
 
@@ -806,7 +810,7 @@ public class Core {
     public final Exp exp;
 
     Let(ValDecl decl, Exp exp) {
-      super(Op.LET, exp.type);
+      super(Pos.ZERO, Op.LET, exp.type);
       this.decl = requireNonNull(decl);
       this.exp = requireNonNull(exp);
     }
@@ -837,7 +841,7 @@ public class Core {
     public final Exp exp;
 
     Local(DataType dataType, Exp exp) {
-      super(Op.LOCAL, exp.type);
+      super(Pos.ZERO, Op.LOCAL, exp.type);
       this.dataType = requireNonNull(dataType);
       this.exp = requireNonNull(exp);
     }
@@ -873,8 +877,8 @@ public class Core {
     public final Pat pat;
     public final Exp exp;
 
-    Match(Pat pat, Exp exp) {
-      super(Op.MATCH);
+    Match(Pos pos, Pat pat, Exp exp) {
+      super(pos, Op.MATCH);
       this.pat = pat;
       this.exp = exp;
     }
@@ -893,7 +897,7 @@ public class Core {
 
     public Match copy(Pat pat, Exp exp) {
       return pat == this.pat && exp == this.exp ? this
-          : core.match(pat, exp);
+          : core.match(pat, exp, pos);
     }
   }
 
@@ -903,7 +907,7 @@ public class Core {
     public final Exp exp;
 
     Fn(FnType type, IdPat idPat, Exp exp) {
-      super(Op.FN, type);
+      super(Pos.ZERO, Op.FN, type);
       this.idPat = requireNonNull(idPat);
       this.exp = requireNonNull(exp);
     }
@@ -939,7 +943,7 @@ public class Core {
     public final List<Match> matchList;
 
     Case(Type type, Exp exp, ImmutableList<Match> matchList) {
-      super(Op.CASE, type);
+      super(Pos.ZERO, Op.CASE, type);
       this.exp = exp;
       this.matchList = matchList;
     }
@@ -968,7 +972,7 @@ public class Core {
     public final ImmutableList<FromStep> steps;
 
     From(ListType type, ImmutableList<FromStep> steps) {
-      super(Op.FROM, type);
+      super(Pos.ZERO, Op.FROM, type);
       this.steps = requireNonNull(steps);
     }
 
@@ -1007,7 +1011,7 @@ public class Core {
     public final ImmutableList<Binding> bindings;
 
     FromStep(Op op, ImmutableList<Binding> bindings) {
-      super(op);
+      super(Pos.ZERO, op);
       this.bindings = bindings;
     }
 
@@ -1150,7 +1154,7 @@ public class Core {
     public final Ast.Direction direction;
 
     OrderItem(Exp exp, Ast.Direction direction) {
-      super(Op.ORDER_ITEM);
+      super(Pos.ZERO, Op.ORDER_ITEM);
       this.exp = requireNonNull(exp);
       this.direction = requireNonNull(direction);
     }
@@ -1251,8 +1255,8 @@ public class Core {
     public final Exp fn;
     public final Exp arg;
 
-    Apply(Type type, Exp fn, Exp arg) {
-      super(Op.APPLY, type);
+    Apply(Pos pos, Type type, Exp fn, Exp arg) {
+      super(pos, Op.APPLY, type);
       this.fn = fn;
       this.arg = arg;
     }
@@ -1292,7 +1296,7 @@ public class Core {
 
     public Apply copy(Exp fn, Exp arg) {
       return fn == this.fn && arg == this.arg ? this
-          : core.apply(type, fn, arg);
+          : core.apply(pos, type, fn, arg);
     }
   }
 
@@ -1306,7 +1310,7 @@ public class Core {
     public final @Nullable Exp argument;
 
     Aggregate(Type type, Exp aggregate, @Nullable Exp argument) {
-      super(Op.AGGREGATE);
+      super(Pos.ZERO, Op.AGGREGATE);
       this.type = type;
       this.aggregate = requireNonNull(aggregate);
       this.argument = argument;

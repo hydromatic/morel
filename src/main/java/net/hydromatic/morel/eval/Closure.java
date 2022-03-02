@@ -19,6 +19,7 @@
 package net.hydromatic.morel.eval;
 
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
@@ -48,12 +49,14 @@ public class Closure implements Comparable<Closure>, Applicable {
    * pattern ({@code _}) succeeds, and therefore we evaluate the second
    * code {@code "no"}. */
   private final ImmutableList<Pair<Core.Pat, Code>> patCodes;
+  private final Pos pos;
 
   /** Not a public API. */
   public Closure(EvalEnv evalEnv,
-      ImmutableList<Pair<Core.Pat, Code>> patCodes) {
+      ImmutableList<Pair<Core.Pat, Code>> patCodes, Pos pos) {
     this.evalEnv = requireNonNull(evalEnv).fix();
     this.patCodes = requireNonNull(patCodes);
+    this.pos = pos;
   }
 
   @Override public String toString() {
@@ -106,7 +109,7 @@ public class Closure implements Comparable<Closure>, Applicable {
         return code.eval(envRef.env);
       }
     }
-    throw new Codes.MorelRuntimeException(Codes.BuiltInExn.BIND);
+    throw new Codes.MorelRuntimeException(Codes.BuiltInExn.BIND, pos);
   }
 
   @Override public Object apply(EvalEnv env, Object argValue) {

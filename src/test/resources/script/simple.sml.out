@@ -476,6 +476,7 @@ val i = 1 : 'a
 *)
 val SOME i = NONE;
 uncaught exception Bind
+  raised at: stdIn:6.5-6.18
 
 (* TODO fix in [MOREL-43]
 val SOME (p as (1, i), SOME true) = SOME ((1, 2), SOME true);
@@ -491,6 +492,7 @@ val i = 1 : int
 
 val (i, false) = (1, true);
 uncaught exception Bind
+  raised at: stdIn:1.5-1.27
 
 let
   val (i, false) = (1, true)
@@ -498,6 +500,7 @@ in
   i + 1
 end;
 uncaught exception Bind
+  raised at: stdIn:2.7-2.29
 
 
 (*) Patterns
@@ -558,6 +561,40 @@ val x as y as z = 3;
 val x = 3 : int
 val y = 3 : int
 val z = 3 : int
+
+
+(*) Errors
+(* The first is printed as '1.9', the second as '1.9-1.11', and the third as '1.9-1.12'. *)
+"a string literal to reset the line counter after the comment";
+val it = "a string literal to reset the line counter after the comment"
+  : string
+
+val a = p + 1;
+stdIn:1.9 Error: unbound variable or constructor: p
+  raised at: stdIn:1.9
+
+val a = pq + 1;
+stdIn:1.9-1.11 Error: unbound variable or constructor: pq
+  raised at: stdIn:1.9-1.11
+
+val a = pqr + 1;
+stdIn:1.9-1.12 Error: unbound variable or constructor: pqr
+  raised at: stdIn:1.9-1.12
+
+
+fun f n = String.substring ("hello", 1, n);
+val f = fn : int -> string
+
+f 2;
+val it = "el" : string
+
+f 6;
+uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:2.11-2.43
+
+f ~1;
+uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:2.11-2.43
 
 
 (*) End simple.sml

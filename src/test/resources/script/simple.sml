@@ -331,4 +331,16 @@ val d = 2 : 'b
 *)
 val x as y as z = 3;
 
+(*) Errors
+(* The first is printed as '1.9', the second as '1.9-1.11', and the third as '1.9-1.12'. *)
+"a string literal to reset the line counter after the comment";
+val a = p + 1;
+val a = pq + 1;
+val a = pqr + 1;
+
+fun f n = String.substring ("hello", 1, n);
+f 2;
+f 6;
+f ~1;
+
 (*) End simple.sml

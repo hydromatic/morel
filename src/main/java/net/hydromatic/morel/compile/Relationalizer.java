@@ -87,7 +87,7 @@ public class Relationalizer extends EnvShuttle {
           // "defaultYieldExp", and therefore we cannot add another yield
           // step. We will have to inline the yield expression as a let.
           final Core.Yield yieldStep = core.yield_(typeSystem,
-              core.apply(fnType.resultType, f,
+              core.apply(apply.pos, fnType.resultType, f,
                   core.implicitYieldExp(typeSystem, from.steps)));
           return core.from(typeSystem, append(from.steps, yieldStep));
         }
@@ -100,7 +100,7 @@ public class Relationalizer extends EnvShuttle {
           final Core.From from = toFrom(apply.arg);
           final Core.Where whereStep =
               core.where(core.lastBindings(from.steps),
-                  core.apply(fnType.resultType, f,
+                  core.apply(apply.pos, fnType.resultType, f,
                       core.implicitYieldExp(typeSystem, from.steps)));
           return core.from(typeSystem, append(from.steps, whereStep));
         }

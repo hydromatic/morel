@@ -314,6 +314,7 @@ public class ShellTest {
         + "[use failed: Io: openIn failed on missing.sml,"
         + " No such file or directory]\r\n"
         + "uncaught exception Error\r\n"
+        + "  raised at: stdIn:1.1-1.18\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
     fixture()
@@ -342,6 +343,7 @@ public class ShellTest {
         + "[use failed: Io: openIn failed on self-referential.sml,"
         + " Too many open files]\r\n"
         + "uncaught exception Error\r\n"
+        + "  raised at: stdIn:1.1-1.27\r\n"
         + "val it = () : unit\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";

@@ -56,13 +56,24 @@ public class MorelParserImpl implements MorelParser
   private static final Logger LOGGER =
       LoggerFactory.getLogger("net.hydromatic.morel.parse");
 
+  private int lineOffset;
+  private String file = "";
+
   public void setTabSize(int tabSize) {
     jj_input_stream.setTabSize(tabSize);
   }
 
-  public Pos getPos() {
-    return new Pos(token.beginLine, token.beginColumn,
-        token.endLine, token.endColumn);
+  public Pos pos() {
+    return new Pos(file,
+        token.beginLine - lineOffset, token.beginColumn,
+        token.endLine - lineOffset, token.endColumn + 1);
+  }
+
+  public void zero(String file) {
+    this.file = file;
+    if (jj_input_stream.bufpos >= 0) {
+      this.lineOffset = jj_input_stream.bufline[jj_input_stream.bufpos];
+    }
   }
 }
 
@@ -73,11 +84,6 @@ JAVACODE
 void debug_message1()
 {
   LOGGER.info("{} , {}", getToken(0).image, getToken(1).image);
-}
-
-JAVACODE Pos pos() {
-  return new Pos(token.beginLine, token.beginColumn,
-    token.endLine, token.endColumn);
 }
 
 /** Parses a literal expression. */
@@ -248,9 +254,9 @@ RecordType recordType() :
 }
 {
   <LBRACE> {
-    span = Span.of(getPos());
-    final Map<String, Type> map = new LinkedHashMap<>();
-  }
+  span = Span.of(pos());
+  final Map<String, Type> map = new LinkedHashMap<>();
+}
   [
     fieldType(map)
     (
@@ -282,7 +288,7 @@ Exp ifThenElse() :
   final Exp ifFalse;
 }
 {
-  <IF> { span = Span.of(getPos()); } condition = expression()
+  <IF> { span = Span.of(pos()); } condition = expression()
   <THEN> ifTrue = expression()
   <ELSE> ifFalse = expression() {
     return ast.ifThenElse(span.end(this), condition, ifTrue, ifFalse);
@@ -298,7 +304,7 @@ Exp let() :
   final List<Decl> declList = new ArrayList<>();
 }
 {
-  <LET> { span = Span.of(getPos()); }
+  <LET> { span = Span.of(pos()); }
   ( decl = decl() [ <SEMICOLON> ] { declList.add(decl); } )+
   <IN> e = expression() <END> {
     return ast.let(span.end(this), declList, e);
@@ -313,7 +319,7 @@ Exp caseOf() :
   final List<Match> matchList;
 }
 {
-  <CASE> { span = Span.of(getPos()); } exp = expression() <OF>
+  <CASE> { span = Span.of(pos()); } exp = expression() <OF>
   matchList = matchList() {
     return ast.caseOf(span.end(this), exp, matchList);
   }
@@ -327,7 +333,7 @@ Exp from() :
   final List<FromStep> steps = new ArrayList<>();
 }
 {
-  <FROM> { span = Span.of(getPos()); }
+  <FROM> { span = Span.of(pos()); }
   [ fromFirstStep(steps)
     ( <COMMA> fromFirstStep(steps) )*
   ]
@@ -362,9 +368,9 @@ void fromStep(List<FromStep> steps) :
 }
 {
   <JOIN> {
-    span = Span.of(getPos());
-    op = Op.INNER_JOIN;
-  }
+  span = Span.of(pos());
+  op = Op.INNER_JOIN;
+}
   patExp = fromSource()
   (
     LOOKAHEAD(2)
@@ -378,11 +384,11 @@ void fromStep(List<FromStep> steps) :
             condition));
   }
 |
-  <WHERE> { span = Span.of(getPos()); } filterExp = expression() {
+  <WHERE> { span = Span.of(pos()); } filterExp = expression() {
     steps.add(ast.where(span.end(this), filterExp));
   }
 |
-  <GROUP> { span = Span.of(getPos()); }
+  <GROUP> { span = Span.of(pos()); }
   (
     groupExps = namedExpressionCommaList()
   |
@@ -397,15 +403,15 @@ void fromStep(List<FromStep> steps) :
     steps.add(ast.group(span.end(this), groupExps, aggregates));
   }
 |
-  <COMPUTE> { span = Span.of(getPos()); } aggregates = aggregateCommaList() {
+  <COMPUTE> { span = Span.of(pos()); } aggregates = aggregateCommaList() {
     steps.add(ast.compute(span.end(this), aggregates));
   }
 |
-  <ORDER> { span = Span.of(getPos()); } orderItems = orderItemCommaList() {
+  <ORDER> { span = Span.of(pos()); } orderItems = orderItemCommaList() {
     steps.add(ast.order(span.end(this), orderItems));
   }
 |
-  <YIELD> { span = Span.of(getPos()); } yieldExp = expression() {
+  <YIELD> { span = Span.of(pos()); } yieldExp = expression() {
     steps.add(ast.yield(span.end(this), yieldExp));
   }
 }
@@ -456,7 +462,7 @@ Aggregate aggregate() :
   {
     final Id id = aggregateId.left;
     final Exp aggregate = aggregateId.right;
-    return ast.aggregate(id.pos.plus(getPos()), aggregate, argument, id);
+    return ast.aggregate(id.pos.plus(pos()), aggregate, argument, id);
   }
 }
 
@@ -482,7 +488,7 @@ OrderItem orderItem() :
   final Exp exp;
 }
 {
-  exp = expression() { span = Span.of(getPos()); }
+  exp = expression() { span = Span.of(pos()); }
   (
     <DESC> { return ast.orderItem(span.end(this), exp, Ast.Direction.DESC); }
   |
@@ -497,7 +503,7 @@ Exp fn() :
   final Match match;
 }
 {
-  <FN> { span = Span.of(getPos()); } match = match() {
+  <FN> { span = Span.of(pos()); } match = match() {
     return ast.fn(span.end(this), match);
   }
 }
@@ -583,7 +589,7 @@ Exp expression7() :
   Exp e2;
 }
 {
-  <TILDE> e = expression7() { return ast.negate(getPos(), e); }
+  <TILDE> e = expression7() { return ast.negate(pos(), e); }
 |
   e = expression8()
   (
@@ -819,7 +825,7 @@ Exp atom() :
   e = from() { return e; }
 |
   <LPAREN> {
-    span = Span.of(getPos());
+    span = Span.of(pos());
   }
   (
     <RPAREN> { return ast.unitLiteral(span.end(this)); }
@@ -843,7 +849,7 @@ Exp atom() :
   )
 |
   <LBRACKET> {
-    span = Span.of(getPos());
+    span = Span.of(pos());
     final List<Exp> list = new ArrayList<>();
     Exp e2;
   }
@@ -858,7 +864,7 @@ Exp atom() :
   }
 |
   <LBRACE> {
-    span = Span.of(getPos());
+    span = Span.of(pos());
     final Map<String, Exp> map = new LinkedHashMap<>();
   }
   [
@@ -912,7 +918,7 @@ ValDecl valDecl() :
   final List<Ast.ValBind> valBinds = new ArrayList<>();
 }
 {
-  <VAL> { span = Span.of(getPos()); }
+  <VAL> { span = Span.of(pos()); }
   [ <REC> { rec = true; } ]
   valBind(valBinds)
   (
@@ -963,7 +969,7 @@ Ast.DatatypeDecl datatypeDecl() :
   final List<DatatypeBind> binds = new ArrayList<>();
 }
 {
-  <DATATYPE> { span = Span.of(getPos()); }
+  <DATATYPE> { span = Span.of(pos()); }
   datatypeBind(binds)
   (
     <AND> datatypeBind(binds)
@@ -1035,7 +1041,7 @@ Ast.FunDecl funDecl() :
   final List<FunBind> funBindList = new ArrayList<>();
 }
 {
-  <FUN> { span = Span.of(getPos()); }
+  <FUN> { span = Span.of(pos()); }
   funBind(funBindList)
   (
     <AND> funBind(funBindList)
@@ -1163,7 +1169,7 @@ Pat atomPat() :
     return ast.wildcardPat(pos());
   }
 |
-  <LPAREN> { span = Span.of(getPos()); }
+  <LPAREN> { span = Span.of(pos()); }
   [
     p = pat() { list.add(p); }
     (
@@ -1179,7 +1185,7 @@ Pat atomPat() :
   }
 |
   <LBRACKET> {
-    span = Span.of(getPos());
+    span = Span.of(pos());
   }
   [
     p = pat() { list.add(p); }
@@ -1192,7 +1198,7 @@ Pat atomPat() :
   }
 |
   <LBRACE> {
-    span = Span.of(getPos());
+    span = Span.of(pos());
     final Map<String, Pat> map = new LinkedHashMap<>();
     boolean ellipsis = false;
   }
@@ -1222,7 +1228,7 @@ void recordPat(Map<String, Pat> map) :
   (
     <EQ> pat = pat() { map.put(id, pat); }
   |
-    { map.put(id, ast.idPat(getPos(), id)); }
+    { map.put(id, ast.idPat(pos(), id)); }
   )
 }
 
@@ -1240,7 +1246,7 @@ Ast.Type atomicType() :
   type = recordType() { return type; }
 |
   <LPAREN> {
-    span = Span.of(getPos());
+    span = Span.of(pos());
   }
   type = type()
   (

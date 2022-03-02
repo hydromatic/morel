@@ -19,7 +19,7 @@
 package net.hydromatic.morel;
 
 import net.hydromatic.morel.ast.AstNode;
-import net.hydromatic.morel.compile.CompileException;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
@@ -31,6 +31,7 @@ import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.MorelException;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -150,6 +151,7 @@ public class Main {
           new SubShell(main, outLines, bindingMap, env0);
       for (;;) {
         try {
+          parser.zero("stdIn");
           final AstNode statement = parser.statementSemicolonOrEof();
           String code = in2.flush();
           if (statement == null && code.endsWith("\n")) {
@@ -182,15 +184,17 @@ public class Main {
       }
     }
 
-    @Override public void use(String fileName) {
+    @Override public void use(String fileName, Pos pos) {
       throw new UnsupportedOperationException();
     }
 
     @Override public void handle(RuntimeException e, StringBuilder buf) {
-      if (e instanceof Codes.MorelRuntimeException) {
-        ((Codes.MorelRuntimeException) e).describeTo(buf);
-      } else if (e instanceof CompileException) {
-        buf.append(e.getMessage());
+      if (e instanceof MorelException) {
+        final MorelException me = (MorelException) e;
+        me.describeTo(buf)
+            .append("\n")
+            .append("  raised at: ");
+        me.pos().describeTo(buf);
       } else {
         buf.append(e);
       }
@@ -209,7 +213,7 @@ public class Main {
       super(main, env0, outLines, outBindings);
     }
 
-    @Override public void use(String fileName) {
+    @Override public void use(String fileName, Pos pos) {
       outLines.accept("[opening " + fileName + "]");
       File file = new File(fileName);
       if (!file.isAbsolute()) {
@@ -219,7 +223,7 @@ public class Main {
         outLines.accept("[use failed: Io: openIn failed on "
             + fileName
             + ", No such file or directory]");
-        throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR);
+        throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR, pos);
       }
       try (FileReader fileReader = new FileReader(file);
            BufferedReader bufferedReader = new BufferedReader(fileReader)) {

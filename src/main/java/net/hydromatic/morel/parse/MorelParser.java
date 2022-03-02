@@ -23,7 +23,10 @@ import net.hydromatic.morel.ast.Pos;
 /** Parser for Morel, a variant of Standard ML. */
 public interface MorelParser {
   /** Returns the position of the last token returned by the parser. */
-  Pos getPos();
+  Pos pos();
+
+  /** Sets the current file, and sets the current line to zero. */
+  void zero(String file);
 }
 
 // End MorelParser.java
