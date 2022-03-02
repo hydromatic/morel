@@ -27,6 +27,7 @@ import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
 
 import org.apache.calcite.util.ImmutableIntList;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 import org.junit.jupiter.api.Test;
 
@@ -37,13 +38,17 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** Tests for various utility classes. */
 public class UtilTest {
@@ -168,6 +173,60 @@ public class UtilTest {
     assertThat(Static.shorterThan(iterable, 4), is(size < 4));
     assertThat(Static.shorterThan(iterable, 1_000_000), is(size < 1_000_000));
   }
+
+  /** Unit tests for {@link Pos}. */
+  @Test void testPos() {
+    final BiConsumer<String, String> check = (s, posString) -> {
+      final Pair<String, Pos> pos = Pos.split(s, '$', "stdIn");
+      assertThat(pos.left, is("abcdefgh"));
+      assertThat(pos.right, notNullValue());
+      assertThat(pos.right.toString(), is(posString));
+    };
+    // starts and ends in middle
+    check.accept("abc$def$gh", "stdIn:1.4-1.7");
+    // ends at end
+    check.accept("abc$defgh$", "stdIn:1.4-1.9");
+    // starts at start
+    check.accept("$abc$defgh", "stdIn:1.1-1.4");
+    // one character long
+    check.accept("abc$d$efgh", "stdIn:1.4");
+
+    final BiConsumer<String, String> check2 = (s, posString) -> {
+      final Pair<String, Pos> pos = Pos.split(s, '$', "stdIn");
+      assertThat(pos.left,
+          is("abc\n"
+              + "de\n"
+              + "\n"
+              + "fgh"));
+      assertThat(pos.right, notNullValue());
+      assertThat(pos.right.toString(), is(posString));
+    };
+    // start of line
+    check2.accept("abc\n"
+        + "$de$\n"
+        + "\n"
+        + "fgh", "stdIn:2.1-2.3");
+    // spans multiple lines
+    check2.accept("abc\n"
+        + "d$e\n"
+        + "\n"
+        + "fg$h", "stdIn:2.2-4.3");
+
+    // too many, too few
+    Consumer<String> checkTooFew = s -> {
+      try {
+        final Pair<String, Pos> pos4 = Pos.split(s, '$', "stdIn");
+        fail("expected error, got " + pos4);
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(),
+            is("expected exactly two occurrences of delimiter, '$'"));
+      }
+    };
+    checkTooFew.accept("$abc$de$f");
+    checkTooFew.accept("abc$def");
+    checkTooFew.accept("abcdef");
+  }
+
 }
 
 // End UtilTest.java

@@ -18,10 +18,31 @@
  */
 package net.hydromatic.morel.compile;
 
+import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.util.MorelException;
+
 /** An error occurred during compilation. */
-public class CompileException extends RuntimeException {
-  public CompileException(String message) {
+public class CompileException extends RuntimeException
+    implements MorelException {
+  private final Pos pos;
+
+  public CompileException(String message, Pos pos) {
     super(message);
+    this.pos = pos;
+  }
+
+  @Override public String toString() {
+    return super.toString() + " at " + pos;
+  }
+
+  @Override public Pos pos() {
+    return pos;
+  }
+
+  public StringBuilder describeTo(StringBuilder buf) {
+    return pos.describeTo(buf)
+        .append(" Error: ")
+        .append(getMessage());
   }
 }
 

@@ -20,6 +20,7 @@ package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Applicable2;
 import net.hydromatic.morel.eval.Applicable3;
@@ -221,7 +222,7 @@ public class Compiler {
     case FN:
       final Core.Fn fn = (Core.Fn) expression;
       return compileMatchList(cx,
-          ImmutableList.of(core.match(fn.idPat, fn.exp)));
+          ImmutableList.of(core.match(fn.idPat, fn.exp, fn.pos)));
 
     case CASE:
       final Core.Case case_ = (Core.Case) expression;
@@ -266,11 +267,12 @@ public class Compiler {
     case FN_LITERAL:
       final Core.Literal literal = (Core.Literal) apply.fn;
       final BuiltIn builtIn = (BuiltIn) literal.value;
-      return compileCall(cx, builtIn, apply.arg);
+      return compileCall(cx, builtIn, apply.arg, apply.pos);
     }
     final Code argCode = compileArg(cx, apply.arg);
     final Type argType = apply.arg.type;
-    final Applicable fnValue = compileApplicable(cx, apply.fn, argType);
+    final Applicable fnValue =
+        compileApplicable(cx, apply.fn, argType, apply.pos);
     if (fnValue != null) {
       return finishCompileApply(cx, fnValue, argCode, argType);
     }
@@ -379,7 +381,7 @@ public class Compiler {
         }
         final Applicable aggregateApplicable =
             compileApplicable(cx, aggregate.aggregate,
-                typeSystem.listType(argumentType));
+                typeSystem.listType(argumentType), aggregate.pos);
         final Code aggregateCode;
         if (aggregateApplicable == null) {
           aggregateCode = compile(cx, aggregate.aggregate);
@@ -414,16 +416,17 @@ public class Compiler {
 
   /** Compiles a function value to an {@link Applicable}, if possible, or
    * returns null. */
-  private Applicable compileApplicable(Context cx, Core.Exp fn, Type argType) {
+  private Applicable compileApplicable(Context cx, Core.Exp fn, Type argType,
+      Pos pos) {
     switch (fn.op) {
     case FN_LITERAL:
       final BuiltIn builtIn = (BuiltIn) ((Core.Literal) fn).value;
       final Object o = Codes.BUILT_IN_VALUES.get(builtIn);
-      return toApplicable(cx, o, argType);
+      return toApplicable(cx, o, argType, pos);
 
     case VALUE_LITERAL:
       final Core.Literal literal = (Core.Literal) fn;
-      return toApplicable(cx, literal.unwrap(), argType);
+      return toApplicable(cx, literal.unwrap(), argType, pos);
 
     case ID:
       final Binding binding = cx.env.getOpt(((Core.Id) fn).idPat.name);
@@ -432,7 +435,7 @@ public class Compiler {
           || binding.value == Unit.INSTANCE) {
         return null;
       }
-      return toApplicable(cx, binding.value, argType);
+      return toApplicable(cx, binding.value, argType, pos);
 
     case RECORD_SELECTOR:
       final Core.RecordSelector recordSelector = (Core.RecordSelector) fn;
@@ -444,9 +447,13 @@ public class Compiler {
   }
 
   private @Nullable Applicable toApplicable(Context cx, Object o,
-      Type argType) {
+      Type argType, Pos pos) {
     if (o instanceof Applicable) {
-      return (Applicable) o;
+      final Applicable applicable = (Applicable) o;
+      if (applicable instanceof Codes.Positioned) {
+        return ((Codes.Positioned) applicable).withPos(pos);
+      }
+      return applicable;
     }
     if (o instanceof Macro) {
       final Macro value = (Macro) o;
@@ -532,7 +539,7 @@ public class Compiler {
     }
   }
 
-  private Code compileCall(Context cx, BuiltIn builtIn, Core.Exp arg) {
+  private Code compileCall(Context cx, BuiltIn builtIn, Core.Exp arg, Pos pos) {
     final List<Code> argCodes;
     switch (builtIn) {
     case Z_ANDALSO:
@@ -548,7 +555,13 @@ public class Compiler {
       argCodes = compileArgs(cx, ((Core.Tuple) arg).args);
       return Codes.list(argCodes);
     default:
-      final Object o = Codes.BUILT_IN_VALUES.get(builtIn);
+      final Object o0 = Codes.BUILT_IN_VALUES.get(builtIn);
+      final Object o;
+      if (o0 instanceof Codes.Positioned) {
+        o = ((Codes.Positioned) o0).withPos(pos);
+      } else {
+        o = o0;
+      }
       if (o instanceof Applicable) {
         final Code argCode = compile(cx, arg);
         if (argCode instanceof Codes.TupleCode) {
@@ -587,7 +600,7 @@ public class Compiler {
         matchList.stream()
             .map(match -> compileMatch(cx, match))
             .collect(toImmutableList());
-    return new MatchCode(patCodes);
+    return new MatchCode(patCodes, Util.last(matchList).pos);
   }
 
   private Pair<Core.Pat, Code> compileMatch(Context cx, Core.Match match) {
@@ -603,7 +616,7 @@ public class Compiler {
     final List<Binding> newBindings = new TailList<>(bindings);
     final Map<Core.NamedPat, LinkCode> linkCodes = new HashMap<>();
     if (valDecl.op == Op.REC_VAL_DECL) {
-      valDecl.forEachBinding((pat, exp) -> {
+      valDecl.forEachBinding((pat, exp, pos) -> {
         final LinkCode linkCode = new LinkCode();
         linkCodes.put(pat, linkCode);
         bindings.add(Binding.of(pat, linkCode));
@@ -611,8 +624,7 @@ public class Compiler {
     }
 
     final Context cx1 = cx.bindAll(newBindings);
-    valDecl.forEachBinding((pat, exp) -> {
-
+    valDecl.forEachBinding((pat, exp, pos) -> {
       // Using 'compileArg' rather than 'compile' encourages CalciteCompiler
       // to use a pure Calcite implementation if possible, and has no effect
       // in the basic Compiler.
@@ -620,7 +632,7 @@ public class Compiler {
       if (!linkCodes.isEmpty()) {
         link(linkCodes, pat, code);
       }
-      matchCodes.add(new MatchCode(ImmutableList.of(Pair.of(pat, code))));
+      matchCodes.add(new MatchCode(ImmutableList.of(Pair.of(pat, code)), pos));
 
       if (actions != null) {
         final Type type0 = exp.type;
@@ -633,7 +645,7 @@ public class Compiler {
             final Object o = code.eval(evalEnv);
             final Map<Core.NamedPat, Object> pairs = new LinkedHashMap<>();
             if (!Closure.bindRecurse(pat.withType(type), o, pairs::put)) {
-              throw new Codes.MorelRuntimeException(Codes.BuiltInExn.BIND);
+              throw new Codes.MorelRuntimeException(Codes.BuiltInExn.BIND, pos);
             }
             pairs.forEach((pat2, o2) -> {
               outBindings.accept(Binding.of(pat2, o2));
@@ -748,9 +760,11 @@ public class Compiler {
   /** Code that implements {@link Compiler#compileMatchList(Context, List)}. */
   private static class MatchCode implements Code {
     private final ImmutableList<Pair<Core.Pat, Code>> patCodes;
+    private final Pos pos;
 
-    MatchCode(ImmutableList<Pair<Core.Pat, Code>> patCodes) {
+    MatchCode(ImmutableList<Pair<Core.Pat, Code>> patCodes, Pos pos) {
       this.patCodes = patCodes;
+      this.pos = pos;
     }
 
     @Override public Describer describe(Describer describer) {
@@ -760,7 +774,7 @@ public class Compiler {
     }
 
     @Override public Object eval(EvalEnv evalEnv) {
-      return new Closure(evalEnv, patCodes);
+      return new Closure(evalEnv, patCodes, pos);
     }
   }
 }

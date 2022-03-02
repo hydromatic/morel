@@ -368,12 +368,15 @@ val it = #"c" : char
 
 String.sub("abc", 20);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.22
 
 String.sub("abc", 3);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.21
 
 String.sub("abc", ~1);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.22
 
 Sys.plan ();
 val it = "apply2(fnValue String.sub, constant(abc), constant(-1))" : string
@@ -397,21 +400,27 @@ val it = "" : string
 
 String.extract("abc", 4, NONE);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.31
 
 String.extract("abc", ~1, NONE);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.32
 
 String.extract("abc", 4, SOME 2);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.33
 
 String.extract("abc", ~1, SOME 2);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.34
 
 String.extract("abc", 1, SOME ~1);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.34
 
 String.extract("abc", 1, SOME 99);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.34
 
 Sys.plan ();
 val it =
@@ -440,12 +449,15 @@ val it = "" : string
 
 String.substring("hello", ~1, 0);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.33
 
 String.substring("hello", 1, ~1);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.33
 
 String.substring("hello", 1, 5);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.32
 
 Sys.plan ();
 val it =
@@ -764,6 +776,7 @@ val it = 1 : int
 
 List.hd [];
 uncaught exception Empty
+  raised at: stdIn:1.1-1.11
 
 Sys.plan ();
 val it = "apply(fnValue List.hd, argCode tuple)" : string
@@ -778,6 +791,7 @@ val it = [2,3] : int list
 
 List.tl [];
 uncaught exception Empty
+  raised at: stdIn:1.1-1.11
 
 Sys.plan ();
 val it = "apply(fnValue List.tl, argCode tuple)" : string
@@ -792,6 +806,7 @@ val it = 3 : int
 
 List.last [];
 uncaught exception Empty
+  raised at: stdIn:1.1-1.13
 
 Sys.plan ();
 val it = "apply(fnValue List.last, argCode tuple)" : string
@@ -823,9 +838,11 @@ val it = 1 : int
 
 List.nth ([1,2,3], 3);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.22
 
 List.nth ([1,2,3], ~1);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.23
 
 Sys.plan ();
 val it =
@@ -848,9 +865,11 @@ val it = [1,2,3] : int list
 
 List.take ([1,2,3], 4);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.23
 
 List.take ([1,2,3], ~1);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.24
 
 Sys.plan ();
 val it =
@@ -1158,6 +1177,7 @@ val it = [] : int list
 
 List.tabulate (~1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
 uncaught exception Size
+  raised at: stdIn:1.1-1.87
 
 Sys.plan ();
 val it =
@@ -1643,6 +1663,7 @@ val it = 1 : int
  *)
 Option.valOf NONE;
 uncaught exception Option
+  raised at: stdIn:5.1-5.18
 
 val noneInt = if true then NONE else SOME 0;
 val noneInt = NONE : int option
@@ -1654,6 +1675,7 @@ val it =
 
 Option.valOf noneInt;
 uncaught exception Option
+  raised at: stdIn:1.1-1.21
 
 Sys.plan ();
 val it = "apply(fnValue Option.valOf, argCode constant([NONE]))" : string
@@ -2066,6 +2088,7 @@ val it = ~1 : int
 
 Real.sign nan;
 uncaught exception Domain
+  raised at: stdIn:1.1-1.14
 
 Sys.plan ();
 val it = "apply(fnValue Real.sign, argCode constant(NaN))" : string
@@ -2184,9 +2207,11 @@ val it = EQUAL : order
 
 Real.compare (Real.negInf, nan);
 uncaught exception Unordered
+  raised at: stdIn:1.1-1.32
 
 Real.compare (nan, nan);
 uncaught exception Unordered
+  raised at: stdIn:1.1-1.24
 
 Sys.plan ();
 val it = "apply2(fnValue Real.compare, constant(NaN), constant(NaN))" : string
@@ -2658,9 +2683,11 @@ val it = 1.5 : real
 
 Real.checkFloat Real.posInf;
 uncaught exception Overflow
+  raised at: stdIn:1.1-1.28
 
 Real.checkFloat Real.negInf;
 uncaught exception Overflow
+  raised at: stdIn:1.1-1.28
 
 Real.checkFloat Real.minNormalPos;
 val it = 1.17549435E~38 : real
@@ -2670,6 +2697,7 @@ val it = 1.4E~45 : real
 
 Real.checkFloat nan;
 uncaught exception Div
+  raised at: stdIn:1.1-1.20
 
 
 (* "realFloor r", "realCeil r", "realTrunc r", "realRound r" convert real values
@@ -3271,9 +3299,11 @@ val it = 2 : int
 
 Relational.only [1, 2, 3];
 uncaught exception Size
+  raised at: stdIn:1.1-1.26
 
 Relational.only [];
 uncaught exception Empty
+  raised at: stdIn:1.1-1.19
 
 Sys.plan ();
 val it = "apply(fnValue Relational.only, argCode tuple)" : string
@@ -3671,9 +3701,11 @@ val it = 9 : int
 
 Vector.sub (Vector.fromList [3,6,9], ~1);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.41
 
 Vector.sub (Vector.fromList [3,6,9], 3);
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.40
 
 Sys.plan ();
 val it =
@@ -3690,9 +3722,11 @@ val it = #["a","baz","c"] : string vector
 
 Vector.update (Vector.fromList ["a","b","c"], ~1, "baz");
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.57
 
 Vector.update (Vector.fromList ["a","b","c"], 3, "baz");
 uncaught exception Subscript [subscript out of bounds]
+  raised at: stdIn:1.1-1.56
 
 Sys.plan ();
 val it =

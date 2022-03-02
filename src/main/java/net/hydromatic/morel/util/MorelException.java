@@ -1,4 +1,4 @@
-(*
+/*
  * Licensed to Julian Hyde under one or more contributor license
  * agreements.  See the NOTICE file distributed with this work
  * for additional information regarding copyright ownership.
@@ -15,31 +15,18 @@
  * either express or implied.  See the License for the specific
  * language governing permissions and limitations under the
  * License.
- *
- * Called by use.sml (which we assume has defined 'x');
- * also called standalone. Some commands fail if 'x' is not
- * defined, but the script continues to the end.
- *)
+ */
+package net.hydromatic.morel.util;
 
-"entering use-1.sml";
-val it = "entering use-1.sml" : string
+import net.hydromatic.morel.ast.Pos;
 
-val y = x ^ ", ";
-stdIn:1.9 Error: unbound variable or constructor: x
-  raised at: stdIn:1.9
+/** Interface implemented by all exceptions in Morel. */
+public interface MorelException {
+  /** Returns the position. */
+  Pos pos();
 
-val x = y ^ "step 2";
-stdIn:1.9 Error: unbound variable or constructor: y
-  raised at: stdIn:1.9
+  /** Writes a description of this exception. */
+  StringBuilder describeTo(StringBuilder buf);
+}
 
-fun plus3 n = n + 3;
-val plus3 = fn : int -> int
-
-plus3 ~1;
-val it = 2 : int
-
-"leaving use-1.sml";
-val it = "leaving use-1.sml" : string
-
-
-(*) End use-1.sml
+// End MorelException.java

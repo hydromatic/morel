@@ -19,6 +19,7 @@
 package net.hydromatic.morel;
 
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
@@ -33,6 +34,7 @@ import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.MorelException;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
@@ -474,6 +476,7 @@ public class Shell {
                   new MorelParserImpl(new StringReader(code));
               final AstNode statement;
               try {
+                smlParser.zero("stdIn");
                 statement = smlParser.statementSemicolon();
                 final Environment env0 = env1;
                 final CompiledStatement compiled =
@@ -515,7 +518,7 @@ public class Shell {
         this.bindings = bindings;
       }
 
-      @Override public void use(String fileName) {
+      @Override public void use(String fileName, Pos pos) {
         outLines.accept("[opening " + fileName + "]");
         File file = new File(fileName);
         if (!file.isAbsolute()) {
@@ -525,13 +528,13 @@ public class Shell {
           outLines.accept("[use failed: Io: openIn failed on "
               + fileName
               + ", No such file or directory]");
-          throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR);
+          throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR, pos);
         }
         if (depth > maxDepth && maxDepth >= 0) {
           outLines.accept("[use failed: Io: openIn failed on "
               + fileName
               + ", Too many open files]");
-          throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR);
+          throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR, pos);
         }
         try (FileReader fileReader = new FileReader(file);
              BufferedReader bufferedReader = new BufferedReader(fileReader)) {
@@ -549,10 +552,12 @@ public class Shell {
         if (depth != 1) {
           throw e;
         }
-        if (e instanceof Codes.MorelRuntimeException) {
-          ((Codes.MorelRuntimeException) e).describeTo(buf);
-        } else if (e instanceof CompileException) {
-          buf.append(e.getMessage());
+        if (e instanceof MorelException) {
+          final MorelException me = (MorelException) e;
+          me.describeTo(buf)
+              .append("\n")
+              .append("  raised at: ");
+          me.pos().describeTo(buf);
         } else {
           buf.append(e);
         }

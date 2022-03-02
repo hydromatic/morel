@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.eval;
 
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 
 import java.util.List;
@@ -48,8 +49,12 @@ import java.util.List;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Applicable3<R, A0, A1, A2>
     extends ApplicableImpl {
+  protected Applicable3(BuiltIn builtIn, Pos pos) {
+    super(builtIn, pos);
+  }
+
   protected Applicable3(BuiltIn builtIn) {
-    super(builtIn);
+    this(builtIn, Pos.ZERO);
   }
 
   @Override public Object apply(EvalEnv env, Object argValue) {

@@ -20,6 +20,7 @@ package net.hydromatic.morel.eval;
 
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
@@ -30,6 +31,7 @@ import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MapList;
+import net.hydromatic.morel.util.MorelException;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Static;
@@ -307,15 +309,26 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#INTERACT_USE */
-  private static final Applicable INTERACT_USE =
-      new ApplicableImpl(BuiltIn.INTERACT_USE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final String f = (String) arg;
-          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
-          session.use(f);
-          return Unit.INSTANCE;
-        }
-      };
+  private static final Applicable INTERACT_USE = new InteractUse(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#INTERACT_USE}. */
+  private static class InteractUse extends ApplicableImpl
+      implements Positioned {
+    InteractUse(Pos pos) {
+      super(BuiltIn.INTERACT_USE, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new InteractUse(pos);
+    }
+
+    @Override public Object apply(EvalEnv env, Object arg) {
+      final String f = (String) arg;
+      final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+      session.use(f, pos);
+      return Unit.INSTANCE;
+    }
+  }
 
   /** @see BuiltIn#OP_CARET */
   private static final Applicable OP_CARET =
@@ -588,81 +601,140 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#STRING_SUB */
-  private static final Applicable STRING_SUB =
-      new Applicable2<Character, String, Integer>(BuiltIn.STRING_SUB) {
-        @Override public Character apply(String s, Integer i) {
-          if (i < 0 || i >= s.length()) {
-            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-          }
-          return s.charAt(i);
-        }
-      };
+  private static final Applicable STRING_SUB = new StringSub(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#STRING_SUB}. */
+  private static class StringSub extends Applicable2<Character, String, Integer>
+      implements Positioned {
+    StringSub(Pos pos) {
+      super(BuiltIn.STRING_SUB, pos);
+    }
+
+    @Override public Character apply(String s, Integer i) {
+      if (i < 0 || i >= s.length()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      return s.charAt(i);
+    }
+
+    public StringSub withPos(Pos pos) {
+      return new StringSub(pos);
+    }
+  }
 
   /** @see BuiltIn#STRING_EXTRACT */
   private static final Applicable STRING_EXTRACT =
-      new Applicable3<String, String, Integer, List>(BuiltIn.STRING_EXTRACT) {
-        @Override public String apply(String s, Integer i, List jOpt) {
-          if (i < 0) {
-            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-          }
-          if (jOpt.size() == 2) {
-            final int j = (Integer) jOpt.get(1);
-            if (j < 0 || i + j > s.length()) {
-              throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-            }
-            return s.substring(i, i + j);
-          } else {
-            if (i > s.length()) {
-              throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-            }
-            return s.substring(i);
-          }
+      new StringExtract(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#STRING_SUB}. */
+  private static class StringExtract
+      extends Applicable3<String, String, Integer, List> implements Positioned {
+    StringExtract(Pos pos) {
+      super(BuiltIn.STRING_EXTRACT, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new StringExtract(pos);
+    }
+
+    @Override public String apply(String s, Integer i, List jOpt) {
+      if (i < 0) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      if (jOpt.size() == 2) {
+        final int j = (Integer) jOpt.get(1);
+        if (j < 0 || i + j > s.length()) {
+          throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
         }
-      };
+        return s.substring(i, i + j);
+      } else {
+        if (i > s.length()) {
+          throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+        }
+        return s.substring(i);
+      }
+    }
+  }
 
   /** @see BuiltIn#STRING_SUBSTRING */
   private static final Applicable STRING_SUBSTRING =
-      new Applicable3<String, String, Integer, Integer>(
-          BuiltIn.STRING_SUBSTRING) {
-        @Override public String apply(String s, Integer i, Integer j) {
-          if (i < 0 || j < 0 || i + j > s.length()) {
-            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-          }
-          return s.substring(i, i + j);
-        }
-      };
+      new StringSubstring(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#STRING_SUBSTRING}. */
+  private static class StringSubstring
+      extends Applicable3<String, String, Integer, Integer>
+      implements Positioned {
+    StringSubstring(Pos pos) {
+      super(BuiltIn.STRING_SUBSTRING, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new StringSubstring(pos);
+    }
+
+    @Override public String apply(String s, Integer i, Integer j) {
+      if (i < 0 || j < 0 || i + j > s.length()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      return s.substring(i, i + j);
+    }
+  }
 
   /** @see BuiltIn#STRING_CONCAT */
-  private static final Applicable STRING_CONCAT =
-      new ApplicableImpl(BuiltIn.STRING_CONCAT) {
-        @SuppressWarnings("unchecked")
-        @Override public Object apply(EvalEnv env, Object arg) {
-          return stringConcat("", (List<String>) arg);
-        }
-      };
+  private static final Applicable STRING_CONCAT = new StringConcat(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#STRING_CONCAT}. */
+  private static class StringConcat extends ApplicableImpl
+      implements Positioned {
+    StringConcat(Pos pos) {
+      super(BuiltIn.STRING_CONCAT, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new StringConcat(pos);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override public Object apply(EvalEnv env, Object arg) {
+      return stringConcat(pos, "", (List<String>) arg);
+    }
+  }
 
   /** @see BuiltIn#STRING_CONCAT_WITH */
   private static final Applicable STRING_CONCAT_WITH =
-      new ApplicableImpl(BuiltIn.STRING_CONCAT_WITH) {
-        @Override public Object apply(EvalEnv env, Object argValue) {
-          final String separator = (String) argValue;
-          return new ApplicableImpl("String.concatWith$separator") {
-            @SuppressWarnings("unchecked")
-            @Override public Object apply(EvalEnv env, Object arg) {
-              return stringConcat(separator, (List<String>) arg);
-            }
-          };
+      new StringConcatWith(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#STRING_CONCAT_WITH}. */
+  private static class StringConcatWith extends ApplicableImpl
+      implements Positioned {
+    StringConcatWith(Pos pos) {
+      super(BuiltIn.STRING_CONCAT_WITH, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new StringConcatWith(pos);
+    }
+
+    @Override public Object apply(EvalEnv env, Object argValue) {
+      final String separator = (String) argValue;
+      return new ApplicableImpl("String.concatWith$separator") {
+        @SuppressWarnings("unchecked")
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return stringConcat(pos, separator, (List<String>) arg);
         }
       };
+    }
+  }
 
-  private static String stringConcat(String separator, List<String> list) {
+  private static String stringConcat(Pos pos, String separator,
+      List<String> list) {
     long n = 0;
     for (String s : list) {
       n += s.length();
       n += separator.length();
     }
     if (n > STRING_MAX_SIZE) {
-      throw new MorelRuntimeException(BuiltInExn.SIZE);
+      throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
     }
     return String.join(separator, list);
   }
@@ -825,41 +897,72 @@ public abstract class Codes {
 
   /** @see BuiltIn#LIST_HD */
   private static final Applicable LIST_HD =
-      new ApplicableImpl(BuiltIn.LIST_HD) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          if (list.isEmpty()) {
-            throw new MorelRuntimeException(BuiltInExn.EMPTY);
-          }
-          return list.get(0);
-        }
-      };
+      new ListHd(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#LIST_HD}. */
+  private static class ListHd extends ApplicableImpl implements Positioned {
+    ListHd(Pos pos) {
+      super(BuiltIn.LIST_HD, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new ListHd(pos);
+    }
+
+    @Override public Object apply(EvalEnv env, Object arg) {
+      final List list = (List) arg;
+      if (list.isEmpty()) {
+        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
+      }
+      return list.get(0);
+    }
+  }
 
   /** @see BuiltIn#LIST_TL */
-  private static final Applicable LIST_TL =
-      new ApplicableImpl(BuiltIn.LIST_TL) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final int size = list.size();
-          if (size == 0) {
-            throw new MorelRuntimeException(BuiltInExn.EMPTY);
-          }
-          return list.subList(1, size);
-        }
-      };
+  private static final Applicable LIST_TL = new ListTl(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#LIST_TL}. */
+  private static class ListTl extends ApplicableImpl implements Positioned {
+    ListTl(Pos pos) {
+      super(BuiltIn.LIST_TL, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new ListTl(pos);
+    }
+
+    @Override public Object apply(EvalEnv env, Object arg) {
+      final List list = (List) arg;
+      final int size = list.size();
+      if (size == 0) {
+        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
+      }
+      return list.subList(1, size);
+    }
+  }
 
   /** @see BuiltIn#LIST_LAST */
-  private static final Applicable LIST_LAST =
-      new ApplicableImpl(BuiltIn.LIST_LAST) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          final int size = list.size();
-          if (size == 0) {
-            throw new MorelRuntimeException(BuiltInExn.EMPTY);
-          }
-          return list.get(size - 1);
-        }
-      };
+  private static final Applicable LIST_LAST = new ListLast(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#LIST_LAST}. */
+  private static class ListLast extends ApplicableImpl implements Positioned {
+    ListLast(Pos pos) {
+      super(BuiltIn.LIST_LAST, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new ListLast(pos);
+    }
+
+    @Override public Object apply(EvalEnv env, Object arg) {
+      final List list = (List) arg;
+      final int size = list.size();
+      if (size == 0) {
+        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
+      }
+      return list.get(size - 1);
+    }
+  }
 
   /** @see BuiltIn#LIST_GET_ITEM */
   private static final Applicable LIST_GET_ITEM =
@@ -876,29 +979,53 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#LIST_NTH */
-  private static final Applicable LIST_NTH = nth(BuiltIn.LIST_NTH);
+  private static final Applicable LIST_NTH =
+      new ListNth(BuiltIn.LIST_NTH, Pos.ZERO);
 
-  private static ApplicableImpl nth(BuiltIn builtIn) {
-    return new Applicable2<Object, List, Integer>(builtIn) {
-      @Override public Object apply(List list, Integer i) {
-        if (i < 0 || i >= list.size()) {
-          throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-        }
-        return list.get(i);
+  /** Implements {@link BuiltIn#LIST_NTH}
+   * and {@link BuiltIn#VECTOR_SUB}. */
+  private static class ListNth extends Applicable2<Object, List, Integer>
+      implements Positioned {
+    private final BuiltIn builtIn;
+
+    ListNth(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+      this.builtIn = builtIn;
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new ListNth(builtIn, pos);
+    }
+
+    @Override public Object apply(List list, Integer i) {
+      if (i < 0 || i >= list.size()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
       }
-    };
+      return list.get(i);
+    }
   }
 
   /** @see BuiltIn#LIST_TAKE */
-  private static final Applicable LIST_TAKE =
-      new Applicable2<List, List, Integer>(BuiltIn.LIST_TAKE) {
-        @Override public List apply(List list, Integer i) {
-          if (i < 0 || i > list.size()) {
-            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-          }
-          return list.subList(0, i);
-        }
-      };
+  private static final Applicable LIST_TAKE = new ListTake(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#LIST_TAKE}. */
+  private static class ListTake extends Applicable2<List, List, Integer>
+      implements Positioned {
+    ListTake(Pos pos) {
+      super(BuiltIn.LIST_TAKE, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new ListTake(pos);
+    }
+
+    @Override public List apply(List list, Integer i) {
+      if (i < 0 || i > list.size()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      return list.subList(0, i);
+    }
+  }
 
   /** @see BuiltIn#LIST_DROP */
   private static final Applicable LIST_DROP =
@@ -1165,24 +1292,35 @@ public abstract class Codes {
 
   /** @see BuiltIn#LIST_TABULATE */
   private static final Applicable LIST_TABULATE =
-      tabulate(BuiltIn.LIST_TABULATE);
+      new ListTabulate(BuiltIn.LIST_TABULATE, Pos.ZERO);
 
-  private static ApplicableImpl tabulate(final BuiltIn builtIn) {
-    return new ApplicableImpl(builtIn) {
-      @Override public Object apply(EvalEnv env, Object arg) {
-        final List tuple = (List) arg;
-        final int count = (Integer) tuple.get(0);
-        if (count < 0) {
-          throw new MorelRuntimeException(BuiltInExn.SIZE);
-        }
-        final Applicable fn = (Applicable) tuple.get(1);
-        final ImmutableList.Builder<Object> builder = ImmutableList.builder();
-        for (int i = 0; i < count; i++) {
-          builder.add(fn.apply(env, i));
-        }
-        return builder.build();
+  /** Implements {@link BuiltIn#LIST_TABULATE}. */
+  private static class ListTabulate extends ApplicableImpl
+      implements Positioned {
+    private final BuiltIn builtIn;
+
+    ListTabulate(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+      this.builtIn = builtIn;
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new ListTabulate(builtIn, pos);
+    }
+
+    @Override public Object apply(EvalEnv env, Object arg) {
+      final List tuple = (List) arg;
+      final int count = (Integer) tuple.get(0);
+      if (count < 0) {
+        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
       }
-    };
+      final Applicable fn = (Applicable) tuple.get(1);
+      final ImmutableList.Builder<Object> builder = ImmutableList.builder();
+      for (int i = 0; i < count; i++) {
+        builder.add(fn.apply(env, i));
+      }
+      return builder.build();
+    }
   }
 
   /** @see BuiltIn#LIST_COLLATE */
@@ -1393,16 +1531,28 @@ public abstract class Codes {
 
   /** @see BuiltIn#OPTION_VAL_OF */
   private static final Applicable OPTION_VAL_OF =
-      new ApplicableImpl(BuiltIn.OPTION_VAL_OF) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List opt = (List) arg;
-          if (opt.size() == 2) { // SOME has 2 elements, NONE has 1
-            return opt.get(1);
-          } else {
-            throw new MorelRuntimeException(BuiltInExn.OPTION);
-          }
-        }
-      };
+      new OptionValOf(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#OPTION_VAL_OF}. */
+  private static class OptionValOf extends ApplicableImpl
+      implements Positioned {
+    OptionValOf(Pos pos) {
+      super(BuiltIn.OPTION_VAL_OF, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new OptionValOf(pos);
+    }
+
+    @Override public Object apply(EvalEnv env, Object arg) {
+      final List opt = (List) arg;
+      if (opt.size() == 2) { // SOME has 2 elements, NONE has 1
+        return opt.get(1);
+      } else {
+        throw new MorelRuntimeException(BuiltInExn.OPTION, pos);
+      }
+    }
+  }
 
   /** @see BuiltIn#OPTION_FILTER */
   private static final Applicable OPTION_FILTER =
@@ -1557,37 +1707,61 @@ public abstract class Codes {
 
   /** @see BuiltIn#REAL_CHECK_FLOAT */
   private static final Applicable REAL_CHECK_FLOAT =
-      new ApplicableImpl(BuiltIn.REAL_CHECK_FLOAT) {
-        @Override public Float apply(EvalEnv env, Object arg) {
-          final Float f = (Float) arg;
-          if (Float.isFinite(f)) {
-            return f;
-          }
-          if (Float.isNaN(f)) {
-            throw new MorelRuntimeException(BuiltInExn.DIV);
-          } else {
-            throw new MorelRuntimeException(BuiltInExn.OVERFLOW);
-          }
-        }
-      };
+      new RealCheckFloat(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#REAL_CHECK_FLOAT}. */
+  private static class RealCheckFloat extends ApplicableImpl
+      implements Positioned {
+    RealCheckFloat(Pos pos) {
+      super(BuiltIn.REAL_CHECK_FLOAT, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new RealCheckFloat(pos);
+    }
+
+    @Override public Float apply(EvalEnv env, Object arg) {
+      final Float f = (Float) arg;
+      if (Float.isFinite(f)) {
+        return f;
+      }
+      if (Float.isNaN(f)) {
+        throw new MorelRuntimeException(BuiltInExn.DIV, pos);
+      } else {
+        throw new MorelRuntimeException(BuiltInExn.OVERFLOW, pos);
+      }
+    }
+  }
 
   /** @see BuiltIn#REAL_COMPARE */
   private static final Applicable REAL_COMPARE =
-      new Applicable2<List, Float, Float>(BuiltIn.REAL_COMPARE) {
-        @Override public List apply(Float f0, Float f1) {
-          if (Float.isNaN(f0) || Float.isNaN(f1)) {
-            throw new MorelRuntimeException(BuiltInExn.UNORDERED);
-          }
-          if (f0 < f1) {
-            return ORDER_LESS;
-          }
-          if (f0 > f1) {
-            return ORDER_GREATER;
-          }
-          // In particular, compare (~0.0, 0) returns ORDER_EQUAL
-          return ORDER_EQUAL;
-        }
-      };
+      new RealCompare(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#REAL_COMPARE}. */
+  private static class RealCompare extends Applicable2<List, Float, Float>
+      implements Positioned {
+    RealCompare(Pos pos) {
+      super(BuiltIn.REAL_COMPARE, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new RealCompare(pos);
+    }
+
+    @Override public List apply(Float f0, Float f1) {
+      if (Float.isNaN(f0) || Float.isNaN(f1)) {
+        throw new MorelRuntimeException(BuiltInExn.UNORDERED, pos);
+      }
+      if (f0 < f1) {
+        return ORDER_LESS;
+      }
+      if (f0 > f1) {
+        return ORDER_GREATER;
+      }
+      // In particular, compare (~0.0, 0) returns ORDER_EQUAL
+      return ORDER_EQUAL;
+    }
+  }
 
   /** @see BuiltIn#REAL_COPY_SIGN */
   private static final Applicable REAL_COPY_SIGN =
@@ -1809,18 +1983,29 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#REAL_SIGN */
-  private static final Applicable REAL_SIGN =
-      new ApplicableImpl(BuiltIn.REAL_SIGN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final float f = (Float) arg;
-          if (Float.isNaN(f)) {
-            throw new MorelRuntimeException(BuiltInExn.DOMAIN);
-          }
-          return f == 0f ? 0 // positive or negative zero
-              : (f > 0f) ? 1 // positive number or positive infinity
-                  : -1; // negative number or negative infinity
-        }
-      };
+  private static final Applicable REAL_SIGN = new RealSign(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#REAL_COMPARE}. */
+  private static class RealSign extends ApplicableImpl
+      implements Positioned {
+    RealSign(Pos pos) {
+      super(BuiltIn.REAL_SIGN, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new RealSign(pos);
+    }
+
+    @Override public Object apply(EvalEnv env, Object arg) {
+      final float f = (Float) arg;
+      if (Float.isNaN(f)) {
+        throw new MorelRuntimeException(BuiltInExn.DOMAIN, pos);
+      }
+      return f == 0f ? 0 // positive or negative zero
+          : (f > 0f) ? 1 // positive number or positive infinity
+              : -1; // negative number or negative infinity
+    }
+  }
 
   /** @see BuiltIn#REAL_SIGN_BIT */
   private static final Applicable REAL_SIGN_BIT =
@@ -1969,18 +2154,30 @@ public abstract class Codes {
 
   /** @see BuiltIn#RELATIONAL_ONLY */
   private static final Applicable RELATIONAL_ONLY =
-      new ApplicableImpl(BuiltIn.RELATIONAL_ONLY) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          final List list = (List) arg;
-          if (list.isEmpty()) {
-            throw new MorelRuntimeException(BuiltInExn.EMPTY);
-          }
-          if (list.size() > 1) {
-            throw new MorelRuntimeException(BuiltInExn.SIZE);
-          }
-          return list.get(0);
-        }
-      };
+      new RelationalOnly(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#RELATIONAL_ONLY}. */
+  private static class RelationalOnly extends ApplicableImpl
+      implements Positioned {
+    RelationalOnly(Pos pos) {
+      super(BuiltIn.RELATIONAL_ONLY, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new RelationalOnly(pos);
+    }
+
+    @Override public Object apply(EvalEnv env, Object arg) {
+      final List list = (List) arg;
+      if (list.isEmpty()) {
+        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
+      }
+      if (list.size() > 1) {
+        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
+      }
+      return list.get(0);
+    }
+  }
 
   /** Implements {@link #RELATIONAL_SUM} for type {@code int list}. */
   private static final Applicable Z_SUM_INT =
@@ -2055,7 +2252,7 @@ public abstract class Codes {
                     core.stringLiteral(entry.getKey()),
                     core.stringLiteral(entry.getValue().id.type.moniker())))
             .collect(Collectors.toList());
-    return core.apply(typeSystem.listType(argType),
+    return core.apply(Pos.ZERO, typeSystem.listType(argType),
         core.functionLiteral(typeSystem, BuiltIn.Z_LIST),
         core.tuple(typeSystem, null, args));
   }
@@ -2123,26 +2320,39 @@ public abstract class Codes {
 
   /** @see BuiltIn#VECTOR_TABULATE */
   private static final Applicable VECTOR_TABULATE =
-      tabulate(BuiltIn.VECTOR_TABULATE);
+      new ListTabulate(BuiltIn.VECTOR_TABULATE, Pos.ZERO);
 
   /** @see BuiltIn#VECTOR_LENGTH */
   private static final Applicable VECTOR_LENGTH = length(BuiltIn.VECTOR_LENGTH);
 
   /** @see BuiltIn#VECTOR_SUB */
-  private static final Applicable VECTOR_SUB = nth(BuiltIn.VECTOR_SUB);
+  private static final Applicable VECTOR_SUB =
+      new ListNth(BuiltIn.VECTOR_SUB, Pos.ZERO);
 
   /** @see BuiltIn#VECTOR_UPDATE */
   private static final Applicable VECTOR_UPDATE =
-      new Applicable3<List, List, Integer, Object>(BuiltIn.VECTOR_UPDATE) {
-        @Override public List apply(List vec, Integer i, Object x) {
-          if (i < 0 || i >= vec.size()) {
-            throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT);
-          }
-          final Object[] elements = vec.toArray();
-          elements[i] = x;
-          return ImmutableList.copyOf(elements);
-        }
-      };
+      new VectorUpdate(Pos.ZERO);
+
+  /** Implements {@link BuiltIn#VECTOR_UPDATE}. */
+  private static class VectorUpdate
+      extends Applicable3<List, List, Integer, Object> implements Positioned {
+    VectorUpdate(Pos pos) {
+      super(BuiltIn.VECTOR_UPDATE, pos);
+    }
+
+    @Override public Applicable withPos(Pos pos) {
+      return new VectorUpdate(pos);
+    }
+
+    @Override public List apply(List vec, Integer i, Object x) {
+      if (i < 0 || i >= vec.size()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      final Object[] elements = vec.toArray();
+      elements[i] = x;
+      return ImmutableList.copyOf(elements);
+    }
+  }
 
   /** @see BuiltIn#VECTOR_CONCAT */
   private static final Applicable VECTOR_CONCAT =
@@ -3078,17 +3288,28 @@ public abstract class Codes {
   }
 
   /** Java exception that wraps an exception thrown by the Morel runtime. */
-  public static class MorelRuntimeException extends RuntimeException {
+  public static class MorelRuntimeException extends RuntimeException
+      implements MorelException {
     private final BuiltInExn e;
+    private final Pos pos;
 
     /** Creates a MorelRuntimeException. */
-    public MorelRuntimeException(BuiltInExn e) {
+    public MorelRuntimeException(BuiltInExn e, Pos pos) {
       this.e = requireNonNull(e);
+      this.pos = requireNonNull(pos);
     }
 
-    public StringBuilder describeTo(StringBuilder buf) {
+    @Override public String toString() {
+      return e.mlName + " at " + pos;
+    }
+
+    @Override public StringBuilder describeTo(StringBuilder buf) {
       return buf.append("uncaught exception ")
           .append(e.mlName);
+    }
+
+    @Override public Pos pos() {
+      return pos;
     }
   }
 
@@ -3328,6 +3549,18 @@ public abstract class Codes {
     }
   }
 
+  /** An {@link Applicable} whose position can be changed.
+   *
+   * <p>Operations that may throw exceptions should implement this interface.
+   * Then the exceptions can be tied to the correct position in the source code.
+   *
+   * <p>If you don't implement this interface, the applicable will use the
+   * default position, which is {@link Pos#ZERO}. If the exception has position
+   * "0.0-0.0", that is an indication you need to use this interface, and make
+   * sure that the position is propagated through the translation process. */
+  public interface Positioned extends Applicable {
+    Applicable withPos(Pos pos);
+  }
 }
 
 // End Codes.java

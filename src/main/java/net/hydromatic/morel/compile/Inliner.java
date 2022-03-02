@@ -144,7 +144,7 @@ public class Inliner extends EnvShuttle {
       //   let x = A in E end
       final Core.Fn fn = (Core.Fn) apply2.fn;
       return core.let(
-          core.nonRecValDecl(fn.idPat, apply2.arg), fn.exp);
+          core.nonRecValDecl(fn.idPat, apply2.arg, apply2.pos), fn.exp);
     }
     return apply2;
   }
