@@ -79,11 +79,11 @@ License.
     <calcite.version>1.29.0</calcite.version>
     <checkstyle.version>7.8.2</checkstyle.version>
     <findbugs.version>3.0.2</findbugs.version>
-    <foodmart-data-hsqldb.version>0.4</foodmart-data-hsqldb.version>
+    <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <!-- We support guava 19.0 to 31.1-jre; 23.0 is just the default. -->
     <guava.version>23.0</guava.version>
     <hamcrest.version>2.2</hamcrest.version>
-    <hsqldb.version>2.3.1</hsqldb.version>
+    <hsqldb.version>2.5.1</hsqldb.version>
     <hydromatic-toolbox.version>0.3</hydromatic-toolbox.version>
     <java-diff.version>1.1.2</java-diff.version>
     <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
@@ -96,7 +96,7 @@ License.
     <maven-project-info-reports-plugin.version>3.2.2</maven-project-info-reports-plugin.version>
     <maven-site-plugin.version>3.11.0</maven-site-plugin.version>
     <maven-surefire-plugin.version>3.0.0-M5</maven-surefire-plugin.version>
-    <scott-data-hsqldb.version>0.1</scott-data-hsqldb.version>
+    <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
     <slf4j.version>1.7.36</slf4j.version>
 
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
