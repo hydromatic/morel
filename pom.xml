@@ -83,7 +83,7 @@ License.
     <!-- We support guava 19.0 to 31.1-jre; 23.0 is just the default. -->
     <guava.version>23.0</guava.version>
     <hamcrest.version>2.2</hamcrest.version>
-    <hsqldb.version>2.5.1</hsqldb.version>
+    <hsqldb.version>2.6.1</hsqldb.version>
     <hydromatic-toolbox.version>0.3</hydromatic-toolbox.version>
     <java-diff.version>1.1.2</java-diff.version>
     <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
