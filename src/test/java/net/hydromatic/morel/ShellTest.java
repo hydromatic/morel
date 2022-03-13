@@ -22,6 +22,7 @@ import net.hydromatic.morel.foreign.ForeignValue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
@@ -104,7 +105,7 @@ public class ShellTest {
         + "\u001B[?2004lval it = 3 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is(expected));
+    fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   /** Tests {@link Shell} with a continued line. */
@@ -119,7 +120,7 @@ public class ShellTest {
         + "\u001B[?2004lval it = 3 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is(expected));
+    fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   /** Tests {@link Shell} printing some tricky real values. */
@@ -146,7 +147,12 @@ public class ShellTest {
         + "\u001B[?2004l- ;\r\r\n"
         + "\u001B[?2004l- \r\r\n"
         + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is(expected));
+    fixture().withInputString(in).assertOutput(is2(expected));
+  }
+
+  private Matcher<String> is2(String expected) {
+    return CoreMatchers.anyOf(is(expected),
+        is(expected.replace("\u001B[?2004l", "")));
   }
 
   /** Tests {@link Shell} with a single-line comment. */
@@ -161,7 +167,7 @@ public class ShellTest {
         + "\u001B[?2004lval it = 3 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is(expected));
+    fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   /** Tests {@link Shell} with a single-line comment that contains a quote. */
@@ -176,7 +182,7 @@ public class ShellTest {
         + "\u001B[?2004lval it = 5 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is(expected));
+    fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   /** Tests {@link Shell} with {@code let} statement spread over multiple
@@ -201,7 +207,7 @@ public class ShellTest {
         + "\u001B[?2004lval it = 3 : int\r\n"
         + "- \r\r\n"
         + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is(expected));
+    fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   /** Tests the {@code use} function. */
@@ -255,7 +261,7 @@ public class ShellTest {
     fixture()
         .withArgListPlusDirectory()
         .withInputString(in)
-        .assertOutput(is(expected));
+        .assertOutput(is2(expected));
 
     final String expectedRaw = "[opening x.sml]\n"
         + "val x = 2 : int\n"
@@ -288,7 +294,7 @@ public class ShellTest {
     fixture()
         .withArgListPlusDirectory()
         .withInputString(in)
-        .assertOutput(is(expected));
+        .assertOutput(is2(expected));
   }
 
   /** Tests the {@code use} function on a missing file. */
@@ -313,7 +319,7 @@ public class ShellTest {
     fixture()
         .withArgListPlusDirectory()
         .withInputString(in)
-        .assertOutput(is(expected));
+        .assertOutput(is2(expected));
   }
 
   /** Tests the {@code use} function on a file that uses itself. */
@@ -343,7 +349,7 @@ public class ShellTest {
         .withArgListPlusDirectory()
         .withArgList(list -> plus(list, "--maxUseDepth=3"))
         .withInputString(in)
-        .assertOutput(is(expected));
+        .assertOutput(is2(expected));
   }
 
   /** Tests a script running in raw mode.
