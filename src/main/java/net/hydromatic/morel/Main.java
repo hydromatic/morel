@@ -238,15 +238,19 @@ public class Main {
         final Environment env = env0.bindAll(bindingMap.values());
         final CompiledStatement compiled =
             Compiles.prepareStatement(main.typeSystem, main.session, env,
-                statement, null);
+                statement, null, e -> appendToOutput(e, outLines));
         final List<Binding> bindings = new ArrayList<>();
         compiled.eval(main.session, env, outLines, bindings::add);
         bindings.forEach(b -> this.bindingMap.put(b.id.name, b));
       } catch (Codes.MorelRuntimeException e) {
-        final StringBuilder buf = new StringBuilder();
-        main.session.handle(e, buf);
-        outLines.accept(buf.toString());
+        appendToOutput(e, outLines);
       }
+    }
+
+    private void appendToOutput(MorelException e, Consumer<String> outLines) {
+      final StringBuilder buf = new StringBuilder();
+      main.session.handle(e, buf);
+      outLines.accept(buf.toString());
     }
   }
 

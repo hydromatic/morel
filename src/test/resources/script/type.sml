@@ -66,7 +66,9 @@ fun f2 {a = 1, b} = b * 2
 f2 {a = 1, b = 6};
 f2 {a = 2, b = 6};
 
+Sys.set ("matchCoverageEnabled", false);
 fun f3 {a = 1, b} = b * 2;
+Sys.unset "matchCoverageEnabled";
 f3 {a = 1, b = 6};
 
 (*) The following correctly throws

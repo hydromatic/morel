@@ -1903,6 +1903,9 @@ mask ("abcde", "spuds");
 val it = 6 : int
 
 
+Sys.set ("matchCoverageEnabled", false);
+val it = () : unit
+
 fun maskToString m =
   let
     fun maskToString2 (m, s, 0) = s
@@ -1917,6 +1920,9 @@ fun maskToString m =
     maskToString2 (m, "", 5)
   end;
 val maskToString = fn : int -> string
+
+Sys.unset "matchCoverageEnabled";
+val it = () : unit
 
 
 maskToString 0;

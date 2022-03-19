@@ -34,8 +34,10 @@ import net.hydromatic.morel.type.TypeSystem;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
@@ -59,7 +61,7 @@ public abstract class Compiles {
    */
   public static CompiledStatement prepareStatement(TypeSystem typeSystem,
       Session session, Environment env, AstNode statement,
-      @Nullable Calcite calcite) {
+      @Nullable Calcite calcite, Consumer<CompileException> warningConsumer) {
     Ast.Decl decl;
     if (statement instanceof Ast.Exp) {
       decl = toValDecl((Ast.Exp) statement);
@@ -67,7 +69,7 @@ public abstract class Compiles {
       decl = (Ast.Decl) statement;
     }
     return prepareDecl(typeSystem, session, env, calcite, decl,
-        decl == statement);
+        decl == statement, warningConsumer);
   }
 
   /**
@@ -76,7 +78,8 @@ public abstract class Compiles {
    */
   private static CompiledStatement prepareDecl(TypeSystem typeSystem,
       Session session, Environment env, @Nullable Calcite calcite,
-      Ast.Decl decl, boolean isDecl) {
+      Ast.Decl decl, boolean isDecl,
+      Consumer<CompileException> warningConsumer) {
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, decl, typeSystem);
     final boolean hybrid = Prop.HYBRID.booleanValue(session.map);
@@ -84,6 +87,14 @@ public abstract class Compiles {
         Math.max(Prop.INLINE_PASS_COUNT.intValue(session.map), 0);
     final Resolver resolver = Resolver.of(resolved.typeMap, env);
     final Core.Decl coreDecl0 = resolver.toCore(resolved.node);
+
+    // Check for exhaustive and redundant patterns, and throw errors or
+    // warnings.
+    final boolean matchCoverageEnabled =
+        Prop.MATCH_COVERAGE_ENABLED.booleanValue(session.map);
+    if (matchCoverageEnabled) {
+      checkPatternCoverage(typeSystem, coreDecl0, warningConsumer);
+    }
 
     Core.Decl coreDecl;
     if (inlinePassCount == 0) {
@@ -114,6 +125,50 @@ public abstract class Compiles {
       compiler = new Compiler(typeSystem);
     }
     return compiler.compileStatement(env, coreDecl, isDecl);
+  }
+
+  /** Checks for exhaustive and redundant patterns, and throws if there are
+   * errors/warnings. */
+  private static void checkPatternCoverage(TypeSystem typeSystem,
+      Core.Decl decl, final Consumer<CompileException> warningConsumer) {
+    final List<CompileException> errorList = new ArrayList<>();
+    decl.accept(new Visitor() {
+      @Override protected void visit(Core.Case kase) {
+        super.visit(kase);
+        checkPatternCoverage(typeSystem, kase, errorList::add,
+            warningConsumer);
+      }
+    });
+    if (!errorList.isEmpty()) {
+      throw errorList.get(0);
+    }
+  }
+
+  private static void checkPatternCoverage(TypeSystem typeSystem,
+      Core.Case kase, Consumer<CompileException> errorConsumer,
+      Consumer<CompileException> warningConsumer) {
+    final List<Core.Pat> prevPatList = new ArrayList<>();
+    final List<Core.Match> redundantMatchList = new ArrayList<>();
+    for (Core.Match match : kase.matchList) {
+      if (PatternCoverageChecker.isCoveredBy(typeSystem, prevPatList,
+          match.pat)) {
+        redundantMatchList.add(match);
+      }
+      prevPatList.add(match.pat);
+    }
+    final boolean exhaustive =
+        PatternCoverageChecker.isExhaustive(typeSystem, prevPatList);
+    if (!redundantMatchList.isEmpty()) {
+      final String message = exhaustive
+          ? "match redundant"
+          : "match redundant and nonexhaustive";
+      errorConsumer.accept(
+          new CompileException(message, false,
+              redundantMatchList.get(0).pos));
+    } else if (!exhaustive) {
+      warningConsumer.accept(
+          new CompileException("match nonexhaustive", true, kase.pos));
+    }
   }
 
   /** Converts {@code e} to {@code val = e}. */

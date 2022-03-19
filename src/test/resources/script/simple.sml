@@ -294,6 +294,7 @@ val i = 2 : 'a
 val SOME (i, NONE) = SOME (1, SOME false);
 *)
 
+Sys.set ("matchCoverageEnabled", false);
 val (i, true) = (1, true);
 val (i, false) = (1, true);
 let
@@ -301,6 +302,7 @@ let
 in
   i + 1
 end;
+Sys.unset "matchCoverageEnabled";
 
 (*) Patterns
 
@@ -308,10 +310,12 @@ end;
 val x = (( "foo", true ), 17 );
 val ( l as (ll,lr), r ) = x;
 
+Sys.set ("matchCoverageEnabled", false);
 fun f (true, []) = ~1
   | f (true, l as (hd :: tl)) = length l
   | f (false, list) = 0;
 f (true, ["a","b","c"]);
+Sys.unset "matchCoverageEnabled";
 
 let
   val w as (x, y) = (1, 2)

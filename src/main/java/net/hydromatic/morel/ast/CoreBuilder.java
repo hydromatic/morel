@@ -307,8 +307,8 @@ public enum CoreBuilder {
   }
 
   public Core.Case caseOf(Type type, Core.Exp exp,
-      Iterable<? extends Core.Match> matchList) {
-    return new Core.Case(type, exp, ImmutableList.copyOf(matchList));
+      Iterable<? extends Core.Match> matchList, Pos pos) {
+    return new Core.Case(pos, type, exp, ImmutableList.copyOf(matchList));
   }
 
   public Core.From from(ListType type, List<Core.FromStep> steps) {
@@ -380,10 +380,11 @@ public enum CoreBuilder {
       Core.Exp ifFalse) {
     // Translate "if c then a else b"
     // as if user had written "case c of true => a | _ => b".
-    // Pos.ZERO is ok becuase match failure is impossible.
-    return new Core.Case(ifTrue.type, condition,
-        ImmutableList.of(match(truePat, ifTrue, Pos.ZERO),
-            match(boolWildcardPat, ifFalse, Pos.ZERO)));
+    // Pos.ZERO is ok because match failure is impossible.
+    final Pos pos = Pos.ZERO;
+    return new Core.Case(pos, ifTrue.type, condition,
+        ImmutableList.of(match(truePat, ifTrue, pos),
+            match(boolWildcardPat, ifFalse, pos)));
   }
 
   public Core.DatatypeDecl datatypeDecl(Iterable<DataType> dataTypes) {

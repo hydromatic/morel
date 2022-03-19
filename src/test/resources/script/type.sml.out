@@ -112,8 +112,14 @@ f2 {a = 2, b = 6};
 val it = 18 : int
 
 
+Sys.set ("matchCoverageEnabled", false);
+val it = () : unit
+
 fun f3 {a = 1, b} = b * 2;
 val f3 = fn : {a:int, b:int} -> int
+
+Sys.unset "matchCoverageEnabled";
+val it = () : unit
 
 f3 {a = 1, b = 6};
 val it = 12 : int

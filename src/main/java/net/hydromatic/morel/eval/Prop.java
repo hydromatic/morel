@@ -37,6 +37,13 @@ public enum Prop {
   /** Maximum number of inlining passes. */
   INLINE_PASS_COUNT("inlinePassCount", Integer.class, 5),
 
+  /** Boolean property "matchCoverageEnabled" controls whether to check the
+   * coverage of patterns. If true (the default), Morel warns if patterns are
+   * redundant and gives errors if patterns are not exhaustive. If false,
+   * Morel does not analyze pattern coverage, and therefore will not give
+   * warnings or errors. */
+  MATCH_COVERAGE_ENABLED("matchCoverageEnabled", Boolean.class, true),
+
   /** Integer property "optionalInt" is for testing. Default is null. */
   OPTIONAL_INT("optionalInt", Integer.class, null),
 

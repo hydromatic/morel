@@ -20,6 +20,7 @@ package net.hydromatic.morel.eval;
 
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.CompileException;
+import net.hydromatic.morel.util.MorelException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -74,8 +75,8 @@ public class Session {
     shell.use(fileName, pos);
   }
 
-  public void handle(Codes.MorelRuntimeException e, StringBuilder buf) {
-    shell.handle(e, buf);
+  public void handle(MorelException e, StringBuilder buf) {
+    shell.handle((RuntimeException) e, buf);
   }
 
   /** Callback to implement "use" command. */

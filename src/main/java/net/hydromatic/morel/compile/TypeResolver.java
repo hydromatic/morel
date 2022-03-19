@@ -313,7 +313,7 @@ public class TypeResolver {
       final Ast.Id id = (Ast.Id) node;
       final Unifier.Term term = env.get(typeSystem, id.name, name ->
           new CompileException("unbound variable or constructor: " + name,
-              id.pos));
+              false, id.pos));
       return reg(id, v, term);
 
     case FN:

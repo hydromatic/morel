@@ -487,6 +487,9 @@ val i = 2 : 'a
 val SOME (i, NONE) = SOME (1, SOME false);
 *)
 
+Sys.set ("matchCoverageEnabled", false);
+val it = () : unit
+
 val (i, true) = (1, true);
 val i = 1 : int
 
@@ -502,6 +505,9 @@ end;
 uncaught exception Bind
   raised at: stdIn:2.7-2.29
 
+Sys.unset "matchCoverageEnabled";
+val it = () : unit
+
 
 (*) Patterns
 
@@ -516,6 +522,9 @@ val lr = true : bool
 val r = 17 : int
 
 
+Sys.set ("matchCoverageEnabled", false);
+val it = () : unit
+
 fun f (true, []) = ~1
   | f (true, l as (hd :: tl)) = length l
   | f (false, list) = 0;
@@ -523,6 +532,9 @@ val f = fn : bool * 'a list -> int
 
 f (true, ["a","b","c"]);
 val it = 3 : int
+
+Sys.unset "matchCoverageEnabled";
+val it = () : unit
 
 
 let
