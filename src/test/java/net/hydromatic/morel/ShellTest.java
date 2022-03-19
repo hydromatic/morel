@@ -281,6 +281,20 @@ public class ShellTest {
         .assertOutput(is(expectedRaw));
   }
 
+  /** Tests a warning. */
+  @Test void testMatchWarning() {
+    final String in = "fun f 1 = 1;\n"
+        + "f 1;\n";
+    final String expected = "stdIn:1.5-1.12 Warning: match nonexhaustive\n"
+        + "  raised at: stdIn:1.5-1.12\n"
+        + "val f = fn : int -> int\n"
+        + "val it = 1 : int\n";
+    fixture()
+        .withRaw(true)
+        .withInputString(in)
+        .assertOutput(is(expected));
+  }
+
   /** Tests the {@code use} function on an empty file. */
   @Test void testUseEmpty() {
     assumeNotInCi();

@@ -479,9 +479,10 @@ public class Shell {
                 smlParser.zero("stdIn");
                 statement = smlParser.statementSemicolon();
                 final Environment env0 = env1;
+                final List<CompileException> warningList = new ArrayList<>();
                 final CompiledStatement compiled =
                     Compiles.prepareStatement(typeSystem, session, env0,
-                        statement, null);
+                        statement, null, warningList::add);
                 final Use shell = new Use(env0, bindingMap);
                 session.withShell(shell, outLines, session1 ->
                     compiled.eval(session1, env0, outLines, bindings::add));

@@ -24,10 +24,12 @@ import net.hydromatic.morel.util.MorelException;
 /** An error occurred during compilation. */
 public class CompileException extends RuntimeException
     implements MorelException {
+  private final boolean warning;
   private final Pos pos;
 
-  public CompileException(String message, Pos pos) {
+  public CompileException(String message, boolean warning, Pos pos) {
     super(message);
+    this.warning = warning;
     this.pos = pos;
   }
 
@@ -41,7 +43,7 @@ public class CompileException extends RuntimeException
 
   public StringBuilder describeTo(StringBuilder buf) {
     return pos.describeTo(buf)
-        .append(" Error: ")
+        .append(warning ? " Warning: " : " Error: ")
         .append(getMessage());
   }
 }

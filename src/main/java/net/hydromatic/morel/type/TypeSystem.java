@@ -54,6 +54,7 @@ import static net.hydromatic.morel.util.Static.toImmutableList;
  * "{@code int -> int}"). */
 public class TypeSystem {
   final Map<String, Type> typeByName = new HashMap<>();
+  final Map<String, Type> internalTypeByName = new HashMap<>();
   final Map<Key, Type> typeByKey = new HashMap<>();
 
   private final Map<String, Pair<DataType, Type>> typeConstructorByName =
@@ -96,6 +97,15 @@ public class TypeSystem {
             .map(t -> (TypeVar) t)
             .collect(toImmutableList());
     return typeVars.isEmpty() ? type : forallType(typeVars, type);
+  }
+
+  /** Looks up an internal type by name. */
+  public Type lookupInternal(String name) {
+    final Type type = internalTypeByName.get(name);
+    if (type == null) {
+      throw new AssertionError("unknown type: " + name);
+    }
+    return type;
   }
 
   /** Looks up a type by name. */
@@ -251,6 +261,13 @@ public class TypeSystem {
     tyCons.forEach((name3, type) ->
         typeConstructorByName.put(name3, Pair.of(dataType, type)));
     return dataType;
+  }
+
+  /** Converts a regular type to an internal type. Throws if the type is not
+   * known. */
+  public void setInternal(String name) {
+    final Type type = typeByName.remove(name);
+    internalTypeByName.put(name, type);
   }
 
   /** Replaces temporary data types with real data types, using the supplied

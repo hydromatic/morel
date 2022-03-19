@@ -1868,6 +1868,7 @@ mask ("abcde", "spree");
 (*) should be 6 (second to last letter is correct)
 mask ("abcde", "spuds");
 
+Sys.set ("matchCoverageEnabled", false);
 fun maskToString m =
   let
     fun maskToString2 (m, s, 0) = s
@@ -1881,6 +1882,7 @@ fun maskToString m =
   in
     maskToString2 (m, "", 5)
   end;
+Sys.unset "matchCoverageEnabled";
 
 maskToString 0;
 maskToString 1;

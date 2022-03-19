@@ -31,6 +31,7 @@ import net.hydromatic.morel.util.Static;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +43,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.type.PrimitiveType.BOOL;
 import static net.hydromatic.morel.type.PrimitiveType.CHAR;
@@ -1662,19 +1662,30 @@ public enum BuiltIn {
   /** Defines built-in {@code datatype} and {@code eqtype} instances, e.g.
    *  {@code option}, {@code vector}. */
   public static void dataTypes(TypeSystem typeSystem, List<Binding> bindings) {
-    defineDataType(typeSystem, bindings, "order", 0, h ->
+    defineDataType(typeSystem, bindings, "order", false, 0, h ->
         h.tyCon("LESS").tyCon("EQUAL").tyCon("GREATER"));
-    defineDataType(typeSystem, bindings, "option", 1, h ->
+    defineDataType(typeSystem, bindings, "option", false, 1, h ->
         h.tyCon("NONE").tyCon("SOME", h.get(0)));
     defineEqType(typeSystem, "vector", 1);
+
+    // Define two internal datatypes:
+    //   datatype 'a list = NIL | CONS of ('a * 'a list);
+    //   datatype bool = FALSE | TRUE;
+    // These are not available from within programs but are used by the
+    // match coverage checker.
+    defineDataType(typeSystem, bindings, "$list", true, 1, h ->
+        h.tyCon("NIL").tyCon("CONS", h.get(0)));
+    defineDataType(typeSystem, bindings, "$bool", true, 0, h ->
+        h.tyCon("FALSE").tyCon("TRUE"));
   }
 
   private static void defineEqType(TypeSystem ts, String name, int varCount) {
-    defineDataType(ts, new ArrayList<>(), name, varCount, h -> h);
+    defineDataType(ts, new ArrayList<>(), name, false, varCount, h -> h);
   }
 
   private static void defineDataType(TypeSystem ts, List<Binding> bindings,
-      String name, int varCount, UnaryOperator<DataTypeHelper> transform) {
+      String name, boolean internal, int varCount,
+      UnaryOperator<DataTypeHelper> transform) {
     final List<TypeVar> tyVars = new ArrayList<>();
     for (int i = 0; i < varCount; i++) {
       tyVars.add(ts.typeVariable(i));
@@ -1697,8 +1708,12 @@ public enum BuiltIn {
     final Type type = ts.dataTypeScheme(name, tyVars, tyCons);
     final DataType dataType = (DataType) (type instanceof DataType ? type
         : ((ForallType) type).type);
-    tyCons.keySet().forEach(tyConName ->
-        bindings.add(ts.bindTyCon(dataType, tyConName)));
+    if (internal) {
+      ts.setInternal(name);
+    } else {
+      tyCons.keySet().forEach(tyConName ->
+          bindings.add(ts.bindTyCon(dataType, tyConName)));
+    }
   }
 
   /** Callback used when defining a datatype. */

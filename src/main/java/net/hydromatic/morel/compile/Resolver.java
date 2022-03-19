@@ -454,7 +454,8 @@ public class Resolver {
     // needs intermediate variable and case, "fn v => case v of (x, y) => exp"
     final Core.IdPat idPat = core.idPat(type.paramType, nameGenerator);
     final Core.Id id = core.id(idPat);
-    return core.fn(type, idPat, core.caseOf(type.resultType, id, matchList));
+    return core.fn(type, idPat,
+        core.caseOf(type.resultType, id, matchList, fn.pos));
   }
 
   private Core.Case toCore(Ast.If if_) {
@@ -464,7 +465,7 @@ public class Resolver {
 
   private Core.Case toCore(Ast.Case case_) {
     return core.caseOf(typeMap.getType(case_), toCore(case_.exp),
-        transform(case_.matchList, this::toCore));
+        transform(case_.matchList, this::toCore), case_.pos);
   }
 
   private Core.Exp toCore(Ast.Let let) {
@@ -779,7 +780,7 @@ public class Resolver {
         final Pos pos = patExps.get(0).pos;
         return core.let(core.nonRecValDecl(idPat, exp, pos),
             core.caseOf(resultExp.type, id,
-                ImmutableList.of(core.match(pat, resultExp, pos))));
+                ImmutableList.of(core.match(pat, resultExp, pos)), pos));
       }
     }
   }
