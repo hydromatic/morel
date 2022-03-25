@@ -392,13 +392,13 @@ class Ml {
       exceptionMatcherFactory = null;
       warningsMatcher =
           new CustomTypeSafeMatcher<List<Throwable>>("non-empty list") {
-        @Override protected boolean matchesSafely(List<Throwable> list) {
-          return list.stream()
-              .anyMatch(e ->
-                  e instanceof CompileException
-                      && e.getMessage().equals("match nonexhaustive"));
-        }
-      };
+            @Override protected boolean matchesSafely(List<Throwable> list) {
+              return list.stream()
+                  .anyMatch(e ->
+                      e instanceof CompileException
+                          && e.getMessage().equals("match nonexhaustive"));
+            }
+          };
       break;
     default:
       // Java doesn't know the switch is exhaustive; how ironic

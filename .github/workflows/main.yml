@@ -27,6 +27,7 @@ jobs:
       matrix:
         java-version: [ "8" ]
         guava-version: [ "21.0" ]
+        checkstyle-version: [ "" ]
         javadoc: [ false ]
         include:
           - java-version: "11"
@@ -38,6 +39,7 @@ jobs:
           - java-version: "17"
             guava-version: "31.1-jre"
             javadoc: false
+            checkstyle-version: "10.0"
 
     steps:
       - uses: actions/checkout@v2
@@ -56,6 +58,10 @@ jobs:
             GOALS="$GOALS javadoc:javadoc javadoc:test-javadoc"
           fi
           DEFS="-Dmorel.ci"
+          if [ "${{ matrix.checkstyle-version }}" ]
+          then
+            DEFS="$DEFS -Dcheckstyle.version=${{ matrix.checkstyle-version }}"
+          fi
           if [ "${{ matrix.guava-version }}" ]
           then
             DEFS="$DEFS -Dguava.version=${{ matrix.guava-version }}"

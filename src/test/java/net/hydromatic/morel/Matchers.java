@@ -182,7 +182,7 @@ public abstract class Matchers {
 
       @Override protected boolean matchesSafely(E actual) {
         final E actualMultiset = expectedMultiset instanceof Multiset
-            && (actual instanceof Iterable)
+            && actual instanceof Iterable
             && !(actual instanceof Multiset)
             ? (E) ImmutableMultiset.copyOf((Iterable) actual)
             : actual;

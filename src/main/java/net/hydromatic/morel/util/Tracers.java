@@ -102,8 +102,8 @@ public class Tracers {
       flush();
     }
 
-    public void onSubstitute(
-        Unifier.Term left, Unifier.Term right, Unifier.Term left2, Unifier.Term right2) {
+    public void onSubstitute(Unifier.Term left, Unifier.Term right,
+        Unifier.Term left2, Unifier.Term right2) {
       b.append("substitute ").append(left).append(' ').append(right);
       if (left2 != left) {
         b.append("; ").append(left).append(" -> ").append(left2);
