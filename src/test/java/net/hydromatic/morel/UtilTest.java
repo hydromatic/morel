@@ -21,6 +21,9 @@ package net.hydromatic.morel;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RangeExtent;
+import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Folder;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Ord;
@@ -28,10 +31,16 @@ import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableRangeSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
+import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Util;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -334,6 +343,47 @@ public class UtilTest {
     assertThat(Pair.anyMatch(list0, list0, (i, j) -> true), is(false));
     assertThat(Pair.allMatch(list0, list0, (i, j) -> true), is(true));
     assertThat(Pair.noneMatch(list0, list0, (i, j) -> true), is(true));
+  }
+
+  @SuppressWarnings("UnstableApiUsage")
+  @Test void testRangeExtent() {
+    // Integer range [(4, 7]]
+    final Range<BigDecimal> range =
+        Range.openClosed(BigDecimal.valueOf(4), BigDecimal.valueOf(7));
+    final RangeExtent rangeExtent =
+        new RangeExtent(ImmutableRangeSet.of(range), PrimitiveType.INT);
+    assertThat(Lists.newArrayList(rangeExtent.toIterable()),
+        is(Arrays.asList(5, 6, 7)));
+
+    // Integer range set [(4, 7], [10, 12]]
+    final Range<BigDecimal> range2 =
+        Range.closed(BigDecimal.valueOf(10), BigDecimal.valueOf(12));
+    final RangeExtent rangeExtent2 =
+        new RangeExtent(
+            ImmutableRangeSet.unionOf(ImmutableList.of(range, range2)),
+            PrimitiveType.INT);
+    assertThat(Lists.newArrayList(rangeExtent2.toIterable()),
+        is(Arrays.asList(5, 6, 7, 10, 11, 12)));
+
+    // Boolean range set
+    final Range<Boolean> range3 = Range.closed(false, true);
+    final RangeExtent rangeExtent3 =
+        new RangeExtent(ImmutableRangeSet.of(range3),
+            PrimitiveType.BOOL);
+    assertThat(Lists.newArrayList(rangeExtent3.toIterable()),
+        is(Arrays.asList(false, true)));
+
+    // Range set of (Boolean, Boolean) tuples
+    final TypeSystem typeSystem = new TypeSystem();
+    final Range<Comparable> range4 =
+        Range.closed((Comparable) FlatLists.of(false, true),
+            (Comparable) FlatLists.of(true, true));
+    final RangeExtent rangeExtent4 =
+        new RangeExtent(ImmutableRangeSet.of(range4),
+            typeSystem.tupleType(PrimitiveType.BOOL, PrimitiveType.BOOL));
+    assertThat(Lists.newArrayList(rangeExtent4.toIterable()),
+        is(Arrays.asList(
+            FlatLists.of(false, true), FlatLists.of(true, true))));
   }
 }
 

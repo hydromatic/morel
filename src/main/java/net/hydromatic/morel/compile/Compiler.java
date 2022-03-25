@@ -35,6 +35,7 @@ import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.foreign.CalciteFunctions;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
@@ -215,6 +216,7 @@ public class Compiler {
       final BuiltIn builtIn = (BuiltIn) literal.value;
       return Codes.constant(Codes.BUILT_IN_VALUES.get(builtIn));
 
+    case INTERNAL_LITERAL:
     case VALUE_LITERAL:
       literal = (Core.Literal) expression;
       return Codes.constant(literal.unwrap());
@@ -280,8 +282,7 @@ public class Compiler {
     // Is this is a call to a built-in operator?
     switch (apply.fn.op) {
     case FN_LITERAL:
-      final Core.Literal literal = (Core.Literal) apply.fn;
-      final BuiltIn builtIn = (BuiltIn) literal.value;
+      final BuiltIn builtIn = (BuiltIn) ((Core.Literal) apply.fn).value;
       return compileCall(cx, builtIn, apply.arg, apply.pos);
     }
     final Code argCode = compileArg(cx, apply.arg);
@@ -340,6 +341,45 @@ public class Compiler {
       final Code conditionCode = compile(cx, scan.condition);
       return () -> Codes.scanRowSink(firstStep.op, scan.pat, code,
           conditionCode, nextFactory.get());
+
+    case SUCH_THAT:
+      // Given
+      //   (n, d) suchthat hasNameInDept (n, d)
+      // that is,
+      //   pat = (n, d),
+      //   exp = hasNameInDept (n, d),
+      // generate
+      //   (n, d) in List.filter
+      //       (fn x => case x of (n, d) => hasNameInDept (n, d))
+      //       (extent: (string * int) list)
+      //
+      // but we'd prefer to find the extent internally, e.g. given
+      //   (n, d) suchthat (n, d) elem nameDeptPairs
+      // we generate
+      //   (n, d) in nameDeptPairs
+      //
+      final Core.Scan scan2 = (Core.Scan) firstStep;
+      final Extents.Analysis extentFilter =
+          Extents.create(typeSystem, scan2.pat, ImmutableSortedMap.of(),
+                  scan2.exp);
+      final FnType fnType =
+          typeSystem.fnType(scan2.pat.type, PrimitiveType.BOOL);
+      final Pos pos = Pos.ZERO;
+      final Core.Match match = core.match(pos, scan2.pat, scan2.exp);
+      final Core.Exp lambda =
+          core.fn(pos, fnType, ImmutableList.of(match),
+              typeSystem.nameGenerator);
+      final Core.Exp filterCall =
+          core.apply(pos, extentFilter.extentExp.type,
+              core.functionLiteral(typeSystem, BuiltIn.LIST_FILTER),
+              lambda);
+      final Core.Exp exp2 =
+          core.apply(pos, extentFilter.extentExp.type, filterCall,
+              extentFilter.extentExp);
+      final Code code2 = compile(cx, exp2);
+      final Code conditionCode2 = compile(cx, scan2.condition);
+      return () -> Codes.scanRowSink(Op.INNER_JOIN, scan2.pat, code2,
+          conditionCode2, nextFactory.get());
 
     case WHERE:
       final Core.Where where = (Core.Where) firstStep;

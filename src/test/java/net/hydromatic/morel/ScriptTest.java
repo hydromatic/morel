@@ -137,7 +137,8 @@ public class ScriptTest {
     final List<String> argList = ImmutableList.of("--echo");
     final File directory = inFile.getParentFile();
     final boolean loadDictionary =
-        inFile.getPath().matches(".*/(blog|dummy|foreign|hybrid)\\.(sml|smli)");
+        inFile.getPath()
+            .matches(".*/(blog|dummy|foreign|hybrid|suchThat)\\.(sml|smli)");
     final Map<String, ForeignValue> dictionary =
         loadDictionary
             ? Calcite.withDataSets(BuiltInDataSet.DICTIONARY).foreignValues()

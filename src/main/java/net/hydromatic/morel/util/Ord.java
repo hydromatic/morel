@@ -108,6 +108,19 @@ public class Ord<E> implements Map.Entry<Integer, E> {
   }
 
   /**
+   * Performs the given action for each element of the {@code List}.
+   *
+   * <p>More efficient than {@link #forEachIndexed(Iterable, ObjIntConsumer)}
+   * if the list implements {@link RandomAccess}.
+   */
+  public static <E> void forEach(final List<E> list,
+      ObjIntConsumer<E> consumer) {
+    for (int i = 0; i < list.size(); i++) {
+      consumer.accept(list.get(i), i);
+    }
+  }
+
+  /**
    * Performs the given action for each entry of a {@code Map}.
    */
   public static <K, V> void forEachIndexed(final Map<K, V> map,

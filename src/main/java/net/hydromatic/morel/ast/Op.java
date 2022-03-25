@@ -37,6 +37,7 @@ public enum Op {
   FN_LITERAL(true), // occurs in Core, not in Ast
   /** Literal whose value is a non-atomic value, such as a record or list. */
   VALUE_LITERAL(true), // occurs in Core, not in Ast
+  INTERNAL_LITERAL(true), // occurs in Core, not in Ast
 
   // patterns
   ID_PAT(true),
@@ -70,6 +71,7 @@ public enum Op {
 
   // internal
   FROM_EQ("$FROM_EQ "),
+  SUCH_THAT("$SUCH_THAT "),
 
   // value constructors
   TUPLE(true),

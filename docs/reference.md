@@ -37,7 +37,7 @@ just because they take effort to build.
 Contributions are welcome!
 
 In Morel but not Standard ML:
-* `from` expression with `in`, `join`, `where`, `group`,
+* `from` expression with `in`, `suchthat`, `join`, `where`, `group`,
   `compute`, `order`, `yield` clauses
 * `union`, `except`, `intersect`, `elem`, `notelem` operators
 * "*lab* `=`" is optional in `exprow`
@@ -146,6 +146,8 @@ In Standard ML but not in Morel:
                                 match
 <i>matchItem</i> &rarr; <i>pat</i> <b>=&gt;</b> <i>exp</i>
 <i>scan</i> &rarr; <i>pat</i> [ <b>in</b> | <b>=</b> ] <i>exp</i>
+    | <i>var<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>var<sub>v</sub></i> <b>suchThat</b> <i>exp</i>
+                                constrained iteration (<i>v</i> &ge; 1)
 <i>step</i> &rarr; <b>where</b> <i>exp</i>                filter clause
     | <b>join</b> <i>scan</i> [ <b>on</b> <i>exp</i> ]      join clause
     | <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>

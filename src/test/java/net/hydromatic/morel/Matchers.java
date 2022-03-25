@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -57,6 +58,10 @@ import static java.util.Objects.requireNonNull;
 
 /** Matchers for use in Morel tests. */
 public abstract class Matchers {
+
+  private static final Pattern PATTERN0 = Pattern.compile("\\(\\n +");
+  private static final Pattern PATTERN1 = Pattern.compile("\\n +");
+
   private Matchers() {}
 
   /** Matches a literal by value. */
@@ -117,6 +122,14 @@ public abstract class Matchers {
         description.appendText("was ").appendValue(plan);
       }
     };
+  }
+
+  /** Matches a Code node by its string representation,
+   * removing spaces that occur after newlines. */
+  static Matcher<Code> isCode2(String expected) {
+    final String expected0 = PATTERN0.matcher(expected).replaceAll("(");
+    final String expected1 = PATTERN1.matcher(expected0).replaceAll(" ");
+    return isCode(expected1);
   }
 
   /** Matches a Code if it is wholly within Calcite. */

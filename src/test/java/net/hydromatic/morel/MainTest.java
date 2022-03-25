@@ -48,6 +48,7 @@ import static net.hydromatic.morel.Matchers.hasMoniker;
 import static net.hydromatic.morel.Matchers.hasTypeConstructors;
 import static net.hydromatic.morel.Matchers.instanceOfAnd;
 import static net.hydromatic.morel.Matchers.isCode;
+import static net.hydromatic.morel.Matchers.isCode2;
 import static net.hydromatic.morel.Matchers.isLiteral;
 import static net.hydromatic.morel.Matchers.isUnordered;
 import static net.hydromatic.morel.Matchers.list;
@@ -610,6 +611,46 @@ public class MainTest {
         + "val p2 = (p1, p1, p1)\n"
         + "val p3 = (p2, p2, p2)\n";
     ml(ml).assertType("xx");
+  }
+
+  @SuppressWarnings("ConstantConditions")
+  @Test void testDummy() {
+    switch (0) {
+    case 0:
+      ml("1").assertEval(is(1));
+      // fall through
+    case 1:
+      ml("1 + 2").assertEval(is(3));
+      // fall through
+    case 2:
+      ml("1 + 2 + 3").assertEval(is(6));
+      // fall through
+    case 3:
+      ml("1 * 2 + 3 * 4").assertEval(is(14));
+      // fall through
+    case 4:
+      ml("let val x = 1 in x + 2 end")
+          .with(Prop.INLINE_PASS_COUNT, 0)
+          .assertEval(is(3));
+      // fall through
+    case 5:
+      ml("let val x = 1 and y = 2 in 7 end")
+          .with(Prop.INLINE_PASS_COUNT, 0)
+          .assertEval(is(7));
+      // fall through
+    case 6:
+      ml("let val x = 1 and y = 2 in x + y + 4 end")
+          .with(Prop.INLINE_PASS_COUNT, 0)
+          .assertEval(is(7));
+      // fall through
+    case 7:
+      ml("(not (true andalso false))").assertEval(is(true));
+      // fall through
+    case 8:
+      ml("let val x = 1 and y = 2 and z = true and a = \"foo\" in\n"
+          + "  if z then x else y\n"
+          + "end").assertEval(is(1));
+    }
   }
 
   @Test void testEval() {
@@ -1641,6 +1682,9 @@ public class MainTest {
     ml("from e in emps").assertParseSame();
     ml("from e in emps where c").assertParseSame();
     ml("from e in emps, d in depts").assertParseSame();
+    ml("from e in emps, d suchthat hasEmp e").assertParseSame();
+    ml("from e in emps, (job, d) suchthat hasEmp (e, d, job)")
+        .assertParseSame();
     ml("from , d in depts").assertError("Xx");
     ml("from join d in depts on c").assertError("Xx");
     ml("from left join d in depts on c").assertError("Xx");
@@ -1729,6 +1773,258 @@ public class MainTest {
         + "  from e in emps where #deptno e = 30 yield #id e\n"
         + "end";
     ml(ml).assertEvalIter(equalsOrdered(102, 103));
+  }
+
+  /** Applies {@code suchthat} to a function that tests membership of a set,
+   * and therefore the effect is to iterate over that set. */
+  @Test void testFromSuchThat() {
+    final String ml = "let\n"
+        + "  val emps = [\n"
+        + "    {id = 100, name = \"Fred\", deptno = 10},\n"
+        + "    {id = 101, name = \"Velma\", deptno = 20},\n"
+        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+        + "  fun hasEmpNameInDept (n, d) =\n"
+        + "    (n, d) elem (from e in emps yield (e.name, e.deptno))\n"
+        + "in\n"
+        + "  from (n, d) suchthat hasEmpNameInDept (n, d)\n"
+        + "    where d = 30\n"
+        + "    yield {d, n}\n"
+        + "end";
+    final String code = "from(sink\n"
+        + "  join(op join, pat (d_1, n_1),\n"
+        + "  exp from(\n"
+        + "    sink join(op join, pat v0, exp from(sink\n"
+        + "                    join(op join, pat e, exp tuple(\n"
+        + "  tuple(constant(10), constant(100), constant(Fred)),\n"
+        + "  tuple(constant(20), constant(101), constant(Velma)),\n"
+        + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
+        + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
+        + "      sink collect(tuple(apply(fnValue nth:2, argCode get(name e)),\n"
+        + "        apply(fnValue nth:0, argCode get(name e)))))),\n"
+        + "      sink collect(tuple(apply(fnValue nth:1, argCode get(name v0)),\n"
+        + "        apply(fnValue nth:0, argCode get(name v0)))))),\n"
+        + "        sink where(condition apply2(fnValue =, get(name d), constant(30)),\n"
+        + "          sink collect(getTuple(names [d, n])))))";
+    final List<Object> expected = list(list(30, "Shaggy"), list(30, "Scooby"));
+    ml(ml).assertType("{d:int, n:string} list")
+        .assertPlan(isCode2(code))
+        .assertEval(is(expected));
+  }
+
+  @Test void testFromSuchThat2() {
+    final String ml = "let\n"
+        + "  fun hasJob (d, job) =\n"
+        + "    (d div 2, job)\n"
+        + "      elem (from e in scott.emp yield (e.deptno, e.job))\n"
+        + "in\n"
+        + "  from d in scott.dept,"
+        + "      j suchthat hasJob (d.deptno, j)\n"
+        + "    yield j\n"
+        + "end";
+    final String core = "val it = "
+        + "from d_1 in #dept scott "
+        + "join j suchthat ("
+        + "case (#deptno d_1, j) of"
+        + " (d, job) => op elem ((op div (d, 2), job),"
+        + " from e in #emp scott"
+        + " yield (#deptno e, #job e))) yield j";
+    final String code = "from(sink join(op join, pat d_1,\n"
+        + "    exp apply(fnValue nth:1, argCode get(name scott)),\n"
+        + "  sink join(op join, pat j,\n"
+        + "      exp apply(\n"
+        + "        fnCode apply(fnValue List.filter,\n"
+        + "          argCode match(j,\n"
+        + "            apply(fnCode match((d, job),\n"
+        + "              apply2(fnValue elem,\n"
+        + "                tuple(apply2(fnValue div, get(name d), constant(2)),\n"
+        + "                get(name job)),\n"
+        + "              from(\n"
+        + "              sink join(op join, pat e,\n"
+        + "                exp apply(fnValue nth:2, argCode get(name scott)),\n"
+        + "                sink collect(\n"
+        + "                  tuple(apply(fnValue nth:1, argCode get(name e)),\n"
+        + "                    apply(fnValue nth:5, argCode get(name e)))))))),\n"
+        + "              argCode tuple(\n"
+        + "                apply(fnValue nth:0, argCode get(name d)),\n"
+        + "                get(name j))))),\n"
+        + "        argCode apply(fnValue $.extent, argCode constant(()))),\n"
+        + "    sink collect(get(name j)))))";
+    final List<Object> expected = list(); // TODO
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("string list");
+//        .assertCore(-1, is(core))
+//        .assertPlan(isCode2(code))
+//        .assertEval(is(expected));
+  }
+
+  /** Translates a simple {@code suchthat} expression, "d elem list". */
+  @Test void testFromSuchThat2b() {
+    final String ml = "from d suchthat d elem scott.dept";
+    final String core0 = "val it = from d suchthat (d elem #dept scott)";
+    final String core1 = "val it = from d in #dept scott";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("{deptno:int, dname:string, loc:string} list")
+        .assertCore(0, is(core0))
+        .assertCore(-1, is(core1));
+  }
+
+  /** Translates a simple {@code suchthat} expression, "{x, y} elem list".
+   * Fields are renamed, to disrupt alphabetical ordering. */
+  @Test void testFromSuchThat2c() {
+    final String ml = "from (loc, deptno, name) "
+        + "suchthat {deptno, loc, dname = name} elem scott.dept";
+    final String core = "val it = "
+        + "from (deptno, loc, name) in"
+        + " (from v0 in #dept scott "
+        + "yield {deptno = #deptno v0, loc = #loc v0, name = #dname v0})";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("{deptno:int, loc:string, name:string} list")
+        .assertCore(-1, is(core));
+  }
+
+  /** As {@link #testFromSuchThat2c()} but with a literal. */
+  @Test void testFromSuchThat2d() {
+    final String ml = "from (dno, name)\n"
+        + "  suchthat {deptno = dno, dname = name, loc = \"CHICAGO\"}\n"
+        + "      elem scott.dept\n"
+        + "    andalso dno = 20";
+    final String core0 = "val it = "
+        + "from (dno, name) "
+        + "suchthat ({deptno = dno, dname = name, loc = \"CHICAGO\"} "
+        + "elem #dept scott "
+        + "andalso dno = 20)";
+    final String core1 = "val it = "
+        + "from (dno, name) in ("
+        + "from v0 in #dept scott "
+        + "where #loc v0 = \"CHICAGO\" "
+        + "where #deptno v0 = 20 "
+        + "yield {dno = #deptno v0, name = #dname v0})";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("{dno:int, name:string} list")
+        .assertCore(0, is(core0))
+        .assertCore(-1, is(core1));
+  }
+
+  /** As {@link #testFromSuchThat2d()} but using a function.
+   * (Simple enough that the function can be handled by inlining.) */
+  @Test void testFromSuchThat2e() {
+    final String ml = "let\n"
+        + "  fun isDept d =\n"
+        + "    d elem scott.dept\n"
+        + "in\n"
+        + "  from d suchthat isDept d andalso d.deptno = 20\n"
+        + "    yield d.dname\n"
+        + "end";
+    final String core0 = "val it = "
+        + "let"
+        + " val isDept = fn d => d elem #dept scott "
+        + "in"
+        + " from d_1 suchthat (isDept d_1 andalso #deptno d_1 = 20)"
+        + " yield #dname d_1 "
+        + "end";
+    final String core1 = "val it = "
+        + "from d_1 in #dept scott "
+        + "where #deptno d_1 = 20 "
+        + "yield #dname d_1";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("string list")
+        .assertCore(0, is(core0))
+        .assertCore(-1, is(core1));
+  }
+
+  /** Tests a join expressed via {@code suchthat}. */
+  @Test void testFromSuchThat2f() {
+    final String ml = "let\n"
+        + "  fun isDept d =\n"
+        + "    d elem scott.dept\n"
+        + "  fun isEmp e =\n"
+        + "    e elem scott.emp\n"
+        + "in\n"
+        + "  from (d, e) suchthat isDept d\n"
+        + "    andalso isEmp e\n"
+        + "    andalso d.deptno = e.deptno\n"
+        + "    andalso d.deptno = 20\n"
+        + "    yield d.dname\n"
+        + "end";
+    final String core0 = "val it = "
+        + "let"
+        + " val isDept = fn d => d elem #dept scott "
+        + "in"
+        + " let"
+        + " val isEmp = fn e => e elem #emp scott "
+        + "in"
+        + " from (d_1, e_1) suchthat (isDept d_1 "
+        + "andalso isEmp e_1 "
+        + "andalso #deptno d_1 = #deptno e_1 "
+        + "andalso #deptno d_1 = 20)"
+        + " yield #dname d_1"
+        + " end "
+        + "end";
+    final String core1 = "val it = "
+        + "from (d_1, e_1) in (from d_1 in #dept scott"
+        + " join e_1 in #emp scott"
+        + " where #deptno d_1 = #deptno e_1"
+        + " where #deptno d_1 = 20) "
+        + "yield #dname d_1";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("string list")
+        .assertCore(0, is(core0))
+        .assertCore(-1, is(core1));
+  }
+
+  /** A {@code suchthat} expression. */
+  @Test void testFromSuchThat3() {
+    final String ml = "let\n"
+        + "  val emps = [\n"
+        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+        + "  fun hasEmpNameInDept (n, d) =\n"
+        + "    (n, d) elem (from e in emps yield (e.name, e.deptno))\n"
+        + "in\n"
+        + "  from (n, d) suchthat hasEmpNameInDept (n, d)\n"
+        + "    where d = 30\n"
+        + "    yield {d, n}\n"
+        + "end";
+    final String core = "val it = "
+        + "from (n_1, d_1) suchthat"
+        + " (case (n_1, d_1) of (n, d) => op elem ((n, d), "
+        + "from e in ["
+        + "{deptno = 30, id = 102, name = \"Shaggy\"}, "
+        + "{deptno = 30, id = 103, name = \"Scooby\"}]"
+        + " yield (#name e, #deptno e)))"
+        + " where d_1 = 30"
+        + " yield {d = d_1, n = n_1}";
+    final String code = "from(sink\n"
+        + "  join(op join, pat (n_1, d_1),\n"
+        + "  exp apply(\n"
+        + "    fnCode apply(fnValue List.filter,\n"
+        + "      argCode match(v0,\n"
+        + "        apply(fnCode match((n_1, d_1),\n"
+        + "            apply(fnCode match((n, d),\n"
+        + "                apply2(fnValue elem,\n"
+        + "                  tuple(get(name n), get(name d)),\n"
+        + "                  from(sink\n"
+        + "                    join(op join, pat e, exp tuple(\n"
+        + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
+        + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
+        + "      sink collect(tuple(apply(fnValue nth:2, argCode get(name e)),\n"
+        + "        apply(fnValue nth:0, argCode get(name e)))))))),\n"
+        + "               argCode tuple(get(name n), get(name d)))),\n"
+        + "            argCode get(name v0)))),\n"
+        + "          argCode apply(fnValue $.extent, argCode constant(()))),\n"
+        + "        sink where(condition apply2(fnValue =, get(name d), constant(30)),\n"
+        + "          sink collect(tuple(get(name d), get(name n))))))";
+    ml(ml).assertType("{d:int, n:string} list");
+//        .assertCore(-1, is(core))
+//        .assertPlan(isCode2(code))
+//        .assertEval(is(list()));
   }
 
   @Test void testFromNoYield() {

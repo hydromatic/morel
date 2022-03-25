@@ -433,6 +433,10 @@ Pair<Pat, Exp> fromSource() :
     <EQ> exp = expression() {
       return Pair.of(pat, ast.fromEq(exp));
     }
+  |
+    <SUCH_THAT> exp = expression() {
+      return Pair.of(pat, ast.fromSuchThat(exp));
+    }
   )
 }
 
@@ -1400,6 +1404,7 @@ AstNode statementEof() :
 | < OF: "of" >
 | < ORELSE: "orelse" >
 | < REC: "rec" >
+| < SUCH_THAT: "suchthat" >
 | < THEN: "then" >
 | < UNION: "union" >
 | < VAL: "val" >

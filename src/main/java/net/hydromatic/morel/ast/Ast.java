@@ -1637,11 +1637,21 @@ public class Ast {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      String op = " in ";
-      Exp exp = this.exp;
-      if (exp.op == Op.FROM_EQ) {
+      final String op;
+      final Exp exp;
+      switch (this.exp.op) {
+      case FROM_EQ:
         op = " = ";
-        exp = ((PrefixCall) exp).a;
+        exp = ((PrefixCall) this.exp).a;
+        break;
+      case SUCH_THAT:
+        op = " suchthat ";
+        exp = ((PrefixCall) this.exp).a;
+        break;
+      default:
+        op = " in ";
+        exp = this.exp;
+        break;
       }
       w.append(this.op.padded)
           .append(pat, 0, 0)

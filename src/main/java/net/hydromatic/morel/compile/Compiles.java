@@ -108,6 +108,10 @@ public abstract class Compiles {
       checkPatternCoverage(typeSystem, coreDecl0, warningConsumer);
     }
 
+    // Ensures that once we discover that there is no suchThat, we stop looking;
+    // makes things a bit more efficient.
+    boolean mayContainSuchThat = true;
+
     Core.Decl coreDecl;
     tracer.onCore(1, coreDecl0);
     if (inlinePassCount == 0) {
@@ -130,7 +134,21 @@ public abstract class Compiles {
         if (relationalizer != null) {
           coreDecl = coreDecl.accept(relationalizer);
         }
-        if (coreDecl == coreDecl0) {
+        if (coreDecl == coreDecl2) {
+          break;
+        }
+        tracer.onCore(i + 2, coreDecl);
+      }
+      for (int i = 0; i < inlinePassCount; i++) {
+        final Core.Decl coreDecl2 = coreDecl;
+        if (mayContainSuchThat) {
+          if (SuchThatShuttle.containsSuchThat(coreDecl)) {
+            coreDecl = coreDecl.accept(new SuchThatShuttle(typeSystem, env));
+          } else {
+            mayContainSuchThat = false;
+          }
+        }
+        if (coreDecl == coreDecl2) {
           break;
         }
         tracer.onCore(i + 2, coreDecl);
@@ -363,6 +381,7 @@ public abstract class Compiles {
       bindDataType(typeSystem, bindings, local.dataType);
     }
   }
+
 }
 
 // End Compiles.java

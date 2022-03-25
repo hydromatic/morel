@@ -36,6 +36,7 @@ import net.hydromatic.morel.util.Pair;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Ordering;
 
 import java.util.List;
 import java.util.Objects;
@@ -108,6 +109,11 @@ public class Core {
    * <p>A {@link Core.ValDecl} must be one of these. */
   public abstract static class NamedPat extends Pat
       implements Comparable<NamedPat> {
+    /** Ordering that compares named patterns by their names, then by their
+     * ordinal. */
+    public static final Ordering<NamedPat> ORDERING =
+        Ordering.from(NamedPat::compare);
+
     public final String name;
     public final int i;
 
@@ -122,11 +128,16 @@ public class Core {
      *
      * <p>Collate first on name, then on ordinal. */
     @Override public int compareTo(NamedPat o) {
-      final int c = RecordType.compareNames(name, o.name);
+      return compare(this, o);
+    }
+
+    /** Helper for {@link #ORDERING}. */
+    static int compare(NamedPat o1, NamedPat o2) {
+      int c = RecordType.compareNames(o1.name, o2.name);
       if (c != 0) {
         return c;
       }
-      return Integer.compare(i, o.i);
+      return Integer.compare(o1.i, o2.i);
     }
 
     public abstract NamedPat withType(Type type);
@@ -470,12 +481,32 @@ public class Core {
       // no args
     }
 
+    /** Returns the {@code i}<sup>th</sup> argument. */
+    public Exp arg(int i) {
+      throw new UnsupportedOperationException();
+    }
+
     /** Returns the type. */
     public Type type() {
       return type;
     }
 
     @Override public abstract Exp accept(Shuttle shuttle);
+
+    /** Returns whether this expression is a constant.
+     *
+     * <p>Examples include literals {@code 1}, {@code true},
+     * constructors applied to constants,
+     * records and tuples whose arguments are constant.
+     */
+    public boolean isConstant() {
+      return false;
+    }
+
+    /** Returns whether this expression is a call to the given built-in. */
+    public boolean isCallTo(BuiltIn builtIn) {
+      return false;
+    }
   }
 
   /** Reference to a variable.
@@ -604,11 +635,19 @@ public class Core {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      if (value instanceof Wrapper) {
+      switch (op) {
+      case VALUE_LITERAL:
         // Generate the original expression from which this value was derived.
         return ((Wrapper) value).exp.unparse(w, left, right);
+      case INTERNAL_LITERAL:
+        // Print the value as if it were a string.
+        return w.appendLiteral(((Wrapper) value).o.toString());
       }
       return w.appendLiteral(value);
+    }
+
+    @Override public boolean isConstant() {
+      return true;
     }
   }
 
@@ -794,6 +833,10 @@ public class Core {
       forEachIndexed(args, action);
     }
 
+    @Override public Exp arg(int i) {
+      return args.get(i);
+    }
+
     @Override public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
@@ -820,6 +863,10 @@ public class Core {
     public Tuple copy(TypeSystem typeSystem, List<Exp> args) {
       return args.equals(this.args) ? this
           : core.tuple(typeSystem, type(), args);
+    }
+
+    @Override public boolean isConstant() {
+      return args.stream().allMatch(Exp::isConstant);
     }
   }
 
@@ -1067,6 +1114,7 @@ public class Core {
       super(op, bindings);
       switch (op) {
       case INNER_JOIN:
+      case SUCH_THAT:
         break;
       default:
         // SCAN and CROSS_JOIN are valid in ast, not core.
@@ -1087,14 +1135,16 @@ public class Core {
 
     @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
         int left, int right) {
-      if (ordinal == 0) {
-        w.append(" ");
-      } else {
-        w.append(op.padded);
-      }
-      // for these purposes 'in' has same precedence as '='
-      w.append(pat, 0, Op.EQ.left)
-          .append(" in ").append(exp, Op.EQ.right, 0);
+      final String prefix = ordinal == 0 ? " "
+          : op == Op.SUCH_THAT ? " join "
+          : op.padded;
+      final String infix = op == Op.SUCH_THAT ? " suchthat "
+          : " in ";
+      w.append(prefix)
+          // for these purposes 'in' and 'suchthat' have same precedence as '='
+          .append(pat, 0, Op.EQ.left)
+          .append(infix)
+          .append(exp, Op.EQ.right, 0);
       if (!isLiteralTrue()) {
         w.append("on").append(condition, 0, 0);
       }
@@ -1299,6 +1349,11 @@ public class Core {
       return ((Tuple) arg).args;
     }
 
+    @Override public Exp arg(int i) {
+      // Throws if the argument is not a tuple.
+      return arg.arg(i);
+    }
+
     @Override public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
@@ -1334,6 +1389,16 @@ public class Core {
     public Apply copy(Exp fn, Exp arg) {
       return fn == this.fn && arg == this.arg ? this
           : core.apply(pos, type, fn, arg);
+    }
+
+    @Override public boolean isConstant() {
+      // A list of constants is constant
+      return isCallTo(BuiltIn.Z_LIST)
+          && args().stream().allMatch(Exp::isConstant);
+    }
+
+    @Override public boolean isCallTo(BuiltIn builtIn) {
+      return fn.op == Op.FN_LITERAL && ((Literal) fn).value == builtIn;
     }
   }
 
@@ -1420,6 +1485,11 @@ public class Core {
       return this == obj
           || obj instanceof Wrapper
           && this.o.equals(((Wrapper) obj).o);
+    }
+
+    /** Returns the value. */
+    <T> T unwrap(Class<T> valueClass) {
+      return valueClass.cast(o);
     }
   }
 }

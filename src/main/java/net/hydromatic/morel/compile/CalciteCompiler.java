@@ -246,8 +246,7 @@ public class CalciteCompiler extends Compiler {
           break;
 
         case FN_LITERAL:
-          final Core.Literal literal = (Core.Literal) apply.fn;
-          final BuiltIn builtIn = (BuiltIn) literal.value;
+          final BuiltIn builtIn = (BuiltIn) ((Core.Literal) apply.fn).value;
           switch (builtIn) {
           case Z_LIST:
             final List<Core.Exp> args = apply.args();
@@ -763,8 +762,7 @@ public class CalciteCompiler extends Compiler {
    * support aggregate functions defined by expressions (e.g. lambdas). */
   @Nonnull private SqlAggFunction aggOp(Core.Exp aggregate) {
     if (aggregate instanceof Core.Literal) {
-      final Core.Literal literal = (Core.Literal) aggregate;
-      switch ((BuiltIn) literal.value) {
+      switch ((BuiltIn) ((Core.Literal) aggregate).value) {
       case RELATIONAL_SUM:
       case Z_SUM_INT:
       case Z_SUM_REAL:

@@ -148,7 +148,7 @@ class Pretty {
             .append(s.replace("\\", "\\\\").replace("\"", "\\\""))
             .append('"');
       case INT:
-        Integer i = (Integer) value;
+        int i = (Integer) value;
         if (i < 0) {
           if (i == Integer.MIN_VALUE) {
             return buf.append("~2147483648");

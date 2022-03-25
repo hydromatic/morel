@@ -28,17 +28,21 @@ import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RangeExtent;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.calcite.util.Util;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
@@ -48,11 +52,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.BiFunction;
 
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static org.apache.calcite.util.Util.transform;
 
 /** Builds parse tree nodes. */
 public enum CoreBuilder {
@@ -150,6 +156,13 @@ public enum CoreBuilder {
         Core.Literal.wrap(exp, value));
   }
 
+  /** Creates an internal literal. */
+  public Core.Literal internalLiteral(Object value) {
+    final Core.Literal exp = unitLiteral();
+    return new Core.Literal(Op.INTERNAL_LITERAL, exp.type,
+        Core.Literal.wrap(exp, value));
+  }
+
   /** Creates a reference to a value. */
   public Core.Id id(Core.NamedPat idPat) {
     return new Core.Id(idPat);
@@ -239,7 +252,7 @@ public enum CoreBuilder {
   }
 
   public Core.TuplePat tuplePat(TypeSystem typeSystem, List<Core.Pat> args) {
-    return tuplePat(typeSystem.tupleType(Util.transform(args, Core.Pat::type)),
+    return tuplePat(typeSystem.tupleType(transform(args, Core.Pat::type)),
         args);
   }
 
@@ -301,7 +314,7 @@ public enum CoreBuilder {
           argNameTypes.put(name, arg.type));
       tupleType = typeSystem.recordType(argNameTypes);
     } else {
-      tupleType = typeSystem.tupleType(Util.transform(argList, Core.Exp::type));
+      tupleType = typeSystem.tupleType(transform(argList, Core.Exp::type));
     }
     return new Core.Tuple(tupleType, argList);
   }
@@ -345,13 +358,13 @@ public enum CoreBuilder {
   }
 
   /** Returns the element type of a {@link Core.From} with the given steps. */
-  static Type fromElementType(TypeSystem typeSystem,
+  private Type fromElementType(TypeSystem typeSystem,
       List<Core.FromStep> steps) {
     if (!steps.isEmpty()
         && Iterables.getLast(steps) instanceof Core.Yield) {
       return ((Core.Yield) Iterables.getLast(steps)).exp.type;
     } else {
-      final List<Binding> lastBindings = core.lastBindings(steps);
+      final List<Binding> lastBindings = lastBindings(steps);
       if (lastBindings.size() == 1) {
         return lastBindings.get(0).id.type;
       }
@@ -376,19 +389,20 @@ public enum CoreBuilder {
       List<Core.FromStep> steps) {
     final List<Binding> bindings = lastBindings(steps);
     if (bindings.size() == 1) {
-      return core.id(getOnlyElement(bindings).id);
+      return id(getOnlyElement(bindings).id);
     } else {
       final SortedMap<Core.NamedPat, Core.Exp> map = new TreeMap<>();
       final SortedMap<String, Type> argNameTypes = new TreeMap<>(ORDERING);
       bindings.forEach(b -> {
-        map.put(b.id, core.id(b.id));
+        map.put(b.id, id(b.id));
         argNameTypes.put(b.id.name, b.id.type);
       });
-      return core.tuple(typeSystem.recordType(argNameTypes), map.values());
+      return tuple(typeSystem.recordType(argNameTypes), map.values());
     }
   }
 
-  public List<Binding> lastBindings(List<? extends Core.FromStep> steps) {
+  public static List<Binding> lastBindings(
+      List<? extends Core.FromStep> steps) {
     return steps.isEmpty()
         ? ImmutableList.of()
         : Iterables.getLast(steps).bindings;
@@ -408,6 +422,29 @@ public enum CoreBuilder {
 
   public Core.Fn fn(FnType type, Core.IdPat idPat, Core.Exp exp) {
     return new Core.Fn(type, idPat, exp);
+  }
+
+  public Core.Fn fn(Pos pos, FnType type, List<Core.Match> matchList,
+      NameGenerator nameGenerator) {
+    if (matchList.size() == 1) {
+      final Core.Match match = matchList.get(0);
+      if (match.pat instanceof Core.IdPat) {
+        // Simple function, "fn x => exp". Does not need 'case'.
+        return fn(type, (Core.IdPat) match.pat, match.exp);
+      }
+      if (match.pat instanceof Core.TuplePat
+          && ((Core.TuplePat) match.pat).args.isEmpty()) {
+        // Simple function with unit arg, "fn () => exp";
+        // needs a new variable, but doesn't need case, "fn (v0: unit) => exp"
+        final Core.IdPat idPat = idPat(type.paramType, nameGenerator);
+        return fn(type, idPat, match.exp);
+      }
+    }
+    // Complex function, "fn (x, y) => exp";
+    // needs intermediate variable and case, "fn v => case v of (x, y) => exp"
+    final Core.IdPat idPat = idPat(type.paramType, nameGenerator);
+    final Core.Id id = id(idPat);
+    return fn(type, idPat, caseOf(pos, type.resultType, id, matchList));
   }
 
   /** Creates a {@link Core.Apply}. */
@@ -488,10 +525,10 @@ public enum CoreBuilder {
     case TUPLE_TYPE:
       ((RecordLikeType) exp.type).argNameTypes().forEach((name, type) ->
           bindings.add(
-              Binding.of(core.idPat(type, name, typeSystem.nameGenerator))));
+              Binding.of(idPat(type, name, typeSystem.nameGenerator))));
       break;
     default:
-      bindings.add(Binding.of(core.idPat(exp.type, typeSystem.nameGenerator)));
+      bindings.add(Binding.of(idPat(exp.type, typeSystem.nameGenerator)));
     }
     return yield_(bindings, exp);
   }
@@ -518,6 +555,108 @@ public enum CoreBuilder {
   /** Creates a list with one or more elements. */
   public Core.Exp list(TypeSystem typeSystem, Core.Exp arg0, Core.Exp... args) {
     return list(typeSystem, arg0.type, Lists.asList(arg0, args));
+  }
+
+  /** Creates an extent. It returns a list of all values of a given type that
+   * fall into a given range-set. The range-set might consist of just
+   * {@link Range#all()}, in which case, the list returns all values of the
+   * type. */
+  @SuppressWarnings({"UnstableApiUsage", "rawtypes"})
+  public Core.Exp extent(TypeSystem typeSystem, Type type,
+      RangeSet<Comparable> rangeSet) {
+    final ListType listType = typeSystem.listType(type);
+    // Store an ImmutableRangeSet value inside a literal of type 'unit'.
+    // The value of such literals is usually Unit.INSTANCE, but we cheat.
+    return core.apply(Pos.ZERO, listType,
+        core.functionLiteral(typeSystem, BuiltIn.Z_EXTENT),
+        core.internalLiteral(new RangeExtent(rangeSet, type)));
+  }
+
+  @SuppressWarnings({"UnstableApiUsage", "rawtypes", "unchecked"})
+  public Pair<Core.Exp, List<Core.Exp>> mergeExtents(TypeSystem typeSystem,
+      List<? extends Core.Exp> exps, boolean intersect) {
+    switch (exps.size()) {
+    case 0:
+      throw new AssertionError();
+
+    case 1:
+      return Pair.of(simplify(typeSystem, exps.get(0)), ImmutableList.of());
+
+    default:
+      ImmutableRangeSet rangeSet = intersect
+          ? ImmutableRangeSet.of(Range.all())
+          : ImmutableRangeSet.of();
+      final List<Core.Exp> remainingExps = new ArrayList<>();
+      for (Core.Exp exp : exps) {
+        if (exp.isCallTo(BuiltIn.Z_EXTENT)) {
+          final Core.Literal argLiteral = (Core.Literal) ((Core.Apply) exp).arg;
+          final Core.Wrapper wrapper = (Core.Wrapper) argLiteral.value;
+          final RangeExtent list = wrapper.unwrap(RangeExtent.class);
+          rangeSet = intersect
+              ? rangeSet.intersection(list.rangeSet)
+              : rangeSet.union(list.rangeSet);
+          continue;
+        }
+        remainingExps.add(exp);
+      }
+      final ListType listType = (ListType) exps.get(0).type;
+      Core.Exp exp =
+          core.extent(typeSystem, listType.elementType, rangeSet);
+      for (Core.Exp remainingExp : remainingExps) {
+        exp = intersect
+            ? core.intersect(typeSystem, exp, remainingExp)
+            : core.union(typeSystem, exp, remainingExp);
+      }
+      return Pair.of(exp, remainingExps);
+    }
+  }
+
+  /** Simplifies an expression.
+   *
+   * <p>In particular, it merges extents. For example,
+   * <blockquote><pre>{@code
+   * extent "[10, 20]" orelse (extent "[-inf,5]" andalso "[1,int]")
+   * }</pre></blockquote>
+   * becomes
+   * <blockquote><pre>{@code
+   * extent "[[1, 5], [10, 20]]"
+   * }</pre></blockquote>
+   */
+  Core.Exp simplify(TypeSystem typeSystem, Core.Exp exp) {
+    switch (exp.op) {
+    case TUPLE:
+      final Core.Tuple tuple = (Core.Tuple) exp;
+      return tuple.copy(typeSystem,
+          transform(tuple.args, e -> simplify(typeSystem, e)));
+
+    case APPLY:
+      Core.Apply apply = (Core.Apply) exp;
+      final Core.Exp simplifiedArgs = simplify(typeSystem, apply.arg);
+      if (!simplifiedArgs.equals(apply.arg)) {
+        apply = apply.copy(apply.fn, simplifiedArgs);
+      }
+      if (apply.isCallTo(BuiltIn.OP_UNION)) {
+        if (apply.args().stream()
+            .allMatch(exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
+          Pair<Core.Exp, List<Core.Exp>> pair =
+              mergeExtents(typeSystem, apply.args(), false);
+          if (pair.right.isEmpty()) {
+            return pair.left;
+          }
+        }
+      }
+      if (apply.isCallTo(BuiltIn.OP_INTERSECT)) {
+        if (apply.args().stream()
+            .allMatch(exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
+          Pair<Core.Exp, List<Core.Exp>> pair =
+              mergeExtents(typeSystem, apply.args(), true);
+          if (pair.right.isEmpty()) {
+            return pair.left;
+          }
+        }
+      }
+    }
+    return exp;
   }
 
   /** Creates a record. */
@@ -563,6 +702,10 @@ public enum CoreBuilder {
     return call(typeSystem, BuiltIn.OP_EQ, a0.type, Pos.ZERO, a0, a1);
   }
 
+  public Core.Exp notEqual(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
+    return call(typeSystem, BuiltIn.OP_NE, a0.type, Pos.ZERO, a0, a1);
+  }
+
   public Core.Exp lessThan(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
     return call(typeSystem, BuiltIn.OP_LT, a0.type, Pos.ZERO, a0, a1);
   }
@@ -571,10 +714,13 @@ public enum CoreBuilder {
     return call(typeSystem, BuiltIn.OP_GT, a0.type, Pos.ZERO, a0, a1);
   }
 
+  public Core.Exp greaterThanOrEqualTo(TypeSystem typeSystem, Core.Exp a0,
+      Core.Exp a1) {
+    return call(typeSystem, BuiltIn.OP_GE, a0.type, Pos.ZERO, a0, a1);
+  }
+
   public Core.Exp elem(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
-    if (a1.op == Op.APPLY
-        && ((Core.Apply) a1).fn.op == Op.FN_LITERAL
-        && ((Core.Literal) ((Core.Apply) a1).fn).value == BuiltIn.Z_LIST
+    if (a1.isCallTo(BuiltIn.Z_LIST)
         && ((Core.Apply) a1).args().size() == 1) {
       // If "a1 = [x]", rather than "a0 elem [x]", generate "a0 = x"
       return equal(typeSystem, a0, ((Core.Apply) a1).args().get(0));
@@ -586,8 +732,26 @@ public enum CoreBuilder {
     return call(typeSystem, BuiltIn.Z_ANDALSO, a0, a1);
   }
 
+  public Core.Exp andAlso(TypeSystem typeSystem, Iterable<Core.Exp> exps) {
+    return foldRight(ImmutableList.copyOf(exps),
+        (e1, e2) -> andAlso(typeSystem, e1, e2));
+  }
+
   public Core.Exp orElse(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
     return call(typeSystem, BuiltIn.Z_ORELSE, a0, a1);
+  }
+
+  public Core.Exp orElse(TypeSystem typeSystem, Iterable<Core.Exp> exps) {
+    return foldRight(ImmutableList.copyOf(exps),
+        (e1, e2) -> orElse(typeSystem, e1, e2));
+  }
+
+  private <E> E foldRight(List<E> list, BiFunction<E, E, E> fold) {
+    E e = list.get(list.size() - 1);
+    for (int i = list.size() - 2; i >= 0; i--) {
+      e = fold.apply(list.get(i), e);
+    }
+    return e;
   }
 
   public Core.Exp only(TypeSystem typeSystem, Pos pos, Core.Exp a0) {
@@ -595,6 +759,25 @@ public enum CoreBuilder {
         ((ListType) a0.type).elementType, pos, a0);
   }
 
+  public Core.Exp union(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
+    return call(typeSystem, BuiltIn.OP_UNION,
+        ((ListType) a0.type).elementType, Pos.ZERO, a0, a1);
+  }
+
+  public Core.Exp union(TypeSystem typeSystem, Iterable<Core.Exp> exps) {
+    return foldRight(ImmutableList.copyOf(exps),
+        (e1, e2) -> union(typeSystem, e1, e2));
+  }
+
+  public Core.Exp intersect(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
+    return call(typeSystem, BuiltIn.OP_INTERSECT,
+        ((ListType) a0.type).elementType, Pos.ZERO, a0, a1);
+  }
+
+  public Core.Exp intersect(TypeSystem typeSystem, Iterable<Core.Exp> exps) {
+    return foldRight(ImmutableList.copyOf(exps),
+        (e1, e2) -> intersect(typeSystem, e1, e2));
+  }
 }
 
 // End CoreBuilder.java
