@@ -82,7 +82,7 @@ License.
     <checkstyle.version>9.3</checkstyle.version>
     <findbugs.version>3.0.2</findbugs.version>
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
-    <git-commit-id-plugin.version>2.1.9</git-commit-id-plugin.version>
+    <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
     <!-- We support guava 19.0 to 31.1-jre; 23.0 is just the default. -->
     <guava.version>23.0</guava.version>
     <hamcrest.version>2.2</hamcrest.version>
