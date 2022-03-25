@@ -83,7 +83,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
 
   public boolean equals(Object obj) {
     return this == obj
-        || (obj instanceof Pair)
+        || obj instanceof Pair
         && Objects.equals(this.left, ((Pair) obj).left)
         && Objects.equals(this.right, ((Pair) obj).right);
   }

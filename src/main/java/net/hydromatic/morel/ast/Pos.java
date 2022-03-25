@@ -41,7 +41,8 @@ public class Pos {
   public final int endColumn;
 
   /** Creates a Pos. */
-  public Pos(String file, int startLine, int startColumn, int endLine, int endColumn) {
+  public Pos(String file, int startLine, int startColumn,
+      int endLine, int endColumn) {
     this.file = file;
     this.startLine = startLine;
     this.startColumn = startColumn;

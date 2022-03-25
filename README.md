@@ -30,7 +30,7 @@ until version 0.2.)
 
 ## Requirements
 
-Java version 8 or higher.
+Java version 11 or higher.
 
 ## Get Morel
 
@@ -60,6 +60,8 @@ On Windows, the last line is
 ```bash
 > mvnw install
 ```
+
+If you are using Java 8, you should add parameters `-Dcheckstyle.version=9.3`.
 
 ### Run the shell
 

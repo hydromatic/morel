@@ -76,25 +76,31 @@ License.
     <top.dir>${project.basedir}</top.dir>
 
     <!-- Component and plugin versions, in alphabetical order. -->
+    <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
     <calcite.version>1.32.0</calcite.version>
-    <checkstyle.version>7.8.2</checkstyle.version>
+    <!-- We support (and test) Checkstyle as low as 9.3.
+         In JDK 8, you must add '-Dcheckstyle.version=9.3' because
+         Checkstyle 10 requires JDK 11 or higher. -->
+    <checkstyle.version>10.3.4</checkstyle.version>
     <findbugs.version>3.0.2</findbugs.version>
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
-    <!-- We support guava 19.0 to 31.1-jre; 23.0 is just the default. -->
-    <guava.version>23.0</guava.version>
+    <git-commit-id-plugin.version>2.1.9</git-commit-id-plugin.version>
+    <!-- We support (and test) Guava as low as 19. -->
+    <guava.version>31.1-jre</guava.version>
     <hamcrest.version>2.2</hamcrest.version>
     <hsqldb.version>2.5.1</hsqldb.version>
-    <hydromatic-toolbox.version>0.3</hydromatic-toolbox.version>
     <java-diff.version>1.1.2</java-diff.version>
     <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
     <javacc.version>7.0.12</javacc.version>
     <jline.version>3.21.0</jline.version>
     <junit-jupiter.version>5.9.1</junit-jupiter.version>
-    <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
+    <maven-checkstyle-plugin.version>3.2.0</maven-checkstyle-plugin.version>
+    <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
     <maven-enforcer-plugin.version>3.1.0</maven-enforcer-plugin.version>
     <maven-javadoc-plugin.version>3.4.1</maven-javadoc-plugin.version>
     <maven-project-info-reports-plugin.version>3.4.1</maven-project-info-reports-plugin.version>
     <maven-site-plugin.version>4.0.0-M3</maven-site-plugin.version>
+    <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
     <maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
     <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
     <slf4j.version>2.0.2</slf4j.version>
@@ -234,6 +240,7 @@ License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
+        <version>${maven-source-plugin.version}</version>
         <executions>
           <execution>
             <id>attach-sources</id>
@@ -248,6 +255,7 @@ License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven-compiler-plugin.version}</version>
         <configuration>
           <source>8</source>
           <target>8</target>
@@ -279,17 +287,6 @@ License.
             <groupId>com.puppycrawl.tools</groupId>
             <artifactId>checkstyle</artifactId>
             <version>${checkstyle.version}</version>
-          </dependency>
-          <dependency>
-            <groupId>net.hydromatic</groupId>
-            <artifactId>toolbox</artifactId>
-            <version>${hydromatic-toolbox.version}</version>
-            <exclusions>
-              <exclusion>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-              </exclusion>
-            </exclusions>
           </dependency>
         </dependencies>
       </plugin>
@@ -335,6 +332,7 @@ License.
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
+        <version>${build-helper-maven-plugin.version}</version>
         <!-- Make sure every sub-project has LICENSE, NOTICE and
              git.properties in its jar's META-INF directory. -->
         <executions>
@@ -397,6 +395,7 @@ License.
       <plugin>
         <groupId>pl.project13.maven</groupId>
         <artifactId>git-commit-id-plugin</artifactId>
+        <version>${git-commit-id-plugin.version}</version>
         <inherited>false</inherited>
         <executions>
           <execution>

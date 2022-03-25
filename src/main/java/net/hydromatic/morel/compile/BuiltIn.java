@@ -1059,7 +1059,8 @@ public enum BuiltIn {
    *
    * <p>Returns true if and only if {@code signBit r1} equals
    * {@code signBit r2}. */
-  REAL_SAME_SIGN("Real", "sameSign", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
+  REAL_SAME_SIGN("Real", "sameSign", ts ->
+      ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
 
   /** Function "Real.sign", of type "real &rarr; int".
    *
