@@ -73,9 +73,8 @@ public class Shuttle {
   }
 
   protected Ast.Exp visit(Ast.AnnotatedExp annotatedExp) {
-    return ast.annotatedExp(annotatedExp.pos,
-        annotatedExp.type.accept(this),
-        annotatedExp.exp.accept(this));
+    return ast.annotatedExp(annotatedExp.pos, annotatedExp.exp.accept(this),
+        annotatedExp.type.accept(this));
   }
 
   protected Ast.Exp visit(Ast.If ifThenElse) {
@@ -206,7 +205,9 @@ public class Shuttle {
 
   protected Ast.FunMatch visit(Ast.FunMatch funMatch) {
     return ast.funMatch(funMatch.pos, funMatch.name,
-        visitList(funMatch.patList), funMatch.exp.accept(this));
+        visitList(funMatch.patList),
+        funMatch.returnType == null ? null : funMatch.returnType.accept(this),
+        funMatch.exp.accept(this));
   }
 
   protected Ast.ValDecl visit(Ast.ValDecl valDecl) {

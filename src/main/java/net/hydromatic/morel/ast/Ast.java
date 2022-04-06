@@ -496,7 +496,7 @@ public class Ast {
     public final Exp exp;
 
     /** Creates a type annotation. */
-    AnnotatedExp(Pos pos, Type type, Exp exp) {
+    AnnotatedExp(Pos pos, Exp exp, Type type) {
       super(pos, Op.ANNOTATED_EXP);
       this.type = requireNonNull(type);
       this.exp = requireNonNull(exp);
@@ -1087,12 +1087,15 @@ public class Ast {
   public static class FunMatch extends AstNode {
     public final String name;
     public final List<Pat> patList;
+    @Nullable public final Type returnType;
     public final Exp exp;
 
-    FunMatch(Pos pos, String name, ImmutableList<Pat> patList, Exp exp) {
+    FunMatch(Pos pos, String name, ImmutableList<Pat> patList,
+        @Nullable Type returnType, Exp exp) {
       super(pos, Op.FUN_MATCH);
       this.name = name;
       this.patList = patList;
+      this.returnType = returnType;
       this.exp = exp;
     }
 

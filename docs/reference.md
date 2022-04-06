@@ -45,7 +45,6 @@ In Morel but not Standard ML:
 In Standard ML but not in Morel:
 * `word` constant
 * `longid` identifier
-* type annotations ("`:` *typ*") (appears in expressions, patterns, and *funmatch*)
 * references (`ref` and operators `!` and `:=`)
 * exceptions (`raise`, `handle`, `exception`)
 * `while` loop
@@ -131,6 +130,7 @@ In Standard ML but not in Morel:
     | '<b>(</b>' <i>exp<sub>1</sub></i> <b>;</b> ... <b>;</b> <i>exp<sub>n</sub></i> '<b>)</b>' sequence (n &ge; 2)
     | <b>let</b> <i>dec</i> <b>in</b> <i>exp<sub>1</sub></i> ; ... ; <i>exp<sub>n</sub></i> <b>end</b>
                                 local declaration (n ≥ 1)
+    | <i>exp</i> <b>:</b> <i>type</i>                type annotation
     | <i>exp<sub>1</sub></i> <b>andalso</b> <i>exp<sub>2</sub></i>         conjunction
     | <i>exp<sub>1</sub></i> <b>orelse</b> <i>exp<sub>2</sub></i>          disjunction
     | <b>if</b> <i>exp<sub>1</sub></i> <b>then</b> <i>exp<sub>2</sub></i> <b>else</b> <i>exp<sub>3</sub></i>
@@ -173,6 +173,7 @@ In Standard ML but not in Morel:
     | '<b>(</b>' <i>pat<sub>1</sub></i> , ... , <i>pat<sub>n</sub></i> '<b>)</b>' tuple (n &ne; 1)
     | <b>{</b> [ <i>patrow</i> ] <b>}</b>            record
     | '<b>[</b>' <i>pat<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>pat<sub>n</sub></i> '<b>]</b>' list (n &ge; 0)
+    | <i>pat</i> <b>:</b> <i>type</i>                type annotation
     | <i>id</i> <b>as</b> <i>pat</i>                 layered
 <i>patrow</i> &rarr; '<b>...</b>'                  wildcard
     | <i>lab</i> <b>=</b> <i>pat</i> [<b>,</b> <i>patrow</i>]      pattern
@@ -206,10 +207,10 @@ In Standard ML but not in Morel:
 <i>funbind</i> &rarr; <i>funmatch</i> [ <b>and</b> <i>funmatch</i> ]*
                                 clausal function
 <i>funmatch</i> &rarr; <i>funmatchItem</i> [ '<b>|</b>' funmatchItem ]*
-<i>funmatchItem</i> &rarr; [ <b>op</b> ] <i>id</i> <i>pat<sub>1</sub></i> ... <i>pat<sub>n</sub></i> <b>=</b> <i>exp</i>
+<i>funmatchItem</i> &rarr; [ <b>op</b> ] <i>id</i> <i>pat<sub>1</sub></i> ... <i>pat<sub>n</sub></i> [ <b>:</b> <i>type</i> ] <b>=</b> <i>exp</i>
                                 nonfix (n &ge; 1)
-    | <i>pat<sub>1</sub></i> <i>id</i> <i>pat<sub>2</sub></i> <b>=</b> <i>exp</i>        infix
-    | '<b>(</b>' <i>pat<sub>1</sub></i> <i>id</i> <i>pat<sub>2</sub></i> '<b>)</b>' <i>pat'<sub>1</sub></i> ... <i>pat'<sub>n</sub></i> = <i>exp</i>
+    | <i>pat<sub>1</sub></i> <i>id</i> <i>pat<sub>2</sub></i> [ <b>:</b> <i>type</i> ] <b>=</b> <i>exp</i>        infix
+    | '<b>(</b>' <i>pat<sub>1</sub></i> <i>id</i> <i>pat<sub>2</sub></i> '<b>)</b>' <i>pat'<sub>1</sub></i> ... <i>pat'<sub>n</sub></i> [ <b>:</b> <i>type</i> ] = <i>exp</i>
                                 infix (n &ge; 0)
 <i>datbind</i> &rarr; <i>datbindItem</i> [ <b>and</b> <i>datbindItem</i> ]*
                                 data type
