@@ -362,8 +362,10 @@ public enum AstBuilder {
   }
 
   public Ast.FunMatch funMatch(Pos pos, String name,
-      Iterable<? extends Ast.Pat> patList, Ast.Exp exp) {
-    return new Ast.FunMatch(pos, name, ImmutableList.copyOf(patList), exp);
+      Iterable<? extends Ast.Pat> patList, @Nullable Ast.Type returnType,
+      Ast.Exp exp) {
+    return new Ast.FunMatch(pos, name, ImmutableList.copyOf(patList),
+        returnType, exp);
   }
 
   public Ast.Apply apply(Ast.Exp fn, Ast.Exp arg) {
@@ -379,8 +381,8 @@ public enum AstBuilder {
     return new Ast.InfixPat(pos, op, p0, p1);
   }
 
-  public Ast.Exp annotatedExp(Pos pos, Ast.Type type, Ast.Exp expression) {
-    return new Ast.AnnotatedExp(pos, type, expression);
+  public Ast.Exp annotatedExp(Pos pos, Ast.Exp expression, Ast.Type type) {
+    return new Ast.AnnotatedExp(pos, expression, type);
   }
 
   public Ast.Exp infixCall(Pos pos, Op op, Ast.Exp a0, Ast.Exp a1) {

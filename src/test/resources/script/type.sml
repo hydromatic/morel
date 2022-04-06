@@ -32,6 +32,52 @@
 {} = ();
 () = {};
 
+(*) Expressions with type annotations
+1: int;
+(2, true): int * bool;
+[]: int list;
+(1: int) + (2: int);
+1 + (2: int);
+(1: int) + 2;
+String.size "abc": int;
+String.size ("abc": string);
+String.size ("abc": string): int;
+
+(*) Patterns with type annotations
+val x: int = 1;
+val y: bool = true;
+val p: int * bool = (1, true);
+val empty: int list = [];
+
+(*) Function declarations with type annotations
+fun f (x: int, y) = x + y;
+fun f (x, y: int) = x + y;
+fun f3 (e: {name: string, deptno:int}) = e.deptno;
+fun hello (name: string, code: int): string = "hello!";
+fun hello2 (name: string) (code : int): string = "hello!";
+val hello3: string * int -> string =
+  fn (name, code) => "hello!";
+fun l1 [] = 0 | l1 ((h: string) :: t) = 1 + (l1 t);
+fun l2 [] = 0 | l2 (h :: (t: bool list)) = 1 + (l2 t);
+fun countOption (NONE: string option) = 0
+  | countOption (SOME x) = 1;
+fun countOption2 NONE: int = 0
+  | countOption2 (SOME x) = 1;
+fun firstOrSecond (e1 :: e2 :: rest): int = e2
+  | firstOrSecond (e1 :: rest) = e1;
+
+(*
+sml-nj gives the following error:
+stdIn:1.6-2.32 Error: parameter or result constraints of clauses don't agree [tycon mismatch]
+  this clause:      'Z option -> string list
+  previous clauses:      'Z option -> int list
+  in declaration:
+    f = (fn NONE => nil: int list
+          | SOME x => nil: string list)
+*)
+fun f NONE:int list = []
+  | f (SOME x):string list = [];
+
 (*) Function with unit arg
 fun one () = 1;
 one ();

@@ -312,6 +312,8 @@ public class Resolver {
       return core.stringLiteral((String) ((Ast.Literal) exp).value);
     case UNIT_LITERAL:
       return core.unitLiteral();
+    case ANNOTATED_EXP:
+      return toCore(((Ast.AnnotatedExp) exp).exp);
     case ID:
       return toCore((Ast.Id) exp);
     case ANDALSO:
@@ -534,6 +536,11 @@ public class Resolver {
     case AS_PAT:
       final Ast.AsPat asPat = (Ast.AsPat) pat;
       return core.asPat(type, asPat.id.name, nameGenerator, toCore(asPat.pat));
+
+    case ANNOTATED_PAT:
+      // There is no annotated pat in core, because all patterns have types.
+      final Ast.AnnotatedPat annotatedPat = (Ast.AnnotatedPat) pat;
+      return toCore(annotatedPat.pat);
 
     case CON_PAT:
       final Ast.ConPat conPat = (Ast.ConPat) pat;

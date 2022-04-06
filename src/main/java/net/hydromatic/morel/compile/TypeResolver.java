@@ -48,6 +48,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.calcite.util.Holder;
@@ -71,6 +72,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Static.skip;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 
@@ -193,6 +195,12 @@ public class TypeResolver {
 
     case UNIT_LITERAL:
       return reg(node, v, toTerm(PrimitiveType.UNIT));
+
+    case ANNOTATED_EXP:
+      final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) node;
+      final Type type = toType(annotatedExp.type, typeSystem);
+      deduceType(env, annotatedExp.exp, v);
+      return reg(node, v, toTerm(type, Subst.EMPTY));
 
     case ANDALSO:
     case ORELSE:
@@ -795,14 +803,31 @@ public class TypeResolver {
       final Ast.TupleType tupleType = (Ast.TupleType) type;
       return typeSystem.tupleType(toTypes(tupleType.types));
 
+    case RECORD_TYPE:
+      final Ast.RecordType recordType = (Ast.RecordType) type;
+      final ImmutableSortedMap.Builder<String, Type> argNameTypes =
+          ImmutableSortedMap.orderedBy(ORDERING);
+      recordType.fieldTypes.forEach((name, t) ->
+          argNameTypes.put(name, toType(t)));
+      return typeSystem.recordType(argNameTypes.build());
+
+    case FUNCTION_TYPE:
+      final Ast.FunctionType functionType = (Ast.FunctionType) type;
+      final Type paramType = toType(functionType.paramType, typeSystem);
+      final Type resultType = toType(functionType.resultType, typeSystem);
+      return typeSystem.fnType(paramType, resultType);
+
     case NAMED_TYPE:
       final Ast.NamedType namedType = (Ast.NamedType) type;
+      final List<Type> typeList = toTypes(namedType.types);
+      if (namedType.name.equals(LIST_TY_CON) && typeList.size() == 1) {
+        // TODO: make 'list' a regular generic type
+        return typeSystem.listType(typeList.get(0));
+      }
       final Type genericType = typeSystem.lookup(namedType.name);
       if (namedType.types.isEmpty()) {
         return genericType;
       }
-      final List<Type> typeList = namedType.types.stream().map(this::toType)
-          .collect(toImmutableList());
       return typeSystem.apply(genericType, typeList);
 
     case TY_VAR:
@@ -811,7 +836,7 @@ public class TypeResolver {
           name -> typeSystem.typeVariable(tyVarMap.size()));
 
     default:
-      throw new AssertionError("cannot convert type " + type);
+      throw new AssertionError("cannot convert type " + type + " " + type.op);
     }
   }
 
@@ -850,21 +875,38 @@ public class TypeResolver {
   private Ast.ValBind toValBind(TypeEnv env, Ast.FunBind funBind) {
     final List<Ast.Pat> vars;
     Ast.Exp exp;
+    Ast.Type returnType = null;
     if (funBind.matchList.size() == 1) {
-      exp = funBind.matchList.get(0).exp;
-      vars = funBind.matchList.get(0).patList;
+      final Ast.FunMatch funMatch = funBind.matchList.get(0);
+      exp = funMatch.exp;
+      vars = funMatch.patList;
+      returnType = funMatch.returnType;
     } else {
       final List<String> varNames =
           MapList.of(funBind.matchList.get(0).patList.size(),
               index -> "v" + index);
       vars = Lists.transform(varNames, v -> ast.idPat(Pos.ZERO, v));
       final List<Ast.Match> matchList = new ArrayList<>();
+      Pos prevReturnTypePos = null;
       for (Ast.FunMatch funMatch : funBind.matchList) {
         matchList.add(
             ast.match(funMatch.pos, patTuple(env, funMatch.patList),
                 funMatch.exp));
+        if (funMatch.returnType != null) {
+          if (returnType != null
+              && !returnType.equals(funMatch.returnType)) {
+            throw new CompileException("parameter or result constraints of "
+                + "clauses don't agree [tycon mismatch]", false,
+                prevReturnTypePos.plus(funMatch.pos));
+          }
+          returnType = funMatch.returnType;
+          prevReturnTypePos = funMatch.pos;
+        }
       }
       exp = ast.caseOf(Pos.ZERO, idTuple(varNames), matchList);
+    }
+    if (returnType != null) {
+      exp = ast.annotatedExp(exp.pos, exp, returnType);
     }
     final Pos pos = funBind.pos;
     for (Ast.Pat var : Lists.reverse(vars)) {
@@ -962,6 +1004,12 @@ public class TypeResolver {
       termMap.put(asPat.id, v);
       deducePatType(env, asPat.pat, termMap, null, v);
       return reg(pat, null, v);
+
+    case ANNOTATED_PAT:
+      final Ast.AnnotatedPat annotatedPat = (Ast.AnnotatedPat) pat;
+      final Type type = toType(annotatedPat.type, typeSystem);
+      deducePatType(env, annotatedPat.pat, termMap, null, v);
+      return reg(pat, v, toTerm(type, Subst.EMPTY));
 
     case TUPLE_PAT:
       final List<Unifier.Term> typeTerms = new ArrayList<>();

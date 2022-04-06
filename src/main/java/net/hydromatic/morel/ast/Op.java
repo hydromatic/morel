@@ -91,7 +91,7 @@ public enum Op {
   FORALL_TYPE,
 
   // annotated expression "e: t"
-  ANNOTATED_EXP(" : "),
+  ANNOTATED_EXP(" : ", 0),
 
   TIMES(" * ", 7),
   DIVIDE(" / ", 7),

@@ -248,6 +248,13 @@ public class MainTest {
             containsString(
                 "Encountered \" \"rec\" \"rec \"\" at line 1, column 19."));
 
+    // : is right-associative and low precedence
+    ml("1 : int : int").assertParseSame();
+    ml("(2 : int) + 1 : int").assertParseSame();
+    ml("(2 : int) + (1 : int) : int").assertParseSame();
+    ml("((2 : int) + (1 : int)) : int")
+        .assertParse("(2 : int) + (1 : int) : int");
+
     // pattern
     ml("let val (x, y) = (1, 2) in x + y end").assertParseSame();
     ml("let val w as (x, y) = (1, 2) in #1 w + #2 w + x + y end")
@@ -456,6 +463,10 @@ public class MainTest {
     ml("fn x => case x of 0 => 1 | _ => 2").assertType("int -> int");
     ml("fn x => case x of 0 => \"zero\" | _ => \"nonzero\"")
         .assertType("int -> string");
+    ml("fn x: int => true").assertType("int -> bool");
+    ml("fn x: int * int => true").assertType("int * int -> bool");
+    ml("fn x: int * string => (false, #2 x)")
+        .assertType("int * string -> bool * string");
   }
 
   @Test void testTypeFnTuple() {

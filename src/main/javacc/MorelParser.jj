@@ -761,9 +761,16 @@ Exp expression1() :
 Exp expression() :
 {
   Exp e;
+  Type t;
 }
 {
-  e = expression1() { return e; }
+  e = expression1()
+  (
+    <COLON> t = type() {
+      e = ast.annotatedExp(e.pos.plus(t.pos), e, t);
+    }
+  )*
+  { return e; }
 }
 
 /** List of expressions "e1 as id1, e2 as id2, e3 as id3". */
@@ -1077,13 +1084,16 @@ void funMatch(List<FunMatch> list) :
   Ast.Pat pat;
   final List<Ast.Pat> patList = new ArrayList<>();
   final Ast.Exp expression;
+  Ast.Type returnType = null;
 }
 {
   id = identifier()
   ( pat = atomPat() { patList.add(pat); } )+
+  [ <COLON> returnType = type() ]
   <EQ> expression = expression() {
     list.add(
-      ast.funMatch(id.pos.plus(expression.pos), id.name, patList, expression));
+        ast.funMatch(id.pos.plus(expression.pos), id.name, patList, returnType,
+            expression));
   }
 }
 
