@@ -78,13 +78,15 @@ License.
     <!-- Component and plugin versions, in alphabetical order. -->
     <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
     <calcite.version>1.30.0</calcite.version>
-    <!-- We support checkstyle 9.3 to 10.0 but 10.0 requires JDK 11 or higher. -->
+    <!-- We support (and test) Checkstyle as low as 9.3.
+         In JDK 8, you must add '-Dcheckstyle.version=9.3' because
+         Checkstyle 10 requires JDK 11 or higher. -->
     <checkstyle.version>10.2</checkstyle.version>
     <findbugs.version>3.0.2</findbugs.version>
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
-    <!-- We support guava 19.0 to 31.1-jre; 23.0 is just the default. -->
-    <guava.version>23.0</guava.version>
+    <!-- We support (and test) Guava as low as 19. -->
+    <guava.version>31.1-jre</guava.version>
     <hamcrest.version>2.2</hamcrest.version>
     <hsqldb.version>2.5.1</hsqldb.version>
     <java-diff.version>1.1.2</java-diff.version>
