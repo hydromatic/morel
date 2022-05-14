@@ -35,6 +35,8 @@ import org.apache.calcite.tools.RelBuilder;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
@@ -56,11 +58,22 @@ public class CalciteForeignValue implements ForeignValue {
   }
 
   public Type type(TypeSystem typeSystem) {
+    return toType(schema, typeSystem);
+  }
+
+  private Type toType(SchemaPlus schema, TypeSystem typeSystem) {
     final ImmutableSortedMap.Builder<String, Type> fields =
         ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-    schema.getTableNames().forEach(tableName ->
-        fields.put(convert(tableName),
-            toType(schema.getTable(tableName), typeSystem)));
+    schema.getTableNames().forEach(tableName -> {
+      Table table = requireNonNull(schema.getTable(tableName));
+      fields.put(convert(tableName), toType(table, typeSystem));
+    });
+    schema.getSubSchemaNames().forEach(subSchemaName -> {
+      final SchemaPlus subSchema =
+          requireNonNull(schema.getSubSchema(subSchemaName));
+      fields.put(convert(subSchemaName), toType(subSchema, typeSystem));
+    });
+
     return typeSystem.recordType(fields.build());
   }
 
@@ -83,26 +96,37 @@ public class CalciteForeignValue implements ForeignValue {
   }
 
   public Object value() {
-    final ImmutableList.Builder<List<Object>> fieldValues =
-        ImmutableList.builder();
+    return valueFor(schema);
+  }
+
+  private ImmutableList<Object> valueFor(SchemaPlus schema) {
+    final SortedMap<String, Object> fieldValues =
+        new TreeMap<>(RecordType.ORDERING);
     final List<String> names = Schemas.path(schema).names();
     schema.getTableNames().forEach(tableName -> {
       final RelBuilder b = calcite.relBuilder;
       b.scan(plus(names, tableName));
       final List<RexNode> exprList = b.peek().getRowType()
           .getFieldList().stream()
-          .map(f ->
-              Ord.of(f.getIndex(),
-                  lower ? f.getName().toLowerCase(Locale.ROOT) : f.getName()))
+          .map(f -> Ord.of(f.getIndex(), convert(f.getName())))
           .sorted(Map.Entry.comparingByValue())
           .map(p -> b.alias(b.field(p.i), p.e))
           .collect(Collectors.toList());
       b.project(exprList, ImmutableList.of(), true);
       final RelNode rel = b.build();
       final Converter<Object[]> converter = Converters.ofRow(rel.getRowType());
-      fieldValues.add(new RelList(rel, calcite.dataContext, converter));
+      fieldValues.put(convert(tableName),
+          new RelList(rel, calcite.dataContext, converter));
     });
-    return fieldValues.build();
+
+    // Recursively walk sub-schemas and add their tables to fieldValues
+    schema.getSubSchemaNames().forEach(subSchemaName -> {
+      final SchemaPlus subSchema =
+          requireNonNull(schema.getSubSchema(subSchemaName));
+      fieldValues.put(convert(subSchemaName),
+          valueFor(subSchema));
+    });
+    return ImmutableList.copyOf(fieldValues.values());
   }
 
   /** Returns a copy of a list with one element appended. */
