@@ -85,24 +85,45 @@ public class CalciteForeignValue implements ForeignValue {
   public Object value() {
     final ImmutableList.Builder<List<Object>> fieldValues =
         ImmutableList.builder();
+
+    pushSchemaTablesIntoFieldValues(schema, fieldValues);
+
+    // Recursively walk sub-schemas and add their tables to fieldValues
+    SchemaPlus currentSchema = schema;
+    while (true) {
+      final Set<String> subSchemaNames = requireNonNull(currentSchema).getSubSchemaNames();
+      if (subSchemaNames.isEmpty()) {
+        break;
+      }
+      for (String subSchemaName : subSchemaNames) {
+        final SchemaPlus subSchema = requireNonNull(currentSchema.getSubSchema(subSchemaName));
+        System.out.println("CalciteForeignValue - processing sub-schema: " + subSchemaName);
+        // TODO: How to create a new ML record type for each sub-schema?
+      }
+      currentSchema = currentSchema.getSubSchema(subSchemaNames.iterator().next());
+    }
+
+    return fieldValues.build();
+  }
+
+  private void pushSchemaTablesIntoFieldValues(SchemaPlus schema, ImmutableList.Builder<List<Object>> fieldValues) {
     final List<String> names = Schemas.path(schema).names();
     schema.getTableNames().forEach(tableName -> {
       final RelBuilder b = calcite.relBuilder;
       b.scan(plus(names, tableName));
       final List<RexNode> exprList = b.peek().getRowType()
-          .getFieldList().stream()
-          .map(f ->
-              Ord.of(f.getIndex(),
-                  lower ? f.getName().toLowerCase(Locale.ROOT) : f.getName()))
-          .sorted(Map.Entry.comparingByValue())
-          .map(p -> b.alias(b.field(p.i), p.e))
-          .collect(Collectors.toList());
+              .getFieldList().stream()
+              .map(f ->
+                      Ord.of(f.getIndex(),
+                              lower ? f.getName().toLowerCase(Locale.ROOT) : f.getName()))
+              .sorted(Map.Entry.comparingByValue())
+              .map(p -> b.alias(b.field(p.i), p.e))
+              .collect(Collectors.toList());
       b.project(exprList, ImmutableList.of(), true);
       final RelNode rel = b.build();
       final Converter<Object[]> converter = Converters.ofRow(rel.getRowType());
       fieldValues.add(new RelList(rel, calcite.dataContext, converter));
     });
-    return fieldValues.build();
   }
 
   /** Returns a copy of a list with one element appended. */
