@@ -1494,7 +1494,7 @@ public enum BuiltIn {
    * vector {@code vec}, from left to right (i.e., increasing indices), until
    * {@code f(x)} evaluates to {@code false}; it returns {@code false} if such
    * an {@code x} exists and {@code true} otherwise. It is equivalent to
-   * {@code not (exists (not o f ) vec))}. */
+   * {@code not (exists (not o f) vec))}. */
   VECTOR_ALL("Vector", "all", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.fnType(h.get(0), BOOL), h.vector(0), BOOL))),
