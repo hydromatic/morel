@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.foreign;
 
+import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
@@ -35,6 +36,8 @@ import org.apache.calcite.tools.RelBuilder;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
@@ -56,12 +59,25 @@ public class CalciteForeignValue implements ForeignValue {
   }
 
   public Type type(TypeSystem typeSystem) {
-    final ImmutableSortedMap.Builder<String, Type> fields =
-        ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-    schema.getTableNames().forEach(tableName ->
-        fields.put(convert(tableName),
-            toType(schema.getTable(tableName), typeSystem)));
-    return typeSystem.recordType(fields.build());
+      return type(schema, typeSystem);
+  }
+
+  public Type type(SchemaPlus schema, TypeSystem typeSystem) {
+      final ImmutableSortedMap.Builder<String, Type> fields =
+              ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+
+      schema.getTableNames().forEach(tableName ->
+              fields.put(convert(tableName),
+                      toType(schema.getTable(tableName), typeSystem)));
+
+      schema.getSubSchemaNames().forEach(subSchemaName -> {
+          final SchemaPlus subSchema = schema.getSubSchema(subSchemaName);
+          RecordLikeType recordType = (RecordLikeType) type(subSchema, typeSystem);
+          fields.put(convert(subSchemaName),
+                  recordType.argNameTypes().get(convert(subSchemaName)));
+      });
+
+      return typeSystem.recordType(fields.build());
   }
 
   private Type toType(Table table, TypeSystem typeSystem) {
@@ -97,8 +113,7 @@ public class CalciteForeignValue implements ForeignValue {
       }
       for (String subSchemaName : subSchemaNames) {
         final SchemaPlus subSchema = requireNonNull(currentSchema.getSubSchema(subSchemaName));
-        System.out.println("CalciteForeignValue - processing sub-schema: " + subSchemaName);
-        // TODO: How to create a new ML record type for each sub-schema?
+        pushSchemaTablesIntoFieldValues(subSchema, fieldValues);
       }
       currentSchema = currentSchema.getSubSchema(subSchemaNames.iterator().next());
     }
