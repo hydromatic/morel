@@ -48,9 +48,7 @@ public class Relationalizer extends EnvShuttle {
     super(typeSystem, env);
   }
 
-  /** Creates a Relationalizer.
-   *
-   * <p>If {@code analysis} is null, no variables are inlined. */
+  /** Creates a Relationalizer. */
   public static Relationalizer of(TypeSystem typeSystem, Environment env) {
     return new Relationalizer(typeSystem, env);
   }

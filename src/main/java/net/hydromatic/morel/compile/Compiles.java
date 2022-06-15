@@ -33,12 +33,12 @@ import net.hydromatic.morel.type.TypeSystem;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 
@@ -61,7 +61,8 @@ public abstract class Compiles {
    */
   public static CompiledStatement prepareStatement(TypeSystem typeSystem,
       Session session, Environment env, AstNode statement,
-      @Nullable Calcite calcite, Consumer<CompileException> warningConsumer) {
+      @Nullable Calcite calcite, Consumer<CompileException> warningConsumer,
+      Tracer tracer) {
     Ast.Decl decl;
     if (statement instanceof Ast.Exp) {
       decl = toValDecl((Ast.Exp) statement);
@@ -69,7 +70,7 @@ public abstract class Compiles {
       decl = (Ast.Decl) statement;
     }
     return prepareDecl(typeSystem, session, env, calcite, decl,
-        decl == statement, warningConsumer);
+        decl == statement, warningConsumer, tracer);
   }
 
   /**
@@ -79,14 +80,18 @@ public abstract class Compiles {
   private static CompiledStatement prepareDecl(TypeSystem typeSystem,
       Session session, Environment env, @Nullable Calcite calcite,
       Ast.Decl decl, boolean isDecl,
-      Consumer<CompileException> warningConsumer) {
+      Consumer<CompileException> warningConsumer, Tracer tracer) {
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, decl, typeSystem);
     final boolean hybrid = Prop.HYBRID.booleanValue(session.map);
     final int inlinePassCount =
         Math.max(Prop.INLINE_PASS_COUNT.intValue(session.map), 0);
+    final boolean relationalize =
+        Prop.RELATIONALIZE.booleanValue(session.map);
+
     final Resolver resolver = Resolver.of(resolved.typeMap, env);
     final Core.Decl coreDecl0 = resolver.toCore(resolved.node);
+    tracer.onCore(0, coreDecl0);
 
     // Check for exhaustive and redundant patterns, and throw errors or
     // warnings.
@@ -96,25 +101,37 @@ public abstract class Compiles {
       checkPatternCoverage(typeSystem, coreDecl0, warningConsumer);
     }
 
+    final Core.Decl coreDecl1 = coreDecl0;
+
     Core.Decl coreDecl;
+    tracer.onCore(1, coreDecl1);
     if (inlinePassCount == 0) {
       // Inlining is disabled. Use the Inliner in a limited mode.
       final Inliner inliner = Inliner.of(typeSystem, env, null);
-      coreDecl = coreDecl0.accept(inliner);
+      coreDecl = coreDecl1.accept(inliner);
     } else {
+      final @Nullable Relationalizer relationalizer =
+          relationalize ? Relationalizer.of(typeSystem, env)
+              : null;
+
       // Inline few times, or until we reach fixed point, whichever is sooner.
-      coreDecl = coreDecl0;
+      coreDecl = coreDecl1;
       for (int i = 0; i < inlinePassCount; i++) {
         final Analyzer.Analysis analysis =
             Analyzer.analyze(typeSystem, env, coreDecl);
         final Inliner inliner = Inliner.of(typeSystem, env, analysis);
-        final Core.Decl coreDecl1 = coreDecl;
-        coreDecl = coreDecl1.accept(inliner);
+        final Core.Decl coreDecl2 = coreDecl;
+        coreDecl = coreDecl2.accept(inliner);
+        if (relationalizer != null) {
+          coreDecl = coreDecl.accept(relationalizer);
+        }
         if (coreDecl == coreDecl1) {
           break;
         }
+        tracer.onCore(i + 2, coreDecl);
       }
     }
+    tracer.onCore(-1, coreDecl);
     final Compiler compiler;
     if (hybrid) {
       if (calcite == null) {

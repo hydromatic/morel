@@ -25,6 +25,8 @@ import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.compile.Tracer;
+import net.hydromatic.morel.compile.Tracers;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
@@ -480,9 +482,10 @@ public class Shell {
                 statement = smlParser.statementSemicolon();
                 final Environment env0 = env1;
                 final List<CompileException> warningList = new ArrayList<>();
+                final Tracer tracer = Tracers.empty();
                 final CompiledStatement compiled =
                     Compiles.prepareStatement(typeSystem, session, env0,
-                        statement, null, warningList::add);
+                        statement, null, warningList::add, tracer);
                 final Use shell = new Use(env0, bindingMap);
                 session.withShell(shell, outLines, session1 ->
                     compiled.eval(session1, env0, outLines, bindings::add));

@@ -82,10 +82,9 @@ public class InlineTest {
 
   @Test void testInlineFnUnit() {
     final String ml = "fun f () = String.size \"abc\"";
-    final String core = "fn v0 => #size String \"abc\"";
+    final String core = "val f = fn v0 => #size String \"abc\"";
     ml(ml)
-        .assertEval(whenAppliedTo(list(), is(3)))
-        .assertCoreString(is(core));
+        .assertEval(whenAppliedTo(list(), is(3))).assertCore(2, is(core));
   }
 
   /** We inline a variable (y), even though it is used twice, because its
@@ -97,10 +96,9 @@ public class InlineTest {
         + "  in\n"
         + "    y + 1 + y\n"
         + "  end";
-    final String core = "fn x => x + 1 + x";
+    final String core = "val f = fn x => x + 1 + x";
     ml(ml)
-        .assertEval(whenAppliedTo(2, is(5)))
-        .assertCoreString(is(core));
+        .assertEval(whenAppliedTo(2, is(5))).assertCore(2, is(core));
   }
 
   @Test void testInlineChained() {
@@ -174,14 +172,17 @@ public class InlineTest {
         + "  where isEven e.empno\n"
         + "  yield e.deptno\n"
         + "end";
-    final String core0 = "let "
+    final String core0 = "val it = "
+        + "let "
         + "val isEven = fn n => n mod 2 = 0 "
         + "in "
         + "from e in #emp scott "
         + "where isEven (#empno e) yield #deptno e end";
-    final String core1 = "from e in #emp scott "
+    final String core1 = "val it = "
+        + "from e in #emp scott "
         + "where let val n = #empno e in op mod (n, 2) = 0 end yield #deptno e";
-    final String core2 = "from e in #emp scott "
+    final String core2 = "val it = "
+        + "from e in #emp scott "
         + "where op mod (#empno e, 2) = 0 yield #deptno e";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
@@ -200,7 +201,8 @@ public class InlineTest {
         + "  where e.deptno = 10\n"
         + "  yield e.ename\n"
         + "end";
-    final String core0 = "let"
+    final String core0 = "val it = "
+        + "let"
         + " val evenEmp = fn x =>"
         + " from e in #emp scott"
         + " where #empno e mod 2 = 0 "
@@ -209,14 +211,16 @@ public class InlineTest {
         + " where #deptno e_1 = 10"
         + " yield #ename e_1 "
         + "end";
-    final String core1 = "from e_1 in "
+    final String core1 = "val it = "
+        + "from e_1 in "
         + "(let val x = 1"
         + " in from e in #emp scott"
         + " where op mod (#empno e, 2) = 0 "
         + "end)"
         + " where #deptno e_1 = 10"
         + " yield #ename e_1";
-    final String core2 = "from e in #emp scott "
+    final String core2 = "val it = "
+        + "from e in #emp scott "
         + "where op mod (#empno e, 2) = 0 "
         + "yield {e = e} "
         + "where #deptno e_1 = 10 "
@@ -232,13 +236,16 @@ public class InlineTest {
   @Test void testMapFilterToFrom() {
     final String ml = "map (fn e => (#empno e))\n"
         + "  (List.filter (fn e => (#deptno e) = 30) (#emp scott))";
-    final String core0 = "map (fn e_1 => #empno e_1) "
+    final String core0 = "val it = "
+        + "map (fn e_1 => #empno e_1) "
         + "(#filter List (fn e => #deptno e = 30) "
         + "(#emp scott))";
-    final String core1 = "from v0 in "
+    final String core1 = "val it = "
+        + "from v0 in "
         + "#filter List (fn e => #deptno e = 30) (#emp scott) "
         + "yield (fn e_1 => #empno e_1) v0";
-    final String core2 = "from v2 in #emp scott "
+    final String core2 = "val it = "
+        + "from v2 in #emp scott "
         + "where #deptno v2 = 30 "
         + "yield {v0 = v2} "
         + "yield #empno v0";
@@ -258,17 +265,20 @@ public class InlineTest {
         + "      (map (fn e => {x = #empno e, y = #deptno e, z = 15})\n"
         + "        (List.filter (fn e => #deptno e = 30)\n"
         + "          (#emp scott)))))";
-    final String core0 = "map (fn r_2 => r_2 + 100)"
+    final String core0 = "val it = "
+        + "map (fn r_2 => r_2 + 100)"
         + " (map (fn r_1 => #x r_1 + #z r_1)"
         + " (#filter List (fn r => #y r > #z r)"
         + " (map (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
         + " (#filter List (fn e => #deptno e = 30) (#emp scott)))))";
-    final String core1 = "from v0 in #map List (fn r_1 => #x r_1 + #z r_1)"
+    final String core1 = "val it = "
+        + "from v0 in #map List (fn r_1 => #x r_1 + #z r_1)"
         + " (#filter List (fn r => #y r > #z r)"
         + " (#map List (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
         + " (#filter List (fn e => #deptno e = 30) (#emp scott)))) "
         + "yield (fn r_2 => r_2 + 100) v0";
-    final String core2 = "from v6 in #emp scott "
+    final String core2 = "val it = "
+        + "from v6 in #emp scott "
         + "where #deptno v6 = 30 "
         + "yield {v5 = v6} "
         + "yield {v4 = {x = #empno v5, y = #deptno v5, z = 15}} "
@@ -288,12 +298,14 @@ public class InlineTest {
         + "  yield e.deptno)\n"
         + "where i > 10\n"
         + "yield i / 10";
-    final String core0 = "from i in"
+    final String core0 = "val it = "
+        + "from i in"
         + " (from e in #emp scott"
         + " yield #deptno e) "
         + "where i > 10 "
         + "yield i / 10";
-    final String core1 = "from e in #emp scott "
+    final String core1 = "val it = "
+        + "from e in #emp scott "
         + "yield {i = #deptno e} "
         + "where i > 10 "
         + "yield /:int (i, 10)";
@@ -307,10 +319,12 @@ public class InlineTest {
     final String ml = "from u in (from)\n"
         + "where 3 < 4\n"
         + "yield {u, v = 10}";
-    final String core0 = "from u in (from) "
+    final String core0 = "val it = "
+        + "from u in (from) "
         + "where 3 < 4 "
         + "yield {u = u, v = 10}";
-    final String core1 = "from "
+    final String core1 = "val it = "
+        + "from "
         + "yield {u = ()} "
         + "where 3 < 4 "
         + "yield {u = u, v = 10}";
