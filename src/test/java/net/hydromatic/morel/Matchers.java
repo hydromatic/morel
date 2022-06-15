@@ -200,8 +200,17 @@ public abstract class Matchers {
   }
 
   static Matcher<Throwable> throwsA(String message, Pos position) {
-    return new CustomTypeSafeMatcher<Throwable>("throwable [" + message
-        + "] at position [" + position + "]") {
+    return throwsA(Throwable.class, message, position);
+  }
+
+  static <T extends Throwable> Matcher<T> throwsA(Class<T> clazz,
+      String message, Pos position) {
+    return new TypeSafeMatcher<T>(clazz) {
+      @Override public void describeTo(Description description) {
+        description.appendText("throwable [" + message
+            + "] at position [" + position + "]");
+      }
+
       @Override protected boolean matchesSafely(Throwable item) {
         return item.toString().contains(message)
             && Objects.equals(positionString(item), position.toString());
@@ -217,10 +226,20 @@ public abstract class Matchers {
     };
   }
 
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  static <T extends Throwable> Matcher<T> throwsA(Class<T> clazz,
+      String message) {
+    return (Matcher) throwsA(clazz, is(message));
+  }
+
   static <T extends Throwable> Matcher<Throwable> throwsA(Class<T> clazz,
       Matcher<?> messageMatcher) {
-    return new CustomTypeSafeMatcher<Throwable>(clazz + " with message "
-        + messageMatcher) {
+    return new TypeSafeMatcher<Throwable>(clazz) {
+      @Override public void describeTo(Description description) {
+        description.appendText(clazz + " with message ")
+            .appendDescriptionOf(messageMatcher);
+      }
+
       @Override protected boolean matchesSafely(Throwable item) {
         return clazz.isInstance(item)
             && messageMatcher.matches(item.getMessage());

@@ -66,6 +66,11 @@ public enum Prop {
    * Default is 12. */
   PRINT_LENGTH("printLength", Integer.class, 12),
 
+  /** Boolean property "relationalize" is
+   * whether to convert to relational algebra.
+   * Default is false. */
+  RELATIONALIZE("relationalize", Boolean.class, false),
+
   /** Integer property "stringDepth" is
    * the length of strings at which ellipsis begins.
    *

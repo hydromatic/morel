@@ -24,6 +24,8 @@ import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.compile.Tracer;
+import net.hydromatic.morel.compile.Tracers;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.ForeignValue;
@@ -236,9 +238,10 @@ public class Main {
     void command(AstNode statement, Consumer<String> outLines) {
       try {
         final Environment env = env0.bindAll(bindingMap.values());
+        final Tracer tracer = Tracers.empty();
         final CompiledStatement compiled =
             Compiles.prepareStatement(main.typeSystem, main.session, env,
-                statement, null, e -> appendToOutput(e, outLines));
+                statement, null, e -> appendToOutput(e, outLines), tracer);
         final List<Binding> bindings = new ArrayList<>();
         compiled.eval(main.session, env, outLines, bindings::add);
         bindings.forEach(b -> this.bindingMap.put(b.id.name, b));
