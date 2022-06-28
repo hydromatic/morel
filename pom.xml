@@ -81,7 +81,7 @@ License.
     <!-- We support (and test) Checkstyle as low as 9.3.
          In JDK 8, you must add '-Dcheckstyle.version=9.3' because
          Checkstyle 10 requires JDK 11 or higher. -->
-    <checkstyle.version>10.3</checkstyle.version>
+    <checkstyle.version>10.3.1</checkstyle.version>
     <findbugs.version>3.0.2</findbugs.version>
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
