@@ -1502,7 +1502,6 @@ public class Ast {
         return null;
       }
       Set<Id> fields = ImmutableSet.of();
-      boolean record = true;
       final Set<Id> nextFields = new HashSet<>();
       for (FromStep step : steps) {
         switch (step.op) {
@@ -1517,7 +1516,6 @@ public class Ast {
             }
           });
           fields = ImmutableSet.copyOf(nextFields);
-          record = nextFields.size() != 1;
           break;
 
         case COMPUTE:
@@ -1535,7 +1533,6 @@ public class Ast {
           groupExps.forEach(pair -> nextFields.add(pair.left));
           aggregates.forEach(aggregate -> nextFields.add(aggregate.id));
           fields = nextFields;
-          record = fields.size() != 1;
           break;
 
         case YIELD:
@@ -1546,14 +1543,15 @@ public class Ast {
                     .stream()
                     .map(label -> ast.id(Pos.ZERO, label))
                     .collect(Collectors.toSet());
-            record = true;
-          } else {
-            record = false;
           }
           break;
         }
       }
-      if (!record) {
+
+      if (fields.size() == 1
+          && (steps.isEmpty()
+          || getLast(steps).op != Op.YIELD
+          || ((Yield) getLast(steps)).exp.op != Op.RECORD)) {
         return Iterables.getOnlyElement(fields);
       } else {
         final SortedMap<String, Exp> map = new TreeMap<>(ORDERING);

@@ -20,6 +20,7 @@ package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.FromBuilder;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
@@ -52,7 +53,8 @@ import java.util.Set;
 import java.util.function.Function;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.util.Static.append;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /** Converts AST expressions to Core expressions. */
 public class Resolver {
@@ -595,87 +597,12 @@ public class Resolver {
   }
 
   Core.Exp toCore(Ast.From from) {
-    final List<Binding> bindings = new ArrayList<>();
     final Type type = typeMap.getType(from);
-    if (from.isCompute()) {
-      final ListType listType = typeMap.typeSystem.listType(type);
-      final Core.From coreFrom =
-          fromStepToCore(bindings, listType, from.steps,
-              ImmutableList.of());
-      return core.only(typeMap.typeSystem, from.pos, coreFrom);
-    } else {
-      return fromStepToCore(bindings, (ListType) type, from.steps,
-          ImmutableList.of());
-    }
-  }
-
-  private Core.From fromStepToCore(List<Binding> bindings, ListType type,
-      List<Ast.FromStep> steps, List<Core.FromStep> coreSteps) {
-    final Resolver r = withEnv(bindings);
-    if (steps.isEmpty()) {
-      return core.from(type, coreSteps);
-    }
-    final Ast.FromStep step = steps.get(0);
-    switch (step.op) {
-    case SCAN:
-    case INNER_JOIN:
-      final Ast.Scan scan = (Ast.Scan) step;
-      final Core.Exp coreExp = r.toCore(scan.exp);
-      final ListType listType = (ListType) coreExp.type;
-      final Core.Pat corePat = r.toCore(scan.pat, listType.elementType);
-      final Op op = step.op == Op.SCAN
-          ? Op.INNER_JOIN
-          : step.op;
-      final List<Binding> bindings2 = new ArrayList<>(bindings);
-      Compiles.acceptBinding(typeMap.typeSystem, corePat, bindings2);
-      Core.Exp coreCondition = scan.condition == null
-          ? core.boolLiteral(true)
-          : r.withEnv(bindings2).toCore(scan.condition);
-      final Core.Scan coreScan =
-          core.scan(op, bindings2, corePat, coreExp, coreCondition);
-      return fromStepToCore(coreScan.bindings, type,
-          Util.skip(steps), append(coreSteps, coreScan));
-
-    case WHERE:
-      final Ast.Where where = (Ast.Where) step;
-      final Core.Where coreWhere =
-          core.where(bindings, r.toCore(where.exp));
-      return fromStepToCore(coreWhere.bindings, type,
-          Util.skip(steps), append(coreSteps, coreWhere));
-
-    case YIELD:
-      final Ast.Yield yield = (Ast.Yield) step;
-      final Core.Yield coreYield =
-          core.yield_(typeMap.typeSystem, r.toCore(yield.exp));
-      return fromStepToCore(coreYield.bindings, type,
-          Util.skip(steps), append(coreSteps, coreYield));
-
-    case ORDER:
-      final Ast.Order order = (Ast.Order) step;
-      final Core.Order coreOrder =
-          core.order(bindings, transform(order.orderItems, r::toCore));
-      return fromStepToCore(coreOrder.bindings, type,
-          Util.skip(steps), append(coreSteps, coreOrder));
-
-    case GROUP:
-    case COMPUTE:
-      final Ast.Group group = (Ast.Group) step;
-      final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExps =
-          ImmutableSortedMap.naturalOrder();
-      final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates =
-          ImmutableSortedMap.naturalOrder();
-      Pair.forEach(group.groupExps, (id, exp) ->
-          groupExps.put(toCorePat(id), r.toCore(exp)));
-      group.aggregates.forEach(aggregate ->
-          aggregates.put(toCorePat(aggregate.id), r.toCore(aggregate)));
-      final Core.Group coreGroup =
-          core.group(groupExps.build(), aggregates.build());
-      return fromStepToCore(coreGroup.bindings, type,
-          Util.skip(steps), append(coreSteps, coreGroup));
-
-    default:
-      throw new AssertionError("unknown step type " + step.op);
-    }
+    final Core.Exp coreFrom = new FromResolver().run(from);
+    checkArgument(coreFrom.type.equals(type),
+        "Conversion to core did not preserve type: expected [%s] "
+            + "actual [%s] from [%s]", type, coreFrom.type, coreFrom);
+    return coreFrom;
   }
 
   private Core.Aggregate toCore(Ast.Aggregate aggregate) {
@@ -836,6 +763,75 @@ public class Resolver {
      */
     public Core.DatatypeDecl toDecl() {
       return core.datatypeDecl(dataTypes);
+    }
+  }
+
+  /** Visitor that converts {@link Ast.From} to {@link Core.From} by
+   * handling each subtype of {@link Ast.FromStep} calling
+   * {@link FromBuilder} appropriately. */
+  private class FromResolver extends Visitor {
+    final FromBuilder fromBuilder = core.fromBuilder(typeMap.typeSystem);
+
+    Core.Exp run(Ast.From from) {
+      from.steps.forEach(this::accept);
+      final Core.Exp e = fromBuilder.buildSimplify();
+      if (from.isCompute()) {
+        return core.only(typeMap.typeSystem, from.pos, e);
+      } else {
+        return e;
+      }
+    }
+
+    @Override protected void visit(Ast.Scan scan) {
+      final Resolver r = withEnv(fromBuilder.bindings());
+      final Core.Exp coreExp;
+      final Core.Pat corePat;
+      switch (scan.exp.op) {
+      default:
+        coreExp = r.toCore(scan.exp);
+        final ListType listType = (ListType) coreExp.type;
+        corePat = r.toCore(scan.pat, listType.elementType);
+      }
+      final Op op = scan.op == Op.SCAN ? Op.INNER_JOIN
+          : scan.op;
+      final List<Binding> bindings2 = new ArrayList<>(fromBuilder.bindings());
+      Compiles.acceptBinding(typeMap.typeSystem, corePat, bindings2);
+      Core.Exp coreCondition = scan.condition == null
+          ? core.boolLiteral(true)
+          : r.withEnv(bindings2).toCore(scan.condition);
+      fromBuilder.scan(corePat, coreExp, coreCondition);
+    }
+
+    @Override protected void visit(Ast.Where where) {
+      final Resolver r = withEnv(fromBuilder.bindings());
+      fromBuilder.where(r.toCore(where.exp));
+    }
+
+    @Override protected void visit(Ast.Yield yield) {
+      final Resolver r = withEnv(fromBuilder.bindings());
+      fromBuilder.yield_(r.toCore(yield.exp));
+    }
+
+    @Override protected void visit(Ast.Order order) {
+      final Resolver r = withEnv(fromBuilder.bindings());
+      fromBuilder.order(transform(order.orderItems, r::toCore));
+    }
+
+    @Override protected void visit(Ast.Compute compute) {
+      visit((Ast.Group) compute);
+    }
+
+    @Override protected void visit(Ast.Group group) {
+      final Resolver r = withEnv(fromBuilder.bindings());
+      final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExps =
+          ImmutableSortedMap.naturalOrder();
+      final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates =
+          ImmutableSortedMap.naturalOrder();
+      Pair.forEach(group.groupExps, (id, exp) ->
+          groupExps.put(toCorePat(id), r.toCore(exp)));
+      group.aggregates.forEach(aggregate ->
+          aggregates.put(toCorePat(aggregate.id), r.toCore(aggregate)));
+      fromBuilder.group(groupExps.build(), aggregates.build());
     }
   }
 

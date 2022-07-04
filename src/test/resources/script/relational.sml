@@ -64,6 +64,10 @@ from e in emps yield {deptno = e.deptno, one = 1};
 
 from e in emps yield {e.deptno, one = 1};
 
+from e in emps yield {x = e.deptno} where x > 10 yield {y = x} where y < 30;
+
+from e in emps yield {x = e.deptno} where x > 10 yield {x = x} where x < 30;
+
 from e in emps yield ((#id e) + (#deptno e));
 
 from e in emps yield (e.id + e.deptno);
@@ -104,6 +108,11 @@ from e in emps
 
 from e in emps
   yield {e.deptno}
+  order deptno desc
+  yield {deptno};
+
+from e in emps
+  yield {e.deptno}
   order deptno desc;
 
 (*) 'yield' followed by 'order'
@@ -123,6 +132,12 @@ from e in emps
   yield {d = e.deptno}
   where d > 10;
 
+(*) singleton record 'yield' followed by 'where' followed by 'yield'
+from e in emps
+  yield {d = e.deptno}
+  where d > 10
+  yield {d = d};
+
 (*) singleton record 'yield' followed by singleton 'group'
 from e in emps
   yield {d = e.deptno}
@@ -139,6 +154,12 @@ from e in emps
 from e in emps
   yield {d = e.deptno}
   order d desc;
+
+(*) singleton record 'yield' followed by 'order' then singleton 'yield'
+from e in emps
+  yield {d = e.deptno}
+  order d desc
+  yield {d = d};
 
 (*) singleton record 'yield' followed by 'order' then 'yield'
 from e in emps
@@ -732,6 +753,15 @@ from;
 from where true;
 
 from where false;
+
+from i in (from j in (from));
+
+from i in (from),
+    j in (from);
+
+from i in (from),
+    j in (from)
+  yield j;
 
 let
   val b = 1 < 2

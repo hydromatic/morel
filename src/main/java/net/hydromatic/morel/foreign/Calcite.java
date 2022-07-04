@@ -99,7 +99,9 @@ public class Calcite {
     final RelNode rel2 = program.run(planner, rel, traitSet,
         ImmutableList.of(), ImmutableList.of());
 
-    return new CalciteCode(dataContext, rel2, type, env);
+    final Function<Enumerable<Object[]>, List<Object>> converter =
+        Converters.fromEnumerable(rel, type);
+    return new CalciteCode(dataContext, rel2, env, converter);
   }
 
   /** Copied from {@link Programs}. */
@@ -173,12 +175,12 @@ public class Calcite {
     final Environment env;
     final Function<Enumerable<Object[]>, List<Object>> converter;
 
-    CalciteCode(DataContext dataContext, RelNode rel, Type type,
-        Environment env) {
+    CalciteCode(DataContext dataContext, RelNode rel, Environment env,
+        Function<Enumerable<Object[]>, List<Object>> converter) {
       this.dataContext = dataContext;
       this.rel = rel;
       this.env = env;
-      converter = Converters.fromEnumerable(rel, type);
+      this.converter = converter;
     }
 
     // to help with debugging
