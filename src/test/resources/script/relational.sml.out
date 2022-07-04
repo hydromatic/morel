@@ -126,6 +126,14 @@ val it =
   : {deptno:int, one:int} list
 
 
+from e in emps yield {x = e.deptno} where x > 10 yield {y = x} where y < 30;
+val it = [20] : int list
+
+
+from e in emps yield {x = e.deptno} where x > 10 yield {x = x} where x < 30;
+val it = [20] : int list
+
+
 from e in emps yield ((#id e) + (#deptno e));
 val it = [110,121,132,133] : int list
 
@@ -193,8 +201,15 @@ val it =
 
 from e in emps
   yield {e.deptno}
-  order deptno desc;
+  order deptno desc
+  yield {deptno};
 val it = [{deptno=30},{deptno=30},{deptno=20},{deptno=10}] : {deptno:int} list
+
+
+from e in emps
+  yield {e.deptno}
+  order deptno desc;
+val it = [30,30,20,10] : int list
 
 
 (*) 'yield' followed by 'order'
@@ -223,6 +238,14 @@ val it =
 from e in emps
   yield {d = e.deptno}
   where d > 10;
+val it = [20,30,30] : int list
+
+
+(*) singleton record 'yield' followed by 'where' followed by 'yield'
+from e in emps
+  yield {d = e.deptno}
+  where d > 10
+  yield {d = d};
 val it = [{d=20},{d=30},{d=30}] : {d:int} list
 
 
@@ -246,6 +269,14 @@ val it = [{c=1,d=10},{c=1,d=20},{c=2,d=30}] : {c:int, d:int} list
 from e in emps
   yield {d = e.deptno}
   order d desc;
+val it = [30,30,20,10] : int list
+
+
+(*) singleton record 'yield' followed by 'order' then singleton 'yield'
+from e in emps
+  yield {d = e.deptno}
+  order d desc
+  yield {d = d};
 val it = [{d=30},{d=30},{d=20},{d=10}] : {d:int} list
 
 
@@ -1163,6 +1194,21 @@ from where false;
 val it = [] : unit list
 
 
+from i in (from j in (from));
+val it = [()] : unit list
+
+
+from i in (from),
+    j in (from);
+val it = [{i=(),j=()}] : {i:unit, j:unit} list
+
+
+from i in (from),
+    j in (from)
+  yield j;
+val it = [()] : unit list
+
+
 let
   val b = 1 < 2
 in
@@ -1670,7 +1716,7 @@ val it = ["Shaggy","Scooby"] : string list
 
 Sys.plan();
 val it =
-  "from(sink join(op join, pat e_2, exp from(sink join(op join, pat e, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e)), constant(30)), sink collect(get(name e))))), sink collect(apply(fnValue nth:2, argCode get(name e)))))"
+  "from(sink join(op join, pat e, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e)), constant(30)), sink collect(apply(fnValue nth:2, argCode get(name e))))))"
   : string
 
 

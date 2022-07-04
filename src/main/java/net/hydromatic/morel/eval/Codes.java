@@ -24,6 +24,7 @@ import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
+import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -47,6 +48,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 import org.apache.calcite.runtime.FlatLists;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -77,7 +79,8 @@ public abstract class Codes {
 
   /** Describes a {@link Code}. */
   public static String describe(Code code) {
-    return code.describe(new DescriberImpl()).toString();
+    final Code code2 = Codes.strip(code);
+    return code2.describe(new DescriberImpl()).toString();
   }
 
   /** Value of {@code NONE}.
@@ -311,6 +314,18 @@ public abstract class Codes {
   /** @see BuiltIn#INTERACT_USE */
   private static final Applicable INTERACT_USE = new InteractUse(Pos.ZERO);
 
+  /** Removes wrappers, in particular the one due to
+   * {@link #wrapRelList(Code)}. */
+  public static Code strip(Code code) {
+    for (;;) {
+      if (code instanceof WrapRelList) {
+        code = ((WrapRelList) code).code;
+      } else {
+        return code;
+      }
+    }
+  }
+
   /** Implements {@link BuiltIn#INTERACT_USE}. */
   private static class InteractUse extends ApplicableImpl
       implements Positioned {
@@ -436,6 +451,10 @@ public abstract class Codes {
 
   public static Code tuple(Iterable<? extends Code> codes) {
     return new TupleCode(ImmutableList.copyOf(codes));
+  }
+
+  public static Code wrapRelList(Code code) {
+    return new WrapRelList(code);
   }
 
   /** Returns an applicable that constructs an instance of a datatype.
@@ -3548,6 +3567,40 @@ public abstract class Codes {
       return fnValue.apply(env, arg);
     }
   }
+
+  /** A {@code Code} that evaluates a {@code Code} and if the result is a
+   * {@link net.hydromatic.morel.foreign.RelList}, wraps it in a different
+   * kind of list. */
+  static class WrapRelList implements Code {
+    public final Code code;
+
+    WrapRelList(Code code) {
+      this.code = code;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("wrapRelList", d -> d.arg("code", code));
+    }
+
+    @Override public Object eval(EvalEnv env) {
+      final Object arg = code.eval(env);
+      if (arg instanceof RelList) {
+        final RelList list = (RelList) arg;
+        return new AbstractList<Object>() {
+          @Override public Object get(int index) {
+            return list.get(index);
+          }
+
+          @Override public int size() {
+            return list.size();
+          }
+        };
+      }
+      return arg;
+    }
+  }
+
+
 
   /** An {@link Applicable} whose position can be changed.
    *

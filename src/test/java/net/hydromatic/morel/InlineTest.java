@@ -222,7 +222,6 @@ public class InlineTest {
     final String core2 = "val it = "
         + "from e in #emp scott "
         + "where op mod (#empno e, 2) = 0 "
-        + "yield {e = e} "
         + "where #deptno e_1 = 10 "
         + "yield #ename e_1";
     ml(ml)
@@ -245,9 +244,9 @@ public class InlineTest {
         + "#filter List (fn e => #deptno e = 30) (#emp scott) "
         + "yield (fn e_1 => #empno e_1) v0";
     final String core2 = "val it = "
-        + "from v2 in #emp scott "
-        + "where #deptno v2 = 30 "
-        + "yield {v0 = v2} "
+        + "from v3 in #emp scott "
+        + "where #deptno v3 = 30 "
+        + "yield {v0 = v3} "
         + "yield #empno v0";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
@@ -278,13 +277,13 @@ public class InlineTest {
         + " (#filter List (fn e => #deptno e = 30) (#emp scott)))) "
         + "yield (fn r_2 => r_2 + 100) v0";
     final String core2 = "val it = "
-        + "from v6 in #emp scott "
-        + "where #deptno v6 = 30 "
-        + "yield {v5 = v6} "
-        + "yield {v4 = {x = #empno v5, y = #deptno v5, z = 15}} "
-        + "where #y v4 > #z v4 "
-        + "yield {v2 = v4} "
-        + "yield {v0 = #x v2 + #z v2} "
+        + "from v13 in #emp scott "
+        + "where #deptno v13 = 30 "
+        + "yield {v10 = v13} "
+        + "yield {v7 = {x = #empno v10, y = #deptno v10, z = 15}} "
+        + "where #y v7 > #z v7 "
+        + "yield {v3 = v7} "
+        + "yield {v0 = #x v3 + #z v3} "
         + "yield v0 + 100";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
@@ -299,9 +298,8 @@ public class InlineTest {
         + "where i > 10\n"
         + "yield i / 10";
     final String core0 = "val it = "
-        + "from i in"
-        + " (from e in #emp scott"
-        + " yield #deptno e) "
+        + "from e in #emp scott "
+        + "yield {i = #deptno e} "
         + "where i > 10 "
         + "yield i / 10";
     final String core1 = "val it = "

@@ -1767,10 +1767,19 @@ public class MainTest {
     final String ml = "from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
         + "  yield {z=e.x}\n"
         + "  where z > 2\n"
-        + "  order z desc";
+        + "  order z desc\n"
+        + "  yield {z=z}";
     ml(ml)
         .assertType("{z:int} list")
         .assertEvalIter(equalsOrdered(list(5), list(3)));
+
+    final String ml2 = "from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
+        + "  yield {z=e.x}\n"
+        + "  where z > 2\n"
+        + "  order z desc";
+    ml(ml2)
+        .assertType("int list")
+        .assertEvalIter(equalsOrdered(5, 3));
   }
 
   /** Analogous to SQL "CROSS APPLY" which calls a table-valued function

@@ -482,13 +482,17 @@ public class Core {
    * value. What would be an {@code Id} in Ast is often a {@link String} in
    * Core; for example, compare {@link Ast.Con0Pat#tyCon}
    * with {@link Con0Pat#tyCon}. */
-  public static class Id extends Exp {
+  public static class Id extends Exp implements Comparable<Id> {
     public final NamedPat idPat;
 
     /** Creates an Id. */
     Id(NamedPat idPat) {
       super(Pos.ZERO, Op.ID, idPat.type);
       this.idPat = requireNonNull(idPat);
+    }
+
+    @Override public int compareTo(Id o) {
+      return idPat.compareTo(o.idPat);
     }
 
     @Override public int hashCode() {
@@ -768,6 +772,17 @@ public class Core {
       this.args = ImmutableList.copyOf(args);
     }
 
+    @Override public boolean equals(Object o) {
+      return this == o
+          || o instanceof Tuple
+          && args.equals(((Tuple) o).args)
+          && type.equals(((Tuple) o).type);
+    }
+
+    @Override public int hashCode() {
+      return Objects.hash(args, type);
+    }
+
     @Override public RecordLikeType type() {
       return (RecordLikeType) type;
     }
@@ -977,6 +992,16 @@ public class Core {
       this.steps = requireNonNull(steps);
     }
 
+    @Override public boolean equals(Object o) {
+      return this == o
+          || o instanceof From
+          && steps.equals(((From) o).steps);
+    }
+
+    @Override public int hashCode() {
+      return steps.hashCode();
+    }
+
     @Override public ListType type() {
       return (ListType) type;
     }
@@ -1002,7 +1027,7 @@ public class Core {
     public Exp copy(TypeSystem typeSystem, List<FromStep> steps) {
       return steps.equals(this.steps)
           ? this
-          : core.from(type(), steps);
+          : core.fromBuilder(typeSystem).addAll(steps).build();
     }
   }
 

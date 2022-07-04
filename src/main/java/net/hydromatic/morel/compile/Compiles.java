@@ -21,6 +21,7 @@ package net.hydromatic.morel.compile;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.eval.Prop;
@@ -33,6 +34,7 @@ import net.hydromatic.morel.type.TypeSystem;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
@@ -141,7 +143,25 @@ public abstract class Compiles {
     } else {
       compiler = new Compiler(typeSystem);
     }
-    return compiler.compileStatement(env, coreDecl, isDecl);
+
+    // If the user wrote "scott.depts" we will print "<relation>";
+    // but if the user wrote "from d in scott.depts", they would like to see
+    // the full contents. Those two expressions may have been simplified to the
+    // same Core.Exp, but in the latter case we will 'wrap' the RelList value
+    // as a regular List so that it is printed in full.
+    final ImmutableSet.Builder<Core.Exp> queriesToWrap = ImmutableSet.builder();
+    if (resolved.originalNode instanceof Ast.ValDecl
+        && coreDecl instanceof Core.NonRecValDecl) {
+      final Ast.ValDecl valDecl = (Ast.ValDecl) resolved.originalNode;
+      final Ast.ValBind valBind = valDecl.valBinds.get(0);
+      final Core.NonRecValDecl nonRecValDecl = (Core.NonRecValDecl) coreDecl;
+      if (valBind.exp.op == Op.FROM) {
+        queriesToWrap.add(nonRecValDecl.exp);
+      }
+    }
+
+    return compiler.compileStatement(env, coreDecl, isDecl,
+        queriesToWrap.build());
   }
 
   /** Checks for exhaustive and redundant patterns, and throws if there are
