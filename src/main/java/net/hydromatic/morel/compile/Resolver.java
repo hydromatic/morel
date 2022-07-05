@@ -602,9 +602,7 @@ public class Resolver {
       final Core.From coreFrom =
           fromStepToCore(bindings, listType, from.steps,
               ImmutableList.of());
-      return core.apply(from.pos, type,
-          core.functionLiteral(typeMap.typeSystem, BuiltIn.RELATIONAL_ONLY),
-          coreFrom);
+      return core.only(typeMap.typeSystem, from.pos, coreFrom);
     } else {
       return fromStepToCore(bindings, (ListType) type, from.steps,
           ImmutableList.of());

@@ -23,6 +23,9 @@ import java.util.SortedMap;
 /** A type that has named fields, as a record type does. */
 public interface RecordLikeType extends Type {
   SortedMap<String, Type> argNameTypes();
+
+  /** Returns the type of the {@code i}th field, or throws. */
+  Type argType(int i);
 }
 
 // End RecordLikeType.java

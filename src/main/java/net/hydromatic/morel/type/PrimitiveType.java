@@ -38,6 +38,10 @@ public enum PrimitiveType implements RecordLikeType {
       // "unit" behaves like a record/tuple type with no fields
       return ImmutableSortedMap.of();
     }
+
+    @Override public Type argType(int i) {
+      throw new IndexOutOfBoundsException();
+    }
   };
 
   /** The name in the language, e.g. {@code bool}. */
@@ -65,6 +69,10 @@ public enum PrimitiveType implements RecordLikeType {
   }
 
   @Override public SortedMap<String, Type> argNameTypes() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override public Type argType(int i) {
     throw new UnsupportedOperationException();
   }
 }

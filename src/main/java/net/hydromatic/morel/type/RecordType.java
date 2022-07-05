@@ -22,6 +22,7 @@ import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.util.Ord;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 
@@ -42,6 +43,11 @@ public class RecordType extends BaseType implements RecordLikeType {
 
   @Override public SortedMap<String, Type> argNameTypes() {
     return argNameTypes;
+  }
+
+  @Override public Type argType(int i) {
+    // No copy is made: values() is already a list.
+    return ImmutableList.copyOf(argNameTypes.values()).get(i);
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {

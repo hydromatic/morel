@@ -102,9 +102,9 @@ public class TypeVar implements Type {
     return Op.TY_VAR;
   }
 
-  @Override public TypeVar copy(TypeSystem typeSystem,
+  @Override public Type copy(TypeSystem typeSystem,
       UnaryOperator<Type> transform) {
-    return this;
+    return transform.apply(this);
   }
 
   @Override public Type substitute(TypeSystem typeSystem,
