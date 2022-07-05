@@ -1043,9 +1043,9 @@ public class Core {
         // SCAN and CROSS_JOIN are valid in ast, not core.
         throw new AssertionError("not a join type " + op);
       }
-      this.pat = pat;
-      this.exp = exp;
-      this.condition = condition;
+      this.pat = requireNonNull(pat, "pat");
+      this.exp = requireNonNull(exp, "exp");
+      this.condition = requireNonNull(condition, "condition");
     }
 
     @Override public Scan accept(Shuttle shuttle) {
@@ -1093,7 +1093,7 @@ public class Core {
 
     Where(ImmutableList<Binding> bindings, Exp exp) {
       super(Op.WHERE, bindings);
-      this.exp = exp;
+      this.exp = requireNonNull(exp, "exp");
     }
 
     @Override public Where accept(Shuttle shuttle) {
@@ -1262,6 +1262,14 @@ public class Core {
       this.arg = arg;
     }
 
+    /** Returns the argument list (assuming that the arguments are a tuple
+     * or record).
+     *
+     * @throws ClassCastException if argument is not a tuple */
+    public List<Exp> args() {
+      return ((Tuple) arg).args;
+    }
+
     @Override public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
@@ -1288,8 +1296,7 @@ public class Core {
         // Convert built-ins to infix operators.
         final Op op = Resolver.BUILT_IN_OP_MAP.get(builtIn);
         if (op != null) {
-          final List<Exp> args = ((Tuple) arg).args;
-          return w.infix(left, args.get(0), op, args.get(1), right);
+          return w.infix(left, args().get(0), op, args().get(1), right);
         }
       }
       return w.infix(left, fn, op, arg, right);

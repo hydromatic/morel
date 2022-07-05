@@ -49,6 +49,10 @@ public class TupleType extends BaseType implements RecordLikeType {
     return map.build();
   }
 
+  @Override public Type argType(int i) {
+    return argTypes.get(i);
+  }
+
   public <R> R accept(TypeVisitor<R> typeVisitor) {
     return typeVisitor.visit(this);
   }

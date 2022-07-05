@@ -24,10 +24,12 @@ import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
+import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
@@ -164,6 +166,13 @@ public enum CoreBuilder {
     }
     throw new IllegalArgumentException("no field '" + fieldName + "' in type '"
         + recordType + "'");
+  }
+
+  public Core.RecordSelector recordSelector(TypeSystem typeSystem,
+      RecordLikeType recordType, int slot) {
+    final Type fieldType = recordType.argType(slot);
+    final FnType fnType = typeSystem.fnType(recordType, fieldType);
+    return recordSelector(fnType, slot);
   }
 
   public Core.RecordSelector recordSelector(FnType fnType, int slot) {
@@ -452,6 +461,100 @@ public enum CoreBuilder {
       bindings.add(Binding.of(core.idPat(exp.type, typeSystem.nameGenerator)));
     }
     return yield_(bindings, exp);
+  }
+
+  // Short-hands
+
+  /** Creates a reference to the {@code slot}th field of an expression,
+   * "{@code #slot exp}". The expression's type must be record or tuple. */
+  public Core.Exp field(TypeSystem typeSystem, Core.Exp exp, int slot) {
+    final Core.RecordSelector selector =
+        recordSelector(typeSystem, (RecordLikeType) exp.type, slot);
+    return apply(exp.pos, selector.type().resultType, selector, exp);
+  }
+
+  /** Creates a list. */
+  public Core.Exp list(TypeSystem typeSystem, Type elementType,
+      List<Core.Exp> args) {
+    final Core.Literal literal = functionLiteral(typeSystem, BuiltIn.Z_LIST);
+    final ListType listType = typeSystem.listType(elementType);
+    return apply(Pos.ZERO, listType, literal,
+        core.tuple(typeSystem, null, args));
+  }
+
+  /** Creates a record. */
+  public Core.Exp record(TypeSystem typeSystem,
+      Map<String, ? extends Core.Exp> nameExps) {
+    final ImmutableSortedMap<String, Core.Exp> sortedNameExps =
+        ImmutableSortedMap.<String, Core.Exp>orderedBy(RecordType.ORDERING)
+            .putAll(nameExps)
+            .build();
+    final SortedMap<String, Type> argNameTypes =
+        new TreeMap<>(RecordType.ORDERING);
+    sortedNameExps.forEach((name, exp) -> argNameTypes.put(name, exp.type));
+    return tuple(typeSystem, typeSystem.recordType(argNameTypes),
+        sortedNameExps.values());
+  }
+
+  /** Calls a built-in function. */
+  private Core.Apply call(TypeSystem typeSystem, BuiltIn builtIn,
+      Core.Exp... args) {
+    final Core.Literal literal = functionLiteral(typeSystem, builtIn);
+    final FnType fnType = (FnType) literal.type;
+    return apply(Pos.ZERO, fnType.resultType, literal,
+        args(fnType.paramType, args));
+  }
+
+  /** Calls a built-in function with one type parameter. */
+  private Core.Apply call(TypeSystem typeSystem, BuiltIn builtIn, Type type,
+      Pos pos, Core.Exp... args) {
+    final Core.Literal literal = functionLiteral(typeSystem, builtIn);
+    final ForallType forallType = (ForallType) literal.type;
+    final FnType fnType = (FnType) typeSystem.apply(forallType, type);
+    return apply(pos, fnType.resultType, literal,
+        args(fnType.paramType, args));
+  }
+
+  private Core.Exp args(Type paramType, Core.Exp[] args) {
+    return args.length == 1
+        ? args[0]
+        : tuple((TupleType) paramType, args);
+  }
+
+  public Core.Exp equal(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
+    return call(typeSystem, BuiltIn.OP_EQ, a0.type, Pos.ZERO, a0, a1);
+  }
+
+  public Core.Exp lessThan(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
+    return call(typeSystem, BuiltIn.OP_LT, a0.type, Pos.ZERO, a0, a1);
+  }
+
+  public Core.Exp greaterThan(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
+    return call(typeSystem, BuiltIn.OP_GT, a0.type, Pos.ZERO, a0, a1);
+  }
+
+  public Core.Exp elem(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
+    if (a1.op == Op.APPLY
+        && ((Core.Apply) a1).fn.op == Op.FN_LITERAL
+        && ((Core.Literal) ((Core.Apply) a1).fn).value == BuiltIn.Z_LIST
+        && ((Core.Apply) a1).args().size() == 1) {
+      // If "a1 = [x]", rather than "a0 elem [x]", generate "a0 = x"
+      return equal(typeSystem, a0, ((Core.Apply) a1).args().get(0));
+    }
+    return call(typeSystem, BuiltIn.OP_ELEM, a0.type, Pos.ZERO, a0, a1);
+  }
+
+  public Core.Exp andAlso(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
+    return call(typeSystem, BuiltIn.Z_ANDALSO, a0, a1);
+  }
+
+  public Core.Exp orElse(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
+    return call(typeSystem, BuiltIn.Z_ORELSE, a0, a1);
+  }
+
+  public Core.Exp only(TypeSystem typeSystem, Pos pos, Core.Exp a0) {
+    return call(typeSystem, BuiltIn.RELATIONAL_ONLY,
+        ((ListType) a0.type).elementType, pos, a0);
   }
 
 }

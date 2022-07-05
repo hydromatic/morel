@@ -54,11 +54,15 @@ public interface Type {
    * parameters. */
   default Type substitute(TypeSystem typeSystem, List<? extends Type> types,
       TypeSystem.Transaction transaction) {
-    if (!types.isEmpty()) {
-      throw new IllegalArgumentException("too many type parameters, "
-          + types + " (expected 0)");
+    if (types.isEmpty()) {
+      return this;
     }
-    return this;
+    return accept(
+        new TypeShuttle(typeSystem) {
+          @Override public Type visit(TypeVar typeVar) {
+            return types.get(typeVar.ordinal);
+          }
+        });
   }
 
   /** Structural identifier of a type. */

@@ -246,7 +246,7 @@ public class CalciteCompiler extends Compiler {
           final BuiltIn builtIn = (BuiltIn) literal.value;
           switch (builtIn) {
           case Z_LIST:
-            final List<Core.Exp> args = ((Core.Tuple) apply.arg).args;
+            final List<Core.Exp> args = apply.args();
             if (args.isEmpty()) {
               final RelDataType calciteType =
                   Converters.toCalciteType(removeTypeVars(apply.type),
@@ -526,18 +526,17 @@ public class CalciteCompiler extends Compiler {
         final SqlOperator binaryOp = BINARY_OPERATORS.get(op);
         if (binaryOp != null) {
           assert apply.arg.op == Op.TUPLE;
-          final List<Core.Exp> args = ((Core.Tuple) apply.arg).args;
           switch (op) {
           case OP_ELEM:
           case OP_NOT_ELEM:
-            final RelNode r = toRel2(cx, args.get(1));
+            final RelNode r = toRel2(cx, apply.args().get(1));
             if (r != null) {
-              final RexNode e = translate(cx, args.get(0));
+              final RexNode e = translate(cx, apply.args().get(0));
               final RexSubQuery in = RexSubQuery.in(r, ImmutableList.of(e));
               return maybeNot(cx, in, op == BuiltIn.OP_NOT_ELEM);
             }
           }
-          return cx.relBuilder.call(binaryOp, translateList(cx, args));
+          return cx.relBuilder.call(binaryOp, translateList(cx, apply.args()));
         }
       }
       if (apply.fn instanceof Core.RecordSelector
