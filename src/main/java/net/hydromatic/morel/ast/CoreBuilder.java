@@ -64,6 +64,10 @@ public enum CoreBuilder {
   private final Core.WildcardPat boolWildcardPat =
       wildcardPat(PrimitiveType.BOOL);
 
+  private final Core.Literal trueLiteral = boolLiteral_(true);
+
+  private final Core.Literal falseLiteral = boolLiteral_(false);
+
   /** Creates a literal. */
   public Core.Literal literal(PrimitiveType type, Object value) {
     switch (type) {
@@ -90,9 +94,14 @@ public enum CoreBuilder {
     }
   }
 
+  /** Used only during initialization. */
+  private static Core.Literal boolLiteral_(boolean b) {
+    return new Core.Literal(Op.BOOL_LITERAL, PrimitiveType.BOOL, b);
+  }
+
   /** Creates a {@code boolean} literal. */
   public Core.Literal boolLiteral(boolean b) {
-    return new Core.Literal(Op.BOOL_LITERAL, PrimitiveType.BOOL, b);
+    return b ? trueLiteral : falseLiteral;
   }
 
   /** Creates a {@code char} literal. */
@@ -361,8 +370,7 @@ public enum CoreBuilder {
     }
   }
 
-  public ImmutableList<Binding> lastBindings(
-      List<? extends Core.FromStep> steps) {
+  public List<Binding> lastBindings(List<? extends Core.FromStep> steps) {
     return steps.isEmpty()
         ? ImmutableList.of()
         : Iterables.getLast(steps).bindings;
