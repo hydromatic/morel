@@ -1137,7 +1137,7 @@ public class Core {
 
     @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
         int left, int right) {
-      return w.append("order ").appendAll(orderItems, ", ");
+      return w.append(" order ").appendAll(orderItems, ", ");
     }
 
     public Order copy(List<Binding> bindings,
@@ -1202,7 +1202,7 @@ public class Core {
 
     @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
         int left, int right) {
-      w.append("group");
+      w.append(" group");
       Pair.forEachIndexed(groupExps, (i, id, exp) ->
           w.append(i == 0 ? " " : ", ")
               .append(id, 0, 0).append(" = ").append(exp, 0, 0));

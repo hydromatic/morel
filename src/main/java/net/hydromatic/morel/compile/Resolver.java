@@ -33,7 +33,6 @@ import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.ConsList;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
@@ -53,6 +52,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Static.append;
 
 /** Converts AST expressions to Core expressions. */
 public class Resolver {
@@ -607,13 +607,6 @@ public class Resolver {
       return fromStepToCore(bindings, (ListType) type, from.steps,
           ImmutableList.of());
     }
-  }
-
-  /** Returns a list with one element appended.
-   *
-   * @see ConsList */
-  static <E> List<E> append(List<E> list, E e) {
-    return ImmutableList.<E>builder().addAll(list).add(e).build();
   }
 
   private Core.From fromStepToCore(List<Binding> bindings, ListType type,

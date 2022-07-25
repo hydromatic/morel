@@ -66,6 +66,7 @@ import static net.hydromatic.morel.ast.Ast.Direction.DESC;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 
+import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.collect.Iterables.getOnlyElement;
 
 import static java.util.Objects.requireNonNull;
@@ -600,7 +601,7 @@ public class Compiler {
         matchList.stream()
             .map(match -> compileMatch(cx, match))
             .collect(toImmutableList());
-    return new MatchCode(patCodes, Util.last(matchList).pos);
+    return new MatchCode(patCodes, getLast(matchList).pos);
   }
 
   private Pair<Core.Pat, Code> compileMatch(Context cx, Core.Match match) {

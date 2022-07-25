@@ -43,6 +43,7 @@ import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.Iterables.getLast;
 
 import static java.util.Objects.requireNonNull;
 
@@ -1496,7 +1497,7 @@ public class Ast {
 
     static @Nullable Exp implicitYieldExp(Pos pos, List<FromStep> steps) {
       if (!steps.isEmpty()
-          && Iterables.getLast(steps) instanceof Ast.Yield) {
+          && getLast(steps) instanceof Ast.Yield) {
         // No implicit yield is needed; the last step is an explicit yield
         return null;
       }
