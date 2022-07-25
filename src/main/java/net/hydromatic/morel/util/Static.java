@@ -19,11 +19,15 @@
 package net.hydromatic.morel.util;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.SortedMap;
 import java.util.stream.Collector;
 
 /**
@@ -109,6 +113,46 @@ public class Static {
   /** Returns all but the first {@code count} elements of a list. */
   public static <E> List<E> skip(int count, List<E> list) {
     return list.subList(count, list.size());
+  }
+
+  /** Returns a list with one element appended.
+   *
+   * @see ConsList */
+  public static <E> List<E> append(List<E> list, E e) {
+    return ImmutableList.<E>builder().addAll(list).add(e).build();
+  }
+
+  /** Prepends an element to a list. */
+  public static <E> List<E> plus(E e, List<E> list) {
+    return ConsList.of(e, list);
+  }
+
+  /** Removes all occurrences of an element from a list. */
+  public static <E> List<E> minus(List<E> list, E e) {
+    final ImmutableList.Builder<E> builder = ImmutableList.builder();
+    list.forEach(e2 -> {
+      if (!e2.equals(e)) {
+        builder.add(e2);
+      }
+    });
+    return builder.build();
+  }
+
+  /** Adds an element to a map. */
+  public static <K, V> Map<K, V> plus(Map<K, V> map, K k, V v) {
+    return ImmutableMap.<K, V>builder()
+        .putAll(map)
+        .put(k, v)
+        .build();
+  }
+
+  /** Adds an element to a sorted map. */
+  public static <K extends Comparable<K>, V> SortedMap<K, V> plus(
+      SortedMap<K, V> map, K k, V v) {
+    return new ImmutableSortedMap.Builder<K, V>(map.comparator())
+        .putAll(map)
+        .put(k, v)
+        .build();
   }
 }
 

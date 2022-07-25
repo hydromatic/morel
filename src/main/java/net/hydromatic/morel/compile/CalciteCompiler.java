@@ -82,6 +82,8 @@ import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 
+import static com.google.common.collect.Iterables.getLast;
+
 import static java.util.Objects.requireNonNull;
 
 /** Compiles an expression to code that can be evaluated. */
@@ -392,7 +394,7 @@ public class CalciteCompiler extends Compiler {
           }
         }
         if (from.steps.isEmpty()
-            || Util.last(from.steps).op != Op.YIELD) {
+            || getLast(from.steps).op != Op.YIELD) {
           final Core.Exp implicitYieldExp =
               core.implicitYieldExp(typeSystem, from.steps);
           cx = yield_(cx, implicitYieldExp);

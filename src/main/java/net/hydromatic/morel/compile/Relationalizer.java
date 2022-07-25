@@ -36,7 +36,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.compile.Resolver.append;
+import static net.hydromatic.morel.util.Static.append;
+
+import static com.google.common.collect.Iterables.getLast;
 
 /**
  * Shuttle that converts calls to {@link BuiltIn#LIST_FILTER}
@@ -136,7 +138,7 @@ public class Relationalizer extends EnvShuttle {
         final Core.Exp exp;
         if (steps.isEmpty()) {
           exp = core.unitLiteral();
-        } else if (Util.last(steps) instanceof Core.Yield) {
+        } else if (getLast(steps) instanceof Core.Yield) {
           exp = ((Core.Yield) steps.remove(steps.size() - 1)).exp;
         } else {
           exp = core.implicitYieldExp(typeSystem, from3.steps);
