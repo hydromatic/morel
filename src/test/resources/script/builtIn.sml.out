@@ -3397,30 +3397,30 @@ val it =
   : string
 
 
-1 notElem [1, 2, 3];
+1 notelem [1, 2, 3];
 val it = false : bool
 
-1 notElem [2, 3, 4];
+1 notelem [2, 3, 4];
 val it = true : bool
 
-1 notElem [];
+1 notelem [];
 val it = true : bool
 
-[] notElem [[0], [1, 2]];
+[] notelem [[0], [1, 2]];
 val it = true : bool
 
-[] notElem [[0], [], [1, 2]];
+[] notelem [[0], [], [1, 2]];
 val it = false : bool
 
-(1, 2) notElem [(0, 1), (1, 2)];
+(1, 2) notelem [(0, 1), (1, 2)];
 val it = false : bool
 
-(1, 2) notElem [(0, 1), (2, 3)];
+(1, 2) notelem [(0, 1), (2, 3)];
 val it = true : bool
 
 Sys.plan ();
 val it =
-  "apply2(fnValue notElem, tuple(constant(1), constant(2)), tuple(tuple(constant(0), constant(1)), tuple(constant(2), constant(3))))"
+  "apply2(fnValue notelem, tuple(constant(1), constant(2)), tuple(tuple(constant(0), constant(1)), tuple(constant(2), constant(3))))"
   : string
 
 

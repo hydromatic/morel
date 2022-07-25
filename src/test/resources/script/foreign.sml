@@ -35,8 +35,8 @@ where d.deptno elem (from e in scott.emp
                      yield e.deptno);
 
 from d in scott.dept
-where d.deptno notElem (from e in scott.emp
-                        where e.job notElem ["ANALYST", "PRESIDENT"]
+where d.deptno notelem (from e in scott.emp
+                        where e.job notelem ["ANALYST", "PRESIDENT"]
                         yield e.deptno);
 
 (*) Functions

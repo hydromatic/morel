@@ -540,7 +540,7 @@ public class AlgebraTest {
         + "        yield e.deptno))\n"
         + "yield d.dname";
     final String ml1 = "from d in scott.dept\n"
-        + "where d.deptno notElem (from e in scott.emp\n"
+        + "where d.deptno notelem (from e in scott.emp\n"
         + "    where e.job elem [\"ANALYST\", \"PRESIDENT\"]\n"
         + "    yield e.deptno)\n"
         + "yield d.dname";
