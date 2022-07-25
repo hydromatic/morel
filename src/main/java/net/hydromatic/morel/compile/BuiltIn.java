@@ -144,9 +144,9 @@ public enum BuiltIn {
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), ts.listType(h.get(0))), BOOL))),
 
-  /** Infix operator "notElem", of type "&alpha; * &alpha; list; &rarr;
+  /** Infix operator "notelem", of type "&alpha; * &alpha; list; &rarr;
    * bool". */
-  OP_NOT_ELEM(null, "op notElem", ts ->
+  OP_NOT_ELEM(null, "op notelem", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.tupleType(h.get(0), ts.listType(h.get(0))), BOOL))),
 

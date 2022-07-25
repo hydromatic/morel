@@ -37,9 +37,9 @@ just because they take effort to build.
 Contributions are welcome!
 
 In Morel but not Standard ML:
-* `from` expression with `join`, `where`, `group`, `compute`, `order`, `yield`
-  clauses
-* `union`, `except`, `intersect`, `elem`, `notElem` operators
+* `from` expression with `in`, `join`, `where`, `group`,
+  `compute`, `order`, `yield` clauses
+* `union`, `except`, `intersect`, `elem`, `notelem` operators
 * "*lab* `=`" is optional in `exprow`
 
 In Standard ML but not in Morel:
@@ -261,7 +261,7 @@ This grammar uses the following notation:
 | =        |    infix 4 | Equal |
 | &lt;&gt; |    infix 4 | Not equal |
 | elem     |    infix 4 | Member of list |
-| notElem  |    infix 4 | Not member of list |
+| notelem  |    infix 4 | Not member of list |
 | :=       |    infix 3 | Assign |
 | o        |    infix 3 | Compose |
 | andalso  |    infix 2 | Logical and |

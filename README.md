@@ -243,7 +243,7 @@ Implemented:
   * Interact:
     `use`
   * Relational:
-    `count`, `op elem`, `op notElem`, `exists`, `notExists`,
+    `count`, `op elem`, `op notelem`, `exists`, `notExists`,
     `only`, `max`, `min`, `sum`
   * System:
     `env`, `plan`, `set`, `show`, `unset`

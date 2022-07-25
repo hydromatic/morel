@@ -315,11 +315,12 @@ public class MainTest {
         .assertParseThrowsParseException(
             startsWith("Encountered \" \"end\" \"end \""));
 
-    // 'notElem' is an infix operator.
-    ml("1 + f notElem g * 2")
-        .assertParse(true, "((((1) + (f))) notElem (((g) * (2))))");
+    // 'notelem' is an infix operator;
+    // 'notElem' and 'NOTELEM' are ordinary identifiers
     ml("1 + f notelem g * 2")
-        .assertParse(true, "((1) + (((((((f) (notelem))) (g))) * (2))))");
+        .assertParse(true, "((((1) + (f))) notelem (((g) * (2))))");
+    ml("1 + f notElem g * 2")
+        .assertParse(true, "((1) + (((((((f) (notElem))) (g))) * (2))))");
     ml("1 + f NOTELEM g * 2")
         .assertParse(true, "((1) + (((((((f) (NOTELEM))) (g))) * (2))))");
 

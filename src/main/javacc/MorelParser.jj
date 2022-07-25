@@ -1393,7 +1393,7 @@ AstNode statementEof() :
 | < INTERSECT: "intersect" >
 | < LET: "let" >
 | < MOD: "mod" >
-| < NOT_ELEM: "notElem" >
+| < NOT_ELEM: "notelem" >
 | < O: "o" >
 | < OF: "of" >
 | < ORELSE: "orelse" >

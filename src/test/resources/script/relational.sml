@@ -315,9 +315,9 @@ from e in emps
     yield d.deptno)
 yield e.name;
 
-(*) notElem (equivalent to SQL's NOT IN, also to 'not ... elem')
+(*) notelem (equivalent to SQL's NOT IN, also to 'not ... elem')
 from e in emps
-  where e.deptno notElem (from d in depts
+  where e.deptno notelem (from d in depts
     where d.name = "Engineering"
     yield d.deptno)
 yield e.name;
