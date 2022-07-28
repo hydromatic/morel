@@ -27,11 +27,13 @@ jobs:
       matrix:
         java-version: [ "11" ]
         guava-version: [ "" ]
+        hsqldb-version: [ "" ]
         checkstyle-version: [ "" ]
         javadoc: [ false ]
         include:
           - java-version: "8"
             guava-version: "19.0"
+            hsqldb-version: "2.5.1"
             checkstyle-version: "9.3"
             javadoc: false
           - java-version: "17"
@@ -68,6 +70,10 @@ jobs:
           if [ "${{ matrix.guava-version }}" ]
           then
             DEFS="$DEFS -Dguava.version=${{ matrix.guava-version }}"
+          fi
+          if [ "${{ matrix.hsqldb-version }}" ]
+          then
+            DEFS="$DEFS -Dhsqldb.version=${{ matrix.hsqldb-version }}"
           fi
           mvn $DEFS --batch-mode --update-snapshots $GOALS
 
