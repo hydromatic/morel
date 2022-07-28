@@ -91,7 +91,7 @@ License.
     <!-- We support (and test) HSQLDB as low as 2.5.1.
          In JDK 8, you must add '-Dhsqldb.version=2.5.1' because
          HSQLDB 2.7.0 requires JDK 11 or higher. -->
-    <hsqldb.version>2.5.1</hsqldb.version>
+    <hsqldb.version>2.7.0</hsqldb.version>
     <java-diff.version>1.1.2</java-diff.version>
     <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
     <javacc.version>7.0.12</javacc.version>
