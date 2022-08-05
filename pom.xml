@@ -102,7 +102,7 @@ License.
     <maven-enforcer-plugin.version>3.1.0</maven-enforcer-plugin.version>
     <maven-javadoc-plugin.version>3.4.0</maven-javadoc-plugin.version>
     <maven-project-info-reports-plugin.version>3.4.0</maven-project-info-reports-plugin.version>
-    <maven-site-plugin.version>3.12.0</maven-site-plugin.version>
+    <maven-site-plugin.version>3.12.1</maven-site-plugin.version>
     <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
     <maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
     <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
