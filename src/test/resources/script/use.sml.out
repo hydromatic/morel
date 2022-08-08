@@ -154,7 +154,8 @@ use "use-1.sml";
 val it = "entering use-1.sml" : string
 
 val y = x ^ ", ";
-java.lang.RuntimeException: Cannot deduce type: conflict: int vs string
+0.0-0.0 Error: Cannot deduce type: conflict: int vs string
+  raised at: 0.0-0.0
 
 val x = y ^ "step 2";
 val x = "step 1, step 2" : string

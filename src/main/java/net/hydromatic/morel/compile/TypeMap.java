@@ -85,6 +85,13 @@ public class TypeMap {
     return term == null ? null : termToType(term);
   }
 
+  /** Returns whether the type of an AST node will be a type variable. */
+  public boolean typeIsVariable(AstNode node) {
+    final Unifier.Term term = nodeTypeTerms.get(node);
+    return term instanceof Unifier.Variable
+        && termToType(term) instanceof TypeVar;
+  }
+
   /** Returns whether an AST node has a type.
    *
    * <p>If it does not, perhaps it was ignored by the unification algorithm

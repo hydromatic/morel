@@ -43,6 +43,10 @@ public interface Tracer {
    * exception was thrown. Returns whether a handler was found. */
   boolean onException(@Nullable Throwable e);
 
+  /** Called with the exception thrown during type resolution.
+   * Returns whether a handler was found. */
+  boolean onTypeException(TypeResolver.TypeException e);
+
   /** Called with the exception thrown during validation, or null if no
    * exception was thrown. Returns whether a handler was found. */
   boolean handleCompileException(@Nullable CompileException e);

@@ -53,6 +53,8 @@ import javax.annotation.Nullable;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import static java.util.Objects.requireNonNull;
+
 /** Matchers for use in Morel tests. */
 public abstract class Matchers {
   private Matchers() {}
@@ -205,6 +207,9 @@ public abstract class Matchers {
 
   static <T extends Throwable> Matcher<T> throwsA(Class<T> clazz,
       String message, Pos position) {
+    requireNonNull(clazz, "clazz");
+    requireNonNull(message, "message");
+    requireNonNull(position, "position");
     return new TypeSafeMatcher<T>(clazz) {
       @Override public void describeTo(Description description) {
         description.appendText("throwable [" + message

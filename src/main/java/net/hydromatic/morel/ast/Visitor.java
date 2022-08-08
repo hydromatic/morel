@@ -240,7 +240,9 @@ public class Visitor {
   }
 
   protected void visit(Ast.TyCon tyCon) {
-    tyCon.type.accept(this);
+    if (tyCon.type != null) {
+      tyCon.type.accept(this);
+    }
     tyCon.id.accept(this);
   }
 
