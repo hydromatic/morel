@@ -450,6 +450,10 @@ public class MainTest {
         + "  end\n"
         + "end";
     ml(ml).assertType("int");
+
+    ml("1 + \"a\"")
+        .assertTypeException("Cannot deduce type: conflict: int vs string");
+
     ml("NONE").assertType("'a option");
     ml("SOME 4").assertType("int option");
     ml("SOME (SOME true)").assertType("bool option option");
@@ -503,6 +507,14 @@ public class MainTest {
   @Test void testRecordType() {
     final String ml = "map #empno [{empno = 10, name = \"Shaggy\"}]";
     ml(ml).assertType("int list");
+  }
+
+  @Test void testIncompleteRecordType() {
+    final String ml = "fn (e, job) => e.job = job";
+    String message =
+        "unresolved flex record (can't tell what fields there are besides #job)";
+    ml(ml).withTypeExceptionMatcher(throwsA(message))
+        .assertEval();
   }
 
   @Test void testApply() {

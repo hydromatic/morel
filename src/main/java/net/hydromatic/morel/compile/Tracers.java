@@ -104,6 +104,17 @@ public abstract class Tracers {
     };
   }
 
+  public static Tracer withOnTypeException(Tracer tracer,
+      Consumer<TypeResolver.TypeException> consumer) {
+    return new DelegatingTracer(tracer) {
+      @Override public boolean onTypeException(TypeResolver.TypeException e) {
+        consumer.accept(e);
+        super.onTypeException(e);
+        return true;
+      }
+    };
+  }
+
   /** Tracer that does nothing. */
   private static class EmptyTracer implements Tracer {
     static final Tracer INSTANCE = new EmptyTracer();
@@ -118,6 +129,10 @@ public abstract class Tracers {
     }
 
     @Override public void onWarnings(List<Throwable> warningList) {
+    }
+
+    @Override public boolean onTypeException(TypeResolver.TypeException e) {
+      return false;
     }
 
     @Override public boolean onException(@Nullable Throwable e) {
@@ -156,6 +171,10 @@ public abstract class Tracers {
 
     @Override public boolean onException(@Nullable Throwable e) {
       return tracer.onException(e);
+    }
+
+    @Override public boolean onTypeException(TypeResolver.TypeException e) {
+      return tracer.onTypeException(e);
     }
 
     @Override public boolean handleCompileException(

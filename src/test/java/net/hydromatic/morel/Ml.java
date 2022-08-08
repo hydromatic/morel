@@ -223,6 +223,10 @@ class Ml {
             Compiles.validateExpression(statement, calcite.foreignValues());
         tracer.handleCompileException(null);
         action.accept(resolved, calcite);
+      } catch (TypeResolver.TypeException e) {
+        if (!tracer.onTypeException(e)) {
+          throw e;
+        }
       } catch (CompileException e) {
         if (!tracer.handleCompileException(e)) {
           throw e;
@@ -250,6 +254,11 @@ class Ml {
                 fail("expected error")),
         matcher);
     return this;
+  }
+
+  Ml assertTypeException(String message) {
+    return withTypeException(message)
+        .assertEval();
   }
 
   Ml withPrepare(Consumer<CompiledStatement> action) {
@@ -528,6 +537,12 @@ class Ml {
     return new Ml(ml, pos, dataSetMap, propMap, tracer);
   }
 
+  Ml withTypeExceptionMatcher(Matcher<Throwable> matcher) {
+    final Consumer<TypeResolver.TypeException> consumer =
+        o -> assertThat(o, matcher);
+    return withTracer(Tracers.withOnTypeException(tracer, consumer));
+  }
+
   Ml withResultMatcher(Matcher<Object> matcher) {
     final Consumer<Object> consumer = o -> assertThat(o, matcher);
     return withTracer(Tracers.withOnResult(this.tracer, consumer));
@@ -551,6 +566,10 @@ class Ml {
     return withTracer(
         Tracers.withOnCompileException(this.tracer,
             exceptionConsumer(matcherFactory)));
+  }
+
+  Ml withTypeException(String message) {
+    return withTypeExceptionMatcher(throwsA(message));
   }
 
   private <T extends Throwable> Consumer<T> exceptionConsumer(

@@ -22,6 +22,7 @@ import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.type.ApplyType;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.DummyType;
@@ -143,7 +144,7 @@ public class TypeResolver {
             + " term pairs:\n"
             + terms.stream().map(Object::toString)
             .collect(Collectors.joining("\n"));
-        throw new RuntimeException("Cannot deduce type: " + result);
+        throw new TypeException("Cannot deduce type: " + result, Pos.ZERO);
       }
       final TypeMap typeMap =
           new TypeMap(typeSystem, map, (Unifier.Substitution) result);
@@ -157,6 +158,22 @@ public class TypeResolver {
           continue tryAgain;
         }
       }
+
+      // Check that there are no field references "x.y" or "#y x" where "x" has
+      // an unresolved type.
+      node2.accept(
+          new Visitor() {
+            @Override protected void visit(Ast.Apply apply) {
+              if (apply.fn.op == Op.RECORD_SELECTOR
+                  && typeMap.typeIsVariable(apply.arg)) {
+                throw new TypeException("unresolved flex record (can't tell "
+                    + "what fields there are besides " + apply.fn + ")",
+                    apply.arg.pos);
+              }
+              super.visit(apply);
+            }
+          });
+
       return Resolved.of(env, decl, node2, typeMap);
     }
   }
@@ -1448,6 +1465,13 @@ public class TypeResolver {
           return map.toString();
         }
       }
+    }
+  }
+
+  /** Error while deducing type. */
+  public static class TypeException extends CompileException {
+    public TypeException(String message, Pos pos) {
+      super(message, false, pos);
     }
   }
 }

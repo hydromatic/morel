@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +38,6 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
@@ -945,7 +945,7 @@ public class Ast {
    */
   public static class TyCon extends AstNode {
     public final Id id;
-    public final Type type;
+    public final @org.checkerframework.checker.nullness.qual.Nullable Type type;
 
     TyCon(Pos pos, Id id, Type type) {
       super(pos, Op.TY_CON);
@@ -1088,7 +1088,7 @@ public class Ast {
   public static class FunMatch extends AstNode {
     public final String name;
     public final List<Pat> patList;
-    @Nullable public final Type returnType;
+    public final @Nullable Type returnType;
     public final Exp exp;
 
     FunMatch(Pos pos, String name, ImmutableList<Pat> patList,
