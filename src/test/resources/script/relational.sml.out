@@ -1716,7 +1716,7 @@ val it = ["Shaggy","Scooby"] : string list
 
 Sys.plan();
 val it =
-  "from(sink join(op join, pat e, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e)), constant(30)), sink collect(apply(fnValue nth:2, argCode get(name e))))))"
+  "from(sink join(op join, pat e, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e)), constant(30)), sink yield(codes [get(e)], sink collect(apply(fnValue nth:2, argCode get(name e)))))))"
   : string
 
 

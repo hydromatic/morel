@@ -19,6 +19,7 @@
 package net.hydromatic.morel.ast;
 
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
@@ -38,6 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.util.Util;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -46,7 +48,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 
@@ -391,8 +392,15 @@ public enum CoreBuilder {
   }
 
   /** Creates a builder that will create a {@link Core.From}. */
+  public FromBuilder fromBuilder(TypeSystem typeSystem,
+      @Nullable Environment env) {
+    return new FromBuilder(typeSystem, env);
+  }
+
+  /** Creates a builder that will create a {@link Core.From} but does not
+   * validate. */
   public FromBuilder fromBuilder(TypeSystem typeSystem) {
-    return new FromBuilder(typeSystem);
+    return fromBuilder(typeSystem, null);
   }
 
   public Core.Fn fn(FnType type, Core.IdPat idPat, Core.Exp exp) {
@@ -425,7 +433,7 @@ public enum CoreBuilder {
   }
 
   public Core.Aggregate aggregate(Type type, Core.Exp aggregate,
-      @Nullable Core.Exp argument) {
+      Core.@Nullable Exp argument) {
     return new Core.Aggregate(type, aggregate, argument);
   }
 

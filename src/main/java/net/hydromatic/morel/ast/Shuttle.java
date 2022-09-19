@@ -382,7 +382,7 @@ public class Shuttle {
   }
 
   protected Core.Exp visit(Core.From from) {
-    return from.copy(typeSystem, visitList(from.steps));
+    return from.copy(typeSystem, null, visitList(from.steps));
   }
 
   protected Core.Scan visit(Core.Scan scan) {

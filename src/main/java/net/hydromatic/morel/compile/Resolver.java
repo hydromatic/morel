@@ -42,7 +42,10 @@ import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.util.Util;
 
 import java.math.BigDecimal;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -50,11 +53,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /** Converts AST expressions to Core expressions. */
 public class Resolver {
@@ -245,7 +251,8 @@ public class Resolver {
   private boolean references(List<PatExp> patExps) {
     final Set<Core.NamedPat> refSet = new HashSet<>();
     final ReferenceFinder finder =
-        new ReferenceFinder(typeMap.typeSystem, Environments.empty(), refSet);
+        new ReferenceFinder(typeMap.typeSystem, Environments.empty(), refSet,
+            new ArrayDeque<>());
     patExps.forEach(x -> x.exp.accept(finder));
 
     final Set<Core.NamedPat> defSet = new HashSet<>();
@@ -271,23 +278,23 @@ public class Resolver {
     final Set<Core.NamedPat> set;
 
     protected ReferenceFinder(TypeSystem typeSystem, Environment env,
-        Set<Core.NamedPat> set) {
-      super(typeSystem, env);
+        Set<Core.NamedPat> set, Deque<FromContext> fromStack) {
+      super(typeSystem, env, fromStack);
       this.set = set;
     }
 
     @Override protected ReferenceFinder bind(Binding binding) {
-      return new ReferenceFinder(typeSystem, env.bind(binding), set);
+      return new ReferenceFinder(typeSystem, env.bind(binding), set, fromStack);
     }
 
     @Override protected ReferenceFinder bind(List<Binding> bindingList) {
-      // The "env2 != env" check is an optimization.
+      // The "env2 == env" check is an optimization.
       // If you remove it, this method will have the same effect, just slower.
       final Environment env2 = env.bindAll(bindingList);
-      if (env2 != env) {
-        return new ReferenceFinder(typeSystem, env2, set);
+      if (env2 == env) {
+        return this;
       }
-      return this;
+      return new ReferenceFinder(typeSystem, env2, set, fromStack);
     }
 
     @Override protected void visit(Core.Id id) {
@@ -349,8 +356,8 @@ public class Resolver {
   }
 
   private Core.Id toCore(Ast.Id id) {
-    final Binding binding = env.get(id.name);
-    assert binding != null;
+    final Binding binding = env.getOpt(id.name);
+    checkNotNull(binding, "not found", id);
     final Core.NamedPat idPat = getIdPat(id, binding);
     return core.id(idPat);
   }
@@ -605,9 +612,12 @@ public class Resolver {
     return coreFrom;
   }
 
-  private Core.Aggregate toCore(Ast.Aggregate aggregate) {
+  private Core.Aggregate toCore(Ast.Aggregate aggregate,
+      Collection<? extends Core.IdPat> groupKeys) {
+    final List<Binding> bindings =
+        groupKeys.stream().map(Binding::of).collect(Collectors.toList());
     return core.aggregate(typeMap.getType(aggregate),
-        toCore(aggregate.aggregate),
+        withEnv(bindings).toCore(aggregate.aggregate),
         aggregate.argument == null ? null : toCore(aggregate.argument));
   }
 
@@ -770,7 +780,7 @@ public class Resolver {
    * handling each subtype of {@link Ast.FromStep} calling
    * {@link FromBuilder} appropriately. */
   private class FromResolver extends Visitor {
-    final FromBuilder fromBuilder = core.fromBuilder(typeMap.typeSystem);
+    final FromBuilder fromBuilder = core.fromBuilder(typeMap.typeSystem, env);
 
     Core.Exp run(Ast.From from) {
       from.steps.forEach(this::accept);
@@ -823,15 +833,17 @@ public class Resolver {
 
     @Override protected void visit(Ast.Group group) {
       final Resolver r = withEnv(fromBuilder.bindings());
-      final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExps =
+      final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExpsB =
           ImmutableSortedMap.naturalOrder();
       final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates =
           ImmutableSortedMap.naturalOrder();
       Pair.forEach(group.groupExps, (id, exp) ->
-          groupExps.put(toCorePat(id), r.toCore(exp)));
+          groupExpsB.put(toCorePat(id), r.toCore(exp)));
+      final SortedMap<Core.IdPat, Core.Exp> groupExps = groupExpsB.build();
       group.aggregates.forEach(aggregate ->
-          aggregates.put(toCorePat(aggregate.id), r.toCore(aggregate)));
-      fromBuilder.group(groupExps.build(), aggregates.build());
+          aggregates.put(toCorePat(aggregate.id),
+              r.toCore(aggregate, groupExps.keySet())));
+      fromBuilder.group(groupExps, aggregates.build());
     }
   }
 

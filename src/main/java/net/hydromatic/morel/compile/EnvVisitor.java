@@ -26,7 +26,9 @@ import net.hydromatic.morel.type.TypeSystem;
 import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Shuttle that keeps an environment of what variables are in scope.
@@ -34,11 +36,14 @@ import java.util.List;
 abstract class EnvVisitor extends Visitor {
   final TypeSystem typeSystem;
   final Environment env;
+  final Deque<FromContext> fromStack;
 
   /** Creates an EnvVisitor. */
-  protected EnvVisitor(TypeSystem typeSystem, Environment env) {
+  protected EnvVisitor(TypeSystem typeSystem, Environment env,
+      Deque<FromContext> fromStack) {
     this.typeSystem = typeSystem;
     this.env = env;
+    this.fromStack = fromStack;
   }
 
   /** Creates a shuttle the same as this but overriding a binding. */
@@ -72,11 +77,60 @@ abstract class EnvVisitor extends Visitor {
     local.exp.accept(bind(bindings));
   }
 
+  @Override protected void visit(Core.RecValDecl recValDecl) {
+    final List<Binding> bindings = new ArrayList<>();
+    recValDecl.list.forEach(decl ->
+        Compiles.bindPattern(typeSystem, bindings, decl.pat));
+    final EnvVisitor v2 = bind(bindings);
+    recValDecl.list.forEach(v2::accept);
+  }
+
   @Override protected void visit(Core.From from) {
     List<Binding> bindings = ImmutableList.of();
     for (Core.FromStep step : from.steps) {
-      step.accept(bind(bindings));
+      visitStep(step, bindings);
       bindings = step.bindings;
+    }
+  }
+
+  public void visitStep(Core.FromStep step, List<Binding> bindings) {
+    try {
+      fromStack.push(new FromContext(this, step));
+      step.accept(bind(bindings));
+    } finally {
+      fromStack.pop();
+    }
+  }
+
+  @Override protected void visit(Core.Aggregate aggregate) {
+    // Aggregates need an environment that includes the group keys.
+    // For example,
+    //   from (i, j) in [(1, 2), (2, 3)]
+    //     group k = i + 2
+    //     compute fn list => List.size list + j of i + j
+    // the aggregate "fn list => List.size list + j" needs an environment [k];
+    // the argument "i + j" needs an environment [i, j].
+    EnvVisitor v2 = fromStack.element().visitor;
+    Core.Group group = (Core.Group) fromStack.element().step;
+    EnvVisitor v3 =
+        v2.bind(group.groupExps.keySet().stream().map(Binding::of)
+            .collect(Collectors.toList()));
+    aggregate.aggregate.accept(v3);
+    if (aggregate.argument != null) {
+      aggregate.argument.accept(this);
+    }
+  }
+
+  /** Where we are in an iteration through the steps of a {@code from}.
+   * Allows the step handlers to retrieve the original environment and make
+   * a custom environment for each step (or part of a step). */
+  public static class FromContext {
+    final EnvVisitor visitor;
+    final Core.FromStep step;
+
+    FromContext(EnvVisitor visitor, Core.FromStep step) {
+      this.visitor = visitor;
+      this.step = step;
     }
   }
 }

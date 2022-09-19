@@ -24,12 +24,18 @@ import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Type;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+
+import static com.google.common.collect.Lists.reverse;
 
 /** Environment for validation/compilation.
  *
@@ -62,28 +68,10 @@ public abstract class Environment {
   }
 
   /** Returns the binding of {@code name} if bound, null if not. */
-  public abstract Binding getOpt(String name);
+  public abstract @Nullable Binding getOpt(String name);
 
   /** Returns the binding of {@code id} if bound, null if not. */
-  public abstract Binding getOpt(Core.NamedPat id);
-
-  /** Returns the binding of {@code name}; throws if not. */
-  public Binding get(String name) {
-    final Binding binding = getOpt(name);
-    if (binding == null) {
-      throw new AssertionError("expected value for " + name);
-    }
-    return binding;
-  }
-
-  /** Returns the binding of {@code name}; throws if not. */
-  public Binding get(Core.IdPat id) {
-    final Binding binding = getOpt(id);
-    if (binding == null) {
-      throw new AssertionError("expected value for " + id);
-    }
-    return binding;
-  }
+  public abstract @Nullable Binding getOpt(Core.NamedPat id);
 
   /** Creates an environment that is the same as a given environment, plus one
    * more variable. */
@@ -132,7 +120,16 @@ public abstract class Environment {
 
   /** If this environment only defines bindings in the given set, returns
    * its parent. Never returns null. The empty environment returns itself. */
-  abstract Environment nearestAncestorNotObscuredBy(Set<String> names);
+  abstract Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names);
+
+  abstract int distance(int soFar, Core.NamedPat id);
+
+  /** Returns this environment plus the bindings in the given environment. */
+  public Environment plus(Environment env) {
+    final List<Binding> bindingList = new ArrayList<>();
+    env.visit(bindingList::add);
+    return bindAll(reverse(bindingList));
+  }
 }
 
 // End Environment.java

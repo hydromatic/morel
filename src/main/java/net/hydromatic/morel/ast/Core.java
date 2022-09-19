@@ -19,6 +19,7 @@
 package net.hydromatic.morel.ast;
 
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Resolver;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
@@ -1024,10 +1025,11 @@ public class Core {
       }
     }
 
-    public Exp copy(TypeSystem typeSystem, List<FromStep> steps) {
+    public Exp copy(TypeSystem typeSystem, Environment env,
+        List<FromStep> steps) {
       return steps.equals(this.steps)
           ? this
-          : core.fromBuilder(typeSystem).addAll(steps).build();
+          : core.fromBuilder(typeSystem, env).addAll(steps).build();
     }
   }
 

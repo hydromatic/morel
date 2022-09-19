@@ -245,11 +245,7 @@ public class Compiler {
 
     case ID:
       final Core.Id id = (Core.Id) expression;
-      final Binding binding = cx.env.getOpt(id.idPat.name);
-      if (binding != null && binding.value instanceof Code) {
-        return (Code) binding.value;
-      }
-      return Codes.get(id.idPat.name);
+      return compileFieldName(cx, id.idPat);
 
     case TUPLE:
       final Core.Tuple tuple = (Core.Tuple) expression;
@@ -262,6 +258,20 @@ public class Compiler {
     default:
       throw new AssertionError("op not handled: " + expression.op);
     }
+  }
+
+  private Code compileFieldName(Context cx, Core.NamedPat idPat) {
+    final Binding binding = cx.env.getOpt(idPat.name);
+    if (binding != null && binding.value instanceof Code) {
+      return (Code) binding.value;
+    }
+    return Codes.get(idPat.name);
+  }
+
+  private Code compileFieldNames(Context cx, List<Core.IdPat> fieldNames) {
+    return Codes.tuple(fieldNames.stream()
+        .map(fieldName -> compileFieldName(cx, fieldName))
+        .collect(Collectors.toList()));
   }
 
   protected Code compileApply(Context cx, Core.Apply apply) {
@@ -306,8 +316,8 @@ public class Compiler {
     final Context cx = cx0.bindAll(bindings);
     if (steps.isEmpty()) {
       final List<String> fieldNames =
-          bindings.stream().map(b -> b.id).sorted()
-              .map(id -> id.name).collect(Collectors.toList());
+          bindings.stream().map(b -> b.id.name).sorted()
+              .collect(Collectors.toList());
       final Code code;
       if (fieldNames.size() == 1
           && getOnlyElement(bindings).id.type.equals(elementType)) {
@@ -366,7 +376,13 @@ public class Compiler {
       for (Core.Exp exp : group.groupExps.values()) {
         groupCodesB.add(compile(cx, exp));
       }
-      final ImmutableList<String> names = bindingNamesSorted(bindings);
+      final ImmutableList.Builder<Code> valueCodesB = ImmutableList.builder();
+      final SortedMap<String, Binding> bindingMap = sortedBindingMap(bindings);
+      for (Binding binding : bindingMap.values()) {
+        valueCodesB.add(compile(cx, core.id(binding.id)));
+      }
+      final ImmutableList<String> names =
+          ImmutableList.copyOf(bindingMap.keySet());
       final ImmutableList.Builder<Applicable> aggregateCodesB =
           ImmutableList.builder();
       for (Core.Aggregate aggregate : group.aggregates.values()) {
@@ -408,8 +424,12 @@ public class Compiler {
     }
   }
 
-  private ImmutableList<String> bindingNamesSorted(List<Binding> bindings) {
-    return RecordType.ORDERING.immutableSortedCopy(bindingNames(bindings));
+  private ImmutableSortedMap<String, Binding> sortedBindingMap(
+      Iterable<Binding> bindings) {
+    final ImmutableSortedMap.Builder<String, Binding> b =
+        ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+    bindings.forEach(binding -> b.put(binding.id.name, binding));
+    return b.build();
   }
 
   private ImmutableList<String> bindingNames(List<Binding> bindings) {
@@ -432,7 +452,7 @@ public class Compiler {
       return toApplicable(cx, literal.unwrap(), argType, pos);
 
     case ID:
-      final Binding binding = cx.env.getOpt(((Core.Id) fn).idPat.name);
+      final Binding binding = cx.env.getOpt(((Core.Id) fn).idPat);
       if (binding == null
           || binding.value instanceof LinkCode
           || binding.value == Unit.INSTANCE) {

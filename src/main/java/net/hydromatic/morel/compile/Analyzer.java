@@ -27,7 +27,9 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 
+import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,18 +40,22 @@ import java.util.Map;
 public class Analyzer extends EnvVisitor {
   private final Map<Core.NamedPat, MutableUse> map;
 
+  /** Creates an Analyzer. */
+  private static Analyzer of(TypeSystem typeSystem, Environment env) {
+    return new Analyzer(typeSystem, env, new HashMap<>(), new ArrayDeque<>());
+  }
+
   /** Private constructor. */
   private Analyzer(TypeSystem typeSystem, Environment env,
-      Map<Core.NamedPat, MutableUse> map) {
-    super(typeSystem, env);
+      Map<Core.NamedPat, MutableUse> map, Deque<FromContext> fromStack) {
+    super(typeSystem, env, fromStack);
     this.map = map;
   }
 
   /** Analyzes an expression. */
   public static Analysis analyze(TypeSystem typeSystem, Environment env,
       AstNode node) {
-    final Map<Core.NamedPat, MutableUse> map = new HashMap<>();
-    final Analyzer analyzer = new Analyzer(typeSystem, env, map);
+    final Analyzer analyzer = of(typeSystem, env);
 
     // Mark all top-level bindings so that they will not be removed
     if (node instanceof Core.NonRecValDecl) {
@@ -67,19 +73,17 @@ public class Analyzer extends EnvVisitor {
   }
 
   @Override protected Analyzer bind(Binding binding) {
-    return new Analyzer(typeSystem, env.bind(binding), map);
+    return new Analyzer(typeSystem, env.bind(binding), map, fromStack);
   }
 
   @Override protected Analyzer bind(List<Binding> bindingList) {
-    // The "!bindingList.isEmpty()" and "env2 != env" checks are optimizations.
-    // If you remove them, this method will have the same effect, just slower.
-    if (!bindingList.isEmpty()) {
-      final Environment env2 = env.bindAll(bindingList);
-      if (env2 != env) {
-        return new Analyzer(typeSystem, env2, map);
-      }
+    // The "env2 == env" check is an optimization.
+    // If you remove it, this method will have the same effect, just slower.
+    final Environment env2 = env.bindAll(bindingList);
+    if (env2 == env) {
+      return this;
     }
-    return this;
+    return new Analyzer(typeSystem, env2, map, fromStack);
   }
 
   @Override protected void visit(Core.IdPat idPat) {
@@ -125,7 +129,7 @@ public class Analyzer extends EnvVisitor {
       // on multiple branches, so we can expedite.
       case_.matchList.get(0).accept(this);
     } else {
-      // Create a multi-map of all of the uses of bindings along the separate
+      // Create a multimap of all uses of bindings along the separate
       // branches. Example:
       //  case e of
       //    1 => a + c
@@ -138,7 +142,8 @@ public class Analyzer extends EnvVisitor {
       final Multimap<Core.NamedPat, MutableUse> multimap =
           HashMultimap.create();
       final Map<Core.NamedPat, MutableUse> subMap = new HashMap<>();
-      final Analyzer analyzer = new Analyzer(typeSystem, env, subMap);
+      final Analyzer analyzer =
+          new Analyzer(typeSystem, env, subMap, new ArrayDeque<>());
       case_.matchList.forEach(e -> {
         subMap.clear();
         e.accept(analyzer);

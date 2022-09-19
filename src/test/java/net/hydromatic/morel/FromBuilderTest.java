@@ -70,7 +70,7 @@ public class FromBuilderTest {
   @Test void testBasic() {
     // from i in [1, 2]
     final Fixture f = new Fixture();
-    final FromBuilder fromBuilder = core.fromBuilder(f.typeSystem);
+    final FromBuilder fromBuilder = core.fromBuilder(f.typeSystem, null);
     fromBuilder.scan(f.iPat, f.list12);
 
     final Core.From from = fromBuilder.build();

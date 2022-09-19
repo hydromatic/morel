@@ -82,6 +82,7 @@ import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Iterables.getLast;
 
 import static java.util.Objects.requireNonNull;
@@ -474,7 +475,7 @@ public class CalciteCompiler extends Compiler {
       // In 'from e in emps yield e', 'e' expands to a record,
       // '{e.deptno, e.ename}'
       final Core.Id id = (Core.Id) exp;
-      final Binding binding = cx.env.getOpt(id.idPat.name);
+      final Binding binding = cx.env.getOpt(id.idPat);
       if (binding != null && binding.value != Unit.INSTANCE) {
         final Core.Literal coreLiteral =
             core.literal((PrimitiveType) binding.id.type, binding.value);
@@ -631,7 +632,9 @@ public class CalciteCompiler extends Compiler {
   }
 
   private Core.Tuple toRecord(RelContext cx, Core.Id id) {
-    final Type type = cx.env.get(id.idPat.name).id.type;
+    final Binding binding = cx.env.getOpt(id.idPat);
+    checkNotNull(binding, "not found", id);
+    final Type type = binding.id.type;
     if (type instanceof RecordType) {
       final RecordType recordType = (RecordType) type;
       final List<Core.Exp> args = new ArrayList<>();

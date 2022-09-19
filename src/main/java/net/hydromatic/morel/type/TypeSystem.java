@@ -82,11 +82,11 @@ public class TypeSystem {
   public Binding bindTyCon(DataType dataType, String tyConName) {
     final Type type = dataType.typeConstructors.get(tyConName);
     if (type == DummyType.INSTANCE) {
-      return Binding.of(core.idPat(dataType, tyConName, nameGenerator),
+      return Binding.of(core.idPat(dataType, tyConName, 0),
           Codes.constant(ComparableSingletonList.of(tyConName)));
     } else {
       final Type type2 = wrap(dataType, fnType(type, dataType));
-      return Binding.of(core.idPat(type2, tyConName, nameGenerator),
+      return Binding.of(core.idPat(type2, tyConName, 0),
           Codes.tyCon(dataType, tyConName));
     }
   }

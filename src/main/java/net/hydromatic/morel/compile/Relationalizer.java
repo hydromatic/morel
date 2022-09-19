@@ -149,7 +149,7 @@ public class Relationalizer extends EnvShuttle {
             typeSystem.recordType(argNameTypes
                 .put(idPat3.name, exp.type).build());
         steps.add(
-            core.yield_(typeSystem, core.tuple(recordType, exp)));
+            core.yield_(step.bindings, core.tuple(recordType, exp)));
         steps.addAll(Util.skip(from2.steps));
         return core.from(typeSystem, steps);
       }

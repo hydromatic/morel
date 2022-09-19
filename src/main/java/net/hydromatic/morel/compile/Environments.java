@@ -30,15 +30,17 @@ import net.hydromatic.morel.util.Static;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+
+import static java.util.Objects.requireNonNull;
 
 /** Helpers for {@link Environment}. */
 public abstract class Environments {
@@ -115,10 +117,11 @@ public abstract class Environments {
     } else {
       // We assume that the set of bindings does not include two Core.IdPat
       // instances with the same name but different ordinals.
-      final ImmutableMap.Builder<String, Binding> b = ImmutableMap.builder();
-      bindings.forEach(binding -> b.put(binding.id.name, binding));
-      final ImmutableMap<String, Binding> map = b.build();
-      final ImmutableSet<String> names = map.keySet();
+      final ImmutableMap.Builder<Core.NamedPat, Binding> b =
+          ImmutableMap.builder();
+      bindings.forEach(binding -> b.put(binding.id, binding));
+      final ImmutableMap<Core.NamedPat, Binding> map = b.build();
+      final ImmutableSet<Core.NamedPat> names = map.keySet();
       env = env.nearestAncestorNotObscuredBy(names);
       return new MapEnvironment(env, map);
     }
@@ -131,18 +134,22 @@ public abstract class Environments {
     private final Binding binding;
 
     SubEnvironment(Environment parent, Binding binding) {
-      this.parent = Objects.requireNonNull(parent);
-      this.binding = Objects.requireNonNull(binding);
+      this.parent = requireNonNull(parent);
+      this.binding = requireNonNull(binding);
     }
 
-    @Override public Binding getOpt(String name) {
+    @Override public String toString() {
+      return binding.id + ", ...";
+    }
+
+    @Override public @Nullable Binding getOpt(String name) {
       if (name.equals(binding.id.name)) {
         return binding;
       }
       return parent.getOpt(name);
     }
 
-    @Override public Binding getOpt(Core.NamedPat id) {
+    @Override public @Nullable Binding getOpt(Core.NamedPat id) {
       if (id.equals(binding.id)) {
         return binding;
       }
@@ -151,7 +158,7 @@ public abstract class Environments {
 
     @Override protected Environment bind(Binding binding) {
       Environment env;
-      if (this.binding.id.name.equals(binding.id.name)) {
+      if (this.binding.id.equals(binding.id)) {
         // The new binding will obscure the current environment's binding,
         // because it binds a variable of the same name. Bind the parent
         // environment instead. This strategy is worthwhile because it tends to
@@ -173,10 +180,18 @@ public abstract class Environments {
       parent.visit(consumer);
     }
 
-    @Override Environment nearestAncestorNotObscuredBy(Set<String> names) {
-      return names.contains(binding.id.name)
+    @Override Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names) {
+      return names.contains(binding.id)
           ? parent.nearestAncestorNotObscuredBy(names)
           : this;
+    }
+
+    @Override int distance(int soFar, Core.NamedPat id) {
+      if (id.equals(this.binding.id)) {
+        return soFar;
+      } else {
+        return parent.distance(soFar + 1, id);
+      }
     }
   }
 
@@ -187,27 +202,32 @@ public abstract class Environments {
     void visit(Consumer<Binding> consumer) {
     }
 
-    @Override public Binding getOpt(String name) {
+    @Override public @Nullable Binding getOpt(String name) {
       return null;
     }
 
-    @Override public Binding getOpt(Core.NamedPat id) {
+    @Override public @Nullable Binding getOpt(Core.NamedPat id) {
       return null;
     }
 
-    @Override Environment nearestAncestorNotObscuredBy(Set<String> names) {
+    @Override Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names) {
       return this;
+    }
+
+    @Override int distance(int soFar, Core.NamedPat id) {
+      return -1;
     }
   }
 
   /** Environment that keeps bindings in a map. */
   static class MapEnvironment extends Environment {
     private final Environment parent;
-    private final Map<String, Binding> map;
+    private final Map<Core.NamedPat, Binding> map;
 
-    MapEnvironment(Environment parent, ImmutableMap<String, Binding> map) {
-      this.parent = Objects.requireNonNull(parent);
-      this.map = Objects.requireNonNull(map);
+    MapEnvironment(Environment parent,
+        ImmutableMap<Core.NamedPat, Binding> map) {
+      this.parent = requireNonNull(parent);
+      this.map = requireNonNull(map);
     }
 
     void visit(Consumer<Binding> consumer) {
@@ -215,21 +235,45 @@ public abstract class Environments {
       parent.visit(consumer);
     }
 
-    public Binding getOpt(String name) {
-      final Binding binding = map.get(name);
-      return binding != null ? binding : parent.getOpt(name);
+    public @Nullable Binding getOpt(String name) {
+      for (Map.Entry<Core.NamedPat, Binding> entry : map.entrySet()) {
+        if (entry.getKey().name.equals(name)) {
+          return entry.getValue();
+        }
+      }
+      return parent.getOpt(name);
     }
 
-    public Binding getOpt(Core.NamedPat id) {
-      final Binding binding = map.get(id.name);
+    public @Nullable Binding getOpt(Core.NamedPat id) {
+      final Binding binding = map.get(id);
       return binding != null && binding.id.i == id.i ? binding
           : parent.getOpt(id);
     }
 
-    @Override Environment nearestAncestorNotObscuredBy(Set<String> names) {
+    @Override Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names) {
       return names.containsAll(map.keySet())
           ? parent.nearestAncestorNotObscuredBy(names)
           : this;
+    }
+
+    @Override int distance(int soFar, Core.NamedPat id) {
+      final int i = find(map.keySet(), id);
+      if (i >= 0) {
+        return soFar + map.size() - 1 - i;
+      } else {
+        return parent.distance(soFar + map.size(), id);
+      }
+    }
+
+    private <E> int find(Iterable<E> iterable, E e) {
+      int i = 0;
+      for (E e1 : iterable) {
+        if (e1.equals(e)) {
+          return i;
+        }
+        ++i;
+      }
+      return -1;
     }
   }
 }

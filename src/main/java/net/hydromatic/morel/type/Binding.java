@@ -21,6 +21,8 @@ package net.hydromatic.morel.type;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Unit;
 
+import java.util.Objects;
+
 import static java.util.Objects.requireNonNull;
 
 /** Binding of a name to a type and a value.
@@ -54,17 +56,29 @@ public class Binding {
     return new Binding(id, null, value, false);
   }
 
+  @Override public int hashCode() {
+    return Objects.hash(id, exp, value);
+  }
+
+  @Override public boolean equals(Object o) {
+    return this == o
+        || o instanceof Binding
+        && id.equals(((Binding) o).id)
+        && Objects.equals(exp, ((Binding) o).exp)
+        && value.equals(((Binding) o).value);
+  }
+
   public Binding withParameter(boolean parameter) {
     return new Binding(id, exp, value, parameter);
   }
 
   @Override public String toString() {
     if (exp != null) {
-      return id.name + " = " + exp;
+      return id + " = " + exp;
     } else if (value == Unit.INSTANCE) {
-      return id.name + " : " + id.type.moniker();
+      return id + " : " + id.type.moniker();
     } else {
-      return id.name + " = " + value + " : " + id.type.moniker();
+      return id + " = " + value + " : " + id.type.moniker();
     }
   }
 }
