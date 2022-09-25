@@ -102,6 +102,8 @@ License.
     <maven-enforcer-plugin.version>3.1.0</maven-enforcer-plugin.version>
     <maven-javadoc-plugin.version>3.4.1</maven-javadoc-plugin.version>
     <maven-project-info-reports-plugin.version>3.4.1</maven-project-info-reports-plugin.version>
+    <maven-release-plugin.version>3.0.0-M6</maven-release-plugin.version>
+    <maven-scm-provider-gitexe.version>2.0.0-M2</maven-scm-provider-gitexe.version>
     <maven-site-plugin.version>4.0.0-M3</maven-site-plugin.version>
     <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
     <maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
@@ -326,6 +328,20 @@ License.
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>${maven-release-plugin.version}</version>
+        <!-- If we don't specify gitexe version, git doesn't
+             commit during release process. -->
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.scm</groupId>
+            <artifactId>maven-scm-provider-gitexe</artifactId>
+            <version>${maven-scm-provider-gitexe.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
