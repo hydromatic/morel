@@ -23,14 +23,15 @@ License.
 ## How to make a release (for committers)
 
 Make sure `mvn clean install`, `mvn site`, and
-`mvn javadoc:javadoc javadoc:test-javadoc` pass under JDK 8 - 14.
+`mvn javadoc:javadoc javadoc:test-javadoc` pass under JDK 8 - 17.
 
 Write release notes. Run the
 [relNotes](https://github.com/julianhyde/share/blob/master/tools/relNotes)
 script and append the output to [HISTORY.md](HISTORY.md).
 
-Update version numbers in README and README.md,
-and the copyright date in NOTICE.
+Update version numbers in
+`src/main/java/net/hydromatic/morel/Shell.java`, `README` and
+`README.md`, and the copyright date in `NOTICE`.
 
 Switch to JDK 11.
 

@@ -205,7 +205,7 @@ public class Shell {
 
   /** Generates a banner to be shown on startup. */
   private String banner() {
-    return "morel version 0.2.0"
+    return "morel version 0.3.0"
         + " (java version \"" + System.getProperty("java.version")
         + "\", JRE " + System.getProperty("java.vendor.version")
         + " (build " + System.getProperty("java.vm.version")
