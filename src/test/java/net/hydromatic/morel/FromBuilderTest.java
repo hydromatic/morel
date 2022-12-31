@@ -51,10 +51,8 @@ public class FromBuilderTest {
     final Core.Id iId = core.id(iPat);
     final Core.IdPat jPat = core.idPat(intType, "j", 0);
     final Core.Id jId = core.id(jPat);
-    final Core.Exp list12 = core.list(typeSystem, intType,
-        ImmutableList.of(intLiteral(1), intLiteral(2)));
-    final Core.Exp list34 = core.list(typeSystem, intType,
-        ImmutableList.of(intLiteral(3), intLiteral(4)));
+    final Core.Exp list12 = core.list(typeSystem, intLiteral(1), intLiteral(2));
+    final Core.Exp list34 = core.list(typeSystem, intLiteral(3), intLiteral(4));
 
     Core.Literal intLiteral(int i) {
       return core.literal(intType, i);

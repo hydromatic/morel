@@ -195,7 +195,6 @@ public enum CoreBuilder {
   /** Creates an IdPat with a given name, generating an ordinal to distinguish
    * it from other declarations with the same name elsewhere in the program. */
   public Core.IdPat idPat(Type type, String name, NameGenerator nameGenerator) {
-    assert name.length() > 0;
     return idPat(type, name, nameGenerator.inc(name));
   }
 
@@ -216,7 +215,6 @@ public enum CoreBuilder {
    * it from other declarations with the same name elsewhere in the program. */
   public Core.AsPat asPat(Type type, String name, NameGenerator nameGenerator,
       Core.Pat pat) {
-    assert name.length() > 0;
     return asPat(type, name, nameGenerator.inc(name), pat);
   }
 
@@ -515,6 +513,11 @@ public enum CoreBuilder {
     final ListType listType = typeSystem.listType(elementType);
     return apply(Pos.ZERO, listType, literal,
         core.tuple(typeSystem, null, args));
+  }
+
+  /** Creates a list with one or more elements. */
+  public Core.Exp list(TypeSystem typeSystem, Core.Exp arg0, Core.Exp... args) {
+    return list(typeSystem, arg0.type, Lists.asList(arg0, args));
   }
 
   /** Creates a record. */

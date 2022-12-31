@@ -113,8 +113,9 @@ public class Core {
 
     NamedPat(Op op, Type type, String name, int i) {
       super(op, type);
-      this.name = name;
+      this.name = requireNonNull(name, "name");
       this.i = i;
+      checkArgument(!name.isEmpty(), "empty name");
     }
 
     /** {@inheritDoc}
