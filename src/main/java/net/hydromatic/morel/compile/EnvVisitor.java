@@ -28,7 +28,8 @@ import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.stream.Collectors;
+
+import static net.hydromatic.morel.util.Static.transform;
 
 /**
  * Shuttle that keeps an environment of what variables are in scope.
@@ -112,9 +113,7 @@ abstract class EnvVisitor extends Visitor {
     // the argument "i + j" needs an environment [i, j].
     EnvVisitor v2 = fromStack.element().visitor;
     Core.Group group = (Core.Group) fromStack.element().step;
-    EnvVisitor v3 =
-        v2.bind(group.groupExps.keySet().stream().map(Binding::of)
-            .collect(Collectors.toList()));
+    EnvVisitor v3 = v2.bind(transform(group.groupExps.keySet(), Binding::of));
     aggregate.aggregate.accept(v3);
     if (aggregate.argument != null) {
       aggregate.argument.accept(this);

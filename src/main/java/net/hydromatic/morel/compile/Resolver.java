@@ -54,10 +54,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Static.transform;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -116,13 +115,6 @@ public class Resolver {
    * environment plus some bindings. */
   public final Resolver withEnv(Iterable<Binding> bindings) {
     return withEnv(Environments.bind(env, bindings));
-  }
-
-  private static <E, T> ImmutableList<T> transform(Iterable<? extends E> elements,
-      Function<E, T> mapper) {
-    final ImmutableList.Builder<T> b = ImmutableList.builder();
-    elements.forEach(e -> b.add(mapper.apply(e)));
-    return b.build();
   }
 
   public Core.Decl toCore(Ast.Decl node) {
@@ -614,8 +606,7 @@ public class Resolver {
 
   private Core.Aggregate toCore(Ast.Aggregate aggregate,
       Collection<? extends Core.IdPat> groupKeys) {
-    final List<Binding> bindings =
-        groupKeys.stream().map(Binding::of).collect(Collectors.toList());
+    final List<Binding> bindings = transform(groupKeys, Binding::of);
     return core.aggregate(typeMap.getType(aggregate),
         withEnv(bindings).toCore(aggregate.aggregate),
         aggregate.argument == null ? null : toCore(aggregate.argument));

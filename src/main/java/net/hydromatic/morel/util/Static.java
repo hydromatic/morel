@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.function.Function;
 import java.util.stream.Collector;
 
 /**
@@ -153,6 +154,20 @@ public class Static {
         .putAll(map)
         .put(k, v)
         .build();
+  }
+
+  /** Converts an Iterable to an ImmutableList, applying a mapping function to
+   * each element. */
+  public static <E, T> ImmutableList<T> transform(Iterable<? extends E> elements,
+      Function<E, T> mapper) {
+    if (elements instanceof Collection
+        && ((Collection<? extends E>) elements).isEmpty()) {
+      // Save ourselves the effort of creating a Builder.
+      return ImmutableList.of();
+    }
+    final ImmutableList.Builder<T> b = ImmutableList.builder();
+    elements.forEach(e -> b.add(mapper.apply(e)));
+    return b.build();
   }
 }
 

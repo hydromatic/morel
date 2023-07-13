@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
 
-import static net.hydromatic.morel.util.Static.toImmutableList;
+import static net.hydromatic.morel.util.Static.transform;
 
 /** Type that is a polymorphic type applied to a set of types. */
 public class ApplyType extends BaseType {
@@ -51,8 +51,7 @@ public class ApplyType extends BaseType {
       UnaryOperator<Type> transform) {
     final Type type2 = type.copy(typeSystem, transform);
     final ImmutableList<Type> types2 =
-        types.stream().map(t -> t.copy(typeSystem, transform))
-            .collect(toImmutableList());
+        transform(types, t -> t.copy(typeSystem, transform));
     return type == type2 && types.equals(types2) ? this
         : typeSystem.apply(type2, types2);
   }

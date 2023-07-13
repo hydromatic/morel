@@ -70,12 +70,13 @@ import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Static.skip;
-import static net.hydromatic.morel.util.Static.toImmutableList;
+import static net.hydromatic.morel.util.Static.transform;
+
+import static java.lang.String.join;
 
 /** Resolves the type of an expression. */
 @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
@@ -142,8 +143,7 @@ public class TypeResolver {
       if (!(result instanceof Unifier.Substitution)) {
         final String extra = ";\n"
             + " term pairs:\n"
-            + terms.stream().map(Object::toString)
-            .collect(Collectors.joining("\n"));
+            + join("\n", transform(terms, Object::toString));
         throw new TypeException("Cannot deduce type: " + result, Pos.ZERO);
       }
       final TypeMap typeMap =
@@ -858,8 +858,7 @@ public class TypeResolver {
   }
 
   private List<Type> toTypes(List<Ast.Type> typeList) {
-    return typeList.stream().map(this::toType)
-        .collect(Collectors.toList());
+    return transform(typeList, this::toType);
   }
 
   /** Converts a function declaration to a value declaration.
@@ -1213,8 +1212,8 @@ public class TypeResolver {
       return unifier.apply(APPLY_TY_CON, ConsList.of(term, terms));
     case TUPLE_TYPE:
       final TupleType tupleType = (TupleType) type;
-      return unifier.apply(TUPLE_TY_CON, tupleType.argTypes.stream()
-          .map(type1 -> toTerm(type1, subst)).collect(toImmutableList()));
+      return unifier.apply(TUPLE_TY_CON,
+          transform(tupleType.argTypes, type1 -> toTerm(type1, subst)));
     case RECORD_TYPE:
       final RecordType recordType = (RecordType) type;
       @SuppressWarnings({"rawtypes", "unchecked"})
@@ -1233,8 +1232,8 @@ public class TypeResolver {
         result = b.toString();
       }
       return unifier.apply(result,
-          recordType.argNameTypes.values().stream()
-              .map(type1 -> toTerm(type1, subst)).collect(toImmutableList()));
+          transform(recordType.argNameTypes.values(),
+              type1 -> toTerm(type1, subst)));
     case LIST:
       final ListType listType = (ListType) type;
       return unifier.apply(LIST_TY_CON,

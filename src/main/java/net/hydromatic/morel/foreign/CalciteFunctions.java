@@ -69,8 +69,9 @@ import java.io.StringReader;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+
+import static net.hydromatic.morel.util.Static.transform;
 
 /** Calcite table-valued user-defined function that evaluates a Morel
  * expression and returns the result as a relation. */
@@ -353,11 +354,9 @@ public class CalciteFunctions {
     boolean optional();
 
     static SqlOperandMetadata metadata(Arg... args) {
-      return OperandTypes.operandMetadata(
-          Arrays.stream(args).map(Arg::family).collect(Collectors.toList()),
-          typeFactory ->
-              Arrays.stream(args).map(arg -> arg.type(typeFactory))
-                  .collect(Collectors.toList()),
+      final List<Arg> argList = Arrays.asList(args);
+      return OperandTypes.operandMetadata(transform(argList, Arg::family),
+          typeFactory -> transform(argList, arg -> arg.type(typeFactory)),
           i -> args[i].name(), i -> args[i].optional());
     }
 

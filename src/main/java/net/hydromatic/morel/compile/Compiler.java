@@ -61,12 +61,12 @@ import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.Ast.Direction.DESC;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Static.toImmutableList;
+import static net.hydromatic.morel.util.Static.transform;
 
 import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -269,9 +269,8 @@ public class Compiler {
   }
 
   private Code compileFieldNames(Context cx, List<Core.IdPat> fieldNames) {
-    return Codes.tuple(fieldNames.stream()
-        .map(fieldName -> compileFieldName(cx, fieldName))
-        .collect(Collectors.toList()));
+    return Codes.tuple(
+        transform(fieldNames, fieldName -> compileFieldName(cx, fieldName)));
   }
 
   protected Code compileApply(Context cx, Core.Apply apply) {
@@ -317,7 +316,7 @@ public class Compiler {
     if (steps.isEmpty()) {
       final List<String> fieldNames =
           bindings.stream().map(b -> b.id.name).sorted()
-              .collect(Collectors.toList());
+              .collect(toImmutableList());
       final Code code;
       if (fieldNames.size() == 1
           && getOnlyElement(bindings).id.type.equals(elementType)) {
@@ -365,9 +364,8 @@ public class Compiler {
     case ORDER:
       final Core.Order order = (Core.Order) firstStep;
       final ImmutableList<Pair<Code, Boolean>> codes =
-          order.orderItems.stream()
-              .map(i -> Pair.of(compile(cx, i.exp), i.direction == DESC))
-              .collect(toImmutableList());
+          transform(order.orderItems,
+              i -> Pair.of(compile(cx, i.exp), i.direction == DESC));
       return () -> Codes.orderRowSink(codes, bindings, nextFactory.get());
 
     case GROUP:
@@ -433,8 +431,7 @@ public class Compiler {
   }
 
   private ImmutableList<String> bindingNames(List<Binding> bindings) {
-    return bindings.stream().map(b -> b.id.name)
-        .collect(toImmutableList());
+    return transform(bindings, b -> b.id.name);
   }
 
   /** Compiles a function value to an {@link Applicable}, if possible, or
@@ -622,11 +619,8 @@ public class Compiler {
    */
   private Code compileMatchList(Context cx,
       List<Core.Match> matchList) {
-    final ImmutableList<Pair<Core.Pat, Code>> patCodes =
-        matchList.stream()
-            .map(match -> compileMatch(cx, match))
-            .collect(toImmutableList());
-    return new MatchCode(patCodes, getLast(matchList).pos);
+    return new MatchCode(transform(matchList, match -> compileMatch(cx, match)),
+        getLast(matchList).pos);
   }
 
   private Pair<Core.Pat, Code> compileMatch(Context cx, Core.Match match) {

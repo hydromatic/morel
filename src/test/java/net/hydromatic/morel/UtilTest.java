@@ -42,6 +42,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.util.Static.transform;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
@@ -227,6 +228,12 @@ public class UtilTest {
     checkTooFew.accept("abcdef");
   }
 
+  @Test void testTransform() {
+    final List<String> list = Arrays.asList("john", "paul", "george", "ringo");
+    assertThat(transform(list, String::length), is(Arrays.asList(4, 4, 6, 5)));
+    assertThat(transform(Collections.emptyList(), String::length),
+        is(Collections.emptyList()));
+  }
 }
 
 // End UtilTest.java

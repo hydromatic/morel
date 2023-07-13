@@ -81,11 +81,12 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
 
   //~ Methods ----------------------------------------------------------------
 
+  @SuppressWarnings("rawtypes")
   public boolean equals(Object obj) {
     return this == obj
-        || obj instanceof Pair
-        && Objects.equals(this.left, ((Pair) obj).left)
-        && Objects.equals(this.right, ((Pair) obj).right);
+        || obj instanceof Map.Entry
+        && Objects.equals(this.left, ((Map.Entry) obj).getKey())
+        && Objects.equals(this.right, ((Map.Entry) obj).getValue());
   }
 
   /** {@inheritDoc}
@@ -98,6 +99,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     return keyHash ^ valueHash;
   }
 
+  @SuppressWarnings("rawtypes")
   public int compareTo(@Nonnull Pair<T1, T2> that) {
     //noinspection unchecked
     int c = compare((Comparable) this.left, (Comparable) that.left);
@@ -109,7 +111,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   public String toString() {
-    return "<" + left + ", " + right + ">";
+    return left + "=" + right;
   }
 
   public T1 getKey() {

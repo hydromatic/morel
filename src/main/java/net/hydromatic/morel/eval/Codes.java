@@ -47,6 +47,7 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 import org.apache.calcite.runtime.FlatLists;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -62,10 +63,9 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.util.Static.toImmutableList;
+import static net.hydromatic.morel.util.Static.transform;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -498,9 +498,8 @@ public abstract class Codes {
   /** Creates a {@link RowSink} for a {@code order} clause. */
   public static RowSink orderRowSink(ImmutableList<Pair<Code, Boolean>> codes,
       ImmutableList<Binding> bindings, RowSink rowSink) {
-    final ImmutableList<String> labels = bindings.stream().map(b -> b.id.name)
-        .collect(toImmutableList());
-    return new OrderRowSink(codes, labels, rowSink);
+    return new OrderRowSink(codes, transform(bindings, b -> b.id.name),
+        rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code group} clause. */
@@ -2629,9 +2628,7 @@ public abstract class Codes {
     });
     BuiltIn.forEachStructure(typeSystem, (structure, type) ->
         valueMap.put(structure.name,
-            structure.memberMap.values().stream()
-                .map(BUILT_IN_VALUES::get)
-                .collect(toImmutableList())));
+            transform(structure.memberMap.values(), BUILT_IN_VALUES::get)));
   }
 
   /** Creates an empty evaluation environment. */
@@ -2695,8 +2692,7 @@ public abstract class Codes {
         } else if (names.size() != 1) {
           // Reconcile the fact that we internally represent rows as arrays when
           // we're buffering for "group", lists at other times.
-          argRows = Lists.transform(rows,
-              row -> Arrays.asList((Object []) row));
+          argRows = transform(rows, row -> Arrays.asList((Object []) row));
         } else {
           argRows = rows;
         }
