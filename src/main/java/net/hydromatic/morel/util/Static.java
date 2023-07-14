@@ -156,6 +156,12 @@ public class Static {
         .build();
   }
 
+  /** Next power of two. */
+  public static int nextPowerOfTwo(int n) {
+    final int p = Integer.numberOfLeadingZeros(n);
+    return 1 << (Integer.SIZE - p);
+  }
+
   /** Converts an Iterable to an ImmutableList, applying a mapping function to
    * each element. */
   public static <E, T> ImmutableList<T> transform(Iterable<? extends E> elements,

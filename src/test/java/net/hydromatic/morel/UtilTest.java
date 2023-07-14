@@ -42,6 +42,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
 import static net.hydromatic.morel.util.Static.transform;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -226,6 +227,32 @@ public class UtilTest {
     checkTooFew.accept("$abc$de$f");
     checkTooFew.accept("abc$def");
     checkTooFew.accept("abcdef");
+  }
+
+  /** Tests {@link Static#nextPowerOfTwo(int)}. */
+  @Test void testPower() {
+    assertThat(nextPowerOfTwo(0), is(1));
+    assertThat(nextPowerOfTwo(-1), is(1)); // 2^16
+    assertThat(nextPowerOfTwo(-2), is(1)); // 2^16
+    assertThat(nextPowerOfTwo(-3), is(1)); // 2^16
+    assertThat(nextPowerOfTwo(-4), is(1)); // 2^16
+    assertThat(nextPowerOfTwo(-65_536), is(1)); // 2^16
+
+    assertThat(nextPowerOfTwo(1), is(2));
+    assertThat(nextPowerOfTwo(2), is(4));
+    assertThat(nextPowerOfTwo(3), is(4));
+    assertThat(nextPowerOfTwo(4), is(8));
+    assertThat(nextPowerOfTwo(5), is(8));
+
+    assertThat(nextPowerOfTwo(16_383), is(16_384)); // 2^14
+    assertThat(nextPowerOfTwo(16_384), is(32_768)); // 2^15
+    assertThat(nextPowerOfTwo(16_384), is(32_768));
+    assertThat(nextPowerOfTwo(32_768), is(65_536)); // 2^16
+
+    assertThat(nextPowerOfTwo(1_073_741_823), is(1_073_741_824)); // 2^31
+    assertThat(nextPowerOfTwo(1_073_741_824), is(-2_147_483_648)); // 2^32
+    assertThat(nextPowerOfTwo(2_147_483_647), is(-2_147_483_648)); // 2^32
+    assertThat(nextPowerOfTwo(-2_147_483_648), is(1)); // 2^0
   }
 
   @Test void testTransform() {
