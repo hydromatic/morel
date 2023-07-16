@@ -46,7 +46,7 @@ import static java.util.Objects.requireNonNull;
 public class PairList<T, U> extends AbstractList<Map.Entry<T, U>> {
   final List<@Nullable Object> list;
 
-  private PairList(List<@Nullable Object> list) {
+  PairList(List<@Nullable Object> list) {
     this.list = list;
   }
 
@@ -239,11 +239,10 @@ public class PairList<T, U> extends AbstractList<Map.Entry<T, U>> {
     return b.build();
   }
 
-  /** Returns an immutable PairList whose contents are the same as this
+  /** Returns an ImmutablePairList whose contents are the same as this
    * PairList. */
-  public PairList<T, U> immutable() {
-    final List<@Nullable Object> immutableList = ImmutableList.copyOf(list);
-    return backedBy(immutableList);
+  public ImmutablePairList<T, U> immutable() {
+    return new ImmutablePairList<>(ImmutableList.copyOf(list));
   }
 
   /** Applies a mapping function to each element of this list. */

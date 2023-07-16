@@ -164,6 +164,7 @@ public class Static {
 
   /** Converts an Iterable to an ImmutableList, applying a mapping function to
    * each element. */
+  @SuppressWarnings("unchecked")
   public static <E, T> ImmutableList<T> transform(Iterable<? extends E> elements,
       Function<E, T> mapper) {
     if (elements instanceof Collection

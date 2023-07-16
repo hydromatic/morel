@@ -20,12 +20,12 @@ package net.hydromatic.morel.eval;
 
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.Pair;
-
-import com.google.common.collect.ImmutableList;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 
 import static net.hydromatic.morel.util.Static.skip;
@@ -48,12 +48,12 @@ public class Closure implements Comparable<Closure>, Applicable {
    * to the value {@code 1}, the first pattern ({@code 0} fails) but the second
    * pattern ({@code _}) succeeds, and therefore we evaluate the second
    * code {@code "no"}. */
-  private final ImmutableList<Pair<Core.Pat, Code>> patCodes;
+  private final ImmutablePairList<Core.Pat, Code> patCodes;
   private final Pos pos;
 
   /** Not a public API. */
   public Closure(EvalEnv evalEnv,
-      ImmutableList<Pair<Core.Pat, Code>> patCodes, Pos pos) {
+      ImmutablePairList<Core.Pat, Code> patCodes, Pos pos) {
     this.evalEnv = requireNonNull(evalEnv).fix();
     this.patCodes = requireNonNull(patCodes);
     this.pos = pos;
@@ -77,8 +77,7 @@ public class Closure implements Comparable<Closure>, Applicable {
    * sets {@code x} to 3 and {@code y} to 4. */
   EvalEnv bind(Object argValue) {
     final EvalEnvHolder envRef = new EvalEnvHolder(evalEnv);
-    for (Pair<Core.Pat, Code> patCode : patCodes) {
-      final Core.Pat pat = patCode.left;
+    for (Core.Pat pat : patCodes.leftList()) {
       if (bindRecurse(pat, argValue, envRef)) {
         return envRef.env;
       }
@@ -89,9 +88,9 @@ public class Closure implements Comparable<Closure>, Applicable {
   /** Similar to {@link #bind}, but evaluates an expression first. */
   EvalEnv evalBind(EvalEnv env) {
     final EvalEnvHolder envRef = new EvalEnvHolder(env);
-    for (Pair<Core.Pat, Code> patCode : patCodes) {
-      final Object argValue = patCode.right.eval(env);
-      final Core.Pat pat = patCode.left;
+    for (Map.Entry<Core.Pat, Code> patCode : patCodes) {
+      final Object argValue = patCode.getValue().eval(env);
+      final Core.Pat pat = patCode.getKey();
       if (bindRecurse(pat, argValue, envRef)) {
         return envRef.env;
       }
@@ -102,10 +101,10 @@ public class Closure implements Comparable<Closure>, Applicable {
   /** Similar to {@link #bind}, but also evaluates. */
   Object bindEval(Object argValue) {
     final EvalEnvHolder envRef = new EvalEnvHolder(evalEnv);
-    for (Pair<Core.Pat, Code> patCode : patCodes) {
-      final Core.Pat pat = patCode.left;
+    for (Map.Entry<Core.Pat, Code> patCode : patCodes) {
+      final Core.Pat pat = patCode.getKey();
       if (bindRecurse(pat, argValue, envRef)) {
-        final Code code = patCode.right;
+        final Code code = patCode.getValue();
         return code.eval(envRef.env);
       }
     }

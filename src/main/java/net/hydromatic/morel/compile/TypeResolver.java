@@ -42,6 +42,7 @@ import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MartelliUnifier;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.Unifier;
 
@@ -88,8 +89,8 @@ public class TypeResolver {
   private final Map<Unifier.Variable, Unifier.Action> actionMap =
       new HashMap<>();
   private final Map<String, TypeVar> tyVarMap = new HashMap<>();
-  private final List<Pair<Unifier.Variable, PrimitiveType>> preferredTypes =
-      new ArrayList<>();
+  private final PairList<Unifier.Variable, PrimitiveType> preferredTypes =
+      PairList.of();
 
   static final String TUPLE_TY_CON = "tuple";
   static final String LIST_TY_CON = "list";
@@ -149,12 +150,12 @@ public class TypeResolver {
       final TypeMap typeMap =
           new TypeMap(typeSystem, map, (Unifier.Substitution) result);
       while (!preferredTypes.isEmpty()) {
-        Pair<Unifier.Variable, PrimitiveType> x = preferredTypes.get(0);
+        Map.Entry<Unifier.Variable, PrimitiveType> x = preferredTypes.get(0);
         preferredTypes.remove(0);
         final Type type =
-            typeMap.termToType(typeMap.substitution.resultMap.get(x.left));
+            typeMap.termToType(typeMap.substitution.resultMap.get(x.getKey()));
         if (type instanceof TypeVar) {
-          equiv(toTerm(x.right), x.left);
+          equiv(toTerm(x.getValue()), x.getKey());
           continue tryAgain;
         }
       }
@@ -386,7 +387,7 @@ public class TypeResolver {
       if (fn2 instanceof Ast.Id) {
         final BuiltIn builtIn = BuiltIn.BY_ML_NAME.get(((Ast.Id) fn2).name);
         if (builtIn != null) {
-          builtIn.prefer(t -> preferredTypes.add(Pair.of(v, t)));
+          builtIn.prefer(t -> preferredTypes.add(v, t));
         }
       }
       return reg(apply.copy(fn2, arg2), null, v);
@@ -509,8 +510,8 @@ public class TypeResolver {
       final Map<Ast.Id, Unifier.Variable> inFieldVars =
           ImmutableMap.copyOf(fieldVars);
       fieldVars.clear();
-      final List<Pair<Ast.Id, Ast.Exp>> groupExps = new ArrayList<>();
-      for (Pair<Ast.Id, Ast.Exp> groupExp : group.groupExps) {
+      final PairList<Ast.Id, Ast.Exp> groupExps = PairList.of();
+      for (Map.Entry<Ast.Id, Ast.Exp> groupExp : group.groupExps) {
         final Ast.Id id = groupExp.getKey();
         final Ast.Exp exp = groupExp.getValue();
         final Unifier.Variable v7 = unifier.variable();
@@ -518,7 +519,7 @@ public class TypeResolver {
         reg(id, null, v7);
         env3 = env3.bind(id.name, v7);
         fieldVars.put(id, v7);
-        groupExps.add(Pair.of(id, exp2));
+        groupExps.add(id, exp2);
       }
       final List<Ast.Aggregate> aggregates = new ArrayList<>();
       for (Ast.Aggregate aggregate : group.aggregates) {
@@ -563,7 +564,7 @@ public class TypeResolver {
    * the keys and aggregates. */
   private void validateGroup(Ast.Group group) {
     final List<String> names = new ArrayList<>();
-    group.groupExps.forEach(pair -> names.add(pair.left.name));
+    group.groupExps.leftList().forEach(id -> names.add(id.name));
     group.aggregates.forEach(aggregate -> names.add(aggregate.id.name));
     int duplicate = Util.firstDuplicate(names);
     if (duplicate >= 0) {

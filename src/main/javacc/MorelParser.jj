@@ -33,7 +33,9 @@ import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.util.Folder;
+import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
 
@@ -362,7 +364,7 @@ void fromStep(List<FromStep> steps) :
   final Exp condition;
   final Exp filterExp;
   final Exp yieldExp;
-  final List<Pair<Id, Exp>> groupExps;
+  final PairList<Id, Exp> groupExps;
   final List<Aggregate> aggregates;
   final List<OrderItem> orderItems;
 }
@@ -392,7 +394,7 @@ void fromStep(List<FromStep> steps) :
   (
     groupExps = namedExpressionCommaList()
   |
-    { groupExps = ImmutableList.of(); }
+    { groupExps = ImmutablePairList.of(); }
   )
   (
     <COMPUTE> aggregates = aggregateCommaList()
@@ -449,19 +451,19 @@ List<Aggregate> aggregateCommaList() :
 
 Aggregate aggregate() :
 {
-  final Pair<Id, Exp> aggregateId;
+  final PairList<Id, Exp> aggregateIds = PairList.of();
   final Exp argument;
 }
 {
-  aggregateId = namedExpression()
+  namedExpression(aggregateIds)
   (
     <OF> argument = expression()
   |
     { argument = null; }
   )
   {
-    final Id id = aggregateId.left;
-    final Exp aggregate = aggregateId.right;
+    final Id id = aggregateIds.get(0).getKey();
+    final Exp aggregate = aggregateIds.get(0).getValue();
     return ast.aggregate(id.pos.plus(pos()), aggregate, argument, id);
   }
 }
@@ -774,16 +776,16 @@ Exp expression() :
 }
 
 /** List of expressions "e1 as id1, e2 as id2, e3 as id3". */
-List<Pair<Id, Exp>> namedExpressionCommaList() :
+PairList<Id, Exp> namedExpressionCommaList() :
 {
-  final List<Pair<Id, Exp>> list = new ArrayList<>();
+  final PairList<Id, Exp> list = PairList.of();
   Pair<Id, Exp> p;
 }
 {
-  p = namedExpression() { list.add(p); }
+  namedExpression(list)
   (
     <COMMA>
-    p = namedExpression() { list.add(p); }
+    namedExpression(list)
   )*
   { return list; }
 }
@@ -791,7 +793,7 @@ List<Pair<Id, Exp>> namedExpressionCommaList() :
 /** Expression with optional "id =", e.g. "id1 = e1";
  * "#deptno e" and "e.deptno" are equivalent to "deptno = e.deptno";
  * "x" is equivalent to "x = x". */
-Pair<Id, Exp> namedExpression() :
+void namedExpression(PairList<Id, Exp> list) :
 {
   final Exp exp;
   final Id id;
@@ -799,12 +801,12 @@ Pair<Id, Exp> namedExpression() :
 {
   LOOKAHEAD(<IDENTIFIER> <EQ>)
   id = identifier() <EQ> exp = expression() {
-    return Pair.of(id, exp);
+    list.add(id, exp);
   }
 |
   exp = expression() {
     final String name = ast.implicitLabel(exp);
-    return Pair.of(ast.id(exp.pos, name), exp);
+    list.add(ast.id(exp.pos, name), exp);
   }
 }
 

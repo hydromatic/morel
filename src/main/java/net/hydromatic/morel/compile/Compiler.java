@@ -40,7 +40,9 @@ import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.TailList;
 import net.hydromatic.morel.util.ThreadLocals;
 
@@ -363,9 +365,9 @@ public class Compiler {
 
     case ORDER:
       final Core.Order order = (Core.Order) firstStep;
-      final ImmutableList<Pair<Code, Boolean>> codes =
-          transform(order.orderItems,
-              i -> Pair.of(compile(cx, i.exp), i.direction == DESC));
+      final PairList<Code, Boolean> codes = PairList.of();
+      order.orderItems.forEach(e ->
+          codes.add(compile(cx, e.exp), e.direction == DESC));
       return () -> Codes.orderRowSink(codes, bindings, nextFactory.get());
 
     case GROUP:
@@ -619,15 +621,17 @@ public class Compiler {
    */
   private Code compileMatchList(Context cx,
       List<Core.Match> matchList) {
-    return new MatchCode(transform(matchList, match -> compileMatch(cx, match)),
-        getLast(matchList).pos);
+    final PairList<Core.Pat, Code> patCodes = PairList.of();
+    matchList.forEach(match -> compileMatch(cx, match, patCodes::add));
+    return new MatchCode(patCodes.immutable(), getLast(matchList).pos);
   }
 
-  private Pair<Core.Pat, Code> compileMatch(Context cx, Core.Match match) {
+  private void compileMatch(Context cx, Core.Match match,
+      BiConsumer<Core.Pat, Code> consumer) {
     final List<Binding> bindings = new ArrayList<>();
     Compiles.bindPattern(typeSystem, bindings, match.pat);
     final Code code = compile(cx.bindAll(bindings), match.exp);
-    return Pair.of(match.pat, code);
+    consumer.accept(match.pat, code);
   }
 
   private void compileValDecl(Context cx, Core.ValDecl valDecl, boolean isDecl,
@@ -655,7 +659,7 @@ public class Compiler {
       if (!linkCodes.isEmpty()) {
         link(linkCodes, pat, code);
       }
-      matchCodes.add(new MatchCode(ImmutableList.of(Pair.of(pat, code)), pos));
+      matchCodes.add(new MatchCode(ImmutablePairList.of(pat, code), pos));
 
       if (actions != null) {
         final Type type0 = exp.type;
@@ -782,18 +786,18 @@ public class Compiler {
 
   /** Code that implements {@link Compiler#compileMatchList(Context, List)}. */
   private static class MatchCode implements Code {
-    private final ImmutableList<Pair<Core.Pat, Code>> patCodes;
+    private final ImmutablePairList<Core.Pat, Code> patCodes;
     private final Pos pos;
 
-    MatchCode(ImmutableList<Pair<Core.Pat, Code>> patCodes, Pos pos) {
+    MatchCode(ImmutablePairList<Core.Pat, Code> patCodes, Pos pos) {
       this.patCodes = patCodes;
       this.pos = pos;
     }
 
     @Override public Describer describe(Describer describer) {
       return describer.start("match", d ->
-          patCodes.forEach(p ->
-              d.arg("", p.left.toString()).arg("", p.right)));
+          patCodes.forEach((pat, code) ->
+              d.arg("", pat.toString()).arg("", code)));
     }
 
     @Override public Object eval(EvalEnv evalEnv) {

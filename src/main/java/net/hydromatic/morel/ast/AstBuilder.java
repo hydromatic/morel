@@ -21,7 +21,7 @@ package net.hydromatic.morel.ast;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.RecordType;
-import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -467,9 +467,9 @@ public enum AstBuilder {
     return new Ast.Compute(pos, ImmutableList.copyOf(aggregates));
   }
 
-  public Ast.Group group(Pos pos, List<Pair<Ast.Id, Ast.Exp>> groupExps,
+  public Ast.Group group(Pos pos, PairList<Ast.Id, Ast.Exp> groupExps,
       List<Ast.Aggregate> aggregates) {
-    return new Ast.Group(pos, Op.GROUP, ImmutableList.copyOf(groupExps),
+    return new Ast.Group(pos, Op.GROUP, groupExps.immutable(),
         ImmutableList.copyOf(aggregates));
   }
 

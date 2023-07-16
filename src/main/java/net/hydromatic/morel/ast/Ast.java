@@ -18,8 +18,10 @@
  */
 package net.hydromatic.morel.ast;
 
+import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -1521,7 +1523,7 @@ public class Ast {
         case COMPUTE:
         case GROUP:
           final Group group = (Group) step;
-          final List<Pair<Id, Exp>> groupExps = group.groupExps;
+          final ImmutablePairList<Id, Exp> groupExps = group.groupExps;
           final List<Aggregate> aggregates = group.aggregates;
 
           // The type of
@@ -1530,7 +1532,7 @@ public class Ast {
           //   {a = e1, b = e2, c = sum (map (fn e => e3) [])}
           nextFields.clear();
           nextFields.addAll(Pair.left(groupExps));
-          groupExps.forEach(pair -> nextFields.add(pair.left));
+          groupExps.forEach((id, exp) -> nextFields.add(id));
           aggregates.forEach(aggregate -> nextFields.add(aggregate.id));
           fields = nextFields;
           break;
@@ -1787,10 +1789,10 @@ public class Ast {
 
   /** A {@code group} clause in a {@code from} expression. */
   public static class Group extends FromStep {
-    public final ImmutableList<Pair<Id, Exp>> groupExps;
+    public final ImmutablePairList<Id, Exp> groupExps;
     public final ImmutableList<Aggregate> aggregates;
 
-    Group(Pos pos, Op op, ImmutableList<Pair<Id, Exp>> groupExps,
+    Group(Pos pos, Op op, ImmutablePairList<Id, Exp> groupExps,
         ImmutableList<Aggregate> aggregates) {
       super(pos, op);
       this.groupExps = groupExps;
@@ -1820,7 +1822,7 @@ public class Ast {
       visitor.visit(this);
     }
 
-    public Group copy(List<Pair<Id, Exp>> groupExps,
+    public Group copy(PairList<Id, Exp> groupExps,
         List<Aggregate> aggregates) {
       checkArgument(op == Op.GROUP, "use Compute.copy instead?");
       return this.groupExps.equals(groupExps)
@@ -1837,7 +1839,7 @@ public class Ast {
    * remember that the type derivation rules are different. */
   public static class Compute extends Group {
     Compute(Pos pos, ImmutableList<Aggregate> aggregates) {
-      super(pos, Op.COMPUTE, ImmutableList.of(), aggregates);
+      super(pos, Op.COMPUTE, ImmutablePairList.of(), aggregates);
     }
 
     @Override public AstNode accept(Shuttle shuttle) {

@@ -215,9 +215,9 @@ public class Visitor {
   }
 
   protected void visit(Ast.Group group) {
-    group.groupExps.forEach(p -> {
-      p.left.accept(this);
-      p.right.accept(this);
+    group.groupExps.forEach((id, exp) -> {
+      id.accept(this);
+      exp.accept(this);
     });
     group.aggregates.forEach(this::accept);
   }
