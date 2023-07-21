@@ -55,18 +55,8 @@ public class Relationalizer extends EnvShuttle {
     return new Relationalizer(typeSystem, env);
   }
 
-  @Override protected EnvShuttle bind(Binding binding) {
-    return new Relationalizer(typeSystem, env.bind(binding));
-  }
-
-  @Override protected Relationalizer bind(List<Binding> bindingList) {
-    // The "env2 != env" check is an optimization. If you remove it, this method
-    // will have the same effect, just slower.
-    final Environment env2 = env.bindAll(bindingList);
-    if (env2 != env) {
-      return new Relationalizer(typeSystem, env2);
-    }
-    return this;
+  @Override protected Relationalizer push(Environment env) {
+    return new Relationalizer(typeSystem, env);
   }
 
   @Override protected Core.Exp visit(Core.Apply apply) {

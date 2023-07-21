@@ -275,18 +275,8 @@ public class Resolver {
       this.set = set;
     }
 
-    @Override protected ReferenceFinder bind(Binding binding) {
-      return new ReferenceFinder(typeSystem, env.bind(binding), set, fromStack);
-    }
-
-    @Override protected ReferenceFinder bind(List<Binding> bindingList) {
-      // The "env2 == env" check is an optimization.
-      // If you remove it, this method will have the same effect, just slower.
-      final Environment env2 = env.bindAll(bindingList);
-      if (env2 == env) {
-        return this;
-      }
-      return new ReferenceFinder(typeSystem, env2, set, fromStack);
+    @Override protected ReferenceFinder push(Environment env) {
+      return new ReferenceFinder(typeSystem, env, set, fromStack);
     }
 
     @Override protected void visit(Core.Id id) {

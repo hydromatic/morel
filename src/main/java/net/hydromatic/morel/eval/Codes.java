@@ -3668,8 +3668,6 @@ public abstract class Codes {
     }
   }
 
-
-
   /** An {@link Applicable} whose position can be changed.
    *
    * <p>Operations that may throw exceptions should implement this interface.

@@ -42,11 +42,24 @@ abstract class EnvShuttle extends Shuttle {
     this.env = env;
   }
 
+  /** Creates a shuttle the same as this but with a new environment. */
+  protected abstract EnvShuttle push(Environment env);
+
   /** Creates a shuttle the same as this but overriding a binding. */
-  protected abstract EnvShuttle bind(Binding binding);
+  protected EnvShuttle bind(Binding binding) {
+    return push(env.bind(binding));
+  }
 
   /** Creates a shuttle the same as this but with overriding bindings. */
-  protected abstract EnvShuttle bind(List<Binding> bindingList);
+  protected EnvShuttle bind(List<Binding> bindingList) {
+    // The "env2 != env" check is an optimization. If you remove it, this method
+    // will have the same effect, just slower.
+    final Environment env2 = env.bindAll(bindingList);
+    if (env2 == env) {
+      return this;
+    }
+    return push(env2);
+  }
 
   @Override protected Core.Fn visit(Core.Fn fn) {
     final Core.IdPat idPat2 = fn.idPat.accept(this);

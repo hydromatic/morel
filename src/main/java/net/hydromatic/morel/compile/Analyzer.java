@@ -20,7 +20,6 @@ package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 
 import com.google.common.collect.HashMultimap;
@@ -31,7 +30,6 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -72,18 +70,8 @@ public class Analyzer extends EnvVisitor {
     return new Analysis(b.build());
   }
 
-  @Override protected Analyzer bind(Binding binding) {
-    return new Analyzer(typeSystem, env.bind(binding), map, fromStack);
-  }
-
-  @Override protected Analyzer bind(List<Binding> bindingList) {
-    // The "env2 == env" check is an optimization.
-    // If you remove it, this method will have the same effect, just slower.
-    final Environment env2 = env.bindAll(bindingList);
-    if (env2 == env) {
-      return this;
-    }
-    return new Analyzer(typeSystem, env2, map, fromStack);
+  @Override protected Analyzer push(Environment env) {
+    return new Analyzer(typeSystem, env, map, fromStack);
   }
 
   @Override protected void visit(Core.IdPat idPat) {

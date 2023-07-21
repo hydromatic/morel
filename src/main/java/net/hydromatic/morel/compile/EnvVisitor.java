@@ -47,11 +47,24 @@ abstract class EnvVisitor extends Visitor {
     this.fromStack = fromStack;
   }
 
-  /** Creates a shuttle the same as this but overriding a binding. */
-  protected abstract EnvVisitor bind(Binding binding);
+  /** Creates a visitor the same as this but with a new environment. */
+  protected abstract EnvVisitor push(Environment env);
 
-  /** Creates a shuttle the same as this but with overriding bindings. */
-  protected abstract EnvVisitor bind(List<Binding> bindingList);
+  /** Creates a visitor the same as this but overriding a binding. */
+  protected EnvVisitor bind(Binding binding) {
+    return push(env.bind(binding));
+  }
+
+  /** Creates a visitor the same as this but with overriding bindings. */
+  protected EnvVisitor bind(List<Binding> bindingList)  {
+    // The "env2 == env" check is an optimization.
+    // If you remove it, this method will have the same effect, just slower.
+    final Environment env2 = env.bindAll(bindingList);
+    if (env2 != env) {
+      return push(env2);
+    }
+    return this;
+  }
 
   @Override protected void visit(Core.Fn fn) {
     fn.idPat.accept(this);

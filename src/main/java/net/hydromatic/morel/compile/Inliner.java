@@ -56,18 +56,8 @@ public class Inliner extends EnvShuttle {
     return new Inliner(typeSystem, env, analysis);
   }
 
-  @Override protected EnvShuttle bind(Binding binding) {
-    return new Inliner(typeSystem, env.bind(binding), analysis);
-  }
-
-  @Override protected Inliner bind(List<Binding> bindingList) {
-    // The "env2 != env" check is an optimization. If you remove it, this method
-    // will have the same effect, just slower.
-    final Environment env2 = env.bindAll(bindingList);
-    if (env2 != env) {
-      return new Inliner(typeSystem, env2, analysis);
-    }
-    return this;
+  @Override protected Inliner push(Environment env) {
+    return new Inliner(typeSystem, env, analysis);
   }
 
   @Override public Core.Exp visit(Core.Id id) {
