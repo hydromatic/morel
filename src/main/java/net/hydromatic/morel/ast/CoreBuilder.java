@@ -38,6 +38,7 @@ import net.hydromatic.morel.util.Pair;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -282,6 +283,10 @@ public enum CoreBuilder {
     return new Core.Tuple(type, ImmutableList.copyOf(args));
   }
 
+  public Core.Tuple tuple(TypeSystem typeSystem, Core.Exp... args) {
+    return tuple(typeSystem, null, ImmutableList.copyOf(args));
+  }
+
   /** As {@link #tuple(RecordLikeType, Iterable)}, but derives type.
    *
    * <p>If present, {@code type} serves as a template, dictating whether to
@@ -311,8 +316,8 @@ public enum CoreBuilder {
     return new Core.Local(dataType, exp);
   }
 
-  public Core.NonRecValDecl nonRecValDecl(Core.NamedPat pat, Core.Exp exp,
-      Pos pos) {
+  public Core.NonRecValDecl nonRecValDecl(Pos pos, Core.NamedPat pat,
+      Core.Exp exp) {
     return new Core.NonRecValDecl(pat, exp, pos);
   }
 
@@ -321,12 +326,12 @@ public enum CoreBuilder {
     return new Core.RecValDecl(ImmutableList.copyOf(list));
   }
 
-  public Core.Match match(Core.Pat pat, Core.Exp exp, Pos pos) {
+  public Core.Match match(Pos pos, Core.Pat pat, Core.Exp exp) {
     return new Core.Match(pos, pat, exp);
   }
 
-  public Core.Case caseOf(Type type, Core.Exp exp,
-      Iterable<? extends Core.Match> matchList, Pos pos) {
+  public Core.Case caseOf(Pos pos, Type type, Core.Exp exp,
+      Iterable<? extends Core.Match> matchList) {
     return new Core.Case(pos, type, exp, ImmutableList.copyOf(matchList));
   }
 
@@ -407,8 +412,20 @@ public enum CoreBuilder {
     return new Core.Fn(type, idPat, exp);
   }
 
+  /** Creates a {@link Core.Apply}. */
   public Core.Apply apply(Pos pos, Type type, Core.Exp fn, Core.Exp arg) {
     return new Core.Apply(pos, type, fn, arg);
+  }
+
+  /** Creates a {@link Core.Apply} with two or more arguments, packing the
+   * arguments into a tuple. */
+  public Core.Apply apply(Pos pos, TypeSystem typeSystem, BuiltIn builtIn,
+      Core.Exp arg0, Core.Exp arg1, Core.Exp... args) {
+    final Core.Literal fn = functionLiteral(typeSystem, builtIn);
+    FnType fnType = (FnType) fn.type;
+    TupleType tupleType = (TupleType) fnType.paramType;
+    return apply(pos, fnType.resultType, fn,
+        tuple(tupleType, Lists.asList(arg0, arg1, args)));
   }
 
   public Core.Case ifThenElse(Core.Exp condition, Core.Exp ifTrue,
@@ -418,8 +435,8 @@ public enum CoreBuilder {
     // Pos.ZERO is ok because match failure is impossible.
     final Pos pos = Pos.ZERO;
     return new Core.Case(pos, ifTrue.type, condition,
-        ImmutableList.of(match(truePat, ifTrue, pos),
-            match(boolWildcardPat, ifFalse, pos)));
+        ImmutableList.of(match(pos, truePat, ifTrue),
+            match(pos, boolWildcardPat, ifFalse)));
   }
 
   public Core.DatatypeDecl datatypeDecl(Iterable<DataType> dataTypes) {

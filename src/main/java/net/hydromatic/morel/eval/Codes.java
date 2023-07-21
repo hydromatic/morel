@@ -2305,15 +2305,15 @@ public abstract class Codes {
   /** @see BuiltIn#SYS_ENV */
   private static Core.Exp sysEnv(TypeSystem typeSystem, Environment env,
       Type argType) {
+    final TupleType stringPairType =
+        typeSystem.tupleType(PrimitiveType.STRING, PrimitiveType.STRING);
     final List<Core.Tuple> args =
         env.getValueMap()
             .entrySet()
             .stream()
             .sorted(Map.Entry.comparingByKey())
             .map(entry ->
-                core.tuple(
-                    typeSystem.tupleType(PrimitiveType.STRING,
-                        PrimitiveType.STRING),
+                core.tuple(stringPairType,
                     core.stringLiteral(entry.getKey()),
                     core.stringLiteral(entry.getValue().id.type.moniker())))
             .collect(Collectors.toList());

@@ -228,7 +228,7 @@ public class Compiler {
     case FN:
       final Core.Fn fn = (Core.Fn) expression;
       return compileMatchList(cx,
-          ImmutableList.of(core.match(fn.idPat, fn.exp, fn.pos)));
+          ImmutableList.of(core.match(fn.pos, fn.idPat, fn.exp)));
 
     case CASE:
       final Core.Case case_ = (Core.Case) expression;

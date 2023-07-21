@@ -710,7 +710,7 @@ public class Core {
 
     public NonRecValDecl copy(NamedPat pat, Exp exp) {
       return pat == this.pat && exp == this.exp ? this
-          : core.nonRecValDecl(pat, exp, pos);
+          : core.nonRecValDecl(pos, pat, exp);
     }
 
     @Override public void forEachBinding(BindingConsumer consumer) {
@@ -914,7 +914,7 @@ public class Core {
 
     public Match copy(Pat pat, Exp exp) {
       return pat == this.pat && exp == this.exp ? this
-          : core.match(pat, exp, pos);
+          : core.match(pos, pat, exp);
     }
   }
 
@@ -980,7 +980,7 @@ public class Core {
 
     public Case copy(Exp exp, List<Match> matchList) {
       return exp == this.exp && matchList.equals(this.matchList) ? this
-          : core.caseOf(type, exp, matchList, pos);
+          : core.caseOf(pos, type, exp, matchList);
     }
   }
 

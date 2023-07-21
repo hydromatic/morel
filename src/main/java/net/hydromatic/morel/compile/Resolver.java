@@ -143,8 +143,8 @@ public class Resolver {
     final List<Binding> bindings = new ArrayList<>(); // discard
     final ResolvedValDecl resolvedValDecl = resolveValDecl(valDecl, bindings);
     Core.NonRecValDecl nonRecValDecl =
-        core.nonRecValDecl(resolvedValDecl.pat, resolvedValDecl.exp,
-            resolvedValDecl.patExps.get(0).pos);
+        core.nonRecValDecl(resolvedValDecl.patExps.get(0).pos,
+            resolvedValDecl.pat, resolvedValDecl.exp);
     return resolvedValDecl.rec
         ? core.recValDecl(ImmutableList.of(nonRecValDecl))
         : nonRecValDecl;
@@ -389,7 +389,7 @@ public class Resolver {
     final ListType listType = typeMap.typeSystem.listType(type);
     return core.apply(exp.pos, listType,
         core.functionLiteral(typeMap.typeSystem, BuiltIn.Z_LIST),
-        core.tuple(typeMap.typeSystem, null, ImmutableList.of(toCore(exp))));
+        core.tuple(typeMap.typeSystem, toCore(exp)));
   }
 
   private Core.Apply toCore(Ast.Apply apply) {
@@ -418,7 +418,7 @@ public class Resolver {
     final BuiltIn builtIn = toBuiltIn(call.op);
     return core.apply(call.pos, typeMap.getType(call),
         core.functionLiteral(typeMap.typeSystem, builtIn),
-        core.tuple(typeMap.typeSystem, null, ImmutableList.of(core0, core1)));
+        core.tuple(typeMap.typeSystem, core0, core1));
   }
 
   private BuiltIn toBuiltIn(Op op) {
@@ -448,7 +448,7 @@ public class Resolver {
     final Core.IdPat idPat = core.idPat(type.paramType, nameGenerator);
     final Core.Id id = core.id(idPat);
     return core.fn(type, idPat,
-        core.caseOf(type.resultType, id, matchList, fn.pos));
+        core.caseOf(fn.pos, type.resultType, id, matchList));
   }
 
   private Core.Case toCore(Ast.If if_) {
@@ -457,8 +457,8 @@ public class Resolver {
   }
 
   private Core.Case toCore(Ast.Case case_) {
-    return core.caseOf(typeMap.getType(case_), toCore(case_.exp),
-        transform(case_.matchList, this::toCore), case_.pos);
+    return core.caseOf(case_.pos, typeMap.getType(case_), toCore(case_.exp),
+        transform(case_.matchList, this::toCore));
   }
 
   private Core.Exp toCore(Ast.Let let) {
@@ -582,7 +582,7 @@ public class Resolver {
     final List<Binding> bindings = new ArrayList<>();
     Compiles.acceptBinding(typeMap.typeSystem, pat, bindings);
     final Core.Exp exp = withEnv(bindings).toCore(match.exp);
-    return core.match(pat, exp, match.pos);
+    return core.match(match.pos, pat, exp);
   }
 
   Core.Exp toCore(Ast.From from) {
@@ -675,13 +675,13 @@ public class Resolver {
       if (rec) {
         final List<Core.NonRecValDecl> valDecls = new ArrayList<>();
         patExps.forEach(x ->
-            valDecls.add(core.nonRecValDecl((Core.IdPat) x.pat, x.exp, x.pos)));
+            valDecls.add(core.nonRecValDecl(x.pos, (Core.IdPat) x.pat, x.exp)));
         return core.let(core.recValDecl(valDecls), resultExp);
       }
       if (!composite && patExps.get(0).pat instanceof Core.IdPat) {
         final PatExp x = patExps.get(0);
         Core.NonRecValDecl valDecl =
-            core.nonRecValDecl((Core.IdPat) x.pat, x.exp, x.pos);
+            core.nonRecValDecl(x.pos, (Core.IdPat) x.pat, x.exp);
         return rec
             ? core.let(core.recValDecl(ImmutableList.of(valDecl)), resultExp)
             : core.let(valDecl, resultExp);
@@ -694,9 +694,9 @@ public class Resolver {
         final Core.IdPat idPat = core.idPat(pat.type, name, nameGenerator);
         final Core.Id id = core.id(idPat);
         final Pos pos = patExps.get(0).pos;
-        return core.let(core.nonRecValDecl(idPat, exp, pos),
-            core.caseOf(resultExp.type, id,
-                ImmutableList.of(core.match(pat, resultExp, pos)), pos));
+        return core.let(core.nonRecValDecl(pos, idPat, exp),
+            core.caseOf(pos, resultExp.type, id,
+                ImmutableList.of(core.match(pos, pat, resultExp))));
       }
     }
   }
