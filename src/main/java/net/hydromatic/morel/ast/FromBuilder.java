@@ -23,7 +23,6 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.RefChecker;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -37,6 +36,7 @@ import java.util.Map;
 import java.util.SortedMap;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Pair.forEach;
 
 import static com.google.common.collect.Iterables.getLast;
 
@@ -134,7 +134,7 @@ public class FromBuilder {
       final List<Binding> bindings;
       if (pat instanceof Core.RecordPat) {
         final Core.RecordPat recordPat = (Core.RecordPat) pat;
-        Pair.forEach(recordPat.type().argNameTypes.keySet(), recordPat.args,
+        forEach(recordPat.type().argNameTypes.keySet(), recordPat.args,
             (name, arg) -> nameExps.put(name, core.id((Core.IdPat) arg)));
         bindings = null;
       } else {

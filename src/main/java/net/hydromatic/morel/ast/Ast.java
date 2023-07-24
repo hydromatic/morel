@@ -43,6 +43,8 @@ import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.getLast;
@@ -346,7 +348,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
-      Ord.forEach(args, action);
+      forEachIndexed(args, action);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -384,7 +386,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
-      Ord.forEach(args, action);
+      forEachIndexed(args, action);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -423,12 +425,12 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Pat> action) {
-      Ord.forEach(args.values(), action);
+      forEachIndexed(args.values(), action);
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      Ord.forEach(args, (i, k, v) ->
+      Ord.forEachIndexed(args, (i, k, v) ->
           w.append(i > 0 ? ", " : "").append(k).append(" = ").append(v, 0, 0));
       if (ellipsis) {
         w.append(args.isEmpty() ? "..." : ", ...");
@@ -569,7 +571,7 @@ public class Ast {
             .append(" ").id(name);
       default:
         w.append("(");
-        Ord.forEach(types, (type, i) ->
+        forEachIndexed(types, (type, i) ->
             w.append(i == 0 ? "" : ", ").append(type, 0, 0));
         return w.append(") ")
             .id(name);
@@ -640,7 +642,7 @@ public class Ast {
 
     AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      Ord.forEach(fieldTypes, (i, field, type) ->
+      Ord.forEachIndexed(fieldTypes, (i, field, type) ->
           w.append(i > 0 ? ", " : "")
               .id(field).append(": ").append(type, 0, 0));
       return w.append("}");
@@ -667,7 +669,7 @@ public class Ast {
     AstWriter unparse(AstWriter w, int left, int right) {
       // "*" is non-associative. Elevate both left and right precedence
       // to force parentheses if the inner expression is also "*".
-      Ord.forEach(types, (arg, i) ->
+      forEachIndexed(types, (arg, i) ->
           w.append(i == 0 ? "" : " * ")
               .append(arg, op.left + 1, op.right + 1));
       return w;
@@ -699,7 +701,7 @@ public class Ast {
 
     AstWriter unparse(AstWriter w, int left, int right) {
       w.append("(");
-      Ord.forEach(types, (arg, i) ->
+      forEachIndexed(types, (arg, i) ->
           w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
     }
@@ -1129,7 +1131,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Exp> action) {
-      Ord.forEach(args, action);
+      forEachIndexed(args, action);
     }
 
     public Exp accept(Shuttle shuttle) {
@@ -1161,7 +1163,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Exp> action) {
-      Ord.forEach(args, action);
+      forEachIndexed(args, action);
     }
 
     public ListExp accept(Shuttle shuttle) {
@@ -1195,7 +1197,7 @@ public class Ast {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Exp> action) {
-      Ord.forEach(args.values(), action);
+      forEachIndexed(args.values(), action);
     }
 
     public Exp accept(Shuttle shuttle) {
@@ -1208,7 +1210,7 @@ public class Ast {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      Ord.forEach(args, (i, k, v) ->
+      Ord.forEachIndexed(args, (i, k, v) ->
           w.append(i > 0 ? ", " : "").append(k).append(" = ").append(v, 0, 0));
       return w.append("}");
     }
@@ -1575,7 +1577,7 @@ public class Ast {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
         w.append("from");
-        Ord.forEach(steps, (step, i) -> {
+        forEachIndexed(steps, (step, i) -> {
           if (step.op == Op.SCAN && i > 0 && steps.get(i - 1).op == Op.SCAN) {
             w.append(",");
           }
@@ -1803,12 +1805,12 @@ public class Ast {
       if (op == Op.GROUP) {
         w.append(" group");
       }
-      Pair.forEachIndexed(groupExps, (i, id, exp) ->
+      forEachIndexed(groupExps, (i, id, exp) ->
           w.append(i == 0 ? " " : ", ")
               .append(id, 0, 0)
               .append(" = ")
               .append(exp, 0, 0));
-      Ord.forEach(aggregates, (aggregate, i) ->
+      forEachIndexed(aggregates, (aggregate, i) ->
           w.append(i == 0 ? " compute " : ", ")
               .append(aggregate, 0, 0));
       return w;

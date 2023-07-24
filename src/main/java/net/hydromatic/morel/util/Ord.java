@@ -99,7 +99,7 @@ public class Ord<E> implements Map.Entry<Integer, E> {
   /**
    * Performs the given action for each element of the {@code Iterable}.
    */
-  public static <E> void forEach(final Iterable<E> iterable,
+  public static <E> void forEachIndexed(final Iterable<E> iterable,
       ObjIntConsumer<E> consumer) {
     int i = 0;
     for (E e : iterable) {
@@ -110,7 +110,7 @@ public class Ord<E> implements Map.Entry<Integer, E> {
   /**
    * Performs the given action for each entry of a {@code Map}.
    */
-  public static <K, V> void forEach(final Map<K, V> map,
+  public static <K, V> void forEachIndexed(final Map<K, V> map,
       IntObjObjConsumer<K, V> consumer) {
     int i = 0;
     for (Map.Entry<K, V> e : map.entrySet()) {
@@ -218,7 +218,7 @@ public class Ord<E> implements Map.Entry<Integer, E> {
    *
    * <p>Analogous to {@link BiConsumer}, but with an extra ordinal.
    *
-   * @see #forEach(Map, IntObjObjConsumer)
+   * @see #forEachIndexed(Map, IntObjObjConsumer)
    *
    * @param <K> Key type
    * @param <V> Value type

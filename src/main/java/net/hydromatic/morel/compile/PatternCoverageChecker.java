@@ -24,7 +24,6 @@ import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Sat;
 
@@ -40,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
 
 import static java.util.Objects.requireNonNull;
 
@@ -149,13 +149,13 @@ class PatternCoverageChecker {
 
     case TUPLE_PAT:
       final Core.TuplePat tuplePat = (Core.TuplePat) pat;
-      Ord.forEach(tuplePat.args, (pat2, i) ->
+      forEachIndexed(tuplePat.args, (pat2, i) ->
           toTerm(pat2, path.sub(i), terms));
       return;
 
     case RECORD_PAT:
       final Core.RecordPat recordPat = (Core.RecordPat) pat;
-      Ord.forEach(recordPat.args, (pat2, i) ->
+      forEachIndexed(recordPat.args, (pat2, i) ->
           toTerm(pat2, path.sub(i), terms));
       return;
 

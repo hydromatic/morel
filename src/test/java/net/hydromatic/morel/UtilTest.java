@@ -99,7 +99,7 @@ public class UtilTest {
   @Test void testOrd() {
     final List<String> abc = Arrays.asList("a", "b", "c");
     final StringBuilder buf = new StringBuilder();
-    Ord.forEach(abc, (e, i) ->
+    Ord.forEachIndexed(abc, (e, i) ->
         buf.append(i).append("#").append(e).append(";"));
     assertThat(buf.toString(), is("0#a;1#b;2#c;"));
   }

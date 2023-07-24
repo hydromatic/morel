@@ -33,7 +33,6 @@ import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
@@ -51,6 +50,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import static net.hydromatic.morel.type.RecordType.ORDERING;
+import static net.hydromatic.morel.util.Pair.forEach;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 
@@ -269,7 +269,7 @@ public enum CoreBuilder {
       List<Core.Pat> args) {
     final ImmutableSortedMap.Builder<String, Type> argNameTypes =
         ImmutableSortedMap.orderedBy(ORDERING);
-    Pair.forEach(argNames, args, (argName, arg) ->
+    forEach(argNames, args, (argName, arg) ->
         argNameTypes.put(argName, arg.type));
     return recordPat((RecordType) typeSystem.recordType(argNameTypes.build()),
         args);
@@ -299,7 +299,7 @@ public enum CoreBuilder {
     if (type instanceof RecordType) {
       final SortedMap<String, Type> argNameTypes =
           new TreeMap<>(ORDERING);
-      Pair.forEach(type.argNameTypes().keySet(), argList, (name, arg) ->
+      forEach(type.argNameTypes().keySet(), argList, (name, arg) ->
           argNameTypes.put(name, arg.type));
       tupleType = typeSystem.recordType(argNameTypes);
     } else {

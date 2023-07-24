@@ -41,7 +41,6 @@ import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.ImmutablePairList;
-import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.TailList;
 import net.hydromatic.morel.util.ThreadLocals;
@@ -67,6 +66,7 @@ import java.util.function.Supplier;
 
 import static net.hydromatic.morel.ast.Ast.Direction.DESC;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 import static net.hydromatic.morel.util.Static.transform;
 
@@ -358,9 +358,8 @@ public class Compiler {
         final RecordLikeType recordType = tuple.type();
         final ImmutableSortedMap.Builder<String, Code> mapCodes =
             ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-        Pair.forEach(tuple.args, recordType.argNameTypes().keySet(),
-            (exp, name) ->
-                mapCodes.put(name, compile(cx, exp)));
+        forEach(tuple.args, recordType.argNameTypes().keySet(), (exp, name) ->
+            mapCodes.put(name, compile(cx, exp)));
         return () -> Codes.yieldRowSink(mapCodes.build(), nextFactory.get());
       }
 
@@ -723,12 +722,12 @@ public class Compiler {
       return;
     case TUPLE_PAT:
       final Core.TuplePat tuplePat = (Core.TuplePat) pat;
-      Pair.forEach(tuplePat.args, (List) o, (pat2, o2) ->
+      forEach(tuplePat.args, (List) o, (pat2, o2) ->
           shredValue(pat2, o2, consumer));
       return;
     case RECORD_PAT:
       final Core.RecordPat recordPat = (Core.RecordPat) pat;
-      Pair.forEach(recordPat.args, (List) o, (pat2, o2) ->
+      forEach(recordPat.args, (List) o, (pat2, o2) ->
           shredValue(pat2, o2, consumer));
       return;
     case CON_PAT:
@@ -757,7 +756,7 @@ public class Compiler {
         // Recurse into the tuple, binding names to code in parallel
         final List<Code> codes = ((Codes.TupleCode) code).codes;
         final List<Core.Pat> pats = ((Core.TuplePat) pat).args;
-        Pair.forEach(codes, pats, (code1, pat1) ->
+        forEach(codes, pats, (code1, pat1) ->
             link(linkCodes, pat1, code1));
       }
     }

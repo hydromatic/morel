@@ -81,6 +81,7 @@ import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Iterables.getLast;
@@ -209,7 +210,7 @@ public class CalciteCompiler extends Compiler {
 
       @Override public Describer describe(Describer describer) {
         return describer.start("let", d -> {
-          Ord.forEach(matchCodes, (matchCode, i) ->
+          forEachIndexed(matchCodes, (matchCode, i) ->
               d.arg("matchCode" + i, matchCode));
           d.arg("resultCode", resultCode);
         });
@@ -575,7 +576,7 @@ public class CalciteCompiler extends Compiler {
       final Core.Tuple tuple = (Core.Tuple) exp;
       builder = cx.relBuilder.getTypeFactory().builder();
       operands = new ArrayList<>();
-      Ord.forEach(tuple.args, (arg, i) -> {
+      forEachIndexed(tuple.args, (arg, i) -> {
         final RexNode e = translate(cx, arg);
         operands.add(e);
         builder.add(Integer.toString(i), e.getType());

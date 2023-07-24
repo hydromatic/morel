@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
+import static net.hydromatic.morel.util.Pair.zip;
 import static net.hydromatic.morel.util.Static.skip;
 
 import static java.util.Objects.requireNonNull;
@@ -160,7 +161,7 @@ public class Closure implements Comparable<Closure>, Applicable {
     case TUPLE_PAT:
       final Core.TuplePat tuplePat = (Core.TuplePat) pat;
       listValue = (List) argValue;
-      for (Pair<Core.Pat, Object> pair : Pair.zip(tuplePat.args, listValue)) {
+      for (Pair<Core.Pat, Object> pair : zip(tuplePat.args, listValue)) {
         if (!bindRecurse(pair.left, pair.right, envRef)) {
           return false;
         }
@@ -170,7 +171,7 @@ public class Closure implements Comparable<Closure>, Applicable {
     case RECORD_PAT:
       final Core.RecordPat recordPat = (Core.RecordPat) pat;
       listValue = (List) argValue;
-      for (Pair<Core.Pat, Object> pair : Pair.zip(recordPat.args, listValue)) {
+      for (Pair<Core.Pat, Object> pair : zip(recordPat.args, listValue)) {
         if (!bindRecurse(pair.left, pair.right, envRef)) {
           return false;
         }
@@ -183,7 +184,7 @@ public class Closure implements Comparable<Closure>, Applicable {
       if (listValue.size() != listPat.args.size()) {
         return false;
       }
-      for (Pair<Core.Pat, Object> pair : Pair.zip(listPat.args, listValue)) {
+      for (Pair<Core.Pat, Object> pair : zip(listPat.args, listValue)) {
         if (!bindRecurse(pair.left, pair.right, envRef)) {
           return false;
         }

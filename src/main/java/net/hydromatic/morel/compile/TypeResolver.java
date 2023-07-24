@@ -74,6 +74,8 @@ import java.util.function.Supplier;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.skip;
 import static net.hydromatic.morel.util.Static.transform;
 
@@ -483,7 +485,7 @@ public class TypeResolver {
             (Unifier.Sequence) map.get(yieldExp2);
         final Ast.Record record2 = (Ast.Record) yieldExp2;
         final TypeEnv[] envs = {env};
-        Pair.forEach(record2.args.keySet(), sequence.terms, (name, term) ->
+        forEach(record2.args.keySet(), sequence.terms, (name, term) ->
             envs[0] = envs[0].bind(name, term));
         return Pair.of(envs[0], v);
       } else {
@@ -733,20 +735,20 @@ public class TypeResolver {
                 transaction, true);
         workspaces.add(new DatatypeBindWorkspace(temporaryType));
       }
-      Pair.forEach(datatypeDecl.binds, workspaces, (datatypeBind, workspace) ->
+      forEach(datatypeDecl.binds, workspaces, (datatypeBind, workspace) ->
           deduceDatatypeBindType(env, datatypeBind, termMap,
               workspace));
     }
 
     final List<Keys.DataTypeDef> defs = new ArrayList<>();
-    Pair.forEach(datatypeDecl.binds, workspaces, (datatypeBind, workspace) ->
+    forEach(datatypeDecl.binds, workspaces, (datatypeBind, workspace) ->
         defs.add(
             Keys.dataTypeDef(datatypeBind.name.name,
                 workspace.temporaryType.parameterTypes, workspace.tyCons,
                 true)));
     final List<Type> types = typeSystem.dataTypes(defs);
 
-    Pair.forEach(datatypeDecl.binds, types, (datatypeBind, type) -> {
+    forEach(datatypeDecl.binds, types, (datatypeBind, type) -> {
       final DataType dataType =
           (DataType) (type instanceof DataType ? type
               : ((ForallType) type).type);
@@ -1082,7 +1084,7 @@ public class TypeResolver {
           if (fieldList != null) {
             final NavigableMap<String, Unifier.Term> labelTerms2 =
                 new TreeMap<>(RecordType.ORDERING);
-            Ord.forEach(fieldList, (fieldName, i) -> {
+            forEachIndexed(fieldList, (fieldName, i) -> {
               if (labelTerms.containsKey(fieldName)) {
                 labelTerms2.put(fieldName, sequence.terms.get(i));
               }

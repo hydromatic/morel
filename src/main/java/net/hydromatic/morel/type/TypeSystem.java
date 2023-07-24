@@ -23,7 +23,6 @@ import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.type.Type.Key;
 import net.hydromatic.morel.util.ComparableSingletonList;
-import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
@@ -48,6 +47,8 @@ import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 
 /** A table that contains all types in use, indexed by their description (e.g.
@@ -229,7 +230,7 @@ public class TypeSystem {
       dataTypeMap.put(key, type);
     });
     final ImmutableList.Builder<Type> types = ImmutableList.builder();
-    Pair.forEach(defs, dataTypeMap.values(), (def, dataType) -> {
+    forEach(defs, dataTypeMap.values(), (def, dataType) -> {
       fixer.apply(dataType, dataTypeMap);
       if (def.scheme) {
         if (!def.types.isEmpty()
@@ -362,7 +363,7 @@ public class TypeSystem {
 
   static StringBuilder unparseList(StringBuilder builder, Op op, int left,
       int right, Collection<? extends Type> argTypes) {
-    Ord.forEach(argTypes, (type, i) -> {
+    forEachIndexed(argTypes, (type, i) -> {
       if (i > 0) {
         builder.append(op.padded);
       }

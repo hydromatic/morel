@@ -31,7 +31,6 @@ import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
@@ -46,6 +45,8 @@ import java.util.function.ObjIntConsumer;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -367,7 +368,7 @@ public class Core {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("(");
-      Ord.forEach(args, (arg, i) ->
+      forEachIndexed(args, (arg, i) ->
           w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
     }
@@ -399,7 +400,7 @@ public class Core {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("[");
-      Ord.forEach(args, (arg, i) ->
+      forEachIndexed(args, (arg, i) ->
           w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append("]");
     }
@@ -434,7 +435,7 @@ public class Core {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      Pair.forEachIndexed(type().argNameTypes.keySet(), args, (i, name, arg) ->
+      forEachIndexed(type().argNameTypes.keySet(), args, (i, name, arg) ->
           w.append(i > 0 ? ", " : "").append(name)
               .append(" = ").append(arg, 0, 0));
       return w.append("}");
@@ -640,7 +641,7 @@ public class Core {
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
-      Ord.forEach(dataTypes, (dataType, i) ->
+      forEachIndexed(dataTypes, (dataType, i) ->
           w.append(i == 0 ? "datatype " : " and ").append(dataType.toString()));
       return w;
     }
@@ -739,7 +740,7 @@ public class Core {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("val rec ");
-      Ord.forEach(list, (decl, i) ->
+      forEachIndexed(list, (decl, i) ->
           w.append(i == 0 ? "" : " and ").append(decl.pat, 0, 0)
               .append(" = ").append(decl.exp, 0, right));
       return w;
@@ -789,7 +790,7 @@ public class Core {
     }
 
     @Override public void forEachArg(ObjIntConsumer<Exp> action) {
-      Ord.forEach(args, action);
+      forEachIndexed(args, action);
     }
 
     @Override public Exp accept(Shuttle shuttle) {
@@ -803,7 +804,7 @@ public class Core {
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       if (type instanceof RecordType) {
         w.append("{");
-        Pair.forEachIndexed(type().argNameTypes().keySet(), args,
+        forEachIndexed(type().argNameTypes().keySet(), args,
             (i, name, exp) ->
                 w.append(i > 0 ? ", " : "").append(name).append(" = ")
                     .append(exp, 0, 0));
@@ -1020,7 +1021,7 @@ public class Core {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
         w.append("from");
-        Ord.forEach(steps, (step, i) -> step.unparse(w, this, i, 0, 0));
+        forEachIndexed(steps, (step, i) -> step.unparse(w, this, i, 0, 0));
         return w;
       }
     }

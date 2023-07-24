@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
+import static net.hydromatic.morel.util.Pair.forEachIndexed;
+
 /** Given pairs of terms, finds a substitution to minimize those pairs of
  * terms. */
 public abstract class Unifier {
@@ -191,7 +193,7 @@ public abstract class Unifier {
 
     public StringBuilder accept(StringBuilder buf) {
       buf.append("[");
-      Pair.forEachIndexed(resultMap, (i, variable, term) ->
+      forEachIndexed(resultMap, (i, variable, term) ->
           buf.append(i > 0 ? ", " : "").append(term)
               .append("/").append(variable));
       return buf.append("]");

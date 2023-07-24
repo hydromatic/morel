@@ -35,7 +35,6 @@ import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MorelException;
-import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Static;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -68,6 +67,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Static.transform;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -2447,7 +2447,7 @@ public abstract class Codes {
       @Override public Unit apply(EvalEnv env, Object arg) {
         @SuppressWarnings("unchecked") final List<Object> vec =
             (List<Object>) arg;
-        Ord.forEach(vec, (e, i) -> f.apply(env, FlatLists.of(i, e)));
+        forEachIndexed(vec, (e, i) -> f.apply(env, FlatLists.of(i, e)));
         return Unit.INSTANCE;
       }
     };
@@ -2488,7 +2488,7 @@ public abstract class Codes {
         @SuppressWarnings("unchecked") final List<Object> vec =
             (List<Object>) arg;
         ImmutableList.Builder<Object> b = ImmutableList.builder();
-        Ord.forEach(vec, (e, i) -> b.add(f.apply(env, FlatLists.of(i, e))));
+        forEachIndexed(vec, (e, i) -> b.add(f.apply(env, FlatLists.of(i, e))));
         return b.build();
       }
     };
@@ -3517,7 +3517,7 @@ public abstract class Codes {
 
     @Override public Describer describe(Describer describer) {
       return describer.start("let", d -> {
-        Ord.forEach(matchCodes, (matchCode, i) ->
+        forEachIndexed(matchCodes, (matchCode, i) ->
             d.arg("matchCode" + i, matchCode));
         d.arg("resultCode", resultCode);
       });

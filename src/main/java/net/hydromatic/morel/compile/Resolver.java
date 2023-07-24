@@ -56,6 +56,7 @@ import java.util.Set;
 import java.util.SortedMap;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.transform;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -482,7 +483,7 @@ public class Resolver {
   private void flatten(Map<Ast.Pat, Ast.Exp> matches, boolean flatten,
       Ast.Pat pat, Ast.Exp exp) {
     if (flatten && pat.op == Op.TUPLE_PAT && exp.op == Op.TUPLE) {
-      Pair.forEach(((Ast.TuplePat) pat).args, ((Ast.Tuple) exp).args,
+      forEach(((Ast.TuplePat) pat).args, ((Ast.Tuple) exp).args,
           (p, e) -> flatten(matches, true, p, e));
     } else {
       matches.put(pat, exp);
@@ -818,7 +819,7 @@ public class Resolver {
           ImmutableSortedMap.naturalOrder();
       final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates =
           ImmutableSortedMap.naturalOrder();
-      Pair.forEach(group.groupExps, (id, exp) ->
+      forEach(group.groupExps, (id, exp) ->
           groupExpsB.put(toCorePat(id), r.toCore(exp)));
       final SortedMap<Core.IdPat, Core.Exp> groupExps = groupExpsB.build();
       group.aggregates.forEach(aggregate ->

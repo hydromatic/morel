@@ -26,8 +26,6 @@ import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.util.Ord;
-import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -53,6 +51,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Pair.forEach;
+
 /** Utilities for Converter. */
 public class Converters {
   private Converters() {
@@ -62,7 +63,7 @@ public class Converters {
     final List<RelDataTypeField> fields = rowType.getFieldList();
     final ImmutableList.Builder<Converter<Object[]>> converters =
         ImmutableList.builder();
-    Ord.forEach(fields, (field, i) ->
+    forEachIndexed(fields, (field, i) ->
         converters.add(ofField(field.getType(), i)));
     return new RecordConverter(converters.build());
   }
@@ -415,7 +416,7 @@ public class Converters {
       case TUPLE_TYPE:
         final ImmutableList.Builder<Function<Object, Object>> b =
             ImmutableList.builder();
-        Pair.forEach(calciteType.getFieldList(),
+        forEach(calciteType.getFieldList(),
             ((TupleType) morelType).argTypes, (field, argType) ->
                 b.add(new C2m(field.getType(), argType)
                     .toMorelObjectFunction()));

@@ -19,7 +19,6 @@
 package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
-import net.hydromatic.morel.util.Ord;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
@@ -29,6 +28,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
+
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
 
 /** The type of a tuple value. */
 public class TupleType extends BaseType implements RecordLikeType {
@@ -45,7 +46,7 @@ public class TupleType extends BaseType implements RecordLikeType {
   @Override public SortedMap<String, Type> argNameTypes() {
     final ImmutableSortedMap.Builder<String, Type> map =
         ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-    Ord.forEach(argTypes, (t, i) -> map.put(Integer.toString(i + 1), t));
+    forEachIndexed(argTypes, (t, i) -> map.put(Integer.toString(i + 1), t));
     return map.build();
   }
 
@@ -103,7 +104,7 @@ public class TupleType extends BaseType implements RecordLikeType {
       List<? extends Type> argTypes) {
     final ImmutableSortedMap.Builder<String, Type> b =
         ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-    Ord.forEach(argTypes, (t, i) ->
+    forEachIndexed(argTypes, (t, i) ->
         b.put(Integer.toString(i + 1), t));
     return b.build();
   }

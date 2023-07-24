@@ -19,12 +19,13 @@
 package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
-import net.hydromatic.morel.util.Ord;
 
 import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 import java.util.Objects;
+
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
 
 /** Base class for types that accept type parameters.
  *
@@ -67,7 +68,7 @@ public abstract class ParameterizedType extends BaseType implements NamedType {
     if (typeVars.size() > 1) {
       b.append('(');
     }
-    Ord.forEach(typeVars, (t, i) -> {
+    forEachIndexed(typeVars, (t, i) -> {
       if (i > 0) {
         b.append(",");
       }

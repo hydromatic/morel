@@ -31,13 +31,14 @@ import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Ord;
-import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import java.util.List;
 import javax.annotation.Nonnull;
+
+import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
 import static java.util.Objects.requireNonNull;
 
@@ -181,7 +182,7 @@ class Pretty {
       list = (List) value;
       buf.append("{");
       start = buf.length();
-      Pair.forEachIndexed(list, recordType.argNameTypes.entrySet(),
+      forEachIndexed(list, recordType.argNameTypes.entrySet(),
           (ordinal, o, nameType) -> {
             if (buf.length() > start) {
               buf.append(",");
@@ -197,7 +198,7 @@ class Pretty {
       list = (List) value;
       buf.append("(");
       start = buf.length();
-      Pair.forEachIndexed(list, tupleType.argTypes,
+      forEachIndexed(list, tupleType.argTypes,
           (ordinal, o, elementType) -> {
             if (buf.length() > start) {
               buf.append(",");
