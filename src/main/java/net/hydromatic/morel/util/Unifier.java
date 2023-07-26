@@ -18,7 +18,6 @@
  */
 package net.hydromatic.morel.util;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -32,6 +31,10 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
+
+import static com.google.common.base.Preconditions.checkArgument;
+
+import static java.util.Objects.requireNonNull;
 
 /** Given pairs of terms, finds a substitution to minimize those pairs of
  * terms. */
@@ -63,12 +66,20 @@ public abstract class Unifier {
     return variableMap.computeIfAbsent(name, Variable::new);
   }
 
+  /** Creates a variable, or returns an existing one with the same ordinal. */
+  public Variable variable(int ordinal) {
+    String name = "T" + ordinal;
+    return variableMap.computeIfAbsent(name, name2 -> new Variable(ordinal));
+  }
+
   /** Creates a new variable, with a new name. */
   public Variable variable() {
     for (;;) {
-      final String name = "T" + varId++;
+      final int ordinal = varId++;
+      final String name = "T" + ordinal;
       if (!variableMap.containsKey(name)) {
-        final Variable variable = new Variable(name);
+        final Variable variable = new Variable(ordinal);
+        assert variable.name.equals(name);
         variableMap.put(name, variable);
         return variable;
       }
@@ -261,11 +272,28 @@ public abstract class Unifier {
    * task is to find the substitutions for such variables. */
   public static final class Variable implements Term, Comparable<Variable> {
     final String name;
+    final int ordinal;
 
-    Variable(String name) {
-      this.name = Objects.requireNonNull(name);
-      Preconditions.checkArgument(name.equals(name.toUpperCase(Locale.ROOT)),
+    Variable(String name, int ordinal) {
+      this.name = requireNonNull(name);
+      this.ordinal = ordinal;
+      checkArgument(name.equals(name.toUpperCase(Locale.ROOT)),
           "must be upper case: %s", name);
+    }
+
+    /** Creates a variable with a name. The name must not be like "T0" or
+     * "T123", because those are the names created for variables with
+     * ordinals. */
+    Variable(String name) {
+      this(name, -1);
+      checkArgument(!name.matches("T[0-9]+"), name);
+    }
+
+    /** Creates a variable with an ordinal. If the ordinal is "34" the name will
+     * be "T34". The ordinal must be non-negative. */
+    Variable(int ordinal) {
+      this("T" + ordinal, ordinal);
+      checkArgument(ordinal >= 0, ordinal);
     }
 
     @Override public String toString() {
@@ -273,23 +301,11 @@ public abstract class Unifier {
     }
 
     @Override public int compareTo(Variable o) {
-      final int i = ordinal();
-      final int i2 = o.ordinal();
-      int c = Integer.compare(i, i2);
+      int c = Integer.compare(ordinal, o.ordinal);
       if (c == 0) {
         c = name.compareTo(o.name);
       }
       return c;
-    }
-
-    /** If the name is "T3", returns 3. If the name is not of the form
-     * "T{integer}" returns -1. */
-    private int ordinal() {
-      try {
-        return Integer.parseInt(name.substring(1));
-      } catch (NumberFormatException e) {
-        return -1;
-      }
     }
 
     public Term apply(Map<Variable, Term> substitutions) {
@@ -323,8 +339,8 @@ public abstract class Unifier {
     final Term right;
 
     public TermTerm(Term left, Term right) {
-      this.left = Objects.requireNonNull(left);
-      this.right = Objects.requireNonNull(right);
+      this.left = requireNonNull(left);
+      this.right = requireNonNull(right);
     }
 
     @Override public String toString() {
@@ -341,7 +357,7 @@ public abstract class Unifier {
     public final List<Term> terms;
 
     Sequence(String operator, List<Term> terms) {
-      this.operator = Objects.requireNonNull(operator);
+      this.operator = requireNonNull(operator);
       this.terms = ImmutableList.copyOf(terms);
     }
 

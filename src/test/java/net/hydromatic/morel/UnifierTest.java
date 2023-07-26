@@ -315,16 +315,16 @@ public abstract class UnifierTest {
      * "https://web.cs.ucla.edu/~palsberg/course/cs239/reading/wand87.pdf">
      * Wand 87</a>]. */
     @Test void test20() {
-      final Unifier.Variable t0 = unifier.variable("T0");
-      final Unifier.Variable t1 = unifier.variable("T1");
-      final Unifier.Variable t2 = unifier.variable("T2");
-      final Unifier.Variable t3 = unifier.variable("T3");
-      final Unifier.Variable t4 = unifier.variable("T4");
-      final Unifier.Variable t5 = unifier.variable("T5");
-      final Unifier.Variable t6 = unifier.variable("T6");
-      final Unifier.Variable t7 = unifier.variable("T7");
-      final Unifier.Variable t8 = unifier.variable("T8");
-      final Unifier.Variable t9 = unifier.variable("T9");
+      final Unifier.Variable t0 = unifier.variable(0);
+      final Unifier.Variable t1 = unifier.variable(1);
+      final Unifier.Variable t2 = unifier.variable(2);
+      final Unifier.Variable t3 = unifier.variable(3);
+      final Unifier.Variable t4 = unifier.variable(4);
+      final Unifier.Variable t5 = unifier.variable(5);
+      final Unifier.Variable t6 = unifier.variable(6);
+      final Unifier.Variable t7 = unifier.variable(7);
+      final Unifier.Variable t8 = unifier.variable(8);
+      final Unifier.Variable t9 = unifier.variable(9);
       final Unifier.TermTerm[] termTerms = {
           new Unifier.TermTerm(t0, arrow(t1, t2)),
           new Unifier.TermTerm(t2, arrow(t3, t4)),
