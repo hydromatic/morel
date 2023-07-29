@@ -955,7 +955,8 @@ public class TypeResolver {
       switch (pat.op) {
       case ID_PAT:
         final Ast.IdPat idPat = (Ast.IdPat) pat;
-        if (env.has(idPat.name)) {
+        if (env.has(idPat.name)
+            && typeSystem.lookupTyCon(idPat.name) != null) {
           final Unifier.Term term = env.get(typeSystem, idPat.name, name ->
               new RuntimeException("oops, should have " + idPat.name));
           if (term instanceof Unifier.Sequence

@@ -1,0 +1,153 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Expressions that use recursion, function values, and closure.
+ *)
+
+(*) Simple factorial function
+let
+  fun fact n =
+    if n = 0 then 1 else n * fact (n - 1)
+in
+  fact 5
+end;
+> val it = 120 : int
+
+(*) Similar, but using parallel functions
+let
+  fun fact 0 = 1
+    | fact n = n * fact (n - 1)
+in
+  fact 5
+end;
+> val it = 120 : int
+
+(*) Similar, but using 'case'
+let
+  fun fact n =
+    case n
+      of 0 => 1
+       | n => n * fact (n - 1)
+in
+  fact 5
+end;
+> val it = 120 : int
+
+(*) Similar, but 'val rec'
+let
+  val rec fact =
+    fn n =>
+      case n
+        of 0 => 1
+         | n => n * fact (n - 1)
+in
+  fact 5
+end;
+> val it = 120 : int
+
+(*) Closure; int variable 'n' is captured in the function definition
+val one = 1;
+> val one = 1 : int
+fun fact 0 = one
+  | fact n = n * fact (n - 1);
+> val fact = fn : int -> int
+fact 5;
+> val it = 120 : int
+val one = 2;
+> val one = 2 : int
+fact 5;
+> val it = 120 : int
+fun fact 0 = one
+  | fact n = n * fact (n - 1);
+> val fact = fn : int -> int
+fact 5;
+> val it = 240 : int
+
+(*) Closure; function 'f' is captured in the function definition
+val f = fn x => x - 1;
+> val f = fn : int -> int
+fun fact3 0 = 1
+  | fact3 n = n * fact3 (f n);
+> val fact3 = fn : int -> int
+fact3 5;
+> val it = 120 : int
+
+(*) Closure; function 'f' is an argument to an enclosing function.
+fun baz4 f =
+  let
+    fun fact4 0 = 1
+      | fact4 n = n * fact4 (f n)
+  in
+    fact4 5
+end;
+> val baz4 = fn : (int -> int) -> int
+baz4 (fn i => i - 1);
+> val it = 120 : int
+
+(*) Closure; function 'f' is not the only argument.
+fun baz5 (f, m) =
+  let
+    fun fact5 0 = 1
+      | fact5 n = n * fact5 (f n)
+  in
+    fact5 m
+end;
+> val baz5 = fn : (int -> int) * int -> int
+baz5 (fn i => i - 1, 5);
+> val it = 120 : int
+
+(*) As previous, with shadowed 'n'.
+fun baz6 (f, n) =
+  let
+    fun fact6 0 = 1
+      | fact6 n = n * fact6 (f n)
+  in
+    fact6 n
+end;
+> val baz6 = fn : (int -> int) * int -> int
+baz6 (fn i => i - 1, 5);
+> val it = 120 : int
+
+(*) Permutations. Captured variable 'k', is at the top level to prevent inlining.
+val k = 3;
+> val k = 3 : int
+val rec perm = fn n => if n = k then k else n * perm (n - 1);
+> val perm = fn : int -> int
+perm 5;
+> val it = 60 : int
+
+(*) As previous, but captured variable is local and is probably inlined.
+let
+  val k = 3
+  val rec perm = fn n => if n = k then k else n * perm (n - 1)
+in
+  perm 5
+end;
+> val it = 60 : int
+
+(*) As previous, replacing captured variable with constant.
+(*) The implementation may still use a closure, so that the recursive function
+(*) can reference itself by name.
+let
+  val rec perm3 = fn n => if n = 3 then n else n * perm3 (n - 1)
+in
+  perm3 5
+end;
+> val it = 60 : int
+
+(*) End closure.smli
