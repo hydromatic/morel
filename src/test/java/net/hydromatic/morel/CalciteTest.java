@@ -73,7 +73,7 @@ class CalciteTest {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     final Main main =
         new Main(ImmutableList.of(), in, new PrintStream(out), foreignValueMap,
-            new File(""));
+            new File(""), false);
 
     main.run();
     if (debug) {

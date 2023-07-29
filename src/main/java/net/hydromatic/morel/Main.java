@@ -50,6 +50,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.io.StringReader;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -67,6 +68,7 @@ public class Main {
   private final Map<String, ForeignValue> valueMap;
   final TypeSystem typeSystem = new TypeSystem();
   final File directory;
+  final boolean idempotent;
   final Session session = new Session();
 
   /** Command-line entry point.
@@ -75,7 +77,7 @@ public class Main {
   public static void main(String[] args) {
     final Main main =
         new Main(ImmutableList.copyOf(args), System.in, System.out,
-            ImmutableMap.of(), new File(System.getProperty("user.dir")));
+            ImmutableMap.of(), new File(System.getProperty("user.dir")), false);
     try {
       main.run();
     } catch (Throwable e) {
@@ -86,19 +88,96 @@ public class Main {
 
   /** Creates a Main. */
   public Main(List<String> args, InputStream in, PrintStream out,
-      Map<String, ForeignValue> valueMap, File directory) {
+      Map<String, ForeignValue> valueMap, File directory, boolean idempotent) {
     this(args, new InputStreamReader(in), new OutputStreamWriter(out),
-        valueMap, directory);
+        valueMap, directory, idempotent);
   }
 
   /** Creates a Main. */
   public Main(List<String> argList, Reader in, Writer out,
-      Map<String, ForeignValue> valueMap, File directory) {
-    this.in = buffer(in);
+      Map<String, ForeignValue> valueMap, File directory, boolean idempotent) {
+    this.in = buffer(idempotent ? stripOutLines(in) : in);
     this.out = buffer(out);
     this.echo = argList.contains("--echo");
     this.valueMap = ImmutableMap.copyOf(valueMap);
     this.directory = requireNonNull(directory, "directory");
+    this.idempotent = idempotent;
+  }
+
+  private static void readerToString(Reader r, StringBuilder b) {
+    final char[] chars = new char[1024];
+    try {
+      for (;;) {
+        final int read = r.read(chars);
+        if (read < 0) {
+          return;
+        }
+        b.append(chars, 0, read);
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static Reader stripOutLines(Reader in) {
+    final StringBuilder b = new StringBuilder();
+    readerToString(in, b);
+    final String s = b.toString();
+    b.setLength(0);
+    for (int i = 0, n = s.length();;) {
+      int j0 = i == 0 && s.startsWith("> ") ? 0 : -1;
+      int j1 = s.indexOf("\n> ", i);
+      int j2 = s.indexOf("(*)", i);
+      int j3 = s.indexOf("(*", i);
+      int j = min(j0, j1, j2, j3);
+      if (j < 0) {
+        b.append(s, i, n);
+        break;
+      }
+      if (j == j0 || j == j1) {
+        // Skip line beginning "> "
+        b.append(s, i, j);
+        int k = s.indexOf("\n", j + 2);
+        if (k < 0) {
+          k = n;
+        }
+        i = k;
+      } else if (j == j2) {
+        // If a line contains "(*)", next search begins at the start of the
+        // next line.
+        int k = s.indexOf("\n", j + "(*)".length());
+        if (k < 0) {
+          k = n;
+        }
+        b.append(s, i, k);
+        i = k;
+      } else if (j == j3) {
+        // If a line contains "(*", next search begins at the next "*)".
+        int k = s.indexOf("*)", j + "(*".length());
+        if (k < 0) {
+          k = n;
+        }
+        b.append(s, i, k);
+        i = k;
+      }
+    }
+    return new StringReader(b.toString());
+  }
+
+  /** Returns the minimum non-negative value of the list, or -1 if all are
+   * negative. */
+  private static int min(int... ints) {
+    int count = 0;
+    int min = Integer.MAX_VALUE;
+    for (int i : ints) {
+      if (i >= 0) {
+        ++count;
+        if (i < min) {
+          min = i;
+        }
+      }
+    }
+    return count == 0 ? -1 : min;
   }
 
   private static PrintWriter buffer(Writer out) {
@@ -122,9 +201,13 @@ public class Main {
 
   public void run() {
     Environment env = Environments.env(typeSystem, valueMap);
-    final Consumer<String> outLines = out::println;
+    final Consumer<String> echoLines = out::println;
+    final Consumer<String> outLines =
+        idempotent
+            ? x -> out.println("> " + x.replace("\n", "\n> "))
+            : echoLines;
     final Map<String, Binding> outBindings = new LinkedHashMap<>();
-    final Shell shell = new Shell(this, env, outLines, outBindings);
+    final Shell shell = new Shell(this, env, echoLines, outLines, outBindings);
     session.withShell(shell, outLines, session1 ->
         shell.run(session1, new BufferingReader(in)));
     out.flush();
@@ -136,13 +219,15 @@ public class Main {
   static class Shell implements Session.Shell {
     protected final Main main;
     protected final Environment env0;
+    protected final Consumer<String> echoLines;
     protected final Consumer<String> outLines;
     protected final Map<String, Binding> bindingMap;
 
-    Shell(Main main, Environment env0, Consumer<String> outLines,
-        Map<String, Binding> bindingMap) {
+    Shell(Main main, Environment env0, Consumer<String> echoLines,
+        Consumer<String> outLines, Map<String, Binding> bindingMap) {
       this.main = main;
       this.env0 = env0;
+      this.echoLines = echoLines;
       this.outLines = outLines;
       this.bindingMap = bindingMap;
     }
@@ -150,17 +235,22 @@ public class Main {
     void run(Session session, BufferingReader in2) {
       final MorelParserImpl parser = new MorelParserImpl(in2);
       final SubShell subShell =
-          new SubShell(main, outLines, bindingMap, env0);
+          new SubShell(main, echoLines, outLines, bindingMap, env0);
       for (;;) {
         try {
           parser.zero("stdIn");
           final AstNode statement = parser.statementSemicolonOrEof();
           String code = in2.flush();
+          if (main.idempotent) {
+            if (code.startsWith("\n")) {
+              code = code.substring(1);
+            }
+          }
           if (statement == null && code.endsWith("\n")) {
             code = code.substring(0, code.length() - 1);
           }
           if (main.echo) {
-            outLines.accept(code);
+            echoLines.accept(code);
           }
           if (statement == null) {
             break;
@@ -210,9 +300,10 @@ public class Main {
    * shell. */
   static class SubShell extends Shell {
 
-    SubShell(Main main, Consumer<String> outLines,
+    SubShell(Main main, Consumer<String> echoLines,
+        Consumer<String> outLines,
         Map<String, Binding> outBindings, Environment env0) {
-      super(main, env0, outLines, outBindings);
+      super(main, env0, echoLines, outLines, outBindings);
     }
 
     @Override public void use(String fileName, Pos pos) {

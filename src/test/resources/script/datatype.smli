@@ -17,116 +17,81 @@
  * License.
  *)
 Sys.set ("printDepth", ~1);
-val it = () : unit
-
+> val it = () : unit
 
 (*) Basic operations on 'int'
 2 + 3;
-val it = 5 : int
-
+> val it = 5 : int
 2 - 3;
-val it = ~1 : int
-
+> val it = ~1 : int
 2 * 3;
-val it = 6 : int
-
+> val it = 6 : int
 2 / 3;
-val it = 0 : int
-
+> val it = 0 : int
 3 / 2;
-val it = 1 : int
-
+> val it = 1 : int
 3 mod 2;
-val it = 1 : int
-
+> val it = 1 : int
 ~2 * 3;
-val it = ~6 : int
-
+> val it = ~6 : int
 ~(2 + 3);
-val it = ~5 : int
-
+> val it = ~5 : int
 2 < 3;
-val it = true : bool
-
+> val it = true : bool
 2 <= 3;
-val it = true : bool
-
+> val it = true : bool
 2 > 3;
-val it = false : bool
-
+> val it = false : bool
 2 >= 3;
-val it = false : bool
-
+> val it = false : bool
 2 = 3;
-val it = false : bool
-
+> val it = false : bool
 2 <> 3;
-val it = true : bool
-
+> val it = true : bool
 
 (*) Basic operations on 'real'
 2.0 + 3.0;
-val it = 5.0 : real
-
+> val it = 5.0 : real
 2.0 - 3.0;
-val it = ~1.0 : real
-
+> val it = ~1.0 : real
 2.0 * 3.0;
-val it = 6.0 : real
-
+> val it = 6.0 : real
 2.0 / 3.0;
-val it = 0.6666667 : real
-
+> val it = 0.6666667 : real
 3.0 / 2.0;
-val it = 1.5 : real
-
+> val it = 1.5 : real
 ~2.0 * 3.0;
-val it = ~6.0 : real
-
+> val it = ~6.0 : real
 ~(2.0 + 3.0);
-val it = ~5.0 : real
-
+> val it = ~5.0 : real
 2.0 < 3.0;
-val it = true : bool
-
+> val it = true : bool
 2.0 <= 3.0;
-val it = true : bool
-
+> val it = true : bool
 2.0 > 3.0;
-val it = false : bool
-
+> val it = false : bool
 2.0 >= 3.0;
-val it = false : bool
-
+> val it = false : bool
 2.0 = 3.0;
-val it = false : bool
-
+> val it = false : bool
 2.0 <> 3.0;
-val it = true : bool
-
+> val it = true : bool
 
 (*) Three different kinds of 'max'
 fun max_alpha (x, y) = if x < y then y else x;
-val max_alpha = fn : 'a * 'a -> 'a
-
+> val max_alpha = fn : 'a * 'a -> 'a
 max_alpha (2, 3);
-val it = 3 : int
-
+> val it = 3 : int
 max_alpha (2.0, 3.0);
-val it = 3.0 : real
-
+> val it = 3.0 : real
 fun max_int (x, y) = if x < y then y + 0 else x;
-val max_int = fn : int * int -> int
-
+> val max_int = fn : int * int -> int
 max_int (2, 3);
-val it = 3 : int
-
+> val it = 3 : int
 fun max_real (x, y) = if x < y then y + 0.0 else x;
-val max_real = fn : real * real -> real
-
+> val max_real = fn : real * real -> real
 max_real (2.0, 3.0);
-val it = 3.0 : real
-
+> val it = 3.0 : real
 
 (*) Tuple type with a polymorphic member
 let
@@ -134,8 +99,7 @@ let
 in
   (#1 r) 1
 end;
-val it = 1 : int
-
+> val it = 1 : int
 
 (*) Record type with a polymorphic member
 let
@@ -143,45 +107,34 @@ let
 in
   r.a 1
 end;
-val it = 1 : int
-
+> val it = 1 : int
 
 let
   val r = {a = fn x => x, b = 2}
 in
   (r.a "x", r.b)
 end;
-val it = ("x",2) : string * int
-
+> val it = ("x",2) : string * int
 
 (*) A datatype whose constructor overwrites another datatype's constructor
 datatype foo = W | X | Y of int;
-datatype foo = W | X | Y of int
-
+> datatype foo = W | X | Y of int
 X;
-val it = X : foo
-
+> val it = X : foo
 Y;
-val it = fn : int -> foo
-
+> val it = fn : int -> foo
 Y 0;
-val it = Y 0 : foo
-
+> val it = Y 0 : foo
 datatype bar = X of int | Y of int * bool | Z;
-datatype bar = X of int | Y of int * bool | Z
-
+> datatype bar = X of int | Y of int * bool | Z
 X;
-val it = fn : int -> bar
-
+> val it = fn : int -> bar
 Y;
-val it = fn : int * bool -> bar
-
+> val it = fn : int * bool -> bar
 Y (1, true);
-val it = Y (1,true) : bar
-
+> val it = Y (1,true) : bar
 Z;
-val it = Z : bar
-
+> val it = Z : bar
 
 (*) The following is syntax error:
 (*
@@ -190,157 +143,115 @@ datatype bar = X of int | Y of (int, bool) | Z;
 
 (*) A recursive type, without generics
 datatype inttree = Empty | Node of inttree * int * inttree;
-datatype inttree = Empty | Node of inttree * int * inttree
-
+> datatype inttree = Empty | Node of inttree * int * inttree
 fun max (x, y) = if x < y then y + 0 else x;
-val max = fn : int * int -> int
-
+> val max = fn : int * int -> int
 fun height Empty = 0
   | height (Node (lft, _, rht)) = 1 + max (height lft, height rht);
-val height = fn : inttree -> int
-
+> val height = fn : inttree -> int
 Empty;
-val it = Empty : inttree
-
+> val it = Empty : inttree
 height it;
-val it = 0 : int
-
+> val it = 0 : int
 height Empty;
-val it = 0 : int
-
+> val it = 0 : int
 Node(Empty, 1, Empty);
-val it = Node (Empty,1,Empty) : inttree
-
+> val it = Node (Empty,1,Empty) : inttree
 height it;
-val it = 1 : int
-
+> val it = 1 : int
 height (Node(Empty, 1, Empty));
-val it = 1 : int
-
+> val it = 1 : int
 Node(Empty, 2, Node(Node(Empty, 3, Empty), 4, Empty));
-val it = Node (Empty,2,Node (Node (Empty,3,Empty),4,Empty)) : inttree
-
+> val it = Node (Empty,2,Node (Node (Empty,3,Empty),4,Empty)) : inttree
 height it;
-val it = 3 : int
-
+> val it = 3 : int
 
 (*) Recursive
 datatype 'x tree = Empty | Node of 'x tree * 'x * 'x tree;
-datatype 'a tree = Empty | Node of 'a tree * 'a * 'a tree
-
+> datatype 'a tree = Empty | Node of 'a tree * 'a * 'a tree
 fun max (x, y) = if x < y then y else x;
-val max = fn : 'a * 'a -> 'a
-
+> val max = fn : 'a * 'a -> 'a
 fun height Empty = 0
   | height (Node (lft, _, rht)) = 1 + max (height lft, height rht);
-val height = fn : 'a tree -> int
-
+> val height = fn : 'a tree -> int
 Empty;
-val it = Empty : 'a tree
-
+> val it = Empty : 'a tree
 height it;
-val it = 0 : int
-
+> val it = 0 : int
 Node(Empty, 1, Empty);
-val it = Node (Empty,1,Empty) : int tree
-
+> val it = Node (Empty,1,Empty) : int tree
 height it;
-val it = 1 : int
-
+> val it = 1 : int
 Node(Empty, 2, Node(Node(Empty, 3, Empty), 4, Empty));
-val it = Node (Empty,2,Node (Node (Empty,3,Empty),4,Empty)) : int tree
-
+> val it = Node (Empty,2,Node (Node (Empty,3,Empty),4,Empty)) : int tree
 height it;
-val it = 3 : int
-
+> val it = 3 : int
 
 (*) Two type parameters
 datatype ('y, 'x) tree =
    Empty
  | Node of ('y, 'x) tree * 'x * 'y * ('y, 'x) tree;
-datatype ('a,'b) tree = Empty | Node of ('a,'b) tree * 'b * 'a * ('a,'b) tree
-
+> datatype ('a,'b) tree = Empty | Node of ('a,'b) tree * 'b * 'a * ('a,'b) tree
 Empty;
-val it = Empty : ('a,'b) tree
-
+> val it = Empty : ('a,'b) tree
 Node (Empty, true, "yes", Empty);
-val it = Node (Empty,true,"yes",Empty) : (string,bool) tree
-
+> val it = Node (Empty,true,"yes",Empty) : (string,bool) tree
 
 datatype ('a, 'b) Union = A of 'a | B of 'b;
-datatype ('a,'b) Union = A of 'a | B of 'b
-
+> datatype ('a,'b) Union = A of 'a | B of 'b
 A 1;
-val it = A 1 : (int,'a) Union
-
+> val it = A 1 : (int,'a) Union
 B true;
-val it = B true : ('a,bool) Union
-
+> val it = B true : ('a,bool) Union
 
 (*) Mutually recursive
 datatype 'a tree = Empty | Node of 'a * 'a forest
 and      'a forest = Nil | Cons of 'a tree * 'a forest;
-datatype 'a tree = Empty | Node of 'a * 'a forest
-datatype 'a forest = Cons of 'a tree * 'a forest | Nil
-
+> datatype 'a tree = Empty | Node of 'a * 'a forest
+> datatype 'a forest = Cons of 'a tree * 'a forest | Nil
 Empty;
-val it = Empty : 'a tree
-
+> val it = Empty : 'a tree
 Nil;
-val it = Nil : 'a forest
-
+> val it = Nil : 'a forest
 Node (1, Nil);
-val it = Node (1,Nil) : int tree
-
+> val it = Node (1,Nil) : int tree
 Node (1, Cons (Empty, Nil));
-val it = Node (1,Cons (Empty,Nil)) : int tree
-
+> val it = Node (1,Cons (Empty,Nil)) : int tree
 Cons (Empty, Nil);
-val it = Cons (Empty,Nil) : 'a forest
-
+> val it = Cons (Empty,Nil) : 'a forest
 Cons (Empty, Cons (Node (true, Nil), Nil));
-val it = Cons (Empty,Cons (Node (true,Nil),Nil)) : bool forest
-
+> val it = Cons (Empty,Cons (Node (true,Nil),Nil)) : bool forest
 
 (*) Parentheses are required for 2 or more type parameters,
 (*) optional for 1 type parameter,
 (*) not allowed for 0 type parameters.
 datatype ('a, 'b) pair = Pair of 'a * 'b;
-datatype ('a,'b) pair = Pair of 'a * 'b
-
+> datatype ('a,'b) pair = Pair of 'a * 'b
 (* disabled; should throw
 datatype 'a, 'b pair = Pair of 'a * 'b; (*) not valid
 *)
 datatype 'a single = Single of 'a;
-datatype 'a single = Single of 'a
-
+> datatype 'a single = Single of 'a
 datatype ('a) single = Single of 'a;
-datatype 'a single = Single of 'a
-
+> datatype 'a single = Single of 'a
 (* disabled; should throw
 datatype () void = Void of unit; (*) not valid
 datatype () void = Void; (*) not valid
 *)
 datatype void = Void;
-datatype void = Void
-
+> datatype void = Void
 datatype unitVoid = Void of unit;
-datatype unitVoid = Void of unit
-
+> datatype unitVoid = Void of unit
 
 (*) Recursive datatype with 2 type parameters
 datatype ('a, 'b) tree = EMPTY | NODE of 'a * 'b * ('a, 'b) tree;
-datatype ('a,'b) tree = EMPTY | NODE of 'a * 'b * ('a,'b) tree
-
+> datatype ('a,'b) tree = EMPTY | NODE of 'a * 'b * ('a,'b) tree
 EMPTY;
-val it = EMPTY : ('a,'b) tree
-
+> val it = EMPTY : ('a,'b) tree
 NODE (1, true, EMPTY);
-val it = NODE (1,true,EMPTY) : (int,bool) tree
-
+> val it = NODE (1,true,EMPTY) : (int,bool) tree
 NODE (1, true, NODE (2, false, EMPTY));
-val it = NODE (1,true,NODE (2,false,EMPTY)) : (int,bool) tree
-
+> val it = NODE (1,true,NODE (2,false,EMPTY)) : (int,bool) tree
 
 (*
 - fun f x none = x | x some y = y;
@@ -395,4 +306,4 @@ stdIn:4.1-4.11 Error: operator and operand don't agree [tycon mismatch]
 val it = 3 : int
 *)
 
-(*) End datatype.sml
+(*) End datatype.smli

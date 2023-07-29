@@ -19,124 +19,89 @@
 
 (*) Record and tuple are equivalent.
 {1 = "a", 2 = true};
-val it = ("a",true) : string * bool
-
+> val it = ("a",true) : string * bool
 ("a", true);
-val it = ("a",true) : string * bool
-
+> val it = ("a",true) : string * bool
 ("a", true) = {1 = "a", 2 = true};
-val it = true : bool
-
+> val it = true : bool
 {1 = "a", 2 = true} = ("a", true);
-val it = true : bool
-
+> val it = true : bool
 ("a", true) = {2 = true, 1 = "a"};
-val it = true : bool
-
+> val it = true : bool
 ("a", true) = {2 = true, 1 = "b"};
-val it = false : bool
-
+> val it = false : bool
 ("a", false) = {1 = "a", 2 = true};
-val it = false : bool
-
+> val it = false : bool
 
 (*) Empty record and empty tuple are equivalent, and of type 'unit'.
 {};
-val it = () : unit
-
+> val it = () : unit
 ();
-val it = () : unit
-
+> val it = () : unit
 {} = ();
-val it = true : bool
-
+> val it = true : bool
 () = {};
-val it = true : bool
-
+> val it = true : bool
 
 (*) Expressions with type annotations
 1: int;
-val it = 1 : int
-
+> val it = 1 : int
 (2, true): int * bool;
-val it = (2,true) : int * bool
-
+> val it = (2,true) : int * bool
 []: int list;
-val it = [] : int list
-
+> val it = [] : int list
 (1: int) + (2: int);
-val it = 3 : int
-
+> val it = 3 : int
 1 + (2: int);
-val it = 3 : int
-
+> val it = 3 : int
 (1: int) + 2;
-val it = 3 : int
-
+> val it = 3 : int
 String.size "abc": int;
-val it = 3 : int
-
+> val it = 3 : int
 String.size ("abc": string);
-val it = 3 : int
-
+> val it = 3 : int
 String.size ("abc": string): int;
-val it = 3 : int
-
+> val it = 3 : int
 
 (*) Patterns with type annotations
 val x: int = 1;
-val x = 1 : int
-
+> val x = 1 : int
 val y: bool = true;
-val y = true : bool
-
+> val y = true : bool
 val p: int * bool = (1, true);
-val p = (1,true) : int * bool
-
+> val p = (1,true) : int * bool
 val empty: int list = [];
-val empty = [] : int list
-
+> val empty = [] : int list
 
 (*) Function declarations with type annotations
 fun f (x: int, y) = x + y;
-val f = fn : int * int -> int
-
+> val f = fn : int * int -> int
 fun f (x, y: int) = x + y;
-val f = fn : int * int -> int
-
+> val f = fn : int * int -> int
 fun f3 (e: {name: string, deptno:int}) = e.deptno;
-val f3 = fn : {deptno:int, name:string} -> int
-
+> val f3 = fn : {deptno:int, name:string} -> int
 fun hello (name: string, code: int): string = "hello!";
-val hello = fn : string * int -> string
-
+> val hello = fn : string * int -> string
 fun hello2 (name: string) (code : int): string = "hello!";
-val hello2 = fn : string -> int -> string
-
+> val hello2 = fn : string -> int -> string
 val hello3: string * int -> string =
   fn (name, code) => "hello!";
-val hello3 = fn : string * int -> string
-
+> val hello3 = fn : string * int -> string
 fun l1 [] = 0 | l1 ((h: string) :: t) = 1 + (l1 t);
-val l1 = fn : string list -> int
-
+> val l1 = fn : string list -> int
 fun l2 [] = 0 | l2 (h :: (t: bool list)) = 1 + (l2 t);
-val l2 = fn : bool list -> int
-
+> val l2 = fn : bool list -> int
 fun countOption (NONE: string option) = 0
   | countOption (SOME x) = 1;
-val countOption = fn : string option -> int
-
+> val countOption = fn : string option -> int
 fun countOption2 NONE: int = 0
   | countOption2 (SOME x) = 1;
-val countOption2 = fn : (int * 'a) option -> int
-
+> val countOption2 = fn : (int * 'a) option -> int
 fun firstOrSecond (e1 :: e2 :: rest): int = e2
   | firstOrSecond (e1 :: rest) = e1;
-0.0-0.0 Warning: match nonexhaustive
-  raised at: 0.0-0.0
-val firstOrSecond = fn : int list -> int
-
+> 0.0-0.0 Warning: match nonexhaustive
+>   raised at: 0.0-0.0
+> val firstOrSecond = fn : int list -> int
 
 (*
 sml-nj gives the following error:
@@ -149,80 +114,63 @@ stdIn:1.6-2.32 Error: parameter or result constraints of clauses don't agree [ty
 *)
 fun f NONE:int list = []
   | f (SOME x):string list = [];
-stdIn:11.5-12.32 Error: parameter or result constraints of clauses don't agree [tycon mismatch]
-  raised at: stdIn:11.5-12.32
-
+> stdIn:11.5-12.32 Error: parameter or result constraints of clauses don't agree [tycon mismatch]
+>   raised at: stdIn:11.5-12.32
 
 (*) Function with unit arg
 fun one () = 1;
-val one = fn : unit -> int
-
+> val one = fn : unit -> int
 one ();
-val it = 1 : int
-
+> val it = 1 : int
 one {};
-val it = 1 : int
-
+> val it = 1 : int
 let
   fun one () = 1
 in
   one ()
 end;
-val it = 1 : int
-
+> val it = 1 : int
 
 (*) A function with a type that is tricky to unparse correctly:
 (*)   'a list -> ('a * 'a list) option
 fun g [] = NONE
   | g (h :: t) = SOME (h, t);
-val g = fn : 'a list -> ('a * 'a list) option
-
+> val g = fn : 'a list -> ('a * 'a list) option
 
 (*) Ditto:
 (*)   'a list -> ('a * 'a list option) option
 fun g [] = NONE
   | g (h :: t) = SOME (h, SOME t);
-val g = fn : 'a list -> ('a * 'a list option) option
-
+> val g = fn : 'a list -> ('a * 'a list option) option
 
 (*) Ditto:
 (*)   'a list -> ('a option * 'a list option) option
 fun g [] = NONE
   | g (h :: t) = SOME (SOME h, SOME t);
-val g = fn : 'a list -> ('a option * 'a list option) option
-
+> val g = fn : 'a list -> ('a option * 'a list option) option
 
 (*) Pattern-match on record
 fun f {a = c, b} = b + c;
-val f = fn : {a:int, b:int} -> int
-
+> val f = fn : {a:int, b:int} -> int
 f {a = 5, b = 6};
-val it = 11 : int
-
+> val it = 11 : int
 
 fun f2 {a = 1, b} = b * 2
   | f2 {a, b} = b * 3;
-val f2 = fn : {a:int, b:int} -> int
-
+> val f2 = fn : {a:int, b:int} -> int
 f2 {a = 1, b = 6};
-val it = 12 : int
-
+> val it = 12 : int
 f2 {a = 2, b = 6};
-val it = 18 : int
-
+> val it = 18 : int
 
 Sys.set ("matchCoverageEnabled", false);
-val it = () : unit
-
+> val it = () : unit
 fun f3 {a = 1, b} = b * 2;
-val f3 = fn : {a:int, b:int} -> int
-
+> val f3 = fn : {a:int, b:int} -> int
 Sys.unset "matchCoverageEnabled";
-val it = () : unit
-
+> val it = () : unit
 f3 {a = 1, b = 6};
-val it = 12 : int
-
+> val it = 12 : int
 
 (*) The following correctly throws
 (*)   unbound variable or constructor: a
@@ -231,35 +179,27 @@ val it = 12 : int
 
 (*) Variable with polymorphic type
 val x = map;
-val x = fn : ('a -> 'b) -> 'a list -> 'b list
-
+> val x = fn : ('a -> 'b) -> 'a list -> 'b list
 x explode ["ab", "c"];
-val it = [[#"a",#"b"],[#"c"]] : char list list
-
+> val it = [[#"a",#"b"],[#"c"]] : char list list
 
 (*) Has polymorphic type
 val rec len = fn x =>
     case x of head :: tail => 1 + (len tail)
             | [] => 0;
-val len = fn : 'a list -> int
-
+> val len = fn : 'a list -> int
 
 len [];
-val it = 0 : int
-
+> val it = 0 : int
 len [1];
-val it = 1 : int
-
+> val it = 1 : int
 len [1,2];
-val it = 2 : int
-
+> val it = 2 : int
 
 map len (map explode ["ab", "", "cde"]);
-val it = [2,0,3] : int list
-
+> val it = [2,0,3] : int list
 map (fn s => len (explode s)) ["ab", "", "cde"];
-val it = [2,0,3] : int list
-
+> val it = [2,0,3] : int list
 
 (*) Type resolution involving record selectors
 val emps =
@@ -267,26 +207,20 @@ val emps =
    {id = 101, name = "Velma", deptno = 20},
    {id = 102, name = "Shaggy", deptno = 30},
    {id = 103, name = "Scooby", deptno = 30}];
-val emps =
-  [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
-   {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
-  : {deptno:int, id:int, name:string} list
-
+> val emps =
+>   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
+>    {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
+>   : {deptno:int, id:int, name:string} list
 map #deptno emps;
-val it = [10,20,30,30] : int list
-
+> val it = [10,20,30,30] : int list
 map #deptno (List.filter (fn e => #deptno e > 10) emps);
-val it = [20,30,30] : int list
-
+> val it = [20,30,30] : int list
 map #2 [(1,2),(3,1)];
-val it = [2,1] : int list
-
+> val it = [2,1] : int list
 List.filter #1 [(true,1),(false,2),(true,3)];
-val it = [(true,1),(true,3)] : (bool * int) list
-
+> val it = [(true,1),(true,3)] : (bool * int) list
 map #2 (List.filter #1 [(true,1),(false,2),(true,3)]);
-val it = [1,3] : int list
-
+> val it = [1,3] : int list
 
 (*) Should give
 (*)  Error: duplicate variable in pattern(s): e
@@ -323,9 +257,8 @@ end;
 (*) : {a:'a list -> ('a * 'a list) option, b:'b list -> ('b * 'b list) option}
 {a = fn x => case x of [] => NONE | (h :: t) => SOME (h, t),
  b = fn x => case x of [] => NONE | (h :: t) => SOME (h, t)};
-val it = {a=fn,b=fn}
-  : {a:'a list -> ('a * 'a list) option, b:'b list -> ('b * 'b list) option}
-
+> val it = {a=fn,b=fn}
+>   : {a:'a list -> ('a * 'a list) option, b:'b list -> ('b * 'b list) option}
 
 (*) Similar, expressed via 'fun'.
 (* sml/nj gives:
@@ -339,12 +272,10 @@ let
 in
   {a=1, b=g}
 end;
-val it = {a=1,b=fn} : {a:int, b:'a list -> ('a * 'a list) option}
-
+> val it = {a=1,b=fn} : {a:int, b:'a list -> ('a * 'a list) option}
 
 (*) as above
 {a = 1, b = let fun g [] = NONE | g (h :: t) = SOME (h, t) in g end};
-val it = {a=1,b=fn} : {a:int, b:'a list -> ('a * 'a list) option}
+> val it = {a=1,b=fn} : {a:int, b:'a list -> ('a * 'a list) option}
 
-
-(*) End type.sml
+(*) End type.smli

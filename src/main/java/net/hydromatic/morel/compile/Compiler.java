@@ -50,6 +50,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.util.Util;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -63,7 +64,6 @@ import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.Ast.Direction.DESC;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
@@ -86,12 +86,13 @@ public class Compiler {
   }
 
   CompiledStatement compileStatement(Environment env, Core.Decl decl,
-      boolean isDecl, Set<Core.Exp> queriesToWrap) {
+      Core.@Nullable NamedPat skipPat, Set<Core.Exp> queriesToWrap) {
     final List<Code> matchCodes = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
     final List<Action> actions = new ArrayList<>();
     final Context cx = Context.of(env);
-    compileDecl(cx, decl, isDecl, queriesToWrap, matchCodes, bindings, actions);
+    compileDecl(cx, decl, skipPat, queriesToWrap, matchCodes, bindings,
+        actions);
     final Type type = decl instanceof Core.NonRecValDecl
         ? ((Core.NonRecValDecl) decl).pat.type
         : PrimitiveType.UNIT;
@@ -503,7 +504,7 @@ public class Compiler {
   private Code compileLet(Context cx, Core.Let let) {
     final List<Code> matchCodes = new ArrayList<>();
     final List<Binding> bindings = new ArrayList<>();
-    compileValDecl(cx, let.decl, true, ImmutableSet.of(), matchCodes, bindings,
+    compileValDecl(cx, let.decl, null, ImmutableSet.of(), matchCodes, bindings,
         null);
     Context cx2 = cx.bindAll(bindings);
     final Code resultCode = compile(cx2, let.exp);
@@ -522,14 +523,14 @@ public class Compiler {
     return compile(cx2, local.exp);
   }
 
-  void compileDecl(Context cx, Core.Decl decl, boolean isDecl,
+  void compileDecl(Context cx, Core.Decl decl, Core.@Nullable NamedPat skipPat,
       Set<Core.Exp> queriesToWrap, List<Code> matchCodes,
       List<Binding> bindings, List<Action> actions) {
     switch (decl.op) {
     case VAL_DECL:
     case REC_VAL_DECL:
       final Core.ValDecl valDecl = (Core.ValDecl) decl;
-      compileValDecl(cx, valDecl, isDecl, queriesToWrap, matchCodes, bindings,
+      compileValDecl(cx, valDecl, skipPat, queriesToWrap, matchCodes, bindings,
           actions);
       break;
 
@@ -634,7 +635,8 @@ public class Compiler {
     consumer.accept(match.pat, code);
   }
 
-  private void compileValDecl(Context cx, Core.ValDecl valDecl, boolean isDecl,
+  private void compileValDecl(Context cx, Core.ValDecl valDecl,
+      Core.@Nullable Pat skipPat,
       Set<Core.Exp> queriesToWrap, List<Code> matchCodes,
       List<Binding> bindings, List<Action> actions) {
     Compiles.bindPattern(typeSystem, bindings, valDecl);
@@ -676,7 +678,7 @@ public class Compiler {
             }
             pairs.forEach((pat2, o2) -> {
               outBindings.accept(Binding.of(pat2, o2));
-              if (!isDecl || !pat2.name.equals("it")) {
+              if (pat2 != skipPat) {
                 int stringDepth = Prop.STRING_DEPTH.intValue(session.map);
                 int lineWidth = Prop.LINE_WIDTH.intValue(session.map);
                 int printDepth = Prop.PRINT_DEPTH.intValue(session.map);

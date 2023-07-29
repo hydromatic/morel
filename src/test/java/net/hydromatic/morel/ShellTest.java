@@ -613,7 +613,9 @@ public class ShellTest {
             final List<String> argList = ImmutableList.of();
             final Map<String, ForeignValue> dictionary = ImmutableMap.of();
             final File directory = getFile();
-            new Main(argList, reader, writer, dictionary, directory).run();
+            final Main main =
+                new Main(argList, reader, writer, dictionary, directory, false);
+            main.run();
             assertThat(writer.toString(), matcher);
             return this;
           }

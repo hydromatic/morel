@@ -74,7 +74,7 @@ public class ScriptTest {
   static Stream<Arguments> data() {
     // Start with a test file we know exists, then find the directory and list
     // its files.
-    final String first = "script/simple.sml";
+    final String first = "script/simple.smli";
     return data_(first);
   }
 
@@ -116,6 +116,7 @@ public class ScriptTest {
     final File inFile;
     final File outFile;
     final File f = new File(path);
+    final boolean idempotent = path.endsWith(".smli");
     if (f.isAbsolute()) {
       // e.g. path = "/tmp/foo.sml"
       inFile = f;
@@ -127,25 +128,29 @@ public class ScriptTest {
       assertThat(inUrl, notNullValue());
       inFile = urlToFile(inUrl);
       assertThat(inFile, notNullValue());
-      outFile = new File(inFile.getAbsoluteFile().getParent(),
-          u2n("surefire/") + path + ".out");
+      String outPath = idempotent ? path : path + ".out";
+      outFile =
+          new File(inFile.getAbsoluteFile().getParent(),
+              u2n("surefire/") + outPath);
     }
     TestUtils.discard(outFile.getParentFile().mkdirs());
     final List<String> argList = ImmutableList.of("--echo");
     final File directory = inFile.getParentFile();
     final boolean loadDictionary =
-        inFile.getPath().matches(".*/(blog|dummy|foreign|hybrid)\\.sml");
+        inFile.getPath().matches(".*/(blog|dummy|foreign|hybrid)\\.(sml|smli)");
     final Map<String, ForeignValue> dictionary =
         loadDictionary
             ? Calcite.withDataSets(BuiltInDataSet.DICTIONARY).foreignValues()
             : ImmutableMap.of();
     try (Reader reader = TestUtils.reader(inFile);
          Writer writer = TestUtils.printWriter(outFile)) {
-      Main main = new Main(argList, reader, writer, dictionary, directory);
+      Main main =
+          new Main(argList, reader, writer, dictionary, directory, idempotent);
       main.run();
     }
-    final File refFile =
-        new File(inFile.getParentFile(), inFile.getName() + ".out");
+    final String inName =
+        idempotent ? inFile.getName() : inFile.getName() + ".out";
+    final File refFile = new File(inFile.getParentFile(), inName);
     if (!refFile.exists()) {
       System.out.println("Reference file not found: " + refFile);
     }
@@ -167,7 +172,7 @@ public class ScriptTest {
         firstFile.getAbsolutePath().length() - first.length();
     final File dir = firstFile.getParentFile();
     @SuppressWarnings("UnstableApiUsage") final FilenameFilter filter =
-        new PatternFilenameFilter(".*\\.sml$");
+        new PatternFilenameFilter(".*\\.(sml|smli)$");
     File[] files = dir.listFiles(filter);
     return Stream.of(first(files, new File[0]))
         .map(f ->

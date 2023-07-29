@@ -17,97 +17,69 @@
  * License.
  *)
 Sys.set ("lineWidth", 78);
-val it = () : unit
-
+> val it = () : unit
 
 (*) Literals
 1;
-val it = 1 : int
-
+> val it = 1 : int
 ~2;
-val it = ~2 : int
-
+> val it = ~2 : int
 ~2147483647;
-val it = ~2147483647 : int
-
+> val it = ~2147483647 : int
 ~2147483648;
-val it = ~2147483648 : int
-
+> val it = ~2147483648 : int
 2147483647;
-val it = 2147483647 : int
-
+> val it = 2147483647 : int
 "a string";
-val it = "a string" : string
-
+> val it = "a string" : string
 "a \"quoted\" string\\with backslash";
-val it = "a \"quoted\" string\\with backslash" : string
-
+> val it = "a \"quoted\" string\\with backslash" : string
 "";
-val it = "" : string
-
+> val it = "" : string
 #"a";
-val it = #"a" : char
-
+> val it = #"a" : char
 #"\"";
-val it = #"\"" : char
-
+> val it = #"\"" : char
 #"\\";
-val it = #"\\" : char
-
+> val it = #"\\" : char
 true;
-val it = true : bool
-
+> val it = true : bool
 [1,2,3];
-val it = [1,2,3] : int list
-
+> val it = [1,2,3] : int list
 (1,2);
-val it = (1,2) : int * int
-
+> val it = (1,2) : int * int
 (1,(2,"three"),true);
-val it = (1,(2,"three"),true) : int * (int * string) * bool
-
+> val it = (1,(2,"three"),true) : int * (int * string) * bool
 [(1,"a"),(2,"b"),(3,"c")];
-val it = [(1,"a"),(2,"b"),(3,"c")] : (int * string) list
-
+> val it = [(1,"a"),(2,"b"),(3,"c")] : (int * string) list
 ([1,2],["a","b","c"]);
-val it = ([1,2],["a","b","c"]) : int list * string list
-
+> val it = ([1,2],["a","b","c"]) : int list * string list
 {a=1, b="two"};
-val it = {a=1,b="two"} : {a:int, b:string}
-
+> val it = {a=1,b="two"} : {a:int, b:string}
 {1="a", 2=true, 3=(3,4,5)};
-val it = ("a",true,(3,4,5)) : string * bool * (int * int * int)
-
+> val it = ("a",true,(3,4,5)) : string * bool * (int * int * int)
 ("a", true, (3,4,5));
-val it = ("a",true,(3,4,5)) : string * bool * (int * int * int)
-
+> val it = ("a",true,(3,4,5)) : string * bool * (int * int * int)
 {1="a"};
-val it = {1="a"} : {1:string}
-
+> val it = {1="a"} : {1:string}
 ("a");
-val it = "a" : string
-
+> val it = "a" : string
 {1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11,a="a",a1="a1",a2="a2",a10="a10"};
-val it =
-  {1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11,a="a",a1="a1",a10="a10",
-   a2="a2"}
-  : {1:int, 2:int, 3:int, 4:int, 5:int, 6:int, 7:int, 8:int, 9:int, 10:int, 11:int, a:string, a1:string, a10:string, a2:string}
-
+> val it =
+>   {1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11,a="a",a1="a1",a10="a10",
+>    a2="a2"}
+>   : {1:int, 2:int, 3:int, 4:int, 5:int, 6:int, 7:int, 8:int, 9:int, 10:int, 11:int, a:string, a1:string, a10:string, a2:string}
 {1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11};
-val it = (1,2,3,4,5,6,7,8,9,10,11)
-  : int * int * int * int * int * int * int * int * int * int * int
-
+> val it = (1,2,3,4,5,6,7,8,9,10,11)
+>   : int * int * int * int * int * int * int * int * int * int * int
 {0=0};
-val it = {0=0} : {0:int}
-
+> val it = {0=0} : {0:int}
 {0=0,1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11};
-val it = {0=0,1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11}
-  : {0:int, 1:int, 2:int, 3:int, 4:int, 5:int, 6:int, 7:int, 8:int, 9:int, 10:int, 11:int}
-
+> val it = {0=0,1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11}
+>   : {0:int, 1:int, 2:int, 3:int, 4:int, 5:int, 6:int, 7:int, 8:int, 9:int, 10:int, 11:int}
 {1=1,2=2,3=3,5=5,6=6,7=7,8=8,9=9,10=10,11=11};
-val it = {1=1,2=2,3=3,5=5,6=6,7=7,8=8,9=9,10=10,11=11}
-  : {1:int, 2:int, 3:int, 5:int, 6:int, 7:int, 8:int, 9:int, 10:int, 11:int}
-
+> val it = {1=1,2=2,3=3,5=5,6=6,7=7,8=8,9=9,10=10,11=11}
+>   : {1:int, 2:int, 3:int, 5:int, 6:int, 7:int, 8:int, 9:int, 10:int, 11:int}
 
 (*) Identifiers
 val x = 1
@@ -117,14 +89,13 @@ and x'y = 4
 and ABC123 = 5
 and Abc_123 = 6
 and Abc_ = 7;
-val x = 1 : int
-val x' = 2 : int
-val x'' = 3 : int
-val x'y = 4 : int
-val ABC123 = 5 : int
-val Abc_123 = 6 : int
-val Abc_ = 7 : int
-
+> val x = 1 : int
+> val x' = 2 : int
+> val x'' = 3 : int
+> val x'y = 4 : int
+> val ABC123 = 5 : int
+> val Abc_123 = 6 : int
+> val Abc_ = 7 : int
 
 fun foo x
   x'
@@ -133,8 +104,7 @@ fun foo x
   ABC123
   Abc_123
   Abc_ = 1;
-val foo = fn : 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g -> int
-
+> val foo = fn : 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g -> int
 
 {x = 1,
  x' = 2,
@@ -143,17 +113,14 @@ val foo = fn : 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g -> int
  ABC123 = 5,
  Abc_123 = 6,
  Abc_ = 7};
-val it = {ABC123=5,Abc_=7,Abc_123=6,x=1,x'=2,x''=3,x'y=4}
-  : {ABC123:int, Abc_:int, Abc_123:int, x:int, x':int, x'':int, x'y:int}
-
+> val it = {ABC123=5,Abc_=7,Abc_123=6,x=1,x'=2,x''=3,x'y=4}
+>   : {ABC123:int, Abc_:int, Abc_123:int, x:int, x':int, x'':int, x'y:int}
 
 (*) Simple commands
 val x = 1;
-val x = 1 : int
-
+> val x = 1 : int
 x + 2;
-val it = 3 : int
-
+> val it = 3 : int
 let
   fun fact n =
     if n = 0
@@ -162,71 +129,58 @@ let
 in
   fact 5
 end;
-val it = 120 : int
-
+> val it = 120 : int
 let
   fun sum x y = x + y
 in
   sum 2
 end;
-val it = fn : int -> int
-
+> val it = fn : int -> int
 it 3;
-val it = 5 : int
-
+> val it = 5 : int
 
 fun strTimes s 0 l = l
   | strTimes s i l = strTimes ("a" ^ s) (i - 1) (s :: l);
-val strTimes = fn : string -> int -> string list -> string list
-
+> val strTimes = fn : string -> int -> string list -> string list
 
 strTimes "" 3 [];
-val it = ["aa","a",""] : string list
-
+> val it = ["aa","a",""] : string list
 strTimes "" 8 [];
-val it = ["aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",""] : string list
-
+> val it = ["aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",""] : string list
 strTimes "" 9 [];
-val it = ["aaaaaaaa","aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",""]
-  : string list
-
+> val it = ["aaaaaaaa","aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",""]
+>   : string list
 strTimes "" 12 [];
-val it =
-  ["aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa","aaaaaaa","aaaaaa",
-   "aaaaa","aaaa","aaa","aa","a",""] : string list
-
+> val it =
+>   ["aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa","aaaaaaa","aaaaaa",
+>    "aaaaa","aaaa","aaa","aa","a",""] : string list
 strTimes "" 13 [];
-val it =
-  ["aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa","aaaaaaa",
-   "aaaaaa","aaaaa","aaaa","aaa","aa","a",...] : string list
-
+> val it =
+>   ["aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa","aaaaaaa",
+>    "aaaaaa","aaaaa","aaaa","aaa","aa","a",...] : string list
 strTimes "" 20 [];
-val it =
-  ["aaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaa",
-   "aaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaa","aaaaaaaaaaaaaa","aaaaaaaaaaaaa",
-   "aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa",...]
-  : string list
-
+> val it =
+>   ["aaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaa",
+>    "aaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaa","aaaaaaaaaaaaaa","aaaaaaaaaaaaa",
+>    "aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa",...]
+>   : string list
 
 [{a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",d="ddddddddd"}];
-val it =
-  [
-   {a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",
-    d="ddddddddd"}] : {a:string, b:string, c:string, d:string} list
-
+> val it =
+>   [
+>    {a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",
+>     d="ddddddddd"}] : {a:string, b:string, c:string, d:string} list
 [{a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",d="ddddddddd"},{a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",d="ddddddddd"}];
-val it =
-  [
-   {a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",
-    d="ddddddddd"},
-   {a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",
-    d="ddddddddd"}] : {a:string, b:string, c:string, d:string} list
-
+> val it =
+>   [
+>    {a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",
+>     d="ddddddddd"},
+>    {a="aaaaaaaaaaaaaaaaaaaaaa",b="bbbbbbbbbbbbbb",c="cccccccccccccccccc",
+>     d="ddddddddd"}] : {a:string, b:string, c:string, d:string} list
 {a=1,b=2,c=3,d=4,e=5,f=6,g=7,h=8,i=9,j=10,k=11,l=12,m=13,n=14,o_=15,p=16};
-val it =
-  {a=1,b=2,c=3,d=4,e=5,f=6,g=7,h=8,i=9,j=10,k=11,l=12,m=13,n=14,o_=15,p=16}
-  : {a:int, b:int, c:int, d:int, e:int, f:int, g:int, h:int, i:int, j:int, k:int, l:int, m:int, n:int, o_:int, p:int}
-
+> val it =
+>   {a=1,b=2,c=3,d=4,e=5,f=6,g=7,h=8,i=9,j=10,k=11,l=12,m=13,n=14,o_=15,p=16}
+>   : {a:int, b:int, c:int, d:int, e:int, f:int, g:int, h:int, i:int, j:int, k:int, l:int, m:int, n:int, o_:int, p:int}
 (*
 sml prints the following, but we cannot split types yet:
 
@@ -235,9 +189,8 @@ val it = {a=1,b={a=2,b={a=3,b={a=4,b={a=#,b=#}}}}}
      b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:unit}}}}}}}
 *)
 {a=1,b={a=2,b={a=3,b={a=4,b={a=5,b={a=6,b={a=7,b={}}}}}}}};
-val it = {a=1,b={a=2,b={a=3,b={a=4,b={a=#,b=#}}}}}
-  : {a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:unit}}}}}}}
-
+> val it = {a=1,b={a=2,b={a=3,b={a=4,b={a=#,b=#}}}}}
+>   : {a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:unit}}}}}}}
 
 (*) Bug: Fails due to lack of parentheses
 (*
@@ -256,16 +209,13 @@ let
 in
   (in_ 3 [1,2,3], in_ 4 [1,2,3])
 end;
-val it = (true,false) : bool * bool
-
+> val it = (true,false) : bool * bool
 
 (*) Lambda on unit
 fn () => 1;
-val it = fn : unit -> int
-
+> val it = fn : unit -> int
 it ();
-val it = 1 : int
-
+> val it = 1 : int
 
 (*) Multiple functions
 let
@@ -274,8 +224,7 @@ let
 in
   f (g 0)
 end;
-val it = 1 : int
-
+> val it = 1 : int
 
 (*) Closure
 let
@@ -286,8 +235,7 @@ let
 in
   f x
 end;
-val it = 13 : int
-
+> val it = 13 : int
 
 (*) As "Closure", but each 'fun' is replaced with a lambda.
 let
@@ -298,8 +246,7 @@ let
 in
   f x
 end;
-val it = 13 : int
-
+> val it = 13 : int
 
 (*) As "Closure", but converted to nested 'let' expressions.
 let
@@ -319,8 +266,7 @@ in
     end
   end
 end;
-val it = 13 : int
-
+> val it = 13 : int
 
 (*) Similar to "Closure", but a simpler expression.
 let
@@ -330,8 +276,7 @@ let
 in
   f x
 end;
-val it = 11 : int
-
+> val it = 11 : int
 
 (*) Similar to "Closure", but the two occurrences of 'x'
 (*) have different data types, so that the bug is more obvious.
@@ -342,8 +287,7 @@ let
 in
   g x
 end;
-val it = 13 : int
-
+> val it = 13 : int
 
 (*) As previous, but converting 'fun' to a lambda.
 let
@@ -353,8 +297,7 @@ let
 in
   g x
 end;
-val it = 13 : int
-
+> val it = 13 : int
 
 (*) A fun in a fun (test case for [MOREL-19])
 fun foo arg =
@@ -363,22 +306,17 @@ fun foo arg =
   in
     baz arg
   end;
-val foo = fn : 'a -> 'a
-
+> val foo = fn : 'a -> 'a
 foo 3;
-val it = 3 : int
-
+> val it = 3 : int
 
 (*) Define a function using higher-order functions
 val longest = foldl (fn (s, t) => if size s > size t then s else t) "";
-val longest = fn : string list -> string
-
+> val longest = fn : string list -> string
 longest ["ab", "cde", "", "f"];
-val it = "cde" : string
-
+> val it = "cde" : string
 longest [];
-val it = "" : string
-
+> val it = "" : string
 
 (*) Mutually recursive functions
 let
@@ -387,11 +325,9 @@ let
 in
   f
 end;
-val it = fn : int -> int
-
+> val it = fn : int -> int
 it 1;
-val it = 26 : int
-
+> val it = 26 : int
 
 (*) Same as previous, using 'val rec'
 let
@@ -400,11 +336,9 @@ let
 in
   f
 end;
-val it = fn : int -> int
-
+> val it = fn : int -> int
 it 1;
-val it = 26 : int
-
+> val it = 26 : int
 
 let
   fun odd 0 = false
@@ -414,8 +348,7 @@ let
 in
   (odd 17, even 17)
 end;
-val it = (true,false) : bool * bool
-
+> val it = (true,false) : bool * bool
 
 let
   fun isZeroMod3 0 = true
@@ -427,17 +360,14 @@ let
 in
   (isZeroMod3 17, isOneMod3 17, isTwoMod3 17)
 end;
-val it = (false,false,true) : bool * bool * bool
-
+> val it = (false,false,true) : bool * bool * bool
 
 (*) An example where identifiers with primes (') are more readable
 fun distance (x, y) (x', y') =
   Math.sqrt ((x - x') * (x - x') + (y - y') * (y - y'));
-val distance = fn : real * real -> real * real -> real
-
+> val distance = fn : real * real -> real * real -> real
 distance (0.0, 1.0) (4.0, 4.0);
-val it = 5.0 : real
-
+> val it = 5.0 : real
 
 (*) Composite declarations
 let
@@ -445,39 +375,30 @@ let
 in
   x + y
 end;
-val it = 3 : int
-
+> val it = 3 : int
 val (x, y) = (1, 2);
-val x = 1 : int
-val y = 2 : int
-
+> val x = 1 : int
+> val y = 2 : int
 it;
-val it = (1,2) : int * int
-
+> val it = (1,2) : int * int
 val (x, 2) = (1, 2);
-val x = 1 : int
-
+> val x = 1 : int
 it;
-val it = (1,2) : int * int
-
+> val it = (1,2) : int * int
 val h :: t = [1, 2, 3];
-val h = 1 : int
-val t = [2,3] : int list
-
+> val h = 1 : int
+> val t = [2,3] : int list
 it;
-val it = [1,2,3] : int list
-
+> val it = [1,2,3] : int list
 val _ = 3;
-
 
 (* TODO fix in [MOREL-43]
 val SOME i = SOME 1;
 val i = 1 : 'a
 *)
 val SOME i = NONE;
-uncaught exception Bind
-  raised at: stdIn:6.5-6.18
-
+> uncaught exception Bind
+>   raised at: stdIn:6.5-6.18
 (* TODO fix in [MOREL-43]
 val SOME (p as (1, i), SOME true) = SOME ((1, 2), SOME true);
 val p = (1,2) : int * 'a
@@ -488,80 +409,65 @@ val SOME (i, NONE) = SOME (1, SOME false);
 *)
 
 Sys.set ("matchCoverageEnabled", false);
-val it = () : unit
-
+> val it = () : unit
 val (i, true) = (1, true);
-val i = 1 : int
-
+> val i = 1 : int
 val (i, false) = (1, true);
-uncaught exception Bind
-  raised at: stdIn:1.5-1.27
-
+> uncaught exception Bind
+>   raised at: stdIn:1.5-1.27
 let
   val (i, false) = (1, true)
 in
   i + 1
 end;
-uncaught exception Bind
-  raised at: stdIn:2.7-2.29
-
+> uncaught exception Bind
+>   raised at: stdIn:2.7-2.29
 Sys.unset "matchCoverageEnabled";
-val it = () : unit
-
+> val it = () : unit
 
 (*) Patterns
 
 (*) The following example is from "Introduction to Standard ML" by Robert Harper.
 val x = (( "foo", true ), 17 );
-val x = (("foo",true),17) : string * bool * int
-
+> val x = (("foo",true),17) : string * bool * int
 val ( l as (ll,lr), r ) = x;
-val l = ("foo",true) : string * bool
-val ll = "foo" : string
-val lr = true : bool
-val r = 17 : int
-
+> val l = ("foo",true) : string * bool
+> val ll = "foo" : string
+> val lr = true : bool
+> val r = 17 : int
 
 Sys.set ("matchCoverageEnabled", false);
-val it = () : unit
-
+> val it = () : unit
 fun f (true, []) = ~1
   | f (true, l as (hd :: tl)) = length l
   | f (false, list) = 0;
-val f = fn : bool * 'a list -> int
-
+> val f = fn : bool * 'a list -> int
 f (true, ["a","b","c"]);
-val it = 3 : int
-
+> val it = 3 : int
 Sys.unset "matchCoverageEnabled";
-val it = () : unit
-
+> val it = () : unit
 
 let
   val w as (x, y) = (1, 2)
 in
   #1 w + #2 w + x + y
 end;
-val it = 6 : int
-
+> val it = 6 : int
 
 val x as (y, z) = (1, 2);
-val x = (1,2) : int * int
-val y = 1 : int
-val z = 2 : int
-
+> val x = (1,2) : int * int
+> val y = 1 : int
+> val z = 2 : int
 val x as h :: t = [1,2,3];
-val x = [1,2,3] : int list
-val h = 1 : int
-val t = [2,3] : int list
-
+> val x = [1,2,3] : int list
+> val h = 1 : int
+> val t = [2,3] : int list
 val x as y as (h,i) :: t = [(1,2),(3,4),(5,6)];
-val x = [(1,2),(3,4),(5,6)] : (int * int) list
-val y = [(1,2),(3,4),(5,6)] : (int * int) list
-val h = 1 : int
-val i = 2 : int
-val t = [(3,4),(5,6)] : (int * int) list
-
+> val x = [(1,2),(3,4),(5,6)] : (int * int) list
+> val y = [(1,2),(3,4),(5,6)] : (int * int) list
+> val h = 1 : int
+> val i = 2 : int
+> val t = [(3,4),(5,6)] : (int * int) list
 (* TODO fix in [MOREL-43]
 val a as SOME (b as (c, d)) = SOME (1, 2);
 val a = SOME (1,2) : (int * int) option
@@ -570,43 +476,34 @@ val c = 1 : 'a
 val d = 2 : 'b
 *)
 val x as y as z = 3;
-val x = 3 : int
-val y = 3 : int
-val z = 3 : int
-
+> val x = 3 : int
+> val y = 3 : int
+> val z = 3 : int
 
 (*) Errors
 (* The first is printed as '1.9', the second as '1.9-1.11', and the third as '1.9-1.12'. *)
 "a string literal to reset the line counter after the comment";
-val it = "a string literal to reset the line counter after the comment"
-  : string
-
+> val it = "a string literal to reset the line counter after the comment"
+>   : string
 val a = p + 1;
-stdIn:1.9 Error: unbound variable or constructor: p
-  raised at: stdIn:1.9
-
+> stdIn:1.9 Error: unbound variable or constructor: p
+>   raised at: stdIn:1.9
 val a = pq + 1;
-stdIn:1.9-1.11 Error: unbound variable or constructor: pq
-  raised at: stdIn:1.9-1.11
-
+> stdIn:1.9-1.11 Error: unbound variable or constructor: pq
+>   raised at: stdIn:1.9-1.11
 val a = pqr + 1;
-stdIn:1.9-1.12 Error: unbound variable or constructor: pqr
-  raised at: stdIn:1.9-1.12
-
+> stdIn:1.9-1.12 Error: unbound variable or constructor: pqr
+>   raised at: stdIn:1.9-1.12
 
 fun f n = String.substring ("hello", 1, n);
-val f = fn : int -> string
-
+> val f = fn : int -> string
 f 2;
-val it = "el" : string
-
+> val it = "el" : string
 f 6;
-uncaught exception Subscript [subscript out of bounds]
-  raised at: stdIn:2.11-2.43
-
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:2.11-2.43
 f ~1;
-uncaught exception Subscript [subscript out of bounds]
-  raised at: stdIn:2.11-2.43
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:2.11-2.43
 
-
-(*) End simple.sml
+(*) End simple.smli

@@ -1,0 +1,3043 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 64);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+(* Structures -------------------------------------------------- *)
+General;
+> val it = {ignore=fn,op o=fn}
+>   : {ignore:'a -> unit, op o:('b -> 'c) * ('d -> 'b) -> 'd -> 'c}
+Interact;
+> val it = {use=fn} : {use:string -> unit}
+List;
+> val it =
+>   {all=fn,app=fn,at=fn,collate=fn,concat=fn,drop=fn,exists=fn,filter=fn,
+>    find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,last=fn,length=fn,map=fn,
+>    mapPartial=fn,nil=[],nth=fn,null=fn,op @=fn,partition=fn,rev=fn,
+>    revAppend=fn,tabulate=fn,take=fn,tl=fn}
+>   : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> order) -> 'd list * 'd list -> order, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i option, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> ('n * 'n list) option, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u option) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, op @:'y list * 'y list -> 'y list, partition:('z -> bool) -> 'z list -> 'z list * 'z list, rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list, tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list, tl:'be list -> 'be list}
+List.rev;
+> val it = fn : 'a list -> 'a list
+List.rev [1,2,3];
+> val it = [3,2,1] : int list
+Math;
+> val it =
+>   {acos=fn,asin=fn,atan=fn,atan2=fn,cos=fn,cosh=fn,e=2.7182817,exp=fn,ln=fn,
+>    log10=fn,pi=3.1415927,pow=fn,sin=fn,sinh=fn,sqrt=fn,tan=fn,tanh=fn}
+>   : {acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}
+Option;
+> val it =
+>   {app=fn,compose=fn,composePartial=fn,filter=fn,flatten=fn,getOpt=fn,
+>    isSome=fn,map=fn,mapPartial=fn,valOf=fn}
+>   : {app:('a option -> unit) -> 'a option -> unit, compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option, composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option, filter:('h -> bool) -> 'h -> 'h option, flatten:'i option option -> 'i option, getOpt:'j option * 'j -> 'j, isSome:'k option -> bool, map:('l -> 'm) -> 'l option -> 'm option, mapPartial:('n -> 'o option) -> 'n option -> 'o option, valOf:'p option -> 'p}
+Option.compose;
+> val it = fn : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
+String;
+> val it =
+>   {concat=fn,concatWith=fn,explode=fn,extract=fn,implode=fn,isPrefix=fn,
+>    isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,
+>    substring=fn,translate=fn}
+>   : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
+Real;
+> val it =
+>   {abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,fromInt=fn,
+>    fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,max=fn,
+>    maxFinite=3.4028235E38,min=fn,minNormalPos=1.17549435E~38,minPos=1.4E~45,
+>    negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,realFloor=fn,
+>    realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,sameSign=fn,sign=fn,
+>    signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,unordered=fn}
+>   : {abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}
+Relational;
+> val it =
+>   {count=fn,exists=fn,iterate=fn,max=fn,min=fn,notExists=fn,only=fn,sum=fn}
+>   : {count:'a list -> int, exists:'b list -> bool, iterate:'c list -> ('c list * 'c list -> 'c list) -> 'c list, max:'d list -> 'd, min:'e list -> 'e, notExists:'f list -> bool, only:'g list -> 'g, sum:'h list -> 'h}
+
+(* Operators --------------------------------------------------- *)
+2 + 3;
+> val it = 5 : int
+2 + 3 * 4;
+> val it = 14 : int
+Sys.plan ();
+> val it =
+>   "apply2(fnValue +, constant(2), apply2(fnValue *, constant(3), constant(4)))"
+>   : string
+
+fn x => x + 1;
+> val it = fn : int -> int
+Sys.plan ();
+> val it = "match(x, apply2(fnValue +, get(name x), constant(1)))" : string
+
+val nan = Real.posInf / Real.negInf;
+> val nan = nan : real
+
+(* Datatypes --------------------------------------------------- *)
+
+(*) datatype option
+SOME 1;
+> val it = SOME 1 : int option
+NONE;
+> val it = NONE : 'a option
+NONE = NONE;
+> val it = true : bool
+NONE = SOME 1;
+> val it = false : bool
+SOME "a" = NONE;
+> val it = false : bool
+SOME (SOME true);
+> val it = SOME (SOME true) : bool option option
+SOME (SOME [1,2,3]);
+> val it = SOME (SOME [1,2,3]) : int list option option
+SOME (SOME {a=1, b=true});
+> val it = SOME (SOME {a=1,b=true}) : {a:int, b:bool} option option
+
+(* Top-level environment --------------------------------------- *)
+(* A few functions and operators belong to signatures but can be
+   used unqualified. For example, "hd" is shorthand for "List.hd".
+   The following are all of the top-level functions and operators
+   defined by Standard ML. *)
+
+(* "val ! : 'a ref -> 'a" maps to "General.!" *)
+(*) TODO !;
+(* "val := : 'a ref * 'a -> unit" maps to "General.:=" *)
+(*) TODO :=;
+(* "val @ : ('a list * 'a list) -> 'a list" maps to "List.@" *)
+(*) TODO @;
+(* "val ^ : string * string -> string" maps to "String.^" *)
+(*) TODO ^;
+(* "val app : ('a -> unit) -> 'a list -> unit" maps to "List.app" *)
+app;
+> val it = fn : ('a -> unit) -> 'a list -> unit
+(* "val before : 'a * unit -> 'a" maps to "General.before" *)
+(*) TODO before;
+(* "val ceil : real -> int" maps to "Real.ceil" *)
+ceil;
+> val it = fn : real -> int
+(* "val chr : int -> char" maps to "Char.chr" *)
+(*) TODO chr;
+(* "val concat : string list -> string" maps to "String.concat" *)
+concat;
+> val it = fn : string list -> string
+(* "val exnMessage : exn -> string" maps to "General.exnMessage" *)
+(*) TODO exnMessage;
+(* "val exnName : exn -> string" maps to "General.exnName" *)
+(*) TODO exnName;
+(* "val explode : string -> char list" maps to "String.explode" *)
+explode;
+> val it = fn : string -> char list
+(* "val floor : real -> int" maps to "Real.floor" *)
+floor;
+> val it = fn : real -> int
+(* "val foldl : ('a*'b->'b)-> 'b -> 'a list -> 'b" maps to "List.foldl" *)
+foldl;
+> val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+(* "val foldr : ('a*'b->'b)-> 'b -> 'a list -> 'b" maps to "List.foldr" *)
+foldr;
+> val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+(* "val getOpt : ('a option * 'a) -> 'a" maps to "Option.getOpt" *)
+getOpt;
+> val it = fn : 'a option * 'a -> 'a
+(* "val hd : 'a list -> 'a" maps to "List.hd" *)
+hd;
+> val it = fn : 'a list -> 'a
+(* "val ignore : 'a -> unit" maps to "General.ignore" *)
+ignore;
+> val it = fn : 'a -> unit
+(* "val implode : char list -> string" maps to "String.implode" *)
+implode;
+> val it = fn : char list -> string
+(* "val isSome : 'a option -> bool" maps to "Option.isSome" *)
+isSome;
+> val it = fn : 'a option -> bool
+(* "val length : 'a list -> int" maps to "List.length" *)
+length;
+> val it = fn : 'a list -> int
+(* "val map : ('a -> 'b) -> 'a list -> 'b list" maps to "List.map" *)
+map;
+> val it = fn : ('a -> 'b) -> 'a list -> 'b list
+(* "val not : bool -> bool" maps to "Bool.not" *)
+not;
+> val it = fn : bool -> bool
+(* "val null : 'a list -> bool" maps to "List.null" *)
+null;
+> val it = fn : 'a list -> bool
+(* "val o : ('a->'b) * ('c->'a) -> 'c->'b" maps to "General.o" *)
+(*) TODO o;
+(* "val ord : char -> int" maps to "Char.ord" *)
+(*) TODO ord;
+(* "val print : string -> unit" maps to "TextIO.print" *)
+(*) TODO print;
+(* "val real : int -> real" maps to "Real.fromInt" *)
+real;
+> val it = fn : int -> real
+(* "val ref : 'a -> 'a ref" maps to "primitive" *)
+(*) TODO ref;
+(* "val rev : 'a list -> 'a list" maps to "List.rev" *)
+rev;
+> val it = fn : 'a list -> 'a list
+(* "val round : real -> int" maps to "Real.round" *)
+round;
+> val it = fn : real -> int
+(* "val size : string -> int" maps to "String.size" *)
+size;
+> val it = fn : string -> int
+(* "val str : char -> string" maps to "String.str" *)
+str;
+> val it = fn : char -> string
+(* "val substring : string * int * int -> string" maps to "String.substring" *)
+substring;
+> val it = fn : string * int * int -> string
+(* "val tl : 'a list -> 'a list" maps to "List.tl" *)
+tl;
+> val it = fn : 'a list -> 'a list
+(* "val trunc : real -> int" maps to "Real.trunc" *)
+trunc;
+> val it = fn : real -> int
+(* "val use : string -> unit" maps to "implementation dependent" *)
+use;
+> val it = fn : string -> unit
+(* "val valOf : 'a option -> 'a" maps to "Option.valOf" *)
+valOf;
+> val it = fn : 'a option -> 'a
+(* "val vector : 'a list -> 'a vector" maps to "Vector.fromList" *)
+vector;
+> val it = fn : 'a list -> 'a vector
+
+(* General ----------------------------------------------------- *)
+
+(*) op o - function composition
+val plusOne = fn x => x + 1;
+> val plusOne = fn : int -> int
+val timesTwo = fn x => x * 2;
+> val timesTwo = fn : int -> int
+val plusThree = fn x => x + 3;
+> val plusThree = fn : int -> int
+plusOne o timesTwo;
+> val it = fn : int -> int
+(plusOne o timesTwo) 3;
+> val it = 7 : int
+plusOne o timesTwo o plusThree;
+> val it = fn : int -> int
+((plusOne o timesTwo) o plusThree) 3;
+> val it = 13 : int
+(plusOne o (timesTwo o plusThree)) 3;
+> val it = 13 : int
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue o, argCode tuple(get(name plusOne), apply(fnValue o, argCode tuple(get(name timesTwo), get(name plusThree))))), argCode constant(3))"
+>   : string
+
+ignore;
+> val it = fn : 'a -> unit
+ignore (1 + 2);
+> val it = () : unit
+Sys.plan ();
+> val it =
+>   "apply(fnValue General.ignore, argCode apply2(fnValue +, constant(1), constant(2)))"
+>   : string
+
+(* Interact ---------------------------------------------------- *)
+
+(*) use - load source from a file
+Interact.use;
+> val it = fn : string -> unit
+use;
+> val it = fn : string -> unit
+
+(* String ------------------------------------------------------ *)
+
+(*) val maxSize : int
+String.maxSize;
+> val it = 2147483647 : int
+Sys.plan ();
+> val it = "constant(2147483647)" : string
+
+(*) val size : string -> int
+String.size;
+> val it = fn : string -> int
+String.size "abc";
+> val it = 3 : int
+String.size "";
+> val it = 0 : int
+Sys.plan ();
+> val it = "apply(fnValue String.size, argCode constant())" : string
+
+(*) val sub : string * int -> char
+String.sub;
+> val it = fn : string * int -> char
+String.sub("abc", 0);
+> val it = #"a" : char
+String.sub("abc", 2);
+> val it = #"c" : char
+String.sub("abc", 20);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.22
+String.sub("abc", 3);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.21
+String.sub("abc", ~1);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.22
+Sys.plan ();
+> val it = "apply2(fnValue String.sub, constant(abc), constant(-1))" : string
+
+(*) val extract: string * int * int option -> string
+String.extract;
+> val it = fn : string * int * int option -> string
+String.extract("abc", 1, NONE);
+> val it = "bc" : string
+String.extract("abc", 1, SOME 2);
+> val it = "bc" : string
+String.extract("abc", 3, NONE);
+> val it = "" : string
+String.extract("abc", 3, SOME 0);
+> val it = "" : string
+String.extract("abc", 4, NONE);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.31
+String.extract("abc", ~1, NONE);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.32
+String.extract("abc", 4, SOME 2);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.33
+String.extract("abc", ~1, SOME 2);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.34
+String.extract("abc", 1, SOME ~1);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.34
+String.extract("abc", 1, SOME 99);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.34
+Sys.plan ();
+> val it =
+>   "apply3(fnValue String.extract, constant(abc), constant(1), apply(fnValue tyCon, argCode constant(99)))"
+>   : string
+
+(*) val substring : string * int * int -> string
+String.substring;
+> val it = fn : string * int * int -> string
+String.substring("hello, world", 2, 7);
+> val it = "llo, wo" : string
+String.substring("hello, world", 0, 1);
+> val it = "h" : string
+String.substring("hello", 5, 0);
+> val it = "" : string
+String.substring("hello", 1, 4);
+> val it = "ello" : string
+String.substring("", 0, 0);
+> val it = "" : string
+String.substring("hello", ~1, 0);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.33
+String.substring("hello", 1, ~1);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.33
+String.substring("hello", 1, 5);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.32
+Sys.plan ();
+> val it =
+>   "apply3(fnValue String.substring, constant(hello), constant(1), constant(5))"
+>   : string
+
+(*) val ^ : string * string -> string
+"a" ^ "bc";
+> val it = "abc" : string
+"a" ^ "";
+> val it = "a" : string
+"a" ^ "bc" ^ "" ^ "def";
+> val it = "abcdef" : string
+Sys.plan ();
+> val it =
+>   "apply2(fnValue ^, apply2(fnValue ^, apply2(fnValue ^, constant(a), constant(bc)), constant()), constant(def))"
+>   : string
+
+(*) val concat : string list -> string
+String.concat;
+> val it = fn : string list -> string
+String.concat ["a", "bc", "def"];
+> val it = "abcdef" : string
+String.concat ["a"];
+> val it = "a" : string
+String.concat [];
+> val it = "" : string
+Sys.plan ();
+> val it = "apply(fnValue String.concat, argCode tuple)" : string
+
+(*) val concatWith : string -> string list -> string
+String.concatWith;
+> val it = fn : string -> string list -> string
+String.concatWith "," ["a", "bc", "def"];
+> val it = "a,bc,def" : string
+String.concatWith "," ["a"];
+> val it = "a" : string
+String.concatWith "," ["", ""];
+> val it = "," : string
+String.concatWith "," [];
+> val it = "" : string
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue String.concatWith, argCode constant(,)), argCode tuple)"
+>   : string
+
+(*) val str : char -> string
+String.str;
+> val it = fn : char -> string
+String.str #"a";
+> val it = "a" : string
+Sys.plan ();
+> val it = "apply(fnValue String.str, argCode constant(a))" : string
+
+(*) val implode : char list -> string
+String.implode;
+> val it = fn : char list -> string
+String.implode [#"a", #"b", #"c"];
+> val it = "abc" : string
+String.implode [];
+> val it = "" : string
+Sys.plan ();
+> val it = "apply(fnValue String.implode, argCode tuple)" : string
+
+(*) val explode : string -> char list
+String.explode;
+> val it = fn : string -> char list
+String.explode "abc";
+> val it = [#"a",#"b",#"c"] : char list
+String.explode "";
+> val it = [] : char list
+Sys.plan ();
+> val it = "apply(fnValue String.explode, argCode constant())" : string
+
+(*) val map : (char -> char) -> string -> string
+String.map;
+> val it = fn : (char -> char) -> string -> string
+String.map (fn c => if c = #"a" then #"A" else if c = #"c" then #"C" else c) "abc";
+> val it = "AbC" : string
+String.map (fn c => if c = #"a" then #"A" else if c = #"c" then #"C" else c) "";
+> val it = "" : string
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue String.map, argCode match(c, apply(fnCode match(true, constant(A), _, apply(fnCode match(true, constant(C), _, get(name c)), argCode apply2(fnValue =, get(name c), constant(c)))), argCode apply2(fnValue =, get(name c), constant(a))))), argCode constant())"
+>   : string
+
+(*) val translate : (char -> string) -> string -> string
+String.translate;
+> val it = fn : (char -> string) -> string -> string
+String.translate (fn c => if c = #"a" then "AA" else if c = #"c" then "CCC" else "-") "abc";
+> val it = "AA-CCC" : string
+String.translate (fn c => if c = #"a" then "AA" else if c = #"c" then "CCC" else "-") "";
+> val it = "" : string
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue String.translate, argCode match(c, apply(fnCode match(true, constant(AA), _, apply(fnCode match(true, constant(CCC), _, constant(-)), argCode apply2(fnValue =, get(name c), constant(c)))), argCode apply2(fnValue =, get(name c), constant(a))))), argCode constant())"
+>   : string
+
+(*) val tokens : (char -> bool) -> string -> string list
+(*) val fields : (char -> bool) -> string -> string list
+(*) val isPrefix    : string -> string -> bool
+String.isPrefix;
+> val it = fn : string -> string -> bool
+String.isPrefix "he" "hello";
+> val it = true : bool
+String.isPrefix "el" "hello";
+> val it = false : bool
+String.isPrefix "lo" "hello";
+> val it = false : bool
+String.isPrefix "bonjour" "hello";
+> val it = false : bool
+String.isPrefix "el" "";
+> val it = false : bool
+String.isPrefix "" "hello";
+> val it = true : bool
+String.isPrefix "" "";
+> val it = true : bool
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue String.isPrefix, argCode constant()), argCode constant())"
+>   : string
+
+(*) val isSubstring : string -> string -> bool
+String.isSubstring;
+> val it = fn : string -> string -> bool
+String.isSubstring "he" "hello";
+> val it = true : bool
+String.isSubstring "el" "hello";
+> val it = true : bool
+String.isSubstring "lo" "hello";
+> val it = true : bool
+String.isSubstring "bonjour" "hello";
+> val it = false : bool
+String.isSubstring "el" "";
+> val it = false : bool
+String.isSubstring "" "hello";
+> val it = true : bool
+String.isSubstring "" "";
+> val it = true : bool
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue String.isSubstring, argCode constant()), argCode constant())"
+>   : string
+
+(*) val isSuffix    : string -> string -> bool
+String.isSuffix;
+> val it = fn : string -> string -> bool
+String.isSuffix "he" "hello";
+> val it = false : bool
+String.isSuffix "el" "hello";
+> val it = false : bool
+String.isSuffix "lo" "hello";
+> val it = true : bool
+String.isSuffix "bonjour" "hello";
+> val it = false : bool
+String.isSuffix "el" "";
+> val it = false : bool
+String.isSuffix "" "hello";
+> val it = true : bool
+String.isSuffix "" "";
+> val it = true : bool
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue String.isSuffix, argCode constant()), argCode constant())"
+>   : string
+
+(*) val compare : string * string -> order
+(*) val collate : (char * char -> order) -> string * string -> order
+(*) val <  : string * string -> bool
+(*) val <= : string * string -> bool
+(*) val >  : string * string -> bool
+(*) val >= : string * string -> bool
+
+(*) val scan       : (char, 'a) StringCvt.reader
+(*)                    -> (string, 'a) StringCvt.reader
+(*) val toCString : string -> String.string
+(*) val fromCString : String.string -> string option
+
+(* List -------------------------------------------------------- *)
+
+(*) val nil : 'a list
+List.nil;
+> val it = [] : 'a list
+Sys.plan ();
+> val it = "constant([])" : string
+
+(*) val null : 'a list -> bool
+List.null;
+> val it = fn : 'a list -> bool
+List.null [];
+> val it = true : bool
+List.null [1];
+> val it = false : bool
+Sys.plan ();
+> val it = "apply(fnValue List.null, argCode tuple(constant(1)))" : string
+
+(*) val length : 'a list -> int
+List.length;
+> val it = fn : 'a list -> int
+List.length [];
+> val it = 0 : int
+List.length [1,2];
+> val it = 2 : int
+Sys.plan ();
+> val it = "apply(fnValue List.length, argCode tuple(constant(1), constant(2)))"
+>   : string
+
+(*) val @ : 'a list * 'a list -> 'a list
+List.at;
+> val it = fn : 'a list * 'a list -> 'a list
+List.at ([1], [2, 3]);
+> val it = [1,2,3] : int list
+List.at ([1], []);
+> val it = [1] : int list
+List.at ([], [2]);
+> val it = [2] : int list
+List.at ([], []);
+> val it = [] : 'a list
+Sys.plan ();
+> val it = "apply2(fnValue List.at, tuple, tuple)" : string
+
+[1] @ [2, 3];
+> val it = [1,2,3] : int list
+[] @ [];
+> val it = [] : 'a list
+Sys.plan ();
+> val it = "apply2(fnValue List.at, tuple, tuple)" : string
+
+(*) val hd : 'a list -> 'a
+List.hd;
+> val it = fn : 'a list -> 'a
+List.hd [1,2,3];
+> val it = 1 : int
+List.hd [];
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.11
+Sys.plan ();
+> val it = "apply(fnValue List.hd, argCode tuple)" : string
+
+(*) val tl : 'a list -> 'a list
+List.tl;
+> val it = fn : 'a list -> 'a list
+List.tl [1,2,3];
+> val it = [2,3] : int list
+List.tl [];
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.11
+Sys.plan ();
+> val it = "apply(fnValue List.tl, argCode tuple)" : string
+
+(*) val last : 'a list -> 'a
+List.last;
+> val it = fn : 'a list -> 'a
+List.last [1,2,3];
+> val it = 3 : int
+List.last [];
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.13
+Sys.plan ();
+> val it = "apply(fnValue List.last, argCode tuple)" : string
+
+(*) val getItem : 'a list -> ('a * 'a list) option
+List.getItem;
+> val it = fn : 'a list -> ('a * 'a list) option
+List.getItem [1,2,3];
+> val it = SOME (1,[2,3]) : (int * int list) option
+List.getItem [1];
+> val it = SOME (1,[]) : (int * int list) option
+Sys.plan ();
+> val it = "apply(fnValue List.getItem, argCode tuple(constant(1)))" : string
+
+(*) val nth : 'a list * int -> 'a
+List.nth;
+> val it = fn : 'a list * int -> 'a
+List.nth ([1,2,3], 2);
+> val it = 3 : int
+List.nth ([1], 0);
+> val it = 1 : int
+List.nth ([1,2,3], 3);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.22
+List.nth ([1,2,3], ~1);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.23
+Sys.plan ();
+> val it =
+>   "apply2(fnValue List.nth, tuple(constant(1), constant(2), constant(3)), constant(-1))"
+>   : string
+
+(*) val take : 'a list * int -> 'a list
+List.take;
+> val it = fn : 'a list * int -> 'a list
+List.take ([1,2,3], 0);
+> val it = [] : int list
+List.take ([1,2,3], 1);
+> val it = [1] : int list
+List.take ([1,2,3], 3);
+> val it = [1,2,3] : int list
+List.take ([1,2,3], 4);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.23
+List.take ([1,2,3], ~1);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.24
+Sys.plan ();
+> val it =
+>   "apply2(fnValue List.take, tuple(constant(1), constant(2), constant(3)), constant(-1))"
+>   : string
+
+(*) val drop : 'a list * int -> 'a list
+List.drop;
+> val it = fn : 'a list * int -> 'a list
+List.drop ([1,2,3], 0);
+> val it = [1,2,3] : int list
+List.drop ([1,2,3], 1);
+> val it = [2,3] : int list
+List.drop ([1,2,3], 3);
+> val it = [] : int list
+Sys.plan ();
+> val it =
+>   "apply2(fnValue List.drop, tuple(constant(1), constant(2), constant(3)), constant(3))"
+>   : string
+
+(*) val rev : 'a list -> 'a list
+List.rev;
+> val it = fn : 'a list -> 'a list
+List.rev [1,2,3];
+> val it = [3,2,1] : int list
+List.rev [2,1];
+> val it = [1,2] : int list
+List.rev [1];
+> val it = [1] : int list
+List.rev [];
+> val it = [] : 'a list
+Sys.plan ();
+> val it = "apply(fnValue List.rev, argCode tuple)" : string
+
+(*) val concat : 'a list list -> 'a list
+List.concat;
+> val it = fn : 'a list list -> 'a list
+List.concat [[1],[2,3],[4,5,6]];
+> val it = [1,2,3,4,5,6] : int list
+List.concat [[1],[],[4,5,6]];
+> val it = [1,4,5,6] : int list
+List.concat [[],[],[]];
+> val it = [] : 'a list
+List.concat [];
+> val it = [] : 'a list
+Sys.plan ();
+> val it = "apply(fnValue List.concat, argCode tuple)" : string
+
+(*) val revAppend : 'a list * 'a list -> 'a list
+List.revAppend;
+> val it = fn : 'a list * 'a list -> 'a list
+List.revAppend ([1,2],[3,4,5]);
+> val it = [2,1,3,4,5] : int list
+List.revAppend ([1],[3,4,5]);
+> val it = [1,3,4,5] : int list
+List.revAppend ([],[3,4,5]);
+> val it = [3,4,5] : int list
+List.revAppend ([1,2],[]);
+> val it = [2,1] : int list
+List.revAppend ([],[]);
+> val it = [] : 'a list
+Sys.plan ();
+> val it = "apply2(fnValue List.revAppend, tuple, tuple)" : string
+
+(*) val app : ('a -> unit) -> 'a list -> unit
+List.app;
+> val it = fn : ('a -> unit) -> 'a list -> unit
+List.app (fn x => ignore (x + 2)) [2,3,4];
+> val it = () : unit
+List.app (fn x => ignore (x + 2)) [];
+> val it = () : unit
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.app, argCode match(x, apply(fnValue General.ignore, argCode apply2(fnValue +, get(name x), constant(2))))), argCode tuple)"
+>   : string
+
+(*) val map : ('a -> 'b) -> 'a list -> 'b list
+List.map;
+> val it = fn : ('a -> 'b) -> 'a list -> 'b list
+List.map (fn x => x + 1) [1,2,3];
+> val it = [2,3,4] : int list
+List.map (fn x => x + 1) [];
+> val it = [] : int list
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.map, argCode match(x, apply2(fnValue +, get(name x), constant(1)))), argCode tuple)"
+>   : string
+
+(*) map is alias for List.map
+map;
+> val it = fn : ('a -> 'b) -> 'a list -> 'b list
+map (fn x => x) [];
+> val it = [] : 'a list
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.map, argCode match(x, get(name x))), argCode tuple)"
+>   : string
+
+(*) val mapPartial : ('a -> 'b option) -> 'a list -> 'b list
+List.mapPartial;
+> val it = fn : ('a -> 'b option) -> 'a list -> 'b list
+List.mapPartial (fn x => if x mod 2 = 0 then NONE else SOME (x + 1)) [1,2,3,5,8];
+> val it = [2,4,6] : int list
+List.mapPartial (fn x => if x mod 2 = 0 then NONE else SOME (x + 1)) [];
+> val it = [] : int list
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.mapPartial, argCode match(x, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply2(fnValue +, get(name x), constant(1)))), argCode apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))))), argCode tuple)"
+>   : string
+
+(*) val find : ('a -> bool) -> 'a list -> 'a option
+List.find;
+> val it = fn : ('a -> bool) -> 'a list -> 'a option
+List.find (fn x => x mod 7 = 0) [2,3,5,8,13,21,34];
+> val it = SOME 21 : int option
+List.find (fn x => x mod 11 = 0) [2,3,5,8,13,21,34];
+> val it = NONE : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.find, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(11)), constant(0)))), argCode tuple(constant(2), constant(3), constant(5), constant(8), constant(13), constant(21), constant(34)))"
+>   : string
+
+(*) val filter : ('a -> bool) -> 'a list -> 'a list
+List.filter;
+> val it = fn : ('a -> bool) -> 'a list -> 'a list
+List.filter (fn x => x mod 2 = 0) [0,1,2,3,4,5];
+> val it = [0,2,4] : int list
+List.filter (fn x => x mod 2 = 0) [1,3];
+> val it = [] : int list
+List.filter (fn x => x mod 2 = 0) [];
+> val it = [] : int list
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.filter, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode tuple)"
+>   : string
+
+(*) val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
+List.partition;
+> val it = fn : ('a -> bool) -> 'a list -> 'a list * 'a list
+List.partition (fn x => x mod 2 = 0) [0,1,2,3,4,5];
+> val it = ([0,2,4],[1,3,5]) : int list * int list
+List.partition (fn x => x mod 2 = 0) [1];
+> val it = ([],[1]) : int list * int list
+List.partition (fn x => x mod 2 = 0) [];
+> val it = ([],[]) : int list * int list
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.partition, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode tuple)"
+>   : string
+
+(*) val foldl : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+List.foldl;
+> val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+List.foldl (fn (a, b) => a + b) 0 [1,2,3];
+> val it = 6 : int
+List.foldl (fn (a, b) => a + b) 0 [];
+> val it = 0 : int
+List.foldl (fn (a, b) => b) 0 [1,2,3];
+> val it = 0 : int
+List.foldl (fn (a, b) => a - b) 0 [1,2,3,4];
+> val it = 2 : int
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnCode apply(fnValue List.foldl, argCode match(v0, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v0)))), argCode constant(0)), argCode tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   : string
+
+(*) val foldr : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+List.foldr;
+> val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+List.foldr (fn (a, b) => a + b) 0 [1,2,3];
+> val it = 6 : int
+List.foldr (fn (a, b) => a + b) 0 [];
+> val it = 0 : int
+List.foldr (fn (a, b) => b) 0 [1,2,3];
+> val it = 0 : int
+List.foldr (fn (a, b) => a - b) 0 [1,2,3,4];
+> val it = ~2 : int
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnCode apply(fnValue List.foldr, argCode match(v0, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v0)))), argCode constant(0)), argCode tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   : string
+
+(*) val exists : ('a -> bool) -> 'a list -> bool
+List.exists;
+> val it = fn : ('a -> bool) -> 'a list -> bool
+List.exists (fn x => x mod 2 = 0) [1,3,5];
+> val it = false : bool
+List.exists (fn x => x mod 2 = 0) [2,4,6];
+> val it = true : bool
+List.exists (fn x => x mod 2 = 0) [1,2,3];
+> val it = true : bool
+List.exists (fn x => x mod 2 = 0) [];
+> val it = false : bool
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.exists, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode tuple)"
+>   : string
+
+(*) val all : ('a -> bool) -> 'a list -> bool
+List.all;
+> val it = fn : ('a -> bool) -> 'a list -> bool
+List.all (fn x => x mod 2 = 0) [1,3,5];
+> val it = false : bool
+List.all (fn x => x mod 2 = 0) [2,4,6];
+> val it = true : bool
+List.all (fn x => x mod 2 = 0) [1,2,3];
+> val it = false : bool
+List.all (fn x => x mod 2 = 0) [];
+> val it = true : bool
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.all, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode tuple)"
+>   : string
+
+(*) val tabulate : int * (int -> 'a) -> 'a list
+List.tabulate;
+> val it = fn : int * (int -> 'a) -> 'a list
+List.tabulate (5, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+> val it = [1,1,2,6,24] : int list
+List.tabulate (1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+> val it = [1] : int list
+List.tabulate (0, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+> val it = [] : int list
+List.tabulate (~1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.87
+Sys.plan ();
+> val it =
+>   "apply(fnValue List.tabulate, argCode tuple(constant(-1), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact))))"
+>   : string
+
+(*) val collate : ('a * 'a -> order) -> 'a list * 'a list -> order
+List.collate;
+> val it = fn : ('a * 'a -> order) -> 'a list * 'a list -> order
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1, 2,3], [1,3,4]);
+> val it = LESS : order
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], [1,2,2]);
+> val it = GREATER : order
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], [1,2]);
+> val it = GREATER : order
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], [1,2,3,4]);
+> val it = LESS : order
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([1,2,3], []);
+> val it = GREATER : order
+List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREATER) ([], []);
+> val it = EQUAL : order
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue List.collate, argCode match(v0, apply(fnCode match((x, y), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name x), get(name y)))), argCode apply2(fnValue <, get(name x), get(name y)))), argCode get(name v0)))), argCode tuple(tuple, tuple))"
+>   : string
+
+(* Math -------------------------------------------------------- *)
+(* The signature MATH specifies basic mathematical constants, the square root
+   function, and trigonometric, hyperbolic, exponential, and logarithmic
+   functions based on a real type. The functions defined here have roughly the
+   same semantics as their counterparts in ISO C's math.h.
+
+   In the functions below, unless specified otherwise, if any argument is a NaN,
+   the return value is a NaN. In a list of rules specifying the behavior of a
+   function in special cases, the first matching rule defines the semantics. *)
+
+(* "acos x" returns the arc cosine of x. acos is the inverse of cos.
+   Its result is guaranteed to be in the closed interval [0, pi]. If
+   the magnitude of x exceeds 1.0, returns NaN. *)
+Math.acos;
+> val it = fn : real -> real
+Math.acos 1.0;
+> val it = 0.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.acos, argCode constant(1.0))" : string
+List.map (fn x => (x, Math.acos x))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, Math.sqrt 0.5, 2.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,0.0),(0.0,1.5707964),(~0.0,1.5707964),(~1.0,3.1415927),(0.5,1.0471976),
+>    (0.70710677,0.7853982),(2.0,nan),(inf,nan),(~inf,nan),(nan,nan)]
+>   : (real * real) list
+
+(* "asin x" returns the arc sine of x. asin is the inverse of sin. Its
+   result is guaranteed to be in the closed interval [-pi / 2, pi / 2].
+   If the magnitude of x exceeds 1.0, returns NaN. *)
+Math.asin;
+> val it = fn : real -> real
+Math.asin 1.0;
+> val it = 1.5707964 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.asin, argCode constant(1.0))" : string
+List.map (fn x => (x, Math.asin x))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, Math.sqrt 0.5, 2.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,1.5707964),(0.0,0.0),(~0.0,~0.0),(~1.0,~1.5707964),(0.5,0.5235988),
+>    (0.70710677,0.7853981),(2.0,nan),(inf,nan),(~inf,nan),(nan,nan)]
+>   : (real * real) list
+
+(* "atan x" returns the arc tangent of x. atan is the inverse of
+   tan. For finite arguments, the result is guaranteed to be in the
+   open interval (-pi / 2, pi / 2). If x is +infinity, it returns pi / 2;
+   if x is -infinity, it returns -pi / 2. *)
+Math.atan;
+> val it = fn : real -> real
+Math.atan 0.0;
+> val it = 0.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.atan, argCode constant(0.0))" : string
+List.map (fn x => (x, Math.atan x))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, Math.sqrt 0.5, 2.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,0.7853982),(0.0,0.0),(~0.0,~0.0),(~1.0,~0.7853982),(0.5,0.4636476),
+>    (0.70710677,0.6154797),(2.0,1.1071488),(inf,1.5707964),(~inf,~1.5707964),
+>    (nan,nan)] : (real * real) list
+
+(* "atan2 (y, x)" returns the arc tangent of (y / x) in the closed
+   interval [-pi, pi], corresponding to angles within +-180
+   degrees. The quadrant of the resulting angle is determined using
+   the signs of both x and y, and is the same as the quadrant of the
+   point (x, y). When x = 0, this corresponds to an angle of 90
+   degrees, and the result is (real (sign y)) * pi / 2.0. It holds
+   that
+     sign (cos (atan2 (y, x))) = sign (x)
+   and
+     sign (sin (atan2 (y, x))) = sign (y)
+   except for inaccuracies incurred by the finite precision of real
+   and the approximation algorithms used to compute the mathematical
+   functions.  Rules for exceptional cases are specified in the
+   following table.
+
+   y                 x         atan2(y, x)
+   ================= ========= ==========
+   +-0               0 < x     +-0
+   +-0               +0        +-0
+   +-0               x < 0     +-pi
+   +-0               -0        +-pi
+   y, 0 < y          +-0       pi/2
+   y, y < 0          +-0       -pi/2
+   +-y, finite y > 0 +infinity +-0
+   +-y, finite y > 0 -infinity +-pi
+   +-infinity        finite x  +-pi/2
+   +-infinity        +infinity +-pi/4
+   +-infinity        -infinity +-3pi/4
+*)
+Math.atan2;
+> val it = fn : real * real -> real
+Math.atan2 (0.0, 1.0);
+> val it = 0.0 : real
+Sys.plan ();
+> val it = "apply2(fnValue Math.atan2, constant(0.0), constant(1.0))" : string
+List.map (fn x => (x, Math.atan2 (x, 1.0)))
+  [1.0, 0.0, ~1.0, 0.5, Math.sqrt 0.5, 2.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,0.7853982),(0.0,0.0),(~1.0,~0.7853982),(0.5,0.4636476),
+>    (0.70710677,0.6154797),(2.0,1.1071488),(inf,1.5707964),(~inf,~1.5707964),
+>    (nan,nan)] : (real * real) list
+List.map (fn (x, y) => (x, y, Math.atan2 (x, y)))
+  [(0.0, 1.0), (~0.0, 1.0),
+   (0.0, 0.0), (~0.0, 0.0),
+   (0.0, ~1.0), (~0.0, ~1.0),
+   (2.5, 0.0), (2.5, ~0.0),
+   (~2.5, 0.0), (~2.5, ~0.0),
+   (3.0, Real.posInf), (~3.0, Real.posInf),
+   (4.0, Real.negInf), (~4.0, Real.negInf),
+   (Real.posInf, 5.0), (Real.negInf, 5.0),
+   (Real.posInf, Real.posInf), (Real.negInf, Real.posInf),
+   (Real.posInf, Real.negInf), (Real.negInf, Real.negInf),
+   (0.0, nan), (1.0, nan), (~1.0, nan), (Real.posInf, nan), (Real.negInf, nan),
+   (nan, 0.0), (nan, 1.0), (nan, ~1.0), (nan, Real.posInf), (nan, Real.negInf),
+   (nan, nan)];
+> val it =
+>   [(0.0,1.0,0.0),(~0.0,1.0,~0.0),(0.0,0.0,0.0),(~0.0,0.0,~0.0),
+>    (0.0,~1.0,3.1415927),(~0.0,~1.0,~3.1415927),(2.5,0.0,1.5707964),
+>    (2.5,~0.0,1.5707964),(~2.5,0.0,~1.5707964),(~2.5,~0.0,~1.5707964),
+>    (3.0,inf,0.0),(~3.0,inf,~0.0),(4.0,~inf,3.1415927),(~4.0,~inf,~3.1415927),
+>    (inf,5.0,1.5707964),(~inf,5.0,~1.5707964),(inf,inf,0.7853982),
+>    (~inf,inf,~0.7853982),(inf,~inf,2.3561945),(~inf,~inf,~2.3561945),
+>    (0.0,nan,nan),(1.0,nan,nan),(~1.0,nan,nan),(inf,nan,nan),(~inf,nan,nan),
+>    (nan,0.0,nan),(nan,1.0,nan),(nan,~1.0,nan),(nan,inf,nan),(nan,~inf,nan),
+>    (nan,nan,nan)] : (real * real * real) list
+
+(* "cos x" returns the cosine of x, measured in radians. If x is an infinity,
+   returns NaN. *)
+Math.cos;
+> val it = fn : real -> real
+Math.cos 0.0;
+> val it = 1.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.cos, argCode constant(0.0))" : string
+List.map (fn x => (x, Math.cos x))
+  [0.0, ~0.0, Math.pi, Math.pi * 0.5, ~Math.pi, Math.pi * 5.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(0.0,1.0),(~0.0,1.0),(3.1415927,~1.0),(1.5707964,~4.371139E~8),
+>    (~3.1415927,~1.0),(15.707964,~1.0),(inf,nan),(~inf,nan),(nan,nan)]
+>   : (real * real) list
+
+(* "cosh x" returns the hyperbolic cosine of x, that is, (e(x) + e(-x)) / 2.
+   It has the properties cosh +-0 = 1, cosh +-infinity = +-infinity. *)
+Math.cosh;
+> val it = fn : real -> real
+Math.cosh 0.0;
+> val it = 1.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.cosh, argCode constant(0.0))" : string
+List.map (fn x => (x, Math.cosh x))
+  [0.0, ~0.0, 1.0, Real.posInf, Real.negInf, nan];
+> val it = [(0.0,1.0),(~0.0,1.0),(1.0,1.5430807),(inf,inf),(~inf,inf),(nan,nan)]
+>   : (real * real) list
+
+(* "val e : real" The base e (2.718281828...) of the natural logarithm. *)
+Math.e;
+> val it = 2.7182817 : real
+Sys.plan ();
+> val it = "constant(2.7182817)" : string
+
+(* "exp x" returns e(x), i.e., e raised to the x(th) power. If x is
+   +infinity, it returns +infinity; if x is -infinity, it returns 0. *)
+Math.exp;
+> val it = fn : real -> real
+Math.exp 0.0;
+> val it = 1.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.exp, argCode constant(0.0))" : string
+List.map (fn x => (x, Math.exp x))
+  [0.0, ~0.0, 1.0, ~2.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(0.0,1.0),(~0.0,1.0),(1.0,2.7182817),(~2.0,0.13533528),(inf,inf),(~inf,0.0),
+>    (nan,nan)] : (real * real) list
+
+(* "ln x" returns the natural logarithm (base e) of x. If x < 0,
+   returns NaN; if x = 0, returns -infinity; if x is infinity, returns
+   infinity. *)
+Math.ln;
+> val it = fn : real -> real
+Math.ln 1.0;
+> val it = 0.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.ln, argCode constant(1.0))" : string
+List.map (fn x => (x, Math.ln x))
+  [1.0, 2.718, Math.e, 0.0, ~0.0, ~3.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,0.0),(2.718,0.9998963),(2.7182817,0.99999994),(0.0,~inf),(~0.0,~inf),
+>    (~3.0,nan),(inf,inf),(~inf,nan),(nan,nan)] : (real * real) list
+
+(* "log10 x" returns the decimal logarithm (base 10) of x. If x < 0,
+   returns NaN; if x = 0, returns -infinity; if x is infinity, returns
+   infinity. *)
+Math.log10;
+> val it = fn : real -> real
+Math.log10 1.0;
+> val it = 0.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.log10, argCode constant(1.0))" : string
+List.map (fn x => (x, Math.log10 x))
+  [1.0, 10.0, 1000.0, 0.0, ~0.0, ~3.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,0.0),(10.0,1.0),(1000.0,3.0),(0.0,~inf),(~0.0,~inf),(~3.0,nan),
+>    (inf,inf),(~inf,nan),(nan,nan)] : (real * real) list
+
+(* "val pi : real" The constant pi (3.141592653...). *)
+Math.pi;
+> val it = 3.1415927 : real
+Sys.plan ();
+> val it = "constant(3.1415927)" : string
+
+(* "pow (x, y)" returns x(y), i.e., x raised to the y(th) power. For
+   finite x and y, this is well-defined when x > 0, or when x < 0 and
+   y is integral. Rules for exceptional cases are specified below.
+
+   x                 y                             pow(x,y)
+   ================= ============================= ==========
+   x, including NaN  0                             1
+   |x| > 1           +infinity                     +infinity
+   |x| < 1           +infinity                     +0
+   |x| > 1           -infinity                     +0
+   |x| < 1           -infinity                     +infinity
+   +infinity         y > 0                         +infinity
+   +infinity         y < 0                         +0
+   -infinity         y > 0, odd integer            -infinity
+   -infinity         y > 0, not odd integer        +infinity
+   -infinity         y < 0, odd integer            -0
+   -infinity         y < 0, not odd integer        +0
+   x                 NaN                           NaN
+   NaN               y <> 0                        NaN
+   +-1               +-infinity                    NaN
+   finite x < 0      finite non-integer y          NaN
+   +-0               y < 0, odd integer            +-infinity
+   +-0               finite y < 0, not odd integer +infinity
+   +-0               y > 0, odd integer            +-0
+   +-0               y > 0, not odd integer        +0
+*)
+Math.pow;
+> val it = fn : real * real -> real
+Math.pow (2.0, 3.0);
+> val it = 8.0 : real
+Math.pow (2.0, ~4.0);
+> val it = 0.0625 : real
+Math.pow (100.0, 0.5);
+> val it = 10.0 : real
+Sys.plan ();
+> val it = "apply2(fnValue Math.pow, constant(100.0), constant(0.5))" : string
+List.map (fn (x, y) => (x, y, Math.pow (x, y)))
+  [(0.0, 0.0), (nan, 0.0),
+   (2.0, Real.posInf), (~2.0, Real.posInf),
+   (0.5, Real.posInf), (~0.5, Real.posInf),
+   (3.0, Real.negInf), (~3.0, Real.negInf),
+   (0.25, Real.negInf), (~0.25, Real.negInf),
+   (Real.posInf, 0.5),
+   (Real.posInf, ~0.5),
+   (Real.negInf, 7.0),
+   (Real.negInf, 8.0),
+   (Real.negInf, ~7.0),
+   (Real.negInf, ~8.0),
+   (9.5, nan),
+   (nan, 9.6),
+   (1.0, Real.posInf), (~1.0, Real.posInf), (1.0, Real.negInf), (~1.0, Real.negInf),
+   (~9.8, 2.5),
+   (0.0, ~9.0), (~0.0, ~9.0),
+   (0.0, ~10.0), (~0.0, ~10.0),
+   (0.0, 11.0), (~0.0, 11.0),
+   (0.0, 12.0), (~0.0, 12.0)];
+> val it =
+>   [(0.0,0.0,1.0),(nan,0.0,1.0),(2.0,inf,inf),(~2.0,inf,inf),(0.5,inf,0.0),
+>    (~0.5,inf,0.0),(3.0,~inf,0.0),(~3.0,~inf,0.0),(0.25,~inf,inf),
+>    (~0.25,~inf,inf),(inf,0.5,inf),(inf,~0.5,0.0),(~inf,7.0,~inf),
+>    (~inf,8.0,inf),(~inf,~7.0,~0.0),(~inf,~8.0,0.0),(9.5,nan,nan),(nan,9.6,nan),
+>    (1.0,inf,nan),(~1.0,inf,nan),(1.0,~inf,nan),(~1.0,~inf,nan),(~9.8,2.5,nan),
+>    (0.0,~9.0,inf),(~0.0,~9.0,~inf),(0.0,~10.0,inf),(~0.0,~10.0,inf),
+>    (0.0,11.0,0.0),(~0.0,11.0,~0.0),(0.0,12.0,0.0),(~0.0,12.0,0.0)]
+>   : (real * real * real) list
+
+(* "sin x" returns the sine of x, measured in radians.
+   If x is an infinity, returns NaN. *)
+Math.sin;
+> val it = fn : real -> real
+Math.sin 0.0;
+> val it = 0.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.sin, argCode constant(0.0))" : string
+List.map (fn x => (x, Math.sin x))
+  [0.0, ~0.0, Math.pi, Math.pi * 0.5, ~Math.pi, Math.pi * 5.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(0.0,0.0),(~0.0,~0.0),(3.1415927,~8.742278E~8),(1.5707964,1.0),
+>    (~3.1415927,8.742278E~8),(15.707964,~6.755325E~7),(inf,nan),(~inf,nan),
+>    (nan,nan)] : (real * real) list
+
+(* "sinh x" returns the hyperbolic sine of x, that is, (e(x) - e(-x)) / 2.
+   It has the property sinh +-0 = +-0, sinh +-infinity = +-infinity. *)
+Math.sinh;
+> val it = fn : real -> real
+Math.sinh 0.0;
+> val it = 0.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.sinh, argCode constant(0.0))" : string
+List.map (fn x => (x, Math.sinh x))
+  [0.0, ~0.0, 1.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(0.0,0.0),(~0.0,~0.0),(1.0,1.1752012),(inf,inf),(~inf,~inf),(nan,nan)]
+>   : (real * real) list
+
+(* "sqrt x" returns the square root of x. sqrt (~0.0) = ~0.0.
+   If x < 0, returns NaN. *)
+Math.sqrt;
+> val it = fn : real -> real
+Math.sqrt 4.0;
+> val it = 2.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.sqrt, argCode constant(4.0))" : string
+List.map (fn x => (x, Math.sqrt x))
+  [4.0, 0.0, ~0.0, ~9.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(4.0,2.0),(0.0,0.0),(~0.0,~0.0),(~9.0,nan),(inf,inf),(~inf,nan),(nan,nan)]
+>   : (real * real) list
+
+(* "tan x" returns the tangent of x, measured in radians. If x is an
+   infinity, returns NaN. Produces infinities at various finite values,
+   roughly corresponding to the singularities of the tangent function. *)
+Math.tan;
+> val it = fn : real -> real
+Math.tan 0.0;
+> val it = 0.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.tan, argCode constant(0.0))" : string
+List.map (fn x => (x, Math.tan x))
+  [0.0, ~0.0, Math.pi, Math.pi * 0.5, ~Math.pi, Math.pi * 5.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(0.0,0.0),(~0.0,~0.0),(3.1415927,8.742278E~8),(1.5707964,~2.2877332E7),
+>    (~3.1415927,~8.742278E~8),(15.707964,6.755325E~7),(inf,nan),(~inf,nan),
+>    (nan,nan)] : (real * real) list
+
+(* "tanh x" returns the hyperbolic tangent of x, that is, (sinh x) / (cosh x).
+   It has the properties tanh +-0 = +-0, tanh +-infinity = +-1. *)
+Math.tanh;
+> val it = fn : real -> real
+Math.tanh 0.0;
+> val it = 0.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Math.tanh, argCode constant(0.0))" : string
+List.map (fn x => (x, Math.tanh x))
+  [0.0, ~0.0, 1.0, Real.posInf, Real.negInf, nan];
+> val it =
+>   [(0.0,0.0),(~0.0,~0.0),(1.0,0.7615942),(inf,1.0),(~inf,~1.0),(nan,nan)]
+>   : (real * real) list
+
+(* Option ------------------------------------------------------ *)
+(*) val getOpt : 'a option * 'a -> 'a
+Option.getOpt (SOME 1, 2);
+> val it = 1 : int
+Option.getOpt (NONE, 2);
+> val it = 2 : int
+Sys.plan ();
+> val it =
+>   "apply(fnValue Option.getOpt, argCode tuple(constant([NONE]), constant(2)))"
+>   : string
+
+(*) val isSome : 'a option -> bool
+Option.isSome (SOME 1);
+> val it = true : bool
+Option.isSome NONE;
+> val it = false : bool
+Sys.plan ();
+> val it = "apply(fnValue Option.isSome, argCode constant([NONE]))" : string
+
+(*) val valOf : 'a option -> 'a
+Option.valOf (SOME 1);
+> val it = 1 : int
+(* sml-nj gives:
+    stdIn:6.1-6.18 Warning: type vars not generalized because of
+       value restriction are instantiated to dummy types (X1,X2,...)
+ *)
+Option.valOf NONE;
+> uncaught exception Option
+>   raised at: stdIn:5.1-5.18
+val noneInt = if true then NONE else SOME 0;
+> val noneInt = NONE : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode constant(0))), argCode constant(true))"
+>   : string
+Option.valOf noneInt;
+> uncaught exception Option
+>   raised at: stdIn:1.1-1.21
+Sys.plan ();
+> val it = "apply(fnValue Option.valOf, argCode constant([NONE]))" : string
+
+(*) val filter : ('a -> bool) -> 'a -> 'a option
+Option.filter (fn x => x mod 2 = 0) 1;
+> val it = NONE : int option
+Option.filter (fn x => x mod 2 = 0) 2;
+> val it = SOME 2 : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Option.filter, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode constant(2))"
+>   : string
+
+(*) val flatten : 'a option option -> 'a option
+(*) (This function is called "Option.join" in the Standard ML basis library.)
+Option.flatten (SOME (SOME 1));
+> val it = SOME 1 : int option
+Option.flatten (SOME noneInt);
+> val it = NONE : int option
+(* sml-nj gives
+  stdIn:1.2-1.18 Warning: type vars not generalized because of
+     value restriction are instantiated to dummy types (X1,X2,...)
+*)
+Option.flatten NONE;
+> val it = NONE : 'a option
+Sys.plan ();
+> val it = "apply(fnValue Option.flatten, argCode constant([NONE]))" : string
+
+(*) val app : ('a -> unit) -> 'a option -> unit
+Option.app General.ignore (SOME 1);
+> val it = () : unit
+Option.app General.ignore NONE;
+> val it = () : unit
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Option.app, argCode constant(General.ignore)), argCode constant([NONE]))"
+>   : string
+
+(*) val map : ('a -> 'b) -> 'a option -> 'b option
+Option.map String.size (SOME "xyz");
+> val it = SOME 3 : int option
+Option.map String.size NONE;
+> val it = NONE : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Option.map, argCode constant(String.size)), argCode constant([NONE]))"
+>   : string
+
+(*) val mapPartial : ('a -> 'b option) -> 'a option -> 'b option
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) (SOME "xyz");
+> val it = SOME 3 : int option
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) NONE;
+> val it = NONE : int option
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) (SOME "");
+> val it = NONE : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Option.mapPartial, argCode match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply2(fnValue =, get(name s), constant())))), argCode apply(fnValue tyCon, argCode constant()))"
+>   : string
+
+(*) val compose : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 1, String.size s))))
+               "";
+> val it = NONE : int option
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 0, String.size s))))
+               "a";
+> val it = SOME 1 : int option
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 0, String.size s))))
+               "";
+> val it = NONE : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Option.compose, argCode tuple(constant(String.size), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply3(fnValue String.substring, get(name s), constant(0), apply(fnValue String.size, argCode get(name s))))), argCode apply2(fnValue =, get(name s), constant()))))), argCode constant())"
+>   : string
+
+(*) val composePartial : ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option
+Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
+                       fn s => if s = "" then NONE else SOME (String.size s))
+                      "abc";
+> val it = SOME 3 : int option
+Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
+                       fn s => if s = "" then NONE else SOME (String.size s))
+                      "";
+> val it = NONE : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Option.composePartial, argCode tuple(match(i, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode get(name i))), argCode apply2(fnValue =, get(name i), constant(0)))), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply2(fnValue =, get(name s), constant()))))), argCode constant())"
+>   : string
+
+(* Real -------------------------------------------------------- *)
+
+(*) val radix : int
+Real.radix;
+> val it = 2 : int
+
+(*) val precision : int
+Real.precision;
+> val it = 24 : int
+
+(*) val maxFinite : real
+Real.maxFinite;
+> val it = 3.4028235E38 : real
+
+(*) val minPos : real
+Real.minPos;
+> val it = 1.4E~45 : real
+
+(*) val minNormalPos : real
+Real.minNormalPos;
+> val it = 1.17549435E~38 : real
+
+(*) val posInf : real
+Real.posInf;
+> val it = inf : real
+
+(*) val negInf : real
+Real.negInf;
+> val it = ~inf : real
+
+(* "r1 + r2" and "r1 - r2" are the sum and difference of r1 and r2. If one
+   argument is finite and the other infinite, the result is infinite with the
+   correct sign, e.g., 5 - (-infinity) = infinity. We also have infinity +
+   infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any other
+   combination of two infinities produces NaN. *)
+1.0 + ~3.5;
+> val it = ~2.5 : real
+
+1.0 + Real.posInf;
+> val it = inf : real
+Real.posInf + 2.5;
+> val it = inf : real
+Real.posInf - Real.posInf;
+> val it = nan : real
+Real.posInf + Real.posInf;
+> val it = inf : real
+Real.posInf + Real.negInf;
+> val it = nan : real
+Real.negInf + Real.negInf;
+> val it = ~inf : real
+5.0 - Real.negInf;
+> val it = inf : real
+
+(* "r1 * r2" is the product of r1 and r2. The product of zero and an infinity
+   produces NaN. Otherwise, if one argument is infinite, the result is infinite
+   with the correct sign, e.g., -5 * (-infinity) = infinity, infinity *
+   (-infinity) = -infinity. *)
+0.0 * Real.posInf;
+> val it = nan : real
+0.0 * Real.negInf;
+> val it = nan : real
+~0.0 * Real.negInf;
+> val it = nan : real
+0.5 * 34.6;
+> val it = 17.3 : real
+Real.posInf * 2.0;
+> val it = inf : real
+Real.posInf * Real.negInf;
+> val it = ~inf : real
+Real.negInf * Real.negInf;
+> val it = inf : real
+
+(* "r1 / r2" denotes the quotient of r1 and r2. We have 0 / 0 = NaN and
+   +-infinity / +-infinity = NaN. Dividing a finite, non-zero number by a zero,
+   or an infinity by a finite number produces an infinity with the correct sign.
+   (Note that zeros are signed.) A finite number divided by an infinity is 0
+   with the correct sign. *)
+0.0 / 0.0;
+> val it = nan : real
+Real.posInf / Real.negInf;
+> val it = nan : real
+1.5 / Real.posInf;
+> val it = 0.0 : real
+1.5 / Real.negInf;
+> val it = ~0.0 : real
+~1.5 / Real.negInf;
+> val it = 0.0 : real
+~0.0 + ~0.0;
+> val it = ~0.0 : real
+~0.0 + 0.0;
+> val it = 0.0 : real
+0.0 + ~0.0;
+> val it = 0.0 : real
+
+(* "rem (x, y)" returns the remainder x - n * y, where n = trunc (x / y). The
+    result has the same sign as x and has absolute value less than the absolute
+    value of y. If x is an infinity or y is 0, rem returns NaN. If y is an
+    infinity, rem returns x. *)
+Real.rem;
+> val it = fn : real * real -> real
+Real.rem (13.0, 5.0);
+> val it = 3.0 : real
+Real.rem (~13.0, 5.0);
+> val it = ~3.0 : real
+Real.rem (13.0, ~5.0);
+> val it = 3.0 : real
+Real.rem (~13.0, ~5.0);
+> val it = ~3.0 : real
+Real.rem (13.0, 0.0);
+> val it = nan : real
+Real.rem (13.0, ~0.0);
+> val it = nan : real
+(*) In the following, Morel returns 13.0 per the spec; sml-nj returns nan.
+Real.rem (13.0, Real.negInf);
+> val it = 13.0 : real
+(*) In the following, Morel returns 13.0 per the spec; sml-nj returns nan.
+Real.rem (13.0, Real.posInf);
+> val it = 13.0 : real
+Sys.plan ();
+> val it = "apply2(fnValue Real.rem, constant(13.0), constant(Infinity))"
+>   : string
+
+(* "*+ (a, b, c)" and "*- (a, b, c)" return a * b + c and a * b - c,
+   respectively. Their behaviors on infinities follow from the behaviors derived
+   from addition, subtraction, and multiplication. *)
+(*) TODO Real.*+ (2.0, 3.0, 7.0);
+(*) TODO val it = 13.0 : real
+(*) TODO Real.*- (2.0, 3.0, 7.0);
+(*) TODO val it = ~1.0 : real
+
+(* "~ r" produces the negation of r.
+   ~ (+-infinity) = -+infinity. *)
+~ 2.0;
+> val it = ~2.0 : real
+~ ~3.5;
+> val it = 3.5 : real
+~ Real.posInf;
+> val it = ~inf : real
+~ Real.negInf;
+> val it = inf : real
+~ nan;
+> val it = nan : real
+
+(* "abs r" returns the absolute value |r| of r.
+    abs (+-0.0) = +0.0;
+    abs (+-infinity) = +infinity;
+    abs (+-NaN) = +NaN *)
+Real.abs;
+> val it = fn : real -> real
+Real.abs ~5.5;
+> val it = 5.5 : real
+Real.abs Real.posInf;
+> val it = inf : real
+Real.abs Real.negInf;
+> val it = inf : real
+Real.abs nan;
+> val it = nan : real
+Sys.plan ();
+> val it = "apply(fnValue Real.abs, argCode constant(NaN))" : string
+
+(* val min : real * real -> real
+   val max : real * real -> real
+   These return the smaller (respectively, larger) of the arguments. If exactly
+   one argument is NaN, they return the other argument. If both arguments are
+   NaN, they return NaN. *)
+Real.min;
+> val it = fn : real * real -> real
+Real.min (3.5, 4.5);
+> val it = 3.5 : real
+Real.min (3.5, ~4.5);
+> val it = ~4.5 : real
+Real.min (nan, 4.5);
+> val it = 4.5 : real
+Real.min (~5.5, nan);
+> val it = ~5.5 : real
+Real.min (Real.posInf, 4.5);
+> val it = 4.5 : real
+Real.min (Real.negInf, 4.5);
+> val it = ~inf : real
+Sys.plan ();
+> val it = "apply2(fnValue Real.min, constant(-Infinity), constant(4.5))"
+>   : string
+
+Real.max;
+> val it = fn : real * real -> real
+Real.max (3.5, 4.5);
+> val it = 4.5 : real
+Real.max (3.5, ~4.5);
+> val it = 3.5 : real
+Real.max (nan, 4.5);
+> val it = 4.5 : real
+Real.max (Real.posInf, 4.5);
+> val it = inf : real
+Real.max (Real.negInf, 4.5);
+> val it = 4.5 : real
+Sys.plan ();
+> val it = "apply2(fnValue Real.max, constant(-Infinity), constant(4.5))"
+>   : string
+
+(* "sign r" returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive.
+    An infinity returns its sign; a zero returns 0 regardless of its sign.
+    It raises Domain on NaN. *)
+Real.sign;
+> val it = fn : real -> int
+Real.sign 2.0;
+> val it = 1 : int
+Real.sign ~3.0;
+> val it = ~1 : int
+Real.sign 0.0;
+> val it = 0 : int
+Real.sign ~0.0;
+> val it = 0 : int
+Real.sign Real.posInf;
+> val it = 1 : int
+Real.sign Real.negInf;
+> val it = ~1 : int
+Real.sign nan;
+> uncaught exception Domain
+>   raised at: stdIn:1.1-1.14
+Sys.plan ();
+> val it = "apply(fnValue Real.sign, argCode constant(NaN))" : string
+
+(* "signBit r" returns true if and only if the sign of r (infinities, zeros,
+   and NaN, included) is negative. *)
+Real.signBit;
+> val it = fn : real -> bool
+Real.signBit 2.0;
+> val it = false : bool
+Real.signBit ~3.5;
+> val it = true : bool
+Real.signBit 0.0;
+> val it = false : bool
+Real.signBit ~0.0;
+> val it = true : bool
+Real.signBit Real.posInf;
+> val it = false : bool
+Real.signBit Real.negInf;
+> val it = true : bool
+(*) Morel and SMLNJ return true, but spec would suggest false
+Real.signBit nan;
+> val it = true : bool
+(*) Morel and SMLNJ return false, but spec would suggest true
+Real.signBit (~nan);
+> val it = false : bool
+Sys.plan ();
+> val it =
+>   "apply(fnValue Real.signBit, argCode apply(fnValue ~, argCode constant(NaN)))"
+>   : string
+
+(* "sameSign (r1, r2)" returns true if and only if signBit r1 equals
+   signBit r2. *)
+Real.sameSign;
+> val it = fn : real * real -> bool
+Real.sameSign (2.0, 3.5);
+> val it = true : bool
+Real.sameSign (~2.0, Real.negInf);
+> val it = true : bool
+Real.sameSign (2.0, nan);
+> val it = false : bool
+Real.sameSign (~2.0, nan);
+> val it = true : bool
+Real.sameSign (nan, nan);
+> val it = true : bool
+Sys.plan ();
+> val it = "apply2(fnValue Real.sameSign, constant(NaN), constant(NaN))"
+>   : string
+
+(* "copySign (x, y)" returns x with the sign of y, even if y is NaN. *)
+Real.copySign;
+> val it = fn : real * real -> real
+Real.copySign (2.0, Real.posInf);
+> val it = 2.0 : real
+Real.copySign (2.0, Real.negInf);
+> val it = ~2.0 : real
+Real.copySign (2.0, nan);
+> val it = ~2.0 : real
+Real.copySign (~3.5, ~nan);
+> val it = 3.5 : real
+Real.copySign (~3.5, nan);
+> val it = ~3.5 : real
+Real.copySign (2.0, ~0.0);
+> val it = ~2.0 : real
+Sys.plan ();
+> val it = "apply2(fnValue Real.copySign, constant(2.0), constant(-0.0))"
+>   : string
+
+(* "val compare : real * real -> order" returns LESS, EQUAL, or GREATER
+   according to whether its first argument is less than, equal to, or
+   greater than the second. It raises IEEEReal.Unordered on unordered
+   arguments. *)
+Real.compare;
+> val it = fn : real * real -> order
+Real.compare (2.0, 2.0);
+> val it = EQUAL : order
+Real.compare (~0.0, 0.0);
+> val it = EQUAL : order
+Real.compare (~5.0, Real.posInf);
+> val it = LESS : order
+Real.compare (~5.0, Real.negInf);
+> val it = GREATER : order
+Real.compare (Real.negInf, Real.negInf);
+> val it = EQUAL : order
+Real.compare (Real.negInf, nan);
+> uncaught exception Unordered
+>   raised at: stdIn:1.1-1.32
+Real.compare (nan, nan);
+> uncaught exception Unordered
+>   raised at: stdIn:1.1-1.24
+Sys.plan ();
+> val it = "apply2(fnValue Real.compare, constant(NaN), constant(NaN))" : string
+
+(* "val compareReal : real * real -> IEEEReal.real_order" behaves similarly to
+   "Real.compare" except that the values it returns have the extended type
+   IEEEReal.real_order and it returns IEEEReal.UNORDERED on unordered
+   arguments. *)
+(*) TODO Real.compareReal (2.0, 2.0);
+(*) TODO val it = EQUAL : IEEEReal.real_order
+(*) TODO Real.compareReal (~0.0, 0.0);
+(*) TODO val it = EQUAL : IEEEReal.real_order
+(*) TODO Real.compareReal (~5.0, Real.posInf);
+(*) TODO val it = LESS : IEEEReal.real_order
+(*) TODO Real.compareReal (~5.0, Real.negInf);
+(*) TODO val it = GREATER : IEEEReal.real_order
+(*) TODO Real.compareReal (Real.negInf, Real.negInf);
+(*) TODO val it = EQUAL : IEEEReal.real_order
+(*) TODO Real.compareReal (Real.negInf, nan);
+(*) TODO val it = UNORDERED : IEEEReal.real_order
+(*) TODO Real.compareReal (nan, nan);
+(*) TODO val it = UNORDERED : IEEEReal.real_order
+(*) TODO Real.compareReal (~nan, nan);
+(*) TODO val it = UNORDERED : IEEEReal.real_order
+(*) TODO Real.compareReal (0.0, ~nan);
+(*) TODO val it = UNORDERED : IEEEReal.real_order
+
+(* val < : real * real -> bool
+   val <= : real * real -> bool
+   val > : real * real -> bool
+   val >= : real * real -> bool
+   These return true if the corresponding relation holds between the two reals.
+  Note that these operators return false on unordered arguments, i.e., if
+  either argument is NaN, so that the usual reversal of comparison under
+  negation does not hold, e.g., a < b is not the same as not (a >= b). *)
+3.0 < 3.0;
+> val it = false : bool
+3.0 < 5.0;
+> val it = true : bool
+3.0 < nan;
+> val it = false : bool
+nan < 5.0;
+> val it = false : bool
+3.0 < Real.posInf;
+> val it = true : bool
+3.0 < Real.negInf;
+> val it = false : bool
+Real.posInf < Real.posInf;
+> val it = false : bool
+
+3.0 <= 3.0;
+> val it = true : bool
+3.0 <= 5.0;
+> val it = true : bool
+3.0 <= nan;
+> val it = false : bool
+nan <= 5.0;
+> val it = false : bool
+3.0 <= Real.posInf;
+> val it = true : bool
+3.0 <= Real.negInf;
+> val it = false : bool
+Real.posInf <= Real.posInf;
+> val it = true : bool
+
+3.0 > 3.0;
+> val it = false : bool
+3.0 > 5.0;
+> val it = false : bool
+3.0 > nan;
+> val it = false : bool
+nan > 5.0;
+> val it = false : bool
+3.0 > Real.posInf;
+> val it = false : bool
+3.0 > Real.negInf;
+> val it = true : bool
+Real.posInf > Real.posInf;
+> val it = false : bool
+
+3.0 >= 3.0;
+> val it = true : bool
+3.0 >= 5.0;
+> val it = false : bool
+3.0 >= nan;
+> val it = false : bool
+nan >= 5.0;
+> val it = false : bool
+3.0 >= Real.posInf;
+> val it = false : bool
+3.0 >= Real.negInf;
+> val it = true : bool
+Real.posInf >= Real.posInf;
+> val it = true : bool
+
+(* "== (x, y)" eturns true if and only if neither y nor x is NaN, and y and x
+   are equal, ignoring signs on zeros. This is equivalent to the IEEE =
+   operator. *)
+(*) TODO
+
+(* "!= (x, y)" is equivalent to not o op == and the IEEE ?<> operator. *)
+(*) TODO
+
+(* "val ?= : real * real -> bool" returns true if either argument is NaN or if
+   the arguments are bitwise equal, ignoring signs on zeros. It is equivalent
+   to the IEEE ?= operator. *)
+(*) TODO
+
+(* "unordered (x, y)" returns true if x and y are unordered, i.e., at least one
+   of x and y is NaN. *)
+Real.unordered;
+> val it = fn : real * real -> bool
+Real.unordered (1.0, 1.0);
+> val it = false : bool
+Real.unordered (~1.0, 1.0);
+> val it = false : bool
+Real.unordered (Real.negInf, Real.posInf);
+> val it = false : bool
+Real.unordered (nan, 1.0);
+> val it = true : bool
+Real.unordered (0.0, nan);
+> val it = true : bool
+
+(* "isFinite x" returns true if x is neither NaN nor an infinity. *)
+Real.isFinite;
+> val it = fn : real -> bool
+Real.isFinite 0.0;
+> val it = true : bool
+Real.isFinite ~0.0;
+> val it = true : bool
+Real.isFinite 1.5;
+> val it = true : bool
+Real.isFinite Real.posInf;
+> val it = false : bool
+Real.isFinite Real.negInf;
+> val it = false : bool
+Real.isFinite nan;
+> val it = false : bool
+
+(* "isNan x" returns true if x is NaN. *)
+Real.isNan;
+> val it = fn : real -> bool
+Real.isNan 0.0;
+> val it = false : bool
+Real.isNan ~0.0;
+> val it = false : bool
+Real.isNan 1.5;
+> val it = false : bool
+Real.isNan Real.posInf;
+> val it = false : bool
+Real.isNan Real.negInf;
+> val it = false : bool
+Real.isNan Real.minNormalPos;
+> val it = false : bool
+Real.isNan Real.minPos;
+> val it = false : bool
+Real.isNan nan;
+> val it = true : bool
+
+(* "isNormal x" returns true if x is normal, i.e., neither zero, subnormal,
+   infinite nor NaN. *)
+Real.isNormal;
+> val it = fn : real -> bool
+Real.isNormal 0.0;
+> val it = false : bool
+Real.isNormal ~0.0;
+> val it = false : bool
+Real.isNormal 1.5;
+> val it = true : bool
+Real.isNormal ~0.1;
+> val it = true : bool
+Real.isNormal Real.posInf;
+> val it = false : bool
+Real.isNormal Real.negInf;
+> val it = false : bool
+Real.isNormal Real.minNormalPos;
+> val it = true : bool
+Real.isNormal Real.minPos;
+> val it = false : bool
+Real.isNormal nan;
+> val it = false : bool
+
+(* "class x" returns the IEEEReal.float_class to which x belongs. *)
+(*) TODO
+
+(* "toManExp r" returns {man, exp}, where man and exp are the mantissa and
+   exponent of r, respectively. Specifically, we have the relation
+     r = man * radix(exp)
+   where 1.0 <= man * radix < radix. This function is comparable to frexp in
+   the C library. If r is +-0, man is +-0 and exp is +0. If r is +-infinity,
+   man is +-infinity and exp is unspecified. If r is NaN, man is NaN and exp
+   is unspecified. *)
+Real.toManExp;
+> val it = fn : real -> {exp:int, man:real}
+Real.toManExp 0.0;
+> val it = {exp=~126,man=0.0} : {exp:int, man:real}
+Sys.plan ();
+> val it = "apply(fnValue Real.toManExp, argCode constant(0.0))" : string
+Real.toManExp ~0.0;
+> val it = {exp=~126,man=~0.0} : {exp:int, man:real}
+Real.toManExp 0.5;
+> val it = {exp=0,man=0.5} : {exp:int, man:real}
+Real.toManExp 1.0;
+> val it = {exp=1,man=0.5} : {exp:int, man:real}
+Real.toManExp 2.0;
+> val it = {exp=2,man=0.5} : {exp:int, man:real}
+Real.toManExp 1.25;
+> val it = {exp=1,man=0.625} : {exp:int, man:real}
+Real.toManExp 2.5;
+> val it = {exp=2,man=0.625} : {exp:int, man:real}
+Real.toManExp ~2.5;
+> val it = {exp=2,man=~0.625} : {exp:int, man:real}
+Real.toManExp nan;
+> val it = {exp=129,man=nan} : {exp:int, man:real}
+Real.toManExp Real.posInf;
+> val it = {exp=129,man=inf} : {exp:int, man:real}
+Real.toManExp Real.negInf;
+> val it = {exp=129,man=~inf} : {exp:int, man:real}
+Real.toManExp Real.maxFinite;
+> val it = {exp=128,man=0.99999994} : {exp:int, man:real}
+Real.toManExp (~Real.maxFinite);
+> val it = {exp=128,man=~0.99999994} : {exp:int, man:real}
+Real.toManExp Real.minNormalPos;
+> val it = {exp=~125,man=0.5} : {exp:int, man:real}
+Real.toManExp (~Real.minNormalPos);
+> val it = {exp=~125,man=~0.5} : {exp:int, man:real}
+Real.toManExp (Real.minNormalPos / 2.0);
+> val it = {exp=~126,man=0.5} : {exp:int, man:real}
+Real.toManExp (Real.minNormalPos / 4.0);
+> val it = {exp=~126,man=0.25} : {exp:int, man:real}
+Real.toManExp Real.minPos;
+> val it = {exp=~126,man=1.1920929E~7} : {exp:int, man:real}
+Real.minNormalPos / Real.minPos;
+> val it = 8388608.0 : real
+List.map (fn x => (x, Real.toManExp x, Real.fromManExp (Real.toManExp x)))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
+   0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
+   Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
+   Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,{exp=1,man=0.5},1.0),(0.0,{exp=~126,man=0.0},0.0),
+>    (~0.0,{exp=~126,man=~0.0},~0.0),(~1.0,{exp=1,man=~0.5},~1.0),
+>    (0.5,{exp=0,man=0.5},0.5),(2.0,{exp=2,man=0.5},2.0),
+>    (1.23456E~5,{exp=~16,man=0.80908126},1.23456E~5),
+>    (1.23456E~6,{exp=~19,man=0.647265},1.23456E~6),
+>    (1.23456E~7,{exp=~22,man=0.517812},1.23456E~7),
+>    (~1.23456E~6,{exp=~19,man=~0.647265},~1.23456E~6),
+>    (1.4E~45,{exp=~126,man=1.1920929E~7},1.4E~45),
+>    (1.17549435E~38,{exp=~125,man=0.5},1.17549435E~38),
+>    (3.4028235E38,{exp=128,man=0.99999994},3.4028235E38),
+>    (~3.4028235E38,{exp=128,man=~0.99999994},~3.4028235E38),
+>    (inf,{exp=129,man=inf},inf),(~inf,{exp=129,man=~inf},~inf),
+>    (nan,{exp=129,man=nan},nan)] : (real * {exp:int, man:real} * real) list
+
+(* "fromManExp {man, exp}" returns man * radix(exp). This function is comparable
+   to ldexp in the C library. Note that, even if man is a non-zero, finite real
+   value, the result of fromManExp can be zero or infinity because of underflows
+   and overflows. If man is +-0, the result is +-0. If man is +-infinity, the
+   result is +-infinity. If man is NaN, the result is NaN. *)
+Real.fromManExp;
+> val it = fn : {exp:int, man:real} -> real
+Real.fromManExp {man = 1.0, exp = 0};
+> val it = 1.0 : real
+Sys.plan ();
+> val it = "apply2(fnValue Real.fromManExp, constant(0), constant(1.0))"
+>   : string
+Real.fromManExp {man = ~1.0, exp = 0};
+> val it = ~1.0 : real
+Real.fromManExp {man = 1.0, exp = 2};
+> val it = 4.0 : real
+Real.fromManExp {man = 1.0, exp = ~3};
+> val it = 0.125 : real
+List.map (fn x => (x, Real.fromManExp (Real.toManExp x)))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
+   0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
+   Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
+   Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,1.0),(0.0,0.0),(~0.0,~0.0),(~1.0,~1.0),(0.5,0.5),(2.0,2.0),
+>    (1.23456E~5,1.23456E~5),(1.23456E~6,1.23456E~6),(1.23456E~7,1.23456E~7),
+>    (~1.23456E~6,~1.23456E~6),(1.4E~45,1.4E~45),(1.17549435E~38,1.17549435E~38),
+>    (3.4028235E38,3.4028235E38),(~3.4028235E38,~3.4028235E38),(inf,inf),
+>    (~inf,~inf),(nan,nan)] : (real * real) list
+
+(* "split r" returns {whole, frac}, where frac and whole are the fractional and
+   integral parts of r, respectively. Specifically, whole is integral,
+   |frac| < 1.0, whole and frac have the same sign as r, and r = whole + frac.
+   This function is comparable to modf in the C library. If r is +-infinity,
+   whole is +-infinity and frac is +-0. If r is NaN, both whole and frac are
+   NaN. *)
+Real.split;
+> val it = fn : real -> {frac:real, whole:real}
+Real.split 2.0;
+> val it = {frac=0.0,whole=2.0} : {frac:real, whole:real}
+Real.split 0.0;
+> val it = {frac=0.0,whole=0.0} : {frac:real, whole:real}
+Real.split ~0.0;
+> val it = {frac=~0.0,whole=0.0} : {frac:real, whole:real}
+Real.split 2.75;
+> val it = {frac=0.75,whole=2.0} : {frac:real, whole:real}
+Real.split ~12.25;
+> val it = {frac=~0.25,whole=~12.0} : {frac:real, whole:real}
+Real.split Real.posInf;
+> val it = {frac=0.0,whole=inf} : {frac:real, whole:real}
+Real.split Real.negInf;
+> val it = {frac=~0.0,whole=~inf} : {frac:real, whole:real}
+Real.split nan;
+> val it = {frac=nan,whole=nan} : {frac:real, whole:real}
+Sys.plan ();
+> val it = "apply(fnValue Real.split, argCode constant(NaN))" : string
+
+(* "realMod r" returns the fractional part of r. "realMod" is equivalent to
+   "#frac o split". *)
+Real.realMod;
+> val it = fn : real -> real
+Real.realMod 2.0;
+> val it = 0.0 : real
+Real.realMod 0.0;
+> val it = 0.0 : real
+Real.realMod ~0.0;
+> val it = ~0.0 : real
+Real.realMod 2.75;
+> val it = 0.75 : real
+Real.realMod ~12.25;
+> val it = ~0.25 : real
+Real.realMod Real.posInf;
+> val it = 0.0 : real
+Real.realMod Real.negInf;
+> val it = ~0.0 : real
+Real.realMod nan;
+> val it = nan : real
+Sys.plan ();
+> val it = "apply(fnValue Real.realMod, argCode constant(NaN))" : string
+
+(* "nextAfter (r, t)" returns the next representable real after r in the
+   direction of t. Thus, if t is less than r, nextAfter returns the largest
+   representable floating-point number less than r. If r = t then it returns
+   r. If either argument is NaN, this returns NaN. If r is +-infinity, it
+   returns +-infinity. *)
+(*) TODO
+
+(* "checkFloat x" raises Overflow if x is an infinity, and raises Div if x is
+   NaN. Otherwise, it returns its argument. This can be used to synthesize
+   trapping arithmetic from the non-trapping operations given here. Note,
+   however, that infinities can be converted to NaNs by some operations, so
+   that if accurate exceptions are required, checks must be done after each
+   operation. *)
+Real.checkFloat;
+> val it = fn : real -> real
+Real.checkFloat 0.0;
+> val it = 0.0 : real
+Real.checkFloat ~0.0;
+> val it = ~0.0 : real
+Real.checkFloat 1.5;
+> val it = 1.5 : real
+Real.checkFloat Real.posInf;
+> uncaught exception Overflow
+>   raised at: stdIn:1.1-1.28
+Real.checkFloat Real.negInf;
+> uncaught exception Overflow
+>   raised at: stdIn:1.1-1.28
+Real.checkFloat Real.minNormalPos;
+> val it = 1.17549435E~38 : real
+Real.checkFloat Real.minPos;
+> val it = 1.4E~45 : real
+Real.checkFloat nan;
+> uncaught exception Div
+>   raised at: stdIn:1.1-1.20
+
+(* "realFloor r", "realCeil r", "realTrunc r", "realRound r" convert real values
+   to integer-valued reals. realFloor produces floor(r), the largest integer not
+   larger than r. realCeil produces ceil(r), the smallest integer not less than r.
+   realTrunc rounds r towards zero, and realRound rounds to the integer-valued
+   real value that is nearest to r. If r is NaN or an infinity, these functions
+   return r. *)
+Real.realFloor;
+> val it = fn : real -> real
+Real.realCeil;
+> val it = fn : real -> real
+Real.realTrunc;
+> val it = fn : real -> real
+Real.realRound;
+> val it = fn : real -> real
+fun f x = (Real.realFloor x, Real.realCeil x, Real.realTrunc x, Real.realRound x);
+> val f = fn : real -> real * real * real * real
+f 0.0;
+> val it = (0.0,0.0,0.0,0.0) : real * real * real * real
+f ~2.0;
+> val it = (~2.0,~2.0,~2.0,~2.0) : real * real * real * real
+f ~1.75;
+> val it = (~2.0,~1.0,~1.0,~2.0) : real * real * real * real
+f ~2.25;
+> val it = (~3.0,~2.0,~2.0,~2.0) : real * real * real * real
+f ~2.5;
+> val it = (~3.0,~2.0,~2.0,~2.0) : real * real * real * real
+f ~3.5;
+> val it = (~4.0,~3.0,~3.0,~4.0) : real * real * real * real
+f Real.negInf;
+> val it = (~inf,~inf,nan,~inf) : real * real * real * real
+f Real.posInf;
+> val it = (inf,inf,nan,inf) : real * real * real * real
+f nan;
+> val it = (nan,nan,nan,nan) : real * real * real * real
+
+(* "floor r", "ceil r", "trunc r", "round r" convert reals to integers.
+   floor produces floor(r), the largest int not larger than r.
+   ceil produces ceil(r), the smallest int not less than r.
+   trunc rounds r towards zero.
+   round yields the integer nearest to r. In the case of a tie, it rounds to the
+   nearest even integer.
+
+   They raise Overflow if the resulting value cannot be represented as an int,
+   for example, on infinity. They raise Domain on NaN arguments.
+
+   These are respectively equivalent to:
+     toInt IEEEReal.TO_NEGINF r
+     toInt IEEEReal.TO_POSINF r
+     toInt IEEEReal.TO_ZERO r
+     toInt IEEEReal.TO_NEAREST r *)
+Real.floor;
+> val it = fn : real -> int
+Real.ceil;
+> val it = fn : real -> int
+Real.trunc;
+> val it = fn : real -> int
+Real.round;
+> val it = fn : real -> int
+fun f x = (Real.floor x, Real.ceil x, Real.trunc x, Real.round x);
+> val f = fn : real -> int * int * int * int
+f 0.0;
+> val it = (0,0,0,0) : int * int * int * int
+f ~2.0;
+> val it = (~2,~2,~2,~2) : int * int * int * int
+f ~1.75;
+> val it = (~2,~2,~1,~2) : int * int * int * int
+f ~2.25;
+> val it = (~2,~2,~2,~2) : int * int * int * int
+f ~2.5;
+> val it = (~2,~3,~2,~2) : int * int * int * int
+f ~3.5;
+> val it = (~3,~4,~3,~3) : int * int * int * int
+f Real.negInf;
+> val it = (~2147483648,~2147483647,~2147483648,~2147483648)
+>   : int * int * int * int
+f Real.posInf;
+> val it = (~2147483648,2147483647,2147483647,2147483647)
+>   : int * int * int * int
+f nan;
+> val it = (0,0,0,0) : int * int * int * int
+
+(* "toInt mode x", "toLargeInt mode x" convert the argument x to an integral
+   type using the specified rounding mode. They raise Overflow if the result
+   is not representable, in particular, if x is an infinity. They raise
+   Domain if the input real is NaN. *)
+(*) TODO
+
+(* "fromInt i", "fromLargeInt i" convert the integer i to a real value. If the
+   absolute value of i is larger than maxFinite, then the appropriate infinity
+   is returned. If i cannot be exactly represented as a real value, then the
+   current rounding mode is used to determine the resulting value. The top-level
+   function real is an alias for Real.fromInt. *)
+Real.fromInt;
+> val it = fn : int -> real
+Real.fromInt 1;
+> val it = 1.0 : real
+Real.fromInt ~2;
+> val it = ~2.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Real.fromInt, argCode constant(-2))" : string
+
+(*) real is a synonym for Real.fromInt
+real;
+> val it = fn : int -> real
+real ~2;
+> val it = ~2.0 : real
+Sys.plan ();
+> val it = "apply(fnValue Real.fromInt, argCode constant(-2))" : string
+
+(*  "fromString s" scans a `real` value from a string. Returns `SOME(r)` if a
+    `real` value can be scanned from a prefix of `s`, ignoring any initial
+    whitespace; otherwise, it returns `NONE`. This function is equivalent to
+    `StringCvt.scanString scan`. *)
+Real.fromString;
+> val it = fn : string -> real option
+Real.fromString "~0.0";
+> val it = SOME ~0.0 : real option
+Sys.plan ();
+> val it = "apply(fnValue Real.fromString, argCode constant(~0.0))" : string
+Real.fromString "~23.45e~06";
+> val it = SOME ~2.345E~5 : real option
+(*) sml-nj allows both '-' and '~', both 'E' and 'e', and 0s after 'E'.
+Real.fromString "-1.5";
+> val it = SOME ~1.5 : real option
+Real.fromString "~1.5";
+> val it = SOME ~1.5 : real option
+Real.fromString "-1.5e-9";
+> val it = SOME ~1.5E~9 : real option
+Real.fromString "-1.5e-09";
+> val it = SOME ~1.5E~9 : real option
+Real.fromString "-1.5E-9";
+> val it = SOME ~1.5E~9 : real option
+Real.fromString "-1.5E~9";
+> val it = SOME ~1.5E~9 : real option
+Real.fromString "-1.5E~09";
+> val it = SOME ~1.5E~9 : real option
+Real.fromString "-1.5e~09";
+> val it = SOME ~1.5E~9 : real option
+(*) In sml-nj, ".", ".e", ".e-", "e5", ".e7" are invalid
+Real.fromString ".";
+> val it = NONE : real option
+Real.fromString ".x";
+> val it = NONE : real option
+Real.fromString ".e";
+> val it = NONE : real option
+Real.fromString ".e~";
+> val it = NONE : real option
+Real.fromString "e5";
+> val it = NONE : real option
+Real.fromString ".e7";
+> val it = NONE : real option
+(*) Letters and whitespace at the end, and whitespace at the start, are ignored
+Real.fromString "1.5x";
+> val it = SOME 1.5 : real option
+Real.fromString " 1.5 x ";
+> val it = SOME 1.5 : real option
+Real.fromString "1.5e";
+> val it = SOME 1.5 : real option
+Real.fromString "1.5e~";
+> val it = SOME 1.5 : real option
+Real.fromString "1.5e~0";
+> val it = SOME 1.5 : real option
+Real.fromString "1.5e2";
+> val it = SOME 150.0 : real option
+Real.fromString "1.5e2e";
+> val it = SOME 150.0 : real option
+Real.fromString "1.5e2e3";
+> val it = SOME 150.0 : real option
+Real.fromString "2e3.4";
+> val it = SOME 2000.0 : real option
+Real.fromString "  2e3.4";
+> val it = SOME 2000.0 : real option
+Real.fromString "2.x";
+> val it = SOME 2.0 : real option
+(*) fromString cannot parse "inf", "nan" etc.
+Real.fromString "inf";
+> val it = NONE : real option
+Real.fromString "~inf";
+> val it = NONE : real option
+Real.fromString "-inf";
+> val it = NONE : real option
+Real.fromString "nan";
+> val it = NONE : real option
+
+List.map (fn x => (x, Real.fromString (Real.toString x)))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
+   0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
+   Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
+   Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,SOME 1.0),(0.0,SOME 0.0),(~0.0,SOME ~0.0),(~1.0,SOME ~1.0),
+>    (0.5,SOME 0.5),(2.0,SOME 2.0),(1.23456E~5,SOME 1.23456E~5),
+>    (1.23456E~6,SOME 1.23456E~6),(1.23456E~7,SOME 1.23456E~7),
+>    (~1.23456E~6,SOME ~1.23456E~6),(1.4E~45,SOME 1.4E~45),
+>    (1.17549435E~38,SOME 1.17549435E~38),(3.4028235E38,SOME 3.4028235E38),
+>    (~3.4028235E38,SOME ~3.4028235E38),(inf,NONE),(~inf,NONE),(nan,NONE)]
+>   : (real * real option) list
+
+(* "toLarge r", "fromLarge r" convert between values of type real and type
+   LargeReal.real. If r is too small or too large to be represented as a real,
+   fromLarge will convert it to a zero or an infinity.
+
+   Note that SMLNJ diverges from the the spec. The spec:
+      Real.toLarge : real -> LargeReal.real
+      Real.fromLarge : LargeReal.real -> real
+   SMLNJ:
+      Real.toLarge : real -> real
+      Real.fromLarge : IEEEReal.rounding_mode -> real -> real *)
+(*) TODO
+
+(* "fmt spec r", "toString r" convert reals into strings. The conversion
+   provided by the function fmt is parameterized by spec, which has the
+   following forms and interpretations.
+
+   SCI arg
+     Scientific notation:
+       [~]?[0-9].[0-9]+?E[0-9]+
+     where there is always one digit before the decimal point, nonzero if the
+     number is nonzero. arg specifies the number of digits to appear after the
+     decimal point, with 6 the default if arg is NONE. If arg is SOME(0), no
+     fractional digits and no decimal point are printed.
+   FIX arg
+     Fixed-point notation:
+       [~]?[0-9]+.[0-9]+?
+     arg specifies the number of digits to appear after the decimal point, with
+     6 the default if arg is NONE. If arg is SOME(0), no fractional digits and
+     no decimal point are printed.
+   GEN arg
+     Adaptive notation: the notation used is either scientific or fixed-point
+     depending on the value converted. arg specifies the maximum number of
+     significant digits used, with 12 the default if arg is NONE.
+   EXACT
+     Exact decimal notation: refer to IEEEReal.toString for a complete
+     description of this format.
+   In all cases, positive and negative infinities are converted to "inf" and
+   "~inf", respectively, and NaN values are converted to the string "nan".
+
+   Refer to StringCvt.realfmt for more details concerning these formats,
+   especially the adaptive format GEN.
+
+   fmt raises Size if spec is an invalid precision, i.e., if spec is
+     SCI (SOME i) with i < 0
+     FIX (SOME i) with i < 0
+     GEN (SOME i) with i < 1
+   The exception should be raised when fmt spec is evaluated.
+
+  The fmt function allows the user precise control as to the form of the
+  resulting string. Note, therefore, that it is possible for fmt to produce
+  a result that is not a valid SML string representation of a real value.
+
+  The value returned by toString is equivalent to:
+    (fmt (StringCvt.GEN NONE) r)
+ *)
+(*) TODO Real.fmt
+
+Real.toString;
+> val it = fn : real -> string
+Real.toString 0.0;
+> val it = "0.0" : string
+Sys.plan ();
+> val it = "apply(fnValue Real.toString, argCode constant(0.0))" : string
+Real.toString ~0.0;
+> val it = "~0.0" : string
+Real.toString 0.01;
+> val it = "0.01" : string
+Real.toString Real.minPos;
+> val it = "1.4E~45" : string
+Real.toString Real.minNormalPos;
+> val it = "1.17549435E~38" : string
+Real.toString 1234567890123.45;
+> val it = "1.23456795E12" : string
+Real.toString 123456789012.3;
+> val it = "1.23456791E11" : string
+Real.toString 12345678901.23;
+> val it = "1.23456788E10" : string
+Real.toString 123456789.0123;
+> val it = "1.23456792E8" : string
+(*) We return '1.23456E~6' but sml-nj returns '1.23456E~06'.
+Real.toString 0.00000123456;
+> val it = "1.23456E~6" : string
+Real.toString 0.0000123456;
+> val it = "1.23456E~5" : string
+Real.toString 0.000123456;
+> val it = "1.23456E~4" : string
+Real.toString 0.0001234567;
+> val it = "1.234567E~4" : string
+Real.toString 0.00012345678;
+> val it = "1.2345678E~4" : string
+Real.toString 0.0000123;
+> val it = "1.23E~5" : string
+Real.toString ~0.000065432;
+> val it = "~6.5432E~5" : string
+Real.toString nan;
+> val it = "nan" : string
+Real.toString Real.negInf;
+> val it = "~inf" : string
+Real.toString Real.posInf;
+> val it = "inf" : string
+List.map (fn x => (x, Real.toString x))
+  [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
+   0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
+   Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
+   Real.posInf, Real.negInf, nan];
+> val it =
+>   [(1.0,"1.0"),(0.0,"0.0"),(~0.0,"~0.0"),(~1.0,"~1.0"),(0.5,"0.5"),(2.0,"2.0"),
+>    (1.23456E~5,"1.23456E~5"),(1.23456E~6,"1.23456E~6"),
+>    (1.23456E~7,"1.23456E~7"),(~1.23456E~6,"~1.23456E~6"),(1.4E~45,"1.4E~45"),
+>    (1.17549435E~38,"1.17549435E~38"),(3.4028235E38,"3.4028235E38"),
+>    (~3.4028235E38,"~3.4028235E38"),(inf,"inf"),(~inf,"~inf"),(nan,"nan")]
+>   : (real * string) list
+
+(* "scan getc strm", "fromString s" scan a real value from character source. The
+   first version reads from ARG/strm/ using reader getc, ignoring initial
+   whitespace. It returns SOME(r,rest) if successful, where r is the scanned
+   real value and rest is the unused portion of the character stream strm.
+   Values of too large a magnitude are represented as infinities; values of too
+   small a magnitude are represented as zeros. The second version returns
+   SOME(r) if a real value can be scanned from a prefix of s, ignoring any
+   initial whitespace; otherwise, it returns NONE. This function is equivalent
+   to StringCvt.scanString scan.
+
+   The functions accept real numbers with the following format:
+     [+~-]?([0-9]+.[0-9]+? | .[0-9]+)(e | E)[+~-]?[0-9]+?
+
+   It also accepts the following string representations of non-finite values:
+     [+~-]?(inf | infinity | nan)
+   where the alphabetic characters are case-insensitive. *)
+(*) TODO
+
+(* "toDecimal r", "fromDecimal d" convert between real values and decimal
+   approximations. Decimal approximations are to be converted using the
+   IEEEReal.TO_NEAREST rounding mode. toDecimal should produce only as many
+   digits as are necessary for fromDecimal to convert back to the same number.
+   In particular, for any normal or subnormal real value r, we have the bit-wise
+   equality:
+     fromDecimal (toDecimal r) = r.
+
+   For toDecimal, when the r is not normal or subnormal, then the exp field is
+   set to 0 and the digits field is the empty list. In all cases, the sign and
+   class field capture the sign and class of r.
+
+  For fromDecimal, if class is ZERO or INF, the resulting real is the
+  appropriate signed zero or infinity. If class is NAN, a signed NaN is
+  generated. If class is NORMAL or SUBNORMAL, the sign, digits and exp fields
+  are used to produce a real number whose value is
+
+    s * 0.d(1)d(2)...d(n) 10(exp)
+
+  where digits = [d(1), d(2), ..., d(n)] and where s is -1 if sign is true and 1
+  otherwise. Note that the conversion itself should ignore the class field, so
+  that the resulting value might have class NORMAL, SUBNORMAL, ZERO, or INF. For
+  example, if digits is empty or a list of all 0's, the result should be a
+  signed zero. More generally, very large or small magnitudes are converted to
+  infinities or zeros.
+
+  If the argument to fromDecimal does not have a valid format, i.e., if the
+  digits field contains integers outside the range [0,9], it returns NONE.
+
+  Implementation note: Algorithms for accurately and efficiently converting
+  between binary and decimal real representations are readily available, e.g.,
+  see the technical report by Gay[CITE]. *)
+(*) TODO
+
+(* Relational -------------------------------------------------- *)
+
+Relational.count [1, 2, 3];
+> val it = 3 : int
+Relational.count [];
+> val it = 0 : int
+Relational.count [false];
+> val it = 1 : int
+Sys.plan ();
+> val it = "apply(fnValue Relational.count, argCode tuple(constant(false)))"
+>   : string
+
+Relational.exists [1, 2, 3];
+> val it = true : bool
+Relational.exists [];
+> val it = false : bool
+Relational.exists [false];
+> val it = true : bool
+Sys.plan ();
+> val it = "apply(fnValue Relational.exists, argCode tuple(constant(false)))"
+>   : string
+
+Relational.notExists [1, 2, 3];
+> val it = false : bool
+Relational.notExists [];
+> val it = true : bool
+Relational.notExists [false];
+> val it = false : bool
+Sys.plan ();
+> val it = "apply(fnValue Relational.notExists, argCode tuple(constant(false)))"
+>   : string
+
+val emp = [
+  {empno=7839, ename="KING", mgr=0},
+  {empno=7566, ename="JONES", mgr=7839},
+  {empno=7698, ename="BLAKE", mgr=7839},
+  {empno=7782, ename="CLARK", mgr=7839},
+  {empno=7788, ename="SCOTT", mgr=7566},
+  {empno=7902, ename="FORD", mgr=7566},
+  {empno=7499, ename="ALLEN", mgr=7698},
+  {empno=7521, ename="WARD", mgr=7698},
+  {empno=7654, ename="MARTIN", mgr=7698},
+  {empno=7844, ename="TURNER", mgr=7698},
+  {empno=7900, ename="JAMES", mgr=7698},
+  {empno=7934, ename="MILLER", mgr=7782},
+  {empno=7876, ename="ADAMS", mgr=7788},
+  {empno=7369, ename="SMITH", mgr=7902}];
+> val emp =
+>   [{empno=7839,ename="KING",mgr=0},{empno=7566,ename="JONES",mgr=7839},
+>    {empno=7698,ename="BLAKE",mgr=7839},{empno=7782,ename="CLARK",mgr=7839},
+>    {empno=7788,ename="SCOTT",mgr=7566},{empno=7902,ename="FORD",mgr=7566},
+>    {empno=7499,ename="ALLEN",mgr=7698},{empno=7521,ename="WARD",mgr=7698},
+>    {empno=7654,ename="MARTIN",mgr=7698},{empno=7844,ename="TURNER",mgr=7698},
+>    {empno=7900,ename="JAMES",mgr=7698},{empno=7934,ename="MILLER",mgr=7782},
+>    {empno=7876,ename="ADAMS",mgr=7788},{empno=7369,ename="SMITH",mgr=7902}]
+>   : {empno:int, ename:string, mgr:int} list
+Relational.iterate
+  (from e in emp where e.mgr = 0)
+  fn (oldList, newList) =>
+      (from d in newList,
+          e in emp
+      where e.mgr = d.empno
+      yield e);
+> val it =
+>   [{empno=7839,ename="KING",mgr=0},{empno=7566,ename="JONES",mgr=7839},
+>    {empno=7698,ename="BLAKE",mgr=7839},{empno=7782,ename="CLARK",mgr=7839},
+>    {empno=7788,ename="SCOTT",mgr=7566},{empno=7902,ename="FORD",mgr=7566},
+>    {empno=7499,ename="ALLEN",mgr=7698},{empno=7521,ename="WARD",mgr=7698},
+>    {empno=7654,ename="MARTIN",mgr=7698},{empno=7844,ename="TURNER",mgr=7698},
+>    {empno=7900,ename="JAMES",mgr=7698},{empno=7934,ename="MILLER",mgr=7782},
+>    {empno=7876,ename="ADAMS",mgr=7788},{empno=7369,ename="SMITH",mgr=7902}]
+>   : {empno:int, ename:string, mgr:int} list
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Relational.iterate, argCode from(sink join(op join, pat e_1, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), constant(0)), sink collect(get(name e)))))), argCode match(v0, apply(fnCode match((oldList, newList), from(sink join(op join, pat d, exp get(name newList), sink join(op join, pat e, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name d))), sink collect(get(name e))))))), argCode get(name v0))))"
+>   : string
+
+Relational.sum [1, 2, 3];
+> val it = 6 : int
+Relational.sum [1.0, 2.5, 3.5];
+> val it = 7.0 : real
+Sys.plan ();
+> val it =
+>   "apply(fnValue Relational.sum$real, argCode tuple(constant(1.0), constant(2.5), constant(3.5)))"
+>   : string
+
+Relational.max [1, 2, 3];
+> val it = 3 : int
+Relational.max [1.0, 2.5, 3.5];
+> val it = 3.5 : real
+Relational.max ["a", "bc", "ab"];
+> val it = "bc" : string
+Relational.max [false, true];
+> val it = true : bool
+Sys.plan ();
+> val it =
+>   "apply(fnValue Relational.max, argCode tuple(constant(false), constant(true)))"
+>   : string
+
+Relational.min [1, 2, 3];
+> val it = 1 : int
+Relational.min [1.0, 2.5, 3.5];
+> val it = 1.0 : real
+Relational.min ["a", "bc", "ab"];
+> val it = "a" : string
+Relational.min [false, true];
+> val it = false : bool
+Sys.plan ();
+> val it =
+>   "apply(fnValue Relational.min, argCode tuple(constant(false), constant(true)))"
+>   : string
+
+Relational.only [2];
+> val it = 2 : int
+Relational.only [1, 2, 3];
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.26
+Relational.only [];
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.19
+Sys.plan ();
+> val it = "apply(fnValue Relational.only, argCode tuple)" : string
+
+[1, 2] union [3] union [] union [4, 2, 5];
+> val it = [1,2,3,4,2,5] : int list
+[] union [];
+> val it = [] : 'a list
+Sys.plan ();
+> val it = "apply2(fnValue union, tuple, tuple)" : string
+
+[1, 2] except [2] except [3] except [];
+> val it = [1] : int list
+[] except [];
+> val it = [] : 'a list
+["a"] except ["a"];
+> val it = [] : string list
+["a", "b", "c", "a"] except ["a"];
+> val it = ["b","c"] : string list
+["a", "b", "c", "a"] except ["c", "b", "c"];
+> val it = ["a","a"] : string list
+["a", "b"] except ["a", "c"] except ["a"];
+> val it = ["b"] : string list
+Sys.plan ();
+> val it =
+>   "apply2(fnValue except, apply2(fnValue except, tuple(constant(a), constant(b)), tuple(constant(a), constant(c))), tuple(constant(a)))"
+>   : string
+
+[1, 2] intersect [2] intersect [0, 2, 4];
+> val it = [2] : int list
+[1, 2] intersect [];
+> val it = [] : int list
+[] intersect [1, 2];
+> val it = [] : int list
+["a", "b", "a"] intersect ["b", "a"];
+> val it = ["a","b","a"] : string list
+[(1, 2), (2, 3)] intersect [(2, 4), (1, 2)];
+> val it = [(1,2)] : (int * int) list
+[1, 2, 3] intersect [2, 3, 4] except [1, 3, 5];
+> val it = [2] : int list
+[1, 2, 3] except [1, 3, 5] intersect [2, 3, 4];
+> val it = [1,2] : int list
+Sys.plan ();
+> val it =
+>   "apply2(fnValue except, tuple(constant(1), constant(2), constant(3)), apply2(fnValue intersect, tuple(constant(1), constant(3), constant(5)), tuple(constant(2), constant(3), constant(4))))"
+>   : string
+
+1 elem [1, 2, 3];
+> val it = true : bool
+1 elem [2, 3, 4];
+> val it = false : bool
+1 elem [];
+> val it = false : bool
+[] elem [[0], [1, 2]];
+> val it = false : bool
+[] elem [[0], [], [1, 2]];
+> val it = true : bool
+(1, 2) elem [(0, 1), (1, 2)];
+> val it = true : bool
+(1, 2) elem [(0, 1), (2, 3)];
+> val it = false : bool
+Sys.plan ();
+> val it =
+>   "apply2(fnValue elem, tuple(constant(1), constant(2)), tuple(tuple(constant(0), constant(1)), tuple(constant(2), constant(3))))"
+>   : string
+
+1 notelem [1, 2, 3];
+> val it = false : bool
+1 notelem [2, 3, 4];
+> val it = true : bool
+1 notelem [];
+> val it = true : bool
+[] notelem [[0], [1, 2]];
+> val it = true : bool
+[] notelem [[0], [], [1, 2]];
+> val it = false : bool
+(1, 2) notelem [(0, 1), (1, 2)];
+> val it = false : bool
+(1, 2) notelem [(0, 1), (2, 3)];
+> val it = true : bool
+Sys.plan ();
+> val it =
+>   "apply2(fnValue notelem, tuple(constant(1), constant(2)), tuple(tuple(constant(0), constant(1)), tuple(constant(2), constant(3))))"
+>   : string
+
+(* Sys --------------------------------------------------------- *)
+
+(*) val env : unit -> string list
+Sys.env;
+> val it = fn : unit -> (string * string) list
+Sys.env ();
+> val it =
+>   [("EQUAL","order"),("GREATER","order"),
+>    ("General",
+>    "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
+>    ("Interact","{use:string -> unit}"),("LESS","order"),
+>    ("List",
+>    "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+>    ("Math",
+>    "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
+>    ("NONE","'a option"),
+>    ("Option",
+>    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
+>    ("Real",
+>    "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
+>    ("Relational",
+>    "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+>    ("SOME","forall 'a. 'a -> 'a option"),
+>    ("String",
+>    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
+>    ("Sys",
+>    "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
+>    ("Vector",
+>    "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
+>    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
+>    ("ceil","real -> int"),("concat","string list -> string"),
+>    ("count","forall 'a. 'a list -> int"),
+>    ("emp","{empno:int, ename:string, mgr:int} list"),
+>    ("env","unit -> (string * string) list"),
+>    ("exists","forall 'a. 'a list -> bool"),("explode","string -> char list"),
+>    ("f","real -> int * int * int * int"),("false","bool"),
+>    ("floor","real -> int"),
+>    ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
+>    ("foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
+>    ("getOpt","forall 'a. 'a option * 'a -> 'a"),
+>    ("hd","forall 'a. 'a list -> 'a"),("ignore","forall 'a. 'a -> unit"),
+>    ("implode","char list -> string"),("isSome","forall 'a. 'a option -> bool"),
+>    ("it","unit -> (string * string) list"),
+>    ("iterate",
+>    "forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list"),
+>    ("length","forall 'a. 'a list -> int"),
+>    ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
+>    ("max","forall 'a. 'a list -> 'a"),("min","forall 'a. 'a list -> 'a"),
+>    ("nan","real"),("noneInt","int option"),("not","bool -> bool"),
+>    ("notExists","forall 'a. 'a list -> bool"),
+>    ("null","forall 'a. 'a list -> bool"),("only","forall 'a. 'a list -> 'a"),
+>    ("op *","forall 'a. 'a * 'a -> 'a"),("op +","forall 'a. 'a * 'a -> 'a"),
+>    ("op -","forall 'a. 'a * 'a -> 'a"),("op /","forall 'a. 'a * 'a -> 'a"),
+>    ("op ::","forall 'a. 'a * 'a list -> 'a list"),
+>    ("op <","forall 'a. 'a * 'a -> bool"),
+>    ("op <=","forall 'a. 'a * 'a -> bool"),
+>    ("op <>","forall 'a. 'a * 'a -> bool"),
+>    ("op =","forall 'a. 'a * 'a -> bool"),("op >","forall 'a. 'a * 'a -> bool"),
+>    ("op >=","forall 'a. 'a * 'a -> bool"),
+>    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
+>    ("op ^","string * string -> string"),("op div","int * int -> int"),
+>    ("op elem","forall 'a. 'a * 'a list -> bool"),
+>    ("op except","forall 'a. 'a list * 'a list -> 'a list"),
+>    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),
+>    ("op mod","int * int -> int"),...] : (string * string) list
+
+env;
+> val it = fn : unit -> (string * string) list
+env ();
+> val it =
+>   [("EQUAL","order"),("GREATER","order"),
+>    ("General",
+>    "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
+>    ("Interact","{use:string -> unit}"),("LESS","order"),
+>    ("List",
+>    "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+>    ("Math",
+>    "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
+>    ("NONE","'a option"),
+>    ("Option",
+>    "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
+>    ("Real",
+>    "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
+>    ("Relational",
+>    "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+>    ("SOME","forall 'a. 'a -> 'a option"),
+>    ("String",
+>    "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
+>    ("Sys",
+>    "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
+>    ("Vector",
+>    "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
+>    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
+>    ("ceil","real -> int"),("concat","string list -> string"),
+>    ("count","forall 'a. 'a list -> int"),
+>    ("emp","{empno:int, ename:string, mgr:int} list"),
+>    ("env","unit -> (string * string) list"),
+>    ("exists","forall 'a. 'a list -> bool"),("explode","string -> char list"),
+>    ("f","real -> int * int * int * int"),("false","bool"),
+>    ("floor","real -> int"),
+>    ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
+>    ("foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
+>    ("getOpt","forall 'a. 'a option * 'a -> 'a"),
+>    ("hd","forall 'a. 'a list -> 'a"),("ignore","forall 'a. 'a -> unit"),
+>    ("implode","char list -> string"),("isSome","forall 'a. 'a option -> bool"),
+>    ("it","unit -> (string * string) list"),
+>    ("iterate",
+>    "forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list"),
+>    ("length","forall 'a. 'a list -> int"),
+>    ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
+>    ("max","forall 'a. 'a list -> 'a"),("min","forall 'a. 'a list -> 'a"),
+>    ("nan","real"),("noneInt","int option"),("not","bool -> bool"),
+>    ("notExists","forall 'a. 'a list -> bool"),
+>    ("null","forall 'a. 'a list -> bool"),("only","forall 'a. 'a list -> 'a"),
+>    ("op *","forall 'a. 'a * 'a -> 'a"),("op +","forall 'a. 'a * 'a -> 'a"),
+>    ("op -","forall 'a. 'a * 'a -> 'a"),("op /","forall 'a. 'a * 'a -> 'a"),
+>    ("op ::","forall 'a. 'a * 'a list -> 'a list"),
+>    ("op <","forall 'a. 'a * 'a -> bool"),
+>    ("op <=","forall 'a. 'a * 'a -> bool"),
+>    ("op <>","forall 'a. 'a * 'a -> bool"),
+>    ("op =","forall 'a. 'a * 'a -> bool"),("op >","forall 'a. 'a * 'a -> bool"),
+>    ("op >=","forall 'a. 'a * 'a -> bool"),
+>    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
+>    ("op ^","string * string -> string"),("op div","int * int -> int"),
+>    ("op elem","forall 'a. 'a * 'a list -> bool"),
+>    ("op except","forall 'a. 'a list * 'a list -> 'a list"),
+>    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),
+>    ("op mod","int * int -> int"),...] : (string * string) list
+
+(*) val plan : unit -> string
+Sys.plan;
+> val it = fn : unit -> string
+1 + 2;
+> val it = 3 : int
+Sys.plan ();
+> val it = "apply2(fnValue +, constant(1), constant(2))" : string
+
+(*) val set : string * 'a -> unit
+Sys.set;
+> val it = fn : string * 'a -> unit
+Sys.set ("hybrid", false);
+> val it = () : unit
+Sys.plan ();
+> val it =
+>   "apply(fnValue Sys.set, argCode tuple(constant(hybrid), constant(false)))"
+>   : string
+
+(*) val show : string -> string option
+Sys.show;
+> val it = fn : string -> string option
+Sys.show "hybrid";
+> val it = SOME "false" : string option
+Sys.set ("hybrid", true);
+> val it = () : unit
+Sys.show "hybrid";
+> val it = SOME "true" : string option
+Sys.show "optionalInt";
+> val it = NONE : string option
+Sys.plan ();
+> val it = "apply(fnValue Sys.show, argCode constant(optionalInt))" : string
+
+Sys.set ("optionalInt", ~5);
+> val it = () : unit
+Sys.show "optionalInt";
+> val it = SOME "-5" : string option
+
+(*) val unset : string -> unit
+Sys.unset;
+> val it = fn : string -> unit
+Sys.unset "hybrid";
+> val it = () : unit
+Sys.unset "optionalInt";
+> val it = () : unit
+Sys.plan ();
+> val it = "apply(fnValue Sys.unset, argCode constant(optionalInt))" : string
+
+(* Vector ------------------------------------------------------ *)
+
+(*) Vector.fromList : 'a list -> 'a vector
+Vector.fromList;
+> val it = fn : 'a list -> 'a vector
+Vector.fromList [1,2];
+> val it = #[1,2] : int vector
+Sys.plan ();
+> val it =
+>   "apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(2)))"
+>   : string
+
+(*) "vector" is shorthand for "Vector.fromList"
+vector [1,2];
+> val it = #[1,2] : int vector
+
+(* supported in sml-nj but not morel:
+ #[1,2];
+ *)
+
+(* sml-nj says:
+  stdIn:3.1-3.19 Warning: type vars not generalized because of
+     value restriction are instantiated to dummy types (X1,X2,...)
+  val it = #[] : ?.X1 vector
+*)
+Vector.fromList [];
+> val it = #[] : 'a vector
+Sys.plan ();
+> val it = "apply(fnValue Vector.fromList, argCode tuple)" : string
+
+(*) Vector.maxLen: int
+Vector.maxLen;
+> val it = 16777215 : int
+Sys.plan ();
+> val it = "constant(16777215)" : string
+
+(*) Vector.tabulate : int * (int -> 'a) -> 'a vector
+Vector.tabulate;
+> val it = fn : int * (int -> 'a) -> 'a vector
+Vector.tabulate (5, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
+> val it = #[1,1,2,6,24] : int vector
+Sys.plan ();
+> val it =
+>   "apply(fnValue Vector.tabulate, argCode tuple(constant(5), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact))))"
+>   : string
+
+(*) Vector.length : 'a vector -> int
+Vector.length;
+> val it = fn : 'a vector -> int
+Vector.length (Vector.fromList [1,2,3]);
+> val it = 3 : int
+Sys.plan ();
+> val it =
+>   "apply(fnValue Vector.length, argCode apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(2), constant(3))))"
+>   : string
+
+(*) Vector.sub : 'a vector * int -> 'a
+Vector.sub;
+> val it = fn : 'a vector * int -> 'a
+Vector.sub (Vector.fromList [3,6,9], 2);
+> val it = 9 : int
+Vector.sub (Vector.fromList [3,6,9], ~1);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.41
+Vector.sub (Vector.fromList [3,6,9], 3);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.40
+Sys.plan ();
+> val it =
+>   "apply2(fnValue Vector.sub, apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(6), constant(9))), constant(3))"
+>   : string
+
+(*) Vector.update : 'a vector * int * 'a -> 'a vector
+Vector.update;
+> val it = fn : 'a vector * int * 'a -> 'a vector
+Vector.update (Vector.fromList ["a","b","c"], 1, "baz");
+> val it = #["a","baz","c"] : string vector
+Vector.update (Vector.fromList ["a","b","c"], ~1, "baz");
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.57
+Vector.update (Vector.fromList ["a","b","c"], 3, "baz");
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.56
+Sys.plan ();
+> val it =
+>   "apply3(fnValue Vector.update, apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b), constant(c))), constant(3), constant(baz))"
+>   : string
+
+(*) Vector.concat : 'a vector list -> 'a vector
+Vector.concat;
+> val it = fn : 'a vector list -> 'a vector
+Vector.concat [Vector.fromList ["a","b"],
+  Vector.fromList [], Vector.fromList ["c"]];
+> val it = #["a","b","c"] : string vector
+Sys.plan ();
+> val it =
+>   "apply(fnValue Vector.concat, argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b))), apply(fnValue Vector.fromList, argCode tuple), apply(fnValue Vector.fromList, argCode tuple(constant(c)))))"
+>   : string
+
+(*) Vector.appi : (int * 'a -> unit) -> 'a vector -> unit
+Vector.appi;
+> val it = fn : (int * 'a -> unit) -> 'a vector -> unit
+Vector.appi (fn (i,s) => ignore s) (Vector.fromList ["a", "b", "c"]);
+> val it = () : unit
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Vector.appi, argCode match(v0, apply(fnCode match((i, s), apply(fnValue General.ignore, argCode get(name s))), argCode get(name v0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b), constant(c))))"
+>   : string
+
+(*) Vector.app  : ('a -> unit) -> 'a vector -> unit
+Vector.app;
+> val it = fn : ('a -> unit) -> 'a vector -> unit
+Vector.app (fn s => ignore s) (Vector.fromList ["a", "b", "c"]);
+> val it = () : unit
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Vector.app, argCode match(s, apply(fnValue General.ignore, argCode get(name s)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b), constant(c))))"
+>   : string
+
+(*) Vector.mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector
+Vector.mapi;
+> val it = fn : (int * 'a -> 'b) -> 'a vector -> 'b vector
+Vector.mapi (fn (i, s) => String.sub (s, i)) (Vector.fromList ["abc", "xyz"]);
+> val it = #[#"a",#"y"] : char vector
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Vector.mapi, argCode match(v0, apply(fnCode match((i, s), apply2(fnValue String.sub, get(name s), get(name i))), argCode get(name v0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(abc), constant(xyz))))"
+>   : string
+
+(*) Vector.map  : ('a -> 'b) -> 'a vector -> 'b vector
+Vector.map;
+> val it = fn : ('a -> 'b) -> 'a vector -> 'b vector
+Vector.map (fn s => String.sub (s, 0)) (Vector.fromList ["abc", "xyz"]);
+> val it = #[#"a",#"x"] : char vector
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Vector.map, argCode match(s, apply2(fnValue String.sub, get(name s), constant(0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(abc), constant(xyz))))"
+>   : string
+
+(*) Vector.foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldli;
+> val it = fn : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldli (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
+> val it = 11 : int
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnCode apply(fnValue Vector.foldli, argCode match(v0, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v0)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   : string
+
+(*) Vector.foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldri;
+> val it = fn : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldri (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
+> val it = 11 : int
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnCode apply(fnValue Vector.foldri, argCode match(v0, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v0)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   : string
+
+(*) Vector.foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldl;
+> val it = fn : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldl (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
+> val it = 9 : int
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnCode apply(fnValue Vector.foldl, argCode match(v0, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v0)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   : string
+
+(*) Vector.foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldr;
+> val it = fn : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
+Vector.foldr (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
+> val it = 9 : int
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnCode apply(fnValue Vector.foldr, argCode match(v0, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v0)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   : string
+
+(*) Vector.findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option
+Vector.findi;
+> val it = fn : (int * 'a -> bool) -> 'a vector -> (int * 'a) option
+Vector.findi (fn (i,j) => j < i) (Vector.fromList [10,8,6,4,2]);
+> val it = SOME (4,2) : (int * int) option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Vector.findi, argCode match(v0, apply(fnCode match((i, j), apply2(fnValue <, get(name j), get(name i))), argCode get(name v0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(10), constant(8), constant(6), constant(4), constant(2))))"
+>   : string
+
+(*) Vector.find  : ('a -> bool) -> 'a vector -> 'a option
+Vector.find;
+> val it = fn : ('a -> bool) -> 'a vector -> 'a option
+Vector.find (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
+> val it = SOME 8 : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Vector.find, argCode match(j, apply2(fnValue =, apply2(fnValue mod, get(name j), constant(2)), constant(0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+>   : string
+
+(*) Vector.exists : ('a -> bool) -> 'a vector -> bool
+Vector.exists;
+> val it = fn : ('a -> bool) -> 'a vector -> bool
+Vector.exists (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
+> val it = true : bool
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Vector.exists, argCode match(j, apply2(fnValue =, apply2(fnValue mod, get(name j), constant(2)), constant(0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+>   : string
+
+(*) Vector.all : ('a -> bool) -> 'a vector -> bool
+Vector.all;
+> val it = fn : ('a -> bool) -> 'a vector -> bool
+Vector.all (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
+> val it = false : bool
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Vector.all, argCode match(j, apply2(fnValue =, apply2(fnValue mod, get(name j), constant(2)), constant(0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+>   : string
+
+(*) Vector.collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order
+Vector.collate;
+> val it = fn : ('a * 'a -> order) -> 'a vector * 'a vector -> order
+Vector.collate
+  (fn (i,j) => if i < j then LESS else if i = j then EQUAL else GREATER)
+  (Vector.fromList [1,3,5], Vector.fromList [1,3,6]);
+> val it = LESS : order
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply(fnValue Vector.collate, argCode match(v0, apply(fnCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name i), get(name j)))), argCode apply2(fnValue <, get(name i), get(name j)))), argCode get(name v0)))), argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
+>   : string
+
+(*) End builtIn.smli

@@ -21,5 +21,6 @@
 
 (*) Bug gave 'AssertionError: op not handled: EQ'
 from p in (from p in [{a=1,b=2}] where p.a = 1);
+> val it = [{a=1,b=2}] : {a:int, b:int} list
 
-(*) End misc.sml
+(*) End misc.smli

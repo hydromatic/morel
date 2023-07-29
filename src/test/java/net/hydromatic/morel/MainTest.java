@@ -78,7 +78,7 @@ public class MainTest {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(new byte[0]);
-      new Main(argList, in, ps, ImmutableMap.of(), directory).run();
+      new Main(argList, in, ps, ImmutableMap.of(), directory, false).run();
     }
     assertThat(out.size(), is(0));
   }
@@ -95,7 +95,7 @@ public class MainTest {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(ml.getBytes());
-      new Main(argList, in, ps, ImmutableMap.of(), directory).run();
+      new Main(argList, in, ps, ImmutableMap.of(), directory, false).run();
     }
     final String expected = "val x = 5 : int\n"
         + "val it = 5 : int\n"

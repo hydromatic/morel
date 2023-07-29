@@ -22,6 +22,7 @@
  * https://writeonly.wordpress.com/2009/03/20/adjacency-list-of-states-of-the-united-states-us/
  *)
 Sys.set ("printLength", 64);
+> val it = () : unit
 
 (*) State adjacency
 val adjacent_states =
@@ -76,17 +77,100 @@ val adjacent_states =
   {state="WI", adjacents=["MI", "MN", "IA", "IL"]},
   {state="WV", adjacents=["OH", "PA", "MD", "VA", "KY"]},
   {state="WY", adjacents=["MT", "SD", "NE", "CO", "UT", "ID"]}];
+> val adjacent_states =
+>   [{adjacents=[],state="AK"},{adjacents=["MS","TN","GA","FL"],state="AL"},
+>    {adjacents=["MO","TN","MS","LA","TX","OK"],state="AR"},
+>    {adjacents=["CA","NV","UT","CO","NM"],state="AZ"},
+>    {adjacents=["OR","NV","AZ"],state="CA"},
+>    {adjacents=["WY","NE","KS","OK","NM","AZ","UT"],state="CO"},
+>    {adjacents=["NY","MA","RI"],state="CT"},{adjacents=["MD","VA"],state="DC"},
+>    {adjacents=["MD","PA","NJ"],state="DE"},{adjacents=["AL","GA"],state="FL"},
+>    {adjacents=["FL","AL","TN","NC","SC"],state="GA"},{adjacents=[],state="HI"},
+>    {adjacents=["MN","WI","IL","MO","NE","SD"],state="IA"},
+>    {adjacents=["MT","WY","UT","NV","OR","WA"],state="ID"},
+>    {adjacents=["IN","KY","MO","IA","WI"],state="IL"},
+>    {adjacents=["MI","OH","KY","IL"],state="IN"},
+>    {adjacents=["NE","MO","OK","CO"],state="KS"},
+>    {adjacents=["IN","OH","WV","VA","TN","MO","IL"],state="KY"},
+>    {adjacents=["TX","AR","MS"],state="LA"},
+>    {adjacents=["RI","CT","NY","NH","VT"],state="MA"},
+>    {adjacents=["VA","WV","PA","DC","DE"],state="MD"},
+>    {adjacents=["NH"],state="ME"},{adjacents=["WI","IN","OH"],state="MI"},
+>    {adjacents=["WI","IA","SD","ND"],state="MN"},
+>    {adjacents=["IA","IL","KY","TN","AR","OK","KS","NE"],state="MO"},
+>    {adjacents=["LA","AR","TN","AL"],state="MS"},
+>    {adjacents=["ND","SD","WY","ID"],state="MT"},
+>    {adjacents=["VA","TN","GA","SC"],state="NC"},
+>    {adjacents=["MN","SD","MT"],state="ND"},
+>    {adjacents=["SD","IA","MO","KS","CO","WY"],state="NE"},
+>    {adjacents=["VT","ME","MA"],state="NH"},
+>    {adjacents=["DE","PA","NY"],state="NJ"},
+>    {adjacents=["AZ","UT","CO","OK","TX"],state="NM"},
+>    {adjacents=["ID","UT","AZ","CA","OR"],state="NV"},
+>    {adjacents=["NJ","PA","VT","MA","CT"],state="NY"},
+>    {adjacents=["PA","WV","KY","IN","MI"],state="OH"},
+>    {adjacents=["KS","MO","AR","TX","NM","CO"],state="OK"},
+>    {adjacents=["CA","NV","ID","WA"],state="OR"},
+>    {adjacents=["NY","NJ","DE","MD","WV","OH"],state="PA"},
+>    {adjacents=["CT","MA"],state="RI"},{adjacents=["GA","NC"],state="SC"},
+>    {adjacents=["ND","MN","IA","NE","WY","MT"],state="SD"},
+>    {adjacents=["KY","VA","NC","GA","AL","MS","AR","MO"],state="TN"},
+>    {adjacents=["NM","OK","AR","LA"],state="TX"},
+>    {adjacents=["ID","WY","CO","NM","AZ","NV"],state="UT"},
+>    {adjacents=["NC","TN","KY","WV","MD","DC"],state="VA"},
+>    {adjacents=["NY","NH","MA"],state="VT"},{adjacents=["ID","OR"],state="WA"},
+>    {adjacents=["MI","MN","IA","IL"],state="WI"},
+>    {adjacents=["OH","PA","MD","VA","KY"],state="WV"},
+>    {adjacents=["MT","SD","NE","CO","UT","ID"],state="WY"}]
+>   : {adjacents:string list, state:string} list
 
 (*) Coastal states
 val coastal_states = ["WA", "OR", "CA", "TX", "LA", "MS",
   "AL", "GA", "FL", "SC", "NC", "VA", "MD", "DE", "NJ",
   "NY", "CT", "RI", "MA", "ME", "NH", "AK", "HI"];
+> val coastal_states =
+>   ["WA","OR","CA","TX","LA","MS","AL","GA","FL","SC","NC","VA","MD","DE","NJ",
+>    "NY","CT","RI","MA","ME","NH","AK","HI"] : string list
 
 (*) Pairs of states that share a border
 val pairs =
   from s in adjacent_states,
       adjacent in s.adjacents
   yield {s.state, adjacent};
+> val pairs =
+>   [{adjacent="MS",state="AL"},{adjacent="TN",state="AL"},
+>    {adjacent="GA",state="AL"},{adjacent="FL",state="AL"},
+>    {adjacent="MO",state="AR"},{adjacent="TN",state="AR"},
+>    {adjacent="MS",state="AR"},{adjacent="LA",state="AR"},
+>    {adjacent="TX",state="AR"},{adjacent="OK",state="AR"},
+>    {adjacent="CA",state="AZ"},{adjacent="NV",state="AZ"},
+>    {adjacent="UT",state="AZ"},{adjacent="CO",state="AZ"},
+>    {adjacent="NM",state="AZ"},{adjacent="OR",state="CA"},
+>    {adjacent="NV",state="CA"},{adjacent="AZ",state="CA"},
+>    {adjacent="WY",state="CO"},{adjacent="NE",state="CO"},
+>    {adjacent="KS",state="CO"},{adjacent="OK",state="CO"},
+>    {adjacent="NM",state="CO"},{adjacent="AZ",state="CO"},
+>    {adjacent="UT",state="CO"},{adjacent="NY",state="CT"},
+>    {adjacent="MA",state="CT"},{adjacent="RI",state="CT"},
+>    {adjacent="MD",state="DC"},{adjacent="VA",state="DC"},
+>    {adjacent="MD",state="DE"},{adjacent="PA",state="DE"},
+>    {adjacent="NJ",state="DE"},{adjacent="AL",state="FL"},
+>    {adjacent="GA",state="FL"},{adjacent="FL",state="GA"},
+>    {adjacent="AL",state="GA"},{adjacent="TN",state="GA"},
+>    {adjacent="NC",state="GA"},{adjacent="SC",state="GA"},
+>    {adjacent="MN",state="IA"},{adjacent="WI",state="IA"},
+>    {adjacent="IL",state="IA"},{adjacent="MO",state="IA"},
+>    {adjacent="NE",state="IA"},{adjacent="SD",state="IA"},
+>    {adjacent="MT",state="ID"},{adjacent="WY",state="ID"},
+>    {adjacent="UT",state="ID"},{adjacent="NV",state="ID"},
+>    {adjacent="OR",state="ID"},{adjacent="WA",state="ID"},
+>    {adjacent="IN",state="IL"},{adjacent="KY",state="IL"},
+>    {adjacent="MO",state="IL"},{adjacent="IA",state="IL"},
+>    {adjacent="WI",state="IL"},{adjacent="MI",state="IN"},
+>    {adjacent="OH",state="IN"},{adjacent="KY",state="IN"},
+>    {adjacent="IL",state="IN"},{adjacent="NE",state="KS"},
+>    {adjacent="MO",state="KS"},{adjacent="OK",state="KS"},...]
+>   : {adjacent:string, state:string} list
 
 (*) States that border both TN and FL
 from p in pairs,
@@ -95,16 +179,21 @@ from p in pairs,
     andalso p.adjacent = q.state
     andalso q.adjacent = "FL"
   yield p.adjacent;
+> val it = ["GA","AL"] : string list
 
 (*) Is a state adjacent to another?
 fun is_adjacent x y =
   case (from p in pairs where p.state = x andalso p.adjacent = y) of
     [] => false
   | _ => true;
+> val is_adjacent = fn : string -> string -> bool
 
 is_adjacent "CA" "NY";
+> val it = false : bool
 is_adjacent "CA" "OR";
+> val it = true : bool
 is_adjacent "OR" "OR";
+> val it = false : bool
 
 (*) States that are n hops of a given state
 fun states_within x 0 = [x]
@@ -116,36 +205,58 @@ fun states_within x 0 = [x]
     (from p in (from p in pairs where p.state = x),
         a in states_within p.adjacent (n - 1)
      group a);
+> val states_within = fn : string -> int -> string list
 
 states_within "CA" 0;
+> val it = ["CA"] : string list
 from s in states_within "CA" 1 order s;
+> val it = ["AZ","NV","OR"] : string list
 from s in states_within "CA" 2 order s;
+> val it = ["AZ","CA","CO","ID","NM","NV","OR","UT","WA"] : string list
 from s in states_within "CA" 2 group compute count;
+> val it = [9] : int list
 from s in states_within "CA" 3 group compute count;
+> val it = [15] : int list
 (* It takes 11 steps to reach to all 48 contiguous states plus DC.
    But it takes 2 minutes, so the following expression is disabled.
    See later, the same expression computed efficiently using semi-naive. *)
 if true then [49] else from s in states_within "CA" 11 group compute count;
+> val it = [49] : int list
 from s in states_within "HI" 0 order s;
+> val it = ["HI"] : string list
 from s in states_within "HI" 1 order s;
+> val it = [] : string list
 from s in states_within "HI" 100 order s;
+> val it = [] : string list
 from s in states_within "ME" 0 order s;
+> val it = ["ME"] : string list
 from s in states_within "ME" 1 order s;
+> val it = ["NH"] : string list
 from s in states_within "ME" 2 order s;
-from s in states_within "ME" 3 order s; (*) maine is not 3 steps from itself
+> val it = ["MA","ME","VT"] : string list
+from s in states_within "ME" 3 order s;
+> val it = ["CT","MA","NH","NY","RI","VT"] : string list
+ (*) maine is not 3 steps from itself
 
 (*) Finding a square root using the Babylonian method
 (*) (An example of a scalar fixed-point query.)
 fun approx_sqrt n a = (n / a + a) * 0.5;
+> val approx_sqrt = fn : real -> real -> real
 approx_sqrt 100.0 1.0;
+> val it = 50.5 : real
 
 (*) Create a closure for the problem of finding the square root of 100.
 (*) Applying the function to its own result, we approach the correct answer.
 val as100 = approx_sqrt 100.0;
+> val as100 = fn : real -> real
 as100 100.0;
+> val it = 50.5 : real
 as100 (as100 100.0);
+> val it = 26.240099 : real
 as100 (as100 (as100 100.0));
+> val it = 15.02553 : real
 as100 (as100 (as100 (as100 100.0)));
+> val it = 10.840435 : real
 
 (*) A fixed-point operator will carry out the iteration for us,
 (*) given any scalar function f and an initial approximation a.
@@ -159,17 +270,24 @@ fun fixp f a =
     else
       fixp f a2
   end;
+> val fixp = fn : ('a -> 'a) -> 'a -> 'a
 fixp as100 100.0;
+> val it = 10.0 : real
 fixp as100 1.0;
+> val it = 10.0 : real
 fixp as100 0.0;
+> val it = inf : real
 fixp as100 ~1.0;
+> val it = ~10.0 : real
 
 (*) Given a list of strings, 'prefixes' returns a list of their
 (*) prefixes that are one character shorter.
 val prefixes = List.map (fn s =>
   if s = "" then s
   else String.substring(s, 0, String.size s - 1));
+> val prefixes = fn : string list -> string list
 prefixes ["cat", "dog", "", "car", "cart"];
+> val it = ["ca","do","","ca","car"] : string list
 
 (*) Fixed-point over union.
 (*) A naive algorithm recomputes the whole set each hop,
@@ -184,7 +302,9 @@ fun fixu_naive f a =
     else
       fixu_naive f a3
   end;
+> val fixu_naive = fn : ('a list -> 'a list) -> 'a list -> 'a list
 from p in fixu_naive prefixes ["cat", "dog", "", "car", "cart"] order p;
+> val it = ["","c","ca","car","cart","cat","d","do","dog"] : string list
 
 (*) Fixed-point over union, with an iteration limit 'n'.
 (*) A semi-naive algorithm applies the function only to
@@ -209,7 +329,9 @@ fun fixu_semi_naive (f, a, n) =
   in
     fixInc ([], a, 0)
   end;
+> val fixu_semi_naive = fn : ('a list -> 'a list) * 'a list * int -> 'a list
 fixu_semi_naive (prefixes, ["cat", "dog", "", "car", "cart"], ~1);
+> val it = ["ca","do","","ca","car","c","d","c"] : string list
 
 (*) Now, back to the states.
 (*) The semi-naive algorithm gets to 11 hops more efficiently.
@@ -219,12 +341,19 @@ fun states_within2 s n =
         p in pairs
       where p.state = s
       group p.adjacent), [s], n);
+> val states_within2 = fn : string -> int -> string list
 from s in states_within2 "CA" 1 order s;
+> val it = ["AZ","NV","OR"] : string list
 from s in states_within2 "CA" 2 order s;
+> val it = ["AZ","CA","CO","ID","NM","NV","OR","UT","WA"] : string list
 from s in states_within2 "CA" 8 group compute count;
+> val it = [43] : int list
 from s in states_within2 "CA" 9 group compute count;
+> val it = [46] : int list
 from s in states_within2 "CA" 10 group compute count;
+> val it = [48] : int list
 from s in states_within2 "CA" 11 group compute count;
+> val it = [49] : int list
 
 (*) Floyd-Warshall algorithm (shortest path in weighted graph)
 (*) Data from https://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
@@ -234,6 +363,11 @@ val edges =
   {source="b", target="c", weight=3},
   {source="c", target="d", weight=2},
   {source="d", target="b", weight=~1}];
+> val edges =
+>   [{source="b",target="a",weight=4},{source="a",target="c",weight=~2},
+>    {source="b",target="c",weight=3},{source="c",target="d",weight=2},
+>    {source="d",target="b",weight=~1}]
+>   : {source:string, target:string, weight:int} list
 fun shortest_path edges =
   let
     val vertices =
@@ -264,6 +398,18 @@ fun shortest_path edges =
   in
     from p in sp (edges0, vertices) order p.source, p.target
   end;
+> val shortest_path = fn
+>   : {source:'a, target:'a, weight:int} list -> {source:'a, target:'a, weight:int} list
 shortest_path edges;
+> val it =
+>   [{source="a",target="a",weight=0},{source="a",target="b",weight=~1},
+>    {source="a",target="c",weight=~2},{source="a",target="d",weight=0},
+>    {source="b",target="a",weight=4},{source="b",target="b",weight=0},
+>    {source="b",target="c",weight=2},{source="b",target="d",weight=4},
+>    {source="c",target="a",weight=5},{source="c",target="b",weight=1},
+>    {source="c",target="c",weight=0},{source="c",target="d",weight=2},
+>    {source="d",target="a",weight=3},{source="d",target="b",weight=~1},
+>    {source="d",target="c",weight=1},{source="d",target="d",weight=0}]
+>   : {source:string, target:string, weight:int} list
 
-(*) End fixedPoint.sml
+(*) End fixedPoint.smli

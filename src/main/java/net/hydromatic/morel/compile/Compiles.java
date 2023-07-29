@@ -72,7 +72,7 @@ public abstract class Compiles {
       decl = (Ast.Decl) statement;
     }
     return prepareDecl(typeSystem, session, env, calcite, decl,
-        decl == statement, warningConsumer, tracer);
+        warningConsumer, tracer);
   }
 
   /**
@@ -81,7 +81,7 @@ public abstract class Compiles {
    */
   private static CompiledStatement prepareDecl(TypeSystem typeSystem,
       Session session, Environment env, @Nullable Calcite calcite,
-      Ast.Decl decl, boolean isDecl,
+      Ast.Decl decl,
       Consumer<CompileException> warningConsumer, Tracer tracer) {
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, decl, typeSystem);
@@ -95,6 +95,11 @@ public abstract class Compiles {
     final Core.Decl coreDecl0 = resolver.toCore(resolved.node);
     tracer.onCore(0, coreDecl0);
 
+    // Should we skip printing the root pattern?
+    // Yes, if they wrote 'val x = 1 and y = 2' and
+    // core became 'val it as (x, y) = (1, 2)'.
+    final Core.NamedPat skipPat = getSkipPat(resolved.node, coreDecl0);
+
     // Check for exhaustive and redundant patterns, and throw errors or
     // warnings.
     final boolean matchCoverageEnabled =
@@ -103,21 +108,19 @@ public abstract class Compiles {
       checkPatternCoverage(typeSystem, coreDecl0, warningConsumer);
     }
 
-    final Core.Decl coreDecl1 = coreDecl0;
-
     Core.Decl coreDecl;
-    tracer.onCore(1, coreDecl1);
+    tracer.onCore(1, coreDecl0);
     if (inlinePassCount == 0) {
       // Inlining is disabled. Use the Inliner in a limited mode.
       final Inliner inliner = Inliner.of(typeSystem, env, null);
-      coreDecl = coreDecl1.accept(inliner);
+      coreDecl = coreDecl0.accept(inliner);
     } else {
       final @Nullable Relationalizer relationalizer =
           relationalize ? Relationalizer.of(typeSystem, env)
               : null;
 
       // Inline few times, or until we reach fixed point, whichever is sooner.
-      coreDecl = coreDecl1;
+      coreDecl = coreDecl0;
       for (int i = 0; i < inlinePassCount; i++) {
         final Analyzer.Analysis analysis =
             Analyzer.analyze(typeSystem, env, coreDecl);
@@ -127,7 +130,7 @@ public abstract class Compiles {
         if (relationalizer != null) {
           coreDecl = coreDecl.accept(relationalizer);
         }
-        if (coreDecl == coreDecl1) {
+        if (coreDecl == coreDecl0) {
           break;
         }
         tracer.onCore(i + 2, coreDecl);
@@ -160,8 +163,56 @@ public abstract class Compiles {
       }
     }
 
-    return compiler.compileStatement(env, coreDecl, isDecl,
+    return compiler.compileStatement(env, coreDecl, skipPat,
         queriesToWrap.build());
+  }
+
+  /** Returns a pattern that should not be printed, or null.
+   *
+   * <p>Consider the two declarations:
+   *
+   * <blockquote><pre>{@code
+   *   val it as (x, y) = (5, 6);
+   *   val (x, y) = (5, 6);
+   * }</pre></blockquote>
+   *
+   * <p>{@code coreDecl} is the same for both. For the first, we should print
+   *
+   * <blockquote><pre>{@code
+   *   val it = (5,6) : int * int
+   *   val x = 5 : int
+   *   val x = 6 : int
+   * }</pre></blockquote>
+   *
+   * <p>but for the second we should skip {@code it}, as follows:
+   *
+   * <blockquote><pre>{@code
+   *   val x = 5 : int
+   *   val x = 6 : int
+   * }</pre></blockquote>
+   */
+  private static Core.@Nullable NamedPat getSkipPat(Ast.Decl decl,
+      Core.Decl coreDecl) {
+    if (coreDecl instanceof Core.NonRecValDecl
+        && decl instanceof Ast.ValDecl) {
+      final Core.NonRecValDecl nonRecValDecl = (Core.NonRecValDecl) coreDecl;
+      final Ast.ValDecl valDecl = (Ast.ValDecl) decl;
+      if (nonRecValDecl.pat.name.equals("it")) {
+        if (valDecl.valBinds.size() == 1) {
+          final Ast.Pat pat = valDecl.valBinds.get(0).pat;
+          if (pat instanceof Ast.AsPat
+              && ((Ast.AsPat) pat).id.name.equals("it")) {
+            return null;
+          }
+          if (pat instanceof Ast.IdPat
+              && ((Ast.IdPat) pat).name.equals("it")) {
+            return null;
+          }
+        }
+        return nonRecValDecl.pat;
+      }
+    }
+    return null;
   }
 
   /** Checks for exhaustive and redundant patterns, and throws if there are

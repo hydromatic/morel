@@ -1,0 +1,365 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests queries that are to execute mostly in Calcite.
+ *)
+Sys.set ("printLength", 64);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+(*) Query in Hybrid mode (100% Calcite)
+Sys.set ("hybrid", true);
+> val it = () : unit
+from e in scott.emp
+where e.deptno = 20
+yield e.empno;
+> val it = [7369,7566,7788,7876,7902] : int list
+Sys.plan();
+> val it =
+>   "calcite(plan LogicalProject(empno=[$2])
+>   LogicalFilter(condition=[=($1, 20)])
+>     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+>       JdbcTableScan(table=[[scott, EMP]])
+> )"
+>   : string
+
+(*) Query in Hybrid mode (20% Morel -> 80% Calcite)
+from e in (List.filter (fn e2 => e2.empno < 7700) scott.emp)
+where e.deptno = 20
+yield e.empno;
+> val it = [7369,7566] : int list
+Sys.plan();
+> val it =
+>   "calcite(plan LogicalProject(empno=[$2])
+>   LogicalFilter(condition=[=($1, 20)])
+>     LogicalTableFunctionScan(invocation=[morelTable('#filter List (fn e2 => #empno e2 < 7700) (#emp scott)', '{
+>   \"fields\": [
+>     {
+>       \"type\": \"REAL\",
+>       \"nullable\": false,
+>       \"name\": \"comm\"
+>     },
+>     {
+>       \"type\": \"INTEGER\",
+>       \"nullable\": false,
+>       \"name\": \"deptno\"
+>     },
+>     {
+>       \"type\": \"INTEGER\",
+>       \"nullable\": false,
+>       \"name\": \"empno\"
+>     },
+>     {
+>       \"type\": \"VARCHAR\",
+>       \"nullable\": false,
+>       \"precision\": -1,
+>       \"name\": \"ename\"
+>     },
+>     {
+>       \"type\": \"VARCHAR\",
+>       \"nullable\": false,
+>       \"precision\": -1,
+>       \"name\": \"hiredate\"
+>     },
+>     {
+>       \"type\": \"VARCHAR\",
+>       \"nullable\": false,
+>       \"precision\": -1,
+>       \"name\": \"job\"
+>     },
+>     {
+>       \"type\": \"INTEGER\",
+>       \"nullable\": false,
+>       \"name\": \"mgr\"
+>     },
+>     {
+>       \"type\": \"REAL\",
+>       \"nullable\": false,
+>       \"name\": \"sal\"
+>     }
+>   ],
+>   \"nullable\": false
+> }')], rowType=[RecordType(REAL comm, INTEGER deptno, INTEGER empno, VARCHAR ename, VARCHAR hiredate, VARCHAR job, INTEGER mgr, REAL sal)])
+> )"
+>   : string
+
+(*) Query in Hybrid mode (99% Calcite; there is a variable but it is not
+(*) referenced by Calcite code)
+let
+  val twenty = 20
+in
+  from e in scott.emp
+  where e.deptno = 20
+  yield e.empno
+end;
+> val it = [7369,7566,7788,7876,7902] : int list
+Sys.plan();
+> val it =
+>   "calcite(plan LogicalProject(empno=[$2])
+>   LogicalFilter(condition=[=($1, 20)])
+>     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+>       JdbcTableScan(table=[[scott, EMP]])
+> )"
+>   : string
+
+(*) Query in Hybrid mode (90% Calcite; Calcite code references a variable
+(*) and an expression from the enclosing environment)
+let
+  val ten = 7 + 3
+  val deptNos = ten :: 20 :: 30 :: [40]
+in
+  from e in scott.emp
+  where e.deptno = List.nth (deptNos, 1)
+  yield e.empno + 13 mod ten
+end;
+> val it = [7372,7569,7791,7879,7905] : int list
+Sys.plan();
+> val it =
+>   "let(matchCode0 match(ten, apply2(fnValue +, constant(7), constant(3))), resultCode calcite(plan LogicalProject($f0=[+($2, MOD(13, morelScalar('ten', '{
+>   \"type\": \"INTEGER\",
+>   \"nullable\": false
+> }')))])
+>   LogicalFilter(condition=[=($1, morelScalar('#nth List (ten :: 20 :: 30 :: [40], 1)', '{
+>   \"type\": \"INTEGER\",
+>   \"nullable\": false
+> }'))])
+>     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+>       JdbcTableScan(table=[[scott, EMP]])
+> ))"
+>   : string
+
+(*) Query in Hybrid mode (90% Calcite; Calcite code references a function
+(*) from the enclosing environment)
+let
+  fun double x = x * 2
+in
+  from d in scott.dept
+  yield double d.deptno
+end;
+> val it = [20,40,60,80] : int list
+Sys.plan();
+> val it =
+>   "calcite(plan LogicalProject($f0=[*($0, 2)])
+>   JdbcTableScan(table=[[scott, DEPT]])
+> )"
+>   : string
+
+(*) Query on an empty list whose element is not referenced
+from e in []
+  yield {a = 1, b = true};
+> val it = [] : {a:int, b:bool} list
+Sys.plan();
+> val it = "calcite(plan LogicalValues(tuples=[[]])
+> )" : string
+
+(*) Equivalent, using map
+map (fn e => {a = 1, b = true}) [];
+> val it = [] : {a:int, b:bool} list
+Sys.plan();
+> val it =
+>   "apply(fnCode apply(fnValue List.map, argCode match(e, tuple(constant(1), constant(true)))), argCode calcite(plan LogicalValues(tuples=[[]])
+> ))"
+>   : string
+
+(*) Query on an empty list whose element is referenced
+from e in []
+  yield {a = 1 + e, b = true};
+> val it = [] : {a:int, b:bool} list
+Sys.plan();
+> val it =
+>   "calcite(plan LogicalProject(a=[+(1, $0)], b=[true])
+>   LogicalValues(tuples=[[]])
+> )"
+>   : string
+
+(*) Equivalent, using map
+map (fn e => {a = 1 + e, b = true}) [];
+> val it = [] : {a:int, b:bool} list
+Sys.plan();
+> val it =
+>   "apply(fnCode apply(fnValue List.map, argCode match(e, tuple(apply2(fnValue +, constant(1), get(name e)), constant(true)))), argCode calcite(plan LogicalValues(tuples=[[]])
+> ))"
+>   : string
+
+(*) Query on a singleton list whose element is not referenced
+from e in [0]
+  yield {a = 1, b = true};
+> val it = [{a=1,b=true}] : {a:int, b:bool} list
+Sys.plan();
+> val it = "calcite(plan LogicalValues(tuples=[[{ 1, true }]])
+> )" : string
+
+(*) Equivalent, using map
+map (fn e => {a = 1, b = true}) [0];
+> val it = [{a=1,b=true}] : {a:int, b:bool} list
+Sys.plan();
+> val it =
+>   "apply(fnCode apply(fnValue List.map, argCode match(e, tuple(constant(1), constant(true)))), argCode calcite(plan LogicalValues(tuples=[[{ 0 }]])
+> ))"
+>   : string
+
+(*) Simple query with scan, filter, project
+from e in scott.emp where e.deptno = 30 yield e.empno;
+> val it = [7499,7521,7654,7698,7844,7900] : int list
+Sys.plan();
+> val it =
+>   "calcite(plan LogicalProject(empno=[$2])
+>   LogicalFilter(condition=[=($1, 30)])
+>     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+>       JdbcTableScan(table=[[scott, EMP]])
+> )"
+>   : string
+
+(*) Equivalent #1; result and plan should be the same
+let
+  val emps = #emp scott
+in
+  from e in emps
+  where e.deptno = 30
+  yield e.empno
+end;
+> val it = [7499,7521,7654,7698,7844,7900] : int list
+Sys.plan();
+> val it =
+>   "calcite(plan LogicalProject(empno=[$2])
+>   LogicalFilter(condition=[=($1, 30)])
+>     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+>       JdbcTableScan(table=[[scott, EMP]])
+> )"
+>   : string
+
+(*) Equivalent #2; result and plan should be the same
+let
+  val emps = #emp scott
+  val thirty = 30
+in
+  from e in emps
+  where e.deptno = thirty
+  yield e.empno
+end;
+> val it = [7499,7521,7654,7698,7844,7900] : int list
+Sys.plan();
+> val it =
+>   "calcite(plan LogicalProject(empno=[$2])
+>   LogicalFilter(condition=[=($1, 30)])
+>     LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+>       JdbcTableScan(table=[[scott, EMP]])
+> )"
+>   : string
+
+(*) Equivalent #3; result and plan should be the same
+map (fn e => (#empno e))
+  (List.filter (fn e => (#deptno e) = 30) (#emp scott));
+> val it = [7499,7521,7654,7698,7844,7900] : int list
+Sys.plan();
+> val it =
+>   "apply(fnCode apply(fnValue List.map, argCode match(e_1, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue List.filter, argCode match(e, apply2(fnValue =, apply(fnValue nth:1, argCode get(name e)), constant(30)))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
+>   JdbcTableScan(table=[[scott, EMP]])
+> )))"
+>   : string
+
+(*) Union followed by group
+(*
+from x in (from e in scott.emp yield e.deptno)
+  union (from d in scott.dept yield d.deptno)
+group x compute c = count;
+*)
+
+(*) Recursive query
+(*
+let
+  fun descendants level oldEmps newEmps =
+    let
+      val pred =
+        if (exists prev) then
+          fn e => e.mgr in (from p in newEmps
+                            yield p.empno)
+        else
+          fn e => e.mgr = 0
+      val nextEmps = from e in scott.emp
+        where (pred e)
+        yield {level, e.empno}
+    in
+      if (exists nextEmps) then
+        descendants (level + 1) (oldEmps union newEmps) nextEmps
+      else
+        (oldEmps union newEmps)
+    end
+  in
+end;
+*)
+
+(*) Recursive query, 2
+(*
+let
+  fun descendants () =
+    (from e in scott.emp
+      where e.mgr = 0
+      yield {e, level = 0})
+    union
+    (from d in descendants (),
+        e in scott.emp
+      where e.mgr = d.e.empno
+      yield {e, level = d.level + 1});
+in
+  descendants ()
+end;
+*)
+
+(*) Recursive query, 3
+Sys.set ("hybrid", false);
+> val it = () : unit
+let
+  fun descendants2 descendants newDescendants =
+    if null newDescendants then
+      descendants
+    else
+      descendants2 (descendants union newDescendants)
+          (from d in newDescendants,
+              e in scott.emp
+            where e.mgr = d.e.empno
+            yield {e, level = d.level + 1})
+in
+  from d in descendants2 []
+      (from e in scott.emp
+        where e.mgr = 0
+        yield {e, level = 0})
+    yield {d.e.empno, d.e.mgr, d.e.ename, d.level}
+end;
+> val it =
+>   [{empno=7839,ename="KING",level=0,mgr=0},
+>    {empno=7566,ename="JONES",level=1,mgr=7839},
+>    {empno=7698,ename="BLAKE",level=1,mgr=7839},
+>    {empno=7782,ename="CLARK",level=1,mgr=7839},
+>    {empno=7788,ename="SCOTT",level=2,mgr=7566},
+>    {empno=7902,ename="FORD",level=2,mgr=7566},
+>    {empno=7499,ename="ALLEN",level=2,mgr=7698},
+>    {empno=7521,ename="WARD",level=2,mgr=7698},
+>    {empno=7654,ename="MARTIN",level=2,mgr=7698},
+>    {empno=7844,ename="TURNER",level=2,mgr=7698},
+>    {empno=7900,ename="JAMES",level=2,mgr=7698},
+>    {empno=7934,ename="MILLER",level=2,mgr=7782},
+>    {empno=7876,ename="ADAMS",level=3,mgr=7788},
+>    {empno=7369,ename="SMITH",level=3,mgr=7902}]
+>   : {empno:int, ename:string, level:int, mgr:int} list
+
+"end";
+> val it = "end" : string
+
+(*) End hybrid.smli
