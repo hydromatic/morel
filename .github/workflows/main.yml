@@ -45,6 +45,10 @@ jobs:
             checkstyle-version: ""
           - java-version: "18"
             javadoc: false
+          - java-version: "19"
+            javadoc: false
+          - java-version: "20"
+            javadoc: false
 
     steps:
       - uses: actions/checkout@v1

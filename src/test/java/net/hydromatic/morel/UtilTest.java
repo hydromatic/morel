@@ -20,6 +20,7 @@ package net.hydromatic.morel;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.util.Folder;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Ord;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
@@ -260,6 +262,35 @@ public class UtilTest {
     assertThat(transform(list, String::length), is(Arrays.asList(4, 4, 6, 5)));
     assertThat(transform(Collections.emptyList(), String::length),
         is(Collections.emptyList()));
+  }
+
+  /** Tests that {@code Real.toString} returns values consistent with JDK 19 and
+   * later, incorporating the fix to
+   * <a href="https://bugs.openjdk.org/browse/JDK-4511638">[JDK-4511638]
+   * Double.toString(double) sometimes produces incorrect results</a>. */
+  @Test void testToString() {
+    Function<String, String> fn = s -> {
+      float f = Float.parseFloat(s);
+      return Codes.floatToString(f);
+    };
+    assertThat(fn.apply("1.17549435E-38"), is("1.1754944E~38"));
+    assertThat(fn.apply("1.1754944E-38"), is("1.1754944E~38"));
+
+    assertThat(fn.apply("1.23456795E12"), is("1.234568E12"));
+    assertThat(fn.apply("1.234568E12"), is("1.234568E12"));
+
+    assertThat(fn.apply("1.23456791E11"), is("1.2345679E11"));
+    assertThat(fn.apply("1.2345679E11"), is("1.2345679E11"));
+
+    assertThat(fn.apply("1.23456788E10"), is("1.2345679E10"));
+    assertThat(fn.apply("1.2345679E10"), is("1.2345679E10"));
+
+    assertThat(fn.apply("1.23456792E8"), is("1.2345679E8"));
+    assertThat(fn.apply("1.2345679E8"), is("1.2345679E8"));
+
+    assertThat(fn.apply("1.0"), is("1.0"));
+    assertThat(fn.apply("-1.234"), is("~1.234"));
+    assertThat(fn.apply("-1.234e-10"), is("~1.234E~10"));
   }
 }
 

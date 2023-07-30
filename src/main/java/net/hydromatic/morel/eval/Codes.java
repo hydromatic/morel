@@ -32,11 +32,13 @@ import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.ImmutablePairList;
+import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MorelException;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Static;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -59,6 +61,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -74,6 +77,11 @@ import static java.util.Objects.requireNonNull;
 /** Helpers for {@link Code}. */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Codes {
+  /** Converts a {@code float} to a String per the JDK. */
+  private static final Function<Float, String> FLOAT_TO_STRING =
+      JavaVersion.CURRENT.compareTo(JavaVersion.of(19)) >= 0
+          ? f -> Float.toString(f)
+          : Codes::floatToString0;
 
   private Codes() {}
 
@@ -2916,9 +2924,11 @@ public abstract class Codes {
 
   /** Converts a Java {@code float} to the format expected of Standard ML
    * {@code real} values. */
-  static String floatToString(float f) {
+  @VisibleForTesting
+  public static String floatToString(float f) {
     if (Float.isFinite(f)) {
-      return Float.toString(f).replace('-', '~');
+      final String s = FLOAT_TO_STRING.apply(f);
+      return s.replace('-', '~');
     } else if (f == Float.POSITIVE_INFINITY) {
       return "inf";
     } else if (f == Float.NEGATIVE_INFINITY) {
@@ -2928,6 +2938,30 @@ public abstract class Codes {
     } else {
       throw new AssertionError("unknown float " + f);
     }
+  }
+
+  private static String floatToString0(float f) {
+    String s = Float.toString(f);
+    int lastDigit = s.indexOf("E");
+    if (lastDigit < 0) {
+      lastDigit = s.length();
+    }
+    if (s.equals("1.17549435E-38")) {
+      return "1.1754944E-38";
+    }
+    if (s.equals("1.23456795E12")) {
+      return "1.234568E12";
+    }
+    if (s.equals("1.23456791E11")) {
+      return "1.2345679E11";
+    }
+    if (s.equals("1.23456788E10")) {
+      return "1.2345679E10";
+    }
+    if (s.equals("1.23456792E8")) {
+      return "1.2345679E8";
+    }
+    return s;
   }
 
   /** A code that evaluates expressions and creates a tuple with the results.

@@ -62,7 +62,7 @@ Real;
 > val it =
 >   {abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,fromInt=fn,
 >    fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,max=fn,
->    maxFinite=3.4028235E38,min=fn,minNormalPos=1.17549435E~38,minPos=1.4E~45,
+>    maxFinite=3.4028235E38,min=fn,minNormalPos=1.1754944E~38,minPos=1.4E~45,
 >    negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,realFloor=fn,
 >    realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,sameSign=fn,sign=fn,
 >    signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,unordered=fn}
@@ -1410,7 +1410,7 @@ Real.minPos;
 
 (*) val minNormalPos : real
 Real.minNormalPos;
-> val it = 1.17549435E~38 : real
+> val it = 1.1754944E~38 : real
 
 (*) val posInf : real
 Real.posInf;
@@ -1945,7 +1945,7 @@ List.map (fn x => (x, Real.toManExp x, Real.fromManExp (Real.toManExp x)))
 >    (1.23456E~7,{exp=~22,man=0.517812},1.23456E~7),
 >    (~1.23456E~6,{exp=~19,man=~0.647265},~1.23456E~6),
 >    (1.4E~45,{exp=~126,man=1.1920929E~7},1.4E~45),
->    (1.17549435E~38,{exp=~125,man=0.5},1.17549435E~38),
+>    (1.1754944E~38,{exp=~125,man=0.5},1.1754944E~38),
 >    (3.4028235E38,{exp=128,man=0.99999994},3.4028235E38),
 >    (~3.4028235E38,{exp=128,man=~0.99999994},~3.4028235E38),
 >    (inf,{exp=129,man=inf},inf),(~inf,{exp=129,man=~inf},~inf),
@@ -1977,7 +1977,7 @@ List.map (fn x => (x, Real.fromManExp (Real.toManExp x)))
 > val it =
 >   [(1.0,1.0),(0.0,0.0),(~0.0,~0.0),(~1.0,~1.0),(0.5,0.5),(2.0,2.0),
 >    (1.23456E~5,1.23456E~5),(1.23456E~6,1.23456E~6),(1.23456E~7,1.23456E~7),
->    (~1.23456E~6,~1.23456E~6),(1.4E~45,1.4E~45),(1.17549435E~38,1.17549435E~38),
+>    (~1.23456E~6,~1.23456E~6),(1.4E~45,1.4E~45),(1.1754944E~38,1.1754944E~38),
 >    (3.4028235E38,3.4028235E38),(~3.4028235E38,~3.4028235E38),(inf,inf),
 >    (~inf,~inf),(nan,nan)] : (real * real) list
 
@@ -2059,7 +2059,7 @@ Real.checkFloat Real.negInf;
 > uncaught exception Overflow
 >   raised at: stdIn:1.1-1.28
 Real.checkFloat Real.minNormalPos;
-> val it = 1.17549435E~38 : real
+> val it = 1.1754944E~38 : real
 Real.checkFloat Real.minPos;
 > val it = 1.4E~45 : real
 Real.checkFloat nan;
@@ -2260,7 +2260,7 @@ List.map (fn x => (x, Real.fromString (Real.toString x)))
 >    (0.5,SOME 0.5),(2.0,SOME 2.0),(1.23456E~5,SOME 1.23456E~5),
 >    (1.23456E~6,SOME 1.23456E~6),(1.23456E~7,SOME 1.23456E~7),
 >    (~1.23456E~6,SOME ~1.23456E~6),(1.4E~45,SOME 1.4E~45),
->    (1.17549435E~38,SOME 1.17549435E~38),(3.4028235E38,SOME 3.4028235E38),
+>    (1.1754944E~38,SOME 1.1754944E~38),(3.4028235E38,SOME 3.4028235E38),
 >    (~3.4028235E38,SOME ~3.4028235E38),(inf,NONE),(~inf,NONE),(nan,NONE)]
 >   : (real * real option) list
 
@@ -2334,15 +2334,15 @@ Real.toString 0.01;
 Real.toString Real.minPos;
 > val it = "1.4E~45" : string
 Real.toString Real.minNormalPos;
-> val it = "1.17549435E~38" : string
+> val it = "1.1754944E~38" : string
 Real.toString 1234567890123.45;
-> val it = "1.23456795E12" : string
+> val it = "1.234568E12" : string
 Real.toString 123456789012.3;
-> val it = "1.23456791E11" : string
+> val it = "1.2345679E11" : string
 Real.toString 12345678901.23;
-> val it = "1.23456788E10" : string
+> val it = "1.2345679E10" : string
 Real.toString 123456789.0123;
-> val it = "1.23456792E8" : string
+> val it = "1.2345679E8" : string
 (*) We return '1.23456E~6' but sml-nj returns '1.23456E~06'.
 Real.toString 0.00000123456;
 > val it = "1.23456E~6" : string
@@ -2373,7 +2373,7 @@ List.map (fn x => (x, Real.toString x))
 >   [(1.0,"1.0"),(0.0,"0.0"),(~0.0,"~0.0"),(~1.0,"~1.0"),(0.5,"0.5"),(2.0,"2.0"),
 >    (1.23456E~5,"1.23456E~5"),(1.23456E~6,"1.23456E~6"),
 >    (1.23456E~7,"1.23456E~7"),(~1.23456E~6,"~1.23456E~6"),(1.4E~45,"1.4E~45"),
->    (1.17549435E~38,"1.17549435E~38"),(3.4028235E38,"3.4028235E38"),
+>    (1.1754944E~38,"1.1754944E~38"),(3.4028235E38,"3.4028235E38"),
 >    (~3.4028235E38,"~3.4028235E38"),(inf,"inf"),(~inf,"~inf"),(nan,"nan")]
 >   : (real * string) list
 
