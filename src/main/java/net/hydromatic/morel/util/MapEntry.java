@@ -84,3 +84,5 @@ public class MapEntry<T, U> implements Map.Entry<T, U> {
     throw new UnsupportedOperationException("setValue");
   }
 }
+
+// End MapEntry.java

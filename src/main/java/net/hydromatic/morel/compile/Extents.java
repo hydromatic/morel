@@ -101,7 +101,7 @@ public class Extents {
    *   end
    * }</pre></blockquote>
    *
-   * we could deduce that "x" has extent "from e in edges group e.i",
+   * <p>we could deduce that "x" has extent "from e in edges group e.i",
    * "y" has extent "from e in edges group e.j"
    * ("from e in edges group e.i" is also valid),
    * "z" has extent "from e in edges group e.j",
@@ -371,3 +371,5 @@ public class Extents {
     }
   }
 }
+
+// End Extents.java

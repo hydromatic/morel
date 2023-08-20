@@ -63,7 +63,7 @@ public enum Prop {
    * <a href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL signature</a>
    * of the Standard Basis Library.
    *
-   * Default is 12. */
+   * <p>Default is 12. */
   PRINT_LENGTH("printLength", Integer.class, 12),
 
   /** Boolean property "relationalize" is

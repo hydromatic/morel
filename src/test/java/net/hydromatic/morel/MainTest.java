@@ -1291,11 +1291,10 @@ public class MainTest {
     ml(ml).assertEval(is(7));
   }
 
-  /**
-   * <p>The algorithm is described in <a href="https://stackoverflow.com/questions/7883023/algorithm-for-type-checking-ml-like-pattern-matching">
-   *  Stack overflow</a> and in Lennart Augustsson's 1985 paper "Compiling
-   *  Pattern Matching".
-   */
+  /** The algorithm is described in
+   * <a href="https://stackoverflow.com/questions/7883023/algorithm-for-type-checking-ml-like-pattern-matching">
+   * Stack overflow</a> and in Lennart Augustsson's 1985 paper "Compiling
+   * Pattern Matching". */
   @Test void testMatchRedundant() {
     final String ml = "fun f x = case x > 0 of\n"
         + "   true => \"positive\"\n"

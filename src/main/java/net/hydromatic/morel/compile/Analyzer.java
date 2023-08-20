@@ -199,9 +199,9 @@ public class Analyzer extends EnvVisitor {
      * val g = fn ys => map (fn x => E) ys
      * }</pre>
      *
-     * no code is duplicated, but a small bounded amount of work is duplicated,
-     * because the closure {@code fn x => E} must be allocated each time
-     * {@code g} is called. */
+     * <p>no code is duplicated, but a small bounded amount of work is
+     * duplicated, because the closure {@code fn x => E} must be allocated
+     * each time {@code g} is called. */
     ONCE_UNSAFE,
 
     /** The binding may occur many times, including inside lambdas. */
