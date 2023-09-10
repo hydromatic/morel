@@ -18,9 +18,12 @@
  */
 package net.hydromatic.morel;
 
+import net.hydromatic.morel.util.ImmutablePairList;
+import net.hydromatic.morel.util.MapEntry;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
@@ -35,11 +38,13 @@ import java.util.function.BiPredicate;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** Unit test for {@code PairList}. */
 class PairListTest {
@@ -86,6 +91,13 @@ class PairListTest {
     assertThat(pairList.rightList(), is(right(list)));
     assertThat(pairList.rightList(), instanceOf(RandomAccess.class));
 
+    // Check PairList.left(int) and PairList.right(int)
+    for (int i = 0; i < list.size(); i++) {
+      Map.Entry<T, U> entry = list.get(i);
+      assertThat(pairList.left(i), is(entry.getKey()));
+      assertThat(pairList.right(i), is(entry.getValue()));
+    }
+
     final List<Map.Entry<T, U>> list2 = new ArrayList<>(pairList);
     assertThat(list2, is(list));
 
@@ -110,8 +122,23 @@ class PairListTest {
 
     // Check PairList.immutable()
     // Skip if there are no null keys or values
-    if (list.stream().noneMatch(e ->
-        e.getKey() == null || e.getValue() == null)) {
+    if (list.stream().anyMatch(e -> e.getKey() == null)) {
+      // PairList.immutable should throw if there are null keys
+      try {
+        Object o = pairList.immutable();
+        fail("expected error, got " + o);
+      } catch (NullPointerException e) {
+        assertThat(e.getMessage(), startsWith("key at index"));
+      }
+    } else if (list.stream().anyMatch(e -> e.getValue() == null)) {
+      // PairList.immutable should throw if there are null values
+      try {
+        Object o = pairList.immutable();
+        fail("expected error, got " + o);
+      } catch (NullPointerException e) {
+        assertThat(e.getMessage(), startsWith("value at index"));
+      }
+    } else {
       final PairList<T, U> immutablePairList = pairList.immutable();
       assertThat(immutablePairList, hasSize(list.size()));
       assertThat(immutablePairList, is(list));
@@ -119,10 +146,6 @@ class PairListTest {
       list2.clear();
       immutablePairList.forEach((k, v) -> list2.add(Pair.of(k, v)));
       assertThat(list2, is(list));
-    } else {
-      // PairList.immutable should throw if there are null keys or values
-      assertThrows(NullPointerException.class,
-          pairList::immutable);
     }
   }
 
@@ -206,6 +229,63 @@ class PairListTest {
     validate(pairList, list);
   }
 
+  @Test void testAddAll() {
+    PairList<String, Integer> pairList = PairList.of();
+
+    // MutablePairList (0 entries)
+    pairList.addAll(PairList.of());
+    assertThat(pairList, hasSize(0));
+
+    // MutablePairList (1 entry)
+    pairList.addAll(PairList.of("a", 1));
+    assertThat(pairList, hasSize(1));
+
+    // MutablePairList (2 entries)
+    pairList.addAll(PairList.of(ImmutableMap.of("b", 2, "c", 3)));
+    assertThat(pairList, hasSize(3));
+
+    // EmptyImmutablePairList
+    pairList.addAll(ImmutablePairList.of());
+    assertThat(pairList, hasSize(3));
+
+    // ImmutableList (0 entries)
+    pairList.addAll(ImmutableList.of());
+    assertThat(pairList, hasSize(3));
+
+    // SingletonImmutablePairList
+    pairList.addAll(ImmutablePairList.of("d", 4));
+    assertThat(pairList, hasSize(4));
+
+    // ImmutableList (1 entry)
+    pairList.addAll(ImmutableList.of(new MapEntry<>("e", 5)));
+    assertThat(pairList, hasSize(5));
+
+    // MutablePairList (2 entries)
+    pairList.addAll(PairList.copyOf("f", 6, "g", 7));
+    assertThat(pairList, hasSize(7));
+
+    // ArrayImmutablePairList (2 entries, created from MutablePairList)
+    pairList.addAll(PairList.copyOf("h", 8, "i", 9).immutable());
+    assertThat(pairList, hasSize(9));
+
+    // ArrayImmutablePairList (3 entries, created using copyOf)
+    pairList.addAll(ImmutablePairList.copyOf("j", 10, "k", 11, "l", 12));
+    assertThat(pairList, hasSize(12));
+
+    // ArrayImmutablePairList (2 entries, created using copyOf)
+    pairList.addAll(ImmutablePairList.copyOf("m", 13, "n", 14));
+    assertThat(pairList, hasSize(14));
+
+    // ArrayImmutablePairList (1 entry, created using copyOf)
+    pairList.addAll(ImmutablePairList.copyOf("o", 15));
+    assertThat(pairList, hasSize(15));
+
+    assertThat(pairList,
+        hasToString("[<a, 1>, <b, 2>, <c, 3>, <d, 4>, <e, 5>, <f, 6>, "
+            + "<g, 7>, <h, 8>, <i, 9>, <j, 10>, <k, 11>, <l, 12>, "
+            + "<m, 13>, <n, 14>, <o, 15>]"));
+  }
+
   /** Tests {@link PairList#of(Map)} and {@link PairList#toImmutableMap()}. */
   @Test void testPairListOfMap() {
     final ImmutableMap<String, Integer> map = ImmutableMap.of("a", 1, "b", 2);
@@ -277,6 +357,8 @@ class PairListTest {
         PairList.copyOf("a", 1, null, 5, "c", 3);
     assertThat(list3.transform((s, i) -> s + i),
         is(Arrays.asList("a1", "null5", "c3")));
+    assertThat(list3.transform2((s, i) -> s + i),
+        is(Arrays.asList("a1", "null5", "c3")));
 
     final PairList<String, Integer> list0 = PairList.of();
     assertThat(list0.transform((s, i) -> s + i), empty());
@@ -327,5 +409,19 @@ class PairListTest {
     list.add(Pair.of("c", null));
     final PairList<String, Integer> list3 = b.build();
     validate(list3, list);
+
+    // Singleton list with null key
+    final PairList.Builder<String, Integer> b2 = PairList.builder();
+    list.clear();
+    b2.add(null, 5);
+    list.add(Pair.of(null, 5));
+    validate(b2.build(), list);
+
+    // Singleton list with null value
+    final PairList.Builder<String, Integer> b3 = PairList.builder();
+    list.clear();
+    b3.add("x", null);
+    list.add(Pair.of("x", null));
+    validate(b3.build(), list);
   }
 }
