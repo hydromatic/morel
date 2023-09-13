@@ -44,6 +44,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.eval.Codes.isNegative;
 import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
 import static net.hydromatic.morel.util.Static.transform;
 
@@ -291,6 +292,26 @@ public class UtilTest {
     assertThat(fn.apply("1.0"), is("1.0"));
     assertThat(fn.apply("-1.234"), is("~1.234"));
     assertThat(fn.apply("-1.234e-10"), is("~1.234E~10"));
+  }
+
+  /** Tests the {@link Codes#isNegative(float)} function,
+   * which is used to implement {@code Real.signBit}. */
+  @SuppressWarnings("ConstantValue")
+  @Test void testFloatBit() {
+    assertThat(isNegative(0f), is(false));
+    assertThat(isNegative(3.5f), is(false));
+    assertThat(isNegative(Float.POSITIVE_INFINITY), is(false));
+    assertThat(isNegative(-0f), is(true));
+    assertThat(isNegative(-10.25f), is(true));
+    assertThat(isNegative(Float.NEGATIVE_INFINITY), is(true));
+
+    // The standard basis library is unclear, but in SMLNJ and Mlton
+    // nan is negative, and we do the same.
+    assertThat(isNegative(Float.NaN), is(true));
+    // In SMLNJ and Mlton ~nan is positive, and we do the same.
+    assertThat(isNegative(Codes.NEGATIVE_NAN), is(false));
+    assertThat(Float.isNaN(Float.NaN), is(true));
+    assertThat(Float.isNaN(Codes.NEGATIVE_NAN), is(true));
   }
 }
 

@@ -87,7 +87,7 @@ fn x => x + 1;
 Sys.plan ();
 > val it = "match(x, apply2(fnValue +, get(name x), constant(1)))" : string
 
-val nan = Real.posInf / Real.negInf;
+val nan = Real.posInf / Real.posInf;
 > val nan = nan : real
 
 (* Datatypes --------------------------------------------------- *)
@@ -1628,16 +1628,18 @@ Real.signBit Real.posInf;
 > val it = false : bool
 Real.signBit Real.negInf;
 > val it = true : bool
-(*) Morel and SMLNJ return true, but spec would suggest false
+(*) In SMLNJ and Mlton, nan is negative; we do the same
 Real.signBit nan;
 > val it = true : bool
-(*) Morel and SMLNJ return false, but spec would suggest true
+(*) In SMLNJ and Mlton, ~nan is positive; we do the same
 Real.signBit (~nan);
 > val it = false : bool
 Sys.plan ();
 > val it =
 >   "apply(fnValue Real.signBit, argCode apply(fnValue ~, argCode constant(NaN)))"
 >   : string
+Real.signBit (~(~nan));
+> val it = true : bool
 
 (* "sameSign (r1, r2)" returns true if and only if signBit r1 equals
    signBit r2. *)
@@ -1854,6 +1856,12 @@ Real.isNan Real.minNormalPos;
 Real.isNan Real.minPos;
 > val it = false : bool
 Real.isNan nan;
+> val it = true : bool
+Real.isNan (~nan);
+> val it = true : bool
+Real.isNan (~(~nan));
+> val it = true : bool
+Real.isNan (nan + 3.0);
 > val it = true : bool
 
 (* "isNormal x" returns true if x is normal, i.e., neither zero, subnormal,

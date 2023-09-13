@@ -83,6 +83,12 @@ public abstract class Codes {
           ? f -> Float.toString(f)
           : Codes::floatToString0;
 
+  /** A special value that represents Standard ML "~NaN". */
+  public static final float NEGATIVE_NAN =
+      Float.intBitsToFloat(
+          Float.floatToRawIntBits(Float.NaN)
+              ^ 0x8000_0000);
+
   private Codes() {}
 
   /** Describes a {@link Code}. */
@@ -203,7 +209,16 @@ public abstract class Codes {
   private static final Applicable Z_NEGATE_REAL =
       new ApplicableImpl(BuiltIn.OP_NEGATE) {
         @Override public Object apply(EvalEnv env, Object arg) {
-          return -((Float) arg);
+          final float f = (Float) arg;
+          if (Float.isNaN(f)) {
+            // ~nan -> nan
+            // nan (or any other value f such that isNan(f)) -> ~nan
+            return Float.floatToRawIntBits(f)
+                == Float.floatToRawIntBits(NEGATIVE_NAN)
+                ? Float.NaN
+                : NEGATIVE_NAN;
+          }
+          return -f;
         }
       };
 
@@ -267,7 +282,11 @@ public abstract class Codes {
   private static final Applicable Z_DIVIDE_REAL =
       new Applicable2<Float, Float, Float>(BuiltIn.OP_DIVIDE) {
         @Override public Float apply(Float a0, Float a1) {
-          return a0 / a1;
+          final float v = a0 / a1;
+          if (Float.isNaN(v)) {
+            return Float.NaN; // normalize NaN
+          }
+          return v;
         }
       };
 
@@ -1795,6 +1814,11 @@ public abstract class Codes {
   private static final Applicable REAL_COPY_SIGN =
       new Applicable2<Float, Float, Float>(BuiltIn.REAL_COPY_SIGN) {
         @Override public Float apply(Float f0, Float f1) {
+          if (Float.isNaN(f1)) {
+            // Emulate SMLNJ/Mlton behavior that nan is negative,
+            // ~nan is positive.
+            f1 = isNegative(f1) ? -1.0f : 1.0f;
+          }
           return Math.copySign(f0, f1);
         }
       };
@@ -2005,10 +2029,23 @@ public abstract class Codes {
   private static final Applicable REAL_SAME_SIGN =
       new Applicable2<Boolean, Float, Float>(BuiltIn.REAL_SAME_SIGN) {
         @Override public Boolean apply(Float x, Float y) {
-          return (Float.floatToRawIntBits(x) & 0x8000_0000)
-              == (Float.floatToRawIntBits(y) & 0x8000_0000);
+          return isNegative(x) == isNegative(y);
         }
       };
+
+  /** Returns whether a {@code float} is negative.
+   * This is the same as the specification of {@code Real.signBit}. */
+  @VisibleForTesting
+  public static boolean isNegative(float f) {
+    final boolean negative =
+        (Float.floatToRawIntBits(f) & 0x8000_0000) == 0x8000_0000;
+    if (Float.isNaN(f)) {
+      // Standard ML/NJ and Mlton treat nan as negative,
+      // and ~nan as positive. Let's do the same.
+      return !negative;
+    }
+    return negative;
+  }
 
   /** @see BuiltIn#REAL_SIGN */
   private static final Applicable REAL_SIGN = new RealSign(Pos.ZERO);
@@ -2039,7 +2076,7 @@ public abstract class Codes {
   private static final Applicable REAL_SIGN_BIT =
       new ApplicableImpl(BuiltIn.REAL_SIGN_BIT) {
         @Override public Boolean apply(EvalEnv env, Object arg) {
-          return (Float.floatToRawIntBits((float) arg) & 0x8000_0000) != 0;
+          return isNegative((Float) arg);
         }
       };
 
