@@ -43,13 +43,13 @@ import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.util.Pair;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;

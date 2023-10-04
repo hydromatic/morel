@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
@@ -209,6 +210,45 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
       size = Math.min(ks.size(), vs.size());
     }
     return new ZipList<>(ks, vs, size);
+  }
+
+  /** Returns whether all pairs match a given predicate. */
+  public static <K, V> boolean allMatch(Iterable<K> ks, Iterable<V> vs,
+      BiPredicate<K, V> predicate) {
+    final Iterator<K> ki = ks.iterator();
+    final Iterator<V> vi = vs.iterator();
+    while (ki.hasNext() && vi.hasNext()) {
+      if (!predicate.test(ki.next(), vi.next())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Returns whether no pair matches a given predicate. */
+  public static <K, V> boolean noneMatch(Iterable<K> ks, Iterable<V> vs,
+      BiPredicate<K, V> predicate) {
+    final Iterator<K> ki = ks.iterator();
+    final Iterator<V> vi = vs.iterator();
+    while (ki.hasNext() && vi.hasNext()) {
+      if (predicate.test(ki.next(), vi.next())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Returns whether any pair matches a given predicate. */
+  public static <K, V> boolean anyMatch(Iterable<K> ks, Iterable<V> vs,
+      BiPredicate<K, V> predicate) {
+    final Iterator<K> ki = ks.iterator();
+    final Iterator<V> vi = vs.iterator();
+    while (ki.hasNext() && vi.hasNext()) {
+      if (predicate.test(ki.next(), vi.next())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Calls a consumer for each pair of items in two iterables. */

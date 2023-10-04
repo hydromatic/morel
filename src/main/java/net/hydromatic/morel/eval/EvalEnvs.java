@@ -31,6 +31,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import javax.annotation.Nullable;
 
+import static net.hydromatic.morel.util.Pair.allMatch;
 import static net.hydromatic.morel.util.Pair.zip;
 import static net.hydromatic.morel.util.Static.skip;
 
@@ -214,12 +215,7 @@ public class EvalEnvs {
       case TUPLE_PAT:
         final Core.TuplePat tuplePat = (Core.TuplePat) pat;
         listValue = (List) argValue;
-        for (Pair<Core.Pat, Object> pair : zip(tuplePat.args, listValue)) {
-          if (!bindRecurse(pair.left, pair.right)) {
-            return false;
-          }
-        }
-        return true;
+        return allMatch(tuplePat.args, listValue, this::bindRecurse);
 
       case RECORD_PAT:
         final Core.RecordPat recordPat = (Core.RecordPat) pat;

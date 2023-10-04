@@ -24,11 +24,11 @@ import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.util.Folder;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
 
 import org.apache.calcite.util.ImmutableIntList;
-import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -312,6 +313,27 @@ public class UtilTest {
     assertThat(isNegative(Codes.NEGATIVE_NAN), is(false));
     assertThat(Float.isNaN(Float.NaN), is(true));
     assertThat(Float.isNaN(Codes.NEGATIVE_NAN), is(true));
+  }
+
+  @Test void testPairAllMatch() {
+    final List<Integer> list1 = Arrays.asList(1, 3, 5);
+    final List<Integer> list2 = Arrays.asList(2, 3, 4);
+    final List<Integer> list0 = Collections.emptyList();
+    assertThat(Pair.anyMatch(list1, list2, Objects::equals), is(true));
+    assertThat(Pair.allMatch(list1, list2, Objects::equals), is(false));
+    assertThat(Pair.noneMatch(list1, list2, Objects::equals), is(false));
+
+    assertThat(Pair.anyMatch(list1, list2, (i, j) -> i == 0), is(false));
+    assertThat(Pair.allMatch(list1, list2, (i, j) -> i == 0), is(false));
+    assertThat(Pair.noneMatch(list1, list2, (i, j) -> i == 0), is(true));
+
+    assertThat(Pair.anyMatch(list1, list2, (i, j) -> i > 0), is(true));
+    assertThat(Pair.allMatch(list1, list2, (i, j) -> i > 0), is(true));
+    assertThat(Pair.noneMatch(list1, list2, (i, j) -> i > 0), is(false));
+
+    assertThat(Pair.anyMatch(list0, list0, (i, j) -> true), is(false));
+    assertThat(Pair.allMatch(list0, list0, (i, j) -> true), is(true));
+    assertThat(Pair.noneMatch(list0, list0, (i, j) -> true), is(true));
   }
 }
 

@@ -18,9 +18,10 @@
  */
 package net.hydromatic.morel.ast;
 
+import net.hydromatic.morel.util.Pair;
+
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.mapping.IntPair;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
