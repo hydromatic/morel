@@ -40,7 +40,7 @@ jobs:
         javadoc: [ false ]
         include:
           - java-version: "8"
-            guava-version: "19.0"
+            guava-version: "21.0"
             hsqldb-version: "2.5.1"
             checkstyle-version: "9.3"
             javadoc: false
@@ -48,7 +48,7 @@ jobs:
             guava-version: "23.0"
             javadoc: true
           - java-version: "17"
-            guava-version: "31.1-jre"
+            guava-version: "32.1.2-jre"
             javadoc: false
             checkstyle-version: ""
           - java-version: "18"
