@@ -29,7 +29,7 @@ public enum DummyType implements Type {
   INSTANCE;
 
   public Key key() {
-    return Keys.name("");
+    return Keys.dummy();
   }
 
   public Op op() {

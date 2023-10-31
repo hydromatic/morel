@@ -310,7 +310,7 @@ implicit labels. For instance,
 from e in emps
   group e.deptno compute sum of e.salary, count
 ```
-is short-hand for
+is shorthand for
 ```
 from e in emps
   group deptno = e.deptno compute sum = sum of e.salary, count = count

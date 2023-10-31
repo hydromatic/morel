@@ -30,9 +30,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import java.lang.reflect.Field;
 import java.util.AbstractList;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -43,12 +41,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
-import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 
 /** A table that contains all types in use, indexed by their description (e.g.
@@ -58,7 +53,7 @@ public class TypeSystem {
   final Map<String, Type> internalTypeByName = new HashMap<>();
   final Map<Key, Type> typeByKey = new HashMap<>();
 
-  private final Map<String, Pair<DataType, Type>> typeConstructorByName =
+  private final Map<String, Pair<DataType, Type.Key>> typeConstructorByName =
       new HashMap<>();
 
   public final NameGenerator nameGenerator = new NameGenerator();
@@ -69,19 +64,9 @@ public class TypeSystem {
     }
   }
 
-  ImmutableSortedMap<String, Type> copyTypeConstructors(
-      @Nonnull SortedMap<String, Type> typeConstructors,
-      @Nonnull UnaryOperator<Type> transform) {
-    final ImmutableSortedMap.Builder<String, Type> builder =
-        ImmutableSortedMap.naturalOrder();
-    typeConstructors.forEach((k, v) ->
-        builder.put(k, v.copy(this, transform)));
-    return builder.build();
-  }
-
   /** Creates a binding of a type constructor value. */
   public Binding bindTyCon(DataType dataType, String tyConName) {
-    final Type type = dataType.typeConstructors.get(tyConName);
+    final Type type = dataType.typeConstructors(this).get(tyConName);
     if (type == DummyType.INSTANCE) {
       return Binding.of(core.idPat(dataType, tyConName, 0),
           Codes.constant(ComparableSingletonList.of(tyConName)));
@@ -97,7 +82,7 @@ public class TypeSystem {
         dataType.parameterTypes.stream().filter(t -> t instanceof TypeVar)
             .map(t -> (TypeVar) t)
             .collect(toImmutableList());
-    return typeVars.isEmpty() ? type : forallType(typeVars, type);
+    return typeVars.isEmpty() ? type : forallType(typeVars.size(), type);
   }
 
   /** Looks up an internal type by name. */
@@ -128,12 +113,27 @@ public class TypeSystem {
 
   /** Gets a type that matches a key, creating if necessary. */
   public Type typeFor(Key key) {
-    return typeByKey.computeIfAbsent(key, this::keyToType);
+    Type type = typeByKey.get(key);
+    if (type == null) {
+      type = key.toType(this);
+      typeByKey.putIfAbsent(key, type);
+    }
+    return type;
   }
 
-  /** Creates a type from a key. */
-  private Type keyToType(Key key) {
-    return key.toType(this);
+  /** Converts a list of keys to a list of types. */
+  public List<Type> typesFor(Iterable<? extends Key> keys) {
+    final ImmutableList.Builder<Type> types = ImmutableList.builder();
+    keys.forEach(key -> types.add(key.toType(this)));
+    return types.build();
+  }
+
+  /** Converts a map of keys to a map of types. */
+  public SortedMap<String, Type> typesFor(Map<String, ? extends Key> keys) {
+    final ImmutableSortedMap.Builder<String, Type> types =
+        ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+    keys.forEach((name, key) -> types.put(name, key.toType(this)));
+    return types.build();
   }
 
   /** Creates a multi-step function type.
@@ -158,7 +158,7 @@ public class TypeSystem {
 
   /** Creates a function type. */
   public FnType fnType(Type paramType, Type resultType) {
-    return (FnType) typeFor(Keys.fn(paramType, resultType));
+    return (FnType) typeFor(Keys.fn(paramType.key(), resultType.key()));
   }
 
   /** Creates a tuple type from an array of types. */
@@ -168,99 +168,72 @@ public class TypeSystem {
 
   /** Creates a tuple type. */
   public RecordLikeType tupleType(List<? extends Type> argTypes) {
-    return (RecordLikeType) typeFor(Keys.tuple(argTypes));
+    return (RecordLikeType) typeFor(Keys.tuple(Keys.toKeys(argTypes)));
   }
 
   /** Creates a list type. */
   public ListType listType(Type elementType) {
-    return (ListType) typeFor(Keys.list(elementType));
+    return (ListType) typeFor(Keys.list(elementType.key()));
   }
 
   /** Creates several data types simultaneously. */
-  public List<Type> dataTypes(List<Keys.DataTypeDef> defs) {
-    return dataTypes(defs, (type, typeMap) -> {
-      if (type instanceof DataType) {
-        final DataType dataType = (DataType) type;
-        setTypeConstructors(dataType,
-            copyTypeConstructors(dataType.typeConstructors,
-                t -> t instanceof TemporaryType ? typeMap.get(t.key()) : t));
-      }
-    });
-  }
+  public List<Type> dataTypes(List<Keys.DataTypeKey> keys) {
+    final Map<Type.Key, DataType> dataTypeMap = new LinkedHashMap<>();
+    keys.forEach(key -> {
+      final DataType dataType = key.toType(this);
+      final Key nameKey = Keys.name(dataType.name);
+      typeByKey.put(nameKey, dataType);
 
-  /** Sets the {@link DataType#typeConstructors} field of a newly constructed
-   * {@link DataType}.
-   *
-   * <p>The field is {@code public final}, which is for the greater good; the
-   * assignment occurs immediately after construction, before anyone sees the
-   * {@link DataType} instance, so is safe. We would have assigned the field
-   * in the constructor if we did not have to deal with datatypes that refer
-   * to each other, like this:
-   *
-   * <pre>{@code
-   * datatype 'a tree = Empty | Node of 'a * 'a forest
-   * and      'a forest = Nil | Cons of 'a tree * 'a forest;
-   * }</pre> */
-  private static void setTypeConstructors(DataType dataType,
-      ImmutableSortedMap<String, Type> typeConstructors) {
-    try {
-      final Field field = DataType.class.getDeclaredField("typeConstructors");
-      field.setAccessible(true);
-      field.set(dataType, typeConstructors);
-      field.setAccessible(false);
-    } catch (NoSuchFieldException | IllegalAccessException e) {
-      throw new AssertionError(e);
-    }
-  }
-
-  private List<Type> dataTypes(List<Keys.DataTypeDef> defs, DataTypeFixer fixer) {
-    final Map<Type.Key, Type> dataTypeMap = new LinkedHashMap<>();
-    defs.forEach(def -> {
-      final Key key;
-      final Type type;
-      if (def.scheme) {
-        key = Keys.name(def.name);
-        type = def.toType(this);
-        typeByKey.put(key, type);
-      } else {
-        final ForallType type1 = (ForallType) lookup(def.name);
-        key = Keys.forallTypeApply(type1, def.types);
-        type = typeFor(key);
-      }
-      dataTypeMap.put(key, type);
+      dataType.typeConstructors.forEach((name, typeKey) ->
+          typeConstructorByName.put(name, Pair.of(dataType, typeKey)));
+      dataTypeMap.put(nameKey, dataType);
     });
+
     final ImmutableList.Builder<Type> types = ImmutableList.builder();
-    forEach(defs, dataTypeMap.values(), (def, dataType) -> {
-      fixer.apply(dataType, dataTypeMap);
-      if (def.scheme) {
-        if (!def.types.isEmpty()
-            && def.types.equals(typeVariables(def.types.size()))) {
-          // We have just created an entry for the moniker (e.g. "'a option"),
-          // so now create an entry for the name (e.g. "option").
-          @SuppressWarnings({"rawtypes", "unchecked"})
-          final List<TypeVar> typeVars = (List) def.types;
-          final ForallType forallType = forallType(typeVars, dataType);
-          typeByName.put(def.name, forallType);
-          types.add(forallType);
-        } else {
-          if (def.types.isEmpty()) {
-            typeByName.put(def.name, dataType);
-          }
-          types.add(dataType);
-        }
-      } else {
-        types.add(dataType);
-      }
+    dataTypeMap.values().forEach(dataType -> {
+      // We have just created an entry for the moniker (e.g. "'a option"),
+      // so now create an entry for the name (e.g. "option").
+      Type t =
+          dataType.arguments.isEmpty() ? dataType
+              : forallType(dataType.arguments.size(), dataType);
+      typeByName.put(dataType.name, t);
+      types.add(t);
     });
     return types.build();
   }
 
-  DataType dataType(String name, Key key, List<? extends Type> types,
-      SortedMap<String, Type> tyCons) {
-    final DataType dataType = new DataType(name, key,
-        ImmutableList.copyOf(types), ImmutableSortedMap.copyOf(tyCons));
-    tyCons.forEach((name3, type) ->
-        typeConstructorByName.put(name3, Pair.of(dataType, type)));
+  /** Creates an algebraic type.
+   *
+   * <p>Parameter types is empty unless this is a type scheme.
+   * For example,
+   *
+   * <ul>
+   *   <li>{@code datatype 'a option = NONE | SOME of 'a} has
+   *   parameter types and argument types {@code ['a]},
+   *   type constructors {@code [NONE: dummy, SOME: 'a]};
+   *   <li>{@code int option} has empty parameter types,
+   *   argument types {@code [int]},
+   *   type constructors {@code [NONE: dummy, SOME: int]};
+   *   <li>{@code datatype color = RED | GREEN} has
+   *   empty parameter types and argument types,
+   *   type constructors {@code [RED: dummy, GREEN: dummy]}.
+   * </ul>
+   *
+   * @param name Name (e.g. "option")
+   * @param argumentTypes Argument types
+   * @param tyCons Type constructors
+   */
+  DataType dataType(String name, List<? extends Type> argumentTypes,
+      SortedMap<String, Key> tyCons) {
+    final String moniker = DataType.computeMoniker(name, argumentTypes);
+    final DataType dataType =
+        new DataType(Op.DATA_TYPE, name, moniker, argumentTypes, tyCons);
+    if (argumentTypes.isEmpty()) {
+      // There are no type parameters, therefore there will be no ForallType to
+      // register its type constructors, so this DataType needs to register.
+      tyCons.forEach((name3, typeKey) ->
+          typeConstructorByName.put(name3, Pair.of(dataType, typeKey)));
+    }
     return dataType;
   }
 
@@ -271,21 +244,14 @@ public class TypeSystem {
     internalTypeByName.put(name, type);
   }
 
-  /** Replaces temporary data types with real data types, using the supplied
-   * map. */
-  @FunctionalInterface
-  private interface DataTypeFixer {
-    void apply(Type type, Map<Key, Type> typeMap);
-  }
-
   /** Creates a data type scheme: a datatype if there are no type arguments
    * (e.g. "{@code ordering}"), or a forall type if there are type arguments
    * (e.g. "{@code forall 'a . 'a option}"). */
-  public Type dataTypeScheme(String name, List<TypeVar> typeParameters,
-      SortedMap<String, Type> tyCons) {
-    final Keys.DataTypeDef def =
-        Keys.dataTypeDef(name, typeParameters, tyCons, true);
-    return dataTypes(ImmutableList.of(def)).get(0);
+  public Type dataTypeScheme(String name, List<TypeVar> parameters,
+      SortedMap<String, Type.Key> tyCons) {
+    final List<Key> keys = Keys.toKeys(parameters);
+    final Keys.DataTypeKey key = Keys.datatype(name, keys, tyCons);
+    return dataTypes(ImmutableList.of(key)).get(0);
   }
 
   /** Creates a record type, or returns a scalar type if {@code argNameTypes}
@@ -312,7 +278,7 @@ public class TypeSystem {
         && argNameTypes2.size() != 1) {
       return tupleType(ImmutableList.copyOf(argNameTypes2.values()));
     }
-    return (RecordLikeType) typeFor(Keys.record(argNameTypes2));
+    return (RecordLikeType) typeFor(Keys.record(Keys.toKeys(argNameTypes2)));
   }
 
   /** Returns whether the collection is ["1", "2", ... n]. */
@@ -328,10 +294,9 @@ public class TypeSystem {
 
   /** Creates a "forall" type. */
   public Type forallType(int typeCount, Function<ForallHelper, Type> builder) {
-    final List<TypeVar> typeVars = typeVariables(typeCount);
     final ForallHelper helper = new ForallHelper() {
       public TypeVar get(int i) {
-        return typeVars.get(i);
+        return typeVariable(i);
       }
 
       public ListType list(int i) {
@@ -351,59 +316,46 @@ public class TypeSystem {
       }
     };
     final Type type = builder.apply(helper);
-    return forallType(typeVars, type);
+    return forallType(typeCount, type);
   }
 
   /** Creates a "for all" type. */
-  public ForallType forallType(List<TypeVar> typeVars, Type type) {
-    assert typeVars.equals(typeVariables(typeVars.size()));
-    final Key key = Keys.forall(type, typeVars);
+  public ForallType forallType(int typeCount, Type type) {
+    final Key key = Keys.forall(type, typeCount);
     return (ForallType) typeFor(key);
   }
 
   static StringBuilder unparseList(StringBuilder builder, Op op, int left,
-      int right, Collection<? extends Type> argTypes) {
-    forEachIndexed(argTypes, (type, i) -> {
-      if (i > 0) {
-        builder.append(op.padded);
-      }
-      unparse(builder, type,
-          i == 0 ? left : op.right,
-          i == argTypes.size() - 1 ? right : op.left);
-    });
+      int right, Collection<? extends Type.Key> argTypes) {
+    if (op == Op.COMMA && argTypes.size() != 1 && !(left == 0 && right == 0)) {
+      builder.append('(');
+      unparseList(builder, op, 0, 0, argTypes);
+      builder.append(')');
+    } else {
+      forEachIndexed(argTypes, (type, i) -> {
+        if (i > 0) {
+          builder.append(op.padded);
+        }
+        unparse(builder, type,
+            i == 0 ? left : op.right,
+            i == argTypes.size() - 1 ? right : op.left);
+      });
+    }
     return builder;
   }
 
-  static StringBuilder unparse(StringBuilder builder, Type type, int left,
+  static StringBuilder unparse(StringBuilder builder, Type.Key type, int left,
       int right) {
-    final Op op = type.op();
-    if (left > op.left || op.right < right) {
-      return builder.append("(").append(type.moniker()).append(")");
+    if (left > type.op.left || type.op.right < right) {
+      builder.append("(");
+      unparse(builder, type, 0, 0);
+      return builder.append(")");
     } else {
-      return builder.append(type.moniker());
+      return type.describe(builder, left, right);
     }
   }
 
-  /** Creates a temporary type.
-   *
-   * <p>(Temporary types exist for a brief period while defining a recursive
-   * {@code datatype}.) */
-  public TemporaryType temporaryType(String name,
-      List<? extends Type> parameterTypes, Transaction transaction_,
-      boolean withScheme) {
-    final TemporaryType temporaryType =
-        new TemporaryType(name, parameterTypes);
-    final TransactionImpl transaction = (TransactionImpl) transaction_;
-    transaction.put(temporaryType.moniker, temporaryType);
-    if (withScheme && !parameterTypes.isEmpty()) {
-      final List<TypeVar> typeVars = typeVariables(parameterTypes.size());
-      transaction.put(name,
-          new ForallType(ImmutableList.copyOf(typeVars), temporaryType));
-    }
-    return temporaryType;
-  }
-
-  private List<TypeVar> typeVariables(int size) {
+  public List<TypeVar> typeVariables(int size) {
     return new AbstractList<TypeVar>() {
       public int size() {
         return size;
@@ -415,7 +367,7 @@ public class TypeSystem {
     };
   }
 
-  public Pair<DataType, Type> lookupTyCon(String tyConName) {
+  public Pair<DataType, Type.Key> lookupTyCon(String tyConName) {
     return typeConstructorByName.get(tyConName);
   }
 
@@ -424,34 +376,15 @@ public class TypeSystem {
   }
 
   public Type apply(Type type, List<Type> types) {
-    if (type instanceof TemporaryType) {
-      final TemporaryType temporaryType = (TemporaryType) type;
-      if (types.equals(temporaryType.parameterTypes)) {
-        return type;
-      }
-      throw new AssertionError();
-    }
     if (type instanceof ForallType) {
       final ForallType forallType = (ForallType) type;
-      try (Transaction transaction = transaction()) {
-        return forallType.type.substitute(this, types, transaction);
-      }
+      return forallType.substitute(this, types);
     }
     if (type instanceof DataType) {
       final DataType dataType = (DataType) type;
-      try (Transaction transaction = transaction()) {
-        return dataType.substitute(this, types, transaction);
-      }
+      return dataType.substitute(this, types);
     }
-    if (type instanceof ApplyType
-        && ((ApplyType) type).type instanceof DataType) {
-      final ApplyType applyType = (ApplyType) type;
-      final DataType dataType = (DataType) applyType.type;
-      try (Transaction transaction = transaction()) {
-        return dataType.substitute(this, types, transaction);
-      }
-    }
-    return new ApplyType((ParameterizedType) type, ImmutableList.copyOf(types));
+    throw new AssertionError();
   }
 
   /** Creates a type variable. */
@@ -461,7 +394,7 @@ public class TypeSystem {
 
   /** Creates an "option" type.
    *
-   * <p>"option(type)" is short-hand for "apply(lookup("option"), type)". */
+   * <p>"option(type)" is shorthand for "apply(lookup("option"), type)". */
   public Type option(Type type) {
     final Type optionType = lookup("option");
     return apply(optionType, type);
@@ -469,7 +402,7 @@ public class TypeSystem {
 
   /** Creates a "vector" type.
    *
-   * <p>"vector(type)" is short-hand for "apply(lookup("vector"), type)". */
+   * <p>"vector(type)" is shorthand for "apply(lookup("vector"), type)". */
   public Type vector(Type type) {
     final Type vectorType = lookup("vector");
     return apply(vectorType, type);
@@ -487,32 +420,6 @@ public class TypeSystem {
     return forallType(collector.vars.size(), h ->
         type.copy(ts, t ->
             t instanceof TypeVar ? h.get(((TypeVar) t).ordinal) : t));
-  }
-
-  public TypeSystem.Transaction transaction() {
-    return new TransactionImpl();
-  }
-
-  /** Holds temporary changes to the type system. */
-  public interface Transaction extends AutoCloseable {
-    void close();
-  }
-
-  /** Implementation of {@link Transaction}. */
-  private class TransactionImpl implements Transaction {
-    final List<String> names = new ArrayList<>();
-
-    void put(String moniker, Type type) {
-      typeByName.put(moniker, Objects.requireNonNull(type));
-      names.add(moniker);
-    }
-
-    public void close() {
-      for (String name : names) {
-        typeByName.remove(name);
-      }
-      names.clear();
-    }
   }
 
   /** Visitor that finds all {@link TypeVar} instances within a {@link Type}. */

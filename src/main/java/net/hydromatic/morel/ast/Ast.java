@@ -616,7 +616,7 @@ public class Ast {
   public static class RecordType extends Type {
     public final Map<String, Type> fieldTypes;
 
-    /** Creates a TyVar. */
+    /** Creates a record type. */
     RecordType(Pos pos, ImmutableMap<String, Type> fieldTypes) {
       super(pos, Op.RECORD_TYPE);
       this.fieldTypes = requireNonNull(fieldTypes);

@@ -23,6 +23,8 @@ import net.hydromatic.morel.ast.Op;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
+import static java.util.Objects.requireNonNull;
+
 /** Type. */
 public interface Type {
   /** Description of the type, e.g. "{@code int}", "{@code int -> int}",
@@ -38,7 +40,7 @@ public interface Type {
    * <p>Use the description if you are looking for a type that is structurally
    * equivalent. Use the moniker to identify it when printing. */
   default String moniker() {
-    return key().moniker();
+    return key().toString();
   }
 
   /** Type operator. */
@@ -52,8 +54,7 @@ public interface Type {
 
   /** Returns a copy of this type, specialized by substituting type
    * parameters. */
-  default Type substitute(TypeSystem typeSystem, List<? extends Type> types,
-      TypeSystem.Transaction transaction) {
+  default Type substitute(TypeSystem typeSystem, List<? extends Type> types) {
     if (types.isEmpty()) {
       return this;
     }
@@ -66,21 +67,40 @@ public interface Type {
   }
 
   /** Structural identifier of a type. */
-  interface Key {
-    Type toType(TypeSystem typeSystem);
+  abstract class Key {
+    final Op op;
 
-    default String moniker() {
+    /** Creates a key. */
+    protected Key(Op op) {
+      this.op = requireNonNull(op);
+    }
+
+    /** Returns a description of this key.
+     *
+     * <p>The default implementation calls
+     * {@link #describe(StringBuilder, int, int)}, but subclasses may override
+     * to provide a more efficient implementation. */
+    @Override public String toString() {
       return describe(new StringBuilder(), 0, 0).toString();
     }
 
-    StringBuilder describe(StringBuilder buf, int left, int right);
-  }
+    /** Writes a description of this key to a string builder. */
+    abstract StringBuilder describe(StringBuilder buf, int left, int right);
 
-  /** Definition of a type. */
-  interface Def {
-    StringBuilder describe(StringBuilder buf);
+    /** Converts this key to a type, and ensures that it is registered in the
+     * type system. */
+    public abstract Type toType(TypeSystem typeSystem);
 
-    DataType toType(TypeSystem typeSystem);
+    /** If this is a type variable {@code ordinal}, returns the
+     * {@code ordinal}th type in the list, otherwise this. */
+    Key substitute(List<? extends Type> types) {
+      return this;
+    }
+
+    /** Copies this key, applying a transform to constituent keys. */
+    Key copy(UnaryOperator<Key> transform) {
+      return this;
+    }
   }
 }
 

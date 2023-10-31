@@ -68,6 +68,7 @@ import java.util.function.Supplier;
 import static net.hydromatic.morel.ast.Ast.Direction.DESC;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.str;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 import static net.hydromatic.morel.util.Static.transform;
 
@@ -593,11 +594,8 @@ public class Compiler {
         final List<Binding> immutableBindings =
             ImmutableList.copyOf(newBindings);
         actions.add((outLines, outBindings, evalEnv) -> {
-          final StringBuilder buf =
-              new StringBuilder().append("datatype ")
-                  .append(dataType.moniker).append(" = ");
-          dataType.def().describe(buf);
-          outLines.accept(buf.toString());
+          String line = dataType.describe(new StringBuilder()).toString();
+          outLines.accept(line);
           immutableBindings.forEach(outBindings);
         });
       }
@@ -727,18 +725,16 @@ public class Compiler {
                         stringDepth);
                 pretty.pretty(buf, pat2.type,
                     new Pretty.TypedVal(pat2.name, o2, pat2.type));
-                final String out = buf.toString();
-                buf.setLength(0);
-                outs.add(out);
-                outLines.accept(out);
+                final String line = str(buf);
+                outs.add(line);
+                outLines.accept(line);
               }
             });
           } catch (Codes.MorelRuntimeException e) {
             session.handle(e, buf);
-            final String out = buf.toString();
-            buf.setLength(0);
-            outs.add(out);
-            outLines.accept(out);
+            final String line = str(buf);
+            outs.add(line);
+            outLines.accept(line);
           }
           session.code = code;
           session.out = ImmutableList.copyOf(outs);

@@ -58,6 +58,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import static net.hydromatic.morel.util.Static.str;
+
 import static java.util.Objects.requireNonNull;
 
 /** Standard ML REPL. */
@@ -122,8 +124,7 @@ public class Main {
   private static Reader stripOutLines(Reader in) {
     final StringBuilder b = new StringBuilder();
     readerToString(in, b);
-    final String s = b.toString();
-    b.setLength(0);
+    final String s = str(b);
     for (int i = 0, n = s.length();;) {
       int j0 = i == 0 && s.startsWith("> ") ? 0 : -1;
       int j1 = s.indexOf("\n> ", i);
@@ -373,9 +374,7 @@ public class Main {
     }
 
     public String flush() {
-      final String s = buf.toString();
-      buf.setLength(0);
-      return s;
+      return str(buf);
     }
   }
 }

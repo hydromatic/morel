@@ -98,6 +98,11 @@ public class Core {
       return type;
     }
 
+    /** Returns the type's key. */
+    public Type.Key typeKey() {
+      return type().key();
+    }
+
     @Override public abstract Pat accept(Shuttle shuttle);
   }
 

@@ -34,7 +34,7 @@ public class ListType extends BaseType {
   }
 
   @Override public Key key() {
-    return Keys.list(elementType);
+    return Keys.list(elementType.key());
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {

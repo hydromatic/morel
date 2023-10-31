@@ -210,7 +210,7 @@ class PatternCoverageChecker {
   }
 
   private Sat.Variable typeConstructorTerm(Path path, String con) {
-    final Pair<DataType, Type> pair = typeSystem.lookupTyCon(con);
+    final Pair<DataType, Type.Key> pair = typeSystem.lookupTyCon(con);
     final DataType dataType = pair.left;
     DataTypeSlot slot =
         pathSlots.computeIfAbsent(path,

@@ -190,6 +190,13 @@ public class Static {
     }
     return list2.build();
   }
+
+  /** Flushes a builder and returns its contents. */
+  public static String str(StringBuilder b) {
+    String s = b.toString();
+    b.setLength(0);
+    return s;
+  }
 }
 
 // End Static.java

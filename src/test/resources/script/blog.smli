@@ -44,7 +44,7 @@ val filter = List.filter;
 (*) label application, or field reference. Thus
 {#deptno e, e.name, d};
 > val it = {d=10,deptno=10,name="Fred"} : {d:int, deptno:int, name:string}
-(*) is short-hand for
+(*) is shorthand for
 {deptno = #deptno e, name = e.name, d = d};
 > val it = {d=10,deptno=10,name="Fred"} : {d:int, deptno:int, name:string}
 

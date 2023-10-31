@@ -19,7 +19,6 @@
 package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
-import net.hydromatic.morel.util.Ord;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -27,17 +26,16 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
 
-/** The type of a record value. */
+/** Record type. */
 public class RecordType extends BaseType implements RecordLikeType {
   public final SortedMap<String, Type> argNameTypes;
 
-  RecordType(ImmutableSortedMap<String, Type> argNameTypes) {
+  RecordType(SortedMap<String, Type> argNameTypes) {
     super(Op.RECORD_TYPE);
-    this.argNameTypes = Objects.requireNonNull(argNameTypes);
+    this.argNameTypes = ImmutableSortedMap.copyOfSorted(argNameTypes);
     Preconditions.checkArgument(argNameTypes.comparator() == ORDERING);
   }
 
@@ -55,7 +53,7 @@ public class RecordType extends BaseType implements RecordLikeType {
   }
 
   public Key key() {
-    return Keys.record(argNameTypes);
+    return Keys.record(Keys.toKeys(argNameTypes));
   }
 
   @Override public RecordType copy(TypeSystem typeSystem,
@@ -107,7 +105,7 @@ public class RecordType extends BaseType implements RecordLikeType {
     final int length = s.length();
     if (length > 9) {
       // We treat values that are 1 billion (1,000,000,000) or higher as if they
-      // are Integer.MAX_VALUE (2,147,483,648). Therefore we do not need to
+      // are Integer.MAX_VALUE (2,147,483,648). Therefore, we do not need to
       // check for overflow in the loop below.
       return Integer.MAX_VALUE;
     }
@@ -121,18 +119,6 @@ public class RecordType extends BaseType implements RecordLikeType {
       n = n * 10 + digit;
     }
     return n;
-  }
-
-  /** Returns the index of a given field, or -1. */
-  public Ord<Type> lookupField(String fieldName) {
-    int i = 0;
-    for (Map.Entry<String, Type> e : argNameTypes.entrySet()) {
-      if (e.getKey().equals(fieldName)) {
-        return Ord.of(i, e.getValue());
-      }
-      ++i;
-    }
-    return null;
   }
 }
 

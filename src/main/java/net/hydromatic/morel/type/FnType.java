@@ -34,7 +34,7 @@ public class FnType extends BaseType {
   }
 
   public Key key() {
-    return Keys.fn(paramType, resultType);
+    return Keys.fn(paramType.key(), resultType.key());
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {

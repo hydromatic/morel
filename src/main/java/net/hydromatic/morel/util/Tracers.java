@@ -22,6 +22,8 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.Objects;
 
+import static net.hydromatic.morel.util.Static.str;
+
 /** Implementations of {@link net.hydromatic.morel.util.Unifier.Tracer}. */
 public class Tracers {
 
@@ -67,9 +69,8 @@ public class Tracers {
     }
 
     private void flush() {
-      w.println(b.toString());
+      w.println(str(b));
       w.flush();
-      b.setLength(0);
     }
 
     public void onDelete(Unifier.Term left, Unifier.Term right) {

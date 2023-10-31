@@ -23,21 +23,17 @@ import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
-import net.hydromatic.morel.type.ApplyType;
 import net.hydromatic.morel.type.DataType;
-import net.hydromatic.morel.type.DummyType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.Keys;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
-import net.hydromatic.morel.type.TemporaryType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
-import net.hydromatic.morel.util.ConsList;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MartelliUnifier;
 import net.hydromatic.morel.util.Ord;
@@ -90,7 +86,6 @@ public class TypeResolver {
   private final Map<AstNode, Unifier.Term> map = new HashMap<>();
   private final Map<Unifier.Variable, Unifier.Action> actionMap =
       new HashMap<>();
-  private final Map<String, TypeVar> tyVarMap = new HashMap<>();
   private final PairList<Unifier.Variable, PrimitiveType> preferredTypes =
       PairList.of();
 
@@ -98,7 +93,6 @@ public class TypeResolver {
   static final String LIST_TY_CON = "list";
   static final String RECORD_TY_CON = "record";
   static final String FN_TY_CON = "fn";
-  static final String APPLY_TY_CON = "apply";
 
   private TypeResolver(TypeSystem typeSystem) {
     this.typeSystem = Objects.requireNonNull(typeSystem);
@@ -112,7 +106,12 @@ public class TypeResolver {
 
   /** Converts a type AST to a type. */
   public static Type toType(Ast.Type type, TypeSystem typeSystem) {
-    return new TypeResolver(typeSystem).toType(type);
+    return typeSystem.typeFor(toTypeKey(type));
+  }
+
+  /** Converts a type AST to a type key. */
+  public static Type.Key toTypeKey(Ast.Type type) {
+    return new Foo().toTypeKey(type);
   }
 
   private Resolved deduceType_(Environment env, Ast.Decl decl) {
@@ -310,23 +309,23 @@ public class TypeResolver {
       // "(from exp: v50 as id: v60 [, exp: v51 as id: v61]...
       //  [where filterExp: v5] [yield yieldExp: v4]): v"
       final Ast.From from = (Ast.From) node;
-      env2 = env;
+      TypeEnv env3 = env;
       final Map<Ast.Id, Unifier.Variable> fieldVars = new LinkedHashMap<>();
       final List<Ast.FromStep> fromSteps = new ArrayList<>();
       for (Ord<Ast.FromStep> step : Ord.zip(from.steps)) {
         Pair<TypeEnv, Unifier.Variable> p =
-            deduceStepType(env, step.e, v3, env2, fieldVars, fromSteps);
+            deduceStepType(env, step.e, v3, env3, fieldVars, fromSteps);
         if (step.e.op == Op.COMPUTE
             && step.i != from.steps.size() - 1) {
           throw new AssertionError("'compute' step must be last in 'from'");
         }
-        env2 = p.left;
+        env3 = p.left;
         v3 = p.right;
       }
       final Ast.Exp yieldExp2;
       if (from.implicitYieldExp != null) {
         v3 = unifier.variable();
-        yieldExp2 = deduceType(env2, from.implicitYieldExp, v3);
+        yieldExp2 = deduceType(env3, from.implicitYieldExp, v3);
       } else {
         Objects.requireNonNull(v3);
         yieldExp2 = null;
@@ -751,30 +750,19 @@ public class TypeResolver {
   private Ast.Decl deduceDataTypeDeclType(TypeEnv env,
       Ast.DatatypeDecl datatypeDecl,
       Map<Ast.IdPat, Unifier.Term> termMap) {
-    final List<DatatypeBindWorkspace> workspaces = new ArrayList<>();
-    try (TypeSystem.Transaction transaction = typeSystem.transaction()) {
-      for (Ast.DatatypeBind datatypeBind : datatypeDecl.binds) {
-        final List<TypeVar> typeVars = new ArrayList<>();
-        for (Ast.TyVar tyVar : datatypeBind.tyVars) {
-          typeVars.add((TypeVar) toType(tyVar));
-        }
-        final TemporaryType temporaryType =
-            typeSystem.temporaryType(datatypeBind.name.name, typeVars,
-                transaction, true);
-        workspaces.add(new DatatypeBindWorkspace(temporaryType));
-      }
-      forEach(datatypeDecl.binds, workspaces, (datatypeBind, workspace) ->
-          deduceDatatypeBindType(env, datatypeBind, termMap,
-              workspace));
-    }
+    final List<Keys.DataTypeKey> keys = new ArrayList<>();
+    for (Ast.DatatypeBind bind : datatypeDecl.binds) {
+      final Foo foo = new Foo();
+      bind.tyVars.forEach(foo::toTypeKey);
 
-    final List<Keys.DataTypeDef> defs = new ArrayList<>();
-    forEach(datatypeDecl.binds, workspaces, (datatypeBind, workspace) ->
-        defs.add(
-            Keys.dataTypeDef(datatypeBind.name.name,
-                workspace.temporaryType.parameterTypes, workspace.tyCons,
-                true)));
-    final List<Type> types = typeSystem.dataTypes(defs);
+      final SortedMap<String, Type.Key> tyCons = new TreeMap<>();
+      deduceDatatypeBindType(bind, tyCons);
+
+      keys.add(
+          Keys.datatype(bind.name.name, Keys.ordinals(foo.tyVarMap.size()),
+              tyCons));
+    }
+    final List<Type> types = typeSystem.dataTypes(keys);
 
     forEach(datatypeDecl.binds, types, (datatypeBind, type) -> {
       final DataType dataType =
@@ -783,7 +771,8 @@ public class TypeResolver {
       for (Ast.TyCon tyCon : datatypeBind.tyCons) {
         final Type tyConType;
         if (tyCon.type != null) {
-          tyConType = typeSystem.fnType(toType(tyCon.type), dataType);
+          final Type.Key conKey = toTypeKey(tyCon.type);
+          tyConType = typeSystem.fnType(conKey.toType(typeSystem), dataType);
         } else {
           tyConType = dataType;
         }
@@ -825,71 +814,67 @@ public class TypeResolver {
     return node2;
   }
 
-  /** Workspace used while handling several datatype binds simultaneously. */
-  private static class DatatypeBindWorkspace {
-    final TemporaryType temporaryType;
-    final SortedMap<String, Type> tyCons = new TreeMap<>();
-    public Type type;
-
-    private DatatypeBindWorkspace(TemporaryType temporaryType) {
-      this.temporaryType = temporaryType;
-    }
-  }
-
-  private void deduceDatatypeBindType(TypeEnv env,
-      Ast.DatatypeBind datatypeBind, Map<Ast.IdPat, Unifier.Term> termMap,
-      DatatypeBindWorkspace w) {
+  private void deduceDatatypeBindType(Ast.DatatypeBind datatypeBind,
+      SortedMap<String, Type.Key> tyCons) {
+    Foo foo = new Foo();
     for (Ast.TyCon tyCon : datatypeBind.tyCons) {
-      w.tyCons.put(tyCon.id.name,
-          tyCon.type == null ? DummyType.INSTANCE : toType(tyCon.type));
+      tyCons.put(tyCon.id.name,
+          tyCon.type == null ? Keys.dummy() : foo.toTypeKey(tyCon.type));
     }
   }
 
-  private Type toType(Ast.Type type) {
-    switch (type.op) {
-    case TUPLE_TYPE:
-      final Ast.TupleType tupleType = (Ast.TupleType) type;
-      return typeSystem.tupleType(toTypes(tupleType.types));
+  /** Workspace for converting types to keys. */
+  private static class Foo {
+    final Map<String, Integer> tyVarMap = new HashMap<>();
 
-    case RECORD_TYPE:
-      final Ast.RecordType recordType = (Ast.RecordType) type;
-      final ImmutableSortedMap.Builder<String, Type> argNameTypes =
-          ImmutableSortedMap.orderedBy(ORDERING);
-      recordType.fieldTypes.forEach((name, t) ->
-          argNameTypes.put(name, toType(t)));
-      return typeSystem.recordType(argNameTypes.build());
+    /** Converts an AST type into a type key. */
+    Type.Key toTypeKey(Ast.Type type) {
+      switch (type.op) {
+      case TUPLE_TYPE:
+        final Ast.TupleType tupleType = (Ast.TupleType) type;
+        return Keys.tuple(toTypeKeys(tupleType.types));
 
-    case FUNCTION_TYPE:
-      final Ast.FunctionType functionType = (Ast.FunctionType) type;
-      final Type paramType = toType(functionType.paramType, typeSystem);
-      final Type resultType = toType(functionType.resultType, typeSystem);
-      return typeSystem.fnType(paramType, resultType);
+      case RECORD_TYPE:
+        final Ast.RecordType recordType = (Ast.RecordType) type;
+        final ImmutableSortedMap.Builder<String, Type.Key> argNameTypes =
+            ImmutableSortedMap.orderedBy(ORDERING);
+        recordType.fieldTypes.forEach((name, t) ->
+            argNameTypes.put(name, toTypeKey(t)));
+        return Keys.record(argNameTypes.build());
 
-    case NAMED_TYPE:
-      final Ast.NamedType namedType = (Ast.NamedType) type;
-      final List<Type> typeList = toTypes(namedType.types);
-      if (namedType.name.equals(LIST_TY_CON) && typeList.size() == 1) {
-        // TODO: make 'list' a regular generic type
-        return typeSystem.listType(typeList.get(0));
+      case FUNCTION_TYPE:
+        final Ast.FunctionType functionType = (Ast.FunctionType) type;
+        final Type.Key paramType = toTypeKey(functionType.paramType);
+        final Type.Key resultType = toTypeKey(functionType.resultType);
+        return Keys.fn(paramType, resultType);
+
+      case NAMED_TYPE:
+        final Ast.NamedType namedType = (Ast.NamedType) type;
+        final List<Type.Key> typeList = toTypeKeys(namedType.types);
+        if (namedType.name.equals(LIST_TY_CON) && typeList.size() == 1) {
+          // TODO: make 'list' a regular generic type
+          return Keys.list(typeList.get(0));
+        }
+        if (typeList.isEmpty()) {
+          return Keys.name(namedType.name);
+        } else {
+          return Keys.apply(Keys.name(namedType.name), typeList);
+        }
+
+      case TY_VAR:
+        final Ast.TyVar tyVar = (Ast.TyVar) type;
+        return Keys.ordinal(
+            tyVarMap.computeIfAbsent(tyVar.name,
+                name -> tyVarMap.size()));
+
+      default:
+        throw new AssertionError("cannot convert type " + type + " " + type.op);
       }
-      final Type genericType = typeSystem.lookup(namedType.name);
-      if (namedType.types.isEmpty()) {
-        return genericType;
-      }
-      return typeSystem.apply(genericType, typeList);
-
-    case TY_VAR:
-      final Ast.TyVar tyVar = (Ast.TyVar) type;
-      return tyVarMap.computeIfAbsent(tyVar.name,
-          name -> typeSystem.typeVariable(tyVarMap.size()));
-
-    default:
-      throw new AssertionError("cannot convert type " + type + " " + type.op);
     }
-  }
 
-  private List<Type> toTypes(List<Ast.Type> typeList) {
-    return transform(typeList, this::toType);
+    List<Type.Key> toTypeKeys(Iterable<? extends Ast.Type> types) {
+      return transform(types, this::toTypeKey);
+    }
   }
 
   /** Converts a function declaration to a value declaration.
@@ -1128,21 +1113,35 @@ public class TypeResolver {
     case CON_PAT:
       final Ast.ConPat conPat = (Ast.ConPat) pat;
       // e.g. "SOME x" has type "int option", "x" has type "int"
-      final Pair<DataType, Type> pair =
+      final Pair<DataType, Type.Key> pair =
           typeSystem.lookupTyCon(conPat.tyCon.name);
       if (pair == null) {
         throw new AssertionError("not found: " + conPat.tyCon.name);
       }
       final DataType dataType = pair.left;
-      final Type argType = pair.right;
+      final Type argType = pair.right.toType(typeSystem);
       final Unifier.Variable vArg = unifier.variable();
       deducePatType(env, conPat.pat, termMap, null, vArg);
-      equiv(vArg, toTerm(argType, Subst.EMPTY));
-      return reg(pat, v, toTerm(dataType, Subst.EMPTY));
+      final Unifier.Term argTerm = toTerm(argType, Subst.EMPTY);
+      equiv(vArg, argTerm);
+      final Unifier.Term term = toTerm(dataType, Subst.EMPTY);
+      if (argType instanceof TypeVar) {
+        // E.g. Suppose arg is "NODE 'b"
+        // (therefore argType is "'b", argTerm is "T7"),
+        // datatype is "('a,'b) tree"
+        // (therefore term is "tree(T8,T9)").
+        // We can say that argTerm (T7) is equivalent to
+        // the second type parameter (T9).
+        //
+        // TODO: handle more complex types, e.g. "NODE (int * 'b)"
+        equiv(argTerm,
+            ((Unifier.Sequence) term).terms.get(((TypeVar) argType).ordinal));
+      }
+      return reg(pat, v, term);
 
     case CON0_PAT:
       final Ast.Con0Pat con0Pat = (Ast.Con0Pat) pat;
-      final Pair<DataType, Type> pair0 =
+      final Pair<DataType, Type.Key> pair0 =
           typeSystem.lookupTyCon(con0Pat.tyCon.name);
       if (pair0 == null) {
         throw new AssertionError();
@@ -1229,19 +1228,11 @@ public class TypeResolver {
       return variable != null ? variable : unifier.variable();
     case DATA_TYPE:
       final DataType dataType = (DataType) type;
-      return unifier.apply(dataType.name(), toTerms(dataType.parameterTypes, subst));
-    case TEMPORARY_DATA_TYPE:
-      final TemporaryType tempType = (TemporaryType) type;
-      return unifier.apply(tempType.name(), toTerms(tempType.parameterTypes, subst));
+      return unifier.apply(dataType.name(), toTerms(dataType.arguments, subst));
     case FUNCTION_TYPE:
       final FnType fnType = (FnType) type;
       return unifier.apply(FN_TY_CON, toTerm(fnType.paramType, subst),
           toTerm(fnType.resultType, subst));
-    case APPLY_TYPE:
-      final ApplyType applyType = (ApplyType) type;
-      final Unifier.Term term = toTerm(applyType.type, subst);
-      final List<Unifier.Term> terms = toTerms(applyType.types, subst);
-      return unifier.apply(APPLY_TY_CON, ConsList.of(term, terms));
     case TUPLE_TYPE:
       final TupleType tupleType = (TupleType) type;
       return unifier.apply(TUPLE_TY_CON,
@@ -1273,8 +1264,8 @@ public class TypeResolver {
     case FORALL_TYPE:
       final ForallType forallType = (ForallType) type;
       Subst subst2 = subst;
-      for (TypeVar typeVar : forallType.typeVars) {
-        subst2 = subst2.plus(typeVar, unifier.variable());
+      for (int i = 0; i < forallType.parameterCount; i++) {
+        subst2 = subst2.plus(typeSystem.typeVariable(i), unifier.variable());
       }
       return toTerm(forallType.type, subst2);
     default:

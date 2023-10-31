@@ -94,9 +94,18 @@ fun l2 [] = 0 | l2 (h :: (t: bool list)) = 1 + (l2 t);
 fun countOption (NONE: string option) = 0
   | countOption (SOME x) = 1;
 > val countOption = fn : string option -> int
+fun countOption0 (NONE) = 0
+  | countOption0 (SOME x) = if x = "" then 1 else 2;
+> val countOption0 = fn : string option -> int
+fun countOption00 (SOME x) = 1
+  | countOption00 (NONE: string option) = 0;
+> val countOption00 = fn : string option -> int
+fun countOption1 (NONE) = 0
+  | countOption1 (SOME x) = if x then 1 else 2;
+> val countOption1 = fn : bool option -> int
 fun countOption2 NONE: int = 0
   | countOption2 (SOME x) = 1;
-> val countOption2 = fn : (int * 'a) option -> int
+> val countOption2 = fn : 'a option -> int
 fun firstOrSecond (e1 :: e2 :: rest): int = e2
   | firstOrSecond (e1 :: rest) = e1;
 > 0.0-0.0 Warning: match nonexhaustive
@@ -252,6 +261,10 @@ in
 end;
 *)
 
+(*) Lambda with record argument
+fn {a, b} => if b then a else a + 1;
+> val it = fn : {a:int, b:bool} -> int
+
 (*) Record containing polymorphic functions:
 (*)  val it = {a=fn,b=fn}
 (*) : {a:'a list -> ('a * 'a list) option, b:'b list -> ('b * 'b list) option}
@@ -277,5 +290,15 @@ end;
 (*) as above
 {a = 1, b = let fun g [] = NONE | g (h :: t) = SOME (h, t) in g end};
 > val it = {a=1,b=fn} : {a:int, b:'a list -> ('a * 'a list) option}
+
+(*) List of monotype
+[SOME true, NONE];
+> val it = [SOME true,NONE] : bool option list
+[SOME [1, 2], NONE];
+> val it = [SOME [1,2],NONE] : int list option list
+[NONE, SOME [{a=1,b=true}], NONE];
+> val it = [NONE,SOME [{a=1,b=true}],NONE] : {a:int, b:bool} list option list
+from b in [SOME true, NONE];
+> val it = [SOME true,NONE] : bool option list
 
 (*) End type.smli

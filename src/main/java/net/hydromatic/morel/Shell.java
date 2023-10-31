@@ -72,6 +72,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
+import static net.hydromatic.morel.util.Static.str;
+
 import static java.util.Objects.requireNonNull;
 
 /** Command shell for ML, powered by JLine3. */
@@ -472,8 +474,7 @@ public class Shell {
           try {
             buf.append(line.right);
             if (line.right.endsWith(";")) {
-              final String code = buf.toString();
-              buf.setLength(0);
+              final String code = str(buf);
               final MorelParserImpl smlParser =
                   new MorelParserImpl(new StringReader(code));
               final AstNode statement;

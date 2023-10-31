@@ -35,7 +35,7 @@ abstract class BaseType implements Type {
   }
 
   @Override public String toString() {
-    return key().moniker();
+    return key().toString();
   }
 }
 

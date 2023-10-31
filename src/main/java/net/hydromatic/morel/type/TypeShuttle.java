@@ -54,10 +54,6 @@ public class TypeShuttle extends TypeVisitor<Type> {
     return primitiveType.copy(typeSystem, t -> t.accept(this));
   }
 
-  @Override public Type visit(ApplyType applyType) {
-    return applyType.copy(typeSystem, t -> t.accept(this));
-  }
-
   @Override public ForallType visit(ForallType forallType) {
     return forallType.copy(typeSystem, t -> t.accept(this));
   }

@@ -20,8 +20,8 @@ package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
-import net.hydromatic.morel.type.DummyType;
 import net.hydromatic.morel.type.ForallType;
+import net.hydromatic.morel.type.Keys;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
@@ -1705,24 +1705,24 @@ public enum BuiltIn {
     for (int i = 0; i < varCount; i++) {
       tyVars.add(ts.typeVariable(i));
     }
-    final SortedMap<String, Type> tyCons = new TreeMap<>();
+    final SortedMap<String, Type.Key> tyCons = new TreeMap<>();
     transform.apply(new DataTypeHelper() {
-      public DataTypeHelper tyCon(String name, Type type) {
-        tyCons.put(name, type);
+      public DataTypeHelper tyCon(String name, Type.Key typeKey) {
+        tyCons.put(name, typeKey);
         return this;
       }
 
       public DataTypeHelper tyCon(String name) {
-        return tyCon(name, DummyType.INSTANCE);
+        return tyCon(name, Keys.dummy());
       }
 
-      public TypeVar get(int i) {
-        return tyVars.get(i);
+      public Type.Key get(int i) {
+        return tyVars.get(i).key();
       }
     });
     final Type type = ts.dataTypeScheme(name, tyVars, tyCons);
-    final DataType dataType = (DataType) (type instanceof DataType ? type
-        : ((ForallType) type).type);
+    final DataType dataType =
+        (DataType) (type instanceof DataType ? type : ((ForallType) type).type);
     if (internal) {
       ts.setInternal(name);
     } else {
@@ -1754,8 +1754,8 @@ public enum BuiltIn {
   /** Callback used when defining a datatype. */
   private interface DataTypeHelper {
     DataTypeHelper tyCon(String name);
-    DataTypeHelper tyCon(String name, Type type);
-    TypeVar get(int i);
+    DataTypeHelper tyCon(String name, Type.Key typeKey);
+    Type.Key get(int i);
   }
 
   /** Built-in structure. */

@@ -21,7 +21,6 @@ package net.hydromatic.morel.compile;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.foreign.RelList;
-import net.hydromatic.morel.type.ApplyType;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
@@ -211,30 +210,25 @@ class Pretty {
       return pretty2(buf, indent, lineEnd, depth + 1, ((ForallType) type).type,
           ImmutableList.of(), value);
 
-    case APPLY_TYPE:
-      final ApplyType applyType = (ApplyType) type;
-      return pretty2(buf, indent, lineEnd, depth + 1, applyType.type,
-          applyType.types, value);
-
     case DATA_TYPE:
       final DataType dataType = (DataType) type;
       //noinspection unchecked,rawtypes
       list = (List) value;
       if (dataType.name.equals("vector")) {
-        final Type argType = Iterables.getOnlyElement(dataType.parameterTypes);
+        final Type argType = Iterables.getOnlyElement(dataType.arguments);
         return printList(buf.append('#'), indent, lineEnd, depth, argType,
             list);
       }
       final String tyConName = (String) list.get(0);
       buf.append(tyConName);
-      final Type typeConArgType = dataType.typeConstructors.get(tyConName);
+      final Type typeConArgType =
+          dataType.typeConstructors(typeSystem).get(tyConName);
+      requireNonNull(typeConArgType);
       if (list.size() == 2) {
         final Object arg = list.get(1);
         buf.append(' ');
         final boolean needParentheses =
-            (typeConArgType.op() == Op.APPLY_TYPE
-                || typeConArgType.op() == Op.DATA_TYPE)
-                && arg instanceof List;
+            typeConArgType.op() == Op.DATA_TYPE && arg instanceof List;
         if (needParentheses) {
           buf.append('(');
         }

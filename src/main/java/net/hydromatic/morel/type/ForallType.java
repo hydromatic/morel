@@ -20,7 +20,7 @@ package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 
 import java.util.List;
 import java.util.Objects;
@@ -28,17 +28,17 @@ import java.util.function.UnaryOperator;
 
 /** Universally quantified type. */
 public class ForallType extends BaseType {
-  public final List<TypeVar> typeVars;
+  public final int parameterCount;
   public final Type type;
 
-  ForallType(ImmutableList<TypeVar> typeVars, Type type) {
+  ForallType(int parameterCount, Type type) {
     super(Op.FORALL_TYPE);
-    this.typeVars = Objects.requireNonNull(typeVars);
+    this.parameterCount = parameterCount;
     this.type = Objects.requireNonNull(type);
   }
 
   public Key key() {
-    return Keys.forall(type, typeVars);
+    return Keys.forall(type, parameterCount);
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {
@@ -50,7 +50,26 @@ public class ForallType extends BaseType {
     final Type type2 = type.copy(typeSystem, transform);
     return type2 == type
         ? this
-        : typeSystem.forallType(typeVars, type2);
+        : typeSystem.forallType(parameterCount, type2);
+  }
+
+  @Override public Type substitute(TypeSystem typeSystem,
+      List<? extends Type> types) {
+    switch (type.op()) {
+    case DATA_TYPE:
+      final DataType dataType = (DataType) type;
+      Key key =
+          Keys.datatype(dataType.name, Keys.toKeys(types),
+              Maps.transformValues(dataType.typeConstructors,
+                  k -> k.substitute(types)));
+      return typeSystem.typeFor(key);
+
+    case FUNCTION_TYPE:
+      return type.substitute(typeSystem, types);
+
+    default:
+      throw new AssertionError(type.op() + ": " + type);
+    }
   }
 }
 

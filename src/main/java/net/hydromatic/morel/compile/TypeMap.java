@@ -28,7 +28,6 @@ import net.hydromatic.morel.util.Unifier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,7 +38,7 @@ import java.util.Objects;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.util.Pair.forEach;
-import static net.hydromatic.morel.util.Static.skip;
+import static net.hydromatic.morel.util.Static.transform;
 
 /** The result of type resolution, a map from AST nodes to types. */
 public class TypeMap {
@@ -133,15 +132,6 @@ public class TypeMap {
         final Type elementType = sequence.terms.get(0).accept(this);
         return typeMap.typeSystem.listType(elementType);
 
-      case TypeResolver.APPLY_TY_CON:
-        assert sequence.terms.size() == 2;
-        type = sequence.terms.get(0).accept(this);
-        argTypes = ImmutableList.builder();
-        for (Unifier.Term term : skip(sequence.terms)) {
-          argTypes.add(term.accept(this));
-        }
-        return typeMap.typeSystem.apply(type, argTypes.build());
-
       case "bool":
       case "char":
       case "int":
@@ -155,7 +145,7 @@ public class TypeMap {
             return type;
           }
           final List<Type> types =
-              Lists.transform(sequence.terms, t -> t.accept(this));
+              transform(sequence.terms, t -> t.accept(this));
           return typeMap.typeSystem.apply(type, types);
         }
         if (sequence.operator.startsWith(TypeResolver.RECORD_TY_CON)) {

@@ -70,22 +70,9 @@ public class TypeVisitor<R> {
     return null;
   }
 
-  /** Visits an {@link ApplyType}. */
-  public R visit(ApplyType applyType) {
-    R r = applyType.type.accept(this);
-    for (Type type : applyType.types) {
-      r = type.accept(this);
-    }
-    return r;
-  }
-
   /** Visits a {@link ForallType}. */
   public R visit(ForallType forallType) {
-    R r = forallType.type.accept(this);
-    for (TypeVar typeVar : forallType.typeVars) {
-      r = typeVar.accept(this);
-    }
-    return r;
+    return forallType.type.accept(this);
   }
 
   /** Visits a {@link DummyType}. */
