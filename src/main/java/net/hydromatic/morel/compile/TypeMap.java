@@ -25,7 +25,6 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.Unifier;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 
@@ -39,6 +38,7 @@ import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 /** The result of type resolution, a map from AST nodes to types. */
 public class TypeMap {
@@ -109,7 +109,6 @@ public class TypeMap {
     }
 
     public Type visit(Unifier.Sequence sequence) {
-      final ImmutableList.Builder<Type> argTypes;
       final ImmutableSortedMap.Builder<String, Type> argNameTypes;
       final Type type;
       switch (sequence.operator) {
@@ -121,11 +120,9 @@ public class TypeMap {
 
       case TypeResolver.TUPLE_TY_CON:
         assert sequence.terms.size() != 1;
-        argTypes = ImmutableList.builder();
-        for (Unifier.Term term : sequence.terms) {
-          argTypes.add(term.accept(this));
-        }
-        return typeMap.typeSystem.tupleType(argTypes.build());
+        final List<Type> argTypes =
+            transformEager(sequence.terms, term -> term.accept(this));
+        return typeMap.typeSystem.tupleType(argTypes);
 
       case TypeResolver.LIST_TY_CON:
         assert sequence.terms.size() == 1;

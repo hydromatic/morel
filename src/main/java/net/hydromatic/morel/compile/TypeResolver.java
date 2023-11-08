@@ -74,6 +74,7 @@ import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.skip;
 import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import static java.lang.String.join;
 
@@ -873,7 +874,7 @@ public class TypeResolver {
     }
 
     List<Type.Key> toTypeKeys(Iterable<? extends Ast.Type> types) {
-      return transform(types, this::toTypeKey);
+      return transformEager(types, this::toTypeKey);
     }
   }
 
@@ -1210,9 +1211,7 @@ public class TypeResolver {
 
   private List<Unifier.Term> toTerms(Iterable<? extends Type> types,
       Subst subst) {
-    final ImmutableList.Builder<Unifier.Term> terms = ImmutableList.builder();
-    types.forEach(type -> terms.add(toTerm(type, subst)));
-    return terms.build();
+    return transformEager(types, type -> toTerm(type, subst));
   }
 
   private Unifier.Term toTerm(PrimitiveType type) {
@@ -1254,9 +1253,10 @@ public class TypeResolver {
         }
         result = b.toString();
       }
-      return unifier.apply(result,
-          transform(recordType.argNameTypes.values(),
-              type1 -> toTerm(type1, subst)));
+      final List<Unifier.Term> args =
+          transformEager(recordType.argNameTypes.values(),
+              type1 -> toTerm(type1, subst));
+      return unifier.apply(result, args);
     case LIST:
       final ListType listType = (ListType) type;
       return unifier.apply(LIST_TY_CON,

@@ -71,6 +71,7 @@ import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.str;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -176,9 +177,7 @@ public class Compiler {
   /** Compiles the tuple arguments to "apply". */
   public List<Code> compileArgs(Context cx,
       Iterable<? extends Core.Exp> expressions) {
-    final ImmutableList.Builder<Code> b = ImmutableList.builder();
-    expressions.forEach(e -> b.add(compile(cx, e)));
-    return b.build();
+    return transformEager(expressions, e -> compile(cx, e));
   }
 
   public Code compile(Context cx, Core.Exp expression) {
@@ -474,7 +473,7 @@ public class Compiler {
   }
 
   private ImmutableList<String> bindingNames(List<Binding> bindings) {
-    return transform(bindings, b -> b.id.name);
+    return transformEager(bindings, b -> b.id.name);
   }
 
   /** Compiles a function value to an {@link Applicable}, if possible, or

@@ -45,6 +45,7 @@ import java.util.function.Function;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Static.toImmutableList;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 /** A table that contains all types in use, indexed by their description (e.g.
  * "{@code int -> int}"). */
@@ -123,9 +124,7 @@ public class TypeSystem {
 
   /** Converts a list of keys to a list of types. */
   public List<Type> typesFor(Iterable<? extends Key> keys) {
-    final ImmutableList.Builder<Type> types = ImmutableList.builder();
-    keys.forEach(key -> types.add(key.toType(this)));
-    return types.build();
+    return transformEager(keys, key -> key.toType(this));
   }
 
   /** Converts a map of keys to a map of types. */

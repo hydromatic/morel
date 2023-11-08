@@ -32,6 +32,7 @@ import java.util.SortedMap;
 import java.util.function.UnaryOperator;
 
 import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -123,9 +124,7 @@ public class Keys {
 
   /** Converts a list of types to a list of keys. */
   public static List<Type.Key> toKeys(List<? extends Type> types) {
-    final ImmutableList.Builder<Type.Key> keys = ImmutableList.builder();
-    types.forEach(t -> keys.add(t.key()));
-    return keys.build();
+    return transformEager(types, Type::key);
   }
 
   /** Key that identifies a type by name. */
@@ -243,7 +242,7 @@ public class Keys {
 
     @Override public Type.Key copy(UnaryOperator<Type.Key> transform) {
       return new ApplyKey(key.copy(transform),
-          transform(args, arg -> arg.copy(transform)));
+          transformEager(args, arg -> arg.copy(transform)));
     }
   }
 

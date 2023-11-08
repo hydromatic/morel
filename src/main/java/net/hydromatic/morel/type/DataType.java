@@ -24,11 +24,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import org.apache.calcite.util.Util;
 
 import java.util.List;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
+
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -78,8 +79,7 @@ public class DataType extends ParameterizedType {
 
   @Override public DataType copy(TypeSystem typeSystem,
       UnaryOperator<Type> transform) {
-    final List<Type> arguments =
-        Util.transform(this.arguments, transform);
+    final List<Type> arguments = transformEager(this.arguments, transform);
     if (arguments.equals(this.arguments)) {
       return this;
     }

@@ -70,6 +70,7 @@ import java.util.stream.Collectors;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -528,7 +529,7 @@ public abstract class Codes {
       Iterable<? extends Map.Entry<Code, Boolean>> codes,
       ImmutableList<Binding> bindings, RowSink rowSink) {
     return new OrderRowSink(ImmutablePairList.copyOf(codes),
-        transform(bindings, b -> b.id.name),
+        transformEager(bindings, b -> b.id.name),
         rowSink);
   }
 
@@ -2685,7 +2686,7 @@ public abstract class Codes {
     });
     BuiltIn.forEachStructure(typeSystem, (structure, type) ->
         valueMap.put(structure.name,
-            transform(structure.memberMap.values(), BUILT_IN_VALUES::get)));
+            transformEager(structure.memberMap.values(), BUILT_IN_VALUES::get)));
   }
 
   /** Creates an empty evaluation environment. */

@@ -65,7 +65,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.JsonBuilder;
-import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
@@ -82,6 +81,8 @@ import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Iterables.getLast;
@@ -360,7 +361,7 @@ public class CalciteCompiler extends Compiler {
       inputs.add(relBuilder.build());
     }
     final RelDataType rowType = relBuilder.getTypeFactory()
-        .leastRestrictive(Util.transform(inputs, RelNode::getRowType));
+        .leastRestrictive(transform(inputs, RelNode::getRowType));
     for (RelNode input : Lists.reverse(inputs)) {
       relBuilder.push(input)
           .convert(rowType, false);
@@ -439,8 +440,7 @@ public class CalciteCompiler extends Compiler {
 
     case TUPLE:
       tuple = (Core.Tuple) exp;
-      cx.relBuilder.project(
-          Util.transform(tuple.args, e -> translate(cx, e)),
+      cx.relBuilder.project(transform(tuple.args, e -> translate(cx, e)),
           ImmutableList.copyOf(tuple.type().argNameTypes().keySet()));
       return cx;
     }
@@ -649,11 +649,7 @@ public class CalciteCompiler extends Compiler {
   }
 
   private List<RexNode> translateList(RelContext cx, List<Core.Exp> exps) {
-    final ImmutableList.Builder<RexNode> list = ImmutableList.builder();
-    for (Core.Exp exp : exps) {
-      list.add(translate(cx, exp));
-    }
-    return list.build();
+    return transformEager(exps, exp -> translate(cx, exp));
   }
 
   private RelContext join(RelContext cx, int i, Core.Scan scan) {

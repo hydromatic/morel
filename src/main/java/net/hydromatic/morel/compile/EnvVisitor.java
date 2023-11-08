@@ -56,7 +56,7 @@ abstract class EnvVisitor extends Visitor {
   }
 
   /** Creates a visitor the same as this but with overriding bindings. */
-  protected EnvVisitor bind(List<Binding> bindingList)  {
+  protected EnvVisitor bind(Iterable<Binding> bindingList)  {
     // The "env2 == env" check is an optimization.
     // If you remove it, this method will have the same effect, just slower.
     final Environment env2 = env.bindAll(bindingList);

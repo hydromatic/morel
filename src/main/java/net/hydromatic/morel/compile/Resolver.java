@@ -60,6 +60,7 @@ import java.util.SortedMap;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -219,8 +220,8 @@ public class Resolver {
     final Core.Pat pat0;
     final Core.Exp exp;
     if (composite) {
-      final List<Core.Pat> pats = Util.transform(patExps, x -> x.pat);
-      final List<Core.Exp> exps = Util.transform(patExps, x -> x.exp);
+      final List<Core.Pat> pats = transform(patExps, x -> x.pat);
+      final List<Core.Exp> exps = transform(patExps, x -> x.exp);
       pat0 = core.tuplePat(typeMap.typeSystem, pats);
       exp = core.tuple((RecordLikeType) pat0.type, exps);
     } else {
@@ -369,12 +370,12 @@ public class Resolver {
 
   private Core.Tuple toCore(Ast.Tuple tuple) {
     return core.tuple((RecordLikeType) typeMap.getType(tuple),
-        transform(tuple.args, this::toCore));
+        transformEager(tuple.args, this::toCore));
   }
 
   private Core.Tuple toCore(Ast.Record record) {
     return core.tuple((RecordLikeType) typeMap.getType(record),
-        transform(record.args(), this::toCore));
+        transformEager(record.args(), this::toCore));
   }
 
   private Core.Exp toCore(Ast.ListExp list) {
@@ -382,7 +383,7 @@ public class Resolver {
     return core.apply(list.pos, type,
         core.functionLiteral(typeMap.typeSystem, BuiltIn.Z_LIST),
         core.tuple(typeMap.typeSystem, null,
-            transform(list.args, this::toCore)));
+            transformEager(list.args, this::toCore)));
   }
 
   /** Translates "x" in "from e = x". Desugar to the same as if they had
@@ -430,8 +431,7 @@ public class Resolver {
 
   private Core.Fn toCore(Ast.Fn fn) {
     final FnType type = (FnType) typeMap.getType(fn);
-    final ImmutableList<Core.Match> matchList =
-        transform(fn.matchList, this::toCore);
+    final List<Core.Match> matchList = transformEager(fn.matchList, this::toCore);
     return core.fn(fn.pos, type, matchList, nameGenerator);
   }
 
@@ -442,7 +442,7 @@ public class Resolver {
 
   private Core.Case toCore(Ast.Case case_) {
     return core.caseOf(case_.pos, typeMap.getType(case_), toCore(case_.exp),
-        transform(case_.matchList, this::toCore));
+        transformEager(case_.matchList, this::toCore));
   }
 
   private Core.Exp toCore(Ast.Let let) {
@@ -537,7 +537,7 @@ public class Resolver {
 
     case LIST_PAT:
       final Ast.ListPat listPat = (Ast.ListPat) pat;
-      return core.listPat(type, transform(listPat.args, this::toCore));
+      return core.listPat(type, transformEager(listPat.args, this::toCore));
 
     case RECORD_PAT:
       final RecordType recordType = (RecordType) targetType;
@@ -553,7 +553,7 @@ public class Resolver {
 
     case TUPLE_PAT:
       final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
-      final List<Core.Pat> argList = transform(tuplePat.args, this::toCore);
+      final List<Core.Pat> argList = transformEager(tuplePat.args, this::toCore);
       return core.tuplePat(type, argList);
 
     default:
@@ -580,9 +580,9 @@ public class Resolver {
 
   private Core.Aggregate toCore(Ast.Aggregate aggregate,
       Collection<? extends Core.IdPat> groupKeys) {
-    final List<Binding> bindings = transform(groupKeys, Binding::of);
+    final Resolver resolver = withEnv(transform(groupKeys, Binding::of));
     return core.aggregate(typeMap.getType(aggregate),
-        withEnv(bindings).toCore(aggregate.aggregate),
+        resolver.toCore(aggregate.aggregate),
         aggregate.argument == null ? null : toCore(aggregate.argument));
   }
 
@@ -822,7 +822,7 @@ public class Resolver {
 
     @Override protected void visit(Ast.Order order) {
       final Resolver r = withEnv(fromBuilder.bindings());
-      fromBuilder.order(transform(order.orderItems, r::toCore));
+      fromBuilder.order(transformEager(order.orderItems, r::toCore));
     }
 
     @Override protected void visit(Ast.Compute compute) {

@@ -21,6 +21,8 @@ package net.hydromatic.morel.util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Iterables;
+import org.apache.calcite.util.Util;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -164,13 +166,38 @@ public class Static {
     return 1 << (Integer.SIZE - p);
   }
 
-  /** Converts an Iterable to an ImmutableList, applying a mapping function to
-   * each element. */
-  @SuppressWarnings("unchecked")
-  public static <E, T> ImmutableList<T> transform(Iterable<? extends E> elements,
+  /** Lazily transforms a list, applying a mapping function to each element. */
+  public static <E, T> List<T> transform(List<? extends E> elements,
       Function<E, T> mapper) {
+    return Util.transform(elements, mapper);
+  }
+
+  /** Lazily transforms an Iterable, applying a mapping function to each
+   * element. */
+  public static <E, T> Iterable<T> transform(Iterable<? extends E> elements,
+      Function<E, T> mapper) {
+    return Iterables.transform(elements, mapper::apply);
+  }
+
+  /** Eagerly converts an Iterable to an ImmutableList, applying a mapping
+   * function to each element. */
+  public static <E, T> ImmutableList<T> transformEager(
+      Iterable<? extends E> elements, Function<E, T> mapper) {
     if (elements instanceof Collection
         && ((Collection<? extends E>) elements).isEmpty()) {
+      // Save ourselves the effort of creating a Builder.
+      return ImmutableList.of();
+    }
+    final ImmutableList.Builder<T> b = ImmutableList.builder();
+    elements.forEach(e -> b.add(mapper.apply(e)));
+    return b.build();
+  }
+
+  /** Eagerly converts a List to an ImmutableList, applying a mapping
+   * function to each element. */
+  public static <E, T> ImmutableList<T> transformEager(
+      List<? extends E> elements, Function<E, T> mapper) {
+    if (elements.isEmpty()) {
       // Save ourselves the effort of creating a Builder.
       return ImmutableList.of();
     }
