@@ -23,7 +23,13 @@ License.
 ## How to make a release (for committers)
 
 Make sure `mvn clean install`, `mvn site`, and
-`mvn javadoc:javadoc javadoc:test-javadoc` pass under JDK 8 - 17.
+`mvn javadoc:javadoc javadoc:test-javadoc` pass under JDK 8 - 21.
+
+Upgrade dependencies to their latest release: run
+```bash
+./mvnw versions:update-properties
+```
+and commit the modified `pom.xml`.
 
 Write release notes. Run the
 [relNotes](https://github.com/julianhyde/share/blob/master/tools/relNotes)
