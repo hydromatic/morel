@@ -596,4 +596,78 @@ enumerate cousin2;
 > Error: non-stratified
 *)
 
+(*
+ * Coloring Australia using three colors.
+ * (From "Basic Modelling in MiniZinc".)
+ *
+ * Australia has six federated states (New South Wales, Queensland,
+ * South Australia, Tasmania, Victoria, and Western Australia) and
+ * Northern Territories. Bordering states/territories must not be the
+ * same color.
+ *
+ *                   _,__        .:
+ *           Darwin <*  /        | \
+ *              .-./     |.     :  :,
+ *             /  |        |-._/     \_
+ *            /   |   NT   |   '       \
+ *          .'    |        |      Q    *: Brisbane
+ *       .-'      |________|___.         ;
+ *       |    WA  |            |         |
+ *       \        |     SA     |-------./
+ *        |       |            |  NSW  /
+ *  Perth  \*     |  __.--._   |`--.__/
+ *          \     |.'       \:.|   V  |
+ *          >__,-'             \_/*_.-'
+ *                                Melbourne
+ *                               :--,
+ *                               'T/
+ *)
+datatype Color = RED | GREEN | BLUE;
+> datatype Color = BLUE | GREEN | RED
+from wa, nt, sa, q, nsw, v, t
+where q = RED
+  andalso t = GREEN
+  andalso wa <> nt
+  andalso wa <> sa
+  andalso nt <> sa
+  andalso nt <> q
+  andalso sa <> q
+  andalso sa <> nsw
+  andalso sa <> v
+  andalso nsw <> v;
+> val it =
+>   [{nsw=BLUE,nt=BLUE,q=RED,sa=GREEN,t=GREEN,v=RED,wa=RED},
+>    {nsw=RED,nt=BLUE,q=RED,sa=GREEN,t=GREEN,v=BLUE,wa=RED},
+>    {nsw=GREEN,nt=GREEN,q=RED,sa=BLUE,t=GREEN,v=RED,wa=RED},
+>    {nsw=RED,nt=GREEN,q=RED,sa=BLUE,t=GREEN,v=GREEN,wa=RED}]
+>   : {nsw:Color, nt:Color, q:Color, sa:Color, t:Color, v:Color, wa:Color} list
+
+(* Arithmetic optimization.
+ * (From "Basic Modelling in MiniZinc".)
+ *
+ * A banana cake which takes 250g of self-raising flour, 2 mashed bananas,
+ * 75g sugar and 100g of butter, and a chocolate cake which takes 200g of
+ * self-raising flour, 75g of cocoa, 150g sugar and 150g of butter. We can sell
+ * a chocolate cake for $4.50 and a banana cake for $4.00. And we have 4kg
+ * self-raising flour, 6 bananas, 2kg of sugar, 500g of butter and 500g of
+ * cocoa. The question is how many of each sort of cake should we bake for the
+ * fete to maximize the profit.
+ *)
+from b, c
+where b >= 0 andalso b <= 100      (*) number of banana cakes
+andalso c >= 0 andalso c <= 100    (*) number of chocolate cakes
+andalso 50 * b + 200 * c <= 4000   (*) flour
+andalso 2 * b <= 6                 (*) bananas
+andalso 75 * b + 150 * c <= 2000   (*) sugar
+andalso 100 * b + 150 * c <= 500   (*) butter
+andalso 75 * c <= 500              (*) cocoa
+yield {b, c, profit = 400 * b + 450 * c}
+order profit desc;
+> val it =
+>   [{b=2,c=2,profit=1700},{b=3,c=1,profit=1650},{b=0,c=3,profit=1350},
+>    {b=1,c=2,profit=1300},{b=2,c=1,profit=1250},{b=3,c=0,profit=1200},
+>    {b=0,c=2,profit=900},{b=1,c=1,profit=850},{b=2,c=0,profit=800},
+>    {b=0,c=1,profit=450},{b=1,c=0,profit=400},{b=0,c=0,profit=0}]
+>   : {b:int, c:int, profit:int} list
+
 (*) End suchThat.smli
