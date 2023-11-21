@@ -240,6 +240,14 @@ public class Shuttle {
     return ast.where(where.pos, where.exp.accept(this));
   }
 
+  protected AstNode visit(Ast.Skip skip) {
+    return ast.skip(skip.pos, skip.exp.accept(this));
+  }
+
+  protected AstNode visit(Ast.Take take) {
+    return ast.take(take.pos, take.exp.accept(this));
+  }
+
   protected AstNode visit(Ast.Yield yield) {
     return ast.yield(yield.pos, yield.exp.accept(this));
   }
@@ -393,6 +401,14 @@ public class Shuttle {
 
   protected Core.Where visit(Core.Where where) {
     return where.copy(where.exp.accept(this), where.bindings);
+  }
+
+  protected Core.Skip visit(Core.Skip skip) {
+    return skip.copy(skip.exp.accept(this), skip.bindings);
+  }
+
+  protected Core.Take visit(Core.Take take) {
+    return take.copy(take.exp.accept(this), take.bindings);
   }
 
   protected Core.Group visit(Core.Group group) {

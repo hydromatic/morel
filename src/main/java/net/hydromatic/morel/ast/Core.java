@@ -1238,6 +1238,66 @@ public class Core {
     }
   }
 
+  /** A {@code skip} clause in a {@code from} expression. */
+  public static class Skip extends FromStep {
+    public final Exp exp;
+
+    Skip(ImmutableList<Binding> bindings, Exp exp) {
+      super(Op.SKIP, bindings);
+      this.exp = requireNonNull(exp, "exp");
+    }
+
+    @Override public Skip accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
+        int left, int right) {
+      return w.append(" skip ").append(exp, 0, 0);
+    }
+
+    public Skip copy(Exp exp, List<Binding> bindings) {
+      return exp == this.exp
+          && bindings.equals(this.bindings)
+          ? this
+          : core.skip(bindings, exp);
+    }
+  }
+
+  /** A {@code take} clause in a {@code from} expression. */
+  public static class Take extends FromStep {
+    public final Exp exp;
+
+    Take(ImmutableList<Binding> bindings, Exp exp) {
+      super(Op.TAKE, bindings);
+      this.exp = requireNonNull(exp, "exp");
+    }
+
+    @Override public Take accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
+        int left, int right) {
+      return w.append(" take ").append(exp, 0, 0);
+    }
+
+    public Take copy(Exp exp, List<Binding> bindings) {
+      return exp == this.exp
+          && bindings.equals(this.bindings)
+          ? this
+          : core.take(bindings, exp);
+    }
+  }
+
   /** An {@code order} clause in a {@code from} expression. */
   public static class Order extends FromStep {
     public final ImmutableList<OrderItem> orderItems;

@@ -68,6 +68,27 @@ public class AlgebraTest {
                 10));
   }
 
+  @Test void testScottOrder() {
+    final String ml = "from e in scott.emp\n"
+        + " yield {e.empno, e.deptno}\n"
+        + " order empno desc\n"
+        + " skip 2 take 4";
+    // When fixed,
+    //   [CALCITE-6128] RelBuilder.sortLimit should compose offset and fetch
+    // will yield a plan with one fewer LogicalSort
+    final String plan = "LogicalSort(fetch=[4])\n"
+        + "  LogicalSort(sort0=[$1], dir0=[DESC], offset=[2])\n"
+        + "    LogicalProject(deptno=[$7], empno=[$0])\n"
+        + "      JdbcTableScan(table=[[scott, EMP]])\n";
+    ml(ml)
+        .withBinding("scott", BuiltInDataSet.SCOTT)
+        .assertType("{deptno:int, empno:int} list")
+        .assertCalcite(is(plan))
+        .assertEvalIter(
+            equalsOrdered(list(30, 7900), list(20, 7876), list(30, 7844),
+                list(10, 7839)));
+  }
+
   @Test void testScottJoin() {
     final String ml = "let\n"
         + "  val emps = #emp scott\n"
@@ -153,6 +174,13 @@ public class AlgebraTest {
             + "group r.b compute sb = sum of r.b,\n"
             + "    mb = min of r.b, a = count\n"
             + "yield {a, a2 = a + b, sb}",
+        "from e in scott.emp\n"
+            + "yield {e.ename, x = e.deptno * 2}",
+        "from e in scott.emp\n"
+            + "order e.ename",
+        "from e in scott.emp\n"
+            + "order e.ename desc\n"
+            + "take 3",
         "from e in scott.emp,\n"
             + "  d in scott.dept\n"
             + "where e.deptno = d.deptno\n"

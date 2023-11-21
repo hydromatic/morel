@@ -507,6 +507,7 @@ public abstract class Codes {
 
       @Override public Object eval(EvalEnv env) {
         final RowSink rowSink = rowSinkFactory.get();
+        rowSink.start(env);
         rowSink.accept(env);
         return rowSink.result(env);
       }
@@ -522,6 +523,16 @@ public abstract class Codes {
   /** Creates a {@link RowSink} for a {@code where} clause. */
   public static RowSink whereRowSink(Code filterCode, RowSink rowSink) {
     return new WhereRowSink(filterCode, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a {@code skip} clause. */
+  public static RowSink skipRowSink(Code filterCode, RowSink rowSink) {
+    return new SkipRowSink(filterCode, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a {@code take} clause. */
+  public static RowSink takeRowSink(Code filterCode, RowSink rowSink) {
+    return new TakeRowSink(filterCode, rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code order} clause. */
@@ -3042,26 +3053,47 @@ public abstract class Codes {
 
   /** Accepts rows produced by a supplier as part of a {@code from} clause. */
   public interface RowSink extends Describable {
+    void start(EvalEnv env);
     void accept(EvalEnv env);
     List<Object> result(EvalEnv env);
   }
 
+  /** Abstract implementation for row sinks that have one successor. */
+  abstract static class BaseRowSink implements RowSink {
+    final RowSink rowSink;
+
+    BaseRowSink(RowSink rowSink) {
+      this.rowSink = requireNonNull(rowSink);
+    }
+
+    @Override public void start(EvalEnv env) {
+      rowSink.start(env);
+    }
+
+    @Override public void accept(EvalEnv env) {
+      rowSink.accept(env);
+    }
+
+    @Override public List<Object> result(EvalEnv env) {
+      return rowSink.result(env);
+    }
+  }
+
   /** Implementation of {@link RowSink} for a {@code join} clause. */
-  static class ScanRowSink implements RowSink {
+  static class ScanRowSink extends BaseRowSink {
     final Op op; // inner, left, right, full
     private final Core.Pat pat;
     private final Code code;
     final Code conditionCode;
-    final RowSink rowSink;
 
     ScanRowSink(Op op, Core.Pat pat, Code code, Code conditionCode,
         RowSink rowSink) {
+      super(rowSink);
       checkArgument(op == Op.INNER_JOIN);
       this.op = op;
       this.pat = pat;
       this.code = code;
       this.conditionCode = conditionCode;
-      this.rowSink = rowSink;
     }
 
     @Override public Describer describe(Describer describer) {
@@ -3078,7 +3110,7 @@ public abstract class Codes {
           && Objects.equals(code.eval(null), true);
     }
 
-    public void accept(EvalEnv env) {
+    @Override public void accept(EvalEnv env) {
       final MutableEvalEnv mutableEvalEnv = env.bindMutablePat(pat);
       final Iterable<Object> elements = (Iterable<Object>) code.eval(env);
       for (Object element : elements) {
@@ -3090,20 +3122,15 @@ public abstract class Codes {
         }
       }
     }
-
-    public List<Object> result(EvalEnv env) {
-      return rowSink.result(env);
-    }
   }
 
   /** Implementation of {@link RowSink} for a {@code where} clause. */
-  static class WhereRowSink implements RowSink {
+  static class WhereRowSink extends BaseRowSink {
     final Code filterCode;
-    final RowSink rowSink;
 
     WhereRowSink(Code filterCode, RowSink rowSink) {
+      super(rowSink);
       this.filterCode = filterCode;
-      this.rowSink = rowSink;
     }
 
     @Override public Describer describe(Describer describer) {
@@ -3112,38 +3139,92 @@ public abstract class Codes {
               .arg("sink", rowSink));
     }
 
-    public void accept(EvalEnv env) {
+    @Override public void accept(EvalEnv env) {
       if ((Boolean) filterCode.eval(env)) {
         rowSink.accept(env);
       }
     }
+  }
 
-    public List<Object> result(EvalEnv env) {
-      return rowSink.result(env);
+  /** Implementation of {@link RowSink} for a {@code skip} clause. */
+  static class SkipRowSink extends BaseRowSink {
+    final Code skipCode;
+    int skip;
+
+    SkipRowSink(Code skipCode, RowSink rowSink) {
+      super(rowSink);
+      this.skipCode = skipCode;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("skip", d ->
+          d.arg("count", skipCode)
+              .arg("sink", rowSink));
+    }
+
+    @Override public void start(EvalEnv env) {
+      skip = (Integer) skipCode.eval(env);
+      super.start(env);
+    }
+
+    @Override public void accept(EvalEnv env) {
+      if (skip > 0) {
+        --skip;
+      } else {
+        rowSink.accept(env);
+      }
+    }
+  }
+
+  /** Implementation of {@link RowSink} for a {@code take} clause. */
+  static class TakeRowSink extends BaseRowSink {
+    final Code takeCode;
+    int take;
+
+    TakeRowSink(Code takeCode, RowSink rowSink) {
+      super(rowSink);
+      this.takeCode = takeCode;
+    }
+
+    @Override public Describer describe(Describer describer) {
+      return describer.start("take", d ->
+          d.arg("count", takeCode)
+              .arg("sink", rowSink));
+    }
+
+    @Override public void start(EvalEnv env) {
+      take = (Integer) takeCode.eval(env);
+      super.start(env);
+    }
+
+    @Override public void accept(EvalEnv env) {
+      if (take > 0) {
+        --take;
+        rowSink.accept(env);
+      }
     }
   }
 
   /** Implementation of {@link RowSink} for a {@code group} clause. */
-  private static class GroupRowSink implements RowSink {
+  private static class GroupRowSink extends BaseRowSink {
     final Code keyCode;
     final ImmutableList<String> inNames;
     final ImmutableList<String> keyNames;
     /** group names followed by aggregate names */
     final ImmutableList<String> outNames;
     final ImmutableList<Applicable> aggregateCodes;
-    final RowSink rowSink;
     final ListMultimap<Object, Object> map = ArrayListMultimap.create();
     final Object[] values;
 
     GroupRowSink(Code keyCode, ImmutableList<Applicable> aggregateCodes,
         ImmutableList<String> inNames, ImmutableList<String> keyNames,
         ImmutableList<String> outNames, RowSink rowSink) {
+      super(rowSink);
       this.keyCode = requireNonNull(keyCode);
       this.aggregateCodes = requireNonNull(aggregateCodes);
       this.inNames = requireNonNull(inNames);
       this.keyNames = requireNonNull(keyNames);
       this.outNames = requireNonNull(outNames);
-      this.rowSink = requireNonNull(rowSink);
       this.values = inNames.size() == 1 ? null : new Object[inNames.size()];
       checkArgument(isPrefix(keyNames, outNames));
     }
@@ -3161,7 +3242,7 @@ public abstract class Codes {
       });
     }
 
-    public void accept(EvalEnv env) {
+    @Override public void accept(EvalEnv env) {
       if (inNames.size() == 1) {
         map.put(keyCode.eval(env), env.getOpt(inNames.get(0)));
       } else {
@@ -3172,7 +3253,7 @@ public abstract class Codes {
       }
     }
 
-    public List<Object> result(final EvalEnv env) {
+    @Override public List<Object> result(final EvalEnv env) {
       // Derive env2, the environment for our consumer. It consists of our input
       // environment plus output names.
       EvalEnv env2 = env;
@@ -3213,18 +3294,17 @@ public abstract class Codes {
   }
 
   /** Implementation of {@link RowSink} for an {@code order} clause. */
-  static class OrderRowSink implements RowSink {
+  static class OrderRowSink extends BaseRowSink {
     final ImmutablePairList<Code, Boolean> codes;
     final ImmutableList<String> names;
-    final RowSink rowSink;
     final List<Object> rows = new ArrayList<>();
     final Object[] values;
 
     OrderRowSink(ImmutablePairList<Code, Boolean> codes,
         ImmutableList<String> names, RowSink rowSink) {
+      super(rowSink);
       this.codes = codes;
       this.names = names;
-      this.rowSink = rowSink;
       this.values = names.size() == 1 ? null : new Object[names.size()];
     }
 
@@ -3235,7 +3315,7 @@ public abstract class Codes {
       });
     }
 
-    public void accept(EvalEnv env) {
+    @Override public void accept(EvalEnv env) {
       if (values == null) {
         rows.add(env.getOpt(names.get(0)));
       } else {
@@ -3246,7 +3326,7 @@ public abstract class Codes {
       }
     }
 
-    public List<Object> result(final EvalEnv env) {
+    @Override public List<Object> result(final EvalEnv env) {
       final MutableEvalEnv leftEnv = env.bindMutableArray(names);
       final MutableEvalEnv rightEnv = env.bindMutableArray(names);
       rows.sort((left, right) -> {
@@ -3277,17 +3357,16 @@ public abstract class Codes {
    * step is allowed to generate expressions that are not records. Non-record
    * expressions (e.g. {@code int} expressions) do not have a name, and
    * therefore the value cannot be passed via the {@link EvalEnv}. */
-  private static class YieldRowSink implements RowSink {
+  private static class YieldRowSink extends BaseRowSink {
     private final ImmutableList<String> names;
     private final ImmutableList<Code> codes;
-    private final RowSink rowSink;
     private final Object[] values;
 
     YieldRowSink(ImmutableList<String> names, ImmutableList<Code> codes,
         RowSink rowSink) {
+      super(rowSink);
       this.names = names;
       this.codes = codes;
-      this.rowSink = rowSink;
       this.values = names.size() == 1 ? null : new Object[names.size()];
     }
 
@@ -3310,10 +3389,6 @@ public abstract class Codes {
       }
       rowSink.accept(env2);
     }
-
-    @Override public List<Object> result(EvalEnv env) {
-      return rowSink.result(env);
-    }
   }
 
   /** Implementation of {@link RowSink} that the last step of a {@code from}
@@ -3328,6 +3403,10 @@ public abstract class Codes {
 
     @Override public Describer describe(Describer describer) {
       return describer.start("collect", d -> d.arg("", code));
+    }
+
+    @Override public void start(EvalEnv env) {
+      list.clear();
     }
 
     @Override public void accept(EvalEnv env) {

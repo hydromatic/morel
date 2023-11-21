@@ -131,7 +131,7 @@ fun bestGuesses words =
 > val bestGuesses = fn : string list -> {f:int, w:string} list
 
 (*) Run on a sample of 500 words; faster than the full set of 12,972 words.
-val sampleWords = if slow then words else List.take (words, 200);
+val sampleWords = if slow then words else List.`take` (words, 200);
 > val sampleWords =
 >   ["aahed","aalii","aargh","aarti","abaca","abaci","aback","abacs","abaft",
 >    "abaka","abamp","aband","abase","abash","abask","abate","abaya","abbas",

@@ -697,20 +697,20 @@ Sys.plan ();
 >   : string
 
 (*) val take : 'a list * int -> 'a list
-List.take;
+List.`take`;
 > val it = fn : 'a list * int -> 'a list
-List.take ([1,2,3], 0);
+List.`take` ([1,2,3], 0);
 > val it = [] : int list
-List.take ([1,2,3], 1);
+List.`take` ([1,2,3], 1);
 > val it = [1] : int list
-List.take ([1,2,3], 3);
+List.`take` ([1,2,3], 3);
 > val it = [1,2,3] : int list
-List.take ([1,2,3], 4);
+List.`take` ([1,2,3], 4);
 > uncaught exception Subscript [subscript out of bounds]
->   raised at: stdIn:1.1-1.23
-List.take ([1,2,3], ~1);
+>   raised at: stdIn:1.1-1.25
+List.`take` ([1,2,3], ~1);
 > uncaught exception Subscript [subscript out of bounds]
->   raised at: stdIn:1.1-1.24
+>   raised at: stdIn:1.1-1.26
 Sys.plan ();
 > val it =
 >   "apply2(fnValue List.take, tuple(constant(1), constant(2), constant(3)), constant(-1))"

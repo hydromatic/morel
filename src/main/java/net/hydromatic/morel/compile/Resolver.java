@@ -919,6 +919,16 @@ public class Resolver {
       fromBuilder.where(r.toCore(where.exp));
     }
 
+    @Override protected void visit(Ast.Skip skip) {
+      final Resolver r = withEnv(env); // do not use 'from' bindings
+      fromBuilder.skip(r.toCore(skip.exp));
+    }
+
+    @Override protected void visit(Ast.Take take) {
+      final Resolver r = withEnv(env); // do not use 'from' bindings
+      fromBuilder.take(r.toCore(take.exp));
+    }
+
     @Override protected void visit(Ast.Yield yield) {
       final Resolver r = withEnv(fromBuilder.bindings());
       fromBuilder.yield_(r.toCore(yield.exp));

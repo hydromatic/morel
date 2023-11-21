@@ -137,6 +137,8 @@ public enum Op {
   COMPUTE,
   ORDER,
   ORDER_ITEM,
+  SKIP,
+  TAKE,
   YIELD,
   AGGREGATE,
   IF;

@@ -1752,6 +1752,12 @@ public class MainTest {
         .assertParse("from e in emps"
             + " group id = #id e compute count = count"
             + " join d in depts where false");
+    ml("from e in emps skip 1 take 2").assertParseSame();
+    ml("from e in emps order e.empno take 2")
+        .assertParse("from e in emps order #empno e take 2");
+    ml("from e in emps order e.empno take 2 skip 3 skip 1+1 take 2")
+        .assertParse("from e in emps order #empno e take 2 skip 3 skip 1 + 1 "
+            + "take 2");
     ml("fn f => from i in [1, 2, 3] where f i")
         .assertParseSame()
         .assertType("(int -> bool) -> int list");
@@ -2399,10 +2405,14 @@ public class MainTest {
   @Test void testFromOrderYield() {
     final String ml = "from r in [{a=1,b=2},{a=1,b=0},{a=2,b=1}]\n"
         + "  order r.a desc, r.b\n"
+        + "  skip 0\n"
+        + "  take 4 + 6\n"
         + "  yield {r.a, b10 = r.b * 10}";
     final String expected = "from r in"
         + " [{a = 1, b = 2}, {a = 1, b = 0}, {a = 2, b = 1}]"
         + " order #a r desc, #b r"
+        + " skip 0"
+        + " take 4 + 6"
         + " yield {a = #a r, b10 = #b r * 10}";
     ml(ml).assertParse(expected)
         .assertType(hasMoniker("{a:int, b10:int} list"))

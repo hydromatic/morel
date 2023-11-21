@@ -206,6 +206,14 @@ public class Visitor {
     where.exp.accept(this);
   }
 
+  protected void visit(Ast.Skip skip) {
+    skip.exp.accept(this);
+  }
+
+  protected void visit(Ast.Take take) {
+    take.exp.accept(this);
+  }
+
   protected void visit(Ast.Yield yield) {
     yield.exp.accept(this);
   }
@@ -324,6 +332,14 @@ public class Visitor {
 
   protected void visit(Core.Where where) {
     where.exp.accept(this);
+  }
+
+  protected void visit(Core.Skip skip) {
+    skip.exp.accept(this);
+  }
+
+  protected void visit(Core.Take take) {
+    take.exp.accept(this);
   }
 
   protected void visit(Core.NonRecValDecl valDecl) {

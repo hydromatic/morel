@@ -260,7 +260,7 @@ public class CalciteCompiler extends Compiler {
             } else {
               for (Core.Exp arg : args) {
                 cx.relBuilder.values(new String[]{"T"}, true);
-                yield_(cx, arg);
+                yield_(cx, ImmutableList.of(), arg);
               }
               cx.relBuilder.union(true, args.size());
             }
@@ -303,9 +303,9 @@ public class CalciteCompiler extends Compiler {
           return false;
         }
         final JsonBuilder jsonBuilder = new JsonBuilder();
+        final RelJson relJson = RelJson.create().withJsonBuilder(jsonBuilder);
         final String jsonRowType =
-            jsonBuilder.toJsonString(
-                new RelJson(jsonBuilder).toJson(rowType));
+            jsonBuilder.toJsonString(relJson.toJson(rowType));
         final String morelCode = apply.toString();
         ThreadLocals.let(CalciteFunctions.THREAD_ENV,
             new CalciteFunctions.Context(new Session(ImmutableMap.of()), cx.env,
@@ -369,7 +369,7 @@ public class CalciteCompiler extends Compiler {
     }
   }
 
-  @Override protected RelCode compileFrom(Context cx, Core.From from) {
+  @Override protected Code compileFrom(Context cx, Core.From from) {
     final Code code = super.compileFrom(cx, from);
     return new RelCode() {
       @Override public Describer describe(Describer describer) {
@@ -400,7 +400,7 @@ public class CalciteCompiler extends Compiler {
             || getLast(from.steps).op != Op.YIELD) {
           final Core.Exp implicitYieldExp =
               core.implicitYieldExp(typeSystem, from.steps);
-          cx = yield_(cx, implicitYieldExp);
+          cx = yield_(cx, ImmutableList.of(), implicitYieldExp);
         }
         return true;
       }
@@ -411,6 +411,10 @@ public class CalciteCompiler extends Compiler {
           return join(cx, i, (Core.Scan) fromStep);
         case WHERE:
           return where(cx, (Core.Where) fromStep);
+        case SKIP:
+          return skip(cx, (Core.Skip) fromStep);
+        case TAKE:
+          return take(cx, (Core.Take) fromStep);
         case ORDER:
           return order(cx, (Core.Order) fromStep);
         case GROUP:
@@ -425,25 +429,28 @@ public class CalciteCompiler extends Compiler {
   }
 
   private RelContext yield_(RelContext cx, Core.Yield yield) {
-    return yield_(cx, yield.exp);
+    return yield_(cx, yield.bindings, yield.exp);
   }
 
-  private RelContext yield_(RelContext cx, Core.Exp exp) {
+  private RelContext yield_(RelContext cx, List<Binding> bindings,
+      Core.Exp exp) {
     final Core.Tuple tuple;
     switch (exp.op) {
     case ID:
       final Core.Id id = (Core.Id) exp;
       tuple = toRecord(cx, id);
       if (tuple != null) {
-        return yield_(cx, tuple);
+        return yield_(cx, bindings, tuple);
       }
       break;
 
     case TUPLE:
       tuple = (Core.Tuple) exp;
+      final List<String> names =
+          ImmutableList.copyOf(tuple.type().argNameTypes().keySet());
       cx.relBuilder.project(transform(tuple.args, e -> translate(cx, e)),
-          ImmutableList.copyOf(tuple.type().argNameTypes().keySet()));
-      return cx;
+          names);
+      return getRelContext(cx, cx.env.bindAll(bindings), names);
     }
     RexNode rex = translate(cx, exp);
     cx.relBuilder.project(rex);
@@ -489,7 +496,7 @@ public class CalciteCompiler extends Compiler {
       if (cx.map.containsKey(id.idPat.name)) {
         // Not a record, so must be a scalar. It is represented in Calcite
         // as a record with one field.
-        final VarData fn = cx.map.get(id.idPat.name);
+        final VarData fn = requireNonNull(cx.map.get(id.idPat.name));
         return fn.apply(cx.relBuilder);
       }
       break;
@@ -611,9 +618,9 @@ public class CalciteCompiler extends Compiler {
     final RelDataType calciteType =
         Converters.toCalciteType(exp.type, typeFactory);
     final JsonBuilder jsonBuilder = new JsonBuilder();
+    final RelJson relJson = RelJson.create().withJsonBuilder(jsonBuilder);
     final String jsonType =
-        jsonBuilder.toJsonString(
-            new RelJson(jsonBuilder).toJson(calciteType));
+        jsonBuilder.toJsonString(relJson.toJson(calciteType));
     final String morelCode = exp.toString();
     return cx.relBuilder.getRexBuilder().makeCall(calciteType,
         CalciteFunctions.SCALAR_OPERATOR,
@@ -695,6 +702,26 @@ public class CalciteCompiler extends Compiler {
     return cx;
   }
 
+  private RelContext skip(RelContext cx, Core.Skip skip) {
+    if (skip.exp.op != Op.INT_LITERAL) {
+      throw new AssertionError("skip requires literal: " + skip.exp);
+    }
+    int offset = ((Core.Literal) skip.exp).unwrap(Integer.class);
+    int fetch = -1; // per Calcite: "negative means no limit"
+    cx.relBuilder.limit(offset, fetch);
+    return cx;
+  }
+
+  private RelContext take(RelContext cx, Core.Take take) {
+    if (take.exp.op != Op.INT_LITERAL) {
+      throw new AssertionError("take requires literal: " + take.exp);
+    }
+    int offset = 0;
+    int fetch = ((Core.Literal) take.exp).unwrap(Integer.class);
+    cx.relBuilder.limit(offset, fetch);
+    return cx;
+  }
+
   private RelContext order(RelContext cx, Core.Order order) {
     final List<RexNode> exps = new ArrayList<>();
     order.orderItems.forEach(i -> {
@@ -709,7 +736,6 @@ public class CalciteCompiler extends Compiler {
   }
 
   private RelContext group(RelContext cx, Core.Group group) {
-    final SortedMap<String, VarData> map = new TreeMap<>();
     final List<Binding> bindings = new ArrayList<>();
     final List<RexNode> nodes = new ArrayList<>();
     final List<String> names = new ArrayList<>();
@@ -734,20 +760,24 @@ public class CalciteCompiler extends Compiler {
 
     // Create an Aggregate operator.
     cx.relBuilder.aggregate(groupKey, aggregateCalls);
+    return getRelContext(cx, cx.env.bindAll(bindings), names);
+  }
 
+  private static RelContext getRelContext(RelContext cx, Environment env,
+      List<String> names) {
     // Permute the fields so that they are sorted by name, per Morel records.
     final List<String> sortedNames =
         Ordering.natural().immutableSortedCopy(names);
     cx.relBuilder.rename(names)
         .project(cx.relBuilder.fields(sortedNames));
     final RelDataType rowType = cx.relBuilder.peek().getRowType();
-    sortedNames.forEach(name -> {
-      final int i = map.size();
-      map.put(name, new VarData(PrimitiveType.UNIT, i, rowType));
-    });
+    final SortedMap<String, VarData> map = new TreeMap<>();
+    sortedNames.forEach(name ->
+        map.put(name,
+            new VarData(PrimitiveType.UNIT, map.size(), rowType)));
 
     // Return a context containing a variable for each output field.
-    return new RelContext(cx.env.bindAll(bindings), cx, cx.relBuilder,
+    return new RelContext(env, cx, cx.relBuilder,
         ImmutableSortedMap.copyOfSorted(map), 1);
   }
 

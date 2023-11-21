@@ -483,6 +483,14 @@ public enum AstBuilder {
     return new Ast.Where(pos, exp);
   }
 
+  public Ast.FromStep skip(Pos pos, Ast.Exp exp) {
+    return new Ast.Skip(pos, exp);
+  }
+
+  public Ast.FromStep take(Pos pos, Ast.Exp exp) {
+    return new Ast.Take(pos, exp);
+  }
+
   public Ast.FromStep yield(Pos pos, Ast.Exp exp) {
     return new Ast.Yield(pos, exp);
   }

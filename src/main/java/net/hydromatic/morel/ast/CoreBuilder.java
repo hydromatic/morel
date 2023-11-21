@@ -521,6 +521,14 @@ public enum CoreBuilder {
     return new Core.Where(ImmutableList.copyOf(bindings), exp);
   }
 
+  public Core.Skip skip(List<Binding> bindings, Core.Exp exp) {
+    return new Core.Skip(ImmutableList.copyOf(bindings), exp);
+  }
+
+  public Core.Take take(List<Binding> bindings, Core.Exp exp) {
+    return new Core.Take(ImmutableList.copyOf(bindings), exp);
+  }
+
   public Core.Yield yield_(List<Binding> bindings, Core.Exp exp) {
     return new Core.Yield(ImmutableList.copyOf(bindings), exp);
   }

@@ -546,6 +546,22 @@ public class TypeResolver {
       fromSteps.add(where.copy(filter2));
       return Pair.of(env2, v);
 
+    case SKIP:
+      final Ast.Skip skip = (Ast.Skip) step;
+      final Unifier.Variable v11 = unifier.variable();
+      final Ast.Exp skipCount = deduceType(env2, skip.exp, v11);
+      equiv(v11, toTerm(PrimitiveType.INT));
+      fromSteps.add(skip.copy(skipCount));
+      return Pair.of(env2, v);
+
+    case TAKE:
+      final Ast.Take take = (Ast.Take) step;
+      final Unifier.Variable v12 = unifier.variable();
+      final Ast.Exp takeCount = deduceType(env2, take.exp, v12);
+      equiv(v12, toTerm(PrimitiveType.INT));
+      fromSteps.add(take.copy(takeCount));
+      return Pair.of(env2, v);
+
     case YIELD:
       final Ast.Yield yield = (Ast.Yield) step;
       final Unifier.Variable v6 = unifier.variable();

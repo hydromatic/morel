@@ -38,7 +38,7 @@ Contributions are welcome!
 
 In Morel but not Standard ML:
 * `from` expression with `in`, `suchthat`, `join`, `where`, `group`,
-  `compute`, `order`, `yield` clauses
+  `compute`, `order`, `skip`, `take`, `yield` clauses
 * `union`, `except`, `intersect`, `elem`, `notelem` operators
 * "*lab* `=`" is optional in `exprow`
 * identifiers may be quoted
@@ -159,7 +159,9 @@ In Standard ML but not in Morel:
                                 compute clause (<i>a</i> &gt; 1)
     | <b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>
                                 order clause (<i>o</i> &ge; 1)
-    | <b>yield</b> <i>exp</i>
+    | <b>skip</b> <i>exp</i>                  skip clause
+    | <b>take</b> <i>exp</i>                  take clause
+    | <b>yield</b> <i>exp</i>                 yield clause
 <i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>
 <i>agg</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i> [ <b>of</b> <i>exp</i> ]
 <i>orderItem</i> &rarr; <i>exp</i> [ <b>desc</b> ]

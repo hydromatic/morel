@@ -357,6 +357,8 @@ void fromStep(List<FromStep> steps) :
   final Pair<Pat, Exp> patExp;
   final Exp condition;
   final Exp filterExp;
+  final Exp skipExp;
+  final Exp takeExp;
   final Exp yieldExp;
   final PairList<Id, Exp> groupExps;
   final List<Aggregate> aggregates;
@@ -405,6 +407,14 @@ void fromStep(List<FromStep> steps) :
 |
   <ORDER> { span = Span.of(pos()); } orderItems = orderItemCommaList() {
     steps.add(ast.order(span.end(this), orderItems));
+  }
+|
+  <SKIP_> { span = Span.of(pos()); } skipExp = expression() {
+    steps.add(ast.skip(span.end(this), skipExp));
+  }
+|
+  <TAKE> { span = Span.of(pos()); } takeExp = expression() {
+    steps.add(ast.take(span.end(this), takeExp));
   }
 |
   <YIELD> { span = Span.of(pos()); } yieldExp = expression() {
@@ -1418,6 +1428,8 @@ AstNode statementEof() :
 | < JOIN: "join" >
 | < ON: "on" >
 | < ORDER: "order" >
+| < SKIP_: "skip" >
+| < TAKE: "take" >
 | < WHERE: "where" >
 | < YIELD: "yield" >
 }

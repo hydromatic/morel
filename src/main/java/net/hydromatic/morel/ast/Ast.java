@@ -1707,6 +1707,58 @@ public class Ast {
     }
   }
 
+  /** A {@code skip} clause in a {@code from} expression. */
+  public static class Skip extends FromStep {
+    public final Exp exp;
+
+    Skip(Pos pos, Exp exp) {
+      super(pos, Op.SKIP);
+      this.exp = exp;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" skip ").append(exp, 0, 0);
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Skip copy(Exp exp) {
+      return this.exp.equals(exp) ? this : new Skip(pos, exp);
+    }
+  }
+
+  /** A {@code take} clause in a {@code from} expression. */
+  public static class Take extends FromStep {
+    public final Exp exp;
+
+    Take(Pos pos, Exp exp) {
+      super(pos, Op.TAKE);
+      this.exp = exp;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" take ").append(exp, 0, 0);
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Take copy(Exp exp) {
+      return this.exp.equals(exp) ? this : new Take(pos, exp);
+    }
+  }
+
   /** A {@code yield} clause in a {@code from} expression. */
   public static class Yield extends FromStep {
     public final Exp exp;

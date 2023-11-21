@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -190,6 +191,19 @@ public class FromBuilder {
       return this;
     }
     return addStep(core.where(bindings, condition));
+  }
+
+  public FromBuilder skip(Core.Exp count) {
+    if (count.op == Op.INT_LITERAL
+        && ((Core.Literal) count).value.equals(BigDecimal.ZERO)) {
+      // skip "skip 0"
+      return this;
+    }
+    return addStep(core.skip(bindings, count));
+  }
+
+  public FromBuilder take(Core.Exp count) {
+    return addStep(core.take(bindings, count));
   }
 
   public FromBuilder group(SortedMap<Core.IdPat, Core.Exp> groupExps,
@@ -376,6 +390,14 @@ public class FromBuilder {
 
     @Override protected void visit(Core.Where where) {
       where(where.exp);
+    }
+
+    @Override protected void visit(Core.Skip skip) {
+      skip(skip.exp);
+    }
+
+    @Override protected void visit(Core.Take take) {
+      take(take.exp);
     }
 
     @Override protected void visit(Core.Yield yield) {

@@ -175,6 +175,41 @@ from e in emps
   order deptno desc;
 > val it = [30,30,20,10] : int list
 
+from e in emps
+  yield {e.deptno}
+  order deptno desc
+  skip 1;
+> val it = [30,20,10] : int list
+
+from e in emps
+  yield {e.deptno}
+  order deptno desc
+  skip 1
+  take 2;
+> val it = [30,20] : int list
+
+from e in emps
+  yield {e.deptno}
+  order deptno desc
+  take 2;
+> val it = [30,30] : int list
+
+(*) Pass 'take' and 'skip' via function arguments
+let
+  fun earlyEmps n =
+    from e in emps
+      yield {e.id, e.deptno}
+      order id
+      skip n - 2
+      take n
+in
+  (earlyEmps 2, earlyEmps 3)
+end;
+> val it =
+>   ([{deptno=10,id=100},{deptno=20,id=101}],
+>    [{deptno=20,id=101},{deptno=30,id=102},{deptno=30,id=103}])
+>   : {deptno:int, id:int} list * {deptno:int, id:int} list
+
 (*) 'yield' followed by 'order'
 from e in emps
   yield {e.deptno, x = e.deptno, e.name}
