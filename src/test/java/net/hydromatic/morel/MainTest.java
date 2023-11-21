@@ -1421,6 +1421,18 @@ public class MainTest {
             });
   }
 
+  /** Test case for "[MOREL-205] Pattern that uses nested type-constructors
+   * should not be considered redundant". */
+  @Test void testMatchCoverage13() {
+    // Even though "SOME i" is seen at depth 1 in the first line,
+    // the "SOME" at depth 0 in the second line is not the same pattern,
+    // therefore the pattern is not redundant.
+    final String ml = "fun f (SOME (SOME i)) = i + 1\n"
+        + "  | f (SOME NONE) = 0\n"
+        + "  | f NONE = ~1\n";
+    ml(ml).assertMatchCoverage(OK);
+  }
+
   /** Function declaration. */
   @Test void testFun() {
     final String ml = "let\n"

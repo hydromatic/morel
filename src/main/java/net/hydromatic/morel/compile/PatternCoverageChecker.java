@@ -139,7 +139,14 @@ class PatternCoverageChecker {
     case CON_PAT:
       final Core.ConPat conPat = (Core.ConPat) pat;
       terms.add(typeConstructorTerm(path, conPat.tyCon));
-      toTerm(conPat.pat, path, terms);
+      final int j =
+          ImmutableList.copyOf(
+              ((DataType) conPat.type).typeConstructors.keySet())
+              .indexOf(conPat.tyCon);
+      if (j < 0) {
+        throw new AssertionError("type constructor not found: " + conPat);
+      }
+      toTerm(conPat.pat, path.sub(j), terms);
       return;
 
     case CONS_PAT:

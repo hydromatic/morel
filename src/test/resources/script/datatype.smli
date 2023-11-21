@@ -306,4 +306,37 @@ stdIn:4.1-4.11 Error: operator and operand don't agree [tycon mismatch]
 val it = 3 : int
 *)
 
+(*) Pattern matching on the same type constructor, nested.
+fun f (SOME (SOME i)) = i + 1
+  | f (SOME NONE) = 0
+  | f NONE = ~1;
+> val f = fn : int option option -> int
+f (SOME (SOME 3));
+> val it = 4 : int
+f (SOME (SOME 2));
+> val it = 3 : int
+f (SOME NONE);
+> val it = 0 : int
+f NONE;
+> val it = ~1 : int
+
+(*) Test cases from [MOREL-126].
+fun f ((SOME i) :: NIL) = i + 1
+  | f NIL = 0;
+> val f = fn : int option list -> int
+f [];
+> val it = 0 : int
+f [SOME 5];
+> val it = 6 : int
+
+fun f [(SOME i)] = i
+  | f [] = 0;
+> 0.0-0.0 Warning: match nonexhaustive
+>   raised at: 0.0-0.0
+> val f = fn : int option list -> int
+f [];
+> val it = 0 : int
+f [SOME 5];
+> val it = 5 : int
+
 (*) End datatype.smli
