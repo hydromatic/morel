@@ -124,6 +124,7 @@ public class MainTest {
     ml("false").assertParseStmt(Ast.Id.class, "false");
 
     ml("val x = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
+    ml("val `x` = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
     ml("val x : int = 5")
         .assertParseDecl(Ast.ValDecl.class, "val x : int = 5");
 

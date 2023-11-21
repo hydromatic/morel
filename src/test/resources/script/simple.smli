@@ -103,8 +103,9 @@ fun foo x
   x'y
   ABC123
   Abc_123
-  Abc_ = 1;
-> val foo = fn : 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g -> int
+  Abc_
+  `a b` = 1;
+> val foo = fn : 'a -> 'b -> 'c -> 'd -> 'e -> 'f -> 'g -> 'h -> int
 
 {x = 1,
  x' = 2,
@@ -112,9 +113,18 @@ fun foo x
  x'y = 4,
  ABC123 = 5,
  Abc_123 = 6,
- Abc_ = 7};
-> val it = {ABC123=5,Abc_=7,Abc_123=6,x=1,x'=2,x''=3,x'y=4}
->   : {ABC123:int, Abc_:int, Abc_123:int, x:int, x':int, x'':int, x'y:int}
+ Abc_ = 7,
+ `A bc` = 8};
+> val it = {`A bc`=8,ABC123=5,Abc_=7,Abc_123=6,x=1,x'=2,x''=3,x'y=4}
+>   : {`A bc`:int, ABC123:int, Abc_:int, Abc_123:int, x:int, x':int, x'':int, x'y:int}
+
+(*) Quoted identifiers
+val `identifier with space` = 1;
+> val `identifier with space` = 1 : int
+val `identifier with ``backtick`` and period.` = 2;
+> val `identifier with ``backtick`` and period.` = 2 : int
+val `val` = "yes, you can use keywords as identifiers";
+> val val = "yes, you can use keywords as identifiers" : string
 
 (*) Simple commands
 val x = 1;

@@ -21,6 +21,7 @@ package net.hydromatic.morel.compile;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.foreign.RelList;
+import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
@@ -105,8 +106,11 @@ class Pretty {
       @Nonnull Object value) {
     if (value instanceof TypedVal) {
       final TypedVal typedVal = (TypedVal) value;
+      final StringBuilder buf2 = new StringBuilder("val ");
+      Parsers.appendId(buf2, typedVal.name)
+          .append(" = ");
       pretty1(buf, indent, lineEnd, depth, PrimitiveType.BOOL,
-          "val " + typedVal.name + " = ");
+          buf2.toString());
       pretty1(buf, indent + 2, lineEnd, depth + 1, typedVal.type, typedVal.o);
       buf.append(' ');
       pretty1(buf, indent + 2, lineEnd, depth, PrimitiveType.BOOL,
@@ -115,8 +119,8 @@ class Pretty {
     }
     if (value instanceof NamedVal) {
       final NamedVal namedVal = (NamedVal) value;
-      buf.append(namedVal.name);
-      buf.append('=');
+      Parsers.appendId(buf, namedVal.name)
+          .append('=');
       pretty1(buf, indent, lineEnd, depth, type, namedVal.o);
       return buf;
     }

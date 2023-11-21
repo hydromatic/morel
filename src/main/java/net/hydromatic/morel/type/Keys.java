@@ -31,6 +31,7 @@ import java.util.Objects;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
 
+import static net.hydromatic.morel.parse.Parsers.appendId;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
@@ -368,7 +369,9 @@ public class Keys {
           if (i > 0) {
             buf.append(", ");
           }
-          buf.append(name).append(':').append(key);
+          appendId(buf, name)
+              .append(':')
+              .append(key);
         });
         return buf.append('}');
       }

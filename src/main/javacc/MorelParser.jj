@@ -49,6 +49,9 @@ import java.util.List;
 import java.util.Map;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.parse.Parsers.unquoteCharLiteral;
+import static net.hydromatic.morel.parse.Parsers.unquoteIdentifier;
+import static net.hydromatic.morel.parse.Parsers.unquoteString;
 
 /**
  * Parser for Standard ML, generated from MorelParser.jj by JavaCC.
@@ -168,11 +171,7 @@ Literal stringLiteral() :
 }
 {
   <QUOTED_STRING> {
-    assert token.image.charAt(0) == '"';
-    assert token.image.charAt(token.image.length() - 1) == '"';
-    String image = token.image.substring(1, token.image.length() - 1)
-        .replace("\\\\", "\\").replace("\\\"", "\"");
-    return ast.stringLiteral(pos(), image);
+    return ast.stringLiteral(pos(), unquoteString(token.image));
   }
 }
 
@@ -182,15 +181,7 @@ Literal charLiteral() :
 }
 {
   <CHAR_LITERAL> {
-    assert token.image.charAt(0) == '#';
-    assert token.image.charAt(1) == '"';
-    assert token.image.charAt(token.image.length() - 1) == '"';
-    String image = token.image.substring(2, token.image.length() - 1)
-        .replace("\\\\", "\\").replace("\\\"", "\"");
-    if (image.length() != 1) {
-      throw new RuntimeException("Error: character constant not length 1");
-    }
-    return ast.charLiteral(pos(), image.charAt(0));
+    return ast.charLiteral(pos(), unquoteCharLiteral(token.image));
   }
 }
 
@@ -201,6 +192,9 @@ Id identifier() :
 {
   <IDENTIFIER> {
     return ast.id(pos(), token.image);
+  }
+| <QUOTED_IDENTIFIER> {
+    return ast.id(pos(), unquoteIdentifier(token.image));
   }
 }
 
@@ -803,7 +797,7 @@ void namedExpression(PairList<Id, Exp> list) :
   final Id id;
 }
 {
-  LOOKAHEAD(<IDENTIFIER> <EQ>)
+  LOOKAHEAD(( <IDENTIFIER> | <QUOTED_IDENTIFIER> ) <EQ>)
   id = identifier() <EQ> exp = expression() {
     list.add(id, exp);
   }
@@ -904,6 +898,10 @@ void recordExp(Map<String, Exp> map) :
 |
   LOOKAHEAD(<IDENTIFIER> <EQ>)
   <IDENTIFIER> { id = token.image; }
+  <EQ> exp = expression() { map.put(id, exp); }
+|
+  LOOKAHEAD(<QUOTED_IDENTIFIER> <EQ>)
+  <QUOTED_IDENTIFIER> { id = unquoteIdentifier(token.image); }
   <EQ> exp = expression() { map.put(id, exp); }
 |
   exp = expression() {
@@ -1240,7 +1238,10 @@ void recordPat(Map<String, Pat> map) :
   final Ast.Pat pat;
 }
 {
-  ( <NON_NEGATIVE_INTEGER_LITERAL> | <IDENTIFIER> ) { id = token.image; }
+  ( <NON_NEGATIVE_INTEGER_LITERAL> { id = token.image; }
+  | <IDENTIFIER> { id = token.image; }
+  | <QUOTED_IDENTIFIER> { id = unquoteIdentifier(token.image); }
+  )
   (
     <EQ> pat = pat() { map.put(id, pat); }
   |
@@ -1569,6 +1570,8 @@ MORE :
     >
     |
     < IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>|"_"|"'")* >
+    |
+    < QUOTED_IDENTIFIER: "`" ( (~["`"]) | ("`" "`") )* "`" >
     |
     < TY_VAR: "'" <LETTER> (<LETTER>|<DIGIT>|"_"|"'")* >
     |

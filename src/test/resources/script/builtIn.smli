@@ -25,17 +25,17 @@ Sys.set ("stringDepth", ~1);
 
 (* Structures -------------------------------------------------- *)
 General;
-> val it = {ignore=fn,op o=fn}
->   : {ignore:'a -> unit, op o:('b -> 'c) * ('d -> 'b) -> 'd -> 'c}
+> val it = {ignore=fn,`op o`=fn}
+>   : {ignore:'a -> unit, `op o`:('b -> 'c) * ('d -> 'b) -> 'd -> 'c}
 Interact;
 > val it = {use=fn} : {use:string -> unit}
 List;
 > val it =
 >   {all=fn,app=fn,at=fn,collate=fn,concat=fn,drop=fn,exists=fn,filter=fn,
 >    find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,last=fn,length=fn,map=fn,
->    mapPartial=fn,nil=[],nth=fn,null=fn,op @=fn,partition=fn,rev=fn,
+>    mapPartial=fn,nil=[],nth=fn,null=fn,`op @`=fn,partition=fn,rev=fn,
 >    revAppend=fn,tabulate=fn,take=fn,tl=fn}
->   : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> order) -> 'd list * 'd list -> order, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i option, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> ('n * 'n list) option, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u option) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, op @:'y list * 'y list -> 'y list, partition:('z -> bool) -> 'z list -> 'z list * 'z list, rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list, tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list, tl:'be list -> 'be list}
+>   : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> order) -> 'd list * 'd list -> order, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i option, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> ('n * 'n list) option, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u option) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, `op @`:'y list * 'y list -> 'y list, partition:('z -> bool) -> 'z list -> 'z list * 'z list, rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list, tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list, tl:'be list -> 'be list}
 List.rev;
 > val it = fn : 'a list -> 'a list
 List.rev [1,2,3];
@@ -2650,10 +2650,10 @@ Sys.env ();
 > val it =
 >   [("EQUAL","order"),("GREATER","order"),
 >    ("General",
->     "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
+>     "{ignore:forall 'a. 'a -> unit, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
 >    ("Interact","{use:string -> unit}"),("LESS","order"),
 >    ("List",
->     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+>     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, `op @`:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
 >    ("Math",
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
 >    ("NONE","'a option"),
@@ -2713,10 +2713,10 @@ env ();
 > val it =
 >   [("EQUAL","order"),("GREATER","order"),
 >    ("General",
->     "{ignore:forall 'a. 'a -> unit, op o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
+>     "{ignore:forall 'a. 'a -> unit, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
 >    ("Interact","{use:string -> unit}"),("LESS","order"),
 >    ("List",
->     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, op @:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+>     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, `op @`:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
 >    ("Math",
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
 >    ("NONE","'a option"),

@@ -41,6 +41,8 @@ In Morel but not Standard ML:
   `compute`, `order`, `yield` clauses
 * `union`, `except`, `intersect`, `elem`, `notelem` operators
 * "*lab* `=`" is optional in `exprow`
+* identifiers may be quoted
+  (for example, <code>\`an identifier\`</code>)
 
 In Standard ML but not in Morel:
 * `word` constant
