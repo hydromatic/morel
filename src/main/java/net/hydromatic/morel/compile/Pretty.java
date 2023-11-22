@@ -202,7 +202,7 @@ class Pretty {
             if (buf.length() > start) {
               buf.append(",");
             }
-            pretty1(buf, indent, lineEnd, depth + 1, elementType, o);
+            pretty1(buf, indent + 1, lineEnd, depth + 1, elementType, o);
           });
       return buf.append(")");
 
