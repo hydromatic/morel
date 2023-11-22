@@ -19,6 +19,7 @@ License.
 {% endcomment %}
 -->
 [![Build Status](https://github.com/hydromatic/morel/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/hydromatic/morel/actions?query=branch%3Amain)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/net.hydromatic/morel/badge.svg)](https://maven-badges.herokuapp.com/maven-central/net.hydromatic/morel)
 <img align="right" alt="Morel mushroom (credit: OldDesignShop.com)" src="etc/morel-1200x1200.jpg" with="300" height="300">
 
 # Morel
