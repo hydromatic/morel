@@ -45,6 +45,13 @@ public class TypeMap {
   public final TypeSystem typeSystem;
   private final Map<AstNode, Unifier.Term> nodeTypeTerms;
   final Unifier.Substitution substitution;
+
+  /** Map from type variable name to type variable. The ordinal of the variable
+   * is the size of the map at the time it is registered.
+   *
+   * <p>This map is never iterated over, and therefore the deterministic
+   * iteration provided by LinkedHashMap is not necessary, and HashMap is
+   * sufficient. */
   private final Map<String, TypeVar> typeVars = new HashMap<>();
 
   TypeMap(TypeSystem typeSystem, Map<AstNode, Unifier.Term> nodeTypeTerms,

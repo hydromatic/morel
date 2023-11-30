@@ -2114,7 +2114,7 @@ public class MainTest {
     final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
         + "    c in explode s\n"
         + "  group s compute count = sum of 1";
-    ml(ml).assertEvalIter(equalsOrdered(list(3, "abc"), list(1, "d")));
+    ml(ml).assertEvalIter(equalsUnordered(list(3, "abc"), list(1, "d")));
   }
 
   @Test void testJoinLateral() {
@@ -2333,7 +2333,7 @@ public class MainTest {
         + "  group j = i mod 2\n"
         + "  compute sum of j")
         .assertType("{j:int, sum:int} list")
-        .assertEval(is(list(list(1, 5), list(0, 3))));
+        .assertEvalIter(equalsUnordered(list(1, 5), list(0, 3)));
 
     // "compute" must not be followed by other steps
     ml("from i in [1, 2, 3] compute s = sum of i yield s + 2")

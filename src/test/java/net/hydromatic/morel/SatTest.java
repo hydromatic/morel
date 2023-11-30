@@ -22,6 +22,7 @@ import net.hydromatic.morel.util.Sat;
 import net.hydromatic.morel.util.Sat.Term;
 import net.hydromatic.morel.util.Sat.Variable;
 
+import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -50,7 +51,8 @@ public class SatTest {
 
     final Map<Variable, Boolean> solution = sat.solve(formula);
     assertThat(solution, notNullValue());
-    assertThat(solution.toString(), is("{x=false, y=true}"));
+    assertThat(solution,
+        is(ImmutableMap.of(x, false, y, true)));
   }
 
   /** Tests true ("and" with zero arguments). */
