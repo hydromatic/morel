@@ -69,7 +69,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -775,7 +775,7 @@ public class CalciteCompiler extends Compiler {
   }
 
   private static EvalEnv evalEnvOf(Environment env) {
-    final Map<String, Object> map = new HashMap<>();
+    final Map<String, Object> map = new LinkedHashMap<>();
     env.forEachValue(map::put);
     EMPTY_ENV.visit(map::putIfAbsent);
     return EvalEnvs.copyOf(map);

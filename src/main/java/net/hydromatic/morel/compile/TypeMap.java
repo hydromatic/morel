@@ -30,7 +30,7 @@ import com.google.common.collect.ImmutableSortedMap;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,7 +45,7 @@ public class TypeMap {
   public final TypeSystem typeSystem;
   private final Map<AstNode, Unifier.Term> nodeTypeTerms;
   final Unifier.Substitution substitution;
-  private final Map<String, TypeVar> typeVars = new HashMap<>();
+  private final Map<String, TypeVar> typeVars = new LinkedHashMap<>();
 
   TypeMap(TypeSystem typeSystem, Map<AstNode, Unifier.Term> nodeTypeTerms,
       Unifier.Substitution substitution) {
