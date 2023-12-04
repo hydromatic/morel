@@ -130,9 +130,7 @@ License.
       <property name="processJavadoc" value="true"/>
     </module>
     <module name="IllegalImport" />
-    <module name="AvoidStarImport">
-      <property name="allowStaticMemberImports" value="true"/>
-    </module>
+    <module name="AvoidStarImport" />
     <module name="ImportOrder">
       <property name="groups" value="net.hydromatic.morel,*,/^javax?/"/>
       <property name="staticGroups" value="net.hydromatic.morel,*,/^javax?/"/>
