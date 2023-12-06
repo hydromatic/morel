@@ -303,6 +303,18 @@ class PairLists {
       }
       return true;
     }
+
+    @SuppressWarnings("unchecked")
+    @Override public int firstMatch(BiPredicate<T, U> predicate) {
+      for (int i = 0, j = 0; i < list.size(); ++j) {
+        final T t = (T) list.get(i++);
+        final U u = (U) list.get(i++);
+        if (predicate.test(t, u)) {
+          return j;
+        }
+      }
+      return -1;
+    }
   }
 
   /** Empty immutable list of pairs.
@@ -366,6 +378,10 @@ class PairLists {
 
     @Override public boolean noMatch(BiPredicate<T, U> predicate) {
       return true;
+    }
+
+    @Override public int firstMatch(BiPredicate<T, U> predicate) {
+      return -1;
     }
   }
 
@@ -451,6 +467,10 @@ class PairLists {
 
     @Override public boolean noMatch(BiPredicate<T, U> predicate) {
       return !predicate.test(t, u);
+    }
+
+    @Override public int firstMatch(BiPredicate<T, U> predicate) {
+      return predicate.test(t, u) ? 0 : -1;
     }
   }
 
@@ -608,6 +628,18 @@ class PairLists {
         }
       }
       return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override public int firstMatch(BiPredicate<T, U> predicate) {
+      for (int i = 0, j = 0; i < elements.length; ++j) {
+        final T t = (T) elements[i++];
+        final U u = (U) elements[i++];
+        if (predicate.test(t, u)) {
+          return j;
+        }
+      }
+      return -1;
     }
   }
 }

@@ -52,6 +52,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.eval.Codes.isNegative;
@@ -188,6 +189,16 @@ public class UtilTest {
     assertThat(Static.shorterThan(iterable, 3), is(size < 3));
     assertThat(Static.shorterThan(iterable, 4), is(size < 4));
     assertThat(Static.shorterThan(iterable, 1_000_000), is(size < 1_000_000));
+  }
+
+  /** Tests {@link Static#find(List, Predicate)}. */
+  @Test void testFind() {
+    final List<Integer> list = Arrays.asList(1, 7, 3);
+    final List<Integer> emptyList = Collections.emptyList();
+    assertThat(Static.find(list, i -> i > 0), is(0));
+    assertThat(Static.find(list, i -> i > 1), is(1));
+    assertThat(Static.find(list, i -> i > 10), is(-1));
+    assertThat(Static.find(emptyList, i -> i > 0), is(-1));
   }
 
   /** Unit tests for {@link Pos}. */

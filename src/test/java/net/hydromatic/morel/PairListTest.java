@@ -353,42 +353,83 @@ class PairListTest {
   }
 
   @Test void testTransform() {
-    final PairList<String, Integer> list3 =
+    final PairList<String, Integer> mutableList3 =
         PairList.copyOf("a", 1, null, 5, "c", 3);
-    assertThat(list3.transform((s, i) -> s + i),
-        is(Arrays.asList("a1", "null5", "c3")));
-    assertThat(list3.transform2((s, i) -> s + i),
-        is(Arrays.asList("a1", "null5", "c3")));
+    final PairList<String, Integer> immutableList3 =
+        PairList.copyOf("a", 1, "null", 5, "c", 3);
 
-    final PairList<String, Integer> list0 = PairList.of();
-    assertThat(list0.transform((s, i) -> s + i), empty());
+    final PairList<String, Integer> mutableList0 = PairList.of();
 
-    final BiPredicate<String, Integer> gt2 = (s, i) -> i > 2;
-    assertThat(list3.anyMatch(gt2), is(true));
-    assertThat(list3.allMatch(gt2), is(false));
-    assertThat(list3.noMatch(gt2), is(false));
+    final PairList<String, Integer> mutableList1 = PairList.of("a", 1);
+    final PairList<String, Integer> doubleList1 =
+        ImmutablePairList.copyOf("a", 1, "a", 1);
 
-    final BiPredicate<String, Integer> negative = (s, i) -> i < 0;
-    assertThat(list3.anyMatch(negative), is(false));
-    assertThat(list3.allMatch(negative), is(false));
-    assertThat(list3.noMatch(negative), is(true));
+    for (boolean mutable : new boolean[] {false, true}) {
+      PairList<String, Integer> list0 =
+          mutable ? mutableList0 : mutableList0.immutable();
+      PairList<String, Integer> list1 =
+          mutable ? mutableList1 : mutableList1.immutable();
+      PairList<String, Integer> list3 =
+          mutable ? mutableList3 : immutableList3;
 
-    final BiPredicate<String, Integer> positive = (s, i) -> i > 0;
-    assertThat(list3.anyMatch(positive), is(true));
-    assertThat(list3.allMatch(positive), is(true));
-    assertThat(list3.noMatch(positive), is(false));
+      assertThat(list0.transform((s, i) -> s + i), empty());
 
-    final BiPredicate<String, Integer> isNull = (s, i) -> s == null;
-    assertThat(list3.anyMatch(isNull), is(true));
-    assertThat(list3.allMatch(isNull), is(false));
-    assertThat(list3.noMatch(isNull), is(false));
+      assertThat(list1.transform((s, i) -> s + i), is(ImmutableList.of("a1")));
 
-    // All predicates behave the same on the empty list
-    Arrays.asList(gt2, negative, positive, isNull).forEach(p -> {
-      assertThat(list0.anyMatch(p), is(false));
-      assertThat(list0.allMatch(p), is(true)); // trivially
-      assertThat(list0.noMatch(p), is(true));
-    });
+      assertThat(list3.transform((s, i) -> s + i),
+          is(Arrays.asList("a1", "null5", "c3")));
+      assertThat(list3.transform2((s, i) -> s + i),
+          is(Arrays.asList("a1", "null5", "c3")));
+
+      final BiPredicate<String, Integer> gt2 = (s, i) -> i > 2;
+      assertThat(list3.anyMatch(gt2), is(true));
+      assertThat(list3.allMatch(gt2), is(false));
+      assertThat(list3.noMatch(gt2), is(false));
+      assertThat(list3.firstMatch(gt2), is(1));
+
+      final BiPredicate<String, Integer> negative = (s, i) -> i < 0;
+      assertThat(list3.anyMatch(negative), is(false));
+      assertThat(list3.allMatch(negative), is(false));
+      assertThat(list3.noMatch(negative), is(true));
+      assertThat(list3.firstMatch(negative), is(-1));
+
+      final BiPredicate<String, Integer> positive = (s, i) -> i > 0;
+      assertThat(list3.anyMatch(positive), is(true));
+      assertThat(list3.allMatch(positive), is(true));
+      assertThat(list3.noMatch(positive), is(false));
+      assertThat(list3.firstMatch(positive), is(0));
+
+      final BiPredicate<String, Integer> isNull = (s, i) -> s == null;
+      if (mutable) {
+        assertThat(list3.anyMatch(isNull), is(true));
+        assertThat(list3.allMatch(isNull), is(false));
+        assertThat(list3.noMatch(isNull), is(false));
+        assertThat(list3.firstMatch(isNull), is(1));
+      } else {
+        // In the immutable version, null has been replaced with "null"
+        assertThat(list3.anyMatch(isNull), is(false));
+        assertThat(list3.allMatch(isNull), is(false));
+        assertThat(list3.noMatch(isNull), is(true));
+        assertThat(list3.firstMatch(isNull), is(-1));
+      }
+
+      // All predicates behave the same on the empty list
+      Arrays.asList(gt2, negative, positive, isNull).forEach(p -> {
+        assertThat(list0.anyMatch(p), is(false));
+        assertThat(list0.allMatch(p), is(true)); // trivially
+        assertThat(list0.noMatch(p), is(true));
+        assertThat(list0.firstMatch(p), is(-1));
+      });
+
+      // All predicates on the 1-element list have the same answer as the same
+      // predicate on the 2-element list that is the 1-element list doubled.
+      Arrays.asList(gt2, negative, positive, isNull).forEach(p -> {
+        assertThat(list1.anyMatch(p), is(doubleList1.anyMatch(p)));
+        assertThat(list1.allMatch(p), is(doubleList1.anyMatch(p)));
+        assertThat(list1.noMatch(p), is(doubleList1.noMatch(p)));
+        assertThat(list1.firstMatch(p), is(doubleList1.firstMatch(p)));
+      });
+    }
   }
 
   @Test void testBuilder() {

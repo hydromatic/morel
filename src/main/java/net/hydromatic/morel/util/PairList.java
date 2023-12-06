@@ -172,6 +172,9 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
    * in this list. */
   boolean allMatch(BiPredicate<T, U> predicate);
 
+  /** Returns the index of the first match of a predicate. */
+  int firstMatch(BiPredicate<T, U> predicate);
+
   /** Returns whether the predicate is true for no pairs
    * in this list. */
   boolean noMatch(BiPredicate<T, U> predicate);

@@ -30,9 +30,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.RandomAccess;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collector;
 
 /**
@@ -204,6 +206,26 @@ public class Static {
     final ImmutableList.Builder<T> b = ImmutableList.builder();
     elements.forEach(e -> b.add(mapper.apply(e)));
     return b.build();
+  }
+
+  /** Returns the first index in a list where a predicate is true, or -1. */
+  public static <E> int find(List<? extends E> list, Predicate<E> predicate) {
+    if (list instanceof RandomAccess) {
+      for (int i = 0; i < list.size(); i++) {
+        if (predicate.test(list.get(i))) {
+          return i;
+        }
+      }
+    } else {
+      int i = 0;
+      for (E e : list) {
+        if (predicate.test(e)) {
+          return i;
+        }
+        ++i;
+      }
+    }
+    return -1;
   }
 
   public static <E> List<E> intersect(List<E> list0,
