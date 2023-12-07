@@ -395,8 +395,7 @@ public class Shuttle {
 
   protected Core.Scan visit(Core.Scan scan) {
     return scan.copy(scan.bindings, scan.pat.accept(this),
-        scan.exp.accept(this),
-        scan.condition == null ? null : scan.condition.accept(this));
+        scan.exp.accept(this), scan.condition.accept(this));
   }
 
   protected Core.Where visit(Core.Where where) {

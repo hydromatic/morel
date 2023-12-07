@@ -20,6 +20,7 @@ package net.hydromatic.morel.ast;
 
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.compile.Extents;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
@@ -39,6 +40,7 @@ import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
@@ -56,9 +58,11 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Pair.forEachIndexed;
 import static net.hydromatic.morel.util.Static.transform;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -253,11 +257,12 @@ public enum CoreBuilder {
     return new Core.Con0Pat(type, tyCon);
   }
 
-  public Core.TuplePat tuplePat(Type type, Iterable<? extends Core.Pat> args) {
+  public Core.TuplePat tuplePat(RecordLikeType type,
+      Iterable<? extends Core.Pat> args) {
     return new Core.TuplePat(type, ImmutableList.copyOf(args));
   }
 
-  public Core.TuplePat tuplePat(Type type, Core.Pat... args) {
+  public Core.TuplePat tuplePat(RecordLikeType type, Core.Pat... args) {
     return new Core.TuplePat(type, ImmutableList.copyOf(args));
   }
 
@@ -540,12 +545,32 @@ public enum CoreBuilder {
     switch (exp.type.op()) {
     case RECORD_TYPE:
     case TUPLE_TYPE:
-      ((RecordLikeType) exp.type).argNameTypes().forEach((name, type) ->
-          bindings.add(
-              Binding.of(idPat(type, name, typeSystem.nameGenerator))));
+      forEachIndexed(((RecordLikeType) exp.type).argNameTypes(),
+          (i, name, type) -> {
+            final Core.NamedPat idPat;
+            if (exp.op == Op.TUPLE
+                && exp.arg(i) instanceof Core.Id
+                && ((Core.Id) exp.arg(i)).idPat.name.equals(name)) {
+              // Use an existing IdPat if we can, rather than generating a new
+              // IdPat with a different sequence number. (The underlying problem
+              // is that the fields of record types have only names, no sequence
+              // numbers.)
+              idPat = ((Core.Id) exp.arg(i)).idPat;
+            } else {
+              idPat = idPat(type, name, typeSystem.nameGenerator);
+            }
+            bindings.add(Binding.of(idPat));
+          });
       break;
+
     default:
-      bindings.add(Binding.of(idPat(exp.type, typeSystem.nameGenerator)));
+      switch (exp.op) {
+      case ID:
+        bindings.add(Binding.of(((Core.Id) exp).idPat));
+        break;
+      default:
+        bindings.add(Binding.of(idPat(exp.type, typeSystem.nameGenerator)));
+      }
     }
     return yield_(bindings, exp);
   }
@@ -578,20 +603,32 @@ public enum CoreBuilder {
    * fall into a given range-set. The range-set might consist of just
    * {@link Range#all()}, in which case, the list returns all values of the
    * type. */
-  @SuppressWarnings({"UnstableApiUsage", "rawtypes"})
+  @SuppressWarnings({"rawtypes", "unchecked"})
   public Core.Exp extent(TypeSystem typeSystem, Type type,
-      RangeSet<Comparable> rangeSet) {
+      RangeSet rangeSet) {
+    final Map<String, ImmutableRangeSet> map;
+    if (rangeSet.complement().isEmpty()) {
+      map = ImmutableMap.of();
+    } else {
+      map = ImmutableMap.of("/", ImmutableRangeSet.copyOf(rangeSet));
+    }
+    return extent(typeSystem, type, map);
+  }
+
+  @SuppressWarnings("rawtypes")
+  public Core.Exp extent(TypeSystem typeSystem, Type type,
+      Map<String, ImmutableRangeSet> rangeSetMap) {
     final ListType listType = typeSystem.listType(type);
     // Store an ImmutableRangeSet value inside a literal of type 'unit'.
     // The value of such literals is usually Unit.INSTANCE, but we cheat.
     return core.apply(Pos.ZERO, listType,
         core.functionLiteral(typeSystem, BuiltIn.Z_EXTENT),
-        core.internalLiteral(new RangeExtent(rangeSet, type)));
+        core.internalLiteral(new RangeExtent(typeSystem, type, rangeSetMap)));
   }
 
-  @SuppressWarnings({"UnstableApiUsage", "rawtypes", "unchecked"})
-  public Pair<Core.Exp, List<Core.Exp>> mergeExtents(TypeSystem typeSystem,
-      List<? extends Core.Exp> exps, boolean intersect) {
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  public Pair<Core.Exp, List<Core.Exp>> intersectExtents(TypeSystem typeSystem,
+      List<? extends Core.Exp> exps) {
     switch (exps.size()) {
     case 0:
       throw new AssertionError();
@@ -600,28 +637,61 @@ public enum CoreBuilder {
       return Pair.of(simplify(typeSystem, exps.get(0)), ImmutableList.of());
 
     default:
-      ImmutableRangeSet rangeSet = intersect
-          ? ImmutableRangeSet.of(Range.all())
-          : ImmutableRangeSet.of();
+      final List<Map<String, ImmutableRangeSet>> rangeSetMaps =
+          new ArrayList<>();
       final List<Core.Exp> remainingExps = new ArrayList<>();
       for (Core.Exp exp : exps) {
         if (exp.isCallTo(BuiltIn.Z_EXTENT)) {
           final Core.Literal argLiteral = (Core.Literal) ((Core.Apply) exp).arg;
           final RangeExtent list = argLiteral.unwrap(RangeExtent.class);
-          rangeSet = intersect
-              ? rangeSet.intersection(list.rangeSet)
-              : rangeSet.union(list.rangeSet);
+          rangeSetMaps.add(list.rangeSetMap);
           continue;
         }
         remainingExps.add(exp);
       }
       final ListType listType = (ListType) exps.get(0).type;
+      Map<String, ImmutableRangeSet> rangeSetMap =
+          Extents.intersect((List) rangeSetMaps);
       Core.Exp exp =
-          core.extent(typeSystem, listType.elementType, rangeSet);
+          core.extent(typeSystem, listType.elementType, rangeSetMap);
       for (Core.Exp remainingExp : remainingExps) {
-        exp = intersect
-            ? core.intersect(typeSystem, exp, remainingExp)
-            : core.union(typeSystem, exp, remainingExp);
+        exp = core.intersect(typeSystem, exp, remainingExp);
+      }
+      return Pair.of(exp, remainingExps);
+    }
+  }
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  public Pair<Core.Exp, List<Core.Exp>> unionExtents(TypeSystem typeSystem,
+      List<? extends Core.Exp> exps) {
+    switch (exps.size()) {
+    case 0:
+      throw new AssertionError();
+
+    case 1:
+      return Pair.of(simplify(typeSystem, exps.get(0)), ImmutableList.of());
+
+    default:
+      final List<Map<String, ImmutableRangeSet>> rangeSetMaps =
+          new ArrayList<>();
+      final List<Core.Exp> remainingExps = new ArrayList<>();
+      for (Core.Exp exp : exps) {
+        if (exp.isCallTo(BuiltIn.Z_EXTENT)) {
+          final Core.Literal argLiteral = (Core.Literal) ((Core.Apply) exp).arg;
+          final Core.Wrapper wrapper = (Core.Wrapper) argLiteral.value;
+          final RangeExtent list = wrapper.unwrap(RangeExtent.class);
+          rangeSetMaps.add(list.rangeSetMap);
+          continue;
+        }
+        remainingExps.add(exp);
+      }
+      final ListType listType = (ListType) exps.get(0).type;
+      Map<String, ImmutableRangeSet> rangeSetMap =
+          Extents.union((List) rangeSetMaps);
+      Core.Exp exp =
+          core.extent(typeSystem, listType.elementType, rangeSetMap);
+      for (Core.Exp remainingExp : remainingExps) {
+        exp = core.union(typeSystem, exp, remainingExp);
       }
       return Pair.of(exp, remainingExps);
     }
@@ -638,7 +708,7 @@ public enum CoreBuilder {
    * extent "[[1, 5], [10, 20]]"
    * }</pre></blockquote>
    */
-  Core.Exp simplify(TypeSystem typeSystem, Core.Exp exp) {
+  public Core.Exp simplify(TypeSystem typeSystem, Core.Exp exp) {
     switch (exp.op) {
     case TUPLE:
       final Core.Tuple tuple = (Core.Tuple) exp;
@@ -655,7 +725,7 @@ public enum CoreBuilder {
         if (apply.args().stream()
             .allMatch(exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
           Pair<Core.Exp, List<Core.Exp>> pair =
-              mergeExtents(typeSystem, apply.args(), false);
+              unionExtents(typeSystem, apply.args());
           if (pair.right.isEmpty()) {
             return pair.left;
           }
@@ -665,7 +735,7 @@ public enum CoreBuilder {
         if (apply.args().stream()
             .allMatch(exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
           Pair<Core.Exp, List<Core.Exp>> pair =
-              mergeExtents(typeSystem, apply.args(), true);
+              intersectExtents(typeSystem, apply.args());
           if (pair.right.isEmpty()) {
             return pair.left;
           }
@@ -707,7 +777,7 @@ public enum CoreBuilder {
   }
 
   /** Calls a built-in function with one type parameter. */
-  private Core.Apply call(TypeSystem typeSystem, BuiltIn builtIn, Type type,
+  public Core.Apply call(TypeSystem typeSystem, BuiltIn builtIn, Type type,
       Pos pos, Core.Exp... args) {
     final Core.Literal literal = functionLiteral(typeSystem, builtIn);
     final ForallType forallType = (ForallType) literal.type;
@@ -756,18 +826,28 @@ public enum CoreBuilder {
     return call(typeSystem, BuiltIn.Z_ANDALSO, a0, a1);
   }
 
+  /** Converts a list of 0 or more expressions into an {@code andalso};
+   * simplifies empty list to "true" and singleton list "[e]" to "e". */
   public Core.Exp andAlso(TypeSystem typeSystem, Iterable<Core.Exp> exps) {
-    return foldRight(ImmutableList.copyOf(exps),
-        (e1, e2) -> andAlso(typeSystem, e1, e2));
+    final List<Core.Exp> expList = ImmutableList.copyOf(exps);
+    if (expList.isEmpty()) {
+      return trueLiteral;
+    }
+    return foldRight(expList, (e1, e2) -> andAlso(typeSystem, e1, e2));
   }
 
   public Core.Exp orElse(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
     return call(typeSystem, BuiltIn.Z_ORELSE, a0, a1);
   }
 
+  /** Converts a list of 0 or more expressions into an {@code orelse};
+   * simplifies empty list to "false" and singleton list "[e]" to "e". */
   public Core.Exp orElse(TypeSystem typeSystem, Iterable<Core.Exp> exps) {
-    return foldRight(ImmutableList.copyOf(exps),
-        (e1, e2) -> orElse(typeSystem, e1, e2));
+    final ImmutableList<Core.Exp> expList = ImmutableList.copyOf(exps);
+    if (expList.isEmpty()) {
+      return falseLiteral;
+    }
+    return foldRight(expList, (e1, e2) -> orElse(typeSystem, e1, e2));
   }
 
   private <E> E foldRight(List<E> list, BiFunction<E, E, E> fold) {
@@ -801,6 +881,100 @@ public enum CoreBuilder {
   public Core.Exp intersect(TypeSystem typeSystem, Iterable<Core.Exp> exps) {
     return foldRight(ImmutableList.copyOf(exps),
         (e1, e2) -> intersect(typeSystem, e1, e2));
+  }
+
+  /** Returns an expression substituting every given expression as true.
+   *
+   * <p>For example, if {@code exp} is "{@code x = 1 andalso y > 2}"
+   * and {@code trueExps} is [{@code x = 1}, {@code z = 2}],
+   * returns "{@code y > 2}".
+   */
+  public Core.Exp subTrue(TypeSystem typeSystem, Core.Exp exp,
+      List<Core.Exp> trueExps) {
+    List<Core.Exp> conjunctions = decomposeAnd(exp);
+    List<Core.Exp> conjunctions2 = new ArrayList<>();
+    for (Core.Exp conjunction : conjunctions) {
+      if (!trueExps.contains(conjunction)) {
+        conjunctions2.add(conjunction);
+      }
+    }
+    if (conjunctions.size() == conjunctions2.size()) {
+      // Don't create a new expression unless we have to.
+      return exp;
+    }
+    return andAlso(typeSystem, conjunctions2);
+  }
+
+  /** Decomposes an {@code andalso} expression;
+   * inverse of {@link #andAlso(TypeSystem, Iterable)}.
+   *
+   * <p>Examples:
+   * <ul>
+   * <li>"p1 andalso p2" becomes "[p1, p2]" (two elements);
+   * <li>"p1 andalso p2 andalso p3" becomes "[p1, p2, p3]" (three elements);
+   * <li>"p1 orelse p2" becomes "[p1 orelse p2]" (one element);
+   * <li>"true" becomes "[]" (no elements);
+   * <li>"false" becomes "[false]" (one element).
+   * </ul> */
+  public List<Core.Exp> decomposeAnd(Core.Exp exp) {
+    final ImmutableList.Builder<Core.Exp> list = ImmutableList.builder();
+    flattenAnd(exp, list::add);
+    return list.build();
+  }
+
+  /** Decomposes an {@code orelse} expression;
+   * inverse of {@link #orElse(TypeSystem, Iterable)}.
+   *
+   * <p>Examples:
+   * <ul>
+   * <li>"p1 orelse p2" becomes "[p1, p2]" (two elements);
+   * <li>"p1 orelse p2 orelse p3" becomes "[p1, p2, p3]" (three elements);
+   * <li>"p1 andalso p2" becomes "[p1 andalso p2]" (one element);
+   * <li>"false" becomes "[]" (no elements);
+   * <li>"true" becomes "[true]" (one element).
+   * </ul> */
+  public List<Core.Exp> decomposeOr(Core.Exp exp) {
+    final ImmutableList.Builder<Core.Exp> list = ImmutableList.builder();
+    flattenOr(exp, list::add);
+    return list.build();
+  }
+
+  /** Flattens the {@code andalso}s in an expression into a consumer. */
+  public void flattenAnd(Core.Exp exp, Consumer<Core.Exp> consumer) {
+    //noinspection StatementWithEmptyBody
+    if (exp.op == Op.BOOL_LITERAL && (boolean) ((Core.Literal) exp).value) {
+      // don't add 'true' to the list
+    } else if (exp.op == Op.APPLY
+        && ((Core.Apply) exp).fn.op == Op.FN_LITERAL
+        && ((Core.Literal) ((Core.Apply) exp).fn).value == BuiltIn.Z_ANDALSO) {
+      flattenAnds(((Core.Apply) exp).args(), consumer);
+    } else {
+      consumer.accept(exp);
+    }
+  }
+
+  /** Flattens the {@code andalso}s in every expression into a consumer. */
+  public void flattenAnds(List<Core.Exp> exps, Consumer<Core.Exp> consumer) {
+    exps.forEach(arg -> flattenAnd(arg, consumer));
+  }
+
+  /** Flattens the {@code orelse}s in an expression into a consumer. */
+  public void flattenOr(Core.Exp exp, Consumer<Core.Exp> consumer) {
+    //noinspection StatementWithEmptyBody
+    if (exp.op == Op.BOOL_LITERAL && !(boolean) ((Core.Literal) exp).value) {
+      // don't add 'false' to the list
+    } else if (exp.op == Op.APPLY
+        && ((Core.Apply) exp).fn.op == Op.FN_LITERAL
+        && ((Core.Literal) ((Core.Apply) exp).fn).value == BuiltIn.Z_ORELSE) {
+      flattenOrs(((Core.Apply) exp).args(), consumer);
+    } else {
+      consumer.accept(exp);
+    }
+  }
+
+  /** Flattens the {@code orelse}s in every expression into a consumer. */
+  public void flattenOrs(List<Core.Exp> exps, Consumer<Core.Exp> consumer) {
+    exps.forEach(arg -> flattenOr(arg, consumer));
   }
 }
 

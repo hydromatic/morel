@@ -185,21 +185,7 @@ public class Static {
    * function to each element. */
   public static <E, T> ImmutableList<T> transformEager(
       Iterable<? extends E> elements, Function<E, T> mapper) {
-    if (elements instanceof Collection
-        && ((Collection<? extends E>) elements).isEmpty()) {
-      // Save ourselves the effort of creating a Builder.
-      return ImmutableList.of();
-    }
-    final ImmutableList.Builder<T> b = ImmutableList.builder();
-    elements.forEach(e -> b.add(mapper.apply(e)));
-    return b.build();
-  }
-
-  /** Eagerly converts a List to an ImmutableList, applying a mapping
-   * function to each element. */
-  public static <E, T> ImmutableList<T> transformEager(
-      List<? extends E> elements, Function<E, T> mapper) {
-    if (elements.isEmpty()) {
+    if (Iterables.isEmpty(elements)) {
       // Save ourselves the effort of creating a Builder.
       return ImmutableList.of();
     }

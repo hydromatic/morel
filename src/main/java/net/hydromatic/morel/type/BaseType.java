@@ -37,6 +37,16 @@ abstract class BaseType implements Type {
   @Override public String toString() {
     return key().toString();
   }
+
+  @Override public boolean equals(Object o) {
+    return this == o
+        || o instanceof BaseType
+        && key().equals(((BaseType) o).key());
+  }
+
+  @Override public int hashCode() {
+    return key().hashCode();
+  }
 }
 
 // End BaseType.java

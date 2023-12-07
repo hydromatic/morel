@@ -345,7 +345,10 @@ void fromFirstStep(List<FromStep> steps) :
 }
 {
   patExp = fromSource() {
-    final Span span = Span.of(patExp.left, patExp.right);
+    final Span span =
+        patExp.right != null
+          ? Span.of(patExp.left, patExp.right)
+          : Span.of(patExp.left);
     steps.add(ast.scan(span.pos(), Op.SCAN, patExp.left, patExp.right, null));
   }
 }
@@ -424,23 +427,30 @@ void fromStep(List<FromStep> steps) :
 
 Pair<Pat, Exp> fromSource() :
 {
+  final Id id;
   final Exp exp;
   final Pat pat;
 }
 {
-  pat = pat()
   (
-    <IN> exp = expression() {
-      return Pair.of(pat, exp);
+    LOOKAHEAD(
+      (<IDENTIFIER> | <QUOTED_IDENTIFIER>)
+      (<COMMA> | <JOIN> | <WHERE> | <GROUP> | <COMPUTE>
+        | <SKIP_> | <TAKE> | <YIELD> | <EOF>))
+    id = identifier() {
+      return Pair.of(ast.idPat(id.pos, id.name), null);
     }
   |
-    <EQ> exp = expression() {
-      return Pair.of(pat, ast.fromEq(exp));
-    }
-  |
-    <SUCH_THAT> exp = expression() {
-      return Pair.of(pat, ast.fromSuchThat(exp));
-    }
+    pat = pat()
+    (
+      <IN> exp = expression() {
+        return Pair.of(pat, exp);
+      }
+    |
+      <EQ> exp = expression() {
+        return Pair.of(pat, ast.fromEq(exp));
+      }
+    )
   )
 }
 
@@ -1415,7 +1425,6 @@ AstNode statementEof() :
 | < OF: "of" >
 | < ORELSE: "orelse" >
 | < REC: "rec" >
-| < SUCH_THAT: "suchthat" >
 | < THEN: "then" >
 | < UNION: "union" >
 | < VAL: "val" >

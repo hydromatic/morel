@@ -18,13 +18,21 @@
  */
 package net.hydromatic.morel.type;
 
+import com.google.common.collect.ImmutableList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.List;
 import java.util.SortedMap;
 
 /** A type that has named fields, as a record type does. */
 public interface RecordLikeType extends Type {
+  /** Returns a map of the field types, keyed by field names. */
   SortedMap<String, Type> argNameTypes();
+
+  /** Returns a list of field types, ordered by field names. */
+  default List<Type> argTypes() {
+    return ImmutableList.copyOf(argNameTypes().values());
+  }
 
   /** Returns the type of the {@code i}th field, or throws. */
   Type argType(int i);

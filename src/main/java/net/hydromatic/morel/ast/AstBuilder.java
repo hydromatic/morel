@@ -349,12 +349,6 @@ public enum AstBuilder {
     return new Ast.PrefixCall(exp.pos, Op.FROM_EQ, exp);
   }
 
-  /** Wraps an expression to distinguish "from x suchthat e" from
-   * "from x in e". */
-  public Ast.Exp fromSuchThat(Ast.Exp exp) {
-    return new Ast.PrefixCall(exp.pos, Op.SUCH_THAT, exp);
-  }
-
   public Ast.Fn fn(Pos pos, Ast.Match... matchList) {
     return new Ast.Fn(pos, ImmutableList.copyOf(matchList));
   }

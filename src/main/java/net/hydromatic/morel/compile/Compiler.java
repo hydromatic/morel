@@ -35,7 +35,6 @@ import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.foreign.CalciteFunctions;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
-import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.Keys;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
@@ -71,7 +70,6 @@ import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.skip;
 import static net.hydromatic.morel.util.Static.str;
 import static net.hydromatic.morel.util.Static.toImmutableList;
-import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.collect.Iterables.getLast;
@@ -274,11 +272,6 @@ public class Compiler {
     return Codes.get(idPat.name);
   }
 
-  private Code compileFieldNames(Context cx, List<Core.IdPat> fieldNames) {
-    return Codes.tuple(
-        transform(fieldNames, fieldName -> compileFieldName(cx, fieldName)));
-  }
-
   protected Code compileApply(Context cx, Core.Apply apply) {
     // Is this is a call to a built-in operator?
     switch (apply.fn.op) {
@@ -342,45 +335,6 @@ public class Compiler {
       final Code conditionCode = compile(cx, scan.condition);
       return () -> Codes.scanRowSink(firstStep.op, scan.pat, code,
           conditionCode, nextFactory.get());
-
-    case SUCH_THAT:
-      // Given
-      //   (n, d) suchthat hasNameInDept (n, d)
-      // that is,
-      //   pat = (n, d),
-      //   exp = hasNameInDept (n, d),
-      // generate
-      //   (n, d) in List.filter
-      //       (fn x => case x of (n, d) => hasNameInDept (n, d))
-      //       (extent: (string * int) list)
-      //
-      // but we'd prefer to find the extent internally, e.g. given
-      //   (n, d) suchthat (n, d) elem nameDeptPairs
-      // we generate
-      //   (n, d) in nameDeptPairs
-      //
-      final Core.Scan scan2 = (Core.Scan) firstStep;
-      final Extents.Analysis extentFilter =
-          Extents.create(typeSystem, scan2.pat, ImmutableSortedMap.of(),
-                  scan2.exp);
-      final FnType fnType =
-          typeSystem.fnType(scan2.pat.type, PrimitiveType.BOOL);
-      final Pos pos = Pos.ZERO;
-      final Core.Match match = core.match(pos, scan2.pat, scan2.exp);
-      final Core.Exp lambda =
-          core.fn(pos, fnType, ImmutableList.of(match),
-              typeSystem.nameGenerator);
-      final Core.Exp filterCall =
-          core.apply(pos, extentFilter.extentExp.type,
-              core.functionLiteral(typeSystem, BuiltIn.LIST_FILTER),
-              lambda);
-      final Core.Exp exp2 =
-          core.apply(pos, extentFilter.extentExp.type, filterCall,
-              extentFilter.extentExp);
-      final Code code2 = compile(cx, exp2);
-      final Code conditionCode2 = compile(cx, scan2.condition);
-      return () -> Codes.scanRowSink(Op.INNER_JOIN, scan2.pat, code2,
-          conditionCode2, nextFactory.get());
 
     case WHERE:
       final Core.Where where = (Core.Where) firstStep;
@@ -738,7 +692,8 @@ public class Compiler {
                   typedVal =
                       new Pretty.TypedVal(pat2.name,
                           typedValue.valueAs(Object.class),
-                          Keys.toProgressive(pat2.typeKey()).toType(typeSystem));
+                          Keys.toProgressive(pat2.type().key())
+                              .toType(typeSystem));
                 } else {
                   typedVal = new Pretty.TypedVal(pat2.name, o2, pat2.type);
                 }
@@ -761,41 +716,6 @@ public class Compiler {
     });
 
     newBindings.clear();
-  }
-
-  private void shredValue(Core.Pat pat, Object o,
-      BiConsumer<Core.NamedPat, Object> consumer) {
-    switch (pat.op) {
-    case ID_PAT:
-      consumer.accept((Core.IdPat) pat, o);
-      return;
-    case AS_PAT:
-      final Core.AsPat asPat = (Core.AsPat) pat;
-      consumer.accept(asPat, o);
-      shredValue(asPat.pat, o, consumer);
-      return;
-    case TUPLE_PAT:
-      final Core.TuplePat tuplePat = (Core.TuplePat) pat;
-      forEach(tuplePat.args, (List) o, (pat2, o2) ->
-          shredValue(pat2, o2, consumer));
-      return;
-    case RECORD_PAT:
-      final Core.RecordPat recordPat = (Core.RecordPat) pat;
-      forEach(recordPat.args, (List) o, (pat2, o2) ->
-          shredValue(pat2, o2, consumer));
-      return;
-    case CON_PAT:
-      final Core.ConPat conPat = (Core.ConPat) pat;
-      shredValue(conPat.pat, ((List) o).get(1), consumer);
-      return;
-    case CONS_PAT:
-      final Core.ConPat consPat = (Core.ConPat) pat;
-      final List list = (List) o;
-      final Object head = list.get(0);
-      final List tail = list.subList(1, list.size());
-      shredValue(consPat.pat, ImmutableList.of(head, tail), consumer);
-      return;
-    }
   }
 
   private void link(Map<Core.NamedPat, LinkCode> linkCodes, Core.Pat pat,

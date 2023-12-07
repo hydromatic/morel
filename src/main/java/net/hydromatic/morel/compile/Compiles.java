@@ -110,9 +110,9 @@ public abstract class Compiles {
       checkPatternCoverage(typeSystem, coreDecl0, warningConsumer);
     }
 
-    // Ensures that once we discover that there is no suchThat, we stop looking;
-    // makes things a bit more efficient.
-    boolean mayContainSuchThat = true;
+    // Ensures that once we discover that there are no unbounded variables,
+    // we stop looking; makes things a bit more efficient.
+    boolean mayContainUnbounded = true;
 
     Core.Decl coreDecl;
     tracer.onCore(1, coreDecl0);
@@ -143,13 +143,14 @@ public abstract class Compiles {
       }
       for (int i = 0; i < inlinePassCount; i++) {
         final Core.Decl coreDecl2 = coreDecl;
-        if (mayContainSuchThat) {
-          if (SuchThatShuttle.containsSuchThat(coreDecl)) {
+        if (mayContainUnbounded) {
+          if (SuchThatShuttle.containsUnbounded(coreDecl)) {
             coreDecl = coreDecl.accept(new SuchThatShuttle(typeSystem, env));
           } else {
-            mayContainSuchThat = false;
+            mayContainUnbounded = false;
           }
         }
+        coreDecl = Extents.infinitePats(typeSystem, coreDecl);
         if (coreDecl == coreDecl2) {
           break;
         }

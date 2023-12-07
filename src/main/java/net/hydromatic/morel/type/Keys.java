@@ -266,7 +266,7 @@ public class Keys {
     final Type.Key key;
     final ImmutableList<Type.Key> args;
 
-    ApplyKey(Type.Key key, ImmutableList<Type.Key> args) {
+    ApplyKey(Type.Key key, List<Type.Key> args) {
       super(Op.APPLY_TYPE);
       this.key = requireNonNull(key);
       this.args = ImmutableList.copyOf(args);

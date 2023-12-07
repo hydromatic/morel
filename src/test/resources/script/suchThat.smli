@@ -16,31 +16,114 @@
  * language governing permissions and limitations under the
  * License.
  *
- * Tests for 'suchthat'.
+ * Tests for queries with unbounded variables.
+ * (Originally, such queries used a 'suchthat' keyword, but that keyword
+ * has since been removed.)
  *)
 
 (*) Convert predicates into ranges
-from i suchthat i > 0 andalso i < 10;
+from i where i > 0 andalso i < 10;
 > val it = [1,2,3,4,5,6,7,8,9] : int list
-from i suchthat i > 0 andalso i < 10 andalso i mod 3 = 2;
+from i where i > 0 andalso i < 4 yield {j = i + 1};
+> val it = [{j=2},{j=3},{j=4}] : {j:int} list
+from i where i > 0 andalso i < 4 yield {j = i + 1} order j desc;
+> val it = [4,3,2] : int list
+from i where i > 0 andalso i < 10 andalso i mod 3 = 2;
 > val it = [2,5,8] : int list
-from i suchthat i > 0 andalso i < 10 orelse i > 12 andalso i <= 15;
+from i where i = 0 orelse i = 12;
+> val it = [0,12] : int list
+from i where i > 0 andalso i < 10 orelse i > 12 andalso i <= 15;
 > val it = [1,2,3,4,5,6,7,8,9,13,14,15] : int list
-from i suchthat i > 0 andalso i < 10,
-  b suchthat b = true;
+from i
+where i > 0 andalso i < 10
+join b
+where b = true;
 > val it =
->   [{b=[true, 1],i=1},{b=[true, 2],i=2},{b=[true, 3],i=3},{b=[true, 4],i=4},
->    {b=[true, 5],i=5},{b=[true, 6],i=6},{b=[true, 7],i=7},{b=[true, 8],i=8},
->    {b=[true, 9],i=9}] : {b:bool, i:int} list
-from i suchthat i > 0 andalso i < 10,
-  b suchthat b = (i mod 2 = 0);
+>   [{b=true,i=1},{b=true,i=2},{b=true,i=3},{b=true,i=4},{b=true,i=5},
+>    {b=true,i=6},{b=true,i=7},{b=true,i=8},{b=true,i=9}] : {b:bool, i:int} list
+from i
+where i > 0 andalso i < 10
+join b
+where b = (i mod 2 = 0);
 > val it =
->   [{b=[false, 1],i=1},{b=[true, 2],i=2},{b=[false, 3],i=3},{b=[true, 4],i=4},
->    {b=[false, 5],i=5},{b=[true, 6],i=6},{b=[false, 7],i=7},{b=[true, 8],i=8},
->    {b=[false, 9],i=9}] : {b:bool, i:int} list
+>   [{b=false,i=1},{b=true,i=2},{b=false,i=3},{b=true,i=4},{b=false,i=5},
+>    {b=true,i=6},{b=false,i=7},{b=true,i=8},{b=false,i=9}]
+>   : {b:bool, i:int} list
+
+from dno, name, loc
+where {deptno = dno, dname = name, loc} elem scott.dept
+  andalso dno > 20;
+> val it =
+>   [{dno=30,loc="CHICAGO",name="SALES"},{dno=40,loc="BOSTON",name="OPERATIONS"}]
+>   : {dno:int, loc:string, name:string} list
+
+(*) As previous but with a literal in the record.
+from dno, name
+where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.dept
+  andalso dno > 20;
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+
+(*) Equivalent to previous, rephrasing 'suchthat' as 'where'
+from dno, name
+where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.dept
+  andalso dno > 20;
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+
+(*) Equivalent to previous, splitting 'where'
+from dno, name
+where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.dept
+where dno > 20;
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+
+(*) Variables 'dno', 'name' are infinite until constrained by conditions.
+from v, dno, name
+where v elem scott.dept
+where v.deptno = dno
+where name = v.dname
+where v.loc = "CHICAGO"
+yield {dno, name = #dname v};
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+
+(*) Forward references are required. 'dno' is infinite until we see the
+(*) condition 'v.deptno = dno', and at that point we haven't declared
+(*) 'v'. So we defer 'dno' until after 'v'.
+from dno, name, v
+where v elem scott.dept
+where v.deptno = dno
+where name = v.dname
+where v.loc = "CHICAGO"
+yield {dno = #deptno v, name = #dname v};
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+
+(*) An extra condition on 'dno' yields empty result.
+from dno, name, v
+where v elem scott.dept
+where v.deptno = dno
+where name = v.dname
+where v.loc = "CHICAGO"
+where dno = 20
+yield {dno = #deptno v, name = #dname v};
+> val it = [] : {dno:int, name:string} list
+
+(*) Inequality on 'dno'
+from dno, name, v
+where v elem scott.dept
+where v.deptno = dno
+where name = v.dname
+where v.loc = "CHICAGO"
+where dno > 20
+yield {dno = #deptno v, name = #dname v};
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+
+(*) We can iterate over a finite datatype
+from i
+where Option.getOpt i;
+> val it = [(NONE,true),(SOME true,false),(SOME true,true)]
+>   : (bool option * bool) list
 
 (*) If the expression is 'elem set' we can deduce the extent.
-from e suchthat (e elem scott.emp)
+from e
+  where (e elem scott.emp)
   where e.deptno = 20
   yield e.ename;
 > val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string list
@@ -50,7 +133,8 @@ let
   fun isEmp e =
     e elem scott.emp
 in
-  from e suchthat isEmp e
+  from e
+    where isEmp e
     where e.deptno = 20
     yield e.ename
 end;
@@ -61,7 +145,8 @@ let
   fun isEmp e =
     e elem scott.emp
 in
-  from e suchthat isEmp e andalso e.deptno = 20
+  from e
+    where isEmp e andalso e.deptno = 20
     yield e.ename
 end;
 > val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string list
@@ -75,7 +160,8 @@ fun isEmp e =
 >      {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
 >       job:string, mgr:int, sal:real} -> bool
 (*
-from e suchthat isEmp e andalso e.deptno = 20
+from e
+  where isEmp e andalso e.deptno = 20
   yield e.ename;
 *)
 
@@ -84,7 +170,8 @@ let
   fun isClerk e =
     e elem scott.emp andalso e.job = "CLERK"
 in
-  from e suchthat isClerk e andalso e.deptno = 20
+  from e
+    where isClerk e andalso e.deptno = 20
     yield e.ename
 end;
 > val it = ["SMITH","ADAMS"] : string list
@@ -96,7 +183,8 @@ let
   fun isEmp50 e =
     e elem scott.emp orelse e.deptno = 50
 in
-  from e suchthat isEmp50 e
+  from e
+    where isEmp50 e
     yield e.ename
 end;
 *)
@@ -114,7 +202,8 @@ let
     e.job = job
 in
   from e in scott.emp,
-    j suchthat hasJob (e, j)
+      j
+    where hasJob (e, j)
     yield j
 end;
 val it =
@@ -129,7 +218,7 @@ let
   fun hasJob (e, job) =
     e.job = job
 in
-  from e suchthat hasJob (e, "CLERK")
+  from e where hasJob (e, "CLERK")
 end;
 *)
 
@@ -140,7 +229,7 @@ fun isPrefix (s1, s2) =
 > val isPrefix = fn : string * string -> bool
 (*) This is invalid, but it could be valid
 (*
-from s suchthat isPrefix (s, "abcd");
+from s where isPrefix (s, "abcd");
 > val it = ["", "a", "ab", "abc", "abcd"] : string list
 *)
 
@@ -150,7 +239,7 @@ fun isBetween (i, j, k) =
   i <= j andalso j <= k;
 > val isBetween = fn : 'a * 'a * 'a -> bool
 (*
-from i suchthat isBetween (i, 5, 8);
+from i where isBetween (i, 5, 8);
 > val it = [5, 6, 7, 8] : int list
 *)
 
@@ -158,7 +247,7 @@ from i suchthat isBetween (i, 5, 8);
 (*) Convenience function that converts a predicate to a relation
 (*
 fun enumerate predicate =
-  from r suchthat predicate r;
+  from r where predicate r;
 *)
 (* TODO should print
 val enumerate = fn : ('a -> bool) -> 'a list
@@ -212,21 +301,17 @@ val edges = [
 > val edges = [{x=1,y=2},{x=2,y=3}] : {x:int, y:int} list
 fun edge (x, y) = {x, y} elem edges;
 > val edge = fn : int * int -> bool
-(*
+(* TODO
 fun path (x, y) =
   edge (x, y)
   orelse exists (
-    from z suchthat path (x, z) andalso edge (z, y));
+    from z where path (x, z) andalso edge (z, y));
+> val path = fn : int * int -> bool
 *)
-(* TODO should return
-val path = fn : int * int -> bool
- *)
-(*
-from p suchthat path p;
+(* TODO
+from p where path p;
+> val it = [(1,2),(2,3),(1,3)] : (int * int) list
 *)
-(* TODO should return
-val it = [(1,2),(2,3),(1,3)] : (int * int) list
- *)
 
 (* More edges *)
 (*
@@ -242,28 +327,30 @@ fun edge (x, y) = (x, y) elem edges;
 
 (*) Return points that are 2 hops apart.
 (*
-from (x, y, z) suchthat edge (x, y) andalso edge (y, z) andalso x <> z
+from x, y, z where edge (x, y) andalso edge (y, z) andalso x <> z
   group x, z;
 *)
 
 (* Previous is equivalent to following. (Which implies a theorem connecting
    'exists' with 'group' and variable elimination.) *)
 (*
-from (x, z) suchthat
-  exists (from y suchthat edge (x, y) andalso edge (y, z))
+from x, z
+  where exists (from y where edge (x, y) andalso edge (y, z))
   andalso x <> z;
 *)
 
 (*) Also equivalent.
 (*
-from (x, z) suchthat exists (
-   from y suchthat edge (x, y) andalso edge (y, z) andalso x <> z);
+from x, z where exists (
+   from y where edge (x, y) andalso edge (y, z) andalso x <> z);
 *)
 
 (*) Also equivalent.
 (*
-from (x, y) suchthat edge (x, y),
-    (y2, z) suchthat y2 = y andalso edge (y, z) andalso x <> z
+from x, y
+  where edge (x, y)
+  join y2, z
+  where y2 = y andalso edge (y, z) andalso x <> z
   group x, y;
 *)
 
@@ -318,62 +405,56 @@ fun sells (bar, beer, price) =
  * Datalog:
  *    Happy(p) <- Frequents(p, bar) AND Likes(p, beer) AND Sells(bar, beer)
  *)
-(*
+(* TODO
 fun happy patron =
   exists (
-    from (bar, beer, price) suchthat frequents (patron, bar)
+    from bar, beer, price
+      where frequents (patron, bar)
       andalso likes (patron, beer)
       andalso sells (bar, beer, price));
+> val happy = fn : string -> bool
 *)
-(* TODO should return
-val happy = fn : string -> bool
- *)
 
 (* Find happy patrons. Shaggy is happy because the Squirrel and Cask sell
    Amber; Velma is happy because Cask sells Stout. Fred and Scooby are not
    happy. *)
-(*
-from p suchthat happy p;
+(* TODO
+from p where happy p;
+> val it = ["shaggy", "velma"] : string list
 *)
-(* TODO should return
-val it = ["shaggy", "velma"] : string list
- *)
 
 (* A beer is considered cheap if there are at least two bars that sell it for
  * under $3.
-
+ *
  * Datalog:
  *   Cheap(beer) <- Sells(bar1, beer, p1) AND Sells(bar2, beer, p2)
  *     AND p1 < 3 AND p2 < 3 AND bar1 <> bar2
  *)
-(*
+(* TODO
 fun cheap beer =
   exists (
-    from (bar1, price1, bar2, price2)
-      suchthat sells (bar1, beer, price1)
+    from bar1, price1, bar2, price2
+      where sells (bar1, beer, price1)
         andalso sells (bar2, beer, price2)
         andalso price1 < 3
         andalso price2 < 3
         andalso bar1 <> bar2);
+> val cheap = fn : string -> bool
 *)
-(* TODO should return
-val cheap = fn : string -> bool
- *)
 
 (*) Pale is cheap
-(*
-from b suchthat cheap b;
+(* TODO
+from b where cheap b;
+> val it = ["pale"] : string list
 *)
-(* TODO should return
-val it = ["pale"] : string list
- *)
 
 (* A rule is safe if:
  * 1. Each distinguished variable,
  * 2. Each variable in an arithmetic subgoal, and
  * 3. Each variable in a negated subgoal,
  *
- *  also appears in a non-negated, relational sub-goal.
+ * also appears in a non-negated, relational sub-goal.
+ *
  * Each of the following is unsafe and not allowed:
  *
  * 1. S(x) <- R(y)
@@ -391,38 +472,36 @@ val it = ["pale"] : string list
  *)
 fun isR y = true;
 > val isR = fn : 'a -> bool
-(*
-fun isS1 x = exists (from y suchthat isR y);
+(* TODO
+fun isS1 x = exists (from y where isR y);
+> val isS1 = fn : 'a -> bool
 *)
-(* TODO should return
-val isS1 = fn : 'a -> bool
- *)
 
 (*) isS1 is unsafe
-(*
-from x suchthat isS1 x;
+(* TODO should throw unsafe
+from x where isS1 x;
+> Unsafe
 *)
-(*) TODO should throw unsafe
 
 (*
-fun isS2 x = exists (from y suchthat isR y andalso not (isR x));
+fun isS2 x = exists (from y where isR y andalso not (isR x));
 *)
 
 (*) isS2 is unsafe
-(*
-from x suchthat isS2 x;
+(* TODO should throw unsafe
+from x where isS2 x;
+> Unsafe
 *)
-(*) TODO should throw unsafe
 
 (*
-fun isS3 x = exists (from y suchthat isR y andalso x < y);
+fun isS3 x = exists (from y where isR y andalso x < y);
 *)
 
 (*) isS3 is unsafe
-(*
-from x suchthat isS3 x;
+(* TODO should throw unsafe
+from x where isS3 x;
+> Unsafe
 *)
-(*) TODO should throw unsafe
 
 (* Example Datalog Program. Using EDB Sells (bar, beer, price) and
  * Likes (patron, beer), find the patrons who like beers Joe doesn't sell.
@@ -432,20 +511,17 @@ from x suchthat isS3 x;
  *   Answer(p) <- Likes(p, b)
  *     AND NOT JoeSells(b)
  *)
-(*
+(* TODO
 fun caskSells b =
-  exists (from (beer, price) suchthat sells ("cask", beer, price));
+  exists (from beer, price where sells ("cask", beer, price));
+> val caskSells = fn : 'a -> bool
 *)
-(* TODO should return
-val caskSells = fn : 'a -> bool
- *)
-(*
-from p suchthat exists (
-  from b suchthat likes (p, b) andalso not (caskSells b));
+
+(* TODO
+from p where exists (
+  from b where likes (p, b) andalso not (caskSells b));
+> val it = ["foo"] : string list
 *)
-(* TODO should return something like
-val it = ["foo"] : string list
- *)
 
 (* Cousin
  *
@@ -468,24 +544,21 @@ fun par (x, p) =
     ("g", "k"),
     ("h", "i")];
 > val par = fn : string * string -> bool
-(*
+(* TODO
 fun sib (x, y) = exists (
-  from p suchthat par (x, p) andalso par (y, p) andalso x <> y);
+  from p where par (x, p) andalso par (y, p) andalso x <> y);
+> val sib = fn : string * string -> bool
 *)
-(* TODO should return
-val sib = fn : string * string -> bool
- *)
 
-(*
+(* TODO
 fun cousin (x, y) = sib (x, y)
   orelse exists (
-    from (xp, yp) suchthat par (x, xp)
+    from xp, yp
+      where par (x, xp)
       andalso par (y, yp)
       andalso cousin (xp, yp));
+> val cousin = fn : string * string -> bool
 *)
-(* TODO should return
-val cousin = fn : string * string -> bool
- *)
 
 (*
  Round 1: (b, c), (c, e), (g, h), (j, k)
@@ -493,37 +566,34 @@ val cousin = fn : string * string -> bool
  Round 3: add (f, g), (f, h), (g, i), (i, k)
  Round 4: add (i, j), (k, k)
  *)
-(*
+(* TODO
 enumerate sib;
+> val it = [("b","c")] : (string * string) list
 *)
-(* TODO return something like
-val it = [("b","c")] : (string * string) list
- *)
+
 (*
 enumerate cousin;
+> val it = [("b","c"), ("c","e"),("g","h"),("j","k"),("f","g"),("f","h"),("g","i"),("i","k"),("i","j"),("k","k")] : (string * string) list
 *)
-(* TODO return something like
-val it = [("b","c"), ("c","e"),("g","h"),("j","k"),("f","g"),("f","h"),("g","i"),("i","k"),("i","j"),("k","k")] : (string * string) list
- *)
 
 (* Nonmonotone relation.
  * 'cousin2' is as 'cousin', but 'orelse' has become 'and not'.
  * The graph is not stratified: there is a path with an infinite number
  * of 'not' as we traverse the cycle cousin - s2 - cousin,
  * where s2 is the expression 'notExists (...)'. *)
-(*
+(* TODO
 fun cousin2 (x, y) = sib (x, y)
   andalso notExists (
-    from (xp, yp) suchthat par (x, xp)
+    from (xp, yp)
+      where par (x, xp)
       andalso par (y, yp)
       andalso cousin2 (xp, yp));
+> val cousin2 = fn : string * string -> bool
 *)
-(* TODO should return
-val cousin2 = fn : string * string -> bool
- *)
-(*
+
+(* TODO
 enumerate cousin2;
+> Error: non-stratified
 *)
-(*) TODO: maybe give error: non-stratified
 
 (*) End suchThat.smli

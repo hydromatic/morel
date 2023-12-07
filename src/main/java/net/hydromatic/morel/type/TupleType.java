@@ -50,6 +50,10 @@ public class TupleType extends BaseType implements RecordLikeType {
     return map.build();
   }
 
+  @Override public List<Type> argTypes() {
+    return argTypes;
+  }
+
   @Override public Type argType(int i) {
     return argTypes.get(i);
   }

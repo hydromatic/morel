@@ -2663,7 +2663,10 @@ public abstract class Codes {
       new ApplicableImpl(BuiltIn.Z_EXTENT) {
         @Override public List apply(EvalEnv env, Object arg) {
           final RangeExtent rangeExtent = (RangeExtent) arg;
-          return Lists.newArrayList(rangeExtent.toIterable());
+          if (rangeExtent.iterable == null) {
+            throw new AssertionError("infinite: " + rangeExtent);
+          }
+          return ImmutableList.copyOf(rangeExtent.iterable);
         }
       };
 

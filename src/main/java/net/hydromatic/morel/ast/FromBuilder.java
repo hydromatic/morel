@@ -23,10 +23,13 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.RefChecker;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Range;
 import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -37,6 +40,7 @@ import java.util.SortedMap;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.append;
 
 import static com.google.common.collect.Iterables.getLast;
 
@@ -122,56 +126,79 @@ public class FromBuilder {
     return this;
   }
 
-  public FromBuilder suchThat(Core.Pat pat, Core.Exp exp) {
-    Compiles.acceptBinding(typeSystem, pat, bindings);
-    return addStep(
-        core.scan(Op.SUCH_THAT, bindings, pat, exp, core.boolLiteral(true)));
+  /** Creates an unbounded scan, "from pat". */
+  public FromBuilder scan(Core.Pat pat) {
+    final Core.Exp extent =
+        core.extent(typeSystem, pat.type, ImmutableRangeSet.of(Range.all()));
+    return scan(pat, extent, core.boolLiteral(true));
   }
 
+  /** Creates a bounded scan, "from pat in exp". */
   public FromBuilder scan(Core.Pat pat, Core.Exp exp) {
     return scan(pat, exp, core.boolLiteral(true));
   }
 
   public FromBuilder scan(Core.Pat pat, Core.Exp exp, Core.Exp condition) {
     if (exp.op == Op.FROM
-        && steps.isEmpty()
         && core.boolLiteral(true).equals(condition)
         && (pat instanceof Core.IdPat
             && !((Core.From) exp).steps.isEmpty()
             && getLast(((Core.From) exp).steps).bindings.size() == 1
             || pat instanceof Core.RecordPat
                 && ((Core.RecordPat) pat).args.stream()
+                    .allMatch(a -> a instanceof Core.IdPat)
+            || pat instanceof Core.TuplePat
+                && ((Core.TuplePat) pat).args.stream()
                     .allMatch(a -> a instanceof Core.IdPat))) {
       final Core.From from = (Core.From) exp;
+      final Core.FromStep lastStep = getLast(from.steps);
+      final List<Core.FromStep> steps =
+          lastStep.op == Op.YIELD ? Util.skipLast(from.steps) : from.steps;
+
       final PairList<String, Core.Exp> nameExps = PairList.of();
+      boolean uselessIfLast = this.bindings.isEmpty();
       final List<Binding> bindings;
       if (pat instanceof Core.RecordPat) {
         final Core.RecordPat recordPat = (Core.RecordPat) pat;
+        this.bindings.forEach(b -> nameExps.add(b.id.name, core.id(b.id)));
         forEach(recordPat.type().argNameTypes.keySet(), recordPat.args,
             (name, arg) -> nameExps.add(name, core.id((Core.IdPat) arg)));
         bindings = null;
+      } else if (pat instanceof Core.TuplePat) {
+        final Core.TuplePat tuplePat = (Core.TuplePat) pat;
+        Pair.forEach(tuplePat.args, lastStep.bindings,
+            (arg, binding) ->
+                nameExps.add(((Core.IdPat) arg).name, core.id(binding.id)));
+        bindings = null;
+      } else if (!this.bindings.isEmpty()) {
+        // With at least one binding, and one new variable, the output will be
+        // a record type.
+        final Core.IdPat idPat = (Core.IdPat) pat;
+        this.bindings.forEach(b -> nameExps.add(b.id.name, core.id(b.id)));
+        lastStep.bindings.forEach(b -> nameExps.add(idPat.name, core.id(b.id)));
+        bindings = null;
       } else {
         final Core.IdPat idPat = (Core.IdPat) pat;
-        final Core.FromStep lastStep = getLast(from.steps);
         if (lastStep instanceof Core.Yield
             && ((Core.Yield) lastStep).exp.op != Op.RECORD) {
           // The last step is a yield scalar, say 'yield x + 1'.
           // Translate it to a yield singleton record, say 'yield {y = x + 1}'
-          addAll(Util.skipLast(from.steps));
-          if (((Core.Yield) lastStep).exp.op == Op.ID) {
+          addAll(steps);
+          if (((Core.Yield) lastStep).exp.op == Op.ID
+              && this.bindings.size() == 1) {
             // The last step is 'yield e'. Skip it.
             return this;
           }
           nameExps.add(idPat.name, ((Core.Yield) lastStep).exp);
           bindings = ImmutableList.of(Binding.of(idPat));
-          return yield_(true, bindings, core.record(typeSystem, nameExps));
+          return yield_(false, bindings, core.record(typeSystem, nameExps));
         }
         final Binding binding = Iterables.getOnlyElement(lastStep.bindings);
         nameExps.add(idPat.name, core.id(binding.id));
-        bindings = ImmutableList.of(Binding.of(idPat));
+        bindings = append(this.bindings, Binding.of(idPat));
       }
-      addAll(from.steps);
-      return yield_(true, bindings, core.record(typeSystem, nameExps));
+      addAll(steps);
+      return yield_(uselessIfLast, bindings, core.record(typeSystem, nameExps));
     }
     Compiles.acceptBinding(typeSystem, pat, bindings);
     return addStep(core.scan(Op.INNER_JOIN, bindings, pat, exp, condition));
@@ -224,7 +251,7 @@ public class FromBuilder {
   }
 
   public FromBuilder yield_(boolean uselessIfLast, Core.Exp exp) {
-    return yield_(false, null, exp);
+    return yield_(uselessIfLast, null, exp);
   }
 
   /** Creates a "yield" step.
@@ -328,25 +355,14 @@ public class FromBuilder {
     return identity ? TupleType.IDENTITY : TupleType.RENAME;
   }
 
-  /** Returns whether tuple is something like "{i = j, j = x}". */
-  private boolean isRename(Core.Tuple tuple) {
-    for (int i = 0; i < tuple.args.size(); i++) {
-      Core.Exp exp = tuple.args.get(i);
-      if (exp.op != Op.ID) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   private Core.Exp build(boolean simplify) {
     if (removeIfLastIndex == steps.size() - 1) {
       removeIfLastIndex = Integer.MIN_VALUE;
       final Core.Yield yield = (Core.Yield) getLast(steps);
-      assert yield.exp.op == Op.TUPLE
-          && ((Core.Tuple) yield.exp).args.size() == 1
-          && isTrivial((Core.Tuple) yield.exp, bindings, yield.bindings)
-          : yield.exp;
+      if (yield.exp.op != Op.TUPLE
+          || ((Core.Tuple) yield.exp).args.size() != 1) {
+        throw new AssertionError(yield.exp);
+      }
       steps.remove(steps.size() - 1);
     }
     if (simplify
@@ -380,11 +396,7 @@ public class FromBuilder {
     }
 
     @Override protected void visit(Core.Scan scan) {
-      if (scan.op == Op.SUCH_THAT) {
-        suchThat(scan.pat, scan.exp);
-      } else {
-        scan(scan.pat, scan.exp, scan.condition);
-      }
+      scan(scan.pat, scan.exp, scan.condition);
     }
 
     @Override protected void visit(Core.Where where) {

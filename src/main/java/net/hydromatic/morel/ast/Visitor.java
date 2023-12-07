@@ -188,7 +188,9 @@ public class Visitor {
 
   protected void visit(Ast.Scan scan) {
     scan.pat.accept(this);
-    scan.exp.accept(this);
+    if (scan.exp != null) {
+      scan.exp.accept(this);
+    }
     if (scan.condition != null) {
       scan.condition.accept(this);
     }

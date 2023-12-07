@@ -23,7 +23,6 @@ import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.FromBuilder;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
-import net.hydromatic.morel.ast.Shuttle;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.type.Binding;
@@ -41,14 +40,15 @@ import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Range;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -612,7 +612,7 @@ public class Resolver {
     case TUPLE_PAT:
       final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
       final List<Core.Pat> argList = transformEager(tuplePat.args, this::toCore);
-      return core.tuplePat(type, argList);
+      return core.tuplePat((RecordLikeType) type, argList);
 
     default:
       throw new AssertionError("unknown pat " + pat.op);
@@ -866,53 +866,22 @@ public class Resolver {
       final Resolver r = withEnv(fromBuilder.bindings());
       final Core.Exp coreExp;
       final Core.Pat corePat;
-      switch (scan.exp.op) {
-      case SUCH_THAT:
-        corePat =
-            r.toCore(scan.pat).accept(
-                // Converts tuple patterns into copies sorted by field names.
-                // For example, (b, c, a) becomes (a, b, c).
-                // Sorting is necessary because "from (b, c, a) suchthat p" will
-                // add variables a, b, c to the environment (in that order).
-                new Shuttle(typeMap.typeSystem) {
-                  @Override protected Core.Pat visit(Core.TuplePat tuplePat) {
-                    final Comparator<Core.Pat> comparator =
-                        Comparator.comparing(pat ->
-                            pat instanceof Core.NamedPat
-                                ? ((Core.NamedPat) pat).name
-                                : "");
-                    return tuplePat.copy(typeSystem,
-                        ImmutableList.sortedCopyOf(comparator,
-                            visitList(tuplePat.args)));
-                  }
-                });
-
-        final List<Binding> bindings2 = new ArrayList<>(fromBuilder.bindings());
-        Compiles.acceptBinding(typeMap.typeSystem, corePat, bindings2);
-        final Resolver r2 = withEnv(bindings2);
-
-        final Ast.Exp scanExp = ((Ast.PrefixCall) scan.exp).a;
-        coreExp = r2.toCore(scanExp);
-        break;
-
-      default:
+      if (scan.exp == null) {
+        corePat = r.toCore(scan.pat);
+        coreExp =
+            core.extent(typeMap.typeSystem, corePat.type,
+                ImmutableRangeSet.of(Range.all()));
+      } else {
         coreExp = r.toCore(scan.exp);
         final ListType listType = (ListType) coreExp.type;
         corePat = r.toCore(scan.pat, listType.elementType);
       }
-      final Op op = scan.exp.op == Op.SUCH_THAT ? Op.SUCH_THAT
-          : scan.op == Op.SCAN ? Op.INNER_JOIN
-          : scan.op;
       final List<Binding> bindings2 = new ArrayList<>(fromBuilder.bindings());
       Compiles.acceptBinding(typeMap.typeSystem, corePat, bindings2);
       Core.Exp coreCondition = scan.condition == null
           ? core.boolLiteral(true)
           : r.withEnv(bindings2).toCore(scan.condition);
-      if (op == Op.SUCH_THAT) {
-        fromBuilder.suchThat(corePat, coreExp);
-      } else {
-        fromBuilder.scan(corePat, coreExp, coreCondition);
-      }
+      fromBuilder.scan(corePat, coreExp, coreCondition);
     }
 
     @Override protected void visit(Ast.Where where) {

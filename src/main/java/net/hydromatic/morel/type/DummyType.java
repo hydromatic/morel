@@ -33,7 +33,7 @@ public enum DummyType implements Type {
   }
 
   public Op op() {
-    return Op.NAMED_TYPE;
+    return Op.DUMMY_TYPE;
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {

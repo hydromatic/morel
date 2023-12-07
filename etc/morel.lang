@@ -34,7 +34,7 @@ Keywords={
         "Word", "Char", "StringCvt", "Word8", "List", "ListPair", "Vector", "TextIO",
         "BinIO", "div", "mod",
         "compute", "desc", "elem", "except", "exists", "from", "group", "intersect",
-        "notelem", "notExists", "order", "suchthat", "union", "yield"},
+        "notelem", "notExists", "order", "union", "yield"},
   },
   { Id=2,
     List={"bool", "string", "int", "real", "word"},

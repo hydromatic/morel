@@ -71,7 +71,7 @@ public class Converters {
   public static Converter<Object[]> ofRow2(RelDataType rowType,
       RecordLikeType type) {
     return ofRow3(rowType.getFieldList().iterator(),
-        new AtomicInteger(), Linq4j.enumerator(type.argNameTypes().values()));
+        new AtomicInteger(), Linq4j.enumerator(type.argTypes()));
   }
 
   static Converter<Object[]> ofRow3(Iterator<RelDataTypeField> fields,

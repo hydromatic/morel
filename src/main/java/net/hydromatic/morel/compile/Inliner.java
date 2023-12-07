@@ -125,6 +125,7 @@ public class Inliner extends EnvShuttle {
     if (apply2.fn.op == Op.RECORD_SELECTOR
         && apply2.arg.op == Op.VALUE_LITERAL) {
       final Core.RecordSelector selector = (Core.RecordSelector) apply2.fn;
+      @SuppressWarnings("rawtypes")
       final List list = ((Core.Literal) apply2.arg).unwrap(List.class);
       final Object o = list.get(selector.slot);
       if (o instanceof Applicable || o instanceof Macro) {

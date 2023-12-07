@@ -20,6 +20,7 @@ package net.hydromatic.morel.ast;
 
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.compile.Extents;
 import net.hydromatic.morel.compile.Resolver;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
@@ -27,8 +28,10 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
+import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
@@ -101,11 +104,6 @@ public class Core {
     /** Returns the type. */
     public Type type() {
       return type;
-    }
-
-    /** Returns the type's key. */
-    public Type.Key typeKey() {
-      return type().key();
     }
 
     @Override public abstract Pat accept(Shuttle shuttle);
@@ -383,9 +381,21 @@ public class Core {
   public static class TuplePat extends Pat {
     public final List<Pat> args;
 
-    TuplePat(Type type, ImmutableList<Pat> args) {
+    /** Creates a TuplePat.
+     *
+     * <p>Type is {@link PrimitiveType#UNIT} if {@code args} is empty,
+     * otherwise a {@link TupleType}. */
+    TuplePat(RecordLikeType type, ImmutableList<Pat> args) {
       super(Op.TUPLE_PAT, type);
       this.args = requireNonNull(args);
+      checkArgument(args.size() == type.argNameTypes().size());
+      checkArgument(args.isEmpty()
+          ? type == PrimitiveType.UNIT
+          : type instanceof TupleType);
+    }
+
+    @Override public RecordLikeType type() {
+      return (RecordLikeType) type;
     }
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
@@ -406,6 +416,17 @@ public class Core {
     public TuplePat copy(TypeSystem typeSystem, List<Pat> args) {
       return args.equals(this.args) ? this
           : core.tuplePat(typeSystem, args);
+    }
+
+    /** Returns the names of all components that are named. */
+    public List<String> fieldNames() {
+      final ImmutableList.Builder<String> names = ImmutableList.builder();
+      for (Pat arg : args) {
+        if (arg instanceof NamedPat) {
+          names.add(((NamedPat) arg).name);
+        }
+      }
+      return names.build();
     }
   }
 
@@ -1127,7 +1148,11 @@ public class Core {
       }
     }
 
-    public Exp copy(TypeSystem typeSystem, Environment env,
+    /** Copies this {@code From} with a new set of steps.
+     *
+     * <p>Returns this {@code From} if the steps are the same.
+     * If {@code env} is not null, performs additional checking. */
+    public Exp copy(TypeSystem typeSystem, @Nullable Environment env,
         List<FromStep> steps) {
       return steps.equals(this.steps)
           ? this
@@ -1165,17 +1190,28 @@ public class Core {
     Scan(Op op, ImmutableList<Binding> bindings, Pat pat, Exp exp,
         Exp condition) {
       super(op, bindings);
-      switch (op) {
-      case INNER_JOIN:
-      case SUCH_THAT:
-        break;
-      default:
+      if (op != Op.INNER_JOIN) {
         // SCAN and CROSS_JOIN are valid in ast, not core.
-        throw new AssertionError("not a join type " + op);
+        throw new IllegalArgumentException("not a join type " + op);
       }
       this.pat = requireNonNull(pat, "pat");
       this.exp = requireNonNull(exp, "exp");
       this.condition = requireNonNull(condition, "condition");
+      if (!(exp.type instanceof ListType)) {
+        throw new IllegalArgumentException("scan expression must be list: "
+            + exp.type);
+      }
+      final ListType listType = (ListType) exp.type;
+      if (!canAssign(listType.elementType, pat.type)) {
+        throw new IllegalArgumentException(exp.type + " + " + pat.type);
+      }
+    }
+
+    /** Returns whether you can assign a value of {@code fromType} to a variable
+     * of type {@code toType}. */
+    private static boolean canAssign(Type fromType, Type toType) {
+      return fromType.equals(toType)
+          || toType.isProgressive();
     }
 
     @Override public Scan accept(Shuttle shuttle) {
@@ -1188,16 +1224,17 @@ public class Core {
 
     @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
         int left, int right) {
-      final String prefix = ordinal == 0 ? " "
-          : op == Op.SUCH_THAT ? " join "
-          : op.padded;
-      final String infix = op == Op.SUCH_THAT ? " suchthat "
-          : " in ";
-      w.append(prefix)
-          // for these purposes 'in' and 'suchthat' have same precedence as '='
-          .append(pat, 0, Op.EQ.left)
-          .append(infix)
-          .append(exp, Op.EQ.right, 0);
+      w.append(ordinal == 0 ? " " : op.padded)
+          // for these purposes 'in' has same precedence as '='
+          .append(pat, 0, Op.EQ.left);
+      if (Extents.isInfinite(exp)) {
+        // Print "from x : int" rather "from x in extent 'int'"
+        w.append(" : ")
+            .append(((ListType) exp.type).elementType.moniker());
+      } else {
+        w.append(" in ")
+            .append(exp, Op.EQ.right, 0);
+      }
       if (!isLiteralTrue()) {
         w.append("on").append(condition, 0, 0);
       }

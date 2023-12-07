@@ -76,6 +76,12 @@ public interface Type {
     return false;
   }
 
+  /** Whether this type has a small, fixed set of instances.
+   * True for {@code bool}, data types on finite types. */
+  default boolean isFinite() {
+    return false;
+  }
+
   /** Structural identifier of a type. */
   abstract class Key {
     public final Op op;

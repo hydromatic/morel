@@ -59,8 +59,13 @@ public enum PrimitiveType implements RecordLikeType {
     return Op.ID;
   }
 
+
   public <R> R accept(TypeVisitor<R> typeVisitor) {
     return typeVisitor.visit(this);
+  }
+
+  @Override public boolean isFinite() {
+    return this == BOOL || this == UNIT;
   }
 
   @Override public PrimitiveType copy(TypeSystem typeSystem,

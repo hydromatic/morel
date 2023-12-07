@@ -20,6 +20,7 @@ package net.hydromatic.morel;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RangeExtent;
@@ -32,6 +33,7 @@ import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
@@ -359,12 +361,17 @@ public class UtilTest {
 
   @SuppressWarnings("UnstableApiUsage")
   @Test void testRangeExtent() {
+    final TypeSystem typeSystem = new TypeSystem();
+    BuiltIn.dataTypes(typeSystem, new ArrayList<>());
+
     // Integer range [(4, 7]]
     final Range<BigDecimal> range =
         Range.openClosed(BigDecimal.valueOf(4), BigDecimal.valueOf(7));
     final RangeExtent rangeExtent =
-        new RangeExtent(ImmutableRangeSet.of(range), PrimitiveType.INT);
-    assertThat(Lists.newArrayList(rangeExtent.toIterable()),
+        new RangeExtent(typeSystem, PrimitiveType.INT,
+            ImmutableMap.of("/", ImmutableRangeSet.of(range)));
+    assertThat(rangeExtent.iterable, notNullValue());
+    assertThat(Lists.newArrayList(rangeExtent.iterable),
         is(Arrays.asList(5, 6, 7)));
 
     // Integer range set [(4, 7], [10, 12]]
@@ -372,30 +379,52 @@ public class UtilTest {
         Range.closed(BigDecimal.valueOf(10), BigDecimal.valueOf(12));
     final RangeExtent rangeExtent2 =
         new RangeExtent(
-            ImmutableRangeSet.unionOf(ImmutableList.of(range, range2)),
-            PrimitiveType.INT);
-    assertThat(Lists.newArrayList(rangeExtent2.toIterable()),
+            typeSystem, PrimitiveType.INT,
+            ImmutableMap.of("/",
+                ImmutableRangeSet.unionOf(ImmutableList.of(range, range2))));
+    assertThat(rangeExtent2.iterable, notNullValue());
+    assertThat(Lists.newArrayList(rangeExtent2.iterable),
         is(Arrays.asList(5, 6, 7, 10, 11, 12)));
 
     // Boolean range set
     final Range<Boolean> range3 = Range.closed(false, true);
     final RangeExtent rangeExtent3 =
-        new RangeExtent(ImmutableRangeSet.of(range3),
-            PrimitiveType.BOOL);
-    assertThat(Lists.newArrayList(rangeExtent3.toIterable()),
+        new RangeExtent(typeSystem, PrimitiveType.BOOL,
+            ImmutableMap.of("/", ImmutableRangeSet.of(range3)));
+    assertThat(rangeExtent3.iterable, notNullValue());
+    assertThat(Lists.newArrayList(rangeExtent3.iterable),
         is(Arrays.asList(false, true)));
 
     // Range set of (Boolean, Boolean) tuples
-    final TypeSystem typeSystem = new TypeSystem();
     final Range<Comparable> range4 =
         Range.closed((Comparable) FlatLists.of(false, true),
             (Comparable) FlatLists.of(true, true));
     final RangeExtent rangeExtent4 =
-        new RangeExtent(ImmutableRangeSet.of(range4),
-            typeSystem.tupleType(PrimitiveType.BOOL, PrimitiveType.BOOL));
-    assertThat(Lists.newArrayList(rangeExtent4.toIterable()),
-        is(Arrays.asList(
-            FlatLists.of(false, true), FlatLists.of(true, true))));
+        new RangeExtent(typeSystem,
+            typeSystem.tupleType(PrimitiveType.BOOL, PrimitiveType.BOOL),
+            ImmutableMap.of("/", ImmutableRangeSet.of(range4)));
+    assertThat(rangeExtent4.iterable, notNullValue());
+    assertThat(Lists.newArrayList(rangeExtent4.iterable),
+        is(
+            Arrays.asList(FlatLists.of(false, true),
+                FlatLists.of(true, false), FlatLists.of(true, true))));
+
+    // Range set of (boolean option, int) tuples
+    final RangeExtent rangeExtent5 =
+        new RangeExtent(typeSystem,
+            typeSystem.tupleType(
+                typeSystem.option(PrimitiveType.BOOL),
+                PrimitiveType.INT),
+            ImmutableMap.of("/1/SOME/",
+                ImmutableRangeSet.of(Range.singleton(true)),
+                "/2/",
+                ImmutableRangeSet.of(
+                    Range.closed(BigDecimal.valueOf(4),
+                        BigDecimal.valueOf(6)))));
+    assertThat(rangeExtent5.iterable, notNullValue());
+    assertThat(ImmutableList.copyOf(rangeExtent5.iterable),
+        hasToString("[[[NONE], 4], [[NONE], 5], [[NONE], 6],"
+            + " [[SOME, true], 4], [[SOME, true], 5], [[SOME, true], 6]]"));
   }
 }
 
