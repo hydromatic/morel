@@ -145,6 +145,24 @@ public class FromBuilderTest {
     assertThat(e, is(from));
   }
 
+  @Test void testTrivialYield3() {
+    // from j in [1, 2] yield {j} join i in [3, 4]
+    //   ==>
+    // from j in [1, 2] join i in [3, 4]
+    final Fixture f = new Fixture();
+    final FromBuilder fromBuilder = core.fromBuilder(f.typeSystem);
+    fromBuilder.scan(f.jPat, f.list12)
+        .yield_(f.record(f.jId))
+        .scan(f.iPat, f.list34);
+
+    final Core.From from = fromBuilder.build();
+    final String expected = "from j in [1, 2] "
+        + "join i in [3, 4]";
+    assertThat(from.toString(), is(expected));
+    final Core.Exp e = fromBuilder.buildSimplify();
+    assertThat(e, is(from));
+  }
+
   @Test void testNested() {
     // from i in (from j in [1, 2] where j < 2) where i > 1
     //   ==>

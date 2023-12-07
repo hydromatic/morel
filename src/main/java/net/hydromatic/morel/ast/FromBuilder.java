@@ -105,7 +105,10 @@ public class FromBuilder {
         final Core.Yield yield = (Core.Yield) lastStep;
         if (yield.exp.op == Op.TUPLE) {
           final Core.Tuple tuple = (Core.Tuple) yield.exp;
-          if (tuple.args.size() == 1 && isTrivial(tuple, yield.bindings)) {
+          final Core.FromStep previousStep = steps.get(steps.size() - 2);
+          final List<Binding> previousBindings = previousStep.bindings;
+          if (tuple.args.size() == 1
+              && isTrivial(tuple, previousBindings, yield.bindings)) {
             steps.remove(steps.size() - 1);
           }
         }
@@ -239,7 +242,8 @@ public class FromBuilder {
     boolean uselessIfNotLast = false;
     switch (exp.op) {
     case TUPLE:
-      final TupleType tupleType = tupleType((Core.Tuple) exp, bindings2);
+      final TupleType tupleType =
+          tupleType((Core.Tuple) exp, bindings, bindings2);
       switch (tupleType) {
       case IDENTITY:
         // A trivial record does not rename, so its only purpose is to change
@@ -285,13 +289,13 @@ public class FromBuilder {
   }
 
   /** Returns whether tuple is something like "{i = i, j = j}". */
-  private boolean isTrivial(Core.Tuple tuple,
+  private static boolean isTrivial(Core.Tuple tuple, List<Binding> bindings,
       @Nullable List<Binding> bindings2) {
-    return tupleType(tuple, bindings2) == TupleType.IDENTITY;
+    return tupleType(tuple, bindings, bindings2) == TupleType.IDENTITY;
   }
 
   /** Returns whether tuple is something like "{i = i, j = j}". */
-  private TupleType tupleType(Core.Tuple tuple,
+  private static TupleType tupleType(Core.Tuple tuple, List<Binding> bindings,
       @Nullable List<Binding> bindings2) {
     if (tuple.args.size() != bindings.size()) {
       return TupleType.OTHER;
@@ -328,7 +332,7 @@ public class FromBuilder {
       final Core.Yield yield = (Core.Yield) getLast(steps);
       assert yield.exp.op == Op.TUPLE
           && ((Core.Tuple) yield.exp).args.size() == 1
-          && isTrivial((Core.Tuple) yield.exp, yield.bindings)
+          && isTrivial((Core.Tuple) yield.exp, bindings, yield.bindings)
           : yield.exp;
       steps.remove(steps.size() - 1);
     }
