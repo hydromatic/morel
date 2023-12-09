@@ -263,13 +263,22 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
 
   /** Calls a consumer with an ordinal for each pair of items in two
    * iterables. */
-  public static <K, V> void forEachIndexed(Iterable<K> ks, Iterable<V> vs,
-      PairWithOrdinalConsumer<K, V> consumer) {
+  public static <K, V> void forEachIndexed(Iterable<? extends K> ks,
+      Iterable<? extends V> vs, PairWithOrdinalConsumer<K, V> consumer) {
     int i = 0;
-    final Iterator<K> ki = ks.iterator();
-    final Iterator<V> vi = vs.iterator();
+    final Iterator<? extends K> ki = ks.iterator();
+    final Iterator<? extends V> vi = vs.iterator();
     while (ki.hasNext() && vi.hasNext()) {
       consumer.accept(i++, ki.next(), vi.next());
+    }
+  }
+
+  /** Calls a consumer with an ordinal for each pair of items in two
+   * lists. */
+  public static <K, V> void forEachIndexed(List<? extends K> ks,
+      List<? extends V> vs, PairWithOrdinalConsumer<K, V> consumer) {
+    for (int i = 0, j = Math.min(ks.size(), vs.size()); i < j; i++) {
+      consumer.accept(i, ks.get(i), vs.get(i));
     }
   }
 

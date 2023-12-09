@@ -33,9 +33,11 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 
@@ -890,16 +892,25 @@ public class Core {
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       if (type instanceof RecordType) {
         w.append("{");
-        forEachIndexed(type().argNameTypes().keySet(), args,
-            (i, name, exp) ->
-                w.append(i > 0 ? ", " : "").append(name).append(" = ")
-                    .append(exp, 0, 0));
+        forEach((i, name, exp) ->
+            w.append(i > 0 ? ", " : "").append(name).append(" = ")
+                .append(exp, 0, 0));
         return w.append("}");
       } else {
         w.append("(");
-        forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
+        forEach((i, name, arg) ->
+            w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
         return w.append(")");
       }
+    }
+
+    /** Calls a consumer with the name, expression and ordinal of each field
+     * of this tuple. */
+    public void forEach(PairList.IndexedBiConsumer<String, Exp> consumer) {
+      final ImmutableSortedSet<String> nameSet =
+          (ImmutableSortedSet<String>) type().argNameTypes().keySet();
+      final List<String> names = nameSet.asList();
+      forEachIndexed(names, args, consumer::accept);
     }
 
     public Tuple copy(TypeSystem typeSystem, List<Exp> args) {

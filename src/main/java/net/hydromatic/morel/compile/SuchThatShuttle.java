@@ -46,7 +46,7 @@ import java.util.TreeMap;
 import java.util.function.UnaryOperator;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.util.Pair.zip;
+import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.append;
 import static net.hydromatic.morel.util.Static.plus;
 import static net.hydromatic.morel.util.Static.skip;
@@ -386,9 +386,8 @@ class SuchThatShuttle extends Shuttle {
       case TUPLE_PAT:
         final Core.TuplePat tuplePat = (Core.TuplePat) pat;
         final Core.Tuple tuple = (Core.Tuple) exp;
-        for (Pair<Core.Pat, Core.Exp> pair : zip(tuplePat.args, tuple.args)) {
-          populate(pair.left, pair.right, nameBuilder);
-        }
+        forEach(tuplePat.args, tuple.args,
+            (pat2, exp2) -> populate(pat2, exp2, nameBuilder));
         break;
       }
     }
