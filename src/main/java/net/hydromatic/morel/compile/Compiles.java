@@ -51,9 +51,10 @@ public abstract class Compiles {
    *
    * <p>Used for testing. */
   public static TypeResolver.Resolved validateExpression(AstNode statement,
-      Map<String, ForeignValue> valueMap) {
+      Map<Prop, Object> propMap, Map<String, ForeignValue> valueMap) {
     final TypeSystem typeSystem = new TypeSystem();
-    final Environment env = Environments.env(typeSystem, valueMap);
+    final Session session = new Session(propMap);
+    final Environment env = Environments.env(typeSystem, session, valueMap);
     return TypeResolver.deduceType(env, toDecl(statement), typeSystem);
   }
 
@@ -91,7 +92,7 @@ public abstract class Compiles {
     final boolean relationalize =
         Prop.RELATIONALIZE.booleanValue(session.map);
 
-    final Resolver resolver = Resolver.of(resolved.typeMap, env);
+    final Resolver resolver = Resolver.of(resolved.typeMap, env, session);
     final Core.Decl coreDecl0 = resolver.toCore(resolved.node);
     tracer.onCore(0, coreDecl0);
 

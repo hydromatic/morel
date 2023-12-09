@@ -82,6 +82,7 @@ public enum Op {
   // types
   TY_VAR(true),
   RECORD_TYPE(true),
+  PROGRESSIVE_RECORD_TYPE(true),
   DATA_TYPE(" ", 8),
   /** Used internally, as the 'type' of a type constructor that does not contain
    * data. */

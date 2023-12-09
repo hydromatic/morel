@@ -39,6 +39,11 @@ public enum Prop {
    * shell's current directory. */
   DIRECTORY("directory", File.class, new File("")),
 
+  /** File property "scriptDirectory" is the path of the directory where the
+   * {@code use} command looks for scripts. When running a script, it is
+   * generally set to the directory that contains the script. */
+  SCRIPT_DIRECTORY("scriptDirectory", File.class, new File("")),
+
   /** Boolean property "hybrid" controls whether to try to create a hybrid
    * execution plan that uses Apache Calcite relational algebra wherever
    * possible. Default is false. */

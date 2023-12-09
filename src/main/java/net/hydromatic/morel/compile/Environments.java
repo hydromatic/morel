@@ -21,6 +21,7 @@ package net.hydromatic.morel.compile;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
+import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -61,14 +62,14 @@ public abstract class Environments {
   /** Creates an environment containing built-ins and the given foreign
    * values. */
   public static Environment env(TypeSystem typeSystem,
-      Map<String, ForeignValue> valueMap) {
-    return env(EmptyEnvironment.INSTANCE, typeSystem, valueMap);
+      @Nullable Session session, Map<String, ForeignValue> valueMap) {
+    return env(EmptyEnvironment.INSTANCE, typeSystem, session, valueMap);
   }
 
   /** Creates a compilation environment, including built-ins and foreign
    * values. */
   private static Environment env(Environment environment, TypeSystem typeSystem,
-      Map<String, ForeignValue> valueMap) {
+      @Nullable Session session, Map<String, ForeignValue> valueMap) {
     if (Static.SKIP) {
       return environment;
     }
@@ -80,6 +81,12 @@ public abstract class Environments {
         return; // ignore Z_ANDALSO, Z_LIST, etc.
       }
       final Type type = key.typeFunction.apply(typeSystem);
+      if (key.sessionValue != null) {
+        if (session == null) {
+          return;
+        }
+        value = key.sessionValue.apply(session);
+      }
       if (key.structure == null) {
         bindings.add(Binding.of(core.idPat(type, key.mlName, nameGen), value));
       }

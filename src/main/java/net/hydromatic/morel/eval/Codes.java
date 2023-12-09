@@ -2903,6 +2903,7 @@ public abstract class Codes {
           .put(BuiltIn.RELATIONAL_MIN, RELATIONAL_MIN)
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
           .put(BuiltIn.SYS_ENV, (Macro) Codes::sysEnv)
+          .put(BuiltIn.SYS_FILE, "") // value comes from Session.file
           .put(BuiltIn.SYS_PLAN, SYS_PLAN)
           .put(BuiltIn.SYS_SET, SYS_SET)
           .put(BuiltIn.SYS_SHOW, SYS_SHOW)

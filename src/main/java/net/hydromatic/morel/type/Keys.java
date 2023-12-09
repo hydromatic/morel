@@ -19,7 +19,6 @@
 package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
-import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
@@ -27,7 +26,7 @@ import com.google.common.collect.Maps;
 
 import java.util.AbstractList;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
 
@@ -37,6 +36,7 @@ import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /** Type keys. */
@@ -92,6 +92,13 @@ public class Keys {
     return new RecordKey(TupleType.recordMap(args));
   }
 
+  /** Returns a key that identifies a {@link ProgressiveRecordType}. */
+  public static Type.Key progressiveRecord(
+      SortedMap<String, ? extends Type.Key> argNameTypes) {
+    return new ProgressiveRecordKey(
+        ImmutableSortedMap.copyOfSorted(argNameTypes));
+  }
+
   /** Returns a key that identifies a {@link FnType}. */
   public static Type.Key fn(Type.Key paramType, Type.Key resultType) {
     return new OpKey(Op.FN, ImmutableList.of(paramType, resultType));
@@ -126,6 +133,52 @@ public class Keys {
   /** Converts a list of types to a list of keys. */
   public static List<Type.Key> toKeys(List<? extends Type> types) {
     return transformEager(types, Type::key);
+  }
+
+  /** Describes a record, progressive record, or tuple type. */
+  static StringBuilder describeRecordType(StringBuilder buf, int left,
+      int right, SortedMap<String, Type.Key> argNameTypes, Op op) {
+    switch (argNameTypes.size()) {
+    case 0:
+      return buf.append(op == Op.PROGRESSIVE_RECORD_TYPE ? "{...}" : "()");
+
+    default:
+      if (op == Op.TUPLE_TYPE) {
+        return TypeSystem.unparseList(buf, Op.TIMES, left, right,
+            argNameTypes.values());
+      }
+      // fall through
+    case 1:
+      buf.append('{');
+      int i = 0;
+      for (Map.Entry<String, Type.Key> entry : argNameTypes.entrySet()) {
+        String name = entry.getKey();
+        Type.Key typeKey = entry.getValue();
+        if (i++ > 0) {
+          buf.append(", ");
+        }
+        appendId(buf, name)
+            .append(':')
+            .append(typeKey);
+      }
+      if (op == Op.PROGRESSIVE_RECORD_TYPE) {
+        if (i > 0) {
+          buf.append(", ");
+        }
+        buf.append("...");
+      }
+      return buf.append('}');
+    }
+  }
+
+  /** Converts a record key to a progressive record key,
+   * leaves other keys unchanged. */
+  public static Type.Key toProgressive(Type.Key key) {
+    if (key instanceof RecordKey) {
+      return progressiveRecord(
+          ((RecordKey) key).argNameTypes);
+    }
+    return key;
   }
 
   /** Key that identifies a type by name. */
@@ -223,7 +276,7 @@ public class Keys {
     }
 
     @Override public int hashCode() {
-      return Objects.hash(key, args);
+      return hash(key, args);
     }
 
     @Override public boolean equals(Object obj) {
@@ -269,7 +322,7 @@ public class Keys {
     }
 
     @Override public int hashCode() {
-      return Objects.hash(op, args);
+      return hash(op, args);
     }
 
     @Override public boolean equals(Object obj) {
@@ -311,7 +364,7 @@ public class Keys {
     }
 
     @Override public int hashCode() {
-      return Objects.hash(type, parameterCount);
+      return hash(type, parameterCount);
     }
 
     @Override public boolean equals(Object obj) {
@@ -354,27 +407,7 @@ public class Keys {
 
     @Override public StringBuilder describe(StringBuilder buf, int left,
         int right) {
-      switch (argNameTypes.size()) {
-      case 0:
-        return buf.append("()");
-      default:
-        if (op == Op.TUPLE_TYPE) {
-          return TypeSystem.unparseList(buf, Op.TIMES, left, right,
-              argNameTypes.values());
-        }
-        // fall through
-      case 1:
-        buf.append('{');
-        Pair.forEachIndexed(argNameTypes, (i, name, key) -> {
-          if (i > 0) {
-            buf.append(", ");
-          }
-          appendId(buf, name)
-              .append(':')
-              .append(key);
-        });
-        return buf.append('}');
-      }
+      return describeRecordType(buf, left, right, argNameTypes, op);
     }
 
     @Override public int hashCode() {
@@ -402,6 +435,39 @@ public class Keys {
     }
   }
 
+  private static class ProgressiveRecordKey extends Type.Key {
+    final ImmutableSortedMap<String, Type.Key> argNameTypes;
+
+    ProgressiveRecordKey(ImmutableSortedMap<String, Type.Key> argNameTypes) {
+      super(Op.PROGRESSIVE_RECORD_TYPE);
+      this.argNameTypes = requireNonNull(argNameTypes);
+    }
+
+    @Override public Type.Key copy(UnaryOperator<Type.Key> transform) {
+      return progressiveRecord(
+          Maps.transformValues(argNameTypes, transform::apply));
+    }
+
+    @Override public StringBuilder describe(StringBuilder buf, int left,
+        int right) {
+      return describeRecordType(buf, left, right, argNameTypes, op);
+    }
+
+    @Override public int hashCode() {
+      return argNameTypes.hashCode();
+    }
+
+    @Override public boolean equals(Object obj) {
+      return obj == this
+          || obj instanceof ProgressiveRecordKey
+          && ((ProgressiveRecordKey) obj).argNameTypes.equals(argNameTypes);
+    }
+
+    @Override public Type toType(TypeSystem typeSystem) {
+      return new ProgressiveRecordType(typeSystem.typesFor(this.argNameTypes));
+    }
+  }
+
   /** Key that identifies a {@code datatype} scheme. */
   public static class DataTypeKey extends Type.Key {
     /** Ideally, a datatype would not have a name, just a list of named type
@@ -420,7 +486,7 @@ public class Keys {
     }
 
     @Override public int hashCode() {
-      return Objects.hash(name, arguments, typeConstructors);
+      return hash(name, arguments, typeConstructors);
     }
 
     @Override public boolean equals(Object obj) {

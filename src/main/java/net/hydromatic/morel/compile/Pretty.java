@@ -30,6 +30,7 @@ import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Ord;
 
 import com.google.common.collect.Iterables;
@@ -190,18 +191,23 @@ class Pretty {
 
     case LIST:
       final ListType listType = (ListType) type;
-      //noinspection unchecked,rawtypes
-      list = (List) value;
+      list = toList(value);
       if (list instanceof RelList) {
-        // Do not attempt to print the elements of a foreign list. It might be huge.
+        // Do not attempt to print the elements of a foreign list. It might be
+        // huge.
+        return buf.append("<relation>");
+      }
+      if (value instanceof TypedValue) {
+        // A TypedValue is probably a field in a record that represents a
+        // database catalog or a directory of CSV files. If the user wishes to
+        // see the contents of each file they should use a query.
         return buf.append("<relation>");
       }
       return printList(buf, indent, lineEnd, depth, listType.elementType, list);
 
     case RECORD_TYPE:
       final RecordType recordType = (RecordType) type;
-      //noinspection unchecked,rawtypes
-      list = (List) value;
+      list = toList(value);
       buf.append("{");
       start = buf.length();
       forEachIndexed(list, recordType.argNameTypes.entrySet(),
@@ -216,8 +222,7 @@ class Pretty {
 
     case TUPLE_TYPE:
       final TupleType tupleType = (TupleType) type;
-      //noinspection unchecked,rawtypes
-      list = (List) value;
+      list = toList(value);
       buf.append("(");
       start = buf.length();
       forEachIndexed(list, tupleType.argTypes,
@@ -235,8 +240,7 @@ class Pretty {
 
     case DATA_TYPE:
       final DataType dataType = (DataType) type;
-      //noinspection unchecked,rawtypes
-      list = (List) value;
+      list = toList(value);
       if (dataType.name.equals("vector")) {
         final Type argType = Iterables.getOnlyElement(dataType.arguments);
         return printList(buf.append('#'), indent, lineEnd, depth, argType,
@@ -317,7 +321,9 @@ class Pretty {
       return buf;
 
     case RECORD_TYPE:
+    case PROGRESSIVE_RECORD_TYPE:
       final RecordType recordType = (RecordType) typeVal.type;
+      final boolean progressive = typeVal.type.isProgressive();
       buf.append("{");
       start = buf.length();
       recordType.argNameTypes.forEach((name, elementType) -> {
@@ -327,6 +333,12 @@ class Pretty {
         pretty1(buf, indent2 + 1, lineEnd, depth, type,
             new LabelVal(name, elementType), 0, 0);
       });
+      if (progressive) {
+        if (buf.length() > start) {
+          buf.append(", ");
+        }
+        pretty1(buf, indent2 + 1, lineEnd, depth, type, "...", 0, 0);
+      }
       return buf.append("}");
 
     case FUNCTION_TYPE:
@@ -350,6 +362,15 @@ class Pretty {
     default:
       throw new AssertionError("unknown type " + typeVal.type);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static List<Object> toList(Object value) {
+    if (value instanceof TypedValue) {
+      TypedValue typedValue = (TypedValue) value;
+      return (List<Object>) typedValue.valueAs(List.class);
+    }
+    return (List<Object>) value;
   }
 
   private static Type unqualified(Type type) {

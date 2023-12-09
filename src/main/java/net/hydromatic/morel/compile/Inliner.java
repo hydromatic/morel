@@ -102,6 +102,10 @@ public class Inliner extends EnvShuttle {
         default:
           if (v instanceof Code) {
             v = ((Code) v).eval(Compiler.EMPTY_ENV);
+            if (v == null) {
+              // Cannot inline SYS_FILE; it requires a session.
+              break;
+            }
           }
           return core.valueLiteral(id, v);
         }

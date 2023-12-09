@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Map;
@@ -73,7 +72,7 @@ class CalciteTest {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     final Main main =
         new Main(ImmutableList.of(), in, new PrintStream(out), foreignValueMap,
-            new File(""), false);
+            ImmutableMap.of(), false);
 
     main.run();
     if (debug) {

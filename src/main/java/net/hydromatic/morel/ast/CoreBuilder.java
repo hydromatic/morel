@@ -34,6 +34,7 @@ import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
@@ -170,6 +171,12 @@ public enum CoreBuilder {
 
   public Core.RecordSelector recordSelector(TypeSystem typeSystem,
       RecordLikeType recordType, String fieldName) {
+    final @Nullable TypedValue typedValue = recordType.asTypedValue();
+    if (typedValue != null) {
+      TypedValue typedValue2 =
+          typedValue.discoverField(typeSystem, fieldName);
+      recordType = (RecordLikeType) typedValue2.typeKey().toType(typeSystem);
+    }
     int slot = 0;
     for (Map.Entry<String, Type> pair : recordType.argNameTypes().entrySet()) {
       if (pair.getKey().equals(fieldName)) {
@@ -179,8 +186,9 @@ public enum CoreBuilder {
       }
       ++slot;
     }
-    throw new IllegalArgumentException("no field '" + fieldName + "' in type '"
-        + recordType + "'");
+
+    throw new IllegalArgumentException("no field '" + fieldName
+        + "' in type '" + recordType + "'");
   }
 
   public Core.RecordSelector recordSelector(TypeSystem typeSystem,

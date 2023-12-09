@@ -61,8 +61,6 @@ import java.util.function.Consumer;
 
 import static net.hydromatic.morel.util.Static.str;
 
-import static java.util.Objects.requireNonNull;
-
 /** Standard ML REPL. */
 public class Main {
   private final BufferedReader in;
@@ -77,9 +75,12 @@ public class Main {
    *
    * @param args Command-line arguments */
   public static void main(String[] args) {
+    final List<String> argList = ImmutableList.copyOf(args);
+    final Map<String, ForeignValue> valueMap = ImmutableMap.of();
+    final Map<Prop, Object> propMap = new LinkedHashMap<>();
+    Prop.DIRECTORY.set(propMap, new File(System.getProperty("user.dir")));
     final Main main =
-        new Main(ImmutableList.copyOf(args), System.in, System.out,
-            ImmutableMap.of(), new File(System.getProperty("user.dir")), false);
+        new Main(argList, System.in, System.out, valueMap, propMap, false);
     try {
       main.run();
     } catch (Throwable e) {
@@ -90,21 +91,21 @@ public class Main {
 
   /** Creates a Main. */
   public Main(List<String> args, InputStream in, PrintStream out,
-      Map<String, ForeignValue> valueMap, File directory, boolean idempotent) {
+      Map<String, ForeignValue> valueMap, Map<Prop, Object> propMap,
+      boolean idempotent) {
     this(args, new InputStreamReader(in), new OutputStreamWriter(out),
-        valueMap, directory, idempotent);
+        valueMap, propMap, idempotent);
   }
 
   /** Creates a Main. */
   public Main(List<String> argList, Reader in, Writer out,
-      Map<String, ForeignValue> valueMap, File directory, boolean idempotent) {
+      Map<String, ForeignValue> valueMap, Map<Prop, Object> propMap,
+      boolean idempotent) {
     this.in = buffer(idempotent ? stripOutLines(in) : in);
     this.out = buffer(out);
     this.echo = argList.contains("--echo");
     this.valueMap = ImmutableMap.copyOf(valueMap);
-    final Map<Prop, Object> map = new LinkedHashMap<>();
-    Prop.DIRECTORY.set(map, requireNonNull(directory, "directory"));
-    this.session = new Session(map);
+    this.session = new Session(propMap);
     this.idempotent = idempotent;
   }
 
@@ -203,7 +204,7 @@ public class Main {
   }
 
   public void run() {
-    Environment env = Environments.env(typeSystem, valueMap);
+    Environment env = Environments.env(typeSystem, session, valueMap);
     final Consumer<String> echoLines = out::println;
     final Consumer<String> outLines =
         idempotent
@@ -313,7 +314,8 @@ public class Main {
       outLines.accept("[opening " + fileName + "]");
       File file = new File(fileName);
       if (!file.isAbsolute()) {
-        final File directory = Prop.DIRECTORY.fileValue(main.session.map);
+        final File directory =
+            Prop.SCRIPT_DIRECTORY.fileValue(main.session.map);
         file = new File(directory, fileName);
       }
       if (!file.exists()) {

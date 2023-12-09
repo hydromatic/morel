@@ -22,6 +22,7 @@ import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
+import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.TypeVar;
@@ -35,12 +36,12 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static net.hydromatic.morel.Matchers.equalsOrdered;
 import static net.hydromatic.morel.Matchers.equalsUnordered;
@@ -75,18 +76,19 @@ public class MainTest {
 
   @Test void testEmptyRepl() {
     final List<String> argList = ImmutableList.of();
-    final File directory = new File("");
+    final Map<String, ForeignValue> valueMap = ImmutableMap.of();
+    final Map<Prop, Object> propMap = ImmutableMap.of();
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(new byte[0]);
-      new Main(argList, in, ps, ImmutableMap.of(), directory, false).run();
+      final Main main = new Main(argList, in, ps, valueMap, propMap, false);
+      main.run();
     }
     assertThat(out.size(), is(0));
   }
 
   @Test void testRepl() {
     final List<String> argList = ImmutableList.of();
-    final File directory = new File("");
     final String ml = "val x = 5;\n"
         + "x;\n"
         + "it + 1;\n"
@@ -96,7 +98,10 @@ public class MainTest {
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(ml.getBytes());
-      new Main(argList, in, ps, ImmutableMap.of(), directory, false).run();
+      final Map<String, ForeignValue> valueMap = ImmutableMap.of();
+      final Map<Prop, Object> propMap = ImmutableMap.of();
+      final Main main = new Main(argList, in, ps, valueMap, propMap, false);
+      main.run();
     }
     final String expected = "val x = 5 : int\n"
         + "val it = 5 : int\n"

@@ -262,8 +262,9 @@ public class Shell {
     final TypeSystem typeSystem = new TypeSystem();
     final Map<Prop, Object> map = new LinkedHashMap<>();
     Prop.DIRECTORY.set(map, config.directory);
+    Prop.SCRIPT_DIRECTORY.set(map, config.directory);
     final Session session = new Session(map);
-    Environment env = Environments.env(typeSystem, config.valueMap);
+    Environment env = Environments.env(typeSystem, session, config.valueMap);
     final LineFn lineFn =
         new TerminalLineFn(minusPrompt, equalsPrompt, lineReader);
     final SubShell subShell =

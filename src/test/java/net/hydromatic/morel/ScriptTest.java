@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.ForeignValue;
 
@@ -36,6 +37,7 @@ import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -136,7 +138,7 @@ public class ScriptTest {
     }
     TestUtils.discard(outFile.getParentFile().mkdirs());
     final List<String> argList = ImmutableList.of("--echo");
-    final File directory = inFile.getParentFile();
+    final File scriptDirectory = inFile.getParentFile();
     final boolean loadDictionary =
         inFile.getPath()
             .matches(".*/(blog|dummy|foreign|hybrid|suchThat)\\.(sml|smli)");
@@ -144,10 +146,22 @@ public class ScriptTest {
         loadDictionary
             ? Calcite.withDataSets(BuiltInDataSet.DICTIONARY).foreignValues()
             : ImmutableMap.of();
+
+    final Map<Prop, Object> propMap = new LinkedHashMap<>();
+    File directory = scriptDirectory;
+    for (File d = scriptDirectory; d != null; d = d.getParentFile()) {
+      if (d.getName().equals("script")) {
+        directory = d.getParentFile();
+        break;
+      }
+    }
+    Prop.DIRECTORY.set(propMap, directory);
+    Prop.SCRIPT_DIRECTORY.set(propMap, scriptDirectory);
+
     try (Reader reader = TestUtils.reader(inFile);
          Writer writer = TestUtils.printWriter(outFile)) {
       Main main =
-          new Main(argList, reader, writer, dictionary, directory, idempotent);
+          new Main(argList, reader, writer, dictionary, propMap, idempotent);
       main.run();
     }
     final String inName =

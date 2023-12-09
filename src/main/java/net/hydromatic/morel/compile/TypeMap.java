@@ -33,12 +33,14 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
+
+import static java.util.Objects.requireNonNull;
 
 /** The result of type resolution, a map from AST nodes to types. */
 public class TypeMap {
@@ -56,9 +58,9 @@ public class TypeMap {
 
   TypeMap(TypeSystem typeSystem, Map<AstNode, Unifier.Term> nodeTypeTerms,
       Unifier.Substitution substitution) {
-    this.typeSystem = Objects.requireNonNull(typeSystem);
+    this.typeSystem = requireNonNull(typeSystem);
     this.nodeTypeTerms = ImmutableMap.copyOf(nodeTypeTerms);
-    this.substitution = Objects.requireNonNull(substitution.resolve());
+    this.substitution = requireNonNull(substitution.resolve());
   }
 
   @Override public String toString() {
@@ -81,7 +83,7 @@ public class TypeMap {
 
   /** Returns the type of an AST node. */
   public Type getType(AstNode node) {
-    final Unifier.Term term = Objects.requireNonNull(nodeTypeTerms.get(node));
+    final Unifier.Term term = requireNonNull(nodeTypeTerms.get(node));
     return termToType(term);
   }
 
@@ -94,8 +96,12 @@ public class TypeMap {
   /** Returns whether the type of an AST node will be a type variable. */
   public boolean typeIsVariable(AstNode node) {
     final Unifier.Term term = nodeTypeTerms.get(node);
-    return term instanceof Unifier.Variable
-        && termToType(term) instanceof TypeVar;
+    if (term instanceof Unifier.Variable) {
+      final Type type = termToType(term);
+      return type instanceof TypeVar
+          || type.isProgressive();
+    }
+    return false;
   }
 
   /** Returns whether an AST node has a type.
@@ -157,9 +163,17 @@ public class TypeMap {
           final List<String> argNames = TypeResolver.fieldList(sequence);
           if (argNames != null) {
             argNameTypes = ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-            forEach(argNames, sequence.terms, (name, term) ->
-                argNameTypes.put(name, term.accept(this)));
-            return typeMap.typeSystem.recordType(argNameTypes.build());
+            final AtomicBoolean progressive = new AtomicBoolean(false);
+            forEach(argNames, sequence.terms, (name, term) -> {
+              if (name.equals(TypeResolver.PROGRESSIVE_LABEL)) {
+                progressive.set(true);
+              } else {
+                argNameTypes.put(name, term.accept(this));
+              }
+            });
+            return progressive.get()
+                ? typeMap.typeSystem.progressiveRecordType(argNameTypes.build())
+                : typeMap.typeSystem.recordType(argNameTypes.build());
           }
         }
         throw new AssertionError("unknown type constructor "

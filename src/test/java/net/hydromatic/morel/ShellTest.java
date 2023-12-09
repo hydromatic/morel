@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.foreign.ForeignValue;
 
 import com.google.common.collect.ImmutableList;
@@ -34,6 +35,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
@@ -702,10 +704,12 @@ public class ShellTest {
           try (Reader reader = new StringReader(inputString());
                StringWriter writer = new StringWriter()) {
             final List<String> argList = ImmutableList.of();
-            final Map<String, ForeignValue> dictionary = ImmutableMap.of();
-            final File directory = getFile();
+            final Map<String, ForeignValue> valueMap = ImmutableMap.of();
+            final Map<Prop, Object> propMap = new LinkedHashMap<>();
+            Prop.DIRECTORY.set(propMap, getFile());
+            Prop.SCRIPT_DIRECTORY.set(propMap, getFile());
             final Main main =
-                new Main(argList, reader, writer, dictionary, directory, false);
+                new Main(argList, reader, writer, valueMap, propMap, false);
             main.run();
             assertThat(writer.toString(), matcher);
             return this;

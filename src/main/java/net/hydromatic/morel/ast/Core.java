@@ -31,6 +31,7 @@ import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
@@ -624,6 +625,10 @@ public class Core {
      * {@link Comparable}, the value will be in a wrapper. */
     public <C> C unwrap(Class<C> clazz) {
       Object v;
+      if (value instanceof Wrapper
+          && ((Wrapper) value).o instanceof TypedValue) {
+        return ((TypedValue) ((Wrapper) value).o).valueAs(clazz);
+      }
       if (clazz.isInstance(value) && clazz != Object.class) {
         v = value;
       } else if (Number.class.isAssignableFrom(clazz)

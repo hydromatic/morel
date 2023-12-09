@@ -23,6 +23,7 @@ import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
+import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ForallType;
@@ -34,6 +35,7 @@ import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
+import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MartelliUnifier;
 import net.hydromatic.morel.util.Ord;
@@ -51,9 +53,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.calcite.util.Holder;
 import org.apache.calcite.util.Util;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,7 +69,9 @@ import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -95,14 +102,27 @@ public class TypeResolver {
   static final String RECORD_TY_CON = "record";
   static final String FN_TY_CON = "fn";
 
+  /** A field of this name indicates that a record type is progressive. */
+  static final String PROGRESSIVE_LABEL = "z$dummy";
+
   private TypeResolver(TypeSystem typeSystem) {
     this.typeSystem = Objects.requireNonNull(typeSystem);
   }
 
-  /** Deduces the type of a declaration. */
+  /** Deduces the datatype of a declaration. */
   public static Resolved deduceType(Environment env, Ast.Decl decl,
       TypeSystem typeSystem) {
-    return new TypeResolver(typeSystem).deduceType_(env, decl);
+    final TypeResolver typeResolver = new TypeResolver(typeSystem);
+    int attempt = 0;
+    for (;;) {
+      int original = typeSystem.expandCount.get();
+      final TypeResolver.Resolved resolved =
+          typeResolver.deduceType_(env, decl);
+      if (typeSystem.expandCount.get() == original
+          || attempt++ > 1) {
+        return resolved;
+      }
+    }
   }
 
   /** Converts a type AST to a type. */
@@ -127,7 +147,7 @@ public class TypeResolver {
     });
     BuiltIn.forEachStructure(typeSystem, (structure, type) ->
         typeEnvs.accept(structure.name, type));
-    env.forEachType(typeEnvs);
+    env.forEachType(typeSystem, typeEnvs);
     final TypeEnv typeEnv = typeEnvs.typeEnv;
     final Map<Ast.IdPat, Unifier.Term> termMap = new LinkedHashMap<>();
     final Ast.Decl node2 = deduceDeclType(typeEnv, decl, termMap);
@@ -136,6 +156,9 @@ public class TypeResolver {
     final Unifier.Tracer tracer = debug
         ? Tracers.printTracer(System.out)
         : Tracers.nullTracer();
+
+    // Deduce types. The loop will retry, just once, if there are certain kinds
+    // of errors.
     tryAgain:
     for (;;) {
       final List<Unifier.TermTerm> termPairs = new ArrayList<>();
@@ -152,8 +175,7 @@ public class TypeResolver {
       final TypeMap typeMap =
           new TypeMap(typeSystem, map, (Unifier.Substitution) result);
       while (!preferredTypes.isEmpty()) {
-        Map.Entry<Unifier.Variable, PrimitiveType> x = preferredTypes.get(0);
-        preferredTypes.remove(0);
+        Map.Entry<Unifier.Variable, PrimitiveType> x = preferredTypes.remove(0);
         final Type type =
             typeMap.termToType(typeMap.substitution.resultMap.get(x.getKey()));
         if (type instanceof TypeVar) {
@@ -162,23 +184,45 @@ public class TypeResolver {
         }
       }
 
-      // Check that there are no field references "x.y" or "#y x" where "x" has
-      // an unresolved type.
-      node2.accept(
-          new Visitor() {
-            @Override protected void visit(Ast.Apply apply) {
-              if (apply.fn.op == Op.RECORD_SELECTOR
-                  && typeMap.typeIsVariable(apply.arg)) {
-                throw new TypeException("unresolved flex record (can't tell "
-                    + "what fields there are besides " + apply.fn + ")",
-                    apply.arg.pos);
-              }
-              super.visit(apply);
-            }
-          });
-
+      final AtomicBoolean progressive = new AtomicBoolean();
+      forEachUnresolvedField(node2, typeMap, apply -> {
+        final Type type = typeMap.getType(apply.arg);
+        if (type.isProgressive()) {
+          progressive.set(true);
+        }
+      });
+      if (progressive.get()) {
+        node2.accept(FieldExpander.create(typeSystem, env));
+      } else {
+        checkNoUnresolvedFieldRefs(node2, typeMap);
+      }
       return Resolved.of(env, decl, node2, typeMap);
     }
+  }
+
+  /** Checks that there are no field references "x.y" or "#y x" where "x" has
+   * an unresolved type. Throws if there are unresolved field references. */
+  private static void checkNoUnresolvedFieldRefs(Ast.Decl decl,
+      TypeMap typeMap) {
+    forEachUnresolvedField(decl, typeMap, apply -> {
+      throw new TypeException("unresolved flex record (can't tell "
+          + "what fields there are besides " + apply.fn + ")",
+          apply.arg.pos);
+    });
+  }
+
+  private static void forEachUnresolvedField(Ast.Decl decl, TypeMap typeMap,
+      Consumer<Ast.Apply> consumer) {
+    decl.accept(
+        new Visitor() {
+          @Override protected void visit(Ast.Apply apply) {
+            if (apply.fn.op == Op.RECORD_SELECTOR
+                && typeMap.typeIsVariable(apply.arg)) {
+              consumer.accept(apply);
+            }
+            super.visit(apply);
+          }
+        });
   }
 
   private <E extends AstNode> E reg(E node,
@@ -839,9 +883,17 @@ public class TypeResolver {
         final Ast.RecordType recordType = (Ast.RecordType) type;
         final ImmutableSortedMap.Builder<String, Type.Key> argNameTypes =
             ImmutableSortedMap.orderedBy(ORDERING);
-        recordType.fieldTypes.forEach((name, t) ->
-            argNameTypes.put(name, toTypeKey(t)));
-        return Keys.record(argNameTypes.build());
+        final AtomicBoolean progressive = new AtomicBoolean(false);
+        recordType.fieldTypes.forEach((name, t) -> {
+          if (name.equals(PROGRESSIVE_LABEL)) {
+            progressive.set(true);
+          } else {
+            argNameTypes.put(name, toTypeKey(t));
+          }
+        });
+        return progressive.get()
+            ? Keys.progressiveRecord(argNameTypes.build())
+            : Keys.record(argNameTypes.build());
 
       case FUNCTION_TYPE:
         final Ast.FunctionType functionType = (Ast.FunctionType) type;
@@ -1238,9 +1290,14 @@ public class TypeResolver {
           transform(tupleType.argTypes, type1 -> toTerm(type1, subst)));
     case RECORD_TYPE:
       final RecordType recordType = (RecordType) type;
+      SortedMap<String, Type> argNameTypes = recordType.argNameTypes;
+      if (recordType.isProgressive()) {
+        argNameTypes = new TreeMap<>(argNameTypes);
+        argNameTypes.put(PROGRESSIVE_LABEL, PrimitiveType.UNIT);
+      }
       @SuppressWarnings({"rawtypes", "unchecked"})
       final NavigableSet<String> labelNames =
-          (NavigableSet) recordType.argNameTypes.keySet();
+          (NavigableSet) argNameTypes.keySet();
       final String result;
       if (labelNames.isEmpty()) {
         result = PrimitiveType.UNIT.name();
@@ -1254,7 +1311,7 @@ public class TypeResolver {
         result = b.toString();
       }
       final List<Unifier.Term> args =
-          transformEager(recordType.argNameTypes.values(),
+          transformEager(argNameTypes.values(),
               type1 -> toTerm(type1, subst));
       return unifier.apply(result, args);
     case LIST:
@@ -1494,6 +1551,60 @@ public class TypeResolver {
   public static class TypeException extends CompileException {
     public TypeException(String message, Pos pos) {
       super(message, false, pos);
+    }
+  }
+
+  /** Visitor that expands progressive types if they are used in field
+   * references. */
+  static class FieldExpander extends EnvVisitor {
+    static FieldExpander create(TypeSystem typeSystem, Environment env) {
+      return new FieldExpander(typeSystem, env, new ArrayDeque<>());
+    }
+
+    private FieldExpander(TypeSystem typeSystem, Environment env,
+        Deque<FromContext> fromStack) {
+      super(typeSystem, env, fromStack);
+    }
+
+    @Override protected EnvVisitor push(Environment env) {
+      return new FieldExpander(typeSystem, env, fromStack);
+    }
+
+    @Override protected void visit(Ast.Apply apply) {
+      super.visit(apply);
+      expandField(env, apply);
+    }
+
+    @Override protected void visit(Ast.Id id) {
+      super.visit(id);
+      expandField(env, id);
+    }
+
+    private @Nullable TypedValue expandField(Environment env, Ast.Exp exp) {
+      switch (exp.op) {
+      case APPLY:
+        final Ast.Apply apply = (Ast.Apply) exp;
+        if (apply.fn.op == Op.RECORD_SELECTOR) {
+          final Ast.RecordSelector selector = (Ast.RecordSelector) apply.fn;
+          final TypedValue typedValue = expandField(env, apply.arg);
+          if (typedValue != null) {
+            typedValue.discoverField(typeSystem, selector.name);
+            return typedValue.fieldValueAs(selector.name, TypedValue.class);
+          }
+        }
+        return null;
+
+      case ID:
+        final Binding binding = env.getOpt(((Ast.Id) exp).name);
+        if (binding != null
+            && binding.value instanceof TypedValue) {
+          return (TypedValue) binding.value;
+        }
+        // fall through
+
+      default:
+        return null;
+      }
     }
   }
 }

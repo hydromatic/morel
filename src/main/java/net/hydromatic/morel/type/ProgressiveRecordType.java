@@ -18,22 +18,22 @@
  */
 package net.hydromatic.morel.type;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.SortedMap;
 
-/** A type that has named fields, as a record type does. */
-public interface RecordLikeType extends Type {
-  SortedMap<String, Type> argNameTypes();
+/** Progressive record type. */
+public class ProgressiveRecordType extends RecordType {
+  /** Creates a ProgressiveRecordType. */
+  ProgressiveRecordType(SortedMap<String, Type> argNameTypes) {
+    super(argNameTypes);
+  }
 
-  /** Returns the type of the {@code i}th field, or throws. */
-  Type argType(int i);
+  @Override public boolean isProgressive() {
+    return true;
+  }
 
-  /** Returns a {@link TypedValue} if this
-   * type wraps a single dynamically typed value, otherwise null. */
-  default @Nullable TypedValue asTypedValue() {
-    return null;
+  @Override public Key key() {
+    return Keys.progressiveRecord(Keys.toKeys(argNameTypes));
   }
 }
 
-// End RecordLikeType.java
+// End ProgressiveRecordType.java

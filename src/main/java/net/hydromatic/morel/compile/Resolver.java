@@ -25,6 +25,7 @@ import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Shuttle;
 import net.hydromatic.morel.ast.Visitor;
+import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
@@ -35,12 +36,14 @@ import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.util.Util;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
@@ -80,6 +83,7 @@ public class Resolver {
   final TypeMap typeMap;
   private final NameGenerator nameGenerator;
   private final Environment env;
+  private final @Nullable Session session;
 
   /** Contains variable declarations whose type at the point they are used is
    * different (more specific) than in their declaration.
@@ -97,22 +101,25 @@ public class Resolver {
 
   private Resolver(TypeMap typeMap, NameGenerator nameGenerator,
       Map<Pair<Core.NamedPat, Type>, Core.NamedPat> variantIdMap,
-      Environment env) {
+      Environment env, @Nullable Session session) {
     this.typeMap = typeMap;
     this.nameGenerator = nameGenerator;
     this.variantIdMap = variantIdMap;
     this.env = env;
+    this.session = session;
   }
 
   /** Creates a root Resolver. */
-  public static Resolver of(TypeMap typeMap, Environment env) {
-    return new Resolver(typeMap, new NameGenerator(), new HashMap<>(), env);
+  public static Resolver of(TypeMap typeMap, Environment env,
+      @Nullable Session session) {
+    return new Resolver(typeMap, new NameGenerator(), new HashMap<>(), env,
+        session);
   }
 
   /** Binds a Resolver to a new environment. */
   public Resolver withEnv(Environment env) {
     return env == this.env ? this
-        : new Resolver(typeMap, nameGenerator, variantIdMap, env);
+        : new Resolver(typeMap, nameGenerator, variantIdMap, env, session);
   }
 
   /** Binds a Resolver to an environment that consists of the current
@@ -402,12 +409,62 @@ public class Resolver {
     Core.Exp coreFn;
     if (apply.fn.op == Op.RECORD_SELECTOR) {
       final Ast.RecordSelector recordSelector = (Ast.RecordSelector) apply.fn;
-      coreFn = core.recordSelector(typeMap.typeSystem,
-          (RecordLikeType) coreArg.type, recordSelector.name);
+      RecordLikeType recordType = (RecordLikeType) coreArg.type;
+      if (coreArg.type.isProgressive()) {
+        Object o = valueOf(env, coreArg);
+        if (o instanceof TypedValue) {
+          final TypedValue typedValue = (TypedValue) o;
+          TypedValue typedValue2 =
+              typedValue.discoverField(typeMap.typeSystem, recordSelector.name);
+          recordType =
+              (RecordLikeType) typedValue2.typeKey().toType(typeMap.typeSystem);
+        }
+      }
+      coreFn =
+          core.recordSelector(typeMap.typeSystem, recordType,
+              recordSelector.name);
+      if (type.op() == Op.TY_VAR
+              && coreFn.type.op() == Op.FUNCTION_TYPE
+          || type.isProgressive()
+          || type instanceof ListType
+              && ((ListType) type).elementType.isProgressive()) {
+        // If we are dereferencing a field in a progressive type, the type
+        // available now may be more precise than the deduced type.
+        type = ((FnType) coreFn.type).resultType;
+      }
     } else {
       coreFn = toCore(apply.fn);
     }
     return core.apply(apply.pos, type, coreFn, coreArg);
+  }
+
+  static Object valueOf(Environment env, Core.Exp exp) {
+    if (exp instanceof Core.Literal) {
+      return ((Core.Literal) exp).value;
+    }
+    if (exp.op == Op.ID) {
+      final Core.Id id = (Core.Id) exp;
+      Binding binding = env.getOpt(id.idPat);
+      if (binding != null) {
+        return binding.value;
+      }
+    }
+    if (exp.op == Op.APPLY) {
+      final Core.Apply apply = (Core.Apply) exp;
+      if (apply.fn.op == Op.RECORD_SELECTOR) {
+        final Core.RecordSelector recordSelector =
+            (Core.RecordSelector) apply.fn;
+        final Object o = valueOf(env, apply.arg);
+        if (o instanceof TypedValue) {
+          return ((TypedValue) o).fieldValueAs(recordSelector.slot,
+              Object.class);
+        } else if (o instanceof List) {
+          @SuppressWarnings("unchecked") List<Object> list = (List<Object>) o;
+          return list.get(recordSelector.slot);
+        }
+      }
+    }
+    return null; // not constant
   }
 
   private Core.RecordSelector toCore(Ast.RecordSelector recordSelector) {
@@ -453,7 +510,7 @@ public class Resolver {
     //   flattenLet(val x :: xs = [1, 2, 3] and (y, z) = (2, 4), x + y)
     // becomes
     //   let v = ([1, 2, 3], (2, 4)) in case v of (x :: xs, (y, z)) => x + y end
-    if (decls.size() == 0) {
+    if (decls.isEmpty()) {
       return toCore(exp);
     }
     final Ast.Decl decl = decls.get(0);
@@ -572,10 +629,62 @@ public class Resolver {
   Core.Exp toCore(Ast.From from) {
     final Type type = typeMap.getType(from);
     final Core.Exp coreFrom = new FromResolver().run(from);
-    checkArgument(coreFrom.type.equals(type),
+    checkArgument(subsumes(type, coreFrom.type()),
         "Conversion to core did not preserve type: expected [%s] "
             + "actual [%s] from [%s]", type, coreFrom.type, coreFrom);
     return coreFrom;
+  }
+
+  /** An actual type subsumes an expected type if it is equal
+   * or if progressive record types have been expanded. */
+  private static boolean subsumes(Type actualType, Type expectedType) {
+    switch (actualType.op()) {
+    case LIST:
+      if (expectedType.op() != Op.LIST) {
+        return false;
+      }
+      return subsumes(((ListType) actualType).elementType,
+          ((ListType) expectedType).elementType);
+    case RECORD_TYPE:
+      if (expectedType.op() != Op.RECORD_TYPE) {
+        return false;
+      }
+      if (actualType.isProgressive()) {
+        return true;
+      }
+      final SortedMap<String, Type> actualMap =
+          ((RecordType) actualType).argNameTypes();
+      final SortedMap<String, Type> expectedMap =
+          ((RecordType) expectedType).argNameTypes();
+      final Iterator<Map.Entry<String, Type>> actualIterator =
+          actualMap.entrySet().iterator();
+      final Iterator<Map.Entry<String, Type>> expectedIterator =
+          expectedMap.entrySet().iterator();
+      for (;;) {
+        if (actualIterator.hasNext()) {
+          if (!expectedIterator.hasNext()) {
+            // expected had fewer entries than actual
+            return false;
+          }
+        } else {
+          if (!expectedIterator.hasNext()) {
+            // expected and actual had same number of entries
+            return true;
+          }
+        }
+        final Map.Entry<String, Type> actual = actualIterator.next();
+        final Map.Entry<String, Type> expected = expectedIterator.next();
+        if (!actual.getKey().equals(expected.getKey())) {
+          return false;
+        }
+        if (!subsumes(actual.getValue(), expected.getValue())) {
+          return false;
+        }
+      }
+      // fall through
+    default:
+      return actualType.equals(expectedType);
+    }
   }
 
   private Core.Aggregate toCore(Ast.Aggregate aggregate,
@@ -666,13 +775,8 @@ public class Resolver {
         final PatExp x = patExps.get(0);
         Core.NonRecValDecl valDecl =
             core.nonRecValDecl(x.pos, (Core.IdPat) x.pat, x.exp);
-        return rec
-            ? core.let(core.recValDecl(ImmutableList.of(valDecl)), resultExp)
-            : core.let(valDecl, resultExp);
+        return core.let(valDecl, resultExp);
       } else {
-        if (rec) {
-          throw new UnsupportedOperationException();
-        }
         // This is a complex pattern. Allocate an intermediate variable.
         final String name = nameGenerator.get();
         final Core.IdPat idPat = core.idPat(pat.type, name, nameGenerator);

@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.compile;
 
+import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ForallType;
@@ -35,7 +36,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BiConsumer;
@@ -50,6 +50,8 @@ import static net.hydromatic.morel.type.PrimitiveType.INT;
 import static net.hydromatic.morel.type.PrimitiveType.REAL;
 import static net.hydromatic.morel.type.PrimitiveType.STRING;
 import static net.hydromatic.morel.type.PrimitiveType.UNIT;
+
+import static java.util.Objects.requireNonNull;
 
 /** Built-in constants and functions. */
 public enum BuiltIn {
@@ -1249,6 +1251,17 @@ public enum BuiltIn {
   SYS_ENV("Sys", "env", "env", ts ->
       ts.fnType(UNIT, ts.listType(ts.tupleType(STRING, STRING)))),
 
+  /** Value "Sys.file", aka "file", of type "{...}" (partial record).
+   *
+   * <p>Its value is not global; each session has a private value.
+   * This allows the type to be different for each session, and reduces
+   * concern thread-safety concerns. */
+  SYS_FILE("Sys", "file", "file", ts ->
+      ts.progressiveRecordType(
+          ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
+              .build()),
+      null, session -> session.file.get()),
+
   /** Function "Sys.plan", aka "plan", of type "unit &rarr; string". */
   SYS_PLAN("Sys", "plan", "plan", ts -> ts.fnType(UNIT, STRING)),
 
@@ -1593,6 +1606,9 @@ public enum BuiltIn {
 
   private final PrimitiveType preferredType;
 
+  /** Computes a value for a particular session. */
+  public final Function<Session, Object> sessionValue;
+
   public static final ImmutableMap<String, BuiltIn> BY_ML_NAME;
 
   public static final SortedMap<String, Structure> BY_STRUCTURE;
@@ -1628,28 +1644,30 @@ public enum BuiltIn {
 
   BuiltIn(@Nullable String structure, String mlName,
       Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, null, typeFunction, null);
+    this(structure, mlName, null, typeFunction, null, null);
   }
 
   BuiltIn(@Nullable String structure, String mlName,
       @Nonnull PrimitiveType preferredType,
       Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, null, typeFunction, preferredType);
+    this(structure, mlName, null, typeFunction, preferredType, null);
   }
 
   BuiltIn(@Nullable String structure, String mlName,
       @Nullable String alias, Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, alias, typeFunction, null);
+    this(structure, mlName, alias, typeFunction, null, null);
   }
 
   BuiltIn(@Nullable String structure, String mlName,
       @Nullable String alias, Function<TypeSystem, Type> typeFunction,
-      @Nullable PrimitiveType preferredType) {
+      @Nullable PrimitiveType preferredType,
+      @Nullable Function<Session, Object> sessionValue) {
     this.structure = structure;
-    this.mlName = Objects.requireNonNull(mlName);
+    this.mlName = requireNonNull(mlName, "mlName");
     this.alias = alias;
-    this.typeFunction = Objects.requireNonNull(typeFunction);
+    this.typeFunction = requireNonNull(typeFunction, "typeFunction");
     this.preferredType = preferredType;
+    this.sessionValue = sessionValue;
   }
 
   /** Calls a consumer once per value. */
@@ -1769,7 +1787,7 @@ public enum BuiltIn {
     public final SortedMap<String, BuiltIn> memberMap;
 
     Structure(String name, SortedMap<String, BuiltIn> memberMap) {
-      this.name = Objects.requireNonNull(name);
+      this.name = requireNonNull(name, "name");
       this.memberMap = ImmutableSortedMap.copyOf(memberMap);
     }
   }

@@ -2719,7 +2719,7 @@ Sys.env ();
 >    ("String",
 >     "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
->     "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
+>     "{env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
@@ -2728,7 +2728,7 @@ Sys.env ();
 >    ("emp","{empno:int, ename:string, mgr:int} list"),
 >    ("env","unit -> (string * string) list"),
 >    ("exists","forall 'a. 'a list -> bool"),("explode","string -> char list"),
->    ("f","real -> int * int * int * int"),("false","bool"),
+>    ("f","real -> int * int * int * int"),("false","bool"),("file","{...}"),
 >    ("floor","real -> int"),
 >    ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
 >    ("foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
@@ -2756,8 +2756,8 @@ Sys.env ();
 >    ("op ^","string * string -> string"),("op div","int * int -> int"),
 >    ("op elem","forall 'a. 'a * 'a list -> bool"),
 >    ("op except","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op mod","int * int -> int"),...] : (string * string) list
+>    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),...]
+>   : (string * string) list
 
 env;
 > val it = fn : unit -> (string * string) list
@@ -2782,7 +2782,7 @@ env ();
 >    ("String",
 >     "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
->     "{env:unit -> (string * string) list, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
+>     "{env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
@@ -2791,7 +2791,7 @@ env ();
 >    ("emp","{empno:int, ename:string, mgr:int} list"),
 >    ("env","unit -> (string * string) list"),
 >    ("exists","forall 'a. 'a list -> bool"),("explode","string -> char list"),
->    ("f","real -> int * int * int * int"),("false","bool"),
+>    ("f","real -> int * int * int * int"),("false","bool"),("file","{...}"),
 >    ("floor","real -> int"),
 >    ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
 >    ("foldr","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
@@ -2819,8 +2819,8 @@ env ();
 >    ("op ^","string * string -> string"),("op div","int * int -> int"),
 >    ("op elem","forall 'a. 'a * 'a list -> bool"),
 >    ("op except","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op mod","int * int -> int"),...] : (string * string) list
+>    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),...]
+>   : (string * string) list
 
 (*) val plan : unit -> string
 Sys.plan;

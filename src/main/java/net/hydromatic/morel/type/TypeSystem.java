@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
@@ -58,6 +59,11 @@ public class TypeSystem {
       new HashMap<>();
 
   public final NameGenerator nameGenerator = new NameGenerator();
+
+  /** Number of times that
+   * {@link TypedValue#discoverField(TypeSystem, String)} has caused a
+   * type to change. */
+  public final AtomicInteger expandCount = new AtomicInteger();
 
   public TypeSystem() {
     for (PrimitiveType primitiveType : PrimitiveType.values()) {
@@ -131,7 +137,7 @@ public class TypeSystem {
   public SortedMap<String, Type> typesFor(Map<String, ? extends Key> keys) {
     final ImmutableSortedMap.Builder<String, Type> types =
         ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-    keys.forEach((name, key) -> types.put(name, key.toType(this)));
+    keys.forEach((name, key) -> types.put(name, typeFor(key)));
     return types.build();
   }
 
@@ -289,6 +295,13 @@ public class TypeSystem {
       }
     }
     return true;
+  }
+
+  /** Creates a progressive record type. */
+  public ProgressiveRecordType progressiveRecordType(
+      SortedMap<String, ? extends Type> argNameTypes) {
+    Key key = Keys.progressiveRecord(Keys.toKeys(argNameTypes));
+    return (ProgressiveRecordType) typeFor(key);
   }
 
   /** Creates a "forall" type. */

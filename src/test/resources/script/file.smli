@@ -1,0 +1,118 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests for the file system ("file").
+ *)
+
+(*) The "file" value represents the file system, starting in the current
+(*) directory.
+file;
+> val it =
+>   {META-INF={},data={},junit-platform.properties={},net={},script={},
+>    script.log={},script.sml={},script.sml.out={},surefire={},use={}}
+>   : {META-INF:{...}, data:{...}, junit-platform.properties:{...}, net:{...},
+>      script:{...}, script.log:{...}, script.sml:{...}, script.sml.out:{...},
+>      surefire:{...}, use:{...}, ...}
+
+(*) The "data" subdirectory can be accessed as a field.
+file.data;
+> val it = {scott={},wordle={}} : {scott:{...}, wordle:{...}, ...}
+
+(*) Now we've gone into the directory, the type of 'file' has widened.
+file;
+> val it =
+>   {META-INF={},data={scott={},wordle={}},junit-platform.properties={},net={},
+>    script={},script.log={},script.sml={},script.sml.out={},surefire={},use={}}
+>   : {META-INF:{...}, data:{scott:{...}, wordle:{...}, ...},
+>      junit-platform.properties:{...}, net:{...}, script:{...}, script.log:{...},
+>      script.sml:{...}, script.sml.out:{...}, surefire:{...}, use:{...}, ...}
+
+(*) A variable via which we can access relations.
+val s = file.data.scott;
+> val s = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
+>   : {bonus:{...} list, dept:{...} list, emp:{...} list, salgrade:{...} list,
+>      ...}
+
+(*) Access two relations (emp, dept) simultaneously via a variable (s).
+from d in s.dept
+  join e in s.emp on d.deptno = e.deptno
+  group e.deptno compute count
+  order deptno;
+> val it = [{count=3,deptno=10},{count=5,deptno=20},{count=6,deptno=30}]
+>   : {count:int, deptno:int} list
+
+file.data.scott.dept;
+> val it =
+>   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>    {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>    {deptno=30,dname="SALES",loc="CHICAGO"},
+>    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+>   : {deptno:int, dname:string, loc:string} list
+
+(*) Since dept is a list of records, we can query it.
+from d in file.data.scott.dept
+ where d.dname elem ["ACCOUNTING", "SALES"]
+ compute sum of d.deptno;
+> val it = 40 : int
+
+from d in file.data.scott.dept
+join e in file.data.scott.emp on d.deptno = e.deptno
+group e.deptno compute count
+order deptno;
+> val it = [{count=3,deptno=10},{count=5,deptno=20},{count=6,deptno=30}]
+>   : {count:int, deptno:int} list
+
+(*) Bonus is empty (except the line defining the fields).
+val scott = file.data.scott;
+> val scott =
+>   {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
+>   : {bonus:{...} list, dept:{deptno:int, dname:string, loc:string} list,
+>      emp:
+>          {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>           job:string, mgrno:int, sal:real} list, salgrade:{...} list, ...}
+from b in scott.bonus;
+> val it = [] : {bonus:real, ename:string, job:string, sal:real} list
+
+(*) The type of 'file' has widened further.
+file;
+> val it =
+>   {META-INF={},
+>    data=
+>    {scott={bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>},
+>     wordle={}},junit-platform.properties={},net={},script={},script.log={},
+>    script.sml={},script.sml.out={},surefire={},use={}}
+>   : {META-INF:{...},
+>      data:{
+>            scott:{bonus:{bonus:real, ename:string, job:string, sal:real} list,
+>                   dept:{deptno:int, dname:string, loc:string} list,
+>                   emp:
+>                       {comm:real, deptno:int, empno:int, ename:string,
+>                        hiredate:string, job:string, mgrno:int, sal:real} list,
+>                   salgrade:{...} list, ...}, wordle:{...}, ...},
+>      junit-platform.properties:{...}, net:{...}, script:{...}, script.log:{...},
+>      script.sml:{...}, script.sml.out:{...}, surefire:{...}, use:{...}, ...}
+
+file.data.scott;
+> val it = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
+>   : {bonus:{bonus:real, ename:string, job:string, sal:real} list,
+>      dept:{deptno:int, dname:string, loc:string} list,
+>      emp:
+>          {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>           job:string, mgrno:int, sal:real} list, salgrade:{...} list, ...}
+
+(*) End file.smli
