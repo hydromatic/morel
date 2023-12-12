@@ -590,8 +590,7 @@ public enum CoreBuilder {
       for (Core.Exp exp : exps) {
         if (exp.isCallTo(BuiltIn.Z_EXTENT)) {
           final Core.Literal argLiteral = (Core.Literal) ((Core.Apply) exp).arg;
-          final Core.Wrapper wrapper = (Core.Wrapper) argLiteral.value;
-          final RangeExtent list = wrapper.unwrap(RangeExtent.class);
+          final RangeExtent list = argLiteral.unwrap(RangeExtent.class);
           rangeSet = intersect
               ? rangeSet.intersection(list.rangeSet)
               : rangeSet.union(list.rangeSet);

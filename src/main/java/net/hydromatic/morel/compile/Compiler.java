@@ -52,7 +52,6 @@ import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -187,25 +186,25 @@ public class Compiler {
     switch (expression.op) {
     case BOOL_LITERAL:
       literal = (Core.Literal) expression;
-      final Boolean boolValue = (Boolean) literal.value;
+      final Boolean boolValue = literal.unwrap(Boolean.class);
       return Codes.constant(boolValue);
 
     case CHAR_LITERAL:
       literal = (Core.Literal) expression;
-      final Character charValue = (Character) literal.value;
+      final Character charValue = literal.unwrap(Character.class);
       return Codes.constant(charValue);
 
     case INT_LITERAL:
       literal = (Core.Literal) expression;
-      return Codes.constant(((BigDecimal) literal.value).intValue());
+      return Codes.constant(literal.unwrap(Integer.class));
 
     case REAL_LITERAL:
       literal = (Core.Literal) expression;
-      return Codes.constant(((Number) literal.value).floatValue());
+      return Codes.constant(literal.unwrap(Float.class));
 
     case STRING_LITERAL:
       literal = (Core.Literal) expression;
-      final String stringValue = (String) literal.value;
+      final String stringValue = literal.unwrap(String.class);
       return Codes.constant(stringValue);
 
     case UNIT_LITERAL:
@@ -213,13 +212,13 @@ public class Compiler {
 
     case FN_LITERAL:
       literal = (Core.Literal) expression;
-      final BuiltIn builtIn = (BuiltIn) literal.value;
+      final BuiltIn builtIn = literal.unwrap(BuiltIn.class);
       return Codes.constant(Codes.BUILT_IN_VALUES.get(builtIn));
 
     case INTERNAL_LITERAL:
     case VALUE_LITERAL:
       literal = (Core.Literal) expression;
-      return Codes.constant(literal.unwrap());
+      return Codes.constant(literal.unwrap(Object.class));
 
     case LET:
       return compileLet(cx, (Core.Let) expression);
@@ -282,7 +281,7 @@ public class Compiler {
     // Is this is a call to a built-in operator?
     switch (apply.fn.op) {
     case FN_LITERAL:
-      final BuiltIn builtIn = (BuiltIn) ((Core.Literal) apply.fn).value;
+      final BuiltIn builtIn = ((Core.Literal) apply.fn).unwrap(BuiltIn.class);
       return compileCall(cx, builtIn, apply.arg, apply.pos);
     }
     final Code argCode = compileArg(cx, apply.arg);
@@ -482,13 +481,13 @@ public class Compiler {
       Pos pos) {
     switch (fn.op) {
     case FN_LITERAL:
-      final BuiltIn builtIn = (BuiltIn) ((Core.Literal) fn).value;
+      final BuiltIn builtIn = ((Core.Literal) fn).unwrap(BuiltIn.class);
       final Object o = Codes.BUILT_IN_VALUES.get(builtIn);
       return toApplicable(cx, o, argType, pos);
 
     case VALUE_LITERAL:
       final Core.Literal literal = (Core.Literal) fn;
-      return toApplicable(cx, literal.unwrap(), argType, pos);
+      return toApplicable(cx, literal.unwrap(Object.class), argType, pos);
 
     case ID:
       final Binding binding = cx.env.getOpt(((Core.Id) fn).idPat);
@@ -523,7 +522,7 @@ public class Compiler {
       switch (exp.op) {
       case FN_LITERAL:
         final Core.Literal literal = (Core.Literal) exp;
-        final BuiltIn builtIn = (BuiltIn) literal.value;
+        final BuiltIn builtIn = literal.unwrap(BuiltIn.class);
         return (Applicable) Codes.BUILT_IN_VALUES.get(builtIn);
       }
       final Code code = compile(cx, exp);

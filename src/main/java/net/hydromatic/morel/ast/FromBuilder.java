@@ -185,7 +185,7 @@ public class FromBuilder {
 
   public FromBuilder where(Core.Exp condition) {
     if (condition.op == Op.BOOL_LITERAL
-        && (Boolean) ((Core.Literal) condition).value) {
+        && ((Core.Literal) condition).unwrap(Boolean.class)) {
       // skip "where true"
       return this;
     }

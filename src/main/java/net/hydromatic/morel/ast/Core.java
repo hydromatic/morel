@@ -38,6 +38,8 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -617,8 +619,38 @@ public class Core {
       return new Wrapper(exp, value);
     }
 
-    public Object unwrap() {
-      return ((Wrapper) value).o;
+    /** Returns the value of this literal as a given class,
+     * or throws {@link ClassCastException}. If the class is not
+     * {@link Comparable}, the value will be in a wrapper. */
+    public <C> C unwrap(Class<C> clazz) {
+      Object v;
+      if (clazz.isInstance(value) && clazz != Object.class) {
+        v = value;
+      } else if (Number.class.isAssignableFrom(clazz)
+          && value instanceof Number) {
+        Number number = (Number) value;
+        if (clazz == Double.class) {
+          v = number.doubleValue();
+        } else if (clazz == Float.class) {
+          v = number.floatValue();
+        } else if (clazz == Long.class) {
+          v = number.longValue();
+        } else if (clazz == Integer.class) {
+          v = number.intValue();
+        } else if (clazz == Short.class) {
+          v = number.shortValue();
+        } else if (clazz == Byte.class) {
+          v = number.byteValue();
+        } else if (clazz == BigInteger.class
+            && number instanceof BigDecimal) {
+          v = ((BigDecimal) number).toBigIntegerExact();
+        } else {
+          v = value;
+        }
+      } else {
+        v = ((Wrapper) value).o;
+      }
+      return clazz.cast(v);
     }
 
     @Override public int hashCode() {
@@ -1157,8 +1189,8 @@ public class Core {
     }
 
     private boolean isLiteralTrue() {
-      return condition instanceof Literal
-          && ((Literal) condition).value.equals(true);
+      return condition.op == Op.BOOL_LITERAL
+          && ((Literal) condition).unwrap(Boolean.class);
     }
 
     public Scan copy(List<Binding> bindings, Pat pat, Exp exp, Exp condition) {
@@ -1370,7 +1402,7 @@ public class Core {
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       switch (fn.op) {
       case FN_LITERAL:
-        final BuiltIn builtIn = (BuiltIn) ((Literal) fn).value;
+        final BuiltIn builtIn = ((Literal) fn).unwrap(BuiltIn.class);
 
         // Because the Core language is narrower than AST, a few AST expression
         // types do not exist in Core and are translated to function
@@ -1403,7 +1435,8 @@ public class Core {
     }
 
     @Override public boolean isCallTo(BuiltIn builtIn) {
-      return fn.op == Op.FN_LITERAL && ((Literal) fn).value == builtIn;
+      return fn.op == Op.FN_LITERAL
+          && ((Literal) fn).unwrap(BuiltIn.class) == builtIn;
     }
   }
 

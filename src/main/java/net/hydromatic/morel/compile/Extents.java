@@ -202,7 +202,7 @@ public class Extents {
         apply = (Core.Apply) exp;
         switch (apply.fn.op) {
         case FN_LITERAL:
-          BuiltIn builtIn = (BuiltIn) ((Core.Literal) apply.fn).value;
+          BuiltIn builtIn = ((Core.Literal) apply.fn).unwrap(BuiltIn.class);
           switch (builtIn) {
           case Z_ANDALSO:
             // Expression is 'andalso'. Visit each pattern, and union the

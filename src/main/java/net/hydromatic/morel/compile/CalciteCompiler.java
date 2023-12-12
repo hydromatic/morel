@@ -247,7 +247,8 @@ public class CalciteCompiler extends Compiler {
           break;
 
         case FN_LITERAL:
-          final BuiltIn builtIn = (BuiltIn) ((Core.Literal) apply.fn).value;
+          final BuiltIn builtIn =
+              ((Core.Literal) apply.fn).unwrap(BuiltIn.class);
           switch (builtIn) {
           case Z_LIST:
             final List<Core.Exp> args = apply.args();
@@ -497,7 +498,7 @@ public class CalciteCompiler extends Compiler {
       final Core.Apply apply = (Core.Apply) exp;
       switch (apply.fn.op) {
       case FN_LITERAL:
-        BuiltIn op = (BuiltIn) ((Core.Literal) apply.fn).value;
+        BuiltIn op = ((Core.Literal) apply.fn).unwrap(BuiltIn.class);
 
         // Is it a unary operator with a Calcite equivalent? E.g. not => NOT
         final SqlOperator unaryOp = UNARY_OPERATORS.get(op);
@@ -758,7 +759,7 @@ public class CalciteCompiler extends Compiler {
    * support aggregate functions defined by expressions (e.g. lambdas). */
   @Nonnull private SqlAggFunction aggOp(Core.Exp aggregate) {
     if (aggregate instanceof Core.Literal) {
-      switch ((BuiltIn) ((Core.Literal) aggregate).value) {
+      switch (((Core.Literal) aggregate).unwrap(BuiltIn.class)) {
       case RELATIONAL_SUM:
       case Z_SUM_INT:
       case Z_SUM_REAL:

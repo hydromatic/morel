@@ -35,6 +35,7 @@ import static net.hydromatic.morel.compile.Extents.generator;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.core.Is.is;
 
 /**
@@ -137,14 +138,16 @@ public class ExtentTest {
     Core.Exp x = generator(f.typeSystem, xPat, exp);
     assertThat(x, instanceOf(Core.Apply.class));
     assertThat(((Core.Apply) x).fn, instanceOf(Core.Literal.class));
-    assertThat(((Core.Literal) ((Core.Apply) x).fn).value, is(BuiltIn.Z_EXTENT));
-    assertThat(x.toString(), is("extent \"int [[3..5), (5..10)]\""));
+    assertThat(((Core.Literal) ((Core.Apply) x).fn).unwrap(BuiltIn.class),
+        is(BuiltIn.Z_EXTENT));
+    assertThat(x, hasToString("extent \"int [[3..5), (5..10)]\""));
 
     Core.Exp y = generator(f.typeSystem, yPat, exp);
     assertThat(y, instanceOf(Core.Apply.class));
     assertThat(((Core.Apply) y).fn, instanceOf(Core.Literal.class));
-    assertThat(((Core.Literal) ((Core.Apply) y).fn).value, is(BuiltIn.Z_LIST));
-    assertThat(y.toString(), is("[20]"));
+    assertThat(((Core.Literal) ((Core.Apply) y).fn).unwrap(BuiltIn.class),
+        is(BuiltIn.Z_LIST));
+    assertThat(y, hasToString("[20]"));
   }
 
 }
