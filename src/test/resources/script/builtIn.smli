@@ -47,9 +47,9 @@ Math;
 >   : {acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}
 Option;
 > val it =
->   {app=fn,compose=fn,composePartial=fn,filter=fn,flatten=fn,getOpt=fn,
->    isSome=fn,map=fn,mapPartial=fn,valOf=fn}
->   : {app:('a option -> unit) -> 'a option -> unit, compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option, composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option, filter:('h -> bool) -> 'h -> 'h option, flatten:'i option option -> 'i option, getOpt:'j option * 'j -> 'j, isSome:'k option -> bool, map:('l -> 'm) -> 'l option -> 'm option, mapPartial:('n -> 'o option) -> 'n option -> 'o option, valOf:'p option -> 'p}
+>   {app=fn,compose=fn,composePartial=fn,filter=fn,getOpt=fn,isSome=fn,join=fn,
+>    map=fn,mapPartial=fn,valOf=fn}
+>   : {app:('a option -> unit) -> 'a option -> unit, compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option, composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option, filter:('h -> bool) -> 'h -> 'h option, getOpt:'i option * 'i -> 'i, isSome:'j option -> bool, join:'k option option -> 'k option, map:('l -> 'm) -> 'l option -> 'm option, mapPartial:('n -> 'o option) -> 'n option -> 'o option, valOf:'p option -> 'p}
 Option.compose;
 > val it = fn : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
 String;
@@ -1308,20 +1308,20 @@ Sys.plan ();
 >   "apply(fnCode apply(fnValue Option.filter, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode constant(2))"
 >   : string
 
-(*) val flatten : 'a option option -> 'a option
-(*) (This function is called "Option.join" in the Standard ML basis library.)
-Option.flatten (SOME (SOME 1));
+(*) val join : 'a option option -> 'a option
+(*) (The function name is quoted using backticks because 'join' is a keyword.)
+Option.`join` (SOME (SOME 1));
 > val it = SOME 1 : int option
-Option.flatten (SOME noneInt);
+Option.`join` (SOME noneInt);
 > val it = NONE : int option
 (* sml-nj gives
   stdIn:1.2-1.18 Warning: type vars not generalized because of
      value restriction are instantiated to dummy types (X1,X2,...)
 *)
-Option.flatten NONE;
+Option.`join` NONE;
 > val it = NONE : 'a option
 Sys.plan ();
-> val it = "apply(fnValue Option.flatten, argCode constant([NONE]))" : string
+> val it = "apply(fnValue Option.join, argCode constant([NONE]))" : string
 
 (*) val app : ('a -> unit) -> 'a option -> unit
 Option.app General.ignore (SOME 1);
@@ -2658,7 +2658,7 @@ Sys.env ();
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
 >    ("NONE","'a option"),
 >    ("Option",
->     "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
+>     "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
 >    ("Real",
 >     "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",
@@ -2721,7 +2721,7 @@ env ();
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
 >    ("NONE","'a option"),
 >    ("Option",
->     "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, flatten:forall 'a. 'a option option -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
+>     "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
 >    ("Real",
 >     "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",

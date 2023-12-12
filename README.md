@@ -181,8 +181,7 @@ Implemented:
   * [Option](https://smlfamily.github.io/Basis/option.html):
     `exception Option`,
     `datatype 'a option = NONE | SOME of 'a`,
-    `getOpt`, `isSome`, `valOf`, `filter`, `join`, `app`,
-    `flatten`, `valOf`,
+    `getOpt`, `isSome`, `valOf`, `filter`, `join`, `app`, `valOf`,
     `map`, `mapPartial`, `compose`, `composePartial`
   * [Real](https://smlfamily.github.io/Basis/real.html):
     `op *`,
