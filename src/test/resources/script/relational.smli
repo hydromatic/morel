@@ -892,7 +892,9 @@ order deptno;
 >     rows=
 >     [{d={deptno=30,name="Engineering"},e={deptno=30,id=102,name="Shaggy"}},
 >      {d={deptno=30,name="Engineering"},e={deptno=30,id=103,name="Scooby"}}]}]
->   : {deptno:int, rows:{d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}} list} list
+>   :
+>     {deptno:int,
+>      rows:{d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}} list} list
 
 (*) Group followed by yield
 from e in emps

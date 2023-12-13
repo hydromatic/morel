@@ -72,7 +72,8 @@ fun seq r1 r2 s =
       where j = j2 + 0
       yield (i + 0, k + 0);
 > val seq = fn
->   : ('a -> (int * int) list) -> ('a -> (int * int) list) -> 'a -> (int * int) list
+>   : ('a -> (int * int) list) ->
+>      ('a -> (int * int) list) -> 'a -> (int * int) list
 (*) match "l" followed by "o" in "hello"
 seq (sym #"l") (sym #"o") "hello";
 > val it = [(3,5)] : (int * int) list

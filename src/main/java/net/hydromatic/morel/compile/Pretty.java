@@ -21,8 +21,8 @@ package net.hydromatic.morel.compile;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.foreign.RelList;
-import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -32,12 +32,12 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Ord;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 import java.util.List;
 import javax.annotation.Nonnull;
 
+import static net.hydromatic.morel.parse.Parsers.appendId;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
 import static java.util.Objects.requireNonNull;
@@ -64,17 +64,18 @@ class Pretty {
   StringBuilder pretty(@Nonnull StringBuilder buf,
       @Nonnull Type type, @Nonnull Object value) {
     int lineEnd = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
-    return pretty1(buf, 0, new int[] {lineEnd}, 0, type, value);
+    return pretty1(buf, 0, new int[] {lineEnd}, 0, type, value, 0, 0);
   }
 
   /** Prints a value to a buffer. If the first attempt goes beyond
    * {@code lineEnd}, back-tracks, adds a newline and indent, and
    * tries again one time. */
   private StringBuilder pretty1(@Nonnull StringBuilder buf, int indent,
-      int[] lineEnd, int depth, @Nonnull Type type, @Nonnull Object value) {
+      int[] lineEnd, int depth, @Nonnull Type type, @Nonnull Object value,
+      int leftPrec, int rightPrec) {
     final int start = buf.length();
     final int end = lineEnd[0];
-    pretty2(buf, indent, lineEnd, depth, type, ImmutableList.of(), value);
+    pretty2(buf, indent, lineEnd, depth, type, value, leftPrec, rightPrec);
     if (end >= 0 && buf.length() > end) {
       // Reset to start, remove trailing whitespace, add newline
       buf.setLength(start);
@@ -89,7 +90,7 @@ class Pretty {
 
       lineEnd[0] = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
       indent(buf, indent);
-      pretty2(buf, indent, lineEnd, depth, type, ImmutableList.of(), value);
+      pretty2(buf, indent, lineEnd, depth, type, value, leftPrec, rightPrec);
     }
     return buf;
   }
@@ -101,29 +102,47 @@ class Pretty {
   }
 
   private StringBuilder pretty2(@Nonnull StringBuilder buf,
-      int indent, int[] lineEnd, int depth,
-      @Nonnull Type type, List<? extends Type> argTypes,
-      @Nonnull Object value) {
+      int indent, int[] lineEnd, int depth, @Nonnull Type type,
+      @Nonnull Object value, int leftPrec, int rightPrec) {
     if (value instanceof TypedVal) {
       final TypedVal typedVal = (TypedVal) value;
       final StringBuilder buf2 = new StringBuilder("val ");
-      Parsers.appendId(buf2, typedVal.name)
+      appendId(buf2, typedVal.name)
           .append(" = ");
       pretty1(buf, indent, lineEnd, depth, PrimitiveType.BOOL,
-          buf2.toString());
-      pretty1(buf, indent + 2, lineEnd, depth + 1, typedVal.type, typedVal.o);
+          buf2.toString(), 0, 0);
+      pretty1(buf, indent + 2, lineEnd, depth + 1, typedVal.type, typedVal.o,
+          0, 0);
       buf.append(' ');
       pretty1(buf, indent + 2, lineEnd, depth, PrimitiveType.BOOL,
-          ": " + unqualified(typedVal.type).moniker());
+          new TypeVal(": ", unqualified(typedVal.type)), 0, 0);
       return buf;
     }
+
     if (value instanceof NamedVal) {
       final NamedVal namedVal = (NamedVal) value;
-      Parsers.appendId(buf, namedVal.name)
+      appendId(buf, namedVal.name)
           .append('=');
-      pretty1(buf, indent, lineEnd, depth, type, namedVal.o);
+      pretty1(buf, indent, lineEnd, depth, type, namedVal.o, 0, 0);
       return buf;
     }
+
+    if (value instanceof LabelVal) {
+      final LabelVal labelVal = (LabelVal) value;
+      final String prefix =
+          appendId(new StringBuilder(), labelVal.label)
+              .append(':')
+              .toString();
+      pretty1(buf, indent, lineEnd, depth, type,
+          new TypeVal(prefix, labelVal.type), 0, 0);
+      return buf;
+    }
+
+    if (value instanceof TypeVal) {
+      return prettyType(buf, indent, lineEnd, depth, type, (TypeVal) value,
+          leftPrec, rightPrec);
+    }
+
     if (printDepth >= 0 && depth > printDepth) {
       buf.append('#');
       return buf;
@@ -191,7 +210,7 @@ class Pretty {
               buf.append(",");
             }
             pretty1(buf, indent + 1, lineEnd, depth + 1, nameType.getValue(),
-                new NamedVal(nameType.getKey(), o));
+                new NamedVal(nameType.getKey(), o), 0, 0);
           });
       return buf.append("}");
 
@@ -206,13 +225,13 @@ class Pretty {
             if (buf.length() > start) {
               buf.append(",");
             }
-            pretty1(buf, indent + 1, lineEnd, depth + 1, elementType, o);
+            pretty1(buf, indent + 1, lineEnd, depth + 1, elementType, o, 0, 0);
           });
       return buf.append(")");
 
     case FORALL_TYPE:
       return pretty2(buf, indent, lineEnd, depth + 1, ((ForallType) type).type,
-          ImmutableList.of(), value);
+          value, 0, 0);
 
     case DATA_TYPE:
       final DataType dataType = (DataType) type;
@@ -236,8 +255,7 @@ class Pretty {
         if (needParentheses) {
           buf.append('(');
         }
-        pretty2(buf, indent, lineEnd, depth + 1, typeConArgType,
-            ImmutableList.of(), arg);
+        pretty2(buf, indent, lineEnd, depth + 1, typeConArgType, arg, 0, 0);
         if (needParentheses) {
           buf.append(')');
         }
@@ -246,6 +264,91 @@ class Pretty {
 
     default:
       return buf.append(value);
+    }
+  }
+
+  private StringBuilder prettyType(StringBuilder buf, int indent, int[] lineEnd,
+      int depth, Type type, TypeVal typeVal, int leftPrec, int rightPrec) {
+    buf.append(typeVal.prefix);
+    final int indent2 = indent + typeVal.prefix.length();
+    final int start;
+    switch (typeVal.type.op()) {
+    case DATA_TYPE:
+    case ID:
+    case TY_VAR:
+      return pretty1(buf, indent2, lineEnd, depth, type,
+          typeVal.type.moniker(), 0, 0);
+
+    case LIST:
+      if (leftPrec > Op.LIST.left
+          || rightPrec > Op.LIST.right) {
+        pretty1(buf, indent2, lineEnd, depth, type, "(", 0, 0);
+        pretty1(buf, indent2, lineEnd, depth, type, typeVal, 0, 0);
+        pretty1(buf, indent2, lineEnd, depth, type, ")", 0, 0);
+        return buf;
+      }
+      final ListType listType = (ListType) typeVal.type;
+      pretty1(buf, indent2, lineEnd, depth, type,
+          new TypeVal("", listType.elementType), leftPrec, Op.LIST.left);
+      return buf.append(" list");
+
+    case TUPLE_TYPE:
+      if (leftPrec > Op.TUPLE_TYPE.left
+          || rightPrec > Op.TUPLE_TYPE.right) {
+        pretty1(buf, indent2, lineEnd, depth, type, "(", 0, 0);
+        pretty1(buf, indent2, lineEnd, depth, type, typeVal, 0, 0);
+        pretty1(buf, indent2, lineEnd, depth, type, ")", 0, 0);
+        return buf;
+      }
+      final TupleType tupleType = (TupleType) typeVal.type;
+      start = buf.length();
+      List<Type> argTypes = tupleType.argTypes;
+      for (int i = 0; i < argTypes.size(); i++) {
+        Type argType = argTypes.get(i);
+        if (buf.length() > start) {
+          pretty1(buf, indent2, lineEnd, depth, type,
+              " * ", 0, 0);
+        }
+        pretty1(buf, indent2, lineEnd, depth, type,
+            new TypeVal("", argType),
+            i == 0 ? leftPrec : Op.TUPLE_TYPE.right,
+            i == argTypes.size() - 1 ? rightPrec : Op.TUPLE_TYPE.left);
+      }
+      return buf;
+
+    case RECORD_TYPE:
+      final RecordType recordType = (RecordType) typeVal.type;
+      buf.append("{");
+      start = buf.length();
+      recordType.argNameTypes.forEach((name, elementType) -> {
+        if (buf.length() > start) {
+          buf.append(", ");
+        }
+        pretty1(buf, indent2 + 1, lineEnd, depth, type,
+            new LabelVal(name, elementType), 0, 0);
+      });
+      return buf.append("}");
+
+    case FUNCTION_TYPE:
+      if (leftPrec > Op.FUNCTION_TYPE.left
+          || rightPrec > Op.FUNCTION_TYPE.right) {
+        pretty1(buf, indent2, lineEnd, depth, type, "(", 0, 0);
+        pretty1(buf, indent2, lineEnd, depth, type, typeVal, 0, 0);
+        pretty1(buf, indent2, lineEnd, depth, type, ")", 0, 0);
+        return buf;
+      }
+      final FnType fnType = (FnType) typeVal.type;
+      pretty1(buf, indent2 + 1, lineEnd, depth, type,
+          new TypeVal("", fnType.paramType),
+          leftPrec, Op.FUNCTION_TYPE.left);
+      pretty1(buf, indent2 + 1, lineEnd, depth, type, " -> ", 0, 0);
+      pretty1(buf, indent2 + 1, lineEnd, depth, type,
+          new TypeVal("", fnType.resultType),
+          Op.FUNCTION_TYPE.right, rightPrec);
+      return buf;
+
+    default:
+      throw new AssertionError("unknown type " + typeVal.type);
     }
   }
 
@@ -265,10 +368,10 @@ class Pretty {
       }
       if (printLength >= 0 && o.i >= printLength) {
         pretty1(buf, indent + 1, lineEnd, depth + 1, PrimitiveType.BOOL,
-            "...");
+            "...", 0, 0);
         break;
       } else {
-        pretty1(buf, indent + 1, lineEnd, depth + 1, elementType, o.e);
+        pretty1(buf, indent + 1, lineEnd, depth + 1, elementType, o.e, 0, 0);
       }
     }
     return buf.append("]");
@@ -296,6 +399,28 @@ class Pretty {
     NamedVal(String name, Object o) {
       this.name = name;
       this.o = o;
+    }
+  }
+
+  /** Wrapper that indicates that a value should be printed "label:type". */
+  private static class LabelVal {
+    final String label;
+    final Type type;
+
+    LabelVal(String label, Type type) {
+      this.label = label;
+      this.type = type;
+    }
+  }
+
+  /** Wrapper around a type value. */
+  private static class TypeVal {
+    final String prefix;
+    final Type type;
+
+    TypeVal(String prefix, Type type) {
+      this.prefix = prefix;
+      this.type = type;
     }
   }
 }

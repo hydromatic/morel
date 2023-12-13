@@ -35,7 +35,25 @@ List;
 >    find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,last=fn,length=fn,map=fn,
 >    mapPartial=fn,nil=[],nth=fn,null=fn,`op @`=fn,partition=fn,rev=fn,
 >    revAppend=fn,tabulate=fn,take=fn,tl=fn}
->   : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit, at:'c list * 'c list -> 'c list, collate:('d * 'd -> order) -> 'd list * 'd list -> order, concat:'e list list -> 'e list, drop:'f list * int -> 'f list, exists:('g -> bool) -> 'g list -> bool, filter:('h -> bool) -> 'h list -> 'h list, find:('i -> bool) -> 'i list -> 'i option, foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k, foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm, getItem:'n list -> ('n * 'n list) option, hd:'o list -> 'o, last:'p list -> 'p, length:'q list -> int, map:('r -> 's) -> 'r list -> 's list, mapPartial:('t -> 'u option) -> 't list -> 'u list, nil:'v list, nth:'w list * int -> 'w, null:'x list -> bool, `op @`:'y list * 'y list -> 'y list, partition:('z -> bool) -> 'z list -> 'z list * 'z list, rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list, tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list, tl:'be list -> 'be list}
+>   : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit,
+>      at:'c list * 'c list -> 'c list,
+>      collate:('d * 'd -> order) -> 'd list * 'd list -> order,
+>      concat:'e list list -> 'e list, drop:'f list * int -> 'f list,
+>      exists:('g -> bool) -> 'g list -> bool,
+>      filter:('h -> bool) -> 'h list -> 'h list,
+>      find:('i -> bool) -> 'i list -> 'i option,
+>      foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k,
+>      foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm,
+>      getItem:'n list -> ('n * 'n list) option, hd:'o list -> 'o,
+>      last:'p list -> 'p, length:'q list -> int,
+>      map:('r -> 's) -> 'r list -> 's list,
+>      mapPartial:('t -> 'u option) -> 't list -> 'u list, nil:'v list,
+>      nth:'w list * int -> 'w, null:'x list -> bool,
+>      `op @`:'y list * 'y list -> 'y list,
+>      partition:('z -> bool) -> 'z list -> 'z list * 'z list,
+>      rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list,
+>      tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list,
+>      tl:'be list -> 'be list}
 List.rev;
 > val it = fn : 'a list -> 'a list
 List.rev [1,2,3];
@@ -44,12 +62,23 @@ Math;
 > val it =
 >   {acos=fn,asin=fn,atan=fn,atan2=fn,cos=fn,cosh=fn,e=2.7182817,exp=fn,ln=fn,
 >    log10=fn,pi=3.1415927,pow=fn,sin=fn,sinh=fn,sqrt=fn,tan=fn,tanh=fn}
->   : {acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}
+>   : {acos:real -> real, asin:real -> real, atan:real -> real,
+>      atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real,
+>      exp:real -> real, ln:real -> real, log10:real -> real, pi:real,
+>      pow:real * real -> real, sin:real -> real, sinh:real -> real,
+>      sqrt:real -> real, tan:real -> real, tanh:real -> real}
 Option;
 > val it =
 >   {app=fn,compose=fn,composePartial=fn,filter=fn,getOpt=fn,isSome=fn,join=fn,
 >    map=fn,mapPartial=fn,valOf=fn}
->   : {app:('a option -> unit) -> 'a option -> unit, compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option, composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option, filter:('h -> bool) -> 'h -> 'h option, getOpt:'i option * 'i -> 'i, isSome:'j option -> bool, join:'k option option -> 'k option, map:('l -> 'm) -> 'l option -> 'm option, mapPartial:('n -> 'o option) -> 'n option -> 'o option, valOf:'p option -> 'p}
+>   : {app:('a option -> unit) -> 'a option -> unit,
+>      compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option,
+>      composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option,
+>      filter:('h -> bool) -> 'h -> 'h option, getOpt:'i option * 'i -> 'i,
+>      isSome:'j option -> bool, join:'k option option -> 'k option,
+>      map:('l -> 'm) -> 'l option -> 'm option,
+>      mapPartial:('n -> 'o option) -> 'n option -> 'o option,
+>      valOf:'p option -> 'p}
 Option.compose;
 > val it = fn : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
 String;
@@ -57,7 +86,14 @@ String;
 >   {concat=fn,concatWith=fn,explode=fn,extract=fn,implode=fn,isPrefix=fn,
 >    isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,
 >    substring=fn,translate=fn}
->   : {concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}
+>   : {concat:string list -> string, concatWith:string -> string list -> string,
+>      explode:string -> char list, extract:string * int * int option -> string,
+>      implode:char list -> string, isPrefix:string -> string -> bool,
+>      isSubstring:string -> string -> bool, isSuffix:string -> string -> bool,
+>      map:(char -> char) -> string -> string, maxSize:int, size:string -> int,
+>      str:char -> string, sub:string * int -> char,
+>      substring:string * int * int -> string,
+>      translate:(char -> string) -> string -> string}
 Real;
 > val it =
 >   {abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,fromInt=fn,
@@ -66,11 +102,27 @@ Real;
 >    negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,realFloor=fn,
 >    realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,sameSign=fn,sign=fn,
 >    signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,unordered=fn}
->   : {abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}
+>   : {abs:real -> real, ceil:real -> int, checkFloat:real -> real,
+>      compare:real * real -> order, copySign:real * real -> real,
+>      floor:real -> int, fromInt:int -> real,
+>      fromManExp:{exp:int, man:real} -> real, fromString:string -> real option,
+>      isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool,
+>      max:real * real -> real, maxFinite:real, min:real * real -> real,
+>      minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int,
+>      radix:int, realCeil:real -> real, realFloor:real -> real,
+>      realMod:real -> real, realRound:real -> real, realTrunc:real -> real,
+>      rem:real * real -> real, round:real -> int, sameSign:real * real -> bool,
+>      sign:real -> int, signBit:real -> bool,
+>      split:real -> {frac:real, whole:real},
+>      toManExp:real -> {exp:int, man:real}, toString:real -> string,
+>      trunc:real -> int, unordered:real * real -> bool}
 Relational;
 > val it =
 >   {count=fn,exists=fn,iterate=fn,max=fn,min=fn,notExists=fn,only=fn,sum=fn}
->   : {count:'a list -> int, exists:'b list -> bool, iterate:'c list -> ('c list * 'c list -> 'c list) -> 'c list, max:'d list -> 'd, min:'e list -> 'e, notExists:'f list -> bool, only:'g list -> 'g, sum:'h list -> 'h}
+>   : {count:'a list -> int, exists:'b list -> bool,
+>      iterate:'c list -> ('c list * 'c list -> 'c list) -> 'c list,
+>      max:'d list -> 'd, min:'e list -> 'e, notExists:'f list -> bool,
+>      only:'g list -> 'g, sum:'h list -> 'h}
 
 (* Operators --------------------------------------------------- *)
 2 + 3;
