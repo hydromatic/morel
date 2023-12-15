@@ -24,6 +24,7 @@ import net.hydromatic.morel.foreign.ForeignValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.PatternFilenameFilter;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -180,6 +181,9 @@ public class ScriptTest {
             Arguments.of(f.getAbsolutePath().substring(commonPrefixLength)));
   }
 
+  @Test void testScript() throws Exception {
+    checkRun("script.sml");
+  }
 }
 
 // End ScriptTest.java
