@@ -39,10 +39,22 @@ public class Session {
   /** The output lines of the previous command. */
   public List<String> out;
   /** Property values. */
-  public final Map<Prop, Object> map = new LinkedHashMap<>();
+  public final Map<Prop, Object> map;
 
   /** Implementation of "use". */
   private Shell shell = Shells.INSTANCE;
+
+  /** Creates a Session.
+   *
+   * <p>The {@code map} parameter, that becomes the property map, is used as is,
+   * not copied. It may be immutable if the session is for a narrow, internal
+   * use. Otherwise, it should probably be a {@link LinkedHashMap} to provide
+   * deterministic iteration order.
+   *
+   * @param map Map that contains property values */
+  public Session(Map<Prop, Object> map) {
+    this.map = map;
+  }
 
   /** Calls some code with a new value of {@link Shell}. */
   public void withShell(Shell shell, Consumer<String> outLines,

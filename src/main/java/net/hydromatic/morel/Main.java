@@ -27,6 +27,7 @@ import net.hydromatic.morel.compile.Environments;
 import net.hydromatic.morel.compile.Tracer;
 import net.hydromatic.morel.compile.Tracers;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.parse.MorelParserImpl;
@@ -69,9 +70,8 @@ public class Main {
   private final boolean echo;
   private final Map<String, ForeignValue> valueMap;
   final TypeSystem typeSystem = new TypeSystem();
-  final File directory;
   final boolean idempotent;
-  final Session session = new Session();
+  final Session session;
 
   /** Command-line entry point.
    *
@@ -102,7 +102,9 @@ public class Main {
     this.out = buffer(out);
     this.echo = argList.contains("--echo");
     this.valueMap = ImmutableMap.copyOf(valueMap);
-    this.directory = requireNonNull(directory, "directory");
+    final Map<Prop, Object> map = new LinkedHashMap<>();
+    Prop.DIRECTORY.set(map, requireNonNull(directory, "directory"));
+    this.session = new Session(map);
     this.idempotent = idempotent;
   }
 
@@ -311,7 +313,8 @@ public class Main {
       outLines.accept("[opening " + fileName + "]");
       File file = new File(fileName);
       if (!file.isAbsolute()) {
-        file = new File(main.directory, fileName);
+        final File directory = Prop.DIRECTORY.fileValue(main.session.map);
+        file = new File(directory, fileName);
       }
       if (!file.exists()) {
         outLines.accept("[use failed: Io: openIn failed on "

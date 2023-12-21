@@ -52,6 +52,9 @@ fi
 
 export JAVA_OPTS=-Djavax.xml.parsers.DocumentBuilderFactory=com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl
 
-exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell --foreign='net.hydromatic.morel.BuiltInDataSet$Dictionary' "$@"
+exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell \
+     --foreign='net.hydromatic.morel.BuiltInDataSet$Dictionary' \
+     --directory="$(pwd)" \
+     "$@"
 
 # End morel

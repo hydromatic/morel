@@ -176,7 +176,7 @@ public class CalciteCompiler extends Compiler {
 
   @Override protected CalciteFunctions.Context createContext(
       Environment env) {
-    final Session dummySession = new Session();
+    final Session dummySession = new Session(ImmutableMap.of());
     return new CalciteFunctions.Context(dummySession, env, typeSystem,
         calcite.dataContext.getTypeFactory());
   }
@@ -308,7 +308,7 @@ public class CalciteCompiler extends Compiler {
                 new RelJson(jsonBuilder).toJson(rowType));
         final String morelCode = apply.toString();
         ThreadLocals.let(CalciteFunctions.THREAD_ENV,
-            new CalciteFunctions.Context(new Session(), cx.env,
+            new CalciteFunctions.Context(new Session(ImmutableMap.of()), cx.env,
                 typeSystem, cx.relBuilder.getTypeFactory()), () ->
             cx.relBuilder.functionScan(CalciteFunctions.TABLE_OPERATOR, 0,
                 cx.relBuilder.literal(morelCode),

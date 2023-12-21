@@ -47,6 +47,7 @@ import net.hydromatic.morel.util.TailList;
 import net.hydromatic.morel.util.ThreadLocals;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.util.Util;
@@ -133,7 +134,7 @@ public class Compiler {
    * not created a session yet. Lifecycle confusion.
    * </ul> */
   protected CalciteFunctions.Context createContext(Environment env) {
-    final Session dummySession = new Session();
+    final Session dummySession = new Session(ImmutableMap.of());
     return new CalciteFunctions.Context(dummySession, env, typeSystem, null);
   }
 

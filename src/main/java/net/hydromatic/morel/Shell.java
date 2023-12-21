@@ -28,6 +28,7 @@ import net.hydromatic.morel.compile.Environments;
 import net.hydromatic.morel.compile.Tracer;
 import net.hydromatic.morel.compile.Tracers;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.DataSet;
@@ -259,8 +260,10 @@ public class Shell {
 
     pause();
     final TypeSystem typeSystem = new TypeSystem();
+    final Map<Prop, Object> map = new LinkedHashMap<>();
+    Prop.DIRECTORY.set(map, config.directory);
+    final Session session = new Session(map);
     Environment env = Environments.env(typeSystem, config.valueMap);
-    final Session session = new Session();
     final LineFn lineFn =
         new TerminalLineFn(minusPrompt, equalsPrompt, lineReader);
     final SubShell subShell =

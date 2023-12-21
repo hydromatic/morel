@@ -21,6 +21,7 @@ package net.hydromatic.morel.eval;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
 
+import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -29,6 +30,15 @@ import java.util.Map;
  * @see Session#map
  */
 public enum Prop {
+  /** File property "directory" is the path of the directory that the
+   * {@code file} variable maps to in this connection.
+   *
+   * <p>The default value is the empty string;
+   * many tests use the "src/test/resources" directory;
+   * when launched via the {@code morel} shell script, the default value is the
+   * shell's current directory. */
+  DIRECTORY("directory", File.class, new File("")),
+
   /** Boolean property "hybrid" controls whether to try to create a hybrid
    * execution plan that uses Apache Calcite relational algebra wherever
    * possible. Default is false. */
@@ -114,6 +124,10 @@ public enum Prop {
       assert defaultValue == null || defaultValue.getClass() == type;
     } else if (type == Integer.class) {
       assert defaultValue == null || defaultValue.getClass() == type;
+    } else if (type == String.class) {
+      assert defaultValue == null || defaultValue.getClass() == type;
+    } else if (type == File.class) {
+      assert defaultValue == null || defaultValue.getClass() == type;
     } else {
       throw new AssertionError("not a valid property type: "
           + type);
@@ -147,6 +161,20 @@ public enum Prop {
     assert type == Integer.class;
     Object o = map.get(this);
     return this.<Integer>typeValue(o);
+  }
+
+  /** Returns the value of a string property. */
+  public String stringValue(Map<Prop, Object> map) {
+    assert type == String.class;
+    Object o = map.get(this);
+    return this.typeValue(o);
+  }
+
+  /** Returns the value of a file property. */
+  public File fileValue(Map<Prop, Object> map) {
+    assert type == File.class;
+    Object o = map.get(this);
+    return this.typeValue(o);
   }
 
   @SuppressWarnings("unchecked")

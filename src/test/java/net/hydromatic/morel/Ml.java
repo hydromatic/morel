@@ -267,7 +267,7 @@ class Ml {
         final TypeSystem typeSystem = new TypeSystem();
         final AstNode statement = parser.statementEof();
         final Environment env = Environments.empty();
-        final Session session = new Session();
+        final Session session = new Session(propMap);
         final List<CompileException> warningList = new ArrayList<>();
         final CompiledStatement compiled =
             Compiles.prepareStatement(typeSystem, session, env, statement,
@@ -428,8 +428,7 @@ class Ml {
 
   Ml assertEval() {
     return withValidate((resolved, calcite) -> {
-      final Session session = new Session();
-      session.map.putAll(propMap);
+      final Session session = new Session(propMap);
       eval(session, resolved.env, resolved.typeMap.typeSystem, resolved.node,
           calcite);
     });
