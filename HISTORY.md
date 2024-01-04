@@ -23,6 +23,106 @@ License.
 For a full list of releases, see
 <a href="https://github.com/hydromatic/morel/releases">github</a>.
 
+## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.4">0.4</a> / 2024-01-04
+
+Release 0.4 extends `from` syntax, adding
+<a href="https://github.com/hydromatic/morel/issues/129">`suchthat`</a>,
+<a href="https://github.com/hydromatic/morel/issues/204">`take` and `skip`</a>
+clauses; allows identifiers to be
+<a href="https://github.com/hydromatic/morel/issues/71">quoted using backticks</a>;
+improves pretty-printing of
+<a href="https://github.com/hydromatic/morel/issues/206">tuples</a> and
+<a href="https://github.com/hydromatic/morel/issues/210">long lines</a>.
+
+Contributors:
+Julian Hyde,
+Rette66
+
+### Features
+
+* [<a href="https://github.com/hydromatic/morel/issues/204">MOREL-204</a>]
+  Add `take` and `skip` relational operators
+* [<a href="https://github.com/hydromatic/morel/issues/209">MOREL-209</a>]
+  File reader, and progressive types
+* [<a href="https://github.com/hydromatic/morel/issues/210">MOREL-210</a>]
+  Fold long types when printing
+* Rename `Option.flatten` to `Option.join`
+* [<a href="https://github.com/hydromatic/morel/issues/71">MOREL-71</a>]
+  Allow identifiers to be quoted using backticks
+* [<a href="https://github.com/hydromatic/morel/issues/206">MOREL-206</a>]
+  Indent tuples when printing
+* [<a href="https://github.com/hydromatic/morel/issues/129">MOREL-129</a>]
+  Define relations via constrained iterations, and introduce a `suchthat`
+  keyword to use them
+
+### Bug-fixes and internal improvements
+
+* Add `directory` property to `Session`
+* Add type parameter to `Core.Literal.unwrap()` method
+* [<a href="https://github.com/hydromatic/morel/issues/208">MOREL-208</a>]
+  `FromBuilder` should remove trivial `yield` step between two scan steps
+* [<a href="https://github.com/hydromatic/morel/issues/205">MOREL-205</a>]
+  Pattern that uses nested type-constructors should not be considered
+  redundant
+* Add utility methods `Static.transform` and `transformEager`
+* [<a href="https://github.com/hydromatic/morel/issues/203">MOREL-203</a>]
+  Cannot deduce type for `from b in [SOME true, NONE]`
+* Refactor: In `Unifier.Variable`, store ordinal rather than computing it
+* Refactor: Rename `Ord.forEach` to `forEachIndexed`
+* In `CoreBuilder`, add `tuple(TypeSystem, Exp...)`, a more convenient
+  `apply`
+* Simplify `EnvShuttle`, `EnvVisitor` by adding `push` method
+* Add `interface PairList` and `interface ImmutablePairList`
+* Add method `Static.nextPowerOfTwo`
+* [<a href="https://github.com/hydromatic/morel/issues/201">MOREL-201</a>]
+  `Real.signBit` gives different result on JDK 19/ARM
+
+### Build and tests
+
+* Run `script.sml` in tests
+* [<a href="https://github.com/hydromatic/morel/issues/207">MOREL-207</a>]
+  Detect and fix flaky tests
+* Disallow static star import
+* [<a href="https://github.com/hydromatic/morel/issues/200">MOREL-200</a>]
+  In the test suite, run arbitrary "lint" checks on code
+* [<a href="https://github.com/hydromatic/morel/issues/198">MOREL-198</a>]
+  Idempotent mode for test scripts
+* Add a test for various closure and recursion scenarios
+* Allow CI runs to be triggered manually, and monthly
+
+### Component upgrades
+
+* Bump build-helper-maven-plugin from 3.3.0 to 3.5.0
+* Bump calcite from 1.32.0 to 1.36.0
+* Bump checkstyle from 10.3.4 to 10.12.7
+* Bump guava from 31.1-jre to 33.0.0-jre;
+  increase minimum guava version from 19.0 to 21.0
+* Bump hsqldb from 2.7.0 to 2.7.2
+* Bump javacc from 7.0.12 to 7.0.13
+* Bump jdk to 21; minimum jdk is still 8
+* Bump jline from 3.21.0 to 3.25.0
+* Bump junit-jupiter from 5.9.1 to 5.10.1
+* Bump maven-checkstyle-plugin from 3.2.0 to 3.3.1
+* Bump maven-compiler-plugin from 3.10.1 to 3.12.1
+* Bump maven-enforcer-plugin from 3.1.0 to 3.4.1
+* Bump maven-javadoc-plugin from 3.4.1 to 3.6.3
+* Bump maven-project-info-reports-plugin from 3.4.1 to 3.5.0
+* Bump maven-release-plugin from 2.4.2 to 3.0.1
+* Bump maven-scm-provider-gitexe from 1.9.1 to 2.0.1
+* Bump maven-site-plugin from 3.12.1 to 4.0.0-M13
+* Bump maven-source-plugin from 3.2.1 to 3.3.0
+* Bump maven-surefire-plugin from 2.22.2 to 3.2.3
+* Bump slfj from 2.0.3 to 2.1.0-alpha1
+* Add versions-maven-plugin version 2.16.2
+* [<a href="https://github.com/hydromatic/morel/issues/199">MOREL-199</a>]
+  Support JDK 19 and 20
+
+### Site and documentation
+
+* [<a href="https://github.com/hydromatic/morel/issues/211">MOREL-211</a>]
+  Release 0.4
+* Add Maven Central badge to `README.md`
+
 ## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.3">0.3</a> / 2022-10-02
 
 Release 0.3 extends `from` syntax, adding an

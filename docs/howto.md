@@ -39,7 +39,7 @@ Update version numbers in
 `src/main/java/net/hydromatic/morel/Shell.java`, `README` and
 `README.md`, and the copyright date in `NOTICE`.
 
-Switch to JDK 11.
+Switch to JDK 21.
 
 Check that the sandbox is clean:
 
