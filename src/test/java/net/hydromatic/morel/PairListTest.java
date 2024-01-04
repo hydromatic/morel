@@ -291,7 +291,7 @@ class PairListTest {
     final ImmutableMap<String, Integer> map = ImmutableMap.of("a", 1, "b", 2);
     final PairList<String, Integer> pairList = PairList.of(map);
     assertThat(pairList, hasSize(2));
-    assertThat(pairList.toString(), is("[<a, 1>, <b, 2>]"));
+    assertThat(pairList, hasToString("[<a, 1>, <b, 2>]"));
 
     final List<Map.Entry<String, Integer>> list = new ArrayList<>(map.entrySet());
     validate(pairList, list);
@@ -304,9 +304,9 @@ class PairListTest {
     pairList.add("c", 3);
     list.add(Pair.of("c", 3));
     validate(pairList, list);
-    assertThat(pairList.toString(), is("[<a, 1>, <b, 2>, <c, 3>]"));
+    assertThat(pairList, hasToString("[<a, 1>, <b, 2>, <c, 3>]"));
     final ImmutableMap<String, Integer> map3 = pairList.toImmutableMap();
-    assertThat(map3.toString(), is("{a=1, b=2, c=3}"));
+    assertThat(map3, hasToString("{a=1, b=2, c=3}"));
 
     final Map<String, Integer> emptyMap = ImmutableMap.of();
     final PairList<String, Integer> emptyPairList = PairList.of(emptyMap);

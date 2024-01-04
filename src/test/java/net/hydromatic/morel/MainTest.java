@@ -68,6 +68,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasToString;
 
 /**
  * Kick the tires.
@@ -109,7 +110,7 @@ public class MainTest {
         + "val f = fn : int -> int\n"
         + "val it = fn : int -> int\n"
         + "val it = 6 : int\n";
-    assertThat(out.toString(), is(expected));
+    assertThat(out, hasToString(expected));
   }
 
   @Test void testParse() {
@@ -414,20 +415,20 @@ public class MainTest {
   @Test void testTypeVarName() {
     assertError(() -> new TypeVar(-1).key(),
         throwsA(IllegalArgumentException.class, nullValue()));
-    assertThat(new TypeVar(0).toString(), is("'a"));
-    assertThat(new TypeVar(1).toString(), is("'b"));
-    assertThat(new TypeVar(2).toString(), is("'c"));
-    assertThat(new TypeVar(25).toString(), is("'z"));
-    assertThat(new TypeVar(26).toString(), is("'ba"));
-    assertThat(new TypeVar(27).toString(), is("'bb"));
-    assertThat(new TypeVar(51).toString(), is("'bz"));
-    assertThat(new TypeVar(52).toString(), is("'ca"));
-    assertThat(new TypeVar(53).toString(), is("'cb"));
-    assertThat(new TypeVar(26 * 26 - 1).toString(), is("'zz"));
-    assertThat(new TypeVar(26 * 26).toString(), is("'baa"));
-    assertThat(new TypeVar(27 * 26 - 1).toString(), is("'baz"));
-    assertThat(new TypeVar(26 * 26 * 26 - 1).toString(), is("'zzz"));
-    assertThat(new TypeVar(26 * 26 * 26).toString(), is("'baaa"));
+    assertThat(new TypeVar(0), hasToString("'a"));
+    assertThat(new TypeVar(1), hasToString("'b"));
+    assertThat(new TypeVar(2), hasToString("'c"));
+    assertThat(new TypeVar(25), hasToString("'z"));
+    assertThat(new TypeVar(26), hasToString("'ba"));
+    assertThat(new TypeVar(27), hasToString("'bb"));
+    assertThat(new TypeVar(51), hasToString("'bz"));
+    assertThat(new TypeVar(52), hasToString("'ca"));
+    assertThat(new TypeVar(53), hasToString("'cb"));
+    assertThat(new TypeVar(26 * 26 - 1), hasToString("'zz"));
+    assertThat(new TypeVar(26 * 26), hasToString("'baa"));
+    assertThat(new TypeVar(27 * 26 - 1), hasToString("'baz"));
+    assertThat(new TypeVar(26 * 26 * 26 - 1), hasToString("'zzz"));
+    assertThat(new TypeVar(26 * 26 * 26), hasToString("'baaa"));
   }
 
   @Test void testType() {
@@ -1890,8 +1891,8 @@ public class MainTest {
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{deptno:int, dname:string, loc:string} list")
-        .assertCore(0, is(core0))
-        .assertCore(-1, is(core1));
+        .assertCore(0, hasToString(core0))
+        .assertCore(-1, hasToString(core1));
   }
 
   /** Translates a simple {@code suchthat} expression, "{x, y} elem list".
@@ -1906,7 +1907,7 @@ public class MainTest {
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{deptno:int, loc:string, name:string} list")
-        .assertCore(-1, is(core));
+        .assertCore(-1, hasToString(core));
   }
 
   /** As {@link #testFromSuchThat2c()} but with a literal. */
@@ -1929,8 +1930,8 @@ public class MainTest {
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{dno:int, name:string} list")
-        .assertCore(0, is(core0))
-        .assertCore(-1, is(core1));
+        .assertCore(0, hasToString(core0))
+        .assertCore(-1, hasToString(core1));
   }
 
   /** As {@link #testFromSuchThat2d()} but using a function.
@@ -1957,8 +1958,8 @@ public class MainTest {
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("string list")
-        .assertCore(0, is(core0))
-        .assertCore(-1, is(core1));
+        .assertCore(0, hasToString(core0))
+        .assertCore(-1, hasToString(core1));
   }
 
   /** Tests a join expressed via {@code suchthat}. */
@@ -1998,8 +1999,8 @@ public class MainTest {
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("string list")
-        .assertCore(0, is(core0))
-        .assertCore(-1, is(core1));
+        .assertCore(0, hasToString(core0))
+        .assertCore(-1, hasToString(core1));
   }
 
   /** A {@code suchthat} expression. */
@@ -2486,7 +2487,7 @@ public class MainTest {
     for (int i = 0; i < expressions.length / 2; i++) {
       String ml = expressions[i * 2];
       String expected = "val it = " + Util.first(expressions[i  * 2 + 1], ml);
-      ml(ml).assertCore(-1, is(expected));
+      ml(ml).assertCore(-1, hasToString(expected));
     }
   }
 

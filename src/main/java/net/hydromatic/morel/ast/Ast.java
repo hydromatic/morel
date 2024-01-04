@@ -1529,7 +1529,7 @@ public class Ast {
           final List<Aggregate> aggregates = group.aggregates;
 
           // The type of
-          //   from emps as e group by a = e1, b = e2 compute c = sum of e3
+          //   from e in emps group a = e1, b = e2 compute c = sum of e3
           // is the same as the type of
           //   {a = e1, b = e2, c = sum (map (fn e => e3) [])}
           nextFields.clear();

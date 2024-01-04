@@ -28,7 +28,6 @@ import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
-import net.hydromatic.morel.util.Static;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -50,6 +49,7 @@ import static net.hydromatic.morel.type.PrimitiveType.INT;
 import static net.hydromatic.morel.type.PrimitiveType.REAL;
 import static net.hydromatic.morel.type.PrimitiveType.STRING;
 import static net.hydromatic.morel.type.PrimitiveType.UNIT;
+import static net.hydromatic.morel.util.Static.SKIP;
 
 import static java.util.Objects.requireNonNull;
 
@@ -1673,7 +1673,7 @@ public enum BuiltIn {
   /** Calls a consumer once per value. */
   public static void forEach(TypeSystem typeSystem,
       BiConsumer<BuiltIn, Type> consumer) {
-    if (Static.SKIP) {
+    if (SKIP) {
       return;
     }
     for (BuiltIn builtIn : values()) {
@@ -1685,7 +1685,7 @@ public enum BuiltIn {
   /** Calls a consumer once per structure. */
   public static void forEachStructure(TypeSystem typeSystem,
       BiConsumer<Structure, Type> consumer) {
-    if (Static.SKIP) {
+    if (SKIP) {
       return;
     }
     final TreeMap<String, Type> nameTypes = new TreeMap<>(RecordType.ORDERING);

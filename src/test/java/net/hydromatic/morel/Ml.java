@@ -313,11 +313,11 @@ class Ml {
    * <p>For pass = 2, the Core string is generated after parsing the current
    * expression and converting it to Core. Which is usually the original
    * string. */
-  Ml assertCore(int pass, Matcher<String> expected) {
+  Ml assertCore(int pass, Matcher<Core.Decl> expected) {
     final AtomicInteger callCount = new AtomicInteger(0);
     final Consumer<Core.Decl> consumer = e -> {
       callCount.incrementAndGet();
-      assertThat(e.toString(), expected);
+      assertThat(e, expected);
     };
     final Tracer tracer = Tracers.withOnCore(this.tracer, pass, consumer);
 
@@ -331,9 +331,9 @@ class Ml {
 
   /** As {@link #assertCore(int, Matcher)} but also checks how the Core
    * string has changed after inlining. */
-  public Ml assertCoreString(@Nullable Matcher<String> beforeMatcher,
-      Matcher<String> matcher,
-      @Nullable Matcher<String> inlinedMatcher) {
+  public Ml assertCoreString(@Nullable Matcher<Core.Decl> beforeMatcher,
+      Matcher<Core.Decl> matcher,
+      @Nullable Matcher<Core.Decl> inlinedMatcher) {
     return with(Prop.INLINE_PASS_COUNT, 10)
         .with(Prop.RELATIONALIZE, true)
         .assertCore(0, beforeMatcher)
@@ -341,7 +341,7 @@ class Ml {
         .assertCore(-1, inlinedMatcher);
   }
 
-  Ml assertAnalyze(Matcher<Object> matcher) {
+  Ml assertAnalyze(Matcher<Map<Core.NamedPat, Analyzer.Use>> matcher) {
     final AstNode statement;
     try {
       final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
@@ -362,7 +362,7 @@ class Ml {
     final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
     final Analyzer.Analysis analysis =
         Analyzer.analyze(typeSystem, env, valDecl3);
-    assertThat(ImmutableSortedMap.copyOf(analysis.map).toString(), matcher);
+    assertThat(ImmutableSortedMap.copyOf(analysis.map), matcher);
     return this;
   }
 

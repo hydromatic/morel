@@ -31,7 +31,6 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Range;
-import org.apache.calcite.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +39,7 @@ import java.util.SortedMap;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.allMatch;
+import static net.hydromatic.morel.util.Static.skip;
 
 import static org.apache.calcite.util.Util.minus;
 
@@ -312,7 +312,7 @@ public class Extents {
             ImmutableRangeSet.of(Range.all()));
       } else {
         extent = extents.get(0);
-        filters.addAll(Util.skip(extents));
+        filters.addAll(skip(extents));
       }
       return new ExtentFilter(extent, ImmutableList.copyOf(filters));
     }

@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.hamcrest.core.IsNot.not;
@@ -169,7 +170,7 @@ public abstract class UnifierTest {
   @Test void test1() {
     final Unifier.Term e1 = p(f(a()), g(b()), Y);
     final Unifier.Term e2 = p(Z, g(d()), c());
-    assertThat(e1.toString(), is("p(f(a), g(b), Y)"));
+    assertThat(e1, hasToString("p(f(a), g(b), Y)"));
     assertThat(unifier.substitution(f(a(), Y), Z).toString(),
         is("[f(a, Y)/Z]"));
     assertThatCannotUnify(e1, e2);

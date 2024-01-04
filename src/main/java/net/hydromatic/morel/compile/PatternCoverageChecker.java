@@ -30,7 +30,6 @@ import net.hydromatic.morel.util.Sat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import org.apache.calcite.util.Util;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -40,6 +39,7 @@ import java.util.Map;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.skip;
 
 import static java.util.Objects.requireNonNull;
 
@@ -206,7 +206,7 @@ class PatternCoverageChecker {
       return core.consPat(listDataType, "CONS",
           core.tuplePat(typeSystem,
               ImmutableList.of(args.get(0),
-                  listToConsRecurse(listDataType, Util.skip(args)))));
+                  listToConsRecurse(listDataType, skip(args)))));
     }
   }
 

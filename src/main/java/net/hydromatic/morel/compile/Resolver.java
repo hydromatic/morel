@@ -42,7 +42,6 @@ import net.hydromatic.morel.util.Pair;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
@@ -62,11 +61,13 @@ import java.util.SortedMap;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.skip;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.calcite.util.Util.intersects;
 
 /** Converts AST expressions to Core expressions. */
 public class Resolver {
@@ -266,7 +267,7 @@ public class Resolver {
     };
     patExps.forEach(x -> x.pat.accept(v));
 
-    return Util.intersects(refSet, defSet);
+    return intersects(refSet, defSet);
   }
 
   private DataType toCore(Ast.DatatypeBind bind) {
@@ -516,7 +517,7 @@ public class Resolver {
     final Ast.Decl decl = decls.get(0);
     final List<Binding> bindings = new ArrayList<>();
     final ResolvedDecl resolvedDecl = resolve(decl, bindings);
-    final Core.Exp e2 = withEnv(bindings).flattenLet(Util.skip(decls), exp);
+    final Core.Exp e2 = withEnv(bindings).flattenLet(skip(decls), exp);
     return resolvedDecl.toExp(e2);
   }
 
@@ -823,7 +824,7 @@ public class Resolver {
         return resultExp;
       } else {
         return core.local(dataTypes.get(0),
-            toExp(Util.skip(dataTypes), resultExp));
+            toExp(skip(dataTypes), resultExp));
       }
     }
 

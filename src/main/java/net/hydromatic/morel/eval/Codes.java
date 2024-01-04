@@ -36,7 +36,6 @@ import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MorelException;
-import net.hydromatic.morel.util.Static;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
@@ -69,6 +68,7 @@ import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.SKIP;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
@@ -2677,7 +2677,7 @@ public abstract class Codes {
       };
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
-    if (Static.SKIP) {
+    if (SKIP) {
       return;
     }
     // Dummy type system, thrown away after this method

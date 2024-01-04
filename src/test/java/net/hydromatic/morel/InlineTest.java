@@ -29,6 +29,7 @@ import static net.hydromatic.morel.Matchers.whenAppliedTo;
 import static net.hydromatic.morel.Ml.ml;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.hasToString;
 
 /**
  * Test inlining and other optimizations.
@@ -56,7 +57,7 @@ public class InlineTest {
         + "gAtomic=ATOMIC, it=MULTI_UNSAFE, op +=MULTI_UNSAFE, "
         + "x=ONCE_SAFE, x0=ONCE_SAFE, x2=DEAD, x3=DEAD, xs=DEAD, z=DEAD}";
     ml(ml)
-        .assertAnalyze(is(map));
+        .assertAnalyze(hasToString(map));
   }
 
   @Test void testInline() {
@@ -84,7 +85,8 @@ public class InlineTest {
     final String ml = "fun f () = String.size \"abc\"";
     final String core = "val f = fn v0 => #size String \"abc\"";
     ml(ml)
-        .assertEval(whenAppliedTo(list(), is(3))).assertCore(2, is(core));
+        .assertEval(whenAppliedTo(list(), is(3)))
+        .assertCore(2, hasToString(core));
   }
 
   /** We inline a variable (y), even though it is used twice, because its
@@ -98,7 +100,7 @@ public class InlineTest {
         + "  end";
     final String core = "val f = fn x => x + 1 + x";
     ml(ml)
-        .assertEval(whenAppliedTo(2, is(5))).assertCore(2, is(core));
+        .assertEval(whenAppliedTo(2, is(5))).assertCore(2, hasToString(core));
   }
 
   @Test void testInlineChained() {
@@ -186,7 +188,8 @@ public class InlineTest {
         + "where op mod (#empno e, 2) = 0 yield #deptno e";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertCoreString(is(core0), is(core1), is(core2))
+        .assertCoreString(hasToString(core0), hasToString(core1),
+            hasToString(core2))
         .assertEval(is(list(20, 30, 30, 10, 20, 30, 20, 30, 20, 10)));
   }
 
@@ -227,7 +230,8 @@ public class InlineTest {
         + "yield #ename e_1";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertCoreString(is(core0), is(core1), is(core2))
+        .assertCoreString(hasToString(core0), hasToString(core1),
+            hasToString(core2))
         .assertEval(isUnordered(list("CLARK", "MILLER")));
   }
 
@@ -251,7 +255,8 @@ public class InlineTest {
         + "yield #empno v0";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertCoreString(is(core0), is(core1), is(core2))
+        .assertCoreString(hasToString(core0), hasToString(core1),
+            hasToString(core2))
         .assertEval(isUnordered(list(7499, 7521, 7654, 7698, 7844, 7900)));
   }
 
@@ -288,7 +293,8 @@ public class InlineTest {
         + "yield v0 + 100";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertCoreString(is(core0), is(core1), is(core2))
+        .assertCoreString(hasToString(core0), hasToString(core1),
+            hasToString(core2))
         .assertEval(isUnordered(list(7614, 7636, 7769, 7813, 7959, 8015)));
   }
 
@@ -310,7 +316,8 @@ public class InlineTest {
         + "yield /:int (i, 10)";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertCoreString(is(core0), is(core1), is(core1))
+        .assertCoreString(hasToString(core0), hasToString(core1),
+            hasToString(core1))
         .assertEval(isUnordered(list(2, 3, 3, 2, 3, 3, 2, 3, 2, 3, 2)));
   }
 
@@ -328,7 +335,8 @@ public class InlineTest {
         + "where 3 < 4 "
         + "yield {u = u, v = 10}";
     ml(ml)
-        .assertCoreString(is(core0), is(core1), is(core1))
+        .assertCoreString(hasToString(core0), hasToString(core1),
+            hasToString(core1))
         .assertEval(isUnordered(list(list(Unit.INSTANCE, 10))));
   }
 }

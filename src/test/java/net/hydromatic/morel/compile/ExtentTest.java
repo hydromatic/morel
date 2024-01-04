@@ -108,12 +108,12 @@ public class ExtentTest {
     Core.Literal ten = f.intLiteral(10);
     Core.Exp exp = core.equal(f.typeSystem, core.id(xPat), ten);
     Core.Exp x = generator(f.typeSystem, xPat, exp);
-    assertThat(x.toString(), is("[10]"));
+    assertThat(x, hasToString("[10]"));
 
     // pat = "x", exp = "10 = x", extent = "[10]"
     Core.Exp exp2 = core.equal(f.typeSystem, ten, core.id(xPat));
     Core.Exp x2 = generator(f.typeSystem, xPat, exp2);
-    assertThat(x2.toString(), is("[10]"));
+    assertThat(x2, hasToString("[10]"));
   }
 
   @Test void testBetween() {

@@ -49,10 +49,10 @@ import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.zip;
 import static net.hydromatic.morel.util.Static.append;
 import static net.hydromatic.morel.util.Static.plus;
+import static net.hydromatic.morel.util.Static.skip;
 
 import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.collect.Iterables.getOnlyElement;
-import static org.apache.calcite.util.Util.skip;
 
 /**
  * Converts {@code suchThat} to {@code in} wherever possible.

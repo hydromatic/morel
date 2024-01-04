@@ -112,11 +112,11 @@ public class Static {
 
   /** Returns all but the first element of a list. */
   public static <E> List<E> skip(List<E> list) {
-    return skip(1, list);
+    return skip(list, 1);
   }
 
   /** Returns all but the first {@code count} elements of a list. */
-  public static <E> List<E> skip(int count, List<E> list) {
+  public static <E> List<E> skip(List<E> list, int count) {
     return list.subList(count, list.size());
   }
 

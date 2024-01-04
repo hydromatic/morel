@@ -138,6 +138,7 @@ License.
       <property name="separated" value="true"/>
       <property name="separatedStaticGroups" value="true"/>
       <property name="option" value="bottom"/>
+      <property name="sortStaticImportsAlphabetically" value="true"/>
     </module>
 
     <!-- Checks for Javadoc comments (tree walker).       -->

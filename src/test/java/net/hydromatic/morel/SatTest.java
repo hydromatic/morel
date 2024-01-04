@@ -30,6 +30,7 @@ import java.util.Map;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.core.Is.is;
 
 /** Tests satisfiability. */
@@ -59,7 +60,7 @@ public class SatTest {
   @Test void testTrue() {
     final Sat sat = new Sat();
     final Term trueTerm = sat.and();
-    assertThat(trueTerm.toString(), is("true"));
+    assertThat(trueTerm, hasToString("true"));
 
     final Map<Variable, Boolean> solve = sat.solve(trueTerm);
     assertThat("satisfiable", solve, notNullValue());
@@ -70,7 +71,7 @@ public class SatTest {
   @Test void testFalse() {
     final Sat sat = new Sat();
     final Term falseTerm = sat.or();
-    assertThat(falseTerm.toString(), is("false"));
+    assertThat(falseTerm, hasToString("false"));
 
     final Map<Variable, Boolean> solve = sat.solve(falseTerm);
     assertThat("not satisfiable", solve, nullValue());

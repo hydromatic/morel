@@ -30,13 +30,13 @@ import net.hydromatic.morel.type.TypeSystem;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
-import org.apache.calcite.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Static.append;
+import static net.hydromatic.morel.util.Static.skip;
 
 import static com.google.common.collect.Iterables.getLast;
 
@@ -140,7 +140,7 @@ public class Relationalizer extends EnvShuttle {
                 .put(idPat3.name, exp.type).build());
         steps.add(
             core.yield_(step.bindings, core.tuple(recordType, exp)));
-        steps.addAll(Util.skip(from2.steps));
+        steps.addAll(skip(from2.steps));
         return core.from(typeSystem, steps);
       }
     }

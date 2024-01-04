@@ -59,6 +59,7 @@ import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
 import static net.hydromatic.morel.util.Static.transform;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -78,26 +79,26 @@ public class UtilTest {
     list.add("c");
     assertThat(tailList.size(), is(1));
     assertThat(tailList.get(0), is("c"));
-    assertThat(tailList.toString(), is("[c]"));
+    assertThat(tailList, hasToString("[c]"));
 
     tailList.set(0, "d");
-    assertThat(tailList.toString(), is("[d]"));
+    assertThat(tailList, hasToString("[d]"));
 
     tailList.add(0, "e");
-    assertThat(tailList.toString(), is("[e, d]"));
+    assertThat(tailList, hasToString("[e, d]"));
 
     final StringBuilder s = new StringBuilder();
     for (String item : tailList) {
       s.append(item);
     }
-    assertThat(s.toString(), is("ed"));
+    assertThat(s, hasToString("ed"));
 
     tailList.add("f");
-    assertThat(tailList.toString(), is("[e, d, f]"));
+    assertThat(tailList, hasToString("[e, d, f]"));
     assertThat(list.size(), is(5));
 
     tailList.addAll(Arrays.asList("x", "y", "z"));
-    assertThat(tailList.toString(), is("[e, d, f, x, y, z]"));
+    assertThat(tailList, hasToString("[e, d, f, x, y, z]"));
 
     tailList.clear();
     assertThat(tailList.size(), is(0));
@@ -111,7 +112,7 @@ public class UtilTest {
     final StringBuilder buf = new StringBuilder();
     Ord.forEachIndexed(abc, (e, i) ->
         buf.append(i).append("#").append(e).append(";"));
-    assertThat(buf.toString(), is("0#a;1#b;2#c;"));
+    assertThat(buf, hasToString("0#a;1#b;2#c;"));
   }
 
   @Test void testMapList() {
@@ -128,12 +129,12 @@ public class UtilTest {
     Folder.start(list, ast.stringLiteral(Pos.ZERO, "a"));
     Folder.at(list, ast.stringLiteral(Pos.ZERO, "b"));
     Folder.at(list, ast.stringLiteral(Pos.ZERO, "c"));
-    assertThat(Folder.combineAll(list).toString(), is("\"a\" @ \"b\" @ \"c\""));
+    assertThat(Folder.combineAll(list), hasToString("\"a\" @ \"b\" @ \"c\""));
 
     list.clear();
     Folder.start(list, ast.stringLiteral(Pos.ZERO, "a"));
     Folder.cons(list, ast.stringLiteral(Pos.ZERO, "b"));
-    assertThat(Folder.combineAll(list).toString(), is("\"a\" :: \"b\""));
+    assertThat(Folder.combineAll(list), hasToString("\"a\" :: \"b\""));
   }
 
   /** Tests {@link Static#shorterThan(Iterable, int)}. */
@@ -195,7 +196,7 @@ public class UtilTest {
       final Pair<String, Pos> pos = Pos.split(s, '$', "stdIn");
       assertThat(pos.left, is("abcdefgh"));
       assertThat(pos.right, notNullValue());
-      assertThat(pos.right.toString(), is(posString));
+      assertThat(pos.right, hasToString(posString));
     };
     // starts and ends in middle
     check.accept("abc$def$gh", "stdIn:1.4-1.7");
@@ -214,7 +215,7 @@ public class UtilTest {
               + "\n"
               + "fgh"));
       assertThat(pos.right, notNullValue());
-      assertThat(pos.right.toString(), is(posString));
+      assertThat(pos.right, hasToString(posString));
     };
     // start of line
     check2.accept("abc\n"
