@@ -240,8 +240,6 @@ Sergey Nuyanzin
 ### Build and tests
 
 * Bump `slf4j-api` from 2.0.2 to 2.0.3
-* Bump `maven-release-plugin` from 2.4.2 to 3.0.0-M6,
-  `maven-scm-provider-gitexe` from 1.9.1 to 2.0.0-M2
 * Bump `hsqldb` from 2.5.1 to 2.7.0
 * Add `hsqldb-version` parameter to CI
 * Add `interface Tracer`, so that tests can check for several events during the
@@ -265,7 +263,6 @@ Sergey Nuyanzin
 * Test Guava versions 19.0 to 31.1-jre in CI
 * Bump `guava` from 21.0 to 23.0
 * Bump `jline` from 3.16.0 to 3.21.0
-* Bump `maven-site-plugin` from 3.7.1 to 4.0.0-M3
 * Bump `maven-surefire-plugin` from 3.0.0-M3 to 3.0.0-M7
 * Bump `jsr305` from 1.3.9 to 3.0.2
 * Bump `slf4j-api` from 1.7.25 to 2.0.2
