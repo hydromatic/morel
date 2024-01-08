@@ -25,11 +25,9 @@ import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
-import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedMap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -133,11 +131,8 @@ public class Relationalizer extends EnvShuttle {
         } else {
           exp = core.implicitYieldExp(typeSystem, from3.steps);
         }
-        final ImmutableSortedMap.Builder<String, Type> argNameTypes =
-            ImmutableSortedMap.orderedBy(RecordType.ORDERING);
         RecordLikeType recordType =
-            typeSystem.recordType(argNameTypes
-                .put(idPat3.name, exp.type).build());
+            typeSystem.recordType(RecordType.map(idPat3.name, exp.type));
         steps.add(
             core.yield_(step.bindings, core.tuple(recordType, exp)));
         steps.addAll(skip(from2.steps));

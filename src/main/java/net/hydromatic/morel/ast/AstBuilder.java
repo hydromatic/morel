@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -200,6 +201,12 @@ public enum AstBuilder {
 
   public Ast.Record record(Pos pos, Map<String, Ast.Exp> map) {
     return new Ast.Record(pos,
+        ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
+  }
+
+  public Ast.Record record(Pos pos,
+      Collection<Map.Entry<String, Ast.Exp>> map) {
+    return record(pos,
         ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
   }
 

@@ -28,6 +28,7 @@ import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
+import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -936,11 +937,8 @@ public enum BuiltIn {
    * mantissa and exponent of r, respectively. */
   REAL_FROM_MAN_EXP("Real", "fromManExp", ts ->
       ts.fnType(
-          ts.recordType(
-              ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
-                  .put("exp", INT)
-                  .put("man", REAL)
-                  .build()), REAL)),
+          ts.recordType(RecordType.map("exp", INT, "man", REAL)),
+          REAL)),
 
   /** Function "Real.fromString s", of type "string &rarr; real option",
    * scans a {@code real} value from a {@code string}. Returns {@code SOME(r)}
@@ -1097,22 +1095,14 @@ public enum BuiltIn {
    * +-0. If {@code r} is NaN, both {@code whole} and {@code frac} are NaN. */
   REAL_SPLIT("Real", "split", ts ->
       ts.fnType(REAL,
-          ts.recordType(
-              ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
-                  .put("frac", REAL)
-                  .put("whole", REAL)
-                  .build()))),
+          ts.recordType(RecordType.map("frac", REAL, "whole", REAL)))),
 
   /** Function "Real.fromManExp r", of type "{exp:int, man:real} &rarr; real"
    * returns <code>{man, exp}</code>, where {@code man} and {@code exp} are the
    * mantissa and exponent of r, respectively. */
   REAL_TO_MAN_EXP("Real", "toManExp", ts ->
       ts.fnType(REAL,
-          ts.recordType(
-              ImmutableSortedMap.<String, Type>orderedBy(RecordType.ORDERING)
-                  .put("exp", INT)
-                  .put("man", REAL)
-                  .build()))),
+          ts.recordType(RecordType.map("exp", INT, "man", REAL)))),
 
   /** Function "Real.toString", of type "real &rarr; string".
    *
@@ -1688,11 +1678,11 @@ public enum BuiltIn {
     if (SKIP) {
       return;
     }
-    final TreeMap<String, Type> nameTypes = new TreeMap<>(RecordType.ORDERING);
+    final PairList<String, Type> nameTypes = PairList.of();
     BY_STRUCTURE.values().forEach(structure -> {
       nameTypes.clear();
       structure.memberMap.forEach((name, builtIn) ->
-          nameTypes.put(name, builtIn.typeFunction.apply(typeSystem)));
+          nameTypes.add(name, builtIn.typeFunction.apply(typeSystem)));
       consumer.accept(structure, typeSystem.recordType(nameTypes));
     });
   }

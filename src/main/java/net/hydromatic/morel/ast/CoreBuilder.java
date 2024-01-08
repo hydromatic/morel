@@ -36,6 +36,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableRangeSet;
@@ -48,6 +49,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -316,10 +318,9 @@ public enum CoreBuilder {
     final ImmutableList<Core.Exp> argList = ImmutableList.copyOf(args);
     final RecordLikeType tupleType;
     if (type instanceof RecordType) {
-      final SortedMap<String, Type> argNameTypes =
-          new TreeMap<>(ORDERING);
+      final PairList<String, Type> argNameTypes = PairList.of();
       forEach(type.argNameTypes().keySet(), argList, (name, arg) ->
-          argNameTypes.put(name, arg.type));
+          argNameTypes.add(name, arg.type));
       tupleType = typeSystem.recordType(argNameTypes);
     } else {
       tupleType = typeSystem.tupleType(transform(argList, Core.Exp::type));
@@ -376,9 +377,9 @@ public enum CoreBuilder {
       if (lastBindings.size() == 1) {
         return lastBindings.get(0).id.type;
       }
-      final SortedMap<String, Type> argNameTypes = new TreeMap<>(ORDERING);
+      final PairList<String, Type> argNameTypes = PairList.of();
       lastBindings
-          .forEach(b -> argNameTypes.put(b.id.name, b.id.type));
+          .forEach(b -> argNameTypes.add(b.id.name, b.id.type));
       return typeSystem.recordType(argNameTypes);
     }
   }
@@ -400,10 +401,10 @@ public enum CoreBuilder {
       return id(getOnlyElement(bindings).id);
     } else {
       final SortedMap<Core.NamedPat, Core.Exp> map = new TreeMap<>();
-      final SortedMap<String, Type> argNameTypes = new TreeMap<>(ORDERING);
+      final PairList<String, Type> argNameTypes = PairList.of();
       bindings.forEach(b -> {
         map.put(b.id, id(b.id));
-        argNameTypes.put(b.id.name, b.id.type);
+        argNameTypes.add(b.id.name, b.id.type);
       });
       return tuple(typeSystem.recordType(argNameTypes), map.values());
     }
@@ -674,18 +675,26 @@ public enum CoreBuilder {
     return exp;
   }
 
-  /** Creates a record. */
+  /** Creates a record from a map of named expressions. */
   public Core.Exp record(TypeSystem typeSystem,
       Map<String, ? extends Core.Exp> nameExps) {
-    final ImmutableSortedMap<String, Core.Exp> sortedNameExps =
-        ImmutableSortedMap.<String, Core.Exp>orderedBy(RecordType.ORDERING)
-            .putAll(nameExps)
-            .build();
-    final SortedMap<String, Type> argNameTypes =
-        new TreeMap<>(RecordType.ORDERING);
-    sortedNameExps.forEach((name, exp) -> argNameTypes.put(name, exp.type));
+    return record_(typeSystem,
+        ImmutableSortedMap.copyOf(nameExps, RecordType.ORDERING));
+  }
+
+  /** Creates a record from a collection of named expressions. */
+  public Core.Exp record(TypeSystem typeSystem,
+      Collection<? extends Map.Entry<String, ? extends Core.Exp>> nameExps) {
+    return record_(typeSystem,
+        ImmutableSortedMap.copyOf(nameExps, RecordType.ORDERING));
+  }
+
+  private Core.Tuple record_(TypeSystem typeSystem,
+      ImmutableSortedMap<String, Core.Exp> nameExps) {
+    final PairList<String, Type> argNameTypes = PairList.of();
+    nameExps.forEach((name, exp) -> argNameTypes.add(name, exp.type));
     return tuple(typeSystem, typeSystem.recordType(argNameTypes),
-        sortedNameExps.values());
+        nameExps.values());
   }
 
   /** Calls a built-in function. */

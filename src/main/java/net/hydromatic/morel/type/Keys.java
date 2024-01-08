@@ -87,6 +87,12 @@ public class Keys {
     return new RecordKey(ImmutableSortedMap.copyOfSorted(argNameTypes));
   }
 
+  /** As {@link #record(SortedMap)} but an {@link Iterable} argument. */
+  public static Type.Key record(
+      Iterable<Map.Entry<String, ? extends Type.Key>> argNameTypes) {
+    return record(ImmutableSortedMap.copyOf(argNameTypes, RecordType.ORDERING));
+  }
+
   /** Returns a key that identifies a {@link TupleType}. */
   public static Type.Key tuple(List<? extends Type.Key> args) {
     return new RecordKey(TupleType.recordMap(args));

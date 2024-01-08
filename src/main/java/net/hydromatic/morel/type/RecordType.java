@@ -19,15 +19,19 @@
 package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.util.PairList;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.UnaryOperator;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /** Record type. */
 public class RecordType extends BaseType implements RecordLikeType {
@@ -36,7 +40,7 @@ public class RecordType extends BaseType implements RecordLikeType {
   RecordType(SortedMap<String, Type> argNameTypes) {
     super(Op.RECORD_TYPE);
     this.argNameTypes = ImmutableSortedMap.copyOfSorted(argNameTypes);
-    Preconditions.checkArgument(argNameTypes.comparator() == ORDERING);
+    checkArgument(argNameTypes.comparator() == ORDERING);
   }
 
   @Override public SortedMap<String, Type> argNameTypes() {
@@ -59,19 +63,18 @@ public class RecordType extends BaseType implements RecordLikeType {
   @Override public RecordType copy(TypeSystem typeSystem,
       UnaryOperator<Type> transform) {
     int differenceCount = 0;
-    final ImmutableSortedMap.Builder<String, Type> argNameTypes2 =
-        ImmutableSortedMap.orderedBy(ORDERING);
+    final PairList<String, Type> argNameTypes2 = PairList.of();
     for (Map.Entry<String, Type> entry : argNameTypes.entrySet()) {
       final Type type = entry.getValue();
       final Type type2 = type.copy(typeSystem, transform);
       if (type != type2) {
         ++differenceCount;
       }
-      argNameTypes2.put(entry.getKey(), type2);
+      argNameTypes2.add(entry.getKey(), type2);
     }
     return differenceCount == 0
         ? this
-        : (RecordType) typeSystem.recordType(argNameTypes2.build());
+        : (RecordType) typeSystem.recordType(argNameTypes2);
   }
 
   /** Ordering that compares integer values numerically,
@@ -81,6 +84,24 @@ public class RecordType extends BaseType implements RecordLikeType {
    * <p>Thus: 2, 22, 202, a, a2, a202, a22. */
   public static final Ordering<String> ORDERING =
       Ordering.from(RecordType::compareNames);
+
+  /** Creates a constant map, sorted by {@link #ORDERING}. */
+  @SuppressWarnings("unchecked")
+  public static <V> SortedMap<String, V> map(String name, V v0,
+      Object... entries) {
+    final ImmutableSortedMap.Builder<String, V> builder =
+        ImmutableSortedMap.orderedBy(ORDERING);
+    builder.put(name, v0);
+    for (int i = 0; i < entries.length / 2; i += 2) {
+      builder.put((String) entries[i], (V) entries[i + 1]);
+    }
+    return builder.build();
+  }
+
+  /** Creates a mutable map, sorted by {@link #ORDERING}. */
+  public static <V> NavigableMap<String, V> mutableMap() {
+    return new TreeMap<>(ORDERING);
+  }
 
   /** Helper for {@link #ORDERING}. */
   public static int compareNames(String o1, String o2) {

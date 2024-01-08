@@ -21,14 +21,13 @@ package net.hydromatic.morel.compile;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.compile.Extents.generator;
@@ -78,20 +77,20 @@ public class ExtentTest {
         core.tuple(f.typeSystem, null, ImmutableList.of()).isConstant(),
         is(true));
 
-    final Map<String, Core.Exp> map =
-        ImmutableMap.of("a", f.intLiteral(1), "b",
+    final PairList<String, Core.Exp> map =
+        PairList.copyOf("a", f.intLiteral(1), "b",
             core.boolLiteral(true));
     assertThat("record of constants is constant",
         core.record(f.typeSystem, map).isConstant(), is(true));
-    final List<Core.Exp> list = ImmutableList.copyOf(map.values());
+    final List<Core.Exp> list = map.rightList();
     assertThat("tuple of constants is constant",
         core.tuple(f.typeSystem, null, list).isConstant(), is(true));
 
-    final Map<String, Core.Exp> map2 =
-        ImmutableMap.of("a", f.intLiteral(1), "b", f.aId);
+    final PairList<String, Core.Exp> map2 =
+        PairList.copyOf("a", f.intLiteral(1), "b", f.aId);
     assertThat("record that contains an id is not constant",
         core.record(f.typeSystem, map2).isConstant(), is(false));
-    final List<Core.Exp> list2 = ImmutableList.copyOf(map2.values());
+    final List<Core.Exp> list2 = map2.rightList();
     assertThat("tuple that contains an id is not constant",
         core.tuple(f.typeSystem, null, list2).isConstant(), is(false));
 

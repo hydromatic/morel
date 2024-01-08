@@ -22,9 +22,9 @@ import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
@@ -62,8 +61,7 @@ public class CalciteForeignValue implements ForeignValue {
   }
 
   private Type toType(SchemaPlus schema, TypeSystem typeSystem) {
-    final ImmutableSortedMap.Builder<String, Type> fields =
-        ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+    final SortedMap<String, Type> fields = RecordType.mutableMap();
     schema.getTableNames().forEach(tableName -> {
       Table table = requireNonNull(schema.getTable(tableName));
       fields.put(convert(tableName), toType(table, typeSystem));
@@ -74,17 +72,16 @@ public class CalciteForeignValue implements ForeignValue {
       fields.put(convert(subSchemaName), toType(subSchema, typeSystem));
     });
 
-    return typeSystem.recordType(fields.build());
+    return typeSystem.recordType(fields);
   }
 
   private Type toType(Table table, TypeSystem typeSystem) {
-    final ImmutableSortedMap.Builder<String, Type> fields =
-        ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+    final PairList<String, Type> fields = PairList.of();
     table.getRowType(calcite.typeFactory)
         .getFieldList()
         .forEach(field ->
-            fields.put(convert(field.getName()), Converters.fieldType(field)));
-    return typeSystem.listType(typeSystem.recordType(fields.build()));
+            fields.add(convert(field.getName()), Converters.fieldType(field)));
+    return typeSystem.listType(typeSystem.recordType(fields));
   }
 
   private String convert(String name) {
@@ -100,8 +97,7 @@ public class CalciteForeignValue implements ForeignValue {
   }
 
   private ImmutableList<Object> valueFor(SchemaPlus schema) {
-    final SortedMap<String, Object> fieldValues =
-        new TreeMap<>(RecordType.ORDERING);
+    final SortedMap<String, Object> fieldValues = RecordType.mutableMap();
     final List<String> names = Schemas.path(schema).names();
     schema.getTableNames().forEach(tableName -> {
       final RelBuilder b = calcite.relBuilder;

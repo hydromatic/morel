@@ -24,14 +24,13 @@ import net.hydromatic.morel.ast.FromBuilder;
 import net.hydromatic.morel.compile.Environments;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 
@@ -61,8 +60,8 @@ public class FromBuilderTest {
     }
 
     Core.Exp record(Core.Id... ids) {
-      final Map<String, Core.Exp> nameExps = new LinkedHashMap<>();
-      Arrays.asList(ids).forEach(id -> nameExps.put(id.idPat.name, id));
+      final PairList<String, Core.Exp> nameExps = PairList.of();
+      Arrays.asList(ids).forEach(id -> nameExps.add(id.idPat.name, id));
       return core.record(typeSystem, nameExps);
     }
 

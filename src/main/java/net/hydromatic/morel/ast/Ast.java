@@ -36,13 +36,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import java.util.stream.Collectors;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
+import static net.hydromatic.morel.type.RecordType.mutableMap;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
@@ -1558,7 +1558,7 @@ public class Ast {
           || ((Yield) getLast(steps)).exp.op != Op.RECORD)) {
         return Iterables.getOnlyElement(fields);
       } else {
-        final SortedMap<String, Exp> map = new TreeMap<>(ORDERING);
+        final SortedMap<String, Ast.Exp> map = mutableMap();
         fields.forEach(field -> map.put(field.name, field));
         return ast.record(pos, map);
       }

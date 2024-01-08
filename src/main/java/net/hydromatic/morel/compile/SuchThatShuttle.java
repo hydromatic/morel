@@ -161,8 +161,7 @@ class SuchThatShuttle extends Shuttle {
       boundPats.forEach((p, e) -> b.put(mapper.apply(p), e));
       final SortedMap<Core.NamedPat, Core.Exp> boundPats2 = b.build();
 
-      final SortedMap<String, Core.Exp> nameExps =
-          new TreeMap<>(RecordType.ORDERING);
+      final SortedMap<String, Core.Exp> nameExps = RecordType.mutableMap();
       if (scans.isEmpty()) {
         final Core.Scan scan = (Core.Scan) fromStates.element().currentStep();
         final Extents.Analysis extent =

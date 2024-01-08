@@ -262,10 +262,10 @@ public class TypeSystem {
   /** Creates a record type, or returns a scalar type if {@code argNameTypes}
    * has one entry. */
   public Type recordOrScalarType(
-      SortedMap<String, ? extends Type> argNameTypes) {
+      Collection<Map.Entry<String, Type>> argNameTypes) {
     switch (argNameTypes.size()) {
     case 1:
-      return Iterables.getOnlyElement(argNameTypes.values());
+      return Iterables.getOnlyElement(argNameTypes).getValue();
     default:
       return recordType(argNameTypes);
     }
@@ -273,12 +273,21 @@ public class TypeSystem {
 
   /** Creates a record type. (Or a tuple type if the fields are named "1", "2"
    * etc.; or "unit" if the field list is empty.) */
-  public RecordLikeType recordType(SortedMap<String, ? extends Type> argNameTypes) {
-    if (argNameTypes.isEmpty()) {
+  public RecordLikeType recordType(
+      Collection<Map.Entry<String, Type>> argNameTypes) {
+    return recordType(
+        ImmutableSortedMap.copyOf(argNameTypes, RecordType.ORDERING));
+  }
+
+  /** Creates a record type. (Or a tuple type if the fields are named "1", "2"
+   * etc.; or "unit" if the field list is empty.) */
+  public RecordLikeType recordType(
+      SortedMap<String, ? extends Type> argNameTypes) {
+    final ImmutableSortedMap<String, Type> argNameTypes2 =
+        ImmutableSortedMap.copyOf(argNameTypes, RecordType.ORDERING);
+    if (argNameTypes2.isEmpty()) {
       return PrimitiveType.UNIT;
     }
-    final ImmutableSortedMap<String, Type> argNameTypes2 =
-        ImmutableSortedMap.copyOfSorted(argNameTypes);
     if (areContiguousIntegers(argNameTypes2.keySet())
         && argNameTypes2.size() != 1) {
       return tupleType(ImmutableList.copyOf(argNameTypes2.values()));
@@ -299,8 +308,17 @@ public class TypeSystem {
 
   /** Creates a progressive record type. */
   public ProgressiveRecordType progressiveRecordType(
-      SortedMap<String, ? extends Type> argNameTypes) {
-    Key key = Keys.progressiveRecord(Keys.toKeys(argNameTypes));
+      Collection<Map.Entry<String, Type>> argNameTypes) {
+    return progressiveRecordType(
+        ImmutableSortedMap.copyOf(argNameTypes, RecordType.ORDERING));
+  }
+
+  /** Creates a progressive record type. */
+  public ProgressiveRecordType progressiveRecordType(
+      SortedMap<String, Type> argNameTypes) {
+    final ImmutableSortedMap<String, Type> argNameTypes2 =
+        ImmutableSortedMap.copyOf(argNameTypes, RecordType.ORDERING);
+    Key key = Keys.progressiveRecord(Keys.toKeys(argNameTypes2));
     return (ProgressiveRecordType) typeFor(key);
   }
 

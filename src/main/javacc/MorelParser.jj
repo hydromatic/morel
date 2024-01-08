@@ -882,21 +882,21 @@ Exp atom() :
 |
   <LBRACE> {
     span = Span.of(pos());
-    final Map<String, Exp> map = new LinkedHashMap<>();
+    final PairList<String, Exp> nameExps = PairList.of();
   }
   [
-    recordExp(map)
+    recordExp(nameExps)
     (
-      <COMMA> recordExp(map)
+      <COMMA> recordExp(nameExps)
     )*
   ]
   <RBRACE> {
-    return ast.record(span.end(this), map);
+    return ast.record(span.end(this), nameExps);
   }
 }
 
 /** Parses a "label = expression" inside a record. */
-void recordExp(Map<String, Exp> map) :
+void recordExp(PairList<String, Exp> nameExps) :
 {
   final String id;
   final Ast.Exp exp;
@@ -904,19 +904,19 @@ void recordExp(Map<String, Exp> map) :
 {
   LOOKAHEAD(<NON_NEGATIVE_INTEGER_LITERAL> <EQ>)
   <NON_NEGATIVE_INTEGER_LITERAL> { id = token.image; }
-  <EQ> exp = expression() { map.put(id, exp); }
+  <EQ> exp = expression() { nameExps.add(id, exp); }
 |
   LOOKAHEAD(<IDENTIFIER> <EQ>)
   <IDENTIFIER> { id = token.image; }
-  <EQ> exp = expression() { map.put(id, exp); }
+  <EQ> exp = expression() { nameExps.add(id, exp); }
 |
   LOOKAHEAD(<QUOTED_IDENTIFIER> <EQ>)
   <QUOTED_IDENTIFIER> { id = unquoteIdentifier(token.image); }
-  <EQ> exp = expression() { map.put(id, exp); }
+  <EQ> exp = expression() { nameExps.add(id, exp); }
 |
   exp = expression() {
     final String label = ast.implicitLabel(exp);
-    map.put(label, exp);
+    nameExps.add(label, exp);
   }
 }
 

@@ -19,14 +19,13 @@
 package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.AstNode;
-import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
+import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.Unifier;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -122,7 +121,6 @@ public class TypeMap {
     }
 
     public Type visit(Unifier.Sequence sequence) {
-      final ImmutableSortedMap.Builder<String, Type> argNameTypes;
       final Type type;
       switch (sequence.operator) {
       case TypeResolver.FN_TY_CON:
@@ -162,18 +160,18 @@ public class TypeMap {
           // E.g. "record:a:b" becomes record type "{a:t0, b:t1}".
           final List<String> argNames = TypeResolver.fieldList(sequence);
           if (argNames != null) {
-            argNameTypes = ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+            final PairList<String, Type> argNameTypes = PairList.of();
             final AtomicBoolean progressive = new AtomicBoolean(false);
             forEach(argNames, sequence.terms, (name, term) -> {
               if (name.equals(TypeResolver.PROGRESSIVE_LABEL)) {
                 progressive.set(true);
               } else {
-                argNameTypes.put(name, term.accept(this));
+                argNameTypes.add(name, term.accept(this));
               }
             });
             return progressive.get()
-                ? typeMap.typeSystem.progressiveRecordType(argNameTypes.build())
-                : typeMap.typeSystem.recordType(argNameTypes.build());
+                ? typeMap.typeSystem.progressiveRecordType(argNameTypes)
+                : typeMap.typeSystem.recordType(argNameTypes);
           }
         }
         throw new AssertionError("unknown type constructor "
