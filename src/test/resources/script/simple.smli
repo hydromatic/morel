@@ -407,21 +407,20 @@ it;
 > val it = [1,2,3] : int list
 val _ = 3;
 
-(* TODO fix in [MOREL-43]
 val SOME i = SOME 1;
-val i = 1 : 'a
-*)
+> val i = 1 : int
+
 val SOME i = NONE;
 > uncaught exception Bind
->   raised at: stdIn:6.5-6.18
-(* TODO fix in [MOREL-43]
-val SOME (p as (1, i), SOME true) = SOME ((1, 2), SOME true);
-val p = (1,2) : int * 'a
-val i = 2 : 'a
-*)
-(* TODO fix in [MOREL-43]
+>   raised at: stdIn:2.5-2.18
+
+val SOME (q as (1, i), SOME true) = SOME ((1, 2), SOME true);
+> val q = (1,2) : int * int
+> val i = 2 : int
+
 val SOME (i, NONE) = SOME (1, SOME false);
-*)
+> uncaught exception Bind
+>   raised at: stdIn:2.5-2.42
 
 Sys.set ("matchCoverageEnabled", false);
 > val it = () : unit
@@ -483,13 +482,13 @@ val x as y as (h,i) :: t = [(1,2),(3,4),(5,6)];
 > val h = 1 : int
 > val i = 2 : int
 > val t = [(3,4),(5,6)] : (int * int) list
-(* TODO fix in [MOREL-43]
+
 val a as SOME (b as (c, d)) = SOME (1, 2);
-val a = SOME (1,2) : (int * int) option
-val b = (1,2) : 'a * 'b
-val c = 1 : 'a
-val d = 2 : 'b
-*)
+> val a = SOME (1,2) : (int * int) option
+> val b = (1,2) : int * int
+> val c = 1 : int
+> val d = 2 : int
+
 val x as y as z = 3;
 > val x = 3 : int
 > val y = 3 : int
