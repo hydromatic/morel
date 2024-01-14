@@ -359,9 +359,16 @@ public class TypeResolver {
       for (Ord<Ast.FromStep> step : Ord.zip(from.steps)) {
         Pair<TypeEnv, Unifier.Variable> p =
             deduceStepType(env, step.e, v3, env3, fieldVars, fromSteps);
-        if (step.e.op == Op.COMPUTE
-            && step.i != from.steps.size() - 1) {
-          throw new AssertionError("'compute' step must be last in 'from'");
+        if (step.i != from.steps.size() - 1) {
+          switch (step.e.op) {
+          case COMPUTE:
+            throw new AssertionError("'compute' step must be last in 'from'");
+          case YIELD:
+            if (((Ast.Yield) step.e).exp.op != Op.RECORD) {
+              throw new AssertionError("'yield' step that is not last in 'from'"
+                  + " must be a record expression");
+            }
+          }
         }
         env3 = p.left;
         v3 = p.right;

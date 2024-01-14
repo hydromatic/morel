@@ -1773,6 +1773,54 @@ public class MainTest {
         .assertType("(int * int -> bool) -> int list");
   }
 
+  @Test void testFromYield() {
+    ml("from a in [1], b in [true]")
+        .assertType("{a:int, b:bool} list");
+    ml("from a in [1], b in [true] yield a")
+        .assertType("int list");
+    ml("from a in [1], b in [true] yield {a,b}")
+        .assertType("{a:int, b:bool} list");
+    ml("from a in [1], b in [true] yield {y=a,b}")
+        .assertType("{b:bool, y:int} list");
+    ml("from a in [1], b in [true] yield {y=a,x=b,z=a}")
+        .assertType("{x:bool, y:int, z:int} list");
+    ml("from a in [1], b in [true] yield {y=a,x=b,z=a} yield {z,x}")
+        .assertType("{x:bool, z:int} list");
+    ml("from a in [1], b in [true] yield {y=a,x=b,z=a} yield {z}")
+        .assertType("{z:int} list");
+    ml("from a in [1], b in [true] yield (b,a)")
+        .assertType("(bool * int) list");
+    ml("from a in [1], b in [true] yield (b)")
+        .assertType("bool list");
+    ml("from a in [1], b in [true] yield {b,a} yield a")
+        .assertType("int list");
+    String value = "'yield' step that is not last in 'from' must be a record "
+        + "expression";
+    ml("from a in [1], b in [true] yield (b,a) where b")
+        .assertTypeThrows(
+            throwsA(AssertionError.class,
+                is(value)));
+    ml("from a in [1], b in [true] yield {b,a} where b")
+        .assertType("{a:int, b:bool} list")
+        .assertEval(is(list(list(1, true))));
+    ml("from d in [{a=1,b=true}], i in [2] yield i")
+        .assertType("int list");
+    // Note that 'd' has record type but is not a record expression;
+    // we may allow record types in the future.
+    ml("from d in [{a=1,b=true}], i in [2] yield d yield a")
+        .assertTypeThrows(throwsA(AssertionError.class, is(value)));
+    ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} yield a")
+        .assertType("int list");
+    ml("from d in [{a=1,b=true}], i in [2] yield d where true")
+        .assertTypeThrows(throwsA(AssertionError.class, is(value)));
+    ml("from d in [{a=1,b=true}], i in [2] yield i yield 3")
+        .assertTypeThrows(throwsA(AssertionError.class, is(value)));
+    ml("from d in [{a=1,b=true}], i in [2] yield d")
+        .assertType("{a:int, b:bool} list");
+    ml("from d in [{a=1,b=true}], i in [2] yield d yield 3")
+        .assertTypeThrows(throwsA(AssertionError.class, is(value)));
+  }
+
   @Test void testFromYieldExpression() {
     final String ml = "let\n"
         + "  val emps = [\n"
