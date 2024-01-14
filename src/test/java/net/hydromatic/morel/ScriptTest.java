@@ -155,6 +155,10 @@ public class ScriptTest {
         break;
       }
     }
+    // For the "file.smli" test, move to a subdirectory; it's more predictable
+    if (inFile.getPath().matches(".*/(file)\\.(sml|smli)")) {
+      directory = new File(directory, "data");
+    }
     Prop.DIRECTORY.set(propMap, directory);
     Prop.SCRIPT_DIRECTORY.set(propMap, scriptDirectory);
 

@@ -22,28 +22,20 @@
 (*) The "file" value represents the file system, starting in the current
 (*) directory.
 file;
-> val it =
->   {META-INF={},data={},junit-platform.properties={},net={},script={},
->    script.log={},script.sml={},script.sml.out={},surefire={},use={}}
->   : {META-INF:{...}, data:{...}, junit-platform.properties:{...}, net:{...},
->      script:{...}, script.log:{...}, script.sml:{...}, script.sml.out:{...},
->      surefire:{...}, use:{...}, ...}
-
-(*) The "data" subdirectory can be accessed as a field.
-file.data;
 > val it = {scott={},wordle={}} : {scott:{...}, wordle:{...}, ...}
+
+(*) A subdirectory.
+file.wordle;
+> val it = {answers=<relation>,words=<relation>}
+>   : {answers:{...} list, words:{...} list, ...}
 
 (*) Now we've gone into the directory, the type of 'file' has widened.
 file;
-> val it =
->   {META-INF={},data={scott={},wordle={}},junit-platform.properties={},net={},
->    script={},script.log={},script.sml={},script.sml.out={},surefire={},use={}}
->   : {META-INF:{...}, data:{scott:{...}, wordle:{...}, ...},
->      junit-platform.properties:{...}, net:{...}, script:{...}, script.log:{...},
->      script.sml:{...}, script.sml.out:{...}, surefire:{...}, use:{...}, ...}
+> val it = {scott={},wordle={answers=<relation>,words=<relation>}}
+>   : {scott:{...}, wordle:{answers:{...} list, words:{...} list, ...}, ...}
 
 (*) A variable via which we can access relations.
-val s = file.data.scott;
+val s = file.scott;
 > val s = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
 >   : {bonus:{...} list, dept:{...} list, emp:{...} list, salgrade:{...} list,
 >      ...}
@@ -56,7 +48,7 @@ from d in s.dept
 > val it = [{count=3,deptno=10},{count=5,deptno=20},{count=6,deptno=30}]
 >   : {count:int, deptno:int} list
 
-file.data.scott.dept;
+file.scott.dept;
 > val it =
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
 >    {deptno=20,dname="RESEARCH",loc="DALLAS"},
@@ -65,20 +57,20 @@ file.data.scott.dept;
 >   : {deptno:int, dname:string, loc:string} list
 
 (*) Since dept is a list of records, we can query it.
-from d in file.data.scott.dept
+from d in file.scott.dept
  where d.dname elem ["ACCOUNTING", "SALES"]
  compute sum of d.deptno;
 > val it = 40 : int
 
-from d in file.data.scott.dept
-join e in file.data.scott.emp on d.deptno = e.deptno
+from d in file.scott.dept
+join e in file.scott.emp on d.deptno = e.deptno
 group e.deptno compute count
 order deptno;
 > val it = [{count=3,deptno=10},{count=5,deptno=20},{count=6,deptno=30}]
 >   : {count:int, deptno:int} list
 
 (*) Bonus is empty (except the line defining the fields).
-val scott = file.data.scott;
+val scott = file.scott;
 > val scott =
 >   {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
 >   : {bonus:{...} list, dept:{deptno:int, dname:string, loc:string} list,
@@ -91,23 +83,18 @@ from b in scott.bonus;
 (*) The type of 'file' has widened further.
 file;
 > val it =
->   {META-INF={},
->    data=
->    {scott={bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>},
->     wordle={}},junit-platform.properties={},net={},script={},script.log={},
->    script.sml={},script.sml.out={},surefire={},use={}}
->   : {META-INF:{...},
->      data:{
->            scott:{bonus:{bonus:real, ename:string, job:string, sal:real} list,
->                   dept:{deptno:int, dname:string, loc:string} list,
->                   emp:
->                       {comm:real, deptno:int, empno:int, ename:string,
->                        hiredate:string, job:string, mgrno:int, sal:real} list,
->                   salgrade:{...} list, ...}, wordle:{...}, ...},
->      junit-platform.properties:{...}, net:{...}, script:{...}, script.log:{...},
->      script.sml:{...}, script.sml.out:{...}, surefire:{...}, use:{...}, ...}
+>   {scott={bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>},
+>    wordle={answers=<relation>,words=<relation>}}
+>   : {
+>      scott:{bonus:{bonus:real, ename:string, job:string, sal:real} list,
+>             dept:{deptno:int, dname:string, loc:string} list,
+>             emp:
+>                 {comm:real, deptno:int, empno:int, ename:string,
+>                  hiredate:string, job:string, mgrno:int, sal:real} list,
+>             salgrade:{...} list, ...},
+>      wordle:{answers:{...} list, words:{...} list, ...}, ...}
 
-file.data.scott;
+file.scott;
 > val it = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
 >   : {bonus:{bonus:real, ename:string, job:string, sal:real} list,
 >      dept:{deptno:int, dname:string, loc:string} list,
