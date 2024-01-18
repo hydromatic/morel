@@ -113,9 +113,9 @@ public class Relationalizer extends EnvShuttle {
     }
   }
 
-  @Override public Core.Exp visit(Core.From from) {
+  @Override protected Core.Exp visit(Core.From from) {
     final Core.From from2 = (Core.From) super.visit(from);
-    if (from2.steps.size() > 0) {
+    if (!from2.steps.isEmpty()) {
       final Core.FromStep step = from2.steps.get(0);
       if (step instanceof Core.Scan
           && ((Core.Scan) step).exp.op == Op.FROM

@@ -28,18 +28,24 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.Pair;
+
+import com.google.common.collect.ImmutableMap;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import javax.annotation.Nullable;
+import java.util.Map;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Shuttle that inlines constant values.
  */
 public class Inliner extends EnvShuttle {
-  private final @Nullable Analyzer.Analysis analysis;
+  private final Analyzer.@Nullable Analysis analysis;
 
   /** Private constructor. */
   private Inliner(TypeSystem typeSystem, Environment env,
@@ -52,7 +58,7 @@ public class Inliner extends EnvShuttle {
    *
    * <p>If {@code analysis} is null, no variables are inlined. */
   public static Inliner of(TypeSystem typeSystem, Environment env,
-      @Nullable Analyzer.Analysis analysis) {
+      Analyzer.@Nullable Analysis analysis) {
     return new Inliner(typeSystem, env, analysis);
   }
 
@@ -60,14 +66,14 @@ public class Inliner extends EnvShuttle {
     return new Inliner(typeSystem, env, analysis);
   }
 
-  @Override public Core.Exp visit(Core.Id id) {
+  @Override protected Core.Exp visit(Core.Id id) {
     final Binding binding = env.getOpt(id.idPat);
     if (binding != null
         && !binding.parameter) {
       if (binding.exp != null) {
         final Analyzer.Use use =
             analysis == null ? Analyzer.Use.MULTI_UNSAFE
-                : analysis.map.get(id.idPat);
+                : requireNonNull(analysis.map.get(id.idPat));
         switch (use) {
         case ATOMIC:
         case ONCE_SAFE:
@@ -143,12 +149,47 @@ public class Inliner extends EnvShuttle {
     return apply2;
   }
 
-  @Override public Core.Exp visit(Core.Let let) {
+  @Override protected Core.Exp visit(Core.Case caseOf) {
+    final Core.Exp exp = caseOf.exp.accept(this);
+    final List<Core.Match> matchList = visitList(caseOf.matchList);
+    if (matchList.size() == 1) {
+      final Map<Core.Id, Core.Id> substitution =
+          getSub(exp, matchList.get(0));
+      if (substitution != null) {
+        return Replacer.substitute(typeSystem, substitution,
+            matchList.get(0).exp);
+      }
+    }
+    return caseOf.copy(exp, matchList);
+  }
+
+  private @Nullable Map<Core.Id, Core.Id> getSub(Core.Exp exp,
+      Core.Match match) {
+    if (exp.op == Op.ID && match.pat.op == Op.ID_PAT) {
+      return ImmutableMap.of(core.id((Core.IdPat) match.pat), (Core.Id) exp);
+    }
+    if (exp.op == Op.TUPLE && match.pat.op == Op.TUPLE_PAT) {
+      final Core.Tuple tuple = (Core.Tuple) exp;
+      final Core.TuplePat tuplePat = (Core.TuplePat) match.pat;
+      if (tuple.args.stream().allMatch(arg -> arg.op == Op.ID)
+          && tuplePat.args.stream().allMatch(arg -> arg.op == Op.ID_PAT)) {
+        final ImmutableMap.Builder<Core.Id, Core.Id> builder =
+            ImmutableMap.builder();
+        Pair.forEach(tuple.args, tuplePat.args, (arg, pat) ->
+            builder.put(core.id((Core.IdPat) pat), (Core.Id) arg));
+        return builder.build();
+      }
+    }
+    return null;
+  }
+
+  @Override protected Core.Exp visit(Core.Let let) {
     final Analyzer.Use use =
         analysis == null
             ? Analyzer.Use.MULTI_UNSAFE
             : let.decl instanceof Core.NonRecValDecl
-                ? analysis.map.get(((Core.NonRecValDecl) let.decl).pat)
+                ? requireNonNull(
+                    analysis.map.get(((Core.NonRecValDecl) let.decl).pat))
                 : Analyzer.Use.MULTI_UNSAFE;
     switch (use) {
     case DEAD:

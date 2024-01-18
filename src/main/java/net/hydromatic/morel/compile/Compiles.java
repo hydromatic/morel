@@ -360,11 +360,11 @@ public abstract class Compiles {
       this.bindings = bindings;
     }
 
-    @Override public void visit(Core.IdPat idPat) {
+    @Override protected void visit(Core.IdPat idPat) {
       bindPattern(typeSystem, bindings, idPat);
     }
 
-    @Override public void visit(Core.AsPat asPat) {
+    @Override protected void visit(Core.AsPat asPat) {
       bindPattern(typeSystem, bindings, asPat);
       super.visit(asPat);
     }

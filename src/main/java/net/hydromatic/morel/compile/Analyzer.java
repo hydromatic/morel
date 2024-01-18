@@ -78,7 +78,7 @@ public class Analyzer extends EnvVisitor {
     use(idPat);
   }
 
-  @Override public void visit(Core.Id id) {
+  @Override protected void visit(Core.Id id) {
     use(id.idPat).useCount++;
     super.visit(id);
   }

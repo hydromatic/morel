@@ -339,6 +339,46 @@ public class InlineTest {
             hasToString(core1))
         .assertEval(isUnordered(list(list(Unit.INSTANCE, 10))));
   }
+
+  /** Tests that a singleton {@code case} is inlined. */
+  @Test void testInlineCase() {
+    final String ml = "let\n"
+        + "  val f = fn x => case x of y => y + 2\n"
+        + "in\n"
+        + "  f 3\n"
+        + "end";
+    ml(ml)
+        .assertCore(0,
+            hasToString("val it = "
+                + "let val f = fn x => case x of y => y + 2 in f 3 end"))
+        .assertCore(2, hasToString("val it = let val x = 3 in x + 2 end"))
+        .assertEval(is(5));
+  }
+
+  /** Tests that a singleton {@code case} is inlined. */
+  @Test void testInlineCase2() {
+    final String ml = "let\n"
+        + "  val f = fn (x, y) => case (x, y) of (x1, y1) => x1 - y1\n"
+        + "in\n"
+        + "  f (13, 5)\n"
+        + "end";
+    ml(ml)
+        .assertCore(0,
+            hasToString("val it = "
+                + "let"
+                + " val f = fn v0 => "
+                + "case v0 of (x, y) => "
+                + "case (x, y) of (x1, y1) => x1 - y1 "
+                + "in"
+                + " f (13, 5) "
+                + "end"))
+        .assertCore(2,
+            hasToString("val it = "
+                + "let val v0 = (13, 5) "
+                + "in case v0 of (x, y) => -:int (x, y) "
+                + "end"))
+        .assertEval(is(8));
+  }
 }
 
 // End InlineTest.java
