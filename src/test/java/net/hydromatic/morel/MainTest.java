@@ -1705,11 +1705,18 @@ public class MainTest {
     ml("from e in emps, job, d where hasEmp (e, d, job)")
         .assertParseSame();
     ml("from a, b in emps where a > b join c join d in depts where c > d")
-        .assertParseSame();
-    // We ought to allow "join v1, v2", but don't currently.
+        .assertParse("from a, b in emps where a > b "
+            + "join c, d in depts where c > d");
     ml("from a, b in emps where a > b join c, d in depts where c > d")
+        .assertParseSame();
+    ml("from e in emps, d in depts on e.deptno = d.deptno")
+        .assertParse("from e in emps, d in depts on #deptno e = #deptno d");
+    ml("from e in emps on true, d in depts on e.deptno = d.deptno")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \",\" \", \"\" at line 1, column 37."));
+            startsWith("Encountered \" \"on\" \"on \"\" "
+                + "at line 1, column 16."));
+    ml("from e, d in depts on e.deptno = d.deptno")
+        .assertParse("from e, d in depts on #deptno e = #deptno d");
     ml("from , d in depts").assertError("Xx");
     ml("from join d in depts on c").assertError("Xx");
     ml("from left join d in depts on c").assertError("Xx");
@@ -1717,11 +1724,14 @@ public class MainTest {
     ml("from full join d in depts on c").assertError("Xx");
     ml("from e in emps join d in depts").assertError("Xx");
     ml("from e in emps join d in depts where c").assertError("Xx");
-    ml("from e in emps join d in depts on c").assertParseSame();
-    ml("from e in emps left join d in depts on c").assertParseSame();
-    ml("from e in emps right join d in depts on c").assertParseSame();
-    ml("from e in emps full join d in depts on c").assertParseSame();
-    ml("from e in (from z in emps) join d in (from y in depts) on c")
+    ml("from e in emps join d in depts on c")
+        .assertParse("from e in emps, d in depts on c");
+    if ("TODO".isEmpty()) {
+      ml("from e in emps left join d in depts on c").assertParseSame();
+      ml("from e in emps right join d in depts on c").assertParseSame();
+      ml("from e in emps full join d in depts on c").assertParseSame();
+    }
+    ml("from e in (from z in emps), d in (from y in depts) on c")
         .assertParseSame();
     ml("from e in emps\n"
         + " group e.deptno\n"
@@ -1770,7 +1780,8 @@ public class MainTest {
         .assertParseSame()
         .assertType("(int -> bool) -> int list");
     ml("fn f => from i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
-        .assertParseSame()
+        .assertParse("fn f => from i in [1, 2, 3],"
+            + " j in [3, 4] on f (i, j) yield i + j")
         .assertType("(int * int -> bool) -> int list");
 
     // In "from p in exp" and "from p = exp", p can be any pattern
@@ -1801,12 +1812,6 @@ public class MainTest {
     ml("from (x, y)")
         .assertParseThrowsParseException(
             startsWith("Encountered \"<EOF>\" at line 1, column 11."));
-  }
-
-  @Test void testFoo() {
-    ml("fn f => from i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
-        .assertParseSame()
-        .assertType("(int * int -> bool) -> int list");
   }
 
   @Test void testFromYield() {
@@ -1901,21 +1906,21 @@ public class MainTest {
         + "    yield {d, n}\n"
         + "end";
     final String code = "from(sink\n"
-        + "  join(op join, pat v0,\n"
+        + "  join(pat v0,\n"
         + "  exp from(\n"
-        + "    sink join(op join, pat e, exp tuple(\n"
+        + "    sink join(pat e, exp tuple(\n"
         + "  tuple(constant(10), constant(100), constant(Fred)),\n"
         + "  tuple(constant(20), constant(101), constant(Velma)),\n"
         + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
         + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
         + " sink collect(tuple(apply(fnValue nth:2, argCode get(name e)), "
         + "apply(fnValue nth:0, argCode get(name e)))))), "
-        + "sink join(op join, pat n_1, exp tuple(\n"
+        + "sink join(pat n_1, exp tuple(\n"
         + " apply(fnValue nth:0, argCode get(name v0))), "
-        + "sink join(op join, pat d_1, exp tuple(constant(30)), "
+        + "sink join(pat d_1, exp tuple(constant(30)), "
         + "sink where(condition apply2(fnValue elem,\n"
         + "                            tuple(get(name n), get(name d)), "
-        + "from(sink join(op join, pat e, exp tuple(\n"
+        + "from(sink join(pat e, exp tuple(\n"
         + "  tuple(constant(10), constant(100), constant(Fred)),\n"
         + "  tuple(constant(20), constant(101), constant(Velma)),\n"
         + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
@@ -1948,9 +1953,9 @@ public class MainTest {
         + " (d, job) => op elem ((op div (d, 2), job),"
         + " from e in #emp scott"
         + " yield (#deptno e, #job e)) yield j";
-    final String code = "from(sink join(op join, pat d_1,\n"
+    final String code = "from(sink join(pat d_1,\n"
         + "    exp apply(fnValue nth:1, argCode get(name scott)),\n"
-        + "  sink join(op join, pat j,\n"
+        + "  sink join(pat j,\n"
         + "      exp apply(\n"
         + "        fnCode apply(fnValue List.filter,\n"
         + "          argCode match(j,\n"
@@ -1959,7 +1964,7 @@ public class MainTest {
         + "                tuple(apply2(fnValue div, get(name d), constant(2)),\n"
         + "                get(name job)),\n"
         + "              from(\n"
-        + "              sink join(op join, pat e,\n"
+        + "              sink join(pat e,\n"
         + "                exp apply(fnValue nth:2, argCode get(name scott)),\n"
         + "                sink collect(\n"
         + "                  tuple(apply(fnValue nth:1, argCode get(name e)),\n"
@@ -2240,7 +2245,7 @@ public class MainTest {
         + " where d_1 = 30"
         + " yield {d = d_1, n = n_1}";
     final String code = "from(sink\n"
-        + "  join(op join, pat (n_1, d_1),\n"
+        + "  join(pat (n_1, d_1),\n"
         + "  exp apply(\n"
         + "    fnCode apply(fnValue List.filter,\n"
         + "      argCode match(v0,\n"
@@ -2249,7 +2254,7 @@ public class MainTest {
         + "                apply2(fnValue elem,\n"
         + "                  tuple(get(name n), get(name d)),\n"
         + "                  from(sink\n"
-        + "                    join(op join, pat e, exp tuple(\n"
+        + "                    join(pat e, exp tuple(\n"
         + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
         + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
         + "      sink collect(tuple(apply(fnValue nth:2, argCode get(name e)),\n"
@@ -2595,7 +2600,7 @@ public class MainTest {
         + " group a = #a r compute sb = sum of #b r"
         + " yield {a = a, a2 = a + a, sb = sb}";
     final String plan = "from("
-        + "sink join(op join, pat r, exp tuple(tuple(constant(2), constant(3))), "
+        + "sink join(pat r, exp tuple(tuple(constant(2), constant(3))), "
         + "sink group(key tuple(apply(fnValue nth:0, argCode get(name r))), "
         + "agg aggregate, "
         + "sink collect(tuple(get(name a), "

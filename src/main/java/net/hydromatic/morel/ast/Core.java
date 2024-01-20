@@ -1187,13 +1187,9 @@ public class Core {
     public final Exp exp;
     public final Exp condition;
 
-    Scan(Op op, ImmutableList<Binding> bindings, Pat pat, Exp exp,
+    Scan(ImmutableList<Binding> bindings, Pat pat, Exp exp,
         Exp condition) {
-      super(op, bindings);
-      if (op != Op.INNER_JOIN) {
-        // SCAN and CROSS_JOIN are valid in ast, not core.
-        throw new IllegalArgumentException("not a join type " + op);
-      }
+      super(Op.SCAN, bindings);
       this.pat = requireNonNull(pat, "pat");
       this.exp = requireNonNull(exp, "exp");
       this.condition = requireNonNull(condition, "condition");
@@ -1224,7 +1220,7 @@ public class Core {
 
     @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
         int left, int right) {
-      w.append(ordinal == 0 ? " " : op.padded)
+      w.append(ordinal == 0 ? " " : " join ")
           // for these purposes 'in' has same precedence as '='
           .append(pat, 0, Op.EQ.left);
       if (Extents.isInfinite(exp)) {
@@ -1252,7 +1248,7 @@ public class Core {
           && condition == this.condition
           && bindings.equals(this.bindings)
           ? this
-          : core.scan(op, bindings, pat, exp, condition);
+          : core.scan(bindings, pat, exp, condition);
     }
   }
 

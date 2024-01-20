@@ -404,7 +404,7 @@ public class CalciteCompiler extends Compiler {
 
       private RelContext step(RelContext cx, int i, Core.FromStep fromStep) {
         switch (fromStep.op) {
-        case INNER_JOIN:
+        case SCAN:
           return join(cx, i, (Core.Scan) fromStep);
         case WHERE:
           return where(cx, (Core.Where) fromStep);
@@ -687,7 +687,7 @@ public class CalciteCompiler extends Compiler {
 
   private static JoinRelType joinRelType(Op op) {
     switch (op) {
-    case INNER_JOIN:
+    case SCAN:
       return JoinRelType.INNER;
     default:
       throw new AssertionError(op);

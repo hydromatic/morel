@@ -108,7 +108,7 @@ public class Relationalizer extends EnvShuttle {
       final List<Binding> bindings = new ArrayList<>();
       Compiles.acceptBinding(typeSystem, id, bindings);
       final Core.Scan scan =
-          core.scan(Op.INNER_JOIN, bindings, id, exp, core.boolLiteral(true));
+          core.scan(bindings, id, exp, core.boolLiteral(true));
       return core.from(typeSystem, ImmutableList.of(scan));
     }
   }

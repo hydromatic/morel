@@ -201,7 +201,7 @@ public class FromBuilder {
       return yield_(uselessIfLast, bindings, core.record(typeSystem, nameExps));
     }
     Compiles.acceptBinding(typeSystem, pat, bindings);
-    return addStep(core.scan(Op.INNER_JOIN, bindings, pat, exp, condition));
+    return addStep(core.scan(bindings, pat, exp, condition));
   }
 
   public FromBuilder addAll(Iterable<? extends Core.FromStep> steps) {
@@ -367,7 +367,7 @@ public class FromBuilder {
     }
     if (simplify
         && steps.size() == 1
-        && steps.get(0).op == Op.INNER_JOIN) {
+        && steps.get(0).op == Op.SCAN) {
       final Core.Scan scan = (Core.Scan) steps.get(0);
       if (scan.pat.op == Op.ID_PAT) {
         return scan.exp;

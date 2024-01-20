@@ -130,7 +130,6 @@ public enum Op {
   CASE,
   FROM,
   SCAN(" "),
-  INNER_JOIN(" join "),
   WHERE,
   GROUP,
   COMPUTE,

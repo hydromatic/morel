@@ -50,6 +50,34 @@ where b = (i mod 2 = 0);
 >    {b=true,i=6},{b=false,i=7},{b=true,i=8},{b=false,i=9}]
 >   : {b:bool, i:int} list
 
+(*) Unbound variables in declared 'join';
+(*) condition on 'j' occurs after 'join'
+from i, j
+where i > 0 andalso i < 3
+join k, m
+where j > 4 andalso j < 7
+  andalso k > 8 andalso k < 11
+  andalso m > 12 andalso m < 15;
+> val it =
+>   [{i=1,j=5,k=9,m=13},{i=1,j=5,k=9,m=14},{i=1,j=5,k=10,m=13},
+>    {i=1,j=5,k=10,m=14},{i=1,j=6,k=9,m=13},{i=1,j=6,k=9,m=14},
+>    {i=1,j=6,k=10,m=13},{i=1,j=6,k=10,m=14},{i=2,j=5,k=9,m=13},
+>    {i=2,j=5,k=9,m=14},{i=2,j=5,k=10,m=13},{i=2,j=5,k=10,m=14},...]
+>   : {i:int, j:int, k:int, m:int} list
+
+(*) 'on' in 'from'
+from i in [1, 2, 3],
+  j in [2, 3, 4] on j = i;
+> val it = [{i=2,j=2},{i=3,j=3}] : {i:int, j:int} list
+
+from a in [1, 2],
+    b in [3, 4, 5] on a + b = 6
+where b < 5
+join c in [6, 7] on b + c = 10,
+    d in [7, 8];
+> val it = [{a=2,b=4,c=6,d=7},{a=2,b=4,c=6,d=8}]
+>   : {a:int, b:int, c:int, d:int} list
+
 from dno, name, loc
 where {deptno = dno, dname = name, loc} elem scott.dept
   andalso dno > 20;

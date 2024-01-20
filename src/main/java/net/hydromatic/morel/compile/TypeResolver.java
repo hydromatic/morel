@@ -480,7 +480,6 @@ public class TypeResolver {
       Map<Ast.Id, Unifier.Variable> fieldVars, List<Ast.FromStep> fromSteps) {
     switch (step.op) {
     case SCAN:
-    case INNER_JOIN:
       final Ast.Scan scan = (Ast.Scan) step;
       final Ast.Exp scanExp;
       final boolean eq;

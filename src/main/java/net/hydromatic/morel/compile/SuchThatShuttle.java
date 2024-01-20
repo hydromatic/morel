@@ -110,7 +110,6 @@ class SuchThatShuttle extends Shuttle {
         final Core.FromStep step = steps.get(i);
         switch (step.op) {
         case SCAN:
-        case INNER_JOIN:
           final Core.Scan scan = (Core.Scan) step;
           if (Extents.isInfinite(scan.exp)) {
             final int idPatCount = idPats.size();

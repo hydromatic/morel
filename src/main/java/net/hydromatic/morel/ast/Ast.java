@@ -1509,7 +1509,6 @@ public class Ast {
       final Set<Id> nextFields = new HashSet<>();
       for (FromStep step : steps) {
         switch (step.op) {
-        case INNER_JOIN:
         case SCAN:
           final Scan scan = (Scan) step;
           nextFields.clear();
@@ -1578,8 +1577,12 @@ public class Ast {
       } else {
         w.append("from");
         forEachIndexed(steps, (step, i) -> {
-          if (step.op == Op.SCAN && i > 0 && steps.get(i - 1).op == Op.SCAN) {
-            w.append(",");
+          if (step.op == Op.SCAN && i > 0) {
+            if (steps.get(i - 1).op == Op.SCAN) {
+              w.append(",");
+            } else {
+              w.append(" join");
+            }
           }
           step.unparse(w, 0, 0);
         });
@@ -1620,17 +1623,8 @@ public class Ast {
     public final @Nullable Exp exp;
     public final @Nullable Exp condition;
 
-    Scan(Pos pos, Op op, Pat pat, @Nullable Exp exp, @Nullable Exp condition) {
-      super(pos, op);
-      switch (op) {
-      case INNER_JOIN:
-        break;
-      case SCAN:
-        checkArgument(condition == null);
-        break;
-      default:
-        throw new AssertionError("not a join type " + op);
-      }
+    Scan(Pos pos, Pat pat, @Nullable Exp exp, @Nullable Exp condition) {
+      super(pos, Op.SCAN);
       this.pat = pat;
       this.exp = exp;
       this.condition = condition;
@@ -1668,7 +1662,7 @@ public class Ast {
           && Objects.equals(this.exp, exp)
           && Objects.equals(this.condition, condition)
           ? this
-          : new Scan(pos, op, pat, exp, condition);
+          : new Scan(pos, pat, exp, condition);
     }
   }
 

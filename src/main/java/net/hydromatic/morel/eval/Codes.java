@@ -3092,7 +3092,7 @@ public abstract class Codes {
     ScanRowSink(Op op, Core.Pat pat, Code code, Code conditionCode,
         RowSink rowSink) {
       super(rowSink);
-      checkArgument(op == Op.INNER_JOIN);
+      checkArgument(op == Op.SCAN);
       this.op = op;
       this.pat = pat;
       this.code = code;
@@ -3101,8 +3101,7 @@ public abstract class Codes {
 
     @Override public Describer describe(Describer describer) {
       return describer.start("join", d ->
-          d.arg("op", op.padded.trim())
-              .arg("pat", pat)
+          d.arg("pat", pat)
               .arg("exp", code)
               .argIf("condition", conditionCode, !isConstantTrue(conditionCode))
               .arg("sink", rowSink));
