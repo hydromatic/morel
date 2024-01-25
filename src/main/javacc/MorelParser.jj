@@ -381,10 +381,13 @@ void fromStep(List<FromStep> steps) :
   final Span span;
   final Op op;
   final Exp filterExp;
+  final Exp intoExp;
   final Exp skipExp;
+  final Exp throughExp;
   final Exp takeExp;
   final Exp yieldExp;
   final PairList<Id, Exp> groupExps;
+  final Pat pat;
   final List<Aggregate> aggregates;
   final List<OrderItem> orderItems;
 }
@@ -416,6 +419,10 @@ void fromStep(List<FromStep> steps) :
     steps.add(ast.compute(span.end(this), aggregates));
   }
 |
+  <INTO> { span = Span.of(pos()); } intoExp = expression() {
+    steps.add(ast.into(span.end(this), intoExp));
+  }
+|
   <ORDER> { span = Span.of(pos()); } orderItems = orderItemCommaList() {
     steps.add(ast.order(span.end(this), orderItems));
   }
@@ -426,6 +433,11 @@ void fromStep(List<FromStep> steps) :
 |
   <TAKE> { span = Span.of(pos()); } takeExp = expression() {
     steps.add(ast.take(span.end(this), takeExp));
+  }
+|
+  <THROUGH> { span = Span.of(pos()); }
+  pat = pat() <IN> throughExp = expression() {
+    steps.add(ast.through(span.end(this), pat, throughExp));
   }
 |
   <YIELD> { span = Span.of(pos()); } yieldExp = expression() {
@@ -1442,11 +1454,13 @@ AstNode statementEof() :
 | < DESC: "desc" >
 | < FROM: "from" >
 | < GROUP: "group" >
+| < INTO: "into" >
 | < JOIN: "join" >
 | < ON: "on" >
 | < ORDER: "order" >
 | < SKIP_: "skip" >
 | < TAKE: "take" >
+| < THROUGH: "through" >
 | < WHERE: "where" >
 | < YIELD: "yield" >
 }

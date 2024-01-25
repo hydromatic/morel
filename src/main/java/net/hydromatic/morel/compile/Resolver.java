@@ -68,6 +68,8 @@ import static net.hydromatic.morel.util.Static.transformEager;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.calcite.util.Util.intersects;
+import static org.apache.calcite.util.Util.last;
+import static org.apache.calcite.util.Util.skipLast;
 
 /** Converts AST expressions to Core expressions. */
 public class Resolver {
@@ -853,13 +855,29 @@ public class Resolver {
     final FromBuilder fromBuilder = core.fromBuilder(typeMap.typeSystem, env);
 
     Core.Exp run(Ast.From from) {
-      from.steps.forEach(this::accept);
-      final Core.Exp e = fromBuilder.buildSimplify();
-      if (from.isCompute()) {
-        return core.only(typeMap.typeSystem, from.pos, e);
-      } else {
-        return e;
+      if (from.isInto()) {
+        // Translate "from ... into f" as if they had written "f (from ...)"
+        final Core.Exp coreFrom = run(skipLast(from.steps));
+        final Ast.Into into = (Ast.Into) last(from.steps);
+        final Core.Exp exp = toCore(into.exp);
+        return core.apply(exp.pos, typeMap.getType(from), exp, coreFrom);
       }
+
+      final Core.Exp coreFrom = run(from.steps);
+      if (from.isCompute()) {
+        return core.only(typeMap.typeSystem, from.pos, coreFrom);
+      } else {
+        return coreFrom;
+      }
+    }
+
+    private Core.Exp run(List<Ast.FromStep> steps) {
+      steps.forEach(this::accept);
+      return fromBuilder.buildSimplify();
+    }
+
+    @Override protected void visit(Ast.From from) {
+      // Do not traverse into the sub-"from".
     }
 
     @Override protected void visit(Ast.Scan scan) {
@@ -907,6 +925,17 @@ public class Resolver {
     @Override protected void visit(Ast.Order order) {
       final Resolver r = withEnv(fromBuilder.bindings());
       fromBuilder.order(transformEager(order.orderItems, r::toCore));
+    }
+
+    @Override protected void visit(Ast.Through through) {
+      // Translate "from ... through p in f"
+      // as if they wrote "from p in f (from ...)"
+      final Core.From from = fromBuilder.build();
+      fromBuilder.clear();
+      final Core.Exp exp = toCore(through.exp);
+      final Core.Pat pat = toCore(through.pat);
+      final Type type = typeMap.typeSystem.listType(pat.type);
+      fromBuilder.scan(pat, core.apply(through.pos, type, exp, from));
     }
 
     @Override protected void visit(Ast.Compute compute) {

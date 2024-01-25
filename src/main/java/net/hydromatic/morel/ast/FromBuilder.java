@@ -82,6 +82,14 @@ public class FromBuilder {
     this.env = env;
   }
 
+  /** Resets state as if this {@code FromBuilder} had just been created. */
+  public void clear() {
+    steps.clear();
+    bindings.clear();
+    removeIfNotLastIndex = Integer.MIN_VALUE;
+    removeIfLastIndex = Integer.MIN_VALUE;
+  }
+
   @Override public String toString() {
     return steps.toString();
   }

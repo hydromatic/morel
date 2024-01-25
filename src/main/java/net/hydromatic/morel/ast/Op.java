@@ -138,6 +138,8 @@ public enum Op {
   SKIP,
   TAKE,
   YIELD,
+  INTO,
+  THROUGH,
   AGGREGATE,
   IF;
 

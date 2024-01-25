@@ -220,6 +220,15 @@ public class Visitor {
     yield.exp.accept(this);
   }
 
+  protected void visit(Ast.Into into) {
+    into.exp.accept(this);
+  }
+
+  protected void visit(Ast.Through through) {
+    through.pat.accept(this);
+    through.exp.accept(this);
+  }
+
   protected void visit(Ast.Compute compute) {
     compute.aggregates.forEach(this::accept);
   }

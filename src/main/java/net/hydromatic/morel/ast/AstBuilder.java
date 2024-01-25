@@ -495,6 +495,14 @@ public enum AstBuilder {
   public Ast.FromStep yield(Pos pos, Ast.Exp exp) {
     return new Ast.Yield(pos, exp);
   }
+
+  public Ast.FromStep into(Pos pos, Ast.Exp exp) {
+    return new Ast.Into(pos, exp);
+  }
+
+  public Ast.FromStep through(Pos pos, Ast.Pat pat, Ast.Exp exp) {
+    return new Ast.Through(pos, pat, exp);
+  }
 }
 
 // End AstBuilder.java

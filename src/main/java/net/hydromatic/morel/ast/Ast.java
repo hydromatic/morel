@@ -1500,10 +1500,13 @@ public class Ast {
     }
 
     static @Nullable Exp implicitYieldExp(Pos pos, List<FromStep> steps) {
-      if (!steps.isEmpty()
-          && getLast(steps) instanceof Ast.Yield) {
-        // No implicit yield is needed; the last step is an explicit yield
-        return null;
+      if (!steps.isEmpty()) {
+        final FromStep lastStep = getLast(steps);
+        if (lastStep.op == Op.YIELD
+            || lastStep.op == Op.INTO) {
+          // No implicit yield is needed; the last step is an explicit yield
+          return null;
+        }
       }
       Set<Id> fields = ImmutableSet.of();
       final Set<Id> nextFields = new HashSet<>();
@@ -1514,6 +1517,17 @@ public class Ast {
           nextFields.clear();
           nextFields.addAll(fields);
           scan.pat.visit(p -> {
+            if (p instanceof IdPat) {
+              nextFields.add(ast.id(Pos.ZERO, ((IdPat) p).name));
+            }
+          });
+          fields = ImmutableSet.copyOf(nextFields);
+          break;
+
+        case THROUGH:
+          final Through through = (Through) step;
+          nextFields.clear();
+          through.pat.visit(p -> {
             if (p instanceof IdPat) {
               nextFields.add(ast.id(Pos.ZERO, ((IdPat) p).name));
             }
@@ -1604,6 +1618,13 @@ public class Ast {
     public boolean isCompute() {
       return !steps.isEmpty()
           && steps.get(steps.size() - 1).op == Op.COMPUTE;
+    }
+
+    /** Returns whether this {@code from} expression ends with as {@code into}
+     * step. If so, its type is a scalar value (or record), not a list. */
+    public boolean isInto() {
+      return !steps.isEmpty()
+          && steps.get(steps.size() - 1).op == Op.INTO;
     }
   }
 
@@ -1767,6 +1788,64 @@ public class Ast {
 
     public Yield copy(Exp exp) {
       return this.exp.equals(exp) ? this : new Yield(pos, exp);
+    }
+  }
+
+  /** An {@code into} clause in a {@code from} expression. */
+  public static class Into extends FromStep {
+    public final Exp exp;
+
+    Into(Pos pos, Exp exp) {
+      super(pos, Op.INTO);
+      this.exp = exp;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" into ").append(exp, 0, 0);
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Into copy(Exp exp) {
+      return this.exp.equals(exp) ? this : new Into(pos, exp);
+    }
+  }
+
+  /** An {@code through} clause in a {@code from} expression. */
+  public static class Through extends FromStep {
+    public final Pat pat;
+    public final Exp exp;
+
+    Through(Pos pos, Pat pat, Exp exp) {
+      super(pos, Op.THROUGH);
+      this.pat = pat;
+      this.exp = exp;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" through ").append(pat, 0, 0)
+          .append(" in ").append(exp, 0, 0);
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Through copy(Pat pat, Exp exp) {
+      return this.pat.equals(pat)
+          && this.exp.equals(exp)
+          ? this
+          : new Through(pos, pat, exp);
     }
   }
 

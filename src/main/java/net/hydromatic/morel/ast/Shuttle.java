@@ -252,6 +252,14 @@ public class Shuttle {
     return ast.yield(yield.pos, yield.exp.accept(this));
   }
 
+  protected AstNode visit(Ast.Into into) {
+    return ast.into(into.pos, into.exp);
+  }
+
+  protected AstNode visit(Ast.Through through) {
+    return ast.through(through.pos, through.pat, through.exp);
+  }
+
   protected AstNode visit(Ast.Compute compute) {
     return ast.compute(compute.pos, compute.aggregates);
   }
