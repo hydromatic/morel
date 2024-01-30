@@ -622,7 +622,15 @@ from p in wordCount ["a skunk sat on a stump",
     "and thunk the stump stunk",
     "but the stump thunk the skunk stunk"]
 order p.word;
-> java.lang.IllegalArgumentException: no field 'word' in type 'string * int'
+> stdIn:4.7 Error: no field 'word' in type 'string * int'
+>   raised at: stdIn:4.7
+from p in wordCount ["a skunk sat on a stump",
+    "and thunk the stump stunk",
+    "but the stump thunk the skunk stunk"]
+order #1 p;
+> val it =
+>   [("a",2),("and",1),("but",1),("on",1),("sat",1),("skunk",2),("stump",3),
+>    ("stunk",2),("the",3),("thunk",2)] : (string * int) list
 
 (*) WordCount in Morel
 val lines = ["a skunk sat on a stump",

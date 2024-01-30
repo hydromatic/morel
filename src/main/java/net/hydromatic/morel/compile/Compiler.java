@@ -358,13 +358,19 @@ public class Compiler {
         // Note that we don't use nextFactory.
         final Code yieldCode = compile(cx, yield.exp);
         return () -> Codes.collectRowSink(yieldCode);
-      } else {
+      } else if (yield.exp instanceof Core.Tuple) {
         final Core.Tuple tuple = (Core.Tuple) yield.exp;
         final RecordLikeType recordType = tuple.type();
         final ImmutableSortedMap.Builder<String, Code> mapCodes =
             ImmutableSortedMap.orderedBy(RecordType.ORDERING);
         forEach(tuple.args, recordType.argNameTypes().keySet(), (exp, name) ->
             mapCodes.put(name, compile(cx, exp)));
+        return () -> Codes.yieldRowSink(mapCodes.build(), nextFactory.get());
+      } else {
+        final ImmutableSortedMap.Builder<String, Code> mapCodes =
+            ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+        final Binding binding = yield.bindings.get(0);
+        mapCodes.put(binding.id.name, compile(cx, yield.exp));
         return () -> Codes.yieldRowSink(mapCodes.build(), nextFactory.get());
       }
 

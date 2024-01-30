@@ -47,7 +47,6 @@ import net.hydromatic.morel.util.Unifier;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.calcite.util.Holder;
@@ -57,6 +56,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -64,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
-import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -83,6 +82,7 @@ import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import static java.lang.String.join;
+import static java.util.Objects.requireNonNull;
 
 /** Resolves the type of an expression. */
 @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
@@ -105,7 +105,7 @@ public class TypeResolver {
   static final String PROGRESSIVE_LABEL = "z$dummy";
 
   private TypeResolver(TypeSystem typeSystem) {
-    this.typeSystem = Objects.requireNonNull(typeSystem);
+    this.typeSystem = requireNonNull(typeSystem);
   }
 
   /** Deduces the datatype of a declaration. */
@@ -189,7 +189,7 @@ public class TypeResolver {
         if (type.isProgressive()) {
           progressive.set(true);
         }
-      });
+      }, apply -> {}, apply -> {});
       if (progressive.get()) {
         node2.accept(FieldExpander.create(typeSystem, env));
       } else {
@@ -203,21 +203,50 @@ public class TypeResolver {
    * an unresolved type. Throws if there are unresolved field references. */
   private static void checkNoUnresolvedFieldRefs(Ast.Decl decl,
       TypeMap typeMap) {
-    forEachUnresolvedField(decl, typeMap, apply -> {
-      throw new TypeException("unresolved flex record (can't tell "
-          + "what fields there are besides " + apply.fn + ")",
-          apply.arg.pos);
-    });
+    forEachUnresolvedField(decl, typeMap,
+        apply -> {
+          throw new TypeException("unresolved flex record (can't tell "
+              + "what fields there are besides " + apply.fn + ")",
+              apply.arg.pos);
+        },
+        apply -> {
+          throw new TypeException("reference to field "
+              + ((Ast.RecordSelector) apply.fn).name
+              + " of non-record type " + typeMap.getType(apply.arg),
+              apply.arg.pos);
+        },
+        apply -> {
+          throw new TypeException("no field '"
+              + ((Ast.RecordSelector) apply.fn).name
+              + "' in type '" + typeMap.getType(apply.arg) + "'",
+              apply.arg.pos);
+        });
   }
 
   private static void forEachUnresolvedField(Ast.Decl decl, TypeMap typeMap,
-      Consumer<Ast.Apply> consumer) {
+      Consumer<Ast.Apply> variableConsumer,
+      Consumer<Ast.Apply> notRecordTypeConsumer,
+      Consumer<Ast.Apply> noFieldConsumer) {
     decl.accept(
         new Visitor() {
           @Override protected void visit(Ast.Apply apply) {
-            if (apply.fn.op == Op.RECORD_SELECTOR
-                && typeMap.typeIsVariable(apply.arg)) {
-              consumer.accept(apply);
+            if (apply.fn.op == Op.RECORD_SELECTOR) {
+              final Ast.RecordSelector recordSelector =
+                  (Ast.RecordSelector) apply.fn;
+              if (typeMap.typeIsVariable(apply.arg)) {
+                variableConsumer.accept(apply);
+              } else {
+                final Collection<String> fieldNames =
+                    typeMap.typeFieldNames(apply.arg);
+                if (fieldNames == null) {
+                  notRecordTypeConsumer.accept(apply);
+                } else {
+                  if (!fieldNames.contains(recordSelector.name)) {
+                    // "#f r" is valid if "r" is a record type with a field "f"
+                    noFieldConsumer.accept(apply);
+                  }
+                }
+              }
             }
             super.visit(apply);
           }
@@ -226,8 +255,8 @@ public class TypeResolver {
 
   private <E extends AstNode> E reg(E node,
       Unifier.Variable variable, Unifier.Term term) {
-    Objects.requireNonNull(node);
-    Objects.requireNonNull(term);
+    requireNonNull(node);
+    requireNonNull(term);
     map.put(node, term);
     if (variable != null) {
       equiv(term, variable);
@@ -238,7 +267,6 @@ public class TypeResolver {
   private Ast.Exp deduceType(TypeEnv env, Ast.Exp node, Unifier.Variable v) {
     final List<Ast.Exp> args2;
     final Unifier.Variable v2;
-    Unifier.Variable v3 = null;
     final Map<Ast.IdPat, Unifier.Term> termMap;
     switch (node.op) {
     case BOOL_LITERAL:
@@ -353,6 +381,7 @@ public class TypeResolver {
       // "(from exp: v50 as id: v60 [, exp: v51 as id: v61]...
       //  [where filterExp: v5] [yield yieldExp: v4]): v"
       final Ast.From from = (Ast.From) node;
+      Unifier.Variable v3 = unifier.variable();
       TypeEnv env3 = env;
       final Map<Ast.Id, Unifier.Variable> fieldVars = new LinkedHashMap<>();
       final List<Ast.FromStep> fromSteps = new ArrayList<>();
@@ -362,12 +391,8 @@ public class TypeResolver {
         if (step.i != from.steps.size() - 1) {
           switch (step.e.op) {
           case COMPUTE:
-            throw new AssertionError("'compute' step must be last in 'from'");
-          case YIELD:
-            if (((Ast.Yield) step.e).exp.op != Op.RECORD) {
-              throw new AssertionError("'yield' step that is not last in 'from'"
-                  + " must be a record expression");
-            }
+            throw new IllegalArgumentException(
+                "'compute' step must be last in 'from'");
           }
         }
         env3 = p.left;
@@ -378,12 +403,10 @@ public class TypeResolver {
         v3 = unifier.variable();
         yieldExp2 = deduceType(env3, from.implicitYieldExp, v3);
       } else {
-        Objects.requireNonNull(v3);
+        requireNonNull(v3);
         yieldExp2 = null;
       }
-      final Ast.From from2 =
-          from.copy(fromSteps,
-              from.implicitYieldExp != null ? yieldExp2 : null);
+      final Ast.From from2 = from.copy(fromSteps, yieldExp2);
       return reg(from2, v,
           from.isCompute() ? v3 : unifier.apply(LIST_TY_CON, v3));
 
@@ -478,6 +501,7 @@ public class TypeResolver {
   private Pair<TypeEnv, Unifier.Variable> deduceStepType(TypeEnv env,
       Ast.FromStep step, Unifier.Variable v, final TypeEnv env2,
       Map<Ast.Id, Unifier.Variable> fieldVars, List<Ast.FromStep> fromSteps) {
+    requireNonNull(v);
     switch (step.op) {
     case SCAN:
       final Ast.Scan scan = (Ast.Scan) step;
@@ -512,6 +536,7 @@ public class TypeResolver {
         fieldVars.put(ast.id(Pos.ZERO, e.getKey().name),
             (Unifier.Variable) e.getValue());
       }
+      v = fieldVar(fieldVars);
       final Ast.Exp scanCondition2;
       if (scan.condition != null) {
         final Unifier.Variable v5 = unifier.variable();
@@ -582,8 +607,6 @@ public class TypeResolver {
       final Ast.Group group = (Ast.Group) step;
       validateGroup(group);
       TypeEnv env3 = env;
-      final Map<Ast.Id, Unifier.Variable> inFieldVars =
-          ImmutableMap.copyOf(fieldVars);
       fieldVars.clear();
       final PairList<Ast.Id, Ast.Exp> groupExps = PairList.of();
       for (Map.Entry<Ast.Id, Ast.Exp> groupExp : group.groupExps) {
@@ -605,18 +628,16 @@ public class TypeResolver {
         final Ast.Exp aggregateFn2 =
             deduceType(env2, aggregate.aggregate, v9);
         final Ast.Exp arg2;
-        final Unifier.Term term;
+        final Unifier.Variable v10;
         if (aggregate.argument == null) {
           arg2 = null;
-          term = fieldRecord(inFieldVars);
+          v10 = v;
         } else {
-          final Unifier.Variable v10 = unifier.variable();
+          v10 = unifier.variable();
           arg2 = deduceType(env2, aggregate.argument, v10);
-          term = v10;
         }
         reg(aggregate.aggregate, null, v9);
-        equiv(
-            unifier.apply(FN_TY_CON, unifier.apply(LIST_TY_CON, term), v8),
+        equiv(unifier.apply(FN_TY_CON, unifier.apply(LIST_TY_CON, v10), v8),
             v9);
         env3 = env3.bind(id.name, v8);
         fieldVars.put(id, v8);
@@ -648,16 +669,16 @@ public class TypeResolver {
     }
   }
 
-  private Unifier.Term fieldRecord(Map<Ast.Id, Unifier.Variable> fieldVars) {
+  private Unifier.Variable fieldVar(Map<Ast.Id, Unifier.Variable> fieldVars) {
     switch (fieldVars.size()) {
     case 0:
-      return toTerm(PrimitiveType.UNIT);
+      return equiv(toTerm(PrimitiveType.UNIT), unifier.variable());
     case 1:
       return Iterables.getOnlyElement(fieldVars.values());
     default:
       final TreeMap<String, Unifier.Variable> map = new TreeMap<>();
       fieldVars.forEach((k, v) -> map.put(k.name, v));
-      return record(map);
+      return equiv(record(map), unifier.variable());
     }
   }
 
@@ -1245,8 +1266,9 @@ public class TypeResolver {
         ast.apply(ast.id(Pos.ZERO, call.op.opName), call.a), v);
   }
 
-  private void equiv(Unifier.Term term, Unifier.Variable atom) {
-    terms.add(new TermVariable(term, atom));
+  private Unifier.Variable equiv(Unifier.Term term, Unifier.Variable v) {
+    terms.add(new TermVariable(term, v));
+    return v;
   }
 
   private void equiv(Unifier.Term term, Unifier.Term term2) {
@@ -1397,9 +1419,9 @@ public class TypeResolver {
 
     BindTypeEnv(String definedName,
         Function<TypeSystem, Unifier.Term> termFactory, TypeEnv parent) {
-      this.definedName = Objects.requireNonNull(definedName);
-      this.termFactory = Objects.requireNonNull(termFactory);
-      this.parent = Objects.requireNonNull(parent);
+      this.definedName = requireNonNull(definedName);
+      this.termFactory = requireNonNull(termFactory);
+      this.parent = requireNonNull(parent);
     }
 
     @Override public Unifier.Term get(TypeSystem typeSystem, String name,
@@ -1442,7 +1464,7 @@ public class TypeResolver {
     private TypeEnv typeEnv;
 
     TypeEnvHolder(TypeEnv typeEnv) {
-      this.typeEnv = Objects.requireNonNull(typeEnv);
+      this.typeEnv = requireNonNull(typeEnv);
     }
 
     @Override public void accept(String name, Type type) {
@@ -1468,9 +1490,9 @@ public class TypeResolver {
     private Resolved(Environment env,
         Ast.Decl originalNode, Ast.Decl node, TypeMap typeMap) {
       this.env = env;
-      this.originalNode = Objects.requireNonNull(originalNode);
-      this.node = Objects.requireNonNull(node);
-      this.typeMap = Objects.requireNonNull(typeMap);
+      this.originalNode = requireNonNull(originalNode);
+      this.node = requireNonNull(node);
+      this.typeMap = requireNonNull(typeMap);
       Preconditions.checkArgument(originalNode instanceof Ast.FunDecl
           ? node instanceof Ast.ValDecl
           : originalNode.getClass() == node.getClass());

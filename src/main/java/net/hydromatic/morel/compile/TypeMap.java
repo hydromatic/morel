@@ -19,6 +19,8 @@
 package net.hydromatic.morel.compile;
 
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.type.RecordLikeType;
+import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
@@ -26,14 +28,16 @@ import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.Unifier;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedSet;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.transform;
@@ -86,13 +90,13 @@ public class TypeMap {
     return termToType(term);
   }
 
-  /** Returns the type of an AST node, or null if no type is known. */
+  /** Returns an AST node's type, or null if no type is known. */
   public @Nullable Type getTypeOpt(AstNode node) {
     final Unifier.Term term = nodeTypeTerms.get(node);
     return term == null ? null : termToType(term);
   }
 
-  /** Returns whether the type of an AST node will be a type variable. */
+  /** Returns whether an AST node's type will be a type variable. */
   public boolean typeIsVariable(AstNode node) {
     final Unifier.Term term = nodeTypeTerms.get(node);
     if (term instanceof Unifier.Variable) {
@@ -109,6 +113,31 @@ public class TypeMap {
    * because it is not relevant to the program. */
   public boolean hasType(AstNode node) {
     return nodeTypeTerms.containsKey(node);
+  }
+
+  /** Returns the field names if an AST node has a type that is a record or a
+   * tuple, otherwise null. */
+  @Nullable SortedSet<String> typeFieldNames(AstNode node) {
+    // The term might be a sequence or a variable. We only materialize a type
+    // if it is a variable. Materializing a type for every sequence allocated
+    // lots of temporary type variables, and created a lot of noise in ref logs.
+    final Unifier.Term term = nodeTypeTerms.get(node);
+    if (term instanceof Unifier.Sequence) {
+      final Unifier.Sequence sequence = (Unifier.Sequence) term;
+      // E.g. "record:a:b" becomes record type "{a:t0, b:t1}".
+      final List<String> fieldList = TypeResolver.fieldList(sequence);
+      if (fieldList != null) {
+        return ImmutableSortedSet.copyOf(RecordType.ORDERING, fieldList);
+      }
+    }
+    if (term instanceof Unifier.Variable) {
+      final Type type = termToType(term);
+      if (type instanceof RecordLikeType) {
+        return (SortedSet<String>)
+            ((RecordLikeType) type).argNameTypes().keySet();
+      }
+    }
+    return null;
   }
 
   /** Visitor that converts type terms into actual types. */

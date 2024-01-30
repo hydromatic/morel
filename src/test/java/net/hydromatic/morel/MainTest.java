@@ -20,6 +20,7 @@ package net.hydromatic.morel;
 
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.compile.CompileException;
+import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.foreign.ForeignValue;
@@ -1812,6 +1813,12 @@ public class MainTest {
     ml("from (x, y)")
         .assertParseThrowsParseException(
             startsWith("Encountered \"<EOF>\" at line 1, column 11."));
+    ml("from e in emps\n"
+        + "yield e.empno\n"
+        + "compute sum, count")
+        .assertParse("from e in emps "
+            + "yield #empno e "
+            + "compute sum = sum, count = count");
   }
 
   @Test void testFromYield() {
@@ -1838,28 +1845,35 @@ public class MainTest {
     String value = "'yield' step that is not last in 'from' must be a record "
         + "expression";
     ml("from a in [1], b in [true] yield (b,a) where b")
-        .assertTypeThrows(
-            throwsA(AssertionError.class,
-                is(value)));
+        .assertType("{a:int, b:bool} list");
+    ml("from a in [1], b in [true] yield (b,a) where $c$", '$')
+        .assertCompileException(pos ->
+            throwsA(CompileException.class,
+                "unbound variable or constructor: c", pos));
     ml("from a in [1], b in [true] yield {b,a} where b")
         .assertType("{a:int, b:bool} list")
         .assertEval(is(list(list(1, true))));
     ml("from d in [{a=1,b=true}], i in [2] yield i")
         .assertType("int list");
-    // Note that 'd' has record type but is not a record expression;
-    // we may allow record types in the future.
-    ml("from d in [{a=1,b=true}], i in [2] yield d yield a")
-        .assertTypeThrows(throwsA(AssertionError.class, is(value)));
+    // Note that 'd' has record type but is not a record expression
+    ml("from d in [{a=1,b=true}], i in [2] yield d yield $a$", '$')
+        .assertCompileException(pos ->
+            throwsA(CompileException.class,
+                "unbound variable or constructor: a", pos));
     ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} yield a")
         .assertType("int list");
     ml("from d in [{a=1,b=true}], i in [2] yield d where true")
-        .assertTypeThrows(throwsA(AssertionError.class, is(value)));
+        .assertType("{d:{a:int, b:bool}, i:int} list");
     ml("from d in [{a=1,b=true}], i in [2] yield i yield 3")
-        .assertTypeThrows(throwsA(AssertionError.class, is(value)));
+        .assertType("int list");
     ml("from d in [{a=1,b=true}], i in [2] yield d")
         .assertType("{a:int, b:bool} list");
     ml("from d in [{a=1,b=true}], i in [2] yield d yield 3")
-        .assertTypeThrows(throwsA(AssertionError.class, is(value)));
+        .assertType("int list");
+    ml("from d in [{a=1,b=true}] yield $d.x$", '$')
+        .assertTypeThrows(
+            pos -> throwsA(TypeResolver.TypeException.class,
+                is("no field 'x' in type '{a:int, b:bool}'")));
   }
 
   @Test void testFromYieldExpression() {
@@ -2584,7 +2598,7 @@ public class MainTest {
     // "compute" must not be followed by other steps
     ml("from i in [1, 2, 3] compute s = sum of i yield s + 2")
         .assertTypeThrows(
-            throwsA(AssertionError.class,
+            throwsA(IllegalArgumentException.class,
                 is("'compute' step must be last in 'from'")));
     // similar, but valid
     ml("(from i in [1, 2, 3] compute s = sum of i) + 2")
