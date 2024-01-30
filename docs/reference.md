@@ -303,6 +303,7 @@ Exception:
 | General.ignore | &alpha; &rarr; unit | "ignore x" always returns `unit`. The function evaluates its argument but throws away the value. |
 | General.op o | (&beta; &rarr; &gamma;) (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma; | "f o g" is the function composition of `f` and `g`. Thus, `(f o g) a` is equivalent to `f (g a)`. |
 | Interact.use | string &rarr; unit | "use f" loads source text from the file named `f`. |
+| Interact.useSilently | string &rarr; unit | "useSilently f" loads source text from the file named `f`, without printing to stdout. |
 | List.nil | &alpha; list | "nil" is the empty list. |
 | List.null | &alpha; list &rarr; bool | "null l" returns `true` if the list `l` is empty. |
 | List.length | &alpha; list &rarr; int | "length l" returns the number of elements in the list `l`. |

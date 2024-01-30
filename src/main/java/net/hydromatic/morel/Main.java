@@ -213,7 +213,7 @@ public class Main {
     final Map<String, Binding> outBindings = new LinkedHashMap<>();
     final Shell shell = new Shell(this, env, echoLines, outLines, outBindings);
     session.withShell(shell, outLines, session1 ->
-        shell.run(session1, new BufferingReader(in)));
+        shell.run(session1, new BufferingReader(in), echoLines, outLines));
     out.flush();
   }
 
@@ -236,7 +236,8 @@ public class Main {
       this.bindingMap = bindingMap;
     }
 
-    void run(Session session, BufferingReader in2) {
+    void run(Session session, BufferingReader in2, Consumer<String> echoLines,
+        Consumer<String> outLines) {
       final MorelParserImpl parser = new MorelParserImpl(in2);
       final SubShell subShell =
           new SubShell(main, echoLines, outLines, bindingMap, env0);
@@ -280,7 +281,7 @@ public class Main {
       }
     }
 
-    @Override public void use(String fileName, Pos pos) {
+    @Override public void use(String fileName, boolean silent, Pos pos) {
       throw new UnsupportedOperationException();
     }
 
@@ -310,7 +311,7 @@ public class Main {
       super(main, env0, echoLines, outLines, outBindings);
     }
 
-    @Override public void use(String fileName, Pos pos) {
+    @Override public void use(String fileName, boolean silent, Pos pos) {
       outLines.accept("[opening " + fileName + "]");
       File file = new File(fileName);
       if (!file.isAbsolute()) {
@@ -324,9 +325,13 @@ public class Main {
             + ", No such file or directory]");
         throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR, pos);
       }
-      try (FileReader fileReader = new FileReader(file);
-           BufferedReader bufferedReader = new BufferedReader(fileReader)) {
-        run(main.session, new BufferingReader(bufferedReader));
+      final Consumer<String> echoLines2 = silent ? line -> {} : echoLines;
+      final Consumer<String> outLines2 = silent ? line -> {} : outLines;
+      try (FileReader in = new FileReader(file);
+           Reader bufferedReader =
+               buffer(main.idempotent ? stripOutLines(in) : in)) {
+        run(main.session, new BufferingReader(bufferedReader), echoLines2,
+            outLines2);
       } catch (IOException e) {
         e.printStackTrace();
       }

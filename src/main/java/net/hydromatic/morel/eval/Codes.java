@@ -341,7 +341,12 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#INTERACT_USE */
-  private static final Applicable INTERACT_USE = new InteractUse(Pos.ZERO);
+  private static final Applicable INTERACT_USE =
+      new InteractUse(Pos.ZERO, false);
+
+  /** @see BuiltIn#INTERACT_USE_SILENTLY */
+  private static final Applicable INTERACT_USE_SILENTLY =
+      new InteractUse(Pos.ZERO, true);
 
   /** Removes wrappers, in particular the one due to
    * {@link #wrapRelList(Code)}. */
@@ -358,18 +363,21 @@ public abstract class Codes {
   /** Implements {@link BuiltIn#INTERACT_USE}. */
   private static class InteractUse extends ApplicableImpl
       implements Positioned {
-    InteractUse(Pos pos) {
+    private final boolean silent;
+
+    InteractUse(Pos pos, boolean silent) {
       super(BuiltIn.INTERACT_USE, pos);
+      this.silent = silent;
     }
 
     @Override public Applicable withPos(Pos pos) {
-      return new InteractUse(pos);
+      return new InteractUse(pos, silent);
     }
 
     @Override public Object apply(EvalEnv env, Object arg) {
       final String f = (String) arg;
       final Session session = (Session) env.getOpt(EvalEnv.SESSION);
-      session.use(f, pos);
+      session.use(f, silent, pos);
       return Unit.INSTANCE;
     }
   }
@@ -2783,6 +2791,7 @@ public abstract class Codes {
           .put(BuiltIn.IGNORE, IGNORE)
           .put(BuiltIn.GENERAL_OP_O, GENERAL_OP_O)
           .put(BuiltIn.INTERACT_USE, INTERACT_USE)
+          .put(BuiltIn.INTERACT_USE_SILENTLY, INTERACT_USE_SILENTLY)
           .put(BuiltIn.OP_CARET, OP_CARET)
           .put(BuiltIn.OP_CONS, OP_CONS)
           .put(BuiltIn.OP_DIV, OP_DIV)

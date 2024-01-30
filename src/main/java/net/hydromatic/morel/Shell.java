@@ -527,7 +527,7 @@ public class Shell {
         this.bindings = bindings;
       }
 
-      @Override public void use(String fileName, Pos pos) {
+      @Override public void use(String fileName, boolean silent, Pos pos) {
         outLines.accept("[opening " + fileName + "]");
         File file = new File(fileName);
         if (!file.isAbsolute()) {

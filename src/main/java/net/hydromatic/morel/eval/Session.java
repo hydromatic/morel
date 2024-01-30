@@ -95,8 +95,8 @@ public class Session {
     }
   }
 
-  public void use(String fileName, Pos pos) {
-    shell.use(fileName, pos);
+  public void use(String fileName, boolean silent, Pos pos) {
+    shell.use(fileName, silent, pos);
   }
 
   public void handle(MorelException e, StringBuilder buf) {
@@ -105,7 +105,7 @@ public class Session {
 
   /** Callback to implement "use" command. */
   public interface Shell {
-    void use(String fileName, Pos pos);
+    void use(String fileName, boolean silent, Pos pos);
 
     /** Handles an exception. Particular implementations may re-throw the
      * exception, or may format the exception to a buffer that will be added to
@@ -136,7 +136,7 @@ public class Session {
       }
     };
 
-    @Override public void use(String fileName, Pos pos) {
+    @Override public void use(String fileName, boolean silent, Pos pos) {
       throw new UnsupportedOperationException();
     }
   }

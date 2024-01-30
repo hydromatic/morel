@@ -201,6 +201,13 @@ public enum BuiltIn {
   INTERACT_USE("Interact", "use", "use", ts ->
       ts.fnType(STRING, UNIT)),
 
+  /** Function "Interact.useSilently" of type "string &rarr; unit"
+   *
+   * <p>"useSilently f" loads source text from the file named `f`,
+   * without printing to stdout. */
+  INTERACT_USE_SILENTLY("Interact", "useSilently", "useSilently", ts ->
+      ts.fnType(STRING, UNIT)),
+
   /** Constant "String.maxSize", of type "int".
    *
    * <p>"The longest allowed size of a string". */
