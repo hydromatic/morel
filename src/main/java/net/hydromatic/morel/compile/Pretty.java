@@ -34,9 +34,9 @@ import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Ord;
 
 import com.google.common.collect.Iterables;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.List;
-import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.parse.Parsers.appendId;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
@@ -62,8 +62,8 @@ class Pretty {
   }
 
   /** Prints a value to a buffer. */
-  StringBuilder pretty(@Nonnull StringBuilder buf,
-      @Nonnull Type type, @Nonnull Object value) {
+  StringBuilder pretty(@NonNull StringBuilder buf,
+      @NonNull Type type, @NonNull Object value) {
     int lineEnd = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
     return pretty1(buf, 0, new int[] {lineEnd}, 0, type, value, 0, 0);
   }
@@ -71,8 +71,8 @@ class Pretty {
   /** Prints a value to a buffer. If the first attempt goes beyond
    * {@code lineEnd}, back-tracks, adds a newline and indent, and
    * tries again one time. */
-  private StringBuilder pretty1(@Nonnull StringBuilder buf, int indent,
-      int[] lineEnd, int depth, @Nonnull Type type, @Nonnull Object value,
+  private StringBuilder pretty1(@NonNull StringBuilder buf, int indent,
+      int[] lineEnd, int depth, @NonNull Type type, @NonNull Object value,
       int leftPrec, int rightPrec) {
     final int start = buf.length();
     final int end = lineEnd[0];
@@ -96,15 +96,15 @@ class Pretty {
     return buf;
   }
 
-  private static void indent(@Nonnull StringBuilder buf, int indent) {
+  private static void indent(@NonNull StringBuilder buf, int indent) {
     for (int i = 0; i < indent; i++) {
       buf.append(' ');
     }
   }
 
-  private StringBuilder pretty2(@Nonnull StringBuilder buf,
-      int indent, int[] lineEnd, int depth, @Nonnull Type type,
-      @Nonnull Object value, int leftPrec, int rightPrec) {
+  private StringBuilder pretty2(@NonNull StringBuilder buf,
+      int indent, int[] lineEnd, int depth, @NonNull Type type,
+      @NonNull Object value, int leftPrec, int rightPrec) {
     if (value instanceof TypedVal) {
       final TypedVal typedVal = (TypedVal) value;
       final StringBuilder buf2 = new StringBuilder("val ");
@@ -378,9 +378,9 @@ class Pretty {
         : type;
   }
 
-  private StringBuilder printList(@Nonnull StringBuilder buf,
-      int indent, int[] lineEnd, int depth, @Nonnull Type elementType,
-      @Nonnull List<Object> list) {
+  private StringBuilder printList(@NonNull StringBuilder buf,
+      int indent, int[] lineEnd, int depth, @NonNull Type elementType,
+      @NonNull List<Object> list) {
     buf.append("[");
     int start = buf.length();
     for (Ord<Object> o : Ord.zip(list)) {

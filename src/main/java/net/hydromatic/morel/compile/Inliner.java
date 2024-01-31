@@ -28,7 +28,6 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableMap;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -38,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Pair.forEach;
 
 import static java.util.Objects.requireNonNull;
 
@@ -176,7 +176,7 @@ public class Inliner extends EnvShuttle {
           && tuplePat.args.stream().allMatch(arg -> arg.op == Op.ID_PAT)) {
         final ImmutableMap.Builder<Core.Id, Core.Id> builder =
             ImmutableMap.builder();
-        Pair.forEach(tuple.args, tuplePat.args, (arg, pat) ->
+        forEach(tuple.args, tuplePat.args, (arg, pat) ->
             builder.put(core.id((Core.IdPat) pat), (Core.Id) arg));
         return builder.build();
       }

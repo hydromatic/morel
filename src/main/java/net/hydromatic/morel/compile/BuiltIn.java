@@ -32,6 +32,7 @@ import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
@@ -42,7 +43,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
-import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.type.PrimitiveType.BOOL;
 import static net.hydromatic.morel.type.PrimitiveType.CHAR;
@@ -1645,7 +1645,7 @@ public enum BuiltIn {
   }
 
   BuiltIn(@Nullable String structure, String mlName,
-      @Nonnull PrimitiveType preferredType,
+      @NonNull PrimitiveType preferredType,
       Function<TypeSystem, Type> typeFunction) {
     this(structure, mlName, null, typeFunction, preferredType, null);
   }

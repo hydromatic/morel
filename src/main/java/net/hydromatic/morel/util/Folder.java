@@ -22,11 +22,12 @@ import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Op;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.util.Static.skip;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Enable creating right-deep trees.
@@ -37,7 +38,7 @@ public abstract class Folder<E> {
   final E e;
 
   Folder(E e) {
-    this.e = Objects.requireNonNull(e);
+    this.e = requireNonNull(e);
   }
 
   abstract E combine(List<Folder<E>> list);

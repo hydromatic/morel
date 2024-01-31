@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -51,7 +52,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.ObjIntConsumer;
-import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
@@ -478,9 +478,10 @@ public class Core {
 
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      forEachIndexed(type().argNameTypes.keySet(), args, (i, name, arg) ->
-          w.append(i > 0 ? ", " : "").append(name)
-              .append(" = ").append(arg, 0, 0));
+      forEachIndexed(type().argNameTypes.keySet(), args,
+          (i, name, arg) ->
+              w.append(i > 0 ? ", " : "").append(name)
+                  .append(" = ").append(arg, 0, 0));
       return w.append("}");
     }
 
@@ -1428,10 +1429,10 @@ public class Core {
     @Override protected AstWriter unparse(AstWriter w, From from, int ordinal,
         int left, int right) {
       w.append(" group");
-      Pair.forEachIndexed(groupExps, (i, id, exp) ->
+      Pair.forEachIndexed(groupExps, (i, id, exp) -> // lint:skip
           w.append(i == 0 ? " " : ", ")
               .append(id, 0, 0).append(" = ").append(exp, 0, 0));
-      Pair.forEachIndexed(aggregates, (i, name, aggregate) ->
+      Pair.forEachIndexed(aggregates, (i, name, aggregate) -> // lint:skip
           w.append(i == 0 ? " compute " : ", ")
               .append(name, 0, 0).append(" = ").append(aggregate, 0, 0));
       return w;

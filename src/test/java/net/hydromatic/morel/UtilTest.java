@@ -27,7 +27,6 @@ import net.hydromatic.morel.type.RangeExtent;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Folder;
 import net.hydromatic.morel.util.MapList;
-import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
@@ -58,6 +57,7 @@ import java.util.function.Predicate;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.eval.Codes.isNegative;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
 import static net.hydromatic.morel.util.Static.transform;
 
@@ -113,7 +113,7 @@ public class UtilTest {
   @Test void testOrd() {
     final List<String> abc = Arrays.asList("a", "b", "c");
     final StringBuilder buf = new StringBuilder();
-    Ord.forEachIndexed(abc, (e, i) ->
+    forEachIndexed(abc, (e, i) ->
         buf.append(i).append("#").append(e).append(";"));
     assertThat(buf, hasToString("0#a;1#b;2#c;"));
   }

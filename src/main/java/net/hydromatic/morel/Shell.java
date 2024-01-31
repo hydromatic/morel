@@ -43,6 +43,7 @@ import net.hydromatic.morel.util.Pair;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Runnables;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -71,7 +72,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.util.Static.str;
 
@@ -277,7 +277,7 @@ public class Shell {
   /** Instantiates a class.
    *
    * <p>Assumes that the class has a public no-arguments constructor. */
-  @Nonnull private static <T> T instantiate(String className,
+  @NonNull private static <T> T instantiate(String className,
       @SuppressWarnings("SameParameterValue") Class<T> clazz) {
     try {
       final Class<?> aClass = Class.forName(className);

@@ -26,13 +26,13 @@ import net.hydromatic.morel.util.PairList;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
-import javax.annotation.Nullable;
 
 /** Builds parse tree nodes. */
 public enum AstBuilder {
@@ -340,7 +340,7 @@ public enum AstBuilder {
   }
 
   public Ast.From from(Pos pos, List<Ast.FromStep> steps,
-      @Nullable Ast.Exp implicitYieldExp) {
+      Ast.@Nullable Exp implicitYieldExp) {
     return new Ast.From(pos, ImmutableList.copyOf(steps), implicitYieldExp);
   }
 
@@ -369,7 +369,7 @@ public enum AstBuilder {
   }
 
   public Ast.FunMatch funMatch(Pos pos, String name,
-      Iterable<? extends Ast.Pat> patList, @Nullable Ast.Type returnType,
+      Iterable<? extends Ast.Pat> patList, Ast.@Nullable Type returnType,
       Ast.Exp exp) {
     return new Ast.FunMatch(pos, name, ImmutableList.copyOf(patList),
         returnType, exp);
@@ -458,7 +458,7 @@ public enum AstBuilder {
   }
 
   public Ast.Scan scan(Pos pos, Ast.Pat pat, Ast.Exp exp,
-      @Nullable Ast.Exp condition) {
+      Ast.@Nullable Exp condition) {
     return new Ast.Scan(pos, pat, exp, condition);
   }
 

@@ -23,7 +23,6 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.RefChecker;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
@@ -174,7 +173,7 @@ public class FromBuilder {
         bindings = null;
       } else if (pat instanceof Core.TuplePat) {
         final Core.TuplePat tuplePat = (Core.TuplePat) pat;
-        Pair.forEach(tuplePat.args, lastStep.bindings,
+        forEach(tuplePat.args, lastStep.bindings,
             (arg, binding) ->
                 nameExps.add(((Core.IdPat) arg).name, core.id(binding.id)));
         bindings = null;

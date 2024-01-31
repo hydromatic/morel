@@ -22,9 +22,10 @@ import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.util.MapList;
 
 import java.util.List;
-import java.util.Objects;
 
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+
+import static java.util.Objects.requireNonNull;
 
 /** Base class for types that accept type parameters.
  *
@@ -41,8 +42,8 @@ public abstract class ParameterizedType extends BaseType implements NamedType {
   /** Creates a ParameterizedType. */
   ParameterizedType(Op op, String name, String moniker, int parameterCount) {
     super(op);
-    this.name = Objects.requireNonNull(name);
-    this.moniker = Objects.requireNonNull(moniker);
+    this.name = requireNonNull(name);
+    this.moniker = requireNonNull(moniker);
     this.parameterTypes = MapList.of(parameterCount, TypeVar::new);
   }
 

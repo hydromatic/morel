@@ -62,16 +62,36 @@ public class LintTest {
         .add(line -> line.contains("\t"),
             line -> line.state().message("Tab", line))
 
+        // Nullable
+        .add(line -> line.startsWith("import javax.annotation.Nullable;"),
+            line -> line.state().message(
+                "use org.checkerframework.checker.nullness.qual.Nullable",
+                line))
+
+        // Nonnull
+        .add(line -> line.startsWith("import javax.annotation.Nonnull;"),
+            line -> line.state().message(
+                "use org.checkerframework.checker.nullness.qual.NonNull",
+                line))
+
         // Use of 'Static.' other than in an import.
-        .add(line -> line.contains("Static.")
+        .add(line -> (line.contains("Assertions.")
+                || line.contains("CoreMatchers.")
+                || line.contains("MatcherAssert.assertThat")
+                || line.contains("Objects.requireNonNull")
+                || line.contains("Ord.forEachIndexed")
+                || line.contains("Pair.forEach")
+                || line.contains("Preconditions.")
+                || line.contains("Static."))
                 && line.filename().endsWith(".java")
                 && !line.startsWith("import static")
                 && !line.matches("^ *// .*$")
+                && !line.endsWith("// lint:skip")
                 && !line.source().fileOpt()
                 .filter(f -> f.getName().equals("LintTest.java")).isPresent()
                 && !line.source().fileOpt()
                 .filter(f -> f.getName().equals("UtilTest.java")).isPresent(),
-            line -> line.state().message("Static", line))
+            line -> line.state().message("should be static import", line))
 
         // In a test,
         //   assertThat(x.toString(), is(y));

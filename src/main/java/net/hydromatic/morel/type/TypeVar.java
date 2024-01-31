@@ -20,7 +20,6 @@ package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
 
-import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -28,6 +27,8 @@ import com.google.common.cache.LoadingCache;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.UnaryOperator;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 import static java.util.Objects.requireNonNull;
 
@@ -46,7 +47,7 @@ public class TypeVar implements Type {
    *
    * <p>TypeVar.of(0) returns "'a"; TypeVar.of(1) returns "'b", etc. */
   public TypeVar(int ordinal) {
-    Preconditions.checkArgument(ordinal >= 0);
+    checkArgument(ordinal >= 0);
     this.ordinal = ordinal;
     try {
       this.name = requireNonNull(NAME_CACHE.get(ordinal));

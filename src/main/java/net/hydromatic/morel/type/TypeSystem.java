@@ -37,7 +37,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,6 +46,8 @@ import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Static.toImmutableList;
 import static net.hydromatic.morel.util.Static.transformEager;
+
+import static java.util.Objects.requireNonNull;
 
 /** A table that contains all types in use, indexed by their description (e.g.
  * "{@code int -> int}"). */
@@ -158,7 +159,7 @@ public class TypeSystem {
         t = fnType(type, t);
       }
     }
-    return Objects.requireNonNull(t);
+    return requireNonNull(t);
   }
 
   /** Creates a function type. */

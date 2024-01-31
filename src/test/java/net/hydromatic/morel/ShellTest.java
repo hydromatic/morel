@@ -23,7 +23,6 @@ import net.hydromatic.morel.foreign.ForeignValue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
@@ -43,6 +42,7 @@ import java.util.function.UnaryOperator;
 import static net.hydromatic.morel.TestUtils.findDirectory;
 import static net.hydromatic.morel.TestUtils.plus;
 
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.StringContains.containsString;
@@ -153,7 +153,7 @@ public class ShellTest {
   }
 
   private Matcher<String> is2(String expected) {
-    return CoreMatchers.anyOf(is(expected),
+    return anyOf(is(expected),
         is(expected.replace("\u001B[?2004l", "")));
   }
 

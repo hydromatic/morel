@@ -21,6 +21,7 @@ package net.hydromatic.morel.util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -28,7 +29,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
@@ -116,7 +116,7 @@ public abstract class Unifier {
     return new Sequence(operator, newTerms.build());
   }
 
-  public @Nonnull abstract Result unify(List<TermTerm> termPairs,
+  public abstract @NonNull Result unify(List<TermTerm> termPairs,
       Map<Variable, Action> termActions, Tracer tracer);
 
   private static void checkCycles(Map<Variable, Term> map,

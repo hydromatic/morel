@@ -23,8 +23,9 @@ import net.hydromatic.morel.ast.Op;
 import com.google.common.collect.Maps;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.function.UnaryOperator;
+
+import static java.util.Objects.requireNonNull;
 
 /** Universally quantified type. */
 public class ForallType extends BaseType {
@@ -34,7 +35,7 @@ public class ForallType extends BaseType {
   ForallType(int parameterCount, Type type) {
     super(Op.FORALL_TYPE);
     this.parameterCount = parameterCount;
-    this.type = Objects.requireNonNull(type);
+    this.type = requireNonNull(type);
   }
 
   public Key key() {

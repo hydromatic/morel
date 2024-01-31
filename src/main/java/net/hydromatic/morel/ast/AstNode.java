@@ -18,7 +18,7 @@
  */
 package net.hydromatic.morel.ast;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 /** Abstract syntax tree node. */
 public abstract class AstNode {
@@ -26,8 +26,8 @@ public abstract class AstNode {
   public final Op op;
 
   public AstNode(Pos pos, Op op) {
-    this.pos = Objects.requireNonNull(pos);
-    this.op = Objects.requireNonNull(op);
+    this.pos = requireNonNull(pos);
+    this.op = requireNonNull(op);
   }
 
   /** Converts this node into an ML string.

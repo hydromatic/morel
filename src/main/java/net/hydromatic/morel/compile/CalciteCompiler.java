@@ -65,6 +65,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.JsonBuilder;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
@@ -77,7 +78,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Predicate;
-import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
@@ -784,7 +784,7 @@ public class CalciteCompiler extends Compiler {
    * <p>Future work: rather than resolving by name, look up aggregate function
    * in environment, and compare with standard implementation of "sum" etc.;
    * support aggregate functions defined by expressions (e.g. lambdas). */
-  @Nonnull private SqlAggFunction aggOp(Core.Exp aggregate) {
+  @NonNull private SqlAggFunction aggOp(Core.Exp aggregate) {
     if (aggregate instanceof Core.Literal) {
       switch (((Core.Literal) aggregate).unwrap(BuiltIn.class)) {
       case RELATIONAL_SUM:

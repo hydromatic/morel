@@ -19,11 +19,11 @@
 package net.hydromatic.morel.util;
 
 import com.google.common.collect.ImmutableSortedMap;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nonnull;
 
 import static net.hydromatic.morel.util.Static.skip;
 
@@ -39,7 +39,7 @@ public class RobinsonUnifier extends Unifier {
     return composed;
   }
 
-  private @Nonnull Result sequenceUnify(Sequence lhs,
+  private @NonNull Result sequenceUnify(Sequence lhs,
       Sequence rhs) {
     if (lhs.terms.size() != rhs.terms.size()) {
       return failure("sequences have different length: " + lhs + ", " + rhs);
@@ -74,7 +74,7 @@ public class RobinsonUnifier extends Unifier {
     return SubstitutionResult.create(joined);
   }
 
-  public @Nonnull Result unify(List<TermTerm> termPairs,
+  public @NonNull Result unify(List<TermTerm> termPairs,
       Map<Variable, Action> termActions, Tracer tracer) {
     switch (termPairs.size()) {
     case 1:
@@ -84,7 +84,7 @@ public class RobinsonUnifier extends Unifier {
     }
   }
 
-  public @Nonnull Result unify(Term lhs, Term rhs) {
+  public @NonNull Result unify(Term lhs, Term rhs) {
     if (lhs instanceof Variable) {
       return SubstitutionResult.create((Variable) lhs, rhs);
     }

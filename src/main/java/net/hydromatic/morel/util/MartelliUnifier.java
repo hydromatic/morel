@@ -19,17 +19,17 @@
 package net.hydromatic.morel.util;
 
 import com.google.common.collect.ImmutableMap;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nonnull;
 
 /** Unification algorithm due to Martelli, Montanari (1976) and
  * Paterson, Wegman (1978). */
 public class MartelliUnifier extends Unifier {
-  public @Nonnull Result unify(List<TermTerm> termPairs,
+  public @NonNull Result unify(List<TermTerm> termPairs,
       Map<Variable, Action> termActions, Tracer tracer) {
 
     // delete: G u { t = t }

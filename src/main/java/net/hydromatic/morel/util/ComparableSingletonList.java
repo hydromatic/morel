@@ -19,7 +19,8 @@
 package net.hydromatic.morel.util;
 
 import java.util.AbstractList;
-import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /** A comparable singleton list.
  *
@@ -30,7 +31,7 @@ public class ComparableSingletonList<E extends Comparable<E>>
   private final E element;
 
   ComparableSingletonList(E element) {
-    this.element = Objects.requireNonNull(element);
+    this.element = requireNonNull(element);
   }
 
   /** Creates a ComparableSingletonList. */

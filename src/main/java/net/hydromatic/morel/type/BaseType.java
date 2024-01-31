@@ -20,14 +20,14 @@ package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 /** Abstract implementation of Type. */
 abstract class BaseType implements Type {
   final Op op;
 
   protected BaseType(Op op) {
-    this.op = Objects.requireNonNull(op);
+    this.op = requireNonNull(op);
   }
 
   public Op op() {

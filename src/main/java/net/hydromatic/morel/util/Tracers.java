@@ -20,9 +20,10 @@ package net.hydromatic.morel.util;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.Objects;
 
 import static net.hydromatic.morel.util.Static.str;
+
+import static java.util.Objects.requireNonNull;
 
 /** Implementations of {@link net.hydromatic.morel.util.Unifier.Tracer}. */
 public class Tracers {
@@ -65,7 +66,7 @@ public class Tracers {
     private final PrintWriter w;
 
     PrintTracer(PrintWriter w) {
-      this.w = Objects.requireNonNull(w);
+      this.w = requireNonNull(w);
     }
 
     private void flush() {

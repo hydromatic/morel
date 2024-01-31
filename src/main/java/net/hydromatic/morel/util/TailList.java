@@ -21,7 +21,8 @@ package net.hydromatic.morel.util;
 import java.util.AbstractList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /** A dynamic list that reads from a given point in a backing list.
  *
@@ -37,7 +38,7 @@ public class TailList<E> extends AbstractList<E> {
    * @param start Start point
    */
   public TailList(List<E> list, int start) {
-    this.list = Objects.requireNonNull(list);
+    this.list = requireNonNull(list);
     this.start = start;
   }
 

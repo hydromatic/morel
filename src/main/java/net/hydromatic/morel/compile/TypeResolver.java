@@ -44,7 +44,6 @@ import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.Unifier;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -80,6 +79,8 @@ import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.skip;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
@@ -1542,7 +1543,7 @@ public class TypeResolver {
       this.originalNode = requireNonNull(originalNode);
       this.node = requireNonNull(node);
       this.typeMap = requireNonNull(typeMap);
-      Preconditions.checkArgument(originalNode instanceof Ast.FunDecl
+      checkArgument(originalNode instanceof Ast.FunDecl
           ? node instanceof Ast.ValDecl
           : originalNode.getClass() == node.getClass());
     }

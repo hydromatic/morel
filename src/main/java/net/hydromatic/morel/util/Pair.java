@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.util;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import java.io.Serializable;
 import java.util.AbstractList;
 import java.util.Collections;
@@ -29,7 +31,8 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
-import javax.annotation.Nonnull;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Pair of objects.
@@ -101,7 +104,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   @SuppressWarnings("rawtypes")
-  public int compareTo(@Nonnull Pair<T1, T2> that) {
+  public int compareTo(@NonNull Pair<T1, T2> that) {
     //noinspection unchecked
     int c = compare((Comparable) this.left, (Comparable) that.left);
     if (c == 0) {
@@ -476,7 +479,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     private final Iterator<? extends Map.Entry<L, R>> iterator;
 
     LeftIterator(Iterator<? extends Map.Entry<L, R>> iterator) {
-      this.iterator = Objects.requireNonNull(iterator);
+      this.iterator = requireNonNull(iterator);
     }
 
     public boolean hasNext() {
@@ -500,7 +503,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     private final Iterator<? extends Map.Entry<L, R>> iterator;
 
     RightIterator(Iterator<? extends Map.Entry<L, R>> iterator) {
-      this.iterator = Objects.requireNonNull(iterator);
+      this.iterator = requireNonNull(iterator);
     }
 
     public boolean hasNext() {
@@ -525,7 +528,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     private final E first;
 
     FirstAndIterator(Iterator<E> iterator, E first) {
-      this.iterator = Objects.requireNonNull(iterator);
+      this.iterator = requireNonNull(iterator);
       this.first = first;
     }
 
@@ -552,8 +555,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
 
     ZipIterator(Iterator<? extends L> leftIterator,
         Iterator<? extends R> rightIterator) {
-      this.leftIterator = Objects.requireNonNull(leftIterator);
-      this.rightIterator = Objects.requireNonNull(rightIterator);
+      this.leftIterator = requireNonNull(leftIterator);
+      this.rightIterator = requireNonNull(rightIterator);
     }
 
     public boolean hasNext() {
@@ -580,7 +583,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     E previous;
 
     AdjacentIterator(Iterator<E> iterator) {
-      this.iterator = Objects.requireNonNull(iterator);
+      this.iterator = requireNonNull(iterator);
       this.first = iterator.next();
       previous = first;
     }
@@ -637,8 +640,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     private final List<V> vs;
 
     MutableZipList(List<K> ks, List<V> vs) {
-      this.ks = Objects.requireNonNull(ks);
-      this.vs = Objects.requireNonNull(vs);
+      this.ks = requireNonNull(ks);
+      this.vs = requireNonNull(vs);
     }
 
     @Override public Pair<K, V> get(int index) {

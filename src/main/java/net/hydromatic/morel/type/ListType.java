@@ -20,8 +20,9 @@ package net.hydromatic.morel.type;
 
 import net.hydromatic.morel.ast.Op;
 
-import java.util.Objects;
 import java.util.function.UnaryOperator;
+
+import static java.util.Objects.requireNonNull;
 
 /** The type of a list value. */
 // TODO: remove this, and use datatype?
@@ -30,7 +31,7 @@ public class ListType extends BaseType {
 
   ListType(Type elementType) {
     super(Op.LIST);
-    this.elementType = Objects.requireNonNull(elementType);
+    this.elementType = requireNonNull(elementType);
   }
 
   @Override public Key key() {

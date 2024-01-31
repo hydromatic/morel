@@ -23,17 +23,18 @@ import net.hydromatic.morel.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.BiConsumer;
-import javax.annotation.Nullable;
 
 import static net.hydromatic.morel.util.Pair.allMatch;
 import static net.hydromatic.morel.util.Pair.zip;
 import static net.hydromatic.morel.util.Static.skip;
+
+import static java.util.Objects.requireNonNull;
 
 /** Helpers for {@link EvalEnv}. */
 public class EvalEnvs {
@@ -99,8 +100,8 @@ public class EvalEnvs {
 
     ArraySubEvalEnv(EvalEnv parentEnv, ImmutableList<String> names,
         @Nullable Object[] values) {
-      this.parentEnv = Objects.requireNonNull(parentEnv);
-      this.names = Objects.requireNonNull(names);
+      this.parentEnv = requireNonNull(parentEnv);
+      this.names = requireNonNull(names);
       this.values = values; // may be null
     }
 
@@ -145,7 +146,7 @@ public class EvalEnvs {
     PatSubEvalEnv(EvalEnv parentEnv, Core.Pat pat, ImmutableList<String> names,
         Object[] values) {
       super(parentEnv, ImmutableList.copyOf(names), values);
-      this.pat = Objects.requireNonNull(pat);
+      this.pat = requireNonNull(pat);
       assert !(pat instanceof Core.IdPat);
     }
   }
