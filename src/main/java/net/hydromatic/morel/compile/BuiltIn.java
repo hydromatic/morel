@@ -195,6 +195,119 @@ public enum BuiltIn {
                   ts.fnType(h.get(0), h.get(1))),
               ts.fnType(h.get(0), h.get(2))))),
 
+  /* TODO:
+  val ~ : int -> int
+  val * : int * int -> int
+  val div : int * int -> int
+  val mod : int * int -> int
+  val quot : int * int -> int
+  val rem : int * int -> int
+  val + : int * int -> int
+  val - : int * int -> int
+  val > : int * int -> bool
+  val >= : int * int -> bool
+  val < : int * int -> bool
+  val <= : int * int -> bool
+   */
+
+  /** Function "Int.abs" of type "int &rarr; int". */
+  INT_ABS("Int", "abs", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.compare", of type "int * int &rarr; order". */
+  INT_COMPARE("Int", "compare", ts ->
+      ts.fnType(ts.tupleType(INT, INT), ts.lookup("order"))),
+
+  /** Function "Int.div", of type "int * int &rarr; int". */
+  INT_DIV("Int", "div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Function "Int.toInt", of type "int &rarr; int". */
+  INT_TO_INT("Int", "toInt", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.fromInt", of type "int &rarr; int". */
+  INT_FROM_INT("Int", "fromInt", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.toLarge", of type "int &rarr; int". */
+  INT_TO_LARGE("Int", "toLarge", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.fromLarge", of type "int &rarr; int". */
+  INT_FROM_LARGE("Int", "fromLarge", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.fromString s", of type "string &rarr; int option",
+   * scans a {@code int} value from a {@code string}. Returns {@code SOME(r)}
+   * if a {@code int} value can be scanned from a prefix of {@code s}, ignoring
+   * any initial whitespace; otherwise, it returns {@code NONE}. This function
+   * is equivalent to {@code StringCvt.scanString scan}. */
+  INT_FROM_STRING("Int", "fromString", ts ->
+      ts.fnType(STRING, ts.option(INT))),
+
+  /** Constant "Int.minInt", of type "int option". */
+  INT_MIN_INT("Int", "minInt", ts -> ts.option(INT)),
+
+  /** Constant "Int.maxInt", of type "int option". */
+  INT_MAX_INT("Int", "maxInt", ts -> ts.option(INT)),
+
+  /** Constant "Int.precision", of type "int option". */
+  INT_PRECISION("Int", "precision", ts -> ts.option(INT)),
+
+  /** Function "Int.max", of type "int * int &rarr; int".
+   *
+   * <p>Returns the returns the larger of the arguments. If exactly one argument
+   * is NaN, returns the other argument. If both arguments are NaN, returns
+   * NaN. */
+  INT_MAX("Int", "max", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Function "Int.min", of type "int * int &rarr; int".
+   *
+   * <p>Returns the returns the larger of the arguments. If exactly one argument
+   * is NaN, returns the other argument. If both arguments are NaN, returns
+   * NaN. */
+  INT_MIN("Int", "min", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Function "Int.quot", of type "int * int &rarr; int". */
+  INT_QUOT("Int", "quot", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Function "Int.mod", of type "int * int &rarr; int".
+   *
+   * <p>Returns the fractional part of r. "intMod" is equivalent to
+   * "#frac o split". */
+  INT_MOD("Int", "mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Function "Int.rem", of type "int * int &rarr; int".
+   *
+   * <p>Returns the remainder {@code x - n * y}, where
+   * {@code n = trunc (x / y)}. The result has the same sign as {@code x} and
+   * has absolute value less than the absolute value of {@code y}. If {@code x}
+   * is an infinity or {@code y} is 0, returns NaN. If {@code y} is an infinity,
+   * returns {@code x}. */
+  INT_REM("Int", "rem", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Function "Int.sameSign", of type "int * int &rarr; bool".
+   *
+   * <p>Returns true if and only if {@code signBit r1} equals
+   * {@code signBit r2}. */
+  INT_SAME_SIGN("Int", "sameSign", ts ->
+      ts.fnType(ts.tupleType(INT, INT), BOOL)),
+
+  /** Function "Int.sign", of type "int &rarr; int".
+   *
+   * <p>Returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive.
+   * An infinity returns its sign; a zero returns 0 regardless of its sign.
+   * It raises
+   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#DOMAIN Domain}
+   * on NaN. */
+  INT_SIGN("Int", "sign", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.toString", of type "int &rarr; string".
+   *
+   * <p>"toString r" converts ints into strings. The value returned by
+   * {@code toString t} is equivalent to:
+   *
+   * <pre>{@code
+   * (fmt (StringCvt.GEN NONE) r)
+   * }</pre>
+   */
+  INT_TO_STRING("Int", "toString", ts -> ts.fnType(INT, STRING)),
+
   /** Function "Interact.use" of type "string &rarr; unit"
    *
    * <p>"use f" loads source text from the file named `f`. */

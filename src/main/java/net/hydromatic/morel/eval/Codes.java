@@ -109,6 +109,15 @@ public abstract class Codes {
     return new ConstantCode(value);
   }
 
+  /** Returns an Applicable that returns its argument. */
+  private static ApplicableImpl identity(BuiltIn builtIn) {
+    return new ApplicableImpl(builtIn) {
+      @Override public Object apply(EvalEnv env, Object arg) {
+        return arg;
+      }
+    };
+  }
+
   /** @see BuiltIn#OP_EQ */
   private static final Applicable OP_EQ =
       new Applicable2<Boolean, Object, Object>(BuiltIn.OP_EQ) {
@@ -318,12 +327,7 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#OP_DIV */
-  private static final Applicable OP_DIV =
-      new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_DIV) {
-        @Override public Integer apply(Integer a0, Integer a1) {
-          return Math.floorDiv(a0, a1);
-        }
-      };
+  private static final Applicable OP_DIV = new IntDiv(BuiltIn.OP_DIV);
 
   /** @see BuiltIn#GENERAL_OP_O */
   private static final Applicable GENERAL_OP_O =
@@ -337,6 +341,172 @@ public abstract class Codes {
               return f.apply(env, g.apply(env, arg));
             }
           };
+        }
+      };
+
+  /** @see BuiltIn#INT_ABS */
+  private static final Applicable INT_ABS =
+      new ApplicableImpl(BuiltIn.INT_ABS) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return Math.abs((int) arg);
+        }
+      };
+
+  /** @see BuiltIn#INT_COMPARE */
+  private static final Applicable INT_COMPARE =
+      new Applicable2<List, Integer, Integer>(BuiltIn.INT_COMPARE) {
+        @Override public List apply(Integer a0, Integer a1) {
+          if (a0 < a1) {
+            return ORDER_LESS;
+          }
+          if (a0 > a1) {
+            return ORDER_GREATER;
+          }
+          return ORDER_EQUAL;
+        }
+      };
+
+  /** @see BuiltIn#INT_FROM_INT */
+  private static final Applicable INT_FROM_INT =
+      identity(BuiltIn.INT_FROM_INT);
+
+  /** @see BuiltIn#INT_FROM_LARGE */
+  private static final Applicable INT_FROM_LARGE =
+      identity(BuiltIn.INT_FROM_LARGE);
+
+  /** Pattern for integers (after '~' has been converted to '-').
+   * ".", ".e", ".e-", ".e5", "e7", "2.", ".5", "2.e5" are invalid;
+   * "-2", "5" are valid. */
+  static final Pattern INT_PATTERN =
+      Pattern.compile("^ *-?[0-9]+");
+
+  /** @see BuiltIn#INT_FROM_STRING */
+  private static final Applicable INT_FROM_STRING =
+      new ApplicableImpl(BuiltIn.INT_FROM_STRING) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          final String s = (String) arg;
+          final String s2 = s.replace('~', '-');
+          final Matcher matcher = INT_PATTERN.matcher(s2);
+          if (!matcher.find(0)) {
+            return OPTION_NONE;
+          }
+          final String s3 = s2.substring(0, matcher.end());
+          try {
+            final int f = Integer.parseInt(s3);
+            return optionSome(f);
+          } catch (NumberFormatException e) {
+            // We should not have reached this point. The pattern
+            // should not have matched the input.
+            throw new AssertionError(e);
+          }
+        }
+      };
+
+  /** @see BuiltIn#INT_MAX */
+  private static final Applicable INT_MAX =
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.INT_MAX) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return Math.max(a0, a1);
+        }
+      };
+
+  /** @see BuiltIn#INT_MAX_INT */
+  private static final List INT_MAX_INT = optionSome(Integer.MAX_VALUE);
+
+  /** @see BuiltIn#INT_MIN */
+  private static final Applicable INT_MIN =
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.INT_MIN) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return Math.min(a0, a1);
+        }
+      };
+
+  /** @see BuiltIn#INT_MIN_INT */
+  private static final List INT_MIN_INT = optionSome(Integer.MAX_VALUE);
+
+  /** @see BuiltIn#INT_DIV */
+  private static final Applicable INT_DIV = new IntDiv(BuiltIn.INT_DIV);
+
+  /** @see BuiltIn#INT_MOD */
+  private static final Applicable INT_MOD = new IntMod(BuiltIn.INT_MOD);
+
+  /** Implements {@link #INT_MOD} and {@link #OP_MOD}. */
+  private static class IntMod
+      extends Applicable2<Integer, Integer, Integer> {
+    IntMod(BuiltIn builtIn) {
+      super(builtIn);
+    }
+
+    @Override public Integer apply(Integer a0, Integer a1) {
+      return Math.floorMod(a0, a1);
+    }
+  }
+
+  /** Implements {@link #INT_DIV} and {@link #OP_DIV}. */
+  private static class IntDiv
+      extends Applicable2<Integer, Integer, Integer> {
+    IntDiv(BuiltIn builtIn) {
+      super(builtIn);
+    }
+
+    @Override public Integer apply(Integer a0, Integer a1) {
+      return Math.floorDiv(a0, a1);
+    }
+  }
+
+  /** @see BuiltIn#INT_PRECISION */
+  private static final List INT_PRECISION = optionSome(32); // Java int 32 bits
+
+  /** @see BuiltIn#INT_QUOT */
+  private static final Applicable INT_QUOT =
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.INT_QUOT) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return a0 / a1;
+        }
+      };
+
+  /** @see BuiltIn#INT_REM */
+  private static final Applicable INT_REM =
+      new Applicable2<Integer, Integer, Integer>(BuiltIn.INT_REM) {
+        @Override public Integer apply(Integer a0, Integer a1) {
+          return a0 % a1;
+        }
+      };
+
+  /** @see BuiltIn#INT_SAME_SIGN */
+  private static final Applicable INT_SAME_SIGN =
+      new Applicable2<Boolean, Integer, Integer>(BuiltIn.INT_SAME_SIGN) {
+        @Override public Boolean apply(Integer a0, Integer a1) {
+          return a0 < 0 && a1 < 0
+              || a0 == 0 && a1 == 0
+              || a0 > 0 && a1 > 0;
+        }
+      };
+
+  /** @see BuiltIn#INT_SIGN */
+  private static final Applicable INT_SIGN =
+      new ApplicableImpl(BuiltIn.INT_SIGN) {
+        @Override public Object apply(EvalEnv env, Object arg) {
+          return Integer.compare((Integer) arg, 0);
+        }
+      };
+
+  /** @see BuiltIn#INT_TO_INT */
+  private static final Applicable INT_TO_INT =
+      identity(BuiltIn.INT_TO_INT);
+
+  /** @see BuiltIn#INT_TO_LARGE */
+  private static final Applicable INT_TO_LARGE = identity(BuiltIn.INT_TO_LARGE);
+
+  /** @see BuiltIn#INT_TO_STRING */
+  private static final Applicable INT_TO_STRING =
+      new ApplicableImpl(BuiltIn.INT_TO_STRING) {
+        @Override public String apply(EvalEnv env, Object arg) {
+          // Java's formatting is reasonably close to ML's formatting,
+          // if we replace minus signs.
+          Integer f = (Integer) arg;
+          final String s = Integer.toString(f);
+          return s.replace('-', '~');
         }
       };
 
@@ -624,12 +794,7 @@ public abstract class Codes {
   };
 
   /** @see BuiltIn#OP_MOD */
-  private static final Applicable OP_MOD =
-      new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_MOD) {
-        @Override public Integer apply(Integer a0, Integer a1) {
-          return Math.floorMod(a0, a1);
-        }
-      };
+  private static final Applicable OP_MOD = new IntMod(BuiltIn.OP_MOD);
 
   /** @see BuiltIn#OP_PLUS */
   private static final Macro OP_PLUS = (typeSystem, env, argType) -> {
@@ -2398,11 +2563,7 @@ public abstract class Codes {
 
   /** @see BuiltIn#VECTOR_FROM_LIST */
   private static final Applicable VECTOR_FROM_LIST =
-      new ApplicableImpl(BuiltIn.VECTOR_FROM_LIST) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          return arg; // vector and list have the same implementation in Java
-        }
-      };
+      identity(BuiltIn.VECTOR_FROM_LIST);
 
   /** @see BuiltIn#VECTOR_TABULATE */
   private static final Applicable VECTOR_TABULATE =
@@ -2679,13 +2840,7 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#Z_LIST */
-  private static final Applicable Z_LIST =
-      new ApplicableImpl(BuiltIn.Z_LIST) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          assert arg instanceof List;
-          return arg;
-        }
-      };
+  private static final Applicable Z_LIST = identity(BuiltIn.Z_LIST);
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
     if (SKIP) {
@@ -2790,6 +2945,25 @@ public abstract class Codes {
           .put(BuiltIn.ABS, ABS)
           .put(BuiltIn.IGNORE, IGNORE)
           .put(BuiltIn.GENERAL_OP_O, GENERAL_OP_O)
+          .put(BuiltIn.INT_ABS, INT_ABS)
+          .put(BuiltIn.INT_COMPARE, INT_COMPARE)
+          .put(BuiltIn.INT_DIV, INT_DIV)
+          .put(BuiltIn.INT_FROM_INT, INT_FROM_INT)
+          .put(BuiltIn.INT_FROM_LARGE, INT_FROM_LARGE)
+          .put(BuiltIn.INT_FROM_STRING, INT_FROM_STRING)
+          .put(BuiltIn.INT_MAX, INT_MAX)
+          .put(BuiltIn.INT_MAX_INT, INT_MAX_INT)
+          .put(BuiltIn.INT_MIN, INT_MIN)
+          .put(BuiltIn.INT_MIN_INT, INT_MIN_INT)
+          .put(BuiltIn.INT_MOD, INT_MOD)
+          .put(BuiltIn.INT_PRECISION, INT_PRECISION)
+          .put(BuiltIn.INT_QUOT, INT_QUOT)
+          .put(BuiltIn.INT_REM, INT_REM)
+          .put(BuiltIn.INT_SAME_SIGN, INT_SAME_SIGN)
+          .put(BuiltIn.INT_SIGN, INT_SIGN)
+          .put(BuiltIn.INT_TO_INT, INT_TO_INT)
+          .put(BuiltIn.INT_TO_LARGE, INT_TO_LARGE)
+          .put(BuiltIn.INT_TO_STRING, INT_TO_STRING)
           .put(BuiltIn.INTERACT_USE, INTERACT_USE)
           .put(BuiltIn.INTERACT_USE_SILENTLY, INTERACT_USE_SILENTLY)
           .put(BuiltIn.OP_CARET, OP_CARET)

@@ -27,6 +27,19 @@ Sys.set ("stringDepth", ~1);
 General;
 > val it = {ignore=fn,`op o`=fn}
 >   : {ignore:'a -> unit, `op o`:('b -> 'c) * ('d -> 'b) -> 'd -> 'c}
+Int;
+> val it =
+>   {abs=fn,compare=fn,div=fn,fromInt=fn,fromLarge=fn,fromString=fn,max=fn,
+>    maxInt=SOME 2147483647,min=fn,minInt=SOME 2147483647,mod=fn,
+>    precision=SOME 32,quot=fn,rem=fn,sameSign=fn,sign=fn,toInt=fn,toLarge=fn,
+>    toString=fn}
+>   : {abs:int -> int, compare:int * int -> order, div:int * int -> int,
+>      fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option,
+>      max:int * int -> int, maxInt:int option, min:int * int -> int,
+>      minInt:int option, mod:int * int -> int, precision:int option,
+>      quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool,
+>      sign:int -> int, toInt:int -> int, toLarge:int -> int,
+>      toString:int -> string}
 Interact;
 > val it = {use=fn,useSilently=fn}
 >   : {use:string -> unit, useSilently:string -> unit}
@@ -134,6 +147,15 @@ Sys.plan ();
 > val it =
 >   "apply2(fnValue +, constant(2), apply2(fnValue *, constant(3), constant(4)))"
 >   : string
+14 div 3;
+> val it = 4 : int
+14 div ~3;
+> val it = ~5 : int
+
+from (i, j) in [(14, 3), (~14, 3), (14, ~3), (~14, ~3)]
+ where (i div j) <> Int.`div` (i, j)
+ orelse (i mod j) <> Int.`mod` (i, j);
+> val it = [] : {i:int, j:int} list
 
 fn x => x + 1;
 > val it = fn : int -> int
@@ -1443,6 +1465,116 @@ Sys.plan ();
 >   "apply(fnCode apply(fnValue Option.composePartial, argCode tuple(match(i, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode get(name i))), argCode apply2(fnValue =, get(name i), constant(0)))), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply2(fnValue =, get(name s), constant()))))), argCode constant())"
 >   : string
 
+(* Int --------------------------------------------------------- *)
+Int.abs;
+> val it = fn : int -> int
+Int.abs 5;
+> val it = 5 : int
+Int.abs ~3;
+> val it = 3 : int
+Int.compare;
+> val it = fn : int * int -> order
+Int.compare (4, 3);
+> val it = GREATER : order
+Int.`div`;
+> val it = fn : int * int -> int
+Int.`div` (14, 3);
+> val it = 4 : int
+Int.`div` (~14, 3);
+> val it = ~5 : int
+Int.`div` (14, ~3);
+> val it = ~5 : int
+Int.`div` (~14, ~3);
+> val it = 4 : int
+Int.`div` (0, ~3);
+> val it = 0 : int
+Int.fromInt;
+> val it = fn : int -> int
+Int.fromInt 3;
+> val it = 3 : int
+Int.fromLarge;
+> val it = fn : int -> int
+Int.fromLarge 3;
+> val it = 3 : int
+Int.fromString;
+> val it = fn : string -> int option
+Int.fromString "~345";
+> val it = SOME ~345 : int option
+Int.max;
+> val it = fn : int * int -> int
+Int.max (4, 3);
+> val it = 4 : int
+Int.maxInt;
+> val it = SOME 2147483647 : int option
+Int.min;
+> val it = fn : int * int -> int
+Int.min (4, 3);
+> val it = 3 : int
+Int.`mod`;
+> val it = fn : int * int -> int
+Int.`mod` (14, 3);
+> val it = 2 : int
+Int.`mod` (~14, 3);
+> val it = 1 : int
+Int.`mod` (14, ~3);
+> val it = ~1 : int
+Int.`mod` (~14, ~3);
+> val it = ~2 : int
+Int.`mod` (0, ~3);
+> val it = 0 : int
+Int.quot;
+> val it = fn : int * int -> int
+Int.quot (14, 3);
+> val it = 4 : int
+Int.quot (~14, 3);
+> val it = ~4 : int
+Int.quot (14, ~3);
+> val it = ~4 : int
+Int.quot (~14, ~3);
+> val it = 4 : int
+Int.quot (0, ~3);
+> val it = 0 : int
+Int.precision;
+> val it = SOME 32 : int option
+Int.rem;
+> val it = fn : int * int -> int
+Int.rem (14, 3);
+> val it = 2 : int
+Int.rem (~14, 3);
+> val it = ~2 : int
+Int.rem (14, ~3);
+> val it = 2 : int
+Int.rem (~14, ~3);
+> val it = ~2 : int
+Int.rem (0, ~3);
+> val it = 0 : int
+Int.sameSign;
+> val it = fn : int * int -> bool
+Int.sameSign (3, ~2);
+> val it = false : bool
+Int.sameSign (0, ~2);
+> val it = false : bool
+Int.sameSign (2, 345);
+> val it = true : bool
+Int.sameSign (0, 0);
+> val it = true : bool
+Int.sign;
+> val it = fn : int -> int
+Int.sign ~3;
+> val it = ~1 : int
+Int.toInt;
+> val it = fn : int -> int
+Int.toInt 3;
+> val it = 3 : int
+Int.toLarge;
+> val it = fn : int -> int
+Int.toLarge 3;
+> val it = 3 : int
+Int.toString;
+> val it = fn : int -> string
+Int.toString ~345;
+> val it = "~345" : string
+
 (* Real -------------------------------------------------------- *)
 
 (*) val radix : int
@@ -2704,6 +2836,8 @@ Sys.env ();
 >   [("EQUAL","order"),("GREATER","order"),
 >    ("General",
 >     "{ignore:forall 'a. 'a -> unit, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
+>    ("Int",
+>     "{abs:int -> int, compare:int * int -> order, div:int * int -> int, fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option, max:int * int -> int, maxInt:int option, min:int * int -> int, minInt:int option, mod:int * int -> int, precision:int option, quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool, sign:int -> int, toInt:int -> int, toLarge:int -> int, toString:int -> string}"),
 >    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
 >    ("LESS","order"),
 >    ("List",
@@ -2757,8 +2891,7 @@ Sys.env ();
 >    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
 >    ("op ^","string * string -> string"),("op div","int * int -> int"),
 >    ("op elem","forall 'a. 'a * 'a list -> bool"),
->    ("op except","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),...]
+>    ("op except","forall 'a. 'a list * 'a list -> 'a list"),...]
 >   : (string * string) list
 
 env;
@@ -2768,6 +2901,8 @@ env ();
 >   [("EQUAL","order"),("GREATER","order"),
 >    ("General",
 >     "{ignore:forall 'a. 'a -> unit, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
+>    ("Int",
+>     "{abs:int -> int, compare:int * int -> order, div:int * int -> int, fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option, max:int * int -> int, maxInt:int option, min:int * int -> int, minInt:int option, mod:int * int -> int, precision:int option, quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool, sign:int -> int, toInt:int -> int, toLarge:int -> int, toString:int -> string}"),
 >    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
 >    ("LESS","order"),
 >    ("List",
@@ -2821,8 +2956,7 @@ env ();
 >    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
 >    ("op ^","string * string -> string"),("op div","int * int -> int"),
 >    ("op elem","forall 'a. 'a * 'a list -> bool"),
->    ("op except","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op intersect","forall 'a. 'a list * 'a list -> 'a list"),...]
+>    ("op except","forall 'a. 'a list * 'a list -> 'a list"),...]
 >   : (string * string) list
 
 (*) val plan : unit -> string
