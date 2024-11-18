@@ -1150,7 +1150,16 @@ public class TypeResolver {
       return reg(pat, v, toTerm(PrimitiveType.STRING));
 
     case ID_PAT:
-      termMap.put((Ast.IdPat) pat, v);
+      final Ast.IdPat idPat = (Ast.IdPat) pat;
+      final Pair<DataType, Type.Key> pair1 =
+          typeSystem.lookupTyCon(idPat.name);
+      if (pair1 != null) {
+        // It is a zero argument constructor, e.g. the LESS constructor of the
+        // order type
+        final DataType dataType0 = pair1.left;
+        return reg(pat, v, toTerm(dataType0, Subst.EMPTY));
+      }
+      termMap.put(idPat, v);
       // fall through
 
     case WILDCARD_PAT:

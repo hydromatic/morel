@@ -261,6 +261,12 @@ in
 end;
 *)
 
+(*) Lambda applied to datatype
+fn LESS => ~1
+ | EQUAL => 0
+ | GREATER => 1;
+> val it = fn : order -> int
+
 (*) Lambda with record argument
 fn {a, b} => if b then a else a + 1;
 > val it = fn : {a:int, b:bool} -> int

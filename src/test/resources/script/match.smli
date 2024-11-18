@@ -91,4 +91,105 @@ ack 2 3;
 ack 3 3;
 > val it = 61 : int
 
+(* Various types, exhaustive & non-exhaustive ------------------ *)
+(*) From https://smlhelp.github.io/book/docs/start/syntax/
+
+(*) unit, exhaustive
+(fn () => ());
+> val it = fn : unit -> unit
+
+(*) bool, non-exhaustive
+(fn true => 1);
+> stdIn:3.2-3.14 Warning: match nonexhaustive
+>   raised at: stdIn:3.2-3.14
+> val it = fn : bool -> int
+
+(*) bool, exhaustive
+(fn true  => 1
+  | false => 0);
+> val it = fn : bool -> int
+
+(*) order, non-exhaustive
+(fn LESS => ~1);
+> stdIn:3.2-3.15 Warning: match nonexhaustive
+>   raised at: stdIn:3.2-3.15
+> val it = fn : order -> int
+
+(*) order, non-exhaustive
+(fn LESS  => ~1
+  | EQUAL => 0);
+> stdIn:3.2-4.15 Warning: match nonexhaustive
+>   raised at: stdIn:3.2-4.15
+> val it = fn : order -> int
+
+(*) order, exhaustive
+(fn LESS    => ~1
+  | EQUAL   => 0
+  | GREATER => 1);
+> val it = fn : order -> int
+
+(*) int, non-exhaustive
+(fn 0 => true);
+> stdIn:3.2-3.14 Warning: match nonexhaustive
+>   raised at: stdIn:3.2-3.14
+> val it = fn : int -> bool
+
+(*) order, exhaustive
+(fn 0 => true
+  | _ => false);
+> val it = fn : int -> bool
+
+(*) int list, non-exhaustive
+(fn x::_ => x + 1);
+> stdIn:3.2-3.18 Warning: match nonexhaustive
+>   raised at: stdIn:3.2-3.18
+> val it = fn : int list -> int
+
+(*) int list, exhaustive
+(fn [] => 0
+  | x::_ => x + 1);
+> val it = fn : int list -> int
+
+(*) int * bool, non-exhaustive
+(fn (0,b) => true andalso b);
+> stdIn:3.2-3.28 Warning: match nonexhaustive
+>   raised at: stdIn:3.2-3.28
+> val it = fn : int * bool -> bool
+
+(*) int * bool, exhaustive
+(fn (0,b) => true andalso b
+  | (n,_) => false);
+> val it = fn : int * bool -> bool
+
+(* Exhaustive function of option list  ------------------------- *)
+(*) Non-exhaustive function
+fun f [(SOME i)] = i
+  | f [] = 0;
+> 0.0-0.0 Warning: match nonexhaustive
+>   raised at: 0.0-0.0
+> val f = fn : int option list -> int
+
+(*) Add NONE, still non-exhaustive
+fun f [(SOME i)] = i
+  | f [NONE] = ~1
+  | f [] = 0;
+> 0.0-0.0 Warning: match nonexhaustive
+>   raised at: 0.0-0.0
+> val f = fn : int option list -> int
+
+(*) Allow list longer than 1, still non-exhaustive
+fun f [(SOME i)] = i
+  | f [] = 0
+  | f (one :: two :: rest) = ~2;
+> 0.0-0.0 Warning: match nonexhaustive
+>   raised at: 0.0-0.0
+> val f = fn : int option list -> int
+
+(*) Exhaustive
+fun f [(SOME i)] = i
+  | f [NONE] = ~1
+  | f [] = 0
+  | f (one :: two :: rest) = ~2;
+> val f = fn : int option list -> int
+
 (*) End match.smli

@@ -321,8 +321,10 @@ f NONE;
 > val it = ~1 : int
 
 (*) Test cases from [MOREL-126].
-fun f ((SOME i) :: NIL) = i + 1
-  | f NIL = 0;
+fun f ((SOME i) :: nil) = i + 1
+  | f nil = 0;
+> 0.0-0.0 Warning: match nonexhaustive
+>   raised at: 0.0-0.0
 > val f = fn : int option list -> int
 f [];
 > val it = 0 : int

@@ -294,6 +294,7 @@ public class MainTest {
     ml("fn _ => 42").assertParseSame();
     ml("fn x => case x of 0 => 1 | _ => 2").assertParseSame();
     ml("fn () => 42").assertParseSame();
+    ml("fn [] => 0 | x :: _ => x + 1").assertParseSame();
 
     // apply
     ml("(fn x => x + 1) 3").assertParseSame();
@@ -315,7 +316,7 @@ public class MainTest {
     ml("1e2").assertParse("1E+2");
     ml("1E2").assertParse("1E+2");
 
-    // keywords such as 'val' and 'in' are case sensitive
+    // keywords such as 'val' and 'in' are case-sensitive
     ml("let val x = 1 in x + 1 end").assertParseSame();
     ml("let VAL x = 1 in x + 1 end")
         .assertParseThrowsParseException(

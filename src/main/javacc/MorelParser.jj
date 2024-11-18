@@ -540,11 +540,11 @@ OrderItem orderItem() :
 Exp fn() :
 {
   final Span span;
-  final Match match;
+  final List<Match> matchList;
 }
 {
-  <FN> { span = Span.of(pos()); } match = match() {
-    return ast.fn(span.end(this), match);
+  <FN> { span = Span.of(pos()); } matchList = matchList() {
+    return ast.fn(span.end(this), matchList);
   }
 }
 
