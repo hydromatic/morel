@@ -306,31 +306,31 @@ Exception:
 | General.op o | (&beta; &rarr; &gamma;) (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma; | "f o g" is the function composition of `f` and `g`. Thus, `(f o g) a` is equivalent to `f (g a)`. |
 | Interact.use | string &rarr; unit | "use f" loads source text from the file named `f`. |
 | Interact.useSilently | string &rarr; unit | "useSilently f" loads source text from the file named `f`, without printing to stdout. |
-| Int op * | int * int &rarr; int | "i * j" is the product of `i` and `j`. It raises Overflow when the result is not representable. |
-| Int op + | int * int &rarr; int | "i + j" is the sum of `i` and `j`. It raises Overflow when the result is not representable. |
-| Int op - | int * int &rarr; int | "i - j" is the difference of `i` and `j`. It raises Overflow when the result is not representable. |
-| Int op div | int * int &rarr; int | "i div j" returns the greatest integer less than or equal to the quotient of i by j, i.e., `floor(i / j)`. It raises Overflow when the result is not representable, or Div when `j = 0`. Note that rounding is towards negative infinity, not zero. |
-| Int op mod | int * int &rarr; int | "i mod j" returns the remainder of the division of i by j. It raises Div when `j = 0`. When defined, `(i mod j)` has the same sign as `j`, and `(i div j) * j + (i mod j) = i`. |
-| Int op &lt; | int * int &rarr; bool | "x &lt; y" returns true if x is less than y. Return false on unordered arguments, i.e., if either argument is NaN, so that the usual reversal of comparison under negation does not hold, e.g., `a &lt; b` is not the same as `not (a &gt;= b)`. |
-| Int op &lt;= | int * int &rarr; bool | As "&lt;" |
-| Int op &gt; | int * int &rarr; bool | As "&lt;" |
-| Int op &gt;= | int * int &rarr; bool | As "&lt;" |
+| Int op * | int * int &rarr; int | "i * j" is the product of `i` and `j`. It raises `Overflow` when the result is not representable. |
+| Int op + | int * int &rarr; int | "i + j" is the sum of `i` and `j`. It raises `Overflow` when the result is not representable. |
+| Int op - | int * int &rarr; int | "i - j" is the difference of `i` and `j`. It raises `Overflow` when the result is not representable. |
+| Int op div | int * int &rarr; int | "i div j" returns the greatest integer less than or equal to the quotient of i by j, i.e., `floor(i / j)`. It raises `Overflow` when the result is not representable, or Div when `j = 0`. Note that rounding is towards negative infinity, not zero. |
+| Int op mod | int * int &rarr; int | "i mod j" returns the remainder of the division of i by j. It raises `Div` when `j = 0`. When defined, `(i mod j)` has the same sign as `j`, and `(i div j) * j + (i mod j) = i`. |
+| Int op &lt; | int * int &rarr; bool | "i &lt; j" returns true if i is less than j. |
+| Int op &lt;= | int * int &rarr; bool | "i &lt; j" returns true if i is less than or equal to j. |
+| Int op &gt; | int * int &rarr; bool | "i &lt; j" returns true if i is greater than j. |
+| Int op &gt;= | int * int &rarr; bool | "i &lt; j" returns true if i is greater than or equal to j. |
 | Int op ~ | int &rarr; int | "~ i" returns the negation of `i`. |
 | Int.abs | int &rarr; int | "abs i" returns the absolute value of `i`. |
 | Int.compare | int * int &rarr; order | "compare (i, j)" returns `LESS`, `EQUAL`, or `GREATER` according to whether its first argument is less than, equal to, or greater than the second. |
-| Int.fromInt, int | int &rarr; int | "fromInt i" converts a value from type `int` to the default integer type. Raises Overflow if the value does not fit. |
-| Int.fromString | string &rarr; int option | "fromString s" scans a `int` value from a string. Returns `SOME(r)` if a `int` value can be scanned from a prefix of `s`, ignoring any initial whitespace; otherwise, it returns `NONE`. Equivalent to `StringCvt.scanString (scan StringCvt.DEC)`. |
+| Int.fromInt, int | int &rarr; int | "fromInt i" converts a value from type `int` to the default integer type. Raises `Overflow` if the value does not fit. |
+| Int.fromString | string &rarr; int option | "fromString s" scans a `int` value from a string. Returns `SOME (r)` if a `int` value can be scanned from a prefix of `s`, ignoring any initial whitespace; otherwise, it returns `NONE`. Equivalent to `StringCvt.scanString (scan StringCvt.DEC)`. |
 | Int.max | int * int &rarr; int | "max (i, j)" returns the larger of the arguments. |
-| Int.maxInt | int | "maxInt" is the maximal (most positive) integer representable by `int`. If a value is `NONE`, `int` can represent all positive integers, within the limits of the heap size. If `precision` is `SOME(n)`, then we have `maxInt` = 2<sup>(n-1)</sup> - 1. |
+| Int.maxInt | int | "maxInt" is the maximal (most positive) integer representable by `int`. If a value is `NONE`, `int` can represent all positive integers, within the limits of the heap size. If `precision` is `SOME (n)`, then we have `maxInt` = 2<sup>(n-1)</sup> - 1. |
 | Int.min | int * int &rarr; int | "min (i, j)" returns the smaller of the arguments. |
-| Int.minVal | int | "minPos" is the minimal (most negative) integer representable by `int`. If a value is `NONE`, `int` can represent all negative integers, within the limits of the heap size. If `precision` is `SOME(n)`, then we have `minInt` = -2<sup>(n-1)</sup>. |
+| Int.minInt | int | "minInt" is the minimal (most negative) integer representable by `int`. If a value is `NONE`, `int` can represent all negative integers, within the limits of the heap size. If `precision` is `SOME (n)`, then we have `minInt` = -2<sup>(n-1)</sup>. |
 | Int.mod | int * int &rarr; int | "mod (i, j)" returns the remainder of the division of `i` by `j`. It raises `Div` when `j = 0`. When defined, `(i mod j)` has the same sign as `j, and `(i div j) * j + (i mod j) = i`. |
-| Int.precision | int | "precision" is the precision. If `SOME(n)`, this denotes the number `n` of significant bits in type `int`, including the sign bit. If it is `NONE`, int has arbitrary precision. The precision need not necessarily be a power of two. |
+| Int.precision | int | "precision" is the precision. If `SOME (n)`, this denotes the number `n` of significant bits in type `int`, including the sign bit. If it is `NONE`, int has arbitrary precision. The precision need not necessarily be a power of two. |
 | Int.quot | int * int &rarr; int | "quot (i, j)" returns the truncated quotient of the division of `i` by `j`, i.e., it computes `(i / j)` and then drops any fractional part of the quotient. It raises `Overflow` when the result is not representable, or `Div` when `j = 0`. Note that unlike `div`, `quot` rounds towards zero. In addition, unlike `div` and `mod`, neither `quot` nor `rem` are infix by default; an appropriate infix declaration would be `infix 7 quot rem`. This is the semantics of most hardware divide instructions, so `quot` may be faster than `div`. |
 | Int.rem | int * int &rarr; int | "rem (i, j)" returns the remainder of the division of `i` by `j`. It raises `Div` when `j = 0`. `(i rem j)` has the same sign as i, and it holds that `(i quot j) * j + (i rem j) = i`. This is the semantics of most hardware divide instructions, so `rem` may be faster than `mod`. |
 | Int.sameSign | int * int &rarr; bool | "sameSign (i, j)" returns true if `i` and `j` have the same sign. It is equivalent to `(sign i = sign j)`. |
 | Int.sign | int &rarr; int | "sign i" returns ~1, 0, or 1 when `i` is less than, equal to, or greater than 0, respectively. |
-| Int.toInt | int &rarr; int | "toInt i" converts a value from the default integer type to type `int`. Raises Overflow if the value does not fit. |
+| Int.toInt | int &rarr; int | "toInt i" converts a value from the default integer type to type `int`. Raises `Overflow` if the value does not fit. |
 | Int.toString | int &rarr; string | "toString i" converts a `int` into a `string`; equivalent to `(fmt StringCvt.DEC r)`. |
 | List.nil | &alpha; list | "nil" is the empty list. |
 | List.null | &alpha; list &rarr; bool | "null l" returns `true` if the list `l` is empty. |
@@ -340,7 +340,7 @@ Exception:
 | List.hd | &alpha; list &rarr; &alpha; | "hd l" returns the first element of `l`. Raises `Empty` if `l` is `nil`. |
 | List.tl | &alpha; list &rarr; &alpha; list | "tl l" returns all but the first element of `l`. Raises `Empty` if `l` is `nil`. |
 | List.last | &alpha; list &rarr; &alpha; | "last l" returns the last element of `l`. Raises `Empty` if `l` is `nil`. |
-| List.getItem | &alpha; list &rarr; * (&alpha; * &alpha; list) option | "getItem l" returns `NONE` if the `list` is empty, and `SOME(hd l,tl l)` otherwise. This function is particularly useful for creating value readers from lists of characters. For example, `Int.scan StringCvt.DEC getItem` has the type `(int, char list) StringCvt.reader` and can be used to scan decimal integers from lists of characters. |
+| List.getItem | &alpha; list &rarr; * (&alpha; * &alpha; list) option | "getItem l" returns `NONE` if the `list` is empty, and `SOME (hd l, tl l)` otherwise. This function is particularly useful for creating value readers from lists of characters. For example, `Int.scan StringCvt.DEC getItem` has the type `(int, char list) StringCvt.reader` and can be used to scan decimal integers from lists of characters. |
 | List.nth | &alpha; list * int &rarr; &alpha; | "nth (l, i)" returns the `i`(th) element of the list `l`, counting from 0. Raises `Subscript` if `i` &lt; 0 or `i` &ge; `length l`. We have `nth(l, 0)` = `hd l`, ignoring exceptions. |
 | List.take | &alpha; list * int &rarr; &alpha; list | "take (l, i)" returns the first `i` elements of the list `l`. Raises `Subscript` if `i` &lt; 0 or `i` &gt; `length l`. We have `take(l, length l)` = `l`. |
 | List.drop | &alpha; list * int &rarr; &alpha; list | "drop (l, i)" returns what is left after dropping the first `i` elements of the list `l`. Raises `Subscript` if `i` &lt; 0 or `i` &gt; `length l`.<br><br>It holds that `take(l, i) @ drop(l, i)` = `l` when 0 &le; `i` &le; `length l`. We also have `drop(l, length l)` = `[]`. |
@@ -350,7 +350,7 @@ Exception:
 | List.app | (&alpha; &rarr; unit) &rarr; &alpha; list &rarr; unit | "app f l" applies `f` to the elements of `l`, from left to right. |
 | List.map | (&alpha; &rarr; &beta;) &rarr; &alpha; list &rarr; &beta; list | "map f l" applies `f` to each element of `l` from left to right, returning the list of results. |
 | List.mapPartial | (&alpha; &rarr; &beta; option) &rarr; &alpha; list &rarr; &beta; list | "mapPartial f l" applies `f` to each element of `l` from left to right, returning a list of results, with `SOME` stripped, where `f` was defined. `f` is not defined for an element of `l` if `f` applied to the element returns `NONE`. The above expression is equivalent to `((map valOf) o (filter isSome) o (map f)) l`. |
-| List.find | (&alpha; &rarr; bool) &rarr; &alpha; list &rarr; &alpha; option | "find f l" applies `f` to each element `x` of the list `l`, from left to right, until `f x` evaluates to `true`. It returns `SOME(x)` if such an `x` exists; otherwise it returns `NONE`. |
+| List.find | (&alpha; &rarr; bool) &rarr; &alpha; list &rarr; &alpha; option | "find f l" applies `f` to each element `x` of the list `l`, from left to right, until `f x` evaluates to `true`. It returns `SOME (x)` if such an `x` exists; otherwise it returns `NONE`. |
 | List.filter | (&alpha; &rarr; bool) &rarr; &alpha; list &rarr; &alpha; list | "filter f l" applies `f` to each element `x` of `l`, from left to right, and returns the list of those `x` for which `f x` evaluated to `true`, in the same order as they occurred in the argument list. |
 | List.partition | (&alpha; &rarr; bool) &rarr; &alpha; list &rarr; &alpha; list * &alpha; list | "partition f l" applies `f` to each element `x` of `l`, from left to right, and returns a pair `(pos, neg)` where `pos` is the list of those `x` for which `f x` evaluated to `true`, and `neg` is the list of those for which `f x` evaluated to `false`. The elements of `pos` and `neg` retain the same relative order they possessed in `l`. |
 | List.foldl | (&alpha; * &beta; &rarr; &beta;) &rarr; &beta; &rarr; &alpha; list &rarr; &beta; | "foldl f init \[x1, x2, ..., xn\]" returns `f(xn, ... , f(x2, f(x1, init))...)` or `init` if the list is empty. |
@@ -424,7 +424,7 @@ Exception:
 | Real.rem | real * real &rarr; real | "rem (x, y)" returns the remainder `x - n * y`, where `n` = `trunc (x / y)`. The result has the same sign as `x` and has absolute value less than the absolute value of `y`. If `x` is an infinity or `y` is 0, `rem` returns NaN. If `y` is an infinity, rem returns `x`. |
 | Real.round | real &rarr; int | "round r" yields the integer nearest to `r`. In the case of a tie, it rounds to the nearest even integer. |
 | Real.sameSign | real * real &rarr; bool | "sameSign (r1, r2)" returns true if and only if `signBit r1` equals `signBit r2`. |
-| Real.sign | real &rarr; int | "sign r" returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive. An infinity returns its sign; a zero returns 0 regardless of its sign. It raises Domain on NaN. |
+| Real.sign | real &rarr; int | "sign r" returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive. An infinity returns its sign; a zero returns 0 regardless of its sign. It raises `Domain` on NaN. |
 | Real.signBit | real &rarr; bool | "signBit r" returns true if and only if the sign of `r` (infinities, zeros, and NaN, included) is negative. |
 | Real.split | real &rarr; {frac:real, whole:real} | "split r" returns `{frac, whole}`, where `frac` and `whole` are the fractional and integral parts of `r`, respectively. Specifically, `whole` is integral, and `abs frac` &lt; 1.0. |
 | Real.trunc | real &rarr; int | "trunc r" rounds r towards zero. |
