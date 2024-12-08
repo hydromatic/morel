@@ -124,6 +124,17 @@ val adjacent_states =
 >    {adjacents=["MT","SD","NE","CO","UT","ID"],state="WY"}]
 >   : {adjacents:string list, state:string} list
 
+(*) Distinct state names
+val states =
+  from a in adjacent_states
+    group a.state
+    order state;
+> val states =
+>   ["AK","AL","AR","AZ","CA","CO","CT","DC","DE","FL","GA","HI","IA","ID","IL",
+>    "IN","KS","KY","LA","MA","MD","ME","MI","MN","MO","MS","MT","NC","ND","NE",
+>    "NH","NJ","NM","NV","NY","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT",
+>    "VA","VT","WA","WI","WV","WY"] : string list
+
 (*) Coastal states
 val coastal_states = ["WA", "OR", "CA", "TX", "LA", "MS",
   "AL", "GA", "FL", "SC", "NC", "VA", "MD", "DE", "NJ",
@@ -133,11 +144,11 @@ val coastal_states = ["WA", "OR", "CA", "TX", "LA", "MS",
 >    "NY","CT","RI","MA","ME","NH","AK","HI"] : string list
 
 (*) Pairs of states that share a border
-val pairs =
+val neighbors =
   from s in adjacent_states,
       adjacent in s.adjacents
   yield {s.state, adjacent};
-> val pairs =
+> val neighbors =
 >   [{adjacent="MS",state="AL"},{adjacent="TN",state="AL"},
 >    {adjacent="GA",state="AL"},{adjacent="FL",state="AL"},
 >    {adjacent="MO",state="AR"},{adjacent="TN",state="AR"},
@@ -172,9 +183,27 @@ val pairs =
 >    {adjacent="MO",state="KS"},{adjacent="OK",state="KS"},...]
 >   : {adjacent:string, state:string} list
 
+(*) As neighbors, but a list of pairs, not a list of records.
+val pairs =
+  from n in neighbors
+    yield (n.state, n.adjacent);
+> val pairs =
+>   [("AL","MS"),("AL","TN"),("AL","GA"),("AL","FL"),("AR","MO"),("AR","TN"),
+>    ("AR","MS"),("AR","LA"),("AR","TX"),("AR","OK"),("AZ","CA"),("AZ","NV"),
+>    ("AZ","UT"),("AZ","CO"),("AZ","NM"),("CA","OR"),("CA","NV"),("CA","AZ"),
+>    ("CO","WY"),("CO","NE"),("CO","KS"),("CO","OK"),("CO","NM"),("CO","AZ"),
+>    ("CO","UT"),("CT","NY"),("CT","MA"),("CT","RI"),("DC","MD"),("DC","VA"),
+>    ("DE","MD"),("DE","PA"),("DE","NJ"),("FL","AL"),("FL","GA"),("GA","FL"),
+>    ("GA","AL"),("GA","TN"),("GA","NC"),("GA","SC"),("IA","MN"),("IA","WI"),
+>    ("IA","IL"),("IA","MO"),("IA","NE"),("IA","SD"),("ID","MT"),("ID","WY"),
+>    ("ID","UT"),("ID","NV"),("ID","OR"),("ID","WA"),("IL","IN"),("IL","KY"),
+>    ("IL","MO"),("IL","IA"),("IL","WI"),("IN","MI"),("IN","OH"),("IN","KY"),
+>    ("IN","IL"),("KS","NE"),("KS","MO"),("KS","OK"),...]
+>   : (string * string) list
+
 (*) States that border both TN and FL
-from p in pairs,
-    q in pairs
+from p in neighbors,
+    q in neighbors
   where p.state = "TN"
     andalso p.adjacent = q.state
     andalso q.adjacent = "FL"
@@ -183,7 +212,7 @@ from p in pairs,
 
 (*) Is a state adjacent to another?
 fun is_adjacent x y =
-  case (from p in pairs where p.state = x andalso p.adjacent = y) of
+  case (from p in neighbors where p.state = x andalso p.adjacent = y) of
     [] => false
   | _ => true;
 > val is_adjacent = fn : string -> string -> bool
@@ -198,11 +227,11 @@ is_adjacent "OR" "OR";
 (*) States that are n hops of a given state
 fun states_within x 0 = [x]
   | states_within x 1 =
-    (from p in pairs
+    (from p in neighbors
      where p.state = x
      yield p.adjacent)
   | states_within x n =
-    (from p in (from p in pairs where p.state = x),
+    (from p in (from p in neighbors where p.state = x),
         a in states_within p.adjacent (n - 1)
      group a);
 > val states_within = fn : string -> int -> string list
@@ -338,7 +367,7 @@ fixu_semi_naive (prefixes, ["cat", "dog", "", "car", "cart"], ~1);
 fun states_within2 s n =
   fixu_semi_naive ((fn states =>
     from s in states,
-        p in pairs
+        p in neighbors
       where p.state = s
       group p.adjacent), [s], n);
 > val states_within2 = fn : string -> int -> string list
@@ -412,5 +441,269 @@ shortest_path edges;
 >    {source="d",target="a",weight=3},{source="d",target="b",weight=~1},
 >    {source="d",target="c",weight=1},{source="d",target="d",weight=0}]
 >   : {source:string, target:string, weight:int} list
+
+(* -- Graph algorithms ---------------------------------- *)
+(* The paper "EmptyHeaded: A Relational Engine for Graph Processing" (Aberger,
+   Tu, Olukotun, Ré, 2016) gives a list of important graph algorithms
+   expressed in an extended version of Datalog. They are Triangle, 4-Clique,
+   Lollipop, Barball, Count-Triangle, PageRank, SSSP. In the following, we
+   translate those algorithms to Morel and apply them to the graph of state
+   adjacency.
+*)
+
+(* 1. Triangles ------------------------------------------------ *)
+(*) In Datalog:
+(*)   Triangle(x, y, z) :- R(x, y), S(y, z), T(x, z).
+
+(*) TODO remove 'in states' when bug is fixed
+from x in states, y in states, z in states
+  where (x, y) elem pairs
+    andalso (y, z) elem pairs
+    andalso (z, x) elem pairs;
+> val it =
+>   [{x="AL",y="FL",z="GA"},{x="AL",y="GA",z="FL"},{x="AL",y="GA",z="TN"},
+>    {x="AL",y="MS",z="TN"},{x="AL",y="TN",z="GA"},{x="AL",y="TN",z="MS"},
+>    {x="AR",y="LA",z="MS"},{x="AR",y="LA",z="TX"},{x="AR",y="MO",z="OK"},
+>    {x="AR",y="MO",z="TN"},{x="AR",y="MS",z="LA"},{x="AR",y="MS",z="TN"},
+>    {x="AR",y="OK",z="MO"},{x="AR",y="OK",z="TX"},{x="AR",y="TN",z="MO"},
+>    {x="AR",y="TN",z="MS"},{x="AR",y="TX",z="LA"},{x="AR",y="TX",z="OK"},
+>    {x="AZ",y="CA",z="NV"},{x="AZ",y="CO",z="NM"},{x="AZ",y="CO",z="UT"},
+>    {x="AZ",y="NM",z="CO"},{x="AZ",y="NM",z="UT"},{x="AZ",y="NV",z="CA"},
+>    {x="AZ",y="NV",z="UT"},{x="AZ",y="UT",z="CO"},{x="AZ",y="UT",z="NM"},
+>    {x="AZ",y="UT",z="NV"},{x="CA",y="AZ",z="NV"},{x="CA",y="NV",z="AZ"},
+>    {x="CA",y="NV",z="OR"},{x="CA",y="OR",z="NV"},{x="CO",y="AZ",z="NM"},
+>    {x="CO",y="AZ",z="UT"},{x="CO",y="KS",z="NE"},{x="CO",y="KS",z="OK"},
+>    {x="CO",y="NE",z="KS"},{x="CO",y="NE",z="WY"},{x="CO",y="NM",z="AZ"},
+>    {x="CO",y="NM",z="OK"},{x="CO",y="NM",z="UT"},{x="CO",y="OK",z="KS"},
+>    {x="CO",y="OK",z="NM"},{x="CO",y="UT",z="AZ"},{x="CO",y="UT",z="NM"},
+>    {x="CO",y="UT",z="WY"},{x="CO",y="WY",z="NE"},{x="CO",y="WY",z="UT"},
+>    {x="CT",y="MA",z="NY"},{x="CT",y="MA",z="RI"},{x="CT",y="NY",z="MA"},
+>    {x="CT",y="RI",z="MA"},{x="DC",y="MD",z="VA"},{x="DC",y="VA",z="MD"},
+>    {x="DE",y="MD",z="PA"},{x="DE",y="NJ",z="PA"},{x="DE",y="PA",z="MD"},
+>    {x="DE",y="PA",z="NJ"},{x="FL",y="AL",z="GA"},{x="FL",y="GA",z="AL"},
+>    {x="GA",y="AL",z="FL"},{x="GA",y="AL",z="TN"},{x="GA",y="FL",z="AL"},
+>    {x="GA",y="NC",z="SC"},...] : {x:string, y:string, z:string} list
+
+(*) Equivalent, using a function
+(*
+from x in states, y in states, z in states
+  where is_adjacent x y
+    andalso is_adjacent y z
+    andalso is_adjacent z x;
+> val it =
+>   [{x="AL",y="FL",z="GA"},{x="AL",y="GA",z="FL"},{x="AL",y="GA",z="TN"},
+>    {x="AL",y="MS",z="TN"},{x="AL",y="TN",z="GA"},{x="AL",y="TN",z="MS"},
+>    {x="AR",y="LA",z="MS"},{x="AR",y="LA",z="TX"},{x="AR",y="MO",z="OK"},
+>    {x="AR",y="MO",z="TN"},{x="AR",y="MS",z="LA"},{x="AR",y="MS",z="TN"},
+>    {x="AR",y="OK",z="MO"},{x="AR",y="OK",z="TX"},{x="AR",y="TN",z="MO"},
+>    {x="AR",y="TN",z="MS"},{x="AR",y="TX",z="LA"},{x="AR",y="TX",z="OK"},
+>    {x="AZ",y="CA",z="NV"},{x="AZ",y="CO",z="NM"},{x="AZ",y="CO",z="UT"},
+>    {x="AZ",y="NM",z="CO"},{x="AZ",y="NM",z="UT"},{x="AZ",y="NV",z="CA"},
+>    {x="AZ",y="NV",z="UT"},{x="AZ",y="UT",z="CO"},{x="AZ",y="UT",z="NM"},
+>    {x="AZ",y="UT",z="NV"},{x="CA",y="AZ",z="NV"},{x="CA",y="NV",z="AZ"},
+>    {x="CA",y="NV",z="OR"},{x="CA",y="OR",z="NV"},{x="CO",y="AZ",z="NM"},
+>    {x="CO",y="AZ",z="UT"},{x="CO",y="KS",z="NE"},{x="CO",y="KS",z="OK"},
+>    {x="CO",y="NE",z="KS"},{x="CO",y="NE",z="WY"},{x="CO",y="NM",z="AZ"},
+>    {x="CO",y="NM",z="OK"},{x="CO",y="NM",z="UT"},{x="CO",y="OK",z="KS"},
+>    {x="CO",y="OK",z="NM"},{x="CO",y="UT",z="AZ"},{x="CO",y="UT",z="NM"},
+>    {x="CO",y="UT",z="WY"},{x="CO",y="WY",z="NE"},{x="CO",y="WY",z="UT"},
+>    {x="CT",y="MA",z="NY"},{x="CT",y="MA",z="RI"},{x="CT",y="NY",z="MA"},
+>    {x="CT",y="RI",z="MA"},{x="DC",y="MD",z="VA"},{x="DC",y="VA",z="MD"},
+>    {x="DE",y="MD",z="PA"},{x="DE",y="NJ",z="PA"},{x="DE",y="PA",z="MD"},
+>    {x="DE",y="PA",z="NJ"},{x="FL",y="AL",z="GA"},{x="FL",y="GA",z="AL"},
+>    {x="GA",y="AL",z="FL"},{x="GA",y="AL",z="TN"},{x="GA",y="FL",z="AL"},
+>    {x="GA",y="NC",z="SC"},...] : {x:string, y:string, z:string} list
+*)
+
+(* 2. Count Triangles ------------------------------------------ *)
+(*) In Datalog:
+(*)   CountTriangle(; w: long) :-
+(*)       R(x, y), S(y, z), T(z, x); w=<<COUNT(*)>>.
+(*) (The formula in the EmptyHeaded paper contains an error.)
+
+(*) TODO remove 'in states' when bug is fixed
+from x in states, y in states, z in states
+  where (x, y) elem pairs
+    andalso (y, z) elem pairs
+    andalso (z, x) elem pairs
+  compute count;
+> val it = 366 : int
+
+(* 3. 4-Clique ------------------------------------------------- *)
+(*) In Datalog:
+(*)   4Clique(x, y, z, w) :- R(x, y), S(y, z), T(x, z), U(x, w),
+(*)       V(y, w), Q(z, w).
+from x in states, y in states, z in states, w in states
+  where (x, y) elem pairs
+    andalso (y, z) elem pairs
+    andalso (x, z) elem pairs
+    andalso (x, w) elem pairs
+    andalso (y, w) elem pairs
+    andalso (z, w) elem pairs;
+> val it =
+>   [{w="UT",x="AZ",y="CO",z="NM"},{w="NM",x="AZ",y="CO",z="UT"},
+>    {w="UT",x="AZ",y="NM",z="CO"},{w="CO",x="AZ",y="NM",z="UT"},
+>    {w="NM",x="AZ",y="UT",z="CO"},{w="CO",x="AZ",y="UT",z="NM"},
+>    {w="UT",x="CO",y="AZ",z="NM"},{w="NM",x="CO",y="AZ",z="UT"},
+>    {w="UT",x="CO",y="NM",z="AZ"},{w="AZ",x="CO",y="NM",z="UT"},
+>    {w="NM",x="CO",y="UT",z="AZ"},{w="AZ",x="CO",y="UT",z="NM"},
+>    {w="UT",x="NM",y="AZ",z="CO"},{w="CO",x="NM",y="AZ",z="UT"},
+>    {w="UT",x="NM",y="CO",z="AZ"},{w="AZ",x="NM",y="CO",z="UT"},
+>    {w="CO",x="NM",y="UT",z="AZ"},{w="AZ",x="NM",y="UT",z="CO"},
+>    {w="NM",x="UT",y="AZ",z="CO"},{w="CO",x="UT",y="AZ",z="NM"},
+>    {w="NM",x="UT",y="CO",z="AZ"},{w="AZ",x="UT",y="CO",z="NM"},
+>    {w="CO",x="UT",y="NM",z="AZ"},{w="AZ",x="UT",y="NM",z="CO"}]
+>   : {w:string, x:string, y:string, z:string} list
+
+(* 4. Lollipop ------------------------------------------------- *)
+(*) In Datalog:
+(*)   Lollipop(x, y, z, w) :- R(x, y), S(y, z), T(x, z), U(x, w).
+from x in states, y in states, z in states, w in states
+  where (x, y) elem pairs
+    andalso (y, z) elem pairs
+    andalso (x, z) elem pairs
+    andalso (x, w) elem pairs
+    andalso w <> y
+    andalso y <> z;
+> val it =
+>   [{w="GA",x="AL",y="FL",z="GA"},{w="MS",x="AL",y="FL",z="GA"},
+>    {w="TN",x="AL",y="FL",z="GA"},{w="FL",x="AL",y="GA",z="FL"},
+>    {w="MS",x="AL",y="GA",z="FL"},{w="TN",x="AL",y="GA",z="FL"},
+>    {w="FL",x="AL",y="GA",z="TN"},{w="MS",x="AL",y="GA",z="TN"},
+>    {w="TN",x="AL",y="GA",z="TN"},{w="FL",x="AL",y="MS",z="TN"},
+>    {w="GA",x="AL",y="MS",z="TN"},{w="TN",x="AL",y="MS",z="TN"},
+>    {w="FL",x="AL",y="TN",z="GA"},{w="GA",x="AL",y="TN",z="GA"},
+>    {w="MS",x="AL",y="TN",z="GA"},{w="FL",x="AL",y="TN",z="MS"},
+>    {w="GA",x="AL",y="TN",z="MS"},{w="MS",x="AL",y="TN",z="MS"},
+>    {w="MO",x="AR",y="LA",z="MS"},{w="MS",x="AR",y="LA",z="MS"},
+>    {w="OK",x="AR",y="LA",z="MS"},{w="TN",x="AR",y="LA",z="MS"},
+>    {w="TX",x="AR",y="LA",z="MS"},{w="MO",x="AR",y="LA",z="TX"},
+>    {w="MS",x="AR",y="LA",z="TX"},{w="OK",x="AR",y="LA",z="TX"},
+>    {w="TN",x="AR",y="LA",z="TX"},{w="TX",x="AR",y="LA",z="TX"},
+>    {w="LA",x="AR",y="MO",z="OK"},{w="MS",x="AR",y="MO",z="OK"},
+>    {w="OK",x="AR",y="MO",z="OK"},{w="TN",x="AR",y="MO",z="OK"},
+>    {w="TX",x="AR",y="MO",z="OK"},{w="LA",x="AR",y="MO",z="TN"},
+>    {w="MS",x="AR",y="MO",z="TN"},{w="OK",x="AR",y="MO",z="TN"},
+>    {w="TN",x="AR",y="MO",z="TN"},{w="TX",x="AR",y="MO",z="TN"},
+>    {w="LA",x="AR",y="MS",z="LA"},{w="MO",x="AR",y="MS",z="LA"},
+>    {w="OK",x="AR",y="MS",z="LA"},{w="TN",x="AR",y="MS",z="LA"},
+>    {w="TX",x="AR",y="MS",z="LA"},{w="LA",x="AR",y="MS",z="TN"},
+>    {w="MO",x="AR",y="MS",z="TN"},{w="OK",x="AR",y="MS",z="TN"},
+>    {w="TN",x="AR",y="MS",z="TN"},{w="TX",x="AR",y="MS",z="TN"},
+>    {w="LA",x="AR",y="OK",z="MO"},{w="MO",x="AR",y="OK",z="MO"},
+>    {w="MS",x="AR",y="OK",z="MO"},{w="TN",x="AR",y="OK",z="MO"},
+>    {w="TX",x="AR",y="OK",z="MO"},{w="LA",x="AR",y="OK",z="TX"},
+>    {w="MO",x="AR",y="OK",z="TX"},{w="MS",x="AR",y="OK",z="TX"},
+>    {w="TN",x="AR",y="OK",z="TX"},{w="TX",x="AR",y="OK",z="TX"},
+>    {w="LA",x="AR",y="TN",z="MO"},{w="MO",x="AR",y="TN",z="MO"},
+>    {w="MS",x="AR",y="TN",z="MO"},{w="OK",x="AR",y="TN",z="MO"},
+>    {w="TX",x="AR",y="TN",z="MO"},{w="LA",x="AR",y="TN",z="MS"},...]
+>   : {w:string, x:string, y:string, z:string} list
+
+(* 5. Barbell -------------------------------------------------- *)
+(*) In Datalog:
+(*)   Barbell(x, y, z, x’, y’, z’) :-
+(*)           R(x, y), S(y, z), T(x, z),
+(*)           U(x, x’),
+(*)           R’(x’, y’), S’(y’, z’), T’(x’, z’).
+(* TODO enable the following when we have an efficient implementation
+from x in states, y in states, z in states, x' in states, y' in states, z' in states
+  where (x, y) elem pairs
+    andalso (y, z) elem pairs
+    andalso (x, z) elem pairs
+    andalso (x, x') elem pairs
+    andalso (x', y') elem pairs
+    andalso (y', z') elem pairs
+    andalso (x', z') elem pairs;
+*)
+
+(*) Equivalent to the previous, hand-optimized
+from (x, x') in pairs, (y, z) in pairs, (y', z') in pairs
+  where (x, y) elem pairs
+    andalso (x, z) elem pairs
+    andalso (x', y') elem pairs
+    andalso (x', z') elem pairs;
+> val it =
+>   [{x="AL",x'="MS",y="FL",y'="AL",z="GA",z'="TN"},
+>    {x="AL",x'="MS",y="FL",y'="AR",z="GA",z'="TN"},
+>    {x="AL",x'="MS",y="FL",y'="AR",z="GA",z'="LA"},
+>    {x="AL",x'="MS",y="FL",y'="LA",z="GA",z'="AR"},
+>    {x="AL",x'="MS",y="FL",y'="TN",z="GA",z'="AL"},
+>    {x="AL",x'="MS",y="FL",y'="TN",z="GA",z'="AR"},
+>    {x="AL",x'="MS",y="GA",y'="AL",z="FL",z'="TN"},
+>    {x="AL",x'="MS",y="GA",y'="AR",z="FL",z'="TN"},
+>    {x="AL",x'="MS",y="GA",y'="AR",z="FL",z'="LA"},
+>    {x="AL",x'="MS",y="GA",y'="LA",z="FL",z'="AR"},
+>    {x="AL",x'="MS",y="GA",y'="TN",z="FL",z'="AL"},
+>    {x="AL",x'="MS",y="GA",y'="TN",z="FL",z'="AR"},
+>    {x="AL",x'="MS",y="GA",y'="AL",z="TN",z'="TN"},
+>    {x="AL",x'="MS",y="GA",y'="AR",z="TN",z'="TN"},
+>    {x="AL",x'="MS",y="GA",y'="AR",z="TN",z'="LA"},
+>    {x="AL",x'="MS",y="GA",y'="LA",z="TN",z'="AR"},
+>    {x="AL",x'="MS",y="GA",y'="TN",z="TN",z'="AL"},
+>    {x="AL",x'="MS",y="GA",y'="TN",z="TN",z'="AR"},
+>    {x="AL",x'="MS",y="MS",y'="AL",z="TN",z'="TN"},
+>    {x="AL",x'="MS",y="MS",y'="AR",z="TN",z'="TN"},
+>    {x="AL",x'="MS",y="MS",y'="AR",z="TN",z'="LA"},
+>    {x="AL",x'="MS",y="MS",y'="LA",z="TN",z'="AR"},
+>    {x="AL",x'="MS",y="MS",y'="TN",z="TN",z'="AL"},
+>    {x="AL",x'="MS",y="MS",y'="TN",z="TN",z'="AR"},
+>    {x="AL",x'="MS",y="TN",y'="AL",z="GA",z'="TN"},
+>    {x="AL",x'="MS",y="TN",y'="AR",z="GA",z'="TN"},
+>    {x="AL",x'="MS",y="TN",y'="AR",z="GA",z'="LA"},
+>    {x="AL",x'="MS",y="TN",y'="LA",z="GA",z'="AR"},
+>    {x="AL",x'="MS",y="TN",y'="TN",z="GA",z'="AL"},
+>    {x="AL",x'="MS",y="TN",y'="TN",z="GA",z'="AR"},
+>    {x="AL",x'="MS",y="TN",y'="AL",z="MS",z'="TN"},
+>    {x="AL",x'="MS",y="TN",y'="AR",z="MS",z'="TN"},
+>    {x="AL",x'="MS",y="TN",y'="AR",z="MS",z'="LA"},
+>    {x="AL",x'="MS",y="TN",y'="LA",z="MS",z'="AR"},
+>    {x="AL",x'="MS",y="TN",y'="TN",z="MS",z'="AL"},
+>    {x="AL",x'="MS",y="TN",y'="TN",z="MS",z'="AR"},
+>    {x="AL",x'="TN",y="FL",y'="AL",z="GA",z'="MS"},
+>    {x="AL",x'="TN",y="FL",y'="AL",z="GA",z'="GA"},
+>    {x="AL",x'="TN",y="FL",y'="AR",z="GA",z'="MO"},
+>    {x="AL",x'="TN",y="FL",y'="AR",z="GA",z'="MS"},
+>    {x="AL",x'="TN",y="FL",y'="GA",z="GA",z'="AL"},
+>    {x="AL",x'="TN",y="FL",y'="GA",z="GA",z'="NC"},
+>    {x="AL",x'="TN",y="FL",y'="KY",z="GA",z'="VA"},
+>    {x="AL",x'="TN",y="FL",y'="KY",z="GA",z'="MO"},
+>    {x="AL",x'="TN",y="FL",y'="MO",z="GA",z'="KY"},
+>    {x="AL",x'="TN",y="FL",y'="MO",z="GA",z'="AR"},
+>    {x="AL",x'="TN",y="FL",y'="MS",z="GA",z'="AR"},
+>    {x="AL",x'="TN",y="FL",y'="MS",z="GA",z'="AL"},
+>    {x="AL",x'="TN",y="FL",y'="NC",z="GA",z'="VA"},
+>    {x="AL",x'="TN",y="FL",y'="NC",z="GA",z'="GA"},
+>    {x="AL",x'="TN",y="FL",y'="VA",z="GA",z'="NC"},
+>    {x="AL",x'="TN",y="FL",y'="VA",z="GA",z'="KY"},
+>    {x="AL",x'="TN",y="GA",y'="AL",z="FL",z'="MS"},
+>    {x="AL",x'="TN",y="GA",y'="AL",z="FL",z'="GA"},
+>    {x="AL",x'="TN",y="GA",y'="AR",z="FL",z'="MO"},
+>    {x="AL",x'="TN",y="GA",y'="AR",z="FL",z'="MS"},
+>    {x="AL",x'="TN",y="GA",y'="GA",z="FL",z'="AL"},
+>    {x="AL",x'="TN",y="GA",y'="GA",z="FL",z'="NC"},
+>    {x="AL",x'="TN",y="GA",y'="KY",z="FL",z'="VA"},
+>    {x="AL",x'="TN",y="GA",y'="KY",z="FL",z'="MO"},
+>    {x="AL",x'="TN",y="GA",y'="MO",z="FL",z'="KY"},
+>    {x="AL",x'="TN",y="GA",y'="MO",z="FL",z'="AR"},
+>    {x="AL",x'="TN",y="GA",y'="MS",z="FL",z'="AR"},
+>    {x="AL",x'="TN",y="GA",y'="MS",z="FL",z'="AL"},...]
+>   : {x:string, x':string, y:string, y':string, z:string, z':string} list
+
+(* 6. PageRank ------------------------------------------------- *)
+(*) In Datalog:
+(*)   PageRank  N(; w: int) :- Edge(x, y); w=<<COUNT(x)>>.
+(*)   PageRank(x; y: float) :- Edge(x, z); y = 1 / N.
+(*)   PageRank(x; y: float)*[i=5] :- Edge(x, z), PageRank(z), InvDeg(z);
+(*)       y = 0.15 + 0.85 * << SUM(z)>>.
+
+(*) TODO
+
+(* 7. Single-Source Shortest Paths (SSSP) ---------------------- *)
+(*) In Datalog:
+(*)   SSSP(x; y: int) :- Edge(" start ", x); y = 1.
+(*)   SSSP(x; y: int)* :- Edge(w, x), SSSP(w); y = <<MIN(w)>> + 1.
+
+(*) TODO
 
 (*) End fixedPoint.smli
