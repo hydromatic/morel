@@ -60,9 +60,13 @@ public final class Parsers {
 
   /** Appends an identifier. Encloses it in back-ticks if necessary. */
   public static StringBuilder appendId(StringBuilder buf, String id) {
-    if (id.contains("`") || id.contains(" ")) {
+    if (id.contains("`")) {
       return buf.append("`")
           .append(id.replaceAll("`", "``"))
+          .append("`");
+    } else if (id.contains(" ")) {
+      return buf.append("`")
+          .append(id)
           .append("`");
     } else {
       return buf.append(id);

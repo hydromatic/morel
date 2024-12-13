@@ -214,6 +214,9 @@ public class Static {
     return -1;
   }
 
+  /** Returns a list containing the elements of {@code list0} that are also in
+   * {@code list1}. The result preserves the order of {@code list1}, and any
+   * duplicates it may contain. */
   public static <E> List<E> intersect(List<E> list0,
       Iterable<? extends E> list1) {
     final ImmutableList.Builder<E> list2 = ImmutableList.builder();
@@ -231,6 +234,12 @@ public class Static {
     String s = b.toString();
     b.setLength(0);
     return s;
+  }
+
+  /** Returns whether a builder ends with a given string. */
+  public static boolean endsWith(StringBuilder buf, String s) {
+    final int i = buf.length() - s.length();
+    return i >= 0 && buf.indexOf(s, i) == i;
   }
 }
 

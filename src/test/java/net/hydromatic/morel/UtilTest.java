@@ -58,6 +58,7 @@ import java.util.function.Predicate;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.eval.Codes.isNegative;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.endsWith;
 import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
 import static net.hydromatic.morel.util.Static.transform;
 
@@ -425,6 +426,22 @@ public class UtilTest {
     assertThat(ImmutableList.copyOf(rangeExtent5.iterable),
         hasToString("[[[NONE], 4], [[NONE], 5], [[NONE], 6],"
             + " [[SOME, true], 4], [[SOME, true], 5], [[SOME, true], 6]]"));
+  }
+
+  /** Tests {@link Static#endsWith(StringBuilder, String)}. */
+  @Test void testEndsWith() {
+    final StringBuilder yzxyz = new StringBuilder("yzxyz");
+    assertThat(endsWith(yzxyz, ""), is(true));
+    assertThat(endsWith(yzxyz, "z"), is(true));
+    assertThat(endsWith(yzxyz, "yz"), is(true));
+    assertThat(endsWith(yzxyz, "xy"), is(false));
+    assertThat(endsWith(yzxyz, "yzx"), is(false));
+    assertThat(endsWith(yzxyz, "yzxyz"), is(true));
+    assertThat(endsWith(yzxyz, "wyzxyz"), is(false));
+
+    final StringBuilder empty = new StringBuilder();
+    assertThat(endsWith(empty, "z"), is(false));
+    assertThat(endsWith(empty, ""), is(true));
   }
 }
 

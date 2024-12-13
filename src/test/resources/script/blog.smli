@@ -592,8 +592,8 @@ fun mapReduce mapper reducer list =
     List.map (fn (key, values) => (key, reducer (key, values))) keyValuesList
   end;
 > val mapReduce = fn
->   : ('a -> ('b * 'c) list) ->
->      ('b * 'c list -> 'd) -> 'a list -> ('b * 'd) list
+>   : ('a -> ('b * 'c) list)
+>     -> ('b * 'c list -> 'd) -> 'a list -> ('b * 'd) list
 
 fun wc_mapper line =
   let
@@ -1245,8 +1245,8 @@ fun mapReduce mapper reducer list =
       (k, v) in mapper e
     group k compute c = (fn vs => reducer (k, vs)) of v;
 > val mapReduce = fn
->   : ('a -> ('b * 'c) list) ->
->      ('b * 'c list -> 'd) -> 'a list -> {c:'d, k:'b} list
+>   : ('a -> ('b * 'c) list)
+>     -> ('b * 'c list -> 'd) -> 'a list -> {c:'d, k:'b} list
 fun wc_mapper line =
   List.map (fn w => (w, 1)) (split line);
 > val wc_mapper = fn : string -> (string * int) list

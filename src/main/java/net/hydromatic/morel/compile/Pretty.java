@@ -40,6 +40,7 @@ import java.util.List;
 
 import static net.hydromatic.morel.parse.Parsers.appendId;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
+import static net.hydromatic.morel.util.Static.endsWith;
 
 import static java.util.Objects.requireNonNull;
 
@@ -273,8 +274,16 @@ class Pretty {
 
   private StringBuilder prettyType(StringBuilder buf, int indent, int[] lineEnd,
       int depth, Type type, TypeVal typeVal, int leftPrec, int rightPrec) {
-    buf.append(typeVal.prefix);
-    final int indent2 = indent + typeVal.prefix.length();
+    String prefix = typeVal.prefix;
+    if (endsWith(buf, " ")) {
+      // If the buffer ends with space, don't print any spaces at the start of
+      // the prefix.
+      while (prefix.startsWith(" ")) {
+        prefix = prefix.substring(1);
+      }
+    }
+    buf.append(prefix);
+    final int indent2 = indent + prefix.length();
     final int start;
     switch (typeVal.type.op()) {
     case DATA_TYPE:
@@ -350,12 +359,11 @@ class Pretty {
         return buf;
       }
       final FnType fnType = (FnType) typeVal.type;
-      pretty1(buf, indent2 + 1, lineEnd, depth, type,
+      pretty1(buf, indent2, lineEnd, depth, type,
           new TypeVal("", fnType.paramType),
           leftPrec, Op.FUNCTION_TYPE.left);
-      pretty1(buf, indent2 + 1, lineEnd, depth, type, " -> ", 0, 0);
-      pretty1(buf, indent2 + 1, lineEnd, depth, type,
-          new TypeVal("", fnType.resultType),
+      pretty1(buf, indent2, lineEnd, depth, type,
+          new TypeVal(" -> ", fnType.resultType),
           Op.FUNCTION_TYPE.right, rightPrec);
       return buf;
 

@@ -307,4 +307,49 @@ end;
 from b in [SOME true, NONE];
 > val it = [SOME true,NONE] : bool option list
 
+(*) If a function type is spread over several lines, put '->' at the start of
+(*) the next line.
+val f : ('a -> (int * int) list) -> ('a -> (int * int) list) -> 'a -> (int * int) list = fn a => fn b => fn c => [];
+> val f = fn
+>   : ('a -> (int * int) list)
+>     -> ('b -> (int * int) list) -> 'c -> (int * int) list
+
+(* SML/NJ output for previous is as follows. TODO match SML/NJ type variables.
+> val f = fn
+>   : ('a -> (int * int) list)
+>     -> ('a -> (int * int) list) -> 'a -> (int * int) list
+*)
+
+(*) Function with tuple type and lots of type variables returns record type.
+(*) Note that after 'z, type variables are 'ba, 'bb, etc.
+(*) Also note that 'o' needs to be quoted.
+fun r0 (a, b, c, d, e, f, g, h, i, j, k, l, m, n, `o`, p, q, r, s, t, u, v, w, x, y, z, aa, ab, ac) = {a=a,b=b,c=c};
+> val r0 = fn
+>   :
+>     'a * 'b * 'c * 'd * 'e * 'f * 'g * 'h * 'i * 'j * 'k * 'l * 'm * 'n * 'o *
+>     'p * 'q * 'r * 's * 't * 'u * 'v * 'w * 'x * 'y * 'z * 'ba * 'bb * 'bc
+>     -> {a:'a, b:'b, c:'c}
+
+(*) Highly curried function with lots of type variables returns record type.
+fun r0 a b c d e f g h i j k l m n p q r s = {a=a,b=b,c=c};
+> val r0 = fn
+>   : 'a
+>     -> 'b
+>        -> 'c
+>           -> 'd
+>              -> 'e
+>                 -> 'f
+>                    -> 'g
+>                       -> 'h
+>                          -> 'i
+>                             -> 'j
+>                                -> 'k
+>                                   -> 'l
+>                                      -> 'm
+>                                         -> 'n
+>                                            -> 'o
+>                                               -> 'p
+>                                                  -> 'q
+>                                                     -> 'r -> {a:'a, b:'b, c:'c}
+
 (*) End type.smli

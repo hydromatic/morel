@@ -185,8 +185,8 @@ fun isEmp e =
   e elem scott.emp;
 > val isEmp = fn
 >   :
->      {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->       job:string, mgr:int, sal:real} -> bool
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} -> bool
 (*
 from e
   where isEmp e andalso e.deptno = 20
