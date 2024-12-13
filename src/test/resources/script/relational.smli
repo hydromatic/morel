@@ -254,6 +254,13 @@ from e in emps
   order d;
 > val it = [10,20,30] : int list
 
+(*) singleton record 'yield' followed by 'distinct'
+from e in emps
+  yield {d = e.deptno}
+  distinct
+  order d;
+> val it = [10,20,30] : int list
+
 (*) singleton record 'yield' followed by 'group'
 from e in emps
   yield {d = e.deptno}
@@ -308,6 +315,30 @@ from e in emps
       x + y
     end;
 > val it = [200,202,204,206] : int list
+
+(*) 'distinct' is equivalent to 'group' with all fields
+(*) Query 1, using `distinct`
+from e in scott.emp
+  yield {e.job, e.deptno}
+  distinct;
+> val it =
+>   [{deptno=10,job="MANAGER"},{deptno=10,job="PRESIDENT"},
+>    {deptno=20,job="CLERK"},{deptno=30,job="MANAGER"},{deptno=20,job="ANALYST"},
+>    {deptno=30,job="SALESMAN"},{deptno=30,job="CLERK"},
+>    {deptno=20,job="MANAGER"},{deptno=10,job="CLERK"}]
+>   : {deptno:int, job:string} list
+
+(*) Query 2, using `group` with no aggregate functions, equivalent to query 1
+from e in scott.emp
+  yield {e.job, e.deptno}
+  group job, deptno;
+> val it =
+>   [{deptno=10,job="MANAGER"},{deptno=10,job="PRESIDENT"},
+>    {deptno=20,job="CLERK"},{deptno=30,job="MANAGER"},{deptno=20,job="ANALYST"},
+>    {deptno=30,job="SALESMAN"},{deptno=30,job="CLERK"},
+>    {deptno=20,job="MANAGER"},{deptno=10,job="CLERK"}]
+>   : {deptno:int, job:string} list
+
 
 (*) Function defined inside query
 from e in emps
@@ -505,6 +536,17 @@ from e in emps
   group e.deptno compute count
   join d in depts on deptno = d.deptno;
 *)
+
+(*) 'join' followed by 'distinct'
+from e in emps
+  join d in depts on e.deptno = d.deptno
+  distinct;
+> val it =
+>   [{d={deptno=10,name="Sales"},e={deptno=10,id=100,name="Fred"}},
+>    {d={deptno=20,name="HR"},e={deptno=20,id=101,name="Velma"}},
+>    {d={deptno=30,name="Engineering"},e={deptno=30,id=102,name="Shaggy"}},
+>    {d={deptno=30,name="Engineering"},e={deptno=30,id=103,name="Scooby"}}]
+>   : {d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}} list
 
 (*) exists (defining the "exists" function ourselves)
 (*) and correlated sub-query

@@ -37,7 +37,7 @@ just because they take effort to build.
 Contributions are welcome!
 
 In Morel but not Standard ML:
-* `from` expression with `in`, `join`, `where`, `group`,
+* `from` expression with `in`, `join`, `where`, `distinct`, `group`,
   `compute`, `into`, `order`, `skip`, `take`, `through`, `yield` clauses
 * `union`, `except`, `intersect`, `elem`, `notelem` operators
 * "*lab* `=`" is optional in `exprow`
@@ -153,6 +153,7 @@ In Standard ML but not in Morel:
 <i>step</i> &rarr; <b>where</b> <i>exp</i>                filter clause
     | <b>join</b> <i>scan<sub>1</sub></i> [ <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ]
                                 join clause
+    | <b>distinct</b>                  distinct clause
     | <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
       [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]
                                 group clause (<i>g</i> &ge; 0, <i>a</i> &ge; 1)

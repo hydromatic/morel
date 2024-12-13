@@ -956,8 +956,11 @@ public class Resolver {
               r.toCore(aggregate, groupExps.keySet())));
       fromBuilder.group(groupExps, aggregates.build());
     }
-  }
 
+    @Override protected void visit(Ast.Distinct distinct) {
+      fromBuilder.distinct();
+    }
+  }
 }
 
 // End Resolver.java

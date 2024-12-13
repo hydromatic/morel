@@ -27,6 +27,7 @@ import net.hydromatic.morel.util.PairList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableRangeSet;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import org.apache.calcite.util.Util;
@@ -237,6 +238,13 @@ public class FromBuilder {
 
   public FromBuilder take(Core.Exp count) {
     return addStep(core.take(bindings, count));
+  }
+
+  public FromBuilder distinct() {
+    final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExpsB =
+        ImmutableSortedMap.naturalOrder();
+    bindings.forEach(b -> groupExpsB.put((Core.IdPat) b.id, core.id(b.id)));
+    return addStep(core.group(groupExpsB.build(), ImmutableSortedMap.of()));
   }
 
   public FromBuilder group(SortedMap<Core.IdPat, Core.Exp> groupExps,

@@ -1738,6 +1738,8 @@ public class MainTest {
     }
     ml("from e in (from z in emps), d in (from y in depts) on c")
         .assertParseSame();
+    ml("from e in emps distinct").assertParseSame();
+    ml("from e in emps distinct where deptno > 10").assertParseSame();
     ml("from e in emps\n"
         + " group e.deptno\n"
         + " join d in depts on deptno = d.deptno\n"

@@ -484,6 +484,10 @@ public enum AstBuilder {
     return new Ast.Where(pos, exp);
   }
 
+  public Ast.FromStep distinct(Pos pos) {
+    return new Ast.Distinct(pos);
+  }
+
   public Ast.FromStep skip(Pos pos, Ast.Exp exp) {
     return new Ast.Skip(pos, exp);
   }

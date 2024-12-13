@@ -104,6 +104,32 @@ public class FromBuilderTest {
     assertThat(e2, is(e));
   }
 
+  @Test void testDistinct() {
+    // from i in [1, 2] distinct
+    final Fixture f = new Fixture();
+    final FromBuilder fromBuilder = f.fromBuilder();
+    fromBuilder.scan(f.iPat, f.list12);
+    fromBuilder.distinct();
+
+    final Core.From from = fromBuilder.build();
+    assertThat(from, hasToString("from i in [1, 2] group i = i"));
+
+    // from i in [1, 2],
+    //   j in [3, 4]
+    //   distinct
+    //   where i < j
+    fromBuilder.clear();
+    fromBuilder.scan(f.iPat, f.list12);
+    fromBuilder.scan(f.jPat, f.list34);
+    fromBuilder.distinct();
+    fromBuilder.where(core.lessThan(f.typeSystem, f.iId, f.jId));
+
+    final Core.From from2 = fromBuilder.build();
+    assertThat(from2,
+        hasToString("from i in [1, 2] join j in [3, 4] "
+            + "group i = i, j = j where i < j"));
+  }
+
   @Test void testWhereOrder() {
     // from i in [1, 2] where i < 2 order i desc
     //  ==>

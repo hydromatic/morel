@@ -130,6 +130,7 @@ public enum Op {
   CASE,
   FROM,
   SCAN(" "),
+  DISTINCT,
   WHERE,
   GROUP,
   COMPUTE,

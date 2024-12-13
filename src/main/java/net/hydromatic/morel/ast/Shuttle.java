@@ -240,6 +240,10 @@ public class Shuttle {
     return ast.where(where.pos, where.exp.accept(this));
   }
 
+  protected AstNode visit(Ast.Distinct distinct) {
+    return distinct;
+  }
+
   protected AstNode visit(Ast.Skip skip) {
     return ast.skip(skip.pos, skip.exp.accept(this));
   }

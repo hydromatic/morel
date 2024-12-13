@@ -1687,6 +1687,25 @@ public class Ast {
     }
   }
 
+  /** A {@code distinct} clause in a {@code from} expression. */
+  public static class Distinct extends FromStep {
+    Distinct(Pos pos) {
+      super(pos, Op.DISTINCT);
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" distinct");
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+  }
+
   /** A {@code where} clause in a {@code from} expression. */
   public static class Where extends FromStep {
     public final Exp exp;

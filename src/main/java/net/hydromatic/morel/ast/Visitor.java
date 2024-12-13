@@ -204,6 +204,9 @@ public class Visitor {
     orderItem.exp.accept(this);
   }
 
+  protected void visit(Ast.Distinct distinct) {
+  }
+
   protected void visit(Ast.Where where) {
     where.exp.accept(this);
   }

@@ -561,6 +561,11 @@ public class TypeResolver {
       fromSteps.add(where.copy(filter2));
       return Pair.of(env2, v);
 
+    case DISTINCT:
+      final Ast.Distinct distinct = (Ast.Distinct) step;
+      fromSteps.add(distinct);
+      return Pair.of(env2, v);
+
     case SKIP:
       final Ast.Skip skip = (Ast.Skip) step;
       final Unifier.Variable v11 = unifier.variable();

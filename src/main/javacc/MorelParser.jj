@@ -419,6 +419,10 @@ void fromStep(List<FromStep> steps) :
     steps.add(ast.compute(span.end(this), aggregates));
   }
 |
+  <DISTINCT> {
+    steps.add(ast.distinct(pos()));
+  }
+|
   <INTO> { span = Span.of(pos()); } intoExp = expression() {
     steps.add(ast.into(span.end(this), intoExp));
   }
@@ -1452,6 +1456,7 @@ AstNode statementEof() :
 // The following are relational extensions:
 | < COMPUTE: "compute" >
 | < DESC: "desc" >
+| < DISTINCT: "distinct" >
 | < FROM: "from" >
 | < GROUP: "group" >
 | < INTO: "into" >
