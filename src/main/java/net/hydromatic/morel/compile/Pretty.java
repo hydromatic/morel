@@ -338,6 +338,14 @@ class Pretty {
           return printList(
               buf.append('#'), indent, lineEnd, depth, argType, list);
         }
+        if (dataType.name.equals("bag")) {
+          // A bag value is printed the same as a list, distinguishable only by
+          // its type, e.g.
+          //  val odds = [1,3,5] : int list
+          //  val evens = [0,2,4] : int bag
+          final Type argType = Iterables.getOnlyElement(dataType.arguments);
+          return printList(buf, indent, lineEnd, depth, argType, list);
+        }
         final String tyConName = (String) list.get(0);
         buf.append(tyConName);
         final Type typeConArgType =

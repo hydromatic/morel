@@ -871,6 +871,355 @@ public enum BuiltIn {
   STRING_IS_SUFFIX("String", "isSuffix", ts -> ts.fnType(STRING, STRING, BOOL)),
 
   /**
+   * Constant "Bag.nil", of type "&alpha; bag".
+   *
+   * <p>"nil" is the empty bag.
+   */
+  BAG_NIL("Bag", "nil", ts -> ts.forallType(1, h -> h.bag(0))),
+
+  /**
+   * Function "Bag.null", of type "&alpha; bag &rarr; bool".
+   *
+   * <p>"null b" returns true if the bag {@code b} is empty.
+   */
+  BAG_NULL(
+      "Bag", "null", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
+
+  /**
+   * Function "Bag.length", of type "&alpha; bag &rarr; int".
+   *
+   * <p>"length b" returns the number of elements in the bag {@code b}.
+   */
+  BAG_LENGTH(
+      "Bag", "length", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), INT))),
+
+  /**
+   * Function "Bag.at", of type "&alpha; bag * &alpha; bag &rarr; &alpha; bag".
+   *
+   * <p>"l1 @ l2" returns the bag that is the concatenation of l1 and l2.
+   */
+  // TODO: remove
+  BAG_AT(
+      "Bag",
+      "at",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)))),
+
+  /**
+   * Operator "Bag.op @", of type "&alpha; bag * &alpha; bag &rarr; &alpha;
+   * bag".
+   *
+   * <p>"l1 @ l2" returns the bag that is the concatenation of l1 and l2.
+   */
+  BAG_OP_AT(
+      "Bag",
+      "op @",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)))),
+
+  /**
+   * Function "Bag.hd", of type "&alpha; bag &rarr; &alpha;".
+   *
+   * <p>"hd b" returns the first element of {@code b}. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty} if {@code b} is
+   * nil. Results are nondeterministic because bag elements are unordered.
+   */
+  BAG_HD(
+      "Bag", "hd", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
+
+  /**
+   * Function "Bag.tl", of type "&alpha; bag &rarr; &alpha; bag".
+   *
+   * <p>"tl b" returns all but the first element of {@code b}. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY empty} if b is nil.
+   * Results are nondeterministic because bag elements are unordered.
+   */
+  BAG_TL(
+      "Bag", "tl", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.bag(0)))),
+
+  /**
+   * Function "Bag.getItem", of type "&alpha; bag &rarr; (&alpha; * &alpha; bag)
+   * option".
+   *
+   * <p>"getItem l" returns {@code NONE} if the bag is empty, and {@code SOME(hd
+   * l,tl l)} otherwise. This function is particularly useful for creating value
+   * readers from bags of characters. For example, {@code Int.scan StringCvt.DEC
+   * getItem} has the type {@code (int, char bag) StringCvt.reader} and can be
+   * used to scan decimal integers from bags of characters.
+   */
+  BAG_GET_ITEM(
+      "Bag",
+      "getItem",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      h.bag(0), ts.option(ts.tupleType(h.get(0), h.bag(0)))))),
+
+  /**
+   * Function "Bag.nth", of type "&alpha; bag * int &rarr; &alpha;".
+   *
+   * <p>"nth (l, i)" returns the {@code i}<sup>th</sup> element of the bag
+   * {@code l}, counting from 0. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} if {@code i
+   * < 0} or {@code i >= length l}. We have {@code nth(l,0) = hd l}, ignoring
+   * exceptions.
+   */
+  BAG_NTH(
+      "Bag",
+      "nth",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), INT), h.get(0)))),
+
+  /**
+   * Function "Bag.take", of type "&alpha; bag * int &rarr; &alpha; bag".
+   *
+   * <p>"take (b, i)" returns the first i elements of the bag {@code b}. It
+   * raises {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT
+   * Subscript} if i &lt; 0 or i &gt; length {@code b}. We have {@code take(l,
+   * length b) = b}.
+   */
+  BAG_TAKE(
+      "Bag",
+      "take",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), INT), h.bag(0)))),
+
+  /**
+   * Function "Bag.drop", of type "&alpha; bag * int &rarr; &alpha; bag".
+   *
+   * <p>"drop (b, i)" returns what is left after dropping the first {@code i}
+   * elements of the bag {@code b}.
+   *
+   * <p>It raises {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT
+   * Subscript} if i &lt; 0 or i &gt; length {@code b}.
+   *
+   * <p>It holds that {@code take(b, i) @ drop(b, i) = l} when 0 &le; i &le;
+   * length b.
+   *
+   * <p>We also have {@code drop(b, length b) = []}.
+   */
+  BAG_DROP(
+      "Bag",
+      "drop",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), INT), h.bag(0)))),
+
+  /**
+   * Function "Bag.concat", of type "&alpha; bag list &rarr; &alpha; bag".
+   *
+   * <p>"concat l" returns the bag that is the concatenation of all the bags in
+   * l in order. {@code concat[b1,b2,...bn] = b1 @ b2 @ ... @ bn}
+   */
+  BAG_CONCAT(
+      "Bag",
+      "concat",
+      ts -> ts.forallType(1, h -> ts.fnType(ts.listType(h.bag(0)), h.bag(0)))),
+
+  /**
+   * Function "Bag.app", of type "(&alpha; &rarr; unit) &rarr; &alpha; bag
+   * &rarr; unit".
+   *
+   * <p>"app f l" applies f to the elements of l, from left to right.
+   */
+  BAG_APP(
+      "Bag",
+      "app",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.bag(0), UNIT))),
+
+  /**
+   * Function "Bag.map", of type "(&alpha; &rarr; &beta;) &rarr; &alpha; bag
+   * &rarr; &beta; bag".
+   *
+   * <p>"map f b" applies f to each element of {@code b} from left to right,
+   * returning the bag of results.
+   */
+  BAG_MAP(
+      "Bag",
+      "map",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.get(1)), h.bag(0), h.bag(1)))),
+
+  /**
+   * Function "Bag.mapPartial", of type "(&alpha; &rarr; &beta; option) &rarr;
+   * &alpha; bag &rarr; &beta; bag".
+   *
+   * <p>"mapPartial f b" applies f to each element of {@code b} from left to
+   * right, returning a bag of results, with SOME stripped, where f was defined.
+   * f is not defined for an element of b if f applied to the element returns
+   * NONE. The above expression is equivalent to: {@code ((map valOf) o (filter
+   * isSome) o (map f)) b}
+   */
+  BAG_MAP_PARTIAL(
+      "Bag",
+      "mapPartial",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.option(1)), h.bag(0), h.bag(1)))),
+
+  /**
+   * Function "Bag.find", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; &alpha; option".
+   *
+   * <p>"find f b" applies {@code f} to each element {@code x} of the bag {@code
+   * b}, from left to right, until {@code f x} evaluates to true. It returns
+   * SOME(x) if such an x exists; otherwise it returns NONE.
+   */
+  BAG_FIND(
+      "Bag",
+      "find",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(h.predicate(0), h.bag(0), h.option(0)))),
+
+  /**
+   * Function "Bag.filter", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; &alpha; bag".
+   *
+   * <p>"filter f b" applies {@code f} to each element {@code x} of {@code b},
+   * from left to right, and returns the bag of those {@code x} for which {@code
+   * f x} evaluated to true, in the same order as they occurred in the argument
+   * bag.
+   */
+  BAG_FILTER(
+      "Bag",
+      "filter",
+      ts ->
+          ts.forallType(1, h -> ts.fnType(h.predicate(0), h.bag(0), h.bag(0)))),
+
+  /**
+   * Function "Bag.partition", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; &alpha; bag * &alpha; bag".
+   *
+   * <p>"partition f b" applies {@code f} to each element {@code x} of bag
+   * {@code b}, from left to right, and returns a pair (pos, neg) where pos is
+   * the bag of those x for which {@code f x} evaluated to true, and neg is the
+   * bag of those for which {@code f x} evaluated to false. The elements of pos
+   * and neg retain the same relative order they possessed in {@code b}.
+   */
+  BAG_PARTITION(
+      "Bag",
+      "partition",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      h.predicate(0),
+                      h.bag(0),
+                      ts.tupleType(h.bag(0), h.bag(0))))),
+
+  /**
+   * Function "Bag.fold", of type "(&alpha; * &beta; &rarr; &beta;) &rarr;
+   * &beta; &rarr; &alpha; bag &rarr; &beta;".
+   *
+   * <p>"fold f init [x1, x2, ..., xn]" returns {@code f(xn,...,f(x2, f(x1,
+   * init))...)} or {@code init} if the bag is empty.
+   */
+  BAG_FOLD(
+      "Bag",
+      "fold",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
+                      h.get(1),
+                      h.bag(0),
+                      h.get(1)))),
+
+  /**
+   * Function "Bag.exists", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; bool".
+   *
+   * <p>"exists f b" applies f to each element x of the bag {@code b}, from left
+   * to right, until {@code f x} evaluates to true; it returns true if such an x
+   * exists and false otherwise.
+   */
+  BAG_EXISTS(
+      "Bag",
+      "exists",
+      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.bag(0), BOOL))),
+
+  /**
+   * Function "Bag.all", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; bool".
+   *
+   * <p>"all f b" applies f to each element x of the bag b, from left to right,
+   * until {@code f x} evaluates to false; it returns false if such an x exists
+   * and true otherwise. It is equivalent to not(exists (not o f) b)).
+   */
+  BAG_ALL(
+      "Bag",
+      "all",
+      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.bag(0), BOOL))),
+
+  /**
+   * Function "Bag.fromList" of type "&alpha; list &rarr; &alpha; bag".
+   *
+   * <p>{@code fromList l} creates a new bag from {@code l}, whose length is
+   * {@code length l} and with the {@code i}<sup>th</sup> element of {@code l}
+   * used as the {@code i}<sup>th</sup> element of the bag. If the length of the
+   * list is greater than {@code maxLen}, then the {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception is raised.
+   */
+  BAG_FROM_LIST(
+      "Bag",
+      "fromList",
+      "bag",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.bag(0)))),
+
+  /**
+   * Function "Bag.toList" of type "&alpha; bag &rarr; &alpha; list".
+   *
+   * <p>{@code toList b} creates a new list from {@code b}, whose length is
+   * {@code length b} and with the {@code i}<sup>th</sup> element of {@code b}
+   * used as the {@code i}<sup>th</sup> element of the list. If the length of
+   * the bag is greater than {@code maxLen}, then the {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception is raised.
+   * The order of the list is nondeterministic because bag elements are
+   * unordered.
+   */
+  BAG_TO_LIST(
+      "Bag",
+      "toList",
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.list(0)))),
+
+  /**
+   * Function "Bag.tabulate", of type "int * (int &rarr; &alpha;) &rarr; &alpha;
+   * bag".
+   *
+   * <p>"tabulate (n, f)" returns a bag of length n equal to {@code [f(0), f(1),
+   * ..., f(n-1)]}, created from left to right. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if n &lt; 0.
+   */
+  BAG_TABULATE(
+      "Bag",
+      "tabulate",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.bag(0)))),
+
+  /**
    * Constant "List.nil", of type "&alpha; list".
    *
    * <p>"nil" is the empty list.
@@ -1113,6 +1462,25 @@ public enum BuiltIn {
               1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.list(0), UNIT))),
 
   /**
+   * Function "List.mapi", of type "(int * &alpha; &rarr; &beta;) &rarr; &alpha;
+   * list &rarr; &beta; list".
+   *
+   * <p>"mapi f l" applies f to each element of l from left to right, returning
+   * the list of results.
+   */
+  LIST_MAPI(
+      "List",
+      "mapi",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(INT, h.get(0)), h.get(1)),
+                      h.list(0),
+                      h.list(1)))),
+
+  /**
    * Function "List.map", of type "(&alpha; &rarr; &beta;) &rarr; &alpha; list
    * &rarr; &beta; list".
    *
@@ -1126,11 +1494,9 @@ public enum BuiltIn {
       ts ->
           ts.forallType(
               2,
-              t ->
+              h ->
                   ts.fnType(
-                      ts.fnType(t.get(0), t.get(1)),
-                      ts.listType(t.get(0)),
-                      ts.listType(t.get(1))))),
+                      ts.fnType(h.get(0), h.get(1)), h.list(0), h.list(1)))),
 
   /**
    * Function "List.mapPartial", of type "(&alpha; &rarr; &beta; option) &rarr;
@@ -2977,6 +3343,7 @@ public enum BuiltIn {
 
   /** Built-in equality type. */
   public enum Eqtype implements BuiltInType {
+    BAG("bag", 1),
     VECTOR("vector", 1);
 
     private final String mlName;
