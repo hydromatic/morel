@@ -102,10 +102,10 @@ factorial 3;
 *)
 
 (* Tuples as arguments *)
-fun sum (a, b) = a + b;
-val sum = fn : int * int -> int
+fun plus (a, b) = a + b;
+val plus = fn : int * int -> int
 
-fun average pair = sum pair div 2;
+fun average pair = plus pair div 2;
 val average = fn : int * int -> int
 
 val four = average (3, 5);
@@ -140,16 +140,16 @@ fun pair_map (f, (x, y)) = (f x, f y);
 val pair_map = fn : ('a -> 'b) * ('a * 'a) -> 'b * 'b
 
 
-fun sum i j = i + j;
-val sum = fn : int -> int -> int
+fun plus i j = i + j;
+val plus = fn : int -> int -> int
 
-val add_three = sum 3;
+val add_three = plus 3;
 val add_three = fn : int -> int
 
 val five = add_three 2;
 val five = 5 : int
 
-val ten = sum 5 5;
+val ten = plus 5 5;
 val ten = 10 : int
 
 

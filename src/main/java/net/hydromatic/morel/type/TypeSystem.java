@@ -101,7 +101,7 @@ public class TypeSystem {
    * Looks up a built-in type.
    *
    * <p>This is the only way to get internal built-in types (such as {@link
-   * BuiltIn.Datatype#BOOL}); non-internal built-in types (such as {@link
+   * BuiltIn.Datatype#PSEUDO_BOOL}); non-internal built-in types (such as {@link
    * BuiltIn.Datatype#ORDER} and {@link BuiltIn.Datatype#OPTION}) can also be
    * retrieved by name.
    */
@@ -198,8 +198,11 @@ public class TypeSystem {
   }
 
   /** Creates a bag type. */
-  public ListType bagType(Type elementType) {
-    return (ListType) typeFor(Keys.list(elementType.key()));
+  public Type bagType(Type elementType) {
+    return typeFor(
+        Keys.apply(
+            Keys.name(BuiltIn.Eqtype.BAG.mlName()),
+            ImmutableList.of(elementType.key())));
   }
 
   /** Creates a list type. */
@@ -414,6 +417,16 @@ public class TypeSystem {
     return (ForallType) typeFor(key);
   }
 
+  /** Creates a multi-type from an array of types. */
+  public MultiType multi(Type... types) {
+    return multi(ImmutableList.copyOf(types));
+  }
+
+  /** Creates a multi-type. */
+  public MultiType multi(List<? extends Type> types) {
+    return new MultiType(ImmutableList.copyOf(types));
+  }
+
   static StringBuilder unparseList(
       StringBuilder builder,
       Op op,
@@ -537,7 +550,7 @@ public class TypeSystem {
    * <p>"bag(type)" is shorthand for "apply(lookup("bag"), type)".
    */
   public Type bag(Type type) {
-    final Type bagType = lookup("bag");
+    final Type bagType = lookup(BuiltIn.Eqtype.BAG);
     return apply(bagType, type);
   }
 

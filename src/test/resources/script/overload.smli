@@ -245,4 +245,22 @@ unsort (MULTI_CONS (1, MULTI_CONS (2, MULTI_NIL)));
 unsort [4];
 > val it = MULTI_CONS (4,MULTI_NIL) : int multiset
 
+(* ---------------------------------------------------------------------------
+ * The 'scan' operator allows us to read lists and bags. *)
+over scan;
+> over scan
+val inst scan = fn aBag: 'a bag => aBag;
+> val scan = fn : 'a bag -> 'a bag
+val inst scan = fn aList: 'a list => aList;
+> val scan = fn : 'a list -> 'a list
+scan (bag [1]);
+> val it = [1] : int bag
+
+(* ---------------------------------------------------------------------------
+ * The built-in 'Relational.nonEmpty' function works on both lists and bags. *)
+Relational.nonEmpty (bag [1]);
+> val it = true : bool
+Relational.nonEmpty [1];
+> val it = true : bool
+
 (*) End overload.smli

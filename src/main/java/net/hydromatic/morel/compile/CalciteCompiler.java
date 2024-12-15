@@ -59,7 +59,6 @@ import net.hydromatic.morel.foreign.CalciteFunctions;
 import net.hydromatic.morel.foreign.Converters;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.type.Binding;
-import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
@@ -240,7 +239,7 @@ public class CalciteCompiler extends Compiler {
 
       @Override
       public boolean toRel(RelContext cx, boolean aggressive) {
-        if (!(apply.type instanceof ListType)) {
+        if (!apply.type.isCollection()) {
           return false;
         }
         switch (apply.fn.op) {

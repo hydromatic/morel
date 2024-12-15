@@ -299,7 +299,10 @@ public class MainTest {
     ml("case {a = 1, b = 2} of {...} => 1").assertParseSame();
     ml("case {a = 1, b = 2} of {a = 3, ...} => 1")
         .assertParse("case {a = 1, b = 2} of {a = 3, ...} => 1");
+  }
 
+  @Test
+  void testParse2() {
     // fn
     ml("fn x => x + 1").assertParseSame();
     ml("fn x => x + (1 + 2)").assertParseSame();
@@ -684,9 +687,6 @@ public class MainTest {
   @SuppressWarnings("ConstantConditions")
   @Test
   void testDummy() {
-    ml("from d in [{a=1,b=true}] yield d.a into sum")
-        .assertType("int")
-        .assertEval(is(1));
     switch (0) {
       case 0:
         ml("1").assertEval(is(1));
@@ -1721,9 +1721,9 @@ public class MainTest {
   void testFunTwoArgs() {
     final String ml =
         "let\n" //
-            + "  fun sum x y = x + y\n"
+            + "  fun plus x y = x + y\n"
             + "in\n"
-            + "  sum 5 3\n"
+            + "  plus 5 3\n"
             + "end";
     ml(ml).assertEval(is(8));
   }
@@ -1898,6 +1898,24 @@ public class MainTest {
   }
 
   @Test
+  void testFromIntegers() {
+    //    ml("from i in [1]")
+    //        .assertType("int list")
+    //        .assertEvalIter(equalsOrdered(1))
+    //    ;
+    ml("from i in [1] where i > 0")
+        .assertType("int list")
+        .assertEvalIter(equalsOrdered(1));
+    ml("from i in [1] yield i")
+        .assertType("int list")
+        .assertEvalIter(equalsOrdered(1));
+    //    ml("from i in bag [1]").assertType("int
+    // list").assertEvalIter(equalsOrdered(1));
+    //    ml("from i in bag [1] where i > 0").assertType("int
+    // list").assertEvalIter(equalsOrdered(1));
+  }
+
+  @Test
   void testParseFrom() {
     ml("from").assertParseSame();
     ml("from e in emps").assertParseSame();
@@ -1986,14 +2004,11 @@ public class MainTest {
         .assertParse(
             "from e in emps order #empno e take 2 skip 3 skip 1 + 1 "
                 + "take 2");
-    ml("fn f => from i in [1, 2, 3] where f i")
-        .assertParseSame()
-        .assertType("(int -> bool) -> int list");
+    ml("fn f => from i in [1, 2, 3] where f i").assertParseSame();
     ml("fn f => from i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
         .assertParse(
             "fn f => from i in [1, 2, 3],"
-                + " j in [3, 4] on f (i, j) yield i + j")
-        .assertType("(int * int -> bool) -> int list");
+                + " j in [3, 4] on f (i, j) yield i + j");
 
     // In "from p in exp" and "from p = exp", p can be any pattern
     // but in "from v" v can only be an identifier.
@@ -2351,7 +2366,39 @@ public class MainTest {
   }
 
   @Test
-  void testFromYield() {
+  void testFromType() {
+    ml("from i in [1]").assertType("int list");
+    ml("from i in bag [1]").assertType("int bag");
+    ml("from i in (from j in bag [1])").assertType("int bag");
+    ml("from i in (\n"
+            + "  from e in bag [{deptno=10}]\n"
+            + "  yield e.deptno)\n"
+            + "where i > 10\n"
+            + "yield i / 10")
+        .assertType("int bag");
+    ml("from (i, j) in [(\"a\", 1)]").assertType("{i:string, j:int} list");
+    ml("from (i, j) in [(1, 1), (2, 3)]").assertType("{i:int, j:int} list");
+    ml("from (x, y) in [(1,2),(3,4),(3,0)] group sum = x + y")
+        .assertParse(
+            "from (x, y) in [(1, 2), (3, 4), (3, 0)] group sum = x + y")
+        .assertType(hasMoniker("int list"))
+        .assertEvalIter(equalsUnordered(3, 7));
+    ml("from {c, a, ...} in [{a=1.0,b=true,c=3},{a=1.5,b=true,c=4}]")
+        .assertParse(
+            "from {a = a, c = c, ...}"
+                + " in [{a = 1.0, b = true, c = 3}, {a = 1.5, b = true, c = 4}]")
+        .assertType("{a:real, c:int} list");
+    ml("from i in [1] group i compute count")
+        .assertType("{count:int, i:int} list");
+    ml("from i in bag [1] group i compute count")
+        .assertType("{count:int, i:int} bag");
+    ml("from d in [{a=1,b=true}] yield d.a into sum")
+        .assertType("int")
+        .assertEval(is(1));
+    ml("fn f => from i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
+        .assertType("(int * int -> bool) -> int list");
+    ml("fn f => from i in [1, 2, 3] where f i")
+        .assertType("(int -> bool) -> int list");
     ml("from a in [1], b in [true]").assertType("{a:int, b:bool} list");
     ml("from a in [1], b in [true] yield a").assertType("int list");
     ml("from a in [1], b in [true] yield {a,b}")
@@ -2382,6 +2429,21 @@ public class MainTest {
         .assertType("{a:int, b:bool} list")
         .assertEval(is(list(list(1, true))));
     ml("from d in [{a=1,b=true}], i in [2] yield i").assertType("int list");
+    ml("from d in [{a=1,b=true}], i in [2] yield {d}")
+        .assertType("{d:{a:int, b:bool}} list");
+    ml("from d in [{a=1,b=true}], i in [2] yield {d} where true")
+        .assertType("{d:{a:int, b:bool}} list");
+    mlE("from d in [{a=1,b=true}], i in [2] yield {d} yield $a$")
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "unbound variable or constructor: a",
+                    pos));
+    ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} yield a")
+        .assertType("int list");
+    ml("from d in [{a=1,b=true}], i in [2] yield i yield 3")
+        .assertType("int list");
     ml("from d in [{a=1,b=true}], i in [2] yield d")
         .assertType("{a:int, b:bool} list");
     mlE("from d in [{a=1,b=true}], i in [2] yield d yield $a$")
@@ -2400,6 +2462,8 @@ public class MainTest {
         .assertType("{a:int, b:bool} list");
     ml("from d in [{a=1,b=true}], i in [2] yield i yield 3.0")
         .assertType("real list");
+
+    // with
     ml("from d in [{a=1,b=true}], i in [2] yield {d with b=false}")
         .assertType("{a:int, b:bool} list");
     if (false) {
@@ -2409,23 +2473,49 @@ public class MainTest {
       ml("from d in [{a=1,b=true}], i in [2] yield {d with b=false} order b")
           .assertType("{a:int, b:bool} list");
     }
+
+    ml("from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
+            + "  yield {z=e.x}\n"
+            + "  where z > 2\n"
+            + "  order z desc\n"
+            + "  yield {z=z}")
+        .assertType("{z:int} list");
     mlE("from d in [{a=1,b=true}] yield $d.x$")
         .assertTypeThrows(
             pos ->
                 throwsA(
                     TypeResolver.TypeException.class,
                     is("no field 'x' in type '{a:int, b:bool}'")));
+
+    // into
     ml("from d in [{a=1,b=true}] yield d.a into List.length").assertType("int");
+    ml("from d in bag [{a=1,b=true}] yield d.a into Bag.length")
+        .assertType("int");
     ml("from d in [{a=1,b=true}] yield d.a into sum")
         .assertType("int")
         .assertEval(is(1));
+
+    // exists, forall
     ml("exists d in [{a=1,b=true}] where d.a = 0").assertType("bool");
     ml("forall d in [{a=1,b=true}] require d.a = 0").assertType("bool");
+
+    // functions based on set operators
+
+    // TODO when [MOREL-270] is fixed, we can deduce that the type is
+    // constrained, e.g. "multi (int list * int bag -> int bag, int list * int
+    // list -> int list)"
+    ml("fn (a: int list, b) => from i in a union b")
+        .assertType("int list * 'a -> 'b");
+    ml("fn (a: int list, b) => from i in a intersect b")
+        .assertType("int list * 'a -> 'b");
+    ml("fn (a: int list, b) => from i in a except b")
+        .assertType("int list * 'a -> 'b");
+
+    // invalid last step
     mlE("from d in [{a=1,b=true}] yield d.a into sum $yield \"a\"$")
         .assertCompileException("'into' step must be last in 'from'");
     mlE("exists d in [{a=1,b=true}] yield d.a $into sum$")
         .assertCompileException("'into' step must not occur in 'exists'");
-
     mlE("forall d in [{a=1,b=true}] yield d.a $into sum$")
         .assertCompileException("'into' step must not occur in 'forall'");
     mlE("forall d in [{a=1,b=true}] yield d.a $compute sum$")
@@ -2434,6 +2524,20 @@ public class MainTest {
         .assertCompileException("last step of 'forall' must be 'require'");
     mlE("forall $d in [{a=1,b=true}]$")
         .assertCompileException("last step of 'forall' must be 'require'");
+
+    // let
+    ml("let\n"
+            + "  val records = from r in bag [1,2]\n"
+            + "in\n"
+            + "  from r2 in records\n"
+            + "end")
+        .assertType("int bag");
+    ml("let\n"
+            + "  val records = from r in [{i=1,j=2}]\n"
+            + "in\n"
+            + "  from r2 in records\n"
+            + "end")
+        .assertType("{i:int, j:int} list");
 
     // "map String.size" has type "string list -> int list",
     // and therefore the type of "j" is "int"
@@ -2444,6 +2548,10 @@ public class MainTest {
             + " through j in (map String.size)\n"
             + " yield j + 2")
         .assertType("int list");
+    ml("from s in bag [\"ab\",\"c\"]\n"
+            + " through j in (Bag.map String.size)\n"
+            + " yield j + 2")
+        .assertType("int bag");
     ml("from d in [{a=1,b=true},{a=2,b=false}]\n"
             + " yield d.a\n"
             + " through s in (fn ints =>\n"
@@ -2528,7 +2636,7 @@ public class MainTest {
             + "          sink collect(tuple(get(name d), get(name n))))))))))";
     final List<Object> expected = list(list(30, "Shaggy"), list(30, "Scooby"));
     ml(ml)
-        .assertType("{d:int, n:string} list")
+        .assertType("{d:int, n:string} bag")
         .assertPlan(isCode2(code))
         .assertEval(is(expected));
   }
@@ -2576,7 +2684,7 @@ public class MainTest {
             + "        argCode apply(fnValue $.extent, argCode constant(()))),\n"
             + "    sink collect(get(name j)))))";
     final List<Object> expected = list(); // TODO
-    ml(ml).withBinding("scott", BuiltInDataSet.SCOTT).assertType("string list");
+    ml(ml).withBinding("scott", BuiltInDataSet.SCOTT).assertType("string bag");
     //        .assertCore(-1, is(core))
     //        .assertPlan(isCode2(code))
     //        .assertEval(is(expected));
@@ -2589,11 +2697,11 @@ public class MainTest {
     final String core0 =
         "val it = "
             + "from d : {deptno:int, dname:string, loc:string} "
-            + "where d elem #depts scott";
+            + "where op elem$0 (d, #depts scott)";
     final String core1 = "val it = from d in #depts scott";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{deptno:int, dname:string, loc:string} list")
+        .assertType("{deptno:int, dname:string, loc:string} bag")
         .assertCore(0, hasToString(core0))
         .assertCore(-1, hasToString(core1));
   }
@@ -2618,7 +2726,7 @@ public class MainTest {
             + "yield {deptno = deptno, loc = loc, name = name}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{deptno:int, loc:string, name:string} list")
+        .assertType("{deptno:int, loc:string, name:string} bag")
         .assertCore(-1, hasToString(core))
         .assertEval(
             is(
@@ -2641,8 +2749,8 @@ public class MainTest {
         "val it = "
             + "from dno : int "
             + "join name : string "
-            + "where {deptno = dno, dname = name, loc = \"CHICAGO\"} "
-            + "elem #depts scott "
+            + "where op elem$0 "
+            + "({deptno = dno, dname = name, loc = \"CHICAGO\"}, #depts scott) "
             + "andalso dno > 20";
     final String core1 =
         "val it = "
@@ -2655,7 +2763,7 @@ public class MainTest {
             + "yield {dno = dno, name = name}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{dno:int, name:string} list")
+        .assertType("{dno:int, name:string} bag")
         .assertCore(0, hasToString(core0))
         .assertCore(-1, hasToString(core1));
   }
@@ -2672,21 +2780,21 @@ public class MainTest {
         "val it = "
             + "from dno : int "
             + "join name : string "
-            + "where {deptno = dno, dname = name, loc = \"CHICAGO\"} "
-            + "elem #depts scott "
+            + "where op elem$0 "
+            + "({deptno = dno, dname = name, loc = \"CHICAGO\"}, #depts scott) "
             + "andalso dno > 20";
     final String core1 =
         "val it = "
             + "from v$0 in #depts scott "
             + "join dno in [#deptno v$0] "
             + "join name in [#dname v$0] "
-            + "where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"},"
-            + " #depts scott) "
+            + "where op elem "
+            + "({deptno = dno, dname = name, loc = \"CHICAGO\"}, #depts scott) "
             + "andalso dno > 20 "
             + "yield {dno = dno, name = name}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{dno:int, name:string} list")
+        .assertType("{dno:int, name:string} bag")
         .assertCore(0, hasToString(core0))
         .assertCore(-1, hasToString(core1));
   }
@@ -2706,7 +2814,7 @@ public class MainTest {
             + "from dno : int "
             + "join name : string "
             + "join v : {deptno:int, dname:string, loc:string} "
-            + "where v elem #depts scott "
+            + "where op elem$0 (v, #depts scott) "
             + "where #deptno v = dno "
             + "where name = #dname v "
             + "where #loc v = \"CHICAGO\" "
@@ -2724,7 +2832,7 @@ public class MainTest {
             + "yield {dno = #deptno v, name = #dname v}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{dno:int, name:string} list")
+        .assertType("{dno:int, name:string} bag")
         .assertCore(0, hasToString(core0))
         .assertCore(-1, hasToString(core1))
         .assertEval(is(list(list(30, "SALES"))));
@@ -2745,7 +2853,7 @@ public class MainTest {
             + "from dno : int "
             + "join name : string "
             + "join v : {deptno:int, dname:string, loc:string} "
-            + "where v elem #depts scott "
+            + "where op elem$0 (v, #depts scott) "
             + "where #deptno v = dno "
             + "where name = #dname v "
             + "where #loc v = \"CHICAGO\" "
@@ -2763,7 +2871,7 @@ public class MainTest {
             + "yield {dno = #deptno v, name = #dname v}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{dno:int, name:string} list")
+        .assertType("{dno:int, name:string} bag")
         .assertCore(0, hasToString(core0))
         .assertCore(-1, hasToString(core1))
         .assertEval(is(list(list(30, "SALES"))));
@@ -2787,7 +2895,7 @@ public class MainTest {
     final String core0 =
         "val it = "
             + "let"
-            + " val isDept = fn d => d elem #depts scott "
+            + " val isDept = fn d => op elem$0 (d, #depts scott) "
             + "in"
             + " from d_1 : {deptno:int, dname:string, loc:string}"
             + " where isDept d_1 andalso #deptno d_1 = 20"
@@ -2800,7 +2908,7 @@ public class MainTest {
             + "yield #dname d_1";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("string list")
+        .assertType("string bag")
         .assertCore(0, hasToString(core0))
         .assertCore(-1, hasToString(core1));
   }
@@ -2825,10 +2933,10 @@ public class MainTest {
     final String core0 =
         "val it = "
             + "let"
-            + " val isDept = fn d => d elem #depts scott "
+            + " val isDept = fn d => op elem$0 (d, #depts scott) "
             + "in"
             + " let"
-            + " val isEmp = fn e => e elem #emps scott "
+            + " val isEmp = fn e => op elem$0 (e, #emps scott) "
             + "in"
             + " from d_1 : {deptno:int, dname:string, loc:string}"
             + " join e_1 : {comm:real, deptno:int, empno:int, ename:string, "
@@ -2849,7 +2957,7 @@ public class MainTest {
             + "yield #dname d_1";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("string list")
+        .assertType("string bag")
         .assertCore(0, hasToString(core0))
         .assertCore(-1, hasToString(core1));
   }
@@ -2901,7 +3009,7 @@ public class MainTest {
             + "          argCode apply(fnValue $.extent, argCode constant(()))),\n"
             + "        sink where(condition apply2(fnValue =, get(name d), constant(30)),\n"
             + "          sink collect(tuple(get(name d), get(name n))))))";
-    ml(ml).assertType("{d:int, n:string} list");
+    ml(ml).assertType("{d:int, n:string} bag");
     //        .assertCore(-1, is(core))
     //        .assertPlan(isCode2(code))
     //        .assertEval(is(list()));
@@ -2922,7 +3030,7 @@ public class MainTest {
             + "from i in extent \"bool option\" "
             + "where #getOpt Option (i, false)";
     ml(ml)
-        .assertType("bool option list")
+        .assertType("bool option bag")
         .assertCore(-1, hasToString(core))
         .assertEval(is(list(list("SOME", true))));
   }
@@ -3105,7 +3213,10 @@ public class MainTest {
             + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
             + "     {id = 101, name = \"Velma\", deptno = 20},\n"
             + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
-            + "  fun sum [] = 0 | sum (h::t) = h + (sum t)\n"
+            + "  fun sum bag =\n"
+            + "    case Bag.getItem bag of\n"
+            + "        NONE => 0\n"
+            + "      | SOME (h, t) => h + (sum t)\n"
             + "in\n"
             + "  from e in emps\n"
             + "    group #deptno e\n"
@@ -3116,7 +3227,9 @@ public class MainTest {
             + "[{deptno = 10, id = 100, name = \"Fred\"},"
             + " {deptno = 20, id = 101, name = \"Velma\"},"
             + " {deptno = 10, id = 102, name = \"Shaggy\"}]; "
-            + "fun sum ([]) = 0 | sum (h :: t) = h + sum t "
+            + "fun sum bag = case #getItem Bag bag of"
+            + " NONE => 0"
+            + " | SOME (h, t) => h + sum t "
             + "in"
             + " from e in emps"
             + " group deptno = #deptno e"
@@ -3381,17 +3494,30 @@ public class MainTest {
   }
 
   @Test
-  void testFromPattern() {
-    ml("from (x, y) in [(1,2),(3,4),(3,0)] group sum = x + y")
-        .assertParse(
-            "from (x, y) in [(1, 2), (3, 4), (3, 0)] group sum = x + y")
-        .assertType(hasMoniker("int list"))
-        .assertEvalIter(equalsUnordered(3, 7));
-    ml("from {c, a, ...} in [{a=1.0,b=true,c=3},{a=1.5,b=true,c=4}]")
-        .assertParse(
-            "from {a = a, c = c, ...}"
-                + " in [{a = 1.0, b = true, c = 3}, {a = 1.5, b = true, c = 4}]")
-        .assertType("{a:real, c:int} list");
+  void testFromDummy() {
+    checkFromDummy(true);
+  }
+
+  void checkFromDummy(boolean skip) {
+    if (!skip) {
+      ml("from i in bag [1,2]").assertType(hasMoniker("int bag"));
+    }
+    ml("from i in [1,2]").assertType(hasMoniker("int list"));
+  }
+
+  @Test
+  void testFromBag() {
+    ml("from i in bag [1,2]").assertType(hasMoniker("int bag"));
+    ml("from i in bag [1,2] where i > 1").assertType(hasMoniker("int bag"));
+    ml("from i in bag [1,2] distinct").assertType(hasMoniker("int bag"));
+    ml("from i in [1,2] distinct").assertType(hasMoniker("int list"));
+    ml("from i in [1,2] group i compute count")
+        .assertType(hasMoniker("{count:int, i:int} list"));
+    ml("from i in bag [1,2] group i compute count")
+        .assertType(hasMoniker("{count:int, i:int} bag"));
+    ml("from (i, j) in bag [(1, 1), (2, 3)]").assertType("{i:int, j:int} bag");
+    ml("from i in bag [1], j in bag [true]").assertType("{i:int, j:bool} bag");
+    ml("from i in bag [1], j in bag [true] group j").assertType("bool bag");
   }
 
   @Test
@@ -3420,7 +3546,7 @@ public class MainTest {
             + "end";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("{deptno:int, empno:int, ename:string} list");
+        .assertType("{deptno:int, empno:int, ename:string} bag");
   }
 
   @Test

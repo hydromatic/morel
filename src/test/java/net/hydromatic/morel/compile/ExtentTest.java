@@ -33,15 +33,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.FromBuilder;
-import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.PairList;
@@ -51,6 +52,12 @@ import org.junit.jupiter.api.Test;
 public class ExtentTest {
   private static class Fixture {
     final TypeSystem typeSystem = new TypeSystem();
+
+    {
+      // Register 'bag'
+      BuiltIn.dataTypes(typeSystem, new ArrayList<>());
+    }
+
     final PrimitiveType intType = PrimitiveType.INT;
     final Core.IdPat aPat = core.idPat(intType, "a", 0);
     final Core.Id aId = core.id(aPat);
@@ -70,8 +77,8 @@ public class ExtentTest {
                 PrimitiveType.STRING,
                 "loc",
                 PrimitiveType.STRING));
-    final ListType deptListType = typeSystem.listType(deptType);
-    final Core.IdPat depts = core.idPat(deptListType, "depts", 0);
+    final Type deptBagType = typeSystem.bagType(deptType);
+    final Core.IdPat depts = core.idPat(deptBagType, "depts", 0);
 
     Core.Literal intLiteral(int i) {
       return core.intLiteral(BigDecimal.valueOf(i));

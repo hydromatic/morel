@@ -29,20 +29,20 @@ Sys.set ("hybrid", true);
 from e in scott.emps
 where e.deptno = 20
 yield e.empno;
-> val it = [7369,7566,7788,7876,7902] : int list
+> val it = [7369,7566,7788,7876,7902] : int bag
 Sys.plan();
 > val it =
 >   "calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 20)])\n    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n      JdbcTableScan(table=[[scott, EMP]])\n)"
 >   : string
 
 (*) Query in Hybrid mode (20% Morel -> 80% Calcite)
-from e in (List.filter (fn e2 => e2.empno < 7700) scott.emps)
+from e in (Bag.filter (fn e2 => e2.empno < 7700) scott.emps)
 where e.deptno = 20
 yield e.empno;
-> val it = [7369,7566] : int list
+> val it = [7369,7566] : int bag
 Sys.plan();
 > val it =
->   "calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 20)])\n    LogicalTableFunctionScan(invocation=[morelTable('#filter List (fn e2 => #empno e2 < 7700) (#emps scott)', '{\n  \"fields\": [\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"comm\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"deptno\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"empno\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"ename\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"hiredate\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"job\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"mgr\"\n    },\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"sal\"\n    }\n  ],\n  \"nullable\": false\n}')], rowType=[RecordType(REAL comm, INTEGER deptno, INTEGER empno, VARCHAR ename, VARCHAR hiredate, VARCHAR job, INTEGER mgr, REAL sal)])\n)"
+>   "calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 20)])\n    LogicalTableFunctionScan(invocation=[morelTable('#filter Bag (fn e2 => #empno e2 < 7700) (#emps scott)', '{\n  \"fields\": [\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"comm\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"deptno\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"empno\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"ename\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"hiredate\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"job\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"mgr\"\n    },\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"sal\"\n    }\n  ],\n  \"nullable\": false\n}')], rowType=[RecordType(REAL comm, INTEGER deptno, INTEGER empno, VARCHAR ename, VARCHAR hiredate, VARCHAR job, INTEGER mgr, REAL sal)])\n)"
 >   : string
 
 (*) Query in Hybrid mode (99% Calcite; there is a variable but it is not
@@ -54,7 +54,7 @@ in
   where e.deptno = 20
   yield e.empno
 end;
-> val it = [7369,7566,7788,7876,7902] : int list
+> val it = [7369,7566,7788,7876,7902] : int bag
 Sys.plan();
 > val it =
 >   "calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 20)])\n    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n      JdbcTableScan(table=[[scott, EMP]])\n)"
@@ -70,7 +70,7 @@ in
   where e.deptno = List.nth (deptNos, 1)
   yield e.empno + 13 mod ten
 end;
-> val it = [7372,7569,7791,7879,7905] : int list
+> val it = [7372,7569,7791,7879,7905] : int bag
 Sys.plan();
 > val it =
 >   "let(matchCode0 match(ten, apply2(fnValue +, constant(7), constant(3))), resultCode calcite(plan LogicalProject($f0=[+($2, MOD(13, morelScalar('ten', '{\n  \"type\": \"INTEGER\",\n  \"nullable\": false\n}')))])\n  LogicalFilter(condition=[=($1, morelScalar('#nth List (ten :: 20 :: 30 :: [40], 1)', '{\n  \"type\": \"INTEGER\",\n  \"nullable\": false\n}'))])\n    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n      JdbcTableScan(table=[[scott, EMP]])\n))"
@@ -84,7 +84,7 @@ in
   from d in scott.depts
   yield double d.deptno
 end;
-> val it = [20,40,60,80] : int list
+> val it = [20,40,60,80] : int bag
 Sys.plan();
 > val it =
 >   "calcite(plan LogicalProject($f0=[*($0, 2)])\n  JdbcTableScan(table=[[scott, DEPT]])\n)"
@@ -139,7 +139,7 @@ Sys.plan();
 
 (*) Simple query with scan, filter, project
 from e in scott.emps where e.deptno = 30 yield e.empno;
-> val it = [7499,7521,7654,7698,7844,7900] : int list
+> val it = [7499,7521,7654,7698,7844,7900] : int bag
 Sys.plan();
 > val it =
 >   "calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 30)])\n    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n      JdbcTableScan(table=[[scott, EMP]])\n)"
@@ -153,7 +153,7 @@ in
   where e.deptno = 30
   yield e.empno
 end;
-> val it = [7499,7521,7654,7698,7844,7900] : int list
+> val it = [7499,7521,7654,7698,7844,7900] : int bag
 Sys.plan();
 > val it =
 >   "calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 30)])\n    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n      JdbcTableScan(table=[[scott, EMP]])\n)"
@@ -168,27 +168,27 @@ in
   where e.deptno = thirty
   yield e.empno
 end;
-> val it = [7499,7521,7654,7698,7844,7900] : int list
+> val it = [7499,7521,7654,7698,7844,7900] : int bag
 Sys.plan();
 > val it =
 >   "calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 30)])\n    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n      JdbcTableScan(table=[[scott, EMP]])\n)"
 >   : string
 
 (*) Equivalent #3; result and plan should be the same
-map (fn e => (#empno e))
-  (List.filter (fn e => (#deptno e) = 30) (#emps scott));
-> val it = [7499,7521,7654,7698,7844,7900] : int list
+Bag.map (fn e => (#empno e))
+  (Bag.filter (fn e => (#deptno e) = 30) (#emps scott));
+> val it = [7499,7521,7654,7698,7844,7900] : int bag
 Sys.plan();
 > val it =
->   "apply(fnCode apply(fnValue List.map, argCode match(e, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue List.filter, argCode match(e_1, apply2(fnValue =, apply(fnValue nth:1, argCode get(name e)), constant(30)))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n  JdbcTableScan(table=[[scott, EMP]])\n)))"
+>   "apply(fnCode apply(fnValue Bag.map, argCode match(e, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue Bag.filter, argCode match(e_1, apply2(fnValue =, apply(fnValue nth:1, argCode get(name e)), constant(30)))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n  JdbcTableScan(table=[[scott, EMP]])\n)))"
 >   : string
 
 (*) Union followed by group
-(*
-from x in (from e in scott.emps yield e.deptno)
-  union (from d in scott.depts yield d.deptno)
+from e in scott.emps
+  yield {x = e.deptno}
+  union (from d in scott.depts yield {x = d.deptno})
 group x compute c = count;
-*)
+> val it = [{c=6,x=20},{c=1,x=40},{c=4,x=10},{c=7,x=30}] : {c:int, x:int} bag
 
 (*) Recursive query
 (*
@@ -236,7 +236,7 @@ Sys.set ("hybrid", false);
 > val it = () : unit
 let
   fun descendants2 descendants newDescendants =
-    if null newDescendants then
+    if empty newDescendants then
       descendants
     else
       descendants2 (from d in descendants union newDescendants)
@@ -245,7 +245,7 @@ let
             where e.mgr = d.e.empno
             yield {e, level = d.level + 1})
 in
-  from d in descendants2 []
+  from d in descendants2 Bag.nil
       (from e in scott.emps
         where e.mgr = 0
         yield {e, level = 0})
@@ -266,7 +266,7 @@ end;
 >    {empno=7934,ename="MILLER",level=2,mgr=7782},
 >    {empno=7876,ename="ADAMS",level=3,mgr=7788},
 >    {empno=7369,ename="SMITH",level=3,mgr=7902}]
->   : {empno:int, ename:string, level:int, mgr:int} list
+>   : {empno:int, ename:string, level:int, mgr:int} bag
 
 "end";
 > val it = "end" : string

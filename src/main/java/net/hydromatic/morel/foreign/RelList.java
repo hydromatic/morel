@@ -30,8 +30,10 @@ import org.apache.calcite.rel.RelNode;
 
 /** A list whose contents are computed by evaluating a relational expression. */
 public class RelList extends AbstractList<Object> {
-  public final RelNode rel;
+  /** Value printed instead of the contents of an external relation. */
+  public static final String RELATION = "<relation>";
 
+  public final RelNode rel;
   private final Supplier<List<Object>> supplier;
 
   RelList(

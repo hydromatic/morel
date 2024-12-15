@@ -72,6 +72,7 @@ public class FromBuilder {
    * shape if the last step but is otherwise a no-op.)
    */
   private int removeIfNotLastIndex = Integer.MIN_VALUE;
+
   /**
    * If non-negative, flags that particular step should be removed if it is the
    * last step. (For example, we flatten "from p in (from q in list)", to "from

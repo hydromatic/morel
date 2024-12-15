@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.compile.BuiltIn;
 
 /** Algebraic type. */
 public class DataType extends ParameterizedType {
@@ -75,6 +76,16 @@ public class DataType extends ParameterizedType {
   @Override
   public Keys.DataTypeKey key() {
     return Keys.datatype(name, Keys.toKeys(arguments), typeConstructors);
+  }
+
+  @Override
+  public Type arg(int i) {
+    return arguments.get(i);
+  }
+
+  @Override
+  public boolean isCollection() {
+    return name.equals(BuiltIn.Eqtype.BAG.mlName());
   }
 
   public <R> R accept(TypeVisitor<R> typeVisitor) {

@@ -439,7 +439,7 @@ public class Resolver {
   private Core.Id toCore(Ast.Id id) {
     final Binding binding = env.getOpt(id.name);
     checkNotNull(binding, "not found", id);
-    final Core.NamedPat idPat = getIdPat(id, binding);
+    final Core.NamedPat idPat = getIdPat(id, binding.id);
     return core.id(idPat);
   }
 
@@ -453,16 +453,16 @@ public class Resolver {
    * Converts an Id that is a reference to a variable into an IdPat that
    * represents its declaration.
    */
-  private Core.NamedPat getIdPat(Ast.Id id, Binding binding) {
+  private Core.NamedPat getIdPat(Ast.Id id, Core.NamedPat coreId) {
     final Type type = typeMap.getType(id);
-    if (type == binding.id.type) {
-      return binding.id;
+    if (type == coreId.type) {
+      return coreId;
     }
     // The required type is different from the binding type, presumably more
     // specific. Create a new IdPat, reusing an existing IdPat if there was
     // one for the same type.
     return variantIdMap.computeIfAbsent(
-        Pair.of(binding.id, type), k -> k.left.withType(k.right));
+        Pair.of(coreId, type), k -> k.left.withType(k.right));
   }
 
   private Core.Tuple toCore(Ast.Tuple tuple) {
@@ -565,17 +565,17 @@ public class Resolver {
       coreFn = core.id(matchingBindings.get(0));
     } else if (top != null && top.isInst()) {
       final Type argType = typeMap.getType(apply.arg);
-      final List<Core.IdPat> matchingBindings = new ArrayList<>();
+      final List<Core.IdPat> matchingIds = new ArrayList<>();
       for (Core.IdPat idPat : env.getOverloads(top.overloadId)) {
         if (idPat.type.canCallArgOf(argType)) {
-          matchingBindings.add(idPat);
+          matchingIds.add(idPat);
         }
       }
-      if (matchingBindings.size() != 1) {
+      if (matchingIds.size() != 1) {
         throw new AssertionError(
-            "zero or more than one matching bindings: " + matchingBindings);
+            "zero or more than one matching bindings: " + matchingIds);
       }
-      coreFn = core.id(matchingBindings.get(0));
+      coreFn = core.id(getIdPat((Ast.Id) apply.fn, matchingIds.get(0)));
     } else {
       coreFn = toCore(apply.fn);
     }
@@ -1133,8 +1133,8 @@ public class Resolver {
                 ImmutableRangeSet.of(Range.all()));
       } else {
         coreExp = r.toCore(scan.exp);
-        final ListType listType = (ListType) coreExp.type;
-        corePat = r.toCore(scan.pat, listType.elementType);
+        final Type elementType = coreExp.type.arg(0);
+        corePat = r.toCore(scan.pat, elementType);
       }
       final List<Binding> bindings2 =
           new ArrayList<>(fromBuilder.stepEnv().bindings);
@@ -1213,7 +1213,7 @@ public class Resolver {
       fromBuilder.clear();
       final Core.Exp exp = toCore(through.exp);
       final Core.Pat pat = toCore(through.pat);
-      final Type type = typeMap.typeSystem.listType(pat.type);
+      final Type type = typeMap.getType(through);
       fromBuilder.scan(pat, core.apply(through.pos, type, exp, from));
     }
 

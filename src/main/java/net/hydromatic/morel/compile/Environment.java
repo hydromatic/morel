@@ -70,7 +70,7 @@ public abstract class Environment {
    */
   public String asString() {
     final StringBuilder b = new StringBuilder();
-    getValueMap().forEach((k, v) -> b.append(v).append("\n"));
+    getValueMap(false).forEach((k, v) -> b.append(v).append("\n"));
     return b.toString();
   }
 
@@ -107,6 +107,9 @@ public abstract class Environment {
 
   /** Returns the binding of {@code id} if bound, null if not. */
   public abstract @Nullable Binding getOpt(Core.NamedPat id);
+
+  /** Alternative version of {@link #getOpt(Core.NamedPat)}. */
+  public abstract @Nullable Binding getOpt2(Core.NamedPat id);
 
   /** Calls a consumer for all bindings of {@code id}. */
   public abstract void collect(Core.NamedPat id, Consumer<Binding> consumer);
@@ -173,9 +176,15 @@ public abstract class Environment {
   }
 
   /** Returns a map of the values and bindings. */
-  public final Map<String, Binding> getValueMap() {
+  public final Map<String, Binding> getValueMap(boolean skipOverloads) {
     final Map<String, Binding> valueMap = new HashMap<>();
-    visit(binding -> valueMap.putIfAbsent(binding.id.name, binding));
+    visit(
+        binding -> {
+          if (skipOverloads && binding.kind == Binding.Kind.INST) {
+            return;
+          }
+          valueMap.putIfAbsent(binding.id.name, binding);
+        });
     return valueMap;
   }
 

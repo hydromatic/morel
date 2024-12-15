@@ -131,6 +131,11 @@ public class Keys {
     return new DataTypeKey(name, arguments, typeConstructors);
   }
 
+  /** Returns a key that identifies a {@link MultiType}. */
+  public static Type.Key multi(List<? extends Type.Key> keys) {
+    return new MultiTypeKey(ImmutableList.copyOf(keys));
+  }
+
   /** Converts a map of types to a map of keys. */
   public static SortedMap<String, Type.Key> toKeys(
       SortedMap<String, ? extends Type> nameTypes) {
@@ -470,6 +475,7 @@ public class Keys {
     }
   }
 
+  /** Key that identifies a {@link ProgressiveRecordType}. */
   private static class ProgressiveRecordKey extends Type.Key {
     final ImmutableSortedMap<String, Type.Key> argNameTypes;
 
@@ -504,6 +510,28 @@ public class Keys {
     @Override
     public Type toType(TypeSystem typeSystem) {
       return new ProgressiveRecordType(typeSystem.typesFor(this.argNameTypes));
+    }
+  }
+
+  /** Key that identifies a {@link MultiType}. */
+  private static class MultiTypeKey extends Type.Key {
+    private final List<Type.Key> args;
+
+    MultiTypeKey(ImmutableList<Type.Key> args) {
+      super(Op.MULTI_TYPE);
+      this.args = requireNonNull(args);
+    }
+
+    @Override
+    StringBuilder describe(StringBuilder buf, int left, int right) {
+      buf.append("multi(");
+      TypeSystem.unparseList(buf, Op.COMMA, 0, 0, args);
+      return buf.append(')');
+    }
+
+    @Override
+    public Type toType(TypeSystem typeSystem) {
+      return new MultiType(typeSystem.typesFor(args));
     }
   }
 

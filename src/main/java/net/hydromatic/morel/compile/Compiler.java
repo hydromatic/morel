@@ -315,7 +315,7 @@ public class Compiler {
   protected Code compileFrom(Context cx, Core.From from) {
     Supplier<Codes.RowSink> rowSinkFactory =
         createRowSinkFactory(
-            cx, Core.StepEnv.EMPTY, from.steps, from.type().elementType);
+            cx, Core.StepEnv.EMPTY, from.steps, from.type().arg(0));
     return Codes.from(rowSinkFactory);
   }
 
@@ -520,7 +520,7 @@ public class Compiler {
         return toApplicable(cx, literal.unwrap(Object.class), argType, pos);
 
       case ID:
-        Binding binding = cx.env.getOpt(((Core.Id) fn).idPat);
+        Binding binding = cx.env.getOpt2(((Core.Id) fn).idPat);
         if (binding == null
             || binding.value instanceof LinkCode
             || binding.value == Unit.INSTANCE) {

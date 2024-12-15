@@ -22,6 +22,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.allMatch;
+import static net.hydromatic.morel.util.Static.filterEager;
 import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.plus;
 import static net.hydromatic.morel.util.Static.transform;
@@ -55,6 +56,7 @@ import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
+import net.hydromatic.morel.type.MultiType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RangeExtent;
 import net.hydromatic.morel.type.RecordLikeType;
@@ -159,6 +161,28 @@ public enum CoreBuilder {
   /** Creates a function literal. */
   public Core.Literal functionLiteral(TypeSystem typeSystem, BuiltIn builtIn) {
     final Type type = builtIn.typeFunction.apply(typeSystem);
+    return new Core.Literal(Op.FN_LITERAL, type, builtIn);
+  }
+
+  /** Creates a function literal, possibly overloaded. */
+  public Core.Literal functionLiteral(
+      TypeSystem typeSystem, BuiltIn builtIn, List<Core.Exp> argList) {
+    Type type = builtIn.typeFunction.apply(typeSystem);
+    if (type instanceof MultiType) {
+      final Type arg0Type =
+          argList.size() == 1
+              ? argList.get(0).type
+              : typeSystem.tupleType(transform(argList, Core.Exp::type));
+      final List<Type> applicableTypes =
+          filterEager(((MultiType) type).types, t -> t.canCallArgOf(arg0Type));
+      checkArgument(
+          applicableTypes.size() == 1,
+          "expected one overload for arguments %s, got %s %s",
+          argList,
+          applicableTypes.size(),
+          applicableTypes);
+      type = applicableTypes.get(0);
+    }
     return new Core.Literal(Op.FN_LITERAL, type, builtIn);
   }
 
@@ -384,17 +408,26 @@ public enum CoreBuilder {
     return new Core.Case(pos, type, exp, ImmutableList.copyOf(matchList));
   }
 
-  public Core.From from(ListType type, List<Core.FromStep> steps) {
+  public Core.From from(Type type, List<Core.FromStep> steps) {
     return new Core.From(type, ImmutableList.copyOf(steps));
   }
 
-  /** Derives the result type, then calls {@link #from(ListType, List)}. */
+  /** Derives the result type, then calls {@link #from(Type, List)}. */
   public Core.From from(TypeSystem typeSystem, List<Core.FromStep> steps) {
     final Type elementType = fromElementType(typeSystem, steps);
-    return from(typeSystem.listType(elementType), steps);
+    final Type collectionType;
+    if (fromOrdered(steps)) {
+      collectionType = typeSystem.listType(elementType);
+    } else {
+      collectionType = typeSystem.bagType(elementType);
+    }
+    return from(collectionType, steps);
   }
 
-  /** Returns the element type of a {@link Core.From} with the given steps. */
+  /**
+   * Returns the datatype of an element of a {@link Core.From} with the given
+   * steps.
+   */
   private Type fromElementType(
       TypeSystem typeSystem, List<Core.FromStep> steps) {
     final Core.StepEnv lastStep = lastEnv(steps);
@@ -405,6 +438,17 @@ public enum CoreBuilder {
       return argNameTypes.right(0);
     }
     return typeSystem.recordType(argNameTypes);
+  }
+
+  /**
+   * Returns whether the output of the last of a sequence of steps is ordered.
+   */
+  private boolean fromOrdered(List<Core.FromStep> steps) {
+    boolean ordered = true;
+    for (Core.FromStep step : steps) {
+      ordered = step.isOrdered(ordered);
+    }
+    return ordered;
   }
 
   /**
@@ -701,12 +745,12 @@ public enum CoreBuilder {
       TypeSystem typeSystem,
       Type type,
       Map<String, ImmutableRangeSet> rangeSetMap) {
-    final ListType listType = typeSystem.listType(type);
+    final Type bagType = typeSystem.bagType(type);
     // Store an ImmutableRangeSet value inside a literal of type 'unit'.
     // The value of such literals is usually Unit.INSTANCE, but we cheat.
     return core.apply(
         Pos.ZERO,
-        listType,
+        bagType,
         core.functionLiteral(typeSystem, BuiltIn.Z_EXTENT),
         core.internalLiteral(new RangeExtent(typeSystem, type, rangeSetMap)));
   }
@@ -735,14 +779,14 @@ public enum CoreBuilder {
           }
           remainingExps.add(exp);
         }
-        final ListType listType = (ListType) exps.get(0).type;
+        final Type listType = exps.get(0).type;
         Map<String, ImmutableRangeSet> rangeSetMap =
             Extents.intersect((List) rangeSetMaps);
         Core.Exp exp =
             core.listIntersect(
                 typeSystem,
                 plus(
-                    core.extent(typeSystem, listType.elementType, rangeSetMap),
+                    core.extent(typeSystem, listType.arg(0), rangeSetMap),
                     remainingExps));
         return Pair.of(exp, remainingExps);
     }
@@ -773,14 +817,14 @@ public enum CoreBuilder {
           }
           remainingExps.add(exp);
         }
-        final ListType listType = (ListType) exps.get(0).type;
+        final Type listType = exps.get(0).type;
         Map<String, ImmutableRangeSet> rangeSetMap =
             Extents.union((List) rangeSetMaps);
         Core.Exp exp =
             core.listConcat(
                 typeSystem,
                 plus(
-                    core.extent(typeSystem, listType.elementType, rangeSetMap),
+                    core.extent(typeSystem, listType.arg(0), rangeSetMap),
                     remainingExps));
         return Pair.of(exp, remainingExps);
     }
@@ -881,7 +925,8 @@ public enum CoreBuilder {
       Type type,
       Pos pos,
       Core.Exp... args) {
-    final Core.Literal literal = functionLiteral(typeSystem, builtIn);
+    final Core.Literal literal =
+        functionLiteral(typeSystem, builtIn, ImmutableList.copyOf(args));
     final ForallType forallType = (ForallType) literal.type;
     final FnType fnType = (FnType) typeSystem.apply(forallType, type);
     return apply(pos, fnType.resultType, literal, args(fnType.paramType, args));
@@ -966,12 +1011,7 @@ public enum CoreBuilder {
   }
 
   public Core.Exp only(TypeSystem typeSystem, Pos pos, Core.Exp a0) {
-    return call(
-        typeSystem,
-        BuiltIn.RELATIONAL_ONLY,
-        ((ListType) a0.type).elementType,
-        pos,
-        a0);
+    return call(typeSystem, BuiltIn.RELATIONAL_ONLY, a0.type.arg(0), pos, a0);
   }
 
   public Core.Exp nonEmpty(TypeSystem typeSystem, Pos pos, Core.Exp a0) {

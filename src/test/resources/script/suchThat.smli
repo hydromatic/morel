@@ -24,32 +24,31 @@
 (* ------------------------------------------------------ *)
 (* Convert predicates into ranges. *)
 from i where i > 0 andalso i < 10;
-> val it = [1,2,3,4,5,6,7,8,9] : int list
+> val it = [1,2,3,4,5,6,7,8,9] : int bag
 from i where i > 0 andalso i < 4 yield {j = i + 1};
-> val it = [{j=2},{j=3},{j=4}] : {j:int} list
+> val it = [{j=2},{j=3},{j=4}] : {j:int} bag
 from i where i > 0 andalso i < 4 yield {j = i + 1} order j desc;
 > val it = [{j=4},{j=3},{j=2}] : {j:int} list
 from i where i > 0 andalso i < 10 andalso i mod 3 = 2;
-> val it = [2,5,8] : int list
+> val it = [2,5,8] : int bag
 from i where i = 0 orelse i = 12;
 > val it = [0,12] : int list
 from i where i > 0 andalso i < 10 orelse i > 12 andalso i <= 15;
-> val it = [1,2,3,4,5,6,7,8,9,13,14,15] : int list
+> val it = [1,2,3,4,5,6,7,8,9,13,14,15] : int bag
 from i
 where i > 0 andalso i < 10
 join b
 where b = true;
 > val it =
 >   [{b=true,i=1},{b=true,i=2},{b=true,i=3},{b=true,i=4},{b=true,i=5},
->    {b=true,i=6},{b=true,i=7},{b=true,i=8},{b=true,i=9}] : {b:bool, i:int} list
+>    {b=true,i=6},{b=true,i=7},{b=true,i=8},{b=true,i=9}] : {b:bool, i:int} bag
 from i
 where i > 0 andalso i < 10
 join b
 where b = (i mod 2 = 0);
 > val it =
 >   [{b=false,i=1},{b=true,i=2},{b=false,i=3},{b=true,i=4},{b=false,i=5},
->    {b=true,i=6},{b=false,i=7},{b=true,i=8},{b=false,i=9}]
->   : {b:bool, i:int} list
+>    {b=true,i=6},{b=false,i=7},{b=true,i=8},{b=false,i=9}] : {b:bool, i:int} bag
 
 (*) Unbound variables in declared 'join';
 (*) condition on 'j' occurs after 'join'
@@ -64,7 +63,7 @@ where j > 4 andalso j < 7
 >    {i=1,j=5,k=10,m=14},{i=1,j=6,k=9,m=13},{i=1,j=6,k=9,m=14},
 >    {i=1,j=6,k=10,m=13},{i=1,j=6,k=10,m=14},{i=2,j=5,k=9,m=13},
 >    {i=2,j=5,k=9,m=14},{i=2,j=5,k=10,m=13},{i=2,j=5,k=10,m=14},...]
->   : {i:int, j:int, k:int, m:int} list
+>   : {i:int, j:int, k:int, m:int} bag
 
 (* ------------------------------------------------------ *)
 (* Unbounded variables with `take` and other clauses. *)
@@ -89,12 +88,12 @@ from i
 from i
   where i >= 0 andalso i <= 100
   take 3;
-> val it = [0,1,2] : int list
+> val it = [0,1,2] : int bag
 
 from i
   where i >= 0 andalso i <= 100
   skip 96;
-> val it = [96,97,98,99,100] : int list
+> val it = [96,97,98,99,100] : int bag
 
 from i
   where i >= 0 andalso i <= 100
@@ -103,32 +102,10 @@ from i
   take 5;
 > val it = [20,19,18,17,16] : int list
 
-fun threes list =
-  let
-    fun f result [] = result
-      | f ([a] :: result) (h :: t) = f ([a,h] :: result) t
-      | f ([a,b] :: result) (h :: t) = f ([a,b,h] :: result) t
-      | f ([a,b,c] :: result) (h :: t) = f ([h] :: [a,b,c] :: result) t
-      | f result (h :: t) = f ([h] :: result) t
-  in
-   f [] list
-  end;
-> val threes = fn : 'a list -> 'a list list
-threes [1];
-> val it = [[1]] : int list list
-threes [1,2];
-> val it = [[1,2]] : int list list
-threes [1,2,3];
-> val it = [[1,2,3]] : int list list
-threes [1,2,3,4];
-> val it = [[4],[1,2,3]] : int list list
-threes [1,2,3,4,5];
-> val it = [[4,5],[1,2,3]] : int list list
-
 from i
   where i >= 0 andalso i <= 10
-  through j in threes;
-> val it = [[9,10],[6,7,8],[3,4,5],[0,1,2]] : int list list
+  through j in (fn bag => Bag.`take` (bag, 3));
+> val it = [0,1,2] : int bag
 
 exists i
   where i >= 0 andalso i <= 100;
@@ -170,25 +147,25 @@ where {deptno = dno, dname = name, loc} elem scott.depts
   andalso dno > 20;
 > val it =
 >   [{dno=30,loc="CHICAGO",name="SALES"},{dno=40,loc="BOSTON",name="OPERATIONS"}]
->   : {dno:int, loc:string, name:string} list
+>   : {dno:int, loc:string, name:string} bag
 
 (*) As previous but with a literal in the record.
 from dno, name
 where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
   andalso dno > 20;
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
 
 (*) Equivalent to previous, rephrasing 'suchthat' as 'where'
 from dno, name
 where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
   andalso dno > 20;
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
 
 (*) Equivalent to previous, splitting 'where'
 from dno, name
 where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
 where dno > 20;
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
 
 (*) Variables 'dno', 'name' are infinite until constrained by conditions.
 from v, dno, name
@@ -197,7 +174,7 @@ where v.deptno = dno
 where name = v.dname
 where v.loc = "CHICAGO"
 yield {dno, name = #dname v};
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
 
 (*) Forward references are required. 'dno' is infinite until we see the
 (*) condition 'v.deptno = dno', and at that point we haven't declared
@@ -208,7 +185,7 @@ where v.deptno = dno
 where name = v.dname
 where v.loc = "CHICAGO"
 yield {dno = #deptno v, name = #dname v};
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
 
 (*) An extra condition on 'dno' yields empty result.
 from dno, name, v
@@ -218,7 +195,7 @@ where name = v.dname
 where v.loc = "CHICAGO"
 where dno = 20
 yield {dno = #deptno v, name = #dname v};
-> val it = [] : {dno:int, name:string} list
+> val it = [] : {dno:int, name:string} bag
 
 (*) Inequality on 'dno'
 from dno, name, v
@@ -228,20 +205,20 @@ where name = v.dname
 where v.loc = "CHICAGO"
 where dno > 20
 yield {dno = #deptno v, name = #dname v};
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
+> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
 
 (*) We can iterate over a finite datatype
 from i
 where Option.getOpt i;
 > val it = [(NONE,true),(SOME true,false),(SOME true,true)]
->   : (bool option * bool) list
+>   : (bool option * bool) bag
 
 (*) If the expression is 'elem set' we can deduce the extent.
 from e
   where (e elem scott.emps)
   where e.deptno = 20
   yield e.ename;
-> val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string list
+> val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string bag
 
 (*) A function that finds its data internally.
 let
@@ -253,7 +230,7 @@ in
     where e.deptno = 20
     yield e.ename
 end;
-> val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string list
+> val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string bag
 
 (*) As above, using 'andalso' rather than 'where'
 let
@@ -264,7 +241,7 @@ in
     where isEmp e andalso e.deptno = 20
     yield e.ename
 end;
-> val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string list
+> val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string bag
 
 (*) As previous, but 'fun' followed by 'from' without using 'let'
 (*) TODO should return same as previous, currently can't inline fun declared separately
@@ -289,7 +266,7 @@ in
     where isClerk e andalso e.deptno = 20
     yield e.ename
 end;
-> val it = ["SMITH","ADAMS"] : string list
+> val it = ["SMITH","ADAMS"] : string bag
 
 (*) A disjunctive condition prevents the extent.
 (*) TODO: throw an error, rather than returning an empty list
@@ -756,7 +733,7 @@ where q = RED
 >    {nsw=RED,nt=BLUE,q=RED,sa=GREEN,t=GREEN,v=BLUE,wa=RED},
 >    {nsw=GREEN,nt=GREEN,q=RED,sa=BLUE,t=GREEN,v=RED,wa=RED},
 >    {nsw=RED,nt=GREEN,q=RED,sa=BLUE,t=GREEN,v=GREEN,wa=RED}]
->   : {nsw:Color, nt:Color, q:Color, sa:Color, t:Color, v:Color, wa:Color} list
+>   : {nsw:Color, nt:Color, q:Color, sa:Color, t:Color, v:Color, wa:Color} bag
 
 (* ------------------------------------------------------ *)
 (* Arithmetic optimization.

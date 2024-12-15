@@ -289,13 +289,17 @@ val prefixes = List.map (fn s =>
 prefixes ["cat", "dog", "", "car", "cart"];
 > val it = ["ca","do","","ca","car"] : string list
 
+(* Workaround for [MOREL-270] Ambiguous collection types. *)
+fun mustBeList (list: 'a list) = list;
+> val mustBeList = fn : 'a list -> 'a list
+
 (*) Fixed-point over union.
 (*) A naive algorithm recomputes the whole set each hop,
 (*) so is not very efficient.
 fun fixu_naive f a =
   let
     val a2 = f a
-    val a3 = from i in a union a2 group i
+    val a3 = from i in mustBeList a union mustBeList a2 group i
   in
     if a3 = a then
       a
@@ -370,6 +374,7 @@ val edges =
 >   : {source:string, target:string, weight:int} list
 fun shortest_path edges =
   let
+    val _ = List.length edges (* force edges to be a list *)
     val vertices =
       from v in (from {source, target, weight} in edges yield source)
           union

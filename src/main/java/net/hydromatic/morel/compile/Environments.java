@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Codes;
@@ -40,6 +41,7 @@ import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.MultiType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
@@ -97,13 +99,39 @@ public abstract class Environments {
             }
             value = key.sessionValue.apply(session);
           }
-          if (key.structure == null) {
-            bindings.add(
-                Binding.of(core.idPat(type, key.mlName, nameGen), value));
-          }
-          if (key.alias != null) {
-            bindings.add(
-                Binding.of(core.idPat(type, key.alias, nameGen), value));
+          // If type is a MultiType, define several overloads.
+          if (type instanceof MultiType) {
+            List<Type> types = ((MultiType) type).types;
+            Core.IdPat overloadId =
+                core.idPat(types.get(0), key.mlName, nameGen);
+            final Supplier<String> nameGen2 =
+                () -> typeSystem.nameGenerator.getPrefixed(overloadId.name);
+            for (int i = 0; i < types.size(); i++) {
+              Type type1 = types.get(i);
+              if (key.structure == null) {
+                if (i == 0) {
+                  bindings.add(Binding.over(overloadId, value));
+                }
+                Core.IdPat id = core.idPat(type1, nameGen2);
+                bindings.add(Binding.inst(id, overloadId, value));
+              }
+              if (key.alias != null) {
+                if (i == 0) {
+                  bindings.add(Binding.over(overloadId, value));
+                }
+                Core.IdPat id = core.idPat(type1, nameGen2);
+                bindings.add(Binding.inst(id, overloadId, value));
+              }
+            }
+          } else {
+            if (key.structure == null) {
+              bindings.add(
+                  Binding.of(core.idPat(type, key.mlName, nameGen), value));
+            }
+            if (key.alias != null) {
+              bindings.add(
+                  Binding.of(core.idPat(type, key.alias, nameGen), value));
+            }
           }
         });
 
@@ -214,6 +242,17 @@ public abstract class Environments {
     }
 
     @Override
+    public @Nullable Binding getOpt2(Core.NamedPat id) {
+      if (binding.id.equals(id)) {
+        return binding;
+      }
+      if (binding.overloadId != null && binding.overloadId.equals(id)) {
+        return binding;
+      }
+      return parent.getOpt2(id);
+    }
+
+    @Override
     public void collect(Core.NamedPat id, Consumer<Binding> consumer) {
       if (id.equals(binding.overloadId) || id.equals(binding.id)) { // TODO
         switch (binding.kind) {
@@ -298,6 +337,11 @@ public abstract class Environments {
     }
 
     @Override
+    public @Nullable Binding getOpt2(Core.NamedPat id) {
+      return null;
+    }
+
+    @Override
     public void collect(Core.NamedPat id, Consumer<Binding> consumer) {
       // do nothing
     }
@@ -362,9 +406,24 @@ public abstract class Environments {
     @Override
     public @Nullable Binding getOpt(Core.NamedPat id) {
       final Binding binding = map.get(id);
-      return binding != null && binding.id.i == id.i
-          ? binding
-          : parent.getOpt(id);
+      if (binding != null && binding.id.i == id.i) {
+        return binding;
+      }
+      for (Binding binding2 : instanceMap.values()) {
+        if (binding2.id.equals(id)) {
+          return binding2;
+        }
+      }
+      return parent.getOpt(id);
+    }
+
+    @Override
+    public @Nullable Binding getOpt2(Core.NamedPat id) {
+      final Binding binding = map.get(id);
+      if (binding != null && binding.id.i == id.i) {
+        return binding;
+      }
+      return parent.getOpt2(id);
     }
 
     @Override
@@ -374,7 +433,7 @@ public abstract class Environments {
           id instanceof Core.IdPat
               ? instanceMap.get((Core.IdPat) id)
               : ImmutableList.of();
-      if (binding != null) {
+      if (binding != null && binding.kind != Binding.Kind.OVER) {
         // Send this binding to the consumer. It obscures all other
         // bindings, so we're done.
         if (!instBindings.isEmpty()) {

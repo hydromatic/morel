@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.foreign;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
 
@@ -34,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.DataType;
-import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
@@ -136,10 +136,11 @@ public class Converters {
   @SuppressWarnings("unchecked")
   public static Function<Enumerable<Object[]>, List<Object>> fromEnumerable(
       RelNode rel, Type type) {
-    final ListType listType = (ListType) type;
+    checkArgument(type.isCollection(), "not a collection type: %s", type);
+    final Type elementType = type.arg(0);
     final RelDataType rowType = rel.getRowType();
     final Function<Object[], Object> elementConverter =
-        forType(rowType, listType.elementType);
+        forType(rowType, elementType);
     return enumerable -> enumerable.select(elementConverter::apply).toList();
   }
 
@@ -304,6 +305,9 @@ public class Converters {
       switch (type.op()) {
         case DATA_TYPE:
           final DataType dataType = (DataType) type;
+          if (dataType.isCollection()) {
+            return forMorelCollection(type, typeFactory, nullable, recordList);
+          }
           if (dataType.name.equals("option")) {
             return forMorel(
                 dataType.parameterTypes.get(0), typeFactory, true, false);
@@ -316,14 +320,7 @@ public class Converters {
           return new C2m(typeFactory.createSqlType(SqlTypeName.ANY), type);
 
         case LIST:
-          final ListType listType = (ListType) type;
-          RelDataType elementType =
-              forMorel(listType.elementType, typeFactory, nullable, false)
-                  .calciteType;
-          if (recordList && !elementType.isStruct()) {
-            elementType = typeFactory.builder().add("1", elementType).build();
-          }
-          return new C2m(typeFactory.createMultisetType(elementType, -1), type);
+          return forMorelCollection(type, typeFactory, nullable, recordList);
 
         case RECORD_TYPE:
         case TUPLE_TYPE:
@@ -340,8 +337,8 @@ public class Converters {
           return new C2m(typeBuilder.build(), type);
 
         case TY_VAR:
-          // The reason that a type variable is present is because the type
-          // doesn't matter. For example, in 'map (fn x => 1) []' it doesn't
+          // Why is a type variable present? Because the type doesn't matter.
+          // For example, in 'map (fn x => 1) []' it doesn't
           // matter what the element type of the empty list is, because the
           // lambda doesn't look at the elements. So, pretend the type is
           // 'bool'.
@@ -393,6 +390,20 @@ public class Converters {
       }
     }
 
+    private static C2m forMorelCollection(
+        Type type,
+        RelDataTypeFactory typeFactory,
+        boolean nullable,
+        boolean recordList) {
+      checkArgument(type.isCollection(), "not a collection type: %s", type);
+      RelDataType elementType =
+          forMorel(type.arg(0), typeFactory, nullable, false).calciteType;
+      if (recordList && !elementType.isStruct()) {
+        elementType = typeFactory.builder().add("1", elementType).build();
+      }
+      return new C2m(typeFactory.createMultisetType(elementType, -1), type);
+    }
+
     public Object toCalciteObject(Object v) {
       return v;
     }
@@ -400,24 +411,21 @@ public class Converters {
     public Enumerable<Object[]> toCalciteEnumerable(Object v) {
       @SuppressWarnings({"unchecked", "rawtypes"})
       final Enumerable<Object> enumerable = Linq4j.asEnumerable((List) v);
-      switch (morelType.op()) {
-        case LIST:
-          final ListType listType = (ListType) morelType;
-          final C2m c =
-              new C2m(calciteType.getComponentType(), listType.elementType);
-          if (c.morelType instanceof PrimitiveType) {
-            if (c.calciteType.isStruct()) {
-              return EnumerableDefaults.select(enumerable, c::scalarToArray);
-            } else {
-              //noinspection unchecked
-              return (Enumerable) enumerable;
-            }
+      if (morelType.isCollection()) {
+        final Type elementType = morelType.arg(0);
+        final C2m c = new C2m(calciteType.getComponentType(), elementType);
+        if (c.morelType instanceof PrimitiveType) {
+          if (c.calciteType.isStruct()) {
+            return EnumerableDefaults.select(enumerable, c::scalarToArray);
           } else {
-            return EnumerableDefaults.select(enumerable, c::listToArray);
+            //noinspection unchecked
+            return (Enumerable) enumerable;
           }
-        default:
-          throw new AssertionError("cannot convert " + morelType);
+        } else {
+          return EnumerableDefaults.select(enumerable, c::listToArray);
+        }
       }
+      throw new AssertionError("cannot convert " + morelType);
     }
 
     private Object[] listToArray(Object o) {

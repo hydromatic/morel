@@ -110,7 +110,7 @@ maskToString (mask ("abcde", "spuds"));
    words divided by the number of groups. For all guesses, the
    number of remaining words is the same. Therefore the best guess
    is the one that returns the most mask groups. *)
-fun f (guess, remainingWords) =
+fun f (guess, remainingWords: 'a list) =
   from w in remainingWords
     group m = mask (guess, w) compute c = count
     compute count;
@@ -120,7 +120,7 @@ fun f (guess, remainingWords) =
    A good guess is one that, in the worst case scenario,
    namely a mask shared by a lot of words, minimizes the
    size of that set of words. *)
-fun bestGuesses2 (sampleWords, remainingWords) =
+fun bestGuesses2 (sampleWords: 'a list, remainingWords: 'a list) =
   from w in sampleWords,
     f = f (w, remainingWords)
     order f desc;
@@ -163,13 +163,13 @@ bestGuesses2 (sampleWords, words);
 
 (* Returns the words left after applying a set of filters from previous
    guesses. *)
-fun remaining (words, []) = words
+fun remaining (words: 'a list, []) = words
   | remaining (words, (guess, m) :: rest) =
       from w in (remaining (words, rest))
         where maskToString (mask (guess, w)) = m;
 > val remaining = fn : string list * (string * string) list -> string list
 
-fun remaining2 (words, guess, m) =
+fun remaining2 (words: 'a list, guess, m) =
   from w in words
     where mask (guess, w) = m;
 > val remaining2 = fn : string list * string * int -> string list

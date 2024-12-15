@@ -159,29 +159,33 @@ public enum BuiltIn {
           ts.forallType(
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), BOOL))),
 
-  /** Infix operator "elem", of type "&alpha; * &alpha; list; &rarr; bool". */
+  /**
+   * Overloaded infix operator "elem", of type "&alpha; * &alpha; bag &rarr;
+   * bool" and "&alpha; * &alpha; list &rarr; bool".
+   */
   OP_ELEM(
       null,
       "op elem",
       ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      ts.tupleType(h.get(0), ts.listType(h.get(0))), BOOL))),
+          ts.multi(
+              ts.forallType(
+                  1, h -> ts.fnType(ts.tupleType(h.get(0), h.bag(0)), BOOL)),
+              ts.forallType(
+                  1, h -> ts.fnType(ts.tupleType(h.get(0), h.list(0)), BOOL)))),
 
   /**
-   * Infix operator "notelem", of type "&alpha; * &alpha; list; &rarr; bool".
+   * Overloaded infix operator "notelem", of type "&alpha; * &alpha; bag &rarr;
+   * bool". and "&alpha; * &alpha; list &rarr; bool".
    */
   OP_NOT_ELEM(
       null,
       "op notelem",
       ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      ts.tupleType(h.get(0), ts.listType(h.get(0))), BOOL))),
+          ts.multi(
+              ts.forallType(
+                  1, h -> ts.fnType(ts.tupleType(h.get(0), h.bag(0)), BOOL)),
+              ts.forallType(
+                  1, h -> ts.fnType(ts.tupleType(h.get(0), h.list(0)), BOOL)))),
 
   /**
    * Infix operator "-", of type "&alpha; * &alpha; &rarr; &alpha;" (where
@@ -2356,7 +2360,7 @@ public enum BuiltIn {
       "Real", "unordered", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
 
   /**
-   * Function "Relational.count", aka "count", of type "int list &rarr; int".
+   * Function "Relational.count", aka "count", of type "int bag &rarr; int".
    *
    * <p>Often used with {@code group}:
    *
@@ -2370,10 +2374,13 @@ public enum BuiltIn {
       "Relational",
       "count",
       "count",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), INT)),
+              ts.forallType(1, h -> ts.fnType(h.list(0), INT)))),
 
   /**
-   * Function "Relational.nonEmpty", of type "&alpha; list &rarr; bool".
+   * Function "Relational.nonEmpty", of type "&alpha; bag &rarr; bool".
    *
    * <p>For example,
    *
@@ -2398,11 +2405,14 @@ public enum BuiltIn {
       "Relational",
       "nonEmpty",
       "nonEmpty",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL)),
+              ts.forallType(1, h -> ts.fnType(h.list(0), BOOL)))),
 
   /**
-   * Function "Relational.notExists", aka "notExists", of type "&alpha; list
-   * &rarr; bool".
+   * Function "Relational.empty", aka "empty", of type "&alpha; bag &rarr;
+   * bool".
    *
    * <p>For example,
    *
@@ -2414,9 +2424,6 @@ public enum BuiltIn {
    *   andalso e.job = "CLERK")
    * }</pre>
    *
-   * <p>{@code notExists list} is equivalent to {@code not (exists list)}, but
-   * the former may be more convenient, because it requires fewer parentheses.
-   *
    * <p>In idiomatic Morel, that would be written using {@code exists}:
    *
    * <pre>{@code
@@ -2425,18 +2432,24 @@ public enum BuiltIn {
    *   where e.deptno = d.deptno
    *   andalso e.job = "CLERK")
    * }</pre>
+   *
+   * <p>{@code empty bag} is equivalent to {@code not (exists bag)}, but the
+   * former may be more convenient, because it requires fewer parentheses.
    */
   RELATIONAL_EMPTY(
       "Relational",
       "empty",
       "empty",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL)),
+              ts.forallType(1, h -> ts.fnType(h.list(0), BOOL)))),
 
   /**
-   * Function "Relational.only", aka "only", of type "&alpha; list &rarr;
+   * Function "Relational.only", aka "only", of type "&alpha; bag &rarr;
    * &alpha;".
    *
-   * <p>"only list" returns the only element of {@code list}. It raises {@link
+   * <p>"only bag" returns the only element of {@code bag}. It raises {@link
    * BuiltInExn#EMPTY Empty} if {@code list} is nil, {@link BuiltInExn#SIZE
    * Size} if {@code list} has more than one element.
    *
@@ -2453,12 +2466,14 @@ public enum BuiltIn {
       "Relational",
       "only",
       "only",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
+              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
 
   /**
-   * Function "Relational.iterate", aka "iterate", of type "&alpha; list &rarr;
-   * (&alpha; list &rarr; &alpha; list &rarr; &alpha; list) &rarr; &alpha;
-   * list".
+   * Function "Relational.iterate", aka "iterate", of type "&alpha; bag &rarr;
+   * (&alpha; bag &rarr; &alpha; bag &rarr; &alpha; bag) &rarr; &alpha; bag".
    *
    * <p>"iterate initialList listUpdate" computes a fixed point, starting with a
    * list and iterating by passing it to a function.
@@ -2468,16 +2483,25 @@ public enum BuiltIn {
       "iterate",
       "iterate",
       ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      h.list(0),
-                      ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)),
-                      h.list(0)))),
+          ts.multi(
+              ts.forallType(
+                  1,
+                  h ->
+                      ts.fnType(
+                          h.bag(0),
+                          ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)),
+                          h.bag(0))),
+              ts.forallType(
+                  1,
+                  h ->
+                      ts.fnType(
+                          h.list(0),
+                          ts.fnType(
+                              ts.tupleType(h.list(0), h.list(0)), h.list(0)),
+                          h.list(0))))),
 
   /**
-   * Function "Relational.sum", aka "sum", of type "&alpha; list &rarr; &alpha;"
+   * Function "Relational.sum", aka "sum", of type "&alpha; bag &rarr; &alpha;"
    * (where &alpha; must be numeric).
    *
    * <p>Often used with {@code group}:
@@ -2492,27 +2516,36 @@ public enum BuiltIn {
       "Relational",
       "sum",
       "sum",
-      ts -> ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
+              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
 
   /**
-   * Function "Relational.max", aka "max", of type "&alpha; list &rarr; &alpha;"
+   * Function "Relational.max", aka "max", of type "&alpha; bag &rarr; &alpha;"
    * (where &alpha; must be comparable).
    */
   RELATIONAL_MAX(
       "Relational",
       "max",
       "max",
-      ts -> ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
+              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
 
   /**
-   * Function "Relational.min", aka "min", of type "&alpha; list &rarr; &alpha;"
+   * Function "Relational.min", aka "min", of type "&alpha; bag &rarr; &alpha;"
    * (where &alpha; must be comparable).
    */
   RELATIONAL_MIN(
       "Relational",
       "min",
       "min",
-      ts -> ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
+              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
 
   /** Function "Sys.clearEnv", of type "unit &rarr; unit". */
   SYS_CLEAR_ENV("Sys", "clearEnv", ts -> ts.fnType(UNIT, UNIT)),
@@ -3020,11 +3053,11 @@ public enum BuiltIn {
    * algebraic types, the extent is practically infinite. It will need to be
    * removed during planning.
    *
-   * <p>Its type is "unit &rarr; * &alpha; list". It would not be possible to
+   * <p>Its type is "unit &rarr; * &alpha; bag". It would not be possible to
    * derive the type if "extent" were used in code.
    */
   Z_EXTENT(
-      "$", "extent", ts -> ts.forallType(1, h -> ts.fnType(UNIT, h.get(0)))),
+      "$", "extent", ts -> ts.forallType(1, h -> ts.fnType(UNIT, h.bag(0)))),
 
   /**
    * Internal list constructor, e.g. "list (1 + 2, 3)" implements "[1 + 2, 3]".
@@ -3297,13 +3330,13 @@ public enum BuiltIn {
      * Analog of {@code list} for checking that matches are exhaustive. Owns the
      * {@code NIL} and {@code CONS} type constructors.
      */
-    LIST("$list", true, 1, h -> h.tyCon("NIL").tyCon("CONS", h.get(0))),
+    PSEUDO_LIST("$list", true, 1, h -> h.tyCon("NIL").tyCon("CONS", h.get(0))),
 
     /**
      * Analog of {@code bool} for checking that matches are exhaustive. Owns the
      * {@code FALSE} and {@code TRUE} type constructors.
      */
-    BOOL("$bool", true, 0, h -> h.tyCon("FALSE").tyCon("TRUE")),
+    PSEUDO_BOOL("$bool", true, 0, h -> h.tyCon("FALSE").tyCon("TRUE")),
 
     /**
      * The type of the value created by an {@code over} declaration.
@@ -3353,6 +3386,7 @@ public enum BuiltIn {
   /** Built-in equality type. */
   public enum Eqtype implements BuiltInType {
     BAG("bag", 1),
+    LIST("list", 1),
     VECTOR("vector", 1);
 
     private final String mlName;

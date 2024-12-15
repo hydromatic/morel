@@ -221,9 +221,9 @@ in
 end;
 > val it = 120 : int
 let
-  fun sum x y = x + y
+  fun plus x y = x + y
 in
-  sum 2
+  plus 2
 end;
 > val it = fn : int -> int
 it 3;

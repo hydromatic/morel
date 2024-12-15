@@ -101,11 +101,29 @@ public class MartelliUnifier extends Unifier {
       if (!work.varAnyQueue.isEmpty()) {
         TermTerm pair = work.varAnyQueue.remove(0);
         final Variable variable = (Variable) pair.left;
-        final Term term = pair.right;
+        Term term = pair.right;
+
+        // Occurs check
         if (term.contains(variable)) {
           tracer.onCycle(variable, term);
           return failure("cycle: variable " + variable + " in " + term);
         }
+
+        // If 'term' is already in the table, map 'variable' to its ultimate
+        // target.
+        while (term instanceof Variable) {
+          final Term term2 = result.get(term);
+          if (term2 == null) {
+            break;
+          }
+          term = term2;
+        }
+
+        if (term.equals(variable)) {
+          // We already knew that 'pair.left' and 'pair.right' were equivalent.
+          continue;
+        }
+
         tracer.onVariable(variable, term);
         final Term priorTerm = result.put(variable, term);
         if (priorTerm != null && !priorTerm.equals(term)) {
@@ -196,7 +214,7 @@ public class MartelliUnifier extends Unifier {
   }
 
   /** Workspace for {@link MartelliUnifier}. */
-  static class Work {
+  class Work {
     final Tracer tracer;
     final ArrayQueue<TermTerm> deleteQueue = new ArrayQueue<>();
     final ArrayQueue<TermTerm> seqSeqQueue = new ArrayQueue<>();
@@ -217,14 +235,9 @@ public class MartelliUnifier extends Unifier {
 
     @Override
     public String toString() {
-      return "delete "
-          + deleteQueue
-          + " seqSeq "
-          + seqSeqQueue
-          + " varAny "
-          + varAnyQueue
-          + " constraints "
-          + constraintQueue;
+      return format(
+          "delete %s seqSeq %s varAny %s constraints %s result %s",
+          deleteQueue, seqSeqQueue, varAnyQueue, constraintQueue, result);
     }
 
     void add2(Term left, Term right) {
@@ -322,8 +335,8 @@ public class MartelliUnifier extends Unifier {
               return failure("no valid overloads");
             case 1:
               Term term1 = constraint.termActions.left(0);
-              Constraint.Action consumer = constraint.termActions.right(0);
-              consumer.accept(constraint.arg, term1, this::add2);
+              Constraint.Action action = constraint.termActions.right(0);
+              action.accept(constraint.arg, term1, this::add2);
               break;
           }
         }

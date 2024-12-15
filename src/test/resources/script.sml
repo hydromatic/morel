@@ -61,8 +61,8 @@ factorial 3;
 *)
 
 (* Tuples as arguments *)
-fun sum (a, b) = a + b;
-fun average pair = sum pair div 2;
+fun plus (a, b) = a + b;
+fun average pair = plus pair div 2;
 val four = average (3, 5);
 
 (* TODO
@@ -83,10 +83,10 @@ swap (1, "foo");
 (* Higher-order functions *)
 fun pair_map (f, (x, y)) = (f x, f y);
 
-fun sum i j = i + j;
-val add_three = sum 3;
+fun plus i j = i + j;
+val add_three = plus 3;
 val five = add_three 2;
-val ten = sum 5 5;
+val ten = plus 5 5;
 
 (* A more complex function *)
 fun gray_code n =

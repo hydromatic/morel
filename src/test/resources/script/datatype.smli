@@ -77,20 +77,20 @@ Sys.set ("printDepth", ~1);
 2.0 <> 3.0;
 > val it = true : bool
 
-(*) Three different kinds of 'max'
-fun max_alpha (x, y) = if x < y then y else x;
-> val max_alpha = fn : 'a * 'a -> 'a
-max_alpha (2, 3);
+(*) Three different kinds of 'greater'
+fun greater_alpha (x, y) = if x < y then y else x;
+> val greater_alpha = fn : 'a * 'a -> 'a
+greater_alpha (2, 3);
 > val it = 3 : int
-max_alpha (2.0, 3.0);
+greater_alpha (2.0, 3.0);
 > val it = 3.0 : real
-fun max_int (x, y) = if x < y then y + 0 else x;
-> val max_int = fn : int * int -> int
-max_int (2, 3);
+fun greater_int (x, y) = if x < y then y + 0 else x;
+> val greater_int = fn : int * int -> int
+greater_int (2, 3);
 > val it = 3 : int
-fun max_real (x, y) = if x < y then y + 0.0 else x;
-> val max_real = fn : real * real -> real
-max_real (2.0, 3.0);
+fun greater_real (x, y) = if x < y then y + 0.0 else x;
+> val greater_real = fn : real * real -> real
+greater_real (2.0, 3.0);
 > val it = 3.0 : real
 
 (*) Tuple type with a polymorphic member
@@ -144,10 +144,10 @@ datatype bar = X of int | Y of (int, bool) | Z;
 (*) A recursive type, without generics
 datatype inttree = Empty | Node of inttree * int * inttree;
 > datatype inttree = Empty | Node of inttree * int * inttree
-fun max (x, y) = if x < y then y + 0 else x;
-> val max = fn : int * int -> int
+fun greater (x, y) = if x < y then y + 0 else x;
+> val greater = fn : int * int -> int
 fun height Empty = 0
-  | height (Node (lft, _, rht)) = 1 + max (height lft, height rht);
+  | height (Node (lft, _, rht)) = 1 + greater (height lft, height rht);
 > val height = fn : inttree -> int
 Empty;
 > val it = Empty : inttree
@@ -169,10 +169,10 @@ height it;
 (*) Recursive
 datatype 'x tree = Empty | Node of 'x tree * 'x * 'x tree;
 > datatype 'a tree = Empty | Node of 'a tree * 'a * 'a tree
-fun max (x, y) = if x < y then y else x;
-> val max = fn : 'a * 'a -> 'a
+fun greater (x, y) = if x < y then y else x;
+> val greater = fn : 'a * 'a -> 'a
 fun height Empty = 0
-  | height (Node (lft, _, rht)) = 1 + max (height lft, height rht);
+  | height (Node (lft, _, rht)) = 1 + greater (height lft, height rht);
 > val height = fn : 'a tree -> int
 Empty;
 > val it = Empty : 'a tree

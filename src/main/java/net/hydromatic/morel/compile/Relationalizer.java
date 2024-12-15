@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.compile;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.getLast;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Static.append;
@@ -30,9 +31,9 @@ import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.FnType;
-import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
 /**
@@ -63,7 +64,8 @@ public class Relationalizer extends EnvShuttle {
         switch (apply2.fn.op) {
           case FN_LITERAL:
             final Core.Literal literal = (Core.Literal) apply2.fn;
-            if (literal.value == BuiltIn.LIST_MAP) {
+            if (literal.value == BuiltIn.LIST_MAP
+                || literal.value == BuiltIn.BAG_MAP) {
               // List.map f list
               //  =>
               // from e in list yield (f e)
@@ -84,7 +86,8 @@ public class Relationalizer extends EnvShuttle {
                       fnType.resultType.op() != Op.RECORD_TYPE);
               return core.from(typeSystem, append(from.steps, yieldStep));
             }
-            if (literal.value == BuiltIn.LIST_FILTER) {
+            if (literal.value == BuiltIn.LIST_FILTER
+                || literal.value == BuiltIn.BAG_FILTER) {
               // List.filter f list
               //  =>
               // from e in list where (f e)
@@ -110,10 +113,12 @@ public class Relationalizer extends EnvShuttle {
     if (exp instanceof Core.From) {
       return (Core.From) exp;
     } else {
-      final ListType listType = (ListType) exp.type;
+      checkArgument(
+          exp.type.isCollection(), "not a collection type: %s", exp.type);
+      final Type elementType = exp.type.arg(0);
       final String name = typeSystem.nameGenerator.get();
       final Core.IdPat id =
-          core.idPat(listType.elementType, name, typeSystem.nameGenerator::inc);
+          core.idPat(elementType, name, typeSystem.nameGenerator::inc);
       final List<Binding> bindings = new ArrayList<>();
       Compiles.acceptBinding(id, bindings);
       boolean atom = bindings.size() == 1;

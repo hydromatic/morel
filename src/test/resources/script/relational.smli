@@ -329,6 +329,12 @@ from e in emps
 > val it = [{tens=3,units=0},{tens=3,units=0},{tens=2,units=0},{tens=1,units=0}]
 >   : {tens:int, units:int} list
 
+(*) assignment to 'd' via a pattern
+from {deptno = d} in [{deptno=10}, {deptno=20}]
+  order d desc
+  yield {tens = d / 10, units = d mod 10};
+> val it = [{tens=2,units=0},{tens=1,units=0}] : {tens:int, units:int} list
+
 (*) record whose only field is a record with only one field
 from x in [{a = {a = 1}}, {a = {a = 2}}]
   yield {b = x.a};
@@ -341,6 +347,25 @@ from x in [{a = {a = 1}}, {a = {a = 2}}]
 from x in [{a = {a = 1}}, {a = {a = 2}}]
   yield {x.a};
 > val it = [{a={a=1}},{a={a=2}}] : {a:{a:int}} list
+
+from (x, y) in [(1,2),(3,4),(3,0)]
+  group sum = x + y;
+> val it = [3,7] : int list
+
+(* Theoretically a "group" without a "compute" can be followed by a
+ * "compute" step. So, the following is ambiguous. We treat it as a single
+ * "group ... compute" step. Under the two-step interpretation, the type
+ * would have been "int". *)
+from (i, j) in [(1, 1), (2, 3), (3, 4)]
+  group j = i mod 2
+  compute sum of j;
+> val it = [{j=1,sum=5},{j=0,sum=3}] : {j:int, sum:int} list
+
+from (i, j) in [(1, 1), (2, 3), (3, 4)]
+  group j = i mod 2
+  compute sum of j, count;
+> val it = [{count=2,j=1,sum=5},{count=1,j=0,sum=3}]
+>   : {count:int, j:int, sum:int} list
 
 from i in [1, 2, 3]
   yield {i = {i = i}};
@@ -649,6 +674,12 @@ from e in emps
 yield e.name;
 > val it = ["Fred","Velma"] : string list
 
+(* Set operations (union, intersect, except) ------------------ *)
+
+(* Workaround for [MOREL-270] Ambiguous collection types. *)
+fun mustBeList (list: 'a list) = list;
+> val mustBeList = fn : 'a list -> 'a list
+
 (*) union (matches SQL's UNION ALL)
 from e in emps
   yield e.deptno
@@ -731,6 +762,22 @@ from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4], [2];
 > val it = [1,2,3] : int list
 from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4], [2, 2, 2];
 > val it = [1,3] : int list
+
+(*) Hybrid union/intersect/except (list and bag) yields bag
+from d in scott.depts yield d.deptno;
+> val it = [10,20,30,40] : int bag
+from i in [10, 15, 20] union (from d in scott.depts yield d.deptno);
+> val it = [10,15,20,10,20,30,40] : int bag
+from i in [10, 15, 20] intersect (from d in scott.depts yield d.deptno);
+> val it = [20,10] : int bag
+from i in [10, 15, 20] except (from d in scott.depts yield d.deptno);
+> val it = [15] : int bag
+from d in scott.depts yield d.deptno union [10, 15, 20];
+> val it = [10,20,30,40,10,15,20] : int bag
+from d in scott.depts yield d.deptno intersect [10, 15, 20];
+> val it = [20,10] : int bag
+from d in scott.depts yield d.deptno except [10, 15, 20];
+> val it = [40,30] : int bag
 
 (*) Set operators are not "lateral". They can't see the "current row".
 val orders = [{id=1, items=["beer"]}, {id=2, items=[]}];
@@ -1338,7 +1385,7 @@ from
 
 (*) Patterns left of 'in'
 fun sumPairs pairs =
-  from (l, r) in pairs
+  from (l, r) in mustBeList pairs
   yield l + r;
 > val sumPairs = fn : (int * int) list -> int list
 sumPairs [];
@@ -1403,7 +1450,7 @@ from {a = x, ...} in [{a=1,b=2,c=3}];
 from {a = x, b = y, ...} in [{a=1,b=2,c=3}];
 > val it = [{x=1,y=2}] : {x:int, y:int} list
 
-fun listHeads lists =
+fun listHeads (lists: 'a list) =
   from hd :: tl in lists
   yield hd + 1;
 > val listHeads = fn : int list list -> int list
@@ -1412,7 +1459,7 @@ listHeads [];
 listHeads [[1, 2], [3], [4, 5, 6]];
 > val it = [2,4,5] : int list
 
-fun listFields lists =
+fun listFields (lists: 'a list) =
   from {a = x, b = y} in lists
   yield x + 1;
 > val listFields = fn : {a:int, b:'a} list -> int list
@@ -1422,7 +1469,7 @@ listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
 > val it = [2,4,5] : int list
 
 (*) As above, using abbreviated record pattern
-fun listFields2 lists =
+fun listFields2 (lists: 'a list) =
   from {a, b} in lists
   yield a + 1;
 > val listFields2 = fn : {a:int, b:'a} list -> int list
@@ -1432,7 +1479,7 @@ listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
 > val it = [2,4,5] : int list
 
 (*) Layered patterns
-fun listHeads2 lists =
+fun listHeads2 (lists: 'a list) =
   from list as (hd :: tl) in lists
   yield hd + 1 + (length list);
 > val listHeads2 = fn : int list list -> int list
@@ -1441,7 +1488,7 @@ listHeads2 [];
 listHeads2 [[1, 2], [3], [4, 5, 6]];
 > val it = [4,5,8] : int list
 
-fun sumPairs2 pairs =
+fun sumPairs2 (pairs: 'a list) =
   from p as (l, r) in pairs
   yield (#1 p) + l + r;
 > val sumPairs2 = fn : (int * int) list -> int list
@@ -1718,6 +1765,45 @@ in
 end;
 > val it = [{i=13},{i=24},{i=35}] : {i:int} list
 
+(*) "threes" is a function that groups a list into sublists of 3
+(* (or fewer) elements each. *)
+fun threes list =
+  let
+    fun f result [] = result
+      | f ([a] :: result) (h :: t) = f ([a,h] :: result) t
+      | f ([a,b] :: result) (h :: t) = f ([a,b,h] :: result) t
+      | f ([a,b,c] :: result) (h :: t) = f ([h] :: [a,b,c] :: result) t
+      | f result (h :: t) = f ([h] :: result) t
+  in
+   f [] list
+  end;
+> val threes = fn : 'a list -> 'a list list
+threes [1];
+> val it = [[1]] : int list list
+threes [1,2];
+> val it = [[1,2]] : int list list
+threes [1,2,3];
+> val it = [[1,2,3]] : int list list
+threes [1,2,3,4];
+> val it = [[4],[1,2,3]] : int list list
+threes [1,2,3,4,5];
+> val it = [[4,5],[1,2,3]] : int list list
+
+from i in [0,1,2,3,4,5,6,7,8,9,10]
+  through j in threes;
+> val it = [[9,10],[6,7,8],[3,4,5],[0,1,2]] : int list list
+
+(* As "threes", but returns a bag. *)
+fun threeBag list = bag (threes list);
+> val threeBag = fn : 'a list -> 'a list bag
+
+(* When we switch the query to use "threeBag" rather than "threes",
+   the input still must be a list, but the output changes from
+   "list list" to "list bag". *)
+from i in [0,1,2,3,4,5,6,7,8,9,10]
+  through j in threeBag;
+> val it = [[9,10],[6,7,8],[3,4,5],[0,1,2]] : int list bag
+
 let
   fun clean emps =
     from e in emps
@@ -1740,13 +1826,13 @@ end;
 >    {count=5,deptno=30,sum=8450.0}] : {count:int, deptno:int, sum:real} list
 
 from d in scott.depts
-  through i2 in (map (fn x => [x]));
+  through i2 in (Bag.map (fn x => [x]));
 > val it =
 >   [[{deptno=10,dname="ACCOUNTING",loc="NEW YORK"}],
 >    [{deptno=20,dname="RESEARCH",loc="DALLAS"}],
 >    [{deptno=30,dname="SALES",loc="CHICAGO"}],
 >    [{deptno=40,dname="OPERATIONS",loc="BOSTON"}]]
->   : {deptno:int, dname:string, loc:string} list list
+>   : {deptno:int, dname:string, loc:string} list bag
 
 (*) through a pivot function
 
@@ -1787,6 +1873,56 @@ from list in [[1,2,3],[2,3,4],[3,4,5]]
   where List.nth (list2, 0) <> 2
   through list3 in pivot;
 > val it = [[1,3],[2,4],[3,5]] : int list list
+
+(* let ------------------------------------- *)
+
+(*) let bag-query in query
+let
+  val records = from r in bag [1,2]
+in
+  from r in records
+end;
+> val it = [1,2] : int bag
+
+(*) let list-query in query
+let
+  val records = from r in bag [1,2]
+in
+  from r in records
+end;
+> val it = [1,2] : int bag
+
+(*) let record-bag in query
+let
+  val records = bag [{i=1,j=2}]
+in
+  from r in records
+end;
+> val it = [{i=1,j=2}] : {i:int, j:int} bag
+
+(*) let bag-query in variable
+let
+  val records = from r in bag [{i=1,j=2}]
+in
+  records
+end;
+> val it = [{i=1,j=2}] : {i:int, j:int} bag
+
+(*) let query in query, same variable name
+let
+  val records = from r in bag [{i=1,j=2}]
+in
+  from r in records
+end;
+> val it = [{i=1,j=2}] : {i:int, j:int} bag
+
+(*) let query-function in query
+let
+  fun records x = from r in bag [{i=x,j=2}]
+in
+  from r in (records 3)
+end;
+> val it = [{i=3,j=2}] : {i:int, j:int} bag
 
 (*) dummy
 from message in ["the end"];

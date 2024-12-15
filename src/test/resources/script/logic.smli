@@ -23,9 +23,9 @@ val emps = scott.emps;
 > val emps = <relation>
 >   :
 >     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->      job:string, mgr:int, sal:real} list
+>      job:string, mgr:int, sal:real} bag
 val depts = scott.depts;
-> val depts = <relation> : {deptno:int, dname:string, loc:string} list
+> val depts = <relation> : {deptno:int, dname:string, loc:string} bag
 
 (* == Simple examples ================================== *)
 
@@ -34,8 +34,8 @@ exists e in emps
   where e.sal < 900.0;
 > val it = true : bool
 
-(* Answer to Q1 using 'from' and 'List.null'. *)
-not (List.null (from e in emps where e.sal < 900.0));
+(* Answer to Q1 using 'from' and 'Bag.null'. *)
+not (Bag.null (from e in emps where e.sal < 900.0));
 > val it = true : bool
 
 (* Answer to Q1 using 'from' and 'compute'. *)
@@ -54,8 +54,8 @@ not (exists e in emps
   where not (e.sal > 1000.0));
 > val it = false : bool
 
-(* Answer to Q2 using 'from' and 'List.null'. *)
-List.null (from e in emps where not (e.sal > 1000.0));
+(* Answer to Q2 using 'from' and 'Bag.null'. *)
+Bag.null (from e in emps where not (e.sal > 1000.0));
 > val it = false : bool
 
 (* Q3. Do all employees in department 10 earn over 1,000? *)
@@ -108,7 +108,7 @@ from d in depts
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
 >    {deptno=20,dname="RESEARCH",loc="DALLAS"},
 >    {deptno=30,dname="SALES",loc="CHICAGO"}]
->   : {deptno:int, dname:string, loc:string} list
+>   : {deptno:int, dname:string, loc:string} bag
 
 (* Q5. Find all departments with no clerks. *)
 from d in depts
@@ -116,7 +116,7 @@ from d in depts
     where e.deptno = d.deptno
     andalso e.job = "CLERK");
 > val it = [{deptno=40,dname="OPERATIONS",loc="BOSTON"}]
->   : {deptno:int, dname:string, loc:string} list
+>   : {deptno:int, dname:string, loc:string} bag
 
 (* Q6. Find all departments where all employees earn more than 1,000. *)
 from d in depts
@@ -126,7 +126,7 @@ from d in depts
 > val it =
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
->   : {deptno:int, dname:string, loc:string} list
+>   : {deptno:int, dname:string, loc:string} bag
 
 (* == Implies ========================================== *)
 false implies false;
@@ -155,7 +155,7 @@ from d in scott.depts
 >    {deptno=20,dname="RESEARCH",loc="DALLAS"},
 >    {deptno=30,dname="SALES",loc="CHICAGO"},
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
->   : {deptno:int, dname:string, loc:string} list
+>   : {deptno:int, dname:string, loc:string} bag
 
 (* Three departments are not department 30 or are called
    "RESEARCH". *)
@@ -165,7 +165,7 @@ from d in scott.depts
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
 >    {deptno=20,dname="RESEARCH",loc="DALLAS"},
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
->   : {deptno:int, dname:string, loc:string} list
+>   : {deptno:int, dname:string, loc:string} bag
 
 (* == Exists =========================================== *)
 

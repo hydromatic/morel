@@ -120,7 +120,7 @@ class PatternCoverageChecker {
         // Knowing there are only two values allows us to prove that patterns
         // are exhaustive.
         final DataType boolDataType =
-            (DataType) typeSystem.lookup(BuiltIn.Datatype.BOOL);
+            (DataType) typeSystem.lookup(BuiltIn.Datatype.PSEUDO_BOOL);
         final Core.LiteralPat literalPat0 = (Core.LiteralPat) pat;
         final Boolean value = (Boolean) literalPat0.value;
         toTerm(
@@ -196,7 +196,7 @@ class PatternCoverageChecker {
    * to "CONS (x, CONS (y, NIL))", etc.
    */
   private Core.Pat listToCons(Core.ListPat listPat) {
-    final Type listType = typeSystem.lookup(BuiltIn.Datatype.LIST);
+    final Type listType = typeSystem.lookup(BuiltIn.Datatype.PSEUDO_LIST);
     final DataType listDataType = (DataType) ((ForallType) listType).type;
     return listToConsRecurse(listDataType, listPat.args);
   }

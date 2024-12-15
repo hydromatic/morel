@@ -47,7 +47,7 @@ public class EnvironmentTest {
     assertThat(e0, instanceOf(Environments.SubEnvironment.class));
     checkOptimizeSubEnvironment(e0);
 
-    final Environment e0a = e0.bindAll(e0.getValueMap().values());
+    final Environment e0a = e0.bindAll(e0.getValueMap(false).values());
     assertThat(e0a, instanceOf(Environments.MapEnvironment.class));
     checkOptimizeSubEnvironment(e0a);
   }
@@ -57,25 +57,25 @@ public class EnvironmentTest {
     final Set<String> namePlusFooSet =
         ImmutableSet.<String>builder().addAll(nameSet).add("foo").build();
 
-    assertThat(e0.getValueMap().keySet(), is(nameSet));
+    assertThat(e0.getValueMap(false).keySet(), is(nameSet));
     assertThat(e0, hasEnvLength(5));
 
     // Overwrite "true"; there are still 5 values, but 6 bindings.
     final Environment e1 =
         e0.bind(core.idPat(PrimitiveType.STRING, "true", 0), "yes");
-    assertThat(e1.getValueMap().keySet(), is(nameSet));
+    assertThat(e1.getValueMap(false).keySet(), is(nameSet));
     assertThat(e1, hasEnvLength(6));
 
     // Overwrite "true" again; still 5 values, and still 6 bindings.
     final Environment e2 =
         e1.bind(core.idPat(PrimitiveType.STRING, "true", 0), "no");
-    assertThat(e2.getValueMap().keySet(), is(nameSet));
+    assertThat(e2.getValueMap(false).keySet(), is(nameSet));
     assertThat(e2, hasEnvLength(6));
 
     // Add "foo". Value count and binding count increase.
     final Environment e3 =
         e2.bind(core.idPat(PrimitiveType.STRING, "foo", 0), "baz");
-    assertThat(e3.getValueMap().keySet(), is(namePlusFooSet));
+    assertThat(e3.getValueMap(false).keySet(), is(namePlusFooSet));
     assertThat(e3, hasEnvLength(7));
 
     // Add "true". Value count stays at 7, binding count increases.
@@ -83,7 +83,7 @@ public class EnvironmentTest {
     // be nice, but is expensive, so we do not do it.)
     final Environment e4 =
         e3.bind(core.idPat(PrimitiveType.STRING, "true", 0), "yes");
-    assertThat(e4.getValueMap().keySet(), is(namePlusFooSet));
+    assertThat(e4.getValueMap(false).keySet(), is(namePlusFooSet));
     assertThat(e4, hasEnvLength(8));
   }
 

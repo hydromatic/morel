@@ -64,8 +64,12 @@ public class Binding {
     return new Binding(id, null, null, Unit.INSTANCE, false, Kind.VAL);
   }
 
+  public static Binding over(Core.NamedPat id, Object value) {
+    return new Binding(id, null, null, value, false, Kind.OVER);
+  }
+
   public static Binding over(Core.NamedPat id) {
-    return new Binding(id, null, null, Unit.INSTANCE, false, Kind.OVER);
+    return over(id, Unit.INSTANCE);
   }
 
   public static Binding of(Core.NamedPat id, Core.Exp exp) {

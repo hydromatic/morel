@@ -112,7 +112,7 @@ public class CalciteForeignValue implements ForeignValue {
                 fields.add(
                     nameConverter.convert(tablePath, field.getName()),
                     Converters.fieldType(field)));
-    return typeSystem.listType(typeSystem.recordType(fields));
+    return typeSystem.bagType(typeSystem.recordType(fields));
   }
 
   public Object value() {

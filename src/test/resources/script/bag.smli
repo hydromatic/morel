@@ -1,0 +1,282 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Bags vs lists, and relational operators between the two
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printDepth", 6);
+> val it = () : unit
+Sys.set ("printLength", 64);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+useSilently "scott.smli";
+> [opening scott.smli]
+> val it = () : unit
+
+(*) constants
+bag [1,2,3];
+> val it = [1,2,3] : int bag
+bag ([]: int list);
+> val it = [] : int bag
+bag [(1,true),(2,false)];
+> val it = [(1,true),(2,false)] : (int * bool) bag
+bag [[1],[2],[3]];
+> val it = [[1],[2],[3]] : int list bag
+
+(*) check that we get good error messages when we apply a list function to
+(*) a bag, and vice versa
+String.size 1;
+> 0.0-0.0 Error: Cannot deduce type: conflict: int vs string
+>   raised at: 0.0-0.0
+List.length List.nil;
+> val it = 0 : int
+Bag.length Bag.nil;
+> val it = 0 : int
+(* TODO
+List.length Bag.nil;
+> val it = 0 : int
+Bag.length List.nil;
+> val it = 0 : int
+*)
+
+(*) assign to variables
+val intList = [1,2,1,3];
+> val intList = [1,2,1,3] : int list
+val intBag = bag intList;
+> val intBag = [1,2,1,3] : int bag
+val emptyIntBag = bag ([]: int list);
+> val emptyIntBag = [] : int bag
+val pairList = [(1,true),(2,false)];
+> val pairList = [(1,true),(2,false)] : (int * bool) list
+val pairBag = bag pairList;
+> val pairBag = [(1,true),(2,false)] : (int * bool) bag
+val recList = [{i=1,b=true}, {i=2,b=false}, {i=1,b=false}];
+> val recList = [{b=true,i=1},{b=false,i=2},{b=false,i=1}]
+>   : {b:bool, i:int} list
+val recBag = bag recList;
+> val recBag = [{b=true,i=1},{b=false,i=2},{b=false,i=1}] : {b:bool, i:int} bag
+
+(*) empty 'from' is ordered
+from;
+> val it = [()] : unit list
+
+(*) scan is ordered iff its input is ordered
+from i in [1];
+> val it = [1] : int list
+from i in intList;
+> val it = [1,2,1,3] : int list
+from i in intBag;
+> val it = [1,2,1,3] : int bag
+
+(*) where is ordered iff its input is ordered
+from i in intList where i > 1;
+> val it = [2,3] : int list
+from i in intBag where i > 1;
+> val it = [2,3] : int bag
+
+(*) yield is ordered iff its input is ordered
+from i in intList yield i;
+> val it = [1,2,1,3] : int list
+from i in intBag yield i;
+> val it = [1,2,1,3] : int bag
+from i in intList yield i * 2;
+> val it = [2,4,2,6] : int list
+from i in intBag yield i * 2;
+> val it = [2,4,2,6] : int bag
+from i in intList yield {j=i*i, i};
+> val it = [{i=1,j=1},{i=2,j=4},{i=1,j=1},{i=3,j=9}] : {i:int, j:int} list
+from i in intBag yield {j=i*i, i};
+> val it = [{i=1,j=1},{i=2,j=4},{i=1,j=1},{i=3,j=9}] : {i:int, j:int} bag
+
+(*) group is ordered iff its input is ordered
+from i in intList group;
+> val it = [()] : unit list
+from i in intBag group;
+> val it = [()] : unit bag
+from i in intList group i;
+> val it = [1,2,3] : int list
+from i in intBag group i;
+> val it = [1,2,3] : int bag
+from r in recList group r.i;
+> val it = [1,2] : int list
+from r in recBag group r.i;
+> val it = [1,2] : int bag
+
+(*) the input to an aggregate functions is a bag, even if the input
+(*) stream is a list. (We need to devise syntax for aggregate functions
+(*) to sort their input.)
+from r in recList group r.i compute count;
+> val it = [{count=2,i=1},{count=1,i=2}] : {count:int, i:int} list
+from r in recBag group r.i compute count;
+> val it = [{count=2,i=1},{count=1,i=2}] : {count:int, i:int} bag
+from r in recList group r.i compute bs = (fn x => x) of r.b;
+> val it = [{bs=[true,false],i=1},{bs=[false],i=2}] : {bs:bool list, i:int} list
+from r in recBag group r.i compute bs = (fn x => x) of r.b;
+> val it = [{bs=[true,false],i=1},{bs=[false],i=2}] : {bs:bool bag, i:int} bag
+
+(*) distinct is ordered iff its input is ordered
+from i in intList distinct;
+> val it = [1,2,3] : int list
+from i in intBag distinct;
+> val it = [1,2,3] : int bag
+
+(*) order's output is ordered
+from i in intList order i;
+> val it = [1,1,2,3] : int list
+from i in intBag order i;
+> val it = [1,1,2,3] : int list
+from i in intList order ();
+> val it = [1,2,1,3] : int list
+from i in intBag order ();
+> val it = [1,2,1,3] : int list
+from r in recList group r.i compute bs = (fn x => x) of r.b order i desc;
+> val it = [{bs=[false],i=2},{bs=[true,false],i=1}] : {bs:bool list, i:int} list
+from r in recBag group r.i compute bs = (fn x => x) of r.b order i desc;
+> val it = [{bs=[false],i=2},{bs=[true,false],i=1}] : {bs:bool bag, i:int} list
+
+(*) join's output is list if all inputs are lists, otherwise bag
+from i in intList, j in intList where i = j;
+> val it = [{i=1,j=1},{i=1,j=1},{i=2,j=2},{i=1,j=1},{i=1,j=1},{i=3,j=3}]
+>   : {i:int, j:int} list
+from i in intList, j in intBag where i = j;
+> val it = [{i=1,j=1},{i=1,j=1},{i=2,j=2},{i=1,j=1},{i=1,j=1},{i=3,j=3}]
+>   : {i:int, j:int} bag
+from i in intBag, j in intList where i = j;
+> val it = [{i=1,j=1},{i=1,j=1},{i=2,j=2},{i=1,j=1},{i=1,j=1},{i=3,j=3}]
+>   : {i:int, j:int} bag
+from i in intBag, j in intBag where i = j;
+> val it = [{i=1,j=1},{i=1,j=1},{i=2,j=2},{i=1,j=1},{i=1,j=1},{i=3,j=3}]
+>   : {i:int, j:int} bag
+
+from h in [] join i in intList, j in intList where i = j;
+> val it = [] : {h:'a, i:int, j:int} list
+from h in bag [] join i in intList, j in intList where i = j;
+> val it = [] : {h:'a, i:int, j:int} bag
+
+fun doubleList list = List.map (fn i => i * 2) list;
+> val doubleList = fn : int list -> int list
+fun doubleBag bag = Bag.map (fn i => i * 2) bag;
+> val doubleBag = fn : int bag -> int bag
+
+(*) union's output is bag if any input is a bag
+from i in intList union intList;
+> val it = [1,2,1,3,1,2,1,3] : int list
+from i in intList union intBag;
+> val it = [1,2,1,3,1,2,1,3] : int bag
+from i in intBag union intList;
+> val it = [1,2,1,3,1,2,1,3] : int bag
+from i in intBag union intBag;
+> val it = [1,2,1,3,1,2,1,3] : int bag
+
+from i in intList union distinct intList;
+> val it = [1,2,3] : int list
+from i in intList union distinct intBag;
+> val it = [1,2,3] : int bag
+
+(*) intersect's output is bag if any input is a bag
+from i in intList intersect intList;
+> val it = [1,1,2,3] : int list
+from i in intList intersect intBag;
+> val it = [1,1,2,3] : int bag
+from i in intBag intersect intList;
+> val it = [1,1,2,3] : int bag
+from i in intBag intersect intBag;
+> val it = [1,1,2,3] : int bag
+
+from i in intList intersect distinct intList;
+> val it = [1,2,3] : int list
+from i in intList intersect distinct intBag;
+> val it = [1,2,3] : int bag
+
+(*) except's output is bag if any input is a bag
+from i in intList except intList;
+> val it = [] : int list
+from i in intList except intBag;
+> val it = [] : int bag
+from i in intBag except intList;
+> val it = [] : int bag
+from i in intBag except intBag;
+> val it = [] : int bag
+
+from i in intList except distinct intList;
+> val it = [] : int list
+from i in intList except distinct intBag;
+> val it = [] : int bag
+
+(*) into requires a function with the same collection type
+(*) ([MOREL-271] will lift this limitation.)
+from i in intList into doubleList;
+> val it = [2,4,2,6] : int list
+from i in intList into doubleBag;
+> 0.0-0.0 Error: Cannot deduce type: conflict: list(T3) vs bag(int)
+>   raised at: 0.0-0.0
+from i in intBag into doubleBag;
+> val it = [2,4,2,6] : int bag
+from i in intBag into doubleList;
+> 0.0-0.0 Error: Cannot deduce type: conflict: bag(T3) vs list(int)
+>   raised at: 0.0-0.0
+
+(*) through requires a function with the same collection type
+(*) ([MOREL-271] will lift this limitation.)
+from i in intList through j in doubleList yield j - 1;
+> val it = [1,3,1,5] : int list
+from i in intList through j in doubleBag yield j - 1;
+> 0.0-0.0 Error: Cannot deduce type: conflict: list(T3) vs bag(int)
+>   raised at: 0.0-0.0
+from i in intBag through j in doubleBag yield j - 1;
+> val it = [1,3,1,5] : int bag
+from i in intBag through j in doubleList yield j - 1;
+> 0.0-0.0 Error: Cannot deduce type: conflict: bag(T3) vs list(int)
+>   raised at: 0.0-0.0
+
+(*) elem works on both 'bag' and 'list' values
+1 elem intList;
+> val it = true : bool
+1 elem intBag;
+> val it = true : bool
+
+(*) notelem works on both 'bag' and 'list' values
+1 notelem intList;
+> val it = false : bool
+1 notelem intBag;
+> val it = false : bool
+
+(*) skip preserves collection type (but makes more sense for ordered)
+from i in intList skip 1;
+> val it = [2,1,3] : int list
+from i in intBag skip 1;
+> val it = [2,1,3] : int bag
+
+(*) take preserves collection type (but makes more sense for ordered)
+from i in intList take 2;
+> val it = [1,2] : int list
+from i in intBag take 2;
+> val it = [1,2] : int bag
+from i in intList skip 1 take 1;
+> val it = [2] : int list
+from i in intBag skip 1 take 1;
+> val it = [2] : int bag
+
+(*) dummy
+from message in ["the end"];
+> val it = ["the end"] : string list
+
+(*) End bag.smli

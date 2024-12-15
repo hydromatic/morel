@@ -34,6 +34,16 @@ from e in scott.depts;
 > 30     SALES      CHICAGO
 > 40     OPERATIONS BOSTON
 >
+> val it : {deptno:int, dname:string, loc:string} bag
+
+from e in scott.depts order e.deptno desc;
+> deptno dname      loc
+> ------ ---------- --------
+> 40     OPERATIONS BOSTON
+> 30     SALES      CHICAGO
+> 20     RESEARCH   DALLAS
+> 10     ACCOUNTING NEW YORK
+>
 > val it : {deptno:int, dname:string, loc:string} list
 
 Sys.unset "output";
@@ -45,6 +55,14 @@ from e in scott.depts;
 >    {deptno=20,dname="RESEARCH",loc="DALLAS"},
 >    {deptno=30,dname="SALES",loc="CHICAGO"},
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+>   : {deptno:int, dname:string, loc:string} bag
+
+from e in scott.depts order e.deptno desc;
+> val it =
+>   [{deptno=40,dname="OPERATIONS",loc="BOSTON"},
+>    {deptno=30,dname="SALES",loc="CHICAGO"},
+>    {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>    {deptno=10,dname="ACCOUNTING",loc="NEW YORK"}]
 >   : {deptno:int, dname:string, loc:string} list
 
 Sys.set ("output", "tabular");

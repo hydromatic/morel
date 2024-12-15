@@ -98,6 +98,7 @@ public enum Op {
   FUNCTION_TYPE(" -> ", 6, false),
   NAMED_TYPE(" ", 8),
   FORALL_TYPE,
+  MULTI_TYPE,
 
   // annotated expression "e: t"
   ANNOTATED_EXP(" : ", 0),

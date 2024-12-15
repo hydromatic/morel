@@ -19,6 +19,7 @@
 package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
@@ -1084,6 +1085,10 @@ public class Core {
 
     Tuple(RecordLikeType type, ImmutableList<Exp> args) {
       super(Pos.ZERO, Op.TUPLE, type);
+      checkArgument(
+          !(type instanceof PrimitiveType) || type == PrimitiveType.UNIT,
+          "primitive type '%s' is not a tuple",
+          type);
       this.args = ImmutableList.copyOf(args);
     }
 
@@ -1362,7 +1367,7 @@ public class Core {
   public static class From extends Exp {
     public final ImmutableList<FromStep> steps;
 
-    From(ListType type, ImmutableList<FromStep> steps) {
+    From(Type type, ImmutableList<FromStep> steps) {
       super(Pos.ZERO, Op.FROM, type);
       this.steps = requireNonNull(steps);
     }
@@ -1375,11 +1380,6 @@ public class Core {
     @Override
     public int hashCode() {
       return steps.hashCode();
-    }
-
-    @Override
-    public ListType type() {
-      return (ListType) type;
     }
 
     @Override
@@ -1429,6 +1429,18 @@ public class Core {
     FromStep(Op op, StepEnv env) {
       super(Pos.ZERO, op);
       this.env = requireNonNull(env);
+    }
+
+    /**
+     * Returns whether the output of this step is ordered, given whether the
+     * input is ordered.
+     *
+     * <p>For example, {@link Where} and {@link Yield} are ordered if and only
+     * if their input is ordered; {@link Order} is always ordered; {@link Group}
+     * is unordered.
+     */
+    public boolean isOrdered(boolean inputIsOrdered) {
+      return inputIsOrdered;
     }
 
     @Override
@@ -1497,13 +1509,13 @@ public class Core {
       this.pat = requireNonNull(pat, "pat");
       this.exp = requireNonNull(exp, "exp");
       this.condition = requireNonNull(condition, "condition");
-      if (!(exp.type instanceof ListType)) {
+      if (!exp.type.isCollection()) {
         throw new IllegalArgumentException(
-            "scan expression must be list: " + exp.type);
+            "scan expression must be list or bag: " + exp.type);
       }
-      final ListType listType = (ListType) exp.type;
-      if (!canAssign(listType.elementType, pat.type)) {
-        throw new IllegalArgumentException(exp.type + " + " + pat.type);
+      if (!canAssign(exp.type.arg(0), pat.type)) {
+        throw new IllegalArgumentException(
+            format("cannot assign elements of %s to %s", exp.type, pat.type));
       }
     }
 
@@ -1513,6 +1525,21 @@ public class Core {
      */
     private static boolean canAssign(Type fromType, Type toType) {
       return fromType.equals(toType) || toType.isProgressive();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>A {@code Scan} is ordered only if the input is ordered and {@link
+     * #exp} is ordered. Think of it as like nested loops join.
+     *
+     * <p>If a {@code Scan} is the first step in the {@code from}, we think of
+     * its input as an ordered list containing {@code unit}. Therefore, its
+     * output is ordered if {@code exp} is a {@code list}.
+     */
+    @Override
+    public boolean isOrdered(boolean inputIsOrdered) {
+      return inputIsOrdered && exp.type instanceof ListType;
     }
 
     @Override
@@ -1533,7 +1560,7 @@ public class Core {
           .append(pat, 0, Op.EQ.left);
       if (Extents.isInfinite(exp)) {
         // Print "from x : int" rather "from x in extent 'int'"
-        w.append(" : ").append(((ListType) exp.type).elementType.moniker());
+        w.append(" : ").append(exp.type.arg(0).moniker());
       } else {
         w.append(" in ").append(exp, Op.EQ.right, 0);
       }
@@ -1675,6 +1702,13 @@ public class Core {
     }
 
     public abstract SetStep copy(boolean distinct, List<Exp> args, StepEnv env);
+
+    @Override
+    public boolean isOrdered(boolean inputIsOrdered) {
+      // The output is ordered if input and all arguments are ordered.
+      return inputIsOrdered
+          && allMatch(args, arg -> arg.type instanceof ListType);
+    }
   }
 
   /** An {@code except} clause in a {@code from} expression. */
@@ -1762,6 +1796,18 @@ public class Core {
     Order(Core.StepEnv env, ImmutableList<OrderItem> orderItems) {
       super(Op.ORDER, env);
       this.orderItems = requireNonNull(orderItems);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>{@code Order} is always ordered. If there are zero keys, or the keys
+     * not exhaustive, the order is not deterministic, but the ordering is still
+     * clearly part of the information in the value.
+     */
+    @Override
+    public boolean isOrdered(boolean inputIsOrdered) {
+      return true;
     }
 
     @Override

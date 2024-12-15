@@ -61,7 +61,6 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.parse.Parsers;
-import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RangeExtent;
 import net.hydromatic.morel.type.TupleType;
@@ -2971,8 +2970,8 @@ public abstract class Codes {
   /** @see BuiltIn#RELATIONAL_SUM */
   private static final Macro RELATIONAL_SUM =
       (typeSystem, env, argType) -> {
-        if (argType instanceof ListType) {
-          final Type resultType = ((ListType) argType).elementType;
+        if (argType.isCollection()) {
+          final Type resultType = argType.arg(0);
           switch ((PrimitiveType) resultType) {
             case INT:
               return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_INT);
@@ -3018,7 +3017,7 @@ public abstract class Codes {
     final TupleType stringPairType =
         typeSystem.tupleType(PrimitiveType.STRING, PrimitiveType.STRING);
     final List<Core.Tuple> args =
-        env.getValueMap().entrySet().stream()
+        env.getValueMap(true).entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
             .map(
                 entry ->

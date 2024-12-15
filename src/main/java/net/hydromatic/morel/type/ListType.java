@@ -38,6 +38,19 @@ public class ListType extends BaseType {
     return Keys.list(elementType.key());
   }
 
+  @Override
+  public Type arg(int i) {
+    if (i != 0) {
+      throw new IndexOutOfBoundsException();
+    }
+    return elementType;
+  }
+
+  @Override
+  public boolean isCollection() {
+    return true;
+  }
+
   public <R> R accept(TypeVisitor<R> typeVisitor) {
     return typeVisitor.visit(this);
   }

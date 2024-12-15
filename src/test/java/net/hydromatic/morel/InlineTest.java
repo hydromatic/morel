@@ -267,17 +267,17 @@ public class InlineTest {
   @Test
   void testMapFilterToFrom() {
     final String ml =
-        "map (fn e => (#empno e))\n"
-            + "  (List.filter (fn e => (#deptno e) = 30) (#emps scott))";
+        "Bag.map (fn e => (#empno e))\n"
+            + "  (Bag.filter (fn e => (#deptno e) = 30) (#emps scott))";
     final String core0 =
         "val it = "
-            + "map (fn e_1 => #empno e_1) "
-            + "(#filter List (fn e => #deptno e = 30) "
+            + "#map Bag (fn e_1 => #empno e_1) "
+            + "(#filter Bag (fn e => #deptno e = 30) "
             + "(#emps scott))";
     final String core1 =
         "val it = "
             + "from v$0 in "
-            + "#filter List (fn e => #deptno e = 30) (#emps scott) "
+            + "#filter Bag (fn e => #deptno e = 30) (#emps scott) "
             + "yield (fn e_1 => #empno e_1) v$0";
     final String core2 =
         "val it = "
@@ -300,25 +300,25 @@ public class InlineTest {
   void testFilterMapFilterMapToFrom() {
     final String ml =
         ""
-            + "map (fn r => r + 100)\n"
-            + "  (map (fn r => #x r + #z r)\n"
-            + "    (List.filter (fn r => #y r > #z r)\n"
-            + "      (map (fn e => {x = #empno e, y = #deptno e, z = 15})\n"
-            + "        (List.filter (fn e => #deptno e = 30)\n"
+            + "Bag.map (fn r => r + 100)\n"
+            + "  (Bag.map (fn r => #x r + #z r)\n"
+            + "    (Bag.filter (fn r => #y r > #z r)\n"
+            + "      (Bag.map (fn e => {x = #empno e, y = #deptno e, z = 15})\n"
+            + "        (Bag.filter (fn e => #deptno e = 30)\n"
             + "          (#emps scott)))))";
     final String core0 =
         "val it = "
-            + "map (fn r_2 => r_2 + 100)"
-            + " (map (fn r_1 => #x r_1 + #z r_1)"
-            + " (#filter List (fn r => #y r > #z r)"
-            + " (map (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
-            + " (#filter List (fn e => #deptno e = 30) (#emps scott)))))";
+            + "#map Bag (fn r_2 => r_2 + 100)"
+            + " (#map Bag (fn r_1 => #x r_1 + #z r_1)"
+            + " (#filter Bag (fn r => #y r > #z r)"
+            + " (#map Bag (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
+            + " (#filter Bag (fn e => #deptno e = 30) (#emps scott)))))";
     final String core1 =
         "val it = "
-            + "from v$0 in #map List (fn r_1 => #x r_1 + #z r_1)"
-            + " (#filter List (fn r => #y r > #z r)"
-            + " (#map List (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
-            + " (#filter List (fn e => #deptno e = 30) (#emps scott)))) "
+            + "from v$0 in #map Bag (fn r_1 => #x r_1 + #z r_1)"
+            + " (#filter Bag (fn r => #y r > #z r)"
+            + " (#map Bag (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
+            + " (#filter Bag (fn e => #deptno e = 30) (#emps scott)))) "
             + "yield (fn r_2 => r_2 + 100) v$0";
     final String core2 =
         "val it = "
