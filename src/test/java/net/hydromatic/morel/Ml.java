@@ -237,8 +237,11 @@ class Ml {
   }
 
   Ml assertType(Matcher<Type> matcher) {
-    return withValidate((resolved, calcite) ->
-        assertThat(resolved.typeMap.getType(resolved.exp()), matcher));
+    return withValidate((resolved, calcite) -> {
+      final Type type = resolved.typeMap.getType(resolved.exp());
+      final Type type2 = resolved.typeMap.typeSystem.unqualified(type);
+      assertThat(type2, matcher);
+    });
   }
 
   Ml assertType(String expected) {

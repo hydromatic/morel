@@ -31,6 +31,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import java.util.AbstractList;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -398,6 +399,38 @@ public class TypeSystem {
     };
   }
 
+  /** Removes any "forall" qualifier of a type, and renumbers the remaining
+   * type variables.
+   *
+   * <p>Examples:
+   * <ul>
+   *   <li>{@code forall 'a. 'a list}
+   *        &rarr; {@code 'a list}
+   *   <li>{@code forall 'a 'b. 'b list}
+   *        &rarr; {@code 'a list}
+   *   <li>{@code forall 'a 'b 'c. 'c * 'a -> {x:'a, y:'c} }
+   *        &rarr; {@code 'a * 'b -> {x:b, y:a'} }
+   * </ul>
+   */
+  public Type unqualified(Type type) {
+    while (type instanceof ForallType) {
+      type = ((ForallType) type).type;
+    }
+    // Renumber type variables:
+    //   'b list   ->  'a list
+    //   ('b * 'a * 'b)  ->  ('a * 'b * 'a)
+    //   ('a * 'c * 'a)  ->  ('a * 'b * 'a)
+    return type.accept(
+        new TypeShuttle(this) {
+          final Map<Integer, TypeVar> map = new HashMap<>();
+
+          @Override public Type visit(TypeVar typeVar) {
+            return map.computeIfAbsent(typeVar.ordinal,
+                i -> typeVariable(map.size()));
+          }
+        });
+  }
+
   public Pair<DataType, Type.Key> lookupTyCon(String tyConName) {
     return typeConstructorByName.get(tyConName);
   }
@@ -447,10 +480,17 @@ public class TypeSystem {
     if (collector.vars.isEmpty()) {
       return type;
     }
+    final List<Type> types = new ArrayList<>();
+    int i = 0;
+    for (TypeVar var : collector.vars) {
+      while (var.ordinal >= types.size()) {
+        types.add(null);
+      }
+      types.set(var.ordinal, typeVariable(i++));
+    }
     final TypeSystem ts = this;
     return forallType(collector.vars.size(), h ->
-        type.copy(ts, t ->
-            t instanceof TypeVar ? h.get(((TypeVar) t).ordinal) : t));
+        type.substitute(ts, types));
   }
 
   /** Visitor that finds all {@link TypeVar} instances within a {@link Type}. */
@@ -458,7 +498,9 @@ public class TypeSystem {
     final Set<TypeVar> vars = new LinkedHashSet<>();
 
     @Override public Void visit(DataType dataType) {
-      return null; // ignore type variables in the datatype
+      // Include arguments but ignore parameters
+      dataType.arguments.forEach(t -> t.accept(this));
+      return null;
     }
 
     @Override public Void visit(TypeVar typeVar) {

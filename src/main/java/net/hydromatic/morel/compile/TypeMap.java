@@ -84,13 +84,13 @@ public class TypeMap {
     return term.accept(new TermToTypeConverter(this));
   }
 
-  /** Returns the type of an AST node. */
+  /** Returns an AST node's data type. */
   public Type getType(AstNode node) {
     final Unifier.Term term = requireNonNull(nodeTypeTerms.get(node));
     return termToType(term);
   }
 
-  /** Returns an AST node's type, or null if no type is known. */
+  /** Returns an AST node's data type, or null if no type is known. */
   public @Nullable Type getTypeOpt(AstNode node) {
     final Unifier.Term term = nodeTypeTerms.get(node);
     return term == null ? null : termToType(term);
