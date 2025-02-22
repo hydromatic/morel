@@ -18,11 +18,13 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.allMatch;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.List;
@@ -153,7 +155,7 @@ public class Inliner extends EnvShuttle {
       //   let x = A in E end
       final Core.Fn fn = (Core.Fn) apply2.fn;
       return core.let(
-          core.nonRecValDecl(apply2.pos, fn.idPat, apply2.arg), fn.exp);
+          core.nonRecValDecl(apply2.pos, fn.idPat, null, apply2.arg), fn.exp);
     }
     return apply2;
   }
@@ -163,11 +165,31 @@ public class Inliner extends EnvShuttle {
     final Core.Exp exp = caseOf.exp.accept(this);
     final List<Core.Match> matchList = visitList(caseOf.matchList);
     if (matchList.size() == 1) {
-      final Map<Core.Id, Core.Id> substitution = getSub(exp, matchList.get(0));
+      // This is a singleton "case". Inline if possible. For example,
+      //   fn x => case x of y => y + 1
+      // becomes
+      //   fn x => x + 1
+      final Core.Match match = matchList.get(0);
+      final Map<Core.Id, Core.Id> substitution = getSub(exp, match);
       if (substitution != null) {
-        return Replacer.substitute(
-            typeSystem, substitution, matchList.get(0).exp);
+        return Replacer.substitute(typeSystem, substitution, match.exp);
       }
+    }
+    if (exp.type != caseOf.exp.type) {
+      // Type has become less general. For example,
+      //   case x of NONE => [] | SOME y => [y]
+      // has type 'alpha list' but when we substitute 'SOME 1' for x, it becomes
+      //   case SOME 1 of NONE => [] | SOME y => [y]
+      // with type 'int list'
+      @Nullable Map<Integer, Type> sub = caseOf.exp.type.unifyWith(exp.type);
+      if (sub == null) {
+        throw new AssertionError(
+            format("cannot unify %s with %s", exp.type, caseOf.exp.type));
+      }
+      final Type type =
+          caseOf.type.substitute(
+              typeSystem, ImmutableList.copyOf(sub.values()));
+      return core.caseOf(caseOf.pos, type, exp, matchList);
     }
     return caseOf.copy(exp, matchList);
   }

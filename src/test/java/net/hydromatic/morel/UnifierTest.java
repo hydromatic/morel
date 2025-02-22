@@ -24,15 +24,20 @@ import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.IsNull.notNullValue;
+import static org.hamcrest.core.IsSame.sameInstance;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import net.hydromatic.morel.util.MartelliUnifier;
 import net.hydromatic.morel.util.RobinsonUnifier;
 import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.Unifier;
+import net.hydromatic.morel.util.Unifiers;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
@@ -138,7 +143,11 @@ public abstract class UnifierTest {
   void assertThatUnify(
       List<Unifier.TermTerm> termPairs, Matcher<String> matcher) {
     final Unifier.Result result =
-        unifier.unify(termPairs, ImmutableMap.of(), Tracers.nullTracer());
+        unifier.unify(
+            termPairs,
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            Tracers.nullTracer());
     assertThat(result, notNullValue());
     assertThat(result instanceof Unifier.Substitution, is(true));
     assertThat(((Unifier.Substitution) result).resolve().toString(), matcher);
@@ -161,8 +170,48 @@ public abstract class UnifierTest {
 
   void assertThatCannotUnify(List<Unifier.TermTerm> pairList) {
     final Unifier.Result result =
-        unifier.unify(pairList, ImmutableMap.of(), Tracers.nullTracer());
+        unifier.unify(
+            pairList,
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            Tracers.nullTracer());
     assertThat(result, not(instanceOf(Unifier.Substitution.class)));
+  }
+
+  @Test
+  void testAtom() {
+    final Unifier.Term a0 = unifier.atomUnique("A");
+    assertThat(a0, hasToString("A0"));
+    final Unifier.Term a1 = unifier.atomUnique("A");
+    assertThat(a1, hasToString("A1"));
+    final Unifier.Term v0 = unifier.variable();
+    assertThat(v0, hasToString("T0"));
+    final Unifier.Term a2 = unifier.atomUnique("T");
+    assertThat(a2, hasToString("T1"));
+    final Unifier.Term a3 = unifier.atomUnique("T1");
+    assertThat(a3, hasToString("T10"));
+    final Unifier.Term v1 = unifier.variable();
+    assertThat(v1, hasToString("T2"));
+    final Unifier.Term v2 = unifier.variable();
+    final Unifier.Variable v1b = unifier.variable(v1.toString());
+    assertThat(v1b, sameInstance(v1));
+    final Unifier.Variable v1c = unifier.variable(2);
+    assertThat(v1c, sameInstance(v1));
+    final Unifier.Variable v2a = unifier.variable(3);
+    assertThat(v2a, sameInstance(v2));
+    final Unifier.Term v3 = unifier.variable();
+    final Unifier.Term v4 = unifier.variable();
+    final Unifier.Term v5 = unifier.variable();
+    final Unifier.Term v6 = unifier.variable();
+    final Unifier.Variable v4a = unifier.variable(5);
+    assertThat(v4a, sameInstance(v4));
+    final Unifier.Term v7 = unifier.variable();
+    final Unifier.Term v8 = unifier.variable();
+    assertThat(
+        Arrays.asList(v0, v1, v2, v3, v4, v5, v6, v7, v8),
+        hasToString("[T0, T2, T3, T4, T5, T6, T7, T8, T9]"));
+    final Unifier.Term v9 = unifier.variable();
+    assertThat("avoids T10 name used by a3 above", v9, hasToString("T11"));
   }
 
   @Test
@@ -312,6 +361,23 @@ public abstract class UnifierTest {
     assertThatUnify(e1, e2, is("[bill/X, g(b)/Y, a/Z]"));
   }
 
+  /** Tests {@link Unifiers#dump(PrintWriter, Iterable)}. */
+  @Test
+  void testUnifierDump() {
+    List<Unifier.TermTerm> pairs = new ArrayList<>();
+    final Unifier.Term intAtom = unifier.atom("int");
+    final Unifier.Variable t5 = unifier.variable(5);
+    pairs.add(new Unifier.TermTerm(intAtom, t5));
+    StringWriter sw = new StringWriter();
+    Unifiers.dump(new PrintWriter(sw), pairs);
+    String expected =
+        "List<Unifier.TermTerm> pairs = new ArrayList<>();\n"
+            + "final Unifier.Term int = unifier.atom(\"int\");\n"
+            + "final Unifier.Variable t5 = unifier.variable(5);\n"
+            + "pairs.add(new Unifier.TermTerm(int, t5));\n";
+    assertThat(sw, hasToString(expected));
+  }
+
   /**
    * Variant of test that uses {@link
    * net.hydromatic.morel.util.RobinsonUnifier}.
@@ -362,6 +428,7 @@ public abstract class UnifierTest {
           unifier.unify(
               Arrays.asList(termTerms),
               ImmutableMap.of(),
+              ImmutableList.of(),
               Tracers.nullTracer());
       assertThat(unify, notNullValue());
       assertThat(unify instanceof Unifier.Substitution, is(true));
@@ -385,6 +452,57 @@ public abstract class UnifierTest {
     @Test
     void testAtomEqAtom3() {
       assertThatUnify(termPairs(a(), X, a(), X), is("[a/X]"));
+    }
+
+    @Test
+    void testOverload() {
+      List<Unifier.TermTerm> pairs = new ArrayList<>();
+      final Unifier.Term intAtom = unifier.atom("int");
+      final Unifier.Variable t5 = unifier.variable(5);
+      pairs.add(new Unifier.TermTerm(intAtom, t5));
+      final Unifier.Variable t4 = unifier.variable(4);
+      pairs.add(new Unifier.TermTerm(t5, t4));
+      final Unifier.Sequence fn1 = unifier.apply("fn", t5, t4);
+      final Unifier.Variable t3 = unifier.variable(3);
+      pairs.add(new Unifier.TermTerm(fn1, t3));
+      final Unifier.Variable t6 = unifier.variable(6);
+      final Unifier.Variable t7 = unifier.variable(7);
+      final Unifier.Sequence fn11 = unifier.apply("fn", t6, t7);
+      pairs.add(new Unifier.TermTerm(fn11, t3));
+      final Unifier.Sequence fn21 = unifier.apply("fn", t3, t3);
+      final Unifier.Variable t2 = unifier.variable(2);
+      pairs.add(new Unifier.TermTerm(fn21, t2));
+      final Unifier.Term bool = unifier.atom("bool");
+      final Unifier.Variable t11 = unifier.variable(11);
+      pairs.add(new Unifier.TermTerm(bool, t11));
+      final Unifier.Variable t10 = unifier.variable(10);
+      pairs.add(new Unifier.TermTerm(t11, t10));
+      final Unifier.Sequence fn31 = unifier.apply("fn", t11, t10);
+      final Unifier.Variable t9 = unifier.variable(9);
+      pairs.add(new Unifier.TermTerm(fn31, t9));
+      final Unifier.Variable t12 = unifier.variable(12);
+      final Unifier.Variable t13 = unifier.variable(13);
+      final Unifier.Sequence fn41 = unifier.apply("fn", t12, t13);
+      pairs.add(new Unifier.TermTerm(fn41, t9));
+      final Unifier.Sequence fn51 = unifier.apply("fn", t9, t9);
+      final Unifier.Variable t8 = unifier.variable(8);
+      pairs.add(new Unifier.TermTerm(fn51, t8));
+      final Unifier.Variable t15 = unifier.variable(15);
+      final Unifier.Variable t1 = unifier.variable(1);
+      final Unifier.Sequence fn61 = unifier.apply("fn", t15, t1);
+      final Unifier.Variable t14 = unifier.variable(14);
+      pairs.add(new Unifier.TermTerm(fn61, t14));
+      pairs.add(new Unifier.TermTerm(bool, t15));
+      final Unifier.Sequence fn71 = unifier.apply("fn", t1, t1);
+      final Unifier.Variable t0 = unifier.variable(0);
+      pairs.add(new Unifier.TermTerm(fn71, t0));
+      String expected =
+          "[fn(T1, T1)/T0, fn(fn(int, int), fn(int, int))/T2, "
+              + "fn(int, int)/T3, int/T4, int/T5, int/T6, int/T7, "
+              + "fn(fn(bool, bool), fn(bool, bool))/T8, "
+              + "fn(bool, bool)/T9, bool/T10, bool/T11, bool/T12, "
+              + "bool/T13, fn(bool, T1)/T14, bool/T15]";
+      assertThatUnify(pairs, is(expected));
     }
   }
 }

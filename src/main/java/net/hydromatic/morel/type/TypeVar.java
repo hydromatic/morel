@@ -117,6 +117,11 @@ public class TypeVar implements Type {
   public Type substitute(TypeSystem typeSystem, List<? extends Type> types) {
     return types.get(ordinal);
   }
+
+  @Override
+  public boolean specializes(Type type) {
+    return type instanceof TypeVar;
+  }
 }
 
 // End TypeVar.java

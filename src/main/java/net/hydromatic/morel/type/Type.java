@@ -21,8 +21,10 @@ package net.hydromatic.morel.type;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.UnaryOperator;
 import net.hydromatic.morel.ast.Op;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Type. */
 public interface Type {
@@ -91,6 +93,38 @@ public interface Type {
    */
   default boolean isFinite() {
     return false;
+  }
+
+  /**
+   * Whether this type is a function that can call an argument of given type.
+   *
+   * <p>For example:
+   *
+   * <ul>
+   *   <li>{@code int} is not a function and therefore results {@code false} for
+   *       all argument types;
+   *   <li>{@code bool -> int} can call arguments of type {@code bool} and
+   *       {@code 'a} but not {@code int} or {@code ('a, 'b)};
+   *   <li>{@code forall 'a. 'a list -> bool} can call arguments of type {@code
+   *       int list} and {@code string list list} but not {@code int option}.
+   * </ul>
+   */
+  default boolean canCallArgOf(Type type) {
+    return false;
+  }
+
+  /**
+   * Whether this type is the same as, or a specialization of, a given type.
+   *
+   * <p>For example, {@code bool} specializes {@code bool} and {@code 'a} but
+   * does not specialize {@code int} or {@code ('a, 'b)}.
+   */
+  default boolean specializes(Type type) {
+    return false;
+  }
+
+  default @Nullable Map<Integer, Type> unifyWith(Type type) {
+    return TypeUnifier.unify(this, type);
   }
 
   /** Structural identifier of a type. */

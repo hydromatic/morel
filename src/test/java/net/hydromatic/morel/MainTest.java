@@ -151,6 +151,8 @@ public class MainTest {
     ml("fun plus x y = x + y")
         .assertParseDecl(Ast.FunDecl.class, "fun plus x y = x + y");
 
+    ml("over x").assertParseDecl(Ast.OverDecl.class, "over x");
+
     ml("datatype 'a option = NONE | SOME of 'a")
         .assertParseDecl(
             Ast.DatatypeDecl.class, "datatype 'a option = NONE | SOME of 'a");
@@ -265,6 +267,8 @@ public class MainTest {
         .assertParseThrowsParseException(
             containsString(
                 "Encountered \" \"rec\" \"rec \"\" at line 1, column 19."));
+
+    ml("let val inst first = fn (x, y) => x in x + y end").assertParseSame();
 
     // : is right-associative and low precedence
     ml("1 : int : int").assertParseSame();
@@ -546,6 +550,34 @@ public class MainTest {
     String message =
         "unresolved flex record (can't tell what fields there are besides #job)";
     ml(ml).withTypeExceptionMatcher(throwsA(message)).assertEval();
+  }
+
+  @Test
+  void testOverload() {
+    final String ml =
+        "let\n"
+            + "  over foo\n"
+            + "  val inst foo = fn i: int => i\n"
+            + "  val inst foo = fn b: bool => b\n"
+            + "in\n"
+            + "  foo false\n"
+            + "end";
+    String expected = "bool";
+    ml(ml).assertType(expected);
+  }
+
+  @Test
+  void testOverload1() {
+    final String ml =
+        "let\n"
+            + "  over foo\n"
+            + "  val inst foo = fn NONE => [] | SOME x => [x]\n"
+            + "  val inst foo = fn list => List.null list\n"
+            + "in\n"
+            + "  foo (SOME 1)\n"
+            + "end";
+    String expected = "int list";
+    ml(ml).assertType(expected);
   }
 
   @Test

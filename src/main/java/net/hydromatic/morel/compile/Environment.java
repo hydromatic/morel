@@ -19,10 +19,12 @@
 package net.hydromatic.morel.compile;
 
 import static com.google.common.collect.Lists.reverse;
+import static org.apache.calcite.util.Util.first;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +37,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
+import net.hydromatic.morel.util.TriConsumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -71,11 +74,42 @@ public abstract class Environment {
     return b.toString();
   }
 
+  /**
+   * Returns the top binding of {@code name}.
+   *
+   * <p>If the top binding is overloaded, there may be other bindings. But at
+   * least it gives you a {@link Core.NamedPat} with which to call {@link
+   * #collect(Core.NamedPat, Consumer)}.
+   */
+  public abstract @Nullable Binding getTop(String name);
+
   /** Returns the binding of {@code name} if bound, null if not. */
-  public abstract @Nullable Binding getOpt(String name);
+  public final @Nullable Binding getOpt(String name) {
+    final Set<Core.NamedPat> idList = new LinkedHashSet<>();
+    visit(
+        binding -> {
+          if (binding.id.name.equals(name)) {
+            idList.add(binding.id);
+          }
+          if (binding.overloadId != null
+              && binding.overloadId.name.equals(name)) {
+            idList.add(binding.overloadId);
+          }
+        });
+    for (Core.NamedPat id : idList) {
+      Binding binding = getOpt(id);
+      if (binding != null) {
+        return binding;
+      }
+    }
+    return null;
+  }
 
   /** Returns the binding of {@code id} if bound, null if not. */
   public abstract @Nullable Binding getOpt(Core.NamedPat id);
+
+  /** Calls a consumer for all bindings of {@code id}. */
+  public abstract void collect(Core.NamedPat id, Consumer<Binding> consumer);
 
   /**
    * Creates an environment that is the same as a given environment, plus one
@@ -94,17 +128,33 @@ public abstract class Environment {
    * bindings.
    */
   public void forEachType(
-      TypeSystem typeSystem, BiConsumer<String, Type> consumer) {
+      TypeSystem typeSystem, TriConsumer<String, Binding.Kind, Type> consumer) {
     final Set<String> names = new HashSet<>();
     visit(
         binding -> {
-          if (names.add(binding.id.name)) {
-            final Type type =
-                binding.value instanceof TypedValue
-                    ? ((TypedValue) binding.value).typeKey().toType(typeSystem)
-                    : binding.id.type;
-            consumer.accept(binding.id.name, type);
+          if (binding.kind == Binding.Kind.INST
+              && names.add(binding.overloadId.name)) {
+            consumer.accept(
+                binding.overloadId.name,
+                Binding.Kind.OVER,
+                typeSystem.lookup(BuiltIn.Datatype.OVERLOAD));
           }
+        });
+    final List<Binding> bindings = new ArrayList<>();
+    visit(bindings::add);
+    bindings.forEach(
+        binding -> {
+          if (binding.kind == Binding.Kind.VAL && !names.add(binding.id.name)) {
+            // This name has already been seen, and is not overloaded, so this
+            // binding is obscured.
+            return;
+          }
+          Type type =
+              binding.value instanceof TypedValue
+                  ? ((TypedValue) binding.value).typeKey().toType(typeSystem)
+                  : binding.id.type;
+          consumer.accept(
+              first(binding.overloadId, binding.id).name, binding.kind, type);
         });
   }
 
@@ -183,6 +233,30 @@ public abstract class Environment {
       return this;
     }
     return Environments.empty().bindAll(consumer.bindings);
+  }
+
+  /** Returns whether a given name is overloaded in this environment. */
+  public boolean hasOverloaded(String name) {
+    final List<Binding> bindings = new ArrayList<>();
+    visit(
+        binding -> {
+          if (binding.overloadId != null
+              && binding.overloadId.name.equals(name)) {
+            bindings.add(binding);
+          }
+        });
+    return !bindings.isEmpty() && bindings.get(0).isInst();
+  }
+
+  public List<Core.IdPat> getOverloads(Core.IdPat id) {
+    final List<Core.IdPat> list = new ArrayList<>();
+    visit(
+        binding -> {
+          if (binding.overloadId != null && binding.overloadId.equals(id)) {
+            list.add((Core.IdPat) binding.id);
+          }
+        });
+    return list;
   }
 }
 

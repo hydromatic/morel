@@ -205,6 +205,10 @@ public class Shuttle {
 
   // declarations
 
+  protected Ast.OverDecl visit(Ast.OverDecl overDecl) {
+    return ast.overDecl(overDecl.pos, overDecl.pat);
+  }
+
   protected Ast.Decl visit(Ast.FunDecl funDecl) {
     return ast.funDecl(funDecl.pos, visitList(funDecl.funBinds));
   }
@@ -223,7 +227,8 @@ public class Shuttle {
   }
 
   protected Ast.ValDecl visit(Ast.ValDecl valDecl) {
-    return ast.valDecl(valDecl.pos, valDecl.rec, visitList(valDecl.valBinds));
+    return ast.valDecl(
+        valDecl.pos, valDecl.rec, valDecl.inst, visitList(valDecl.valBinds));
   }
 
   protected Ast.ValBind visit(Ast.ValBind valBind) {
@@ -386,7 +391,10 @@ public class Shuttle {
   }
 
   protected Core.NonRecValDecl visit(Core.NonRecValDecl valDecl) {
-    return valDecl.copy(valDecl.pat.accept(this), valDecl.exp.accept(this));
+    return valDecl.copy(
+        valDecl.pat.accept(this),
+        valDecl.exp.accept(this),
+        valDecl.overloadPat == null ? null : valDecl.overloadPat.accept(this));
   }
 
   protected Core.RecValDecl visit(Core.RecValDecl valDecl) {
@@ -503,6 +511,10 @@ public class Shuttle {
 
   protected Core.Yield visit(Core.Yield yield) {
     return yield.copy(yield.env, yield.exp.accept(this));
+  }
+
+  public Core.OverDecl visit(Core.OverDecl overDecl) {
+    return overDecl;
   }
 }
 

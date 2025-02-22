@@ -80,6 +80,7 @@ In Morel but not Standard ML:
 * identifiers may be quoted
   (for example, <code>\`an identifier\`</code>)
 * `with` functional update for record values
+* overloaded functions may be declared using `over` and `inst`
 
 In Standard ML but not in Morel:
 * `word` constant
@@ -254,11 +255,13 @@ In Standard ML but not in Morel:
 <i>dec</i> &rarr; <i>vals</i> <i>valbind</i>              value
     | <b>fun</b> <i>vars</i> <i>funbind</i>          function
     | <b>datatype</b> <i>datbind</i>          data type
+    | <b>over</b> <i>id</i>                   overloaded name
     | <i>empty</i>
     | <i>dec<sub>1</sub></i> [<b>;</b>] <i>dec<sub>2</sub></i>              sequence
 <i>valbind</i> &rarr; <i>pat</i> <b>=</b> <i>exp</i> [ <b>and</b> <i>valbind</i> ]*
                                 destructuring
     | <b>rec</b> <i>valbind</i>               recursive
+    | <b>inst</b> <i>valbind</i>              overload instance
 <i>funbind</i> &rarr; <i>funmatch</i> [ <b>and</b> <i>funmatch</i> ]*
                                 clausal function
 <i>funmatch</i> &rarr; <i>funmatchItem</i> [ '<b>|</b>' funmatchItem ]*

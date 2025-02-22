@@ -20,8 +20,10 @@ package net.hydromatic.morel;
 
 import static net.hydromatic.morel.util.Static.str;
 
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Multimap;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -224,7 +226,8 @@ public class Main {
     final Consumer<String> echoLines = out::println;
     final Consumer<String> outLines =
         idempotent ? x -> out.println(prefixLines(x)) : echoLines;
-    final Map<String, Binding> outBindings = new LinkedHashMap<>();
+    final Multimap<String, Binding> outBindings =
+        ArrayListMultimap.create(100, 2);
     final Shell shell = new Shell(this, env, echoLines, outLines, outBindings);
     session.withShell(
         shell,
@@ -250,14 +253,18 @@ public class Main {
     protected final Environment env0;
     protected final Consumer<String> echoLines;
     protected final Consumer<String> outLines;
-    protected final Map<String, Binding> bindingMap;
+    /**
+     * Contains the environment created by previous commands in this shell. It
+     * is a multimap so that overloads with the same name can all be stored.
+     */
+    protected final Multimap<String, Binding> bindingMap;
 
     Shell(
         Main main,
         Environment env0,
         Consumer<String> echoLines,
         Consumer<String> outLines,
-        Map<String, Binding> bindingMap) {
+        Multimap<String, Binding> bindingMap) {
       this.main = main;
       this.env0 = env0;
       this.echoLines = echoLines;
@@ -306,7 +313,7 @@ public class Main {
             outLines.accept(code);
           }
           outLines.accept(message);
-          if (code.length() == 0) {
+          if (code.isEmpty()) {
             // If we consumed no input, we're not making progress, so we'll
             // never finish. Abort.
             break;
@@ -349,7 +356,7 @@ public class Main {
         Main main,
         Consumer<String> echoLines,
         Consumer<String> outLines,
-        Map<String, Binding> outBindings,
+        Multimap<String, Binding> outBindings,
         Environment env0) {
       super(main, env0, echoLines, outLines, outBindings);
     }
@@ -400,7 +407,21 @@ public class Main {
                 tracer);
         final List<Binding> bindings = new ArrayList<>();
         compiled.eval(main.session, env, outLines, bindings::add);
-        bindings.forEach(b -> this.bindingMap.put(b.id.name, b));
+
+        // Add the new bindings to the map. Overloaded bindings (INST) add to
+        // previous bindings; ordinary bindings (VAL) replace previous bindings
+        // of the same name.
+        for (Binding binding : bindings) {
+          if (binding.overloadId == null
+              && bindingMap.containsKey(binding.id.name)) {
+            // This is not an instance of an overload, so if there was a
+            // previous value we must overwrite it, not append to it.
+            bindingMap.replaceValues(
+                binding.id.name, ImmutableList.of(binding));
+          } else {
+            bindingMap.put(binding.id.name, binding);
+          }
+        }
       } catch (Codes.MorelRuntimeException e) {
         appendToOutput(e, outLines);
       }

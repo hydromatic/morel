@@ -152,7 +152,8 @@ public enum Op {
   INTO,
   THROUGH,
   AGGREGATE,
-  IF;
+  IF,
+  OVER_DECL;
 
   /** Padded name, e.g. " : ". */
   public final String padded;

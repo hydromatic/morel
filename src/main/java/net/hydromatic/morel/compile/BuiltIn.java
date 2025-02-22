@@ -3274,11 +3274,12 @@ public enum BuiltIn {
    *
    * <p>{@code order} and {@code option} are non-internal.
    *
-   * <p>The two internal datatypes,
+   * <p>The three internal datatypes,
    *
    * <pre>{@code
    * datatype 'a list = NIL | CONS of ('a * 'a list);
    * datatype bool = FALSE | TRUE;
+   * datatype overload;
    * }</pre>
    *
    * <p>are not available from within programs but used for internal purposes.
@@ -3302,7 +3303,15 @@ public enum BuiltIn {
      * Analog of {@code bool} for checking that matches are exhaustive. Owns the
      * {@code FALSE} and {@code TRUE} type constructors.
      */
-    BOOL("$bool", true, 0, h -> h.tyCon("FALSE").tyCon("TRUE"));
+    BOOL("$bool", true, 0, h -> h.tyCon("FALSE").tyCon("TRUE")),
+
+    /**
+     * The type of the value created by an {@code over} declaration.
+     *
+     * <p>After "{@code o}", {@code o} has type {@code overload}. The type
+     * system will then allow subsequent {@code val inst o} declarations.
+     */
+    OVERLOAD("$overload", true, 0, h -> h);
 
     private final String mlName;
     private final boolean internal;

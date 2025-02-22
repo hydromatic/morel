@@ -19,7 +19,9 @@
 package net.hydromatic.morel.util;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.util.Pair.allMatch;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
 import com.google.common.collect.ImmutableList;
@@ -32,17 +34,28 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Given pairs of terms, finds a substitution to minimize those pairs of terms.
  */
 public abstract class Unifier {
-  private int varId;
   private final Map<String, Variable> variableMap = new HashMap<>();
   private final Map<String, Sequence> atomMap = new HashMap<>();
   private final Map<String, Sequence> sequenceMap = new HashMap<>();
+
+  /**
+   * Assists with the generation of unique names by recording the lowest
+   * ordinal, for a given prefix, for which a name has not yet been generated.
+   *
+   * <p>For example, if we have called {@code name("T")} twice, and thereby
+   * generated "T0" and "T1, then the map will contain {@code code("T", 2)},
+   * indicating that the next call to {@code name("T")} should generate "T2".
+   */
+  private final Map<String, AtomicInteger> nameMap = new HashMap<>();
 
   /** Whether this unifier checks for cycles in substitutions. */
   public boolean occurs() {
@@ -74,21 +87,98 @@ public abstract class Unifier {
 
   /** Creates a new variable, with a new name. */
   public Variable variable() {
-    for (; ; ) {
-      final int ordinal = varId++;
-      final String name = "T" + ordinal;
-      if (!variableMap.containsKey(name)) {
-        final Variable variable = new Variable(ordinal);
-        assert variable.name.equals(name);
-        variableMap.put(name, variable);
-        return variable;
-      }
-    }
+    return newName(
+        "T",
+        (name, ordinal) -> {
+          final Variable variable = new Variable(name, ordinal);
+          variableMap.put(variable.name, variable);
+          return variable;
+        });
   }
 
   /** Creates an atom, or returns an existing one with the same name. */
   public Term atom(String name) {
     return atomMap.computeIfAbsent(name, Sequence::new);
+  }
+
+  /**
+   * Creates a constraint arising from a call to an overloaded function.
+   *
+   * <p>Consider a call to an overloaded function with two overloads {@code c ->
+   * d} and {@code e -> f}. If the argument ({@code a}) unifies to {@code c}
+   * then the result ({@code b}) is {@code d}; if the argument unifies to {@code
+   * e} then the result is {@code f}.
+   *
+   * <p>This is created with the following call:
+   *
+   * <pre>{@code
+   * Constraint constraint =
+   *   unifier.constraint(a, b, PairList.of(c, d, e, f));
+   * }</pre>
+   */
+  public Constraint constraint(
+      Unifier.Variable arg,
+      Unifier.Variable result,
+      PairList<Unifier.Term, Unifier.Term> argResults) {
+    PairList<Term, Constraint.Action> termActions = PairList.of();
+    argResults.forEach(
+        (arg0, result0) ->
+            termActions.add(
+                arg0,
+                (actualArg, term, consumer) -> {
+                  consumer.accept(actualArg, term);
+                  consumer.accept(result, result0);
+                }));
+    return constraint(arg, termActions);
+  }
+
+  /**
+   * Creates a Constraint.
+   *
+   * <p>The following code creates a constraint where {@code a} is allowed to be
+   * either {@code term1} or {@code term2}. When the unifier has narrowed down
+   * the options to just {@code term2}, it will call {@code action2} with a
+   * consumer that accepts a pair of {@link Term} arguments.
+   *
+   * <pre>{@code
+   * Constraint constraint =
+   *   unifier.constraint(a, PairList.of(term1, action1, term2, action2));
+   * }</pre>
+   */
+  public Constraint constraint(
+      Variable arg, PairList<Term, Constraint.Action> termActions) {
+    return new Constraint(arg, termActions);
+  }
+
+  /** Creates an atom with a unique name. */
+  public Term atomUnique(String prefix) {
+    return newName(
+        prefix,
+        (name, ordinal) -> {
+          final Sequence sequence = new Sequence(name);
+          atomMap.put(name, sequence);
+          return sequence;
+        });
+  }
+
+  /** Finds an ordinal that makes a name unique among atomcs and variables. */
+  private <T> T newName(
+      String prefix, BiFunction<String, Integer, T> consumer) {
+    final AtomicInteger sequence =
+        nameMap.computeIfAbsent(prefix, prefix2 -> new AtomicInteger());
+    for (; ; ) {
+      final int ordinal = sequence.getAndIncrement();
+      final String name = prefix + ordinal;
+
+      // Make sure that there is no variable or atom with the same name. This
+      // might happen if they have been created directly, without using this
+      // 'newName' method. This time we had to go around the loop a few times,
+      // but because we called sequence.getAndIncrement(), the next call to
+      // 'newName' with the same prefix will be more efficient.
+      if (!variableMap.containsKey(name) && !atomMap.containsKey(name)) {
+        return consumer.apply(name, ordinal);
+      }
+    }
   }
 
   /**
@@ -123,6 +213,7 @@ public abstract class Unifier {
   public abstract @NonNull Result unify(
       List<TermTerm> termPairs,
       Map<Variable, Action> termActions,
+      List<Constraint> constraints,
       Tracer tracer);
 
   private static void checkCycles(
@@ -133,7 +224,7 @@ public abstract class Unifier {
     }
   }
 
-  protected Failure failure(String reason) {
+  protected static Failure failure(String reason) {
     return new Failure() {
       @Override
       public String toString() {
@@ -281,6 +372,17 @@ public abstract class Unifier {
 
     /** Accepts a visitor. */
     <R> R accept(TermVisitor<R> visitor);
+
+    /**
+     * Returns whether this term could possibly unify with another term.
+     *
+     * <p>Returns true if {@code this} or {@code term} is a variable, or if they
+     * are sequences with the same operator and number of terms, and if all
+     * pairs of those terms could unify.
+     */
+    default boolean couldUnifyWith(Term term) {
+      return true;
+    }
   }
 
   /**
@@ -434,6 +536,19 @@ public abstract class Unifier {
     }
 
     @Override
+    public boolean couldUnifyWith(Term term) {
+      if (term instanceof Variable) {
+        return true;
+      }
+      final Sequence sequence = (Sequence) term;
+      if (!operator.equals(((Sequence) term).operator)
+          || terms.size() != sequence.terms.size()) {
+        return false;
+      }
+      return allMatch(terms, sequence.terms, Term::couldUnifyWith);
+    }
+
+    @Override
     public String toString() {
       if (terms.isEmpty()) {
         return operator;
@@ -518,6 +633,42 @@ public abstract class Unifier {
 
     public <R> R accept(TermVisitor<R> visitor) {
       return visitor.visit(this);
+    }
+  }
+
+  /**
+   * Constraint arising from a call to an overloaded function.
+   *
+   * <p>Consider a call to an overloaded function with two overloads {@code c ->
+   * d} and {@code e -> f}. If the argument ({@code a}) unifies to {@code c}
+   * then the result ({@code b}) is {@code d}; if the argument unifies to {@code
+   * e} then the result is {@code f}.
+   *
+   * <p>This is represented as the following constraint:
+   *
+   * <pre>{@code
+   * {arg: a, result: b, argResults [{c, d}, {e, f}]}
+   * }</pre>
+   */
+  public static final class Constraint {
+    public final Variable arg;
+    public final PairList<Term, Action> termActions;
+
+    /** Creates a Constraint. */
+    Constraint(Variable arg, PairList<Term, Action> termActions) {
+      this.arg = requireNonNull(arg);
+      this.termActions = termActions.immutable();
+      checkArgument(!termActions.isEmpty());
+    }
+
+    @Override
+    public String toString() {
+      return format("{constraint %s %s}", arg, termActions.leftList());
+    }
+
+    /** Called when a constraint is narrowed down to one possibility. */
+    public interface Action {
+      void accept(Term actualArg, Term term, BiConsumer<Term, Term> consumer);
     }
   }
 

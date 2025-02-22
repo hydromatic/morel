@@ -863,6 +863,42 @@ public class Core {
     public abstract Decl accept(Shuttle shuttle);
   }
 
+  /** Overloaded operator declaration. */
+  public static class OverDecl extends Decl {
+    public final IdPat pat;
+
+    OverDecl(IdPat pat) {
+      super(Pos.ZERO, Op.OVER_DECL);
+      this.pat = requireNonNull(pat);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(Op.OVER_DECL, pat);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof OverDecl && pat.equals(((OverDecl) o).pat);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("over ").append(pat.name);
+    }
+
+    @Override
+    public OverDecl accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+  }
+
   /** Datatype declaration. */
   public static class DatatypeDecl extends Decl {
     public final List<DataType> dataTypes;
@@ -921,7 +957,7 @@ public class Core {
   /** Consumer of bindings. */
   @FunctionalInterface
   public interface BindingConsumer {
-    void accept(NamedPat namedPat, Exp exp, Pos pos);
+    void accept(NamedPat pat, Exp exp, @Nullable IdPat overloadPat, Pos pos);
   }
 
   /**
@@ -932,11 +968,14 @@ public class Core {
   public static class NonRecValDecl extends ValDecl {
     public final NamedPat pat;
     public final Exp exp;
+    /** If an 'inst', the overloaded name, otherwise null. */
+    public final Core.@Nullable IdPat overloadPat;
 
-    NonRecValDecl(NamedPat pat, Exp exp, Pos pos) {
+    NonRecValDecl(NamedPat pat, Exp exp, @Nullable IdPat overloadPat, Pos pos) {
       super(pos, Op.VAL_DECL);
       this.pat = pat;
       this.exp = exp;
+      this.overloadPat = overloadPat;
     }
 
     @Override
@@ -970,15 +1009,18 @@ public class Core {
       visitor.visit(this);
     }
 
-    public NonRecValDecl copy(NamedPat pat, Exp exp) {
-      return pat == this.pat && exp == this.exp
+    public NonRecValDecl copy(
+        NamedPat pat, Exp exp, @Nullable IdPat overloadPat) {
+      return pat == this.pat
+              && exp == this.exp
+              && overloadPat == this.overloadPat
           ? this
-          : core.nonRecValDecl(pos, pat, exp);
+          : core.nonRecValDecl(pos, pat, overloadPat, exp);
     }
 
     @Override
     public void forEachBinding(BindingConsumer consumer) {
-      consumer.accept(pat, exp, pos);
+      consumer.accept(pat, exp, overloadPat, pos);
     }
   }
 

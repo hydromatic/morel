@@ -19,7 +19,7 @@
 package net.hydromatic.morel.type;
 
 import static java.lang.String.format;
-import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Pair.allMatch;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.transform;
 
@@ -69,7 +69,7 @@ public class TupleType extends BaseType implements RecordLikeType {
   }
 
   public Key key() {
-    return Keys.record(toArgNameTypeKeys(argTypes));
+    return Keys.record(recordMap(transform(argTypes, Type::key)));
   }
 
   @Override
@@ -86,6 +86,15 @@ public class TupleType extends BaseType implements RecordLikeType {
     return differenceCount == 0 ? this : new TupleType(argTypes2.build());
   }
 
+  @Override
+  public boolean specializes(Type type) {
+    return type instanceof TupleType
+            && argTypes.size() == ((TupleType) type).argTypes.size()
+            && allMatch(
+                argTypes, ((TupleType) type).argTypes, Type::specializes)
+        || type instanceof TypeVar;
+  }
+
   /** Returns a list of strings ["1", ..., "size"]. */
   public static List<String> ordinalNames(int size) {
     return INT_STRING_CACHE.subList(1, size + 1);
@@ -99,17 +108,8 @@ public class TupleType extends BaseType implements RecordLikeType {
       List<? extends E> argTypes) {
     final ImmutableSortedMap.Builder<String, E> b =
         ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-    forEachIndexed(argTypes, (t, i) -> b.put(Integer.toString(i + 1), t));
+    forEach(ordinalNames(argTypes.size()), argTypes, b::put);
     return b.build();
-  }
-
-  /**
-   * Given a list of types [t1, t2, ..., tn] returns a sorted map ["1" : t1.key,
-   * "2" : t2.key, ... "n" : tn.key].
-   */
-  static ImmutableSortedMap<String, Type.Key> toArgNameTypeKeys(
-      List<? extends Type> argTypes) {
-    return recordMap(transform(argTypes, Type::key));
   }
 
   /**

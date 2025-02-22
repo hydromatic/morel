@@ -1088,16 +1088,18 @@ ValDecl valDecl() :
 {
   final Span span;
   boolean rec = false;
+  boolean inst = false;
   final List<Ast.ValBind> valBinds = new ArrayList<>();
 }
 {
   <VAL> { span = Span.of(pos()); }
   [ <REC> { rec = true; } ]
+  [ <INST> { inst = true; } ]
   valBind(valBinds)
   (
     <AND> valBind(valBinds)
   )*
-  { return ast.valDecl(span.end(this), rec, valBinds); }
+  { return ast.valDecl(span.end(this), rec, inst, valBinds); }
 }
 
 void valBind(List<Ast.ValBind> valBinds) :
@@ -1122,6 +1124,8 @@ Ast.Decl decl() :
   n = valDecl() { return n; }
 |
   n = funDecl() { return n; }
+|
+  n = overDecl() { return n; }
 }
 
 /** Parses a declaration followed by end-of-file. */
@@ -1131,6 +1135,22 @@ Ast.Decl declEof() :
 }
 {
   d = decl() <EOF> { return d; }
+}
+
+/** Parses an overload declaration, e.g.
+ * {@code over myFun}. */
+Ast.OverDecl overDecl() :
+{
+  final Span span;
+  final Ast.Id id;
+}
+{
+  <OVER> { span = Span.of(pos()); }
+  id = identifier()
+  {
+    return ast.overDecl(span.end(this),
+        (Ast.IdPat) ast.idPat(id.pos, id.name));
+  }
 }
 
 /** Parses a type declaration, e.g.
@@ -1591,6 +1611,10 @@ AstNode statementEof() :
 | < WHERE: "where" >
 | < WITH: "with" >
 | < YIELD: "yield" >
+
+// The following are extensions for overloaded operators:
+| < INST: "inst" >
+| < OVER: "over" >
 }
 
 /* LITERALS */

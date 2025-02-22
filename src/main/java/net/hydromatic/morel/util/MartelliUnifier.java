@@ -19,8 +19,11 @@
 package net.hydromatic.morel.util;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,9 +38,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * (1978).
  */
 public class MartelliUnifier extends Unifier {
+  @Override
   public @NonNull Result unify(
       List<TermTerm> termPairs,
       Map<Variable, Action> termActions,
+      List<Constraint> constraints,
       Tracer tracer) {
     final long start = System.nanoTime();
 
@@ -62,8 +67,8 @@ public class MartelliUnifier extends Unifier {
     //  => fail
     // if x in vars(f(s0, ..., sk))
 
-    final Work work = new Work(tracer, termPairs);
     final Map<Variable, Term> result = new LinkedHashMap<>();
+    final Work work = new Work(tracer, termPairs, constraints, result);
     for (int iteration = 0; ; iteration++) {
       // delete
       if (!work.deleteQueue.isEmpty()) {
@@ -88,7 +93,7 @@ public class MartelliUnifier extends Unifier {
         // decompose
         tracer.onSequence(left, right);
         for (int j = 0; j < left.terms.size(); j++) {
-          work.add(new TermTerm(left.terms.get(j), right.terms.get(j)));
+          work.add(left.terms.get(j), right.terms.get(j));
         }
         continue;
       }
@@ -102,16 +107,19 @@ public class MartelliUnifier extends Unifier {
           return failure("cycle: variable " + variable + " in " + term);
         }
         tracer.onVariable(variable, term);
-        Term priorTerm = result.put(variable, term);
+        final Term priorTerm = result.put(variable, term);
         if (priorTerm != null && !priorTerm.equals(term)) {
-          work.add(new TermTerm(priorTerm, term));
+          work.add(priorTerm, term);
         }
         if (!termActions.isEmpty()) {
           final Set<Variable> set = new HashSet<>();
           act(variable, term, work, new Substitution(result), termActions, set);
           checkArgument(set.isEmpty(), "Working set not empty: %s", set);
         }
-        work.substituteList(variable, term);
+        Failure failure = work.substituteList(variable, term);
+        if (failure != null) {
+          return failure;
+        }
         continue;
       }
 
@@ -152,11 +160,7 @@ public class MartelliUnifier extends Unifier {
       Set<Variable> set) {
     final Action action = termActions.get(variable);
     if (action != null) {
-      action.accept(
-          variable,
-          term,
-          substitution,
-          (leftTerm, rightTerm) -> work.add(new TermTerm(leftTerm, rightTerm)));
+      action.accept(variable, term, substitution, work::add);
     }
     if (term instanceof Variable) {
       // Create a temporary list to prevent concurrent modification, in case the
@@ -197,10 +201,18 @@ public class MartelliUnifier extends Unifier {
     final ArrayQueue<TermTerm> deleteQueue = new ArrayQueue<>();
     final ArrayQueue<TermTerm> seqSeqQueue = new ArrayQueue<>();
     final ArrayQueue<TermTerm> varAnyQueue = new ArrayQueue<>();
+    final List<MutableConstraint> constraintQueue = new ArrayList<>();
+    final Map<Variable, Term> result;
 
-    Work(Tracer tracer, List<TermTerm> termPairs) {
+    Work(
+        Tracer tracer,
+        List<TermTerm> termPairs,
+        List<Constraint> constraints,
+        Map<Variable, Term> result) {
       this.tracer = tracer;
-      termPairs.forEach(this::add);
+      this.result = result;
+      termPairs.forEach(pair -> add(pair.left, pair.right));
+      constraints.forEach(c -> constraintQueue.add(new MutableConstraint(c)));
     }
 
     @Override
@@ -210,23 +222,29 @@ public class MartelliUnifier extends Unifier {
           + " seqSeq "
           + seqSeqQueue
           + " varAny "
-          + varAnyQueue;
+          + varAnyQueue
+          + " constraints "
+          + constraintQueue;
     }
 
-    void add(TermTerm pair) {
-      switch (Kind.of(pair)) {
+    void add2(Term left, Term right) {
+      add(left.apply(result), right.apply(result));
+    }
+
+    void add(Term left, Term right) {
+      switch (Kind.of(left, right)) {
         case DELETE:
-          deleteQueue.add(pair);
+          deleteQueue.add(new TermTerm(left, right));
           break;
         case SEQ_SEQ:
-          seqSeqQueue.add(pair);
+          seqSeqQueue.add(new TermTerm(left, right));
           break;
         case NON_VAR_VAR:
-          tracer.onSwap(pair.left, pair.right);
-          pair = new TermTerm(pair.right, pair.left);
-          // fall through
+          tracer.onSwap(left, right);
+          varAnyQueue.add(new TermTerm(right, left));
+          break;
         case VAR_ANY:
-          varAnyQueue.add(pair);
+          varAnyQueue.add(new TermTerm(left, right));
       }
     }
 
@@ -242,10 +260,11 @@ public class MartelliUnifier extends Unifier {
     /**
      * Applies a mapping to all term pairs in a list, modifying them in place.
      */
-    private void substituteList(Variable variable, Term term) {
+    private @Nullable Failure substituteList(Variable variable, Term term) {
       sub(variable, term, deleteQueue, Kind.DELETE);
       sub(variable, term, seqSeqQueue, Kind.SEQ_SEQ);
       sub(variable, term, varAnyQueue, Kind.VAR_ANY);
+      return subConstraint(variable, term);
     }
 
     private void sub(
@@ -257,20 +276,59 @@ public class MartelliUnifier extends Unifier {
         final Term right2 = pair.right.apply1(variable, term);
         if (left2 != pair.left || right2 != pair.right) {
           tracer.onSubstitute(pair.left, pair.right, left2, right2);
-          TermTerm pair2 = new TermTerm(left2, right2);
-          final Kind kind2 = Kind.of(pair2);
+          final Kind kind2 = Kind.of(left2, right2);
           if (kind2 == kind) {
             // Still belongs in this queue
-            iter.set(pair2);
+            iter.set(new TermTerm(left2, right2));
           } else if (kind2 == Kind.NON_VAR_VAR && kind == Kind.VAR_ANY) {
-            iter.set(new TermTerm(pair2.right, pair2.left));
+            iter.set(new TermTerm(right2, left2));
           } else {
             // Belongs in another queue
             iter.remove();
-            add(pair2);
+            add(left2, right2);
           }
         }
       }
+    }
+
+    private @Nullable Failure subConstraint(Variable variable, Term term) {
+      for (MutableConstraint constraint : constraintQueue) {
+        final Term arg2 = constraint.arg.apply1(variable, term);
+        int changeCount = 0;
+        if (arg2 != constraint.arg) {
+          ++changeCount;
+          constraint.arg = arg2;
+          constraint
+              .termActions
+              .leftList()
+              .removeIf(arg1 -> !arg2.couldUnifyWith(arg1));
+        }
+        for (ListIterator<Term> iterator =
+                constraint.termActions.leftList().listIterator();
+            iterator.hasNext(); ) {
+          final Term subArg = iterator.next();
+          final Term subArg2 = subArg.apply1(variable, term);
+          if (subArg != subArg2) {
+            ++changeCount;
+            iterator.set(subArg2);
+            if (!arg2.couldUnifyWith(subArg2)) {
+              iterator.remove();
+            }
+          }
+        }
+        if (changeCount > 0) {
+          switch (constraint.termActions.size()) {
+            case 0:
+              return failure("no valid overloads");
+            case 1:
+              Term term1 = constraint.termActions.left(0);
+              Constraint.Action consumer = constraint.termActions.right(0);
+              consumer.accept(constraint.arg, term1, this::add2);
+              break;
+          }
+        }
+      }
+      return null;
     }
   }
 
@@ -280,21 +338,47 @@ public class MartelliUnifier extends Unifier {
     VAR_ANY,
     NON_VAR_VAR;
 
-    static Kind of(TermTerm pair) {
-      if (pair.left.equals(pair.right)) {
+    static Kind of(Term left, Term right) {
+      if (left.equals(right)) {
         return DELETE;
       }
-      if (pair.left instanceof Sequence) {
-        if (pair.right instanceof Sequence) {
+      if (left instanceof Sequence) {
+        if (right instanceof Sequence) {
           return SEQ_SEQ;
         } else {
-          assert pair.right instanceof Variable;
+          assert right instanceof Variable;
           return NON_VAR_VAR;
         }
       } else {
-        assert pair.left instanceof Variable;
+        assert left instanceof Variable;
         return VAR_ANY;
       }
+    }
+  }
+
+  /** As {@link Constraint}, but mutable. */
+  private static class MutableConstraint {
+    final Variable v;
+    Term arg;
+    Variable result;
+    final PairList<Term, Constraint.Action> termActions;
+
+    /** Creates a MutableConstraint. */
+    MutableConstraint(
+        Variable arg, PairList<Term, Constraint.Action> termActions) {
+      this.v = requireNonNull(arg);
+      this.arg = requireNonNull(arg);
+      this.termActions = termActions;
+      checkArgument(!termActions.isEmpty());
+    }
+
+    MutableConstraint(Constraint constraint) {
+      this(constraint.arg, PairList.copyOf(constraint.termActions));
+    }
+
+    @Override
+    public String toString() {
+      return format("{constraint %s = %s %s %s}", v, arg, result, termActions);
     }
   }
 }

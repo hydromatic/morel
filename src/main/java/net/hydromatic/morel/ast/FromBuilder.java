@@ -346,7 +346,7 @@ public class FromBuilder {
             // change from a scalar to a record, and even then only when a
             // singleton.
             if (bindings.size() == 1) {
-              // Singleton record that does not rename, e.g. 'yield {x=x}'
+              // Singleton record that does not rename, e.g. 'yield {x=x}'.
               // It only has meaning as the last step.
               if (env2 == null) {
                 env2 = Core.StepEnv.of(bindings, false);

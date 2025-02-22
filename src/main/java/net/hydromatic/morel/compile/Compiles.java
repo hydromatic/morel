@@ -109,7 +109,8 @@ public abstract class Compiles {
     // Yes, if they wrote 'val x = 1 and y = 2' and
     // core became 'val it as (x, y) = (1, 2)'.
     // No, if they actually wrote 'val (x, y) = (1, 2)'.
-    final Core.NamedPat skipPat = getSkipPat(resolved.node, coreDecl0);
+    final Core.@Nullable NamedPat skipPat =
+        getSkipPat(resolved.node, coreDecl0);
 
     // Check for exhaustive and redundant patterns, and throw errors or
     // warnings.
@@ -296,10 +297,8 @@ public abstract class Compiles {
   /** Converts {@code e} to {@code val = e}. */
   public static Ast.ValDecl toValDecl(Ast.Exp statement) {
     final Pos pos = statement.pos;
-    return ast.valDecl(
-        pos,
-        false,
-        ImmutableList.of(ast.valBind(pos, ast.idPat(pos, "it"), statement)));
+    Ast.ValBind valBind = ast.valBind(pos, ast.idPat(pos, "it"), statement);
+    return ast.valDecl(pos, false, false, ImmutableList.of(valBind));
   }
 
   /** Converts an expression or value declaration to a value declaration. */
@@ -324,35 +323,21 @@ public abstract class Compiles {
     return decl.exp;
   }
 
-  static void bindPattern(
-      TypeSystem typeSystem,
-      List<Binding> bindings,
-      Core.DatatypeDecl datatypeDecl) {
-    datatypeDecl.accept(binding(typeSystem, bindings));
-  }
-
   /**
-   * Richer than {@link #bindPattern(TypeSystem, List, Core.Pat)} because we
+   * Richer than {@link #acceptBinding(TypeSystem, Core.Pat, List)} because we
    * have the expression.
    */
   static void bindPattern(
       TypeSystem typeSystem, List<Binding> bindings, Core.ValDecl valDecl) {
     valDecl.forEachBinding(
-        (pat, exp, pos) -> {
+        (pat, exp, overloadPat, pos) -> {
           if (pat instanceof Core.IdPat) {
-            bindings.add(Binding.of(pat, exp));
+            bindings.add(
+                overloadPat == null
+                    ? Binding.of(pat, exp)
+                    : Binding.inst(pat, overloadPat, exp));
           }
         });
-  }
-
-  static void bindPattern(
-      TypeSystem typeSystem, List<Binding> bindings, Core.Pat pat) {
-    pat.accept(binding(typeSystem, bindings));
-  }
-
-  static void bindPattern(
-      TypeSystem typeSystem, List<Binding> bindings, Core.NamedPat namedPat) {
-    bindings.add(Binding.of(namedPat));
   }
 
   public static void bindDataType(
@@ -363,7 +348,8 @@ public abstract class Compiles {
         .forEach(name -> bindings.add(typeSystem.bindTyCon(dataType, name)));
   }
 
-  static PatternBinder binding(TypeSystem typeSystem, List<Binding> bindings) {
+  static PatternBinder binding(
+      TypeSystem typeSystem, Binding.Kind kind, List<Binding> bindings) {
     return new PatternBinder(typeSystem, bindings);
   }
 
@@ -371,11 +357,17 @@ public abstract class Compiles {
    * Visits a pattern, adding bindings to a list.
    *
    * <p>If the pattern is an {@link net.hydromatic.morel.ast.Core.IdPat}, don't
-   * use this method: just bind directly.
+   * use this method: just {@link #acceptBinding(Core.NamedPat, List) bind
+   * directly}.
    */
   public static void acceptBinding(
       TypeSystem typeSystem, Core.Pat pat, List<Binding> bindings) {
-    pat.accept(binding(typeSystem, bindings));
+    pat.accept(binding(typeSystem, Binding.Kind.VAL, bindings));
+  }
+
+  public static void acceptBinding(
+      Core.NamedPat namedPat, List<Binding> bindings) {
+    bindings.add(Binding.of(namedPat));
   }
 
   /**
@@ -393,12 +385,12 @@ public abstract class Compiles {
 
     @Override
     protected void visit(Core.IdPat idPat) {
-      bindPattern(typeSystem, bindings, idPat);
+      acceptBinding(idPat, bindings);
     }
 
     @Override
     protected void visit(Core.AsPat asPat) {
-      bindPattern(typeSystem, bindings, asPat);
+      acceptBinding(asPat, bindings);
       super.visit(asPat);
     }
 

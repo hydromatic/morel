@@ -19,6 +19,7 @@
 package net.hydromatic.morel.type;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static net.hydromatic.morel.util.Pair.allMatch;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import com.google.common.collect.ImmutableList;
@@ -72,7 +73,7 @@ public class DataType extends ParameterizedType {
   }
 
   @Override
-  public Key key() {
+  public Keys.DataTypeKey key() {
     return Keys.datatype(name, Keys.toKeys(arguments), typeConstructors);
   }
 
@@ -92,7 +93,8 @@ public class DataType extends ParameterizedType {
     if (arguments.equals(this.arguments)) {
       return this;
     }
-    return new DataType(name, moniker, arguments, typeConstructors);
+    return (DataType) key().substitute(arguments).toType(typeSystem);
+    //    return new DataType(name, moniker, arguments, typeConstructors);
   }
 
   /**
@@ -119,6 +121,16 @@ public class DataType extends ParameterizedType {
           }
         });
     return buf;
+  }
+
+  @Override
+  public boolean specializes(Type type) {
+    if (type instanceof DataType) {
+      final DataType dataType = (DataType) type;
+      return name.equals(dataType.name)
+          && allMatch(arguments, dataType.arguments, Type::specializes);
+    }
+    return type instanceof TypeVar;
   }
 }
 

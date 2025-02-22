@@ -29,6 +29,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.UnaryOperator;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 
 /** Record type. */
@@ -75,6 +76,20 @@ public class RecordType extends BaseType implements RecordLikeType {
     return differenceCount == 0
         ? this
         : (RecordType) typeSystem.recordType(argNameTypes2);
+  }
+
+  @Override
+  public boolean specializes(Type type) {
+    return type instanceof RecordType
+            && argNameTypes.size() == ((RecordType) type).argNameTypes.size()
+            && argNameTypes
+                .keySet()
+                .equals(((RecordType) type).argNameTypes.keySet())
+            && Pair.allMatch(
+                argNameTypes.values(),
+                ((RecordType) type).argNameTypes.values(),
+                Type::specializes)
+        || type instanceof TypeVar;
   }
 
   /**

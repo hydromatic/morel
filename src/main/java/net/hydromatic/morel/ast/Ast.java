@@ -939,6 +939,41 @@ public class Ast {
     public abstract Decl accept(Shuttle shuttle);
   }
 
+  /** Parse tree node of an overload declaration. */
+  public static class OverDecl extends Decl {
+    public final IdPat pat;
+
+    OverDecl(Pos pos, IdPat pat) {
+      super(pos, Op.OVER_DECL);
+      this.pat = requireNonNull(pat);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(Op.OVER_DECL, pat);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof OverDecl && pat.equals(((OverDecl) o).pat);
+    }
+
+    public OverDecl accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("over ").append(pat.name);
+    }
+  }
+
   /** Parse tree node of a datatype declaration. */
   public static class DatatypeDecl extends Decl {
     public final List<DatatypeBind> binds;
@@ -1078,11 +1113,14 @@ public class Ast {
   /** Parse tree node of a value declaration. */
   public static class ValDecl extends Decl {
     public final boolean rec;
+    public final boolean inst;
     public final List<ValBind> valBinds;
 
-    protected ValDecl(Pos pos, boolean rec, ImmutableList<ValBind> valBinds) {
+    protected ValDecl(
+        Pos pos, boolean rec, boolean inst, ImmutableList<ValBind> valBinds) {
       super(pos, Op.VAL_DECL);
       this.rec = rec;
+      this.inst = inst;
       this.valBinds = requireNonNull(valBinds);
       checkArgument(!valBinds.isEmpty());
     }
@@ -1111,7 +1149,10 @@ public class Ast {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
-      String sep = rec ? "val rec " : "val ";
+      String sep =
+          rec
+              ? (inst ? "val rec inst " : "val rec ")
+              : (inst ? "val inst " : "val ");
       for (ValBind valBind : valBinds) {
         w.append(sep);
         sep = " and ";
@@ -1127,7 +1168,7 @@ public class Ast {
     public ValDecl copy(Iterable<ValBind> valBinds) {
       return Iterables.elementsEqual(this.valBinds, valBinds)
           ? this
-          : ast.valDecl(pos, rec, valBinds);
+          : ast.valDecl(pos, rec, inst, valBinds);
     }
   }
 

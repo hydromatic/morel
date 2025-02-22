@@ -87,6 +87,8 @@ public class Resolver {
   private final NameGenerator nameGenerator;
   private final Environment env;
   private final @Nullable Session session;
+  private final Map<String, Pair<Core.IdPat, List<Core.IdPat>>>
+      resolvedOverloads;
 
   /**
    * Contains variable declarations whose type at the point they are used is
@@ -106,11 +108,13 @@ public class Resolver {
       TypeMap typeMap,
       NameGenerator nameGenerator,
       Map<Pair<Core.NamedPat, Type>, Core.NamedPat> variantIdMap,
+      Map<String, Pair<Core.IdPat, List<Core.IdPat>>> resolvedOverloads,
       Environment env,
       @Nullable Session session) {
     this.typeMap = typeMap;
     this.nameGenerator = nameGenerator;
     this.variantIdMap = variantIdMap;
+    this.resolvedOverloads = resolvedOverloads;
     this.env = env;
     this.session = session;
   }
@@ -120,14 +124,21 @@ public class Resolver {
       TypeMap typeMap, Environment env, @Nullable Session session) {
     NameGenerator nameGenerator =
         session == null ? new NameGenerator() : session.nameGenerator;
-    return new Resolver(typeMap, nameGenerator, new HashMap<>(), env, session);
+    return new Resolver(
+        typeMap, nameGenerator, new HashMap<>(), new HashMap<>(), env, session);
   }
 
   /** Binds a Resolver to a new environment. */
   public Resolver withEnv(Environment env) {
     return env == this.env
         ? this
-        : new Resolver(typeMap, nameGenerator, variantIdMap, env, session);
+        : new Resolver(
+            typeMap,
+            nameGenerator,
+            variantIdMap,
+            resolvedOverloads,
+            env,
+            session);
   }
 
   /**
@@ -140,6 +151,9 @@ public class Resolver {
 
   public Core.Decl toCore(Ast.Decl node) {
     switch (node.op) {
+      case OVER_DECL:
+        return toCore(typeMap.typeSystem, (Ast.OverDecl) node);
+
       case VAL_DECL:
         return toCore((Ast.ValDecl) node);
 
@@ -152,9 +166,16 @@ public class Resolver {
     }
   }
 
+  /** Converts an {@link Ast.OverDecl} to a Core {@link Core.OverDecl}. */
+  public Core.Decl toCore(TypeSystem typeSystem, Ast.OverDecl overDecl) {
+    Type overloadType = typeSystem.lookup(BuiltIn.Datatype.OVERLOAD);
+    Core.IdPat idPat = core.idPat(overloadType, overDecl.pat.name, 0);
+    return core.overDecl(idPat);
+  }
+
   /**
-   * Converts a simple {@link net.hydromatic.morel.ast.Ast.ValDecl}, of the form
-   * {@code val v = e}, to a Core {@link net.hydromatic.morel.ast.Core.ValDecl}.
+   * Converts a simple {@link Ast.ValDecl}, of the form {@code val v = e}, to a
+   * Core {@link Core.ValDecl}.
    *
    * <p>Declarations such as {@code val (x, y) = (1, 2)} and {@code val emp ::
    * rest = emps} are considered complex, and are not handled by this method.
@@ -164,14 +185,26 @@ public class Resolver {
   public Core.ValDecl toCore(Ast.ValDecl valDecl) {
     final List<Binding> bindings = new ArrayList<>(); // discard
     final ResolvedValDecl resolvedValDecl = resolveValDecl(valDecl, bindings);
-    Core.NonRecValDecl nonRecValDecl =
+    final Core.NonRecValDecl nonRecValDecl =
         core.nonRecValDecl(
             resolvedValDecl.patExps.get(0).pos,
             resolvedValDecl.pat,
+            valDecl.inst && resolvedValDecl.pat instanceof Core.IdPat
+                ? getOverload((Core.IdPat) resolvedValDecl.pat)
+                : null,
             resolvedValDecl.exp);
     return resolvedValDecl.rec
         ? core.recValDecl(ImmutableList.of(nonRecValDecl))
         : nonRecValDecl;
+  }
+
+  private Core.@Nullable IdPat getOverload(Core.IdPat pat) {
+    for (Pair<Core.IdPat, List<Core.IdPat>> pair : resolvedOverloads.values()) {
+      if (pair.right.contains(pat)) {
+        return pair.left;
+      }
+    }
+    throw new AssertionError("not found: " + pat);
   }
 
   public Core.DatatypeDecl toCore(Ast.DatatypeDecl datatypeDecl) {
@@ -182,10 +215,15 @@ public class Resolver {
   }
 
   private ResolvedDecl resolve(Ast.Decl decl, List<Binding> bindings) {
-    if (decl instanceof Ast.DatatypeDecl) {
-      return resolveDatatypeDecl((Ast.DatatypeDecl) decl, bindings);
-    } else {
-      return resolveValDecl((Ast.ValDecl) decl, bindings);
+    switch (decl.op) {
+      case DATATYPE_DECL:
+        return resolveDatatypeDecl((Ast.DatatypeDecl) decl, bindings);
+      case OVER_DECL:
+        return resolveOverDecl((Ast.OverDecl) decl, bindings);
+      case VAL_DECL:
+        return resolveValDecl((Ast.ValDecl) decl, bindings);
+      default:
+        throw new AssertionError(decl);
     }
   }
 
@@ -205,6 +243,16 @@ public class Resolver {
     return new ResolvedDatatypeDecl(ImmutableList.copyOf(dataTypes));
   }
 
+  private static ResolvedDecl resolveOverDecl(
+      Ast.OverDecl decl, List<Binding> bindings) {
+    return new ResolvedDecl() {
+      @Override
+      Core.Exp toExp(Core.Exp resultExp) {
+        return resultExp;
+      }
+    };
+  }
+
   private ResolvedValDecl resolveValDecl(
       Ast.ValDecl valDecl, List<Binding> bindings) {
     final boolean composite = valDecl.valBinds.size() > 1;
@@ -213,9 +261,10 @@ public class Resolver {
         valBind -> flatten(matches, composite, valBind.pat, valBind.exp));
 
     final List<PatExp> patExps = new ArrayList<>();
+    final boolean inst = valDecl.inst;
     if (valDecl.rec) {
       final List<Core.Pat> pats = new ArrayList<>();
-      matches.forEach((pat, exp) -> pats.add(toCore(pat)));
+      matches.forEach((pat, exp) -> pats.add(toCore(pat, inst)));
       pats.forEach(
           p -> Compiles.acceptBinding(typeMap.typeSystem, p, bindings));
       final Resolver r = withEnv(bindings);
@@ -229,7 +278,8 @@ public class Resolver {
       matches.forEach(
           (pat, exp) ->
               patExps.add(
-                  new PatExp(toCore(pat), toCore(exp), pat.pos.plus(exp.pos))));
+                  new PatExp(
+                      toCore(pat, inst), toCore(exp), pat.pos.plus(exp.pos))));
       patExps.forEach(
           x -> Compiles.acceptBinding(typeMap.typeSystem, x.pat, bindings));
     }
@@ -471,6 +521,9 @@ public class Resolver {
     Core.Exp coreArg = toCore(apply.arg);
     Type type = typeMap.getType(apply);
     Core.Exp coreFn;
+    @Nullable
+    Binding top =
+        apply.fn.op == Op.ID ? env.getTop(((Ast.Id) apply.fn).name) : null;
     if (apply.fn.op == Op.RECORD_SELECTOR) {
       final Ast.RecordSelector recordSelector = (Ast.RecordSelector) apply.fn;
       RecordLikeType recordType = (RecordLikeType) coreArg.type;
@@ -495,6 +548,34 @@ public class Resolver {
         // available now may be more precise than the deduced type.
         type = ((FnType) coreFn.type).resultType;
       }
+    } else if (apply.fn.op == Op.ID // TODO: change to 'top != null'
+        && resolvedOverloads.containsKey(((Ast.Id) apply.fn).name)) {
+      final Type argType = typeMap.getType(apply.arg);
+      final List<Core.IdPat> matchingBindings = new ArrayList<>();
+      Pair<Core.IdPat, List<Core.IdPat>> pair =
+          resolvedOverloads.get(((Ast.Id) apply.fn).name);
+      for (Core.IdPat idPat : pair.right) {
+        if (idPat.type.canCallArgOf(argType)) {
+          matchingBindings.add(idPat);
+        }
+      }
+      if (matchingBindings.size() != 1) {
+        throw new AssertionError(matchingBindings);
+      }
+      coreFn = core.id(matchingBindings.get(0));
+    } else if (top != null && top.isInst()) {
+      final Type argType = typeMap.getType(apply.arg);
+      final List<Core.IdPat> matchingBindings = new ArrayList<>();
+      for (Core.IdPat idPat : env.getOverloads(top.overloadId)) {
+        if (idPat.type.canCallArgOf(argType)) {
+          matchingBindings.add(idPat);
+        }
+      }
+      if (matchingBindings.size() != 1) {
+        throw new AssertionError(
+            "zero or more than one matching bindings: " + matchingBindings);
+      }
+      coreFn = core.id(matchingBindings.get(0));
     } else {
       coreFn = toCore(apply.fn);
     }
@@ -616,7 +697,40 @@ public class Resolver {
   }
 
   private Core.Pat toCore(Ast.Pat pat) {
+    return toCore(pat, false);
+  }
+
+  /**
+   * Converts a pattern to Core, reusing an existing {@link Core.IdPat} if
+   * {@code inst}.
+   */
+  private Core.Pat toCore(Ast.Pat pat, boolean inst) {
     final Type type = typeMap.getType(pat);
+    if (inst && pat.op == Op.ID_PAT) {
+      Ast.IdPat idPat = (Ast.IdPat) pat;
+      // This identifier is overloaded. Generate a new name for every
+      // occurrence.
+      Pair<Core.IdPat, List<Core.IdPat>> pair =
+          resolvedOverloads.computeIfAbsent(
+              idPat.name,
+              name -> {
+                final Binding top = env.getTop(idPat.name);
+                final List<Core.IdPat> coreIds = new ArrayList<>();
+                Core.IdPat coreOverloadId;
+                if (top != null) {
+                  coreOverloadId = top.overloadId;
+                  env.collect(
+                      top.overloadId, b -> coreIds.add((Core.IdPat) b.id));
+                } else {
+                  coreOverloadId = core.idPat(type, name, nameGenerator::inc);
+                }
+                return Pair.of(coreOverloadId, coreIds);
+              });
+      Core.IdPat corePat =
+          core.idPat(type, () -> nameGenerator.getPrefixed(idPat.name));
+      pair.right.add(corePat);
+      return corePat;
+    }
     return toCore(pat, type, type);
   }
 
@@ -837,8 +951,8 @@ public class Resolver {
   /**
    * Resolved declaration. It can be converted to an expression given a result
    * expression; depending on sub-type, that expression will either be a {@code
-   * let} (for a {@link net.hydromatic.morel.ast.Ast.ValDecl} or a {@code local}
-   * (for a {@link net.hydromatic.morel.ast.Ast.DatatypeDecl}.
+   * let} (for a {@link Ast.ValDecl} or a {@code local} (for a {@link
+   * Ast.DatatypeDecl}.
    */
   public abstract static class ResolvedDecl {
     /** Converts the declaration to a {@code let} or a {@code local}. */
@@ -872,13 +986,14 @@ public class Resolver {
         patExps.forEach(
             x ->
                 valDecls.add(
-                    core.nonRecValDecl(x.pos, (Core.IdPat) x.pat, x.exp)));
+                    core.nonRecValDecl(
+                        x.pos, (Core.IdPat) x.pat, null, x.exp)));
         return core.let(core.recValDecl(valDecls), resultExp);
       }
       if (!composite && patExps.get(0).pat instanceof Core.IdPat) {
         final PatExp x = patExps.get(0);
         Core.NonRecValDecl valDecl =
-            core.nonRecValDecl(x.pos, (Core.IdPat) x.pat, x.exp);
+            core.nonRecValDecl(x.pos, (Core.IdPat) x.pat, null, x.exp);
         return core.let(valDecl, resultExp);
       } else {
         // This is a complex pattern. Allocate an intermediate variable.
@@ -887,7 +1002,7 @@ public class Resolver {
         final Core.Id id = core.id(idPat);
         final Pos pos = patExps.get(0).pos;
         return core.let(
-            core.nonRecValDecl(pos, idPat, exp),
+            core.nonRecValDecl(pos, idPat, null, exp),
             core.caseOf(
                 pos,
                 resultExp.type,

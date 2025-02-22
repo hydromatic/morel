@@ -70,10 +70,15 @@ public class RobinsonUnifier extends Unifier {
     return SubstitutionResult.create(joined);
   }
 
+  @Override
   public @NonNull Result unify(
       List<TermTerm> termPairs,
       Map<Variable, Action> termActions,
+      List<Constraint> constraints,
       Tracer tracer) {
+    if (!constraints.isEmpty()) {
+      throw new AssertionError("Constraints are not supported");
+    }
     switch (termPairs.size()) {
       case 1:
         return unify(termPairs.get(0).left, termPairs.get(0).right);

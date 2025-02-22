@@ -150,6 +150,8 @@ public class Visitor {
 
   // declarations
 
+  protected void visit(Ast.OverDecl overDecl) {}
+
   protected void visit(Ast.FunDecl funDecl) {
     funDecl.funBinds.forEach(this::accept);
   }
@@ -329,6 +331,8 @@ public class Visitor {
   protected void visit(Core.Tuple tuple) {
     tuple.args.forEach(this::accept);
   }
+
+  protected void visit(Core.OverDecl overDecl) {}
 
   protected void visit(Core.DatatypeDecl datatypeDecl) {}
 

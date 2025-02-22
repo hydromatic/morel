@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -278,7 +277,7 @@ public class Compiler {
   }
 
   private Code compileFieldName(Context cx, Core.NamedPat idPat) {
-    final Binding binding = cx.env.getOpt(idPat.name);
+    final Binding binding = cx.env.getOpt(idPat);
     if (binding != null && binding.value instanceof Code) {
       return (Code) binding.value;
     }
@@ -521,11 +520,27 @@ public class Compiler {
         return toApplicable(cx, literal.unwrap(Object.class), argType, pos);
 
       case ID:
-        final Binding binding = cx.env.getOpt(((Core.Id) fn).idPat);
+        Binding binding = cx.env.getOpt(((Core.Id) fn).idPat);
         if (binding == null
             || binding.value instanceof LinkCode
             || binding.value == Unit.INSTANCE) {
           return null;
+        }
+        if (binding.kind != Binding.Kind.VAL) {
+          final List<Binding> bindings = new ArrayList<>();
+          cx.env.collect(
+              ((Core.Id) fn).idPat,
+              instBinding -> {
+                if (instBinding.id.type.canCallArgOf(argType)) {
+                  bindings.add(instBinding);
+                }
+              });
+          if (bindings.size() == 1) {
+            binding = bindings.get(0);
+          } else {
+            throw new AssertionError(
+                argType + " matches functions with arguments " + bindings);
+          }
         }
         return toApplicable(cx, binding.value, argType, pos);
 
@@ -610,6 +625,11 @@ public class Compiler {
             cx, valDecl, skipPat, queriesToWrap, matchCodes, bindings, actions);
         break;
 
+      case OVER_DECL:
+        final Core.OverDecl overDecl = (Core.OverDecl) decl;
+        compileOverDecl(overDecl, bindings, actions);
+        break;
+
       case DATATYPE_DECL:
         final Core.DatatypeDecl datatypeDecl = (Core.DatatypeDecl) decl;
         compileDatatypeDecl(datatypeDecl.dataTypes, bindings, actions);
@@ -617,6 +637,16 @@ public class Compiler {
 
       default:
         throw new AssertionError("unknown " + decl.op + " [" + decl + "]");
+    }
+  }
+
+  private void compileOverDecl(
+      Core.OverDecl overDecl, List<Binding> bindings, List<Action> actions) {
+    bindings.add(Binding.over(overDecl.pat));
+    if (actions != null) {
+      actions.add(
+          (outLines, outBindings, evalEnv) ->
+              outLines.accept("over " + overDecl.pat));
     }
   }
 
@@ -706,7 +736,7 @@ public class Compiler {
   private void compileMatch(
       Context cx, Core.Match match, BiConsumer<Core.Pat, Code> consumer) {
     final List<Binding> bindings = new ArrayList<>();
-    Compiles.bindPattern(typeSystem, bindings, match.pat);
+    Compiles.acceptBinding(typeSystem, match.pat, bindings);
     final Code code = compile(cx.bindAll(bindings), match.exp);
     consumer.accept(match.pat, code);
   }
@@ -724,7 +754,7 @@ public class Compiler {
     final Map<Core.NamedPat, LinkCode> linkCodes = new HashMap<>();
     if (valDecl.op == Op.REC_VAL_DECL) {
       valDecl.forEachBinding(
-          (pat, exp, pos) -> {
+          (pat, exp, overloadPat, pos) -> {
             final LinkCode linkCode = new LinkCode();
             linkCodes.put(pat, linkCode);
             bindings.add(Binding.of(pat, linkCode));
@@ -733,7 +763,7 @@ public class Compiler {
 
     final Context cx1 = cx.bindAll(newBindings);
     valDecl.forEachBinding(
-        (pat, exp, pos) -> {
+        (pat, exp, overloadPat, pos) -> {
           // Using 'compileArg' rather than 'compile' encourages CalciteCompiler
           // to use a pure Calcite implementation if possible, and has no effect
           // in the basic Compiler.
@@ -756,55 +786,62 @@ public class Compiler {
                   final List<String> outs = new ArrayList<>();
                   try {
                     final Object o = code.eval(evalEnv);
-                    final Map<Core.NamedPat, Object> pairs =
-                        new LinkedHashMap<>();
+                    final List<Binding> outBindings0 = new ArrayList<>();
                     if (!Closure.bindRecurse(
-                        pat.withType(type), o, pairs::put)) {
+                        pat.withType(type),
+                        o,
+                        (pat2, o2) ->
+                            outBindings0.add(
+                                overloadPat == null
+                                    ? Binding.of(pat2, o2)
+                                    : Binding.inst(pat2, overloadPat, o2)))) {
                       throw new Codes.MorelRuntimeException(
                           Codes.BuiltInExn.BIND, pos);
                     }
-                    pairs.forEach(
-                        (pat2, o2) -> {
-                          outBindings.accept(Binding.of(pat2, o2));
-                          if (pat2 != skipPat) {
-                            int stringDepth =
-                                Prop.STRING_DEPTH.intValue(session.map);
-                            int lineWidth =
-                                Prop.LINE_WIDTH.intValue(session.map);
-                            int printDepth =
-                                Prop.PRINT_DEPTH.intValue(session.map);
-                            int printLength =
-                                Prop.PRINT_LENGTH.intValue(session.map);
-                            Prop.Output output =
-                                Prop.OUTPUT.enumValue(
-                                    session.map, Prop.Output.class);
-                            final Pretty pretty =
-                                new Pretty(
-                                    typeSystem,
-                                    lineWidth,
-                                    output,
-                                    printLength,
-                                    printDepth,
-                                    stringDepth);
-                            final Pretty.TypedVal typedVal;
-                            if (o2 instanceof TypedValue) {
-                              TypedValue typedValue = (TypedValue) o2;
-                              typedVal =
-                                  new Pretty.TypedVal(
-                                      pat2.name,
-                                      typedValue.valueAs(Object.class),
-                                      Keys.toProgressive(pat2.type().key())
-                                          .toType(typeSystem));
-                            } else {
-                              typedVal =
-                                  new Pretty.TypedVal(pat2.name, o2, pat2.type);
-                            }
-                            pretty.pretty(buf, pat2.type, typedVal);
-                            final String line = str(buf);
-                            outs.add(line);
-                            outLines.accept(line);
-                          }
-                        });
+                    for (Binding binding : outBindings0) {
+                      outBindings.accept(binding);
+                      if (binding.id != skipPat) {
+                        int stringDepth =
+                            Prop.STRING_DEPTH.intValue(session.map);
+                        int lineWidth = Prop.LINE_WIDTH.intValue(session.map);
+                        Prop.Output output =
+                            Prop.OUTPUT.enumValue(
+                                session.map, Prop.Output.class);
+                        int printDepth = Prop.PRINT_DEPTH.intValue(session.map);
+                        int printLength =
+                            Prop.PRINT_LENGTH.intValue(session.map);
+                        final Pretty pretty =
+                            new Pretty(
+                                typeSystem,
+                                lineWidth,
+                                output,
+                                printLength,
+                                printDepth,
+                                stringDepth);
+                        final Pretty.TypedVal typedVal;
+                        final Core.NamedPat id =
+                            binding.overloadId != null
+                                ? binding.overloadId
+                                : binding.id;
+                        if (binding.value instanceof TypedValue) {
+                          TypedValue typedValue = (TypedValue) binding.value;
+                          typedVal =
+                              new Pretty.TypedVal(
+                                  id.name,
+                                  typedValue.valueAs(Object.class),
+                                  Keys.toProgressive(binding.id.type().key())
+                                      .toType(typeSystem));
+                        } else {
+                          typedVal =
+                              new Pretty.TypedVal(
+                                  id.name, binding.value, binding.id.type);
+                        }
+                        pretty.pretty(buf, binding.id.type, typedVal);
+                        final String line = str(buf);
+                        outs.add(line);
+                        outLines.accept(line);
+                      }
+                    }
                   } catch (Codes.MorelRuntimeException e) {
                     session.handle(e, buf);
                     final String line = str(buf);

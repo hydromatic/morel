@@ -360,8 +360,11 @@ public enum CoreBuilder {
   }
 
   public Core.NonRecValDecl nonRecValDecl(
-      Pos pos, Core.NamedPat pat, Core.Exp exp) {
-    return new Core.NonRecValDecl(pat, exp, pos);
+      Pos pos,
+      Core.NamedPat pat,
+      Core.@Nullable IdPat overloadPat,
+      Core.Exp exp) {
+    return new Core.NonRecValDecl(pat, exp, overloadPat, pos);
   }
 
   public Core.RecValDecl recValDecl(
@@ -520,6 +523,10 @@ public enum CoreBuilder {
         condition,
         ImmutableList.of(
             match(pos, truePat, ifTrue), match(pos, boolWildcardPat, ifFalse)));
+  }
+
+  public Core.OverDecl overDecl(Core.IdPat pat) {
+    return new Core.OverDecl(pat);
   }
 
   public Core.DatatypeDecl datatypeDecl(Iterable<DataType> dataTypes) {

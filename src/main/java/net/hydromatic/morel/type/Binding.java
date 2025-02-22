@@ -18,12 +18,14 @@
  */
 package net.hydromatic.morel.type;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.eval.Unit;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Binding of a name to a type and a value.
@@ -36,26 +38,52 @@ public class Binding {
   public final Object value;
   /** If true, the binding is ignored by inlining. */
   public final boolean parameter;
+  /** Distinguishes between regular and overloaded values. */
+  public final Kind kind;
+
+  public final Core.@Nullable IdPat overloadId;
 
   private Binding(
-      Core.NamedPat id, Core.Exp exp, Object value, boolean parameter) {
+      Core.NamedPat id,
+      Core.@Nullable IdPat overloadId,
+      Core.Exp exp,
+      Object value,
+      boolean parameter,
+      Kind kind) {
     this.id = requireNonNull(id);
+    this.overloadId = overloadId;
     this.exp = exp;
     this.value = requireNonNull(value);
-    assert !(value instanceof Core.IdPat);
     this.parameter = parameter;
+    this.kind = requireNonNull(kind);
+    checkArgument(!(value instanceof Core.IdPat));
+    checkArgument((kind == Kind.INST) == (overloadId != null));
   }
 
   public static Binding of(Core.NamedPat id) {
-    return new Binding(id, null, Unit.INSTANCE, false);
+    return new Binding(id, null, null, Unit.INSTANCE, false, Kind.VAL);
+  }
+
+  public static Binding over(Core.NamedPat id) {
+    return new Binding(id, null, null, Unit.INSTANCE, false, Kind.OVER);
   }
 
   public static Binding of(Core.NamedPat id, Core.Exp exp) {
-    return new Binding(id, exp, Unit.INSTANCE, false);
+    return new Binding(id, null, exp, Unit.INSTANCE, false, Kind.VAL);
+  }
+
+  public static Binding inst(
+      Core.NamedPat id, Core.IdPat overloadId, Core.Exp exp) {
+    return new Binding(id, overloadId, exp, Unit.INSTANCE, false, Kind.INST);
   }
 
   public static Binding of(Core.NamedPat id, Object value) {
-    return new Binding(id, null, value, false);
+    return new Binding(id, null, null, value, false, Kind.VAL);
+  }
+
+  public static Binding inst(
+      Core.NamedPat id, Core.IdPat overloadId, Object value) {
+    return new Binding(id, overloadId, null, value, false, Kind.INST);
   }
 
   /** Used by {@link Environment#renumber()}. */
@@ -63,8 +91,8 @@ public class Binding {
     if (id.i == 0) {
       return this;
     }
-    return new Binding(
-        id.withName(id.name + '_' + id.i), exp, value, parameter);
+    Core.NamedPat id1 = id.withName(id.name + '_' + id.i);
+    return new Binding(id1, overloadId, exp, value, parameter, kind);
   }
 
   @Override
@@ -82,7 +110,20 @@ public class Binding {
   }
 
   public Binding withParameter(boolean parameter) {
-    return new Binding(id, exp, value, parameter);
+    return parameter == this.parameter
+        ? this
+        : new Binding(id, overloadId, exp, value, parameter, kind);
+  }
+
+  public Binding withKind(Kind kind) {
+    return kind == this.kind
+        ? this
+        : new Binding(id, overloadId, exp, value, parameter, kind);
+  }
+
+  /** Returns whether this binding is an instance of an overloaded name. */
+  public boolean isInst() {
+    return kind == Kind.INST;
   }
 
   @Override
@@ -94,6 +135,16 @@ public class Binding {
     } else {
       return id + " = " + value + " : " + id.type.moniker();
     }
+  }
+
+  /** What kind of binding? */
+  public enum Kind {
+    /** Regular, non-overloaded binding ({@code val}). */
+    VAL,
+    /** Declaration that a name is overloaded ({@code over}). */
+    OVER,
+    /** Instance of an overloaded name ({@code val inst}). */
+    INST,
   }
 }
 

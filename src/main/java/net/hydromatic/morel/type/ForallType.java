@@ -51,6 +51,11 @@ public class ForallType extends BaseType {
   }
 
   @Override
+  public boolean canCallArgOf(Type type) {
+    return this.type.canCallArgOf(type);
+  }
+
+  @Override
   public Type substitute(TypeSystem typeSystem, List<? extends Type> types) {
     switch (type.op()) {
       case DATA_TYPE:

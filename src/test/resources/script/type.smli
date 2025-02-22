@@ -379,6 +379,16 @@ let val r = {a=[], b=[]} in r.b end;
 fun f (a, b, c) = {x=c, y=a};
 > val f = fn : 'a * 'b * 'c -> {x:'c, y:'a}
 
+(*) When printing a type, 'forall' is omitted. Sometimes that eliminates
+(*) type variables. The following tests make sure that type variables are
+(*) contiguous and numbered left-to-right.
+[[], []];
+> val it = [[],[]] : 'a list list
+let val r = {a=[], b=[]} in r.b end;
+> val it = [] : 'a list
+fun f (a, b, c) = {x=c, y=a};
+> val f = fn : 'a * 'b * 'c -> {x:'c, y:'a}
+
 (* [MOREL-247] Cannot translate an expression that contains type annotations. *)
 fun divides (n: int, d: int): bool =
   n mod d = 0;

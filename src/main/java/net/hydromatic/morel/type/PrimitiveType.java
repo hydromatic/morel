@@ -86,6 +86,11 @@ public enum PrimitiveType implements RecordLikeType {
   public Type argType(int i) {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public boolean specializes(Type type) {
+    return type == this || type instanceof TypeVar;
+  }
 }
 
 // End PrimitiveType.java
