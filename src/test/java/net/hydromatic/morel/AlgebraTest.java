@@ -73,13 +73,10 @@ public class AlgebraTest {
         + " yield {e.empno, e.deptno}\n"
         + " order empno desc\n"
         + " skip 2 take 4";
-    // When fixed,
-    //   [CALCITE-6128] RelBuilder.sortLimit should compose offset and fetch
-    // will yield a plan with one fewer LogicalSort
-    final String plan = "LogicalSort(fetch=[4])\n"
-        + "  LogicalSort(sort0=[$1], dir0=[DESC], offset=[2])\n"
-        + "    LogicalProject(deptno=[$7], empno=[$0])\n"
-        + "      JdbcTableScan(table=[[scott, EMP]])\n";
+    final String plan = ""
+        + "LogicalSort(sort0=[$1], dir0=[DESC], offset=[2], fetch=[4])\n"
+        + "  LogicalProject(deptno=[$7], empno=[$0])\n"
+        + "    JdbcTableScan(table=[[scott, EMP]])\n";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{deptno:int, empno:int} list")
@@ -442,7 +439,7 @@ public class AlgebraTest {
         + "  \"type\": \"ANY\",\n"
         + "  \"nullable\": false,\n"
         + "  \"precision\": -1,\n"
-        + "  \"scale\": -1\n"
+        + "  \"scale\": -2147483648\n"
         + "}'), $0)])\n"
         + "  JdbcTableScan(table=[[scott, DEPT]])\n"
         + "))";
@@ -477,7 +474,7 @@ public class AlgebraTest {
         + "  \"type\": \"ANY\",\n"
         + "  \"nullable\": false,\n"
         + "  \"precision\": -1,\n"
-        + "  \"scale\": -1\n"
+        + "  \"scale\": -2147483648\n"
         + "}'), ROW($0, morelScalar('five', '{\n"
         + "  \"type\": \"INTEGER\",\n"
         + "  \"nullable\": false\n"

@@ -77,7 +77,7 @@ License.
 
     <!-- Component and plugin versions, in alphabetical order. -->
     <build-helper-maven-plugin.version>3.5.0</build-helper-maven-plugin.version>
-    <calcite.version>1.36.0</calcite.version>
+    <calcite.version>1.38.0</calcite.version>
     <!-- We support (and test) Checkstyle as low as 9.3.
          In JDK 8, you must add '-Dcheckstyle.version=9.3' because
          Checkstyle 10 requires JDK 11 or higher. -->

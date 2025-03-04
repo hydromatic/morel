@@ -43,6 +43,8 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.type.DelegatingTypeSystem;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql2rel.RelDecorrelator;
 import org.apache.calcite.tools.Frameworks;
@@ -63,9 +65,11 @@ public class Calcite {
 
   protected Calcite() {
     rootSchema = CalciteSchema.createRootSchema(false).plus();
-    relBuilder = RelBuilder.create(Frameworks.newConfigBuilder()
-        .defaultSchema(rootSchema)
-        .build());
+    relBuilder =
+        RelBuilder.create(Frameworks.newConfigBuilder()
+            .typeSystem(new RaggedTypeSystem())
+            .defaultSchema(rootSchema)
+            .build());
     typeFactory = (JavaTypeFactory) relBuilder.getTypeFactory();
     dataContext = new EmptyDataContext(typeFactory, rootSchema);
   }
@@ -203,6 +207,20 @@ public class Calcite {
                         new Interpreter(dataContext, rel);
                     return converter.apply(interpreter);
                   }));
+    }
+  }
+
+  /** Type system whose
+   * {@link #shouldConvertRaggedUnionTypesToVarying()} returns {@code true}.
+   *
+   * <p>Calcite requires it to have a public default constructor. */
+  public static class RaggedTypeSystem extends DelegatingTypeSystem {
+    public RaggedTypeSystem() {
+      super(RelDataTypeSystem.DEFAULT);
+    }
+
+    public boolean shouldConvertRaggedUnionTypesToVarying() {
+      return true;
     }
   }
 }
