@@ -23,6 +23,106 @@ License.
 For a full list of releases, see
 <a href="https://github.com/hydromatic/morel/releases">github</a>.
 
+<!--
+## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.x">0.x</a> / xxxx-xx-xx
+
+Release 0.x ...
+
+Contributors:
+
+### Features
+
+### Bug-fixes and internal improvements
+
+### Build and tests
+
+### Component upgrades
+
+### Site and documentation
+
+* [<a href="https://github.com/hydromatic/morel/issues/xxx">MOREL-xxx</a>]
+  Release 0.x
+-->
+
+## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.5">0.5</a> / 2025-03-04
+
+Release 0.5 extends the syntax of the `from` expression
+([`distinct`](https://github.com/hydromatic/morel/issues/231),
+[`into` and `through`](https://github.com/hydromatic/morel/issues/231) keywords,
+[comma-separated scans](https://github.com/hydromatic/morel/issues/216),
+and [unbounded variables](https://github.com/hydromatic/morel/issues/202)).
+Morel now allows
+[`fn` to have multiple branches, like `case`](https://github.com/hydromatic/morel/issues/230).
+We have improved code generation for a singleton `case` expression,
+and implemented the
+[`Int` structure](https://github.com/hydromatic/morel/issues/228) as defined by the
+[Standard ML Basis Library](https://smlfamily.github.io/Basis/integer.html#Int:STR:SPEC).
+
+Contributors:
+Julian Hyde
+
+### Features
+
+* [<a href="https://github.com/hydromatic/morel/issues/231">MOREL-231</a>]
+  Add `distinct` keyword as shorthand for `group` with all fields and no
+  aggregate functions
+* [<a href="https://github.com/hydromatic/morel/issues/230">MOREL-230</a>]
+  Allow lambda (`fn`) to have multiple branches, similar to `case`
+* [<a href="https://github.com/hydromatic/morel/issues/228">MOREL-228</a>]
+  `Int` structure
+* [<a href="https://github.com/hydromatic/morel/issues/171">MOREL-171</a>]
+  Add `into` and `through` clauses to `from` expression
+* Add function `Interactive.useSilently`
+* [<a href="https://github.com/hydromatic/morel/issues/216">MOREL-216</a>]
+  Allow comma-separated scans in `join`, and `on` in the `from` clause
+* [<a href="https://github.com/hydromatic/morel/issues/202">MOREL-202</a>]
+  Allow unbounded variables (`from` and `join` without `in`), and remove
+  `suchthat` keyword
+* Inline singleton `case`
+* [<a href="https://github.com/hydromatic/morel/issues/213">MOREL-213</a>]
+  Require that a non-terminal `yield` step is a record expression
+
+### Bug-fixes and internal improvements
+
+* Number type variables left-to-right
+* Improve formatting of function types
+* Validate field references
+* Add `Core.Tuple.forEach`
+* Add `Static.find` and `PairList.firstMatch`
+* Add `RecordType.mutableMap`
+* Make `file.smli` test less flaky
+
+### Build and tests
+
+* Add Australia, cakes tests from
+  [MiniZinc tutorial](https://docs.minizinc.dev/en/stable/modelling.html)
+* Enable tests for
+  [<a href="https://github.com/hydromatic/morel/issues/43">MOREL-43</a>]
+
+### Component upgrades
+
+* Bump calcite from 1.36 to 1.38
+* Bump build-helper-maven-plugin from 3.5.0 to 3.6.0
+* Bump checkstyle from 10.12.7 to 10.21.4
+* Bump guava from 33.0.0-jre to 33.4.0-jre
+* Bump hamcrest from 2.2 to 3.0
+* Bump hsqldb from 2.7.2 to 2.7.4
+* Bump junit.jupiter from 5.10.1 to 5.12.0
+* Bump maven-checkstyle-plugin from 3.3.1 to 3.6.0
+* Bump maven-compiler-plugin from 3.12.1 to 3.14.0
+* Bump maven-enforcer-plugin from 3.4.1 to 3.5.0
+* Bump maven-javadoc-plugin from 3.6.3 to 3.11.2
+* Bump maven-project-info-reports-plugin from 3.5.0 to 3.9.0
+* Bump maven-surefire-plugin from 3.2.3 to 3.5.2
+* Bump versions-maven-plugin from 2.16.2 to 2.18.0
+
+### Site and documentation
+
+* Copy-edit documentation
+* Add javadoc badge to README
+* [<a href="https://github.com/hydromatic/morel/issues/243">MOREL-243</a>]
+  Release 0.5
+
 ## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.4">0.4</a> / 2024-01-04
 
 Release 0.4 extends `from` syntax, adding
