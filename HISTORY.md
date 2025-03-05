@@ -24,9 +24,9 @@ For a full list of releases, see
 <a href="https://github.com/hydromatic/morel/releases">github</a>.
 
 <!--
-## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.x">0.x</a> / xxxx-xx-xx
+## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.x.0">0.x.0</a> / xxxx-xx-xx
 
-Release 0.x ...
+Release 0.x.0 ...
 
 Contributors:
 
@@ -41,12 +41,12 @@ Contributors:
 ### Site and documentation
 
 * [<a href="https://github.com/hydromatic/morel/issues/xxx">MOREL-xxx</a>]
-  Release 0.x
+  Release 0.x.0
 -->
 
-## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.5">0.5</a> / 2025-03-04
+## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.5.0">0.5.0</a> / 2025-03-04
 
-Release 0.5 extends the syntax of the `from` expression
+Release 0.5.0 extends the syntax of the `from` expression
 ([`distinct`](https://github.com/hydromatic/morel/issues/231),
 [`into` and `through`](https://github.com/hydromatic/morel/issues/231) keywords,
 [comma-separated scans](https://github.com/hydromatic/morel/issues/216),
@@ -121,11 +121,11 @@ Julian Hyde
 * Copy-edit documentation
 * Add javadoc badge to README
 * [<a href="https://github.com/hydromatic/morel/issues/243">MOREL-243</a>]
-  Release 0.5
+  Release 0.5.0
 
-## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.4">0.4</a> / 2024-01-04
+## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.4.0">0.4.0</a> / 2024-01-04
 
-Release 0.4 extends `from` syntax, adding
+Release 0.4.0 extends `from` syntax, adding
 <a href="https://github.com/hydromatic/morel/issues/129">`suchthat`</a>,
 <a href="https://github.com/hydromatic/morel/issues/204">`take` and `skip`</a>
 clauses; allows identifiers to be
@@ -220,12 +220,12 @@ Rette66
 ### Site and documentation
 
 * [<a href="https://github.com/hydromatic/morel/issues/211">MOREL-211</a>]
-  Release 0.4
+  Release 0.4.0
 * Add Maven Central badge to `README.md`
 
-## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.3">0.3</a> / 2022-10-02
+## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.3.0">0.3.0</a> / 2022-10-02
 
-Release 0.3 extends `from` syntax, adding an
+Release 0.3.0 extends `from` syntax, adding an
 <a href="https://github.com/hydromatic/morel/issues/20">`order` clause</a>,
 allowing multiple
 <a href="https://github.com/hydromatic/morel/issues/52">`yield`</a>,
@@ -502,7 +502,7 @@ Sergey Nuyanzin
 ### Site and documentation
 
 * [<a href="https://github.com/hydromatic/morel/issues/181">MOREL-181</a>]
-  Release 0.3
+  Release 0.3.0
 * Update operator list in `README`
 * In reference, re-order the `String` and `Vector` built-in functions
 * Add example of matching regular expressions using combinators
@@ -515,7 +515,7 @@ Sergey Nuyanzin
 * Add examples of recursive queries and fixed-point algorithms
 * Add Morel logo and square image
 
-## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.2">0.2</a> / 2020-03-10
+## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.2.0">0.2.0</a> / 2020-03-10
 
 The first release since smlj was renamed to Morel includes major
 improvements to the type system and relational extensions. Some highlights:
@@ -602,7 +602,7 @@ improvements to the type system and relational extensions. Some highlights:
 * Add [javadoc to site](http://hydromatic.net/morel/apidocs/)
 * Generate an asciinema demo
 
-## <a href="https://github.com/hydromatic/morel/releases/tag/smlj-0.1">0.1</a> / 2019-07-24
+## <a href="https://github.com/hydromatic/morel/releases/tag/smlj-0.1.0">0.1</a> / 2019-07-24
 
 Initial release features the core language (primitive types, lists,
 tuples, records; `let`, `if`, `fn` and `case` expressions; `val`,
