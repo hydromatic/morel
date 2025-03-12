@@ -49,7 +49,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.calcite.util.Holder;
-import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayDeque;
@@ -81,6 +80,7 @@ import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.calcite.util.Util.firstDuplicate;
 
 import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
@@ -717,7 +717,7 @@ public class TypeResolver {
     final List<String> names = new ArrayList<>();
     group.groupExps.leftList().forEach(id -> names.add(id.name));
     group.aggregates.forEach(aggregate -> names.add(aggregate.id.name));
-    int duplicate = Util.firstDuplicate(names);
+    int duplicate = firstDuplicate(names);
     if (duplicate >= 0) {
       throw new RuntimeException("Duplicate field name '"
           + names.get(duplicate) + "' in group");

@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
-import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
@@ -41,6 +40,7 @@ import java.util.SortedMap;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.append;
+import static net.hydromatic.morel.util.Static.skipLast;
 
 import static com.google.common.collect.Iterables.getLast;
 
@@ -161,7 +161,7 @@ public class FromBuilder {
       final Core.From from = (Core.From) exp;
       final Core.FromStep lastStep = getLast(from.steps);
       final List<Core.FromStep> steps =
-          lastStep.op == Op.YIELD ? Util.skipLast(from.steps) : from.steps;
+          lastStep.op == Op.YIELD ? skipLast(from.steps) : from.steps;
 
       final PairList<String, Core.Exp> nameExps = PairList.of();
       boolean uselessIfLast = this.bindings.isEmpty();

@@ -38,7 +38,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.util.ImmutableIntList;
-import org.apache.calcite.util.Util;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -62,12 +61,16 @@ import static net.hydromatic.morel.util.Static.endsWith;
 import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
 import static net.hydromatic.morel.util.Static.transform;
 
+import static org.apache.calcite.util.Util.range;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /** Tests for various utility classes. */
@@ -178,7 +181,7 @@ public class UtilTest {
 
     // Very large collections (too large to materialize)
     final int bigSize = Integer.MAX_VALUE - 10;
-    final List<Integer> listBig = Util.range(bigSize);
+    final List<Integer> listBig = range(bigSize);
     final Iterable<Integer> iterableBig = listBig::iterator;
     assertThat(iterableBig, not(instanceOf(Collection.class)));
     checkShorterThan(listBig, bigSize);
@@ -202,6 +205,40 @@ public class UtilTest {
     assertThat(Static.find(list, i -> i > 1), is(1));
     assertThat(Static.find(list, i -> i > 10), is(-1));
     assertThat(Static.find(emptyList, i -> i > 0), is(-1));
+  }
+
+  /** Tests {@link Static#last(List)},
+   * {@link Static#skip(List)},
+   * {@link Static#skipLast(List)}. */
+  @Test void testLast() {
+    final List<Integer> list = Arrays.asList(1, 7, 3);
+    final List<Integer> emptyList = Collections.emptyList();
+    assertThat(Static.last(list), is(3));
+    assertThrows(IndexOutOfBoundsException.class, () -> Static.last(emptyList));
+
+    assertThat(Static.skip(list), hasSize(2));
+    assertThat(Static.skip(list), is(Arrays.asList(7, 3)));
+    assertThat(Static.skip(list, 1), hasSize(2));
+    assertThat(Static.skip(list, 1), is(Arrays.asList(7, 3)));
+    assertThat(Static.skip(emptyList, 0), is(emptyList));
+    assertThat(Static.skip(list, 0), is(list));
+    assertThat(Static.skip(list, 2), hasSize(1));
+    assertThat(Static.skip(list, 2), is(Collections.singletonList(3)));
+    assertThat(Static.skip(list, 3), empty());
+    assertThrows(IllegalArgumentException.class, () -> Static.skip(emptyList));
+    assertThrows(IllegalArgumentException.class, () -> Static.skip(list, 7));
+
+    assertThat(Static.skipLast(list), hasSize(2));
+    assertThat(Static.skipLast(list), is(Arrays.asList(1, 7)));
+    assertThat(Static.skipLast(list, 1), hasSize(2));
+    assertThat(Static.skipLast(list, 1), is(Arrays.asList(1, 7)));
+    assertThat(Static.skipLast(emptyList, 0), is(emptyList));
+    assertThat(Static.skipLast(list, 0), is(list));
+    assertThat(Static.skipLast(list, 2), hasSize(1));
+    assertThat(Static.skipLast(list, 2), is(Collections.singletonList(1)));
+    assertThat(Static.skipLast(list, 3), empty());
+    assertThrows(IllegalArgumentException.class, () -> Static.skipLast(emptyList));
+    assertThrows(IllegalArgumentException.class, () -> Static.skipLast(list, 7));
   }
 
   /** Unit tests for {@link Pos}. */

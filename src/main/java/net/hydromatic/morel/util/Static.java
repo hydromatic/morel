@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
-import org.apache.calcite.util.Util;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -112,6 +111,14 @@ public class Static {
     return true;
   }
 
+  /** Returns the last element of a list.
+   *
+   * @throws java.lang.IndexOutOfBoundsException if the list is empty
+   */
+  public static <E> E last(List<E> list) {
+    return list.get(list.size() - 1);
+  }
+
   /** Returns all but the first element of a list. */
   public static <E> List<E> skip(List<E> list) {
     return skip(list, 1);
@@ -120,6 +127,16 @@ public class Static {
   /** Returns all but the first {@code count} elements of a list. */
   public static <E> List<E> skip(List<E> list, int count) {
     return list.subList(count, list.size());
+  }
+
+  /** Returns every element of a list but its last element. */
+  public static <E> List<E> skipLast(List<E> list) {
+    return skipLast(list, 1);
+  }
+
+  /** Returns every element of a list but its last {@code n} elements. */
+  public static <E> List<E> skipLast(List<E> list, int n) {
+    return list.subList(0, list.size() - n);
   }
 
   /** Returns a list with one element appended.
@@ -171,7 +188,7 @@ public class Static {
   /** Lazily transforms a list, applying a mapping function to each element. */
   public static <E, T> List<T> transform(List<? extends E> elements,
       Function<E, T> mapper) {
-    return Util.transform(elements, mapper);
+    return org.apache.calcite.util.Util.transform(elements, mapper);
   }
 
   /** Lazily transforms an Iterable, applying a mapping function to each

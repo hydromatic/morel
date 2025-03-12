@@ -61,15 +61,15 @@ import java.util.SortedMap;
 
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.skip;
+import static net.hydromatic.morel.util.Static.skipLast;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.calcite.util.Util.intersects;
-import static org.apache.calcite.util.Util.last;
-import static org.apache.calcite.util.Util.skipLast;
 
 /** Converts AST expressions to Core expressions. */
 public class Resolver {

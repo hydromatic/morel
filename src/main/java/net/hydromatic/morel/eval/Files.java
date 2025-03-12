@@ -45,6 +45,8 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
+import static org.apache.calcite.util.Util.first;
+
 import static java.nio.file.Files.newInputStream;
 import static java.util.Objects.requireNonNull;
 
@@ -180,7 +182,7 @@ public class Files {
 
       entries = new TreeMap<>(RecordType.ORDERING);
       for (java.io.File subFile
-          : Util.first(ioFile.listFiles(), new java.io.File[0])) {
+          : first(ioFile.listFiles(), new java.io.File[0])) {
         UnknownFile f = createUnknown(this, subFile);
         entries.put(f.baseName, f);
       }

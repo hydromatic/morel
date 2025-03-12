@@ -30,7 +30,6 @@ import net.hydromatic.morel.type.TypeVar;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.util.Util;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -62,6 +61,7 @@ import static net.hydromatic.morel.Ml.MatchCoverage.OK;
 import static net.hydromatic.morel.Ml.MatchCoverage.REDUNDANT;
 import static net.hydromatic.morel.Ml.assertError;
 import static net.hydromatic.morel.Ml.ml;
+import static net.hydromatic.morel.TestUtils.first;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -2771,7 +2771,7 @@ public class MainTest {
     };
     for (int i = 0; i < expressions.length / 2; i++) {
       String ml = expressions[i * 2];
-      String expected = "val it = " + Util.first(expressions[i  * 2 + 1], ml);
+      String expected = "val it = " + first(expressions[i  * 2 + 1], ml);
       ml(ml).assertCore(-1, hasToString(expected));
     }
   }
