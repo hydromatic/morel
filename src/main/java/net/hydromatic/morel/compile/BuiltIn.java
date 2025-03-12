@@ -1262,20 +1262,29 @@ public enum BuiltIn {
   RELATIONAL_COUNT("Relational", "count", "count", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
 
-  /** Function "Relational.exists", aka "exists", of type "&alpha; list
+  /** Function "Relational.nonEmpty", of type "&alpha; list
    * &rarr; bool".
    *
    * <p>For example,
    *
    * <pre>{@code
    * from d in depts
-   * where exists (
+   * where nonEmpty (
    *   from e in emps
    *   where e.deptno = d.deptno
-   *   andalso e.job = 'CLERK')
+   *   andalso e.job = "CLERK")
+   * }</pre>
+   *
+   * <p>In idiomatic Morel, that would be written using {@code exists}:
+   *
+   * <pre>{@code
+   * from d in depts
+   * where (exists e in emps
+   *   where e.deptno = d.deptno
+   *   andalso e.job = "CLERK")
    * }</pre>
    */
-  RELATIONAL_EXISTS("Relational", "exists", "exists", ts ->
+  RELATIONAL_NON_EMPTY("Relational", "nonEmpty", "nonEmpty", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
 
   /** Function "Relational.notExists", aka "notExists", of type "&alpha; list
@@ -1285,17 +1294,26 @@ public enum BuiltIn {
    *
    * <pre>{@code
    * from d in depts
-   * where notExists (
+   * where empty (
    *   from e in emps
    *   where e.deptno = d.deptno
-   *   andalso e.job = 'CLERK')
+   *   andalso e.job = "CLERK")
    * }</pre>
    *
    * <p>{@code notExists list} is equivalent to {@code not (exists list)},
    * but the former may be more convenient, because it requires fewer
    * parentheses.
+   *
+   * <p>In idiomatic Morel, that would be written using {@code exists}:
+   *
+   * <pre>{@code
+   * from d in depts
+   * where not (exists e in emps
+   *   where e.deptno = d.deptno
+   *   andalso e.job = "CLERK")
+   * }</pre>
    */
-  RELATIONAL_NOT_EXISTS("Relational", "notExists", "notExists", ts ->
+  RELATIONAL_EMPTY("Relational", "empty", "empty", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
 
   /** Function "Relational.only", aka "only", of type "&alpha; list

@@ -132,10 +132,10 @@ Real;
 >      trunc:real -> int, unordered:real * real -> bool}
 Relational;
 > val it =
->   {count=fn,exists=fn,iterate=fn,max=fn,min=fn,notExists=fn,only=fn,sum=fn}
->   : {count:'a list -> int, exists:'b list -> bool,
+>   {count=fn,empty=fn,iterate=fn,max=fn,min=fn,nonEmpty=fn,only=fn,sum=fn}
+>   : {count:'a list -> int, empty:'b list -> bool,
 >      iterate:'c list -> ('c list * 'c list -> 'c list) -> 'c list,
->      max:'d list -> 'd, min:'e list -> 'e, notExists:'f list -> bool,
+>      max:'d list -> 'd, min:'e list -> 'e, nonEmpty:'f list -> bool,
 >      only:'g list -> 'g, sum:'h list -> 'h}
 
 (* Operators --------------------------------------------------- *)
@@ -916,15 +916,15 @@ Sys.plan ();
 >   : string
 
 (*) val exists : ('a -> bool) -> 'a list -> bool
-List.exists;
+List.`exists`;
 > val it = fn : ('a -> bool) -> 'a list -> bool
-List.exists (fn x => x mod 2 = 0) [1,3,5];
+List.`exists` (fn x => x mod 2 = 0) [1,3,5];
 > val it = false : bool
-List.exists (fn x => x mod 2 = 0) [2,4,6];
+List.`exists` (fn x => x mod 2 = 0) [2,4,6];
 > val it = true : bool
-List.exists (fn x => x mod 2 = 0) [1,2,3];
+List.`exists` (fn x => x mod 2 = 0) [1,2,3];
 > val it = true : bool
-List.exists (fn x => x mod 2 = 0) [];
+List.`exists` (fn x => x mod 2 = 0) [];
 > val it = false : bool
 Sys.plan ();
 > val it =
@@ -2634,24 +2634,24 @@ Sys.plan ();
 > val it = "apply(fnValue Relational.count, argCode tuple(constant(false)))"
 >   : string
 
-Relational.exists [1, 2, 3];
+Relational.nonEmpty [1, 2, 3];
 > val it = true : bool
-Relational.exists [];
+Relational.nonEmpty [];
 > val it = false : bool
-Relational.exists [false];
+Relational.nonEmpty [false];
 > val it = true : bool
 Sys.plan ();
-> val it = "apply(fnValue Relational.exists, argCode tuple(constant(false)))"
+> val it = "apply(fnValue Relational.nonEmpty, argCode tuple(constant(false)))"
 >   : string
 
-Relational.notExists [1, 2, 3];
+Relational.empty [1, 2, 3];
 > val it = false : bool
-Relational.notExists [];
+Relational.empty [];
 > val it = true : bool
-Relational.notExists [false];
+Relational.empty [false];
 > val it = false : bool
 Sys.plan ();
-> val it = "apply(fnValue Relational.notExists, argCode tuple(constant(false)))"
+> val it = "apply(fnValue Relational.empty, argCode tuple(constant(false)))"
 >   : string
 
 val emp = [
@@ -2850,7 +2850,7 @@ Sys.env ();
 >    ("Real",
 >     "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",
->     "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+>     "{count:forall 'a. 'a list -> int, empty:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, nonEmpty:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
 >    ("SOME","forall 'a. 'a -> 'a option"),
 >    ("String",
 >     "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
@@ -2862,8 +2862,8 @@ Sys.env ();
 >    ("ceil","real -> int"),("concat","string list -> string"),
 >    ("count","forall 'a. 'a list -> int"),
 >    ("emp","{empno:int, ename:string, mgr:int} list"),
->    ("env","unit -> (string * string) list"),
->    ("exists","forall 'a. 'a list -> bool"),("explode","string -> char list"),
+>    ("empty","forall 'a. 'a list -> bool"),
+>    ("env","unit -> (string * string) list"),("explode","string -> char list"),
 >    ("f","real -> int * int * int * int"),("false","bool"),("file","{...}"),
 >    ("floor","real -> int"),
 >    ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
@@ -2877,8 +2877,8 @@ Sys.env ();
 >    ("length","forall 'a. 'a list -> int"),
 >    ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
 >    ("max","forall 'a. 'a list -> 'a"),("min","forall 'a. 'a list -> 'a"),
->    ("nan","real"),("noneInt","int option"),("not","bool -> bool"),
->    ("notExists","forall 'a. 'a list -> bool"),
+>    ("nan","real"),("nonEmpty","forall 'a. 'a list -> bool"),
+>    ("noneInt","int option"),("not","bool -> bool"),
 >    ("null","forall 'a. 'a list -> bool"),("only","forall 'a. 'a list -> 'a"),
 >    ("op *","forall 'a. 'a * 'a -> 'a"),("op +","forall 'a. 'a * 'a -> 'a"),
 >    ("op -","forall 'a. 'a * 'a -> 'a"),("op /","forall 'a. 'a * 'a -> 'a"),
@@ -2915,7 +2915,7 @@ env ();
 >    ("Real",
 >     "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",
->     "{count:forall 'a. 'a list -> int, exists:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, notExists:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
+>     "{count:forall 'a. 'a list -> int, empty:forall 'a. 'a list -> bool, iterate:forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list, max:forall 'a. 'a list -> 'a, min:forall 'a. 'a list -> 'a, nonEmpty:forall 'a. 'a list -> bool, only:forall 'a. 'a list -> 'a, sum:forall 'a. 'a list -> 'a}"),
 >    ("SOME","forall 'a. 'a -> 'a option"),
 >    ("String",
 >     "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
@@ -2927,8 +2927,8 @@ env ();
 >    ("ceil","real -> int"),("concat","string list -> string"),
 >    ("count","forall 'a. 'a list -> int"),
 >    ("emp","{empno:int, ename:string, mgr:int} list"),
->    ("env","unit -> (string * string) list"),
->    ("exists","forall 'a. 'a list -> bool"),("explode","string -> char list"),
+>    ("empty","forall 'a. 'a list -> bool"),
+>    ("env","unit -> (string * string) list"),("explode","string -> char list"),
 >    ("f","real -> int * int * int * int"),("false","bool"),("file","{...}"),
 >    ("floor","real -> int"),
 >    ("foldl","forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b"),
@@ -2942,8 +2942,8 @@ env ();
 >    ("length","forall 'a. 'a list -> int"),
 >    ("map","forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list"),
 >    ("max","forall 'a. 'a list -> 'a"),("min","forall 'a. 'a list -> 'a"),
->    ("nan","real"),("noneInt","int option"),("not","bool -> bool"),
->    ("notExists","forall 'a. 'a list -> bool"),
+>    ("nan","real"),("nonEmpty","forall 'a. 'a list -> bool"),
+>    ("noneInt","int option"),("not","bool -> bool"),
 >    ("null","forall 'a. 'a list -> bool"),("only","forall 'a. 'a list -> 'a"),
 >    ("op *","forall 'a. 'a * 'a -> 'a"),("op +","forall 'a. 'a * 'a -> 'a"),
 >    ("op -","forall 'a. 'a * 'a -> 'a"),("op /","forall 'a. 'a * 'a -> 'a"),
@@ -3208,9 +3208,9 @@ Sys.plan ();
 >   : string
 
 (*) Vector.exists : ('a -> bool) -> 'a vector -> bool
-Vector.exists;
+Vector.`exists`;
 > val it = fn : ('a -> bool) -> 'a vector -> bool
-Vector.exists (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
+Vector.`exists` (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
 > val it = true : bool
 Sys.plan ();
 > val it =

@@ -820,6 +820,11 @@ public enum CoreBuilder {
     return call(typeSystem, BuiltIn.OP_ELEM, a0.type, Pos.ZERO, a0, a1);
   }
 
+  public Core.Exp not(TypeSystem typeSystem, Core.Exp a0) {
+    Core.Literal not = functionLiteral(typeSystem, BuiltIn.NOT);
+    return apply(a0.pos, PrimitiveType.BOOL, not, a0);
+  }
+
   public Core.Exp andAlso(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {
     return call(typeSystem, BuiltIn.Z_ANDALSO, a0, a1);
   }
@@ -859,6 +864,16 @@ public enum CoreBuilder {
   public Core.Exp only(TypeSystem typeSystem, Pos pos, Core.Exp a0) {
     return call(typeSystem, BuiltIn.RELATIONAL_ONLY,
         ((ListType) a0.type).elementType, pos, a0);
+  }
+
+  public Core.Exp nonEmpty(TypeSystem typeSystem, Pos pos, Core.Exp a0) {
+    return call(typeSystem, BuiltIn.RELATIONAL_NON_EMPTY, PrimitiveType.BOOL,
+        pos, a0);
+  }
+
+  public Core.Exp empty(TypeSystem typeSystem, Pos pos, Core.Exp a0) {
+    return call(typeSystem, BuiltIn.RELATIONAL_EMPTY, PrimitiveType.BOOL,
+        pos, a0);
   }
 
   public Core.Exp union(TypeSystem typeSystem, Core.Exp a0, Core.Exp a1) {

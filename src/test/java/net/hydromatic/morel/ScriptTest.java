@@ -141,7 +141,8 @@ public class ScriptTest {
     final File scriptDirectory = inFile.getParentFile();
     final boolean loadDictionary =
         inFile.getPath()
-            .matches(".*/(blog|dummy|foreign|hybrid|suchThat)\\.(sml|smli)");
+            .matches(".*/(blog|dummy|foreign|hybrid|logic"
+                + "|suchThat)\\.(sml|smli)");
     final Map<String, ForeignValue> dictionary =
         loadDictionary
             ? Calcite.withDataSets(BuiltInDataSet.DICTIONARY).foreignValues()

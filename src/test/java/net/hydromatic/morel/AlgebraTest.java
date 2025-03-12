@@ -576,11 +576,6 @@ public class AlgebraTest {
   /** Tests that {@code exists} is pushed down to Calcite.
    * (There are no correlating variables.) */
   @Test void testExists() {
-    final String ml = "from d in scott.dept\n"
-        + "where exists (\n"
-        + "  from e in scott.emp\n"
-        + "  where e.job = \"CLERK\")\n"
-        + "yield d.deptno";
     String plan = "calcite(plan "
         + "LogicalProject(deptno=[$0])\n"
         + "  LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n"
@@ -594,30 +589,31 @@ public class AlgebraTest {
         + "ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
         + "              JdbcTableScan(table=[[scott, EMP]])\n"
         + ")";
-    ml(ml)
-        .withBinding("scott", BuiltInDataSet.SCOTT)
-        .with(Prop.HYBRID, true)
-        .assertType("int list")
-        .assertPlan(isFullyCalcite())
-        .assertPlan(isCode(plan))
-        .assertEvalIter(equalsOrdered(10, 20, 30, 40));
-  }
-
-  /** Tests that {@code not exists} (uncorrelated), also {@code notExists} and
-   * {@code List.null}, is pushed down to Calcite. */
-  @Test void testNotExists() {
     final UnaryOperator<Ml> fn = ml ->
         ml.withBinding("scott", BuiltInDataSet.SCOTT)
             .with(Prop.HYBRID, true)
             .assertType("int list")
             .assertPlan(isFullyCalcite())
+            .assertPlan(isCode(plan))
             .assertEvalIter(equalsOrdered(10, 20, 30, 40));
     final String ml0 = "from d in scott.dept\n"
-        + "where not (exists (\n"
+        + "where Relational.nonEmpty (\n"
         + "  from e in scott.emp\n"
-        + "  where e.job = \"CLARK KENT\"))\n"
+        + "  where e.job = \"CLERK\")\n"
         + "yield d.deptno";
-    final String plan0 = "calcite(plan "
+    final String ml1 = "from d in scott.dept\n"
+        + "where (\n"
+        + "  exists e in scott.emp\n"
+        + "  where e.job = \"CLERK\")\n"
+        + "yield d.deptno";
+    fn.apply(ml(ml0));
+    fn.apply(ml(ml1));
+  }
+
+  /** Tests that {@code not exists} (uncorrelated), also {@code empty} and
+   * {@code List.null}, is pushed down to Calcite. */
+  @Test void testNotExists() {
+    final String plan = "calcite(plan "
         + "LogicalProject(deptno=[$0])\n"
         + "  LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n"
         + "    LogicalFilter(condition=[IS NULL($3)])\n"
@@ -631,8 +627,20 @@ public class AlgebraTest {
         + "ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
         + "                JdbcTableScan(table=[[scott, EMP]])\n"
         + ")";
+    final UnaryOperator<Ml> fn = ml ->
+        ml.withBinding("scott", BuiltInDataSet.SCOTT)
+            .with(Prop.HYBRID, true)
+            .assertType("int list")
+            .assertPlan(isFullyCalcite())
+            .assertEvalIter(equalsOrdered(10, 20, 30, 40))
+            .assertPlan(isCode(plan));
+    final String ml0 = "from d in scott.dept\n"
+        + "where Relational.empty (\n"
+        + "  from e in scott.emp\n"
+        + "  where e.job = \"CLARK KENT\")\n"
+        + "yield d.deptno";
     final String ml1 = "from d in scott.dept\n"
-        + "where notExists (\n"
+        + "where empty (\n"
         + "  from e in scott.emp\n"
         + "  where e.job = \"CLARK KENT\")\n"
         + "yield d.deptno";
@@ -641,19 +649,19 @@ public class AlgebraTest {
         + "  from e in scott.emp\n"
         + "  where e.job = \"CLARK KENT\")\n"
         + "yield d.deptno";
-    fn.apply(ml(ml0))
-        .assertPlan(isCode(plan0));
+    final String ml3 = "from d in scott.dept\n"
+        + "where not (\n"
+        + "  exists e in scott.emp\n"
+        + "  where e.job = \"CLARK KENT\")\n"
+        + "yield d.deptno";
+    fn.apply(ml(ml0));
     fn.apply(ml(ml1));
     fn.apply(ml(ml2));
+    fn.apply(ml(ml3));
   }
 
   /** Tests that correlated {@code exists} is pushed down to Calcite. */
   @Test void testExistsCorrelated() {
-    final String ml = "from d in scott.dept\n"
-        + "where exists (\n"
-        + "  from e in scott.emp\n"
-        + "  where e.deptno = d.deptno\n"
-        + "  andalso e.job = \"CLERK\")";
     String plan = "calcite(plan "
         + "LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n"
         + "  LogicalJoin(condition=[=($0, $3)], joinType=[inner])\n"
@@ -668,16 +676,28 @@ public class AlgebraTest {
         + "ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
         + "              JdbcTableScan(table=[[scott, EMP]])\n"
         + ")";
-    ml(ml)
-        .withBinding("scott", BuiltInDataSet.SCOTT)
-        .with(Prop.HYBRID, true)
-        .assertType("{deptno:int, dname:string, loc:string} list")
-        .assertPlan(isFullyCalcite())
-        .assertPlan(isCode(plan))
-        .assertEvalIter(
-            equalsOrdered(list(10, "ACCOUNTING", "NEW YORK"),
-                list(20, "RESEARCH", "DALLAS"),
-                list(30, "SALES", "CHICAGO")));
+    final UnaryOperator<Ml> fn = ml ->
+        ml.withBinding("scott", BuiltInDataSet.SCOTT)
+            .with(Prop.HYBRID, true)
+            .assertType("{deptno:int, dname:string, loc:string} list")
+            .assertPlan(isFullyCalcite())
+            .assertPlan(isCode(plan))
+            .assertEvalIter(
+                equalsOrdered(list(10, "ACCOUNTING", "NEW YORK"),
+                    list(20, "RESEARCH", "DALLAS"),
+                    list(30, "SALES", "CHICAGO")));
+    final String ml0 = "from d in scott.dept\n"
+        + "where Relational.nonEmpty (\n"
+        + "  from e in scott.emp\n"
+        + "  where e.deptno = d.deptno\n"
+        + "  andalso e.job = \"CLERK\")";
+    final String ml1 = "from d in scott.dept\n"
+        + "where (\n"
+        + "  exists e in scott.emp\n"
+        + "  where e.deptno = d.deptno\n"
+        + "  andalso e.job = \"CLERK\")";
+    fn.apply(ml(ml0));
+    fn.apply(ml(ml1));
   }
 
   @Test void testCorrelatedListSubQuery() {

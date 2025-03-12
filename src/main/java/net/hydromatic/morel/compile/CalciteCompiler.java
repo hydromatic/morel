@@ -96,8 +96,8 @@ public class CalciteCompiler extends Compiler {
       ImmutableMap.<BuiltIn, SqlOperator>builder()
           .put(BuiltIn.NOT, SqlStdOperatorTable.NOT)
           .put(BuiltIn.LIST_NULL, SqlStdOperatorTable.EXISTS)
-          .put(BuiltIn.RELATIONAL_EXISTS, SqlStdOperatorTable.EXISTS)
-          .put(BuiltIn.RELATIONAL_NOT_EXISTS, SqlStdOperatorTable.EXISTS)
+          .put(BuiltIn.RELATIONAL_NON_EMPTY, SqlStdOperatorTable.EXISTS)
+          .put(BuiltIn.RELATIONAL_EMPTY, SqlStdOperatorTable.EXISTS)
           .put(BuiltIn.RELATIONAL_ONLY, SqlStdOperatorTable.SCALAR_QUERY)
           .build();
 
@@ -509,16 +509,16 @@ public class CalciteCompiler extends Compiler {
         if (unaryOp != null) {
           switch (op) {
           case LIST_NULL:
-          case RELATIONAL_EXISTS:
-          case RELATIONAL_NOT_EXISTS:
+          case RELATIONAL_EMPTY:
+          case RELATIONAL_NON_EMPTY:
           case RELATIONAL_ONLY:
             final RelNode r = toRel2(cx, apply.arg);
             if (r != null) {
               switch (op) {
               case LIST_NULL:
-              case RELATIONAL_NOT_EXISTS:
+              case RELATIONAL_EMPTY:
                 return cx.relBuilder.not(RexSubQuery.exists(r));
-              case RELATIONAL_EXISTS:
+              case RELATIONAL_NON_EMPTY:
                 return RexSubQuery.exists(r);
               case RELATIONAL_ONLY:
                 return RexSubQuery.scalar(r);

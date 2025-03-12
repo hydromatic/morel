@@ -39,7 +39,14 @@ Contributions are welcome!
 In Morel but not Standard ML:
 * `from` expression with `in`, `join`, `where`, `distinct`, `group`,
   `compute`, `into`, `order`, `skip`, `take`, `through`, `yield` clauses
-* `union`, `except`, `intersect`, `elem`, `notelem` operators
+* `elem`,
+  `except`,
+  `exists`,
+  `forall`,
+  `implies`,
+  `intersect`,
+  `notelem`,
+  `union` operators
 * "*lab* `=`" is optional in `exprow`
 * identifiers may be quoted
   (for example, <code>\`an identifier\`</code>)
@@ -139,8 +146,12 @@ In Standard ML but not in Morel:
                                 conditional
     | <b>case</b> <i>exp</i> <b>of</b> <i>match</i>         case analysis
     | <b>fn</b> <i>match</i>                  function
-    | <b>from</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step</i>*
+    | <b>from</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step</i>* [ <i>terminalStep</i> ]
                                 relational expression (<i>s</i> &ge; 0)
+    | <b>exists</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step</i>*
+                                existential quantification (<i>s</i> &ge; 0)
+    | <b>forall</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step</i>* <b>require</b> <i>exp</i>
+                                universal quantification (<i>s</i> &ge; 0)
 <i>exprow</i> &rarr; <i>exprowItem</i> [<b>,</b> <i>exprowItem</i> ]*
                                 expression row
 <i>exprowItem</i> &rarr; [ <i>lab</i> <b>=</b> ] <i>exp</i>
@@ -150,22 +161,21 @@ In Standard ML but not in Morel:
 <i>scan</i> &rarr; <i>pat</i> <b>in</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]    iteration
     | <i>pat</i> <b>=</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]      single iteration
     | <i>var</i>                       unbounded variable
-<i>step</i> &rarr; <b>where</b> <i>exp</i>                filter clause
-    | <b>join</b> <i>scan<sub>1</sub></i> [ <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ]
+<i>step</i> &rarr; <b>join</b> <i>scan<sub>1</sub></i> [ <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ]
                                 join clause
+    | <b>where</b> <i>exp</i>                 filter clause
     | <b>distinct</b>                  distinct clause
     | <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
       [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]
                                 group clause (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
-    | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>
-                                compute clause (<i>a</i> &gt; 1)
     | <b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>
                                 order clause (<i>o</i> &ge; 1)
     | <b>skip</b> <i>exp</i>                  skip clause
     | <b>take</b> <i>exp</i>                  take clause
-    | <b>into</b> <i>exp</i>                  into clause
     | <b>through</b> <i>pat</i> <b>in</b> <i>exp</i>        through clause
     | <b>yield</b> <i>exp</i>                 yield clause
+<i>terminalStep</i> &rarr; <b>into</b> <i>exp</i>         into clause
+    | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>  compute clause (<i>a</i> &gt; 1)
 <i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>
 <i>agg</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i> [ <b>of</b> <i>exp</i> ]
 <i>orderItem</i> &rarr; <i>exp</i> [ <b>desc</b> ]
@@ -276,6 +286,7 @@ This grammar uses the following notation:
 | o        |    infix 3 | Compose |
 | andalso  |    infix 2 | Logical and |
 | orelse   |    infix 1 | Logical or |
+| implies  |    infix 0 | Logical implication |
 
 ## Built-in types
 
@@ -433,11 +444,11 @@ Exception:
 | Real.toString | real &rarr; string | "toString r" converts a `real` into a `string`; equivalent to `(fmt (StringCvt.GEN NONE) r)` |
 | Real.unordered | real * real &rarr; bool | "unordered (x, y)" returns true if x and y are unordered, i.e., at least one of x and y is NaN. |
 | Relational.count, count | int list &rarr; int | "count list" returns the number of elements in `list`. Often used with `group`, for example `from e in emps group e.deptno compute countId = count`. |
-| Relational.exists | &alpha; list &rarr; bool | "exists list" returns whether the list has at least one element, for example `from d in depts where exists (from e where e.deptno = d.deptno)`. |
-| Relational.notExists | &alpha; list &rarr; bool | "notExists list" returns whether the list is empty, for example `from d in depts where notExists (from e where e.deptno = d.deptno)`. |
-| Relational.only | &alpha; list &rarr; &alpha; | "only list" returns the sole element of list, for example `from e in emps yield only (from d where d.deptno = e.deptno)`. |
+| Relational.empty, empty | &alpha; list &rarr; bool | "empty list" returns whether the list is empty, for example `from d in depts where empty (from e where e.deptno = d.deptno)`. |
 | Relational.max, max | &alpha; list &rarr; &alpha; | "max list" returns the greatest element of `list`. Often used with `group`, for example `from e in emps group e.deptno compute maxId = max of e.id`. |
 | Relational.min, min | &alpha; list &rarr; &alpha; | "min list" returns the least element of `list`. Often used with `group`, for example `from e in emps group e.deptno compute minId = min of e.id`. |
+| Relational.nonEmpty, nonEmpty | &alpha; list &rarr; bool | "nonEmpty list" returns whether the list has at least one element, for example `from d in depts where nonEmpty (from e where e.deptno = d.deptno)`. |
+| Relational.only, only | &alpha; list &rarr; &alpha; | "only list" returns the sole element of list, for example `from e in emps yield only (from d where d.deptno = e.deptno)`. |
 | Relational.sum, sum | int list &rarr; int | "sum list" returns the sum of the elements of `list`. Often used with `group`, for example `from e in emps group e.deptno compute sumId = sum of e.id`. |
 | String.concat | string list &rarr; string | "concat l" is the concatenation of all the strings in `l`. This raises `Size` if the sum of all the sizes is greater than `maxSize`. |
 | String.concatWith | string &rarr; string list &rarr; string | "concatWith s l" returns the concatenation of the strings in the list `l` using the string `s` as a separator. This raises `Size` if the size of the resulting string would be greater than `maxSize`. |

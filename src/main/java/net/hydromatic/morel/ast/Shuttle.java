@@ -222,6 +222,14 @@ public class Shuttle {
     return ast.from(from.pos, from.steps);
   }
 
+  protected Ast.Exp visit(Ast.Exists exists) {
+    return ast.exists(exists.pos, exists.steps);
+  }
+
+  protected Ast.Exp visit(Ast.Forall forall) {
+    return ast.forall(forall.pos, forall.steps);
+  }
+
   protected AstNode visit(Ast.Order order) {
     return ast.order(order.pos, order.orderItems);
   }
@@ -242,6 +250,10 @@ public class Shuttle {
 
   protected AstNode visit(Ast.Distinct distinct) {
     return distinct;
+  }
+
+  protected AstNode visit(Ast.Require require) {
+    return ast.require(require.pos, require.exp.accept(this));
   }
 
   protected AstNode visit(Ast.Skip skip) {

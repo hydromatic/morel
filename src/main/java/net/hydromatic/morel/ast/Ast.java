@@ -1485,16 +1485,17 @@ public class Ast {
     }
   }
 
-  /** From expression. */
-  public static class From extends Exp {
+  /** Base class for "{@code from}", "{@code exists}" or "{@code forall}"
+   * expression. */
+  public abstract static class Query extends Exp {
     public final ImmutableList<FromStep> steps;
     /** An implicit yield expression, if the last step is not a {@link Yield};
      * null if the last step is a {@link Yield}. */
     public final @Nullable Exp implicitYieldExp;
 
-    From(Pos pos, ImmutableList<FromStep> steps,
+    Query(Pos pos, Op op, ImmutableList<FromStep> steps,
         @Nullable Exp implicitYieldExp) {
-      super(pos, Op.FROM);
+      super(pos, op);
       this.steps = requireNonNull(steps);
       this.implicitYieldExp = implicitYieldExp;
     }
@@ -1577,19 +1578,11 @@ public class Ast {
       }
     }
 
-    public Exp accept(Shuttle shuttle) {
-      return shuttle.visit(this);
-    }
-
-    @Override public void accept(Visitor visitor) {
-      visitor.visit(this);
-    }
-
     @Override AstWriter unparse(AstWriter w, int left, int right) {
       if (left > op.left || op.right < right) {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
-        w.append("from");
+        w.append(op.lowerName()); // "from", "exists", "forall"
         forEachIndexed(steps, (step, i) -> {
           if (step.op == Op.SCAN && i > 0) {
             if (steps.get(i - 1).op == Op.SCAN) {
@@ -1604,13 +1597,10 @@ public class Ast {
       }
     }
 
-    /** Creates a copy of this {@code From} with given contents,
-     * or {@code this} if the contents are the same. */
-    public From copy(List<FromStep> steps, @Nullable Exp implicitYieldExp) {
-      return this.steps.equals(steps)
-          ? this
-          : ast.from(pos, steps, implicitYieldExp);
-    }
+    /** Creates a copy of this {@code From} or {@code Exists} with given
+     * contents, or {@code this} if the contents are the same. */
+    public abstract Query copy(List<FromStep> steps,
+        @Nullable Exp implicitYieldExp);
 
     /** Returns whether this {@code from} expression ends with a {@code compute}
      * step. If so, it is a <em>monoid</em> comprehension, not a <em>monad</em>
@@ -1625,6 +1615,77 @@ public class Ast {
     public boolean isInto() {
       return !steps.isEmpty()
           && steps.get(steps.size() - 1).op == Op.INTO;
+    }
+  }
+
+  /** From expression. */
+  public static class From extends Query {
+    From(Pos pos, ImmutableList<FromStep> steps,
+        @Nullable Exp implicitYieldExp) {
+      super(pos, Op.FROM, steps, implicitYieldExp);
+    }
+
+    /** Creates a copy of this {@code From} with given contents,
+     * or {@code this} if the contents are the same. */
+    @Override public From copy(List<FromStep> steps,
+        @Nullable Exp implicitYieldExp) {
+      return this.steps.equals(steps)
+          ? this
+          : ast.from(pos, steps, implicitYieldExp);
+    }
+
+    @Override public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+  }
+
+  /** Exists expression. */
+  public static class Exists extends Query {
+    Exists(Pos pos, ImmutableList<FromStep> steps) {
+      super(pos, Op.EXISTS, steps, null);
+    }
+
+    @Override public Exists copy(List<FromStep> steps,
+        @Nullable Exp implicitYieldExp) {
+      checkArgument(implicitYieldExp == null);
+      return this.steps.equals(steps)
+          ? this
+          : ast.exists(pos, steps);
+    }
+
+    @Override public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+  }
+
+  /** Forall expression. */
+  public static class Forall extends Query {
+    Forall(Pos pos, ImmutableList<FromStep> steps) {
+      super(pos, Op.FORALL, steps, null);
+    }
+
+    @Override public Forall copy(List<FromStep> steps,
+        @Nullable Exp implicitYieldExp) {
+      checkArgument(implicitYieldExp == null);
+      return this.steps.equals(steps)
+          ? this
+          : ast.forall(pos, steps);
+    }
+
+    @Override public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
     }
   }
 
@@ -1729,6 +1790,32 @@ public class Ast {
 
     public Where copy(Exp exp) {
       return this.exp.equals(exp) ? this : new Where(pos, exp);
+    }
+  }
+
+  /** A {@code require} clause in a {@code forall} expression. */
+  public static class Require extends FromStep {
+    public final Exp exp;
+
+    Require(Pos pos, Exp exp) {
+      super(pos, Op.REQUIRE);
+      this.exp = exp;
+    }
+
+    @Override AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" require ").append(exp, 0, 0);
+    }
+
+    @Override public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Require copy(Exp exp) {
+      return this.exp.equals(exp) ? this : new Require(pos, exp);
     }
   }
 

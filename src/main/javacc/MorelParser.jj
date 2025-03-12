@@ -339,6 +339,42 @@ Exp from() :
   }
 }
 
+/** Parses a "{@code exists id in exp where exp}" expression. */
+Exp exists() :
+{
+  final Span span;
+  Span stepSpan;
+  final List<FromStep> steps = new ArrayList<>();
+}
+{
+  <EXISTS> { span = Span.of(pos()); }
+  [ fromFirstScan(steps)
+    ( <COMMA> fromScan(steps) )*
+  ]
+  ( fromStep(steps) )*
+  {
+    return ast.exists(span.end(this), steps);
+  }
+}
+
+/** Parses a "{@code forall id in exp require exp}" expression. */
+Exp forall() :
+{
+  final Span span;
+  Span stepSpan;
+  final List<FromStep> steps = new ArrayList<>();
+}
+{
+  <FORALL> { span = Span.of(pos()); }
+  [ fromFirstScan(steps)
+    ( <COMMA> fromScan(steps) )*
+  ]
+  ( fromStep(steps) )*
+  {
+    return ast.forall(span.end(this), steps);
+  }
+}
+
 void fromFirstScan(List<FromStep> steps) :
 {
   final Pair<Pat, Exp> patExp;
@@ -385,6 +421,7 @@ void fromStep(List<FromStep> steps) :
   final Exp skipExp;
   final Exp throughExp;
   final Exp takeExp;
+  final Exp requireExp;
   final Exp yieldExp;
   final PairList<Id, Exp> groupExps;
   final Pat pat;
@@ -429,6 +466,10 @@ void fromStep(List<FromStep> steps) :
 |
   <ORDER> { span = Span.of(pos()); } orderItems = orderItemCommaList() {
     steps.add(ast.order(span.end(this), orderItems));
+  }
+|
+  <REQUIRE> { span = Span.of(pos()); } requireExp = expression() {
+    steps.add(ast.require(span.end(this), requireExp));
   }
 |
   <SKIP_> { span = Span.of(pos()); } skipExp = expression() {
@@ -802,13 +843,29 @@ Exp expression1() :
   { return e; }
 }
 
+/** Parses an expression of precedence level 0 (implies). */
+Exp expression0() :
+{
+  Exp e;
+  Exp e2;
+}
+{
+  e = expression1()
+  (
+    <IMPLIES> e2 = expression1() {
+      e = ast.implies(e, e2);
+    }
+  )*
+  { return e; }
+}
+
 Exp expression() :
 {
   Exp e;
   Type t;
 }
 {
-  e = expression1()
+  e = expression0()
   (
     <COLON> t = type() {
       e = ast.annotatedExp(e.pos.plus(t.pos), e, t);
@@ -874,6 +931,10 @@ Exp atom() :
   e = caseOf() { return e; }
 |
   e = from() { return e; }
+|
+  e = exists() { return e; }
+|
+  e = forall() { return e; }
 |
   <LPAREN> {
     span = Span.of(pos());
@@ -1433,39 +1494,43 @@ AstNode statementEof() :
 | < CASE: "case" >
 | < DATATYPE: "datatype" >
 | < DIV: "div" >
-| < ELEM: "elem" >
 | < ELSE: "else" >
-| < EXCEPT: "except" >
 | < END: "end" >
 | < FN: "fn" >
 | < FUN: "fun" >
 | < IF: "if" >
 | < IN: "in" >
-| < INTERSECT: "intersect" >
 | < LET: "let" >
 | < MOD: "mod" >
-| < NOT_ELEM: "notelem" >
 | < O: "o" >
 | < OF: "of" >
 | < ORELSE: "orelse" >
 | < REC: "rec" >
 | < THEN: "then" >
-| < UNION: "union" >
 | < VAL: "val" >
 
 // The following are relational extensions:
 | < COMPUTE: "compute" >
 | < DESC: "desc" >
 | < DISTINCT: "distinct" >
+| < ELEM: "elem" >
+| < EXCEPT: "except" >
+| < EXISTS: "exists" >
+| < FORALL: "forall" >
 | < FROM: "from" >
 | < GROUP: "group" >
+| < IMPLIES: "implies" >
+| < INTERSECT: "intersect" >
 | < INTO: "into" >
 | < JOIN: "join" >
+| < NOT_ELEM: "notelem" >
 | < ON: "on" >
 | < ORDER: "order" >
+| < REQUIRE: "require" >
 | < SKIP_: "skip" >
 | < TAKE: "take" >
 | < THROUGH: "through" >
+| < UNION: "union" >
 | < WHERE: "where" >
 | < YIELD: "yield" >
 }

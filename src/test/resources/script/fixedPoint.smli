@@ -313,7 +313,7 @@ from p in fixu_naive prefixes ["cat", "dog", "", "car", "cart"] order p;
 fun fixu_semi_naive (f, a, n) =
   let
     fun contains (list, e) =
-      List.exists (fn e2 => e = e2) list
+      List.`exists` (fn e2 => e = e2) list
     fun minus (list1, list2) =
       List.filter (fn e => not (contains (list2, e))) list1
     fun fixInc (a, delta, i) =

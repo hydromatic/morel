@@ -1104,7 +1104,7 @@ public abstract class Codes {
 
   /** @see BuiltIn#LIST_NULL */
   private static final Applicable LIST_NULL =
-      isNotEmpty(BuiltIn.LIST_NULL);
+      empty(BuiltIn.LIST_NULL);
 
   /** @see BuiltIn#LIST_LENGTH */
   private static final Applicable LIST_LENGTH = length(BuiltIn.LIST_LENGTH);
@@ -2347,11 +2347,11 @@ public abstract class Codes {
   private static final Applicable RELATIONAL_COUNT =
       length(BuiltIn.RELATIONAL_COUNT);
 
-  /** @see BuiltIn#RELATIONAL_EXISTS */
-  private static final Applicable RELATIONAL_EXISTS =
-      isEmpty(BuiltIn.RELATIONAL_EXISTS);
+  /** @see BuiltIn#RELATIONAL_NON_EMPTY */
+  private static final Applicable RELATIONAL_NON_EMPTY =
+      nonEmpty(BuiltIn.RELATIONAL_NON_EMPTY);
 
-  private static ApplicableImpl isEmpty(final BuiltIn builtIn) {
+  private static ApplicableImpl nonEmpty(final BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
       @Override public Object apply(EvalEnv env, Object arg) {
         return !((List) arg).isEmpty();
@@ -2359,11 +2359,11 @@ public abstract class Codes {
     };
   }
 
-  /** @see BuiltIn#RELATIONAL_NOT_EXISTS */
-  private static final Applicable RELATIONAL_NOT_EXISTS =
-      isNotEmpty(BuiltIn.RELATIONAL_NOT_EXISTS);
+  /** @see BuiltIn#RELATIONAL_EMPTY */
+  private static final Applicable RELATIONAL_EMPTY =
+      empty(BuiltIn.RELATIONAL_EMPTY);
 
-  private static ApplicableImpl isNotEmpty(BuiltIn builtIn) {
+  private static ApplicableImpl empty(BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
       @Override public Boolean apply(EvalEnv env, Object arg) {
         return ((List) arg).isEmpty();
@@ -3092,12 +3092,12 @@ public abstract class Codes {
           .put(BuiltIn.REAL_TRUNC, REAL_TRUNC)
           .put(BuiltIn.REAL_UNORDERED, REAL_UNORDERED)
           .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
-          .put(BuiltIn.RELATIONAL_EXISTS, RELATIONAL_EXISTS)
-          .put(BuiltIn.RELATIONAL_NOT_EXISTS, RELATIONAL_NOT_EXISTS)
+          .put(BuiltIn.RELATIONAL_EMPTY, RELATIONAL_EMPTY)
           .put(BuiltIn.RELATIONAL_ITERATE, RELATIONAL_ITERATE)
-          .put(BuiltIn.RELATIONAL_ONLY, RELATIONAL_ONLY)
           .put(BuiltIn.RELATIONAL_MAX, RELATIONAL_MAX)
           .put(BuiltIn.RELATIONAL_MIN, RELATIONAL_MIN)
+          .put(BuiltIn.RELATIONAL_NON_EMPTY, RELATIONAL_NON_EMPTY)
+          .put(BuiltIn.RELATIONAL_ONLY, RELATIONAL_ONLY)
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
           .put(BuiltIn.SYS_ENV, (Macro) Codes::sysEnv)
           .put(BuiltIn.SYS_FILE, "") // value comes from Session.file

@@ -1,0 +1,265 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests for logical expressions.
+ *)
+
+val emps = scott.emp;
+> val emps = <relation>
+>   :
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} list
+val depts = scott.dept;
+> val depts = <relation> : {deptno:int, dname:string, loc:string} list
+
+(* == Simple examples ================================== *)
+
+(* Q1. Do any employees have a salary under 900? *)
+exists e in emps
+  where e.sal < 900.0;
+> val it = true : bool
+
+(* Answer to Q1 using 'from' and 'List.null'. *)
+not (List.null (from e in emps where e.sal < 900.0));
+> val it = true : bool
+
+(* Answer to Q1 using 'from' and 'compute'. *)
+(from e in emps
+  where e.sal < 900.0
+  compute count) > 0;
+> val it = true : bool
+
+(* Q2. Do all employees have a salary greater than 1,000? *)
+forall e in emps
+  require e.sal > 1000.0;
+> val it = false : bool
+
+(* Answer to Q2 using 'exists'. *)
+not (exists e in emps
+  where not (e.sal > 1000.0));
+> val it = false : bool
+
+(* Answer to Q2 using 'from' and 'List.null'. *)
+List.null (from e in emps where not (e.sal > 1000.0));
+> val it = false : bool
+
+(* Q3. Do all employees in department 10 earn over 1,000? *)
+forall e in emps
+  where e.deptno = 10
+  require e.sal > 1000.0;
+> val it = true : bool
+
+(* Not equivalent to Q3. Syntax is valid, but query
+   does not return the result the user wanted. *)
+forall e in emps
+  require e.deptno = 10 andalso e.sal > 1000.0;
+> val it = false : bool
+
+(* Answer to Q3 using 'implies'. *)
+forall e in emps
+  require e.deptno = 10 implies e.sal > 1000.0;
+> val it = true : bool
+
+(* Answer to Q3 using 'if'. *)
+forall e in emps
+  require if e.deptno = 10 then e.sal > 1000.0 else true;
+> val it = true : bool
+
+(* Answer to Q3 using 'not ... orelse'. *)
+forall e in emps
+  require not (e.deptno = 10) orelse e.sal > 1000.0;
+> val it = true : bool
+
+(* Answer to Q3 using 'where'. *)
+forall e in emps
+  where e.deptno = 10
+  require e.sal > 1000.0;
+> val it = true : bool
+
+(* Answer to Q3 using unconstrained variables. *)
+(* TODO
+forall e
+  require e elem emps andalso e.deptno = 10
+    implies e.sal > 1000.0;
+> val it = true : bool
+*)
+
+(* Q4. Find all departments with at least one clerk. *)
+from d in depts
+  where (exists e in emps
+    where e.deptno = d.deptno
+    andalso e.job = "CLERK");
+> val it =
+>   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>    {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>    {deptno=30,dname="SALES",loc="CHICAGO"}]
+>   : {deptno:int, dname:string, loc:string} list
+
+(* Q5. Find all departments with no clerks. *)
+from d in depts
+  where not (exists e in emps
+    where e.deptno = d.deptno
+    andalso e.job = "CLERK");
+> val it = [{deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+>   : {deptno:int, dname:string, loc:string} list
+
+(* Q6. Find all departments where all employees earn more than 1,000. *)
+from d in depts
+  where (forall e in emps
+    require e.deptno = d.deptno
+    implies e.sal > 1000.0);
+> val it =
+>   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+>   : {deptno:int, dname:string, loc:string} list
+
+(* == Implies ========================================== *)
+false implies false;
+> val it = true : bool
+false implies true;
+> val it = true : bool
+true implies false;
+> val it = false : bool
+true implies true;
+> val it = true : bool
+
+(*) 'implies' is left-associative
+false implies true implies false;
+> val it = false : bool
+(false implies true) implies false;
+> val it = false : bool
+false implies (true implies false);
+> val it = true : bool
+
+(* All departments are not department 30 or are called
+   "SALES". *)
+from d in scott.dept
+  where d.deptno = 30 implies d.dname = "SALES";
+> val it =
+>   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>    {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>    {deptno=30,dname="SALES",loc="CHICAGO"},
+>    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+>   : {deptno:int, dname:string, loc:string} list
+
+(* Three departments are not department 30 or are called
+   "RESEARCH". *)
+from d in scott.dept
+  where d.deptno = 30 implies d.dname = "RESEARCH";
+> val it =
+>   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>    {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+>   : {deptno:int, dname:string, loc:string} list
+
+(* == Exists =========================================== *)
+
+(* Exists in a lambda. *)
+val g = fn f => exists i in [1, 2, 3] where f i;
+> val g = fn : (int -> bool) -> bool
+g (fn i => i mod 2 = 0);
+> val it = true : bool
+g (fn i => i mod 5 = 0);
+> val it = false : bool
+
+(* Exists with a join in a lambda. *)
+val g2 = fn f => exists i in [1, 2, 3] join j in [3, 4] on f (i, j);
+> val g2 = fn : (int * int -> bool) -> bool
+g2 (fn (i, j) => j - i = 2);
+> val it = true : bool
+
+(* As previous, but with a spurious 'yield' step. *)
+val g3 = fn f => exists i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j;
+> val g3 = fn : (int * int -> bool) -> bool
+g3 (fn (i, j) => j - i = 2);
+> val it = true : bool
+
+(* Empty 'exists' iterates over zero variables, a collection
+   that contains one instance of the unit tuple, hence
+   returns true. *)
+exists;
+> val it = true : bool
+not exists;
+> val it = false : bool
+
+(* Empty 'exists' with 'where'. *)
+exists where true;
+> val it = true : bool
+exists where false;
+> val it = false : bool
+not exists where false;
+> val it = true : bool
+
+(*) 'exists' must not have 'into'
+exists e in scott.emps where e.deptno = 20 into sum;
+> stdIn:3.44-3.52 Error: 'into' step must not occur in 'exists'
+>   raised at: stdIn:3.44-3.52
+
+(*) 'exists' must not have 'compute'
+exists e in scott.emps where e.deptno = 20 compute min of e.job;
+> stdIn:3.44-3.64 Error: 'compute' step must not occur in 'exists'
+>   raised at: stdIn:3.44-3.64
+
+(*) 'exists' must not have 'require'
+exists e in scott.emps where e.deptno = 20 require false;
+> stdIn:3.44-3.57 Error: 'require' step must not occur in 'exists'
+>   raised at: stdIn:3.44-3.57
+
+(* == Forall =========================================== *)
+forall i in [2, 4, 6] require i mod 2 = 0;
+> val it = true : bool
+forall i in [2, 3, 4] require i mod 2 = 0;
+> val it = false : bool
+forall i in [] require i mod 2 = 0;
+> val it = true : bool
+forall i in [2, 3, 4, 12, 14] require i > 10 implies i mod 2 = 0;
+> val it = true : bool
+forall i in [2, 3, 4, 12, 14] where i > 10 require i mod 2 = 0;
+> val it = true : bool
+
+(*) Empty 'forall' iterates over one row.
+forall require true;
+> val it = true : bool
+forall require false;
+> val it = false : bool
+
+(*) 'forall' requires 'require'
+forall i in [2, 3, 4, 12, 14] where i > 10;
+> stdIn:3.31-3.43 Error: last step of 'forall' must be 'require'
+>   raised at: stdIn:3.31-3.43
+
+(*) 'from' must not have 'require'
+from i in [2, 3, 4, 12, 14] require i > 10;
+> stdIn:3.29-3.43 Error: 'require' step must not occur in 'from'
+>   raised at: stdIn:3.29-3.43
+
+from i in [2, 3, 4, 12, 14] require i > 10 where true;
+> stdIn:2.29-2.43 Error: 'require' step must not occur in 'from'
+>   raised at: stdIn:2.29-2.43
+
+(*) 'forall' must not have 'into'
+forall i in [2, 3, 4, 12, 14] into sum require true;
+> stdIn:3.31-3.39 Error: 'into' step must not occur in 'forall'
+>   raised at: stdIn:3.31-3.39
+
+(*) 'forall' must not have 'compute'
+forall i in [2, 3, 4, 12, 14] compute sum require true;
+> stdIn:3.31-3.42 Error: 'compute' step must not occur in 'forall'
+>   raised at: stdIn:3.31-3.42
+
+(*) End logic.smli

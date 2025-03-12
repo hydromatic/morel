@@ -324,6 +324,8 @@ public class Resolver {
     case ANDALSO:
     case ORELSE:
       return toCore((Ast.InfixCall) exp);
+    case IMPLIES:
+      return toCoreImplies(((Ast.InfixCall) exp).a0, ((Ast.InfixCall) exp).a1);
     case APPLY:
       return toCore((Ast.Apply) exp);
     case FN:
@@ -335,7 +337,9 @@ public class Resolver {
     case LET:
       return toCore((Ast.Let) exp);
     case FROM:
-      return toCore((Ast.From) exp);
+    case EXISTS:
+    case FORALL:
+      return toCore((Ast.Query) exp);
     case TUPLE:
       return toCore((Ast.Tuple) exp);
     case RECORD:
@@ -485,6 +489,14 @@ public class Resolver {
         core.tuple(typeMap.typeSystem, core0, core1));
   }
 
+  /** Translate "p implies q" as "(not p) orelse q". */
+  private Core.Exp toCoreImplies(Ast.Exp a0, Ast.Exp a1) {
+    Core.Exp core0 = toCore(a0);
+    Core.Exp core1 = toCore(a1);
+    return core.orElse(typeMap.typeSystem, core.not(typeMap.typeSystem, core0),
+        core1);
+  }
+
   private BuiltIn toBuiltIn(Op op) {
     return OP_BUILT_IN_MAP.get(op);
   }
@@ -629,9 +641,9 @@ public class Resolver {
     return core.match(match.pos, pat, exp);
   }
 
-  Core.Exp toCore(Ast.From from) {
-    final Type type = typeMap.getType(from);
-    final Core.Exp coreFrom = new FromResolver().run(from);
+  Core.Exp toCore(Ast.Query query) {
+    final Type type = typeMap.getType(query);
+    final Core.Exp coreFrom = new FromResolver().run(query);
     checkArgument(subsumes(type, coreFrom.type()),
         "Conversion to core did not preserve type: expected [%s] "
             + "actual [%s] from [%s]", type, coreFrom.type, coreFrom);
@@ -848,24 +860,37 @@ public class Resolver {
     }
   }
 
-  /** Visitor that converts {@link Ast.From} to {@link Core.From} by
+  /** Visitor that converts a {@link Ast.From}, {@link Ast.Exists}
+   * or {@link Ast.Forall} to {@link Core.From} by
    * handling each subtype of {@link Ast.FromStep} calling
    * {@link FromBuilder} appropriately. */
   private class FromResolver extends Visitor {
     final FromBuilder fromBuilder = core.fromBuilder(typeMap.typeSystem, env);
 
-    Core.Exp run(Ast.From from) {
-      if (from.isInto()) {
+    Core.Exp run(Ast.Query query) {
+      if (query.isInto()) {
         // Translate "from ... into f" as if they had written "f (from ...)"
-        final Core.Exp coreFrom = run(skipLast(from.steps));
-        final Ast.Into into = (Ast.Into) last(from.steps);
+        final Core.Exp coreFrom = run(skipLast(query.steps));
+        final Ast.Into into = (Ast.Into) last(query.steps);
         final Core.Exp exp = toCore(into.exp);
-        return core.apply(exp.pos, typeMap.getType(from), exp, coreFrom);
+        return core.apply(exp.pos, typeMap.getType(query), exp, coreFrom);
       }
 
-      final Core.Exp coreFrom = run(from.steps);
-      if (from.isCompute()) {
-        return core.only(typeMap.typeSystem, from.pos, coreFrom);
+      final Core.Exp coreFrom = run(query.steps);
+      if (query.op == Op.EXISTS) {
+        // Translate "exists ..." as if they had written
+        // "Relational.nonEmpty (from ...)"
+        return core.nonEmpty(typeMap.typeSystem, query.pos, coreFrom);
+      } else if (query.op == Op.FORALL) {
+        // Translate "forall ... require e" as if they had written
+        // "not exists (from ... where not e)".
+        //
+        // We assume that the last step is 'require e', and we know that
+        // 'require e' will have been translated to the same as 'where not e'.
+        checkArgument(last(query.steps).op == Op.REQUIRE);
+        return core.empty(typeMap.typeSystem, query.pos, coreFrom);
+      } else if (query.isCompute()) {
+        return core.only(typeMap.typeSystem, query.pos, coreFrom);
       } else {
         return coreFrom;
       }
@@ -905,6 +930,14 @@ public class Resolver {
     @Override protected void visit(Ast.Where where) {
       final Resolver r = withEnv(fromBuilder.bindings());
       fromBuilder.where(r.toCore(where.exp));
+    }
+
+    @Override protected void visit(Ast.Require require) {
+      // 'require e' translates to the same as 'where not e'
+      final Resolver r = withEnv(fromBuilder.bindings());
+      final Core.Exp coreRequire = r.toCore(require.exp);
+      final Core.Exp coreNot = core.not(typeMap.typeSystem, coreRequire);
+      fromBuilder.where(coreNot);
     }
 
     @Override protected void visit(Ast.Skip skip) {

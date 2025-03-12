@@ -250,6 +250,10 @@ public enum AstBuilder {
     return infix(Op.ORELSE, a0, a1);
   }
 
+  public Ast.Exp implies(Ast.Exp a0, Ast.Exp a1) {
+    return infix(Op.IMPLIES, a0, a1);
+  }
+
   public Ast.Exp plus(Ast.Exp a0, Ast.Exp a1) {
     return infix(Op.PLUS, a0, a1);
   }
@@ -330,6 +334,14 @@ public enum AstBuilder {
   public Ast.Case caseOf(Pos pos, Ast.Exp exp,
       Iterable<? extends Ast.Match> matchList) {
     return new Ast.Case(pos, exp, ImmutableList.copyOf(matchList));
+  }
+
+  public Ast.Exists exists(Pos pos, List<Ast.FromStep> steps) {
+    return new Ast.Exists(pos, ImmutableList.copyOf(steps));
+  }
+
+  public Ast.Forall forall(Pos pos, List<Ast.FromStep> steps) {
+    return new Ast.Forall(pos, ImmutableList.copyOf(steps));
   }
 
   public Ast.From from(Pos pos, List<Ast.FromStep> steps) {
@@ -486,6 +498,10 @@ public enum AstBuilder {
 
   public Ast.FromStep distinct(Pos pos) {
     return new Ast.Distinct(pos);
+  }
+
+  public Ast.FromStep require(Pos pos, Ast.Exp exp) {
+    return new Ast.Require(pos, exp);
   }
 
   public Ast.FromStep skip(Pos pos, Ast.Exp exp) {
