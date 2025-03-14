@@ -18,9 +18,9 @@
  */
 package net.hydromatic.morel.type;
 
-import net.hydromatic.morel.ast.Op;
-
 import static java.util.Objects.requireNonNull;
+
+import net.hydromatic.morel.ast.Op;
 
 /** Abstract implementation of Type. */
 abstract class BaseType implements Type {
@@ -34,17 +34,19 @@ abstract class BaseType implements Type {
     return op;
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return key().toString();
   }
 
-  @Override public boolean equals(Object o) {
+  @Override
+  public boolean equals(Object o) {
     return this == o
-        || o instanceof BaseType
-        && key().equals(((BaseType) o).key());
+        || o instanceof BaseType && key().equals(((BaseType) o).key());
   }
 
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     return key().hashCode();
   }
 }

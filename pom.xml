@@ -226,7 +226,7 @@ License.
               <includeStale>false</includeStale>
               <style>GOOGLE</style>
               <filterModified>false</filterModified>
-              <skip>true</skip>
+              <skip>false</skip>
               <fixImports>true</fixImports>
               <maxLineLength>80</maxLineLength>
             </configuration>

@@ -18,6 +18,14 @@
  */
 package net.hydromatic.morel.compile;
 
+import static com.google.common.collect.Iterables.getLast;
+import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Static.append;
+import static net.hydromatic.morel.util.Static.skip;
+
+import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
+import java.util.List;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.type.Binding;
@@ -27,20 +35,9 @@ import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TypeSystem;
 
-import com.google.common.collect.ImmutableList;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.util.Static.append;
-import static net.hydromatic.morel.util.Static.skip;
-
-import static com.google.common.collect.Iterables.getLast;
-
 /**
- * Shuttle that converts calls to {@link BuiltIn#LIST_FILTER}
- * and {@link BuiltIn#LIST_MAP} into {@link Core.From} expressions.
+ * Shuttle that converts calls to {@link BuiltIn#LIST_FILTER} and {@link
+ * BuiltIn#LIST_MAP} into {@link Core.From} expressions.
  */
 public class Relationalizer extends EnvShuttle {
   /** Private constructor. */
@@ -53,46 +50,57 @@ public class Relationalizer extends EnvShuttle {
     return new Relationalizer(typeSystem, env);
   }
 
-  @Override protected Relationalizer push(Environment env) {
+  @Override
+  protected Relationalizer push(Environment env) {
     return new Relationalizer(typeSystem, env);
   }
 
-  @Override protected Core.Exp visit(Core.Apply apply) {
+  @Override
+  protected Core.Exp visit(Core.Apply apply) {
     switch (apply.fn.op) {
-    case APPLY:
-      final Core.Apply apply2 = (Core.Apply) apply.fn;
-      switch (apply2.fn.op) {
-      case FN_LITERAL:
-        final Core.Literal literal = (Core.Literal) apply2.fn;
-        if (literal.value == BuiltIn.LIST_MAP) {
-          // List.map f list
-          //  =>
-          // from e in list yield (f e)
-          final Core.Exp f = apply2.arg;
-          final FnType fnType = (FnType) f.type;
-          final Core.From from = toFrom(apply.arg);
-          // TODO: if the last step is a non-record yield, there is no
-          // "defaultYieldExp", and therefore we cannot add another yield
-          // step. We will have to inline the yield expression as a let.
-          final Core.Yield yieldStep = core.yield_(typeSystem,
-              core.apply(apply.pos, fnType.resultType, f,
-                  core.implicitYieldExp(typeSystem, from.steps)));
-          return core.from(typeSystem, append(from.steps, yieldStep));
+      case APPLY:
+        final Core.Apply apply2 = (Core.Apply) apply.fn;
+        switch (apply2.fn.op) {
+          case FN_LITERAL:
+            final Core.Literal literal = (Core.Literal) apply2.fn;
+            if (literal.value == BuiltIn.LIST_MAP) {
+              // List.map f list
+              //  =>
+              // from e in list yield (f e)
+              final Core.Exp f = apply2.arg;
+              final FnType fnType = (FnType) f.type;
+              final Core.From from = toFrom(apply.arg);
+              // TODO: if the last step is a non-record yield, there is no
+              // "defaultYieldExp", and therefore we cannot add another yield
+              // step. We will have to inline the yield expression as a let.
+              final Core.Yield yieldStep =
+                  core.yield_(
+                      typeSystem,
+                      core.apply(
+                          apply.pos,
+                          fnType.resultType,
+                          f,
+                          core.implicitYieldExp(typeSystem, from.steps)));
+              return core.from(typeSystem, append(from.steps, yieldStep));
+            }
+            if (literal.value == BuiltIn.LIST_FILTER) {
+              // List.filter f list
+              //  =>
+              // from e in list where (f e)
+              final Core.Exp f = apply2.arg;
+              final FnType fnType = (FnType) f.type;
+              final Core.From from = toFrom(apply.arg);
+              final Core.Where whereStep =
+                  core.where(
+                      core.lastBindings(from.steps),
+                      core.apply(
+                          apply.pos,
+                          fnType.resultType,
+                          f,
+                          core.implicitYieldExp(typeSystem, from.steps)));
+              return core.from(typeSystem, append(from.steps, whereStep));
+            }
         }
-        if (literal.value == BuiltIn.LIST_FILTER) {
-          // List.filter f list
-          //  =>
-          // from e in list where (f e)
-          final Core.Exp f = apply2.arg;
-          final FnType fnType = (FnType) f.type;
-          final Core.From from = toFrom(apply.arg);
-          final Core.Where whereStep =
-              core.where(core.lastBindings(from.steps),
-                  core.apply(apply.pos, fnType.resultType, f,
-                      core.implicitYieldExp(typeSystem, from.steps)));
-          return core.from(typeSystem, append(from.steps, whereStep));
-        }
-      }
     }
     return super.visit(apply);
   }
@@ -113,7 +121,8 @@ public class Relationalizer extends EnvShuttle {
     }
   }
 
-  @Override protected Core.Exp visit(Core.From from) {
+  @Override
+  protected Core.Exp visit(Core.From from) {
     final Core.From from2 = (Core.From) super.visit(from);
     if (!from2.steps.isEmpty()) {
       final Core.FromStep step = from2.steps.get(0);
@@ -133,8 +142,7 @@ public class Relationalizer extends EnvShuttle {
         }
         RecordLikeType recordType =
             typeSystem.recordType(RecordType.map(idPat3.name, exp.type));
-        steps.add(
-            core.yield_(step.bindings, core.tuple(recordType, exp)));
+        steps.add(core.yield_(step.bindings, core.tuple(recordType, exp)));
         steps.addAll(skip(from2.steps));
         return core.from(typeSystem, steps);
       }

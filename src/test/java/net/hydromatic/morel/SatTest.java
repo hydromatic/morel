@@ -18,26 +18,27 @@
  */
 package net.hydromatic.morel;
 
-import net.hydromatic.morel.util.Sat;
-import net.hydromatic.morel.util.Sat.Term;
-import net.hydromatic.morel.util.Sat.Variable;
-
-import com.google.common.collect.ImmutableMap;
-import org.junit.jupiter.api.Test;
-
-import java.util.Map;
-
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.core.Is.is;
 
+import com.google.common.collect.ImmutableMap;
+import java.util.Map;
+import net.hydromatic.morel.util.Sat;
+import net.hydromatic.morel.util.Sat.Term;
+import net.hydromatic.morel.util.Sat.Variable;
+import org.junit.jupiter.api.Test;
+
 /** Tests satisfiability. */
 public class SatTest {
-  /** Tests a formula with three clauses, three terms each.
-   * It is in "3SAT" form, and has a solution (i.e. is satisfiable). */
-  @Test void testBuild() {
+  /**
+   * Tests a formula with three clauses, three terms each. It is in "3SAT" form,
+   * and has a solution (i.e. is satisfiable).
+   */
+  @Test
+  void testBuild() {
     final Sat sat = new Sat();
     final Variable x = sat.variable("x");
     final Variable y = sat.variable("y");
@@ -47,17 +48,17 @@ public class SatTest {
     final Term clause1 = sat.or(sat.not(x), sat.not(y), sat.not(y));
     final Term clause2 = sat.or(sat.not(x), y, y);
     final Term formula = sat.and(clause0, clause1, clause2);
-    assertThat(formula,
-        hasToString("(x ∨ x ∨ y) ∧ (¬x ∨ ¬y ∨ ¬y) ∧ (¬x ∨ y ∨ y)"));
+    assertThat(
+        formula, hasToString("(x ∨ x ∨ y) ∧ (¬x ∨ ¬y ∨ ¬y) ∧ (¬x ∨ y ∨ y)"));
 
     final Map<Variable, Boolean> solution = sat.solve(formula);
     assertThat(solution, notNullValue());
-    assertThat(solution,
-        is(ImmutableMap.of(x, false, y, true)));
+    assertThat(solution, is(ImmutableMap.of(x, false, y, true)));
   }
 
   /** Tests true ("and" with zero arguments). */
-  @Test void testTrue() {
+  @Test
+  void testTrue() {
     final Sat sat = new Sat();
     final Term trueTerm = sat.and();
     assertThat(trueTerm, hasToString("true"));
@@ -68,7 +69,8 @@ public class SatTest {
   }
 
   /** Tests false ("or" with zero arguments). */
-  @Test void testFalse() {
+  @Test
+  void testFalse() {
     final Sat sat = new Sat();
     final Term falseTerm = sat.or();
     assertThat(falseTerm, hasToString("false"));
@@ -76,7 +78,6 @@ public class SatTest {
     final Map<Variable, Boolean> solve = sat.solve(falseTerm);
     assertThat("not satisfiable", solve, nullValue());
   }
-
 }
 
 // End SatTest.java

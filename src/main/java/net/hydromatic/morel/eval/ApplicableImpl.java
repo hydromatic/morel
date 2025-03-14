@@ -21,8 +21,10 @@ package net.hydromatic.morel.eval;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 
-/** Abstract implementation of {@link Applicable} that describes itself
- * with a constant name. */
+/**
+ * Abstract implementation of {@link Applicable} that describes itself with a
+ * constant name.
+ */
 abstract class ApplicableImpl implements Applicable {
   private final String name;
   final Pos pos;
@@ -36,26 +38,33 @@ abstract class ApplicableImpl implements Applicable {
     this(name, Pos.ZERO);
   }
 
-  /** Creates an ApplicableImpl that directly implements a BuiltIn.
-   * The parameter is currently only for provenance purposes. */
+  /**
+   * Creates an ApplicableImpl that directly implements a BuiltIn. The parameter
+   * is currently only for provenance purposes.
+   */
   protected ApplicableImpl(BuiltIn builtIn, Pos pos) {
-    this(builtIn.mlName.startsWith("op ")
-        ? builtIn.mlName.substring("op ".length())
-        : builtIn.structure + "." + builtIn.mlName,
+    this(
+        builtIn.mlName.startsWith("op ")
+            ? builtIn.mlName.substring("op ".length())
+            : builtIn.structure + "." + builtIn.mlName,
         pos);
   }
 
-  /** Creates an ApplicableImpl that directly implements a BuiltIn.
-   * The parameter is currently only for provenance purposes. */
+  /**
+   * Creates an ApplicableImpl that directly implements a BuiltIn. The parameter
+   * is currently only for provenance purposes.
+   */
   protected ApplicableImpl(BuiltIn builtIn) {
     this(builtIn, Pos.ZERO);
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return name;
   }
 
-  @Override public Describer describe(Describer describer) {
+  @Override
+  public Describer describe(Describer describer) {
     return describer.start(name, d -> {});
   }
 }

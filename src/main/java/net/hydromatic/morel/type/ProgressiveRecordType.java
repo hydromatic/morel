@@ -27,11 +27,13 @@ public class ProgressiveRecordType extends RecordType {
     super(argNameTypes);
   }
 
-  @Override public boolean isProgressive() {
+  @Override
+  public boolean isProgressive() {
     return true;
   }
 
-  @Override public Key key() {
+  @Override
+  public Key key() {
     return Keys.progressiveRecord(Keys.toKeys(argNameTypes));
   }
 }

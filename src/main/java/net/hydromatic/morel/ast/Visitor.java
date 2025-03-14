@@ -28,11 +28,9 @@ public class Visitor {
 
   // expressions
 
-  protected void visit(Ast.Literal literal) {
-  }
+  protected void visit(Ast.Literal literal) {}
 
-  protected void visit(Ast.Id id) {
-  }
+  protected void visit(Ast.Id id) {}
 
   protected void visit(Ast.AnnotatedExp annotatedExp) {
     annotatedExp.exp.accept(this);
@@ -68,14 +66,11 @@ public class Visitor {
 
   // patterns
 
-  protected void visit(Ast.IdPat idPat) {
-  }
+  protected void visit(Ast.IdPat idPat) {}
 
-  protected void visit(Ast.LiteralPat literalPat) {
-  }
+  protected void visit(Ast.LiteralPat literalPat) {}
 
-  protected void visit(Ast.WildcardPat wildcardPat) {
-  }
+  protected void visit(Ast.WildcardPat wildcardPat) {}
 
   protected void visit(Ast.InfixPat infixPat) {
     infixPat.p0.accept(this);
@@ -138,8 +133,7 @@ public class Visitor {
     apply.arg.accept(this);
   }
 
-  protected void visit(Ast.RecordSelector recordSelector) {
-  }
+  protected void visit(Ast.RecordSelector recordSelector) {}
 
   protected void visit(Ast.Match match) {
     match.pat.accept(this);
@@ -152,8 +146,7 @@ public class Visitor {
     namedType.types.forEach(this::accept);
   }
 
-  protected void visit(Ast.TyVar tyVar) {
-  }
+  protected void visit(Ast.TyVar tyVar) {}
 
   // declarations
 
@@ -218,8 +211,7 @@ public class Visitor {
     orderItem.exp.accept(this);
   }
 
-  protected void visit(Ast.Distinct distinct) {
-  }
+  protected void visit(Ast.Distinct distinct) {}
 
   protected void visit(Ast.Where where) {
     where.exp.accept(this);
@@ -255,10 +247,11 @@ public class Visitor {
   }
 
   protected void visit(Ast.Group group) {
-    group.groupExps.forEach((id, exp) -> {
-      id.accept(this);
-      exp.accept(this);
-    });
+    group.groupExps.forEach(
+        (id, exp) -> {
+          id.accept(this);
+          exp.accept(this);
+        });
     group.aggregates.forEach(this::accept);
   }
 
@@ -305,11 +298,9 @@ public class Visitor {
 
   // core expressions
 
-  protected void visit(Core.Literal literal) {
-  }
+  protected void visit(Core.Literal literal) {}
 
-  protected void visit(Core.Id id) {
-  }
+  protected void visit(Core.Id id) {}
 
   protected void visit(Core.Let let) {
     let.decl.accept(this);
@@ -330,15 +321,13 @@ public class Visitor {
     apply.arg.accept(this);
   }
 
-  protected void visit(Core.RecordSelector recordSelector) {
-  }
+  protected void visit(Core.RecordSelector recordSelector) {}
 
   protected void visit(Core.Tuple tuple) {
     tuple.args.forEach(this::accept);
   }
 
-  protected void visit(Core.DatatypeDecl datatypeDecl) {
-  }
+  protected void visit(Core.DatatypeDecl datatypeDecl) {}
 
   protected void visit(Core.Fn fn) {
     fn.idPat.accept(this);
@@ -423,21 +412,17 @@ public class Visitor {
     conPat.pat.accept(this);
   }
 
-  protected void visit(Core.Con0Pat con0Pat) {
-  }
+  protected void visit(Core.Con0Pat con0Pat) {}
 
-  protected void visit(Core.IdPat idPat) {
-  }
+  protected void visit(Core.IdPat idPat) {}
 
   protected void visit(Core.AsPat asPat) {
     asPat.pat.accept(this);
   }
 
-  protected void visit(Core.LiteralPat idPat) {
-  }
+  protected void visit(Core.LiteralPat idPat) {}
 
-  protected void visit(Core.WildcardPat wildcardPat) {
-  }
+  protected void visit(Core.WildcardPat wildcardPat) {}
 }
 
 // End Visitor.java

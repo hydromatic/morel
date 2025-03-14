@@ -18,30 +18,26 @@
  */
 package net.hydromatic.morel.compile;
 
+import static net.hydromatic.morel.util.Static.transform;
+
+import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 
-import com.google.common.collect.ImmutableList;
-
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-
-import static net.hydromatic.morel.util.Static.transform;
-
-/**
- * Shuttle that keeps an environment of what variables are in scope.
- */
+/** Shuttle that keeps an environment of what variables are in scope. */
 abstract class EnvVisitor extends Visitor {
   final TypeSystem typeSystem;
   final Environment env;
   final Deque<FromContext> fromStack;
 
   /** Creates an EnvVisitor. */
-  protected EnvVisitor(TypeSystem typeSystem, Environment env,
-      Deque<FromContext> fromStack) {
+  protected EnvVisitor(
+      TypeSystem typeSystem, Environment env, Deque<FromContext> fromStack) {
     this.typeSystem = typeSystem;
     this.env = env;
     this.fromStack = fromStack;
@@ -56,7 +52,7 @@ abstract class EnvVisitor extends Visitor {
   }
 
   /** Creates a visitor the same as this but with overriding bindings. */
-  protected EnvVisitor bind(Iterable<Binding> bindingList)  {
+  protected EnvVisitor bind(Iterable<Binding> bindingList) {
     // The "env2 == env" check is an optimization.
     // If you remove it, this method will have the same effect, just slower.
     final Environment env2 = env.bindAll(bindingList);
@@ -66,40 +62,46 @@ abstract class EnvVisitor extends Visitor {
     return this;
   }
 
-  @Override protected void visit(Core.Fn fn) {
+  @Override
+  protected void visit(Core.Fn fn) {
     fn.idPat.accept(this);
     fn.exp.accept(bind(Binding.of(fn.idPat)));
   }
 
-  @Override protected void visit(Core.Match match) {
+  @Override
+  protected void visit(Core.Match match) {
     final List<Binding> bindings = new ArrayList<>();
     match.pat.accept(this);
     Compiles.bindPattern(typeSystem, bindings, match.pat);
     match.exp.accept(bind(bindings));
   }
 
-  @Override protected void visit(Core.Let let) {
+  @Override
+  protected void visit(Core.Let let) {
     let.decl.accept(this);
     final List<Binding> bindings = new ArrayList<>();
     Compiles.bindPattern(typeSystem, bindings, let.decl);
     let.exp.accept(bind(bindings));
   }
 
-  @Override protected void visit(Core.Local local) {
+  @Override
+  protected void visit(Core.Local local) {
     final List<Binding> bindings = new ArrayList<>();
     Compiles.bindDataType(typeSystem, bindings, local.dataType);
     local.exp.accept(bind(bindings));
   }
 
-  @Override protected void visit(Core.RecValDecl recValDecl) {
+  @Override
+  protected void visit(Core.RecValDecl recValDecl) {
     final List<Binding> bindings = new ArrayList<>();
-    recValDecl.list.forEach(decl ->
-        Compiles.bindPattern(typeSystem, bindings, decl.pat));
+    recValDecl.list.forEach(
+        decl -> Compiles.bindPattern(typeSystem, bindings, decl.pat));
     final EnvVisitor v2 = bind(bindings);
     recValDecl.list.forEach(v2::accept);
   }
 
-  @Override protected void visit(Core.From from) {
+  @Override
+  protected void visit(Core.From from) {
     List<Binding> bindings = ImmutableList.of();
     for (Core.FromStep step : from.steps) {
       visitStep(step, bindings);
@@ -116,7 +118,8 @@ abstract class EnvVisitor extends Visitor {
     }
   }
 
-  @Override protected void visit(Core.Aggregate aggregate) {
+  @Override
+  protected void visit(Core.Aggregate aggregate) {
     // Aggregates need an environment that includes the group keys.
     // For example,
     //   from (i, j) in [(1, 2), (2, 3)]
@@ -133,9 +136,11 @@ abstract class EnvVisitor extends Visitor {
     }
   }
 
-  /** Where we are in an iteration through the steps of a {@code from}.
-   * Allows the step handlers to retrieve the original environment and make
-   * a custom environment for each step (or part of a step). */
+  /**
+   * Where we are in an iteration through the steps of a {@code from}. Allows
+   * the step handlers to retrieve the original environment and make a custom
+   * environment for each step (or part of a step).
+   */
   public static class FromContext {
     final EnvVisitor visitor;
     final Core.FromStep step;

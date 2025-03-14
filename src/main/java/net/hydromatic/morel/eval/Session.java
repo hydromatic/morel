@@ -18,24 +18,24 @@
  */
 package net.hydromatic.morel.eval;
 
-import net.hydromatic.morel.ast.Pos;
-import net.hydromatic.morel.compile.CompileException;
-import net.hydromatic.morel.util.MorelException;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.Suppliers;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.compile.CompileException;
+import net.hydromatic.morel.util.MorelException;
 
-import static java.util.Objects.requireNonNull;
-
-/** Session environment.
+/**
+ * Session environment.
  *
  * <p>Accessible from {@link EvalEnv#getOpt(String)} via the hidden "$session"
- * variable. */
+ * variable.
+ */
 public class Session {
   /** The plan of the previous command. */
   public Code code;
@@ -44,33 +44,37 @@ public class Session {
   /** Property values. */
   public final Map<Prop, Object> map;
 
-  /** File system.
+  /**
+   * File system.
    *
-   * <p>Wrapped in a Supplier to avoid the cost of initializing it (scanning
-   * a directory) for every session. */
+   * <p>Wrapped in a Supplier to avoid the cost of initializing it (scanning a
+   * directory) for every session.
+   */
   public final Supplier<File> file;
 
   /** Implementation of "use". */
   private Shell shell = Shells.INSTANCE;
 
-  /** Creates a Session.
+  /**
+   * Creates a Session.
    *
    * <p>The {@code map} parameter, that becomes the property map, is used as is,
    * not copied. It may be immutable if the session is for a narrow, internal
    * use. Otherwise, it should probably be a {@link LinkedHashMap} to provide
    * deterministic iteration order.
    *
-   * @param map Map that contains property values */
+   * @param map Map that contains property values
+   */
   public Session(Map<Prop, Object> map) {
     this.map = map;
     this.file =
-        Suppliers.memoize(() ->
-            Files.create(Prop.DIRECTORY.fileValue(this.map)));
+        Suppliers.memoize(
+            () -> Files.create(Prop.DIRECTORY.fileValue(this.map)));
   }
 
   /** Calls some code with a new value of {@link Shell}. */
-  public void withShell(Shell shell, Consumer<String> outLines,
-      Consumer<Session> consumer) {
+  public void withShell(
+      Shell shell, Consumer<String> outLines, Consumer<Session> consumer) {
     final Shell prevShell = this.shell;
     try {
       this.shell = requireNonNull(shell, "shell");
@@ -107,10 +111,12 @@ public class Session {
   public interface Shell {
     void use(String fileName, boolean silent, Pos pos);
 
-    /** Handles an exception. Particular implementations may re-throw the
+    /**
+     * Handles an exception. Particular implementations may re-throw the
      * exception, or may format the exception to a buffer that will be added to
      * the output. Typically, a root shell will handle the exception, and
-     * sub-shells will re-throw. */
+     * sub-shells will re-throw.
+     */
     void handle(RuntimeException e, StringBuilder buf);
   }
 
@@ -118,7 +124,8 @@ public class Session {
   private enum Shells implements Shell {
     /** Default instance of Shell. */
     INSTANCE {
-      @Override public void handle(RuntimeException e, StringBuilder buf) {
+      @Override
+      public void handle(RuntimeException e, StringBuilder buf) {
         if (e instanceof Codes.MorelRuntimeException) {
           ((Codes.MorelRuntimeException) e).describeTo(buf);
         } else if (e instanceof CompileException) {
@@ -131,12 +138,14 @@ public class Session {
 
     /** Instance of Shell that does not handle exceptions. */
     BARF {
-      @Override public void handle(RuntimeException e, StringBuilder buf) {
+      @Override
+      public void handle(RuntimeException e, StringBuilder buf) {
         throw e;
       }
     };
 
-    @Override public void use(String fileName, boolean silent, Pos pos) {
+    @Override
+    public void use(String fileName, boolean silent, Pos pos) {
       throw new UnsupportedOperationException();
     }
   }

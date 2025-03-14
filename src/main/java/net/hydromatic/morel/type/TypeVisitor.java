@@ -18,10 +18,10 @@
  */
 package net.hydromatic.morel.type;
 
-/** Visitor over {@link Type} objects.
+/**
+ * Visitor over {@link Type} objects.
  *
  * @param <R> return type from {@code visit} methods
- *
  * @see Type#accept(TypeVisitor)
  */
 public class TypeVisitor<R> {

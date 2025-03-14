@@ -19,14 +19,13 @@
 package net.hydromatic.morel.util;
 
 import com.google.common.collect.ImmutableList;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * List that consists of a head element and an immutable non-empty list.
@@ -37,13 +36,13 @@ public class ConsList<E> extends AbstractImmutableList<E> {
   private final E first;
   private final List<E> rest;
 
-  /** Creates a ConsList.
-   * It consists of an element pre-pended to another list.
-   * If the other list is mutable, creates an immutable copy. */
+  /**
+   * Creates a ConsList. It consists of an element pre-pended to another list.
+   * If the other list is mutable, creates an immutable copy.
+   */
   public static <E> List<E> of(E first, List<? extends E> rest) {
     if (rest instanceof ConsList
-        || rest instanceof ImmutableList
-        && !rest.isEmpty()) {
+        || rest instanceof ImmutableList && !rest.isEmpty()) {
       //noinspection unchecked
       return new ConsList<>(first, (List<E>) rest);
     } else {
@@ -57,7 +56,7 @@ public class ConsList<E> extends AbstractImmutableList<E> {
   }
 
   public E get(int index) {
-    for (ConsList<E> c = this;; c = (ConsList<E>) c.rest) {
+    for (ConsList<E> c = this; ; c = (ConsList<E>) c.rest) {
       if (index == 0) {
         return c.first;
       }
@@ -71,30 +70,31 @@ public class ConsList<E> extends AbstractImmutableList<E> {
   @SuppressWarnings("rawtypes")
   public int size() {
     int s = 1;
-    for (ConsList c = this;; c = (ConsList) c.rest, ++s) {
+    for (ConsList c = this; ; c = (ConsList) c.rest, ++s) {
       if (!(c.rest instanceof ConsList)) {
         return s + c.rest.size();
       }
     }
   }
 
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     return toList().hashCode();
   }
 
-  @Override public boolean equals(Object o) {
-    return o == this
-        || o instanceof List
-        && toList().equals(o);
+  @Override
+  public boolean equals(Object o) {
+    return o == this || o instanceof List && toList().equals(o);
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return toList().toString();
   }
 
   protected final List<E> toList() {
     final List<E> list = new ArrayList<>();
-    for (ConsList<E> c = this;; c = (ConsList<E>) c.rest) {
+    for (ConsList<E> c = this; ; c = (ConsList<E>) c.rest) {
       list.add(c.first);
       if (!(c.rest instanceof ConsList)) {
         list.addAll(c.rest);
@@ -103,24 +103,30 @@ public class ConsList<E> extends AbstractImmutableList<E> {
     }
   }
 
-  @Override @NonNull public ListIterator<E> listIterator() {
+  @Override
+  @NonNull
+  public ListIterator<E> listIterator() {
     return toList().listIterator();
   }
 
-  @Override @NonNull public Iterator<E> iterator() {
+  @Override
+  @NonNull
+  public Iterator<E> iterator() {
     return toList().iterator();
   }
 
-  @Override @NonNull public ListIterator<E> listIterator(int index) {
+  @Override
+  @NonNull
+  public ListIterator<E> listIterator(int index) {
     return toList().listIterator(index);
   }
 
-  public @Nullable Object @NonNull[] toArray() {
+  public @Nullable Object @NonNull [] toArray() {
     return toList().toArray();
   }
 
   @SuppressWarnings("rawtypes")
-  public <T> @Nullable T @NonNull[] toArray(@Nullable T @NonNull[] a) {
+  public <T> @Nullable T @NonNull [] toArray(@Nullable T @NonNull [] a) {
     final int s = size();
     if (s > a.length) {
       a = Arrays.copyOf(a, s);
@@ -128,7 +134,7 @@ public class ConsList<E> extends AbstractImmutableList<E> {
       a[s] = null;
     }
     int i = 0;
-    for (ConsList c = this;; c = (ConsList) c.rest) {
+    for (ConsList c = this; ; c = (ConsList) c.rest) {
       //noinspection unchecked
       a[i++] = (T) c.first;
       if (!(c.rest instanceof ConsList)) {

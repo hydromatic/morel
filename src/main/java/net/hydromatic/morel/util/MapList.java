@@ -22,8 +22,9 @@ import java.util.AbstractList;
 import java.util.RandomAccess;
 import java.util.function.IntFunction;
 
-/** Read-only list that generates elements between 0 and {@code size} - 1
- * by applying a function.
+/**
+ * Read-only list that generates elements between 0 and {@code size} - 1 by
+ * applying a function.
  *
  * @param <E> Element type
  */

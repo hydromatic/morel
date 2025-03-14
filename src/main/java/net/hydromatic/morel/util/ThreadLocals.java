@@ -21,16 +21,13 @@ package net.hydromatic.morel.util;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
-/**
- * Utilities for {@link ThreadLocal}.
- */
+/** Utilities for {@link ThreadLocal}. */
 public class ThreadLocals {
-  private ThreadLocals() {
-  }
+  private ThreadLocals() {}
 
   /** Performs an action with a thread-local set to a particular value. */
-  public static <T> void let(ThreadLocal<T> threadLocal, T value,
-      Runnable runnable) {
+  public static <T> void let(
+      ThreadLocal<T> threadLocal, T value, Runnable runnable) {
     final T originalValue = threadLocal.get();
     threadLocal.set(value);
     try {
@@ -42,10 +39,12 @@ public class ThreadLocals {
     }
   }
 
-  /** Performs an action with a thread-local set to a particular value,
-   * and returns the result. */
-  public static <T, R> R let(ThreadLocal<T> threadLocal, T value,
-      Supplier<R> supplier) {
+  /**
+   * Performs an action with a thread-local set to a particular value, and
+   * returns the result.
+   */
+  public static <T, R> R let(
+      ThreadLocal<T> threadLocal, T value, Supplier<R> supplier) {
     final T originalValue = threadLocal.get();
     threadLocal.set(value);
     try {
@@ -57,18 +56,25 @@ public class ThreadLocals {
     }
   }
 
-  /** Performs an action with a thread-local set to a value derived from its
-   * current value via a transformer. */
-  public static <T> void mutate(ThreadLocal<T> threadLocal,
-      UnaryOperator<T> transform, Runnable runnable) {
+  /**
+   * Performs an action with a thread-local set to a value derived from its
+   * current value via a transformer.
+   */
+  public static <T> void mutate(
+      ThreadLocal<T> threadLocal,
+      UnaryOperator<T> transform,
+      Runnable runnable) {
     let(threadLocal, transform.apply(threadLocal.get()), runnable);
   }
 
-  /** Performs an action with a thread-local set to a value derived from its
-   * current value via a transformer,
-   * and returns the result. */
-  public static <T, R> R mutate(ThreadLocal<T> threadLocal,
-      UnaryOperator<T> transform, Supplier<R> supplier) {
+  /**
+   * Performs an action with a thread-local set to a value derived from its
+   * current value via a transformer, and returns the result.
+   */
+  public static <T, R> R mutate(
+      ThreadLocal<T> threadLocal,
+      UnaryOperator<T> transform,
+      Supplier<R> supplier) {
     return let(threadLocal, transform.apply(threadLocal.get()), supplier);
   }
 }

@@ -18,26 +18,22 @@
  */
 package net.hydromatic.morel.type;
 
-import net.hydromatic.morel.ast.Op;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.parse.Parsers.appendId;
+import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Maps;
-
 import java.util.AbstractList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
-
-import static net.hydromatic.morel.parse.Parsers.appendId;
-import static net.hydromatic.morel.util.Static.transform;
-import static net.hydromatic.morel.util.Static.transformEager;
-
-import static com.google.common.base.Preconditions.checkArgument;
-
-import static java.util.Objects.hash;
-import static java.util.Objects.requireNonNull;
+import net.hydromatic.morel.ast.Op;
 
 /** Type keys. */
 public class Keys {
@@ -53,15 +49,19 @@ public class Keys {
     return name("");
   }
 
-  /** Returns a key that identifies types (especially
-   * {@link TypeVar type variables}) by ordinal. */
+  /**
+   * Returns a key that identifies types (especially {@link TypeVar type
+   * variables}) by ordinal.
+   */
   public static Type.Key ordinal(int ordinal) {
     return new OrdinalKey(ordinal);
   }
 
-  /** Returns a list of keys for type variables 0 through size - 1.
+  /**
+   * Returns a list of keys for type variables 0 through size - 1.
    *
-   * @see TypeSystem#typeVariables(int) */
+   * @see TypeSystem#typeVariables(int)
+   */
   public static List<Type.Key> ordinals(int size) {
     return new AbstractList<Type.Key>() {
       public int size() {
@@ -75,15 +75,18 @@ public class Keys {
   }
 
   /** Returns a key that applies a polymorphic type to arguments. */
-  public static Type.Key apply(Type.Key type,
-      Iterable<? extends Type.Key> args) {
+  public static Type.Key apply(
+      Type.Key type, Iterable<? extends Type.Key> args) {
     return new ApplyKey(type, ImmutableList.copyOf(args));
   }
 
-  /** Returns a key that identifies a {@link RecordType}
-   * (or a {@link TupleType} if the field names are ascending integers,
-   * or {@link PrimitiveType#UNIT unit} if the fields are empty). */
-  public static Type.Key record(SortedMap<String, ? extends Type.Key> argNameTypes) {
+  /**
+   * Returns a key that identifies a {@link RecordType} (or a {@link TupleType}
+   * if the field names are ascending integers, or {@link PrimitiveType#UNIT
+   * unit} if the fields are empty).
+   */
+  public static Type.Key record(
+      SortedMap<String, ? extends Type.Key> argNameTypes) {
     return new RecordKey(ImmutableSortedMap.copyOfSorted(argNameTypes));
   }
 
@@ -121,7 +124,8 @@ public class Keys {
   }
 
   /** Returns a key that identifies a {@link DataType}. */
-  public static DataTypeKey datatype(String name,
+  public static DataTypeKey datatype(
+      String name,
       List<? extends Type.Key> arguments,
       SortedMap<String, Type.Key> typeConstructors) {
     return new DataTypeKey(name, arguments, typeConstructors);
@@ -142,47 +146,50 @@ public class Keys {
   }
 
   /** Describes a record, progressive record, or tuple type. */
-  static StringBuilder describeRecordType(StringBuilder buf, int left,
-      int right, SortedMap<String, Type.Key> argNameTypes, Op op) {
+  static StringBuilder describeRecordType(
+      StringBuilder buf,
+      int left,
+      int right,
+      SortedMap<String, Type.Key> argNameTypes,
+      Op op) {
     switch (argNameTypes.size()) {
-    case 0:
-      return buf.append(op == Op.PROGRESSIVE_RECORD_TYPE ? "{...}" : "()");
+      case 0:
+        return buf.append(op == Op.PROGRESSIVE_RECORD_TYPE ? "{...}" : "()");
 
-    default:
-      if (op == Op.TUPLE_TYPE) {
-        return TypeSystem.unparseList(buf, Op.TIMES, left, right,
-            argNameTypes.values());
-      }
-      // fall through
-    case 1:
-      buf.append('{');
-      int i = 0;
-      for (Map.Entry<String, Type.Key> entry : argNameTypes.entrySet()) {
-        String name = entry.getKey();
-        Type.Key typeKey = entry.getValue();
-        if (i++ > 0) {
-          buf.append(", ");
+      default:
+        if (op == Op.TUPLE_TYPE) {
+          return TypeSystem.unparseList(
+              buf, Op.TIMES, left, right, argNameTypes.values());
         }
-        appendId(buf, name)
-            .append(':')
-            .append(typeKey);
-      }
-      if (op == Op.PROGRESSIVE_RECORD_TYPE) {
-        if (i > 0) {
-          buf.append(", ");
+        // fall through
+      case 1:
+        buf.append('{');
+        int i = 0;
+        for (Map.Entry<String, Type.Key> entry : argNameTypes.entrySet()) {
+          String name = entry.getKey();
+          Type.Key typeKey = entry.getValue();
+          if (i++ > 0) {
+            buf.append(", ");
+          }
+          appendId(buf, name).append(':').append(typeKey);
         }
-        buf.append("...");
-      }
-      return buf.append('}');
+        if (op == Op.PROGRESSIVE_RECORD_TYPE) {
+          if (i > 0) {
+            buf.append(", ");
+          }
+          buf.append("...");
+        }
+        return buf.append('}');
     }
   }
 
-  /** Converts a record key to a progressive record key,
-   * leaves other keys unchanged. */
+  /**
+   * Converts a record key to a progressive record key, leaves other keys
+   * unchanged.
+   */
   public static Type.Key toProgressive(Type.Key key) {
     if (key instanceof RecordKey) {
-      return progressiveRecord(
-          ((RecordKey) key).argNameTypes);
+      return progressiveRecord(((RecordKey) key).argNameTypes);
     }
     return key;
   }
@@ -196,23 +203,25 @@ public class Keys {
       this.name = requireNonNull(name);
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return name;
     }
 
-    @Override public StringBuilder describe(StringBuilder buf, int left,
-        int right) {
+    @Override
+    public StringBuilder describe(StringBuilder buf, int left, int right) {
       return buf.append(name);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return name.hashCode();
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj == this
-          || obj instanceof NameKey
-          && ((NameKey) obj).name.equals(name);
+          || obj instanceof NameKey && ((NameKey) obj).name.equals(name);
     }
 
     public Type toType(TypeSystem typeSystem) {
@@ -232,26 +241,29 @@ public class Keys {
       this.ordinal = ordinal;
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return TypeVar.name(ordinal);
     }
 
-    @Override public StringBuilder describe(StringBuilder buf, int left,
-        int right) {
+    @Override
+    public StringBuilder describe(StringBuilder buf, int left, int right) {
       return buf.append(TypeVar.name(ordinal));
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return ordinal;
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj == this
-          || obj instanceof OrdinalKey
-          && ((OrdinalKey) obj).ordinal == ordinal;
+          || obj instanceof OrdinalKey && ((OrdinalKey) obj).ordinal == ordinal;
     }
 
-    @Override public Type.Key substitute(List<? extends Type> types) {
+    @Override
+    public Type.Key substitute(List<? extends Type> types) {
       return types.get(ordinal).key();
     }
 
@@ -260,8 +272,9 @@ public class Keys {
     }
   }
 
-  /** Key of a type that applies a parameterized type to specific type
-   * arguments. */
+  /**
+   * Key of a type that applies a parameterized type to specific type arguments.
+   */
   private static class ApplyKey extends Type.Key {
     final Type.Key key;
     final ImmutableList<Type.Key> args;
@@ -272,8 +285,8 @@ public class Keys {
       this.args = ImmutableList.copyOf(args);
     }
 
-    @Override public StringBuilder describe(StringBuilder buf, int left,
-        int right) {
+    @Override
+    public StringBuilder describe(StringBuilder buf, int left, int right) {
       if (!args.isEmpty()) {
         TypeSystem.unparseList(buf, Op.COMMA, left, Op.APPLY.left, args);
         buf.append(Op.APPLY.padded);
@@ -281,18 +294,21 @@ public class Keys {
       return buf.append(key);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return hash(key, args);
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj == this
           || obj instanceof ApplyKey
-          && ((ApplyKey) obj).key.equals(key)
-          && ((ApplyKey) obj).args.equals(args);
+              && ((ApplyKey) obj).key.equals(key)
+              && ((ApplyKey) obj).args.equals(args);
     }
 
-    @Override public Type toType(TypeSystem typeSystem) {
+    @Override
+    public Type toType(TypeSystem typeSystem) {
       final Type type = key.toType(typeSystem);
       if (type instanceof ForallType) {
         return type.substitute(typeSystem, typeSystem.typesFor(args));
@@ -300,14 +316,18 @@ public class Keys {
       throw new AssertionError();
     }
 
-    @Override public Type.Key copy(UnaryOperator<Type.Key> transform) {
-      return new ApplyKey(key.copy(transform),
+    @Override
+    public Type.Key copy(UnaryOperator<Type.Key> transform) {
+      return new ApplyKey(
+          key.copy(transform),
           transformEager(args, arg -> arg.copy(transform)));
     }
   }
 
-  /** Key of a type that applies a built-in type constructor to specific type
-   * arguments. */
+  /**
+   * Key of a type that applies a built-in type constructor to specific type
+   * arguments.
+   */
   private static class OpKey extends Type.Key {
     final ImmutableList<Type.Key> args;
 
@@ -316,43 +336,46 @@ public class Keys {
       this.args = ImmutableList.copyOf(args);
     }
 
-    @Override public StringBuilder describe(StringBuilder buf, int left,
-        int right) {
+    @Override
+    public StringBuilder describe(StringBuilder buf, int left, int right) {
       switch (op) {
-      case LIST:
-        return TypeSystem.unparse(buf, args.get(0), 0, Op.LIST.right)
-            .append(" list");
-      default:
-        return TypeSystem.unparseList(buf, op, left, right, args);
+        case LIST:
+          return TypeSystem.unparse(buf, args.get(0), 0, Op.LIST.right)
+              .append(" list");
+        default:
+          return TypeSystem.unparseList(buf, op, left, right, args);
       }
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return hash(op, args);
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj == this
           || obj instanceof OpKey
-          && ((OpKey) obj).op.equals(op)
-          && ((OpKey) obj).args.equals(args);
+              && ((OpKey) obj).op.equals(op)
+              && ((OpKey) obj).args.equals(args);
     }
 
     public Type toType(TypeSystem typeSystem) {
       switch (op) {
-      case FN:
-        assert args.size() == 2;
-        return new FnType(typeSystem.typeFor(args.get(0)),
-            typeSystem.typeFor(args.get(1)));
-      case LIST:
-        assert args.size() == 1;
-        return new ListType(typeSystem.typeFor(args.get(0)));
-      default:
-        throw new AssertionError(op);
+        case FN:
+          assert args.size() == 2;
+          return new FnType(
+              typeSystem.typeFor(args.get(0)), typeSystem.typeFor(args.get(1)));
+        case LIST:
+          assert args.size() == 1;
+          return new ListType(typeSystem.typeFor(args.get(0)));
+        default:
+          throw new AssertionError(op);
       }
     }
 
-    @Override public Type.Key copy(UnaryOperator<Type.Key> transform) {
+    @Override
+    public Type.Key copy(UnaryOperator<Type.Key> transform) {
       return new OpKey(op, transform(args, arg -> arg.copy(transform)));
     }
   }
@@ -369,19 +392,21 @@ public class Keys {
       checkArgument(parameterCount >= 0);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return hash(type, parameterCount);
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj == this
           || obj instanceof ForallKey
-          && ((ForallKey) obj).type.equals(type)
-          && ((ForallKey) obj).parameterCount == parameterCount;
+              && ((ForallKey) obj).type.equals(type)
+              && ((ForallKey) obj).parameterCount == parameterCount;
     }
 
-    @Override public StringBuilder describe(StringBuilder buf, int left,
-        int right) {
+    @Override
+    public StringBuilder describe(StringBuilder buf, int left, int right) {
       buf.append("forall");
       for (int i = 0; i < parameterCount; i++) {
         buf.append(' ').append(TypeVar.name(i));
@@ -400,43 +425,47 @@ public class Keys {
     final ImmutableSortedMap<String, Type.Key> argNameTypes;
 
     RecordKey(ImmutableSortedMap<String, Type.Key> argNameTypes) {
-      super(TypeSystem.areContiguousIntegers(argNameTypes.keySet())
-          ? Op.TUPLE_TYPE
-          : Op.RECORD_TYPE);
+      super(
+          TypeSystem.areContiguousIntegers(argNameTypes.keySet())
+              ? Op.TUPLE_TYPE
+              : Op.RECORD_TYPE);
       this.argNameTypes = requireNonNull(argNameTypes);
       checkArgument(argNameTypes.comparator() == RecordType.ORDERING);
     }
 
-    @Override public Type.Key copy(UnaryOperator<Type.Key> transform) {
+    @Override
+    public Type.Key copy(UnaryOperator<Type.Key> transform) {
       return record(Maps.transformValues(argNameTypes, transform::apply));
     }
 
-    @Override public StringBuilder describe(StringBuilder buf, int left,
-        int right) {
+    @Override
+    public StringBuilder describe(StringBuilder buf, int left, int right) {
       return describeRecordType(buf, left, right, argNameTypes, op);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return argNameTypes.hashCode();
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj == this
           || obj instanceof RecordKey
-          && ((RecordKey) obj).argNameTypes.equals(argNameTypes);
+              && ((RecordKey) obj).argNameTypes.equals(argNameTypes);
     }
 
     public Type toType(TypeSystem typeSystem) {
       switch (argNameTypes.size()) {
-      case 0:
-        return PrimitiveType.UNIT;
-      default:
-        if (op == Op.TUPLE_TYPE) {
-          return new TupleType(typeSystem.typesFor(argNameTypes.values()));
-        }
-        // fall through
-      case 1:
-        return new RecordType(typeSystem.typesFor(argNameTypes));
+        case 0:
+          return PrimitiveType.UNIT;
+        default:
+          if (op == Op.TUPLE_TYPE) {
+            return new TupleType(typeSystem.typesFor(argNameTypes.values()));
+          }
+          // fall through
+        case 1:
+          return new RecordType(typeSystem.typesFor(argNameTypes));
       }
     }
   }
@@ -449,41 +478,50 @@ public class Keys {
       this.argNameTypes = requireNonNull(argNameTypes);
     }
 
-    @Override public Type.Key copy(UnaryOperator<Type.Key> transform) {
+    @Override
+    public Type.Key copy(UnaryOperator<Type.Key> transform) {
       return progressiveRecord(
           Maps.transformValues(argNameTypes, transform::apply));
     }
 
-    @Override public StringBuilder describe(StringBuilder buf, int left,
-        int right) {
+    @Override
+    public StringBuilder describe(StringBuilder buf, int left, int right) {
       return describeRecordType(buf, left, right, argNameTypes, op);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return argNameTypes.hashCode();
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj == this
           || obj instanceof ProgressiveRecordKey
-          && ((ProgressiveRecordKey) obj).argNameTypes.equals(argNameTypes);
+              && ((ProgressiveRecordKey) obj).argNameTypes.equals(argNameTypes);
     }
 
-    @Override public Type toType(TypeSystem typeSystem) {
+    @Override
+    public Type toType(TypeSystem typeSystem) {
       return new ProgressiveRecordType(typeSystem.typesFor(this.argNameTypes));
     }
   }
 
   /** Key that identifies a {@code datatype} scheme. */
   public static class DataTypeKey extends Type.Key {
-    /** Ideally, a datatype would not have a name, just a list of named type
+    /**
+     * Ideally, a datatype would not have a name, just a list of named type
      * constructors, and the name would be associated later. When that happens,
-     * we can remove the {@code name} field from this key. */
+     * we can remove the {@code name} field from this key.
+     */
     private final String name;
+
     private final List<? extends Type.Key> arguments;
     private final SortedMap<String, Type.Key> typeConstructors;
 
-    DataTypeKey(String name, List<? extends Type.Key> arguments,
+    DataTypeKey(
+        String name,
+        List<? extends Type.Key> arguments,
         SortedMap<String, Type.Key> typeConstructors) {
       super(Op.DATA_TYPE);
       this.name = requireNonNull(name);
@@ -491,19 +529,22 @@ public class Keys {
       this.typeConstructors = ImmutableSortedMap.copyOfSorted(typeConstructors);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return hash(name, arguments, typeConstructors);
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj == this
           || obj instanceof DataTypeKey
-          && ((DataTypeKey) obj).name.equals(name)
-          && ((DataTypeKey) obj).arguments.equals(arguments)
-          && ((DataTypeKey) obj).typeConstructors.equals(typeConstructors);
+              && ((DataTypeKey) obj).name.equals(name)
+              && ((DataTypeKey) obj).arguments.equals(arguments)
+              && ((DataTypeKey) obj).typeConstructors.equals(typeConstructors);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      * <p>Prints the name of this datatype along with any type arguments.
      * Examples:
@@ -518,8 +559,8 @@ public class Keys {
      *
      * @see ParameterizedType#computeMoniker(String, List)
      */
-    @Override public StringBuilder describe(StringBuilder buf, int left,
-        int right) {
+    @Override
+    public StringBuilder describe(StringBuilder buf, int left, int right) {
       if (arguments.isEmpty()) {
         return buf.append(name);
       }
@@ -545,9 +586,10 @@ public class Keys {
       return buf.append(' ').append(name);
     }
 
-    @Override public DataType toType(TypeSystem typeSystem) {
-      return typeSystem.dataType(name,
-          typeSystem.typesFor(arguments), typeConstructors);
+    @Override
+    public DataType toType(TypeSystem typeSystem) {
+      return typeSystem.dataType(
+          name, typeSystem.typesFor(arguments), typeConstructors);
     }
   }
 }

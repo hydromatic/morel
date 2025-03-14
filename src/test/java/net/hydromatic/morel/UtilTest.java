@@ -18,28 +18,29 @@
  */
 package net.hydromatic.morel;
 
-import net.hydromatic.morel.ast.Ast;
-import net.hydromatic.morel.ast.Pos;
-import net.hydromatic.morel.compile.BuiltIn;
-import net.hydromatic.morel.eval.Codes;
-import net.hydromatic.morel.type.PrimitiveType;
-import net.hydromatic.morel.type.RangeExtent;
-import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.Folder;
-import net.hydromatic.morel.util.MapList;
-import net.hydromatic.morel.util.Pair;
-import net.hydromatic.morel.util.Static;
-import net.hydromatic.morel.util.TailList;
+import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.eval.Codes.isNegative;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.endsWith;
+import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
+import static net.hydromatic.morel.util.Static.transform;
+import static org.apache.calcite.util.Util.range;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
-import org.apache.calcite.runtime.FlatLists;
-import org.apache.calcite.util.ImmutableIntList;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,30 +54,27 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-
-import static net.hydromatic.morel.ast.AstBuilder.ast;
-import static net.hydromatic.morel.eval.Codes.isNegative;
-import static net.hydromatic.morel.util.Ord.forEachIndexed;
-import static net.hydromatic.morel.util.Static.endsWith;
-import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
-import static net.hydromatic.morel.util.Static.transform;
-
-import static org.apache.calcite.util.Util.range;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.hasToString;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.core.Is.is;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
+import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RangeExtent;
+import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.Folder;
+import net.hydromatic.morel.util.MapList;
+import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.Static;
+import net.hydromatic.morel.util.TailList;
+import org.apache.calcite.runtime.FlatLists;
+import org.apache.calcite.util.ImmutableIntList;
+import org.junit.jupiter.api.Test;
 
 /** Tests for various utility classes. */
 public class UtilTest {
   /** Tests {@link TailList}. */
-  @Test void testTailList() {
+  @Test
+  void testTailList() {
     final List<String> list = new ArrayList<>();
     list.add("a");
     list.add("b");
@@ -114,24 +112,26 @@ public class UtilTest {
     assertThat(list.isEmpty(), is(false));
   }
 
-  @Test void testOrd() {
+  @Test
+  void testOrd() {
     final List<String> abc = Arrays.asList("a", "b", "c");
     final StringBuilder buf = new StringBuilder();
-    forEachIndexed(abc, (e, i) ->
-        buf.append(i).append("#").append(e).append(";"));
+    forEachIndexed(
+        abc, (e, i) -> buf.append(i).append("#").append(e).append(";"));
     assertThat(buf, hasToString("0#a;1#b;2#c;"));
   }
 
-  @Test void testMapList() {
-    final List<String> abc =
-        MapList.of(3, i -> "" + (char) ('a' + i));
+  @Test
+  void testMapList() {
+    final List<String> abc = MapList.of(3, i -> "" + (char) ('a' + i));
     assertThat(abc.size(), is(3));
     assertThat(abc.get(0), is("a"));
     assertThat(abc.get(2), is("c"));
     assertThat(String.join(",", abc), is("a,b,c"));
   }
 
-  @Test void testFolder() {
+  @Test
+  void testFolder() {
     final List<Folder<Ast.Exp>> list = new ArrayList<>();
     Folder.start(list, ast.stringLiteral(Pos.ZERO, "a"));
     Folder.at(list, ast.stringLiteral(Pos.ZERO, "b"));
@@ -145,7 +145,8 @@ public class UtilTest {
   }
 
   /** Tests {@link Static#shorterThan(Iterable, int)}. */
-  @Test void testShorterThan() {
+  @Test
+  void testShorterThan() {
     // A list of length n is shorter than n + 1, but not shorter than n
     final List<Integer> list2 = Arrays.asList(0, 1);
     assertThat(Static.shorterThan(list2, 1), is(false));
@@ -198,7 +199,8 @@ public class UtilTest {
   }
 
   /** Tests {@link Static#find(List, Predicate)}. */
-  @Test void testFind() {
+  @Test
+  void testFind() {
     final List<Integer> list = Arrays.asList(1, 7, 3);
     final List<Integer> emptyList = Collections.emptyList();
     assertThat(Static.find(list, i -> i > 0), is(0));
@@ -207,10 +209,12 @@ public class UtilTest {
     assertThat(Static.find(emptyList, i -> i > 0), is(-1));
   }
 
-  /** Tests {@link Static#last(List)},
-   * {@link Static#skip(List)},
-   * {@link Static#skipLast(List)}. */
-  @Test void testLast() {
+  /**
+   * Tests {@link Static#last(List)}, {@link Static#skip(List)}, {@link
+   * Static#skipLast(List)}.
+   */
+  @Test
+  void testLast() {
     final List<Integer> list = Arrays.asList(1, 7, 3);
     final List<Integer> emptyList = Collections.emptyList();
     assertThat(Static.last(list), is(3));
@@ -237,18 +241,22 @@ public class UtilTest {
     assertThat(Static.skipLast(list, 2), hasSize(1));
     assertThat(Static.skipLast(list, 2), is(Collections.singletonList(1)));
     assertThat(Static.skipLast(list, 3), empty());
-    assertThrows(IllegalArgumentException.class, () -> Static.skipLast(emptyList));
-    assertThrows(IllegalArgumentException.class, () -> Static.skipLast(list, 7));
+    assertThrows(
+        IllegalArgumentException.class, () -> Static.skipLast(emptyList));
+    assertThrows(
+        IllegalArgumentException.class, () -> Static.skipLast(list, 7));
   }
 
   /** Unit tests for {@link Pos}. */
-  @Test void testPos() {
-    final BiConsumer<String, String> check = (s, posString) -> {
-      final Pair<String, Pos> pos = Pos.split(s, '$', "stdIn");
-      assertThat(pos.left, is("abcdefgh"));
-      assertThat(pos.right, notNullValue());
-      assertThat(pos.right, hasToString(posString));
-    };
+  @Test
+  void testPos() {
+    final BiConsumer<String, String> check =
+        (s, posString) -> {
+          final Pair<String, Pos> pos = Pos.split(s, '$', "stdIn");
+          assertThat(pos.left, is("abcdefgh"));
+          assertThat(pos.right, notNullValue());
+          assertThat(pos.right, hasToString(posString));
+        };
     // starts and ends in middle
     check.accept("abc$def$gh", "stdIn:1.4-1.7");
     // ends at end
@@ -258,44 +266,54 @@ public class UtilTest {
     // one character long
     check.accept("abc$d$efgh", "stdIn:1.4");
 
-    final BiConsumer<String, String> check2 = (s, posString) -> {
-      final Pair<String, Pos> pos = Pos.split(s, '$', "stdIn");
-      assertThat(pos.left,
-          is("abc\n" //
-              + "de\n"
-              + "\n"
-              + "fgh"));
-      assertThat(pos.right, notNullValue());
-      assertThat(pos.right, hasToString(posString));
-    };
+    final BiConsumer<String, String> check2 =
+        (s, posString) -> {
+          final Pair<String, Pos> pos = Pos.split(s, '$', "stdIn");
+          assertThat(
+              pos.left,
+              is(
+                  "abc\n" //
+                      + "de\n"
+                      + "\n"
+                      + "fgh"));
+          assertThat(pos.right, notNullValue());
+          assertThat(pos.right, hasToString(posString));
+        };
     // start of line
-    check2.accept("abc\n" //
-        + "$de$\n"
-        + "\n"
-        + "fgh", "stdIn:2.1-2.3");
+    check2.accept(
+        "abc\n" //
+            + "$de$\n"
+            + "\n"
+            + "fgh",
+        "stdIn:2.1-2.3");
     // spans multiple lines
-    check2.accept("abc\n" //
-        + "d$e\n"
-        + "\n"
-        + "fg$h", "stdIn:2.2-4.3");
+    check2.accept(
+        "abc\n" //
+            + "d$e\n"
+            + "\n"
+            + "fg$h",
+        "stdIn:2.2-4.3");
 
     // too many, too few
-    Consumer<String> checkTooFew = s -> {
-      try {
-        final Pair<String, Pos> pos4 = Pos.split(s, '$', "stdIn");
-        fail("expected error, got " + pos4);
-      } catch (IllegalArgumentException e) {
-        assertThat(e.getMessage(),
-            is("expected exactly two occurrences of delimiter, '$'"));
-      }
-    };
+    Consumer<String> checkTooFew =
+        s -> {
+          try {
+            final Pair<String, Pos> pos4 = Pos.split(s, '$', "stdIn");
+            fail("expected error, got " + pos4);
+          } catch (IllegalArgumentException e) {
+            assertThat(
+                e.getMessage(),
+                is("expected exactly two occurrences of delimiter, '$'"));
+          }
+        };
     checkTooFew.accept("$abc$de$f");
     checkTooFew.accept("abc$def");
     checkTooFew.accept("abcdef");
   }
 
   /** Tests {@link Static#nextPowerOfTwo(int)}. */
-  @Test void testPower() {
+  @Test
+  void testPower() {
     assertThat(nextPowerOfTwo(0), is(1));
     assertThat(nextPowerOfTwo(-1), is(1)); // 2^16
     assertThat(nextPowerOfTwo(-2), is(1)); // 2^16
@@ -320,22 +338,28 @@ public class UtilTest {
     assertThat(nextPowerOfTwo(-2_147_483_648), is(1)); // 2^0
   }
 
-  @Test void testTransform() {
+  @Test
+  void testTransform() {
     final List<String> list = Arrays.asList("john", "paul", "george", "ringo");
     assertThat(transform(list, String::length), is(Arrays.asList(4, 4, 6, 5)));
-    assertThat(transform(Collections.emptyList(), String::length),
+    assertThat(
+        transform(Collections.emptyList(), String::length),
         is(Collections.emptyList()));
   }
 
-  /** Tests that {@code Real.toString} returns values consistent with JDK 19 and
-   * later, incorporating the fix to
-   * <a href="https://bugs.openjdk.org/browse/JDK-4511638">[JDK-4511638]
-   * Double.toString(double) sometimes produces incorrect results</a>. */
-  @Test void testToString() {
-    Function<String, String> fn = s -> {
-      float f = Float.parseFloat(s);
-      return Codes.floatToString(f);
-    };
+  /**
+   * Tests that {@code Real.toString} returns values consistent with JDK 19 and
+   * later, incorporating the fix to <a
+   * href="https://bugs.openjdk.org/browse/JDK-4511638">[JDK-4511638]
+   * Double.toString(double) sometimes produces incorrect results</a>.
+   */
+  @Test
+  void testToString() {
+    Function<String, String> fn =
+        s -> {
+          float f = Float.parseFloat(s);
+          return Codes.floatToString(f);
+        };
     assertThat(fn.apply("1.17549435E-38"), is("1.1754944E~38"));
     assertThat(fn.apply("1.1754944E-38"), is("1.1754944E~38"));
 
@@ -356,10 +380,13 @@ public class UtilTest {
     assertThat(fn.apply("-1.234e-10"), is("~1.234E~10"));
   }
 
-  /** Tests the {@link Codes#isNegative(float)} function,
-   * which is used to implement {@code Real.signBit}. */
+  /**
+   * Tests the {@link Codes#isNegative(float)} function, which is used to
+   * implement {@code Real.signBit}.
+   */
   @SuppressWarnings("ConstantValue")
-  @Test void testFloatBit() {
+  @Test
+  void testFloatBit() {
     assertThat(isNegative(0f), is(false));
     assertThat(isNegative(3.5f), is(false));
     assertThat(isNegative(Float.POSITIVE_INFINITY), is(false));
@@ -376,7 +403,8 @@ public class UtilTest {
     assertThat(Float.isNaN(Codes.NEGATIVE_NAN), is(true));
   }
 
-  @Test void testPairAllMatch() {
+  @Test
+  void testPairAllMatch() {
     final List<Integer> list1 = Arrays.asList(1, 3, 5);
     final List<Integer> list2 = Arrays.asList(2, 3, 4);
     final List<Integer> list0 = Collections.emptyList();
@@ -398,7 +426,8 @@ public class UtilTest {
   }
 
   @SuppressWarnings("UnstableApiUsage")
-  @Test void testRangeExtent() {
+  @Test
+  void testRangeExtent() {
     final TypeSystem typeSystem = new TypeSystem();
     BuiltIn.dataTypes(typeSystem, new ArrayList<>());
 
@@ -406,67 +435,84 @@ public class UtilTest {
     final Range<BigDecimal> range =
         Range.openClosed(BigDecimal.valueOf(4), BigDecimal.valueOf(7));
     final RangeExtent rangeExtent =
-        new RangeExtent(typeSystem, PrimitiveType.INT,
+        new RangeExtent(
+            typeSystem,
+            PrimitiveType.INT,
             ImmutableMap.of("/", ImmutableRangeSet.of(range)));
     assertThat(rangeExtent.iterable, notNullValue());
-    assertThat(Lists.newArrayList(rangeExtent.iterable),
-        is(Arrays.asList(5, 6, 7)));
+    assertThat(
+        Lists.newArrayList(rangeExtent.iterable), is(Arrays.asList(5, 6, 7)));
 
     // Integer range set [(4, 7], [10, 12]]
     final Range<BigDecimal> range2 =
         Range.closed(BigDecimal.valueOf(10), BigDecimal.valueOf(12));
     final RangeExtent rangeExtent2 =
         new RangeExtent(
-            typeSystem, PrimitiveType.INT,
-            ImmutableMap.of("/",
+            typeSystem,
+            PrimitiveType.INT,
+            ImmutableMap.of(
+                "/",
                 ImmutableRangeSet.unionOf(ImmutableList.of(range, range2))));
     assertThat(rangeExtent2.iterable, notNullValue());
-    assertThat(Lists.newArrayList(rangeExtent2.iterable),
+    assertThat(
+        Lists.newArrayList(rangeExtent2.iterable),
         is(Arrays.asList(5, 6, 7, 10, 11, 12)));
 
     // Boolean range set
     final Range<Boolean> range3 = Range.closed(false, true);
     final RangeExtent rangeExtent3 =
-        new RangeExtent(typeSystem, PrimitiveType.BOOL,
+        new RangeExtent(
+            typeSystem,
+            PrimitiveType.BOOL,
             ImmutableMap.of("/", ImmutableRangeSet.of(range3)));
     assertThat(rangeExtent3.iterable, notNullValue());
-    assertThat(Lists.newArrayList(rangeExtent3.iterable),
+    assertThat(
+        Lists.newArrayList(rangeExtent3.iterable),
         is(Arrays.asList(false, true)));
 
     // Range set of (Boolean, Boolean) tuples
     final Range<Comparable> range4 =
-        Range.closed((Comparable) FlatLists.of(false, true),
+        Range.closed(
+            (Comparable) FlatLists.of(false, true),
             (Comparable) FlatLists.of(true, true));
     final RangeExtent rangeExtent4 =
-        new RangeExtent(typeSystem,
+        new RangeExtent(
+            typeSystem,
             typeSystem.tupleType(PrimitiveType.BOOL, PrimitiveType.BOOL),
             ImmutableMap.of("/", ImmutableRangeSet.of(range4)));
     assertThat(rangeExtent4.iterable, notNullValue());
-    assertThat(Lists.newArrayList(rangeExtent4.iterable),
+    assertThat(
+        Lists.newArrayList(rangeExtent4.iterable),
         is(
-            Arrays.asList(FlatLists.of(false, true),
-                FlatLists.of(true, false), FlatLists.of(true, true))));
+            Arrays.asList(
+                FlatLists.of(false, true),
+                FlatLists.of(true, false),
+                FlatLists.of(true, true))));
 
     // Range set of (boolean option, int) tuples
     final RangeExtent rangeExtent5 =
-        new RangeExtent(typeSystem,
+        new RangeExtent(
+            typeSystem,
             typeSystem.tupleType(
-                typeSystem.option(PrimitiveType.BOOL),
-                PrimitiveType.INT),
-            ImmutableMap.of("/1/SOME/",
+                typeSystem.option(PrimitiveType.BOOL), PrimitiveType.INT),
+            ImmutableMap.of(
+                "/1/SOME/",
                 ImmutableRangeSet.of(Range.singleton(true)),
                 "/2/",
                 ImmutableRangeSet.of(
-                    Range.closed(BigDecimal.valueOf(4),
-                        BigDecimal.valueOf(6)))));
+                    Range.closed(
+                        BigDecimal.valueOf(4), BigDecimal.valueOf(6)))));
     assertThat(rangeExtent5.iterable, notNullValue());
-    assertThat(ImmutableList.copyOf(rangeExtent5.iterable),
-        hasToString("[[[NONE], 4], [[NONE], 5], [[NONE], 6],"
-            + " [[SOME, true], 4], [[SOME, true], 5], [[SOME, true], 6]]"));
+    assertThat(
+        ImmutableList.copyOf(rangeExtent5.iterable),
+        hasToString(
+            "[[[NONE], 4], [[NONE], 5], [[NONE], 6],"
+                + " [[SOME, true], 4], [[SOME, true], 5], [[SOME, true], 6]]"));
   }
 
   /** Tests {@link Static#endsWith(StringBuilder, String)}. */
-  @Test void testEndsWith() {
+  @Test
+  void testEndsWith() {
     final StringBuilder yzxyz = new StringBuilder("yzxyz");
     assertThat(endsWith(yzxyz, ""), is(true));
     assertThat(endsWith(yzxyz, "z"), is(true));

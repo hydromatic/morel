@@ -17,10 +17,10 @@
  * License.
  */
 
-/** Validates programs
- * (represented as {@link net.hydromatic.morel.ast.AstNode}),
- * deduces their type,
- * and compiles them into code that can be evaluated. */
+/**
+ * Validates programs (represented as {@link net.hydromatic.morel.ast.AstNode}),
+ * deduces their type, and compiles them into code that can be evaluated.
+ */
 package net.hydromatic.morel.compile;
 
 // End package-info.java

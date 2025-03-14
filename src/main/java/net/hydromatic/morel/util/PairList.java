@@ -18,11 +18,11 @@
  */
 package net.hydromatic.morel.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -30,10 +30,10 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
-/** A list of pairs, stored as a quotient list.
+/**
+ * A list of pairs, stored as a quotient list.
  *
  * @param <T> First type
  * @param <U> Second type
@@ -65,10 +65,12 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
     return backedBy(new ArrayList<>(initialCapacity));
   }
 
-  /** Creates a PairList backed by a given list.
+  /**
+   * Creates a PairList backed by a given list.
    *
-   * <p>Changes to the backing list will be reflected in the PairList.
-   * If the backing list is immutable, this PairList will be also. */
+   * <p>Changes to the backing list will be reflected in the PairList. If the
+   * backing list is immutable, this PairList will be also.
+   */
   static <T, U> PairList<T, U> backedBy(List<@Nullable Object> list) {
     return new PairLists.MutablePairList<>(list);
   }
@@ -77,10 +79,11 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
   @SuppressWarnings("RedundantCast")
   static <T, U> PairList<T, U> of(Map<T, U> map) {
     final List<@Nullable Object> list = new ArrayList<>(map.size() * 2);
-    map.forEach((t, u) -> {
-      list.add((Object) t);
-      list.add((Object) u);
-    });
+    map.forEach(
+        (t, u) -> {
+          list.add((Object) t);
+          list.add((Object) u);
+        });
     return new PairLists.MutablePairList<>(list);
   }
 
@@ -99,21 +102,26 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
     throw new UnsupportedOperationException("add");
   }
 
-  /** Adds to this list the contents of another PairList.
+  /**
+   * Adds to this list the contents of another PairList.
    *
-   * <p>Equivalent to {@link #addAll(Collection)}, but more efficient. */
+   * <p>Equivalent to {@link #addAll(Collection)}, but more efficient.
+   */
   default boolean addAll(PairList<T, U> list2) {
     throw new UnsupportedOperationException("addAll");
   }
 
-  /** Adds to this list, at a given index, the contents of another PairList.
+  /**
+   * Adds to this list, at a given index, the contents of another PairList.
    *
-   * <p>Equivalent to {@link #addAll(int, Collection)}, but more efficient. */
+   * <p>Equivalent to {@link #addAll(int, Collection)}, but more efficient.
+   */
   default boolean addAll(int index, PairList<T, U> list2) {
     throw new UnsupportedOperationException("addAll");
   }
 
-  @Override default Map.Entry<T, U> set(int index, Map.Entry<T, U> entry) {
+  @Override
+  default Map.Entry<T, U> set(int index, Map.Entry<T, U> entry) {
     return set(index, entry.getKey(), entry.getValue());
   }
 
@@ -122,7 +130,8 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
     throw new UnsupportedOperationException("set");
   }
 
-  @Override default Map.Entry<T, U> remove(int index) {
+  @Override
+  default Map.Entry<T, U> remove(int index) {
     throw new UnsupportedOperationException("remove");
   }
 
@@ -132,12 +141,16 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
   /** Returns the right part of the {@code index}th pair. */
   U right(int index);
 
-  /** Returns an unmodifiable list view consisting of the left entry of each
-   * pair. */
+  /**
+   * Returns an unmodifiable list view consisting of the left entry of each
+   * pair.
+   */
   List<T> leftList();
 
-  /** Returns an unmodifiable list view consisting of the right entry of each
-   * pair. */
+  /**
+   * Returns an unmodifiable list view consisting of the right entry of each
+   * pair.
+   */
   List<U> rightList();
 
   /** Calls a BiConsumer with each pair in this list. */
@@ -146,16 +159,19 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
   /** Calls a BiConsumer with each pair in this list. */
   void forEachIndexed(IndexedBiConsumer<T, U> consumer);
 
-  /** Creates an {@link ImmutableMap} whose entries are the pairs in this list.
-   * Throws if keys are not unique. */
+  /**
+   * Creates an {@link ImmutableMap} whose entries are the pairs in this list.
+   * Throws if keys are not unique.
+   */
   default ImmutableMap<T, U> toImmutableMap() {
     final ImmutableMap.Builder<T, U> b = ImmutableMap.builder();
     forEach((t, u) -> b.put(t, u));
     return b.build();
   }
 
-  /** Returns an ImmutablePairList whose contents are the same as this
-   * PairList. */
+  /**
+   * Returns an ImmutablePairList whose contents are the same as this PairList.
+   */
   ImmutablePairList<T, U> immutable();
 
   /** Applies a mapping function to each element of this list. */
@@ -164,26 +180,25 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
   /** Applies a mapping function to each element of this list. */
   <R> ImmutableList<R> transform2(BiFunction<T, U, R> function);
 
-  /** Returns whether the predicate is true for at least one pair
-   * in this list. */
+  /**
+   * Returns whether the predicate is true for at least one pair in this list.
+   */
   boolean anyMatch(BiPredicate<T, U> predicate);
 
-  /** Returns whether the predicate is true for all pairs
-   * in this list. */
+  /** Returns whether the predicate is true for all pairs in this list. */
   boolean allMatch(BiPredicate<T, U> predicate);
 
   /** Returns the index of the first match of a predicate. */
   int firstMatch(BiPredicate<T, U> predicate);
 
-  /** Returns whether the predicate is true for no pairs
-   * in this list. */
+  /** Returns whether the predicate is true for no pairs in this list. */
   boolean noMatch(BiPredicate<T, U> predicate);
 
-  /** Action to be taken each step of an indexed iteration over a PairList.
+  /**
+   * Action to be taken each step of an indexed iteration over a PairList.
    *
    * @param <T> First type
    * @param <U> Second type
-   *
    * @see PairList#forEachIndexed(IndexedBiConsumer)
    */
   interface IndexedBiConsumer<T, U> {
@@ -197,10 +212,12 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
     void accept(int index, T t, U u);
   }
 
-  /** Builds a PairList.
+  /**
+   * Builds a PairList.
    *
    * @param <T> First type
-   * @param <U> Second type */
+   * @param <U> Second type
+   */
   class Builder<T, U> {
     final List<@Nullable Object> list = new ArrayList<>();
 

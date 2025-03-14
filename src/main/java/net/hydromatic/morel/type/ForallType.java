@@ -18,14 +18,12 @@
  */
 package net.hydromatic.morel.type;
 
-import net.hydromatic.morel.ast.Op;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.Maps;
-
 import java.util.List;
 import java.util.function.UnaryOperator;
-
-import static java.util.Objects.requireNonNull;
+import net.hydromatic.morel.ast.Op;
 
 /** Universally quantified type. */
 public class ForallType extends BaseType {
@@ -46,30 +44,30 @@ public class ForallType extends BaseType {
     return typeVisitor.visit(this);
   }
 
-  @Override public ForallType copy(TypeSystem typeSystem,
-      UnaryOperator<Type> transform) {
+  @Override
+  public ForallType copy(TypeSystem typeSystem, UnaryOperator<Type> transform) {
     final Type type2 = type.copy(typeSystem, transform);
-    return type2 == type
-        ? this
-        : typeSystem.forallType(parameterCount, type2);
+    return type2 == type ? this : typeSystem.forallType(parameterCount, type2);
   }
 
-  @Override public Type substitute(TypeSystem typeSystem,
-      List<? extends Type> types) {
+  @Override
+  public Type substitute(TypeSystem typeSystem, List<? extends Type> types) {
     switch (type.op()) {
-    case DATA_TYPE:
-      final DataType dataType = (DataType) type;
-      Key key =
-          Keys.datatype(dataType.name, Keys.toKeys(types),
-              Maps.transformValues(dataType.typeConstructors,
-                  k -> k.substitute(types)));
-      return typeSystem.typeFor(key);
+      case DATA_TYPE:
+        final DataType dataType = (DataType) type;
+        Key key =
+            Keys.datatype(
+                dataType.name,
+                Keys.toKeys(types),
+                Maps.transformValues(
+                    dataType.typeConstructors, k -> k.substitute(types)));
+        return typeSystem.typeFor(key);
 
-    case FUNCTION_TYPE:
-      return type.substitute(typeSystem, types);
+      case FUNCTION_TYPE:
+        return type.substitute(typeSystem, types);
 
-    default:
-      throw new AssertionError(type.op() + ": " + type);
+      default:
+        throw new AssertionError(type.op() + ": " + type);
     }
   }
 }

@@ -20,17 +20,20 @@ package net.hydromatic.morel.eval;
 
 import java.util.AbstractList;
 
-/** A placeholder value for the "unit" type.
+/**
+ * A placeholder value for the "unit" type.
  *
  * <p>We sometimes use it as a dummy value when we need to add a variable (and
  * its type) to the compilation environment but we don't have a value (because
- * it's not a runtime environment). */
+ * it's not a runtime environment).
+ */
 public class Unit extends AbstractList implements Comparable<Unit> {
   public static final Unit INSTANCE = new Unit();
 
   private Unit() {}
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return "()";
   }
 

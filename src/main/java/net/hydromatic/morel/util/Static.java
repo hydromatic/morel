@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
-
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -36,25 +35,25 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
 
-/**
- * Utilities.
- */
+/** Utilities. */
 public class Static {
-  private Static() {
-  }
+  private Static() {}
 
-  /** Whether to skip built-in functions.
+  /**
+   * Whether to skip built-in functions.
    *
    * <p>To skip built-in functions, add "-DskipMorelBuiltIns" java's
-   * command-line arguments. */
+   * command-line arguments.
+   */
   public static final boolean SKIP =
       getBooleanProperty("skipMorelBuiltIns", false);
 
-  /** Returns the value of a system property, converted into a boolean value.
+  /**
+   * Returns the value of a system property, converted into a boolean value.
    *
-   * <p>Values "", "true", "TRUE" and "1" are treated as true;
-   * "false", "FALSE" and "0" treated as false;
-   * for {@code null} and other values, returns {@code defaultVal}.
+   * <p>Values "", "true", "TRUE" and "1" are treated as true; "false", "FALSE"
+   * and "0" treated as false; for {@code null} and other values, returns {@code
+   * defaultVal}.
    */
   @SuppressWarnings("SimplifiableConditionalExpression")
   private static boolean getBooleanProperty(String prop, boolean defaultVal) {
@@ -63,26 +62,28 @@ public class Static {
       return defaultVal;
     }
     final String low = value.toLowerCase(Locale.ROOT);
-    return low.equals("true") || low.equals("1") || low.isEmpty() ? true
-        : low.equals("false") || low.equals("0") ? false
-        : defaultVal;
+    return low.equals("true") || low.equals("1") || low.isEmpty()
+        ? true
+        : low.equals("false") || low.equals("0") ? false : defaultVal;
   }
 
   /**
    * Returns a {@code Collector} that accumulates the input elements into a
    * Guava {@link ImmutableList} via a {@link ImmutableList.Builder}.
    *
-   * <p>It will be obsolete when we move to Guava 21.0,
-   * which has {@code ImmutableList.toImmutableList()}.
+   * <p>It will be obsolete when we move to Guava 21.0, which has {@code
+   * ImmutableList.toImmutableList()}.
    *
    * @param <T> Type of the input elements
-   *
    * @return a {@code Collector} that collects all the input elements into an
-   * {@link ImmutableList}, in encounter order
+   *     {@link ImmutableList}, in encounter order
    */
-  public static <T> Collector<T, ImmutableList.Builder<T>, ImmutableList<T>>
-      toImmutableList() {
-    return Collector.of(ImmutableList::builder, ImmutableList.Builder::add,
+  public static <T>
+      Collector<T, ImmutableList.Builder<T>, ImmutableList<T>>
+          toImmutableList() {
+    return Collector.of(
+        ImmutableList::builder,
+        ImmutableList.Builder::add,
         (t, u) -> {
           t.addAll(u.build());
           return t;
@@ -90,7 +91,8 @@ public class Static {
         ImmutableList.Builder::build);
   }
 
-  /** Returns whether an {@link Iterable} has fewer than {@code n} elements.
+  /**
+   * Returns whether an {@link Iterable} has fewer than {@code n} elements.
    *
    * @param <E> Element type
    */
@@ -102,8 +104,9 @@ public class Static {
       return false;
     }
     int i = 0;
-    for (Iterator<E> iterator = iterable.iterator(); iterator.hasNext();
-         iterator.next()) {
+    for (Iterator<E> iterator = iterable.iterator();
+        iterator.hasNext();
+        iterator.next()) {
       if (++i == n) {
         return false;
       }
@@ -111,7 +114,8 @@ public class Static {
     return true;
   }
 
-  /** Returns the last element of a list.
+  /**
+   * Returns the last element of a list.
    *
    * @throws java.lang.IndexOutOfBoundsException if the list is empty
    */
@@ -139,9 +143,11 @@ public class Static {
     return list.subList(0, list.size() - n);
   }
 
-  /** Returns a list with one element appended.
+  /**
+   * Returns a list with one element appended.
    *
-   * @see ConsList */
+   * @see ConsList
+   */
   public static <E> List<E> append(List<E> list, E e) {
     return ImmutableList.<E>builder().addAll(list).add(e).build();
   }
@@ -154,20 +160,18 @@ public class Static {
   /** Removes all occurrences of an element from a list. */
   public static <E> List<E> minus(List<E> list, E e) {
     final ImmutableList.Builder<E> builder = ImmutableList.builder();
-    list.forEach(e2 -> {
-      if (!e2.equals(e)) {
-        builder.add(e2);
-      }
-    });
+    list.forEach(
+        e2 -> {
+          if (!e2.equals(e)) {
+            builder.add(e2);
+          }
+        });
     return builder.build();
   }
 
   /** Adds an element to a map. */
   public static <K, V> Map<K, V> plus(Map<K, V> map, K k, V v) {
-    return ImmutableMap.<K, V>builder()
-        .putAll(map)
-        .put(k, v)
-        .build();
+    return ImmutableMap.<K, V>builder().putAll(map).put(k, v).build();
   }
 
   /** Adds an element to a sorted map. */
@@ -186,20 +190,23 @@ public class Static {
   }
 
   /** Lazily transforms a list, applying a mapping function to each element. */
-  public static <E, T> List<T> transform(List<? extends E> elements,
-      Function<E, T> mapper) {
+  public static <E, T> List<T> transform(
+      List<? extends E> elements, Function<E, T> mapper) {
     return org.apache.calcite.util.Util.transform(elements, mapper);
   }
 
-  /** Lazily transforms an Iterable, applying a mapping function to each
-   * element. */
-  public static <E, T> Iterable<T> transform(Iterable<? extends E> elements,
-      Function<E, T> mapper) {
+  /**
+   * Lazily transforms an Iterable, applying a mapping function to each element.
+   */
+  public static <E, T> Iterable<T> transform(
+      Iterable<? extends E> elements, Function<E, T> mapper) {
     return Iterables.transform(elements, mapper::apply);
   }
 
-  /** Eagerly converts an Iterable to an ImmutableList, applying a mapping
-   * function to each element. */
+  /**
+   * Eagerly converts an Iterable to an ImmutableList, applying a mapping
+   * function to each element.
+   */
   public static <E, T> ImmutableList<T> transformEager(
       Iterable<? extends E> elements, Function<E, T> mapper) {
     if (Iterables.isEmpty(elements)) {
@@ -231,11 +238,13 @@ public class Static {
     return -1;
   }
 
-  /** Returns a list containing the elements of {@code list0} that are also in
+  /**
+   * Returns a list containing the elements of {@code list0} that are also in
    * {@code list1}. The result preserves the order of {@code list1}, and any
-   * duplicates it may contain. */
-  public static <E> List<E> intersect(List<E> list0,
-      Iterable<? extends E> list1) {
+   * duplicates it may contain.
+   */
+  public static <E> List<E> intersect(
+      List<E> list0, Iterable<? extends E> list1) {
     final ImmutableList.Builder<E> list2 = ImmutableList.builder();
     final Set<E> set = new HashSet<>(list0);
     for (E e : list1) {

@@ -18,17 +18,6 @@
  */
 package net.hydromatic.morel;
 
-import net.hydromatic.morel.foreign.Calcite;
-import net.hydromatic.morel.foreign.CalciteForeignValue;
-import net.hydromatic.morel.foreign.DataSet;
-import net.hydromatic.morel.foreign.ForeignValue;
-
-import net.hydromatic.foodmart.data.hsqldb.FoodmartHsqldb;
-import net.hydromatic.scott.data.hsqldb.ScottHsqldb;
-import org.apache.calcite.adapter.jdbc.JdbcSchema;
-import org.apache.calcite.schema.SchemaPlus;
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import java.util.AbstractMap;
 import java.util.Locale;
 import java.util.Map;
@@ -36,10 +25,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.sql.DataSource;
+import net.hydromatic.foodmart.data.hsqldb.FoodmartHsqldb;
+import net.hydromatic.morel.foreign.Calcite;
+import net.hydromatic.morel.foreign.CalciteForeignValue;
+import net.hydromatic.morel.foreign.DataSet;
+import net.hydromatic.morel.foreign.ForeignValue;
+import net.hydromatic.scott.data.hsqldb.ScottHsqldb;
+import org.apache.calcite.adapter.jdbc.JdbcSchema;
+import org.apache.calcite.schema.SchemaPlus;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Data sets for testing. */
 enum BuiltInDataSet implements DataSet {
-  /** Returns a value based on the Foodmart JDBC database.
+  /**
+   * Returns a value based on the Foodmart JDBC database.
    *
    * <p>It is a record with fields for the following tables:
    *
@@ -53,7 +52,10 @@ enum BuiltInDataSet implements DataSet {
   FOODMART {
     SchemaPlus schema(SchemaPlus rootSchema) {
       final DataSource dataSource =
-          JdbcSchema.dataSource(FoodmartHsqldb.URI, null, FoodmartHsqldb.USER,
+          JdbcSchema.dataSource(
+              FoodmartHsqldb.URI,
+              null,
+              FoodmartHsqldb.USER,
               FoodmartHsqldb.PASSWORD);
       final String name = "foodmart";
       final JdbcSchema schema =
@@ -62,7 +64,8 @@ enum BuiltInDataSet implements DataSet {
     }
   },
 
-  /** Returns a value based on the Scott JDBC database.
+  /**
+   * Returns a value based on the Scott JDBC database.
    *
    * <p>It is a record with fields for the following tables:
    *
@@ -76,8 +79,8 @@ enum BuiltInDataSet implements DataSet {
   SCOTT {
     SchemaPlus schema(SchemaPlus rootSchema) {
       final DataSource dataSource =
-          JdbcSchema.dataSource(ScottHsqldb.URI, null, ScottHsqldb.USER,
-              ScottHsqldb.PASSWORD);
+          JdbcSchema.dataSource(
+              ScottHsqldb.URI, null, ScottHsqldb.USER, ScottHsqldb.PASSWORD);
       final String name = "scott";
       final JdbcSchema schema =
           JdbcSchema.create(rootSchema, name, dataSource, null, "SCOTT");
@@ -85,28 +88,34 @@ enum BuiltInDataSet implements DataSet {
     }
   };
 
-  /** Map of all known data sets.
+  /**
+   * Map of all known data sets.
    *
-   * <p>Contains "foodmart" and "scott". */
+   * <p>Contains "foodmart" and "scott".
+   */
   static final Map<String, DataSet> DICTIONARY =
       Stream.of(BuiltInDataSet.values())
           .collect(
-              Collectors.toMap(d -> d.name().toLowerCase(Locale.ROOT),
-                  d -> d));
+              Collectors.toMap(d -> d.name().toLowerCase(Locale.ROOT), d -> d));
 
   /** Returns the Calcite schema of this data set. */
   abstract SchemaPlus schema(SchemaPlus rootSchema);
 
-  @Override public ForeignValue foreignValue(Calcite calcite) {
+  @Override
+  public ForeignValue foreignValue(Calcite calcite) {
     return new CalciteForeignValue(calcite, schema(calcite.rootSchema), true);
   }
 
-  /** Map of built-in data sets.
+  /**
+   * Map of built-in data sets.
    *
-   * <p>Typically passed to {@link Shell} via the {@code --foreign} argument. */
+   * <p>Typically passed to {@link Shell} via the {@code --foreign} argument.
+   */
   @SuppressWarnings("unused")
   public static class Dictionary extends AbstractMap<String, DataSet> {
-    @Override @NonNull public Set<Entry<String, DataSet>> entrySet() {
+    @Override
+    @NonNull
+    public Set<Entry<String, DataSet>> entrySet() {
       return DICTIONARY.entrySet();
     }
   }

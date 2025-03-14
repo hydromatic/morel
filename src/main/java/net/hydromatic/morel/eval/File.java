@@ -21,7 +21,8 @@ package net.hydromatic.morel.eval;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 
-/** Directory in the file system.
+/**
+ * Directory in the file system.
  *
  * <p>Its type is progressive, so that it can discover new files and
  * subdirectories.
@@ -30,20 +31,21 @@ import net.hydromatic.morel.type.TypedValue;
  * @see Files#create(java.io.File)
  */
 public interface File extends TypedValue {
-  /** Expands this file to a file with a more precise type.
+  /**
+   * Expands this file to a file with a more precise type.
    *
    * <p>During expansion, record types may get new fields, never lose them.
    *
    * <p>This file object may or may not be mutable. If this file is immutable
    * and is expanded, returns the new file. If this file is mutable, returns
    * this file regardless of whether expansion occurred; the caller cannot
-   * discern whether expansion occurred. */
+   * discern whether expansion occurred.
+   */
   default File expand() {
     return this;
   }
 
-  default File discoverField(TypeSystem typeSystem,
-      String fieldName) {
+  default File discoverField(TypeSystem typeSystem, String fieldName) {
     return this;
   }
 }

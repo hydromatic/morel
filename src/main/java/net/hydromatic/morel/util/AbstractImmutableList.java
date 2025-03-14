@@ -18,12 +18,11 @@
  */
 package net.hydromatic.morel.util;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Base class for lists whose contents are constant after creation.
@@ -33,11 +32,13 @@ import java.util.ListIterator;
 abstract class AbstractImmutableList<E> implements List<E> {
   protected abstract List<E> toList();
 
-  @NonNull public Iterator<E> iterator() {
+  @NonNull
+  public Iterator<E> iterator() {
     return toList().iterator();
   }
 
-  @NonNull public ListIterator<E> listIterator() {
+  @NonNull
+  public ListIterator<E> listIterator() {
     return toList().listIterator();
   }
 
@@ -81,11 +82,13 @@ abstract class AbstractImmutableList<E> implements List<E> {
     throw new UnsupportedOperationException();
   }
 
-  @NonNull public ListIterator<E> listIterator(int index) {
+  @NonNull
+  public ListIterator<E> listIterator(int index) {
     return toList().listIterator(index);
   }
 
-  @NonNull public List<E> subList(int fromIndex, int toIndex) {
+  @NonNull
+  public List<E> subList(int fromIndex, int toIndex) {
     return toList().subList(fromIndex, toIndex);
   }
 

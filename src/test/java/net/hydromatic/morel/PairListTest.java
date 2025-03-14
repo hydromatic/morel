@@ -18,24 +18,6 @@
  */
 package net.hydromatic.morel;
 
-import net.hydromatic.morel.util.ImmutablePairList;
-import net.hydromatic.morel.util.MapEntry;
-import net.hydromatic.morel.util.Pair;
-import net.hydromatic.morel.util.PairList;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.junit.jupiter.api.Test;
-
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.RandomAccess;
-import java.util.function.BiPredicate;
-
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -46,42 +28,68 @@ import static org.hamcrest.Matchers.hasToString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.RandomAccess;
+import java.util.function.BiPredicate;
+import net.hydromatic.morel.util.ImmutablePairList;
+import net.hydromatic.morel.util.MapEntry;
+import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
+import org.junit.jupiter.api.Test;
+
 /** Unit test for {@code PairList}. */
 class PairListTest {
-  /** Equivalent to {@link Pair#left} but without calling
-   * {@link PairList#leftList()}. */
+  /**
+   * Equivalent to {@link Pair#left} but without calling {@link
+   * PairList#leftList()}.
+   */
   private static <T, U> List<T> left(
       final List<? extends Map.Entry<? extends T, ? extends U>> pairs) {
     return new AbstractList<T>() {
-      @Override public T get(int index) {
+      @Override
+      public T get(int index) {
         return pairs.get(index).getKey();
       }
 
-      @Override public int size() {
+      @Override
+      public int size() {
         return pairs.size();
       }
     };
   }
 
-  /** Equivalent to {@link Pair#right} but without calling
-   * {@link PairList#rightList()}. */
+  /**
+   * Equivalent to {@link Pair#right} but without calling {@link
+   * PairList#rightList()}.
+   */
   private static <T, U> List<U> right(
       final List<? extends Map.Entry<? extends T, ? extends U>> pairs) {
     return new AbstractList<U>() {
-      @Override public U get(int index) {
+      @Override
+      public U get(int index) {
         return pairs.get(index).getValue();
       }
 
-      @Override public int size() {
+      @Override
+      public int size() {
         return pairs.size();
       }
     };
   }
 
-  /** Compares a {@link PairList} with a {@link List} that should have
-   * equivalent contents. */
-  private <T, U> void validate(PairList<T, U> pairList,
-      List<? extends Map.Entry<T, U>> list) {
+  /**
+   * Compares a {@link PairList} with a {@link List} that should have equivalent
+   * contents.
+   */
+  private <T, U> void validate(
+      PairList<T, U> pairList, List<? extends Map.Entry<T, U>> list) {
     assertThat(pairList.isEmpty(), is(list.isEmpty()));
     assertThat(pairList, hasSize(list.size()));
     assertThat(pairList.leftList(), hasSize(list.size()));
@@ -114,10 +122,11 @@ class PairListTest {
 
     // Check PairList.forEachIndexed
     list2.clear();
-    pairList.forEachIndexed((i, t, u) -> {
-      assertThat(i, is(list2.size()));
-      list2.add(Pair.of(t, u));
-    });
+    pairList.forEachIndexed(
+        (i, t, u) -> {
+          assertThat(i, is(list2.size()));
+          list2.add(Pair.of(t, u));
+        });
     assertThat(list2, is(list));
 
     // Check PairList.immutable()
@@ -150,7 +159,8 @@ class PairListTest {
   }
 
   /** Basic test for {@link PairList}. */
-  @Test void testPairList() {
+  @Test
+  void testPairList() {
     final PairList<Integer, String> pairList = PairList.of();
     final List<Map.Entry<Integer, String>> list = new ArrayList<>();
 
@@ -214,8 +224,9 @@ class PairListTest {
     validate(pairList, list);
 
     PairList<Integer, String> immutablePairList = pairList.immutable();
-    assertThrows(UnsupportedOperationException.class, () ->
-        immutablePairList.add(0, ""));
+    assertThrows(
+        UnsupportedOperationException.class,
+        () -> immutablePairList.add(0, ""));
     validate(immutablePairList, list);
 
     // set(int, Pair<T, U>)
@@ -229,7 +240,8 @@ class PairListTest {
     validate(pairList, list);
   }
 
-  @Test void testAddAll() {
+  @Test
+  void testAddAll() {
     PairList<String, Integer> pairList = PairList.of();
 
     // MutablePairList (0 entries)
@@ -280,20 +292,24 @@ class PairListTest {
     pairList.addAll(ImmutablePairList.copyOf("o", 15));
     assertThat(pairList, hasSize(15));
 
-    assertThat(pairList,
-        hasToString("[<a, 1>, <b, 2>, <c, 3>, <d, 4>, <e, 5>, <f, 6>, "
-            + "<g, 7>, <h, 8>, <i, 9>, <j, 10>, <k, 11>, <l, 12>, "
-            + "<m, 13>, <n, 14>, <o, 15>]"));
+    assertThat(
+        pairList,
+        hasToString(
+            "[<a, 1>, <b, 2>, <c, 3>, <d, 4>, <e, 5>, <f, 6>, "
+                + "<g, 7>, <h, 8>, <i, 9>, <j, 10>, <k, 11>, <l, 12>, "
+                + "<m, 13>, <n, 14>, <o, 15>]"));
   }
 
   /** Tests {@link PairList#of(Map)} and {@link PairList#toImmutableMap()}. */
-  @Test void testPairListOfMap() {
+  @Test
+  void testPairListOfMap() {
     final ImmutableMap<String, Integer> map = ImmutableMap.of("a", 1, "b", 2);
     final PairList<String, Integer> pairList = PairList.of(map);
     assertThat(pairList, hasSize(2));
     assertThat(pairList, hasToString("[<a, 1>, <b, 2>]"));
 
-    final List<Map.Entry<String, Integer>> list = new ArrayList<>(map.entrySet());
+    final List<Map.Entry<String, Integer>> list =
+        new ArrayList<>(map.entrySet());
     validate(pairList, list);
 
     final ImmutableMap<String, Integer> map2 = pairList.toImmutableMap();
@@ -315,7 +331,8 @@ class PairListTest {
   }
 
   /** Tests {@link PairList#withCapacity(int)}. */
-  @Test void testPairListWithCapacity() {
+  @Test
+  void testPairListWithCapacity() {
     final PairList<String, Integer> list = PairList.withCapacity(100);
     assertThat(list, hasSize(0));
     assertThat(list, empty());
@@ -332,7 +349,8 @@ class PairListTest {
     assertThat(list, hasToString("[<b, 2>]"));
   }
 
-  @Test void testPairListOf() {
+  @Test
+  void testPairListOf() {
     final PairList<String, Integer> list0 = PairList.of();
     assertThat(list0, hasSize(0));
     assertThat(list0, empty());
@@ -347,12 +365,14 @@ class PairListTest {
     assertThat(list3, hasSize(3));
     assertThat(list3, hasToString("[<a, 1>, <b, null>, <c, 3>]"));
 
-    assertThrows(IllegalArgumentException.class,
+    assertThrows(
+        IllegalArgumentException.class,
         () -> PairList.copyOf("a", 1, "b", 2, "c"),
         "odd number of arguments");
   }
 
-  @Test void testTransform() {
+  @Test
+  void testTransform() {
     final PairList<String, Integer> mutableList3 =
         PairList.copyOf("a", 1, null, 5, "c", 3);
     final PairList<String, Integer> immutableList3 =
@@ -369,16 +389,17 @@ class PairListTest {
           mutable ? mutableList0 : mutableList0.immutable();
       PairList<String, Integer> list1 =
           mutable ? mutableList1 : mutableList1.immutable();
-      PairList<String, Integer> list3 =
-          mutable ? mutableList3 : immutableList3;
+      PairList<String, Integer> list3 = mutable ? mutableList3 : immutableList3;
 
       assertThat(list0.transform((s, i) -> s + i), empty());
 
       assertThat(list1.transform((s, i) -> s + i), is(ImmutableList.of("a1")));
 
-      assertThat(list3.transform((s, i) -> s + i),
+      assertThat(
+          list3.transform((s, i) -> s + i),
           is(Arrays.asList("a1", "null5", "c3")));
-      assertThat(list3.transform2((s, i) -> s + i),
+      assertThat(
+          list3.transform2((s, i) -> s + i),
           is(Arrays.asList("a1", "null5", "c3")));
 
       final BiPredicate<String, Integer> gt2 = (s, i) -> i > 2;
@@ -414,25 +435,30 @@ class PairListTest {
       }
 
       // All predicates behave the same on the empty list
-      Arrays.asList(gt2, negative, positive, isNull).forEach(p -> {
-        assertThat(list0.anyMatch(p), is(false));
-        assertThat(list0.allMatch(p), is(true)); // trivially
-        assertThat(list0.noMatch(p), is(true));
-        assertThat(list0.firstMatch(p), is(-1));
-      });
+      Arrays.asList(gt2, negative, positive, isNull)
+          .forEach(
+              p -> {
+                assertThat(list0.anyMatch(p), is(false));
+                assertThat(list0.allMatch(p), is(true)); // trivially
+                assertThat(list0.noMatch(p), is(true));
+                assertThat(list0.firstMatch(p), is(-1));
+              });
 
       // All predicates on the 1-element list have the same answer as the same
       // predicate on the 2-element list that is the 1-element list doubled.
-      Arrays.asList(gt2, negative, positive, isNull).forEach(p -> {
-        assertThat(list1.anyMatch(p), is(doubleList1.anyMatch(p)));
-        assertThat(list1.allMatch(p), is(doubleList1.anyMatch(p)));
-        assertThat(list1.noMatch(p), is(doubleList1.noMatch(p)));
-        assertThat(list1.firstMatch(p), is(doubleList1.firstMatch(p)));
-      });
+      Arrays.asList(gt2, negative, positive, isNull)
+          .forEach(
+              p -> {
+                assertThat(list1.anyMatch(p), is(doubleList1.anyMatch(p)));
+                assertThat(list1.allMatch(p), is(doubleList1.anyMatch(p)));
+                assertThat(list1.noMatch(p), is(doubleList1.noMatch(p)));
+                assertThat(list1.firstMatch(p), is(doubleList1.firstMatch(p)));
+              });
     }
   }
 
-  @Test void testBuilder() {
+  @Test
+  void testBuilder() {
     final PairList.Builder<String, Integer> b = PairList.builder();
     final List<Pair<String, Integer>> list = new ArrayList<>();
 

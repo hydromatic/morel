@@ -18,6 +18,39 @@
  */
 package net.hydromatic.morel.eval;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.SKIP;
+import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.Ordering;
+import com.google.common.primitives.Chars;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
@@ -36,45 +69,8 @@ import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MorelException;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Chars;
 import org.apache.calcite.runtime.FlatLists;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.util.Ord.forEachIndexed;
-import static net.hydromatic.morel.util.Static.SKIP;
-import static net.hydromatic.morel.util.Static.transform;
-import static net.hydromatic.morel.util.Static.transformEager;
-
-import static com.google.common.base.Preconditions.checkArgument;
-
-import static java.util.Objects.requireNonNull;
 
 /** Helpers for {@link Code}. */
 @SuppressWarnings({"rawtypes", "unchecked"})
@@ -87,9 +83,7 @@ public abstract class Codes {
 
   /** A special value that represents Standard ML "~NaN". */
   public static final float NEGATIVE_NAN =
-      Float.intBitsToFloat(
-          Float.floatToRawIntBits(Float.NaN)
-              ^ 0x8000_0000);
+      Float.intBitsToFloat(Float.floatToRawIntBits(Float.NaN) ^ 0x8000_0000);
 
   private Codes() {}
 
@@ -99,9 +93,11 @@ public abstract class Codes {
     return code2.describe(new DescriberImpl()).toString();
   }
 
-  /** Value of {@code NONE}.
+  /**
+   * Value of {@code NONE}.
    *
-   * @see #optionSome(Object) */
+   * @see #optionSome(Object)
+   */
   private static final List OPTION_NONE = ImmutableList.of("NONE");
 
   /** Returns a Code that evaluates to the same value in all environments. */
@@ -112,7 +108,8 @@ public abstract class Codes {
   /** Returns an Applicable that returns its argument. */
   private static ApplicableImpl identity(BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         return arg;
       }
     };
@@ -121,7 +118,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_EQ */
   private static final Applicable OP_EQ =
       new Applicable2<Boolean, Object, Object>(BuiltIn.OP_EQ) {
-        @Override public Boolean apply(Object a0, Object a1) {
+        @Override
+        public Boolean apply(Object a0, Object a1) {
           return a0.equals(a1);
         }
       };
@@ -129,7 +127,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_NE */
   private static final Applicable OP_NE =
       new Applicable2<Boolean, Object, Object>(BuiltIn.OP_NE) {
-        @Override public Boolean apply(Object a0, Object a1) {
+        @Override
+        public Boolean apply(Object a0, Object a1) {
           return !a0.equals(a1);
         }
       };
@@ -137,7 +136,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_LT */
   private static final Applicable OP_LT =
       new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LT) {
-        @Override public Boolean apply(Comparable a0, Comparable a1) {
+        @Override
+        public Boolean apply(Comparable a0, Comparable a1) {
           if (a0 instanceof Float && Float.isNaN((Float) a0)
               || a1 instanceof Float && Float.isNaN((Float) a1)) {
             return false;
@@ -149,7 +149,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_GT */
   private static final Applicable OP_GT =
       new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GT) {
-        @Override public Boolean apply(Comparable a0, Comparable a1) {
+        @Override
+        public Boolean apply(Comparable a0, Comparable a1) {
           if (a0 instanceof Float && Float.isNaN((Float) a0)
               || a1 instanceof Float && Float.isNaN((Float) a1)) {
             return false;
@@ -161,7 +162,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_LE */
   private static final Applicable OP_LE =
       new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LE) {
-        @Override public Boolean apply(Comparable a0, Comparable a1) {
+        @Override
+        public Boolean apply(Comparable a0, Comparable a1) {
           if (a0 instanceof Float && Float.isNaN((Float) a0)
               || a1 instanceof Float && Float.isNaN((Float) a1)) {
             return false;
@@ -173,7 +175,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_GE */
   private static final Applicable OP_GE =
       new Applicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GE) {
-        @Override public Boolean apply(Comparable a0, Comparable a1) {
+        @Override
+        public Boolean apply(Comparable a0, Comparable a1) {
           if (a0 instanceof Float && Float.isNaN((Float) a0)
               || a1 instanceof Float && Float.isNaN((Float) a1)) {
             return false;
@@ -185,7 +188,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_ELEM */
   private static final Applicable OP_ELEM =
       new Applicable2<Boolean, Object, List>(BuiltIn.OP_ELEM) {
-        @Override public Boolean apply(Object a0, List a1) {
+        @Override
+        public Boolean apply(Object a0, List a1) {
           return a1.contains(a0);
         }
       };
@@ -193,7 +197,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_NOT_ELEM */
   private static final Applicable OP_NOT_ELEM =
       new Applicable2<Boolean, Object, List>(BuiltIn.OP_NOT_ELEM) {
-        @Override public Boolean apply(Object a0, List a1) {
+        @Override
+        public Boolean apply(Object a0, List a1) {
           return !a1.contains(a0);
         }
       };
@@ -211,7 +216,8 @@ public abstract class Codes {
   /** Implements {@link #OP_NEGATE} for type {@code int}. */
   private static final Applicable Z_NEGATE_INT =
       new ApplicableImpl(BuiltIn.OP_NEGATE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return -((Integer) arg);
         }
       };
@@ -219,13 +225,14 @@ public abstract class Codes {
   /** Implements {@link #OP_NEGATE} for type {@code real}. */
   private static final Applicable Z_NEGATE_REAL =
       new ApplicableImpl(BuiltIn.OP_NEGATE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final float f = (Float) arg;
           if (Float.isNaN(f)) {
             // ~nan -> nan
             // nan (or any other value f such that isNan(f)) -> ~nan
             return Float.floatToRawIntBits(f)
-                == Float.floatToRawIntBits(NEGATIVE_NAN)
+                    == Float.floatToRawIntBits(NEGATIVE_NAN)
                 ? Float.NaN
                 : NEGATIVE_NAN;
           }
@@ -236,7 +243,8 @@ public abstract class Codes {
   /** Implements {@link #OP_PLUS} for type {@code int}. */
   private static final Applicable Z_PLUS_INT =
       new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_PLUS) {
-        @Override public Integer apply(Integer a0, Integer a1) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
           return a0 + a1;
         }
       };
@@ -244,7 +252,8 @@ public abstract class Codes {
   /** Implements {@link #OP_PLUS} for type {@code real}. */
   private static final Applicable Z_PLUS_REAL =
       new Applicable2<Float, Float, Float>(BuiltIn.OP_PLUS) {
-        @Override public Float apply(Float a0, Float a1) {
+        @Override
+        public Float apply(Float a0, Float a1) {
           return a0 + a1;
         }
       };
@@ -252,7 +261,8 @@ public abstract class Codes {
   /** Implements {@link #OP_MINUS} for type {@code int}. */
   private static final Applicable Z_MINUS_INT =
       new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_MINUS) {
-        @Override public Integer apply(Integer a0, Integer a1) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
           return a0 - a1;
         }
       };
@@ -260,7 +270,8 @@ public abstract class Codes {
   /** Implements {@link #OP_MINUS} for type {@code real}. */
   private static final Applicable Z_MINUS_REAL =
       new Applicable2<Float, Float, Float>(BuiltIn.OP_MINUS) {
-        @Override public Float apply(Float a0, Float a1) {
+        @Override
+        public Float apply(Float a0, Float a1) {
           return a0 - a1;
         }
       };
@@ -268,7 +279,8 @@ public abstract class Codes {
   /** Implements {@link #OP_TIMES} for type {@code int}. */
   private static final Applicable Z_TIMES_INT =
       new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_TIMES) {
-        @Override public Integer apply(Integer a0, Integer a1) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
           return a0 * a1;
         }
       };
@@ -276,7 +288,8 @@ public abstract class Codes {
   /** Implements {@link #OP_TIMES} for type {@code real}. */
   private static final Applicable Z_TIMES_REAL =
       new Applicable2<Float, Float, Float>(BuiltIn.OP_TIMES) {
-        @Override public Float apply(Float a0, Float a1) {
+        @Override
+        public Float apply(Float a0, Float a1) {
           return a0 * a1;
         }
       };
@@ -284,7 +297,8 @@ public abstract class Codes {
   /** Implements {@link #OP_DIVIDE} for type {@code int}. */
   private static final Applicable Z_DIVIDE_INT =
       new Applicable2<Integer, Integer, Integer>(BuiltIn.OP_DIVIDE) {
-        @Override public Integer apply(Integer a0, Integer a1) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
           return a0 / a1;
         }
       };
@@ -292,7 +306,8 @@ public abstract class Codes {
   /** Implements {@link #OP_DIVIDE} for type {@code real}. */
   private static final Applicable Z_DIVIDE_REAL =
       new Applicable2<Float, Float, Float>(BuiltIn.OP_DIVIDE) {
-        @Override public Float apply(Float a0, Float a1) {
+        @Override
+        public Float apply(Float a0, Float a1) {
           final float v = a0 / a1;
           if (Float.isNaN(v)) {
             return Float.NaN; // normalize NaN
@@ -302,29 +317,31 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#OP_NEGATE */
-  private static final Macro OP_NEGATE = (typeSystem, env, argType) -> {
-    switch ((PrimitiveType) argType) {
-    case INT:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_INT);
-    case REAL:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_REAL);
-    default:
-      throw new AssertionError("bad type " + argType);
-    }
-  };
+  private static final Macro OP_NEGATE =
+      (typeSystem, env, argType) -> {
+        switch ((PrimitiveType) argType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
 
   /** @see BuiltIn#OP_DIVIDE */
-  private static final Macro OP_DIVIDE = (typeSystem, env, argType) -> {
-    final Type resultType = ((TupleType) argType).argTypes.get(0);
-    switch ((PrimitiveType) resultType) {
-    case INT:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_INT);
-    case REAL:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_REAL);
-    default:
-      throw new AssertionError("bad type " + argType);
-    }
-  };
+  private static final Macro OP_DIVIDE =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
 
   /** @see BuiltIn#OP_DIV */
   private static final Applicable OP_DIV = new IntDiv(BuiltIn.OP_DIV);
@@ -332,12 +349,15 @@ public abstract class Codes {
   /** @see BuiltIn#GENERAL_OP_O */
   private static final Applicable GENERAL_OP_O =
       new ApplicableImpl("o") {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          @SuppressWarnings("rawtypes") final List tuple = (List) arg;
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          @SuppressWarnings("rawtypes")
+          final List tuple = (List) arg;
           final Applicable f = (Applicable) tuple.get(0);
           final Applicable g = (Applicable) tuple.get(1);
           return new ApplicableImpl("o$f$g") {
-            @Override public Object apply(EvalEnv env, Object arg) {
+            @Override
+            public Object apply(EvalEnv env, Object arg) {
               return f.apply(env, g.apply(env, arg));
             }
           };
@@ -347,7 +367,8 @@ public abstract class Codes {
   /** @see BuiltIn#INT_ABS */
   private static final Applicable INT_ABS =
       new ApplicableImpl(BuiltIn.INT_ABS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return Math.abs((int) arg);
         }
       };
@@ -355,7 +376,8 @@ public abstract class Codes {
   /** @see BuiltIn#INT_COMPARE */
   private static final Applicable INT_COMPARE =
       new Applicable2<List, Integer, Integer>(BuiltIn.INT_COMPARE) {
-        @Override public List apply(Integer a0, Integer a1) {
+        @Override
+        public List apply(Integer a0, Integer a1) {
           if (a0 < a1) {
             return ORDER_LESS;
           }
@@ -367,23 +389,23 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#INT_FROM_INT */
-  private static final Applicable INT_FROM_INT =
-      identity(BuiltIn.INT_FROM_INT);
+  private static final Applicable INT_FROM_INT = identity(BuiltIn.INT_FROM_INT);
 
   /** @see BuiltIn#INT_FROM_LARGE */
   private static final Applicable INT_FROM_LARGE =
       identity(BuiltIn.INT_FROM_LARGE);
 
-  /** Pattern for integers (after '~' has been converted to '-').
-   * ".", ".e", ".e-", ".e5", "e7", "2.", ".5", "2.e5" are invalid;
-   * "-2", "5" are valid. */
-  static final Pattern INT_PATTERN =
-      Pattern.compile("^ *-?[0-9]+");
+  /**
+   * Pattern for integers (after '~' has been converted to '-'). ".", ".e",
+   * ".e-", ".e5", "e7", "2.", ".5", "2.e5" are invalid; "-2", "5" are valid.
+   */
+  static final Pattern INT_PATTERN = Pattern.compile("^ *-?[0-9]+");
 
   /** @see BuiltIn#INT_FROM_STRING */
   private static final Applicable INT_FROM_STRING =
       new ApplicableImpl(BuiltIn.INT_FROM_STRING) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final String s = (String) arg;
           final String s2 = s.replace('~', '-');
           final Matcher matcher = INT_PATTERN.matcher(s2);
@@ -405,7 +427,8 @@ public abstract class Codes {
   /** @see BuiltIn#INT_MAX */
   private static final Applicable INT_MAX =
       new Applicable2<Integer, Integer, Integer>(BuiltIn.INT_MAX) {
-        @Override public Integer apply(Integer a0, Integer a1) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
           return Math.max(a0, a1);
         }
       };
@@ -416,7 +439,8 @@ public abstract class Codes {
   /** @see BuiltIn#INT_MIN */
   private static final Applicable INT_MIN =
       new Applicable2<Integer, Integer, Integer>(BuiltIn.INT_MIN) {
-        @Override public Integer apply(Integer a0, Integer a1) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
           return Math.min(a0, a1);
         }
       };
@@ -431,25 +455,25 @@ public abstract class Codes {
   private static final Applicable INT_MOD = new IntMod(BuiltIn.INT_MOD);
 
   /** Implements {@link #INT_MOD} and {@link #OP_MOD}. */
-  private static class IntMod
-      extends Applicable2<Integer, Integer, Integer> {
+  private static class IntMod extends Applicable2<Integer, Integer, Integer> {
     IntMod(BuiltIn builtIn) {
       super(builtIn);
     }
 
-    @Override public Integer apply(Integer a0, Integer a1) {
+    @Override
+    public Integer apply(Integer a0, Integer a1) {
       return Math.floorMod(a0, a1);
     }
   }
 
   /** Implements {@link #INT_DIV} and {@link #OP_DIV}. */
-  private static class IntDiv
-      extends Applicable2<Integer, Integer, Integer> {
+  private static class IntDiv extends Applicable2<Integer, Integer, Integer> {
     IntDiv(BuiltIn builtIn) {
       super(builtIn);
     }
 
-    @Override public Integer apply(Integer a0, Integer a1) {
+    @Override
+    public Integer apply(Integer a0, Integer a1) {
       return Math.floorDiv(a0, a1);
     }
   }
@@ -460,7 +484,8 @@ public abstract class Codes {
   /** @see BuiltIn#INT_QUOT */
   private static final Applicable INT_QUOT =
       new Applicable2<Integer, Integer, Integer>(BuiltIn.INT_QUOT) {
-        @Override public Integer apply(Integer a0, Integer a1) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
           return a0 / a1;
         }
       };
@@ -468,7 +493,8 @@ public abstract class Codes {
   /** @see BuiltIn#INT_REM */
   private static final Applicable INT_REM =
       new Applicable2<Integer, Integer, Integer>(BuiltIn.INT_REM) {
-        @Override public Integer apply(Integer a0, Integer a1) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
           return a0 % a1;
         }
       };
@@ -476,24 +502,23 @@ public abstract class Codes {
   /** @see BuiltIn#INT_SAME_SIGN */
   private static final Applicable INT_SAME_SIGN =
       new Applicable2<Boolean, Integer, Integer>(BuiltIn.INT_SAME_SIGN) {
-        @Override public Boolean apply(Integer a0, Integer a1) {
-          return a0 < 0 && a1 < 0
-              || a0 == 0 && a1 == 0
-              || a0 > 0 && a1 > 0;
+        @Override
+        public Boolean apply(Integer a0, Integer a1) {
+          return a0 < 0 && a1 < 0 || a0 == 0 && a1 == 0 || a0 > 0 && a1 > 0;
         }
       };
 
   /** @see BuiltIn#INT_SIGN */
   private static final Applicable INT_SIGN =
       new ApplicableImpl(BuiltIn.INT_SIGN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return Integer.compare((Integer) arg, 0);
         }
       };
 
   /** @see BuiltIn#INT_TO_INT */
-  private static final Applicable INT_TO_INT =
-      identity(BuiltIn.INT_TO_INT);
+  private static final Applicable INT_TO_INT = identity(BuiltIn.INT_TO_INT);
 
   /** @see BuiltIn#INT_TO_LARGE */
   private static final Applicable INT_TO_LARGE = identity(BuiltIn.INT_TO_LARGE);
@@ -501,7 +526,8 @@ public abstract class Codes {
   /** @see BuiltIn#INT_TO_STRING */
   private static final Applicable INT_TO_STRING =
       new ApplicableImpl(BuiltIn.INT_TO_STRING) {
-        @Override public String apply(EvalEnv env, Object arg) {
+        @Override
+        public String apply(EvalEnv env, Object arg) {
           // Java's formatting is reasonably close to ML's formatting,
           // if we replace minus signs.
           Integer f = (Integer) arg;
@@ -518,10 +544,11 @@ public abstract class Codes {
   private static final Applicable INTERACT_USE_SILENTLY =
       new InteractUse(Pos.ZERO, true);
 
-  /** Removes wrappers, in particular the one due to
-   * {@link #wrapRelList(Code)}. */
+  /**
+   * Removes wrappers, in particular the one due to {@link #wrapRelList(Code)}.
+   */
   public static Code strip(Code code) {
-    for (;;) {
+    for (; ; ) {
       if (code instanceof WrapRelList) {
         code = ((WrapRelList) code).code;
       } else {
@@ -540,11 +567,13 @@ public abstract class Codes {
       this.silent = silent;
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new InteractUse(pos, silent);
     }
 
-    @Override public Object apply(EvalEnv env, Object arg) {
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
       final String f = (String) arg;
       final Session session = (Session) env.getOpt(EvalEnv.SESSION);
       session.use(f, silent, pos);
@@ -555,7 +584,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_CARET */
   private static final Applicable OP_CARET =
       new Applicable2<String, String, String>(BuiltIn.OP_CARET) {
-        @Override public String apply(String a0, String a1) {
+        @Override
+        public String apply(String a0, String a1) {
           return a0 + a1;
         }
       };
@@ -563,17 +593,17 @@ public abstract class Codes {
   /** @see BuiltIn#OP_CONS */
   private static final Applicable OP_CONS =
       new Applicable2<List, Object, Iterable>(BuiltIn.OP_CONS) {
-        @Override public List apply(Object e, Iterable iterable) {
-          return ImmutableList.builder().add(e)
-              .addAll(iterable)
-              .build();
+        @Override
+        public List apply(Object e, Iterable iterable) {
+          return ImmutableList.builder().add(e).addAll(iterable).build();
         }
       };
 
   /** @see BuiltIn#OP_EXCEPT */
   private static final Applicable OP_EXCEPT =
       new Applicable2<List, List, List>(BuiltIn.OP_EXCEPT) {
-        @Override public List apply(List list0, List list1) {
+        @Override
+        public List apply(List list0, List list1) {
           List collection = new ArrayList(list0);
           final Set set = new HashSet(list1);
           if (!collection.removeAll(set)) {
@@ -586,7 +616,8 @@ public abstract class Codes {
   /** @see BuiltIn#OP_INTERSECT */
   private static final Applicable OP_INTERSECT =
       new Applicable2<List, List, List>(BuiltIn.OP_INTERSECT) {
-        @Override public List apply(List list0, List list1) {
+        @Override
+        public List apply(List list0, List list1) {
           List collection = new ArrayList(list0);
           final Set set = new HashSet(list1);
           if (!collection.retainAll(set)) {
@@ -599,14 +630,18 @@ public abstract class Codes {
   /** @see BuiltIn#OP_UNION */
   private static final Applicable OP_UNION = union(BuiltIn.OP_UNION);
 
-  /** Returns a Code that returns the value of variable "name" in the current
-   * environment. */
+  /**
+   * Returns a Code that returns the value of variable "name" in the current
+   * environment.
+   */
   public static Code get(String name) {
     return new GetCode(name);
   }
 
-  /** Returns a Code that returns a tuple consisting of the values of variables
-   * "name0", ... "nameN" in the current environment. */
+  /**
+   * Returns a Code that returns a tuple consisting of the values of variables
+   * "name0", ... "nameN" in the current environment.
+   */
   public static Code getTuple(Iterable<String> names) {
     if (Iterables.isEmpty(names)) {
       return new ConstantCode(Unit.INSTANCE);
@@ -616,21 +651,23 @@ public abstract class Codes {
 
   public static Code let(List<Code> matchCodes, Code resultCode) {
     switch (matchCodes.size()) {
-    case 0:
-      return resultCode;
+      case 0:
+        return resultCode;
 
-    case 1:
-      // Use a more efficient runtime path if the list has only one element.
-      // The effect is the same.
-      return new Let1Code(matchCodes.get(0), resultCode);
+      case 1:
+        // Use a more efficient runtime path if the list has only one element.
+        // The effect is the same.
+        return new Let1Code(matchCodes.get(0), resultCode);
 
-    default:
-      return new LetCode(ImmutableList.copyOf(matchCodes), resultCode);
+      default:
+        return new LetCode(ImmutableList.copyOf(matchCodes), resultCode);
     }
   }
 
-  /** Generates the code for applying a function (or function value) to an
-   * argument. */
+  /**
+   * Generates the code for applying a function (or function value) to an
+   * argument.
+   */
   public static Code apply(Code fnCode, Code argCode) {
     assert !fnCode.isConstant(); // if constant, use "apply(Closure, Code)"
     return new ApplyCodeCode(fnCode, argCode);
@@ -647,8 +684,8 @@ public abstract class Codes {
   }
 
   /** Generates the code for applying a function value to three arguments. */
-  public static Code apply3(Applicable3 fnValue, Code argCode0, Code argCode1,
-      Code argCode2) {
+  public static Code apply3(
+      Applicable3 fnValue, Code argCode0, Code argCode1, Code argCode2) {
     return new ApplyCode3(fnValue, argCode0, argCode1, argCode2);
   }
 
@@ -664,13 +701,16 @@ public abstract class Codes {
     return new WrapRelList(code);
   }
 
-  /** Returns an applicable that constructs an instance of a datatype.
-   * The instance is a list with two elements [constructorName, value]. */
+  /**
+   * Returns an applicable that constructs an instance of a datatype. The
+   * instance is a list with two elements [constructorName, value].
+   */
   public static Applicable tyCon(Type dataType, String name) {
     requireNonNull(dataType);
     requireNonNull(name);
     return new ApplicableImpl("tyCon") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         return ImmutableList.of(name, arg);
       }
     };
@@ -678,12 +718,14 @@ public abstract class Codes {
 
   public static Code from(Supplier<RowSink> rowSinkFactory) {
     return new Code() {
-      @Override public Describer describe(Describer describer) {
-        return describer.start("from", d ->
-            d.arg("sink", rowSinkFactory.get()));
+      @Override
+      public Describer describe(Describer describer) {
+        return describer.start(
+            "from", d -> d.arg("sink", rowSinkFactory.get()));
       }
 
-      @Override public Object eval(EvalEnv env) {
+      @Override
+      public Object eval(EvalEnv env) {
         final RowSink rowSink = rowSinkFactory.get();
         rowSink.start(env);
         rowSink.accept(env);
@@ -693,8 +735,8 @@ public abstract class Codes {
   }
 
   /** Creates a {@link RowSink} for a {@code join} clause. */
-  public static RowSink scanRowSink(Op op, Core.Pat pat, Code code,
-      Code conditionCode, RowSink rowSink) {
+  public static RowSink scanRowSink(
+      Op op, Core.Pat pat, Code code, Code conditionCode, RowSink rowSink) {
     return new ScanRowSink(op, pat, code, conditionCode, rowSink);
   }
 
@@ -716,40 +758,52 @@ public abstract class Codes {
   /** Creates a {@link RowSink} for a {@code order} clause. */
   public static RowSink orderRowSink(
       Iterable<? extends Map.Entry<Code, Boolean>> codes,
-      ImmutableList<Binding> bindings, RowSink rowSink) {
-    return new OrderRowSink(ImmutablePairList.copyOf(codes),
+      ImmutableList<Binding> bindings,
+      RowSink rowSink) {
+    return new OrderRowSink(
+        ImmutablePairList.copyOf(codes),
         transformEager(bindings, b -> b.id.name),
         rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code group} clause. */
-  public static RowSink groupRowSink(Code keyCode,
-      ImmutableList<Applicable> aggregateCodes, ImmutableList<String> inNames,
+  public static RowSink groupRowSink(
+      Code keyCode,
+      ImmutableList<Applicable> aggregateCodes,
+      ImmutableList<String> inNames,
       ImmutableList<String> keyNames,
-      ImmutableList<String> outNames, RowSink rowSink) {
-    return new GroupRowSink(keyCode, aggregateCodes, inNames, keyNames,
-        outNames, rowSink);
+      ImmutableList<String> outNames,
+      RowSink rowSink) {
+    return new GroupRowSink(
+        keyCode, aggregateCodes, inNames, keyNames, outNames, rowSink);
   }
 
   /** Creates a {@link RowSink} for a non-terminal {@code yield} step. */
-  public static RowSink yieldRowSink(Map<String, Code> yieldCodes,
-      RowSink rowSink) {
-    return new YieldRowSink(ImmutableList.copyOf(yieldCodes.keySet()),
-        ImmutableList.copyOf(yieldCodes.values()), rowSink);
+  public static RowSink yieldRowSink(
+      Map<String, Code> yieldCodes, RowSink rowSink) {
+    return new YieldRowSink(
+        ImmutableList.copyOf(yieldCodes.keySet()),
+        ImmutableList.copyOf(yieldCodes.values()),
+        rowSink);
   }
 
-  /** Creates a {@link RowSink} to collect the results of a {@code from}
-   * expression. */
+  /**
+   * Creates a {@link RowSink} to collect the results of a {@code from}
+   * expression.
+   */
   public static RowSink collectRowSink(Code code) {
     return new CollectRowSink(code);
   }
 
-  /** Returns an applicable that returns the {@code slot}th field of a tuple or
-   * record. */
+  /**
+   * Returns an applicable that returns the {@code slot}th field of a tuple or
+   * record.
+   */
   public static Applicable nth(int slot) {
     assert slot >= 0 : slot;
     return new ApplicableImpl("nth:" + slot) {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         return ((List) arg).get(slot);
       }
     };
@@ -758,7 +812,8 @@ public abstract class Codes {
   /** An applicable that negates a boolean value. */
   private static final Applicable NOT =
       new ApplicableImpl(BuiltIn.NOT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return !(Boolean) arg;
         }
       };
@@ -766,7 +821,8 @@ public abstract class Codes {
   /** An applicable that returns the absolute value of an int. */
   private static final Applicable ABS =
       new ApplicableImpl(BuiltIn.ABS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Integer integer = (Integer) arg;
           return integer >= 0 ? integer : -integer;
         }
@@ -775,52 +831,56 @@ public abstract class Codes {
   /** @see BuiltIn#IGNORE */
   private static final Applicable IGNORE =
       new ApplicableImpl(BuiltIn.IGNORE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return Unit.INSTANCE;
         }
       };
 
   /** @see BuiltIn#OP_MINUS */
-  private static final Macro OP_MINUS = (typeSystem, env, argType) -> {
-    final Type resultType = ((TupleType) argType).argTypes.get(0);
-    switch ((PrimitiveType) resultType) {
-    case INT:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_INT);
-    case REAL:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_REAL);
-    default:
-      throw new AssertionError("bad type " + argType);
-    }
-  };
+  private static final Macro OP_MINUS =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
 
   /** @see BuiltIn#OP_MOD */
   private static final Applicable OP_MOD = new IntMod(BuiltIn.OP_MOD);
 
   /** @see BuiltIn#OP_PLUS */
-  private static final Macro OP_PLUS = (typeSystem, env, argType) -> {
-    final Type resultType = ((TupleType) argType).argTypes.get(0);
-    switch ((PrimitiveType) resultType) {
-    case INT:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_INT);
-    case REAL:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_REAL);
-    default:
-      throw new AssertionError("bad type " + argType);
-    }
-  };
+  private static final Macro OP_PLUS =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
 
   /** @see BuiltIn#OP_TIMES */
-  private static final Macro OP_TIMES = (typeSystem, env, argType) -> {
-    final Type resultType = ((TupleType) argType).argTypes.get(0);
-    switch ((PrimitiveType) resultType) {
-    case INT:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_INT);
-    case REAL:
-      return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_REAL);
-    default:
-      throw new AssertionError("bad type " + argType);
-    }
-  };
+  private static final Macro OP_TIMES =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
 
   /** @see BuiltIn#STRING_MAX_SIZE */
   private static final Integer STRING_MAX_SIZE = Integer.MAX_VALUE;
@@ -828,7 +888,8 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_SIZE */
   private static final Applicable STRING_SIZE =
       new ApplicableImpl(BuiltIn.STRING_SIZE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return ((String) arg).length();
         }
       };
@@ -843,7 +904,8 @@ public abstract class Codes {
       super(BuiltIn.STRING_SUB, pos);
     }
 
-    @Override public Character apply(String s, Integer i) {
+    @Override
+    public Character apply(String s, Integer i) {
       if (i < 0 || i >= s.length()) {
         throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
       }
@@ -856,8 +918,7 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#STRING_EXTRACT */
-  private static final Applicable STRING_EXTRACT =
-      new StringExtract(Pos.ZERO);
+  private static final Applicable STRING_EXTRACT = new StringExtract(Pos.ZERO);
 
   /** Implements {@link BuiltIn#STRING_SUB}. */
   private static class StringExtract
@@ -866,11 +927,13 @@ public abstract class Codes {
       super(BuiltIn.STRING_EXTRACT, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new StringExtract(pos);
     }
 
-    @Override public String apply(String s, Integer i, List jOpt) {
+    @Override
+    public String apply(String s, Integer i, List jOpt) {
       if (i < 0) {
         throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
       }
@@ -901,11 +964,13 @@ public abstract class Codes {
       super(BuiltIn.STRING_SUBSTRING, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new StringSubstring(pos);
     }
 
-    @Override public String apply(String s, Integer i, Integer j) {
+    @Override
+    public String apply(String s, Integer i, Integer j) {
       if (i < 0 || j < 0 || i + j > s.length()) {
         throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
       }
@@ -923,12 +988,14 @@ public abstract class Codes {
       super(BuiltIn.STRING_CONCAT, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new StringConcat(pos);
     }
 
     @SuppressWarnings("unchecked")
-    @Override public Object apply(EvalEnv env, Object arg) {
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
       return stringConcat(pos, "", (List<String>) arg);
     }
   }
@@ -944,23 +1011,26 @@ public abstract class Codes {
       super(BuiltIn.STRING_CONCAT_WITH, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new StringConcatWith(pos);
     }
 
-    @Override public Object apply(EvalEnv env, Object argValue) {
+    @Override
+    public Object apply(EvalEnv env, Object argValue) {
       final String separator = (String) argValue;
       return new ApplicableImpl("String.concatWith$separator") {
         @SuppressWarnings("unchecked")
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return stringConcat(pos, separator, (List<String>) arg);
         }
       };
     }
   }
 
-  private static String stringConcat(Pos pos, String separator,
-      List<String> list) {
+  private static String stringConcat(
+      Pos pos, String separator, List<String> list) {
     long n = 0;
     for (String s : list) {
       n += s.length();
@@ -975,7 +1045,8 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_STR */
   private static final Applicable STRING_STR =
       new ApplicableImpl(BuiltIn.STRING_STR) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Character character = (Character) arg;
           return character + "";
         }
@@ -984,7 +1055,8 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_IMPLODE */
   private static final Applicable STRING_IMPLODE =
       new ApplicableImpl(BuiltIn.STRING_IMPLODE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           // Note: In theory this function should raise Size, but it is not
           // possible in practice because List.size() is never larger than
           // Integer.MAX_VALUE.
@@ -995,7 +1067,8 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_EXPLODE */
   private static final Applicable STRING_EXPLODE =
       new ApplicableImpl(BuiltIn.STRING_EXPLODE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final String s = (String) arg;
           return MapList.of(s.length(), s::charAt);
         }
@@ -1004,14 +1077,16 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_MAP */
   private static final Applicable STRING_MAP =
       new ApplicableImpl(BuiltIn.STRING_MAP) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return stringMap((Applicable) arg);
         }
       };
 
   private static Applicable stringMap(Applicable f) {
     return new ApplicableImpl("String.map$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final String s = (String) arg;
         final StringBuilder buf = new StringBuilder();
         for (int i = 0; i < s.length(); i++) {
@@ -1027,7 +1102,8 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_TRANSLATE */
   private static final Applicable STRING_TRANSLATE =
       new ApplicableImpl(BuiltIn.STRING_TRANSLATE) {
-        @Override public Applicable apply(EvalEnv env, Object arg) {
+        @Override
+        public Applicable apply(EvalEnv env, Object arg) {
           final Applicable f = (Applicable) arg;
           return translate(f);
         }
@@ -1035,7 +1111,8 @@ public abstract class Codes {
 
   private static Applicable translate(Applicable f) {
     return new ApplicableImpl("String.translate$f") {
-      @Override public String apply(EvalEnv env, Object arg) {
+      @Override
+      public String apply(EvalEnv env, Object arg) {
         final String s = (String) arg;
         final StringBuilder buf = new StringBuilder();
         for (int i = 0; i < s.length(); i++) {
@@ -1051,7 +1128,8 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_IS_PREFIX */
   private static final Applicable STRING_IS_PREFIX =
       new ApplicableImpl(BuiltIn.STRING_IS_PREFIX) {
-        @Override public Applicable apply(EvalEnv env, Object arg) {
+        @Override
+        public Applicable apply(EvalEnv env, Object arg) {
           final String s = (String) arg;
           return isPrefix(s);
         }
@@ -1059,7 +1137,8 @@ public abstract class Codes {
 
   private static Applicable isPrefix(String s) {
     return new ApplicableImpl("String.isPrefix$s") {
-      @Override public Boolean apply(EvalEnv env, Object arg) {
+      @Override
+      public Boolean apply(EvalEnv env, Object arg) {
         final String s2 = (String) arg;
         return s2.startsWith(s);
       }
@@ -1069,7 +1148,8 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_IS_SUBSTRING */
   private static final Applicable STRING_IS_SUBSTRING =
       new ApplicableImpl(BuiltIn.STRING_IS_SUBSTRING) {
-        @Override public Applicable apply(EvalEnv env, Object arg) {
+        @Override
+        public Applicable apply(EvalEnv env, Object arg) {
           final String s = (String) arg;
           return isSubstring(s);
         }
@@ -1077,7 +1157,8 @@ public abstract class Codes {
 
   private static Applicable isSubstring(String s) {
     return new ApplicableImpl("String.isSubstring$s") {
-      @Override public Boolean apply(EvalEnv env, Object arg) {
+      @Override
+      public Boolean apply(EvalEnv env, Object arg) {
         final String s2 = (String) arg;
         return s2.contains(s);
       }
@@ -1087,7 +1168,8 @@ public abstract class Codes {
   /** @see BuiltIn#STRING_IS_SUFFIX */
   private static final Applicable STRING_IS_SUFFIX =
       new ApplicableImpl(BuiltIn.STRING_IS_SUFFIX) {
-        @Override public Applicable apply(EvalEnv env, Object arg) {
+        @Override
+        public Applicable apply(EvalEnv env, Object arg) {
           final String s = (String) arg;
           return isSuffix(s);
         }
@@ -1095,7 +1177,8 @@ public abstract class Codes {
 
   private static Applicable isSuffix(String s) {
     return new ApplicableImpl("String.isSuffix$s") {
-      @Override public Boolean apply(EvalEnv env, Object arg) {
+      @Override
+      public Boolean apply(EvalEnv env, Object arg) {
         final String s2 = (String) arg;
         return s2.endsWith(s);
       }
@@ -1103,15 +1186,15 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#LIST_NULL */
-  private static final Applicable LIST_NULL =
-      empty(BuiltIn.LIST_NULL);
+  private static final Applicable LIST_NULL = empty(BuiltIn.LIST_NULL);
 
   /** @see BuiltIn#LIST_LENGTH */
   private static final Applicable LIST_LENGTH = length(BuiltIn.LIST_LENGTH);
 
   private static ApplicableImpl length(BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         return ((List) arg).size();
       }
     };
@@ -1122,15 +1205,15 @@ public abstract class Codes {
 
   private static ApplicableImpl union(final BuiltIn builtIn) {
     return new Applicable2<List, List, List>(builtIn) {
-      @Override public List apply(List list0, List list1) {
+      @Override
+      public List apply(List list0, List list1) {
         return ImmutableList.builder().addAll(list0).addAll(list1).build();
       }
     };
   }
 
   /** @see BuiltIn#LIST_HD */
-  private static final Applicable LIST_HD =
-      new ListHd(Pos.ZERO);
+  private static final Applicable LIST_HD = new ListHd(Pos.ZERO);
 
   /** Implements {@link BuiltIn#LIST_HD}. */
   private static class ListHd extends ApplicableImpl implements Positioned {
@@ -1138,11 +1221,13 @@ public abstract class Codes {
       super(BuiltIn.LIST_HD, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new ListHd(pos);
     }
 
-    @Override public Object apply(EvalEnv env, Object arg) {
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
       final List list = (List) arg;
       if (list.isEmpty()) {
         throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
@@ -1160,11 +1245,13 @@ public abstract class Codes {
       super(BuiltIn.LIST_TL, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new ListTl(pos);
     }
 
-    @Override public Object apply(EvalEnv env, Object arg) {
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
       final List list = (List) arg;
       final int size = list.size();
       if (size == 0) {
@@ -1183,11 +1270,13 @@ public abstract class Codes {
       super(BuiltIn.LIST_LAST, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new ListLast(pos);
     }
 
-    @Override public Object apply(EvalEnv env, Object arg) {
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
       final List list = (List) arg;
       final int size = list.size();
       if (size == 0) {
@@ -1200,7 +1289,8 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_GET_ITEM */
   private static final Applicable LIST_GET_ITEM =
       new ApplicableImpl(BuiltIn.LIST_GET_ITEM) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final List list = (List) arg;
           if (list.isEmpty()) {
             return OPTION_NONE;
@@ -1215,8 +1305,7 @@ public abstract class Codes {
   private static final Applicable LIST_NTH =
       new ListNth(BuiltIn.LIST_NTH, Pos.ZERO);
 
-  /** Implements {@link BuiltIn#LIST_NTH}
-   * and {@link BuiltIn#VECTOR_SUB}. */
+  /** Implements {@link BuiltIn#LIST_NTH} and {@link BuiltIn#VECTOR_SUB}. */
   private static class ListNth extends Applicable2<Object, List, Integer>
       implements Positioned {
     private final BuiltIn builtIn;
@@ -1226,11 +1315,13 @@ public abstract class Codes {
       this.builtIn = builtIn;
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new ListNth(builtIn, pos);
     }
 
-    @Override public Object apply(List list, Integer i) {
+    @Override
+    public Object apply(List list, Integer i) {
       if (i < 0 || i >= list.size()) {
         throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
       }
@@ -1248,11 +1339,13 @@ public abstract class Codes {
       super(BuiltIn.LIST_TAKE, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new ListTake(pos);
     }
 
-    @Override public List apply(List list, Integer i) {
+    @Override
+    public List apply(List list, Integer i) {
       if (i < 0 || i > list.size()) {
         throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
       }
@@ -1263,7 +1356,8 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_DROP */
   private static final Applicable LIST_DROP =
       new Applicable2<List, List, Integer>(BuiltIn.LIST_DROP) {
-        @Override public List apply(List list, Integer i) {
+        @Override
+        public List apply(List list, Integer i) {
           return list.subList(i, list.size());
         }
       };
@@ -1271,7 +1365,8 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_REV */
   private static final Applicable LIST_REV =
       new ApplicableImpl(BuiltIn.LIST_REV) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final List list = (List) arg;
           return Lists.reverse(list);
         }
@@ -1280,7 +1375,8 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_CONCAT */
   private static final Applicable LIST_CONCAT =
       new ApplicableImpl(BuiltIn.LIST_CONCAT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final List list = (List) arg;
           final ImmutableList.Builder<Object> builder = ImmutableList.builder();
           for (Object o : list) {
@@ -1293,23 +1389,28 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_REV_APPEND */
   private static final Applicable LIST_REV_APPEND =
       new Applicable2<List, List, List>(BuiltIn.LIST_REV_APPEND) {
-        @Override public List apply(List list0, List list1) {
-          return ImmutableList.builder().addAll(Lists.reverse(list0))
-              .addAll(list1).build();
+        @Override
+        public List apply(List list0, List list1) {
+          return ImmutableList.builder()
+              .addAll(Lists.reverse(list0))
+              .addAll(list1)
+              .build();
         }
       };
 
   /** @see BuiltIn#LIST_APP */
   private static final Applicable LIST_APP =
       new ApplicableImpl(BuiltIn.LIST_APP) {
-        @Override public Applicable apply(EvalEnv env, Object arg) {
+        @Override
+        public Applicable apply(EvalEnv env, Object arg) {
           return listApp((Applicable) arg);
         }
       };
 
   private static Applicable listApp(Applicable consumer) {
     return new ApplicableImpl("List.app$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List list = (List) arg;
         list.forEach(o -> consumer.apply(env, o));
         return Unit.INSTANCE;
@@ -1320,14 +1421,16 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_MAP */
   private static final Applicable LIST_MAP =
       new ApplicableImpl(BuiltIn.LIST_MAP) {
-        @Override public Applicable apply(EvalEnv env, Object arg) {
+        @Override
+        public Applicable apply(EvalEnv env, Object arg) {
           return listMap((Applicable) arg);
         }
       };
 
   private static Applicable listMap(Applicable fn) {
     return new ApplicableImpl("List.map$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List list = (List) arg;
         final ImmutableList.Builder<Object> builder = ImmutableList.builder();
         for (Object o : list) {
@@ -1341,14 +1444,16 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_MAP_PARTIAL */
   private static final Applicable LIST_MAP_PARTIAL =
       new ApplicableImpl(BuiltIn.LIST_MAP_PARTIAL) {
-        @Override public Applicable apply(EvalEnv env, Object arg) {
+        @Override
+        public Applicable apply(EvalEnv env, Object arg) {
           return listMapPartial((Applicable) arg);
         }
       };
 
   private static Applicable listMapPartial(Applicable f) {
     return new ApplicableImpl("List.mapPartial$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List list = (List) arg;
         final ImmutableList.Builder<Object> builder = ImmutableList.builder();
         for (Object o : list) {
@@ -1367,7 +1472,8 @@ public abstract class Codes {
 
   private static ApplicableImpl find(BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
-      @Override public Applicable apply(EvalEnv env, Object arg) {
+      @Override
+      public Applicable apply(EvalEnv env, Object arg) {
         final Applicable fn = (Applicable) arg;
         return find(fn);
       }
@@ -1376,7 +1482,8 @@ public abstract class Codes {
 
   private static Applicable find(Applicable f) {
     return new ApplicableImpl("List.find$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List list = (List) arg;
         for (Object o : list) {
           if ((Boolean) f.apply(env, o)) {
@@ -1391,7 +1498,8 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_FILTER */
   private static final Applicable LIST_FILTER =
       new ApplicableImpl(BuiltIn.LIST_FILTER) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Applicable fn = (Applicable) arg;
           return listFilter(fn);
         }
@@ -1399,7 +1507,8 @@ public abstract class Codes {
 
   private static Applicable listFilter(Applicable f) {
     return new ApplicableImpl("List.filter$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List list = (List) arg;
         final ImmutableList.Builder builder = ImmutableList.builder();
         for (Object o : list) {
@@ -1415,7 +1524,8 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_PARTITION */
   private static final Applicable LIST_PARTITION =
       new ApplicableImpl(BuiltIn.LIST_PARTITION) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Applicable fn = (Applicable) arg;
           return listPartition(fn);
         }
@@ -1423,7 +1533,8 @@ public abstract class Codes {
 
   private static Applicable listPartition(Applicable f) {
     return new ApplicableImpl("List.partition$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List list = (List) arg;
         final ImmutableList.Builder trueBuilder = ImmutableList.builder();
         final ImmutableList.Builder falseBuilder = ImmutableList.builder();
@@ -1438,7 +1549,8 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_FOLDL */
   private static final Applicable LIST_FOLDL =
       new ApplicableImpl(BuiltIn.LIST_FOLDL) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return listFold(true, (Applicable) arg);
         }
       };
@@ -1446,23 +1558,25 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_FOLDR */
   private static final Applicable LIST_FOLDR =
       new ApplicableImpl(BuiltIn.LIST_FOLDR) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return listFold(false, (Applicable) arg);
         }
       };
 
   private static Applicable listFold(boolean left, Applicable f) {
     return new ApplicableImpl("List.fold$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         return listFold2(left, f, arg);
       }
     };
   }
 
-  private static Applicable listFold2(boolean left, Applicable f,
-      Object init) {
+  private static Applicable listFold2(boolean left, Applicable f, Object init) {
     return new ApplicableImpl("List.fold$f$init") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List list = (List) arg;
         Object b = init;
         for (Object a : left ? list : Lists.reverse(list)) {
@@ -1478,7 +1592,8 @@ public abstract class Codes {
 
   private static ApplicableImpl exists(final BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         return listExists((Applicable) arg);
       }
     };
@@ -1486,7 +1601,8 @@ public abstract class Codes {
 
   private static Applicable listExists(Applicable f) {
     return new ApplicableImpl("List.exists$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List list = (List) arg;
         for (Object o : list) {
           if ((Boolean) f.apply(env, o)) {
@@ -1503,7 +1619,8 @@ public abstract class Codes {
 
   private static ApplicableImpl all(final BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         return listAll((Applicable) arg);
       }
     };
@@ -1511,7 +1628,8 @@ public abstract class Codes {
 
   private static Applicable listAll(Applicable f) {
     return new ApplicableImpl("List.all$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List list = (List) arg;
         for (Object o : list) {
           if (!(Boolean) f.apply(env, o)) {
@@ -1537,11 +1655,13 @@ public abstract class Codes {
       this.builtIn = builtIn;
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new ListTabulate(builtIn, pos);
     }
 
-    @Override public Object apply(EvalEnv env, Object arg) {
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
       final List tuple = (List) arg;
       final int count = (Integer) tuple.get(0);
       if (count < 0) {
@@ -1561,7 +1681,8 @@ public abstract class Codes {
 
   private static ApplicableImpl collate(final BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         return collate((Applicable) arg);
       }
     };
@@ -1569,7 +1690,8 @@ public abstract class Codes {
 
   private static Applicable collate(Applicable comparator) {
     return new ApplicableImpl("List.collate$comparator") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List tuple = (List) arg;
         final List list0 = (List) tuple.get(0);
         final List list1 = (List) tuple.get(1);
@@ -1579,8 +1701,9 @@ public abstract class Codes {
         for (int i = 0; i < n; i++) {
           final Object element0 = list0.get(i);
           final Object element1 = list1.get(i);
-          final List compare = (List) comparator.apply(env,
-              ImmutableList.of(element0, element1));
+          final List compare =
+              (List)
+                  comparator.apply(env, ImmutableList.of(element0, element1));
           if (!compare.get(0).equals("EQUAL")) {
             return compare;
           }
@@ -1593,7 +1716,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_ACOS */
   private static final Applicable MATH_ACOS =
       new ApplicableImpl(BuiltIn.MATH_ACOS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.acos((Float) arg);
         }
       };
@@ -1601,7 +1725,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_ASIN */
   private static final Applicable MATH_ASIN =
       new ApplicableImpl(BuiltIn.MATH_ASIN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.asin((Float) arg);
         }
       };
@@ -1609,7 +1734,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_ATAN */
   private static final Applicable MATH_ATAN =
       new ApplicableImpl(BuiltIn.MATH_ATAN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.atan((Float) arg);
         }
       };
@@ -1617,7 +1743,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_ATAN2 */
   private static final Applicable MATH_ATAN2 =
       new Applicable2<Float, Float, Float>(BuiltIn.MATH_ATAN2) {
-        @Override public Float apply(Float arg0, Float arg1) {
+        @Override
+        public Float apply(Float arg0, Float arg1) {
           return (float) Math.atan2(arg0, arg1);
         }
       };
@@ -1625,7 +1752,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_COS */
   private static final Applicable MATH_COS =
       new ApplicableImpl(BuiltIn.MATH_COS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.cos((Float) arg);
         }
       };
@@ -1633,7 +1761,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_COSH */
   private static final Applicable MATH_COSH =
       new ApplicableImpl(BuiltIn.MATH_COSH) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.cosh((Float) arg);
         }
       };
@@ -1644,7 +1773,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_EXP */
   private static final Applicable MATH_EXP =
       new ApplicableImpl(BuiltIn.MATH_EXP) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.exp((Float) arg);
         }
       };
@@ -1652,7 +1782,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_LN */
   private static final Applicable MATH_LN =
       new ApplicableImpl(BuiltIn.MATH_LN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.log((Float) arg);
         }
       };
@@ -1660,7 +1791,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_LOG10 */
   private static final Applicable MATH_LOG10 =
       new ApplicableImpl(BuiltIn.MATH_LOG10) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.log10((Float) arg);
         }
       };
@@ -1671,7 +1803,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_POW */
   private static final Applicable MATH_POW =
       new Applicable2<Float, Float, Float>(BuiltIn.MATH_POW) {
-        @Override public Float apply(Float arg0, Float arg1) {
+        @Override
+        public Float apply(Float arg0, Float arg1) {
           return (float) Math.pow(arg0, arg1);
         }
       };
@@ -1679,7 +1812,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_SIN */
   private static final Applicable MATH_SIN =
       new ApplicableImpl(BuiltIn.MATH_SIN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.sin((Float) arg);
         }
       };
@@ -1687,7 +1821,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_SINH */
   private static final Applicable MATH_SINH =
       new ApplicableImpl(BuiltIn.MATH_SINH) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.sinh((Float) arg);
         }
       };
@@ -1695,7 +1830,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_SQRT */
   private static final Applicable MATH_SQRT =
       new ApplicableImpl(BuiltIn.MATH_SQRT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.sqrt((Float) arg);
         }
       };
@@ -1703,7 +1839,8 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_TAN */
   private static final Applicable MATH_TAN =
       new ApplicableImpl(BuiltIn.MATH_TAN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.tan((Float) arg);
         }
       };
@@ -1711,16 +1848,17 @@ public abstract class Codes {
   /** @see BuiltIn#MATH_TANH */
   private static final Applicable MATH_TANH =
       new ApplicableImpl(BuiltIn.MATH_TANH) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return (float) Math.tanh((Float) arg);
         }
       };
 
-
   /** @see BuiltIn#OPTION_APP */
   private static final Applicable OPTION_APP =
       new ApplicableImpl(BuiltIn.OPTION_APP) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Applicable f = (Applicable) arg;
           return optionApp(f);
         }
@@ -1729,7 +1867,8 @@ public abstract class Codes {
   /** Implements {@link #OPTION_APP}. */
   private static Applicable optionApp(Applicable f) {
     return new ApplicableImpl("Option.app$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List a = (List) arg;
         if (a.size() == 2) {
           f.apply(env, a.get(1));
@@ -1742,7 +1881,8 @@ public abstract class Codes {
   /** @see BuiltIn#OPTION_GET_OPT */
   private static final Applicable OPTION_GET_OPT =
       new ApplicableImpl(BuiltIn.OPTION_GET_OPT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final List tuple = (List) arg;
           final List opt = (List) tuple.get(0);
           if (opt.size() == 2) {
@@ -1756,15 +1896,15 @@ public abstract class Codes {
   /** @see BuiltIn#OPTION_IS_SOME */
   private static final Applicable OPTION_IS_SOME =
       new ApplicableImpl(BuiltIn.OPTION_IS_SOME) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final List opt = (List) arg;
           return opt.size() == 2; // SOME has 2 elements, NONE has 1
         }
       };
 
   /** @see BuiltIn#OPTION_VAL_OF */
-  private static final Applicable OPTION_VAL_OF =
-      new OptionValOf(Pos.ZERO);
+  private static final Applicable OPTION_VAL_OF = new OptionValOf(Pos.ZERO);
 
   /** Implements {@link BuiltIn#OPTION_VAL_OF}. */
   private static class OptionValOf extends ApplicableImpl
@@ -1773,11 +1913,13 @@ public abstract class Codes {
       super(BuiltIn.OPTION_VAL_OF, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new OptionValOf(pos);
     }
 
-    @Override public Object apply(EvalEnv env, Object arg) {
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
       final List opt = (List) arg;
       if (opt.size() == 2) { // SOME has 2 elements, NONE has 1
         return opt.get(1);
@@ -1790,7 +1932,8 @@ public abstract class Codes {
   /** @see BuiltIn#OPTION_FILTER */
   private static final Applicable OPTION_FILTER =
       new ApplicableImpl(BuiltIn.OPTION_FILTER) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Applicable f = (Applicable) arg;
           return optionFilter(f);
         }
@@ -1799,7 +1942,8 @@ public abstract class Codes {
   /** Implementation of {@link #OPTION_FILTER}. */
   private static Applicable optionFilter(Applicable f) {
     return new ApplicableImpl("Option.filter$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         if ((Boolean) f.apply(env, arg)) {
           return optionSome(arg);
         } else {
@@ -1812,7 +1956,8 @@ public abstract class Codes {
   /** @see BuiltIn#OPTION_JOIN */
   private static final Applicable OPTION_JOIN =
       new ApplicableImpl(BuiltIn.OPTION_JOIN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final List opt = (List) arg;
           return opt.size() == 2
               ? opt.get(1) // SOME(SOME(v)) -> SOME(v), SOME(NONE) -> NONE
@@ -1823,7 +1968,8 @@ public abstract class Codes {
   /** @see BuiltIn#OPTION_MAP */
   private static final Applicable OPTION_MAP =
       new ApplicableImpl(BuiltIn.OPTION_MAP) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return optionMap((Applicable) arg);
         }
       };
@@ -1831,7 +1977,8 @@ public abstract class Codes {
   /** Implements {@link #OPTION_MAP}. */
   private static Applicable optionMap(Applicable f) {
     return new ApplicableImpl(BuiltIn.OPTION_MAP) {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List a = (List) arg;
         if (a.size() == 2) { // SOME v
           return optionSome(f.apply(env, a.get(1))); // SOME (f v)
@@ -1841,9 +1988,11 @@ public abstract class Codes {
     };
   }
 
-  /** Creates a value of {@code SOME v}.
+  /**
+   * Creates a value of {@code SOME v}.
    *
-   * @see #OPTION_NONE */
+   * @see #OPTION_NONE
+   */
   private static List optionSome(Object o) {
     return ImmutableList.of("SOME", o);
   }
@@ -1851,7 +2000,8 @@ public abstract class Codes {
   /** @see BuiltIn#OPTION_MAP_PARTIAL */
   private static final Applicable OPTION_MAP_PARTIAL =
       new ApplicableImpl(BuiltIn.OPTION_MAP_PARTIAL) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return optionMapPartial((Applicable) arg);
         }
       };
@@ -1859,7 +2009,8 @@ public abstract class Codes {
   /** Implements {@link #OPTION_MAP_PARTIAL}. */
   private static Applicable optionMapPartial(Applicable f) {
     return new ApplicableImpl("Option.mapPartial$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List a = (List) arg;
         if (a.size() == 2) { // SOME v
           return f.apply(env, a.get(1)); // f v
@@ -1872,7 +2023,8 @@ public abstract class Codes {
   /** @see BuiltIn#OPTION_COMPOSE */
   private static final Applicable OPTION_COMPOSE =
       new ApplicableImpl(BuiltIn.OPTION_COMPOSE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final List tuple = (List) arg;
           final Applicable f = (Applicable) tuple.get(0);
           final Applicable g = (Applicable) tuple.get(1);
@@ -1883,7 +2035,8 @@ public abstract class Codes {
   /** Implements {@link #OPTION_COMPOSE}. */
   private static Applicable optionCompose(Applicable f, Applicable g) {
     return new ApplicableImpl("Option.compose$f$g") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List ga = (List) g.apply(env, arg); // g (a)
         if (ga.size() == 2) { // SOME v
           return optionSome(f.apply(env, ga.get(1))); // SOME (f (v))
@@ -1896,7 +2049,8 @@ public abstract class Codes {
   /** @see BuiltIn#OPTION_COMPOSE_PARTIAL */
   private static final Applicable OPTION_COMPOSE_PARTIAL =
       new ApplicableImpl(BuiltIn.OPTION_COMPOSE_PARTIAL) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final List tuple = (List) arg;
           final Applicable f = (Applicable) tuple.get(0);
           final Applicable g = (Applicable) tuple.get(1);
@@ -1907,7 +2061,8 @@ public abstract class Codes {
   /** Implements {@link #OPTION_COMPOSE_PARTIAL}. */
   private static Applicable optionComposePartial(Applicable f, Applicable g) {
     return new ApplicableImpl("Option.composePartial$f$g") {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         final List ga = (List) g.apply(env, arg); // g (a)
         if (ga.size() == 2) { // SOME v
           return f.apply(env, ga.get(1)); // f (v)
@@ -1920,7 +2075,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_ABS */
   private static final Applicable REAL_ABS =
       new ApplicableImpl(BuiltIn.REAL_ABS) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return Math.abs((float) arg);
         }
       };
@@ -1928,7 +2084,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_CEIL */
   private static final Applicable REAL_CEIL =
       new ApplicableImpl(BuiltIn.REAL_CEIL) {
-        @Override public Integer apply(EvalEnv env, Object arg) {
+        @Override
+        public Integer apply(EvalEnv env, Object arg) {
           float f = (float) arg;
           if (f >= 0) {
             return Math.round(f);
@@ -1949,11 +2106,13 @@ public abstract class Codes {
       super(BuiltIn.REAL_CHECK_FLOAT, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new RealCheckFloat(pos);
     }
 
-    @Override public Float apply(EvalEnv env, Object arg) {
+    @Override
+    public Float apply(EvalEnv env, Object arg) {
       final Float f = (Float) arg;
       if (Float.isFinite(f)) {
         return f;
@@ -1967,8 +2126,7 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#REAL_COMPARE */
-  private static final Applicable REAL_COMPARE =
-      new RealCompare(Pos.ZERO);
+  private static final Applicable REAL_COMPARE = new RealCompare(Pos.ZERO);
 
   /** Implements {@link BuiltIn#REAL_COMPARE}. */
   private static class RealCompare extends Applicable2<List, Float, Float>
@@ -1977,11 +2135,13 @@ public abstract class Codes {
       super(BuiltIn.REAL_COMPARE, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new RealCompare(pos);
     }
 
-    @Override public List apply(Float f0, Float f1) {
+    @Override
+    public List apply(Float f0, Float f1) {
       if (Float.isNaN(f0) || Float.isNaN(f1)) {
         throw new MorelRuntimeException(BuiltInExn.UNORDERED, pos);
       }
@@ -1999,7 +2159,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_COPY_SIGN */
   private static final Applicable REAL_COPY_SIGN =
       new Applicable2<Float, Float, Float>(BuiltIn.REAL_COPY_SIGN) {
-        @Override public Float apply(Float f0, Float f1) {
+        @Override
+        public Float apply(Float f0, Float f1) {
           if (Float.isNaN(f1)) {
             // Emulate SMLNJ/Mlton behavior that nan is negative,
             // ~nan is positive.
@@ -2012,7 +2173,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_FLOOR */
   private static final Applicable REAL_FLOOR =
       new ApplicableImpl(BuiltIn.REAL_FLOOR) {
-        @Override public Integer apply(EvalEnv env, Object arg) {
+        @Override
+        public Integer apply(EvalEnv env, Object arg) {
           float f = (float) arg;
           if (f >= 0) {
             return -Math.round(-f);
@@ -2025,7 +2187,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_FROM_INT */
   private static final Applicable REAL_FROM_INT =
       new ApplicableImpl(BuiltIn.REAL_FROM_INT) {
-        @Override public Float apply(EvalEnv env, Object arg) {
+        @Override
+        public Float apply(EvalEnv env, Object arg) {
           return (float) ((Integer) arg);
         }
       };
@@ -2033,7 +2196,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_FROM_MAN_EXP */
   private static final Applicable REAL_FROM_MAN_EXP =
       new Applicable2<Float, Integer, Float>(BuiltIn.REAL_FROM_MAN_EXP) {
-        @Override public Float apply(Integer exp, Float mantissa) {
+        @Override
+        public Float apply(Integer exp, Float mantissa) {
           if (!Float.isFinite(mantissa)) {
             return mantissa;
           }
@@ -2049,16 +2213,19 @@ public abstract class Codes {
         }
       };
 
-  /** Pattern for floating point numbers (after '~' has been converted to '-').
-   * ".", ".e", ".e-", ".e5", "e7" are invalid;
-   * "2.", ".5", "2.e5", "2.e" are valid. */
+  /**
+   * Pattern for floating point numbers (after '~' has been converted to '-').
+   * ".", ".e", ".e-", ".e5", "e7" are invalid; "2.", ".5", "2.e5", "2.e" are
+   * valid.
+   */
   static final Pattern FLOAT_PATTERN =
       Pattern.compile("^ *-?([0-9]*\\.)?[0-9]+([Ee]-?[0-9]+)?");
 
   /** @see BuiltIn#REAL_FROM_STRING */
   private static final Applicable REAL_FROM_STRING =
       new ApplicableImpl(BuiltIn.REAL_FROM_STRING) {
-        @Override public List apply(EvalEnv env, Object arg) {
+        @Override
+        public List apply(EvalEnv env, Object arg) {
           final String s = (String) arg;
           final String s2 = s.replace('~', '-');
           final Matcher matcher = FLOAT_PATTERN.matcher(s2);
@@ -2080,7 +2247,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_IS_FINITE */
   private static final Applicable REAL_IS_FINITE =
       new ApplicableImpl(BuiltIn.REAL_IS_FINITE) {
-        @Override public Boolean apply(EvalEnv env, Object arg) {
+        @Override
+        public Boolean apply(EvalEnv env, Object arg) {
           return Float.isFinite((Float) arg);
         }
       };
@@ -2088,7 +2256,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_IS_NAN */
   private static final Applicable REAL_IS_NAN =
       new ApplicableImpl(BuiltIn.REAL_IS_NAN) {
-        @Override public Boolean apply(EvalEnv env, Object arg) {
+        @Override
+        public Boolean apply(EvalEnv env, Object arg) {
           return Float.isNaN((Float) arg);
         }
       };
@@ -2096,7 +2265,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_IS_NORMAL */
   private static final Applicable REAL_IS_NORMAL =
       new ApplicableImpl(BuiltIn.REAL_IS_NORMAL) {
-        @Override public Boolean apply(EvalEnv env, Object arg) {
+        @Override
+        public Boolean apply(EvalEnv env, Object arg) {
           final Float f = (Float) arg;
           return Float.isFinite(f)
               && (f >= Float.MIN_NORMAL || f <= -Float.MIN_NORMAL);
@@ -2121,20 +2291,18 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_MIN */
   private static final Applicable REAL_MIN =
       new Applicable2<Float, Float, Float>(BuiltIn.REAL_MIN) {
-        @Override public Float apply(Float f0, Float f1) {
-          return Float.isNaN(f0) ? f1
-              : Float.isNaN(f1) ? f0
-              : Math.min(f0, f1);
+        @Override
+        public Float apply(Float f0, Float f1) {
+          return Float.isNaN(f0) ? f1 : Float.isNaN(f1) ? f0 : Math.min(f0, f1);
         }
       };
 
   /** @see BuiltIn#REAL_MAX */
   private static final Applicable REAL_MAX =
       new Applicable2<Float, Float, Float>(BuiltIn.REAL_MAX) {
-        @Override public Float apply(Float f0, Float f1) {
-          return Float.isNaN(f0) ? f1
-              : Float.isNaN(f1) ? f0
-              : Math.max(f0, f1);
+        @Override
+        public Float apply(Float f0, Float f1) {
+          return Float.isNaN(f0) ? f1 : Float.isNaN(f1) ? f0 : Math.max(f0, f1);
         }
       };
 
@@ -2150,7 +2318,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_REAL_MOD */
   private static final Applicable REAL_REAL_MOD =
       new ApplicableImpl(BuiltIn.REAL_REAL_MOD) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final float f = (Float) arg;
           if (Float.isInfinite(f)) {
             // realMod posInf  => 0.0
@@ -2164,7 +2333,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_REAL_CEIL */
   private static final Applicable REAL_REAL_CEIL =
       new ApplicableImpl(BuiltIn.REAL_REAL_CEIL) {
-        @Override public Float apply(EvalEnv env, Object arg) {
+        @Override
+        public Float apply(EvalEnv env, Object arg) {
           return (float) Math.ceil((float) arg);
         }
       };
@@ -2172,7 +2342,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_REAL_FLOOR */
   private static final Applicable REAL_REAL_FLOOR =
       new ApplicableImpl(BuiltIn.REAL_REAL_FLOOR) {
-        @Override public Float apply(EvalEnv env, Object arg) {
+        @Override
+        public Float apply(EvalEnv env, Object arg) {
           return (float) Math.floor((float) arg);
         }
       };
@@ -2180,7 +2351,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_REAL_ROUND */
   private static final Applicable REAL_REAL_ROUND =
       new ApplicableImpl(BuiltIn.REAL_REAL_ROUND) {
-        @Override public Float apply(EvalEnv env, Object arg) {
+        @Override
+        public Float apply(EvalEnv env, Object arg) {
           return (float) Math.rint((float) arg);
         }
       };
@@ -2188,7 +2360,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_REAL_TRUNC */
   private static final Applicable REAL_REAL_TRUNC =
       new ApplicableImpl(BuiltIn.REAL_REAL_TRUNC) {
-        @Override public Float apply(EvalEnv env, Object arg) {
+        @Override
+        public Float apply(EvalEnv env, Object arg) {
           final float f = (float) arg;
           final float frac = f % 1;
           return f - frac;
@@ -2198,7 +2371,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_REM */
   private static final Applicable REAL_REM =
       new Applicable2<Float, Float, Float>(BuiltIn.REAL_REM) {
-        @Override public Float apply(Float x, Float y) {
+        @Override
+        public Float apply(Float x, Float y) {
           return x % y;
         }
       };
@@ -2206,7 +2380,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_ROUND */
   private static final Applicable REAL_ROUND =
       new ApplicableImpl(BuiltIn.REAL_ROUND) {
-        @Override public Integer apply(EvalEnv env, Object arg) {
+        @Override
+        public Integer apply(EvalEnv env, Object arg) {
           return Math.round((float) arg);
         }
       };
@@ -2214,13 +2389,16 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_SAME_SIGN */
   private static final Applicable REAL_SAME_SIGN =
       new Applicable2<Boolean, Float, Float>(BuiltIn.REAL_SAME_SIGN) {
-        @Override public Boolean apply(Float x, Float y) {
+        @Override
+        public Boolean apply(Float x, Float y) {
           return isNegative(x) == isNegative(y);
         }
       };
 
-  /** Returns whether a {@code float} is negative.
-   * This is the same as the specification of {@code Real.signBit}. */
+  /**
+   * Returns whether a {@code float} is negative. This is the same as the
+   * specification of {@code Real.signBit}.
+   */
   @VisibleForTesting
   public static boolean isNegative(float f) {
     final boolean negative =
@@ -2237,23 +2415,26 @@ public abstract class Codes {
   private static final Applicable REAL_SIGN = new RealSign(Pos.ZERO);
 
   /** Implements {@link BuiltIn#REAL_COMPARE}. */
-  private static class RealSign extends ApplicableImpl
-      implements Positioned {
+  private static class RealSign extends ApplicableImpl implements Positioned {
     RealSign(Pos pos) {
       super(BuiltIn.REAL_SIGN, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new RealSign(pos);
     }
 
-    @Override public Object apply(EvalEnv env, Object arg) {
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
       final float f = (Float) arg;
       if (Float.isNaN(f)) {
         throw new MorelRuntimeException(BuiltInExn.DOMAIN, pos);
       }
-      return f == 0f ? 0 // positive or negative zero
-          : (f > 0f) ? 1 // positive number or positive infinity
+      return f == 0f
+          ? 0 // positive or negative zero
+          : (f > 0f)
+              ? 1 // positive number or positive infinity
               : -1; // negative number or negative infinity
     }
   }
@@ -2261,7 +2442,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_SIGN_BIT */
   private static final Applicable REAL_SIGN_BIT =
       new ApplicableImpl(BuiltIn.REAL_SIGN_BIT) {
-        @Override public Boolean apply(EvalEnv env, Object arg) {
+        @Override
+        public Boolean apply(EvalEnv env, Object arg) {
           return isNegative((Float) arg);
         }
       };
@@ -2269,7 +2451,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_SPLIT */
   private static final Applicable REAL_SPLIT =
       new ApplicableImpl(BuiltIn.REAL_SPLIT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final float f = (Float) arg;
           final float frac;
           final float whole;
@@ -2289,7 +2472,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_TO_MAN_EXP */
   private static final Applicable REAL_TO_MAN_EXP =
       new ApplicableImpl(BuiltIn.REAL_TO_MAN_EXP) {
-        @Override public List apply(EvalEnv env, Object arg) {
+        @Override
+        public List apply(EvalEnv env, Object arg) {
           // In IEEE 32 bit floating point,
           // bit 31 is the sign (1 bit);
           // bits 30 - 23 are the exponent (8 bits);
@@ -2318,7 +2502,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_TO_STRING */
   private static final Applicable REAL_TO_STRING =
       new ApplicableImpl(BuiltIn.REAL_TO_STRING) {
-        @Override public String apply(EvalEnv env, Object arg) {
+        @Override
+        public String apply(EvalEnv env, Object arg) {
           // Java's formatting is reasonably close to ML's formatting,
           // if we replace minus signs.
           Float f = (Float) arg;
@@ -2329,7 +2514,8 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_TRUNC */
   private static final Applicable REAL_TRUNC =
       new ApplicableImpl(BuiltIn.REAL_TRUNC) {
-        @Override public Integer apply(EvalEnv env, Object arg) {
+        @Override
+        public Integer apply(EvalEnv env, Object arg) {
           float f = (float) arg;
           return (int) f;
         }
@@ -2338,8 +2524,9 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_UNORDERED */
   private static final Applicable REAL_UNORDERED =
       new Applicable2<Boolean, Float, Float>(BuiltIn.REAL_UNORDERED) {
-        @Override public Boolean apply(Float f0, Float f1) {
-          return Float.isNaN(f0) ||  Float.isNaN(f1);
+        @Override
+        public Boolean apply(Float f0, Float f1) {
+          return Float.isNaN(f0) || Float.isNaN(f1);
         }
       };
 
@@ -2353,7 +2540,8 @@ public abstract class Codes {
 
   private static ApplicableImpl nonEmpty(final BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
-      @Override public Object apply(EvalEnv env, Object arg) {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
         return !((List) arg).isEmpty();
       }
     };
@@ -2365,7 +2553,8 @@ public abstract class Codes {
 
   private static ApplicableImpl empty(BuiltIn builtIn) {
     return new ApplicableImpl(builtIn) {
-      @Override public Boolean apply(EvalEnv env, Object arg) {
+      @Override
+      public Boolean apply(EvalEnv env, Object arg) {
         return ((List) arg).isEmpty();
       }
     };
@@ -2374,16 +2563,18 @@ public abstract class Codes {
   /** @see BuiltIn#RELATIONAL_ITERATE */
   private static final Applicable RELATIONAL_ITERATE =
       new ApplicableImpl(BuiltIn.RELATIONAL_ITERATE) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final List initialList = (List) arg;
           return new ApplicableImpl("Relational.iterate$list") {
-            @Override public Object apply(EvalEnv env, Object argValue) {
+            @Override
+            public Object apply(EvalEnv env, Object argValue) {
               final Applicable update = (Applicable) argValue;
               List list = initialList;
               List newList = list;
-              for (;;) {
-                List nextList = (List) update.apply(env,
-                    FlatLists.of(list, newList));
+              for (; ; ) {
+                List nextList =
+                    (List) update.apply(env, FlatLists.of(list, newList));
                 if (nextList.isEmpty()) {
                   return list;
                 }
@@ -2394,7 +2585,9 @@ public abstract class Codes {
                 //    is empty?
                 // 3. add an "iterateDistinct" variant?
                 list =
-                    ImmutableList.builder().addAll(list).addAll(nextList)
+                    ImmutableList.builder()
+                        .addAll(list)
+                        .addAll(nextList)
                         .build();
                 newList = nextList;
               }
@@ -2414,11 +2607,13 @@ public abstract class Codes {
       super(BuiltIn.RELATIONAL_ONLY, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new RelationalOnly(pos);
     }
 
-    @Override public Object apply(EvalEnv env, Object arg) {
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
       final List list = (List) arg;
       if (list.isEmpty()) {
         throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
@@ -2433,9 +2628,10 @@ public abstract class Codes {
   /** Implements {@link #RELATIONAL_SUM} for type {@code int list}. */
   private static final Applicable Z_SUM_INT =
       new ApplicableImpl("Relational.sum$int") {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          @SuppressWarnings("unchecked") final List<? extends Number> list =
-              (List) arg;
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          @SuppressWarnings("unchecked")
+          final List<? extends Number> list = (List) arg;
           int sum = 0;
           for (Number o : list) {
             sum += o.intValue();
@@ -2447,9 +2643,10 @@ public abstract class Codes {
   /** Implements {@link #RELATIONAL_SUM} for type {@code real list}. */
   private static final Applicable Z_SUM_REAL =
       new ApplicableImpl("Relational.sum$real") {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          @SuppressWarnings("unchecked") final List<? extends Number> list =
-              (List) arg;
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          @SuppressWarnings("unchecked")
+          final List<? extends Number> list = (List) arg;
           float sum = 0;
           for (Number o : list) {
             sum += o.floatValue();
@@ -2459,23 +2656,25 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#RELATIONAL_SUM */
-  private static final Macro RELATIONAL_SUM = (typeSystem, env, argType) -> {
-    if (argType instanceof ListType) {
-      final Type resultType = ((ListType) argType).elementType;
-      switch ((PrimitiveType) resultType) {
-      case INT:
-        return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_INT);
-      case REAL:
-        return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_REAL);
-      }
-    }
-    throw new AssertionError("bad type " + argType);
-  };
+  private static final Macro RELATIONAL_SUM =
+      (typeSystem, env, argType) -> {
+        if (argType instanceof ListType) {
+          final Type resultType = ((ListType) argType).elementType;
+          switch ((PrimitiveType) resultType) {
+            case INT:
+              return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_INT);
+            case REAL:
+              return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_REAL);
+          }
+        }
+        throw new AssertionError("bad type " + argType);
+      };
 
   /** @see BuiltIn#RELATIONAL_MIN */
   private static final Applicable RELATIONAL_MIN =
       new ApplicableImpl(BuiltIn.RELATIONAL_MIN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return Ordering.natural().min((List) arg);
         }
       };
@@ -2483,27 +2682,30 @@ public abstract class Codes {
   /** @see BuiltIn#RELATIONAL_MAX */
   private static final Applicable RELATIONAL_MAX =
       new ApplicableImpl(BuiltIn.RELATIONAL_MAX) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return Ordering.natural().max((List) arg);
         }
       };
 
   /** @see BuiltIn#SYS_ENV */
-  private static Core.Exp sysEnv(TypeSystem typeSystem, Environment env,
-      Type argType) {
+  private static Core.Exp sysEnv(
+      TypeSystem typeSystem, Environment env, Type argType) {
     final TupleType stringPairType =
         typeSystem.tupleType(PrimitiveType.STRING, PrimitiveType.STRING);
     final List<Core.Tuple> args =
-        env.getValueMap()
-            .entrySet()
-            .stream()
+        env.getValueMap().entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
-            .map(entry ->
-                core.tuple(stringPairType,
-                    core.stringLiteral(entry.getKey()),
-                    core.stringLiteral(entry.getValue().id.type.moniker())))
+            .map(
+                entry ->
+                    core.tuple(
+                        stringPairType,
+                        core.stringLiteral(entry.getKey()),
+                        core.stringLiteral(entry.getValue().id.type.moniker())))
             .collect(Collectors.toList());
-    return core.apply(Pos.ZERO, typeSystem.listType(argType),
+    return core.apply(
+        Pos.ZERO,
+        typeSystem.listType(argType),
         core.functionLiteral(typeSystem, BuiltIn.Z_LIST),
         core.tuple(typeSystem, null, args));
   }
@@ -2511,7 +2713,8 @@ public abstract class Codes {
   /** @see BuiltIn#SYS_PLAN */
   private static final Applicable SYS_PLAN =
       new ApplicableImpl(BuiltIn.SYS_PLAN) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Session session = (Session) env.getOpt(EvalEnv.SESSION);
           return Codes.describe(session.code);
         }
@@ -2520,7 +2723,8 @@ public abstract class Codes {
   /** @see BuiltIn#SYS_SET */
   private static final Applicable SYS_SET =
       new ApplicableImpl(BuiltIn.SYS_SET) {
-        @Override public Unit apply(EvalEnv env, Object arg) {
+        @Override
+        public Unit apply(EvalEnv env, Object arg) {
           final Session session = (Session) env.getOpt(EvalEnv.SESSION);
           final List list = (List) arg;
           final String propName = (String) list.get(0);
@@ -2533,7 +2737,8 @@ public abstract class Codes {
   /** @see BuiltIn#SYS_SHOW */
   private static final Applicable SYS_SHOW =
       new ApplicableImpl(BuiltIn.SYS_SHOW) {
-        @Override public List apply(EvalEnv env, Object arg) {
+        @Override
+        public List apply(EvalEnv env, Object arg) {
           final Session session = (Session) env.getOpt(EvalEnv.SESSION);
           final String propName = (String) arg;
           final Object value = Prop.lookup(propName).get(session.map);
@@ -2544,12 +2749,13 @@ public abstract class Codes {
   /** @see BuiltIn#SYS_UNSET */
   private static final Applicable SYS_UNSET =
       new ApplicableImpl(BuiltIn.SYS_UNSET) {
-        @Override public Unit apply(EvalEnv env, Object arg) {
+        @Override
+        public Unit apply(EvalEnv env, Object arg) {
           final Session session = (Session) env.getOpt(EvalEnv.SESSION);
           final String propName = (String) arg;
           final Prop prop = Prop.lookup(propName);
-          @SuppressWarnings("unused") final Object value =
-              prop.remove(session.map);
+          @SuppressWarnings("unused")
+          final Object value = prop.remove(session.map);
           return Unit.INSTANCE;
         }
       };
@@ -2577,8 +2783,7 @@ public abstract class Codes {
       new ListNth(BuiltIn.VECTOR_SUB, Pos.ZERO);
 
   /** @see BuiltIn#VECTOR_UPDATE */
-  private static final Applicable VECTOR_UPDATE =
-      new VectorUpdate(Pos.ZERO);
+  private static final Applicable VECTOR_UPDATE = new VectorUpdate(Pos.ZERO);
 
   /** Implements {@link BuiltIn#VECTOR_UPDATE}. */
   private static class VectorUpdate
@@ -2587,11 +2792,13 @@ public abstract class Codes {
       super(BuiltIn.VECTOR_UPDATE, pos);
     }
 
-    @Override public Applicable withPos(Pos pos) {
+    @Override
+    public Applicable withPos(Pos pos) {
       return new VectorUpdate(pos);
     }
 
-    @Override public List apply(List vec, Integer i, Object x) {
+    @Override
+    public List apply(List vec, Integer i, Object x) {
       if (i < 0 || i >= vec.size()) {
         throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
       }
@@ -2604,9 +2811,10 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_CONCAT */
   private static final Applicable VECTOR_CONCAT =
       new ApplicableImpl(BuiltIn.VECTOR_CONCAT) {
-        @Override public Object apply(EvalEnv env, Object arg) {
-          @SuppressWarnings("unchecked") final List<List<Object>> lists =
-              (List<List<Object>>) arg;
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          @SuppressWarnings("unchecked")
+          final List<List<Object>> lists = (List<List<Object>>) arg;
           final ImmutableList.Builder<Object> b = ImmutableList.builder();
           for (List<Object> list : lists) {
             b.addAll(list);
@@ -2618,7 +2826,8 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_APPI */
   private static final Applicable VECTOR_APPI =
       new ApplicableImpl(BuiltIn.VECTOR_APPI) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return vectorAppi((Applicable) arg);
         }
       };
@@ -2626,9 +2835,10 @@ public abstract class Codes {
   /** Implements {@link #VECTOR_APPI}. */
   private static Applicable vectorAppi(Applicable f) {
     return new ApplicableImpl("Vector.appi$f") {
-      @Override public Unit apply(EvalEnv env, Object arg) {
-        @SuppressWarnings("unchecked") final List<Object> vec =
-            (List<Object>) arg;
+      @Override
+      public Unit apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked")
+        final List<Object> vec = (List<Object>) arg;
         forEachIndexed(vec, (e, i) -> f.apply(env, FlatLists.of(i, e)));
         return Unit.INSTANCE;
       }
@@ -2638,7 +2848,8 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_APP */
   private static final Applicable VECTOR_APP =
       new ApplicableImpl(BuiltIn.VECTOR_APP) {
-        @Override public Applicable apply(EvalEnv env, Object arg) {
+        @Override
+        public Applicable apply(EvalEnv env, Object arg) {
           return vectorApp((Applicable) arg);
         }
       };
@@ -2646,9 +2857,10 @@ public abstract class Codes {
   /** Implements {@link #VECTOR_APP}. */
   private static Applicable vectorApp(Applicable f) {
     return new ApplicableImpl("Vector.app$f") {
-      @Override public Unit apply(EvalEnv env, Object arg) {
-        @SuppressWarnings("unchecked") final List<Object> vec =
-            (List<Object>) arg;
+      @Override
+      public Unit apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked")
+        final List<Object> vec = (List<Object>) arg;
         vec.forEach(e -> f.apply(env, e));
         return Unit.INSTANCE;
       }
@@ -2658,7 +2870,8 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_MAPI */
   private static final Applicable VECTOR_MAPI =
       new ApplicableImpl(BuiltIn.VECTOR_MAPI) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return vectorMapi((Applicable) arg);
         }
       };
@@ -2666,9 +2879,10 @@ public abstract class Codes {
   /** Implements {@link #VECTOR_MAPI}. */
   private static Applicable vectorMapi(Applicable f) {
     return new ApplicableImpl("Vector.map$f") {
-      @Override public List apply(EvalEnv env, Object arg) {
-        @SuppressWarnings("unchecked") final List<Object> vec =
-            (List<Object>) arg;
+      @Override
+      public List apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked")
+        final List<Object> vec = (List<Object>) arg;
         ImmutableList.Builder<Object> b = ImmutableList.builder();
         forEachIndexed(vec, (e, i) -> b.add(f.apply(env, FlatLists.of(i, e))));
         return b.build();
@@ -2679,7 +2893,8 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_MAP */
   private static final Applicable VECTOR_MAP =
       new ApplicableImpl(BuiltIn.VECTOR_MAP) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return vectorMap((Applicable) arg);
         }
       };
@@ -2687,9 +2902,10 @@ public abstract class Codes {
   /** Implements {@link #VECTOR_MAP}. */
   private static Applicable vectorMap(Applicable f) {
     return new ApplicableImpl("Vector.map$f") {
-      @Override public List apply(EvalEnv env, Object arg) {
-        @SuppressWarnings("unchecked") final List<Object> vec =
-            (List<Object>) arg;
+      @Override
+      public List apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked")
+        final List<Object> vec = (List<Object>) arg;
         ImmutableList.Builder<Object> b = ImmutableList.builder();
         vec.forEach(e -> b.add(f.apply(env, e)));
         return b.build();
@@ -2700,14 +2916,17 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_FOLDLI */
   private static final Applicable VECTOR_FOLDLI =
       new ApplicableImpl(BuiltIn.VECTOR_FOLDLI) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Applicable f = (Applicable) arg;
           return new ApplicableImpl("Vector.foldli$f") {
-            @Override public Object apply(EvalEnv env2, Object init) {
+            @Override
+            public Object apply(EvalEnv env2, Object init) {
               return new ApplicableImpl("Vector.foldli$f$init") {
-                @Override public Object apply(EvalEnv env3, Object arg3) {
-                  @SuppressWarnings("unchecked") final List<Object> vec =
-                      (List<Object>) arg3;
+                @Override
+                public Object apply(EvalEnv env3, Object arg3) {
+                  @SuppressWarnings("unchecked")
+                  final List<Object> vec = (List<Object>) arg3;
                   Object acc = init;
                   for (int i = 0, n = vec.size(); i < n; i++) {
                     acc = f.apply(env3, FlatLists.of(i, vec.get(i), acc));
@@ -2723,14 +2942,17 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_FOLDRI */
   private static final Applicable VECTOR_FOLDRI =
       new ApplicableImpl(BuiltIn.VECTOR_FOLDRI) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Applicable f = (Applicable) arg;
           return new ApplicableImpl("Vector.foldri$f") {
-            @Override public Object apply(EvalEnv env2, Object init) {
+            @Override
+            public Object apply(EvalEnv env2, Object init) {
               return new ApplicableImpl("Vector.foldri$f$init") {
-                @Override public Object apply(EvalEnv env3, Object arg3) {
-                  @SuppressWarnings("unchecked") final List<Object> vec =
-                      (List<Object>) arg3;
+                @Override
+                public Object apply(EvalEnv env3, Object arg3) {
+                  @SuppressWarnings("unchecked")
+                  final List<Object> vec = (List<Object>) arg3;
                   Object acc = init;
                   for (int i = vec.size() - 1; i >= 0; i--) {
                     acc = f.apply(env3, FlatLists.of(i, vec.get(i), acc));
@@ -2746,14 +2968,17 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_FOLDL */
   private static final Applicable VECTOR_FOLDL =
       new ApplicableImpl(BuiltIn.VECTOR_FOLDL) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Applicable f = (Applicable) arg;
           return new ApplicableImpl("Vector.foldl$f") {
-            @Override public Object apply(EvalEnv env2, Object init) {
+            @Override
+            public Object apply(EvalEnv env2, Object init) {
               return new ApplicableImpl("Vector.foldl$f$init") {
-                @Override public Object apply(EvalEnv env3, Object arg3) {
-                  @SuppressWarnings("unchecked") final List<Object> vec =
-                      (List<Object>) arg3;
+                @Override
+                public Object apply(EvalEnv env3, Object arg3) {
+                  @SuppressWarnings("unchecked")
+                  final List<Object> vec = (List<Object>) arg3;
                   Object acc = init;
                   for (Object o : vec) {
                     acc = f.apply(env3, FlatLists.of(o, acc));
@@ -2769,14 +2994,17 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_FOLDR */
   private static final Applicable VECTOR_FOLDR =
       new ApplicableImpl(BuiltIn.VECTOR_FOLDR) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           final Applicable f = (Applicable) arg;
           return new ApplicableImpl("Vector.foldlr$f") {
-            @Override public Object apply(EvalEnv env2, Object init) {
+            @Override
+            public Object apply(EvalEnv env2, Object init) {
               return new ApplicableImpl("Vector.foldr$f$init") {
-                @Override public Object apply(EvalEnv env3, Object arg3) {
-                  @SuppressWarnings("unchecked") final List<Object> vec =
-                      (List<Object>) arg3;
+                @Override
+                public Object apply(EvalEnv env3, Object arg3) {
+                  @SuppressWarnings("unchecked")
+                  final List<Object> vec = (List<Object>) arg3;
                   Object acc = init;
                   for (int i = vec.size() - 1; i >= 0; i--) {
                     acc = f.apply(env3, FlatLists.of(vec.get(i), acc));
@@ -2792,7 +3020,8 @@ public abstract class Codes {
   /** @see BuiltIn#VECTOR_FINDI */
   private static final Applicable VECTOR_FINDI =
       new ApplicableImpl(BuiltIn.VECTOR_FINDI) {
-        @Override public Object apply(EvalEnv env, Object arg) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
           return vectorFindi((Applicable) arg);
         }
       };
@@ -2800,9 +3029,10 @@ public abstract class Codes {
   /** Implements {@link #VECTOR_FINDI}. */
   private static Applicable vectorFindi(Applicable f) {
     return new ApplicableImpl("Vector.findi$f") {
-      @Override public Object apply(EvalEnv env, Object arg) {
-        @SuppressWarnings("unchecked") final List<Object> vec =
-            (List<Object>) arg;
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked")
+        final List<Object> vec = (List<Object>) arg;
         for (int i = 0, n = vec.size(); i < n; i++) {
           final List<Object> tuple = FlatLists.of(i, vec.get(i));
           if ((Boolean) f.apply(env, tuple)) {
@@ -2830,7 +3060,8 @@ public abstract class Codes {
   /** @see BuiltIn#Z_EXTENT */
   private static final Applicable Z_EXTENT =
       new ApplicableImpl(BuiltIn.Z_EXTENT) {
-        @Override public List apply(EvalEnv env, Object arg) {
+        @Override
+        public List apply(EvalEnv env, Object arg) {
           final RangeExtent rangeExtent = (RangeExtent) arg;
           if (rangeExtent.iterable == null) {
             throw new AssertionError("infinite: " + rangeExtent);
@@ -2849,21 +3080,27 @@ public abstract class Codes {
     // Dummy type system, thrown away after this method
     final TypeSystem typeSystem = new TypeSystem();
     BuiltIn.dataTypes(typeSystem, new ArrayList<>());
-    BuiltIn.forEach(typeSystem, (key, type) -> {
-      final Object value = BUILT_IN_VALUES.get(key);
-      if (value == null) {
-        throw new AssertionError("no implementation for " + key);
-      }
-      if (key.structure == null) {
-        valueMap.put(key.mlName, value);
-      }
-      if (key.alias != null) {
-        valueMap.put(key.alias, value);
-      }
-    });
-    BuiltIn.forEachStructure(typeSystem, (structure, type) ->
-        valueMap.put(structure.name,
-            transformEager(structure.memberMap.values(), BUILT_IN_VALUES::get)));
+    BuiltIn.forEach(
+        typeSystem,
+        (key, type) -> {
+          final Object value = BUILT_IN_VALUES.get(key);
+          if (value == null) {
+            throw new AssertionError("no implementation for " + key);
+          }
+          if (key.structure == null) {
+            valueMap.put(key.mlName, value);
+          }
+          if (key.alias != null) {
+            valueMap.put(key.alias, value);
+          }
+        });
+    BuiltIn.forEachStructure(
+        typeSystem,
+        (structure, type) ->
+            valueMap.put(
+                structure.name,
+                transformEager(
+                    structure.memberMap.values(), BUILT_IN_VALUES::get)));
   }
 
   /** Creates an empty evaluation environment. */
@@ -2871,8 +3108,10 @@ public abstract class Codes {
     return EMPTY_ENV;
   }
 
-  /** Creates an evaluation environment that contains the bound values from a
-   * compilation environment. */
+  /**
+   * Creates an evaluation environment that contains the bound values from a
+   * compilation environment.
+   */
   public static EvalEnv emptyEnvWith(Session session, Environment env) {
     final Map<String, Object> map = EMPTY_ENV.valueMap();
     env.forEachValue(map::put);
@@ -2881,41 +3120,50 @@ public abstract class Codes {
   }
 
   /** Creates a compilation environment. */
-  public static Environment env(TypeSystem typeSystem,
-      Environment environment) {
+  public static Environment env(
+      TypeSystem typeSystem, Environment environment) {
     final Environment[] hEnv = {environment};
-    BUILT_IN_VALUES.forEach((key, value) -> {
-      final Type type = key.typeFunction.apply(typeSystem);
-      if (key.structure == null) {
-        final Core.IdPat idPat =
-            core.idPat(type, key.mlName, typeSystem.nameGenerator);
-        hEnv[0] = hEnv[0].bind(idPat, value);
-      }
-      if (key.alias != null) {
-        final Core.IdPat idPat =
-            core.idPat(type, key.alias, typeSystem.nameGenerator);
-        hEnv[0] = hEnv[0].bind(idPat, value);
-      }
-    });
+    BUILT_IN_VALUES.forEach(
+        (key, value) -> {
+          final Type type = key.typeFunction.apply(typeSystem);
+          if (key.structure == null) {
+            final Core.IdPat idPat =
+                core.idPat(type, key.mlName, typeSystem.nameGenerator);
+            hEnv[0] = hEnv[0].bind(idPat, value);
+          }
+          if (key.alias != null) {
+            final Core.IdPat idPat =
+                core.idPat(type, key.alias, typeSystem.nameGenerator);
+            hEnv[0] = hEnv[0].bind(idPat, value);
+          }
+        });
 
     final List<Object> valueList = new ArrayList<>();
-    BuiltIn.forEachStructure(typeSystem, (structure, type) -> {
-      valueList.clear();
-      structure.memberMap.values()
-          .forEach(builtIn -> valueList.add(BUILT_IN_VALUES.get(builtIn)));
-      final Core.IdPat idPat =
-          core.idPat(type, structure.name, typeSystem.nameGenerator);
-      hEnv[0] = hEnv[0].bind(idPat, ImmutableList.copyOf(valueList));
-    });
+    BuiltIn.forEachStructure(
+        typeSystem,
+        (structure, type) -> {
+          valueList.clear();
+          structure
+              .memberMap
+              .values()
+              .forEach(builtIn -> valueList.add(BUILT_IN_VALUES.get(builtIn)));
+          final Core.IdPat idPat =
+              core.idPat(type, structure.name, typeSystem.nameGenerator);
+          hEnv[0] = hEnv[0].bind(idPat, ImmutableList.copyOf(valueList));
+        });
     return hEnv[0];
   }
 
-  public static Applicable aggregate(Environment env0, Code aggregateCode,
-      List<String> names, @Nullable Code argumentCode) {
+  public static Applicable aggregate(
+      Environment env0,
+      Code aggregateCode,
+      List<String> names,
+      @Nullable Code argumentCode) {
     return new ApplicableImpl("aggregate") {
-      @Override public Object apply(EvalEnv env, Object arg) {
-        @SuppressWarnings("unchecked") final List<Object> rows =
-            (List<Object>) arg;
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
+        @SuppressWarnings("unchecked")
+        final List<Object> rows = (List<Object>) arg;
         final List<Object> argRows;
         if (argumentCode != null) {
           final MutableEvalEnv env2 = env.bindMutableArray(names);
@@ -2927,7 +3175,7 @@ public abstract class Codes {
         } else if (names.size() != 1) {
           // Reconcile the fact that we internally represent rows as arrays when
           // we're buffering for "group", lists at other times.
-          argRows = transform(rows, row -> Arrays.asList((Object []) row));
+          argRows = transform(rows, row -> Arrays.asList((Object[]) row));
         } else {
           argRows = rows;
         }
@@ -3151,11 +3399,12 @@ public abstract class Codes {
 
   private static Map<Applicable, BuiltIn> get() {
     final IdentityHashMap<Applicable, BuiltIn> b = new IdentityHashMap<>();
-    BUILT_IN_VALUES.forEach((builtIn, o) -> {
-      if (o instanceof Applicable) {
-        b.put((Applicable) o, builtIn);
-      }
-    });
+    BUILT_IN_VALUES.forEach(
+        (builtIn, o) -> {
+          if (o instanceof Applicable) {
+            b.put((Applicable) o, builtIn);
+          }
+        });
     return ImmutableMap.copyOf(b);
   }
 
@@ -3169,8 +3418,10 @@ public abstract class Codes {
     return buf.append(floatToString(f));
   }
 
-  /** Converts a Java {@code float} to the format expected of Standard ML
-   * {@code real} values. */
+  /**
+   * Converts a Java {@code float} to the format expected of Standard ML {@code
+   * real} values.
+   */
   @VisibleForTesting
   public static String floatToString(float f) {
     if (Float.isFinite(f)) {
@@ -3211,10 +3462,11 @@ public abstract class Codes {
     return s;
   }
 
-  /** A code that evaluates expressions and creates a tuple with the results.
+  /**
+   * A code that evaluates expressions and creates a tuple with the results.
    *
-   * <p>An inner class so that we can pick apart the results of multiply
-   * defined functions: {@code fun f = ... and g = ...}.
+   * <p>An inner class so that we can pick apart the results of multiply defined
+   * functions: {@code fun f = ... and g = ...}.
    */
   public static class TupleCode implements Code {
     public final List<Code> codes;
@@ -3223,9 +3475,10 @@ public abstract class Codes {
       this.codes = codes;
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("tuple", d ->
-          codes.forEach(code -> d.arg("", code)));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "tuple", d -> codes.forEach(code -> d.arg("", code)));
     }
 
     public Object eval(EvalEnv env) {
@@ -3240,7 +3493,9 @@ public abstract class Codes {
   /** Accepts rows produced by a supplier as part of a {@code from} clause. */
   public interface RowSink extends Describable {
     void start(EvalEnv env);
+
     void accept(EvalEnv env);
+
     List<Object> result(EvalEnv env);
   }
 
@@ -3252,15 +3507,18 @@ public abstract class Codes {
       this.rowSink = requireNonNull(rowSink);
     }
 
-    @Override public void start(EvalEnv env) {
+    @Override
+    public void start(EvalEnv env) {
       rowSink.start(env);
     }
 
-    @Override public void accept(EvalEnv env) {
+    @Override
+    public void accept(EvalEnv env) {
       rowSink.accept(env);
     }
 
-    @Override public List<Object> result(EvalEnv env) {
+    @Override
+    public List<Object> result(EvalEnv env) {
       return rowSink.result(env);
     }
   }
@@ -3272,8 +3530,8 @@ public abstract class Codes {
     private final Code code;
     final Code conditionCode;
 
-    ScanRowSink(Op op, Core.Pat pat, Code code, Code conditionCode,
-        RowSink rowSink) {
+    ScanRowSink(
+        Op op, Core.Pat pat, Code code, Code conditionCode, RowSink rowSink) {
       super(rowSink);
       checkArgument(op == Op.SCAN);
       this.op = op;
@@ -3282,20 +3540,26 @@ public abstract class Codes {
       this.conditionCode = conditionCode;
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("join", d ->
-          d.arg("pat", pat)
-              .arg("exp", code)
-              .argIf("condition", conditionCode, !isConstantTrue(conditionCode))
-              .arg("sink", rowSink));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "join",
+          d ->
+              d.arg("pat", pat)
+                  .arg("exp", code)
+                  .argIf(
+                      "condition",
+                      conditionCode,
+                      !isConstantTrue(conditionCode))
+                  .arg("sink", rowSink));
     }
 
     private static boolean isConstantTrue(Code code) {
-      return code.isConstant()
-          && Objects.equals(code.eval(null), true);
+      return code.isConstant() && Objects.equals(code.eval(null), true);
     }
 
-    @Override public void accept(EvalEnv env) {
+    @Override
+    public void accept(EvalEnv env) {
       final MutableEvalEnv mutableEvalEnv = env.bindMutablePat(pat);
       final Iterable<Object> elements = (Iterable<Object>) code.eval(env);
       for (Object element : elements) {
@@ -3318,13 +3582,14 @@ public abstract class Codes {
       this.filterCode = filterCode;
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("where", d ->
-          d.arg("condition", filterCode)
-              .arg("sink", rowSink));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "where", d -> d.arg("condition", filterCode).arg("sink", rowSink));
     }
 
-    @Override public void accept(EvalEnv env) {
+    @Override
+    public void accept(EvalEnv env) {
       if ((Boolean) filterCode.eval(env)) {
         rowSink.accept(env);
       }
@@ -3341,18 +3606,20 @@ public abstract class Codes {
       this.skipCode = skipCode;
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("skip", d ->
-          d.arg("count", skipCode)
-              .arg("sink", rowSink));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "skip", d -> d.arg("count", skipCode).arg("sink", rowSink));
     }
 
-    @Override public void start(EvalEnv env) {
+    @Override
+    public void start(EvalEnv env) {
       skip = (Integer) skipCode.eval(env);
       super.start(env);
     }
 
-    @Override public void accept(EvalEnv env) {
+    @Override
+    public void accept(EvalEnv env) {
       if (skip > 0) {
         --skip;
       } else {
@@ -3371,18 +3638,20 @@ public abstract class Codes {
       this.takeCode = takeCode;
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("take", d ->
-          d.arg("count", takeCode)
-              .arg("sink", rowSink));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "take", d -> d.arg("count", takeCode).arg("sink", rowSink));
     }
 
-    @Override public void start(EvalEnv env) {
+    @Override
+    public void start(EvalEnv env) {
       take = (Integer) takeCode.eval(env);
       super.start(env);
     }
 
-    @Override public void accept(EvalEnv env) {
+    @Override
+    public void accept(EvalEnv env) {
       if (take > 0) {
         --take;
         rowSink.accept(env);
@@ -3397,13 +3666,18 @@ public abstract class Codes {
     final ImmutableList<String> keyNames;
     /** group names followed by aggregate names */
     final ImmutableList<String> outNames;
+
     final ImmutableList<Applicable> aggregateCodes;
     final ListMultimap<Object, Object> map = ArrayListMultimap.create();
     final Object[] values;
 
-    GroupRowSink(Code keyCode, ImmutableList<Applicable> aggregateCodes,
-        ImmutableList<String> inNames, ImmutableList<String> keyNames,
-        ImmutableList<String> outNames, RowSink rowSink) {
+    GroupRowSink(
+        Code keyCode,
+        ImmutableList<Applicable> aggregateCodes,
+        ImmutableList<String> inNames,
+        ImmutableList<String> keyNames,
+        ImmutableList<String> outNames,
+        RowSink rowSink) {
       super(rowSink);
       this.keyCode = requireNonNull(keyCode);
       this.aggregateCodes = requireNonNull(aggregateCodes);
@@ -3419,15 +3693,19 @@ public abstract class Codes {
           && list0.equals(list1.subList(0, list0.size()));
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("group", d -> {
-        d.arg("key", keyCode);
-        aggregateCodes.forEach(a -> d.arg("agg", a));
-        d.arg("sink", rowSink);
-      });
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "group",
+          d -> {
+            d.arg("key", keyCode);
+            aggregateCodes.forEach(a -> d.arg("agg", a));
+            d.arg("sink", rowSink);
+          });
     }
 
-    @Override public void accept(EvalEnv env) {
+    @Override
+    public void accept(EvalEnv env) {
       if (inNames.size() == 1) {
         map.put(keyCode.eval(env), env.getOpt(inNames.get(0)));
       } else {
@@ -3438,7 +3716,8 @@ public abstract class Codes {
       }
     }
 
-    @Override public List<Object> result(final EvalEnv env) {
+    @Override
+    public List<Object> result(final EvalEnv env) {
       // Derive env2, the environment for our consumer. It consists of our input
       // environment plus output names.
       EvalEnv env2 = env;
@@ -3485,22 +3764,28 @@ public abstract class Codes {
     final List<Object> rows = new ArrayList<>();
     final Object[] values;
 
-    OrderRowSink(ImmutablePairList<Code, Boolean> codes,
-        ImmutableList<String> names, RowSink rowSink) {
+    OrderRowSink(
+        ImmutablePairList<Code, Boolean> codes,
+        ImmutableList<String> names,
+        RowSink rowSink) {
       super(rowSink);
       this.codes = codes;
       this.names = names;
       this.values = names.size() == 1 ? null : new Object[names.size()];
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("order", d -> {
-        codes.forEach((code, desc) -> d.arg(desc ? "desc" : "asc", code));
-        d.arg("sink", rowSink);
-      });
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "order",
+          d -> {
+            codes.forEach((code, desc) -> d.arg(desc ? "desc" : "asc", code));
+            d.arg("sink", rowSink);
+          });
     }
 
-    @Override public void accept(EvalEnv env) {
+    @Override
+    public void accept(EvalEnv env) {
       if (values == null) {
         rows.add(env.getOpt(names.get(0)));
       } else {
@@ -3511,22 +3796,26 @@ public abstract class Codes {
       }
     }
 
-    @Override public List<Object> result(final EvalEnv env) {
+    @Override
+    public List<Object> result(final EvalEnv env) {
       final MutableEvalEnv leftEnv = env.bindMutableArray(names);
       final MutableEvalEnv rightEnv = env.bindMutableArray(names);
-      rows.sort((left, right) -> {
-        leftEnv.set(left);
-        rightEnv.set(right);
-        for (Map.Entry<Code, Boolean> code : codes) {
-          final Comparable leftVal = (Comparable) code.getKey().eval(leftEnv);
-          final Comparable rightVal = (Comparable) code.getKey().eval(rightEnv);
-          int c = leftVal.compareTo(rightVal);
-          if (c != 0) {
-            return code.getValue() ? -c : c;
-          }
-        }
-        return 0;
-      });
+      rows.sort(
+          (left, right) -> {
+            leftEnv.set(left);
+            rightEnv.set(right);
+            for (Map.Entry<Code, Boolean> code : codes) {
+              final Comparable leftVal =
+                  (Comparable) code.getKey().eval(leftEnv);
+              final Comparable rightVal =
+                  (Comparable) code.getKey().eval(rightEnv);
+              int c = leftVal.compareTo(rightVal);
+              if (c != 0) {
+                return code.getValue() ? -c : c;
+              }
+            }
+            return 0;
+          });
       for (Object row : rows) {
         leftEnv.set(row);
         rowSink.accept(leftEnv);
@@ -3535,19 +3824,23 @@ public abstract class Codes {
     }
   }
 
-  /** Implementation of {@link RowSink} for a {@code yield} step.
+  /**
+   * Implementation of {@link RowSink} for a {@code yield} step.
    *
-   * <p>If this is the last step, use instead a {@link CollectRowSink}. It
-   * is more efficient; there is no downstream row sink; and a terminal yield
-   * step is allowed to generate expressions that are not records. Non-record
+   * <p>If this is the last step, use instead a {@link CollectRowSink}. It is
+   * more efficient; there is no downstream row sink; and a terminal yield step
+   * is allowed to generate expressions that are not records. Non-record
    * expressions (e.g. {@code int} expressions) do not have a name, and
-   * therefore the value cannot be passed via the {@link EvalEnv}. */
+   * therefore the value cannot be passed via the {@link EvalEnv}.
+   */
   private static class YieldRowSink extends BaseRowSink {
     private final ImmutableList<String> names;
     private final ImmutableList<Code> codes;
     private final Object[] values;
 
-    YieldRowSink(ImmutableList<String> names, ImmutableList<Code> codes,
+    YieldRowSink(
+        ImmutableList<String> names,
+        ImmutableList<Code> codes,
         RowSink rowSink) {
       super(rowSink);
       this.names = names;
@@ -3555,13 +3848,14 @@ public abstract class Codes {
       this.values = names.size() == 1 ? null : new Object[names.size()];
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("yield", d ->
-          d.arg("codes", codes)
-              .arg("sink", rowSink));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "yield", d -> d.arg("codes", codes).arg("sink", rowSink));
     }
 
-    @Override public void accept(EvalEnv env) {
+    @Override
+    public void accept(EvalEnv env) {
       final MutableEvalEnv env2 = env.bindMutableArray(names);
       if (values == null) {
         final Object value = codes.get(0).eval(env);
@@ -3576,8 +3870,10 @@ public abstract class Codes {
     }
   }
 
-  /** Implementation of {@link RowSink} that the last step of a {@code from}
-   * writes into. */
+  /**
+   * Implementation of {@link RowSink} that the last step of a {@code from}
+   * writes into.
+   */
   private static class CollectRowSink implements RowSink {
     final List<Object> list = new ArrayList<>();
     final Code code;
@@ -3586,19 +3882,23 @@ public abstract class Codes {
       this.code = requireNonNull(code);
     }
 
-    @Override public Describer describe(Describer describer) {
+    @Override
+    public Describer describe(Describer describer) {
       return describer.start("collect", d -> d.arg("", code));
     }
 
-    @Override public void start(EvalEnv env) {
+    @Override
+    public void start(EvalEnv env) {
       list.clear();
     }
 
-    @Override public void accept(EvalEnv env) {
+    @Override
+    public void accept(EvalEnv env) {
       list.add(code.eval(env));
     }
 
-    @Override public List<Object> result(EvalEnv env) {
+    @Override
+    public List<Object> result(EvalEnv env) {
       return list;
     }
   }
@@ -3611,11 +3911,13 @@ public abstract class Codes {
       this.name = requireNonNull(name);
     }
 
-    @Override public Describer describe(Describer describer) {
+    @Override
+    public Describer describe(Describer describer) {
       return describer.start("get", d -> d.arg("name", name));
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return "get(" + name + ")";
     }
 
@@ -3624,8 +3926,10 @@ public abstract class Codes {
     }
   }
 
-  /** Code that retrieves, as a tuple, the value of several variables from the
-   * environment. */
+  /**
+   * Code that retrieves, as a tuple, the value of several variables from the
+   * environment.
+   */
   private static class GetTupleCode implements Code {
     private final ImmutableList<String> names;
     private final Object[] values; // work space
@@ -3635,15 +3939,18 @@ public abstract class Codes {
       this.values = new Object[names.size()];
     }
 
-    @Override public Describer describe(Describer describer) {
+    @Override
+    public Describer describe(Describer describer) {
       return describer.start("getTuple", d -> d.arg("names", names));
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return "getTuple(" + names + ")";
     }
 
-    @Override public Object eval(EvalEnv env) {
+    @Override
+    public Object eval(EvalEnv env) {
       for (int i = 0; i < names.size(); i++) {
         values[i] = env.getOpt(names.get(i));
       }
@@ -3663,16 +3970,18 @@ public abstract class Codes {
       this.pos = requireNonNull(pos);
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return e.mlName + " at " + pos;
     }
 
-    @Override public StringBuilder describeTo(StringBuilder buf) {
-      return buf.append("uncaught exception ")
-          .append(e.mlName);
+    @Override
+    public StringBuilder describeTo(StringBuilder buf) {
+      return buf.append("uncaught exception ").append(e.mlName);
     }
 
-    @Override public Pos pos() {
+    @Override
+    public Pos pos() {
       return pos;
     }
   }
@@ -3707,7 +4016,8 @@ public abstract class Codes {
       this.value = value;
     }
 
-    @Override public Describer describe(Describer describer) {
+    @Override
+    public Describer describe(Describer describer) {
       return describer.start("constant", d -> d.arg("", value));
     }
 
@@ -3715,7 +4025,8 @@ public abstract class Codes {
       return value;
     }
 
-    @Override public boolean isConstant() {
+    @Override
+    public boolean isConstant() {
       return true;
     }
   }
@@ -3730,11 +4041,13 @@ public abstract class Codes {
       this.code1 = code1;
     }
 
-    @Override public Describer describe(Describer describer) {
+    @Override
+    public Describer describe(Describer describer) {
       return describer.start("andalso", d -> d.arg("", code0).arg("", code1));
     }
 
-    @Override public Object eval(EvalEnv evalEnv) {
+    @Override
+    public Object eval(EvalEnv evalEnv) {
       // Lazy evaluation. If code0 returns false, code1 is never evaluated.
       return (boolean) code0.eval(evalEnv) && (boolean) code1.eval(evalEnv);
     }
@@ -3750,11 +4063,13 @@ public abstract class Codes {
       this.code1 = code1;
     }
 
-    @Override public Describer describe(Describer describer) {
+    @Override
+    public Describer describe(Describer describer) {
       return describer.start("orelse", d -> d.arg("", code0).arg("", code1));
     }
 
-    @Override public Object eval(EvalEnv evalEnv) {
+    @Override
+    public Object eval(EvalEnv evalEnv) {
       // Lazy evaluation. If code0 returns true, code1 is never evaluated.
       return (boolean) code0.eval(evalEnv) || (boolean) code1.eval(evalEnv);
     }
@@ -3770,12 +4085,15 @@ public abstract class Codes {
       this.resultCode = resultCode;
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("let1", d ->
-          d.arg("matchCode", matchCode).arg("resultCode", resultCode));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "let1",
+          d -> d.arg("matchCode", matchCode).arg("resultCode", resultCode));
     }
 
-    @Override public Object eval(EvalEnv evalEnv) {
+    @Override
+    public Object eval(EvalEnv evalEnv) {
       final Closure fnValue = (Closure) matchCode.eval(evalEnv);
       EvalEnv env2 = fnValue.evalBind(evalEnv);
       return resultCode.eval(env2);
@@ -3792,15 +4110,20 @@ public abstract class Codes {
       this.resultCode = resultCode;
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("let", d -> {
-        forEachIndexed(matchCodes, (matchCode, i) ->
-            d.arg("matchCode" + i, matchCode));
-        d.arg("resultCode", resultCode);
-      });
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "let",
+          d -> {
+            forEachIndexed(
+                matchCodes,
+                (matchCode, i) -> d.arg("matchCode" + i, matchCode));
+            d.arg("resultCode", resultCode);
+          });
     }
 
-    @Override public Object eval(EvalEnv evalEnv) {
+    @Override
+    public Object eval(EvalEnv evalEnv) {
       EvalEnv evalEnv2 = evalEnv;
       for (Code matchCode : matchCodes) {
         final Closure fnValue = (Closure) matchCode.eval(evalEnv);
@@ -3820,14 +4143,16 @@ public abstract class Codes {
       this.argCode = argCode;
     }
 
-    @Override public Object eval(EvalEnv env) {
+    @Override
+    public Object eval(EvalEnv env) {
       final Object arg = argCode.eval(env);
       return fnValue.apply(env, arg);
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("apply", d ->
-          d.arg("fnValue", fnValue).arg("argCode", argCode));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "apply", d -> d.arg("fnValue", fnValue).arg("argCode", argCode));
     }
   }
 
@@ -3843,17 +4168,18 @@ public abstract class Codes {
       this.argCode1 = argCode1;
     }
 
-    @Override public Object eval(EvalEnv env) {
+    @Override
+    public Object eval(EvalEnv env) {
       final Object arg0 = argCode0.eval(env);
       final Object arg1 = argCode1.eval(env);
       return fnValue.apply(arg0, arg1);
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("apply2", d ->
-          d.arg("fnValue", fnValue)
-              .arg("", argCode0)
-              .arg("", argCode1));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "apply2",
+          d -> d.arg("fnValue", fnValue).arg("", argCode0).arg("", argCode1));
     }
   }
 
@@ -3864,34 +4190,40 @@ public abstract class Codes {
     private final Code argCode1;
     private final Code argCode2;
 
-    ApplyCode3(Applicable3 fnValue, Code argCode0, Code argCode1,
-        Code argCode2) {
+    ApplyCode3(
+        Applicable3 fnValue, Code argCode0, Code argCode1, Code argCode2) {
       this.fnValue = fnValue;
       this.argCode0 = argCode0;
       this.argCode1 = argCode1;
       this.argCode2 = argCode2;
     }
 
-    @Override public Object eval(EvalEnv env) {
+    @Override
+    public Object eval(EvalEnv env) {
       final Object arg0 = argCode0.eval(env);
       final Object arg1 = argCode1.eval(env);
       final Object arg2 = argCode2.eval(env);
       return fnValue.apply(arg0, arg1, arg2);
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("apply3", d ->
-          d.arg("fnValue", fnValue)
-              .arg("", argCode0)
-              .arg("", argCode1)
-              .arg("", argCode2));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "apply3",
+          d ->
+              d.arg("fnValue", fnValue)
+                  .arg("", argCode0)
+                  .arg("", argCode1)
+                  .arg("", argCode2));
     }
   }
 
-  /** Applies a {@link Code} to a {@link Code}.
+  /**
+   * Applies a {@link Code} to a {@link Code}.
    *
    * <p>If {@link #fnCode} is constant, you should use {@link ApplyCode}
-   * instead. */
+   * instead.
+   */
   static class ApplyCodeCode implements Code {
     public final Code fnCode;
     public final Code argCode;
@@ -3901,21 +4233,25 @@ public abstract class Codes {
       this.argCode = argCode;
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("apply",
-          d -> d.arg("fnCode", fnCode).arg("argCode", argCode));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "apply", d -> d.arg("fnCode", fnCode).arg("argCode", argCode));
     }
 
-    @Override public Object eval(EvalEnv env) {
+    @Override
+    public Object eval(EvalEnv env) {
       final Applicable fnValue = (Applicable) fnCode.eval(env);
       final Object arg = argCode.eval(env);
       return fnValue.apply(env, arg);
     }
   }
 
-  /** A {@code Code} that evaluates a {@code Code} and if the result is a
-   * {@link net.hydromatic.morel.foreign.RelList}, wraps it in a different
-   * kind of list. */
+  /**
+   * A {@code Code} that evaluates a {@code Code} and if the result is a {@link
+   * net.hydromatic.morel.foreign.RelList}, wraps it in a different kind of
+   * list.
+   */
   static class WrapRelList implements Code {
     public final Code code;
 
@@ -3923,20 +4259,24 @@ public abstract class Codes {
       this.code = code;
     }
 
-    @Override public Describer describe(Describer describer) {
+    @Override
+    public Describer describe(Describer describer) {
       return describer.start("wrapRelList", d -> d.arg("code", code));
     }
 
-    @Override public Object eval(EvalEnv env) {
+    @Override
+    public Object eval(EvalEnv env) {
       final Object arg = code.eval(env);
       if (arg instanceof RelList) {
         final RelList list = (RelList) arg;
         return new AbstractList<Object>() {
-          @Override public Object get(int index) {
+          @Override
+          public Object get(int index) {
             return list.get(index);
           }
 
-          @Override public int size() {
+          @Override
+          public int size() {
             return list.size();
           }
         };
@@ -3945,7 +4285,8 @@ public abstract class Codes {
     }
   }
 
-  /** An {@link Applicable} whose position can be changed.
+  /**
+   * An {@link Applicable} whose position can be changed.
    *
    * <p>Operations that may throw exceptions should implement this interface.
    * Then the exceptions can be tied to the correct position in the source code.
@@ -3953,7 +4294,8 @@ public abstract class Codes {
    * <p>If you don't implement this interface, the applicable will use the
    * default position, which is {@link Pos#ZERO}. If the exception has position
    * "0.0-0.0", that is an indication you need to use this interface, and make
-   * sure that the position is propagated through the translation process. */
+   * sure that the position is propagated through the translation process.
+   */
   public interface Positioned extends Applicable {
     Applicable withPos(Pos pos);
   }

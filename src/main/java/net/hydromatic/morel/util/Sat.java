@@ -18,39 +18,38 @@
  */
 package net.hydromatic.morel.util;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-import static java.util.Objects.requireNonNull;
-
-/**
- * Boolean satisfiability.
- */
+/** Boolean satisfiability. */
 public class Sat {
   private final Map<Integer, Variable> variablesById = new HashMap<>();
   private final Map<String, Variable> variablesByName = new HashMap<>();
   private int nextVariable = 0;
 
-  /** Finds an assignment of variables such that a term evaluates to true,
-   * or null if there is no solution. */
+  /**
+   * Finds an assignment of variables such that a term evaluates to true, or
+   * null if there is no solution.
+   */
   public @Nullable Map<Variable, Boolean> solve(Term term) {
     final List<List<Assignment>> allAssignments = new ArrayList<>();
     for (Variable variable : variablesById.values()) {
       allAssignments.add(
-          ImmutableList.of(new Assignment(variable, false),
-              new Assignment(variable, true)));
+          ImmutableList.of(
+              new Assignment(variable, false), new Assignment(variable, true)));
     }
 
     final boolean[] env = new boolean[nextVariable];
-    for (List<Assignment> assignments
-        : Lists.cartesianProduct(allAssignments)) {
+    for (List<Assignment> assignments :
+        Lists.cartesianProduct(allAssignments)) {
       assignments.forEach(a -> env[a.variable.id] = a.value);
       if (term.evaluate(env)) {
         final ImmutableMap.Builder<Variable, Boolean> builder =
@@ -82,7 +81,7 @@ public class Sat {
     return new And(ImmutableList.copyOf(terms));
   }
 
-  public Term and(Iterable<?extends Term> terms) {
+  public Term and(Iterable<? extends Term> terms) {
     return new And(ImmutableList.copyOf(terms));
   }
 
@@ -90,7 +89,7 @@ public class Sat {
     return new Or(ImmutableList.copyOf(terms));
   }
 
-  public Term or(Iterable<?extends Term> terms) {
+  public Term or(Iterable<? extends Term> terms) {
     return new Or(ImmutableList.copyOf(terms));
   }
 
@@ -102,12 +101,13 @@ public class Sat {
       this.op = requireNonNull(op, "op");
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return unparse(new StringBuilder(), 0, 0).toString();
     }
 
-    protected abstract StringBuilder unparse(StringBuilder buf, int left,
-        int right);
+    protected abstract StringBuilder unparse(
+        StringBuilder buf, int left, int right);
 
     public abstract boolean evaluate(boolean[] env);
   }
@@ -123,12 +123,13 @@ public class Sat {
       this.name = requireNonNull(name, "name");
     }
 
-    @Override protected StringBuilder unparse(StringBuilder buf, int left,
-        int right) {
+    @Override
+    protected StringBuilder unparse(StringBuilder buf, int left, int right) {
       return buf.append(name);
     }
 
-    @Override public boolean evaluate(boolean[] env) {
+    @Override
+    public boolean evaluate(boolean[] env) {
       return env[id];
     }
   }
@@ -142,16 +143,16 @@ public class Sat {
       this.terms = requireNonNull(terms);
     }
 
-    @Override protected StringBuilder unparse(StringBuilder buf, int left,
-        int right) {
+    @Override
+    protected StringBuilder unparse(StringBuilder buf, int left, int right) {
       switch (terms.size()) {
-      case 0:
-        // empty "and" prints as "true";
-        // empty "or" prints as "false"
-        return buf.append(op.emptyName);
-      case 1:
-        // singleton "and" and "or" print as the sole term
-        return terms.get(0).unparse(buf, left, right);
+        case 0:
+          // empty "and" prints as "true";
+          // empty "or" prints as "false"
+          return buf.append(op.emptyName);
+        case 1:
+          // singleton "and" and "or" print as the sole term
+          return terms.get(0).unparse(buf, left, right);
       }
       if (left > op.left || right > op.right) {
         return unparse(buf.append('('), 0, 0).append(')');
@@ -161,7 +162,8 @@ public class Sat {
         if (i > 0) {
           buf.append(op.str);
         }
-        term.unparse(buf,
+        term.unparse(
+            buf,
             i == 0 ? left : op.right,
             i == terms.size() - 1 ? right : op.left);
       }
@@ -175,7 +177,8 @@ public class Sat {
       super(Op.AND, terms);
     }
 
-    @Override public boolean evaluate(boolean[] env) {
+    @Override
+    public boolean evaluate(boolean[] env) {
       for (Term term : terms) {
         if (!term.evaluate(env)) {
           return false;
@@ -191,7 +194,8 @@ public class Sat {
       super(Op.OR, terms);
     }
 
-    @Override public boolean evaluate(boolean[] env) {
+    @Override
+    public boolean evaluate(boolean[] env) {
       for (Term term : terms) {
         if (term.evaluate(env)) {
           return true;
@@ -210,18 +214,21 @@ public class Sat {
       this.term = requireNonNull(term, "term");
     }
 
-    @Override protected StringBuilder unparse(StringBuilder buf, int left,
-        int right) {
+    @Override
+    protected StringBuilder unparse(StringBuilder buf, int left, int right) {
       return term.unparse(buf.append(op.str), op.right, right);
     }
 
-    @Override public boolean evaluate(boolean[] env) {
+    @Override
+    public boolean evaluate(boolean[] env) {
       return !term.evaluate(env);
     }
   }
 
-  /** Operator (or type of term), with its left and right precedence and print
-   * name. */
+  /**
+   * Operator (or type of term), with its left and right precedence and print
+   * name.
+   */
   private enum Op {
     AND(3, 4, " ∧ ", "true"),
     OR(1, 2, " ∨ ", "false"),

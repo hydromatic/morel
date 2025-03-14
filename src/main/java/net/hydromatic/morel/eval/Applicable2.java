@@ -18,10 +18,9 @@
  */
 package net.hydromatic.morel.eval;
 
+import java.util.List;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
-
-import java.util.List;
 
 // CHECKSTYLE: IGNORE 30 (long line in javadoc)
 /**
@@ -33,10 +32,10 @@ import java.util.List;
  * generics provide the casting.
  *
  * <p>But the rewrite assumes that the function is <b>strict</b> (always
- * evaluates all arguments, even if the function throws) and doesn't use
- * {@link EvalEnv}, so it is not appropriate for all functions.
- * For example, {@link Codes#andAlso(Code, Code) andalso} evaluates its
- * arguments lazily and therefore cannot be an {@code Applicable2}.
+ * evaluates all arguments, even if the function throws) and doesn't use {@link
+ * EvalEnv}, so it is not appropriate for all functions. For example, {@link
+ * Codes#andAlso(Code, Code) andalso} evaluates its arguments lazily and
+ * therefore cannot be an {@code Applicable2}.
  *
  * <p>If a function has an {@code Applicable2} implementation and the argument
  * tuple is evaluated whole, the old evaluation path will be used. For example,
@@ -53,12 +52,10 @@ import java.util.List;
  * val it =
  *   "apply(fnValue Math.pow, argCode apply(fnValue List.hd, argCode tuple(tuple(constant(2.0), constant(3.0)))))"
  *   : string
- * }
- * </pre>
+ * }</pre>
  *
  * @see Applicable3
- *
- * @param <R>  return type
+ * @param <R> return type
  * @param <A0> type of argument 0
  * @param <A1> type of argument 1
  */
@@ -72,7 +69,8 @@ public abstract class Applicable2<R, A0, A1> extends ApplicableImpl {
     this(builtIn, Pos.ZERO);
   }
 
-  @Override public Object apply(EvalEnv env, Object argValue) {
+  @Override
+  public Object apply(EvalEnv env, Object argValue) {
     final List list = (List) argValue;
     return apply((A0) list.get(0), (A1) list.get(1));
   }

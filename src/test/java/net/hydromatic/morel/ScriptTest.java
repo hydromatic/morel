@@ -18,18 +18,18 @@
  */
 package net.hydromatic.morel;
 
-import net.hydromatic.morel.eval.Prop;
-import net.hydromatic.morel.foreign.Calcite;
-import net.hydromatic.morel.foreign.ForeignValue;
+import static net.hydromatic.morel.TestUtils.first;
+import static net.hydromatic.morel.TestUtils.n2u;
+import static net.hydromatic.morel.TestUtils.toCamelCase;
+import static net.hydromatic.morel.TestUtils.u2n;
+import static net.hydromatic.morel.TestUtils.urlToFile;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.PatternFilenameFilter;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.Reader;
@@ -41,29 +41,25 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import net.hydromatic.morel.eval.Prop;
+import net.hydromatic.morel.foreign.Calcite;
+import net.hydromatic.morel.foreign.ForeignValue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static net.hydromatic.morel.TestUtils.first;
-import static net.hydromatic.morel.TestUtils.n2u;
-import static net.hydromatic.morel.TestUtils.toCamelCase;
-import static net.hydromatic.morel.TestUtils.u2n;
-import static net.hydromatic.morel.TestUtils.urlToFile;
-
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
-
-/**
- * Test that runs files and checks the results.
- */
+/** Test that runs files and checks the results. */
 public class ScriptTest {
-  public ScriptTest() {
-  }
+  public ScriptTest() {}
 
-  /** Runs a test from the command line.
+  /**
+   * Runs a test from the command line.
    *
    * <p>For example:
    *
-   * <pre>{@code java ScriptTest script/table.sml}</pre> */
+   * <pre>{@code java ScriptTest script/table.sml}</pre>
+   */
   public static void main(String[] args) throws Exception {
     for (String arg : args) {
       new ScriptTest().test(arg);
@@ -79,8 +75,9 @@ public class ScriptTest {
     return data_(first);
   }
 
-  @ParameterizedTest @MethodSource("data") void test(String path)
-      throws Exception {
+  @ParameterizedTest
+  @MethodSource("data")
+  void test(String path) throws Exception {
     Method method = findMethod(path);
     if (method != null) {
       try {
@@ -102,8 +99,11 @@ public class ScriptTest {
 
   private Method findMethod(String path) {
     // E.g. path "script/simple.sml" gives method "testScriptSimple"
-    String methodName = toCamelCase("test_"
-        + path.replace(File.separatorChar, '_').replaceAll("\\.sml$", ""));
+    String methodName =
+        toCamelCase(
+            "test_"
+                + path.replace(File.separatorChar, '_')
+                    .replaceAll("\\.sml$", ""));
     Method m;
     try {
       m = getClass().getMethod(methodName);
@@ -131,16 +131,18 @@ public class ScriptTest {
       assertThat(inFile, notNullValue());
       String outPath = idempotent ? path : path + ".out";
       outFile =
-          new File(inFile.getAbsoluteFile().getParent(),
-              u2n("surefire/") + outPath);
+          new File(
+              inFile.getAbsoluteFile().getParent(), u2n("surefire/") + outPath);
     }
     TestUtils.discard(outFile.getParentFile().mkdirs());
     final List<String> argList = ImmutableList.of("--echo");
     final File scriptDirectory = inFile.getParentFile();
     final boolean loadDictionary =
-        inFile.getPath()
-            .matches(".*/(blog|dummy|foreign|hybrid|logic"
-                + "|suchThat)\\.(sml|smli)");
+        inFile
+            .getPath()
+            .matches(
+                ".*/(blog|dummy|foreign|hybrid|logic"
+                    + "|suchThat)\\.(sml|smli)");
     final Map<String, ForeignValue> dictionary =
         loadDictionary
             ? Calcite.withDataSets(BuiltInDataSet.DICTIONARY).foreignValues()
@@ -162,7 +164,7 @@ public class ScriptTest {
     Prop.SCRIPT_DIRECTORY.set(propMap, scriptDirectory);
 
     try (Reader reader = TestUtils.reader(inFile);
-         Writer writer = TestUtils.printWriter(outFile)) {
+        Writer writer = TestUtils.printWriter(outFile)) {
       Main main =
           new Main(argList, reader, writer, dictionary, propMap, idempotent);
       main.run();
@@ -175,8 +177,13 @@ public class ScriptTest {
     }
     final String diff = TestUtils.diff(refFile, outFile);
     if (!diff.isEmpty()) {
-      fail("Files differ: " + refFile + " " + outFile + "\n" //
-          + diff);
+      fail(
+          "Files differ: "
+              + refFile
+              + " "
+              + outFile
+              + "\n" //
+              + diff);
     }
   }
 
@@ -190,15 +197,18 @@ public class ScriptTest {
     final int commonPrefixLength =
         firstFile.getAbsolutePath().length() - first.length();
     final File dir = firstFile.getParentFile();
-    @SuppressWarnings("UnstableApiUsage") final FilenameFilter filter =
-        new PatternFilenameFilter(".*\\.(sml|smli)$");
+    @SuppressWarnings("UnstableApiUsage")
+    final FilenameFilter filter = new PatternFilenameFilter(".*\\.(sml|smli)$");
     File[] files = dir.listFiles(filter);
     return Stream.of(first(files, new File[0]))
-        .map(f ->
-            Arguments.of(f.getAbsolutePath().substring(commonPrefixLength)));
+        .map(
+            f ->
+                Arguments.of(
+                    f.getAbsolutePath().substring(commonPrefixLength)));
   }
 
-  @Test void testScript() throws Exception {
+  @Test
+  void testScript() throws Exception {
     checkRun("script.sml");
   }
 }

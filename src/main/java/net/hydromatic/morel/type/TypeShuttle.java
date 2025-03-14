@@ -26,39 +26,48 @@ public class TypeShuttle extends TypeVisitor<Type> {
     this.typeSystem = typeSystem;
   }
 
-  @Override public Type visit(TypeVar typeVar) {
+  @Override
+  public Type visit(TypeVar typeVar) {
     return typeVar.copy(typeSystem, t -> t.accept(this));
   }
 
-  @Override public ListType visit(ListType listType) {
+  @Override
+  public ListType visit(ListType listType) {
     return listType.copy(typeSystem, t -> t.accept(this));
   }
 
-  @Override public FnType visit(FnType fnType) {
+  @Override
+  public FnType visit(FnType fnType) {
     return fnType.copy(typeSystem, t -> t.accept(this));
   }
 
-  @Override public TupleType visit(TupleType tupleType) {
+  @Override
+  public TupleType visit(TupleType tupleType) {
     return tupleType.copy(typeSystem, t -> t.accept(this));
   }
 
-  @Override public RecordType visit(RecordType recordType) {
+  @Override
+  public RecordType visit(RecordType recordType) {
     return recordType.copy(typeSystem, t -> t.accept(this));
   }
 
-  @Override public Type visit(DataType dataType) {
+  @Override
+  public Type visit(DataType dataType) {
     return dataType.copy(typeSystem, t -> t.accept(this));
   }
 
-  @Override public PrimitiveType visit(PrimitiveType primitiveType) {
+  @Override
+  public PrimitiveType visit(PrimitiveType primitiveType) {
     return primitiveType.copy(typeSystem, t -> t.accept(this));
   }
 
-  @Override public ForallType visit(ForallType forallType) {
+  @Override
+  public ForallType visit(ForallType forallType) {
     return forallType.copy(typeSystem, t -> t.accept(this));
   }
 
-  @Override public DummyType visit(DummyType dummyType) {
+  @Override
+  public DummyType visit(DummyType dummyType) {
     return dummyType.copy(typeSystem, t -> t.accept(this));
   }
 }

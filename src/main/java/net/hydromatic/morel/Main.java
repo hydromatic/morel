@@ -18,27 +18,10 @@
  */
 package net.hydromatic.morel;
 
-import net.hydromatic.morel.ast.AstNode;
-import net.hydromatic.morel.ast.Pos;
-import net.hydromatic.morel.compile.CompiledStatement;
-import net.hydromatic.morel.compile.Compiles;
-import net.hydromatic.morel.compile.Environment;
-import net.hydromatic.morel.compile.Environments;
-import net.hydromatic.morel.compile.Tracer;
-import net.hydromatic.morel.compile.Tracers;
-import net.hydromatic.morel.eval.Codes;
-import net.hydromatic.morel.eval.Prop;
-import net.hydromatic.morel.eval.Session;
-import net.hydromatic.morel.foreign.ForeignValue;
-import net.hydromatic.morel.parse.MorelParserImpl;
-import net.hydromatic.morel.parse.ParseException;
-import net.hydromatic.morel.type.Binding;
-import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.MorelException;
+import static net.hydromatic.morel.util.Static.str;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -58,8 +41,23 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-
-import static net.hydromatic.morel.util.Static.str;
+import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.compile.CompiledStatement;
+import net.hydromatic.morel.compile.Compiles;
+import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.compile.Tracer;
+import net.hydromatic.morel.compile.Tracers;
+import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Prop;
+import net.hydromatic.morel.eval.Session;
+import net.hydromatic.morel.foreign.ForeignValue;
+import net.hydromatic.morel.parse.MorelParserImpl;
+import net.hydromatic.morel.parse.ParseException;
+import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.MorelException;
 
 /** Standard ML REPL. */
 public class Main {
@@ -71,9 +69,11 @@ public class Main {
   final boolean idempotent;
   final Session session;
 
-  /** Command-line entry point.
+  /**
+   * Command-line entry point.
    *
-   * @param args Command-line arguments */
+   * @param args Command-line arguments
+   */
   public static void main(String[] args) {
     final List<String> argList = ImmutableList.copyOf(args);
     final Map<String, ForeignValue> valueMap = ImmutableMap.of();
@@ -90,16 +90,29 @@ public class Main {
   }
 
   /** Creates a Main. */
-  public Main(List<String> args, InputStream in, PrintStream out,
-      Map<String, ForeignValue> valueMap, Map<Prop, Object> propMap,
+  public Main(
+      List<String> args,
+      InputStream in,
+      PrintStream out,
+      Map<String, ForeignValue> valueMap,
+      Map<Prop, Object> propMap,
       boolean idempotent) {
-    this(args, new InputStreamReader(in), new OutputStreamWriter(out),
-        valueMap, propMap, idempotent);
+    this(
+        args,
+        new InputStreamReader(in),
+        new OutputStreamWriter(out),
+        valueMap,
+        propMap,
+        idempotent);
   }
 
   /** Creates a Main. */
-  public Main(List<String> argList, Reader in, Writer out,
-      Map<String, ForeignValue> valueMap, Map<Prop, Object> propMap,
+  public Main(
+      List<String> argList,
+      Reader in,
+      Writer out,
+      Map<String, ForeignValue> valueMap,
+      Map<Prop, Object> propMap,
       boolean idempotent) {
     this.in = buffer(idempotent ? stripOutLines(in) : in);
     this.out = buffer(out);
@@ -112,7 +125,7 @@ public class Main {
   private static void readerToString(Reader r, StringBuilder b) {
     final char[] chars = new char[1024];
     try {
-      for (;;) {
+      for (; ; ) {
         final int read = r.read(chars);
         if (read < 0) {
           return;
@@ -128,7 +141,7 @@ public class Main {
     final StringBuilder b = new StringBuilder();
     readerToString(in, b);
     final String s = str(b);
-    for (int i = 0, n = s.length();;) {
+    for (int i = 0, n = s.length(); ; ) {
       int j0 = i == 0 && s.startsWith("> ") ? 0 : -1;
       int j1 = s.indexOf("\n> ", i);
       int j2 = s.indexOf("(*)", i);
@@ -168,8 +181,10 @@ public class Main {
     return new StringReader(b.toString());
   }
 
-  /** Returns the minimum non-negative value of the list, or -1 if all are
-   * negative. */
+  /**
+   * Returns the minimum non-negative value of the list, or -1 if all are
+   * negative.
+   */
   private static int min(int... ints) {
     int count = 0;
     int min = Integer.MAX_VALUE;
@@ -212,14 +227,19 @@ public class Main {
             : echoLines;
     final Map<String, Binding> outBindings = new LinkedHashMap<>();
     final Shell shell = new Shell(this, env, echoLines, outLines, outBindings);
-    session.withShell(shell, outLines, session1 ->
-        shell.run(session1, new BufferingReader(in), echoLines, outLines));
+    session.withShell(
+        shell,
+        outLines,
+        session1 ->
+            shell.run(session1, new BufferingReader(in), echoLines, outLines));
     out.flush();
   }
 
-  /** Shell (or sub-shell created via
-   * {@link use net.hydromatic.morel.compile.BuiltIn#INTERACT_USE}) that can
-   * execute commands and handle errors. */
+  /**
+   * Shell (or sub-shell created via {@link use
+   * net.hydromatic.morel.compile.BuiltIn#INTERACT_USE}) that can execute
+   * commands and handle errors.
+   */
   static class Shell implements Session.Shell {
     protected final Main main;
     protected final Environment env0;
@@ -227,8 +247,12 @@ public class Main {
     protected final Consumer<String> outLines;
     protected final Map<String, Binding> bindingMap;
 
-    Shell(Main main, Environment env0, Consumer<String> echoLines,
-        Consumer<String> outLines, Map<String, Binding> bindingMap) {
+    Shell(
+        Main main,
+        Environment env0,
+        Consumer<String> echoLines,
+        Consumer<String> outLines,
+        Map<String, Binding> bindingMap) {
       this.main = main;
       this.env0 = env0;
       this.echoLines = echoLines;
@@ -236,12 +260,15 @@ public class Main {
       this.bindingMap = bindingMap;
     }
 
-    void run(Session session, BufferingReader in2, Consumer<String> echoLines,
+    void run(
+        Session session,
+        BufferingReader in2,
+        Consumer<String> echoLines,
         Consumer<String> outLines) {
       final MorelParserImpl parser = new MorelParserImpl(in2);
       final SubShell subShell =
           new SubShell(main, echoLines, outLines, bindingMap, env0);
-      for (;;) {
+      for (; ; ) {
         try {
           parser.zero("stdIn");
           final AstNode statement = parser.statementSemicolonOrEof();
@@ -260,8 +287,10 @@ public class Main {
           if (statement == null) {
             break;
           }
-          session.withShell(subShell, outLines, session1 ->
-              subShell.command(statement, outLines));
+          session.withShell(
+              subShell,
+              outLines,
+              session1 -> subShell.command(statement, outLines));
         } catch (ParseException e) {
           final String message = e.getMessage();
           if (message.startsWith("Encountered \"<EOF>\" ")) {
@@ -281,16 +310,16 @@ public class Main {
       }
     }
 
-    @Override public void use(String fileName, boolean silent, Pos pos) {
+    @Override
+    public void use(String fileName, boolean silent, Pos pos) {
       throw new UnsupportedOperationException();
     }
 
-    @Override public void handle(RuntimeException e, StringBuilder buf) {
+    @Override
+    public void handle(RuntimeException e, StringBuilder buf) {
       if (e instanceof MorelException) {
         final MorelException me = (MorelException) e;
-        me.describeTo(buf)
-            .append("\n")
-            .append("  raised at: ");
+        me.describeTo(buf).append("\n").append("  raised at: ");
         me.pos().describeTo(buf);
       } else {
         buf.append(e);
@@ -298,20 +327,25 @@ public class Main {
     }
   }
 
-  /** Shell that is created via the
-   * {@link use net.hydromatic.morel.compile.BuiltIn#INTERACT_USE}) command.
-   * Like a top-level shell, it can execute commands and handle errors. But its
-   * input is a file, and its output is to the same output as its parent
-   * shell. */
+  /**
+   * Shell that is created via the {@link use
+   * net.hydromatic.morel.compile.BuiltIn#INTERACT_USE}) command. Like a
+   * top-level shell, it can execute commands and handle errors. But its input
+   * is a file, and its output is to the same output as its parent shell.
+   */
   static class SubShell extends Shell {
 
-    SubShell(Main main, Consumer<String> echoLines,
+    SubShell(
+        Main main,
+        Consumer<String> echoLines,
         Consumer<String> outLines,
-        Map<String, Binding> outBindings, Environment env0) {
+        Map<String, Binding> outBindings,
+        Environment env0) {
       super(main, env0, echoLines, outLines, outBindings);
     }
 
-    @Override public void use(String fileName, boolean silent, Pos pos) {
+    @Override
+    public void use(String fileName, boolean silent, Pos pos) {
       outLines.accept("[opening " + fileName + "]");
       File file = new File(fileName);
       if (!file.isAbsolute()) {
@@ -320,17 +354,21 @@ public class Main {
         file = new File(directory, fileName);
       }
       if (!file.exists()) {
-        outLines.accept("[use failed: Io: openIn failed on "
-            + fileName
-            + ", No such file or directory]");
+        outLines.accept(
+            "[use failed: Io: openIn failed on "
+                + fileName
+                + ", No such file or directory]");
         throw new Codes.MorelRuntimeException(Codes.BuiltInExn.ERROR, pos);
       }
       final Consumer<String> echoLines2 = silent ? line -> {} : echoLines;
       final Consumer<String> outLines2 = silent ? line -> {} : outLines;
       try (FileReader in = new FileReader(file);
-           Reader bufferedReader =
-               buffer(main.idempotent ? stripOutLines(in) : in)) {
-        run(main.session, new BufferingReader(bufferedReader), echoLines2,
+          Reader bufferedReader =
+              buffer(main.idempotent ? stripOutLines(in) : in)) {
+        run(
+            main.session,
+            new BufferingReader(bufferedReader),
+            echoLines2,
             outLines2);
       } catch (IOException e) {
         e.printStackTrace();
@@ -342,8 +380,14 @@ public class Main {
         final Environment env = env0.bindAll(bindingMap.values());
         final Tracer tracer = Tracers.empty();
         final CompiledStatement compiled =
-            Compiles.prepareStatement(main.typeSystem, main.session, env,
-                statement, null, e -> appendToOutput(e, outLines), tracer);
+            Compiles.prepareStatement(
+                main.typeSystem,
+                main.session,
+                env,
+                statement,
+                null,
+                e -> appendToOutput(e, outLines),
+                tracer);
         final List<Binding> bindings = new ArrayList<>();
         compiled.eval(main.session, env, outLines, bindings::add);
         bindings.forEach(b -> this.bindingMap.put(b.id.name, b));
@@ -359,8 +403,10 @@ public class Main {
     }
   }
 
-  /** Reader that snoops which characters have been read and saves
-   * them in a buffer until {@link #flush} is called. */
+  /**
+   * Reader that snoops which characters have been read and saves them in a
+   * buffer until {@link #flush} is called.
+   */
   static class BufferingReader extends FilterReader {
     final StringBuilder buf = new StringBuilder();
 
@@ -368,14 +414,15 @@ public class Main {
       super(in);
     }
 
-    @Override public int read() throws IOException {
+    @Override
+    public int read() throws IOException {
       int c = super.read();
       buf.append(c);
       return c;
     }
 
-    @Override public int read(char[] cbuf, int off, int len)
-        throws IOException {
+    @Override
+    public int read(char[] cbuf, int off, int len) throws IOException {
       int n = super.read(cbuf, off, 1);
       if (n > 0) {
         buf.append(cbuf, off, n);

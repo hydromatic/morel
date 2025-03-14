@@ -18,23 +18,22 @@
  */
 package net.hydromatic.morel.type;
 
-import net.hydromatic.morel.ast.Op;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.transform;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
-
 import java.util.AbstractList;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
-
-import static net.hydromatic.morel.util.Ord.forEachIndexed;
-import static net.hydromatic.morel.util.Static.transform;
+import net.hydromatic.morel.ast.Op;
 
 /** The type of a tuple value. */
 public class TupleType extends BaseType implements RecordLikeType {
-  private static final String[] INT_STRINGS =
-      {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
+  private static final String[] INT_STRINGS = {
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
+  };
 
   public final List<Type> argTypes;
 
@@ -43,18 +42,21 @@ public class TupleType extends BaseType implements RecordLikeType {
     this.argTypes = ImmutableList.copyOf(argTypes);
   }
 
-  @Override public SortedMap<String, Type> argNameTypes() {
+  @Override
+  public SortedMap<String, Type> argNameTypes() {
     final ImmutableSortedMap.Builder<String, Type> map =
         ImmutableSortedMap.orderedBy(RecordType.ORDERING);
     forEachIndexed(argTypes, (t, i) -> map.put(Integer.toString(i + 1), t));
     return map.build();
   }
 
-  @Override public List<Type> argTypes() {
+  @Override
+  public List<Type> argTypes() {
     return argTypes;
   }
 
-  @Override public Type argType(int i) {
+  @Override
+  public Type argType(int i) {
     return argTypes.get(i);
   }
 
@@ -66,8 +68,8 @@ public class TupleType extends BaseType implements RecordLikeType {
     return Keys.record(toArgNameTypeKeys(argTypes));
   }
 
-  @Override public TupleType copy(TypeSystem typeSystem,
-      UnaryOperator<Type> transform) {
+  @Override
+  public TupleType copy(TypeSystem typeSystem, UnaryOperator<Type> transform) {
     int differenceCount = 0;
     final ImmutableList.Builder<Type> argTypes2 = ImmutableList.builder();
     for (Type argType : argTypes) {
@@ -77,15 +79,16 @@ public class TupleType extends BaseType implements RecordLikeType {
       }
       argTypes2.add(argType2);
     }
-    return differenceCount == 0
-        ? this
-        : new TupleType(argTypes2.build());
+    return differenceCount == 0 ? this : new TupleType(argTypes2.build());
   }
 
-  /** Converts an integer to its string representation, using a cached value
-   * if possible. */
+  /**
+   * Converts an integer to its string representation, using a cached value if
+   * possible.
+   */
   private static String str(int i) {
-    return i >= 0 && i < INT_STRINGS.length ? INT_STRINGS[i]
+    return i >= 0 && i < INT_STRINGS.length
+        ? INT_STRINGS[i]
         : Integer.toString(i);
   }
 
@@ -102,19 +105,22 @@ public class TupleType extends BaseType implements RecordLikeType {
     };
   }
 
-  /** Given a list of types [t1, t2, ..., tn] returns a sorted map ["1" : t1,
-   * "2" : t2, ... "n" : tn]. */
+  /**
+   * Given a list of types [t1, t2, ..., tn] returns a sorted map ["1" : t1, "2"
+   * : t2, ... "n" : tn].
+   */
   static <E> ImmutableSortedMap<String, E> recordMap(
       List<? extends E> argTypes) {
     final ImmutableSortedMap.Builder<String, E> b =
         ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-    forEachIndexed(argTypes, (t, i) ->
-        b.put(Integer.toString(i + 1), t));
+    forEachIndexed(argTypes, (t, i) -> b.put(Integer.toString(i + 1), t));
     return b.build();
   }
 
-  /** Given a list of types [t1, t2, ..., tn] returns a sorted map
-   * ["1" : t1.key, "2" : t2.key, ... "n" : tn.key]. */
+  /**
+   * Given a list of types [t1, t2, ..., tn] returns a sorted map ["1" : t1.key,
+   * "2" : t2.key, ... "n" : tn.key].
+   */
   static ImmutableSortedMap<String, Type.Key> toArgNameTypeKeys(
       List<? extends Type> argTypes) {
     return recordMap(transform(argTypes, Type::key));

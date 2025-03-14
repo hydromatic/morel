@@ -18,29 +18,25 @@
  */
 package net.hydromatic.morel.util;
 
-import com.google.common.collect.ImmutableSortedMap;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import static net.hydromatic.morel.util.Static.skip;
 
+import com.google.common.collect.ImmutableSortedMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static net.hydromatic.morel.util.Static.skip;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Robinson's unification algorithm. */
 public class RobinsonUnifier extends Unifier {
-  /**
-   * Applies s1 to the elements of s2 and adds them into a single list.
-   */
-  static Map<Variable, Term> compose(Map<Variable, Term> s1,
-      Map<Variable, Term> s2) {
+  /** Applies s1 to the elements of s2 and adds them into a single list. */
+  static Map<Variable, Term> compose(
+      Map<Variable, Term> s1, Map<Variable, Term> s2) {
     Map<Variable, Term> composed = new HashMap<>(s1);
     s2.forEach((key, value) -> composed.put(key, value.apply(s1)));
     return composed;
   }
 
-  private @NonNull Result sequenceUnify(Sequence lhs,
-      Sequence rhs) {
+  private @NonNull Result sequenceUnify(Sequence lhs, Sequence rhs) {
     if (lhs.terms.size() != rhs.terms.size()) {
       return failure("sequences have different length: " + lhs + ", " + rhs);
     }
@@ -74,13 +70,15 @@ public class RobinsonUnifier extends Unifier {
     return SubstitutionResult.create(joined);
   }
 
-  public @NonNull Result unify(List<TermTerm> termPairs,
-      Map<Variable, Action> termActions, Tracer tracer) {
+  public @NonNull Result unify(
+      List<TermTerm> termPairs,
+      Map<Variable, Action> termActions,
+      Tracer tracer) {
     switch (termPairs.size()) {
-    case 1:
-      return unify(termPairs.get(0).left, termPairs.get(0).right);
-    default:
-      throw new AssertionError();
+      case 1:
+        return unify(termPairs.get(0).left, termPairs.get(0).right);
+      default:
+        throw new AssertionError();
     }
   }
 
@@ -96,7 +94,6 @@ public class RobinsonUnifier extends Unifier {
     }
     return failure("terms have different types: " + lhs + ", " + rhs);
   }
-
 }
 
 // End RobinsonUnifier.java

@@ -18,23 +18,19 @@
  */
 package net.hydromatic.morel.compile;
 
-import net.hydromatic.morel.ast.AstNode;
-import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.type.TypeSystem;
-
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
-
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
+import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.type.TypeSystem;
 
-/**
- * Shuttle that counts how many times each expression is used.
- */
+/** Shuttle that counts how many times each expression is used. */
 public class Analyzer extends EnvVisitor {
   private final Map<Core.NamedPat, MutableUse> map;
 
@@ -44,15 +40,18 @@ public class Analyzer extends EnvVisitor {
   }
 
   /** Private constructor. */
-  private Analyzer(TypeSystem typeSystem, Environment env,
-      Map<Core.NamedPat, MutableUse> map, Deque<FromContext> fromStack) {
+  private Analyzer(
+      TypeSystem typeSystem,
+      Environment env,
+      Map<Core.NamedPat, MutableUse> map,
+      Deque<FromContext> fromStack) {
     super(typeSystem, env, fromStack);
     this.map = map;
   }
 
   /** Analyzes an expression. */
-  public static Analysis analyze(TypeSystem typeSystem, Environment env,
-      AstNode node) {
+  public static Analysis analyze(
+      TypeSystem typeSystem, Environment env, AstNode node) {
     final Analyzer analyzer = of(typeSystem, env);
 
     // Mark all top-level bindings so that they will not be removed
@@ -70,15 +69,18 @@ public class Analyzer extends EnvVisitor {
     return new Analysis(b.build());
   }
 
-  @Override protected Analyzer push(Environment env) {
+  @Override
+  protected Analyzer push(Environment env) {
     return new Analyzer(typeSystem, env, map, fromStack);
   }
 
-  @Override protected void visit(Core.IdPat idPat) {
+  @Override
+  protected void visit(Core.IdPat idPat) {
     use(idPat);
   }
 
-  @Override protected void visit(Core.Id id) {
+  @Override
+  protected void visit(Core.Id id) {
     use(id.idPat).useCount++;
     super.visit(id);
   }
@@ -88,7 +90,8 @@ public class Analyzer extends EnvVisitor {
     return map.computeIfAbsent(name, k -> new MutableUse());
   }
 
-  @Override protected void visit(Core.NonRecValDecl valDecl) {
+  @Override
+  protected void visit(Core.NonRecValDecl valDecl) {
     super.visit(valDecl);
     if (isAtom(valDecl.exp)) {
       use(valDecl.pat).atomic = true;
@@ -97,20 +100,21 @@ public class Analyzer extends EnvVisitor {
 
   private static boolean isAtom(Core.Exp exp) {
     switch (exp.op) {
-    case ID:
-    case BOOL_LITERAL:
-    case CHAR_LITERAL:
-    case INT_LITERAL:
-    case REAL_LITERAL:
-    case STRING_LITERAL:
-    case UNIT_LITERAL:
-      return true;
-    default:
-      return false;
+      case ID:
+      case BOOL_LITERAL:
+      case CHAR_LITERAL:
+      case INT_LITERAL:
+      case REAL_LITERAL:
+      case STRING_LITERAL:
+      case UNIT_LITERAL:
+        return true;
+      default:
+        return false;
     }
   }
 
-  @Override protected void visit(Core.Case case_) {
+  @Override
+  protected void visit(Core.Case case_) {
     case_.exp.accept(this);
     if (case_.matchList.size() == 1) {
       // When there is a single branch, we don't need to check for a single use
@@ -132,44 +136,57 @@ public class Analyzer extends EnvVisitor {
       final Map<Core.NamedPat, MutableUse> subMap = new HashMap<>();
       final Analyzer analyzer =
           new Analyzer(typeSystem, env, subMap, new ArrayDeque<>());
-      case_.matchList.forEach(e -> {
-        subMap.clear();
-        e.accept(analyzer);
-        subMap.forEach(multimap::put);
-      });
-      multimap.asMap().forEach((id, uses) -> {
-        final MutableUse baseUse = use(id);
-        int maxCount = MutableUse.max(uses);
-        if (uses.size() > 1) {
-          baseUse.parallel = true;
-        }
-        baseUse.useCount += maxCount;
-      });
+      case_.matchList.forEach(
+          e -> {
+            subMap.clear();
+            e.accept(analyzer);
+            subMap.forEach(multimap::put);
+          });
+      multimap
+          .asMap()
+          .forEach(
+              (id, uses) -> {
+                final MutableUse baseUse = use(id);
+                int maxCount = MutableUse.max(uses);
+                if (uses.size() > 1) {
+                  baseUse.parallel = true;
+                }
+                baseUse.useCount += maxCount;
+              });
     }
   }
 
   /** How a binding (assignment of a value to a variable) is used. */
   public enum Use {
-    /** Indicates that the binding cannot be inlined because recursively
-     * refers to itself (or more precisely, is part of a recursive cycle
-     * and has been chosen as the link to remove to break the cycle). */
+    /**
+     * Indicates that the binding cannot be inlined because recursively refers
+     * to itself (or more precisely, is part of a recursive cycle and has been
+     * chosen as the link to remove to break the cycle).
+     */
     LOOP_BREAKER,
 
-    /** Binding is not used. For a let (whether recursive or not), the binding
-     * can be discarded. */
+    /**
+     * Binding is not used. For a let (whether recursive or not), the binding
+     * can be discarded.
+     */
     DEAD,
 
-    /** The binding occurs exactly once, and that occurrence is not inside a
+    /**
+     * The binding occurs exactly once, and that occurrence is not inside a
      * lambda, nor is a constructor argument. Inlining is unconditionally safe;
-     * it duplicates neither code nor work. */
+     * it duplicates neither code nor work.
+     */
     ONCE_SAFE,
 
-    /** The binding is an atom (variable or literal). Regardless of how many
-     * times it is used, inlining is unconditionally safe;
-     * it duplicates neither code nor work. */
+    /**
+     * The binding is an atom (variable or literal). Regardless of how many
+     * times it is used, inlining is unconditionally safe; it duplicates neither
+     * code nor work.
+     */
     ATOMIC,
 
-    /** The binding occurs at most once in each of several distinct case
+    /**
+     * The binding occurs at most once in each of several distinct case
      * branches; none of these occurrences is inside a lambda. For example:
      *
      * <pre>{@code
@@ -179,10 +196,12 @@ public class Analyzer extends EnvVisitor {
      * }</pre>
      *
      * <p>In this expression, {@code y} occurs only once in each case branch.
-     * Inlining {@code y} may duplicate code, but it will not duplicate work. */
+     * Inlining {@code y} may duplicate code, but it will not duplicate work.
+     */
     MULTI_SAFE,
 
-    /** The binding occurs exactly once, but inside a lambda. Inlining will not
+    /**
+     * The binding occurs exactly once, but inside a lambda. Inlining will not
      * duplicate code, but it might duplicate work.
      *
      * <p>We must not inline an arbitrary expression inside a lambda, as the
@@ -200,16 +219,19 @@ public class Analyzer extends EnvVisitor {
      * }</pre>
      *
      * <p>no code is duplicated, but a small bounded amount of work is
-     * duplicated, because the closure {@code fn x => E} must be allocated
-     * each time {@code g} is called. */
+     * duplicated, because the closure {@code fn x => E} must be allocated each
+     * time {@code g} is called.
+     */
     ONCE_UNSAFE,
 
     /** The binding may occur many times, including inside lambdas. */
     MULTI_UNSAFE,
   }
 
-  /** Work space where the uses of a binding are counted. When all the uses
-   * have been found, call {@link #fix} to convert this into a {@link Use}. */
+  /**
+   * Work space where the uses of a binding are counted. When all the uses have
+   * been found, call {@link #fix} to convert this into a {@link Use}.
+   */
   private static class MutableUse {
     boolean top;
     boolean atomic;
@@ -224,16 +246,21 @@ public class Analyzer extends EnvVisitor {
       return max;
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return "[" + useCount + (parallel ? " parallel]" : "]");
     }
 
     Use fix() {
-      return top ? Use.MULTI_UNSAFE
-          : useCount == 0 ? Use.DEAD
-          : atomic ? Use.ATOMIC
-          : useCount == 1 ? (parallel ? Use.MULTI_SAFE : Use.ONCE_SAFE)
-          : Use.MULTI_UNSAFE;
+      return top
+          ? Use.MULTI_UNSAFE
+          : useCount == 0
+              ? Use.DEAD
+              : atomic
+                  ? Use.ATOMIC
+                  : useCount == 1
+                      ? (parallel ? Use.MULTI_SAFE : Use.ONCE_SAFE)
+                      : Use.MULTI_UNSAFE;
     }
   }
 

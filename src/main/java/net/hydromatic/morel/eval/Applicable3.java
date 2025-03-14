@@ -18,10 +18,9 @@
  */
 package net.hydromatic.morel.eval;
 
+import java.util.List;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
-
-import java.util.List;
 
 /**
  * Applicable whose argument is a 3-tuple.
@@ -32,23 +31,20 @@ import java.util.List;
  * generics provide the casting.
  *
  * <p>But the rewrite assumes that the function is <b>strict</b> (always
- * evaluates all arguments, even if the function throws) and doesn't use
- * {@link EvalEnv}, so it is not appropriate for all functions.
+ * evaluates all arguments, even if the function throws) and doesn't use {@link
+ * EvalEnv}, so it is not appropriate for all functions.
  *
- * <p>If a function has an {@code Applicable3} implementation and
- * the argument tuple is evaluated whole, the old evaluation path will be
- * used.
+ * <p>If a function has an {@code Applicable3} implementation and the argument
+ * tuple is evaluated whole, the old evaluation path will be used.
  *
  * @see Applicable2
- *
- * @param <R>  return type
+ * @param <R> return type
  * @param <A0> type of argument 0
  * @param <A1> type of argument 1
  * @param <A2> type of argument 2
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class Applicable3<R, A0, A1, A2>
-    extends ApplicableImpl {
+public abstract class Applicable3<R, A0, A1, A2> extends ApplicableImpl {
   protected Applicable3(BuiltIn builtIn, Pos pos) {
     super(builtIn, pos);
   }
@@ -57,7 +53,8 @@ public abstract class Applicable3<R, A0, A1, A2>
     this(builtIn, Pos.ZERO);
   }
 
-  @Override public Object apply(EvalEnv env, Object argValue) {
+  @Override
+  public Object apply(EvalEnv env, Object argValue) {
     final List list = (List) argValue;
     return apply((A0) list.get(0), (A1) list.get(1), (A2) list.get(2));
   }

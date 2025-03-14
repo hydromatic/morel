@@ -18,25 +18,23 @@
  */
 package net.hydromatic.morel;
 
-import net.hydromatic.morel.util.MartelliUnifier;
-import net.hydromatic.morel.util.RobinsonUnifier;
-import net.hydromatic.morel.util.Tracers;
-import net.hydromatic.morel.util.Unifier;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.hamcrest.Matcher;
-import org.junit.jupiter.api.Test;
-
-import java.util.Arrays;
-import java.util.List;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.IsNull.notNullValue;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.util.Arrays;
+import java.util.List;
+import net.hydromatic.morel.util.MartelliUnifier;
+import net.hydromatic.morel.util.RobinsonUnifier;
+import net.hydromatic.morel.util.Tracers;
+import net.hydromatic.morel.util.Unifier;
+import org.hamcrest.Matcher;
+import org.junit.jupiter.api.Test;
 
 /** Test for {@link RobinsonUnifier}. */
 public abstract class UnifierTest {
@@ -132,13 +130,13 @@ public abstract class UnifierTest {
   private final Unifier.Variable W = unifier.variable("W");
   private final Unifier.Variable Z = unifier.variable("Z");
 
-  void assertThatUnify(Unifier.Term e1, Unifier.Term e2,
-      Matcher<String> matcher) {
+  void assertThatUnify(
+      Unifier.Term e1, Unifier.Term e2, Matcher<String> matcher) {
     assertThatUnify(termPairs(e1, e2), matcher);
   }
 
-  void assertThatUnify(List<Unifier.TermTerm> termPairs,
-      Matcher<String> matcher) {
+  void assertThatUnify(
+      List<Unifier.TermTerm> termPairs, Matcher<String> matcher) {
     final Unifier.Result result =
         unifier.unify(termPairs, ImmutableMap.of(), Tracers.nullTracer());
     assertThat(result, notNullValue());
@@ -167,22 +165,24 @@ public abstract class UnifierTest {
     assertThat(result, not(instanceOf(Unifier.Substitution.class)));
   }
 
-  @Test void test1() {
+  @Test
+  void test1() {
     final Unifier.Term e1 = p(f(a()), g(b()), Y);
     final Unifier.Term e2 = p(Z, g(d()), c());
     assertThat(e1, hasToString("p(f(a), g(b), Y)"));
-    assertThat(unifier.substitution(f(a(), Y), Z),
-        hasToString("[f(a, Y)/Z]"));
+    assertThat(unifier.substitution(f(a(), Y), Z), hasToString("[f(a, Y)/Z]"));
     assertThatCannotUnify(e1, e2);
   }
 
-  @Test void test2() {
+  @Test
+  void test2() {
     final Unifier.Term e1 = p(f(a()), g(b()), Y);
     final Unifier.Term e2 = p(Z, g(W), c());
     assertThatUnify(e1, e2, is("[b/W, c/Y, f(a)/Z]"));
   }
 
-  @Test void test3() {
+  @Test
+  void test3() {
     // Note: Hesham Alassaf's test says that these cannot be unified; I think
     // because X is free, and so it assumes that Xs are distinct.
     final Unifier.Term e1 = p(f(f(b())), X);
@@ -194,85 +194,99 @@ public abstract class UnifierTest {
     }
   }
 
-  @Test void test4() {
+  @Test
+  void test4() {
     final Unifier.Term e1 = p(f(f(b())), c());
     final Unifier.Term e2 = p(f(Y), X);
     assertThatUnify(e1, e2, is("[c/X, f(b)/Y]"));
   }
 
-  @Test void test5() {
+  @Test
+  void test5() {
     final Unifier.Term e1 = p(a(), X);
     final Unifier.Term e2 = p(b(), Y);
     assertThatCannotUnify(e1, e2);
   }
 
-  @Test void test6() {
+  @Test
+  void test6() {
     final Unifier.Term e1 = p(X, a());
     final Unifier.Term e2 = p(b(), Y);
     assertThatUnify(e1, e2, is("[b/X, a/Y]"));
   }
 
-  @Test void test7() {
+  @Test
+  void test7() {
     final Unifier.Term e1 = f(a(), X);
     final Unifier.Term e2 = f(a(), b());
     assertThatUnify(e1, e2, is("[b/X]"));
   }
 
-  @Test void test8() {
+  @Test
+  void test8() {
     final Unifier.Term e1 = f(X);
     final Unifier.Term e2 = f(Y);
     assertThatUnify(e1, e2, is("[Y/X]"));
   }
 
-  @Test void test9() {
+  @Test
+  void test9() {
     final Unifier.Term e1 = f(g(X), X);
     final Unifier.Term e2 = f(Y);
     assertThatCannotUnify(e1, e2);
   }
 
-  @Test void test10() {
+  @Test
+  void test10() {
     final Unifier.Term e1 = f(g(X));
     final Unifier.Term e2 = f(Y);
     assertThatUnify(e1, e2, is("[g(X)/Y]"));
   }
 
-  @Test void test11() {
+  @Test
+  void test11() {
     final Unifier.Term e1 = f(g(X), X);
     final Unifier.Term e2 = f(Y, a());
     assertThatUnify(e1, e2, is("[a/X, g(a)/Y]"));
   }
 
-  @Test void test12() {
+  @Test
+  void test12() {
     final Unifier.Term e1 = father(X, Y);
     final Unifier.Term e2 = father(bob(), tom());
     assertThatUnify(e1, e2, is("[bob/X, tom/Y]"));
   }
 
-  @Test void test13() {
+  @Test
+  void test13() {
     final Unifier.Term e1 = parents(X, father(X), mother(bill()));
     final Unifier.Term e2 = parents(bill(), father(bill()), Y);
     assertThatUnify(e1, e2, is("[bill/X, mother(bill)/Y]"));
   }
 
-  @Test void test14() {
+  @Test
+  void test14() {
     final Unifier.Term e1 = grandParent(X, parent(parent(X)));
     final Unifier.Term e2 = grandParent(john(), parent(Y));
     assertThatUnify(e1, e2, is("[john/X, parent(john)/Y]"));
   }
 
-  @Test void test15() {
+  @Test
+  void test15() {
     final Unifier.Term e1 = p(f(a(), g(X)));
     final Unifier.Term e2 = p(Y, Y);
     assertThatCannotUnify(e1, e2);
   }
 
-  @Test void test16() {
+  @Test
+  void test16() {
     final Unifier.Term e1 = p(a(), X, h(g(Z)));
     final Unifier.Term e2 = p(Z, h(Y), h(Y));
     assertThatUnify(e1, e2, is("[h(g(a))/X, g(a)/Y, a/Z]"));
   }
 
-  @Test void test17() {
+  @Test
+  void test17() {
     final Unifier.Term e1 = p(X, X);
     final Unifier.Term e2 = p(Y, f(Y));
     if (unifier.occurs()) {
@@ -284,38 +298,47 @@ public abstract class UnifierTest {
     }
   }
 
-  @Test void test18() {
+  @Test
+  void test18() {
     final Unifier.Term e1 = part(W, X);
     final Unifier.Term e2 = connected(f(W, X), W);
     assertThatCannotUnify(e1, e2);
   }
 
-  @Test void test19() {
+  @Test
+  void test19() {
     final Unifier.Term e1 = p(f(X), a(), Y);
     final Unifier.Term e2 = p(f(bill()), Z, g(b()));
     assertThatUnify(e1, e2, is("[bill/X, g(b)/Y, a/Z]"));
   }
 
-  /** Variant of test that uses
-   * {@link net.hydromatic.morel.util.RobinsonUnifier}. */
+  /**
+   * Variant of test that uses {@link
+   * net.hydromatic.morel.util.RobinsonUnifier}.
+   */
   public static class RobinsonUnifierTest extends UnifierTest {
     protected Unifier createUnifier() {
       return new RobinsonUnifier();
     }
   }
 
-  /** Variant of test that uses
-   * {@link net.hydromatic.morel.util.MartelliUnifier}. */
+  /**
+   * Variant of test that uses {@link
+   * net.hydromatic.morel.util.MartelliUnifier}.
+   */
   public static class MartelliUnifierTest extends UnifierTest {
     protected Unifier createUnifier() {
       return new MartelliUnifier();
     }
 
-    /** Solves the equations from the S combinator,
-     * "{@code fn x => fn y => fn z => x z (z y)}", in [<a href=
-     * "https://web.cs.ucla.edu/~palsberg/course/cs239/reading/wand87.pdf">
-     * Wand 87</a>]. */
-    @Test void test20() {
+    /**
+     * Solves the equations from the S combinator, "{@code fn x => fn y => fn z
+     * => x z (z y)}", in [<a href=
+     * "https://web.cs.ucla.edu/~palsberg/course/cs239/reading/wand87.pdf"> Wand
+     * 87</a>].
+     */
+    @Test
+    void test20() {
       final Unifier.Variable t0 = unifier.variable(0);
       final Unifier.Variable t1 = unifier.variable(1);
       final Unifier.Variable t2 = unifier.variable(2);
@@ -327,33 +350,40 @@ public abstract class UnifierTest {
       final Unifier.Variable t8 = unifier.variable(8);
       final Unifier.Variable t9 = unifier.variable(9);
       final Unifier.TermTerm[] termTerms = {
-          new Unifier.TermTerm(t0, arrow(t1, t2)),
-          new Unifier.TermTerm(t2, arrow(t3, t4)),
-          new Unifier.TermTerm(t4, arrow(t5, t6)),
-          new Unifier.TermTerm(t1, arrow(t8, arrow(t7, t6))),
-          new Unifier.TermTerm(t8, t5),
-          new Unifier.TermTerm(arrow(t9, t7), t3),
-          new Unifier.TermTerm(t9, t5)
+        new Unifier.TermTerm(t0, arrow(t1, t2)),
+        new Unifier.TermTerm(t2, arrow(t3, t4)),
+        new Unifier.TermTerm(t4, arrow(t5, t6)),
+        new Unifier.TermTerm(t1, arrow(t8, arrow(t7, t6))),
+        new Unifier.TermTerm(t8, t5),
+        new Unifier.TermTerm(arrow(t9, t7), t3),
+        new Unifier.TermTerm(t9, t5)
       };
       final Unifier.Result unify =
-          unifier.unify(Arrays.asList(termTerms), ImmutableMap.of(),
+          unifier.unify(
+              Arrays.asList(termTerms),
+              ImmutableMap.of(),
               Tracers.nullTracer());
       assertThat(unify, notNullValue());
       assertThat(unify instanceof Unifier.Substitution, is(true));
-      assertThat(unify.toString(),
-          is("[->(T1, T2)/T0, ->(T8, ->(T7, T6))/T1, ->(T3, T4)/T2,"
-              + " ->(T9, T7)/T3, ->(T5, T6)/T4, T5/T8, T5/T9]"));
+      assertThat(
+          unify.toString(),
+          is(
+              "[->(T1, T2)/T0, ->(T8, ->(T7, T6))/T1, ->(T3, T4)/T2,"
+                  + " ->(T9, T7)/T3, ->(T5, T6)/T4, T5/T8, T5/T9]"));
     }
 
-    @Test void testAtomEqAtom() {
+    @Test
+    void testAtomEqAtom() {
       assertThatCannotUnify(termPairs(b(), X, a(), X));
     }
 
-    @Test void testAtomEqAtom2() {
+    @Test
+    void testAtomEqAtom2() {
       assertThatCannotUnify(termPairs(a(), X, a(), X, b(), X));
     }
 
-    @Test void testAtomEqAtom3() {
+    @Test
+    void testAtomEqAtom3() {
       assertThatUnify(termPairs(a(), X, a(), X), is("[a/X]"));
     }
   }

@@ -22,13 +22,14 @@ import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
-/** A function that is 'called' at compile time,
- * and generates an expanded parse tree.
+/**
+ * A function that is 'called' at compile time, and generates an expanded parse
+ * tree.
  *
- * <p>Currently, Macros are internal.
- * Also, the macro is validated as if it were a function.
- * Its type is derived before expansion.
- * Expansion must preserve the type. */
+ * <p>Currently, Macros are internal. Also, the macro is validated as if it were
+ * a function. Its type is derived before expansion. Expansion must preserve the
+ * type.
+ */
 public interface Macro {
   Core.Exp expand(TypeSystem typeSystem, Environment env, Type argType);
 }

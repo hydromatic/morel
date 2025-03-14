@@ -18,17 +18,18 @@
  */
 package net.hydromatic.morel;
 
-import org.junit.jupiter.api.Assumptions;
-
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import org.junit.jupiter.api.Assumptions;
 
 /** Utilities for writing tests. */
 public class MorelTests {
   private MorelTests() {}
 
-  /** Aborts the test with a given message.
-   * Use this method if you want to abandon a test case half way through.
-   * The test will "succeed", because this is an {@link Assumptions} failure.
+  /**
+   * Aborts the test with a given message. Use this method if you want to
+   * abandon a test case half way through. The test will "succeed", because this
+   * is an {@link Assumptions} failure.
    *
    * @param message Message
    */

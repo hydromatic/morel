@@ -18,13 +18,19 @@
  */
 package net.hydromatic.morel.foreign;
 
+import static java.util.Objects.requireNonNull;
+
+import com.google.common.collect.ImmutableList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.stream.Collectors;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
-
-import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
@@ -32,15 +38,8 @@ import org.apache.calcite.schema.Schemas;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.tools.RelBuilder;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.stream.Collectors;
-
-import static java.util.Objects.requireNonNull;
-
-/** Value based on a Calcite schema.
+/**
+ * Value based on a Calcite schema.
  *
  * <p>In ML, it appears as a record with a field for each table.
  */
@@ -50,7 +49,8 @@ public class CalciteForeignValue implements ForeignValue {
   private final boolean lower;
 
   /** Creates a CalciteForeignValue. */
-  public CalciteForeignValue(Calcite calcite, SchemaPlus schema, boolean lower) {
+  public CalciteForeignValue(
+      Calcite calcite, SchemaPlus schema, boolean lower) {
     this.calcite = requireNonNull(calcite);
     this.schema = requireNonNull(schema);
     this.lower = lower;
@@ -62,25 +62,34 @@ public class CalciteForeignValue implements ForeignValue {
 
   private Type toType(SchemaPlus schema, TypeSystem typeSystem) {
     final SortedMap<String, Type> fields = RecordType.mutableMap();
-    schema.getTableNames().forEach(tableName -> {
-      Table table = requireNonNull(schema.getTable(tableName));
-      fields.put(convert(tableName), toType(table, typeSystem));
-    });
-    schema.getSubSchemaNames().forEach(subSchemaName -> {
-      final SchemaPlus subSchema =
-          requireNonNull(schema.getSubSchema(subSchemaName));
-      fields.put(convert(subSchemaName), toType(subSchema, typeSystem));
-    });
+    schema
+        .getTableNames()
+        .forEach(
+            tableName -> {
+              Table table = requireNonNull(schema.getTable(tableName));
+              fields.put(convert(tableName), toType(table, typeSystem));
+            });
+    schema
+        .getSubSchemaNames()
+        .forEach(
+            subSchemaName -> {
+              final SchemaPlus subSchema =
+                  requireNonNull(schema.getSubSchema(subSchemaName));
+              fields.put(convert(subSchemaName), toType(subSchema, typeSystem));
+            });
 
     return typeSystem.recordType(fields);
   }
 
   private Type toType(Table table, TypeSystem typeSystem) {
     final PairList<String, Type> fields = PairList.of();
-    table.getRowType(calcite.typeFactory)
+    table
+        .getRowType(calcite.typeFactory)
         .getFieldList()
-        .forEach(field ->
-            fields.add(convert(field.getName()), Converters.fieldType(field)));
+        .forEach(
+            field ->
+                fields.add(
+                    convert(field.getName()), Converters.fieldType(field)));
     return typeSystem.listType(typeSystem.recordType(fields));
   }
 
@@ -99,29 +108,36 @@ public class CalciteForeignValue implements ForeignValue {
   private ImmutableList<Object> valueFor(SchemaPlus schema) {
     final SortedMap<String, Object> fieldValues = RecordType.mutableMap();
     final List<String> names = Schemas.path(schema).names();
-    schema.getTableNames().forEach(tableName -> {
-      final RelBuilder b = calcite.relBuilder;
-      b.scan(plus(names, tableName));
-      final List<RexNode> exprList = b.peek().getRowType()
-          .getFieldList().stream()
-          .map(f -> Ord.of(f.getIndex(), convert(f.getName())))
-          .sorted(Map.Entry.comparingByValue())
-          .map(p -> b.alias(b.field(p.i), p.e))
-          .collect(Collectors.toList());
-      b.project(exprList, ImmutableList.of(), true);
-      final RelNode rel = b.build();
-      final Converter<Object[]> converter = Converters.ofRow(rel.getRowType());
-      fieldValues.put(convert(tableName),
-          new RelList(rel, calcite.dataContext, converter));
-    });
+    schema
+        .getTableNames()
+        .forEach(
+            tableName -> {
+              final RelBuilder b = calcite.relBuilder;
+              b.scan(plus(names, tableName));
+              final List<RexNode> exprList =
+                  b.peek().getRowType().getFieldList().stream()
+                      .map(f -> Ord.of(f.getIndex(), convert(f.getName())))
+                      .sorted(Map.Entry.comparingByValue())
+                      .map(p -> b.alias(b.field(p.i), p.e))
+                      .collect(Collectors.toList());
+              b.project(exprList, ImmutableList.of(), true);
+              final RelNode rel = b.build();
+              final Converter<Object[]> converter =
+                  Converters.ofRow(rel.getRowType());
+              fieldValues.put(
+                  convert(tableName),
+                  new RelList(rel, calcite.dataContext, converter));
+            });
 
     // Recursively walk sub-schemas and add their tables to fieldValues
-    schema.getSubSchemaNames().forEach(subSchemaName -> {
-      final SchemaPlus subSchema =
-          requireNonNull(schema.getSubSchema(subSchemaName));
-      fieldValues.put(convert(subSchemaName),
-          valueFor(subSchema));
-    });
+    schema
+        .getSubSchemaNames()
+        .forEach(
+            subSchemaName -> {
+              final SchemaPlus subSchema =
+                  requireNonNull(schema.getSubSchema(subSchemaName));
+              fieldValues.put(convert(subSchemaName), valueFor(subSchema));
+            });
     return ImmutableList.copyOf(fieldValues.values());
   }
 
@@ -129,7 +145,6 @@ public class CalciteForeignValue implements ForeignValue {
   private static <E> List<E> plus(List<E> list, E e) {
     return ImmutableList.<E>builder().addAll(list).add(e).build();
   }
-
 }
 
 // End CalciteForeignValue.java

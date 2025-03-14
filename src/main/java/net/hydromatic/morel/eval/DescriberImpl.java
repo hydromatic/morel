@@ -24,12 +24,13 @@ import java.util.function.Consumer;
 class DescriberImpl implements Describer {
   final StringBuilder buf = new StringBuilder();
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return buf.toString();
   }
 
-  @Override public Describer start(String name,
-      Consumer<Detail> consumer) {
+  @Override
+  public Describer start(String name, Consumer<Detail> consumer) {
     buf.append(name);
     final DetailImpl detail = new DetailImpl();
     consumer.accept(detail);
@@ -37,12 +38,12 @@ class DescriberImpl implements Describer {
     return this;
   }
 
-  /** Implementation of
-   * {@link Detail}. */
+  /** Implementation of {@link Detail}. */
   private class DetailImpl implements Detail {
     final int start = buf.length();
 
-    @Override public Detail arg(String name, Object value) {
+    @Override
+    public Detail arg(String name, Object value) {
       buf.append(buf.length() == start ? "(" : ", ")
           .append(name)
           .append(name.equals("") ? "" : " ")
@@ -50,7 +51,8 @@ class DescriberImpl implements Describer {
       return this;
     }
 
-    @Override public Detail arg(String name, Describable describable) {
+    @Override
+    public Detail arg(String name, Describable describable) {
       buf.append(buf.length() == start ? "(" : ", ")
           .append(name)
           .append(name.equals("") ? "" : " ");

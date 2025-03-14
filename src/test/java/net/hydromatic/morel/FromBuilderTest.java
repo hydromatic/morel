@@ -18,6 +18,17 @@
  */
 package net.hydromatic.morel;
 
+import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasToString;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Function;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.FromBuilder;
@@ -27,25 +38,9 @@ import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.PairList;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Function;
-
-import static net.hydromatic.morel.ast.CoreBuilder.core;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasToString;
-
-/**
- * Test {@link net.hydromatic.morel.ast.FromBuilder}.
- */
+/** Test {@link net.hydromatic.morel.ast.FromBuilder}. */
 public class FromBuilderTest {
   private static class Fixture {
     final TypeSystem typeSystem = new TypeSystem();
@@ -85,7 +80,8 @@ public class FromBuilderTest {
     }
   }
 
-  @Test void testBasic() {
+  @Test
+  void testBasic() {
     // from i in [1, 2]
     final Fixture f = new Fixture();
     final FromBuilder fromBuilder = f.fromBuilder();
@@ -104,7 +100,8 @@ public class FromBuilderTest {
     assertThat(e2, is(e));
   }
 
-  @Test void testDistinct() {
+  @Test
+  void testDistinct() {
     // from i in [1, 2] distinct
     final Fixture f = new Fixture();
     final FromBuilder fromBuilder = f.fromBuilder();
@@ -125,43 +122,50 @@ public class FromBuilderTest {
     fromBuilder.where(core.lessThan(f.typeSystem, f.iId, f.jId));
 
     final Core.From from2 = fromBuilder.build();
-    assertThat(from2,
-        hasToString("from i in [1, 2] join j in [3, 4] "
-            + "group i = i, j = j where i < j"));
+    assertThat(
+        from2,
+        hasToString(
+            "from i in [1, 2] join j in [3, 4] "
+                + "group i = i, j = j where i < j"));
   }
 
-  @Test void testWhereOrder() {
+  @Test
+  void testWhereOrder() {
     // from i in [1, 2] where i < 2 order i desc
     //  ==>
     // from i in [1, 2]
     final Fixture f = new Fixture();
     final FromBuilder fromBuilder = f.fromBuilder();
-    fromBuilder.scan(f.iPat, f.list12)
+    fromBuilder
+        .scan(f.iPat, f.list12)
         .where(core.lessThan(f.typeSystem, f.iId, f.intLiteral(2)))
         .order(ImmutableList.of(core.orderItem(f.iId, Ast.Direction.DESC)));
 
     final Core.From from = fromBuilder.build();
-    assertThat(from,
-        hasToString("from i in [1, 2] where i < 2 order i desc"));
+    assertThat(from, hasToString("from i in [1, 2] where i < 2 order i desc"));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
 
     // "where true" and "order {}" are ignored
-    fromBuilder.where(core.boolLiteral(true))
+    fromBuilder
+        .where(core.boolLiteral(true))
         .order(ImmutableList.of())
         .where(core.greaterThan(f.typeSystem, f.iId, f.intLiteral(1)));
     final Core.From from2 = fromBuilder.build();
-    assertThat(from2,
+    assertThat(
+        from2,
         hasToString("from i in [1, 2] where i < 2 order i desc where i > 1"));
     final Core.Exp e2 = fromBuilder.buildSimplify();
     assertThat(e2, is(from2));
   }
 
-  @Test void testTrivialYield() {
+  @Test
+  void testTrivialYield() {
     // from i in [1, 2] where i < 2 yield i
     final Fixture f = new Fixture();
     final FromBuilder fromBuilder = f.fromBuilder();
-    fromBuilder.scan(f.iPat, f.list12)
+    fromBuilder
+        .scan(f.iPat, f.list12)
         .where(core.lessThan(f.typeSystem, f.iId, f.intLiteral(2)))
         .yield_(f.iId);
 
@@ -171,45 +175,48 @@ public class FromBuilderTest {
     assertThat(e, is(from));
   }
 
-  @Test void testTrivialYield2() {
+  @Test
+  void testTrivialYield2() {
     // from j in [1, 2], i in [3, 4] where i < 2 yield {i, j}
     //   ==>
     // from j in [1, 2], i in [3, 4] where i < 2
     final Fixture f = new Fixture();
     final FromBuilder fromBuilder = f.fromBuilder();
-    fromBuilder.scan(f.jPat, f.list12)
+    fromBuilder
+        .scan(f.jPat, f.list12)
         .scan(f.iPat, f.list34)
         .where(core.lessThan(f.typeSystem, f.iId, f.intLiteral(2)))
         .yield_(f.record(f.iId, f.jId));
 
     final Core.From from = fromBuilder.build();
-    final String expected = "from j in [1, 2] "
-        + "join i in [3, 4] "
-        + "where i < 2";
+    final String expected =
+        "from j in [1, 2] " + "join i in [3, 4] " + "where i < 2";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
   }
 
-  @Test void testTrivialYield3() {
+  @Test
+  void testTrivialYield3() {
     // from j in [1, 2] yield {j} join i in [3, 4]
     //   ==>
     // from j in [1, 2] join i in [3, 4]
     final Fixture f = new Fixture();
     final FromBuilder fromBuilder = f.fromBuilder();
-    fromBuilder.scan(f.jPat, f.list12)
+    fromBuilder
+        .scan(f.jPat, f.list12)
         .yield_(f.record(f.jId))
         .scan(f.iPat, f.list34);
 
     final Core.From from = fromBuilder.build();
-    final String expected = "from j in [1, 2] "
-        + "join i in [3, 4]";
+    final String expected = "from j in [1, 2] " + "join i in [3, 4]";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
   }
 
-  @Test void testNested() {
+  @Test
+  void testNested() {
     // from i in (from j in [1, 2] where j < 2) where i > 1
     //   ==>
     // from j in [1, 2] where j < 2 yield {i = j} where i > 1
@@ -221,31 +228,29 @@ public class FromBuilderTest {
             .build();
 
     final FromBuilder fromBuilder = f.fromBuilder();
-    fromBuilder.scan(f.iPat, innerFrom)
+    fromBuilder
+        .scan(f.iPat, innerFrom)
         .where(core.greaterThan(f.typeSystem, f.iId, f.intLiteral(1)));
 
     final Core.From from = fromBuilder.build();
-    final String expected = "from j in [1, 2] "
-        + "where j < 2 "
-        + "yield {i = j} "
-        + "where i > 1";
+    final String expected =
+        "from j in [1, 2] " + "where j < 2 " + "yield {i = j} " + "where i > 1";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
   }
 
-  @Test void testNested3() {
+  @Test
+  void testNested3() {
     // from i in (from j in [1, 2]) where i > 1
     //   ==>
     // from j in [1, 2] yield {i = j} where i > 1
     final Fixture f = new Fixture();
-    final Core.From innerFrom =
-        f.fromBuilder()
-            .scan(f.jPat, f.list12)
-            .build();
+    final Core.From innerFrom = f.fromBuilder().scan(f.jPat, f.list12).build();
 
     final FromBuilder fromBuilder = f.fromBuilder();
-    fromBuilder.scan(f.iPat, innerFrom)
+    fromBuilder
+        .scan(f.iPat, innerFrom)
         .where(core.greaterThan(f.typeSystem, f.iId, f.intLiteral(1)));
 
     final Core.From from = fromBuilder.build();
@@ -258,7 +263,8 @@ public class FromBuilderTest {
     //   ==>
     // from j in [1, 2] where j > 1
     final FromBuilder fromBuilder2 = f.fromBuilder();
-    fromBuilder2.scan(f.jPat, innerFrom)
+    fromBuilder2
+        .scan(f.jPat, innerFrom)
         .where(core.greaterThan(f.typeSystem, f.jId, f.intLiteral(1)));
 
     final Core.From from2 = fromBuilder2.build();
@@ -282,29 +288,29 @@ public class FromBuilderTest {
     assertThat(e3, is(f.list12));
   }
 
-  @Test void testNested4() {
+  @Test
+  void testNested4() {
     // from d in [(1, 2), (3, 4)]
     // join i in (from i in [#1 d])
     //   ==>
     // from d in [(1, 2), (3, 4)]
     // join i in [#1 d]
     final Fixture f = new Fixture();
-    final Function<List<Binding>, Core.From> innerFrom = bindings ->
-        core.fromBuilder(f.typeSystem,
-                Environments.empty().bindAll(bindings))
-            .scan(f.iPat,
-                core.list(f.typeSystem,
-                    core.field(f.typeSystem, f.dId, 0)))
-            .build();
+    final Function<List<Binding>, Core.From> innerFrom =
+        bindings ->
+            core.fromBuilder(
+                    f.typeSystem, Environments.empty().bindAll(bindings))
+                .scan(
+                    f.iPat,
+                    core.list(f.typeSystem, core.field(f.typeSystem, f.dId, 0)))
+                .build();
     final FromBuilder fromBuilder = f.fromBuilder();
     fromBuilder
-        .scan(f.dPat,
-            core.list(f.typeSystem, f.tuple12, f.tuple34))
+        .scan(f.dPat, core.list(f.typeSystem, f.tuple12, f.tuple34))
         .scan(f.iPat, innerFrom.apply(fromBuilder.bindings()));
 
     final Core.From from = fromBuilder.build();
-    final String expected = "from d in [(1, 2), (3, 4)] "
-        + "join i in [#1 d]";
+    final String expected = "from d in [(1, 2), (3, 4)] " + "join i in [#1 d]";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
@@ -319,26 +325,29 @@ public class FromBuilderTest {
     // where j > #1 d
     final FromBuilder fromBuilder2 = f.fromBuilder();
     fromBuilder2
-        .scan(f.dPat,
-            core.list(f.typeSystem, f.tuple12, f.tuple34))
+        .scan(f.dPat, core.list(f.typeSystem, f.tuple12, f.tuple34))
         .scan(f.jPat, innerFrom.apply(fromBuilder.bindings()))
         .where(
-            core.greaterThan(f.typeSystem, f.jId,
-                core.field(f.typeSystem, f.dId, 0)));
+            core.greaterThan(
+                f.typeSystem, f.jId, core.field(f.typeSystem, f.dId, 0)));
 
     final Core.From from2 = fromBuilder2.build();
-    final String expected2 = "from d in [(1, 2), (3, 4)] "
-        + "join i in [#1 d] "
-        + "yield {d = d, j = i} "
-        + "where j > #1 d";
+    final String expected2 =
+        "from d in [(1, 2), (3, 4)] "
+            + "join i in [#1 d] "
+            + "yield {d = d, j = i} "
+            + "where j > #1 d";
     assertThat(from2, hasToString(expected2));
     final Core.Exp e2 = fromBuilder2.buildSimplify();
     assertThat(e2, is(from2));
   }
 
-  /** As {@link #testNested()} but inner and outer variables have the same
-   * name, and therefore no yield is required. */
-  @Test void testNestedSameName() {
+  /**
+   * As {@link #testNested()} but inner and outer variables have the same name,
+   * and therefore no yield is required.
+   */
+  @Test
+  void testNestedSameName() {
     // from i in (from i in [1, 2] where i < 2) where i > 1
     //   ==>
     // from i in [1, 2] where i < 2 where i > 1
@@ -350,19 +359,20 @@ public class FromBuilderTest {
             .build();
 
     final FromBuilder fromBuilder = f.fromBuilder();
-    fromBuilder.scan(f.iPat, innerFrom)
+    fromBuilder
+        .scan(f.iPat, innerFrom)
         .where(core.greaterThan(f.typeSystem, f.iId, f.intLiteral(1)));
 
     final Core.From from = fromBuilder.build();
-    final String expected = "from i in [1, 2] "
-        + "where i < 2 "
-        + "where i > 1";
+    final String expected =
+        "from i in [1, 2] " + "where i < 2 " + "where i > 1";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
   }
 
-  @Test void testNested0() {
+  @Test
+  void testNested0() {
     // from u in (from)
     //   ==>
     // from
@@ -378,7 +388,8 @@ public class FromBuilderTest {
     assertThat(e, hasToString("from"));
   }
 
-  @Test void testNested2() {
+  @Test
+  void testNested2() {
     // from {i = a, j = b} in (from a in [1, 2], b in [3, 4] where a < 2)
     //   where i < j
     //   ==>
@@ -393,24 +404,29 @@ public class FromBuilderTest {
             .build();
 
     final FromBuilder fromBuilder = f.fromBuilder();
-    fromBuilder.scan(
-        core.recordPat(f.typeSystem, ImmutableSet.of("i", "j"),
-            ImmutableList.of(f.aPat, f.bPat)),
+    fromBuilder
+        .scan(
+            core.recordPat(
+                f.typeSystem,
+                ImmutableSet.of("i", "j"),
+                ImmutableList.of(f.aPat, f.bPat)),
             innerFrom)
         .where(core.lessThan(f.typeSystem, f.iId, f.jId));
 
     final Core.From from = fromBuilder.build();
-    final String expected = "from a in [1, 2] "
-        + "join b in [3, 4] "
-        + "where a < 2 "
-        + "yield {i = a, j = b} "
-        + "where i < j";
+    final String expected =
+        "from a in [1, 2] "
+            + "join b in [3, 4] "
+            + "where a < 2 "
+            + "yield {i = a, j = b} "
+            + "where i < j";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
   }
 
-  @Test void testNestedFromTuple() {
+  @Test
+  void testNestedFromTuple() {
     // from (a, b) in
     //   (from (a, b) in
     //     (from a in [1, 2] join b in [3, 4]))
@@ -426,29 +442,26 @@ public class FromBuilderTest {
         core.tuplePat(f.typeSystem, Arrays.asList(f.aPat, f.bPat));
 
     final Core.From innermostFrom =
-        f.fromBuilder()
-            .scan(f.aPat, f.list12)
-            .scan(f.bPat, f.list34)
-            .build();
+        f.fromBuilder().scan(f.aPat, f.list12).scan(f.bPat, f.list34).build();
     final Core.From innerFrom =
-        f.fromBuilder()
-            .scan(abPat, innermostFrom)
-            .build();
+        f.fromBuilder().scan(abPat, innermostFrom).build();
     final FromBuilder fromBuilder = f.fromBuilder();
     fromBuilder
         .scan(abPat, innerFrom)
         .where(
-            core.andAlso(f.typeSystem,
+            core.andAlso(
+                f.typeSystem,
                 core.greaterThan(f.typeSystem, f.aId, f.bId),
-                core.equal(f.typeSystem, f.aId,
-                    core.intLiteral(BigDecimal.TEN))))
+                core.equal(
+                    f.typeSystem, f.aId, core.intLiteral(BigDecimal.TEN))))
         .yield_(f.bId);
 
     final Core.From from = fromBuilder.build();
-    final String expected = "from a in [1, 2] "
-        + "join b in [3, 4] "
-        + "where a > b andalso a = 10 "
-        + "yield b";
+    final String expected =
+        "from a in [1, 2] "
+            + "join b in [3, 4] "
+            + "where a > b andalso a = 10 "
+            + "yield b";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
@@ -472,18 +485,20 @@ public class FromBuilderTest {
     fromBuilder2
         .scan(baPat, innermostFrom)
         .where(
-            core.andAlso(f.typeSystem,
+            core.andAlso(
+                f.typeSystem,
                 core.greaterThan(f.typeSystem, f.aId, f.bId),
-                core.equal(f.typeSystem, f.aId,
-                    core.intLiteral(BigDecimal.TEN))))
+                core.equal(
+                    f.typeSystem, f.aId, core.intLiteral(BigDecimal.TEN))))
         .yield_(f.bId);
 
     final Core.From from2 = fromBuilder2.build();
-    final String expected2 = "from a in [1, 2] "
-        + "join b in [3, 4] "
-        + "yield {a = b, b = a} "
-        + "where a > b andalso a = 10 "
-        + "yield b";
+    final String expected2 =
+        "from a in [1, 2] "
+            + "join b in [3, 4] "
+            + "yield {a = b, b = a} "
+            + "where a > b andalso a = 10 "
+            + "yield b";
     assertThat(from2, hasToString(expected2));
     final Core.Exp e2 = fromBuilder2.buildSimplify();
     assertThat(e2, is(from2));
@@ -504,18 +519,20 @@ public class FromBuilderTest {
     fromBuilder3
         .scan(ijPat, innermostFrom)
         .where(
-            core.andAlso(f.typeSystem,
+            core.andAlso(
+                f.typeSystem,
                 core.greaterThan(f.typeSystem, f.iId, f.jId),
-                core.equal(f.typeSystem, f.jId,
-                    core.intLiteral(BigDecimal.TEN))))
+                core.equal(
+                    f.typeSystem, f.jId, core.intLiteral(BigDecimal.TEN))))
         .yield_(f.jId);
 
     final Core.From from3 = fromBuilder3.build();
-    final String expected3 = "from a in [1, 2] "
-        + "join b in [3, 4] "
-        + "yield {i = a, j = b} "
-        + "where i > j andalso j = 10 "
-        + "yield j";
+    final String expected3 =
+        "from a in [1, 2] "
+            + "join b in [3, 4] "
+            + "yield {i = a, j = b} "
+            + "where i > j andalso j = 10 "
+            + "yield j";
     assertThat(from3, hasToString(expected3));
     final Core.Exp e3 = fromBuilder3.buildSimplify();
     assertThat(e3, is(from3));

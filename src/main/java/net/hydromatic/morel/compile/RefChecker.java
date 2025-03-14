@@ -18,32 +18,35 @@
  */
 package net.hydromatic.morel.compile;
 
-import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.type.TypeSystem;
+import static com.google.common.base.Verify.verifyNotNull;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.type.TypeSystem;
 
-import static com.google.common.base.Verify.verifyNotNull;
-
-/** Validates expressions, making sure that every {@link Core.Id}
- * exists in the environment. */
+/**
+ * Validates expressions, making sure that every {@link Core.Id} exists in the
+ * environment.
+ */
 public class RefChecker extends EnvVisitor {
   /** Creates a reference checker. */
   public static RefChecker of(TypeSystem typeSystem, Environment env) {
     return new RefChecker(typeSystem, env, new ArrayDeque<>());
   }
 
-  private RefChecker(TypeSystem typeSystem, Environment env,
-      Deque<FromContext> fromStack) {
+  private RefChecker(
+      TypeSystem typeSystem, Environment env, Deque<FromContext> fromStack) {
     super(typeSystem, env, fromStack);
   }
 
-  @Override protected RefChecker push(Environment env) {
+  @Override
+  protected RefChecker push(Environment env) {
     return new RefChecker(typeSystem, env, fromStack);
   }
 
-  @Override protected void visit(Core.Id id) {
+  @Override
+  protected void visit(Core.Id id) {
     verifyNotNull(env.getOpt(id.idPat), "not found", id);
   }
 }

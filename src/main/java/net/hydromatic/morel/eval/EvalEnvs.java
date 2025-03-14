@@ -18,23 +18,20 @@
  */
 package net.hydromatic.morel.eval;
 
-import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.util.Pair;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiConsumer;
-
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Pair.allMatch;
 import static net.hydromatic.morel.util.Pair.zip;
 import static net.hydromatic.morel.util.Static.skip;
 
-import static java.util.Objects.requireNonNull;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.util.Pair;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Helpers for {@link EvalEnv}. */
 public class EvalEnvs {
@@ -45,8 +42,10 @@ public class EvalEnvs {
 
   private EvalEnvs() {}
 
-  /** Evaluation environment that inherits from a parent environment and adds
-   * one binding. */
+  /**
+   * Evaluation environment that inherits from a parent environment and adds one
+   * binding.
+   */
   static class SubEvalEnv implements EvalEnv {
     protected final EvalEnv parentEnv;
     protected final String name;
@@ -64,7 +63,7 @@ public class EvalEnvs {
     }
 
     public Object getOpt(String name) {
-      for (SubEvalEnv e = this;;) {
+      for (SubEvalEnv e = this; ; ) {
         if (name.equals(e.name)) {
           return e.value;
         }
@@ -87,7 +86,8 @@ public class EvalEnvs {
       this.value = value;
     }
 
-    @Override public EvalEnv fix() {
+    @Override
+    public EvalEnv fix() {
       return new SubEvalEnv(parentEnv, name, value);
     }
   }
@@ -98,7 +98,9 @@ public class EvalEnvs {
     protected final ImmutableList<String> names;
     protected Object[] values;
 
-    ArraySubEvalEnv(EvalEnv parentEnv, ImmutableList<String> names,
+    ArraySubEvalEnv(
+        EvalEnv parentEnv,
+        ImmutableList<String> names,
         @Nullable Object[] values) {
       this.parentEnv = requireNonNull(parentEnv);
       this.names = requireNonNull(names);
@@ -121,8 +123,10 @@ public class EvalEnvs {
     }
   }
 
-  /** Similar to {@link MutableEvalEnv} but binds several names;
-   * extends {@link ArraySubEvalEnv} adding mutability. */
+  /**
+   * Similar to {@link MutableEvalEnv} but binds several names; extends {@link
+   * ArraySubEvalEnv} adding mutability.
+   */
   static class MutableArraySubEvalEnv extends ArraySubEvalEnv
       implements MutableEvalEnv {
     MutableArraySubEvalEnv(EvalEnv parentEnv, List<String> names) {
@@ -134,7 +138,8 @@ public class EvalEnvs {
       assert values.length == names.size();
     }
 
-    @Override public ArraySubEvalEnv fix() {
+    @Override
+    public ArraySubEvalEnv fix() {
       return new ArraySubEvalEnv(parentEnv, names, values.clone());
     }
   }
@@ -143,7 +148,10 @@ public class EvalEnvs {
   static class PatSubEvalEnv extends ArraySubEvalEnv {
     protected final Core.Pat pat;
 
-    PatSubEvalEnv(EvalEnv parentEnv, Core.Pat pat, ImmutableList<String> names,
+    PatSubEvalEnv(
+        EvalEnv parentEnv,
+        Core.Pat pat,
+        ImmutableList<String> names,
         Object[] values) {
       super(parentEnv, ImmutableList.copyOf(names), values);
       this.pat = requireNonNull(pat);
@@ -157,15 +165,20 @@ public class EvalEnvs {
     private int slot;
 
     MutablePatSubEvalEnv(EvalEnv parentEnv, Core.Pat pat, List<String> names) {
-      super(parentEnv, pat, ImmutableList.copyOf(names),
+      super(
+          parentEnv,
+          pat,
+          ImmutableList.copyOf(names),
           new Object[names.size()]);
     }
 
-    @Override public EvalEnv fix() {
+    @Override
+    public EvalEnv fix() {
       return new PatSubEvalEnv(parentEnv, pat, names, values.clone());
     }
 
-    @Override public void set(Object value) {
+    @Override
+    public void set(Object value) {
       if (!setOpt(value)) {
         // If this error happens, perhaps your code should be calling "setOpt"
         // and handling a false result appropriately.
@@ -173,7 +186,8 @@ public class EvalEnvs {
       }
     }
 
-    @Override public boolean setOpt(Object value) {
+    @Override
+    public boolean setOpt(Object value) {
       slot = 0;
       return bindRecurse(pat, value);
     }
@@ -182,92 +196,93 @@ public class EvalEnvs {
       final List<Object> listValue;
       final Core.LiteralPat literalPat;
       switch (pat.op) {
-      case ID_PAT:
-        this.values[slot++] = argValue;
-        return true;
-
-      case AS_PAT:
-        final Core.AsPat asPat = (Core.AsPat) pat;
-        final int oldSlot = slot++;
-        if (bindRecurse(asPat.pat, argValue)) {
-          this.values[oldSlot] = argValue;
+        case ID_PAT:
+          this.values[slot++] = argValue;
           return true;
-        } else {
-          return false;
-        }
 
-      case WILDCARD_PAT:
-        return true;
-
-      case BOOL_LITERAL_PAT:
-      case CHAR_LITERAL_PAT:
-      case STRING_LITERAL_PAT:
-        literalPat = (Core.LiteralPat) pat;
-        return literalPat.value.equals(argValue);
-
-      case INT_LITERAL_PAT:
-        literalPat = (Core.LiteralPat) pat;
-        return ((BigDecimal) literalPat.value).intValue() == (Integer) argValue;
-
-      case REAL_LITERAL_PAT:
-        literalPat = (Core.LiteralPat) pat;
-        return ((BigDecimal) literalPat.value).doubleValue() == (Double) argValue;
-
-      case TUPLE_PAT:
-        final Core.TuplePat tuplePat = (Core.TuplePat) pat;
-        listValue = (List) argValue;
-        return allMatch(tuplePat.args, listValue, this::bindRecurse);
-
-      case RECORD_PAT:
-        final Core.RecordPat recordPat = (Core.RecordPat) pat;
-        listValue = (List) argValue;
-        for (Pair<Core.Pat, Object> pair
-            : zip(recordPat.args, listValue)) {
-          if (!bindRecurse(pair.left, pair.right)) {
+        case AS_PAT:
+          final Core.AsPat asPat = (Core.AsPat) pat;
+          final int oldSlot = slot++;
+          if (bindRecurse(asPat.pat, argValue)) {
+            this.values[oldSlot] = argValue;
+            return true;
+          } else {
             return false;
           }
-        }
-        return true;
 
-      case LIST_PAT:
-        final Core.ListPat listPat = (Core.ListPat) pat;
-        listValue = (List) argValue;
-        if (listValue.size() != listPat.args.size()) {
-          return false;
-        }
-        for (Pair<Core.Pat, Object> pair : zip(listPat.args, listValue)) {
-          if (!bindRecurse(pair.left, pair.right)) {
+        case WILDCARD_PAT:
+          return true;
+
+        case BOOL_LITERAL_PAT:
+        case CHAR_LITERAL_PAT:
+        case STRING_LITERAL_PAT:
+          literalPat = (Core.LiteralPat) pat;
+          return literalPat.value.equals(argValue);
+
+        case INT_LITERAL_PAT:
+          literalPat = (Core.LiteralPat) pat;
+          return ((BigDecimal) literalPat.value).intValue()
+              == (Integer) argValue;
+
+        case REAL_LITERAL_PAT:
+          literalPat = (Core.LiteralPat) pat;
+          return ((BigDecimal) literalPat.value).doubleValue()
+              == (Double) argValue;
+
+        case TUPLE_PAT:
+          final Core.TuplePat tuplePat = (Core.TuplePat) pat;
+          listValue = (List) argValue;
+          return allMatch(tuplePat.args, listValue, this::bindRecurse);
+
+        case RECORD_PAT:
+          final Core.RecordPat recordPat = (Core.RecordPat) pat;
+          listValue = (List) argValue;
+          for (Pair<Core.Pat, Object> pair : zip(recordPat.args, listValue)) {
+            if (!bindRecurse(pair.left, pair.right)) {
+              return false;
+            }
+          }
+          return true;
+
+        case LIST_PAT:
+          final Core.ListPat listPat = (Core.ListPat) pat;
+          listValue = (List) argValue;
+          if (listValue.size() != listPat.args.size()) {
             return false;
           }
-        }
-        return true;
+          for (Pair<Core.Pat, Object> pair : zip(listPat.args, listValue)) {
+            if (!bindRecurse(pair.left, pair.right)) {
+              return false;
+            }
+          }
+          return true;
 
-      case CONS_PAT:
-        final Core.ConPat infixPat = (Core.ConPat) pat;
-        @SuppressWarnings("unchecked") final List<Object> consValue =
-            (List) argValue;
-        if (consValue.isEmpty()) {
-          return false;
-        }
-        final Object head = consValue.get(0);
-        final List<Object> tail = skip(consValue);
-        List<Core.Pat> patArgs = ((Core.TuplePat) infixPat.pat).args;
-        return bindRecurse(patArgs.get(0), head)
-            && bindRecurse(patArgs.get(1), tail);
+        case CONS_PAT:
+          final Core.ConPat infixPat = (Core.ConPat) pat;
+          @SuppressWarnings("unchecked")
+          final List<Object> consValue = (List) argValue;
+          if (consValue.isEmpty()) {
+            return false;
+          }
+          final Object head = consValue.get(0);
+          final List<Object> tail = skip(consValue);
+          List<Core.Pat> patArgs = ((Core.TuplePat) infixPat.pat).args;
+          return bindRecurse(patArgs.get(0), head)
+              && bindRecurse(patArgs.get(1), tail);
 
-      case CON0_PAT:
-        final Core.Con0Pat con0Pat = (Core.Con0Pat) pat;
-        final List con0Value = (List) argValue;
-        return con0Value.get(0).equals(con0Pat.tyCon);
+        case CON0_PAT:
+          final Core.Con0Pat con0Pat = (Core.Con0Pat) pat;
+          final List con0Value = (List) argValue;
+          return con0Value.get(0).equals(con0Pat.tyCon);
 
-      case CON_PAT:
-        final Core.ConPat conPat = (Core.ConPat) pat;
-        final List conValue = (List) argValue;
-        return conValue.get(0).equals(conPat.tyCon)
-            && bindRecurse(conPat.pat, conValue.get(1));
+        case CON_PAT:
+          final Core.ConPat conPat = (Core.ConPat) pat;
+          final List conValue = (List) argValue;
+          return conValue.get(0).equals(conPat.tyCon)
+              && bindRecurse(conPat.pat, conValue.get(1));
 
-      default:
-        throw new AssertionError("cannot compile " + pat.op + ": " + pat);
+        default:
+          throw new AssertionError("cannot compile " + pat.op + ": " + pat);
       }
     }
   }

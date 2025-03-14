@@ -18,21 +18,21 @@
  */
 package net.hydromatic.morel.eval;
 
-import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.ast.Visitor;
-import net.hydromatic.morel.compile.Environment;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.Visitor;
+import net.hydromatic.morel.compile.Environment;
 
-/** Evaluation environment.
+/**
+ * Evaluation environment.
  *
- * <p>Whereas {@link Environment} contains both types and values,
- * because it is used for validation/compilation, EvalEnv contains
- * only values. */
+ * <p>Whereas {@link Environment} contains both types and values, because it is
+ * used for validation/compilation, EvalEnv contains only values.
+ */
 public interface EvalEnv {
 
   /** The name of the variable that contains the {@link Session}. */
@@ -41,45 +41,57 @@ public interface EvalEnv {
   /** Returns the binding of {@code name} if bound, null if not. */
   Object getOpt(String name);
 
-  /** Creates an environment that has the same content as this one, plus
-   * the binding (name, value). */
+  /**
+   * Creates an environment that has the same content as this one, plus the
+   * binding (name, value).
+   */
   default EvalEnv bind(String name, Object value) {
     return new EvalEnvs.SubEvalEnv(this, name, value);
   }
 
-  /** Creates an evaluation environment that has the same content as this one,
-   * plus a mutable slot. */
+  /**
+   * Creates an evaluation environment that has the same content as this one,
+   * plus a mutable slot.
+   */
   default MutableEvalEnv bindMutable(String name) {
     return new EvalEnvs.MutableSubEvalEnv(this, name);
   }
 
-  /** Creates an evaluation environment that has the same content as this one,
-   * plus mutable slots for each name in a pattern. */
+  /**
+   * Creates an evaluation environment that has the same content as this one,
+   * plus mutable slots for each name in a pattern.
+   */
   default MutableEvalEnv bindMutablePat(Core.Pat pat) {
     if (pat instanceof Core.IdPat) {
       // Pattern is simple; use a simple implementation.
       return bindMutable(((Core.IdPat) pat).name);
     }
     final List<String> names = new ArrayList<>();
-    pat.accept(new Visitor() {
-      @Override protected void visit(Core.IdPat idPat) {
-        names.add(idPat.name);
-      }
-      @Override protected void visit(Core.AsPat asPat) {
-        names.add(asPat.name);
-        super.visit(asPat);
-      }
-    });
+    pat.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Core.IdPat idPat) {
+            names.add(idPat.name);
+          }
+
+          @Override
+          protected void visit(Core.AsPat asPat) {
+            names.add(asPat.name);
+            super.visit(asPat);
+          }
+        });
     return new EvalEnvs.MutablePatSubEvalEnv(this, pat, names);
   }
 
-  /** Creates an evaluation environment that has the same content as this one,
+  /**
+   * Creates an evaluation environment that has the same content as this one,
    * plus a mutable slot or slots.
    *
-   * <p>If {@code names} has one element, calling
-   * {@link MutableEvalEnv#set(Object)} will populate the slot will be filled by
-   * an object; if {@code names} has more than one element, {@code set} will
-   * expect to be given an array with the same number of elements. */
+   * <p>If {@code names} has one element, calling {@link
+   * MutableEvalEnv#set(Object)} will populate the slot will be filled by an
+   * object; if {@code names} has more than one element, {@code set} will expect
+   * to be given an array with the same number of elements.
+   */
   default MutableEvalEnv bindMutableArray(List<String> names) {
     if (names.size() == 1) {
       return bindMutable(names.get(0));
@@ -87,10 +99,12 @@ public interface EvalEnv {
     return new EvalEnvs.MutableArraySubEvalEnv(this, names);
   }
 
-  /** Visits every variable binding in this environment.
+  /**
+   * Visits every variable binding in this environment.
    *
-   * <p>Bindings that are obscured by more recent bindings of the same name
-   * are visited, but after the more obscuring bindings. */
+   * <p>Bindings that are obscured by more recent bindings of the same name are
+   * visited, but after the more obscuring bindings.
+   */
   void visit(BiConsumer<String, Object> consumer);
 
   /** Returns a map of the values and bindings. */

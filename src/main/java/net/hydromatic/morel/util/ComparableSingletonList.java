@@ -18,16 +18,17 @@
  */
 package net.hydromatic.morel.util;
 
-import java.util.AbstractList;
-
 import static java.util.Objects.requireNonNull;
 
-/** A comparable singleton list.
+import java.util.AbstractList;
+
+/**
+ * A comparable singleton list.
  *
- * @param <E> Element type */
+ * @param <E> Element type
+ */
 public class ComparableSingletonList<E extends Comparable<E>>
-    extends AbstractList<E>
-    implements Comparable<ComparableSingletonList<E>> {
+    extends AbstractList<E> implements Comparable<ComparableSingletonList<E>> {
   private final E element;
 
   ComparableSingletonList(E element) {
@@ -39,16 +40,19 @@ public class ComparableSingletonList<E extends Comparable<E>>
     return new ComparableSingletonList<>(e);
   }
 
-  @Override public E get(int index) {
+  @Override
+  public E get(int index) {
     assert index == 0;
     return element;
   }
 
-  @Override public int size() {
+  @Override
+  public int size() {
     return 1;
   }
 
-  @Override public int compareTo(ComparableSingletonList<E> o) {
+  @Override
+  public int compareTo(ComparableSingletonList<E> o) {
     return element.compareTo(o.element);
   }
 }

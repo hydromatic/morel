@@ -18,10 +18,10 @@
  */
 package net.hydromatic.morel;
 
-import com.google.common.collect.ImmutableList;
-import org.incava.diff.Diff;
-import org.incava.diff.Difference;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -43,22 +43,21 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+import org.incava.diff.Diff;
+import org.incava.diff.Difference;
 
 /** Utility methods for testing. */
 class TestUtils {
   private TestUtils() {}
 
-  /** Converts a path from Unix to native.
+  /**
+   * Converts a path from Unix to native.
    *
-   * <p>On Windows, converts forward-slashes to back-slashes;
-   * on Linux, does nothing. */
+   * <p>On Windows, converts forward-slashes to back-slashes; on Linux, does
+   * nothing.
+   */
   public static String u2n(String s) {
-    return File.separatorChar == '\\'
-        ? s.replace('/', '\\')
-        : s;
+    return File.separatorChar == '\\' ? s.replace('/', '\\') : s;
   }
 
   /** Converts a path from native to Unix. */
@@ -100,8 +99,8 @@ class TestUtils {
     try {
       uri = url.toURI();
     } catch (URISyntaxException e) {
-      throw new IllegalArgumentException("Unable to convert URL " + url
-          + " to URI", e);
+      throw new IllegalArgumentException(
+          "Unable to convert URL " + url + " to URI", e);
     }
     if (uri.isOpaque()) {
       // It is like file:test%20file.c++
@@ -120,56 +119,64 @@ class TestUtils {
   }
 
   @SuppressWarnings("unused")
-  public static void discard(boolean value) {
-  }
+  public static void discard(boolean value) {}
 
-  /** Creates a {@link PrintWriter} to a given output stream using UTF-8
+  /**
+   * Creates a {@link PrintWriter} to a given output stream using UTF-8
    * character set.
    *
-   * <p>Does not use the default character set. */
+   * <p>Does not use the default character set.
+   */
   public static PrintWriter printWriter(OutputStream out) {
     return new PrintWriter(
         new BufferedWriter(
             new OutputStreamWriter(out, StandardCharsets.UTF_8)));
   }
 
-  /** Creates a {@link PrintWriter} to a given file using UTF-8
-   * character set.
+  /**
+   * Creates a {@link PrintWriter} to a given file using UTF-8 character set.
    *
-   * <p>Does not use the default character set. */
+   * <p>Does not use the default character set.
+   */
   public static PrintWriter printWriter(File file)
       throws FileNotFoundException {
     return printWriter(new FileOutputStream(file));
   }
 
-  /** Creates a {@link BufferedReader} to a given input stream using UTF-8
+  /**
+   * Creates a {@link BufferedReader} to a given input stream using UTF-8
    * character set.
    *
-   * <p>Does not use the default character set. */
+   * <p>Does not use the default character set.
+   */
   public static BufferedReader reader(InputStream in) {
     return new BufferedReader(
         new InputStreamReader(in, StandardCharsets.UTF_8));
   }
 
-  /** Creates a {@link BufferedReader} to read a given file using UTF-8
-   * character set.
+  /**
+   * Creates a {@link BufferedReader} to read a given file using UTF-8 character
+   * set.
    *
-   * <p>Does not use the default character set. */
-  public static BufferedReader reader(File file)
-      throws FileNotFoundException {
+   * <p>Does not use the default character set.
+   */
+  public static BufferedReader reader(File file) throws FileNotFoundException {
     return reader(new FileInputStream(file));
   }
 
-  /** Returns a string containing the difference between the contents of two
-   * files. The string has a similar format to the UNIX 'diff' utility. */
+  /**
+   * Returns a string containing the difference between the contents of two
+   * files. The string has a similar format to the UNIX 'diff' utility.
+   */
   public static String diff(File file1, File file2) {
     List<String> lines1 = fileLines(file1);
     List<String> lines2 = fileLines(file2);
     return diffLines(lines1, lines2);
   }
 
-  /** Returns a string containing the difference between the two sets of
-   * lines. */
+  /**
+   * Returns a string containing the difference between the two sets of lines.
+   */
   public static String diffLines(List<String> lines1, List<String> lines2) {
     final Diff<String> diff = new Diff<>(lines1, lines2);
     final List<Difference> differences = diff.execute();
@@ -197,8 +204,9 @@ class TestUtils {
       } else {
         if (de == 0) {
           // an addition: "<ds>a<as,ae>"
-          sw.append(String.valueOf(ds - 1)).append("a").append(
-              String.valueOf(as));
+          sw.append(String.valueOf(ds - 1))
+              .append("a")
+              .append(String.valueOf(as));
           if (ae > as) {
             sw.append(",").append(String.valueOf(ae));
           }
@@ -231,7 +239,8 @@ class TestUtils {
     return sw.toString();
   }
 
-  /** Returns a list of the lines in a given file, or an empty list if the file
+  /**
+   * Returns a list of the lines in a given file, or an empty list if the file
    * does not exist.
    *
    * @param file File
@@ -255,10 +264,7 @@ class TestUtils {
 
   /** Returns a list plus one element. */
   public static <E> ImmutableList<E> plus(List<E> elements, E element) {
-    return ImmutableList.<E>builder()
-        .addAll(elements)
-        .add(element)
-        .build();
+    return ImmutableList.<E>builder().addAll(elements).add(element).build();
   }
 }
 

@@ -18,9 +18,11 @@
  */
 package net.hydromatic.morel.eval;
 
-/** Can be visited by a {@link Describer}.
+/**
+ * Can be visited by a {@link Describer}.
  *
- * <p>(There are no plans for an {@code interface Indescribable}. */
+ * <p>(There are no plans for an {@code interface Indescribable}.
+ */
 public interface Describable {
   Describer describe(Describer describer);
 }
