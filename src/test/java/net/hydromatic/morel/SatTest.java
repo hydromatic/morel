@@ -47,8 +47,8 @@ public class SatTest {
     final Term clause1 = sat.or(sat.not(x), sat.not(y), sat.not(y));
     final Term clause2 = sat.or(sat.not(x), y, y);
     final Term formula = sat.and(clause0, clause1, clause2);
-    assertThat(formula.toString(),
-        is("(x ∨ x ∨ y) ∧ (¬x ∨ ¬y ∨ ¬y) ∧ (¬x ∨ y ∨ y)"));
+    assertThat(formula,
+        hasToString("(x ∨ x ∨ y) ∧ (¬x ∨ ¬y ∨ ¬y) ∧ (¬x ∨ y ∨ y)"));
 
     final Map<Variable, Boolean> solution = sat.solve(formula);
     assertThat(solution, notNullValue());

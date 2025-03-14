@@ -171,8 +171,8 @@ public abstract class UnifierTest {
     final Unifier.Term e1 = p(f(a()), g(b()), Y);
     final Unifier.Term e2 = p(Z, g(d()), c());
     assertThat(e1, hasToString("p(f(a), g(b), Y)"));
-    assertThat(unifier.substitution(f(a(), Y), Z).toString(),
-        is("[f(a, Y)/Z]"));
+    assertThat(unifier.substitution(f(a(), Y), Z),
+        hasToString("[f(a, Y)/Z]"));
     assertThatCannotUnify(e1, e2);
   }
 

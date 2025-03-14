@@ -157,7 +157,7 @@ public class AlgebraTest {
         "from r in [{a=1,b=2},{a=1,b=0},{a=2,b=1}]\n"
             + "  order r.a desc, r.b\n"
             + "  yield {r.a, b10 = r.b * 10}",
-        "from r in [{a=2,b=3},{a=2,b=1},{a=1,b=1}]\n"
+        "from r in [{a=2,b=3},{a=2,b=1},{a=1,b=1}]\n" //
             + "  group r.a",
         "from r in [{a=2,b=3},{a=2,b=1},{a=1,b=1}]\n"
             + "  group compute sb = sum of r.b",
@@ -171,11 +171,11 @@ public class AlgebraTest {
             + "group r.b compute sb = sum of r.b,\n"
             + "    mb = min of r.b, a = count\n"
             + "yield {a, a2 = a + b, sb}",
-        "from e in scott.emp\n"
+        "from e in scott.emp\n" //
             + "yield {e.ename, x = e.deptno * 2}",
-        "from e in scott.emp\n"
+        "from e in scott.emp\n" //
             + "order e.ename",
-        "from e in scott.emp\n"
+        "from e in scott.emp\n" //
             + "order e.ename desc\n"
             + "take 3",
         "from e in scott.emp,\n"

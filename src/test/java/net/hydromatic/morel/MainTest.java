@@ -61,6 +61,7 @@ import static net.hydromatic.morel.Ml.MatchCoverage.OK;
 import static net.hydromatic.morel.Ml.MatchCoverage.REDUNDANT;
 import static net.hydromatic.morel.Ml.assertError;
 import static net.hydromatic.morel.Ml.ml;
+import static net.hydromatic.morel.Ml.mlE;
 import static net.hydromatic.morel.TestUtils.first;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -316,10 +317,10 @@ public class MainTest {
   @Test void testParseComment() {
     ml("1 + (* 2 + *) 3")
         .assertParse("1 + 3");
-    ml("1 +\n"
+    ml("1 +\n" //
         + "(* 2 +\n"
         + " *) 3").assertParse("1 + 3");
-    ml("(* 1 +\n"
+    ml("(* 1 +\n" //
         + "2 +\n"
         + "3 *) 5 + 6").assertParse("5 + 6");
   }
@@ -411,17 +412,17 @@ public class MainTest {
   }
 
   @Test void testParseErrorPosition() {
-    ml("let val x = 1 and y = $x$ + 2 in x + y end", '$')
+    mlE("let val x = 1 and y = $x$ + 2 in x + y end")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "unbound variable or constructor: x", pos));
   }
 
   @Test void testRuntimeErrorPosition() {
-    ml("\"x\" ^\n"
+    mlE("\"x\" ^\n"
         + "  $String.substring(\"hello\",\n"
         + "    1, 15)$ ^\n"
-        + "  \"y\"\n", '$')
+        + "  \"y\"\n")
         .assertEvalError(pos ->
             throwsA(Codes.BuiltInExn.SUBSCRIPT.mlName, pos));
   }
@@ -608,7 +609,7 @@ public class MainTest {
 
   @Disabled("disable failing test - enable when we have polymorphic types")
   @Test void testExponentialType0() {
-    final String ml = "let\n"
+    final String ml = "let\n" //
         + "  fun f x = (x, x)\n"
         + "in\n"
         + "  f (f 0)\n"
@@ -772,7 +773,7 @@ public class MainTest {
         + "then\n"
         + "  if true then 2 else 3\n"
         + "else 4").assertEval(is(4));
-    ml("if false\n"
+    ml("if false\n" //
         + "then\n"
         + "  if true then 2 else 3\n"
         + "else\n"
@@ -787,7 +788,7 @@ public class MainTest {
             + "          x => ...\n"
             + "    -->   y => ...\n");
     ml("case 1 of 1 => 2")
-        .assertError("Warning: match nonexhaustive\n"
+        .assertError("Warning: match nonexhaustive\n" //
             + "          1 => ...\n");
     ml("let val f = fn x => case x of x => x + 1 in f 2 end").assertEval(is(3));
 
@@ -854,7 +855,7 @@ public class MainTest {
     // 'and' is executed in parallel, therefore 'x + 1' evaluates to 2, not 4
     ml("let val x = 1; val x = 3 and y = x + 1 in x + y end").assertEval(is(5));
 
-    ml("let val x = 1 and y = $x$ + 2 in x + y end", '$')
+    mlE("let val x = 1 and y = $x$ + 2 in x + y end")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "unbound variable or constructor: x"));
@@ -1325,7 +1326,7 @@ public class MainTest {
         + "   true => \"positive\"\n"
         + " | false => \"non-positive\"\n"
         + " | $true => \"oops\"$";
-    ml(ml, '$')
+    mlE(ml)
         .assertMatchCoverage(REDUNDANT)
         .assertEvalThrows(pos -> throwsA("match redundant", pos));
 
@@ -1334,7 +1335,7 @@ public class MainTest {
         + "fun f true = \"positive\"\n"
         + "  | f false = \"non-positive\"\n"
         + "  | $f true = \"oops\"$";
-    ml(ml2, '$')
+    mlE(ml2)
         .assertMatchCoverage(REDUNDANT)
         .assertEvalThrows(pos -> throwsA("match redundant", pos));
   }
@@ -1358,28 +1359,28 @@ public class MainTest {
   }
 
   @Test void testMatchCoverage4() {
-    final String ml = ""
+    final String ml = "" //
         + "fun f 1 = 2\n"
         + "  | f _ = 1";
     ml(ml).assertMatchCoverage(OK);
   }
 
   @Test void testMatchCoverage5() {
-    final String ml = ""
+    final String ml = "" //
         + "fun f [] = 0\n"
         + "  | f (h :: t) = 1 + (f t)";
     ml(ml).assertMatchCoverage(OK);
   }
 
   @Test void testMatchCoverage6() {
-    final String ml = ""
+    final String ml = "" //
         + "fun f (0, y) = y\n"
         + "  | f (x, y) = x + y + 1";
     ml(ml).assertMatchCoverage(OK);
   }
 
   @Test void testMatchCoverage7() {
-    final String ml = ""
+    final String ml = "" //
         + "fun f (x, y, 0) = y\n"
         + "  | f (x, y, z) = x + z";
     ml(ml).assertMatchCoverage(OK);
@@ -1391,17 +1392,17 @@ public class MainTest {
         + "fun f (true, y, z) = y\n"
         + "  | f (false, y, z) = z\n"
         + "  | $f _ = 0$";
-    ml(ml, '$')
+    mlE(ml)
         .assertMatchCoverage(REDUNDANT)
         .assertEvalError(pos -> throwsA("match redundant", pos));
   }
 
   @Test void testMatchCoverage9() {
     // The last case is redundant because we know that unit has only one value.
-    final String ml = ""
+    final String ml = "" //
         + "fun f () = 1\n"
         + "  | $f _ = 0$";
-    ml(ml, '$').assertMatchCoverage(REDUNDANT);
+    mlE(ml).assertMatchCoverage(REDUNDANT);
   }
 
   @Test void testMatchCoverage10() {
@@ -1418,7 +1419,7 @@ public class MainTest {
         + "  in\n"
         + "    maskToString2 (m, \"\", 5)\n"
         + "  end";
-    ml(ml, '$')
+    mlE(ml)
         .assertMatchCoverage(NON_EXHAUSTIVE);
   }
 
@@ -1548,7 +1549,7 @@ public class MainTest {
 
   /** A function with two arguments. */
   @Test void testFunTwoArgs() {
-    final String ml = "let\n"
+    final String ml = "let\n" //
         + "  fun sum x y = x + y\n"
         + "in\n"
         + "  sum 5 3\n"
@@ -1832,15 +1833,15 @@ public class MainTest {
     ml("from (x, y)")
         .assertParseThrowsParseException(
             startsWith("Encountered \"<EOF>\" at line 1, column 11."));
-    ml("from e in emps\n"
+    ml("from e in emps\n" //
         + "through e in empsInDept 20\n"
         + "yield e.sal")
         .assertParse("from e in emps through e in empsInDept 20 yield #sal e");
-    ml("from e in emps\n"
+    ml("from e in emps\n" //
         + "yield e.empno\n"
         + "into sum")
         .assertParse("from e in emps yield #empno e into sum");
-    ml("from e in emps\n"
+    ml("from e in emps\n" //
         + "yield e.empno\n"
         + "compute sum, count")
         .assertParse("from e in emps "
@@ -1967,15 +1968,15 @@ public class MainTest {
     ml("exists (x, y)")
         .assertParseThrowsParseException(
             startsWith("Encountered \"<EOF>\" at line 1, column 13."));
-    ml("exists e in emps\n"
+    ml("exists e in emps\n" //
         + "through e in empsInDept 20\n"
         + "yield e.sal")
         .assertParse("exists e in emps through e in empsInDept 20 yield #sal e");
-    ml("exists e in emps\n"
+    ml("exists e in emps\n" //
         + "yield e.empno\n"
         + "into sum")
         .assertParse("exists e in emps yield #empno e into sum");
-    ml("exists e in emps\n"
+    ml("exists e in emps\n" //
         + "yield e.empno\n"
         + "compute sum, count")
         .assertParse("exists e in emps "
@@ -2102,15 +2103,15 @@ public class MainTest {
     ml("forall (x, y)")
         .assertParseThrowsParseException(
             startsWith("Encountered \"<EOF>\" at line 1, column 13."));
-    ml("forall e in emps\n"
+    ml("forall e in emps\n" //
         + "through e in empsInDept 20\n"
         + "yield e.sal")
         .assertParse("forall e in emps through e in empsInDept 20 yield #sal e");
-    ml("forall e in emps\n"
+    ml("forall e in emps\n" //
         + "yield e.empno\n"
         + "into sum")
         .assertParse("forall e in emps yield #empno e into sum");
-    ml("forall e in emps\n"
+    ml("forall e in emps\n" //
         + "yield e.empno\n"
         + "compute sum, count")
         .assertParse("forall e in emps "
@@ -2143,7 +2144,7 @@ public class MainTest {
         + "expression";
     ml("from a in [1], b in [true] yield (b,a) where b")
         .assertType("{a:int, b:bool} list");
-    ml("from a in [1], b in [true] yield (b,a) where $c$", '$')
+    mlE("from a in [1], b in [true] yield (b,a) where $c$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "unbound variable or constructor: c", pos));
@@ -2153,7 +2154,7 @@ public class MainTest {
     ml("from d in [{a=1,b=true}], i in [2] yield i")
         .assertType("int list");
     // Note that 'd' has record type but is not a record expression
-    ml("from d in [{a=1,b=true}], i in [2] yield d yield $a$", '$')
+    mlE("from d in [{a=1,b=true}], i in [2] yield d yield $a$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "unbound variable or constructor: a", pos));
@@ -2167,7 +2168,7 @@ public class MainTest {
         .assertType("{a:int, b:bool} list");
     ml("from d in [{a=1,b=true}], i in [2] yield d yield 3")
         .assertType("int list");
-    ml("from d in [{a=1,b=true}] yield $d.x$", '$')
+    mlE("from d in [{a=1,b=true}] yield $d.x$")
         .assertTypeThrows(
             pos -> throwsA(TypeResolver.TypeException.class,
                 is("no field 'x' in type '{a:int, b:bool}'")));
@@ -2180,36 +2181,35 @@ public class MainTest {
         .assertType("bool");
     ml("forall d in [{a=1,b=true}] require d.a = 0")
         .assertType("bool");
-    ml("from d in [{a=1,b=true}] yield d.a into sum $yield \"a\"$", '$')
+    mlE("from d in [{a=1,b=true}] yield d.a into sum $yield \"a\"$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "'into' step must be last in 'from'", pos));
-    ml("exists d in [{a=1,b=true}] yield d.a $into sum$", '$')
+    mlE("exists d in [{a=1,b=true}] yield d.a $into sum$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "'into' step must not occur in 'exists'", pos));
 
-
-    ml("forall d in [{a=1,b=true}] yield d.a $into sum$", '$')
+    mlE("forall d in [{a=1,b=true}] yield d.a $into sum$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "'into' step must not occur in 'forall'", pos));
-    ml("forall d in [{a=1,b=true}] yield d.a $compute sum$", '$')
+    mlE("forall d in [{a=1,b=true}] yield d.a $compute sum$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "'compute' step must not occur in 'forall'", pos));
-    ml("forall d in [{a=1,b=true}] $yield d.a$", '$')
+    mlE("forall d in [{a=1,b=true}] $yield d.a$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "last step of 'forall' must be 'require'", pos));
-    ml("forall $d in [{a=1,b=true}]$", '$')
+    mlE("forall $d in [{a=1,b=true}]$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "last step of 'forall' must be 'require'", pos));
 
     // "map String.size" has type "string list -> int list",
     // and therefore the type of "j" is "int"
-    ml("from s in [\"ab\",\"c\"]\n"
+    ml("from s in [\"ab\",\"c\"]\n" //
         + " through j in (map String.size)")
         .assertType("int list");
     ml("from s in [\"ab\",\"c\"]\n"
@@ -2636,7 +2636,7 @@ public class MainTest {
    * {@code bool option} and therefore iterates over
    * {@code [SOME true, SOME false, NONE]}. */
   @Test void testBooleanExtent() {
-    final String ml = "from i\n"
+    final String ml = "from i\n" //
         + "where Option.getOpt (i, false)";
     final String core = "val it = "
         + "from i in extent \"bool option\" "
@@ -2812,18 +2812,18 @@ public class MainTest {
   }
 
   @Test void testGroupAs() {
-    final String ml0 = "from e in emp\n"
+    final String ml0 = "from e in emp\n" //
         + "group deptno = e.deptno";
-    final String ml1 = "from e in emp\n"
+    final String ml1 = "from e in emp\n" //
         + "group e.deptno";
-    final String ml2 = "from e in emp\n"
+    final String ml2 = "from e in emp\n" //
         + "group #deptno e";
     final String expected = "from e in emp group deptno = #deptno e";
     ml(ml0).assertParse(expected);
     ml(ml1).assertParse(expected);
     ml(ml2).assertParse(expected);
 
-    final String ml3 = "from e in emp\n"
+    final String ml3 = "from e in emp\n" //
         + "group e, h = f + e.g";
     final String expected3 = "from e in emp group e = e, h = f + #g e";
     ml(ml3).assertParse(expected3);
@@ -2845,10 +2845,10 @@ public class MainTest {
     ml("from e in emp group compute (fn x => x) of e.job")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression fn x => x"));
-    ml("from e in [{x = 1, y = 5}]\n"
+    ml("from e in [{x = 1, y = 5}]\n" //
         + "  group compute sum of e.x")
         .assertType(hasMoniker("int list"));
-    ml("from e in [1, 2, 3]\n"
+    ml("from e in [1, 2, 3]\n" //
         + "  group compute sum of e")
         .assertType(hasMoniker("int list"));
   }
@@ -2944,7 +2944,7 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(list(1, 5), list(0, 3)));
 
     // "compute" must not be followed by other steps
-    ml("from i in [1, 2, 3] compute s = sum of i $yield s + 2$", '$')
+    mlE("from i in [1, 2, 3] compute s = sum of i $yield s + 2$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "'compute' step must be last in 'from'", pos));
@@ -2954,7 +2954,7 @@ public class MainTest {
         .assertEval(is(8));
 
     // "compute" must not occur in "exists"
-    ml("exists i in [1, 2, 3] $compute s = sum of i$", '$')
+    mlE("exists i in [1, 2, 3] $compute s = sum of i$")
         .assertCompileException(pos ->
             throwsA(CompileException.class,
                 "'compute' step must not occur in 'exists'", pos));

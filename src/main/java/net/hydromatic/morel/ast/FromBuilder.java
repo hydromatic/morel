@@ -277,9 +277,9 @@ public class FromBuilder {
    * Later steps are relying on the variables remaining the same. For example,
    * in
    *
-   * <blockquote>{@code
+   * <pre>{@code
    * from ... yield {a = b} where a > 5
-   * }</blockquote>
+   * }</pre>
    *
    * <p>the {@code a} in {@code a > 5} references {@code IdPat('a', 0)} and we
    * don't want yield to generate an {@code IdPat('a', 1)}.
@@ -301,8 +301,9 @@ public class FromBuilder {
           tupleType((Core.Tuple) exp, bindings, bindings2);
       switch (tupleType) {
       case IDENTITY:
-        // A trivial record does not rename, so its only purpose is to change
-        // from a scalar to a record, and even then only when a singleton.
+        // A trivial record does not rename, so its only purpose is to
+        // change from a scalar to a record, and even then only when a
+        // singleton.
         if (bindings.size() == 1) {
           // Singleton record that does not rename, e.g. 'yield {x=x}'
           // It only has meaning as the last step.
@@ -312,8 +313,8 @@ public class FromBuilder {
           uselessIfNotLast = true;
           break;
         } else {
-          // Non-singleton record that does not rename, e.g. 'yield {x=x,y=y}'
-          // It is useless.
+          // Non-singleton record that does not rename,
+          // e.g. 'yield {x=x,y=y}'. It is useless.
           return this;
         }
       case RENAME:
@@ -322,7 +323,7 @@ public class FromBuilder {
           // It is always useful.
           break;
         } else {
-          // Non-singleton record that renames, e.g. 'yield {y=x,z=y}'
+          // Non-singleton record that renames, e.g. 'yield {y=x,z=y}'.
           // It is always useful.
           break;
         }

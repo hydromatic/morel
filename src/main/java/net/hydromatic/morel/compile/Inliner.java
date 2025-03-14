@@ -102,7 +102,8 @@ public class Inliner extends EnvShuttle {
             return core.functionLiteral(typeSystem, builtIn);
           }
           // Applicable (including Closure) that does not map to a BuiltIn
-          // is not considered 'constant', mainly because it creates messy plans
+          // is not considered 'constant', mainly because it creates messy
+          // plans.
           break;
 
         default:

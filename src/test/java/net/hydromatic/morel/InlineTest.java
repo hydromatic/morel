@@ -126,7 +126,7 @@ public class InlineTest {
   /** Checks that a nested expression of depth {@code n} gives the right
    * answer and completes in a reasonable time. */
   private void checkInlineChained(int n) {
-    final String ml = "fun f x0 =\n"
+    final String ml = "fun f x0 =\n" //
         + gen(1, n);
     final int expected = n * (n + 1) / 2;
     ml(ml).assertEval(Matchers.whenAppliedTo(0, is(expected)));
@@ -322,7 +322,7 @@ public class InlineTest {
   }
 
   @Test void testFromEmptyFrom() {
-    final String ml = "from u in (from)\n"
+    final String ml = "from u in (from)\n" //
         + "where 3 < 4\n"
         + "yield {u, v = 10}";
     final String core0 = "val it = "

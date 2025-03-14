@@ -550,9 +550,9 @@ public enum CoreBuilder {
                 && exp.arg(i) instanceof Core.Id
                 && ((Core.Id) exp.arg(i)).idPat.name.equals(name)) {
               // Use an existing IdPat if we can, rather than generating a new
-              // IdPat with a different sequence number. (The underlying problem
-              // is that the fields of record types have only names, no sequence
-              // numbers.)
+              // IdPat with a different sequence number. (The underlying
+              // problem is that the fields of record types have only names,
+              // no sequence numbers.)
               idPat = ((Core.Id) exp.arg(i)).idPat;
             } else {
               idPat = idPat(type, name, typeSystem.nameGenerator);
@@ -698,13 +698,16 @@ public enum CoreBuilder {
   /** Simplifies an expression.
    *
    * <p>In particular, it merges extents. For example,
-   * <blockquote><pre>{@code
+   *
+   * <pre>{@code
    * extent "[10, 20]" orelse (extent "[-inf,5]" andalso "[1,int]")
-   * }</pre></blockquote>
-   * becomes
-   * <blockquote><pre>{@code
+   * }</pre>
+   *
+   * <p>becomes
+   *
+   * <pre>{@code
    * extent "[[1, 5], [10, 20]]"
-   * }</pre></blockquote>
+   * }</pre>
    */
   public Core.Exp simplify(TypeSystem typeSystem, Core.Exp exp) {
     switch (exp.op) {

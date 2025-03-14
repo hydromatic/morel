@@ -141,8 +141,8 @@ public class FromBuilderTest {
         .order(ImmutableList.of(core.orderItem(f.iId, Ast.Direction.DESC)));
 
     final Core.From from = fromBuilder.build();
-    assertThat(from.toString(),
-        is("from i in [1, 2] where i < 2 order i desc"));
+    assertThat(from,
+        hasToString("from i in [1, 2] where i < 2 order i desc"));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
 
@@ -151,8 +151,8 @@ public class FromBuilderTest {
         .order(ImmutableList.of())
         .where(core.greaterThan(f.typeSystem, f.iId, f.intLiteral(1)));
     final Core.From from2 = fromBuilder.build();
-    assertThat(from2.toString(),
-        is("from i in [1, 2] where i < 2 order i desc where i > 1"));
+    assertThat(from2,
+        hasToString("from i in [1, 2] where i < 2 order i desc where i > 1"));
     final Core.Exp e2 = fromBuilder.buildSimplify();
     assertThat(e2, is(from2));
   }

@@ -50,16 +50,16 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
  *
  * <p>For example, converts
  *
- * <blockquote><pre>{@code
+ * <pre>{@code
  * from e
  *   where e elem #dept scott
- * }</pre></blockquote>
+ * }</pre>
  *
  * <p>to
  *
- * <blockquote><pre>{@code
+ * <pre>{@code
  * from e in #dept scott
- * }</pre></blockquote>
+ * }</pre>
  */
 class SuchThatShuttle extends Shuttle {
   final @Nullable Environment env;

@@ -63,9 +63,7 @@ public class ScriptTest {
    *
    * <p>For example:
    *
-   * <blockquote>
-   *   <code>java ScriptTest script/table.sml</code>
-   * </blockquote> */
+   * <pre>{@code java ScriptTest script/table.sml}</pre> */
   public static void main(String[] args) throws Exception {
     for (String arg : args) {
       new ScriptTest().test(arg);
@@ -177,7 +175,7 @@ public class ScriptTest {
     }
     final String diff = TestUtils.diff(refFile, outFile);
     if (!diff.isEmpty()) {
-      fail("Files differ: " + refFile + " " + outFile + "\n"
+      fail("Files differ: " + refFile + " " + outFile + "\n" //
           + diff);
     }
   }

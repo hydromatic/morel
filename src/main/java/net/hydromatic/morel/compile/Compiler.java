@@ -576,8 +576,8 @@ public class Compiler {
     switch (builtIn) {
     case Z_ANDALSO:
       // Argument for a built-in infix operator such as "andalso" is always a
-      // tuple; operators are never curried, nor do they evaluate an expression
-      // to yield the tuple of arguments.
+      // tuple; operators are never curried, nor do they evaluate an
+      // expression to yield the tuple of arguments.
       argCodes = compileArgs(cx, ((Core.Tuple) arg).args);
       return Codes.andAlso(argCodes.get(0), argCodes.get(1));
     case Z_ORELSE:

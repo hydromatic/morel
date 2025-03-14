@@ -198,8 +198,9 @@ public class TypeSystem {
 
     final ImmutableList.Builder<Type> types = ImmutableList.builder();
     dataTypeMap.values().forEach(dataType -> {
-      // We have just created an entry for the moniker (e.g. "'a option"),
-      // so now create an entry for the name (e.g. "option").
+      // We have just created an entry for the moniker
+      // (e.g. "'a option"), so now create an entry for the name
+      // (e.g. "option").
       Type t =
           dataType.arguments.isEmpty() ? dataType
               : forallType(dataType.arguments.size(), dataType);

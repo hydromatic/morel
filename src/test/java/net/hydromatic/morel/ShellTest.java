@@ -113,7 +113,7 @@ public class ShellTest {
   /** Tests {@link Shell} with a continued line. */
   @Test void testTwoLines() {
     assumeNotInCi();
-    final String in = "1 +\n"
+    final String in = "1 +\n" //
         + "2;\n";
     final String expected = "1 +\r\n"
         + "2;\r\n"
@@ -138,7 +138,7 @@ public class ShellTest {
    *  and another that has only a semicolon; all are treated as empty. */
   @Test void testEmptyLines() {
     assumeNotInCi();
-    final String in = "(* a comment followed by empty *)\n"
+    final String in = "(* a comment followed by empty *)\n" //
         + "\n"
         + ";\n";
     final String expected = "(* a comment followed by empty *)\r\n"
@@ -160,7 +160,7 @@ public class ShellTest {
   /** Tests {@link Shell} with a single-line comment. */
   @Test void testSingleLineComment() {
     assumeNotInCi();
-    final String in = "(*) line comment\n"
+    final String in = "(*) line comment\n" //
         + "1 + 2;\n";
     final String expected = "(*) line comment\r\n"
         + "1 + 2;\r\n"
@@ -175,7 +175,7 @@ public class ShellTest {
   /** Tests {@link Shell} with a single-line comment that contains a quote. */
   @Test void testSingleLineCommentWithQuote() {
     assumeNotInCi();
-    final String in = "(*) it's a single-line comment with a quote\n"
+    final String in = "(*) it's a single-line comment with a quote\n" //
         + "2 + 3;\n";
     final String expected = "(*) it's a single-line comment with a quote\r\n"
         + "2 + 3;\r\n"
@@ -191,7 +191,7 @@ public class ShellTest {
    * lines. */
   @Test void testMultiLineLet() {
     assumeNotInCi();
-    final String in = "let\n"
+    final String in = "let\n" //
         + "  val x = 1\n"
         + "in\n"
         + "  x + 2\n"
@@ -285,7 +285,7 @@ public class ShellTest {
 
   /** Tests a warning. */
   @Test void testMatchWarning() {
-    final String in = "fun f 1 = 1;\n"
+    final String in = "fun f 1 = 1;\n" //
         + "f 1;\n";
     final String expected = "stdIn:1.5-1.12 Warning: match nonexhaustive\n"
         + "  raised at: stdIn:1.5-1.12\n"
@@ -373,9 +373,9 @@ public class ShellTest {
   /** Tests a script running in raw mode.
    * It uses {@link Main} rather than {@link Shell}. */
   @Test void testRaw() {
-    String inputString = "val x = 2;\n"
+    String inputString = "val x = 2;\n" //
         + "x + 3;\n";
-    String expected = "val x = 2 : int\n"
+    String expected = "val x = 2 : int\n" //
         + "val it = 5 : int\n";
     fixture()
         .withRaw(true)
@@ -437,10 +437,10 @@ public class ShellTest {
         + "x;"
         + "Sys.set (\"printDepth\", ~1);\n"
         + "x;";
-    // TODO: wrap types linke this:
+    // TODO: wrap types like this:
     // val it = ...
     //  : {a:int, b:int list,
-    //     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+    //     c:{d:int, e:int list, f:{g:int, h:{i:int list}} list} list}
     String expected = "val it = () : unit\n"
         + "val x = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=#,h=#,i=#}]}]}\n"
         + "  : {a:int, b:int list,\n"

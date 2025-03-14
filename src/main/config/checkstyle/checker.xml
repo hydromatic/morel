@@ -110,43 +110,9 @@ License.
     <module name="StringLiteralEquality" />
       <!-- Don't declare multiple variables in the same statement -->
     <module name="MultipleVariableDeclarations" />
-      <!-- String literals more than one character long should not be
-           repeated several times -->
-      <!-- the "unchecked" string is also accepted to allow
-           @SuppressWarnings("unchecked") -->
-      <!-- Disabling for now until we have a better ignoreStringsRegexp -->
-      <!--
-    <module name="MultipleStringLiterals" >
-      <property name="ignoreStringsRegexp" value='^(("")|(".")|("unchecked"))$'/>
-    </module>
-      -->
-
-    <!-- Checks for imports                              -->
-    <!-- See http://checkstyle.sf.net/config_import.html -->
-    <module name="RedundantImport"/>
-      <!-- Import should be explicit, and only from pure java packages.
-           But we allow imports that are only used in javadoc. -->
-    <module name="UnusedImports">
-      <property name="processJavadoc" value="true"/>
-    </module>
-    <module name="IllegalImport" />
-    <module name="AvoidStarImport" />
-    <module name="ImportOrder">
-      <property name="groups" value="net.hydromatic.morel,*,/^javax?/"/>
-      <property name="staticGroups" value="net.hydromatic.morel,*,/^javax?/"/>
-      <property name="ordered" value="true"/>
-      <property name="separated" value="true"/>
-      <property name="separatedStaticGroups" value="true"/>
-      <property name="option" value="bottom"/>
-      <property name="sortStaticImportsAlphabetically" value="true"/>
-    </module>
 
     <!-- Checks for Javadoc comments (tree walker).       -->
     <!-- See http://checkstyle.sf.net/config_javadoc.html -->
-      <!-- Javadoc must be formatted correctly -->
-    <module name="JavadocStyle">
-      <property name="checkFirstSentence" value="false"/>
-    </module>
       <!-- Must have class / interface header comments -->
     <module name="JavadocType"/>
 
@@ -154,20 +120,10 @@ License.
     <!-- See http://checkstyle.sf.net/config_misc.html -->
       <!-- Java style arrays -->
     <module name="ArrayTypeStyle"/>
-      <!-- Indentation -->
-    <module name="Indentation">
-      <property name="caseIndent" value="0"/>
-      <property name="basicOffset" value="2"/>
-      <property name="braceAdjustment" value="0"/>
-    </module>
     <module name="UpperEll"/>
-
-    <module name="OperatorWrap"/>
 
     <!-- Modifier Checks                                    -->
     <!-- See http://checkstyle.sf.net/config_modifiers.html -->
-      <!-- Use a consistent way to put modifiers -->
-    <module name="ModifierOrder"/>
     <module name="RedundantModifier"/>
 
     <!-- Checks for Naming Conventions.                  -->
@@ -233,7 +189,6 @@ License.
 
     <!-- Checks for whitespace (tree walker)                 -->
     <!-- See http://checkstyle.sf.net/config_whitespace.html -->
-    <module name="EmptyForIteratorPad"/>
       <!-- Spacing around methods -->
     <module name="MethodParamPad">
       <property name="option" value="nospace"/>
@@ -243,13 +198,6 @@ License.
     <module name="NoWhitespaceBefore"/>
       <!-- Whitespace after tokens is required -->
     <module name="WhitespaceAfter"/>
-      <!-- Whitespace around tokens is required -->
-    <module name="WhitespaceAround">
-        <property name="allowEmptyConstructors" value="true"/>
-        <property name="allowEmptyLambdas" value="true"/>
-        <property name="allowEmptyMethods" value="true"/>
-    </module>
-    <module name="ParenPad"/>
     <module name="TypecastParenPad"/>
       <!-- No extra whitespace around types -->
     <module name="GenericWhitespace"/>

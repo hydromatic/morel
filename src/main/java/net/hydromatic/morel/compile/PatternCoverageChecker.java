@@ -115,7 +115,8 @@ class PatternCoverageChecker {
       // Transform false to FALSE and true to TRUE, constructor of the
       // internal $bool datatype:
       //   datatype $bool = FALSE | TRUE
-      // Knowing there are only two values allows us to
+      // Knowing there are only two values allows us to prove that patterns
+      // are exhaustive.
       final DataType boolDataType =
           (DataType) typeSystem.lookupInternal("$bool");
       final Core.LiteralPat literalPat0 = (Core.LiteralPat) pat;

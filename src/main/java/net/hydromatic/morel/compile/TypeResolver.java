@@ -1061,12 +1061,17 @@ public class TypeResolver {
    * becomes {@code val rec sum = fn x => fn y => x + y}.
    *
    * <p>If there are multiple clauses, we generate {@code case}:
+   *
+   * <pre>
    * {@code fun gcd a 0 = a | gcd a b = gcd b (a mod b)}
-   * becomes
-   * {@code val rec gcd = fn x => fn y =>
+   * </pre>
+   *
+   * <p>becomes
+   *
+   * <pre>{@code val rec gcd = fn x => fn y =>
    * case (x, y) of
    *     (a, 0) => a
-   *   | (a, b) = gcd b (a mod b)}.
+   *   | (a, b) = gcd b (a mod b)}</pre>
    */
   private Ast.ValDecl toValDecl(TypeEnv env, Ast.FunDecl funDecl) {
     final List<Ast.ValBind> valBindList = new ArrayList<>();
@@ -1203,7 +1208,7 @@ public class TypeResolver {
           typeSystem.lookupTyCon(idPat.name);
       if (pair1 != null) {
         // It is a zero argument constructor, e.g. the LESS constructor of the
-        // order type
+        // 'order' type.
         final DataType dataType0 = pair1.left;
         return reg(pat, v, toTerm(dataType0, Subst.EMPTY));
       }
@@ -1239,8 +1244,9 @@ public class TypeResolver {
       // First, determine the set of field names.
       //
       // If the pattern is in a 'case', we know the field names from the
-      // argument. But it we are in a function, we require at least one of the
-      // patterns to not be a wildcard and not have an ellipsis. For example, in
+      // argument. But if we are in a function, we require at least one of the
+      // patterns to not be a wildcard and not have an ellipsis. For example,
+      // in
       //
       //  fun f {a=1,...} = 1 | f {b=2,...} = 2
       //
@@ -1269,8 +1275,8 @@ public class TypeResolver {
       final Unifier.Variable v2 = unifier.variable();
       equiv(record, v2);
       actionMap.put(v, (v3, t, substitution, termPairs) -> {
-        // We now know the type of the source record, say "{a: int, b: real}".
-        // So, now we can fill out the ellipsis.
+        // We now know the type of the source record, say
+        // "{a: int, b: real}". So, now we can fill out the ellipsis.
         assert v == v3;
         if (t instanceof Unifier.Sequence) {
           final Unifier.Sequence sequence = (Unifier.Sequence) t;
@@ -1440,8 +1446,7 @@ public class TypeResolver {
         result = b.toString();
       }
       final List<Unifier.Term> args =
-          transformEager(argNameTypes.values(),
-              type1 -> toTerm(type1, subst));
+          transformEager(argNameTypes.values(), t -> toTerm(t, subst));
       return unifier.apply(result, args);
     case LIST:
       final ListType listType = (ListType) type;

@@ -192,25 +192,25 @@ public abstract class Compiles {
    *
    * <p>Consider the two declarations:
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    *   val it as (x, y) = (5, 6);
    *   val (x, y) = (5, 6);
-   * }</pre></blockquote>
+   * }</pre>
    *
    * <p>{@code coreDecl} is the same for both. For the first, we should print
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    *   val it = (5,6) : int * int
    *   val x = 5 : int
    *   val x = 6 : int
-   * }</pre></blockquote>
+   * }</pre>
    *
    * <p>but for the second we should skip {@code it}, as follows:
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    *   val x = 5 : int
    *   val x = 6 : int
-   * }</pre></blockquote>
+   * }</pre>
    */
   private static Core.@Nullable NamedPat getSkipPat(Ast.Decl decl,
       Core.Decl coreDecl) {

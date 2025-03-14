@@ -100,6 +100,11 @@ class Ml {
         Tracers.empty());
   }
 
+  /** Creates an {@code Ml} containing an error position delimited by '$'. */
+  static Ml mlE(String ml) {
+    return ml(ml, '$');
+  }
+
   /** Creates an {@code Ml} with an error position in it. */
   static Ml ml(String ml, char delimiter) {
     Pair<String, Pos> pair = Pos.split(ml, delimiter, "stdIn");

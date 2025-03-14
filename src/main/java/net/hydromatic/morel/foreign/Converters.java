@@ -295,8 +295,8 @@ public class Converters {
         throw new AssertionError("unknown type " + type);
 
       case FUNCTION_TYPE:
-        // Represent Morel functions (and closures) as SQL type ANY. UDFs have a
-        // parameter of type Object, and the value is cast to Closure.
+        // Represent Morel functions (and closures) as SQL type ANY. UDFs have
+        // a parameter of type Object, and the value is cast to Closure.
         return new C2m(typeFactory.createSqlType(SqlTypeName.ANY), type);
 
       case LIST:

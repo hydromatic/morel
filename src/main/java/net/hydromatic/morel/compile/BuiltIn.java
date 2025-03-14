@@ -937,10 +937,10 @@ public enum BuiltIn {
    * <p>Because {@code join} is a keyword in Morel, you must quote the function
    * name using backticks. For example:
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    * Option.`join` (SOME (SOME 1));
    * > val it = SOME 1 : int option
-   * }</pre></blockquote>
+   * }</pre>
    */
   OPTION_JOIN("Option", "join", ts ->
       ts.forallType(1, h -> ts.fnType(ts.option(h.option(0)), h.option(0)))),
@@ -1251,13 +1251,11 @@ public enum BuiltIn {
    *
    * <p>Often used with {@code group}:
    *
-   * <blockquote>
-   *   <pre>
+   * <pre>{@code
    *     from e in emps
-   *     group deptno = (#deptno e)
-   *       compute sumId = sum of (#id e)
-   *   </pre>
-   * </blockquote>
+   *       group deptno = (#deptno e)
+   *         compute sumId = sum of (#id e)
+   * }</pre>
    */
   RELATIONAL_COUNT("Relational", "count", "count", ts ->
       ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
@@ -1354,13 +1352,11 @@ public enum BuiltIn {
    *
    * <p>Often used with {@code group}:
    *
-   * <blockquote>
-   *   <pre>
+   * <pre>{@code
    *     from e in emps
    *     group deptno = (#deptno e)
    *       compute sumId = sum of (#id e)
-   *   </pre>
-   * </blockquote>
+   * }</pre>
    */
   RELATIONAL_SUM("Relational", "sum", "sum", ts ->
       ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
@@ -1429,7 +1425,7 @@ public enum BuiltIn {
    * the elements are defined in order of increasing index by applying {@code f}
    * to the element's index. This is equivalent to the expression:
    *
-   * <blockquote>{@code fromList (List.tabulate (n, f))}</blockquote>
+   * <pre>{@code fromList (List.tabulate (n, f))}</pre>
    *
    * <p>If {@code n < 0} or {@code maxLen < n}, then the
    * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size}
@@ -1487,9 +1483,9 @@ public enum BuiltIn {
    * both the element and the element's index to the function {@code f}.
    * Equivalent to:
    *
-   * <blockquote>
+   * <pre>
    *   {@code List.app f (foldri (fn (i,a,l) => (i,a)::l) [] vec)}
-   * </blockquote> */
+   * </pre> */
   VECTOR_APPI("Vector", "appi", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.fnType(ts.tupleType(INT, h.get(0)), UNIT),
@@ -1502,9 +1498,9 @@ public enum BuiltIn {
    * a vector in left to right order (i.e., in order of increasing indices).
    * Equivalent to:
    *
-   * <blockquote>
+   * <pre>
    *   {@code List.app f (foldr (fn (a,l) => a::l) [] vec)}
-   * </blockquote> */
+   * </pre> */
   VECTOR_APP("Vector", "app", ts ->
       ts.forallType(1, h ->
           ts.fnType(ts.fnType(h.get(0), UNIT), h.vector(0), UNIT))),
@@ -1517,9 +1513,9 @@ public enum BuiltIn {
    * {@code mapi} is more general, and supplies {@code f} with the vector
    * index of an element along with the element. Equivalent to:
    *
-   * <blockquote>
+   * <pre>
    * {@code fromList (List.map f (foldri (fn (i,a,l) => (i,a)::l) [] vec))}
-   * </blockquote> */
+   * </pre> */
   VECTOR_MAPI("Vector", "mapi", ts ->
       ts.forallType(2, h ->
           ts.fnType(ts.fnType(ts.tupleType(INT, h.get(0)), h.get(1)),
@@ -1531,9 +1527,9 @@ public enum BuiltIn {
    * <p>{@code map f vec} produces a new vector by mapping the function
    * {@code f} from left to right over the argument vector. Equivalent to:
    *
-   * <blockquote>
+   * <pre>
    * {@code fromList (List.map f (foldr (fn (a,l) => a::l) [] vec))}
-   * </blockquote> */
+   * </pre> */
   VECTOR_MAP("Vector", "map", ts ->
       ts.forallType(2, h ->
           ts.fnType(ts.fnType(h.get(0), h.get(1)), h.vector(0), h.vector(1)))),
@@ -1572,9 +1568,9 @@ public enum BuiltIn {
    * Applies the function {@code f} from left to right (increasing indices).
    * Equivalent to
    *
-   * <blockquote>
+   * <pre>
    *   {@code foldli (fn (_, a, x) => f(a, x)) init vec}
-   * </blockquote> */
+   * </pre> */
   VECTOR_FOLDL("Vector", "foldl", ts ->
       ts.forallType(2, h ->
           ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
@@ -1588,9 +1584,9 @@ public enum BuiltIn {
    * Applies the function {@code f} from right to left (decreasing indices).
    * Equivalent to
    *
-   * <blockquote>
+   * <pre>
    *   {@code foldri (fn (_, a, x) => f(a, x)) init vec}
-   * </blockquote> */
+   * </pre> */
   VECTOR_FOLDR("Vector", "foldr", ts ->
       ts.forallType(2, h ->
           ts.fnType(ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),

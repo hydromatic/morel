@@ -261,7 +261,7 @@ public class UtilTest {
     final BiConsumer<String, String> check2 = (s, posString) -> {
       final Pair<String, Pos> pos = Pos.split(s, '$', "stdIn");
       assertThat(pos.left,
-          is("abc\n"
+          is("abc\n" //
               + "de\n"
               + "\n"
               + "fgh"));
@@ -269,12 +269,12 @@ public class UtilTest {
       assertThat(pos.right, hasToString(posString));
     };
     // start of line
-    check2.accept("abc\n"
+    check2.accept("abc\n" //
         + "$de$\n"
         + "\n"
         + "fgh", "stdIn:2.1-2.3");
     // spans multiple lines
-    check2.accept("abc\n"
+    check2.accept("abc\n" //
         + "d$e\n"
         + "\n"
         + "fg$h", "stdIn:2.2-4.3");

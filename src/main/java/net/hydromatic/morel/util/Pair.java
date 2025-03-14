@@ -66,9 +66,16 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
    *
    * <p>This is a shorthand that allows you to omit implicit types. For
    * example, you can write:
-   * <blockquote>return Pair.of(s, n);</blockquote>
-   * instead of
-   * <blockquote>return new Pair&lt;String, Integer&gt;(s, n);</blockquote>
+   *
+   * <pre>{@code
+   * return Pair.of(s, n);
+   * }</pre>
+   *
+   * <p>instead of
+   *
+   * <pre>{@code
+   * return new Pair&lt;String, Integer&gt;(s, n);
+   * }</pre>
    *
    * @param left  left value
    * @param right right value
@@ -82,8 +89,6 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   public static <K, V> Pair<K, V> of(Map.Entry<K, V> entry) {
     return of(entry.getKey(), entry.getValue());
   }
-
-  //~ Methods ----------------------------------------------------------------
 
   @SuppressWarnings("rawtypes")
   public boolean equals(Object obj) {

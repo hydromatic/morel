@@ -70,7 +70,7 @@ import static java.util.Objects.requireNonNull;
  * <p>There is often a better approximation that can be deduced from the uses
  * of the variable. For example,
  *
- * <blockquote><pre>{@code
+ * <pre>{@code
  *   let
  *     fun isOdd i = i % 2 = 0
  *   in
@@ -80,16 +80,16 @@ import static java.util.Objects.requireNonNull;
  *         andalso i < 100
  *         andalso i = e.deptno
  *   end
- * }</pre></blockquote>
+ * }</pre>
  *
  * <p>we can deduce a better extent for {@code i}, namely
  *
- * <blockquote><pre>{@code
+ * <pre>{@code
  *    from e in emps
  *      yield e.deptno
  *      where deptno % 2 = 0
  *        andalso deptno < 100
- * }</pre></blockquote>
+ * }</pre>
  */
 public class Extents {
   private Extents() {}
@@ -99,19 +99,19 @@ public class Extents {
    *
    * <p>For example, given the program
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    *   let
    *     fun f i = i elem [1, 2, 4]
    *   in
    *     from x where f x
    *   end
-   * }</pre></blockquote>
+   * }</pre>
    *
    * <p>we can deduce that the extent of "x" is "[1, 2, 4]".
    *
    * <p>We can also compute the extent of tuples. For the program
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    *   let
    *     val edges = [(1, 2), (2, 3), (1, 4), (4, 2), (4, 3)]
    *     fun edge (i, j) = (i, j) elem edges
@@ -119,7 +119,7 @@ public class Extents {
    *     from x, y, z
    *     where edge (x, y) andalso edge (y, z) andalso x <> z
    *   end
-   * }</pre></blockquote>
+   * }</pre>
    *
    * <p>we could deduce that "x" has extent "from e in edges group e.i",
    * "y" has extent "from e in edges group e.j"
@@ -127,18 +127,18 @@ public class Extents {
    * "z" has extent "from e in edges group e.j",
    * and therefore "(x, y, z)" has extent
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    * from x in (from e in edges group e.i),
    *   y in (from e in edges group e.j),
    *   z in (from e in edges group e.j)
-   * }</pre></blockquote>
+   * }</pre>
    *
    * <p>but we can do better by computing the extent of (x, y) simultaneously:
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    * from (x, y) in (from e in edges),
    *   z in (from e in edges group e.j)
-   * }</pre></blockquote>
+   * }</pre>
    */
   public static Analysis create(TypeSystem typeSystem, Core.Pat pat,
       SortedMap<Core.NamedPat, Core.Exp> boundPats,
@@ -407,8 +407,8 @@ public class Extents {
             break;
 
           case Z_ORELSE:
-            // Expression is 'orelse'. Visit each pattern, and intersect the
-            // constraints (union the generators).
+            // Expression is 'orelse'. Visit each pattern, and intersect
+            // the constraints (union the generators).
             map2 = new LinkedHashMap<>();
             final Map<Core.Pat, PairList<Core.Exp, Core.Exp>> map3 =
                 new LinkedHashMap<>();
@@ -570,19 +570,19 @@ public class Extents {
    * {@link BuiltIn#Z_EXTENT extent}, merges them into a single extent.
    * For example, in
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    * [extent "int: (0, inf)", x > 0,
    *   x elem primes, isPrime x,
    *   extent "int: (-inf, 10)", x < 10]
-   * }</pre></blockquote>
+   * }</pre>
    *
    * <p>the extents for "(0, inf)" and "(-inf, 10)" are merged into
    * extent "(0, 10)":
    *
-   * <blockquote><pre>{@code
+   * <pre>{@code
    * (extent "int: (0, 10)" intersect primes,
    *   x > 0 andalso isPrime x andalso x < 10)
-   * }</pre></blockquote>
+   * }</pre>
    */
   static Pair<Core.Exp, Core.Exp> reduceAnd(TypeSystem typeSystem,
       PairList<Core.Exp, Core.Exp> extentFilters) {
