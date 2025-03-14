@@ -18,12 +18,10 @@
  */
 package net.hydromatic.morel.compile;
 
+import java.util.List;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Code;
-
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.List;
 
 /** Called on various events during compilation. */
 public interface Tracer {
@@ -39,16 +37,22 @@ public interface Tracer {
   /** Called with the list of warnings after evaluation. */
   void onWarnings(List<Throwable> warningList);
 
-  /** Called with the exception thrown during evaluation, or null if no
-   * exception was thrown. Returns whether a handler was found. */
+  /**
+   * Called with the exception thrown during evaluation, or null if no exception
+   * was thrown. Returns whether a handler was found.
+   */
   boolean onException(@Nullable Throwable e);
 
-  /** Called with the exception thrown during type resolution.
-   * Returns whether a handler was found. */
+  /**
+   * Called with the exception thrown during type resolution. Returns whether a
+   * handler was found.
+   */
   boolean onTypeException(TypeResolver.TypeException e);
 
-  /** Called with the exception thrown during validation, or null if no
-   * exception was thrown. Returns whether a handler was found. */
+  /**
+   * Called with the exception thrown during validation, or null if no exception
+   * was thrown. Returns whether a handler was found.
+   */
   boolean handleCompileException(@Nullable CompileException e);
 }
 

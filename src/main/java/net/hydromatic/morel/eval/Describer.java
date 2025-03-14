@@ -27,9 +27,11 @@ public interface Describer {
   /** Provided as a callback while describing a node. */
   interface Detail {
     Detail arg(String name, Object value);
+
     Detail arg(String name, Describable describable);
-    default Detail argIf(String name, Describable describable,
-        boolean condition) {
+
+    default Detail argIf(
+        String name, Describable describable, boolean condition) {
       return condition ? arg(name, describable) : this;
     }
   }

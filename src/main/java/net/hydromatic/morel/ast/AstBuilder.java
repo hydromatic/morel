@@ -18,27 +18,26 @@
  */
 package net.hydromatic.morel.ast;
 
-import net.hydromatic.morel.compile.BuiltIn;
-import net.hydromatic.morel.eval.Unit;
-import net.hydromatic.morel.type.RecordType;
-import net.hydromatic.morel.util.PairList;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.eval.Unit;
+import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.util.PairList;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Builds parse tree nodes. */
 public enum AstBuilder {
-  /** The singleton instance of the AST builder.
-   * The short name is convenient for use via 'import static',
-   * but checkstyle does not approve. */
+  /**
+   * The singleton instance of the AST builder. The short name is convenient for
+   * use via 'import static', but checkstyle does not approve.
+   */
   // CHECKSTYLE: IGNORE 1
   ast;
 
@@ -53,8 +52,8 @@ public enum AstBuilder {
     if (exp instanceof Ast.Id) {
       return ((Ast.Id) exp).name;
     }
-    throw new IllegalArgumentException("cannot derive label for expression "
-        + exp);
+    throw new IllegalArgumentException(
+        "cannot derive label for expression " + exp);
   }
 
   /** Creates a call to an infix operator. */
@@ -87,8 +86,10 @@ public enum AstBuilder {
     return new Ast.Literal(pos, Op.REAL_LITERAL, value);
   }
 
-  /** Creates a {@code float} literal for a special IEEE floating point value:
-   * NaN, negative zero, positive and negative infinity. */
+  /**
+   * Creates a {@code float} literal for a special IEEE floating point value:
+   * NaN, negative zero, positive and negative infinity.
+   */
   public Ast.Literal realLiteral(Pos pos, Float value) {
     return new Ast.Literal(pos, Op.REAL_LITERAL, value);
   }
@@ -119,8 +120,8 @@ public enum AstBuilder {
     return new Ast.RecordSelector(pos, name);
   }
 
-  public Ast.Type namedType(Pos pos, Iterable<? extends Ast.Type> types,
-      String name) {
+  public Ast.Type namedType(
+      Pos pos, Iterable<? extends Ast.Type> types, String name) {
     return new Ast.NamedType(pos, ImmutableList.copyOf(types), name);
   }
 
@@ -129,14 +130,14 @@ public enum AstBuilder {
     // If we did, matching the pattern would rebind the name
     // to some other value.
     switch (name) {
-    case "false":
-      return literalPat(pos, Op.BOOL_LITERAL_PAT, false);
-    case "true":
-      return literalPat(pos, Op.BOOL_LITERAL_PAT, true);
-    case "nil":
-      return listPat(pos);
-    default:
-      return new Ast.IdPat(pos, name);
+      case "false":
+        return literalPat(pos, Op.BOOL_LITERAL_PAT, false);
+      case "true":
+        return literalPat(pos, Op.BOOL_LITERAL_PAT, true);
+      case "nil":
+        return listPat(pos);
+      default:
+        return new Ast.IdPat(pos, name);
     }
   }
 
@@ -177,10 +178,10 @@ public enum AstBuilder {
     return new Ast.ListPat(pos, ImmutableList.copyOf(args));
   }
 
-  public Ast.RecordPat recordPat(Pos pos, boolean ellipsis,
-      Map<String, ? extends Ast.Pat> args) {
-    return new Ast.RecordPat(pos, ellipsis,
-        ImmutableSortedMap.copyOf(args, RecordType.ORDERING));
+  public Ast.RecordPat recordPat(
+      Pos pos, boolean ellipsis, Map<String, ? extends Ast.Pat> args) {
+    return new Ast.RecordPat(
+        pos, ellipsis, ImmutableSortedMap.copyOf(args, RecordType.ORDERING));
   }
 
   public Ast.AnnotatedPat annotatedPat(Pos pos, Ast.Pat pat, Ast.Type type) {
@@ -200,14 +201,13 @@ public enum AstBuilder {
   }
 
   public Ast.Record record(Pos pos, Map<String, Ast.Exp> map) {
-    return new Ast.Record(pos,
-        ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
+    return new Ast.Record(
+        pos, ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
   }
 
-  public Ast.Record record(Pos pos,
-      Collection<Map.Entry<String, Ast.Exp>> map) {
-    return record(pos,
-        ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
+  public Ast.Record record(
+      Pos pos, Collection<Map.Entry<String, Ast.Exp>> map) {
+    return record(pos, ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
   }
 
   public Ast.Exp equal(Ast.Exp a0, Ast.Exp a1) {
@@ -314,8 +314,8 @@ public enum AstBuilder {
     return new Ast.Let(pos, ImmutableList.copyOf(decls), exp);
   }
 
-  public Ast.ValDecl valDecl(Pos pos, boolean rec,
-      Iterable<? extends Ast.ValBind> valBinds) {
+  public Ast.ValDecl valDecl(
+      Pos pos, boolean rec, Iterable<? extends Ast.ValBind> valBinds) {
     return new Ast.ValDecl(pos, rec, ImmutableList.copyOf(valBinds));
   }
 
@@ -331,8 +331,8 @@ public enum AstBuilder {
     return new Ast.Match(pos, pat, exp);
   }
 
-  public Ast.Case caseOf(Pos pos, Ast.Exp exp,
-      Iterable<? extends Ast.Match> matchList) {
+  public Ast.Case caseOf(
+      Pos pos, Ast.Exp exp, Iterable<? extends Ast.Match> matchList) {
     return new Ast.Case(pos, exp, ImmutableList.copyOf(matchList));
   }
 
@@ -345,14 +345,12 @@ public enum AstBuilder {
   }
 
   public Ast.From from(Pos pos, List<Ast.FromStep> steps) {
-    final Ast.Exp implicitYieldExp =
-        Ast.From.implicitYieldExp(pos, steps);
-    return from(pos, ImmutableList.copyOf(steps),
-        implicitYieldExp);
+    final Ast.Exp implicitYieldExp = Ast.From.implicitYieldExp(pos, steps);
+    return from(pos, ImmutableList.copyOf(steps), implicitYieldExp);
   }
 
-  public Ast.From from(Pos pos, List<Ast.FromStep> steps,
-      Ast.@Nullable Exp implicitYieldExp) {
+  public Ast.From from(
+      Pos pos, List<Ast.FromStep> steps, Ast.@Nullable Exp implicitYieldExp) {
     return new Ast.From(pos, ImmutableList.copyOf(steps), implicitYieldExp);
   }
 
@@ -365,34 +363,36 @@ public enum AstBuilder {
     return new Ast.Fn(pos, ImmutableList.copyOf(matchList));
   }
 
-  public Ast.Fn fn(Pos pos,
-      Iterable<? extends Ast.Match> matchList) {
+  public Ast.Fn fn(Pos pos, Iterable<? extends Ast.Match> matchList) {
     return new Ast.Fn(pos, ImmutableList.copyOf(matchList));
   }
 
-  public Ast.FunDecl funDecl(Pos pos,
-      Iterable<? extends Ast.FunBind> valBinds) {
+  public Ast.FunDecl funDecl(
+      Pos pos, Iterable<? extends Ast.FunBind> valBinds) {
     return new Ast.FunDecl(pos, ImmutableList.copyOf(valBinds));
   }
 
-  public Ast.FunBind funBind(Pos pos,
-      Iterable<? extends Ast.FunMatch> matchList) {
+  public Ast.FunBind funBind(
+      Pos pos, Iterable<? extends Ast.FunMatch> matchList) {
     return new Ast.FunBind(pos, ImmutableList.copyOf(matchList));
   }
 
-  public Ast.FunMatch funMatch(Pos pos, String name,
-      Iterable<? extends Ast.Pat> patList, Ast.@Nullable Type returnType,
+  public Ast.FunMatch funMatch(
+      Pos pos,
+      String name,
+      Iterable<? extends Ast.Pat> patList,
+      Ast.@Nullable Type returnType,
       Ast.Exp exp) {
-    return new Ast.FunMatch(pos, name, ImmutableList.copyOf(patList),
-        returnType, exp);
+    return new Ast.FunMatch(
+        pos, name, ImmutableList.copyOf(patList), returnType, exp);
   }
 
   public Ast.Apply apply(Ast.Exp fn, Ast.Exp arg) {
     return new Ast.Apply(fn.pos.plus(arg.pos), fn, arg);
   }
 
-  public Ast.Exp ifThenElse(Pos pos, Ast.Exp condition, Ast.Exp ifTrue,
-      Ast.Exp ifFalse) {
+  public Ast.Exp ifThenElse(
+      Pos pos, Ast.Exp condition, Ast.Exp ifTrue, Ast.Exp ifFalse) {
     return new Ast.If(pos, condition, ifTrue, ifFalse);
   }
 
@@ -408,15 +408,18 @@ public enum AstBuilder {
     return new Ast.InfixCall(pos, op, a0, a1);
   }
 
-  public Ast.DatatypeDecl datatypeDecl(Pos pos,
-      Iterable<Ast.DatatypeBind> binds) {
+  public Ast.DatatypeDecl datatypeDecl(
+      Pos pos, Iterable<Ast.DatatypeBind> binds) {
     return new Ast.DatatypeDecl(pos, ImmutableList.copyOf(binds));
   }
 
-  public Ast.DatatypeBind datatypeBind(Pos pos, Ast.Id name,
-      Iterable<Ast.TyVar> tyVars, Iterable<Ast.TyCon> tyCons) {
-    return new Ast.DatatypeBind(pos, ImmutableList.copyOf(tyVars), name,
-        ImmutableList.copyOf(tyCons));
+  public Ast.DatatypeBind datatypeBind(
+      Pos pos,
+      Ast.Id name,
+      Iterable<Ast.TyVar> tyVars,
+      Iterable<Ast.TyCon> tyCons) {
+    return new Ast.DatatypeBind(
+        pos, ImmutableList.copyOf(tyVars), name, ImmutableList.copyOf(tyCons));
   }
 
   public Ast.TyCon typeConstructor(Pos pos, Ast.Id id, Ast.Type type) {
@@ -431,14 +434,14 @@ public enum AstBuilder {
     return new Ast.CompositeType(pos, ImmutableList.copyOf(types));
   }
 
-  public Ast.FunctionType functionType(Pos pos, Ast.Type fromType,
-      Ast.Type toType) {
+  public Ast.FunctionType functionType(
+      Pos pos, Ast.Type fromType, Ast.Type toType) {
     return new Ast.FunctionType(pos, fromType, toType);
   }
 
   public Ast.Type foldFunctionType(List<Ast.Type> types) {
-    return foldRight(types, (t1,  t2) ->
-        functionType(t1.pos.plus(t2.pos), t1, t2));
+    return foldRight(
+        types, (t1, t2) -> functionType(t1.pos.plus(t2.pos), t1, t2));
   }
 
   private <E> E foldRight(List<E> list, BiFunction<E, E, E> fold) {
@@ -449,19 +452,20 @@ public enum AstBuilder {
     return e;
   }
 
-  public Ast.Aggregate aggregate(Pos pos, Ast.Exp aggregate, Ast.Exp argument,
-      Ast.Id id) {
+  public Ast.Aggregate aggregate(
+      Pos pos, Ast.Exp aggregate, Ast.Exp argument, Ast.Id id) {
     return new Ast.Aggregate(pos, aggregate, argument, id);
   }
 
-  /** Returns a reference to a built-in: either a name (e.g. "true")
-   * or a field reference (e.g. "#hd List"). */
+  /**
+   * Returns a reference to a built-in: either a name (e.g. "true") or a field
+   * reference (e.g. "#hd List").
+   */
   private Ast.Exp ref(Pos pos, BuiltIn builtIn) {
     if (builtIn.structure == null) {
       return id(pos, builtIn.mlName);
     } else {
-      return apply(id(pos, builtIn.structure),
-          id(pos, builtIn.mlName));
+      return apply(id(pos, builtIn.structure), id(pos, builtIn.mlName));
     }
   }
 
@@ -469,8 +473,8 @@ public enum AstBuilder {
     return apply(apply(ref(pos, BuiltIn.LIST_MAP), e1), e2);
   }
 
-  public Ast.Scan scan(Pos pos, Ast.Pat pat, Ast.Exp exp,
-      Ast.@Nullable Exp condition) {
+  public Ast.Scan scan(
+      Pos pos, Ast.Pat pat, Ast.Exp exp, Ast.@Nullable Exp condition) {
     return new Ast.Scan(pos, pat, exp, condition);
   }
 
@@ -478,7 +482,8 @@ public enum AstBuilder {
     return new Ast.Order(pos, ImmutableList.copyOf(orderItems));
   }
 
-  public Ast.OrderItem orderItem(Pos pos, Ast.Exp exp, Ast.Direction direction) {
+  public Ast.OrderItem orderItem(
+      Pos pos, Ast.Exp exp, Ast.Direction direction) {
     return new Ast.OrderItem(pos, exp, direction);
   }
 
@@ -486,10 +491,12 @@ public enum AstBuilder {
     return new Ast.Compute(pos, ImmutableList.copyOf(aggregates));
   }
 
-  public Ast.Group group(Pos pos, PairList<Ast.Id, Ast.Exp> groupExps,
+  public Ast.Group group(
+      Pos pos,
+      PairList<Ast.Id, Ast.Exp> groupExps,
       List<Ast.Aggregate> aggregates) {
-    return new Ast.Group(pos, Op.GROUP, groupExps.immutable(),
-        ImmutableList.copyOf(aggregates));
+    return new Ast.Group(
+        pos, Op.GROUP, groupExps.immutable(), ImmutableList.copyOf(aggregates));
   }
 
   public Ast.FromStep where(Pos pos, Ast.Exp exp) {

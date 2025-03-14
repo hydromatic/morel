@@ -19,10 +19,9 @@
 package net.hydromatic.morel.type;
 
 import com.google.common.collect.ImmutableList;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.List;
 import java.util.SortedMap;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A type that has named fields, as a record type does. */
 public interface RecordLikeType extends Type {
@@ -37,8 +36,10 @@ public interface RecordLikeType extends Type {
   /** Returns the type of the {@code i}th field, or throws. */
   Type argType(int i);
 
-  /** Returns a {@link TypedValue} if this
-   * type wraps a single dynamically typed value, otherwise null. */
+  /**
+   * Returns a {@link TypedValue} if this type wraps a single dynamically typed
+   * value, otherwise null.
+   */
   default @Nullable TypedValue asTypedValue() {
     return null;
   }

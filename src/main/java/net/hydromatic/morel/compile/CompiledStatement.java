@@ -18,32 +18,34 @@
  */
 package net.hydromatic.morel.compile;
 
+import java.util.function.Consumer;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Type;
 
-import java.util.function.Consumer;
-
 /**
- * Statement that has been compiled and is ready to be run from the
- * REPL.
+ * Statement that has been compiled and is ready to be run from the REPL.
  *
- * <p>If a declaration, it evaluates an expression and also
- * creates a new environment (with new variables bound) and
- * generates a line or two of output for the REPL.
+ * <p>If a declaration, it evaluates an expression and also creates a new
+ * environment (with new variables bound) and generates a line or two of output
+ * for the REPL.
  */
 public interface CompiledStatement {
-  /** Evaluates this statement, adding lines of feedback to {@code output}
-   * and writing bindings (values to variables, and types definitions) to
-   * {@code bindings}. The environment for the next statement can be
-   * constructed from the bindings.
+  /**
+   * Evaluates this statement, adding lines of feedback to {@code output} and
+   * writing bindings (values to variables, and types definitions) to {@code
+   * bindings}. The environment for the next statement can be constructed from
+   * the bindings.
    *
    * @param session Session
    * @param environment Evaluation environment
    * @param outLines List to which to append lines of output
    * @param outBindings List to which to append bound variables and types
    */
-  void eval(Session session, Environment environment, Consumer<String> outLines,
+  void eval(
+      Session session,
+      Environment environment,
+      Consumer<String> outLines,
       Consumer<Binding> outBindings);
 
   Type getType();

@@ -18,7 +18,7 @@
  */
 package net.hydromatic.morel.util;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
 import java.util.AbstractList;
@@ -31,21 +31,20 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
-
-import static java.util.Objects.requireNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Pair of objects.
  *
  * <p>Because a pair implements {@link #equals(Object)}, {@link #hashCode()} and
- * {@link #compareTo(Pair)}, it can be used in any kind of
- * {@link java.util.Collection}.
+ * {@link #compareTo(Pair)}, it can be used in any kind of {@link
+ * java.util.Collection}.
  *
  * @param <T1> Left-hand type
  * @param <T2> Right-hand type
  */
-public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
-    Map.Entry<T1, T2>, Serializable {
+public class Pair<T1, T2>
+    implements Comparable<Pair<T1, T2>>, Map.Entry<T1, T2>, Serializable {
 
   public final T1 left;
   public final T2 right;
@@ -53,7 +52,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   /**
    * Creates a Pair.
    *
-   * @param left  left value
+   * @param left left value
    * @param right right value
    */
   public Pair(T1 left, T2 right) {
@@ -64,8 +63,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   /**
    * Creates a Pair of appropriate type.
    *
-   * <p>This is a shorthand that allows you to omit implicit types. For
-   * example, you can write:
+   * <p>This is a shorthand that allows you to omit implicit types. For example,
+   * you can write:
    *
    * <pre>{@code
    * return Pair.of(s, n);
@@ -77,7 +76,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
    * return new Pair&lt;String, Integer&gt;(s, n);
    * }</pre>
    *
-   * @param left  left value
+   * @param left left value
    * @param right right value
    * @return A Pair
    */
@@ -94,15 +93,18 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   public boolean equals(Object obj) {
     return this == obj
         || obj instanceof Map.Entry
-        && Objects.equals(this.left, ((Map.Entry) obj).getKey())
-        && Objects.equals(this.right, ((Map.Entry) obj).getValue());
+            && Objects.equals(this.left, ((Map.Entry) obj).getKey())
+            && Objects.equals(this.right, ((Map.Entry) obj).getValue());
   }
 
-  /** {@inheritDoc}
+  /**
+   * {@inheritDoc}
    *
-   * <p>Computes hash code consistent with
-   * {@link java.util.Map.Entry#hashCode()}. */
-  @Override public int hashCode() {
+   * <p>Computes hash code consistent with {@link
+   * java.util.Map.Entry#hashCode()}.
+   */
+  @Override
+  public int hashCode() {
     int keyHash = left == null ? 0 : left.hashCode();
     int valueHash = right == null ? 0 : right.hashCode();
     return keyHash ^ valueHash;
@@ -136,13 +138,13 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   /**
-   * Compares a pair of comparable values of the same type. Null collates
-   * less than everything else, but equal to itself.
+   * Compares a pair of comparable values of the same type. Null collates less
+   * than everything else, but equal to itself.
    *
    * @param c1 First value
    * @param c2 Second value
-   * @return a negative integer, zero, or a positive integer if c1
-   * is less than, equal to, or greater than c2.
+   * @return a negative integer, zero, or a positive integer if c1 is less than,
+   *     equal to, or greater than c2.
    */
   private static <C extends Comparable<C>> int compare(C c1, C c2) {
     if (c1 == null) {
@@ -179,9 +181,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   /**
-   * Converts two lists into a list of {@link Pair}s,
-   * whose length is the lesser of the lengths of the
-   * source lists.
+   * Converts two lists into a list of {@link Pair}s, whose length is the lesser
+   * of the lengths of the source lists.
    *
    * @param ks Left list
    * @param vs Right list
@@ -198,16 +199,14 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
    * <p>The length of the combined list is the lesser of the lengths of the
    * source lists. But typically the source lists will be the same length.
    *
-   * @param ks     Left list
-   * @param vs     Right list
+   * @param ks Left list
+   * @param vs Right list
    * @param strict Whether to fail if lists have different size
    * @return List of pairs
    * @see Ord#zip(java.util.List)
    */
   public static <K, V> List<Pair<K, V>> zip(
-      final List<K> ks,
-      final List<V> vs,
-      boolean strict) {
+      final List<K> ks, final List<V> vs, boolean strict) {
     final int size;
     if (strict) {
       if (ks.size() != vs.size()) {
@@ -221,8 +220,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   /** Returns whether all pairs match a given predicate. */
-  public static <K, V> boolean allMatch(Iterable<K> ks, Iterable<V> vs,
-      BiPredicate<K, V> predicate) {
+  public static <K, V> boolean allMatch(
+      Iterable<K> ks, Iterable<V> vs, BiPredicate<K, V> predicate) {
     final Iterator<K> ki = ks.iterator();
     final Iterator<V> vi = vs.iterator();
     while (ki.hasNext() && vi.hasNext()) {
@@ -234,8 +233,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   /** Returns whether no pair matches a given predicate. */
-  public static <K, V> boolean noneMatch(Iterable<K> ks, Iterable<V> vs,
-      BiPredicate<K, V> predicate) {
+  public static <K, V> boolean noneMatch(
+      Iterable<K> ks, Iterable<V> vs, BiPredicate<K, V> predicate) {
     final Iterator<K> ki = ks.iterator();
     final Iterator<V> vi = vs.iterator();
     while (ki.hasNext() && vi.hasNext()) {
@@ -247,8 +246,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   /** Returns whether any pair matches a given predicate. */
-  public static <K, V> boolean anyMatch(Iterable<K> ks, Iterable<V> vs,
-      BiPredicate<K, V> predicate) {
+  public static <K, V> boolean anyMatch(
+      Iterable<K> ks, Iterable<V> vs, BiPredicate<K, V> predicate) {
     final Iterator<K> ki = ks.iterator();
     final Iterator<V> vi = vs.iterator();
     while (ki.hasNext() && vi.hasNext()) {
@@ -260,8 +259,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   /** Calls a consumer for each pair of items in two iterables. */
-  public static <K, V> void forEach(Iterable<K> ks, Iterable<V> vs,
-      BiConsumer<K, V> consumer) {
+  public static <K, V> void forEach(
+      Iterable<K> ks, Iterable<V> vs, BiConsumer<K, V> consumer) {
     final Iterator<K> ki = ks.iterator();
     final Iterator<V> vi = vs.iterator();
     while (ki.hasNext() && vi.hasNext()) {
@@ -269,10 +268,13 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     }
   }
 
-  /** Calls a consumer with an ordinal for each pair of items in two
-   * iterables. */
-  public static <K, V> void forEachIndexed(Iterable<? extends K> ks,
-      Iterable<? extends V> vs, PairWithOrdinalConsumer<K, V> consumer) {
+  /**
+   * Calls a consumer with an ordinal for each pair of items in two iterables.
+   */
+  public static <K, V> void forEachIndexed(
+      Iterable<? extends K> ks,
+      Iterable<? extends V> vs,
+      PairWithOrdinalConsumer<K, V> consumer) {
     int i = 0;
     final Iterator<? extends K> ki = ks.iterator();
     final Iterator<? extends V> vi = vs.iterator();
@@ -281,17 +283,20 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     }
   }
 
-  /** Calls a consumer with an ordinal for each pair of items in two
-   * lists. */
-  public static <K, V> void forEachIndexed(List<? extends K> ks,
-      List<? extends V> vs, PairWithOrdinalConsumer<K, V> consumer) {
+  /** Calls a consumer with an ordinal for each pair of items in two lists. */
+  public static <K, V> void forEachIndexed(
+      List<? extends K> ks,
+      List<? extends V> vs,
+      PairWithOrdinalConsumer<K, V> consumer) {
     for (int i = 0, j = Math.min(ks.size(), vs.size()); i < j; i++) {
       consumer.accept(i, ks.get(i), vs.get(i));
     }
   }
 
-  /** Calls a consumer with an ordinal for each pair of items in an iterable
-   * of pairs. */
+  /**
+   * Calls a consumer with an ordinal for each pair of items in an iterable of
+   * pairs.
+   */
   public static <K, V> void forEachIndexed(
       Iterable<? extends Map.Entry<K, V>> pairs,
       PairWithOrdinalConsumer<K, V> consumer) {
@@ -302,8 +307,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   /** Calls a consumer for each entry in a map. */
-  public static <K, V> void forEachIndexed(Map<K, V> map,
-      PairWithOrdinalConsumer<K, V> consumer) {
+  public static <K, V> void forEachIndexed(
+      Map<K, V> map, PairWithOrdinalConsumer<K, V> consumer) {
     forEachIndexed(map.entrySet(), consumer);
   }
 
@@ -318,8 +323,7 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
    * @return Iterable over pairs
    */
   public static <K, V> Iterable<Pair<K, V>> zip(
-      final Iterable<? extends K> ks,
-      final Iterable<? extends V> vs) {
+      final Iterable<? extends K> ks, final Iterable<? extends V> vs) {
     return () -> {
       final Iterator<? extends K> kIterator = ks.iterator();
       final Iterator<? extends V> vIterator = vs.iterator();
@@ -332,16 +336,13 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
    * Converts two arrays into a list of {@link Pair}s.
    *
    * <p>The length of the combined list is the lesser of the lengths of the
-   * source arrays. But typically the source arrays will be the same
-   * length.
+   * source arrays. But typically the source arrays will be the same length.
    *
    * @param ks Left array
    * @param vs Right array
    * @return List of pairs
    */
-  public static <K, V> List<Pair<K, V>> zip(
-      final K[] ks,
-      final V[] vs) {
+  public static <K, V> List<Pair<K, V>> zip(final K[] ks, final V[] vs) {
     return new AbstractList<Pair<K, V>>() {
       public Pair<K, V> get(int index) {
         return Pair.of(ks[index], vs[index]);
@@ -353,26 +354,26 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     };
   }
 
-  /** Returns a mutable list of pairs backed by a pair of mutable lists.
+  /**
+   * Returns a mutable list of pairs backed by a pair of mutable lists.
    *
    * <p>Modifications to this list are reflected in the backing lists, and vice
    * versa.
    *
    * @param <K> Key (left) value type
-   * @param <V> Value (right) value type */
+   * @param <V> Value (right) value type
+   */
   public static <K, V> List<Pair<K, V>> zipMutable(
-      final List<K> ks,
-      final List<V> vs) {
+      final List<K> ks, final List<V> vs) {
     return new MutableZipList<>(ks, vs);
   }
 
-  /** Applies an action to every element of an iterable of pairs.
+  /**
+   * Applies an action to every element of an iterable of pairs.
    *
    * @see Map#forEach(java.util.function.BiConsumer)
-   *
    * @param entries Pairs
    * @param consumer The action to be performed for each element
-   *
    * @param <K> Left type
    * @param <V> Right type
    */
@@ -388,8 +389,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
    * Returns an iterable over the left slice of an iterable.
    *
    * @param iterable Iterable over pairs
-   * @param <L>      Left type
-   * @param <R>      Right type
+   * @param <L> Left type
+   * @param <R> Right type
    * @return Iterable over the left elements
    */
   public static <L, R> Iterable<L> left(
@@ -401,8 +402,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
    * Returns an iterable over the right slice of an iterable.
    *
    * @param iterable Iterable over pairs
-   * @param <L>      right type
-   * @param <R>      Right type
+   * @param <L> right type
+   * @param <R> Right type
    * @return Iterable over the right elements
    */
   public static <L, R> Iterable<R> right(
@@ -456,8 +457,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
   }
 
   /**
-   * Returns an iterator that iterates over (0, i) pairs in an iterable for
-   * i &gt; 0.
+   * Returns an iterator that iterates over (0, i) pairs in an iterable for i
+   * &gt; 0.
    *
    * <p>For example, {@code firstAnd([3, 5, 7])} returns [(3, 5), (3, 7)].
    *
@@ -476,10 +477,12 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     };
   }
 
-  /** Iterator that returns the left field of each pair.
+  /**
+   * Iterator that returns the left field of each pair.
    *
    * @param <L> Left-hand type
-   * @param <R> Right-hand type */
+   * @param <R> Right-hand type
+   */
   private static class LeftIterator<L, R> implements Iterator<L> {
     private final Iterator<? extends Map.Entry<L, R>> iterator;
 
@@ -500,10 +503,12 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     }
   }
 
-  /** Iterator that returns the right field of each pair.
+  /**
+   * Iterator that returns the right field of each pair.
    *
    * @param <L> Left-hand type
-   * @param <R> Right-hand type */
+   * @param <R> Right-hand type
+   */
   private static class RightIterator<L, R> implements Iterator<R> {
     private final Iterator<? extends Map.Entry<L, R>> iterator;
 
@@ -524,10 +529,12 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     }
   }
 
-  /** Iterator that returns the first element of a collection paired with every
+  /**
+   * Iterator that returns the first element of a collection paired with every
    * other element.
    *
-   * @param <E> Element type */
+   * @param <E> Element type
+   */
   private static class FirstAndIterator<E> implements Iterator<Pair<E, E>> {
     private final Iterator<E> iterator;
     private final E first;
@@ -550,15 +557,18 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     }
   }
 
-  /** Iterator that pairs elements from two iterators.
+  /**
+   * Iterator that pairs elements from two iterators.
    *
    * @param <L> Left-hand type
-   * @param <R> Right-hand type */
+   * @param <R> Right-hand type
+   */
   private static class ZipIterator<L, R> implements Iterator<Pair<L, R>> {
     private final Iterator<? extends L> leftIterator;
     private final Iterator<? extends R> rightIterator;
 
-    ZipIterator(Iterator<? extends L> leftIterator,
+    ZipIterator(
+        Iterator<? extends L> leftIterator,
         Iterator<? extends R> rightIterator) {
       this.leftIterator = requireNonNull(leftIterator);
       this.rightIterator = requireNonNull(rightIterator);
@@ -578,10 +588,12 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     }
   }
 
-  /** Iterator that returns consecutive pairs of elements from an underlying
+  /**
+   * Iterator that returns consecutive pairs of elements from an underlying
    * iterator.
    *
-   * @param <E> Element type */
+   * @param <E> Element type
+   */
   private static class AdjacentIterator<E> implements Iterator<Pair<E, E>> {
     private final E first;
     private final Iterator<E> iterator;
@@ -609,10 +621,12 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     }
   }
 
-  /** Unmodifiable list of pairs, backed by a pair of lists.
+  /**
+   * Unmodifiable list of pairs, backed by a pair of lists.
    *
    * @param <K> Left-hand type
-   * @param <V> Right-hand type */
+   * @param <V> Right-hand type
+   */
   private static class ZipList<K, V> extends AbstractList<Pair<K, V>> {
     private final List<K> ks;
     private final List<V> vs;
@@ -633,13 +647,15 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
     }
   }
 
-  /** A mutable list of pairs backed by a pair of mutable lists.
+  /**
+   * A mutable list of pairs backed by a pair of mutable lists.
    *
    * <p>Modifications to this list are reflected in the backing lists, and vice
    * versa.
    *
    * @param <K> Key (left) value type
-   * @param <V> Value (right) value type */
+   * @param <V> Value (right) value type
+   */
   private static class MutableZipList<K, V> extends AbstractList<Pair<K, V>> {
     private final List<K> ks;
     private final List<V> vs;
@@ -649,26 +665,31 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
       this.vs = requireNonNull(vs);
     }
 
-    @Override public Pair<K, V> get(int index) {
+    @Override
+    public Pair<K, V> get(int index) {
       return Pair.of(ks.get(index), vs.get(index));
     }
 
-    @Override public int size() {
+    @Override
+    public int size() {
       return Math.min(ks.size(), vs.size());
     }
 
-    @Override public void add(int index, Pair<K, V> pair) {
+    @Override
+    public void add(int index, Pair<K, V> pair) {
       ks.add(index, pair.left);
       vs.add(index, pair.right);
     }
 
-    @Override public Pair<K, V> remove(int index) {
+    @Override
+    public Pair<K, V> remove(int index) {
       final K bufferedRow = ks.remove(index);
       final V stateSet = vs.remove(index);
       return Pair.of(bufferedRow, stateSet);
     }
 
-    @Override public Pair<K, V> set(int index, Pair<K, V> pair) {
+    @Override
+    public Pair<K, V> set(int index, Pair<K, V> pair) {
       final Pair<K, V> previous = get(index);
       ks.set(index, pair.left);
       vs.set(index, pair.right);
@@ -680,8 +701,8 @@ public class Pair<T1, T2> implements Comparable<Pair<T1, T2>>,
    * Represents an operation that accepts two input arguments and an ordinal,
    * and returns no result.
    *
-   * <p>This is a specialization of {@link Consumer}, similar to
-   * {@link BiConsumer}.
+   * <p>This is a specialization of {@link Consumer}, similar to {@link
+   * BiConsumer}.
    *
    * @param <K> Key type
    * @param <V> Value type

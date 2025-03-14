@@ -18,17 +18,15 @@
  */
 package net.hydromatic.morel.ast;
 
-import net.hydromatic.morel.util.Pair;
-
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.calcite.util.mapping.IntPair;
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import java.util.AbstractList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
+import net.hydromatic.morel.util.Pair;
+import org.apache.calcite.util.mapping.IntPair;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Position of a parse-tree node. */
 public class Pos {
@@ -41,8 +39,8 @@ public class Pos {
   public final int endColumn;
 
   /** Creates a Pos. */
-  public Pos(String file, int startLine, int startColumn,
-      int endLine, int endColumn) {
+  public Pos(
+      String file, int startLine, int startColumn, int endLine, int endColumn) {
     this.file = file;
     this.startLine = startLine;
     this.startColumn = startColumn;
@@ -57,38 +55,45 @@ public class Pos {
     return new Pos(file, start.source, start.target, end.source, end.target);
   }
 
-  /** Creates a Pos from a filename and a string with a delimiter character.
-   * The delimiter must occur exactly twice in the string. */
-  public static Pair<@NonNull String, @NonNull Pos> split(String s,
-      char delimiter, String file) {
+  /**
+   * Creates a Pos from a filename and a string with a delimiter character. The
+   * delimiter must occur exactly twice in the string.
+   */
+  public static Pair<@NonNull String, @NonNull Pos> split(
+      String s, char delimiter, String file) {
     final int i = s.indexOf(delimiter);
     final int j = s.indexOf(delimiter, i + 1);
     final int k = s.indexOf(delimiter, j + 1);
     if (i < 0 || j <= i || k >= 0) {
-      throw new IllegalArgumentException("expected exactly two occurrences "
-          + "of delimiter, '" + delimiter + "'");
+      throw new IllegalArgumentException(
+          "expected exactly two occurrences "
+              + "of delimiter, '"
+              + delimiter
+              + "'");
     }
-    final String s2 = s.substring(0, i)
-        + s.substring(i + 1, j)
-        + s.substring(j + 1);
+    final String s2 =
+        s.substring(0, i) + s.substring(i + 1, j) + s.substring(j + 1);
     final Pos pos = of(s2, file, i, j - 1);
     return Pair.of(s2, pos);
   }
 
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     return Objects.hash(startLine, startColumn, endLine, endColumn);
   }
 
-  @Override public boolean equals(Object o) {
+  @Override
+  public boolean equals(Object o) {
     return o == this
         || o instanceof Pos
-        && this.startLine == ((Pos) o).startLine
-        && this.startColumn == ((Pos) o).startColumn
-        && this.endLine == ((Pos) o).endLine
-        && this.endColumn == ((Pos) o).endColumn;
+            && this.startLine == ((Pos) o).startLine
+            && this.startColumn == ((Pos) o).startColumn
+            && this.endLine == ((Pos) o).endLine
+            && this.endColumn == ((Pos) o).endColumn;
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return describeTo(new StringBuilder()).toString();
   }
 
@@ -99,10 +104,7 @@ public class Pos {
         .append('.')
         .append(startColumn);
     if (endColumn != startColumn + 1 || endLine != startLine) {
-      buf.append('-')
-          .append(endLine)
-          .append('.')
-          .append(endColumn);
+      buf.append('-').append(endLine).append('.').append(endColumn);
     }
     return buf;
   }
@@ -113,9 +115,7 @@ public class Pos {
    */
   public static Pos sum(Iterable<Pos> poses) {
     final List<Pos> list =
-        poses instanceof List
-            ? (List<Pos>) poses
-            : Lists.newArrayList(poses);
+        poses instanceof List ? (List<Pos>) poses : Lists.newArrayList(poses);
     return sum_(list);
   }
 
@@ -129,48 +129,45 @@ public class Pos {
   }
 
   /**
-   * Combines a list of parser positions to create a position which spans
-   * from the beginning of the first to the end of the last.
+   * Combines a list of parser positions to create a position which spans from
+   * the beginning of the first to the end of the last.
    */
   private static Pos sum_(final List<Pos> positions) {
     switch (positions.size()) {
-    case 0:
-      throw new AssertionError();
-    case 1:
-      return positions.get(0);
-    default:
-      final List<Pos> poses = new AbstractList<Pos>() {
-        public Pos get(int index) {
-          return positions.get(index + 1);
-        }
-        public int size() {
-          return positions.size() - 1;
-        }
-      };
-      final Pos p = positions.get(0);
-      return sum(poses, p.startLine, p.startColumn, p.endLine, p.endColumn);
+      case 0:
+        throw new AssertionError();
+      case 1:
+        return positions.get(0);
+      default:
+        final List<Pos> poses =
+            new AbstractList<Pos>() {
+              public Pos get(int index) {
+                return positions.get(index + 1);
+              }
+
+              public int size() {
+                return positions.size() - 1;
+              }
+            };
+        final Pos p = positions.get(0);
+        return sum(poses, p.startLine, p.startColumn, p.endLine, p.endColumn);
     }
   }
-
 
   /**
    * Computes the parser position which is the sum of an array of parser
    * positions and of a parser position represented by (line, column, endLine,
    * endColumn).
    *
-   * @param poses     Array of parser positions
-   * @param line      Start line
-   * @param column    Start column
-   * @param endLine   End line
+   * @param poses Array of parser positions
+   * @param line Start line
+   * @param column Start column
+   * @param endLine End line
    * @param endColumn End column
    * @return Sum of parser positions
    */
   private static Pos sum(
-      Iterable<Pos> poses,
-      int line,
-      int column,
-      int endLine,
-      int endColumn) {
+      Iterable<Pos> poses, int line, int column, int endLine, int endColumn) {
     int testLine;
     int testColumn;
     String file = Pos.ZERO.file;
@@ -200,16 +197,14 @@ public class Pos {
     int startLine = this.startLine;
     int startColumn = this.startColumn;
     if (pos.startLine < startLine
-        || pos.startLine == startLine
-        && pos.startColumn < startColumn) {
+        || pos.startLine == startLine && pos.startColumn < startColumn) {
       startLine = pos.startLine;
       startColumn = pos.startColumn;
     }
     int endLine = pos.endLine;
     int endColumn = pos.endColumn;
     if (this.endLine > endLine
-        || this.endLine == endLine
-        && this.endColumn > endColumn) {
+        || this.endLine == endLine && this.endColumn > endColumn) {
       endLine = this.endLine;
       endColumn = this.endColumn;
     }

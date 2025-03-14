@@ -23,14 +23,18 @@ public interface TypedValue {
   /** Returns the value cast as a particular type. */
   <V> V valueAs(Class<V> clazz);
 
-  /** Returns the value of a field, identified by name,
-   * cast as a particular type. */
+  /**
+   * Returns the value of a field, identified by name, cast as a particular
+   * type.
+   */
   default <V> V fieldValueAs(String fieldName, Class<V> clazz) {
     throw new UnsupportedOperationException("not a record");
   }
 
-  /** Returns the value of a field, identified by ordinal,
-   * cast as a particular type. */
+  /**
+   * Returns the value of a field, identified by ordinal, cast as a particular
+   * type.
+   */
   default <V> V fieldValueAs(int fieldIndex, Class<V> clazz) {
     throw new UnsupportedOperationException("not a record");
   }
@@ -38,9 +42,11 @@ public interface TypedValue {
   /** Key from which the type of this value can be constructed. */
   Type.Key typeKey();
 
-  /** Tries to expand the type to include the given field name.
+  /**
+   * Tries to expand the type to include the given field name.
    *
-   * <p>Returns this value or an expanded value. */
+   * <p>Returns this value or an expanded value.
+   */
   default TypedValue discoverField(TypeSystem typeSystem, String fieldName) {
     return this;
   }

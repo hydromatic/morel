@@ -18,16 +18,14 @@
  */
 package net.hydromatic.morel.util;
 
-import net.hydromatic.morel.ast.Ast;
-import net.hydromatic.morel.ast.Op;
-
-import java.util.List;
-import java.util.function.Function;
-
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.util.Static.skip;
 
-import static java.util.Objects.requireNonNull;
+import java.util.List;
+import java.util.function.Function;
+import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.ast.Op;
 
 /**
  * Enable creating right-deep trees.
@@ -75,8 +73,8 @@ public abstract class Folder<E> {
   }
 
   /** Adds an element and operator to a non-empty list. */
-  private static <E> void append(List<Folder<E>> list, E e,
-      Function<E, Folder<E>> fn) {
+  private static <E> void append(
+      List<Folder<E>> list, E e, Function<E, Folder<E>> fn) {
     if (list.isEmpty()) {
       throw new AssertionError();
     }
@@ -86,8 +84,10 @@ public abstract class Folder<E> {
     list.add(end(e));
   }
 
-  /** Creates a folder that combines an expression with whatever follows
-   * using an infix operator. */
+  /**
+   * Creates a folder that combines an expression with whatever follows using an
+   * infix operator.
+   */
   private static Folder<Ast.Exp> op(Ast.Exp exp, final Op at) {
     return new Folder<Ast.Exp>(exp) {
       Ast.Exp combine(List<Folder<Ast.Exp>> list) {
@@ -97,9 +97,11 @@ public abstract class Folder<E> {
     };
   }
 
-  /** Sub-class of {@code Folder} that marks the end of a list.
+  /**
+   * Sub-class of {@code Folder} that marks the end of a list.
    *
-   * @param <E> element type */
+   * @param <E> element type
+   */
   private static class End<E> extends Folder<E> {
     End(E e) {
       super(e);

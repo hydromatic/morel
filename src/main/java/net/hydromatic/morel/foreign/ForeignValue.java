@@ -21,14 +21,17 @@ package net.hydromatic.morel.foreign;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 
-/** External value.
+/**
+ * External value.
  *
  * <p>A common example is a table backed by a JDBC database, that manifests in
  * ML as a list of records.
  *
- * @see CalciteForeignValue */
+ * @see CalciteForeignValue
+ */
 public interface ForeignValue {
   Type type(TypeSystem typeSystem);
+
   Object value();
 }
 

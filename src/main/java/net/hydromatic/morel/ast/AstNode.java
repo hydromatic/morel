@@ -30,7 +30,8 @@ public abstract class AstNode {
     this.op = requireNonNull(op);
   }
 
-  /** Converts this node into an ML string.
+  /**
+   * Converts this node into an ML string.
    *
    * <p>The purpose of this string is debugging. If you want to generate an
    * expression, use {@link #unparse}, which will insert parentheses as
@@ -40,7 +41,8 @@ public abstract class AstNode {
    * result; so the only reason to override is if they can do it more
    * efficiently.
    */
-  @Override public final String toString() {
+  @Override
+  public final String toString() {
     // Marked final because you should override unparse, not toString
     return unparse(new AstWriter());
   }
@@ -52,14 +54,18 @@ public abstract class AstNode {
 
   abstract AstWriter unparse(AstWriter w, int left, int right);
 
-  /** Accepts a shuttle, calling the
-   * {@link net.hydromatic.morel.ast.Shuttle#visit}
-   * method appropriate to the type of this node, and returning the result. */
+  /**
+   * Accepts a shuttle, calling the {@link
+   * net.hydromatic.morel.ast.Shuttle#visit} method appropriate to the type of
+   * this node, and returning the result.
+   */
   public abstract AstNode accept(Shuttle shuttle);
 
-  /** Accepts a visitor, calling the
-   * {@link net.hydromatic.morel.ast.Shuttle#visit}
-   * method appropriate to the type of this node, and returning the result. */
+  /**
+   * Accepts a visitor, calling the {@link
+   * net.hydromatic.morel.ast.Shuttle#visit} method appropriate to the type of
+   * this node, and returning the result.
+   */
   public abstract void accept(Visitor visitor);
 }
 

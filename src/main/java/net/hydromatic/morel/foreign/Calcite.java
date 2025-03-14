@@ -18,6 +18,11 @@
  */
 package net.hydromatic.morel.foreign;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
@@ -25,9 +30,6 @@ import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.util.ThreadLocals;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -52,10 +54,6 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-
 /** Runtime context. */
 public class Calcite {
   final RelBuilder relBuilder;
@@ -66,10 +64,11 @@ public class Calcite {
   protected Calcite() {
     rootSchema = CalciteSchema.createRootSchema(false).plus();
     relBuilder =
-        RelBuilder.create(Frameworks.newConfigBuilder()
-            .typeSystem(new RaggedTypeSystem())
-            .defaultSchema(rootSchema)
-            .build());
+        RelBuilder.create(
+            Frameworks.newConfigBuilder()
+                .typeSystem(new RaggedTypeSystem())
+                .defaultSchema(rootSchema)
+                .build());
     typeFactory = (JavaTypeFactory) relBuilder.getTypeFactory();
     dataContext = new EmptyDataContext(typeFactory, rootSchema);
   }
@@ -89,8 +88,10 @@ public class Calcite {
     return relBuilder.transform(c -> c);
   }
 
-  /** Creates a {@code Code} that evaluates a Calcite relational expression,
-   * converting it to Morel list type {@code type}. */
+  /**
+   * Creates a {@code Code} that evaluates a Calcite relational expression,
+   * converting it to Morel list type {@code type}.
+   */
   public Code code(Environment env, RelNode rel, Type type) {
     // Transform the relational expression, converting sub-queries. For example,
     // RexSubQuery.IN becomes a Join.
@@ -100,8 +101,9 @@ public class Calcite {
             new DecorrelateProgram());
     final RelOptPlanner planner = rel.getCluster().getPlanner();
     final RelTraitSet traitSet = rel.getCluster().traitSet();
-    final RelNode rel2 = program.run(planner, rel, traitSet,
-        ImmutableList.of(), ImmutableList.of());
+    final RelNode rel2 =
+        program.run(
+            planner, rel, traitSet, ImmutableList.of(), ImmutableList.of());
 
     final Function<Enumerable<Object[]>, List<Object>> converter =
         Converters.fromEnumerable(rel, type);
@@ -110,12 +112,17 @@ public class Calcite {
 
   /** Copied from {@link Programs}. */
   private static class DecorrelateProgram implements Program {
-    @Override public RelNode run(RelOptPlanner planner, RelNode rel,
+    @Override
+    public RelNode run(
+        RelOptPlanner planner,
+        RelNode rel,
         RelTraitSet requiredOutputTraits,
         List<RelOptMaterialization> materializations,
         List<RelOptLattice> lattices) {
       final CalciteConnectionConfig config =
-          planner.getContext().maybeUnwrap(CalciteConnectionConfig.class)
+          planner
+              .getContext()
+              .maybeUnwrap(CalciteConnectionConfig.class)
               .orElse(CalciteConnectionConfig.DEFAULT);
       if (config.forceDecorrelate()) {
         final RelBuilder relBuilder =
@@ -126,20 +133,23 @@ public class Calcite {
     }
   }
 
-  /** Extension to Calcite context that remembers the foreign value
-   * for each name. */
+  /**
+   * Extension to Calcite context that remembers the foreign value for each
+   * name.
+   */
   private static class CalciteMap extends Calcite {
     final ImmutableMap<String, ForeignValue> valueMap;
 
     CalciteMap(Map<String, DataSet> dataSetMap) {
       final ImmutableMap.Builder<String, ForeignValue> b =
           ImmutableMap.builder();
-      dataSetMap.forEach((name, dataSet) ->
-          b.put(name, dataSet.foreignValue(this)));
+      dataSetMap.forEach(
+          (name, dataSet) -> b.put(name, dataSet.foreignValue(this)));
       this.valueMap = b.build();
     }
 
-    @Override public Map<String, ForeignValue> foreignValues() {
+    @Override
+    public Map<String, ForeignValue> foreignValues() {
       return valueMap;
     }
   }
@@ -171,15 +181,20 @@ public class Calcite {
     }
   }
 
-  /** Evaluates a Calcite relational expression,
-   * converting it to Morel list type {@code type}. */
+  /**
+   * Evaluates a Calcite relational expression, converting it to Morel list type
+   * {@code type}.
+   */
   private static class CalciteCode implements Code {
     final DataContext dataContext;
     final RelNode rel;
     final Environment env;
     final Function<Enumerable<Object[]>, List<Object>> converter;
 
-    CalciteCode(DataContext dataContext, RelNode rel, Environment env,
+    CalciteCode(
+        DataContext dataContext,
+        RelNode rel,
+        Environment env,
         Function<Enumerable<Object[]>, List<Object>> converter) {
       this.dataContext = dataContext;
       this.rel = rel;
@@ -188,19 +203,25 @@ public class Calcite {
     }
 
     // to help with debugging
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return Codes.describe(this);
     }
 
-    @Override public Describer describe(Describer describer) {
-      return describer.start("calcite", d ->
-          d.arg("plan", RelOptUtil.toString(rel)));
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "calcite", d -> d.arg("plan", RelOptUtil.toString(rel)));
     }
 
-    @Override public Object eval(EvalEnv evalEnv) {
-      return ThreadLocals.let(CalciteFunctions.THREAD_EVAL_ENV,
-          evalEnv, () ->
-              ThreadLocals.mutate(CalciteFunctions.THREAD_ENV,
+    @Override
+    public Object eval(EvalEnv evalEnv) {
+      return ThreadLocals.let(
+          CalciteFunctions.THREAD_EVAL_ENV,
+          evalEnv,
+          () ->
+              ThreadLocals.mutate(
+                  CalciteFunctions.THREAD_ENV,
                   c -> c.withEnv(env),
                   () -> {
                     final Interpreter interpreter =
@@ -210,10 +231,12 @@ public class Calcite {
     }
   }
 
-  /** Type system whose
-   * {@link #shouldConvertRaggedUnionTypesToVarying()} returns {@code true}.
+  /**
+   * Type system whose {@link #shouldConvertRaggedUnionTypesToVarying()} returns
+   * {@code true}.
    *
-   * <p>Calcite requires it to have a public default constructor. */
+   * <p>Calcite requires it to have a public default constructor.
+   */
   public static class RaggedTypeSystem extends DelegatingTypeSystem {
     public RaggedTypeSystem() {
       super(RelDataTypeSystem.DEFAULT);

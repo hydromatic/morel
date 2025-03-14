@@ -18,13 +18,14 @@
  */
 package net.hydromatic.morel.type;
 
+import java.util.function.UnaryOperator;
 import net.hydromatic.morel.ast.Op;
 
-import java.util.function.UnaryOperator;
-
-/** Type that is a place-holder for a type constructor that has no arguments;
- * for example, "NONE" in "datatype 'a option = NONE | SOME of 'a" would have
- * dummy type. */
+/**
+ * Type that is a place-holder for a type constructor that has no arguments; for
+ * example, "NONE" in "datatype 'a option = NONE | SOME of 'a" would have dummy
+ * type.
+ */
 public enum DummyType implements Type {
   INSTANCE;
 
@@ -40,8 +41,8 @@ public enum DummyType implements Type {
     return typeVisitor.visit(this);
   }
 
-  @Override public DummyType copy(TypeSystem typeSystem,
-      UnaryOperator<Type> transform) {
+  @Override
+  public DummyType copy(TypeSystem typeSystem, UnaryOperator<Type> transform) {
     return this;
   }
 }

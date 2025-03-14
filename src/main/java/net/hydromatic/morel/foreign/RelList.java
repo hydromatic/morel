@@ -19,30 +19,33 @@
 package net.hydromatic.morel.foreign;
 
 import com.google.common.base.Suppliers;
-import org.apache.calcite.DataContext;
-import org.apache.calcite.interpreter.Interpreter;
-import org.apache.calcite.rel.RelNode;
-
 import java.util.AbstractList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.apache.calcite.DataContext;
+import org.apache.calcite.interpreter.Interpreter;
+import org.apache.calcite.rel.RelNode;
 
-/** A list whose contents are computed by evaluating a relational
- * expression. */
+/** A list whose contents are computed by evaluating a relational expression. */
 public class RelList extends AbstractList<Object> {
   public final RelNode rel;
 
   private final Supplier<List<Object>> supplier;
 
-  RelList(RelNode rel, DataContext dataContext,
+  RelList(
+      RelNode rel,
+      DataContext dataContext,
       Function<Object[], Object> converter) {
     this.rel = rel;
     //noinspection FunctionalExpressionCanBeFolded
-    supplier = Suppliers.memoize(() ->
-        new Interpreter(dataContext, rel)
-            .select(converter::apply)
-            .toList())::get;
+    supplier =
+        Suppliers.memoize(
+                () ->
+                    new Interpreter(dataContext, rel)
+                        .select(converter::apply)
+                        .toList())
+            ::get;
   }
 
   public Object get(int index) {

@@ -20,88 +20,101 @@ package net.hydromatic.morel.eval;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
-
 import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Property.
+/**
+ * Property.
  *
  * @see Session#map
  */
 public enum Prop {
-  /** File property "directory" is the path of the directory that the
-   * {@code file} variable maps to in this connection.
+  /**
+   * File property "directory" is the path of the directory that the {@code
+   * file} variable maps to in this connection.
    *
-   * <p>The default value is the empty string;
-   * many tests use the "src/test/resources" directory;
-   * when launched via the {@code morel} shell script, the default value is the
-   * shell's current directory. */
+   * <p>The default value is the empty string; many tests use the
+   * "src/test/resources" directory; when launched via the {@code morel} shell
+   * script, the default value is the shell's current directory.
+   */
   DIRECTORY("directory", File.class, new File("")),
 
-  /** File property "scriptDirectory" is the path of the directory where the
+  /**
+   * File property "scriptDirectory" is the path of the directory where the
    * {@code use} command looks for scripts. When running a script, it is
-   * generally set to the directory that contains the script. */
+   * generally set to the directory that contains the script.
+   */
   SCRIPT_DIRECTORY("scriptDirectory", File.class, new File("")),
 
-  /** Boolean property "hybrid" controls whether to try to create a hybrid
+  /**
+   * Boolean property "hybrid" controls whether to try to create a hybrid
    * execution plan that uses Apache Calcite relational algebra wherever
-   * possible. Default is false. */
+   * possible. Default is false.
+   */
   HYBRID("hybrid", Boolean.class, false),
 
   /** Maximum number of inlining passes. */
   INLINE_PASS_COUNT("inlinePassCount", Integer.class, 5),
 
-  /** Boolean property "matchCoverageEnabled" controls whether to check the
+  /**
+   * Boolean property "matchCoverageEnabled" controls whether to check the
    * coverage of patterns. If true (the default), Morel warns if patterns are
-   * redundant and gives errors if patterns are not exhaustive. If false,
-   * Morel does not analyze pattern coverage, and therefore will not give
-   * warnings or errors. */
+   * redundant and gives errors if patterns are not exhaustive. If false, Morel
+   * does not analyze pattern coverage, and therefore will not give warnings or
+   * errors.
+   */
   MATCH_COVERAGE_ENABLED("matchCoverageEnabled", Boolean.class, true),
 
   /** Integer property "optionalInt" is for testing. Default is null. */
   OPTIONAL_INT("optionalInt", Integer.class, null),
 
-  /** Integer property "printDepth" controls printing.
-   * The depth of nesting of recursive data structure at which ellipsis begins.
+  /**
+   * Integer property "printDepth" controls printing. The depth of nesting of
+   * recursive data structure at which ellipsis begins.
    *
-   * <p>It is based upon the "printDepth" property in the
-   * <a href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL signature</a>
-   * of the Standard Basis Library.
-   * Default is 5. */
+   * <p>It is based upon the "printDepth" property in the <a
+   * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
+   * signature</a> of the Standard Basis Library. Default is 5.
+   */
   PRINT_DEPTH("printDepth", Integer.class, 5),
 
-  /** Integer property "printLength" controls printing.
-   * The length of lists at which ellipsis begins.
+  /**
+   * Integer property "printLength" controls printing. The length of lists at
+   * which ellipsis begins.
    *
-   * <p>It is based upon the "printLength" property in the
-   * <a href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL signature</a>
-   * of the Standard Basis Library.
+   * <p>It is based upon the "printLength" property in the <a
+   * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
+   * signature</a> of the Standard Basis Library.
    *
-   * <p>Default is 12. */
+   * <p>Default is 12.
+   */
   PRINT_LENGTH("printLength", Integer.class, 12),
 
-  /** Boolean property "relationalize" is
-   * whether to convert to relational algebra.
-   * Default is false. */
+  /**
+   * Boolean property "relationalize" is whether to convert to relational
+   * algebra. Default is false.
+   */
   RELATIONALIZE("relationalize", Boolean.class, false),
 
-  /** Integer property "stringDepth" is
-   * the length of strings at which ellipsis begins.
+  /**
+   * Integer property "stringDepth" is the length of strings at which ellipsis
+   * begins.
    *
-   * <p>It is based upon the "stringDepth" property in the
-   * <a href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL signature</a>
-   * of the Standard Basis Library.
-   * Default is 70. */
+   * <p>It is based upon the "stringDepth" property in the <a
+   * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
+   * signature</a> of the Standard Basis Library. Default is 70.
+   */
   STRING_DEPTH("stringDepth", Integer.class, 70),
 
-  /** Integer property "lineWidth" controls printing.
-   * The length at which lines are wrapped.
+  /**
+   * Integer property "lineWidth" controls printing. The length at which lines
+   * are wrapped.
    *
-   * <p>It is based upon the "linewidth" property in the
-   * <a href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL signature</a>
-   * of the Standard Basis Library.
-   * Default is 79. */
+   * <p>It is based upon the "linewidth" property in the <a
+   * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
+   * signature</a> of the Standard Basis Library. Default is 79.
+   */
   LINE_WIDTH("lineWidth", Integer.class, 79);
 
   public final String camelName;
@@ -123,7 +136,8 @@ public enum Prop {
     this.camelName = camelName;
     this.type = type;
     this.defaultValue = defaultValue;
-    assert CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, camelName)
+    assert CaseFormat.LOWER_CAMEL
+        .to(CaseFormat.UPPER_UNDERSCORE, camelName)
         .equals(name());
     if (type == Boolean.class) {
       assert defaultValue == null || defaultValue.getClass() == type;
@@ -134,8 +148,7 @@ public enum Prop {
     } else if (type == File.class) {
       assert defaultValue == null || defaultValue.getClass() == type;
     } else {
-      throw new AssertionError("not a valid property type: "
-          + type);
+      throw new AssertionError("not a valid property type: " + type);
     }
   }
 
@@ -186,16 +199,15 @@ public enum Prop {
   private <T> T typeValue(Object o) {
     if (o == null) {
       if (defaultValue == null) {
-        throw new RuntimeException("no value for property " + camelName
-            + " and no default value");
+        throw new RuntimeException(
+            "no value for property " + camelName + " and no default value");
       }
       return (T) defaultValue;
     }
     return (T) o;
   }
 
-  /** Sets the value of a property.
-   * Checks that its type is valid. */
+  /** Sets the value of a property. Checks that its type is valid. */
   public void set(Map<Prop, Object> map, Object value) {
     if (value != null && !type.isInstance(value)) {
       throw new RuntimeException("value for property must have type " + type);
@@ -203,8 +215,10 @@ public enum Prop {
     map.put(this, value);
   }
 
-  /** Removes the value of this property from a map, returning the previous
-   * value or null. */
+  /**
+   * Removes the value of this property from a map, returning the previous value
+   * or null.
+   */
   public Object remove(Map<Prop, Object> map) {
     return map.remove(this);
   }

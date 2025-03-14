@@ -18,11 +18,10 @@
  */
 package net.hydromatic.morel.type;
 
-import net.hydromatic.morel.ast.Op;
+import static java.util.Objects.requireNonNull;
 
 import java.util.function.UnaryOperator;
-
-import static java.util.Objects.requireNonNull;
+import net.hydromatic.morel.ast.Op;
 
 /** The type of a list value. */
 // TODO: remove this, and use datatype?
@@ -34,7 +33,8 @@ public class ListType extends BaseType {
     this.elementType = requireNonNull(elementType);
   }
 
-  @Override public Key key() {
+  @Override
+  public Key key() {
     return Keys.list(elementType.key());
   }
 
@@ -42,8 +42,8 @@ public class ListType extends BaseType {
     return typeVisitor.visit(this);
   }
 
-  @Override public ListType copy(TypeSystem typeSystem,
-      UnaryOperator<Type> transform) {
+  @Override
+  public ListType copy(TypeSystem typeSystem, UnaryOperator<Type> transform) {
     final Type elementType2 = elementType.copy(typeSystem, transform);
     return elementType2 == elementType
         ? this

@@ -18,16 +18,17 @@
  */
 package net.hydromatic.morel.type;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.Objects;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Unit;
 
-import java.util.Objects;
-
-import static java.util.Objects.requireNonNull;
-
-/** Binding of a name to a type and a value.
+/**
+ * Binding of a name to a type and a value.
  *
- * <p>Used in {@link net.hydromatic.morel.compile.Environment}. */
+ * <p>Used in {@link net.hydromatic.morel.compile.Environment}.
+ */
 public class Binding {
   public final Core.NamedPat id;
   public final Core.Exp exp;
@@ -35,8 +36,8 @@ public class Binding {
   /** If true, the binding is ignored by inlining. */
   public final boolean parameter;
 
-  private Binding(Core.NamedPat id, Core.Exp exp, Object value,
-      boolean parameter) {
+  private Binding(
+      Core.NamedPat id, Core.Exp exp, Object value, boolean parameter) {
     this.id = requireNonNull(id);
     this.exp = exp;
     this.value = requireNonNull(value);
@@ -56,23 +57,26 @@ public class Binding {
     return new Binding(id, null, value, false);
   }
 
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     return Objects.hash(id, exp, value);
   }
 
-  @Override public boolean equals(Object o) {
+  @Override
+  public boolean equals(Object o) {
     return this == o
         || o instanceof Binding
-        && id.equals(((Binding) o).id)
-        && Objects.equals(exp, ((Binding) o).exp)
-        && value.equals(((Binding) o).value);
+            && id.equals(((Binding) o).id)
+            && Objects.equals(exp, ((Binding) o).exp)
+            && value.equals(((Binding) o).value);
   }
 
   public Binding withParameter(boolean parameter) {
     return new Binding(id, exp, value, parameter);
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     if (exp != null) {
       return id + " = " + exp;
     } else if (value == Unit.INSTANCE) {

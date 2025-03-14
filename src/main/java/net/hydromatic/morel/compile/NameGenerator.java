@@ -39,7 +39,8 @@ public class NameGenerator {
 
   /** Returns the number of times that "name" has been used for a variable. */
   public int inc(String name) {
-    return nameCounts.computeIfAbsent(name, n -> new AtomicInteger(0))
+    return nameCounts
+        .computeIfAbsent(name, n -> new AtomicInteger(0))
         .getAndIncrement();
   }
 }

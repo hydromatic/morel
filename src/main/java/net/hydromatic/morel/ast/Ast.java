@@ -18,18 +18,20 @@
  */
 package net.hydromatic.morel.ast;
 
-import net.hydromatic.morel.util.ImmutablePairList;
-import net.hydromatic.morel.util.Ord;
-import net.hydromatic.morel.util.Pair;
-import net.hydromatic.morel.util.PairList;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.Iterables.getLast;
+import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.type.RecordType.ORDERING;
+import static net.hydromatic.morel.type.RecordType.mutableMap;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -39,26 +41,22 @@ import java.util.SortedMap;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import java.util.stream.Collectors;
-
-import static net.hydromatic.morel.ast.AstBuilder.ast;
-import static net.hydromatic.morel.type.RecordType.ORDERING;
-import static net.hydromatic.morel.type.RecordType.mutableMap;
-import static net.hydromatic.morel.util.Ord.forEachIndexed;
-import static net.hydromatic.morel.util.Pair.forEachIndexed;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.Iterables.getLast;
-
-import static java.util.Objects.requireNonNull;
+import net.hydromatic.morel.util.ImmutablePairList;
+import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Various sub-classes of AST nodes. */
 public class Ast {
   private Ast() {}
 
-  /** Base class for a pattern.
+  /**
+   * Base class for a pattern.
    *
-   * <p>For example, "x" in "val x = 5" is a {@link IdPat};
-   * the "(x, y) in "val (x, y) = makePair 1 2" is a {@link TuplePat}. */
+   * <p>For example, "x" in "val x = 5" is a {@link IdPat}; the "(x, y) in "val
+   * (x, y) = makePair 1 2" is a {@link TuplePat}.
+   */
   public abstract static class Pat extends AstNode {
     Pat(Pos pos, Op op) {
       super(pos, op);
@@ -68,7 +66,8 @@ public class Ast {
       // no args
     }
 
-    @Override public abstract Pat accept(Shuttle shuttle);
+    @Override
+    public abstract Pat accept(Shuttle shuttle);
 
     public void visit(Consumer<Pat> consumer) {
       consumer.accept(this);
@@ -76,9 +75,11 @@ public class Ast {
     }
   }
 
-  /** Named pattern, the pattern analog of the {@link Id} expression.
+  /**
+   * Named pattern, the pattern analog of the {@link Id} expression.
    *
-   * <p>For example, "x" in "val x = 5". */
+   * <p>For example, "x" in "val x = 5".
+   */
   public static class IdPat extends Pat {
     public final String name;
 
@@ -91,7 +92,8 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -100,9 +102,11 @@ public class Ast {
     }
   }
 
-  /** Literal pattern, the pattern analog of the {@link Literal} expression.
+  /**
+   * Literal pattern, the pattern analog of the {@link Literal} expression.
    *
-   * <p>For example, "0" in "fun fact 0 = 1 | fact n = n * fact (n - 1)".*/
+   * <p>For example, "0" in "fun fact 0 = 1 | fact n = n * fact (n - 1)".
+   */
   @SuppressWarnings("rawtypes")
   public static class LiteralPat extends Pat {
     public final Comparable value;
@@ -110,28 +114,32 @@ public class Ast {
     LiteralPat(Pos pos, Op op, Comparable value) {
       super(pos, op);
       this.value = requireNonNull(value);
-      checkArgument(op == Op.BOOL_LITERAL_PAT
-          || op == Op.CHAR_LITERAL_PAT
-          || op == Op.INT_LITERAL_PAT
-          || op == Op.REAL_LITERAL_PAT
-          || op == Op.STRING_LITERAL_PAT);
+      checkArgument(
+          op == Op.BOOL_LITERAL_PAT
+              || op == Op.CHAR_LITERAL_PAT
+              || op == Op.INT_LITERAL_PAT
+              || op == Op.REAL_LITERAL_PAT
+              || op == Op.STRING_LITERAL_PAT);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return value.hashCode();
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
       return o == this
           || o instanceof LiteralPat
-          && this.value.equals(((LiteralPat) o).value);
+              && this.value.equals(((LiteralPat) o).value);
     }
 
     public Pat accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -140,19 +148,23 @@ public class Ast {
     }
   }
 
-  /** Wildcard pattern.
+  /**
+   * Wildcard pattern.
    *
-   * <p>For example, "{@code _}" in "{@code fn foo _ => 42}". */
+   * <p>For example, "{@code _}" in "{@code fn foo _ => 42}".
+   */
   public static class WildcardPat extends Pat {
     WildcardPat(Pos pos) {
       super(pos, Op.WILDCARD_PAT);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return "_".hashCode();
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
       return o instanceof WildcardPat;
     }
 
@@ -160,7 +172,8 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -184,37 +197,42 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Pat> action) {
       action.accept(p0, 0);
       action.accept(p1, 1);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, p0, op, p1, right);
     }
 
-    /** Creates a copy of this {@code InfixPat} with given contents
-     * and same operator,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code InfixPat} with given contents and same
+     * operator, or {@code this} if the contents are the same.
+     */
     public InfixPat copy(Pat p0, Pat p1) {
-      return this.p0.equals(p0)
-          && this.p1.equals(p1)
+      return this.p0.equals(p0) && this.p1.equals(p1)
           ? this
           : ast.infixPat(pos, op, p0, p1);
     }
   }
 
-  /** Type constructor pattern with an argument.
+  /**
+   * Type constructor pattern with an argument.
    *
-   * <p>For example, in "fun nvl NIL = 0 | OPTION x = x",
-   * "OPTION x" is a type constructor pattern that binds "x";
-   * and "NIL" is a type constructor pattern whose {@link #pat} is null.
+   * <p>For example, in "fun nvl NIL = 0 | OPTION x = x", "OPTION x" is a type
+   * constructor pattern that binds "x"; and "NIL" is a type constructor pattern
+   * whose {@link #pat} is null.
    *
-   * @see Con0Pat */
+   * @see Con0Pat
+   */
   public static class ConPat extends Pat {
     public final Id tyCon;
     public final Pat pat;
@@ -229,33 +247,39 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Pat> action) {
       action.accept(pat, 0);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, tyCon, op, pat, right);
     }
 
-    /** Creates a copy of this {@code ConPat} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code ConPat} with given contents, or {@code
+     * this} if the contents are the same.
+     */
     public ConPat copy(Id tyCon, Pat pat) {
-      return this.tyCon.equals(tyCon)
-          && this.pat.equals(pat)
+      return this.tyCon.equals(tyCon) && this.pat.equals(pat)
           ? this
           : ast.conPat(pos, tyCon, pat);
     }
   }
 
-  /** Layered pattern.
+  /**
+   * Layered pattern.
    *
-   * <p>For example, in "val h as (i, j) = (1, 2)",
-   * if the pattern matches, "h" is assigned the whole tuple,
-   * and "i" and "j" are assigned the left and right members of the tuple. */
+   * <p>For example, in "val h as (i, j) = (1, 2)", if the pattern matches, "h"
+   * is assigned the whole tuple, and "i" and "j" are assigned the left and
+   * right members of the tuple.
+   */
   public static class AsPat extends Pat {
     public final IdPat id;
     public final Pat pat;
@@ -270,35 +294,41 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Pat> action) {
       action.accept(id, 0);
       action.accept(pat, 1);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, id, op, pat, right);
     }
 
-    /** Creates a copy of this {@code AsPat} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code AsPat} with given contents, or {@code this}
+     * if the contents are the same.
+     */
     public AsPat copy(IdPat id, Pat pat) {
-      return this.id.equals(id)
-          && this.pat.equals(pat)
+      return this.id.equals(id) && this.pat.equals(pat)
           ? this
           : ast.asPat(pos, id, pat);
     }
   }
 
-  /** Type constructor pattern with no argument.
+  /**
+   * Type constructor pattern with no argument.
    *
-   * <p>For example, in "fun nvl NIL = 0 | OPTION x = x",
-   * "NIL" is a zero-arg type constructor pattern.
+   * <p>For example, in "fun nvl NIL = 0 | OPTION x = x", "NIL" is a zero-arg
+   * type constructor pattern.
    *
-   * @see ConPat */
+   * @see ConPat
+   */
   public static class Con0Pat extends Pat {
     public final Id tyCon;
 
@@ -311,26 +341,30 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return tyCon.unparse(w, left, right);
     }
 
-    /** Creates a copy of this {@code Con0Pat} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code Con0Pat} with given contents, or {@code
+     * this} if the contents are the same.
+     */
     public Con0Pat copy(Id tyCon) {
-      return this.tyCon.equals(tyCon)
-          ? this
-          : ast.con0Pat(pos, tyCon);
+      return this.tyCon.equals(tyCon) ? this : ast.con0Pat(pos, tyCon);
     }
   }
 
-  /** Tuple pattern, the pattern analog of the {@link Tuple} expression.
+  /**
+   * Tuple pattern, the pattern analog of the {@link Tuple} expression.
    *
-   * <p>For example, "(x, y)" in "fun sum (x, y) = x + y". */
+   * <p>For example, "(x, y)" in "fun sum (x, y) = x + y".
+   */
   public static class TuplePat extends Pat {
     public final List<Pat> args;
 
@@ -343,32 +377,37 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Pat> action) {
       forEachIndexed(args, action);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       w.append("(");
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
     }
 
-    /** Creates a copy of this {@code TuplePat} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code TuplePat} with given contents, or {@code
+     * this} if the contents are the same.
+     */
     public TuplePat copy(List<Pat> args) {
-      return this.args.equals(args)
-          ? this
-          : ast.tuplePat(pos, args);
+      return this.args.equals(args) ? this : ast.tuplePat(pos, args);
     }
   }
 
-  /** List pattern, the pattern analog of the {@link ListExp} expression.
+  /**
+   * List pattern, the pattern analog of the {@link ListExp} expression.
    *
-   * <p>For example, "[x, y]" in "fun sum [x, y] = x + y". */
+   * <p>For example, "[x, y]" in "fun sum [x, y] = x + y".
+   */
   public static class ListPat extends Pat {
     public final List<Pat> args;
 
@@ -381,26 +420,29 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Pat> action) {
       forEachIndexed(args, action);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       w.append("[");
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append("]");
     }
 
-    /** Creates a copy of this {@code ListPat} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code ListPat} with given contents, or {@code
+     * this} if the contents are the same.
+     */
     public ListPat copy(List<Pat> args) {
-      return this.args.equals(args)
-          ? this
-          : ast.listPat(pos, args);
+      return this.args.equals(args) ? this : ast.listPat(pos, args);
     }
   }
 
@@ -420,20 +462,26 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Pat> action) {
       forEachIndexed(args.values(), action);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
       Ord.forEachIndexed( // lint:skip
           args,
           (i, k, v) ->
-          w.append(i > 0 ? ", " : "").append(k).append(" = ").append(v, 0, 0));
+              w.append(i > 0 ? ", " : "")
+                  .append(k)
+                  .append(" = ")
+                  .append(v, 0, 0));
       if (ellipsis) {
         w.append(args.isEmpty() ? "..." : ", ...");
       }
@@ -441,16 +489,17 @@ public class Ast {
     }
 
     public RecordPat copy(boolean ellipsis, Map<String, ? extends Pat> args) {
-      return this.ellipsis == ellipsis
-          && this.args.equals(args)
+      return this.ellipsis == ellipsis && this.args.equals(args)
           ? this
           : ast.recordPat(pos, ellipsis, args);
     }
   }
 
-  /** Pattern that is a pattern annotated with a type.
+  /**
+   * Pattern that is a pattern annotated with a type.
    *
-   * <p>For example, "x : int" in "val x : int = 5". */
+   * <p>For example, "x : int" in "val x : int = 5".
+   */
   public static class AnnotatedPat extends Pat {
     public final Pat pat;
     public final Type type;
@@ -465,7 +514,8 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -473,15 +523,17 @@ public class Ast {
       return w.infix(left, pat, op, type, right);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Pat> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Pat> action) {
       action.accept(pat, 0);
     }
 
-    /** Creates a copy of this {@code AnnotatedPat} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code AnnotatedPat} with given contents, or
+     * {@code this} if the contents are the same.
+     */
     public AnnotatedPat copy(Pat pat, Type type) {
-      return this.pat.equals(pat)
-          && this.type.equals(type)
+      return this.pat.equals(pat) && this.type.equals(type)
           ? this
           : ast.annotatedPat(pos, pat, type);
     }
@@ -494,7 +546,8 @@ public class Ast {
       super(pos, op);
     }
 
-    @Override public abstract Type accept(Shuttle shuttle);
+    @Override
+    public abstract Type accept(Shuttle shuttle);
   }
 
   /** Parse tree node of an expression annotated with a type. */
@@ -509,11 +562,13 @@ public class Ast {
       this.exp = requireNonNull(exp);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return Objects.hash(type, exp);
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return this == obj
           || obj instanceof AnnotatedExp
               && type.equals(((AnnotatedExp) obj).type)
@@ -524,7 +579,8 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -545,38 +601,40 @@ public class Ast {
       this.name = requireNonNull(name);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return Objects.hash(types, name);
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return obj == this
           || obj instanceof NamedType
-          && types.equals(((NamedType) obj).types)
-          && name.equals(((NamedType) obj).name);
+              && types.equals(((NamedType) obj).types)
+              && name.equals(((NamedType) obj).name);
     }
 
     public Type accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
       switch (types.size()) {
-      case 0:
-        return w.id(name);
-      case 1:
-        return w.append(types.get(0), left, op.left)
-            .append(" ").id(name);
-      default:
-        w.append("(");
-        forEachIndexed(types, (type, i) ->
-            w.append(i == 0 ? "" : ", ").append(type, 0, 0));
-        return w.append(") ")
-            .id(name);
+        case 0:
+          return w.id(name);
+        case 1:
+          return w.append(types.get(0), left, op.left).append(" ").id(name);
+        default:
+          w.append("(");
+          forEachIndexed(
+              types,
+              (type, i) -> w.append(i == 0 ? "" : ", ").append(type, 0, 0));
+          return w.append(") ").id(name);
       }
     }
   }
@@ -591,21 +649,23 @@ public class Ast {
       this.name = requireNonNull(name);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return name.hashCode();
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
       return o == this
-          || o instanceof TyVar
-          && this.name.equals(((TyVar) o).name);
+          || o instanceof TyVar && this.name.equals(((TyVar) o).name);
     }
 
     public TyVar accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -624,21 +684,24 @@ public class Ast {
       this.fieldTypes = requireNonNull(fieldTypes);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return fieldTypes.hashCode();
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
       return o == this
           || o instanceof RecordType
-          && this.fieldTypes.equals(((RecordType) o).fieldTypes);
+              && this.fieldTypes.equals(((RecordType) o).fieldTypes);
     }
 
     public RecordType accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -647,8 +710,10 @@ public class Ast {
       Ord.forEachIndexed( // lint:skip
           fieldTypes,
           (i, field, type) ->
-          w.append(i > 0 ? ", " : "")
-              .id(field).append(": ").append(type, 0, 0));
+              w.append(i > 0 ? ", " : "")
+                  .id(field)
+                  .append(": ")
+                  .append(type, 0, 0));
       return w.append("}");
     }
   }
@@ -666,27 +731,32 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
       // "*" is non-associative. Elevate both left and right precedence
       // to force parentheses if the inner expression is also "*".
-      forEachIndexed(types, (arg, i) ->
-          w.append(i == 0 ? "" : " * ")
-              .append(arg, op.left + 1, op.right + 1));
+      forEachIndexed(
+          types,
+          (arg, i) ->
+              w.append(i == 0 ? "" : " * ")
+                  .append(arg, op.left + 1, op.right + 1));
       return w;
     }
   }
 
-  /** Not really a type, just a way for the parser to represent the type
+  /**
+   * Not really a type, just a way for the parser to represent the type
    * arguments to a type constructor.
    *
    * <p>For example, in {@code datatype foo = Pair of (int, string) list},
-   * {@code (int, string)} is briefly represented as a composite type,
-   * then {@code int} and {@code string} becomes the two type parameters to
-   * the {@code list} {@link NamedType}. */
+   * {@code (int, string)} is briefly represented as a composite type, then
+   * {@code int} and {@code string} becomes the two type parameters to the
+   * {@code list} {@link NamedType}.
+   */
   public static class CompositeType extends Type {
     public final List<Type> types;
 
@@ -699,14 +769,15 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
       w.append("(");
-      forEachIndexed(types, (arg, i) ->
-          w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
+      forEachIndexed(
+          types, (arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
     }
   }
@@ -726,7 +797,8 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -747,7 +819,8 @@ public class Ast {
       // no args
     }
 
-    @Override public abstract Exp accept(Shuttle shuttle);
+    @Override
+    public abstract Exp accept(Shuttle shuttle);
 
     /** Returns a list of all arguments. */
     public final List<Exp> args() {
@@ -771,7 +844,8 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -791,21 +865,22 @@ public class Ast {
       assert !name.startsWith("#");
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return name.hashCode();
     }
 
-    @Override public boolean equals(Object o) {
-      return o == this
-          || o instanceof Id
-          && this.name.equals(((Id) o).name);
+    @Override
+    public boolean equals(Object o) {
+      return o == this || o instanceof Id && this.name.equals(((Id) o).name);
     }
 
     public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -825,25 +900,28 @@ public class Ast {
       this.value = requireNonNull(value);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return value.hashCode();
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
       return o == this
-          || o instanceof Literal
-          && this.value.equals(((Literal) o).value);
+          || o instanceof Literal && this.value.equals(((Literal) o).value);
     }
 
     public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.appendLiteral(value);
     }
   }
@@ -854,7 +932,8 @@ public class Ast {
       super(pos, op);
     }
 
-    @Override public abstract Decl accept(Shuttle shuttle);
+    @Override
+    public abstract Decl accept(Shuttle shuttle);
   }
 
   /** Parse tree node of a datatype declaration. */
@@ -867,41 +946,49 @@ public class Ast {
       checkArgument(!this.binds.isEmpty());
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return Objects.hash(binds);
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
       return o == this
           || o instanceof DatatypeDecl
-          && binds.equals(((DatatypeDecl) o).binds);
+              && binds.equals(((DatatypeDecl) o).binds);
     }
 
     public DatatypeDecl accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.appendAll(binds, "datatype ", " and ", "");
     }
   }
 
-  /** Parse tree node of a datatype binding.
+  /**
+   * Parse tree node of a datatype binding.
    *
-   * <p>Example: the datatype declaration
-   * {@code datatype 'a x = X1 of 'a | X2 and y = Y}
-   * consists of type bindings {@code 'a x = X1 of 'a | X2} and
-   * {@code y = Y}. */
+   * <p>Example: the datatype declaration {@code datatype 'a x = X1 of 'a | X2
+   * and y = Y} consists of type bindings {@code 'a x = X1 of 'a | X2} and
+   * {@code y = Y}.
+   */
   public static class DatatypeBind extends AstNode {
     public final List<TyVar> tyVars;
     public final Id name;
     public final List<TyCon> tyCons;
 
-    DatatypeBind(Pos pos, ImmutableList<TyVar> tyVars, Id name,
+    DatatypeBind(
+        Pos pos,
+        ImmutableList<TyVar> tyVars,
+        Id name,
         ImmutableList<TyCon> tyCons) {
       super(pos, Op.DATATYPE_DECL);
       this.tyVars = requireNonNull(tyVars);
@@ -910,46 +997,50 @@ public class Ast {
       checkArgument(!this.tyCons.isEmpty());
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return Objects.hash(tyVars, tyCons);
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
       return o == this
           || o instanceof DatatypeBind
-          && name.equals(((DatatypeBind) o).name)
-          && tyVars.equals(((DatatypeBind) o).tyVars)
-          && tyCons.equals(((DatatypeBind) o).tyCons);
+              && name.equals(((DatatypeBind) o).name)
+              && tyVars.equals(((DatatypeBind) o).tyVars)
+              && tyCons.equals(((DatatypeBind) o).tyCons);
     }
 
     public DatatypeBind accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       switch (tyVars.size()) {
-      case 0:
-        break;
-      case 1:
-        w.append(tyVars.get(0), 0, 0).append(" ");
-        break;
-      default:
-        w.appendAll(tyVars, "(", ", ", ") ");
+        case 0:
+          break;
+        case 1:
+          w.append(tyVars.get(0), 0, 0).append(" ");
+          break;
+        default:
+          w.appendAll(tyVars, "(", ", ", ") ");
       }
-      return w.id(name.name)
-          .appendAll(tyCons, " = ", " | ", "");
+      return w.id(name.name).appendAll(tyCons, " = ", " | ", "");
     }
   }
 
-  /** Type constructor.
+  /**
+   * Type constructor.
    *
-   * <p>For example, in the {@link DatatypeDecl datatype declaration}
-   * {@code datatype 'a option = NIL | SOME of 'a}, "NIL" and "SOME of 'a"
-   * are both type constructors.
+   * <p>For example, in the {@link DatatypeDecl datatype declaration} {@code
+   * datatype 'a option = NIL | SOME of 'a}, "NIL" and "SOME of 'a" are both
+   * type constructors.
    */
   public static class TyCon extends AstNode {
     public final Id id;
@@ -961,7 +1052,8 @@ public class Ast {
       this.type = type; // optional
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -992,26 +1084,30 @@ public class Ast {
       checkArgument(!valBinds.isEmpty());
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return Objects.hash(rec, valBinds);
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
       return o == this
           || o instanceof ValDecl
-          && this.rec == ((ValDecl) o).rec
-          && this.valBinds.equals(((ValDecl) o).valBinds);
+              && this.rec == ((ValDecl) o).rec
+              && this.valBinds.equals(((ValDecl) o).valBinds);
     }
 
     public ValDecl accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       String sep = rec ? "val rec " : "val ";
       for (ValBind valBind : valBinds) {
         w.append(sep);
@@ -1021,8 +1117,10 @@ public class Ast {
       return w;
     }
 
-    /** Creates a copy of this {@code ValDecl} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code ValDecl} with given contents, or {@code
+     * this} if the contents are the same.
+     */
     public ValDecl copy(Iterable<ValBind> valBinds) {
       return Iterables.elementsEqual(this.valBinds, valBinds)
           ? this
@@ -1041,31 +1139,36 @@ public class Ast {
       // TODO: check that functions have the same name
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return funBinds.hashCode();
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
       return o == this
           || o instanceof FunDecl
-          && this.funBinds.equals(((FunDecl) o).funBinds);
+              && this.funBinds.equals(((FunDecl) o).funBinds);
     }
 
     public Decl accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.appendAll(funBinds, "fun ", " and ", "");
     }
   }
 
-  /** One of the branches (separated by 'and') in a 'fun' function
-   * declaration. */
+  /**
+   * One of the branches (separated by 'and') in a 'fun' function declaration.
+   */
   public static class FunBind extends AstNode {
     public final List<FunMatch> matchList;
     public final String name;
@@ -1083,7 +1186,8 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -1099,8 +1203,12 @@ public class Ast {
     public final @Nullable Type returnType;
     public final Exp exp;
 
-    FunMatch(Pos pos, String name, ImmutableList<Pat> patList,
-        @Nullable Type returnType, Exp exp) {
+    FunMatch(
+        Pos pos,
+        String name,
+        ImmutableList<Pat> patList,
+        @Nullable Type returnType,
+        Exp exp) {
       super(pos, Op.FUN_MATCH);
       this.name = name;
       this.patList = patList;
@@ -1120,7 +1228,8 @@ public class Ast {
       return w.append(" = ").append(exp, 0, right);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
   }
@@ -1134,7 +1243,8 @@ public class Ast {
       this.args = ImmutableList.copyOf(args);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Exp> action) {
       forEachIndexed(args, action);
     }
 
@@ -1142,11 +1252,13 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       w.append("(");
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append(")");
@@ -1166,7 +1278,8 @@ public class Ast {
       this.args = ImmutableList.copyOf(args);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Exp> action) {
       forEachIndexed(args, action);
     }
 
@@ -1174,19 +1287,20 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       w.append("[");
       forEachArg((arg, i) -> w.append(i == 0 ? "" : ", ").append(arg, 0, 0));
       return w.append("]");
     }
 
     public ListExp copy(List<Exp> args) {
-      return args.equals(this.args) ? this
-          : ast.list(pos, args);
+      return args.equals(this.args) ? this : ast.list(pos, args);
     }
   }
 
@@ -1200,7 +1314,8 @@ public class Ast {
       checkArgument(args.comparator() == ORDERING);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Exp> action) {
       forEachIndexed(args.values(), action);
     }
 
@@ -1208,16 +1323,21 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
       Ord.forEachIndexed( // lint:skip
           args,
           (i, k, v) ->
-          w.append(i > 0 ? ", " : "").append(k).append(" = ").append(v, 0, 0));
+              w.append(i > 0 ? ", " : "")
+                  .append(k)
+                  .append(" = ")
+                  .append(v, 0, 0));
       return w.append("}");
     }
 
@@ -1237,7 +1357,8 @@ public class Ast {
       this.a1 = requireNonNull(a1);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Exp> action) {
       action.accept(a0, 0);
       action.accept(a1, 1);
     }
@@ -1246,19 +1367,22 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, a0, op, a1, right);
     }
 
-    /** Creates a copy of this {@code InfixCall} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code InfixCall} with given contents, or {@code
+     * this} if the contents are the same.
+     */
     public InfixCall copy(Exp a0, Exp a1) {
-      return this.a0.equals(a0)
-          && this.a1.equals(a1)
+      return this.a0.equals(a0) && this.a1.equals(a1)
           ? this
           : new InfixCall(pos, op, a0, a1);
     }
@@ -1273,7 +1397,8 @@ public class Ast {
       this.a = requireNonNull(a);
     }
 
-    @Override public void forEachArg(ObjIntConsumer<Exp> action) {
+    @Override
+    public void forEachArg(ObjIntConsumer<Exp> action) {
       action.accept(a, 0);
     }
 
@@ -1281,11 +1406,13 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.prefix(left, op, a, right);
     }
   }
@@ -1307,22 +1434,29 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append("if ").append(condition, 0, 0)
-          .append(" then ").append(ifTrue, 0, 0)
-          .append(" else ").append(ifFalse, 0, right);
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("if ")
+          .append(condition, 0, 0)
+          .append(" then ")
+          .append(ifTrue, 0, 0)
+          .append(" else ")
+          .append(ifFalse, 0, right);
     }
 
-    /** Creates a copy of this {@code If} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code If} with given contents, or {@code this} if
+     * the contents are the same.
+     */
     public If copy(Exp condition, Exp ifTrue, Exp ifFalse) {
       return this.condition.equals(condition)
-          && this.ifTrue.equals(ifTrue)
-          && this.ifFalse.equals(ifFalse)
+              && this.ifTrue.equals(ifTrue)
+              && this.ifFalse.equals(ifFalse)
           ? this
           : new If(pos, condition, ifTrue, ifFalse);
     }
@@ -1343,20 +1477,25 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.appendAll(decls, "let ", "; ", " in ")
-          .append(exp, 0, 0).append(" end");
+          .append(exp, 0, 0)
+          .append(" end");
     }
 
-    /** Creates a copy of this {@code LetExp} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code LetExp} with given contents, or {@code
+     * this} if the contents are the same.
+     */
     public Let copy(Iterable<Decl> decls, Exp exp) {
       return Iterables.elementsEqual(this.decls, decls)
-          && Objects.equals(this.exp, exp)
+              && Objects.equals(this.exp, exp)
           ? this
           : ast.let(pos, decls, exp);
     }
@@ -1377,19 +1516,22 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(pat, 0, 0).append(" = ").append(exp, 0, right);
     }
 
-    /** Creates a copy of this {@code ValBind} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code ValBind} with given contents, or {@code
+     * this} if the contents are the same.
+     */
     public ValBind copy(Pat pat, Exp exp) {
-      return this.pat.equals(pat)
-          && this.exp.equals(exp)
+      return this.pat.equals(pat) && this.exp.equals(exp)
           ? this
           : ast.valBind(pos, pat, exp);
     }
@@ -1410,19 +1552,22 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(pat, 0, 0).append(" => ").append(exp, 0, right);
     }
 
-    /** Creates a copy of this {@code Match} with given contents,
-     * or {@code this} if the contents are the same. */
+    /**
+     * Creates a copy of this {@code Match} with given contents, or {@code this}
+     * if the contents are the same.
+     */
     public Match copy(Pat pat, Exp exp) {
-      return this.pat.equals(pat)
-          && this.exp.equals(exp)
+      return this.pat.equals(pat) && this.exp.equals(exp)
           ? this
           : ast.match(pos, pat, exp);
     }
@@ -1442,20 +1587,22 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append("fn ").appendAll(matchList, 0, Op.BAR, right);
     }
 
-    /** Creates a copy of this {@code Fn} with given contents,
-     * or this if the contents are the same. */
+    /**
+     * Creates a copy of this {@code Fn} with given contents, or this if the
+     * contents are the same.
+     */
     public Fn copy(List<Match> matchList) {
-      return this.matchList.equals(matchList)
-          ? this
-          : ast.fn(pos, matchList);
+      return this.matchList.equals(matchList) ? this : ast.fn(pos, matchList);
     }
   }
 
@@ -1474,32 +1621,42 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append("case ").append(exp, 0, 0).append(" of ")
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("case ")
+          .append(exp, 0, 0)
+          .append(" of ")
           .appendAll(matchList, left, Op.BAR, right);
     }
 
     public Case copy(Exp exp, List<Match> matchList) {
-      return this.exp.equals(exp)
-          && this.matchList.equals(matchList)
+      return this.exp.equals(exp) && this.matchList.equals(matchList)
           ? this
           : ast.caseOf(pos, exp, matchList);
     }
   }
 
-  /** Base class for "{@code from}", "{@code exists}" or "{@code forall}"
-   * expression. */
+  /**
+   * Base class for "{@code from}", "{@code exists}" or "{@code forall}"
+   * expression.
+   */
   public abstract static class Query extends Exp {
     public final ImmutableList<FromStep> steps;
-    /** An implicit yield expression, if the last step is not a {@link Yield};
-     * null if the last step is a {@link Yield}. */
+    /**
+     * An implicit yield expression, if the last step is not a {@link Yield};
+     * null if the last step is a {@link Yield}.
+     */
     public final @Nullable Exp implicitYieldExp;
 
-    Query(Pos pos, Op op, ImmutableList<FromStep> steps,
+    Query(
+        Pos pos,
+        Op op,
+        ImmutableList<FromStep> steps,
         @Nullable Exp implicitYieldExp) {
       super(pos, op);
       this.steps = requireNonNull(steps);
@@ -1509,8 +1666,7 @@ public class Ast {
     static @Nullable Exp implicitYieldExp(Pos pos, List<FromStep> steps) {
       if (!steps.isEmpty()) {
         final FromStep lastStep = getLast(steps);
-        if (lastStep.op == Op.YIELD
-            || lastStep.op == Op.INTO) {
+        if (lastStep.op == Op.YIELD || lastStep.op == Op.INTO) {
           // No implicit yield is needed; the last step is an explicit yield
           return null;
         }
@@ -1519,63 +1675,65 @@ public class Ast {
       final Set<Id> nextFields = new HashSet<>();
       for (FromStep step : steps) {
         switch (step.op) {
-        case SCAN:
-          final Scan scan = (Scan) step;
-          nextFields.clear();
-          nextFields.addAll(fields);
-          scan.pat.visit(p -> {
-            if (p instanceof IdPat) {
-              nextFields.add(ast.id(Pos.ZERO, ((IdPat) p).name));
+          case SCAN:
+            final Scan scan = (Scan) step;
+            nextFields.clear();
+            nextFields.addAll(fields);
+            scan.pat.visit(
+                p -> {
+                  if (p instanceof IdPat) {
+                    nextFields.add(ast.id(Pos.ZERO, ((IdPat) p).name));
+                  }
+                });
+            fields = ImmutableSet.copyOf(nextFields);
+            break;
+
+          case THROUGH:
+            final Through through = (Through) step;
+            nextFields.clear();
+            through.pat.visit(
+                p -> {
+                  if (p instanceof IdPat) {
+                    nextFields.add(ast.id(Pos.ZERO, ((IdPat) p).name));
+                  }
+                });
+            fields = ImmutableSet.copyOf(nextFields);
+            break;
+
+          case COMPUTE:
+          case GROUP:
+            final Group group = (Group) step;
+            final ImmutablePairList<Id, Exp> groupExps = group.groupExps;
+            final List<Aggregate> aggregates = group.aggregates;
+
+            // The type of
+            //   from e in emps group a = e1, b = e2 compute c = sum of e3
+            // is the same as the type of
+            //   {a = e1, b = e2, c = sum (map (fn e => e3) [])}
+            nextFields.clear();
+            nextFields.addAll(Pair.left(groupExps));
+            groupExps.forEach((id, exp) -> nextFields.add(id));
+            aggregates.forEach(aggregate -> nextFields.add(aggregate.id));
+            fields = nextFields;
+            break;
+
+          case YIELD:
+            final Yield yield = (Yield) step;
+            if (yield.exp instanceof Record) {
+              fields =
+                  ((Record) yield.exp)
+                      .args.keySet().stream()
+                          .map(label -> ast.id(Pos.ZERO, label))
+                          .collect(Collectors.toSet());
             }
-          });
-          fields = ImmutableSet.copyOf(nextFields);
-          break;
-
-        case THROUGH:
-          final Through through = (Through) step;
-          nextFields.clear();
-          through.pat.visit(p -> {
-            if (p instanceof IdPat) {
-              nextFields.add(ast.id(Pos.ZERO, ((IdPat) p).name));
-            }
-          });
-          fields = ImmutableSet.copyOf(nextFields);
-          break;
-
-        case COMPUTE:
-        case GROUP:
-          final Group group = (Group) step;
-          final ImmutablePairList<Id, Exp> groupExps = group.groupExps;
-          final List<Aggregate> aggregates = group.aggregates;
-
-          // The type of
-          //   from e in emps group a = e1, b = e2 compute c = sum of e3
-          // is the same as the type of
-          //   {a = e1, b = e2, c = sum (map (fn e => e3) [])}
-          nextFields.clear();
-          nextFields.addAll(Pair.left(groupExps));
-          groupExps.forEach((id, exp) -> nextFields.add(id));
-          aggregates.forEach(aggregate -> nextFields.add(aggregate.id));
-          fields = nextFields;
-          break;
-
-        case YIELD:
-          final Yield yield = (Yield) step;
-          if (yield.exp instanceof Record) {
-            fields =
-                ((Record) yield.exp).args.keySet()
-                    .stream()
-                    .map(label -> ast.id(Pos.ZERO, label))
-                    .collect(Collectors.toSet());
-          }
-          break;
+            break;
         }
       }
 
       if (fields.size() == 1
           && (steps.isEmpty()
-          || getLast(steps).op != Op.YIELD
-          || ((Yield) getLast(steps)).exp.op != Op.RECORD)) {
+              || getLast(steps).op != Op.YIELD
+              || ((Yield) getLast(steps)).exp.op != Op.RECORD)) {
         return Iterables.getOnlyElement(fields);
       } else {
         final SortedMap<String, Ast.Exp> map = mutableMap();
@@ -1584,67 +1742,80 @@ public class Ast {
       }
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       if (left > op.left || op.right < right) {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
         w.append(op.lowerName()); // "from", "exists", "forall"
-        forEachIndexed(steps, (step, i) -> {
-          if (step.op == Op.SCAN && i > 0) {
-            if (steps.get(i - 1).op == Op.SCAN) {
-              w.append(",");
-            } else {
-              w.append(" join");
-            }
-          }
-          step.unparse(w, 0, 0);
-        });
+        forEachIndexed(
+            steps,
+            (step, i) -> {
+              if (step.op == Op.SCAN && i > 0) {
+                if (steps.get(i - 1).op == Op.SCAN) {
+                  w.append(",");
+                } else {
+                  w.append(" join");
+                }
+              }
+              step.unparse(w, 0, 0);
+            });
         return w;
       }
     }
 
-    /** Creates a copy of this {@code From} or {@code Exists} with given
-     * contents, or {@code this} if the contents are the same. */
-    public abstract Query copy(List<FromStep> steps,
-        @Nullable Exp implicitYieldExp);
+    /**
+     * Creates a copy of this {@code From} or {@code Exists} with given
+     * contents, or {@code this} if the contents are the same.
+     */
+    public abstract Query copy(
+        List<FromStep> steps, @Nullable Exp implicitYieldExp);
 
-    /** Returns whether this {@code from} expression ends with a {@code compute}
+    /**
+     * Returns whether this {@code from} expression ends with a {@code compute}
      * step. If so, it is a <em>monoid</em> comprehension, not a <em>monad</em>
-     * comprehension, and its type is a scalar value (or record), not a list. */
+     * comprehension, and its type is a scalar value (or record), not a list.
+     */
     public boolean isCompute() {
-      return !steps.isEmpty()
-          && steps.get(steps.size() - 1).op == Op.COMPUTE;
+      return !steps.isEmpty() && steps.get(steps.size() - 1).op == Op.COMPUTE;
     }
 
-    /** Returns whether this {@code from} expression ends with as {@code into}
-     * step. If so, its type is a scalar value (or record), not a list. */
+    /**
+     * Returns whether this {@code from} expression ends with as {@code into}
+     * step. If so, its type is a scalar value (or record), not a list.
+     */
     public boolean isInto() {
-      return !steps.isEmpty()
-          && steps.get(steps.size() - 1).op == Op.INTO;
+      return !steps.isEmpty() && steps.get(steps.size() - 1).op == Op.INTO;
     }
   }
 
   /** From expression. */
   public static class From extends Query {
-    From(Pos pos, ImmutableList<FromStep> steps,
+    From(
+        Pos pos,
+        ImmutableList<FromStep> steps,
         @Nullable Exp implicitYieldExp) {
       super(pos, Op.FROM, steps, implicitYieldExp);
     }
 
-    /** Creates a copy of this {@code From} with given contents,
-     * or {@code this} if the contents are the same. */
-    @Override public From copy(List<FromStep> steps,
-        @Nullable Exp implicitYieldExp) {
+    /**
+     * Creates a copy of this {@code From} with given contents, or {@code this}
+     * if the contents are the same.
+     */
+    @Override
+    public From copy(List<FromStep> steps, @Nullable Exp implicitYieldExp) {
       return this.steps.equals(steps)
           ? this
           : ast.from(pos, steps, implicitYieldExp);
     }
 
-    @Override public Exp accept(Shuttle shuttle) {
+    @Override
+    public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
   }
@@ -1655,19 +1826,19 @@ public class Ast {
       super(pos, Op.EXISTS, steps, null);
     }
 
-    @Override public Exists copy(List<FromStep> steps,
-        @Nullable Exp implicitYieldExp) {
+    @Override
+    public Exists copy(List<FromStep> steps, @Nullable Exp implicitYieldExp) {
       checkArgument(implicitYieldExp == null);
-      return this.steps.equals(steps)
-          ? this
-          : ast.exists(pos, steps);
+      return this.steps.equals(steps) ? this : ast.exists(pos, steps);
     }
 
-    @Override public Exp accept(Shuttle shuttle) {
+    @Override
+    public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
   }
@@ -1678,34 +1849,37 @@ public class Ast {
       super(pos, Op.FORALL, steps, null);
     }
 
-    @Override public Forall copy(List<FromStep> steps,
-        @Nullable Exp implicitYieldExp) {
+    @Override
+    public Forall copy(List<FromStep> steps, @Nullable Exp implicitYieldExp) {
       checkArgument(implicitYieldExp == null);
-      return this.steps.equals(steps)
-          ? this
-          : ast.forall(pos, steps);
+      return this.steps.equals(steps) ? this : ast.forall(pos, steps);
     }
 
-    @Override public Exp accept(Shuttle shuttle) {
+    @Override
+    public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
   }
 
-  /** A step in a {@code from} expression - {@code where}, {@code group}
-   * or {@code order}. */
+  /**
+   * A step in a {@code from} expression - {@code where}, {@code group} or
+   * {@code order}.
+   */
   public abstract static class FromStep extends AstNode {
     FromStep(Pos pos, Op op) {
       super(pos, op);
     }
   }
 
-  /** A scan (e.g. "e in emps", "e")
-   * or scan-and-join (e.g. "left join d in depts on e.deptno = d.deptno")
-   * in a {@code from} expression. */
+  /**
+   * A scan (e.g. "e in emps", "e") or scan-and-join (e.g. "left join d in depts
+   * on e.deptno = d.deptno") in a {@code from} expression.
+   */
   public static class Scan extends FromStep {
     public final Pat pat;
     public final @Nullable Exp exp;
@@ -1718,37 +1892,36 @@ public class Ast {
       this.condition = condition;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
-      w.append(op.padded)
-          .append(pat, 0, 0);
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      w.append(op.padded).append(pat, 0, 0);
       if (exp != null) {
         if (exp.op == Op.FROM_EQ) {
-          w.append(" = ")
-              .append(((PrefixCall) this.exp).a, Op.EQ.right, 0);
+          w.append(" = ").append(((PrefixCall) this.exp).a, Op.EQ.right, 0);
         } else {
-          w.append(" in ")
-              .append(this.exp, Op.EQ.right, 0);
+          w.append(" in ").append(this.exp, Op.EQ.right, 0);
         }
       }
       if (condition != null) {
-        w.append(" on ")
-            .append(condition, 0, 0);
+        w.append(" on ").append(condition, 0, 0);
       }
       return w;
     }
 
-    @Override public Scan accept(Shuttle shuttle) {
+    @Override
+    public Scan accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
     public Scan copy(Pat pat, @Nullable Exp exp, @Nullable Exp condition) {
       return this.pat.equals(pat)
-          && Objects.equals(this.exp, exp)
-          && Objects.equals(this.condition, condition)
+              && Objects.equals(this.exp, exp)
+              && Objects.equals(this.condition, condition)
           ? this
           : new Scan(pos, pat, exp, condition);
     }
@@ -1760,15 +1933,18 @@ public class Ast {
       super(pos, Op.DISTINCT);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(" distinct");
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
   }
@@ -1782,15 +1958,18 @@ public class Ast {
       this.exp = exp;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(" where ").append(exp, 0, 0);
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -1808,15 +1987,18 @@ public class Ast {
       this.exp = exp;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(" require ").append(exp, 0, 0);
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -1834,15 +2016,18 @@ public class Ast {
       this.exp = exp;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(" skip ").append(exp, 0, 0);
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -1860,15 +2045,18 @@ public class Ast {
       this.exp = exp;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(" take ").append(exp, 0, 0);
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -1886,15 +2074,18 @@ public class Ast {
       this.exp = exp;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(" yield ").append(exp, 0, 0);
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -1912,15 +2103,18 @@ public class Ast {
       this.exp = exp;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(" into ").append(exp, 0, 0);
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -1940,22 +2134,26 @@ public class Ast {
       this.exp = exp;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append(" through ").append(pat, 0, 0)
-          .append(" in ").append(exp, 0, 0);
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" through ")
+          .append(pat, 0, 0)
+          .append(" in ")
+          .append(exp, 0, 0);
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
     public Through copy(Pat pat, Exp exp) {
-      return this.pat.equals(pat)
-          && this.exp.equals(exp)
+      return this.pat.equals(pat) && this.exp.equals(exp)
           ? this
           : new Through(pos, pat, exp);
     }
@@ -1970,15 +2168,18 @@ public class Ast {
       this.orderItems = requireNonNull(orderItems);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.append(" order ").appendAll(orderItems, ", ");
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -2000,7 +2201,8 @@ public class Ast {
       this.direction = requireNonNull(direction);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -2014,8 +2216,7 @@ public class Ast {
     }
 
     public OrderItem copy(Exp exp, Direction direction) {
-      return this.exp.equals(exp)
-          && this.direction == direction
+      return this.exp.equals(exp) && this.direction == direction
           ? this
           : new OrderItem(pos, exp, direction);
     }
@@ -2032,61 +2233,73 @@ public class Ast {
     public final ImmutablePairList<Id, Exp> groupExps;
     public final ImmutableList<Aggregate> aggregates;
 
-    Group(Pos pos, Op op, ImmutablePairList<Id, Exp> groupExps,
+    Group(
+        Pos pos,
+        Op op,
+        ImmutablePairList<Id, Exp> groupExps,
         ImmutableList<Aggregate> aggregates) {
       super(pos, op);
       this.groupExps = groupExps;
       this.aggregates = aggregates;
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       if (op == Op.GROUP) {
         w.append(" group");
       }
-      forEachIndexed(groupExps, (i, id, exp) ->
-          w.append(i == 0 ? " " : ", ")
-              .append(id, 0, 0)
-              .append(" = ")
-              .append(exp, 0, 0));
-      forEachIndexed(aggregates, (aggregate, i) ->
-          w.append(i == 0 ? " compute " : ", ")
-              .append(aggregate, 0, 0));
+      forEachIndexed(
+          groupExps,
+          (i, id, exp) ->
+              w.append(i == 0 ? " " : ", ")
+                  .append(id, 0, 0)
+                  .append(" = ")
+                  .append(exp, 0, 0));
+      forEachIndexed(
+          aggregates,
+          (aggregate, i) ->
+              w.append(i == 0 ? " compute " : ", ").append(aggregate, 0, 0));
       return w;
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    public Group copy(PairList<Id, Exp> groupExps,
-        List<Aggregate> aggregates) {
+    public Group copy(PairList<Id, Exp> groupExps, List<Aggregate> aggregates) {
       checkArgument(op == Op.GROUP, "use Compute.copy instead?");
       return this.groupExps.equals(groupExps)
-          && this.aggregates.equals(aggregates)
+              && this.aggregates.equals(aggregates)
           ? this
           : ast.group(pos, groupExps, aggregates);
     }
   }
 
-  /** A {@code compute} clause in a {@code from} expression.
+  /**
+   * A {@code compute} clause in a {@code from} expression.
    *
    * <p>Because {@code compute} and {@code group} are structurally similar, this
-   * is a  sub-class of {@link Group}, with an empty list of group keys. But
-   * remember that the type derivation rules are different. */
+   * is a sub-class of {@link Group}, with an empty list of group keys. But
+   * remember that the type derivation rules are different.
+   */
   public static class Compute extends Group {
     Compute(Pos pos, ImmutableList<Aggregate> aggregates) {
       super(pos, Op.COMPUTE, ImmutablePairList.of(), aggregates);
     }
 
-    @Override public AstNode accept(Shuttle shuttle) {
+    @Override
+    public AstNode accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
@@ -2112,25 +2325,29 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
-    @Override AstWriter unparse(AstWriter w, int left, int right) {
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, fn, op, arg, right);
     }
 
     public Apply copy(Exp fn, Exp arg) {
-      return this.fn.equals(fn) && this.arg.equals(arg) ? this
+      return this.fn.equals(fn) && this.arg.equals(arg)
+          ? this
           : new Apply(pos, fn, arg);
     }
   }
 
-  /** Call to an aggregate function in a {@code compute} clause.
+  /**
+   * Call to an aggregate function in a {@code compute} clause.
    *
-   * <p>For example, in {@code compute sumId = sum of #id e},
-   * {@code aggregate} is "sum", {@code argument} is "#id e",
-   * and {@code id} is "sumId". */
+   * <p>For example, in {@code compute sumId = sum of #id e}, {@code aggregate}
+   * is "sum", {@code argument} is "#id e", and {@code id} is "sumId".
+   */
   public static class Aggregate extends AstNode {
     public final Exp aggregate;
     public final Exp argument;
@@ -2144,12 +2361,9 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      w.id(id.name)
-          .append(" = ")
-          .append(aggregate, 0, 0);
+      w.id(id.name).append(" = ").append(aggregate, 0, 0);
       if (argument != null) {
-        w.append(" of ")
-            .append(argument, 0, 0);
+        w.append(" of ").append(argument, 0, 0);
       }
       return w;
     }
@@ -2158,14 +2372,15 @@ public class Ast {
       return shuttle.visit(this);
     }
 
-    @Override public void accept(Visitor visitor) {
+    @Override
+    public void accept(Visitor visitor) {
       visitor.visit(this);
     }
 
     public Aggregate copy(Exp aggregate, Exp argument, Id id) {
       return this.aggregate.equals(aggregate)
-          && Objects.equals(this.argument, argument)
-          && this.id.equals(id)
+              && Objects.equals(this.argument, argument)
+              && this.id.equals(id)
           ? this
           : ast.aggregate(pos, aggregate, argument, id);
     }

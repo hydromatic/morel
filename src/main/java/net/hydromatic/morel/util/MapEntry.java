@@ -18,10 +18,9 @@
  */
 package net.hydromatic.morel.util;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.Map;
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Simple implementation of {@link Map.Entry}.
@@ -43,7 +42,8 @@ public class MapEntry<T, U> implements Map.Entry<T, U> {
     this.u = u;
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return "<" + t + ", " + u + ">";
   }
 
@@ -53,34 +53,38 @@ public class MapEntry<T, U> implements Map.Entry<T, U> {
    * <p>Compares equal to any {@link Map.Entry} with the equal key and value.
    */
   @SuppressWarnings("unchecked")
-  @Override public boolean equals(@Nullable Object o) {
+  @Override
+  public boolean equals(@Nullable Object o) {
     return this == o
         || o instanceof Map.Entry
-        && Objects.equals(this.t, ((Map.Entry<T, U>) o).getKey())
-        && Objects.equals(this.u, ((Map.Entry<T, U>) o).getValue());
+            && Objects.equals(this.t, ((Map.Entry<T, U>) o).getKey())
+            && Objects.equals(this.u, ((Map.Entry<T, U>) o).getValue());
   }
 
   /**
    * {@inheritDoc}
    *
-   * <p>Computes hash code consistent with
-   * {@link Map.Entry#hashCode()}.
+   * <p>Computes hash code consistent with {@link Map.Entry#hashCode()}.
    */
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     int keyHash = t == null ? 0 : t.hashCode();
     int valueHash = u == null ? 0 : u.hashCode();
     return keyHash ^ valueHash;
   }
 
-  @Override public T getKey() {
+  @Override
+  public T getKey() {
     return t;
   }
 
-  @Override public U getValue() {
+  @Override
+  public U getValue() {
     return u;
   }
 
-  @Override public U setValue(U value) {
+  @Override
+  public U setValue(U value) {
     throw new UnsupportedOperationException("setValue");
   }
 }

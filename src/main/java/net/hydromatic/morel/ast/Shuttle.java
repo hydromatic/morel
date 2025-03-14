@@ -18,7 +18,7 @@
  */
 package net.hydromatic.morel.ast;
 
-import net.hydromatic.morel.type.TypeSystem;
+import static net.hydromatic.morel.ast.AstBuilder.ast;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -26,8 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
-import static net.hydromatic.morel.ast.AstBuilder.ast;
+import net.hydromatic.morel.type.TypeSystem;
 
 /** Visits and transforms syntax trees. */
 public class Shuttle {
@@ -73,13 +72,18 @@ public class Shuttle {
   }
 
   protected Ast.Exp visit(Ast.AnnotatedExp annotatedExp) {
-    return ast.annotatedExp(annotatedExp.pos, annotatedExp.exp.accept(this),
+    return ast.annotatedExp(
+        annotatedExp.pos,
+        annotatedExp.exp.accept(this),
         annotatedExp.type.accept(this));
   }
 
   protected Ast.Exp visit(Ast.If ifThenElse) {
-    return ast.ifThenElse(ifThenElse.pos, ifThenElse.condition.accept(this),
-        ifThenElse.ifTrue.accept(this), ifThenElse.ifFalse.accept(this));
+    return ast.ifThenElse(
+        ifThenElse.pos,
+        ifThenElse.condition.accept(this),
+        ifThenElse.ifTrue.accept(this),
+        ifThenElse.ifFalse.accept(this));
   }
 
   protected Ast.Let visit(Ast.Let let) {
@@ -87,20 +91,23 @@ public class Shuttle {
   }
 
   protected Ast.Exp visit(Ast.Case caseOf) {
-    return ast.caseOf(caseOf.pos, caseOf.exp.accept(this),
-        visitList(caseOf.matchList));
+    return ast.caseOf(
+        caseOf.pos, caseOf.exp.accept(this), visitList(caseOf.matchList));
   }
 
   // calls
 
   protected Ast.Exp visit(Ast.InfixCall infixCall) {
-    return ast.infixCall(infixCall.pos, infixCall.op,
-        infixCall.a0.accept(this), infixCall.a1.accept(this));
+    return ast.infixCall(
+        infixCall.pos,
+        infixCall.op,
+        infixCall.a0.accept(this),
+        infixCall.a1.accept(this));
   }
 
   protected Ast.Exp visit(Ast.PrefixCall prefixCall) {
-    return ast.prefixCall(prefixCall.pos, prefixCall.op,
-        prefixCall.a.accept(this));
+    return ast.prefixCall(
+        prefixCall.pos, prefixCall.op, prefixCall.a.accept(this));
   }
 
   // patterns
@@ -134,13 +141,13 @@ public class Shuttle {
   }
 
   protected Ast.Pat visit(Ast.AnnotatedPat annotatedPat) {
-    return annotatedPat.copy(annotatedPat.pat.accept(this),
-        annotatedPat.type.accept(this));
+    return annotatedPat.copy(
+        annotatedPat.pat.accept(this), annotatedPat.type.accept(this));
   }
 
   protected Ast.Pat visit(Ast.AsPat asPat) {
-    return asPat.copy((Ast.IdPat) asPat.id.accept(this),
-        asPat.pat.accept(this));
+    return asPat.copy(
+        (Ast.IdPat) asPat.id.accept(this), asPat.pat.accept(this));
   }
 
   protected Ast.ConPat visit(Ast.ConPat conPat) {
@@ -204,7 +211,9 @@ public class Shuttle {
   }
 
   protected Ast.FunMatch visit(Ast.FunMatch funMatch) {
-    return ast.funMatch(funMatch.pos, funMatch.name,
+    return ast.funMatch(
+        funMatch.pos,
+        funMatch.name,
         visitList(funMatch.patList),
         funMatch.returnType == null ? null : funMatch.returnType.accept(this),
         funMatch.exp.accept(this));
@@ -239,7 +248,9 @@ public class Shuttle {
   }
 
   protected Ast.Scan visit(Ast.Scan scan) {
-    return ast.scan(scan.pos, scan.pat.accept(this),
+    return ast.scan(
+        scan.pos,
+        scan.pat.accept(this),
         scan.exp.accept(this),
         scan.condition == null ? null : scan.condition.accept(this));
   }
@@ -285,8 +296,8 @@ public class Shuttle {
   }
 
   protected AstNode visit(Ast.Aggregate aggregate) {
-    return ast.aggregate(aggregate.pos, aggregate.aggregate, aggregate.argument,
-        aggregate.id);
+    return ast.aggregate(
+        aggregate.pos, aggregate.aggregate, aggregate.argument, aggregate.id);
   }
 
   protected Ast.DatatypeDecl visit(Ast.DatatypeDecl datatypeDecl) {
@@ -294,12 +305,17 @@ public class Shuttle {
   }
 
   protected Ast.DatatypeBind visit(Ast.DatatypeBind datatypeBind) {
-    return ast.datatypeBind(datatypeBind.pos, datatypeBind.name.accept(this),
-        visitList(datatypeBind.tyVars), visitList(datatypeBind.tyCons));
+    return ast.datatypeBind(
+        datatypeBind.pos,
+        datatypeBind.name.accept(this),
+        visitList(datatypeBind.tyVars),
+        visitList(datatypeBind.tyCons));
   }
 
   protected AstNode visit(Ast.TyCon tyCon) {
-    return ast.typeConstructor(tyCon.pos, tyCon.id.accept(this),
+    return ast.typeConstructor(
+        tyCon.pos,
+        tyCon.id.accept(this),
         tyCon.type == null ? null : tyCon.type.accept(this));
   }
 
@@ -312,13 +328,12 @@ public class Shuttle {
   }
 
   protected Ast.Type visit(Ast.FunctionType functionType) {
-    return ast.functionType(functionType.pos, functionType.paramType,
-        functionType.resultType);
+    return ast.functionType(
+        functionType.pos, functionType.paramType, functionType.resultType);
   }
 
   protected Ast.Type visit(Ast.CompositeType compositeType) {
-    return ast.compositeType(compositeType.pos,
-        visitList(compositeType.types));
+    return ast.compositeType(compositeType.pos, visitList(compositeType.types));
   }
 
   // core expressions, patterns
@@ -356,8 +371,7 @@ public class Shuttle {
   }
 
   protected Core.NonRecValDecl visit(Core.NonRecValDecl valDecl) {
-    return valDecl.copy(valDecl.pat.accept(this),
-        valDecl.exp.accept(this));
+    return valDecl.copy(valDecl.pat.accept(this), valDecl.exp.accept(this));
   }
 
   protected Core.RecValDecl visit(Core.RecValDecl valDecl) {
@@ -397,7 +411,9 @@ public class Shuttle {
   }
 
   protected Core.Pat visit(Core.RecordPat recordPat) {
-    return recordPat.copy(typeSystem, recordPat.type().argNameTypes.keySet(),
+    return recordPat.copy(
+        typeSystem,
+        recordPat.type().argNameTypes.keySet(),
         visitList(recordPat.args));
   }
 
@@ -418,8 +434,11 @@ public class Shuttle {
   }
 
   protected Core.Scan visit(Core.Scan scan) {
-    return scan.copy(scan.bindings, scan.pat.accept(this),
-        scan.exp.accept(this), scan.condition.accept(this));
+    return scan.copy(
+        scan.bindings,
+        scan.pat.accept(this),
+        scan.exp.accept(this),
+        scan.condition.accept(this));
   }
 
   protected Core.Where visit(Core.Where where) {
@@ -435,12 +454,14 @@ public class Shuttle {
   }
 
   protected Core.Group visit(Core.Group group) {
-    return group.copy(visitSortedMap(group.groupExps),
-        visitSortedMap(group.aggregates));
+    return group.copy(
+        visitSortedMap(group.groupExps), visitSortedMap(group.aggregates));
   }
 
   protected Core.Aggregate visit(Core.Aggregate aggregate) {
-    return aggregate.copy(aggregate.type, aggregate.aggregate.accept(this),
+    return aggregate.copy(
+        aggregate.type,
+        aggregate.aggregate.accept(this),
         aggregate.argument == null ? null : aggregate.argument.accept(this));
   }
 

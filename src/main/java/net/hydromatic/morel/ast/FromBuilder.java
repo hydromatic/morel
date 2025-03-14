@@ -18,46 +18,43 @@
  */
 package net.hydromatic.morel.ast;
 
-import net.hydromatic.morel.compile.Compiles;
-import net.hydromatic.morel.compile.Environment;
-import net.hydromatic.morel.compile.RefChecker;
-import net.hydromatic.morel.type.Binding;
-import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.PairList;
+import static com.google.common.collect.Iterables.getLast;
+import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.append;
+import static net.hydromatic.morel.util.Static.skipLast;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
+import net.hydromatic.morel.compile.Compiles;
+import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.compile.RefChecker;
+import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.PairList;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.util.Pair.forEach;
-import static net.hydromatic.morel.util.Static.append;
-import static net.hydromatic.morel.util.Static.skipLast;
-
-import static com.google.common.collect.Iterables.getLast;
-
-/** Builds a {@link Core.From}.
+/**
+ * Builds a {@link Core.From}.
  *
  * <p>Simplifies the following patterns:
+ *
  * <ul>
- *   <li>Converts "from v in list" to "list"
- *   (only works in {@link #buildSimplify()}, not {@link #build()});
+ *   <li>Converts "from v in list" to "list" (only works in {@link
+ *       #buildSimplify()}, not {@link #build()});
  *   <li>Removes "where true" steps;
  *   <li>Removes empty "order" steps;
- *   <li>Removes trivial {@code yield},
- *   e.g. "from v in list where condition yield v"
- *   becomes "from v in list where condition";
- *   <li>Inlines {@code from} expressions,
- *   e.g. "from v in (from w in list)"
- *   becomes "from w in list yield {v = w}".
+ *   <li>Removes trivial {@code yield}, e.g. "from v in list where condition
+ *       yield v" becomes "from v in list where condition";
+ *   <li>Inlines {@code from} expressions, e.g. "from v in (from w in list)"
+ *       becomes "from w in list yield {v = w}".
  * </ul>
  */
 public class FromBuilder {
@@ -66,14 +63,18 @@ public class FromBuilder {
   private final List<Core.FromStep> steps = new ArrayList<>();
   private final List<Binding> bindings = new ArrayList<>();
 
-  /** If non-negative, flags that particular step should be removed if it is not
+  /**
+   * If non-negative, flags that particular step should be removed if it is not
    * the last step. (For example, "yield {i = i}", which changes the result
-   * shape if the last step but is otherwise a no-op.) */
+   * shape if the last step but is otherwise a no-op.)
+   */
   private int removeIfNotLastIndex = Integer.MIN_VALUE;
-  /** If non-negative, flags that particular step should be removed if it is
-   * the last step. (For example, we flatten "from p in (from q in list)",
-   * to "from q in list yield {p = q}" but we want to remove "yield {p = q}"
-   * if it turns out to be the last step.) */
+  /**
+   * If non-negative, flags that particular step should be removed if it is the
+   * last step. (For example, we flatten "from p in (from q in list)", to "from
+   * q in list yield {p = q}" but we want to remove "yield {p = q}" if it turns
+   * out to be the last step.)
+   */
   private int removeIfLastIndex = Integer.MIN_VALUE;
 
   /** Use {@link net.hydromatic.morel.ast.CoreBuilder#fromBuilder}. */
@@ -90,7 +91,8 @@ public class FromBuilder {
     removeIfLastIndex = Integer.MIN_VALUE;
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return steps.toString();
   }
 
@@ -150,14 +152,14 @@ public class FromBuilder {
     if (exp.op == Op.FROM
         && core.boolLiteral(true).equals(condition)
         && (pat instanceof Core.IdPat
-            && !((Core.From) exp).steps.isEmpty()
-            && getLast(((Core.From) exp).steps).bindings.size() == 1
+                && !((Core.From) exp).steps.isEmpty()
+                && getLast(((Core.From) exp).steps).bindings.size() == 1
             || pat instanceof Core.RecordPat
-                && ((Core.RecordPat) pat).args.stream()
-                    .allMatch(a -> a instanceof Core.IdPat)
+                && ((Core.RecordPat) pat)
+                    .args.stream().allMatch(a -> a instanceof Core.IdPat)
             || pat instanceof Core.TuplePat
-                && ((Core.TuplePat) pat).args.stream()
-                    .allMatch(a -> a instanceof Core.IdPat))) {
+                && ((Core.TuplePat) pat)
+                    .args.stream().allMatch(a -> a instanceof Core.IdPat))) {
       final Core.From from = (Core.From) exp;
       final Core.FromStep lastStep = getLast(from.steps);
       final List<Core.FromStep> steps =
@@ -169,12 +171,16 @@ public class FromBuilder {
       if (pat instanceof Core.RecordPat) {
         final Core.RecordPat recordPat = (Core.RecordPat) pat;
         this.bindings.forEach(b -> nameExps.add(b.id.name, core.id(b.id)));
-        forEach(recordPat.type().argNameTypes.keySet(), recordPat.args,
+        forEach(
+            recordPat.type().argNameTypes.keySet(),
+            recordPat.args,
             (name, arg) -> nameExps.add(name, core.id((Core.IdPat) arg)));
         bindings = null;
       } else if (pat instanceof Core.TuplePat) {
         final Core.TuplePat tuplePat = (Core.TuplePat) pat;
-        forEach(tuplePat.args, lastStep.bindings,
+        forEach(
+            tuplePat.args,
+            lastStep.bindings,
             (arg, binding) ->
                 nameExps.add(((Core.IdPat) arg).name, core.id(binding.id)));
         bindings = null;
@@ -247,7 +253,8 @@ public class FromBuilder {
     return addStep(core.group(groupExpsB.build(), ImmutableSortedMap.of()));
   }
 
-  public FromBuilder group(SortedMap<Core.IdPat, Core.Exp> groupExps,
+  public FromBuilder group(
+      SortedMap<Core.IdPat, Core.Exp> groupExps,
       SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
     return addStep(core.group(groupExps, aggregates));
   }
@@ -269,13 +276,13 @@ public class FromBuilder {
     return yield_(uselessIfLast, null, exp);
   }
 
-  /** Creates a "yield" step.
+  /**
+   * Creates a "yield" step.
    *
-   * <p>When copying, the {@code bindings2} parameter is the
-   * {@link net.hydromatic.morel.ast.Core.Yield#bindings} value of the current
-   * Yield, so that we don't generate new variables (with different ordinals).
-   * Later steps are relying on the variables remaining the same. For example,
-   * in
+   * <p>When copying, the {@code bindings2} parameter is the {@link
+   * net.hydromatic.morel.ast.Core.Yield#bindings} value of the current Yield,
+   * so that we don't generate new variables (with different ordinals). Later
+   * steps are relying on the variables remaining the same. For example, in
    *
    * <pre>{@code
    * from ... yield {a = b} where a > 5
@@ -285,73 +292,77 @@ public class FromBuilder {
    * don't want yield to generate an {@code IdPat('a', 1)}.
    *
    * @param uselessIfLast Whether this Yield will be useless if it is the last
-   *                      step. The expression {@code {x = y} } is an example of
-   *                      this
-   * @param bindings2     Desired bindings, or null
-   * @param exp           Expression to yield
-   *
+   *     step. The expression {@code {x = y} } is an example of this
+   * @param bindings2 Desired bindings, or null
+   * @param exp Expression to yield
    * @return This FromBuilder, with a Yield added to the list of steps
    */
-  public FromBuilder yield_(boolean uselessIfLast,
-      @Nullable List<Binding> bindings2, Core.Exp exp) {
+  public FromBuilder yield_(
+      boolean uselessIfLast, @Nullable List<Binding> bindings2, Core.Exp exp) {
     boolean uselessIfNotLast = false;
     switch (exp.op) {
-    case TUPLE:
-      final TupleType tupleType =
-          tupleType((Core.Tuple) exp, bindings, bindings2);
-      switch (tupleType) {
-      case IDENTITY:
-        // A trivial record does not rename, so its only purpose is to
-        // change from a scalar to a record, and even then only when a
-        // singleton.
-        if (bindings.size() == 1) {
-          // Singleton record that does not rename, e.g. 'yield {x=x}'
-          // It only has meaning as the last step.
-          if (bindings2 == null) {
-            bindings2 = ImmutableList.copyOf(bindings);
-          }
-          uselessIfNotLast = true;
-          break;
-        } else {
-          // Non-singleton record that does not rename,
-          // e.g. 'yield {x=x,y=y}'. It is useless.
+      case TUPLE:
+        final TupleType tupleType =
+            tupleType((Core.Tuple) exp, bindings, bindings2);
+        switch (tupleType) {
+          case IDENTITY:
+            // A trivial record does not rename, so its only purpose is to
+            // change from a scalar to a record, and even then only when a
+            // singleton.
+            if (bindings.size() == 1) {
+              // Singleton record that does not rename, e.g. 'yield {x=x}'
+              // It only has meaning as the last step.
+              if (bindings2 == null) {
+                bindings2 = ImmutableList.copyOf(bindings);
+              }
+              uselessIfNotLast = true;
+              break;
+            } else {
+              // Non-singleton record that does not rename,
+              // e.g. 'yield {x=x,y=y}'. It is useless.
+              return this;
+            }
+          case RENAME:
+            if (bindings.size() == 1) {
+              // Singleton record that renames, e.g. 'yield {y=x}'.
+              // It is always useful.
+              break;
+            } else {
+              // Non-singleton record that renames, e.g. 'yield {y=x,z=y}'.
+              // It is always useful.
+              break;
+            }
+        }
+        break;
+
+      case ID:
+        if (bindings.size() == 1
+            && ((Core.Id) exp).idPat.equals(bindings.get(0).id)) {
           return this;
         }
-      case RENAME:
-        if (bindings.size() == 1) {
-          // Singleton record that renames, e.g. 'yield {y=x}'.
-          // It is always useful.
-          break;
-        } else {
-          // Non-singleton record that renames, e.g. 'yield {y=x,z=y}'.
-          // It is always useful.
-          break;
-        }
-      }
-      break;
-
-    case ID:
-      if (bindings.size() == 1
-          && ((Core.Id) exp).idPat.equals(bindings.get(0).id)) {
-        return this;
-      }
     }
-    addStep(bindings2 != null
-        ? core.yield_(bindings2, exp)
-        : core.yield_(typeSystem, exp));
-    removeIfNotLastIndex = uselessIfNotLast ? steps.size() - 1 : Integer.MIN_VALUE;
+    addStep(
+        bindings2 != null
+            ? core.yield_(bindings2, exp)
+            : core.yield_(typeSystem, exp));
+    removeIfNotLastIndex =
+        uselessIfNotLast ? steps.size() - 1 : Integer.MIN_VALUE;
     removeIfLastIndex = uselessIfLast ? steps.size() - 1 : Integer.MIN_VALUE;
     return this;
   }
 
   /** Returns whether tuple is something like "{i = i, j = j}". */
-  private static boolean isTrivial(Core.Tuple tuple, List<Binding> bindings,
+  private static boolean isTrivial(
+      Core.Tuple tuple,
+      List<Binding> bindings,
       @Nullable List<Binding> bindings2) {
     return tupleType(tuple, bindings, bindings2) == TupleType.IDENTITY;
   }
 
   /** Returns whether tuple is something like "{i = i, j = j}". */
-  private static TupleType tupleType(Core.Tuple tuple, List<Binding> bindings,
+  private static TupleType tupleType(
+      Core.Tuple tuple,
+      List<Binding> bindings,
       @Nullable List<Binding> bindings2) {
     if (tuple.args.size() != bindings.size()) {
       return TupleType.OTHER;
@@ -381,9 +392,7 @@ public class FromBuilder {
       }
       steps.remove(steps.size() - 1);
     }
-    if (simplify
-        && steps.size() == 1
-        && steps.get(0).op == Op.SCAN) {
+    if (simplify && steps.size() == 1 && steps.get(0).op == Op.SCAN) {
       final Core.Scan scan = (Core.Scan) steps.get(0);
       if (scan.pat.op == Op.ID_PAT) {
         return scan.exp;
@@ -403,47 +412,58 @@ public class FromBuilder {
 
   /** Calls the method to re-register a step. */
   private class StepHandler extends Visitor {
-    @Override protected void visit(Core.Group group) {
+    @Override
+    protected void visit(Core.Group group) {
       group(group.groupExps, group.aggregates);
     }
 
-    @Override protected void visit(Core.Order order) {
+    @Override
+    protected void visit(Core.Order order) {
       order(order.orderItems);
     }
 
-    @Override protected void visit(Core.Scan scan) {
+    @Override
+    protected void visit(Core.Scan scan) {
       scan(scan.pat, scan.exp, scan.condition);
     }
 
-    @Override protected void visit(Core.Where where) {
+    @Override
+    protected void visit(Core.Where where) {
       where(where.exp);
     }
 
-    @Override protected void visit(Core.Skip skip) {
+    @Override
+    protected void visit(Core.Skip skip) {
       skip(skip.exp);
     }
 
-    @Override protected void visit(Core.Take take) {
+    @Override
+    protected void visit(Core.Take take) {
       take(take.exp);
     }
 
-    @Override protected void visit(Core.Yield yield) {
+    @Override
+    protected void visit(Core.Yield yield) {
       yield_(false, yield.bindings, yield.exp);
     }
   }
 
   /** Category of expression passed to "yield". */
   private enum TupleType {
-    /** Tuple whose right side are the current fields,
-     * e.g. "{a = deptno, b = dname}". */
+    /**
+     * Tuple whose right side are the current fields, e.g. "{a = deptno, b =
+     * dname}".
+     */
     RENAME,
-    /** Tuple whose right side are the current fields
-     * and left side are the same as the right,
-     * e.g. "{deptno = deptno, dname = dname}". */
+    /**
+     * Tuple whose right side are the current fields and left side are the same
+     * as the right, e.g. "{deptno = deptno, dname = dname}".
+     */
     IDENTITY,
-    /** Any other tuple,
-     * e.g. "{a = deptno + 1, dname = dname}",
-     * "{deptno = deptno}" (too few fields). */
+    /**
+     * Any other tuple, e.g. "{a = deptno + 1, dname = dname}", "{deptno =
+     * deptno}" (too few fields).
+     */
     OTHER
   }
 }

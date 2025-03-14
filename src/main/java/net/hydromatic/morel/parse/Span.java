@@ -18,36 +18,35 @@
  */
 package net.hydromatic.morel.parse;
 
-import net.hydromatic.morel.ast.AstNode;
-import net.hydromatic.morel.ast.Pos;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.ast.Pos;
 
 /**
  * Builder for {@link Pos}.
  *
- * <p>Because it is mutable, it is convenient for keeping track of the
- * positions of the tokens that go into a non-terminal. It can be passed
- * into methods, which can add the positions of tokens consumed to it.
+ * <p>Because it is mutable, it is convenient for keeping track of the positions
+ * of the tokens that go into a non-terminal. It can be passed into methods,
+ * which can add the positions of tokens consumed to it.
  *
  * <p>Some patterns:
  *
  * <ul>
- * <li>{@code final Span s;} declaration of a Span at the top of a production
- * <li>{@code s = span();} initializes s to a Span that includes the token we
- *   just saw; very often occurs immediately after the first token in the
- *   production
- * <li>{@code s.end(this);} adds the most recent token to span s and evaluates
- *   to a Position that spans from beginning to end; commonly used
- *   when making a call to a function
- * <li>{@code s.pos()} returns a position spanning all tokens in the list
- * <li>{@code s.add(node);} adds a AstNode's parser position to a span
- * <li>{@code s.addAll(nodeList);} adds several AstNodes' parser positions to
- *   a span
- * <li>{@code s = Span.of();} initializes s to an empty Span, not even
- *   including the most recent token; rarely used
+ *   <li>{@code final Span s;} declaration of a Span at the top of a production
+ *   <li>{@code s = span();} initializes s to a Span that includes the token we
+ *       just saw; very often occurs immediately after the first token in the
+ *       production
+ *   <li>{@code s.end(this);} adds the most recent token to span s and evaluates
+ *       to a Position that spans from beginning to end; commonly used when
+ *       making a call to a function
+ *   <li>{@code s.pos()} returns a position spanning all tokens in the list
+ *   <li>{@code s.add(node);} adds a AstNode's parser position to a span
+ *   <li>{@code s.addAll(nodeList);} adds several AstNodes' parser positions to
+ *       a span
+ *   <li>{@code s = Span.of();} initializes s to an empty Span, not even
+ *       including the most recent token; rarely used
  * </ul>
  */
 public final class Span {
@@ -81,27 +80,29 @@ public final class Span {
     return new Span().addAll(nodes);
   }
 
-  /** Adds a node's position to the list,
-   * and returns this Span. */
+  /** Adds a node's position to the list, and returns this Span. */
   public Span add(AstNode n) {
     return add(n.pos);
   }
 
-  /** Adds a node's position to the list if the node is not null,
-   * and returns this Span. */
+  /**
+   * Adds a node's position to the list if the node is not null, and returns
+   * this Span.
+   */
   public Span addIf(AstNode n) {
     return n == null ? this : add(n);
   }
 
-  /** Adds a position to the list,
-   * and returns this Span. */
+  /** Adds a position to the list, and returns this Span. */
   public Span add(Pos pos) {
     posList.add(pos);
     return this;
   }
 
-  /** Adds the positions of a collection of nodes to the list,
-   * and returns this Span. */
+  /**
+   * Adds the positions of a collection of nodes to the list, and returns this
+   * Span.
+   */
   public Span addAll(Iterable<? extends AstNode> nodes) {
     for (AstNode node : nodes) {
       add(node);
@@ -109,8 +110,10 @@ public final class Span {
     return this;
   }
 
-  /** Adds the position of the last token emitted by a parser to the list,
-   * and returns this Span. */
+  /**
+   * Adds the position of the last token emitted by a parser to the list, and
+   * returns this Span.
+   */
   public Span add(MorelParser parser) {
     try {
       final Pos pos = parser.pos();
@@ -121,28 +124,33 @@ public final class Span {
     }
   }
 
-  /** Returns a position spanning the earliest position to the latest.
-   * Does not assume that the positions are sorted.
-   * Throws if the list is empty. */
+  /**
+   * Returns a position spanning the earliest position to the latest. Does not
+   * assume that the positions are sorted. Throws if the list is empty.
+   */
   public Pos pos() {
     switch (posList.size()) {
-    case 0:
-      throw new AssertionError();
-    case 1:
-      return posList.get(0);
-    default:
-      return Pos.sum(posList);
+      case 0:
+        throw new AssertionError();
+      case 1:
+        return posList.get(0);
+      default:
+        return Pos.sum(posList);
     }
   }
 
-  /** Adds the position of the last token emitted by a parser to the list,
-   * and returns a position that covers the whole range. */
+  /**
+   * Adds the position of the last token emitted by a parser to the list, and
+   * returns a position that covers the whole range.
+   */
   public Pos end(MorelParser parser) {
     return add(parser).pos();
   }
 
-  /** Adds a node's position to the list,
-   * and returns a position that covers the whole range. */
+  /**
+   * Adds a node's position to the list, and returns a position that covers the
+   * whole range.
+   */
   public Pos end(AstNode n) {
     return add(n).pos();
   }

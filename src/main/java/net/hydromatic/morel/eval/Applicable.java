@@ -18,7 +18,8 @@
  */
 package net.hydromatic.morel.eval;
 
-/** A compiled expression that can be evaluated by applying to an argument.
+/**
+ * A compiled expression that can be evaluated by applying to an argument.
  *
  * <p>Similar to {@link Code} but more efficient, because it does not require
  * creating a new runtime environment.
@@ -26,20 +27,25 @@ package net.hydromatic.morel.eval;
 public interface Applicable extends Describable {
   Object apply(EvalEnv env, Object argValue);
 
-  /** Converts this Applicable to a Code that has similar effect
-   * (but is less efficient). */
+  /**
+   * Converts this Applicable to a Code that has similar effect (but is less
+   * efficient).
+   */
   default Code asCode() {
     return new Code() {
-      @Override public Describer describe(Describer describer) {
-        return describer.start("code2", d ->
-            d.arg("applicable", Applicable.this));
+      @Override
+      public Describer describe(Describer describer) {
+        return describer.start(
+            "code2", d -> d.arg("applicable", Applicable.this));
       }
 
-      @Override public Object eval(EvalEnv env) {
+      @Override
+      public Object eval(EvalEnv env) {
         return Applicable.this;
       }
 
-      @Override public boolean isConstant() {
+      @Override
+      public boolean isConstant() {
         return true;
       }
     };

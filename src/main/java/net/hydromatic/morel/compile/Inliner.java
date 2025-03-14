@@ -18,6 +18,14 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Pair.forEach;
+
+import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Applicable;
@@ -28,56 +36,49 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.TypeSystem;
-
-import com.google.common.collect.ImmutableMap;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.util.Pair.forEach;
-
-import static java.util.Objects.requireNonNull;
-
-/**
- * Shuttle that inlines constant values.
- */
+/** Shuttle that inlines constant values. */
 public class Inliner extends EnvShuttle {
   private final Analyzer.@Nullable Analysis analysis;
 
   /** Private constructor. */
-  private Inliner(TypeSystem typeSystem, Environment env,
-      Analyzer.Analysis analysis) {
+  private Inliner(
+      TypeSystem typeSystem, Environment env, Analyzer.Analysis analysis) {
     super(typeSystem, env);
     this.analysis = analysis;
   }
 
-  /** Creates an Inliner.
+  /**
+   * Creates an Inliner.
    *
-   * <p>If {@code analysis} is null, no variables are inlined. */
-  public static Inliner of(TypeSystem typeSystem, Environment env,
+   * <p>If {@code analysis} is null, no variables are inlined.
+   */
+  public static Inliner of(
+      TypeSystem typeSystem,
+      Environment env,
       Analyzer.@Nullable Analysis analysis) {
     return new Inliner(typeSystem, env, analysis);
   }
 
-  @Override protected Inliner push(Environment env) {
+  @Override
+  protected Inliner push(Environment env) {
     return new Inliner(typeSystem, env, analysis);
   }
 
-  @Override protected Core.Exp visit(Core.Id id) {
+  @Override
+  protected Core.Exp visit(Core.Id id) {
     final Binding binding = env.getOpt(id.idPat);
-    if (binding != null
-        && !binding.parameter) {
+    if (binding != null && !binding.parameter) {
       if (binding.exp != null) {
         final Analyzer.Use use =
-            analysis == null ? Analyzer.Use.MULTI_UNSAFE
+            analysis == null
+                ? Analyzer.Use.MULTI_UNSAFE
                 : requireNonNull(analysis.map.get(id.idPat));
         switch (use) {
-        case ATOMIC:
-        case ONCE_SAFE:
-          return binding.exp.accept(this);
+          case ATOMIC:
+          case ONCE_SAFE:
+            return binding.exp.accept(this);
         }
       }
       Object v = binding.value;
@@ -91,37 +92,38 @@ public class Inliner extends EnvShuttle {
       }
       if (v != Unit.INSTANCE) {
         switch (id.type.op()) {
-        case ID:
-          assert id.type instanceof PrimitiveType;
-          return core.literal((PrimitiveType) id.type, v);
+          case ID:
+            assert id.type instanceof PrimitiveType;
+            return core.literal((PrimitiveType) id.type, v);
 
-        case FUNCTION_TYPE:
-          assert v instanceof Applicable || v instanceof Macro : v;
-          final BuiltIn builtIn = Codes.BUILT_IN_MAP.get(v);
-          if (builtIn != null) {
-            return core.functionLiteral(typeSystem, builtIn);
-          }
-          // Applicable (including Closure) that does not map to a BuiltIn
-          // is not considered 'constant', mainly because it creates messy
-          // plans.
-          break;
-
-        default:
-          if (v instanceof Code) {
-            v = ((Code) v).eval(Compiler.EMPTY_ENV);
-            if (v == null) {
-              // Cannot inline SYS_FILE; it requires a session.
-              break;
+          case FUNCTION_TYPE:
+            assert v instanceof Applicable || v instanceof Macro : v;
+            final BuiltIn builtIn = Codes.BUILT_IN_MAP.get(v);
+            if (builtIn != null) {
+              return core.functionLiteral(typeSystem, builtIn);
             }
-          }
-          return core.valueLiteral(id, v);
+            // Applicable (including Closure) that does not map to a BuiltIn
+            // is not considered 'constant', mainly because it creates messy
+            // plans.
+            break;
+
+          default:
+            if (v instanceof Code) {
+              v = ((Code) v).eval(Compiler.EMPTY_ENV);
+              if (v == null) {
+                // Cannot inline SYS_FILE; it requires a session.
+                break;
+              }
+            }
+            return core.valueLiteral(id, v);
         }
       }
     }
     return super.visit(id);
   }
 
-  @Override protected Core.Exp visit(Core.Apply apply) {
+  @Override
+  protected Core.Exp visit(Core.Apply apply) {
     final Core.Apply apply2 = (Core.Apply) super.visit(apply);
     if (apply2.fn.op == Op.RECORD_SELECTOR
         && apply2.arg.op == Op.VALUE_LITERAL) {
@@ -151,22 +153,22 @@ public class Inliner extends EnvShuttle {
     return apply2;
   }
 
-  @Override protected Core.Exp visit(Core.Case caseOf) {
+  @Override
+  protected Core.Exp visit(Core.Case caseOf) {
     final Core.Exp exp = caseOf.exp.accept(this);
     final List<Core.Match> matchList = visitList(caseOf.matchList);
     if (matchList.size() == 1) {
-      final Map<Core.Id, Core.Id> substitution =
-          getSub(exp, matchList.get(0));
+      final Map<Core.Id, Core.Id> substitution = getSub(exp, matchList.get(0));
       if (substitution != null) {
-        return Replacer.substitute(typeSystem, substitution,
-            matchList.get(0).exp);
+        return Replacer.substitute(
+            typeSystem, substitution, matchList.get(0).exp);
       }
     }
     return caseOf.copy(exp, matchList);
   }
 
-  private @Nullable Map<Core.Id, Core.Id> getSub(Core.Exp exp,
-      Core.Match match) {
+  private @Nullable Map<Core.Id, Core.Id> getSub(
+      Core.Exp exp, Core.Match match) {
     if (exp.op == Op.ID && match.pat.op == Op.ID_PAT) {
       return ImmutableMap.of(core.id((Core.IdPat) match.pat), (Core.Id) exp);
     }
@@ -177,15 +179,19 @@ public class Inliner extends EnvShuttle {
           && tuplePat.args.stream().allMatch(arg -> arg.op == Op.ID_PAT)) {
         final ImmutableMap.Builder<Core.Id, Core.Id> builder =
             ImmutableMap.builder();
-        forEach(tuple.args, tuplePat.args, (arg, pat) ->
-            builder.put(core.id((Core.IdPat) pat), (Core.Id) arg));
+        forEach(
+            tuple.args,
+            tuplePat.args,
+            (arg, pat) ->
+                builder.put(core.id((Core.IdPat) pat), (Core.Id) arg));
         return builder.build();
       }
     }
     return null;
   }
 
-  @Override protected Core.Exp visit(Core.Let let) {
+  @Override
+  protected Core.Exp visit(Core.Let let) {
     final Analyzer.Use use =
         analysis == null
             ? Analyzer.Use.MULTI_UNSAFE
@@ -194,17 +200,17 @@ public class Inliner extends EnvShuttle {
                     analysis.map.get(((Core.NonRecValDecl) let.decl).pat))
                 : Analyzer.Use.MULTI_UNSAFE;
     switch (use) {
-    case DEAD:
-      // This declaration has no uses; remove it
-      return let.exp;
+      case DEAD:
+        // This declaration has no uses; remove it
+        return let.exp;
 
-    case ATOMIC:
-    case ONCE_SAFE:
-      // This declaration has one use; remove the declaration, and replace its
-      // use inside the expression.
-      final List<Binding> bindings = new ArrayList<>();
-      Compiles.bindPattern(typeSystem, bindings, let.decl);
-      return let.exp.accept(bind(bindings));
+      case ATOMIC:
+      case ONCE_SAFE:
+        // This declaration has one use; remove the declaration, and replace its
+        // use inside the expression.
+        final List<Binding> bindings = new ArrayList<>();
+        Compiles.bindPattern(typeSystem, bindings, let.decl);
+        return let.exp.accept(bind(bindings));
     }
     return super.visit(let);
   }

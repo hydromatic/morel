@@ -18,19 +18,16 @@
  */
 package net.hydromatic.morel.type;
 
-import net.hydromatic.morel.ast.Op;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.UnaryOperator;
-
-import static com.google.common.base.Preconditions.checkArgument;
-
-import static java.util.Objects.requireNonNull;
+import net.hydromatic.morel.ast.Op;
 
 /** Type variable (e.g. {@code 'a}). */
 public class TypeVar implements Type {
@@ -43,9 +40,11 @@ public class TypeVar implements Type {
   public final int ordinal;
   private final String name;
 
-  /** Creates a type variable with a given ordinal.
+  /**
+   * Creates a type variable with a given ordinal.
    *
-   * <p>TypeVar.of(0) returns "'a"; TypeVar.of(1) returns "'b", etc. */
+   * <p>TypeVar.of(0) returns "'a"; TypeVar.of(1) returns "'b", etc.
+   */
   public TypeVar(int ordinal) {
     checkArgument(ordinal >= 0);
     this.ordinal = ordinal;
@@ -56,18 +55,20 @@ public class TypeVar implements Type {
     }
   }
 
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     return ordinal + 6563;
   }
 
-  @Override public boolean equals(Object obj) {
+  @Override
+  public boolean equals(Object obj) {
     return obj == this
-        || obj instanceof TypeVar
-        && this.ordinal == ((TypeVar) obj).ordinal;
+        || obj instanceof TypeVar && this.ordinal == ((TypeVar) obj).ordinal;
   }
 
   /** Returns a string for debugging. */
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return name;
   }
 
@@ -75,17 +76,19 @@ public class TypeVar implements Type {
     return typeVisitor.visit(this);
   }
 
-  /** Generates a name for a type variable.
+  /**
+   * Generates a name for a type variable.
    *
    * <p>0 &rarr; 'a, 1 &rarr; 'b, 26 &rarr; 'z, 27 &rarr; 'ba, 28 &rarr; 'bb,
    * 675 &rarr; 'zz, 676 &rarr; 'baa, etc. (Think of it is a base 26 number,
-   * with "a" as 0, "z" as 25.) */
+   * with "a" as 0, "z" as 25.)
+   */
   static String name(int i) {
     if (i < 0) {
       throw new IllegalArgumentException();
     }
     final StringBuilder s = new StringBuilder();
-    for (;;) {
+    for (; ; ) {
       final int mod = i % 26;
       s.append(ALPHAS[mod]);
       i /= 26;
@@ -95,21 +98,23 @@ public class TypeVar implements Type {
     }
   }
 
-  @Override public Key key() {
+  @Override
+  public Key key() {
     return Keys.ordinal(ordinal);
   }
 
-  @Override public Op op() {
+  @Override
+  public Op op() {
     return Op.TY_VAR;
   }
 
-  @Override public Type copy(TypeSystem typeSystem,
-      UnaryOperator<Type> transform) {
+  @Override
+  public Type copy(TypeSystem typeSystem, UnaryOperator<Type> transform) {
     return transform.apply(this);
   }
 
-  @Override public Type substitute(TypeSystem typeSystem,
-      List<? extends Type> types) {
+  @Override
+  public Type substitute(TypeSystem typeSystem, List<? extends Type> types) {
     return types.get(ordinal);
   }
 }

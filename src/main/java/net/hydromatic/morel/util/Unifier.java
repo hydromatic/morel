@@ -18,26 +18,24 @@
  */
 package net.hydromatic.morel.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.util.Pair.forEachIndexed;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
-import static net.hydromatic.morel.util.Pair.forEachIndexed;
-
-import static com.google.common.base.Preconditions.checkArgument;
-
-import static java.util.Objects.requireNonNull;
-
-/** Given pairs of terms, finds a substitution to minimize those pairs of
- * terms. */
+/**
+ * Given pairs of terms, finds a substitution to minimize those pairs of terms.
+ */
 public abstract class Unifier {
   private int varId;
   private final Map<String, Variable> variableMap = new HashMap<>();
@@ -74,7 +72,7 @@ public abstract class Unifier {
 
   /** Creates a new variable, with a new name. */
   public Variable variable() {
-    for (;;) {
+    for (; ; ) {
       final int ordinal = varId++;
       final String name = "T" + ordinal;
       if (!variableMap.containsKey(name)) {
@@ -91,10 +89,12 @@ public abstract class Unifier {
     return atomMap.computeIfAbsent(name, Sequence::new);
   }
 
-  /** Creates a substitution.
+  /**
+   * Creates a substitution.
    *
-   * <p>The arguments are alternating variable / term pairs. For example,
-   * {@code substitution(a, x, b, y)} becomes [a/X, b/Y]. */
+   * <p>The arguments are alternating variable / term pairs. For example, {@code
+   * substitution(a, x, b, y)} becomes [a/X, b/Y].
+   */
   public Substitution substitution(Term... varTerms) {
     final ImmutableMap.Builder<Variable, Term> mapBuilder =
         ImmutableMap.builder();
@@ -107,8 +107,10 @@ public abstract class Unifier {
     return new Substitution(mapBuilder.build());
   }
 
-  static Sequence sequenceApply(String operator,
-      Map<Variable, Term> substitutions, Iterable<Term> terms) {
+  static Sequence sequenceApply(
+      String operator,
+      Map<Variable, Term> substitutions,
+      Iterable<Term> terms) {
     final ImmutableList.Builder<Term> newTerms = ImmutableList.builder();
     for (Term term : terms) {
       newTerms.add(term.apply(substitutions));
@@ -116,11 +118,14 @@ public abstract class Unifier {
     return new Sequence(operator, newTerms.build());
   }
 
-  public abstract @NonNull Result unify(List<TermTerm> termPairs,
-      Map<Variable, Action> termActions, Tracer tracer);
+  public abstract @NonNull Result unify(
+      List<TermTerm> termPairs,
+      Map<Variable, Action> termActions,
+      Tracer tracer);
 
-  private static void checkCycles(Map<Variable, Term> map,
-      Map<Variable, Variable> active) throws CycleException {
+  private static void checkCycles(
+      Map<Variable, Term> map, Map<Variable, Variable> active)
+      throws CycleException {
     for (Term term : map.values()) {
       term.checkCycle(map, active);
     }
@@ -128,7 +133,8 @@ public abstract class Unifier {
 
   protected Failure failure(String reason) {
     return new Failure() {
-      @Override public String toString() {
+      @Override
+      public String toString() {
         return reason;
       }
     };
@@ -137,22 +143,27 @@ public abstract class Unifier {
   /** Called by the unifier when a Term's type becomes known. */
   @FunctionalInterface
   public interface Action {
-    void accept(Variable variable, Term term, Substitution substitution,
+    void accept(
+        Variable variable,
+        Term term,
+        Substitution substitution,
         List<TermTerm> termPairs);
   }
 
-  /** Result of attempting unification. A success is {@link Substitution},
-   * but there are other failures. */
-  public interface Result {
-  }
+  /**
+   * Result of attempting unification. A success is {@link Substitution}, but
+   * there are other failures.
+   */
+  public interface Result {}
 
   /** Result indicating that unification was not possible. */
-  public static class Failure implements Result {
-  }
+  public static class Failure implements Result {}
 
-  /** The results of a successful unification. Gives access to the raw variable
+  /**
+   * The results of a successful unification. Gives access to the raw variable
    * mapping that resulted from the algorithm, but can also resolve a variable
-   * to the fullest extent possible with the {@link #resolve} method. */
+   * to the fullest extent possible with the {@link #resolve} method.
+   */
   public static final class SubstitutionResult extends Substitution
       implements Result {
     private SubstitutionResult(Map<Variable, Term> resultMap) {
@@ -174,39 +185,50 @@ public abstract class Unifier {
     }
   }
 
-  /** Map from variables to terms.
+  /**
+   * Map from variables to terms.
    *
-   * <p>Quicker to create than its sub-class {@link SubstitutionResult}
-   * because the map is mutable and not sorted. */
+   * <p>Quicker to create than its sub-class {@link SubstitutionResult} because
+   * the map is mutable and not sorted.
+   */
   public static class Substitution {
-    /** The result of the unification algorithm proper. This does not have
+    /**
+     * The result of the unification algorithm proper. This does not have
      * everything completely resolved: some variable substitutions are required
-     * before getting the most atom-y representation. */
+     * before getting the most atom-y representation.
+     */
     public final Map<Variable, Term> resultMap;
 
     Substitution(Map<Variable, Term> resultMap) {
       this.resultMap = resultMap;
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return resultMap.hashCode();
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return this == obj
           || obj instanceof Substitution
-          && resultMap.equals(((Substitution) obj).resultMap);
+              && resultMap.equals(((Substitution) obj).resultMap);
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return accept(new StringBuilder()).toString();
     }
 
     public StringBuilder accept(StringBuilder buf) {
       buf.append("[");
-      forEachIndexed(resultMap, (i, variable, term) ->
-          buf.append(i > 0 ? ", " : "").append(term)
-              .append("/").append(variable));
+      forEachIndexed(
+          resultMap,
+          (i, variable, term) ->
+              buf.append(i > 0 ? ", " : "")
+                  .append(term)
+                  .append("/")
+                  .append(variable));
       return buf.append("]");
     }
 
@@ -253,23 +275,28 @@ public abstract class Unifier {
     <R> R accept(TermVisitor<R> visitor);
   }
 
-  /** Visitor for terms.
+  /**
+   * Visitor for terms.
    *
    * @param <R> return type
-   *
-   * @see Term#accept(TermVisitor) */
+   * @see Term#accept(TermVisitor)
+   */
   public interface TermVisitor<R> {
     R visit(Sequence sequence);
+
     R visit(Variable variable);
   }
 
-  /** Control flow exception, thrown by {@link Term#checkCycle(Map, Map)} if
-   * it finds a cycle in a substitution map. */
-  private static class CycleException extends Exception {
-  }
+  /**
+   * Control flow exception, thrown by {@link Term#checkCycle(Map, Map)} if it
+   * finds a cycle in a substitution map.
+   */
+  private static class CycleException extends Exception {}
 
-  /** A variable that represents a symbol or a sequence; unification's
-   * task is to find the substitutions for such variables. */
+  /**
+   * A variable that represents a symbol or a sequence; unification's task is to
+   * find the substitutions for such variables.
+   */
   public static final class Variable implements Term, Comparable<Variable> {
     final String name;
     final int ordinal;
@@ -277,30 +304,37 @@ public abstract class Unifier {
     Variable(String name, int ordinal) {
       this.name = requireNonNull(name);
       this.ordinal = ordinal;
-      checkArgument(name.equals(name.toUpperCase(Locale.ROOT)),
-          "must be upper case: %s", name);
+      checkArgument(
+          name.equals(name.toUpperCase(Locale.ROOT)),
+          "must be upper case: %s",
+          name);
     }
 
-    /** Creates a variable with a name. The name must not be like "T0" or
-     * "T123", because those are the names created for variables with
-     * ordinals. */
+    /**
+     * Creates a variable with a name. The name must not be like "T0" or "T123",
+     * because those are the names created for variables with ordinals.
+     */
     Variable(String name) {
       this(name, -1);
       checkArgument(!name.matches("T[0-9]+"), name);
     }
 
-    /** Creates a variable with an ordinal. If the ordinal is "34" the name will
-     * be "T34". The ordinal must be non-negative. */
+    /**
+     * Creates a variable with an ordinal. If the ordinal is "34" the name will
+     * be "T34". The ordinal must be non-negative.
+     */
     Variable(int ordinal) {
       this("T" + ordinal, ordinal);
       checkArgument(ordinal >= 0, ordinal);
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return name;
     }
 
-    @Override public int compareTo(Variable o) {
+    @Override
+    public int compareTo(Variable o) {
       int c = Integer.compare(ordinal, o.ordinal);
       if (c == 0) {
         c = name.compareTo(o.name);
@@ -316,8 +350,9 @@ public abstract class Unifier {
       return variable == this;
     }
 
-    public void checkCycle(Map<Variable, Term> map,
-        Map<Variable, Variable> active) throws CycleException {
+    public void checkCycle(
+        Map<Variable, Term> map, Map<Variable, Variable> active)
+        throws CycleException {
       final Term term = map.get(this);
       if (term != null) {
         if (active.put(this, this) != null) {
@@ -343,15 +378,18 @@ public abstract class Unifier {
       this.right = requireNonNull(right);
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return left + " = " + right;
     }
   }
 
-  /** A sequence of terms.
+  /**
+   * A sequence of terms.
    *
    * <p>A sequence [a b c] is often printed "a(b, c)", as if "a" is the type of
-   * node and "b" and "c" are its children. */
+   * node and "b" and "c" are its children.
+   */
   public static final class Sequence implements Term {
     public final String operator;
     public final List<Term> terms;
@@ -365,18 +403,21 @@ public abstract class Unifier {
       this(operator, ImmutableList.of());
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
       return Objects.hash(operator, terms);
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
       return this == obj
           || obj instanceof Sequence
-          && operator.equals(((Sequence) obj).operator)
-          && terms.equals(((Sequence) obj).terms);
+              && operator.equals(((Sequence) obj).operator)
+              && terms.equals(((Sequence) obj).terms);
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       if (terms.isEmpty()) {
         return operator;
       }
@@ -399,16 +440,19 @@ public abstract class Unifier {
       return sequence;
     }
 
-    public void checkCycle(Map<Variable, Term> map,
-        Map<Variable, Variable> active) throws CycleException {
+    public void checkCycle(
+        Map<Variable, Term> map, Map<Variable, Variable> active)
+        throws CycleException {
       for (Term term : terms) {
         term.checkCycle(map, active);
       }
     }
 
-    /** Compares whether two sequences have the same terms.
-     * Compares addresses, not contents, to avoid hitting cycles
-     * if any of the terms are cyclic (e.g. "X = f(X)"). */
+    /**
+     * Compares whether two sequences have the same terms. Compares addresses,
+     * not contents, to avoid hitting cycles if any of the terms are cyclic
+     * (e.g. "X = f(X)").
+     */
     private boolean equalsShallow(Sequence sequence) {
       return this == sequence || listEqual(terms, sequence.terms);
     }
@@ -442,11 +486,17 @@ public abstract class Unifier {
   /** Called on various events during unification. */
   public interface Tracer {
     void onDelete(Term left, Term right);
+
     void onConflict(Sequence left, Sequence right);
+
     void onSequence(Sequence left, Sequence right);
+
     void onSwap(Term left, Term right);
+
     void onCycle(Variable variable, Term term);
+
     void onVariable(Variable variable, Term term);
+
     void onSubstitute(Term left, Term right, Term left2, Term right2);
   }
 }

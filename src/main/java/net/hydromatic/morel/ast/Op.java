@@ -18,12 +18,11 @@
  */
 package net.hydromatic.morel.ast;
 
-import com.google.common.collect.ImmutableMap;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.Locale;
-
 import static java.util.Objects.requireNonNull;
+
+import com.google.common.collect.ImmutableMap;
+import java.util.Locale;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Subtypes of {@link AstNode}. */
 public enum Op {
@@ -88,8 +87,10 @@ public enum Op {
   RECORD_TYPE(true),
   PROGRESSIVE_RECORD_TYPE(true),
   DATA_TYPE(" ", 8),
-  /** Used internally, as the 'type' of a type constructor that does not contain
-   * data. */
+  /**
+   * Used internally, as the 'type' of a type constructor that does not contain
+   * data.
+   */
   DUMMY_TYPE(true),
   APPLY_TYPE(" ", 8),
   TUPLE_TYPE(" * ", 7),
@@ -197,7 +198,8 @@ public enum Op {
   }
 
   Op(String padded, int precedence, boolean leftAssociative) {
-    this(padded,
+    this(
+        padded,
         precedence * 2 + (leftAssociative ? 0 : 1),
         precedence * 2 + (leftAssociative ? 1 : 0));
   }
@@ -214,24 +216,26 @@ public enum Op {
     return name().toLowerCase(Locale.ROOT);
   }
 
-  /** Converts the op of a literal or tuple expression to the corresponding op
-   * of a pattern. */
+  /**
+   * Converts the op of a literal or tuple expression to the corresponding op of
+   * a pattern.
+   */
   public Op toPat() {
     switch (this) {
-    case BOOL_LITERAL:
-      return BOOL_LITERAL_PAT;
-    case CHAR_LITERAL:
-      return CHAR_LITERAL_PAT;
-    case INT_LITERAL:
-      return INT_LITERAL_PAT;
-    case REAL_LITERAL:
-      return REAL_LITERAL_PAT;
-    case STRING_LITERAL:
-      return STRING_LITERAL_PAT;
-    case TUPLE:
-      return TUPLE_PAT;
-    default:
-      throw new AssertionError("unknown op " + this);
+      case BOOL_LITERAL:
+        return BOOL_LITERAL_PAT;
+      case CHAR_LITERAL:
+        return CHAR_LITERAL_PAT;
+      case INT_LITERAL:
+        return INT_LITERAL_PAT;
+      case REAL_LITERAL:
+        return REAL_LITERAL_PAT;
+      case STRING_LITERAL:
+        return STRING_LITERAL_PAT;
+      case TUPLE:
+        return TUPLE_PAT;
+      default:
+        throw new AssertionError("unknown op " + this);
     }
   }
 }

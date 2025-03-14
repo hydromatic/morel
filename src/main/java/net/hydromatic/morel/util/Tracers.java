@@ -18,12 +18,11 @@
  */
 package net.hydromatic.morel.util;
 
-import java.io.OutputStream;
-import java.io.PrintWriter;
-
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Static.str;
 
-import static java.util.Objects.requireNonNull;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 
 /** Implementations of {@link net.hydromatic.morel.util.Unifier.Tracer}. */
 public class Tracers {
@@ -49,18 +48,29 @@ public class Tracers {
 
   /** Implementation of {@link Unifier.Tracer} that does nothing. */
   private static class NullTracer implements Unifier.Tracer {
-    public void onDelete(Unifier.Term left, Unifier.Term right) { }
-    public void onConflict(Unifier.Sequence left, Unifier.Sequence right) { }
-    public void onSequence(Unifier.Sequence left, Unifier.Sequence right) { }
-    public void onSwap(Unifier.Term left, Unifier.Term right) { }
-    public void onCycle(Unifier.Variable variable, Unifier.Term term) { }
-    public void onVariable(Unifier.Variable variable, Unifier.Term term) { }
-    public void onSubstitute(Unifier.Term left, Unifier.Term right,
-        Unifier.Term left2, Unifier.Term right2) { }
+    public void onDelete(Unifier.Term left, Unifier.Term right) {}
+
+    public void onConflict(Unifier.Sequence left, Unifier.Sequence right) {}
+
+    public void onSequence(Unifier.Sequence left, Unifier.Sequence right) {}
+
+    public void onSwap(Unifier.Term left, Unifier.Term right) {}
+
+    public void onCycle(Unifier.Variable variable, Unifier.Term term) {}
+
+    public void onVariable(Unifier.Variable variable, Unifier.Term term) {}
+
+    public void onSubstitute(
+        Unifier.Term left,
+        Unifier.Term right,
+        Unifier.Term left2,
+        Unifier.Term right2) {}
   }
 
-  /** Implementation of {@link Unifier.Tracer} that writes to a given
-   * {@link PrintWriter}. */
+  /**
+   * Implementation of {@link Unifier.Tracer} that writes to a given {@link
+   * PrintWriter}.
+   */
   private static class PrintTracer implements Unifier.Tracer {
     private final StringBuilder b = new StringBuilder();
     private final PrintWriter w;
@@ -104,8 +114,11 @@ public class Tracers {
       flush();
     }
 
-    public void onSubstitute(Unifier.Term left, Unifier.Term right,
-        Unifier.Term left2, Unifier.Term right2) {
+    public void onSubstitute(
+        Unifier.Term left,
+        Unifier.Term right,
+        Unifier.Term left2,
+        Unifier.Term right2) {
       b.append("substitute ").append(left).append(' ').append(right);
       if (left2 != left) {
         b.append("; ").append(left).append(" -> ").append(left2);

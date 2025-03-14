@@ -18,22 +18,14 @@
  */
 package net.hydromatic.morel.eval;
 
-import net.hydromatic.morel.type.Keys;
-import net.hydromatic.morel.type.PrimitiveType;
-import net.hydromatic.morel.type.RecordType;
-import net.hydromatic.morel.type.Type;
-import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.type.TypedValue;
-import net.hydromatic.morel.util.ImmutablePairList;
-import net.hydromatic.morel.util.PairList;
+import static java.nio.file.Files.newInputStream;
+import static java.util.Objects.requireNonNull;
+import static org.apache.calcite.util.Util.first;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import org.apache.calcite.util.Util;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.AbstractList;
@@ -44,25 +36,28 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
-
-import static org.apache.calcite.util.Util.first;
-
-import static java.nio.file.Files.newInputStream;
-import static java.util.Objects.requireNonNull;
+import net.hydromatic.morel.type.Keys;
+import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypedValue;
+import net.hydromatic.morel.util.ImmutablePairList;
+import net.hydromatic.morel.util.PairList;
+import org.apache.calcite.util.Util;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Implementations of {@link File}. */
 public class Files {
-  private Files() {
-  }
+  private Files() {}
 
-  /** Creates a file (or directory).
-   * Never returns null. */
+  /** Creates a file (or directory). Never returns null. */
   public static File create(java.io.File ioFile) {
     return createUnknown(null, ioFile).expand();
   }
 
-  static UnknownFile createUnknown(@Nullable Directory directory,
-      java.io.File ioFile) {
+  static UnknownFile createUnknown(
+      @Nullable Directory directory, java.io.File ioFile) {
     FileType fileType;
     if (ioFile.isDirectory()) {
       fileType = FileType.DIRECTORY;
@@ -82,8 +77,10 @@ public class Files {
     }
   }
 
-  /** Returns a string without its suffix; for example,
-   * {@code removeSuffix("x.txt", ".txt")} returns {@code "x"}. */
+  /**
+   * Returns a string without its suffix; for example, {@code
+   * removeSuffix("x.txt", ".txt")} returns {@code "x"}.
+   */
   private static String removeSuffix(String s, String suffix) {
     if (!s.endsWith(suffix)) {
       return s;
@@ -103,46 +100,46 @@ public class Files {
     for (String field : firstLine.split(",")) {
       final String[] split = field.split(":");
       final String subFieldName = split[0];
-      final String subFieldType =
-          split.length > 1 ? split[1] : "string";
+      final String subFieldType = split.length > 1 ? split[1] : "string";
       Type.Key subType;
       switch (subFieldType) {
-      case "bool":
-        subType = PrimitiveType.BOOL.key();
-        break;
-      case "decimal":
-      case "double":
-        subType = PrimitiveType.REAL.key();
-        break;
-      case "int":
-        subType = PrimitiveType.INT.key();
-        break;
-      default:
-        subType = PrimitiveType.STRING.key();
-        break;
+        case "bool":
+          subType = PrimitiveType.BOOL.key();
+          break;
+        case "decimal":
+        case "double":
+          subType = PrimitiveType.REAL.key();
+          break;
+        case "int":
+          subType = PrimitiveType.INT.key();
+          break;
+        default:
+          subType = PrimitiveType.STRING.key();
+          break;
       }
       nameTypes.add(subFieldName, subType);
     }
     return nameTypes;
   }
 
-  /** Creates a function that converts a string field value to the desired
-   * type. */
+  /**
+   * Creates a function that converts a string field value to the desired type.
+   */
   static Function<String, Object> parser(Type.Key type) {
     switch (type.op) {
-    case DATA_TYPE:
-      switch (type.toString()) {
-      case "int":
-        return s -> s.equals("NULL") ? 0 : Integer.parseInt(s);
-      case "real":
-        return s -> s.equals("NULL") ? 0f : Float.parseFloat(s);
-      case "string":
-        return Files::unquoteString;
+      case DATA_TYPE:
+        switch (type.toString()) {
+          case "int":
+            return s -> s.equals("NULL") ? 0 : Integer.parseInt(s);
+          case "real":
+            return s -> s.equals("NULL") ? 0f : Float.parseFloat(s);
+          case "string":
+            return Files::unquoteString;
+          default:
+            throw new IllegalArgumentException("unknown type " + type);
+        }
       default:
         throw new IllegalArgumentException("unknown type " + type);
-      }
-    default:
-      throw new IllegalArgumentException("unknown type " + type);
     }
   }
 
@@ -167,7 +164,8 @@ public class Files {
       this.fileType = requireNonNull(fileType, "fileType");
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return baseName;
     }
   }
@@ -181,20 +179,21 @@ public class Files {
       this.ioFile = file;
 
       entries = new TreeMap<>(RecordType.ORDERING);
-      for (java.io.File subFile
-          : first(ioFile.listFiles(), new java.io.File[0])) {
+      for (java.io.File subFile :
+          first(ioFile.listFiles(), new java.io.File[0])) {
         UnknownFile f = createUnknown(this, subFile);
         entries.put(f.baseName, f);
       }
     }
 
-    @Override public Type.Key typeKey() {
+    @Override
+    public Type.Key typeKey() {
       return Keys.progressiveRecord(
           Maps.transformValues(entries, TypedValue::typeKey));
     }
 
-    @Override public File discoverField(TypeSystem typeSystem,
-        String fieldName) {
+    @Override
+    public File discoverField(TypeSystem typeSystem, String fieldName) {
       final File file = entries.get(fieldName);
       if (file != null) {
         File file2 = file.expand();
@@ -205,26 +204,31 @@ public class Files {
       return this;
     }
 
-    @Override public File get(int index) {
+    @Override
+    public File get(int index) {
       return Iterables.get(entries.values(), index);
     }
 
-    @Override public int size() {
+    @Override
+    public int size() {
       return entries.size();
     }
 
-    @Override public <V> V valueAs(Class<V> clazz) {
+    @Override
+    public <V> V valueAs(Class<V> clazz) {
       if (clazz.isInstance(this)) {
         return clazz.cast(this);
       }
       throw new IllegalArgumentException("not a " + clazz);
     }
 
-    @Override public <V> V fieldValueAs(String fieldName, Class<V> clazz) {
+    @Override
+    public <V> V fieldValueAs(String fieldName, Class<V> clazz) {
       return clazz.cast(entries.get(fieldName));
     }
 
-    @Override public <V> V fieldValueAs(int fieldIndex, Class<V> clazz) {
+    @Override
+    public <V> V fieldValueAs(int fieldIndex, Class<V> clazz) {
       return clazz.cast(Iterables.get(entries.values(), fieldIndex));
     }
   }
@@ -234,14 +238,18 @@ public class Files {
     final Type.Key typeKey;
     final PairList<Integer, Function<String, Object>> parsers;
 
-    DataFile(java.io.File file, FileType fileType, Type.Key typeKey,
+    DataFile(
+        java.io.File file,
+        FileType fileType,
+        Type.Key typeKey,
         PairList<Integer, Function<String, Object>> parsers) {
       super(file, fileType);
       this.typeKey = requireNonNull(typeKey, "typeKey");
       this.parsers = parsers.immutable();
     }
 
-    @Override public <V> V valueAs(Class<V> clazz) {
+    @Override
+    public <V> V valueAs(Class<V> clazz) {
       try (BufferedReader r = fileType.open(ioFile)) {
         String firstLine = r.readLine();
         if (firstLine == null) {
@@ -249,14 +257,14 @@ public class Files {
         }
         final Object[] values = new Object[parsers.size()];
         final List<List<Object>> list = new ArrayList<>();
-        for (;;) {
+        for (; ; ) {
           String line = r.readLine();
           if (line == null) {
             return clazz.cast(list);
           }
           String[] fields = line.split(",");
-          parsers.forEachIndexed((i, j, parser) ->
-              values[j] = parser.apply(fields[i]));
+          parsers.forEachIndexed(
+              (i, j, parser) -> values[j] = parser.apply(fields[i]));
           list.add(ImmutableList.copyOf(values));
         }
       } catch (IOException e) {
@@ -265,75 +273,87 @@ public class Files {
       }
     }
 
-    @Override public Type.Key typeKey() {
+    @Override
+    public Type.Key typeKey() {
       return typeKey;
     }
   }
 
-  /** File that we have not yet categorized. We don't know whether it is a
+  /**
+   * File that we have not yet categorized. We don't know whether it is a
    * directory.
    *
    * <p>Its type is an empty record type (because we don't know the files in the
-   * directory, or the fields of the data file). */
+   * directory, or the fields of the data file).
+   */
   private static class UnknownFile extends AbstractFile {
-    /** Key for the type "{...}", the progressive record with no
-     * (as yet known) fields. */
+    /**
+     * Key for the type "{...}", the progressive record with no (as yet known)
+     * fields.
+     */
     static final Type.Key PROGRESSIVE_UNIT =
         Keys.progressiveRecord(ImmutableSortedMap.of());
 
-    /** Key for the type "{...} list", the list of progressive records with no
-     * (as yet known) fields. */
-    static final Type.Key PROGRESSIVE_UNIT_LIST =
-        Keys.list(PROGRESSIVE_UNIT);
+    /**
+     * Key for the type "{...} list", the list of progressive records with no
+     * (as yet known) fields.
+     */
+    static final Type.Key PROGRESSIVE_UNIT_LIST = Keys.list(PROGRESSIVE_UNIT);
 
     protected UnknownFile(java.io.File file, FileType fileType) {
       super(file, fileType);
     }
 
-    @Override public <V> V valueAs(Class<V> clazz) {
+    @Override
+    public <V> V valueAs(Class<V> clazz) {
       if (clazz.isAssignableFrom(ImmutableList.class)) {
         return clazz.cast(ImmutableList.of());
       }
       throw new IllegalArgumentException("not a " + clazz);
     }
 
-    @Override public Type.Key typeKey() {
+    @Override
+    public Type.Key typeKey() {
       return fileType.list ? PROGRESSIVE_UNIT_LIST : PROGRESSIVE_UNIT;
     }
 
-    @Override public File expand() {
+    @Override
+    public File expand() {
       switch (fileType) {
-      case DIRECTORY:
-        return new Directory(ioFile);
+        case DIRECTORY:
+          return new Directory(ioFile);
 
-      case FILE:
-        return this;
-
-      default:
-        try (BufferedReader r = fileType.open(ioFile)) {
-          final PairList<String, Type.Key> nameTypes = fileType.deduceFields(r);
-          final ImmutableSortedMap<String, Type.Key> sortedNameTypes =
-              ImmutableSortedMap.<String, Type.Key>orderedBy(RecordType.ORDERING)
-                  .putAll(nameTypes)
-                  .build();
-          final PairList<Integer, Function<String, Object>> fieldParsers =
-              PairList.of();
-          nameTypes.forEach((name, typeKey) -> {
-            final int j = sortedNameTypes.keySet().asList().indexOf(name);
-            fieldParsers.add(j, parser(typeKey));
-          });
-
-          final Type.Key listType = Keys.list(Keys.record(sortedNameTypes));
-          return new DataFile(ioFile, fileType, listType, fieldParsers);
-        } catch (IOException e) {
-          // ignore, and skip file
+        case FILE:
           return this;
-        }
+
+        default:
+          try (BufferedReader r = fileType.open(ioFile)) {
+            final PairList<String, Type.Key> nameTypes =
+                fileType.deduceFields(r);
+            final ImmutableSortedMap<String, Type.Key> sortedNameTypes =
+                ImmutableSortedMap.<String, Type.Key>orderedBy(
+                        RecordType.ORDERING)
+                    .putAll(nameTypes)
+                    .build();
+            final PairList<Integer, Function<String, Object>> fieldParsers =
+                PairList.of();
+            nameTypes.forEach(
+                (name, typeKey) -> {
+                  final int j = sortedNameTypes.keySet().asList().indexOf(name);
+                  fieldParsers.add(j, parser(typeKey));
+                });
+
+            final Type.Key listType = Keys.list(Keys.record(sortedNameTypes));
+            return new DataFile(ioFile, fileType, listType, fieldParsers);
+          } catch (IOException e) {
+            // ignore, and skip file
+            return this;
+          }
       }
     }
 
-    @Override public File discoverField(TypeSystem typeSystem,
-        String fieldName) {
+    @Override
+    public File discoverField(TypeSystem typeSystem, String fieldName) {
       final File file = expand();
       if (file == this) {
         return this;
@@ -346,13 +366,14 @@ public class Files {
   private static class UnknownChildFile extends UnknownFile {
     private final Directory directory;
 
-    protected UnknownChildFile(Directory directory, java.io.File file,
-        FileType fileType) {
+    protected UnknownChildFile(
+        Directory directory, java.io.File file, FileType fileType) {
       super(file, fileType);
       this.directory = requireNonNull(directory, "directory");
     }
 
-    @Override public File expand() {
+    @Override
+    public File expand() {
       final File file = super.expand();
       if (file != this) {
         directory.entries.put(baseName, file);
@@ -361,9 +382,11 @@ public class Files {
     }
   }
 
-  /** Describes a type of file that can be read by this reader.
-   * Each file has a way to deduce the schema (set of field names and types)
-   * and to parse the file into a set of records. */
+  /**
+   * Describes a type of file that can be read by this reader. Each file has a
+   * way to deduce the schema (set of field names and types) and to parse the
+   * file into a set of records.
+   */
   enum FileType {
     DIRECTORY("", false),
     FILE("", false),
@@ -388,13 +411,14 @@ public class Files {
 
     BufferedReader open(java.io.File file) throws IOException {
       switch (this) {
-      case CSV:
-        return Util.reader(file);
-      case CSV_GZ:
-        return Util.reader(new GZIPInputStream(newInputStream(file.toPath())));
-      default:
-        throw new IllegalArgumentException("cannot open file " + file
-            + " of type " + this);
+        case CSV:
+          return Util.reader(file);
+        case CSV_GZ:
+          return Util.reader(
+              new GZIPInputStream(newInputStream(file.toPath())));
+        default:
+          throw new IllegalArgumentException(
+              "cannot open file " + file + " of type " + this);
       }
     }
 

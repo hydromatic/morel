@@ -18,20 +18,18 @@
  */
 package net.hydromatic.morel.type;
 
-import net.hydromatic.morel.ast.Op;
-import net.hydromatic.morel.util.PairList;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
-
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.UnaryOperator;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.util.PairList;
 
 /** Record type. */
 public class RecordType extends BaseType implements RecordLikeType {
@@ -43,11 +41,13 @@ public class RecordType extends BaseType implements RecordLikeType {
     checkArgument(argNameTypes.comparator() == ORDERING);
   }
 
-  @Override public SortedMap<String, Type> argNameTypes() {
+  @Override
+  public SortedMap<String, Type> argNameTypes() {
     return argNameTypes;
   }
 
-  @Override public Type argType(int i) {
+  @Override
+  public Type argType(int i) {
     // No copy is made: values() is already a list.
     return ImmutableList.copyOf(argNameTypes.values()).get(i);
   }
@@ -60,8 +60,8 @@ public class RecordType extends BaseType implements RecordLikeType {
     return Keys.record(Keys.toKeys(argNameTypes));
   }
 
-  @Override public RecordType copy(TypeSystem typeSystem,
-      UnaryOperator<Type> transform) {
+  @Override
+  public RecordType copy(TypeSystem typeSystem, UnaryOperator<Type> transform) {
     int differenceCount = 0;
     final PairList<String, Type> argNameTypes2 = PairList.of();
     for (Map.Entry<String, Type> entry : argNameTypes.entrySet()) {
@@ -77,18 +77,19 @@ public class RecordType extends BaseType implements RecordLikeType {
         : (RecordType) typeSystem.recordType(argNameTypes2);
   }
 
-  /** Ordering that compares integer values numerically,
-   * string values lexicographically,
-   * and integer values before string values.
+  /**
+   * Ordering that compares integer values numerically, string values
+   * lexicographically, and integer values before string values.
    *
-   * <p>Thus: 2, 22, 202, a, a2, a202, a22. */
+   * <p>Thus: 2, 22, 202, a, a2, a202, a22.
+   */
   public static final Ordering<String> ORDERING =
       Ordering.from(RecordType::compareNames);
 
   /** Creates a constant map, sorted by {@link #ORDERING}. */
   @SuppressWarnings("unchecked")
-  public static <V> SortedMap<String, V> map(String name, V v0,
-      Object... entries) {
+  public static <V> SortedMap<String, V> map(
+      String name, V v0, Object... entries) {
     final ImmutableSortedMap.Builder<String, V> builder =
         ImmutableSortedMap.orderedBy(ORDERING);
     builder.put(name, v0);
@@ -114,14 +115,16 @@ public class RecordType extends BaseType implements RecordLikeType {
     return o1.compareTo(o2);
   }
 
-  /** Parses a string that contains an integer value; returns
-   * {@link Integer#MAX_VALUE} if the string does not contain an integer,
-   * or if the value is less than zero,
-   * or if the value is greater than or equal to 1 billion.
+  /**
+   * Parses a string that contains an integer value; returns {@link
+   * Integer#MAX_VALUE} if the string does not contain an integer, or if the
+   * value is less than zero, or if the value is greater than or equal to 1
+   * billion.
    *
-   * <p>This approach is much faster for our purposes than
-   * {@link Integer#parseInt(String)}, which has to create and throw an
-   * exception if the value is not an integer. */
+   * <p>This approach is much faster for our purposes than {@link
+   * Integer#parseInt(String)}, which has to create and throw an exception if
+   * the value is not an integer.
+   */
   private static int parseInt(String s) {
     final int length = s.length();
     if (length > 9) {

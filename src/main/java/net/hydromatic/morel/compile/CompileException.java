@@ -33,11 +33,13 @@ public class CompileException extends RuntimeException
     this.pos = pos;
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return super.toString() + " at " + pos;
   }
 
-  @Override public Pos pos() {
+  @Override
+  public Pos pos() {
     return pos;
   }
 

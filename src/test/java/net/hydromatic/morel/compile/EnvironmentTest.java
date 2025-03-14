@@ -18,33 +18,32 @@
  */
 package net.hydromatic.morel.compile;
 
-import net.hydromatic.morel.type.PrimitiveType;
-
-import com.google.common.collect.ImmutableSet;
-import org.hamcrest.CustomTypeSafeMatcher;
-import org.hamcrest.Matcher;
-import org.junit.jupiter.api.Test;
-
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static net.hydromatic.morel.ast.CoreBuilder.core;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 
-/**
- * Tests for {@link net.hydromatic.morel.compile.Environment}.
- */
+import com.google.common.collect.ImmutableSet;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import net.hydromatic.morel.type.PrimitiveType;
+import org.hamcrest.CustomTypeSafeMatcher;
+import org.hamcrest.Matcher;
+import org.junit.jupiter.api.Test;
+
+/** Tests for {@link net.hydromatic.morel.compile.Environment}. */
 public class EnvironmentTest {
-  /** Tests that if you call {@link Environment#bind} twice with the same name,
-   * the binding chain does not get longer. */
-  @Test void testOptimizeSubEnvironment() {
-    final Environment e0 = Environments.empty()
-        .bind(core.idPat(PrimitiveType.INT, "a", 0), 0)
-        .bind(core.idPat(PrimitiveType.INT, "b", 0), 1)
-        .bind(core.idPat(PrimitiveType.INT, "c", 0), 2);
+  /**
+   * Tests that if you call {@link Environment#bind} twice with the same name,
+   * the binding chain does not get longer.
+   */
+  @Test
+  void testOptimizeSubEnvironment() {
+    final Environment e0 =
+        Environments.empty()
+            .bind(core.idPat(PrimitiveType.INT, "a", 0), 0)
+            .bind(core.idPat(PrimitiveType.INT, "b", 0), 1)
+            .bind(core.idPat(PrimitiveType.INT, "c", 0), 2);
     assertThat(e0, instanceOf(Environments.SubEnvironment.class));
     checkOptimizeSubEnvironment(e0);
 
@@ -90,7 +89,8 @@ public class EnvironmentTest {
 
   private Matcher<Environment> hasEnvLength(int i) {
     return new CustomTypeSafeMatcher<Environment>("environment depth " + i) {
-      @Override protected boolean matchesSafely(Environment env) {
+      @Override
+      protected boolean matchesSafely(Environment env) {
         return depth(env) == i;
       }
 

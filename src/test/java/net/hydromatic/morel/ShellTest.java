@@ -18,14 +18,18 @@
  */
 package net.hydromatic.morel;
 
-import net.hydromatic.morel.eval.Prop;
-import net.hydromatic.morel.foreign.ForeignValue;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.TestUtils.findDirectory;
+import static net.hydromatic.morel.TestUtils.plus;
+import static org.hamcrest.CoreMatchers.anyOf;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.StringContains.containsString;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.hamcrest.Matcher;
-import org.junit.jupiter.api.Test;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -38,18 +42,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
-
-import static net.hydromatic.morel.TestUtils.findDirectory;
-import static net.hydromatic.morel.TestUtils.plus;
-
-import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.StringContains.containsString;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
+import net.hydromatic.morel.eval.Prop;
+import net.hydromatic.morel.foreign.ForeignValue;
+import org.hamcrest.Matcher;
+import org.junit.jupiter.api.Test;
 
 /** Tests the Shell. */
 public class ShellTest {
@@ -67,14 +63,15 @@ public class ShellTest {
     }
   }
 
-  /** Throws "assumption failed" if the environment variable 'morel.ci'
-   * is set and is not 0 or false. Allows us to skip tests that are
-   * non-deterministic when run in GitHub actions or Travis CI. */
+  /**
+   * Throws "assumption failed" if the environment variable 'morel.ci' is set
+   * and is not 0 or false. Allows us to skip tests that are non-deterministic
+   * when run in GitHub actions or Travis CI.
+   */
   static void assumeNotInCi() {
     final String ci = System.getProperty("morel.ci");
-    assumeTrue(ci == null
-            || ci.equalsIgnoreCase("false")
-            || ci.equals("0"),
+    assumeTrue(
+        ci == null || ci.equalsIgnoreCase("false") || ci.equals("0"),
         "test skipped during CI (morel.ci is " + ci + ")");
   }
 
@@ -84,136 +81,160 @@ public class ShellTest {
   }
 
   /** Tests {@link Shell} with empty input. */
-  @Test void testShell() {
+  @Test
+  void testShell() {
     final List<String> argList = Collections.singletonList("--system=false");
-    fixture().withArgList(argList)
+    fixture()
+        .withArgList(argList)
         .withInputString("")
         .assertOutput(containsString("morel version"));
   }
 
   /** Tests {@link Shell} with empty input and banner disabled. */
-  @Test void testShellNoBanner() {
-    fixture()
-        .withInputString("")
-        .assertOutput(containsString("- \r\r\n"));
+  @Test
+  void testShellNoBanner() {
+    fixture().withInputString("").assertOutput(containsString("- \r\r\n"));
   }
 
   /** Tests {@link Shell} with one line. */
-  @Test void testOneLine() {
+  @Test
+  void testOneLine() {
     assumeNotInCi();
     final String in = "1 + 2;\n";
-    final String expected = "1 + 2;\r\n"
-        + "- 1 + 2;\r\r\n"
-        + "\u001B[?2004lval it = 3 : int\r\n"
-        + "- \r\r\n"
-        + "\u001B[?2004l";
+    final String expected =
+        "1 + 2;\r\n"
+            + "- 1 + 2;\r\r\n"
+            + "\u001B[?2004lval it = 3 : int\r\n"
+            + "- \r\r\n"
+            + "\u001B[?2004l";
     fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   /** Tests {@link Shell} with a continued line. */
-  @Test void testTwoLines() {
+  @Test
+  void testTwoLines() {
     assumeNotInCi();
-    final String in = "1 +\n" //
-        + "2;\n";
-    final String expected = "1 +\r\n"
-        + "2;\r\n"
-        + "- 1 +\r\r\n"
-        + "\u001B[?2004l= 2;\r\r\n"
-        + "\u001B[?2004lval it = 3 : int\r\n"
-        + "- \r\r\n"
-        + "\u001B[?2004l";
+    final String in =
+        "1 +\n" //
+            + "2;\n";
+    final String expected =
+        "1 +\r\n"
+            + "2;\r\n"
+            + "- 1 +\r\r\n"
+            + "\u001B[?2004l= 2;\r\r\n"
+            + "\u001B[?2004lval it = 3 : int\r\n"
+            + "- \r\r\n"
+            + "\u001B[?2004l";
     fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   /** Tests {@link Shell} printing some tricky real values. */
-  @Test void testReal() {
-    final String in = "val nan = Real.posInf / Real.negInf;\n"
-        + "(nan, Real.posInf, Real.negInf, 0.0, ~0.0);\n";
-    final String expected = "val nan = nan : real\n"
-        + "val it = (nan,inf,~inf,0.0,~0.0) : real * real * real * real * real\n";
+  @Test
+  void testReal() {
+    final String in =
+        "val nan = Real.posInf / Real.negInf;\n"
+            + "(nan, Real.posInf, Real.negInf, 0.0, ~0.0);\n";
+    final String expected =
+        "val nan = nan : real\n"
+            + "val it = (nan,inf,~inf,0.0,~0.0) : real * real * real * real * real\n";
     fixture().withRaw(true).withInputString(in).assertOutput(is(expected));
   }
 
-  /** Tests {@link Shell} with a line that is a comment, another that is empty,
-   *  and another that has only a semicolon; all are treated as empty. */
-  @Test void testEmptyLines() {
+  /**
+   * Tests {@link Shell} with a line that is a comment, another that is empty,
+   * and another that has only a semicolon; all are treated as empty.
+   */
+  @Test
+  void testEmptyLines() {
     assumeNotInCi();
-    final String in = "(* a comment followed by empty *)\n" //
-        + "\n"
-        + ";\n";
-    final String expected = "(* a comment followed by empty *)\r\n"
-        + "\r\n"
-        + ";\r\n"
-        + "- (* a comment followed by empty *)\r\r\n"
-        + "\u001B[?2004l- \r\r\n"
-        + "\u001B[?2004l- ;\r\r\n"
-        + "\u001B[?2004l- \r\r\n"
-        + "\u001B[?2004l";
+    final String in =
+        "(* a comment followed by empty *)\n" //
+            + "\n"
+            + ";\n";
+    final String expected =
+        "(* a comment followed by empty *)\r\n"
+            + "\r\n"
+            + ";\r\n"
+            + "- (* a comment followed by empty *)\r\r\n"
+            + "\u001B[?2004l- \r\r\n"
+            + "\u001B[?2004l- ;\r\r\n"
+            + "\u001B[?2004l- \r\r\n"
+            + "\u001B[?2004l";
     fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   private Matcher<String> is2(String expected) {
-    return anyOf(is(expected),
-        is(expected.replace("\u001B[?2004l", "")));
+    return anyOf(is(expected), is(expected.replace("\u001B[?2004l", "")));
   }
 
   /** Tests {@link Shell} with a single-line comment. */
-  @Test void testSingleLineComment() {
+  @Test
+  void testSingleLineComment() {
     assumeNotInCi();
-    final String in = "(*) line comment\n" //
-        + "1 + 2;\n";
-    final String expected = "(*) line comment\r\n"
-        + "1 + 2;\r\n"
-        + "- (*) line comment\r\r\n"
-        + "\u001B[?2004l- 1 + 2;\r\r\n"
-        + "\u001B[?2004lval it = 3 : int\r\n"
-        + "- \r\r\n"
-        + "\u001B[?2004l";
+    final String in =
+        "(*) line comment\n" //
+            + "1 + 2;\n";
+    final String expected =
+        "(*) line comment\r\n"
+            + "1 + 2;\r\n"
+            + "- (*) line comment\r\r\n"
+            + "\u001B[?2004l- 1 + 2;\r\r\n"
+            + "\u001B[?2004lval it = 3 : int\r\n"
+            + "- \r\r\n"
+            + "\u001B[?2004l";
     fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   /** Tests {@link Shell} with a single-line comment that contains a quote. */
-  @Test void testSingleLineCommentWithQuote() {
+  @Test
+  void testSingleLineCommentWithQuote() {
     assumeNotInCi();
-    final String in = "(*) it's a single-line comment with a quote\n" //
-        + "2 + 3;\n";
-    final String expected = "(*) it's a single-line comment with a quote\r\n"
-        + "2 + 3;\r\n"
-        + "- (*) it's a single-line comment with a quote\r\r\n"
-        + "\u001B[?2004l- 2 + 3;\r\r\n"
-        + "\u001B[?2004lval it = 5 : int\r\n"
-        + "- \r\r\n"
-        + "\u001B[?2004l";
+    final String in =
+        "(*) it's a single-line comment with a quote\n" //
+            + "2 + 3;\n";
+    final String expected =
+        "(*) it's a single-line comment with a quote\r\n"
+            + "2 + 3;\r\n"
+            + "- (*) it's a single-line comment with a quote\r\r\n"
+            + "\u001B[?2004l- 2 + 3;\r\r\n"
+            + "\u001B[?2004lval it = 5 : int\r\n"
+            + "- \r\r\n"
+            + "\u001B[?2004l";
     fixture().withInputString(in).assertOutput(is2(expected));
   }
 
-  /** Tests {@link Shell} with {@code let} statement spread over multiple
-   * lines. */
-  @Test void testMultiLineLet() {
+  /**
+   * Tests {@link Shell} with {@code let} statement spread over multiple lines.
+   */
+  @Test
+  void testMultiLineLet() {
     assumeNotInCi();
-    final String in = "let\n" //
-        + "  val x = 1\n"
-        + "in\n"
-        + "  x + 2\n"
-        + "end;\n";
-    final String expected = "let\r\n"
-        + "  val x = 1\r\n"
-        + "in\r\n"
-        + "  x + 2\r\n"
-        + "end;\r\n"
-        + "- let\r\r\n"
-        + "\u001B[?2004l=   val x = 1\r\r\n"
-        + "\u001B[?2004l= in\r\r\n"
-        + "\u001B[?2004l=   x + 2\r\r\n"
-        + "\u001B[?2004l= end;\r\r\n"
-        + "\u001B[?2004lval it = 3 : int\r\n"
-        + "- \r\r\n"
-        + "\u001B[?2004l";
+    final String in =
+        "let\n" //
+            + "  val x = 1\n"
+            + "in\n"
+            + "  x + 2\n"
+            + "end;\n";
+    final String expected =
+        "let\r\n"
+            + "  val x = 1\r\n"
+            + "in\r\n"
+            + "  x + 2\r\n"
+            + "end;\r\n"
+            + "- let\r\r\n"
+            + "\u001B[?2004l=   val x = 1\r\r\n"
+            + "\u001B[?2004l= in\r\r\n"
+            + "\u001B[?2004l=   x + 2\r\r\n"
+            + "\u001B[?2004l= end;\r\r\n"
+            + "\u001B[?2004lval it = 3 : int\r\n"
+            + "- \r\r\n"
+            + "\u001B[?2004l";
     fixture().withInputString(in).assertOutput(is2(expected));
   }
 
   /** Tests the {@code use} function. */
-  @Test void testUse() {
+  @Test
+  void testUse() {
     assumeNotInCi();
     // In SML-NJ, given x.sml as follows:
     //   val x = 2;
@@ -245,37 +266,39 @@ public class ShellTest {
     // Note that x = 1 after /tmp/x.sml has finished;
     // and that z has been assigned after /tmp/z.sml has finished.
     final String in = "use \"x.sml\";\n";
-    final String expected = "use \"x.sml\";\r\n"
-        + "- use \"x.sml\";\r\r\n"
-        + "\u001B[?2004l[opening x.sml]\r\n"
-        + "val x = 2 : int\r\n"
-        + "val y = 5 : int\r\n"
-        + "val it = 7 : int\r\n"
-        + "[opening z.sml]\r\n"
-        + "val z = 7 : int\r\n"
-        + "val x = 1 : int\r\n"
-        + "val it = 8 : int\r\n"
-        + "val it = () : unit\r\n"
-        + "val it = 13 : int\r\n"
-        + "val it = () : unit\r\n"
-        + "- \r\r\n"
-        + "\u001B[?2004l";
+    final String expected =
+        "use \"x.sml\";\r\n"
+            + "- use \"x.sml\";\r\r\n"
+            + "\u001B[?2004l[opening x.sml]\r\n"
+            + "val x = 2 : int\r\n"
+            + "val y = 5 : int\r\n"
+            + "val it = 7 : int\r\n"
+            + "[opening z.sml]\r\n"
+            + "val z = 7 : int\r\n"
+            + "val x = 1 : int\r\n"
+            + "val it = 8 : int\r\n"
+            + "val it = () : unit\r\n"
+            + "val it = 13 : int\r\n"
+            + "val it = () : unit\r\n"
+            + "- \r\r\n"
+            + "\u001B[?2004l";
     fixture()
         .withArgListPlusDirectory()
         .withInputString(in)
         .assertOutput(is2(expected));
 
-    final String expectedRaw = "[opening x.sml]\n"
-        + "val x = 2 : int\n"
-        + "val y = 5 : int\n"
-        + "val it = 7 : int\n"
-        + "[opening z.sml]\n"
-        + "val z = 7 : int\n"
-        + "val x = 1 : int\n"
-        + "val it = 8 : int\n"
-        + "val it = () : unit\n"
-        + "val it = 13 : int\n"
-        + "val it = () : unit\n";
+    final String expectedRaw =
+        "[opening x.sml]\n"
+            + "val x = 2 : int\n"
+            + "val y = 5 : int\n"
+            + "val it = 7 : int\n"
+            + "[opening z.sml]\n"
+            + "val z = 7 : int\n"
+            + "val x = 1 : int\n"
+            + "val it = 8 : int\n"
+            + "val it = () : unit\n"
+            + "val it = 13 : int\n"
+            + "val it = () : unit\n";
     fixture()
         .withRaw(true)
         .withArgListPlusDirectory()
@@ -284,29 +307,31 @@ public class ShellTest {
   }
 
   /** Tests a warning. */
-  @Test void testMatchWarning() {
-    final String in = "fun f 1 = 1;\n" //
-        + "f 1;\n";
-    final String expected = "stdIn:1.5-1.12 Warning: match nonexhaustive\n"
-        + "  raised at: stdIn:1.5-1.12\n"
-        + "val f = fn : int -> int\n"
-        + "val it = 1 : int\n";
-    fixture()
-        .withRaw(true)
-        .withInputString(in)
-        .assertOutput(is(expected));
+  @Test
+  void testMatchWarning() {
+    final String in =
+        "fun f 1 = 1;\n" //
+            + "f 1;\n";
+    final String expected =
+        "stdIn:1.5-1.12 Warning: match nonexhaustive\n"
+            + "  raised at: stdIn:1.5-1.12\n"
+            + "val f = fn : int -> int\n"
+            + "val it = 1 : int\n";
+    fixture().withRaw(true).withInputString(in).assertOutput(is(expected));
   }
 
   /** Tests the {@code use} function on an empty file. */
-  @Test void testUseEmpty() {
+  @Test
+  void testUseEmpty() {
     assumeNotInCi();
     final String in = "use \"empty.sml\";\n";
-    final String expected = "use \"empty.sml\";\r\n"
-        + "- use \"empty.sml\";\r\r\n"
-        + "\u001B[?2004l[opening empty.sml]\r\n"
-        + "val it = () : unit\r\n"
-        + "- \r\r\n"
-        + "\u001B[?2004l";
+    final String expected =
+        "use \"empty.sml\";\r\n"
+            + "- use \"empty.sml\";\r\r\n"
+            + "\u001B[?2004l[opening empty.sml]\r\n"
+            + "val it = () : unit\r\n"
+            + "- \r\r\n"
+            + "\u001B[?2004l";
     fixture()
         .withArgListPlusDirectory()
         .withInputString(in)
@@ -314,7 +339,8 @@ public class ShellTest {
   }
 
   /** Tests the {@code use} function on a missing file. */
-  @Test void testUseMissing() {
+  @Test
+  void testUseMissing() {
     assumeNotInCi();
     // SML-NJ gives:
     //   [opening missing.sml]
@@ -324,15 +350,16 @@ public class ShellTest {
     //     raised at: ../compiler/TopLevel/interact/interact.sml:24.14-24.28
 
     final String in = "use \"missing.sml\";\n";
-    final String expected = "use \"missing.sml\";\r\n"
-        + "- use \"missing.sml\";\r\r\n"
-        + "\u001B[?2004l[opening missing.sml]\r\n"
-        + "[use failed: Io: openIn failed on missing.sml,"
-        + " No such file or directory]\r\n"
-        + "uncaught exception Error\r\n"
-        + "  raised at: stdIn:1.1-1.18\r\n"
-        + "- \r\r\n"
-        + "\u001B[?2004l";
+    final String expected =
+        "use \"missing.sml\";\r\n"
+            + "- use \"missing.sml\";\r\r\n"
+            + "\u001B[?2004l[opening missing.sml]\r\n"
+            + "[use failed: Io: openIn failed on missing.sml,"
+            + " No such file or directory]\r\n"
+            + "uncaught exception Error\r\n"
+            + "  raised at: stdIn:1.1-1.18\r\n"
+            + "- \r\r\n"
+            + "\u001B[?2004l";
     fixture()
         .withArgListPlusDirectory()
         .withInputString(in)
@@ -340,7 +367,8 @@ public class ShellTest {
   }
 
   /** Tests the {@code use} function on a file that uses itself. */
-  @Test void testUseSelfReferential() {
+  @Test
+  void testUseSelfReferential() {
     assumeNotInCi();
     // SML-NJ gives:
     //   [opening self-referential.sml]
@@ -350,19 +378,20 @@ public class ShellTest {
     //     raised at: ../compiler/TopLevel/interact/interact.sml:24.14-24.28
 
     final String in = "use \"self-referential.sml\";\n";
-    final String expected = "use \"self-referential.sml\";\r\n"
-        + "- use \"self-referential.sml\";\r\r\n"
-        + "\u001B[?2004l[opening self-referential.sml]\r\n"
-        + "[opening self-referential.sml]\r\n"
-        + "[opening self-referential.sml]\r\n"
-        + "[opening self-referential.sml]\r\n"
-        + "[use failed: Io: openIn failed on self-referential.sml,"
-        + " Too many open files]\r\n"
-        + "uncaught exception Error\r\n"
-        + "  raised at: stdIn:1.1-1.27\r\n"
-        + "val it = () : unit\r\n"
-        + "- \r\r\n"
-        + "\u001B[?2004l";
+    final String expected =
+        "use \"self-referential.sml\";\r\n"
+            + "- use \"self-referential.sml\";\r\r\n"
+            + "\u001B[?2004l[opening self-referential.sml]\r\n"
+            + "[opening self-referential.sml]\r\n"
+            + "[opening self-referential.sml]\r\n"
+            + "[opening self-referential.sml]\r\n"
+            + "[use failed: Io: openIn failed on self-referential.sml,"
+            + " Too many open files]\r\n"
+            + "uncaught exception Error\r\n"
+            + "  raised at: stdIn:1.1-1.27\r\n"
+            + "val it = () : unit\r\n"
+            + "- \r\r\n"
+            + "\u001B[?2004l";
     fixture()
         .withArgListPlusDirectory()
         .withArgList(list -> plus(list, "--maxUseDepth=3"))
@@ -370,291 +399,307 @@ public class ShellTest {
         .assertOutput(is2(expected));
   }
 
-  /** Tests a script running in raw mode.
-   * It uses {@link Main} rather than {@link Shell}. */
-  @Test void testRaw() {
-    String inputString = "val x = 2;\n" //
-        + "x + 3;\n";
-    String expected = "val x = 2 : int\n" //
-        + "val it = 5 : int\n";
+  /**
+   * Tests a script running in raw mode. It uses {@link Main} rather than {@link
+   * Shell}.
+   */
+  @Test
+  void testRaw() {
+    String inputString =
+        "val x = 2;\n" //
+            + "x + 3;\n";
+    String expected =
+        "val x = 2 : int\n" //
+            + "val it = 5 : int\n";
     fixture()
         .withRaw(true)
         .withInputString(inputString)
         .assertOutput(is(expected));
   }
 
-  @Test void testStringDepth() {
-    String inputString = "val s = \"a string that is 35 characters long\";\n"
-        + "val c = #\"a\";\n"
-        + "Sys.set (\"stringDepth\", 20);\n"
-        + "s;\n"
-        + "c;\n"
-        + "\"abc\";\n"
-        + "Sys.set (\"stringDepth\", 1);\n"
-        + "s;\n"
-        + "c;\n"
-        + "Sys.set (\"stringDepth\", 0);\n"
-        + "s;\n"
-        + "c;\n"
-        + "Sys.set (\"stringDepth\", 5);\n"
-        + "\"a\\\\b\\\"cdef\";";
-    String expected = "val s = \"a string that is 35 characters long\" : string\n"
-        + "val c = #\"a\" : char\n"
-        + "val it = () : unit\n"
-        + "val it = \"a string that is 35 #\" : string\n"
-        + "val it = #\"a\" : char\n"
-        + "val it = \"abc\" : string\n"
-        + "val it = () : unit\n"
-        + "val it = \"a#\" : string\n"
-        + "val it = #\"a\" : char\n"
-        + "val it = () : unit\n"
-        + "val it = \"#\" : string\n"
-        + "val it = #\"a\" : char\n"
-        + "val it = () : unit\n"
-        + "val it = \"a\\\\b\\\"c#\" : string\n";
+  @Test
+  void testStringDepth() {
+    String inputString =
+        "val s = \"a string that is 35 characters long\";\n"
+            + "val c = #\"a\";\n"
+            + "Sys.set (\"stringDepth\", 20);\n"
+            + "s;\n"
+            + "c;\n"
+            + "\"abc\";\n"
+            + "Sys.set (\"stringDepth\", 1);\n"
+            + "s;\n"
+            + "c;\n"
+            + "Sys.set (\"stringDepth\", 0);\n"
+            + "s;\n"
+            + "c;\n"
+            + "Sys.set (\"stringDepth\", 5);\n"
+            + "\"a\\\\b\\\"cdef\";";
+    String expected =
+        "val s = \"a string that is 35 characters long\" : string\n"
+            + "val c = #\"a\" : char\n"
+            + "val it = () : unit\n"
+            + "val it = \"a string that is 35 #\" : string\n"
+            + "val it = #\"a\" : char\n"
+            + "val it = \"abc\" : string\n"
+            + "val it = () : unit\n"
+            + "val it = \"a#\" : string\n"
+            + "val it = #\"a\" : char\n"
+            + "val it = () : unit\n"
+            + "val it = \"#\" : string\n"
+            + "val it = #\"a\" : char\n"
+            + "val it = () : unit\n"
+            + "val it = \"a\\\\b\\\"c#\" : string\n";
     fixture()
         .withRaw(true)
         .withInputString(inputString)
         .assertOutput(is(expected));
   }
 
-  @Test void testPrintDepth() {
-    String inputString = "Sys.set (\"lineWidth\", 70);\n"
-        + "val x = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[8],i={j=[9]}}]}]};\n"
-        + "Sys.set (\"printDepth\", 6);\n"
-        + "x;"
-        + "Sys.set (\"printDepth\", 5);\n"
-        + "x;"
-        + "Sys.set (\"printDepth\", 4);\n"
-        + "x;"
-        + "Sys.set (\"printDepth\", 3);\n"
-        + "x;"
-        + "Sys.set (\"printDepth\", 2);\n"
-        + "x;"
-        + "Sys.set (\"printDepth\", 1);\n"
-        + "x;"
-        + "Sys.set (\"printDepth\", 0);\n"
-        + "x;"
-        + "Sys.set (\"printDepth\", ~1);\n"
-        + "x;";
+  @Test
+  void testPrintDepth() {
+    String inputString =
+        "Sys.set (\"lineWidth\", 70);\n"
+            + "val x = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[8],i={j=[9]}}]}]};\n"
+            + "Sys.set (\"printDepth\", 6);\n"
+            + "x;"
+            + "Sys.set (\"printDepth\", 5);\n"
+            + "x;"
+            + "Sys.set (\"printDepth\", 4);\n"
+            + "x;"
+            + "Sys.set (\"printDepth\", 3);\n"
+            + "x;"
+            + "Sys.set (\"printDepth\", 2);\n"
+            + "x;"
+            + "Sys.set (\"printDepth\", 1);\n"
+            + "x;"
+            + "Sys.set (\"printDepth\", 0);\n"
+            + "x;"
+            + "Sys.set (\"printDepth\", ~1);\n"
+            + "x;";
     // TODO: wrap types like this:
     // val it = ...
     //  : {a:int, b:int list,
     //     c:{d:int, e:int list, f:{g:int, h:{i:int list}} list} list}
-    String expected = "val it = () : unit\n"
-        + "val x = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=#,h=#,i=#}]}]}\n"
-        + "  : {a:int, b:int list,\n"
-        + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
-        + "val it = () : unit\n"
-        + "val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[#],i={j=#}}]}]}\n"
-        + "  : {a:int, b:int list,\n"
-        + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
-        + "val it = () : unit\n"
-        + "val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=#,h=#,i=#}]}]}\n"
-        + "  : {a:int, b:int list,\n"
-        + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
-        + "val it = () : unit\n"
-        + "val it = {a=1,b=[2,3],c=[{d=4,e=[#,#],f=[#]}]}\n"
-        + "  : {a:int, b:int list,\n"
-        + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
-        + "val it = () : unit\n"
-        + "val it = {a=1,b=[2,3],c=[{d=#,e=#,f=#}]}\n"
-        + "  : {a:int, b:int list,\n"
-        + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
-        + "val it = () : unit\n"
-        + "val it = {a=1,b=[#,#],c=[#]}\n"
-        + "  : {a:int, b:int list,\n"
-        + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
-        + "val it = () : unit\n"
-        + "val it = {a=#,b=#,c=#}\n"
-        + "  : {a:int, b:int list,\n"
-        + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
-        + "val it = # : unit\n"
-        + "val it = #\n"
-        + "  : {a:int, b:int list,\n"
-        + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
-        + "val it = () : unit\n"
-        + "val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[8],i={j=[9]}}]}]}\n"
-        + "  : {a:int, b:int list,\n"
-        + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n";
+    String expected =
+        "val it = () : unit\n"
+            + "val x = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=#,h=#,i=#}]}]}\n"
+            + "  : {a:int, b:int list,\n"
+            + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
+            + "val it = () : unit\n"
+            + "val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[#],i={j=#}}]}]}\n"
+            + "  : {a:int, b:int list,\n"
+            + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
+            + "val it = () : unit\n"
+            + "val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=#,h=#,i=#}]}]}\n"
+            + "  : {a:int, b:int list,\n"
+            + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
+            + "val it = () : unit\n"
+            + "val it = {a=1,b=[2,3],c=[{d=4,e=[#,#],f=[#]}]}\n"
+            + "  : {a:int, b:int list,\n"
+            + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
+            + "val it = () : unit\n"
+            + "val it = {a=1,b=[2,3],c=[{d=#,e=#,f=#}]}\n"
+            + "  : {a:int, b:int list,\n"
+            + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
+            + "val it = () : unit\n"
+            + "val it = {a=1,b=[#,#],c=[#]}\n"
+            + "  : {a:int, b:int list,\n"
+            + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
+            + "val it = () : unit\n"
+            + "val it = {a=#,b=#,c=#}\n"
+            + "  : {a:int, b:int list,\n"
+            + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
+            + "val it = # : unit\n"
+            + "val it = #\n"
+            + "  : {a:int, b:int list,\n"
+            + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n"
+            + "val it = () : unit\n"
+            + "val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[8],i={j=[9]}}]}]}\n"
+            + "  : {a:int, b:int list,\n"
+            + "     c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}\n";
     fixture()
         .withRaw(true)
         .withInputString(inputString)
         .assertOutput(is(expected));
   }
 
-  @Test void testPrintLength() {
-    String inputString = "Sys.set (\"printLength\", 10);\n"
-        + "val x = [[1,2,3], [4,5], [6], []];\n"
-        + "Sys.set (\"printLength\", 4);\n"
-        + "x;"
-        + "Sys.set (\"printLength\", 3);\n"
-        + "x;"
-        + "Sys.set (\"printLength\", 2);\n"
-        + "x;"
-        + "Sys.set (\"printLength\", 1);\n"
-        + "x;"
-        + "Sys.set (\"printLength\", 0);\n"
-        + "x;"
-        + "Sys.set (\"printLength\", ~1);\n"
-        + "x;\n";
-    String expected = "val it = () : unit\n"
-        + "val x = [[1,2,3],[4,5],[6],[]] : int list list\n"
-        + "val it = () : unit\n"
-        + "val it = [[1,2,3],[4,5],[6],[]] : int list list\n"
-        + "val it = () : unit\n"
-        + "val it = [[1,2,3],[4,5],[6],...] : int list list\n"
-        + "val it = () : unit\n"
-        + "val it = [[1,2,...],[4,5],...] : int list list\n"
-        + "val it = () : unit\n"
-        + "val it = [[1,...],...] : int list list\n"
-        + "val it = () : unit\n"
-        + "val it = [...] : int list list\n"
-        + "val it = () : unit\n"
-        + "val it = [[1,2,3],[4,5],[6],[]] : int list list\n";
+  @Test
+  void testPrintLength() {
+    String inputString =
+        "Sys.set (\"printLength\", 10);\n"
+            + "val x = [[1,2,3], [4,5], [6], []];\n"
+            + "Sys.set (\"printLength\", 4);\n"
+            + "x;"
+            + "Sys.set (\"printLength\", 3);\n"
+            + "x;"
+            + "Sys.set (\"printLength\", 2);\n"
+            + "x;"
+            + "Sys.set (\"printLength\", 1);\n"
+            + "x;"
+            + "Sys.set (\"printLength\", 0);\n"
+            + "x;"
+            + "Sys.set (\"printLength\", ~1);\n"
+            + "x;\n";
+    String expected =
+        "val it = () : unit\n"
+            + "val x = [[1,2,3],[4,5],[6],[]] : int list list\n"
+            + "val it = () : unit\n"
+            + "val it = [[1,2,3],[4,5],[6],[]] : int list list\n"
+            + "val it = () : unit\n"
+            + "val it = [[1,2,3],[4,5],[6],...] : int list list\n"
+            + "val it = () : unit\n"
+            + "val it = [[1,2,...],[4,5],...] : int list list\n"
+            + "val it = () : unit\n"
+            + "val it = [[1,...],...] : int list list\n"
+            + "val it = () : unit\n"
+            + "val it = [...] : int list list\n"
+            + "val it = () : unit\n"
+            + "val it = [[1,2,3],[4,5],[6],[]] : int list list\n";
     fixture()
         .withRaw(true)
         .withInputString(inputString)
         .assertOutput(is(expected));
   }
 
-  @Test void testLineWidth() {
-    String inputString = "Sys.set (\"lineWidth\", 100);\n"
-        + "100;"
-        + "val x = [[1,2,3], [4,5], [6], []];\n"
-        + "val y = ([1,2,3], [4,5], [6], []);\n"
-        + "val z = {a=[1,2,3], b=[4,5], c=[6], d=()};\n"
-        + "val r = {x=x,y=y,z=z};\n"
-        + "val f = fn s => String.size s;\n"
-        + "Sys.set (\"lineWidth\", 40);\n"
-        + "40;\n"
-        + "x;\n"
-        + "y;\n"
-        + "z;\n"
-        + "r;\n"
-        + "Sys.set (\"lineWidth\", 20);\n"
-        + "20;\n"
-        + "x;\n"
-        + "y;\n"
-        + "z;\n"
-        + "f;\n"
-        + "Sys.set (\"lineWidth\", 1);\n"
-        + "1;\n"
-        + "x;\n"
-        + "Sys.set (\"lineWidth\", 0);\n"
-        + "0;\n"
-        + "x;\n"
-        + "Sys.set (\"lineWidth\", ~1);\n"
-        + "~1;\n"
-        + "x;\n";
+  @Test
+  void testLineWidth() {
+    String inputString =
+        "Sys.set (\"lineWidth\", 100);\n"
+            + "100;"
+            + "val x = [[1,2,3], [4,5], [6], []];\n"
+            + "val y = ([1,2,3], [4,5], [6], []);\n"
+            + "val z = {a=[1,2,3], b=[4,5], c=[6], d=()};\n"
+            + "val r = {x=x,y=y,z=z};\n"
+            + "val f = fn s => String.size s;\n"
+            + "Sys.set (\"lineWidth\", 40);\n"
+            + "40;\n"
+            + "x;\n"
+            + "y;\n"
+            + "z;\n"
+            + "r;\n"
+            + "Sys.set (\"lineWidth\", 20);\n"
+            + "20;\n"
+            + "x;\n"
+            + "y;\n"
+            + "z;\n"
+            + "f;\n"
+            + "Sys.set (\"lineWidth\", 1);\n"
+            + "1;\n"
+            + "x;\n"
+            + "Sys.set (\"lineWidth\", 0);\n"
+            + "0;\n"
+            + "x;\n"
+            + "Sys.set (\"lineWidth\", ~1);\n"
+            + "~1;\n"
+            + "x;\n";
     String[] lines = {
-        // width 100
-        "val it = () : unit",
-        "val it = 100 : int",
-        "val x = [[1,2,3],[4,5],[6],[]] : int list list",
-        "val y = ([1,2,3],[4,5],[6],[])"
-            + " : int list * int list * int list * 'a list",
-        "val z = {a=[1,2,3],b=[4,5],c=[6],d=()}"
-            + " : {a:int list, b:int list, c:int list, d:unit}",
-        "val r = {x=[[1,2,3],[4,5],[6],[]],y=([1,2,3],[4,5],[6],[]),"
-            + "z={a=[1,2,3],b=[4,5],c=[6],d=()}}",
-        "  : {x:int list list, y:int list * int list * int list * 'a list,",
-        "     z:{a:int list, b:int list, c:int list, d:unit}}",
-        "val f = fn : string -> int",
-        // width 40
-        "val it = () : unit",
-        "val it = 40 : int",
-        "val it = [[1,2,3],[4,5],[6],[]]",
-        "  : int list list",
-        "val it = ([1,2,3],[4,5],[6],[])",
-        "  : int list * int list * int list *",
-        "    'a list",
-        "val it = {a=[1,2,3],b=[4,5],c=[6],d=()}",
-        "  : {a:int list, b:int list, c:int list,",
-        "     d:unit}",
-        "val it =",
-        "  {x=[[1,2,3],[4,5],[6],[]],",
-        "   y=([1,2,3],[4,5],[6],[]),",
-        "   z={a=[1,2,3],b=[4,5],c=[6],d=()}}",
-        "  : {x:int list list,",
-        "     y:int list * int list * int list *",
-        "       'a list,",
-        "     z:{a:int list, b:int list,",
-        "        c:int list, d:unit}}",
-        // width 20
-        "val it = () : unit",
-        "val it = 20 : int",
-        "val it =",
-        "  [[1,2,3],[4,5],[6],",
-        "   []]",
-        "  : int list list",
-        "val it =",
-        "  ([1,2,3],[4,5],[6],",
-        "   [])",
-        "  : int list *",
-        "    int list *",
-        "    int list *",
-        "    'a list",
-        "val it =",
-        "  {a=[1,2,3],b=[4,5],",
-        "   c=[6],d=()}",
-        "  : {a:int list,",
-        "     b:int list,",
-        "     c:int list,",
-        "     d:unit}",
-        "val it = fn",
-        "  : string -> int",
-        // width 1
-        "val it =",
-        "  ()",
-        "  :",
-        "    unit",
-        "val it =",
-        "  1",
-        "  :",
-        "    int",
-        "val it =",
-        "  [",
-        "   [",
-        "    1,",
-        "    2,",
-        "    3],",
-        "   [",
-        "    4,",
-        "    5],",
-        "   [",
-        "    6],",
-        "   []]",
-        "  :",
-        "    int list list",
-        // width 0
-        "val it =",
-        "  ()",
-        "  :",
-        "    unit",
-        "val it =",
-        "  0",
-        "  :",
-        "    int",
-        "val it =",
-        "  [",
-        "   [",
-        "    1,",
-        "    2,",
-        "    3],",
-        "   [",
-        "    4,",
-        "    5],",
-        "   [",
-        "    6],",
-        "   []]",
-        "  :",
-        "    int list list",
-        // width ~1
-        "val it = () : unit",
-        "val it = ~1 : int",
-        "val it = [[1,2,3],[4,5],[6],[]] : int list list",
-        "",
+      // width 100
+      "val it = () : unit",
+      "val it = 100 : int",
+      "val x = [[1,2,3],[4,5],[6],[]] : int list list",
+      "val y = ([1,2,3],[4,5],[6],[])"
+          + " : int list * int list * int list * 'a list",
+      "val z = {a=[1,2,3],b=[4,5],c=[6],d=()}"
+          + " : {a:int list, b:int list, c:int list, d:unit}",
+      "val r = {x=[[1,2,3],[4,5],[6],[]],y=([1,2,3],[4,5],[6],[]),"
+          + "z={a=[1,2,3],b=[4,5],c=[6],d=()}}",
+      "  : {x:int list list, y:int list * int list * int list * 'a list,",
+      "     z:{a:int list, b:int list, c:int list, d:unit}}",
+      "val f = fn : string -> int",
+      // width 40
+      "val it = () : unit",
+      "val it = 40 : int",
+      "val it = [[1,2,3],[4,5],[6],[]]",
+      "  : int list list",
+      "val it = ([1,2,3],[4,5],[6],[])",
+      "  : int list * int list * int list *",
+      "    'a list",
+      "val it = {a=[1,2,3],b=[4,5],c=[6],d=()}",
+      "  : {a:int list, b:int list, c:int list,",
+      "     d:unit}",
+      "val it =",
+      "  {x=[[1,2,3],[4,5],[6],[]],",
+      "   y=([1,2,3],[4,5],[6],[]),",
+      "   z={a=[1,2,3],b=[4,5],c=[6],d=()}}",
+      "  : {x:int list list,",
+      "     y:int list * int list * int list *",
+      "       'a list,",
+      "     z:{a:int list, b:int list,",
+      "        c:int list, d:unit}}",
+      // width 20
+      "val it = () : unit",
+      "val it = 20 : int",
+      "val it =",
+      "  [[1,2,3],[4,5],[6],",
+      "   []]",
+      "  : int list list",
+      "val it =",
+      "  ([1,2,3],[4,5],[6],",
+      "   [])",
+      "  : int list *",
+      "    int list *",
+      "    int list *",
+      "    'a list",
+      "val it =",
+      "  {a=[1,2,3],b=[4,5],",
+      "   c=[6],d=()}",
+      "  : {a:int list,",
+      "     b:int list,",
+      "     c:int list,",
+      "     d:unit}",
+      "val it = fn",
+      "  : string -> int",
+      // width 1
+      "val it =",
+      "  ()",
+      "  :",
+      "    unit",
+      "val it =",
+      "  1",
+      "  :",
+      "    int",
+      "val it =",
+      "  [",
+      "   [",
+      "    1,",
+      "    2,",
+      "    3],",
+      "   [",
+      "    4,",
+      "    5],",
+      "   [",
+      "    6],",
+      "   []]",
+      "  :",
+      "    int list list",
+      // width 0
+      "val it =",
+      "  ()",
+      "  :",
+      "    unit",
+      "val it =",
+      "  0",
+      "  :",
+      "    int",
+      "val it =",
+      "  [",
+      "   [",
+      "    1,",
+      "    2,",
+      "    3],",
+      "   [",
+      "    4,",
+      "    5],",
+      "   [",
+      "    6],",
+      "   []]",
+      "  :",
+      "    int list list",
+      // width ~1
+      "val it = () : unit",
+      "val it = ~1 : int",
+      "val it = [[1,2,3],[4,5],[6],[]] : int list list",
+      "",
     };
     String expected = String.join("\n", lines);
     fixture()
@@ -663,12 +708,17 @@ public class ShellTest {
         .assertOutput(is(expected));
   }
 
-  /** Fixture for testing the shell.
+  /**
+   * Fixture for testing the shell.
    *
-   * @see #fixture */
+   * @see #fixture
+   */
   interface Fixture {
     ImmutableList<String> DEFAULT_ARG_LIST =
-        ImmutableList.of("--prompt=false", "--system=false", "--banner=false",
+        ImmutableList.of(
+            "--prompt=false",
+            "--system=false",
+            "--banner=false",
             "--terminal=dumb");
 
     List<String> argList();
@@ -702,7 +752,7 @@ public class ShellTest {
       try {
         if (isRaw()) {
           try (Reader reader = new StringReader(inputString());
-               StringWriter writer = new StringWriter()) {
+              StringWriter writer = new StringWriter()) {
             final List<String> argList = ImmutableList.of();
             final Map<String, ForeignValue> valueMap = ImmutableMap.of();
             final Map<Prop, Object> propMap = new LinkedHashMap<>();
@@ -718,8 +768,9 @@ public class ShellTest {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final ByteArrayInputStream bais =
             new ByteArrayInputStream(inputString().getBytes(UTF_8));
-        final Shell.Config config = Shell.parse(Shell.Config.DEFAULT, argList())
-            .withPauseFn(ShellTest::pauseForTenMilliseconds);
+        final Shell.Config config =
+            Shell.parse(Shell.Config.DEFAULT, argList())
+                .withPauseFn(ShellTest::pauseForTenMilliseconds);
         final Shell shell = Shell.create(config, bais, baos);
         shell.run();
         final String outString = baos.toString(UTF_8.name());
@@ -738,19 +789,24 @@ public class ShellTest {
     final boolean raw;
     final File file;
 
-    FixtureImpl(ImmutableList<String> argList, String inputString,
-        boolean raw, File file) {
+    FixtureImpl(
+        ImmutableList<String> argList,
+        String inputString,
+        boolean raw,
+        File file) {
       this.argList = requireNonNull(argList, "argList");
       this.inputString = requireNonNull(inputString, "inputString");
       this.raw = raw;
       this.file = requireNonNull(file, "file");
     }
 
-    @Override public List<String> argList() {
+    @Override
+    public List<String> argList() {
       return argList;
     }
 
-    @Override public Fixture withArgList(List<String> argList) {
+    @Override
+    public Fixture withArgList(List<String> argList) {
       if (this.argList.equals(argList)) {
         return this;
       }
@@ -758,33 +814,39 @@ public class ShellTest {
       return new FixtureImpl(argList1, inputString, raw, file);
     }
 
-    @Override public File getFile() {
+    @Override
+    public File getFile() {
       return file;
     }
 
-    @Override public Fixture withFile(File file) {
+    @Override
+    public Fixture withFile(File file) {
       if (file.equals(this.file)) {
         return this;
       }
       return new FixtureImpl(argList, inputString, raw, file);
     }
 
-    @Override public String inputString() {
+    @Override
+    public String inputString() {
       return inputString;
     }
 
-    @Override public Fixture withInputString(String inputString) {
+    @Override
+    public Fixture withInputString(String inputString) {
       if (this.inputString.equals(inputString)) {
         return this;
       }
       return new FixtureImpl(argList, inputString, raw, file);
     }
 
-    @Override public boolean isRaw() {
+    @Override
+    public boolean isRaw() {
       return raw;
     }
 
-    @Override public Fixture withRaw(boolean raw) {
+    @Override
+    public Fixture withRaw(boolean raw) {
       if (raw == this.raw) {
         return this;
       }

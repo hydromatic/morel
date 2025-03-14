@@ -18,18 +18,14 @@
  */
 package net.hydromatic.morel;
 
-import org.apache.calcite.util.Sources;
+import static java.util.Objects.requireNonNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.net.URL;
+import org.apache.calcite.util.Sources;
 
-import static org.junit.jupiter.api.Assertions.fail;
-
-import static java.util.Objects.requireNonNull;
-
-/**
- * Static utilities for JUnit tests.
- */
+/** Static utilities for JUnit tests. */
 public abstract class TestUtil {
   /** Returns the root directory of the source tree. */
   public static File getBaseDir(Class<?> klass) {
@@ -50,9 +46,12 @@ public abstract class TestUtil {
       file = file.getParentFile();
     }
     if (!isProjectDir(file)) {
-      fail("Could not find pom.xml, build.gradle.kts or gradle.properties. "
-          + "Started with " + classFile.getAbsolutePath()
-          + ", the current path is " + file.getAbsolutePath());
+      fail(
+          "Could not find pom.xml, build.gradle.kts or gradle.properties. "
+              + "Started with "
+              + classFile.getAbsolutePath()
+              + ", the current path is "
+              + file.getAbsolutePath());
     }
     return file;
   }

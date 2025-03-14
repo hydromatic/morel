@@ -18,37 +18,38 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.Map;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.type.TypeSystem;
 
-import java.util.Map;
-
-import static java.util.Objects.requireNonNull;
-
-/**
- * Replaces identifiers with other identifiers.
- */
+/** Replaces identifiers with other identifiers. */
 public class Replacer extends EnvShuttle {
   private final Map<Core.Id, Core.Id> substitution;
 
-  private Replacer(TypeSystem typeSystem, Environment env,
+  private Replacer(
+      TypeSystem typeSystem,
+      Environment env,
       Map<Core.Id, Core.Id> substitution) {
     super(typeSystem, env);
     this.substitution = requireNonNull(substitution);
   }
 
-  static Core.Exp substitute(TypeSystem typeSystem,
-      Map<Core.Id, Core.Id> substitution, Core.Exp exp) {
+  static Core.Exp substitute(
+      TypeSystem typeSystem, Map<Core.Id, Core.Id> substitution, Core.Exp exp) {
     final Replacer replacer =
         new Replacer(typeSystem, Environments.empty(), substitution);
     return exp.accept(replacer);
   }
 
-  @Override protected Replacer push(Environment env) {
+  @Override
+  protected Replacer push(Environment env) {
     return new Replacer(typeSystem, env, substitution);
   }
 
-  @Override protected Core.Exp visit(Core.Id id) {
+  @Override
+  protected Core.Exp visit(Core.Id id) {
     final Core.Id id2 = substitution.get(id);
     return id2 != null ? id2 : id;
   }

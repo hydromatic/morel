@@ -20,17 +20,17 @@ package net.hydromatic.morel.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Version of the JDK.
+/**
+ * Version of the JDK.
  *
- * <p>The {@link #components} field contains the Java version string,
- * parsed into a list of integers. For example,
- * Java "13.0.2" is the list [13, 0, 2];
- * Java "1.8.0_341" is the list [8, 0, 341]. */
+ * <p>The {@link #components} field contains the Java version string, parsed
+ * into a list of integers. For example, Java "13.0.2" is the list [13, 0, 2];
+ * Java "1.8.0_341" is the list [8, 0, 341].
+ */
 public class JavaVersion implements Comparable<JavaVersion> {
   public final List<Integer> components;
 
@@ -75,7 +75,8 @@ public class JavaVersion implements Comparable<JavaVersion> {
     return new JavaVersion(ImmutableList.copyOf(componentList));
   }
 
-  @Override public int compareTo(JavaVersion o) {
+  @Override
+  public int compareTo(JavaVersion o) {
     return COMPARATOR.compare(components, o.components);
   }
 }

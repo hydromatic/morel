@@ -18,6 +18,18 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Static.SKIP;
+import static net.hydromatic.morel.util.Static.shorterThan;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
@@ -27,22 +39,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.checkerframework.checker.nullness.qual.Nullable;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-
-import static net.hydromatic.morel.ast.CoreBuilder.core;
-import static net.hydromatic.morel.util.Static.SKIP;
-import static net.hydromatic.morel.util.Static.shorterThan;
-
-import static java.util.Objects.requireNonNull;
 
 /** Helpers for {@link Environment}. */
 public abstract class Environments {
@@ -60,59 +57,79 @@ public abstract class Environments {
     return BASIC_ENVIRONMENT;
   }
 
-  /** Creates an environment containing built-ins and the given foreign
-   * values. */
-  public static Environment env(TypeSystem typeSystem,
-      @Nullable Session session, Map<String, ForeignValue> valueMap) {
+  /**
+   * Creates an environment containing built-ins and the given foreign values.
+   */
+  public static Environment env(
+      TypeSystem typeSystem,
+      @Nullable Session session,
+      Map<String, ForeignValue> valueMap) {
     return env(EmptyEnvironment.INSTANCE, typeSystem, session, valueMap);
   }
 
-  /** Creates a compilation environment, including built-ins and foreign
-   * values. */
-  private static Environment env(Environment environment, TypeSystem typeSystem,
-      @Nullable Session session, Map<String, ForeignValue> valueMap) {
+  /**
+   * Creates a compilation environment, including built-ins and foreign values.
+   */
+  private static Environment env(
+      Environment environment,
+      TypeSystem typeSystem,
+      @Nullable Session session,
+      Map<String, ForeignValue> valueMap) {
     if (SKIP) {
       return environment;
     }
     final List<Binding> bindings = new ArrayList<>();
     BuiltIn.dataTypes(typeSystem, bindings);
     final NameGenerator nameGen = typeSystem.nameGenerator;
-    Codes.BUILT_IN_VALUES.forEach((key, value) -> {
-      if ("$".equals(key.structure)) {
-        return; // ignore Z_ANDALSO, Z_LIST, etc.
-      }
-      final Type type = key.typeFunction.apply(typeSystem);
-      if (key.sessionValue != null) {
-        if (session == null) {
-          return;
-        }
-        value = key.sessionValue.apply(session);
-      }
-      if (key.structure == null) {
-        bindings.add(Binding.of(core.idPat(type, key.mlName, nameGen), value));
-      }
-      if (key.alias != null) {
-        bindings.add(Binding.of(core.idPat(type, key.alias, nameGen), value));
-      }
-    });
+    Codes.BUILT_IN_VALUES.forEach(
+        (key, value) -> {
+          if ("$".equals(key.structure)) {
+            return; // ignore Z_ANDALSO, Z_LIST, etc.
+          }
+          final Type type = key.typeFunction.apply(typeSystem);
+          if (key.sessionValue != null) {
+            if (session == null) {
+              return;
+            }
+            value = key.sessionValue.apply(session);
+          }
+          if (key.structure == null) {
+            bindings.add(
+                Binding.of(core.idPat(type, key.mlName, nameGen), value));
+          }
+          if (key.alias != null) {
+            bindings.add(
+                Binding.of(core.idPat(type, key.alias, nameGen), value));
+          }
+        });
 
     final EvalEnv emptyEnv = Codes.emptyEnv();
-    BuiltIn.forEachStructure(typeSystem, (structure, type) ->
-        bindings.add(
-            Binding.of(core.idPat(type, structure.name, nameGen),
-                emptyEnv.getOpt(structure.name))));
+    BuiltIn.forEachStructure(
+        typeSystem,
+        (structure, type) ->
+            bindings.add(
+                Binding.of(
+                    core.idPat(type, structure.name, nameGen),
+                    emptyEnv.getOpt(structure.name))));
 
     foreignBindings(typeSystem, valueMap, bindings);
     return bind(environment, bindings);
   }
 
-  private static void foreignBindings(TypeSystem typeSystem,
-      Map<String, ForeignValue> map, List<Binding> bindings) {
-    map.forEach((name, value) -> bindings.add(
-        Binding.of(
-            core.idPat(value.type(typeSystem), name, typeSystem.nameGenerator),
-            value.value())
-            .withParameter(true)));
+  private static void foreignBindings(
+      TypeSystem typeSystem,
+      Map<String, ForeignValue> map,
+      List<Binding> bindings) {
+    map.forEach(
+        (name, value) ->
+            bindings.add(
+                Binding.of(
+                        core.idPat(
+                            value.type(typeSystem),
+                            name,
+                            typeSystem.nameGenerator),
+                        value.value())
+                    .withParameter(true)));
   }
 
   /** Creates an environment that is a given environment plus bindings. */
@@ -135,8 +152,9 @@ public abstract class Environments {
     }
   }
 
-  /** Environment that inherits from a parent environment and adds one
-   * binding. */
+  /**
+   * Environment that inherits from a parent environment and adds one binding.
+   */
   static class SubEnvironment extends Environment {
     private final Environment parent;
     private final Binding binding;
@@ -146,25 +164,29 @@ public abstract class Environments {
       this.binding = requireNonNull(binding);
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return binding.id + ", ...";
     }
 
-    @Override public @Nullable Binding getOpt(String name) {
+    @Override
+    public @Nullable Binding getOpt(String name) {
       if (name.equals(binding.id.name)) {
         return binding;
       }
       return parent.getOpt(name);
     }
 
-    @Override public @Nullable Binding getOpt(Core.NamedPat id) {
+    @Override
+    public @Nullable Binding getOpt(Core.NamedPat id) {
       if (id.equals(binding.id)) {
         return binding;
       }
       return parent.getOpt(id);
     }
 
-    @Override protected Environment bind(Binding binding) {
+    @Override
+    protected Environment bind(Binding binding) {
       Environment env;
       if (this.binding.id.equals(binding.id)) {
         // The new binding will obscure the current environment's binding,
@@ -188,13 +210,15 @@ public abstract class Environments {
       parent.visit(consumer);
     }
 
-    @Override Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names) {
+    @Override
+    Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names) {
       return names.contains(binding.id)
           ? parent.nearestAncestorNotObscuredBy(names)
           : this;
     }
 
-    @Override int distance(int soFar, Core.NamedPat id) {
+    @Override
+    int distance(int soFar, Core.NamedPat id) {
       if (id.equals(this.binding.id)) {
         return soFar;
       } else {
@@ -207,22 +231,25 @@ public abstract class Environments {
   private static class EmptyEnvironment extends Environment {
     static final EmptyEnvironment INSTANCE = new EmptyEnvironment();
 
-    void visit(Consumer<Binding> consumer) {
-    }
+    void visit(Consumer<Binding> consumer) {}
 
-    @Override public @Nullable Binding getOpt(String name) {
+    @Override
+    public @Nullable Binding getOpt(String name) {
       return null;
     }
 
-    @Override public @Nullable Binding getOpt(Core.NamedPat id) {
+    @Override
+    public @Nullable Binding getOpt(Core.NamedPat id) {
       return null;
     }
 
-    @Override Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names) {
+    @Override
+    Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names) {
       return this;
     }
 
-    @Override int distance(int soFar, Core.NamedPat id) {
+    @Override
+    int distance(int soFar, Core.NamedPat id) {
       return -1;
     }
   }
@@ -232,8 +259,8 @@ public abstract class Environments {
     private final Environment parent;
     private final Map<Core.NamedPat, Binding> map;
 
-    MapEnvironment(Environment parent,
-        ImmutableMap<Core.NamedPat, Binding> map) {
+    MapEnvironment(
+        Environment parent, ImmutableMap<Core.NamedPat, Binding> map) {
       this.parent = requireNonNull(parent);
       this.map = requireNonNull(map);
     }
@@ -254,17 +281,20 @@ public abstract class Environments {
 
     public @Nullable Binding getOpt(Core.NamedPat id) {
       final Binding binding = map.get(id);
-      return binding != null && binding.id.i == id.i ? binding
+      return binding != null && binding.id.i == id.i
+          ? binding
           : parent.getOpt(id);
     }
 
-    @Override Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names) {
+    @Override
+    Environment nearestAncestorNotObscuredBy(Set<Core.NamedPat> names) {
       return names.containsAll(map.keySet())
           ? parent.nearestAncestorNotObscuredBy(names)
           : this;
     }
 
-    @Override int distance(int soFar, Core.NamedPat id) {
+    @Override
+    int distance(int soFar, Core.NamedPat id) {
       final int i = find(map.keySet(), id);
       if (i >= 0) {
         return soFar + map.size() - 1 - i;

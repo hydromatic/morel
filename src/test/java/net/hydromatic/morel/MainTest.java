@@ -18,31 +18,6 @@
  */
 package net.hydromatic.morel;
 
-import net.hydromatic.morel.ast.Ast;
-import net.hydromatic.morel.compile.CompileException;
-import net.hydromatic.morel.compile.TypeResolver;
-import net.hydromatic.morel.eval.Codes;
-import net.hydromatic.morel.eval.Prop;
-import net.hydromatic.morel.foreign.ForeignValue;
-import net.hydromatic.morel.parse.ParseException;
-import net.hydromatic.morel.type.DataType;
-import net.hydromatic.morel.type.TypeVar;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.hamcrest.CustomTypeSafeMatcher;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import static net.hydromatic.morel.Matchers.equalsOrdered;
 import static net.hydromatic.morel.Matchers.equalsUnordered;
 import static net.hydromatic.morel.Matchers.hasMoniker;
@@ -63,7 +38,6 @@ import static net.hydromatic.morel.Ml.assertError;
 import static net.hydromatic.morel.Ml.ml;
 import static net.hydromatic.morel.Ml.mlE;
 import static net.hydromatic.morel.TestUtils.first;
-
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -72,12 +46,34 @@ import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
 
-/**
- * Kick the tires.
- */
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.compile.CompileException;
+import net.hydromatic.morel.compile.TypeResolver;
+import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Prop;
+import net.hydromatic.morel.foreign.ForeignValue;
+import net.hydromatic.morel.parse.ParseException;
+import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.TypeVar;
+import org.hamcrest.CustomTypeSafeMatcher;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
+/** Kick the tires. */
 public class MainTest {
 
-  @Test void testEmptyRepl() {
+  @Test
+  void testEmptyRepl() {
     final List<String> argList = ImmutableList.of();
     final Map<String, ForeignValue> valueMap = ImmutableMap.of();
     final Map<Prop, Object> propMap = ImmutableMap.of();
@@ -90,14 +86,16 @@ public class MainTest {
     assertThat(out.size(), is(0));
   }
 
-  @Test void testRepl() {
+  @Test
+  void testRepl() {
     final List<String> argList = ImmutableList.of();
-    final String ml = "val x = 5;\n"
-        + "x;\n"
-        + "it + 1;\n"
-        + "val f = fn x => x + 1;\n"
-        + "f;\n"
-        + "it x;\n";
+    final String ml =
+        "val x = 5;\n"
+            + "x;\n"
+            + "it + 1;\n"
+            + "val f = fn x => x + 1;\n"
+            + "f;\n"
+            + "it x;\n";
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (PrintStream ps = new PrintStream(out)) {
       final InputStream in = new ByteArrayInputStream(ml.getBytes());
@@ -106,16 +104,18 @@ public class MainTest {
       final Main main = new Main(argList, in, ps, valueMap, propMap, false);
       main.run();
     }
-    final String expected = "val x = 5 : int\n"
-        + "val it = 5 : int\n"
-        + "val it = 6 : int\n"
-        + "val f = fn : int -> int\n"
-        + "val it = fn : int -> int\n"
-        + "val it = 6 : int\n";
+    final String expected =
+        "val x = 5 : int\n"
+            + "val it = 5 : int\n"
+            + "val it = 6 : int\n"
+            + "val f = fn : int -> int\n"
+            + "val it = fn : int -> int\n"
+            + "val it = 6 : int\n";
     assertThat(out, hasToString(expected));
   }
 
-  @Test void testParse() {
+  @Test
+  void testParse() {
     ml("1").assertParseLiteral(isLiteral(BigDecimal.ONE, "1"));
     ml("~3.5").assertParseLiteral(isLiteral(new BigDecimal("-3.5"), "~3.5"));
     ml("\"a string\"")
@@ -133,8 +133,7 @@ public class MainTest {
 
     ml("val x = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
     ml("val `x` = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
-    ml("val x : int = 5")
-        .assertParseDecl(Ast.ValDecl.class, "val x : int = 5");
+    ml("val x : int = 5").assertParseDecl(Ast.ValDecl.class, "val x : int = 5");
 
     // other valid identifiers
     ml("val x' = 5").assertParseDecl(Ast.ValDecl.class, "val x' = 5");
@@ -154,47 +153,50 @@ public class MainTest {
         .assertParseDecl(Ast.FunDecl.class, "fun plus x y = x + y");
 
     ml("datatype 'a option = NONE | SOME of 'a")
-        .assertParseDecl(Ast.DatatypeDecl.class,
-            "datatype 'a option = NONE | SOME of 'a");
+        .assertParseDecl(
+            Ast.DatatypeDecl.class, "datatype 'a option = NONE | SOME of 'a");
 
     ml("datatype color = RED | GREEN | BLUE")
-        .assertParseDecl(Ast.DatatypeDecl.class,
-            "datatype color = RED | GREEN | BLUE");
+        .assertParseDecl(
+            Ast.DatatypeDecl.class, "datatype color = RED | GREEN | BLUE");
     ml("datatype 'a tree = Empty | Node of 'a * 'a forest\n"
-        + "and      'a forest = Nil | Cons of 'a tree * 'a forest")
-        .assertParseDecl(Ast.DatatypeDecl.class, "datatype 'a tree = Empty"
-            + " | Node of 'a * 'a forest "
-            + "and 'a forest = Nil"
-            + " | Cons of 'a tree * 'a forest");
+            + "and      'a forest = Nil | Cons of 'a tree * 'a forest")
+        .assertParseDecl(
+            Ast.DatatypeDecl.class,
+            "datatype 'a tree = Empty"
+                + " | Node of 'a * 'a forest "
+                + "and 'a forest = Nil"
+                + " | Cons of 'a tree * 'a forest");
 
-    final String ml = "datatype ('a, 'b) choice ="
-        + " NEITHER"
-        + " | LEFT of 'a"
-        + " | RIGHT of 'b"
-        + " | BOTH of {a: 'a, b: 'b}";
+    final String ml =
+        "datatype ('a, 'b) choice ="
+            + " NEITHER"
+            + " | LEFT of 'a"
+            + " | RIGHT of 'b"
+            + " | BOTH of {a: 'a, b: 'b}";
     ml(ml).assertParseSame();
 
     // -> is right-associative
     ml("datatype x = X of int -> int -> int").assertParseSame();
     ml("datatype x = X of (int -> int) -> int")
-        .assertParseDecl(Ast.DatatypeDecl.class,
-            "datatype x = X of (int -> int) -> int");
+        .assertParseDecl(
+            Ast.DatatypeDecl.class, "datatype x = X of (int -> int) -> int");
     ml("datatype x = X of int -> (int -> int)")
-        .assertParseDecl(Ast.DatatypeDecl.class,
-            "datatype x = X of int -> int -> int");
+        .assertParseDecl(
+            Ast.DatatypeDecl.class, "datatype x = X of int -> int -> int");
 
     ml("datatype x = X of int * int list")
-        .assertParseDecl(Ast.DatatypeDecl.class,
-            "datatype x = X of int * int list");
+        .assertParseDecl(
+            Ast.DatatypeDecl.class, "datatype x = X of int * int list");
     ml("datatype x = X of int * (int list)")
-        .assertParseDecl(Ast.DatatypeDecl.class,
-            "datatype x = X of int * int list");
+        .assertParseDecl(
+            Ast.DatatypeDecl.class, "datatype x = X of int * int list");
     ml("datatype x = X of (int * int) list")
-        .assertParseDecl(Ast.DatatypeDecl.class,
-            "datatype x = X of (int * int) list");
+        .assertParseDecl(
+            Ast.DatatypeDecl.class, "datatype x = X of (int * int) list");
     ml("datatype x = X of (int, int) pair")
-        .assertParseDecl(Ast.DatatypeDecl.class,
-            "datatype x = X of (int, int) pair");
+        .assertParseDecl(
+            Ast.DatatypeDecl.class, "datatype x = X of (int, int) pair");
 
     // "*" is non-associative; parentheses cannot be removed
     ml("datatype ('a, 'b, 'c) foo = Triple of 'a * 'b * 'c").assertParseSame();
@@ -205,23 +207,17 @@ public class MainTest {
 
     // parentheses creating left precedence, which is the natural precedence for
     // '+', can be removed
-    ml("((1 + 2) + 3) + 4")
-        .assertParse("1 + 2 + 3 + 4");
+    ml("((1 + 2) + 3) + 4").assertParse("1 + 2 + 3 + 4");
 
     // parentheses creating right precedence can not be removed
-    ml("1 + (2 + (3 + (4)))")
-        .assertParse("1 + (2 + (3 + 4))");
+    ml("1 + (2 + (3 + (4)))").assertParse("1 + (2 + (3 + 4))");
 
-    ml("1 + (2 + (3 + 4)) = 5 + 5")
-        .assertParse("1 + (2 + (3 + 4)) = 5 + 5");
+    ml("1 + (2 + (3 + 4)) = 5 + 5").assertParse("1 + (2 + (3 + 4)) = 5 + 5");
 
     // :: is right-associative
-    ml("1 :: 2 :: 3 :: []")
-        .assertParse("1 :: 2 :: 3 :: []");
-    ml("((1 :: 2) :: 3) :: []")
-        .assertParse("((1 :: 2) :: 3) :: []");
-    ml("1 :: (2 :: (3 :: []))")
-        .assertParse("1 :: 2 :: 3 :: []");
+    ml("1 :: 2 :: 3 :: []").assertParse("1 :: 2 :: 3 :: []");
+    ml("((1 :: 2) :: 3) :: []").assertParse("((1 :: 2) :: 3) :: []");
+    ml("1 :: (2 :: (3 :: []))").assertParse("1 :: 2 :: 3 :: []");
     ml("1 + 2 :: 3 + 4 * 5 :: 6").assertParseSame();
 
     // o is left-associative;
@@ -314,18 +310,21 @@ public class MainTest {
     ml("(fn x => x + 1) 3").assertParseSame();
   }
 
-  @Test void testParseComment() {
-    ml("1 + (* 2 + *) 3")
-        .assertParse("1 + 3");
+  @Test
+  void testParseComment() {
+    ml("1 + (* 2 + *) 3").assertParse("1 + 3");
     ml("1 +\n" //
-        + "(* 2 +\n"
-        + " *) 3").assertParse("1 + 3");
+            + "(* 2 +\n"
+            + " *) 3")
+        .assertParse("1 + 3");
     ml("(* 1 +\n" //
-        + "2 +\n"
-        + "3 *) 5 + 6").assertParse("5 + 6");
+            + "2 +\n"
+            + "3 *) 5 + 6")
+        .assertParse("5 + 6");
   }
 
-  @Test void testParseCase() {
+  @Test
+  void testParseCase() {
     // SML/NJ allows 'e' and 'E'
     ml("1e2").assertParse("1E+2");
     ml("1E2").assertParse("1E+2");
@@ -350,52 +349,47 @@ public class MainTest {
 
     // 'o' is an infix operator;
     // 'O' is presumed to be just another value.
-    ml("1 + f o g + 2")
-        .assertParse(true, "((((1) + (f))) o (((g) + (2))))");
-    ml("1 + F o G + 2")
-        .assertParse(true, "((((1) + (F))) o (((G) + (2))))");
+    ml("1 + f o g + 2").assertParse(true, "((((1) + (f))) o (((g) + (2))))");
+    ml("1 + F o G + 2").assertParse(true, "((((1) + (F))) o (((G) + (2))))");
     ml("1 + f O g + 2")
         .assertParse(true, "((((1) + (((((f) (O))) (g))))) + (2))");
   }
 
-  /** Tests that the syntactic sugar "exp.field" is de-sugared to
-   * "#field exp". */
-  @Test void testParseDot() {
-    ml("a . b")
-        .assertParse("#b a");
-    ml("a . b . c")
-        .assertParse("#c (#b a)");
-    ml("a . b + c . d")
-        .assertParse("#b a + #d c");
-    ml("a.b+c.d")
-        .assertParse("#b a + #d c");
-    ml("(a.b+c.d*e.f.g).h")
-        .assertParse("#h (#b a + #d c * #g (#f e))");
-    ml("a b")
-        .assertParse("a b");
-    ml("a b.c")
-        .assertParse("a (#c b)");
-    ml("a.b c.d e.f")
-        .assertParse("#b a (#d c) (#f e)");
-    ml("(a.b) (c.d) (e.f)")
-        .assertParse("#b a (#d c) (#f e)");
+  /**
+   * Tests that the syntactic sugar "exp.field" is de-sugared to "#field exp".
+   */
+  @Test
+  void testParseDot() {
+    ml("a . b").assertParse("#b a");
+    ml("a . b . c").assertParse("#c (#b a)");
+    ml("a . b + c . d").assertParse("#b a + #d c");
+    ml("a.b+c.d").assertParse("#b a + #d c");
+    ml("(a.b+c.d*e.f.g).h").assertParse("#h (#b a + #d c * #g (#f e))");
+    ml("a b").assertParse("a b");
+    ml("a b.c").assertParse("a (#c b)");
+    ml("a.b c.d e.f").assertParse("#b a (#d c) (#f e)");
+    ml("(a.b) (c.d) (e.f)").assertParse("#b a (#d c) (#f e)");
     ml("(a.(b (c.d) (e.f))")
         .assertParseThrowsParseException(
-            containsString("Encountered \" \"(\" \"( \"\" at line 1, column 4."));
+            containsString(
+                "Encountered \" \"(\" \"( \"\" at line 1, column 4."));
     ml("(a.b c.(d (e.f)))")
         .assertParseThrowsParseException(
-            containsString("Encountered \" \"(\" \"( \"\" at line 1, column 8."));
+            containsString(
+                "Encountered \" \"(\" \"( \"\" at line 1, column 8."));
   }
 
-  /** Tests that the abbreviated record syntax "{a, e.b, #c e, d = e}"
-   * is expanded to "{a = a, b = e.b, c = #c e, d = e}". */
-  @Test void testParseAbbreviatedRecord() {
+  /**
+   * Tests that the abbreviated record syntax "{a, e.b, #c e, d = e}" is
+   * expanded to "{a = a, b = e.b, c = #c e, d = e}".
+   */
+  @Test
+  void testParseAbbreviatedRecord() {
     ml("{a, e.b, #c e, #d (e + 1), e = f + g}")
         .assertParse("{a = a, b = #b e, c = #c e, d = #d (e + 1), e = f + g}");
     ml("{v = a, w = e.b, x = #c e, y = #d (e + 1), z = (#f 2)}")
         .assertParse("{v = a, w = #b e, x = #c e, y = #d (e + 1), z = #f 2}");
-    ml("{w = a = b + c, a = b + c}")
-        .assertParse("{a = b + c, w = a = b + c}");
+    ml("{w = a = b + c, a = b + c}").assertParse("{a = b + c, w = a = b + c}");
     ml("{1}")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression 1"));
@@ -411,25 +405,32 @@ public class MainTest {
         .assertParse("fn {a = a, b = 2, ...} => a + b");
   }
 
-  @Test void testParseErrorPosition() {
+  @Test
+  void testParseErrorPosition() {
     mlE("let val x = 1 and y = $x$ + 2 in x + y end")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "unbound variable or constructor: x", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "unbound variable or constructor: x",
+                    pos));
   }
 
-  @Test void testRuntimeErrorPosition() {
+  @Test
+  void testRuntimeErrorPosition() {
     mlE("\"x\" ^\n"
-        + "  $String.substring(\"hello\",\n"
-        + "    1, 15)$ ^\n"
-        + "  \"y\"\n")
-        .assertEvalError(pos ->
-            throwsA(Codes.BuiltInExn.SUBSCRIPT.mlName, pos));
+            + "  $String.substring(\"hello\",\n"
+            + "    1, 15)$ ^\n"
+            + "  \"y\"\n")
+        .assertEvalError(
+            pos -> throwsA(Codes.BuiltInExn.SUBSCRIPT.mlName, pos));
   }
 
   /** Tests the name of {@link TypeVar}. */
-  @Test void testTypeVarName() {
-    assertError(() -> new TypeVar(-1).key(),
+  @Test
+  void testTypeVarName() {
+    assertError(
+        () -> new TypeVar(-1).key(),
         throwsA(IllegalArgumentException.class, nullValue()));
     assertThat(new TypeVar(0), hasToString("'a"));
     assertThat(new TypeVar(1), hasToString("'b"));
@@ -447,7 +448,8 @@ public class MainTest {
     assertThat(new TypeVar(26 * 26 * 26), hasToString("'baaa"));
   }
 
-  @Test void testType() {
+  @Test
+  void testType() {
     ml("1").assertType("int");
     ml("0e0").assertType("real");
     ml("1 + 2").assertType("int");
@@ -468,11 +470,12 @@ public class MainTest {
         .assertType("(int -> int) * (int -> int)");
     ml("let val x = 1.0 in x + 2.0 end").assertType("real");
 
-    final String ml = "let val x = 1 in\n"
-        + "  let val y = 2 in\n"
-        + "    x + y\n"
-        + "  end\n"
-        + "end";
+    final String ml =
+        "let val x = 1 in\n"
+            + "  let val y = 2 in\n"
+            + "    x + y\n"
+            + "  end\n"
+            + "end";
     ml(ml).assertType("int");
 
     ml("1 + \"a\"")
@@ -481,13 +484,12 @@ public class MainTest {
     ml("NONE").assertType("'a option");
     ml("SOME 4").assertType("int option");
     ml("SOME (SOME true)").assertType("bool option option");
-    ml("SOME (SOME [1, 2])")
-        .assertType("int list option option");
-    ml("SOME (SOME {a=1, b=true})")
-        .assertType("{a:int, b:bool} option option");
+    ml("SOME (SOME [1, 2])").assertType("int list option option");
+    ml("SOME (SOME {a=1, b=true})").assertType("{a:int, b:bool} option option");
   }
 
-  @Test void testTypeFn() {
+  @Test
+  void testTypeFn() {
     ml("fn x => x + 1").assertType("int -> int");
     ml("fn x => fn y => x + y").assertType("int -> int -> int");
     ml("fn x => case x of 0 => 1 | _ => 2").assertType("int -> int");
@@ -499,25 +501,26 @@ public class MainTest {
         .assertType("int * string -> bool * string");
   }
 
-  @Test void testTypeFnTuple() {
-    ml("fn (x, y) => (x + 1, y + 1)")
-        .assertType("int * int -> int * int");
+  @Test
+  void testTypeFnTuple() {
+    ml("fn (x, y) => (x + 1, y + 1)").assertType("int * int -> int * int");
     ml("(fn x => x + 1, fn y => y + 1)")
         .assertType("(int -> int) * (int -> int)");
-    ml("fn x => fn (y, z) => x + y + z")
-        .assertType("int -> int * int -> int");
+    ml("fn x => fn (y, z) => x + y + z").assertType("int -> int * int -> int");
     ml("fn (x, y) => (x + 1, fn z => (x + z, y + z), y)")
         .assertType("int * int -> int * (int -> int * int) * int");
     ml("fn {a = x, b = y, c} => x + y")
         .assertType("{a:int, b:int, c:'a} -> int");
   }
 
-  @Test void testTypeLetRecFn() {
-    final String ml = "let\n"
-        + "  val rec f = fn n => if n = 0 then 1 else n * (f (n - 1))\n"
-        + "in\n"
-        + "  f 5\n"
-        + "end";
+  @Test
+  void testTypeLetRecFn() {
+    final String ml =
+        "let\n"
+            + "  val rec f = fn n => if n = 0 then 1 else n * (f (n - 1))\n"
+            + "in\n"
+            + "  f 5\n"
+            + "end";
     ml(ml).assertType("int");
 
     final String ml2 = ml.replace(" rec", "");
@@ -528,58 +531,62 @@ public class MainTest {
         .assertError("Error: fn expression required on rhs of val rec");
   }
 
-  @Test void testRecordType() {
+  @Test
+  void testRecordType() {
     final String ml = "map #empno [{empno = 10, name = \"Shaggy\"}]";
     ml(ml).assertType("int list");
   }
 
-  @Test void testIncompleteRecordType() {
+  @Test
+  void testIncompleteRecordType() {
     final String ml = "fn (e, job) => e.job = job";
     String message =
         "unresolved flex record (can't tell what fields there are besides #job)";
-    ml(ml).withTypeExceptionMatcher(throwsA(message))
-        .assertEval();
+    ml(ml).withTypeExceptionMatcher(throwsA(message)).assertEval();
   }
 
-  @Test void testApply() {
-    ml("hd [\"abc\"]")
-        .assertType("string");
+  @Test
+  void testApply() {
+    ml("hd [\"abc\"]").assertType("string");
   }
 
-  @Test void testApply2() {
-    ml("map (fn x => String.size x) [\"abc\", \"de\"]")
-        .assertType("int list");
+  @Test
+  void testApply2() {
+    ml("map (fn x => String.size x) [\"abc\", \"de\"]").assertType("int list");
   }
 
-  @Test void testApplyIsMonomorphic() {
+  @Test
+  void testApplyIsMonomorphic() {
     // cannot be typed, since the parameter f is in a monomorphic position
     ml("fn f => (f true, f 0)")
         .assertTypeThrows(
-            throwsA(RuntimeException.class,
+            throwsA(
+                RuntimeException.class,
                 is("Cannot deduce type: conflict: int vs bool")));
   }
 
   @Disabled("disable failing test - enable when we have polymorphic types")
-  @Test void testLetIsPolymorphic() {
+  @Test
+  void testLetIsPolymorphic() {
     // f has been introduced in a let-expression and is therefore treated as
     // polymorphic.
-    ml("let val f = fn x => x in (f true, f 0) end")
-        .assertType("bool * int");
+    ml("let val f = fn x => x in (f true, f 0) end").assertType("bool * int");
   }
 
   @Disabled("disable failing test - enable when we have polymorphic types")
-  @Test void testHdIsPolymorphic() {
-    ml("(hd [1, 2], hd [false, true])")
-        .assertType("int * bool");
+  @Test
+  void testHdIsPolymorphic() {
+    ml("(hd [1, 2], hd [false, true])").assertType("int * bool");
     ml("let\n"
-        + "  val h = hd\n"
-        + "in\n"
-        + "   (h [1, 2], h [false, true])\n"
-        + "end")
+            + "  val h = hd\n"
+            + "in\n"
+            + "   (h [1, 2], h [false, true])\n"
+            + "end")
         .assertType("int * bool");
   }
 
-  @Test void testTypeVariable() {
+  @Test
+  void testTypeVariable() {
     // constant
     ml("fn _ => 42").assertType("'a -> int");
     ml("(fn _ => 42) 2").assertEval(is(42));
@@ -595,12 +602,9 @@ public class MainTest {
 
     // first/second
     ml("fn x => fn y => x").assertType("'a -> 'b -> 'a");
-    ml("let fun first x y = x in first end")
-        .assertType("'a -> 'b -> 'a");
-    ml("fun first x y = x")
-        .assertType("'a -> 'b -> 'a");
-    ml("fun second x y = y")
-        .assertType("'a -> 'b -> 'b");
+    ml("let fun first x y = x in first end").assertType("'a -> 'b -> 'a");
+    ml("fun first x y = x").assertType("'a -> 'b -> 'a");
+    ml("fun second x y = y").assertType("'a -> 'b -> 'b");
     ml("fun choose b x y = if b then x else y")
         .assertType("bool -> 'a -> 'a -> 'a");
     ml("fun choose b (x, y) = if b then x else y")
@@ -608,78 +612,87 @@ public class MainTest {
   }
 
   @Disabled("disable failing test - enable when we have polymorphic types")
-  @Test void testExponentialType0() {
-    final String ml = "let\n" //
-        + "  fun f x = (x, x)\n"
-        + "in\n"
-        + "  f (f 0)\n"
-        + "end";
+  @Test
+  void testExponentialType0() {
+    final String ml =
+        "let\n" //
+            + "  fun f x = (x, x)\n"
+            + "in\n"
+            + "  f (f 0)\n"
+            + "end";
     ml(ml).assertType("xx");
   }
 
   @Disabled("until type-inference bug is fixed")
-  @Test void testExponentialType() {
-    final String ml = "let\n"
-        + "  fun f x = (x, x, x)\n"
-        + "in\n"
-        + "   f (f (f (f (f 0))))\n"
-        + "end";
+  @Test
+  void testExponentialType() {
+    final String ml =
+        "let\n"
+            + "  fun f x = (x, x, x)\n"
+            + "in\n"
+            + "   f (f (f (f (f 0))))\n"
+            + "end";
     ml(ml).assertType("xx");
   }
 
   @Disabled("until type-inference bug is fixed")
-  @Test void testExponentialType2() {
-    final String ml = "fun f x y z = (x, y, z)\n"
-        + "val p1 = (f, f, f)\n"
-        + "val p2 = (p1, p1, p1)\n"
-        + "val p3 = (p2, p2, p2)\n";
+  @Test
+  void testExponentialType2() {
+    final String ml =
+        "fun f x y z = (x, y, z)\n"
+            + "val p1 = (f, f, f)\n"
+            + "val p2 = (p1, p1, p1)\n"
+            + "val p3 = (p2, p2, p2)\n";
     ml(ml).assertType("xx");
   }
 
   @SuppressWarnings("ConstantConditions")
-  @Test void testDummy() {
+  @Test
+  void testDummy() {
     ml("from d in [{a=1,b=true}] yield d.a into sum")
         .assertType("int")
         .assertEval(is(1));
     switch (0) {
-    case 0:
-      ml("1").assertEval(is(1));
-      // fall through
-    case 1:
-      ml("1 + 2").assertEval(is(3));
-      // fall through
-    case 2:
-      ml("1 + 2 + 3").assertEval(is(6));
-      // fall through
-    case 3:
-      ml("1 * 2 + 3 * 4").assertEval(is(14));
-      // fall through
-    case 4:
-      ml("let val x = 1 in x + 2 end")
-          .with(Prop.INLINE_PASS_COUNT, 0)
-          .assertEval(is(3));
-      // fall through
-    case 5:
-      ml("let val x = 1 and y = 2 in 7 end")
-          .with(Prop.INLINE_PASS_COUNT, 0)
-          .assertEval(is(7));
-      // fall through
-    case 6:
-      ml("let val x = 1 and y = 2 in x + y + 4 end")
-          .with(Prop.INLINE_PASS_COUNT, 0)
-          .assertEval(is(7));
-      // fall through
-    case 7:
-      ml("(not (true andalso false))").assertEval(is(true));
-      // fall through
-    case 8:
-      ml("let val x = 1 and y = 2 and z = true and a = \"foo\" in\n"
-          + "  if z then x else y\n"
-          + "end").assertEval(is(1));
+      case 0:
+        ml("1").assertEval(is(1));
+        // fall through
+      case 1:
+        ml("1 + 2").assertEval(is(3));
+        // fall through
+      case 2:
+        ml("1 + 2 + 3").assertEval(is(6));
+        // fall through
+      case 3:
+        ml("1 * 2 + 3 * 4").assertEval(is(14));
+        // fall through
+      case 4:
+        ml("let val x = 1 in x + 2 end")
+            .with(Prop.INLINE_PASS_COUNT, 0)
+            .assertEval(is(3));
+        // fall through
+      case 5:
+        ml("let val x = 1 and y = 2 in 7 end")
+            .with(Prop.INLINE_PASS_COUNT, 0)
+            .assertEval(is(7));
+        // fall through
+      case 6:
+        ml("let val x = 1 and y = 2 in x + y + 4 end")
+            .with(Prop.INLINE_PASS_COUNT, 0)
+            .assertEval(is(7));
+        // fall through
+      case 7:
+        ml("(not (true andalso false))").assertEval(is(true));
+        // fall through
+      case 8:
+        ml("let val x = 1 and y = 2 and z = true and a = \"foo\" in\n"
+                + "  if z then x else y\n"
+                + "end")
+            .assertEval(is(1));
     }
   }
 
-  @Test void testEval() {
+  @Test
+  void testEval() {
     // literals
     ml("1").assertEval(is(1));
     ml("~2").assertEval(is(-2));
@@ -699,9 +712,10 @@ public class MainTest {
     ml("(not (true andalso false))").assertEval(is(true));
     ml("not true").assertEval(is(false));
     ml("not not true")
-        .assertError("operator and operand don't agree [tycon mismatch]\n"
-            + "  operator domain: bool\n"
-            + "  operand:         bool -> bool");
+        .assertError(
+            "operator and operand don't agree [tycon mismatch]\n"
+                + "  operator domain: bool\n"
+                + "  operand:         bool -> bool");
     ml("not (not true)").assertEval(is(true));
 
     // comparisons
@@ -762,34 +776,36 @@ public class MainTest {
     ml("\"\" ^ \"\"").assertEval(is(""));
     ml("\"1\" ^ \"2\"").assertEval(is("12"));
     ml("1 ^ 2")
-        .assertError("operator and operand don't agree [overload conflict]\n"
-            + "  operator domain: string * string\n"
-            + "  operand:         [int ty] * [int ty]\n");
+        .assertError(
+            "operator and operand don't agree [overload conflict]\n"
+                + "  operator domain: string * string\n"
+                + "  operand:         [int ty] * [int ty]\n");
 
     // if
     ml("if true then 1 else 2").assertEval(is(1));
     ml("if false then 1 else if true then 2 else 3").assertEval(is(2));
-    ml("if false\n"
-        + "then\n"
-        + "  if true then 2 else 3\n"
-        + "else 4").assertEval(is(4));
+    ml("if false\n" + "then\n" + "  if true then 2 else 3\n" + "else 4")
+        .assertEval(is(4));
     ml("if false\n" //
-        + "then\n"
-        + "  if true then 2 else 3\n"
-        + "else\n"
-        + "  if false then 4 else 5").assertEval(is(5));
+            + "then\n"
+            + "  if true then 2 else 3\n"
+            + "else\n"
+            + "  if false then 4 else 5")
+        .assertEval(is(5));
 
     // case
     ml("case 1 of 0 => \"zero\" | _ => \"nonzero\"")
         .assertType("string")
         .assertEval(is("nonzero"));
     ml("case 1 of x => x | y => y")
-        .assertError("Error: match redundant\n"
-            + "          x => ...\n"
-            + "    -->   y => ...\n");
+        .assertError(
+            "Error: match redundant\n"
+                + "          x => ...\n"
+                + "    -->   y => ...\n");
     ml("case 1 of 1 => 2")
-        .assertError("Warning: match nonexhaustive\n" //
-            + "          1 => ...\n");
+        .assertError(
+            "Warning: match nonexhaustive\n" //
+                + "          1 => ...\n");
     ml("let val f = fn x => case x of x => x + 1 in f 2 end").assertEval(is(3));
 
     // let
@@ -812,25 +828,29 @@ public class MainTest {
     ml("let val x = 1 and y = 2 in x + y end").assertEval(is(3));
     // let with multiple variables
     ml("let val x = 1 and y = 2 and z = false in\n"
-        + "  if z then x else y\n"
-        + "end").assertEval(is(2));
+            + "  if z then x else y\n"
+            + "end")
+        .assertEval(is(2));
     ml("let val x = 1 and y = 2 and z = true in\n"
-        + "  if z then x else y\n"
-        + "end").assertEval(is(1));
+            + "  if z then x else y\n"
+            + "end")
+        .assertEval(is(1));
     ml("let val x = 1 and y = 2 and z = true and a = \"foo\" in\n"
-        + "  if z then x else y\n"
-        + "end").assertEval(is(1));
+            + "  if z then x else y\n"
+            + "end")
+        .assertEval(is(1));
 
     // let where variables shadow
-    final String letNested = "let\n"
-        + "  val x = 1\n"
-        + "in\n"
-        + "  let\n"
-        + "    val x = 2\n"
-        + "  in\n"
-        + "    x * 3\n"
-        + "  end + x\n"
-        + "end";
+    final String letNested =
+        "let\n"
+            + "  val x = 1\n"
+            + "in\n"
+            + "  let\n"
+            + "    val x = 2\n"
+            + "  in\n"
+            + "    x * 3\n"
+            + "  end + x\n"
+            + "end";
     ml(letNested).assertEval(is(2 * 3 + 1));
 
     // let with match
@@ -844,7 +864,8 @@ public class MainTest {
     ml("(1, 2, 1, 4)").assertEval(is(list(1, 2, 1, 4)));
   }
 
-  @Test void testLetSequentialDeclarations() {
+  @Test
+  void testLetSequentialDeclarations() {
     // let with sequential declarations
     ml("let val x = 1; val y = x + 1 in x + y end").assertEval(is(3));
 
@@ -856,102 +877,119 @@ public class MainTest {
     ml("let val x = 1; val x = 3 and y = x + 1 in x + y end").assertEval(is(5));
 
     mlE("let val x = 1 and y = $x$ + 2 in x + y end")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "unbound variable or constructor: x"));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "unbound variable or constructor: x"));
 
     // let with val and fun
     ml("let fun f x = 1 + x; val x = 2 in f x end").assertEval(is(3));
   }
 
-  /** Tests that in a {@code let} clause, we can see previously defined
-   * variables. */
-  @Test void testLet2() {
-    final String ml = "let\n"
-        + "  val x = 1\n"
-        + "  val y = x + 2\n"
-        + "in\n"
-        + "  y + x + 3\n"
-        + "end";
+  /**
+   * Tests that in a {@code let} clause, we can see previously defined
+   * variables.
+   */
+  @Test
+  void testLet2() {
+    final String ml =
+        "let\n"
+            + "  val x = 1\n"
+            + "  val y = x + 2\n"
+            + "in\n"
+            + "  y + x + 3\n"
+            + "end";
     ml(ml).assertEval(is(7));
   }
 
   /** As {@link #testLet2()}, but using 'and'. */
-  @Test void testLet3() {
-    final String ml = "let\n"
-        + "  val x = 1\n"
-        + "  and y = 2\n"
-        + "in\n"
-        + "  y + x + 3\n"
-        + "end";
+  @Test
+  void testLet3() {
+    final String ml =
+        "let\n"
+            + "  val x = 1\n"
+            + "  and y = 2\n"
+            + "in\n"
+            + "  y + x + 3\n"
+            + "end";
     ml(ml).assertEval(is(6));
   }
 
   /** As {@link #testLet3()}, but a tuple is being assigned. */
-  @Test void testLet3b() {
+  @Test
+  void testLet3b() {
     // The intermediate form will have nested tuples, something like this:
     //   val v = (1, (2, 4)) in case v of (x, (y, z)) => y + 3 + x
-    final String ml = "let\n"
-        + "  val x = 1\n"
-        + "  and (y, z) = (2, 4)\n"
-        + "in\n"
-        + "  y + x + 3\n"
-        + "end";
+    final String ml =
+        "let\n"
+            + "  val x = 1\n"
+            + "  and (y, z) = (2, 4)\n"
+            + "in\n"
+            + "  y + x + 3\n"
+            + "end";
     ml(ml).assertEval(is(6));
   }
 
-  @Test void testLet3c() {
+  @Test
+  void testLet3c() {
     // The intermediate form will have nested tuples, something like this:
     //   val v = (1, (2, 4)) in case v of (x, (y, z)) => y + 3 + x
-    final String ml = "let\n"
-        + "  val x1 :: x2 :: xs = [1, 5, 9, 13, 17]\n"
-        + "  and (y, z) = (2, 4)\n"
-        + "in\n"
-        + "  y + x1 + x2 + 3\n"
-        + "end";
-    ml(ml)
-        .with(Prop.MATCH_COVERAGE_ENABLED, false)
-        .assertEval(is(11));
+    final String ml =
+        "let\n"
+            + "  val x1 :: x2 :: xs = [1, 5, 9, 13, 17]\n"
+            + "  and (y, z) = (2, 4)\n"
+            + "in\n"
+            + "  y + x1 + x2 + 3\n"
+            + "end";
+    ml(ml).with(Prop.MATCH_COVERAGE_ENABLED, false).assertEval(is(11));
   }
 
   /** Tests that 'and' assignments occur simultaneously. */
-  @Test void testLet4() {
-    final String ml = "let\n"
-        + "  val x = 5\n"
-        + "  and y = 1\n"
-        + "in\n"
-        + "  let\n"
-        + "    val x = y (* new x = old y = 1 *)\n"
-        + "    and y = x + 2 (* new y = old x + 2 = 5 + 2 = 7 *)\n"
-        + "  in\n"
-        + "    y + x + 3 (* new y + new x + 3 = 7 + 1 + 3 = 11 *)\n"
-        + "  end\n"
-        + "end";
+  @Test
+  void testLet4() {
+    final String ml =
+        "let\n"
+            + "  val x = 5\n"
+            + "  and y = 1\n"
+            + "in\n"
+            + "  let\n"
+            + "    val x = y (* new x = old y = 1 *)\n"
+            + "    and y = x + 2 (* new y = old x + 2 = 5 + 2 = 7 *)\n"
+            + "  in\n"
+            + "    y + x + 3 (* new y + new x + 3 = 7 + 1 + 3 = 11 *)\n"
+            + "  end\n"
+            + "end";
     ml(ml).assertEval(is(11));
   }
 
   /** Tests a closure in a let. */
-  @Test void testLet5() {
-    final String ml = "let\n"
-        + "  val plus = fn x => fn y => x + y\n"
-        + "  val plusTwo = plus 2\n"
-        + "in\n"
-        + "  plusTwo 3\n"
-        + "end";
+  @Test
+  void testLet5() {
+    final String ml =
+        "let\n"
+            + "  val plus = fn x => fn y => x + y\n"
+            + "  val plusTwo = plus 2\n"
+            + "in\n"
+            + "  plusTwo 3\n"
+            + "end";
     ml(ml).assertEval(is(5));
   }
 
   /** Tests a predicate in a let. */
-  @Test void testLet6() {
-    final String ml = "let\n"
-        + "  fun isZero x = x = 0\n"
-        + "in\n"
-        + "  fn i => i = 10 andalso isZero i\n"
-        + "end";
+  @Test
+  void testLet6() {
+    final String ml =
+        "let\n"
+            + "  fun isZero x = x = 0\n"
+            + "in\n"
+            + "  fn i => i = 10 andalso isZero i\n"
+            + "end";
     // With inlining, we want the plan to simplify to "fn i => false"
-    final String plan = "match(i, andalso(apply2("
-        + "fnValue =, get(name i), constant(10)), "
-        + "apply2(fnValue =, get(name i), constant(0))))";
+    final String plan =
+        "match(i, andalso(apply2("
+            + "fnValue =, get(name i), constant(10)), "
+            + "apply2(fnValue =, get(name i), constant(0))))";
     ml(ml)
         .assertEval(whenAppliedTo(0, is(false)))
         .assertEval(whenAppliedTo(10, is(false)))
@@ -959,71 +997,82 @@ public class MainTest {
         .assertPlan(isCode(plan));
   }
 
-  /** Tests a function in a let. (From <a
+  /**
+   * Tests a function in a let. (From <a
    * href="https://www.microsoft.com/en-us/research/wp-content/uploads/2002/07/inline.pdf">Secrets
-   * of the Glasgow Haskell Compiler inliner</a> (GHC inlining), section 2.3. */
-  @Test void testLet7() {
-    final String ml = "fun g (a, b, c) =\n"
-        + "  let\n"
-        + "    fun f x = x * 3\n"
-        + "  in\n"
-        + "    f (a + b) - c\n"
-        + "  end";
+   * of the Glasgow Haskell Compiler inliner</a> (GHC inlining), section 2.3.
+   */
+  @Test
+  void testLet7() {
+    final String ml =
+        "fun g (a, b, c) =\n"
+            + "  let\n"
+            + "    fun f x = x * 3\n"
+            + "  in\n"
+            + "    f (a + b) - c\n"
+            + "  end";
     // With inlining, we want the plan to simplify to
     // "fn (a, b, c) => (a + b) * 3 - c"
-    final String plan = "match(v0, apply(fnCode match((a, b, c), "
-        + "apply2(fnValue -, apply2(fnValue *, "
-        + "apply2(fnValue +, get(name a), get(name b)), "
-        + "constant(3)), get(name c))), argCode get(name v0)))";
+    final String plan =
+        "match(v0, apply(fnCode match((a, b, c), "
+            + "apply2(fnValue -, apply2(fnValue *, "
+            + "apply2(fnValue +, get(name a), get(name b)), "
+            + "constant(3)), get(name c))), argCode get(name v0)))";
     ml(ml)
         // g (4, 3, 2) = (4 + 3) * 3 - 2 = 19
         .assertEval(whenAppliedTo(list(4, 3, 2), is(19)))
         .assertPlan(isCode(plan));
   }
 
-  /** Tests that a simple eager function ({@code Math.pow}) uses
-   * direct application ({@code apply2}) when its arguments are a tuple. */
-  @Test void testEvalApply2() {
+  /**
+   * Tests that a simple eager function ({@code Math.pow}) uses direct
+   * application ({@code apply2}) when its arguments are a tuple.
+   */
+  @Test
+  void testEvalApply2() {
     final String ml = "Math.pow (2.0, 3.0)";
     final String plan =
         "apply2(fnValue Math.pow, constant(2.0), constant(3.0))";
-    ml(ml)
-        .assertEval(is(8f))
-        .assertPlan(isCode(plan));
+    ml(ml).assertEval(is(8f)).assertPlan(isCode(plan));
 
     // When the argument tuple is returned from a function call, we evaluate
     // the long way ('apply').
     final String ml2 = "Math.pow (hd [(2.0, 3.0)])";
-    final String plan2 = "apply(fnValue Math.pow,"
-        + " argCode apply(fnValue List.hd, "
-        + "argCode tuple(tuple(constant(2.0), constant(3.0)))))";
-    ml(ml2)
-        .assertEval(is(8f))
-        .assertPlan(isCode(plan2));
+    final String plan2 =
+        "apply(fnValue Math.pow,"
+            + " argCode apply(fnValue List.hd, "
+            + "argCode tuple(tuple(constant(2.0), constant(3.0)))))";
+    ml(ml2).assertEval(is(8f)).assertPlan(isCode(plan2));
   }
 
-  /** Tests that name capture does not occur during inlining.
-   * (Example is from GHC inlining, section 3.) */
-  @Test void testNameCapture() {
-    final String ml = "fn (a, b) =>\n"
-        + "  let val x = a + b in\n"
-        + "    let val a = 7 in\n"
-        + "      x + a\n"
-        + "    end\n"
-        + "  end";
+  /**
+   * Tests that name capture does not occur during inlining. (Example is from
+   * GHC inlining, section 3.)
+   */
+  @Test
+  void testNameCapture() {
+    final String ml =
+        "fn (a, b) =>\n"
+            + "  let val x = a + b in\n"
+            + "    let val a = 7 in\n"
+            + "      x + a\n"
+            + "    end\n"
+            + "  end";
     ml(ml)
         // result should be x + a = (1 + 2) + 7 = 10
         // if 'a' were wrongly captured, result would be (7 + 2) + 7 = 16
         .assertEval(whenAppliedTo(list(1, 2), is(10)));
   }
 
-  @Test void testMutualRecursion() {
-    final String ml = "let\n"
-        + "  fun f i = g (i * 2)\n"
-        + "  and g i = if i > 10 then i else f (i + 3)\n"
-        + "in\n"
-        + "  f\n"
-        + "end";
+  @Test
+  void testMutualRecursion() {
+    final String ml =
+        "let\n"
+            + "  fun f i = g (i * 2)\n"
+            + "  and g i = if i > 10 then i else f (i + 3)\n"
+            + "in\n"
+            + "  f\n"
+            + "end";
     ml(ml)
         // answers checked on SMLJ
         .assertEval(whenAppliedTo(1, is(26)))
@@ -1031,58 +1080,69 @@ public class MainTest {
         .assertEval(whenAppliedTo(3, is(18)));
   }
 
-  @Test void testMutualRecursion3() {
-    final String ml = "let\n"
-        + "  fun isZeroMod3 0 = true | isZeroMod3 n = isTwoMod3 (n - 1)\n"
-        + "  and isOneMod3 0 = false | isOneMod3 n = isZeroMod3 (n - 1)\n"
-        + "  and isTwoMod3 0 = false | isTwoMod3 n = isOneMod3 (n - 1)\n"
-        + "in\n"
-        + "  fn n => (isZeroMod3 n, isOneMod3 n, isTwoMod3 n)\n"
-        + "end";
+  @Test
+  void testMutualRecursion3() {
+    final String ml =
+        "let\n"
+            + "  fun isZeroMod3 0 = true | isZeroMod3 n = isTwoMod3 (n - 1)\n"
+            + "  and isOneMod3 0 = false | isOneMod3 n = isZeroMod3 (n - 1)\n"
+            + "  and isTwoMod3 0 = false | isTwoMod3 n = isOneMod3 (n - 1)\n"
+            + "in\n"
+            + "  fn n => (isZeroMod3 n, isOneMod3 n, isTwoMod3 n)\n"
+            + "end";
     ml(ml)
         .assertEval(whenAppliedTo(17, is(list(false, false, true))))
         .assertEval(whenAppliedTo(18, is(list(true, false, false))));
   }
 
-  /** Tests a recursive {@code let} that includes a pattern. I'm not sure
-   * whether this is valid Standard ML; SML-NJ doesn't like it. */
+  /**
+   * Tests a recursive {@code let} that includes a pattern. I'm not sure whether
+   * this is valid Standard ML; SML-NJ doesn't like it.
+   */
   @Disabled("until mutual recursion bug is fixed")
-  @Test void testCompositeRecursiveLet() {
-    final String ml = "let\n"
-        + "  val rec (x, y) = (1, 2)\n"
-        + "  and f = fn n => if n = 1 then 1 else n * f (n - 1)\n"
-        + "in\n"
-        + "  x + f 5 + y\n"
-        + "end";
+  @Test
+  void testCompositeRecursiveLet() {
+    final String ml =
+        "let\n"
+            + "  val rec (x, y) = (1, 2)\n"
+            + "  and f = fn n => if n = 1 then 1 else n * f (n - 1)\n"
+            + "in\n"
+            + "  x + f 5 + y\n"
+            + "end";
     ml(ml).assertEval(is(123));
   }
 
-  /** Tests that inlining of mutually recursive functions does not prevent
+  /**
+   * Tests that inlining of mutually recursive functions does not prevent
    * compilation from terminating.
    *
    * <p>Per GHC inlining, (f, g, h), (g, p, q) are strongly connected components
    * of the dependency graph. In each group, the inliner should choose one
-   * function as 'loop-breaker' that will not be inlined; say f and q. */
+   * function as 'loop-breaker' that will not be inlined; say f and q.
+   */
   @Disabled("until mutual recursion bug is fixed")
-  @Test void testMutualRecursionComplex() {
-    final String ml0 = "let\n"
-        + "  fun f i = g (i + 1)\n"
-        + "  and g i = h (i + 2) + p (i + 4)\n"
-        + "  and h i = if i > 100 then i + 8 else f (i + 16)\n"
-        + "  and p i = q (i + 32)\n"
-        + "  and q i = if i > 200 then i + 64 else g (i + 128)\n"
-        + "in\n"
-        + "  g 7\n"
-        + "end";
-    final String ml = "let\n"
-        + "  val rec f = fn i => g (i + 1)\n"
-        + "  and g = fn i => h (i + 2) + p (i + 4)\n"
-        + "  and h = fn i => if i > 100 then i + 8 else f (i + 16)\n"
-        + "  and p = fn i => q (i + 32)\n"
-        + "  and q = fn i => if i > 200 then i + 64 else g (i + 128)\n"
-        + "in\n"
-        + "  g 7\n"
-        + "end";
+  @Test
+  void testMutualRecursionComplex() {
+    final String ml0 =
+        "let\n"
+            + "  fun f i = g (i + 1)\n"
+            + "  and g i = h (i + 2) + p (i + 4)\n"
+            + "  and h i = if i > 100 then i + 8 else f (i + 16)\n"
+            + "  and p i = q (i + 32)\n"
+            + "  and q i = if i > 200 then i + 64 else g (i + 128)\n"
+            + "in\n"
+            + "  g 7\n"
+            + "end";
+    final String ml =
+        "let\n"
+            + "  val rec f = fn i => g (i + 1)\n"
+            + "  and g = fn i => h (i + 2) + p (i + 4)\n"
+            + "  and h = fn i => if i > 100 then i + 8 else f (i + 16)\n"
+            + "  and p = fn i => q (i + 32)\n"
+            + "  and q = fn i => if i > 200 then i + 64 else g (i + 128)\n"
+            + "in\n"
+            + "  g 7\n"
+            + "end";
     ml(ml)
         // answers checked on SMLJ
         .assertEval(whenAppliedTo(1, is(4003)))
@@ -1090,67 +1150,84 @@ public class MainTest {
         .assertEval(whenAppliedTo(7, is(3394)));
   }
 
-  /** Tests that you can use the same variable name in different parts of the
-   * program without the types getting confused. */
-  @Test void testSameVariableName() {
-    final String ml = "List.filter\n"
-        + " (fn e => e.x + 2 * e.y > 16)\n"
-        + " (map\n"
-        + "   (fn e => {x = e - 1, y = 10 - e})\n"
-        + "   [1, 2, 3, 4, 5])";
+  /**
+   * Tests that you can use the same variable name in different parts of the
+   * program without the types getting confused.
+   */
+  @Test
+  void testSameVariableName() {
+    final String ml =
+        "List.filter\n"
+            + " (fn e => e.x + 2 * e.y > 16)\n"
+            + " (map\n"
+            + "   (fn e => {x = e - 1, y = 10 - e})\n"
+            + "   [1, 2, 3, 4, 5])";
     ml(ml).assertEval(isUnordered(list(list(0, 9), list(1, 8))));
   }
 
   /** As {@link #testSameVariableName()} but both variables are records. */
-  @Test void testSameVariableName2() {
-    final String ml = "List.filter\n"
-        + " (fn e => e.x + 2 * e.y > 16)\n"
-        + " (map\n"
-        + "   (fn e => {x = e.a - 1, y = 10 - e.a})\n"
-        + "   [{a=1}, {a=2}, {a=3}, {a=4}, {a=5}])";
+  @Test
+  void testSameVariableName2() {
+    final String ml =
+        "List.filter\n"
+            + " (fn e => e.x + 2 * e.y > 16)\n"
+            + " (map\n"
+            + "   (fn e => {x = e.a - 1, y = 10 - e.a})\n"
+            + "   [{a=1}, {a=2}, {a=3}, {a=4}, {a=5}])";
     ml(ml).assertEval(isUnordered(list(list(0, 9), list(1, 8))));
   }
 
-  /** Tests a closure that uses one variable "x", called in an environment
-   * with a different value of "x" (of a different type, to flush out bugs). */
-  @Test void testClosure() {
-    final String ml = "let\n"
-        + "  val x = \"abc\";\n"
-        + "  fun g y = size x + y;\n"
-        + "  val x = 10\n"
-        + "in\n"
-        + "  g x\n"
-        + "end";
+  /**
+   * Tests a closure that uses one variable "x", called in an environment with a
+   * different value of "x" (of a different type, to flush out bugs).
+   */
+  @Test
+  void testClosure() {
+    final String ml =
+        "let\n"
+            + "  val x = \"abc\";\n"
+            + "  fun g y = size x + y;\n"
+            + "  val x = 10\n"
+            + "in\n"
+            + "  g x\n"
+            + "end";
     ml(ml).assertEval(is(13));
   }
 
-  @Test void testEvalFn() {
+  @Test
+  void testEvalFn() {
     ml("(fn x => x + 1) 2").assertEval(is(3));
   }
 
-  @Test void testEvalFnCurried() {
+  @Test
+  void testEvalFnCurried() {
     ml("(fn x => fn y => x + y) 2 3").assertEval(is(5));
   }
 
-  @Test void testEvalFnTuple() {
+  @Test
+  void testEvalFnTuple() {
     ml("(fn (x, y) => x + y) (2, 3)").assertEval(is(5));
   }
 
-  @Test void testEvalFnRec() {
-    final String ml = "let\n"
-        + "  val rec f = fn n => if n = 0 then 1 else n * f (n - 1)\n"
-        + "in\n"
-        + "  f 5\n"
-        + "end";
+  @Test
+  void testEvalFnRec() {
+    final String ml =
+        "let\n"
+            + "  val rec f = fn n => if n = 0 then 1 else n * f (n - 1)\n"
+            + "in\n"
+            + "  f 5\n"
+            + "end";
     ml(ml).assertEval(is(120));
   }
 
-  @Test void testEvalFnTupleGeneric() {
+  @Test
+  void testEvalFnTupleGeneric() {
     ml("(fn (x, y) => x) (2, 3)").assertEval(is(2));
     ml("(fn (x, y) => y) (2, 3)").assertEval(is(3));
   }
 
-  @Test void testRecord() {
+  @Test
+  void testRecord() {
     ml("{a = 1, b = {c = true, d = false}}").assertParseSame();
     ml("{a = 1, 1 = 2}").assertParseStmt(Ast.Record.class, "{1 = 2, a = 1}");
     ml("#b {a = 1, b = {c = true, d = false}}").assertParseSame();
@@ -1161,35 +1238,34 @@ public class MainTest {
     ml("{a = true, b = ~2}").assertEval(is(list(true, -2)));
     ml("{a = true, b = ~2, c = \"c\"}").assertEval(is(list(true, -2, "c")));
     ml("let val ab = {a = true, b = ~2} in #a ab end").assertEval(is(true));
-    ml("{a = true, b = {c = 1, d = 2}}")
-        .assertEval(is(list(true, list(1, 2))));
-    ml("#a {a = 1, b = true}")
-        .assertType("int")
-        .assertEval(is(1));
-    ml("#b {a = 1, b = true}")
-        .assertType("bool")
-        .assertEval(is(true));
+    ml("{a = true, b = {c = 1, d = 2}}").assertEval(is(list(true, list(1, 2))));
+    ml("#a {a = 1, b = true}").assertType("int").assertEval(is(1));
+    ml("#b {a = 1, b = true}").assertType("bool").assertEval(is(true));
     ml("#b {a = 1, b = 2}").assertEval(is(2));
     ml("#b {a = 1, b = {x = 3, y = 4}, z = true}").assertEval(is(list(3, 4)));
     ml("#x (#b {a = 1, b = {x = 3, y = 4}, z = true})").assertEval(is(3));
   }
 
-  @Test void testEquals() {
+  @Test
+  void testEquals() {
     ml("{b = true, a = 1} = {a = 1, b = true}").assertEval(is(true));
     ml("{b = true, a = 0} = {a = 1, b = true}").assertEval(is(false));
   }
 
   @Disabled("deduce type of #label")
-  @Test void testRecord2() {
+  @Test
+  void testRecord2() {
     ml("#x #b {a = 1, b = {x = 3, y = 4}, z = true}")
-        .assertError("Error: operator and operand don't agree [type mismatch]\n"
-            + "  operator domain: {x:'Y; 'Z}\n"
-            + "  operand:         {b:'W; 'X} -> 'W\n"
-            + "  in expression:\n"
-            + "    (fn {x=x,...} => x) (fn {b=b,...} => b)\n");
+        .assertError(
+            "Error: operator and operand don't agree [type mismatch]\n"
+                + "  operator domain: {x:'Y; 'Z}\n"
+                + "  operand:         {b:'W; 'X} -> 'W\n"
+                + "  in expression:\n"
+                + "    (fn {x=x,...} => x) (fn {b=b,...} => b)\n");
   }
 
-  @Test void testRecordFn() {
+  @Test
+  void testRecordFn() {
     ml("(fn {a=a1,b=b1} => a1) {a = 1, b = true}")
         .assertType("int")
         .assertEval(is(1));
@@ -1198,24 +1274,27 @@ public class MainTest {
         .assertEval(is(true));
   }
 
-  @Test void testRecordMatch() {
-    final String ml = "case {a=1, b=2, c=3}\n"
-        + "  of {a=2, b=2, c=3} => 0\n"
-        + "   | {a=1, c=x, ...} => x\n"
-        + "   | _ => ~1";
+  @Test
+  void testRecordMatch() {
+    final String ml =
+        "case {a=1, b=2, c=3}\n"
+            + "  of {a=2, b=2, c=3} => 0\n"
+            + "   | {a=1, c=x, ...} => x\n"
+            + "   | _ => ~1";
     ml(ml).assertEval(is(3));
     ml("fn {} => 0").assertParseSame();
     ml("fn {a=1, ..., c=2}")
         .assertParseThrowsParseException(
-            containsString("Encountered \" \",\" \", \"\" at line 1, "
-                + "column 13."));
+            containsString(
+                "Encountered \" \",\" \", \"\" at line 1, " + "column 13."));
     ml("fn {...} => 0").assertParseSame();
     ml("fn {a = a, ...} => 0").assertParseSame();
     ml("fn {a, b = {c, d}, ...} => 0")
         .assertParse("fn {a = a, b = {c = c, d = d}, ...} => 0");
   }
 
-  @Test void testRecordCase() {
+  @Test
+  void testRecordCase() {
     ml("case {a=2,b=3} of {a=x,b=y} => x * y").assertEval(is(6));
     ml("case {a=2,b=3,c=4} of {a=x,b=y,c=z} => x * y").assertEval(is(6));
     ml("case {a=2,b=3,c=4} of {a=x,b=y,...} => x * y").assertEval(is(6));
@@ -1224,24 +1303,22 @@ public class MainTest {
         .assertEval(is(3));
   }
 
-  @Test void testRecordTuple() {
+  @Test
+  void testRecordTuple() {
     ml("{ 1 = true, 2 = 0}").assertType("bool * int");
     ml("{2=0,1=true}").assertType("bool * int");
     ml("{3=0,1=true,11=false}").assertType("{1:bool, 3:int, 11:bool}");
     ml("#1 {1=true,2=0}").assertType("bool");
     ml("#1 (true, 0)").assertType("bool");
-    ml("#2 (true, 0)")
-        .assertType("int")
-        .assertEval(is(0));
+    ml("#2 (true, 0)").assertType("int").assertEval(is(0));
 
     // empty record = () = unit
     ml("()").assertType("unit");
-    ml("{}")
-        .assertType("unit")
-        .assertEval(is(ImmutableList.of()));
+    ml("{}").assertType("unit").assertEval(is(ImmutableList.of()));
   }
 
-  @Test void testList() {
+  @Test
+  void testList() {
     ml("[1]").assertType("int list");
     ml("[[1]]").assertType("int list list");
     ml("[(1, true), (2, false)]").assertType("(int * bool) list");
@@ -1249,195 +1326,226 @@ public class MainTest {
     ml("1 :: [2, 3]").assertType("int list");
     ml("[1] :: [[2], [3]]").assertType("int list list");
     ml("1 :: []").assertType("int list");
-    ml("1 :: 2 :: []")
-        .assertType("int list")
-        .assertEval(is(list(1, 2)));
+    ml("1 :: 2 :: []").assertType("int list").assertEval(is(list(1, 2)));
     ml("fn [] => 0").assertType("'a list -> int");
   }
 
   @Disabled("need type annotations")
-  @Test void testList2() {
+  @Test
+  void testList2() {
     ml("fn x: 'b list => 0").assertType("'a list -> int");
   }
 
   /** List length function exercises list pattern-matching and recursion. */
-  @Test void testListLength() {
-    final String ml = "let\n"
-        + "  val rec len = fn x =>\n"
-        + "    case x of [] => 0\n"
-        + "            | head :: tail => 1 + len tail\n"
-        + "in\n"
-        + "  len [1, 2, 3]\n"
-        + "end";
+  @Test
+  void testListLength() {
+    final String ml =
+        "let\n"
+            + "  val rec len = fn x =>\n"
+            + "    case x of [] => 0\n"
+            + "            | head :: tail => 1 + len tail\n"
+            + "in\n"
+            + "  len [1, 2, 3]\n"
+            + "end";
     ml(ml).assertEval(is(3));
   }
 
-  /** As {@link #testListLength()} but match reversed, which requires
-   * cautious matching of :: pattern. */
-  @Test void testListLength2() {
-    final String ml = "let\n"
-        + "  val rec len = fn x =>\n"
-        + "    case x of head :: tail => 1 + len tail\n"
-        + "            | [] => 0\n"
-        + "in\n"
-        + "  len [1, 2, 3]\n"
-        + "end";
+  /**
+   * As {@link #testListLength()} but match reversed, which requires cautious
+   * matching of :: pattern.
+   */
+  @Test
+  void testListLength2() {
+    final String ml =
+        "let\n"
+            + "  val rec len = fn x =>\n"
+            + "    case x of head :: tail => 1 + len tail\n"
+            + "            | [] => 0\n"
+            + "in\n"
+            + "  len [1, 2, 3]\n"
+            + "end";
     ml(ml).assertEval(is(3));
   }
 
   /** As {link {@link #testListLength()} but using {@code fun}. */
-  @Test void testListLength3() {
-    final String ml = "let\n"
-        + "  fun len [] = 0\n"
-        + "     | len (head :: tail) = 1 + len tail\n"
-        + "in\n"
-        + "  len [1, 2, 3]\n"
-        + "end";
+  @Test
+  void testListLength3() {
+    final String ml =
+        "let\n"
+            + "  fun len [] = 0\n"
+            + "     | len (head :: tail) = 1 + len tail\n"
+            + "in\n"
+            + "  len [1, 2, 3]\n"
+            + "end";
     ml(ml).assertEval(is(3));
   }
 
-  @Test void testFunUnit() {
-    final String ml = "let\n"
-        + "  fun one () = 1\n"
-        + "in\n"
-        + "  one () + 2\n"
-        + "end";
+  @Test
+  void testFunUnit() {
+    final String ml =
+        "let\n" + "  fun one () = 1\n" + "in\n" + "  one () + 2\n" + "end";
     ml(ml).assertEval(is(3));
   }
 
-  @Test void testMatchTuple() {
-    final String ml = "let\n"
-        + "  val rec sumIf = fn v =>\n"
-        + "    case v of (true, n) :: tail => n + sumIf tail\n"
-        + "            | (false, _) :: tail => sumIf tail\n"
-        + "            | _ => 0\n"
-        + "in\n"
-        + "  sumIf [(true, 2), (false, 3), (true, 5)]\n"
-        + "end";
+  @Test
+  void testMatchTuple() {
+    final String ml =
+        "let\n"
+            + "  val rec sumIf = fn v =>\n"
+            + "    case v of (true, n) :: tail => n + sumIf tail\n"
+            + "            | (false, _) :: tail => sumIf tail\n"
+            + "            | _ => 0\n"
+            + "in\n"
+            + "  sumIf [(true, 2), (false, 3), (true, 5)]\n"
+            + "end";
     ml(ml).assertEval(is(7));
   }
 
-  /** The algorithm is described in
-   * <a href="https://stackoverflow.com/questions/7883023/algorithm-for-type-checking-ml-like-pattern-matching">
+  /**
+   * The algorithm is described in <a
+   * href="https://stackoverflow.com/questions/7883023/algorithm-for-type-checking-ml-like-pattern-matching">
    * Stack overflow</a> and in Lennart Augustsson's 1985 paper "Compiling
-   * Pattern Matching". */
-  @Test void testMatchRedundant() {
-    final String ml = "fun f x = case x > 0 of\n"
-        + "   true => \"positive\"\n"
-        + " | false => \"non-positive\"\n"
-        + " | $true => \"oops\"$";
+   * Pattern Matching".
+   */
+  @Test
+  void testMatchRedundant() {
+    final String ml =
+        "fun f x = case x > 0 of\n"
+            + "   true => \"positive\"\n"
+            + " | false => \"non-positive\"\n"
+            + " | $true => \"oops\"$";
     mlE(ml)
         .assertMatchCoverage(REDUNDANT)
         .assertEvalThrows(pos -> throwsA("match redundant", pos));
 
     // similar, but 'fun' rather than 'case'
-    final String ml2 = ""
-        + "fun f true = \"positive\"\n"
-        + "  | f false = \"non-positive\"\n"
-        + "  | $f true = \"oops\"$";
+    final String ml2 =
+        ""
+            + "fun f true = \"positive\"\n"
+            + "  | f false = \"non-positive\"\n"
+            + "  | $f true = \"oops\"$";
     mlE(ml2)
         .assertMatchCoverage(REDUNDANT)
         .assertEvalThrows(pos -> throwsA("match redundant", pos));
   }
 
-  @Test void testMatchCoverage1() {
+  @Test
+  void testMatchCoverage1() {
     final String ml = "fun f (x, y) = x + y + 1";
     ml(ml).assertMatchCoverage(OK);
   }
 
-  @Test void testMatchCoverage2() {
-    final String ml = ""
-        + "fun f (1, y) = y\n"
-        + "  | f (x, 2) = x\n"
-        + "  | f (x, y) = x + y + 1";
+  @Test
+  void testMatchCoverage2() {
+    final String ml =
+        ""
+            + "fun f (1, y) = y\n"
+            + "  | f (x, 2) = x\n"
+            + "  | f (x, y) = x + y + 1";
     ml(ml).assertMatchCoverage(OK);
   }
 
-  @Test void testMatchCoverage3() {
+  @Test
+  void testMatchCoverage3() {
     final String ml = "fun f 1 = 2 | f x = x + 3";
     ml(ml).assertMatchCoverage(OK);
   }
 
-  @Test void testMatchCoverage4() {
-    final String ml = "" //
-        + "fun f 1 = 2\n"
-        + "  | f _ = 1";
+  @Test
+  void testMatchCoverage4() {
+    final String ml =
+        "" //
+            + "fun f 1 = 2\n"
+            + "  | f _ = 1";
     ml(ml).assertMatchCoverage(OK);
   }
 
-  @Test void testMatchCoverage5() {
-    final String ml = "" //
-        + "fun f [] = 0\n"
-        + "  | f (h :: t) = 1 + (f t)";
+  @Test
+  void testMatchCoverage5() {
+    final String ml =
+        "" //
+            + "fun f [] = 0\n"
+            + "  | f (h :: t) = 1 + (f t)";
     ml(ml).assertMatchCoverage(OK);
   }
 
-  @Test void testMatchCoverage6() {
-    final String ml = "" //
-        + "fun f (0, y) = y\n"
-        + "  | f (x, y) = x + y + 1";
+  @Test
+  void testMatchCoverage6() {
+    final String ml =
+        "" //
+            + "fun f (0, y) = y\n"
+            + "  | f (x, y) = x + y + 1";
     ml(ml).assertMatchCoverage(OK);
   }
 
-  @Test void testMatchCoverage7() {
-    final String ml = "" //
-        + "fun f (x, y, 0) = y\n"
-        + "  | f (x, y, z) = x + z";
+  @Test
+  void testMatchCoverage7() {
+    final String ml =
+        "" //
+            + "fun f (x, y, 0) = y\n"
+            + "  | f (x, y, z) = x + z";
     ml(ml).assertMatchCoverage(OK);
   }
 
-  @Test void testMatchCoverage8() {
+  @Test
+  void testMatchCoverage8() {
     // The last case is redundant because we know that bool has two values.
-    final String ml = ""
-        + "fun f (true, y, z) = y\n"
-        + "  | f (false, y, z) = z\n"
-        + "  | $f _ = 0$";
+    final String ml =
+        ""
+            + "fun f (true, y, z) = y\n"
+            + "  | f (false, y, z) = z\n"
+            + "  | $f _ = 0$";
     mlE(ml)
         .assertMatchCoverage(REDUNDANT)
         .assertEvalError(pos -> throwsA("match redundant", pos));
   }
 
-  @Test void testMatchCoverage9() {
+  @Test
+  void testMatchCoverage9() {
     // The last case is redundant because we know that unit has only one value.
-    final String ml = "" //
-        + "fun f () = 1\n"
-        + "  | $f _ = 0$";
+    final String ml =
+        "" //
+            + "fun f () = 1\n"
+            + "  | $f _ = 0$";
     mlE(ml).assertMatchCoverage(REDUNDANT);
   }
 
-  @Test void testMatchCoverage10() {
-    final String ml = "fun maskToString m =\n"
-        + "  let\n"
-        + "    fun maskToString2 (m, s, 0) = s\n"
-        + "      | maskToString2 (m, s, k) =\n"
-        + "        maskToString2 (m div 3,\n"
-        + "          ($case (m mod 3) of\n"
-        + "              0 => \"b\"\n"
-        + "            | 1 => \"y\"\n"
-        + "            | 2 => \"g\"$) ^ s,\n"
-        + "          k - 1)\n"
-        + "  in\n"
-        + "    maskToString2 (m, \"\", 5)\n"
-        + "  end";
-    mlE(ml)
-        .assertMatchCoverage(NON_EXHAUSTIVE);
+  @Test
+  void testMatchCoverage10() {
+    final String ml =
+        "fun maskToString m =\n"
+            + "  let\n"
+            + "    fun maskToString2 (m, s, 0) = s\n"
+            + "      | maskToString2 (m, s, k) =\n"
+            + "        maskToString2 (m div 3,\n"
+            + "          ($case (m mod 3) of\n"
+            + "              0 => \"b\"\n"
+            + "            | 1 => \"y\"\n"
+            + "            | 2 => \"g\"$) ^ s,\n"
+            + "          k - 1)\n"
+            + "  in\n"
+            + "    maskToString2 (m, \"\", 5)\n"
+            + "  end";
+    mlE(ml).assertMatchCoverage(NON_EXHAUSTIVE);
   }
 
-  @Test void testMatchCoverage12() {
+  @Test
+  void testMatchCoverage12() {
     // two "match nonexhaustive" warnings
-    final String ml = "fun f x =\n"
-        + "  let\n"
-        + "    fun g 1 = 1\n"
-        + "    and h 2 = 2\n"
-        + "  in\n"
-        + "    (g x) + (h 2)\n"
-        + "  end";
+    final String ml =
+        "fun f x =\n"
+            + "  let\n"
+            + "    fun g 1 = 1\n"
+            + "    and h 2 = 2\n"
+            + "  in\n"
+            + "    (g x) + (h 2)\n"
+            + "  end";
     ml(ml)
         .assertMatchCoverage(NON_EXHAUSTIVE)
         .assertEvalWarnings(
-            new CustomTypeSafeMatcher<List<Throwable>>(
-                "two warnings") {
-              @Override protected boolean matchesSafely(List<Throwable> list) {
+            new CustomTypeSafeMatcher<List<Throwable>>("two warnings") {
+              @Override
+              protected boolean matchesSafely(List<Throwable> list) {
                 return list.size() == 2
                     && list.get(0) instanceof CompileException
                     && list.get(0).getMessage().equals("match nonexhaustive")
@@ -1447,144 +1555,173 @@ public class MainTest {
             });
   }
 
-  /** Test case for "[MOREL-205] Pattern that uses nested type-constructors
-   * should not be considered redundant". */
-  @Test void testMatchCoverage13() {
+  /**
+   * Test case for "[MOREL-205] Pattern that uses nested type-constructors
+   * should not be considered redundant".
+   */
+  @Test
+  void testMatchCoverage13() {
     // Even though "SOME i" is seen at depth 1 in the first line,
     // the "SOME" at depth 0 in the second line is not the same pattern,
     // therefore the pattern is not redundant.
-    final String ml = "fun f (SOME (SOME i)) = i + 1\n"
-        + "  | f (SOME NONE) = 0\n"
-        + "  | f NONE = ~1\n";
+    final String ml =
+        "fun f (SOME (SOME i)) = i + 1\n"
+            + "  | f (SOME NONE) = 0\n"
+            + "  | f NONE = ~1\n";
     ml(ml).assertMatchCoverage(OK);
   }
 
   /** Function declaration. */
-  @Test void testFun() {
-    final String ml = "let\n"
-        + "  fun fact n = if n = 0 then 1 else n * fact (n - 1)\n"
-        + "in\n"
-        + "  fact 5\n"
-        + "end";
+  @Test
+  void testFun() {
+    final String ml =
+        "let\n"
+            + "  fun fact n = if n = 0 then 1 else n * fact (n - 1)\n"
+            + "in\n"
+            + "  fact 5\n"
+            + "end";
     ml(ml).assertEval(is(120));
   }
 
   /** As {@link #testFun()} but not applied to a value. */
-  @Test void testFunValue() {
-    final String ml = "let\n"
-        + "  fun fact n = if n = 0 then 1 else n * fact (n - 1)\n"
-        + "in\n"
-        + "  fact\n"
-        + "end";
+  @Test
+  void testFunValue() {
+    final String ml =
+        "let\n"
+            + "  fun fact n = if n = 0 then 1 else n * fact (n - 1)\n"
+            + "in\n"
+            + "  fact\n"
+            + "end";
     ml(ml).assertEval(whenAppliedTo(5, is(120)));
   }
 
-  /** As {@link #testFunValue()} but without "let".
+  /**
+   * As {@link #testFunValue()} but without "let".
    *
    * <p>This is mainly a test for the test framework. We want to handle bindings
    * ({@code fun}) as well as values ({@code let} and {@code fn}). So people can
-   * write tests more concisely. */
-  @Test void testFunValueSansLet() {
+   * write tests more concisely.
+   */
+  @Test
+  void testFunValueSansLet() {
     final String ml = "fun fact n = if n = 0 then 1 else n * fact (n - 1)";
     ml(ml).assertEval(whenAppliedTo(5, is(120)));
   }
 
   /** As {@link #testFun} but uses case. */
-  @Test void testFun2() {
-    final String ml = "let\n"
-        + "  fun fact n = case n of 0 => 1 | _ => n * fact (n - 1)\n"
-        + "in\n"
-        + "  fact 5\n"
-        + "end";
+  @Test
+  void testFun2() {
+    final String ml =
+        "let\n"
+            + "  fun fact n = case n of 0 => 1 | _ => n * fact (n - 1)\n"
+            + "in\n"
+            + "  fact 5\n"
+            + "end";
     ml(ml).assertEval(is(120));
   }
 
   /** As {@link #testFun} but uses a multi-clause function. */
-  @Test void testFun3() {
-    final String ml = "let\n"
-        + "  fun fact 1 = 1 | fact n = n * fact (n - 1)\n"
-        + "in\n"
-        + "  fact 5\n"
-        + "end";
-    final String expected = "let"
-        + " fun fact 1 = 1 "
-        + "| fact n = n * fact (n - 1) "
-        + "in fact 5 end";
-    ml(ml).assertParse(expected)
-        .assertEval(is(120));
+  @Test
+  void testFun3() {
+    final String ml =
+        "let\n"
+            + "  fun fact 1 = 1 | fact n = n * fact (n - 1)\n"
+            + "in\n"
+            + "  fact 5\n"
+            + "end";
+    final String expected =
+        "let"
+            + " fun fact 1 = 1 "
+            + "| fact n = n * fact (n - 1) "
+            + "in fact 5 end";
+    ml(ml).assertParse(expected).assertEval(is(120));
   }
 
   /** Simultaneous functions. */
-  @Test void testFun4() {
-    final String ml = "let\n"
-        + "  val x = 1\n"
-        + "in\n"
-        + "  let\n"
-        + "    val x = 17\n"
-        + "    and inc1 = fn n => n + x\n"
-        + "    and inc2 = fn n => n + x + x\n"
-        + "  in\n"
-        + "    inc2 (inc1 x)\n"
-        + "  end\n"
-        + "end";
-    ml(ml).assertType("int")
-        .assertEval(is(20));
+  @Test
+  void testFun4() {
+    final String ml =
+        "let\n"
+            + "  val x = 1\n"
+            + "in\n"
+            + "  let\n"
+            + "    val x = 17\n"
+            + "    and inc1 = fn n => n + x\n"
+            + "    and inc2 = fn n => n + x + x\n"
+            + "  in\n"
+            + "    inc2 (inc1 x)\n"
+            + "  end\n"
+            + "end";
+    ml(ml).assertType("int").assertEval(is(20));
   }
 
-  /** Mutually recursive functions: the definition of 'even' references 'odd'
-   * and the definition of 'odd' references 'even'. */
+  /**
+   * Mutually recursive functions: the definition of 'even' references 'odd' and
+   * the definition of 'odd' references 'even'.
+   */
   @Disabled("not working yet")
-  @Test void testMutuallyRecursiveFunctions() {
-    final String ml = "let\n"
-        + "  fun even 0 = true\n"
-        + "    | even n = odd (n - 1)\n"
-        + "  and odd 0 = false\n"
-        + "    | odd n = even (n - 1)\n"
-        + "in\n"
-        + "  odd 7\n"
-        + "end";
-    ml(ml).assertType("boolean")
-        .assertEval(is(true));
+  @Test
+  void testMutuallyRecursiveFunctions() {
+    final String ml =
+        "let\n"
+            + "  fun even 0 = true\n"
+            + "    | even n = odd (n - 1)\n"
+            + "  and odd 0 = false\n"
+            + "    | odd n = even (n - 1)\n"
+            + "in\n"
+            + "  odd 7\n"
+            + "end";
+    ml(ml).assertType("boolean").assertEval(is(true));
   }
 
   /** A function with two arguments. */
-  @Test void testFunTwoArgs() {
-    final String ml = "let\n" //
-        + "  fun sum x y = x + y\n"
-        + "in\n"
-        + "  sum 5 3\n"
-        + "end";
+  @Test
+  void testFunTwoArgs() {
+    final String ml =
+        "let\n" //
+            + "  fun sum x y = x + y\n"
+            + "in\n"
+            + "  sum 5 3\n"
+            + "end";
     ml(ml).assertEval(is(8));
   }
 
-  @Test void testFunRecord() {
-    final String ml = ""
-        + "fun f {a=x,b=1,...} = x\n"
-        + "  | f {b=y,c=2,...} = y\n"
-        + "  | f {a=x,b=y,c=z} = x+y+z";
-    ml(ml).assertType("{a:int, b:int, c:int} -> int")
+  @Test
+  void testFunRecord() {
+    final String ml =
+        ""
+            + "fun f {a=x,b=1,...} = x\n"
+            + "  | f {b=y,c=2,...} = y\n"
+            + "  | f {a=x,b=y,c=z} = x+y+z";
+    ml(ml)
+        .assertType("{a:int, b:int, c:int} -> int")
         .assertEval(whenAppliedTo(list(1, 2, 3), is(6)));
 
-    final String ml2 = "let\n"
-        + "  fun f {a=x,b=1,...} = x\n"
-        + "    | f {b=y,c=2,...} = y\n"
-        + "    | f {a=x,b=y,c=z} = x+y+z\n"
-        + "in\n"
-        + "  f {a=1,b=2,c=3}\n"
-        + "end";
+    final String ml2 =
+        "let\n"
+            + "  fun f {a=x,b=1,...} = x\n"
+            + "    | f {b=y,c=2,...} = y\n"
+            + "    | f {a=x,b=y,c=z} = x+y+z\n"
+            + "in\n"
+            + "  f {a=1,b=2,c=3}\n"
+            + "end";
     ml(ml2).assertEval(is(6));
   }
 
-  @Test void testDatatype() {
-    final String ml = "let\n"
-        + "  datatype 'a tree = NODE of 'a tree * 'a tree | LEAF of 'a\n"
-        + "in\n"
-        + "  NODE (LEAF 1, NODE (LEAF 2, LEAF 3))\n"
-        + "end";
-    ml(ml).assertParseSame()
+  @Test
+  void testDatatype() {
+    final String ml =
+        "let\n"
+            + "  datatype 'a tree = NODE of 'a tree * 'a tree | LEAF of 'a\n"
+            + "in\n"
+            + "  NODE (LEAF 1, NODE (LEAF 2, LEAF 3))\n"
+            + "end";
+    ml(ml)
+        .assertParseSame()
         .assertType(hasMoniker("'a tree"))
         .assertType(
-            instanceOfAnd(DataType.class,
+            instanceOfAnd(
+                DataType.class,
                 hasTypeConstructors("{LEAF='a, NODE='a tree * 'a tree}")))
         .assertEval(is(node(leaf(1), node(leaf(2), leaf(3)))));
   }
@@ -1597,100 +1734,105 @@ public class MainTest {
     return list("NODE", list(args));
   }
 
-  @Test void testDatatype2() {
-    final String ml = "let\n"
-        + "  datatype number = ZERO | INTEGER of int | RATIONAL of int * int\n"
-        + "in\n"
-        + "  RATIONAL (2, 3)\n"
-        + "end";
-    ml(ml).assertParseSame()
+  @Test
+  void testDatatype2() {
+    final String ml =
+        "let\n"
+            + "  datatype number = ZERO | INTEGER of int | RATIONAL of int * int\n"
+            + "in\n"
+            + "  RATIONAL (2, 3)\n"
+            + "end";
+    ml(ml)
+        .assertParseSame()
         .assertType("number")
         .assertEval(is(ImmutableList.of("RATIONAL", ImmutableList.of(2, 3))));
   }
 
-  @Test void testDatatype3() {
-    final String ml = "let\n"
-        + "  datatype intoption = NONE | SOME of int;\n"
-        + "  val score = fn z => case z of NONE => 0 | SOME x => x\n"
-        + "in\n"
-        + "  score (SOME 5)\n"
-        + "end";
-    ml(ml).assertParseSame()
-        .assertType("int")
-        .assertEval(is(5));
+  @Test
+  void testDatatype3() {
+    final String ml =
+        "let\n"
+            + "  datatype intoption = NONE | SOME of int;\n"
+            + "  val score = fn z => case z of NONE => 0 | SOME x => x\n"
+            + "in\n"
+            + "  score (SOME 5)\n"
+            + "end";
+    ml(ml).assertParseSame().assertType("int").assertEval(is(5));
   }
 
-  /** As {@link #testDatatype3()} but with {@code fun} rather than {@code fn}
-   *  ... {@code case}. */
-  @Test void testDatatype3b() {
-    final String ml = "let\n"
-        + "  datatype intoption = NONE | SOME of int;\n"
-        + "  fun score NONE = 0\n"
-        + "    | score (SOME x) = x\n"
-        + "in\n"
-        + "  score (SOME 5)\n"
-        + "end";
-    ml(ml).assertParseSame()
-        .assertType("int")
-        .assertEval(is(5));
+  /**
+   * As {@link #testDatatype3()} but with {@code fun} rather than {@code fn} ...
+   * {@code case}.
+   */
+  @Test
+  void testDatatype3b() {
+    final String ml =
+        "let\n"
+            + "  datatype intoption = NONE | SOME of int;\n"
+            + "  fun score NONE = 0\n"
+            + "    | score (SOME x) = x\n"
+            + "in\n"
+            + "  score (SOME 5)\n"
+            + "end";
+    ml(ml).assertParseSame().assertType("int").assertEval(is(5));
   }
 
   /** As {@link #testDatatype3b()} but use a nilary type constructor (NONE). */
-  @Test void testDatatype3c() {
-    final String ml = "let\n"
-        + "  datatype intoption = NONE | SOME of int;\n"
-        + "  fun score NONE = 0\n"
-        + "    | score (SOME x) = x\n"
-        + "in\n"
-        + "  score NONE\n"
-        + "end";
-    ml(ml).assertParseSame()
-        .assertType("int")
-        .assertEval(is(0));
+  @Test
+  void testDatatype3c() {
+    final String ml =
+        "let\n"
+            + "  datatype intoption = NONE | SOME of int;\n"
+            + "  fun score NONE = 0\n"
+            + "    | score (SOME x) = x\n"
+            + "in\n"
+            + "  score NONE\n"
+            + "end";
+    ml(ml).assertParseSame().assertType("int").assertEval(is(0));
   }
 
-  @Test void testDatatype4() {
-    final String ml = "let\n"
-        + " datatype intlist = NIL | CONS of int * intlist;\n"
-        + " fun depth NIL = 0\n"
-        + "   | depth CONS (x, y) = 1 + depth y\n"
-        + "in\n"
-        + " depth NIL\n"
-        + "end";
-    ml(ml).assertParseSame()
-        .assertType("int")
-        .assertEval(is(0));
+  @Test
+  void testDatatype4() {
+    final String ml =
+        "let\n"
+            + " datatype intlist = NIL | CONS of int * intlist;\n"
+            + " fun depth NIL = 0\n"
+            + "   | depth CONS (x, y) = 1 + depth y\n"
+            + "in\n"
+            + " depth NIL\n"
+            + "end";
+    ml(ml).assertParseSame().assertType("int").assertEval(is(0));
   }
 
   /** As {@link #testDatatype4()} but with deeper expression. */
-  @Test void testDatatype4a() {
-    final String ml = "let\n"
-        + " datatype intlist = NIL | CONS of int * intlist;\n"
-        + " fun depth NIL = 0\n"
-        + "   | depth CONS (x, y) = 1 + depth y\n"
-        + "in\n"
-        + " depth (CONS (5, CONS (2, NIL)))\n"
-        + "end";
-    ml(ml).assertParseSame()
-        .assertType("int")
-        .assertEval(is(2));
+  @Test
+  void testDatatype4a() {
+    final String ml =
+        "let\n"
+            + " datatype intlist = NIL | CONS of int * intlist;\n"
+            + " fun depth NIL = 0\n"
+            + "   | depth CONS (x, y) = 1 + depth y\n"
+            + "in\n"
+            + " depth (CONS (5, CONS (2, NIL)))\n"
+            + "end";
+    ml(ml).assertParseSame().assertType("int").assertEval(is(2));
   }
 
-  /** Tests set operators (union, except, intersect).
-   * These are Morel extensions to Standard ML,
-   * intended to help relational expressions,
-   * but not part of the {@code from} expression. */
-  @Test void testSetOp() {
+  /**
+   * Tests set operators (union, except, intersect). These are Morel extensions
+   * to Standard ML, intended to help relational expressions, but not part of
+   * the {@code from} expression.
+   */
+  @Test
+  void testSetOp() {
     ml("a union b").assertParseSame();
     ml("a union b union c").assertParseSame();
     ml("(a union b) union c").assertParse("a union b union c");
     ml("a union (b union c)").assertParseSame();
     final String ueui = "a union b except c union d intersect e";
     ml(ueui).assertParseSame();
-    ml("((a union b) except c) union (d intersect e)")
-        .assertParse(ueui);
-    ml("from x in emps union depts where deptno = 10")
-        .assertParseSame();
+    ml("((a union b) except c) union (d intersect e)").assertParse(ueui);
+    ml("from x in emps union depts where deptno = 10").assertParseSame();
     final String fuf =
         "(from x in emps) union (from x in depts where #deptno x = 10)";
     ml(fuf).assertParseSame();
@@ -1701,39 +1843,42 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(1, 2, 3, 2, 3, 4));
   }
 
-  @Test void testFrom() {
-    final String ml = "let\n"
-        + "  val emps = [\n"
-        + "    {id = 100, name = \"Fred\", deptno = 10},\n"
-        + "    {id = 101, name = \"Velma\", deptno = 20},\n"
-        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
-        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
-        + "in\n"
-        + "  from e in emps yield #deptno e\n"
-        + "end";
+  @Test
+  void testFrom() {
+    final String ml =
+        "let\n"
+            + "  val emps = [\n"
+            + "    {id = 100, name = \"Fred\", deptno = 10},\n"
+            + "    {id = 101, name = \"Velma\", deptno = 20},\n"
+            + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+            + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+            + "in\n"
+            + "  from e in emps yield #deptno e\n"
+            + "end";
     ml(ml).assertEvalIter(equalsOrdered(10, 20, 30, 30));
   }
 
-  @Test void testParseFrom() {
+  @Test
+  void testParseFrom() {
     ml("from").assertParseSame();
     ml("from e in emps").assertParseSame();
     ml("from e in emps where c").assertParseSame();
     ml("from e in emps, d in depts").assertParseSame();
     ml("from e in emps, d where hasEmp e").assertParseSame();
     ml("from e, d where hasEmp e").assertParseSame();
-    ml("from e in emps, job, d where hasEmp (e, d, job)")
-        .assertParseSame();
+    ml("from e in emps, job, d where hasEmp (e, d, job)").assertParseSame();
     ml("from a, b in emps where a > b join c join d in depts where c > d")
-        .assertParse("from a, b in emps where a > b "
-            + "join c, d in depts where c > d");
+        .assertParse(
+            "from a, b in emps where a > b "
+                + "join c, d in depts where c > d");
     ml("from a, b in emps where a > b join c, d in depts where c > d")
         .assertParseSame();
     ml("from e in emps, d in depts on e.deptno = d.deptno")
         .assertParse("from e in emps, d in depts on #deptno e = #deptno d");
     ml("from e in emps on true, d in depts on e.deptno = d.deptno")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"on\" \"on \"\" "
-                + "at line 1, column 16."));
+            startsWith(
+                "Encountered \" \"on\" \"on \"\" " + "at line 1, column 16."));
     ml("from e, d in depts on e.deptno = d.deptno")
         .assertParse("from e, d in depts on #deptno e = #deptno d");
     ml("from , d in depts").assertError("Xx");
@@ -1755,54 +1900,60 @@ public class MainTest {
     ml("from e in emps distinct").assertParseSame();
     ml("from e in emps distinct where deptno > 10").assertParseSame();
     ml("from e in emps\n"
-        + " group e.deptno\n"
-        + " join d in depts on deptno = d.deptno\n"
-        + " group d.location\n")
-        .assertParse("from e in emps"
-            + " group deptno = #deptno e"
-            + " join d in depts on deptno = #deptno d"
-            + " group location = #location d");
+            + " group e.deptno\n"
+            + " join d in depts on deptno = d.deptno\n"
+            + " group d.location\n")
+        .assertParse(
+            "from e in emps"
+                + " group deptno = #deptno e"
+                + " join d in depts on deptno = #deptno d"
+                + " group location = #location d");
     // As previous, but use 'group e = {...}' so that we can write 'e.deptno'
     // later in the query.
     ml("from e in emps\n"
-        + " group e = {e.deptno}\n"
-        + " join d in depts on e.deptno = d.deptno\n"
-        + " group d.location")
-        .assertParse("from e in emps"
-            + " group e = {deptno = #deptno e}"
-            + " join d in depts on #deptno e = #deptno d"
-            + " group location = #location d");
+            + " group e = {e.deptno}\n"
+            + " join d in depts on e.deptno = d.deptno\n"
+            + " group d.location")
+        .assertParse(
+            "from e in emps"
+                + " group e = {deptno = #deptno e}"
+                + " join d in depts on #deptno e = #deptno d"
+                + " group location = #location d");
     ml("(from e in emps where e.id = 101, d in depts)")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"in\" \"in \"\" at line 1, column 37."));
+            startsWith(
+                "Encountered \" \"in\" \"in \"\" at line 1, column 37."));
     ml("from e in emps where e.id = 101 join d in depts")
         .assertParse("from e in emps where #id e = 101 join d in depts");
     // after 'group', you have to use 'join' not ','
     ml("(from e in emps\n"
-        + " group e.id compute count,\n"
-        + " d in depts\n"
-        + " where false)")
+            + " group e.id compute count,\n"
+            + " d in depts\n"
+            + " where false)")
         .assertParseThrowsParseException(
             startsWith("Encountered \" \"in\" \"in \"\" at line 3, column 4."));
     ml("(from e in emps\n"
-        + " group e.id compute count\n"
-        + " join d in depts\n"
-        + " where false)")
-        .assertParse("from e in emps"
-            + " group id = #id e compute count = count"
-            + " join d in depts where false");
+            + " group e.id compute count\n"
+            + " join d in depts\n"
+            + " where false)")
+        .assertParse(
+            "from e in emps"
+                + " group id = #id e compute count = count"
+                + " join d in depts where false");
     ml("from e in emps skip 1 take 2").assertParseSame();
     ml("from e in emps order e.empno take 2")
         .assertParse("from e in emps order #empno e take 2");
     ml("from e in emps order e.empno take 2 skip 3 skip 1+1 take 2")
-        .assertParse("from e in emps order #empno e take 2 skip 3 skip 1 + 1 "
-            + "take 2");
+        .assertParse(
+            "from e in emps order #empno e take 2 skip 3 skip 1 + 1 "
+                + "take 2");
     ml("fn f => from i in [1, 2, 3] where f i")
         .assertParseSame()
         .assertType("(int -> bool) -> int list");
     ml("fn f => from i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
-        .assertParse("fn f => from i in [1, 2, 3],"
-            + " j in [3, 4] on f (i, j) yield i + j")
+        .assertParse(
+            "fn f => from i in [1, 2, 3],"
+                + " j in [3, 4] on f (i, j) yield i + j")
         .assertType("(int * int -> bool) -> int list");
 
     // In "from p in exp" and "from p = exp", p can be any pattern
@@ -1812,65 +1963,73 @@ public class MainTest {
         .assertParse("from {x = x, y = y} in [{x = 1, y = 2}], z");
     ml("from {x, y}, z")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \",\" \", \"\" "
-                + "at line 1, column 12."));
+            startsWith(
+                "Encountered \" \",\" \", \"\" " + "at line 1, column 12."));
     ml("from {x, y} group")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"group\" \"group \"\" "
-                + "at line 1, column 13."));
+            startsWith(
+                "Encountered \" \"group\" \"group \"\" "
+                    + "at line 1, column 13."));
     ml("from {x, y} where true")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"where\" \"where \"\" "
-                + "at line 1, column 13."));
+            startsWith(
+                "Encountered \" \"where\" \"where \"\" "
+                    + "at line 1, column 13."));
     ml("from (x, y) where true")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"where\" \"where \"\" "
-                + "at line 1, column 13."));
+            startsWith(
+                "Encountered \" \"where\" \"where \"\" "
+                    + "at line 1, column 13."));
     ml("from w as (x, y) order x")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"order\" \"order \"\" "
-                + "at line 1, column 18."));
+            startsWith(
+                "Encountered \" \"order\" \"order \"\" "
+                    + "at line 1, column 18."));
     ml("from (x, y)")
         .assertParseThrowsParseException(
             startsWith("Encountered \"<EOF>\" at line 1, column 11."));
     ml("from e in emps\n" //
-        + "through e in empsInDept 20\n"
-        + "yield e.sal")
+            + "through e in empsInDept 20\n"
+            + "yield e.sal")
         .assertParse("from e in emps through e in empsInDept 20 yield #sal e");
     ml("from e in emps\n" //
-        + "yield e.empno\n"
-        + "into sum")
+            + "yield e.empno\n"
+            + "into sum")
         .assertParse("from e in emps yield #empno e into sum");
     ml("from e in emps\n" //
-        + "yield e.empno\n"
-        + "compute sum, count")
-        .assertParse("from e in emps "
-            + "yield #empno e "
-            + "compute sum = sum, count = count");
+            + "yield e.empno\n"
+            + "compute sum, count")
+        .assertParse(
+            "from e in emps "
+                + "yield #empno e "
+                + "compute sum = sum, count = count");
   }
 
-  /** This test is a copy of {@link #testParseFrom()}, replacing "from" with
-   * "exists". */
-  @Test void testParseExists() {
+  /**
+   * This test is a copy of {@link #testParseFrom()}, replacing "from" with
+   * "exists".
+   */
+  @Test
+  void testParseExists() {
     ml("exists").assertParseSame();
     ml("exists e in emps").assertParseSame();
     ml("exists e in emps where c").assertParseSame();
     ml("exists e in emps, d in depts").assertParseSame();
     ml("exists e in emps, d where hasEmp e").assertParseSame();
     ml("exists e, d where hasEmp e").assertParseSame();
-    ml("exists e in emps, job, d where hasEmp (e, d, job)")
-        .assertParseSame();
+    ml("exists e in emps, job, d where hasEmp (e, d, job)").assertParseSame();
     ml("exists a, b in emps where a > b join c join d in depts where c > d")
-        .assertParse("exists a, b in emps where a > b "
-            + "join c, d in depts where c > d");
+        .assertParse(
+            "exists a, b in emps where a > b "
+                + "join c, d in depts where c > d");
     ml("exists a, b in emps where a > b join c, d in depts where c > d")
         .assertParseSame();
     ml("exists e in emps, d in depts on e.deptno = d.deptno")
         .assertParse("exists e in emps, d in depts on #deptno e = #deptno d");
     ml("exists e in emps on true, d in depts on e.deptno = d.deptno")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"on\" \"on \"\" "
-                + "at line 1, column 18."));
+            startsWith(
+                "Encountered \" \"on\" \"on \"\" " + "at line 1, column 18."));
     ml("exists e, d in depts on e.deptno = d.deptno")
         .assertParse("exists e, d in depts on #deptno e = #deptno d");
     ml("exists , d in depts").assertError("Xx");
@@ -1892,53 +2051,58 @@ public class MainTest {
     ml("exists e in emps distinct").assertParseSame();
     ml("exists e in emps distinct where deptno > 10").assertParseSame();
     ml("exists e in emps\n"
-        + " group e.deptno\n"
-        + " join d in depts on deptno = d.deptno\n"
-        + " group d.location\n")
-        .assertParse("exists e in emps"
-            + " group deptno = #deptno e"
-            + " join d in depts on deptno = #deptno d"
-            + " group location = #location d");
+            + " group e.deptno\n"
+            + " join d in depts on deptno = d.deptno\n"
+            + " group d.location\n")
+        .assertParse(
+            "exists e in emps"
+                + " group deptno = #deptno e"
+                + " join d in depts on deptno = #deptno d"
+                + " group location = #location d");
     // As previous, but use 'group e = {...}' so that we can write 'e.deptno'
     // later in the query.
     ml("exists e in emps\n"
-        + " group e = {e.deptno}\n"
-        + " join d in depts on e.deptno = d.deptno\n"
-        + " group d.location")
-        .assertParse("exists e in emps"
-            + " group e = {deptno = #deptno e}"
-            + " join d in depts on #deptno e = #deptno d"
-            + " group location = #location d");
+            + " group e = {e.deptno}\n"
+            + " join d in depts on e.deptno = d.deptno\n"
+            + " group d.location")
+        .assertParse(
+            "exists e in emps"
+                + " group e = {deptno = #deptno e}"
+                + " join d in depts on #deptno e = #deptno d"
+                + " group location = #location d");
     ml("(exists e in emps where e.id = 101, d in depts)")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"in\" \"in \"\" at line 1, column 39."));
+            startsWith(
+                "Encountered \" \"in\" \"in \"\" at line 1, column 39."));
     ml("exists e in emps where e.id = 101 join d in depts")
         .assertParse("exists e in emps where #id e = 101 join d in depts");
     // after 'group', you have to use 'join' not ','
     ml("(exists e in emps\n"
-        + " group e.id compute count,\n"
-        + " d in depts\n"
-        + " where false)")
+            + " group e.id compute count,\n"
+            + " d in depts\n"
+            + " where false)")
         .assertParseThrowsParseException(
             startsWith("Encountered \" \"in\" \"in \"\" at line 3, column 4."));
     ml("(exists e in emps\n"
-        + " group e.id compute count\n"
-        + " join d in depts\n"
-        + " where false)")
-        .assertParse("exists e in emps"
-            + " group id = #id e compute count = count"
-            + " join d in depts where false");
+            + " group e.id compute count\n"
+            + " join d in depts\n"
+            + " where false)")
+        .assertParse(
+            "exists e in emps"
+                + " group id = #id e compute count = count"
+                + " join d in depts where false");
     ml("exists e in emps skip 1 take 2").assertParseSame();
     ml("exists e in emps order e.empno take 2")
         .assertParse("exists e in emps order #empno e take 2");
     ml("exists e in emps order e.empno take 2 skip 3 skip 1+1 take 2")
-        .assertParse("exists e in emps order #empno e take 2 skip 3 skip 1 + 1 "
-            + "take 2");
-    ml("fn f => exists i in [1, 2, 3] where f i")
-        .assertParseSame();
+        .assertParse(
+            "exists e in emps order #empno e take 2 skip 3 skip 1 + 1 "
+                + "take 2");
+    ml("fn f => exists i in [1, 2, 3] where f i").assertParseSame();
     ml("fn f => exists i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
-        .assertParse("fn f => exists i in [1, 2, 3],"
-            + " j in [3, 4] on f (i, j) yield i + j");
+        .assertParse(
+            "fn f => exists i in [1, 2, 3],"
+                + " j in [3, 4] on f (i, j) yield i + j");
 
     // In "exists p in exp" and "exists p = exp", p can be any pattern
     // but in "exists v" v can only be an identifier.
@@ -1947,65 +2111,74 @@ public class MainTest {
         .assertParse("exists {x = x, y = y} in [{x = 1, y = 2}], z");
     ml("exists {x, y}, z")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \",\" \", \"\" "
-                + "at line 1, column 14."));
+            startsWith(
+                "Encountered \" \",\" \", \"\" " + "at line 1, column 14."));
     ml("exists {x, y} group")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"group\" \"group \"\" "
-                + "at line 1, column 15."));
+            startsWith(
+                "Encountered \" \"group\" \"group \"\" "
+                    + "at line 1, column 15."));
     ml("exists {x, y} where true")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"where\" \"where \"\" "
-                + "at line 1, column 15."));
+            startsWith(
+                "Encountered \" \"where\" \"where \"\" "
+                    + "at line 1, column 15."));
     ml("exists (x, y) where true")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"where\" \"where \"\" "
-                + "at line 1, column 15."));
+            startsWith(
+                "Encountered \" \"where\" \"where \"\" "
+                    + "at line 1, column 15."));
     ml("exists w as (x, y) order x")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"order\" \"order \"\" "
-                + "at line 1, column 20."));
+            startsWith(
+                "Encountered \" \"order\" \"order \"\" "
+                    + "at line 1, column 20."));
     ml("exists (x, y)")
         .assertParseThrowsParseException(
             startsWith("Encountered \"<EOF>\" at line 1, column 13."));
     ml("exists e in emps\n" //
-        + "through e in empsInDept 20\n"
-        + "yield e.sal")
-        .assertParse("exists e in emps through e in empsInDept 20 yield #sal e");
+            + "through e in empsInDept 20\n"
+            + "yield e.sal")
+        .assertParse(
+            "exists e in emps through e in empsInDept 20 yield #sal e");
     ml("exists e in emps\n" //
-        + "yield e.empno\n"
-        + "into sum")
+            + "yield e.empno\n"
+            + "into sum")
         .assertParse("exists e in emps yield #empno e into sum");
     ml("exists e in emps\n" //
-        + "yield e.empno\n"
-        + "compute sum, count")
-        .assertParse("exists e in emps "
-            + "yield #empno e "
-            + "compute sum = sum, count = count");
+            + "yield e.empno\n"
+            + "compute sum, count")
+        .assertParse(
+            "exists e in emps "
+                + "yield #empno e "
+                + "compute sum = sum, count = count");
   }
 
-  /** This test is a copy of {@link #testParseFrom()}, replacing "from" with
-   * "forall". */
-  @Test void testParseForall() {
+  /**
+   * This test is a copy of {@link #testParseFrom()}, replacing "from" with
+   * "forall".
+   */
+  @Test
+  void testParseForall() {
     ml("forall require true").assertParseSame();
     ml("forall e in emps require true").assertParseSame();
     ml("forall e in emps where c").assertParseSame();
     ml("forall e in emps, d in depts").assertParseSame();
     ml("forall e in emps, d where hasEmp e").assertParseSame();
     ml("forall e, d where hasEmp e").assertParseSame();
-    ml("forall e in emps, job, d where hasEmp (e, d, job)")
-        .assertParseSame();
+    ml("forall e in emps, job, d where hasEmp (e, d, job)").assertParseSame();
     ml("forall a, b in emps where a > b join c join d in depts where c > d")
-        .assertParse("forall a, b in emps where a > b "
-            + "join c, d in depts where c > d");
+        .assertParse(
+            "forall a, b in emps where a > b "
+                + "join c, d in depts where c > d");
     ml("forall a, b in emps where a > b join c, d in depts where c > d")
         .assertParseSame();
     ml("forall e in emps, d in depts on e.deptno = d.deptno")
         .assertParse("forall e in emps, d in depts on #deptno e = #deptno d");
     ml("forall e in emps on true, d in depts on e.deptno = d.deptno")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"on\" \"on \"\" "
-                + "at line 1, column 18."));
+            startsWith(
+                "Encountered \" \"on\" \"on \"\" " + "at line 1, column 18."));
     ml("forall e, d in depts on e.deptno = d.deptno")
         .assertParse("forall e, d in depts on #deptno e = #deptno d");
     ml("forall , d in depts").assertError("Xx");
@@ -2027,53 +2200,58 @@ public class MainTest {
     ml("forall e in emps distinct").assertParseSame();
     ml("forall e in emps distinct where deptno > 10").assertParseSame();
     ml("forall e in emps\n"
-        + " group e.deptno\n"
-        + " join d in depts on deptno = d.deptno\n"
-        + " group d.location\n")
-        .assertParse("forall e in emps"
-            + " group deptno = #deptno e"
-            + " join d in depts on deptno = #deptno d"
-            + " group location = #location d");
+            + " group e.deptno\n"
+            + " join d in depts on deptno = d.deptno\n"
+            + " group d.location\n")
+        .assertParse(
+            "forall e in emps"
+                + " group deptno = #deptno e"
+                + " join d in depts on deptno = #deptno d"
+                + " group location = #location d");
     // As previous, but use 'group e = {...}' so that we can write 'e.deptno'
     // later in the query.
     ml("forall e in emps\n"
-        + " group e = {e.deptno}\n"
-        + " join d in depts on e.deptno = d.deptno\n"
-        + " group d.location")
-        .assertParse("forall e in emps"
-            + " group e = {deptno = #deptno e}"
-            + " join d in depts on #deptno e = #deptno d"
-            + " group location = #location d");
+            + " group e = {e.deptno}\n"
+            + " join d in depts on e.deptno = d.deptno\n"
+            + " group d.location")
+        .assertParse(
+            "forall e in emps"
+                + " group e = {deptno = #deptno e}"
+                + " join d in depts on #deptno e = #deptno d"
+                + " group location = #location d");
     ml("(forall e in emps where e.id = 101, d in depts)")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"in\" \"in \"\" at line 1, column 39."));
+            startsWith(
+                "Encountered \" \"in\" \"in \"\" at line 1, column 39."));
     ml("forall e in emps where e.id = 101 join d in depts")
         .assertParse("forall e in emps where #id e = 101 join d in depts");
     // after 'group', you have to use 'join' not ','
     ml("(forall e in emps\n"
-        + " group e.id compute count,\n"
-        + " d in depts\n"
-        + " where false)")
+            + " group e.id compute count,\n"
+            + " d in depts\n"
+            + " where false)")
         .assertParseThrowsParseException(
             startsWith("Encountered \" \"in\" \"in \"\" at line 3, column 4."));
     ml("(forall e in emps\n"
-        + " group e.id compute count\n"
-        + " join d in depts\n"
-        + " where false)")
-        .assertParse("forall e in emps"
-            + " group id = #id e compute count = count"
-            + " join d in depts where false");
+            + " group e.id compute count\n"
+            + " join d in depts\n"
+            + " where false)")
+        .assertParse(
+            "forall e in emps"
+                + " group id = #id e compute count = count"
+                + " join d in depts where false");
     ml("forall e in emps skip 1 take 2").assertParseSame();
     ml("forall e in emps order e.empno take 2")
         .assertParse("forall e in emps order #empno e take 2");
     ml("forall e in emps order e.empno take 2 skip 3 skip 1+1 take 2")
-        .assertParse("forall e in emps order #empno e take 2 skip 3 skip 1 + 1 "
-            + "take 2");
-    ml("fn f => forall i in [1, 2, 3] where f i")
-        .assertParseSame();
+        .assertParse(
+            "forall e in emps order #empno e take 2 skip 3 skip 1 + 1 "
+                + "take 2");
+    ml("fn f => forall i in [1, 2, 3] where f i").assertParseSame();
     ml("fn f => forall i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
-        .assertParse("fn f => forall i in [1, 2, 3],"
-            + " j in [3, 4] on f (i, j) yield i + j");
+        .assertParse(
+            "fn f => forall i in [1, 2, 3],"
+                + " j in [3, 4] on f (i, j) yield i + j");
 
     // In "forall p in exp" and "forall p = exp", p can be any pattern
     // but in "forall v" v can only be an identifier.
@@ -2082,48 +2260,53 @@ public class MainTest {
         .assertParse("forall {x = x, y = y} in [{x = 1, y = 2}], z");
     ml("forall {x, y}, z")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \",\" \", \"\" "
-                + "at line 1, column 14."));
+            startsWith(
+                "Encountered \" \",\" \", \"\" " + "at line 1, column 14."));
     ml("forall {x, y} group")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"group\" \"group \"\" "
-                + "at line 1, column 15."));
+            startsWith(
+                "Encountered \" \"group\" \"group \"\" "
+                    + "at line 1, column 15."));
     ml("forall {x, y} where true")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"where\" \"where \"\" "
-                + "at line 1, column 15."));
+            startsWith(
+                "Encountered \" \"where\" \"where \"\" "
+                    + "at line 1, column 15."));
     ml("forall (x, y) where true")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"where\" \"where \"\" "
-                + "at line 1, column 15."));
+            startsWith(
+                "Encountered \" \"where\" \"where \"\" "
+                    + "at line 1, column 15."));
     ml("forall w as (x, y) order x")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" \"order\" \"order \"\" "
-                + "at line 1, column 20."));
+            startsWith(
+                "Encountered \" \"order\" \"order \"\" "
+                    + "at line 1, column 20."));
     ml("forall (x, y)")
         .assertParseThrowsParseException(
             startsWith("Encountered \"<EOF>\" at line 1, column 13."));
     ml("forall e in emps\n" //
-        + "through e in empsInDept 20\n"
-        + "yield e.sal")
-        .assertParse("forall e in emps through e in empsInDept 20 yield #sal e");
+            + "through e in empsInDept 20\n"
+            + "yield e.sal")
+        .assertParse(
+            "forall e in emps through e in empsInDept 20 yield #sal e");
     ml("forall e in emps\n" //
-        + "yield e.empno\n"
-        + "into sum")
+            + "yield e.empno\n"
+            + "into sum")
         .assertParse("forall e in emps yield #empno e into sum");
     ml("forall e in emps\n" //
-        + "yield e.empno\n"
-        + "compute sum, count")
-        .assertParse("forall e in emps "
-            + "yield #empno e "
-            + "compute sum = sum, count = count");
+            + "yield e.empno\n"
+            + "compute sum, count")
+        .assertParse(
+            "forall e in emps "
+                + "yield #empno e "
+                + "compute sum = sum, count = count");
   }
 
-  @Test void testFromYield() {
-    ml("from a in [1], b in [true]")
-        .assertType("{a:int, b:bool} list");
-    ml("from a in [1], b in [true] yield a")
-        .assertType("int list");
+  @Test
+  void testFromYield() {
+    ml("from a in [1], b in [true]").assertType("{a:int, b:bool} list");
+    ml("from a in [1], b in [true] yield a").assertType("int list");
     ml("from a in [1], b in [true] yield {a,b}")
         .assertType("{a:int, b:bool} list");
     ml("from a in [1], b in [true] yield {y=a,b}")
@@ -2136,28 +2319,32 @@ public class MainTest {
         .assertType("{z:int} list");
     ml("from a in [1], b in [true] yield (b,a)")
         .assertType("(bool * int) list");
-    ml("from a in [1], b in [true] yield (b)")
-        .assertType("bool list");
-    ml("from a in [1], b in [true] yield {b,a} yield a")
-        .assertType("int list");
-    String value = "'yield' step that is not last in 'from' must be a record "
-        + "expression";
+    ml("from a in [1], b in [true] yield (b)").assertType("bool list");
+    ml("from a in [1], b in [true] yield {b,a} yield a").assertType("int list");
+    String value =
+        "'yield' step that is not last in 'from' must be a record "
+            + "expression";
     ml("from a in [1], b in [true] yield (b,a) where b")
         .assertType("{a:int, b:bool} list");
     mlE("from a in [1], b in [true] yield (b,a) where $c$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "unbound variable or constructor: c", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "unbound variable or constructor: c",
+                    pos));
     ml("from a in [1], b in [true] yield {b,a} where b")
         .assertType("{a:int, b:bool} list")
         .assertEval(is(list(list(1, true))));
-    ml("from d in [{a=1,b=true}], i in [2] yield i")
-        .assertType("int list");
+    ml("from d in [{a=1,b=true}], i in [2] yield i").assertType("int list");
     // Note that 'd' has record type but is not a record expression
     mlE("from d in [{a=1,b=true}], i in [2] yield d yield $a$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "unbound variable or constructor: a", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "unbound variable or constructor: a",
+                    pos));
     ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} yield a")
         .assertType("int list");
     ml("from d in [{a=1,b=true}], i in [2] yield d where true")
@@ -2170,187 +2357,217 @@ public class MainTest {
         .assertType("int list");
     mlE("from d in [{a=1,b=true}] yield $d.x$")
         .assertTypeThrows(
-            pos -> throwsA(TypeResolver.TypeException.class,
-                is("no field 'x' in type '{a:int, b:bool}'")));
-    ml("from d in [{a=1,b=true}] yield d.a into List.length")
-        .assertType("int");
+            pos ->
+                throwsA(
+                    TypeResolver.TypeException.class,
+                    is("no field 'x' in type '{a:int, b:bool}'")));
+    ml("from d in [{a=1,b=true}] yield d.a into List.length").assertType("int");
     ml("from d in [{a=1,b=true}] yield d.a into sum")
         .assertType("int")
         .assertEval(is(1));
-    ml("exists d in [{a=1,b=true}] where d.a = 0")
-        .assertType("bool");
-    ml("forall d in [{a=1,b=true}] require d.a = 0")
-        .assertType("bool");
+    ml("exists d in [{a=1,b=true}] where d.a = 0").assertType("bool");
+    ml("forall d in [{a=1,b=true}] require d.a = 0").assertType("bool");
     mlE("from d in [{a=1,b=true}] yield d.a into sum $yield \"a\"$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "'into' step must be last in 'from'", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "'into' step must be last in 'from'",
+                    pos));
     mlE("exists d in [{a=1,b=true}] yield d.a $into sum$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "'into' step must not occur in 'exists'", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "'into' step must not occur in 'exists'",
+                    pos));
 
     mlE("forall d in [{a=1,b=true}] yield d.a $into sum$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "'into' step must not occur in 'forall'", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "'into' step must not occur in 'forall'",
+                    pos));
     mlE("forall d in [{a=1,b=true}] yield d.a $compute sum$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "'compute' step must not occur in 'forall'", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "'compute' step must not occur in 'forall'",
+                    pos));
     mlE("forall d in [{a=1,b=true}] $yield d.a$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "last step of 'forall' must be 'require'", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "last step of 'forall' must be 'require'",
+                    pos));
     mlE("forall $d in [{a=1,b=true}]$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "last step of 'forall' must be 'require'", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "last step of 'forall' must be 'require'",
+                    pos));
 
     // "map String.size" has type "string list -> int list",
     // and therefore the type of "j" is "int"
     ml("from s in [\"ab\",\"c\"]\n" //
-        + " through j in (map String.size)")
+            + " through j in (map String.size)")
         .assertType("int list");
     ml("from s in [\"ab\",\"c\"]\n"
-        + " through j in (map String.size)\n"
-        + " yield j + 2")
+            + " through j in (map String.size)\n"
+            + " yield j + 2")
         .assertType("int list");
     ml("from d in [{a=1,b=true},{a=2,b=false}]\n"
-        + " yield d.a\n"
-        + " through s in (fn ints =>\n"
-        + "   from i in ints yield substring (\"abc\", 0, i))")
+            + " yield d.a\n"
+            + " through s in (fn ints =>\n"
+            + "   from i in ints yield substring (\"abc\", 0, i))")
         .assertType("string list")
         .assertEval(is(list("a", "ab")));
   }
 
-  @Test void testFromYieldExpression() {
-    final String ml = "let\n"
-        + "  val emps = [\n"
-        + "    {id = 100, name = \"Fred\", deptno = 10},\n"
-        + "    {id = 101, name = \"Velma\", deptno = 20},\n"
-        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
-        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
-        + "in\n"
-        + "  from e in emps yield (#id e + #deptno e)\n"
-        + "end";
+  @Test
+  void testFromYieldExpression() {
+    final String ml =
+        "let\n"
+            + "  val emps = [\n"
+            + "    {id = 100, name = \"Fred\", deptno = 10},\n"
+            + "    {id = 101, name = \"Velma\", deptno = 20},\n"
+            + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+            + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+            + "in\n"
+            + "  from e in emps yield (#id e + #deptno e)\n"
+            + "end";
     ml(ml).assertEvalIter(equalsOrdered(110, 121, 132, 133));
   }
 
-  @Test void testFromWhere() {
-    final String ml = "let\n"
-        + "  val emps = [\n"
-        + "    {id = 100, name = \"Fred\", deptno = 10},\n"
-        + "    {id = 101, name = \"Velma\", deptno = 20},\n"
-        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
-        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
-        + "in\n"
-        + "  from e in emps where #deptno e = 30 yield #id e\n"
-        + "end";
+  @Test
+  void testFromWhere() {
+    final String ml =
+        "let\n"
+            + "  val emps = [\n"
+            + "    {id = 100, name = \"Fred\", deptno = 10},\n"
+            + "    {id = 101, name = \"Velma\", deptno = 20},\n"
+            + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+            + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+            + "in\n"
+            + "  from e in emps where #deptno e = 30 yield #id e\n"
+            + "end";
     ml(ml).assertEvalIter(equalsOrdered(102, 103));
   }
 
-  /** Applies {@code suchthat} to a function that tests membership of a set,
-   * and therefore the effect is to iterate over that set. */
-  @Test void testFromSuchThat() {
-    final String ml = "let\n"
-        + "  val emps = [\n"
-        + "    {id = 100, name = \"Fred\", deptno = 10},\n"
-        + "    {id = 101, name = \"Velma\", deptno = 20},\n"
-        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
-        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
-        + "  fun hasEmpNameInDept (n, d) =\n"
-        + "    (n, d) elem (from e in emps yield (e.name, e.deptno))\n"
-        + "in\n"
-        + "  from n, d\n"
-        + "    where hasEmpNameInDept (n, d)\n"
-        + "    where d = 30\n"
-        + "    yield {d, n}\n"
-        + "end";
-    final String code = "from(sink\n"
-        + "  join(pat v0,\n"
-        + "  exp from(\n"
-        + "    sink join(pat e, exp tuple(\n"
-        + "  tuple(constant(10), constant(100), constant(Fred)),\n"
-        + "  tuple(constant(20), constant(101), constant(Velma)),\n"
-        + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
-        + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
-        + " sink collect(tuple(apply(fnValue nth:2, argCode get(name e)), "
-        + "apply(fnValue nth:0, argCode get(name e)))))), "
-        + "sink join(pat n_1, exp tuple(\n"
-        + " apply(fnValue nth:0, argCode get(name v0))), "
-        + "sink join(pat d_1, exp tuple(constant(30)), "
-        + "sink where(condition apply2(fnValue elem,\n"
-        + "                            tuple(get(name n), get(name d)), "
-        + "from(sink join(pat e, exp tuple(\n"
-        + "  tuple(constant(10), constant(100), constant(Fred)),\n"
-        + "  tuple(constant(20), constant(101), constant(Velma)),\n"
-        + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
-        + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
-        + " sink collect(tuple(apply(fnValue nth:2, argCode get(name e)), "
-        + "apply(fnValue nth:0, argCode get(name e))))))),\n"
-        + "        sink where(condition apply2(fnValue =, get(name d), constant(30)),\n"
-        + "          sink collect(tuple(get(name d), get(name n)))))))))";
-    final List<Object> expected =
-        list(list(30, "Shaggy"), list(30, "Scooby"));
-    ml(ml).assertType("{d:int, n:string} list")
+  /**
+   * Applies {@code suchthat} to a function that tests membership of a set, and
+   * therefore the effect is to iterate over that set.
+   */
+  @Test
+  void testFromSuchThat() {
+    final String ml =
+        "let\n"
+            + "  val emps = [\n"
+            + "    {id = 100, name = \"Fred\", deptno = 10},\n"
+            + "    {id = 101, name = \"Velma\", deptno = 20},\n"
+            + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+            + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+            + "  fun hasEmpNameInDept (n, d) =\n"
+            + "    (n, d) elem (from e in emps yield (e.name, e.deptno))\n"
+            + "in\n"
+            + "  from n, d\n"
+            + "    where hasEmpNameInDept (n, d)\n"
+            + "    where d = 30\n"
+            + "    yield {d, n}\n"
+            + "end";
+    final String code =
+        "from(sink\n"
+            + "  join(pat v0,\n"
+            + "  exp from(\n"
+            + "    sink join(pat e, exp tuple(\n"
+            + "  tuple(constant(10), constant(100), constant(Fred)),\n"
+            + "  tuple(constant(20), constant(101), constant(Velma)),\n"
+            + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
+            + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
+            + " sink collect(tuple(apply(fnValue nth:2, argCode get(name e)), "
+            + "apply(fnValue nth:0, argCode get(name e)))))), "
+            + "sink join(pat n_1, exp tuple(\n"
+            + " apply(fnValue nth:0, argCode get(name v0))), "
+            + "sink join(pat d_1, exp tuple(constant(30)), "
+            + "sink where(condition apply2(fnValue elem,\n"
+            + "                            tuple(get(name n), get(name d)), "
+            + "from(sink join(pat e, exp tuple(\n"
+            + "  tuple(constant(10), constant(100), constant(Fred)),\n"
+            + "  tuple(constant(20), constant(101), constant(Velma)),\n"
+            + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
+            + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
+            + " sink collect(tuple(apply(fnValue nth:2, argCode get(name e)), "
+            + "apply(fnValue nth:0, argCode get(name e))))))),\n"
+            + "        sink where(condition apply2(fnValue =, get(name d), constant(30)),\n"
+            + "          sink collect(tuple(get(name d), get(name n)))))))))";
+    final List<Object> expected = list(list(30, "Shaggy"), list(30, "Scooby"));
+    ml(ml)
+        .assertType("{d:int, n:string} list")
         .assertPlan(isCode2(code))
         .assertEval(is(expected));
   }
 
-  @Test void testFromSuchThat2() {
-    final String ml = "let\n"
-        + "  fun hasJob (d, job) =\n"
-        + "    (d div 2, job)\n"
-        + "      elem (from e in scott.emp yield (e.deptno, e.job))\n"
-        + "in\n"
-        + "  from d in scott.dept, j"
-        + "    where hasJob (d.deptno, j)\n"
-        + "    yield j\n"
-        + "end";
-    final String core = "val it = "
-        + "from d_1 in #dept scott "
-        + "join j : string "
-        + "where case (#deptno d_1, j) of"
-        + " (d, job) => op elem ((op div (d, 2), job),"
-        + " from e in #emp scott"
-        + " yield (#deptno e, #job e)) yield j";
-    final String code = "from(sink join(pat d_1,\n"
-        + "    exp apply(fnValue nth:1, argCode get(name scott)),\n"
-        + "  sink join(pat j,\n"
-        + "      exp apply(\n"
-        + "        fnCode apply(fnValue List.filter,\n"
-        + "          argCode match(j,\n"
-        + "            apply(fnCode match((d, job),\n"
-        + "              apply2(fnValue elem,\n"
-        + "                tuple(apply2(fnValue div, get(name d), constant(2)),\n"
-        + "                get(name job)),\n"
-        + "              from(\n"
-        + "              sink join(pat e,\n"
-        + "                exp apply(fnValue nth:2, argCode get(name scott)),\n"
-        + "                sink collect(\n"
-        + "                  tuple(apply(fnValue nth:1, argCode get(name e)),\n"
-        + "                    apply(fnValue nth:5, argCode get(name e)))))))),\n"
-        + "              argCode tuple(\n"
-        + "                apply(fnValue nth:0, argCode get(name d)),\n"
-        + "                get(name j))))),\n"
-        + "        argCode apply(fnValue $.extent, argCode constant(()))),\n"
-        + "    sink collect(get(name j)))))";
+  @Test
+  void testFromSuchThat2() {
+    final String ml =
+        "let\n"
+            + "  fun hasJob (d, job) =\n"
+            + "    (d div 2, job)\n"
+            + "      elem (from e in scott.emp yield (e.deptno, e.job))\n"
+            + "in\n"
+            + "  from d in scott.dept, j"
+            + "    where hasJob (d.deptno, j)\n"
+            + "    yield j\n"
+            + "end";
+    final String core =
+        "val it = "
+            + "from d_1 in #dept scott "
+            + "join j : string "
+            + "where case (#deptno d_1, j) of"
+            + " (d, job) => op elem ((op div (d, 2), job),"
+            + " from e in #emp scott"
+            + " yield (#deptno e, #job e)) yield j";
+    final String code =
+        "from(sink join(pat d_1,\n"
+            + "    exp apply(fnValue nth:1, argCode get(name scott)),\n"
+            + "  sink join(pat j,\n"
+            + "      exp apply(\n"
+            + "        fnCode apply(fnValue List.filter,\n"
+            + "          argCode match(j,\n"
+            + "            apply(fnCode match((d, job),\n"
+            + "              apply2(fnValue elem,\n"
+            + "                tuple(apply2(fnValue div, get(name d), constant(2)),\n"
+            + "                get(name job)),\n"
+            + "              from(\n"
+            + "              sink join(pat e,\n"
+            + "                exp apply(fnValue nth:2, argCode get(name scott)),\n"
+            + "                sink collect(\n"
+            + "                  tuple(apply(fnValue nth:1, argCode get(name e)),\n"
+            + "                    apply(fnValue nth:5, argCode get(name e)))))))),\n"
+            + "              argCode tuple(\n"
+            + "                apply(fnValue nth:0, argCode get(name d)),\n"
+            + "                get(name j))))),\n"
+            + "        argCode apply(fnValue $.extent, argCode constant(()))),\n"
+            + "    sink collect(get(name j)))))";
     final List<Object> expected = list(); // TODO
-    ml(ml)
-        .withBinding("scott", BuiltInDataSet.SCOTT)
-        .assertType("string list");
-//        .assertCore(-1, is(core))
-//        .assertPlan(isCode2(code))
-//        .assertEval(is(expected));
+    ml(ml).withBinding("scott", BuiltInDataSet.SCOTT).assertType("string list");
+    //        .assertCore(-1, is(core))
+    //        .assertPlan(isCode2(code))
+    //        .assertEval(is(expected));
   }
 
   /** Translates a simple {@code suchthat} expression, "d elem list". */
-  @Test void testFromSuchThat2b() {
+  @Test
+  void testFromSuchThat2b() {
     final String ml = "from d where d elem scott.dept";
-    final String core0 = "val it = "
-        + "from d : {deptno:int, dname:string, loc:string} "
-        + "where d elem #dept scott";
+    final String core0 =
+        "val it = "
+            + "from d : {deptno:int, dname:string, loc:string} "
+            + "where d elem #dept scott";
     final String core1 = "val it = from d in #dept scott";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
@@ -2359,51 +2576,61 @@ public class MainTest {
         .assertCore(-1, hasToString(core1));
   }
 
-  /** Translates a simple {@code suchthat} expression, "{x, y} elem list".
-   * Fields are renamed, to disrupt alphabetical ordering. */
-  @Test void testFromSuchThat2c() {
-    final String ml = "from loc, deptno, name "
-        + "where {deptno, loc, dname = name} elem scott.dept";
-    final String core = "val it = "
-        + "from v0 in #dept scott "
-        + "join loc in [#loc v0] "
-        + "join deptno in [#deptno v0] "
-        + "join name in [#dname v0] "
-        + "where op elem ({deptno = deptno, dname = name, loc = loc},"
-        + " #dept scott) "
-        + "yield {deptno = deptno, loc = loc, name = name}";
+  /**
+   * Translates a simple {@code suchthat} expression, "{x, y} elem list". Fields
+   * are renamed, to disrupt alphabetical ordering.
+   */
+  @Test
+  void testFromSuchThat2c() {
+    final String ml =
+        "from loc, deptno, name "
+            + "where {deptno, loc, dname = name} elem scott.dept";
+    final String core =
+        "val it = "
+            + "from v0 in #dept scott "
+            + "join loc in [#loc v0] "
+            + "join deptno in [#deptno v0] "
+            + "join name in [#dname v0] "
+            + "where op elem ({deptno = deptno, dname = name, loc = loc},"
+            + " #dept scott) "
+            + "yield {deptno = deptno, loc = loc, name = name}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{deptno:int, loc:string, name:string} list")
         .assertCore(-1, hasToString(core))
         .assertEval(
             is(
-                list(list(10, "NEW YORK", "ACCOUNTING"),
+                list(
+                    list(10, "NEW YORK", "ACCOUNTING"),
                     list(20, "DALLAS", "RESEARCH"),
                     list(30, "CHICAGO", "SALES"),
                     list(40, "BOSTON", "OPERATIONS"))));
   }
 
   /** As {@link #testFromSuchThat2c()} but with a literal. */
-  @Test void testFromSuchThat2d() {
-    final String ml = "from dno, name\n"
-        + "  where {deptno = dno, dname = name, loc = \"CHICAGO\"}\n"
-        + "      elem scott.dept\n"
-        + "    andalso dno > 20";
-    final String core0 = "val it = "
-        + "from dno : int "
-        + "join name : string "
-        + "where {deptno = dno, dname = name, loc = \"CHICAGO\"} "
-        + "elem #dept scott "
-        + "andalso dno > 20";
-    final String core1 = "val it = "
-        + "from v0 in #dept scott "
-        + "join dno in [#deptno v0] "
-        + "join name in [#dname v0] "
-        + "where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"},"
-        + " #dept scott) "
-        + "andalso dno > 20 "
-        + "yield {dno = dno, name = name}";
+  @Test
+  void testFromSuchThat2d() {
+    final String ml =
+        "from dno, name\n"
+            + "  where {deptno = dno, dname = name, loc = \"CHICAGO\"}\n"
+            + "      elem scott.dept\n"
+            + "    andalso dno > 20";
+    final String core0 =
+        "val it = "
+            + "from dno : int "
+            + "join name : string "
+            + "where {deptno = dno, dname = name, loc = \"CHICAGO\"} "
+            + "elem #dept scott "
+            + "andalso dno > 20";
+    final String core1 =
+        "val it = "
+            + "from v0 in #dept scott "
+            + "join dno in [#deptno v0] "
+            + "join name in [#dname v0] "
+            + "where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"},"
+            + " #dept scott) "
+            + "andalso dno > 20 "
+            + "yield {dno = dno, name = name}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{dno:int, name:string} list")
@@ -2412,25 +2639,29 @@ public class MainTest {
   }
 
   /** As {@link #testFromSuchThat2c()} but with a literal. */
-  @Test void testFromSuchThat2d2() {
-    final String ml = "from dno, name\n"
-        + "  where {deptno = dno, dname = name, loc = \"CHICAGO\"}\n"
-        + "      elem scott.dept\n"
-        + "    andalso dno > 20";
-    final String core0 = "val it = "
-        + "from dno : int "
-        + "join name : string "
-        + "where {deptno = dno, dname = name, loc = \"CHICAGO\"} "
-        + "elem #dept scott "
-        + "andalso dno > 20";
-    final String core1 = "val it = "
-        + "from v0 in #dept scott "
-        + "join dno in [#deptno v0] "
-        + "join name in [#dname v0] "
-        + "where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"},"
-        + " #dept scott) "
-        + "andalso dno > 20 "
-        + "yield {dno = dno, name = name}";
+  @Test
+  void testFromSuchThat2d2() {
+    final String ml =
+        "from dno, name\n"
+            + "  where {deptno = dno, dname = name, loc = \"CHICAGO\"}\n"
+            + "      elem scott.dept\n"
+            + "    andalso dno > 20";
+    final String core0 =
+        "val it = "
+            + "from dno : int "
+            + "join name : string "
+            + "where {deptno = dno, dname = name, loc = \"CHICAGO\"} "
+            + "elem #dept scott "
+            + "andalso dno > 20";
+    final String core1 =
+        "val it = "
+            + "from v0 in #dept scott "
+            + "join dno in [#deptno v0] "
+            + "join name in [#dname v0] "
+            + "where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"},"
+            + " #dept scott) "
+            + "andalso dno > 20 "
+            + "yield {dno = dno, name = name}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{dno:int, name:string} list")
@@ -2438,33 +2669,37 @@ public class MainTest {
         .assertCore(-1, hasToString(core1));
   }
 
-  @Test void testFromSuchThat2d3() {
-    final String ml = "from dno, name, v\n"
-        + "where v elem scott.dept\n"
-        + "where v.deptno = dno\n"
-        + "where name = v.dname\n"
-        + "where v.loc = \"CHICAGO\"\n"
-        + "where dno = 30\n"
-        + "yield {dno = #deptno v, name = #dname v}";
-    final String core0 = "val it = "
-        + "from dno : int "
-        + "join name : string "
-        + "join v : {deptno:int, dname:string, loc:string} "
-        + "where v elem #dept scott "
-        + "where #deptno v = dno "
-        + "where name = #dname v "
-        + "where #loc v = \"CHICAGO\" "
-        + "where dno = 30 "
-        + "yield {dno = #deptno v, name = #dname v}";
-    final String core1 = "val it = "
-        + "from dno in [30] "
-        + "join v in #dept scott "
-        + "join name in [#dname v] "
-        + "where #deptno v = dno "
-        + "where name = #dname v "
-        + "where #loc v = \"CHICAGO\" "
-        + "where dno = 30 "
-        + "yield {dno = #deptno v, name = #dname v}";
+  @Test
+  void testFromSuchThat2d3() {
+    final String ml =
+        "from dno, name, v\n"
+            + "where v elem scott.dept\n"
+            + "where v.deptno = dno\n"
+            + "where name = v.dname\n"
+            + "where v.loc = \"CHICAGO\"\n"
+            + "where dno = 30\n"
+            + "yield {dno = #deptno v, name = #dname v}";
+    final String core0 =
+        "val it = "
+            + "from dno : int "
+            + "join name : string "
+            + "join v : {deptno:int, dname:string, loc:string} "
+            + "where v elem #dept scott "
+            + "where #deptno v = dno "
+            + "where name = #dname v "
+            + "where #loc v = \"CHICAGO\" "
+            + "where dno = 30 "
+            + "yield {dno = #deptno v, name = #dname v}";
+    final String core1 =
+        "val it = "
+            + "from dno in [30] "
+            + "join v in #dept scott "
+            + "join name in [#dname v] "
+            + "where #deptno v = dno "
+            + "where name = #dname v "
+            + "where #loc v = \"CHICAGO\" "
+            + "where dno = 30 "
+            + "yield {dno = #deptno v, name = #dname v}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{dno:int, name:string} list")
@@ -2473,33 +2708,37 @@ public class MainTest {
         .assertEval(is(list(list(30, "SALES"))));
   }
 
-  @Test void testFromSuchThat2d4() {
-    final String ml = "from dno, name, v\n"
-        + "where v elem scott.dept\n"
-        + "where v.deptno = dno\n"
-        + "where name = v.dname\n"
-        + "where v.loc = \"CHICAGO\"\n"
-        + "where dno > 25\n"
-        + "yield {dno = #deptno v, name = #dname v}";
-    final String core0 = "val it = "
-        + "from dno : int "
-        + "join name : string "
-        + "join v : {deptno:int, dname:string, loc:string} "
-        + "where v elem #dept scott "
-        + "where #deptno v = dno "
-        + "where name = #dname v "
-        + "where #loc v = \"CHICAGO\" "
-        + "where dno > 25 "
-        + "yield {dno = #deptno v, name = #dname v}";
-    final String core1 = "val it = "
-        + "from v in #dept scott "
-        + "join dno in [#deptno v] "
-        + "join name in [#dname v] "
-        + "where #deptno v = dno "
-        + "where name = #dname v "
-        + "where #loc v = \"CHICAGO\" "
-        + "where dno > 25 "
-        + "yield {dno = #deptno v, name = #dname v}";
+  @Test
+  void testFromSuchThat2d4() {
+    final String ml =
+        "from dno, name, v\n"
+            + "where v elem scott.dept\n"
+            + "where v.deptno = dno\n"
+            + "where name = v.dname\n"
+            + "where v.loc = \"CHICAGO\"\n"
+            + "where dno > 25\n"
+            + "yield {dno = #deptno v, name = #dname v}";
+    final String core0 =
+        "val it = "
+            + "from dno : int "
+            + "join name : string "
+            + "join v : {deptno:int, dname:string, loc:string} "
+            + "where v elem #dept scott "
+            + "where #deptno v = dno "
+            + "where name = #dname v "
+            + "where #loc v = \"CHICAGO\" "
+            + "where dno > 25 "
+            + "yield {dno = #deptno v, name = #dname v}";
+    final String core1 =
+        "val it = "
+            + "from v in #dept scott "
+            + "join dno in [#deptno v] "
+            + "join name in [#dname v] "
+            + "where #deptno v = dno "
+            + "where name = #dname v "
+            + "where #loc v = \"CHICAGO\" "
+            + "where dno > 25 "
+            + "yield {dno = #deptno v, name = #dname v}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{dno:int, name:string} list")
@@ -2508,29 +2747,35 @@ public class MainTest {
         .assertEval(is(list(list(30, "SALES"))));
   }
 
-  /** As {@link #testFromSuchThat2d()} but using a function.
-   * (Simple enough that the function can be handled by inlining.) */
-  @Test void testFromSuchThat2e() {
-    final String ml = "let\n"
-        + "  fun isDept d =\n"
-        + "    d elem scott.dept\n"
-        + "in\n"
-        + "  from d\n"
-        + "    where isDept d andalso d.deptno = 20\n"
-        + "    yield d.dname\n"
-        + "end";
-    final String core0 = "val it = "
-        + "let"
-        + " val isDept = fn d => d elem #dept scott "
-        + "in"
-        + " from d_1 : {deptno:int, dname:string, loc:string}"
-        + " where isDept d_1 andalso #deptno d_1 = 20"
-        + " yield #dname d_1 "
-        + "end";
-    final String core1 = "val it = "
-        + "from d_1 in #dept scott "
-        + "where #deptno d_1 = 20 "
-        + "yield #dname d_1";
+  /**
+   * As {@link #testFromSuchThat2d()} but using a function. (Simple enough that
+   * the function can be handled by inlining.)
+   */
+  @Test
+  void testFromSuchThat2e() {
+    final String ml =
+        "let\n"
+            + "  fun isDept d =\n"
+            + "    d elem scott.dept\n"
+            + "in\n"
+            + "  from d\n"
+            + "    where isDept d andalso d.deptno = 20\n"
+            + "    yield d.dname\n"
+            + "end";
+    final String core0 =
+        "val it = "
+            + "let"
+            + " val isDept = fn d => d elem #dept scott "
+            + "in"
+            + " from d_1 : {deptno:int, dname:string, loc:string}"
+            + " where isDept d_1 andalso #deptno d_1 = 20"
+            + " yield #dname d_1 "
+            + "end";
+    final String core1 =
+        "val it = "
+            + "from d_1 in #dept scott "
+            + "where #deptno d_1 = 20 "
+            + "yield #dname d_1";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("string list")
@@ -2539,43 +2784,47 @@ public class MainTest {
   }
 
   /** Tests a join expressed via {@code suchthat}. */
-  @Test void testFromSuchThat2f() {
-    final String ml = "let\n"
-        + "  fun isDept d =\n"
-        + "    d elem scott.dept\n"
-        + "  fun isEmp e =\n"
-        + "    e elem scott.emp\n"
-        + "in\n"
-        + "  from d, e\n"
-        + "    where isDept d\n"
-        + "    andalso isEmp e\n"
-        + "    andalso d.deptno = e.deptno\n"
-        + "    andalso d.deptno = 20\n"
-        + "    yield d.dname\n"
-        + "end";
-    final String core0 = "val it = "
-        + "let"
-        + " val isDept = fn d => d elem #dept scott "
-        + "in"
-        + " let"
-        + " val isEmp = fn e => e elem #emp scott "
-        + "in"
-        + " from d_1 : {deptno:int, dname:string, loc:string}"
-        + " join e_1 : {comm:real, deptno:int, empno:int, ename:string, "
-        + "hiredate:string, job:string, mgr:int, sal:real}"
-        + " where isDept d_1 "
-        + "andalso isEmp e_1 "
-        + "andalso #deptno d_1 = #deptno e_1 "
-        + "andalso #deptno d_1 = 20"
-        + " yield #dname d_1"
-        + " end "
-        + "end";
-    final String core1 = "val it = "
-        + "from d_1 in #dept scott "
-        + "join e_1 in #emp scott "
-        + "where #deptno d_1 = #deptno e_1 "
-        + "andalso #deptno d_1 = 20 "
-        + "yield #dname d_1";
+  @Test
+  void testFromSuchThat2f() {
+    final String ml =
+        "let\n"
+            + "  fun isDept d =\n"
+            + "    d elem scott.dept\n"
+            + "  fun isEmp e =\n"
+            + "    e elem scott.emp\n"
+            + "in\n"
+            + "  from d, e\n"
+            + "    where isDept d\n"
+            + "    andalso isEmp e\n"
+            + "    andalso d.deptno = e.deptno\n"
+            + "    andalso d.deptno = 20\n"
+            + "    yield d.dname\n"
+            + "end";
+    final String core0 =
+        "val it = "
+            + "let"
+            + " val isDept = fn d => d elem #dept scott "
+            + "in"
+            + " let"
+            + " val isEmp = fn e => e elem #emp scott "
+            + "in"
+            + " from d_1 : {deptno:int, dname:string, loc:string}"
+            + " join e_1 : {comm:real, deptno:int, empno:int, ename:string, "
+            + "hiredate:string, job:string, mgr:int, sal:real}"
+            + " where isDept d_1 "
+            + "andalso isEmp e_1 "
+            + "andalso #deptno d_1 = #deptno e_1 "
+            + "andalso #deptno d_1 = 20"
+            + " yield #dname d_1"
+            + " end "
+            + "end";
+    final String core1 =
+        "val it = "
+            + "from d_1 in #dept scott "
+            + "join e_1 in #emp scott "
+            + "where #deptno d_1 = #deptno e_1 "
+            + "andalso #deptno d_1 = 20 "
+            + "yield #dname d_1";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("string list")
@@ -2584,252 +2833,294 @@ public class MainTest {
   }
 
   /** A {@code suchthat} expression. */
-  @Test void testFromSuchThat3() {
-    final String ml = "let\n"
-        + "  val emps = [\n"
-        + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
-        + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
-        + "  fun hasEmpNameInDept (n, d) =\n"
-        + "    (n, d) elem (from e in emps yield (e.name, e.deptno))\n"
-        + "in\n"
-        + "  from n, d\n"
-        + "    where hasEmpNameInDept (n, d)\n"
-        + "    where d = 30\n"
-        + "    yield {d, n}\n"
-        + "end";
-    final String core = "val it = "
-        + "from n_1, d_1 "
-        + "where (case (n_1, d_1) of (n, d) => op elem ((n, d), "
-        + "from e in ["
-        + "{deptno = 30, id = 102, name = \"Shaggy\"}, "
-        + "{deptno = 30, id = 103, name = \"Scooby\"}]"
-        + " yield (#name e, #deptno e)))"
-        + " where d_1 = 30"
-        + " yield {d = d_1, n = n_1}";
-    final String code = "from(sink\n"
-        + "  join(pat (n_1, d_1),\n"
-        + "  exp apply(\n"
-        + "    fnCode apply(fnValue List.filter,\n"
-        + "      argCode match(v0,\n"
-        + "        apply(fnCode match((n_1, d_1),\n"
-        + "            apply(fnCode match((n, d),\n"
-        + "                apply2(fnValue elem,\n"
-        + "                  tuple(get(name n), get(name d)),\n"
-        + "                  from(sink\n"
-        + "                    join(pat e, exp tuple(\n"
-        + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
-        + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
-        + "      sink collect(tuple(apply(fnValue nth:2, argCode get(name e)),\n"
-        + "        apply(fnValue nth:0, argCode get(name e)))))))),\n"
-        + "               argCode tuple(get(name n), get(name d)))),\n"
-        + "            argCode get(name v0)))),\n"
-        + "          argCode apply(fnValue $.extent, argCode constant(()))),\n"
-        + "        sink where(condition apply2(fnValue =, get(name d), constant(30)),\n"
-        + "          sink collect(tuple(get(name d), get(name n))))))";
+  @Test
+  void testFromSuchThat3() {
+    final String ml =
+        "let\n"
+            + "  val emps = [\n"
+            + "    {id = 102, name = \"Shaggy\", deptno = 30},\n"
+            + "    {id = 103, name = \"Scooby\", deptno = 30}]\n"
+            + "  fun hasEmpNameInDept (n, d) =\n"
+            + "    (n, d) elem (from e in emps yield (e.name, e.deptno))\n"
+            + "in\n"
+            + "  from n, d\n"
+            + "    where hasEmpNameInDept (n, d)\n"
+            + "    where d = 30\n"
+            + "    yield {d, n}\n"
+            + "end";
+    final String core =
+        "val it = "
+            + "from n_1, d_1 "
+            + "where (case (n_1, d_1) of (n, d) => op elem ((n, d), "
+            + "from e in ["
+            + "{deptno = 30, id = 102, name = \"Shaggy\"}, "
+            + "{deptno = 30, id = 103, name = \"Scooby\"}]"
+            + " yield (#name e, #deptno e)))"
+            + " where d_1 = 30"
+            + " yield {d = d_1, n = n_1}";
+    final String code =
+        "from(sink\n"
+            + "  join(pat (n_1, d_1),\n"
+            + "  exp apply(\n"
+            + "    fnCode apply(fnValue List.filter,\n"
+            + "      argCode match(v0,\n"
+            + "        apply(fnCode match((n_1, d_1),\n"
+            + "            apply(fnCode match((n, d),\n"
+            + "                apply2(fnValue elem,\n"
+            + "                  tuple(get(name n), get(name d)),\n"
+            + "                  from(sink\n"
+            + "                    join(pat e, exp tuple(\n"
+            + "  tuple(constant(30), constant(102), constant(Shaggy)),\n"
+            + "  tuple(constant(30), constant(103), constant(Scooby))),\n"
+            + "      sink collect(tuple(apply(fnValue nth:2, argCode get(name e)),\n"
+            + "        apply(fnValue nth:0, argCode get(name e)))))))),\n"
+            + "               argCode tuple(get(name n), get(name d)))),\n"
+            + "            argCode get(name v0)))),\n"
+            + "          argCode apply(fnValue $.extent, argCode constant(()))),\n"
+            + "        sink where(condition apply2(fnValue =, get(name d), constant(30)),\n"
+            + "          sink collect(tuple(get(name d), get(name n))))))";
     ml(ml).assertType("{d:int, n:string} list");
-//        .assertCore(-1, is(core))
-//        .assertPlan(isCode2(code))
-//        .assertEval(is(list()));
+    //        .assertCore(-1, is(core))
+    //        .assertPlan(isCode2(code))
+    //        .assertEval(is(list()));
   }
 
-  /** A query with an unconstrained scan that is deduced to be of type
-   * {@code bool option} and therefore iterates over
-   * {@code [SOME true, SOME false, NONE]}. */
-  @Test void testBooleanExtent() {
-    final String ml = "from i\n" //
-        + "where Option.getOpt (i, false)";
-    final String core = "val it = "
-        + "from i in extent \"bool option\" "
-        + "where #getOpt Option (i, false)";
-    ml(ml).assertType("bool option list")
+  /**
+   * A query with an unconstrained scan that is deduced to be of type {@code
+   * bool option} and therefore iterates over {@code [SOME true, SOME false,
+   * NONE]}.
+   */
+  @Test
+  void testBooleanExtent() {
+    final String ml =
+        "from i\n" //
+            + "where Option.getOpt (i, false)";
+    final String core =
+        "val it = "
+            + "from i in extent \"bool option\" "
+            + "where #getOpt Option (i, false)";
+    ml(ml)
+        .assertType("bool option list")
         .assertCore(-1, hasToString(core))
         .assertEval(is(list(list("SOME", true))));
   }
 
-  @Test void testFromNoYield() {
-    final String ml = "let\n"
-        + "  val emps =\n"
-        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
-        + "     {id = 103, name = \"Scooby\", deptno = 30}]\n"
-        + "in\n"
-        + "  from e in emps where #deptno e = 30\n"
-        + "end";
-    ml(ml).assertType("{deptno:int, id:int, name:string} list")
+  @Test
+  void testFromNoYield() {
+    final String ml =
+        "let\n"
+            + "  val emps =\n"
+            + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+            + "     {id = 103, name = \"Scooby\", deptno = 30}]\n"
+            + "in\n"
+            + "  from e in emps where #deptno e = 30\n"
+            + "end";
+    ml(ml)
+        .assertType("{deptno:int, id:int, name:string} list")
         .assertEvalIter(equalsOrdered(list(30, 103, "Scooby")));
   }
 
-  @Test void testFromJoinNoYield() {
-    final String ml = "let\n"
-        + "  val emps =\n"
-        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
-        + "     {id = 101, name = \"Velma\", deptno = 20}]\n"
-        + "  val depts =\n"
-        + "    [{deptno = 10, name = \"Sales\"}]\n"
-        + "in\n"
-        + "  from e in emps, d in depts where #deptno e = #deptno d\n"
-        + "end";
+  @Test
+  void testFromJoinNoYield() {
+    final String ml =
+        "let\n"
+            + "  val emps =\n"
+            + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+            + "     {id = 101, name = \"Velma\", deptno = 20}]\n"
+            + "  val depts =\n"
+            + "    [{deptno = 10, name = \"Sales\"}]\n"
+            + "in\n"
+            + "  from e in emps, d in depts where #deptno e = #deptno d\n"
+            + "end";
     ml(ml)
-        .assertType("{d:{deptno:int, name:string},"
-            + " e:{deptno:int, id:int, name:string}} list")
+        .assertType(
+            "{d:{deptno:int, name:string},"
+                + " e:{deptno:int, id:int, name:string}} list")
         .assertEvalIter(
             equalsOrdered(list(list(10, "Sales"), list(10, 100, "Fred"))));
   }
 
-  @Test void testYieldYield() {
-    final String ml = "let\n"
-        + "  val emps =\n"
-        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
-        + "     {id = 101, name = \"Velma\", deptno = 20}]\n"
-        + "in\n"
-        + "  from e in emps\n"
-        + "  yield {x = e.id + e.deptno, y = e.id - e.deptno}\n"
-        + "  yield x + y\n"
-        + "end";
-    ml(ml)
-        .assertType("int list")
-        .assertEvalIter(equalsOrdered(200, 202));
+  @Test
+  void testYieldYield() {
+    final String ml =
+        "let\n"
+            + "  val emps =\n"
+            + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+            + "     {id = 101, name = \"Velma\", deptno = 20}]\n"
+            + "in\n"
+            + "  from e in emps\n"
+            + "  yield {x = e.id + e.deptno, y = e.id - e.deptno}\n"
+            + "  yield x + y\n"
+            + "end";
+    ml(ml).assertType("int list").assertEvalIter(equalsOrdered(200, 202));
   }
 
-  @Test void testYieldSingletonRecord() {
-    final String ml = "from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
-        + "  yield {z=e.x}\n"
-        + "  where z > 2\n"
-        + "  order z desc\n"
-        + "  yield {z=z}";
+  @Test
+  void testYieldSingletonRecord() {
+    final String ml =
+        "from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
+            + "  yield {z=e.x}\n"
+            + "  where z > 2\n"
+            + "  order z desc\n"
+            + "  yield {z=z}";
     ml(ml)
         .assertType("{z:int} list")
         .assertEvalIter(equalsOrdered(list(5), list(3)));
 
-    final String ml2 = "from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
-        + "  yield {z=e.x}\n"
-        + "  where z > 2\n"
-        + "  order z desc";
-    ml(ml2)
-        .assertType("int list")
-        .assertEvalIter(equalsOrdered(5, 3));
+    final String ml2 =
+        "from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
+            + "  yield {z=e.x}\n"
+            + "  where z > 2\n"
+            + "  order z desc";
+    ml(ml2).assertType("int list").assertEvalIter(equalsOrdered(5, 3));
   }
 
-  /** Analogous to SQL "CROSS APPLY" which calls a table-valued function
-   * for each row in an outer loop. */
-  @Test void testCrossApply() {
-    final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
-        + "    c in explode s\n"
-        + "  yield s ^ \":\" ^ str c";
+  /**
+   * Analogous to SQL "CROSS APPLY" which calls a table-valued function for each
+   * row in an outer loop.
+   */
+  @Test
+  void testCrossApply() {
+    final String ml =
+        "from s in [\"abc\", \"\", \"d\"],\n"
+            + "    c in explode s\n"
+            + "  yield s ^ \":\" ^ str c";
     ml(ml).assertEvalIter(equalsOrdered("abc:a", "abc:b", "abc:c", "d:d"));
   }
 
-  @Test void testCrossApplyGroup() {
-    final String ml = "from s in [\"abc\", \"\", \"d\"],\n"
-        + "    c in explode s\n"
-        + "  group s compute count = sum of 1";
+  @Test
+  void testCrossApplyGroup() {
+    final String ml =
+        "from s in [\"abc\", \"\", \"d\"],\n"
+            + "    c in explode s\n"
+            + "  group s compute count = sum of 1";
     ml(ml).assertEvalIter(equalsUnordered(list(3, "abc"), list(1, "d")));
   }
 
-  @Test void testJoinLateral() {
-    final String ml = "let\n"
-        + "  val emps = [{name = \"Shaggy\",\n"
-        + "               pets = [{name = \"Scooby\", species = \"Dog\"},\n"
-        + "                       {name = \"Scrappy\", species = \"Dog\"}]},\n"
-        + "              {name = \"Charlie\",\n"
-        + "               pets = [{name = \"Snoopy\", species = \"Dog\"}]},\n"
-        + "              {name = \"Danny\", pets = []}]"
-        + "in\n"
-        + "  from e in emps,\n"
-        + "      p in e.pets\n"
-        + "    yield p.name\n"
-        + "end";
+  @Test
+  void testJoinLateral() {
+    final String ml =
+        "let\n"
+            + "  val emps = [{name = \"Shaggy\",\n"
+            + "               pets = [{name = \"Scooby\", species = \"Dog\"},\n"
+            + "                       {name = \"Scrappy\", species = \"Dog\"}]},\n"
+            + "              {name = \"Charlie\",\n"
+            + "               pets = [{name = \"Snoopy\", species = \"Dog\"}]},\n"
+            + "              {name = \"Danny\", pets = []}]"
+            + "in\n"
+            + "  from e in emps,\n"
+            + "      p in e.pets\n"
+            + "    yield p.name\n"
+            + "end";
     ml(ml).assertEvalIter(equalsOrdered("Scooby", "Scrappy", "Snoopy"));
   }
 
-  @Test void testFromGroupWithoutCompute() {
-    final String ml = "let\n"
-        + "  val emps =\n"
-        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
-        + "     {id = 101, name = \"Velma\", deptno = 20},\n"
-        + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
-        + "in\n"
-        + "  from e in emps group #deptno e\n"
-        + "end";
-    final String expected = "let val emps = "
-        + "[{deptno = 10, id = 100, name = \"Fred\"},"
-        + " {deptno = 20, id = 101, name = \"Velma\"},"
-        + " {deptno = 10, id = 102, name = \"Shaggy\"}] "
-        + "in"
-        + " from e in emps"
-        + " group deptno = #deptno e "
-        + "end";
+  @Test
+  void testFromGroupWithoutCompute() {
+    final String ml =
+        "let\n"
+            + "  val emps =\n"
+            + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+            + "     {id = 101, name = \"Velma\", deptno = 20},\n"
+            + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
+            + "in\n"
+            + "  from e in emps group #deptno e\n"
+            + "end";
+    final String expected =
+        "let val emps = "
+            + "[{deptno = 10, id = 100, name = \"Fred\"},"
+            + " {deptno = 20, id = 101, name = \"Velma\"},"
+            + " {deptno = 10, id = 102, name = \"Shaggy\"}] "
+            + "in"
+            + " from e in emps"
+            + " group deptno = #deptno e "
+            + "end";
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
     // The implicit yield expression is "deptno". It is not a record,
     // "{deptno = deptno}", because there is only one variable defined (the
     // "group" clause defines "deptno" and hides the "e" from the "from"
     // clause).
-    ml(ml).assertType("int list")
-        .assertEvalIter(equalsUnordered(10, 20));
+    ml(ml).assertType("int list").assertEvalIter(equalsUnordered(10, 20));
   }
 
-  /** As {@link #testFromGroupWithoutCompute()} but composite key, therefore
-   * result is a list of records. */
-  @Test void testFromGroupWithoutCompute2() {
-    final String ml = "let\n"
-        + "  val emps =\n"
-        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
-        + "     {id = 101, name = \"Velma\", deptno = 20},\n"
-        + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
-        + "in\n"
-        + "  from e in emps group #deptno e, parity = e.id mod 2\n"
-        + "end";
-    ml(ml).assertType("{deptno:int, parity:int} list")
+  /**
+   * As {@link #testFromGroupWithoutCompute()} but composite key, therefore
+   * result is a list of records.
+   */
+  @Test
+  void testFromGroupWithoutCompute2() {
+    final String ml =
+        "let\n"
+            + "  val emps =\n"
+            + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+            + "     {id = 101, name = \"Velma\", deptno = 20},\n"
+            + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
+            + "in\n"
+            + "  from e in emps group #deptno e, parity = e.id mod 2\n"
+            + "end";
+    ml(ml)
+        .assertType("{deptno:int, parity:int} list")
         .assertEvalIter(equalsUnordered(list(10, 0), list(20, 1)));
   }
 
-  @Test void testFromGroup() {
-    final String ml = "let\n"
-        + "  val emps =\n"
-        + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
-        + "     {id = 101, name = \"Velma\", deptno = 20},\n"
-        + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
-        + "  fun sum [] = 0 | sum (h::t) = h + (sum t)\n"
-        + "in\n"
-        + "  from e in emps\n"
-        + "    group #deptno e\n"
-        + "    compute sumId = sum of #id e\n"
-        + "end";
-    final String expected = "let val emps = "
-        + "[{deptno = 10, id = 100, name = \"Fred\"},"
-        + " {deptno = 20, id = 101, name = \"Velma\"},"
-        + " {deptno = 10, id = 102, name = \"Shaggy\"}]; "
-        + "fun sum ([]) = 0 | sum (h :: t) = h + sum t "
-        + "in"
-        + " from e in emps"
-        + " group deptno = #deptno e"
-        + " compute sumId = sum of #id e "
-        + "end";
+  @Test
+  void testFromGroup() {
+    final String ml =
+        "let\n"
+            + "  val emps =\n"
+            + "    [{id = 100, name = \"Fred\", deptno = 10},\n"
+            + "     {id = 101, name = \"Velma\", deptno = 20},\n"
+            + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
+            + "  fun sum [] = 0 | sum (h::t) = h + (sum t)\n"
+            + "in\n"
+            + "  from e in emps\n"
+            + "    group #deptno e\n"
+            + "    compute sumId = sum of #id e\n"
+            + "end";
+    final String expected =
+        "let val emps = "
+            + "[{deptno = 10, id = 100, name = \"Fred\"},"
+            + " {deptno = 20, id = 101, name = \"Velma\"},"
+            + " {deptno = 10, id = 102, name = \"Shaggy\"}]; "
+            + "fun sum ([]) = 0 | sum (h :: t) = h + sum t "
+            + "in"
+            + " from e in emps"
+            + " group deptno = #deptno e"
+            + " compute sumId = sum of #id e "
+            + "end";
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
-    ml(ml).assertType("{deptno:int, sumId:int} list")
+    ml(ml)
+        .assertType("{deptno:int, sumId:int} list")
         .assertEvalIter(equalsUnordered(list(10, 202), list(20, 101)));
   }
 
-  @Test void testGroupAs() {
-    final String ml0 = "from e in emp\n" //
-        + "group deptno = e.deptno";
-    final String ml1 = "from e in emp\n" //
-        + "group e.deptno";
-    final String ml2 = "from e in emp\n" //
-        + "group #deptno e";
+  @Test
+  void testGroupAs() {
+    final String ml0 =
+        "from e in emp\n" //
+            + "group deptno = e.deptno";
+    final String ml1 =
+        "from e in emp\n" //
+            + "group e.deptno";
+    final String ml2 =
+        "from e in emp\n" //
+            + "group #deptno e";
     final String expected = "from e in emp group deptno = #deptno e";
     ml(ml0).assertParse(expected);
     ml(ml1).assertParse(expected);
     ml(ml2).assertParse(expected);
 
-    final String ml3 = "from e in emp\n" //
-        + "group e, h = f + e.g";
+    final String ml3 =
+        "from e in emp\n" //
+            + "group e, h = f + e.g";
     final String expected3 = "from e in emp group e = e, h = f + #g e";
     ml(ml3).assertParse(expected3);
   }
 
-  @Test void testGroupAs2() {
+  @Test
+  void testGroupAs2() {
     ml("from e in emp group e.deptno, e.deptno + e.empid")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression #deptno e + #empid e"));
@@ -2846,21 +3137,22 @@ public class MainTest {
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression fn x => x"));
     ml("from e in [{x = 1, y = 5}]\n" //
-        + "  group compute sum of e.x")
+            + "  group compute sum of e.x")
         .assertType(hasMoniker("int list"));
     ml("from e in [1, 2, 3]\n" //
-        + "  group compute sum of e")
+            + "  group compute sum of e")
         .assertType(hasMoniker("int list"));
   }
 
-  @Test void testGroupSansOf() {
+  @Test
+  void testGroupSansOf() {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "  group compute c = count")
+            + "  group compute c = count")
         .assertType(hasMoniker("int list"))
         .assertEvalIter(equalsUnordered(3));
 
     ml("from e in [{a = 1, b = 5}, {a = 0, b = 1}, {a = 1, b = 1}]\n"
-        + "  group e.a compute rows = (fn x => x)")
+            + "  group e.a compute rows = (fn x => x)")
         .assertType(hasMoniker("{a:int, rows:{a:int, b:int} list} list"))
         .assertEvalIter(
             equalsUnordered(
@@ -2868,86 +3160,100 @@ public class MainTest {
                 list(0, list(list(0, 1)))));
   }
 
-  /** Tests that Morel throws if there are duplicate names in 'group' or
-   * 'compute' clauses. */
-  @Test void testGroupDuplicates() {
+  /**
+   * Tests that Morel throws if there are duplicate names in 'group' or
+   * 'compute' clauses.
+   */
+  @Test
+  void testGroupDuplicates() {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group a = e.x")
+            + "group a = e.x")
         .assertEvalIter(equalsUnordered(0, 1));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group a = e.x, b = e.x")
+            + "group a = e.x, b = e.x")
         .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group a = e.x, a = e.y")
+            + "group a = e.x, a = e.y")
         .assertTypeThrows(
-            throwsA(RuntimeException.class,
+            throwsA(
+                RuntimeException.class,
                 is("Duplicate field name 'a' in group")));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group e.x, x = e.y")
+            + "group e.x, x = e.y")
         .assertTypeThrows(
-            throwsA(RuntimeException.class,
+            throwsA(
+                RuntimeException.class,
                 is("Duplicate field name 'x' in group")));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group a = e.x\n"
-        + "compute b = sum of e.y")
+            + "group a = e.x\n"
+            + "compute b = sum of e.y")
         .assertEvalIter(equalsUnordered(list(0, 1), list(1, 6)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group a = e.x\n"
-        + "compute a = sum of e.y")
+            + "group a = e.x\n"
+            + "compute a = sum of e.y")
         .assertTypeThrows(
-            throwsA(RuntimeException.class,
+            throwsA(
+                RuntimeException.class,
                 is("Duplicate field name 'a' in group")));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group sum = e.x\n"
-        + "compute sum of e.y")
+            + "group sum = e.x\n"
+            + "compute sum of e.y")
         .assertTypeThrows(
-            throwsA(RuntimeException.class,
+            throwsA(
+                RuntimeException.class,
                 is("Duplicate field name 'sum' in group")));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group a = e.x\n"
-        + "compute b = sum of e.y, c = sum of e.x")
+            + "group a = e.x\n"
+            + "compute b = sum of e.y, c = sum of e.x")
         .assertEvalIter(equalsUnordered(list(0, 1, 0), list(1, 6, 2)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-        + "group a = e.x\n"
-        + "compute c = sum of e.y, c = sum of e.x")
+            + "group a = e.x\n"
+            + "compute c = sum of e.y, c = sum of e.x")
         .assertTypeThrows(
-            throwsA(RuntimeException.class,
+            throwsA(
+                RuntimeException.class,
                 is("Duplicate field name 'c' in group")));
   }
 
-  /** Tests query with 'compute' without 'group'. Such a query does not return
-   * a collection, but returns the value of the aggregate function. Technically,
-   * it is a monoid comprehension, and an aggregate function is a monoid. */
-  @Test void testCompute() {
+  /**
+   * Tests query with 'compute' without 'group'. Such a query does not return a
+   * collection, but returns the value of the aggregate function. Technically,
+   * it is a monoid comprehension, and an aggregate function is a monoid.
+   */
+  @Test
+  void testCompute() {
     ml("from i in [1, 2, 3] compute sum of i")
         .assertParse("from i in [1, 2, 3] compute sum = sum of i")
         .assertType("int")
         .assertEval(is(6));
     ml("from i in [1, 2, 3] compute sum of i, count")
-        .assertParse("from i in [1, 2, 3] "
-            + "compute sum = sum of i, count = count")
+        .assertParse(
+            "from i in [1, 2, 3] " + "compute sum = sum of i, count = count")
         .assertType("{count:int, sum:int}");
     // there must be at least one aggregate function
     ml("from i in [1, 2, 3] compute")
         .assertParseThrows(
-            throwsA(ParseException.class,
-                startsWith("Encountered \"<EOF>\" at ")));
+            throwsA(
+                ParseException.class, startsWith("Encountered \"<EOF>\" at ")));
 
     // Theoretically a "group" without a "compute" can be followed by a
     // "compute" step. So, the following is ambiguous. We treat it as a single
     // "group ... compute" step. Under the two-step interpretation, the type
     // would have been "int".
     ml("from (i, j) in [(1, 1), (2, 3), (3, 4)]\n"
-        + "  group j = i mod 2\n"
-        + "  compute sum of j")
+            + "  group j = i mod 2\n"
+            + "  compute sum of j")
         .assertType("{j:int, sum:int} list")
         .assertEvalIter(equalsUnordered(list(1, 5), list(0, 3)));
 
     // "compute" must not be followed by other steps
     mlE("from i in [1, 2, 3] compute s = sum of i $yield s + 2$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "'compute' step must be last in 'from'", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "'compute' step must be last in 'from'",
+                    pos));
     // similar, but valid
     ml("(from i in [1, 2, 3] compute s = sum of i) + 2")
         .assertType(hasMoniker("int"))
@@ -2955,186 +3261,233 @@ public class MainTest {
 
     // "compute" must not occur in "exists"
     mlE("exists i in [1, 2, 3] $compute s = sum of i$")
-        .assertCompileException(pos ->
-            throwsA(CompileException.class,
-                "'compute' step must not occur in 'exists'", pos));
+        .assertCompileException(
+            pos ->
+                throwsA(
+                    CompileException.class,
+                    "'compute' step must not occur in 'exists'",
+                    pos));
   }
 
-  @Test void testGroupYield() {
-    final String ml = "from r in [{a=2,b=3}]\n"
-        + "group r.a compute sb = sum of r.b\n"
-        + "yield {a, a2 = a + a, sb}";
-    final String expected = "from r in [{a = 2, b = 3}]"
-        + " group a = #a r compute sb = sum of #b r"
-        + " yield {a = a, a2 = a + a, sb = sb}";
-    final String plan = "from("
-        + "sink join(pat r, exp tuple(tuple(constant(2), constant(3))), "
-        + "sink group(key tuple(apply(fnValue nth:0, argCode get(name r))), "
-        + "agg aggregate, "
-        + "sink collect(tuple(get(name a), "
-        + "apply2(fnValue +, get(name a), get(name a)), "
-        + "get(name sb))))))";
-    ml(ml).assertParse(expected)
+  @Test
+  void testGroupYield() {
+    final String ml =
+        "from r in [{a=2,b=3}]\n"
+            + "group r.a compute sb = sum of r.b\n"
+            + "yield {a, a2 = a + a, sb}";
+    final String expected =
+        "from r in [{a = 2, b = 3}]"
+            + " group a = #a r compute sb = sum of #b r"
+            + " yield {a = a, a2 = a + a, sb = sb}";
+    final String plan =
+        "from("
+            + "sink join(pat r, exp tuple(tuple(constant(2), constant(3))), "
+            + "sink group(key tuple(apply(fnValue nth:0, argCode get(name r))), "
+            + "agg aggregate, "
+            + "sink collect(tuple(get(name a), "
+            + "apply2(fnValue +, get(name a), get(name a)), "
+            + "get(name sb))))))";
+    ml(ml)
+        .assertParse(expected)
         .assertEvalIter(equalsOrdered(list(2, 4, 3)))
         .assertPlan(isCode(plan));
   }
 
-  @Test void testJoinGroup() {
-    final String ml = "from e in [{empno=100,deptno=10}],\n"
-        + "  d in [{deptno=10,altitude=3500}]\n"
-        + "group e.deptno compute s = sum of e.empno + d.altitude";
-    final String expected = "from e in [{deptno = 10, empno = 100}],"
-        + " d in [{altitude = 3500, deptno = 10}]"
-        + " group deptno = #deptno e"
-        + " compute s = sum of #empno e + #altitude d";
-    ml(ml).assertParse(expected)
+  @Test
+  void testJoinGroup() {
+    final String ml =
+        "from e in [{empno=100,deptno=10}],\n"
+            + "  d in [{deptno=10,altitude=3500}]\n"
+            + "group e.deptno compute s = sum of e.empno + d.altitude";
+    final String expected =
+        "from e in [{deptno = 10, empno = 100}],"
+            + " d in [{altitude = 3500, deptno = 10}]"
+            + " group deptno = #deptno e"
+            + " compute s = sum of #empno e + #altitude d";
+    ml(ml)
+        .assertParse(expected)
         .assertType("{deptno:int, s:int} list")
         .assertEvalIter(equalsOrdered(list(10, 3600)));
   }
 
-  @Test void testGroupGroup() {
-    final String ml = "from r in [{a=2,b=3}]\n"
-        + "group a1 = r.a, b1 = r.b\n"
-        + "group c2 = a1 + b1 compute s2 = sum of a1";
-    final String expected = "from r in [{a = 2, b = 3}]"
-        + " group a1 = #a r, b1 = #b r"
-        + " group c2 = a1 + b1 compute s2 = sum of a1";
-    ml(ml).assertParse(expected)
+  @Test
+  void testGroupGroup() {
+    final String ml =
+        "from r in [{a=2,b=3}]\n"
+            + "group a1 = r.a, b1 = r.b\n"
+            + "group c2 = a1 + b1 compute s2 = sum of a1";
+    final String expected =
+        "from r in [{a = 2, b = 3}]"
+            + " group a1 = #a r, b1 = #b r"
+            + " group c2 = a1 + b1 compute s2 = sum of a1";
+    ml(ml)
+        .assertParse(expected)
         .assertType(hasMoniker("{c2:int, s2:int} list"))
         .assertEvalIter(equalsOrdered(list(5, 2)));
   }
 
-  @Test void testFromOrderYield() {
-    final String ml = "from r in [{a=1,b=2},{a=1,b=0},{a=2,b=1}]\n"
-        + "  order r.a desc, r.b\n"
-        + "  skip 0\n"
-        + "  take 4 + 6\n"
-        + "  yield {r.a, b10 = r.b * 10}";
-    final String expected = "from r in"
-        + " [{a = 1, b = 2}, {a = 1, b = 0}, {a = 2, b = 1}]"
-        + " order #a r desc, #b r"
-        + " skip 0"
-        + " take 4 + 6"
-        + " yield {a = #a r, b10 = #b r * 10}";
-    ml(ml).assertParse(expected)
+  @Test
+  void testFromOrderYield() {
+    final String ml =
+        "from r in [{a=1,b=2},{a=1,b=0},{a=2,b=1}]\n"
+            + "  order r.a desc, r.b\n"
+            + "  skip 0\n"
+            + "  take 4 + 6\n"
+            + "  yield {r.a, b10 = r.b * 10}";
+    final String expected =
+        "from r in"
+            + " [{a = 1, b = 2}, {a = 1, b = 0}, {a = 2, b = 1}]"
+            + " order #a r desc, #b r"
+            + " skip 0"
+            + " take 4 + 6"
+            + " yield {a = #a r, b10 = #b r * 10}";
+    ml(ml)
+        .assertParse(expected)
         .assertType(hasMoniker("{a:int, b10:int} list"))
         .assertEvalIter(equalsOrdered(list(2, 10), list(1, 0), list(1, 20)));
   }
 
-  @Test void testFromEmpty() {
+  @Test
+  void testFromEmpty() {
     final String ml = "from";
     final String expected = "from";
-    ml(ml).assertParse(expected)
+    ml(ml)
+        .assertParse(expected)
         .assertType(hasMoniker("unit list"))
         .assertEvalIter(equalsOrdered(list()));
   }
 
-  @Test void testFromPattern() {
+  @Test
+  void testFromPattern() {
     ml("from (x, y) in [(1,2),(3,4),(3,0)] group sum = x + y")
-        .assertParse("from (x, y) in [(1, 2), (3, 4), (3, 0)] "
-            + "group sum = x + y")
+        .assertParse(
+            "from (x, y) in [(1, 2), (3, 4), (3, 0)] " + "group sum = x + y")
         .assertType(hasMoniker("int list"))
         .assertEvalIter(equalsUnordered(3, 7));
     ml("from {c, a, ...} in [{a=1.0,b=true,c=3},{a=1.5,b=true,c=4}]")
-        .assertParse("from {a = a, c = c, ...}"
-            + " in [{a = 1.0, b = true, c = 3}, {a = 1.5, b = true, c = 4}]")
+        .assertParse(
+            "from {a = a, c = c, ...}"
+                + " in [{a = 1.0, b = true, c = 3}, {a = 1.5, b = true, c = 4}]")
         .assertType("{a:real, c:int} list");
   }
 
-  @Test void testFromEquals() {
-    final String ml = "from x in [\"a\", \"b\"], y = \"c\", z in [\"d\"]\n"
-        + "  yield x ^ y ^ z";
-    final String expected = "from x in [\"a\", \"b\"], y = \"c\", z in [\"d\"]"
-        + " yield x ^ y ^ z";
-    ml(ml).assertParse(expected)
+  @Test
+  void testFromEquals() {
+    final String ml =
+        "from x in [\"a\", \"b\"], y = \"c\", z in [\"d\"]\n"
+            + "  yield x ^ y ^ z";
+    final String expected =
+        "from x in [\"a\", \"b\"], y = \"c\", z in [\"d\"]"
+            + " yield x ^ y ^ z";
+    ml(ml)
+        .assertParse(expected)
         .assertType(hasMoniker("string list"))
         .assertEvalIter(equalsUnordered("acd", "bcd"));
   }
 
-  @Test void testFunFrom() {
-    final String ml = "let\n"
-        + "  fun query emp =\n"
-        + "    from e in emp\n"
-        + "    yield {e.deptno,e.empno,e.ename}\n"
-        + "in\n"
-        + "  query scott.emp\n"
-        + "end";
+  @Test
+  void testFunFrom() {
+    final String ml =
+        "let\n"
+            + "  fun query emp =\n"
+            + "    from e in emp\n"
+            + "    yield {e.deptno,e.empno,e.ename}\n"
+            + "in\n"
+            + "  query scott.emp\n"
+            + "end";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{deptno:int, empno:int, ename:string} list");
   }
 
-  @Test void testToCoreAndBack() {
+  @Test
+  void testToCoreAndBack() {
     final String[] expressions = {
-        "()", null,
-        "true andalso not false", null,
-        "true orelse false", null,
-        "1", null,
-        "[1, 2]", null,
-        "1 :: 2 :: []", null,
-        "1 + ~2", null,
-        "(\"hello\", 2, 3)", null,
-        "String.substring (\"hello\", 2, 3)",
-        "#substring String (\"hello\", 2, 3)",
-        "substring (\"hello\", 4, 1)",
-        "#substring String (\"hello\", 4, 1)",
-        "{a = 1, b = true, c = \"d\"}", null,
-        "fn x => 1 + x + 3", null,
-        "List.tabulate (6, fn i =>"
-            + " {i, j = i + 3, s = substring (\"morel\", 0, i)})",
-        "#tabulate List (6, fn i =>"
-            + " {i = i, j = i + 3, s = #substring String (\"morel\", 0, i)})",
+      "()",
+      null,
+      "true andalso not false",
+      null,
+      "true orelse false",
+      null,
+      "1",
+      null,
+      "[1, 2]",
+      null,
+      "1 :: 2 :: []",
+      null,
+      "1 + ~2",
+      null,
+      "(\"hello\", 2, 3)",
+      null,
+      "String.substring (\"hello\", 2, 3)",
+      "#substring String (\"hello\", 2, 3)",
+      "substring (\"hello\", 4, 1)",
+      "#substring String (\"hello\", 4, 1)",
+      "{a = 1, b = true, c = \"d\"}",
+      null,
+      "fn x => 1 + x + 3",
+      null,
+      "List.tabulate (6, fn i =>"
+          + " {i, j = i + 3, s = substring (\"morel\", 0, i)})",
+      "#tabulate List (6, fn i =>"
+          + " {i = i, j = i + 3, s = #substring String (\"morel\", 0, i)})",
     };
     for (int i = 0; i < expressions.length / 2; i++) {
       String ml = expressions[i * 2];
-      String expected = "val it = " + first(expressions[i  * 2 + 1], ml);
+      String expected = "val it = " + first(expressions[i * 2 + 1], ml);
       ml(ml).assertCore(-1, hasToString(expected));
     }
   }
 
-  @Test void testError() {
+  @Test
+  void testError() {
     ml("fn x y => x + y")
         .assertError(
             "Error: non-constructor applied to argument in pattern: x");
     ml("- case {a=1,b=2,c=3} of {a=x,b=y} => x + y")
-        .assertError("Error: case object and rules do not agree [tycon "
-            + "mismatch]\n"
-            + "  rule domain: {a:[+ ty], b:[+ ty]}\n"
-            + "  object: {a:[int ty], b:[int ty], c:[int ty]}\n"
-            + "  in expression:\n"
-            + "    (case {a=1,b=2,c=3}\n"
-            + "      of {a=x,b=y} => x + y)\n");
+        .assertError(
+            "Error: case object and rules do not agree [tycon "
+                + "mismatch]\n"
+                + "  rule domain: {a:[+ ty], b:[+ ty]}\n"
+                + "  object: {a:[int ty], b:[int ty], c:[int ty]}\n"
+                + "  in expression:\n"
+                + "    (case {a=1,b=2,c=3}\n"
+                + "      of {a=x,b=y} => x + y)\n");
     ml("fun f {a=x,b=y,...} = x+y")
-        .assertError("Error: unresolved flex record (need to know the names of "
-            + "ALL the fields\n"
-            + " in this context)\n"
-            + "  type: {a:[+ ty], b:[+ ty]; 'Z}\n");
+        .assertError(
+            "Error: unresolved flex record (need to know the names of "
+                + "ALL the fields\n"
+                + " in this context)\n"
+                + "  type: {a:[+ ty], b:[+ ty]; 'Z}\n");
     ml("fun f {a=x,...} = x | {b=y,...} = y;")
-        .assertError("stdIn:1.24-1.33 Error: can't find function arguments in "
-            + "clause\n"
-            + "stdIn:1.24-1.33 Error: illegal function symbol in clause\n"
-            + "stdIn:1.6-1.37 Error: clauses do not all have same function "
-            + "name\n"
-            + "stdIn:1.36 Error: unbound variable or constructor: y\n"
-            + "stdIn:1.2-1.37 Error: unresolved flex record\n"
-            + "   (can't tell what fields there are besides #a)\n");
+        .assertError(
+            "stdIn:1.24-1.33 Error: can't find function arguments in "
+                + "clause\n"
+                + "stdIn:1.24-1.33 Error: illegal function symbol in clause\n"
+                + "stdIn:1.6-1.37 Error: clauses do not all have same function "
+                + "name\n"
+                + "stdIn:1.36 Error: unbound variable or constructor: y\n"
+                + "stdIn:1.2-1.37 Error: unresolved flex record\n"
+                + "   (can't tell what fields there are besides #a)\n");
     ml("fun f {a=x,...} = x | f {b=y,...} = y")
-        .assertError("Error: unresolved flex record (need to know the names of "
-            + "ALL the fields\n"
-            + " in this context)\n"
-            + "  type: {a:'Y, b:'Y; 'Z}\n");
+        .assertError(
+            "Error: unresolved flex record (need to know the names of "
+                + "ALL the fields\n"
+                + " in this context)\n"
+                + "  type: {a:'Y, b:'Y; 'Z}\n");
     ml("fun f {a=x,...} = x\n"
-        + "  | f {b=y,...} = y\n"
-        + "  | f {a=x,b=y,c=z} = x+y+z")
-        .assertError("stdIn:1.6-3.20 Error: match redundant\n"
-            + "          {a=x,b=_,c=_} => ...\n"
-            + "    -->   {a=_,b=y,c=_} => ...\n"
-            + "    -->   {a=x,b=y,c=z} => ...\n");
+            + "  | f {b=y,...} = y\n"
+            + "  | f {a=x,b=y,c=z} = x+y+z")
+        .assertError(
+            "stdIn:1.6-3.20 Error: match redundant\n"
+                + "          {a=x,b=_,c=_} => ...\n"
+                + "    -->   {a=_,b=y,c=_} => ...\n"
+                + "    -->   {a=x,b=y,c=z} => ...\n");
     ml("fun f 1 = 1 | f n = n * f (n - 1) | g 2 = 2")
-        .assertError("stdIn:3.5-3.46 Error: clauses don't all have same "
-            + "function name");
+        .assertError(
+            "stdIn:3.5-3.46 Error: clauses don't all have same "
+                + "function name");
   }
-
 }
 
 // End MainTest.java
