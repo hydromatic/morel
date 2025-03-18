@@ -209,13 +209,64 @@ public class Static {
    */
   public static <E, T> ImmutableList<T> transformEager(
       Iterable<? extends E> elements, Function<E, T> mapper) {
-    if (Iterables.isEmpty(elements)) {
-      // Save ourselves the effort of creating a Builder.
-      return ImmutableList.of();
+    if (elements instanceof List) {
+      // If elements is a List, we can optimize by pre-sizing the builder.
+      // (We could also check for Collection, but it's not worth the effort.)
+      return transformEager((Collection<? extends E>) elements, mapper);
     }
     final ImmutableList.Builder<T> b = ImmutableList.builder();
     elements.forEach(e -> b.add(mapper.apply(e)));
     return b.build();
+  }
+
+  /**
+   * Eagerly converts a Collection to an ImmutableList, applying a mapping
+   * function to each element.
+   *
+   * <p>More efficient than {@link #transformEager(Iterable, Function)}, because
+   * we can optimize the size of the builder for the size of the collection, and
+   * can avoid creating a builder if the collection is empty.
+   */
+  public static <E, T> ImmutableList<T> transformEager(
+      Collection<? extends E> elements, Function<E, T> mapper) {
+    if (elements.isEmpty()) {
+      // Save ourselves the effort of creating a Builder.
+      return ImmutableList.of();
+    }
+
+    // Optimize by making the builder the same size as the collection.
+    final ImmutableList.Builder<T> b =
+        ImmutableList.builderWithExpectedSize(elements.size());
+    elements.forEach(e -> b.add(mapper.apply(e)));
+    return b.build();
+  }
+
+  /**
+   * Eagerly converts a List to an ImmutableList, applying a mapping function to
+   * each element.
+   *
+   * <p>More efficient than {@link #transformEager(Collection, Function)},
+   * because we can avoid creating a builder for a singleton list.
+   */
+  public static <E, T> ImmutableList<T> transformEager(
+      List<? extends E> elements, Function<E, T> mapper) {
+    switch (elements.size()) {
+      case 0:
+        // Save ourselves the effort of creating a Builder.
+        return ImmutableList.of();
+
+      case 1:
+        // Save ourselves the effort of creating a Builder, and go directly to a
+        // singleton list.
+        return ImmutableList.of(mapper.apply(elements.get(0)));
+
+      default:
+        // Optimize by making the builder the same size as the collection.
+        final ImmutableList.Builder<T> b =
+            ImmutableList.builderWithExpectedSize(elements.size());
+        elements.forEach(e -> b.add(mapper.apply(e)));
+        return b.build();
+    }
   }
 
   /** Returns the first index in a list where a predicate is true, or -1. */

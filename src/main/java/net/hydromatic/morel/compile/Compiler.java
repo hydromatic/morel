@@ -188,7 +188,7 @@ public class Compiler {
 
   /** Compiles the tuple arguments to "apply". */
   public List<Code> compileArgs(
-      Context cx, Iterable<? extends Core.Exp> expressions) {
+      Context cx, List<? extends Core.Exp> expressions) {
     return transformEager(expressions, e -> compile(cx, e));
   }
 

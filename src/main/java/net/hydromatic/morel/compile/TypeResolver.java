@@ -1492,8 +1492,7 @@ public class TypeResolver {
     }
   }
 
-  private List<Unifier.Term> toTerms(
-      Iterable<? extends Type> types, Subst subst) {
+  private List<Unifier.Term> toTerms(List<? extends Type> types, Subst subst) {
     return transformEager(types, type -> toTerm(type, subst));
   }
 
