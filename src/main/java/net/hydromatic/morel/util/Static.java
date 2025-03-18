@@ -22,6 +22,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -34,6 +37,7 @@ import java.util.SortedMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Utilities. */
 public class Static {
@@ -47,6 +51,17 @@ public class Static {
    */
   public static final boolean SKIP =
       getBooleanProperty("skipMorelBuiltIns", false);
+
+  /**
+   * Method handle for {@link ImmutableList#builderWithExpectedSize(int)} (Guava
+   * 23.1 and higher).
+   */
+  private static final @Nullable MethodHandle
+      BUILDER_WITH_EXPECTED_SIZE_METHOD =
+          findStaticOptional(
+              ImmutableList.class,
+              "builderWithExpectedSize",
+              MethodType.methodType(ImmutableList.Builder.class, int.class));
 
   /**
    * Returns the value of a system property, converted into a boolean value.
@@ -209,13 +224,51 @@ public class Static {
    */
   public static <E, T> ImmutableList<T> transformEager(
       Iterable<? extends E> elements, Function<E, T> mapper) {
-    if (Iterables.isEmpty(elements)) {
-      // Save ourselves the effort of creating a Builder.
-      return ImmutableList.of();
+    if (elements instanceof Collection) {
+      // If elements is a Collection, we can optimize by pre-sizing the builder
+      return transformEager((Collection<? extends E>) elements, mapper);
     }
     final ImmutableList.Builder<T> b = ImmutableList.builder();
     elements.forEach(e -> b.add(mapper.apply(e)));
     return b.build();
+  }
+
+  /**
+   * Eagerly converts a Collection to an ImmutableList, applying a mapping
+   * function to each element.
+   *
+   * <p>More efficient than {@link #transformEager(Iterable, Function)}, because
+   * we can optimize the size of the builder for the size of the collection, and
+   * can avoid creating a builder if the collection is empty.
+   */
+  public static <E, T> ImmutableList<T> transformEager(
+      Collection<? extends E> elements, Function<E, T> mapper) {
+    if (elements.isEmpty()) {
+      // Save ourselves the effort of creating a Builder.
+      return ImmutableList.of();
+    }
+
+    // Optimize by making the builder the same size as the collection.
+    final ImmutableList.Builder<T> b = builderWithExpectedSize(elements.size());
+    elements.forEach(e -> b.add(mapper.apply(e)));
+    return b.build();
+  }
+
+  /** Equivalent to {@link ImmutableList#builderWithExpectedSize(int)}. */
+  @SuppressWarnings("unchecked")
+  public static <E> ImmutableList.Builder<E> builderWithExpectedSize(
+      int expectedSize) {
+    if (BUILDER_WITH_EXPECTED_SIZE_METHOD == null) {
+      return ImmutableList.builder();
+    }
+    try {
+      return (ImmutableList.Builder<E>)
+          BUILDER_WITH_EXPECTED_SIZE_METHOD.invoke(expectedSize);
+    } catch (RuntimeException | Error e) {
+      throw e;
+    } catch (Throwable e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /** Returns the first index in a list where a predicate is true, or -1. */
@@ -266,6 +319,17 @@ public class Static {
   public static boolean endsWith(StringBuilder buf, String s) {
     final int i = buf.length() - s.length();
     return i >= 0 && buf.indexOf(s, i) == i;
+  }
+
+  /** Looks up a method and returns its handle, or null if not found. */
+  @SuppressWarnings("SameParameterValue")
+  private static @Nullable MethodHandle findStaticOptional(
+      Class<?> refc, String name, MethodType type) {
+    try {
+      return MethodHandles.lookup().findStatic(refc, name, type);
+    } catch (NoSuchMethodException | IllegalAccessException e) {
+      return null;
+    }
   }
 }
 
