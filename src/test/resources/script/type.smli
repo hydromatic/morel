@@ -369,4 +369,473 @@ fun divides (n: int, d: int): bool =
 divides (10, 4): bool;
 > val it = false : bool
 
+(* An expression whose type is complicated to infer. *)
+fun f1 x = x;
+> val f1 = fn : 'a -> 'a
+fun f2 x = f1 (f1 x);
+> val f2 = fn : 'a -> 'a
+fun f3 x = f2 (f2 x);
+> val f3 = fn : 'a -> 'a
+fun f4 x = f3 (f3 x);
+> val f4 = fn : 'a -> 'a
+fun f5 x = f4 (f4 x);
+> val f5 = fn : 'a -> 'a
+fun f6 x = f5 (f5 x);
+> val f6 = fn : 'a -> 'a
+fun f7 x = f6 (f6 x);
+> val f7 = fn : 'a -> 'a
+fun f8 x = f7 (f7 x);
+> val f8 = fn : 'a -> 'a
+fun f9 x = f8 (f8 x);
+> val f9 = fn : 'a -> 'a
+fun f10 x = f9 (f9 x);
+> val f10 = fn : 'a -> 'a
+fun g y =
+  let
+    val a = f10 (fn z => z)
+    val b = f10 (fn z => (z, z))
+    val c = f10 (fn z => if true then z else y)
+    val d = f10 (fn z => f10 z)
+  in
+    (a, b, c, d)
+  end;
+> val g = fn : 'a -> ('b -> 'b) * ('c -> 'c * 'c) * ('a -> 'a) * ('d -> 'd)
+
+(* Should be able to derive type, but cannot. A bug.
+   Moving 'fun f1' outside the 'let' solves the problem.
+fun g2 y =
+  let
+    fun f1 x = x
+    val a = f1 (fn w => w)
+    val b = f1 (fn z => (z, z))
+  in
+    (a, b)
+  end;
+> val g2 = fn : 'a -> ('b -> 'b) * ('c -> 'c * 'c)
+*)
+
+(* Identity function, and chain functions that apply the identity
+   function multiple times. *)
+fun id x = x;
+> val id = fn : 'a -> 'a
+fun chain0 f = f;
+> val chain0 = fn : 'a -> 'a
+fun chain1 f = fn x => f (id x);
+> val chain1 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain2 f = fn x => f (id (id x));
+> val chain2 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain3 f = fn x => f (id (id (id x)));
+> val chain3 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain4 f = fn x => f (id (id (id (id x))));
+> val chain4 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain5 f = fn x => f (id (id (id (id (id x)))));
+> val chain5 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain6 f = fn x => f (id (id (id (id (id (id x))))));
+> val chain6 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain7 f = fn x => f (id (id (id (id (id (id (id x)))))));
+> val chain7 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain8 f = fn x => f (id (id (id (id (id (id (id (id x))))))));
+> val chain8 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain9 f = fn x => f (id (id (id (id (id (id (id (id (id x)))))))));
+> val chain9 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain10 f = fn x => f (id (id (id (id (id (id (id (id (id (id x))))))))));
+> val chain10 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain11 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id x)))))))))));
+> val chain11 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain12 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id (id x))))))))))));
+> val chain12 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain13 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id (id (id x)))))))))))));
+> val chain13 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain14 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id (id (id (id x))))))))))))));
+> val chain14 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain15 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id x)))))))))))))));
+> val chain15 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain16 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id x))))))))))))))));
+> val chain16 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain17 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id x)))))))))))))))));
+> val chain17 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain18 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id x))))))))))))))))));
+> val chain18 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain19 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id x)))))))))))))))))));
+> val chain19 = fn : ('a -> 'b) -> 'a -> 'b
+fun chain20 f = fn x => f (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id (id x))))))))))))))))))));
+> val chain20 = fn : ('a -> 'b) -> 'a -> 'b
+
+(* Helper functions for creating more complex type constraints. *)
+fun apply f x = f x;
+> val apply = fn : ('a -> 'b) -> 'a -> 'b
+fun compose f g x = f (g x);
+> val compose = fn : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
+fun flip f x y = f y x;
+> val flip = fn : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
+fun fst (x, _) = x;
+> val fst = fn : 'a * 'b -> 'a
+fun snd (_, y) = y;
+> val snd = fn : 'a * 'b -> 'b
+
+(* Data structures for creating diverse type constraints. *)
+datatype ('a, 'b) either = LEFT of 'a | RIGHT of 'b;
+> datatype ('a,'b) either = LEFT of 'a | RIGHT of 'b
+datatype 'a tree = LEAF of 'a | NODE of 'a tree * 'a * 'a tree;
+> datatype 'a tree = LEAF of 'a | NODE of 'a tree * 'a * 'a tree
+
+(* Function that creates a quadratic unification case. *)
+fun quadratic_case () =
+  let
+    val f0 = chain0 (fn x => x)
+    val f1 = chain1 (fn x => (x, x))
+    val f2 = chain2 (fn x => [x])
+    val f3 = chain3 (fn x => SOME x)
+    val f4 = chain4 (fn x => (x, x, x))
+    val f5 = chain5 (fn x => fn y => (x, y))
+    val f6 = chain6 (fn x => {field = x})
+    val f7 = chain7 (fn x => if true then x else x)
+    val f8 = chain8 (fn x => apply (fn y => (x, y)) x)
+    val f9 = chain9 (fn x => apply (fn y => apply (fn z => (x, y, z)) y) x)
+    val f10 = chain10 (fn x => LEAF x)
+    val f11 = chain11 (fn x => NODE (LEAF x, x, LEAF x))
+    val f12 = chain12 (fn x => LEFT x)
+    val f13 = chain13 (fn x => RIGHT x)
+    val f14 = chain14 (fn x => compose (fn y => (x, y)) (fn z => (z, x)))
+    val f15 = chain15 (fn x => flip (fn a => fn b => (a, b, x)) x)
+    val f16 = chain16 (fn x => fn y => fn z => (x, y, z))
+    val f17 = chain17 (fn x => fn y => fst (x, y))
+    val f18 = chain18 (fn x => fn y => snd (x, y))
+    val f19 = chain19 (fn x => fn f => f x)
+    val f20 = chain20 (fn x => fn f => fn g => compose f g x)
+  in
+    (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20)
+  end;
+> val quadratic_case = fn
+>   : unit
+>     -> ('a -> 'a) * ('b -> 'b * 'b) * ('c -> 'c list) * ('d -> 'd option) *
+>        ('e -> 'e * 'e * 'e) * ('f -> 'g -> 'f * 'g) * ('h -> {field:'h}) *
+>        ('i -> 'i) * ('j -> 'j * 'j) * ('k -> 'k * 'k * 'k) * ('l -> 'l tree) *
+>        ('m -> 'm tree) * ('n -> ('n,'o) either) * ('p -> ('q,'p) either) *
+>        ('r -> 's -> 'r * ('s * 'r)) * ('t -> 'u -> 'u * 't * 't) *
+>        ('v -> 'w -> 'x -> 'v * 'w * 'x) * ('y -> 'z -> 'y) *
+>        ('ba -> 'bb -> 'bb) * ('bc -> ('bc -> 'bd) -> 'bd) *
+>        ('be -> ('bf -> 'bg) -> ('be -> 'bf) -> 'bg)
+
+(* Additional function to create nested applications. *)
+fun nested_quadratic_case () =
+  let
+    val g0 = chain10 (chain10 (fn x => x))
+    val g1 = chain9 (chain11 (fn x => (x, x)))
+    val g2 = chain8 (chain12 (fn x => [x]))
+    val g3 = chain7 (chain13 (fn x => SOME x))
+    val g4 = chain6 (chain14 (fn x => (x, x, x)))
+    val g5 = chain5 (chain15 (fn x => fn y => (x, y)))
+    val g6 = chain4 (chain16 (fn x => {field = x}))
+    val g7 = chain3 (chain17 (fn x => if true then x else x))
+    val g8 = chain2 (chain18 (fn x => LEAF x))
+    val g9 = chain1 (chain19 (fn x => NODE (LEAF x, x, LEAF x)))
+    val g10 = chain0 (chain20 (fn x => LEFT x))
+  in
+    (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10)
+  end;
+> val nested_quadratic_case = fn
+>   : unit
+>     -> ('a -> 'a) * ('b -> 'b * 'b) * ('c -> 'c list) * ('d -> 'd option) *
+>        ('e -> 'e * 'e * 'e) * ('f -> 'g -> 'f * 'g) * ('h -> {field:'h}) *
+>        ('i -> 'i) * ('j -> 'j tree) * ('k -> 'k tree) * ('l -> ('l,'m) either)
+
+(* Cross-chain dependencies for even more complexity. *)
+fun cross_chain () =
+  let
+    val h0 = chain0 (chain10 (fn x => x))
+    val h1 = chain1 (chain9 (fn x => (x, x)))
+    val h2 = chain2 (chain8 (fn x => [x]))
+    val h3 = chain3 (chain7 (fn x => SOME x))
+    val h4 = chain4 (chain6 (fn x => (x, x, x)))
+    val h5 = chain5 (chain5 (fn x => fn y => (x, y)))
+    val h6 = chain6 (chain4 (fn x => {field = x}))
+    val h7 = chain7 (chain3 (fn x => if true then x else x))
+    val h8 = chain8 (chain2 (fn x => apply (fn y => (x, y)) x))
+    val h9 = chain9 (chain1 (fn x => apply (fn y => apply (fn z => (x, y, z)) y) x))
+    val h10 = chain10 (chain0 (fn x => LEAF x))
+  in
+    (h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10)
+  end;
+> val cross_chain = fn
+>   : unit
+>     -> ('a -> 'a) * ('b -> 'b * 'b) * ('c -> 'c list) * ('d -> 'd option) *
+>        ('e -> 'e * 'e * 'e) * ('f -> 'g -> 'f * 'g) * ('h -> {field:'h}) *
+>        ('i -> 'i) * ('j -> 'j * 'j) * ('k -> 'k * 'k * 'k) * ('l -> 'l tree)
+
+(* Test all the cases *)
+val all_cases = (quadratic_case(), nested_quadratic_case(), cross_chain());
+> val all_cases =
+>   ((fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn),
+>    (fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn),(fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn))
+>   :
+>     ('a -> 'a) * ('b -> 'b * 'b) * ('c -> 'c list) * ('d -> 'd option) *
+>     ('e -> 'e * 'e * 'e) * ('f -> 'g -> 'f * 'g) * ('h -> {field:'h}) *
+>     ('i -> 'i) * ('j -> 'j * 'j) * ('k -> 'k * 'k * 'k) * ('l -> 'l tree) *
+>     ('m -> 'm tree) * ('n -> ('n,'o) either) * ('p -> ('q,'p) either) *
+>     ('r -> 's -> 'r * ('s * 'r)) * ('t -> 'u -> 'u * 't * 't) *
+>     ('v -> 'w -> 'x -> 'v * 'w * 'x) * ('y -> 'z -> 'y) * ('ba -> 'bb -> 'bb)
+>      * ('bc -> ('bc -> 'bd) -> 'bd) *
+>     ('be -> ('bf -> 'bg) -> ('be -> 'bf) -> 'bg) *
+>     (
+>     ('bh -> 'bh) * ('bi -> 'bi * 'bi) * ('bj -> 'bj list) * ('bk -> 'bk option)
+>      * ('bl -> 'bl * 'bl * 'bl) * ('bm -> 'bn -> 'bm * 'bn) *
+>     ('bo -> {field:'bo}) * ('bp -> 'bp) * ('bq -> 'bq tree) * ('br -> 'br tree)
+>      * ('bs -> ('bs,'bt) either)) *
+>     (
+>     ('bu -> 'bu) * ('bv -> 'bv * 'bv) * ('bw -> 'bw list) * ('bx -> 'bx option)
+>      * ('by -> 'by * 'by * 'by) * ('bz -> 'ca -> 'bz * 'ca) *
+>     ('cb -> {field:'cb}) * ('cc -> 'cc) * ('cd -> 'cd * 'cd) *
+>     ('ce -> 'ce * 'ce * 'ce) * ('cf -> 'cf tree))
+
+(* Function that creates a quadratic unification case. *)
+fun quadratic_case2 () =
+  let
+    val f0 = chain0 (fn x => x)
+    val f1 = chain1 (fn x => (x, x))
+    val f2 = chain2 (fn x => [x])
+    val f3 = chain3 (fn x => SOME x)
+    val f4 = chain4 (fn x => (x, x, x))
+    val f5 = chain5 (fn x => fn y => (x, y))
+    val f6 = chain6 (fn x => {field = x})
+    val f7 = chain7 (fn x => if true then x else x)
+    val f8 = chain8 (fn x => apply (fn y => (x, y)) x)
+    val f9 = chain9 (fn x => apply (fn y => apply (fn z => (x, y, z)) y) x)
+    val f10 = chain10 (fn x => LEAF x)
+    val f11 = chain11 (fn x => NODE (LEAF x, x, LEAF x))
+    val f12 = chain12 (fn x => LEFT x)
+    val f13 = chain13 (fn x => RIGHT x)
+    val f14 = chain14 (fn x => compose (fn y => (x, y)) (fn z => (z, x)))
+    val f15 = chain15 (fn x => flip (fn a => fn b => (a, b, x)) x)
+    val f16 = chain16 (fn x => fn y => fn z => (x, y, z))
+    val f17 = chain17 (fn x => fn y => fst (x, y))
+    val f18 = chain18 (fn x => fn y => snd (x, y))
+    val f19 = chain19 (fn x => fn f => f x)
+    val f20 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f21 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f22 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f23 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f24 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f25 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f26 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f27 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f28 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f29 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f30 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f31 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f32 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f33 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f34 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f35 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f36 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f37 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f38 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f39 = chain20 (fn x => fn f => fn g => compose f g x)
+  in
+    (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13,
+     f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24, f25,
+     f26, f27, f28, f29, f30, f31, f32, f33, f34, f35, f36, f37,
+     f38, f39)
+  end;
+> val quadratic_case2 = fn
+>   : unit
+>     -> ('a -> 'a) * ('b -> 'b * 'b) * ('c -> 'c list) * ('d -> 'd option) *
+>        ('e -> 'e * 'e * 'e) * ('f -> 'g -> 'f * 'g) * ('h -> {field:'h}) *
+>        ('i -> 'i) * ('j -> 'j * 'j) * ('k -> 'k * 'k * 'k) * ('l -> 'l tree) *
+>        ('m -> 'm tree) * ('n -> ('n,'o) either) * ('p -> ('q,'p) either) *
+>        ('r -> 's -> 'r * ('s * 'r)) * ('t -> 'u -> 'u * 't * 't) *
+>        ('v -> 'w -> 'x -> 'v * 'w * 'x) * ('y -> 'z -> 'y) *
+>        ('ba -> 'bb -> 'bb) * ('bc -> ('bc -> 'bd) -> 'bd) *
+>        ('be -> ('bf -> 'bg) -> ('be -> 'bf) -> 'bg) *
+>        ('bh -> ('bi -> 'bj) -> ('bh -> 'bi) -> 'bj) *
+>        ('bk -> ('bl -> 'bm) -> ('bk -> 'bl) -> 'bm) *
+>        ('bn -> ('bo -> 'bp) -> ('bn -> 'bo) -> 'bp) *
+>        ('bq -> ('br -> 'bs) -> ('bq -> 'br) -> 'bs) *
+>        ('bt -> ('bu -> 'bv) -> ('bt -> 'bu) -> 'bv) *
+>        ('bw -> ('bx -> 'by) -> ('bw -> 'bx) -> 'by) *
+>        ('bz -> ('ca -> 'cb) -> ('bz -> 'ca) -> 'cb) *
+>        ('cc -> ('cd -> 'ce) -> ('cc -> 'cd) -> 'ce) *
+>        ('cf -> ('cg -> 'ch) -> ('cf -> 'cg) -> 'ch) *
+>        ('ci -> ('cj -> 'ck) -> ('ci -> 'cj) -> 'ck) *
+>        ('cl -> ('cm -> 'cn) -> ('cl -> 'cm) -> 'cn) *
+>        ('co -> ('cp -> 'cq) -> ('co -> 'cp) -> 'cq) *
+>        ('cr -> ('cs -> 'ct) -> ('cr -> 'cs) -> 'ct) *
+>        ('cu -> ('cv -> 'cw) -> ('cu -> 'cv) -> 'cw) *
+>        ('cx -> ('cy -> 'cz) -> ('cx -> 'cy) -> 'cz) *
+>        ('da -> ('db -> 'dc) -> ('da -> 'db) -> 'dc) *
+>        ('dd -> ('de -> 'df) -> ('dd -> 'de) -> 'df) *
+>        ('dg -> ('dh -> 'di) -> ('dg -> 'dh) -> 'di) *
+>        ('dj -> ('dk -> 'dl) -> ('dj -> 'dk) -> 'dl)
+
+(* Function that creates a quadratic unification case. *)
+fun quadratic_case3 () =
+  let
+    val f0 = chain0 (fn x => x)
+    val f1 = chain1 (fn x => (x, x))
+    val f2 = chain2 (fn x => [x])
+    val f3 = chain3 (fn x => SOME x)
+    val f4 = chain4 (fn x => (x, x, x))
+    val f5 = chain5 (fn x => fn y => (x, y))
+    val f6 = chain6 (fn x => {field = x})
+    val f7 = chain7 (fn x => if true then x else x)
+    val f8 = chain8 (fn x => apply (fn y => (x, y)) x)
+    val f9 = chain9 (fn x => apply (fn y => apply (fn z => (x, y, z)) y) x)
+    val f10 = chain10 (fn x => LEAF x)
+    val f11 = chain11 (fn x => NODE (LEAF x, x, LEAF x))
+    val f12 = chain12 (fn x => LEFT x)
+    val f13 = chain13 (fn x => RIGHT x)
+    val f14 = chain14 (fn x => compose (fn y => (x, y)) (fn z => (z, x)))
+    val f15 = chain15 (fn x => flip (fn a => fn b => (a, b, x)) x)
+    val f16 = chain16 (fn x => fn y => fn z => (x, y, z))
+    val f17 = chain17 (fn x => fn y => fst (x, y))
+    val f18 = chain18 (fn x => fn y => snd (x, y))
+    val f19 = chain19 (fn x => fn f => f x)
+    val f20 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f21 = chain1 (fn x => (x, x))
+    val f22 = chain2 (fn x => [x])
+    val f23 = chain3 (fn x => SOME x)
+    val f24 = chain4 (fn x => (x, x, x))
+    val f25 = chain5 (fn x => fn y => (x, y))
+    val f26 = chain6 (fn x => {field = x})
+    val f27 = chain7 (fn x => if true then x else x)
+    val f28 = chain8 (fn x => apply (fn y => (x, y)) x)
+    val f29 = chain9 (fn x => apply (fn y => apply (fn z => (x, y, z)) y) x)
+    val f30 = chain10 (fn x => LEAF x)
+    val f31 = chain11 (fn x => NODE (LEAF x, x, LEAF x))
+    val f32 = chain12 (fn x => LEFT x)
+    val f33 = chain13 (fn x => RIGHT x)
+    val f34 = chain14 (fn x => compose (fn y => (x, y)) (fn z => (z, x)))
+    val f35 = chain15 (fn x => flip (fn a => fn b => (a, b, x)) x)
+    val f36 = chain16 (fn x => fn y => fn z => (x, y, z))
+    val f37 = chain17 (fn x => fn y => fst (x, y))
+    val f38 = chain18 (fn x => fn y => snd (x, y))
+    val f39 = chain19 (fn x => fn f => f x)
+    val f40 = chain20 (fn x => fn f => fn g => compose f g x)
+    val f41 = chain1 (fn x => (x, x))
+    val f42 = chain2 (fn x => [x])
+    val f43 = chain3 (fn x => SOME x)
+    val f44 = chain4 (fn x => (x, x, x))
+    val f45 = chain5 (fn x => fn y => (x, y))
+    val f46 = chain6 (fn x => {field = x})
+    val f47 = chain7 (fn x => if true then x else x)
+  in
+    (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13,
+     f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24, f25,
+     f26, f27, f28, f29, f30, f31, f32, f33, f34, f35, f36, f37,
+     f38, f39, f40, f41, f42, f43, f44, f45, f46, f47)
+  end;
+> val quadratic_case3 = fn
+>   : unit
+>     -> ('a -> 'a) * ('b -> 'b * 'b) * ('c -> 'c list) * ('d -> 'd option) *
+>        ('e -> 'e * 'e * 'e) * ('f -> 'g -> 'f * 'g) * ('h -> {field:'h}) *
+>        ('i -> 'i) * ('j -> 'j * 'j) * ('k -> 'k * 'k * 'k) * ('l -> 'l tree) *
+>        ('m -> 'm tree) * ('n -> ('n,'o) either) * ('p -> ('q,'p) either) *
+>        ('r -> 's -> 'r * ('s * 'r)) * ('t -> 'u -> 'u * 't * 't) *
+>        ('v -> 'w -> 'x -> 'v * 'w * 'x) * ('y -> 'z -> 'y) *
+>        ('ba -> 'bb -> 'bb) * ('bc -> ('bc -> 'bd) -> 'bd) *
+>        ('be -> ('bf -> 'bg) -> ('be -> 'bf) -> 'bg) * ('bh -> 'bh * 'bh) *
+>        ('bi -> 'bi list) * ('bj -> 'bj option) * ('bk -> 'bk * 'bk * 'bk) *
+>        ('bl -> 'bm -> 'bl * 'bm) * ('bn -> {field:'bn}) * ('bo -> 'bo) *
+>        ('bp -> 'bp * 'bp) * ('bq -> 'bq * 'bq * 'bq) * ('br -> 'br tree) *
+>        ('bs -> 'bs tree) * ('bt -> ('bt,'bu) either) *
+>        ('bv -> ('bw,'bv) either) * ('bx -> 'by -> 'bx * ('by * 'bx)) *
+>        ('bz -> 'ca -> 'ca * 'bz * 'bz) * ('cb -> 'cc -> 'cd -> 'cb * 'cc * 'cd)
+>         * ('ce -> 'cf -> 'ce) * ('cg -> 'ch -> 'ch) *
+>        ('ci -> ('ci -> 'cj) -> 'cj) *
+>        ('ck -> ('cl -> 'cm) -> ('ck -> 'cl) -> 'cm) * ('cn -> 'cn * 'cn) *
+>        ('co -> 'co list) * ('cp -> 'cp option) * ('cq -> 'cq * 'cq * 'cq) *
+>        ('cr -> 'cs -> 'cr * 'cs) * ('ct -> {field:'ct}) * ('cu -> 'cu)
+
+let
+  val v01 = 1
+  val v02 = 2
+  val v03 = 3
+  val v04 = v02 * v02
+  val v05 = 5
+  val v06 = v02 * v03
+in
+  v01 + v02 + v03 + v04 + v05 + v06
+end;
+> val it = 21 : int
+
+
+(* Factorize a number. *)
+fun factorize n =
+  let
+    fun isDivisible (n, d) =
+      n mod d = 0
+
+    fun findSmallestDivisor (n, start) =
+      if start * start > n then n
+      else if isDivisible (n, start) then start
+      else findSmallestDivisor (n, start + 1)
+
+    fun smallestFactor n =
+      if n <= 1 then n
+      else findSmallestDivisor (n, 2);
+  in
+    if n <= 1 then [n]
+    else
+      let
+        val factor = smallestFactor n
+      in
+        if factor = n then [n]
+        else factor :: factorize (n div factor)
+      end
+    end;
+> val factorize = fn : int -> int list
+
+factorize 60;
+> val it = [2,2,3,5] : int list
+factorize 84;
+> val it = [2,2,3,7] : int list
+factorize 101;
+> val it = [101] : int list
+
+Sys.set ("stringDepth", 1000000);
+> val it = () : unit
+
+(* Generates a program of length 'n', to stress the unifier. *)
+fun program n =
+  let
+    fun concat2 (start, sep, `end`, list) =
+      start ^
+        (case list of
+            [] => ""
+          | [s] => s
+          | first :: rest => first ^ (String.concat (List.map (fn s => sep ^ s) rest))) ^
+        `end`
+    fun f i =
+      " val i" ^ (Int.toString i) ^ " = " ^
+        let
+          val factors = (factorize i)
+        in
+          if (length factors) = 1 then
+            Int.toString (hd factors)
+          else
+            (concat2 ("", " * ", "", (List.map (fn factor => "i" ^ (Int.toString factor)) factors)))
+        end ^ ";"
+  in
+    "let " ^
+      String.concat (List.tabulate (n, f)) ^
+      " in " ^
+      concat2 ("(", ", ", ")", List.tabulate (n, fn i => "i" ^ (Int.toString i))) ^
+      " end"
+  end;
+> val program = fn : int -> string
+
+program 30;
+> val it =
+>   "let  val i0 = 0; val i1 = 1; val i2 = 2; val i3 = 3; val i4 = i2 * i2; val i5 = 5; val i6 = i2 * i3; val i7 = 7; val i8 = i2 * i2 * i2; val i9 = i3 * i3; val i10 = i2 * i5; val i11 = 11; val i12 = i2 * i2 * i3; val i13 = 13; val i14 = i2 * i7; val i15 = i3 * i5; val i16 = i2 * i2 * i2 * i2; val i17 = 17; val i18 = i2 * i3 * i3; val i19 = 19; val i20 = i2 * i2 * i5; val i21 = i3 * i7; val i22 = i2 * i11; val i23 = 23; val i24 = i2 * i2 * i2 * i3; val i25 = i5 * i5; val i26 = i2 * i13; val i27 = i3 * i3 * i3; val i28 = i2 * i2 * i7; val i29 = 29; in (i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20, i21, i22, i23, i24, i25, i26, i27, i28, i29) end"
+>   : string
+
+(*) Pasted from "program 30"
+let  val i0 = 0; val i1 = 1; val i2 = 2; val i3 = 3; val i4 = i2 * i2; val i5 = 5; val i6 = i2 * i3; val i7 = 7; val i8 = i2 * i2 * i2; val i9 = i3 * i3; val i10 = i2 * i5; val i11 = 11; val i12 = i2 * i2 * i3; val i13 = 13; val i14 = i2 * i7; val i15 = i3 * i5; val i16 = i2 * i2 * i2 * i2; val i17 = 17; val i18 = i2 * i3 * i3; val i19 = 19; val i20 = i2 * i2 * i5; val i21 = i3 * i7; val i22 = i2 * i11; val i23 = 23; val i24 = i2 * i2 * i2 * i3; val i25 = i5 * i5; val i26 = i2 * i13; val i27 = i3 * i3 * i3; val i28 = i2 * i2 * i7; val i29 = 29; in (i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16, i17, i18, i19, i20, i21, i22, i23, i24, i25, i26, i27, i28, i29) end;
+> val it =
+>   (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,
+>    29)
+>   : int * int * int * int * int * int * int * int * int * int * int * int * int
+>      * int * int * int * int * int * int * int * int * int * int * int * int *
+>     int * int * int * int * int
+
 (*) End type.smli

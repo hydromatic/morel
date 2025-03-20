@@ -853,7 +853,7 @@ public class TypeResolver {
                 final Unifier.Term result2 = substitution.resolve(vResult);
                 final Unifier.Term term = sequence.terms.get(i);
                 final Unifier.Term term2 = substitution.resolve(term);
-                termPairs.add(new Unifier.TermTerm(result2, term2));
+                termPairs.accept(result2, term2);
               }
             }
           }
@@ -1384,7 +1384,7 @@ public class TypeResolver {
                       });
                   final Unifier.Term result2 = substitution.resolve(v2);
                   final Unifier.Term term2 = record(labelTerms2);
-                  termPairs.add(new Unifier.TermTerm(result2, term2));
+                  termPairs.accept(result2, term2);
                 }
               }
             });

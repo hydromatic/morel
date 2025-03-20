@@ -25,12 +25,14 @@ import static net.hydromatic.morel.util.Pair.forEachIndexed;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -147,7 +149,7 @@ public abstract class Unifier {
         Variable variable,
         Term term,
         Substitution substitution,
-        List<TermTerm> termPairs);
+        BiConsumer<Term, Term> termPairs);
   }
 
   /**
@@ -264,14 +266,20 @@ public abstract class Unifier {
 
   /** Term (variable, symbol or node). */
   public interface Term {
+    /** Applies a substitution to this term. */
     Term apply(Map<Variable, Term> substitutions);
 
+    /** Applies a single-variable substitution to this term. */
+    Term apply1(Variable variable, Term term);
+
+    /** Returns whether this term references a given variable. */
     boolean contains(Variable variable);
 
     /** Throws CycleException if expanding this term leads to a cycle. */
     void checkCycle(Map<Variable, Term> map, Map<Variable, Variable> active)
         throws CycleException;
 
+    /** Accepts a visitor. */
     <R> R accept(TermVisitor<R> visitor);
   }
 
@@ -291,7 +299,7 @@ public abstract class Unifier {
    * Control flow exception, thrown by {@link Term#checkCycle(Map, Map)} if it
    * finds a cycle in a substitution map.
    */
-  private static class CycleException extends Exception {}
+  public static class CycleException extends Exception {}
 
   /**
    * A variable that represents a symbol or a sequence; unification's task is to
@@ -342,14 +350,22 @@ public abstract class Unifier {
       return c;
     }
 
+    @Override
     public Term apply(Map<Variable, Term> substitutions) {
       return substitutions.getOrDefault(this, this);
     }
 
+    @Override
+    public Term apply1(Variable variable, Term term) {
+      return variable == this ? term : this;
+    }
+
+    @Override
     public boolean contains(Variable variable) {
       return variable == this;
     }
 
+    @Override
     public void checkCycle(
         Map<Variable, Term> map, Map<Variable, Variable> active)
         throws CycleException {
@@ -363,6 +379,7 @@ public abstract class Unifier {
       }
     }
 
+    @Override
     public <R> R accept(TermVisitor<R> visitor) {
       return visitor.visit(this);
     }
@@ -433,11 +450,32 @@ public abstract class Unifier {
     }
 
     public Term apply(Map<Variable, Term> substitutions) {
-      final Sequence sequence = sequenceApply(operator, substitutions, terms);
-      if (sequence.equalsShallow(this)) {
+      if (terms.isEmpty()) {
         return this;
       }
-      return sequence;
+      final List<Term> newTerms = new ArrayList<>(terms.size());
+      for (Term term : terms) {
+        newTerms.add(term.apply(substitutions));
+      }
+      if (listEqual(terms, newTerms)) {
+        return this;
+      }
+      return new Sequence(operator, newTerms);
+    }
+
+    @Override
+    public Term apply1(Variable variable, Term term) {
+      if (terms.isEmpty()) {
+        return this;
+      }
+      if (!contains(variable)) {
+        return this;
+      }
+      final ImmutableList.Builder<Term> newTerms = ImmutableList.builder();
+      for (Term term1 : terms) {
+        newTerms.add(term1.apply1(variable, term));
+      }
+      return new Sequence(operator, newTerms.build());
     }
 
     public void checkCycle(

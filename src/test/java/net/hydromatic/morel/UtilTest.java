@@ -32,6 +32,7 @@ import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -47,8 +48,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -61,6 +64,7 @@ import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RangeExtent;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.ArrayQueue;
 import net.hydromatic.morel.util.Folder;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Pair;
@@ -525,6 +529,81 @@ public class UtilTest {
     final StringBuilder empty = new StringBuilder();
     assertThat(endsWith(empty, "z"), is(false));
     assertThat(endsWith(empty, ""), is(true));
+  }
+
+  @Test
+  void testQueue() {
+    ArrayQueue<String> q = new ArrayQueue<>();
+    List<String> list = new LinkedList<>();
+    assertThat(q.size(), is(0));
+    assertThat(q.isEmpty(), is(true));
+    assertThat(q.asList(), is(list));
+    try {
+      String s = q.get(0);
+      fail("expected error, got " + s);
+    } catch (IndexOutOfBoundsException e) {
+      assertThat(e.getMessage(), nullValue());
+    }
+    assertThat(q, hasToString(list.toString()));
+
+    q.add("a");
+    list.add("a");
+    assertThat(q.asList(), is(list));
+    assertThat(q.size(), is(1));
+    assertThat(q.isEmpty(), is(false));
+    assertThat(q.get(0), is("a"));
+    assertThat(q.asList(), is(list));
+    assertThat(q, hasToString(list.toString()));
+
+    String poll = q.poll();
+    list.remove(0);
+    assertThat(poll, is("a"));
+    assertThat(q.size(), is(0));
+    assertThat(q.isEmpty(), is(true));
+    try {
+      String s = q.get(0);
+      fail("expected error, got " + s);
+    } catch (IndexOutOfBoundsException e) {
+      assertThat(e.getMessage(), nullValue());
+    }
+    assertThat(q.asList(), is(list));
+    assertThat(q, hasToString(list.toString()));
+
+    String poll2 = q.poll();
+    assertThat(poll2, nullValue());
+    assertThat(q.asList(), is(list));
+
+    final Random r = new Random(0);
+    for (int i = 0; i < 1000; i++) {
+      switch (r.nextInt(6)) {
+        case 0:
+        case 1:
+        case 2:
+          q.add("x");
+          list.add("x");
+          break;
+        case 3:
+        case 4:
+          q.poll();
+          if (!list.isEmpty()) {
+            list.remove(0);
+          }
+          break;
+        case 5:
+        default:
+          if (!q.isEmpty()) {
+            final int z = r.nextInt(q.size());
+            q.remove(z);
+            if (z == 0 || z == list.size() - 1) {
+              list.remove(z);
+            } else {
+              list.set(z, list.remove(list.size() - 1));
+            }
+          }
+          break;
+      }
+      assertThat(q.asList(), is(list));
+    }
   }
 }
 
