@@ -587,6 +587,16 @@ public class Ast {
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.infix(left, exp, op, type, right);
     }
+
+    /**
+     * Creates a copy of this {@code AnnotatedExp} with given contents, or
+     * {@code this} if the contents are the same.
+     */
+    public AnnotatedExp copy(Exp exp, Type type) {
+      return this.exp.equals(exp) && this.type.equals(type)
+          ? this
+          : ast.annotatedExp(pos, exp, type);
+    }
   }
 
   /** Parse tree for a named type (e.g. "int" or "(int, string) list"). */

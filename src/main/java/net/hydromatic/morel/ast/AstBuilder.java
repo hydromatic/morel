@@ -400,7 +400,8 @@ public enum AstBuilder {
     return new Ast.InfixPat(pos, op, p0, p1);
   }
 
-  public Ast.Exp annotatedExp(Pos pos, Ast.Exp expression, Ast.Type type) {
+  public Ast.AnnotatedExp annotatedExp(
+      Pos pos, Ast.Exp expression, Ast.Type type) {
     return new Ast.AnnotatedExp(pos, expression, type);
   }
 

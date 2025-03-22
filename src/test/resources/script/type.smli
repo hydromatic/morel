@@ -362,4 +362,11 @@ let val r = {a=[], b=[]} in r.b end;
 fun f (a, b, c) = {x=c, y=a};
 > val f = fn : 'a * 'b * 'c -> {x:'c, y:'a}
 
+(* [MOREL-247] Cannot translate an expression that contains type annotations. *)
+fun divides (n: int, d: int): bool =
+  n mod d = 0;
+> val divides = fn : int * int -> bool
+divides (10, 4): bool;
+> val it = false : bool
+
 (*) End type.smli

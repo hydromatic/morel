@@ -308,8 +308,10 @@ public class TypeResolver {
       case ANNOTATED_EXP:
         final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) node;
         final Type type = toType(annotatedExp.type, typeSystem);
-        deduceType(env, annotatedExp.exp, v);
-        return reg(node, v, toTerm(type, Subst.EMPTY));
+        final Ast.Exp exp2 = deduceType(env, annotatedExp.exp, v);
+        final Ast.AnnotatedExp annotatedExp2 =
+            annotatedExp.copy(exp2, annotatedExp.type);
+        return reg(annotatedExp2, v, toTerm(type, Subst.EMPTY));
 
       case ANDALSO:
       case ORELSE:
