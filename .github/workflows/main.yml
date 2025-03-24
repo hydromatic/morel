@@ -35,7 +35,7 @@ jobs:
     strategy:
       matrix:
         java-version: [ "11" ]
-        guava-version: [ "33.4.0-jre" ]
+        guava-version: [ "33.4.5-jre" ]
         hsqldb-version: [ "" ]
         checkstyle-version: [ "" ]
         javadoc: [ false ]
