@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -189,7 +188,7 @@ public class Compiler {
 
   /** Compiles the tuple arguments to "apply". */
   public List<Code> compileArgs(
-      Context cx, Collection<? extends Core.Exp> expressions) {
+      Context cx, List<? extends Core.Exp> expressions) {
     return transformEager(expressions, e -> compile(cx, e));
   }
 

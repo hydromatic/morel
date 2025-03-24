@@ -22,9 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -37,7 +34,6 @@ import java.util.SortedMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Utilities. */
 public class Static {
@@ -51,17 +47,6 @@ public class Static {
    */
   public static final boolean SKIP =
       getBooleanProperty("skipMorelBuiltIns", false);
-
-  /**
-   * Method handle for {@link ImmutableList#builderWithExpectedSize(int)} (Guava
-   * 23.1 and higher).
-   */
-  private static final @Nullable MethodHandle
-      BUILDER_WITH_EXPECTED_SIZE_METHOD =
-          findStaticOptional(
-              ImmutableList.class,
-              "builderWithExpectedSize",
-              MethodType.methodType(ImmutableList.Builder.class, int.class));
 
   /**
    * Returns the value of a system property, converted into a boolean value.
@@ -224,8 +209,9 @@ public class Static {
    */
   public static <E, T> ImmutableList<T> transformEager(
       Iterable<? extends E> elements, Function<E, T> mapper) {
-    if (elements instanceof Collection) {
-      // If elements is a Collection, we can optimize by pre-sizing the builder
+    if (elements instanceof List) {
+      // If elements is a List, we can optimize by pre-sizing the builder.
+      // (We could also check for Collection, but it's not worth the effort.)
       return transformEager((Collection<? extends E>) elements, mapper);
     }
     final ImmutableList.Builder<T> b = ImmutableList.builder();
@@ -249,25 +235,37 @@ public class Static {
     }
 
     // Optimize by making the builder the same size as the collection.
-    final ImmutableList.Builder<T> b = builderWithExpectedSize(elements.size());
+    final ImmutableList.Builder<T> b =
+        ImmutableList.builderWithExpectedSize(elements.size());
     elements.forEach(e -> b.add(mapper.apply(e)));
     return b.build();
   }
 
-  /** Equivalent to {@link ImmutableList#builderWithExpectedSize(int)}. */
-  @SuppressWarnings("unchecked")
-  public static <E> ImmutableList.Builder<E> builderWithExpectedSize(
-      int expectedSize) {
-    if (BUILDER_WITH_EXPECTED_SIZE_METHOD == null) {
-      return ImmutableList.builder();
-    }
-    try {
-      return (ImmutableList.Builder<E>)
-          BUILDER_WITH_EXPECTED_SIZE_METHOD.invoke(expectedSize);
-    } catch (RuntimeException | Error e) {
-      throw e;
-    } catch (Throwable e) {
-      throw new RuntimeException(e);
+  /**
+   * Eagerly converts a List to an ImmutableList, applying a mapping function to
+   * each element.
+   *
+   * <p>More efficient than {@link #transformEager(Collection, Function)},
+   * because we can avoid creating a builder for a singleton list.
+   */
+  public static <E, T> ImmutableList<T> transformEager(
+      List<? extends E> elements, Function<E, T> mapper) {
+    switch (elements.size()) {
+      case 0:
+        // Save ourselves the effort of creating a Builder.
+        return ImmutableList.of();
+
+      case 1:
+        // Save ourselves the effort of creating a Builder, and go directly to a
+        // singleton list.
+        return ImmutableList.of(mapper.apply(elements.get(0)));
+
+      default:
+        // Optimize by making the builder the same size as the collection.
+        final ImmutableList.Builder<T> b =
+            ImmutableList.builderWithExpectedSize(elements.size());
+        elements.forEach(e -> b.add(mapper.apply(e)));
+        return b.build();
     }
   }
 
@@ -319,17 +317,6 @@ public class Static {
   public static boolean endsWith(StringBuilder buf, String s) {
     final int i = buf.length() - s.length();
     return i >= 0 && buf.indexOf(s, i) == i;
-  }
-
-  /** Looks up a method and returns its handle, or null if not found. */
-  @SuppressWarnings("SameParameterValue")
-  private static @Nullable MethodHandle findStaticOptional(
-      Class<?> refc, String name, MethodType type) {
-    try {
-      return MethodHandles.lookup().findStatic(refc, name, type);
-    } catch (NoSuchMethodException | IllegalAccessException e) {
-      return null;
-    }
   }
 }
 

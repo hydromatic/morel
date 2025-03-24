@@ -1492,8 +1492,7 @@ public class TypeResolver {
     }
   }
 
-  private List<Unifier.Term> toTerms(
-      Collection<? extends Type> types, Subst subst) {
+  private List<Unifier.Term> toTerms(List<? extends Type> types, Subst subst) {
     return transformEager(types, type -> toTerm(type, subst));
   }
 
@@ -1545,7 +1544,8 @@ public class TypeResolver {
           }
           result = b.toString();
         }
-        final List<Unifier.Term> args = toTerms(argNameTypes.values(), subst);
+        final List<Unifier.Term> args =
+            transformEager(argNameTypes.values(), t -> toTerm(t, subst));
         return unifier.apply(result, args);
       case LIST:
         final ListType listType = (ListType) type;
