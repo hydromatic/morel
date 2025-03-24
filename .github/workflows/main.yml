@@ -41,14 +41,14 @@ jobs:
         javadoc: [ false ]
         include:
           - java-version: "8"
-            guava-version: "21.0"
+            guava-version: "23.1"
             hsqldb-version: "2.5.1"
             checkstyle-version: "9.3"
           - java-version: "11"
           - java-version: "17"
             javadoc: true
           - java-version: "21"
-            guava-version: "23.0"
+            guava-version: "31.1-jre"
           - java-version: "21"
 
     steps:
