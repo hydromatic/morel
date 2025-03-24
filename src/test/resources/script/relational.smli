@@ -318,26 +318,28 @@ from e in emps
 
 (*) 'distinct' is equivalent to 'group' with all fields
 (*) Query 1, using `distinct`
+(*) (The 'order' clause is for deterministic results.)
 from e in scott.emp
   yield {e.job, e.deptno}
-  distinct;
+  distinct
+  order job, deptno;
 > val it =
->   [{deptno=10,job="MANAGER"},{deptno=10,job="PRESIDENT"},
->    {deptno=20,job="CLERK"},{deptno=30,job="MANAGER"},{deptno=20,job="ANALYST"},
->    {deptno=30,job="SALESMAN"},{deptno=30,job="CLERK"},
->    {deptno=20,job="MANAGER"},{deptno=10,job="CLERK"}]
->   : {deptno:int, job:string} list
+>   [{deptno=20,job="ANALYST"},{deptno=10,job="CLERK"},{deptno=20,job="CLERK"},
+>    {deptno=30,job="CLERK"},{deptno=10,job="MANAGER"},{deptno=20,job="MANAGER"},
+>    {deptno=30,job="MANAGER"},{deptno=10,job="PRESIDENT"},
+>    {deptno=30,job="SALESMAN"}] : {deptno:int, job:string} list
 
 (*) Query 2, using `group` with no aggregate functions, equivalent to query 1
+(*) (The 'order' clause is for deterministic results.)
 from e in scott.emp
   yield {e.job, e.deptno}
-  group job, deptno;
+  group job, deptno
+  order job, deptno;
 > val it =
->   [{deptno=10,job="MANAGER"},{deptno=10,job="PRESIDENT"},
->    {deptno=20,job="CLERK"},{deptno=30,job="MANAGER"},{deptno=20,job="ANALYST"},
->    {deptno=30,job="SALESMAN"},{deptno=30,job="CLERK"},
->    {deptno=20,job="MANAGER"},{deptno=10,job="CLERK"}]
->   : {deptno:int, job:string} list
+>   [{deptno=20,job="ANALYST"},{deptno=10,job="CLERK"},{deptno=20,job="CLERK"},
+>    {deptno=30,job="CLERK"},{deptno=10,job="MANAGER"},{deptno=20,job="MANAGER"},
+>    {deptno=30,job="MANAGER"},{deptno=10,job="PRESIDENT"},
+>    {deptno=30,job="SALESMAN"}] : {deptno:int, job:string} list
 
 
 (*) Function defined inside query
@@ -1669,11 +1671,12 @@ let
 
   fun pipeline emps =
     from e in process (clean emps)
-    yield e.deptno + e.count
+    yield {i = e.deptno + e.count}
+    order i
 in
   pipeline scott.emp
 end;
-> val it = [24,13,35] : int list
+> val it = [13,24,35] : int list
 
 let
   fun clean emps =
@@ -1683,6 +1686,7 @@ let
   fun process emps =
     from e in emps
     group e.deptno compute count, sum of e.sal
+    order deptno
 
   fun pipeline emps =
     from e in emps
@@ -1692,7 +1696,7 @@ in
   pipeline scott.emp
 end;
 > val it =
->   [{count=4,deptno=20,sum=10075.0},{count=3,deptno=10,sum=8750.0},
+>   [{count=3,deptno=10,sum=8750.0},{count=4,deptno=20,sum=10075.0},
 >    {count=5,deptno=30,sum=8450.0}] : {count:int, deptno:int, sum:real} list
 
 from d in scott.dept

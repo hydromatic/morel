@@ -86,8 +86,8 @@ License.
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
     <googleformatter-maven-plugin.version>1.7.5</googleformatter-maven-plugin.version>
-    <!-- We support (and test) Guava as low as 21. -->
-    <guava.version>33.4.0-jre</guava.version>
+    <!-- We support (and test) Guava as low as 23.1-jre. -->
+    <guava.version>33.4.5-jre</guava.version>
     <hamcrest.version>3.0</hamcrest.version>
     <!-- We support (and test) HSQLDB as low as 2.5.1.
          In JDK 8, you must add '-Dhsqldb.version=2.5.1' because
