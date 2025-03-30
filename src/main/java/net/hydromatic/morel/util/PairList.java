@@ -60,6 +60,23 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
     return new PairLists.MutablePairList<>(new ArrayList<>(list));
   }
 
+  /**
+   * Creates a PairList whose contents are a copy of a given collection of
+   * pairs.
+   */
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  static <T, U> PairList<T, U> copyOf(
+      Iterable<? extends Map.Entry<T, U>> list) {
+    if (list instanceof PairLists.AbstractPairList) {
+      // It's quicker to copy the backing list.
+      List backingList = ((PairLists.AbstractPairList) list).backingList();
+      return backedBy(new ArrayList<>(backingList));
+    }
+    final Builder<T, U> builder = builder();
+    list.forEach(entry -> builder.add(entry.getKey(), entry.getValue()));
+    return builder.build();
+  }
+
   /** Creates an empty PairList with a specified initial capacity. */
   static <T, U> PairList<T, U> withCapacity(int initialCapacity) {
     return backedBy(new ArrayList<>(initialCapacity));

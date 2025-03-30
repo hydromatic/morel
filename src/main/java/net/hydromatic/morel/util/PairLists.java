@@ -206,16 +206,28 @@ class PairLists {
     @SuppressWarnings("unchecked")
     @Override
     public List<T> leftList() {
-      final int size = list.size() / 2;
       return new RandomAccessList<T>() {
         @Override
         public int size() {
-          return size;
+          return list.size() / 2;
         }
 
         @Override
         public T get(int index) {
           return (T) list.get(index * 2);
+        }
+
+        @Override
+        public T set(int index, T element) {
+          return (T) list.set(index * 2, element);
+        }
+
+        @Override
+        public T remove(int index) {
+          T t = (T) list.remove(index * 2);
+          @SuppressWarnings("unused")
+          U u = (U) list.remove(index * 2);
+          return t;
         }
       };
     }
@@ -223,16 +235,29 @@ class PairLists {
     @SuppressWarnings("unchecked")
     @Override
     public List<U> rightList() {
-      final int size = list.size() / 2;
       return new RandomAccessList<U>() {
         @Override
         public int size() {
-          return size;
+          return list.size() / 2;
         }
 
         @Override
         public U get(int index) {
           return (U) list.get(index * 2 + 1);
+        }
+
+        @Override
+        public U set(int index, U element) {
+          return (U) list.set(index * 2 + 1, element);
+        }
+
+        @Override
+        public U remove(int index) {
+          @SuppressWarnings("unused")
+          T t = (T) list.remove(index * 2);
+          @SuppressWarnings("UnnecessaryLocalVariable")
+          U u = (U) list.remove(index * 2);
+          return u;
         }
       };
     }

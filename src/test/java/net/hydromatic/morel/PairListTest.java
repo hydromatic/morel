@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -34,6 +35,7 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.RandomAccess;
@@ -300,6 +302,68 @@ class PairListTest {
                 + "<m, 13>, <n, 14>, <o, 15>]"));
   }
 
+  /**
+   * Tests {@link List#set(int, Object)} and {@link List#remove(Object)}
+   * operations on { @link {@link PairList#leftList()}} and { @link {@link
+   * PairList#rightList()}}.
+   */
+  @Test
+  void testRemove() {
+    final PairList<String, Integer> list = PairList.copyOf("a", 1, "b", null);
+    assertThat(list, hasSize(2));
+    assertThat(list, hasToString("[<a, 1>, <b, null>]"));
+
+    assertThat(list.leftList(), hasSize(2));
+    assertThat(list.leftList(), hasToString("[a, b]"));
+    assertThat(list.rightList(), hasSize(2));
+    assertThat(list.rightList(), hasToString("[1, null]"));
+
+    list.leftList().set(0, "c");
+    assertThat(list, hasSize(2));
+    assertThat(list, hasToString("[<c, 1>, <b, null>]"));
+
+    list.rightList().set(0, 3);
+    assertThat(list, hasSize(2));
+    assertThat(list, hasToString("[<c, 3>, <b, null>]"));
+
+    list.leftList().set(1, "z");
+    assertThat(list, hasSize(2));
+    assertThat(list, hasToString("[<c, 3>, <z, null>]"));
+    assertThat(list.leftList(), hasToString("[c, z]"));
+
+    list.rightList().set(1, 9);
+    assertThat(list, hasSize(2));
+    assertThat(list, hasToString("[<c, 3>, <z, 9>]"));
+    assertThat(list.rightList(), hasToString("[3, 9]"));
+
+    final String removed = list.leftList().remove(0);
+    assertThat(removed, is("c"));
+    assertThat(list.leftList(), hasSize(1));
+    assertThat(list.leftList(), hasToString("[z]"));
+    assertThat(list.rightList(), hasSize(1));
+    assertThat(list.rightList(), hasToString("[9]"));
+    assertThat(list, hasSize(1));
+    assertThat(list, hasToString("[<z, 9>]"));
+    try {
+      Integer removed2 = list.rightList().remove(1);
+      fail("expected failure, got " + removed2);
+    } catch (IndexOutOfBoundsException e) {
+      assertThat(
+          e.getMessage(),
+          anyOf(
+              hasToString("Index: 2, Size: 2"), // JDK 8
+              hasToString("Index 2 out of bounds for length 2"))); // later JDK
+    }
+    final Integer removed3 = list.rightList().remove(0);
+    assertThat(removed3, is(9));
+    assertThat(list.leftList(), empty());
+    assertThat(list.leftList(), hasToString("[]"));
+    assertThat(list.rightList(), empty());
+    assertThat(list.rightList(), hasToString("[]"));
+    assertThat(list, empty());
+    assertThat(list, hasToString("[]"));
+  }
+
   /** Tests {@link PairList#of(Map)} and {@link PairList#toImmutableMap()}. */
   @Test
   void testPairListOfMap() {
@@ -349,6 +413,7 @@ class PairListTest {
     assertThat(list, hasToString("[<b, 2>]"));
   }
 
+  /** Tests {@link PairList#of()} and {@link PairList#copyOf(Iterable)}. */
   @Test
   void testPairListOf() {
     final PairList<String, Integer> list0 = PairList.of();
@@ -356,14 +421,38 @@ class PairListTest {
     assertThat(list0, empty());
     assertThat(list0, hasToString("[]"));
 
+    // Now create lists equivalent to list0 using copyOf
+    final PairList<String, Integer> list0b =
+        PairList.copyOf(ImmutableMap.<String, Integer>of().entrySet());
+    assertThat(list0b, hasToString(list0.toString()));
+    final PairList<String, Integer> list0c = PairList.copyOf(list0);
+    assertThat(list0c, hasToString(list0.toString()));
+
     final PairList<String, Integer> list1 = PairList.of("a", 1);
     assertThat(list1, hasSize(1));
     assertThat(list1, hasToString("[<a, 1>]"));
+
+    // Now create lists equivalent to list1 using copyOf
+    final PairList<String, Integer> list1b =
+        PairList.copyOf(ImmutableMap.of("a", 1).entrySet());
+    assertThat(list1b, hasToString(list1.toString()));
+    final PairList<String, Integer> list1c = PairList.copyOf(list1);
+    assertThat(list1c, hasToString(list1.toString()));
 
     final PairList<String, Integer> list3 =
         PairList.copyOf("a", 1, "b", null, "c", 3);
     assertThat(list3, hasSize(3));
     assertThat(list3, hasToString("[<a, 1>, <b, null>, <c, 3>]"));
+
+    // Now create lists equivalent to list3 using copyOf
+    final Map<String, Integer> map = new LinkedHashMap<>();
+    map.put("a", 1);
+    map.put("b", null);
+    map.put("c", 3);
+    final PairList<String, Integer> list3b = PairList.copyOf(map.entrySet());
+    assertThat(list3b, hasToString(list3.toString()));
+    final PairList<String, Integer> list3c = PairList.copyOf(list3);
+    assertThat(list3c, hasToString(list3.toString()));
 
     assertThrows(
         IllegalArgumentException.class,
