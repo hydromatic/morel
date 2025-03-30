@@ -41,6 +41,7 @@ import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.type.Type.Key;
@@ -53,7 +54,7 @@ import net.hydromatic.morel.util.Pair;
  */
 public class TypeSystem {
   final Map<String, Type> typeByName = new HashMap<>();
-  final Map<String, Type> internalTypeByName = new HashMap<>();
+  final Map<BuiltIn.BuiltInType, Type> builtInTypes = new HashMap<>();
   final Map<Key, Type> typeByKey = new HashMap<>();
 
   private final Map<String, Pair<DataType, Type.Key>> typeConstructorByName =
@@ -96,11 +97,18 @@ public class TypeSystem {
     return typeVars.isEmpty() ? type : forallType(typeVars.size(), type);
   }
 
-  /** Looks up an internal type by name. */
-  public Type lookupInternal(String name) {
-    final Type type = internalTypeByName.get(name);
+  /**
+   * Looks up a built-in type.
+   *
+   * <p>This is the only way to get internal built-in types (such as {@link
+   * BuiltIn.Datatype#BOOL}); non-internal built-in types (such as {@link
+   * BuiltIn.Datatype#ORDER} and {@link BuiltIn.Datatype#OPTION}) can also be
+   * retrieved by name.
+   */
+  public Type lookup(BuiltIn.BuiltInType builtInType) {
+    final Type type = builtInTypes.get(builtInType);
     if (type == null) {
-      throw new AssertionError("unknown type: " + name);
+      throw new AssertionError("unknown type: " + builtInType);
     }
     return type;
   }
@@ -265,9 +273,17 @@ public class TypeSystem {
    * Converts a regular type to an internal type. Throws if the type is not
    * known.
    */
-  public void setInternal(String name) {
-    final Type type = typeByName.remove(name);
-    internalTypeByName.put(name, type);
+  public void setBuiltIn(BuiltIn.BuiltInType datatype) {
+    final Type type;
+    if (datatype.isInternal()) {
+      // Internal types can only be accessed by name.
+      type = typeByName.remove(datatype.mlName());
+    } else {
+      // Non-internal built-in types can be accessed by name or enum.
+      type = typeByName.get(datatype.mlName());
+    }
+    requireNonNull(type, datatype.mlName());
+    builtInTypes.put(datatype, type);
   }
 
   /**
@@ -495,13 +511,18 @@ public class TypeSystem {
     return (TypeVar) typeFor(Keys.ordinal(ordinal));
   }
 
+  /** Creates an "order" type. */
+  public Type order() {
+    return lookup(BuiltIn.Datatype.ORDER);
+  }
+
   /**
    * Creates an "option" type.
    *
    * <p>"option(type)" is shorthand for "apply(lookup("option"), type)".
    */
   public Type option(Type type) {
-    final Type optionType = lookup("option");
+    final Type optionType = lookup(BuiltIn.Datatype.OPTION);
     return apply(optionType, type);
   }
 
@@ -511,7 +532,7 @@ public class TypeSystem {
    * <p>"vector(type)" is shorthand for "apply(lookup("vector"), type)".
    */
   public Type vector(Type type) {
-    final Type vectorType = lookup("vector");
+    final Type vectorType = lookup(BuiltIn.Eqtype.VECTOR);
     return apply(vectorType, type);
   }
 

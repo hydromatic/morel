@@ -324,9 +324,7 @@ public enum BuiltIn {
 
   /** Function "Int.compare", of type "int * int &rarr; order". */
   INT_COMPARE(
-      "Int",
-      "compare",
-      ts -> ts.fnType(ts.tupleType(INT, INT), ts.lookup("order"))),
+      "Int", "compare", ts -> ts.fnType(ts.tupleType(INT, INT), ts.order())),
 
   /** Function "Int.div", of type "int * int &rarr; int". */
   INT_DIV("Int", "div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
@@ -1026,10 +1024,9 @@ public enum BuiltIn {
               1,
               h ->
                   ts.fnType(
-                      ts.fnType(
-                          ts.tupleType(h.get(0), h.get(0)), ts.lookup("order")),
+                      ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()),
                       ts.tupleType(h.list(0), h.list(0)),
-                      ts.lookup("order")))),
+                      ts.order()))),
 
   /**
    * Function "Math.acos", of type "real &rarr; real".
@@ -1432,9 +1429,7 @@ public enum BuiltIn {
    * <p>Returns {@code x} with the sign of {@code y}, even if y is NaN.
    */
   REAL_COMPARE(
-      "Real",
-      "compare",
-      ts -> ts.fnType(ts.tupleType(REAL, REAL), ts.lookup("order"))),
+      "Real", "compare", ts -> ts.fnType(ts.tupleType(REAL, REAL), ts.order())),
 
   /**
    * Function "Real.copySign", of type "real * real &rarr; real".
@@ -2317,10 +2312,9 @@ public enum BuiltIn {
               1,
               h ->
                   ts.fnType(
-                      ts.fnType(
-                          ts.tupleType(h.get(0), h.get(0)), ts.lookup("order")),
+                      ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()),
                       ts.tupleType(h.vector(0), h.vector(0)),
-                      ts.lookup("order")))),
+                      ts.order()))),
 
   /** Internal operator "andalso", of type "bool * bool &rarr; bool". */
   Z_ANDALSO("$", "andalso", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
@@ -2517,80 +2511,43 @@ public enum BuiltIn {
    * option}, {@code vector}.
    */
   public static void dataTypes(TypeSystem typeSystem, List<Binding> bindings) {
-    defineDataType(
-        typeSystem,
-        bindings,
-        "order",
-        false,
-        0,
-        h -> h.tyCon("LESS").tyCon("EQUAL").tyCon("GREATER"));
-    defineDataType(
-        typeSystem,
-        bindings,
-        "option",
-        false,
-        1,
-        h -> h.tyCon("NONE").tyCon("SOME", h.get(0)));
-    defineEqType(typeSystem, "vector", 1);
-
-    // Define two internal datatypes:
-    //   datatype 'a list = NIL | CONS of ('a * 'a list);
-    //   datatype bool = FALSE | TRUE;
-    // These are not available from within programs but are used by the
-    // match coverage checker.
-    defineDataType(
-        typeSystem,
-        bindings,
-        "$list",
-        true,
-        1,
-        h -> h.tyCon("NIL").tyCon("CONS", h.get(0)));
-    defineDataType(
-        typeSystem,
-        bindings,
-        "$bool",
-        true,
-        0,
-        h -> h.tyCon("FALSE").tyCon("TRUE"));
+    for (Datatype datatype : Datatype.values()) {
+      defineType(typeSystem, bindings, datatype);
+    }
+    for (Eqtype eqtype : Eqtype.values()) {
+      defineType(typeSystem, bindings, eqtype);
+    }
   }
 
-  private static void defineEqType(TypeSystem ts, String name, int varCount) {
-    defineDataType(ts, new ArrayList<>(), name, false, varCount, h -> h);
-  }
-
-  private static void defineDataType(
-      TypeSystem ts,
-      List<Binding> bindings,
-      String name,
-      boolean internal,
-      int varCount,
-      UnaryOperator<DataTypeHelper> transform) {
+  private static void defineType(
+      TypeSystem ts, List<Binding> bindings, BuiltInType builtInType) {
     final List<TypeVar> tyVars = new ArrayList<>();
-    for (int i = 0; i < varCount; i++) {
+    for (int i = 0; i < builtInType.varCount(); i++) {
       tyVars.add(ts.typeVariable(i));
     }
     final SortedMap<String, Type.Key> tyCons = new TreeMap<>();
-    transform.apply(
-        new DataTypeHelper() {
-          public DataTypeHelper tyCon(String name, Type.Key typeKey) {
-            tyCons.put(name, typeKey);
-            return this;
-          }
+    builtInType
+        .transform()
+        .apply(
+            new DataTypeHelper() {
+              public DataTypeHelper tyCon(String name, Type.Key typeKey) {
+                tyCons.put(name, typeKey);
+                return this;
+              }
 
-          public DataTypeHelper tyCon(String name) {
-            return tyCon(name, Keys.dummy());
-          }
+              public DataTypeHelper tyCon(String name) {
+                return tyCon(name, Keys.dummy());
+              }
 
-          public Type.Key get(int i) {
-            return tyVars.get(i).key();
-          }
-        });
-    final Type type = ts.dataTypeScheme(name, tyVars, tyCons);
+              public Type.Key get(int i) {
+                return tyVars.get(i).key();
+              }
+            });
+    final Type type = ts.dataTypeScheme(builtInType.mlName(), tyVars, tyCons);
     final DataType dataType =
         (DataType) (type instanceof DataType ? type : ((ForallType) type).type);
-    if (internal) {
-      ts.setInternal(name);
-    } else {
+    ts.setBuiltIn(builtInType);
+    if (!builtInType.isInternal()) {
       tyCons
           .keySet()
           .forEach(
@@ -2643,6 +2600,116 @@ public enum BuiltIn {
   public void prefer(Consumer<PrimitiveType> consumer) {
     if (preferredType != null) {
       consumer.accept(preferredType);
+    }
+  }
+
+  /** Built-in type. */
+  public interface BuiltInType {
+    String mlName();
+
+    int varCount();
+
+    default UnaryOperator<DataTypeHelper> transform() {
+      return UnaryOperator.identity();
+    }
+
+    default boolean isInternal() {
+      return false;
+    }
+  }
+
+  /**
+   * Built-in datatype.
+   *
+   * <p>{@code order} and {@code option} are non-internal.
+   *
+   * <p>The two internal datatypes,
+   *
+   * <pre>{@code
+   * datatype 'a list = NIL | CONS of ('a * 'a list);
+   * datatype bool = FALSE | TRUE;
+   * }</pre>
+   *
+   * <p>are not available from within programs but used for internal purposes.
+   */
+  public enum Datatype implements BuiltInType {
+    ORDER(
+        "order",
+        false,
+        0,
+        h -> h.tyCon("LESS").tyCon("EQUAL").tyCon("GREATER")),
+
+    OPTION("option", false, 1, h -> h.tyCon("NONE").tyCon("SOME", h.get(0))),
+
+    /**
+     * Analog of {@code list} for checking that matches are exhaustive. Owns the
+     * {@code NIL} and {@code CONS} type constructors.
+     */
+    LIST("$list", true, 1, h -> h.tyCon("NIL").tyCon("CONS", h.get(0))),
+
+    /**
+     * Analog of {@code bool} for checking that matches are exhaustive. Owns the
+     * {@code FALSE} and {@code TRUE} type constructors.
+     */
+    BOOL("$bool", true, 0, h -> h.tyCon("FALSE").tyCon("TRUE"));
+
+    private final String mlName;
+    private final boolean internal;
+    private final int varCount;
+    private final UnaryOperator<DataTypeHelper> transform;
+
+    Datatype(
+        String mlName,
+        boolean internal,
+        int varCount,
+        UnaryOperator<DataTypeHelper> transform) {
+      this.mlName = requireNonNull(mlName, "mlName");
+      this.internal = internal;
+      this.varCount = varCount;
+      this.transform = requireNonNull(transform, "transform");
+    }
+
+    @Override
+    public String mlName() {
+      return mlName;
+    }
+
+    @Override
+    public int varCount() {
+      return varCount;
+    }
+
+    @Override
+    public UnaryOperator<DataTypeHelper> transform() {
+      return transform;
+    }
+
+    @Override
+    public boolean isInternal() {
+      return internal;
+    }
+  }
+
+  /** Built-in equality type. */
+  public enum Eqtype implements BuiltInType {
+    VECTOR("vector", 1);
+
+    private final String mlName;
+    private final int varCount;
+
+    Eqtype(String mlName, int varCount) {
+      this.mlName = requireNonNull(mlName, "mlName");
+      this.varCount = varCount;
+    }
+
+    @Override
+    public String mlName() {
+      return mlName;
+    }
+
+    @Override
+    public int varCount() {
+      return varCount;
     }
   }
 }
