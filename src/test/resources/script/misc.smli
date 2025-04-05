@@ -23,4 +23,17 @@
 from p in (from p in [{a=1,b=2}] where p.a = 1);
 > val it = [{a=1,b=2}] : {a:int, b:int} list
 
+(* [MOREL-250] Inliner generates invalid plan if dead code occurs in a nested
+   let. *)
+let
+  val bind = fn x => [x]
+in
+  let
+    val three = 1 + 2
+  in
+    bind "a"
+  end
+end;
+> val it = ["a"] : string list
+
 (*) End misc.smli

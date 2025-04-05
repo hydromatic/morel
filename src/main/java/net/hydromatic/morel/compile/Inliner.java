@@ -202,7 +202,7 @@ public class Inliner extends EnvShuttle {
     switch (use) {
       case DEAD:
         // This declaration has no uses; remove it
-        return let.exp;
+        return let.exp.accept(this);
 
       case ATOMIC:
       case ONCE_SAFE:
