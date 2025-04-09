@@ -934,12 +934,12 @@ public class TypeResolver {
       TypeEnv env,
       Ast.ValBind valBind,
       Map<Ast.IdPat, Unifier.Term> termMap,
-      Unifier.Variable v,
       Unifier.Variable vPat) {
     deducePatType(env, valBind.pat, termMap, null, vPat);
     final Ast.Exp e2 = deduceType(env, valBind.exp, vPat);
     final Ast.ValBind valBind2 = valBind.copy(valBind.pat, e2);
-    return reg(valBind2, v, unifier.apply(FN_TY_CON, vPat, vPat));
+    map.put(valBind2, toTerm(PrimitiveType.UNIT));
+    return valBind2;
   }
 
   private static TypeEnv bindAll(
@@ -1042,11 +1042,7 @@ public class TypeResolver {
             valBinds.add(
                 (Ast.ValBind)
                     deduceValBindType(
-                        env2,
-                        valBind,
-                        termMap,
-                        unifier.variable(),
-                        vPatSupplier.get())));
+                        env2, valBind, termMap, vPatSupplier.get())));
     Ast.Decl node2 = valDecl.copy(valBinds);
     map.put(node2, toTerm(PrimitiveType.UNIT));
     return node2;
