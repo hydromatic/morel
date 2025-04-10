@@ -848,7 +848,8 @@ public class Compiler {
           "match",
           d ->
               patCodes.forEach(
-                  (pat, code) -> d.arg("", pat.toString()).arg("", code)));
+                  (pat, code) ->
+                      d.arg("", pat.describe(describer)).arg("", code)));
     }
 
     @Override

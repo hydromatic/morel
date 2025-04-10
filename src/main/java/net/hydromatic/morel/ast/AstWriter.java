@@ -29,7 +29,7 @@ public class AstWriter {
   private final boolean parenthesize;
 
   private AstWriter(StringBuilder b, boolean parenthesize) {
-    this.b = new StringBuilder();
+    this.b = b;
     this.parenthesize = parenthesize;
   }
 
@@ -61,19 +61,19 @@ public class AstWriter {
   }
 
   /** Appends an identifier to the output. */
-  public AstWriter id(String s) {
-    b.append(s);
+  public AstWriter id(String name) {
+    b.append(name);
     return this;
   }
 
   /**
-   * Appends a ordinal-qualified-identifier to the output.
+   * Appends an ordinal-qualified-identifier to the output.
    *
    * <p>Prints "v" for {@code id("v", 0)}, "v#1" for {@code id("v", 1)}, and so
    * forth.
    */
-  public AstWriter id(String s, int i) {
-    b.append(s);
+  public AstWriter id(String name, int i) {
+    b.append(name);
     if (i > 0) {
       b.append('_').append(i);
     }

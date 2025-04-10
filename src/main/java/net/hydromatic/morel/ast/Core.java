@@ -42,6 +42,7 @@ import net.hydromatic.morel.compile.Extents;
 import net.hydromatic.morel.compile.Resolver;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
+import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
@@ -109,6 +110,30 @@ public class Core {
 
     @Override
     public abstract Pat accept(Shuttle shuttle);
+
+    /**
+     * Converts this pattern to a string.
+     *
+     * <p>The result is similar to that of {@link #toString()}, except that
+     * identifiers are permuted. For example, if a pattern includes "c.3" and
+     * "c.2" but not "c.0" or "c.1", then "c.3" will be printed as "c" and "c.2"
+     * will be printed as "c.1".
+     *
+     * <p>This behavior makes plans more concise if their local variables happen
+     * to have the same name as other variables that occur in functions in the
+     * session history.
+     */
+    public String describe(Describer describer) {
+      final AstWriter w =
+          new AstWriter() {
+            @Override
+            public AstWriter id(String name, int i) {
+              int j = describer.register(name, i);
+              return super.id(name, j);
+            }
+          };
+      return unparse(w);
+    }
   }
 
   /**

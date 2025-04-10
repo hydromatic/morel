@@ -24,6 +24,24 @@ import java.util.function.Consumer;
 public interface Describer {
   Describer start(String name, Consumer<Detail> detail);
 
+  /**
+   * Registers a (name, ordinal) combination, and returns how many occurrences
+   * of the same name with a different ordinal have been seen before.
+   *
+   * <p>For example:
+   *
+   * <ul>
+   *   <li>register("a", 0) returns 0;
+   *   <li>register("b", 3) returns 0;
+   *   <li>register("b", 2) returns 1;
+   *   <li>register("b", 3) returns 0;
+   *   <li>register("a", 42) returns 1.
+   * </ul>
+   *
+   * @see net.hydromatic.morel.ast.Core.Pat#describe(Describer)
+   */
+  int register(String name, int i);
+
   /** Provided as a callback while describing a node. */
   interface Detail {
     Detail arg(String name, Object value);
