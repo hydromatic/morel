@@ -1014,10 +1014,10 @@ public class MainTest {
     // With inlining, we want the plan to simplify to
     // "fn (a, b, c) => (a + b) * 3 - c"
     final String plan =
-        "match(v0, apply(fnCode match((a, b, c), "
+        "match(v, apply(fnCode match((a, b, c), "
             + "apply2(fnValue -, apply2(fnValue *, "
             + "apply2(fnValue +, get(name a), get(name b)), "
-            + "constant(3)), get(name c))), argCode get(name v0)))";
+            + "constant(3)), get(name c))), argCode get(name v)))";
     ml(ml)
         // g (4, 3, 2) = (4 + 3) * 3 - 2 = 19
         .assertEval(whenAppliedTo(list(4, 3, 2), is(19)))
@@ -2481,7 +2481,7 @@ public class MainTest {
             + "end";
     final String code =
         "from(sink\n"
-            + "  join(pat v0,\n"
+            + "  join(pat v$0,\n"
             + "  exp from(\n"
             + "    sink join(pat e, exp tuple(\n"
             + "  tuple(constant(10), constant(100), constant(Fred)),\n"
@@ -2491,7 +2491,7 @@ public class MainTest {
             + " sink collect(tuple(apply(fnValue nth:2, argCode get(name e)), "
             + "apply(fnValue nth:0, argCode get(name e)))))), "
             + "sink join(pat n_1, exp tuple(\n"
-            + " apply(fnValue nth:0, argCode get(name v0))), "
+            + " apply(fnValue nth:0, argCode get(name v$0))), "
             + "sink join(pat d_1, exp tuple(constant(30)), "
             + "sink where(condition apply2(fnValue elem,\n"
             + "                            tuple(get(name n), get(name d)), "
@@ -2587,10 +2587,10 @@ public class MainTest {
             + "where {deptno, loc, dname = name} elem scott.dept";
     final String core =
         "val it = "
-            + "from v0 in #dept scott "
-            + "join loc in [#loc v0] "
-            + "join deptno in [#deptno v0] "
-            + "join name in [#dname v0] "
+            + "from v$0 in #dept scott "
+            + "join loc in [#loc v$0] "
+            + "join deptno in [#deptno v$0] "
+            + "join name in [#dname v$0] "
             + "where op elem ({deptno = deptno, dname = name, loc = loc},"
             + " #dept scott) "
             + "yield {deptno = deptno, loc = loc, name = name}";
@@ -2624,9 +2624,9 @@ public class MainTest {
             + "andalso dno > 20";
     final String core1 =
         "val it = "
-            + "from v0 in #dept scott "
-            + "join dno in [#deptno v0] "
-            + "join name in [#dname v0] "
+            + "from v$0 in #dept scott "
+            + "join dno in [#deptno v$0] "
+            + "join name in [#dname v$0] "
             + "where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"},"
             + " #dept scott) "
             + "andalso dno > 20 "
@@ -2655,9 +2655,9 @@ public class MainTest {
             + "andalso dno > 20";
     final String core1 =
         "val it = "
-            + "from v0 in #dept scott "
-            + "join dno in [#deptno v0] "
-            + "join name in [#dname v0] "
+            + "from v$0 in #dept scott "
+            + "join dno in [#deptno v$0] "
+            + "join name in [#dname v$0] "
             + "where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"},"
             + " #dept scott) "
             + "andalso dno > 20 "
@@ -2863,7 +2863,7 @@ public class MainTest {
             + "  join(pat (n_1, d_1),\n"
             + "  exp apply(\n"
             + "    fnCode apply(fnValue List.filter,\n"
-            + "      argCode match(v0,\n"
+            + "      argCode match(v$0,\n"
             + "        apply(fnCode match((n_1, d_1),\n"
             + "            apply(fnCode match((n, d),\n"
             + "                apply2(fnValue elem,\n"
@@ -2875,7 +2875,7 @@ public class MainTest {
             + "      sink collect(tuple(apply(fnValue nth:2, argCode get(name e)),\n"
             + "        apply(fnValue nth:0, argCode get(name e)))))))),\n"
             + "               argCode tuple(get(name n), get(name d)))),\n"
-            + "            argCode get(name v0)))),\n"
+            + "            argCode get(name v$0)))),\n"
             + "          argCode apply(fnValue $.extent, argCode constant(()))),\n"
             + "        sink where(condition apply2(fnValue =, get(name d), constant(30)),\n"
             + "          sink collect(tuple(get(name d), get(name n))))))";

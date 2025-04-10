@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.eval.Unit;
 
 /**
@@ -55,6 +56,15 @@ public class Binding {
 
   public static Binding of(Core.NamedPat id, Object value) {
     return new Binding(id, null, value, false);
+  }
+
+  /** Used by {@link Environment#renumber()}. */
+  public Binding withFlattenedName() {
+    if (id.i == 0) {
+      return this;
+    }
+    return new Binding(
+        id.withName(id.name + '_' + id.i), exp, value, parameter);
   }
 
   @Override

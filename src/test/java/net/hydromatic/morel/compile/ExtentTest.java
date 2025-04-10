@@ -329,14 +329,14 @@ public class ExtentTest {
             assertThat(
                 analysis.extentExp,
                 hasToString(
-                    ("from loc in [#loc v0] "
-                            + "join deptno in [#deptno v0] "
-                            + "join name in [#dname v0]")
-                        .replace("v0", v)));
+                    ("from loc in [#loc v$0] "
+                            + "join deptno in [#deptno v$0] "
+                            + "join name in [#dname v$0]")
+                        .replace("v$0", v)));
             assertThat(analysis.satisfiedFilters, hasSize(3));
             assertThat(
                 analysis.satisfiedFilters.get(0),
-                hasToString("loc = #loc v0".replace("v0", v)));
+                hasToString("loc = #loc v$0".replace("v$0", v)));
           } else {
             assertThat(analysis.extentExp, hasToString("depts"));
             assertThat(analysis.satisfiedFilters, hasSize(1));
@@ -351,19 +351,19 @@ public class ExtentTest {
 
     // from (loc, deptno, name)
     // where op elem ({deptno = deptno, dname = name, loc = loc}, depts)
-    fn.accept("v0", fromBuilder -> fromBuilder.where(condition0));
+    fn.accept("v$0", fromBuilder -> fromBuilder.where(condition0));
 
     // from (loc, deptno, name)
     // where op elem ({deptno = deptno, dname = name, loc = loc}, depts)
     // where deptno > 20
     fn.accept(
-        "v1", fromBuilder -> fromBuilder.where(condition0).where(condition1));
+        "v$1", fromBuilder -> fromBuilder.where(condition0).where(condition1));
 
     // from (loc, deptno, name)
     // where op elem ({deptno = deptno, dname = name, loc = loc}, depts)
     //    andalso deptno > 20
     fn.accept(
-        "v2",
+        "v$2",
         fromBuilder ->
             fromBuilder.where(
                 core.andAlso(f.typeSystem, condition0, condition1)));
@@ -412,9 +412,9 @@ public class ExtentTest {
     assertThat(analysis, notNullValue());
     assertThat(
         analysis.extentExp,
-        hasToString("from dno in [#deptno v0] join name in [#dname v0]"));
+        hasToString("from dno in [#deptno v$0] join name in [#dname v$0]"));
     assertThat(idPats, hasSize(1));
-    assertThat(idPats.leftList().get(0), hasToString("v0"));
+    assertThat(idPats.leftList().get(0), hasToString("v$0"));
   }
 }
 

@@ -117,8 +117,9 @@ public class Resolver {
   /** Creates a root Resolver. */
   public static Resolver of(
       TypeMap typeMap, Environment env, @Nullable Session session) {
-    return new Resolver(
-        typeMap, new NameGenerator(), new HashMap<>(), env, session);
+    NameGenerator nameGenerator =
+        session == null ? new NameGenerator() : session.nameGenerator;
+    return new Resolver(typeMap, nameGenerator, new HashMap<>(), env, session);
   }
 
   /** Binds a Resolver to a new environment. */
@@ -394,7 +395,7 @@ public class Resolver {
   /** Converts an id in a declaration to Core. */
   private Core.IdPat toCorePat(Ast.Id id) {
     final Type type = typeMap.getType(id);
-    return core.idPat(type, id.name, nameGenerator);
+    return core.idPat(type, id.name, nameGenerator::inc);
   }
 
   /**
@@ -548,7 +549,7 @@ public class Resolver {
     final FnType type = (FnType) typeMap.getType(fn);
     final List<Core.Match> matchList =
         transformEager(fn.matchList, this::toCore);
-    return core.fn(fn.pos, type, matchList, nameGenerator);
+    return core.fn(fn.pos, type, matchList, nameGenerator::inc);
   }
 
   private Core.Case toCore(Ast.If if_) {
@@ -632,7 +633,7 @@ public class Resolver {
             && ((DataType) type).typeConstructors.containsKey(idPat.name)) {
           return core.con0Pat((DataType) type, idPat.name);
         }
-        return core.idPat(type, idPat.name, nameGenerator);
+        return core.idPat(type, idPat.name, nameGenerator::inc);
 
       case AS_PAT:
         final Ast.AsPat asPat = (Ast.AsPat) pat;
@@ -868,7 +869,7 @@ public class Resolver {
       } else {
         // This is a complex pattern. Allocate an intermediate variable.
         final String name = nameGenerator.get();
-        final Core.IdPat idPat = core.idPat(pat.type, name, nameGenerator);
+        final Core.IdPat idPat = core.idPat(pat.type, name, nameGenerator::inc);
         final Core.Id id = core.id(idPat);
         final Pos pos = patExps.get(0).pos;
         return core.let(

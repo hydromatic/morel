@@ -42,6 +42,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Extents;
@@ -218,7 +220,7 @@ public enum CoreBuilder {
   }
 
   /** Creates an IdPat with a system-generated unique name. */
-  public Core.IdPat idPat(Type type, NameGenerator nameGenerator) {
+  public Core.IdPat idPat(Type type, Supplier<String> nameGenerator) {
     return idPat(type, nameGenerator.get(), 0);
   }
 
@@ -226,8 +228,9 @@ public enum CoreBuilder {
    * Creates an IdPat with a given name, generating an ordinal to distinguish it
    * from other declarations with the same name elsewhere in the program.
    */
-  public Core.IdPat idPat(Type type, String name, NameGenerator nameGenerator) {
-    return idPat(type, name, nameGenerator.inc(name));
+  public Core.IdPat idPat(
+      Type type, String name, ToIntFunction<String> nameGenerator) {
+    return idPat(type, name, nameGenerator.applyAsInt(name));
   }
 
   @SuppressWarnings("rawtypes")
@@ -461,7 +464,7 @@ public enum CoreBuilder {
       Pos pos,
       FnType type,
       List<Core.Match> matchList,
-      NameGenerator nameGenerator) {
+      ToIntFunction<String> nameGenerator) {
     if (matchList.size() == 1) {
       final Core.Match match = matchList.get(0);
       if (match.pat instanceof Core.IdPat) {
@@ -472,13 +475,13 @@ public enum CoreBuilder {
           && ((Core.TuplePat) match.pat).args.isEmpty()) {
         // Simple function with unit arg, "fn () => exp";
         // needs a new variable, but doesn't need case, "fn (v0: unit) => exp"
-        final Core.IdPat idPat = idPat(type.paramType, nameGenerator);
+        final Core.IdPat idPat = idPat(type.paramType, "v", nameGenerator);
         return fn(type, idPat, match.exp);
       }
     }
     // Complex function, "fn (x, y) => exp";
     // needs intermediate variable and case, "fn v => case v of (x, y) => exp"
-    final Core.IdPat idPat = idPat(type.paramType, nameGenerator);
+    final Core.IdPat idPat = idPat(type.paramType, "v", nameGenerator);
     final Core.Id id = id(idPat);
     return fn(type, idPat, caseOf(pos, type.resultType, id, matchList));
   }
@@ -594,7 +597,7 @@ public enum CoreBuilder {
                 // no sequence numbers.)
                 idPat = ((Core.Id) exp.arg(i)).idPat;
               } else {
-                idPat = idPat(type, name, typeSystem.nameGenerator);
+                idPat = idPat(type, name, typeSystem.nameGenerator::inc);
               }
               bindings.add(Binding.of(idPat));
             });
@@ -606,7 +609,8 @@ public enum CoreBuilder {
             bindings.add(Binding.of(((Core.Id) exp).idPat));
             break;
           default:
-            bindings.add(Binding.of(idPat(exp.type, typeSystem.nameGenerator)));
+            bindings.add(
+                Binding.of(idPat(exp.type, typeSystem.nameGenerator::get)));
         }
     }
     return yield_(bindings, exp);

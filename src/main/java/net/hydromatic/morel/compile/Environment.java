@@ -150,6 +150,40 @@ public abstract class Environment {
     env.visit(bindingList::add);
     return bindAll(reverse(bindingList));
   }
+
+  /**
+   * Creates an environment where all variables have ordinal 0.
+   *
+   * <p>A rather crude hack that papers over some problems when we evaluate
+   * fragments of Morel code in Calcite. The conversion to code currently
+   * produces variables with names like "wordCount_1", and the code is run in an
+   * environment not exactly the same as that in which it was compiled.
+   */
+  public Environment renumber() {
+    class BindingConsumer implements Consumer<Binding> {
+      int changeCount = 0;
+      final Set<String> names = new HashSet<>();
+      final List<Binding> bindings = new ArrayList<>();
+
+      public void accept(Binding binding) {
+        if (!names.add(binding.id.name)) {
+          // Don't consider bindings that are overshadowed
+          return;
+        }
+        Binding binding1 = binding.withFlattenedName();
+        if (binding1 != binding) {
+          ++changeCount;
+        }
+        bindings.add(binding1);
+      };
+    }
+    BindingConsumer consumer = new BindingConsumer();
+    visit(consumer);
+    if (consumer.changeCount == 0) {
+      return this;
+    }
+    return Environments.empty().bindAll(consumer.bindings);
+  }
 }
 
 // End Environment.java

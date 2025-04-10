@@ -84,7 +84,7 @@ public class InlineTest {
   @Test
   void testInlineFnUnit() {
     final String ml = "fun f () = String.size \"abc\"";
-    final String core = "val f = fn v0 => #size String \"abc\"";
+    final String core = "val f = fn v => #size String \"abc\"";
     ml(ml)
         .assertEval(whenAppliedTo(list(), is(3)))
         .assertCore(2, hasToString(core));
@@ -276,15 +276,15 @@ public class InlineTest {
             + "(#emp scott))";
     final String core1 =
         "val it = "
-            + "from v0 in "
+            + "from v$0 in "
             + "#filter List (fn e => #deptno e = 30) (#emp scott) "
-            + "yield (fn e_1 => #empno e_1) v0";
+            + "yield (fn e_1 => #empno e_1) v$0";
     final String core2 =
         "val it = "
-            + "from v2 in #emp scott "
-            + "where #deptno v2 = 30 "
-            + "yield {v0 = v2} "
-            + "yield #empno v0";
+            + "from v$2 in #emp scott "
+            + "where #deptno v$2 = 30 "
+            + "yield {v$0 = v$2} "
+            + "yield #empno v$0";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertCoreString(
@@ -315,21 +315,21 @@ public class InlineTest {
             + " (#filter List (fn e => #deptno e = 30) (#emp scott)))))";
     final String core1 =
         "val it = "
-            + "from v0 in #map List (fn r_1 => #x r_1 + #z r_1)"
+            + "from v$0 in #map List (fn r_1 => #x r_1 + #z r_1)"
             + " (#filter List (fn r => #y r > #z r)"
             + " (#map List (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
             + " (#filter List (fn e => #deptno e = 30) (#emp scott)))) "
-            + "yield (fn r_2 => r_2 + 100) v0";
+            + "yield (fn r_2 => r_2 + 100) v$0";
     final String core2 =
         "val it = "
-            + "from v6 in #emp scott "
-            + "where #deptno v6 = 30 "
-            + "yield {v5 = v6} "
-            + "yield {v4 = {x = #empno v5, y = #deptno v5, z = 15}} "
-            + "where #y v4 > #z v4 "
-            + "yield {v2 = v4} "
-            + "yield {v0 = #x v2 + #z v2} "
-            + "yield v0 + 100";
+            + "from v$6 in #emp scott "
+            + "where #deptno v$6 = 30 "
+            + "yield {v$5 = v$6} "
+            + "yield {v$4 = {x = #empno v$5, y = #deptno v$5, z = 15}} "
+            + "where #y v$4 > #z v$4 "
+            + "yield {v$2 = v$4} "
+            + "yield {v$0 = #x v$2 + #z v$2} "
+            + "yield v$0 + 100";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertCoreString(
@@ -421,8 +421,8 @@ public class InlineTest {
             hasToString(
                 "val it = "
                     + "let"
-                    + " val f = fn v0 => "
-                    + "case v0 of (x, y) => "
+                    + " val f = fn v => "
+                    + "case v of (x, y) => "
                     + "case (x, y) of (x1, y1) => x1 - y1 "
                     + "in"
                     + " f (13, 5) "
@@ -431,8 +431,8 @@ public class InlineTest {
             2,
             hasToString(
                 "val it = "
-                    + "let val v0 = (13, 5) "
-                    + "in case v0 of (x, y) => -:int (x, y) "
+                    + "let val v = (13, 5) "
+                    + "in case v of (x, y) => -:int (x, y) "
                     + "end"))
         .assertEval(is(8));
   }

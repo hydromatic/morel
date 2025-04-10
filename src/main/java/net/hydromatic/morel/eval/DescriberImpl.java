@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/** Implementation of {@link net.hydromatic.morel.eval.Code .Describer}. */
+/** Implementation of {@link net.hydromatic.morel.eval.Describer}. */
 class DescriberImpl implements Describer {
   final StringBuilder buf = new StringBuilder();
   final Map<String, List<Integer>> nameIds = new HashMap<>();

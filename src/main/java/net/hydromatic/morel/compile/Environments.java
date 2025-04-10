@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.ToIntFunction;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
@@ -80,7 +81,7 @@ public abstract class Environments {
     }
     final List<Binding> bindings = new ArrayList<>();
     BuiltIn.dataTypes(typeSystem, bindings);
-    final NameGenerator nameGen = typeSystem.nameGenerator;
+    final ToIntFunction<String> nameGen = typeSystem.nameGenerator::inc;
     Codes.BUILT_IN_VALUES.forEach(
         (key, value) -> {
           if ("$".equals(key.structure)) {
@@ -127,7 +128,7 @@ public abstract class Environments {
                         core.idPat(
                             value.type(typeSystem),
                             name,
-                            typeSystem.nameGenerator),
+                            typeSystem.nameGenerator::inc),
                         value.value())
                     .withParameter(true)));
   }

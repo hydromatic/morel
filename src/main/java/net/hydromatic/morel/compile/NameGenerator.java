@@ -29,12 +29,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  * program, so that a new occurrence of a name can be given a fresh ordinal.
  */
 public class NameGenerator {
-  private int id = 0;
   private final Map<String, AtomicInteger> nameCounts = new HashMap<>();
 
   /** Generates a name that is unique in this program. */
   public String get() {
-    return "v" + id++;
+    return getPrefixed("v");
+  }
+
+  /** Generates a name that is unique in this program with a given prefix. */
+  public String getPrefixed(String prefix) {
+    String s = prefix + "$";
+    return s + inc(s);
   }
 
   /** Returns the number of times that "name" has been used for a variable. */

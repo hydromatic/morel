@@ -18,8 +18,6 @@
  */
 package net.hydromatic.morel.compile;
 
-import static net.hydromatic.morel.ast.CoreBuilder.core;
-
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,7 +67,7 @@ abstract class EnvShuttle extends Shuttle {
     final List<Binding> bindings = new ArrayList<>();
     final Core.Pat pat2 = match.pat.accept(this);
     Compiles.bindPattern(typeSystem, bindings, pat2);
-    return core.match(match.pos, pat2, match.exp.accept(bind(bindings)));
+    return match.copy(pat2, match.exp.accept(bind(bindings)));
   }
 
   @Override

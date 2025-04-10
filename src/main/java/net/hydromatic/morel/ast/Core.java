@@ -182,7 +182,17 @@ public class Core {
       return Integer.compare(o1.i, o2.i);
     }
 
+    /**
+     * Returns a copy of this pattern with a given type; or this pattern if the
+     * type is the same.
+     */
     public abstract NamedPat withType(Type type);
+
+    /**
+     * Returns a copy of this pattern with a given name and ordinal 0; or this
+     * pattern if the name is the same.
+     */
+    public abstract NamedPat withName(String name);
 
     @Override
     public abstract NamedPat accept(Shuttle shuttle);
@@ -229,6 +239,11 @@ public class Core {
     @Override
     public IdPat withType(Type type) {
       return type == this.type ? this : new IdPat(type, name, i);
+    }
+
+    @Override
+    public IdPat withName(String name) {
+      return name.equals(this.name) ? this : new IdPat(type, name, 0);
     }
   }
 
@@ -333,6 +348,11 @@ public class Core {
     @Override
     public AsPat withType(Type type) {
       return type == this.type ? this : new AsPat(type, name, i, pat);
+    }
+
+    @Override
+    public AsPat withName(String name) {
+      return name.equals(this.name) ? this : new AsPat(type, name, 0, pat);
     }
 
     @Override

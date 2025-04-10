@@ -896,7 +896,7 @@ List.foldl (fn (a, b) => a - b) 0 [1,2,3,4];
 > val it = 2 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue List.foldl, argCode match(v0, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v0)))), argCode constant(0)), argCode tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   "apply(fnCode apply(fnCode apply(fnValue List.foldl, argCode match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v)))), argCode constant(0)), argCode tuple(constant(1), constant(2), constant(3), constant(4)))"
 >   : string
 
 (*) val foldr : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
@@ -912,7 +912,7 @@ List.foldr (fn (a, b) => a - b) 0 [1,2,3,4];
 > val it = ~2 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue List.foldr, argCode match(v0, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v0)))), argCode constant(0)), argCode tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   "apply(fnCode apply(fnCode apply(fnValue List.foldr, argCode match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v)))), argCode constant(0)), argCode tuple(constant(1), constant(2), constant(3), constant(4)))"
 >   : string
 
 (*) val exists : ('a -> bool) -> 'a list -> bool
@@ -981,7 +981,7 @@ List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREA
 > val it = EQUAL : order
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.collate, argCode match(v0, apply(fnCode match((x, y), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name x), get(name y)))), argCode apply2(fnValue <, get(name x), get(name y)))), argCode get(name v0)))), argCode tuple(tuple, tuple))"
+>   "apply(fnCode apply(fnValue List.collate, argCode match(v, apply(fnCode match((x, y), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name x), get(name y)))), argCode apply2(fnValue <, get(name x), get(name y)))), argCode get(name v)))), argCode tuple(tuple, tuple))"
 >   : string
 
 (* Math -------------------------------------------------------- *)
@@ -2696,7 +2696,7 @@ Relational.iterate
 >   : {empno:int, ename:string, mgr:int} list
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Relational.iterate, argCode from(sink join(pat e_1, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), constant(0)), sink collect(get(name e)))))), argCode match(v0, apply(fnCode match((oldList, newList), from(sink join(pat d, exp get(name newList), sink join(pat e, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name d))), sink collect(get(name e))))))), argCode get(name v0))))"
+>   "apply(fnCode apply(fnValue Relational.iterate, argCode from(sink join(pat e_1, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), constant(0)), sink collect(get(name e)))))), argCode match(v, apply(fnCode match((oldList, newList), from(sink join(pat d, exp get(name newList), sink join(pat e, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name d))), sink collect(get(name e))))))), argCode get(name v))))"
 >   : string
 
 Relational.sum [1, 2, 3];
@@ -3114,7 +3114,7 @@ Vector.appi (fn (i,s) => ignore s) (Vector.fromList ["a", "b", "c"]);
 > val it = () : unit
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.appi, argCode match(v0, apply(fnCode match((i, s), apply(fnValue General.ignore, argCode get(name s))), argCode get(name v0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b), constant(c))))"
+>   "apply(fnCode apply(fnValue Vector.appi, argCode match(v, apply(fnCode match((i, s), apply(fnValue General.ignore, argCode get(name s))), argCode get(name v)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b), constant(c))))"
 >   : string
 
 (*) Vector.app  : ('a -> unit) -> 'a vector -> unit
@@ -3134,7 +3134,7 @@ Vector.mapi (fn (i, s) => String.sub (s, i)) (Vector.fromList ["abc", "xyz"]);
 > val it = #[#"a",#"y"] : char vector
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.mapi, argCode match(v0, apply(fnCode match((i, s), apply2(fnValue String.sub, get(name s), get(name i))), argCode get(name v0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(abc), constant(xyz))))"
+>   "apply(fnCode apply(fnValue Vector.mapi, argCode match(v, apply(fnCode match((i, s), apply2(fnValue String.sub, get(name s), get(name i))), argCode get(name v)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(abc), constant(xyz))))"
 >   : string
 
 (*) Vector.map  : ('a -> 'b) -> 'a vector -> 'b vector
@@ -3154,7 +3154,7 @@ Vector.foldli (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
 > val it = 11 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue Vector.foldli, argCode match(v0, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v0)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply(fnCode apply(fnCode apply(fnValue Vector.foldli, argCode match(v, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -3164,7 +3164,7 @@ Vector.foldri (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
 > val it = 11 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue Vector.foldri, argCode match(v0, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v0)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply(fnCode apply(fnCode apply(fnValue Vector.foldri, argCode match(v, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -3174,7 +3174,7 @@ Vector.foldl (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
 > val it = 9 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue Vector.foldl, argCode match(v0, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v0)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply(fnCode apply(fnCode apply(fnValue Vector.foldl, argCode match(v, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -3184,7 +3184,7 @@ Vector.foldr (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
 > val it = 9 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue Vector.foldr, argCode match(v0, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v0)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply(fnCode apply(fnCode apply(fnValue Vector.foldr, argCode match(v, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option
@@ -3194,7 +3194,7 @@ Vector.findi (fn (i,j) => j < i) (Vector.fromList [10,8,6,4,2]);
 > val it = SOME (4,2) : (int * int) option
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.findi, argCode match(v0, apply(fnCode match((i, j), apply2(fnValue <, get(name j), get(name i))), argCode get(name v0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(10), constant(8), constant(6), constant(4), constant(2))))"
+>   "apply(fnCode apply(fnValue Vector.findi, argCode match(v, apply(fnCode match((i, j), apply2(fnValue <, get(name j), get(name i))), argCode get(name v)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(10), constant(8), constant(6), constant(4), constant(2))))"
 >   : string
 
 (*) Vector.find  : ('a -> bool) -> 'a vector -> 'a option
@@ -3236,7 +3236,7 @@ Vector.collate
 > val it = LESS : order
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.collate, argCode match(v0, apply(fnCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name i), get(name j)))), argCode apply2(fnValue <, get(name i), get(name j)))), argCode get(name v0)))), argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
+>   "apply(fnCode apply(fnValue Vector.collate, argCode match(v, apply(fnCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name i), get(name j)))), argCode apply2(fnValue <, get(name i), get(name j)))), argCode get(name v)))), argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
 >   : string
 
 (*) End builtIn.smli

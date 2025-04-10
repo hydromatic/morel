@@ -481,7 +481,7 @@ public class CalciteFunctions {
         TypeSystem typeSystem,
         @Nullable RelDataTypeFactory typeFactory) {
       this.session = session;
-      this.env = env;
+      this.env = env.renumber();
       this.typeSystem = typeSystem;
       this.typeFactory = typeFactory;
     }

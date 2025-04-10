@@ -631,7 +631,7 @@ public class Extents {
       if (i >= 0) {
         return idPats.leftList().get(i);
       }
-      final Core.IdPat idPat = core.idPat(type, typeSystem.nameGenerator);
+      final Core.IdPat idPat = core.idPat(type, typeSystem.nameGenerator::get);
       idPats.add(idPat, extent);
       return idPat;
     }

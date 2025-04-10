@@ -3139,12 +3139,12 @@ public abstract class Codes {
           final Type type = key.typeFunction.apply(typeSystem);
           if (key.structure == null) {
             final Core.IdPat idPat =
-                core.idPat(type, key.mlName, typeSystem.nameGenerator);
+                core.idPat(type, key.mlName, typeSystem.nameGenerator::inc);
             hEnv[0] = hEnv[0].bind(idPat, value);
           }
           if (key.alias != null) {
             final Core.IdPat idPat =
-                core.idPat(type, key.alias, typeSystem.nameGenerator);
+                core.idPat(type, key.alias, typeSystem.nameGenerator::inc);
             hEnv[0] = hEnv[0].bind(idPat, value);
           }
         });
@@ -3159,7 +3159,7 @@ public abstract class Codes {
               .values()
               .forEach(builtIn -> valueList.add(BUILT_IN_VALUES.get(builtIn)));
           final Core.IdPat idPat =
-              core.idPat(type, structure.name, typeSystem.nameGenerator);
+              core.idPat(type, structure.name, typeSystem.nameGenerator::inc);
           hEnv[0] = hEnv[0].bind(idPat, ImmutableList.copyOf(valueList));
         });
     return hEnv[0];

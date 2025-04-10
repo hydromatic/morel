@@ -526,10 +526,10 @@ public class AlgebraTest {
             + "  yield plus (d.deptno, five)\n"
             + "end";
     String plan =
-        "let(matchCode0 match(plus, match(v0, "
+        "let(matchCode0 match(plus, match(v, "
             + "apply(fnCode match((x, y), apply2(fnValue +, "
             + "get(name x), get(name y))), "
-            + "argCode get(name v0)))), "
+            + "argCode get(name v)))), "
             + "resultCode let(matchCode0 match(five, constant(5)), "
             + "resultCode calcite(plan "
             + "LogicalProject($f0=[morelScalar('int * int', "
