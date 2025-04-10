@@ -107,6 +107,10 @@ public class Session {
     shell.handle((RuntimeException) e, buf);
   }
 
+  public void clearEnv() {
+    shell.clearEnv();
+  }
+
   /** Callback to implement "use" command. */
   public interface Shell {
     void use(String fileName, boolean silent, Pos pos);
@@ -118,6 +122,9 @@ public class Session {
      * sub-shells will re-throw.
      */
     void handle(RuntimeException e, StringBuilder buf);
+
+    /** Clears the environment. Default implementation does nothing. */
+    default void clearEnv() {}
   }
 
   /** Various implementations of {@link Shell}. */

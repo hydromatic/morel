@@ -2688,6 +2688,17 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#SYS_CLEAR_ENV */
+  private static final Applicable SYS_CLEAR_ENV =
+      new ApplicableImpl(BuiltIn.MATH_LOG10) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          session.clearEnv();
+          return Unit.INSTANCE;
+        }
+      };
+
   /** @see BuiltIn#SYS_ENV */
   private static Core.Exp sysEnv(
       TypeSystem typeSystem, Environment env, Type argType) {
@@ -3347,6 +3358,7 @@ public abstract class Codes {
           .put(BuiltIn.RELATIONAL_NON_EMPTY, RELATIONAL_NON_EMPTY)
           .put(BuiltIn.RELATIONAL_ONLY, RELATIONAL_ONLY)
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
+          .put(BuiltIn.SYS_CLEAR_ENV, SYS_CLEAR_ENV)
           .put(BuiltIn.SYS_ENV, (Macro) Codes::sysEnv)
           .put(BuiltIn.SYS_FILE, "") // value comes from Session.file
           .put(BuiltIn.SYS_PLAN, SYS_PLAN)

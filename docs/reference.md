@@ -465,8 +465,9 @@ Exception:
 | String.sub | string * int &rarr; char | "sub (s, i)" returns the `i`(th) character of `s`, counting from zero. This raises `Subscript` if `i` &lt; 0 or \|`s`\| &le; `i`. |
 | String.substring | string * int * int &rarr; string | "substring (s, i, j)" returns the substring `s`\[`i`..`i`+`j`-1\], i.e., the substring of size `j` starting at index `i`. This is equivalent to `extract(s, i, SOME j)`. |
 | String.translate | (char &rarr; string) &rarr; string &rarr; string | "translate f s" returns the string generated from `s` by mapping each character in `s` by `f`. It is equivalent to `concat(List.map f (explode s))`. |
+| Sys.clearEnv | unit &rarr; unit | "clearEnv ()" restores the environment to the initial environment. |
 | Sys.env, env | unit &rarr; string list | "env ()" prints the environment. |
-| Sys.plan | unit &rarr; string | "plan ()" print the plan of the most recently executed expression. |
+| Sys.plan | unit &rarr; string | "plan ()" prints the plan of the most recently executed expression. |
 | Sys.set | string * &alpha; &rarr; unit | "set (property, value)" sets the value of `property` to `value`. (See [Properties](#properties) below.) |
 | Sys.show | string &rarr; string option | "show property" returns the current the value of `property`, as a string, or `NONE` if unset. |
 | Sys.unset | string &rarr; unit | "unset property" clears the current the value of `property`. |

@@ -325,6 +325,11 @@ public class Main {
         buf.append(e);
       }
     }
+
+    @Override
+    public void clearEnv() {
+      bindingMap.clear();
+    }
   }
 
   /**

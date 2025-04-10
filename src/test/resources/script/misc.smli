@@ -19,12 +19,60 @@
  * Miscellaneous stuff - often test cases for bugs
  *)
 
-(*) Bug gave 'AssertionError: op not handled: EQ'
+(* -------------------------------------------------------------
+ * [MOREL-251] Add function `Sys.clearEnv ()`
+ *
+ * This test needs an empty environment, so must be the first
+ * test in the script.
+ *)
+
+(*) Initial environment has 83 values.
+List.length (Sys.env());
+> val it = 83 : int
+
+(*) Now we have 84 (83 + "it").
+List.length (Sys.env());
+> val it = 84 : int
+List.last (Sys.env());
+> val it = ("vector","forall 'a. 'a list -> 'a vector") : string * string
+
+(*) Define 3 variables, and we have 87.
+val (x,y,z) = (1,2,3);
+> val x = 1 : int
+> val y = 2 : int
+> val z = 3 : int
+List.length (Sys.env());
+> val it = 87 : int
+List.last (Sys.env());
+> val it = ("z","int") : string * string
+
+(*) Overwrite one value, add another, which takes us to 88.
+val (w,z) = ("four","five");
+> val w = "four" : string
+> val z = "five" : string
+List.length (Sys.env());
+> val it = 88 : int
+List.last (Sys.env());
+> val it = ("z","string") : string * string
+
+(*) Clear the environment, back down to 84 (including "it").
+Sys.clearEnv();
+> val it = () : unit
+List.length (Sys.env());
+> val it = 84 : int
+List.last (Sys.env());
+> val it = ("vector","forall 'a. 'a list -> 'a vector") : string * string
+
+(* -------------------------------------------------------------
+ * Bug gave 'AssertionError: op not handled: EQ'
+ *)
 from p in (from p in [{a=1,b=2}] where p.a = 1);
 > val it = [{a=1,b=2}] : {a:int, b:int} list
 
-(* [MOREL-250] Inliner generates invalid plan if dead code occurs in a nested
-   let. *)
+(* -------------------------------------------------------------
+ * [MOREL-250] Inliner generates invalid plan if dead code
+ * occurs in a nested let.
+ *)
 let
   val bind = fn x => [x]
 in

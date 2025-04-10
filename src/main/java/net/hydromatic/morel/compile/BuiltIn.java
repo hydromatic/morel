@@ -1876,6 +1876,9 @@ public enum BuiltIn {
       "min",
       ts -> ts.forallType(1, h -> ts.fnType(ts.listType(h.get(0)), h.get(0)))),
 
+  /** Function "Sys.clearEnv", of type "unit &rarr; unit". */
+  SYS_CLEAR_ENV("Sys", "clearEnv", ts -> ts.fnType(UNIT, UNIT)),
+
   /** Function "Sys.env", aka "env", of type "unit &rarr; string list". */
   SYS_ENV(
       "Sys",
