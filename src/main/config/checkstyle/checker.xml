@@ -78,7 +78,16 @@ License.
     <module name="AvoidNestedBlocks">
         <property name="allowInSwitchCase" value="true"/>
     </module>
-    <module name="LeftCurly"/>
+    <!-- Require '{' to be at end-of-line for all default
+         tokens except LITERAL_CASE. -->
+    <module name="LeftCurly">
+      <property name="option" value="eol"/>
+      <property name="tokens" value="ANNOTATION_DEF, CLASS_DEF, CTOR_DEF, ENUM_CONSTANT_DEF, ENUM_DEF, INTERFACE_DEF, LAMBDA, LITERAL_CATCH, LITERAL_DO, LITERAL_ELSE, LITERAL_FINALLY, LITERAL_FOR, LITERAL_IF, LITERAL_SWITCH, LITERAL_SYNCHRONIZED, LITERAL_TRY, LITERAL_WHILE, METHOD_DEF, OBJBLOCK, STATIC_INIT, RECORD_DEF, COMPACT_CTOR_DEF"/>
+    </module>
+    <module name="LeftCurly">
+      <property name="option" value="nl"/>
+      <property name="tokens" value="LITERAL_CASE"/>
+    </module>
       <!-- No if/else/do/for/while without braces -->
     <module name="NeedBraces"/>
     <module name="RightCurly"/>
