@@ -23,6 +23,7 @@ import java.util.AbstractList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.hydromatic.morel.compile.Environment;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.Interpreter;
 import org.apache.calcite.rel.RelNode;
@@ -54,6 +55,30 @@ public class RelList extends AbstractList<Object> {
 
   public int size() {
     return supplier.get().size();
+  }
+
+  /**
+   * Returns "{@code <list>}". Does not obey the usual behavior for collections,
+   * concatenating the string representations of all elements, because some
+   * tables are huge.
+   *
+   * @see #asString()
+   */
+  @Override
+  public String toString() {
+    return "<list>";
+  }
+
+  /**
+   * Returns the contents of this list as a string.
+   *
+   * <p>This method does not override the {@link #toString()} method; if we did,
+   * debuggers would invoke it automatically, burning lots of CPU and memory.
+   *
+   * @see Environment#asString()
+   */
+  public String asString() {
+    return supplier.get().toString();
   }
 }
 
