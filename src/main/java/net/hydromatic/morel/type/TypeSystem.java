@@ -469,8 +469,12 @@ public class TypeSystem {
    * </ul>
    */
   public Type unqualified(Type type) {
+    final Type type0 = type;
     while (type instanceof ForallType) {
       type = ((ForallType) type).type;
+    }
+    if (type == type0) {
+      return type0;
     }
     // Renumber type variables:
     //   'b list   ->  'a list

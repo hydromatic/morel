@@ -36,6 +36,7 @@ import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -92,7 +93,10 @@ public class Inliner extends EnvShuttle {
         }
       }
       if (v != Unit.INSTANCE) {
-        switch (id.type.op()) {
+        // Trim "forall", so that "forall b. b list -> int" becomes
+        // "a list -> int" and is clearly a function type.
+        final Type type = typeSystem.unqualified(id.type);
+        switch (type.op()) {
           case ID:
             assert id.type instanceof PrimitiveType;
             return core.literal((PrimitiveType) id.type, v);
