@@ -137,6 +137,11 @@ Relational;
 >      iterate:'c list -> ('c list * 'c list -> 'c list) -> 'c list,
 >      max:'d list -> 'd, min:'e list -> 'e, nonEmpty:'f list -> bool,
 >      only:'g list -> 'g, sum:'h list -> 'h}
+Sys;
+> val it = {clearEnv=fn,env=fn,file={},plan=fn,set=fn,show=fn,unset=fn}
+>   : {clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...},
+>      plan:unit -> string, set:string * 'a -> unit,
+>      show:string -> string option, unset:string -> unit}
 
 (* Operators --------------------------------------------------- *)
 2 + 3;
