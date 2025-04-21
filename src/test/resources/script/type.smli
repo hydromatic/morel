@@ -33,6 +33,23 @@
 ("a", false) = {1 = "a", 2 = true};
 > val it = false : bool
 
+(*) Records with 'with'
+{{a = 1, b = 2} with a = 3};
+> val it = {a=3,b=2} : {a:int, b:int}
+{{a = "1", b = 2} with a = "3", b = 4};
+> val it = {a="3",b=4} : {a:string, b:int}
+{{a = "1", b = 2} with a = "3"};
+> val it = {a="3",b=2} : {a:string, b:int}
+{{a = "1", b = NONE} with b = SOME "3"};
+> val it = {a="1",b=SOME "3"} : {a:string, b:string option}
+{{a = "1", b = SOME true} with b = NONE};
+> val it = {a="1",b=NONE} : {a:string, b:'a option}
+(* TODO previous should be
+> val it = {a="1",b=NONE} : {a:string, b:bool option}
+*)
+{{a = "1", b = 2, c = true, d = false} with c = false, b = 3};
+> val it = {a="1",b=3,c=false,d=false} : {a:string, b:int, c:bool, d:bool}
+
 (*) Empty record and empty tuple are equivalent, and of type 'unit'.
 {};
 > val it = () : unit

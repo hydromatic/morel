@@ -21,6 +21,7 @@ package net.hydromatic.morel.compile;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.skip;
@@ -421,9 +422,25 @@ public class Resolver {
   }
 
   private Core.Tuple toCore(Ast.Record record) {
-    return core.tuple(
-        (RecordLikeType) typeMap.getType(record),
-        transformEager(record.args(), this::toCore));
+    RecordLikeType type = (RecordLikeType) typeMap.getType(record);
+    List<Core.Exp> args;
+    if (record.with != null) {
+      args = new ArrayList<>();
+      final Core.Exp coreWith = toCore(record.with);
+      forEachIndexed(
+          type.argNameTypes().keySet(),
+          (field, i) -> {
+            Ast.Exp exp = record.args.get(field);
+            if (exp != null) {
+              args.add(toCore(exp));
+            } else {
+              args.add(core.field(typeMap.typeSystem, coreWith, i));
+            }
+          });
+    } else {
+      args = transformEager(record.args(), this::toCore);
+    }
+    return core.tuple(type, args);
   }
 
   private Core.Exp toCore(Ast.ListExp list) {

@@ -308,6 +308,12 @@ public class MainTest {
 
     // apply
     ml("(fn x => x + 1) 3").assertParseSame();
+
+    // with
+    ml("{e with deptno = 10}").assertParseSame();
+    ml("{e with deptno = 10, empno = 100}").assertParseSame();
+    ml("{hd scott.emps with deptno = 10, empno = 100}")
+        .assertParse("{hd (#emps scott) with deptno = 10, empno = 100}");
   }
 
   @Test
@@ -486,6 +492,9 @@ public class MainTest {
     ml("SOME (SOME true)").assertType("bool option option");
     ml("SOME (SOME [1, 2])").assertType("int list option option");
     ml("SOME (SOME {a=1, b=true})").assertType("{a:int, b:bool} option option");
+
+    ml("{a=1,b=true}").assertType("{a:int, b:bool}");
+    ml("{{a=1,b=true} with b=false}").assertType("{a:int, b:bool}");
   }
 
   @Test

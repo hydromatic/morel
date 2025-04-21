@@ -169,7 +169,10 @@ public class Shuttle {
   }
 
   protected Ast.Exp visit(Ast.Record record) {
-    return ast.record(record.pos, visitMap(record.args));
+    return ast.record(
+        record.pos,
+        record.with == null ? null : record.with.accept(this),
+        visitMap(record.args));
   }
 
   // functions and matches

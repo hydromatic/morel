@@ -200,14 +200,18 @@ public enum AstBuilder {
     return new Ast.ListExp(pos, list);
   }
 
-  public Ast.Record record(Pos pos, Map<String, Ast.Exp> map) {
+  public Ast.Record record(
+      Pos pos, Ast.@Nullable Exp with, Map<String, Ast.Exp> map) {
     return new Ast.Record(
-        pos, ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
+        pos, with, ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
   }
 
   public Ast.Record record(
-      Pos pos, Collection<Map.Entry<String, Ast.Exp>> map) {
-    return record(pos, ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
+      Pos pos,
+      Ast.@Nullable Exp with,
+      Collection<Map.Entry<String, Ast.Exp>> map) {
+    return record(
+        pos, with, ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
   }
 
   public Ast.Exp equal(Ast.Exp a0, Ast.Exp a1) {

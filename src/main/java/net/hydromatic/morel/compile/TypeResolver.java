@@ -349,7 +349,13 @@ public class TypeResolver {
               labelTypes.put(name, vArg);
               map2.put(name, e2);
             });
-        return reg(record.copy(map2), v, record(labelTypes));
+        if (record.with == null) {
+          return reg(record.copy(null, map2), v, record(labelTypes));
+        } else {
+          final Unifier.Variable v3 = unifier.variable();
+          final Ast.Exp with2 = deduceType(env, record.with, v3);
+          return reg(record.copy(with2, map2), v, v3);
+        }
 
       case LET:
         final Ast.Let let = (Ast.Let) node;
@@ -613,7 +619,8 @@ public class TypeResolver {
         v = v6;
         final Ast.Exp yieldExp2 = deduceType(env2, yield.exp, v6);
         fromSteps.add(yield.copy(yieldExp2));
-        if (yieldExp2.op == Op.RECORD) {
+        if (yieldExp2.op == Op.RECORD
+            && ((Ast.Record) yieldExp2).with == null) {
           final Unifier.Sequence sequence =
               (Unifier.Sequence) map.get(yieldExp2);
           final Ast.Record record2 = (Ast.Record) yieldExp2;

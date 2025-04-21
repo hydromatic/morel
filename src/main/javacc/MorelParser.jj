@@ -978,20 +978,37 @@ Exp atom() :
   <LBRACE> {
     span = Span.of(pos());
     final PairList<String, Exp> nameExps = PairList.of();
+    Exp exp;
+    Exp with = null;
   }
   [
-    recordExp(nameExps)
+    (
+      LOOKAHEAD((<NON_NEGATIVE_INTEGER_LITERAL> | <IDENTIFIER> | <QUOTED_IDENTIFIER>) <EQ>)
+      labeledRecordExp(nameExps)
+    |
+      exp = expression()
+      (
+        <WITH> recordExp(nameExps) {
+          with = exp;
+        }
+      |
+        {
+          final String label = ast.implicitLabel(exp);
+          nameExps.add(label, exp);
+        }
+      )
+    )
     (
       <COMMA> recordExp(nameExps)
     )*
   ]
   <RBRACE> {
-    return ast.record(span.end(this), nameExps);
+    return ast.record(span.end(this), with, nameExps);
   }
 }
 
 /** Parses a "label = expression" inside a record. */
-void recordExp(PairList<String, Exp> nameExps) :
+void labeledRecordExp(PairList<String, Exp> nameExps) :
 {
   final String id;
   final Ast.Exp exp;
@@ -1008,6 +1025,17 @@ void recordExp(PairList<String, Exp> nameExps) :
   LOOKAHEAD(<QUOTED_IDENTIFIER> <EQ>)
   <QUOTED_IDENTIFIER> { id = unquoteIdentifier(token.image); }
   <EQ> exp = expression() { nameExps.add(id, exp); }
+}
+
+/** Parses a "label = expression" inside a record. */
+void recordExp(PairList<String, Exp> nameExps) :
+{
+  final String id;
+  final Ast.Exp exp;
+}
+{
+  LOOKAHEAD((<NON_NEGATIVE_INTEGER_LITERAL> | <IDENTIFIER> | <QUOTED_IDENTIFIER>) <EQ>)
+  labeledRecordExp(nameExps)
 |
   exp = expression() {
     final String label = ast.implicitLabel(exp);
@@ -1532,6 +1560,7 @@ AstNode statementEof() :
 | < THROUGH: "through" >
 | < UNION: "union" >
 | < WHERE: "where" >
+| < WITH: "with" >
 | < YIELD: "yield" >
 }
 

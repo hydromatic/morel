@@ -1316,10 +1316,12 @@ public class Ast {
 
   /** Record. */
   public static class Record extends Exp {
+    public final Ast.@Nullable Exp with;
     public final SortedMap<String, Exp> args;
 
-    Record(Pos pos, ImmutableSortedMap<String, Exp> args) {
+    Record(Pos pos, @Nullable Exp with, ImmutableSortedMap<String, Exp> args) {
       super(pos, Op.RECORD);
+      this.with = with;
       this.args = requireNonNull(args);
       checkArgument(args.comparator() == ORDERING);
     }
@@ -1341,6 +1343,10 @@ public class Ast {
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
+      if (with != null) {
+        with.unparse(w, 0, 0);
+        w.append(" with ");
+      }
       Ord.forEachIndexed( // lint:skip
           args,
           (i, k, v) ->
@@ -1351,8 +1357,10 @@ public class Ast {
       return w.append("}");
     }
 
-    public Record copy(Map<String, Ast.Exp> args) {
-      return args.equals(this.args) ? this : ast.record(pos, args);
+    public Record copy(Ast.@Nullable Exp with, Map<String, Ast.Exp> args) {
+      return Objects.equals(with, this.with) && args.equals(this.args)
+          ? this
+          : ast.record(pos, with, args);
     }
   }
 
@@ -1748,7 +1756,7 @@ public class Ast {
       } else {
         final SortedMap<String, Ast.Exp> map = mutableMap();
         fields.forEach(field -> map.put(field.name, field));
-        return ast.record(pos, map);
+        return ast.record(pos, null, map);
       }
     }
 
