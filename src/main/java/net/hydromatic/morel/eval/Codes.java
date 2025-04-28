@@ -2757,6 +2757,24 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#SYS_SHOW_ALL */
+  private static final Applicable SYS_SHOW_ALL =
+      new ApplicableImpl(BuiltIn.SYS_SHOW_ALL) {
+        @Override
+        public List apply(EvalEnv env, Object arg) {
+          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final ImmutableList.Builder<List<List>> list =
+              ImmutableList.builder();
+          for (Prop prop : Prop.BY_CAMEL_NAME) {
+            final Object value = prop.get(session.map);
+            List option =
+                value == null ? OPTION_NONE : optionSome(value.toString());
+            list.add((List) ImmutableList.of(prop.camelName, option));
+          }
+          return list.build();
+        }
+      };
+
   /** @see BuiltIn#SYS_UNSET */
   private static final Applicable SYS_UNSET =
       new ApplicableImpl(BuiltIn.SYS_UNSET) {
@@ -3366,6 +3384,7 @@ public abstract class Codes {
           .put(BuiltIn.SYS_PLAN, SYS_PLAN)
           .put(BuiltIn.SYS_SET, SYS_SET)
           .put(BuiltIn.SYS_SHOW, SYS_SHOW)
+          .put(BuiltIn.SYS_SHOW_ALL, SYS_SHOW_ALL)
           .put(BuiltIn.SYS_UNSET, SYS_UNSET)
           .put(BuiltIn.VECTOR_MAX_LEN, VECTOR_MAX_LEN)
           .put(BuiltIn.VECTOR_FROM_LIST, VECTOR_FROM_LIST)

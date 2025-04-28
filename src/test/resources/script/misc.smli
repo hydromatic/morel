@@ -26,40 +26,42 @@
  * test in the script.
  *)
 
-(*) Initial environment has 83 values.
-List.length (Sys.env());
-> val it = 83 : int
-
-(*) Now we have 84 (83 + "it").
+(*) Initial environment has 84 values.
 List.length (Sys.env());
 > val it = 84 : int
+val eLen = it;
+> val eLen = 84 : int
+
+(*) Now we have two more (due to "it" and "eLen").
+List.length (Sys.env()) - eLen;
+> val it = 2 : int
 List.last (Sys.env());
 > val it = ("vector","forall 'a. 'a list -> 'a vector") : string * string
 
-(*) Define 3 variables, and we have 87.
+(*) Define 3 variables.
 val (x,y,z) = (1,2,3);
 > val x = 1 : int
 > val y = 2 : int
 > val z = 3 : int
-List.length (Sys.env());
-> val it = 87 : int
+List.length (Sys.env()) - eLen;
+> val it = 5 : int
 List.last (Sys.env());
 > val it = ("z","int") : string * string
 
-(*) Overwrite one value, add another, which takes us to 88.
+(*) Overwrite one value, add another.
 val (w,z) = ("four","five");
 > val w = "four" : string
 > val z = "five" : string
-List.length (Sys.env());
-> val it = 88 : int
+List.length (Sys.env()) - eLen;
+> val it = 6 : int
 List.last (Sys.env());
 > val it = ("z","string") : string * string
 
-(*) Clear the environment, back down to 84 (including "it").
+(*) Clear the environment, back down to the original (plus one for "it").
 Sys.clearEnv();
 > val it = () : unit
 List.length (Sys.env());
-> val it = 84 : int
+> val it = 85 : int
 List.last (Sys.env());
 > val it = ("vector","forall 'a. 'a list -> 'a vector") : string * string
 

@@ -138,10 +138,12 @@ Relational;
 >      max:'d list -> 'd, min:'e list -> 'e, nonEmpty:'f list -> bool,
 >      only:'g list -> 'g, sum:'h list -> 'h}
 Sys;
-> val it = {clearEnv=fn,env=fn,file={},plan=fn,set=fn,show=fn,unset=fn}
+> val it =
+>   {clearEnv=fn,env=fn,file={},plan=fn,set=fn,show=fn,showAll=fn,unset=fn}
 >   : {clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...},
 >      plan:unit -> string, set:string * 'a -> unit,
->      show:string -> string option, unset:string -> unit}
+>      show:string -> string option,
+>      showAll:unit -> (string * string option) list, unset:string -> unit}
 
 (* Operators --------------------------------------------------- *)
 2 + 3;
@@ -2860,7 +2862,7 @@ Sys.env ();
 >    ("String",
 >     "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
->     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
+>     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
@@ -2925,7 +2927,7 @@ env ();
 >    ("String",
 >     "{concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
->     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, unset:string -> unit}"),
+>     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
@@ -2985,6 +2987,8 @@ Sys.plan ();
 (*) val show : string -> string option
 Sys.show;
 > val it = fn : string -> string option
+show;
+> val it = fn : string -> string option
 Sys.show "hybrid";
 > val it = SOME "false" : string option
 Sys.set ("hybrid", true);
@@ -2995,6 +2999,30 @@ Sys.show "optionalInt";
 > val it = NONE : string option
 Sys.plan ();
 > val it = "apply(fnValue Sys.show, argCode constant(optionalInt))" : string
+
+(*) val showAll : unit -> string * string option list
+Sys.showAll;
+> val it = fn : unit -> (string * string option) list
+showAll;
+> val it = fn : unit -> (string * string option) list
+map
+  (fn (p,v) =>
+    (p, if p = "directory" orelse p = "scriptDirectory" then SOME "?" else v))
+  (Sys.showAll ());
+> val it =
+>   [("directory",SOME "?"),("hybrid",SOME "true"),("inlinePassCount",SOME "5"),
+>    ("lineWidth",SOME "78"),("matchCoverageEnabled",SOME "true"),
+>    ("optionalInt",NONE),("printDepth",SOME "5"),("printLength",SOME "64"),
+>    ("relationalize",SOME "false"),("scriptDirectory",SOME "?"),
+>    ("stringDepth",SOME "-1")] : (string * string option) list
+List.length (Sys.showAll ());
+> val it = 11 : int
+List.length (showAll ());
+> val it = 11 : int
+Sys.plan ();
+> val it =
+>   "apply(fnValue List.length, argCode apply(fnValue Sys.showAll, argCode constant(())))"
+>   : string
 
 Sys.set ("optionalInt", ~5);
 > val it = () : unit

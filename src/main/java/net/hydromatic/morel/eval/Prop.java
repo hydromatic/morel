@@ -20,8 +20,12 @@ package net.hydromatic.morel.eval;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
 import java.io.File;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -121,11 +125,23 @@ public enum Prop {
   private final Class<?> type;
   private final Object defaultValue;
 
+  /**
+   * Map of all properties, keyed by both {@link #name()} and {@link
+   * #camelName}.
+   */
   public static final ImmutableMap<String, Prop> BY_NAME;
 
+  /** List of all properties sorted by {@link #camelName}. */
+  public static final List<Prop> BY_CAMEL_NAME;
+
   static {
+    final List<Prop> list = Arrays.asList(values());
+    final Ordering<Prop> ordering =
+        Ordering.from(Comparator.comparing((Prop o) -> o.camelName));
+    BY_CAMEL_NAME = ordering.sortedCopy(list);
+
     final Map<String, Prop> map = new LinkedHashMap<>();
-    for (Prop value : values()) {
+    for (Prop value : BY_CAMEL_NAME) {
       map.put(value.name(), value);
       map.put(value.camelName, value);
     }

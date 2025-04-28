@@ -470,6 +470,7 @@ Exception:
 | Sys.plan | unit &rarr; string | "plan ()" prints the plan of the most recently executed expression. |
 | Sys.set | string * &alpha; &rarr; unit | "set (property, value)" sets the value of `property` to `value`. (See [Properties](#properties) below.) |
 | Sys.show | string &rarr; string option | "show property" returns the current the value of `property`, as a string, or `NONE` if unset. |
+| Sys.showAll | unit &rarr; string * string option list | "showAll ()" returns a list of all properties and their current value as a string, or `NONE` if unset. |
 | Sys.unset | string &rarr; unit | "unset property" clears the current the value of `property`. |
 | Vector.all |
 | Vector.app | (&alpha; &rarr; unit) &rarr; &alpha; vector &rarr; unit | "app f vec" applies the function `f` to the elements of a vector in left to right order (i.e., in order of increasing indices) |
