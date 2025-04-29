@@ -142,24 +142,25 @@ public class Main {
     readerToString(in, b);
     final String s = str(b);
     for (int i = 0, n = s.length(); ; ) {
-      int j0 = i == 0 && s.startsWith("> ") ? 0 : -1;
+      int j0 = i == 0 && (s.startsWith("> ") || s.startsWith(">\n")) ? 0 : -1;
       int j1 = s.indexOf("\n> ", i);
-      int j2 = s.indexOf("(*)", i);
-      int j3 = s.indexOf("(*", i);
-      int j = min(j0, j1, j2, j3);
+      int j2 = s.indexOf("\n>\n", i);
+      int j3 = s.indexOf("(*)", i);
+      int j4 = s.indexOf("(*", i);
+      int j = min(j0, j1, j2, j3, j4);
       if (j < 0) {
         b.append(s, i, n);
         break;
       }
-      if (j == j0 || j == j1) {
-        // Skip line beginning "> "
+      if (j == j0 || j == j1 || j == j2) {
+        // Skip line beginning ">"
         b.append(s, i, j);
-        int k = s.indexOf("\n", j + 2);
+        int k = s.indexOf("\n", j + 1);
         if (k < 0) {
           k = n;
         }
         i = k;
-      } else if (j == j2) {
+      } else if (j == j3) {
         // If a line contains "(*)", next search begins at the start of the
         // next line.
         int k = s.indexOf("\n", j + "(*)".length());
@@ -168,7 +169,7 @@ public class Main {
         }
         b.append(s, i, k);
         i = k;
-      } else if (j == j3) {
+      } else if (j == j4) {
         // If a line contains "(*", next search begins at the next "*)".
         int k = s.indexOf("*)", j + "(*".length());
         if (k < 0) {
@@ -222,9 +223,7 @@ public class Main {
     Environment env = Environments.env(typeSystem, session, valueMap);
     final Consumer<String> echoLines = out::println;
     final Consumer<String> outLines =
-        idempotent
-            ? x -> out.println("> " + x.replace("\n", "\n> "))
-            : echoLines;
+        idempotent ? x -> out.println(prefixLines(x)) : echoLines;
     final Map<String, Binding> outBindings = new LinkedHashMap<>();
     final Shell shell = new Shell(this, env, echoLines, outLines, outBindings);
     session.withShell(
@@ -233,6 +232,12 @@ public class Main {
         session1 ->
             shell.run(session1, new BufferingReader(in), echoLines, outLines));
     out.flush();
+  }
+
+  /** Precedes every line in 'x' with a caret. */
+  private static String prefixLines(String s) {
+    String s2 = "> " + s.replace("\n", "\n> ");
+    return s2.replace("> \n", ">\n");
   }
 
   /**

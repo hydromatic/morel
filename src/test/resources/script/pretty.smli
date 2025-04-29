@@ -1,0 +1,87 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Pretty-printing and output modes
+ *)
+
+(* -------------------------------------------------------------
+ * [MOREL-259] Tabular mode
+ *)
+
+Sys.set ("output", "tabular");
+> val it = () : unit
+
+from e in scott.dept;
+> deptno dname      loc
+> ------ ---------- --------
+> 10     ACCOUNTING NEW YORK
+> 20     RESEARCH   DALLAS
+> 30     SALES      CHICAGO
+> 40     OPERATIONS BOSTON
+>
+> val it : {deptno:int, dname:string, loc:string} list
+
+Sys.unset "output";
+> val it = () : unit
+
+from e in scott.dept;
+> val it =
+>   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>    {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>    {deptno=30,dname="SALES",loc="CHICAGO"},
+>    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
+>   : {deptno:int, dname:string, loc:string} list
+
+Sys.set ("output", "tabular");
+> val it = () : unit
+
+(* List of primitives uses classic style. *)
+[1,2,3];
+> val it = [1,2,3] : int list
+
+(* List of lists uses classic style. *)
+[[1,2],[3,4]];
+> val it = [[1,2],[3,4]] : int list list
+
+(* Record uses classic style. *)
+{id=1, name="julian", employed=false};
+> val it = {employed=false,id=1,name="julian"}
+>   : {employed:bool, id:int, name:string}
+
+(* List of records with a list field uses classic style. *)
+[{id=1, pets=["ruby"]}, {id=2, pets=["stealth", "luna"]}];
+> val it = [{id=1,pets=["ruby"]},{id=2,pets=["stealth","luna"]}]
+>   : {id:int, pets:string list} list
+
+(* List of records with a sum-type field uses classic style. *)
+[{id=1, salary=NONE}, {id=2, salary=SOME 100}];
+> val it = [{id=1,salary=NONE},{id=2,salary=SOME 100}]
+>   : {id:int, salary:int option} list
+
+(* List of records with a tuple field uses classic style. *)
+[{id=1, address=(94705,"CA")}, {id=2, address=(94618,"CA")}];
+> val it = [{address=(94705,"CA"),id=1},{address=(94618,"CA"),id=2}]
+>   : {address:int * string, id:int} list
+
+(* List of records with a record field uses classic style. *)
+[{id=1, address={zip=94705,state="CA"}}, {id=2, address={zip=94618, state="CA"}}];
+> val it =
+>   [{address={state="CA",zip=94705},id=1},{address={state="CA",zip=94618},id=2}]
+>   : {address:{state:string, zip:int}, id:int} list
+
+(*) End output.smli

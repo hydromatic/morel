@@ -66,6 +66,40 @@ List.last (Sys.env());
 > val it = ("vector","forall 'a. 'a list -> 'a vector") : string * string
 
 (* -------------------------------------------------------------
+ * Setting properties whose values are enums
+ *)
+Sys.set ("output", "classic");
+> val it = () : unit
+Sys.set ("output", "CLASSIC");
+> val it = () : unit
+Sys.set ("output", "ClasSic");
+> val it = () : unit
+Sys.set ("output", "classic ");
+> java.lang.RuntimeException: value must be one of: 'CLASSIC', 'TABULAR'
+Sys.set ("output", "bad");
+> java.lang.RuntimeException: value must be one of: 'CLASSIC', 'TABULAR'
+
+(*) After you unset a property with a default value, it reverts to the default.
+Sys.unset "output";
+> val it = () : unit
+Sys.show "output";
+> val it = SOME "CLASSIC" : string option
+
+(*) After you unset a property with a default value, it reverts to the default.
+Sys.show "optionalInt";
+> val it = NONE : string option
+Sys.set ("optionalInt", "foo");
+> java.lang.RuntimeException: value for property must have type class java.lang.Integer
+Sys.set ("optionalInt", 12);
+> val it = () : unit
+Sys.show "optionalInt";
+> val it = SOME "12" : string option
+Sys.unset "optionalInt";
+> val it = () : unit
+Sys.show "optionalInt";
+> val it = NONE : string option
+
+(* -------------------------------------------------------------
  * Bug gave 'AssertionError: op not handled: EQ'
  *)
 from p in (from p in [{a=1,b=2}] where p.a = 1);

@@ -20,13 +20,18 @@ package net.hydromatic.morel.compile;
 
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.parse.Parsers.appendId;
+import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 import static net.hydromatic.morel.util.Static.endsWith;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
@@ -39,6 +44,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.PairList;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Prints values. */
@@ -46,21 +52,26 @@ class Pretty {
 
   private final TypeSystem typeSystem;
   private final int lineWidth;
+  private final Prop.Output output;
   private final int printLength;
   private final int printDepth;
   private final int stringDepth;
+  private final char newline;
 
   Pretty(
       TypeSystem typeSystem,
       int lineWidth,
+      Prop.Output output,
       int printLength,
       int printDepth,
       int stringDepth) {
     this.typeSystem = requireNonNull(typeSystem);
     this.lineWidth = lineWidth;
+    this.output = requireNonNull(output);
     this.printLength = printLength;
     this.printDepth = printDepth;
     this.stringDepth = stringDepth;
+    this.newline = '\n';
   }
 
   /** Prints a value to a buffer. */
@@ -91,11 +102,11 @@ class Pretty {
       buf.setLength(start);
       while (buf.length() > 0
           && (buf.charAt(buf.length() - 1) == ' '
-              || buf.charAt(buf.length() - 1) == '\n')) {
+              || buf.charAt(buf.length() - 1) == newline)) {
         buf.setLength(buf.length() - 1);
       }
       if (buf.length() > 0) {
-        buf.append("\n");
+        buf.append(newline);
       }
 
       lineEnd[0] = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
@@ -123,18 +134,39 @@ class Pretty {
     if (value instanceof TypedVal) {
       final TypedVal typedVal = (TypedVal) value;
       final StringBuilder buf2 = new StringBuilder("val ");
-      appendId(buf2, typedVal.name).append(" = ");
-      pretty1(
-          buf,
-          indent,
-          lineEnd,
-          depth,
-          PrimitiveType.BOOL,
-          buf2.toString(),
-          0,
-          0);
-      pretty1(
-          buf, indent + 2, lineEnd, depth + 1, typedVal.type, typedVal.o, 0, 0);
+      appendId(buf2, typedVal.name);
+      if (customPrint(buf, indent, lineEnd, depth, typedVal.type, typedVal.o)) {
+        lineEnd[0] = -1; // no limit
+        pretty1(
+            buf,
+            indent,
+            lineEnd,
+            depth,
+            PrimitiveType.BOOL,
+            buf2.toString(),
+            0,
+            0);
+      } else {
+        buf2.append(" = ");
+        pretty1(
+            buf,
+            indent,
+            lineEnd,
+            depth,
+            PrimitiveType.BOOL,
+            buf2.toString(),
+            0,
+            0);
+        pretty1(
+            buf,
+            indent + 2,
+            lineEnd,
+            depth + 1,
+            typedVal.type,
+            typedVal.o,
+            0,
+            0);
+      }
       buf.append(' ');
       pretty1(
           buf,
@@ -327,6 +359,101 @@ class Pretty {
 
       default:
         return buf.append(value);
+    }
+  }
+
+  /**
+   * Tries to print a value using a custom formatter.
+   *
+   * <p>If successful, returns true, and {@code buf} contains the value; if
+   * unsuccessful, returns false, and the contents of {@code buf} are not
+   * changed.
+   */
+  @SuppressWarnings("unchecked")
+  private boolean customPrint(
+      @NonNull StringBuilder buf,
+      int indent,
+      int[] lineEnd,
+      int depth,
+      Type type,
+      Object o) {
+    if (output != Prop.Output.CLASSIC && canPrintTabular(type)) {
+      final RecordType recordType = (RecordType) ((ListType) type).elementType;
+      final List<List<String>> recordList = new ArrayList<>();
+      final List<String> valueList = new ArrayList<>();
+      for (List<?> record : (List<List<?>>) o) {
+        for (Object value : record) {
+          valueList.add(value.toString());
+        }
+        recordList.add(ImmutableList.copyOf(valueList));
+        valueList.clear();
+      }
+
+      // Default widths are based on headers.
+      final List<Integer> widths = new ArrayList<>();
+      final List<String> headers =
+          ImmutableList.copyOf(recordType.argNameTypes.keySet());
+      headers.forEach(s -> widths.add(s.length()));
+
+      // Compute the widest value in each column.
+      for (List<String> values : recordList) {
+        for (int i = 0; i < values.size(); i++) {
+          String s = values.get(i);
+          if (widths.get(i) < s.length()) {
+            widths.set(i, s.length());
+          }
+        }
+      }
+
+      row(buf, headers, widths, ' ');
+      row(buf, Collections.nCopies(headers.size(), ""), widths, '-');
+      for (List<String> strings : recordList) {
+        row(buf, strings, widths, ' ');
+      }
+      buf.append(newline);
+      return true;
+    }
+    return false;
+  }
+
+  /** Can print a type in tabular format if it is a list of records. */
+  private static boolean canPrintTabular(Type type) {
+    return type instanceof ListType
+        && ((ListType) type).elementType instanceof RecordType
+        && canPrintTabular2((RecordType) ((ListType) type).elementType);
+  }
+
+  /** Can print a record in tabular format if its fields are all primitive. */
+  private static boolean canPrintTabular2(RecordType recordType) {
+    return PairList.viewOf(recordType.argNameTypes)
+        .allMatch((label, type) -> type instanceof PrimitiveType);
+  }
+
+  private void row(
+      StringBuilder buf, List<String> values, List<Integer> widths, char pad) {
+    final int i = buf.length();
+    forEach(
+        values,
+        widths,
+        (value, width) -> {
+          if (buf.length() > i) {
+            buf.append(' ');
+          }
+          final int j = buf.length() + width;
+          buf.append(value);
+          padTo(buf, j, pad);
+        });
+    int j = buf.length();
+    while (j > 0 && buf.charAt(j - 1) == ' ') {
+      --j;
+    }
+    buf.setLength(j);
+    buf.append(newline);
+  }
+
+  private void padTo(StringBuilder buf, int desiredLength, char pad) {
+    while (buf.length() < desiredLength) {
+      buf.append(pad);
     }
   }
 

@@ -522,6 +522,7 @@ Not yet implemented
 Each property is set using the function `Sys.set (name, value)`,
 displayed using `Sys.show name`,
 and unset using `Sys.unset name`.
+`Sys.showAll ()` shows all properties and their values.
 
 | Name                 | Type | Default | Description |
 | -------------------- | ---- | ------- | ----------- |
@@ -529,6 +530,7 @@ and unset using `Sys.unset name`.
 | inlinePassCount      | int  | 5       | Maximum number of inlining passes. |
 | lineWidth            | int  | 79      | When printing, the length at which lines are wrapped. |
 | matchCoverageEnabled | bool | true    | Whether to check whether patterns are exhaustive and/or redundant. |
+| output               | enum | classic | How values should be formatted. "classic" (the default) prints values in a compact nested format; "tabular" prints values in a table if their type is a list of records. |
 | printDepth           | int  | 5       | When printing, the depth of nesting of recursive data structure at which ellipsis begins. |
 | printLength          | int  | 12      | When printing, the length of lists at which ellipsis begins. |
 | stringDepth          | int  | 70      | When printing, the length of strings at which ellipsis begins. |

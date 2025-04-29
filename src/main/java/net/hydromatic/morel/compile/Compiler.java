@@ -748,10 +748,14 @@ public class Compiler {
                                 Prop.PRINT_DEPTH.intValue(session.map);
                             int printLength =
                                 Prop.PRINT_LENGTH.intValue(session.map);
+                            Prop.Output output =
+                                Prop.OUTPUT.enumValue(
+                                    session.map, Prop.Output.class);
                             final Pretty pretty =
                                 new Pretty(
                                     typeSystem,
                                     lineWidth,
+                                    output,
                                     printLength,
                                     printDepth,
                                     stringDepth);

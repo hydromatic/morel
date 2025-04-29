@@ -2740,7 +2740,7 @@ public abstract class Codes {
           final List list = (List) arg;
           final String propName = (String) list.get(0);
           final Object value = list.get(1);
-          Prop.lookup(propName).set(session.map, value);
+          Prop.lookup(propName).setLenient(session.map, value);
           return Unit.INSTANCE;
         }
       };

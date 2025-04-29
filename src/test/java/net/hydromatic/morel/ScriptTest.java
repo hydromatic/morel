@@ -141,7 +141,7 @@ public class ScriptTest {
         inFile
             .getPath()
             .matches(
-                ".*/(blog|dummy|foreign|hybrid|logic"
+                ".*/(blog|dummy|foreign|hybrid|logic|pretty"
                     + "|suchThat)\\.(sml|smli)");
     final Map<String, ForeignValue> dictionary =
         loadDictionary
