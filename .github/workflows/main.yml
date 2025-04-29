@@ -35,7 +35,7 @@ jobs:
     strategy:
       matrix:
         java-version: [ "11" ]
-        guava-version: [ "33.4.5-jre" ]
+        guava-version: [ "33.4.8-jre" ]
         hsqldb-version: [ "" ]
         checkstyle-version: [ "" ]
         javadoc: [ false ]
@@ -50,6 +50,7 @@ jobs:
           - java-version: "21"
             guava-version: "31.1-jre"
           - java-version: "21"
+          - java-version: "24"
 
     steps:
       - uses: actions/checkout@v1
