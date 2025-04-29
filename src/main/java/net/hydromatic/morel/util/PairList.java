@@ -77,6 +77,11 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
     return builder.build();
   }
 
+  /** Creates a PairList that is a view of a Map. */
+  static <T, U> PairList<T, U> viewOf(Map<T, U> map) {
+    return new PairLists.MapPairList<>(map);
+  }
+
   /** Creates an empty PairList with a specified initial capacity. */
   static <T, U> PairList<T, U> withCapacity(int initialCapacity) {
     return backedBy(new ArrayList<>(initialCapacity));
@@ -209,7 +214,7 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
   int firstMatch(BiPredicate<T, U> predicate);
 
   /** Returns whether the predicate is true for no pairs in this list. */
-  boolean noMatch(BiPredicate<T, U> predicate);
+  boolean noneMatch(BiPredicate<T, U> predicate);
 
   /**
    * Action to be taken each step of an indexed iteration over a PairList.
@@ -227,6 +232,21 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
      * @param u Second input argument
      */
     void accept(int index, T t, U u);
+
+    /**
+     * Returns a {@link BiConsumer} that calls this IndexedBiConsumer with an
+     * index that is incremented each call.
+     */
+    default BiConsumer<T, U> getBiConsumer() {
+      return new BiConsumer<T, U>() {
+        int i = 0;
+
+        @Override
+        public void accept(T t, U u) {
+          IndexedBiConsumer.this.accept(i++, t, u);
+        }
+      };
+    }
   }
 
   /**

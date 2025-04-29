@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.AbstractList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.RandomAccess;
@@ -32,6 +33,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import org.apache.calcite.linq4j.function.Functions;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Various implementations of {@link PairList}. */
@@ -82,6 +84,47 @@ class PairLists {
      * pair.
      */
     abstract List<Object> backingList();
+
+    @Override
+    public T left(int index) {
+      return get(index).getKey();
+    }
+
+    @Override
+    public U right(int index) {
+      return get(index).getValue();
+    }
+
+    @Override
+    public void forEachIndexed(IndexedBiConsumer<T, U> consumer) {
+      forEach(consumer.getBiConsumer());
+    }
+
+    @Override
+    public <R> List<R> transform(BiFunction<T, U, R> function) {
+      return Functions.generate(
+          size(),
+          index -> {
+            final T t = left(index);
+            final U u = right(index);
+            return function.apply(t, u);
+          });
+    }
+
+    @Override
+    public <R> ImmutableList<R> transform2(BiFunction<T, U, R> function) {
+      if (isEmpty()) {
+        return ImmutableList.of();
+      }
+      ImmutableList.Builder<R> list = ImmutableList.builder();
+      forEach((t, u) -> list.add(function.apply(t, u)));
+      return list.build();
+    }
+
+    @Override
+    public boolean noneMatch(BiPredicate<T, U> predicate) {
+      return firstMatch(predicate) < 0;
+    }
   }
 
   /**
@@ -352,7 +395,7 @@ class PairLists {
 
     @SuppressWarnings("unchecked")
     @Override
-    public boolean noMatch(BiPredicate<T, U> predicate) {
+    public boolean noneMatch(BiPredicate<T, U> predicate) {
       for (int i = 0; i < list.size(); ) {
         final T t = (T) list.get(i++);
         final U u = (U) list.get(i++);
@@ -447,7 +490,7 @@ class PairLists {
     }
 
     @Override
-    public boolean noMatch(BiPredicate<T, U> predicate) {
+    public boolean noneMatch(BiPredicate<T, U> predicate) {
       return true;
     }
 
@@ -550,7 +593,7 @@ class PairLists {
     }
 
     @Override
-    public boolean noMatch(BiPredicate<T, U> predicate) {
+    public boolean noneMatch(BiPredicate<T, U> predicate) {
       return !predicate.test(t, u);
     }
 
@@ -727,7 +770,7 @@ class PairLists {
 
     @SuppressWarnings("unchecked")
     @Override
-    public boolean noMatch(BiPredicate<T, U> predicate) {
+    public boolean noneMatch(BiPredicate<T, U> predicate) {
       for (int i = 0; i < elements.length; ) {
         final T t = (T) elements[i++];
         final U u = (U) elements[i++];
@@ -749,6 +792,130 @@ class PairLists {
         }
       }
       return -1;
+    }
+  }
+
+  /**
+   * List of pairs backed by a map.
+   *
+   * <p>It works for all maps, but is efficient only if {@link
+   * ImmutableList#copyOf(Iterable)} on the key-set and value-set are O(0).
+   * Therefore, we recommend using it only with maps that extend {@link
+   * ImmutableMap}.
+   *
+   * @param <T> First type
+   * @param <U> Second type
+   */
+  static class MapPairList<T, U> extends AbstractPairList<T, U> {
+    private final Map<T, U> map;
+    private transient @Nullable List<T> leftList;
+    private transient @Nullable List<U> rightList;
+
+    MapPairList(Map<T, U> map) {
+      this.map = map;
+    }
+
+    @Override
+    List<Object> backingList() {
+      ImmutableList.Builder<Object> list =
+          ImmutableList.builderWithExpectedSize(size() * 2);
+      map.forEach(
+          (t, u) -> {
+            list.add(t);
+            list.add(u);
+          });
+      return list.build();
+    }
+
+    @Override
+    public ImmutablePairList<T, U> immutable() {
+      return ImmutablePairList.copyOf(map.entrySet());
+    }
+
+    @Override
+    public String toString() {
+      if (isEmpty()) {
+        return "[]";
+      }
+      StringBuilder sb = new StringBuilder();
+      sb.append('[');
+      forEach(
+          (t, u) -> {
+            if (sb.length() > 1) {
+              sb.append(',').append(' ');
+            }
+            sb.append('<');
+            sb.append(t);
+            sb.append(',');
+            sb.append(' ');
+            sb.append(u);
+            sb.append('>');
+          });
+      sb.append(']');
+      return sb.toString();
+    }
+
+    @Override
+    public T left(int index) {
+      return leftList().get(index);
+    }
+
+    @Override
+    public U right(int index) {
+      return rightList().get(index);
+    }
+
+    @Override
+    public List<T> leftList() {
+      final @Nullable List<T> result = leftList;
+      if (result != null) {
+        return result;
+      }
+      return leftList = ImmutableList.copyOf(map.keySet());
+    }
+
+    @Override
+    public List<U> rightList() {
+      final @Nullable List<U> result = rightList;
+      if (result != null) {
+        return result;
+      }
+      return rightList = ImmutableList.copyOf(map.values());
+    }
+
+    @Override
+    public void forEach(BiConsumer<T, U> consumer) {
+      map.forEach(consumer);
+    }
+
+    @Override
+    public boolean anyMatch(BiPredicate<T, U> predicate) {
+      return Pair.anyMatch(leftList(), rightList(), predicate);
+    }
+
+    @Override
+    public boolean allMatch(BiPredicate<T, U> predicate) {
+      return Pair.allMatch(leftList(), rightList(), predicate);
+    }
+
+    @Override
+    public int firstMatch(BiPredicate<T, U> predicate) {
+      return Pair.firstMatch(leftList(), rightList(), predicate);
+    }
+
+    @Override
+    public int size() {
+      return map.size();
+    }
+
+    @Override
+    public @NonNull Iterator<Map.Entry<T, U>> iterator() {
+      return map.entrySet().iterator();
+    }
+
+    @Override
+    public Map.Entry<T, U> get(int index) {
+      return new MapEntry<>(left(index), right(index));
     }
   }
 }

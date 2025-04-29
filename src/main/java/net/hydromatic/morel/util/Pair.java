@@ -258,6 +258,19 @@ public class Pair<T1, T2>
     return false;
   }
 
+  /** Returns the index of the first pair that matches a predicate. */
+  public static <K, V> int firstMatch(
+      Iterable<K> ks, Iterable<V> vs, BiPredicate<K, V> predicate) {
+    final Iterator<K> ki = ks.iterator();
+    final Iterator<V> vi = vs.iterator();
+    for (int i = 0; ki.hasNext() && vi.hasNext(); ++i) {
+      if (predicate.test(ki.next(), vi.next())) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   /** Calls a consumer for each pair of items in two iterables. */
   public static <K, V> void forEach(
       Iterable<K> ks, Iterable<V> vs, BiConsumer<K, V> consumer) {

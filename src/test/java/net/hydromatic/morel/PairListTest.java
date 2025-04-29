@@ -394,6 +394,29 @@ class PairListTest {
     validate(emptyPairList, Collections.emptyList());
   }
 
+  /**
+   * Tests {@link PairList#viewOf(Map)} and {@link PairList#toImmutableMap()}.
+   */
+  @Test
+  void testPairListViewOfMap() {
+    final ImmutableMap<String, Integer> map = ImmutableMap.of("a", 1, "b", 2);
+    final PairList<String, Integer> pairList = PairList.viewOf(map);
+    assertThat(pairList, hasSize(2));
+    assertThat(pairList, hasToString("[<a, 1>, <b, 2>]"));
+
+    final List<Map.Entry<String, Integer>> list =
+        new ArrayList<>(map.entrySet());
+    validate(pairList, list);
+
+    final ImmutableMap<String, Integer> map2 = pairList.toImmutableMap();
+    assertThat(map2, is(map));
+
+    final Map<String, Integer> emptyMap = ImmutableMap.of();
+    final PairList<String, Integer> emptyPairList = PairList.viewOf(emptyMap);
+    assertThat(emptyPairList.isEmpty(), is(true));
+    validate(emptyPairList, Collections.emptyList());
+  }
+
   /** Tests {@link PairList#withCapacity(int)}. */
   @Test
   void testPairListWithCapacity() {
@@ -494,32 +517,32 @@ class PairListTest {
       final BiPredicate<String, Integer> gt2 = (s, i) -> i > 2;
       assertThat(list3.anyMatch(gt2), is(true));
       assertThat(list3.allMatch(gt2), is(false));
-      assertThat(list3.noMatch(gt2), is(false));
+      assertThat(list3.noneMatch(gt2), is(false));
       assertThat(list3.firstMatch(gt2), is(1));
 
       final BiPredicate<String, Integer> negative = (s, i) -> i < 0;
       assertThat(list3.anyMatch(negative), is(false));
       assertThat(list3.allMatch(negative), is(false));
-      assertThat(list3.noMatch(negative), is(true));
+      assertThat(list3.noneMatch(negative), is(true));
       assertThat(list3.firstMatch(negative), is(-1));
 
       final BiPredicate<String, Integer> positive = (s, i) -> i > 0;
       assertThat(list3.anyMatch(positive), is(true));
       assertThat(list3.allMatch(positive), is(true));
-      assertThat(list3.noMatch(positive), is(false));
+      assertThat(list3.noneMatch(positive), is(false));
       assertThat(list3.firstMatch(positive), is(0));
 
       final BiPredicate<String, Integer> isNull = (s, i) -> s == null;
       if (mutable) {
         assertThat(list3.anyMatch(isNull), is(true));
         assertThat(list3.allMatch(isNull), is(false));
-        assertThat(list3.noMatch(isNull), is(false));
+        assertThat(list3.noneMatch(isNull), is(false));
         assertThat(list3.firstMatch(isNull), is(1));
       } else {
         // In the immutable version, null has been replaced with "null"
         assertThat(list3.anyMatch(isNull), is(false));
         assertThat(list3.allMatch(isNull), is(false));
-        assertThat(list3.noMatch(isNull), is(true));
+        assertThat(list3.noneMatch(isNull), is(true));
         assertThat(list3.firstMatch(isNull), is(-1));
       }
 
@@ -529,7 +552,7 @@ class PairListTest {
               p -> {
                 assertThat(list0.anyMatch(p), is(false));
                 assertThat(list0.allMatch(p), is(true)); // trivially
-                assertThat(list0.noMatch(p), is(true));
+                assertThat(list0.noneMatch(p), is(true));
                 assertThat(list0.firstMatch(p), is(-1));
               });
 
@@ -540,7 +563,7 @@ class PairListTest {
               p -> {
                 assertThat(list1.anyMatch(p), is(doubleList1.anyMatch(p)));
                 assertThat(list1.allMatch(p), is(doubleList1.anyMatch(p)));
-                assertThat(list1.noMatch(p), is(doubleList1.noMatch(p)));
+                assertThat(list1.noneMatch(p), is(doubleList1.noneMatch(p)));
                 assertThat(list1.firstMatch(p), is(doubleList1.firstMatch(p)));
               });
     }
