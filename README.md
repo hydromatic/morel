@@ -45,7 +45,7 @@ Get Morel from
 <dependency>
   <groupId>net.hydromatic</groupId>
   <artifactId>morel</artifactId>
-  <version>0.5.0</version>
+  <version>0.6.0</version>
 </dependency>
 ```
 
@@ -70,7 +70,7 @@ If you are using Java 8, you should add parameters
 
 ```bash
 $ ./morel
-morel version 0.5.0 (java version "21", JLine terminal, xterm-256color)
+morel version 0.6.0 (java version "21", JLine terminal, xterm-256color)
 - "Hello, world!";
 val it = "Hello, world!" : string
 - exit

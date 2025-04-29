@@ -21,7 +21,7 @@ License.
 # Morel release history and change log
 
 For a full list of releases, see
-<a href="https://github.com/hydromatic/morel/releases">github</a>.
+<a href="https://github.com/hydromatic/morel/releases">GitHub</a>.
 
 <!--
 ## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.x.0">0.x.0</a> / xxxx-xx-xx
@@ -40,9 +40,104 @@ Contributors:
 
 ### Site and documentation
 
-* [<a href="https://github.com/hydromatic/morel/issues/xxx">MOREL-xxx</a>]
+* [[MOREL-xxx](https://github.com/hydromatic/morel/issues/xxx)]
   Release 0.x.0
 -->
+
+## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.6.0">0.6.0</a> / 2024-05-02
+
+Release 0.6.0 generalizes queries with
+[universal and existential quantification](https://github.com/hydromatic/morel/issues/241)
+(`forall` and `exists`) and adds a keyword for logical implication (`implies`).
+The new `with` keyword allows
+[functional update of record values](https://github.com/hydromatic/morel/issues/249).
+
+Usability of the shell is improved by
+[tabular mode](https://github.com/hydromatic/morel/issues/259),
+and
+[`showAll`](https://github.com/hydromatic/morel/issues/260)
+and
+[`clearEnv`](https://github.com/hydromatic/morel/issues/251)
+functions.
+
+In preparation for
+[operator overloading](https://github.com/hydromatic/morel/issues/237)
+we have
+[tuned the performance of the unifier](https://github.com/hydromatic/morel/issues/246)
+that powers Morel's type-inference.
+
+Contributors:
+Julian Hyde
+
+### Features
+
+* [[MOREL-259](https://github.com/hydromatic/morel/issues/259)]
+  Tabular mode
+* [[MOREL-249](https://github.com/hydromatic/morel/issues/249)]
+  Add `with` operator (functional update notation for record values)
+* [[MOREL-260](https://github.com/hydromatic/morel/issues/260)]
+  Add function `Sys.showAll ()`
+* [[MOREL-251](https://github.com/hydromatic/morel/issues/251)]
+  Add function `Sys.clearEnv ()`
+* [[MOREL-246](https://github.com/hydromatic/morel/issues/246)]
+  Tune unifier
+* [[MOREL-241](https://github.com/hydromatic/morel/issues/241)]
+  Universal and existential quantification (`forall` and `exists`) and
+  implication (`implies`)
+
+### Bug-fixes and internal improvements
+
+* [[MOREL-253](https://github.com/hydromatic/morel/issues/253)]
+  Scalar `yield` after singleton record `yield` throws
+  "Conversion to core did not preserve type"
+* [[MOREL-258](https://github.com/hydromatic/morel/issues/258)]
+  `skip` and `take` in query with unbounded variable give error
+* Add method `PairList.viewOf(Map)`
+* Allow `Sys` to be evaluated and printed in the shell
+* Refactor `NameGenerator`
+* [[MOREL-252](https://github.com/hydromatic/morel/issues/252)]
+  When unparsing Morel, try to generate qualified identifiers less often
+* Refactor: Define built-in datatypes in an enum
+* Refactor: Omit declarations from type-unification
+* In `PairList`, add a static `copyOf` method, and enable `set` and `remove`
+  methods
+* The `toString` methods of `RelList` and `Binding` should not print the
+  contents of tables
+* [[MOREL-250](https://github.com/hydromatic/morel/issues/250)]
+  Inliner generates invalid plan if dead code occurs in a nested `let`
+* [[MOREL-248](https://github.com/hydromatic/morel/issues/248)]
+  Optimize method `Static.transformEager` for `List` and `Collection` arguments
+* [[MOREL-247](https://github.com/hydromatic/morel/issues/247)]
+  Cannot translate an expression that contains type annotations
+* In `class Static`, add methods `last`, `skipLast`
+
+### Build and tests
+
+* Reduce CI timeout
+* Checkstyle should require that braces around blocks in `case:` are at the
+  start of the line
+* [[MOREL-245](https://github.com/hydromatic/morel/issues/245)]
+  Enable google-java-format
+
+### Component upgrades
+
+* Bump calcite from 1.38 to 1.39
+* Bump checkstyle from 10.21.4 to 10.23.1
+* Bump guava from 33.4.0-jre to 33.4.5-jre,
+  and raise minimum from 21.0 to 23.1-jre
+* Bump guava from 33.4.5-jre to 33.4.8-jre
+* Bump jdk from 21 to 24;
+  we still support all Java versions JDK 8 and higher
+* Bump junit-jupiter from 5.12.0 to 5.12.2
+* Bump maven from 3.8.4 to 3.9.9
+* Bump maven-surefire-plugin from 3.5.2 to 3.5.3
+
+### Site and documentation
+
+* [[MOREL-261](https://github.com/hydromatic/morel/issues/261)]
+  Release 0.6.0
+* [Document query expressions](docs/query.md)
+* In release notes, use the '0.x.0' format for releases
 
 ## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.5.0">0.5.0</a> / 2025-03-04
 
@@ -63,23 +158,23 @@ Julian Hyde
 
 ### Features
 
-* [<a href="https://github.com/hydromatic/morel/issues/231">MOREL-231</a>]
+* [[MOREL-231](https://github.com/hydromatic/morel/issues/231)]
   Add `distinct` keyword as shorthand for `group` with all fields and no
   aggregate functions
-* [<a href="https://github.com/hydromatic/morel/issues/230">MOREL-230</a>]
+* [[MOREL-230](https://github.com/hydromatic/morel/issues/230)]
   Allow lambda (`fn`) to have multiple branches, similar to `case`
-* [<a href="https://github.com/hydromatic/morel/issues/228">MOREL-228</a>]
+* [[MOREL-228](https://github.com/hydromatic/morel/issues/228)]
   `Int` structure
-* [<a href="https://github.com/hydromatic/morel/issues/171">MOREL-171</a>]
+* [[MOREL-171](https://github.com/hydromatic/morel/issues/171)]
   Add `into` and `through` clauses to `from` expression
 * Add function `Interactive.useSilently`
-* [<a href="https://github.com/hydromatic/morel/issues/216">MOREL-216</a>]
+* [[MOREL-216](https://github.com/hydromatic/morel/issues/216)]
   Allow comma-separated scans in `join`, and `on` in the `from` clause
-* [<a href="https://github.com/hydromatic/morel/issues/202">MOREL-202</a>]
+* [[MOREL-202](https://github.com/hydromatic/morel/issues/202)]
   Allow unbounded variables (`from` and `join` without `in`), and remove
   `suchthat` keyword
 * Inline singleton `case`
-* [<a href="https://github.com/hydromatic/morel/issues/213">MOREL-213</a>]
+* [[MOREL-213](https://github.com/hydromatic/morel/issues/213)]
   Require that a non-terminal `yield` step is a record expression
 
 ### Bug-fixes and internal improvements
@@ -97,7 +192,7 @@ Julian Hyde
 * Add Australia, cakes tests from
   [MiniZinc tutorial](https://docs.minizinc.dev/en/stable/modelling.html)
 * Enable tests for
-  [<a href="https://github.com/hydromatic/morel/issues/43">MOREL-43</a>]
+  [[MOREL-43](https://github.com/hydromatic/morel/issues/43)]
 
 ### Component upgrades
 
@@ -120,7 +215,7 @@ Julian Hyde
 
 * Copy-edit documentation
 * Add javadoc badge to README
-* [<a href="https://github.com/hydromatic/morel/issues/243">MOREL-243</a>]
+* [[MOREL-243](https://github.com/hydromatic/morel/issues/243)]
   Release 0.5.0
 
 ## <a href="https://github.com/hydromatic/morel/releases/tag/morel-0.4.0">0.4.0</a> / 2024-01-04
@@ -140,18 +235,18 @@ Rette66
 
 ### Features
 
-* [<a href="https://github.com/hydromatic/morel/issues/204">MOREL-204</a>]
+* [[MOREL-204](https://github.com/hydromatic/morel/issues/204)]
   Add `take` and `skip` relational operators
-* [<a href="https://github.com/hydromatic/morel/issues/209">MOREL-209</a>]
+* [[MOREL-209](https://github.com/hydromatic/morel/issues/209)]
   File reader, and progressive types
-* [<a href="https://github.com/hydromatic/morel/issues/210">MOREL-210</a>]
+* [[MOREL-210](https://github.com/hydromatic/morel/issues/210)]
   Fold long types when printing
 * Rename `Option.flatten` to `Option.join`
-* [<a href="https://github.com/hydromatic/morel/issues/71">MOREL-71</a>]
+* [[MOREL-71](https://github.com/hydromatic/morel/issues/71)]
   Allow identifiers to be quoted using backticks
-* [<a href="https://github.com/hydromatic/morel/issues/206">MOREL-206</a>]
+* [[MOREL-206](https://github.com/hydromatic/morel/issues/206)]
   Indent tuples when printing
-* [<a href="https://github.com/hydromatic/morel/issues/129">MOREL-129</a>]
+* [[MOREL-129](https://github.com/hydromatic/morel/issues/129)]
   Define relations via constrained iterations, and introduce a `suchthat`
   keyword to use them
 
@@ -159,13 +254,13 @@ Rette66
 
 * Add `directory` property to `Session`
 * Add type parameter to `Core.Literal.unwrap()` method
-* [<a href="https://github.com/hydromatic/morel/issues/208">MOREL-208</a>]
+* [[MOREL-208](https://github.com/hydromatic/morel/issues/208)]
   `FromBuilder` should remove trivial `yield` step between two scan steps
-* [<a href="https://github.com/hydromatic/morel/issues/205">MOREL-205</a>]
+* [[MOREL-205](https://github.com/hydromatic/morel/issues/205)]
   Pattern that uses nested type-constructors should not be considered
   redundant
 * Add utility methods `Static.transform` and `transformEager`
-* [<a href="https://github.com/hydromatic/morel/issues/203">MOREL-203</a>]
+* [[MOREL-203](https://github.com/hydromatic/morel/issues/203)]
   Cannot deduce type for `from b in [SOME true, NONE]`
 * Refactor: In `Unifier.Variable`, store ordinal rather than computing it
 * Refactor: Rename `Ord.forEach` to `forEachIndexed`
@@ -174,18 +269,18 @@ Rette66
 * Simplify `EnvShuttle`, `EnvVisitor` by adding `push` method
 * Add `interface PairList` and `interface ImmutablePairList`
 * Add method `Static.nextPowerOfTwo`
-* [<a href="https://github.com/hydromatic/morel/issues/201">MOREL-201</a>]
+* [[MOREL-201](https://github.com/hydromatic/morel/issues/201)]
   `Real.signBit` gives different result on JDK 19/ARM
 
 ### Build and tests
 
 * Run `script.sml` in tests
-* [<a href="https://github.com/hydromatic/morel/issues/207">MOREL-207</a>]
+* [[MOREL-207](https://github.com/hydromatic/morel/issues/207)]
   Detect and fix flaky tests
 * Disallow static star import
-* [<a href="https://github.com/hydromatic/morel/issues/200">MOREL-200</a>]
+* [[MOREL-200](https://github.com/hydromatic/morel/issues/200)]
   In the test suite, run arbitrary "lint" checks on code
-* [<a href="https://github.com/hydromatic/morel/issues/198">MOREL-198</a>]
+* [[MOREL-198](https://github.com/hydromatic/morel/issues/198)]
   Idempotent mode for test scripts
 * Add a test for various closure and recursion scenarios
 * Allow CI runs to be triggered manually, and monthly
@@ -214,12 +309,12 @@ Rette66
 * Bump maven-surefire-plugin from 2.22.2 to 3.2.3
 * Bump slfj from 2.0.3 to 2.1.0-alpha1
 * Add versions-maven-plugin version 2.16.2
-* [<a href="https://github.com/hydromatic/morel/issues/199">MOREL-199</a>]
+* [[MOREL-199](https://github.com/hydromatic/morel/issues/199)]
   Support JDK 19 and 20
 
 ### Site and documentation
 
-* [<a href="https://github.com/hydromatic/morel/issues/211">MOREL-211</a>]
+* [[MOREL-211](https://github.com/hydromatic/morel/issues/211)]
   Release 0.4.0
 * Add Maven Central badge to `README.md`
 
@@ -255,127 +350,127 @@ Sergey Nuyanzin
 
 ### Features
 
-* [<a href="https://github.com/hydromatic/morel/issues/165">MOREL-165</a>]
+* [[MOREL-165](https://github.com/hydromatic/morel/issues/165)]
   Improve message when type resolution cannot deduce full record type
-* [<a href="https://github.com/hydromatic/morel/issues/159">MOREL-159</a>]
+* [[MOREL-159](https://github.com/hydromatic/morel/issues/159)]
   `from` should not have a singleton record type unless it ends with a
   singleton record `yield`
-* [<a href="https://github.com/hydromatic/morel/issues/147">MOREL-147</a>]
+* [[MOREL-147](https://github.com/hydromatic/morel/issues/147)]
   Allow Calcite schemas to contain sub-schemas
-* [<a href="https://github.com/hydromatic/morel/issues/138">MOREL-138</a>]
+* [[MOREL-138](https://github.com/hydromatic/morel/issues/138)]
   Type annotations in patterns, function declarations and expressions
-* [<a href="https://github.com/hydromatic/morel/issues/55">MOREL-55</a>]
+* [[MOREL-55](https://github.com/hydromatic/morel/issues/55)]
   Analyze match coverage, detecting redundant and exhaustive matches
 * Satisfiability prover
-* [<a href="https://github.com/hydromatic/morel/issues/118">MOREL-118</a>]
+* [[MOREL-118](https://github.com/hydromatic/morel/issues/118)]
   Report positions in error messages and exceptions
-* [<a href="https://github.com/hydromatic/morel/issues/105">MOREL-105</a>]
+* [[MOREL-105](https://github.com/hydromatic/morel/issues/105)]
   Allow identifiers to contain prime characters (`'`)
-* [<a href="https://github.com/hydromatic/morel/issues/70">MOREL-70</a>]
+* [[MOREL-70](https://github.com/hydromatic/morel/issues/70)]
   Polymorphic datatype
-* [<a href="https://github.com/hydromatic/morel/issues/104">MOREL-104</a>]
+* [[MOREL-104](https://github.com/hydromatic/morel/issues/104)]
   Make functions top-level
-* [<a href="https://github.com/hydromatic/morel/issues/103">MOREL-103</a>]
+* [[MOREL-103](https://github.com/hydromatic/morel/issues/103)]
   Layered patterns (`as`), and composite `val`
-* [<a href="https://github.com/hydromatic/morel/issues/102">MOREL-102</a>]
+* [[MOREL-102](https://github.com/hydromatic/morel/issues/102)]
   `Real` structure
 * Allow quick eager evaluation for functions/operators with more than one
   argument
-* [<a href="https://github.com/hydromatic/morel/issues/96">MOREL-96</a>]
+* [[MOREL-96](https://github.com/hydromatic/morel/issues/96)]
   Print control
-* [<a href="https://github.com/hydromatic/morel/issues/100">MOREL-100</a>]
+* [[MOREL-100](https://github.com/hydromatic/morel/issues/100)]
   Allow double-quote and backslash in string and char literals
-* [<a href="https://github.com/hydromatic/morel/issues/88">MOREL-88</a>]
+* [[MOREL-88](https://github.com/hydromatic/morel/issues/88)]
   `Math` structure
 * Floating point: `posInf`, `negInf`, `NaN`, and negative zero
-* [<a href="https://github.com/hydromatic/morel/issues/94">MOREL-94</a>]
+* [[MOREL-94](https://github.com/hydromatic/morel/issues/94)]
   Wordle solver
-* [<a href="https://github.com/hydromatic/morel/issues/95">MOREL-95</a>]
+* [[MOREL-95](https://github.com/hydromatic/morel/issues/95)]
   Mutually recursive functions
 * Add `Relational.iterate`, which allows "recursive queries" such as
   transitive closure
-* [<a href="https://github.com/hydromatic/morel/issues/69">MOREL-69</a>]
+* [[MOREL-69](https://github.com/hydromatic/morel/issues/69)]
   Add `compute` clause, for monoid comprehensions
-* [<a href="https://github.com/hydromatic/morel/issues/86">MOREL-86</a>]
+* [[MOREL-86](https://github.com/hydromatic/morel/issues/86)]
   Add `use` function, to read and execute source from a file
-* [<a href="https://github.com/hydromatic/morel/issues/72">MOREL-72</a>]
+* [[MOREL-72](https://github.com/hydromatic/morel/issues/72)]
   Join
-* [<a href="https://github.com/hydromatic/morel/issues/11">MOREL-11</a>]
+* [[MOREL-11](https://github.com/hydromatic/morel/issues/11)]
   In `from` clause, allow 'variable = value'
-* [<a href="https://github.com/hydromatic/morel/issues/62">MOREL-62</a>]
+* [[MOREL-62](https://github.com/hydromatic/morel/issues/62)]
   Add function `Relational.only`, which allows scalar sub-queries
-* [<a href="https://github.com/hydromatic/morel/issues/65">MOREL-65</a>]
+* [[MOREL-65](https://github.com/hydromatic/morel/issues/65)]
   In the shell (REPL), use prompt '`-`' and continuation '`=`'
-* [<a href="https://github.com/hydromatic/morel/issues/51">MOREL-51</a>]
+* [[MOREL-51](https://github.com/hydromatic/morel/issues/51)]
   Add `Relational.exists` function, and push it down to Calcite
 * Add `morel.lang`, Morel language definition for the Linux 'highlight'
   command
-* [<a href="https://github.com/hydromatic/morel/issues/60">MOREL-60</a>]
+* [[MOREL-60](https://github.com/hydromatic/morel/issues/60)]
   Push `elem`, `notelem` and `not ... elem` down to Calcite (as SQL `IN`
   and `NOT IN`)
-* [<a href="https://github.com/hydromatic/morel/issues/52">MOREL-52</a>]
+* [[MOREL-52](https://github.com/hydromatic/morel/issues/52)]
   Allow multiple `yield` steps in `from`
-* [<a href="https://github.com/hydromatic/morel/issues/45">MOREL-45</a>]
+* [[MOREL-45](https://github.com/hydromatic/morel/issues/45)]
   Translate `List.filter` as if user had written `where`;
   and `List.map` to `yield`
-* [<a href="https://github.com/hydromatic/morel/issues/57">MOREL-57</a>]
+* [[MOREL-57](https://github.com/hydromatic/morel/issues/57)]
   `group` with empty key should emit one row
-* [<a href="https://github.com/hydromatic/morel/issues/54">MOREL-54</a>]
+* [[MOREL-54](https://github.com/hydromatic/morel/issues/54)]
   Views (parameterized functions that return a relation) and inlining
-* [<a href="https://github.com/hydromatic/morel/issues/53">MOREL-53</a>]
+* [[MOREL-53](https://github.com/hydromatic/morel/issues/53)]
   Optimize core language by inlining expressions
-* [<a href="https://github.com/hydromatic/morel/issues/42">MOREL-42</a>]
+* [[MOREL-42](https://github.com/hydromatic/morel/issues/42)]
   Add a `morel` Calcite UDF, to allow hybrid plans with a mixture of relational
   and non-relational
-* [<a href="https://github.com/hydromatic/morel/issues/40">MOREL-40</a>]
+* [[MOREL-40](https://github.com/hydromatic/morel/issues/40)]
   Translate to full Calcite algebra
-* [<a href="https://github.com/hydromatic/morel/issues/46">MOREL-46</a>]
+* [[MOREL-46](https://github.com/hydromatic/morel/issues/46)]
   Core language
-* [<a href="https://github.com/hydromatic/morel/issues/48">MOREL-48</a>]
+* [[MOREL-48](https://github.com/hydromatic/morel/issues/48)]
   Deduce types when a function is applied to a record selector
-* [<a href="https://github.com/hydromatic/morel/issues/44">MOREL-44</a>]
+* [[MOREL-44](https://github.com/hydromatic/morel/issues/44)]
   Session variables
-* [<a href="https://github.com/hydromatic/morel/issues/41">MOREL-41</a>]
+* [[MOREL-41](https://github.com/hydromatic/morel/issues/41)]
   Add `Sys.plan ()` function, to display plans from the shell
-* [<a href="https://github.com/hydromatic/morel/issues/39">MOREL-39</a>]
+* [[MOREL-39](https://github.com/hydromatic/morel/issues/39)]
   Implement built-in `vector` and `order` data types
-* [<a href="https://github.com/hydromatic/morel/issues/38">MOREL-38</a>]
+* [[MOREL-38](https://github.com/hydromatic/morel/issues/38)]
   Implement built-in `option` datatype and supporting functions
-* [<a href="https://github.com/hydromatic/morel/issues/37">MOREL-37</a>]
+* [[MOREL-37](https://github.com/hydromatic/morel/issues/37)]
   Raise exceptions in built-in functions
-* [<a href="https://github.com/hydromatic/morel/issues/25">MOREL-25</a>]
+* [[MOREL-25](https://github.com/hydromatic/morel/issues/25)]
   Add `o` (function composition) and `@` (list concatenation) operators
-* [<a href="https://github.com/hydromatic/morel/issues/36">MOREL-36</a>]
+* [[MOREL-36](https://github.com/hydromatic/morel/issues/36)]
   In record pattern, make labels optional, and disallow `...` anywhere but end
-* [<a href="https://github.com/hydromatic/morel/issues/34">MOREL-34</a>]
+* [[MOREL-34](https://github.com/hydromatic/morel/issues/34)]
   Functions in relations
-* [<a href="https://github.com/hydromatic/morel/issues/27">MOREL-27</a>]
+* [[MOREL-27](https://github.com/hydromatic/morel/issues/27)]
   Create objects for built-in structures `List` and `String`, and allow
   `structure.name` references
-* [<a href="https://github.com/hydromatic/morel/issues/33">MOREL-33</a>]
+* [[MOREL-33](https://github.com/hydromatic/morel/issues/33)]
   Add `elem`, `notelem` operators
-* [<a href="https://github.com/hydromatic/morel/issues/30">MOREL-30</a>]
+* [[MOREL-30](https://github.com/hydromatic/morel/issues/30)]
   Add `union`, `intersect`, `except` operators
-* [<a href="https://github.com/hydromatic/morel/issues/31">MOREL-31</a>]
+* [[MOREL-31](https://github.com/hydromatic/morel/issues/31)]
   In `from` expression, allow `in` to assign to pattern
-* [<a href="https://github.com/hydromatic/morel/issues/29">MOREL-29</a>]
+* [[MOREL-29](https://github.com/hydromatic/morel/issues/29)]
   Overload `+` operator to allow both `int` and `real` arguments
-* [<a href="https://github.com/hydromatic/morel/issues/24">MOREL-24</a>]
+* [[MOREL-24](https://github.com/hydromatic/morel/issues/24)]
   Use `=` rather than `as` for assigning column aliases in `group` and `compute`
-* [<a href="https://github.com/hydromatic/morel/issues/23">MOREL-23</a>]
+* [[MOREL-23](https://github.com/hydromatic/morel/issues/23)]
   Default arguments for aggregate functions
-* [<a href="https://github.com/hydromatic/morel/issues/17">MOREL-17</a>]
+* [[MOREL-17](https://github.com/hydromatic/morel/issues/17)]
   Allow `from` clause that defines 0 sources
-* [<a href="https://github.com/hydromatic/morel/issues/20">MOREL-20</a>]
+* [[MOREL-20](https://github.com/hydromatic/morel/issues/20)]
   Add `order` clause
 * In `compute` clause of `group`, apply `of` expression to each row
-* [<a href="https://github.com/hydromatic/morel/issues/21">MOREL-21</a>]
+* [[MOREL-21](https://github.com/hydromatic/morel/issues/21)]
   In `from`, allow multiple `group` and `where` clauses in any order, optionally
   followed by `yield`
 
 ### Bug-fixes and internal improvements
 
-* [<a href="https://github.com/hydromatic/morel/issues/179">MOREL-179</a>]
+* [[MOREL-179](https://github.com/hydromatic/morel/issues/179)]
   In compilation environment, use name + ordinal as the key, not just name, to
   accommodate variable copies caused by inlining
 * Refactor: Move list methods into `Static`
@@ -383,43 +478,43 @@ Sergey Nuyanzin
   `lessThan`, `only` etc.
 * Allocate `bool` literals (`true` and `false`) once in `CoreBuilder`
 * Keywords should be lower case
-* [<a href="https://github.com/hydromatic/morel/issues/101">MOREL-101</a>]
+* [[MOREL-101](https://github.com/hydromatic/morel/issues/101)]
   Join variables are out of order in the rows sent to an aggregate function
-* [<a href="https://github.com/hydromatic/morel/issues/99">MOREL-99</a>]
+* [[MOREL-99](https://github.com/hydromatic/morel/issues/99)]
   Script parser hangs if it encounters invalid syntax, and ignores comments at
   ends of files
 * Refactor: `Array` to `List`, `List` to `Consumer`
 * Refactor: move `Shell` state into new `interface Config`
 * Tuning
 * Rename `Option.join` to `flatten` (to make way for the `join` keyword)
-* [<a href="https://github.com/hydromatic/morel/issues/73">MOREL-73</a>]
+* [[MOREL-73](https://github.com/hydromatic/morel/issues/73)]
   Keywords must be lower case
-* [<a href="https://github.com/hydromatic/morel/issues/64">MOREL-64</a>]
+* [[MOREL-64](https://github.com/hydromatic/morel/issues/64)]
   `order` after `yield` gives 'unbound variable' error
-* [<a href="https://github.com/hydromatic/morel/issues/67">MOREL-67</a>]
+* [[MOREL-67](https://github.com/hydromatic/morel/issues/67)]
   In `compute` clause, the key value should be available but is null
 * During inlining, use '_' as delimiter for qualified variable names
-* [<a href="https://github.com/hydromatic/morel/issues/59">MOREL-59</a>]
+* [[MOREL-59](https://github.com/hydromatic/morel/issues/59)]
   Converting an empty list to relational algebra throws
 * Add `Core.Yield` step, and obsolete `Core.yieldExp`
 * Rationalize order of Java 'import' statements
 * Always inline atomic variables
 * Add method `Static.shorterThan(Iterable, int)`
-* [<a href="https://github.com/hydromatic/morel/issues/49">MOREL-49</a>]
+* [[MOREL-49](https://github.com/hydromatic/morel/issues/49)]
   Function argument `()` should have type `unit`, not 0-tuple
-* [<a href="https://github.com/hydromatic/morel/issues/50">MOREL-50</a>]
+* [[MOREL-50](https://github.com/hydromatic/morel/issues/50)]
   Type resolver does not resolve all fields of record types
 * Improve field names, e.g. rename `Exp e` to `Exp exp`
 * Remove overrides of `toString()` method in `Environment` and `EvalEnv`
 * Factor `Converter` out of `CalciteForeignValue`
 * Refactor: rename `let` fields
 * Add `enum Prop`, for strongly-typed properties
-* [<a href="https://github.com/hydromatic/morel/issues/13">MOREL-13</a>]
+* [[MOREL-13](https://github.com/hydromatic/morel/issues/13)]
   Garbage-collect obscured variables
 * AST that contains a call to `op +` is unparsed incorrectly
 * Refactor `DataSet`
 * `TypeVisitor` should visit parameter types inside `DataType`
-* [<a href="https://github.com/hydromatic/morel/issues/35">MOREL-35</a>]
+* [[MOREL-35](https://github.com/hydromatic/morel/issues/35)]
   Record pattern in `from` mixes up fields if not in alphabetical order
 * Deduce type of polymorphic field in tuple or record
 * Add tracing to `Unifier`
@@ -427,14 +522,14 @@ Sergey Nuyanzin
 * Correct order of numeric labels in records, and allow 0 as a label
 * A record with a field named "1" is a record, not a tuple
 * During validation, replace `From.sources` if rewrites occur
-* [<a href="https://github.com/hydromatic/morel/issues/28">MOREL-28</a>]
+* [[MOREL-28](https://github.com/hydromatic/morel/issues/28)]
   The `sum` aggregate function only works on `int` values
-* [<a href="https://github.com/hydromatic/morel/issues/26">MOREL-26</a>]
+* [[MOREL-26](https://github.com/hydromatic/morel/issues/26)]
   Cannot parse `()` as pattern
 * Morel shell should work even if Apache Maven is not installed
-* [<a href="https://github.com/hydromatic/morel/issues/19">MOREL-19</a>]
+* [[MOREL-19](https://github.com/hydromatic/morel/issues/19)]
   `AssertionError: unknown FUN_DECL`
-* [<a href="https://github.com/hydromatic/morel/issues/22">MOREL-22</a>]
+* [[MOREL-22](https://github.com/hydromatic/morel/issues/22)]
   Character literal should unparse as `#"a"`, not `"a"`
 
 ### Build and tests
@@ -470,7 +565,7 @@ Sergey Nuyanzin
 * Bump `javacc` from 7.0.5 to 7.0.12
 * Enable Dependabot
 * Run CI on multiple Java versions, with Javadoc
-* [<a href="https://github.com/hydromatic/morel/issues/107">MOREL-107</a>]
+* [[MOREL-107](https://github.com/hydromatic/morel/issues/107)]
   `ShellTest` is non-deterministic
 * Add GitHub workflow to build and test
 * Move project to 'hydromatic' GitHub organization
@@ -491,7 +586,7 @@ Sergey Nuyanzin
   `class Matchers`
 * Bump `calcite-core` to 1.27
 * Run tests in parallel
-* [<a href="https://github.com/hydromatic/morel/issues/47">MOREL-47</a>]
+* [[MOREL-47](https://github.com/hydromatic/morel/issues/47)]
   Bump `junit` from 4.11 to 5.7.2,
   `hamcrest` from 1.3 to 2.2
 * Add tests for blog post 'Aggregate queries in Morel'
@@ -501,7 +596,7 @@ Sergey Nuyanzin
 
 ### Site and documentation
 
-* [<a href="https://github.com/hydromatic/morel/issues/181">MOREL-181</a>]
+* [[MOREL-181](https://github.com/hydromatic/morel/issues/181)]
   Release 0.3.0
 * Update operator list in `README`
 * In reference, re-order the `String` and `Vector` built-in functions
@@ -536,21 +631,21 @@ improvements to the type system and relational extensions. Some highlights:
 
 ### Features
 
-* [<a href="https://github.com/hydromatic/morel/issues/15">MOREL-15</a>]
+* [[MOREL-15](https://github.com/hydromatic/morel/issues/15)]
   Improve pretty-printing: wrap long lines, and abbreviate long lists and deep
   structures
-* [<a href="https://github.com/hydromatic/morel/issues/12">MOREL-12</a>]
+* [[MOREL-12](https://github.com/hydromatic/morel/issues/12)]
   In `from` clause, allow initializers to reference previous variables
 * In `group`, `as alias` is optional
-* [<a href="https://github.com/hydromatic/morel/issues/10">MOREL-10</a>]
+* [[MOREL-10](https://github.com/hydromatic/morel/issues/10)]
   Implicit labels in record expressions
-* [<a href="https://github.com/hydromatic/morel/issues/9">MOREL-9</a>]
+* [[MOREL-9](https://github.com/hydromatic/morel/issues/9)]
   Allow `<expr>.<field>` as an alternative syntax for `#<field> <expr>`
-* [<a href="https://github.com/hydromatic/morel/issues/7">MOREL-7</a>]
+* [[MOREL-7](https://github.com/hydromatic/morel/issues/7)]
   Rename project from 'smlj' to 'morel'
-* [<a href="https://github.com/hydromatic/morel/issues/5">SMLJ-5</a>]
+* [[MOREL-5](https://github.com/hydromatic/morel/issues/5)]
   Foreign values, including record values based on the contents of a JDBC schema
-* [<a href="https://github.com/hydromatic/morel/issues/6">SMLJ-6</a>]
+* [[MOREL-6](https://github.com/hydromatic/morel/issues/6)]
   Add `group` clause (and `compute` sub-clause) to `from` expression, to support
   aggregation and aggregate functions
 * Polymorphic types
@@ -558,9 +653,9 @@ improvements to the type system and relational extensions. Some highlights:
 
 ### Bug-fixes and internal improvements
 
-* [<a href="https://github.com/hydromatic/morel/issues/16">MOREL-16</a>]
+* [[MOREL-16](https://github.com/hydromatic/morel/issues/16)]
   Ensure that types derived for REPL expressions have no free type variables
-* [<a href="https://github.com/hydromatic/morel/issues/14">MOREL-14</a>]
+* [[MOREL-14](https://github.com/hydromatic/morel/issues/14)]
   Tuple should equal record, and both equal `unit` when empty
 * Add macros (special built-in functions that are 'called' at compile time to
   generate a new AST)
@@ -573,7 +668,7 @@ improvements to the type system and relational extensions. Some highlights:
 * In parallel declarations (`let` ... `and`) add variables to compilation
   environment
 * Refactor special type constructors (list, tuple, record)
-* [<a href="https://github.com/hydromatic/morel/issues/4">SMLJ-4</a>]
+* [[MOREL-4](https://github.com/hydromatic/morel/issues/4)]
   `let fun` inside `from` expression fails
 * Move built-in constants and functions into new `enum BuiltIn`
 * In `Shell`, fix parsing single-quote in line comments, and line endings in
