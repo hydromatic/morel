@@ -87,6 +87,7 @@ file:
 ## Documentation
 
 * [Morel language reference](docs/reference.md)
+* [Query reference](docs/query.md)
 * ["How to" guide](docs/howto.md)
 * [Change log](HISTORY.md)
 * Reading [test reference logs](src/test/resources/script)

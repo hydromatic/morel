@@ -21,6 +21,23 @@ License.
 
 # Morel language reference
 
+This document describes the grammar of Morel
+([constants](#constants),
+[identifiers](#identifiers),
+[expressions](#expressions),
+[patterns](#patterns),
+[types](#types),
+[declarations](#declarations)),
+and then lists its built-in
+[operators](#built-in-operators),
+[types](#built-in-types),
+[functions](#built-in-functions).
+[Properties](#properties) affect the execution strategy and the
+behavior of the shell.
+
+Query expressions (`from`, `exists`, `forall`) are described in more
+detail in the [query reference](query.md).
+
 ## Grammar
 
 This reference is based on
@@ -37,19 +54,32 @@ just because they take effort to build.
 Contributions are welcome!
 
 In Morel but not Standard ML:
-* `from` expression with `in`, `join`, `where`, `distinct`, `group`,
-  `compute`, `into`, `order`, `skip`, `take`, `through`, `yield` clauses
+* Queries (expressions starting with `exists`, `forall` or `from`) with
+  `compute`,
+  `distinct`,
+  `group`,
+  `in`,
+  `into`,
+  `join`,
+  `order`,
+  `require`,
+  `skip`,
+  `take`,
+  `through`,
+  `where`,
+  `yield` clauses
 * `elem`,
   `except`,
-  `exists`,
-  `forall`,
   `implies`,
   `intersect`,
   `notelem`,
   `union` operators
-* "*lab* `=`" is optional in `exprow`
+* <code><i>lab</i> =</code> is optional in <code><i>exprow</i></code>
+* <code><i>record</i>.<i>lab</i></code> as an alternative to
+  <code>#<i>lab</i> <i>record</i></code>
 * identifiers may be quoted
   (for example, <code>\`an identifier\`</code>)
+* `with` functional update for record values
 
 In Standard ML but not in Morel:
 * `word` constant
@@ -88,7 +118,7 @@ In Standard ML but not in Morel:
                                 or \-headed escape sequence
 </pre>
 
-## Identifiers
+### Identifiers
 
 <pre>
 <i>id</i> &rarr;  <i>letter</i> (<i>letter</i> | <i>digit</i> | ''' | <b>_</b>)*
@@ -146,12 +176,12 @@ In Standard ML but not in Morel:
                                 conditional
     | <b>case</b> <i>exp</i> <b>of</b> <i>match</i>         case analysis
     | <b>fn</b> <i>match</i>                  function
-    | <b>from</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step</i>* [ <i>terminalStep</i> ]
-                                relational expression (<i>s</i> &ge; 0)
-    | <b>exists</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step</i>*
-                                existential quantification (<i>s</i> &ge; 0)
-    | <b>forall</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step</i>* <b>require</b> <i>exp</i>
-                                universal quantification (<i>s</i> &ge; 0)
+    | <b>from</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step<sub>1</sub></i> ... <i>step<sub>t</sub></i> [ <i>terminalStep</i> ]
+                                relational expression (<i>s</i> &ge; 0, <i>t</i> &ge; 0)
+    | <b>exists</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step<sub>1</sub></i> ... <i>step<sub>t</sub></i>
+                                existential quantification (<i>s</i> &ge; 0, <i>t</i> &ge; 0)
+    | <b>forall</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step<sub>1</sub></i> ... <i>step<sub>t</sub></i> <b>require</b> <i>exp</i>
+                                universal quantification (<i>s</i> &ge; 0, <i>t</i> &ge; 0)
 <i>exprow</i> &rarr; [ <i>exp</i> <b>with</b> ] <i>exprowItem</i> [<b>,</b> <i>exprowItem</i> ]*
                                 expression row
 <i>exprowItem</i> &rarr; [ <i>lab</i> <b>=</b> ] <i>exp</i>
@@ -161,8 +191,8 @@ In Standard ML but not in Morel:
 <i>scan</i> &rarr; <i>pat</i> <b>in</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]    iteration
     | <i>pat</i> <b>=</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]      single iteration
     | <i>var</i>                       unbounded variable
-<i>step</i> &rarr; <b>join</b> <i>scan<sub>1</sub></i> [ <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ]
-                                join clause
+<i>step</i> &rarr; <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>
+                                join clause (<i>s</i> &ge; 1)
     | <b>where</b> <i>exp</i>                 filter clause
     | <b>distinct</b>                  distinct clause
     | <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
@@ -175,7 +205,7 @@ In Standard ML but not in Morel:
     | <b>through</b> <i>pat</i> <b>in</b> <i>exp</i>        through clause
     | <b>yield</b> <i>exp</i>                 yield clause
 <i>terminalStep</i> &rarr; <b>into</b> <i>exp</i>         into clause
-    | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>  compute clause (<i>a</i> &gt; 1)
+    | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>  compute clause (<i>a</i> &ge; 1)
 <i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>
 <i>agg</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i> [ <b>of</b> <i>exp</i> ]
 <i>orderItem</i> &rarr; <i>exp</i> [ <b>desc</b> ]
