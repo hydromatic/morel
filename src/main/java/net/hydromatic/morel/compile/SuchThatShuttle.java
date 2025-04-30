@@ -158,6 +158,20 @@ class SuchThatShuttle extends Shuttle {
             fromBuilder.order(order.orderItems);
             break;
 
+          case SKIP:
+            final Core.Skip skip = (Core.Skip) step;
+            killTemporaryScans(idPats);
+            deferredScans.flush(fromBuilder);
+            fromBuilder.skip(skip.exp);
+            break;
+
+          case TAKE:
+            final Core.Take take = (Core.Take) step;
+            killTemporaryScans(idPats);
+            deferredScans.flush(fromBuilder);
+            fromBuilder.take(take.exp);
+            break;
+
           default:
             throw new AssertionError(step.op);
         }

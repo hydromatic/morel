@@ -21,7 +21,8 @@
  * has since been removed.)
  *)
 
-(*) Convert predicates into ranges
+(* ------------------------------------------------------ *)
+(* Convert predicates into ranges. *)
 from i where i > 0 andalso i < 10;
 > val it = [1,2,3,4,5,6,7,8,9] : int list
 from i where i > 0 andalso i < 4 yield {j = i + 1};
@@ -64,6 +65,92 @@ where j > 4 andalso j < 7
 >    {i=1,j=6,k=10,m=13},{i=1,j=6,k=10,m=14},{i=2,j=5,k=9,m=13},
 >    {i=2,j=5,k=9,m=14},{i=2,j=5,k=10,m=13},{i=2,j=5,k=10,m=14},...]
 >   : {i:int, j:int, k:int, m:int} list
+
+(* ------------------------------------------------------ *)
+(* Unbounded variables with `take` and other clauses. *)
+
+(* Odd and even numbers that are not a multiple of 6. *)
+from i
+  where i >= 0 andalso i <= 100 andalso i mod 6 <> 0
+  yield {i, odd = i mod 2 = 1}
+  group odd compute count
+  order odd;
+> val it = [{count=34,odd=false},{count=50,odd=true}]
+>   : {count:int, odd:bool} list
+
+from i
+  where i >= 0 andalso i <= 100
+  yield {j = i mod 3}
+  distinct
+  order j desc;
+> val it = [2,1,0] : int list
+
+(* [MOREL-258] `take` in query with unbounded variable gives error *)
+from i
+  where i >= 0 andalso i <= 100
+  take 3;
+> val it = [0,1,2] : int list
+
+from i
+  where i >= 0 andalso i <= 100
+  skip 96;
+> val it = [96,97,98,99,100] : int list
+
+from i
+  where i >= 0 andalso i <= 100
+  order i desc
+  skip 80
+  take 5;
+> val it = [20,19,18,17,16] : int list
+
+fun threes list =
+  let
+    fun f result [] = result
+      | f ([a] :: result) (h :: t) = f ([a,h] :: result) t
+      | f ([a,b] :: result) (h :: t) = f ([a,b,h] :: result) t
+      | f ([a,b,c] :: result) (h :: t) = f ([h] :: [a,b,c] :: result) t
+      | f result (h :: t) = f ([h] :: result) t
+  in
+   f [] list
+  end;
+> val threes = fn : 'a list -> 'a list list
+threes [1];
+> val it = [[1]] : int list list
+threes [1,2];
+> val it = [[1,2]] : int list list
+threes [1,2,3];
+> val it = [[1,2,3]] : int list list
+threes [1,2,3,4];
+> val it = [[4],[1,2,3]] : int list list
+threes [1,2,3,4,5];
+> val it = [[4,5],[1,2,3]] : int list list
+
+from i
+  where i >= 0 andalso i <= 10
+  through j in threes;
+> val it = [[9,10],[6,7,8],[3,4,5],[0,1,2]] : int list list
+
+exists i
+  where i >= 0 andalso i <= 100;
+> val it = true : bool
+
+exists i
+  where i >= 30 andalso i <= 40 andalso i mod 17 = 0;
+> val it = true : bool
+
+exists i
+  where i >= 40 andalso i <= 50 andalso i mod 17 = 0;
+> val it = false : bool
+
+forall i
+  where i >= 50 andalso i < 60
+  require i + 100 < 155;
+> val it = false : bool
+
+forall i
+  where i >= 40 andalso i < 50
+  require i + 100 < 155;
+> val it = true : bool
 
 (*) 'on' in 'from'
 from i in [1, 2, 3],
@@ -272,7 +359,8 @@ from i where isBetween (i, 5, 8);
 *)
 
 (* ------------------------------------------------------ *)
-(*) Convenience function that converts a predicate to a relation
+(* Convenience function that converts a predicate to a
+ * relation. *)
 (*
 fun enumerate predicate =
   from r where predicate r;
@@ -624,8 +712,8 @@ enumerate cousin2;
 > Error: non-stratified
 *)
 
-(*
- * Coloring Australia using three colors.
+(* ------------------------------------------------------ *)
+(* Coloring Australia using three colors.
  * (From "Basic Modelling in MiniZinc".)
  *
  * Australia has six federated states (New South Wales, Queensland,
@@ -670,6 +758,7 @@ where q = RED
 >    {nsw=RED,nt=GREEN,q=RED,sa=BLUE,t=GREEN,v=GREEN,wa=RED}]
 >   : {nsw:Color, nt:Color, q:Color, sa:Color, t:Color, v:Color, wa:Color} list
 
+(* ------------------------------------------------------ *)
 (* Arithmetic optimization.
  * (From "Basic Modelling in MiniZinc".)
  *
