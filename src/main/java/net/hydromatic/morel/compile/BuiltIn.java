@@ -37,6 +37,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
+import net.hydromatic.morel.eval.Codes.BuiltInExn;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
@@ -304,6 +305,314 @@ public enum BuiltIn {
                           ts.fnType(h.get(0), h.get(1))),
                       ts.fnType(h.get(0), h.get(2))))),
 
+  /**
+   * Function "Char.chr" of type "int &rarr; char".
+   *
+   * <p>"chr i" returns the character whose code is {@code i}. Raises {@link
+   * BuiltInExn#CHR Chr} if {@code i < 0 or i > maxOrd}.
+   */
+  CHAR_CHR("Char", "chr", "chr", ts -> ts.fnType(INT, CHAR)),
+
+  /**
+   * Function "Char.compare" of type "char * char &rarr; order".
+   *
+   * <p>"compare (c, d)" returns {@code LESS}, {@code EQUAL}, or {@code
+   * GREATER}, depending on whether {@code c} precedes, equals, or follows
+   * {@code d} in the character ordering.
+   */
+  CHAR_COMPARE(
+      "Char", "compare", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), ts.order())),
+
+  /**
+   * Function "Char.contains" of type "string &rarr; char &rarr; bool".
+   *
+   * <p>"contains s c" returns true if character {@code c} occurs in the string
+   * s; false otherwise. The function, when applied to s, builds a table and
+   * returns a function which uses table lookup to decide whether a given
+   * character is in the string or not. Hence, it is relatively expensive to
+   * compute {@code val p = contains s} but very fast to compute {@code p(c)}
+   * for any given character.
+   */
+  CHAR_CONTAINS("Char", "contains", ts -> ts.fnType(STRING, CHAR, BOOL)),
+
+  /**
+   * Function "Char.fromCString" of type "string &rarr; char option".
+   *
+   * <p>"fromCString s" attempts to scan a character or C escape sequence from
+   * the string {@code s}. Does not skip leading whitespace. For instance,
+   * {@code fromString "\\065"} equals {@code #"A"}.
+   */
+  CHAR_FROM_CSTRING(
+      "Char", "fromCString", ts -> ts.fnType(STRING, ts.option(CHAR))),
+
+  /**
+   * Function "Char.fromString" of type "string &rarr; char option".
+   *
+   * <p>"fromString s" attempts to scan a character or ML escape sequence from
+   * the string {@code s}. Does not skip leading whitespace. For instance,
+   * {@code fromString "\\065"} equals {@code #"A"}.
+   */
+  CHAR_FROM_STRING(
+      "Char", "fromString", ts -> ts.fnType(STRING, ts.option(CHAR))),
+
+  /**
+   * Constant "Char.maxChar", of type "char".
+   *
+   * <p>The greatest character in the ordering &lt;.
+   */
+  CHAR_MAX_CHAR("Char", "maxChar", ts -> CHAR),
+
+  /**
+   * Constant "Char.maxOrd", of type "int".
+   *
+   * <p>The greatest character code; equals {@code ord(maxChar)}.
+   */
+  CHAR_MAX_ORD("Char", "maxOrd", ts -> INT),
+
+  /**
+   * Constant "Char.minChar", of type "char".
+   *
+   * <p>The least character in the ordering &lt;.
+   */
+  CHAR_MIN_CHAR("Char", "minChar", ts -> CHAR),
+
+  /**
+   * Function "Char.notContains" of type "string &rarr; char &rarr; bool".
+   *
+   * <p>"notContains s c" returns true if character {@code c} does not occur in
+   * the string s; false otherwise. Works by construction of a lookup table in
+   * the same way as {@link #CHAR_CONTAINS}.
+   */
+  CHAR_NOT_CONTAINS("Char", "notContains", ts -> ts.fnType(STRING, CHAR, BOOL)),
+
+  /**
+   * Function "Char.ord" of type "char &rarr; int".
+   *
+   * <p>"ord c" returns the code of character {@code c}.
+   */
+  CHAR_ORD("Char", "ord", ts -> ts.fnType(CHAR, INT)),
+
+  /**
+   * Operator "Char.op &lt;", of type "char * char &rarr; bool".
+   *
+   * <p>"c1 &lt; c2" returns true if {@code ord(c1)} &lt; {@code ord(c2)}.
+   */
+  CHAR_OP_LT("Char", "op <", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+
+  /**
+   * Operator "Char.op &lt;=", of type "char * char &rarr; bool".
+   *
+   * <p>"c1 &le; c2" returns true if {@code ord(c1)} &le; {@code ord(c2)}.
+   */
+  CHAR_OP_LE("Char", "op <=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+
+  /**
+   * Operator "Char.op &gt;", of type "char * char &rarr; bool".
+   *
+   * <p>"c1 &gt; c2" returns true if {@code ord(c1)} &gt; {@code ord(c2)}.
+   */
+  CHAR_OP_GT("Char", "op >", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+
+  /**
+   * Operator "Char.op &gt;=", of type "char * char &rarr; bool".
+   *
+   * <p>"c1 &ge; c2" returns true if {@code ord(c1)} &ge; {@code ord(c2)}.
+   */
+  CHAR_OP_GE("Char", "op >=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+
+  /**
+   * Function "Char.pred" of type "char &rarr; char".
+   *
+   * <p>"pred c" returns the character immediately preceding {@code c}, or
+   * raises {@link BuiltInExn#CHR Chr} if {@code c = minChar}.
+   */
+  CHAR_PRED("Char", "pred", ts -> ts.fnType(CHAR, CHAR)),
+
+  /**
+   * Function "Char.succ" of type "char &rarr; char".
+   *
+   * <p>"succ c" returns the character immediately following {@code c} in the
+   * ordering, or raises {@link BuiltInExn#CHR Chr} if {@code c = maxChar}. When
+   * defined, {@code succ c} is equivalent to {@code chr(ord c + 1)}.
+   */
+  CHAR_SUCC("Char", "succ", ts -> ts.fnType(CHAR, CHAR)),
+
+  /**
+   * Function "Char.toCString" of type "char &rarr; string".
+   *
+   * <p>"toCString c" returns a string consisting of the character {@code c}, if
+   * {@code c} is printable, else an C escape sequence corresponding to {@code
+   * c}. A printable character is mapped to a one-character string; bell,
+   * backspace, tab, newline, vertical tab, form feed, and carriage return are
+   * mapped to the two-character strings "\\a", "\\b", "\\t", "\\n", "\\v",
+   * "\\f", and "\\r"; other characters are mapped to four-character strings of
+   * the form "\\ooo", where ooo are three octal digits representing the
+   * character code. For instance,
+   *
+   * <ul>
+   *   <li>{@code toCString #"A"} equals {@code "A"}
+   *   <li>{@code toCString #"A"} equals {@code "A"}
+   *   <li>{@code toCString #"\\"} equals {@code "\\\\"}
+   *   <li>{@code toCString #"\""} equals {@code "\\\""}
+   *   <li>{@code toCString (chr 0)} equals {@code "\\000"}
+   *   <li>{@code toCString (chr 1)} equals {@code "\\001"}
+   *   <li>{@code toCString (chr 6)} equals {@code "\\006"}
+   *   <li>{@code toCString (chr 7)} equals {@code "\\a"}
+   *   <li>{@code toCString (chr 8)} equals {@code "\\b"}
+   *   <li>{@code toCString (chr 9)} equals {@code "\\t"}
+   *   <li>{@code toCString (chr 10)} equals {@code "\\n"}
+   *   <li>{@code toCString (chr 11)} equals {@code "\\v"}
+   *   <li>{@code toCString (chr 12)} equals {@code "\\f"}
+   *   <li>{@code toCString (chr 13)} equals {@code "\\r"}
+   *   <li>{@code toCString (chr 14)} equals {@code "\\016"}
+   *   <li>{@code toCString (chr 127)} equals {@code "\\177"}
+   *   <li>{@code toCString (chr 128)} equals {@code "\\200"}
+   * </ul>
+   */
+  CHAR_TO_CSTRING("Char", "toCString", ts -> ts.fnType(CHAR, STRING)),
+
+  /**
+   * Function "Char.toLower" of type "char &rarr; char".
+   *
+   * <p>"toLower c" returns the lowercase letter corresponding to {@code c}, if
+   * {@code c} is a letter (a to z or A to Z); otherwise returns {@code c}.
+   */
+  CHAR_TO_LOWER("Char", "toLower", ts -> ts.fnType(CHAR, CHAR)),
+
+  /**
+   * Function "Char.toString" of type "char &rarr; string".
+   *
+   * <p>"toString c" returns a string consisting of the character {@code c}, if
+   * {@code c} is printable, else an ML escape sequence corresponding to {@code
+   * c}. A printable character is mapped to a one-character string; bell,
+   * backspace, tab, newline, vertical tab, form feed, and carriage return are
+   * mapped to the two-character strings "\\a", "\\b", "\\t", "\\n", "\\v",
+   * "\\f", and "\\r"; other characters with code less than 32 are mapped to
+   * three-character strings of the form "\\^Z", and characters with codes 127
+   * through 255 are mapped to four-character strings of the form "\\ddd", where
+   * ddd are three decimal digits representing the character code. For instance,
+   *
+   * <ul>
+   *   <li>{@code toString #"A"} equals "A"
+   *   <li>{@code toString #"\\"} equals "\\\\"
+   *   <li>{@code toString #"\""} equals "\\\""
+   *   <li>{@code toString (chr 0)} equals "\\^@"
+   *   <li>{@code toString (chr 1)} equals "\\^A"
+   *   <li>{@code toString (chr 6)} equals "\\^F"
+   *   <li>{@code toString (chr 7)} equals "\\a"
+   *   <li>{@code toString (chr 8)} equals "\\b"
+   *   <li>{@code toString (chr 9)} equals "\\t"
+   *   <li>{@code toString (chr 10)} equals "\\n"
+   *   <li>{@code toString (chr 11)} equals "\\v"
+   *   <li>{@code toString (chr 12)} equals "\\f"
+   *   <li>{@code toString (chr 13)} equals "\\r"
+   *   <li>{@code toString (chr 14)} equals "\\^N"
+   *   <li>{@code toString (chr 127)} equals "\\127"
+   *   <li>{@code toString (chr 128)} equals "\\128"
+   * </ul>
+   */
+  CHAR_TO_STRING("Char", "toString", ts -> ts.fnType(CHAR, STRING)),
+
+  /**
+   * Function "Char.toUpper" of type "char &rarr; char".
+   *
+   * <p>"toUpper c" returns the uppercase letter corresponding to {@code c}, if
+   * {@code c} is a letter (a to z or A to Z); otherwise returns {@code c}.
+   */
+  CHAR_TO_UPPER("Char", "toUpper", ts -> ts.fnType(CHAR, CHAR)),
+
+  /**
+   * Function "Char.isAlpha" of type "char &rarr; bool".
+   *
+   * <p>"isAlpha c" returns true if {@code c} is a letter (lowercase or
+   * uppercase).
+   */
+  CHAR_IS_ALPHA("Char", "isAlpha", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isAlphaNum" of type "char &rarr; bool".
+   *
+   * <p>"isAlphaNum c" returns true if {@code c} is alphanumeric (a letter or a
+   * decimal digit).
+   */
+  CHAR_IS_ALPHA_NUM("Char", "isAlphaNum", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isAscii" of type "char &rarr; bool".
+   *
+   * <p>"isAscii c" returns true if {@code 0 <= ord c <= 127}.
+   */
+  CHAR_IS_ASCII("Char", "isAscii", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isCntrl" of type "char &rarr; bool".
+   *
+   * <p>"isCntrl c" returns true if {@code c} is a control character, that is,
+   * if {@code not (isPrint c)}.
+   */
+  CHAR_IS_CNTRL("Char", "isCntrl", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isDigit" of type "char &rarr; bool".
+   *
+   * <p>"isDigit c" returns true if {@code c} is a decimal digit (0 to 9).
+   */
+  CHAR_IS_DIGIT("Char", "isDigit", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isGraph" of type "char &rarr; bool".
+   *
+   * <p>"isGraph c" returns true if {@code c} is a graphical character, that is,
+   * it is printable and not a whitespace character.
+   */
+  CHAR_IS_GRAPH("Char", "isGraph", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isHexDigit" of type "char &rarr; bool".
+   *
+   * <p>"isHexDigit c" returns true if {@code c} is a hexadecimal digit (0 to 9
+   * or a to f or A to F).
+   */
+  CHAR_IS_HEX_DIGIT("Char", "isHexDigit", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isLower" of type "char &rarr; bool".
+   *
+   * <p>"isLower c" returns true if {@code c} is a lowercase letter (a to z).
+   */
+  CHAR_IS_LOWER("Char", "isLower", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isPrint" of type "char &rarr; bool".
+   *
+   * <p>"isPrint c" returns true if {@code c} is a printable character (space or
+   * visible).
+   */
+  CHAR_IS_PRINT("Char", "isPrint", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isPunct" of type "char &rarr; bool".
+   *
+   * <p>"isPunct c" returns true if {@code c} is a punctuation character, that
+   * is, graphical but not alphanumeric.
+   */
+  CHAR_IS_PUNCT("Char", "isPunct", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isSpace" of type "char &rarr; bool".
+   *
+   * <p>"isSpace c" returns true if {@code c} is a whitespace character (blank,
+   * newline, tab, vertical tab, new page).
+   */
+  CHAR_IS_SPACE("Char", "isSpace", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isUpper" of type "char &rarr; bool".
+   *
+   * <p>"isUpper c" returns true if {@code c} is an uppercase letter (A to Z).
+   */
+  CHAR_IS_UPPER("Char", "isUpper", ts -> ts.fnType(CHAR, BOOL)),
+
   /* TODO:
   val ~ : int -> int
   val * : int * int -> int
@@ -362,16 +671,16 @@ public enum BuiltIn {
   /**
    * Function "Int.max", of type "int * int &rarr; int".
    *
-   * <p>Returns the returns the larger of the arguments. If exactly one argument
-   * is NaN, returns the other argument. If both arguments are NaN, returns NaN.
+   * <p>Returns the larger of the arguments. If exactly one argument is NaN,
+   * returns the other argument. If both arguments are NaN, returns NaN.
    */
   INT_MAX("Int", "max", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
   /**
    * Function "Int.min", of type "int * int &rarr; int".
    *
-   * <p>Returns the returns the larger of the arguments. If exactly one argument
-   * is NaN, returns the other argument. If both arguments are NaN, returns NaN.
+   * <p>Returns the smaller of the arguments. If exactly one argument is NaN,
+   * returns the other argument. If both arguments are NaN, returns NaN.
    */
   INT_MIN("Int", "min", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
@@ -410,8 +719,7 @@ public enum BuiltIn {
    *
    * <p>Returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive. An
    * infinity returns its sign; a zero returns 0 regardless of its sign. It
-   * raises {@link net.hydromatic.morel.eval.Codes.BuiltInExn#DOMAIN Domain} on
-   * NaN.
+   * raises {@link BuiltInExn#DOMAIN Domain} on NaN.
    */
   INT_SIGN("Int", "sign", ts -> ts.fnType(INT, INT)),
 
@@ -461,8 +769,7 @@ public enum BuiltIn {
    * Function "String.sub", of type "string * int &rarr; char".
    *
    * <p>"sub (s, i)" returns the {@code i}<sup>th</sup> character of s, counting
-   * from zero. This raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} if i &lt; 0
+   * from zero. This raises {@link BuiltInExn#SUBSCRIPT Subscript} if i &lt; 0
    * or |s| &le; i.
    */
   STRING_SUB("String", "sub", ts -> ts.fnType(ts.tupleType(STRING, INT), CHAR)),
@@ -474,15 +781,14 @@ public enum BuiltIn {
    * <p>"extract (s, i, NONE)" and "extract (s, i, SOME j)" return substrings of
    * {@code s}. The first returns the substring of {@code s} from the {@code
    * i}<sup>th</sup> character to the end of the string, i.e., the string {@code
-   * s[i..|s|-1]}. This raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} if {@code i
-   * < 0} or {@code |s| < i}.
+   * s[i..|s|-1]}. This raises {@link BuiltInExn#SUBSCRIPT Subscript} if {@code
+   * i < 0} or {@code |s| < i}.
    *
    * <p>The second form returns the substring of size {@code j} starting at
    * index {@code i}, i.e., the {@code string s[i..i+j-1]}. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} if {@code i
-   * < 0} or {@code j < 0} or {@code |s| < i + j}. Note that, if defined,
-   * extract returns the empty string when {@code i = |s|}.
+   * BuiltInExn#SUBSCRIPT Subscript} if {@code i < 0} or {@code j < 0} or {@code
+   * |s| < i + j}. Note that, if defined, extract returns the empty string when
+   * {@code i = |s|}.
    */
   STRING_EXTRACT(
       "String",
@@ -506,8 +812,8 @@ public enum BuiltIn {
    * Function "String.concat", of type "string list &rarr; string".
    *
    * <p>"concat l" is the concatenation of all the strings in l. This raises
-   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if the sum of
-   * all the sizes is greater than maxSize.
+   * {@link BuiltInExn#SIZE Size} if the sum of all the sizes is greater than
+   * maxSize.
    */
   STRING_CONCAT(
       "String",
@@ -520,9 +826,8 @@ public enum BuiltIn {
    * string".
    *
    * <p>"concatWith s l" returns the concatenation of the strings in the list l
-   * using the string s as a separator. This raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if the size of the
-   * resulting string would be greater than maxSize.
+   * using the string s as a separator. This raises {@link BuiltInExn#SIZE Size}
+   * if the size of the resulting string would be greater than maxSize.
    */
   STRING_CONCAT_WITH(
       "String",
@@ -532,7 +837,7 @@ public enum BuiltIn {
   /**
    * Function "String.str", of type "char &rarr; string".
    *
-   * <p>"str c" is the string of size one containing the character c.
+   * <p>"str c" is the string of size one containing the character {@code c}.
    */
   STRING_STR("String", "str", "str", ts -> ts.fnType(CHAR, STRING)),
 
@@ -541,8 +846,8 @@ public enum BuiltIn {
    *
    * <p>"implode l" generates the string containing the characters in the list
    * l. This is equivalent to {@code concat (List.map str l)}. This raises
-   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if the
-   * resulting string would have size greater than maxSize.
+   * {@link BuiltInExn#SIZE Size} if the resulting string would have size
+   * greater than maxSize.
    */
   STRING_IMPLODE(
       "String",
@@ -675,8 +980,8 @@ public enum BuiltIn {
   /**
    * Function "List.hd", of type "&alpha; list &rarr; &alpha;".
    *
-   * <p>"hd l" returns the first element of l. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty} if l is nil.
+   * <p>"hd l" returns the first element of l. It raises {@link BuiltInExn#EMPTY
+   * Empty} if l is nil.
    */
   LIST_HD(
       "List",
@@ -688,7 +993,7 @@ public enum BuiltIn {
    * Function "List.tl", of type "&alpha; list &rarr; &alpha; list".
    *
    * <p>"tl l" returns all but the first element of l. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY empty} if l is nil.
+   * BuiltInExn#EMPTY Empty} if l is nil.
    */
   LIST_TL(
       "List",
@@ -700,7 +1005,7 @@ public enum BuiltIn {
    * Function "List.last", of type "&alpha; list &rarr; &alpha;".
    *
    * <p>"last l" returns the last element of l. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY empty} if l is nil.
+   * BuiltInExn#EMPTY Empty} if l is nil.
    */
   LIST_LAST(
       "List",
@@ -733,10 +1038,9 @@ public enum BuiltIn {
    * Function "List.nth", of type "&alpha; list * int &rarr; &alpha;".
    *
    * <p>"nth (l, i)" returns the {@code i}<sup>th</sup> element of the list
-   * {@code l}, counting from 0. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} if {@code i
-   * < 0} or {@code i >= length l}. We have {@code nth(l,0) = hd l}, ignoring
-   * exceptions.
+   * {@code l}, counting from 0. It raises {@link BuiltInExn#SUBSCRIPT
+   * Subscript} if {@code i < 0} or {@code i >= length l}. We have {@code
+   * nth(l,0) = hd l}, ignoring exceptions.
    */
   LIST_NTH(
       "List",
@@ -749,8 +1053,8 @@ public enum BuiltIn {
    * Function "List.take", of type "&alpha; list * int &rarr; &alpha; list".
    *
    * <p>"take (l, i)" returns the first i elements of the list l. It raises
-   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} if i
-   * &lt; 0 or i &gt; length l. We have {@code take(l, length l) = l}.
+   * {@link BuiltInExn#SUBSCRIPT Subscript} if i &lt; 0 or i &gt; length l. We
+   * have {@code take(l, length l) = l}.
    */
   LIST_TAKE(
       "List",
@@ -765,8 +1069,8 @@ public enum BuiltIn {
    * <p>"drop (l, i)" returns what is left after dropping the first i elements
    * of the list l.
    *
-   * <p>It raises {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT
-   * Subscript} if i &lt; 0 or i &gt; length l.
+   * <p>It raises {@link BuiltInExn#SUBSCRIPT Subscript} if i &lt; 0 or i &gt;
+   * length l.
    *
    * <p>It holds that {@code take(l, i) @ drop(l, i) = l} when 0 &le; i &le;
    * length l.
@@ -997,7 +1301,7 @@ public enum BuiltIn {
    *
    * <p>"tabulate (n, f)" returns a list of length n equal to {@code [f(0),
    * f(1), ..., f(n-1)]}, created from left to right. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if n &lt; 0.
+   * BuiltInExn#SIZE Size} if n &lt; 0.
    */
   LIST_TABULATE(
       "List",
@@ -1252,7 +1556,7 @@ public enum BuiltIn {
    * Function "Option.valOf", of type "&alpha; option &rarr; &alpha;".
    *
    * <p>{@code valOf opt} returns v if opt is SOME(v); otherwise it raises
-   * {@link net.hydromatic.morel.eval.Codes.BuiltInExn#OPTION Option}.
+   * {@link BuiltInExn#OPTION Option}.
    */
   OPTION_VAL_OF(
       "Option",
@@ -1415,10 +1719,8 @@ public enum BuiltIn {
   /**
    * Function "Real.checkFloat", of type "real &rarr; real".
    *
-   * <p>"checkFloat x" raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#OVERFLOW Overflow} if {@code x}
-   * is an infinity, and raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#DIV Div} if {@code x} is NaN.
+   * <p>"checkFloat x" raises {@link BuiltInExn#OVERFLOW Overflow} if {@code x}
+   * is an infinity, and raises {@link BuiltInExn#DIV Div} if {@code x} is NaN.
    * Otherwise, it returns its argument.
    */
   REAL_CHECK_FLOAT("Real", "checkFloat", ts -> ts.fnType(REAL, REAL)),
@@ -1637,8 +1939,7 @@ public enum BuiltIn {
    *
    * <p>Returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive. An
    * infinity returns its sign; a zero returns 0 regardless of its sign. It
-   * raises {@link net.hydromatic.morel.eval.Codes.BuiltInExn#DOMAIN Domain} on
-   * NaN.
+   * raises {@link BuiltInExn#DOMAIN Domain} on NaN.
    */
   REAL_SIGN("Real", "sign", ts -> ts.fnType(REAL, INT)),
 
@@ -1793,9 +2094,8 @@ public enum BuiltIn {
    * &alpha;".
    *
    * <p>"only list" returns the only element of {@code list}. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty} if {@code list} is
-   * nil, {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if {@code
-   * list} has more than one element.
+   * BuiltInExn#EMPTY Empty} if {@code list} is nil, {@link BuiltInExn#SIZE
+   * Size} if {@code list} has more than one element.
    *
    * <p>"only" allows you to write the equivalent of a scalar sub-query:
    *
@@ -1933,9 +2233,8 @@ public enum BuiltIn {
    * Constant "Vector.maxLen" of type "int".
    *
    * <p>The maximum length of vectors supported by this implementation. Attempts
-   * to create larger vectors will result in the {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception being
-   * raised.
+   * to create larger vectors will result in the {@link BuiltInExn#SIZE Size}
+   * exception being raised.
    */
   VECTOR_MAX_LEN("Vector", "maxLen", ts -> INT),
 
@@ -1945,8 +2244,8 @@ public enum BuiltIn {
    * <p>{@code fromList l} creates a new vector from {@code l}, whose length is
    * {@code length l} and with the {@code i}<sup>th</sup> element of {@code l}
    * used as the {@code i}<sup>th</sup> element of the vector. If the length of
-   * the list is greater than {@code maxLen}, then the {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception is raised.
+   * the list is greater than {@code maxLen}, then the {@link BuiltInExn#SIZE
+   * Size} exception is raised.
    */
   VECTOR_FROM_LIST(
       "Vector",
@@ -1964,8 +2263,8 @@ public enum BuiltIn {
    *
    * <pre>{@code fromList (List.tabulate (n, f))}</pre>
    *
-   * <p>If {@code n < 0} or {@code maxLen < n}, then the {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception is raised.
+   * <p>If {@code n < 0} or {@code maxLen < n}, then the {@link BuiltInExn#SIZE
+   * Size} exception is raised.
    */
   VECTOR_TABULATE(
       "Vector",
@@ -1994,8 +2293,7 @@ public enum BuiltIn {
    *
    * <p>{@code sub (vec, i)} returns the {@code i}<sup>th</sup> element of the
    * vector {@code vec}. If {@code i < 0} or {@code |vec| <= i}, then the {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} exception
-   * is raised.
+   * BuiltInExn#SUBSCRIPT Subscript} exception is raised.
    */
   VECTOR_SUB(
       "Vector",
@@ -2011,8 +2309,7 @@ public enum BuiltIn {
    * <p>{@code update (vec, i, x)} returns a new vector, identical to {@code
    * vec}, except the {@code i}<sup>th</sup> element of {@code vec} is set to
    * {@code x}. If {@code i < 0} or {@code |vec| <= i}, then the {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} exception
-   * is raised.
+   * BuiltInExn#SUBSCRIPT Subscript} exception is raised.
    */
   VECTOR_UPDATE(
       "Vector",
@@ -2030,8 +2327,7 @@ public enum BuiltIn {
    *
    * <p>{@code concat l} returns the vector that is the concatenation of the
    * vectors in the list {@code l}. If the total length of these vectors exceeds
-   * {@code maxLen}, then the {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception is raised.
+   * {@code maxLen}, then the {@link BuiltInExn#SIZE Size} exception is raised.
    */
   VECTOR_CONCAT(
       "Vector",

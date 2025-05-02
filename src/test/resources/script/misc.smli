@@ -26,13 +26,14 @@
  * test in the script.
  *)
 
-(*) Initial environment has 84 values.
-List.length (Sys.env());
-> val it = 84 : int
-val eLen = it;
-> val eLen = 84 : int
+(*) Initial environment has 86 values.
+val eLen = List.length (Sys.env());
+> val eLen = 86 : int
 
-(*) Now we have two more (due to "it" and "eLen").
+(*) Now we have one more (due to "it").
+List.length (Sys.env()) - eLen;
+> val it = 1 : int
+(*) And one more (due to "it").
 List.length (Sys.env()) - eLen;
 > val it = 2 : int
 List.last (Sys.env());
@@ -57,11 +58,12 @@ List.length (Sys.env()) - eLen;
 List.last (Sys.env());
 > val it = ("z","string") : string * string
 
-(*) Clear the environment, back down to the original (plus one for "it").
+(*) Clear the environment.
 Sys.clearEnv();
 > val it = () : unit
+(*) Back down to the original eLen plus one (for "it").
 List.length (Sys.env());
-> val it = 85 : int
+> val it = 87 : int
 List.last (Sys.env());
 > val it = ("vector","forall 'a. 'a list -> 'a vector") : string * string
 

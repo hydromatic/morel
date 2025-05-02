@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -58,6 +59,7 @@ import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.foreign.RelList;
+import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -363,6 +365,248 @@ public abstract class Codes {
           };
         }
       };
+  /** @see BuiltIn#CHAR_CHR */
+  private static final Applicable CHAR_CHR =
+      new ApplicableImpl(BuiltIn.CHAR_CHR) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          int ord = (int) arg;
+          if (ord < 0 || ord > 255) {
+            throw new MorelRuntimeException(BuiltInExn.CHR, pos);
+          }
+          return (char) ord;
+        }
+      };
+
+  /** @see BuiltIn#CHAR_COMPARE */
+  private static final Applicable CHAR_COMPARE =
+      new Applicable2<List, Character, Character>(BuiltIn.CHAR_COMPARE) {
+        @Override
+        public List apply(Character a0, Character a1) {
+          if (a0 < a1) {
+            return ORDER_LESS;
+          }
+          if (a0 > a1) {
+            return ORDER_GREATER;
+          }
+          return ORDER_EQUAL;
+        }
+      };
+
+  /** @see BuiltIn#CHAR_CONTAINS */
+  private static final Applicable CHAR_CONTAINS =
+      new ApplicableImpl(BuiltIn.CHAR_CONTAINS) {
+        @Override
+        public Object apply(EvalEnv env, Object argValue) {
+          final String s = (String) argValue;
+          return charContains(s, false);
+        }
+      };
+
+  /** Implement {@link #CHAR_CONTAINS} and {@link #CHAR_NOT_CONTAINS}. */
+  private static ApplicableImpl charContains(String s, boolean negate) {
+    return new ApplicableImpl("contains") {
+      @Override
+      public Object apply(EvalEnv env, Object argValue) {
+        final Character c = (Character) argValue;
+        return s.indexOf(c) >= 0 ^ negate;
+      }
+    };
+  }
+
+  /** @see BuiltIn#CHAR_FROM_CSTRING */
+  private static final Applicable CHAR_FROM_CSTRING =
+      new ApplicableImpl(BuiltIn.CHAR_FROM_CSTRING) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          throw new UnsupportedOperationException("CHAR_FROM_CSTRING");
+        }
+      };
+
+  /** @see BuiltIn#CHAR_FROM_STRING */
+  private static final Applicable CHAR_FROM_STRING =
+      new ApplicableImpl(BuiltIn.CHAR_FROM_STRING) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          String s = (String) arg;
+          Character c = Parsers.fromString(s);
+          return c == null ? OPTION_NONE : optionSome(c);
+        }
+      };
+
+  /** @see BuiltIn#CHAR_IS_ALPHA */
+  private static final Applicable CHAR_IS_ALPHA =
+      new CharPredicate(BuiltIn.CHAR_IS_ALPHA, CharPredicate::isAlpha);
+
+  /** @see BuiltIn#CHAR_IS_ALPHA_NUM */
+  private static final Applicable CHAR_IS_ALPHA_NUM =
+      new CharPredicate(BuiltIn.CHAR_IS_ALPHA_NUM, CharPredicate::isAlphaNum);
+
+  /** @see BuiltIn#CHAR_IS_ASCII */
+  private static final Applicable CHAR_IS_ASCII =
+      new CharPredicate(BuiltIn.CHAR_IS_ASCII, CharPredicate::isAscii);
+
+  /** @see BuiltIn#CHAR_IS_CNTRL */
+  private static final Applicable CHAR_IS_CNTRL =
+      new CharPredicate(BuiltIn.CHAR_IS_CNTRL, CharPredicate::isCntrl);
+
+  /** @see BuiltIn#CHAR_IS_DIGIT */
+  private static final Applicable CHAR_IS_DIGIT =
+      new CharPredicate(BuiltIn.CHAR_IS_DIGIT, CharPredicate::isDigit);
+
+  /** @see BuiltIn#CHAR_IS_GRAPH */
+  private static final Applicable CHAR_IS_GRAPH =
+      new CharPredicate(BuiltIn.CHAR_IS_GRAPH, CharPredicate::isGraph);
+
+  /** @see BuiltIn#CHAR_IS_HEX_DIGIT */
+  private static final Applicable CHAR_IS_HEX_DIGIT =
+      new CharPredicate(BuiltIn.CHAR_IS_HEX_DIGIT, CharPredicate::isHexDigit);
+
+  /** @see BuiltIn#CHAR_IS_LOWER */
+  private static final Applicable CHAR_IS_LOWER =
+      new CharPredicate(BuiltIn.CHAR_IS_LOWER, CharPredicate::isLower);
+
+  /** @see BuiltIn#CHAR_IS_PRINT */
+  private static final Applicable CHAR_IS_PRINT =
+      new CharPredicate(BuiltIn.CHAR_IS_PRINT, CharPredicate::isPrint);
+
+  /** @see BuiltIn#CHAR_IS_PUNCT */
+  private static final Applicable CHAR_IS_PUNCT =
+      new CharPredicate(BuiltIn.CHAR_IS_PUNCT, CharPredicate::isPunct);
+
+  /** @see BuiltIn#CHAR_IS_SPACE */
+  private static final Applicable CHAR_IS_SPACE =
+      new CharPredicate(BuiltIn.CHAR_IS_SPACE, CharPredicate::isSpace);
+
+  /** @see BuiltIn#CHAR_IS_UPPER */
+  private static final Applicable CHAR_IS_UPPER =
+      new CharPredicate(BuiltIn.CHAR_IS_UPPER, CharPredicate::isUpper);
+
+  /** @see BuiltIn#CHAR_MAX_CHAR */
+  private static final Character CHAR_MAX_CHAR = 255;
+
+  /** @see BuiltIn#CHAR_MAX_ORD */
+  private static final Integer CHAR_MAX_ORD = 255;
+
+  /** @see BuiltIn#CHAR_MIN_CHAR */
+  private static final Character CHAR_MIN_CHAR = 0;
+
+  /** @see BuiltIn#CHAR_NOT_CONTAINS */
+  private static final Applicable CHAR_NOT_CONTAINS =
+      new ApplicableImpl(BuiltIn.CHAR_CONTAINS) {
+        @Override
+        public Object apply(EvalEnv env, Object argValue) {
+          final String s = (String) argValue;
+          return charContains(s, true);
+        }
+      };
+
+  /** @see BuiltIn#CHAR_OP_GE */
+  private static final Applicable CHAR_OP_GE =
+      new Applicable2<Boolean, Character, Character>(BuiltIn.CHAR_OP_GE) {
+        @Override
+        public Boolean apply(Character a0, Character a1) {
+          return a0 >= a1;
+        }
+      };
+
+  /** @see BuiltIn#CHAR_OP_GT */
+  private static final Applicable CHAR_OP_GT =
+      new Applicable2<Boolean, Character, Character>(BuiltIn.CHAR_OP_GT) {
+        @Override
+        public Boolean apply(Character a0, Character a1) {
+          return a0 > a1;
+        }
+      };
+
+  /** @see BuiltIn#CHAR_OP_LE */
+  private static final Applicable CHAR_OP_LE =
+      new Applicable2<Boolean, Character, Character>(BuiltIn.CHAR_OP_LE) {
+        @Override
+        public Boolean apply(Character a0, Character a1) {
+          return a0 <= a1;
+        }
+      };
+
+  /** @see BuiltIn#CHAR_OP_LT */
+  private static final Applicable CHAR_OP_LT =
+      new Applicable2<Boolean, Character, Character>(BuiltIn.CHAR_OP_LT) {
+        @Override
+        public Boolean apply(Character a0, Character a1) {
+          return a0 < a1;
+        }
+      };
+
+  /** @see BuiltIn#CHAR_ORD */
+  private static final Applicable CHAR_ORD =
+      new ApplicableImpl(BuiltIn.CHAR_ORD) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          return (int) ((char) arg);
+        }
+      };
+
+  /** @see BuiltIn#CHAR_PRED */
+  private static final Applicable CHAR_PRED =
+      new ApplicableImpl(BuiltIn.CHAR_PRED) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          char c = (char) arg;
+          if (c == CHAR_MIN_CHAR) {
+            throw new MorelRuntimeException(BuiltInExn.CHR, pos);
+          }
+          return (char) (c - 1);
+        }
+      };
+
+  /** @see BuiltIn#CHAR_SUCC */
+  private static final Applicable CHAR_SUCC =
+      new ApplicableImpl(BuiltIn.CHAR_SUCC) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          char c = (char) arg;
+          if (c == CHAR_MAX_CHAR) {
+            throw new MorelRuntimeException(BuiltInExn.CHR, pos);
+          }
+          return (char) (c + 1);
+        }
+      };
+
+  /** @see BuiltIn#CHAR_TO_CSTRING */
+  private static final Applicable CHAR_TO_CSTRING =
+      new ApplicableImpl(BuiltIn.CHAR_TO_CSTRING) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          throw new UnsupportedOperationException("CHAR_TO_CSTRING");
+        }
+      };
+
+  /** @see BuiltIn#CHAR_TO_LOWER */
+  private static final Applicable CHAR_TO_LOWER =
+      new ApplicableImpl(BuiltIn.CHAR_TO_LOWER) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          return Character.toLowerCase((char) arg);
+        }
+      };
+
+  /** @see BuiltIn#CHAR_TO_STRING */
+  private static final Applicable CHAR_TO_STRING =
+      new ApplicableImpl(BuiltIn.CHAR_TO_STRING) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          return Parsers.charToString((Character) arg);
+        }
+      };
+
+  /** @see BuiltIn#CHAR_TO_UPPER */
+  private static final Applicable CHAR_TO_UPPER =
+      new ApplicableImpl(BuiltIn.CHAR_TO_UPPER) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          return Character.toUpperCase((char) arg);
+        }
+      };
 
   /** @see BuiltIn#INT_ABS */
   private static final Applicable INT_ABS =
@@ -378,13 +622,7 @@ public abstract class Codes {
       new Applicable2<List, Integer, Integer>(BuiltIn.INT_COMPARE) {
         @Override
         public List apply(Integer a0, Integer a1) {
-          if (a0 < a1) {
-            return ORDER_LESS;
-          }
-          if (a0 > a1) {
-            return ORDER_GREATER;
-          }
-          return ORDER_EQUAL;
+          return order(Integer.compare(a0, a1));
         }
       };
 
@@ -1708,7 +1946,7 @@ public abstract class Codes {
             return compare;
           }
         }
-        return n0 < n1 ? ORDER_LESS : n0 == n1 ? ORDER_EQUAL : ORDER_GREATER;
+        return order(Integer.compare(n0, n1));
       }
     };
   }
@@ -2789,6 +3027,20 @@ public abstract class Codes {
         }
       };
 
+  /**
+   * Converts the result of {@link Comparable#compareTo(Object)} to an {@code
+   * Order} value.
+   */
+  private static List order(int c) {
+    if (c < 0) {
+      return ORDER_LESS;
+    }
+    if (c > 0) {
+      return ORDER_GREATER;
+    }
+    return ORDER_EQUAL;
+  }
+
   private static final List ORDER_LESS = ImmutableList.of("LESS");
   private static final List ORDER_EQUAL = ImmutableList.of("EQUAL");
   private static final List ORDER_GREATER = ImmutableList.of("GREATER");
@@ -3222,6 +3474,38 @@ public abstract class Codes {
           .put(BuiltIn.ABS, ABS)
           .put(BuiltIn.IGNORE, IGNORE)
           .put(BuiltIn.GENERAL_OP_O, GENERAL_OP_O)
+          .put(BuiltIn.CHAR_CHR, CHAR_CHR)
+          .put(BuiltIn.CHAR_ORD, CHAR_ORD)
+          .put(BuiltIn.CHAR_MIN_CHAR, CHAR_MIN_CHAR)
+          .put(BuiltIn.CHAR_MAX_CHAR, CHAR_MAX_CHAR)
+          .put(BuiltIn.CHAR_MAX_ORD, CHAR_MAX_ORD)
+          .put(BuiltIn.CHAR_SUCC, CHAR_SUCC)
+          .put(BuiltIn.CHAR_PRED, CHAR_PRED)
+          .put(BuiltIn.CHAR_IS_LOWER, CHAR_IS_LOWER)
+          .put(BuiltIn.CHAR_IS_UPPER, CHAR_IS_UPPER)
+          .put(BuiltIn.CHAR_IS_DIGIT, CHAR_IS_DIGIT)
+          .put(BuiltIn.CHAR_IS_ALPHA, CHAR_IS_ALPHA)
+          .put(BuiltIn.CHAR_IS_HEX_DIGIT, CHAR_IS_HEX_DIGIT)
+          .put(BuiltIn.CHAR_IS_ALPHA_NUM, CHAR_IS_ALPHA_NUM)
+          .put(BuiltIn.CHAR_IS_PRINT, CHAR_IS_PRINT)
+          .put(BuiltIn.CHAR_IS_SPACE, CHAR_IS_SPACE)
+          .put(BuiltIn.CHAR_IS_PUNCT, CHAR_IS_PUNCT)
+          .put(BuiltIn.CHAR_IS_GRAPH, CHAR_IS_GRAPH)
+          .put(BuiltIn.CHAR_IS_ASCII, CHAR_IS_ASCII)
+          .put(BuiltIn.CHAR_IS_CNTRL, CHAR_IS_CNTRL)
+          .put(BuiltIn.CHAR_TO_LOWER, CHAR_TO_LOWER)
+          .put(BuiltIn.CHAR_TO_UPPER, CHAR_TO_UPPER)
+          .put(BuiltIn.CHAR_FROM_STRING, CHAR_FROM_STRING)
+          .put(BuiltIn.CHAR_FROM_CSTRING, CHAR_FROM_CSTRING)
+          .put(BuiltIn.CHAR_TO_CSTRING, CHAR_TO_CSTRING)
+          .put(BuiltIn.CHAR_TO_STRING, CHAR_TO_STRING)
+          .put(BuiltIn.CHAR_CONTAINS, CHAR_CONTAINS)
+          .put(BuiltIn.CHAR_NOT_CONTAINS, CHAR_NOT_CONTAINS)
+          .put(BuiltIn.CHAR_OP_GE, CHAR_OP_GE)
+          .put(BuiltIn.CHAR_OP_GT, CHAR_OP_GT)
+          .put(BuiltIn.CHAR_OP_LE, CHAR_OP_LE)
+          .put(BuiltIn.CHAR_OP_LT, CHAR_OP_LT)
+          .put(BuiltIn.CHAR_COMPARE, CHAR_COMPARE)
           .put(BuiltIn.INT_ABS, INT_ABS)
           .put(BuiltIn.INT_COMPARE, INT_COMPARE)
           .put(BuiltIn.INT_DIV, INT_DIV)
@@ -4023,6 +4307,7 @@ public abstract class Codes {
   public enum BuiltInExn {
     EMPTY("List", "Empty"),
     BIND("General", "Bind"),
+    CHR("General", "Chr"),
     DIV("General", "Div"),
     DOMAIN("General", "Domain"),
     OPTION("Option", "Option"),
@@ -4331,6 +4616,69 @@ public abstract class Codes {
    */
   public interface Positioned extends Applicable {
     Applicable withPos(Pos pos);
+  }
+
+  /** Implementation of {@link Applicable} that has a single char argument. */
+  private static class CharPredicate extends ApplicableImpl {
+    private final Predicate<Character> predicate;
+
+    CharPredicate(BuiltIn builtIn, Predicate<Character> predicate) {
+      super(builtIn);
+      this.predicate = predicate;
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      return predicate.test((Character) arg);
+    }
+
+    static boolean isGraph(char c) {
+      return c >= '!' && c <= '~';
+    }
+
+    static boolean isPrint(char c) {
+      return isGraph(c) || c == ' ';
+    }
+
+    static boolean isCntrl(char c) {
+      return isAscii(c) && !isPrint(c);
+    }
+
+    static boolean isSpace(char c) {
+      return c >= '\t' && c <= '\r' || c == ' ';
+    }
+
+    static boolean isAscii(char c) {
+      return c <= 127;
+    }
+
+    static boolean isUpper(char c) {
+      return 'A' <= c && c <= 'Z';
+    }
+
+    static boolean isLower(char c) {
+      return 'a' <= c && c <= 'z';
+    }
+
+    static boolean isDigit(char c) {
+      return '0' <= c && c <= '9';
+    }
+
+    static boolean isAlpha(char c) {
+      return isUpper(c) || isLower(c);
+    }
+
+    static boolean isAlphaNum(char c) {
+      return isAlpha(c) || isDigit(c);
+    }
+
+    static boolean isHexDigit(char c) {
+      return isDigit(c) || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F';
+    }
+
+    static boolean isPunct(char c) {
+      return isGraph(c) && !isAlphaNum(c);
+    }
   }
 }
 

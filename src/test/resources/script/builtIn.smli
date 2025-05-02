@@ -27,6 +27,26 @@ Sys.set ("stringDepth", ~1);
 General;
 > val it = {ignore=fn,`op o`=fn}
 >   : {ignore:'a -> unit, `op o`:('b -> 'c) * ('d -> 'b) -> 'd -> 'c}
+Char;
+> val it =
+>   {chr=fn,compare=fn,contains=fn,fromCString=fn,fromString=fn,isAlpha=fn,
+>    isAlphaNum=fn,isAscii=fn,isCntrl=fn,isDigit=fn,isGraph=fn,isHexDigit=fn,
+>    isLower=fn,isPrint=fn,isPunct=fn,isSpace=fn,isUpper=fn,maxChar=#"\255",
+>    maxOrd=255,minChar=#"\^@",notContains=fn,`op <`=fn,`op <=`=fn,`op >`=fn,
+>    `op >=`=fn,ord=fn,pred=fn,succ=fn,toCString=fn,toLower=fn,toString=fn,
+>    toUpper=fn}
+>   : {chr:int -> char, compare:char * char -> order,
+>      contains:string -> char -> bool, fromCString:string -> char option,
+>      fromString:string -> char option, isAlpha:char -> bool,
+>      isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool,
+>      isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool,
+>      isLower:char -> bool, isPrint:char -> bool, isPunct:char -> bool,
+>      isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int,
+>      minChar:char, notContains:string -> char -> bool,
+>      `op <`:char * char -> bool, `op <=`:char * char -> bool,
+>      `op >`:char * char -> bool, `op >=`:char * char -> bool, ord:char -> int,
+>      pred:char -> char, succ:char -> char, toCString:char -> string,
+>      toLower:char -> char, toString:char -> string, toUpper:char -> char}
 Int;
 > val it =
 >   {abs=fn,compare=fn,div=fn,fromInt=fn,fromLarge=fn,fromString=fn,max=fn,
@@ -215,7 +235,8 @@ app;
 ceil;
 > val it = fn : real -> int
 (* "val chr : int -> char" maps to "Char.chr" *)
-(*) TODO chr;
+chr;
+> val it = fn : int -> char
 (* "val concat : string list -> string" maps to "String.concat" *)
 concat;
 > val it = fn : string list -> string
@@ -1471,6 +1492,451 @@ Sys.plan ();
 > val it =
 >   "apply(fnCode apply(fnValue Option.composePartial, argCode tuple(match(i, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode get(name i))), argCode apply2(fnValue =, get(name i), constant(0)))), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply2(fnValue =, get(name s), constant()))))), argCode constant())"
 >   : string
+
+(* Char -------------------------------------------------------- *)
+
+(* Utility function used to test the functions below. *)
+fun testChar (p: char -> bool) =
+  from c in String.explode "Abz0! \t\128\255"
+    yield {b = p c, s = Char.toString c}
+    group b compute concat of s
+    order b
+    yield (b, concat);
+> val testChar = fn : (char -> bool) -> (bool * string) list
+
+Char.ord;
+> val it = fn : char -> int
+
+(* [minChar] is the least character in the ordering <. *)
+Char.minChar;
+> val it = #"\^@" : char
+
+(* [maxChar] is the greatest character in the ordering <. *)
+Char.maxChar;
+> val it = #"\255" : char
+
+(* [maxOrd] is the greatest character code; equals ord(maxChar). *)
+Char.maxOrd;
+> val it = 255 : int
+
+(* [chr i] returns the character whose code is i.  Raises Chr if
+   i<0 or i>maxOrd. *)
+Char.chr;
+> val it = fn : int -> char
+Char.chr 65;
+> val it = #"A" : char
+Char.chr ~1;
+> uncaught exception Chr
+>   raised at: 0.0-0.0
+Char.chr 256;
+> uncaught exception Chr
+>   raised at: 0.0-0.0
+Char.chr 12345678;
+> uncaught exception Chr
+>   raised at: 0.0-0.0
+
+(* [ord c] returns the code of character c. *)
+Char.ord;
+> val it = fn : char -> int
+Char.ord #"A";
+> val it = 65 : int
+
+(* [succ c] returns the character immediately following c, or raises
+   Chr if c = maxChar. *)
+Char.succ;
+> val it = fn : char -> char
+Char.succ #"A";
+> val it = #"B" : char
+Char.succ (chr 254);
+> val it = #"\255" : char
+Char.succ (chr 255);
+> uncaught exception Chr
+>   raised at: 0.0-0.0
+
+(* [pred c] returns the character immediately preceding c, or raises
+   Chr if c = minChar. *)
+Char.pred;
+> val it = fn : char -> char
+Char.pred #"B";
+> val it = #"A" : char
+Char.pred (chr 0);
+> uncaught exception Chr
+>   raised at: 0.0-0.0
+
+(* [isAscii c] returns true if c is an ASCII character (0 to 127). *)
+Char.isAscii;
+> val it = fn : char -> bool
+Char.isAscii #"A";
+> val it = true : bool
+testChar Char.isAscii;
+> val it = [(false,"\\128\\255"),(true,"Abz0! \\t")] : (bool * string) list
+
+(* [isLower c] returns true if c is a lowercase letter (a to z). *)
+Char.isLower;
+> val it = fn : char -> bool
+Char.isLower #"A";
+> val it = false : bool
+testChar Char.isLower;
+> val it = [(false,"A0! \\t\\128\\255"),(true,"bz")] : (bool * string) list
+
+(* [isUpper c] returns true if c is a uppercase letter (A to Z). *)
+Char.isUpper;
+> val it = fn : char -> bool
+Char.isUpper #"A";
+> val it = true : bool
+testChar Char.isUpper;
+> val it = [(false,"bz0! \\t\\128\\255"),(true,"A")] : (bool * string) list
+
+(* [isAlpha c] returns true if c is a letter (lowercase or uppercase). *)
+Char.isAlpha;
+> val it = fn : char -> bool
+Char.isAlpha #"A";
+> val it = true : bool
+testChar Char.isAlpha;
+> val it = [(false,"0! \\t\\128\\255"),(true,"Abz")] : (bool * string) list
+
+(* [isDigit c] returns true if c is a decimal digit (0 to 9). *)
+Char.isDigit;
+> val it = fn : char -> bool
+Char.isDigit #"A";
+> val it = false : bool
+testChar Char.isDigit;
+> val it = [(false,"Abz! \\t\\128\\255"),(true,"0")] : (bool * string) list
+
+(* [isHexDigit c] returns true if c is a hexadecimal digit (0 to 9 or
+   a to f or A to F). *)
+Char.isHexDigit;
+> val it = fn : char -> bool
+Char.isHexDigit #"A";
+> val it = true : bool
+testChar Char.isHexDigit;
+> val it = [(false,"z! \\t\\128\\255"),(true,"Ab0")] : (bool * string) list
+
+(* [isAlphaNum c] returns true if c is alphanumeric (a letter or a
+   decimal digit). *)
+Char.isAlphaNum;
+> val it = fn : char -> bool
+Char.isAlphaNum #"A";
+> val it = true : bool
+testChar Char.isAlphaNum;
+> val it = [(false,"! \\t\\128\\255"),(true,"Abz0")] : (bool * string) list
+
+(* [isPrint c] returns true if c is a printable character (space or visible) *)
+Char.isPrint;
+> val it = fn : char -> bool
+Char.isPrint #"A";
+> val it = true : bool
+testChar Char.isPrint;
+> val it = [(false,"\\t\\128\\255"),(true,"Abz0! ")] : (bool * string) list
+
+(* [isSpace c] returns true if c is a whitespace character (blank, newline,
+   tab, vertical tab, new page). *)
+Char.isSpace;
+> val it = fn : char -> bool
+Char.isSpace #"A";
+> val it = false : bool
+testChar Char.isSpace;
+> val it = [(false,"Abz0!\\128\\255"),(true," \\t")] : (bool * string) list
+
+(* [isGraph c] returns true if c is a graphical character, that is,
+   it is printable and not a whitespace character. *)
+Char.isGraph;
+> val it = fn : char -> bool
+Char.isGraph #"A";
+> val it = true : bool
+testChar Char.isGraph;
+> val it = [(false," \\t\\128\\255"),(true,"Abz0!")] : (bool * string) list
+
+(* [isPunct c] returns true if c is a punctuation character, that is,
+   graphical but not alphanumeric. *)
+Char.isPunct;
+> val it = fn : char -> bool
+Char.isPunct #"A";
+> val it = false : bool
+testChar Char.isPunct;
+> val it = [(false,"Abz0 \\t\\128\\255"),(true,"!")] : (bool * string) list
+
+(* [isCntrl c] returns true if c is a control character, that is, if
+   not (isPrint c). *)
+Char.isCntrl;
+> val it = fn : char -> bool
+testChar Char.isCntrl;
+> val it = [(false,"Abz0! \\128\\255"),(true,"\\t")] : (bool * string) list
+
+(* [isAscii c] returns true if 0 <= ord c <= 127. *)
+Char.isAscii;
+> val it = fn : char -> bool
+testChar Char.isAscii;
+> val it = [(false,"\\128\\255"),(true,"Abz0! \\t")] : (bool * string) list
+
+(* [toLower c] returns the lowercase letter corresponding to c,
+   if c is a letter (a to z or A to Z); otherwise returns c. *)
+Char.toLower;
+> val it = fn : char -> char
+Char.toLower #"A";
+> val it = #"a" : char
+Char.toLower #"a";
+> val it = #"a" : char
+Char.toLower #" ";
+> val it = #" " : char
+Char.toLower #"\^@";
+> val it = #"\^@" : char
+
+(* [toUpper c] returns the uppercase letter corresponding to c,
+   if c is a letter (a to z or A to Z); otherwise returns c. *)
+Char.toUpper;
+> val it = fn : char -> char
+Char.toUpper #"A";
+> val it = #"A" : char
+Char.toUpper #"a";
+> val it = #"A" : char
+Char.toUpper #" ";
+> val it = #" " : char
+Char.toUpper #"\^@";
+> val it = #"\^@" : char
+
+(* [contains s c] returns true if character c occurs in the string s;
+   false otherwise.  The function, when applied to s, builds a table
+   and returns a function which uses table lookup to decide whether a
+   given character is in the string or not.  Hence it is relatively
+   expensive to compute `val p = contains s` but very fast to compute
+   `p(c)` for any given character. *)
+Char.contains;
+> val it = fn : string -> char -> bool
+val p = Char.contains "abc";
+> val p = fn : char -> bool
+p #"a";
+> val it = true : bool
+p #"z";
+> val it = false : bool
+p #"\128";
+> val it = false : bool
+testChar p;
+> val it = [(false,"Az0! \\t\\128\\255"),(true,"b")] : (bool * string) list
+
+(* [notContains s c] returns true if character c does not occur in the
+   string s; false otherwise.  Works by construction of a lookup table
+   in the same way as the above function. *)
+Char.notContains;
+> val it = fn : string -> char -> bool
+val p = Char.notContains "abc";
+> val p = fn : char -> bool
+p #"a";
+> val it = false : bool
+p #"z";
+> val it = true : bool
+p #"\128";
+> val it = true : bool
+testChar p;
+> val it = [(false,"b"),(true,"Az0! \\t\\128\\255")] : (bool * string) list
+
+(* [fromString s] attempts to scan a character or ML escape sequence
+   from the string s.  Does not skip leading whitespace.  For
+   instance, fromString "\\065" equals #"A". *)
+Char.fromString;
+> val it = fn : string -> char option
+Char.fromString "\\065";
+> val it = SOME #"A" : char option
+Char.fromString "a";
+> val it = SOME #"a" : char option
+Char.fromString "\^@";
+> val it = SOME #"\^@" : char option
+Char.fromString "\t";
+> val it = SOME #"\t" : char option
+Char.fromString "\\t";
+> val it = SOME #"\t" : char option
+Char.fromString "\009";
+> val it = SOME #"\t" : char option
+Char.fromString "\\009";
+> val it = SOME #"\t" : char option
+
+(* [toString c] returns a string consisting of the character c, if c
+      is printable, else an ML escape sequence corresponding to c.  A
+      printable character is mapped to a one-character string; bell,
+      backspace, tab, newline, vertical tab, form feed, and carriage
+      return are mapped to the two-character strings "\\a", "\\b", "\\t",
+      "\\n", "\\v", "\\f", and "\\r"; other characters with code less
+      than 32 are mapped to three-character strings of the form "\\^Z",
+      and characters with codes 127 through 255 are mapped to
+      four-character strings of the form "\\ddd", where ddd are three decimal
+      digits representing the character code.  For instance,
+                toString #"A"      equals "A"
+                toString #"\\"     equals "\\\\"
+                toString #"\""     equals "\\\""
+                toString (chr   0) equals "\\^@"
+                toString (chr   1) equals "\\^A"
+                toString (chr   6) equals "\\^F"
+                toString (chr   7) equals "\\a"
+                toString (chr   8) equals "\\b"
+                toString (chr   9) equals "\\t"
+                toString (chr  10) equals "\\n"
+                toString (chr  11) equals "\\v"
+                toString (chr  12) equals "\\f"
+                toString (chr  13) equals "\\r"
+                toString (chr  14) equals "\\^N"
+                toString (chr 127) equals "\\127"
+                toString (chr 128) equals "\\128" *)
+Char.toString;
+> val it = fn : char -> string
+Char.toString #"A";
+> val it = "A" : string
+Char.toString #"\\";
+> val it = "\\\\" : string
+Char.toString #"\"";
+> val it = "\\\"" : string
+Char.toString (chr 0);
+> val it = "\\^@" : string
+Char.toString (chr 1);
+> val it = "\\^A" : string
+Char.toString (chr 2);
+> val it = "\\^B" : string
+Char.toString (chr 6);
+> val it = "\\^F" : string
+Char.toString (chr 7);
+> val it = "\\a" : string
+Char.toString (chr 8);
+> val it = "\\b" : string
+Char.toString (chr 9);
+> val it = "\\t" : string
+Char.toString (chr 10);
+> val it = "\\n" : string
+Char.toString (chr 11);
+> val it = "\\v" : string
+Char.toString (chr 12);
+> val it = "\\f" : string
+Char.toString (chr 13);
+> val it = "\\r" : string
+Char.toString (chr 14);
+> val it = "\\^N" : string
+Char.toString (chr 127);
+> val it = "\\127" : string
+Char.toString (chr 128);
+> val it = "\\128" : string
+Char.toString (chr 129);
+> val it = "\\129" : string
+Char.toString (chr 255);
+> val it = "\\255" : string
+
+chr 0;
+> val it = #"\^@" : char
+chr 1;
+> val it = #"\^A" : char
+chr 2;
+> val it = #"\^B" : char
+chr 6;
+> val it = #"\^F" : char
+chr 7;
+> val it = #"\a" : char
+chr 8;
+> val it = #"\b" : char
+chr 9;
+> val it = #"\t" : char
+chr 10;
+> val it = #"\n" : char
+chr 11;
+> val it = #"\v" : char
+chr 12;
+> val it = #"\f" : char
+chr 13;
+> val it = #"\r" : char
+chr 14;
+> val it = #"\^N" : char
+chr 48;
+> val it = #"0" : char
+chr 65;
+> val it = #"A" : char
+chr 96;
+> val it = #"`" : char
+chr 97;
+> val it = #"a" : char
+chr 127;
+> val it = #"\127" : char
+chr 128;
+> val it = #"\128" : char
+chr 255;
+> val it = #"\255" : char
+
+(* [fromCString s] attempts to scan a character or C escape sequence
+   from the string s.  Does not skip leading whitespace.  For
+   instance, fromString "\\065" equals #"A". *)
+Char.fromString;
+> val it = fn : string -> char option
+
+(* [toCString c] returns a string consisting of the character c, if c
+   is printable, else an C escape sequence corresponding to c.  A
+   printable character is mapped to a one-character string; bell,
+   backspace, tab, newline, vertical tab, form feed, and carriage
+   return are mapped to the two-character strings "\\a", "\\b", "\\t",
+   "\\n", "\\v", "\\f", and "\\r"; other characters are mapped to
+   four-character strings of the form "\\ooo", where ooo are three
+   octal digits representing the character code.  For instance,
+             toString #"A"      equals "A"
+             toString #"A"      equals "A"
+             toString #"\\"     equals "\\\\"
+             toString #"\""     equals "\\\""
+             toString (chr   0) equals "\\000"
+             toString (chr   1) equals "\\001"
+             toString (chr   6) equals "\\006"
+             toString (chr   7) equals "\\a"
+             toString (chr   8) equals "\\b"
+             toString (chr   9) equals "\\t"
+             toString (chr  10) equals "\\n"
+             toString (chr  11) equals "\\v"
+             toString (chr  12) equals "\\f"
+             toString (chr  13) equals "\\r"
+             toString (chr  14) equals "\\016"
+             toString (chr 127) equals "\\177"
+             toString (chr 128) equals "\\200" *)
+Char.toCString;
+> val it = fn : char -> string
+
+(* [<]
+   [<=]
+   [>]
+   [>=] compares character codes.  For instance, c1 < c2 returns true
+   if ord(c1) < ord(c2), and similarly for <=, >, >=. *)
+
+Char.`op <`;
+> val it = fn : char * char -> bool
+#"A" < #"B";
+> val it = true : bool
+#"a" < #"A";
+> val it = false : bool
+
+Char.`op <=`;
+> val it = fn : char * char -> bool
+#"A" <= #"B";
+> val it = true : bool
+
+Char.`op >`;
+> val it = fn : char * char -> bool
+#"A" > #"B";
+> val it = false : bool
+
+Char.`op >=`;
+> val it = fn : char * char -> bool
+#"A" >= #"B";
+> val it = false : bool
+
+(* TODO: Standard ML accepts the following:
+    Char.<;
+    Char.<=;
+    Char.>;
+    Char.>=;
+*)
+
+(* [compare(c1, c2)] returns LESS, EQUAL, or GREATER, according as c1 is
+   precedes, equals, or follows c2 in the ordering Char.< . *)
+Char.compare;
+> val it = fn : char * char -> order
+Char.compare (#"a", #"a");
+> val it = EQUAL : order
+Char.compare (#"d", #"a");
+> val it = GREATER : order
+Char.compare (#"D", #"a");
+> val it = LESS : order
+Char.compare (#"a", #"D");
+> val it = GREATER : order
 
 (* Int --------------------------------------------------------- *)
 Int.abs;
@@ -2840,7 +3306,10 @@ Sys.env;
 > val it = fn : unit -> (string * string) list
 Sys.env ();
 > val it =
->   [("EQUAL","order"),("GREATER","order"),
+>   [
+>    ("Char",
+>     "{chr:int -> char, compare:char * char -> order, contains:string -> char -> bool, fromCString:string -> char option, fromString:string -> char option, isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool, isLower:char -> bool, isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char, notContains:string -> char -> bool, `op <`:char * char -> bool, `op <=`:char * char -> bool, `op >`:char * char -> bool, `op >=`:char * char -> bool, ord:char -> int, pred:char -> char, succ:char -> char, toCString:char -> string, toLower:char -> char, toString:char -> string, toUpper:char -> char}"),
+>    ("EQUAL","order"),("GREATER","order"),
 >    ("General",
 >     "{ignore:forall 'a. 'a -> unit, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
 >    ("Int",
@@ -2866,8 +3335,8 @@ Sys.env ();
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
->    ("ceil","real -> int"),("concat","string list -> string"),
->    ("count","forall 'a. 'a list -> int"),
+>    ("ceil","real -> int"),("chr","int -> char"),
+>    ("concat","string list -> string"),("count","forall 'a. 'a list -> int"),
 >    ("emp","{empno:int, ename:string, mgr:int} list"),
 >    ("empty","forall 'a. 'a list -> bool"),
 >    ("env","unit -> (string * string) list"),("explode","string -> char list"),
@@ -2896,16 +3365,17 @@ Sys.env ();
 >    ("op =","forall 'a. 'a * 'a -> bool"),("op >","forall 'a. 'a * 'a -> bool"),
 >    ("op >=","forall 'a. 'a * 'a -> bool"),
 >    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op ^","string * string -> string"),("op div","int * int -> int"),
->    ("op elem","forall 'a. 'a * 'a list -> bool"),
->    ("op except","forall 'a. 'a list * 'a list -> 'a list"),...]
+>    ("op ^","string * string -> string"),("op div","int * int -> int"),...]
 >   : (string * string) list
 
 env;
 > val it = fn : unit -> (string * string) list
 env ();
 > val it =
->   [("EQUAL","order"),("GREATER","order"),
+>   [
+>    ("Char",
+>     "{chr:int -> char, compare:char * char -> order, contains:string -> char -> bool, fromCString:string -> char option, fromString:string -> char option, isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool, isLower:char -> bool, isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char, notContains:string -> char -> bool, `op <`:char * char -> bool, `op <=`:char * char -> bool, `op >`:char * char -> bool, `op >=`:char * char -> bool, ord:char -> int, pred:char -> char, succ:char -> char, toCString:char -> string, toLower:char -> char, toString:char -> string, toUpper:char -> char}"),
+>    ("EQUAL","order"),("GREATER","order"),
 >    ("General",
 >     "{ignore:forall 'a. 'a -> unit, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
 >    ("Int",
@@ -2931,8 +3401,8 @@ env ();
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
->    ("ceil","real -> int"),("concat","string list -> string"),
->    ("count","forall 'a. 'a list -> int"),
+>    ("ceil","real -> int"),("chr","int -> char"),
+>    ("concat","string list -> string"),("count","forall 'a. 'a list -> int"),
 >    ("emp","{empno:int, ename:string, mgr:int} list"),
 >    ("empty","forall 'a. 'a list -> bool"),
 >    ("env","unit -> (string * string) list"),("explode","string -> char list"),
@@ -2961,9 +3431,7 @@ env ();
 >    ("op =","forall 'a. 'a * 'a -> bool"),("op >","forall 'a. 'a * 'a -> bool"),
 >    ("op >=","forall 'a. 'a * 'a -> bool"),
 >    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op ^","string * string -> string"),("op div","int * int -> int"),
->    ("op elem","forall 'a. 'a * 'a list -> bool"),
->    ("op except","forall 'a. 'a list * 'a list -> 'a list"),...]
+>    ("op ^","string * string -> string"),("op div","int * int -> int"),...]
 >   : (string * string) list
 
 (*) val plan : unit -> string

@@ -1604,29 +1604,7 @@ yield {r.j, r.s};
 >    {j=8,s="morel"}] : {j:int, s:string} list
 Sys.plan();
 > val it =
->   "calcite(plan LogicalProject(j=[$1], s=[$2])
->   LogicalTableFunctionScan(invocation=[morelTable('#tabulate List (6, fn i_11 => {i = i_11, j = i_11 + 3, s = #substring String (\"morel\", 0, i_11)})', '{
->   \"fields\": [
->     {
->       \"type\": \"INTEGER\",
->       \"nullable\": false,
->       \"name\": \"i\"
->     },
->     {
->       \"type\": \"INTEGER\",
->       \"nullable\": false,
->       \"name\": \"j\"
->     },
->     {
->       \"type\": \"VARCHAR\",
->       \"nullable\": false,
->       \"precision\": -1,
->       \"name\": \"s\"
->     }
->   ],
->   \"nullable\": false
-> }')], rowType=[RecordType(INTEGER i, INTEGER j, VARCHAR s)])
-> )"
+>   "calcite(plan LogicalProject(j=[$1], s=[$2])\n  LogicalTableFunctionScan(invocation=[morelTable('#tabulate List (6, fn i_11 => {i = i_11, j = i_11 + 3, s = #substring String (\"morel\", 0, i_11)})', '{\n  \"fields\": [\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"i\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"j\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"s\"\n    }\n  ],\n  \"nullable\": false\n}')], rowType=[RecordType(INTEGER i, INTEGER j, VARCHAR s)])\n)"
 >   : string
 
 (*) List expression in Hybrid mode (0% Calcite), with various

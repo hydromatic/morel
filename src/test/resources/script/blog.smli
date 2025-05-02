@@ -1211,18 +1211,7 @@ from d in scott.dept
 >   : {deptno:int, dname:string, loc:string} list
 Sys.plan();
 > val it =
->   "calcite(plan LogicalProject(deptno=[$0], dname=[$1], loc=[$2])
->   LogicalFilter(condition=[IS NULL($4)])
->     LogicalJoin(condition=[=($0, $3)], joinType=[left])
->       LogicalProject(deptno=[$0], dname=[$1], loc=[$2])
->         JdbcTableScan(table=[[scott, DEPT]])
->       LogicalProject(deptno=[$0], $f1=[true])
->         LogicalAggregate(group=[{0}])
->           LogicalProject(deptno=[$1])
->             LogicalFilter(condition=[AND(=($5, 'CLERK'), IS NOT NULL($1))])
->               LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])
->                 JdbcTableScan(table=[[scott, EMP]])
-> )"
+>   "calcite(plan LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n  LogicalFilter(condition=[IS NULL($4)])\n    LogicalJoin(condition=[=($0, $3)], joinType=[left])\n      LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n        JdbcTableScan(table=[[scott, DEPT]])\n      LogicalProject(deptno=[$0], $f1=[true])\n        LogicalAggregate(group=[{0}])\n          LogicalProject(deptno=[$1])\n            LogicalFilter(condition=[AND(=($5, 'CLERK'), IS NOT NULL($1))])\n              LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n                JdbcTableScan(table=[[scott, EMP]])\n)"
 >   : string
 
 (*) Functional programming <=> relational programming
