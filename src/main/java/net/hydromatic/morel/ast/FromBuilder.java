@@ -18,7 +18,7 @@
  */
 package net.hydromatic.morel.ast;
 
-import static com.google.common.collect.Iterables.getLast;
+import static com.google.common.base.Preconditions.checkArgument;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.append;
@@ -28,7 +28,6 @@ import static net.hydromatic.morel.util.Static.skipLast;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -64,6 +63,7 @@ public class FromBuilder {
   private final @Nullable Environment env;
   private final List<Core.FromStep> steps = new ArrayList<>();
   private final List<Binding> bindings = new ArrayList<>();
+  private boolean atom;
 
   /**
    * If non-negative, flags that particular step should be removed if it is not
@@ -98,16 +98,16 @@ public class FromBuilder {
     return steps.toString();
   }
 
-  /** Returns the bindings available after the most recent step. */
-  public List<Binding> bindings() {
-    return ImmutableList.copyOf(bindings);
+  /** Returns the environment available after the most recent step. */
+  public Core.StepEnv stepEnv() {
+    return Core.StepEnv.of(bindings, atom);
   }
 
   private FromBuilder addStep(Core.FromStep step) {
     if (env != null) {
       // Validate the step. (Not necessary, but helps find bugs.)
       RefChecker.of(typeSystem, env.bindAll(bindings))
-          .visitStep(step, bindings);
+          .visitStep(step, stepEnv());
     }
     if (removeIfNotLastIndex == steps.size() - 1) {
       // A trivial record yield with a single yield, e.g. 'yield {i = i}', has
@@ -116,25 +116,26 @@ public class FromBuilder {
       // We've just about to add a new step, so this is no longer necessary.
       removeIfNotLastIndex = Integer.MIN_VALUE;
       removeIfLastIndex = Integer.MIN_VALUE;
-      final Core.FromStep lastStep = getLast(steps);
+      final Core.FromStep lastStep = last(steps);
       if (lastStep.op == Op.YIELD) {
         final Core.Yield yield = (Core.Yield) lastStep;
         if (yield.exp.op == Op.TUPLE) {
           final Core.Tuple tuple = (Core.Tuple) yield.exp;
           final Core.FromStep previousStep = steps.get(steps.size() - 2);
-          final List<Binding> previousBindings = previousStep.bindings;
+          final Core.StepEnv previousEnv = previousStep.env;
           if (tuple.args.size() == 1
-              && isTrivial(tuple, previousBindings, yield.bindings)) {
+              && isTrivial(tuple, previousEnv, yield.env)) {
             steps.remove(steps.size() - 1);
           }
         }
       }
     }
     steps.add(step);
-    if (!bindings.equals(step.bindings)) {
+    if (!bindings.equals(step.env.bindings)) {
       bindings.clear();
-      bindings.addAll(step.bindings);
+      bindings.addAll(step.env.bindings);
     }
+    atom = step.env.atom;
     return this;
   }
 
@@ -155,7 +156,7 @@ public class FromBuilder {
         && core.boolLiteral(true).equals(condition)
         && (pat instanceof Core.IdPat
                 && !((Core.From) exp).steps.isEmpty()
-                && getLast(((Core.From) exp).steps).bindings.size() == 1
+                && last(((Core.From) exp).steps).env.bindings.size() == 1
             || pat instanceof Core.RecordPat
                 && ((Core.RecordPat) pat)
                     .args.stream().allMatch(a -> a instanceof Core.IdPat)
@@ -163,13 +164,18 @@ public class FromBuilder {
                 && ((Core.TuplePat) pat)
                     .args.stream().allMatch(a -> a instanceof Core.IdPat))) {
       final Core.From from = (Core.From) exp;
-      final Core.FromStep lastStep = getLast(from.steps);
+      final Core.FromStep lastStep = last(from.steps);
       final List<Core.FromStep> steps =
           lastStep.op == Op.YIELD ? skipLast(from.steps) : from.steps;
 
+      // This is an atom only if this is the first step.
+      // Even if the previous step was empty, e.g.
+      // "from () in [()], i in [1,2]" has type "{i:int} list" not "int list".
+      boolean atom1 = this.steps.isEmpty() && lastStep.env.atom;
+
       final PairList<String, Core.Exp> nameExps = PairList.of();
       boolean uselessIfLast = this.bindings.isEmpty();
-      final List<Binding> bindings;
+      final Core.StepEnv env;
       if (pat instanceof Core.RecordPat) {
         final Core.RecordPat recordPat = (Core.RecordPat) pat;
         this.bindings.forEach(b -> nameExps.add(b.id.name, core.id(b.id)));
@@ -177,22 +183,23 @@ public class FromBuilder {
             recordPat.type().argNameTypes.keySet(),
             recordPat.args,
             (name, arg) -> nameExps.add(name, core.id((Core.IdPat) arg)));
-        bindings = null;
+        env = null;
       } else if (pat instanceof Core.TuplePat) {
         final Core.TuplePat tuplePat = (Core.TuplePat) pat;
         forEach(
             tuplePat.args,
-            lastStep.bindings,
+            lastStep.env.bindings,
             (arg, binding) ->
                 nameExps.add(((Core.IdPat) arg).name, core.id(binding.id)));
-        bindings = null;
+        env = null;
       } else if (!this.bindings.isEmpty()) {
         // With at least one binding, and one new variable, the output will be
         // a record type.
         final Core.IdPat idPat = (Core.IdPat) pat;
         this.bindings.forEach(b -> nameExps.add(b.id.name, core.id(b.id)));
-        lastStep.bindings.forEach(b -> nameExps.add(idPat.name, core.id(b.id)));
-        bindings = null;
+        lastStep.env.bindings.forEach(
+            b -> nameExps.add(idPat.name, core.id(b.id)));
+        env = null;
       } else {
         final Core.IdPat idPat = (Core.IdPat) pat;
         if (lastStep instanceof Core.Yield
@@ -206,18 +213,21 @@ public class FromBuilder {
             return this;
           }
           nameExps.add(idPat.name, ((Core.Yield) lastStep).exp);
-          bindings = ImmutableList.of(Binding.of(idPat));
-          return yield_(false, bindings, core.record(typeSystem, nameExps));
+          env = Core.StepEnv.atom(Binding.of(idPat));
+          return yield_(false, env, core.record(typeSystem, nameExps), atom1);
         }
-        final Binding binding = Iterables.getOnlyElement(lastStep.bindings);
+        final Binding binding = lastStep.env.bindings.get(0);
         nameExps.add(idPat.name, core.id(binding.id));
-        bindings = append(this.bindings, Binding.of(idPat));
+
+        env = Core.StepEnv.of(append(this.bindings, Binding.of(idPat)), atom1);
       }
       addAll(steps);
-      return yield_(uselessIfLast, bindings, core.record(typeSystem, nameExps));
+      return yield_(
+          uselessIfLast, env, core.record(typeSystem, nameExps), atom1);
     }
     Compiles.acceptBinding(typeSystem, pat, bindings);
-    return addStep(core.scan(bindings, pat, exp, condition));
+    atom = steps.isEmpty() && bindings.size() == 1;
+    return addStep(core.scan(stepEnv(), pat, exp, condition));
   }
 
   public FromBuilder addAll(Iterable<? extends Core.FromStep> steps) {
@@ -232,7 +242,7 @@ public class FromBuilder {
       // skip "where true"
       return this;
     }
-    return addStep(core.where(bindings, condition));
+    return addStep(core.where(stepEnv(), condition));
   }
 
   public FromBuilder skip(Core.Exp count) {
@@ -241,18 +251,21 @@ public class FromBuilder {
       // skip "skip 0"
       return this;
     }
-    return addStep(core.skip(bindings, count));
+    return addStep(core.skip(stepEnv(), count));
   }
 
   public FromBuilder take(Core.Exp count) {
-    return addStep(core.take(bindings, count));
+    return addStep(core.take(stepEnv(), count));
   }
 
   public FromBuilder distinct() {
+    // Do not call group(); it never creates atomic rows, but distinct() needs
+    // to propagate row type.
     final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExpsB =
         ImmutableSortedMap.naturalOrder();
     bindings.forEach(b -> groupExpsB.put((Core.IdPat) b.id, core.id(b.id)));
-    return addStep(core.group(groupExpsB.build(), ImmutableSortedMap.of()));
+    return addStep(
+        new Core.Group(stepEnv(), groupExpsB.build(), ImmutableSortedMap.of()));
   }
 
   public FromBuilder group(
@@ -267,24 +280,25 @@ public class FromBuilder {
       // skip empty "order"
       return this;
     }
-    return addStep(core.order(bindings, orderItems));
+    return addStep(core.order(stepEnv(), orderItems));
   }
 
   public FromBuilder yield_(Core.Exp exp) {
-    return yield_(false, exp);
+    boolean atom = exp.op != Op.TUPLE || exp.type.op() != Op.RECORD_TYPE;
+    return yield_(false, exp, atom);
   }
 
-  public FromBuilder yield_(boolean uselessIfLast, Core.Exp exp) {
-    return yield_(uselessIfLast, null, exp);
+  public FromBuilder yield_(boolean uselessIfLast, Core.Exp exp, boolean atom) {
+    return yield_(uselessIfLast, null, exp, atom);
   }
 
   /**
    * Creates a "yield" step.
    *
-   * <p>When copying, the {@code bindings2} parameter is the {@link
-   * net.hydromatic.morel.ast.Core.Yield#bindings} value of the current Yield,
-   * so that we don't generate new variables (with different ordinals). Later
-   * steps are relying on the variables remaining the same. For example, in
+   * <p>When copying, the {@code env2} parameter is the {@link
+   * net.hydromatic.morel.ast.Core.Yield#env} value of the current Yield, so
+   * that we don't generate new variables (with different ordinals). Later steps
+   * are relying on the variables remaining the same. For example, in
    *
    * <pre>{@code
    * from ... yield {a = b} where a > 5
@@ -295,17 +309,23 @@ public class FromBuilder {
    *
    * @param uselessIfLast Whether this Yield will be useless if it is the last
    *     step. The expression {@code {x = y} } is an example of this
-   * @param bindings2 Desired bindings, or null
+   * @param env2 Desired step environment, or null
    * @param exp Expression to yield
+   * @param atom Whether the expression is an atom (as opposed to a record); all
+   *     atoms have just one binding, but records may also have one binding
    * @return This FromBuilder, with a Yield added to the list of steps
    */
   public FromBuilder yield_(
-      boolean uselessIfLast, @Nullable List<Binding> bindings2, Core.Exp exp) {
+      boolean uselessIfLast,
+      Core.@Nullable StepEnv env2,
+      Core.Exp exp,
+      boolean atom) {
+    checkArgument(env2 == null || env2.atom == atom);
     boolean uselessIfNotLast = false;
     switch (exp.op) {
       case TUPLE:
         final TupleType tupleType =
-            tupleType((Core.Tuple) exp, bindings, bindings2);
+            tupleType((Core.Tuple) exp, stepEnv(), env2);
         switch (tupleType) {
           case IDENTITY:
             // A trivial record does not rename, so its only purpose is to
@@ -314,8 +334,8 @@ public class FromBuilder {
             if (bindings.size() == 1) {
               // Singleton record that does not rename, e.g. 'yield {x=x}'
               // It only has meaning as the last step.
-              if (bindings2 == null) {
-                bindings2 = ImmutableList.copyOf(bindings);
+              if (env2 == null) {
+                env2 = Core.StepEnv.of(bindings, false);
               }
               uselessIfNotLast = true;
               break;
@@ -348,10 +368,11 @@ public class FromBuilder {
           return this;
         }
     }
-    addStep(
-        bindings2 != null
-            ? core.yield_(bindings2, exp)
-            : core.yield_(typeSystem, exp));
+    Core.Yield step =
+        env2 != null
+            ? core.yield_(env2, exp)
+            : core.yield_(typeSystem, exp, atom);
+    addStep(step);
     removeIfNotLastIndex =
         uselessIfNotLast ? steps.size() - 1 : Integer.MIN_VALUE;
     removeIfLastIndex = uselessIfLast ? steps.size() - 1 : Integer.MIN_VALUE;
@@ -360,21 +381,17 @@ public class FromBuilder {
 
   /** Returns whether tuple is something like "{i = i, j = j}". */
   private static boolean isTrivial(
-      Core.Tuple tuple,
-      List<Binding> bindings,
-      @Nullable List<Binding> bindings2) {
-    return tupleType(tuple, bindings, bindings2) == TupleType.IDENTITY;
+      Core.Tuple tuple, Core.StepEnv env, Core.@Nullable StepEnv env2) {
+    return tupleType(tuple, env, env2) == TupleType.IDENTITY;
   }
 
   /** Returns whether tuple is something like "{i = i, j = j}". */
   private static TupleType tupleType(
-      Core.Tuple tuple,
-      List<Binding> bindings,
-      @Nullable List<Binding> bindings2) {
-    if (tuple.args.size() != bindings.size()) {
+      Core.Tuple tuple, Core.StepEnv env, Core.@Nullable StepEnv env2) {
+    if (tuple.args.size() != env.bindings.size()) {
       return TupleType.OTHER;
     }
-    boolean identity = bindings2 == null || bindings.equals(bindings2);
+    boolean identity = env2 == null || env.bindings.equals(env2.bindings);
     for (Pair<Core.Exp, String> argName :
         Pair.zip(tuple.args, tuple.type().argNames())) {
       Core.Exp arg = argName.left;
@@ -392,7 +409,7 @@ public class FromBuilder {
   private Core.Exp build(boolean simplify) {
     if (removeIfLastIndex == steps.size() - 1) {
       removeIfLastIndex = Integer.MIN_VALUE;
-      final Core.Yield yield = (Core.Yield) getLast(steps);
+      final Core.Yield yield = (Core.Yield) last(steps);
       if (yield.exp.op != Op.TUPLE
           || ((Core.Tuple) yield.exp).args.size() != 1) {
         throw new AssertionError(yield.exp);
@@ -451,7 +468,7 @@ public class FromBuilder {
 
     @Override
     protected void visit(Core.Yield yield) {
-      yield_(false, yield.bindings, yield.exp);
+      yield_(false, yield.env, yield.exp, yield.env.atom);
     }
   }
 

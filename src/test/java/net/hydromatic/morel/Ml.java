@@ -551,6 +551,11 @@ class Ml {
         .assertEval();
   }
 
+  Ml assertCompileException(String message) {
+    return assertCompileException(
+        pos -> throwsA(CompileException.class, message, pos));
+  }
+
   Ml assertEvalError(Function<Pos, Matcher<Throwable>> matcherSupplier) {
     assertThat(pos, notNullValue());
     return withResultMatcher(notNullValue())

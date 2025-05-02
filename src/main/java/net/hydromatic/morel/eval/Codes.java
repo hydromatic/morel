@@ -60,7 +60,6 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.parse.Parsers;
-import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RangeExtent;
@@ -996,11 +995,11 @@ public abstract class Codes {
   /** Creates a {@link RowSink} for a {@code order} clause. */
   public static RowSink orderRowSink(
       Iterable<? extends Map.Entry<Code, Boolean>> codes,
-      ImmutableList<Binding> bindings,
+      Core.StepEnv env,
       RowSink rowSink) {
     return new OrderRowSink(
         ImmutablePairList.copyOf(codes),
-        transformEager(bindings, b -> b.id.name),
+        transformEager(env.bindings, b -> b.id.name),
         rowSink);
   }
 
@@ -4168,7 +4167,7 @@ public abstract class Codes {
     @Override
     public Describer describe(Describer describer) {
       return describer.start(
-          "yield", d -> d.arg("codes", codes).arg("sink", rowSink));
+          "yield", d -> d.args("codes", codes).arg("sink", rowSink));
     }
 
     @Override
@@ -4258,7 +4257,7 @@ public abstract class Codes {
 
     @Override
     public Describer describe(Describer describer) {
-      return describer.start("getTuple", d -> d.arg("names", names));
+      return describer.start("getTuple", d -> d.args("names", names));
     }
 
     @Override

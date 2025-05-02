@@ -1009,7 +1009,7 @@ public class Resolver {
 
     @Override
     protected void visit(Ast.Scan scan) {
-      final Resolver r = withEnv(fromBuilder.bindings());
+      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
       final Core.Exp coreExp;
       final Core.Pat corePat;
       if (scan.exp == null) {
@@ -1024,7 +1024,8 @@ public class Resolver {
         final ListType listType = (ListType) coreExp.type;
         corePat = r.toCore(scan.pat, listType.elementType);
       }
-      final List<Binding> bindings2 = new ArrayList<>(fromBuilder.bindings());
+      final List<Binding> bindings2 =
+          new ArrayList<>(fromBuilder.stepEnv().bindings);
       Compiles.acceptBinding(typeMap.typeSystem, corePat, bindings2);
       Core.Exp coreCondition =
           scan.condition == null
@@ -1035,14 +1036,14 @@ public class Resolver {
 
     @Override
     protected void visit(Ast.Where where) {
-      final Resolver r = withEnv(fromBuilder.bindings());
+      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
       fromBuilder.where(r.toCore(where.exp));
     }
 
     @Override
     protected void visit(Ast.Require require) {
       // 'require e' translates to the same as 'where not e'
-      final Resolver r = withEnv(fromBuilder.bindings());
+      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
       final Core.Exp coreRequire = r.toCore(require.exp);
       final Core.Exp coreNot = core.not(typeMap.typeSystem, coreRequire);
       fromBuilder.where(coreNot);
@@ -1062,13 +1063,14 @@ public class Resolver {
 
     @Override
     protected void visit(Ast.Yield yield) {
-      final Resolver r = withEnv(fromBuilder.bindings());
-      fromBuilder.yield_(r.toCore(yield.exp));
+      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
+      Core.Exp exp = r.toCore(yield.exp);
+      fromBuilder.yield_(exp);
     }
 
     @Override
     protected void visit(Ast.Order order) {
-      final Resolver r = withEnv(fromBuilder.bindings());
+      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
       fromBuilder.order(transformEager(order.orderItems, r::toCore));
     }
 
@@ -1091,7 +1093,7 @@ public class Resolver {
 
     @Override
     protected void visit(Ast.Group group) {
-      final Resolver r = withEnv(fromBuilder.bindings());
+      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
       final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExpsB =
           ImmutableSortedMap.naturalOrder();
       final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates =

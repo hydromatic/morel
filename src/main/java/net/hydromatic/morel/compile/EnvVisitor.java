@@ -20,7 +20,6 @@ package net.hydromatic.morel.compile;
 
 import static net.hydromatic.morel.util.Static.transform;
 
-import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
@@ -102,17 +101,17 @@ abstract class EnvVisitor extends Visitor {
 
   @Override
   protected void visit(Core.From from) {
-    List<Binding> bindings = ImmutableList.of();
+    Core.StepEnv env = Core.StepEnv.EMPTY;
     for (Core.FromStep step : from.steps) {
-      visitStep(step, bindings);
-      bindings = step.bindings;
+      visitStep(step, env);
+      env = step.env;
     }
   }
 
-  public void visitStep(Core.FromStep step, List<Binding> bindings) {
+  public void visitStep(Core.FromStep step, Core.StepEnv stepEnv) {
     try {
       fromStack.push(new FromContext(this, step));
-      step.accept(bind(bindings));
+      step.accept(bind(stepEnv.bindings));
     } finally {
       fromStack.pop();
     }

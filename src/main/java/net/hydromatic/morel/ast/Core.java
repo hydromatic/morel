@@ -1381,11 +1381,11 @@ public class Core {
    * {@code order}.
    */
   public abstract static class FromStep extends BaseNode {
-    public final ImmutableList<Binding> bindings;
+    public final StepEnv env;
 
-    FromStep(Op op, ImmutableList<Binding> bindings) {
+    FromStep(Op op, StepEnv env) {
       super(Pos.ZERO, op);
-      this.bindings = bindings;
+      this.env = requireNonNull(env);
     }
 
     @Override
@@ -1400,6 +1400,46 @@ public class Core {
     public abstract FromStep accept(Shuttle shuttle);
   }
 
+  /** Environment for a step. */
+  public static class StepEnv {
+    public static final StepEnv EMPTY = new StepEnv(ImmutableList.of(), false);
+
+    public final ImmutableList<Binding> bindings;
+    public final boolean atom;
+
+    private StepEnv(List<Binding> bindings, boolean atom) {
+      this.bindings = ImmutableList.copyOf(bindings);
+      this.atom = atom;
+      checkArgument(!atom || bindings.size() == 1);
+    }
+
+    /** Creates a StepEnv. */
+    public static StepEnv of(List<Binding> bindings, boolean atom) {
+      if (bindings.isEmpty() && !atom) {
+        return EMPTY;
+      }
+      return new StepEnv(bindings, atom);
+    }
+
+    /** Creates a StepEnv that is an atom. */
+    public static StepEnv atom(Binding binding) {
+      return new StepEnv(ImmutableList.of(binding), true);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(bindings, atom);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return this == obj
+          || obj instanceof StepEnv
+              && this.atom == ((StepEnv) obj).atom
+              && this.bindings.equals(((StepEnv) obj).bindings);
+    }
+  }
+
   /**
    * A {@code join} or {@code v in listExpr} or {@code v = expr} clause in a
    * {@code from} expression.
@@ -1409,8 +1449,8 @@ public class Core {
     public final Exp exp;
     public final Exp condition;
 
-    Scan(ImmutableList<Binding> bindings, Pat pat, Exp exp, Exp condition) {
-      super(Op.SCAN, bindings);
+    Scan(StepEnv env, Pat pat, Exp exp, Exp condition) {
+      super(Op.SCAN, env);
       this.pat = requireNonNull(pat, "pat");
       this.exp = requireNonNull(exp, "exp");
       this.condition = requireNonNull(condition, "condition");
@@ -1465,13 +1505,13 @@ public class Core {
           && ((Literal) condition).unwrap(Boolean.class);
     }
 
-    public Scan copy(List<Binding> bindings, Pat pat, Exp exp, Exp condition) {
+    public Scan copy(StepEnv env, Pat pat, Exp exp, Exp condition) {
       return pat == this.pat
               && exp == this.exp
               && condition == this.condition
-              && bindings.equals(this.bindings)
+              && env.equals(this.env)
           ? this
-          : core.scan(bindings, pat, exp, condition);
+          : core.scan(env, pat, exp, condition);
     }
   }
 
@@ -1479,8 +1519,8 @@ public class Core {
   public static class Where extends FromStep {
     public final Exp exp;
 
-    Where(ImmutableList<Binding> bindings, Exp exp) {
-      super(Op.WHERE, bindings);
+    Where(StepEnv env, Exp exp) {
+      super(Op.WHERE, env);
       this.exp = requireNonNull(exp, "exp");
     }
 
@@ -1500,10 +1540,10 @@ public class Core {
       return w.append(" where ").append(exp, 0, 0);
     }
 
-    public Where copy(Exp exp, List<Binding> bindings) {
-      return exp == this.exp && bindings.equals(this.bindings)
+    public Where copy(Exp exp, StepEnv env) {
+      return exp == this.exp && env.equals(this.env)
           ? this
-          : core.where(bindings, exp);
+          : core.where(env, exp);
     }
   }
 
@@ -1511,8 +1551,8 @@ public class Core {
   public static class Skip extends FromStep {
     public final Exp exp;
 
-    Skip(ImmutableList<Binding> bindings, Exp exp) {
-      super(Op.SKIP, bindings);
+    Skip(Core.StepEnv env, Exp exp) {
+      super(Op.SKIP, env);
       this.exp = requireNonNull(exp, "exp");
     }
 
@@ -1532,10 +1572,10 @@ public class Core {
       return w.append(" skip ").append(exp, 0, 0);
     }
 
-    public Skip copy(Exp exp, List<Binding> bindings) {
-      return exp == this.exp && bindings.equals(this.bindings)
+    public Skip copy(Exp exp, Core.StepEnv env) {
+      return exp == this.exp && env.equals(this.env)
           ? this
-          : core.skip(bindings, exp);
+          : core.skip(env, exp);
     }
   }
 
@@ -1543,8 +1583,8 @@ public class Core {
   public static class Take extends FromStep {
     public final Exp exp;
 
-    Take(ImmutableList<Binding> bindings, Exp exp) {
-      super(Op.TAKE, bindings);
+    Take(Core.StepEnv env, Exp exp) {
+      super(Op.TAKE, env);
       this.exp = requireNonNull(exp, "exp");
     }
 
@@ -1564,10 +1604,10 @@ public class Core {
       return w.append(" take ").append(exp, 0, 0);
     }
 
-    public Take copy(Exp exp, List<Binding> bindings) {
-      return exp == this.exp && bindings.equals(this.bindings)
+    public Take copy(Exp exp, Core.StepEnv env) {
+      return exp == this.exp && env.equals(this.env)
           ? this
-          : core.take(bindings, exp);
+          : core.take(env, exp);
     }
   }
 
@@ -1575,9 +1615,8 @@ public class Core {
   public static class Order extends FromStep {
     public final ImmutableList<OrderItem> orderItems;
 
-    Order(
-        ImmutableList<Binding> bindings, ImmutableList<OrderItem> orderItems) {
-      super(Op.ORDER, bindings);
+    Order(Core.StepEnv env, ImmutableList<OrderItem> orderItems) {
+      super(Op.ORDER, env);
       this.orderItems = requireNonNull(orderItems);
     }
 
@@ -1597,11 +1636,10 @@ public class Core {
       return w.append(" order ").appendAll(orderItems, ", ");
     }
 
-    public Order copy(List<Binding> bindings, List<OrderItem> orderItems) {
-      return bindings.equals(this.bindings)
-              && orderItems.equals(this.orderItems)
+    public Order copy(Core.StepEnv env, List<OrderItem> orderItems) {
+      return env.equals(this.env) && orderItems.equals(this.orderItems)
           ? this
-          : core.order(bindings, orderItems);
+          : core.order(env, orderItems);
     }
   }
 
@@ -1645,10 +1683,10 @@ public class Core {
     public final SortedMap<Core.IdPat, Aggregate> aggregates;
 
     Group(
-        ImmutableList<Binding> bindings,
+        Core.StepEnv env,
         ImmutableSortedMap<Core.IdPat, Exp> groupExps,
         ImmutableSortedMap<Core.IdPat, Aggregate> aggregates) {
-      super(Op.GROUP, bindings);
+      super(Op.GROUP, env);
       this.groupExps = groupExps;
       this.aggregates = aggregates;
     }
@@ -1698,8 +1736,8 @@ public class Core {
   public static class Yield extends FromStep {
     public final Exp exp;
 
-    Yield(ImmutableList<Binding> bindings, Exp exp) {
-      super(Op.YIELD, bindings);
+    Yield(Core.StepEnv env, Exp exp) {
+      super(Op.YIELD, env);
       this.exp = exp;
     }
 
@@ -1719,10 +1757,10 @@ public class Core {
       visitor.visit(this);
     }
 
-    public Yield copy(List<Binding> bindings, Exp exp) {
-      return bindings.equals(this.bindings) && exp == this.exp
+    public Yield copy(Core.StepEnv env, Exp exp) {
+      return env.equals(this.env) && exp == this.exp
           ? this
-          : core.yield_(bindings, exp);
+          : core.yield_(env, exp);
     }
   }
 

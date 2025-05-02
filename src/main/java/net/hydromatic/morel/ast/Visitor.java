@@ -174,23 +174,14 @@ public class Visitor {
 
   protected void visit(Ast.From from) {
     from.steps.forEach(this::accept);
-    if (from.implicitYieldExp != null) {
-      from.implicitYieldExp.accept(this);
-    }
   }
 
   protected void visit(Ast.Exists exists) {
     exists.steps.forEach(this::accept);
-    if (exists.implicitYieldExp != null) {
-      exists.implicitYieldExp.accept(this);
-    }
   }
 
   protected void visit(Ast.Forall forall) {
     forall.steps.forEach(this::accept);
-    if (forall.implicitYieldExp != null) {
-      forall.implicitYieldExp.accept(this);
-    }
   }
 
   protected void visit(Ast.Scan scan) {

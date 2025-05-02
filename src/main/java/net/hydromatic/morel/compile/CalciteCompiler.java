@@ -19,10 +19,10 @@
 package net.hydromatic.morel.compile;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.Iterables.getLast;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
@@ -270,7 +270,7 @@ public class CalciteCompiler extends Compiler {
                 } else {
                   for (Core.Exp arg : args) {
                     cx.relBuilder.values(new String[] {"T"}, true);
-                    yield_(cx, ImmutableList.of(), arg);
+                    yield_(cx, Core.StepEnv.EMPTY, arg);
                   }
                   cx.relBuilder.union(true, args.size());
                 }
@@ -422,10 +422,10 @@ public class CalciteCompiler extends Compiler {
             return false;
           }
         }
-        if (from.steps.isEmpty() || getLast(from.steps).op != Op.YIELD) {
+        if (from.steps.isEmpty() || last(from.steps).op != Op.YIELD) {
           final Core.Exp implicitYieldExp =
               core.implicitYieldExp(typeSystem, from.steps);
-          cx = yield_(cx, ImmutableList.of(), implicitYieldExp);
+          cx = yield_(cx, Core.StepEnv.EMPTY, implicitYieldExp);
         }
         return true;
       }
@@ -454,18 +454,17 @@ public class CalciteCompiler extends Compiler {
   }
 
   private RelContext yield_(RelContext cx, Core.Yield yield) {
-    return yield_(cx, yield.bindings, yield.exp);
+    return yield_(cx, yield.env, yield.exp);
   }
 
-  private RelContext yield_(
-      RelContext cx, List<Binding> bindings, Core.Exp exp) {
+  private RelContext yield_(RelContext cx, Core.StepEnv env, Core.Exp exp) {
     final Core.Tuple tuple;
     switch (exp.op) {
       case ID:
         final Core.Id id = (Core.Id) exp;
         tuple = toRecord(cx, id);
         if (tuple != null) {
-          return yield_(cx, bindings, tuple);
+          return yield_(cx, env, tuple);
         }
         break;
 
@@ -474,7 +473,7 @@ public class CalciteCompiler extends Compiler {
         final List<String> names = tuple.type().argNames();
         cx.relBuilder.project(
             transform(tuple.args, e -> translate(cx, e)), names);
-        return getRelContext(cx, cx.env.bindAll(bindings), names);
+        return getRelContext(cx, cx.env.bindAll(env.bindings), names);
     }
     RexNode rex = translate(cx, exp);
     cx.relBuilder.project(rex);
@@ -719,7 +718,7 @@ public class CalciteCompiler extends Compiler {
     }
     cx =
         new RelContext(
-            cx.env.bindAll(scan.bindings),
+            cx.env.bindAll(scan.env.bindings),
             cx,
             cx.relBuilder,
             ImmutableSortedMap.copyOfSorted(varOffsets),

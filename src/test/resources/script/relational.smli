@@ -122,10 +122,10 @@ from e in emps yield {e with deptno = e.deptno + 1, name = e.name ^ "!"};
 >   : {deptno:int, id:int, name:string} list
 
 from e in emps yield {x = e.deptno} where x > 10 yield {y = x} where y < 30;
-> val it = [20] : int list
+> val it = [{y=20}] : {y:int} list
 
 from e in emps yield {x = e.deptno} where x > 10 yield {x = x} where x < 30;
-> val it = [20] : int list
+> val it = [{x=20}] : {x:int} list
 
 from e in emps yield ((#id e) + (#deptno e));
 > val it = [110,121,132,133] : int list
@@ -189,26 +189,26 @@ from e in emps
 from e in emps
   yield {e.deptno}
   order deptno desc;
-> val it = [30,30,20,10] : int list
+> val it = [{deptno=30},{deptno=30},{deptno=20},{deptno=10}] : {deptno:int} list
 
 from e in emps
   yield {e.deptno}
   order deptno desc
   skip 1;
-> val it = [30,20,10] : int list
+> val it = [{deptno=30},{deptno=20},{deptno=10}] : {deptno:int} list
 
 from e in emps
   yield {e.deptno}
   order deptno desc
   skip 1
   take 2;
-> val it = [30,20] : int list
+> val it = [{deptno=30},{deptno=20}] : {deptno:int} list
 
 from e in emps
   yield {e.deptno}
   order deptno desc
   take 2;
-> val it = [30,30] : int list
+> val it = [{deptno=30},{deptno=30}] : {deptno:int} list
 
 (*) Pass 'take' and 'skip' via function arguments
 let
@@ -250,7 +250,7 @@ from e in emps
 from e in emps
   yield {d = e.deptno}
   where d > 10;
-> val it = [20,30,30] : int list
+> val it = [{d=20},{d=30},{d=30}] : {d:int} list
 
 (*) singleton record 'yield' followed by 'where' followed by 'yield'
 from e in emps
@@ -273,6 +273,27 @@ from e in emps
   order d;
 > val it = [10,20,30] : int list
 
+(*) atom 'yield' with implicit name 'deptno' followed by 'distinct' and 'order'
+from e in emps
+  yield e.deptno
+  distinct
+  order deptno;
+> val it = [10,20,30] : int list
+
+(*) anonymous 'yield' followed by 'distinct'
+from i in [1, 2, 3],
+    j in [1, 2, 3]
+  yield i + j
+  distinct;
+> val it = [2,3,4,5,6] : int list
+
+(*) singleton record 'yield' followed by 'yield'
+from i in [1, 2, 3],
+    j in [1, 2, 3]
+  yield {x = i + j}
+  yield x;
+> val it = [2,3,4,3,4,5,4,5,6] : int list
+
 (*) singleton record 'yield' followed by 'yield'
 from i in [1, 2, 3],
     j in [1, 2, 3]
@@ -291,7 +312,7 @@ from e in emps
 from e in emps
   yield {d = e.deptno}
   order d desc;
-> val it = [30,30,20,10] : int list
+> val it = [{d=30},{d=30},{d=20},{d=10}] : {d:int} list
 
 (*) singleton record 'yield' followed by 'order' then singleton 'yield'
 from e in emps
@@ -1184,22 +1205,33 @@ from e in emps
   compute si = sum of e.id, c = count, si1 = sum of e.id + 1;
 > val it = {c=4,si=406,si1=410} : {c:int, si:int, si1:int}
 
-(*) Primitive 'yield' followed by composite 'compute';
-(*) fine as long as it doesn't reference fields
+(*) Primitive 'yield' followed by composite 'compute'
 from e in emps
   yield e.deptno
   compute sum, count;
 > val it = {count=4,sum=90} : {count:int, sum:int}
 
+(* Row is an atom (type 'int', not a record) but can be referenced via 'deptno'. *)
 from e in emps
   yield e.deptno
   compute sum of deptno;
-> stdIn:4.18-4.24 Error: unbound variable or constructor: deptno
->   raised at: stdIn:4.18-4.24
+> val it = 90 : int
+
+(* Reference to 'deptno' is not valid after it has been renamed to 'x'. *)
+from e in emps
+  yield {x = e.deptno}
+  compute sum of deptno;
+> stdIn:5.18-5.24 Error: unbound variable or constructor: deptno
+>   raised at: stdIn:5.18-5.24
 
 from e in emps
   yield {e.deptno}
   compute sum of deptno;
+> val it = 90 : int
+
+from e in emps
+  yield {x = e.deptno}
+  compute sum of x;
 > val it = 90 : int
 
 from e in emps
@@ -1580,16 +1612,16 @@ from e in
 (*) Hybrid
 Sys.set ("hybrid", false);
 > val it = () : unit
-from r in
+from r1 in
   List.tabulate (6, fn i =>
     {i, j = i + 3, s = substring ("morel", 0, i)})
-yield {r.j, r.s};
+yield {r1.j, r1.s};
 > val it =
 >   [{j=3,s=""},{j=4,s="m"},{j=5,s="mo"},{j=6,s="mor"},{j=7,s="more"},
 >    {j=8,s="morel"}] : {j:int, s:string} list
 Sys.plan();
 > val it =
->   "from(sink join(pat r_4, exp apply(fnValue List.tabulate, argCode tuple(constant(6), match(i, tuple(get(name i), apply2(fnValue +, get(name i), constant(3)), apply3(fnValue String.substring, constant(morel), constant(0), get(name i)))))), sink collect(tuple(apply(fnValue nth:1, argCode get(name r)), apply(fnValue nth:2, argCode get(name r))))))"
+>   "from(sink join(pat r1, exp apply(fnValue List.tabulate, argCode tuple(constant(6), match(i, tuple(get(name i), apply2(fnValue +, get(name i), constant(3)), apply3(fnValue String.substring, constant(morel), constant(0), get(name i)))))), sink collect(tuple(apply(fnValue nth:1, argCode get(name r1)), apply(fnValue nth:2, argCode get(name r1))))))"
 >   : string
 
 
@@ -1676,7 +1708,7 @@ let
 in
   pipeline scott.emps
 end;
-> val it = [13,24,35] : int list
+> val it = [{i=13},{i=24},{i=35}] : {i:int} list
 
 let
   fun clean emps =

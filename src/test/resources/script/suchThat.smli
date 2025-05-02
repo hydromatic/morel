@@ -28,7 +28,7 @@ from i where i > 0 andalso i < 10;
 from i where i > 0 andalso i < 4 yield {j = i + 1};
 > val it = [{j=2},{j=3},{j=4}] : {j:int} list
 from i where i > 0 andalso i < 4 yield {j = i + 1} order j desc;
-> val it = [4,3,2] : int list
+> val it = [{j=4},{j=3},{j=2}] : {j:int} list
 from i where i > 0 andalso i < 10 andalso i mod 3 = 2;
 > val it = [2,5,8] : int list
 from i where i = 0 orelse i = 12;

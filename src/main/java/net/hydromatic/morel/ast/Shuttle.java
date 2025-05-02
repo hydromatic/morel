@@ -438,22 +438,22 @@ public class Shuttle {
 
   protected Core.Scan visit(Core.Scan scan) {
     return scan.copy(
-        scan.bindings,
+        scan.env,
         scan.pat.accept(this),
         scan.exp.accept(this),
         scan.condition.accept(this));
   }
 
   protected Core.Where visit(Core.Where where) {
-    return where.copy(where.exp.accept(this), where.bindings);
+    return where.copy(where.exp.accept(this), where.env);
   }
 
   protected Core.Skip visit(Core.Skip skip) {
-    return skip.copy(skip.exp.accept(this), skip.bindings);
+    return skip.copy(skip.exp.accept(this), skip.env);
   }
 
   protected Core.Take visit(Core.Take take) {
-    return take.copy(take.exp.accept(this), take.bindings);
+    return take.copy(take.exp.accept(this), take.env);
   }
 
   protected Core.Group visit(Core.Group group) {
@@ -469,7 +469,7 @@ public class Shuttle {
   }
 
   protected Core.Order visit(Core.Order order) {
-    return order.copy(order.bindings, visitList(order.orderItems));
+    return order.copy(order.env, visitList(order.orderItems));
   }
 
   protected Core.OrderItem visit(Core.OrderItem orderItem) {
@@ -477,7 +477,7 @@ public class Shuttle {
   }
 
   protected Core.Yield visit(Core.Yield yield) {
-    return yield.copy(yield.bindings, yield.exp.accept(this));
+    return yield.copy(yield.env, yield.exp.accept(this));
   }
 }
 

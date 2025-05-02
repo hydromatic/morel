@@ -134,7 +134,7 @@ class SuchThatShuttle extends Shuttle {
             final Core.Yield yield = (Core.Yield) step;
             killTemporaryScans(idPats);
             deferredScans.flush(fromBuilder);
-            fromBuilder.yield_(false, yield.bindings, yield.exp);
+            fromBuilder.yield_(false, yield.env, yield.exp, yield.env.atom);
             break;
 
           case WHERE:
@@ -175,7 +175,7 @@ class SuchThatShuttle extends Shuttle {
           default:
             throw new AssertionError(step.op);
         }
-        env = Environments.empty().bindAll(step.bindings);
+        env = Environments.empty().bindAll(step.env.bindings);
       }
       deferredScans.flush(fromBuilder);
       killTemporaryScans(idPats);
@@ -187,17 +187,18 @@ class SuchThatShuttle extends Shuttle {
         return;
       }
       final PairList<String, Core.Id> nameExps = PairList.of();
-      for (Binding b : fromBuilder.bindings()) {
+      Core.StepEnv env = fromBuilder.stepEnv();
+      for (Binding b : env.bindings) {
         Core.IdPat id = (Core.IdPat) b.id;
         if (!idPats.leftList().contains(id)) {
           nameExps.add(id.name, core.id(id));
         }
       }
-      if (nameExps.size() == 1) {
-        fromBuilder.yield_(false, null, nameExps.get(0).getValue());
-      } else {
-        fromBuilder.yield_(false, null, core.record(typeSystem, nameExps));
-      }
+      Core.Exp exp =
+          nameExps.size() == 1
+              ? nameExps.get(0).getValue()
+              : core.record(typeSystem, nameExps);
+      fromBuilder.yield_(false, null, exp, env.atom);
       idPats.clear();
     }
 

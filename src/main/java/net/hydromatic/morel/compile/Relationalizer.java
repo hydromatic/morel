@@ -80,7 +80,8 @@ public class Relationalizer extends EnvShuttle {
                           apply.pos,
                           fnType.resultType,
                           f,
-                          core.implicitYieldExp(typeSystem, from.steps)));
+                          core.implicitYieldExp(typeSystem, from.steps)),
+                      fnType.resultType.op() != Op.RECORD_TYPE);
               return core.from(typeSystem, append(from.steps, yieldStep));
             }
             if (literal.value == BuiltIn.LIST_FILTER) {
@@ -92,7 +93,7 @@ public class Relationalizer extends EnvShuttle {
               final Core.From from = toFrom(apply.arg);
               final Core.Where whereStep =
                   core.where(
-                      core.lastBindings(from.steps),
+                      core.lastEnv(from.steps),
                       core.apply(
                           apply.pos,
                           fnType.resultType,
@@ -115,8 +116,10 @@ public class Relationalizer extends EnvShuttle {
           core.idPat(listType.elementType, name, typeSystem.nameGenerator::inc);
       final List<Binding> bindings = new ArrayList<>();
       Compiles.acceptBinding(typeSystem, id, bindings);
+      boolean atom = bindings.size() == 1;
+      final Core.StepEnv stepEnv = Core.StepEnv.of(bindings, atom);
       final Core.Scan scan =
-          core.scan(bindings, id, exp, core.boolLiteral(true));
+          core.scan(stepEnv, id, exp, core.boolLiteral(true));
       return core.from(typeSystem, ImmutableList.of(scan));
     }
   }
@@ -142,7 +145,7 @@ public class Relationalizer extends EnvShuttle {
         }
         RecordLikeType recordType =
             typeSystem.recordType(RecordType.map(idPat3.name, exp.type));
-        steps.add(core.yield_(step.bindings, core.tuple(recordType, exp)));
+        steps.add(core.yield_(step.env, core.tuple(recordType, exp)));
         steps.addAll(skip(from2.steps));
         return core.from(typeSystem, steps);
       }

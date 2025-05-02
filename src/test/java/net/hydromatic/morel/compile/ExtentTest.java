@@ -99,7 +99,7 @@ public class ExtentTest {
               typeSystem,
               pat,
               ImmutableSortedMap.of(),
-              ImmutableList.of(core.where(ImmutableList.of(), filterExp)),
+              ImmutableList.of(core.where(Core.StepEnv.EMPTY, filterExp)),
               ImmutablePairList.of());
       return analysis.extentExp;
     }

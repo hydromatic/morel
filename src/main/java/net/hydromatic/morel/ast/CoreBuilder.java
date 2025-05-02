@@ -18,17 +18,16 @@
  */
 package net.hydromatic.morel.ast;
 
-import static com.google.common.collect.Iterables.getOnlyElement;
+import static com.google.common.base.Preconditions.checkArgument;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
-import static net.hydromatic.morel.util.Pair.forEachIndexed;
+import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.transform;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
@@ -393,17 +392,14 @@ public enum CoreBuilder {
   /** Returns the element type of a {@link Core.From} with the given steps. */
   private Type fromElementType(
       TypeSystem typeSystem, List<Core.FromStep> steps) {
-    if (!steps.isEmpty() && Iterables.getLast(steps) instanceof Core.Yield) {
-      return ((Core.Yield) Iterables.getLast(steps)).exp.type;
-    } else {
-      final List<Binding> lastBindings = lastBindings(steps);
-      if (lastBindings.size() == 1) {
-        return lastBindings.get(0).id.type;
-      }
-      final PairList<String, Type> argNameTypes = PairList.of();
-      lastBindings.forEach(b -> argNameTypes.add(b.id.name, b.id.type));
-      return typeSystem.recordType(argNameTypes);
+    final Core.StepEnv lastStep = lastEnv(steps);
+    final PairList<String, Type> argNameTypes = PairList.of();
+    lastStep.bindings.forEach(b -> argNameTypes.add(b.id.name, b.id.type));
+    if (lastStep.atom) {
+      checkArgument(argNameTypes.size() == 1);
+      return argNameTypes.right(0);
     }
+    return typeSystem.recordType(argNameTypes);
   }
 
   /**
@@ -421,13 +417,13 @@ public enum CoreBuilder {
    */
   public Core.Exp implicitYieldExp(
       TypeSystem typeSystem, List<Core.FromStep> steps) {
-    final List<Binding> bindings = lastBindings(steps);
-    if (bindings.size() == 1) {
-      return id(getOnlyElement(bindings).id);
+    final Core.StepEnv lastEnv = lastEnv(steps);
+    if (lastEnv.bindings.size() == 1) {
+      return id(lastEnv.bindings.get(0).id);
     } else {
       final SortedMap<Core.NamedPat, Core.Exp> map = new TreeMap<>();
       final PairList<String, Type> argNameTypes = PairList.of();
-      bindings.forEach(
+      lastEnv.bindings.forEach(
           b -> {
             map.put(b.id, id(b.id));
             argNameTypes.add(b.id.name, b.id.type);
@@ -436,10 +432,8 @@ public enum CoreBuilder {
     }
   }
 
-  public List<Binding> lastBindings(List<? extends Core.FromStep> steps) {
-    return steps.isEmpty()
-        ? ImmutableList.of()
-        : Iterables.getLast(steps).bindings;
+  public Core.StepEnv lastEnv(List<? extends Core.FromStep> steps) {
+    return steps.isEmpty() ? Core.StepEnv.EMPTY : last(steps).env;
   }
 
   /** Creates a builder that will create a {@link Core.From}. */
@@ -531,8 +525,8 @@ public enum CoreBuilder {
   }
 
   public Core.Scan scan(
-      List<Binding> bindings, Core.Pat pat, Core.Exp exp, Core.Exp condition) {
-    return new Core.Scan(ImmutableList.copyOf(bindings), pat, exp, condition);
+      Core.StepEnv env, Core.Pat pat, Core.Exp exp, Core.Exp condition) {
+    return new Core.Scan(env, pat, exp, condition);
   }
 
   public Core.Aggregate aggregate(
@@ -541,9 +535,8 @@ public enum CoreBuilder {
   }
 
   public Core.Order order(
-      List<Binding> bindings, Iterable<Core.OrderItem> orderItems) {
-    return new Core.Order(
-        ImmutableList.copyOf(bindings), ImmutableList.copyOf(orderItems));
+      Core.StepEnv env, Iterable<Core.OrderItem> orderItems) {
+    return new Core.Order(env, ImmutableList.copyOf(orderItems));
   }
 
   public Core.OrderItem orderItem(Core.Exp exp, Ast.Direction direction) {
@@ -556,64 +549,85 @@ public enum CoreBuilder {
     final List<Binding> bindings = new ArrayList<>();
     groupExps.keySet().forEach(id -> bindings.add(Binding.of(id)));
     aggregates.keySet().forEach(id -> bindings.add(Binding.of(id)));
+    boolean atom = bindings.size() == 1;
     return new Core.Group(
-        ImmutableList.copyOf(bindings),
+        Core.StepEnv.of(bindings, atom),
         ImmutableSortedMap.copyOfSorted(groupExps),
         ImmutableSortedMap.copyOfSorted(aggregates));
   }
 
-  public Core.Where where(List<Binding> bindings, Core.Exp exp) {
-    return new Core.Where(ImmutableList.copyOf(bindings), exp);
+  public Core.Where where(Core.StepEnv env, Core.Exp exp) {
+    return new Core.Where(env, exp);
   }
 
-  public Core.Skip skip(List<Binding> bindings, Core.Exp exp) {
-    return new Core.Skip(ImmutableList.copyOf(bindings), exp);
+  public Core.Skip skip(Core.StepEnv env, Core.Exp exp) {
+    return new Core.Skip(env, exp);
   }
 
-  public Core.Take take(List<Binding> bindings, Core.Exp exp) {
-    return new Core.Take(ImmutableList.copyOf(bindings), exp);
+  public Core.Take take(Core.StepEnv env, Core.Exp exp) {
+    return new Core.Take(env, exp);
   }
 
-  public Core.Yield yield_(List<Binding> bindings, Core.Exp exp) {
-    return new Core.Yield(ImmutableList.copyOf(bindings), exp);
+  public Core.Yield yield_(Core.StepEnv env, Core.Exp exp) {
+    return new Core.Yield(env, exp);
   }
 
-  /** Derives bindings, then calls {@link #yield_(List, Core.Exp)}. */
-  public Core.Yield yield_(TypeSystem typeSystem, Core.Exp exp) {
-    final List<Binding> bindings = new ArrayList<>();
-    switch (exp.type.op()) {
-      case RECORD_TYPE:
-      case TUPLE_TYPE:
-        forEachIndexed(
-            ((RecordLikeType) exp.type).argNameTypes(),
-            (i, name, type) -> {
-              final Core.NamedPat idPat;
-              if (exp.op == Op.TUPLE
-                  && exp.arg(i) instanceof Core.Id
-                  && ((Core.Id) exp.arg(i)).idPat.name.equals(name)) {
-                // Use an existing IdPat if we can, rather than generating a new
-                // IdPat with a different sequence number. (The underlying
-                // problem is that the fields of record types have only names,
-                // no sequence numbers.)
-                idPat = ((Core.Id) exp.arg(i)).idPat;
-              } else {
-                idPat = idPat(type, name, typeSystem.nameGenerator::inc);
-              }
-              bindings.add(Binding.of(idPat));
-            });
-        break;
-
-      default:
-        switch (exp.op) {
-          case ID:
-            bindings.add(Binding.of(((Core.Id) exp).idPat));
-            break;
-          default:
-            bindings.add(
-                Binding.of(idPat(exp.type, typeSystem.nameGenerator::get)));
-        }
+  /** Derives bindings, then calls {@link #yield_(Core.StepEnv, Core.Exp)}. */
+  public Core.Yield yield_(TypeSystem typeSystem, Core.Exp exp, boolean atom) {
+    final List<Core.NamedPat> idPats = new ArrayList<>();
+    if (atom) {
+      idPats.add(getIdPat(typeSystem, exp, null));
+    } else if (exp.op == Op.TUPLE) {
+      forEach(
+          ((RecordLikeType) exp.type).argNames(),
+          ((Core.Tuple) exp).args,
+          (name, arg) -> idPats.add(getIdPat(typeSystem, arg, name)));
+    } else {
+      ((RecordLikeType) exp.type)
+          .argNameTypes()
+          .forEach(
+              (name, type) ->
+                  idPats.add(idPat(type, name, typeSystem.nameGenerator::inc)));
     }
-    return yield_(bindings, exp);
+    return yield_(Core.StepEnv.of(transform(idPats, Binding::of), atom), exp);
+  }
+
+  private Core.NamedPat getIdPat(
+      TypeSystem typeSystem, Core.Exp exp, @Nullable String name) {
+    if (exp instanceof Core.Id) {
+      Core.Id id = (Core.Id) exp;
+      if (name == null) {
+        // There is no preferred name, so this id will do.
+        return id.idPat;
+      }
+      if (id.idPat.name.equals(name)) {
+        // Name is specified, which means that we are trying to generate an
+        // IdPat from an assignment in a record constructor. If the left-hand
+        // side matches the name (e.g. '{x = x}') we can use the IdPat from the
+        // right side; but if it does not (e.g. '{y = x}') we cannot.
+        //
+        // It is better to use an existing IdPat, rather than generating a new
+        // IdPat with a different sequence number. (The underlying problem,
+        // which we should solve someday, is that the fields of record types
+        // have only names, no sequence numbers.)
+        return id.idPat;
+      }
+    }
+
+    // If the expression is "#deptno e" (also written as "e.deptno"), use
+    // "deptno" as the name.
+    if (name == null && exp instanceof Core.Apply) {
+      Core.Apply apply = (Core.Apply) exp;
+      if (apply.fn instanceof Core.RecordSelector) {
+        name = ((Core.RecordSelector) apply.fn).fieldName();
+      }
+    }
+
+    if (name == null) {
+      return idPat(exp.type, typeSystem.nameGenerator::get);
+    } else {
+      return idPat(exp.type, name, typeSystem.nameGenerator::inc);
+    }
   }
 
   // Shorthands

@@ -41,7 +41,23 @@ public enum AstBuilder {
   // CHECKSTYLE: IGNORE 1
   ast;
 
-  public String implicitLabel(Ast.Exp exp) {
+  /**
+   * Returns the implicit label for when an expression occurs within a record,
+   * or null if no label can be deduced.
+   *
+   * <p>For example,
+   *
+   * <pre>{@code {x.a, y, z = x.b + 2} }</pre>
+   *
+   * <p>is equivalent to
+   *
+   * <pre>{@code {a = x.a, y = y, z = x.b + 2} }</pre>
+   *
+   * <p>because a field reference {@code x.a} has implicit label {@code a}, and
+   * a variable reference {@code y} has implicit label {@code y}. The expression
+   * {@code x.b + 2} has no implicit label.
+   */
+  public @Nullable String implicitLabelOpt(Ast.Exp exp) {
     if (exp instanceof Ast.Apply) {
       final Ast.Apply apply = (Ast.Apply) exp;
       if (apply.fn instanceof Ast.RecordSelector) {
@@ -51,6 +67,15 @@ public enum AstBuilder {
     }
     if (exp instanceof Ast.Id) {
       return ((Ast.Id) exp).name;
+    }
+    return null;
+  }
+
+  /** Returns an expression's implicit label, or throws. */
+  public String implicitLabel(Ast.Exp exp) {
+    String value = implicitLabelOpt(exp);
+    if (value != null) {
+      return value;
     }
     throw new IllegalArgumentException(
         "cannot derive label for expression " + exp);
@@ -349,13 +374,7 @@ public enum AstBuilder {
   }
 
   public Ast.From from(Pos pos, List<Ast.FromStep> steps) {
-    final Ast.Exp implicitYieldExp = Ast.From.implicitYieldExp(pos, steps);
-    return from(pos, ImmutableList.copyOf(steps), implicitYieldExp);
-  }
-
-  public Ast.From from(
-      Pos pos, List<Ast.FromStep> steps, Ast.@Nullable Exp implicitYieldExp) {
-    return new Ast.From(pos, ImmutableList.copyOf(steps), implicitYieldExp);
+    return new Ast.From(pos, ImmutableList.copyOf(steps));
   }
 
   /** Wraps an expression to distinguish "from x = e" from "from x in e". */

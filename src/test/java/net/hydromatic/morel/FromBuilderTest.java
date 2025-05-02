@@ -306,7 +306,7 @@ public class FromBuilderTest {
     final FromBuilder fromBuilder = f.fromBuilder();
     fromBuilder
         .scan(f.dPat, core.list(f.typeSystem, f.tuple12, f.tuple34))
-        .scan(f.iPat, innerFrom.apply(fromBuilder.bindings()));
+        .scan(f.iPat, innerFrom.apply(fromBuilder.stepEnv().bindings));
 
     final Core.From from = fromBuilder.build();
     final String expected = "from d in [(1, 2), (3, 4)] join i in [#1 d]";
@@ -325,7 +325,7 @@ public class FromBuilderTest {
     final FromBuilder fromBuilder2 = f.fromBuilder();
     fromBuilder2
         .scan(f.dPat, core.list(f.typeSystem, f.tuple12, f.tuple34))
-        .scan(f.jPat, innerFrom.apply(fromBuilder.bindings()))
+        .scan(f.jPat, innerFrom.apply(fromBuilder.stepEnv().bindings))
         .where(
             core.greaterThan(
                 f.typeSystem, f.jId, core.field(f.typeSystem, f.dId, 0)));

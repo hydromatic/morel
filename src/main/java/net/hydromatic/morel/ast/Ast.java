@@ -19,31 +19,24 @@
 package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.Iterables.getLast;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
-import static net.hydromatic.morel.type.RecordType.mutableMap;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
-import java.util.stream.Collectors;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.Ord;
-import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -1054,7 +1047,7 @@ public class Ast {
    */
   public static class TyCon extends AstNode {
     public final Id id;
-    public final @org.checkerframework.checker.nullness.qual.Nullable Type type;
+    public final @Nullable Type type;
 
     TyCon(Pos pos, Id id, Type type) {
       super(pos, Op.TY_CON);
@@ -1665,101 +1658,10 @@ public class Ast {
    */
   public abstract static class Query extends Exp {
     public final ImmutableList<FromStep> steps;
-    /**
-     * An implicit yield expression, if the last step is not a {@link Yield};
-     * null if the last step is a {@link Yield}.
-     */
-    public final @Nullable Exp implicitYieldExp;
 
-    Query(
-        Pos pos,
-        Op op,
-        ImmutableList<FromStep> steps,
-        @Nullable Exp implicitYieldExp) {
+    Query(Pos pos, Op op, ImmutableList<FromStep> steps) {
       super(pos, op);
       this.steps = requireNonNull(steps);
-      this.implicitYieldExp = implicitYieldExp;
-    }
-
-    static @Nullable Exp implicitYieldExp(Pos pos, List<FromStep> steps) {
-      if (!steps.isEmpty()) {
-        final FromStep lastStep = getLast(steps);
-        if (lastStep.op == Op.YIELD
-            || lastStep.op == Op.INTO
-            || lastStep.op == Op.COMPUTE) {
-          // No implicit yield is needed; the last step is an explicit yield
-          return null;
-        }
-      }
-      Set<Id> fields = ImmutableSet.of();
-      final Set<Id> nextFields = new HashSet<>();
-      for (FromStep step : steps) {
-        switch (step.op) {
-          case SCAN:
-            final Scan scan = (Scan) step;
-            nextFields.clear();
-            nextFields.addAll(fields);
-            scan.pat.visit(
-                p -> {
-                  if (p instanceof IdPat) {
-                    nextFields.add(ast.id(Pos.ZERO, ((IdPat) p).name));
-                  }
-                });
-            fields = ImmutableSet.copyOf(nextFields);
-            break;
-
-          case THROUGH:
-            final Through through = (Through) step;
-            nextFields.clear();
-            through.pat.visit(
-                p -> {
-                  if (p instanceof IdPat) {
-                    nextFields.add(ast.id(Pos.ZERO, ((IdPat) p).name));
-                  }
-                });
-            fields = ImmutableSet.copyOf(nextFields);
-            break;
-
-          case COMPUTE:
-          case GROUP:
-            final Group group = (Group) step;
-            final ImmutablePairList<Id, Exp> groupExps = group.groupExps;
-            final List<Aggregate> aggregates = group.aggregates;
-
-            // The type of
-            //   from e in emps group a = e1, b = e2 compute c = sum of e3
-            // is the same as the type of
-            //   {a = e1, b = e2, c = sum (map (fn e => e3) [])}
-            nextFields.clear();
-            nextFields.addAll(Pair.left(groupExps));
-            groupExps.forEach((id, exp) -> nextFields.add(id));
-            aggregates.forEach(aggregate -> nextFields.add(aggregate.id));
-            fields = nextFields;
-            break;
-
-          case YIELD:
-            final Yield yield = (Yield) step;
-            if (yield.exp instanceof Record) {
-              fields =
-                  ((Record) yield.exp)
-                      .args.keySet().stream()
-                          .map(label -> ast.id(Pos.ZERO, label))
-                          .collect(Collectors.toSet());
-            }
-            break;
-        }
-      }
-
-      if (fields.size() == 1
-          && (steps.isEmpty()
-              || getLast(steps).op != Op.YIELD
-              || ((Yield) getLast(steps)).exp.op != Op.RECORD)) {
-        return Iterables.getOnlyElement(fields);
-      } else {
-        final SortedMap<String, Ast.Exp> map = mutableMap();
-        fields.forEach(field -> map.put(field.name, field));
-        return ast.record(pos, null, map);
-      }
     }
 
     @Override
@@ -1788,8 +1690,7 @@ public class Ast {
      * Creates a copy of this {@code From} or {@code Exists} with given
      * contents, or {@code this} if the contents are the same.
      */
-    public abstract Query copy(
-        List<FromStep> steps, @Nullable Exp implicitYieldExp);
+    public abstract Query copy(List<FromStep> steps);
 
     /**
      * Returns whether this {@code from} expression ends with a {@code compute}
@@ -1811,11 +1712,8 @@ public class Ast {
 
   /** From expression. */
   public static class From extends Query {
-    From(
-        Pos pos,
-        ImmutableList<FromStep> steps,
-        @Nullable Exp implicitYieldExp) {
-      super(pos, Op.FROM, steps, implicitYieldExp);
+    From(Pos pos, ImmutableList<FromStep> steps) {
+      super(pos, Op.FROM, steps);
     }
 
     /**
@@ -1823,10 +1721,8 @@ public class Ast {
      * if the contents are the same.
      */
     @Override
-    public From copy(List<FromStep> steps, @Nullable Exp implicitYieldExp) {
-      return this.steps.equals(steps)
-          ? this
-          : ast.from(pos, steps, implicitYieldExp);
+    public From copy(List<FromStep> steps) {
+      return this.steps.equals(steps) ? this : ast.from(pos, steps);
     }
 
     @Override
@@ -1843,12 +1739,11 @@ public class Ast {
   /** Exists expression. */
   public static class Exists extends Query {
     Exists(Pos pos, ImmutableList<FromStep> steps) {
-      super(pos, Op.EXISTS, steps, null);
+      super(pos, Op.EXISTS, steps);
     }
 
     @Override
-    public Exists copy(List<FromStep> steps, @Nullable Exp implicitYieldExp) {
-      checkArgument(implicitYieldExp == null);
+    public Exists copy(List<FromStep> steps) {
       return this.steps.equals(steps) ? this : ast.exists(pos, steps);
     }
 
@@ -1866,12 +1761,11 @@ public class Ast {
   /** Forall expression. */
   public static class Forall extends Query {
     Forall(Pos pos, ImmutableList<FromStep> steps) {
-      super(pos, Op.FORALL, steps, null);
+      super(pos, Op.FORALL, steps);
     }
 
     @Override
-    public Forall copy(List<FromStep> steps, @Nullable Exp implicitYieldExp) {
-      checkArgument(implicitYieldExp == null);
+    public Forall copy(List<FromStep> steps) {
       return this.steps.equals(steps) ? this : ast.forall(pos, steps);
     }
 

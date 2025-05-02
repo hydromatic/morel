@@ -20,7 +20,6 @@ package net.hydromatic.morel.compile;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getLast;
-import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.Ast.Direction.DESC;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
@@ -317,25 +316,25 @@ public class Compiler {
   protected Code compileFrom(Context cx, Core.From from) {
     Supplier<Codes.RowSink> rowSinkFactory =
         createRowSinkFactory(
-            cx, ImmutableList.of(), from.steps, from.type().elementType);
+            cx, Core.StepEnv.EMPTY, from.steps, from.type().elementType);
     return Codes.from(rowSinkFactory);
   }
 
   protected Supplier<Codes.RowSink> createRowSinkFactory(
       Context cx0,
-      ImmutableList<Binding> bindings,
+      Core.StepEnv stepEnv,
       List<Core.FromStep> steps,
       Type elementType) {
-    final Context cx = cx0.bindAll(bindings);
+    final Context cx = cx0.bindAll(stepEnv.bindings);
     if (steps.isEmpty()) {
       final List<String> fieldNames =
-          bindings.stream()
+          stepEnv.bindings.stream()
               .map(b -> b.id.name)
               .sorted()
               .collect(toImmutableList());
       final Code code;
       if (fieldNames.size() == 1
-          && getOnlyElement(bindings).id.type.equals(elementType)) {
+          && stepEnv.bindings.get(0).id.type.equals(elementType)) {
         code = Codes.get(fieldNames.get(0));
       } else {
         code = Codes.getTuple(fieldNames);
@@ -344,7 +343,7 @@ public class Compiler {
     }
     final Core.FromStep firstStep = steps.get(0);
     final Supplier<Codes.RowSink> nextFactory =
-        createRowSinkFactory(cx, firstStep.bindings, skip(steps), elementType);
+        createRowSinkFactory(cx, firstStep.env, skip(steps), elementType);
     switch (firstStep.op) {
       case SCAN:
         final Core.Scan scan = (Core.Scan) firstStep;
@@ -389,7 +388,7 @@ public class Compiler {
         } else {
           final ImmutableSortedMap.Builder<String, Code> mapCodes =
               ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-          final Binding binding = yield.bindings.get(0);
+          final Binding binding = yield.env.bindings.get(0);
           mapCodes.put(binding.id.name, compile(cx, yield.exp));
           return () -> Codes.yieldRowSink(mapCodes.build(), nextFactory.get());
         }
@@ -399,7 +398,7 @@ public class Compiler {
         final PairList<Code, Boolean> codes = PairList.of();
         order.orderItems.forEach(
             e -> codes.add(compile(cx, e.exp), e.direction == DESC));
-        return () -> Codes.orderRowSink(codes, bindings, nextFactory.get());
+        return () -> Codes.orderRowSink(codes, stepEnv, nextFactory.get());
 
       case GROUP:
         final Core.Group group = (Core.Group) firstStep;
@@ -409,7 +408,7 @@ public class Compiler {
         }
         final ImmutableList.Builder<Code> valueCodesB = ImmutableList.builder();
         final SortedMap<String, Binding> bindingMap =
-            sortedBindingMap(bindings);
+            sortedBindingMap(stepEnv.bindings);
         for (Binding binding : bindingMap.values()) {
           valueCodesB.add(compile(cx, core.id(binding.id)));
         }
@@ -422,7 +421,8 @@ public class Compiler {
           final Type argumentType;
           if (aggregate.argument == null) {
             final PairList<String, Type> argNameTypes = PairList.of();
-            bindings.forEach(b -> argNameTypes.add(b.id.name, b.id.type));
+            stepEnv.bindings.forEach(
+                b -> argNameTypes.add(b.id.name, b.id.type));
             argumentType = typeSystem.recordOrScalarType(argNameTypes);
             argumentCode = null;
           } else {
@@ -448,7 +448,8 @@ public class Compiler {
         final Code keyCode = Codes.tuple(groupCodes);
         final ImmutableList<Applicable> aggregateCodes =
             aggregateCodesB.build();
-        final ImmutableList<String> outNames = bindingNames(firstStep.bindings);
+        final ImmutableList<String> outNames =
+            bindingNames(firstStep.env.bindings);
         final ImmutableList<String> keyNames =
             outNames.subList(0, group.groupExps.size());
         return () ->

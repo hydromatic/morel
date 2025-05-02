@@ -18,7 +18,6 @@
  */
 package net.hydromatic.morel.compile;
 
-import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
 import net.hydromatic.morel.ast.Core;
@@ -94,15 +93,15 @@ abstract class EnvShuttle extends Shuttle {
 
   @Override
   protected Core.Exp visit(Core.From from) {
-    List<Binding> bindings = ImmutableList.of();
+    Core.StepEnv env = Core.StepEnv.EMPTY;
     final List<Core.FromStep> steps = new ArrayList<>();
     for (Core.FromStep step : from.steps) {
-      final Core.FromStep step2 = step.accept(bind(bindings));
+      final Core.FromStep step2 = step.accept(bind(env.bindings));
       steps.add(step2);
-      bindings = step2.bindings;
+      env = step2.env;
     }
 
-    return from.copy(typeSystem, env, steps);
+    return from.copy(typeSystem, this.env, steps);
   }
 }
 
