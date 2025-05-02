@@ -273,6 +273,13 @@ from e in emps
   order d;
 > val it = [10,20,30] : int list
 
+(*) singleton record 'yield' followed by 'yield'
+from i in [1, 2, 3],
+    j in [1, 2, 3]
+  yield {x = i + j}
+  yield x;
+> val it = [2,3,4,3,4,5,4,5,6] : int list
+
 (*) singleton record 'yield' followed by 'group'
 from e in emps
   yield {d = e.deptno}
@@ -1598,7 +1605,7 @@ yield {r.j, r.s};
 Sys.plan();
 > val it =
 >   "calcite(plan LogicalProject(j=[$1], s=[$2])
->   LogicalTableFunctionScan(invocation=[morelTable('#tabulate List (6, fn i_10 => {i = i_10, j = i_10 + 3, s = #substring String (\"morel\", 0, i_10)})', '{
+>   LogicalTableFunctionScan(invocation=[morelTable('#tabulate List (6, fn i_11 => {i = i_11, j = i_11 + 3, s = #substring String (\"morel\", 0, i_11)})', '{
 >   \"fields\": [
 >     {
 >       \"type\": \"INTEGER\",

@@ -22,6 +22,7 @@ import static com.google.common.collect.Iterables.getLast;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.append;
+import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.skipLast;
 
 import com.google.common.collect.ImmutableList;
@@ -337,7 +338,12 @@ public class FromBuilder {
 
       case ID:
         if (bindings.size() == 1
-            && ((Core.Id) exp).idPat.equals(bindings.get(0).id)) {
+            && ((Core.Id) exp).idPat.equals(bindings.get(0).id)
+            // After 'yield {x = something}', 'yield x' may seem trivial, but
+            // it converts record to scalar type, so don't remove it.
+            && !(!steps.isEmpty()
+                && last(steps).op == Op.YIELD
+                && ((Core.Yield) last(steps)).exp.op == Op.TUPLE)) {
           return this;
         }
     }
