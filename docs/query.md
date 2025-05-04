@@ -53,7 +53,7 @@ employees in department 10:
 <pre>
 <b>from</b> e <b>in</b> scott.emps
   <b>where</b> e.deptno = 10
-  <b>yield</b> {e.ename, e.sal};
+  <b>yield</b> {e.ename, e.job};
 <i>
 ename  job
 ------ ---------
@@ -73,7 +73,7 @@ If you know SQL, you might have noticed that this looks similar to a
 SQL query:
 
 <pre>
-<b>SELECT</b> e.ename, e.sal
+<b>SELECT</b> e.ename, e.job
 <b>FROM</b> scott.emps <b>AS</b> e
 <b>WHERE</b> e.deptno = 10;
 </pre>
@@ -135,13 +135,13 @@ For example, the query
 <b>from</b> e <b>in</b> scott.emps,
     d <b>in</b> scott.depts <b>on</b> e.deptno = d.deptno
   <b>where</b> e.deptno = 10
-  <b>yield</b> {d.dname, e.ename, e.sal};
+  <b>yield</b> {d.dname, e.ename, e.job};
 </pre>
 
 has two scans (<code>e <b>in</b> scott.emps</code> and <code>d
 <b>in</b> scott.depts <b>on</b> e.deptno = d.deptno</code>) and two
 steps (<code><b>where</b> e.deptno = 10</code> and <code><b>yield</b>
-{e.ename, e.sal}</code>).
+{d.dname, e.ename, e.job}</code>).
 
 In the following sections we will look at [scans](#scan) and
 [steps](#step) in more detail. We will focus on `from` for now, and
