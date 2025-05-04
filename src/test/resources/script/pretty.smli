@@ -26,7 +26,7 @@
 Sys.set ("output", "tabular");
 > val it = () : unit
 
-from e in scott.dept;
+from e in scott.depts;
 > deptno dname      loc
 > ------ ---------- --------
 > 10     ACCOUNTING NEW YORK
@@ -39,7 +39,7 @@ from e in scott.dept;
 Sys.unset "output";
 > val it = () : unit
 
-from e in scott.dept;
+from e in scott.depts;
 > val it =
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
 >    {deptno=20,dname="RESEARCH",loc="DALLAS"},

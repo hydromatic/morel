@@ -19,12 +19,12 @@
  * Tests for logical expressions.
  *)
 
-val emps = scott.emp;
+val emps = scott.emps;
 > val emps = <relation>
 >   :
 >     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
 >      job:string, mgr:int, sal:real} list
-val depts = scott.dept;
+val depts = scott.depts;
 > val depts = <relation> : {deptno:int, dname:string, loc:string} list
 
 (* == Simple examples ================================== *)
@@ -148,7 +148,7 @@ false implies (true implies false);
 
 (* All departments are not department 30 or are called
    "SALES". *)
-from d in scott.dept
+from d in scott.depts
   where d.deptno = 30 implies d.dname = "SALES";
 > val it =
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
@@ -159,7 +159,7 @@ from d in scott.dept
 
 (* Three departments are not department 30 or are called
    "RESEARCH". *)
-from d in scott.dept
+from d in scott.depts
   where d.deptno = 30 implies d.dname = "RESEARCH";
 > val it =
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},

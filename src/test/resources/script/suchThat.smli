@@ -166,7 +166,7 @@ join c in [6, 7] on b + c = 10,
 >   : {a:int, b:int, c:int, d:int} list
 
 from dno, name, loc
-where {deptno = dno, dname = name, loc} elem scott.dept
+where {deptno = dno, dname = name, loc} elem scott.depts
   andalso dno > 20;
 > val it =
 >   [{dno=30,loc="CHICAGO",name="SALES"},{dno=40,loc="BOSTON",name="OPERATIONS"}]
@@ -174,25 +174,25 @@ where {deptno = dno, dname = name, loc} elem scott.dept
 
 (*) As previous but with a literal in the record.
 from dno, name
-where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.dept
+where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
   andalso dno > 20;
 > val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
 
 (*) Equivalent to previous, rephrasing 'suchthat' as 'where'
 from dno, name
-where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.dept
+where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
   andalso dno > 20;
 > val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
 
 (*) Equivalent to previous, splitting 'where'
 from dno, name
-where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.dept
+where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
 where dno > 20;
 > val it = [{dno=30,name="SALES"}] : {dno:int, name:string} list
 
 (*) Variables 'dno', 'name' are infinite until constrained by conditions.
 from v, dno, name
-where v elem scott.dept
+where v elem scott.depts
 where v.deptno = dno
 where name = v.dname
 where v.loc = "CHICAGO"
@@ -203,7 +203,7 @@ yield {dno, name = #dname v};
 (*) condition 'v.deptno = dno', and at that point we haven't declared
 (*) 'v'. So we defer 'dno' until after 'v'.
 from dno, name, v
-where v elem scott.dept
+where v elem scott.depts
 where v.deptno = dno
 where name = v.dname
 where v.loc = "CHICAGO"
@@ -212,7 +212,7 @@ yield {dno = #deptno v, name = #dname v};
 
 (*) An extra condition on 'dno' yields empty result.
 from dno, name, v
-where v elem scott.dept
+where v elem scott.depts
 where v.deptno = dno
 where name = v.dname
 where v.loc = "CHICAGO"
@@ -222,7 +222,7 @@ yield {dno = #deptno v, name = #dname v};
 
 (*) Inequality on 'dno'
 from dno, name, v
-where v elem scott.dept
+where v elem scott.depts
 where v.deptno = dno
 where name = v.dname
 where v.loc = "CHICAGO"
@@ -238,7 +238,7 @@ where Option.getOpt i;
 
 (*) If the expression is 'elem set' we can deduce the extent.
 from e
-  where (e elem scott.emp)
+  where (e elem scott.emps)
   where e.deptno = 20
   yield e.ename;
 > val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string list
@@ -246,7 +246,7 @@ from e
 (*) A function that finds its data internally.
 let
   fun isEmp e =
-    e elem scott.emp
+    e elem scott.emps
 in
   from e
     where isEmp e
@@ -258,7 +258,7 @@ end;
 (*) As above, using 'andalso' rather than 'where'
 let
   fun isEmp e =
-    e elem scott.emp
+    e elem scott.emps
 in
   from e
     where isEmp e andalso e.deptno = 20
@@ -269,7 +269,7 @@ end;
 (*) As previous, but 'fun' followed by 'from' without using 'let'
 (*) TODO should return same as previous, currently can't inline fun declared separately
 fun isEmp e =
-  e elem scott.emp;
+  e elem scott.emps;
 > val isEmp = fn
 >   :
 >     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
@@ -283,7 +283,7 @@ from e
 (*) Similar to 'isEmp' but with a conjunctive condition.
 let
   fun isClerk e =
-    e elem scott.emp andalso e.job = "CLERK"
+    e elem scott.emps andalso e.job = "CLERK"
 in
   from e
     where isClerk e andalso e.deptno = 20
@@ -296,7 +296,7 @@ end;
 (*
 let
   fun isEmp50 e =
-    e elem scott.emp orelse e.deptno = 50
+    e elem scott.emps orelse e.deptno = 50
 in
   from e
     where isEmp50 e
@@ -316,7 +316,7 @@ let
   fun hasJob (e, job) =
     e.job = job
 in
-  from e in scott.emp,
+  from e in scott.emps,
       j
     where hasJob (e, j)
     yield j

@@ -26,7 +26,7 @@ Sys.set ("stringDepth", ~1);
 (*) Query in Hybrid mode (100% Calcite)
 Sys.set ("hybrid", true);
 > val it = () : unit
-from e in scott.emp
+from e in scott.emps
 where e.deptno = 20
 yield e.empno;
 > val it = [7369,7566,7788,7876,7902] : int list
@@ -36,13 +36,13 @@ Sys.plan();
 >   : string
 
 (*) Query in Hybrid mode (20% Morel -> 80% Calcite)
-from e in (List.filter (fn e2 => e2.empno < 7700) scott.emp)
+from e in (List.filter (fn e2 => e2.empno < 7700) scott.emps)
 where e.deptno = 20
 yield e.empno;
 > val it = [7369,7566] : int list
 Sys.plan();
 > val it =
->   "calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 20)])\n    LogicalTableFunctionScan(invocation=[morelTable('#filter List (fn e2 => #empno e2 < 7700) (#emp scott)', '{\n  \"fields\": [\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"comm\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"deptno\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"empno\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"ename\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"hiredate\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"job\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"mgr\"\n    },\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"sal\"\n    }\n  ],\n  \"nullable\": false\n}')], rowType=[RecordType(REAL comm, INTEGER deptno, INTEGER empno, VARCHAR ename, VARCHAR hiredate, VARCHAR job, INTEGER mgr, REAL sal)])\n)"
+>   "calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 20)])\n    LogicalTableFunctionScan(invocation=[morelTable('#filter List (fn e2 => #empno e2 < 7700) (#emps scott)', '{\n  \"fields\": [\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"comm\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"deptno\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"empno\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"ename\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"hiredate\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"job\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"mgr\"\n    },\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"sal\"\n    }\n  ],\n  \"nullable\": false\n}')], rowType=[RecordType(REAL comm, INTEGER deptno, INTEGER empno, VARCHAR ename, VARCHAR hiredate, VARCHAR job, INTEGER mgr, REAL sal)])\n)"
 >   : string
 
 (*) Query in Hybrid mode (99% Calcite; there is a variable but it is not
@@ -50,7 +50,7 @@ Sys.plan();
 let
   val twenty = 20
 in
-  from e in scott.emp
+  from e in scott.emps
   where e.deptno = 20
   yield e.empno
 end;
@@ -66,7 +66,7 @@ let
   val ten = 7 + 3
   val deptNos = ten :: 20 :: 30 :: [40]
 in
-  from e in scott.emp
+  from e in scott.emps
   where e.deptno = List.nth (deptNos, 1)
   yield e.empno + 13 mod ten
 end;
@@ -81,7 +81,7 @@ Sys.plan();
 let
   fun double x = x * 2
 in
-  from d in scott.dept
+  from d in scott.depts
   yield double d.deptno
 end;
 > val it = [20,40,60,80] : int list
@@ -138,7 +138,7 @@ Sys.plan();
 >   : string
 
 (*) Simple query with scan, filter, project
-from e in scott.emp where e.deptno = 30 yield e.empno;
+from e in scott.emps where e.deptno = 30 yield e.empno;
 > val it = [7499,7521,7654,7698,7844,7900] : int list
 Sys.plan();
 > val it =
@@ -147,7 +147,7 @@ Sys.plan();
 
 (*) Equivalent #1; result and plan should be the same
 let
-  val emps = #emp scott
+  val emps = #emps scott
 in
   from e in emps
   where e.deptno = 30
@@ -161,7 +161,7 @@ Sys.plan();
 
 (*) Equivalent #2; result and plan should be the same
 let
-  val emps = #emp scott
+  val emps = #emps scott
   val thirty = 30
 in
   from e in emps
@@ -176,7 +176,7 @@ Sys.plan();
 
 (*) Equivalent #3; result and plan should be the same
 map (fn e => (#empno e))
-  (List.filter (fn e => (#deptno e) = 30) (#emp scott));
+  (List.filter (fn e => (#deptno e) = 30) (#emps scott));
 > val it = [7499,7521,7654,7698,7844,7900] : int list
 Sys.plan();
 > val it =
@@ -185,8 +185,8 @@ Sys.plan();
 
 (*) Union followed by group
 (*
-from x in (from e in scott.emp yield e.deptno)
-  union (from d in scott.dept yield d.deptno)
+from x in (from e in scott.emps yield e.deptno)
+  union (from d in scott.depts yield d.deptno)
 group x compute c = count;
 *)
 
@@ -201,7 +201,7 @@ let
                             yield p.empno)
         else
           fn e => e.mgr = 0
-      val nextEmps = from e in scott.emp
+      val nextEmps = from e in scott.emps
         where (pred e)
         yield {level, e.empno}
     in
@@ -218,12 +218,12 @@ end;
 (*
 let
   fun descendants () =
-    (from e in scott.emp
+    (from e in scott.emps
       where e.mgr = 0
       yield {e, level = 0})
     union
     (from d in descendants (),
-        e in scott.emp
+        e in scott.emps
       where e.mgr = d.e.empno
       yield {e, level = d.level + 1});
 in
@@ -241,12 +241,12 @@ let
     else
       descendants2 (descendants union newDescendants)
           (from d in newDescendants,
-              e in scott.emp
+              e in scott.emps
             where e.mgr = d.e.empno
             yield {e, level = d.level + 1})
 in
   from d in descendants2 []
-      (from e in scott.emp
+      (from e in scott.emps
         where e.mgr = 0
         yield {e, level = 0})
     yield {d.e.empno, d.e.mgr, d.e.ename, d.level}

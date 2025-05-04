@@ -19,6 +19,7 @@
 package net.hydromatic.morel.foreign;
 
 import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.util.Static.append;
 
 import com.google.common.collect.ImmutableList;
 import java.util.List;
@@ -46,14 +47,27 @@ import org.apache.calcite.tools.RelBuilder;
 public class CalciteForeignValue implements ForeignValue {
   private final Calcite calcite;
   private final SchemaPlus schema;
-  private final boolean lower;
+  private final NameConverter nameConverter;
 
   /** Creates a CalciteForeignValue. */
   public CalciteForeignValue(
-      Calcite calcite, SchemaPlus schema, boolean lower) {
+      Calcite calcite, SchemaPlus schema, NameConverter nameConverter) {
     this.calcite = requireNonNull(calcite);
     this.schema = requireNonNull(schema);
-    this.lower = lower;
+    this.nameConverter = requireNonNull(nameConverter);
+  }
+
+  /**
+   * Creates a CalciteForeignValue, optionally converting schema, table and
+   * column names to lower case.
+   */
+  @Deprecated
+  public CalciteForeignValue(
+      Calcite calcite, SchemaPlus schema, boolean lower) {
+    this(
+        calcite,
+        schema,
+        lower ? NameConverter.TO_LOWER : NameConverter.IDENTITY);
   }
 
   public Type type(TypeSystem typeSystem) {
@@ -62,12 +76,16 @@ public class CalciteForeignValue implements ForeignValue {
 
   private Type toType(SchemaPlus schema, TypeSystem typeSystem) {
     final SortedMap<String, Type> fields = RecordType.mutableMap();
+    final List<String> schemaPath = Schemas.path(schema).names();
     schema
         .getTableNames()
         .forEach(
             tableName -> {
               Table table = requireNonNull(schema.getTable(tableName));
-              fields.put(convert(tableName), toType(table, typeSystem));
+              final List<String> tablePath = append(schemaPath, tableName);
+              fields.put(
+                  nameConverter.convert(schemaPath, tableName),
+                  toType(tablePath, table, typeSystem));
             });
     schema
         .getSubSchemaNames()
@@ -75,13 +93,16 @@ public class CalciteForeignValue implements ForeignValue {
             subSchemaName -> {
               final SchemaPlus subSchema =
                   requireNonNull(schema.getSubSchema(subSchemaName));
-              fields.put(convert(subSchemaName), toType(subSchema, typeSystem));
+              fields.put(
+                  nameConverter.convert(schemaPath, subSchemaName),
+                  toType(subSchema, typeSystem));
             });
 
     return typeSystem.recordType(fields);
   }
 
-  private Type toType(Table table, TypeSystem typeSystem) {
+  private Type toType(
+      List<String> tablePath, Table table, TypeSystem typeSystem) {
     final PairList<String, Type> fields = PairList.of();
     table
         .getRowType(calcite.typeFactory)
@@ -89,16 +110,9 @@ public class CalciteForeignValue implements ForeignValue {
         .forEach(
             field ->
                 fields.add(
-                    convert(field.getName()), Converters.fieldType(field)));
+                    nameConverter.convert(tablePath, field.getName()),
+                    Converters.fieldType(field)));
     return typeSystem.listType(typeSystem.recordType(fields));
-  }
-
-  private String convert(String name) {
-    return convert(lower, name);
-  }
-
-  private static String convert(boolean lower, String name) {
-    return lower ? name.toLowerCase(Locale.ROOT) : name;
   }
 
   public Object value() {
@@ -107,16 +121,23 @@ public class CalciteForeignValue implements ForeignValue {
 
   private ImmutableList<Object> valueFor(SchemaPlus schema) {
     final SortedMap<String, Object> fieldValues = RecordType.mutableMap();
-    final List<String> names = Schemas.path(schema).names();
+    final List<String> schemaPath = Schemas.path(schema).names();
     schema
         .getTableNames()
         .forEach(
             tableName -> {
               final RelBuilder b = calcite.relBuilder;
-              b.scan(plus(names, tableName));
+              b.scan(plus(schemaPath, tableName));
+              final List<String> tablePath =
+                  append(Schemas.path(schema).names(), tableName);
               final List<RexNode> exprList =
                   b.peek().getRowType().getFieldList().stream()
-                      .map(f -> Ord.of(f.getIndex(), convert(f.getName())))
+                      .map(
+                          f ->
+                              Ord.of(
+                                  f.getIndex(),
+                                  nameConverter.convert(
+                                      tablePath, f.getName())))
                       .sorted(Map.Entry.comparingByValue())
                       .map(p -> b.alias(b.field(p.i), p.e))
                       .collect(Collectors.toList());
@@ -125,7 +146,7 @@ public class CalciteForeignValue implements ForeignValue {
               final Converter<Object[]> converter =
                   Converters.ofRow(rel.getRowType());
               fieldValues.put(
-                  convert(tableName),
+                  nameConverter.convert(schemaPath, tableName),
                   new RelList(rel, calcite.dataContext, converter));
             });
 
@@ -136,7 +157,9 @@ public class CalciteForeignValue implements ForeignValue {
             subSchemaName -> {
               final SchemaPlus subSchema =
                   requireNonNull(schema.getSubSchema(subSchemaName));
-              fieldValues.put(convert(subSchemaName), valueFor(subSchema));
+              fieldValues.put(
+                  nameConverter.convert(schemaPath, subSchemaName),
+                  valueFor(subSchema));
             });
     return ImmutableList.copyOf(fieldValues.values());
   }
@@ -144,6 +167,17 @@ public class CalciteForeignValue implements ForeignValue {
   /** Returns a copy of a list with one element appended. */
   private static <E> List<E> plus(List<E> list, E e) {
     return ImmutableList.<E>builder().addAll(list).add(e).build();
+  }
+
+  /** Converts a database object name to a Morel field name. */
+  public interface NameConverter {
+    String convert(List<String> path, String name);
+
+    /** Converter that converts all names to lower-case. */
+    NameConverter TO_LOWER = (path, name) -> name.toLowerCase(Locale.ROOT);
+
+    /** Converter that leaves all names unchanged. */
+    NameConverter IDENTITY = (path, name) -> name;
   }
 }
 

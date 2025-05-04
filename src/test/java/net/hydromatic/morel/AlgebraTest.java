@@ -41,7 +41,7 @@ public class AlgebraTest {
   void testScott() {
     final String ml =
         "let\n"
-            + "  val emps = #emp scott\n"
+            + "  val emps = #emps scott\n"
             + "in\n"
             + "  from e in emps yield #deptno e\n"
             + "end\n";
@@ -56,7 +56,7 @@ public class AlgebraTest {
   /** As previous, but with more concise syntax. */
   @Test
   void testScott2() {
-    final String ml = "from e in scott.emp yield e.deptno";
+    final String ml = "from e in scott.emps yield e.deptno";
     final String plan =
         "LogicalProject(deptno=[$7])\n"
             + "  JdbcTableScan(table=[[scott, EMP]])\n";
@@ -72,7 +72,7 @@ public class AlgebraTest {
   @Test
   void testScottOrder() {
     final String ml =
-        "from e in scott.emp\n"
+        "from e in scott.emps\n"
             + " yield {e.empno, e.deptno}\n"
             + " order empno desc\n"
             + " skip 2 take 4";
@@ -97,8 +97,8 @@ public class AlgebraTest {
   void testScottJoin() {
     final String ml =
         "let\n"
-            + "  val emps = #emp scott\n"
-            + "  and depts = #dept scott\n"
+            + "  val emps = #emps scott\n"
+            + "  and depts = #depts scott\n"
             + "in\n"
             + "  from e in emps, d in depts\n"
             + "    where #deptno e = #deptno d\n"
@@ -119,7 +119,7 @@ public class AlgebraTest {
   @Test
   void testScottJoin2() {
     final String ml =
-        "from e in #emp scott, d in #dept scott\n"
+        "from e in #emps scott, d in #depts scott\n"
             + "  where #deptno e = #deptno d\n"
             + "  andalso #empno e >= 7900\n"
             + "  yield {empno = #empno e, dname = #dname d}\n";
@@ -140,7 +140,7 @@ public class AlgebraTest {
   @Test
   void testScottJoin2Dot() {
     final String ml =
-        "from e in scott.emp, d in scott.dept\n"
+        "from e in scott.emps, d in scott.depts\n"
             + "  where e.deptno = d.deptno\n"
             + "  andalso e.empno >= 7900\n"
             + "  yield {empno = e.empno, dname = d.dname}\n";
@@ -159,19 +159,19 @@ public class AlgebraTest {
   void testQueryList() {
     final String[] queries = {
       "from",
-      "from e in scott.emp",
-      "from e in scott.emp yield e.deptno",
-      "from e in scott.emp yield {e.deptno, e.ename}",
-      "from e in scott.emp yield {e.ename, e.deptno}",
-      "from e in scott.emp\n"
+      "from e in scott.emps",
+      "from e in scott.emps yield e.deptno",
+      "from e in scott.emps yield {e.deptno, e.ename}",
+      "from e in scott.emps yield {e.ename, e.deptno}",
+      "from e in scott.emps\n"
           + "  yield {e.ename, x = e.deptno + e.empno, b = true, "
           // + "c = #\"c\", "
           + "i = 3, r = 3.14, "
           // + "u = (), "
           + "s = \"hello\"}",
-      "from e in scott.emp yield ()",
-      "from e in scott.emp yield e",
-      "from e in scott.emp where e.job = \"CLERK\" yield e",
+      "from e in scott.emps yield ()",
+      "from e in scott.emps yield e",
+      "from e in scott.emps where e.job = \"CLERK\" yield e",
       "from n in [1,2,3] yield n",
       "from n in [1,2,3] where n mod 2 = 1 andalso n < 3 yield n",
       "from n in [1,2,3] where false yield n",
@@ -193,72 +193,72 @@ public class AlgebraTest {
           + "group r.b compute sb = sum of r.b,\n"
           + "    mb = min of r.b, a = count\n"
           + "yield {a, a2 = a + b, sb}",
-      "from e in scott.emp\n" //
+      "from e in scott.emps\n" //
           + "yield {e.ename, x = e.deptno * 2}",
-      "from e in scott.emp\n" //
+      "from e in scott.emps\n" //
           + "order e.ename",
-      "from e in scott.emp\n" //
+      "from e in scott.emps\n" //
           + "order e.ename desc\n"
           + "take 3",
-      "from e in scott.emp,\n"
-          + "  d in scott.dept\n"
+      "from e in scott.emps,\n"
+          + "  d in scott.depts\n"
           + "where e.deptno = d.deptno\n"
           + "yield {e.ename, d.dname}",
-      "from e in scott.emp,\n"
-          + "  d in scott.dept\n"
+      "from e in scott.emps,\n"
+          + "  d in scott.depts\n"
           + "where e.deptno = d.deptno",
-      "from e in scott.emp,\n"
-          + "  d in scott.dept\n"
+      "from e in scott.emps,\n"
+          + "  d in scott.depts\n"
           + "where e.deptno = d.deptno\n"
           + "yield e",
-      "from e in scott.emp,\n"
-          + "  d in scott.dept\n"
+      "from e in scott.emps,\n"
+          + "  d in scott.depts\n"
           + "where e.deptno = d.deptno\n"
           + "andalso e.job = \"CLERK\"\n"
           + "yield d",
-      "from e in scott.emp,\n"
-          + "  d in scott.dept\n"
+      "from e in scott.emps,\n"
+          + "  d in scott.depts\n"
           + "where e.deptno = d.deptno\n"
           + "andalso e.job = \"CLERK\"\n"
           + "group e.mgr",
-      "from e in scott.emp,\n"
-          + "  g in scott.salgrade\n"
+      "from e in scott.emps,\n"
+          + "  g in scott.salgrades\n"
           + "where e.sal >= g.losal\n"
           + "  andalso e.sal < g.hisal",
-      "from e in scott.emp,\n"
-          + "  d in scott.dept,"
-          + "  g in scott.salgrade\n"
+      "from e in scott.emps,\n"
+          + "  d in scott.depts,"
+          + "  g in scott.salgrades\n"
           + "where e.sal >= g.losal\n"
           + "  andalso e.sal < g.hisal\n"
           + "  andalso d.deptno = e.deptno",
-      "from e in scott.emp,\n"
-          + "  d in scott.dept,"
-          + "  g in scott.salgrade\n"
+      "from e in scott.emps,\n"
+          + "  d in scott.depts,"
+          + "  g in scott.salgrades\n"
           + "where e.sal >= g.losal\n"
           + "  andalso e.sal < g.hisal\n"
           + "  andalso d.deptno = e.deptno\n"
           + "group g.grade compute c = count",
-      "from x in (from e in scott.emp yield {e.deptno, z = 1})\n"
-          + "  union (from d in scott.dept yield {d.deptno, z = 2})",
-      "from x in (from e in scott.emp yield e.deptno)\n"
-          + "  union (from d in scott.dept yield d.deptno)\n"
+      "from x in (from e in scott.emps yield {e.deptno, z = 1})\n"
+          + "  union (from d in scott.depts yield {d.deptno, z = 2})",
+      "from x in (from e in scott.emps yield e.deptno)\n"
+          + "  union (from d in scott.depts yield d.deptno)\n"
           + "group x compute c = count",
       "[1, 2, 3] union [2, 3, 4]",
-      "[10, 15, 20] union (from d in scott.dept yield d.deptno)",
-      "[10, 15, 20] except (from d in scott.dept yield d.deptno)",
-      "[10, 15, 20] intersect (from d in scott.dept yield d.deptno)",
+      "[10, 15, 20] union (from d in scott.depts yield d.deptno)",
+      "[10, 15, 20] except (from d in scott.depts yield d.deptno)",
+      "[10, 15, 20] intersect (from d in scott.depts yield d.deptno)",
 
       // the following 4 are equivalent
-      "from e in scott.emp where e.deptno = 30 yield e.empno",
+      "from e in scott.emps where e.deptno = 30 yield e.empno",
       "let\n"
-          + "  val emps = #emp scott\n"
+          + "  val emps = #emps scott\n"
           + "in\n"
           + "  from e in emps\n"
           + "  where e.deptno = 30\n"
           + "  yield e.empno\n"
           + "end",
       "let\n"
-          + "  val emps = #emp scott\n"
+          + "  val emps = #emps scott\n"
           + "  val thirty = 30\n"
           + "in\n"
           + "  from e in emps\n"
@@ -266,7 +266,7 @@ public class AlgebraTest {
           + "  yield e.empno\n"
           + "end",
       "map (fn e => (#empno e))\n"
-          + "  (List.filter (fn e => (#deptno e) = 30) (#emp scott))",
+          + "  (List.filter (fn e => (#deptno e) = 30) (#emps scott))",
     };
     Stream.of(queries)
         .filter(q -> !q.startsWith("#"))
@@ -307,7 +307,7 @@ public class AlgebraTest {
     final String ml =
         "List.filter\n"
             + "  (fn x => x.empno < 7500)\n"
-            + "  (from e in scott.emp\n"
+            + "  (from e in scott.emps\n"
             + "  where e.job = \"CLERK\"\n"
             + "  yield {e.empno, e.deptno, d5 = e.deptno + 5})";
     String plan =
@@ -336,7 +336,7 @@ public class AlgebraTest {
   @Test
   void testFullCalcite() {
     final String ml =
-        "from e in scott.emp\n"
+        "from e in scott.emps\n"
             + "  where e.empno < 7500\n"
             + "  yield {e.empno, e.deptno, d5 = e.deptno + 5}";
     checkFullCalcite(ml);
@@ -347,9 +347,9 @@ public class AlgebraTest {
   void testFullCalcite2() {
     final String ml =
         "let\n"
-            + "  val emp = scott.emp\n"
+            + "  val emps = scott.emps\n"
             + "in\n"
-            + "  from e in scott.emp\n"
+            + "  from e in emps\n"
             + "  where e.empno < 7500\n"
             + "  yield {e.empno, e.deptno, d5 = e.deptno + 5}\n"
             + "end";
@@ -364,12 +364,12 @@ public class AlgebraTest {
   void testFullCalcite3() {
     final String ml =
         "let\n"
-            + "  fun query emp =\n"
-            + "    from e in emp\n"
+            + "  fun query emps =\n"
+            + "    from e in emps\n"
             + "    where e.empno < 7500\n"
             + "    yield {e.empno, e.deptno, d5 = e.deptno + 5}\n"
             + "in\n"
-            + "  query scott.emp\n"
+            + "  query scott.emps\n"
             + "end";
     checkFullCalcite(ml);
   }
@@ -463,7 +463,7 @@ public class AlgebraTest {
             + "  val five = 2 + 3\n"
             + "  val ten = five + five\n"
             + "in\n"
-            + "  from e in scott.emp\n"
+            + "  from e in scott.emps\n"
             + "  where e.empno < 7500 + ten\n"
             + "  yield {e.empno, e.deptno, d5 = e.deptno + five}\n"
             + "end";
@@ -485,7 +485,7 @@ public class AlgebraTest {
         "let\n"
             + "  fun twice x = x + x\n"
             + "in\n"
-            + "  from d in scott.dept\n"
+            + "  from d in scott.depts\n"
             + "  yield twice d.deptno\n"
             + "end";
     String plan =
@@ -522,7 +522,7 @@ public class AlgebraTest {
             + "  fun plus (x, y) = x + y\n"
             + "  val five = 5\n"
             + "in\n"
-            + "  from d in scott.dept\n"
+            + "  from d in scott.depts\n"
             + "  yield plus (d.deptno, five)\n"
             + "end";
     String plan =
@@ -558,9 +558,9 @@ public class AlgebraTest {
   void testUnion() {
     final String ml =
         "from x in (\n"
-            + "(from e in scott.emp where e.job = \"CLERK\" yield e.deptno)\n"
+            + "(from e in scott.emps where e.job = \"CLERK\" yield e.deptno)\n"
             + "union\n"
-            + "(from d in scott.dept yield d.deptno))\n";
+            + "(from d in scott.depts yield d.deptno))\n";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .with(Prop.HYBRID, true)
@@ -574,9 +574,9 @@ public class AlgebraTest {
   void testExcept() {
     final String ml =
         "from x in (\n"
-            + "(from d in scott.dept yield d.deptno)"
+            + "(from d in scott.depts yield d.deptno)"
             + "except\n"
-            + "(from e in scott.emp where e.job = \"CLERK\" yield e.deptno))\n";
+            + "(from e in scott.emps where e.job = \"CLERK\" yield e.deptno))\n";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .with(Prop.HYBRID, true)
@@ -590,9 +590,9 @@ public class AlgebraTest {
   void testIntersect() {
     final String ml =
         "from x in (\n"
-            + "(from e in scott.emp where e.job = \"CLERK\" yield e.deptno)\n"
+            + "(from e in scott.emps where e.job = \"CLERK\" yield e.deptno)\n"
             + "intersect\n"
-            + "(from d in scott.dept yield d.deptno))\n";
+            + "(from d in scott.depts yield d.deptno))\n";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .with(Prop.HYBRID, true)
@@ -608,8 +608,8 @@ public class AlgebraTest {
   @Test
   void testElem() {
     final String ml =
-        "from d in scott.dept\n"
-            + "where d.deptno elem (from e in scott.emp\n"
+        "from d in scott.depts\n"
+            + "where d.deptno elem (from e in scott.emps\n"
             + "    where e.job elem [\"ANALYST\", \"PRESIDENT\"]\n"
             + "    yield e.deptno)\n"
             + "yield d.dname";
@@ -636,15 +636,15 @@ public class AlgebraTest {
                 .assertEvalIter(equalsUnordered("SALES", "OPERATIONS"));
 
     final String ml0 =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "where not (d.deptno elem\n"
-            + "    (from e in scott.emp\n"
+            + "    (from e in scott.emps\n"
             + "        where e.job elem [\"ANALYST\", \"PRESIDENT\"]\n"
             + "        yield e.deptno))\n"
             + "yield d.dname";
     final String ml1 =
-        "from d in scott.dept\n"
-            + "where d.deptno notelem (from e in scott.emp\n"
+        "from d in scott.depts\n"
+            + "where d.deptno notelem (from e in scott.emps\n"
             + "    where e.job elem [\"ANALYST\", \"PRESIDENT\"]\n"
             + "    yield e.deptno)\n"
             + "yield d.dname";
@@ -681,15 +681,15 @@ public class AlgebraTest {
                 .assertPlan(isCode(plan))
                 .assertEvalIter(equalsOrdered(10, 20, 30, 40));
     final String ml0 =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "where Relational.nonEmpty (\n"
-            + "  from e in scott.emp\n"
+            + "  from e in scott.emps\n"
             + "  where e.job = \"CLERK\")\n"
             + "yield d.deptno";
     final String ml1 =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "where (\n"
-            + "  exists e in scott.emp\n"
+            + "  exists e in scott.emps\n"
             + "  where e.job = \"CLERK\")\n"
             + "yield d.deptno";
     fn.apply(ml(ml0));
@@ -726,27 +726,27 @@ public class AlgebraTest {
                 .assertEvalIter(equalsOrdered(10, 20, 30, 40))
                 .assertPlan(isCode(plan));
     final String ml0 =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "where Relational.empty (\n"
-            + "  from e in scott.emp\n"
+            + "  from e in scott.emps\n"
             + "  where e.job = \"CLARK KENT\")\n"
             + "yield d.deptno";
     final String ml1 =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "where empty (\n"
-            + "  from e in scott.emp\n"
+            + "  from e in scott.emps\n"
             + "  where e.job = \"CLARK KENT\")\n"
             + "yield d.deptno";
     final String ml2 =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "where List.null (\n"
-            + "  from e in scott.emp\n"
+            + "  from e in scott.emps\n"
             + "  where e.job = \"CLARK KENT\")\n"
             + "yield d.deptno";
     final String ml3 =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "where not (\n"
-            + "  exists e in scott.emp\n"
+            + "  exists e in scott.emps\n"
             + "  where e.job = \"CLARK KENT\")\n"
             + "yield d.deptno";
     fn.apply(ml(ml0));
@@ -786,15 +786,15 @@ public class AlgebraTest {
                         list(20, "RESEARCH", "DALLAS"),
                         list(30, "SALES", "CHICAGO")));
     final String ml0 =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "where Relational.nonEmpty (\n"
-            + "  from e in scott.emp\n"
+            + "  from e in scott.emps\n"
             + "  where e.deptno = d.deptno\n"
             + "  andalso e.job = \"CLERK\")";
     final String ml1 =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "where (\n"
-            + "  exists e in scott.emp\n"
+            + "  exists e in scott.emps\n"
             + "  where e.deptno = d.deptno\n"
             + "  andalso e.job = \"CLERK\")";
     fn.apply(ml(ml0));
@@ -804,8 +804,8 @@ public class AlgebraTest {
   @Test
   void testCorrelatedListSubQuery() {
     final String ml =
-        "from d in scott.dept\n"
-            + "yield {d.dname, empCount = (from e in scott.emp\n"
+        "from d in scott.depts\n"
+            + "yield {d.dname, empCount = (from e in scott.emps\n"
             + "                            group e.deptno compute c = count\n"
             + "                            where deptno = d.deptno\n"
             + "                            yield c)}";
@@ -825,9 +825,9 @@ public class AlgebraTest {
   @Test
   void testCorrelatedScalar() {
     final String ml =
-        "from d in scott.dept\n"
+        "from d in scott.depts\n"
             + "yield {d.dname, empCount =\n"
-            + "    only (from e in scott.emp\n"
+            + "    only (from e in scott.emps\n"
             + "          where e.deptno = d.deptno\n"
             + "          group compute count)}";
     ml(ml)
@@ -857,12 +857,12 @@ public class AlgebraTest {
             + "    else\n"
             + "      descendants2 (descendants union newDescendants)\n"
             + "          (from d in newDescendants,\n"
-            + "              e in scott.emp\n"
+            + "              e in scott.emps\n"
             + "            where e.mgr = d.e.empno\n"
             + "            yield {e, level = d.level + 1})\n"
             + "in\n"
             + "  from d in descendants2 []\n"
-            + "      (from e in scott.emp\n"
+            + "      (from e in scott.emps\n"
             + "        where e.mgr = 0\n"
             + "        yield {e, level = 0})\n"
             + "    yield {d.e.empno, d.e.mgr, d.e.ename, d.level}\n"
@@ -897,12 +897,12 @@ public class AlgebraTest {
   void testRecursive2() {
     final String ml =
         "from i in iterate\n"
-            + "    (from e in scott.emp\n"
+            + "    (from e in scott.emps\n"
             + "      where e.mgr = 0\n"
             + "      yield {e, level = 0})\n"
             + "    fn (oldList, newList) =>\n"
             + "      (from d in newList,\n"
-            + "          e in scott.emp\n"
+            + "          e in scott.emps\n"
             + "        where e.mgr = d.e.empno\n"
             + "        yield {e, level = d.level + 1})\n"
             + "  yield {i.e.empno, i.e.ename, i.level, i.e.mgr}";

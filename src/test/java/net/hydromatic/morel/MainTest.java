@@ -2526,19 +2526,19 @@ public class MainTest {
         "let\n"
             + "  fun hasJob (d, job) =\n"
             + "    (d div 2, job)\n"
-            + "      elem (from e in scott.emp yield (e.deptno, e.job))\n"
+            + "      elem (from e in scott.emps yield (e.deptno, e.job))\n"
             + "in\n"
-            + "  from d in scott.dept, j"
+            + "  from d in scott.depts, j"
             + "    where hasJob (d.deptno, j)\n"
             + "    yield j\n"
             + "end";
     final String core =
         "val it = "
-            + "from d_1 in #dept scott "
+            + "from d_1 in #depts scott "
             + "join j : string "
             + "where case (#deptno d_1, j) of"
             + " (d, job) => op elem ((op div (d, 2), job),"
-            + " from e in #emp scott"
+            + " from e in #emps scott"
             + " yield (#deptno e, #job e)) yield j";
     final String code =
         "from(sink join(pat d_1,\n"
@@ -2572,12 +2572,12 @@ public class MainTest {
   /** Translates a simple {@code suchthat} expression, "d elem list". */
   @Test
   void testFromSuchThat2b() {
-    final String ml = "from d where d elem scott.dept";
+    final String ml = "from d where d elem scott.depts";
     final String core0 =
         "val it = "
             + "from d : {deptno:int, dname:string, loc:string} "
-            + "where d elem #dept scott";
-    final String core1 = "val it = from d in #dept scott";
+            + "where d elem #depts scott";
+    final String core1 = "val it = from d in #depts scott";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertType("{deptno:int, dname:string, loc:string} list")
@@ -2593,15 +2593,15 @@ public class MainTest {
   void testFromSuchThat2c() {
     final String ml =
         "from loc, deptno, name "
-            + "where {deptno, loc, dname = name} elem scott.dept";
+            + "where {deptno, loc, dname = name} elem scott.depts";
     final String core =
         "val it = "
-            + "from v$0 in #dept scott "
+            + "from v$0 in #depts scott "
             + "join loc in [#loc v$0] "
             + "join deptno in [#deptno v$0] "
             + "join name in [#dname v$0] "
             + "where op elem ({deptno = deptno, dname = name, loc = loc},"
-            + " #dept scott) "
+            + " #depts scott) "
             + "yield {deptno = deptno, loc = loc, name = name}";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
@@ -2622,22 +2622,22 @@ public class MainTest {
     final String ml =
         "from dno, name\n"
             + "  where {deptno = dno, dname = name, loc = \"CHICAGO\"}\n"
-            + "      elem scott.dept\n"
+            + "      elem scott.depts\n"
             + "    andalso dno > 20";
     final String core0 =
         "val it = "
             + "from dno : int "
             + "join name : string "
             + "where {deptno = dno, dname = name, loc = \"CHICAGO\"} "
-            + "elem #dept scott "
+            + "elem #depts scott "
             + "andalso dno > 20";
     final String core1 =
         "val it = "
-            + "from v$0 in #dept scott "
+            + "from v$0 in #depts scott "
             + "join dno in [#deptno v$0] "
             + "join name in [#dname v$0] "
             + "where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"},"
-            + " #dept scott) "
+            + " #depts scott) "
             + "andalso dno > 20 "
             + "yield {dno = dno, name = name}";
     ml(ml)
@@ -2653,22 +2653,22 @@ public class MainTest {
     final String ml =
         "from dno, name\n"
             + "  where {deptno = dno, dname = name, loc = \"CHICAGO\"}\n"
-            + "      elem scott.dept\n"
+            + "      elem scott.depts\n"
             + "    andalso dno > 20";
     final String core0 =
         "val it = "
             + "from dno : int "
             + "join name : string "
             + "where {deptno = dno, dname = name, loc = \"CHICAGO\"} "
-            + "elem #dept scott "
+            + "elem #depts scott "
             + "andalso dno > 20";
     final String core1 =
         "val it = "
-            + "from v$0 in #dept scott "
+            + "from v$0 in #depts scott "
             + "join dno in [#deptno v$0] "
             + "join name in [#dname v$0] "
             + "where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"},"
-            + " #dept scott) "
+            + " #depts scott) "
             + "andalso dno > 20 "
             + "yield {dno = dno, name = name}";
     ml(ml)
@@ -2682,7 +2682,7 @@ public class MainTest {
   void testFromSuchThat2d3() {
     final String ml =
         "from dno, name, v\n"
-            + "where v elem scott.dept\n"
+            + "where v elem scott.depts\n"
             + "where v.deptno = dno\n"
             + "where name = v.dname\n"
             + "where v.loc = \"CHICAGO\"\n"
@@ -2693,7 +2693,7 @@ public class MainTest {
             + "from dno : int "
             + "join name : string "
             + "join v : {deptno:int, dname:string, loc:string} "
-            + "where v elem #dept scott "
+            + "where v elem #depts scott "
             + "where #deptno v = dno "
             + "where name = #dname v "
             + "where #loc v = \"CHICAGO\" "
@@ -2702,7 +2702,7 @@ public class MainTest {
     final String core1 =
         "val it = "
             + "from dno in [30] "
-            + "join v in #dept scott "
+            + "join v in #depts scott "
             + "join name in [#dname v] "
             + "where #deptno v = dno "
             + "where name = #dname v "
@@ -2721,7 +2721,7 @@ public class MainTest {
   void testFromSuchThat2d4() {
     final String ml =
         "from dno, name, v\n"
-            + "where v elem scott.dept\n"
+            + "where v elem scott.depts\n"
             + "where v.deptno = dno\n"
             + "where name = v.dname\n"
             + "where v.loc = \"CHICAGO\"\n"
@@ -2732,7 +2732,7 @@ public class MainTest {
             + "from dno : int "
             + "join name : string "
             + "join v : {deptno:int, dname:string, loc:string} "
-            + "where v elem #dept scott "
+            + "where v elem #depts scott "
             + "where #deptno v = dno "
             + "where name = #dname v "
             + "where #loc v = \"CHICAGO\" "
@@ -2740,7 +2740,7 @@ public class MainTest {
             + "yield {dno = #deptno v, name = #dname v}";
     final String core1 =
         "val it = "
-            + "from v in #dept scott "
+            + "from v in #depts scott "
             + "join dno in [#deptno v] "
             + "join name in [#dname v] "
             + "where #deptno v = dno "
@@ -2765,7 +2765,7 @@ public class MainTest {
     final String ml =
         "let\n"
             + "  fun isDept d =\n"
-            + "    d elem scott.dept\n"
+            + "    d elem scott.depts\n"
             + "in\n"
             + "  from d\n"
             + "    where isDept d andalso d.deptno = 20\n"
@@ -2774,7 +2774,7 @@ public class MainTest {
     final String core0 =
         "val it = "
             + "let"
-            + " val isDept = fn d => d elem #dept scott "
+            + " val isDept = fn d => d elem #depts scott "
             + "in"
             + " from d_1 : {deptno:int, dname:string, loc:string}"
             + " where isDept d_1 andalso #deptno d_1 = 20"
@@ -2782,7 +2782,7 @@ public class MainTest {
             + "end";
     final String core1 =
         "val it = "
-            + "from d_1 in #dept scott "
+            + "from d_1 in #depts scott "
             + "where #deptno d_1 = 20 "
             + "yield #dname d_1";
     ml(ml)
@@ -2798,9 +2798,9 @@ public class MainTest {
     final String ml =
         "let\n"
             + "  fun isDept d =\n"
-            + "    d elem scott.dept\n"
+            + "    d elem scott.depts\n"
             + "  fun isEmp e =\n"
-            + "    e elem scott.emp\n"
+            + "    e elem scott.emps\n"
             + "in\n"
             + "  from d, e\n"
             + "    where isDept d\n"
@@ -2812,10 +2812,10 @@ public class MainTest {
     final String core0 =
         "val it = "
             + "let"
-            + " val isDept = fn d => d elem #dept scott "
+            + " val isDept = fn d => d elem #depts scott "
             + "in"
             + " let"
-            + " val isEmp = fn e => e elem #emp scott "
+            + " val isEmp = fn e => e elem #emps scott "
             + "in"
             + " from d_1 : {deptno:int, dname:string, loc:string}"
             + " join e_1 : {comm:real, deptno:int, empno:int, ename:string, "
@@ -2829,8 +2829,8 @@ public class MainTest {
             + "end";
     final String core1 =
         "val it = "
-            + "from d_1 in #dept scott "
-            + "join e_1 in #emp scott "
+            + "from d_1 in #depts scott "
+            + "join e_1 in #emps scott "
             + "where #deptno d_1 = #deptno e_1 "
             + "andalso #deptno d_1 = 20 "
             + "yield #dname d_1";
@@ -3108,41 +3108,41 @@ public class MainTest {
   @Test
   void testGroupAs() {
     final String ml0 =
-        "from e in emp\n" //
+        "from e in emps\n" //
             + "group deptno = e.deptno";
     final String ml1 =
-        "from e in emp\n" //
+        "from e in emps\n" //
             + "group e.deptno";
     final String ml2 =
-        "from e in emp\n" //
+        "from e in emps\n" //
             + "group #deptno e";
-    final String expected = "from e in emp group deptno = #deptno e";
+    final String expected = "from e in emps group deptno = #deptno e";
     ml(ml0).assertParse(expected);
     ml(ml1).assertParse(expected);
     ml(ml2).assertParse(expected);
 
     final String ml3 =
-        "from e in emp\n" //
+        "from e in emps\n" //
             + "group e, h = f + e.g";
-    final String expected3 = "from e in emp group e = e, h = f + #g e";
+    final String expected3 = "from e in emps group e = e, h = f + #g e";
     ml(ml3).assertParse(expected3);
   }
 
   @Test
   void testGroupAs2() {
-    ml("from e in emp group e.deptno, e.deptno + e.empid")
+    ml("from e in emps group e.deptno, e.deptno + e.empid")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression #deptno e + #empid e"));
-    ml("from e in emp group 1")
+    ml("from e in emps group 1")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression 1"));
-    ml("from e in emp group e.deptno compute (fn x => x) of e.job")
+    ml("from e in emps group e.deptno compute (fn x => x) of e.job")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression fn x => x"));
     // Require that we can derive a name for the expression even though there
     // is only one, and therefore we would not use the name.
     // (We could revisit this requirement.)
-    ml("from e in emp group compute (fn x => x) of e.job")
+    ml("from e in emps group compute (fn x => x) of e.job")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression fn x => x"));
     ml("from e in [{x = 1, y = 5}]\n" //
@@ -3398,11 +3398,11 @@ public class MainTest {
   void testFunFrom() {
     final String ml =
         "let\n"
-            + "  fun query emp =\n"
-            + "    from e in emp\n"
+            + "  fun query emps =\n"
+            + "    from e in emps\n"
             + "    yield {e.deptno,e.empno,e.ename}\n"
             + "in\n"
-            + "  query scott.emp\n"
+            + "  query scott.emps\n"
             + "end";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)

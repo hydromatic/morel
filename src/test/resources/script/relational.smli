@@ -338,7 +338,7 @@ from e in emps
 (*) 'distinct' is equivalent to 'group' with all fields
 (*) Query 1, using `distinct`
 (*) (The 'order' clause is for deterministic results.)
-from e in scott.emp
+from e in scott.emps
   yield {e.job, e.deptno}
   distinct
   order job, deptno;
@@ -350,7 +350,7 @@ from e in scott.emp
 
 (*) Query 2, using `group` with no aggregate functions, equivalent to query 1
 (*) (The 'order' clause is for deterministic results.)
-from e in scott.emp
+from e in scott.emps
   yield {e.job, e.deptno}
   group job, deptno
   order job, deptno;
@@ -1674,7 +1674,7 @@ let
     yield {i = e.deptno + e.count}
     order i
 in
-  pipeline scott.emp
+  pipeline scott.emps
 end;
 > val it = [13,24,35] : int list
 
@@ -1693,13 +1693,13 @@ let
       through e2 in clean
       into process
 in
-  pipeline scott.emp
+  pipeline scott.emps
 end;
 > val it =
 >   [{count=3,deptno=10,sum=8750.0},{count=4,deptno=20,sum=10075.0},
 >    {count=5,deptno=30,sum=8450.0}] : {count:int, deptno:int, sum:real} list
 
-from d in scott.dept
+from d in scott.depts
   through i2 in (map (fn x => [x]));
 > val it =
 >   [[{deptno=10,dname="ACCOUNTING",loc="NEW YORK"}],

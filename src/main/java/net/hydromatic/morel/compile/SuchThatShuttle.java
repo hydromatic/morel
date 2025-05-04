@@ -49,13 +49,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * <pre>{@code
  * from e
- *   where e elem #dept scott
+ *   where e elem #emps scott
  * }</pre>
  *
  * <p>to
  *
  * <pre>{@code
- * from e in #dept scott
+ * from e in #emps scott
  * }</pre>
  */
 class SuchThatShuttle extends Shuttle {

@@ -187,7 +187,7 @@ public class InlineTest {
         "let\n"
             + "  fun isEven n = n mod 2 = 0\n"
             + "in\n"
-            + "  from e in scott.emp\n"
+            + "  from e in scott.emps\n"
             + "  where isEven e.empno\n"
             + "  yield e.deptno\n"
             + "end";
@@ -196,15 +196,15 @@ public class InlineTest {
             + "let "
             + "val isEven = fn n => n mod 2 = 0 "
             + "in "
-            + "from e in #emp scott "
+            + "from e in #emps scott "
             + "where isEven (#empno e) yield #deptno e end";
     final String core1 =
         "val it = "
-            + "from e in #emp scott "
+            + "from e in #emps scott "
             + "where let val n = #empno e in op mod (n, 2) = 0 end yield #deptno e";
     final String core2 =
         "val it = "
-            + "from e in #emp scott "
+            + "from e in #emps scott "
             + "where op mod (#empno e, 2) = 0 yield #deptno e";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
@@ -219,7 +219,7 @@ public class InlineTest {
     final String ml =
         "let\n"
             + "  fun evenEmp x =\n"
-            + "    from e in scott.emp\n"
+            + "    from e in scott.emps\n"
             + "    where e.empno mod 2 = 0\n"
             + "in\n"
             + "  from e in (evenEmp 1)\n"
@@ -230,7 +230,7 @@ public class InlineTest {
         "val it = "
             + "let"
             + " val evenEmp = fn x =>"
-            + " from e in #emp scott"
+            + " from e in #emps scott"
             + " where #empno e mod 2 = 0 "
             + "in"
             + " from e_1 in evenEmp 1"
@@ -241,14 +241,14 @@ public class InlineTest {
         "val it = "
             + "from e_1 in "
             + "(let val x = 1"
-            + " in from e in #emp scott"
+            + " in from e in #emps scott"
             + " where op mod (#empno e, 2) = 0 "
             + "end)"
             + " where #deptno e_1 = 10"
             + " yield #ename e_1";
     final String core2 =
         "val it = "
-            + "from e in #emp scott "
+            + "from e in #emps scott "
             + "where op mod (#empno e, 2) = 0 "
             + "yield {e = e} "
             + "where #deptno e_1 = 10 "
@@ -268,20 +268,20 @@ public class InlineTest {
   void testMapFilterToFrom() {
     final String ml =
         "map (fn e => (#empno e))\n"
-            + "  (List.filter (fn e => (#deptno e) = 30) (#emp scott))";
+            + "  (List.filter (fn e => (#deptno e) = 30) (#emps scott))";
     final String core0 =
         "val it = "
             + "map (fn e_1 => #empno e_1) "
             + "(#filter List (fn e => #deptno e = 30) "
-            + "(#emp scott))";
+            + "(#emps scott))";
     final String core1 =
         "val it = "
             + "from v$0 in "
-            + "#filter List (fn e => #deptno e = 30) (#emp scott) "
+            + "#filter List (fn e => #deptno e = 30) (#emps scott) "
             + "yield (fn e_1 => #empno e_1) v$0";
     final String core2 =
         "val it = "
-            + "from v$2 in #emp scott "
+            + "from v$2 in #emps scott "
             + "where #deptno v$2 = 30 "
             + "yield {v$0 = v$2} "
             + "yield #empno v$0";
@@ -305,24 +305,24 @@ public class InlineTest {
             + "    (List.filter (fn r => #y r > #z r)\n"
             + "      (map (fn e => {x = #empno e, y = #deptno e, z = 15})\n"
             + "        (List.filter (fn e => #deptno e = 30)\n"
-            + "          (#emp scott)))))";
+            + "          (#emps scott)))))";
     final String core0 =
         "val it = "
             + "map (fn r_2 => r_2 + 100)"
             + " (map (fn r_1 => #x r_1 + #z r_1)"
             + " (#filter List (fn r => #y r > #z r)"
             + " (map (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
-            + " (#filter List (fn e => #deptno e = 30) (#emp scott)))))";
+            + " (#filter List (fn e => #deptno e = 30) (#emps scott)))))";
     final String core1 =
         "val it = "
             + "from v$0 in #map List (fn r_1 => #x r_1 + #z r_1)"
             + " (#filter List (fn r => #y r > #z r)"
             + " (#map List (fn e_1 => {x = #empno e_1, y = #deptno e_1, z = 15})"
-            + " (#filter List (fn e => #deptno e = 30) (#emp scott)))) "
+            + " (#filter List (fn e => #deptno e = 30) (#emps scott)))) "
             + "yield (fn r_2 => r_2 + 100) v$0";
     final String core2 =
         "val it = "
-            + "from v$6 in #emp scott "
+            + "from v$6 in #emps scott "
             + "where #deptno v$6 = 30 "
             + "yield {v$5 = v$6} "
             + "yield {v$4 = {x = #empno v$5, y = #deptno v$5, z = 15}} "
@@ -341,19 +341,19 @@ public class InlineTest {
   void testFromFrom() {
     final String ml =
         "from i in (\n"
-            + "  from e in scott.emp\n"
+            + "  from e in scott.emps\n"
             + "  yield e.deptno)\n"
             + "where i > 10\n"
             + "yield i / 10";
     final String core0 =
         "val it = "
-            + "from e in #emp scott "
+            + "from e in #emps scott "
             + "yield {i = #deptno e} "
             + "where i > 10 "
             + "yield i / 10";
     final String core1 =
         "val it = "
-            + "from e in #emp scott "
+            + "from e in #emps scott "
             + "yield {i = #deptno e} "
             + "where i > 10 "
             + "yield /:int (i, 10)";

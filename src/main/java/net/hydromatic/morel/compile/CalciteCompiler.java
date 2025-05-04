@@ -246,7 +246,7 @@ public class CalciteCompiler extends Compiler {
         switch (apply.fn.op) {
           case RECORD_SELECTOR:
             if (apply.arg instanceof Core.Id) {
-              // Something like '#emp scott', 'scott' is a foreign value
+              // Something like '#emps scott', 'scott' is a foreign value
               final Object o = code.eval(evalEnvOf(cx.env));
               if (o instanceof RelList) {
                 cx.relBuilder.push(((RelList) o).rel);
@@ -279,7 +279,8 @@ public class CalciteCompiler extends Compiler {
               case OP_UNION:
               case OP_EXCEPT:
               case OP_INTERSECT:
-                // For example, '[1, 2, 3] union (from scott.dept yield deptno)'
+                // For example, '[1, 2, 3] union (from scott.depts yield
+                // deptno)'
                 final Core.Tuple tuple = (Core.Tuple) apply.arg;
                 for (Core.Exp arg : tuple.args) {
                   if (!CalciteCompiler.this.toRel3(cx, arg, false)) {

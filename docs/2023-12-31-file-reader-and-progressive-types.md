@@ -144,8 +144,8 @@ department. You could write a similar query in SQL using `JOIN` and
 `GROUP BY`:
 
 ```
-- from d in file.scott.dept
-=   join e in file.scott.emp on d.deptno = e.deptno
+- from d in file.scott.depts
+=   join e in file.scott.emps on d.deptno = e.deptno
 =   group d.dname compute sum of e.sal;
 val it =
   [{dname="RESEARCH",sum=10875.0},{dname="SALES",sum=9400.0},

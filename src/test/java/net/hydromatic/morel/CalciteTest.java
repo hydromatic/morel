@@ -31,6 +31,7 @@ import java.io.PrintStream;
 import java.util.Map;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.CalciteForeignValue;
+import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.foreign.ForeignValue;
 import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.schema.Schema;
@@ -56,18 +57,17 @@ class CalciteTest {
     final Schema userSchema = new ReflectiveSchema(new UserSchema());
     final Schema taskSchema = new ReflectiveSchema(new TaskSchema());
 
+    DataSet dataSet =
+        (Calcite calcite) -> {
+          SchemaPlus newSchema = calcite.rootSchema.add("users", userSchema);
+          newSchema.add("task", taskSchema);
+          newSchema.add("task2", taskSchema);
+          CalciteForeignValue.NameConverter nameConverter =
+              CalciteForeignValue.NameConverter.IDENTITY;
+          return new CalciteForeignValue(calcite, newSchema, nameConverter);
+        };
     final Map<String, ForeignValue> foreignValueMap =
-        Calcite.withDataSets(
-                ImmutableMap.of(
-                    "user",
-                    (Calcite calcite) -> {
-                      SchemaPlus newSchema =
-                          calcite.rootSchema.add("users", userSchema);
-                      newSchema.add("task", taskSchema);
-                      newSchema.add("task2", taskSchema);
-                      return new CalciteForeignValue(calcite, newSchema, true);
-                    }))
-            .foreignValues();
+        Calcite.withDataSets(ImmutableMap.of("user", dataSet)).foreignValues();
 
     final String sql =
         "user;\n"

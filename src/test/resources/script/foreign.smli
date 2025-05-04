@@ -24,25 +24,26 @@ Sys.set ("lineWidth", 78);
 > val it = () : unit
 
 scott;
-> val it = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
->   : {bonus:{comm:real, ename:string, job:string, sal:real} list,
->      dept:{deptno:int, dname:string, loc:string} list,
->      emp:
->          {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->           job:string, mgr:int, sal:real} list,
->      salgrade:{grade:int, hisal:real, losal:real} list}
-#dept scott;
+> val it =
+>   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
+>   : {bonuses:{comm:real, ename:string, job:string, sal:real} list,
+>      depts:{deptno:int, dname:string, loc:string} list,
+>      emps:
+>           {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>            job:string, mgr:int, sal:real} list,
+>      salgrades:{grade:int, hisal:real, losal:real} list}
+#depts scott;
 > val it = <relation> : {deptno:int, dname:string, loc:string} list
-scott.dept;
+scott.depts;
 > val it = <relation> : {deptno:int, dname:string, loc:string} list
-from d in scott.dept;
+from d in scott.depts;
 > val it =
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
 >    {deptno=20,dname="RESEARCH",loc="DALLAS"},
 >    {deptno=30,dname="SALES",loc="CHICAGO"},
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
 >   : {deptno:int, dname:string, loc:string} list
-from d in scott.dept yield {d.dname, d.loc};
+from d in scott.depts yield {d.dname, d.loc};
 > val it =
 >   [{dname="ACCOUNTING",loc="NEW YORK"},{dname="RESEARCH",loc="DALLAS"},
 >    {dname="SALES",loc="CHICAGO"},{dname="OPERATIONS",loc="BOSTON"}]
@@ -246,8 +247,8 @@ foodmart;
 #days foodmart;
 > val it = <relation> : {day:int, week_day:string} list
 
-from d in scott.dept
-where d.deptno elem (from e in scott.emp
+from d in scott.depts
+where d.deptno elem (from e in scott.emps
                      where e.job elem ["ANALYST", "PRESIDENT"]
                      yield e.deptno);
 > val it =
@@ -255,8 +256,8 @@ where d.deptno elem (from e in scott.emp
 >    {deptno=20,dname="RESEARCH",loc="DALLAS"}]
 >   : {deptno:int, dname:string, loc:string} list
 
-from d in scott.dept
-where d.deptno notelem (from e in scott.emp
+from d in scott.depts
+where d.deptno notelem (from e in scott.emps
                         where e.job notelem ["ANALYST", "PRESIDENT"]
                         yield e.deptno);
 > val it = [{deptno=40,dname="OPERATIONS",loc="BOSTON"}]
@@ -265,7 +266,7 @@ where d.deptno notelem (from e in scott.emp
 (*) Functions
 (*) Clerks get a 20% raise each year; everyone else gets 5%
 val emp2 =
-  from e in scott.emp
+  from e in scott.emps
   yield {e.deptno, e.job, e.ename,
     salIn = fn year => e.sal
        + e.sal

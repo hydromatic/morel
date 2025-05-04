@@ -3127,7 +3127,7 @@ Sys.plan ();
 > val it = "apply(fnValue Relational.empty, argCode tuple(constant(false)))"
 >   : string
 
-val emp = [
+val emps = [
   {empno=7839, ename="KING", mgr=0},
   {empno=7566, ename="JONES", mgr=7839},
   {empno=7698, ename="BLAKE", mgr=7839},
@@ -3142,7 +3142,7 @@ val emp = [
   {empno=7934, ename="MILLER", mgr=7782},
   {empno=7876, ename="ADAMS", mgr=7788},
   {empno=7369, ename="SMITH", mgr=7902}];
-> val emp =
+> val emps =
 >   [{empno=7839,ename="KING",mgr=0},{empno=7566,ename="JONES",mgr=7839},
 >    {empno=7698,ename="BLAKE",mgr=7839},{empno=7782,ename="CLARK",mgr=7839},
 >    {empno=7788,ename="SCOTT",mgr=7566},{empno=7902,ename="FORD",mgr=7566},
@@ -3152,10 +3152,10 @@ val emp = [
 >    {empno=7876,ename="ADAMS",mgr=7788},{empno=7369,ename="SMITH",mgr=7902}]
 >   : {empno:int, ename:string, mgr:int} list
 Relational.iterate
-  (from e in emp where e.mgr = 0)
+  (from e in emps where e.mgr = 0)
   fn (oldList, newList) =>
       (from d in newList,
-          e in emp
+          e in emps
       where e.mgr = d.empno
       yield e);
 > val it =
@@ -3337,7 +3337,7 @@ Sys.env ();
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
 >    ("ceil","real -> int"),("chr","int -> char"),
 >    ("concat","string list -> string"),("count","forall 'a. 'a list -> int"),
->    ("emp","{empno:int, ename:string, mgr:int} list"),
+>    ("emps","{empno:int, ename:string, mgr:int} list"),
 >    ("empty","forall 'a. 'a list -> bool"),
 >    ("env","unit -> (string * string) list"),("explode","string -> char list"),
 >    ("f","real -> int * int * int * int"),("false","bool"),("file","{...}"),
@@ -3403,7 +3403,7 @@ env ();
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
 >    ("ceil","real -> int"),("chr","int -> char"),
 >    ("concat","string list -> string"),("count","forall 'a. 'a list -> int"),
->    ("emp","{empno:int, ename:string, mgr:int} list"),
+>    ("emps","{empno:int, ename:string, mgr:int} list"),
 >    ("empty","forall 'a. 'a list -> bool"),
 >    ("env","unit -> (string * string) list"),("explode","string -> char list"),
 >    ("f","real -> int * int * int * int"),("false","bool"),("file","{...}"),

@@ -36,19 +36,20 @@ file;
 
 (*) A variable via which we can access relations.
 val s = file.scott;
-> val s = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
->   : {bonus:{...} list, dept:{...} list, emp:{...} list, salgrade:{...} list,
->      ...}
+> val s =
+>   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
+>   : {bonuses:{...} list, depts:{...} list, emps:{...} list,
+>      salgrades:{...} list, ...}
 
-(*) Access two relations (emp, dept) simultaneously via a variable (s).
-from d in s.dept
-  join e in s.emp on d.deptno = e.deptno
+(*) Access two relations (emps, depts) simultaneously via a variable (s).
+from d in s.depts
+  join e in s.emps on d.deptno = e.deptno
   group e.deptno compute count
   order deptno;
 > val it = [{count=3,deptno=10},{count=5,deptno=20},{count=6,deptno=30}]
 >   : {count:int, deptno:int} list
 
-file.scott.dept;
+file.scott.depts;
 > val it =
 >   [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
 >    {deptno=20,dname="RESEARCH",loc="DALLAS"},
@@ -56,50 +57,53 @@ file.scott.dept;
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
 >   : {deptno:int, dname:string, loc:string} list
 
-(*) Since dept is a list of records, we can query it.
-from d in file.scott.dept
+(*) Since depts is a list of records, we can query it.
+from d in file.scott.depts
  where d.dname elem ["ACCOUNTING", "SALES"]
  compute sum of d.deptno;
 > val it = 40 : int
 
-from d in file.scott.dept
-join e in file.scott.emp on d.deptno = e.deptno
+from d in file.scott.depts
+join e in file.scott.emps on d.deptno = e.deptno
 group e.deptno compute count
 order deptno;
 > val it = [{count=3,deptno=10},{count=5,deptno=20},{count=6,deptno=30}]
 >   : {count:int, deptno:int} list
 
-(*) Bonus is empty (except the line defining the fields).
+(*) Bonuses is empty (except the line defining the fields).
 val scott = file.scott;
 > val scott =
->   {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
->   : {bonus:{...} list, dept:{deptno:int, dname:string, loc:string} list,
->      emp:
->          {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->           job:string, mgrno:int, sal:real} list, salgrade:{...} list, ...}
-from b in scott.bonus;
+>   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
+>   : {bonuses:{...} list, depts:{deptno:int, dname:string, loc:string} list,
+>      emps:
+>           {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>            job:string, mgrno:int, sal:real} list, salgrades:{...} list, ...}
+from b in scott.bonuses;
 > val it = [] : {bonus:real, ename:string, job:string, sal:real} list
 
 (*) The type of 'file' has widened further.
 file;
 > val it =
->   {scott={bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>},
+>   {
+>    scott=
+>    {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>},
 >    wordle={answers=<relation>,words=<relation>}}
 >   : {
->      scott:{bonus:{bonus:real, ename:string, job:string, sal:real} list,
->             dept:{deptno:int, dname:string, loc:string} list,
->             emp:
->                 {comm:real, deptno:int, empno:int, ename:string,
->                  hiredate:string, job:string, mgrno:int, sal:real} list,
->             salgrade:{...} list, ...},
+>      scott:{bonuses:{bonus:real, ename:string, job:string, sal:real} list,
+>             depts:{deptno:int, dname:string, loc:string} list,
+>             emps:
+>                  {comm:real, deptno:int, empno:int, ename:string,
+>                   hiredate:string, job:string, mgrno:int, sal:real} list,
+>             salgrades:{...} list, ...},
 >      wordle:{answers:{...} list, words:{...} list, ...}, ...}
 
 file.scott;
-> val it = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
->   : {bonus:{bonus:real, ename:string, job:string, sal:real} list,
->      dept:{deptno:int, dname:string, loc:string} list,
->      emp:
->          {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->           job:string, mgrno:int, sal:real} list, salgrade:{...} list, ...}
+> val it =
+>   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
+>   : {bonuses:{bonus:real, ename:string, job:string, sal:real} list,
+>      depts:{deptno:int, dname:string, loc:string} list,
+>      emps:
+>           {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>            job:string, mgrno:int, sal:real} list, salgrades:{...} list, ...}
 
 (*) End file.smli

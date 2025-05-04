@@ -226,7 +226,7 @@ end;
 (*) Can we extend ML syntax to make it easier to write relational
 (*) algebra expressions? You bet!
 
-(*) Let's start by defining "emp" and "dept" relations as lists of
+(*) Let's start by defining "emps" and "depts" relations as lists of
 (*) records.
 val emps =
   [{id = 100, name = "Fred", deptno = 10},
@@ -683,12 +683,12 @@ from p in wordCount lines order p.word;
 
 (*) === Aggregate functions =========================================
 
-val emps = scott.emp;
+val emps = scott.emps;
 > val emps = <relation>
 >   :
 >     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
 >      job:string, mgr:int, sal:real} list
-val depts = scott.dept;
+val depts = scott.depts;
 > val depts = <relation> : {deptno:int, dname:string, loc:string} list
 
 from e in emps
@@ -1184,17 +1184,18 @@ foodmart;
 >                 warehouse_postal_code:string, warehouse_state_province:string} list,
 >      warehouse_class:{description:string, warehouse_class_id:int} list}
 scott;
-> val it = {bonus=<relation>,dept=<relation>,emp=<relation>,salgrade=<relation>}
->   : {bonus:{comm:real, ename:string, job:string, sal:real} list,
->      dept:{deptno:int, dname:string, loc:string} list,
->      emp:
->          {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->           job:string, mgr:int, sal:real} list,
->      salgrade:{grade:int, hisal:real, losal:real} list}
-scott.dept;
+> val it =
+>   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
+>   : {bonuses:{comm:real, ename:string, job:string, sal:real} list,
+>      depts:{deptno:int, dname:string, loc:string} list,
+>      emps:
+>           {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>            job:string, mgr:int, sal:real} list,
+>      salgrades:{grade:int, hisal:real, losal:real} list}
+scott.depts;
 > val it = <relation> : {deptno:int, dname:string, loc:string} list
-from d in scott.dept
-  where empty (from e in scott.emp
+from d in scott.depts
+  where empty (from e in scott.emps
     where e.deptno = d.deptno
     andalso e.job = "CLERK");
 > val it = [{deptno=40,dname="OPERATIONS",loc="BOSTON"}]
@@ -1203,8 +1204,8 @@ from d in scott.dept
 (*) Integration with Apache Calcite - relational algebra
 Sys.set ("hybrid", true);
 > val it = () : unit
-from d in scott.dept
-  where empty (from e in scott.emp
+from d in scott.depts
+  where empty (from e in scott.emps
     where e.deptno = d.deptno
     andalso e.job = "CLERK");
 > val it = [{deptno=40,dname="OPERATIONS",loc="BOSTON"}]

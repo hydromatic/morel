@@ -20,8 +20,8 @@ Sys.set ("printLength", 64);
 > val it = () : unit
 
 val scott = {
-  bonus = [] : {comm:real, ename:string, job:string, sal:real} list,
-  emp = [
+  bonuses = [] : {comm:real, ename:string, job:string, sal:real} list,
+  emps = [
     {comm = 0.0, deptno = 20, empno = 7369, ename = "SMITH", hiredate = "1980-12-16", job = "CLERK", mgr = 7902, sal = 800.0},
     {comm = 300.0, deptno = 30, empno = 7499, ename = "ALLEN", hiredate = "1981-02-19", job = "SALESMAN", mgr = 7698, sal = 1600.0},
     {comm = 500.0, deptno = 30, empno = 7521, ename = "WARD", hiredate = "1981-02-21", job = "SALESMAN", mgr = 7698, sal = 1250.0},
@@ -36,12 +36,12 @@ val scott = {
     {comm = 0.0, deptno = 30, empno = 7900, ename = "JAMES", hiredate = "1981-12-02", job = "CLERK", mgr = 7698, sal = 950.0},
     {comm = 0.0, deptno = 20, empno = 7902, ename = "FORD", hiredate = "1981-12-02", job = "ANALYST", mgr = 7566, sal = 3000.0},
     {comm = 0.0, deptno = 10, empno = 7934, ename = "MILLER", hiredate = "1982-01-22", job = "CLERK", mgr = 7782, sal = 1300.0}],
-  dept  =  [
+  depts  =  [
     {deptno = 10, dname = "ACCOUNTING", loc = "NEW YORK"},
     {deptno = 20, dname = "RESEARCH", loc = "DALLAS"},
     {deptno = 30, dname = "SALES", loc = "CHICAGO"},
     {deptno = 40, dname = "OPERATIONS", loc = "BOSTON"}],
-  salgrade  =  [
+  salgrades  =  [
     {grade = 1, hisal = 1200.0, losal = 700.0},
     {grade = 2, hisal = 1400.0, losal = 1201.0},
     {grade = 3, hisal = 2000.0, losal = 1401.0},
@@ -49,13 +49,13 @@ val scott = {
     {grade = 5, hisal = 9999.0, losal = 3001.0}]
 };
 > val scott =
->   {bonus=[],
->    dept=
+>   {bonuses=[],
+>    depts=
 >    [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
 >     {deptno=20,dname="RESEARCH",loc="DALLAS"},
 >     {deptno=30,dname="SALES",loc="CHICAGO"},
 >     {deptno=40,dname="OPERATIONS",loc="BOSTON"}],
->    emp=
+>    emps=
 >    [
 >     {comm=0.0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-16",
 >      job="CLERK",mgr=7902,sal=800.0},
@@ -85,15 +85,15 @@ val scott = {
 >      job="ANALYST",mgr=7566,sal=3000.0},
 >     {comm=0.0,deptno=10,empno=7934,ename="MILLER",hiredate="1982-01-22",
 >      job="CLERK",mgr=7782,sal=1300.0}],
->    salgrade=
+>    salgrades=
 >    [{grade=1,hisal=1200.0,losal=700.0},{grade=2,hisal=1400.0,losal=1201.0},
 >     {grade=3,hisal=2000.0,losal=1401.0},{grade=4,hisal=3000.0,losal=2001.0},
 >     {grade=5,hisal=9999.0,losal=3001.0}]}
->   : {bonus:{comm:real, ename:string, job:string, sal:real} list,
->      dept:{deptno:int, dname:string, loc:string} list,
->      emp:
->          {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->           job:string, mgr:int, sal:real} list,
->      salgrade:{grade:int, hisal:real, losal:real} list}
+>   : {bonuses:{comm:real, ename:string, job:string, sal:real} list,
+>      depts:{deptno:int, dname:string, loc:string} list,
+>      emps:
+>           {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>            job:string, mgr:int, sal:real} list,
+>      salgrades:{grade:int, hisal:real, losal:real} list}
 
 (*) End scott.smli
