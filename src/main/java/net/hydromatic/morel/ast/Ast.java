@@ -1684,7 +1684,9 @@ public class Ast {
     static @Nullable Exp implicitYieldExp(Pos pos, List<FromStep> steps) {
       if (!steps.isEmpty()) {
         final FromStep lastStep = getLast(steps);
-        if (lastStep.op == Op.YIELD || lastStep.op == Op.INTO) {
+        if (lastStep.op == Op.YIELD
+            || lastStep.op == Op.INTO
+            || lastStep.op == Op.COMPUTE) {
           // No implicit yield is needed; the last step is an explicit yield
           return null;
         }
