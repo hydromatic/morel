@@ -278,6 +278,18 @@ public class Shuttle {
     return ast.take(take.pos, take.exp.accept(this));
   }
 
+  protected AstNode visit(Ast.Except except) {
+    return except.copy(except.distinct, visitList(except.args));
+  }
+
+  protected AstNode visit(Ast.Intersect intersect) {
+    return intersect.copy(intersect.distinct, visitList(intersect.args));
+  }
+
+  protected AstNode visit(Ast.Union union) {
+    return union.copy(union.distinct, visitList(union.args));
+  }
+
   protected AstNode visit(Ast.Yield yield) {
     return ast.yield(yield.pos, yield.exp.accept(this));
   }
@@ -454,6 +466,19 @@ public class Shuttle {
 
   protected Core.Take visit(Core.Take take) {
     return take.copy(take.exp.accept(this), take.env);
+  }
+
+  protected Core.Except visit(Core.Except except) {
+    return except.copy(except.distinct, visitList(except.args), except.env);
+  }
+
+  protected Core.Intersect visit(Core.Intersect intersect) {
+    return intersect.copy(
+        intersect.distinct, visitList(intersect.args), intersect.env);
+  }
+
+  protected Core.Union visit(Core.Union union) {
+    return union.copy(union.distinct, visitList(union.args), union.env);
   }
 
   protected Core.Group visit(Core.Group group) {

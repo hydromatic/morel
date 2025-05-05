@@ -315,18 +315,6 @@ public enum AstBuilder {
     return infix(Op.COMPOSE, a0, a1);
   }
 
-  public Ast.Exp except(Ast.Exp a0, Ast.Exp a1) {
-    return infix(Op.EXCEPT, a0, a1);
-  }
-
-  public Ast.Exp intersect(Ast.Exp a0, Ast.Exp a1) {
-    return infix(Op.INTERSECT, a0, a1);
-  }
-
-  public Ast.Exp union(Ast.Exp a0, Ast.Exp a1) {
-    return infix(Op.UNION, a0, a1);
-  }
-
   public Ast.Exp negate(Pos p, Ast.Exp a) {
     return prefixCall(p, Op.NEGATE, a);
   }
@@ -541,6 +529,21 @@ public enum AstBuilder {
 
   public Ast.FromStep take(Pos pos, Ast.Exp exp) {
     return new Ast.Take(pos, exp);
+  }
+
+  public Ast.Except except(
+      Pos pos, boolean distinct, Iterable<? extends Ast.Exp> args) {
+    return new Ast.Except(pos, distinct, ImmutableList.copyOf(args));
+  }
+
+  public Ast.Intersect intersect(
+      Pos pos, boolean distinct, Iterable<? extends Ast.Exp> args) {
+    return new Ast.Intersect(pos, distinct, ImmutableList.copyOf(args));
+  }
+
+  public Ast.Union union(
+      Pos pos, boolean distinct, Iterable<? extends Ast.Exp> args) {
+    return new Ast.Union(pos, distinct, ImmutableList.copyOf(args));
   }
 
   public Ast.FromStep yield(Pos pos, Ast.Exp exp) {

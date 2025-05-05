@@ -427,14 +427,22 @@ void fromStep(List<FromStep> steps) :
   final Pat pat;
   final List<Aggregate> aggregates;
   final List<OrderItem> orderItems;
+  final List<Exp> exps;
+  final boolean distinct;
 }
 {
   <JOIN>
   fromScan(steps)
   ( <COMMA> fromScan(steps) )*
 |
-  <WHERE> { span = Span.of(pos()); } filterExp = expression() {
-    steps.add(ast.where(span.end(this), filterExp));
+  <DISTINCT> {
+    steps.add(ast.distinct(pos()));
+  }
+|
+  <EXCEPT> { span = Span.of(pos()); }
+  distinct = distinctOrFalse()
+  exps = expressionCommaList() {
+    steps.add(ast.except(span.end(this), distinct, exps));
   }
 |
   <GROUP> { span = Span.of(pos()); }
@@ -456,8 +464,10 @@ void fromStep(List<FromStep> steps) :
     steps.add(ast.compute(span.end(this), aggregates));
   }
 |
-  <DISTINCT> {
-    steps.add(ast.distinct(pos()));
+  <INTERSECT> { span = Span.of(pos()); }
+  distinct = distinctOrFalse()
+  exps = expressionCommaList() {
+    steps.add(ast.intersect(span.end(this), distinct, exps));
   }
 |
   <INTO> { span = Span.of(pos()); } intoExp = expression() {
@@ -483,6 +493,16 @@ void fromStep(List<FromStep> steps) :
   <THROUGH> { span = Span.of(pos()); }
   pat = pat() <IN> throughExp = expression() {
     steps.add(ast.through(span.end(this), pat, throughExp));
+  }
+|
+  <UNION> { span = Span.of(pos()); }
+  distinct = distinctOrFalse()
+  exps = expressionCommaList() {
+    steps.add(ast.union(span.end(this), distinct, exps));
+  }
+|
+  <WHERE> { span = Span.of(pos()); } filterExp = expression() {
+    steps.add(ast.where(span.end(this), filterExp));
   }
 |
   <YIELD> { span = Span.of(pos()); } yieldExp = expression() {
@@ -581,6 +601,14 @@ OrderItem orderItem() :
   )
 }
 
+/** Returns true if {@code distinct} is present, otherwise false. */
+boolean distinctOrFalse() : {}
+{
+  <DISTINCT> { return true; }
+|
+  { return false; }
+}
+
 /** Parses a "{@code fn arg => expression}" lambda expression. */
 Exp fn() :
 {
@@ -627,8 +655,8 @@ Match match() :
  * <ul>
  * <li>infix 9 {@code .}
  * <li>infix 8 (application)
- * <li>infix 7 {@code * / div mod intersect}
- * <li>infix 6 {@code + - ^ union except}
+ * <li>infix 7 {@code * / div mod}
+ * <li>infix 6 {@code + - ^}
  * <li>infixr 5 {@code :: @}
  * <li>infix 4 {@code = <> > >= < <=}
  * <li>infix 3 {@code := o}
@@ -690,10 +718,6 @@ Exp expression7() :
       e = ast.div(e, e2);
     }
   |
-    <INTERSECT> e2 = expression8() {
-      e = ast.intersect(e, e2);
-    }
-  |
     <MOD> e2 = expression8() {
       e = ast.mod(e, e2);
     }
@@ -701,7 +725,7 @@ Exp expression7() :
   { return e; }
 }
 
-/** Parses an expression of precedence level 6 (+, -, ^, except, union). */
+/** Parses an expression of precedence level 6 (+, -, ^). */
 Exp expression6() :
 {
   Exp e;
@@ -720,14 +744,6 @@ Exp expression6() :
   |
     <CARET> e2 = expression7() {
       e = ast.caret(e, e2);
-    }
-  |
-    <EXCEPT> e2 = expression7() {
-      e = ast.except(e, e2);
-    }
-  |
-    <UNION> e2 = expression7() {
-      e = ast.union(e, e2);
     }
   )*
   { return e; }
@@ -872,6 +888,19 @@ Exp expression() :
     }
   )*
   { return e; }
+}
+
+List<Exp> expressionCommaList() :
+{
+  final List<Exp> list = new ArrayList<>();
+  Exp e;
+}
+{
+  e = expression() { list.add(e); }
+  (
+    <COMMA> e = expression() { list.add(e); }
+  )*
+  { return list; }
 }
 
 /** List of expressions "e1 as id1, e2 as id2, e3 as id3". */

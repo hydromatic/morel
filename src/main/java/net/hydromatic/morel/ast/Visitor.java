@@ -220,6 +220,18 @@ public class Visitor {
     take.exp.accept(this);
   }
 
+  protected void visit(Ast.Except except) {
+    except.args.forEach(this::accept);
+  }
+
+  protected void visit(Ast.Intersect intersect) {
+    intersect.args.forEach(this::accept);
+  }
+
+  protected void visit(Ast.Union union) {
+    union.args.forEach(this::accept);
+  }
+
   protected void visit(Ast.Yield yield) {
     yield.exp.accept(this);
   }
@@ -352,6 +364,18 @@ public class Visitor {
 
   protected void visit(Core.Take take) {
     take.exp.accept(this);
+  }
+
+  protected void visit(Core.Except except) {
+    except.args.forEach(this::accept);
+  }
+
+  protected void visit(Core.Intersect intersect) {
+    intersect.args.forEach(this::accept);
+  }
+
+  protected void visit(Core.Union union) {
+    union.args.forEach(this::accept);
   }
 
   protected void visit(Core.NonRecValDecl valDecl) {

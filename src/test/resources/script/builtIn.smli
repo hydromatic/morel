@@ -65,29 +65,29 @@ Interact;
 >   : {use:string -> unit, useSilently:string -> unit}
 List;
 > val it =
->   {all=fn,app=fn,at=fn,collate=fn,concat=fn,drop=fn,exists=fn,filter=fn,
->    find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,last=fn,length=fn,map=fn,
->    mapPartial=fn,nil=[],nth=fn,null=fn,`op @`=fn,partition=fn,rev=fn,
->    revAppend=fn,tabulate=fn,take=fn,tl=fn}
+>   {all=fn,app=fn,at=fn,collate=fn,concat=fn,drop=fn,except=fn,exists=fn,
+>    filter=fn,find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,intersect=fn,last=fn,
+>    length=fn,map=fn,mapPartial=fn,nil=[],nth=fn,null=fn,`op @`=fn,partition=fn,
+>    rev=fn,revAppend=fn,tabulate=fn,take=fn,tl=fn}
 >   : {all:('a -> bool) -> 'a list -> bool, app:('b -> unit) -> 'b list -> unit,
 >      at:'c list * 'c list -> 'c list,
 >      collate:('d * 'd -> order) -> 'd list * 'd list -> order,
 >      concat:'e list list -> 'e list, drop:'f list * int -> 'f list,
->      exists:('g -> bool) -> 'g list -> bool,
->      filter:('h -> bool) -> 'h list -> 'h list,
->      find:('i -> bool) -> 'i list -> 'i option,
->      foldl:('j * 'k -> 'k) -> 'k -> 'j list -> 'k,
->      foldr:('l * 'm -> 'm) -> 'm -> 'l list -> 'm,
->      getItem:'n list -> ('n * 'n list) option, hd:'o list -> 'o,
->      last:'p list -> 'p, length:'q list -> int,
->      map:('r -> 's) -> 'r list -> 's list,
->      mapPartial:('t -> 'u option) -> 't list -> 'u list, nil:'v list,
->      nth:'w list * int -> 'w, null:'x list -> bool,
->      `op @`:'y list * 'y list -> 'y list,
->      partition:('z -> bool) -> 'z list -> 'z list * 'z list,
->      rev:'ba list -> 'ba list, revAppend:'bb list * 'bb list -> 'bb list,
->      tabulate:int * (int -> 'bc) -> 'bc list, take:'bd list * int -> 'bd list,
->      tl:'be list -> 'be list}
+>      except:'g list list -> 'g list, exists:('h -> bool) -> 'h list -> bool,
+>      filter:('i -> bool) -> 'i list -> 'i list,
+>      find:('j -> bool) -> 'j list -> 'j option,
+>      foldl:('k * 'l -> 'l) -> 'l -> 'k list -> 'l,
+>      foldr:('m * 'n -> 'n) -> 'n -> 'm list -> 'n,
+>      getItem:'o list -> ('o * 'o list) option, hd:'p list -> 'p,
+>      intersect:'q list list -> 'q list, last:'r list -> 'r,
+>      length:'s list -> int, map:('t -> 'u) -> 't list -> 'u list,
+>      mapPartial:('v -> 'w option) -> 'v list -> 'w list, nil:'x list,
+>      nth:'y list * int -> 'y, null:'z list -> bool,
+>      `op @`:'ba list * 'ba list -> 'ba list,
+>      partition:('bb -> bool) -> 'bb list -> 'bb list * 'bb list,
+>      rev:'bc list -> 'bc list, revAppend:'bd list * 'bd list -> 'bd list,
+>      tabulate:int * (int -> 'be) -> 'be list, take:'bf list * int -> 'bf list,
+>      tl:'bg list -> 'bg list}
 List.rev;
 > val it = fn : 'a list -> 'a list
 List.rev [1,2,3];
@@ -3218,47 +3218,47 @@ Relational.only [];
 Sys.plan ();
 > val it = "apply(fnValue Relational.only, argCode tuple)" : string
 
-[1, 2] union [3] union [] union [4, 2, 5];
+List.concat [[1, 2], [3], [], [4, 2, 5]];
 > val it = [1,2,3,4,2,5] : int list
-[] union [];
+List.concat [[], []];
 > val it = [] : 'a list
 Sys.plan ();
-> val it = "apply2(fnValue union, tuple, tuple)" : string
+> val it = "apply(fnValue List.concat, argCode tuple(tuple, tuple))" : string
 
-[1, 2] except [2] except [3] except [];
+List.`except` [[1, 2], [2], [3], []];
 > val it = [1] : int list
-[] except [];
+List.`except` [[], []];
 > val it = [] : 'a list
-["a"] except ["a"];
+List.`except` [["a"], ["a"]];
 > val it = [] : string list
-["a", "b", "c", "a"] except ["a"];
+List.`except` [["a", "b", "c", "a"], ["a"]];
 > val it = ["b","c"] : string list
-["a", "b", "c", "a"] except ["c", "b", "c"];
+List.`except` [["a", "b", "c", "a"], ["c", "b", "c"]];
 > val it = ["a","a"] : string list
-["a", "b"] except ["a", "c"] except ["a"];
+List.`except` [["a", "b"], ["a", "c"], ["a"]];
 > val it = ["b"] : string list
 Sys.plan ();
 > val it =
->   "apply2(fnValue except, apply2(fnValue except, tuple(constant(a), constant(b)), tuple(constant(a), constant(c))), tuple(constant(a)))"
+>   "apply(fnValue List.except, argCode tuple(tuple(constant(a), constant(b)), tuple(constant(a), constant(c)), tuple(constant(a))))"
 >   : string
 
-[1, 2] intersect [2] intersect [0, 2, 4];
+List.`intersect` [[1, 2], [2], [0, 2, 4]];
 > val it = [2] : int list
-[1, 2] intersect [];
+List.`intersect` [[1, 2], []];
 > val it = [] : int list
-[] intersect [1, 2];
+List.`intersect` [[], [1, 2]];
 > val it = [] : int list
-["a", "b", "a"] intersect ["b", "a"];
+List.`intersect` [["a", "b", "a"], ["b", "a"]];
 > val it = ["a","b","a"] : string list
-[(1, 2), (2, 3)] intersect [(2, 4), (1, 2)];
+List.`intersect` [[(1, 2), (2, 3)], [(2, 4), (1, 2)]];
 > val it = [(1,2)] : (int * int) list
-[1, 2, 3] intersect [2, 3, 4] except [1, 3, 5];
+List.`except` [List.`intersect` [[1, 2, 3], [2, 3, 4]], [1, 3, 5]];
 > val it = [2] : int list
-[1, 2, 3] except [1, 3, 5] intersect [2, 3, 4];
+List.`except` [[1, 2, 3], List.`intersect` [[1, 3, 5], [2, 3, 4]]];
 > val it = [1,2] : int list
 Sys.plan ();
 > val it =
->   "apply2(fnValue except, tuple(constant(1), constant(2), constant(3)), apply2(fnValue intersect, tuple(constant(1), constant(3), constant(5)), tuple(constant(2), constant(3), constant(4))))"
+>   "apply(fnValue List.except, argCode tuple(tuple(constant(1), constant(2), constant(3)), apply(fnValue List.except, argCode tuple(tuple(constant(1), constant(3), constant(5)), tuple(constant(2), constant(3), constant(4))))))"
 >   : string
 
 1 elem [1, 2, 3];
@@ -3317,7 +3317,7 @@ Sys.env ();
 >    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
 >    ("LESS","order"),
 >    ("List",
->     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, `op @`:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+>     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, except:forall 'a. 'a list list -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, intersect:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, `op @`:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
 >    ("Math",
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
 >    ("NONE","'a option"),
@@ -3383,7 +3383,7 @@ env ();
 >    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
 >    ("LESS","order"),
 >    ("List",
->     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, `op @`:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+>     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, except:forall 'a. 'a list list -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, intersect:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, `op @`:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
 >    ("Math",
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
 >    ("NONE","'a option"),

@@ -100,19 +100,24 @@ The formal syntax of queries is as follows.
     | <i>pat</i> <b>=</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]      single iteration
     | <i>var</i>                       unbounded variable
 
-<i>step</i> &rarr; <b>join</b> <i>scan<sub>1</sub></i> [ <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ]
-                                join clause
-    | <b>where</b> <i>exp</i>                 filter clause
-    | <b>distinct</b>                  distinct clause
+<i>step</i> &rarr; <b>distinct</b>                 distinct step
+    | <b>except</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>e</sub></i>
+                                except step (<i>e</i> &ge; 1)
     | <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
       [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]
-                                group clause (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
+                                group step (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
+    | <b>intersect</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>i</sub></i>
+                                intersect step (<i>i</i> &ge; 1)
+    | <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>  join step (<i>s</i> &ge; 1)
     | <b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>
-                                order clause (<i>o</i> &ge; 1)
-    | <b>skip</b> <i>exp</i>                  skip clause
-    | <b>take</b> <i>exp</i>                  take clause
-    | <b>through</b> <i>pat</i> <b>in</b> <i>exp</i>        through clause
-    | <b>yield</b> <i>exp</i>                 yield clause
+                                order step (<i>o</i> &ge; 1)
+    | <b>skip</b> <i>exp</i>                  skip step
+    | <b>take</b> <i>exp</i>                  take step
+    | <b>through</b> <i>pat</i> <b>in</b> <i>exp</i>        through step
+    | <b>union</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>u</sub></i>
+                                union step (<i>u</i> &ge; 1)
+    | <b>where</b> <i>exp</i>                 filter step
+    | <b>yield</b> <i>exp</i>                 yield step
 
 <i>terminalStep</i> &rarr; <b>into</b> <i>exp</i>         into clause
     | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>  compute clause (<i>a</i> &gt; 1)
@@ -395,17 +400,20 @@ types and how they map input fields to output fields.
 
 ### Step list
 
-| Name                    | Summary                                                                                                              |
-|-------------------------|----------------------------------------------------------------------------------------------------------------------|
-| [`distinct`](#distinct) | Removes duplicate rows from the current collection.                                                                  |
-| [`group`](#group)       | Performs aggregation across groups of rows.                                                                          |
-| [`join`](#join)         | Joins one or more scans to the current collection.                                                                   |
-| [`order`](#order)       | Sorts the current collection by a list of expressions.                                                               |
-| [`skip`](#skip)         | Skips a given number of rows from the current collection.                                                            |
-| [`take`](#take)         | Limits the number of rows to return from the current collection.                                                     |
-| [`through`](#through)   | Calls a table function, with the current collection as an argument, and starts a scan over the collection it returns. |
-| [`where`](#where)       | Emits rows of the current collection for which a given predicate evaluates to `true`.                                |
-| [`yield`](#yield)       | For each row in the current collection, evaluates an expression and emits it as a row.                               |
+| Name                           | Summary                                                                                                               |
+|--------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| [`distinct`](#distinct-step)   | Removes duplicate rows from the current collection.                                                                   |
+| [`except`](#except-step)       | Returns the set (or multiset) difference between the current collection and one or more argument collections.         |
+| [`group`](#group-step)         | Performs aggregation across groups of rows.                                                                           |
+| [`intersect`](#intersect-step) | Returns the set (or multiset) intersection between the current collection and one or more argument collections.       |
+| [`join`](#join-step)           | Joins one or more scans to the current collection.                                                                    |
+| [`order`](#order-step)         | Sorts the current collection by a list of expressions.                                                                |
+| [`skip`](#skip-step)           | Skips a given number of rows from the current collection.                                                             |
+| [`take`](#take-step)           | Limits the number of rows to return from the current collection.                                                      |
+| [`through`](#through-step)     | Calls a table function, with the current collection as an argument, and starts a scan over the collection it returns. |
+| [`union`](#union-step)         | Returns the set (or multiset) union between the current collection and one or more argument collections.              |
+| [`where`](#where-step)         | Emits rows of the current collection for which a given predicate evaluates to `true`.                                 |
+| [`yield`](#yield-step)         | For each row in the current collection, evaluates an expression and emits it as a row.                                |
 
 The following steps produce a single scalar or record value. Because
 the output is not a collection, no further steps are possible, and
@@ -416,11 +424,11 @@ It can be unwieldy to use a query in an expression such as `if` or
 step, and `forall` and `exists` queries, are easy to embed in an
 expression.
 
-| Name                  | Summary                                                 |
-|-----------------------|---------------------------------------------------------|
-| [`compute`](#compute) | Applies aggregate functions to the current collection.  |
-| [`into`](#into)       | Applies a function to the current collection.           |
-| [`require`](#require) | Evaluates the predicate of a [`forall`](#forall) query. |
+| Name                       | Summary                                                       |
+|----------------------------|---------------------------------------------------------------|
+| [`compute`](#compute-step) | Applies aggregate functions to the current collection.        |
+| [`into`](#into-step)       | Applies a function to the current collection.                 |
+| [`require`](#require-step) | Evaluates the predicate of a [`forall`](#forall-query) query. |
 
 ### Distinct step
 
@@ -444,6 +452,63 @@ The output fields are the same as the input fields.
   <b>distinct</b>;
 
 <i>val it = [2,3,4,5,6,7,8,9,10,11,12] : int list</i>
+</pre>
+
+### Except step
+
+<pre>
+<b>except</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>e</sub></i>   (<i>e</i> &ge; 1)
+</pre>
+
+#### Description
+
+Returns the set (or multiset) difference between the current
+collection and one or more argument collections.
+
+The `except` step returns the distinct elements from the input
+collection that are not present in any of the arguments (the
+collections resulting from evaluating the <code>exp<sub>i</sub></code>
+expressions).
+
+With the `distinct` keyword, the `except` step returns the elements
+from the input collection that are not present in any of the argument
+collections.  If an element occurs *x* times in the input collection
+and a total of *y* times in the argument collections, the step emits the
+element *x - y* times. If *y* is greater than *x*, the element is not
+emitted.
+
+`except` is equivalent to SQL `EXCEPT ALL`; `except distinct` is
+equivalent to SQL `EXCEPT` or `EXCEPT DISTINCT`. (Some SQL dialects
+use `MINUS` rather than `EXCEPT`.)
+
+The output fields are the same as the input fields.
+
+#### Example
+
+<pre>
+<i>(* Which job titles exist in department 10 but not in
+   department 20 or 30? *)</i>
+<b>from</b> e <b>in</b> scott.emps
+  <b>where</b> e.deptno = 10
+  <b>yield</b> e.job
+  <b>except distinct</b>
+    (<b>from</b> e <b>in</b> scott.emps
+      <b>where</b> e.deptno = 20
+      <b>yield</b> e.job),
+    (<b>from</b> e <b>in</b> scott.emps
+      <b>where</b> e.deptno = 30
+      <b>yield</b> e.job);
+
+<i>val it = ["PRESIDENT"] : string list</i>
+</pre>
+
+<pre>
+<i>(* I have two sodas and three candies and give my friend
+   one soda and two candies. What do I have left? *)</i>
+<b>from</b> i <b>in</b> ["candy", "soda", "soda", "candy", "candy"]
+  <b>except</b> ["soda", "candy"];
+
+<i>val it = ["candy","candy","soda"] : string list</i>
 </pre>
 
 ### Group step
@@ -501,6 +566,65 @@ deptno count  avgSal
     30     6 1566.67
 
 val it : {deptno:int, count:int, avgSal:real} list</i>
+</pre>
+
+### Intersect step
+
+<pre>
+<b>intersect</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>i</sub></i>   (<i>i</i> &ge; 1)
+</pre>
+
+#### Description
+
+Returns the set (or multiset) intersection between the current
+collection and one or more argument collections.
+
+The `intersect` step returns the distinct elements that are present in
+the input collection and all argument collections (the collections
+resulting from evaluating the <code>exp<sub>i</sub></code>
+expressions).
+
+With the `distinct` keyword, the `intersect` emits an element if it
+occurs in the input and all argument collections, and may emit it
+multiple times.  If an element occurs *x* times in the input
+collection, <code>y<sub>1</sub></code> times in argument collection 1,
+<code>y<sub>2</sub></code> times in argument collection 2, and so
+forth, the step will emit it *z* times, where *z* is
+<code>min(<i>x</i>, <i>y<sub>1</sub></i>, ..., <i>y<sub>i</sub></i>)</code>.
+
+`intersect` is equivalent to SQL `INTERSECT ALL`; `intersect distinct`
+is equivalent to SQL `INTERSECT` or `INTERSECT DISTINCT`.
+
+The output fields are the same as the input fields.
+
+#### Example
+
+<pre>
+<i>(* Which job titles exist in department 10 and also in
+   departments 20 and 30? *)</i>
+<b>from</b> e <b>in</b> scott.emps
+  <b>where</b> e.deptno = 10
+  <b>yield</b> e.job
+  <b>intersect distinct</b>
+    (<b>from</b> e <b>in</b> scott.emps
+      <b>where</b> e.deptno = 20
+      <b>yield</b> e.job),
+    (<b>from</b> e <b>in</b> scott.emps
+      <b>where</b> e.deptno = 30
+      <b>yield</b> e.job);
+
+<i>val it = ["CLERK","MANAGER"] : string list</i>
+</pre>
+
+<pre>
+<i>(* I have two sodas and three candies, and my friend
+   has one soda, one donut, and four candies. What do we
+   have in common? *)</i>
+<b>from</b> i <b>in</b> ["candy", "soda", "soda", "candy", "candy"]
+  <b>intersect</b> <b>distinct</b> ["soda", "donut", "candy",
+                      "donut", "candy", "candy"];
+
+<i>val it = ["candy","candy","candy","soda"] : string list</i>
 </pre>
 
 ### Join step
@@ -734,6 +858,66 @@ val it : {j:int} list</i>
 
 Calls a table function, with the current collection as an argument,
 and starts a scan over the collection it returns.
+
+### Union step
+
+<pre>
+<b>union</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>i</sub></i>   (<i>i</i> &ge; 1)
+</pre>
+
+#### Description
+
+Returns the set (or multiset) union between the current
+collection and one or more argument collections.
+
+The `union` step returns the distinct elements that are present in
+the input collection or any of the argument collections (the collections
+resulting from evaluating the <code>exp<sub>u</sub></code>
+expressions).
+
+With the `distinct` keyword, the `union` step may emit an element
+multiple times.  If an element occurs *x* times in the input
+collection, <code>y<sub>1</sub></code> times in argument collection 1,
+<code>y<sub>2</sub></code> times in argument collection 2, and so
+forth, the step will emit it *z* times, where *z* is
+<code><i>x</i> + <i>y<sub>1</sub></i> + ... + <i>y<sub>u</sub></i>)</code>.
+
+`union` is equivalent to SQL `UNION ALL`; `union distinct`
+is equivalent to SQL `UNION` or `UNION DISTINCT`.
+
+The output fields are the same as the input fields.
+
+#### Example
+
+<pre>
+<i>(* Which job titles exist in departments 10, 20 and 30? *)</i>
+<b>from</b> e <b>in</b> scott.emps
+  <b>where</b> e.deptno = 10
+  <b>yield</b> e.job
+  <b>union distinct</b>
+    (<b>from</b> e <b>in</b> scott.emps
+      <b>where</b> e.deptno = 20
+      <b>yield</b> e.job),
+    (<b>from</b> e <b>in</b> scott.emps
+      <b>where</b> e.deptno = 30
+      <b>yield</b> e.job);
+
+<i>val it =
+  ["MANAGER","PRESIDENT","CLERK","ANALYST","SALESMAN"]
+  : string list</i>
+</pre>
+
+<pre>
+<i>(* I have two sodas and three candies, and my friend has
+   one soda and one candy. What do we have if we combine
+   our stashes? *)</i>
+<b>from</b> i <b>in</b> ["candy", "soda", "soda", "candy", "candy"]
+  <b>union</b> ["soda", "candy"];
+
+<i>val it =
+  ["candy","soda","soda","candy","candy","soda","candy"]
+  : string list</i>
+</pre>
 
 ### Where step
 
@@ -1051,10 +1235,10 @@ Many of the keywords in a SQL query have an equivalent in Morel.
 | `ORDER BY`  | `order`     | Morel `order` is equivalent to SQL `ORDER BY`.                                                                                                                                                                         |
 | `LIMIT`     | `take`      | Morel `take` is equivalent to SQL `LIMIT`.                                                                                                                                                                             |
 | `OFFSET`    | `skip`      | Morel `skip` is equivalent to SQL `OFFSET`.                                                                                                                                                                            |
-| `UNION`     | `union`     | Morel `union` is equivalent to SQL `UNION ALL`.                                                                                                                                                                        |
-| `INTERSECT` | `intersect` | Morel `intersect` is equivalent to SQL `INTERSECT ALL`.                                                                                                                                                                |
-| `EXCEPT`    | `except`    | Morel `except` is equivalent to SQL `EXCEPT ALL` (or `MINUS ALL` in some SQL dialects).                                                                                                                                |
-| `EXISTS`    | `exists`    | SQL `EXISTS` is unary operator whose operand is a query, but Morel `exists` is a query that returns `true` if the query has at least one row.                                                                          |
+| `UNION`     | `union`     | Morel `union` is equivalent to SQL `UNION ALL`; `union distinct` is equivalent to `UNION`.                                                                                                                             |
+| `INTERSECT` | `intersect` | Morel `intersect` is equivalent to SQL `INTERSECT ALL`; `intersect distinct` is equivalent to `INTERSECT`.                                                                                                             |
+| `EXCEPT`    | `except`    | Morel `except` is equivalent to SQL `EXCEPT ALL`; `except distinct` is equivalent to `EXCEPT`. (Some dialects use `MINUS` rather than `EXCEPT`.)                                                                       |
+| `EXISTS`    | `exists`    | SQL `EXISTS` is a unary operator whose operand is a query, but Morel `exists` is a query that returns `true` if the query has at least one row.                                                                        |
 | -           | `forall`    | Morel `forall` is a query that returns `true` if a predicate is true for all rows.                                                                                                                                     |
 | `IN`        | `elem`      | SQL `IN` is a binary operator whose right operand is either a query or a list (but not an array or multiset); Morel `elem` is the equivalent operator, and its right operand can be any collection, including a query. |
 | `NOT IN`    | `notelem`   | Morel `notelem` is equivalent to SQL `NOT IN`, but without SQL's confusing [NULL-value semantics](https://community.snowflake.com/s/article/Behaviour-of-NOT-IN-with-NULL-values).                                     |

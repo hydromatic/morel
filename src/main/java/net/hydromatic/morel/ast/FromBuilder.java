@@ -258,6 +258,18 @@ public class FromBuilder {
     return addStep(core.take(stepEnv(), count));
   }
 
+  public FromBuilder except(boolean distinct, List<Core.Exp> args) {
+    return addStep(core.except(stepEnv(), distinct, args));
+  }
+
+  public FromBuilder intersect(boolean distinct, List<Core.Exp> args) {
+    return addStep(core.intersect(stepEnv(), distinct, args));
+  }
+
+  public FromBuilder union(boolean distinct, List<Core.Exp> args) {
+    return addStep(core.union(stepEnv(), distinct, args));
+  }
+
   public FromBuilder distinct() {
     // Do not call group(); it never creates atomic rows, but distinct() needs
     // to propagate row type.
@@ -437,8 +449,18 @@ public class FromBuilder {
   /** Calls the method to re-register a step. */
   private class StepHandler extends Visitor {
     @Override
+    protected void visit(Core.Except except) {
+      except(except.distinct, except.args);
+    }
+
+    @Override
     protected void visit(Core.Group group) {
       group(group.groupExps, group.aggregates);
+    }
+
+    @Override
+    protected void visit(Core.Intersect intersect) {
+      intersect(intersect.distinct, intersect.args);
     }
 
     @Override
@@ -464,6 +486,11 @@ public class FromBuilder {
     @Override
     protected void visit(Core.Take take) {
       take(take.exp);
+    }
+
+    @Override
+    protected void visit(Core.Union union) {
+      union(union.distinct, union.args);
     }
 
     @Override

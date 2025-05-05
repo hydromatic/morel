@@ -87,7 +87,7 @@ syms "el" "hello";
 
 (* Similarly, regex alternation "r1 | r2" is accomplished by unioning all
    matches of each: *)
-fun alt r1 r2 s = (r1 s) union (r2 s);
+fun alt r1 r2 s = from i in (r1 s) union (r2 s);
 > val alt = fn : ('a -> 'b list) -> ('a -> 'b list) -> 'a -> 'b list
 (*) match "e" or "o" in "hello"
 val matches = alt (sym #"e") (sym #"o") "hello";
@@ -112,7 +112,7 @@ trans [(1, 2), (4, 6), (2, 5), (2, 3)];
    "r", then "r*" matches its reflexive, transitive closure. This can be
    accomplished by combining "epsilon" and "trans". *)
 fun star r s =
-    (epsilon s) union (trans (r s));
+    from i in (epsilon s) union (trans (r s));
 > val star = fn : (string -> (int * int) list) -> string -> (int * int) list
 val matches = star (sym #"l") "hello";
 > val matches = [(0,0),(1,1),(2,2),(3,3),(4,4),(5,5),(2,3),(3,4),(2,4)]
@@ -192,7 +192,7 @@ matchStringsPos r "hello";
 > val it = [(3,"lo")] : (int * string) list
 
 (* Regex alternation "alt" is effectively unchanged: *)
-fun altPos r1 r2 x = (r1 x) union (r2 x);
+fun altPos r1 r2 x = from i in (r1 x) union (r2 x);
 > val altPos = fn : ('a -> 'b list) -> ('a -> 'b list) -> 'a -> 'b list
 val r = altPos (symPos #"e") (symPos #"o");
 > val r = fn : string * int -> int list

@@ -191,21 +191,26 @@ In Standard ML but not in Morel:
 <i>scan</i> &rarr; <i>pat</i> <b>in</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]    iteration
     | <i>pat</i> <b>=</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]      single iteration
     | <i>var</i>                       unbounded variable
-<i>step</i> &rarr; <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>
-                                join clause (<i>s</i> &ge; 1)
-    | <b>where</b> <i>exp</i>                 filter clause
-    | <b>distinct</b>                  distinct clause
+<i>step</i> &rarr; <b>distinct</b>                 distinct step
+    | <b>except</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>e</sub></i>
+                                except step (<i>e</i> &ge; 1)
     | <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
       [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]
-                                group clause (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
+                                group step (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
+    | <b>intersect</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>i</sub></i>
+                                intersect step (<i>i</i> &ge; 1)
+    | <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>  join step (<i>s</i> &ge; 1)
     | <b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>
-                                order clause (<i>o</i> &ge; 1)
-    | <b>skip</b> <i>exp</i>                  skip clause
-    | <b>take</b> <i>exp</i>                  take clause
-    | <b>through</b> <i>pat</i> <b>in</b> <i>exp</i>        through clause
-    | <b>yield</b> <i>exp</i>                 yield clause
-<i>terminalStep</i> &rarr; <b>into</b> <i>exp</i>         into clause
-    | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>  compute clause (<i>a</i> &ge; 1)
+                                order step (<i>o</i> &ge; 1)
+    | <b>skip</b> <i>exp</i>                  skip step
+    | <b>take</b> <i>exp</i>                  take step
+    | <b>through</b> <i>pat</i> <b>in</b> <i>exp</i>        through step
+    | <b>union</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>u</sub></i>
+                                union step (<i>u</i> &ge; 1)
+    | <b>where</b> <i>exp</i>                 filter step
+    | <b>yield</b> <i>exp</i>                 yield step
+<i>terminalStep</i> &rarr; <b>into</b> <i>exp</i>         into step
+    | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>  compute step (<i>a</i> &ge; 1)
 <i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>
 <i>agg</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i> [ <b>of</b> <i>exp</i> ]
 <i>orderItem</i> &rarr; <i>exp</i> [ <b>desc</b> ]
@@ -295,12 +300,9 @@ This grammar uses the following notation:
 | /        |    infix 7 | Division |
 | div      |    infix 7 | Integer division |
 | mod      |    infix 7 | Modulo |
-| intersect |   infix 7 | List intersect |
 | +        |    infix 6 | Plus |
 | -        |    infix 6 | Minus |
 | ^        |    infix 6 | String concatenate |
-| union    |    infix 6 | List union |
-| except   |    infix 6 | List difference |
 | ~        |   prefix 6 | Negate |
 | ::       |   infixr 5 | List cons |
 | @        |   infixr 5 | List append |
@@ -331,10 +333,17 @@ Eqtype:
 * `eqtype 'a vector = 'a vector` (in structure `Vector`)
 
 Exception:
+* `Bind` (in structure `General`)
+* `Chr` (in structure `General`)
+* `Div` (in structure `General`)
+* `Domain` (in structure `General`)
 * `Empty` (in structure `List`)
+* `Error` (in structure `Interact`)
 * `Option` (in structure `Option`)
+* `Overflow` (in structure `Option`)
 * `Size` (in structure `General`)
 * `Subscript` (in structure `General`)
+* `Unordered` (in structure `IEEEReal`)
 
 ## Built-in functions
 
@@ -418,6 +427,8 @@ Exception:
 | List.drop | &alpha; list * int &rarr; &alpha; list | "drop (l, i)" returns what is left after dropping the first `i` elements of the list `l`. Raises `Subscript` if `i` &lt; 0 or `i` &gt; `length l`.<br><br>It holds that `take(l, i) @ drop(l, i)` = `l` when 0 &le; `i` &le; `length l`. We also have `drop(l, length l)` = `[]`. |
 | List.rev | &alpha; list &rarr; &alpha; list | "rev l" returns a list consisting of `l`'s elements in reverse order. |
 | List.concat | &alpha; list list &rarr; &alpha; list | "concat l" returns the list that is the concatenation of all the lists in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln` |
+| List.except | &alpha; list list &rarr; &alpha; list | "except l" returns the list that is the concatenation of all the lists in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln` |
+| List.intersect | &alpha; list list &rarr; &alpha; list | "intersect l" returns the list that is the concatenation of all the lists in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln` |
 | List.revAppend | &alpha; list * &alpha; list &rarr; &alpha; list | "revAppend (l1, l2)" returns `(rev l1) @ l2`. |
 | List.app | (&alpha; &rarr; unit) &rarr; &alpha; list &rarr; unit | "app f l" applies `f` to the elements of `l`, from left to right. |
 | List.map | (&alpha; &rarr; &beta;) &rarr; &alpha; list &rarr; &beta; list | "map f l" applies `f` to each element of `l` from left to right, returning the list of results. |

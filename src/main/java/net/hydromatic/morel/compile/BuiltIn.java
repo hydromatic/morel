@@ -70,54 +70,6 @@ public enum BuiltIn {
   OP_CARET(null, "op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
 
   /**
-   * Infix operator "except", of type "&alpha; list * &alpha; list &rarr;
-   * &alpha; list".
-   */
-  OP_EXCEPT(
-      null,
-      "op except",
-      ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      ts.tupleType(
-                          ts.listType(h.get(0)), ts.listType(h.get(0))),
-                      ts.listType(h.get(0))))),
-
-  /**
-   * Infix operator "intersect", of type "&alpha; list * &alpha; list &rarr;
-   * &alpha; list".
-   */
-  OP_INTERSECT(
-      null,
-      "op intersect",
-      ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      ts.tupleType(
-                          ts.listType(h.get(0)), ts.listType(h.get(0))),
-                      ts.listType(h.get(0))))),
-
-  /**
-   * Infix operator "union", of type "&alpha; list * &alpha; list &rarr; &alpha;
-   * list".
-   */
-  OP_UNION(
-      null,
-      "op union",
-      ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      ts.tupleType(
-                          ts.listType(h.get(0)), ts.listType(h.get(0))),
-                      ts.listType(h.get(0))))),
-
-  /**
    * Infix operator "::" (list cons), of type "&alpha; * &alpha; list &rarr;
    * &alpha; list".
    */
@@ -1104,6 +1056,31 @@ public enum BuiltIn {
   LIST_CONCAT(
       "List",
       "concat",
+      ts ->
+          ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
+
+  /**
+   * Function "List.except", of type "&alpha; list list &rarr; &alpha; list".
+   *
+   * <p>"except l" returns the list that is the first list in {@code l} minus
+   * the second and all subsequent lists. It raises {@link BuiltInExn#EMPTY
+   * Empty} if {@code l} is empty.
+   */
+  LIST_EXCEPT(
+      "List",
+      "except",
+      ts ->
+          ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
+
+  /**
+   * Function "List.intersect", of type "&alpha; list list &rarr; &alpha; list".
+   *
+   * <p>"intersect l" returns the list that is the intersection of all lists in
+   * l. It raises {@link BuiltInExn#EMPTY Empty} if {@code l} is empty.
+   */
+  LIST_INTERSECT(
+      "List",
+      "intersect",
       ts ->
           ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
 

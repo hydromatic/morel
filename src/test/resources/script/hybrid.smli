@@ -239,7 +239,7 @@ let
     if null newDescendants then
       descendants
     else
-      descendants2 (descendants union newDescendants)
+      descendants2 (from d in descendants union newDescendants)
           (from d in newDescendants,
               e in scott.emps
             where e.mgr = d.e.empno

@@ -811,14 +811,11 @@ public class Resolver {
         BuiltIn.LIST_OP_AT, Op.AT,
         BuiltIn.OP_CONS, Op.CONS,
         BuiltIn.OP_EQ, Op.EQ,
-        BuiltIn.OP_EXCEPT, Op.EXCEPT,
         BuiltIn.OP_GE, Op.GE,
         BuiltIn.OP_GT, Op.GT,
-        BuiltIn.OP_INTERSECT, Op.INTERSECT,
         BuiltIn.OP_LE, Op.LE,
         BuiltIn.OP_LT, Op.LT,
         BuiltIn.OP_NE, Op.NE,
-        BuiltIn.OP_UNION, Op.UNION,
         BuiltIn.Z_ANDALSO, Op.ANDALSO,
         BuiltIn.Z_ORELSE, Op.ORELSE,
         BuiltIn.Z_PLUS_INT, Op.PLUS,
@@ -1059,6 +1056,25 @@ public class Resolver {
     protected void visit(Ast.Take take) {
       final Resolver r = withEnv(env); // do not use 'from' bindings
       fromBuilder.take(r.toCore(take.exp));
+    }
+
+    @Override
+    protected void visit(Ast.Except except) {
+      fromBuilder.except(
+          except.distinct, transformEager(except.args, Resolver.this::toCore));
+    }
+
+    @Override
+    protected void visit(Ast.Intersect intersect) {
+      fromBuilder.intersect(
+          intersect.distinct,
+          transformEager(intersect.args, Resolver.this::toCore));
+    }
+
+    @Override
+    protected void visit(Ast.Union union) {
+      fromBuilder.union(
+          union.distinct, transformEager(union.args, Resolver.this::toCore));
     }
 
     @Override

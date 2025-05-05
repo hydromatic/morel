@@ -100,6 +100,17 @@ public interface EvalEnv {
   }
 
   /**
+   * Creates an evaluation environment that has the same content as this one,
+   * plus a mutable slot or slots.
+   */
+  default MutableEvalEnv bindMutableList(List<String> names) {
+    if (names.size() == 1) {
+      return bindMutable(names.get(0));
+    }
+    return new EvalEnvs.MutableListSubEvalEnv(this, names);
+  }
+
+  /**
    * Visits every variable binding in this environment.
    *
    * <p>Bindings that are obscured by more recent bindings of the same name are

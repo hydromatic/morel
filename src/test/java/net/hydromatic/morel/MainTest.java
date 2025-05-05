@@ -1829,27 +1829,24 @@ public class MainTest {
   }
 
   /**
-   * Tests set operators (union, except, intersect). These are Morel extensions
-   * to Standard ML, intended to help relational expressions, but not part of
-   * the {@code from} expression.
+   * Tests set operators (union, except, intersect).
+   *
+   * <p>In Morel 0.6 and earlier, {@code union}, {@code intersect} and {@code
+   * except} were binary operators. From Morel 0.7, they are now step in a
+   * "from" pipeline.
    */
   @Test
   void testSetOp() {
-    ml("a union b").assertParseSame();
-    ml("a union b union c").assertParseSame();
-    ml("(a union b) union c").assertParse("a union b union c");
-    ml("a union (b union c)").assertParseSame();
-    final String ueui = "a union b except c union d intersect e";
-    ml(ueui).assertParseSame();
-    ml("((a union b) except c) union (d intersect e)").assertParse(ueui);
+    ml("from i in a union b").assertParseSame();
+    ml("from i in a union b union c").assertParseSame();
+    ml("from j in (from i in a union b) union c").assertParseSame();
+    ml("from i in a union (from j in b union c)").assertParseSame();
+    ml("from i in a union b except c union d intersect e").assertParseSame();
+    ml("from i in a union distinct b except distinct c"
+            + " union distinct d intersect e")
+        .assertParseSame();
     ml("from x in emps union depts where deptno = 10").assertParseSame();
-    final String fuf =
-        "(from x in emps) union (from x in depts where #deptno x = 10)";
-    ml(fuf).assertParseSame();
-    ml("(from x in emps) union from x in depts where #deptno x = 10")
-        .assertParse(fuf);
-
-    ml("[1, 2, 3] union [2, 3, 4]")
+    ml("List.concat [[1, 2, 3], [2, 3, 4]]")
         .assertEvalIter(equalsUnordered(1, 2, 3, 2, 3, 4));
   }
 
@@ -2013,6 +2010,14 @@ public class MainTest {
             "from e in emps "
                 + "yield #empno e "
                 + "compute sum = sum, count = count");
+    ml("from i in [1, 2] union [3, 4]").assertParseSame();
+    ml("from i in [0, 1, 2]\n"
+            + "where i > 0\n"
+            + "union [3, 4], [5]\n"
+            + "except [2], [0]\n"
+            + "intersect [1, 3, 5, 7]\n"
+            + "yield i + 3")
+        .assertParseSame();
   }
 
   /**

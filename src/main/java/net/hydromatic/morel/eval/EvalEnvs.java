@@ -287,6 +287,58 @@ public class EvalEnvs {
     }
   }
 
+  /** Similar to {@link MutableEvalEnv} but binds several names. */
+  static class ListSubEvalEnv implements EvalEnv {
+    protected final EvalEnv parentEnv;
+    protected final ImmutableList<String> names;
+    protected List<?> values;
+
+    ListSubEvalEnv(
+        EvalEnv parentEnv,
+        ImmutableList<String> names,
+        @Nullable List<?> values) {
+      this.parentEnv = requireNonNull(parentEnv);
+      this.names = requireNonNull(names);
+      this.values = values; // may be null
+    }
+
+    public void visit(BiConsumer<String, Object> consumer) {
+      for (int i = 0; i < names.size(); i++) {
+        consumer.accept(names.get(i), values.get(i));
+      }
+      parentEnv.visit(consumer);
+    }
+
+    public Object getOpt(String name) {
+      final int i = names.indexOf(name);
+      if (i >= 0) {
+        return values.get(i);
+      }
+      return parentEnv.getOpt(name);
+    }
+  }
+
+  /**
+   * Similar to {@link MutableEvalEnv} but binds several names; extends {@link
+   * ListSubEvalEnv} adding mutability.
+   */
+  static class MutableListSubEvalEnv extends ListSubEvalEnv
+      implements MutableEvalEnv {
+    MutableListSubEvalEnv(EvalEnv parentEnv, List<String> names) {
+      super(parentEnv, ImmutableList.copyOf(names), null);
+    }
+
+    public void set(Object value) {
+      values = (List<?>) value;
+      assert values.size() == names.size();
+    }
+
+    @Override
+    public ListSubEvalEnv fix() {
+      throw new UnsupportedOperationException("fix");
+    }
+  }
+
   /** Evaluation environment that reads from a map. */
   static class MapEvalEnv implements EvalEnv {
     final Map<String, Object> valueMap;

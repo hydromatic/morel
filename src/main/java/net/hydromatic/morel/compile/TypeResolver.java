@@ -489,9 +489,6 @@ public class TypeResolver {
       case ELEM:
       case NOT_ELEM:
       case CONS:
-      case UNION:
-      case INTERSECT:
-      case EXCEPT:
         return infix(env, (Ast.InfixCall) node, v);
 
       case NEGATE:
@@ -602,6 +599,18 @@ public class TypeResolver {
         final Ast.Exp takeCount = deduceType(p.env, take.exp, v12);
         equiv(v12, toTerm(PrimitiveType.INT));
         fromSteps.add(take.copy(takeCount));
+        return p;
+
+      case UNION:
+      case EXCEPT:
+      case INTERSECT:
+        final Ast.SetStep setStep = (Ast.SetStep) step;
+        final List<Ast.Exp> args2 = new ArrayList<>();
+        final Unifier.Variable v4 = toVariable(listTerm(p.v));
+        for (Ast.Exp arg : setStep.args) {
+          args2.add(deduceType(env, arg, v4));
+        }
+        fromSteps.add(setStep.copy(setStep.distinct, args2));
         return p;
 
       case YIELD:

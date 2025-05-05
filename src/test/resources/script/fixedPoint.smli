@@ -324,7 +324,7 @@ fun fixu_semi_naive (f, a, n) =
         if newDelta = [] orelse i = n then
           a
         else
-          fixInc (a union newDelta, newDelta, i + 1)
+          fixInc ((from z in a union newDelta), newDelta, i + 1)
       end
   in
     fixInc ([], a, 0)

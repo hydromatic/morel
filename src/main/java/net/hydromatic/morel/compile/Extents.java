@@ -680,7 +680,7 @@ public class Extents {
   static Pair<Core.Exp, Core.Exp> reduceOr(
       TypeSystem typeSystem, PairList<Core.Exp, Core.Exp> extentFilters) {
     return Pair.of(
-        core.union(typeSystem, extentFilters.leftList()),
+        core.listConcat(typeSystem, extentFilters.leftList()),
         core.orElse(typeSystem, extentFilters.rightList()));
   }
 
@@ -727,7 +727,7 @@ public class Extents {
             for (Core.Pat p : tuplePat.args) {
               PairList<Core.Exp, Core.Exp> f =
                   requireNonNull(get(typeSystem, p), "contradicts canGet");
-              fromBuilder.scan(p, core.union(typeSystem, f.leftList()));
+              fromBuilder.scan(p, core.listConcat(typeSystem, f.leftList()));
               core.flattenAnds(f.rightList(), filters::add);
             }
             return PairList.of(

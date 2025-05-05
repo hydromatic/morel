@@ -650,96 +650,104 @@ yield e.name;
 > val it = ["Fred","Velma"] : string list
 
 (*) union (matches SQL's UNION ALL)
-(from e in emps yield e.deptno)
-union
-(from d in depts yield d.deptno);
+from e in emps
+  yield e.deptno
+  union (from d in depts yield d.deptno);
 > val it = [10,20,30,30,10,20,30,40] : int list
 
-(*) simulate SQL's UNION DISTINCT
-from deptno in (
-  (from e in emps yield e.deptno)
-  union
-  (from d in depts yield d.deptno))
-group deptno
-order deptno;
+(*) union distinct (matches SQL's UNION DISTINCT, aka UNION)
+from deptno in (from e in emps yield e.deptno)
+  union distinct (from d in depts yield d.deptno);
 > val it = [10,20,30,40] : int list
 
-(*) except
-(from d in depts yield d.deptno)
-except
-(from e in emps yield e.deptno);
+(*) except (matches SQL's EXCEPT ALL)
+from d in depts
+  yield d.deptno
+  except (from e in emps yield e.deptno);
 > val it = [40] : int list
 
-(*) simulate SQL's EXCEPT DISTINCT
-fun exceptDistinct l1 l2 =
-  from v in l1 except l2
-  group v;
-> val exceptDistinct = fn : 'a list -> 'a list -> 'a list
-exceptDistinct (from e in emps yield e.deptno)
-  (from d in depts where d.deptno <> 20 yield d.deptno);
+(*) except distinct (matches SQL's EXCEPT DISTINCT)
+from e in emps
+  yield e.deptno
+  except distinct (from d in depts where d.deptno <> 20 yield d.deptno);
 > val it = [20] : int list
 
-(*) simulate SQL's EXCEPT ALL
-fun exceptAll l1 l2 =
-  from e in (
-      from e in
-        (from v in l1 yield {v, c = 1})
-        union
-        (from v in l2 yield {v, c = ~1})
-      group e.v compute c = sum of e.c
-      where c > 0),
-    r in (
-      let
-        fun units 0 = []
-          | units n = () :: (units (n - 1))
-      in
-        units e.c
-      end)
-    yield e.v;
-> val exceptAll = fn : 'a list -> 'a list -> 'a list
-exceptAll (from e in emps yield e.deptno)
-  (from d in depts yield d.deptno);
-> val it = [30] : int list
+(*) intersect (matches SQL's INTERSECT ALL)
+from e in emps
+  yield e.deptno
+  intersect (from d in depts yield d.deptno);
+> val it = [20,10,30] : int list
 
-(*) intersect
-(from e in emps yield e.deptno)
-intersect
-(from d in depts yield d.deptno);
-> val it = [10,20,30,30] : int list
-
-(*) simulate SQL's INTERSECT DISTINCT
-fun intersectDistinct l1 l2 =
-  from v in l1 intersect l2
-  group v;
-> val intersectDistinct = fn : 'a list -> 'a list -> 'a list
-from d in intersectDistinct (from e in emps yield e.deptno)
-    (from d in depts yield d.deptno)
-  order d;
+(*) intersect distinct (matches SQL's INTERSECT DISTINCT)
+from e in emps
+  yield e.deptno
+  intersect (from d in depts yield d.deptno)
+  order deptno;
 > val it = [10,20,30] : int list
 
-(*) simulate SQL's INTERSECT ALL
-fun intersectAll l1 l2 =
-  from e in (
-      from e in
-        (from v in l1 group v compute c = count)
-        union
-        (from v in l2 group v compute c = count)
-      group e.v compute c = min of e.c, c2 = count
-      where c2 = 2
-      yield {v, c}),
-    r in (
-      let
-        fun units 0 = []
-          | units n = () :: (units (n - 1))
-      in
-        units e.c
-      end)
-    yield e.v;
-> val intersectAll = fn : 'a list -> 'a list -> 'a list
-from d in intersectAll (from e in emps yield e.deptno)
-    (from d in depts yield d.deptno)
-  order d;
-> val it = [10,20,30] : int list
+from i in [2, 1, 2, 2, 2, 3] union [2, 2, 4];
+> val it = [2,1,2,2,2,3,2,2,4] : int list
+from i in [2, 1, 2, 2, 2, 3] union distinct [2, 2, 4];
+> val it = [2,1,3,4] : int list
+from i in [2, 1, 2, 2, 2, 3] union [2, 2, 4] distinct;
+> val it = [1,2,3,4] : int list
+from i in [2, 1, 2, 2, 2, 3] intersect [2, 2, 4];
+> val it = [2,2] : int list
+from i in [2, 1, 2, 2, 2, 3] intersect distinct [2, 2, 4];
+> val it = [2] : int list
+from i in [2, 1, 2, 2, 2, 3] intersect [2, 2, 4] distinct;
+> val it = [2] : int list
+from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4];
+> val it = [1,2,2,3] : int list
+from i in [2, 1, 2, 2, 2, 3] except distinct [2, 2, 4];
+> val it = [1,3] : int list
+from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4] distinct;
+> val it = [1,2,3] : int list
+
+(*) Two arguments to union, except, intersect
+from i in [2, 1, 2, 2, 2, 3] union [2, 2, 4];
+> val it = [2,1,2,2,2,3,2,2,4] : int list
+from i in [2, 1, 2, 2, 2, 3] union [2, 2, 4], [];
+> val it = [2,1,2,2,2,3,2,2,4] : int list
+from i in [2, 1, 2, 2, 2, 3] union [2, 2, 4], [2];
+> val it = [2,1,2,2,2,3,2,2,4,2] : int list
+from i in [2, 1, 2, 2, 2, 3] union [2, 2, 4], [2, 2, 2];
+> val it = [2,1,2,2,2,3,2,2,4,2,2,2] : int list
+
+from i in [2, 1, 2, 2, 2, 3] intersect [2, 2, 4];
+> val it = [2,2] : int list
+from i in [2, 1, 2, 2, 2, 3] intersect [2, 2, 4], [];
+> val it = [] : int list
+from i in [2, 1, 2, 2, 2, 3] intersect [2, 2, 4], [2];
+> val it = [2] : int list
+from i in [2, 1, 2, 2, 2, 3] intersect [2, 2, 4], [2, 2, 2];
+> val it = [2,2] : int list
+
+from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4];
+> val it = [1,2,2,3] : int list
+from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4], [];
+> val it = [1,2,2,3] : int list
+from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4], [2];
+> val it = [1,2,3] : int list
+from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4], [2, 2, 2];
+> val it = [1,3] : int list
+
+(*) Set operators are not "lateral". They can't see the "current row".
+val orders = [{id=1, items=["beer"]}, {id=2, items=[]}];
+> val orders = [{id=1,items=["beer"]},{id=2,items=[]}]
+>   : {id:int, items:string list} list
+from `o` in orders
+  union `o`.items;
+> stdIn:2.9-2.12 Error: unbound variable or constructor: o
+>   raised at: stdIn:2.9-2.12
+from `o` in orders
+  except `o`.items;
+> stdIn:2.10-2.13 Error: unbound variable or constructor: o
+>   raised at: stdIn:2.10-2.13
+from `o` in orders
+  intersect `o`.items;
+> stdIn:2.13-2.16 Error: unbound variable or constructor: o
+>   raised at: stdIn:2.13-2.16
 
 (*) union followed by group
 from x in (from e in emps yield e.deptno)
@@ -753,14 +761,14 @@ from x in (from e in emps yield e.deptno)
     except (from d in depts yield d.deptno)
 group x compute c = count
 order c, x;
-> val it = [] : {c:int, x:int} list
+> val it = [{c=1,x=30}] : {c:int, x:int} list
 
 (*) intersect followed by group
 from x in (from e in emps yield e.deptno)
-    intersect (from d in depts yield d.deptno)
+    intersect distinct (from d in depts yield d.deptno)
 group x compute c = count
 order c, x;
-> val it = [{c=1,x=10},{c=1,x=20},{c=2,x=30}] : {c:int, x:int} list
+> val it = [{c=1,x=10},{c=1,x=20},{c=1,x=30}] : {c:int, x:int} list
 
 (*) foldl function (built into SML)
 let
