@@ -20,6 +20,7 @@ package net.hydromatic.morel;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
@@ -27,6 +28,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.calcite.util.Puffin;
 import org.apache.calcite.util.Source;
 import org.apache.calcite.util.Sources;
@@ -95,14 +97,8 @@ public class LintTest {
                     && !line.startsWith("import static")
                     && !line.matches("^ *// .*$")
                     && !line.endsWith("// lint:skip")
-                    && !line.source()
-                        .fileOpt()
-                        .filter(f -> f.getName().equals("LintTest.java"))
-                        .isPresent()
-                    && !line.source()
-                        .fileOpt()
-                        .filter(f -> f.getName().equals("UtilTest.java"))
-                        .isPresent(),
+                    && !filenameIs(line, "LintTest.java")
+                    && !filenameIs(line, "UtilTest.java"),
             line -> line.state().message("should be static import", line))
 
         // In a test,
@@ -113,25 +109,48 @@ public class LintTest {
             line ->
                 line.contains(".toString(), is(")
                     && line.filename().endsWith(".java")
-                    && !line.source()
-                        .fileOpt()
-                        .filter(f -> f.getName().equals("LintTest.java"))
-                        .isPresent(),
+                    && !filenameIs(line, "LintTest.java"),
             line -> line.state().message("use 'Matchers.hasToString'", line))
 
         // Comment without space
         .add(
             line ->
                 line.matches(".* //[^ ].*")
-                    && !line.source()
-                        .fileOpt()
-                        .filter(f -> f.getName().equals("LintTest.java"))
-                        .isPresent()
+                    && !filenameIs(line, "LintTest.java")
                     && !line.contains("//--")
                     && !line.contains("//~")
                     && !line.contains("//noinspection")
                     && !line.contains("//CHECKSTYLE"),
             line -> line.state().message("'//' must be followed by ' '", line))
+
+        // In 'for (int i : list)', colon must be surrounded by space.
+        .add(
+            line ->
+                line.matches("^ *for \\(.*:.*")
+                    && !line.matches(".*[^ ][ ][:][ ][^ ].*")
+                    && !line.matches(".*[^ ][ ][:]$")
+                    && isJava(line.filename()),
+            line -> line.state().message("':' must be surrounded by ' '", line))
+
+        // Broken string, "latch" + "string", should be "latchstring".
+        .add(
+            line ->
+                line.matches("^[^\"]*[\"][^\"]*[\"] *\\+ *[\"].*$")
+                    && !line.contains("//")
+                    && isJava(line.filename()),
+            line -> line.state().message("broken string", line))
+
+        // Newline should be at end of string literal, not in the middle
+        .add(
+            line ->
+                line.matches("^.*\\\\n[^\"]+[\"][^\"]*$")
+                    && !line.contains("//")
+                    && !line.contains("\\\\n")
+                    && isJava(line.filename()),
+            line ->
+                line.state()
+                    .message(
+                        "newline should be at end of string literal", line))
 
         // Javadoc does not require '</p>', so we do not allow '</p>'
         .add(
@@ -212,6 +231,100 @@ public class LintTest {
         .add(line -> line.contains("<ul>"), line -> line.state().ulCount++)
         .add(line -> line.contains("</ul>"), line -> line.state().ulCount--)
         .build();
+  }
+
+  private static boolean filenameIs(
+      Puffin.Line<GlobalState, FileState> line, String anObject) {
+    return line.source()
+        .fileOpt()
+        .filter(f -> f.getName().equals(anObject))
+        .isPresent();
+  }
+
+  /** Returns whether we are in a file that contains Java code. */
+  private static boolean isJava(String filename) {
+    return filename.endsWith(".java")
+        || filename.endsWith(".jj")
+        || filename.endsWith(".fmpp")
+        || filename.endsWith(".ftl")
+        || filename.equals("GuavaCharSource{memory}"); // for testing
+  }
+
+  @Test
+  void testProgramWorks() {
+    final String code =
+        "class MyClass {\n"
+            + "  /** Paragraph.\n"
+            + "   *\n"
+            + "   * Missing p.\n"
+            + "   *\n"
+            + "   * <p>\n"
+            + "   * <p>A paragraph (p must be preceded by blank line).\n"
+            + "   *\n"
+            + "   *\n"
+            + "   * <p>no p</p>\n"
+            + "   * @see java.lang.String (should be preceded by blank line)\n"
+            + "   **/\n"
+            + "  String x = \"ok because it's not in javadoc:</p>\";\n"
+            + "  for (Map.Entry<String, Integer> e: entries) {\n"
+            + "    //comment without space\n"
+            + "  }\n"
+            + "  for (int i :tooFewSpacesAfter) {\n"
+            + "  }\n"
+            + "  for (int i  : tooManySpacesBefore) {\n"
+            + "  }\n"
+            + "  for (int i :   tooManySpacesAfter) {\n"
+            + "  }\n"
+            + "  for (int i : justRight) {\n"
+            + "  }\n"
+            + "  for (int i :\n"
+            + "     alsoFine) {\n"
+            + "  }\n"
+            + "  String bad = \"broken\" + \"string\";\n"
+            + "  String bad2 = \"string with\\nembedded newline\";\n"
+            + "  String good = \"string with newline\\n\"\n"
+            + "      \"at end of line\";\n"
+            + "}\n";
+    final String expectedMessages =
+        "["
+            + "GuavaCharSource{memory}:4:"
+            + "missing '<p>'\n"
+            + "GuavaCharSource{memory}:6:"
+            + "<p> must not be on its own line\n"
+            + "GuavaCharSource{memory}:7:"
+            + "<p> must be preceded by blank line\n"
+            + "GuavaCharSource{memory}:9:"
+            + "duplicate empty line in javadoc\n"
+            + "GuavaCharSource{memory}:10:"
+            + "no '</p>'\n"
+            + "GuavaCharSource{memory}:11:"
+            + "First @tag must be preceded by blank line\n"
+            + "GuavaCharSource{memory}:12:"
+            + "no '**/'; use '*/'\n"
+            + "GuavaCharSource{memory}:14:"
+            + "':' must be surrounded by ' '\n"
+            + "GuavaCharSource{memory}:15:"
+            + "'//' must be followed by ' '\n"
+            + "GuavaCharSource{memory}:17:"
+            + "':' must be surrounded by ' '\n"
+            + "GuavaCharSource{memory}:19:"
+            + "':' must be surrounded by ' '\n"
+            + "GuavaCharSource{memory}:21:"
+            + "':' must be surrounded by ' '\n"
+            + "GuavaCharSource{memory}:28:"
+            + "broken string\n"
+            + "GuavaCharSource{memory}:29:"
+            + "newline should be at end of string literal\n"
+            + "";
+    final Puffin.Program<GlobalState> program = makeProgram();
+    final StringWriter sw = new StringWriter();
+    final GlobalState g;
+    try (PrintWriter pw = new PrintWriter(sw)) {
+      g = program.execute(Stream.of(Sources.of(code)), pw);
+    }
+    assertThat(
+        g.messages.toString().replace(", ", "\n").replace(']', '\n'),
+        is(expectedMessages));
   }
 
   /** Tests that source code has no flaws. */

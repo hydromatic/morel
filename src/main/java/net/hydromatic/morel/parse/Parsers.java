@@ -256,12 +256,12 @@ public final class Parsers {
             }
           }
           throw new RuntimeException(
-              "illegal control escape; " + "too few digits after ^");
+              "illegal control escape; too few digits after ^");
 
         case '^':
           if (i >= s.length()) {
             throw new RuntimeException(
-                "illegal control escape; " + "no character after ^");
+                "illegal control escape; no character after ^");
           }
           final char c3 = s.charAt(i++);
           if (c3 >= '@' && c3 <= '_') {
@@ -275,7 +275,7 @@ public final class Parsers {
 
         default:
           throw new RuntimeException(
-              "illegal escape; " + "invalid character after \\");
+              "illegal escape; invalid character after \\");
       }
     }
   }

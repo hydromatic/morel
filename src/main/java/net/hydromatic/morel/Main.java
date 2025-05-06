@@ -143,8 +143,8 @@ public class Main {
     final String s = str(b);
     for (int i = 0, n = s.length(); ; ) {
       int j0 = i == 0 && (s.startsWith("> ") || s.startsWith(">\n")) ? 0 : -1;
-      int j1 = s.indexOf("\n> ", i);
-      int j2 = s.indexOf("\n>\n", i);
+      int j1 = s.indexOf("\n> ", i); // lint:skip
+      int j2 = s.indexOf("\n>\n", i); // lint:skip
       int j3 = s.indexOf("(*)", i);
       int j4 = s.indexOf("(*", i);
       int j = min(j0, j1, j2, j3, j4);
@@ -236,7 +236,7 @@ public class Main {
 
   /** Precedes every line in 'x' with a caret. */
   private static String prefixLines(String s) {
-    String s2 = "> " + s.replace("\n", "\n> ");
+    String s2 = "> " + s.replace("\n", "\n> "); // lint:skip
     return s2.replace("> \n", ">\n");
   }
 

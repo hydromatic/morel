@@ -189,8 +189,7 @@ public class FromBuilderTest {
         .yield_(f.record(f.iId, f.jId));
 
     final Core.From from = fromBuilder.build();
-    final String expected =
-        "from j in [1, 2] " + "join i in [3, 4] " + "where i < 2";
+    final String expected = "from j in [1, 2] join i in [3, 4] where i < 2";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
@@ -209,7 +208,7 @@ public class FromBuilderTest {
         .scan(f.iPat, f.list34);
 
     final Core.From from = fromBuilder.build();
-    final String expected = "from j in [1, 2] " + "join i in [3, 4]";
+    final String expected = "from j in [1, 2] join i in [3, 4]";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
@@ -234,7 +233,7 @@ public class FromBuilderTest {
 
     final Core.From from = fromBuilder.build();
     final String expected =
-        "from j in [1, 2] " + "where j < 2 " + "yield {i = j} " + "where i > 1";
+        "from j in [1, 2] where j < 2 yield {i = j} where i > 1";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
@@ -310,7 +309,7 @@ public class FromBuilderTest {
         .scan(f.iPat, innerFrom.apply(fromBuilder.bindings()));
 
     final Core.From from = fromBuilder.build();
-    final String expected = "from d in [(1, 2), (3, 4)] " + "join i in [#1 d]";
+    final String expected = "from d in [(1, 2), (3, 4)] join i in [#1 d]";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
@@ -364,8 +363,7 @@ public class FromBuilderTest {
         .where(core.greaterThan(f.typeSystem, f.iId, f.intLiteral(1)));
 
     final Core.From from = fromBuilder.build();
-    final String expected =
-        "from i in [1, 2] " + "where i < 2 " + "where i > 1";
+    final String expected = "from i in [1, 2] where i < 2 where i > 1";
     assertThat(from, hasToString(expected));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));

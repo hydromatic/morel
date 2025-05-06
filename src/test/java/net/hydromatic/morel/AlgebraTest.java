@@ -398,7 +398,9 @@ public class AlgebraTest {
   @Test
   void testCalciteFrom() {
     final String ml = "from";
-    String plan = "calcite(plan LogicalValues(tuples=[[{  }]])\n)";
+    String plan =
+        "calcite(plan LogicalValues(tuples=[[{  }]])\n" //
+            + ")";
     ml(ml)
         .with(Prop.HYBRID, true)
         .assertType("unit list")
@@ -445,10 +447,12 @@ public class AlgebraTest {
             + "resultCode calcite(plan "
             + "LogicalProject(d5=[+($1, morelScalar('five', '{\n"
             + "  \"type\": \"INTEGER\",\n"
-            + "  \"nullable\": false\n}'))], deptno=[$1], empno=[$2])\n"
+            + "  \"nullable\": false\n"
+            + "}'))], deptno=[$1], empno=[$2])\n"
             + "  LogicalFilter(condition=[<($2, +(7500, morelScalar('ten', '{\n"
             + "  \"type\": \"INTEGER\",\n"
-            + "  \"nullable\": false\n}')))])\n"
+            + "  \"nullable\": false\n"
+            + "}')))])\n"
             + "    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], "
             + "hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n"
             + "      JdbcTableScan(table=[[scott, EMP]])\n"

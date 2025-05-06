@@ -49,7 +49,8 @@ public class ParserTest {
     assertThat("chr 32", unquoteString("\"ab c\""), is("ab c"));
     assertThat("chr 255", unquoteString("\"ab\\255c\""), is("ab\u00FFc"));
     assertThat("tab", unquoteString("\"ab\\tc\""), is("ab\tc"));
-    assertThat("newline", unquoteString("\"ab\\nc\""), is("ab\nc"));
+    assertThat(
+        "newline", unquoteString("\"ab\\nc\""), is("ab\nc")); // lint:skip
     assertThat("return", unquoteString("\"ab\\rc\""), is("ab\rc"));
     assertThat("form-feed", unquoteString("\"ab\\fc\""), is("ab\fc"));
     assertThat("bel", unquoteString("\"ab\\bc\""), is("ab\bc"));

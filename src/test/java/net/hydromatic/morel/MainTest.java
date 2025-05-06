@@ -793,7 +793,10 @@ public class MainTest {
     // if
     ml("if true then 1 else 2").assertEval(is(1));
     ml("if false then 1 else if true then 2 else 3").assertEval(is(2));
-    ml("if false\n" + "then\n" + "  if true then 2 else 3\n" + "else 4")
+    ml("if false\n" //
+            + "then\n"
+            + "  if true then 2 else 3\n"
+            + "else 4")
         .assertEval(is(4));
     ml("if false\n" //
             + "then\n"
@@ -1392,7 +1395,11 @@ public class MainTest {
   @Test
   void testFunUnit() {
     final String ml =
-        "let\n" + "  fun one () = 1\n" + "in\n" + "  one () + 2\n" + "end";
+        "let\n" //
+            + "  fun one () = 1\n"
+            + "in\n"
+            + "  one () + 2\n"
+            + "end";
     ml(ml).assertEval(is(3));
   }
 
@@ -3237,7 +3244,7 @@ public class MainTest {
         .assertEval(is(6));
     ml("from i in [1, 2, 3] compute sum of i, count")
         .assertParse(
-            "from i in [1, 2, 3] " + "compute sum = sum of i, count = count")
+            "from i in [1, 2, 3] compute sum = sum of i, count = count")
         .assertType("{count:int, sum:int}");
     // there must be at least one aggregate function
     ml("from i in [1, 2, 3] compute")
@@ -3370,7 +3377,7 @@ public class MainTest {
   void testFromPattern() {
     ml("from (x, y) in [(1,2),(3,4),(3,0)] group sum = x + y")
         .assertParse(
-            "from (x, y) in [(1, 2), (3, 4), (3, 0)] " + "group sum = x + y")
+            "from (x, y) in [(1, 2), (3, 4), (3, 0)] group sum = x + y")
         .assertType(hasMoniker("int list"))
         .assertEvalIter(equalsUnordered(3, 7));
     ml("from {c, a, ...} in [{a=1.0,b=true,c=3},{a=1.5,b=true,c=4}]")
