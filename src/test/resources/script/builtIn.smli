@@ -3490,7 +3490,7 @@ List.length (showAll ());
 > val it = 12 : int
 Sys.plan ();
 > val it =
->   "apply(fnValue List.length, argCode apply(fnValue Sys.showAll, argCode constant(())))"
+>   "apply(fnValue List.length, argCode apply(fnValue Sys.showAll, argCode constant([])))"
 >   : string
 
 Sys.set ("optionalInt", ~5);

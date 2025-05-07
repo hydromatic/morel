@@ -44,10 +44,22 @@ public interface Describer {
 
   /** Provided as a callback while describing a node. */
   interface Detail {
+    /** Prints an atomic argument. */
     Detail arg(String name, Object value);
 
+    /** Warns that the argument is not atomic. */
+    @Deprecated
+    default Detail arg(String name, Iterable<?> value) {
+      return args(name, value);
+    }
+
+    /** Prints a collection-valued argument. */
+    Detail args(String name, Iterable<?> value);
+
+    /** Prints a complex argument. */
     Detail arg(String name, Describable describable);
 
+    /** Prints an argument if the condition is true. */
     default Detail argIf(
         String name, Describable describable, boolean condition) {
       return condition ? arg(name, describable) : this;

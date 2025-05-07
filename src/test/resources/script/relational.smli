@@ -1596,15 +1596,15 @@ Sys.plan();
 Sys.set ("hybrid", true);
 > val it = () : unit
 from r in
-  List.tabulate (6, fn i =>
-    {i, j = i + 3, s = substring ("morel", 0, i)})
+  List.tabulate (6, fn i2 =>
+    {i = i2, j = i2 + 3, s = substring ("morel", 0, i2)})
 yield {r.j, r.s};
 > val it =
 >   [{j=3,s=""},{j=4,s="m"},{j=5,s="mo"},{j=6,s="mor"},{j=7,s="more"},
 >    {j=8,s="morel"}] : {j:int, s:string} list
 Sys.plan();
 > val it =
->   "calcite(plan LogicalProject(j=[$1], s=[$2])\n  LogicalTableFunctionScan(invocation=[morelTable('#tabulate List (6, fn i_11 => {i = i_11, j = i_11 + 3, s = #substring String (\"morel\", 0, i_11)})', '{\n  \"fields\": [\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"i\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"j\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"s\"\n    }\n  ],\n  \"nullable\": false\n}')], rowType=[RecordType(INTEGER i, INTEGER j, VARCHAR s)])\n)"
+>   "calcite(plan LogicalProject(j=[$1], s=[$2])\n  LogicalTableFunctionScan(invocation=[morelTable('#tabulate List (6, fn i2 => {i = i2, j = i2 + 3, s = #substring String (\"morel\", 0, i2)})', '{\n  \"fields\": [\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"i\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"j\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"s\"\n    }\n  ],\n  \"nullable\": false\n}')], rowType=[RecordType(INTEGER i, INTEGER j, VARCHAR s)])\n)"
 >   : string
 
 (*) List expression in Hybrid mode (0% Calcite), with various
@@ -1647,7 +1647,7 @@ end;
 > val it = ["Shaggy","Scooby"] : string list
 Sys.plan();
 > val it =
->   "from(sink join(pat e140, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e140)), constant(30)), sink yield(codes [get(e140)], sink collect(apply(fnValue nth:2, argCode get(name e142)))))))"
+>   "from(sink join(pat e140, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e140)), constant(30)), sink yield(codes [get(name e140)], sink collect(apply(fnValue nth:2, argCode get(name e142)))))))"
 >   : string
 
 (*) into and through

@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.eval;
 
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,11 +63,43 @@ class DescriberImpl implements Describer {
 
     @Override
     public Detail arg(String name, Object value) {
+      if (value instanceof Iterable) {
+        return args(name, (Iterable<?>) value);
+      }
       buf.append(buf.length() == start ? "(" : ", ")
           .append(name)
           .append(name.isEmpty() ? "" : " ")
           .append(value);
       return this;
+    }
+
+    @Override
+    public Detail args(String name, Iterable<?> values) {
+      buf.append(buf.length() == start ? "(" : ", ")
+          .append(name)
+          .append(name.isEmpty() ? "[" : " [");
+      appendAll(values);
+      buf.append(']');
+      return this;
+    }
+
+    private void appendAll(Iterable<?> values) {
+      forEachIndexed(
+          values,
+          (value, i) -> {
+            if (i > 0) {
+              buf.append(", ");
+            }
+            append(value);
+          });
+    }
+
+    private void append(Object value) {
+      if (value instanceof Describable) {
+        ((Describable) value).describe(DescriberImpl.this);
+      } else {
+        buf.append(value);
+      }
     }
 
     @Override
