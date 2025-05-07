@@ -340,7 +340,7 @@ public enum CoreBuilder {
     if (type instanceof RecordType) {
       final PairList<String, Type> argNameTypes = PairList.of();
       forEach(
-          type.argNameTypes().keySet(),
+          type.argNames(),
           argList,
           (name, arg) -> argNameTypes.add(name, arg.type));
       tupleType = typeSystem.recordType(argNameTypes);

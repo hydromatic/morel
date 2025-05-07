@@ -26,8 +26,6 @@ import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -736,7 +734,7 @@ public class Core {
 
     public String fieldName() {
       final RecordLikeType recordType = (RecordLikeType) type().paramType;
-      return Iterables.get(recordType.argNameTypes().keySet(), slot);
+      return recordType.argNames().get(slot);
     }
 
     @Override
@@ -1108,10 +1106,7 @@ public class Core {
      * this tuple.
      */
     public void forEach(PairList.IndexedBiConsumer<String, Exp> consumer) {
-      final ImmutableSortedSet<String> nameSet =
-          (ImmutableSortedSet<String>) type().argNameTypes().keySet();
-      final List<String> names = nameSet.asList();
-      forEachIndexed(names, args, consumer::accept);
+      forEachIndexed(type().argNames(), args, consumer::accept);
     }
 
     public Tuple copy(TypeSystem typeSystem, List<Exp> args) {

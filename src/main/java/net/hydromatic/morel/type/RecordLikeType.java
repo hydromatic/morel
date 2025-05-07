@@ -33,6 +33,11 @@ public interface RecordLikeType extends Type {
     return ImmutableList.copyOf(argNameTypes().values());
   }
 
+  /** Returns a list of field names. */
+  default List<String> argNames() {
+    return ImmutableList.copyOf(argNameTypes().keySet());
+  }
+
   /** Returns the type of the {@code i}th field, or throws. */
   Type argType(int i);
 

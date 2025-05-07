@@ -383,7 +383,7 @@ public class Compiler {
               ImmutableSortedMap.orderedBy(RecordType.ORDERING);
           forEach(
               tuple.args,
-              recordType.argNameTypes().keySet(),
+              recordType.argNames(),
               (exp, name) -> mapCodes.put(name, compile(cx, exp)));
           return () -> Codes.yieldRowSink(mapCodes.build(), nextFactory.get());
         } else {

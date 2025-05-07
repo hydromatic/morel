@@ -39,6 +39,7 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.RefChecker;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -373,15 +374,15 @@ public class FromBuilder {
     if (tuple.args.size() != bindings.size()) {
       return TupleType.OTHER;
     }
-    final ImmutableList<String> argNames =
-        ImmutableList.copyOf(tuple.type().argNameTypes().keySet());
     boolean identity = bindings2 == null || bindings.equals(bindings2);
-    for (int i = 0; i < tuple.args.size(); i++) {
-      Core.Exp exp = tuple.args.get(i);
-      if (exp.op != Op.ID) {
+    for (Pair<Core.Exp, String> argName :
+        Pair.zip(tuple.args, tuple.type().argNames())) {
+      Core.Exp arg = argName.left;
+      String name = argName.right;
+      if (arg.op != Op.ID) {
         return TupleType.OTHER;
       }
-      if (!((Core.Id) exp).idPat.name.equals(argNames.get(i))) {
+      if (!((Core.Id) arg).idPat.name.equals(name)) {
         identity = false;
       }
     }

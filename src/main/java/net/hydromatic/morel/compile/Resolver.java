@@ -428,7 +428,7 @@ public class Resolver {
       args = new ArrayList<>();
       final Core.Exp coreWith = toCore(record.with);
       forEachIndexed(
-          type.argNameTypes().keySet(),
+          type.argNames(),
           (field, i) -> {
             Ast.Exp exp = record.args.get(field);
             if (exp != null) {

@@ -471,8 +471,7 @@ public class CalciteCompiler extends Compiler {
 
       case TUPLE:
         tuple = (Core.Tuple) exp;
-        final List<String> names =
-            ImmutableList.copyOf(tuple.type().argNameTypes().keySet());
+        final List<String> names = tuple.type().argNames();
         cx.relBuilder.project(
             transform(tuple.args, e -> translate(cx, e)), names);
         return getRelContext(cx, cx.env.bindAll(bindings), names);
