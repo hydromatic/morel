@@ -156,9 +156,11 @@ public class TypeSystem {
   /**
    * Creates a multi-step function type.
    *
-   * <p>For example, {@code fnType(a, b, c, d)} returns the same as {@code
-   * fnType(a, fnType(b, fnType(c, d)))}, viz <code>a &rarr; b &rarr; c &rarr; d
-   * </code>.
+   * <p>For example, {@code fnType(a, b, c, d)} returns the same as
+   * <!-- prevent wrapping -->
+   * {@code fnType(a, fnType(b, fnType(c, d)))},
+   * <!-- prevent wrapping -->
+   * viz <code>a &rarr; b &rarr; c &rarr; d</code>.
    */
   public Type fnType(
       Type paramType, Type type1, Type type2, Type... moreTypes) {

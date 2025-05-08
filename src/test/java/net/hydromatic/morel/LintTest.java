@@ -230,6 +230,23 @@ public class LintTest {
             line -> line.state().blockquoteCount--)
         .add(line -> line.contains("<ul>"), line -> line.state().ulCount++)
         .add(line -> line.contains("</ul>"), line -> line.state().ulCount--)
+
+        // In markdown, <code> and </code> must be on same line
+        .add(
+            line ->
+                line.contains("code>")
+                    && !line.source()
+                        .fileOpt()
+                        .filter(f -> f.getName().equals("LintTest.java"))
+                        .isPresent(),
+            line -> {
+              int openCount = count(line.line(), "<code>");
+              int closeCount = count(line.line(), "</code>");
+              if (openCount != closeCount) {
+                line.state()
+                    .message("<code> and </code> must be on same line", line);
+              }
+            })
         .build();
   }
 
@@ -248,6 +265,20 @@ public class LintTest {
         || filename.endsWith(".fmpp")
         || filename.endsWith(".ftl")
         || filename.equals("GuavaCharSource{memory}"); // for testing
+  }
+
+  /** Returns the number of occurrences of a string in a string. */
+  private int count(String s, String sub) {
+    int count = 0;
+    for (int i = 0; i < s.length(); ) {
+      i = s.indexOf(sub, i);
+      if (i < 0) {
+        break;
+      }
+      count++;
+      i += sub.length();
+    }
+    return count;
   }
 
   @Test
@@ -284,6 +315,8 @@ public class LintTest {
             + "  String bad2 = \"string with\\nembedded newline\";\n"
             + "  String good = \"string with newline\\n\"\n"
             + "      \"at end of line\";\n"
+            + "  // A comment with <code>on one line and\n"
+            + "  // </code> on the next.\n"
             + "}\n";
     final String expectedMessages =
         "["
@@ -315,7 +348,10 @@ public class LintTest {
             + "broken string\n"
             + "GuavaCharSource{memory}:29:"
             + "newline should be at end of string literal\n"
-            + "";
+            + "GuavaCharSource{memory}:32:"
+            + "<code> and </code> must be on same line\n"
+            + "GuavaCharSource{memory}:33:"
+            + "<code> and </code> must be on same line\n";
     final Puffin.Program<GlobalState> program = makeProgram();
     final StringWriter sw = new StringWriter();
     final GlobalState g;

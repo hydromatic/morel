@@ -138,10 +138,10 @@ For example, the query
   <b>yield</b> {d.dname, e.ename, e.job};
 </pre>
 
-has two scans (<code>e <b>in</b> scott.emps</code> and <code>d
-<b>in</b> scott.depts <b>on</b> e.deptno = d.deptno</code>) and two
-steps (<code><b>where</b> e.deptno = 10</code> and <code><b>yield</b>
-{d.dname, e.ename, e.job}</code>).
+has two scans (<code>e <b>in</b> scott.emps</code> and
+<code>d <b>in</b> scott.depts <b>on</b> e.deptno = d.deptno</code>)
+and two steps (<code><b>where</b> e.deptno = 10</code> and
+<code><b>yield</b> {d.dname, e.ename, e.job}</code>).
 
 In the following sections we will look at [scans](#scan) and
 [steps](#step) in more detail. We will focus on `from` for now, and
@@ -287,10 +287,10 @@ concise in Morel.
 
 ### Single-row scan
 
-A scan with `=` syntax iterates over a single value. While <code>pat =
-exp</code> is just syntactic sugar for <code>pat <b>in</b>
-[exp]</code>, it is nevertheless a useful way to add a column to the
-current row.
+A scan with `=` syntax iterates over a single value. While
+<code>pat = exp</code> is just syntactic sugar for
+<code>pat <b>in</b> [exp]</code>, it is nevertheless a useful way to
+add a column to the current row.
 
 <pre>
 <i>(* Iterate over a list of integers and compute whether
