@@ -98,7 +98,10 @@ public class MartelliUnifier extends Unifier {
           return failure("cycle: variable " + variable + " in " + term);
         }
         tracer.onVariable(variable, term);
-        result.put(variable, term);
+        Term priorTerm = result.put(variable, term);
+        if (priorTerm != null && !priorTerm.equals(term)) {
+          work.add(new TermTerm(priorTerm, term));
+        }
         if (!termActions.isEmpty()) {
           act(variable, term, work, new Substitution(result), termActions, 0);
         }
