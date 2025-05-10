@@ -35,219 +35,225 @@ import org.apache.calcite.util.Sources;
 import org.junit.jupiter.api.Test;
 
 /** Runs Lint-like checks on the source code. Also tests those checks. */
+@SuppressWarnings("Convert2MethodRef") // JDK 8 requires lambdas
 public class LintTest {
-  @SuppressWarnings("Convert2MethodRef") // JDK 8 requires lambdas
   private Puffin.Program<GlobalState> makeProgram() {
-    return Puffin.builder(GlobalState::new, global -> new FileState(global))
-        .add(
-            line -> line.isLast(),
-            line -> {
-              String f = line.filename();
-              final int slash = f.lastIndexOf('/');
-              final String endMarker =
-                  "// End " + (slash < 0 ? f : f.substring(slash + 1));
-              if (!line.line().equals(endMarker)
-                  && line.filename().endsWith(".java")) {
-                line.state()
-                    .message("File must end with '" + endMarker + "'", line);
-              }
-            })
-        .add(line -> line.fnr() == 1, line -> line.globalState().fileCount++)
+    Puffin.Builder<GlobalState, FileState> b =
+        Puffin.builder(GlobalState::new, global -> new FileState(global));
+    addProgram0(b);
+    addProgram1(b);
+    return b.build();
+  }
 
-        // Trailing space
-        .add(
-            line -> line.endsWith(" "),
-            line -> line.state().message("Trailing space", line))
+  private static void addProgram0(Puffin.Builder<GlobalState, FileState> b) {
+    b.add(
+        line -> line.isLast(),
+        line -> {
+          String f = line.filename();
+          final int slash = f.lastIndexOf('/');
+          final String endMarker =
+              "// End " + (slash < 0 ? f : f.substring(slash + 1));
+          if (!line.line().equals(endMarker)
+              && line.filename().endsWith(".java")) {
+            line.state()
+                .message("File must end with '" + endMarker + "'", line);
+          }
+        });
+    b.add(line -> line.fnr() == 1, line -> line.globalState().fileCount++);
 
-        // Tab
-        .add(
-            line -> line.contains("\t"),
-            line -> line.state().message("Tab", line))
+    // Trailing space
+    b.add(
+        line -> line.endsWith(" "),
+        line -> line.state().message("Trailing space", line));
 
-        // Nullable
-        .add(
-            line -> line.startsWith("import javax.annotation.Nullable;"),
-            line ->
-                line.state()
-                    .message(
-                        "use org.checkerframework.checker.nullness.qual.Nullable",
-                        line))
+    // Tab
+    b.add(
+        line -> line.contains("\t"), line -> line.state().message("Tab", line));
 
-        // Nonnull
-        .add(
-            line -> line.startsWith("import javax.annotation.Nonnull;"),
-            line ->
-                line.state()
-                    .message(
-                        "use org.checkerframework.checker.nullness.qual.NonNull",
-                        line))
+    // Nullable
+    b.add(
+        line -> line.startsWith("import javax.annotation.Nullable;"),
+        line ->
+            line.state()
+                .message(
+                    "use org.checkerframework.checker.nullness.qual.Nullable",
+                    line));
 
-        // Use of 'Static.' other than in an import.
-        .add(
-            line ->
-                (line.contains("Assertions.")
-                        || line.contains("CoreMatchers.")
-                        || line.contains("MatcherAssert.assertThat")
-                        || line.contains("Objects.requireNonNull")
-                        || line.contains("Ord.forEachIndexed")
-                        || line.contains("Pair.forEach")
-                        || line.contains("Preconditions.")
-                        || line.contains("Static."))
-                    && line.filename().endsWith(".java")
-                    && !line.startsWith("import static")
-                    && !line.matches("^ *// .*$")
-                    && !line.endsWith("// lint:skip")
-                    && !filenameIs(line, "LintTest.java")
-                    && !filenameIs(line, "UtilTest.java"),
-            line -> line.state().message("should be static import", line))
+    // Nonnull
+    b.add(
+        line -> line.startsWith("import javax.annotation.Nonnull;"),
+        line ->
+            line.state()
+                .message(
+                    "use org.checkerframework.checker.nullness.qual.NonNull",
+                    line));
 
-        // In a test,
-        //   assertThat(x.toString(), is(y));
-        // should be
-        //   assertThat(x, hasToString(y)));
-        .add(
-            line ->
-                line.contains(".toString(), is(")
-                    && line.filename().endsWith(".java")
-                    && !filenameIs(line, "LintTest.java"),
-            line -> line.state().message("use 'Matchers.hasToString'", line))
+    // Use of 'Static.' other than in an import.
+    b.add(
+        line ->
+            (line.contains("Assertions.")
+                    || line.contains("CoreMatchers.")
+                    || line.contains("MatcherAssert.assertThat")
+                    || line.contains("Objects.requireNonNull")
+                    || line.contains("Ord.forEachIndexed")
+                    || line.contains("Pair.forEach")
+                    || line.contains("Preconditions.")
+                    || line.contains("Static."))
+                && line.filename().endsWith(".java")
+                && !line.startsWith("import static")
+                && !line.matches("^ *// .*$")
+                && !line.endsWith("// lint:skip")
+                && !filenameIs(line, "LintTest.java")
+                && !filenameIs(line, "UtilTest.java"),
+        line -> line.state().message("should be static import", line));
 
-        // Comment without space
-        .add(
-            line ->
-                line.matches(".* //[^ ].*")
-                    && !filenameIs(line, "LintTest.java")
-                    && !line.contains("//--")
-                    && !line.contains("//~")
-                    && !line.contains("//noinspection")
-                    && !line.contains("//CHECKSTYLE"),
-            line -> line.state().message("'//' must be followed by ' '", line))
+    // In a test,
+    //   assertThat(x.toString(), is(y));
+    // should be
+    //   assertThat(x, hasToString(y)));
+    b.add(
+        line ->
+            line.contains(".toString(), is(")
+                && line.filename().endsWith(".java")
+                && !filenameIs(line, "LintTest.java"),
+        line -> line.state().message("use 'Matchers.hasToString'", line));
 
-        // In 'for (int i : list)', colon must be surrounded by space.
-        .add(
-            line ->
-                line.matches("^ *for \\(.*:.*")
-                    && !line.matches(".*[^ ][ ][:][ ][^ ].*")
-                    && !line.matches(".*[^ ][ ][:]$")
-                    && isJava(line.filename()),
-            line -> line.state().message("':' must be surrounded by ' '", line))
+    // Comment without space
+    b.add(
+        line ->
+            line.matches(".* //[^ ].*")
+                && !filenameIs(line, "LintTest.java")
+                && !line.contains("//--")
+                && !line.contains("//~")
+                && !line.contains("//noinspection")
+                && !line.contains("//CHECKSTYLE"),
+        line -> line.state().message("'//' must be followed by ' '", line));
 
-        // Broken string, "latch" + "string", should be "latchstring".
-        .add(
-            line ->
-                line.matches("^[^\"]*[\"][^\"]*[\"] *\\+ *[\"].*$")
-                    && !line.contains("//")
-                    && isJava(line.filename()),
-            line -> line.state().message("broken string", line))
+    // In 'for (int i : list)', colon must be surrounded by space.
+    b.add(
+        line ->
+            line.matches("^ *for \\(.*:.*")
+                && !line.matches(".*[^ ][ ][:][ ][^ ].*")
+                && !line.matches(".*[^ ][ ][:]$")
+                && isJava(line.filename()),
+        line -> line.state().message("':' must be surrounded by ' '", line));
+  }
 
-        // Newline should be at end of string literal, not in the middle
-        .add(
-            line ->
-                line.matches("^.*\\\\n[^\"]+[\"][^\"]*$")
-                    && !line.contains("//")
-                    && !line.contains("\\\\n")
-                    && isJava(line.filename()),
-            line ->
-                line.state()
-                    .message(
-                        "newline should be at end of string literal", line))
+  private void addProgram1(Puffin.Builder<GlobalState, FileState> b) {
+    // Broken string, "latch" + "string", should be "latchstring".
+    b.add(
+        line ->
+            line.matches("^[^\"]*[\"][^\"]*[\"] *\\+ *[\"].*$")
+                && !line.contains("//")
+                && isJava(line.filename()),
+        line -> line.state().message("broken string", line));
 
-        // Javadoc does not require '</p>', so we do not allow '</p>'
-        .add(
-            line -> line.state().inJavadoc() && line.contains("</p>"),
-            line -> line.state().message("no '</p>'", line))
+    // Newline should be at end of string literal, not in the middle
+    b.add(
+        line ->
+            line.matches("^.*\\\\n[^\"]+[\"][^\"]*$")
+                && !line.contains("//")
+                && !line.contains("\\\\n")
+                && isJava(line.filename()),
+        line ->
+            line.state()
+                .message("newline should be at end of string literal", line));
 
-        // No "**/"
-        .add(
-            line -> line.contains(" **/") && line.state().inJavadoc(),
-            line -> line.state().message("no '**/'; use '*/'", line))
+    // Javadoc does not require '</p>', so we do not allow '</p>'
+    b.add(
+        line -> line.state().inJavadoc() && line.contains("</p>"),
+        line -> line.state().message("no '</p>'", line));
 
-        // A Javadoc paragraph '<p>' must not be on its own line.
-        .add(
-            line -> line.matches("^ *\\* <p>"),
-            line ->
-                line.state().message("<p> must not be on its own line", line))
+    // No "**/"
+    b.add(
+        line -> line.contains(" **/") && line.state().inJavadoc(),
+        line -> line.state().message("no '**/'; use '*/'", line));
 
-        // A Javadoc paragraph '<p>' must be preceded by a blank Javadoc
-        // line.
-        .add(
-            line -> line.matches("^ *\\*"),
-            line -> {
-              final FileState f = line.state();
-              if (f.starLine == line.fnr() - 1) {
-                f.message("duplicate empty line in javadoc", line);
-              }
-              f.starLine = line.fnr();
-            })
-        .add(
-            line ->
-                line.matches("^ *\\* <p>.*")
-                    && line.fnr() - 1 != line.state().starLine,
-            line ->
-                line.state()
-                    .message("<p> must be preceded by blank line", line))
+    // A Javadoc paragraph '<p>' must not be on its own line.
+    b.add(
+        line -> line.matches("^ *\\* <p>"),
+        line -> line.state().message("<p> must not be on its own line", line));
 
-        // A non-blank line following a blank line must have a '<p>'
-        .add(
-            line ->
-                line.state().inJavadoc()
-                    && line.state().ulCount == 0
-                    && line.state().blockquoteCount == 0
-                    && line.contains("* ")
-                    && line.fnr() - 1 == line.state().starLine
-                    && line.matches("^ *\\* [^<@].*"),
-            line -> line.state().message("missing '<p>'", line))
+    // A Javadoc paragraph '<p>' must be preceded by a blank Javadoc
+    // line.
+    b.add(
+        line -> line.matches("^ *\\*"),
+        line -> {
+          final FileState f = line.state();
+          if (f.starLine == line.fnr() - 1) {
+            f.message("duplicate empty line in javadoc", line);
+          }
+          f.starLine = line.fnr();
+        });
 
-        // The first "@param" of a javadoc block must be preceded by a blank
-        // line.
-        .add(
-            line -> line.matches("^ */\\*\\*.*"),
-            line -> {
-              final FileState f = line.state();
-              f.javadocStartLine = line.fnr();
-              f.blockquoteCount = 0;
-              f.ulCount = 0;
-            })
-        .add(
-            line -> line.matches(".*\\*/"),
-            line -> line.state().javadocEndLine = line.fnr())
-        .add(
-            line -> line.matches("^ *\\* @.*"),
-            line -> {
-              if (line.state().inJavadoc()
-                  && line.state().atLine < line.state().javadocStartLine
-                  && line.fnr() - 1 != line.state().starLine) {
-                line.state()
-                    .message("First @tag must be preceded by blank line", line);
-              }
-              line.state().atLine = line.fnr();
-            })
-        .add(
-            line -> line.contains("<blockquote>"),
-            line -> line.state().blockquoteCount++)
-        .add(
-            line -> line.contains("</blockquote>"),
-            line -> line.state().blockquoteCount--)
-        .add(line -> line.contains("<ul>"), line -> line.state().ulCount++)
-        .add(line -> line.contains("</ul>"), line -> line.state().ulCount--)
+    b.add(
+        line ->
+            line.matches("^ *\\* <p>.*")
+                && line.fnr() - 1 != line.state().starLine,
+        line ->
+            line.state().message("<p> must be preceded by blank line", line));
 
-        // In markdown, <code> and </code> must be on same line
-        .add(
-            line ->
-                line.contains("code>")
-                    && !line.source()
-                        .fileOpt()
-                        .filter(f -> f.getName().equals("LintTest.java"))
-                        .isPresent(),
-            line -> {
-              int openCount = count(line.line(), "<code>");
-              int closeCount = count(line.line(), "</code>");
-              if (openCount != closeCount) {
-                line.state()
-                    .message("<code> and </code> must be on same line", line);
-              }
-            })
-        .build();
+    // A non-blank line following a blank line must have a '<p>'
+    b.add(
+        line ->
+            line.state().inJavadoc()
+                && line.state().ulCount == 0
+                && line.state().blockquoteCount == 0
+                && line.contains("* ")
+                && line.fnr() - 1 == line.state().starLine
+                && line.matches("^ *\\* [^<@].*"),
+        line -> line.state().message("missing '<p>'", line));
+
+    // The first "@param" of a javadoc block must be preceded by a blank
+    // line.
+    b.add(
+        line -> line.matches("^ */\\*\\*.*"),
+        line -> {
+          final FileState f = line.state();
+          f.javadocStartLine = line.fnr();
+          f.blockquoteCount = 0;
+          f.ulCount = 0;
+        });
+
+    b.add(
+        line -> line.matches(".*\\*/"),
+        line -> line.state().javadocEndLine = line.fnr());
+    b.add(
+        line -> line.matches("^ *\\* @.*"),
+        line -> {
+          if (line.state().inJavadoc()
+              && line.state().atLine < line.state().javadocStartLine
+              && line.fnr() - 1 != line.state().starLine) {
+            line.state()
+                .message("First @tag must be preceded by blank line", line);
+          }
+          line.state().atLine = line.fnr();
+        });
+    b.add(
+        line -> line.contains("<blockquote>"),
+        line -> line.state().blockquoteCount++);
+    b.add(
+        line -> line.contains("</blockquote>"),
+        line -> line.state().blockquoteCount--);
+    b.add(line -> line.contains("<ul>"), line -> line.state().ulCount++);
+    b.add(line -> line.contains("</ul>"), line -> line.state().ulCount--);
+
+    // In markdown, <code> and </code> must be on same line
+    b.add(
+        line ->
+            line.contains("code>")
+                && !line.source()
+                    .fileOpt()
+                    .filter(f -> f.getName().equals("LintTest.java"))
+                    .isPresent(),
+        line -> {
+          int openCount = count(line.line(), "<code>");
+          int closeCount = count(line.line(), "</code>");
+          if (openCount != closeCount) {
+            line.state()
+                .message("<code> and </code> must be on same line", line);
+          }
+        });
   }
 
   private static boolean filenameIs(
