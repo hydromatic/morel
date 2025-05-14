@@ -18,11 +18,15 @@
  */
 package net.hydromatic.morel.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.collect.ImmutableList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Set;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -103,7 +107,9 @@ public class MartelliUnifier extends Unifier {
           work.add(new TermTerm(priorTerm, term));
         }
         if (!termActions.isEmpty()) {
-          act(variable, term, work, new Substitution(result), termActions, 0);
+          final Set<Variable> set = new HashSet<>();
+          act(variable, term, work, new Substitution(result), termActions, set);
+          checkArgument(set.isEmpty(), "Working set not empty: %s", set);
         }
         work.substituteList(variable, term);
         continue;
@@ -126,7 +132,24 @@ public class MartelliUnifier extends Unifier {
       Work work,
       Substitution substitution,
       Map<Variable, Action> termActions,
-      int depth) {
+      Set<Variable> set) {
+    // To prevent infinite recursion, this method is a no-op if the variable
+    // is already in the working set.
+    if (set.add(variable)) {
+      act2(variable, term, work, substitution, termActions, set);
+
+      // Remove the variable from the working set.
+      set.remove(variable);
+    }
+  }
+
+  private void act2(
+      Variable variable,
+      Term term,
+      Work work,
+      Substitution substitution,
+      Map<Variable, Action> termActions,
+      Set<Variable> set) {
     final Action action = termActions.get(variable);
     if (action != null) {
       action.accept(
@@ -135,7 +158,7 @@ public class MartelliUnifier extends Unifier {
           substitution,
           (leftTerm, rightTerm) -> work.add(new TermTerm(leftTerm, rightTerm)));
     }
-    if (term instanceof Variable && depth < 2) {
+    if (term instanceof Variable) {
       // Create a temporary list to prevent concurrent modification, in case the
       // action appends to the list. Limit on depth, to prevent infinite
       // recursion.
@@ -149,19 +172,13 @@ public class MartelliUnifier extends Unifier {
                   work,
                   substitution,
                   termActions,
-                  depth + 1);
+                  set);
             }
           });
       // If the term is a variable, recurse to see whether there is an
       // action for that variable. Limit on depth to prevent swapping back.
-      if (depth < 1) {
-        act(
-            (Variable) term,
-            variable,
-            work,
-            substitution,
-            termActions,
-            depth + 1);
+      if (set.size() < 2) {
+        act((Variable) term, variable, work, substitution, termActions, set);
       }
     }
     substitution.resultMap.forEach(
@@ -169,7 +186,7 @@ public class MartelliUnifier extends Unifier {
           // Substitution contains "variable2 -> variable"; call the actions of
           // "variable2", because it too has just been unified.
           if (v.equals(variable)) {
-            act(variable2, term, work, substitution, termActions, depth + 1);
+            act(variable2, term, work, substitution, termActions, set);
           }
         });
   }
