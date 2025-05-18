@@ -21,8 +21,12 @@ package net.hydromatic.morel;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.eval.Codes.isNegative;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.allMatch;
+import static net.hydromatic.morel.util.Static.anyMatch;
 import static net.hydromatic.morel.util.Static.endsWith;
+import static net.hydromatic.morel.util.Static.filterEager;
 import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
+import static net.hydromatic.morel.util.Static.noneMatch;
 import static net.hydromatic.morel.util.Static.transform;
 import static org.apache.calcite.util.Util.range;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -34,6 +38,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -349,6 +354,40 @@ public class UtilTest {
     assertThat(
         transform(Collections.emptyList(), String::length),
         is(Collections.emptyList()));
+  }
+
+  @Test
+  void testFilter() {
+    final List<String> list =
+        ImmutableList.of("john", "paul", "george", "ringo");
+    final List<String> emptyList = ImmutableList.of();
+    assertThat(
+        filterEager(list, s -> s.length() > 4), hasToString("[george, ringo]"));
+    assertThat(
+        filterEager(list, s -> s.length() <= 4), hasToString("[john, paul]"));
+    assertThat(filterEager(list, s -> s.length() > 3), sameInstance(list));
+    assertThat(filterEager(list, String::isEmpty), sameInstance(emptyList));
+    assertThat(
+        filterEager(emptyList, String::isEmpty), sameInstance(emptyList));
+  }
+
+  @Test
+  void testAllMatch() {
+    final List<String> list =
+        ImmutableList.of("john", "paul", "george", "ringo");
+    final List<String> emptyList = ImmutableList.of();
+    assertThat(allMatch(list, s -> s.length() > 4), is(false));
+    assertThat(allMatch(list, s -> s.length() > 3), is(true));
+    assertThat(anyMatch(list, s -> s.length() > 3), is(true));
+    assertThat(anyMatch(list, s -> s.length() > 4), is(true));
+    assertThat(anyMatch(list, s -> s.length() > 400), is(false));
+    assertThat(noneMatch(list, s -> s.length() > 3), is(false));
+    assertThat(noneMatch(list, s -> s.length() > 4), is(false));
+    assertThat(noneMatch(list, s -> s.length() > 400), is(true));
+
+    assertThat(allMatch(emptyList, String::isEmpty), is(true));
+    assertThat(anyMatch(emptyList, String::isEmpty), is(false));
+    assertThat(noneMatch(emptyList, String::isEmpty), is(true));
   }
 
   /**

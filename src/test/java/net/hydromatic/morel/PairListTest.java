@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import static net.hydromatic.morel.util.Static.anyMatch;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -133,7 +134,7 @@ class PairListTest {
 
     // Check PairList.immutable()
     // Skip if there are no null keys or values
-    if (list.stream().anyMatch(e -> e.getKey() == null)) {
+    if (anyMatch(list, e -> e.getKey() == null)) {
       // PairList.immutable should throw if there are null keys
       try {
         Object o = pairList.immutable();
@@ -141,7 +142,7 @@ class PairListTest {
       } catch (NullPointerException e) {
         assertThat(e.getMessage(), startsWith("key at index"));
       }
-    } else if (list.stream().anyMatch(e -> e.getValue() == null)) {
+    } else if (anyMatch(list, e -> e.getValue() == null)) {
       // PairList.immutable should throw if there are null values
       try {
         Object o = pairList.immutable();

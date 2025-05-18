@@ -33,7 +33,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collector;
 
 /** Utilities. */
 public class Static {
@@ -65,30 +64,6 @@ public class Static {
     return low.equals("true") || low.equals("1") || low.isEmpty()
         ? true
         : low.equals("false") || low.equals("0") ? false : defaultVal;
-  }
-
-  /**
-   * Returns a {@code Collector} that accumulates the input elements into a
-   * Guava {@link ImmutableList} via a {@link ImmutableList.Builder}.
-   *
-   * <p>It will be obsolete when we move to Guava 21.0, which has {@code
-   * ImmutableList.toImmutableList()}.
-   *
-   * @param <T> Type of the input elements
-   * @return a {@code Collector} that collects all the input elements into an
-   *     {@link ImmutableList}, in encounter order
-   */
-  public static <T>
-      Collector<T, ImmutableList.Builder<T>, ImmutableList<T>>
-          toImmutableList() {
-    return Collector.of(
-        ImmutableList::builder,
-        ImmutableList.Builder::add,
-        (t, u) -> {
-          t.addAll(u.build());
-          return t;
-        },
-        ImmutableList.Builder::build);
   }
 
   /**
@@ -189,6 +164,39 @@ public class Static {
     return 1 << (Integer.SIZE - p);
   }
 
+  /** Returns whether a predicate is true for all elements of a list. */
+  public static <E> boolean allMatch(
+      Iterable<? extends E> iterable, Predicate<E> predicate) {
+    for (E e : iterable) {
+      if (!predicate.test(e)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Returns whether a predicate is true for at least one element of a list. */
+  public static <E> boolean anyMatch(
+      Iterable<? extends E> iterable, Predicate<E> predicate) {
+    for (E e : iterable) {
+      if (predicate.test(e)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Returns whether a predicate is not true for any element of a list. */
+  public static <E> boolean noneMatch(
+      Iterable<? extends E> iterable, Predicate<E> predicate) {
+    for (E e : iterable) {
+      if (predicate.test(e)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /** Lazily transforms a list, applying a mapping function to each element. */
   public static <E, T> List<T> transform(
       List<? extends E> elements, Function<E, T> mapper) {
@@ -267,6 +275,38 @@ public class Static {
         elements.forEach(e -> b.add(mapper.apply(e)));
         return b.build();
     }
+  }
+
+  /**
+   * Eagerly converts a List to an ImmutableList, keeping elements that pass a
+   * predicate.
+   */
+  public static <E> ImmutableList<E> filterEager(
+      List<? extends E> elements, Predicate<E> predicate) {
+    // Do all the elements match?
+    for (int i = 0; i < elements.size(); i++) {
+      E element = elements.get(i);
+      if (predicate.test(element)) {
+        continue;
+      }
+      // Optimize by making the builder the same size as the collection.
+      final ImmutableList.Builder<E> b =
+          ImmutableList.builderWithExpectedSize(elements.size());
+      // Add all elements before the first non-matching element.
+      for (int j = 0; j < i; j++) {
+        b.add(elements.get(j));
+      }
+      // Test and add all elements after the first non-matching element.
+      for (int j = i + 1; j < elements.size(); j++) {
+        E e = elements.get(j);
+        if (predicate.test(e)) {
+          b.add(e);
+        }
+      }
+      return b.build();
+    }
+    // All elements match. We can just return the original list.
+    return ImmutableList.copyOf(elements);
   }
 
   /** Returns the first index in a list where a predicate is true, or -1. */

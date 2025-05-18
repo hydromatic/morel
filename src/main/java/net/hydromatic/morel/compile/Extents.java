@@ -20,6 +20,7 @@ package net.hydromatic.morel.compile;
 
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.util.Static.allMatch;
 import static net.hydromatic.morel.util.Static.skip;
 import static org.apache.calcite.util.Util.minus;
 
@@ -718,7 +719,7 @@ public class Extents {
       switch (pat.op) {
         case TUPLE_PAT:
           final Core.TuplePat tuplePat = (Core.TuplePat) pat;
-          if (tuplePat.args.stream().allMatch(this::canGet)) {
+          if (allMatch(tuplePat.args, this::canGet)) {
             // Convert 'from x, y where p(x) andalso q(y)'
             // to 'from x in extentP, y in extentQ'
             // and that becomes the extent of '(x, y)'.
@@ -739,12 +740,12 @@ public class Extents {
                   if (pat1.op == Op.TUPLE_PAT) {
                     final Core.TuplePat tuplePat1 = (Core.TuplePat) pat1;
                     final List<String> fieldNames = tuplePat1.fieldNames();
-                    if (tuplePat.args.stream()
-                        .allMatch(
-                            arg ->
-                                arg instanceof Core.NamedPat
-                                    && fieldNames.contains(
-                                        ((Core.NamedPat) arg).name))) {
+                    if (allMatch(
+                        tuplePat.args,
+                        arg ->
+                            arg instanceof Core.NamedPat
+                                && fieldNames.contains(
+                                    ((Core.NamedPat) arg).name))) {
                       foo1.addAll(foo2);
                     }
                   }
@@ -767,7 +768,7 @@ public class Extents {
       switch (pat.op) {
         case TUPLE_PAT:
           final Core.TuplePat tuplePat = (Core.TuplePat) pat;
-          if (tuplePat.args.stream().allMatch(this::canGet)) {
+          if (allMatch(tuplePat.args, this::canGet)) {
             return true;
           }
           // If the map contains a tuple with a field for every one of this
@@ -777,12 +778,11 @@ public class Extents {
             if (pat1.op == Op.TUPLE_PAT) {
               final Core.TuplePat tuplePat1 = (Core.TuplePat) pat1;
               final List<String> fieldNames = tuplePat1.fieldNames();
-              if (tuplePat.args.stream()
-                  .allMatch(
-                      arg ->
-                          arg instanceof Core.NamedPat
-                              && fieldNames.contains(
-                                  ((Core.NamedPat) arg).name))) {
+              if (allMatch(
+                  tuplePat.args,
+                  arg ->
+                      arg instanceof Core.NamedPat
+                          && fieldNames.contains(((Core.NamedPat) arg).name))) {
                 return true;
               }
             }

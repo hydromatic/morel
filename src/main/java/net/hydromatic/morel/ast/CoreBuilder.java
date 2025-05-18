@@ -21,6 +21,7 @@ package net.hydromatic.morel.ast;
 import static com.google.common.base.Preconditions.checkArgument;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.allMatch;
 import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.plus;
 import static net.hydromatic.morel.util.Static.transform;
@@ -809,8 +810,8 @@ public enum CoreBuilder {
         if (apply.isCallTo(BuiltIn.LIST_CONCAT)
             && apply.arg.isCallTo(BuiltIn.Z_LIST)) {
           final Core.Apply apply2 = (Core.Apply) apply.arg;
-          if (apply2.args().stream()
-              .allMatch(exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
+          if (allMatch(
+              apply2.args(), exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
             Pair<Core.Exp, List<Core.Exp>> pair =
                 unionExtents(typeSystem, apply2.args());
             if (pair.right.isEmpty()) {
@@ -821,8 +822,8 @@ public enum CoreBuilder {
         if (apply.isCallTo(BuiltIn.LIST_INTERSECT)
             && apply.arg.isCallTo(BuiltIn.Z_LIST)) {
           final Core.Apply apply2 = (Core.Apply) apply.arg;
-          if (apply2.args().stream()
-              .allMatch(exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
+          if (allMatch(
+              apply2.args(), exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
             Pair<Core.Exp, List<Core.Exp>> pair =
                 intersectExtents(typeSystem, apply2.args());
             if (pair.right.isEmpty()) {

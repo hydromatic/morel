@@ -21,6 +21,7 @@ package net.hydromatic.morel.compile;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.allMatch;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -175,8 +176,8 @@ public class Inliner extends EnvShuttle {
     if (exp.op == Op.TUPLE && match.pat.op == Op.TUPLE_PAT) {
       final Core.Tuple tuple = (Core.Tuple) exp;
       final Core.TuplePat tuplePat = (Core.TuplePat) match.pat;
-      if (tuple.args.stream().allMatch(arg -> arg.op == Op.ID)
-          && tuplePat.args.stream().allMatch(arg -> arg.op == Op.ID_PAT)) {
+      if (allMatch(tuple.args, arg -> arg.op == Op.ID)
+          && allMatch(tuplePat.args, arg -> arg.op == Op.ID_PAT)) {
         final ImmutableMap.Builder<Core.Id, Core.Id> builder =
             ImmutableMap.builder();
         forEach(

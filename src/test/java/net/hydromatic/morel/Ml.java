@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.Matchers.hasMoniker;
 import static net.hydromatic.morel.Matchers.isAst;
 import static net.hydromatic.morel.Matchers.throwsA;
+import static net.hydromatic.morel.util.Static.anyMatch;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -424,12 +425,11 @@ class Ml {
             new CustomTypeSafeMatcher<List<Throwable>>("non-empty list") {
               @Override
               protected boolean matchesSafely(List<Throwable> list) {
-                return list.stream()
-                    .anyMatch(
-                        e ->
-                            e instanceof CompileException
-                                && e.getMessage()
-                                    .equals("match nonexhaustive"));
+                return anyMatch(
+                    list,
+                    e ->
+                        e instanceof CompileException
+                            && e.getMessage().equals("match nonexhaustive"));
               }
             };
         break;

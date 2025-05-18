@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
+import static net.hydromatic.morel.util.Static.allMatch;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
@@ -1117,7 +1118,7 @@ public class Core {
 
     @Override
     public boolean isConstant() {
-      return args.stream().allMatch(Exp::isConstant);
+      return allMatch(args, Exp::isConstant);
     }
   }
 
@@ -1938,8 +1939,7 @@ public class Core {
     @Override
     public boolean isConstant() {
       // A list of constants is constant
-      return isCallTo(BuiltIn.Z_LIST)
-          && args().stream().allMatch(Exp::isConstant);
+      return isCallTo(BuiltIn.Z_LIST) && allMatch(args(), Exp::isConstant);
     }
 
     @Override

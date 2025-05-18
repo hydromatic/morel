@@ -21,6 +21,7 @@ package net.hydromatic.morel.ast;
 import static com.google.common.base.Preconditions.checkArgument;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.allMatch;
 import static net.hydromatic.morel.util.Static.append;
 import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.skipLast;
@@ -158,11 +159,12 @@ public class FromBuilder {
                 && !((Core.From) exp).steps.isEmpty()
                 && last(((Core.From) exp).steps).env.bindings.size() == 1
             || pat instanceof Core.RecordPat
-                && ((Core.RecordPat) pat)
-                    .args.stream().allMatch(a -> a instanceof Core.IdPat)
+                && allMatch(
+                    ((Core.RecordPat) pat).args, a -> a instanceof Core.IdPat)
             || pat instanceof Core.TuplePat
-                && ((Core.TuplePat) pat)
-                    .args.stream().allMatch(a -> a instanceof Core.IdPat))) {
+                && allMatch(
+                    ((Core.TuplePat) pat).args,
+                    a -> a instanceof Core.IdPat))) {
       final Core.From from = (Core.From) exp;
       final Core.FromStep lastStep = last(from.steps);
       final List<Core.FromStep> steps =
