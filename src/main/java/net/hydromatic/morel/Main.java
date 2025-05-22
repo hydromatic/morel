@@ -282,6 +282,7 @@ public class Main {
           new SubShell(main, echoLines, outLines, bindingMap, env0);
       for (; ; ) {
         try {
+          Pos pos = parser.nextTokenPos();
           parser.zero("stdIn");
           final AstNode statement = parser.statementSemicolonOrEof();
           String code = in2.flush();

@@ -1692,7 +1692,7 @@ Option.valOf (SOME 1);
  *)
 Option.valOf NONE;
 > uncaught exception Option
->   raised at: stdIn:5.1-5.18
+>   raised at: stdIn:1.1-1.18
 val noneInt = if true then NONE else SOME 0;
 > val noneInt = NONE : int option
 Sys.plan ();

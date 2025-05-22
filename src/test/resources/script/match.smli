@@ -21,14 +21,14 @@
 
 (*) Warning: match nonexhaustive
 fun f 1 = 0;
-> stdIn:23.5-23.12 Warning: match nonexhaustive
->   raised at: stdIn:23.5-23.12
+> stdIn:1.5-1.12 Warning: match nonexhaustive
+>   raised at: stdIn:1.5-1.12
 > val f = fn : int -> int
 f 1;
 > val it = 0 : int
 f 2;
 > uncaught exception Bind
->   raised at: stdIn:23.5-23.12
+>   raised at: stdIn:1.5-1.12
 
 (*) Warning: match nonexhaustive, twice
 fun f x =
@@ -38,22 +38,22 @@ fun f x =
   in
     (g x) + (h 2)
   end;
-> stdIn:5.9-5.16 Warning: match nonexhaustive
->   raised at: stdIn:5.9-5.16
-> stdIn:6.9-6.16 Warning: match nonexhaustive
->   raised at: stdIn:6.9-6.16
+> stdIn:3.9-3.16 Warning: match nonexhaustive
+>   raised at: stdIn:3.9-3.16
+> stdIn:4.9-4.16 Warning: match nonexhaustive
+>   raised at: stdIn:4.9-4.16
 > val f = fn : int -> int
 f 1;
 > val it = 3 : int
 f 2;
 > uncaught exception Bind
->   raised at: stdIn:5.9-5.16
+>   raised at: stdIn:3.9-3.16
 
 (*) Error: match redundant and nonexhaustive
 fun f 1 = 0
   | f 1 = 0;
-> stdIn:4.5-4.12 Error: match redundant and nonexhaustive
->   raised at: stdIn:4.5-4.12
+> stdIn:2.5-2.12 Error: match redundant and nonexhaustive
+>   raised at: stdIn:2.5-2.12
 
 (*) OK
 fun f 1 = 0
@@ -69,8 +69,8 @@ fun f (1, _) = 1
   | f (_, 2) = 2
   | f (1, 2) = 3
   | f (_, _) = 4;
-> stdIn:5.5-5.17 Error: match redundant
->   raised at: stdIn:5.5-5.17
+> stdIn:3.5-3.17 Error: match redundant
+>   raised at: stdIn:3.5-3.17
 
 (*) The Ackermann-Péter function
 (*) See "Recursion Equations as a Programming Language", D A Turner 1982
@@ -100,8 +100,8 @@ ack 3 3;
 
 (*) bool, non-exhaustive
 (fn true => 1);
-> stdIn:3.2-3.14 Warning: match nonexhaustive
->   raised at: stdIn:3.2-3.14
+> stdIn:1.2-1.14 Warning: match nonexhaustive
+>   raised at: stdIn:1.2-1.14
 > val it = fn : bool -> int
 
 (*) bool, exhaustive
@@ -111,15 +111,15 @@ ack 3 3;
 
 (*) order, non-exhaustive
 (fn LESS => ~1);
-> stdIn:3.2-3.15 Warning: match nonexhaustive
->   raised at: stdIn:3.2-3.15
+> stdIn:1.2-1.15 Warning: match nonexhaustive
+>   raised at: stdIn:1.2-1.15
 > val it = fn : order -> int
 
 (*) order, non-exhaustive
 (fn LESS  => ~1
   | EQUAL => 0);
-> stdIn:3.2-4.15 Warning: match nonexhaustive
->   raised at: stdIn:3.2-4.15
+> stdIn:1.2-2.15 Warning: match nonexhaustive
+>   raised at: stdIn:1.2-2.15
 > val it = fn : order -> int
 
 (*) order, exhaustive
@@ -130,8 +130,8 @@ ack 3 3;
 
 (*) int, non-exhaustive
 (fn 0 => true);
-> stdIn:3.2-3.14 Warning: match nonexhaustive
->   raised at: stdIn:3.2-3.14
+> stdIn:1.2-1.14 Warning: match nonexhaustive
+>   raised at: stdIn:1.2-1.14
 > val it = fn : int -> bool
 
 (*) order, exhaustive
@@ -141,8 +141,8 @@ ack 3 3;
 
 (*) int list, non-exhaustive
 (fn x::_ => x + 1);
-> stdIn:3.2-3.18 Warning: match nonexhaustive
->   raised at: stdIn:3.2-3.18
+> stdIn:1.2-1.18 Warning: match nonexhaustive
+>   raised at: stdIn:1.2-1.18
 > val it = fn : int list -> int
 
 (*) int list, exhaustive
@@ -152,8 +152,8 @@ ack 3 3;
 
 (*) int * bool, non-exhaustive
 (fn (0,b) => true andalso b);
-> stdIn:3.2-3.28 Warning: match nonexhaustive
->   raised at: stdIn:3.2-3.28
+> stdIn:1.2-1.28 Warning: match nonexhaustive
+>   raised at: stdIn:1.2-1.28
 > val it = fn : int * bool -> bool
 
 (*) int * bool, exhaustive

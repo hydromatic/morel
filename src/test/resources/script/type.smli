@@ -140,8 +140,8 @@ stdIn:1.6-2.32 Error: parameter or result constraints of clauses don't agree [ty
 *)
 fun f NONE:int list = []
   | f (SOME x):string list = [];
-> stdIn:11.5-12.32 Error: parameter or result constraints of clauses don't agree [tycon mismatch]
->   raised at: stdIn:11.5-12.32
+> stdIn:1.5-2.32 Error: parameter or result constraints of clauses don't agree [tycon mismatch]
+>   raised at: stdIn:1.5-2.32
 
 (*) Function with unit arg
 fun one () = 1;

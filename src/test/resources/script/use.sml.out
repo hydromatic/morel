@@ -37,7 +37,7 @@ val b = 20 : int
 (*) throws Subscript:
 val a = String.sub("abc", b);
 uncaught exception Subscript [subscript out of bounds]
-  raised at: stdIn:2.9-2.29
+  raised at: stdIn:1.9-1.29
 
 (*) plan is for the unsuccessful statement:
 Sys.plan();

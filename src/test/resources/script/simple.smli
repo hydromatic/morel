@@ -489,7 +489,7 @@ val SOME i = SOME 1;
 
 val SOME i = NONE;
 > uncaught exception Bind
->   raised at: stdIn:2.5-2.18
+>   raised at: stdIn:1.5-1.18
 
 val SOME (q as (1, i), SOME true) = SOME ((1, 2), SOME true);
 > val q = (1,2) : int * int
@@ -497,7 +497,7 @@ val SOME (q as (1, i), SOME true) = SOME ((1, 2), SOME true);
 
 val SOME (i, NONE) = SOME (1, SOME false);
 > uncaught exception Bind
->   raised at: stdIn:2.5-2.42
+>   raised at: stdIn:1.5-1.42
 
 Sys.set ("matchCoverageEnabled", false);
 > val it = () : unit
@@ -592,9 +592,9 @@ f 2;
 > val it = "el" : string
 f 6;
 > uncaught exception Subscript [subscript out of bounds]
->   raised at: stdIn:2.11-2.43
+>   raised at: stdIn:1.11-1.43
 f ~1;
 > uncaught exception Subscript [subscript out of bounds]
->   raised at: stdIn:2.11-2.43
+>   raised at: stdIn:1.11-1.43
 
 (*) End simple.smli

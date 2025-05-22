@@ -69,6 +69,10 @@ public class MorelParserImpl implements MorelParser
   }
 
   public Pos pos() {
+    return pos(token);
+  }
+
+  private Pos pos(Token token) {
     return new Pos(file,
         token.beginLine - lineOffset, token.beginColumn,
         token.endLine - lineOffset, token.endColumn + 1);
@@ -77,8 +81,16 @@ public class MorelParserImpl implements MorelParser
   public void zero(String file) {
     this.file = file;
     if (jj_input_stream.bufpos >= 0) {
-      this.lineOffset = jj_input_stream.bufline[jj_input_stream.bufpos];
+      this.lineOffset = jj_input_stream.bufline[jj_input_stream.bufpos] - 1;
     }
+  }
+
+  /** Reads the position of the upcoming Token, but does not make it current. */
+  final public Pos nextTokenPos() {
+    if (token.next == null) {
+       token.next = token_source.getNextToken();
+    }
+    return pos(token.next);
   }
 }
 

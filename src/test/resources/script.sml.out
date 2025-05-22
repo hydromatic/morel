@@ -160,8 +160,8 @@ fun gray_code n =
   else let val prev = gray_code (n-1)
         in (map (fn s => "0" ^ s) prev) @ (rev (map (fn s => "1" ^ s) prev))
        end;
-stdIn:5.14-5.17 Error: unbound variable or constructor: nil
-  raised at: stdIn:5.14-5.17
+stdIn:3.14-3.17 Error: unbound variable or constructor: nil
+  raised at: stdIn:3.14-3.17
 
 val gray_code_3 = gray_code 3;
 stdIn:1.19-1.28 Error: unbound variable or constructor: gray_code
@@ -311,21 +311,21 @@ val ilist = [1,2,3,4,5,6,7,8,9,10,11,12,...] : int list
 
 (*) Should give 'Error: unbound variable or constructor: foo'
 foo;
-stdIn:5.1-5.4 Error: unbound variable or constructor: foo
-  raised at: stdIn:5.1-5.4
+stdIn:1.1-1.4 Error: unbound variable or constructor: foo
+  raised at: stdIn:1.1-1.4
 
 
 (*) Should give 'Error: unbound variable or constructor: foo'
 5 + foo;
-stdIn:3.5-3.8 Error: unbound variable or constructor: foo
-  raised at: stdIn:3.5-3.8
+stdIn:1.5-1.8 Error: unbound variable or constructor: foo
+  raised at: stdIn:1.5-1.8
 
 
 (*) Should give 'Error: unbound variable or constructor: foo'
 (*) or 'Error: unbound variable or constructor: bar'
 5 + bar + 6 + foo;
-stdIn:4.5-4.8 Error: unbound variable or constructor: bar
-  raised at: stdIn:4.5-4.8
+stdIn:1.5-1.8 Error: unbound variable or constructor: bar
+  raised at: stdIn:1.5-1.8
 
 
 (* end script.sml *)
