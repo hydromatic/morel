@@ -3006,6 +3006,13 @@ public enum BuiltIn {
   /** Internal operator "orelse", of type "bool * bool &rarr; bool". */
   Z_ORELSE("$", "orelse", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
 
+  /**
+   * Internal value "$current", of type "unit". It is used to implement the
+   * {@code current} keyword and its type is not necessarily {@code unit}. This
+   * enum member is mainly to provide a single definition for the name.
+   */
+  Z_CURRENT("$", "$current", ts -> UNIT),
+
   /** Internal unary negation operator "~", of type "int &rarr; int". */
   Z_NEGATE_INT("$", "~:int", ts -> ts.fnType(INT, INT)),
 

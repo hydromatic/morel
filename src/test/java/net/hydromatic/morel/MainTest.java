@@ -1998,6 +1998,10 @@ public class MainTest {
                 + " group id = #id e compute count = count"
                 + " join d in depts where false");
     ml("from e in emps skip 1 take 2").assertParseSame();
+    ml("from e in emps order e.empno desc, e.deptno")
+        .assertParse("from e in emps order #empno e desc, #deptno e");
+    ml("from e in emps yield e.deptno order current mod 2")
+        .assertParse("from e in emps yield #deptno e order current mod 2");
     ml("from e in emps order e.empno take 2")
         .assertParse("from e in emps order #empno e take 2");
     ml("from e in emps order e.empno take 2 skip 3 skip 1+1 take 2")
@@ -2450,7 +2454,11 @@ public class MainTest {
         .assertCompileException("unbound variable or constructor: a");
     ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} yield a")
         .assertType("int list");
+    ml("from d in [{a=1,b=true}], i in [2] yield (d.b, i) yield #1 current")
+        .assertType("bool list");
     ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} order a")
+        .assertType("{a:int, b:bool} list");
+    ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} order current.a")
         .assertType("{a:int, b:bool} list");
     ml("from d in [{a=1,b=true}], i in [2] yield d where true")
         .assertType("{a:int, b:bool} list");
@@ -2462,6 +2470,14 @@ public class MainTest {
         .assertType("{a:int, b:bool} list");
     ml("from d in [{a=1,b=true}], i in [2] yield i yield 3.0")
         .assertType("real list");
+  }
+
+  @Test
+  void testFromType2() {
+    mlE("from i in [1,2,3,4,5] take $current$")
+        .assertCompileException("'current' is only valid in a query");
+    ml("from i in [1,2,3,4,5] yield substring(\"hello\", 1, current)")
+        .assertType("string list");
 
     // with
     ml("from d in [{a=1,b=true}], i in [2] yield {d with b=false}")

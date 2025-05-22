@@ -20,6 +20,7 @@ package net.hydromatic.morel.compile;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
@@ -67,6 +68,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Converts AST expressions to Core expressions. */
@@ -87,6 +89,7 @@ public class Resolver {
   private final NameGenerator nameGenerator;
   private final Environment env;
   private final @Nullable Session session;
+  private final Core.Exp current;
   private final Map<String, Pair<Core.IdPat, List<Core.IdPat>>>
       resolvedOverloads;
 
@@ -110,13 +113,15 @@ public class Resolver {
       Map<Pair<Core.NamedPat, Type>, Core.NamedPat> variantIdMap,
       Map<String, Pair<Core.IdPat, List<Core.IdPat>>> resolvedOverloads,
       Environment env,
-      @Nullable Session session) {
+      @Nullable Session session,
+      Core.@Nullable Exp current) {
     this.typeMap = typeMap;
     this.nameGenerator = nameGenerator;
     this.variantIdMap = variantIdMap;
     this.resolvedOverloads = resolvedOverloads;
     this.env = env;
     this.session = session;
+    this.current = current;
   }
 
   /** Creates a root Resolver. */
@@ -125,20 +130,28 @@ public class Resolver {
     NameGenerator nameGenerator =
         session == null ? new NameGenerator() : session.nameGenerator;
     return new Resolver(
-        typeMap, nameGenerator, new HashMap<>(), new HashMap<>(), env, session);
+        typeMap,
+        nameGenerator,
+        new HashMap<>(),
+        new HashMap<>(),
+        env,
+        session,
+        null);
   }
 
   /** Binds a Resolver to a new environment. */
   public Resolver withEnv(Environment env) {
-    return env == this.env
-        ? this
-        : new Resolver(
-            typeMap,
-            nameGenerator,
-            variantIdMap,
-            resolvedOverloads,
-            env,
-            session);
+    if (env == this.env) {
+      return this;
+    }
+    return new Resolver(
+        typeMap,
+        nameGenerator,
+        variantIdMap,
+        resolvedOverloads,
+        env,
+        session,
+        current);
   }
 
   /**
@@ -147,6 +160,20 @@ public class Resolver {
    */
   public final Resolver withEnv(Iterable<Binding> bindings) {
     return withEnv(Environments.bind(env, bindings));
+  }
+
+  private Resolver withCurrent(Core.Exp current) {
+    if (current == this.current) {
+      return this;
+    }
+    return new Resolver(
+        typeMap,
+        nameGenerator,
+        variantIdMap,
+        resolvedOverloads,
+        env,
+        session,
+        current);
   }
 
   public Core.Decl toCore(Ast.Decl node) {
@@ -401,6 +428,8 @@ public class Resolver {
         return toCore(((Ast.AnnotatedExp) exp).exp);
       case ID:
         return toCore((Ast.Id) exp);
+      case CURRENT:
+        return toCore((Ast.Current) exp);
       case ANDALSO:
       case ORELSE:
         return toCore((Ast.InfixCall) exp);
@@ -441,6 +470,10 @@ public class Resolver {
     checkNotNull(binding, "not found", id);
     final Core.NamedPat idPat = getIdPat(id, binding.id);
     return core.id(idPat);
+  }
+
+  private Core.Exp toCore(Ast.Current current) {
+    return requireNonNull(this.current);
   }
 
   /** Converts an id in a declaration to Core. */
@@ -1114,6 +1147,19 @@ public class Resolver {
       return fromBuilder.buildSimplify();
     }
 
+    /** Creates a new resolver, adding the bindings from the current step. */
+    private Resolver withStepEnv(Core.StepEnv stepEnv) {
+      Core.Exp f;
+      if (stepEnv.atom) {
+        f = core.id(stepEnv.bindings.get(0).id);
+      } else {
+        final PairList<String, Core.Exp> nameExps = PairList.of();
+        stepEnv.bindings.forEach(b -> nameExps.add(b.id.name, core.id(b.id)));
+        f = core.record(typeMap.typeSystem, nameExps);
+      }
+      return withEnv(stepEnv.bindings).withCurrent(f);
+    }
+
     @Override
     protected void visit(Ast.From from) {
       // Do not traverse into the sub-"from".
@@ -1121,7 +1167,7 @@ public class Resolver {
 
     @Override
     protected void visit(Ast.Scan scan) {
-      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
+      final Resolver r = withStepEnv(fromBuilder.stepEnv());
       final Core.Exp coreExp;
       final Core.Pat corePat;
       if (scan.exp == null) {
@@ -1148,14 +1194,14 @@ public class Resolver {
 
     @Override
     protected void visit(Ast.Where where) {
-      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
+      final Resolver r = withStepEnv(fromBuilder.stepEnv());
       fromBuilder.where(r.toCore(where.exp));
     }
 
     @Override
     protected void visit(Ast.Require require) {
       // 'require e' translates to the same as 'where not e'
-      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
+      final Resolver r = withStepEnv(fromBuilder.stepEnv());
       final Core.Exp coreRequire = r.toCore(require.exp);
       final Core.Exp coreNot = core.not(typeMap.typeSystem, coreRequire);
       fromBuilder.where(coreNot);
@@ -1194,14 +1240,14 @@ public class Resolver {
 
     @Override
     protected void visit(Ast.Yield yield) {
-      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
+      final Resolver r = withStepEnv(fromBuilder.stepEnv());
       Core.Exp exp = r.toCore(yield.exp);
       fromBuilder.yield_(exp);
     }
 
     @Override
     protected void visit(Ast.Order order) {
-      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
+      final Resolver r = withStepEnv(fromBuilder.stepEnv());
       fromBuilder.order(transformEager(order.orderItems, r::toCore));
     }
 
@@ -1224,7 +1270,7 @@ public class Resolver {
 
     @Override
     protected void visit(Ast.Group group) {
-      final Resolver r = withEnv(fromBuilder.stepEnv().bindings);
+      final Resolver r = withStepEnv(fromBuilder.stepEnv());
       final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExpsB =
           ImmutableSortedMap.naturalOrder();
       final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates =

@@ -3868,6 +3868,7 @@ public abstract class Codes {
           .put(BuiltIn.VECTOR_COLLATE, VECTOR_COLLATE)
           .put(BuiltIn.Z_ANDALSO, Unit.INSTANCE)
           .put(BuiltIn.Z_ORELSE, Unit.INSTANCE)
+          .put(BuiltIn.Z_CURRENT, Unit.INSTANCE)
           .put(BuiltIn.Z_NEGATE_INT, Z_NEGATE_INT)
           .put(BuiltIn.Z_NEGATE_REAL, Z_NEGATE_REAL)
           .put(BuiltIn.Z_DIVIDE_INT, Z_DIVIDE_INT)

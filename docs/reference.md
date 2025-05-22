@@ -57,8 +57,10 @@ In Morel but not Standard ML:
 * Queries (expressions starting with `exists`, `forall` or `from`) with
   `compute`,
   `distinct`,
+  `except`,
   `group`,
   `in`,
+  `intersect`,
   `into`,
   `join`,
   `order`,
@@ -66,14 +68,13 @@ In Morel but not Standard ML:
   `skip`,
   `take`,
   `through`,
+  `union`,
   `where`,
-  `yield` clauses
+  `yield` steps
 * `elem`,
-  `except`,
   `implies`,
-  `intersect`,
-  `notelem`,
-  `union` operators
+  `notelem` binary operators
+* `current` nilary operator
 * <code><i>lab</i> =</code> is optional in <code><i>exprow</i></code>
 * <code><i>record</i>.<i>lab</i></code> as an alternative to
   <code>#<i>lab</i> <i>record</i></code>

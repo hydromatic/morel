@@ -843,6 +843,7 @@ public class Ast {
       this.name = requireNonNull(name);
     }
 
+    @Override
     public Id accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
@@ -852,8 +853,40 @@ public class Ast {
       visitor.visit(this);
     }
 
+    @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.id(name);
+    }
+  }
+
+  /**
+   * Parse tree node of the "current" reference.
+   *
+   * <p>{@code current} references the current row in a step of a query. Also,
+   * it is name of the sole field returned by an atom yield (e.g. {@code yield x
+   * + 2}) with an expression for which {@link
+   * net.hydromatic.morel.ast.AstBuilder#implicitLabelOpt(Ast.Exp)} cannot
+   * derive a label.
+   */
+  public static class Current extends Exp {
+    /** Creates a Current. */
+    Current(Pos pos) {
+      super(pos, Op.CURRENT);
+    }
+
+    @Override
+    public Current accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.id("current");
     }
   }
 

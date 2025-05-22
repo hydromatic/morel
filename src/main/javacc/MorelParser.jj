@@ -178,9 +178,7 @@ Literal numericLiteral() :
 }
 
 /** Parses a string literal. */
-Literal stringLiteral() :
-{
-}
+Literal stringLiteral() : {}
 {
   <QUOTED_STRING> {
     return ast.stringLiteral(pos(), unquoteString(token.image));
@@ -188,9 +186,7 @@ Literal stringLiteral() :
 }
 
 /** Parses a char literal. */
-Literal charLiteral() :
-{
-}
+Literal charLiteral() : {}
 {
   <CHAR_LITERAL> {
     return ast.charLiteral(pos(), unquoteCharLiteral(token.image));
@@ -198,9 +194,7 @@ Literal charLiteral() :
 }
 
 /** Parses an identifier. */
-Id identifier() :
-{
-}
+Id identifier() : {}
 {
   <IDENTIFIER> {
     return ast.id(pos(), token.image);
@@ -210,14 +204,20 @@ Id identifier() :
   }
 }
 
+/** Parses the {@code current} keyword. */
+Current current() : {}
+{
+  <CURRENT> {
+    return ast.current(pos());
+  }
+}
+
 /** Parses a record selector, e.g. "{@code #empno}".
  *
  * <p>You use it as a function to extract a field of a record;
  * for example <code>#empno {empno=10, name="Fred"}</code>
  * yields {@code 10}. */
-RecordSelector recordSelector() :
-{
-}
+RecordSelector recordSelector() : {}
 {
   <LABEL> {
     assert token.image.startsWith("#");
@@ -226,9 +226,7 @@ RecordSelector recordSelector() :
 }
 
 /** Parses a type variable, e.g. "{@code 'a}". */
-TyVar tyVar() :
-{
-}
+TyVar tyVar() : {}
 {
   <TY_VAR> {
     assert token.image.startsWith("'");
@@ -959,6 +957,8 @@ Exp atom() :
 {
   e = identifier() { return e; }
 |
+  e = current() { return e; }
+|
   e = recordSelector() { return e; }
 |
   e = literal() { return e; }
@@ -1527,9 +1527,7 @@ Ast.Type type() :
   }
 }
 
-Ast.Type namedType() :
-{
-}
+Ast.Type namedType() : {}
 {
   <IDENTIFIER> {
     return ast.namedType(pos(), ImmutableList.of(), token.image);
@@ -1600,6 +1598,7 @@ AstNode statementEof() :
 
 // The following are relational extensions:
 | < COMPUTE: "compute" >
+| < CURRENT: "current" >
 | < DESC: "desc" >
 | < DISTINCT: "distinct" >
 | < ELEM: "elem" >

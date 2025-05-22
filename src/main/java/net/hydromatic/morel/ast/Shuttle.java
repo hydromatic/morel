@@ -71,6 +71,10 @@ public class Shuttle {
     return id; // leaf
   }
 
+  protected Ast.Current visit(Ast.Current current) {
+    return current;
+  }
+
   protected Ast.Exp visit(Ast.AnnotatedExp annotatedExp) {
     return ast.annotatedExp(
         annotatedExp.pos,

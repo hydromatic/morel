@@ -129,6 +129,10 @@ public enum AstBuilder {
     return new Ast.Literal(p, Op.UNIT_LITERAL, Unit.INSTANCE);
   }
 
+  public Ast.Current current(Pos pos) {
+    return new Ast.Current(pos);
+  }
+
   public Ast.Id id(Pos pos, String name) {
     return new Ast.Id(pos, name);
   }
