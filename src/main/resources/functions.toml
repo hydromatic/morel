@@ -1,0 +1,3052 @@
+# Licensed to Julian Hyde under one or more contributor license
+# agreements.  See the NOTICE file distributed with this work
+# for additional information regarding copyright ownership.
+# Julian Hyde licenses this file to you under the Apache
+# License, Version 2.0 (the "License"); you may not use this
+# file except in compliance with the License.  You may obtain a
+# copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied.  See the License for the specific
+# language governing permissions and limitations under the
+# License.
+#
+# Standard ML Library Functions
+#
+# Format:
+#  * name (string) is the name of the function.
+#  * ordinal (optional int) contains the order of the function in the
+#    original reference.md table.
+#  * structure (string) is the name of the structure.
+#  * type (string) is the Standard ML type signature.
+#  * description (string) is the description. Multi-line string
+#    wrapped at 70. Identifiers are enclosed in backticks.
+#  * implemented (optional boolean, default true) indicates whether
+#    the function has been implemented in Morel
+#  * syntax (optional string, default "function", may also be
+#    "prefix", "infix") is the syntax of the function or operator.
+#  * specified (optional string, default "basis") indicates whether
+#    the function is defined in the Standard ML basis library or is a
+#    Morel extension.
+
+# === Bag structure ==================================================
+
+[[functions]]
+ordinal = 23
+structure = "Bag"
+name = "all"
+specified = "morel"
+type = "(α → bool) → α bag → bool"
+description = """
+"all f b" applies `f` to each element `x` of the bag `b`, in arbitrary
+order, until `f(x)` evaluates to `false`; it returns `false` if such
+an `x` exists and `true` otherwise. It is equivalent to `not(exists
+(not o f) b))`.
+"""
+
+[[functions]]
+ordinal = 15
+structure = "Bag"
+name = "app"
+specified = "morel"
+type = "(α → unit) → α bag → unit"
+description = """
+"app f b" applies `f` to the elements of `b`.
+"""
+
+[[functions]]
+ordinal = 8
+structure = "Bag"
+name = "at"
+specified = "morel"
+type = "α bag * α bag → α bag"
+description = """
+"at (b1, b2)" returns the bag that is the concatenation of `b1` and
+`b2`.
+"""
+
+[[functions]]
+ordinal = 25
+structure = "Bag"
+name = "collate"
+specified = "morel"
+type = "(α * α → order) → α bag * α bag → order"
+description = """
+"collate f (l1, l2)" performs lexicographic comparison of the two bags
+using the given ordering `f` on the bag elements.
+"""
+
+[[functions]]
+ordinal = 14
+structure = "Bag"
+name = "concat"
+specified = "morel"
+type = "α bag bag → α bag"
+description = """
+"concat b" returns the bag that is the concatenation of all the bags
+in `b`.
+"""
+
+[[functions]]
+ordinal = 13
+structure = "Bag"
+name = "drop"
+specified = "morel"
+type = "α bag * int → α bag"
+description = """
+"drop (b, i)" returns what is left after dropping an arbitrary `i`
+elements of the bag `b`. Raises `Subscript` if `i` < 0 or `i` >
+`length l`.
+
+<p>We have `drop(b, length b)` = `[]`.
+"""
+
+[[functions]]
+ordinal = 22
+structure = "Bag"
+name = "exists"
+specified = "morel"
+type = "(α → bool) → α bag → bool"
+description = """
+"exists f b" applies `f` to each element `x` of the bag `b`, in
+arbitrary order, until `f(x)` evaluates to `true`; it returns `true`
+if such an `x` exists and `false` otherwise.
+"""
+
+[[functions]]
+ordinal = 19
+structure = "Bag"
+name = "filter"
+specified = "morel"
+type = "(α → bool) → α bag → α bag"
+description = """
+"filter f b" applies `f` to each element `x` of `b` and returns the
+bag of those `x` for which `f x` evaluated to `true`.
+"""
+
+[[functions]]
+ordinal = 18
+structure = "Bag"
+name = "find"
+specified = "morel"
+type = "(α → bool) → α bag → α option"
+description = """
+"find f b" applies `f` to each element `x` of the bag `b`, in
+arbitrary order, until `f x` evaluates to `true`. It returns `SOME
+(x)` if such an `x` exists; otherwise it returns `NONE`.
+"""
+
+[[functions]]
+ordinal = 21
+structure = "Bag"
+name = "fold"
+specified = "morel"
+type = "(α * β → β) → β → α bag → β"
+description = """
+"fold f init (bag \\[x1, x2, ..., xn\\])" returns `f(xn, ... , f(x2,
+f(x1, init))...)` (for some arbitrary reordering of the elements `xi`)
+or `init` if the bag is empty.
+"""
+
+[[functions]]
+ordinal = 5
+structure = "Bag"
+name = "fromList"
+specified = "morel"
+type = "α list → α bag"
+description = """
+"fromList l" creates a new bag from `l`, whose length is `length l`
+and whose elements are the same as those of `l`. Raises `Size` if
+`maxLen` < `n`.
+"""
+
+[[functions]]
+ordinal = 11
+structure = "Bag"
+name = "getItem"
+specified = "morel"
+type = "α bag → * (α * α bag) option"
+description = """
+"getItem b" returns `NONE` if the bag `b` is empty, and `SOME (hd b,
+tl b)` otherwise (applying `hd` and `tl` simultaneously so that they
+choose/remove the same arbitrary element).
+"""
+
+[[functions]]
+ordinal = 9
+structure = "Bag"
+name = "hd"
+specified = "morel"
+type = "α bag → α"
+description = """
+"hd b" returns an arbitrary element of bag `b`. Raises `Empty` if `b`
+is `nil`.
+"""
+
+[[functions]]
+ordinal = 7
+structure = "Bag"
+name = "length"
+specified = "morel"
+type = "α bag → int"
+description = """
+"length b" returns the number of elements in the bag `b`.
+"""
+
+[[functions]]
+ordinal = 16
+structure = "Bag"
+name = "map"
+specified = "morel"
+type = "(α → β) → α bag → β bag"
+description = """
+"map f b" applies `f` to each element of `b`, returning the bag of
+results. This is equivalent to:
+
+<pre>fromList (List.map f (foldr (fn (a,l) => a::l) [] b))</pre>
+"""
+
+[[functions]]
+ordinal = 17
+structure = "Bag"
+name = "mapPartial"
+specified = "morel"
+type = "(α → β option) → α bag → β bag"
+description = """
+"mapPartial f b" applies `f` to each element of `b`, returning a bag
+of results, with `SOME` stripped, where `f` was defined. `f` is not
+defined for an element of `b` if `f` applied to the element returns
+`NONE`. The above expression is equivalent to:
+
+<pre>((map valOf) o (filter isSome) o (map f)) b`</pre>
+"""
+
+[[functions]]
+ordinal = 3
+structure = "Bag"
+name = "nil"
+specified = "morel"
+type = "α bag"
+description = """
+"nil" is the empty bag.
+"""
+
+[[functions]]
+ordinal = 4
+structure = "Bag"
+name = "null"
+specified = "morel"
+type = "α bag → bool"
+description = """
+"null b" returns `true` if the bag `b` is empty.
+"""
+
+[[functions]]
+ordinal = 20
+structure = "Bag"
+name = "partition"
+specified = "morel"
+type = "(α → bool) → α bag → α bag * α bag"
+description = """
+"partition f b" applies `f` to each element `x` of `b`, in arbitrary
+order, and returns a pair `(pos, neg)` where `pos` is the bag of those
+`x` for which `f x` evaluated to `true`, and `neg` is the bag of those
+for which `f x` evaluated to `false`.
+"""
+
+[[functions]]
+ordinal = 24
+structure = "Bag"
+name = "tabulate"
+specified = "morel"
+type = "int * (int → α) → α bag"
+description = """
+"tabulate (n, f)" returns a bag of length `n` equal to `[f(0), f(1),
+..., f(n-1)]`. This is equivalent to the expression:
+
+<pre>fromList (List.tabulate (n, f))</pre>
+
+Raises `Size` if `n` < 0.
+"""
+
+[[functions]]
+ordinal = 12
+structure = "Bag"
+name = "take"
+specified = "morel"
+type = "α bag * int → α bag"
+description = """
+"take (b, i)" returns an arbitrary `i` elements of the bag `b`. Raises
+`Subscript` if `i` < 0 or `i` > `length l`. We have `take(b, length
+b)` = `b`.
+"""
+
+[[functions]]
+ordinal = 10
+structure = "Bag"
+name = "tl"
+specified = "morel"
+type = "α bag → α bag"
+description = """
+"tl b" returns all but one arbitrary element of bag `b`. Raises
+`Empty` if `b` is `nil`.
+"""
+
+[[functions]]
+ordinal = 6
+structure = "Bag"
+name = "toList"
+specified = "morel"
+type = "α bag → α list"
+description = """
+"toList b" creates a new bag from `b`, whose length is `length b` and
+whose elements are the same as those of `b`. Raises `Size` if `maxLen`
+< `n`.
+"""
+
+# === Bool structure =================================================
+
+[[values]]
+structure = "Bool"
+ordinal = 0
+name = "true"
+specified = "basis"
+type = "bool"
+description = """
+Literal true.
+"""
+
+[[values]]
+structure = "Bool"
+ordinal = 1
+name = "false"
+specified = "basis"
+type = "bool"
+description = """
+Literal false.
+"""
+
+[[functions]]
+structure = "Bool"
+syntax = "prefix"
+name = "not"
+specified = "basis"
+type = "bool → bool"
+description = """
+"not b" returns the logical inverse of `b`.
+"""
+
+[[functions]]
+structure = "Bool"
+name = "op implies"
+syntax = "binary"
+specified = "morel"
+type = "bool * bool → bool"
+description = """
+"b1 implies b2" returns `true` if `b1` is `false` or `b2` is `true`.
+"""
+
+# === Char structure =================================================
+
+[[functions]]
+ordinal = 26
+structure = "Char"
+name = "chr"
+specified = "basis"
+type = "int → char"
+description = """
+"chr i" returns the character whose code is `i`. Raises `Chr` if `i` <
+0 or `i` > `maxOrd`.
+"""
+
+[[functions]]
+ordinal = 27
+structure = "Char"
+name = "compare"
+specified = "basis"
+type = "char * char → order"
+description = """
+"compare (c1, c2)" returns `LESS`, `EQUAL`, or `GREATER` according to
+whether its first argument is less than, equal to, or greater than the
+second.
+"""
+
+[[functions]]
+ordinal = 28
+structure = "Char"
+name = "contains"
+specified = "basis"
+type = "char → string → bool"
+description = """
+"contains s c" returns true if character `c` occurs in the string `s`;
+false otherwise. The function, when applied to `s`, builds a table and
+returns a function which uses table lookup to decide whether a given
+character is in the string or not. Hence it is relatively expensive to
+compute `val p = contains s` but very fast to compute `p(c)` for any
+given character.
+"""
+
+[[functions]]
+ordinal = 29
+structure = "Char"
+name = "fromCString"
+specified = "basis"
+type = "string → char option"
+description = """
+"fromCString s" scans a `char` value from a string. Returns `SOME (r)`
+if a `char` value can be scanned from a prefix of `s`, ignoring any
+initial whitespace; otherwise, it returns `NONE`. Equivalent to
+`StringCvt.scanString (scan StringCvt.ORD)`.
+"""
+
+[[functions]]
+ordinal = 30
+structure = "Char"
+name = "fromInt"
+specified = "basis"
+type = "int → char option"
+description = """
+"fromInt i" converts an `int` into a `char`. Raises `Chr` if `i` < 0
+or `i` > `maxOrd`.
+"""
+
+[[functions]]
+ordinal = 31
+structure = "Char"
+name = "fromString"
+specified = "basis"
+type = "string → char option"
+description = """
+"fromString s" attempts to scan a character or ML escape sequence from
+the string `s`. Does not skip leading whitespace. For instance,
+`fromString "\\\\065"` equals `#"A"`.
+"""
+
+[[functions]]
+ordinal = 32
+structure = "Char"
+name = "isAlpha"
+specified = "basis"
+type = "char → bool"
+description = """
+"isAlpha c" returns true if `c` is a letter (lowercase or uppercase).
+"""
+
+[[functions]]
+ordinal = 33
+structure = "Char"
+name = "isAlphaNum"
+specified = "basis"
+type = "char → bool"
+description = """
+"isAlphaNum c" returns true if `c` is alphanumeric (a letter or a
+decimal digit).
+"""
+
+[[functions]]
+ordinal = 34
+structure = "Char"
+name = "isAscii"
+specified = "basis"
+type = "char → bool"
+description = """
+"isAscii c" returns true if 0 ≤ `ord c` ≤ 127 `c`.
+"""
+
+[[functions]]
+ordinal = 35
+structure = "Char"
+name = "isCntrl"
+specified = "basis"
+type = "char → bool"
+description = """
+"isCntrl c" returns true if `c` is a control character, that is, if
+`not (isPrint c)`.
+"""
+
+[[functions]]
+ordinal = 36
+structure = "Char"
+name = "isDigit"
+specified = "basis"
+type = "char → bool"
+description = """
+"isDigit c" returns true if `c` is a decimal digit (0 to 9).
+"""
+
+[[functions]]
+ordinal = 37
+structure = "Char"
+name = "isGraph"
+specified = "basis"
+type = "char → bool"
+description = """
+"isGraph c" returns true if `c` is a graphical character, that is, it
+is printable and not a whitespace character.
+"""
+
+[[functions]]
+ordinal = 38
+structure = "Char"
+name = "isHexDigit"
+specified = "basis"
+type = "char → bool"
+description = """
+"isHexDigit c" returns true if `c` is a hexadecimal digit.
+"""
+
+[[functions]]
+ordinal = 39
+structure = "Char"
+name = "isLower"
+specified = "basis"
+type = "char → bool"
+description = """
+"isLower c" returns true if `c` is a hexadecimal digit (0 to 9 or a to
+f or A to F).
+"""
+
+[[functions]]
+ordinal = 40
+structure = "Char"
+name = "isOctDigit"
+specified = "basis"
+type = "char → bool"
+description = """
+"isOctDigit c" returns true if `c` is an octal digit.
+"""
+
+[[functions]]
+ordinal = 41
+structure = "Char"
+name = "isPrint"
+specified = "basis"
+type = "char → bool"
+description = """
+"isPrint c" returns true if `c` is a printable character (space or
+visible).
+"""
+
+[[functions]]
+ordinal = 42
+structure = "Char"
+name = "isPunct"
+specified = "basis"
+type = "char → bool"
+description = """
+"isPunct c" returns true if `c` is a punctuation character, that is,
+graphical but not alphanumeric.
+"""
+
+[[functions]]
+ordinal = 43
+structure = "Char"
+name = "isSpace"
+specified = "basis"
+type = "char → bool"
+description = """
+"isSpace c" returns true if `c` is a whitespace character (blank,
+newline, tab, vertical tab, new page).
+"""
+
+[[functions]]
+ordinal = 44
+structure = "Char"
+name = "isUpper"
+specified = "basis"
+type = "char → bool"
+description = """
+"isUpper c" returns true if `c` is an uppercase letter (A to Z).
+"""
+
+[[functions]]
+ordinal = 47
+structure = "Char"
+name = "maxChar"
+specified = "basis"
+type = "int"
+description = """
+"maxChar" is the greatest character in the ordering `<`.
+"""
+
+[[functions]]
+ordinal = 45
+structure = "Char"
+name = "maxOrd"
+specified = "basis"
+type = "int"
+description = """
+"maxOrd" is the greatest character code; it equals `ord maxChar`.
+"""
+
+[[functions]]
+ordinal = 48
+structure = "Char"
+name = "minChar"
+specified = "basis"
+type = "char"
+description = """
+"minChar" is the minimal (most negative) character representable by
+`char`. If a value is `NONE`, `char` can represent all negative
+integers, within the limits of the heap size. If `precision` is `SOME
+(n)`, then we have `minChar` = -2<sup>(n-1)</sup>.
+"""
+
+[[functions]]
+ordinal = 49
+structure = "Char"
+name = "notContains"
+specified = "basis"
+type = "char → string → bool"
+description = """
+"notContains s c" returns true if character `c` does not occur in the
+string `s`; false otherwise. Works by construction of a lookup table
+in the same way as `Char.contains`.
+"""
+
+[[functions]]
+ordinal = 50
+structure = "Char"
+name = "ord"
+specified = "basis"
+type = "char → int"
+description = """
+"ord c" returns the code of character `c`.
+"""
+
+[[functions]]
+ordinal = 50
+structure = "Char"
+name = "pred"
+specified = "basis"
+type = "char → char"
+description = """
+"pred c" returns the predecessor of `c`. Raises `Subscript` if `c` is
+`minOrd`.
+"""
+
+[[functions]]
+ordinal = 51
+structure = "Char"
+name = "succ"
+specified = "basis"
+type = "char → char"
+description = """
+"succ c" returns the character immediately following `c`, or raises
+`Chr` if `c` = `maxChar`
+"""
+
+[[functions]]
+ordinal = 52
+structure = "Char"
+name = "toCString"
+specified = "basis"
+type = "char → string"
+description = """
+"toCString c" converts a `char` into a `string`; equivalent to `(fmt
+StringCvt.ORD r)`.
+"""
+
+[[functions]]
+ordinal = 53
+structure = "Char"
+name = "toLower"
+specified = "basis"
+type = "char → char"
+description = """
+"toLower c" returns the lowercase letter corresponding to `c`, if `c`
+is a letter (a to z or A to Z); otherwise returns `c`.
+"""
+
+[[functions]]
+ordinal = 54
+structure = "Char"
+name = "toString"
+specified = "basis"
+type = "char → string"
+description = """
+"toString c" converts a `char` into a `string`; equivalent to `(fmt
+StringCvt.ORD r)`.
+"""
+
+[[functions]]
+ordinal = 55
+structure = "Char"
+name = "toUpper"
+specified = "basis"
+type = "char → char"
+description = """
+"toUpper c" returns the uppercase letter corresponding to `c`, if `c`
+is a letter (a to z or A to Z); otherwise returns `c`.
+"""
+
+# === General structure ==============================================
+
+[[functions]]
+ordinal = 56
+structure = "General"
+name = "ignore"
+specified = "basis"
+type = "α → unit"
+description = """
+"ignore x" always returns `unit`. The function evaluates its argument
+but throws away the value.
+"""
+
+[[functions]]
+ordinal = 57
+structure = "General"
+name = "op o"
+specified = "basis"
+type = "(β → γ) (α → β) → α → γ"
+description = """
+"f o g" is the function composition of `f` and `g`. Thus, `(f o g) a`
+is equivalent to `f (g a)`.
+"""
+
+# === Int structure ==================================================
+
+[[functions]]
+ordinal = 70
+structure = "Int"
+name = "abs"
+specified = "basis"
+type = "int → int"
+description = """
+"abs i" returns the absolute value of `i`.
+"""
+
+[[functions]]
+ordinal = 71
+structure = "Int"
+name = "compare"
+specified = "basis"
+type = "int * int → order"
+description = """
+"compare (i, j)" returns `LESS`, `EQUAL`, or `GREATER` according to
+whether its first argument is less than, equal to, or greater than the
+second.
+"""
+
+[[functions]]
+ordinal = 239
+structure = "Int"
+name = "fmt"
+specified = "basis"
+type = "StringCvt.radix → int → string"
+implemented = false
+description = """
+"fmt radix i" returns a string containing a representation of i with
+#"~" used as the sign for negative numbers. Formats the string
+according to `radix`; the hexadecimal digits 10 through 15 are
+represented as #"A" through #"F", respectively. No prefix "0x" is
+generated for the hexadecimal representation.
+"""
+
+[[functions]]
+ordinal = 72
+structure = "Int"
+name = "fromInt, int"
+specified = "basis"
+type = "int → int"
+description = """
+"fromInt i" converts a value from type `int` to the default integer
+type. Raises `Overflow` if the value does not fit.
+"""
+
+[[functions]]
+ordinal = 73
+structure = "Int"
+name = "fromString"
+specified = "basis"
+type = "string → int option"
+description = """
+"fromString s" scans a `int` value from a string. Returns `SOME (r)`
+if a `int` value can be scanned from a prefix of `s`, ignoring any
+initial whitespace; otherwise, it returns `NONE`. Equivalent to
+`StringCvt.scanString (scan StringCvt.DEC)`.
+"""
+
+[[functions]]
+ordinal = 74
+structure = "Int"
+name = "max"
+specified = "basis"
+type = "int * int → int"
+description = """
+"max (i, j)" returns the larger of the arguments.
+"""
+
+[[functions]]
+ordinal = 75
+structure = "Int"
+name = "maxInt"
+specified = "basis"
+type = "int"
+description = """
+"maxInt" is the maximal (most positive) integer representable by
+`int`. If a value is `NONE`, `int` can represent all positive
+integers, within the limits of the heap size. If `precision` is `SOME
+(n)`, then we have `maxInt` = 2<sup>(n-1)</sup> - 1.
+"""
+
+[[functions]]
+ordinal = 76
+structure = "Int"
+name = "min"
+specified = "basis"
+type = "int * int → int"
+description = """
+"min (i, j)" returns the smaller of the arguments.
+"""
+
+[[functions]]
+ordinal = 77
+structure = "Int"
+name = "minInt"
+specified = "basis"
+type = "int"
+description = """
+"minInt" is the minimal (most negative) integer representable by
+`int`. If a value is `NONE`, `int` can represent all negative
+integers, within the limits of the heap size. If `precision` is `SOME
+(n)`, then we have `minInt` = -2<sup>(n-1)</sup>.
+"""
+
+[[functions]]
+ordinal = 78
+structure = "Int"
+name = "mod"
+specified = "basis"
+type = "int * int → int"
+description = """
+"mod (i, j)" returns the remainder of the division of `i` by `j`. It
+raises `Div` when `j = 0`. When defined, `(i mod j)` has the same sign
+as `j`, and `(i div j) * j + (i mod j) = i`.
+"""
+
+[[functions]]
+ordinal = 60
+structure = "Int"
+name = "op *"
+specified = "basis"
+type = "int * int → int"
+description = """
+"i * j" is the product of `i` and `j`. It raises `Overflow` when the
+result is not representable.
+"""
+
+[[functions]]
+ordinal = 61
+structure = "Int"
+name = "op +"
+specified = "basis"
+type = "int * int → int"
+description = """
+"i + j" is the sum of `i` and `j`. It raises `Overflow` when the
+result is not representable.
+"""
+
+[[functions]]
+ordinal = 62
+structure = "Int"
+name = "op -"
+specified = "basis"
+type = "int * int → int"
+description = """
+"i - j" is the difference of `i` and `j`. It raises `Overflow` when
+the result is not representable.
+"""
+
+[[functions]]
+ordinal = 65
+structure = "Int"
+name = "op <"
+specified = "basis"
+type = "int * int → bool"
+description = """
+"i < j" returns true if i is less than j.
+"""
+
+[[functions]]
+ordinal = 66
+structure = "Int"
+name = "op <="
+specified = "basis"
+type = "int * int → bool"
+description = """
+"i < j" returns true if i is less than or equal to j.
+"""
+
+[[functions]]
+ordinal = 67
+structure = "Int"
+name = "op >"
+specified = "basis"
+type = "int * int → bool"
+description = """
+"i < j" returns true if i is greater than j.
+"""
+
+[[functions]]
+ordinal = 68
+structure = "Int"
+name = "op >="
+specified = "basis"
+type = "int * int → bool"
+description = """
+"i < j" returns true if i is greater than or equal to j.
+"""
+
+[[functions]]
+ordinal = 63
+structure = "Int"
+name = "op div"
+specified = "basis"
+type = "int * int → int"
+description = """
+"i div j" returns the greatest integer less than or equal to the
+quotient of i by j, i.e., `floor(i / j)`. It raises `Overflow` when
+the result is not representable, or Div when `j = 0`. Note that
+rounding is towards negative infinity, not zero.
+"""
+
+[[functions]]
+ordinal = 64
+structure = "Int"
+name = "op mod"
+specified = "basis"
+type = "int * int → int"
+description = """
+"i mod j" returns the remainder of the division of i by j. It raises
+`Div` when `j = 0`. When defined, `(i mod j)` has the same sign as
+`j`, and `(i div j) * j + (i mod j) = i`.
+"""
+
+[[functions]]
+ordinal = 69
+structure = "Int"
+name = "op ~"
+specified = "basis"
+type = "int → int"
+description = """
+"~ i" returns the negation of `i`.
+"""
+
+[[functions]]
+ordinal = 79
+structure = "Int"
+name = "precision"
+specified = "basis"
+type = "int"
+description = """
+"precision" is the precision. If `SOME (n)`, this denotes the number
+`n` of significant bits in type `int`, including the sign bit. If it
+is `NONE`, int has arbitrary precision. The precision need not
+necessarily be a power of two.
+"""
+
+[[functions]]
+ordinal = 80
+structure = "Int"
+name = "quot"
+specified = "basis"
+type = "int * int → int"
+description = """
+"quot (i, j)" returns the truncated quotient of the division of `i` by
+`j`, i.e., it computes `(i / j)` and then drops any fractional part of
+the quotient. It raises `Overflow` when the result is not
+representable, or `Div` when `j = 0`. Note that unlike `div`, `quot`
+rounds towards zero. In addition, unlike `div` and `mod`, neither
+`quot` nor `rem` are infix by default; an appropriate infix
+declaration would be `infix 7 quot rem`. This is the semantics of most
+hardware divide instructions, so `quot` may be faster than `div`.
+"""
+
+[[functions]]
+ordinal = 81
+structure = "Int"
+name = "rem"
+specified = "basis"
+type = "int * int → int"
+description = """
+"rem (i, j)" returns the remainder of the division of `i` by `j`. It
+raises `Div` when `j = 0`. `(i rem j)` has the same sign as i, and it
+holds that `(i quot j) * j + (i rem j) = i`. This is the semantics of
+most hardware divide instructions, so `rem` may be faster than `mod`.
+"""
+
+[[functions]]
+ordinal = 82
+structure = "Int"
+name = "sameSign"
+specified = "basis"
+type = "int * int → bool"
+description = """
+"sameSign (i, j)" returns true if `i` and `j` have the same sign. It
+is equivalent to `(sign i = sign j)`.
+"""
+
+[[functions]]
+ordinal = 240
+structure = "Int"
+name = "scan"
+specified = "basis"
+type = "scan radix getc strm"
+implemented = false
+description = """
+Returns `SOME (i,rest)` if an integer in the format denoted by `radix`
+can be parsed from a prefix of the character stream `strm` after
+skipping initial whitespace, where `i` is the value of the integer
+parsed and `rest` is the rest of the character stream. `NONE` is
+returned otherwise. This function raises `Overflow` when an integer
+can be parsed, but is too large to be represented by type `int`.
+"""
+
+[[functions]]
+ordinal = 83
+structure = "Int"
+name = "sign"
+specified = "basis"
+type = "int → int"
+description = """
+"sign i" returns ~1, 0, or 1 when `i` is less than, equal to, or
+greater than 0, respectively.
+"""
+
+[[functions]]
+ordinal = 84
+structure = "Int"
+name = "toInt"
+specified = "basis"
+type = "int → int"
+description = """
+"toInt i" converts a value from the default integer type to type
+`int`. Raises `Overflow` if the value does not fit.
+"""
+
+[[functions]]
+ordinal = 85
+structure = "Int"
+name = "toString"
+specified = "basis"
+type = "int → string"
+description = """
+"toString i" converts a `int` into a `string`; equivalent to `(fmt
+StringCvt.DEC r)`.
+"""
+
+# === Interact structure =============================================
+
+[[functions]]
+ordinal = 58
+structure = "Interact"
+name = "use"
+specified = "morel"
+type = "string → unit"
+description = """
+"use f" loads source text from the file named `f`.
+"""
+
+[[functions]]
+ordinal = 59
+structure = "Interact"
+name = "useSilently"
+specified = "morel"
+type = "string → unit"
+description = """
+"useSilently f" loads source text from the file named `f`, without
+printing to stdout.
+"""
+
+# === List structure =================================================
+
+[[functions]]
+ordinal = 113
+structure = "List"
+name = "all"
+specified = "basis"
+type = "(α → bool) → α list → bool"
+description = """
+"all f l" applies `f` to each element `x` of the list `l`, from left
+to right, until `f(x)` evaluates to `false`; it returns `false` if
+such an `x` exists and `true` otherwise. It is equivalent to
+`not(exists (not o f) l))`.
+"""
+
+[[functions]]
+ordinal = 103
+structure = "List"
+name = "app"
+specified = "basis"
+type = "(α → unit) → α list → unit"
+description = """
+"app f l" applies `f` to the elements of `l`, from left to right.
+"""
+
+[[functions]]
+ordinal = 90
+structure = "List"
+name = "at"
+specified = "basis"
+type = "α list * α list → α list"
+description = """
+"at (l1, l2)" is equivalent to "l1 @ l2".
+"""
+
+[[functions]]
+ordinal = 115
+structure = "List"
+name = "collate"
+specified = "basis"
+type = "(α * α → order) → α list * α list → order"
+description = """
+"collate f (l1, l2)" performs lexicographic comparison of the two
+lists using the given ordering `f` on the list elements.
+"""
+
+[[functions]]
+ordinal = 99
+structure = "List"
+name = "concat"
+specified = "basis"
+type = "α list list → α list"
+description = """
+"concat l" returns the list that is the concatenation of all the lists
+in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln`
+"""
+
+[[functions]]
+ordinal = 97
+structure = "List"
+name = "drop"
+specified = "basis"
+type = "α list * int → α list"
+description = """
+"drop (l, i)" returns what is left after dropping the first `i`
+elements of the list `l`. Raises `Subscript` if `i` < 0 or `i` >
+`length l`.
+
+<p>It holds that `take(l, i) @ drop(l, i)` = `l` when 0 &le;
+`i` &le; `length l`. We also have `drop(l, length l)` = `[]`.
+"""
+
+[[functions]]
+ordinal = 100
+structure = "List"
+name = "except"
+specified = "morel"
+type = "α list list → α list"
+description = """
+"except l" returns the list that is the concatenation of all the lists
+in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln`
+"""
+
+[[functions]]
+ordinal = 112
+structure = "List"
+name = "exists"
+specified = "basis"
+type = "(α → bool) → α list → bool"
+description = """
+"exists f l" applies `f` to each element `x` of the list `l`, from
+left to right, until `f(x)` evaluates to `true`; it returns `true` if
+such an `x` exists and `false` otherwise.
+"""
+
+[[functions]]
+ordinal = 108
+structure = "List"
+name = "filter"
+specified = "basis"
+type = "(α → bool) → α list → α list"
+description = """
+"filter f l" applies `f` to each element `x` of `l`, from left to
+right, and returns the list of those `x` for which `f x` evaluated to
+`true`, in the same order as they occurred in the argument list.
+"""
+
+[[functions]]
+ordinal = 107
+structure = "List"
+name = "find"
+specified = "basis"
+type = "(α → bool) → α list → α option"
+description = """
+"find f l" applies `f` to each element `x` of the list `l`, from left
+to right, until `f x` evaluates to `true`. It returns `SOME (x)` if
+such an `x` exists; otherwise it returns `NONE`.
+"""
+
+[[functions]]
+ordinal = 110
+structure = "List"
+name = "foldl"
+specified = "basis"
+type = "(α * β → β) → β → α list → β"
+description = """
+"foldl f init \\[x1, x2, ..., xn\\]" returns `f(xn, ... , f(x2, f(x1,
+init))...)` or `init` if the list is empty.
+"""
+
+[[functions]]
+ordinal = 111
+structure = "List"
+name = "foldr"
+specified = "basis"
+type = "(α * β → β) → β → α list → β"
+description = """
+"foldr f init \\[x1, x2, ..., xn\\]" returns `f(x1, f(x2, ..., f(xn,
+init)...))` or `init` if the list is empty.
+"""
+
+[[functions]]
+ordinal = 94
+structure = "List"
+name = "getItem"
+specified = "basis"
+type = "α list → * (α * α list) option"
+description = """
+"getItem l" returns `NONE` if the `list` is empty, and `SOME (hd l, tl
+l)` otherwise. This function is particularly useful for creating value
+readers from lists of characters. For example, `Int.scan StringCvt.DEC
+getItem` has the type `(int, char list) StringCvt.reader` and can be
+used to scan decimal integers from lists of characters.
+"""
+
+[[functions]]
+ordinal = 91
+structure = "List"
+name = "hd"
+specified = "basis"
+type = "α list → α"
+description = """
+"hd l" returns the first element of `l`. Raises `Empty` if `l` is
+`nil`.
+"""
+
+[[functions]]
+ordinal = 101
+structure = "List"
+name = "intersect"
+specified = "morel"
+type = "α list list → α list"
+description = """
+"intersect l" returns the list that is the concatenation of all the
+lists in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @
+ln`
+"""
+
+[[functions]]
+ordinal = 93
+structure = "List"
+name = "last"
+specified = "basis"
+type = "α list → α"
+description = """
+"last l" returns the last element of `l`. Raises `Empty` if `l` is
+`nil`.
+"""
+
+[[functions]]
+ordinal = 88
+structure = "List"
+name = "length"
+specified = "basis"
+type = "α list → int"
+description = """
+"length l" returns the number of elements in the list `l`.
+"""
+
+[[functions]]
+ordinal = 104
+structure = "List"
+name = "map"
+specified = "basis"
+type = "(α → β) → α list → β list"
+description = """
+"map f l" applies `f` to each element of `l` from left to right,
+returning the list of results.
+"""
+
+[[functions]]
+ordinal = 106
+structure = "List"
+name = "mapPartial"
+specified = "basis"
+type = "(α → β option) → α list → β list"
+description = """
+"mapPartial f l" applies `f` to each element of `l` from left to
+right, returning a list of results, with `SOME` stripped, where `f`
+was defined. `f` is not defined for an element of `l` if `f` applied
+to the element returns `NONE`. The above expression is equivalent to:
+
+<pre>((map valOf) o (filter isSome) o (map f)) b`</pre>
+"""
+
+[[functions]]
+ordinal = 105
+structure = "List"
+name = "mapi"
+specified = "basis"
+type = "(int * α → β) → α list → β list"
+description = """
+"mapi f l" applies the function `f` to the elements of the argument
+list `l`, supplying the list index and element as arguments to each
+call.
+"""
+
+[[functions]]
+ordinal = 86
+structure = "List"
+name = "nil"
+specified = "basis"
+type = "α list"
+description = """
+"nil" is the empty list.
+"""
+
+[[functions]]
+ordinal = 95
+structure = "List"
+name = "nth"
+specified = "basis"
+type = "α list * int → α"
+description = """
+"nth (l, i)" returns the `i`(th) element of the list `l`, counting
+from 0. Raises `Subscript` if `i` < 0 or `i` &ge; `length l`. We have
+`nth(l, 0)` = `hd l`, ignoring exceptions.
+"""
+
+[[functions]]
+ordinal = 87
+structure = "List"
+name = "null"
+specified = "basis"
+type = "α list → bool"
+description = """
+"null l" returns `true` if the list `l` is empty.
+"""
+
+[[functions]]
+ordinal = 89
+structure = "List"
+name = "op @"
+specified = "basis"
+type = "α list * α list → α list"
+description = """
+"l1 @ l2" returns the list that is the concatenation of `l1` and `l2`.
+"""
+
+[[functions]]
+ordinal = 109
+structure = "List"
+name = "partition"
+specified = "basis"
+type = "(α → bool) → α list → α list * α list"
+description = """
+"partition f l" applies `f` to each element `x` of `l`, from left to
+right, and returns a pair `(pos, neg)` where `pos` is the list of
+those `x` for which `f x` evaluated to `true`, and `neg` is the list
+of those for which `f x` evaluated to `false`. The elements of `pos`
+and `neg` retain the same relative order they possessed in `l`.
+"""
+
+[[functions]]
+ordinal = 98
+structure = "List"
+name = "rev"
+specified = "basis"
+type = "α list → α list"
+description = """
+"rev l" returns a list consisting of `l`'s elements in reverse order.
+"""
+
+[[functions]]
+ordinal = 102
+structure = "List"
+name = "revAppend"
+specified = "basis"
+type = "α list * α list → α list"
+description = """
+"revAppend (l1, l2)" returns `(rev l1) @ l2`.
+"""
+
+[[functions]]
+ordinal = 114
+structure = "List"
+name = "tabulate"
+specified = "basis"
+type = "int * (int → α) → α list"
+description = """
+"tabulate (n, f)" returns a list of length `n` equal to `[f(0), f(1),
+..., f(n-1)]`, created from left to right. Raises `Size` if `n` < 0.
+"""
+
+[[functions]]
+ordinal = 96
+structure = "List"
+name = "take"
+specified = "basis"
+type = "α list * int → α list"
+description = """
+"take (l, i)" returns the first `i` elements of the list `l`. Raises
+`Subscript` if `i` < 0 or `i` > `length l`. We have `take(l, length
+l)` = `l`.
+"""
+
+[[functions]]
+ordinal = 92
+structure = "List"
+name = "tl"
+specified = "basis"
+type = "α list → α list"
+description = """
+"tl l" returns all but the first element of `l`. Raises `Empty` if `l`
+is `nil`.
+"""
+
+# === Math structure =================================================
+
+[[functions]]
+ordinal = 116
+structure = "Math"
+name = "acos"
+specified = "basis"
+type = "real → real"
+description = """
+"acos x" returns the arc cosine of `x`. `acos` is the inverse of
+`cos`. Its result is guaranteed to be in the closed interval \\[0,
+pi\\]. If the magnitude of `x` exceeds 1.0, returns NaN.
+"""
+
+[[functions]]
+ordinal = 117
+structure = "Math"
+name = "asin"
+specified = "basis"
+type = "real → real"
+description = """
+"asin x" returns the arc sine of `x`. `asin` is the inverse of
+`sin`. Its result is guaranteed to be in the closed interval \\[-pi / 2,
+pi / 2\\]. If the magnitude of `x` exceeds 1.0, returns NaN.
+"""
+
+[[functions]]
+ordinal = 118
+structure = "Math"
+name = "atan"
+specified = "basis"
+type = "real → real"
+description = """
+"atan x" returns the arc tangent of `x`. `atan` is the inverse of
+`tan`. For finite arguments, the result is guaranteed to be in the
+open interval (-pi / 2, pi / 2). If `x` is +infinity, it returns pi /
+2; if `x` is -infinity, it returns -pi / 2.
+"""
+
+[[functions]]
+ordinal = 119
+structure = "Math"
+name = "atan2"
+specified = "basis"
+type = "real * real → real"
+description = """
+"atan2 (y, x)" returns the arc tangent of `(y / x)` in the closed
+interval \\[-pi, pi\\], corresponding to angles within +-180 degrees. The
+quadrant of the resulting angle is determined using the signs of both
+`x` and `y`, and is the same as the quadrant of the point `(x,
+y)`. When `x` = 0, this corresponds to an angle of 90 degrees, and the
+result is `(real (sign y)) * pi / 2.0`.
+"""
+
+[[functions]]
+ordinal = 120
+structure = "Math"
+name = "cos"
+specified = "basis"
+type = "real → real"
+description = """
+"cos x" returns the cosine of `x`, measured in radians. If `x` is an
+infinity, returns NaN.
+"""
+
+[[functions]]
+ordinal = 121
+structure = "Math"
+name = "cosh"
+specified = "basis"
+type = "real → real"
+description = """
+"cosh x" returns the hyperbolic cosine of `x`, that is, `(e(x) +
+e(-x)) / 2`. Among its properties, cosh +-0 = 1, cosh +-infinity =
++-infinity.
+"""
+
+[[functions]]
+ordinal = 122
+structure = "Math"
+name = "e"
+specified = "basis"
+type = "real"
+description = """
+"e" is base e (2.718281828...) of the natural logarithm.
+"""
+
+[[functions]]
+ordinal = 123
+structure = "Math"
+name = "exp"
+specified = "basis"
+type = "real → real"
+description = """
+"exp x" returns `e(x)`, i.e., `e` raised to the `x`<sup>th</sup>
+power. If `x` is +infinity, returns +infinity; if `x` is -infinity,
+returns 0.
+"""
+
+[[functions]]
+ordinal = 124
+structure = "Math"
+name = "ln"
+specified = "basis"
+type = "real → real"
+description = """
+"ln x" returns the natural logarithm (base e) of `x`. If `x` < 0,
+returns NaN; if `x` = 0, returns -infinity; if `x` is infinity,
+returns infinity.
+"""
+
+[[functions]]
+ordinal = 125
+structure = "Math"
+name = "log10"
+specified = "basis"
+type = "real → real"
+description = """
+"log10 x" returns the decimal logarithm (base 10) of `x`. If `x` < 0,
+returns NaN; if `x` = 0, returns -infinity; if `x` is infinity,
+returns infinity.
+"""
+
+[[functions]]
+ordinal = 126
+structure = "Math"
+name = "pi"
+specified = "basis"
+type = "real"
+description = """
+"pi" is the constant pi (3.141592653...).
+"""
+
+[[functions]]
+ordinal = 127
+structure = "Math"
+name = "pow"
+specified = "basis"
+type = "real * real → real"
+description = """
+"pow (x, y)" returns `x(y)`, i.e., `x` raised to the `y`<sup>th</sup>
+power. For finite `x` and `y`, this is well-defined when `x` > 0, or
+when `x` < 0 and `y` is integral.
+"""
+
+[[functions]]
+ordinal = 128
+structure = "Math"
+name = "sin"
+specified = "basis"
+type = "real → real"
+description = """
+"sin x" returns the sine of `x`, measured in radians. If `x` is an
+infinity, returns NaN.
+"""
+
+[[functions]]
+ordinal = 129
+structure = "Math"
+name = "sinh"
+specified = "basis"
+type = "real → real"
+description = """
+"sinh x" returns the hyperbolic sine of `x`, that is, `(e(x) - e(-x))
+/ 2`. Among its properties, sinh +-0 = +-0, sinh +-infinity =
++-infinity.
+"""
+
+[[functions]]
+ordinal = 130
+structure = "Math"
+name = "sqrt"
+specified = "basis"
+type = "real → real"
+description = """
+"sqrt x" returns the square root of `x`. sqrt (~0.0) = ~0.0. If `x` <
+0, returns NaN.
+"""
+
+[[functions]]
+ordinal = 131
+structure = "Math"
+name = "tan"
+specified = "basis"
+type = "real → real"
+description = """
+"tan x" returns the tangent of `x`, measured in radians. If `x` is an
+infinity, returns NaN. Produces infinities at various finite values,
+roughly corresponding to the singularities of the tangent function.
+"""
+
+[[functions]]
+ordinal = 132
+structure = "Math"
+name = "tanh"
+specified = "basis"
+type = "real → real"
+description = """
+"tanh x" returns the hyperbolic tangent of `x`, that is, `(sinh x) /
+(cosh x)`. Among its properties, tanh +-0 = +-0, tanh +-infinity =
++-1.
+"""
+
+# === Option structure ===============================================
+
+[[functions]]
+ordinal = 133
+structure = "Option"
+name = "app"
+specified = "basis"
+type = "(α → unit) → α option → unit"
+description = """
+"app f opt" applies the function `f` to the value `v` if `opt` is
+`SOME v`, and otherwise does nothing.
+"""
+
+[[functions]]
+ordinal = 134
+structure = "Option"
+name = "compose"
+specified = "basis"
+type = "(α → β) * (γ → α option) → γ → β option"
+description = """
+"compose (f, g) a" returns `NONE` if `g(a)` is `NONE`; otherwise, if
+`g(a)` is `SOME v`, it returns `SOME (f v)`.
+"""
+
+[[functions]]
+ordinal = 135
+structure = "Option"
+name = "composePartial"
+specified = "basis"
+type = "(α → β option) * (γ → α option) → γ → β option"
+description = """
+"composePartial (f, g) a" returns `NONE` if `g(a)` is `NONE`;
+otherwise, if `g(a)` is `SOME v`, returns `f(v)`.
+"""
+
+[[functions]]
+ordinal = 140
+structure = "Option"
+name = "filter"
+specified = "basis"
+type = "(α → bool) → α → α option"
+description = """
+"filter f a" returns `SOME a` if `f(a)` is `true`, `NONE` otherwise.
+"""
+
+[[functions]]
+ordinal = 138
+structure = "Option"
+name = "getOpt"
+specified = "basis"
+type = "α option * α → α"
+description = """
+"getOpt (opt, a)" returns `v` if `opt` is `SOME (v)`; otherwise
+returns `a`.
+"""
+
+[[functions]]
+ordinal = 139
+structure = "Option"
+name = "isSome"
+specified = "basis"
+type = "α option → bool"
+description = """
+"isSome opt" returns `true` if `opt` is `SOME v`; otherwise returns
+`false`.
+"""
+
+[[functions]]
+ordinal = 141
+structure = "Option"
+name = "join"
+specified = "basis"
+type = "α option option → α option"
+description = """
+"join opt" maps `NONE` to `NONE` and `SOME v` to `v`.
+"""
+
+[[functions]]
+ordinal = 136
+structure = "Option"
+name = "map"
+specified = "basis"
+type = "α → β) → α option → β option"
+description = """
+"map f opt" maps `NONE` to `NONE` and `SOME v` to `SOME (f v)`.
+"""
+
+[[functions]]
+ordinal = 137
+structure = "Option"
+name = "mapPartial"
+specified = "basis"
+type = "α → β option) → α option → β option"
+description = """
+"mapPartial f opt" maps `NONE` to `NONE` and `SOME v` to `f(v)`.
+"""
+
+[[functions]]
+ordinal = 142
+structure = "Option"
+name = "valOf"
+specified = "basis"
+type = "α option → α"
+description = """
+"valOf opt" returns `v` if `opt` is `SOME v`, otherwise raises
+`Option`.
+"""
+
+# === Real structure =================================================
+
+[[functions]]
+ordinal = 152
+structure = "Real"
+name = "abs"
+specified = "basis"
+type = "real → real"
+description = """
+"abs r" returns the absolute value of `r`.
+"""
+
+[[functions]]
+ordinal = 153
+structure = "Real"
+name = "ceil"
+specified = "basis"
+type = "real → int"
+description = """
+"floor r" produces `ceil(r)`, the smallest int not less than `r`.
+"""
+
+[[functions]]
+ordinal = 154
+structure = "Real"
+name = "checkFloat"
+specified = "basis"
+type = "real → real"
+description = """
+"checkFloat x" raises `Overflow` if x is an infinity, and raises `Div`
+if x is NaN. Otherwise, it returns its argument.
+"""
+
+[[functions]]
+ordinal = 246
+structure = "Real"
+name = "class"
+specified = "basis"
+type = "real → IEEEReal.float_class"
+implemented = false
+description = """
+"class x" returns the `IEEEReal.float_class` to which x belongs.
+"""
+
+[[functions]]
+ordinal = 155
+structure = "Real"
+name = "compare"
+specified = "basis"
+type = "real * real → order"
+description = """
+"compare (x, y)" returns `LESS`, `EQUAL`, or `GREATER` according to
+whether its first argument is less than, equal to, or greater than the
+second. It raises `IEEEReal.Unordered` on unordered arguments.
+"""
+
+[[functions]]
+ordinal = 247
+structure = "Real"
+name = "compareReal"
+specified = "basis"
+type = "real * real → IEEEReal.real_order"
+implemented = false
+description = """
+"compareReal (x, y)" behaves similarly to `Real.compare` except that
+the values it returns have the extended type `IEEEReal.real_order` and
+it returns `IEEEReal.UNORDERED` on unordered arguments.
+"""
+
+[[functions]]
+ordinal = 156
+structure = "Real"
+name = "copySign"
+specified = "basis"
+type = "real * real → real"
+description = """
+"copySign (x, y)" returns `x` with the sign of `y`, even if `y` is
+NaN.
+"""
+
+[[functions]]
+ordinal = 157
+structure = "Real"
+name = "floor"
+specified = "basis"
+type = "real → int"
+description = """
+"floor r" produces `floor(r)`, the largest int not larger than `r`.
+"""
+
+[[functions]]
+ordinal = 248
+structure = "Real"
+name = "fmt"
+specified = "basis"
+type = "StringCvt.realfmt → real → string"
+implemented = false
+description = """
+"fmt spec r" converts a `real` into a `string` according to by `spec`;
+raises `Size` when `fmt spec` is evaluated if `spec` is an invalid
+precision
+"""
+
+[[functions]]
+ordinal = 249
+structure = "Real"
+name = "fromDecimal"
+specified = "basis"
+type = "IEEEReal.decimal_approx → real"
+implemented = false
+description = """
+"fromDecimal d" converts decimal approximation to a `real`
+"""
+
+[[functions]]
+ordinal = 158
+structure = "Real"
+name = "fromInt, real"
+specified = "basis"
+type = "int → real"
+description = """
+"fromInt i" converts the integer `i` to a `real` value. If the
+absolute value of `i` is larger than `maxFinite`, then the appropriate
+infinity is returned. If `i` cannot be exactly represented as a `real`
+value, uses current rounding mode to determine the resulting value.
+"""
+
+[[functions]]
+ordinal = 250
+structure = "Real"
+name = "fromLarge"
+specified = "basis"
+type = "IEEEReal.rounding_mode → real → real"
+implemented = false
+description = """
+"toLarge r" converts a value of type `real` to type
+`LargeReal.real`. If `r` is too small or too large to be represented
+as a real, converts it to a zero or an infinity.
+"""
+
+[[functions]]
+ordinal = 251
+structure = "Real"
+name = "fromLargeInt"
+specified = "basis"
+type = "IntInf.int → real"
+implemented = false
+description = """
+See "fromInt"
+"""
+
+[[functions]]
+ordinal = 159
+structure = "Real"
+name = "fromManExp"
+specified = "basis"
+type = "{exp:int, man:real} → real"
+description = """
+"fromManExp r" returns `{man, exp}`, where `man` and `exp` are the
+mantissa and exponent of r, respectively.
+"""
+
+[[functions]]
+ordinal = 160
+structure = "Real"
+name = "fromString"
+specified = "basis"
+type = "string → real option"
+description = """
+"fromString s" scans a `real` value from a string. Returns `SOME (r)`
+if a `real` value can be scanned from a prefix of `s`, ignoring any
+initial whitespace; otherwise, it returns `NONE`. This function is
+equivalent to `StringCvt.scanString scan`.
+"""
+
+[[functions]]
+ordinal = 161
+structure = "Real"
+name = "isFinite"
+specified = "basis"
+type = "real → bool"
+description = """
+"isFinite x" returns true if x is neither NaN nor an infinity.
+"""
+
+[[functions]]
+ordinal = 162
+structure = "Real"
+name = "isNan"
+specified = "basis"
+type = "real → bool"
+description = """
+"isNan x" returns true if x NaN.
+"""
+
+[[functions]]
+ordinal = 163
+structure = "Real"
+name = "isNormal"
+specified = "basis"
+type = "real → bool"
+description = """
+"isNormal x" returns true if x is normal, i.e., neither zero,
+subnormal, infinite nor NaN.
+"""
+
+[[functions]]
+ordinal = 164
+structure = "Real"
+name = "max"
+specified = "basis"
+type = "real * real → real"
+description = """
+"max (x, y)" returns the larger of the arguments. If exactly one
+argument is NaN, returns the other argument. If both arguments are
+NaN, returns NaN.
+"""
+
+[[functions]]
+ordinal = 165
+structure = "Real"
+name = "maxFinite"
+specified = "basis"
+type = "real"
+description = """
+"maxFinite" is the maximum finite number.
+"""
+
+[[functions]]
+ordinal = 166
+structure = "Real"
+name = "min"
+specified = "basis"
+type = "real * real → real"
+description = """
+"min (x, y)" returns the smaller of the arguments. If exactly one
+argument is NaN, returns the other argument. If both arguments are
+NaN, returns NaN.
+"""
+
+[[functions]]
+ordinal = 167
+structure = "Real"
+name = "minNormalPos"
+specified = "basis"
+type = "real"
+description = """
+"minNormalPos" is the minimum non-zero normalized number.
+"""
+
+[[functions]]
+ordinal = 168
+structure = "Real"
+name = "minPos"
+specified = "basis"
+type = "real"
+description = """
+"minPos" is the minimum non-zero positive number.
+"""
+
+[[functions]]
+ordinal = 169
+structure = "Real"
+name = "negInf"
+specified = "basis"
+type = "real"
+description = """
+"negInf" is the negative infinity value.
+"""
+
+[[functions]]
+ordinal = 252
+structure = "Real"
+name = "nextAfter"
+specified = "basis"
+type = "real * real → real"
+implemented = false
+description = """
+"nextAfter (r, t)" returns the next representable real after `r` in
+the direction of `t`. Thus, if `t` is less than `r`, `nextAfter`
+returns the largest representable floating-point number less than `r`.
+"""
+
+[[functions]]
+ordinal = 241
+structure = "Real"
+name = "op !="
+specified = "basis"
+type = "real * real → bool"
+implemented = false
+description = """
+"x != y" is equivalent to `not o op ==` and the IEEE `?<>` operator.
+"""
+
+[[functions]]
+ordinal = 143
+structure = "Real"
+name = "op *"
+specified = "basis"
+type = "real * real → real"
+description = """
+"r1 * r2" is the product of `r1` and `r2`. The product of zero and an
+infinity produces NaN. Otherwise, if one argument is infinite, the
+result is infinite with the correct sign, e.g., -5 * (-infinity) =
+infinity, infinity * (-infinity) = -infinity.
+"""
+
+[[functions]]
+ordinal = 242
+structure = "Real"
+name = "op *+"
+specified = "basis"
+type = "real * real * real → real"
+implemented = false
+description = """
+"*+ (a, b, c)" returns `a * b + c`. Its behavior on infinities follows
+from the behaviors derived from addition and multiplication.
+"""
+
+[[functions]]
+ordinal = 243
+structure = "Real"
+name = "op *-"
+specified = "basis"
+type = "real * real * real → real"
+implemented = false
+description = """
+"*- (a, b, c)" returns `a * b - c`. Its behavior on infinities follows
+from the behaviors derived from subtraction and multiplication.
+"""
+
+[[functions]]
+ordinal = 144
+structure = "Real"
+name = "op +"
+specified = "basis"
+type = "real * real → real"
+description = """
+"r1 + r2" is the sum of `r1` and `r2`. If one argument is finite and
+the other infinite, the result is infinite with the correct sign,
+e.g., 5 - (-infinity) = infinity. We also have infinity + infinity =
+infinity and (-infinity) + (-infinity) = (-infinity). Any other
+combination of two infinities produces NaN.
+"""
+
+[[functions]]
+ordinal = 145
+structure = "Real"
+name = "op -"
+specified = "basis"
+type = "real * real → real"
+description = """
+"r1 - r2" is the difference of `r1` and `r2`. If one argument is
+finite and the other infinite, the result is infinite with the correct
+sign, e.g., 5 - (-infinity) = infinity. We also have infinity +
+infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any
+other combination of two infinities produces NaN.
+"""
+
+[[functions]]
+ordinal = 146
+structure = "Real"
+name = "op /"
+specified = "basis"
+type = "real * real → real"
+description = """
+"r1 / r2" is the quotient of `r1` and `r2`. We have 0 / 0 = NaN and
++-infinity / +-infinity = NaN. Dividing a finite, non-zero number by a
+zero, or an infinity by a finite number produces an infinity with the
+correct sign. (Note that zeros are signed.) A finite number divided by
+an infinity is 0 with the correct sign.
+"""
+
+[[functions]]
+ordinal = 147
+structure = "Real"
+name = "op <"
+specified = "basis"
+type = "real * real → bool"
+description = """
+"x < y" returns true if x is less than y. Return false on unordered
+arguments, i.e., if either argument is NaN, so that the usual reversal
+of comparison under negation does not hold, e.g., `a < b` is not the
+same as `not (a >= b)`.
+"""
+
+[[functions]]
+ordinal = 148
+structure = "Real"
+name = "op <="
+specified = "basis"
+type = "real * real → bool"
+description = """
+As "<"
+"""
+
+[[functions]]
+ordinal = 244
+structure = "Real"
+name = "op =="
+specified = "basis"
+type = "real * real → bool"
+implemented = false
+description = """
+"x == y" returns true if and only if neither y nor x is NaN, and y and
+x are equal, ignoring signs on zeros. This is equivalent to the IEEE
+`=` operator.
+"""
+
+[[functions]]
+ordinal = 149
+structure = "Real"
+name = "op >"
+specified = "basis"
+type = "real * real → bool"
+description = """
+As "<"
+"""
+
+[[functions]]
+ordinal = 150
+structure = "Real"
+name = "op >="
+specified = "basis"
+type = "real * real → bool"
+description = """
+As "<"
+"""
+
+[[functions]]
+ordinal = 245
+structure = "Real"
+name = "op ?="
+specified = "basis"
+type = "real * real → bool"
+implemented = false
+description = """
+"?= (x, y)" returns true if either argument is NaN or if the arguments
+are bitwise equal, ignoring signs on zeros. It is equivalent to the
+IEEE `?=` operator.
+"""
+
+[[functions]]
+ordinal = 151
+structure = "Real"
+name = "op ~"
+specified = "basis"
+type = "real → real"
+description = """
+"~ r" returns the negation of `r`.
+"""
+
+[[functions]]
+ordinal = 170
+structure = "Real"
+name = "posInf"
+specified = "basis"
+type = "real"
+description = """
+"posInf" is the positive infinity value.
+"""
+
+[[functions]]
+ordinal = 171
+structure = "Real"
+name = "precision"
+specified = "basis"
+type = "int"
+description = """
+"precision" is the number of digits, each between 0 and `radix` - 1,
+in the mantissa. Note that the precision includes the implicit (or
+hidden) bit used in the IEEE representation (e.g., the value of
+Real64.precision is 53).
+"""
+
+[[functions]]
+ordinal = 172
+structure = "Real"
+name = "radix"
+specified = "basis"
+type = "int"
+description = """
+"radix" is the base of the representation, e.g., 2 or 10 for IEEE
+floating point.
+"""
+
+[[functions]]
+ordinal = 173
+structure = "Real"
+name = "realCeil"
+specified = "basis"
+type = "real → real"
+description = """
+"realCeil r" produces `ceil(r)`, the smallest integer not less than
+`r`.
+"""
+
+[[functions]]
+ordinal = 174
+structure = "Real"
+name = "realFloor"
+specified = "basis"
+type = "real → real"
+description = """
+"realFloor r" produces `floor(r)`, the largest integer not larger than
+`r`.
+"""
+
+[[functions]]
+ordinal = 175
+structure = "Real"
+name = "realMod"
+specified = "basis"
+type = "real → real"
+description = """
+"realMod r" returns the fractional parts of `r`; `realMod` is
+equivalent to `#frac o split`.
+"""
+
+[[functions]]
+ordinal = 176
+structure = "Real"
+name = "realRound"
+specified = "basis"
+type = "real → real"
+description = """
+"realRound r" rounds to the integer-valued real value that is nearest
+to `r`. In the case of a tie, it rounds to the nearest even integer.
+"""
+
+[[functions]]
+ordinal = 177
+structure = "Real"
+name = "realTrunc"
+specified = "basis"
+type = "real → real"
+description = """
+"realTrunc r" rounds `r` towards zero.
+"""
+
+[[functions]]
+ordinal = 178
+structure = "Real"
+name = "rem"
+specified = "basis"
+type = "real * real → real"
+description = """
+"rem (x, y)" returns the remainder `x - n * y`, where `n` = `trunc (x
+/ y)`. The result has the same sign as `x` and has absolute value less
+than the absolute value of `y`. If `x` is an infinity or `y` is 0,
+`rem` returns NaN. If `y` is an infinity, rem returns `x`.
+"""
+
+[[functions]]
+ordinal = 179
+structure = "Real"
+name = "round"
+specified = "basis"
+type = "real → int"
+description = """
+"round r" yields the integer nearest to `r`. In the case of a tie, it
+rounds to the nearest even integer.
+"""
+
+[[functions]]
+ordinal = 180
+structure = "Real"
+name = "sameSign"
+specified = "basis"
+type = "real * real → bool"
+description = """
+"sameSign (r1, r2)" returns true if and only if `signBit r1` equals
+`signBit r2`.
+"""
+
+[[functions]]
+ordinal = 253
+structure = "Real"
+name = "scan"
+specified = "basis"
+type = "(char,'a) StringCvt.reader → (real,'a) StringCvt.reader"
+implemented = false
+description = """
+"scan getc strm" scans a `real` value from character source. Reads
+from ARG/strm/ using reader `getc`, ignoring initial whitespace. It
+returns `SOME (r, rest)` if successful, where `r` is the scanned
+`real` value and `rest` is the unused portion of the character stream
+`strm`. Values of too large a magnitude are represented as infinities;
+values of too small a magnitude are represented as zeros.
+"""
+
+[[functions]]
+ordinal = 181
+structure = "Real"
+name = "sign"
+specified = "basis"
+type = "real → int"
+description = """
+"sign r" returns ~1 if r is negative, 0 if r is zero, or 1 if r is
+positive. An infinity returns its sign; a zero returns 0 regardless of
+its sign. It raises `Domain` on NaN.
+"""
+
+[[functions]]
+ordinal = 182
+structure = "Real"
+name = "signBit"
+specified = "basis"
+type = "real → bool"
+description = """
+"signBit r" returns true if and only if the sign of `r` (infinities,
+zeros, and NaN, included) is negative.
+"""
+
+[[functions]]
+ordinal = 183
+structure = "Real"
+name = "split"
+specified = "basis"
+type = "real → {frac:real, whole:real}"
+description = """
+"split r" returns `{frac, whole}`, where `frac` and `whole` are the
+fractional and integral parts of `r`, respectively. Specifically,
+`whole` is integral, and `abs frac` < 1.0.
+"""
+
+[[functions]]
+ordinal = 254
+structure = "Real"
+name = "toDecimal"
+specified = "basis"
+type = "real → IEEEReal.decimal_approx"
+implemented = false
+description = """
+"toDecimal r" converts a `real` to a decimal approximation
+"""
+
+[[functions]]
+ordinal = 255
+structure = "Real"
+name = "toInt"
+specified = "basis"
+type = "real → IEEEReal.rounding_mode → int"
+implemented = false
+description = """
+"toInt mode x" converts the argument `x` to an integral type using the
+specified rounding mode. It raises `Overflow` if the result is not
+representable, in particular, if `x` is an infinity. It raises
+`Domain` if the input real is NaN.
+"""
+
+[[functions]]
+ordinal = 256
+structure = "Real"
+name = "toLarge"
+specified = "basis"
+type = "real → real"
+implemented = false
+description = """
+"toLarge r" convert a value of type `real` to type `LargeReal.real`.
+"""
+
+[[functions]]
+ordinal = 257
+structure = "Real"
+name = "toLargeInt"
+specified = "basis"
+type = "real → IEEEReal.rounding_mode → IntInf.int"
+implemented = false
+description = """
+See "toInt"
+"""
+
+[[functions]]
+ordinal = 185
+structure = "Real"
+name = "toManExp"
+specified = "basis"
+type = "real → {man:real, exp:int}"
+description = """
+"toManExp r" returns `{man, exp}`, where `man` and `exp` are the
+mantissa and exponent of r, respectively.
+"""
+
+[[functions]]
+ordinal = 186
+structure = "Real"
+name = "toString"
+specified = "basis"
+type = "real → string"
+description = """
+"toString r" converts a `real` into a `string`; equivalent to `(fmt
+(StringCvt.GEN NONE) r)`
+"""
+
+[[functions]]
+ordinal = 184
+structure = "Real"
+name = "trunc"
+specified = "basis"
+type = "real → int"
+description = """
+"trunc r" rounds r towards zero.
+"""
+
+[[functions]]
+ordinal = 187
+structure = "Real"
+name = "unordered"
+specified = "basis"
+type = "real * real → bool"
+description = """
+"unordered (x, y)" returns true if x and y are unordered, i.e., at
+least one of x and y is NaN.
+"""
+
+# === Relational structure ===========================================
+
+[[functions]]
+ordinal = 188
+structure = "Relational"
+name = "count, count"
+specified = "morel"
+type = "int list → int"
+description = """
+"count list" returns the number of elements in `list`. Often used with
+`group`, for example `from e in emps group e.deptno compute countId =
+count`.
+"""
+
+[[functions]]
+ordinal = 189
+structure = "Relational"
+name = "empty, empty"
+specified = "morel"
+type = "α list → bool"
+description = """
+"empty list" returns whether the list is empty, for example `from d in
+depts where empty (from e where e.deptno = d.deptno)`.
+"""
+
+[[functions]]
+ordinal = 190
+structure = "Relational"
+name = "max, max"
+specified = "morel"
+type = "α list → α"
+description = """
+"max list" returns the greatest element of `list`. Often used with
+`group`, for example `from e in emps group e.deptno compute maxId =
+max of e.id`.
+"""
+
+[[functions]]
+ordinal = 191
+structure = "Relational"
+name = "min, min"
+specified = "morel"
+type = "α list → α"
+description = """
+"min list" returns the least element of `list`. Often used with
+`group`, for example `from e in emps group e.deptno compute minId =
+min of e.id`.
+"""
+
+[[functions]]
+ordinal = 192
+structure = "Relational"
+name = "nonEmpty, nonEmpty"
+specified = "morel"
+type = "α list → bool"
+description = """
+"nonEmpty list" returns whether the list has at least one element, for
+example `from d in depts where nonEmpty (from e where e.deptno =
+d.deptno)`.
+"""
+
+[[functions]]
+ordinal = 193
+structure = "Relational"
+name = "only, only"
+specified = "morel"
+type = "α list → α"
+description = """
+"only list" returns the sole element of list, for example `from e in
+emps yield only (from d where d.deptno = e.deptno)`.
+"""
+
+[[functions]]
+ordinal = 194
+structure = "Relational"
+name = "op elem"
+specified = "morel"
+type = "α * α bag → bool, α * α list → bool"
+description = """
+"e elem collection" returns whether `e` is a member of `collection`.
+"""
+
+[[functions]]
+ordinal = 195
+structure = "Relational"
+name = "op notelem"
+specified = "morel"
+type = "α * α bag → bool, α * α list → bool"
+description = """
+"e notelem collection" returns whether `e` is not a member of
+`collection`.
+"""
+
+[[functions]]
+ordinal = 196
+structure = "Relational"
+name = "sum, sum"
+specified = "morel"
+type = "int list → int"
+description = """
+"sum list" returns the sum of the elements of `list`. Often used with
+`group`, for example `from e in emps group e.deptno compute sumId =
+sum of e.id`.
+"""
+
+# === String structure ===============================================
+
+[[functions]]
+ordinal = 197
+structure = "String"
+name = "concat"
+specified = "basis"
+type = "string list → string"
+description = """
+"concat l" is the concatenation of all the strings in `l`. This raises
+`Size` if the sum of all the sizes is greater than `maxSize`.
+"""
+
+[[functions]]
+ordinal = 198
+structure = "String"
+name = "concatWith"
+specified = "basis"
+type = "string → string list → string"
+description = """
+"concatWith s l" returns the concatenation of the strings in the list
+`l` using the string `s` as a separator. This raises `Size` if the
+size of the resulting string would be greater than `maxSize`.
+"""
+
+[[functions]]
+ordinal = 199
+structure = "String"
+name = "explode"
+specified = "basis"
+type = "string → char list"
+description = """
+"explode s" is the list of characters in the string `s`.
+"""
+
+[[functions]]
+ordinal = 200
+structure = "String"
+name = "extract"
+specified = "basis"
+type = "string * int * int option → string"
+description = """
+"extract (s, i, NONE)" and "extract (s, i, SOME j)" return substrings
+of `s`. The first returns the substring of `s` from the `i`(th)
+character to the end of the string, i.e., the string
+`s`[`i`..|`s`|-1]. This raises `Subscript` if `i` < 0 or |`s`| < `i`.
+
+<p>The second form returns the substring of size `j` starting at
+index `i`, i.e., the string `s`[`i`..`i`+`j`-1]. Raises `Subscript` if
+`i` < 0 or `j` < 0 or |`s`| < `i` + `j`. Note that, if defined,
+`extract` returns the empty string when `i` = |`s`|.
+"""
+
+[[functions]]
+ordinal = 201
+structure = "String"
+name = "implode"
+specified = "basis"
+type = "char list → string"
+description = """
+"implode l" generates the string containing the characters in the list
+`l`. This is equivalent to `concat (List.map str l)`. This raises
+`Size` if the resulting string would have size greater than `maxSize`.
+"""
+
+[[functions]]
+ordinal = 202
+structure = "String"
+name = "isPrefix"
+specified = "basis"
+type = "string → string → bool"
+description = """
+"isPrefix s1 s2" returns `true` if the string `s1` is a prefix of the
+string `s2`. Note that the empty string is a prefix of any string, and
+that a string is a prefix of itself.
+"""
+
+[[functions]]
+ordinal = 203
+structure = "String"
+name = "isSubstring"
+specified = "basis"
+type = "string → string → bool"
+description = """
+"isSubstring s1 s2" returns `true` if the string `s1` is a substring
+of the string `s2`. Note that the empty string is a substring of any
+string, and that a string is a substring of itself.
+"""
+
+[[functions]]
+ordinal = 204
+structure = "String"
+name = "isSuffix"
+specified = "basis"
+type = "string → string → bool"
+description = """
+"isSuffix s1 s2" returns `true` if the string `s1` is a suffix of the
+string `s2`. Note that the empty string is a suffix of any string, and
+that a string is a suffix of itself.
+"""
+
+[[functions]]
+ordinal = 205
+structure = "String"
+name = "map"
+specified = "basis"
+type = "(char → char) → string → string"
+description = """
+"map f s" applies `f` to each element of `s` from left to right,
+returning the resulting string. It is equivalent to `implode(List.map
+f (explode s))`.
+"""
+
+[[functions]]
+ordinal = 206
+structure = "String"
+name = "maxSize"
+specified = "basis"
+type = "int"
+description = """
+The longest allowed size of a string.
+"""
+
+[[functions]]
+ordinal = 207
+structure = "String"
+name = "size"
+specified = "basis"
+type = "string → int"
+description = """
+"size s" returns |`s`|, the number of characters in string `s`.
+"""
+
+[[functions]]
+ordinal = 208
+structure = "String"
+name = "str"
+specified = "basis"
+type = "char → string"
+description = """
+"str c" is the string of size one containing the character `c`.
+"""
+
+[[functions]]
+ordinal = 209
+structure = "String"
+name = "sub"
+specified = "basis"
+type = "string * int → char"
+description = """
+"sub (s, i)" returns the `i`(th) character of `s`, counting from
+zero. This raises `Subscript` if `i` < 0 or |`s`| &le; `i`.
+"""
+
+[[functions]]
+ordinal = 210
+structure = "String"
+name = "substring"
+specified = "basis"
+type = "string * int * int → string"
+description = """
+"substring (s, i, j)" returns the substring `s`[`i`..`i`+`j`-1], i.e.,
+the substring of size `j` starting at index `i`. This is equivalent to
+`extract(s, i, SOME j)`.
+"""
+
+[[functions]]
+ordinal = 211
+structure = "String"
+name = "translate"
+specified = "basis"
+type = "(char → string) → string → string"
+description = """
+"translate f s" returns the string generated from `s` by mapping each
+character in `s` by `f`. It is equivalent to `concat(List.map f
+(explode s))`.
+"""
+
+# === Sys structure ==================================================
+
+[[functions]]
+ordinal = 212
+structure = "Sys"
+name = "clearEnv"
+specified = "morel"
+type = "unit → unit"
+description = """
+"clearEnv ()" restores the environment to the initial environment.
+"""
+
+[[functions]]
+ordinal = 213
+structure = "Sys"
+name = "env, env"
+specified = "morel"
+type = "unit → string list"
+description = """
+"env ()" prints the environment.
+"""
+
+[[functions]]
+ordinal = 214
+structure = "Sys"
+name = "plan"
+specified = "morel"
+type = "unit → string"
+description = """
+"plan ()" prints the plan of the most recently executed expression.
+"""
+
+[[functions]]
+ordinal = 215
+structure = "Sys"
+name = "set"
+specified = "morel"
+type = "string * α → unit"
+description = """
+"set (property, value)" sets the value of `property` to `value`.
+"""
+extra = """
+(See [Properties](#properties) below.)
+"""
+
+[[functions]]
+ordinal = 216
+structure = "Sys"
+name = "show"
+specified = "morel"
+type = "string → string option"
+description = """
+"show property" returns the current the value of `property`, as a
+string, or `NONE` if unset.
+"""
+
+[[functions]]
+ordinal = 217
+structure = "Sys"
+name = "showAll"
+specified = "morel"
+type = "unit → string * string option list"
+description = """
+"showAll ()" returns a list of all properties and their current value
+as a string, or `NONE` if unset.
+"""
+
+[[functions]]
+ordinal = 218
+structure = "Sys"
+name = "unset"
+specified = "morel"
+type = "string → unit"
+description = """
+"unset property" clears the current the value of `property`.
+"""
+
+# === Vector structure ===============================================
+
+[[functions]]
+ordinal = 219
+structure = "Vector"
+name = "all"
+specified = "basis"
+type = "(α → bool) → α vector → bool"
+description = """
+"all f vec" applies `f` to each element `x` of the vector `vec`, from
+left to right, until `f(x)` evaluates to `false`. It returns `false`
+if such an `x` exists; otherwise it returns `true`. It is equivalent
+to `not(exists (not o f) vec)`.
+"""
+
+[[functions]]
+ordinal = 220
+structure = "Vector"
+name = "app"
+specified = "basis"
+type = "(α → unit) → α vector → unit"
+description = """
+"app f vec" applies the function `f` to the elements of a vector in
+left to right order (i.e., in order of increasing indices).
+
+<p>It is equivalent to
+<pre>List.app f (foldr (fn (a,l) => a::l) [] vec)</pre>
+"""
+
+[[functions]]
+ordinal = 221
+structure = "Vector"
+name = "appi"
+specified = "basis"
+type = "(int * α → unit) → α vector → unit"
+description = """
+"appi f vec" applies the function `f` to the elements of a vector in
+left to right order (i.e., in order of increasing indices).
+
+<p>It is equivalent to
+<pre>List.app f (foldri (fn (i,a,l) => (i,a)::l) [] vec)</pre>
+"""
+
+[[functions]]
+ordinal = 222
+structure = "Vector"
+name = "collate"
+specified = "basis"
+type = ""
+description = """
+"collate f (v1, v2)" performs lexicographic comparison of the two
+vectors using the given ordering `f` on elements.
+"""
+
+[[functions]]
+ordinal = 223
+structure = "Vector"
+name = "concat"
+specified = "basis"
+type = "α vector list → α vector"
+description = """
+"concat l" returns the vector that is the concatenation of the vectors
+in the list `l`.  Raises `Size` if the total length of these vectors
+exceeds `maxLen`
+"""
+
+[[functions]]
+ordinal = 224
+structure = "Vector"
+name = "exists"
+specified = "basis"
+type = ""
+description = """
+"exists f vec" applies `f` to each element `x` of the vector `vec`,
+from left to right (i.e., increasing indices), until `f(x)` evaluates
+to `true`; it returns `true` if such an `x` exists and `false`
+otherwise.
+"""
+
+[[functions]]
+ordinal = 225
+structure = "Vector"
+name = "find"
+specified = "basis"
+type = "(α → bool) → α vector → α option"
+description = """
+"find f vec" applies `f` to each element `x` of the vector `vec`, from
+left to right, until `f(x)` evaluates to `true`. It returns `SOME (x)`
+if such an `x` exists; otherwise it returns `NONE`.
+"""
+
+[[functions]]
+ordinal = 226
+structure = "Vector"
+name = "findi"
+specified = "basis"
+type = "(int * α → bool) → α vector → (int * α) option"
+description = """
+"findi f vec" applies `f` to each element `x` and element index `i` of
+the vector `vec`, from left to right, until `f(i, x)` evaluates to
+`true`. It returns `SOME (i, x)` if such an `x` exists; otherwise it
+returns `NONE`.
+"""
+
+[[functions]]
+ordinal = 227
+structure = "Vector"
+name = "foldl"
+specified = "basis"
+type = "(α * β → β) → β → α vector → β"
+description = """
+"foldl f init vec" folds the function `f` over all the elements of
+vector `vec`, left to right, using the initial value `init`.
+"""
+
+[[functions]]
+ordinal = 228
+structure = "Vector"
+name = "foldli"
+specified = "basis"
+type = "(int * α * β → β) → β → α vector → β"
+description = """
+"foldli f init vec" folds the function `f` over all the (index,
+element) pairs of vector `vec`, left to right, using the initial value
+`init`.
+"""
+
+[[functions]]
+ordinal = 229
+structure = "Vector"
+name = "foldr"
+specified = "basis"
+type = "(α * β → β) → β → α vector → β"
+description = """
+"foldr f init vec" folds the function `f` over all the elements of
+vector `vec`, right to left, using the initial value `init`.
+"""
+
+[[functions]]
+ordinal = 230
+structure = "Vector"
+name = "foldri"
+specified = "basis"
+type = "(int * α * β → β) → β → α vector → β"
+description = """
+"foldri f init vec" folds the function `f` over all the (index,
+element) pairs of vector `vec`, right to left, using the initial value
+`init`.
+"""
+
+[[functions]]
+ordinal = 231
+structure = "Vector"
+name = "fromList"
+specified = "basis"
+type = "α list → α vector"
+description = """
+"fromList l" creates a new vector from `l`, whose length is `length l`
+and with the `i`<sup>th</sup> element of `l` used as the
+`i`<sup>th</sup> element of the vector. Raises `Size` if `maxLen` <
+`n`.
+"""
+
+[[functions]]
+ordinal = 232
+structure = "Vector"
+name = "length"
+specified = "basis"
+type = "α vector → int"
+description = """
+"length v" returns the number of elements in the vector `v`.
+"""
+
+[[functions]]
+ordinal = 233
+structure = "Vector"
+name = "map"
+specified = "basis"
+type = "(α → β) → α vector → β vector"
+description = """
+"map f vec" applies the function `f` to the elements of the argument
+vector `vec`.
+
+<p>It is equivalent to
+<pre>fromList (List.map f (foldr (fn (a,l) => a::l) [] vec))</pre>
+"""
+
+[[functions]]
+ordinal = 234
+structure = "Vector"
+name = "mapi"
+specified = "basis"
+type = "(int * α → β) → α vector → β vector"
+description = """
+"mapi f vec" applies the function `f` to the elements of the argument
+vector `vec`, supplying the vector index and element as arguments to
+each call.
+
+<p>It is equivalent to
+<pre>fromList (List.map f (foldri (fn (i,a,l) => (i,a)::l) [] vec))</pre>
+"""
+
+[[functions]]
+ordinal = 235
+structure = "Vector"
+name = "maxLen"
+specified = "basis"
+type = "int"
+description = """
+"maxLen" returns the maximum length of vectors supported in this
+implementation.
+"""
+
+[[functions]]
+ordinal = 236
+structure = "Vector"
+name = "sub"
+specified = "basis"
+type = "α vector * int → α"
+description = """
+"sub (vec, i)" returns the `i`<sup>th</sup> element of vector `vec`.
+Raises `Subscript` if `i` < 0 or `size vec` &le; `i`.
+"""
+
+[[functions]]
+ordinal = 237
+structure = "Vector"
+name = "tabulate"
+specified = "basis"
+type = "int * (int → α) → α vector"
+description = """
+"tabulate (n, f)" returns a vector of length `n` equal to `[f(0),
+f(1), ..., f(n-1)]`, created from left to right. This is equivalent
+to the expression
+
+<pre>fromList (List.tabulate (n, f))</pre>
+
+Raises `Size` if `n` < 0 or `maxLen` < `n`.
+"""
+
+[[functions]]
+ordinal = 238
+structure = "Vector"
+name = "update"
+specified = "basis"
+type = "α vector * int * α → α vector"
+description = """
+"update (vec, i, x)" returns a new vector, identical to `vec`, except
+the `i`<sup>th</sup> element of `vec` is set to `x`. Raises
+`Subscript` if `i` < 0 or `size vec` &le; `i`.
+"""
+
+# End functions.toml

@@ -27,6 +27,7 @@ Make sure `mvn clean install`, `mvn site`, and
 
 Upgrade dependencies to their latest release: run
 ```bash
+./mvnw versions:display-dependency-updates
 ./mvnw versions:update-properties
 ```
 and commit the modified `pom.xml`.

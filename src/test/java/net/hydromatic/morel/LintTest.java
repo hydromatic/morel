@@ -21,14 +21,22 @@ package net.hydromatic.morel;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.io.StringWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+import net.hydromatic.morel.util.Generation;
 import org.apache.calcite.util.Puffin;
 import org.apache.calcite.util.Source;
 import org.apache.calcite.util.Sources;
@@ -384,6 +392,47 @@ public class LintTest {
     }
 
     assertThat("Lint violations:\n" + b, g.messages, empty());
+  }
+
+  /** Parses the "reference.md" file. */
+  @Test
+  void testFunctionTable() throws IOException {
+    File baseDir = TestUtils.getBaseDir(TestUtils.class);
+    final File file = new File(baseDir, "docs/reference.md");
+    final File genFile = new File(baseDir, "target/reference.md");
+    try (Reader r = new FileReader(file);
+        BufferedReader br = new BufferedReader(r);
+        Writer w = new FileWriter(genFile);
+        PrintWriter pw = new PrintWriter(w)) {
+      boolean emit = true;
+      for (; ; ) {
+        String line = br.readLine();
+        if (line == null) {
+          break;
+        }
+        if (line.equals("{% comment %}END TABLE{% endcomment %}")) {
+          emit = true;
+        }
+        if (emit) {
+          pw.println(line);
+        }
+        if (line.equals("{% comment %}START TABLE{% endcomment %}")) {
+          emit = false;
+          Generation.generateFunctionTable(pw);
+        }
+      }
+    }
+
+    final String diff = TestUtils.diff(file, genFile);
+    if (!diff.isEmpty()) {
+      fail(
+          "Files differ: "
+              + file
+              + " "
+              + genFile
+              + "\n" //
+              + diff);
+    }
   }
 
   /** Warning that code is not as it should be. */

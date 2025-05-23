@@ -97,6 +97,7 @@ License.
     <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
     <javacc.version>7.0.13</javacc.version>
     <jline.version>3.25.0</jline.version>
+    <jackson.version>2.19.0</jackson.version>
     <junit-jupiter.version>5.12.2</junit-jupiter.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
@@ -139,6 +140,12 @@ License.
   </scm>
 
   <dependencies>
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-toml</artifactId>
+      <version>${jackson.version}</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>

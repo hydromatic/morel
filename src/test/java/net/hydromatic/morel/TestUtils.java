@@ -18,8 +18,10 @@
  */
 package net.hydromatic.morel;
 
+import static java.util.Objects.requireNonNull;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.ImmutableList;
 import java.io.BufferedReader;
@@ -43,11 +45,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.calcite.util.Sources;
 import org.incava.diff.Diff;
 import org.incava.diff.Difference;
 
 /** Utility methods for testing. */
-class TestUtils {
+public class TestUtils {
   private TestUtils() {}
 
   /**
@@ -114,6 +117,13 @@ class TestUtils {
   /** Returns the root directory of test resources. */
   static File findDirectory() {
     final URL inUrl = MainTest.class.getResource("/");
+    assertThat(inUrl, notNullValue());
+    return urlToFile(inUrl);
+  }
+
+  /** Returns the root directory of production resources. */
+  static File resourceDirectory() {
+    final URL inUrl = Main.class.getResource("/");
     assertThat(inUrl, notNullValue());
     return urlToFile(inUrl);
   }
@@ -265,6 +275,41 @@ class TestUtils {
   /** Returns a list plus one element. */
   public static <E> ImmutableList<E> plus(List<E> elements, E element) {
     return ImmutableList.<E>builder().addAll(elements).add(element).build();
+  }
+
+  /** Returns the root directory of the source tree. */
+  public static File getBaseDir(Class<?> klass) {
+    // Algorithm:
+    // 1) Find location of TestUtil.class
+    // 2) Climb via getParentFile() until we detect pom.xml
+    // 3) It means we've got BASE/testkit/pom.xml, and we need to get BASE
+    final URL resource = klass.getResource(klass.getSimpleName() + ".class");
+    final File classFile =
+        Sources.of(requireNonNull(resource, "resource")).file();
+
+    File file = classFile.getAbsoluteFile();
+    for (int i = 0; i < 42; i++) {
+      if (isProjectDir(file)) {
+        // Ok, file == BASE/testkit/
+        break;
+      }
+      file = file.getParentFile();
+    }
+    if (!isProjectDir(file)) {
+      fail(
+          "Could not find pom.xml, build.gradle.kts or gradle.properties. "
+              + "Started with "
+              + classFile.getAbsolutePath()
+              + ", the current path is "
+              + file.getAbsolutePath());
+    }
+    return file;
+  }
+
+  private static boolean isProjectDir(File dir) {
+    return new File(dir, "pom.xml").isFile()
+        || new File(dir, "build.gradle.kts").isFile()
+        || new File(dir, "gradle.properties").isFile();
   }
 }
 
