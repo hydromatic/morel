@@ -75,6 +75,10 @@ public class Shuttle {
     return current;
   }
 
+  protected Ast.Ordinal visit(Ast.Ordinal ordinal) {
+    return ordinal;
+  }
+
   protected Ast.Exp visit(Ast.AnnotatedExp annotatedExp) {
     return ast.annotatedExp(
         annotatedExp.pos,

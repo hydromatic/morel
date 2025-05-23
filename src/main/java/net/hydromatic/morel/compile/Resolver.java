@@ -61,6 +61,7 @@ import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.ListType;
+import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
@@ -430,6 +431,8 @@ public class Resolver {
         return toCore((Ast.Id) exp);
       case CURRENT:
         return toCore((Ast.Current) exp);
+      case ORDINAL:
+        return toCore((Ast.Ordinal) exp);
       case ANDALSO:
       case ORELSE:
         return toCore((Ast.InfixCall) exp);
@@ -474,6 +477,13 @@ public class Resolver {
 
   private Core.Exp toCore(Ast.Current current) {
     return requireNonNull(this.current);
+  }
+
+  private Core.Exp toCore(Ast.Ordinal ordinal) {
+    Core.Literal fn =
+        core.functionLiteral(typeMap.typeSystem, BuiltIn.Z_ORDINAL);
+    Core.Tuple arg = core.tuple(typeMap.typeSystem);
+    return core.apply(ordinal.pos, PrimitiveType.INT, fn, arg);
   }
 
   /** Converts an id in a declaration to Core. */
@@ -954,6 +964,7 @@ public class Resolver {
         BuiltIn.OP_NE, Op.NE,
         BuiltIn.Z_ANDALSO, Op.ANDALSO,
         BuiltIn.Z_ORELSE, Op.ORELSE,
+        BuiltIn.Z_ORDINAL, Op.ORDINAL,
         BuiltIn.Z_PLUS_INT, Op.PLUS,
         BuiltIn.Z_PLUS_REAL, Op.PLUS,
       };

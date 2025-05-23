@@ -66,14 +66,19 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.ImmutablePairList;
+import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.TailList;
 import net.hydromatic.morel.util.ThreadLocals;
+import org.apache.calcite.util.TryThreadLocal;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Compiles an expression to code that can be evaluated. */
 public class Compiler {
   protected static final EvalEnv EMPTY_ENV = Codes.emptyEnv();
+
+  private static final TryThreadLocal<int[]> ORDINAL_CODE =
+      TryThreadLocal.withInitial(() -> new int[] {0});
 
   protected final TypeSystem typeSystem;
 
@@ -188,6 +193,45 @@ public class Compiler {
   public List<Code> compileArgs(
       Context cx, List<? extends Core.Exp> expressions) {
     return transformEager(expressions, e -> compile(cx, e));
+  }
+
+  /** Compiles an expression that is evaluated once per row. */
+  public Code compileRow(Context cx, Core.Exp expression) {
+    final int[] ordinalSlots = {0};
+    try (TryThreadLocal.Memo ignored = ORDINAL_CODE.push(ordinalSlots)) {
+      Code code = compile(cx, expression);
+      if (ordinalSlots[0] == 0) {
+        return code;
+      }
+      // The ordinal was used in at least one place.
+      // Create a wrapper that will increment the ordinal each time.
+      ordinalSlots[0] = 0;
+      return Codes.ordinalInc(ordinalSlots, code);
+    }
+  }
+
+  /**
+   * Compiles a collection of expressions that are evaluated once per row.
+   *
+   * <p>If one or more of those expressions references {@code ordinal}, add a
+   * wrapper around the first expression that increments the ordinal, similar to
+   * how {@link #compileRow(Context, Core.Exp)} does it.
+   */
+  private ImmutableSortedMap<String, Code> compileRowMap(
+      Context cx, List<? extends Map.Entry<String, Core.Exp>> nameExps) {
+    final int[] ordinalSlots = {0};
+    try (TryThreadLocal.Memo ignored = ORDINAL_CODE.push(ordinalSlots)) {
+      final PairList<String, Code> mapCodes = PairList.of();
+      forEach(nameExps, (name, exp) -> mapCodes.add(name, compile(cx, exp)));
+      if (ordinalSlots[0] > 0) {
+        // The ordinal was used in at least one place.
+        // Create a wrapper that will increment the ordinal each time.
+        ordinalSlots[0] = 0;
+        final List<Code> codes = mapCodes.rightList();
+        codes.set(0, Codes.ordinalInc(ordinalSlots, codes.get(0)));
+      }
+      return ImmutableSortedMap.copyOf(mapCodes, RecordType.ORDERING);
+    }
   }
 
   public Code compile(Context cx, Core.Exp expression) {
@@ -356,7 +400,7 @@ public class Compiler {
 
       case WHERE:
         final Core.Where where = (Core.Where) firstStep;
-        final Code filterCode = compile(cx, where.exp);
+        final Code filterCode = compileRow(cx, where.exp);
         return () -> Codes.whereRowSink(filterCode, nextFactory.get());
 
       case SKIP:
@@ -398,24 +442,19 @@ public class Compiler {
         if (steps.size() == 1) {
           // Last step. Use a Collect row sink, and we're done.
           // Note that we don't use nextFactory.
-          final Code yieldCode = compile(cx, yield.exp);
+          final Code yieldCode = compileRow(cx, yield.exp);
           return () -> Codes.collectRowSink(yieldCode);
         } else if (yield.exp instanceof Core.Tuple) {
           final Core.Tuple tuple = (Core.Tuple) yield.exp;
           final RecordLikeType recordType = tuple.type();
-          final ImmutableSortedMap.Builder<String, Code> mapCodes =
-              ImmutableSortedMap.orderedBy(RecordType.ORDERING);
-          forEach(
-              tuple.args,
-              recordType.argNames(),
-              (exp, name) -> mapCodes.put(name, compile(cx, exp)));
-          return () -> Codes.yieldRowSink(mapCodes.build(), nextFactory.get());
+          final Map<String, Code> codeMap =
+              compileRowMap(cx, Pair.zip(recordType.argNames(), tuple.args));
+          return () -> Codes.yieldRowSink(codeMap, nextFactory.get());
         } else {
-          final ImmutableSortedMap.Builder<String, Code> mapCodes =
-              ImmutableSortedMap.orderedBy(RecordType.ORDERING);
           final Binding binding = yield.env.bindings.get(0);
-          mapCodes.put(binding.id.name, compile(cx, yield.exp));
-          return () -> Codes.yieldRowSink(mapCodes.build(), nextFactory.get());
+          Map<String, Code> codeMap =
+              compileRowMap(cx, PairList.of(binding.id.name, yield.exp));
+          return () -> Codes.yieldRowSink(codeMap, nextFactory.get());
         }
 
       case ORDER:
@@ -686,6 +725,10 @@ public class Compiler {
       case Z_LIST:
         argCodes = compileArgs(cx, ((Core.Tuple) arg).args);
         return Codes.list(argCodes);
+      case Z_ORDINAL:
+        int[] ordinalSlots = ORDINAL_CODE.get();
+        ordinalSlots[0]++; // signal that we are using an ordinal
+        return Codes.ordinalGet(ordinalSlots);
       default:
         final Object o0 = Codes.BUILT_IN_VALUES.get(builtIn);
         final Object o;

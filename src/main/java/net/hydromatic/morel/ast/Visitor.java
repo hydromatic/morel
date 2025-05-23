@@ -34,6 +34,8 @@ public class Visitor {
 
   protected void visit(Ast.Current current) {}
 
+  protected void visit(Ast.Ordinal ordinal) {}
+
   protected void visit(Ast.AnnotatedExp annotatedExp) {
     annotatedExp.exp.accept(this);
     annotatedExp.type.accept(this);

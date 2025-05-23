@@ -58,17 +58,23 @@ public enum AstBuilder {
    * {@code x.b + 2} has no implicit label.
    */
   public @Nullable String implicitLabelOpt(Ast.Exp exp) {
-    if (exp instanceof Ast.Apply) {
-      final Ast.Apply apply = (Ast.Apply) exp;
-      if (apply.fn instanceof Ast.RecordSelector) {
-        final Ast.RecordSelector selector = (Ast.RecordSelector) apply.fn;
-        return selector.name;
-      }
+    switch (exp.op) {
+      case CURRENT:
+        return "current";
+      case ORDINAL:
+        return "ordinal";
+      case ID:
+        return ((Ast.Id) exp).name;
+      case APPLY:
+        final Ast.Apply apply = (Ast.Apply) exp;
+        if (apply.fn instanceof Ast.RecordSelector) {
+          final Ast.RecordSelector selector = (Ast.RecordSelector) apply.fn;
+          return selector.name;
+        }
+        // fall through
+      default:
+        return null;
     }
-    if (exp instanceof Ast.Id) {
-      return ((Ast.Id) exp).name;
-    }
-    return null;
   }
 
   /** Returns an expression's implicit label, or throws. */
@@ -131,6 +137,10 @@ public enum AstBuilder {
 
   public Ast.Current current(Pos pos) {
     return new Ast.Current(pos);
+  }
+
+  public Ast.Ordinal ordinal(Pos pos) {
+    return new Ast.Ordinal(pos);
   }
 
   public Ast.Id id(Pos pos, String name) {

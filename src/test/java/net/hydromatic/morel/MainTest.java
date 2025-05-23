@@ -2002,6 +2002,10 @@ public class MainTest {
         .assertParse("from e in emps order #empno e desc, #deptno e");
     ml("from e in emps yield e.deptno order current mod 2")
         .assertParse("from e in emps yield #deptno e order current mod 2");
+    ml("from e in emps yield e.empno order ordinal mod 2, ordinal div 2")
+        .assertParse(
+            "from e in emps yield #empno e "
+                + "order ordinal mod 2, ordinal div 2");
     ml("from e in emps order e.empno take 2")
         .assertParse("from e in emps order #empno e take 2");
     ml("from e in emps order e.empno take 2 skip 3 skip 1+1 take 2")

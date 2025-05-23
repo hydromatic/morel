@@ -524,6 +524,15 @@ public class TypeResolver {
         final Term term = env.get(typeSystem, id.name, TypeEnv.unbound(id));
         return reg(id, v, term);
 
+      case ORDINAL:
+        final Ast.Ordinal ordinal = (Ast.Ordinal) node;
+        final Term term3 =
+            env.get(
+                typeSystem,
+                BuiltIn.Z_CURRENT.mlName,
+                TypeEnv.onlyValidInQuery(ordinal));
+        return reg(ordinal, v, toTerm(PrimitiveType.INT));
+
       case CURRENT:
         final Ast.Current current = (Ast.Current) node;
         final Term term2 =

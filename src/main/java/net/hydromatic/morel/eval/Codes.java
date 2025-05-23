@@ -691,6 +691,16 @@ public abstract class Codes {
   /** @see BuiltIn#INT_MOD */
   private static final Applicable INT_MOD = new IntMod(BuiltIn.INT_MOD);
 
+  /** @see BuiltIn#Z_ORDINAL */
+  public static Code ordinalGet(int[] ordinalSlots) {
+    return new OrdinalGetCode(ordinalSlots);
+  }
+
+  /** Helper for {@link #ordinalGet(int[])}. */
+  public static Code ordinalInc(int[] ordinalSlots, Code nextCode) {
+    return new OrdinalIncCode(ordinalSlots, nextCode);
+  }
+
   /** Implements {@link #INT_MOD} and {@link #OP_MOD}. */
   private static class IntMod extends Applicable2<Integer, Integer, Integer> {
     IntMod(BuiltIn builtIn) {
@@ -3869,6 +3879,7 @@ public abstract class Codes {
           .put(BuiltIn.Z_ANDALSO, Unit.INSTANCE)
           .put(BuiltIn.Z_ORELSE, Unit.INSTANCE)
           .put(BuiltIn.Z_CURRENT, Unit.INSTANCE)
+          .put(BuiltIn.Z_ORDINAL, 0)
           .put(BuiltIn.Z_NEGATE_INT, Z_NEGATE_INT)
           .put(BuiltIn.Z_NEGATE_REAL, Z_NEGATE_REAL)
           .put(BuiltIn.Z_DIVIDE_INT, Z_DIVIDE_INT)
@@ -5281,6 +5292,56 @@ public abstract class Codes {
 
     static boolean isPunct(char c) {
       return isGraph(c) && !isAlphaNum(c);
+    }
+  }
+
+  /**
+   * Implementation of {@code Code} that evaluates the current row ordinal.
+   *
+   * @see OrdinalIncCode
+   */
+  private static class OrdinalGetCode implements Code {
+    private final int[] ordinalSlots;
+
+    OrdinalGetCode(int[] ordinalSlots) {
+      this.ordinalSlots = requireNonNull(ordinalSlots);
+      checkArgument(ordinalSlots.length == 1);
+    }
+
+    @Override
+    public Object eval(EvalEnv evalEnv) {
+      return ordinalSlots[0];
+    }
+
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start("ordinal", d -> {});
+    }
+  }
+
+  /**
+   * Implementation of {@code Code} that increments the current row ordinal then
+   * calls another {@code Code}.
+   */
+  private static class OrdinalIncCode implements Code {
+    private final int[] ordinalSlots;
+    private final Code nextCode;
+
+    OrdinalIncCode(int[] ordinalSlots, Code nextCode) {
+      this.ordinalSlots = requireNonNull(ordinalSlots);
+      this.nextCode = requireNonNull(nextCode);
+      checkArgument(ordinalSlots.length == 1);
+    }
+
+    @Override
+    public Object eval(EvalEnv evalEnv) {
+      ++ordinalSlots[0];
+      return nextCode.eval(evalEnv);
+    }
+
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start("ordinal", d -> {});
     }
   }
 }

@@ -3013,6 +3013,12 @@ public enum BuiltIn {
    */
   Z_CURRENT("$", "$current", ts -> UNIT),
 
+  /**
+   * Internal value "$ordinal", of type "int", used to implement the {@code
+   * ordinal} keyword.
+   */
+  Z_ORDINAL("$", "$ordinal", ts -> INT),
+
   /** Internal unary negation operator "~", of type "int &rarr; int". */
   Z_NEGATE_INT("$", "~:int", ts -> ts.fnType(INT, INT)),
 

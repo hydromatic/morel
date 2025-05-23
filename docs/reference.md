@@ -69,12 +69,14 @@ In Morel but not Standard ML:
   `take`,
   `through`,
   `union`,
+  `unorder`,
   `where`,
   `yield` steps
 * `elem`,
   `implies`,
   `notelem` binary operators
-* `current` nilary operator
+* `current`,
+  `ordinal` nilary operators
 * <code><i>lab</i> =</code> is optional in <code><i>exprow</i></code>
 * <code><i>record</i>.<i>lab</i></code> as an alternative to
   <code>#<i>lab</i> <i>record</i></code>

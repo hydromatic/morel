@@ -29,6 +29,7 @@ public enum Op {
   // identifiers
   ID(true),
   CURRENT(" current ", 99, 99),
+  ORDINAL(" ordinal ", 99, 99),
   RECORD_SELECTOR(true),
 
   // literals

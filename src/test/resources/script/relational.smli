@@ -318,6 +318,123 @@ from i in [1,2,3,4,5]
   where not (exists j in ["a","b","ccc","dd"] skip current);
 > val it = [4,5] : int list
 
+(* Ordinal ---------------------------------------------------- *)
+1 + ordinal;
+> stdIn:1.5-1.12 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.5-1.12
+
+(*) 'ordinal' cannot be used in the first step of a query
+from i in [ordinal, ordinal + 1, ordinal + 2];
+> stdIn:1.12-1.19 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.12-1.19
+
+(*) 'ordinal' is available in a subquery
+from i in [10,20,30]
+  yield {i, js = (from j in [i + ordinal, i + ordinal + 1])};
+> val it = [{i=10,js=[11,12]},{i=20,js=[22,23]},{i=30,js=[33,34]}]
+>   : {i:int, js:int list} list
+
+from e in emps
+  order e.deptno
+  yield {ordinal, e.name};
+> val it =
+>   [{name="Fred",ordinal=1},{name="Velma",ordinal=2},{name="Shaggy",ordinal=3},
+>    {name="Scooby",ordinal=4}] : {name:string, ordinal:int} list
+
+from e in emps
+  order e.deptno
+  where e.deptno = 30
+  yield {ordinal, e.name};
+> val it = [{name="Shaggy",ordinal=1},{name="Scooby",ordinal=2}]
+>   : {name:string, ordinal:int} list
+
+from e in emps
+  order e.deptno
+  join i in [2,3]
+  yield {ordinal, e.name};
+> val it =
+>   [{name="Fred",ordinal=1},{name="Fred",ordinal=2},{name="Velma",ordinal=3},
+>    {name="Velma",ordinal=4},{name="Shaggy",ordinal=5},
+>    {name="Shaggy",ordinal=6},{name="Scooby",ordinal=7},
+>    {name="Scooby",ordinal=8}] : {name:string, ordinal:int} list
+
+(*) A 'where' clause after 'yield ordinal' creates gaps in the ordinals.
+from e in emps
+  order e.deptno
+  join i in [2,3]
+  yield {ordinal, e.name}
+  where String.sub(name, 0) = #"S";
+> val it =
+>   [{name="Shaggy",ordinal=5},{name="Shaggy",ordinal=6},
+>    {name="Scooby",ordinal=7},{name="Scooby",ordinal=8}]
+>   : {name:string, ordinal:int} list
+
+(*) Do the equivalent of 'take' using ordinal.
+from e in emps
+  order e.deptno
+  where ordinal < 3;
+> val it = [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"}]
+>   : {deptno:int, id:int, name:string} list
+
+(*) Do the equivalent of 'skip' using ordinal.
+from e in emps
+  order e.deptno
+  where ordinal > 2;
+> val it = [{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
+>   : {deptno:int, id:int, name:string} list
+
+(*) When there is a field called 'ordinal', it doesn't get used unless you quote it.
+from i in [3,1,4,5,3,5,8,9,7]
+  yield {ordinal, i}
+  where i > 5
+  where ordinal > 2;
+> val it = [{i=7,ordinal=9}] : {i:int, ordinal:int} list
+
+from i in [3,1,4,5,3,5,8,9,7]
+  yield {ordinal, i}
+  where i > 5
+  where `ordinal` > 2;
+> val it = [{i=8,ordinal=7},{i=9,ordinal=8},{i=7,ordinal=9}]
+>   : {i:int, ordinal:int} list
+
+(* In the following query, the query becomes unordered after
+   the join with the unordered `scott.depts` table, but we can
+   restore the same order by sorting on `i` (which is assigned
+   in a previous step from `ordinal`). *)
+from e in scott.emps
+  order e.deptno
+  yield {i = ordinal, e}
+  join d in scott.depts on d.deptno = e.deptno
+  order i
+  yield {i, d.dname, e.ename};
+> val it =
+>   [{dname="ACCOUNTING",ename="CLARK",i=1},
+>    {dname="ACCOUNTING",ename="KING",i=2},
+>    {dname="ACCOUNTING",ename="MILLER",i=3},
+>    {dname="RESEARCH",ename="SMITH",i=4},{dname="RESEARCH",ename="JONES",i=5},
+>    {dname="RESEARCH",ename="SCOTT",i=6},{dname="RESEARCH",ename="ADAMS",i=7},
+>    {dname="RESEARCH",ename="FORD",i=8},{dname="SALES",ename="ALLEN",i=9},
+>    {dname="SALES",ename="WARD",i=10},{dname="SALES",ename="MARTIN",i=11},
+>    {dname="SALES",ename="BLAKE",i=12},{dname="SALES",ename="TURNER",i=13},
+>    {dname="SALES",ename="JAMES",i=14}]
+>   : {dname:string, ename:string, i:int} list
+
+(* Morel's order step does not provide stable sorts, but you
+   can achieve stable sorts using `ordinal`. Note that employees
+   are sorted by job then empno. *)
+from e in scott.emps
+  order e.empno
+  where e.deptno > 10
+  order e.job, ordinal
+  yield {e.empno, e.job};
+> val it =
+>   [{empno=7788,job="ANALYST"},{empno=7902,job="ANALYST"},
+>    {empno=7369,job="CLERK"},{empno=7876,job="CLERK"},{empno=7900,job="CLERK"},
+>    {empno=7566,job="MANAGER"},{empno=7698,job="MANAGER"},
+>    {empno=7499,job="SALESMAN"},{empno=7521,job="SALESMAN"},
+>    {empno=7654,job="SALESMAN"},{empno=7844,job="SALESMAN"}]
+>   : {empno:int, job:string} list
+
 (* Combinations of steps -------------------------------------- *)
 (*) 'yield' followed by 'order'
 from e in emps

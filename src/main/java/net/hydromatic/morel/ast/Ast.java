@@ -890,6 +890,34 @@ public class Ast {
     }
   }
 
+  /**
+   * Parse tree node of the "ordinal" reference.
+   *
+   * <p>{@code ordinal} is the 0-based ordinal of the current element in an
+   * ordered iteration.
+   */
+  public static class Ordinal extends Exp {
+    /** Creates an Ordinal. */
+    Ordinal(Pos pos) {
+      super(pos, Op.ORDINAL);
+    }
+
+    @Override
+    public Ordinal accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.id("ordinal");
+    }
+  }
+
   /** Parse tree node of a record selector. */
   public static class RecordSelector extends Exp {
     public final String name;

@@ -212,6 +212,14 @@ Current current() : {}
   }
 }
 
+/** Parses the {@code ordinal} keyword. */
+Ordinal ordinal() : {}
+{
+  <ORDINAL> {
+    return ast.ordinal(pos());
+  }
+}
+
 /** Parses a record selector, e.g. "{@code #empno}".
  *
  * <p>You use it as a function to extract a field of a record;
@@ -959,6 +967,8 @@ Exp atom() :
 |
   e = current() { return e; }
 |
+  e = ordinal() { return e; }
+|
   e = recordSelector() { return e; }
 |
   e = literal() { return e; }
@@ -1614,6 +1624,7 @@ AstNode statementEof() :
 | < NOT_ELEM: "notelem" >
 | < ON: "on" >
 | < ORDER: "order" >
+| < ORDINAL: "ordinal" >
 | < REQUIRE: "require" >
 | < SKIP_: "skip" >
 | < TAKE: "take" >
