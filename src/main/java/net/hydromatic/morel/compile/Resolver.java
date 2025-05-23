@@ -882,7 +882,7 @@ public class Resolver {
    * An actual type subsumes an expected type if it is equal or if progressive
    * record types have been expanded.
    */
-  private static boolean subsumes(Type actualType, Type expectedType) {
+  public static boolean subsumes(Type actualType, Type expectedType) {
     switch (actualType.op()) {
       case LIST:
         if (expectedType.op() != Op.LIST) {
@@ -902,24 +902,13 @@ public class Resolver {
             ((RecordType) actualType).argNameTypes();
         final SortedMap<String, Type> expectedMap =
             ((RecordType) expectedType).argNameTypes();
-        final Iterator<Map.Entry<String, Type>> actualIterator =
-            actualMap.entrySet().iterator();
-        final Iterator<Map.Entry<String, Type>> expectedIterator =
-            expectedMap.entrySet().iterator();
-        for (; ; ) {
-          if (actualIterator.hasNext()) {
-            if (!expectedIterator.hasNext()) {
-              // expected had fewer entries than actual
-              return false;
-            }
-          } else {
-            if (!expectedIterator.hasNext()) {
-              // expected and actual had same number of entries
-              return true;
-            }
-          }
-          final Map.Entry<String, Type> actual = actualIterator.next();
-          final Map.Entry<String, Type> expected = expectedIterator.next();
+        if (actualMap.size() != expectedMap.size()) {
+          return false;
+        }
+        for (Pair<Map.Entry<String, Type>, Map.Entry<String, Type>> pair :
+            Pair.zip(actualMap.entrySet(), expectedMap.entrySet())) {
+          final Map.Entry<String, Type> actual = pair.left;
+          final Map.Entry<String, Type> expected = pair.right;
           if (!actual.getKey().equals(expected.getKey())) {
             return false;
           }

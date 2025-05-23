@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import static net.hydromatic.morel.compile.Resolver.subsumes;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -27,9 +28,11 @@ import com.google.common.collect.ImmutableSortedMap;
 import java.util.ArrayList;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.type.FnType;
+import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.PairList;
 import org.junit.jupiter.api.Test;
 
 /** Tests for types and the type system. */
@@ -134,6 +137,46 @@ public class TypeTest {
 
   private static void assertCannotCall(String reason, Type type, Type argType) {
     assertThat(reason, type.canCallArgOf(argType), is(false));
+  }
+
+  @Test
+  void testSubsumes() {
+    final TypeSystem typeSystem = new TypeSystem();
+    BuiltIn.dataTypes(typeSystem, new ArrayList<>());
+    final Type intT = PrimitiveType.INT;
+    final Type boolT = PrimitiveType.BOOL;
+    final Type iRec = typeSystem.recordType(PairList.of("i", intT));
+    final Type ibRec =
+        typeSystem.recordType(PairList.copyOf("i", intT, "b", boolT));
+    final Type jbRec =
+        typeSystem.recordType(PairList.copyOf("j", intT, "b", boolT));
+    final Type ibxRec =
+        typeSystem.recordType(
+            PairList.copyOf("i", intT, "b", boolT, "x", intT));
+    final ListType ibList = typeSystem.listType(ibRec);
+    final Type ibBag = typeSystem.bagType(ibRec);
+    final PairList<String, Type> types =
+        PairList.copyOf(
+            "intT", intT,
+            "boolT", boolT,
+            "iRec", iRec,
+            "ibRec", ibRec,
+            "jbRec", jbRec,
+            "ibxRec", ibxRec,
+            "ibList", ibList,
+            "ibBag", ibBag);
+    types.forEach(
+        (name1, t1) ->
+            types.forEach((name2, t2) -> checkSubsumes(name1, t1, name2, t2)));
+  }
+
+  private static void checkSubsumes(
+      String name1, Type t1, String name2, Type t2) {
+    if (t1 == t2) {
+      assertThat(name1 + " == " + name2, subsumes(t1, t2), is(true));
+    } else {
+      assertThat(name1 + " != " + name2, subsumes(t1, t2), is(false));
+    }
   }
 }
 

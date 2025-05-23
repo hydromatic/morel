@@ -339,6 +339,14 @@ from e in emps
 >    {name=20,x="Velma",z=21},{name=10,x="Fred",z=11}]
 >   : {name:int, x:string, z:int} list
 
+(*) 'yield' followed by 'join'
+from job in ["CLERK", "MANAGER"]
+  yield {x = 0, job}
+  join d in [10, 20];
+> val it =
+>   [{d=10,job="CLERK",x=0},{d=20,job="CLERK",x=0},{d=10,job="MANAGER",x=0},
+>    {d=20,job="MANAGER",x=0}] : {d:int, job:string, x:int} list
+
 (*) singleton record 'yield' followed by 'where'
 from e in emps
   yield {d = e.deptno}

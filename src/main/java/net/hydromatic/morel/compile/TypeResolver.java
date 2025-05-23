@@ -721,12 +721,21 @@ public class TypeResolver {
           }
           if (term instanceof Sequence) {
             final Sequence sequence = (Sequence) term;
-            forEach(record2.args.keySet(), sequence.terms, envs::bind);
+            fieldVars.clear();
+            forEach(
+                record2.args.keySet(),
+                sequence.terms,
+                (name, t) -> {
+                  fieldVars.add(ast.id(Pos.ZERO, name), toVariable(t));
+                  envs.bind(name, t);
+                });
           }
         } else {
           String label =
               first(ast.implicitLabelOpt(yield.exp), Op.CURRENT.opName);
           envs.bind(label, v6);
+          fieldVars.clear();
+          fieldVars.add(ast.id(Pos.ZERO, label), v6);
         }
         return Triple.of(envs.typeEnv, v6, c6);
 
