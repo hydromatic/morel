@@ -760,6 +760,11 @@ public class TypeResolver {
         fromSteps.add(order.copy(orderItems));
         return Triple.of(p.env, p.v, toVariable(listTerm(p.v)));
 
+      case UNORDER:
+        final Ast.Unorder unorder = (Ast.Unorder) step;
+        fromSteps.add(unorder);
+        return Triple.of(p.env, p.v, toVariable(bagTerm(p.v)));
+
       case GROUP:
       case COMPUTE:
         return deduceGroupStepType(

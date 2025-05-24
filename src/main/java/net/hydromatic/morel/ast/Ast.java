@@ -2198,6 +2198,28 @@ public class Ast {
     }
   }
 
+  /** An {@code unorder} step in a {@code from} expression. */
+  public static class Unorder extends FromStep {
+    Unorder(Pos pos) {
+      super(pos, Op.UNORDER);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" unorder");
+    }
+
+    @Override
+    public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+  }
+
   /** A {@code yield} step in a {@code from} expression. */
   public static class Yield extends FromStep {
     public final Exp exp;

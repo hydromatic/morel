@@ -636,6 +636,10 @@ public enum CoreBuilder {
     return new Core.Union(env, distinct, ImmutableList.copyOf(args));
   }
 
+  public Core.Unorder unorder(Core.StepEnv env) {
+    return new Core.Unorder(env);
+  }
+
   public Core.Yield yield_(Core.StepEnv env, Core.Exp exp) {
     return new Core.Yield(env, exp);
   }

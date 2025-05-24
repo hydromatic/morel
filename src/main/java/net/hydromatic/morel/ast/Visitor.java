@@ -238,6 +238,8 @@ public class Visitor {
     union.args.forEach(this::accept);
   }
 
+  protected void visit(Ast.Unorder unorder) {}
+
   protected void visit(Ast.Yield yield) {
     yield.exp.accept(this);
   }
@@ -418,6 +420,8 @@ public class Visitor {
   protected void visit(Core.Yield yield) {
     yield.exp.accept(this);
   }
+
+  protected void visit(Core.Unorder unorder) {}
 
   protected void visit(Core.TuplePat tuplePat) {
     tuplePat.args.forEach(this::accept);

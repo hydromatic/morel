@@ -465,6 +465,11 @@ public class Compiler {
         final ImmutablePairList<Code, Boolean> codes2 = codes.immutable();
         return () -> Codes.orderRowSink(codes2, stepEnv, nextFactory.get());
 
+      case UNORDER:
+        // No explicit step is required. Unorder is a change in type, but
+        // ordered and unordered streams have the same representation.
+        return nextFactory;
+
       case GROUP:
         final Core.Group group = (Core.Group) firstStep;
         final ImmutableList.Builder<Code> groupCodesB = ImmutableList.builder();

@@ -227,6 +227,41 @@ end;
 >    [{deptno=20,id=101},{deptno=30,id=102},{deptno=30,id=103}])
 >   : {deptno:int, id:int} list * {deptno:int, id:int} list
 
+(* Unorder ---------------------------------------------------- *)
+from i in [1,2] unorder;
+> val it = [1,2] : int bag
+
+from i in bag [1,2] unorder;
+> val it = [1,2] : int bag
+
+from i in [1,2] unorder unorder;
+> val it = [1,2] : int bag
+
+from i in [1,2,3,4] where i > 1 unorder where i < 4 unorder;
+> val it = [2,3] : int bag
+
+from i in [1,2,3,4] where i > 1 unorder where i < 4 order i desc;
+> val it = [3,2] : int list
+
+from e in emps
+  order e.name desc
+  take 2
+  unorder;
+> val it = [{deptno=20,id=101,name="Velma"},{deptno=30,id=102,name="Shaggy"}]
+>   : {deptno:int, id:int, name:string} bag
+
+exists i in [1,2,3,4] unorder where i > 3;
+> val it = true : bool
+
+exists i in [] unorder;
+> val it = false : bool
+
+forall i in [1,2,3,4] unorder require i > 3;
+> val it = false : bool
+
+forall i in [] unorder require false;
+> val it = true : bool
+
 (* Current ---------------------------------------------------- *)
 from e in emps
   where current.deptno = 10;

@@ -568,6 +568,10 @@ public enum AstBuilder {
     return new Ast.Union(pos, distinct, ImmutableList.copyOf(args));
   }
 
+  public Ast.FromStep unorder(Pos pos) {
+    return new Ast.Unorder(pos);
+  }
+
   public Ast.FromStep yield(Pos pos, Ast.Exp exp) {
     return new Ast.Yield(pos, exp);
   }

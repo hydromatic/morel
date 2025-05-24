@@ -303,6 +303,10 @@ public class Shuttle {
     return union.copy(union.distinct, visitList(union.args));
   }
 
+  protected AstNode visit(Ast.Unorder unorder) {
+    return unorder;
+  }
+
   protected AstNode visit(Ast.Yield yield) {
     return ast.yield(yield.pos, yield.exp.accept(this));
   }
@@ -521,7 +525,11 @@ public class Shuttle {
     return yield.copy(yield.env, yield.exp.accept(this));
   }
 
-  public Core.OverDecl visit(Core.OverDecl overDecl) {
+  protected Core.Unorder visit(Core.Unorder unorder) {
+    return unorder;
+  }
+
+  protected Core.OverDecl visit(Core.OverDecl overDecl) {
     return overDecl;
   }
 }

@@ -1922,6 +1922,38 @@ public class Core {
     }
   }
 
+  /** Step that converts the stream to an unordered collection. */
+  public static class Unorder extends FromStep {
+    Unorder(Core.StepEnv env) {
+      super(Op.UNORDER, env);
+    }
+
+    @Override
+    public boolean isOrdered(boolean inputIsOrdered) {
+      return false;
+    }
+
+    @Override
+    protected AstWriter unparse(
+        AstWriter w, From from, int ordinal, int left, int right) {
+      return w.append(" unorder");
+    }
+
+    @Override
+    public Unorder accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Unorder copy(Core.StepEnv env) {
+      return env.equals(this.env) ? this : core.unorder(env);
+    }
+  }
+
   /** Step that computes an expression. */
   public static class Yield extends FromStep {
     public final Exp exp;

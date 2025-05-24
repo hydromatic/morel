@@ -2012,6 +2012,12 @@ public class MainTest {
         .assertParse(
             "from e in emps order #empno e take 2 skip 3 skip 1 + 1 "
                 + "take 2");
+    ml("from i in [1, 2] unorder").assertParseSame();
+    ml("from i in [1, 2] unorder where i > 1").assertParseSame();
+    ml("from i in integers unorder").assertParseSame();
+    mlE("from i in (integers $unorder$)")
+        .assertParseThrowsParseException(
+            containsString("Encountered \" \"unorder\" \"unorder \"\" at "));
     ml("fn f => from i in [1, 2, 3] where f i").assertParseSame();
     ml("fn f => from i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
         .assertParse(
@@ -2474,6 +2480,14 @@ public class MainTest {
         .assertType("{a:int, b:bool} list");
     ml("from d in [{a=1,b=true}], i in [2] yield i yield 3.0")
         .assertType("real list");
+
+    // unorder
+    ml("from d in [{a=1,b=true}], i in [2] unorder")
+        .assertType("{d:{a:int, b:bool}, i:int} bag");
+    ml("from d in [{a=1,b=true}], i in [2] unorder unorder")
+        .assertType("{d:{a:int, b:bool}, i:int} bag");
+    ml("from d in [{a=1,b=true}], i in [2] unorder order i")
+        .assertType("{d:{a:int, b:bool}, i:int} list");
   }
 
   @Test

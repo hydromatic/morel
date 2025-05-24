@@ -412,6 +412,7 @@ types and how they map input fields to output fields.
 | [`take`](#take-step)           | Limits the number of rows to return from the current collection.                                                      |
 | [`through`](#through-step)     | Calls a table function, with the current collection as an argument, and starts a scan over the collection it returns. |
 | [`union`](#union-step)         | Returns the set (or multiset) union between the current collection and one or more argument collections.              |
+| [`unorder`](#unorder-step)     | Makes the current collection unordered.                                                                               |
 | [`where`](#where-step)         | Emits rows of the current collection for which a given predicate evaluates to `true`.                                 |
 | [`yield`](#yield-step)         | For each row in the current collection, evaluates an expression and emits it as a row.                                |
 
@@ -700,6 +701,12 @@ descending order.
 
 The output fields are the same as the input fields.
 
+The `order` step is not stable. Even in the event of ties (multiple
+elements with the same sort key) the order that it outputs elements is
+not affected by the order in which elements arrived. (If you wish to
+achieve a stable sort, you can use the `ordinal` expression in a
+secondary sort key.)
+
 #### Example
 
 <pre>
@@ -917,6 +924,59 @@ The output fields are the same as the input fields.
 <i>val it =
   ["candy","soda","soda","candy","candy","soda","candy"]
   : string list</i>
+</pre>
+
+### Unorder step
+
+<pre>
+<b>unorder</b>
+</pre>
+
+#### Description
+
+Removes the ordering of the current collection.
+
+The output fields are the same as the input fields.
+
+Why would you want to remove ordering? Some relational operators can
+be more expensive when the input collection is ordered, and if you
+don't need the ordering, you can remove it to improve performance.
+
+Consider the `union` step. When applied to lists, its output must be
+ordered, consisting of the elements of the input in order, followed by
+the elements the first argument in order, and so forth. This limits
+parallelism.  When the output of a `union` step is unordered, such as
+when it is applied to bags or when followed by an `unorder` step, it
+can execute its arguments in parallel.  Furthermore, its inputs can
+operate in unordered mode, which may lead to further efficiencies.
+
+Unordered collections can be propagated towards inputs except for the
+[`skip`](#skip-step) and [`take`](#take-step) steps, and any step that
+evaluates the `ordinal` expression.
+
+Surprisingly, the `order` step is somewhat similar to `unorder`.
+While its output is ordered, of course, `order` disregards the order
+of its input. This allows upstream steps to operate in unordered mode,
+if that is more efficient.
+
+#### Example
+
+<pre>
+<i>(* Find the top 3 employees by salary, as an unordered
+   collection. *)</i>
+<b>from</b> e <b>in</b> scott.emps
+  <b>order</b> e.sal <b>desc</b>
+  <b>take</b> 3
+  <b>unorder</b>
+  <b>yield</b> {e.ename, e.job, e.sal};
+<i>
+ename job       sal
+----- --------- ------
+KING  PRESIDENT 5000.0
+SCOTT ANALYST   3000.0
+FORD  ANALYST   3000.0
+
+val it : {ename:string, job:string, sal:real} bag</i>
 </pre>
 
 ### Where step

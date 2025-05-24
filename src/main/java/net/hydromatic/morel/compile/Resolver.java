@@ -1239,6 +1239,11 @@ public class Resolver {
     }
 
     @Override
+    protected void visit(Ast.Unorder unorder) {
+      fromBuilder.unorder();
+    }
+
+    @Override
     protected void visit(Ast.Yield yield) {
       final Resolver r = withStepEnv(fromBuilder.stepEnv());
       Core.Exp exp = r.toCore(yield.exp);

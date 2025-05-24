@@ -148,6 +148,7 @@ public enum Op {
   REQUIRE,
   SKIP,
   TAKE,
+  UNORDER,
   EXCEPT(" except "),
   INTERSECT(" intersect "),
   UNION(" union "),

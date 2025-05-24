@@ -519,6 +519,10 @@ void fromStep(List<FromStep> steps) :
     steps.add(ast.union(span.end(this), distinct, exps));
   }
 |
+  <UNORDER> {
+    steps.add(ast.unorder(pos()));
+  }
+|
   <WHERE> { span = Span.of(pos()); } filterExp = expression() {
     steps.add(ast.where(span.end(this), filterExp));
   }
@@ -1630,6 +1634,7 @@ AstNode statementEof() :
 | < TAKE: "take" >
 | < THROUGH: "through" >
 | < UNION: "union" >
+| < UNORDER: "unorder" >
 | < WHERE: "where" >
 | < WITH: "with" >
 | < YIELD: "yield" >
