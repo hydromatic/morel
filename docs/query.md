@@ -398,6 +398,102 @@ val it : {deptno:int, initial:char, job:string} list</i>
 In the following sections, we define each of Morel's step
 types and how they map input fields to output fields.
 
+### Step expressions
+
+Expressions within query steps use the same syntax as
+expressions elsewhere in Morel, but they execute within an
+enhanced environment that provides additional operations.
+
+Query step expressions have access to two special operations
+not available in other contexts:
+ * `current` - references the current row being processed
+ * `ordinal` - provides the position/index of the current row
+
+Most query steps evaluate once per row and run within a specialized
+environment. This applies to all steps except:
+
+* `compute`
+* `except`
+* `intersect`
+* `into`
+* `skip`
+* `take`
+* `through`
+* `union`
+
+An expression in a per-row step has access to:
+ * Field definitions from the preceding step in the query
+   pipeline
+ * Special operations: `ordinal` and `current` expressions
+   for row-specific processing
+
+#### The `current` expression
+
+The `current` expression refers to the current row. If there are
+multiple fields, its type is a record with the fields defined by the
+preceding step. If there is only one field, its type is the type of
+that field.
+
+<pre>
+<i>(* Multiple fields. Current is a record. *)</i>
+<b>from</b> i <b>in</b> [1, 2],
+    j <b>in</b> ["a", "b"]
+  <b>yield</b> <b>current</b>;
+<i>val it =
+  [{i=1,j="a"},{i=1,j="b"},{i=2, j="a"},{i=2, j="b"}]
+  : {i:int, j:string} list</i>
+
+<i>(* Single anonymous field. Current is an atom. *)</i>
+<b>from</b> i <b>in</b> [1, 2, 3]
+  <b>yield</b> i <b>mod</b> 2
+  <b>yield</b> <b>current</b>;
+<i>val it = [1,0,1] : int list</i>
+
+<i>(* Single field named "dname". Current is an atom, but you
+   can also refer to the field by name. *)</i>
+<b>from</b> d <b>in</b> scott.depts
+  <b>yield</b> d.dname
+  <b>yield</b> <b>current</b>;
+<i>val it = ["ACCOUNTING","RESEARCH","SALES","OPERATIONS"]
+  : string bag</i>
+
+<b>from</b> d <b>in</b> scott.depts
+  <b>yield</b> d.dname
+  <b>yield</b> dname;
+<i>val it = ["ACCOUNTING","RESEARCH","SALES","OPERATIONS"]
+  : string bag</i>
+
+<i>(* Yield is a record expression with a single field.
+   Current is a record. *)</i>
+<b>from</b> i <b>in</b> [1, 2, 3]
+  <b>yield</b> {j = i + 1}
+  <b>yield</b> <b>current</b>;
+<i>val it = [{j=2}, {j=3}, {j=4}] : {j:int} list</i>
+</pre>
+
+#### The `ordinal` expression
+
+The `ordinal` expression refers to the ordinal number of the current
+row, starting at 0.
+
+<pre>
+(* Print the top 5 employees by salary, and their rank. *)
+<b>from</b> e <b>in</b> scott.emps
+  <b>order</b> e.sal <b>desc</b>
+  <b>take</b> 5
+  <b>yield</b> {e.ename, e.sal, rank = <b>ordinal</b> + 1};
+<i>
+ename rank sal
+----- ---- ------
+KING  1    5000.0
+SCOTT 2    3000.0
+FORD  3    3000.0
+JONES 4    2975.0
+BLAKE 5    2850.0
+
+val it : {ename:string, rank:int, sal:real} list</i>
+</pre>
+
 ### Step list
 
 | Name                           | Summary                                                                                                               |

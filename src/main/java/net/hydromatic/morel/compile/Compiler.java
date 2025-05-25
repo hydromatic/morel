@@ -205,7 +205,7 @@ public class Compiler {
       }
       // The ordinal was used in at least one place.
       // Create a wrapper that will increment the ordinal each time.
-      ordinalSlots[0] = 0;
+      ordinalSlots[0] = -1;
       return Codes.ordinalInc(ordinalSlots, code);
     }
   }
@@ -226,7 +226,7 @@ public class Compiler {
       if (ordinalSlots[0] > 0) {
         // The ordinal was used in at least one place.
         // Create a wrapper that will increment the ordinal each time.
-        ordinalSlots[0] = 0;
+        ordinalSlots[0] = -1;
         final List<Code> codes = mapCodes.rightList();
         codes.set(0, Codes.ordinalInc(ordinalSlots, codes.get(0)));
       }
