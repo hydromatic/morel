@@ -393,6 +393,18 @@ from e in emps
 >    {name="Shaggy",ordinal=5},{name="Scooby",ordinal=6},
 >    {name="Scooby",ordinal=7}] : {name:string, ordinal:int} list
 
+(*) 'ordinal' cannot be used in an unordered query
+from e in emps, i in bag [1]
+  yield {ordinal, e.name};
+> stdIn:2.10-2.17 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:2.10-2.17
+from e in emps, i in bag [1]
+  order e.deptno
+  yield {ordinal, e.name};
+> val it =
+>   [{name="Fred",ordinal=0},{name="Velma",ordinal=1},{name="Shaggy",ordinal=2},
+>    {name="Scooby",ordinal=3}] : {name:string, ordinal:int} list
+
 (*) A 'where' clause after 'yield ordinal' creates gaps in the ordinals.
 from e in emps
   order e.deptno
@@ -431,6 +443,11 @@ from i in [3,1,4,5,3,5,8,9,7]
   where `ordinal` > 1;
 > val it = [{i=8,ordinal=6},{i=9,ordinal=7},{i=7,ordinal=8}]
 >   : {i:int, ordinal:int} list
+
+from e in scott.emps
+  yield {e.ename, e.sal, rank = ordinal + 1};
+> stdIn:2.33-2.40 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:2.33-2.40
 
 (* In the following query, the query becomes unordered after
    the join with the unordered `scott.depts` table, but we can

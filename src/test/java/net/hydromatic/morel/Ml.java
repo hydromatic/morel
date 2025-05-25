@@ -271,6 +271,10 @@ class Ml {
     return assertTypeThrows(throwsA(RuntimeException.class, is(s)));
   }
 
+  Ml assertTypeThrowsTypeException(String s) {
+    return assertTypeThrows(throwsA(TypeResolver.TypeException.class, is(s)));
+  }
+
   Ml assertTypeThrows(Function<Pos, Matcher<Throwable>> matcherSupplier) {
     return assertTypeThrows(matcherSupplier.apply(pos));
   }

@@ -2486,6 +2486,15 @@ public class MainTest {
 
   @Test
   void testFromType2() {
+    // ordinal doesn't affect type but is only valid in an ordered query
+    ml("from i in [1,2,3,4,5] yield i + ordinal").assertType("int list");
+    mlE("from i in bag [1,2,3,4,5] yield i + $ordinal$")
+        .assertTypeThrowsTypeException(
+            "cannot use 'ordinal' in unordered query");
+    ml("from i in bag [1,2,3,4,5] order i desc yield i + ordinal")
+        .assertType("int list");
+
+    // current
     mlE("from i in [1,2,3,4,5] take $current$")
         .assertCompileException("'current' is only valid in a query");
     ml("from i in [1,2,3,4,5] yield substring(\"hello\", 1, current)")

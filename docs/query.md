@@ -494,6 +494,16 @@ BLAKE 5    2850.0
 val it : {ename:string, rank:int, sal:real} list</i>
 </pre>
 
+`ordinal` is only available in steps
+whose input is ordered.
+
+<pre>
+<b>from</b> e <b>in</b> scott.emps
+  <b>yield</b> {e.ename, e.sal, rank = <b>ordinal</b> + 1};
+<i>> stdIn:2.33-2.40 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:2.33-2.40</i>
+</pre>
+
 ### Step list
 
 | Name                           | Summary                                                                                                               |

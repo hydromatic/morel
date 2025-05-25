@@ -105,6 +105,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 // @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
 public class TypeResolver {
   private final TypeSystem typeSystem;
+  private final PairList<Ast.FromStep, Triple> stepStack = PairList.of();
+  private final List<Consumer<Resolved>> validations = new ArrayList<>();
   private final Unifier unifier = new MartelliUnifier();
   private final List<TermVariable> terms = new ArrayList<>();
   private final Map<AstNode, Term> map = new HashMap<>();
@@ -133,14 +135,10 @@ public class TypeResolver {
   public static Resolved deduceType(
       Environment env, Ast.Decl decl, TypeSystem typeSystem) {
     final TypeResolver typeResolver = new TypeResolver(typeSystem);
-    int attempt = 0;
-    for (; ; ) {
-      int original = typeSystem.expandCount.get();
-      final Resolved resolved = typeResolver.deduceType_(env, decl);
-      if (typeSystem.expandCount.get() == original || attempt++ > 1) {
-        return resolved;
-      }
-    }
+    Resolved resolved =
+        typeResolver.deduceTypeWithRetries(env, decl, typeSystem);
+    typeResolver.validations.forEach(v -> v.accept(resolved));
+    return resolved;
   }
 
   /** Converts a type AST to a type. */
@@ -153,7 +151,27 @@ public class TypeResolver {
     return new KeyBuilder().toTypeKey(type);
   }
 
+  /**
+   * Deduces the datatype of a declaration, retrying each time a node is
+   * expanded.
+   */
+  private Resolved deduceTypeWithRetries(
+      Environment env, Ast.Decl decl, TypeSystem typeSystem) {
+    int attempt = 0;
+    for (; ; ) {
+      int original = typeSystem.expandCount.get();
+      final Resolved resolved = deduceType_(env, decl);
+      if (typeSystem.expandCount.get() == original || attempt++ > 1) {
+        return resolved;
+      }
+    }
+  }
+
+  /** Deduces the datatype of a declaration. */
   private Resolved deduceType_(Environment env, Ast.Decl decl) {
+    // Clean up from previous attempt.
+    validations.clear();
+
     final TypeEnvHolder typeEnvs =
         new TypeEnvHolder(new EnvironmentTypeEnv(env, EmptyTypeEnv.INSTANCE));
     env.forEachType(typeSystem, typeEnvs);
@@ -531,6 +549,16 @@ public class TypeResolver {
                 typeSystem,
                 BuiltIn.Z_CURRENT.mlName,
                 TypeEnv.onlyValidInQuery(ordinal));
+        final Triple step = last(stepStack.rightList());
+        validations.add(
+            resolved -> {
+              requireNonNull(step.c);
+              Type stepType = resolved.typeMap.termToType(step.c);
+              if (stepType.op() != Op.LIST) {
+                throw new TypeException(
+                    "cannot use 'ordinal' in unordered query", ordinal.pos);
+              }
+            });
         return reg(ordinal, v, toTerm(PrimitiveType.INT));
 
       case CURRENT:
@@ -597,7 +625,12 @@ public class TypeResolver {
       // Whether this is the last step. (The synthetic "yield" counts as a last
       // step.)
       final boolean lastStep = step.i == query.steps.size() - 1;
-      p = deduceStepType(env, step.e, p, fieldVars, fromSteps);
+      try {
+        stepStack.add(step.e, p);
+        p = deduceStepType(env, step.e, p, fieldVars, fromSteps);
+      } finally {
+        stepStack.remove(stepStack.size() - 1);
+      }
       switch (step.e.op) {
         case COMPUTE:
         case INTO:

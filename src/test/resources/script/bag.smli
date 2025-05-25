@@ -166,6 +166,23 @@ from i in intList unorder order i desc;
 from i in intList unorder order i desc unorder;
 > val it = [3,2,1,1] : int bag
 
+(*) ordinal is valid only for ordered collections
+from i in intBag yield i + ordinal;
+> stdIn:1.28-1.35 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.28-1.35
+from i in intList yield i + ordinal;
+> val it = [1,3,3,6] : int list
+from i in intBag order i desc where i > 1 yield i + ordinal;
+> val it = [3,3] : int list
+from i in intBag where i > ordinal;
+> stdIn:1.28-1.35 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.28-1.35
+from i in intBag order ordinal;
+> stdIn:1.24-1.31 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.24-1.31
+from i in intList order ordinal;
+> val it = [1,2,1,3] : int list
+
 (*) join's output is list if all inputs are lists, otherwise bag
 from i in intList, j in intList where i = j;
 > val it = [{i=1,j=1},{i=1,j=1},{i=2,j=2},{i=1,j=1},{i=1,j=1},{i=3,j=3}]
