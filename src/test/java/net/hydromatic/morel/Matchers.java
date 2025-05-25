@@ -209,15 +209,6 @@ public abstract class Matchers {
     };
   }
 
-  static Matcher<Throwable> throwsA(String message) {
-    return new CustomTypeSafeMatcher<Throwable>("throwable: " + message) {
-      @Override
-      protected boolean matchesSafely(Throwable item) {
-        return item.toString().contains(message);
-      }
-    };
-  }
-
   static Matcher<Throwable> throwsA(String message, Pos position) {
     return throwsA(Throwable.class, message, position);
   }

@@ -267,6 +267,10 @@ class Ml {
     return assertType(hasMoniker(expected));
   }
 
+  Ml assertTypeThrowsRuntimeException(String s) {
+    return assertTypeThrows(throwsA(RuntimeException.class, is(s)));
+  }
+
   Ml assertTypeThrows(Function<Pos, Matcher<Throwable>> matcherSupplier) {
     return assertTypeThrows(matcherSupplier.apply(pos));
   }
@@ -276,10 +280,6 @@ class Ml {
         () -> withValidate((resolved, calcite) -> fail("expected error")),
         matcher);
     return this;
-  }
-
-  Ml assertTypeException(String message) {
-    return withTypeException(message).assertEval();
   }
 
   Ml withPrepare(Consumer<CompiledStatement> action) {
@@ -628,10 +628,6 @@ class Ml {
     return withTracer(
         Tracers.withOnCompileException(
             this.tracer, exceptionConsumer(matcherFactory)));
-  }
-
-  Ml withTypeException(String message) {
-    return withTypeExceptionMatcher(throwsA(message));
   }
 
   private <T extends Throwable> Consumer<T> exceptionConsumer(

@@ -62,7 +62,6 @@ import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.foreign.ForeignValue;
-import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.TypeVar;
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -486,7 +485,8 @@ public class MainTest {
     ml(ml).assertType("int");
 
     ml("1 + \"a\"")
-        .assertTypeException("Cannot deduce type: conflict: int vs string");
+        .assertTypeThrowsRuntimeException(
+            "Cannot deduce type: conflict: int vs string");
 
     ml("NONE").assertType("'a option");
     ml("SOME 4").assertType("int option");
@@ -552,7 +552,7 @@ public class MainTest {
     final String ml = "fn (e, job) => e.job = job";
     String message =
         "unresolved flex record (can't tell what fields there are besides #job)";
-    ml(ml).withTypeExceptionMatcher(throwsA(message)).assertEval();
+    ml(ml).assertTypeThrowsRuntimeException(message);
   }
 
   @Test
@@ -597,10 +597,8 @@ public class MainTest {
   void testApplyIsMonomorphic() {
     // cannot be typed, since the parameter f is in a monomorphic position
     ml("fn f => (f true, f 0)")
-        .assertTypeThrows(
-            throwsA(
-                RuntimeException.class,
-                is("Cannot deduce type: conflict: int vs bool")));
+        .assertTypeThrowsRuntimeException(
+            "Cannot deduce type: conflict: int vs bool");
   }
 
   @Disabled("disable failing test - enable when we have polymorphic types")
@@ -915,11 +913,7 @@ public class MainTest {
     ml("let val x = 1; val x = 3 and y = x + 1 in x + y end").assertEval(is(5));
 
     mlE("let val x = 1 and y = $x$ + 2 in x + y end")
-        .assertCompileException(
-            pos ->
-                throwsA(
-                    CompileException.class,
-                    "unbound variable or constructor: x"));
+        .assertCompileException("unbound variable or constructor: x");
 
     // let with val and fun
     ml("let fun f x = 1 + x; val x = 2 in f x end").assertEval(is(3));
@@ -3354,16 +3348,10 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group a = e.x, a = e.y")
-        .assertTypeThrows(
-            throwsA(
-                RuntimeException.class,
-                is("Duplicate field name 'a' in group")));
+        .assertTypeThrowsRuntimeException("Duplicate field name 'a' in group");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group e.x, x = e.y")
-        .assertTypeThrows(
-            throwsA(
-                RuntimeException.class,
-                is("Duplicate field name 'x' in group")));
+        .assertTypeThrowsRuntimeException("Duplicate field name 'x' in group");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group a = e.x\n"
             + "compute b = sum of e.y")
@@ -3371,17 +3359,12 @@ public class MainTest {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group a = e.x\n"
             + "compute a = sum of e.y")
-        .assertTypeThrows(
-            throwsA(
-                RuntimeException.class,
-                is("Duplicate field name 'a' in group")));
+        .assertTypeThrowsRuntimeException("Duplicate field name 'a' in group");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group sum = e.x\n"
             + "compute sum of e.y")
-        .assertTypeThrows(
-            throwsA(
-                RuntimeException.class,
-                is("Duplicate field name 'sum' in group")));
+        .assertTypeThrowsRuntimeException(
+            "Duplicate field name 'sum' in group");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group a = e.x\n"
             + "compute b = sum of e.y, c = sum of e.x")
@@ -3389,10 +3372,7 @@ public class MainTest {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group a = e.x\n"
             + "compute c = sum of e.y, c = sum of e.x")
-        .assertTypeThrows(
-            throwsA(
-                RuntimeException.class,
-                is("Duplicate field name 'c' in group")));
+        .assertTypeThrowsRuntimeException("Duplicate field name 'c' in group");
   }
 
   /**
@@ -3412,9 +3392,8 @@ public class MainTest {
         .assertType("{count:int, sum:int}");
     // there must be at least one aggregate function
     ml("from i in [1, 2, 3] compute")
-        .assertParseThrows(
-            throwsA(
-                ParseException.class, startsWith("Encountered \"<EOF>\" at ")));
+        .assertParseThrowsParseException(
+            startsWith("Encountered \"<EOF>\" at "));
 
     // Theoretically a "group" without a "compute" can be followed by a
     // "compute" step. So, the following is ambiguous. We treat it as a single
