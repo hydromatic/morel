@@ -964,7 +964,6 @@ public class Resolver {
         BuiltIn.OP_NE, Op.NE,
         BuiltIn.Z_ANDALSO, Op.ANDALSO,
         BuiltIn.Z_ORELSE, Op.ORELSE,
-        BuiltIn.Z_ORDINAL, Op.ORDINAL,
         BuiltIn.Z_PLUS_INT, Op.PLUS,
         BuiltIn.Z_PLUS_REAL, Op.PLUS,
       };

@@ -932,21 +932,7 @@ public abstract class Codes {
   }
 
   public static Code from(Supplier<RowSink> rowSinkFactory) {
-    return new Code() {
-      @Override
-      public Describer describe(Describer describer) {
-        return describer.start(
-            "from", d -> d.arg("sink", rowSinkFactory.get()));
-      }
-
-      @Override
-      public Object eval(EvalEnv env) {
-        final RowSink rowSink = rowSinkFactory.get();
-        rowSink.start(env);
-        rowSink.accept(env);
-        return rowSink.result(env);
-      }
-    };
+    return new FromCode(rowSinkFactory);
   }
 
   /** Creates a {@link RowSink} for a {@code join} step. */
@@ -1040,6 +1026,27 @@ public abstract class Codes {
    */
   public static RowSink collectRowSink(Code code) {
     return new CollectRowSink(code);
+  }
+
+  /** Creates a {@link RowSink} that starts all downstream row sinks. */
+  public static RowSink firstRowSink(RowSink rowSink) {
+    // Use a Describer to walk over the downstream sinks and their codes, and
+    // collect the start actions. The only start action, currently, resets
+    // ordinals to -1.
+    final List<Runnable> startActions = new ArrayList<>();
+    rowSink.describe(
+        new CodeVisitor() {
+          @Override
+          public void addStartAction(Runnable runnable) {
+            startActions.add(runnable);
+          }
+        });
+    if (startActions.isEmpty()) {
+      // There are no start actions, so there's no need to wrap the in a
+      // FirstRowSink.
+      return rowSink;
+    }
+    return new FirstRowSink(rowSink, startActions);
   }
 
   /**
@@ -3997,6 +4004,28 @@ public abstract class Codes {
     }
   }
 
+  /** Code that evaluates a query. */
+  static class FromCode implements Code {
+    private final Supplier<Codes.RowSink> rowSinkFactory;
+
+    FromCode(Supplier<Codes.RowSink> rowSinkFactory) {
+      this.rowSinkFactory = requireNonNull(rowSinkFactory);
+    }
+
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start("from", d -> d.arg("sink", rowSinkFactory.get()));
+    }
+
+    @Override
+    public Object eval(EvalEnv env) {
+      final RowSink rowSink = rowSinkFactory.get();
+      rowSink.start(env);
+      rowSink.accept(env);
+      return rowSink.result(env);
+    }
+  }
+
   /** Accepts rows produced by a supplier as part of a {@code from} step. */
   public interface RowSink extends Describable {
     void start(EvalEnv env);
@@ -4820,6 +4849,27 @@ public abstract class Codes {
     }
   }
 
+  /** First row sink in the chain. */
+  private static class FirstRowSink extends BaseRowSink {
+    final ImmutableList<Runnable> startActions;
+
+    FirstRowSink(RowSink rowSink, List<Runnable> startActions) {
+      super(rowSink);
+      this.startActions = ImmutableList.copyOf(startActions);
+    }
+
+    @Override
+    public Describer describe(Describer describer) {
+      return rowSink.describe(describer);
+    }
+
+    @Override
+    public void start(EvalEnv env) {
+      startActions.forEach(Runnable::run);
+      rowSink.start(env);
+    }
+  }
+
   /** Code that retrieves the value of a variable from the environment. */
   private static class GetCode implements Code {
     private final String name;
@@ -5341,7 +5391,12 @@ public abstract class Codes {
 
     @Override
     public Describer describe(Describer describer) {
+      describer.addStartAction(this::resetOrdinal);
       return describer.start("ordinal", d -> {});
+    }
+
+    private void resetOrdinal() {
+      ordinalSlots[0] = -1;
     }
   }
 }

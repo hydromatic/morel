@@ -360,7 +360,9 @@ public class Compiler {
     Supplier<Codes.RowSink> rowSinkFactory =
         createRowSinkFactory(
             cx, Core.StepEnv.EMPTY, from.steps, from.type().arg(0));
-    return Codes.from(rowSinkFactory);
+    Supplier<Codes.RowSink> firstRowSinkFactory =
+        () -> Codes.firstRowSink(rowSinkFactory.get());
+    return Codes.from(firstRowSinkFactory);
   }
 
   protected Supplier<Codes.RowSink> createRowSinkFactory(
@@ -392,7 +394,7 @@ public class Compiler {
     switch (firstStep.op) {
       case SCAN:
         final Core.Scan scan = (Core.Scan) firstStep;
-        final Code code = compile(cx, scan.exp);
+        final Code code = compileRow(cx, scan.exp);
         final Code conditionCode = compile(cx, scan.condition);
         return () ->
             Codes.scanRowSink(

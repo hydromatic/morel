@@ -487,6 +487,27 @@ from e in scott.emps
 >    {empno=7654,job="SALESMAN"},{empno=7844,job="SALESMAN"}]
 >   : {empno:int, job:string} list
 
+(*) Ordinal in subquery
+from i in [1,2,3,4]
+  yield {i, ks = (from k in ["a","b","c","d"] where ordinal < i)};
+> val it =
+>   [{i=1,ks=["a"]},{i=2,ks=["a","b"]},{i=3,ks=["a","b","c"]},
+>    {i=4,ks=["a","b","c","d"]}] : {i:int, ks:string list} list
+
+from i in [1,2]
+  join j in (from k in ["a","b","c"] yield ordinal);
+> val it = [{i=1,j=0},{i=1,j=1},{i=1,j=2},{i=2,j=0},{i=2,j=1},{i=2,j=2}]
+>   : {i:int, j:int} list
+
+from i in [1,2]
+  join j in (from k in ["a","b","c"] where ordinal < i);
+> val it = [{i=1,j="a"},{i=2,j="a"},{i=2,j="b"}] : {i:int, j:string} list
+
+from i in [1,2]
+  join j in (from k in ["a","b","c"] yield {m = ordinal} yield m);
+> val it = [{i=1,j=0},{i=1,j=1},{i=1,j=2},{i=2,j=0},{i=2,j=1},{i=2,j=2}]
+>   : {i:int, j:int} list
+
 (* Combinations of steps -------------------------------------- *)
 (*) 'yield' followed by 'order'
 from e in emps

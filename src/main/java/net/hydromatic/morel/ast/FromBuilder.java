@@ -34,6 +34,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.RefChecker;
@@ -156,16 +158,8 @@ public class FromBuilder {
   public FromBuilder scan(Core.Pat pat, Core.Exp exp, Core.Exp condition) {
     if (exp.op == Op.FROM
         && core.boolLiteral(true).equals(condition)
-        && (pat instanceof Core.IdPat
-                && !((Core.From) exp).steps.isEmpty()
-                && last(((Core.From) exp).steps).env.bindings.size() == 1
-            || pat instanceof Core.RecordPat
-                && allMatch(
-                    ((Core.RecordPat) pat).args, a -> a instanceof Core.IdPat)
-            || pat instanceof Core.TuplePat
-                && allMatch(
-                    ((Core.TuplePat) pat).args,
-                    a -> a instanceof Core.IdPat))) {
+        && isSimplePat(pat, (Core.From) exp)
+        && !containsOrdinal(exp)) {
       final Core.From from = (Core.From) exp;
       final Core.FromStep lastStep = last(from.steps);
       final List<Core.FromStep> steps =
@@ -231,6 +225,37 @@ public class FromBuilder {
     Compiles.acceptBinding(typeSystem, pat, bindings);
     atom = steps.isEmpty() && bindings.size() == 1;
     return addStep(core.scan(stepEnv(), pat, exp, condition));
+  }
+
+  /** Returns whether a expression calls {@code ordinal}. */
+  private static boolean containsOrdinal(Core.Exp exp) {
+    final AtomicBoolean b = new AtomicBoolean();
+    exp.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Core.Apply apply) {
+            if (apply.isCallTo(BuiltIn.Z_ORDINAL)) {
+              b.set(true);
+            }
+            super.visit(apply);
+          }
+        });
+    return b.get();
+  }
+
+  private static boolean isSimplePat(Core.Pat pat, Core.From exp) {
+    switch (pat.op) {
+      case ID_PAT:
+        return !exp.steps.isEmpty() && last(exp.steps).env.bindings.size() == 1;
+      case RECORD_PAT:
+        return allMatch(
+            ((Core.RecordPat) pat).args, a -> a instanceof Core.IdPat);
+      case TUPLE_PAT:
+        return allMatch(
+            ((Core.TuplePat) pat).args, a -> a instanceof Core.IdPat);
+      default:
+        return false;
+    }
   }
 
   public FromBuilder addAll(Iterable<? extends Core.FromStep> steps) {

@@ -42,6 +42,9 @@ public interface Describer {
    */
   int register(String name, int i);
 
+  /** Registers an action to be performed each time the query is started. */
+  default void addStartAction(Runnable runnable) {}
+
   /** Provided as a callback while describing a node. */
   interface Detail {
     /** Prints an atomic argument. */
