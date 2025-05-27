@@ -541,7 +541,7 @@ public class Resolver {
     return core.apply(
         list.pos,
         type,
-        core.functionLiteral(typeMap.typeSystem, BuiltIn.Z_LIST),
+        core.functionLiteral(type, BuiltIn.Z_LIST),
         core.tuple(
             typeMap.typeSystem, null, transformEager(list.args, this::toCore)));
   }

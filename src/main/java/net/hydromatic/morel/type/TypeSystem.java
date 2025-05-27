@@ -25,6 +25,7 @@ import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -264,11 +265,11 @@ public class TypeSystem {
    */
   DataType dataType(
       String name,
-      List<? extends Type> argumentTypes,
-      SortedMap<String, Key> tyCons) {
+      ImmutableList<Type> argumentTypes,
+      ImmutableMap<String, Key> tyCons) {
     final String moniker = DataType.computeMoniker(name, argumentTypes);
     final DataType dataType =
-        new DataType(Op.DATA_TYPE, name, moniker, argumentTypes, tyCons);
+        new DataType(name, moniker, argumentTypes, tyCons);
     if (argumentTypes.isEmpty()) {
       // There are no type parameters, therefore there will be no ForallType to
       // register its type constructors, so this DataType needs to register.
@@ -300,11 +301,13 @@ public class TypeSystem {
    * Creates a data type scheme: a datatype if there are no type arguments (e.g.
    * "{@code ordering}"), or a forall type if there are type arguments (e.g.
    * "{@code forall 'a . 'a option}").
+   *
+   * <p>Iteration order of the type constructors ({@code tyCons}) is
+   * significant. We recommend that you use a sequenced map such as {@link
+   * ImmutableMap} or {@link LinkedHashMap}.
    */
   public Type dataTypeScheme(
-      String name,
-      List<TypeVar> parameters,
-      SortedMap<String, Type.Key> tyCons) {
+      String name, List<TypeVar> parameters, Map<String, Type.Key> tyCons) {
     final List<Key> keys = Keys.toKeys(parameters);
     final Keys.DataTypeKey key = Keys.datatype(name, keys, tyCons);
     return dataTypes(ImmutableList.of(key)).get(0);
@@ -392,7 +395,7 @@ public class TypeSystem {
           }
 
           public Type bag(int i) {
-            return TypeSystem.this.bag(get(i));
+            return bagType(get(i));
           }
 
           public Type vector(int i) {
@@ -537,6 +540,11 @@ public class TypeSystem {
   /** Creates a type variable. */
   public TypeVar typeVariable(int ordinal) {
     return (TypeVar) typeFor(Keys.ordinal(ordinal));
+  }
+
+  /** Returns the "descending" built-in data type. */
+  public Type descending() {
+    return lookup(BuiltIn.Datatype.DESCENDING);
   }
 
   /** Returns the "order" built-in data type. */

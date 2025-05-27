@@ -2419,6 +2419,33 @@ public enum BuiltIn {
       "Real", "unordered", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
 
   /**
+   * Function "Relational.compare", of type "&alpha; * &alpha; &rarr; order".
+   *
+   * <p>Returns the result of comparing the two values. Comparison is defined
+   * based on the structure of the types:
+   *
+   * <ul>
+   *   <li>Primitive types compare as usual;
+   *   <li>The {@code descending} type compares in the opposite direction to its
+   *       wrapped type;
+   *   <li>Tuple types compare lexicographically;
+   *   <li>Record types compare lexicographically based on their fields in
+   *       alphabetical order;
+   *   <li>The {@code option} type compares with {@code NONE} being greater than
+   *       all {@code SOME} values, and {@code SOME} values comparing according
+   *       to their wrapped type;
+   *   <li>{@code list} types compare lexicographically.
+   * </ul>
+   */
+  RELATIONAL_COMPARE(
+      "Relational",
+      "compare",
+      "compare",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()))),
+
+  /**
    * Function "Relational.count", aka "count", of type "int bag &rarr; int".
    *
    * <p>Often used with {@code group}:
@@ -3281,7 +3308,7 @@ public enum BuiltIn {
     for (int i = 0; i < builtInType.varCount(); i++) {
       tyVars.add(ts.typeVariable(i));
     }
-    final SortedMap<String, Type.Key> tyCons = new TreeMap<>();
+    final PairList<String, Type.Key> tyCons = PairList.of();
     UnaryOperator<DataTypeHelper> transform =
         builtInType instanceof Datatype
             ? ((Datatype) builtInType).transform
@@ -3291,7 +3318,7 @@ public enum BuiltIn {
           @Override
           public DataTypeHelper tyCon(Constructor constructor) {
             Type.Key typeKey = constructor.typeFunction.apply(this);
-            tyCons.put(constructor.constructor, typeKey);
+            tyCons.add(constructor.constructor, typeKey);
             return this;
           }
 
@@ -3299,13 +3326,15 @@ public enum BuiltIn {
             return tyVars.get(i).key();
           }
         });
-    final Type type = ts.dataTypeScheme(builtInType.mlName(), tyVars, tyCons);
+    final Type type =
+        ts.dataTypeScheme(
+            builtInType.mlName(), tyVars, tyCons.toImmutableMap());
     final DataType dataType =
         (DataType) (type instanceof DataType ? type : ((ForallType) type).type);
     ts.setBuiltIn(builtInType);
     if (!builtInType.isInternal()) {
       tyCons
-          .keySet()
+          .leftList()
           .forEach(
               tyConName -> bindings.add(ts.bindTyCon(dataType, tyConName)));
     }
@@ -3363,10 +3392,6 @@ public enum BuiltIn {
 
     int varCount();
 
-    default UnaryOperator<DataTypeHelper> transform() {
-      return UnaryOperator.identity();
-    }
-
     default boolean isInternal() {
       return false;
     }
@@ -3375,7 +3400,13 @@ public enum BuiltIn {
   /**
    * Built-in datatype.
    *
-   * <p>{@code order} and {@code option} are non-internal.
+   * <p>The following datatypes are non-internal:
+   *
+   * <pre>{@code
+   * datatype descending = DESC of 'a;
+   * datatype order = LESS | EQUAL | GREATER;
+   * datatype option 'a = NONE | SOME of 'a;
+   * }</pre>
    *
    * <p>The three internal datatypes,
    *
@@ -3388,6 +3419,9 @@ public enum BuiltIn {
    * <p>are not available from within programs but used for internal purposes.
    */
   public enum Datatype implements BuiltInType {
+    DESCENDING(
+        "descending", false, 1, h -> h.tyCon(Constructor.DESCENDING_DESC)),
+
     ORDER(
         "order",
         false,
@@ -3458,11 +3492,6 @@ public enum BuiltIn {
     }
 
     @Override
-    public UnaryOperator<DataTypeHelper> transform() {
-      return transform;
-    }
-
-    @Override
     public boolean isInternal() {
       return internal;
     }
@@ -3497,6 +3526,7 @@ public enum BuiltIn {
   public enum Constructor {
     BOOL_FALSE(Datatype.PSEUDO_BOOL, "FALSE"),
     BOOL_TRUE(Datatype.PSEUDO_BOOL, "TRUE"),
+    DESCENDING_DESC(Datatype.DESCENDING, "DESC", h -> h.get(0)),
     LIST_NIL(Datatype.PSEUDO_LIST, "NIL"),
     LIST_CONS(Datatype.PSEUDO_LIST, "CONS", h -> h.get(0)),
     OPTION_SOME(Datatype.OPTION, "SOME", h -> h.get(0)),

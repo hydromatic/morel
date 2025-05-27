@@ -2440,6 +2440,28 @@ least one of x and y is NaN.
 # === Relational structure ===========================================
 
 [[functions]]
+structure = "Relational"
+name = "compare"
+specified = "morel"
+type = "α * α → order"
+description = """
+"compare (x, y)" returns `LESS`, `EQUAL`, or `GREATER` according to
+whether its first argument is less than, equal to, or greater than the
+second.
+
+Comparisons are based on the structure of the type `α`.
+Primitive types are compared using their natural order;
+Option types compare with NONE last;
+Tuple types compare lexicographically;
+Record types compare lexicographically, with the fields
+compared in alphabetical order;
+List values compare lexicographically;
+Bag values compare lexicographically, the elements appearing
+in an order that is arbitrary but is consistent for each
+particular value.
+"""
+
+[[functions]]
 ordinal = 188
 structure = "Relational"
 name = "count, count"

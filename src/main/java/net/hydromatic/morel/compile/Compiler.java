@@ -267,8 +267,7 @@ public class Compiler {
 
       case FN_LITERAL:
         literal = (Core.Literal) expression;
-        final BuiltIn builtIn = literal.unwrap(BuiltIn.class);
-        return Codes.constant(Codes.BUILT_IN_VALUES.get(builtIn));
+        return Codes.constant(literal.toBuiltIn(typeSystem, null));
 
       case INTERNAL_LITERAL:
       case VALUE_LITERAL:
@@ -332,8 +331,7 @@ public class Compiler {
     // Is this is a call to a built-in operator?
     switch (apply.fn.op) {
       case FN_LITERAL:
-        final BuiltIn builtIn = ((Core.Literal) apply.fn).unwrap(BuiltIn.class);
-        return compileCall(cx, builtIn, apply.arg, apply.pos);
+        return compileCall(cx, (Core.Literal) apply.fn, apply.arg, apply.pos);
     }
     final Code argCode = compileArg(cx, apply.arg);
     final Type argType = apply.arg.type;
@@ -555,14 +553,15 @@ public class Compiler {
    */
   private Applicable compileApplicable(
       Context cx, Core.Exp fn, Type argType, Pos pos) {
+    final Core.Literal literal;
     switch (fn.op) {
       case FN_LITERAL:
-        final BuiltIn builtIn = ((Core.Literal) fn).unwrap(BuiltIn.class);
-        final Object o = Codes.BUILT_IN_VALUES.get(builtIn);
-        return toApplicable(cx, o, argType, pos);
+        literal = (Core.Literal) fn;
+        return toApplicable(
+            cx, literal.toBuiltIn(typeSystem, null), argType, pos);
 
       case VALUE_LITERAL:
-        final Core.Literal literal = (Core.Literal) fn;
+        literal = (Core.Literal) fn;
         return toApplicable(cx, literal.unwrap(Object.class), argType, pos);
 
       case ID:
@@ -614,8 +613,7 @@ public class Compiler {
       switch (exp.op) {
         case FN_LITERAL:
           final Core.Literal literal = (Core.Literal) exp;
-          final BuiltIn builtIn = literal.unwrap(BuiltIn.class);
-          return (Applicable) Codes.BUILT_IN_VALUES.get(builtIn);
+          return (Applicable) literal.toBuiltIn(typeSystem, null);
       }
       final Code code = compile(cx, exp);
       return new Applicable() {
@@ -717,7 +715,9 @@ public class Compiler {
     }
   }
 
-  private Code compileCall(Context cx, BuiltIn builtIn, Core.Exp arg, Pos pos) {
+  private Code compileCall(
+      Context cx, Core.Literal fnLiteral, Core.Exp arg, Pos pos) {
+    final BuiltIn builtIn = fnLiteral.unwrap(BuiltIn.class);
     final List<Code> argCodes;
     switch (builtIn) {
       case Z_ANDALSO:
@@ -737,13 +737,7 @@ public class Compiler {
         ordinalSlots[0]++; // signal that we are using an ordinal
         return Codes.ordinalGet(ordinalSlots);
       default:
-        final Object o0 = Codes.BUILT_IN_VALUES.get(builtIn);
-        final Object o;
-        if (o0 instanceof Codes.Positioned) {
-          o = ((Codes.Positioned) o0).withPos(pos);
-        } else {
-          o = o0;
-        }
+        final Object o = fnLiteral.toBuiltIn(typeSystem, pos);
         if (o instanceof Applicable) {
           final Code argCode = compile(cx, arg);
           if (argCode instanceof Codes.TupleCode) {

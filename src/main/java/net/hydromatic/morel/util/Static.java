@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -307,6 +308,39 @@ public class Static {
     }
     // All elements match. We can just return the original list.
     return ImmutableList.copyOf(elements);
+  }
+
+  /**
+   * Given a {@link Map}, returns an {@link ImmutableMap} with the same keys,
+   * but with each value transformed by a mapping function.
+   */
+  public static <K, V, V2> ImmutableMap<K, V2> transformValuesEager(
+      Map<K, V> map, Function<V, V2> mapper) {
+    if (map.isEmpty()) {
+      // Save ourselves the effort of creating a Builder.
+      return ImmutableMap.of();
+    }
+    final ImmutableMap.Builder<K, V2> b =
+        ImmutableMap.builderWithExpectedSize(map.size());
+    map.forEach((k, v) -> b.put(k, mapper.apply(v)));
+    return b.build();
+  }
+
+  /**
+   * Given a {@link SortedMap}, returns an {@link ImmutableSortedMap} with the
+   * same keys, but with each value transformed by a mapping function.
+   */
+  @SuppressWarnings("unchecked")
+  public static <K, V, V2> ImmutableSortedMap<K, V2> transformValuesEager(
+      SortedMap<K, V> map, Function<V, V2> mapper) {
+    if (map.isEmpty()) {
+      // Save ourselves the effort of creating a Builder.
+      return ImmutableSortedMap.of();
+    }
+    final ImmutableSortedMap.Builder<K, V2> b =
+        ImmutableSortedMap.orderedBy((Comparator<K>) map.comparator());
+    map.forEach((k, v) -> b.put(k, mapper.apply(v)));
+    return b.build();
   }
 
   /** Returns the first index in a list where a predicate is true, or -1. */

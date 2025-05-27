@@ -19,16 +19,18 @@
 package net.hydromatic.morel.type;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.Maps.transformValues;
 import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.parse.Parsers.appendId;
-import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
+import static net.hydromatic.morel.util.Static.transformValuesEager;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Maps;
 import java.util.AbstractList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -110,12 +112,12 @@ public class Keys {
 
   /** Returns a key that identifies a {@link FnType}. */
   public static Type.Key fn(Type.Key paramType, Type.Key resultType) {
-    return new OpKey(Op.FN, ImmutableList.of(paramType, resultType));
+    return new FnKey(paramType, resultType);
   }
 
   /** Returns a key that identifies a {@link ListType}. */
   public static Type.Key list(Type.Key elementType) {
-    return new OpKey(Op.LIST, ImmutableList.of(elementType));
+    return new ListKey(elementType);
   }
 
   /** Returns a key that identifies a {@link ForallType}. */
@@ -123,12 +125,21 @@ public class Keys {
     return new ForallKey(type, parameterCount);
   }
 
-  /** Returns a key that identifies a {@link DataType}. */
+  /**
+   * Returns a key that identifies a {@link DataType}.
+   *
+   * <p>Iteration order of the type constructors ({@code typeConstructors}) is
+   * significant. We recommend that you use a sequenced map such as {@link
+   * ImmutableMap} or {@link LinkedHashMap}.
+   */
   public static DataTypeKey datatype(
       String name,
       List<? extends Type.Key> arguments,
-      SortedMap<String, Type.Key> typeConstructors) {
-    return new DataTypeKey(name, arguments, typeConstructors);
+      Map<String, Type.Key> typeConstructors) {
+    return new DataTypeKey(
+        name,
+        ImmutableList.copyOf(arguments),
+        ImmutableMap.copyOf(typeConstructors));
   }
 
   /** Returns a key that identifies a {@link MultiType}. */
@@ -229,6 +240,7 @@ public class Keys {
           || obj instanceof NameKey && ((NameKey) obj).name.equals(name);
     }
 
+    @Override
     public Type toType(TypeSystem typeSystem) {
       if (name.isEmpty()) {
         return DummyType.INSTANCE;
@@ -333,7 +345,7 @@ public class Keys {
    * Key of a type that applies a built-in type constructor to specific type
    * arguments.
    */
-  private static class OpKey extends Type.Key {
+  private abstract static class OpKey extends Type.Key {
     final ImmutableList<Type.Key> args;
 
     OpKey(Op op, List<Type.Key> args) {
@@ -343,13 +355,7 @@ public class Keys {
 
     @Override
     public StringBuilder describe(StringBuilder buf, int left, int right) {
-      switch (op) {
-        case LIST:
-          return TypeSystem.unparse(buf, args.get(0), 0, Op.LIST.right)
-              .append(" list");
-        default:
-          return TypeSystem.unparseList(buf, op, left, right, args);
-      }
+      return TypeSystem.unparseList(buf, op, left, right, args);
     }
 
     @Override
@@ -364,24 +370,42 @@ public class Keys {
               && ((OpKey) obj).op.equals(op)
               && ((OpKey) obj).args.equals(args);
     }
+  }
 
-    public Type toType(TypeSystem typeSystem) {
-      switch (op) {
-        case FN:
-          assert args.size() == 2;
-          return new FnType(
-              typeSystem.typeFor(args.get(0)), typeSystem.typeFor(args.get(1)));
-        case LIST:
-          assert args.size() == 1;
-          return new ListType(typeSystem.typeFor(args.get(0)));
-        default:
-          throw new AssertionError(op);
-      }
+  /** Key of a list type. */
+  private static class ListKey extends OpKey {
+    ListKey(Type.Key arg) {
+      super(Op.LIST, ImmutableList.of(arg));
     }
 
     @Override
-    public Type.Key copy(UnaryOperator<Type.Key> transform) {
-      return new OpKey(op, transform(args, arg -> arg.copy(transform)));
+    public StringBuilder describe(StringBuilder buf, int left, int right) {
+      return TypeSystem.unparse(buf, args.get(0), 0, Op.LIST.right)
+          .append(" list");
+    }
+
+    @Override
+    Type.Key copy(UnaryOperator<Type.Key> transform) {
+      return super.copy(transform);
+    }
+
+    @Override
+    public Type toType(TypeSystem typeSystem) {
+      return new ListType(typeSystem.typeFor(args.get(0)));
+    }
+  }
+
+  /** Key of a function type. */
+  private static class FnKey extends OpKey {
+    FnKey(Type.Key paramType, Type.Key resultType) {
+      super(Op.FN, ImmutableList.of(paramType, resultType));
+      checkArgument(args.size() == 2);
+    }
+
+    @Override
+    public Type toType(TypeSystem typeSystem) {
+      return new FnType(
+          typeSystem.typeFor(args.get(0)), typeSystem.typeFor(args.get(1)));
     }
   }
 
@@ -440,7 +464,7 @@ public class Keys {
 
     @Override
     public Type.Key copy(UnaryOperator<Type.Key> transform) {
-      return record(Maps.transformValues(argNameTypes, transform::apply));
+      return record(transformValues(argNameTypes, transform::apply));
     }
 
     @Override
@@ -486,8 +510,7 @@ public class Keys {
 
     @Override
     public Type.Key copy(UnaryOperator<Type.Key> transform) {
-      return progressiveRecord(
-          Maps.transformValues(argNameTypes, transform::apply));
+      return progressiveRecord(transformValues(argNameTypes, transform::apply));
     }
 
     @Override
@@ -544,17 +567,17 @@ public class Keys {
      */
     private final String name;
 
-    private final List<? extends Type.Key> arguments;
-    private final SortedMap<String, Type.Key> typeConstructors;
+    private final ImmutableList<Type.Key> arguments;
+    private final ImmutableMap<String, Type.Key> typeConstructors;
 
     DataTypeKey(
         String name,
-        List<? extends Type.Key> arguments,
-        SortedMap<String, Type.Key> typeConstructors) {
+        ImmutableList<Type.Key> arguments,
+        ImmutableMap<String, Type.Key> typeConstructors) {
       super(Op.DATA_TYPE);
       this.name = requireNonNull(name);
-      this.arguments = ImmutableList.copyOf(arguments);
-      this.typeConstructors = ImmutableSortedMap.copyOfSorted(typeConstructors);
+      this.arguments = requireNonNull(arguments);
+      this.typeConstructors = requireNonNull(typeConstructors);
     }
 
     @Override
@@ -569,6 +592,20 @@ public class Keys {
               && ((DataTypeKey) obj).name.equals(name)
               && ((DataTypeKey) obj).arguments.equals(arguments)
               && ((DataTypeKey) obj).typeConstructors.equals(typeConstructors);
+    }
+
+    @Override
+    Type.Key substitute(List<? extends Type> types) {
+      ImmutableList<Type.Key> arguments =
+          transformEager(this.arguments, arg -> arg.substitute(types));
+      ImmutableMap<String, Type.Key> typeConstructors =
+          transformValuesEager(
+              this.typeConstructors, arg -> arg.substitute(types));
+      if (arguments.equals(this.arguments)
+          && typeConstructors.equals(this.typeConstructors)) {
+        return this;
+      }
+      return new DataTypeKey(name, arguments, typeConstructors);
     }
 
     /**
@@ -617,7 +654,9 @@ public class Keys {
     @Override
     public DataType toType(TypeSystem typeSystem) {
       return typeSystem.dataType(
-          name, typeSystem.typesFor(arguments), typeConstructors);
+          name,
+          ImmutableList.copyOf(typeSystem.typesFor(arguments)),
+          typeConstructors);
     }
   }
 }

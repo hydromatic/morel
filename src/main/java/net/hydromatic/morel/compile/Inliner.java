@@ -143,7 +143,7 @@ public class Inliner extends EnvShuttle {
         // builtIn is BuiltIn.LIST_FILTER.
         final BuiltIn builtIn = Codes.BUILT_IN_MAP.get(o);
         if (builtIn != null) {
-          return core.functionLiteral(typeSystem, builtIn);
+          return core.functionLiteral(apply2.type, builtIn);
         }
       }
       return core.valueLiteral(apply2, o);

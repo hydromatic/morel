@@ -25,6 +25,7 @@ import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 import static net.hydromatic.morel.util.Static.allMatch;
+import static org.apache.calcite.util.Util.first;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
@@ -42,6 +43,7 @@ import net.hydromatic.morel.compile.Extents;
 import net.hydromatic.morel.compile.Resolver;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
+import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
@@ -820,6 +822,19 @@ public class Core {
         v = ((Wrapper) value).o;
       }
       return clazz.cast(v);
+    }
+
+    /** Converts to a built-in. */
+    public Object toBuiltIn(TypeSystem typeSystem, @Nullable Pos pos) {
+      final BuiltIn builtIn = unwrap(BuiltIn.class);
+      Object o = Codes.BUILT_IN_VALUES.get(builtIn);
+      if (o instanceof Codes.Typed) {
+        o = ((Codes.Typed) o).withType(typeSystem, type);
+      }
+      if (o instanceof Codes.Positioned) {
+        o = ((Codes.Positioned) o).withPos(first(pos, this.pos));
+      }
+      return o;
     }
 
     @Override

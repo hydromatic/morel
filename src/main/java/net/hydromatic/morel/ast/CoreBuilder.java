@@ -159,9 +159,14 @@ public enum CoreBuilder {
   }
 
   /** Creates a function literal. */
+  public Core.Literal functionLiteral(Type type, BuiltIn builtIn) {
+    return new Core.Literal(Op.FN_LITERAL, type, builtIn);
+  }
+
+  /** Creates a function literal, deducing its type. */
   public Core.Literal functionLiteral(TypeSystem typeSystem, BuiltIn builtIn) {
     final Type type = builtIn.typeFunction.apply(typeSystem);
-    return new Core.Literal(Op.FN_LITERAL, type, builtIn);
+    return functionLiteral(type, builtIn);
   }
 
   /** Creates a function literal, possibly overloaded. */
@@ -183,7 +188,7 @@ public enum CoreBuilder {
           applicableTypes);
       type = applicableTypes.get(0);
     }
-    return new Core.Literal(Op.FN_LITERAL, type, builtIn);
+    return functionLiteral(type, builtIn);
   }
 
   /** Creates a value literal. */
@@ -197,6 +202,12 @@ public enum CoreBuilder {
     final Core.Literal exp = unitLiteral();
     return new Core.Literal(
         Op.INTERNAL_LITERAL, exp.type, Core.Literal.wrap(exp, value));
+  }
+
+  /** Wraps an expression in "desc". */
+  public Core.Exp desc(TypeSystem typeSystem, Core.Exp exp) {
+    Core.Id desc = constructor(typeSystem, BuiltIn.Constructor.DESCENDING_DESC);
+    return apply(Pos.ZERO, desc.type, desc, exp);
   }
 
   /** Creates a reference to a value. */

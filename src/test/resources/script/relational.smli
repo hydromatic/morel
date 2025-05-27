@@ -1126,6 +1126,43 @@ group x compute c = count
 order c, x;
 > val it = [{c=1,x=10},{c=1,x=20},{c=1,x=30}] : {c:int, x:int} list
 
+(* ------------------------------------------------------------
+   Compute highest common factor (HCF) using intersect over
+   bags.
+ *)
+fun factorize n =
+  let
+    fun factorize' n d =
+      if n < d then [] else
+      if n mod d = 0 then d :: (factorize' (n div d) d)
+      else factorize' n (d + 1)
+  in
+    factorize' n 2
+  end;
+> val factorize = fn : int -> int list
+factorize 12;
+> val it = [2,2,3] : int list
+fun product [] = 1
+  | product (hd :: tl) = hd * (product tl);
+> val product = fn : int list -> int
+product (factorize 12);
+> val it = 12 : int
+fun hcf (m, n) =
+  from i in factorize m
+    intersect (factorize n)
+    compute product of i;
+> val hcf = fn : int * int -> int
+hcf (12, 18);
+> val it = 6 : int
+hcf (9, 8);
+> val it = 1 : int
+hcf (38024, 16296);
+> val it = 5432 : int
+
+(* Group ------------------------------------------------------ *)
+
+(* We can simulate "group" using "foldl". *)
+
 (*) foldl function (built into SML)
 let
   fun foldl f start [] = start
