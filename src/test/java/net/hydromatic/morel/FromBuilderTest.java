@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.FromBuilder;
 import net.hydromatic.morel.compile.BuiltIn;
@@ -143,7 +142,7 @@ public class FromBuilderTest {
 
   @Test
   void testWhereOrder() {
-    // from i in [1, 2] where i < 2 order i desc
+    // from i in [1, 2] where i < 2 order DESC i
     //  ==>
     // from i in [1, 2]
     final Fixture f = new Fixture();
@@ -151,22 +150,24 @@ public class FromBuilderTest {
     fromBuilder
         .scan(f.iPat, f.list12)
         .where(core.lessThan(f.typeSystem, f.iId, f.intLiteral(2)))
-        .order(ImmutableList.of(core.orderItem(f.iId, Ast.Direction.DESC)));
+        .order(core.desc(f.typeSystem, f.iId));
 
     final Core.From from = fromBuilder.build();
-    assertThat(from, hasToString("from i in [1, 2] where i < 2 order i desc"));
+    assertThat(from, hasToString("from i in [1, 2] where i < 2 order DESC i"));
     final Core.Exp e = fromBuilder.buildSimplify();
     assertThat(e, is(from));
 
-    // "where true" and "order {}" are ignored
+    // "where true" is ignored because it has no effect;
+    // "order {}" is retained because it could convert a bag to a list.
     fromBuilder
         .where(core.boolLiteral(true))
-        .order(ImmutableList.of())
+        .order(core.tuple(f.typeSystem))
         .where(core.greaterThan(f.typeSystem, f.iId, f.intLiteral(1)));
     final Core.From from2 = fromBuilder.build();
     assertThat(
         from2,
-        hasToString("from i in [1, 2] where i < 2 order i desc where i > 1"));
+        hasToString(
+            "from i in [1, 2] where i < 2 order DESC i order () where i > 1"));
     final Core.Exp e2 = fromBuilder.buildSimplify();
     assertThat(e2, is(from2));
   }

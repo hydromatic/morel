@@ -155,7 +155,7 @@ class SuchThatShuttle extends Shuttle {
             final Core.Order order = (Core.Order) step;
             killTemporaryScans(idPats);
             deferredScans.flush(fromBuilder);
-            fromBuilder.order(order.orderItems);
+            fromBuilder.order(order.exp);
             break;
 
           case SKIP:

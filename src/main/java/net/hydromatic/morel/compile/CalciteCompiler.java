@@ -40,8 +40,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
-import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
@@ -800,16 +800,34 @@ public class CalciteCompiler extends Compiler {
 
   private RelContext order(RelContext cx, Core.Order order) {
     final List<RexNode> exps = new ArrayList<>();
-    order.orderItems.forEach(
-        i -> {
-          RexNode exp = translate(cx, i.exp);
-          if (i.direction == Ast.Direction.DESC) {
-            exp = cx.relBuilder.desc(exp);
-          }
-          exps.add(exp);
-        });
+    translateOrderItems(cx, exps::add, order.exp, false);
     cx.relBuilder.sort(exps);
     return cx;
+  }
+
+  private void translateOrderItems(
+      RelContext cx, Consumer<RexNode> consumer, Core.Exp exp, boolean desc) {
+    if (exp.isCallTo(BuiltIn.Constructor.DESCENDING_DESC)) {
+      Core.Apply apply = (Core.Apply) exp;
+      translateOrderItems(cx, consumer, apply.arg, !desc);
+      return;
+    }
+
+    switch (exp.op) {
+      case TUPLE:
+      case RECORD:
+        for (Core.Exp arg : ((Core.Tuple) exp).args) {
+          translateOrderItems(cx, consumer, arg, desc);
+        }
+        break;
+
+      default:
+        RexNode rex = translate(cx, exp);
+        if (desc) {
+          rex = cx.relBuilder.desc(rex);
+        }
+        consumer.accept(rex);
+    }
   }
 
   private RelContext group(RelContext cx, Core.Group group) {

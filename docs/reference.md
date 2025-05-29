@@ -59,7 +59,6 @@ In Morel but not Standard ML:
   `distinct`,
   `except`,
   `group`,
-  `in`,
   `intersect`,
   `into`,
   `join`,
@@ -71,7 +70,7 @@ In Morel but not Standard ML:
   `union`,
   `unorder`,
   `where`,
-  `yield` steps
+  `yield` steps and `in` and `of` keywords
 * `elem`,
   `implies`,
   `notelem` binary operators
@@ -204,8 +203,7 @@ In Standard ML but not in Morel:
     | <b>intersect</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>i</sub></i>
                                 intersect step (<i>i</i> &ge; 1)
     | <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>  join step (<i>s</i> &ge; 1)
-    | <b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>
-                                order step (<i>o</i> &ge; 1)
+    | <b>order</b> <i>exp</i>                 order step
     | <b>skip</b> <i>exp</i>                  skip step
     | <b>take</b> <i>exp</i>                  take step
     | <b>through</b> <i>pat</i> <b>in</b> <i>exp</i>        through step
@@ -217,7 +215,6 @@ In Standard ML but not in Morel:
     | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>  compute step (<i>a</i> &ge; 1)
 <i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>
 <i>agg</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i> [ <b>of</b> <i>exp</i> ]
-<i>orderItem</i> &rarr; <i>exp</i> [ <b>desc</b> ]
 </pre>
 
 ### Patterns
@@ -331,11 +328,13 @@ This grammar uses the following notation:
 Primitive: `bool`, `char`, `int`, `real`, `string`, `unit`
 
 Datatype:
+* `datatype 'a descending = DESC of 'a (in structure `Relational`)
 * `datatype 'a list = nil | :: of 'a * 'a list` (in structure `List`)
 * `datatype 'a option = NONE | SOME of 'a` (in structure `Option`)
 * `datatype 'a order = LESS | EQUAL | GREATER` (in structure `General`)
 
 Eqtype:
+* `eqtype 'a bag = 'a bag` (in structure `Bag`)
 * `eqtype 'a vector = 'a vector` (in structure `Vector`)
 
 Exception:

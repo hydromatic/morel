@@ -35,7 +35,7 @@ public interface Tracer {
   void onResult(Object o);
 
   /** Called with the list of warnings after evaluation. */
-  void onWarnings(List<Throwable> warningList);
+  void onWarnings(List<? extends Throwable> warningList);
 
   /**
    * Called with the exception thrown during evaluation, or null if no exception

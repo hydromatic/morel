@@ -27,7 +27,7 @@ from i where i > 0 andalso i < 10;
 > val it = [1,2,3,4,5,6,7,8,9] : int bag
 from i where i > 0 andalso i < 4 yield {j = i + 1};
 > val it = [{j=2},{j=3},{j=4}] : {j:int} bag
-from i where i > 0 andalso i < 4 yield {j = i + 1} order j desc;
+from i where i > 0 andalso i < 4 yield {j = i + 1} order DESC j;
 > val it = [{j=4},{j=3},{j=2}] : {j:int} list
 from i where i > 0 andalso i < 10 andalso i mod 3 = 2;
 > val it = [2,5,8] : int bag
@@ -81,7 +81,7 @@ from i
   where i >= 0 andalso i <= 100
   yield {j = i mod 3}
   distinct
-  order j desc;
+  order DESC j;
 > val it = [2,1,0] : int list
 
 (* [MOREL-258] `take` in query with unbounded variable gives error *)
@@ -97,7 +97,7 @@ from i
 
 from i
   where i >= 0 andalso i <= 100
-  order i desc
+  order DESC i
   skip 80
   take 5;
 > val it = [20,19,18,17,16] : int list
@@ -756,7 +756,7 @@ andalso 75 * b + 150 * c <= 2000   (*) sugar
 andalso 100 * b + 150 * c <= 500   (*) butter
 andalso 75 * c <= 500              (*) cocoa
 yield {b, c, profit = 400 * b + 450 * c}
-order profit desc;
+order DESC profit;
 > val it =
 >   [{b=2,c=2,profit=1700},{b=3,c=1,profit=1650},{b=0,c=3,profit=1350},
 >    {b=1,c=2,profit=1300},{b=2,c=1,profit=1250},{b=3,c=0,profit=1200},

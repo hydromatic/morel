@@ -444,7 +444,7 @@ void fromStep(List<FromStep> steps) :
   final PairList<Id, Exp> groupExps;
   final Pat pat;
   final List<Aggregate> aggregates;
-  final List<OrderItem> orderItems;
+  final Exp orderExp;
   final List<Exp> exps;
   final boolean distinct;
 }
@@ -492,8 +492,8 @@ void fromStep(List<FromStep> steps) :
     steps.add(ast.into(span.end(this), intoExp));
   }
 |
-  <ORDER> { span = Span.of(pos()); } orderItems = orderItemCommaList() {
-    steps.add(ast.order(span.end(this), orderItems));
+  <ORDER> { span = Span.of(pos()); } orderExp = expression() {
+    steps.add(ast.order(span.end(this), orderExp));
   }
 |
   <REQUIRE> { span = Span.of(pos()); } requireExp = expression() {
@@ -591,36 +591,6 @@ Aggregate aggregate() :
     final Exp aggregate = aggregateIds.get(0).getValue();
     return ast.aggregate(id.pos.plus(pos()), aggregate, argument, id);
   }
-}
-
-/** List of order items "e1 desc, e2, e3 desc". */
-List<OrderItem> orderItemCommaList() :
-{
-  final List<OrderItem> list = new ArrayList<>();
-  OrderItem i;
-}
-{
-  i = orderItem() { list.add(i); }
-  (
-    <COMMA>
-    i = orderItem() { list.add(i); }
-  )*
-  { return list; }
-}
-
-/** Order item. An expression optionally followed by "desc". */
-OrderItem orderItem() :
-{
-  final Span span;
-  final Exp exp;
-}
-{
-  exp = expression() { span = Span.of(pos()); }
-  (
-    <DESC> { return ast.orderItem(span.end(this), exp, Ast.Direction.DESC); }
-  |
-    { return ast.orderItem(span.end(this), exp, Ast.Direction.ASC); }
-  )
 }
 
 /** Returns true if {@code distinct} is present, otherwise false. */
@@ -1613,7 +1583,6 @@ AstNode statementEof() :
 // The following are relational extensions:
 | < COMPUTE: "compute" >
 | < CURRENT: "current" >
-| < DESC: "desc" >
 | < DISTINCT: "distinct" >
 | < ELEM: "elem" >
 | < EXCEPT: "except" >

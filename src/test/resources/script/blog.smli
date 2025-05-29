@@ -704,7 +704,7 @@ from e in emps,
   group e.deptno, d.dname, e.job
     compute sumSal = sum of e.sal,
       minRemuneration = min of e.sal + e.comm
-  order deptno, job;
+  order (deptno, job);
 > val it =
 >   [
 >    {deptno=10,dname="ACCOUNTING",job="CLERK",minRemuneration=1300.0,
@@ -941,13 +941,13 @@ from e in emps;
 >    {deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
 >   : {deptno:int, id:int, name:string} list
 from e in emps
-  order e.deptno, e.id desc;
+  order (e.deptno, DESC e.id);
 > val it =
 >   [{deptno=10,id=100,name="Fred"},{deptno=20,id=101,name="Velma"},
 >    {deptno=30,id=103,name="Scooby"},{deptno=30,id=102,name="Shaggy"}]
 >   : {deptno:int, id:int, name:string} list
 from e in emps
-  order e.deptno, e.id desc
+  order (e.deptno, DESC e.id)
   yield {e.name, nameLength = String.size e.name, e.id, e.deptno};
 > val it =
 >   [{deptno=10,id=100,name="Fred",nameLength=4},
@@ -956,7 +956,7 @@ from e in emps
 >    {deptno=30,id=102,name="Shaggy",nameLength=6}]
 >   : {deptno:int, id:int, name:string, nameLength:int} list
 from e in emps
-  order e.deptno, e.id desc
+  order (e.deptno, DESC e.id)
   yield {e.name, nameLength = String.size e.name, e.id, e.deptno}
   where nameLength > 4;
 > val it =
@@ -965,21 +965,21 @@ from e in emps
 >    {deptno=30,id=102,name="Shaggy",nameLength=6}]
 >   : {deptno:int, id:int, name:string, nameLength:int} list
 from e in emps
-  order e.deptno, e.id desc
+  order (e.deptno, DESC e.id)
   yield {e.name, nameLength = String.size e.name, e.id, e.deptno}
   where nameLength > 4
   group deptno compute c = count, s = sum of nameLength;
 > val it = [{c=1,deptno=20,s=5},{c=2,deptno=30,s=12}]
 >   : {c:int, deptno:int, s:int} list
 from e in emps
-  order e.deptno, e.id desc
+  order (e.deptno, DESC e.id)
   yield {e.name, nameLength = String.size e.name, e.id, e.deptno}
   where nameLength > 4
   group deptno compute c = count, s = sum of nameLength
   where s > 10;
 > val it = [{c=2,deptno=30,s=12}] : {c:int, deptno:int, s:int} list
 from e in emps
-  order e.deptno, e.id desc
+  order (e.deptno, DESC e.id)
   yield {e.name, nameLength = String.size e.name, e.id, e.deptno}
   where nameLength > 4
   group deptno compute c = count, s = sum of nameLength

@@ -653,6 +653,12 @@ public class Shell {
                       session1 ->
                           compiled.eval(
                               session1, env0, outLines, bindings::add));
+                  warningList.forEach(
+                      w -> {
+                        final StringBuilder buf2 = new StringBuilder();
+                        shell.handle(w, buf2);
+                        outLines.accept(buf2.toString());
+                      });
                   bindings.forEach(b -> bindingMap.put(b.id.name, b));
                   env1 = env0.bindAll(bindingMap.values());
                   if (outBindings != null) {

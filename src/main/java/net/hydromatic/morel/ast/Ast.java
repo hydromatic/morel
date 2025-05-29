@@ -2316,44 +2316,21 @@ public class Ast {
 
   /** An {@code order} step in a {@code from} expression. */
   public static class Order extends FromStep {
-    public final ImmutableList<OrderItem> orderItems;
-
-    Order(Pos pos, ImmutableList<OrderItem> orderItems) {
-      super(pos, Op.ORDER);
-      this.orderItems = requireNonNull(orderItems);
-    }
-
-    @Override
-    AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append(" order ").appendAll(orderItems, ", ");
-    }
-
-    @Override
-    public AstNode accept(Shuttle shuttle) {
-      return shuttle.visit(this);
-    }
-
-    @Override
-    public void accept(Visitor visitor) {
-      visitor.visit(this);
-    }
-
-    public Order copy(List<OrderItem> orderItems) {
-      return this.orderItems.equals(orderItems)
-          ? this
-          : new Order(pos, ImmutableList.copyOf(orderItems));
-    }
-  }
-
-  /** An item in an {@code order} clause. */
-  public static class OrderItem extends AstNode {
     public final Exp exp;
-    public final Direction direction;
 
-    OrderItem(Pos pos, Exp exp, Direction direction) {
-      super(pos, Op.ORDER_ITEM);
+    Order(Pos pos, Exp exp) {
+      super(pos, Op.ORDER);
       this.exp = requireNonNull(exp);
-      this.direction = requireNonNull(direction);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" order ").append(exp, 0, right);
+    }
+
+    @Override
+    public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
     }
 
     @Override
@@ -2361,26 +2338,9 @@ public class Ast {
       visitor.visit(this);
     }
 
-    AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append(exp, 0, 0)
-          .append(direction == Direction.DESC ? " desc" : "");
+    public Order copy(Exp exp) {
+      return this.exp.equals(exp) ? this : new Order(pos, exp);
     }
-
-    public AstNode accept(Shuttle shuttle) {
-      return shuttle.visit(this);
-    }
-
-    public OrderItem copy(Exp exp, Direction direction) {
-      return this.exp.equals(exp) && this.direction == direction
-          ? this
-          : new OrderItem(pos, exp, direction);
-    }
-  }
-
-  /** Sort order. */
-  public enum Direction {
-    ASC,
-    DESC
   }
 
   /** A {@code group} step in a {@code from} expression. */

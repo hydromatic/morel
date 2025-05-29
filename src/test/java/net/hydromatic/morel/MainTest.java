@@ -1579,9 +1579,10 @@ public class MainTest {
     ml(ml)
         .assertMatchCoverage(NON_EXHAUSTIVE)
         .assertEvalWarnings(
-            new CustomTypeSafeMatcher<List<Throwable>>("two warnings") {
+            new CustomTypeSafeMatcher<List<? extends Throwable>>(
+                "two warnings") {
               @Override
-              protected boolean matchesSafely(List<Throwable> list) {
+              protected boolean matchesSafely(List<? extends Throwable> list) {
                 return list.size() == 2
                     && list.get(0) instanceof CompileException
                     && list.get(0).getMessage().equals("match nonexhaustive")
@@ -1992,14 +1993,14 @@ public class MainTest {
                 + " group id = #id e compute count = count"
                 + " join d in depts where false");
     ml("from e in emps skip 1 take 2").assertParseSame();
-    ml("from e in emps order e.empno desc, e.deptno")
-        .assertParse("from e in emps order #empno e desc, #deptno e");
+    ml("from e in emps order (DESC e.empno, e.deptno)")
+        .assertParse("from e in emps order (DESC (#empno e), #deptno e)");
     ml("from e in emps yield e.deptno order current mod 2")
         .assertParse("from e in emps yield #deptno e order current mod 2");
-    ml("from e in emps yield e.empno order ordinal mod 2, ordinal div 2")
+    ml("from e in emps yield e.empno order (ordinal mod 2, ordinal div 2)")
         .assertParse(
             "from e in emps yield #empno e "
-                + "order ordinal mod 2, ordinal div 2");
+                + "order (ordinal mod 2, ordinal div 2)");
     ml("from e in emps order e.empno take 2")
         .assertParse("from e in emps order #empno e take 2");
     ml("from e in emps order e.empno take 2 skip 3 skip 1+1 take 2")
@@ -2475,6 +2476,26 @@ public class MainTest {
     ml("from d in [{a=1,b=true}], i in [2] yield i yield 3.0")
         .assertType("real list");
 
+    // order
+    ml("from e in [{empno=1,deptno=10,name=\"Fred\"},\n"
+            + "        {empno=2,deptno=10,name=\"Jane\"}]\n"
+            + "  order (e.empno, e.deptno)")
+        .assertType("{deptno:int, empno:int, name:string} list");
+    ml("from e in [{empno=1,deptno=10,name=\"Fred\"},\n"
+            + "        {empno=2,deptno=10,name=\"Jane\"}]\n"
+            + "  order {e.deptno, e.empno}")
+        .assertType("{deptno:int, empno:int, name:string} list");
+    mlE("from e in [{empno=1,deptno=10,name=\"Fred\"},\n"
+            + "         ${$empno=2,deptno=10,name=\"Jane\"}]\n"
+            + "  order {e.empno, e.deptno}")
+        .withWarningsMatcher(
+            hasToString(
+                "[net.hydromatic.morel.compile.CompileException: "
+                    + "Sorting on a record whose fields are not in alphabetical "
+                    + "order. Sort order may not be what you expect. "
+                    + "at stdIn:3.9-3.28]"))
+        .assertType("{deptno:int, empno:int, name:string} list");
+
     // unorder
     ml("from d in [{a=1,b=true}], i in [2] unorder")
         .assertType("{d:{a:int, b:bool}, i:int} bag");
@@ -2491,7 +2512,7 @@ public class MainTest {
     mlE("from i in bag [1,2,3,4,5] yield i + $ordinal$")
         .assertTypeThrowsTypeException(
             "cannot use 'ordinal' in unordered query");
-    ml("from i in bag [1,2,3,4,5] order i desc yield i + ordinal")
+    ml("from i in bag [1,2,3,4,5] order DESC i yield i + ordinal")
         .assertType("int list");
 
     // current
@@ -2514,7 +2535,7 @@ public class MainTest {
     ml("from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
             + "  yield {z=e.x}\n"
             + "  where z > 2\n"
-            + "  order z desc\n"
+            + "  order DESC z\n"
             + "  yield {z=z}")
         .assertType("{z:int} list");
     mlE("from d in [{a=1,b=true}] yield $d.x$")
@@ -3128,7 +3149,7 @@ public class MainTest {
         "from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
             + "  yield {z=e.x}\n"
             + "  where z > 2\n"
-            + "  order z desc\n"
+            + "  order DESC z\n"
             + "  yield {z=z}";
     ml(ml)
         .assertType("{z:int} list")
@@ -3149,7 +3170,7 @@ public class MainTest {
         "from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
             + "  yield {z=e.x}\n"
             + "  where z > 2\n"
-            + "  order z desc";
+            + "  order DESC z";
     ml(ml4).assertType("{z:int} list");
   }
 
@@ -3488,14 +3509,14 @@ public class MainTest {
   void testFromOrderYield() {
     final String ml =
         "from r in [{a=1,b=2},{a=1,b=0},{a=2,b=1}]\n"
-            + "  order r.a desc, r.b\n"
+            + "  order (DESC r.a, r.b)\n"
             + "  skip 0\n"
             + "  take 4 + 6\n"
             + "  yield {r.a, b10 = r.b * 10}";
     final String expected =
         "from r in"
             + " [{a = 1, b = 2}, {a = 1, b = 0}, {a = 2, b = 1}]"
-            + " order #a r desc, #b r"
+            + " order (DESC (#a r), #b r)"
             + " skip 0"
             + " take 4 + 6"
             + " yield {a = #a r, b10 = #b r * 10}";

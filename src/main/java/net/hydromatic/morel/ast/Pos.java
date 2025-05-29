@@ -238,6 +238,17 @@ public class Pos {
       throw new IllegalArgumentException("not found");
     }
   }
+
+  /** Compares two positions by start line and start column. */
+  public static int compare(Pos p1, Pos p2) {
+    if (p1.startLine < p2.startLine) {
+      return -1;
+    }
+    if (p1.startLine == p2.startLine) {
+      return Integer.compare(p1.startColumn, p2.startColumn);
+    }
+    return 1;
+  }
 }
 
 // End Pos.java

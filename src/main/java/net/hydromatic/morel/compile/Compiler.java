@@ -20,7 +20,6 @@ package net.hydromatic.morel.compile;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
-import static net.hydromatic.morel.ast.Ast.Direction.DESC;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.last;
@@ -33,6 +32,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +50,7 @@ import net.hydromatic.morel.eval.Applicable3;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.Comparators;
 import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.eval.Prop;
@@ -389,10 +390,11 @@ public class Compiler {
         createRowSinkFactory(cx, firstStep.env, skip(steps), elementType);
     final ImmutableList<Code> inputCodes;
     final ImmutableList<String> outNames;
+    final Code code;
     switch (firstStep.op) {
       case SCAN:
         final Core.Scan scan = (Core.Scan) firstStep;
-        final Code code = compileRow(cx, scan.exp);
+        code = compileRow(cx, scan.exp);
         final Code conditionCode = compile(cx, scan.condition);
         return () ->
             Codes.scanRowSink(
@@ -459,11 +461,11 @@ public class Compiler {
 
       case ORDER:
         final Core.Order order = (Core.Order) firstStep;
-        final PairList<Code, Boolean> codes = PairList.of();
-        order.orderItems.forEach(
-            e -> codes.add(compile(cx, e.exp), e.direction == DESC));
-        final ImmutablePairList<Code, Boolean> codes2 = codes.immutable();
-        return () -> Codes.orderRowSink(codes2, stepEnv, nextFactory.get());
+        code = compile(cx, order.exp);
+        final Comparator comparator =
+            Comparators.comparatorFor(typeSystem, order.exp.type);
+        return () ->
+            Codes.orderRowSink(code, comparator, stepEnv, nextFactory.get());
 
       case UNORDER:
         // No explicit step is required. Unorder is a change in type, but

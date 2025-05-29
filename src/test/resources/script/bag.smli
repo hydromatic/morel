@@ -147,9 +147,9 @@ from i in intList order ();
 > val it = [1,2,1,3] : int list
 from i in intBag order ();
 > val it = [1,2,1,3] : int list
-from r in recList group r.i compute bs = (fn x => x) of r.b order i desc;
+from r in recList group r.i compute bs = (fn x => x) of r.b order DESC i;
 > val it = [{bs=[false],i=2},{bs=[true,false],i=1}] : {bs:bool list, i:int} list
-from r in recBag group r.i compute bs = (fn x => x) of r.b order i desc;
+from r in recBag group r.i compute bs = (fn x => x) of r.b order DESC i;
 > val it = [{bs=[false],i=2},{bs=[true,false],i=1}] : {bs:bool bag, i:int} list
 
 (*) unorder's output is unordered
@@ -161,9 +161,9 @@ from i in intList unorder skip 2;
 > val it = [1,3] : int bag
 from i in intList unorder take 2;
 > val it = [1,2] : int bag
-from i in intList unorder order i desc;
+from i in intList unorder order DESC i;
 > val it = [3,2,1,1] : int list
-from i in intList unorder order i desc unorder;
+from i in intList unorder order DESC i unorder;
 > val it = [3,2,1,1] : int bag
 
 (*) ordinal is valid only for ordered collections
@@ -172,7 +172,7 @@ from i in intBag yield i + ordinal;
 >   raised at: stdIn:1.28-1.35
 from i in intList yield i + ordinal;
 > val it = [1,3,3,6] : int list
-from i in intBag order i desc where i > 1 yield i + ordinal;
+from i in intBag order DESC i where i > 1 yield i + ordinal;
 > val it = [3,3] : int list
 from i in intBag where i > ordinal;
 > stdIn:1.28-1.35 Error: cannot use 'ordinal' in unordered query

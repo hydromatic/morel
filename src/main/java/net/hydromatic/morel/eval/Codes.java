@@ -68,7 +68,6 @@ import net.hydromatic.morel.type.RangeExtent;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MorelException;
@@ -994,11 +993,9 @@ public abstract class Codes {
 
   /** Creates a {@link RowSink} for an {@code order} step. */
   public static RowSink orderRowSink(
-      ImmutablePairList<Code, Boolean> codes,
-      Core.StepEnv env,
-      RowSink rowSink) {
-    return new OrderRowSink(
-        codes, transformEager(env.bindings, b -> b.id.name), rowSink);
+      Code code, Comparator comparator, Core.StepEnv env, RowSink rowSink) {
+    ImmutableList<String> names = transformEager(env.bindings, b -> b.id.name);
+    return new OrderRowSink(code, comparator, names, rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code group} step. */
@@ -4861,17 +4858,20 @@ public abstract class Codes {
 
   /** Implementation of {@link RowSink} for an {@code order} step. */
   static class OrderRowSink extends BaseRowSink {
-    final ImmutablePairList<Code, Boolean> codes;
+    final Code code;
+    final Comparator comparator;
     final ImmutableList<String> names;
     final List<Object> rows = new ArrayList<>();
     final Object[] values;
 
     OrderRowSink(
-        ImmutablePairList<Code, Boolean> codes,
+        Code code,
+        Comparator comparator,
         ImmutableList<String> names,
         RowSink rowSink) {
       super(rowSink);
-      this.codes = codes;
+      this.code = code;
+      this.comparator = comparator;
       this.names = names;
       this.values = names.size() == 1 ? null : new Object[names.size()];
     }
@@ -4879,11 +4879,7 @@ public abstract class Codes {
     @Override
     public Describer describe(Describer describer) {
       return describer.start(
-          "order",
-          d -> {
-            codes.forEach((code, desc) -> d.arg(desc ? "desc" : "asc", code));
-            d.arg("sink", rowSink);
-          });
+          "order", d -> d.arg("code", code).arg("sink", rowSink));
     }
 
     @Override
@@ -4906,17 +4902,9 @@ public abstract class Codes {
           (left, right) -> {
             leftEnv.set(left);
             rightEnv.set(right);
-            for (Map.Entry<Code, Boolean> code : codes) {
-              final Comparable leftVal =
-                  (Comparable) code.getKey().eval(leftEnv);
-              final Comparable rightVal =
-                  (Comparable) code.getKey().eval(rightEnv);
-              int c = leftVal.compareTo(rightVal);
-              if (c != 0) {
-                return code.getValue() ? -c : c;
-              }
-            }
-            return 0;
+            final Object leftVal = code.eval(leftEnv);
+            final Object rightVal = code.eval(rightEnv);
+            return comparator.compare(leftVal, rightVal);
           });
       for (Object row : rows) {
         leftEnv.set(row);

@@ -941,10 +941,6 @@ public class Resolver {
         aggregate.argument == null ? null : toCore(aggregate.argument));
   }
 
-  private Core.OrderItem toCore(Ast.OrderItem orderItem) {
-    return core.orderItem(toCore(orderItem.exp), orderItem.direction);
-  }
-
   /** Helper for initialization. */
   private enum Init {
     INSTANCE;
@@ -1252,7 +1248,7 @@ public class Resolver {
     @Override
     protected void visit(Ast.Order order) {
       final Resolver r = withStepEnv(fromBuilder.stepEnv());
-      fromBuilder.order(transformEager(order.orderItems, r::toCore));
+      fromBuilder.order(r.toCore(order.exp));
     }
 
     @Override

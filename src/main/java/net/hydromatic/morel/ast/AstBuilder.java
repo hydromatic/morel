@@ -512,13 +512,8 @@ public enum AstBuilder {
     return new Ast.Scan(pos, pat, exp, condition);
   }
 
-  public Ast.Order order(Pos pos, Iterable<Ast.OrderItem> orderItems) {
-    return new Ast.Order(pos, ImmutableList.copyOf(orderItems));
-  }
-
-  public Ast.OrderItem orderItem(
-      Pos pos, Ast.Exp exp, Ast.Direction direction) {
-    return new Ast.OrderItem(pos, exp, direction);
+  public Ast.Order order(Pos pos, Ast.Exp exp) {
+    return new Ast.Order(pos, exp);
   }
 
   public Ast.Compute compute(Pos pos, List<Ast.Aggregate> aggregates) {

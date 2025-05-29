@@ -26,7 +26,6 @@ import static net.hydromatic.morel.util.Static.append;
 import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.skipLast;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Range;
@@ -318,13 +317,8 @@ public class FromBuilder {
     return addStep(core.group(groupExps, aggregates));
   }
 
-  public FromBuilder order(Iterable<Core.OrderItem> orderItems) {
-    final List<Core.OrderItem> orderItemList = ImmutableList.copyOf(orderItems);
-    if (orderItemList.isEmpty()) {
-      // skip empty "order"
-      return this;
-    }
-    return addStep(core.order(stepEnv(), orderItems));
+  public FromBuilder order(Core.Exp exp) {
+    return addStep(core.order(stepEnv(), exp));
   }
 
   public FromBuilder yield_(Core.Exp exp) {
@@ -497,7 +491,7 @@ public class FromBuilder {
 
     @Override
     protected void visit(Core.Order order) {
-      order(order.orderItems);
+      order(order.exp);
     }
 
     @Override

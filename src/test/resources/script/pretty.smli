@@ -36,7 +36,7 @@ from e in scott.depts;
 >
 > val it : {deptno:int, dname:string, loc:string} bag
 
-from e in scott.depts order e.deptno desc;
+from e in scott.depts order DESC e.deptno;
 > deptno dname      loc
 > ------ ---------- --------
 > 40     OPERATIONS BOSTON
@@ -57,7 +57,7 @@ from e in scott.depts;
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
 >   : {deptno:int, dname:string, loc:string} bag
 
-from e in scott.depts order e.deptno desc;
+from e in scott.depts order DESC e.deptno;
 > val it =
 >   [{deptno=40,dname="OPERATIONS",loc="BOSTON"},
 >    {deptno=30,dname="SALES",loc="CHICAGO"},

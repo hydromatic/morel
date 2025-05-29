@@ -237,9 +237,13 @@ class Ml {
           }
           final Calcite calcite = Calcite.withDataSets(dataSetMap);
           try {
+            final Consumer<CompileException> ignoreWarnings = w -> {};
             final TypeResolver.Resolved resolved =
                 Compiles.validateExpression(
-                    statement, propMap, calcite.foreignValues());
+                    statement,
+                    propMap,
+                    calcite.foreignValues(),
+                    ignoreWarnings);
             tracer.handleCompileException(null);
             action.accept(resolved, calcite);
           } catch (TypeResolver.TypeException e) {
@@ -320,7 +324,7 @@ class Ml {
       final Calcite calcite = Calcite.withDataSets(dataSetMap);
       final TypeResolver.Resolved resolved =
           Compiles.validateExpression(
-              statement, propMap, calcite.foreignValues());
+              statement, propMap, calcite.foreignValues(), w -> {});
       final Environment env = resolved.env;
       final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
       final Session session = null;
@@ -394,8 +398,9 @@ class Ml {
     final Environment env =
         Environments.env(typeSystem, session, ImmutableMap.of());
     final Ast.ValDecl valDecl = Compiles.toValDecl(statement);
+    final Consumer<CompileException> ignoreWarnings = w -> {};
     final TypeResolver.Resolved resolved =
-        TypeResolver.deduceType(env, valDecl, typeSystem);
+        TypeResolver.deduceType(env, valDecl, typeSystem, ignoreWarnings);
     final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
     final Resolver resolver = Resolver.of(resolved.typeMap, env, null);
     final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
@@ -407,7 +412,7 @@ class Ml {
 
   Ml assertMatchCoverage(MatchCoverage expectedCoverage) {
     final Function<Pos, Matcher<Throwable>> exceptionMatcherFactory;
-    final Matcher<List<Throwable>> warningsMatcher;
+    final Matcher<List<? extends Throwable>> warningsMatcher;
     switch (expectedCoverage) {
       case OK:
         // Expect no errors or warnings
@@ -426,9 +431,10 @@ class Ml {
       case NON_EXHAUSTIVE:
         exceptionMatcherFactory = null;
         warningsMatcher =
-            new CustomTypeSafeMatcher<List<Throwable>>("non-empty list") {
+            new CustomTypeSafeMatcher<List<? extends Throwable>>(
+                "non-empty list") {
               @Override
-              protected boolean matchesSafely(List<Throwable> list) {
+              protected boolean matchesSafely(List<? extends Throwable> list) {
                 return anyMatch(
                     list,
                     e ->
@@ -447,10 +453,10 @@ class Ml {
         .assertEval();
   }
 
-  private static <E> Matcher<List<E>> isEmptyList() {
-    return new CustomTypeSafeMatcher<List<E>>("empty list") {
+  private static <E> Matcher<List<? extends E>> isEmptyList() {
+    return new CustomTypeSafeMatcher<List<? extends E>>("empty list") {
       @Override
-      protected boolean matchesSafely(List<E> list) {
+      protected boolean matchesSafely(List<? extends E> list) {
         return list.isEmpty();
       }
     };
@@ -567,7 +573,7 @@ class Ml {
         .assertEval();
   }
 
-  Ml assertEvalWarnings(Matcher<List<Throwable>> warningsMatcher) {
+  Ml assertEvalWarnings(Matcher<List<? extends Throwable>> warningsMatcher) {
     return withResultMatcher(notNullValue())
         .withWarningsMatcher(warningsMatcher)
         .assertEval();
@@ -614,8 +620,8 @@ class Ml {
     return withTracer(Tracers.withOnResult(this.tracer, consumer));
   }
 
-  Ml withWarningsMatcher(Matcher<List<Throwable>> matcher) {
-    final Consumer<List<Throwable>> consumer =
+  Ml withWarningsMatcher(Matcher<List<? extends Throwable>> matcher) {
+    final Consumer<List<? extends Throwable>> consumer =
         warningList -> assertThat(warningList, matcher);
     return withTracer(Tracers.withOnWarnings(this.tracer, consumer));
   }

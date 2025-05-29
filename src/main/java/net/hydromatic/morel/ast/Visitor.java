@@ -201,11 +201,7 @@ public class Visitor {
   }
 
   protected void visit(Ast.Order order) {
-    order.orderItems.forEach(this::accept);
-  }
-
-  protected void visit(Ast.OrderItem orderItem) {
-    orderItem.exp.accept(this);
+    order.exp.accept(this);
   }
 
   protected void visit(Ast.Distinct distinct) {}
@@ -410,11 +406,7 @@ public class Visitor {
   }
 
   protected void visit(Core.Order order) {
-    order.orderItems.forEach(this::accept);
-  }
-
-  protected void visit(Core.OrderItem orderItem) {
-    orderItem.exp.accept(this);
+    order.exp.accept(this);
   }
 
   protected void visit(Core.Yield yield) {

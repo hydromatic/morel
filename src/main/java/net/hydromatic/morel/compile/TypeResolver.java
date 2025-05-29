@@ -39,6 +39,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -105,6 +106,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 // @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
 public class TypeResolver {
   private final TypeSystem typeSystem;
+  private final Consumer<CompileException> warningConsumer;
   private final PairList<Ast.FromStep, Triple> stepStack = PairList.of();
   private final List<Consumer<Resolved>> validations = new ArrayList<>();
   private final Unifier unifier = new MartelliUnifier();
@@ -127,14 +129,20 @@ public class TypeResolver {
   /** A field of this name indicates that a record type is progressive. */
   static final String PROGRESSIVE_LABEL = "z$dummy";
 
-  private TypeResolver(TypeSystem typeSystem) {
+  private TypeResolver(
+      TypeSystem typeSystem, Consumer<CompileException> warningConsumer) {
     this.typeSystem = requireNonNull(typeSystem);
+    this.warningConsumer = requireNonNull(warningConsumer);
   }
 
   /** Deduces the datatype of a declaration. */
   public static Resolved deduceType(
-      Environment env, Ast.Decl decl, TypeSystem typeSystem) {
-    final TypeResolver typeResolver = new TypeResolver(typeSystem);
+      Environment env,
+      Ast.Decl decl,
+      TypeSystem typeSystem,
+      Consumer<CompileException> warningConsumer) {
+    final TypeResolver typeResolver =
+        new TypeResolver(typeSystem, warningConsumer);
     Resolved resolved =
         typeResolver.deduceTypeWithRetries(env, decl, typeSystem);
     typeResolver.validations.forEach(v -> v.accept(resolved));
@@ -783,14 +791,9 @@ public class TypeResolver {
 
       case ORDER:
         final Ast.Order order = (Ast.Order) step;
-        final List<Ast.OrderItem> orderItems = new ArrayList<>();
-        for (Ast.OrderItem orderItem : order.orderItems) {
-          orderItems.add(
-              orderItem.copy(
-                  deduceType(p.env, orderItem.exp, unifier.variable()),
-                  orderItem.direction));
-        }
-        fromSteps.add(order.copy(orderItems));
+        validateOrder(order);
+        final Ast.Exp exp = deduceType(p.env, order.exp, unifier.variable());
+        fromSteps.add(order.copy(exp));
         return Triple.of(p.env, p.v, toVariable(listTerm(p.v)));
 
       case UNORDER:
@@ -1034,6 +1037,29 @@ public class TypeResolver {
       throw new RuntimeException(
           "Duplicate field name '" + names.get(duplicate) + "' in group");
     }
+  }
+
+  /**
+   * Validates an {@code Order}. Warns if asked so sort on a record expression
+   * where the fields are not in alphabetical order.
+   */
+  private void validateOrder(Ast.Order order) {
+    order.exp.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Ast.Record record) {
+            final List<Pos> positions =
+                transformEager(record.args.values(), e -> e.pos);
+            if (!Ordering.from(Pos::compare).isOrdered(positions)) {
+              String message =
+                  "Sorting on a record whose fields are not in alphabetical "
+                      + "order. Sort order may not be what you expect.";
+              warningConsumer.accept(
+                  new CompileException(message, true, record.pos));
+            }
+            super.visit(record);
+          }
+        });
   }
 
   private Variable fieldVar(PairList<Ast.Id, Variable> fieldVars) {

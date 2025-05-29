@@ -33,8 +33,13 @@ Keywords={
         "with", "withtype", "o", "true", "false", "", "Bool", "String", "Int", "Real",
         "Word", "Char", "StringCvt", "Word8", "List", "ListPair", "Vector", "TextIO",
         "BinIO", "div", "mod",
-        "compute", "desc", "elem", "except", "exists", "from", "group", "intersect",
-        "notelem", "notExists", "order", "union", "yield"},
+        -- query
+        "from", "exists", "forall",
+        -- step
+        "compute", "distinct", "except", "exists", "group", "intersect",
+        "order", "unorder", "union", "yield",
+        -- operator
+        "current", "elem", "implies", "notelem", "ordinal"},
   },
   { Id=2,
     List={"bool", "string", "int", "real", "word"},

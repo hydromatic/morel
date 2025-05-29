@@ -79,10 +79,10 @@ public abstract class Tracers {
   }
 
   public static Tracer withOnWarnings(
-      Tracer tracer, Consumer<List<Throwable>> consumer) {
+      Tracer tracer, Consumer<List<? extends Throwable>> consumer) {
     return new DelegatingTracer(tracer) {
       @Override
-      public void onWarnings(List<Throwable> warningList) {
+      public void onWarnings(List<? extends Throwable> warningList) {
         consumer.accept(warningList);
         super.onWarnings(warningList);
       }
@@ -139,7 +139,7 @@ public abstract class Tracers {
     public void onResult(Object o) {}
 
     @Override
-    public void onWarnings(List<Throwable> warningList) {}
+    public void onWarnings(List<? extends Throwable> warningList) {}
 
     @Override
     public boolean onTypeException(TypeResolver.TypeException e) {
@@ -181,7 +181,7 @@ public abstract class Tracers {
     }
 
     @Override
-    public void onWarnings(List<Throwable> warningList) {
+    public void onWarnings(List<? extends Throwable> warningList) {
       tracer.onWarnings(warningList);
     }
 

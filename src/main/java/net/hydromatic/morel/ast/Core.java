@@ -1814,11 +1814,11 @@ public class Core {
 
   /** An {@code order} clause in a {@code from} expression. */
   public static class Order extends FromStep {
-    public final ImmutableList<OrderItem> orderItems;
+    public final Exp exp;
 
-    Order(Core.StepEnv env, ImmutableList<OrderItem> orderItems) {
+    Order(Core.StepEnv env, Exp exp) {
       super(Op.ORDER, env);
-      this.orderItems = requireNonNull(orderItems);
+      this.exp = requireNonNull(exp);
     }
 
     /**
@@ -1846,47 +1846,13 @@ public class Core {
     @Override
     protected AstWriter unparse(
         AstWriter w, From from, int ordinal, int left, int right) {
-      return w.append(" order ").appendAll(orderItems, ", ");
+      return w.append(" order ").append(exp, 0, right);
     }
 
-    public Order copy(Core.StepEnv env, List<OrderItem> orderItems) {
-      return env.equals(this.env) && orderItems.equals(this.orderItems)
+    public Order copy(Core.StepEnv env, Core.Exp exp) {
+      return env.equals(this.env) && exp.equals(this.exp)
           ? this
-          : core.order(env, orderItems);
-    }
-  }
-
-  /** An item in an {@code order} clause. */
-  public static class OrderItem extends BaseNode {
-    public final Exp exp;
-    public final Ast.Direction direction;
-
-    OrderItem(Exp exp, Ast.Direction direction) {
-      super(Pos.ZERO, Op.ORDER_ITEM);
-      this.exp = requireNonNull(exp);
-      this.direction = requireNonNull(direction);
-    }
-
-    @Override
-    public AstNode accept(Shuttle shuttle) {
-      return shuttle.visit(this);
-    }
-
-    @Override
-    public void accept(Visitor visitor) {
-      visitor.visit(this);
-    }
-
-    @Override
-    AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append(exp, 0, 0)
-          .append(direction == Ast.Direction.DESC ? " desc" : "");
-    }
-
-    public OrderItem copy(Exp exp, Ast.Direction direction) {
-      return exp == this.exp && direction == this.direction
-          ? this
-          : core.orderItem(exp, direction);
+          : core.order(env, exp);
     }
   }
 

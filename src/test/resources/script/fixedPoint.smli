@@ -401,7 +401,7 @@ fun shortest_path edges =
           sp (paths3, vs)
         end
   in
-    from p in sp (edges0, vertices) order p.source, p.target
+    from p in sp (edges0, vertices) order (p.source, p.target)
   end;
 > val shortest_path = fn
 >   : {source:'a, target:'a, weight:int} list

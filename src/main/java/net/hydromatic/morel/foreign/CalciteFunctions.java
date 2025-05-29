@@ -24,9 +24,11 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.Compiler;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
@@ -276,8 +278,9 @@ public class CalciteFunctions {
           throw new RuntimeException("Error while parsing\n" + ml, pe);
         }
         final Ast.ValDecl valDecl = Compiles.toValDecl(exp);
+        final Consumer<CompileException> ignoreWarnings = w -> {};
         final TypeResolver.Resolved resolved =
-            TypeResolver.deduceType(env, valDecl, typeSystem);
+            TypeResolver.deduceType(env, valDecl, typeSystem, ignoreWarnings);
         final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
         final Core.NonRecValDecl valDecl3 =
             (Core.NonRecValDecl)
@@ -351,8 +354,9 @@ public class CalciteFunctions {
           throw new RuntimeException(pe);
         }
         final Ast.ValDecl valDecl = Compiles.toValDecl(exp);
+        final Consumer<CompileException> ignoreWarnings = w -> {};
         final TypeResolver.Resolved resolved =
-            TypeResolver.deduceType(env, valDecl, typeSystem);
+            TypeResolver.deduceType(env, valDecl, typeSystem, ignoreWarnings);
         final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
         final Core.NonRecValDecl valDecl3 =
             (Core.NonRecValDecl)

@@ -109,8 +109,7 @@ The formal syntax of queries is as follows.
     | <b>intersect</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>i</sub></i>
                                 intersect step (<i>i</i> &ge; 1)
     | <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>  join step (<i>s</i> &ge; 1)
-    | <b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>
-                                order step (<i>o</i> &ge; 1)
+    | <b>order</b> <i>exp</i>                 order step
     | <b>skip</b> <i>exp</i>                  skip step
     | <b>take</b> <i>exp</i>                  take step
     | <b>through</b> <i>pat</i> <b>in</b> <i>exp</i>        through step
@@ -125,8 +124,6 @@ The formal syntax of queries is as follows.
 <i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>
 
 <i>agg</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i> [ <b>of</b> <i>exp</i> ]
-
-<i>orderItem</i> &rarr; <i>exp</i> [ <b>desc</b> ]
 </pre>
 
 A query is a `from`, `exists` or `forall` keyword followed by one or
@@ -479,7 +476,7 @@ row, starting at 0.
 <pre>
 (* Print the top 5 employees by salary, and their rank. *)
 <b>from</b> e <b>in</b> scott.emps
-  <b>order</b> e.sal <b>desc</b>
+  <b>order</b> <b>DESC</b> e.sal
   <b>take</b> 5
   <b>yield</b> {e.ename, e.sal, rank = <b>ordinal</b> + 1};
 <i>
@@ -513,7 +510,7 @@ whose input is ordered.
 | [`group`](#group-step)         | Performs aggregation across groups of rows.                                                                           |
 | [`intersect`](#intersect-step) | Returns the set (or multiset) intersection between the current collection and one or more argument collections.       |
 | [`join`](#join-step)           | Joins one or more scans to the current collection.                                                                    |
-| [`order`](#order-step)         | Sorts the current collection by a list of expressions.                                                                |
+| [`order`](#order-step)         | Sorts the current collection by an expression.                                                               |
 | [`skip`](#skip-step)           | Skips a given number of rows from the current collection.                                                             |
 | [`take`](#take-step)           | Limits the number of rows to return from the current collection.                                                      |
 | [`through`](#through-step)     | Calls a table function, with the current collection as an argument, and starts a scan over the collection it returns. |
@@ -791,19 +788,53 @@ val it : {dname:string, ename:string} list</i>
 ### Order step
 
 <pre>
-<b>order</b> <i>orderItem<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>orderItem<sub>o</sub></i>   (<i>o</i> &ge; 1)
-
-<i>orderItem</i> &rarr; <i>exp</i> [ <b>desc</b> ]
+<b>order</b> <i>exp</i>
 </pre>
 
 #### Description
 
-Sorts the current collection by a list of expressions.
+Sorts the current collection by an expression.
 
-Each expression in <code><i>orderItem</i></code> specifies a sort
-key. By default, rows are ordered in ascending order of each
-expression; if `desc` is specified, that expression is sorted in
-descending order.
+Ordering is determined by the data type, and is defined not just for
+scalar expressions like `int` and `string`, but structured types like
+tuples, records, lists, and sum types. The rules are as follows:
+
+* Primitive types
+  * `bool` orders `false` < `true`;
+  * `char` orders as defined by `Char.compare`;
+  * `int` orders as defined by `Int.compare`;
+  * `real` orders as defined by `Real.compare`;
+  * `string` orders as defined by `String.compare`;
+  * `unit` has only value, `()`, which compares equal to itself.
+* Lists are ordered lexicographically,
+  e.g. `[]` < `[3]` < `[3, 1]` < `[3, 2]` < `[4]`.
+* Tuples are ordered lexicographically on fields left-to-right,
+  e.g. `(1, "b")` < `(1, "c")` < `(2, "a")`.
+* Records are ordered lexicographically on fields in alphabetical order,
+  e.g. `{x=1, y="b"}` < `{x=1, y="c"}` < `{x=2, y="a"}`.
+* Sum types are ordered by the label in declaration order, then by
+  values. For example, a sum type `foo` declared as
+  <pre>datatype foo =
+      EMPTY
+    | SINGLE of int
+    | PAIR of int * string</pre>
+  orders `EMPTY` < `SINGLE 1` < `SINGLE 2` < `PAIR (1, "b")` < `PAIR (2, "a")`.
+* `Option` is declared as a sum type
+  <pre>datatype 'a Option =
+      NONE
+    | SOME of 'a</pre>
+  and follows the usual rules for sum types,
+  therefore `NONE` < `SOME 1` < `SOME 2`.
+  (Since `NONE` is Morel's equivalent of SQL's null value,
+  this ordering corresponds to SQL `NULLS FIRST`.)
+* `Descending` is declared as a sum type
+  <pre>datatype 'a Descending = DESC of 'a</pre>
+  but has special ordering semantics, reversing the value's order.
+  Thus `DESC 3` < `DESC 2` < `DESC 1`.
+
+Common sort specifications can be achieved using tuple types and/or
+`DESC`. For example, the equivalent of SQL `ORDER BY e.job, e.sal DESC`
+is `order (e.job, DESC e.sal)`.
 
 The output fields are the same as the input fields.
 
@@ -819,7 +850,7 @@ secondary sort key.)
 <i>(* List employees ordered by salary (descending) then
    name. *)</i>
 <b>from</b> e <b>in</b> scott.emps
-  <b>order</b> e.sal <b>desc</b>, e.ename
+  <b>order</b> (<b>DESC</b> e.sal, e.ename)
   <b>yield</b> {e.ename, e.job, e.sal};
 <i>
 ename  job       sal
@@ -840,6 +871,41 @@ JAMES  CLERK      950.0
 SMITH  CLERK      800.0
 
 val it : {ename:string, job:string, sal:real} list</i>
+</pre>
+
+If you sort by a record whose fields do not appear in alphabetical
+order, Morel gives a warning.
+
+<pre><i>(* Record expressions are sorted lexicographically on field
+   name, that is, by job then by salary. Morel gives a
+   warning, in case you were expecting to sort on salary
+   first. *)</i>
+<b>from</b> e <b>in</b> scott.emps
+  <b>order</b> {e.sal, e.job}
+  <b>yield</b> {e.ename, e.job, e.sal};
+<i>
+ename  job       sal
+------ --------- ------
+SCOTT  ANALYST   3000.0
+FORD   ANALYST   3000.0
+SMITH  CLERK     800.0
+JAMES  CLERK     950.0
+ADAMS  CLERK     1100.0
+MILLER CLERK     1300.0
+CLARK  MANAGER   2450.0
+BLAKE  MANAGER   2850.0
+JONES  MANAGER   2975.0
+KING   PRESIDENT 5000.0
+WARD   SALESMAN  1250.0
+MARTIN SALESMAN  1250.0
+TURNER SALESMAN  1500.0
+ALLEN  SALESMAN  1600.0
+
+val it : {ename:string, job:string, sal:real} list
+
+Warning: Sorting on a record whose fields are not in
+alphabetical order. Sort order may not be what you expect.
+  raised at: stdIn:2.9-2.23</i>
 </pre>
 
 ### Skip step
@@ -1071,7 +1137,7 @@ if that is more efficient.
 <i>(* Find the top 3 employees by salary, as an unordered
    collection. *)</i>
 <b>from</b> e <b>in</b> scott.emps
-  <b>order</b> e.sal <b>desc</b>
+  <b>order</b> <b>DESC</b> e.sal
   <b>take</b> 3
   <b>unorder</b>
   <b>yield</b> {e.ename, e.job, e.sal};

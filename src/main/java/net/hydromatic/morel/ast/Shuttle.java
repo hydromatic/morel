@@ -256,11 +256,7 @@ public class Shuttle {
   }
 
   protected AstNode visit(Ast.Order order) {
-    return ast.order(order.pos, order.orderItems);
-  }
-
-  protected AstNode visit(Ast.OrderItem orderItem) {
-    return ast.orderItem(orderItem.pos, orderItem.exp, orderItem.direction);
+    return ast.order(order.pos, order.exp);
   }
 
   protected Ast.Scan visit(Ast.Scan scan) {
@@ -514,11 +510,7 @@ public class Shuttle {
   }
 
   protected Core.Order visit(Core.Order order) {
-    return order.copy(order.env, visitList(order.orderItems));
-  }
-
-  protected Core.OrderItem visit(Core.OrderItem orderItem) {
-    return orderItem.copy(orderItem.exp.accept(this), orderItem.direction);
+    return order.copy(order.env, order.exp.accept(this));
   }
 
   protected Core.Yield visit(Core.Yield yield) {
