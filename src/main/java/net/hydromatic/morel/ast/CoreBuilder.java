@@ -204,6 +204,16 @@ public enum CoreBuilder {
     return new Core.Id(idPat);
   }
 
+  /** Creates a reference to a constructor. */
+  public Core.Id constructor(
+      TypeSystem typeSystem, BuiltIn.Constructor constructor) {
+    Type type = typeSystem.lookup(constructor.datatype);
+    DataType dataType = (DataType) typeSystem.unqualified(type);
+    Type x = dataType.typeConstructors(typeSystem).get(constructor.constructor);
+    Core.IdPat idPat = idPat(x, constructor.constructor, 0);
+    return new Core.Id(idPat);
+  }
+
   public Core.RecordSelector recordSelector(
       TypeSystem typeSystem, RecordLikeType recordType, String fieldName) {
     final @Nullable TypedValue typedValue = recordType.asTypedValue();

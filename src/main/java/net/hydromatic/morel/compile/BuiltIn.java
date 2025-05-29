@@ -3223,23 +3223,23 @@ public enum BuiltIn {
       tyVars.add(ts.typeVariable(i));
     }
     final SortedMap<String, Type.Key> tyCons = new TreeMap<>();
-    builtInType
-        .transform()
-        .apply(
-            new DataTypeHelper() {
-              public DataTypeHelper tyCon(String name, Type.Key typeKey) {
-                tyCons.put(name, typeKey);
-                return this;
-              }
+    UnaryOperator<DataTypeHelper> transform =
+        builtInType instanceof Datatype
+            ? ((Datatype) builtInType).transform
+            : UnaryOperator.identity();
+    transform.apply(
+        new DataTypeHelper() {
+          @Override
+          public DataTypeHelper tyCon(Constructor constructor) {
+            Type.Key typeKey = constructor.typeFunction.apply(this);
+            tyCons.put(constructor.constructor, typeKey);
+            return this;
+          }
 
-              public DataTypeHelper tyCon(String name) {
-                return tyCon(name, Keys.dummy());
-              }
-
-              public Type.Key get(int i) {
-                return tyVars.get(i).key();
-              }
-            });
+          public Type.Key get(int i) {
+            return tyVars.get(i).key();
+          }
+        });
     final Type type = ts.dataTypeScheme(builtInType.mlName(), tyVars, tyCons);
     final DataType dataType =
         (DataType) (type instanceof DataType ? type : ((ForallType) type).type);
@@ -3276,9 +3276,7 @@ public enum BuiltIn {
 
   /** Callback used when defining a datatype. */
   private interface DataTypeHelper {
-    DataTypeHelper tyCon(String name);
-
-    DataTypeHelper tyCon(String name, Type.Key typeKey);
+    DataTypeHelper tyCon(Constructor constructor);
 
     Type.Key get(int i);
   }
@@ -3335,21 +3333,36 @@ public enum BuiltIn {
         "order",
         false,
         0,
-        h -> h.tyCon("LESS").tyCon("EQUAL").tyCon("GREATER")),
+        h ->
+            h.tyCon(Constructor.ORDER_LESS)
+                .tyCon(Constructor.ORDER_EQUAL)
+                .tyCon(Constructor.ORDER_GREATER)),
 
-    OPTION("option", false, 1, h -> h.tyCon("NONE").tyCon("SOME", h.get(0))),
+    OPTION(
+        "option",
+        false,
+        1,
+        h -> h.tyCon(Constructor.OPTION_NONE).tyCon(Constructor.OPTION_SOME)),
 
     /**
      * Analog of {@code list} for checking that matches are exhaustive. Owns the
      * {@code NIL} and {@code CONS} type constructors.
      */
-    PSEUDO_LIST("$list", true, 1, h -> h.tyCon("NIL").tyCon("CONS", h.get(0))),
+    PSEUDO_LIST(
+        "$list",
+        true,
+        1,
+        h -> h.tyCon(Constructor.LIST_NIL).tyCon(Constructor.LIST_CONS)),
 
     /**
      * Analog of {@code bool} for checking that matches are exhaustive. Owns the
      * {@code FALSE} and {@code TRUE} type constructors.
      */
-    PSEUDO_BOOL("$bool", true, 0, h -> h.tyCon("FALSE").tyCon("TRUE")),
+    PSEUDO_BOOL(
+        "$bool",
+        true,
+        0,
+        h -> h.tyCon(Constructor.BOOL_FALSE).tyCon(Constructor.BOOL_TRUE)),
 
     /**
      * The type of the value created by an {@code over} declaration.
@@ -3418,6 +3431,36 @@ public enum BuiltIn {
     @Override
     public int varCount() {
       return varCount;
+    }
+  }
+
+  /** Built-in constructor of a datatype. */
+  public enum Constructor {
+    BOOL_FALSE(Datatype.PSEUDO_BOOL, "FALSE"),
+    BOOL_TRUE(Datatype.PSEUDO_BOOL, "TRUE"),
+    LIST_NIL(Datatype.PSEUDO_LIST, "NIL"),
+    LIST_CONS(Datatype.PSEUDO_LIST, "CONS", h -> h.get(0)),
+    OPTION_SOME(Datatype.OPTION, "SOME", h -> h.get(0)),
+    OPTION_NONE(Datatype.OPTION, "NONE"),
+    ORDER_LESS(Datatype.ORDER, "LESS"),
+    ORDER_EQUAL(Datatype.ORDER, "EQUAL"),
+    ORDER_GREATER(Datatype.ORDER, "GREATER");
+
+    public final Datatype datatype;
+    public final String constructor;
+    final Function<DataTypeHelper, Type.Key> typeFunction;
+
+    Constructor(Datatype datatype, String constructor) {
+      this(datatype, constructor, h -> Keys.dummy());
+    }
+
+    Constructor(
+        Datatype datatype,
+        String constructor,
+        Function<DataTypeHelper, Type.Key> typeFunction) {
+      this.datatype = datatype;
+      this.constructor = constructor;
+      this.typeFunction = typeFunction;
     }
   }
 }

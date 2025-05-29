@@ -657,6 +657,14 @@ public class Core {
     public boolean isCallTo(BuiltIn builtIn) {
       return false;
     }
+
+    /**
+     * Returns whether this expression is a call to the given constructor of a
+     * built-in datatype.
+     */
+    public boolean isCallTo(BuiltIn.Constructor constructor) {
+      return false;
+    }
   }
 
   /**
@@ -2066,6 +2074,12 @@ public class Core {
     public boolean isCallTo(BuiltIn builtIn) {
       return fn.op == Op.FN_LITERAL
           && ((Literal) fn).unwrap(BuiltIn.class) == builtIn;
+    }
+
+    @Override
+    public boolean isCallTo(BuiltIn.Constructor constructor) {
+      return fn instanceof Id
+          && ((Id) fn).idPat.name.equals(constructor.constructor);
     }
   }
 

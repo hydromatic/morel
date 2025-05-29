@@ -539,7 +539,7 @@ public class TypeSystem {
     return (TypeVar) typeFor(Keys.ordinal(ordinal));
   }
 
-  /** Creates an "order" type. */
+  /** Returns the "order" built-in data type. */
   public Type order() {
     return lookup(BuiltIn.Datatype.ORDER);
   }

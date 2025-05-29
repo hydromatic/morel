@@ -95,7 +95,7 @@ public abstract class Codes {
   }
 
   /**
-   * Value of {@code NONE}.
+   * Value of {@link BuiltIn.Constructor#OPTION_NONE}.
    *
    * @see #optionSome(Object)
    */
@@ -2322,10 +2322,11 @@ public abstract class Codes {
   /**
    * Creates a value of {@code SOME v}.
    *
+   * @see net.hydromatic.morel.compile.BuiltIn.Constructor#OPTION_SOME
    * @see #OPTION_NONE
    */
   private static List optionSome(Object o) {
-    return ImmutableList.of("SOME", o);
+    return ImmutableList.of(BuiltIn.Constructor.OPTION_SOME.constructor, o);
   }
 
   /** @see BuiltIn#OPTION_MAP_PARTIAL */
@@ -3132,9 +3133,17 @@ public abstract class Codes {
     return ORDER_EQUAL;
   }
 
-  private static final List ORDER_LESS = ImmutableList.of("LESS");
-  private static final List ORDER_EQUAL = ImmutableList.of("EQUAL");
-  private static final List ORDER_GREATER = ImmutableList.of("GREATER");
+  /** @see BuiltIn.Constructor#ORDER_LESS */
+  private static final List ORDER_LESS =
+      ImmutableList.of(BuiltIn.Constructor.ORDER_LESS.constructor);
+
+  /** @see BuiltIn.Constructor#ORDER_EQUAL */
+  private static final List ORDER_EQUAL =
+      ImmutableList.of(BuiltIn.Constructor.ORDER_EQUAL.constructor);
+
+  /** @see BuiltIn.Constructor#ORDER_GREATER */
+  private static final List ORDER_GREATER =
+      ImmutableList.of(BuiltIn.Constructor.ORDER_GREATER.constructor);
 
   /** @see BuiltIn#VECTOR_MAX_LEN */
   private static final int VECTOR_MAX_LEN = (1 << 24) - 1;

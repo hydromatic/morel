@@ -122,9 +122,12 @@ class PatternCoverageChecker {
         final DataType boolDataType =
             (DataType) typeSystem.lookup(BuiltIn.Datatype.PSEUDO_BOOL);
         final Core.LiteralPat literalPat0 = (Core.LiteralPat) pat;
-        final Boolean value = (Boolean) literalPat0.value;
-        toTerm(
-            core.con0Pat(boolDataType, value ? "TRUE" : "FALSE"), path, terms);
+        final BuiltIn.Constructor constructor =
+            (Boolean) literalPat0.value
+                ? BuiltIn.Constructor.BOOL_TRUE
+                : BuiltIn.Constructor.BOOL_FALSE;
+        Core.Con0Pat pat0 = core.con0Pat(boolDataType, constructor.constructor);
+        toTerm(pat0, path, terms);
         return;
 
       case CHAR_LITERAL_PAT:
@@ -204,11 +207,12 @@ class PatternCoverageChecker {
   private Core.Pat listToConsRecurse(
       DataType listDataType, List<Core.Pat> args) {
     if (args.isEmpty()) {
-      return core.con0Pat(listDataType, "NIL");
+      return core.con0Pat(
+          listDataType, BuiltIn.Constructor.LIST_NIL.constructor);
     } else {
       return core.consPat(
           listDataType,
-          "CONS",
+          BuiltIn.Constructor.LIST_CONS.constructor,
           core.tuplePat(
               typeSystem,
               ImmutableList.of(

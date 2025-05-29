@@ -34,6 +34,7 @@ import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.FromBuilder;
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -46,10 +47,12 @@ import org.junit.jupiter.api.Test;
 public class FromBuilderTest {
   private static class Fixture {
     final TypeSystem typeSystem = new TypeSystem();
+    final List<Binding> bindings = new ArrayList<>();
 
     {
-      // Register 'bag'
-      BuiltIn.dataTypes(typeSystem, new ArrayList<>());
+      // Register 'bag'; keep only the 'DESC' binding.
+      BuiltIn.dataTypes(typeSystem, bindings);
+      bindings.removeIf(b -> !b.id.name.equals("DESC"));
     }
 
     final PrimitiveType intType = PrimitiveType.INT;
@@ -84,7 +87,8 @@ public class FromBuilderTest {
     }
 
     FromBuilder fromBuilder() {
-      return core.fromBuilder(typeSystem, Environments.empty());
+      Environment env = Environments.empty().bindAll(bindings);
+      return core.fromBuilder(typeSystem, env);
     }
   }
 

@@ -272,7 +272,7 @@ public class Resolver {
   }
 
   private static ResolvedDecl resolveOverDecl(
-      Ast.OverDecl decl, List<Binding> bindings) {
+      Ast.OverDecl ignoredDecl, List<Binding> ignoredBindings) {
     return new ResolvedDecl() {
       @Override
       Core.Exp toExp(Core.Exp resultExp) {
@@ -475,7 +475,7 @@ public class Resolver {
     return core.id(idPat);
   }
 
-  private Core.Exp toCore(Ast.Current current) {
+  private Core.Exp toCore(Ast.Current ignoredCurrent) {
     return requireNonNull(this.current);
   }
 
