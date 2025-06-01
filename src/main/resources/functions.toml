@@ -2545,6 +2545,30 @@ sum of e.id`.
 # === String structure ===============================================
 
 [[functions]]
+ordinal = 194
+structure = "String"
+name = "collate"
+specified = "basis"
+type = "(char * char -> order) → string * string → order"
+description = """
+"collate (f, (s, t))" performs lexicographic comparison of the two
+strings using the given ordering f on characters.
+"""
+
+[[functions]]
+ordinal = 195
+structure = "String"
+name = "compare"
+specified = "basis"
+type = "string * string → order"
+description = """
+"compare (s, t)" does a lexicographic comparison of the two strings
+using the ordering `Char.compare` on the characters. It returns
+`LESS`, `EQUAL`, or `GREATER`, if `s` is less than, equal to, or
+greater than `t`, respectively.
+"""
+
+[[functions]]
 ordinal = 197
 structure = "String"
 name = "concat"
@@ -2593,6 +2617,91 @@ character to the end of the string, i.e., the string
 index `i`, i.e., the string `s`[`i`..`i`+`j`-1]. Raises `Subscript` if
 `i` < 0 or `j` < 0 or |`s`| < `i` + `j`. Note that, if defined,
 `extract` returns the empty string when `i` = |`s`|.
+"""
+
+[[functions]]
+structure = "String"
+name = "fields"
+specified = "basis"
+type = "(char → bool) → string → string list"
+description = """
+"fields f s" returns a list of fields derived from `s` from left to
+right. A field is a (possibly empty) maximal substring of `s` not
+containing any delimiter. A delimiter is a character satisfying the
+predicate `f`.
+
+Two tokens may be separated by more than one delimiter, whereas
+two fields are separated by exactly one delimiter. For example, if
+the only delimiter is the character `#"|"`, then the string
+`"|abc||def"` contains two tokens `"abc"` and `"def"`, whereas it
+contains the four fields `""`, `"abc"`, `""` and `"def"`.
+"""
+
+[[functions]]
+ordinal = 214
+structure = "String"
+name = "fromCString"
+specified = "basis"
+type = "string → string option"
+implemented = false
+description = """
+"fromCString s" scans the string `s` as a string in the C language,
+converting C escape sequences into the appropriate characters. The
+semantics are identical to `fromString` above, except that C escape
+sequences are used (see ISO C standard ISO/IEC 9899:1990).
+
+For more information on the allowed escape sequences, see the entry
+for `CHAR.fromCString`. Note that `fromCString` accepts an unescaped
+single quote character, but does not accept an unescaped double
+quote character.
+"""
+
+[[functions]]
+ordinal = 216
+structure = "String"
+name = "fromString"
+specified = "basis"
+type = "string → string option"
+implemented = false
+description = """
+"fromString s" scans the string `s` as a sequence of printable
+characters, converting SML escape sequences into the appropriate
+characters. It does not skip leading whitespace. It returns as many
+characters as can successfully be scanned, stopping when it reaches
+the end of the string or a non-printing character (i.e., one not
+satisfying `isPrint`), or if it encounters an improper escape
+sequence. It ignores the remaining characters.
+
+If no conversion is possible, e.g., if the first character is
+non-printable or begins an illegal escape sequence, `NONE` is
+returned. Note, however, that `fromString ""` returns `SOME("")`.
+
+For more information on the allowed escape sequences, see the entry
+for `CHAR.fromString`. SML source also allows escaped formatting
+sequences, which are ignored during conversion. The rule is that if
+any prefix of the input is successfully scanned, including an escaped
+formatting sequence, the function returns some string. It only
+returns `NONE` in the case where the prefix of the input cannot be
+scanned at all. Here are some sample conversions:
+
+<pre>
+Input string s fromString s
+============== ============
+"\\\\q"          NONE
+"a\\^D"         SOME "a"
+"a\\\\ \\\\\\\\q" SOME "a"
+"\\\\ \\\\"      SOME ""
+""             SOME ""
+"\\\\ \\\\\\^D"     SOME ""
+"\\\\ a"         NONE
+</pre>
+
+*Implementation note*: Because of the special cases, such as
+`fromString ""` = `SOME ""`,
+`fromString "\\\\ \\\\\\^D"` = `SOME ""`, and
+`fromString "\\^D" = NONE`,
+the function cannot be implemented as a simple iterative application
+of `CHAR.scan`.
 """
 
 [[functions]]
@@ -2666,6 +2775,35 @@ The longest allowed size of a string.
 """
 
 [[functions]]
+ordinal = 196
+structure = "String"
+name = "op ^"
+specified = "basis"
+type = "string * string → string"
+description = """
+"s ^ t" is the concatenation of the strings `s` and `t`. This raises
+`Size` if `|s| + |t| > maxSize`.
+"""
+
+[[functions]]
+ordinal = 215
+structure = "String"
+name = "scan"
+specified = "basis"
+type = "(char,α) StringCvt.reader → (string,α) StringCvt.reader"
+implemented = false
+description = """
+"scan getc strm" scans its character source as a sequence of printable
+characters, converting SML escape sequences into the appropriate
+characters. It does not skip leading whitespace. It returns as many
+characters as can successfully be scanned, stopping when it reaches
+the end of the string or a non-printing character (i.e., one not
+satisfying `isPrint`), or if it encounters an improper escape
+sequence. It returns the remaining characters as the rest of the
+stream.
+"""
+
+[[functions]]
 ordinal = 207
 structure = "String"
 name = "size"
@@ -2706,6 +2844,53 @@ description = """
 "substring (s, i, j)" returns the substring `s`[`i`..`i`+`j`-1], i.e.,
 the substring of size `j` starting at index `i`. This is equivalent to
 `extract(s, i, SOME j)`.
+"""
+
+[[functions]]
+ordinal = 217
+structure = "String"
+name = "toCString"
+specified = "basis"
+type = "string → string"
+implemented = false
+description = """
+"toCString s" returns a string corresponding to `s`, with non-printable
+characters replaced by C escape sequences. This is equivalent to
+
+<pre>translate Char.toCString s</pre>
+"""
+
+[[functions]]
+ordinal = 214
+structure = "String"
+name = "toString"
+specified = "basis"
+type = "string → string"
+implemented = false
+description = """
+"toString s" returns a string corresponding to `s`, with non-printable
+characters replaced by SML escape sequences. This is equivalent to
+
+<pre>translate Char.toString s</pre>
+"""
+
+[[functions]]
+ordinal = 216
+structure = "String"
+name = "tokens"
+specified = "basis"
+type = "(char → bool) → string → string list"
+description = """
+"tokens f s" returns a list of tokens derived from `s` from left to
+right. A token is a non-empty maximal substring of `s` not containing
+any delimiter. A delimiter is a character satisfying the predicate
+`f`.
+
+Two tokens may be separated by more than one delimiter, whereas
+two fields are separated by exactly one delimiter. For example, if
+the only delimiter is the character `#"|"`, then the string
+`"|abc||def"` contains two tokens `"abc"` and `"def"`, whereas it
+contains the four fields `""`, `"abc"`, `""` and `"def"`.
 """
 
 [[functions]]

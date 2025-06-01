@@ -186,10 +186,10 @@ public class Generation {
         String extra,
         boolean implemented,
         int ordinal) {
-      this.structure = requireNonNull(structure);
-      this.name = requireNonNull(name);
-      this.type = requireNonNull(type);
-      this.description = requireNonNull(description);
+      this.structure = requireNonNull(structure, "structure");
+      this.name = requireNonNull(name, "name");
+      this.type = requireNonNull(type, "type");
+      this.description = requireNonNull(description, "description");
       this.extra = extra;
       this.implemented = implemented;
       this.ordinal = ordinal;

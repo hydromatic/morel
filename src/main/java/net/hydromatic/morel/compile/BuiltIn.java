@@ -714,6 +714,26 @@ public enum BuiltIn {
    */
   STRING_MAX_SIZE("String", "maxSize", ts -> INT),
 
+  /** Operator "String.op ^", of type "string * string &rarr; string". */
+  STRING_OP_CARET(
+      "String", "op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
+
+  /** Operator "String.op &lt;", of type "string * string &rarr; bool". */
+  STRING_OP_LT(
+      "String", "op <", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
+  /** Operator "String.op &lt;=", of type "string * string &rarr; bool". */
+  STRING_OP_LE(
+      "String", "op <=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
+  /** Operator "String.op &gt;", of type "string * string &rarr; bool". */
+  STRING_OP_GT(
+      "String", "op >", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
+  /** Operator "String.op &gt;=", of type "string * string &rarr; bool". */
+  STRING_OP_GE(
+      "String", "op >=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
   /**
    * Function "String.size", of type "string &rarr; int".
    *
@@ -729,6 +749,25 @@ public enum BuiltIn {
    * or |s| &le; i.
    */
   STRING_SUB("String", "sub", ts -> ts.fnType(ts.tupleType(STRING, INT), CHAR)),
+
+  /** Function "String.compare", of type "string * string &rarr; order". */
+  STRING_COMPARE(
+      "String",
+      "compare",
+      ts -> ts.fnType(ts.tupleType(STRING, STRING), ts.order())),
+
+  /**
+   * Function "String.collate", of type "(char * char &rarr; order) &rarr;
+   * string * string &rarr; order".
+   */
+  STRING_COLLATE(
+      "String",
+      "collate",
+      ts ->
+          ts.fnType(
+              ts.fnType(ts.tupleType(CHAR, CHAR), ts.order()),
+              ts.tupleType(STRING, STRING),
+              ts.order())),
 
   /**
    * Function "String.extract", of type "string * int * int option &rarr;
@@ -750,6 +789,26 @@ public enum BuiltIn {
       "String",
       "extract",
       ts -> ts.fnType(ts.tupleType(STRING, INT, ts.option(INT)), STRING)),
+
+  /**
+   * Function "String.fields", of type "(char &rarr; bool) &rarr; string &rarr;
+   * string list".
+   */
+  STRING_FIELDS(
+      "String",
+      "fields",
+      "fields",
+      ts -> ts.fnType(ts.fnType(CHAR, BOOL), STRING, ts.listType(STRING))),
+
+  /**
+   * Function "String.tokens", of type "(char &rarr; bool) &rarr; string &rarr;
+   * string list".
+   */
+  STRING_TOKENS(
+      "String",
+      "tokens",
+      "tokens",
+      ts -> ts.fnType(ts.fnType(CHAR, BOOL), STRING, ts.listType(STRING))),
 
   /**
    * Function "String.substring", of type "string * int * int &rarr; string".
