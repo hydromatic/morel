@@ -77,11 +77,11 @@ License.
 
     <!-- Component and plugin versions, in alphabetical order. -->
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
-    <calcite.version>1.39.0</calcite.version>
+    <calcite.version>1.40.0</calcite.version>
     <!-- We support (and test) Checkstyle as low as 9.3.
          In JDK 8, you must add '-Dcheckstyle.version=9.3' because
          Checkstyle 10 requires JDK 11 or higher. -->
-    <checkstyle.version>10.23.1</checkstyle.version>
+    <checkstyle.version>10.25.0</checkstyle.version>
     <findbugs.version>3.0.2</findbugs.version>
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
@@ -98,7 +98,7 @@ License.
     <javacc.version>7.0.13</javacc.version>
     <jline.version>3.25.0</jline.version>
     <jackson.version>2.19.0</jackson.version>
-    <junit-jupiter.version>5.12.2</junit-jupiter.version>
+    <junit-jupiter.version>5.13.1</junit-jupiter.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
