@@ -162,7 +162,8 @@ public abstract class TestUnsafe {
         "*.smli",
         "*.txt",
         "*.xml",
-        "*.yml");
+        "*.yml",
+        "README");
   }
 
   /**

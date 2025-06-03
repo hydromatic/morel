@@ -23,6 +23,7 @@ import com.google.common.collect.Ordering;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Version of the JDK.
@@ -36,6 +37,9 @@ public class JavaVersion implements Comparable<JavaVersion> {
 
   /** Version of the current JVM. */
   public static final JavaVersion CURRENT;
+
+  /** Morel's current version. */
+  public static final JavaVersion MOREL = JavaVersion.of(0, 6, 0);
 
   static {
     String versionString = System.getProperty("java.version");
@@ -78,6 +82,13 @@ public class JavaVersion implements Comparable<JavaVersion> {
   @Override
   public int compareTo(JavaVersion o) {
     return COMPARATOR.compare(components, o.components);
+  }
+
+  @Override
+  public String toString() {
+    return components.stream()
+        .map(Object::toString)
+        .collect(Collectors.joining("."));
   }
 }
 

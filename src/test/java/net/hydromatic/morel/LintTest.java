@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.core.Is.is;
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 import net.hydromatic.morel.util.Generation;
+import net.hydromatic.morel.util.JavaVersion;
 import org.apache.calcite.util.Puffin;
 import org.apache.calcite.util.Source;
 import org.apache.calcite.util.Sources;
@@ -273,6 +275,73 @@ public class LintTest {
                 .message("<code> and </code> must be on same line", line);
           }
         });
+
+    // README.md must have a line "morel version x.y.z (java version ...)"
+    final String versionString = JavaVersion.MOREL.toString();
+    b.add(
+        line ->
+            filenameIs(line, "README.md") && line.startsWith("morel version "),
+        line -> {
+          line.state().versionCount++;
+          final String version = line.line().split(" ")[2];
+          if (!version.equals(versionString)) {
+            line.state()
+                .message(
+                    format(
+                        "Version '%s' should match '%s'",
+                        version, JavaVersion.MOREL),
+                    line);
+          }
+        });
+
+    // README.md must have a line "<version>x.y.z</version>"
+    final String versionLine = "<version>" + JavaVersion.MOREL + "</version>";
+    b.add(
+        line -> filenameIs(line, "README.md") && line.matches("  <version>.*"),
+        line -> {
+          line.state().versionCount++;
+          final String version = line.line().split(" ")[2];
+          if (!line.line().contains(versionLine)) {
+            line.state()
+                .message(
+                    format(
+                        "Version '%s' should match '%s'",
+                        version, JavaVersion.MOREL),
+                    line);
+          }
+        });
+
+    // README must have a line "Morel release x.y.z"
+    b.add(
+        line -> filenameIs(line, "README") && line.startsWith("Morel release "),
+        line -> {
+          line.state().versionCount++;
+          final String version = line.line().split(" ")[2];
+          if (!version.equals(versionString)) {
+            line.state()
+                .message(
+                    format(
+                        "Version '%s' should match '%s'",
+                        version, JavaVersion.MOREL),
+                    line);
+          }
+        });
+    b.add(
+        line -> line.isLast(),
+        line -> {
+          int expectedVersionCount =
+              filenameIs(line, "README.md")
+                  ? 2
+                  : filenameIs(line, "README") ? 1 : 0;
+          if (expectedVersionCount != line.state().versionCount) {
+            line.state()
+                .message(
+                    format(
+                        "Version should appear %d times but appears %d times",
+                        expectedVersionCount, line.state().versionCount),
+                    line);
+          }
+        });
   }
 
   private static boolean filenameIs(
@@ -473,6 +542,7 @@ public class LintTest {
   /** Internal state of the lint rules, per file. */
   private static class FileState {
     final GlobalState global;
+    int versionCount;
     int starLine;
     int atLine;
     int javadocStartLine;

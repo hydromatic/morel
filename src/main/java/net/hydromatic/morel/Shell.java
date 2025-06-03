@@ -57,6 +57,7 @@ import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MorelException;
 import net.hydromatic.morel.util.Pair;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -212,18 +213,14 @@ public class Shell {
 
   /** Generates a banner to be shown on startup. */
   private String banner() {
-    return "morel version 0.6.0"
-        + " (java version \""
-        + System.getProperty("java.version")
-        + "\", JRE "
-        + System.getProperty("java.vendor.version")
-        + " (build "
-        + System.getProperty("java.vm.version")
-        + "), "
-        + terminal.getName()
-        + ", "
-        + terminal.getType()
-        + ")";
+    return String.format(
+        "morel version %s (java version \"%s\", JRE %s (build %s), %s, %s)",
+        JavaVersion.MOREL,
+        System.getProperty("java.version"),
+        System.getProperty("java.vendor.version"),
+        System.getProperty("java.vm.version"),
+        terminal.getName(),
+        terminal.getType());
   }
 
   public void run() {
