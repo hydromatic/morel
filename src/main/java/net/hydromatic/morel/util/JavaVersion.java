@@ -39,7 +39,7 @@ public class JavaVersion implements Comparable<JavaVersion> {
   public static final JavaVersion CURRENT;
 
   /** Morel's current version. */
-  public static final JavaVersion MOREL = JavaVersion.of(0, 6, 0);
+  public static final JavaVersion MOREL = JavaVersion.of(0, 7, 0);
 
   static {
     String versionString = System.getProperty("java.version");
