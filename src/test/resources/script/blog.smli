@@ -1267,6 +1267,447 @@ from line in lines,
 >    {c=1,word="sat"},{c=2,word="skunk"},{c=3,word="stump"},{c=2,word="stunk"},
 >    {c=3,word="the"},{c=2,word="thunk"}] : {c:int, word:string} list
 
+(*) === More than Query =============================================
+(* Talk "More than Query", at Data Council, 2025/04/23. *)
+Sys.set ("hybrid", false);
+> val it = () : unit
+
+(*) Solving Wordle
+fun mask (guess, answer) =
+  let
+    fun mask2 (m, i, [], answer) = m
+      | mask2 (m, i, letter :: rest, answer) =
+          mask2 ((m * 3
+          + (if String.sub(answer, i) = letter
+               then 2
+             else if String.isSubstring(str letter) answer
+               then 1
+             else 0)), i + 1, rest, answer)
+  in
+    mask2 (0, 0, explode guess, answer)
+  end;
+> val mask = fn : string * string -> int
+fun maskToString m =
+  let
+    fun maskToString2 (m, s, 0) = s
+      | maskToString2 (m, s, k) =
+        maskToString2 (m div 3,
+          List.nth(["b", "y", "g"], m mod 3) ^ s,
+          k - 1)
+  in
+    maskToString2 (m, "", 5)
+  end;
+> val maskToString = fn : int -> string
+
+val words = from w in file.data.wordle.words yield w.word;
+> val words =
+>   ["aahed","aalii","aargh","aarti","abaca","abaci","aback","abacs","abaft",
+>    "abaka","abamp","aband",...] : string list
+fun maskCount (guess, remainingWords: string list) =
+  from w in remainingWords
+    group m = mask (guess, w) compute c = count
+    compute count;
+> val maskCount = fn : string * string list -> int
+fun bestGuesses words =
+  from w in words,
+    maskCount = maskCount (w, words)
+    order DESC maskCount;
+> val bestGuesses = fn : string list -> {maskCount:int, w:string} list
+fun remaining (words: string list, []) = words
+  | remaining (words, (guess, m) :: rest) =
+      from w in (remaining (words, rest))
+        where maskToString (mask (guess, w)) = m;
+> val remaining = fn : string list * (string * string) list -> string list
+
+bestGuesses (remaining (words, [("aster", "ybbby")]));
+> val it =
+>   [{maskCount=54,w="marid"},{maskCount=54,w="moria"},{maskCount=51,w="daric"},
+>    {maskCount=51,w="moira"},{maskCount=50,w="caird"},{maskCount=50,w="coria"},
+>    {maskCount=49,w="carbo"},{maskCount=49,w="cardi"},{maskCount=49,w="coram"},
+>    {maskCount=49,w="darcy"},{maskCount=49,w="moral"},{maskCount=48,w="maria"},
+>    ...] : {maskCount:int, w:string} list
+
+(*) Functional programming  –  values, types, operators
+1 + 2;
+> val it = 3 : int
+"Hello, " ^ "world!";
+> val it = "Hello, world!" : string
+val integers = [1, 2, 3, 4, 5, 6, 7, 8];
+> val integers = [1,2,3,4,5,6,7,8] : int list
+fun filter f [] = []
+  | filter f (first :: rest) =
+      if (f first)
+        then first :: (filter f rest)
+        else filter f rest;
+> val filter = fn : ('a -> bool) -> 'a list -> 'a list
+filter (fn i => i mod 2 = 0) integers;
+> val it = [2,4,6,8] : int list
+
+(*) Alternatives to SQL
+val db =
+  {emps = [{name = "Fred", deptno = 2, sal = 1000, comm = 100}]};
+> val db = {emps=[{comm=100,deptno=2,name="Fred",sal=1000}]}
+>   : {emps:{comm:int, deptno:int, name:string, sal:int} list}
+from e in db.emps
+  where e.deptno = 2
+  yield {e.name, pay = e.sal + e.comm};
+> val it = [{name="Fred",pay=1100}] : {name:string, pay:int} list
+
+(*) Pipe syntax
+val produceSales = [
+  {item = "bananas", category = "fruit", sales = 100},
+  {item = "apples", category = "fruit", sales = 200},
+  {item = "almonds", category = "nut", sales = 150},
+  {item = "peanuts", category = "nut", sales = 120},
+  {item = "carrots", category = "vegetable", sales = 80}];
+> val produceSales =
+>   [{category="fruit",item="bananas",sales=100},
+>    {category="fruit",item="apples",sales=200},
+>    {category="nut",item="almonds",sales=150},
+>    {category="nut",item="peanuts",sales=120},
+>    {category="vegetable",item="carrots",sales=80}]
+>   : {category:string, item:string, sales:int} list
+from p in produceSales
+  where p.item <> "bananas"
+    andalso p.category elem ["fruit", "nut"]
+  group p.item compute c = count,
+    total = sum of p.sales
+  order DESC item;
+> val it =
+>   [{c=1,item="peanuts",total=120},{c=1,item="apples",total=200},
+>    {c=1,item="almonds",total=150}] : {c:int, item:string, total:int} list
+
+(*) Billion dollar mistake
+from e in scott.emps
+  where e.deptno = 10
+    andalso
+    (forall e2 in scott.emps
+      where e2.deptno = 20
+        andalso e2.job = "PROGRAMMER"
+      require e.sal > e2.sal)
+  yield e.ename;
+> val it = ["CLARK","KING","MILLER"] : string bag
+
+(*) Types and collections
+(* Disabled until "[MOREL-285] Record type" is fixed.
+datatype personnel_id =
+    EMPLOYEE of int
+  | CONTRACTOR of {ssid: string, agency: string};
+type member = {name: string, deptno: int, id: personnel_id};
+val members = [
+  {name = "Smith", deptno = 10, id = EMPLOYEE 100},
+  {name = "Jones", deptno = 20,
+   id = CONTRACTOR {ssid = "xxx-xx-xxxx", agency = "Cheap & cheerful"}];
+*)
+datatype personnel_id =
+    EMPLOYEE of int
+  | CONTRACTOR of string * string;
+> datatype personnel_id = CONTRACTOR of string * string | EMPLOYEE of int
+val members = [
+  {name = "Smith", deptno = 10, id = EMPLOYEE 100},
+  {name = "Jones", deptno = 20,
+   id = CONTRACTOR ("xxx-xx-xxxx", "Cheap & cheerful")}];
+> val members =
+>   [{deptno=10,id=EMPLOYEE 100,name="Smith"},
+>    {deptno=20,id=CONTRACTOR ("xxx-xx-xxxx","Cheap & cheerful"),name="Jones"}]
+>   : {deptno:int, id:personnel_id, name:string} list
+
+val departments = scott.depts;
+> val departments = <relation> : {deptno:int, dname:string, loc:string} bag
+val primes = [2, 3, 5, 7, 11];
+> val primes = [2,3,5,7,11] : int list
+val bands = [["john", "paul", "george", "ringo"], ["simon", "garfunkel"]];
+> val bands = [["john","paul","george","ringo"],["simon","garfunkel"]]
+>   : string list list
+
+(*) Lists, bags, sets in Morel
+from i in [1, 2],
+    j in ["a", "b"],
+    k in [3, 4, 5, 6]
+  where i + k < 6;
+> val it =
+>   [{i=1,j="a",k=3},{i=1,j="a",k=4},{i=1,j="b",k=3},{i=1,j="b",k=4},
+>    {i=2,j="a",k=3},{i=2,j="b",k=3}] : {i:int, j:string, k:int} list
+from dept in [10, 30],
+    e in scott.emps
+  where e.deptno = dept
+  yield e.ename;
+> val it =
+>   ["CLARK","KING","MILLER","ALLEN","WARD","MARTIN","BLAKE","TURNER","JAMES"]
+>   : string bag
+from dept in [10, 30],
+    e in scott.emps
+  where e.deptno = dept
+  order DESC e.sal
+  take 3
+  yield {e.deptno, e.ename};
+> val it =
+>   [{deptno=10,ename="KING"},{deptno=30,ename="BLAKE"},
+>    {deptno=10,ename="CLARK"}] : {deptno:int, ename:string} list
+
+(*) DML
+(* Delete employees who earn more than 1,000. *)
+val emps2 =
+  from e in scott.emps
+    where not (e.sal > 1000.0);
+> val emps2 =
+>   [
+>    {comm=0.0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-16",
+>     job="CLERK",mgr=7902,sal=800.0},
+>    {comm=0.0,deptno=30,empno=7900,ename="JAMES",hiredate="1981-12-02",
+>     job="CLERK",mgr=7698,sal=950.0}]
+>   :
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} bag
+(* Add one employee. *)
+val emps3 = from e in emps2 union
+  [{empno = 100, deptno = 20, ename = "HYDE", job = "ANALYST",
+    sal = 1150.0, hiredate = "2023-10-01", mgr = 7902, comm = 0.0}];
+> val emps3 =
+>   [
+>    {comm=0.0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-16",
+>     job="CLERK",mgr=7902,sal=800.0},
+>    {comm=0.0,deptno=30,empno=7900,ename="JAMES",hiredate="1981-12-02",
+>     job="CLERK",mgr=7698,sal=950.0},
+>    {comm=0.0,deptno=20,empno=100,ename="HYDE",hiredate="2023-10-01",
+>     job="ANALYST",mgr=7902,sal=1150.0}]
+>   :
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} bag
+(* Double the salary of all managers. *)
+val emps4 =
+  from e in emps3
+    yield if e.job = "MANAGER"
+      then {e with sal = e.sal * 2.0}
+      else e;
+> val emps4 =
+>   [
+>    {comm=0.0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-16",
+>     job="CLERK",mgr=7902,sal=800.0},
+>    {comm=0.0,deptno=30,empno=7900,ename="JAMES",hiredate="1981-12-02",
+>     job="CLERK",mgr=7698,sal=950.0},
+>    {comm=0.0,deptno=20,empno=100,ename="HYDE",hiredate="2023-10-01",
+>     job="ANALYST",mgr=7902,sal=1150.0}]
+>   :
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} bag
+(* Commit. *)
+(*) TODO commit {scott with emps = emps4};
+
+(* New and removed employees. *)
+val empsAdded = from e in emps4 except scott.emps;
+> val empsAdded =
+>   [
+>    {comm=0.0,deptno=20,empno=100,ename="HYDE",hiredate="2023-10-01",
+>     job="ANALYST",mgr=7902,sal=1150.0}]
+>   :
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} bag
+val empsRemoved = from e in scott.emps except emps4;
+> val empsRemoved =
+>   [
+>    {comm=0.0,deptno=20,empno=7902,ename="FORD",hiredate="1981-12-02",
+>     job="ANALYST",mgr=7566,sal=3000.0},
+>    {comm=300.0,deptno=30,empno=7499,ename="ALLEN",hiredate="1981-02-19",
+>     job="SALESMAN",mgr=7698,sal=1600.0},
+>    {comm=0.0,deptno=10,empno=7782,ename="CLARK",hiredate="1981-06-08",
+>     job="MANAGER",mgr=7839,sal=2450.0},
+>    {comm=0.0,deptno=10,empno=7934,ename="MILLER",hiredate="1982-01-22",
+>     job="CLERK",mgr=7782,sal=1300.0},
+>    {comm=0.0,deptno=20,empno=7566,ename="JONES",hiredate="1981-02-03",
+>     job="MANAGER",mgr=7839,sal=2975.0},
+>    {comm=0.0,deptno=30,empno=7844,ename="TURNER",hiredate="1981-09-07",
+>     job="SALESMAN",mgr=7698,sal=1500.0},
+>    {comm=0.0,deptno=10,empno=7839,ename="KING",hiredate="1981-11-16",
+>     job="PRESIDENT",mgr=0,sal=5000.0},
+>    {comm=500.0,deptno=30,empno=7521,ename="WARD",hiredate="1981-02-21",
+>     job="SALESMAN",mgr=7698,sal=1250.0},
+>    {comm=0.0,deptno=20,empno=7788,ename="SCOTT",hiredate="1987-04-18",
+>     job="ANALYST",mgr=7566,sal=3000.0},
+>    {comm=1400.0,deptno=30,empno=7654,ename="MARTIN",hiredate="1981-09-27",
+>     job="SALESMAN",mgr=7698,sal=1250.0},
+>    {comm=0.0,deptno=30,empno=7698,ename="BLAKE",hiredate="1981-01-04",
+>     job="MANAGER",mgr=7839,sal=2850.0},
+>    {comm=0.0,deptno=20,empno=7876,ename="ADAMS",hiredate="1987-05-22",
+>     job="CLERK",mgr=7788,sal=1100.0}]
+>   :
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} bag
+
+(*) Empty summary table. (TODO: Use record type.)
+val summary =
+  from s in [{deptno = 0, c = 0, sum_sal = 0.0}]
+    where false;
+> val summary = [] : {c:int, deptno:int, sum_sal:real} list
+
+(* Compute the updated summary table. *)
+val summary2 =
+  from s in (*scott.*)summary
+    union
+      (from e in empsAdded
+        yield {e.deptno, c = 1, sum_sal = e.sal})
+    union
+      (from e in empsRemoved
+        yield {e.deptno, c = ~1, sum_sal = ~e.sal})
+    group s.deptno compute c = sum of s.c, sum_sal = sum of s.sum_sal
+    where c <> 0;
+> val summary2 =
+>   [{c=~3,deptno=20,sum_sal=~8925.0},{c=~3,deptno=10,sum_sal=~8750.0},
+>    {c=~5,deptno=30,sum_sal=~8450.0}] : {c:int, deptno:int, sum_sal:real} bag
+
+(* Commit. *)
+(*) TODO commit {scott with summary = summary2};
+
+val parents = [
+  ("earendil", "elrond"),
+  ("elrond", "arwen"),
+  ("elrond", "elladan"),
+  ("elrond", "elrohir")];
+> val parents =
+>   [("earendil","elrond"),("elrond","arwen"),("elrond","elladan"),
+>    ("elrond","elrohir")] : (string * string) list
+from (parent, child) in parents
+  where parent = "elrond";
+> val it =
+>   [{child="arwen",parent="elrond"},{child="elladan",parent="elrond"},
+>    {child="elrohir",parent="elrond"}] : {child:string, parent:string} list
+
+(*) TODO Fix the UnsupportedOperationException
+fun ancestors () =
+  from (x, y) in parents
+    union
+      (from (x, y) in parents,
+        (y2, z) in ancestors ()
+      where y = y2
+      yield (x, z));
+> java.lang.UnsupportedOperationException
+
+(* Morel "forwards" relation *)
+(* Relation defined using algebra. *)
+fun clerks () =
+  from e in scott.emps
+    where e.job = "CLERK";
+> val clerks = fn
+>   : unit
+>     ->
+>        {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>         job:string, mgr:int, sal:real} bag
+(* Query uses regular iteration. *)
+from e in clerks (),
+    d in scott.depts
+  where d.deptno = e.deptno
+    andalso d.loc = "DALLAS"
+  yield e.ename;
+> val it = ["SMITH","ADAMS"] : string bag
+
+(* Morel "backwards" relation *)
+(* Relation defined using a predicate. *)
+(* TODO enable when we have record types.
+fun isClerk e =
+  e.job = "CLERK";
+(*) Query uses a mixture of constrained and regular iteration.
+from e,
+    d in depts
+  where isClerk(e)
+    andalso d.deptno = e.deptno
+    andalso d.loc = "DALLAS"
+  yield e.name;
+["SMITH", "ADAMS"] : string list;
+*)
+
+(*) Recursively-defined predicate relation
+fun isAncestor (x, z) =
+  (x, z) elem parents
+    orelse (exists y
+      where isAncestor(x, y)
+        andalso (y, z) elem parents);
+> com.google.common.base.VerifyException: not found [isAncestor]
+
+from a
+  where isAncestor(a, "arwen");
+> stdIn:2.9-2.19 Error: unbound variable or constructor: isAncestor
+>   raised at: stdIn:2.9-2.19
+(*) TODO should return ["earendil", "elrond"] : string list
+
+from d
+  where isAncestor("earendil", d);
+> stdIn:2.9-2.19 Error: unbound variable or constructor: isAncestor
+>   raised at: stdIn:2.9-2.19
+(*) TODO should return ["elrond", "arwen", "elladan", "elrohir"] : string list
+
+(*) Recipe optimization
+from b, c
+  where b >= 0 andalso b <= 100       (*) number of banana cakes
+  andalso c >= 0 andalso c <= 100     (*) number of chocolate cakes
+  andalso 50 * b + 200 * c <= 40000   (*) flour
+  andalso 2 * b <= 60                 (*) bananas
+  andalso 75 * b + 150 * c <= 20000   (*) sugar
+  andalso 100 * b + 150 * c <= 5000   (*) butter
+  andalso 75 * c <= 5000              (*) cocoa
+  yield {b, c, profit = 400 * b + 450 * c}
+  order DESC profit
+  take 3;
+> val it =
+>   [{b=29,c=14,profit=17900},{b=30,c=13,profit=17850},{b=26,c=16,profit=17600}]
+>   : {b:int, c:int, profit:int} list
+
+(*) === GCD and LCM =================================================
+(* "INTERSECT ALL, EXCEPT ALL, and the arithmetic of fractions",
+   posted on 2025/06/03. *)
+fun factorize n =
+  let
+    fun factorize' n d =
+      if n < d then [] else
+      if n mod d = 0 then d :: (factorize' (n div d) d)
+      else factorize' n (d + 1)
+  in
+    factorize' n 2
+  end;
+> val factorize = fn : int -> int list
+
+fun product [] = 1
+  | product (x :: xs) = x * product xs;
+> val product = fn : int list -> int
+product [2, 3, 2];
+> val it = 12 : int
+
+factorize 120;
+> val it = [2,2,2,3,5] : int list
+product (factorize 120);
+> val it = 120 : int
+
+(*) Greatest Common Divisor (GCD)
+fun gcd (m, n) =
+  from f in factorize m
+    intersect (factorize n)
+    compute product;
+> val gcd = fn : int * int -> int
+
+(*) Least Common Multiple (LCM)
+fun lcm (m, n) =
+  let
+    val m_factors = factorize m
+    val n_factors = factorize n
+  in
+    from f in m_factors
+      union (n_factors)
+      except (from f in m_factors
+        intersect n_factors)
+    compute product
+  end;
+> val lcm = fn : int * int -> int
+
+fun lcm' (m, n) =
+  m * n div gcd (m, n);
+> val lcm' = fn : int * int -> int
+
+lcm (36, 120);
+> val it = 360 : int
+lcm' (36, 120);
+> val it = 360 : int
+gcd (36, 120);
+> val it = 12 : int
+
 (*) === Coda ========================================================
 from message in ["the end"];
 > val it = ["the end"] : string list
