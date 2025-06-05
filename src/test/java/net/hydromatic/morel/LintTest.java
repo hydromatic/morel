@@ -78,6 +78,17 @@ public class LintTest {
     b.add(
         line -> line.contains("\t"), line -> line.state().message("Tab", line));
 
+    // Smart quotes
+    //noinspection UnnecessaryUnicodeEscape
+    b.add(
+        line ->
+            line.contains("\u00B4") // acute accent
+                || line.contains("\u2018") // left single quote
+                || line.contains("\u2019") // right single quote
+                || line.contains("\u201C") // left double quote
+                || line.contains("\u201D"), // right double quote
+        line -> line.state().message("Smart quote", line));
+
     // Nullable
     b.add(
         line -> line.startsWith("import javax.annotation.Nullable;"),

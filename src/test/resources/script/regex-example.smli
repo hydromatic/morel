@@ -206,7 +206,7 @@ matchStringsPos r "hello";
 > val it = [(1,"e"),(4,"o")] : (int * string) list
 
 (* Finally, Kleene star is implemented by recursively appending r to a set x of
-   matches found so far. It’s worth noting that this definition is effectively
+   matches found so far. It's worth noting that this definition is effectively
    left-recursive – it takes the endpoints from the fixed point x, and then
    continues matching using the argument r. This should make clear that this is
    not just plain old functional programming – we are genuinely relying upon the

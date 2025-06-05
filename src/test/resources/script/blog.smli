@@ -477,7 +477,7 @@ fun even n = n mod 2 = 0;
 filter even [1, 2, 3, 4];
 > val it = [2,4] : int list
 
-(* Let’s start by defining emps and depts relations as lists of
+(* Let's start by defining emps and depts relations as lists of
    records. *)
 
 val emps =
