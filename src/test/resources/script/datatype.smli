@@ -208,7 +208,7 @@ B true;
 datatype 'a tree = Empty | Node of 'a * 'a forest
 and      'a forest = Nil | Cons of 'a tree * 'a forest;
 > datatype 'a tree = Empty | Node of 'a * 'a forest
-> datatype 'a forest = Cons of 'a tree * 'a forest | Nil
+> datatype 'a forest = Nil | Cons of 'a tree * 'a forest
 Empty;
 > val it = Empty : 'a tree
 Nil;
@@ -365,5 +365,19 @@ Relational.compare (Node (2, Leaf 4, Leaf 10), Node (2, Leaf 4, Leaf 11));
 > val it = LESS : order
 Relational.compare (Node (2, Leaf 5, Leaf 10), Node (2, Leaf 4, Leaf 11));
 > val it = GREATER : order
+
+(*) Datatype with a record member.
+datatype foo = Foo of {a: int, b: string} | Bar of int;
+> datatype foo = Foo of {a:int, b:string} | Bar of int
+fun baz (Foo r) = #a r
+  | baz (Bar i) = i * 2;
+> val baz = fn : foo -> int
+fun baz (Foo r) = r.a
+  | baz (Bar i) = i * 2;
+> val baz = fn : foo -> int
+baz (Bar 3);
+> val it = 6 : int
+baz (Foo {b = "a", a = 4});
+> val it = 4 : int
 
 (*) End datatype.smli

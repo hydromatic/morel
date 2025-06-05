@@ -177,7 +177,7 @@ fun swap_int_pair (i : int, j : int) = (j,i);
 
 (* Datatype declarations *)
 datatype int_or_string = INT of int | STRING of string | NEITHER;
-datatype int_or_string = INT of int | NEITHER | STRING of string
+datatype int_or_string = INT of int | STRING of string | NEITHER
 
 val i = INT 3;
 val i = INT 3 : int_or_string
@@ -240,7 +240,7 @@ twelve;
 
 (* Equality types *)
 datatype suit = HEARTS | CLUBS | DIAMONDS | SPADES;
-datatype suit = CLUBS | DIAMONDS | HEARTS | SPADES
+datatype suit = HEARTS | CLUBS | DIAMONDS | SPADES
 
 datatype int_pair = INT_PAIR of int * int;
 datatype int_pair = INT_PAIR of int * int

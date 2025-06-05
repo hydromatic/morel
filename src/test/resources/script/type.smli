@@ -67,6 +67,8 @@
 > val it = (2,true) : int * bool
 []: int list;
 > val it = [] : int list
+[]: {a: int, b: string} list;
+> val it = [] : {a:int, b:string} list
 (1: int) + (2: int);
 > val it = 3 : int
 1 + (2: int);
@@ -89,6 +91,8 @@ val p: int * bool = (1, true);
 > val p = (1,true) : int * bool
 val empty: int list = [];
 > val empty = [] : int list
+val empty2: {a: int, b: string} list = [];
+> val empty2 = [] : {a:int, b:string} list
 
 (*) Function declarations with type annotations
 fun f (x: int, y) = x + y;
@@ -108,6 +112,14 @@ fun l1 [] = 0 | l1 ((h: string) :: t) = 1 + (l1 t);
 > val l1 = fn : string list -> int
 fun l2 [] = 0 | l2 (h :: (t: bool list)) = 1 + (l2 t);
 > val l2 = fn : bool list -> int
+fun l1a (p: string list) = List.length p;
+> val l1a = fn : string list -> int
+fun l1b (p: string list): int = List.length p;
+> val l1b = fn : string list -> int
+fun l2b (p: bool list) = List.length p;
+> val l2b = fn : bool list -> int
+fun l3b (p: {b: int, a: string} list) = List.length p;
+> val l3b = fn : {a:string, b:int} list -> int
 fun countOption (NONE: string option) = 0
   | countOption (SOME x) = 1;
 > val countOption = fn : string option -> int

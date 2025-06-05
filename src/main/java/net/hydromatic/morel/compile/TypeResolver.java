@@ -1403,14 +1403,14 @@ public class TypeResolver {
       final KeyBuilder keyBuilder = new KeyBuilder();
       bind.tyVars.forEach(keyBuilder::toTypeKey);
 
-      final SortedMap<String, Type.Key> tyCons = new TreeMap<>();
+      final PairList<String, Type.Key> tyCons = PairList.of();
       deduceDatatypeBindType(bind, tyCons);
 
       keys.add(
           Keys.datatype(
               bind.name.name,
               Keys.ordinals(keyBuilder.tyVarMap.size()),
-              tyCons));
+              tyCons.toImmutableMap()));
     }
     final List<Type> types = typeSystem.dataTypes(keys);
 
@@ -1483,10 +1483,10 @@ public class TypeResolver {
   }
 
   private void deduceDatatypeBindType(
-      Ast.DatatypeBind datatypeBind, SortedMap<String, Type.Key> tyCons) {
+      Ast.DatatypeBind datatypeBind, PairList<String, Type.Key> tyCons) {
     KeyBuilder keyBuilder = new KeyBuilder();
     for (Ast.TyCon tyCon : datatypeBind.tyCons) {
-      tyCons.put(
+      tyCons.add(
           tyCon.id.name,
           tyCon.type == null ? Keys.dummy() : keyBuilder.toTypeKey(tyCon.type));
     }

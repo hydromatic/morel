@@ -715,7 +715,7 @@ enumerate cousin2;
  *                               :--,
  *                               'T/
  *)
-datatype Color = RED | GREEN | BLUE;
+datatype Color = BLUE | GREEN | RED;
 > datatype Color = BLUE | GREEN | RED
 from wa, nt, sa, q, nsw, v, t
 where q = RED

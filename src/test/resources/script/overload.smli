@@ -215,7 +215,7 @@ o4a (SOME 1);
 datatype 'a multiset =
     MULTI_NIL
   | MULTI_CONS of ('a * 'a multiset);
-> datatype 'a multiset = MULTI_CONS of 'a * 'a multiset | MULTI_NIL
+> datatype 'a multiset = MULTI_NIL | MULTI_CONS of 'a * 'a multiset
 fun listToMultiset [] = MULTI_NIL
   | listToMultiset (h :: t) = MULTI_CONS (h, listToMultiset t);
 > val listToMultiset = fn : 'a list -> 'a multiset

@@ -1389,28 +1389,21 @@ from e in scott.emps
 > val it = ["CLARK","KING","MILLER"] : string bag
 
 (*) Types and collections
-(* Disabled until "[MOREL-285] Record type" is fixed.
 datatype personnel_id =
     EMPLOYEE of int
   | CONTRACTOR of {ssid: string, agency: string};
+> datatype personnel_id = EMPLOYEE of int | CONTRACTOR of {agency:string, ssid:string}
+(* Disabled until "[MOREL-285] Type declaration" is fixed.
 type member = {name: string, deptno: int, id: personnel_id};
-val members = [
-  {name = "Smith", deptno = 10, id = EMPLOYEE 100},
-  {name = "Jones", deptno = 20,
-   id = CONTRACTOR {ssid = "xxx-xx-xxxx", agency = "Cheap & cheerful"}];
 *)
-datatype personnel_id =
-    EMPLOYEE of int
-  | CONTRACTOR of string * string;
-> datatype personnel_id = CONTRACTOR of string * string | EMPLOYEE of int
 val members = [
   {name = "Smith", deptno = 10, id = EMPLOYEE 100},
   {name = "Jones", deptno = 20,
-   id = CONTRACTOR ("xxx-xx-xxxx", "Cheap & cheerful")}];
+   id = CONTRACTOR {ssid = "xxx-xx-xxxx", agency = "Cheap & cheerful"}}];
 > val members =
 >   [{deptno=10,id=EMPLOYEE 100,name="Smith"},
->    {deptno=20,id=CONTRACTOR ("xxx-xx-xxxx","Cheap & cheerful"),name="Jones"}]
->   : {deptno:int, id:personnel_id, name:string} list
+>    {deptno=20,id=CONTRACTOR {agency="Cheap & cheerful",ssid="xxx-xx-xxxx"},
+>     name="Jones"}] : {deptno:int, id:personnel_id, name:string} list
 
 val departments = scott.depts;
 > val departments = <relation> : {deptno:int, dname:string, loc:string} bag

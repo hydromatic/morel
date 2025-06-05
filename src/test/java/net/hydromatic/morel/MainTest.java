@@ -1759,7 +1759,7 @@ public class MainTest {
         .assertType(
             instanceOfAnd(
                 DataType.class,
-                hasTypeConstructors("{LEAF='a, NODE='a tree * 'a tree}")))
+                hasTypeConstructors("{NODE='a tree * 'a tree, LEAF='a}")))
         .assertEval(is(node(leaf(1), node(leaf(2), leaf(3)))));
   }
 
