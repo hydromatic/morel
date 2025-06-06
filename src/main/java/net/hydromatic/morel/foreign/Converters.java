@@ -21,13 +21,13 @@ package net.hydromatic.morel.foreign;
 import static com.google.common.base.Preconditions.checkArgument;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static org.apache.calcite.avatica.util.DateTimeUtils.unixDateToString;
+import static org.apache.calcite.avatica.util.DateTimeUtils.unixTimeToString;
+import static org.apache.calcite.avatica.util.DateTimeUtils.unixTimestampToString;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import java.math.BigDecimal;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.util.AbstractList;
 import java.util.Iterator;
 import java.util.List;
@@ -40,7 +40,6 @@ import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
-import org.apache.calcite.avatica.util.DateTimeUtils;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.EnumerableDefaults;
 import org.apache.calcite.linq4j.Enumerator;
@@ -216,21 +215,17 @@ public class Converters {
     },
     FROM_DATE(PrimitiveType.STRING) {
       public String convertFrom(Object o) {
-        return o == null
-            ? ""
-            : new Date((Integer) o * DateTimeUtils.MILLIS_PER_DAY).toString();
+        return o == null ? "" : unixDateToString((Integer) o);
       }
     },
     FROM_TIME(PrimitiveType.STRING) {
       public String convertFrom(Object o) {
-        return o == null
-            ? ""
-            : new Time((Integer) o % DateTimeUtils.MILLIS_PER_DAY).toString();
+        return o == null ? "" : unixTimeToString((Integer) o);
       }
     },
     FROM_TIMESTAMP(PrimitiveType.STRING) {
       public String convertFrom(Object o) {
-        return o == null ? "" : new Timestamp((Long) o).toString();
+        return o == null ? "" : unixTimestampToString((Long) o);
       }
     },
     FROM_STRING(PrimitiveType.STRING) {
