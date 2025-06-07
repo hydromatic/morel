@@ -2409,6 +2409,12 @@ public class MainTest {
     ml("fn f => from i in [1, 2, 3] where f i")
         .assertType("(int -> bool) -> int list");
     ml("from a in [1], b in [true]").assertType("{a:int, b:bool} list");
+    ml("from a in [1], b in [()]").assertType("{a:int, b:unit} list");
+    ml("from a in [1], _ in [true]").assertType("int list");
+    ml("from a in [1], _ in bag [true]").assertType("int bag");
+    ml("from a in [1], _ = ()").assertType("int list");
+    ml("from a in bag [1], _ = ()").assertType("int bag");
+
     ml("from a in [1], b in [true] yield a").assertType("int list");
     ml("from a in [1], b in [true] yield {a,b}")
         .assertType("{a:int, b:bool} list");

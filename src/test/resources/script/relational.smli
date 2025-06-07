@@ -536,6 +536,136 @@ from i in [1,2]
 > val it = [{i=1,j=0},{i=1,j=1},{i=1,j=2},{i=2,j=0},{i=2,j=1},{i=2,j=2}]
 >   : {i:int, j:int} list
 
+(* Degenerate joins ------------------------------------------- *)
+(*) Join atom to list of units
+from i in [1,2,3],
+  () in [()];
+> val it = [1,2,3] : int list
+from i in [1,2,3]
+  join () in [()];
+> val it = [1,2,3] : int list
+from i in [1,2,3],
+  _ in [()];
+> val it = [1,2,3] : int list
+from i in [1,2,3],
+  {} in [()];
+> val it = [1,2,3] : int list
+from i in [1,2,3]
+  join _ in [()];
+> val it = [1,2,3] : int list
+
+(*) Single record, but wildcard ignores its value
+from i in [1,2,3],
+  _ in ["a"];
+> val it = [1,2,3] : int list
+
+(*) Two records, but wildcard ignores its value
+from i in [1,2,3],
+  _ in ["a", "b"];
+> val it = [1,1,2,2,3,3] : int list
+
+(*) Join atom to bag of units (desugared 'unorder')
+from i in [1,2,3]
+  join _ in bag [()];
+> val it = [1,2,3] : int bag
+
+(*) Composite join with wildcard
+from (i, j) in [(1, 2), (3, 4)],
+  _ in [()];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} list
+from (i, j) in [(1, 2), (3, 4)]
+  join _ in [()];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} list
+from (i, j) in [(1, 2), (3, 4)]
+  join _ in ["a"];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} list
+
+(*) As previous, but a bag.
+from (i, j) in [(1, 2), (3, 4)],
+  _ in bag [()];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} bag
+from (i, j) in [(1, 2), (3, 4)],
+  () in bag [()];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} bag
+from (i, j) in [(1, 2), (3, 4)],
+  {} in bag [()];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} bag
+from (i, j) in [(1, 2), (3, 4)]
+  join _ in bag [()];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} bag
+from (i, j) in [(1, 2), (3, 4)]
+  join () in bag [()];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} bag
+from (i, j) in [(1, 2), (3, 4)]
+  join {} in bag [()];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} bag
+from (i, j) in [(1, 2), (3, 4)]
+  join _ in bag ["a"];
+> val it = [{i=1,j=2},{i=3,j=4}] : {i:int, j:int} bag
+
+(*) Unit join unit
+from () in [()]
+  join () in [()];
+> val it = [()] : unit list
+from () in [()],
+    () in [()];
+> val it = [()] : unit list
+from _ in ["a"],
+    _ in [true];
+> val it = [()] : unit list
+from _ in ["a"],
+    _ in bag [true];
+> val it = [()] : unit bag
+from () in [()],
+    () in [(), ()];
+> val it = [(),()] : unit list
+from {} in [()],
+  {} in [()];
+> val it = [()] : unit list
+from _ in ["a","b","c"],
+  _ in [true,false];
+> val it = [(),(),(),(),(),()] : unit list
+
+(*) Unit join atom
+from _ in [()],
+  i in [1,2,3];
+> val it = [1,2,3] : int list
+from {} in [()],
+  i in [1,2,3];
+> val it = [1,2,3] : int list
+from _ in [()],
+  i in bag [1,2,3];
+> val it = [1,2,3] : int bag
+from {} in [()],
+  i in bag [1,2,3];
+> val it = [1,2,3] : int bag
+from {} in bag [()],
+  i in bag [1,2,3];
+> val it = [1,2,3] : int bag
+from {} in bag [()],
+  i in [1,2,3];
+> val it = [1,2,3] : int bag
+
+(*) Variations of the above with '='
+from i in [1,2,3],
+  _ = true;
+> val it = [1,2,3] : int list
+from i in [1,2,3],
+  _ = ();
+> val it = [1,2,3] : int list
+from i in bag [1,2,3],
+  _ = ();
+> val it = [1,2,3] : int bag
+from i in [1,2,3],
+  () = ();
+> val it = [1,2,3] : int list
+from () in [()],
+  () = ();
+> val it = [()] : unit list
+from _ = "a",
+  _ = 1;
+> val it = [()] : unit list
+
 (* Combinations of steps -------------------------------------- *)
 (*) 'yield' followed by 'order'
 from e in emps

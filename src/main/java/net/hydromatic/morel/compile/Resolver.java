@@ -844,8 +844,13 @@ public class Resolver {
         return core.listPat(type, transformEager(listPat.args, this::toCore));
 
       case RECORD_PAT:
-        final RecordType recordType = (RecordType) targetType;
         final Ast.RecordPat recordPat = (Ast.RecordPat) pat;
+        if (targetType == PrimitiveType.UNIT) {
+          // Unit record is a special case, it has no fields.
+          // Its type is not RecordType, but RecordLikeType.
+          return core.wildcardPat(targetType);
+        }
+        final RecordType recordType = (RecordType) targetType;
         final ImmutableList.Builder<Core.Pat> args = ImmutableList.builder();
         recordType.argNameTypes.forEach(
             (label, argType) -> {

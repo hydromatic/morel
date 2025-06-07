@@ -151,16 +151,6 @@ public class Ast {
       super(pos, Op.WILDCARD_PAT);
     }
 
-    @Override
-    public int hashCode() {
-      return "_".hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      return o instanceof WildcardPat;
-    }
-
     public Pat accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }

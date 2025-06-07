@@ -876,7 +876,7 @@ public class TypeResolver {
       final Ast.Exp scanExp = ((Ast.PrefixCall) scan.exp).a;
       final Ast.Exp scanExp2 = deduceType(p.env, scanExp, v0);
       scanExp3 = ast.fromEq(scanExp2);
-      containerize = CollectionType.LIST; // ordered
+      containerize = CollectionType.INHERIT; // retain source collection type
       c0 = null;
       reg(scanExp, v0);
     } else {
@@ -901,8 +901,16 @@ public class TypeResolver {
       case BAG:
         c = toVariable(bagTerm(v));
         break;
-      case LIST:
-        c = toVariable(listTerm(v));
+      case INHERIT:
+        // Consider "from ... yield {i=1} join b = false".
+        // p.c is "int list" or "int bag" - collection type from previous step
+        // p.v is "int" - the element type of the input
+        // c0 is null - the input is a list, but we don't care
+        // v0 is "bool" - the element type of the input
+        // c is "{i:int, b:bool} list" or "bag" - collection type of the query
+        // v is "{i:int, b:bool}" - the element type of the query
+        c = unifier.variable();
+        isListOrBagMatchingInput(p.c, p.v, c, v);
         break;
       default:
         c = unifier.variable();
@@ -2636,7 +2644,7 @@ public class TypeResolver {
 
   private enum CollectionType {
     BAG,
-    LIST,
+    INHERIT,
     BOTH
   }
 

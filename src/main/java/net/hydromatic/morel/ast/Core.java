@@ -580,6 +580,7 @@ public class Core {
       super(Op.RECORD_PAT, type);
       this.args = requireNonNull(args);
       checkArgument(args.size() == type.argNameTypes.size());
+      checkArgument(!args.isEmpty(), "Use TuplePat for empty record");
     }
 
     @Override

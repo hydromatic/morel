@@ -222,7 +222,7 @@ public class FromBuilder {
           uselessIfLast, env, core.record(typeSystem, nameExps), atom1);
     }
     Compiles.acceptBinding(typeSystem, pat, bindings);
-    atom = steps.isEmpty() && bindings.size() == 1;
+    atom = bindings.size() == 1;
     return addStep(core.scan(stepEnv(), pat, exp, condition));
   }
 
