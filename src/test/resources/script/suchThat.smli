@@ -72,7 +72,7 @@ where j > 4 andalso j < 7
 from i
   where i >= 0 andalso i <= 100 andalso i mod 6 <> 0
   yield {i, odd = i mod 2 = 1}
-  group odd compute count
+  group odd compute count over ()
   order odd;
 > val it = [{count=34,odd=false},{count=50,odd=true}]
 >   : {count:int, odd:bool} list

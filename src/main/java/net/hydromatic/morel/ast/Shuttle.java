@@ -325,16 +325,16 @@ public class Shuttle {
   }
 
   protected AstNode visit(Ast.Compute compute) {
-    return ast.compute(compute.pos, compute.aggregates);
+    return ast.compute(compute.pos, compute.aggregate);
   }
 
   protected AstNode visit(Ast.Group group) {
-    return ast.group(group.pos, group.groupExps, group.aggregates);
+    return ast.group(group.pos, group.group, group.aggregate);
   }
 
-  protected AstNode visit(Ast.Aggregate aggregate) {
+  protected Ast.Aggregate visit(Ast.Aggregate aggregate) {
     return ast.aggregate(
-        aggregate.pos, aggregate.aggregate, aggregate.argument, aggregate.id);
+        aggregate.pos, aggregate.aggregate, aggregate.argument);
   }
 
   protected Ast.TypeDecl visit(Ast.TypeDecl typeDecl) {

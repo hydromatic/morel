@@ -61,7 +61,7 @@ CLARK  MANAGER
 KING   PRESIDENT
 MILLER CLERK
 
-val it : {ename:string, job:string} list</i>
+val it : {ename:string, job:string} bag</i>
 </pre>
 
 (Notice how this result is printed as a table. Morel automatically
@@ -98,14 +98,13 @@ The formal syntax of queries is as follows.
 
 <i>scan</i> &rarr; <i>pat</i> <b>in</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]    iteration
     | <i>pat</i> <b>=</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]      single iteration
-    | <i>var</i>                       unbounded variable
+    | <i>val</i>                       unbounded variable
 
 <i>step</i> &rarr; <b>distinct</b>                 distinct step
     | <b>except</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>e</sub></i>
                                 except step (<i>e</i> &ge; 1)
-    | <b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
-      [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]
-                                group step (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
+    | <b>group</b> <i>exp<sub>1</sub></i> [ <b>compute</b> <i>exp<sub>2</sub></i> ]
+                                group step
     | <b>intersect</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>i</sub></i>
                                 intersect step (<i>i</i> &ge; 1)
     | <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>  join step (<i>s</i> &ge; 1)
@@ -118,8 +117,8 @@ The formal syntax of queries is as follows.
     | <b>where</b> <i>exp</i>                 filter step
     | <b>yield</b> <i>exp</i>                 yield step
 
-<i>terminalStep</i> &rarr; <b>into</b> <i>exp</i>         into clause
-    | <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i>  compute clause (<i>a</i> &gt; 1)
+<i>terminalStep</i> &rarr; <b>into</b> <i>exp</i>         into step
+    | <b>compute</b> <i>exp</i>               compute step
 
 <i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>
 
@@ -225,12 +224,12 @@ If you want to add a join condition, you can append an `on` clause:
   <b>yield</b> {e.ename, d.dname};
 <i>
 dname      ename
----------- ------
+---------- -----
 RESEARCH   JONES
 SALES      BLAKE
 ACCOUNTING CLARK
 
-val it : {dname:string, ename:string} list</i>
+val it : {dname:string, ename:string} bag</i>
 </pre>
 
 (The `on` clause is not allowed on the first scan.)
@@ -261,8 +260,8 @@ Multiple scans are a convenient way of dealing with nested data.
    more nested items. *)</i>
 <b>val</b> shipments =
   [{id=1, shipping=10.0, items=[{product="soda", quantity=12},
-                                {product="beer", quantity=3}],
-   {id=2, shipping=7.5, items=[{product="cider",quantity=4}]}]}];
+                                {product="beer", quantity=3}]},
+   {id=2, shipping=7.5, items=[{product="cider",quantity=4}]}];
 
 <i>(* Flatten the data set by joining each shipment to its own
    items. *)</i>
@@ -306,10 +305,11 @@ i odd
 2 false
 3 true
 4 false
-5 true</i>
+5 true
+
+val it : {i:int, odd:bool} list</i>
 
 <i>(* Equivalent using "in" and a singleton list. *)</i>
-<b>val</b> it : {i:int, odd:bool} list
 <b>from</b> i <b>in</b> [1, 2, 3, 4, 5],
     odd <b>in</b> [(i <b>mod</b> 2 = 1)];
 <i>
@@ -344,7 +344,7 @@ You can even feed that one row into a pipeline.
 <i>
 3
 
-val it : {i:int} list</i>
+val it : int list</i>
 </pre>
 
 ## Step
@@ -376,7 +376,7 @@ step, which produces fields `deptno`, `job`, `initial`:
 <pre>
 <b>from</b> deptno <b>in</b> [10, 20],
     emp <b>in</b> scott.emps <b>on</b> emp.deptno = deptno
-  <b>yield</b> {deptno, emp.job, initial = String.sub(emp.ename, 1);
+  <b>yield</b> {deptno, emp.job, initial = String.sub(emp.ename, 1)};
 <i>
 deptno initial job
 ------ ------- ---------
@@ -389,7 +389,7 @@ deptno initial job
 20     D       CLERK
 20     O       ANALYST
 
-val it : {deptno:int, initial:char, job:string} list</i>
+val it : {deptno:int, initial:char, job:string} bag</i>
 </pre>
 
 In the following sections, we define each of Morel's step
@@ -436,9 +436,15 @@ that field.
 <b>from</b> i <b>in</b> [1, 2],
     j <b>in</b> ["a", "b"]
   <b>yield</b> <b>current</b>;
-<i>val it =
-  [{i=1,j="a"},{i=1,j="b"},{i=2, j="a"},{i=2, j="b"}]
-  : {i:int, j:string} list</i>
+<i>
+i j
+- -
+1 a
+1 b
+2 a
+2 b
+
+val it : {i:int, j:string} list</i>
 
 <i>(* Single anonymous field. Current is an atom. *)</i>
 <b>from</b> i <b>in</b> [1, 2, 3]
@@ -603,7 +609,7 @@ The output fields are the same as the input fields.
       <b>where</b> e.deptno = 30
       <b>yield</b> e.job);
 
-<i>val it = ["PRESIDENT"] : string list</i>
+<i>val it = ["PRESIDENT"] : string bag</i>
 </pre>
 
 <pre>
@@ -618,58 +624,75 @@ The output fields are the same as the input fields.
 ### Group step
 
 <pre>
-<b>group</b> <i>groupKey<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>groupKey<sub>g</sub></i>
-  [ <b>compute</b> <i>agg<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>agg<sub>a</sub></i> ]       (<i>g</i> &ge; 0, <i>a</i> &ge; 1)
-
-<i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>
-
-<i>agg</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i> [ <b>of</b> <i>exp</i> ]
+<b>group</b> <i>exp<sub>1</sub></i> [ <b>compute</b> <i>exp<sub>2</sub></i> ]
 </pre>
 
 #### Description
 
 Performs aggregation across groups of rows.
 
-Groups the rows of the input collection by one or more group keys. If
-there is a `compute` clause, for each group, computes the aggregate
-expressions specified in <code><i>agg</i></code>.
+Groups the rows of the input collection by the group key,
+<code><i>exp<sub>1</sub></i></code>. If there is a `compute` clause,
+for each group, computes the aggregate expressions specified in
+<code><i>exp<sub>2</sub></i></code>.
 
-The output fields are the group key fields and the aggregate fields.
+The output is an atom if there is a single field: if `group` is an
+atom and `compute` is missing, or `group` is empty and `compute` is an
+atom. Otherwise, the output is a record; `group` and `compute` must
+both be records, or be atomic expressions from which a name can be
+derived, and the output fields are the combined fields of those
+records, whose names must be disjoint.
 
-Field names are derived similarly to record fields in the
-[`yield`](#yield-step) step. An explicit field name of a
-<code><i>groupKey</i></code> or <code><i>agg</i></code> can be
-specified using an <code><i>id</i> =</code> prefix. The explicit field
-name of a <code><i>groupKey</i></code> can be omitted if an implicit
-field name can be derived: if the expression is <code><i>id</i></code>
-then the implicit field name is <code><i>id</i></code>; if the
-expression is <code><i>record</i>.<i>field</i></code> then the
-implicit field name is <code><i>field</i></code>. The explicit field
-name of an <code><i>agg</i></code> can be omitted if an implicit field
-name can be derived: if the aggregate function is
-<code><i>id</i></code> then the implicit field name is
-<code><i>id</i></code>; if the aggregate function is
-<code><i>record</i>.<i>field</i></code> then the implicit field name
-is <code><i>field</i></code>.
+Field names are derived in the usual way for record fields.  An
+explicit field name can be specified using an <code><i>id</i> =</code>
+prefix. The explicit field name can be omitted if an implicit field
+name can be derived: if the expression is <code><i>id</i></code> then
+the implicit field name is <code><i>id</i></code>; if the expression
+is <code><i>record</i>.<i>field</i></code> then the implicit field
+name is <code><i>field</i></code>; if the expression is
+<code><i>agg</i> <b>over</b> <i>arg</i></code> then the implicit field
+name is <code><i>agg</i></code>.
 
-The `of` clause in an aggregate specifies the expression to aggregate;
-if omitted, the aggregate function is applied to the entire row.
+The `over` operator applies an aggregate function to a collection of
+values. The left operand of `over` is an aggregate expression; it is
+typically an aggregate function such as `count` or `sum` but may be an
+expression such as `min 0` or `fn x => x`. The right operand of `over`
+is an expression that is evaluated for each element in the group.
+
+An `over` expression is just an expression (albeit one that can only
+be used in a `compute` clause), and that means that it can be part of
+a larger expression. That larger expression can include other `over`
+expressions, for example `((min over e.sal) + (max over e.sal)) / 2`.
 
 #### Example
 
 <pre>
-<i>(* Count employees and compute average salary for each
+<i>(* Count employees and compute total salary for each
    department. *)</i>
 <b>from</b> e <b>in</b> scott.emps
-  <b>group</b> e.deptno <b>compute</b> count, avgSal = avg <b>of</b> e.sal;
-<i>
-deptno count  avgSal
------- ----- -------
-    10     3 2916.67
-    20     5 2175.00
-    30     6 1566.67
+  <b>group</b> e.deptno
+    <b>compute</b> {count <b>over</b> (), sumSal = sum <b>over</b> e.sal};
+<i>count deptno sumSal
+----- ------ -------
+5     20     10875.0
+3     10     8750.0
+6     30     9400.0
 
-val it : {deptno:int, count:int, avgSal:real} list</i>
+val it : {count:int, deptno:int, sumSal:real} bag</i>
+
+<i>(* One group key and no compute expressions gives an
+   atomic result. *)</i>
+<b>from</b> e <b>in</b> scott.emps
+  <b>group</b> e.deptno;
+<i>
+val it = [20,10,30] : int bag</i>
+
+<i>(* Empty group key and one compute expression gives an
+   atomic result. *)</i>
+<b>from</b> e <b>in</b> scott.emps
+  <b>group</b> {} <b>compute</b> min <b>over</b> e.sal + e.comm;
+<i>
+val it = [800.0] : real bag</i>
 </pre>
 
 ### Intersect step
@@ -717,7 +740,7 @@ The output fields are the same as the input fields.
       <b>where</b> e.deptno = 30
       <b>yield</b> e.job);
 
-<i>val it = ["CLERK","MANAGER"] : string list</i>
+<i>val it = ["CLERK","MANAGER"] : string bag</i>
 </pre>
 
 <pre>
@@ -725,8 +748,8 @@ The output fields are the same as the input fields.
    has one soda, one donut, and four candies. What do we
    have in common? *)</i>
 <b>from</b> i <b>in</b> ["candy", "soda", "soda", "candy", "candy"]
-  <b>intersect</b> <b>distinct</b> ["soda", "donut", "candy",
-                      "donut", "candy", "candy"];
+  <b>intersect</b> ["soda", "donut", "candy",
+             "donut", "candy", "candy"];
 
 <i>val it = ["candy","candy","candy","soda"] : string list</i>
 </pre>
@@ -782,7 +805,7 @@ SALES      BLAKE
 SALES      TURNER
 SALES      JAMES
 
-val it : {dname:string, ename:string} list</i>
+val it : {dname:string, ename:string} bag</i>
 </pre>
 
 ### Order step
@@ -933,12 +956,7 @@ The output fields are the same as the input fields.
 <b>from</b> i <b>in</b> [1, 2, 3, 4, 5, 6, 7]
   <b>skip</b> 3;
 <i>
-4
-5
-6
-7
-
-val it : int list</i>
+val it = [4,5,6,7] : int list</i>
 </pre>
 
 ### Take step
@@ -965,11 +983,7 @@ The output fields are the same as the input fields.
 <b>from</b> i <b>in</b> [1, 2, 3, 4, 5, 6, 7]
   <b>take</b> 3;
 <i>
-1
-2
-3
-
-val it : int list</i>
+val it = [1,2,3] : int list</i>
 </pre>
 
 ### Through step
@@ -996,7 +1010,7 @@ The output fields are the fields defined by the pattern
 <pre>
 <i>(* Define a table function that returns the even numbers
    from a collection. *)</i>
-<b>fun</b> evenNumbers(xs) =
+<b>fun</b> evenNumbers (xs: int list) =
   <b>from</b> x <b>in</b> xs
     <b>where</b> x <b>mod</b> 2 = 0;
 
@@ -1004,11 +1018,7 @@ The output fields are the fields defined by the pattern
 <b>from</b> i <b>in</b> [1, 2, 3, 4, 5, 6, 7]
   <b>through</b> j <b>in</b> evenNumbers;
 <i>
-2
-4
-6
-
-val it : {j:int} list</i>
+val it = [2,4,6] : int list</i>
 </pre>
 
 The previous example can be generalized to find multiples of any given
@@ -1019,7 +1029,7 @@ becomes the second argument.
 <pre>
 <i>(* Define a table function that returns the numbers from
    a collection that are multiples of base. *)</i>
-<b>fun</b> multiplesOf base xs =
+<b>fun</b> multiplesOf base (xs: int list) =
   <b>from</b> x <b>in</b> xs
     <b>where</b> x <b>mod</b> base = 0;
 
@@ -1027,10 +1037,7 @@ becomes the second argument.
 <b>from</b> i <b>in</b> [1, 2, 3, 4, 5, 6, 7]
   <b>through</b> j <b>in</b> multiplesOf 3;
 <i>
-3
-6
-
-val it : {j:int} list</i>
+val it = [3,6] : int list</i>
 </pre>
 
 #### Description
@@ -1081,9 +1088,8 @@ The output fields are the same as the input fields.
       <b>where</b> e.deptno = 30
       <b>yield</b> e.job);
 
-<i>val it =
-  ["MANAGER","PRESIDENT","CLERK","ANALYST","SALESMAN"]
-  : string list</i>
+<i>val it = ["MANAGER","PRESIDENT","CLERK","ANALYST","SALESMAN"]
+  : string bag</i>
 </pre>
 
 <pre>
@@ -1093,8 +1099,7 @@ The output fields are the same as the input fields.
 <b>from</b> i <b>in</b> ["candy", "soda", "soda", "candy", "candy"]
   <b>union</b> ["soda", "candy"];
 
-<i>val it =
-  ["candy","soda","soda","candy","candy","soda","candy"]
+<i>val it = ["candy","soda","soda","candy","candy","soda","candy"]
   : string list</i>
 </pre>
 
@@ -1184,7 +1189,7 @@ SCOTT ANALYST
 ADAMS CLERK
 FORD  ANALYST
 
-val it : {ename:string, job:string} list</i>
+val it : {ename:string, job:string} bag</i>
 </pre>
 
 ### Yield step
@@ -1216,24 +1221,24 @@ result of the query is a collection of that non-record type.
       position = String.map Char.toLower e.job,
       annualSalary = e.sal * 12.0};
 <i>
-name   position  annualSalary
------- --------- ------------
-SMITH  clerk          9600.00
-ALLEN  salesman      19200.00
-WARD   salesman      15000.00
-JONES  manager       35700.00
-MARTIN salesman      15000.00
-BLAKE  manager       34200.00
-CLARK  manager       29400.00
-SCOTT  analyst       36000.00
-KING   president     60000.00
-TURNER salesman      18000.00
-ADAMS  clerk         13200.00
-JAMES  clerk         11400.00
-FORD   analyst       36000.00
-MILLER clerk         15600.00
+annualSalary name   position
+------------ ------ ---------
+9600.0       SMITH  clerk
+19200.0      ALLEN  salesman
+15000.0      WARD   salesman
+35700.0      JONES  manager
+15000.0      MARTIN salesman
+34200.0      BLAKE  manager
+29400.0      CLARK  manager
+36000.0      SCOTT  analyst
+60000.0      KING   president
+18000.0      TURNER salesman
+13200.0      ADAMS  clerk
+11400.0      JAMES  clerk
+36000.0      FORD   analyst
+15600.0      MILLER clerk
 
-val it : {name:string, position:string, annualSalary:real} list</i>
+val it : {annualSalary:real, name:string, position:string} bag</i>
 </pre>
 
 <pre>
@@ -1243,13 +1248,9 @@ val it : {name:string, position:string, annualSalary:real} list</i>
   <b>where</b> e.deptno = 20
   <b>yield</b> e.ename ^ " is a " ^ e.job;
 <i>
-SMITH is a CLERK
-JONES is a MANAGER
-SCOTT is a ANALYST
-ADAMS is a CLERK
-FORD is a ANALYST
-
-val it : string list</i>
+val it =
+  ["SMITH is a CLERK","JONES is a MANAGER","SCOTT is a ANALYST",
+   "ADAMS is a CLERK","FORD is a ANALYST"] : string bag</i>
 </pre>
 
 ### Compute terminal step
@@ -1292,18 +1293,16 @@ is <code><i>field</i></code>.
            minSal = min <b>of</b> e.sal,
            maxSal = max <b>of</b> e.sal;
 <i>
-total avgSal  minSal  maxSal
------ ------- ------- -------
-14    2073.21 800.00  5000.00
-
-val it : {total:int, avgSal:real, minSal:real, maxSal:real}</i>
+val it = {maxSal=5000.0,minSal=800.0,sumSal=29025.0,total=14}
+  : {maxSal:real, minSal:real, sumSal:real, total:int}</i>
 </pre>
 
 <pre>
 <i>(* Compute total number of employees. *)</i>
 <b>from</b> e <b>in</b> scott.emps
   <b>compute</b> count;
-<i>val it = 14 : int</i>
+<i>
+val it = 14 : int</i>
 </pre>
 
 ### Into terminal step
@@ -1324,11 +1323,11 @@ query is the result of applying that function to the collection.
 
 <pre>
 <i>(* Apply a custom function to the query results. *)</i>
-<b>fun</b> analyzeResults (emps: {deptno: int, sal: real} list) =
+<b>fun</b> analyzeResults (emps: {deptno: int, sal: real} bag) =
   <b>let</b>
     <b>val</b> {count, sumSal} =
       <b>from</b> e <b>in</b> emps
-        <b>compute</b> count, sumSal = sum <b>of</b> e.sal
+        <b>compute</b> {count <b>over</b> (), sumSal = sum <b>over</b> e.sal}
     <b>val</b> avgSal = sumSal / real count
   <b>in</b>
     {employeeCount = count,

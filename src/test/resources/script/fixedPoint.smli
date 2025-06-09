@@ -213,14 +213,14 @@ from s in states_within "CA" 1 order s;
 > val it = ["AZ","NV","OR"] : string list
 from s in states_within "CA" 2 order s;
 > val it = ["AZ","CA","CO","ID","NM","NV","OR","UT","WA"] : string list
-from s in states_within "CA" 2 group compute count;
+from s in states_within "CA" 2 group {} compute count over ();
 > val it = [9] : int list
-from s in states_within "CA" 3 group compute count;
+from s in states_within "CA" 3 group {} compute count over ();
 > val it = [15] : int list
 (* It takes 11 steps to reach to all 48 contiguous states plus DC.
    But it takes 2 minutes, so the following expression is disabled.
    See later, the same expression computed efficiently using semi-naive. *)
-if true then [49] else from s in states_within "CA" 11 group compute count;
+if true then [49] else from s in states_within "CA" 11 group {} compute count over ();
 > val it = [49] : int list
 from s in states_within "HI" 0 order s;
 > val it = ["HI"] : string list
@@ -350,13 +350,13 @@ from s in states_within2 "CA" 1 order s;
 > val it = ["AZ","NV","OR"] : string list
 from s in states_within2 "CA" 2 order s;
 > val it = ["AZ","CA","CO","ID","NM","NV","OR","UT","WA"] : string list
-from s in states_within2 "CA" 8 group compute count;
+from s in states_within2 "CA" 8 group {} compute count over ();
 > val it = [43] : int list
-from s in states_within2 "CA" 9 group compute count;
+from s in states_within2 "CA" 9 group {} compute count over ();
 > val it = [46] : int list
-from s in states_within2 "CA" 10 group compute count;
+from s in states_within2 "CA" 10 group {} compute count over ();
 > val it = [48] : int list
-from s in states_within2 "CA" 11 group compute count;
+from s in states_within2 "CA" 11 group {} compute count over ();
 > val it = [49] : int list
 
 (*) Floyd-Warshall algorithm (shortest path in weighted graph)
@@ -384,7 +384,7 @@ fun shortest_path edges =
       from e in edges
           union
           (from v in vertices yield {source = v, target = v, weight = 0})
-        group e.source, e.target compute weight = min of e.weight
+        group {e.source, e.target} compute {weight = min over e.weight}
     fun sp (paths, []) = paths
       | sp (paths, v :: vs) =
         let
@@ -396,7 +396,7 @@ fun shortest_path edges =
               yield {p1.source, p2.target, weight = p1.weight + p2.weight}
           val paths3 =
             from p in paths union paths2
-              group p.source, p.target compute weight = min of p.weight
+              group {p.source, p.target} compute {weight = min over p.weight}
         in
           sp (paths3, vs)
         end

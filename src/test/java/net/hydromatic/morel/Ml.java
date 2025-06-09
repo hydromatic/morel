@@ -299,6 +299,11 @@ class Ml {
         pos -> throwsA(TypeResolver.TypeException.class, s, pos));
   }
 
+  @SuppressWarnings("UnusedReturnValue")
+  Ml assertTypeThrowsCompileException(String s) {
+    return assertTypeThrows(pos -> throwsA(CompileException.class, s, pos));
+  }
+
   <T> Ml assertTypeThrows(Function<Pos, Matcher<T>> matcherSupplier) {
     return assertTypeThrows(matcherSupplier.apply(pos));
   }

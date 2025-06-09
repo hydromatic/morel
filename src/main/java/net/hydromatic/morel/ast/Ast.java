@@ -1562,15 +1562,25 @@ public class Ast {
     }
   }
 
-  /** Record. */
+  /**
+   * Record.
+   *
+   * @see AstBuilder#isSingletonRecord(Exp)
+   * @see AstBuilder#isEmptyRecord(AstNode)
+   * @see AstBuilder#fieldCount(Exp)
+   */
   public static class Record extends Exp {
     public final Ast.@Nullable Exp with;
     public final PairList<Id, Exp> args;
 
+    /** The empty record expression, {@code {}}. */
+    public static final Record EMPTY =
+        new Record(Pos.ZERO, null, ImmutablePairList.of());
+
     Record(
         Pos pos,
         @Nullable Exp with,
-        Iterable<? extends Map.Entry<Id, Exp>> args) {
+        Iterable<? extends Map.Entry<Id, ? extends Exp>> args) {
       super(pos, Op.RECORD);
       this.with = with;
       this.args = ImmutablePairList.copyOf(args);
@@ -2510,35 +2520,41 @@ public class Ast {
 
   /** A {@code group} step in a {@code from} expression. */
   public static class Group extends FromStep {
-    public final ImmutablePairList<Id, Exp> groupExps;
-    public final ImmutableList<Aggregate> aggregates;
+    public final Exp group;
 
-    Group(
-        Pos pos,
-        Op op,
-        ImmutablePairList<Id, Exp> groupExps,
-        ImmutableList<Aggregate> aggregates) {
+    /** The {@code compute} clause, or null if there is none. */
+    public final @Nullable Exp aggregate;
+
+    Group(Pos pos, Op op, Exp group, @Nullable Exp aggregate) {
       super(pos, op);
-      this.groupExps = groupExps;
-      this.aggregates = aggregates;
+      this.group = requireNonNull(group);
+      this.aggregate = aggregate;
+      checkArgument(op == Op.GROUP || op == Op.COMPUTE);
+    }
+
+    /** Returns the group key as a record expression. */
+    public Record key() {
+      return ast.toRecord(group, "_key");
+    }
+
+    /** Returns the compute expression as a record. May be empty, never null. */
+    public Record compute() {
+      if (aggregate == null) {
+        return Record.EMPTY;
+      }
+      return ast.toRecord(aggregate, "_compute");
     }
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       if (op == Op.GROUP) {
-        w.append(" group");
+        w.append(" group ");
+        w.append(group, 0, 0);
       }
-      forEachIndexed(
-          groupExps,
-          (i, id, exp) ->
-              w.append(i == 0 ? " " : ", ")
-                  .append(id, 0, 0)
-                  .append(" = ")
-                  .append(exp, 0, 0));
-      forEachIndexed(
-          aggregates,
-          (aggregate, i) ->
-              w.append(i == 0 ? " compute " : ", ").append(aggregate, 0, 0));
+      if (aggregate != null) {
+        w.append(" compute ");
+        w.append(aggregate, 0, 0);
+      }
       return w;
     }
 
@@ -2552,17 +2568,36 @@ public class Ast {
       visitor.visit(this);
     }
 
-    public Group copy(PairList<Id, Exp> groupExps, List<Aggregate> aggregates) {
+    public Group copy(Exp groupExp, Exp aggregate) {
       checkArgument(op == Op.GROUP, "use Compute.copy instead?");
-      return this.groupExps.equals(groupExps)
-              && this.aggregates.equals(aggregates)
+      return this.group.equals(groupExp)
+              && Objects.equals(this.aggregate, aggregate)
           ? this
-          : ast.group(pos, groupExps, aggregates);
+          : ast.group(pos, groupExp, aggregate);
     }
 
-    /** Returns whether this {@code group} step is an atom. */
+    /**
+     * Returns whether this {@code group} step is an atom.
+     *
+     * <p>Examples:
+     *
+     * <ul>
+     *   <li>{@code group {} compute count of e} is atom (1 field)
+     *   <li>{@code group {} compute {c = count of e}} is not atom (1 field, but
+     *       aliased in a singleton record)
+     *   <li>{@code group e.deptno compute count of e} is not atom (2 fields)
+     *   <li>{@code group e.deptno compute {}} is atom (1 field)
+     *   <li>{@code compute count over e} is atom (1 field)
+     *   <li>{@code compute {c =count over e}} is not atom (1 field, but aliased
+     *       in a singleton record)
+     *   <li>{@code compute {c = count over e, sum over e.sal}} is not atom (2
+     *       fields)
+     * </ul>
+     */
     public boolean isAtom() {
-      return groupExps.size() + aggregates.size() == 1;
+      return ast.fieldCount(group) + ast.fieldCount(aggregate) == 1
+          && !ast.isSingletonRecord(group)
+          && !ast.isSingletonRecord(aggregate);
     }
   }
 
@@ -2570,12 +2605,12 @@ public class Ast {
    * A {@code compute} step in a {@code from} expression.
    *
    * <p>Because {@code compute} and {@code group} are structurally similar, this
-   * is a sub-class of {@link Group}, with an empty list of group keys. But
-   * remember that the type derivation rules are different.
+   * is a subclass of {@link Group}, with a group key that is always the empty
+   * tuple. But remember that the type derivation rules are different.
    */
   public static class Compute extends Group {
-    Compute(Pos pos, ImmutableList<Aggregate> aggregates) {
-      super(pos, Op.COMPUTE, ImmutablePairList.of(), aggregates);
+    Compute(Pos pos, Exp aggregate) {
+      super(pos, Op.COMPUTE, Record.EMPTY, requireNonNull(aggregate));
     }
 
     @Override
@@ -2588,10 +2623,10 @@ public class Ast {
       visitor.visit(this);
     }
 
-    public Compute copy(List<Aggregate> aggregates) {
-      return this.aggregates.equals(aggregates)
+    public Compute copy(Exp aggregate) {
+      return requireNonNull(this.aggregate).equals(aggregate)
           ? this
-          : ast.compute(pos, aggregates);
+          : ast.compute(pos, aggregate);
     }
   }
 
@@ -2628,32 +2663,28 @@ public class Ast {
   }
 
   /**
-   * Call to an aggregate function in a {@code compute} clause.
+   * Call to an aggregate function. It is an expression but may only occur in a
+   * {@code compute} step or a {@code compute} clause of a {@code group} step.
    *
-   * <p>For example, in {@code compute sumId = sum of #id e}, {@code aggregate}
-   * is "sum", {@code argument} is "#id e", and {@code id} is "sumId".
+   * <p>For example, in {@code compute {sumId = 2 * sum of (#id e - 1)}}, the
+   * aggregate is "sum of (#id e - 1)", with {@code aggregate} is "sum", {@code
+   * argument} is "#id e", and {@code id} is "sumId".
    */
-  public static class Aggregate extends AstNode {
+  public static class Aggregate extends Exp {
     public final Exp aggregate;
     public final Exp argument;
-    public final Id id;
 
-    Aggregate(Pos pos, Exp aggregate, @Nullable Exp argument, Id id) {
+    Aggregate(Pos pos, Exp aggregate, Exp argument) {
       super(pos, Op.AGGREGATE);
       this.aggregate = requireNonNull(aggregate);
-      this.argument = argument;
-      this.id = requireNonNull(id);
+      this.argument = requireNonNull(argument);
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      w.id(id.name).append(" = ").append(aggregate, 0, 0);
-      if (argument != null) {
-        w.append(" of ").append(argument, 0, 0);
-      }
-      return w;
+      return w.append(aggregate, 0, 0).append(" over ").append(argument, 0, 0);
     }
 
-    public AstNode accept(Shuttle shuttle) {
+    public Aggregate accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
 
@@ -2662,12 +2693,10 @@ public class Ast {
       visitor.visit(this);
     }
 
-    public Aggregate copy(Exp aggregate, Exp argument, Id id) {
-      return this.aggregate.equals(aggregate)
-              && Objects.equals(this.argument, argument)
-              && this.id.equals(id)
+    public Aggregate copy(Exp aggregate, Exp argument) {
+      return this.aggregate.equals(aggregate) && this.argument.equals(argument)
           ? this
-          : ast.aggregate(pos, aggregate, argument, id);
+          : ast.aggregate(pos, aggregate, argument);
     }
   }
 }

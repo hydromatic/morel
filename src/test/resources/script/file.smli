@@ -44,7 +44,7 @@ val s = file.scott;
 (*) Access two relations (emps, depts) simultaneously via a variable (s).
 from d in s.depts
   join e in s.emps on d.deptno = e.deptno
-  group e.deptno compute count
+  group e.deptno compute count over ()
   order deptno;
 > val it = [{count=3,deptno=10},{count=5,deptno=20},{count=6,deptno=30}]
 >   : {count:int, deptno:int} list
@@ -60,12 +60,12 @@ file.scott.depts;
 (*) Since depts is a list of records, we can query it.
 from d in file.scott.depts
  where d.dname elem ["ACCOUNTING", "SALES"]
- compute sum of d.deptno;
+ compute sum over d.deptno;
 > val it = 40 : int
 
 from d in file.scott.depts
 join e in file.scott.emps on d.deptno = e.deptno
-group e.deptno compute count
+group e.deptno compute count over ()
 order deptno;
 > val it = [{count=3,deptno=10},{count=5,deptno=20},{count=6,deptno=30}]
 >   : {count:int, deptno:int} list

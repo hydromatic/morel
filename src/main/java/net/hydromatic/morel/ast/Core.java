@@ -1958,6 +1958,7 @@ public class Core {
       super(Op.GROUP, env);
       this.groupExps = groupExps;
       this.aggregates = aggregates;
+      checkArgument(!env.atom || groupExps.size() + aggregates.size() == 1);
     }
 
     @Override

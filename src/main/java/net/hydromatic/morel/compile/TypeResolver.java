@@ -83,6 +83,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.type.TypedValue;
+import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MartelliUnifier;
 import net.hydromatic.morel.util.Ord;
@@ -119,6 +120,7 @@ public class TypeResolver {
       PairList.of();
   private final List<Inst> overloads = new ArrayList<>();
   private final List<Constraint> constraints = new ArrayList<>();
+  private final Deque<AggFrame> aggregateTripleStack = new ArrayDeque<>();
 
   static final String BAG_TY_CON = BuiltIn.Eqtype.BAG.mlName();
   static final String TUPLE_TY_CON = "tuple";
@@ -636,10 +638,10 @@ public class TypeResolver {
       case RECORD_SELECTOR:
         final Ast.RecordSelector recordSelector = (Ast.RecordSelector) node;
         throw new RuntimeException(
-            "Error: unresolved flex record\n"
-                + "   (can't tell what fields there are besides #"
-                + recordSelector.name
-                + ")");
+            format(
+                "Error: unresolved flex record\n"
+                    + "   (can't tell what fields there are besides #%s)",
+                recordSelector.name));
 
       case IF:
         final Ast.If if_ = (Ast.If) node;
@@ -712,6 +714,18 @@ public class TypeResolver {
 
       case APPLY:
         return deduceApplyType(env, (Ast.Apply) node, v);
+
+      case AGGREGATE:
+        final AggFrame aggFrame = aggregateTripleStack.peek();
+        if (aggFrame == null) {
+          throw new CompileException(
+              "'over' is only valid in 'compute'", false, node.pos);
+        }
+        if (aggFrame.activeCount > 0) {
+          throw new CompileException(
+              "'over' is not valid in 'over'", false, node.pos);
+        }
+        return deduceAggregateType(aggFrame, (Ast.Aggregate) node, v);
 
       case AT:
       case CARET:
@@ -1021,7 +1035,7 @@ public class TypeResolver {
     }
     final TypeEnv env4 = typeEnvs.typeEnv;
 
-    final Variable v = fieldVar(fieldVars);
+    final Variable v = fieldVar(fieldVars, true);
     final Variable c;
     switch (containerize) {
       case BAG:
@@ -1099,62 +1113,66 @@ public class TypeResolver {
       PairList<Ast.Id, Variable> fieldVars,
       List<Ast.FromStep> fromSteps) {
     validateGroup(group);
-    TypeEnv env3 = env;
+    final PairList<String, Term> bindings = PairList.of();
     fieldVars.clear();
-    final PairList<Ast.Id, Ast.Exp> groupExps = PairList.of();
-    for (Map.Entry<Ast.Id, Ast.Exp> groupExp : group.groupExps) {
-      final Ast.Id id = groupExp.getKey();
-      final Ast.Exp exp = groupExp.getValue();
-      final Variable v7 = unifier.variable();
-      final Ast.Exp exp2 = deduceType(p.env, exp, v7);
-      reg(id, v7);
-      env3 = env3.bind(id.name, v7);
-      fieldVars.add(id, v7);
-      groupExps.add(id, exp2);
-    }
-    final List<Ast.Aggregate> aggregates = new ArrayList<>();
-    for (Ast.Aggregate aggregate : group.aggregates) {
-      final Ast.Id id = aggregate.id;
-      final Variable v8 = unifier.variable();
-      reg(id, v8);
-      final Variable v9 = unifier.variable();
-      final Ast.Exp aggregateFn2;
-      final Ast.Exp arg2;
-      final Variable c10;
-      if (aggregate.argument == null) {
-        c10 = p.c;
-        arg2 = null;
-      } else {
-        // The collection that is the input to the aggregate function is ordered
-        // iff the input is ordered.
-        final Variable v10 = unifier.variable();
-        c10 = unifier.variable();
-        isListOrBagMatchingInput(c10, v10, p.c, p.v);
-        arg2 = deduceType(p.env, aggregate.argument, v10);
-      }
-      aggregateFn2 = deduceApplyFnType(p.env, aggregate.aggregate, v9, c10, v8);
-      reg(aggregate.aggregate, v9);
 
-      final Sequence fnType = fnTerm(c10, v8);
-      equiv(v9, fnType);
-      env3 = env3.bind(id.name, v8);
-      fieldVars.add(id, v8);
-      final Ast.Aggregate aggregate2 =
-          aggregate.copy(aggregateFn2, arg2, aggregate.id);
-      aggregates.add(aggregate2);
-      reg(aggregate2, v8);
+    Ast.Record key = group.key();
+    final PairList<Ast.Id, Ast.Exp> groupExps = PairList.of();
+    key.args.forEach(
+        (id, exp) -> {
+          final Variable v7 = unifier.variable();
+          final Ast.Exp exp2 = deduceType(p.env, exp, v7);
+          reg(id, v7);
+          bindings.add(id.name, v7);
+          fieldVars.add(id, v7);
+          groupExps.add(id, exp2);
+        });
+
+    final Ast.Record compute = group.compute();
+    final PairList<Ast.Id, Ast.Exp> args2 = PairList.of();
+    final TypeEnv groupEnv = env.bindAll(bindings);
+    compute.args.forEach(
+        (id, exp) -> {
+          final Variable v8 = unifier.variable();
+          reg(id, v8);
+          final Ast.Exp exp2;
+          final AggFrame aggFrame =
+              new AggFrame(p.withEnv(p.env.bindAll(bindings)));
+          try {
+            aggregateTripleStack.push(aggFrame);
+            exp2 = deduceType(groupEnv, exp, v8);
+          } finally {
+            aggregateTripleStack.pop();
+          }
+          bindings.add(id.name, v8);
+          fieldVars.add(id, v8);
+          args2.add(id, exp2);
+          reg(exp2, v8);
+        });
+
+    final Ast.Exp group2;
+    if (groupExps.size() == 1 && group.isAtom()) {
+      group2 = groupExps.right(0);
+    } else {
+      group2 = key.copy(key.with, groupExps);
+      Variable v = fieldVar(fieldVars.first(groupExps.size()), false);
     }
-    final Variable v2 = fieldVar(fieldVars);
+    final Ast.Exp compute2 =
+        args2.size() == 1 && group.isAtom()
+            ? args2.right(0)
+            : compute.copy(compute.with, ImmutablePairList.copyOf(args2));
+
+    final Variable v2 = fieldVar(fieldVars, group.isAtom());
     if (group.op == Op.GROUP) {
-      fromSteps.add(group.copy(groupExps, aggregates));
+      fromSteps.add(group.copy(group2, compute2));
 
       // Output is ordered iff input is ordered.
       final Variable c2 = unifier.variable();
       isListOrBagMatchingInput(c2, v2, p.c, p.v);
-      return Triple.of(env3, v2, c2);
+      return Triple.of(env.bindAll(bindings), v2, c2);
     } else {
-      fromSteps.add(((Ast.Compute) group).copy(aggregates));
-      return Triple.singleton(env3, v2);
+      fromSteps.add(((Ast.Compute) group).copy(compute2));
+      return Triple.singleton(env.bindAll(bindings), v2);
     }
   }
 
@@ -1242,12 +1260,37 @@ public class TypeResolver {
    */
   private void validateGroup(Ast.Group group) {
     final List<String> names = new ArrayList<>();
-    group.groupExps.leftList().forEach(id -> names.add(id.name));
-    group.aggregates.forEach(aggregate -> names.add(aggregate.id.name));
-    int duplicate = firstDuplicate(names);
-    if (duplicate >= 0) {
-      throw new RuntimeException(
-          "Duplicate field name '" + names.get(duplicate) + "' in group");
+    if (!group.isAtom()) {
+      // If either group or compute is an atom, check that a label can be
+      // derived.
+      if (!(group.group instanceof Ast.Record)) {
+        @Nullable String label = ast.implicitLabelOpt(group.group);
+        if (label == null) {
+          throw new TypeException(
+              "cannot derive label for group expression", group.group.pos);
+        }
+      }
+      if (group.aggregate != null && !(group.aggregate instanceof Ast.Record)) {
+        @Nullable String label = ast.implicitLabelOpt(group.aggregate);
+        if (label == null) {
+          throw new TypeException(
+              "cannot derive label for compute expression",
+              group.aggregate.pos);
+        }
+      }
+
+      // Having checked that atom expressions can derive labels, we can call
+      // group.key() and group.compute() and be assured that they are the
+      // synthetic "_group" and "_compute" labels will not appear.
+      final Ast.Record groupRecord = group.key();
+      final Ast.Record aggregateRecord = group.compute();
+      groupRecord.args.forEach((id, e) -> names.add(id.name));
+      aggregateRecord.args.forEach((id, e) -> names.add(id.name));
+      int duplicate = firstDuplicate(names);
+      if (duplicate >= 0) {
+        throw new RuntimeException(
+            "Duplicate field name '" + names.get(duplicate) + "' in group");
+      }
     }
   }
 
@@ -1275,12 +1318,16 @@ public class TypeResolver {
         });
   }
 
-  private Variable fieldVar(PairList<Ast.Id, Variable> fieldVars) {
+  private Variable fieldVar(
+      PairList<Ast.Id, Variable> fieldVars, boolean atom) {
     switch (fieldVars.size()) {
       case 0:
         return toVariable(toTerm(PrimitiveType.UNIT));
       case 1:
-        return fieldVars.right(0);
+        if (atom) {
+          return fieldVars.right(0);
+        }
+        // fall through
       default:
         final TreeMap<String, Variable> map = new TreeMap<>();
         fieldVars.forEach((k, v) -> map.put(k.name, v));
@@ -1547,6 +1594,39 @@ public class TypeResolver {
     final List<Ast.Match> matchList2 =
         deduceMatchListType(env, case_.matchList, labelNames, v2, v);
     return reg(case_.copy(e2b, matchList2), v);
+  }
+
+  private Ast.Aggregate deduceAggregateType(
+      AggFrame aggFrame, Ast.Aggregate aggregate, Variable v) {
+    final Triple p = aggFrame.p;
+    final Ast.Exp arg2;
+    final Variable c;
+    if (aggregate.argument == null) {
+      c = p.c;
+      arg2 = null;
+    } else {
+      // The collection that is the input to the aggregate function is
+      // ordered iff the input is ordered.
+      final Variable v10 = unifier.variable();
+      c = unifier.variable();
+      isListOrBagMatchingInput(c, v10, p.c, p.v);
+      try {
+        ++aggFrame.activeCount;
+        arg2 = deduceType(p.env, aggregate.argument, v10);
+      } finally {
+        --aggFrame.activeCount;
+      }
+    }
+
+    final Variable vAgg = unifier.variable();
+    final Ast.Exp aggregateFn2 =
+        deduceApplyFnType(p.env, aggregate.aggregate, vAgg, c, v);
+    reg(aggregate.aggregate, vAgg);
+
+    final Sequence fnType = fnTerm(c, v);
+    equiv(vAgg, fnType);
+    final Ast.Aggregate aggregate2 = aggregate.copy(aggregateFn2, arg2);
+    return reg(aggregate2, v);
   }
 
   private AstNode deduceValBindType(
@@ -2511,6 +2591,14 @@ public class TypeResolver {
           new CompileException(
               "unbound variable or constructor: " + name, false, id.pos);
     }
+
+    default TypeEnv bindAll(Iterable<Map.Entry<String, Term>> nameTerms) {
+      TypeEnv env = this;
+      for (Map.Entry<String, Term> pair : nameTerms) {
+        env = env.bind(pair.getKey(), pair.getValue());
+      }
+      return env;
+    }
   }
 
   /** Type environment based on an {@link Environment}. */
@@ -2962,6 +3050,18 @@ public class TypeResolver {
 
     Triple withEnv(TypeEnv env) {
       return env == this.env ? this : new Triple(env, v, c);
+    }
+  }
+
+  /** Frame in which an "over" expression is resolved. */
+  private static class AggFrame {
+    final Triple p;
+
+    /** Number of nested "over" expressions encountered. */
+    int activeCount = 0;
+
+    private AggFrame(Triple p) {
+      this.p = p;
     }
   }
 

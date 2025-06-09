@@ -107,9 +107,9 @@ from i in intBag yield {j=i*i, i};
 > val it = [{i=1,j=1},{i=2,j=4},{i=1,j=1},{i=3,j=9}] : {i:int, j:int} bag
 
 (*) group is ordered iff its input is ordered
-from i in intList group;
+from i in intList group {};
 > val it = [()] : unit list
-from i in intBag group;
+from i in intBag group {};
 > val it = [()] : unit bag
 from i in intList group i;
 > val it = [1,2,3] : int list
@@ -123,13 +123,13 @@ from r in recBag group r.i;
 (*) the input to an aggregate functions is a bag, even if the input
 (*) stream is a list. (We need to devise syntax for aggregate functions
 (*) to sort their input.)
-from r in recList group r.i compute count;
+from r in recList group r.i compute count over ();
 > val it = [{count=2,i=1},{count=1,i=2}] : {count:int, i:int} list
-from r in recBag group r.i compute count;
+from r in recBag group r.i compute count over ();
 > val it = [{count=2,i=1},{count=1,i=2}] : {count:int, i:int} bag
-from r in recList group r.i compute bs = (fn x => x) of r.b;
+from r in recList group r.i compute {bs = (fn x => x) over r.b};
 > val it = [{bs=[true,false],i=1},{bs=[false],i=2}] : {bs:bool list, i:int} list
-from r in recBag group r.i compute bs = (fn x => x) of r.b;
+from r in recBag group r.i compute {bs = (fn x => x) over r.b};
 > val it = [{bs=[true,false],i=1},{bs=[false],i=2}] : {bs:bool bag, i:int} bag
 
 (*) distinct is ordered iff its input is ordered
@@ -147,9 +147,9 @@ from i in intList order ();
 > val it = [1,2,1,3] : int list
 from i in intBag order ();
 > val it = [1,2,1,3] : int list
-from r in recList group r.i compute bs = (fn x => x) of r.b order DESC i;
+from r in recList group r.i compute {bs = (fn x => x) over r.b} order DESC i;
 > val it = [{bs=[false],i=2},{bs=[true,false],i=1}] : {bs:bool list, i:int} list
-from r in recBag group r.i compute bs = (fn x => x) of r.b order DESC i;
+from r in recBag group r.i compute {bs = (fn x => x) over r.b} order DESC i;
 > val it = [{bs=[false],i=2},{bs=[true,false],i=1}] : {bs:bool bag, i:int} list
 
 (*) unorder's output is unordered

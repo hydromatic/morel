@@ -21,20 +21,22 @@ package net.hydromatic.morel.compile;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.Static.anyMatch;
 import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.skip;
 import static net.hydromatic.morel.util.Static.skipLast;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
+import static org.apache.calcite.util.Util.first;
 import static org.apache.calcite.util.Util.intersects;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
-import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Range;
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
@@ -49,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.function.Predicate;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.FromBuilder;
@@ -56,6 +59,7 @@ import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.eval.Session;
+import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
@@ -88,12 +92,12 @@ public class Resolver {
       Init.INSTANCE.builtInOpMap;
 
   final TypeMap typeMap;
-  private final NameGenerator nameGenerator;
-  private final Environment env;
-  private final @Nullable Session session;
-  private final Core.Exp current;
-  private final Map<String, Pair<Core.IdPat, List<Core.IdPat>>>
-      resolvedOverloads;
+  final NameGenerator nameGenerator;
+  final Environment env;
+  final @Nullable Session session;
+  final Core.Exp current;
+  final AggregateResolver aggregateResolver;
+  final Map<String, Pair<Core.IdPat, List<Core.IdPat>>> resolvedOverloads;
 
   /**
    * Contains variable declarations whose type at the point they are used is
@@ -116,7 +120,8 @@ public class Resolver {
       Map<String, Pair<Core.IdPat, List<Core.IdPat>>> resolvedOverloads,
       Environment env,
       @Nullable Session session,
-      Core.@Nullable Exp current) {
+      Core.@Nullable Exp current,
+      AggregateResolver aggregateResolver) {
     this.typeMap = typeMap;
     this.nameGenerator = nameGenerator;
     this.variantIdMap = variantIdMap;
@@ -124,6 +129,7 @@ public class Resolver {
     this.env = env;
     this.session = session;
     this.current = current;
+    this.aggregateResolver = aggregateResolver;
   }
 
   /** Creates a root Resolver. */
@@ -138,7 +144,8 @@ public class Resolver {
         new HashMap<>(),
         env,
         session,
-        null);
+        null,
+        AggregateResolver.UNSUPPORTED);
   }
 
   /** Binds a Resolver to a new environment. */
@@ -153,7 +160,8 @@ public class Resolver {
         resolvedOverloads,
         env,
         session,
-        current);
+        current,
+        aggregateResolver);
   }
 
   /**
@@ -175,7 +183,61 @@ public class Resolver {
         resolvedOverloads,
         env,
         session,
-        current);
+        current,
+        aggregateResolver);
+  }
+
+  /**
+   * Creates a Resolver that is able to translate a {@code compute} clause.
+   *
+   * <p>The challenge is to split expressions such as "{@code e0 = 1 + avg over
+   * e.salary * 2.0}". It is split as follows:
+   *
+   * <ul>
+   *   <li>{@code e.salary * 2.0} is the pre-expression, and becomes {@code p0}
+   *   <li>{@code avg of p0} is the aggregate, and becomes {@code a0}
+   *   <li>{@code 1 + a0} is the post-expression, and becomes {@code e0}
+   * </ul>
+   *
+   * <p>If the pre- and post-expressions are non-trivial we end up with a {@link
+   * Core.Yield} on a {@link Core.Group} on a {@link Core.Yield}.
+   *
+   * <p>What is the environment? If the query is "{@code from e in emps group
+   * e.deptno compute sum over e.salary * 2.0}", then this resolver (used for
+   * resolving the outer expressions) has an environment that includes the group
+   * key, {@code deptno}. The aggregate resolver has environment that includes
+   * the group key, {@code deptno}, and the input variables, in this case {@code
+   * e}.
+   */
+  Resolver withAggregateResolver(
+      Environment baseEnv,
+      Core.StepEnv stepEnv,
+      Collection<? extends Core.IdPat> groupKeys,
+      PairList<Core.IdPat, Core.Aggregate> aggregates) {
+    final Environment outerEnv =
+        Environments.bind(baseEnv, transform(groupKeys, Binding::of));
+    final Environment innerEnv = Environments.bind(outerEnv, stepEnv.bindings);
+    final Resolver innerResolver =
+        new Resolver(
+            typeMap,
+            nameGenerator,
+            variantIdMap,
+            resolvedOverloads,
+            innerEnv,
+            session,
+            current,
+            AggregateResolver.UNSUPPORTED);
+    final AggregateResolver aggregateResolver =
+        new AggregateResolverImpl(groupKeys, innerResolver, aggregates);
+    return new Resolver(
+        typeMap,
+        nameGenerator,
+        variantIdMap,
+        resolvedOverloads,
+        outerEnv,
+        session,
+        current,
+        aggregateResolver);
   }
 
   public Core.Decl toCore(Ast.Decl node) {
@@ -429,7 +491,11 @@ public class Resolver {
     }
   }
 
-  private Core.Exp toCore(Ast.Exp exp) {
+  Core.Exp toCore(Ast.Exp exp) {
+    return toCore(exp, null);
+  }
+
+  Core.Exp toCore(Ast.Exp exp, Ast.@Nullable Id id) {
     switch (exp.op) {
       case BOOL_LITERAL:
         return core.boolLiteral((Boolean) ((Ast.Literal) exp).value);
@@ -461,6 +527,8 @@ public class Resolver {
             ((Ast.InfixCall) exp).a0, ((Ast.InfixCall) exp).a1);
       case APPLY:
         return toCore((Ast.Apply) exp);
+      case AGGREGATE:
+        return aggregateResolver.toCore((Ast.Aggregate) exp, this, id);
       case FN:
         return toCore((Ast.Fn) exp);
       case IF:
@@ -959,15 +1027,6 @@ public class Resolver {
     }
   }
 
-  private Core.Aggregate toCore(
-      Ast.Aggregate aggregate, Collection<? extends Core.IdPat> groupKeys) {
-    final Resolver resolver = withEnv(transform(groupKeys, Binding::of));
-    return core.aggregate(
-        typeMap.getType(aggregate),
-        resolver.toCore(aggregate.aggregate),
-        aggregate.argument == null ? null : toCore(aggregate.argument));
-  }
-
   /** Helper for initialization. */
   private enum Init {
     INSTANCE;
@@ -1133,7 +1192,10 @@ public class Resolver {
    * Ast.FromStep} calling {@link FromBuilder} appropriately.
    */
   private class FromResolver extends Visitor {
-    final FromBuilder fromBuilder = core.fromBuilder(typeMap.typeSystem, env);
+    final FromBuilder fromBuilder =
+        core.fromBuilder(
+            typeMap.typeSystem,
+            () -> env.bindAll(aggregateResolver.bindings()));
 
     Core.Exp run(Ast.Query query) {
       if (query.isInto()) {
@@ -1304,25 +1366,168 @@ public class Resolver {
     protected void visit(Ast.Group group) {
       final boolean atom = group.isAtom();
       final Resolver r = withStepEnv(fromBuilder.stepEnv());
-      final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExpsB =
-          ImmutableSortedMap.naturalOrder();
-      final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates =
-          ImmutableSortedMap.naturalOrder();
-      forEach(
-          group.groupExps,
-          (id, exp) -> groupExpsB.put(toCorePat(id), r.toCore(exp)));
-      final SortedMap<Core.IdPat, Core.Exp> groupExps = groupExpsB.build();
-      group.aggregates.forEach(
-          aggregate ->
-              aggregates.put(
-                  toCorePat(aggregate.id),
-                  r.toCore(aggregate, groupExps.keySet())));
-      fromBuilder.group(atom, groupExps, aggregates.build());
+      final PairList<Core.IdPat, Core.Exp> groupExps = PairList.of();
+      final Resolver aggregateResolver;
+      final PairList<Core.IdPat, Core.Aggregate> aggregates = PairList.of();
+      final PairList<String, Core.Exp> postExps = PairList.of();
+      if (atom) {
+        aggregateResolver =
+            r.withAggregateResolver(
+                env, fromBuilder.stepEnv(), ImmutableList.of(), aggregates);
+        final boolean emptyKey =
+            group.group instanceof Ast.Record
+                && ((Ast.Record) group.group).args.isEmpty();
+        final Core.Exp exp;
+        final String label;
+        if (emptyKey) {
+          // No group keys. Since this is atom, compute must be a singleton.
+          exp = aggregateResolver.toCore(group.aggregate, null);
+          label = ast.implicitLabelOpt(requireNonNull(group.aggregate));
+        } else {
+          // One group key. Since this is an atom, compute must be empty.
+          exp = r.toCore(group.group);
+          label = ast.implicitLabelOpt(requireNonNull(group.group));
+        }
+        Core.Id id;
+        Core.IdPat idPat;
+        if (exp instanceof Core.Id) {
+          id = (Core.Id) exp;
+          idPat = (Core.IdPat) id.idPat;
+        } else if (label != null) {
+          idPat = core.idPat(exp.type, label, 0);
+          id = core.id(idPat);
+        } else {
+          idPat = core.idPat(exp.type, typeMap.typeSystem.nameGenerator::get);
+          id = core.id(idPat);
+        }
+        if (emptyKey) {
+          postExps.add(idPat.name, exp);
+        } else {
+          groupExps.add(idPat, exp);
+          postExps.add(idPat.name, id);
+        }
+      } else {
+        group
+            .key()
+            .args
+            .forEach((id, exp) -> groupExps.add(toCorePat(id), r.toCore(exp)));
+
+        aggregateResolver =
+            r.withAggregateResolver(
+                env, fromBuilder.stepEnv(), groupExps.leftList(), aggregates);
+        groupExps.forEach((id, exp) -> postExps.add(id.name, core.id(id)));
+        group
+            .compute()
+            .args
+            .forEach(
+                (id, exp) ->
+                    postExps.add(id.name, aggregateResolver.toCore(exp, id)));
+      }
+      final SortedMap<Core.IdPat, Core.Exp> groupMap =
+          groupExps.toImmutableSortedMap();
+      final SortedMap<Core.IdPat, Core.Aggregate> aggregateMap =
+          aggregates.toImmutableSortedMap();
+      int count = groupMap.size() + aggregateMap.size();
+      fromBuilder.group(atom && count == 1, groupMap, aggregateMap);
+
+      final Core.Exp yieldExp;
+      if (atom) {
+        yieldExp = postExps.right(0);
+      } else {
+        yieldExp = core.record(typeMap.typeSystem, postExps);
+      }
+      fromBuilder.yield_(yieldExp);
     }
 
     @Override
     protected void visit(Ast.Distinct distinct) {
       fromBuilder.distinct();
+    }
+  }
+
+  /**
+   * Converts an {@link Ast.Aggregate} to a core expression.
+   *
+   * <p>The main implementation, {@link AggregateResolverImpl}, creates a {@link
+   * Core.Aggregate} and returns its {@link Core.Id}.
+   */
+  private interface AggregateResolver {
+    Core.Exp toCore(
+        Ast.Aggregate aggregate, Resolver outerResolver, Ast.@Nullable Id id);
+
+    AggregateResolver UNSUPPORTED =
+        (aggregate, outerResolver, id) -> {
+          throw new UnsupportedOperationException(
+              "Aggregate expressions are not supported in this context: "
+                  + aggregate);
+        };
+
+    /** Returns the additional bindings created by this resolver. */
+    default List<Binding> bindings() {
+      return ImmutableList.of();
+    }
+  }
+
+  /**
+   * Implementation of {@link AggregateResolver} that is used inside a {@code
+   * compute} clause.
+   *
+   * <p>If an aggregate ({@code over}) is encountered, it is added to the {@link
+   * #aggregates} field with a generated name.
+   */
+  private static class AggregateResolverImpl implements AggregateResolver {
+    private final ImmutableList<Core.IdPat> groupKeys;
+    private final Resolver inputResolver;
+    private final PairList<Core.IdPat, Core.Aggregate> aggregates;
+
+    private AggregateResolverImpl(
+        Collection<? extends Core.IdPat> groupKeys,
+        Resolver inputResolver,
+        PairList<Core.IdPat, Core.Aggregate> aggregates) {
+      this.groupKeys = ImmutableList.copyOf(groupKeys);
+      this.inputResolver = inputResolver;
+      this.aggregates = aggregates;
+    }
+
+    @Override
+    public List<Binding> bindings() {
+      return aggregates.transform2((id, agg) -> Binding.of(id, Unit.INSTANCE));
+    }
+
+    @Override
+    public Core.Exp toCore(
+        Ast.Aggregate aggregate, Resolver outerResolver, Ast.@Nullable Id id) {
+      final Core.Aggregate coreAggregate =
+          core.aggregate(
+              outerResolver.typeMap.getType(aggregate),
+              outerResolver.toCore(aggregate.aggregate, null),
+              inputResolver.toCore(aggregate.argument));
+      final String base =
+          id != null
+              ? id.name
+              : first(ast.implicitLabelOpt(aggregate), "aggregate");
+      final String name = generateName(base, this::nameIsUnavailable);
+      final Core.IdPat idPat = core.idPat(coreAggregate.type, name, 0);
+      aggregates.add(idPat, coreAggregate);
+      return core.id(idPat);
+    }
+
+    /**
+     * Generates "base", "base1", "base2", ... until we find a name where {@code
+     * predicate} returns false.
+     */
+    static String generateName(String base, Predicate<String> predicate) {
+      String name = base;
+      int i = 0;
+      while (predicate.test(name)) {
+        name = base + ++i;
+      }
+      return name;
+    }
+
+    boolean nameIsUnavailable(String n) {
+      return aggregates.anyMatch((id, exp) -> id.name.equals(n))
+          || anyMatch(groupKeys, k -> k.name.equals(n));
     }
   }
 }

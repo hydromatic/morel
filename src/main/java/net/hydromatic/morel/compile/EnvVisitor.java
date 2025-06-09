@@ -130,10 +130,10 @@ abstract class EnvVisitor extends Visitor {
     // Aggregates need an environment that includes the group keys.
     // For example,
     //   from (i, j) in [(1, 2), (2, 3)]
-    //     group k = i + 2
-    //     compute fn list => List.size list + j of i + j
-    // the aggregate "fn list => List.size list + j" needs an environment [k];
-    // the argument "i + j" needs an environment [i, j].
+    //     group {k = i + 2}
+    //     compute {x = (fn list => List.size list + k) over i + j + k}
+    // the aggregate "fn list => List.size list + k" needs an environment [k];
+    // the argument "i + j + k" needs an environment [k, i, j].
     aggregate.aggregate.accept(push(aggEnv(false)));
     if (aggregate.argument != null) {
       aggregate.argument.accept(push(aggEnv(true)));

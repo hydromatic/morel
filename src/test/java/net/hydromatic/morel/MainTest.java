@@ -338,8 +338,6 @@ public class MainTest {
     ml("let val rec x = 2 and y = 3 in x + y end").assertParseSame();
     mlE("let val x = 2 and $rec$ y = 3 in x + y end")
         .assertParseThrowsParseException("Encountered \" \"rec\" \"rec \"\"");
-    mlE("let val x = 2 and $rec$ y = 3 in x + y end")
-        .assertParseThrowsParseException("Encountered \" \"rec\" \"rec \"\"");
 
     ml("let val inst first = fn (x, y) => x in x + y end").assertParseSame();
 
@@ -2048,9 +2046,9 @@ public class MainTest {
             + " group d.location\n")
         .assertParse(
             "from e in emps"
-                + " group deptno = #deptno e"
+                + " group #deptno e"
                 + " join d in depts on deptno = #deptno d"
-                + " group location = #location d");
+                + " group #location d");
     // As previous, but use 'group e = {...}' so that we can write 'e.deptno'
     // later in the query.
     ml("from e in emps\n"
@@ -2061,24 +2059,24 @@ public class MainTest {
             "from e in emps"
                 + " group e = {#deptno e}"
                 + " join d in depts on #deptno e = #deptno d"
-                + " group location = #location d");
+                + " group #location d");
     mlE("(from e in emps where e.id = 101, d $in$ depts)")
         .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("from e in emps where e.id = 101 join d in depts")
         .assertParse("from e in emps where #id e = 101 join d in depts");
     // after 'group', you have to use 'join' not ','
     mlE("(from e in emps\n"
-            + " group e.id compute count,\n"
+            + " group e.id compute count over (),\n"
             + " d $in$ depts\n"
             + " where false)")
         .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("(from e in emps\n"
-            + " group e.id compute count\n"
+            + " group e.id compute count over ()\n"
             + " join d in depts\n"
             + " where false)")
         .assertParse(
             "from e in emps"
-                + " group id = #id e compute count = count"
+                + " group #id e compute count over ()"
                 + " join d in depts where false");
     ml("from e in emps skip 1 take 2").assertParseSame();
     ml("from e in emps order (DESC e.empno, e.deptno)")
@@ -2138,11 +2136,11 @@ public class MainTest {
         .assertParse("from e in emps yield #empno e into sum");
     ml("from e in emps\n" //
             + "yield e.empno\n"
-            + "compute sum, count")
+            + "compute {sum over current, count over current}")
         .assertParse(
             "from e in emps "
                 + "yield #empno e "
-                + "compute sum = sum, count = count");
+                + "compute {sum over current, count over current}");
     ml("from i in [1, 2] union [3, 4]").assertParseSame();
     ml("from i in [0, 1, 2]\n"
             + "where i > 0\n"
@@ -2151,6 +2149,24 @@ public class MainTest {
             + "intersect [1, 3, 5, 7]\n"
             + "yield i + 3")
         .assertParseSame();
+  }
+
+  /** Tests parsing "from ... group". */
+  @Test
+  void testParseFromGroup() {
+    ml("from e in emps group {e.deptno, e.job}")
+        .assertParse("from e in emps group {#deptno e, #job e}");
+    ml("from e in emps\n"
+            + "group {e.deptno, e.job}\n"
+            + "  compute {sumSal = sum over e.sal}")
+        .assertParse(
+            "from e in emps "
+                + "group {#deptno e, #job e}"
+                + " compute {sumSal = sum over #sal e}");
+    ml("from e in emps\n" //
+            + "group {} compute 1 + sum over 2 * e.sal")
+        .assertParse(
+            "from e in emps group {} compute 1 + (sum over 2 * #sal e)");
   }
 
   /**
@@ -2202,9 +2218,9 @@ public class MainTest {
             + " group d.location\n")
         .assertParse(
             "exists e in emps"
-                + " group deptno = #deptno e"
+                + " group #deptno e"
                 + " join d in depts on deptno = #deptno d"
-                + " group location = #location d");
+                + " group #location d");
     // As previous, but use 'group e = {...}' so that we can write 'e.deptno'
     // later in the query.
     ml("exists e in emps\n"
@@ -2215,24 +2231,24 @@ public class MainTest {
             "exists e in emps"
                 + " group e = {#deptno e}"
                 + " join d in depts on #deptno e = #deptno d"
-                + " group location = #location d");
+                + " group #location d");
     mlE("(exists e in emps where e.id = 101, d $in$ depts)")
         .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("exists e in emps where e.id = 101 join d in depts")
         .assertParse("exists e in emps where #id e = 101 join d in depts");
     // after 'group', you have to use 'join' not ','
     mlE("(exists e in emps\n"
-            + " group e.id compute count,\n"
+            + " group e.id compute count over (),\n"
             + " d $in$ depts\n"
             + " where false)")
         .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("(exists e in emps\n"
-            + " group e.id compute count\n"
+            + " group e.id compute count over ()\n"
             + " join d in depts\n"
             + " where false)")
         .assertParse(
             "exists e in emps"
-                + " group id = #id e compute count = count"
+                + " group #id e compute count over ()"
                 + " join d in depts where false");
     ml("exists e in emps skip 1 take 2").assertParseSame();
     ml("exists e in emps order e.empno take 2")
@@ -2279,11 +2295,11 @@ public class MainTest {
         .assertParse("exists e in emps yield #empno e into sum");
     ml("exists e in emps\n" //
             + "yield e.empno\n"
-            + "compute sum, count")
+            + "compute {sum over current, count over current}")
         .assertParse(
             "exists e in emps "
                 + "yield #empno e "
-                + "compute sum = sum, count = count");
+                + "compute {sum over current, count over current}");
   }
 
   /**
@@ -2335,9 +2351,9 @@ public class MainTest {
             + " group d.location\n")
         .assertParse(
             "forall e in emps"
-                + " group deptno = #deptno e"
+                + " group #deptno e"
                 + " join d in depts on deptno = #deptno d"
-                + " group location = #location d");
+                + " group #location d");
     // As previous, but use 'group e = {...}' so that we can write 'e.deptno'
     // later in the query.
     ml("forall e in emps\n"
@@ -2348,24 +2364,24 @@ public class MainTest {
             "forall e in emps"
                 + " group e = {#deptno e}"
                 + " join d in depts on #deptno e = #deptno d"
-                + " group location = #location d");
+                + " group #location d");
     mlE("(forall e in emps where e.id = 101, d $in$ depts)")
         .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("forall e in emps where e.id = 101 join d in depts")
         .assertParse("forall e in emps where #id e = 101 join d in depts");
     // after 'group', you have to use 'join' not ','
     mlE("(forall e in emps\n"
-            + " group e.id compute count,\n"
+            + " group e.id compute count over (),\n"
             + " d $in$ depts\n"
             + " where false)")
         .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("(forall e in emps\n"
-            + " group e.id compute count\n"
+            + " group e.id compute count over ()\n"
             + " join d in depts\n"
             + " where false)")
         .assertParse(
             "forall e in emps"
-                + " group id = #id e compute count = count"
+                + " group #id e compute count over ()"
                 + " join d in depts where false");
     ml("forall e in emps skip 1 take 2").assertParseSame();
     ml("forall e in emps order e.empno take 2")
@@ -2412,11 +2428,11 @@ public class MainTest {
         .assertParse("forall e in emps yield #empno e into sum");
     ml("forall e in emps\n" //
             + "yield e.empno\n"
-            + "compute sum, count")
+            + "compute {sum over current, count over current}")
         .assertParse(
             "forall e in emps "
                 + "yield #empno e "
-                + "compute sum = sum, count = count");
+                + "compute {sum over current, count over current}");
   }
 
   @Test
@@ -2432,20 +2448,38 @@ public class MainTest {
         .assertType("int bag");
     ml("from (i, j) in [(\"a\", 1)]").assertType("{i:string, j:int} list");
     ml("from (i, j) in [(1, 1), (2, 3)]").assertType("{i:int, j:int} list");
-    ml("from (x, y) in [(1,2),(3,4),(3,0)] group sum = x + y")
-        .assertParse(
-            "from (x, y) in [(1, 2), (3, 4), (3, 0)] group sum = x + y")
+    ml("from (x, y) in [(1,2),(3,4),(3,0)] group x + y")
+        .assertParse("from (x, y) in [(1, 2), (3, 4), (3, 0)] group x + y")
         .assertType(hasMoniker("int list"))
         .assertEvalIter(equalsUnordered(3, 7));
+    ml("from (x, y) in [(1,2),(3,4),(3,0)] group {sum = x + y}")
+        .assertParse(
+            "from (x, y) in [(1, 2), (3, 4), (3, 0)] group {sum = x + y}")
+        .assertType(hasMoniker("{sum:int} list"))
+        .assertEvalIter(equalsUnordered(list(3), list(7)));
     ml("from {c, a, ...} in [{a=1.0,b=true,c=3},{a=1.5,b=true,c=4}]")
         .assertParse(
             "from {a = a, c = c, ...}"
                 + " in [{a = 1.0, b = true, c = 3}, {a = 1.5, b = true, c = 4}]")
         .assertType("{a:real, c:int} list");
-    ml("from i in [1] group i compute count")
+    ml("from i in [1] group i compute count over i")
         .assertType("{count:int, i:int} list");
-    ml("from i in bag [1] group i compute count")
+    ml("from i in bag [1] group i compute count over i")
         .assertType("{count:int, i:int} bag");
+    ml("from (r, s) in [(1.0, \"a\")]\n"
+            + "  group r compute {x = 1 + sum over size s}")
+        .assertType("{r:real, x:int} list");
+    ml("from (r, s) in [(1.0, \"a\")]\n"
+            + "  group r compute {x = 1 + sum over size s,\n"
+            + "                   y = 0,\n"
+            + "                   z = concat over s}")
+        .assertType("{r:real, x:int, y:int, z:string} list");
+    ml("from p in [{r=1.0, s=\"a\"}]\n" //
+            + "  group p.r compute {x = r}")
+        .assertType("{r:real, x:real} list");
+    mlE("from p in [{r=1.0, s=\"a\"}]\n" //
+            + "  group p.r compute {x = $p$.r}")
+        .assertTypeThrowsCompileException("unbound variable or constructor: p");
     ml("from d in [{a=1,b=true}] yield d.a into sum")
         .assertType("int")
         .assertEval(is(1));
@@ -2627,7 +2661,7 @@ public class MainTest {
         .assertCompileException("'into' step must not occur in 'exists'");
     mlE("forall d in [{a=1,b=true}] yield d.a $into sum$")
         .assertCompileException("'into' step must not occur in 'forall'");
-    mlE("forall d in [{a=1,b=true}] yield d.a $compute sum$")
+    mlE("forall d in [{a=1,b=true}] yield d.a $compute sum over current$")
         .assertCompileException("'compute' step must not occur in 'forall'");
     mlE("forall d in [{a=1,b=true}] $yield d.a$")
         .assertCompileException("last step of 'forall' must be 'require'");
@@ -3244,7 +3278,7 @@ public class MainTest {
     final String ml =
         "from s in [\"abc\", \"\", \"d\"],\n"
             + "    c in explode s\n"
-            + "  group s compute count = sum of 1";
+            + "  group s compute {count = sum over 1}";
     ml(ml).assertEvalIter(equalsUnordered(list(3, "abc"), list(1, "d")));
   }
 
@@ -3284,7 +3318,7 @@ public class MainTest {
             + " {id = 102, name = \"Shaggy\", deptno = 10}] "
             + "in"
             + " from e in emps"
-            + " group deptno = #deptno e "
+            + " group #deptno e "
             + "end";
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = (" + expected + ")");
@@ -3308,7 +3342,7 @@ public class MainTest {
             + "     {id = 101, name = \"Velma\", deptno = 20},\n"
             + "     {id = 102, name = \"Shaggy\", deptno = 10}]\n"
             + "in\n"
-            + "  from e in emps group #deptno e, parity = e.id mod 2\n"
+            + "  from e in emps group {#deptno e, parity = e.id mod 2}\n"
             + "end";
     ml(ml)
         .assertType("{deptno:int, parity:int} list")
@@ -3330,7 +3364,7 @@ public class MainTest {
             + "in\n"
             + "  from e in emps\n"
             + "    group #deptno e\n"
-            + "    compute sumId = sum of #id e\n"
+            + "    compute {sumId = sum over #id e}\n"
             + "end";
     final String expected =
         "let val emps = "
@@ -3342,8 +3376,8 @@ public class MainTest {
             + " | SOME (h, t) => h + sum t "
             + "in"
             + " from e in emps"
-            + " group deptno = #deptno e"
-            + " compute sumId = sum of #id e "
+            + " group #deptno e"
+            + " compute {sumId = sum over #id e} "
             + "end";
     ml("val x = " + ml)
         .assertParseDecl(Ast.ValDecl.class, "val x = (" + expected + ")");
@@ -3356,64 +3390,82 @@ public class MainTest {
   void testGroupAs() {
     final String ml0 =
         "from e in emps\n" //
-            + "group deptno = e.deptno";
+            + "group {deptno = e.deptno}";
     final String ml1 =
         "from e in emps\n" //
             + "group e.deptno";
     final String ml2 =
         "from e in emps\n" //
             + "group #deptno e";
-    final String expected = "from e in emps group deptno = #deptno e";
-    ml(ml0).assertParse(expected);
+    final String expected0 = "from e in emps group {#deptno e}";
+    final String expected = "from e in emps group #deptno e";
+    ml(ml0).assertParse(expected0);
     ml(ml1).assertParse(expected);
     ml(ml2).assertParse(expected);
 
     final String ml3 =
         "from e in emps\n" //
-            + "group e, h = f + e.g";
-    final String expected3 = "from e in emps group e = e, h = f + #g e";
+            + "group {e, h = f + e.g}";
+    final String expected3 = "from e in emps group {e, h = f + #g e}";
     ml(ml3).assertParse(expected3);
   }
 
   @Test
   void testGroupAs2() {
-    ml("from e in emps group e.deptno, e.deptno + e.empid")
+    ml("from e in emps group {e.deptno, e.deptno + e.empid}")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression #deptno e + #empid e"));
-    ml("from e in emps group 1")
+    ml("from e in emps group 1").assertParseSame();
+    ml("from e in emps group {1}")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression 1"));
-    ml("from e in emps group e.deptno compute (fn x => x) of e.job")
+    ml("from e in emps group e.deptno compute {(fn x => x) over e.job}")
         .assertParseThrowsIllegalArgumentException(
-            is("cannot derive label for expression fn x => x"));
-    // Require that we can derive a name for the expression even though there
-    // is only one, and therefore we would not use the name.
-    // (We could revisit this requirement.)
-    ml("from e in emps group compute (fn x => x) of e.job")
-        .assertParseThrowsIllegalArgumentException(
-            is("cannot derive label for expression fn x => x"));
+            is("cannot derive label for expression fn x => x over #job e"));
+    // If there is only one expression in the group, we do not require that it
+    // we can derive a name for the expression.
+    ml("from e in emps group {} compute (fn x => x) over e.job")
+        .assertParse("from e in emps group {} compute fn x => x over #job e");
+    // But if we add a group key, now there are two expressions, and the compute
+    // expression must have a derivable name.
+    mlE("from e in [{empno=1,deptno=10,job=\"Analyst\"},\n"
+            + "        {empno=2,deptno=10,job=\"Manager\"}]\n"
+            + "group e.deptno compute ($fn x => x) over e.job$")
+        .assertTypeThrowsTypeException(
+            "cannot derive label for compute expression");
+    // And vice versa.
+    mlE("from e in [{empno=1,deptno=10,job=\"Analyst\"},\n"
+            + "        {empno=2,deptno=10,job=\"Manager\"}]\n"
+            + "group $1 + e.deptno$ compute sum over e.empno")
+        .assertTypeThrowsTypeException(
+            "cannot derive label for group expression");
     ml("from e in [{x = 1, y = 5}]\n" //
-            + "  group compute sum of e.x")
+            + "  group {} compute sum over e.x")
         .assertType(hasMoniker("int list"));
     ml("from e in [1, 2, 3]\n" //
-            + "  group compute sum of e")
+            + "  group {} compute sum over e")
         .assertType(hasMoniker("int list"));
   }
 
   @Test
   void testGroupSansOf() {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "  group compute c = count")
+            + "  group {} compute count over e")
         .assertType(hasMoniker("int list"))
         .assertEvalIter(equalsUnordered(3));
 
     ml("from e in [{a = 1, b = 5}, {a = 0, b = 1}, {a = 1, b = 1}]\n"
-            + "  group e.a compute rows = (fn x => x)")
+            + "  group e.a compute {rows = (fn x => x) over e}")
         .assertType(hasMoniker("{a:int, rows:{a:int, b:int} list} list"))
         .assertEvalIter(
             equalsUnordered(
                 list(1, list(list(1, 5), list(1, 1))),
                 list(0, list(list(0, 1)))));
+
+    mlE("from e in [{a = 1, b = 5}, {a = 0, b = 1}, {a = 1, b = 1}]\n"
+            + "  group e.a compute ($fn x => x) over e$")
+        .assertTypeThrowsTypeException(
+            "cannot derive label for compute expression");
   }
 
   /**
@@ -3423,37 +3475,46 @@ public class MainTest {
   @Test
   void testGroupDuplicates() {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "group a = e.x")
+            + "group e.x")
+        .assertType("int list")
         .assertEvalIter(equalsUnordered(0, 1));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "group a = e.x, b = e.x")
+            + "group {e.x}")
+        .assertType("{x:int} list")
+        .assertEvalIter(equalsUnordered(list(0), list(1)));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+            + "group {a = e.x}")
+        .assertType("{a:int} list")
+        .assertEvalIter(equalsUnordered(list(0), list(1)));
+    ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
+            + "group {a = e.x, b = e.x}")
         .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "group a = e.x, a = e.y")
+            + "group {a = e.x, a = e.y}")
         .assertTypeThrowsRuntimeException("Duplicate field name 'a' in group");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "group e.x, x = e.y")
+            + "group {e.x, x = e.y}")
         .assertTypeThrowsRuntimeException("Duplicate field name 'x' in group");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "group a = e.x\n"
-            + "compute b = sum of e.y")
+            + "group {a = e.x}\n"
+            + "compute {b = sum over e.y}")
         .assertEvalIter(equalsUnordered(list(0, 1), list(1, 6)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "group a = e.x\n"
-            + "compute a = sum of e.y")
+            + "group {a = e.x}\n"
+            + "compute {a = sum over e.y}")
         .assertTypeThrowsRuntimeException("Duplicate field name 'a' in group");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "group sum = e.x\n"
-            + "compute sum of e.y")
+            + "group {sum = e.x}\n"
+            + "compute sum over e.y")
         .assertTypeThrowsRuntimeException(
             "Duplicate field name 'sum' in group");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "group a = e.x\n"
-            + "compute b = sum of e.y, c = sum of e.x")
+            + "group {a = e.x}\n"
+            + "compute {b = sum over e.y, c = sum over e.x}")
         .assertEvalIter(equalsUnordered(list(0, 1, 0), list(1, 6, 2)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
-            + "group a = e.x\n"
-            + "compute c = sum of e.y, c = sum of e.x")
+            + "group {a = e.x}\n"
+            + "compute {c = sum over e.y, c = sum over e.x}")
         .assertTypeThrowsRuntimeException("Duplicate field name 'c' in group");
   }
 
@@ -3464,13 +3525,12 @@ public class MainTest {
    */
   @Test
   void testCompute() {
-    ml("from i in [1, 2, 3] compute sum of i")
-        .assertParse("from i in [1, 2, 3] compute sum = sum of i")
+    ml("from i in [1, 2, 3] compute sum over i")
+        .assertParse("from i in [1, 2, 3] compute sum over i")
         .assertType("int")
         .assertEval(is(6));
-    ml("from i in [1, 2, 3] compute sum of i, count")
-        .assertParse(
-            "from i in [1, 2, 3] compute sum = sum of i, count = count")
+    ml("from i in [1, 2, 3] compute {sum over i, count over i}")
+        .assertParse("from i in [1, 2, 3] compute {sum over i, count over i}")
         .assertType("{count:int, sum:int}");
     // there must be at least one aggregate function
     mlE("from i in [1, 2, 3] comput$e$")
@@ -3481,21 +3541,21 @@ public class MainTest {
     // "group ... compute" step. Under the two-step interpretation, the type
     // would have been "int".
     ml("from (i, j) in [(1, 1), (2, 3), (3, 4)]\n"
-            + "  group j = i mod 2\n"
-            + "  compute sum of j")
+            + "  group {j = i mod 2}\n"
+            + "  compute sum over j")
         .assertType("{j:int, sum:int} list")
         .assertEvalIter(equalsUnordered(list(1, 5), list(0, 3)));
 
     // "compute" must not be followed by other steps
-    mlE("from i in [1, 2, 3] compute s = sum of i $yield s + 2$")
+    mlE("from i in [1, 2, 3] compute sum over i $yield s + 2$")
         .assertCompileException("'compute' step must be last in 'from'");
     // similar, but valid
-    ml("(from i in [1, 2, 3] compute s = sum of i) + 2")
+    ml("(from i in [1, 2, 3] compute sum over i) + 2")
         .assertType(hasMoniker("int"))
         .assertEval(is(8));
 
     // "compute" must not occur in "exists"
-    mlE("exists i in [1, 2, 3] $compute s = sum of i$")
+    mlE("exists i in [1, 2, 3] $compute sum over i$")
         .assertCompileException("'compute' step must not occur in 'exists'");
   }
 
@@ -3503,11 +3563,11 @@ public class MainTest {
   void testGroupYield() {
     final String ml =
         "from r in [{a=2,b=3}]\n"
-            + "group r.a compute sb = sum of r.b\n"
+            + "group r.a compute {sb = sum over r.b}\n"
             + "yield {a, a2 = a + a, sb}";
     final String expected =
         "from r in [{a = 2, b = 3}]"
-            + " group a = #a r compute sb = sum of #b r"
+            + " group #a r compute {sb = sum over #b r}"
             + " yield {a, a2 = a + a, sb}";
     final String plan =
         "from("
@@ -3528,12 +3588,12 @@ public class MainTest {
     final String ml =
         "from e in [{empno=100,deptno=10}],\n"
             + "  d in [{deptno=10,altitude=3500}]\n"
-            + "group e.deptno compute s = sum of e.empno + d.altitude";
+            + "group e.deptno compute {s = sum over e.empno + d.altitude}";
     final String expected =
         "from e in [{empno = 100, deptno = 10}],"
             + " d in [{deptno = 10, altitude = 3500}]"
-            + " group deptno = #deptno e"
-            + " compute s = sum of #empno e + #altitude d";
+            + " group #deptno e"
+            + " compute {s = sum over #empno e + #altitude d}";
     ml(ml)
         .assertParse(expected)
         .assertType("{deptno:int, s:int} list")
@@ -3544,12 +3604,12 @@ public class MainTest {
   void testGroupGroup() {
     final String ml =
         "from r in [{a=2,b=3}]\n"
-            + "group a1 = r.a, b1 = r.b\n"
-            + "group c2 = a1 + b1 compute s2 = sum of a1";
+            + "group {a1 = r.a, b1 = r.b}\n"
+            + "group {c2 = a1 + b1} compute {s2 = sum over a1}";
     final String expected =
         "from r in [{a = 2, b = 3}]"
-            + " group a1 = #a r, b1 = #b r"
-            + " group c2 = a1 + b1 compute s2 = sum of a1";
+            + " group {a1 = #a r, b1 = #b r}"
+            + " group {c2 = a1 + b1} compute {s2 = sum over a1}";
     ml(ml)
         .assertParse(expected)
         .assertType(hasMoniker("{c2:int, s2:int} list"))
@@ -3605,9 +3665,9 @@ public class MainTest {
     ml("from i in bag [1,2] where i > 1").assertType(hasMoniker("int bag"));
     ml("from i in bag [1,2] distinct").assertType(hasMoniker("int bag"));
     ml("from i in [1,2] distinct").assertType(hasMoniker("int list"));
-    ml("from i in [1,2] group i compute count")
+    ml("from i in [1,2] group i compute count over i")
         .assertType(hasMoniker("{count:int, i:int} list"));
-    ml("from i in bag [1,2] group i compute count")
+    ml("from i in bag [1,2] group i compute count over i")
         .assertType(hasMoniker("{count:int, i:int} bag"));
     ml("from (i, j) in bag [(1, 1), (2, 3)]").assertType("{i:int, j:int} bag");
     ml("from i in bag [1], j in bag [true]").assertType("{i:int, j:bool} bag");

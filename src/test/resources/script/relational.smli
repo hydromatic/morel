@@ -778,7 +778,7 @@ from i in [1, 2, 3],
 (*) singleton record 'yield' followed by 'group'
 from e in emps
   yield {d = e.deptno}
-  group d compute c = count
+  group d compute {c = count over ()}
   order d;
 > val it = [{c=1,d=10},{c=1,d=20},{c=2,d=30}] : {c:int, d:int} list
 
@@ -823,21 +823,91 @@ from x in [{a = {a = 1}}, {a = {a = 2}}]
 > val it = [{a={a=1}},{a={a=2}}] : {a:{a:int}} list
 
 from (x, y) in [(1,2),(3,4),(3,0)]
-  group sum = x + y;
+  group x + y;
 > val it = [3,7] : int list
+
+(* "over" is only valid inside "compute" *)
+from i in [2, 1, 2]
+  where (sum over i) > 3;
+> stdIn:2.10-2.20 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.10-2.20
+from i in [2, 1, 2]
+  group (sum over i);
+> stdIn:2.10-2.20 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.10-2.20
+from i in [2, 1, 2]
+  yield (sum over i);
+> stdIn:2.10-2.20 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.10-2.20
+from i in [2, 1, 2]
+  skip (sum over i);
+> stdIn:2.9-2.19 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.9-2.19
+from i in [2, 1, 2]
+  take (sum over i);
+> stdIn:2.9-2.19 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.9-2.19
+from i in [2, 1, 2]
+  order (sum over i);
+> stdIn:2.10-2.20 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.10-2.20
+
+(* "over" is not valid inside "over" *)
+from (i, j) in [(2, 5), (1, 1), (2, 7)]
+  group i compute {min over (max over j)};
+> stdIn:2.30-2.40 Error: 'over' is not valid in 'over'
+>   raised at: stdIn:2.30-2.40
+
+from (i, j) in [(2, 5), (1, 1), (2, 7)]
+  group i compute {min over (count over ())};
+> stdIn:2.30-2.43 Error: 'over' is not valid in 'over'
+>   raised at: stdIn:2.30-2.43
+
+from i in [2, 1, 2]
+  compute sum over i;
+> val it = 5 : int
+from i in [2, 1, 2]
+  compute {s = sum over i, t = 1 + sum over i * 3};
+> val it = {s=5,t=16} : {s:int, t:int}
+from i in [2, 1, 2]
+  group i compute (sum over i);
+> val it = [{i=1,sum=1},{i=2,sum=4}] : {i:int, sum:int} list
+(*) Aggregate used in a subquery
+from i in [2, 1, 2]
+  group i compute {x = from j in [3, 4] yield j + (sum over i)};
+> val it = [{i=1,x=[4,5]},{i=2,x=[7,8]}] : {i:int, x:int list} list
+from (i, j) in [(2, 5), (1, 1), (2, 7)]
+  group i compute {mid = ((min over j) + (max over j)) / 2};
+> val it = [{i=1,mid=1},{i=2,mid=6}] : {i:int, mid:int} list
+from i in [2, 1, 2]
+  compute 1;
+> val it = 1 : int
+(*) "count" used as an ordinary function ("over" is not present)
+from i in [2, 1, 2]
+  compute count ["a", "b"];
+> val it = 2 : int
+from i in [2, 1, 2]
+  group i compute {c = count ["a", "b"]};
+> val it = [{c=2,i=1},{c=2,i=2}] : {c:int, i:int} list
 
 (* Theoretically a "group" without a "compute" can be followed by a
  * "compute" step. So, the following is ambiguous. We treat it as a single
  * "group ... compute" step. Under the two-step interpretation, the type
  * would have been "int". *)
 from (i, j) in [(1, 1), (2, 3), (3, 4)]
-  group j = i mod 2
-  compute sum of j;
+  group {j = i mod 2}
+  compute sum over j;
 > val it = [{j=1,sum=5},{j=0,sum=3}] : {j:int, sum:int} list
 
+(*) Equivalent to previous, renaming "j" to "k" so it doesn't shadow the other "j".
 from (i, j) in [(1, 1), (2, 3), (3, 4)]
-  group j = i mod 2
-  compute sum of j, count;
+  group {k = i mod 2}
+  compute sum over j;
+> val it = [{k=1,sum=5},{k=0,sum=3}] : {k:int, sum:int} list
+
+from (i, j) in [(1, 1), (2, 3), (3, 4)]
+  group {j = i mod 2}
+  compute {sum over j, count over ()};
 > val it = [{count=2,j=1,sum=5},{count=1,j=0,sum=3}]
 >   : {count:int, j:int, sum:int} list
 
@@ -872,7 +942,7 @@ from e in scott.emps
 (*) (The 'order' clause is for deterministic results.)
 from e in scott.emps
   yield {e.job, e.deptno}
-  group job, deptno
+  group {job, deptno}
   order (job, deptno);
 > val it =
 >   [{deptno=20,job="ANALYST"},{deptno=10,job="CLERK"},{deptno=20,job="CLERK"},
@@ -1033,17 +1103,17 @@ from e in emps, d in depts
 
 (*) join group where neither variable is referenced
 from e in emps, d in depts
-  group compute count = sum of 1;
+  group {} compute sum over 1;
 > val it = [16] : int list
 
-(*) as above, without 'of'
+(*) as above, count
 from e in emps, d in depts
-  group compute count = count;
+  group {} compute count over ();
 > val it = [16] : int list
 
 (*) join group where right variable is not referenced
 from e in emps, d in depts
-  group e.deptno compute count = sum of 1
+  group e.deptno compute {count = sum over 1}
   order deptno;
 > val it = [{count=4,deptno=10},{count=4,deptno=20},{count=8,deptno=30}]
 >   : {count:int, deptno:int} list
@@ -1273,21 +1343,21 @@ from `o` in orders
 (*) union followed by group
 from x in (from e in emps yield e.deptno)
     union (from d in depts yield d.deptno)
-group x compute c = count
+group x compute {c = count over ()}
 order (c, x);
 > val it = [{c=1,x=40},{c=2,x=10},{c=2,x=20},{c=3,x=30}] : {c:int, x:int} list
 
 (*) except followed by group
 from x in (from e in emps yield e.deptno)
     except (from d in depts yield d.deptno)
-group x compute c = count
+group x compute {c = count over ()}
 order (c, x);
 > val it = [{c=1,x=30}] : {c:int, x:int} list
 
 (*) intersect followed by group
 from x in (from e in emps yield e.deptno)
     intersect distinct (from d in depts yield d.deptno)
-group x compute c = count
+group x compute {c = count over ()}
 order (c, x);
 > val it = [{c=1,x=10},{c=1,x=20},{c=1,x=30}] : {c:int, x:int} list
 
@@ -1315,7 +1385,7 @@ product (factorize 12);
 fun hcf (m, n) =
   from i in factorize m
     intersect (factorize n)
-    compute product of i;
+    compute product over i;
 > val hcf = fn : int * int -> int
 hcf (12, 18);
 > val it = 6 : int
@@ -1356,9 +1426,9 @@ end;
 
 (*) Basic 'group'
 from e in emps
-group deptno = e.deptno
-  compute sum = sum of e.id,
-          count = count
+group e.deptno
+  compute {sum over e.id,
+           count over ()}
 order deptno;
 > val it =
 >   [{count=1,deptno=10,sum=100},{count=1,deptno=20,sum=101},
@@ -1368,8 +1438,8 @@ order deptno;
 (*) and "sum =" and "count =" in "compute".
 from e in emps
 group e.deptno
-  compute sum of e.id,
-          count
+  compute {sum over e.id,
+           count over ()}
 order deptno;
 > val it =
 >   [{count=1,deptno=10,sum=100},{count=1,deptno=20,sum=101},
@@ -1377,7 +1447,7 @@ order deptno;
 
 (*) 'group' with no aggregates
 from e in emps
-group deptno = e.deptno
+group e.deptno
 order deptno;
 > val it = [10,20,30] : int list
 
@@ -1388,7 +1458,7 @@ order deptno;
 
 (*) composite 'group' with no aggregates
 from e in emps
-group e.deptno, idMod2 = e.id mod 2
+group {e.deptno, idMod2 = e.id mod 2}
 order deptno;
 > val it =
 >   [{deptno=10,idMod2=0},{deptno=20,idMod2=1},{deptno=30,idMod2=0},
@@ -1396,40 +1466,60 @@ order deptno;
 
 (*) 'group' with empty key produces one output row
 from e in emps
-group compute count, sid = sum of e.id;
+group {} compute {count over (), sid = sum over e.id};
 > val it = [{count=4,sid=406}] : {count:int, sid:int} list
 
 (*) 'group' with empty key produces one output row even if input is empty
 from e in emps
 where false
-group compute count;
+group {} compute count over ();
 > val it = [0] : int list
 
 (*) 'group' with empty key, empty input, no aggregate functions
 from e in emps
 where false
-group;
+group {};
 > val it = [()] : unit list
 
 (*) 'group' with 'where' and complex argument to 'sum'
 from e in emps
 where e.deptno < 30
-group deptno = e.deptno
-  compute sumId = sum of e.id,
-          sumIdPlusDeptno = sum of e.id + e.deptno
+group e.deptno
+  compute {sumId = sum over e.id,
+           sumIdPlusDeptno = sum over e.id + e.deptno}
 order deptno;
 > val it =
 >   [{deptno=10,sumId=100,sumIdPlusDeptno=110},
 >    {deptno=20,sumId=101,sumIdPlusDeptno=121}]
 >   : {deptno:int, sumId:int, sumIdPlusDeptno:int} list
 
+(*) 'group' with complex expression in 'compute'
+from e in emps
+  group e.deptno compute {x = 1 + sum over e.id * 2}
+  order deptno;
+> val it = [{deptno=10,x=201},{deptno=20,x=203},{deptno=30,x=411}]
+>   : {deptno:int, x:int} list
+
+(*) 'group' with complex expressions in 'compute'
+from e in emps
+  group e.deptno compute {x = 1 + sum over e.id * 2, y = 2, z = deptno + 3}
+  order deptno;
+> val it =
+>   [{deptno=10,x=201,y=2,z=13},{deptno=20,x=203,y=2,z=23},
+>    {deptno=30,x=411,y=2,z=33}] : {deptno:int, x:int, y:int, z:int} list
+
+from (i, j) in [(1, 2), (2, 3), (1, 8), (1, 7)]
+  group {k = i + 2}
+  compute {x = (fn list => List.length list + k) over i + j + k};
+> val it = [{k=3,x=6},{k=4,x=5}] : {k:int, x:int} list
+
 (*) 'group' with 'nonEmpty' and 'empty' as aggregate functions
 from e in emps
 group e.deptno
-  compute sumId = sum of e.id,
-          existsId = Relational.nonEmpty of e.id,
-          notExistsId = Relational.empty of e.id,
-          existsStar = Relational.nonEmpty
+  compute {sumId = sum over e.id,
+           existsId = Relational.nonEmpty over e.id,
+           notExistsId = Relational.empty over e.id,
+           existsStar = Relational.nonEmpty over ()}
 order deptno;
 > val it =
 >   [{deptno=10,existsId=true,existsStar=true,notExistsId=false,sumId=100},
@@ -1439,19 +1529,19 @@ order deptno;
 
 (*) 'compute' with 'empty' and 'nonEmpty' as an aggregate functions
 from e in emps
-compute empty, nonEmpty;
+compute {empty over (), nonEmpty over ()};
 > val it = {empty=false,nonEmpty=true} : {empty:bool, nonEmpty:bool}
 
 (*) 'compute' with 'empty' and 'nonEmpty' as an aggregate functions
 from e in emps
 where e.deptno = 50
-compute empty, nonEmpty;
+compute {empty over (), nonEmpty over ()};
 > val it = {empty=true,nonEmpty=false} : {empty:bool, nonEmpty:bool}
 
 (*) 'group' with record key
 (*) (useful if we want to refer to 'e' later in the pipeline)
 from e in emps
-group e = {e.deptno, odd = e.id mod 2 = 1} compute c = count
+group {e = {e.deptno, odd = e.id mod 2 = 1}} compute {c = count over ()}
 yield {e.deptno, c1 = c + 1}
 order deptno;
 > val it = [{c1=2,deptno=10},{c1=2,deptno=20},{c1=2,deptno=30},{c1=2,deptno=30}]
@@ -1460,8 +1550,8 @@ order deptno;
 (*) 'group' with join
 from e in emps, d in depts
 where e.deptno = d.deptno
-group e.deptno, ename = e.name, dname = d.name
-  compute sumId = sum of e.id
+group {e.deptno, ename = e.name, dname = d.name}
+  compute {sumId = sum over e.id}
 order ename;
 > val it =
 >   [{deptno=10,dname="Sales",ename="Fred",sumId=100},
@@ -1498,34 +1588,39 @@ yield {e, d};
 >    {d={deptno=30,name="Engineering"},e={deptno=30,id=103,name="Scooby"}}]
 >   : {d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}} list
 
-(*) empty 'group'
+(*) empty 'group' with singleton 'compute'
 from e in emps
-group compute sumId = sum of e.id;
+group {} compute sum over e.id;
 > val it = [406] : int list
+
+(*) empty 'group' with singleton record 'compute'
+from e in emps
+group {} compute {sumId = sum over e.id};
+> val it = [{sumId=406}] : {sumId:int} list
 
 (*) 'group' with aggregate function that references the key
 from (k, v) in [(1, 5), (1, 6), (2, 7), (2, 10)]
-group k compute x = (fn vs => k + (sum vs)) of v;
+group k compute {x = (fn vs => k + (sum vs)) over v};
 > val it = [{k=1,x=12},{k=2,x=19}] : {k:int, x:int} list
 
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x compute z = (fn ys => concat (x :: ys)) of y;
+  group x compute {z = (fn ys => concat (x :: ys)) over y};
 > val it = [{x="a",z="aplw"},{x="m",z="ma"}] : {x:string, z:string} list
 
 (*) similar, but with composite key
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x, z compute a = (fn ys => x ^ ":" ^ z ^ ":" ^ (concat ys)) of y;
+  group {x, z} compute {a = (fn ys => x ^ ":" ^ z ^ ":" ^ (concat ys)) over y};
 > val it = [{a="m:n:a",x="m",z="n"},{a="a:e:plw",x="a",z="e"}]
 >   : {a:string, x:string, z:string} list
 
 (*) similar, but aggregate does not reference key
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x compute z = (fn ys => concat ys) of y;
+  group x compute {z = (fn ys => concat ys) over y};
 > val it = [{x="a",z="plw"},{x="m",z="a"}] : {x:string, z:string} list
 
 (*) equivalent to previous
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
-  group x compute z = concat of y;
+  group x compute {z = concat over y};
 > val it = [{x="a",z="plw"},{x="m",z="a"}] : {x:string, z:string} list
 
 (*) user-defined aggregate function
@@ -1534,7 +1629,7 @@ let
     | siz (ht :: tl) = 1 + (siz tl)
 in
   from e in emps
-  group deptno = e.deptno compute size = siz of e.id
+  group e.deptno compute {size = siz over e.id}
   order deptno
 end;
 > val it = [{deptno=10,size=1},{deptno=20,size=1},{deptno=30,size=2}]
@@ -1546,7 +1641,7 @@ let
     | siz (ht :: tl) = 1 + (siz tl)
 in
   from e in emps
-  group deptno = e.deptno compute size = siz of e
+  group e.deptno compute {size = siz over e}
   order deptno
 end;
 > val it = [{deptno=10,size=1},{deptno=20,size=1},{deptno=30,size=2}]
@@ -1558,7 +1653,7 @@ let
     | my_sum (head :: tail) = head + (my_sum tail)
 in
   from e in emps
-  group e.deptno compute my_sum of e.id
+  group e.deptno compute {my_sum over e.id}
   order deptno
 end;
 > val it =
@@ -1570,7 +1665,7 @@ let
   fun id x = x
 in
   from e in emps
-  group e.deptno compute rows = id of e
+  group e.deptno compute {rows = id over e}
   order deptno
 end;
 > val it =
@@ -1585,7 +1680,7 @@ let
   fun id x = x
 in
   from e in emps
-  group e.deptno compute rows = id
+  group e.deptno compute {rows = id over e}
   order deptno
 end;
 > val it =
@@ -1597,7 +1692,7 @@ end;
 
 (*) Identity aggregate function, using lambda
 from e in emps
-group e.deptno compute rows = (fn x => x)
+group e.deptno compute {rows = (fn x => x) over e}
 order deptno;
 > val it =
 >   [{deptno=10,rows=[{deptno=10,id=100,name="Fred"}]},
@@ -1609,7 +1704,7 @@ order deptno;
 (*) Identity aggregate function with multiple input variables
 from e in emps, d in depts
 where e.deptno = d.deptno
-group e.deptno compute rows = (fn x => x)
+group e.deptno compute {rows = (fn x => x) over current}
 order deptno;
 > val it =
 >   [
@@ -1628,8 +1723,8 @@ order deptno;
 (*) Group followed by yield
 from e in emps
 group e.deptno
-  compute sumId = sum of e.id,
-          count = count of e
+  compute {sumId = sum over e.id,
+           count = count over e}
 yield {deptno, avgId = sumId / count}
 order deptno;
 > val it = [{avgId=100,deptno=10},{avgId=101,deptno=20},{avgId=102,deptno=30}]
@@ -1639,8 +1734,8 @@ order deptno;
 from g in (
   from e in emps
   group e.deptno
-    compute sumId = sum of e.id,
-            count = count of e)
+    compute {sumId = sum over e.id,
+             count = count over e})
 yield {g.deptno, avgId = g.sumId / g.count}
 order deptno;
 > val it = [{avgId=100,deptno=10},{avgId=101,deptno=20},{avgId=102,deptno=30}]
@@ -1649,8 +1744,8 @@ order deptno;
 (*) Group followed by order and yield
 from e in emps
 group e.deptno
-  compute sumId = sum of e.id,
-          count = count of e
+  compute {sumId = sum over e.id,
+           count = count over e}
 order DESC deptno
 yield {deptno, avgId = sumId / count};
 > val it = [{avgId=102,deptno=30},{avgId=101,deptno=20},{avgId=100,deptno=10}]
@@ -1658,20 +1753,20 @@ yield {deptno, avgId = sumId / count};
 
 (*) Group followed by group
 from e in emps
-  group e.deptno, parity = e.deptno mod 2
-    compute sumId = sum of e.id
+  group {e.deptno, parity = e.deptno mod 2}
+    compute {sumId = sum over e.id}
   group parity
-    compute sumSumId = sum of sumId,
-      c = count;
+    compute {sumSumId = sum over sumId,
+      c = count over ()};
 > val it = [{c=3,parity=0,sumSumId=406}]
 >   : {c:int, parity:int, sumSumId:int} list
 
 (*) Group followed by group followed by yield
 from e in emps
-  group e.deptno, parity = e.deptno mod 2
-    compute sumId = sum of e.id
+  group {e.deptno, parity = e.deptno mod 2}
+    compute {sumId = sum over e.id}
   group parity
-    compute sumSumId = sum of sumId
+    compute {sumSumId = sum over sumId}
   yield sumSumId * parity;
 > val it = [0] : int list
 
@@ -1679,8 +1774,8 @@ from e in emps
 from e in emps,
     d in depts
   where e.deptno = d.deptno
-  group x = e.id + d.deptno, e.deptno
-    compute sumId = sum of e.id
+  group {x = e.id + d.deptno, e.deptno}
+    compute {sumId = sum over e.id}
   order DESC x;
 > val it =
 >   [{deptno=30,sumId=103,x=133},{deptno=30,sumId=102,x=132},
@@ -1759,50 +1854,50 @@ from e in emps
 
 (*) Single-row aggregates using 'only' function and 'compute' clause
 from e in emps
-  group compute si = sum of e.id, c = count, si1 = sum of e.id + 1;
+  group {} compute {si = sum over e.id, c = count over (), si1 = sum over e.id + 1};
 > val it = [{c=4,si=406,si1=410}] : {c:int, si:int, si1:int} list
 (*) similar to previous, but the 'only' function converts a singleton set to a record
 only (
   from e in emps
-    group compute si = sum of e.id, c = count, si1 = sum of e.id + 1);
+    group {} compute {si = sum over e.id, c = count over (), si1 = sum over e.id + 1});
 > val it = {c=4,si=406,si1=410} : {c:int, si:int, si1:int}
 (*) equivalent to previous, using group-less 'compute' rather than 'only'
 from e in emps
-  compute si = sum of e.id, c = count, si1 = sum of e.id + 1;
+  compute {si = sum over e.id, c = count over (), si1 = sum over e.id + 1};
 > val it = {c=4,si=406,si1=410} : {c:int, si:int, si1:int}
 
 (*) Primitive 'yield' followed by composite 'compute'
 from e in emps
   yield e.deptno
-  compute sum, count;
+  compute {sum over deptno, count over ()};
 > val it = {count=4,sum=90} : {count:int, sum:int}
 
 (* Row is an atom (type 'int', not a record) but can be referenced via 'deptno'. *)
 from e in emps
   yield e.deptno
-  compute sum of deptno;
+  compute sum over deptno;
 > val it = 90 : int
 
 (* Reference to 'deptno' is not valid after it has been renamed to 'x'. *)
 from e in emps
   yield {x = e.deptno}
-  compute sum of deptno;
-> stdIn:3.18-3.24 Error: unbound variable or constructor: deptno
->   raised at: stdIn:3.18-3.24
+  compute sum over deptno;
+> stdIn:3.20-3.26 Error: unbound variable or constructor: deptno
+>   raised at: stdIn:3.20-3.26
 
 from e in emps
   yield {e.deptno}
-  compute sum of deptno;
+  compute sum over deptno;
 > val it = 90 : int
 
 from e in emps
   yield {x = e.deptno}
-  compute sum of x;
+  compute sum over x;
 > val it = 90 : int
 
 from e in emps
   yield {e.id, e.deptno}
-  compute sum of deptno;
+  compute sum over deptno;
 > val it = 90 : int
 
 (*) Primitive 'yield' followed  by 'into'
@@ -1861,13 +1956,18 @@ end;
 
 (*) Empty from with empty group
 from
-  group;
+  group {};
 > val it = [()] : unit list
 
-(*) Empty from with empty group and one aggregate function
+(*) Empty 'from' with empty 'group' and one aggregate function
 from
-  group compute c = count of "a";
+  group {} compute count over "a";
 > val it = [1] : int list
+
+(*) Empty 'from' with empty 'group' and one aggregate function in a record
+from
+  group {} compute {c = count over "a"};
+> val it = [{c=1}] : {c:int} list
 
 (*) Empty from with group
 let
@@ -1875,22 +1975,22 @@ let
   val eleven = ten + 1;
 in
   from
-    group ten compute sumEleven = sum of eleven
+    group ten compute {sumEleven = sum over eleven}
 end;
 > val it = [{sumEleven=11,ten=10}] : {sumEleven:int, ten:int} list
 
 (*) Empty from with composite group
 from
-  group x = "a", y = 6;
+  group {x = "a", y = 6};
 > val it = [{x="a",y=6}] : {x:string, y:int} list
 
 from
-  group z = "a", y = 6;
+  group {z = "a", y = 6};
 > val it = [{y=6,z="a"}] : {y:int, z:string} list
 
 (*) Empty from with group and yield
 from
-  group one = 1 compute two = sum of 2, three = sum of 3
+  group {one = 1} compute {two = sum over 2, three = sum over 3}
   yield {c1 = one, c5 = two + three};
 > val it = [{c1=1,c5=5}] : {c1:int, c5:int} list
 
@@ -1934,7 +2034,7 @@ from {a = a, b = true, c = c} in [{a=1,b=true,c=3}];
 > val it = [{a=1,c=3}] : {a:int, c:int} list
 from {a = c, b = true, c = a} in [{a=1,b=true,c=3}];
 > val it = [{a=3,c=1}] : {a:int, c:int} list
-from {a = c, b = true, c = a} in [{a=1,b=true,c=3},{a=1,b=true,c=4}] group c compute sum of a;
+from {a = c, b = true, c = a} in [{a=1,b=true,c=3},{a=1,b=true,c=4}] group c compute sum over a;
 > val it = [{c=1,sum=7}] : {c:int, sum:int} list
 from {a = a, b = b, c = _} in [{a=1,b=true,c=3},{a=1,b=true,c=4}];
 > val it = [{a=1,b=true},{a=1,b=true}] : {a:int, b:bool} list
@@ -2025,7 +2125,7 @@ from x in [1, 2],
 from x in [1, 2],
     y = x + 1,
     z = y + 2
-  group x, y, z compute c = count;
+  group {x, y, z} compute {c = count over ()};
 > val it = [{c=1,x=1,y=2,z=4},{c=1,x=2,y=3,z=5}]
 >   : {c:int, x:int, y:int, z:int} list
 
@@ -2265,7 +2365,7 @@ let
 
   fun process emps =
     from e in emps
-    group e.deptno compute count, sum of e.sal
+    group e.deptno compute {count over (), sum over e.sal}
 
   fun pipeline emps =
     from e in process (clean emps)
@@ -2322,7 +2422,7 @@ let
 
   fun process emps =
     from e in emps
-    group e.deptno compute count, sum of e.sal
+    group e.deptno compute {count over (), sum over e.sal}
     order deptno
 
   fun pipeline emps =
@@ -2356,11 +2456,11 @@ fun pivot listlists =
   else
     let
       fun id x = x
-      val n = (from list in listlists compute min of length list)
+      val n = (from list in listlists compute min over length list)
     in
       List.tabulate (n,
         fn i => (from list in listlists
-                 compute id of List.nth (list, i)))
+                 compute id over List.nth (list, i)))
     end;
 > val pivot = fn : 'a list list -> 'a list list
 pivot [[1,2],[3,4],[5,6]];

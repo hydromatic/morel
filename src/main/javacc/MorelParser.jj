@@ -544,9 +544,9 @@ void fromStep(List<FromStep> steps) :
   final Exp takeExp;
   final Exp requireExp;
   final Exp yieldExp;
-  final PairList<Id, Exp> groupExps;
+  final Exp groupExp;
   final Pat pat;
-  final List<Aggregate> aggregates;
+  final Exp aggregate;
   final Exp orderExp;
   final List<Exp> exps;
   final boolean distinct;
@@ -567,22 +567,18 @@ void fromStep(List<FromStep> steps) :
   }
 |
   <GROUP> { span = Span.of(pos()); }
+  groupExp = expression()
   (
-    groupExps = namedExpressionCommaList()
+    <COMPUTE> aggregate = expression()
   |
-    { groupExps = ImmutablePairList.of(); }
-  )
-  (
-    <COMPUTE> aggregates = aggregateCommaList()
-  |
-    { aggregates = ImmutableList.of(); }
+    { aggregate = null; }
   )
   {
-    steps.add(ast.group(span.end(this), groupExps, aggregates));
+    steps.add(ast.group(span.end(this), groupExp, aggregate));
   }
 |
-  <COMPUTE> { span = Span.of(pos()); } aggregates = aggregateCommaList() {
-    steps.add(ast.compute(span.end(this), aggregates));
+  <COMPUTE> { span = Span.of(pos()); } aggregate = expression() {
+    steps.add(ast.compute(span.end(this), aggregate));
   }
 |
   <INTERSECT> { span = Span.of(pos()); }
@@ -664,38 +660,6 @@ Pair<Pat, Exp> fromSource() :
   )
 }
 
-List<Aggregate> aggregateCommaList() :
-{
-  final List<Aggregate> list = new ArrayList<>();
-  Aggregate e;
-}
-{
-  e = aggregate() { list.add(e); }
-  (
-    <COMMA> e = aggregate() { list.add(e); }
-  )*
-  { return list; }
-}
-
-Aggregate aggregate() :
-{
-  final PairList<Id, Exp> aggregateIds = PairList.of();
-  final Exp argument;
-}
-{
-  namedExpression(aggregateIds)
-  (
-    <OF> argument = expression()
-  |
-    { argument = null; }
-  )
-  {
-    final Id id = aggregateIds.get(0).getKey();
-    final Exp aggregate = aggregateIds.get(0).getValue();
-    return ast.aggregate(id.pos.plus(pos()), aggregate, argument, id);
-  }
-}
-
 /** Returns true if {@code distinct} is present, otherwise false. */
 boolean distinctOrFalse() : {}
 {
@@ -750,12 +714,15 @@ Match match() :
  * <ul>
  * <li>infix 9 {@code .}
  * <li>infix 8 (application)
+ * <li>infix 7.5 {@code over}
  * <li>infix 7 {@code * / div mod}
  * <li>infix 6 {@code + - ^}
  * <li>infixr 5 {@code :: @}
  * <li>infix 4 {@code = <> > >= < <=}
  * <li>infix 3 {@code := o}
- * <li>infix 0 {@code before}
+ * <li>infix 2 {@code andalso}
+ * <li>infix 1 {@code orelse}
+ * <li>infix 0 {@code before implies}
  * </ul>
  */
 Exp expression9() :
@@ -790,6 +757,22 @@ Exp expression8() :
   { return e; }
 }
 
+/** Parses an expression of precedence level 7.5 ({@code over}). */
+Exp expression7b() :
+{
+  final Exp e;
+  final Exp e2;
+}
+{
+  e = expression8()
+  [
+    <OVER> e2 = expression5() {
+      return ast.aggregate(e.pos.plus(e2.pos), e, e2);
+    }
+  ]
+  { return e; }
+}
+
 /** Parses an expression of precedence level 7 (*, /, div, mod). */
 Exp expression7() :
 {
@@ -799,21 +782,21 @@ Exp expression7() :
 {
   <TILDE> e = expression7() { return ast.negate(pos(), e); }
 |
-  e = expression8()
+  e = expression7b()
   (
-    <STAR> e2 = expression8() {
+    <STAR> e2 = expression7b() {
       e = ast.times(e, e2);
     }
   |
-    <SLASH> e2 = expression8() {
+    <SLASH> e2 = expression7b() {
       e = ast.divide(e, e2);
     }
   |
-    <DIV> e2 = expression8() {
+    <DIV> e2 = expression7b() {
       e = ast.div(e, e2);
     }
   |
-    <MOD> e2 = expression8() {
+    <MOD> e2 = expression7b() {
       e = ast.mod(e, e2);
     }
   )*

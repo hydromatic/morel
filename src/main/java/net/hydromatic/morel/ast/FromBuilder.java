@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
@@ -42,6 +43,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -62,7 +64,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class FromBuilder {
   private final TypeSystem typeSystem;
-  private final @Nullable Environment env;
+  private final @Nullable Supplier<@NonNull Environment> envSupplier;
   private final List<Core.FromStep> steps = new ArrayList<>();
   private final List<Binding> bindings = new ArrayList<>();
   private boolean atom;
@@ -83,9 +85,11 @@ public class FromBuilder {
   private int removeIfLastIndex = Integer.MIN_VALUE;
 
   /** Use {@link net.hydromatic.morel.ast.CoreBuilder#fromBuilder}. */
-  FromBuilder(TypeSystem typeSystem, @Nullable Environment env) {
+  FromBuilder(
+      TypeSystem typeSystem,
+      @Nullable Supplier<@NonNull Environment> envSupplier) {
     this.typeSystem = typeSystem;
-    this.env = env;
+    this.envSupplier = envSupplier;
   }
 
   /** Resets state as if this {@code FromBuilder} had just been created. */
@@ -107,10 +111,11 @@ public class FromBuilder {
   }
 
   private FromBuilder addStep(Core.FromStep step) {
-    if (env != null) {
+    if (envSupplier != null) {
       // Validate the step. (Not necessary, but helps find bugs.)
       Core.StepEnv previousEnv =
           steps.isEmpty() ? Core.StepEnv.EMPTY : last(steps).env;
+      final Environment env = envSupplier.get();
       RefChecker.of(typeSystem, env).visitStep(step, previousEnv);
     }
     if (removeIfNotLastIndex == steps.size() - 1) {

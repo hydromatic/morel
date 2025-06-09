@@ -41,7 +41,7 @@ not (Bag.null (from e in emps where e.sal < 900.0));
 (* Answer to Q1 using 'from' and 'compute'. *)
 (from e in emps
   where e.sal < 900.0
-  compute count) > 0;
+  compute count over ()) > 0;
 > val it = true : bool
 
 (* Q2. Do all employees have a salary greater than 1,000? *)
@@ -211,9 +211,9 @@ exists e in scott.emps where e.deptno = 20 into sum;
 >   raised at: stdIn:1.44-1.52
 
 (*) 'exists' must not have 'compute'
-exists e in scott.emps where e.deptno = 20 compute min of e.job;
-> stdIn:1.44-1.64 Error: 'compute' step must not occur in 'exists'
->   raised at: stdIn:1.44-1.64
+exists e in scott.emps where e.deptno = 20 compute min over e.job;
+> stdIn:1.44-1.66 Error: 'compute' step must not occur in 'exists'
+>   raised at: stdIn:1.44-1.66
 
 (*) 'exists' must not have 'require'
 exists e in scott.emps where e.deptno = 20 require false;
@@ -258,8 +258,8 @@ forall i in [2, 3, 4, 12, 14] into sum require true;
 >   raised at: stdIn:1.31-1.39
 
 (*) 'forall' must not have 'compute'
-forall i in [2, 3, 4, 12, 14] compute sum require true;
-> stdIn:1.31-1.42 Error: 'compute' step must not occur in 'forall'
->   raised at: stdIn:1.31-1.42
+forall i in [2, 3, 4, 12, 14] compute sum over i require true;
+> stdIn:1.31-1.49 Error: 'compute' step must not occur in 'forall'
+>   raised at: stdIn:1.31-1.49
 
 (*) End logic.smli

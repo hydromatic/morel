@@ -112,8 +112,8 @@ maskToString (mask ("abcde", "spuds"));
    is the one that returns the most mask groups. *)
 fun f (guess, remainingWords: 'a list) =
   from w in remainingWords
-    group m = mask (guess, w) compute c = count
-    compute count;
+    group {m = mask (guess, w)} compute {c = count over ()}
+    compute count over ();
 > val f = fn : string * string list -> int
 
 (* Returns the best guesses in "sampleWords".

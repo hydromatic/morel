@@ -66,6 +66,9 @@ public enum AstBuilder {
         return "ordinal";
       case ID:
         return ((Ast.Id) exp).name;
+      case AGGREGATE:
+        final Ast.Aggregate aggregate = (Ast.Aggregate) exp;
+        return implicitLabelOpt(aggregate.aggregate);
       case APPLY:
         final Ast.Apply apply = (Ast.Apply) exp;
         if (apply.fn instanceof Ast.RecordSelector) {
@@ -80,12 +83,50 @@ public enum AstBuilder {
 
   /** Returns an expression's implicit label, or throws. */
   public Ast.Id implicitLabel(Ast.Exp exp) {
+    return implicitLabel(exp, null);
+  }
+
+  /** Returns an expression's implicit label, or uses a default. */
+  public Ast.Id implicitLabel(Ast.Exp exp, @Nullable String defaultLabel) {
     String value = implicitLabelOpt(exp);
     if (value != null) {
       return id(exp.pos, value);
     }
+    if (defaultLabel != null) {
+      return id(exp.pos, defaultLabel);
+    }
     throw new IllegalArgumentException(
         "cannot derive label for expression " + exp);
+  }
+
+  /**
+   * Converts an expression to record. (If it is not a record, returns a
+   * singleton record, deriving a label, if using the given default label.)
+   */
+  public Ast.Record toRecord(Ast.Exp exp, String defaultLabel) {
+    if (exp instanceof Ast.Record) {
+      return (Ast.Record) exp;
+    }
+    final Ast.Id label = implicitLabel(exp, defaultLabel);
+    return ast.record(Pos.ZERO, null, ImmutablePairList.of(label, exp));
+  }
+
+  /** Returns whether an expression is a record with one field. */
+  @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+  public boolean isSingletonRecord(Ast.Exp exp) {
+    return exp instanceof Ast.Record && ((Ast.Record) exp).args.size() == 1;
+  }
+
+  /** Returns whether an expression is a record with no fields. */
+  public boolean isEmptyRecord(AstNode exp) {
+    return exp instanceof Ast.Record && ((Ast.Record) exp).args.isEmpty();
+  }
+
+  /** Returns the number of fields emitted by an expression. */
+  public int fieldCount(Ast.@Nullable Exp exp) {
+    return exp == null
+        ? 0
+        : exp instanceof Ast.Record ? ((Ast.Record) exp).args.size() : 1;
   }
 
   /** Creates a call to an infix operator. */
@@ -498,9 +539,8 @@ public enum AstBuilder {
     return e;
   }
 
-  public Ast.Aggregate aggregate(
-      Pos pos, Ast.Exp aggregate, Ast.Exp argument, Ast.Id id) {
-    return new Ast.Aggregate(pos, aggregate, argument, id);
+  public Ast.Aggregate aggregate(Pos pos, Ast.Exp aggregate, Ast.Exp argument) {
+    return new Ast.Aggregate(pos, aggregate, argument);
   }
 
   /**
@@ -528,16 +568,12 @@ public enum AstBuilder {
     return new Ast.Order(pos, exp);
   }
 
-  public Ast.Compute compute(Pos pos, List<Ast.Aggregate> aggregates) {
-    return new Ast.Compute(pos, ImmutableList.copyOf(aggregates));
+  public Ast.Compute compute(Pos pos, Ast.Exp aggregate) {
+    return new Ast.Compute(pos, aggregate);
   }
 
-  public Ast.Group group(
-      Pos pos,
-      PairList<Ast.Id, Ast.Exp> groupExps,
-      List<Ast.Aggregate> aggregates) {
-    return new Ast.Group(
-        pos, Op.GROUP, groupExps.immutable(), ImmutableList.copyOf(aggregates));
+  public Ast.Group group(Pos pos, Ast.Exp groupExp, Ast.Exp aggregate) {
+    return new Ast.Group(pos, Op.GROUP, groupExp, aggregate);
   }
 
   public Ast.FromStep where(Pos pos, Ast.Exp exp) {
