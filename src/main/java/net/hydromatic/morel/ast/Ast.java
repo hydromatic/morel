@@ -22,6 +22,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
+import static net.hydromatic.morel.type.RecordType.compareNames;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
@@ -824,7 +825,7 @@ public class Ast {
   }
 
   /** Parse tree node of an identifier. */
-  public static class Id extends Exp {
+  public static class Id extends Exp implements Comparable<Id> {
     public final String name;
 
     /** Creates an Id. */
@@ -846,6 +847,11 @@ public class Ast {
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.id(name);
+    }
+
+    @Override
+    public int compareTo(Id o) {
+      return compareNames(this.name, o.name);
     }
   }
 
@@ -1402,13 +1408,12 @@ public class Ast {
   /** Record. */
   public static class Record extends Exp {
     public final Ast.@Nullable Exp with;
-    public final SortedMap<String, Exp> args;
+    public final SortedMap<Id, Exp> args;
 
-    Record(Pos pos, @Nullable Exp with, ImmutableSortedMap<String, Exp> args) {
+    Record(Pos pos, @Nullable Exp with, ImmutableSortedMap<Id, Exp> args) {
       super(pos, Op.RECORD);
       this.with = with;
       this.args = requireNonNull(args);
-      checkArgument(args.comparator() == ORDERING);
     }
 
     @Override
@@ -1436,13 +1441,13 @@ public class Ast {
           args,
           (i, k, v) ->
               w.append(i > 0 ? ", " : "")
-                  .append(k)
+                  .append(k, 0, 0)
                   .append(" = ")
                   .append(v, 0, 0));
       return w.append("}");
     }
 
-    public Record copy(Ast.@Nullable Exp with, Map<String, Ast.Exp> args) {
+    public Record copy(Ast.@Nullable Exp with, Map<Ast.Id, Ast.Exp> args) {
       return Objects.equals(with, this.with) && args.equals(this.args)
           ? this
           : ast.record(pos, with, args);

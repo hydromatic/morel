@@ -925,8 +925,7 @@ void namedExpression(PairList<Id, Exp> list) :
   }
 |
   exp = expression() {
-    final String name = ast.implicitLabel(exp);
-    list.add(ast.id(exp.pos, name), exp);
+    list.add(ast.implicitLabel(exp), exp);
   }
 }
 
@@ -1002,7 +1001,7 @@ Exp atom() :
 |
   <LBRACE> {
     span = Span.of(pos());
-    final PairList<String, Exp> nameExps = PairList.of();
+    final PairList<Id, Exp> nameExps = PairList.of();
     Exp exp;
     Exp with = null;
   }
@@ -1018,8 +1017,7 @@ Exp atom() :
         }
       |
         {
-          final String label = ast.implicitLabel(exp);
-          nameExps.add(label, exp);
+          nameExps.add(ast.implicitLabel(exp), exp);
         }
       )
     )
@@ -1033,29 +1031,29 @@ Exp atom() :
 }
 
 /** Parses a "label = expression" inside a record. */
-void labeledRecordExp(PairList<String, Exp> nameExps) :
+void labeledRecordExp(PairList<Id, Exp> nameExps) :
 {
-  final String id;
+  final Ast.Id id;
   final Ast.Exp exp;
 }
 {
   LOOKAHEAD(<NON_NEGATIVE_INTEGER_LITERAL> <EQ>)
-  <NON_NEGATIVE_INTEGER_LITERAL> { id = token.image; }
+  <NON_NEGATIVE_INTEGER_LITERAL> { id = ast.id(pos(), token.image); }
   <EQ> exp = expression() { nameExps.add(id, exp); }
 |
   LOOKAHEAD(<IDENTIFIER> <EQ>)
-  <IDENTIFIER> { id = token.image; }
+  <IDENTIFIER> { id = ast.id(pos(), token.image); }
   <EQ> exp = expression() { nameExps.add(id, exp); }
 |
   LOOKAHEAD(<QUOTED_IDENTIFIER> <EQ>)
-  <QUOTED_IDENTIFIER> { id = unquoteIdentifier(token.image); }
+  <QUOTED_IDENTIFIER> { id = ast.id(pos(), unquoteIdentifier(token.image)); }
   <EQ> exp = expression() { nameExps.add(id, exp); }
 }
 
 /** Parses a "label = expression" inside a record. */
-void recordExp(PairList<String, Exp> nameExps) :
+void recordExp(PairList<Id, Exp> nameExps) :
 {
-  final String id;
+  final Ast.Id id;
   final Ast.Exp exp;
 }
 {
@@ -1063,7 +1061,7 @@ void recordExp(PairList<String, Exp> nameExps) :
   labeledRecordExp(nameExps)
 |
   exp = expression() {
-    final String label = ast.implicitLabel(exp);
+    final Ast.Id label = ast.implicitLabel(exp);
     nameExps.add(label, exp);
   }
 }

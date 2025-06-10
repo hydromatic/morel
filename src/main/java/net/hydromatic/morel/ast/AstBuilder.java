@@ -78,10 +78,10 @@ public enum AstBuilder {
   }
 
   /** Returns an expression's implicit label, or throws. */
-  public String implicitLabel(Ast.Exp exp) {
+  public Ast.Id implicitLabel(Ast.Exp exp) {
     String value = implicitLabelOpt(exp);
     if (value != null) {
-      return value;
+      return id(exp.pos, value);
     }
     throw new IllegalArgumentException(
         "cannot derive label for expression " + exp);
@@ -240,17 +240,15 @@ public enum AstBuilder {
   }
 
   public Ast.Record record(
-      Pos pos, Ast.@Nullable Exp with, Map<String, Ast.Exp> map) {
-    return new Ast.Record(
-        pos, with, ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
+      Pos pos, Ast.@Nullable Exp with, Map<Ast.Id, Ast.Exp> map) {
+    return new Ast.Record(pos, with, ImmutableSortedMap.copyOf(map));
   }
 
   public Ast.Record record(
       Pos pos,
       Ast.@Nullable Exp with,
-      Collection<Map.Entry<String, Ast.Exp>> map) {
-    return record(
-        pos, with, ImmutableSortedMap.copyOf(map, RecordType.ORDERING));
+      Collection<Map.Entry<Ast.Id, Ast.Exp>> map) {
+    return record(pos, with, ImmutableSortedMap.copyOf(map));
   }
 
   public Ast.Exp equal(Ast.Exp a0, Ast.Exp a1) {

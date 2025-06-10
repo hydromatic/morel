@@ -484,13 +484,13 @@ public class TypeResolver {
       case RECORD:
         final Ast.Record record = (Ast.Record) node;
         final NavigableMap<String, Term> labelTypes = new TreeMap<>();
-        final NavigableMap<String, Ast.Exp> map2 = new TreeMap<>();
+        final NavigableMap<Ast.Id, Ast.Exp> map2 = new TreeMap<>();
         record.args.forEach(
-            (name, exp) -> {
+            (id, exp) -> {
               final Variable vArg = unifier.variable();
               final Ast.Exp e2 = deduceType(env, exp, vArg);
-              labelTypes.put(name, vArg);
-              map2.put(name, e2);
+              labelTypes.put(id.name, vArg);
+              map2.put(id, e2);
             });
         if (record.with == null) {
           return reg(record.copy(null, map2), v, recordTerm(labelTypes));
@@ -775,9 +775,9 @@ public class TypeResolver {
             forEach(
                 record2.args.keySet(),
                 sequence.terms,
-                (name, t) -> {
-                  fieldVars.add(ast.id(Pos.ZERO, name), toVariable(t));
-                  envs.bind(name, t);
+                (id, t) -> {
+                  fieldVars.add(id, toVariable(t));
+                  envs.bind(id.name, t);
                 });
           }
         } else {

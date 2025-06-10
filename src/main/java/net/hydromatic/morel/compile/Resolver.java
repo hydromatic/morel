@@ -520,10 +520,12 @@ public class Resolver {
     if (record.with != null) {
       args = new ArrayList<>();
       final Core.Exp coreWith = toCore(record.with);
+      final Map<String, Ast.Exp> nameArgs = new HashMap<>();
+      record.args.forEach((id, exp) -> nameArgs.put(id.name, exp));
       forEachIndexed(
           type.argNames(),
           (field, i) -> {
-            Ast.Exp exp = record.args.get(field);
+            Ast.Exp exp = nameArgs.get(field);
             if (exp != null) {
               args.add(toCore(exp));
             } else {
