@@ -1439,11 +1439,15 @@ public class Ast {
       }
       Ord.forEachIndexed( // lint:skip
           args,
-          (i, k, v) ->
-              w.append(i > 0 ? ", " : "")
-                  .append(k, 0, 0)
-                  .append(" = ")
-                  .append(v, 0, 0));
+          (i, k, v) -> {
+            if (i > 0) {
+              w.append(", ");
+            }
+            if (!k.name.equals(ast.implicitLabelOpt(v))) {
+              w.append(k, 0, 0).append(" = ");
+            }
+            w.append(v, 0, 0);
+          });
       return w.append("}");
     }
 

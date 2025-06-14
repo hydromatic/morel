@@ -401,7 +401,7 @@ public class MainTest {
   @Test
   void testParseAbbreviatedRecord() {
     ml("{a, e.b, #c e, #d (e + 1), e = f + g}")
-        .assertParse("{a = a, b = #b e, c = #c e, d = #d (e + 1), e = f + g}");
+        .assertParse("{a, #b e, #c e, #d (e + 1), e = f + g}");
     ml("{v = a, w = e.b, x = #c e, y = #d (e + 1), z = (#f 2)}")
         .assertParse("{v = a, w = #b e, x = #c e, y = #d (e + 1), z = #f 2}");
     ml("{w = a = b + c, a = b + c}").assertParse("{a = b + c, w = a = b + c}");
@@ -1972,7 +1972,7 @@ public class MainTest {
             + " group d.location")
         .assertParse(
             "from e in emps"
-                + " group e = {deptno = #deptno e}"
+                + " group e = {#deptno e}"
                 + " join d in depts on #deptno e = #deptno d"
                 + " group location = #location d");
     ml("(from e in emps where e.id = 101, d in depts)")
@@ -2142,7 +2142,7 @@ public class MainTest {
             + " group d.location")
         .assertParse(
             "exists e in emps"
-                + " group e = {deptno = #deptno e}"
+                + " group e = {#deptno e}"
                 + " join d in depts on #deptno e = #deptno d"
                 + " group location = #location d");
     ml("(exists e in emps where e.id = 101, d in depts)")
@@ -2291,7 +2291,7 @@ public class MainTest {
             + " group d.location")
         .assertParse(
             "forall e in emps"
-                + " group e = {deptno = #deptno e}"
+                + " group e = {#deptno e}"
                 + " join d in depts on #deptno e = #deptno d"
                 + " group location = #location d");
     ml("(forall e in emps where e.id = 101, d in depts)")
@@ -3467,7 +3467,7 @@ public class MainTest {
     final String expected =
         "from r in [{a = 2, b = 3}]"
             + " group a = #a r compute sb = sum of #b r"
-            + " yield {a = a, a2 = a + a, sb = sb}";
+            + " yield {a, a2 = a + a, sb}";
     final String plan =
         "from("
             + "sink join(pat r, exp tuple(tuple(constant(2), constant(3))), "
@@ -3529,7 +3529,7 @@ public class MainTest {
             + " order (DESC (#a r), #b r)"
             + " skip 0"
             + " take 4 + 6"
-            + " yield {a = #a r, b10 = #b r * 10}";
+            + " yield {#a r, b10 = #b r * 10}";
     ml(ml)
         .assertParse(expected)
         .assertType(hasMoniker("{a:int, b10:int} list"))
