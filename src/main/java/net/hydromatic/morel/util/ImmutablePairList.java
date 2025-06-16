@@ -65,7 +65,7 @@ public interface ImmutablePairList<T, U> extends PairList<T, U> {
    */
   @SuppressWarnings("unchecked")
   static <T, U> ImmutablePairList<T, U> copyOf(
-      Iterable<? extends Map.Entry<T, U>> iterable) {
+      Iterable<? extends Map.Entry<? extends T, ? extends U>> iterable) {
     // Every PairList - mutable and immutable - knows how to quickly make
     // itself immutable.
     if (iterable instanceof PairList) {
@@ -84,13 +84,14 @@ public interface ImmutablePairList<T, U> extends PairList<T, U> {
         case 1:
           // Use of iterator is suboptimal. If we knew this was a list we could
           // call get(0), but the special case doesn't seem worth the effort.
-          final Map.Entry<T, U> entry = iterable.iterator().next();
+          final Map.Entry<? extends T, ? extends U> entry =
+              iterable.iterator().next();
           return of(entry.getKey(), entry.getValue());
 
         default:
           Object[] elements = new Object[2 * collection.size()];
           int i = 0;
-          for (Map.Entry<T, U> entry2 : iterable) {
+          for (Map.Entry<? extends T, ? extends U> entry2 : iterable) {
             elements[i++] = entry2.getKey();
             elements[i++] = entry2.getValue();
           }
