@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1408,17 +1409,20 @@ public class Ast {
   /** Record. */
   public static class Record extends Exp {
     public final Ast.@Nullable Exp with;
-    public final SortedMap<Id, Exp> args;
+    public final PairList<Id, Exp> args;
 
-    Record(Pos pos, @Nullable Exp with, ImmutableSortedMap<Id, Exp> args) {
+    Record(
+        Pos pos,
+        @Nullable Exp with,
+        Iterable<? extends Map.Entry<Id, Exp>> args) {
       super(pos, Op.RECORD);
       this.with = with;
-      this.args = requireNonNull(args);
+      this.args = ImmutablePairList.copyOf(args);
     }
 
     @Override
     public void forEachArg(ObjIntConsumer<Exp> action) {
-      forEachIndexed(args.values(), action);
+      forEachIndexed(args.rightList(), action);
     }
 
     public Exp accept(Shuttle shuttle) {
@@ -1437,8 +1441,7 @@ public class Ast {
         with.unparse(w, 0, 0);
         w.append(" with ");
       }
-      Ord.forEachIndexed( // lint:skip
-          args,
+      args.forEachIndexed(
           (i, k, v) -> {
             if (i > 0) {
               w.append(", ");
@@ -1451,10 +1454,15 @@ public class Ast {
       return w.append("}");
     }
 
-    public Record copy(Ast.@Nullable Exp with, Map<Ast.Id, Ast.Exp> args) {
+    public Record copy(
+        Ast.@Nullable Exp with, Collection<Map.Entry<Id, Exp>> args) {
       return Objects.equals(with, this.with) && args.equals(this.args)
           ? this
           : ast.record(pos, with, args);
+    }
+
+    public SortedMap<Id, Exp> sortedArgs() {
+      return args.toImmutableSortedMap();
     }
   }
 

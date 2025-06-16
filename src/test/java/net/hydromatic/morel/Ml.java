@@ -279,14 +279,20 @@ class Ml {
     return assertTypeThrows(throwsA(TypeResolver.TypeException.class, is(s)));
   }
 
-  Ml assertTypeThrows(Function<Pos, Matcher<Throwable>> matcherSupplier) {
+  Ml assertTypeThrows(String message) {
+    return assertTypeThrows(
+        pos -> throwsA(TypeResolver.TypeException.class, message, pos));
+  }
+
+  <T> Ml assertTypeThrows(Function<Pos, Matcher<T>> matcherSupplier) {
     return assertTypeThrows(matcherSupplier.apply(pos));
   }
 
-  Ml assertTypeThrows(Matcher<Throwable> matcher) {
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  <T> Ml assertTypeThrows(Matcher<T> matcher) {
     assertError(
         () -> withValidate((resolved, calcite) -> fail("expected error")),
-        matcher);
+        (Matcher) matcher);
     return this;
   }
 

@@ -32,6 +32,7 @@ import java.util.RandomAccess;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import org.apache.calcite.linq4j.function.Functions;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -671,6 +672,14 @@ class PairLists {
         public T get(int index) {
           return (T) elements[index * 2];
         }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public void forEach(Consumer<? super T> action) {
+          for (int x = 0; x < elements.length; x += 2) {
+            action.accept((T) elements[x]);
+          }
+        }
       };
     }
 
@@ -686,6 +695,14 @@ class PairLists {
         @Override
         public U get(int index) {
           return (U) elements[index * 2 + 1];
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public void forEach(Consumer<? super U> action) {
+          for (int x = 0; x < elements.length; x += 2) {
+            action.accept((U) elements[x + 1]);
+          }
         }
       };
     }

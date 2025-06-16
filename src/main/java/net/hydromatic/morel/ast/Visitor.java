@@ -123,7 +123,7 @@ public class Visitor {
   }
 
   protected void visit(Ast.Record record) {
-    record.args.values().forEach(this::accept);
+    record.args.rightList().forEach(this::accept);
   }
 
   // functions and matches

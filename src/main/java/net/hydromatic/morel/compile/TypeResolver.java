@@ -278,7 +278,7 @@ public class TypeResolver {
                   + "' in type '"
                   + typeMap.getType(apply.arg)
                   + "'",
-              apply.arg.pos);
+              apply.fn.pos);
         });
   }
 
@@ -483,15 +483,19 @@ public class TypeResolver {
 
       case RECORD:
         final Ast.Record record = (Ast.Record) node;
+        validateRecord(record);
+
         final NavigableMap<String, Term> labelTypes = new TreeMap<>();
-        final NavigableMap<Ast.Id, Ast.Exp> map2 = new TreeMap<>();
-        record.args.forEach(
-            (id, exp) -> {
-              final Variable vArg = unifier.variable();
-              final Ast.Exp e2 = deduceType(env, exp, vArg);
-              labelTypes.put(id.name, vArg);
-              map2.put(id, e2);
-            });
+        final PairList<Ast.Id, Ast.Exp> map2 = PairList.of();
+        record
+            .sortedArgs()
+            .forEach(
+                (id, exp) -> {
+                  final Variable vArg = unifier.variable();
+                  final Ast.Exp e2 = deduceType(env, exp, vArg);
+                  labelTypes.put(id.name, vArg);
+                  map2.add(id, e2);
+                });
         if (record.with == null) {
           return reg(record.copy(null, map2), v, recordTerm(labelTypes));
         } else {
@@ -773,7 +777,7 @@ public class TypeResolver {
             final Sequence sequence = (Sequence) term;
             fieldVars.clear();
             forEach(
-                record2.args.keySet(),
+                record2.args.leftList(),
                 sequence.terms,
                 (id, t) -> {
                   fieldVars.add(id, toVariable(t));
@@ -1032,6 +1036,18 @@ public class TypeResolver {
     }
   }
 
+  /** Validates a {@code Record}. Throws if there are duplicate field names. */
+  private void validateRecord(Ast.Record record) {
+    final List<String> names = record.args.transform2((id, e) -> id.name);
+    final int i = firstDuplicate(names);
+    if (i >= 0) {
+      final int j = names.lastIndexOf(names.get(i));
+      throw new TypeException(
+          format("duplicate field '%s' in record", names.get(i)),
+          record.args.left(j).pos);
+    }
+  }
+
   /**
    * Validates a {@code Group}. Throws if there are duplicate names among the
    * keys and aggregates.
@@ -1057,7 +1073,8 @@ public class TypeResolver {
           @Override
           protected void visit(Ast.Record record) {
             final List<Pos> positions =
-                transformEager(record.args.values(), e -> e.pos);
+                transformEager(
+                    record.args.toImmutableSortedMap().values(), e -> e.pos);
             if (!Ordering.from(Pos::compare).isOrdered(positions)) {
               String message =
                   "Sorting on a record whose fields are not in alphabetical "

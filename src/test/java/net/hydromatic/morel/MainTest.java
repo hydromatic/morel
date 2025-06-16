@@ -58,7 +58,6 @@ import java.util.List;
 import java.util.Map;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.compile.CompileException;
-import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.foreign.ForeignValue;
@@ -404,7 +403,7 @@ public class MainTest {
         .assertParse("{a, #b e, #c e, #d (e + 1), e = f + g}");
     ml("{v = a, w = e.b, x = #c e, y = #d (e + 1), z = (#f 2)}")
         .assertParse("{v = a, w = #b e, x = #c e, y = #d (e + 1), z = #f 2}");
-    ml("{w = a = b + c, a = b + c}").assertParse("{a = b + c, w = a = b + c}");
+    ml("{w = a = b + c, a = b + c}").assertParse("{w = a = b + c, a = b + c}");
     ml("{1}")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression 1"));
@@ -549,6 +548,11 @@ public class MainTest {
   void testRecordType() {
     final String ml = "map #empno [{empno = 10, name = \"Shaggy\"}]";
     ml(ml).assertType("int list");
+
+    ml("{a=1, b=true}").assertType("{a:int, b:bool}");
+    ml("{c=1, b=true}").assertType("{b:bool, c:int}");
+    mlE("{a=1, b=true, $a$=3}")
+        .assertTypeThrows("duplicate field 'a' in record");
   }
 
   @Test
@@ -1265,7 +1269,7 @@ public class MainTest {
   @Test
   void testRecord() {
     ml("{a = 1, b = {c = true, d = false}}").assertParseSame();
-    ml("{a = 1, 1 = 2}").assertParseStmt(Ast.Record.class, "{1 = 2, a = 1}");
+    ml("{a = 1, 1 = 2}").assertParseStmt(Ast.Record.class, "{a = 1, 1 = 2}");
     ml("#b {a = 1, b = {c = true, d = false}}").assertParseSame();
     ml("{0=1}").assertError(is("label must be positive"));
     ml("{a = 1, b = true}").assertType("{a:int, b:bool}");
@@ -2548,12 +2552,10 @@ public class MainTest {
             + "  order DESC z\n"
             + "  yield {z=z}")
         .assertType("{z:int} list");
-    mlE("from d in [{a=1,b=true}] yield $d.x$")
-        .assertTypeThrows(
-            pos ->
-                throwsA(
-                    TypeResolver.TypeException.class,
-                    is("no field 'x' in type '{a:int, b:bool}'")));
+    mlE("from d in [{a=1,b=true}] yield d.$x$")
+        .assertTypeThrows("no field 'x' in type '{a:int, b:bool}'");
+    mlE("from d in [{a=1,b=true}] yield $#x$ d")
+        .assertTypeThrows("no field 'x' in type '{a:int, b:bool}'");
 
     // into
     ml("from d in [{a=1,b=true}] yield d.a into List.length").assertType("int");
@@ -3237,9 +3239,9 @@ public class MainTest {
             + "end";
     final String expected =
         "let val emps = "
-            + "[{deptno = 10, id = 100, name = \"Fred\"},"
-            + " {deptno = 20, id = 101, name = \"Velma\"},"
-            + " {deptno = 10, id = 102, name = \"Shaggy\"}] "
+            + "[{id = 100, name = \"Fred\", deptno = 10},"
+            + " {id = 101, name = \"Velma\", deptno = 20},"
+            + " {id = 102, name = \"Shaggy\", deptno = 10}] "
             + "in"
             + " from e in emps"
             + " group deptno = #deptno e "
@@ -3292,9 +3294,9 @@ public class MainTest {
             + "end";
     final String expected =
         "let val emps = "
-            + "[{deptno = 10, id = 100, name = \"Fred\"},"
-            + " {deptno = 20, id = 101, name = \"Velma\"},"
-            + " {deptno = 10, id = 102, name = \"Shaggy\"}]; "
+            + "[{id = 100, name = \"Fred\", deptno = 10},"
+            + " {id = 101, name = \"Velma\", deptno = 20},"
+            + " {id = 102, name = \"Shaggy\", deptno = 10}]; "
             + "fun sum bag = case #getItem Bag bag of"
             + " NONE => 0"
             + " | SOME (h, t) => h + sum t "
@@ -3489,8 +3491,8 @@ public class MainTest {
             + "  d in [{deptno=10,altitude=3500}]\n"
             + "group e.deptno compute s = sum of e.empno + d.altitude";
     final String expected =
-        "from e in [{deptno = 10, empno = 100}],"
-            + " d in [{altitude = 3500, deptno = 10}]"
+        "from e in [{empno = 100, deptno = 10}],"
+            + " d in [{deptno = 10, altitude = 3500}]"
             + " group deptno = #deptno e"
             + " compute s = sum of #empno e + #altitude d";
     ml(ml)

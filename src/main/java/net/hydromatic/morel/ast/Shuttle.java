@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.PairList;
 
 /** Visits and transforms syntax trees. */
 public class Shuttle {
@@ -59,6 +60,14 @@ public class Shuttle {
     //noinspection unchecked
     nodes.forEach((k, v) -> map.put(k, (E) v.accept(this)));
     return map;
+  }
+
+  protected <K, E extends AstNode> PairList<K, E> visitPairList(
+      PairList<K, E> nodes) {
+    final PairList<K, E> list = PairList.of();
+    //noinspection unchecked
+    nodes.forEach((k, v) -> list.add(k, (E) v.accept(this)));
+    return list;
   }
 
   // expressions
@@ -180,7 +189,7 @@ public class Shuttle {
     return ast.record(
         record.pos,
         record.with == null ? null : record.with.accept(this),
-        visitMap(record.args));
+        visitPairList(record.args));
   }
 
   // functions and matches

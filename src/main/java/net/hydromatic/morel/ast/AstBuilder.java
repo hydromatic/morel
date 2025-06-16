@@ -29,6 +29,7 @@ import java.util.function.BiFunction;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.RecordType;
+import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.PairList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -240,15 +241,15 @@ public enum AstBuilder {
   }
 
   public Ast.Record record(
-      Pos pos, Ast.@Nullable Exp with, Map<Ast.Id, Ast.Exp> map) {
-    return new Ast.Record(pos, with, ImmutableSortedMap.copyOf(map));
+      Pos pos, Ast.@Nullable Exp with, PairList<Ast.Id, Ast.Exp> args) {
+    return new Ast.Record(pos, with, ImmutablePairList.copyOf(args));
   }
 
   public Ast.Record record(
       Pos pos,
       Ast.@Nullable Exp with,
-      Collection<Map.Entry<Ast.Id, Ast.Exp>> map) {
-    return record(pos, with, ImmutableSortedMap.copyOf(map));
+      Collection<Map.Entry<Ast.Id, Ast.Exp>> args) {
+    return record(pos, with, PairList.copyOf(args));
   }
 
   public Ast.Exp equal(Ast.Exp a0, Ast.Exp a1) {

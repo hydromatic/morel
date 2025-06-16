@@ -625,8 +625,8 @@ from p in wordCount ["a skunk sat on a stump",
     "and thunk the stump stunk",
     "but the stump thunk the skunk stunk"]
 order p.word;
-> stdIn:4.7 Error: no field 'word' in type 'string * int'
->   raised at: stdIn:4.7
+> stdIn:4.9-4.13 Error: no field 'word' in type 'string * int'
+>   raised at: stdIn:4.9-4.13
 from p in wordCount ["a skunk sat on a stump",
     "and thunk the stump stunk",
     "but the stump thunk the skunk stunk"]
