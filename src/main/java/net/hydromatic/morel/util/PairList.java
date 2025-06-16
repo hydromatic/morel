@@ -22,6 +22,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -189,6 +190,19 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
     final ImmutableMap.Builder<T, U> b = ImmutableMap.builder();
     forEach((t, u) -> b.put(t, u));
     return b.build();
+  }
+
+  /**
+   * Creates an {@link ImmutableSortedMap} whose entries are the pairs in this
+   * list. Throws if keys are not unique, or if the key type does not extend
+   * {@link Comparable}.
+   */
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  default ImmutableSortedMap<T, U> toImmutableSortedMap() {
+    final ImmutableSortedMap.Builder<Comparable, U> b =
+        ImmutableSortedMap.naturalOrder();
+    forEach((t, u) -> b.put((Comparable) t, u));
+    return (ImmutableSortedMap<T, U>) b.build();
   }
 
   /**

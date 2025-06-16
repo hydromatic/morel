@@ -328,13 +328,6 @@ class PairLists {
     }
 
     @Override
-    public ImmutableMap<T, U> toImmutableMap() {
-      final ImmutableMap.Builder<T, U> b = ImmutableMap.builder();
-      forEach((t, u) -> b.put(t, u));
-      return b.build();
-    }
-
-    @Override
     public ImmutablePairList<T, U> immutable() {
       return immutableBackedBy(list);
     }
