@@ -92,6 +92,82 @@ public class MorelParserImpl implements MorelParser
     }
     return pos(token.next);
   }
+
+  @Override
+  public MorelParseException wrap(Exception x) {
+    ParseException e = (ParseException) x;
+    return new MorelParseException(e, pos(e.currentToken.next));
+  }
+
+  /** As {@link #statementEof()}, but wraps any exception as a
+   * {@link MorelParseException}. */
+  public AstNode statementEofSafe() {
+    try {
+      return statementEof();
+    } catch (ParseException e) {
+      throw wrap(e);
+    }
+  }
+
+  /** As {@link #literalEof()}, but wraps any exception as a
+   * {@link MorelParseException}. */
+  public Ast.Literal literalEofSafe() {
+    try {
+      return literalEof();
+    } catch (ParseException e) {
+      throw wrap(e);
+    }
+  }
+
+  /** As {@link #declEof()}, but wraps any exception as a
+   * {@link MorelParseException}. */
+  public Ast.Decl declEofSafe() {
+    try {
+      return declEof();
+    } catch (ParseException e) {
+      throw wrap(e);
+    }
+  }
+
+  /** As {@link #expression()}, but wraps any exception as a
+   * {@link MorelParseException}. */
+  public Ast.Exp expressionSafe() {
+    try {
+      return expression();
+    } catch (ParseException e) {
+      throw wrap(e);
+    }
+  }
+
+  /** As {@link #statementSemicolon()}, but wraps any exception as a
+   * {@link MorelParseException}. */
+  public AstNode statementSemicolonSafe() {
+    try {
+      return statementSemicolon();
+    } catch (ParseException e) {
+      throw wrap(e);
+    }
+  }
+
+  /** As {@link #statementSemicolonOrEof()}, but wraps any exception as a
+   * {@link MorelParseException}. */
+  public AstNode statementSemicolonOrEofSafe() {
+    try {
+      return statementSemicolonOrEof();
+    } catch (ParseException e) {
+      throw wrap(e);
+    }
+  }
+
+  /** As {@link #type()}, but wraps any exception as a
+   * {@link MorelParseException}. */
+  public Ast.Type typeSafe() {
+    try {
+      return type();
+    } catch (ParseException e) {
+      throw wrap(e);
+    }
+  }
 }
 
 PARSER_END(MorelParserImpl)

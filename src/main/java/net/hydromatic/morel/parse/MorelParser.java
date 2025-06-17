@@ -27,6 +27,12 @@ public interface MorelParser {
 
   /** Sets the current file, and sets the current line to zero. */
   void zero(String file);
+
+  /**
+   * Wraps a parse exception in a {@link
+   * net.hydromatic.morel.util.MorelException} with the current position.
+   */
+  MorelParseException wrap(Exception parseException);
 }
 
 // End MorelParser.java

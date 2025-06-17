@@ -55,8 +55,8 @@ import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.ForeignValue;
+import net.hydromatic.morel.parse.MorelParseException;
 import net.hydromatic.morel.parse.MorelParserImpl;
-import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MorelException;
@@ -284,7 +284,7 @@ public class Main {
         try {
           Pos pos = parser.nextTokenPos();
           parser.zero("stdIn");
-          final AstNode statement = parser.statementSemicolonOrEof();
+          final AstNode statement = parser.statementSemicolonOrEofSafe();
           String code = in2.flush();
           if (main.idempotent) {
             if (code.startsWith("\n")) {
@@ -304,7 +304,7 @@ public class Main {
               subShell,
               outLines,
               session1 -> subShell.command(statement, outLines));
-        } catch (ParseException e) {
+        } catch (MorelParseException e) {
           final String message = e.getMessage();
           if (message.startsWith("Encountered \"<EOF>\" ")) {
             break;

@@ -38,11 +38,9 @@ import static net.hydromatic.morel.Ml.assertError;
 import static net.hydromatic.morel.Ml.ml;
 import static net.hydromatic.morel.Ml.mlE;
 import static net.hydromatic.morel.TestUtils.first;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
 
@@ -265,10 +263,10 @@ public class MainTest {
 
     ml("let val x = 2 and y = 3 in x + y end").assertParseSame();
     ml("let val rec x = 2 and y = 3 in x + y end").assertParseSame();
-    ml("let val x = 2 and rec y = 3 in x + y end")
-        .assertParseThrowsParseException(
-            containsString(
-                "Encountered \" \"rec\" \"rec \"\" at line 1, column 19."));
+    mlE("let val x = 2 and $rec$ y = 3 in x + y end")
+        .assertParseThrowsParseException("Encountered \" \"rec\" \"rec \"\"");
+    mlE("let val x = 2 and $rec$ y = 3 in x + y end")
+        .assertParseThrowsParseException("Encountered \" \"rec\" \"rec \"\"");
 
     ml("let val inst first = fn (x, y) => x in x + y end").assertParseSame();
 
@@ -345,12 +343,11 @@ public class MainTest {
 
     // keywords such as 'val' and 'in' are case-sensitive
     ml("let val x = 1 in x + 1 end").assertParseSame();
-    ml("let VAL x = 1 in x + 1 end")
+    mlE("let $VAL$ x = 1 in x + 1 end")
         .assertParseThrowsParseException(
-            startsWith("Encountered \" <IDENTIFIER> \"VAL \""));
-    ml("let val x = 1 IN x + 1 end")
-        .assertParseThrowsParseException(
-            startsWith("Encountered \" \"end\" \"end \""));
+            "Encountered \" <IDENTIFIER> \"VAL \"");
+    mlE("let val x = 1 IN x + 1 $end$")
+        .assertParseThrowsParseException("Encountered \" \"end\" \"end \"");
 
     // 'notelem' is an infix operator;
     // 'notElem' and 'NOTELEM' are ordinary identifiers
@@ -383,14 +380,10 @@ public class MainTest {
     ml("a b.c").assertParse("a (#c b)");
     ml("a.b c.d e.f").assertParse("#b a (#d c) (#f e)");
     ml("(a.b) (c.d) (e.f)").assertParse("#b a (#d c) (#f e)");
-    ml("(a.(b (c.d) (e.f))")
-        .assertParseThrowsParseException(
-            containsString(
-                "Encountered \" \"(\" \"( \"\" at line 1, column 4."));
-    ml("(a.b c.(d (e.f)))")
-        .assertParseThrowsParseException(
-            containsString(
-                "Encountered \" \"(\" \"( \"\" at line 1, column 8."));
+    mlE("(a.$($b (c.d) (e.f))")
+        .assertParseThrowsParseException("Encountered \" \"(\" \"( \"\"");
+    mlE("(a.b c.$($d (e.f)))")
+        .assertParseThrowsParseException("Encountered \" \"(\" \"( \"\"");
   }
 
   /**
@@ -552,7 +545,7 @@ public class MainTest {
     ml("{a=1, b=true}").assertType("{a:int, b:bool}");
     ml("{c=1, b=true}").assertType("{b:bool, c:int}");
     mlE("{a=1, b=true, $a$=3}")
-        .assertTypeThrows("duplicate field 'a' in record");
+        .assertTypeThrowsTypeException("duplicate field 'a' in record");
   }
 
   @Test
@@ -1323,10 +1316,8 @@ public class MainTest {
             + "   | _ => ~1";
     ml(ml).assertEval(is(3));
     ml("fn {} => 0").assertParseSame();
-    ml("fn {a=1, ..., c=2}")
-        .assertParseThrowsParseException(
-            containsString(
-                "Encountered \" \",\" \", \"\" at line 1, " + "column 13."));
+    mlE("fn {a=1, ...$,$ c=2}")
+        .assertParseThrowsParseException("Encountered \" \",\" \", \"\"");
     ml("fn {...} => 0").assertParseSame();
     ml("fn {a = a, ...} => 0").assertParseSame();
     ml("fn {a, b = {c, d}, ...} => 0")
@@ -1935,10 +1926,8 @@ public class MainTest {
         .assertParseSame();
     ml("from e in emps, d in depts on e.deptno = d.deptno")
         .assertParse("from e in emps, d in depts on #deptno e = #deptno d");
-    ml("from e in emps on true, d in depts on e.deptno = d.deptno")
-        .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"on\" \"on \"\" " + "at line 1, column 16."));
+    mlE("from e in emps $on$ true, d in depts on e.deptno = d.deptno")
+        .assertParseThrowsParseException("Encountered \" \"on\" \"on \"\"");
     ml("from e, d in depts on e.deptno = d.deptno")
         .assertParse("from e, d in depts on #deptno e = #deptno d");
     ml("from , d in depts").assertError("Xx");
@@ -1979,19 +1968,16 @@ public class MainTest {
                 + " group e = {#deptno e}"
                 + " join d in depts on #deptno e = #deptno d"
                 + " group location = #location d");
-    ml("(from e in emps where e.id = 101, d in depts)")
-        .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"in\" \"in \"\" at line 1, column 37."));
+    mlE("(from e in emps where e.id = 101, d $in$ depts)")
+        .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("from e in emps where e.id = 101 join d in depts")
         .assertParse("from e in emps where #id e = 101 join d in depts");
     // after 'group', you have to use 'join' not ','
-    ml("(from e in emps\n"
+    mlE("(from e in emps\n"
             + " group e.id compute count,\n"
-            + " d in depts\n"
+            + " d $in$ depts\n"
             + " where false)")
-        .assertParseThrowsParseException(
-            startsWith("Encountered \" \"in\" \"in \"\" at line 3, column 4."));
+        .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("(from e in emps\n"
             + " group e.id compute count\n"
             + " join d in depts\n"
@@ -2020,7 +2006,7 @@ public class MainTest {
     ml("from i in integers unorder").assertParseSame();
     mlE("from i in (integers $unorder$)")
         .assertParseThrowsParseException(
-            containsString("Encountered \" \"unorder\" \"unorder \"\" at "));
+            "Encountered \" \"unorder\" \"unorder \"\"");
     ml("fn f => from i in [1, 2, 3] where f i").assertParseSame();
     ml("fn f => from i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
         .assertParse(
@@ -2032,33 +2018,22 @@ public class MainTest {
     ml("from x, y in [1, 2], z").assertParseSame();
     ml("from {x, y} in [{x=1, y=2}], z")
         .assertParse("from {x = x, y = y} in [{x = 1, y = 2}], z");
-    ml("from {x, y}, z")
+    mlE("from {x, y}$,$ z")
+        .assertParseThrowsParseException("Encountered \" \",\" \", \"\"");
+    mlE("from {x, y} $group$")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \",\" \", \"\" " + "at line 1, column 12."));
-    ml("from {x, y} group")
+            "Encountered \" \"group\" \"group \"\"");
+    mlE("from {x, y} $where$ true")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"group\" \"group \"\" "
-                    + "at line 1, column 13."));
-    ml("from {x, y} where true")
+            "Encountered \" \"where\" \"where \"\"");
+    mlE("from (x, y) $where$ true")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"where\" \"where \"\" "
-                    + "at line 1, column 13."));
-    ml("from (x, y) where true")
+            "Encountered \" \"where\" \"where \"\"");
+    mlE("from w as (x, y) $order$ x")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"where\" \"where \"\" "
-                    + "at line 1, column 13."));
-    ml("from w as (x, y) order x")
-        .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"order\" \"order \"\" "
-                    + "at line 1, column 18."));
-    ml("from (x, y)")
-        .assertParseThrowsParseException(
-            startsWith("Encountered \"<EOF>\" at line 1, column 11."));
+            "Encountered \" \"order\" \"order \"\"");
+    mlE("from (x, y$)$")
+        .assertParseThrowsParseException("Encountered \"<EOF>\"");
     ml("from e in emps\n" //
             + "through e in empsInDept 20\n"
             + "yield e.sal")
@@ -2105,10 +2080,8 @@ public class MainTest {
         .assertParseSame();
     ml("exists e in emps, d in depts on e.deptno = d.deptno")
         .assertParse("exists e in emps, d in depts on #deptno e = #deptno d");
-    ml("exists e in emps on true, d in depts on e.deptno = d.deptno")
-        .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"on\" \"on \"\" " + "at line 1, column 18."));
+    mlE("exists e in emps $on$ true, d in depts on e.deptno = d.deptno")
+        .assertParseThrowsParseException("Encountered \" \"on\" \"on \"\"");
     ml("exists e, d in depts on e.deptno = d.deptno")
         .assertParse("exists e, d in depts on #deptno e = #deptno d");
     ml("exists , d in depts").assertError("Xx");
@@ -2149,19 +2122,16 @@ public class MainTest {
                 + " group e = {#deptno e}"
                 + " join d in depts on #deptno e = #deptno d"
                 + " group location = #location d");
-    ml("(exists e in emps where e.id = 101, d in depts)")
-        .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"in\" \"in \"\" at line 1, column 39."));
+    mlE("(exists e in emps where e.id = 101, d $in$ depts)")
+        .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("exists e in emps where e.id = 101 join d in depts")
         .assertParse("exists e in emps where #id e = 101 join d in depts");
     // after 'group', you have to use 'join' not ','
-    ml("(exists e in emps\n"
+    mlE("(exists e in emps\n"
             + " group e.id compute count,\n"
-            + " d in depts\n"
+            + " d $in$ depts\n"
             + " where false)")
-        .assertParseThrowsParseException(
-            startsWith("Encountered \" \"in\" \"in \"\" at line 3, column 4."));
+        .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("(exists e in emps\n"
             + " group e.id compute count\n"
             + " join d in depts\n"
@@ -2188,33 +2158,22 @@ public class MainTest {
     ml("exists x, y in [1, 2], z").assertParseSame();
     ml("exists {x, y} in [{x=1, y=2}], z")
         .assertParse("exists {x = x, y = y} in [{x = 1, y = 2}], z");
-    ml("exists {x, y}, z")
+    mlE("exists {x, y}$,$ z")
+        .assertParseThrowsParseException("Encountered \" \",\" \", \"\"");
+    mlE("exists {x, y} $group$")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \",\" \", \"\" " + "at line 1, column 14."));
-    ml("exists {x, y} group")
+            "Encountered \" \"group\" \"group \"\"");
+    mlE("exists {x, y} $where$ true")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"group\" \"group \"\" "
-                    + "at line 1, column 15."));
-    ml("exists {x, y} where true")
+            "Encountered \" \"where\" \"where \"\"");
+    mlE("exists (x, y) $where$ true")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"where\" \"where \"\" "
-                    + "at line 1, column 15."));
-    ml("exists (x, y) where true")
+            "Encountered \" \"where\" \"where \"\"");
+    mlE("exists w as (x, y) $order$ x")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"where\" \"where \"\" "
-                    + "at line 1, column 15."));
-    ml("exists w as (x, y) order x")
-        .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"order\" \"order \"\" "
-                    + "at line 1, column 20."));
-    ml("exists (x, y)")
-        .assertParseThrowsParseException(
-            startsWith("Encountered \"<EOF>\" at line 1, column 13."));
+            "Encountered \" \"order\" \"order \"\"");
+    mlE("exists (x, y$)$")
+        .assertParseThrowsParseException("Encountered \"<EOF>\"");
     ml("exists e in emps\n" //
             + "through e in empsInDept 20\n"
             + "yield e.sal")
@@ -2254,10 +2213,8 @@ public class MainTest {
         .assertParseSame();
     ml("forall e in emps, d in depts on e.deptno = d.deptno")
         .assertParse("forall e in emps, d in depts on #deptno e = #deptno d");
-    ml("forall e in emps on true, d in depts on e.deptno = d.deptno")
-        .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"on\" \"on \"\" " + "at line 1, column 18."));
+    mlE("forall e in emps $on$ true, d in depts on e.deptno = d.deptno")
+        .assertParseThrowsParseException("Encountered \" \"on\" \"on \"\"");
     ml("forall e, d in depts on e.deptno = d.deptno")
         .assertParse("forall e, d in depts on #deptno e = #deptno d");
     ml("forall , d in depts").assertError("Xx");
@@ -2298,19 +2255,16 @@ public class MainTest {
                 + " group e = {#deptno e}"
                 + " join d in depts on #deptno e = #deptno d"
                 + " group location = #location d");
-    ml("(forall e in emps where e.id = 101, d in depts)")
-        .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"in\" \"in \"\" at line 1, column 39."));
+    mlE("(forall e in emps where e.id = 101, d $in$ depts)")
+        .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("forall e in emps where e.id = 101 join d in depts")
         .assertParse("forall e in emps where #id e = 101 join d in depts");
     // after 'group', you have to use 'join' not ','
-    ml("(forall e in emps\n"
+    mlE("(forall e in emps\n"
             + " group e.id compute count,\n"
-            + " d in depts\n"
+            + " d $in$ depts\n"
             + " where false)")
-        .assertParseThrowsParseException(
-            startsWith("Encountered \" \"in\" \"in \"\" at line 3, column 4."));
+        .assertParseThrowsParseException("Encountered \" \"in\" \"in \"\"");
     ml("(forall e in emps\n"
             + " group e.id compute count\n"
             + " join d in depts\n"
@@ -2337,33 +2291,22 @@ public class MainTest {
     ml("forall x, y in [1, 2], z").assertParseSame();
     ml("forall {x, y} in [{x=1, y=2}], z")
         .assertParse("forall {x = x, y = y} in [{x = 1, y = 2}], z");
-    ml("forall {x, y}, z")
+    mlE("forall {x, y}$,$ z")
+        .assertParseThrowsParseException("Encountered \" \",\" \", \"\"");
+    mlE("forall {x, y} $group$")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \",\" \", \"\" " + "at line 1, column 14."));
-    ml("forall {x, y} group")
+            "Encountered \" \"group\" \"group \"\"");
+    mlE("forall {x, y} $where$ true")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"group\" \"group \"\" "
-                    + "at line 1, column 15."));
-    ml("forall {x, y} where true")
+            "Encountered \" \"where\" \"where \"\"");
+    mlE("forall (x, y) $where$ true")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"where\" \"where \"\" "
-                    + "at line 1, column 15."));
-    ml("forall (x, y) where true")
+            "Encountered \" \"where\" \"where \"\"");
+    mlE("forall w as (x, y) $order$ x")
         .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"where\" \"where \"\" "
-                    + "at line 1, column 15."));
-    ml("forall w as (x, y) order x")
-        .assertParseThrowsParseException(
-            startsWith(
-                "Encountered \" \"order\" \"order \"\" "
-                    + "at line 1, column 20."));
-    ml("forall (x, y)")
-        .assertParseThrowsParseException(
-            startsWith("Encountered \"<EOF>\" at line 1, column 13."));
+            "Encountered \" \"order\" \"order \"\"");
+    mlE("forall (x, y$)$")
+        .assertParseThrowsParseException("Encountered \"<EOF>\"");
     ml("forall e in emps\n" //
             + "through e in empsInDept 20\n"
             + "yield e.sal")
@@ -2553,9 +2496,11 @@ public class MainTest {
             + "  yield {z=z}")
         .assertType("{z:int} list");
     mlE("from d in [{a=1,b=true}] yield d.$x$")
-        .assertTypeThrows("no field 'x' in type '{a:int, b:bool}'");
+        .assertTypeThrowsTypeException(
+            "no field 'x' in type '{a:int, b:bool}'");
     mlE("from d in [{a=1,b=true}] yield $#x$ d")
-        .assertTypeThrows("no field 'x' in type '{a:int, b:bool}'");
+        .assertTypeThrowsTypeException(
+            "no field 'x' in type '{a:int, b:bool}'");
 
     // into
     ml("from d in [{a=1,b=true}] yield d.a into List.length").assertType("int");
@@ -3433,9 +3378,8 @@ public class MainTest {
             "from i in [1, 2, 3] compute sum = sum of i, count = count")
         .assertType("{count:int, sum:int}");
     // there must be at least one aggregate function
-    ml("from i in [1, 2, 3] compute")
-        .assertParseThrowsParseException(
-            startsWith("Encountered \"<EOF>\" at "));
+    mlE("from i in [1, 2, 3] comput$e$")
+        .assertParseThrowsParseException("Encountered \"<EOF>\" at ");
 
     // Theoretically a "group" without a "compute" can be followed by a
     // "compute" step. So, the following is ambiguous. We treat it as a single

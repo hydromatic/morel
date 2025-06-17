@@ -16,26 +16,19 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.morel.compile;
+package net.hydromatic.morel.parse;
 
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.util.MorelException;
 
-/** An error occurred during compilation. */
-public class CompileException extends RuntimeException
+/** Exception caused by a parse error. */
+public class MorelParseException extends RuntimeException
     implements MorelException {
-  private final boolean warning;
   private final Pos pos;
 
-  public CompileException(String message, boolean warning, Pos pos) {
-    super(message);
-    this.warning = warning;
+  MorelParseException(Exception cause, Pos pos) {
+    super(cause.getMessage(), cause);
     this.pos = pos;
-  }
-
-  @Override
-  public String toString() {
-    return super.toString() + " at " + pos;
   }
 
   @Override
@@ -45,10 +38,8 @@ public class CompileException extends RuntimeException
 
   @Override
   public StringBuilder describeTo(StringBuilder buf) {
-    return pos.describeTo(buf)
-        .append(warning ? " Warning: " : " Error: ")
-        .append(getMessage());
+    return pos.describeTo(buf).append(getCause().getMessage());
   }
 }
 
-// End CompileException.java
+// End MorelParseException.java

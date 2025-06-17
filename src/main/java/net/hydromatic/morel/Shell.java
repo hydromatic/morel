@@ -53,8 +53,8 @@ import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.DataSet;
 import net.hydromatic.morel.foreign.ForeignValue;
+import net.hydromatic.morel.parse.MorelParseException;
 import net.hydromatic.morel.parse.MorelParserImpl;
-import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.JavaVersion;
@@ -630,7 +630,7 @@ public class Shell {
                 final AstNode statement;
                 try {
                   smlParser.zero("stdIn");
-                  statement = smlParser.statementSemicolon();
+                  statement = smlParser.statementSemicolonSafe();
                   final Environment env0 = env1;
                   final List<CompileException> warningList = new ArrayList<>();
                   final Tracer tracer = Tracers.empty();
@@ -663,7 +663,7 @@ public class Shell {
                   }
                   bindingMap.clear();
                   bindings.clear();
-                } catch (ParseException | CompileException e) {
+                } catch (MorelParseException | CompileException e) {
                   outLines.accept(e.getMessage());
                 }
                 if (echo) {

@@ -234,12 +234,13 @@ public abstract class Matchers {
       @Nullable
       String positionString(Throwable e) {
         if (e instanceof MorelException) {
-          return ((MorelException) e)
-              .pos()
-              .describeTo(new StringBuilder())
-              .toString();
+          return getString(((MorelException) e).pos());
         }
         return null;
+      }
+
+      private String getString(Pos pos) {
+        return pos.describeTo(new StringBuilder()).toString();
       }
     };
   }

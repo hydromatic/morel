@@ -62,8 +62,8 @@ import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.DataSet;
+import net.hydromatic.morel.parse.MorelParseException;
 import net.hydromatic.morel.parse.MorelParserImpl;
-import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
@@ -141,24 +141,16 @@ class Ml {
   Ml assertParseLiteral(Matcher<Ast.Literal> matcher) {
     return withParser(
         parser -> {
-          try {
-            final Ast.Literal literal = parser.literalEof();
-            assertThat(literal, matcher);
-          } catch (ParseException e) {
-            throw new RuntimeException(e);
-          }
+          final Ast.Literal literal = parser.literalEofSafe();
+          assertThat(literal, matcher);
         });
   }
 
   Ml assertParseDecl(Matcher<Ast.Decl> matcher) {
     return withParser(
         parser -> {
-          try {
-            final Ast.Decl decl = parser.declEof();
-            assertThat(decl, matcher);
-          } catch (ParseException e) {
-            throw new RuntimeException(e);
-          }
+          final Ast.Decl decl = parser.declEofSafe();
+          assertThat(decl, matcher);
         });
   }
 
@@ -169,12 +161,8 @@ class Ml {
   Ml assertParseStmt(Matcher<AstNode> matcher) {
     return withParser(
         parser -> {
-          try {
-            final AstNode statement = parser.statementEof();
-            assertThat(statement, matcher);
-          } catch (ParseException e) {
-            throw new RuntimeException(e);
-          }
+          final AstNode statement = parser.statementEofSafe();
+          assertThat(statement, matcher);
         });
   }
 
@@ -206,21 +194,31 @@ class Ml {
     return assertParse(ml.replaceAll("[\n ]+", " "));
   }
 
-  Ml assertParseThrowsParseException(Matcher<String> matcher) {
-    return assertParseThrows(throwsA(ParseException.class, matcher));
+  @SuppressWarnings("UnusedReturnValue")
+  Ml assertParseThrowsParseException(String message) {
+    return assertParseThrows(
+        pos -> throwsA(MorelParseException.class, message, pos));
   }
 
+  @SuppressWarnings("UnusedReturnValue")
   Ml assertParseThrowsIllegalArgumentException(Matcher<String> matcher) {
     return assertParseThrows(throwsA(IllegalArgumentException.class, matcher));
   }
 
-  Ml assertParseThrows(Matcher<Throwable> matcher) {
+  <T> Ml assertParseThrows(Function<Pos, Matcher<T>> matcherSupplier) {
+    return assertParseThrows(matcherSupplier.apply(pos));
+  }
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  <T> Ml assertParseThrows(Matcher<T> matcher) {
     try {
       final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
-      final AstNode statement = parser.statementEof();
+      Pos pos = parser.nextTokenPos();
+      parser.zero("stdIn");
+      final AstNode statement = parser.statementEofSafe();
       fail("expected error, got " + statement);
     } catch (Throwable e) {
-      assertThat(e, matcher);
+      assertThat(e, (Matcher) matcher);
     }
     return this;
   }
@@ -228,13 +226,8 @@ class Ml {
   private Ml withValidate(BiConsumer<TypeResolver.Resolved, Calcite> action) {
     return withParser(
         parser -> {
-          final AstNode statement;
-          try {
-            parser.zero("stdIn");
-            statement = parser.statementEof();
-          } catch (ParseException e) {
-            throw new RuntimeException(e);
-          }
+          parser.zero("stdIn");
+          final AstNode statement = parser.statementEofSafe();
           final Calcite calcite = Calcite.withDataSets(dataSetMap);
           try {
             final Consumer<CompileException> ignoreWarnings = w -> {};
@@ -271,17 +264,15 @@ class Ml {
     return assertType(hasMoniker(expected));
   }
 
+  @SuppressWarnings("UnusedReturnValue")
   Ml assertTypeThrowsRuntimeException(String s) {
     return assertTypeThrows(throwsA(RuntimeException.class, is(s)));
   }
 
+  @SuppressWarnings("UnusedReturnValue")
   Ml assertTypeThrowsTypeException(String s) {
-    return assertTypeThrows(throwsA(TypeResolver.TypeException.class, is(s)));
-  }
-
-  Ml assertTypeThrows(String message) {
     return assertTypeThrows(
-        pos -> throwsA(TypeResolver.TypeException.class, message, pos));
+        pos -> throwsA(TypeResolver.TypeException.class, s, pos));
   }
 
   <T> Ml assertTypeThrows(Function<Pos, Matcher<T>> matcherSupplier) {
@@ -299,54 +290,46 @@ class Ml {
   Ml withPrepare(Consumer<CompiledStatement> action) {
     return withParser(
         parser -> {
-          try {
-            final TypeSystem typeSystem = new TypeSystem();
-            final AstNode statement = parser.statementEof();
-            final Environment env = Environments.empty();
-            final Session session = new Session(propMap);
-            final List<CompileException> warningList = new ArrayList<>();
-            final CompiledStatement compiled =
-                Compiles.prepareStatement(
-                    typeSystem,
-                    session,
-                    env,
-                    statement,
-                    null,
-                    warningList::add,
-                    tracer);
-            action.accept(compiled);
-          } catch (ParseException e) {
-            throw new RuntimeException(e);
-          }
+          final TypeSystem typeSystem = new TypeSystem();
+          final AstNode statement = parser.statementEofSafe();
+          final Environment env = Environments.empty();
+          final Session session = new Session(propMap);
+          final List<CompileException> warningList = new ArrayList<>();
+          final CompiledStatement compiled =
+              Compiles.prepareStatement(
+                  typeSystem,
+                  session,
+                  env,
+                  statement,
+                  null,
+                  warningList::add,
+                  tracer);
+          action.accept(compiled);
         });
   }
 
   Ml assertCalcite(Matcher<String> matcher) {
-    try {
-      final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
-      final AstNode statement = parser.statementEof();
-      final TypeSystem typeSystem = new TypeSystem();
+    final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
+    final AstNode statement = parser.statementEofSafe();
+    final TypeSystem typeSystem = new TypeSystem();
 
-      final Calcite calcite = Calcite.withDataSets(dataSetMap);
-      final TypeResolver.Resolved resolved =
-          Compiles.validateExpression(
-              statement, propMap, calcite.foreignValues(), w -> {});
-      final Environment env = resolved.env;
-      final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
-      final Session session = null;
-      final Resolver resolver = Resolver.of(resolved.typeMap, env, session);
-      final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
-      assertThat(valDecl3, instanceOf(Core.NonRecValDecl.class));
-      final RelNode rel =
-          new CalciteCompiler(typeSystem, calcite)
-              .toRel(env, Compiles.toExp((Core.NonRecValDecl) valDecl3));
-      requireNonNull(rel);
-      final String relString = RelOptUtil.toString(rel);
-      assertThat(relString, matcher);
-      return this;
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
+    final Calcite calcite = Calcite.withDataSets(dataSetMap);
+    final TypeResolver.Resolved resolved =
+        Compiles.validateExpression(
+            statement, propMap, calcite.foreignValues(), w -> {});
+    final Environment env = resolved.env;
+    final Ast.ValDecl valDecl2 = (Ast.ValDecl) resolved.node;
+    final Session session = null;
+    final Resolver resolver = Resolver.of(resolved.typeMap, env, session);
+    final Core.ValDecl valDecl3 = resolver.toCore(valDecl2);
+    assertThat(valDecl3, instanceOf(Core.NonRecValDecl.class));
+    final RelNode rel =
+        new CalciteCompiler(typeSystem, calcite)
+            .toRel(env, Compiles.toExp((Core.NonRecValDecl) valDecl3));
+    requireNonNull(rel);
+    final String relString = RelOptUtil.toString(rel);
+    assertThat(relString, matcher);
+    return this;
   }
 
   /**
@@ -391,13 +374,8 @@ class Ml {
   }
 
   Ml assertAnalyze(Matcher<Map<Core.NamedPat, Analyzer.Use>> matcher) {
-    final AstNode statement;
-    try {
-      final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
-      statement = parser.statementEof();
-    } catch (ParseException parseException) {
-      throw new RuntimeException(parseException);
-    }
+    final MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
+    final AstNode statement = parser.statementEofSafe();
     final TypeSystem typeSystem = new TypeSystem();
 
     final Session session = null;

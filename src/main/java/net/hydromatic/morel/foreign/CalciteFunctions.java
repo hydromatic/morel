@@ -39,8 +39,8 @@ import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.eval.Session;
+import net.hydromatic.morel.parse.MorelParseException;
 import net.hydromatic.morel.parse.MorelParserImpl;
-import net.hydromatic.morel.parse.ParseException;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import org.apache.calcite.DataContext;
@@ -273,8 +273,9 @@ public class CalciteFunctions {
           Session session) {
         final Ast.Exp exp;
         try {
-          exp = new MorelParserImpl(new StringReader(ml)).expression();
-        } catch (ParseException pe) {
+          MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
+          exp = parser.expressionSafe();
+        } catch (MorelParseException pe) {
           throw new RuntimeException("Error while parsing\n" + ml, pe);
         }
         final Ast.ValDecl valDecl = Compiles.toValDecl(exp);
@@ -347,12 +348,8 @@ public class CalciteFunctions {
           RelDataTypeFactory typeFactory,
           String ml,
           String typeJson) {
-        final Ast.Exp exp;
-        try {
-          exp = new MorelParserImpl(new StringReader(ml)).expression();
-        } catch (ParseException pe) {
-          throw new RuntimeException(pe);
-        }
+        MorelParserImpl parser = new MorelParserImpl(new StringReader(ml));
+        final Ast.Exp exp = parser.expressionSafe();
         final Ast.ValDecl valDecl = Compiles.toValDecl(exp);
         final Consumer<CompileException> ignoreWarnings = w -> {};
         final TypeResolver.Resolved resolved =
@@ -412,12 +409,9 @@ public class CalciteFunctions {
           String morelArgType,
           RelDataTypeFactory typeFactory,
           TypeSystem typeSystem) {
-        Ast.Type typeAst;
-        try {
-          typeAst = new MorelParserImpl(new StringReader(morelArgType)).type();
-        } catch (ParseException pe) {
-          throw new RuntimeException(pe);
-        }
+        MorelParserImpl parser =
+            new MorelParserImpl(new StringReader(morelArgType));
+        Ast.Type typeAst = parser.typeSafe();
         final Type argType = TypeResolver.toType(typeAst, typeSystem);
         converter = Converters.toMorel(argType, typeFactory);
       }
