@@ -18,11 +18,13 @@
  */
 package net.hydromatic.morel.util;
 
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -391,6 +393,26 @@ public class Static {
   public static boolean endsWith(StringBuilder buf, String s) {
     final int i = buf.length() - s.length();
     return i >= 0 && buf.indexOf(s, i) == i;
+  }
+
+  /**
+   * Creates an unmodifiable view on a list.
+   *
+   * <p>Checks for Guava {@link ImmutableCollection} and {@link
+   * ImmutablePairList}. We could check for {@link Collections#emptyList()},
+   * {@link Collections#singletonList(Object)} but do not. {@link
+   * Collections#unmodifiableList(List)} makes sure it does not wrap twice.
+   */
+  public static <E> List<E> unmodifiable(List<E> list) {
+    if (list instanceof ImmutableCollection) {
+      // Already immutable, therefore unmodifiable.
+      return list;
+    }
+    if (list instanceof ImmutablePairList) {
+      // Already immutable, therefore unmodifiable.
+      return list;
+    }
+    return Collections.unmodifiableList(list);
   }
 }
 

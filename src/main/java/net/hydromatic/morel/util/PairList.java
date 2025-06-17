@@ -158,6 +158,20 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
     throw new UnsupportedOperationException("remove");
   }
 
+  /** Returns a sublist of this PairList. */
+  @Override
+  PairList<T, U> subList(int fromIndex, int toIndex);
+
+  /** Returns the first {@code count} entries of this PairList. */
+  default PairList<T, U> first(int count) {
+    return subList(0, count);
+  }
+
+  /** Returns all but the first {@code count} entries of this PairList. */
+  default PairList<T, U> skipFirst(int count) {
+    return subList(count, size());
+  }
+
   /** Returns the left part of the {@code index}th pair. */
   T left(int index);
 

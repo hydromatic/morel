@@ -19,6 +19,7 @@
 package net.hydromatic.morel.util;
 
 import static java.util.Objects.requireNonNull;
+import static net.hydromatic.morel.util.Static.unmodifiable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -96,6 +97,18 @@ class PairLists {
       return get(index).getValue();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Returns a sublist based on an immutable view of the backing list.
+     * Mutable subclasses should override.
+     */
+    @Override
+    public @NonNull PairList<T, U> subList(int fromIndex, int toIndex) {
+      return new MutablePairList<>(
+          unmodifiable(backingList().subList(fromIndex * 2, toIndex * 2)));
+    }
+
     @Override
     public void forEachIndexed(IndexedBiConsumer<T, U> consumer) {
       forEach(consumer.getBiConsumer());
@@ -130,6 +143,9 @@ class PairLists {
 
   /**
    * Mutable version of {@link PairList}.
+   *
+   * <p>Becomes unmodifiable if created with a backing list is unmodifiable
+   * (including any kind of immutable list).
    *
    * @param <T> First type
    * @param <U> Second type
@@ -306,6 +322,12 @@ class PairLists {
       };
     }
 
+    @Override
+    public @NonNull PairList<T, U> subList(int fromIndex, int toIndex) {
+      return new MutablePairList<>(
+          backingList().subList(fromIndex * 2, toIndex * 2));
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public void forEach(BiConsumer<T, U> consumer) {
@@ -443,6 +465,19 @@ class PairLists {
     }
 
     @Override
+    public @NonNull PairList<T, U> subList(int fromIndex, int toIndex) {
+      if (fromIndex != 0 || toIndex != 0) {
+        throw new IndexOutOfBoundsException(
+            "Sublist from "
+                + fromIndex
+                + " to "
+                + toIndex
+                + " is out of range");
+      }
+      return this;
+    }
+
+    @Override
     public int size() {
       return 0;
     }
@@ -539,6 +574,25 @@ class PairLists {
         throw new IndexOutOfBoundsException("Index out of range: " + index);
       }
       return u;
+    }
+
+    @Override
+    public @NonNull PairList<T, U> subList(int fromIndex, int toIndex) {
+      // Only (0, 0), (0, 1), and (1, 1) are valid.
+      if (fromIndex < 0 || 1 < toIndex || toIndex < fromIndex) {
+        throw new IndexOutOfBoundsException(
+            "Sublist from "
+                + fromIndex
+                + " to "
+                + toIndex
+                + " is out of range");
+      }
+      if (fromIndex == toIndex) {
+        // (0, 0) or (1, 1) is empty.
+        return ImmutablePairList.of();
+      }
+      // (0, 1) is the same as this.
+      return this;
     }
 
     @Override
