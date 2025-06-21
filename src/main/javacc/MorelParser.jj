@@ -1516,6 +1516,10 @@ Ast.Type namedType() : {}
   <IDENTIFIER> {
     return ast.namedType(pos(), ImmutableList.of(), token.image);
   }
+| <QUOTED_IDENTIFIER> {
+    return ast.namedType(pos(), ImmutableList.of(),
+        unquoteIdentifier(token.image));
+  }
 }
 
 AstNode statement() :

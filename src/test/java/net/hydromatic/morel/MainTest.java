@@ -132,6 +132,10 @@ public class MainTest {
     ml("val x = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
     ml("val `x` = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
     ml("val x : int = 5").assertParseDecl(Ast.ValDecl.class, "val x : int = 5");
+    ml("val x : `order` = LESS")
+        .assertParseDecl(Ast.ValDecl.class, "val x : order = LESS");
+    ml("val x : `order` list = [LESS]")
+        .assertParseDecl(Ast.ValDecl.class, "val x : order list = [LESS]");
 
     // other valid identifiers
     ml("val x' = 5").assertParseDecl(Ast.ValDecl.class, "val x' = 5");

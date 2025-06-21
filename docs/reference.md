@@ -79,7 +79,7 @@ In Morel but not Standard ML:
 * <code><i>lab</i> =</code> is optional in <code><i>exprow</i></code>
 * <code><i>record</i>.<i>lab</i></code> as an alternative to
   <code>#<i>lab</i> <i>record</i></code>
-* identifiers may be quoted
+* identifiers and type names may be quoted
   (for example, <code>\`an identifier\`</code>)
 * `with` functional update for record values
 * overloaded functions may be declared using `over` and `inst`

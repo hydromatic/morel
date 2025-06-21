@@ -206,6 +206,21 @@ val `identifier with ``backtick`` and period.` = 2;
 val `val` = "yes, you can use keywords as identifiers";
 > val val = "yes, you can use keywords as identifiers" : string
 
+(*) Quoted type name
+val x: `int` = 1;
+> val x = 1 : int
+val x: `order` = LESS;
+> val x = LESS : order
+fun f (x: `order` list) = List.length x;
+> val f = fn : order list -> int
+fun f (x: {a:`order`, b:bool, c:`order`}) = if x.b then x.a else x.c;
+> val f = fn : {a:order, b:bool, c:order} -> order
+fun compareInt (x: int, y: int) : `order` =
+  if x < y then LESS
+  else if x > y then GREATER
+  else EQUAL;
+> val compareInt = fn : int * int -> order
+
 (*) Simple commands
 val x = 1;
 > val x = 1 : int

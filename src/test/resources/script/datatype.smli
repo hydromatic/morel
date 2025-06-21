@@ -380,4 +380,12 @@ baz (Bar 3);
 baz (Foo {b = "a", a = 4});
 > val it = 4 : int
 
+(*) Datatype with spaces in its name.
+datatype `foo bar baz` = `Foo Bar` of {a: int, b: string} | Baz of int;
+> datatype foo bar baz = Foo Bar of {a:int, b:string} | Baz of int
+`Foo Bar` {a = 1, b = "x"};
+> val it = Foo Bar {a=1,b="x"} : foo bar baz
+`Foo Bar`;
+> val it = fn : {a:int, b:string} -> foo bar baz
+
 (*) End datatype.smli
