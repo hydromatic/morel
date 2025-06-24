@@ -109,8 +109,9 @@ public class FromBuilder {
   private FromBuilder addStep(Core.FromStep step) {
     if (env != null) {
       // Validate the step. (Not necessary, but helps find bugs.)
-      RefChecker.of(typeSystem, env.bindAll(bindings))
-          .visitStep(step, stepEnv());
+      Core.StepEnv previousEnv =
+          steps.isEmpty() ? Core.StepEnv.EMPTY : last(steps).env;
+      RefChecker.of(typeSystem, env).visitStep(step, previousEnv);
     }
     if (removeIfNotLastIndex == steps.size() - 1) {
       // A trivial record yield with a single yield, e.g. 'yield {i = i}', has

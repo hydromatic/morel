@@ -42,6 +42,9 @@ public class RefChecker extends EnvVisitor {
 
   @Override
   protected RefChecker push(Environment env) {
+    if (env == this.env) {
+      return this;
+    }
     return new RefChecker(typeSystem, env, fromStack);
   }
 

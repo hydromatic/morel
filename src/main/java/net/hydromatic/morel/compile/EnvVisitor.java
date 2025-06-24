@@ -109,10 +109,19 @@ abstract class EnvVisitor extends Visitor {
 
   public void visitStep(Core.FromStep step, Core.StepEnv stepEnv) {
     try {
-      fromStack.push(new FromContext(this, step));
+      fromStack.push(new FromContext(this, step, stepEnv));
       step.accept(bind(stepEnv.bindings));
     } finally {
       fromStack.pop();
+    }
+  }
+
+  @Override
+  protected void visit(Core.Scan scan) {
+    scan.pat.accept(this);
+    scan.exp.accept(this);
+    if (scan.condition != null) {
+      scan.condition.accept(bind(scan.env.bindings));
     }
   }
 
@@ -125,13 +134,25 @@ abstract class EnvVisitor extends Visitor {
     //     compute fn list => List.size list + j of i + j
     // the aggregate "fn list => List.size list + j" needs an environment [k];
     // the argument "i + j" needs an environment [i, j].
-    EnvVisitor v2 = fromStack.element().visitor;
-    Core.Group group = (Core.Group) fromStack.element().step;
-    EnvVisitor v3 = v2.bind(transform(group.groupExps.keySet(), Binding::of));
-    aggregate.aggregate.accept(v3);
+    aggregate.aggregate.accept(push(aggEnv(false)));
     if (aggregate.argument != null) {
-      aggregate.argument.accept(this);
+      aggregate.argument.accept(push(aggEnv(true)));
     }
+  }
+
+  /**
+   * Returns an environment for aggregate function or its argument.
+   *
+   * @param includeInput Whether to include input variables
+   */
+  private Environment aggEnv(boolean includeInput) {
+    final FromContext fromContext = fromStack.element();
+    final Core.Group group = (Core.Group) fromContext.step;
+    Environment env = fromContext.visitor.env;
+    if (includeInput) {
+      env = env.bindAll(fromContext.stepEnv.bindings);
+    }
+    return env.bindAll(transform(group.groupExps.keySet(), Binding::of));
   }
 
   /**
@@ -142,10 +163,13 @@ abstract class EnvVisitor extends Visitor {
   public static class FromContext {
     final EnvVisitor visitor;
     final Core.FromStep step;
+    /** Environment produced by previous step. */
+    final Core.StepEnv stepEnv;
 
-    FromContext(EnvVisitor visitor, Core.FromStep step) {
+    FromContext(EnvVisitor visitor, Core.FromStep step, Core.StepEnv stepEnv) {
       this.visitor = visitor;
       this.step = step;
+      this.stepEnv = stepEnv;
     }
   }
 }
