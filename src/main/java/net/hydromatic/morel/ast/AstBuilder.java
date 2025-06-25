@@ -165,6 +165,10 @@ public enum AstBuilder {
     return new Ast.NamedType(pos, ImmutableList.copyOf(types), name);
   }
 
+  public Ast.Type expressionType(Pos pos, Ast.Exp exp) {
+    return new Ast.ExpressionType(pos, exp);
+  }
+
   public Ast.Pat idPat(Pos pos, String name) {
     // Don't treat built-in constants as identifiers.
     // If we did, matching the pattern would rebind the name

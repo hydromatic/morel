@@ -369,6 +369,33 @@ void fieldType(Map<String, Type> map) :
   }
 }
 
+/** Parses a type inferred from an expression using the {@code typeof}
+ * operator, e.g. "{@code typeof String.length "abc"}" has the same effect
+ * as writing "{@code int}".
+ *
+ * <p>Expression precedence is 9. So, to parse
+ * "typeof (x = y)" (precedence 4) or
+ * "typeof (x :: y)" (precedence 5) or
+ * "typeof (x + y)" (precedence 6) or
+ * "typeof (x * y)" (precedence 7)  or
+ * "typeof (x y)" (precedence 8) requires parentheses, but
+ * "typeof x . y" (precedence 9) does not.
+ * This is what you would want for "val r : typeof scott.emps = []",
+ * "val x : typeof (y z) = 5", and
+ * "val e : typeof (hd scott.emps) = {empno = 10, name = "Fred"}".
+ */
+Type expressionType() :
+{
+  final Span span;
+  final Exp exp;
+}
+{
+  <TYPEOF> { span = Span.of(pos()); }
+  exp = expression9() {
+    return ast.expressionType(span.end(this), exp);
+  }
+}
+
 /** Parses a "if ... then ... else ..." expression. */
 Exp ifThenElse() :
 {
@@ -1567,6 +1594,8 @@ Ast.Type atomicType() :
 |
   type = recordType() { return type; }
 |
+  type = expressionType() { return type; }
+|
   <LPAREN> {
     span = Span.of(pos());
   }
@@ -1734,6 +1763,7 @@ AstNode statementEof() :
 | < SKIP_: "skip" >
 | < TAKE: "take" >
 | < THROUGH: "through" >
+| < TYPEOF: "typeof" >
 | < UNION: "union" >
 | < UNORDER: "unorder" >
 | < WHERE: "where" >

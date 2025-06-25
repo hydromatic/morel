@@ -312,6 +312,10 @@ public class Visitor {
     compositeType.types.forEach(this::accept);
   }
 
+  protected void visit(Ast.ExpressionType expressionType) {
+    expressionType.exp.accept(this);
+  }
+
   // core expressions
 
   protected void visit(Core.Literal literal) {}

@@ -240,6 +240,41 @@ public class MainTest {
     ml("fn x : {a: int} => 0").assertParseSame();
     ml("fn x : {a: int, b: boolean} => 0").assertParseSame();
     ml("fn x : {a: int list * unit, b: boolean} => 0").assertParseSame();
+    ml("fn x : typeof 1 => 0").assertParseSame();
+    ml("fn x : typeof (1 + 2) => 0").assertParseSame();
+
+    // case has lower precedence than over typeof
+    ml("fn x : typeof (case x of 0 => true | _ => false) => ()")
+        .assertParseEquivalent(
+            "fn x : typeof case x of 0 => true | _ => false => ()");
+
+    ml("fn x : typeof {a = 1, b = bool} => ()").assertParseSame();
+    mlE("fn x : typeof ${a: int}$ => ()")
+        .assertParseThrowsIllegalArgumentException(
+            is("cannot derive label for expression a : int"));
+    ml("fn x : typeof ([1, 2, 3]) => ()").assertParseSame();
+    ml("let val (v : typeof (hd ([1, 2, 3]))) = 0 in v + 1 end")
+        .assertParseEquivalent(
+            "let val (v : typeof (hd [1, 2, 3])) = 0 in v + 1 end")
+        .assertParseEquivalent(
+            "let val v : typeof (hd [1, 2, 3]) = 0 in v + 1 end");
+
+    mlE("let val v : typeof hd $[$1, 2, 3] = 0 in v + 1 end")
+        .assertParseThrowsParseException("Encountered \" \"[\" \"[ \"\"");
+
+    ml("let val (v : typeof x) = (y = 0) in v + 1 end")
+        .assertParseEquivalent("let val v : typeof x = y = 0 in v + 1 end");
+
+    // '=' has lower precedence than 'typeof'
+    ml("let val (v : typeof (x = y)) = false in v orelse true end")
+        .assertParseEquivalent(
+            "let val v : typeof (x = y) = false in v orelse true end");
+
+    ml("let val (v : typeof x) = (y = false) in v orelse true end")
+        .assertParseEquivalent(
+            "let val v : typeof x = (y = false) in v orelse true end")
+        .assertParseEquivalent(
+            "let val v : typeof x = y = false in v orelse true end");
   }
 
   @Test

@@ -771,6 +771,49 @@ public class Ast {
   }
 
   /**
+   * Parse tree for a type derived from an expression using the {@code typeof}
+   * operator. E.g. "{@code typeof 1 + 2}" or "{@code typeof hd ["a", "b"]}.
+   */
+  public static class ExpressionType extends Type {
+    public final Exp exp;
+
+    /** Creates an expression type. */
+    ExpressionType(Pos pos, Exp exp) {
+      super(pos, Op.EXPRESSION_TYPE);
+      this.exp = requireNonNull(exp);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(op, exp);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj == this
+          || obj instanceof ExpressionType
+              && exp.equals(((ExpressionType) obj).exp);
+    }
+
+    public Type accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(op.padded).append(exp, op.right, right);
+    }
+
+    public Type copy(Exp exp) {
+      return exp == this.exp ? this : ast.expressionType(pos, exp);
+    }
+  }
+
+  /**
    * Not really a type, just a way for the parser to represent the type
    * arguments to a type constructor.
    *

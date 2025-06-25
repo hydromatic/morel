@@ -586,11 +586,10 @@ public class TypeResolver {
 
       case ANNOTATED_EXP:
         final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) node;
-        final Type type = toType(annotatedExp.type, typeSystem);
+        final Ast.Type type2 = deduceTypeType(env, annotatedExp.type, v);
         final Ast.Exp exp2 = deduceType(env, annotatedExp.exp, v);
-        final Ast.AnnotatedExp annotatedExp2 =
-            annotatedExp.copy(exp2, annotatedExp.type);
-        return reg(annotatedExp2, v, toTerm(type, Subst.EMPTY));
+        final Ast.AnnotatedExp annotatedExp2 = annotatedExp.copy(exp2, type2);
+        return reg(annotatedExp2, v);
 
       case ANDALSO:
       case ORELSE:
@@ -740,6 +739,10 @@ public class TypeResolver {
       default:
         throw new AssertionError("cannot deduce type for " + node.op);
     }
+  }
+
+  private Ast.Type deduceTypeType(TypeEnv env, Ast.Type type, Variable v) {
+    return new TypeToTermConverter(env).typeTerm(type, v);
   }
 
   private Ast.Query deduceQueryType(TypeEnv env, Ast.Query query, Variable v) {
@@ -1788,6 +1791,113 @@ public class TypeResolver {
     }
   }
 
+  /** Workspace for converting types to terms. */
+  private class TypeToTermConverter {
+    final Map<String, Variable> tyVarMap = new HashMap<>();
+    final TypeEnv env;
+
+    TypeToTermConverter(TypeEnv env) {
+      this.env = env;
+    }
+
+    /** Converts an AST type into a type term. */
+    Ast.Type typeTerm(Ast.Type type, Variable v) {
+      switch (type.op) {
+        case EXPRESSION_TYPE:
+          final Ast.ExpressionType expressionType = (Ast.ExpressionType) type;
+          final Ast.Exp exp2 = deduceType(env, expressionType.exp, v);
+          return reg(expressionType.copy(exp2), v);
+
+        case TUPLE_TYPE:
+          final Ast.TupleType tupleType = (Ast.TupleType) type;
+          final PairList<Ast.Type, Variable> typeTerms =
+              typeTerms(tupleType.types);
+          final Ast.Type tupleType2 = tupleType.copy(typeTerms.leftList());
+          return reg(tupleType2, v, tupleTerm(typeTerms.rightList()));
+
+        case RECORD_TYPE:
+          final Ast.RecordType recordType = (Ast.RecordType) type;
+          final SortedMap<String, Ast.Type> fieldTypes = mutableMap();
+          final NavigableMap<String, Term> fieldTerms = mutableMap();
+          final AtomicBoolean progressive = new AtomicBoolean(false);
+          recordType.fieldTypes.forEach(
+              (name, t) -> {
+                if (name.equals(PROGRESSIVE_LABEL)) {
+                  progressive.set(true);
+                } else {
+                  final Variable v3 = unifier.variable();
+                  fieldTerms.put(name, v3);
+                  fieldTypes.put(name, typeTerm(t, v3));
+                }
+              });
+          final Ast.Type recordType2 = recordType.copy(fieldTypes);
+          if (progressive.get()) {
+            fieldTerms.put(PROGRESSIVE_LABEL, toTerm(PrimitiveType.UNIT));
+          }
+          return reg(recordType2, v, recordTerm(fieldTerms));
+
+        case FUNCTION_TYPE:
+          final Ast.FunctionType fnType = (Ast.FunctionType) type;
+          final Variable v4 = unifier.variable();
+          final Variable v5 = unifier.variable();
+          final Ast.Type paramType = typeTerm(fnType.paramType, v4);
+          final Ast.Type resultType = typeTerm(fnType.resultType, v5);
+          final Ast.FunctionType fnType2 = fnType.copy(paramType, resultType);
+          return reg(fnType2, v, fnTerm(v4, v5));
+
+        case NAMED_TYPE:
+          final Ast.NamedType namedType = (Ast.NamedType) type;
+          final Type aliasType = typeSystem.lookupOpt(namedType.name);
+          if (aliasType instanceof AliasType) {
+            final Term aliasTerm = toTerm(aliasType, Subst.EMPTY);
+            return reg(type, v, aliasTerm);
+          }
+
+          final PairList<Ast.Type, Variable> typeTerms2 =
+              typeTerms(namedType.types);
+          final Term term;
+          if (namedType.name.equals(LIST_TY_CON) && typeTerms2.size() == 1) {
+            // TODO: make 'list' a regular generic type
+            term = listTerm(typeTerms2.right(0));
+          } else if (typeTerms2.isEmpty()) {
+            term = unifier.apply(namedType.name);
+          } else {
+            term = unifier.apply(namedType.name, typeTerms2.rightList());
+          }
+          final Ast.Type namedType2 = namedType.copy(typeTerms2.leftList());
+          return reg(namedType2, v, term);
+
+        case TY_VAR:
+          final Ast.TyVar tyVar = (Ast.TyVar) type;
+          final Variable v7 = tyVarMap.get(tyVar.name);
+          if (v7 == null) {
+            tyVarMap.put(tyVar.name, v);
+          } else {
+            equiv(v, v7);
+          }
+          return tyVar;
+
+        default:
+          if (true) {
+            final Type theType = toType(type, typeSystem);
+            final Term term2 = toTerm(theType, Subst.EMPTY);
+            return reg(type, v, term2);
+          }
+          throw new AssertionError(
+              format("unknown kind of type: %s %s", type.op, type));
+      }
+    }
+
+    private PairList<Ast.Type, Variable> typeTerms(List<Ast.Type> types) {
+      final PairList<Ast.Type, Variable> typeTerms = PairList.of();
+      for (Ast.Type t : types) {
+        final Variable v = unifier.variable();
+        typeTerms.add(typeTerm(t, v), v);
+      }
+      return typeTerms;
+    }
+  }
+
   /**
    * Converts a function declaration to a value declaration. In other words,
    * {@code fun} is syntactic sugar, and this is the de-sugaring machine.
@@ -1981,11 +2091,10 @@ public class TypeResolver {
 
       case ANNOTATED_PAT:
         final Ast.AnnotatedPat annotatedPat = (Ast.AnnotatedPat) pat;
-        final Type type = toType(annotatedPat.type, typeSystem);
         pat2 = deducePatType(env, annotatedPat.pat, termMap, null, v, accessor);
-        final Ast.Type type2 = annotatedPat.type;
+        final Ast.Type type2 = deduceTypeType(env, annotatedPat.type, v);
         final Ast.AnnotatedPat annotatedPat2 = annotatedPat.copy(pat2, type2);
-        return reg(annotatedPat2, v, toTerm(type, Subst.EMPTY));
+        return reg(annotatedPat2, v);
 
       case TUPLE_PAT:
         final PairList<Ast.Pat, Term> typeTerms = PairList.of();
@@ -2131,6 +2240,10 @@ public class TypeResolver {
       default:
         throw new AssertionError("cannot deduce type for pattern " + pat.op);
     }
+  }
+
+  private Term getTerm(Type type) {
+    return toTerm(type, Subst.EMPTY);
   }
 
   /** Registers an infix operator whose type is a given type. */

@@ -62,6 +62,10 @@
 > val it = 1 : int
 (2, true): int * bool;
 > val it = (2,true) : int * bool
+[(2, true)]: (int * bool) list;
+> val it = [(2,true)] : (int * bool) list
+(2, [true]): int * (bool list);
+> val it = (2,[true]) : int * bool list
 []: int list;
 > val it = [] : int list
 []: {a: int, b: string} list;
@@ -84,7 +88,11 @@ val x: int = 1;
 > val x = 1 : int
 val y: bool = true;
 > val y = true : bool
+val (y: bool) = true;
+> val y = true : bool
 val p: int * bool = (1, true);
+> val p = (1,true) : int * bool
+val (p: int * bool) = (1, true);
 > val p = (1,true) : int * bool
 val empty: int list = [];
 > val empty = [] : int list
@@ -151,6 +159,68 @@ fun f NONE:int list = []
   | f (SOME x):string list = [];
 > stdIn:1.5-2.32 Error: parameter or result constraints of clauses don't agree [tycon mismatch]
 >   raised at: stdIn:1.5-2.32
+
+(*) Annotations that use 'typeof'
+fn x: typeof 1 => true;
+> val it = fn : int -> bool
+
+let
+  val s = "abc"
+in
+  fn x: typeof s => [x]
+end;
+> val it = fn : string -> string list
+
+let
+  val list = ["abc", "de"]
+in
+  fn x: typeof (hd list) => [x]
+end;
+> val it = fn : string -> string list
+
+let
+  val r = {empno = 100, isMgr = true, name = "Fred"};
+in
+  fn x: typeof r.isMgr => ()
+end;
+> val it = fn : bool -> unit
+
+let
+  val r = {empno = 100, isMgr = true, name = "Fred"};
+in
+  fn x: typeof r => x.empno
+end;
+> val it = fn : {empno:int, isMgr:bool, name:string} -> int
+
+let
+  val r = {empno = 100, isMgr = true, name = "Fred"};
+in
+  fn x: {a: string, b: typeof r.empno list, c: typeof (r.name ^ "!")} => ()
+end;
+> val it = fn : {a:string, b:int list, c:string} -> unit
+
+let
+  val rec fact =
+    fn n : typeof n =>
+      if n = 0 then 1
+      else n * fact (n - 1)
+in
+  fact 5
+end;
+> stdIn:3.19 Error: unbound variable or constructor: n
+>   raised at: stdIn:3.19
+
+val m = 5;
+> val m = 5 : int
+let
+  val rec fact =
+    fn n : typeof m =>
+      if n = 0 then 1
+      else n * fact (n - 1)
+in
+  fact 5
+end;
+> val it = 120 : int
 
 (*) Function with unit arg
 fun one () = 1;
@@ -335,16 +405,10 @@ from b in [SOME true, NONE];
 
 (*) If a function type is spread over several lines, put '->' at the start of
 (*) the next line.
-val f : ('a -> (int * int) list) -> ('b -> (int * int) list) -> 'c -> (int * int) list = fn a => fn b => fn c => [];
-> val f = fn
->   : ('a -> (int * int) list)
->     -> ('b -> (int * int) list) -> 'c -> (int * int) list
-
-(* SML/NJ output for previous is as follows. TODO match SML/NJ type variables.
+val f : ('a -> (int * int) list) -> ('a -> (int * int) list) -> 'a -> (int * int) list = fn a => fn b => fn c => [];
 > val f = fn
 >   : ('a -> (int * int) list)
 >     -> ('a -> (int * int) list) -> 'a -> (int * int) list
-*)
 
 (*) Function with tuple type and lots of type variables returns record type.
 (*) Note that after 'z, type variables are 'ba, 'bb, etc.

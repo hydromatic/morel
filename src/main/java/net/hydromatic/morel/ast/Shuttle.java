@@ -385,6 +385,11 @@ public class Shuttle {
     return ast.compositeType(compositeType.pos, visitList(compositeType.types));
   }
 
+  protected Ast.Type visit(Ast.ExpressionType expressionType) {
+    return ast.expressionType(
+        expressionType.pos, expressionType.exp.accept(this));
+  }
+
   // core expressions, patterns
 
   protected Core.Exp visit(Core.Apply apply) {

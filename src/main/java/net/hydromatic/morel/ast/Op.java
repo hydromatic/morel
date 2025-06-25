@@ -101,6 +101,7 @@ public enum Op {
   FUNCTION_TYPE(" -> ", 6, false),
   NAMED_TYPE(" ", 8),
   ALIAS_TYPE(" ", 8),
+  EXPRESSION_TYPE("typeof ", 9),
   FORALL_TYPE,
   MULTI_TYPE,
 

@@ -76,6 +76,7 @@ In Morel but not Standard ML:
   `notelem` binary operators
 * `current`,
   `ordinal` nilary operators
+* `typeof` type operator
 * <code><i>lab</i> =</code> is optional in <code><i>exprow</i></code>
 * <code><i>record</i>.<i>lab</i></code> as an alternative to
   <code>#<i>lab</i> <i>record</i></code>
@@ -246,6 +247,7 @@ In Standard ML but not in Morel:
     | <i>typ<sub>1</sub></i> <b>-&gt;</b> <i>typ<sub>2</sub></i>              function
     | <i>typ<sub>1</sub></i> '<b>*</b>' ... '<b>*</b>' <i>typ<sub>n</sub></i>     tuple (n &ge; 2)
     | <b>{</b> [ <i>typrow</i> ] <b>}</b>            record
+    | <b>typeof</b> <i>exp</i>                expression type
 <i>typrow</i> &rarr; <i>lab</i> : <i>typ</i> [, <i>typrow</i>]   type row
 </pre>
 
