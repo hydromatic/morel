@@ -243,7 +243,7 @@ public class AstWriter {
         append("~");
         c = c.negate();
       }
-      append(c.toString());
+      append(c.toString().replace("+", ""));
     } else if (value instanceof BuiltIn) {
       final BuiltIn builtIn = (BuiltIn) value;
       if (builtIn.structure != null && !builtIn.structure.equals("$")) {

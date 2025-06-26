@@ -194,6 +194,30 @@ class Ml {
     return assertParse(ml.replaceAll("[\n ]+", " "));
   }
 
+  /**
+   * Asserts that the current code {@code ml} is canonical, and that parsing the
+   * string {@code ml2} produces that same canonical string {@code ml}.
+   *
+   * <p>In fact, this:
+   *
+   * <pre>{@code
+   * // This...
+   * ml(s1).assertParseEquivalent(s2);
+   * }</pre>
+   *
+   * <p>is equivalent to this:
+   *
+   * <pre>{@code
+   * ml(s1).assertParseSame();
+   * ml(s2).assertParse(s1);
+   * }</pre>
+   */
+  public Ml assertParseEquivalent(String ml2) {
+    assertParseSame();
+    ml(ml2).assertParse(ml);
+    return this;
+  }
+
   @SuppressWarnings("UnusedReturnValue")
   Ml assertParseThrowsParseException(String message) {
     return assertParseThrows(

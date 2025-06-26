@@ -125,14 +125,20 @@ public class MainTest {
     // true and false are variables, not actually literals
     ml("true").assertParseStmt(Ast.Id.class, "true");
     ml("false").assertParseStmt(Ast.Id.class, "false");
+  }
 
+  @Test
+  void testParseDecl() {
     ml("val x = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
     ml("val `x` = 5").assertParseDecl(Ast.ValDecl.class, "val x = 5");
-    ml("val x : int = 5").assertParseDecl(Ast.ValDecl.class, "val x : int = 5");
+    ml("val x : int = 5")
+        .assertParseDecl(Ast.ValDecl.class, "val (x : int) = 5");
+    ml("val (x : int) = 5")
+        .assertParseDecl(Ast.ValDecl.class, "val (x : int) = 5");
     ml("val x : `order` = LESS")
-        .assertParseDecl(Ast.ValDecl.class, "val x : order = LESS");
+        .assertParseDecl(Ast.ValDecl.class, "val (x : order) = LESS");
     ml("val x : `order` list = [LESS]")
-        .assertParseDecl(Ast.ValDecl.class, "val x : order list = [LESS]");
+        .assertParseDecl(Ast.ValDecl.class, "val (x : order list) = [LESS]");
 
     // other valid identifiers
     ml("val x' = 5").assertParseDecl(Ast.ValDecl.class, "val x' = 5");
@@ -150,7 +156,11 @@ public class MainTest {
 
     ml("fun plus x y = x + y")
         .assertParseDecl(Ast.FunDecl.class, "fun plus x y = x + y");
+  }
 
+  /** Tests parsing types (including declarations). */
+  @Test
+  void testParseType() {
     ml("over x").assertParseDecl(Ast.OverDecl.class, "over x");
 
     ml("datatype 'a option = NONE | SOME of 'a")
@@ -169,7 +179,7 @@ public class MainTest {
                 + "and 'a forest = Nil"
                 + " | Cons of 'a tree * 'a forest");
 
-    final String ml =
+    String ml =
         "datatype ('a, 'b) choice ="
             + " NEITHER"
             + " | LEFT of 'a"
@@ -210,6 +220,30 @@ public class MainTest {
     ml("type myInt = int and myRealList = real list").assertParseSame();
     ml("type emp = {empno: int, pets: string list}").assertParseSame();
 
+    // various types as annotations
+    ml("fn x : int => 0").assertParseSame();
+    ml("fn x : boolean => 0").assertParseSame();
+    ml("fn x : string => 0").assertParseSame();
+    ml("fn x : unit => 0").assertParseSame();
+    ml("fn x : int * string => 0").assertParseSame();
+    ml("fn x : int * int -> string => 0")
+        .assertParseEquivalent("fn x : (int * int) -> string => 0");
+    ml("fn x : int * (int -> string) => 0").assertParseSame();
+    ml("fn x : (int * int) -> string => 0")
+        .assertParse("fn x : int * int -> string => 0");
+    ml("fn x : {} => 0").assertParseSame();
+    ml("fn x : int list => 0").assertParseSame();
+    ml("fn x : int * string list option => 0")
+        .assertParseEquivalent("fn x : int * (string list) option => 0");
+    ml("fn x : (int * string) list option => 0")
+        .assertParseEquivalent("fn x : ((int * string) list) option => 0");
+    ml("fn x : {a: int} => 0").assertParseSame();
+    ml("fn x : {a: int, b: boolean} => 0").assertParseSame();
+    ml("fn x : {a: int list * unit, b: boolean} => 0").assertParseSame();
+  }
+
+  @Test
+  void testParse1b() {
     // parentheses creating left precedence, which is the natural precedence for
     // '+', can be removed
     ml("((1 + 2) + 3) + 4").assertParse("1 + 2 + 3 + 4");
@@ -228,38 +262,36 @@ public class MainTest {
     // o is left-associative;
     // lower precedence than "=" (4), higher than "andalso" (2)
     ml("f o g").assertParseSame();
-    ml("f o g o h").assertParseSame();
+    ml("f o g o h").assertParseEquivalent("(f o g) o h");
     ml("f o (g o h)").assertParseSame();
-    ml("(f o g) o h").assertParse("f o g o h");
 
-    ml("a = f o g andalso c = d").assertParseSame();
+    ml("a = f o g andalso c = d")
+        .assertParseEquivalent("(a = f) o g andalso (c = d)");
     ml("a = (f o g) andalso (c = d)").assertParse("a = (f o g) andalso c = d");
-    ml("(a = f) o g andalso (c = d)").assertParse("a = f o g andalso c = d");
 
     // implies is left-associative
     ml("x > 5 implies y > 3").assertParseSame();
-    ml("a implies b implies c").assertParseSame();
-    ml("(a implies b) implies c").assertParse("a implies b implies c");
+    ml("a implies b implies c")
+        .assertParseEquivalent("(a implies b) implies c");
     ml("a implies (b implies c)").assertParseSame();
 
     // implies has lower precedence than andalso and orelse
     ml("a andalso b implies c").assertParseSame();
     ml("a orelse b implies c orelse d").assertParseSame();
-    ml("a andalso b implies c orelse d andalso e").assertParseSame();
-    ml("(a andalso b) implies (c orelse (d andalso e))")
-        .assertParse("a andalso b implies c orelse d andalso e");
+    ml("a andalso b implies c orelse d andalso e")
+        .assertParseEquivalent(
+            "(a andalso b) implies (c orelse (d andalso e))");
 
     // @ is right-associative;
     // lower precedence than "+" (6), higher than "=" (4)
     ml("f @ g").assertParseSame();
-    ml("f @ g @ h").assertParseSame();
-    ml("f @ (g @ h)").assertParse("f @ g @ h");
+    ml("f @ g @ h").assertParseEquivalent("f @ (g @ h)");
     ml("(f @ g) @ h").assertParseSame();
 
     // ^ is left-associative;
     // lower precedence than "*" (7), higher than "@" (5)
     ml("a * f ^ g @ b").assertParseSame();
-    ml("(a * f) ^ (g @ b)").assertParse("a * f ^ (g @ b)");
+    ml("a * f ^ (g @ b)").assertParseEquivalent("(a * f) ^ (g @ b)");
 
     ml("(1 + 2, 3, true, (5, 6), 7 = 8)").assertParseSame();
 
@@ -277,14 +309,14 @@ public class MainTest {
     // : is right-associative and low precedence
     ml("1 : int : int").assertParseSame();
     ml("(2 : int) + 1 : int").assertParseSame();
-    ml("(2 : int) + (1 : int) : int").assertParseSame();
-    ml("((2 : int) + (1 : int)) : int")
-        .assertParse("(2 : int) + (1 : int) : int");
+    ml("(2 : int) + (1 : int) : int")
+        .assertParseEquivalent("((2 : int) + (1 : int)) : int");
 
     // pattern
     ml("let val (x, y) = (1, 2) in x + y end").assertParseSame();
-    ml("let val w as (x, y) = (1, 2) in #1 w + #2 w + x + y end")
-        .assertParseSame();
+    ml("let val (w as (x, y)) = (1, 2) in #1 w + #2 w + x + y end")
+        .assertParseEquivalent(
+            "let val w as (x, y) = (1, 2) in #1 w + #2 w + x + y end");
 
     // record
     ml("{a = 1}").assertParseSame();
@@ -342,8 +374,9 @@ public class MainTest {
   @Test
   void testParseCase() {
     // SML/NJ allows 'e' and 'E'
-    ml("1e2").assertParse("1E+2");
-    ml("1E2").assertParse("1E+2");
+    ml("1E2").assertParseEquivalent("1e2");
+    ml("0.01").assertParseEquivalent("1E~2").assertParseEquivalent("1e~2");
+    ml("~0.01").assertParseEquivalent("~1E~2").assertParseEquivalent("~1e~2");
 
     // keywords such as 'val' and 'in' are case-sensitive
     ml("let val x = 1 in x + 1 end").assertParseSame();
@@ -375,15 +408,16 @@ public class MainTest {
    */
   @Test
   void testParseDot() {
-    ml("a . b").assertParse("#b a");
-    ml("a . b . c").assertParse("#c (#b a)");
-    ml("a . b + c . d").assertParse("#b a + #d c");
-    ml("a.b+c.d").assertParse("#b a + #d c");
-    ml("(a.b+c.d*e.f.g).h").assertParse("#h (#b a + #d c * #g (#f e))");
-    ml("a b").assertParse("a b");
-    ml("a b.c").assertParse("a (#c b)");
-    ml("a.b c.d e.f").assertParse("#b a (#d c) (#f e)");
-    ml("(a.b) (c.d) (e.f)").assertParse("#b a (#d c) (#f e)");
+    ml("#b a").assertParseEquivalent("a . b");
+    ml("#c (#b a)").assertParseEquivalent("a . b . c");
+    ml("#b a + #d c").assertParseEquivalent("a . b + c . d");
+    ml("#b a + #d c").assertParseEquivalent("a.b+c.d");
+    ml("#h (#b a + #d c * #g (#f e))")
+        .assertParseEquivalent("(a.b+c.d*e.f.g).h");
+    ml("a b").assertParseEquivalent("a(b)");
+    ml("a (#c b)").assertParseEquivalent("a b.c");
+    ml("#b a (#d c) (#f e)").assertParseEquivalent("a.b c.d e.f");
+    ml("#b a (#d c) (#f e)").assertParseEquivalent("(a.b) (c.d) (e.f)");
     mlE("(a.$($b (c.d) (e.f))")
         .assertParseThrowsParseException("Encountered \" \"(\" \"( \"\"");
     mlE("(a.b c.$($d (e.f)))")
@@ -396,11 +430,12 @@ public class MainTest {
    */
   @Test
   void testParseAbbreviatedRecord() {
-    ml("{a, e.b, #c e, #d (e + 1), e = f + g}")
-        .assertParse("{a, #b e, #c e, #d (e + 1), e = f + g}");
-    ml("{v = a, w = e.b, x = #c e, y = #d (e + 1), z = (#f 2)}")
-        .assertParse("{v = a, w = #b e, x = #c e, y = #d (e + 1), z = #f 2}");
-    ml("{w = a = b + c, a = b + c}").assertParse("{w = a = b + c, a = b + c}");
+    ml("{a, #b e, #c e, #d (e + 1), e = f + g}")
+        .assertParseEquivalent("{a, e.b, #c e, #d (e + 1), e = f + g}");
+    ml("{v = a, w = #b e, x = #c e, y = #d (e + 1), z = #f 2}")
+        .assertParseEquivalent(
+            "{v = a, w = e.b, x = #c e, y = #d (e + 1), z = (#f 2)}");
+    ml("{w = a = b + c, a = b + c}").assertParseSame();
     ml("{1}")
         .assertParseThrowsIllegalArgumentException(
             is("cannot derive label for expression 1"));
@@ -3197,7 +3232,7 @@ public class MainTest {
             + " group deptno = #deptno e "
             + "end";
     ml("val x = " + ml)
-        .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
+        .assertParseDecl(Ast.ValDecl.class, "val x = (" + expected + ")");
     // The implicit yield expression is "deptno". It is not a record,
     // "{deptno = deptno}", because there is only one variable defined (the
     // "group" clause defines "deptno" and hides the "e" from the "from"
@@ -3256,7 +3291,7 @@ public class MainTest {
             + " compute sumId = sum of #id e "
             + "end";
     ml("val x = " + ml)
-        .assertParseDecl(Ast.ValDecl.class, "val x = " + expected);
+        .assertParseDecl(Ast.ValDecl.class, "val x = (" + expected + ")");
     ml(ml)
         .assertType("{deptno:int, sumId:int} list")
         .assertEvalIter(equalsUnordered(list(10, 202), list(20, 101)));

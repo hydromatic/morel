@@ -805,6 +805,7 @@ public class TypeResolver {
       Triple p,
       PairList<Ast.Id, Variable> fieldVars,
       List<Ast.FromStep> fromSteps) {
+    final Ast.Pat pat;
     switch (step.op) {
       case SCAN:
         return deduceScanStepType((Ast.Scan) step, p, fieldVars, fromSteps);
@@ -959,11 +960,11 @@ public class TypeResolver {
         mayBeBagOrList(p.c, p.v);
 
         final List<PatTerm> termMap = new ArrayList<>();
-        deducePatType(env, through.pat, termMap::add, null, v18, t -> t);
+        pat = deducePatType(env, through.pat, termMap::add, null, v18, t -> t);
         final Variable v17 = toVariable(fnTerm(p.c, c18));
         final Ast.Exp throughExp = deduceType(p.env, through.exp, v17);
         mayBeBagOrList(c18, v18);
-        fromSteps.add(through.copy(through.pat, throughExp));
+        fromSteps.add(through.copy(pat, throughExp));
         TypeEnv env5 = env;
         fieldVars.clear();
         for (PatTerm e : termMap) {
@@ -983,6 +984,7 @@ public class TypeResolver {
       PairList<Ast.Id, Variable> fieldVars,
       List<Ast.FromStep> fromSteps) {
     final Ast.Exp scanExp3;
+    final Ast.Pat pat;
     final Variable v0 = unifier.variable();
     final Variable c0;
     final List<PatTerm> termMap = new ArrayList<>();
@@ -1006,7 +1008,7 @@ public class TypeResolver {
       reg(scan.exp, c0);
       containerize = CollectionType.BOTH; // retain source collection type
     }
-    deducePatType(p.env, scan.pat, termMap::add, null, v0, t -> t);
+    pat = deducePatType(p.env, scan.pat, termMap::add, null, v0, t -> t);
     final TypeEnvHolder typeEnvs = new TypeEnvHolder(p.env);
     for (PatTerm patTerm : termMap) {
       typeEnvs.bind(patTerm.id.name, patTerm.term);
@@ -1079,7 +1081,7 @@ public class TypeResolver {
     } else {
       scanCondition2 = null;
     }
-    fromSteps.add(scan.copy(scan.pat, scanExp3, scanCondition2));
+    fromSteps.add(scan.copy(pat, scanExp3, scanCondition2));
     return Triple.of(env4, v, c);
   }
 
@@ -1494,11 +1496,12 @@ public class TypeResolver {
     final Variable vPat = unifier.variable();
     final PairList<Ast.IdPat, Term> termMap1 = PairList.of();
     final Consumer<PatTerm> consumer = p -> termMap1.add(p.id, p.term);
-    deducePatType(env, match.pat, consumer, null, vPat, t -> t);
+    final Ast.Pat pat =
+        deducePatType(env, match.pat, consumer, null, vPat, t -> t);
     termMap1.forEach(termMap);
     TypeEnv env2 = bindAll(env, termMap1);
     Ast.Exp exp2 = deduceType(env2, match.exp, resultVariable);
-    Ast.Match match2 = match.copy(match.pat, exp2);
+    Ast.Match match2 = match.copy(pat, exp2);
     return reg(match2, argVariable, fnTerm(vPat, resultVariable));
   }
 
@@ -1517,10 +1520,12 @@ public class TypeResolver {
     for (Ast.Match match : matchList) {
       final PairList<Ast.IdPat, Term> termMap = PairList.of();
       final Consumer<PatTerm> consumer = p -> termMap.add(p.id, p.term);
-      deducePatType(env, match.pat, consumer, labelNames, argVariable, t -> t);
+      final Ast.Pat pat2 =
+          deducePatType(
+              env, match.pat, consumer, labelNames, argVariable, t -> t);
       final TypeEnv env2 = bindAll(env, termMap);
       final Ast.Exp exp2 = deduceType(env2, match.exp, resultVariable);
-      matchList2.add(match.copy(match.pat, exp2));
+      matchList2.add(match.copy(pat2, exp2));
     }
     return matchList2;
   }
@@ -1547,9 +1552,10 @@ public class TypeResolver {
       PairList<Ast.IdPat, Term> termMap,
       Variable vPat) {
     final Consumer<PatTerm> consumer = p -> termMap.add(p.id, p.term);
-    deducePatType(env, valBind.pat, consumer, null, vPat, t -> t);
-    final Ast.Exp e2 = deduceType(env, valBind.exp, vPat);
-    final Ast.ValBind valBind2 = valBind.copy(valBind.pat, e2);
+    final Ast.Pat pat =
+        deducePatType(env, valBind.pat, consumer, null, vPat, t -> t);
+    final Ast.Exp exp = deduceType(env, valBind.exp, vPat);
+    final Ast.ValBind valBind2 = valBind.copy(pat, exp);
     if (valBind2.pat instanceof Ast.IdPat) {
       if (env.hasOverloaded(((Ast.IdPat) valBind2.pat).name)) {
         // We are assigning to an overloaded name. Morel only allows overloads
@@ -1927,33 +1933,29 @@ public class TypeResolver {
    *     expression that this pattern is applied to, returns the type of this
    *     sub-pattern
    */
-  private void deducePatType(
+  private Ast.Pat deducePatType(
       TypeEnv env,
       Ast.Pat pat,
       Consumer<PatTerm> termMap,
       @Nullable NavigableSet<String> labelNames,
       Variable v,
       UnaryOperator<Term> accessor) {
+    final Ast.Pat pat2;
     switch (pat.op) {
       case BOOL_LITERAL_PAT:
-        reg(pat, v, toTerm(PrimitiveType.BOOL));
-        return;
+        return reg(pat, v, toTerm(PrimitiveType.BOOL));
 
       case CHAR_LITERAL_PAT:
-        reg(pat, v, toTerm(PrimitiveType.CHAR));
-        return;
+        return reg(pat, v, toTerm(PrimitiveType.CHAR));
 
       case INT_LITERAL_PAT:
-        reg(pat, v, toTerm(PrimitiveType.INT));
-        return;
+        return reg(pat, v, toTerm(PrimitiveType.INT));
 
       case REAL_LITERAL_PAT:
-        reg(pat, v, toTerm(PrimitiveType.REAL));
-        return;
+        return reg(pat, v, toTerm(PrimitiveType.REAL));
 
       case STRING_LITERAL_PAT:
-        reg(pat, v, toTerm(PrimitiveType.STRING));
-        return;
+        return reg(pat, v, toTerm(PrimitiveType.STRING));
 
       case ID_PAT:
         final Ast.IdPat idPat = (Ast.IdPat) pat;
@@ -1963,44 +1965,42 @@ public class TypeResolver {
           // It is a zero argument constructor, e.g. the LESS constructor of the
           // 'order' type.
           final DataType dataType0 = pair1.left;
-          reg(pat, v, toTerm(dataType0, Subst.EMPTY));
-          return;
+          return reg(pat, v, toTerm(dataType0, Subst.EMPTY));
         }
         termMap.accept(new PatTerm(idPat, v, accessor));
         // fall through
 
       case WILDCARD_PAT:
-        reg(pat, v);
-        return;
+        return reg(pat, v);
 
       case AS_PAT:
         final Ast.AsPat asPat = (Ast.AsPat) pat;
         termMap.accept(new PatTerm(asPat.id, v, accessor));
-        deducePatType(env, asPat.pat, termMap, null, v, accessor);
-        reg(pat, v);
-        return;
+        pat2 = deducePatType(env, asPat.pat, termMap, null, v, accessor);
+        return reg(asPat.copy(asPat.id, pat2), v);
 
       case ANNOTATED_PAT:
         final Ast.AnnotatedPat annotatedPat = (Ast.AnnotatedPat) pat;
         final Type type = toType(annotatedPat.type, typeSystem);
-        deducePatType(env, annotatedPat.pat, termMap, null, v, accessor);
-        reg(pat, v, toTerm(type, Subst.EMPTY));
-        return;
+        pat2 = deducePatType(env, annotatedPat.pat, termMap, null, v, accessor);
+        final Ast.Type type2 = annotatedPat.type;
+        final Ast.AnnotatedPat annotatedPat2 = annotatedPat.copy(pat2, type2);
+        return reg(annotatedPat2, v, toTerm(type, Subst.EMPTY));
 
       case TUPLE_PAT:
-        final List<Term> typeTerms = new ArrayList<>();
-        final Ast.TuplePat tuple = (Ast.TuplePat) pat;
-        forEachIndexed(
-            tuple.args,
+        final PairList<Ast.Pat, Term> typeTerms = PairList.of();
+        final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
+        tuplePat.forEachArg(
             (arg, i) -> {
               final Variable vArg = unifier.variable();
               final UnaryOperator<Term> accessor2 =
                   term -> ((Sequence) accessor.apply(term)).terms.get(i);
-              deducePatType(env, arg, termMap, null, vArg, accessor2);
-              typeTerms.add(vArg);
+              final Ast.Pat arg2 =
+                  deducePatType(env, arg, termMap, null, vArg, accessor2);
+              typeTerms.add(arg2, vArg);
             });
-        reg(pat, v, tupleTerm(typeTerms));
-        return;
+        final Ast.TuplePat tuplePat2 = tuplePat.copy(typeTerms.leftList());
+        return reg(tuplePat2, v, tupleTerm(typeTerms.rightList()));
 
       case RECORD_PAT:
         // First, determine the set of field names.
@@ -2024,21 +2024,23 @@ public class TypeResolver {
             (labelName, i) -> {
               final Variable vArg = unifier.variable();
               labelTerms.put(labelName, vArg);
-              final Ast.Pat argPat = recordPat.args.get(labelName);
-              if (argPat != null) {
+              final Ast.Pat arg = recordPat.args.get(labelName);
+              if (arg != null) {
                 final UnaryOperator<Term> accessor2 =
                     term -> ((Sequence) accessor.apply(term)).terms.get(i);
-                deducePatType(env, argPat, termMap, null, vArg, accessor2);
-                args.put(labelName, argPat);
+                final Ast.Pat arg2 =
+                    deducePatType(env, arg, termMap, null, vArg, accessor2);
+                args.put(labelName, arg2);
               }
             });
-        final Term record = recordTerm(labelTerms);
-        if (!recordPat.ellipsis) {
-          reg(recordPat, v, record);
-          return;
+        final Ast.RecordPat recordPat2 =
+            recordPat.copy(recordPat.ellipsis, args);
+        final Term recordTerm = recordTerm(labelTerms);
+        if (!recordPat2.ellipsis) {
+          return reg(recordPat2, v, recordTerm);
         }
         final Variable v2 = unifier.variable();
-        equiv(v2, record);
+        equiv(v2, recordTerm);
         actionMap.put(
             v,
             (v3, t, substitution, termPairs) -> {
@@ -2063,8 +2065,7 @@ public class TypeResolver {
                 }
               }
             });
-        reg(recordPat, record);
-        return;
+        return reg(recordPat2, recordTerm);
 
       case CON_PAT:
         final Ast.ConPat conPat = (Ast.ConPat) pat;
@@ -2077,7 +2078,7 @@ public class TypeResolver {
         final DataType dataType = pair.left;
         final Type argType = pair.right.toType(typeSystem);
         final Variable vArg = unifier.variable();
-        deducePatType(env, conPat.pat, termMap, null, vArg, t -> vArg);
+        pat2 = deducePatType(env, conPat.pat, termMap, null, vArg, t -> vArg);
         final Term argTerm = toTerm(argType, Subst.EMPTY);
         equiv(vArg, argTerm);
         final Term term = toTerm(dataType, Subst.EMPTY);
@@ -2095,8 +2096,7 @@ public class TypeResolver {
           final TypeVar typeVar = (TypeVar) argType;
           equiv(vArg, sequence.terms.get(typeVar.ordinal));
         }
-        reg(pat, v, term);
-        return;
+        return reg(conPat.copy(conPat.tyCon, pat2), v, term);
 
       case CON0_PAT:
         final Ast.Con0Pat con0Pat = (Ast.Con0Pat) pat;
@@ -2106,26 +2106,27 @@ public class TypeResolver {
           throw new AssertionError();
         }
         final DataType dataType0 = pair0.left;
-        reg(pat, v, toTerm(dataType0, Subst.EMPTY));
-        return;
+        return reg(con0Pat, v, toTerm(dataType0, Subst.EMPTY));
 
       case LIST_PAT:
-        final Ast.ListPat list = (Ast.ListPat) pat;
+        final Ast.ListPat listPat = (Ast.ListPat) pat;
+        final List<Ast.Pat> argList = new ArrayList<>();
         final Variable vArg2 = unifier.variable();
-        for (Ast.Pat arg : list.args) {
-          deducePatType(env, arg, termMap, null, vArg2, t -> vArg2);
+        for (Ast.Pat arg : listPat.args) {
+          argList.add(
+              deducePatType(env, arg, termMap, null, vArg2, t -> vArg2));
         }
-        reg(list, v, listTerm(vArg2));
-        return;
+        return reg(listPat.copy(argList), v, listTerm(vArg2));
 
       case CONS_PAT:
         final Variable elementType = unifier.variable();
         final Ast.InfixPat call = (Ast.InfixPat) pat;
-        deducePatType(
-            env, call.p0, termMap, null, elementType, t -> elementType);
-        deducePatType(env, call.p1, termMap, null, v, accessor);
-        reg(call, v, listTerm(elementType));
-        return;
+        final Ast.Pat p0 =
+            deducePatType(
+                env, call.p0, termMap, null, elementType, t -> elementType);
+        final Ast.Pat p1 =
+            deducePatType(env, call.p1, termMap, null, v, accessor);
+        return reg(call.copy(p0, p1), v, listTerm(elementType));
 
       default:
         throw new AssertionError("cannot deduce type for pattern " + pat.op);

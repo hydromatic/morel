@@ -633,6 +633,10 @@ public class Ast {
           return w.append(") ").id(name);
       }
     }
+
+    public Type copy(List<Type> types) {
+      return types.equals(this.types) ? this : ast.namedType(pos, types, name);
+    }
   }
 
   /** Parse tree node of a type variable. */
@@ -724,6 +728,12 @@ public class Ast {
                   .append(type, 0, 0));
       return w.append("}");
     }
+
+    public Type copy(SortedMap<String, Type> fieldTypes) {
+      return fieldTypes.equals(this.fieldTypes)
+          ? this
+          : ast.recordType(pos, fieldTypes);
+    }
   }
 
   /** Tuple type. */
@@ -753,6 +763,10 @@ public class Ast {
               w.append(i == 0 ? "" : " * ")
                   .append(arg, op.left + 1, op.right + 1));
       return w;
+    }
+
+    public Type copy(List<Type> types) {
+      return types.equals(this.types) ? this : ast.tupleType(pos, types);
     }
   }
 
@@ -814,6 +828,13 @@ public class Ast {
       return w.append(paramType, left, op.left)
           .append(" -> ")
           .append(resultType, op.right, right);
+    }
+
+    public FunctionType copy(Type paramType, Type resultType) {
+      return paramType.equals(this.paramType)
+              && resultType.equals(this.resultType)
+          ? this
+          : ast.functionType(pos, paramType, resultType);
     }
   }
 
@@ -1735,7 +1756,9 @@ public class Ast {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.append(pat, 0, 0).append(" = ").append(exp, 0, right);
+      return w.append(pat, 0, Op.EQ.left)
+          .append(" = ")
+          .append(exp, Op.EQ.right, right);
     }
 
     /**
