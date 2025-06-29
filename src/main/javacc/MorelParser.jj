@@ -1191,6 +1191,8 @@ Ast.Decl decl() :
 {
   n = datatypeDecl() { return n; }
 |
+  n = typeDecl() { return n; }
+|
   n = valDecl() { return n; }
 |
   n = funDecl() { return n; }
@@ -1223,6 +1225,64 @@ Ast.OverDecl overDecl() :
   }
 }
 
+/** Parses zero or more type variables (with parentheses and commas if
+  * more than one). */
+Pair<Pos, List<Ast.TyVar>> tyVars() :
+{
+  final Pos pos;
+  TyVar tyVar;
+}
+{
+  (
+    tyVar = tyVar() { return Pair.of(tyVar.pos, ImmutableList.of(tyVar)); }
+  |
+    <LPAREN> { pos = pos(); final List<TyVar> tyVars = new ArrayList<>(); }
+    tyVar = tyVar() { tyVars.add(tyVar); }
+    (
+      <COMMA> tyVar = tyVar() {
+        tyVars.add(tyVar);
+      }
+    )*
+    <RPAREN>
+    { return Pair.of(pos.plusAll(tyVars), tyVars); }
+  |
+    { return Pair.of(pos(), ImmutableList.of()); }
+  )
+}
+
+/** Parses a type declaration, e.g.
+ * {@code type point = real list}. */
+Ast.TypeDecl typeDecl() :
+{
+  final Span span;
+  final List<TypeBind> binds = new ArrayList<>();
+}
+{
+  <TYPE> { span = Span.of(pos()); }
+  typeBind(binds)
+  (
+    <AND> typeBind(binds)
+  )*
+  { return ast.typeDecl(span.end(this), binds); }
+}
+
+void typeBind(List<Ast.TypeBind> typeBinds) :
+{
+  final Pair<Pos, List<TyVar>> tyVars;
+  final Ast.Id id;
+  final List<TyCon> tyCons = new ArrayList<>();
+  final Type type;
+}
+{
+  tyVars = tyVars()
+  id = identifier()
+  <EQ>
+  type = type() {
+    final Pos pos = tyVars.left.plus(type.pos);
+    typeBinds.add(ast.typeBind(pos, id, tyVars.right, type));
+  }
+}
+
 /** Parses a type declaration, e.g.
  * {@code datatype 'a option = NONE | SOME of 'a}
  */
@@ -1242,25 +1302,13 @@ Ast.DatatypeDecl datatypeDecl() :
 
 void datatypeBind(List<Ast.DatatypeBind> datatypeBinds) :
 {
-  final List<TyVar> tyVars = new ArrayList<>();
-  TyVar tyVar;
+  final Pair<Pos, List<TyVar>> tyVars;
   final Ast.Id id;
   final List<TyCon> tyCons = new ArrayList<>();
   TyCon tyCon;
 }
 {
-  (
-    tyVar = tyVar() { tyVars.add(tyVar); }
-  |
-    <LPAREN>
-    tyVar = tyVar() { tyVars.add(tyVar); }
-    (
-      <COMMA> tyVar = tyVar() {
-        tyVars.add(tyVar);
-      }
-    )*
-    <RPAREN>
-  )?
+  tyVars = tyVars()
   id = identifier()
   <EQ>
   tyCon = typeConstructor() {
@@ -1272,9 +1320,14 @@ void datatypeBind(List<Ast.DatatypeBind> datatypeBinds) :
     }
   )*
   {
-    final List<AstNode> nodes = ImmutableList.<AstNode>builder().addAll(tyVars)
-        .add(id).addAll(tyCons).build();
-    datatypeBinds.add(ast.datatypeBind(Pos.sum(nodes), id, tyVars, tyCons));
+    final List<AstNode> nodes =
+        ImmutableList.<AstNode>builder()
+            .addAll(tyVars.right)
+            .add(id)
+            .addAll(tyCons)
+            .build();
+    final Pos pos = tyVars.left.plusAll(nodes);
+    datatypeBinds.add(ast.datatypeBind(pos, id, tyVars.right, tyCons));
   }
 }
 
@@ -1656,6 +1709,7 @@ AstNode statementEof() :
 | < ORELSE: "orelse" >
 | < REC: "rec" >
 | < THEN: "then" >
+| < TYPE: "type" >
 | < VAL: "val" >
 
 // The following are relational extensions:

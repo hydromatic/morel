@@ -37,6 +37,7 @@ import static org.apache.calcite.util.Util.firstDuplicate;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -66,6 +67,7 @@ import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
+import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.Binding.Kind;
 import net.hydromatic.morel.type.DataType;
@@ -213,8 +215,20 @@ public class TypeResolver {
         throw new TypeException(
             "Cannot deduce type: " + failure.reason(), Pos.ZERO);
       }
+
+      final TypeMap typeMap0 =
+          new TypeMap(
+              typeSystem, map, (Substitution) result, ImmutableMap.of());
+
+      // If any value bindings have aliased types (e.g. 'myInt' rather than
+      // the expanded type 'int'), populate a map with those types.
+      final Map<Ast.Pat, Type> realTypes = deduceRealTypes(typeMap0, decl);
+
       final TypeMap typeMap =
-          new TypeMap(typeSystem, map, (Substitution) result);
+          realTypes.isEmpty()
+              ? typeMap0
+              : new TypeMap(typeSystem, map, (Substitution) result, realTypes);
+
       while (!preferredTypes.isEmpty()) {
         Map.Entry<Variable, PrimitiveType> x = preferredTypes.remove(0);
         final Type type =
@@ -313,6 +327,128 @@ public class TypeResolver {
             super.visit(apply);
           }
         });
+  }
+
+  /**
+   * Creates a map that contains any patterns whose inferred type should be a
+   * type alias.
+   *
+   * <p>For example, suppose that {@code myInt} has been declared as an alias
+   * for {@code int}. Type inference will have expanded all occurrences of
+   * {@code myInt} to {@code int}. But value bindings annotated with {@code
+   * myInt}, or expressions whose deduced type is {@code myInt}, should result
+   * in bindings of type {@code myInt} rather than {@code int}.
+   *
+   * <p>In the following, the declarations of {@code i}, {@code j}, {@code k}
+   * and {@code list} are simple enough to contain {@code myInt}; only {@code l}
+   * is not simple enough, and so it is inferred to be of type {@code int}.
+   *
+   * <pre>{@code
+   * type myInt = int;
+   * > type myInt = int
+   * val i: myInt = 1;
+   * > val i = 1 : myInt
+   * val j = 2: myInt;
+   * > val j = 2 : myInt
+   * val k = i;
+   * > val k = 1 : myInt
+   * val l = i + 3;
+   * > val l = 4 : int
+   * val list = [i];
+   * > val list = [1] : myInt list
+   * }</pre>
+   */
+  Map<Ast.Pat, Type> deduceRealTypes(TypeMap typeMap, Ast.Decl decl) {
+    final Map<Ast.Pat, Type> realTypes = new LinkedHashMap<>();
+    if (decl instanceof Ast.ValDecl) {
+      final BiConsumer<Ast.Pat, Type> consumer =
+          (pat, realType) -> {
+            Type deducedType = typeMap.getType(pat);
+            if (!realType.equals(deducedType)) {
+              realTypes.put(pat, realType);
+            }
+          };
+      for (Ast.ValBind valBind : ((Ast.ValDecl) decl).valBinds) {
+        deduceRealType(valBind.pat, null, valBind.exp, consumer);
+      }
+    }
+    return realTypes;
+  }
+
+  private Type deduceRealType(
+      Ast.Pat pat,
+      @Nullable Type annotatedType,
+      Ast.Exp exp,
+      BiConsumer<Ast.Pat, Type> consumer) {
+    if (pat instanceof Ast.AnnotatedPat) {
+      final Ast.AnnotatedPat annotatedPat = (Ast.AnnotatedPat) pat;
+      final Type annotatedType2 = toType(annotatedPat.type, typeSystem);
+      final Type realType =
+          deduceRealType(annotatedPat.pat, annotatedType2, exp, consumer);
+      if (realType != null) {
+        consumer.accept(pat, realType);
+        return realType;
+      }
+    }
+    if (pat instanceof Ast.IdPat) {
+      if (annotatedType != null) {
+        consumer.accept(pat, annotatedType);
+        return annotatedType;
+      }
+    }
+    if (exp instanceof Ast.AnnotatedExp) {
+      final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) exp;
+      final Type annotatedType2 = toType(annotatedExp.type, typeSystem);
+      final Type realType =
+          deduceRealType(pat, annotatedType2, annotatedExp.exp, consumer);
+      if (realType != null) {
+        consumer.accept(pat, realType);
+        return realType;
+      }
+    }
+    if (exp instanceof Ast.ListExp) {
+      final Ast.ListExp listExp = (Ast.ListExp) exp;
+      if (!listExp.args.isEmpty()) {
+        final Type annotatedType2 =
+            annotatedType instanceof ListType
+                ? ((ListType) annotatedType).elementType
+                : null;
+        final Type elementType =
+            deduceRealType(annotatedType2, listExp.args.get(0));
+        if (elementType != null) {
+          final Type realType = typeSystem.listType(elementType);
+          consumer.accept(pat, realType);
+          return realType;
+        }
+      }
+    }
+    return null;
+  }
+
+  private Type deduceRealType(@Nullable Type annotatedType, Ast.Exp exp) {
+    if (exp instanceof Ast.AnnotatedExp) {
+      final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) exp;
+      final Type annotatedType2 = toType(annotatedExp.type, typeSystem);
+      final Type realType = deduceRealType(annotatedType2, annotatedExp.exp);
+      if (realType != null) {
+        return realType;
+      }
+    }
+    if (exp instanceof Ast.ListExp) {
+      final Ast.ListExp listExp = (Ast.ListExp) exp;
+      if (!listExp.args.isEmpty()) {
+        final Type annotatedType2 =
+            annotatedType instanceof ListType
+                ? ((ListType) annotatedType).elementType
+                : null;
+        final Type elementType =
+            deduceRealType(annotatedType2, listExp.args.get(0));
+        if (elementType != null) {
+          return typeSystem.listType(elementType);
+        }
+      }
+    }
+    return annotatedType;
   }
 
   /** Registers that an AST node maps to a type term. */
@@ -1456,6 +1592,10 @@ public class TypeResolver {
         final Ast.ValDecl valDecl = toValDecl(env, (Ast.FunDecl) node);
         return deduceValDeclType(env, valDecl, termMap);
 
+      case TYPE_DECL:
+        final Ast.TypeDecl typeDecl = (Ast.TypeDecl) node;
+        return deduceTypeDeclType(env, typeDecl, termMap);
+
       case DATATYPE_DECL:
         final Ast.DatatypeDecl datatypeDecl = (Ast.DatatypeDecl) node;
         return deduceDataTypeDeclType(env, datatypeDecl, termMap);
@@ -1464,6 +1604,22 @@ public class TypeResolver {
         throw new AssertionError(
             "cannot deduce type for " + node.op + " [" + node + "]");
     }
+  }
+
+  private Ast.Decl deduceTypeDeclType(
+      TypeEnv env, Ast.TypeDecl typeDecl, PairList<Ast.IdPat, Term> termMap) {
+    final List<Type.Key> keys = new ArrayList<>();
+    for (Ast.TypeBind bind : typeDecl.binds) {
+      final KeyBuilder keyBuilder = new KeyBuilder();
+      bind.tyVars.forEach(keyBuilder::toTypeKey);
+
+      keys.add(
+          Keys.alias(bind.name.name, toTypeKey(bind.type), ImmutableList.of()));
+    }
+    final List<Type> types = typeSystem.typesFor(keys);
+
+    map.put(typeDecl, toTerm(PrimitiveType.UNIT));
+    return typeDecl;
   }
 
   private Ast.Decl deduceDataTypeDeclType(
@@ -2063,6 +2219,15 @@ public class TypeResolver {
       case TY_VAR:
         final Variable variable = subst.get((TypeVar) type);
         return variable != null ? variable : unifier.variable();
+      case ALIAS_TYPE:
+        // During type inference, we pretend that an alias type is its
+        // underlying type. For example, if we have 'type t = int', and
+        // 'val i = 1: t', we treat 'i' has having type 'int'.
+        //
+        // After type inference is complete, can can deduce the true type
+        // bottom-up. Thus, '[1: t]' has type 't list'.
+        final AliasType aliasType = (AliasType) type;
+        return toTerm(aliasType.type, subst);
       case DATA_TYPE:
         final DataType dataType = (DataType) type;
         if (dataType.name.equals(BAG_TY_CON)) {

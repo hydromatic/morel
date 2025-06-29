@@ -337,6 +337,18 @@ public class Shuttle {
         aggregate.pos, aggregate.aggregate, aggregate.argument, aggregate.id);
   }
 
+  protected Ast.TypeDecl visit(Ast.TypeDecl typeDecl) {
+    return ast.typeDecl(typeDecl.pos, visitList(typeDecl.binds));
+  }
+
+  protected Ast.TypeBind visit(Ast.TypeBind typeBind) {
+    return ast.typeBind(
+        typeBind.pos,
+        typeBind.name.accept(this),
+        visitList(typeBind.tyVars),
+        typeBind.type.accept(this));
+  }
+
   protected Ast.DatatypeDecl visit(Ast.DatatypeDecl datatypeDecl) {
     return ast.datatypeDecl(datatypeDecl.pos, visitList(datatypeDecl.binds));
   }
@@ -401,6 +413,10 @@ public class Shuttle {
 
   protected Core.Exp visit(Core.Local local) {
     return local.copy(local.dataType, local.exp.accept(this));
+  }
+
+  protected Core.TypeDecl visit(Core.TypeDecl datatypeDecl) {
+    return datatypeDecl;
   }
 
   protected Core.DatatypeDecl visit(Core.DatatypeDecl datatypeDecl) {

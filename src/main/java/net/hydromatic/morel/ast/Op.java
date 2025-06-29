@@ -69,6 +69,7 @@ public enum Op {
   FUN_BIND(" and "),
   FUN_MATCH,
   TY_CON,
+  TYPE_DECL,
   DATATYPE_DECL,
   DATATYPE_BIND,
   FUN_DECL,
@@ -99,6 +100,7 @@ public enum Op {
   COMPOSITE_TYPE,
   FUNCTION_TYPE(" -> ", 6, false),
   NAMED_TYPE(" ", 8),
+  ALIAS_TYPE(" ", 8),
   FORALL_TYPE,
   MULTI_TYPE,
 

@@ -57,6 +57,7 @@ import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.foreign.CalciteFunctions;
+import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.Keys;
@@ -676,6 +677,11 @@ public class Compiler {
         compileOverDecl(overDecl, bindings, actions);
         break;
 
+      case TYPE_DECL:
+        final Core.TypeDecl typeDecl = (Core.TypeDecl) decl;
+        compileTypeDecl(typeDecl.types, bindings, actions);
+        break;
+
       case DATATYPE_DECL:
         final Core.DatatypeDecl datatypeDecl = (Core.DatatypeDecl) decl;
         compileDatatypeDecl(datatypeDecl.dataTypes, bindings, actions);
@@ -693,6 +699,17 @@ public class Compiler {
       actions.add(
           (outLines, outBindings, evalEnv) ->
               outLines.accept("over " + overDecl.pat));
+    }
+  }
+
+  private void compileTypeDecl(
+      List<AliasType> types, List<Binding> bindings, List<Action> actions) {
+    if (actions != null) {
+      for (AliasType type : types) {
+        actions.add(
+            (outLines, outBindings, evalEnv) ->
+                outLines.accept("type " + type.name + " = " + type.type.key()));
+      }
     }
   }
 

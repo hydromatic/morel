@@ -111,8 +111,9 @@ Implemented:
 * `if`
 * `case`
 * Primitive, list, tuple and record types
-* Type variables (polymorphism) (except in `let` and `datatype`)
+* Type variables (polymorphism)
 * Algebraic types (`datatype`)
+* Type aliases (`type`)
 * Tuples and unit, record, list, and vector values
 * Patterns (destructuring) in `val`, `case`, `fun` and `from`,
   matching constants, wildcards, tuples, records, and lists
@@ -252,7 +253,7 @@ Implemented:
     `env`, `plan`, `set`, `show`, `unset`
 
 Not implemented:
-* `type`, `eqtype`, `exception`
+* `eqtype`, `exception`
 * `structure`, `struct`, `signature`, `sig`, `open`
 * `local`
 * `raise`, `handle`

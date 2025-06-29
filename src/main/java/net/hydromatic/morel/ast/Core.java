@@ -20,6 +20,7 @@ package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.type.TypeSystem.canAssign;
@@ -34,7 +35,6 @@ import com.google.common.collect.Ordering;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.ObjIntConsumer;
@@ -46,6 +46,7 @@ import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Describer;
+import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
@@ -59,6 +60,7 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -900,7 +902,7 @@ public class Core {
 
     @Override
     public int hashCode() {
-      return Objects.hash(Op.OVER_DECL, pat);
+      return hash(Op.OVER_DECL, pat);
     }
 
     @Override
@@ -925,6 +927,47 @@ public class Core {
     }
   }
 
+  /** Type declaration. */
+  public static class TypeDecl extends Decl {
+    public final List<AliasType> types;
+
+    TypeDecl(ImmutableList<@NonNull AliasType> types) {
+      super(Pos.ZERO, Op.TYPE_DECL);
+      this.types = requireNonNull(types);
+      checkArgument(!this.types.isEmpty());
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(types);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof TypeDecl && types.equals(((TypeDecl) o).types);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      forEachIndexed(
+          types,
+          (type, i) ->
+              w.append(i == 0 ? "type " : " and ").append(type.toString()));
+      return w;
+    }
+
+    @Override
+    public TypeDecl accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+  }
+
   /** Datatype declaration. */
   public static class DatatypeDecl extends Decl {
     public final List<DataType> dataTypes;
@@ -937,7 +980,7 @@ public class Core {
 
     @Override
     public int hashCode() {
-      return Objects.hash(dataTypes);
+      return hash(dataTypes);
     }
 
     @Override
@@ -1012,7 +1055,7 @@ public class Core {
 
     @Override
     public int hashCode() {
-      return Objects.hash(pat, exp);
+      return hash(pat, exp);
     }
 
     @Override
@@ -1133,7 +1176,7 @@ public class Core {
 
     @Override
     public int hashCode() {
-      return Objects.hash(args, type);
+      return hash(args, type);
     }
 
     @Override
@@ -1514,7 +1557,7 @@ public class Core {
 
     @Override
     public int hashCode() {
-      return Objects.hash(bindings, atom);
+      return hash(bindings, atom);
     }
 
     @Override

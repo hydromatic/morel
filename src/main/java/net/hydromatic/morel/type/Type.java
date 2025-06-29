@@ -161,6 +161,20 @@ public interface Type {
     return TypeUnifier.unify(this, type);
   }
 
+  /** Returns whether this type contains an alias type. */
+  default boolean containsAlias() {
+    final AtomicInteger c = new AtomicInteger();
+    accept(
+        new TypeVisitor<Void>() {
+          @Override
+          public Void visit(AliasType aliasType) {
+            c.incrementAndGet();
+            return super.visit(aliasType);
+          }
+        });
+    return c.get() > 0;
+  }
+
   /** Structural identifier of a type. */
   abstract class Key {
     public final Op op;

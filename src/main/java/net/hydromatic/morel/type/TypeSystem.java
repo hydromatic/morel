@@ -280,6 +280,13 @@ public class TypeSystem {
     return dataType;
   }
 
+  /** Creates a type that is an alias for another type. */
+  Type aliasType(String name, Type type, List<Type> arguments) {
+    final AliasType aliasType = new AliasType(name, type, arguments);
+    typeByName.put(name, aliasType);
+    return aliasType;
+  }
+
   /**
    * Converts a regular type to an internal type. Throws if the type is not
    * known.
@@ -625,6 +632,7 @@ public class TypeSystem {
     }
     return fromType.equals(toType)
         || fromType instanceof RecordType && toType.isProgressive()
+        || toType.containsAlias()
         || fromType instanceof ListType
             && toType instanceof ListType
             && canAssign(

@@ -51,6 +51,7 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Extents;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.eval.Unit;
+import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
@@ -592,6 +593,10 @@ public enum CoreBuilder {
 
   public Core.OverDecl overDecl(Core.IdPat pat) {
     return new Core.OverDecl(pat);
+  }
+
+  public Core.TypeDecl typeDecl(Iterable<AliasType> types) {
+    return new Core.TypeDecl(ImmutableList.copyOf(types));
   }
 
   public Core.DatatypeDecl datatypeDecl(Iterable<DataType> dataTypes) {

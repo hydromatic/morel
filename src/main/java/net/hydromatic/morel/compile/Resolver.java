@@ -56,6 +56,7 @@ import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.eval.Session;
+import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
@@ -185,6 +186,9 @@ public class Resolver {
       case VAL_DECL:
         return toCore((Ast.ValDecl) node);
 
+      case TYPE_DECL:
+        return toCore(typeMap.typeSystem, (Ast.TypeDecl) node);
+
       case DATATYPE_DECL:
         return toCore((Ast.DatatypeDecl) node);
 
@@ -199,6 +203,11 @@ public class Resolver {
     Type overloadType = typeSystem.lookup(BuiltIn.Datatype.OVERLOAD);
     Core.IdPat idPat = core.idPat(overloadType, overDecl.pat.name, 0);
     return core.overDecl(idPat);
+  }
+
+  /** Converts an {@link Ast.TypeDecl} to a {@link Core.TypeDecl}. */
+  public Core.Decl toCore(TypeSystem typeSystem, Ast.TypeDecl typeDecl) {
+    return core.typeDecl(transformEager(typeDecl.binds, this::toCore));
   }
 
   /**
@@ -304,10 +313,17 @@ public class Resolver {
                       patIter.next(), r.toCore(exp), pat.pos.plus(exp.pos))));
     } else {
       matches.forEach(
-          (pat, exp) ->
-              patExps.add(
-                  new PatExp(
-                      toCore(pat, inst), toCore(exp), pat.pos.plus(exp.pos))));
+          (pat, exp) -> {
+            Core.Pat corePat = toCore(pat, inst);
+            if (corePat instanceof Core.NamedPat) {
+              final Type realType = typeMap.getRealType(pat);
+              if (realType != null) {
+                corePat = ((Core.NamedPat) corePat).withType(realType);
+              }
+            }
+            patExps.add(
+                new PatExp(corePat, toCore(exp), pat.pos.plus(exp.pos)));
+          });
       patExps.forEach(
           x -> Compiles.acceptBinding(typeMap.typeSystem, x.pat, bindings));
     }
@@ -371,6 +387,10 @@ public class Resolver {
     patExps.forEach(x -> x.pat.accept(v));
 
     return intersects(refSet, defSet);
+  }
+
+  private AliasType toCore(Ast.TypeBind bind) {
+    return (AliasType) typeMap.typeSystem.lookup(bind.name.name);
   }
 
   private DataType toCore(Ast.DatatypeBind bind) {

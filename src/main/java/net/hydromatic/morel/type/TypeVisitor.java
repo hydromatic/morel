@@ -65,6 +65,12 @@ public class TypeVisitor<R> {
     return null;
   }
 
+  /** Visits an {@link AliasType}. */
+  public R visit(AliasType aliasType) {
+    aliasType.parameterTypes.forEach(t -> t.accept(this));
+    return null;
+  }
+
   /** Visits a {@link PrimitiveType}. */
   public R visit(PrimitiveType primitiveType) {
     return null;

@@ -206,6 +206,10 @@ public class MainTest {
     ml("datatype ('a, 'b, 'c) foo = Triple of ('a * 'b) * 'c")
         .assertParseSame();
 
+    ml("type myInt = int").assertParseSame();
+    ml("type myInt = int and myRealList = real list").assertParseSame();
+    ml("type emp = {empno: int, pets: string list}").assertParseSame();
+
     // parentheses creating left precedence, which is the natural precedence for
     // '+', can be removed
     ml("((1 + 2) + 3) + 4").assertParse("1 + 2 + 3 + 4");

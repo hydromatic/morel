@@ -19,6 +19,7 @@
 package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
@@ -549,7 +550,7 @@ public class Ast {
 
     @Override
     public int hashCode() {
-      return Objects.hash(type, exp);
+      return hash(type, exp);
     }
 
     @Override
@@ -598,7 +599,7 @@ public class Ast {
 
     @Override
     public int hashCode() {
-      return Objects.hash(types, name);
+      return hash(types, name);
     }
 
     @Override
@@ -666,6 +667,18 @@ public class Ast {
 
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.id(name);
+    }
+
+    /** Unparses a list of type variables. */
+    static AstWriter unparseList(AstWriter w, List<TyVar> tyVars) {
+      switch (tyVars.size()) {
+        case 0:
+          return w;
+        case 1:
+          return w.append(tyVars.get(0), 0, 0).append(" ");
+        default:
+          return w.appendAll(tyVars, "(", ", ", ") ");
+      }
     }
   }
 
@@ -1008,7 +1021,7 @@ public class Ast {
 
     @Override
     public int hashCode() {
-      return Objects.hash(Op.OVER_DECL, pat);
+      return hash(Op.OVER_DECL, pat);
     }
 
     @Override
@@ -1032,6 +1045,92 @@ public class Ast {
     }
   }
 
+  /** Parse tree node of a type declaration. */
+  public static class TypeDecl extends Decl {
+    public final List<TypeBind> binds;
+
+    TypeDecl(Pos pos, ImmutableList<TypeBind> binds) {
+      super(pos, Op.TYPE_DECL);
+      this.binds = requireNonNull(binds);
+      checkArgument(!this.binds.isEmpty());
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(binds);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof TypeDecl && binds.equals(((TypeDecl) o).binds);
+    }
+
+    public TypeDecl accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.appendAll(binds, "type ", " and ", "");
+    }
+  }
+
+  /**
+   * Parse tree node of a type binding.
+   *
+   * <p>Example: the type declaration {@code type point = real list and myInt =
+   * int}.
+   */
+  public static class TypeBind extends AstNode {
+    public final List<TyVar> tyVars;
+    public final Id name;
+    public final Type type;
+
+    TypeBind(Pos pos, ImmutableList<TyVar> tyVars, Id name, Type type) {
+      super(pos, Op.TYPE_DECL);
+      this.tyVars = requireNonNull(tyVars);
+      this.name = requireNonNull(name);
+      this.type = requireNonNull(type);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(tyVars, type);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof TypeBind
+              && name.equals(((TypeBind) o).name)
+              && tyVars.equals(((TypeBind) o).tyVars)
+              && type.equals(((TypeBind) o).type);
+    }
+
+    public TypeBind accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return TyVar.unparseList(w, tyVars)
+          .id(name.name)
+          .append(" = ")
+          .append(type, 0, 0);
+    }
+  }
+
   /** Parse tree node of a datatype declaration. */
   public static class DatatypeDecl extends Decl {
     public final List<DatatypeBind> binds;
@@ -1044,7 +1143,7 @@ public class Ast {
 
     @Override
     public int hashCode() {
-      return Objects.hash(binds);
+      return hash(binds);
     }
 
     @Override
@@ -1095,7 +1194,7 @@ public class Ast {
 
     @Override
     public int hashCode() {
-      return Objects.hash(tyVars, tyCons);
+      return hash(tyVars, tyCons);
     }
 
     @Override
@@ -1118,16 +1217,9 @@ public class Ast {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
-      switch (tyVars.size()) {
-        case 0:
-          break;
-        case 1:
-          w.append(tyVars.get(0), 0, 0).append(" ");
-          break;
-        default:
-          w.appendAll(tyVars, "(", ", ", ") ");
-      }
-      return w.id(name.name).appendAll(tyCons, " = ", " | ", "");
+      return TyVar.unparseList(w, tyVars)
+          .id(name.name)
+          .appendAll(tyCons, " = ", " | ", "");
     }
   }
 
@@ -1185,7 +1277,7 @@ public class Ast {
 
     @Override
     public int hashCode() {
-      return Objects.hash(rec, valBinds);
+      return hash(rec, valBinds);
     }
 
     @Override
@@ -1990,7 +2082,7 @@ public class Ast {
 
     @Override
     public int hashCode() {
-      return Objects.hash(op, distinct, args);
+      return hash(op, distinct, args);
     }
 
     @Override

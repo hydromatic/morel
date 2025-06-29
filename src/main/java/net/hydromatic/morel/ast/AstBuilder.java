@@ -441,6 +441,15 @@ public enum AstBuilder {
     return new Ast.InfixCall(pos, op, a0, a1);
   }
 
+  public Ast.TypeDecl typeDecl(Pos pos, Iterable<Ast.TypeBind> binds) {
+    return new Ast.TypeDecl(pos, ImmutableList.copyOf(binds));
+  }
+
+  public Ast.TypeBind typeBind(
+      Pos pos, Ast.Id name, Iterable<Ast.TyVar> tyVars, Ast.Type type) {
+    return new Ast.TypeBind(pos, ImmutableList.copyOf(tyVars), name, type);
+  }
+
   public Ast.DatatypeDecl datatypeDecl(
       Pos pos, Iterable<Ast.DatatypeBind> binds) {
     return new Ast.DatatypeDecl(pos, ImmutableList.copyOf(binds));

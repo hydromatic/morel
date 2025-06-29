@@ -34,6 +34,7 @@ import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.parse.Parsers;
+import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ForallType;
@@ -131,6 +132,12 @@ class Pretty {
       @NonNull Object value,
       int leftPrec,
       int rightPrec) {
+    // Strip any alias. If 'pair' is an alias for 'int * int', we print a 'pair'
+    // value the same way we would print an 'int * int' value.
+    while (type instanceof AliasType) {
+      type = ((AliasType) type).type;
+    }
+
     if (value instanceof TypedVal) {
       final TypedVal typedVal = (TypedVal) value;
       final StringBuilder buf2 = new StringBuilder("val ");
@@ -521,6 +528,7 @@ class Pretty {
         }
         // fall through
       case ID:
+      case ALIAS_TYPE:
       case TY_VAR:
         return pretty1(
             buf, indent2, lineEnd, depth, type, typeVal.type.moniker(), 0, 0);

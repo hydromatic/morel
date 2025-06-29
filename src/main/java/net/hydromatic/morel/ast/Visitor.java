@@ -270,6 +270,15 @@ public class Visitor {
     aggregate.id.accept(this);
   }
 
+  protected void visit(Ast.TypeDecl typeDecl) {
+    typeDecl.binds.forEach(this::accept);
+  }
+
+  protected void visit(Ast.TypeBind typeBind) {
+    typeBind.tyVars.forEach(this::accept);
+    typeBind.type.accept(this);
+  }
+
   protected void visit(Ast.DatatypeDecl datatypeDecl) {
     datatypeDecl.binds.forEach(this::accept);
   }
@@ -335,6 +344,8 @@ public class Visitor {
   }
 
   protected void visit(Core.OverDecl overDecl) {}
+
+  protected void visit(Core.TypeDecl typeDecl) {}
 
   protected void visit(Core.DatatypeDecl datatypeDecl) {}
 

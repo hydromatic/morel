@@ -253,7 +253,8 @@ In Standard ML but not in Morel:
 
 <pre>
 <i>dec</i> &rarr; <i>vals</i> <i>valbind</i>              value
-    | <b>fun</b> <i>vars</i> <i>funbind</i>          function
+    | <b>fun</b> <i>funbind</i>               function
+    | <b>type</b> <i>typbind</i>              type
     | <b>datatype</b> <i>datbind</i>          data type
     | <b>over</b> <i>id</i>                   overloaded name
     | <i>empty</i>
@@ -270,9 +271,11 @@ In Standard ML but not in Morel:
     | <i>pat<sub>1</sub></i> <i>id</i> <i>pat<sub>2</sub></i> [ <b>:</b> <i>type</i> ] <b>=</b> <i>exp</i>        infix
     | '<b>(</b>' <i>pat<sub>1</sub></i> <i>id</i> <i>pat<sub>2</sub></i> '<b>)</b>' <i>pat'<sub>1</sub></i> ... <i>pat'<sub>n</sub></i> [ <b>:</b> <i>type</i> ] = <i>exp</i>
                                 infix (n &ge; 0)
+<i>typbind</i> &rarr; [ <i>vars</i> ] <i>id</i> <b>=</b> <i>typ</i> [ <b>and</b> <i>typbind</i> ]*
+                                abbreviation
 <i>datbind</i> &rarr; <i>datbindItem</i> [ <b>and</b> <i>datbindItem</i> ]*
                                 data type
-<i>datbindItem</i> &rarr; <i>vars</i> <i>id</i> <b>=</b> <i>conbind</i>
+<i>datbindItem</i> &rarr; [ <i>vars</i> ] <i>id</i> <b>=</b> <i>conbind</i>
 <i>conbind</i> &rarr; <i>conbindItem</i> [ '<b>|</b>' <i>conbindItem</i> ]*
                                 data constructor
 <i>conbindItem</i> &rarr; <i>id</i> [ <b>of</b> <i>typ</i> ]

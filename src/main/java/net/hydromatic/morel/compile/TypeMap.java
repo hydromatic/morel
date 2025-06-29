@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
+import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
@@ -47,6 +48,7 @@ public class TypeMap {
   public final TypeSystem typeSystem;
   private final Map<AstNode, Unifier.Term> nodeTypeTerms;
   final Unifier.Substitution substitution;
+  private final Map<Ast.Pat, Type> realTypes;
 
   /**
    * Map from type variable name to type variable. The ordinal of the variable
@@ -61,10 +63,12 @@ public class TypeMap {
   TypeMap(
       TypeSystem typeSystem,
       Map<AstNode, Unifier.Term> nodeTypeTerms,
-      Unifier.Substitution substitution) {
+      Unifier.Substitution substitution,
+      Map<Ast.Pat, Type> realTypes) {
     this.typeSystem = requireNonNull(typeSystem);
     this.nodeTypeTerms = ImmutableMap.copyOf(nodeTypeTerms);
     this.substitution = requireNonNull(substitution.resolve());
+    this.realTypes = ImmutableMap.copyOf(realTypes);
   }
 
   @Override
@@ -99,6 +103,15 @@ public class TypeMap {
   public @Nullable Type getTypeOpt(AstNode node) {
     final Unifier.Term term = nodeTypeTerms.get(node);
     return term == null ? null : termToType(term);
+  }
+
+  /**
+   * Returns an AST node type with type aliases, or null if the type is the same
+   * as the expanded type.
+   */
+  @SuppressWarnings("SuspiciousMethodCalls")
+  public @Nullable Type getRealType(AstNode node) {
+    return realTypes.get(node);
   }
 
   /** Returns whether an AST node's type will be a type variable. */
