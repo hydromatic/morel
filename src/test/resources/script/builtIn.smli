@@ -23,6 +23,11 @@ Sys.set ("printLength", 999);
 Sys.set ("stringDepth", ~1);
 > val it = () : unit
 
+(* Until we have a real "print" function, we use "ignore" to
+   suppress the output of expressions. *)
+fun print x = ignore x;
+> val print = fn : 'a -> unit
+
 (* Structures -------------------------------------------------- *)
 General;
 > val it = {ignore=fn,`op o`=fn}
@@ -89,10 +94,24 @@ List;
 >      rev:'be list -> 'be list, revAppend:'bf list * 'bf list -> 'bf list,
 >      tabulate:int * (int -> 'bg) -> 'bg list, take:'bh list * int -> 'bh list,
 >      tl:'bi list -> 'bi list}
-List.rev;
-> val it = fn : 'a list -> 'a list
-List.rev [1,2,3];
-> val it = [3,2,1] : int list
+ListPair;
+> val it =
+>   {all=fn,allEq=fn,app=fn,appEq=fn,exists=fn,foldl=fn,foldlEq=fn,foldr=fn,
+>    foldrEq=fn,map=fn,mapEq=fn,unzip=fn,zip=fn,zipEq=fn}
+>   : {all:('a * 'b -> bool) -> 'a list * 'b list -> bool,
+>      allEq:('c * 'd -> bool) -> 'c list * 'd list -> bool,
+>      app:('e * 'f -> unit) -> 'e list * 'f list -> unit,
+>      appEq:('g * 'h -> unit) -> 'g list * 'h list -> unit,
+>      exists:('i * 'j -> bool) -> 'i list * 'j list -> bool,
+>      foldl:('k * 'l * 'm -> 'm) -> 'm -> 'k list * 'l list -> 'm,
+>      foldlEq:('n * 'o * 'p -> 'p) -> 'p -> 'n list * 'o list -> 'p,
+>      foldr:('q * 'r * 's -> 's) -> 's -> 'q list * 'r list -> 's,
+>      foldrEq:('t * 'u * 'v -> 'v) -> 'v -> 't list * 'u list -> 'v,
+>      map:('w * 'x -> 'y) -> 'w list * 'x list -> 'y list,
+>      mapEq:('z * 'ba -> 'bb) -> 'z list * 'ba list -> 'bb list,
+>      unzip:('bc * 'bd) list -> 'bc list * 'bd list,
+>      zip:'be list * 'bf list -> ('be * 'bf) list,
+>      zipEq:'bg list * 'bh list -> ('bg * 'bh) list}
 Math;
 > val it =
 >   {acos=fn,asin=fn,atan=fn,atan2=fn,cos=fn,cosh=fn,e=2.7182817,exp=fn,ln=fn,
@@ -1416,15 +1435,246 @@ Sys.plan ();
 >   "apply(fnCode apply(fnValue List.collate, argCode match(v, apply(fnCode match((x, y), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name x), get(name y)))), argCode apply2(fnValue <, get(name x), get(name y)))), argCode get(name v)))), argCode tuple(tuple, tuple))"
 >   : string
 
-(* Math -------------------------------------------------------- *)
-(* The signature MATH specifies basic mathematical constants, the square root
-   function, and trigonometric, hyperbolic, exponential, and logarithmic
-   functions based on a real type. The functions defined here have roughly the
-   same semantics as their counterparts in ISO C's math.h.
+(* ListPair ---------------------------------------------------- *)
 
-   In the functions below, unless specified otherwise, if any argument is a NaN,
-   the return value is a NaN. In a list of rules specifying the behavior of a
-   function in special cases, the first matching rule defines the semantics. *)
+(* The ListPair structure provides operations on pairs of lists. The
+   operations fall into two categories. Those in the first category,
+   whose names do not end in "Eq", do not require that the lists have
+   the same length. When the lists are of uneven lengths, the excess
+   elements from the tail of the longer list are ignored. The
+   operations in the second category, whose names have the suffix
+   "Eq", differ from their similarly named operations in the first
+   category only when the list arguments have unequal lengths, in
+   which case they typically raise the UnequalLengths exception.
+
+   There are three groups of functions:
+    * zip, map, app, all, exists, foldr and foldl raise no exception
+      when the argument lists are found to be of unequal length; the
+      excess elements from the longer list are simply disregarded.
+    * zipEq, mapEq, appEq, foldrEq and foldlEq raise exception
+      UnequalLengths when the argument lists are found to be of
+      unequal length.
+    * allEq raises no exception but returns false if the lists are
+      found to have unequal lengths (after traversing the lists).
+*)
+ListPair;
+> val it =
+>   {all=fn,allEq=fn,app=fn,appEq=fn,exists=fn,foldl=fn,foldlEq=fn,foldr=fn,
+>    foldrEq=fn,map=fn,mapEq=fn,unzip=fn,zip=fn,zipEq=fn}
+>   : {all:('a * 'b -> bool) -> 'a list * 'b list -> bool,
+>      allEq:('c * 'd -> bool) -> 'c list * 'd list -> bool,
+>      app:('e * 'f -> unit) -> 'e list * 'f list -> unit,
+>      appEq:('g * 'h -> unit) -> 'g list * 'h list -> unit,
+>      exists:('i * 'j -> bool) -> 'i list * 'j list -> bool,
+>      foldl:('k * 'l * 'm -> 'm) -> 'm -> 'k list * 'l list -> 'm,
+>      foldlEq:('n * 'o * 'p -> 'p) -> 'p -> 'n list * 'o list -> 'p,
+>      foldr:('q * 'r * 's -> 's) -> 's -> 'q list * 'r list -> 's,
+>      foldrEq:('t * 'u * 'v -> 'v) -> 'v -> 't list * 'u list -> 'v,
+>      map:('w * 'x -> 'y) -> 'w list * 'x list -> 'y list,
+>      mapEq:('z * 'ba -> 'bb) -> 'z list * 'ba list -> 'bb list,
+>      unzip:('bc * 'bd) list -> 'bc list * 'bd list,
+>      zip:'be list * 'bf list -> ('be * 'bf) list,
+>      zipEq:'bg list * 'bh list -> ('bg * 'bh) list}
+
+(* [all p (xs, ys)] applies predicate p to the pairs of corresponding
+   elements of xs and ys from left to right until p evaluates to false
+   or one or both lists is exhausted; returns true if p is true of all
+   such pairs; otherwise false.  Hence all p (xs, ys) has the same
+   result and effect as List.all p (zip (xs, ys)). *)
+ListPair.all;
+> val it = fn : ('a * 'b -> bool) -> 'a list * 'b list -> bool
+
+ListPair.all (fn (x, y) => x < y) ([1, 2, 3], [2, 3, 4]);
+> val it = true : bool
+ListPair.all (fn (x, y) => x < y) ([1, 2, 3], [2, 3]);
+> val it = true : bool
+ListPair.all (fn (x, y) => x < y) ([1, 2, 3], [2, 3, 4, 5]);
+> val it = true : bool
+ListPair.all (fn (x, y) => x < y) ([1, 2, 3], [2, 2, 4, 5, 6]);
+> val it = false : bool
+
+(* [allEq p (xs, ys)] works as all p (xs, ys) but returns false if xs
+   and ys do not have the same length.  Equivalent to all p (xs, ys)
+   andalso length xs = length ys. *)
+ListPair.allEq;
+> val it = fn : ('a * 'b -> bool) -> 'a list * 'b list -> bool
+ListPair.allEq (fn (x, y) => x < y) ([1, 2, 3], [2, 3, 4]);
+> val it = true : bool
+ListPair.allEq (fn (x, y) => x < y) ([1, 2, 3], [2, 3]);
+> val it = false : bool
+ListPair.allEq (fn (x, y) => x < y) ([1, 2, 3], [2, 3, 4, 5]);
+> val it = false : bool
+ListPair.allEq (fn (x, y) => x < y) ([1, 5, 3], [2, 3, 4]);
+> val it = false : bool
+
+(* [app f (xs, ys)] applies function f to the pairs of corresponding
+   elements of xs and ys from left to right and returns ().  Hence app
+   f (xs, ys) has the same result and effect as List.app f (zip (xs,
+   ys)). *)
+ListPair.app;
+> val it = fn : ('a * 'b -> unit) -> 'a list * 'b list -> unit
+ListPair.app (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n")) ([1, 2, 3], [4, 5, 6]);
+> val it = () : unit
+ListPair.app (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n")) ([1, 2, 3], [4]);
+> val it = () : unit
+
+(* [appEq f (xs, ys)] applies function f to pairs of corresponding
+   elements of xs and ys from left to right, and then raises
+   UnequalLengths if xs and ys have the same length. *)
+ListPair.appEq;
+> val it = fn : ('a * 'b -> unit) -> 'a list * 'b list -> unit
+ListPair.appEq (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n")) ([1, 2, 3], [4, 5, 6]);
+> val it = () : unit
+ListPair.appEq (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n")) ([1, 2, 3], [4, 5]);
+> uncaught exception UnequalLengths
+>   raised at: stdIn:1.1-1.82
+
+(* [exists p (xs, ys)] applies predicate p to the pairs of
+   corresponding elements of xs and ys from left to right until p
+   evaluates to true or one or both lists is exhausted; returns true
+   if p is true of any such pair; otherwise false.  Hence exists p
+   (xs, ys) has the same result and effect as List.exists p (zip (xs,
+   ys)).  Also, exists p (xs, ys) is equivalent to not(all (not o p)
+   (xs, ys)). *)
+ListPair.`exists`;
+> val it = fn : ('a * 'b -> bool) -> 'a list * 'b list -> bool
+ListPair.`exists` (fn (x, y) => x < y) ([1, 2, 3], [2, 3, 4]);
+> val it = true : bool
+ListPair.`exists` (fn (x, y) => x < y) ([1, 2, 3], [2, 3]);
+> val it = true : bool
+ListPair.`exists` (fn (x, y) => x < y) ([1, 2, 3], [2, 3, 4, 5]);
+> val it = true : bool
+ListPair.`exists` (fn (x, y) => x < y) ([1, 2, 3], [1, 1, 2, 5, 6]);
+> val it = false : bool
+ListPair.`exists` (fn (x, y) => x < y) ([1, 2, 3], []);
+> val it = false : bool
+
+(* [foldl f e (xs, ys)] evaluates f(xn, yn, f( ..., f(x2, y2, f(x1,
+   y1, e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2,
+   ..., y(n-1), yn, ...], and n = min(length xs, length ys).
+   Equivalent to List.foldl (fn ((x, y), r) => f(x, y, r)) e (zip(xs,
+   ys)). *)
+ListPair.foldl;
+> val it = fn : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
+ListPair.foldl (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
+> val it = 21 : int
+ListPair.foldl (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
+> val it = 12 : int
+
+(* [foldlEq f e (xs, ys)] evaluates f(xn, yn, f( ..., f(x2, y2, f(x1,
+   y1, e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2,
+   ..., y(n-1), yn, ...], and n = min(length xs, length ys).  Then
+   raises UnequalLengths if xs and ys do not have the same length.  If
+   f has no side effects and terminates normally, then it is
+   equivalent to List.foldl (fn ((x,y),r) => f(x,y,r)) e (zipEq(xs,
+   ys)). *)
+ListPair.foldlEq;
+> val it = fn : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
+ListPair.foldlEq (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
+> val it = 21 : int
+ListPair.foldlEq (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
+> uncaught exception UnequalLengths
+>   raised at: stdIn:1.1-1.44
+
+(* [foldr f e (xs, ys)] evaluates f(x1, y1, f(x2, y2, f(..., f(xn, yn,
+   e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2, ...,
+   y(n-1), yn, ...], and n = min(length xs, length ys).  Equivalent to
+   List.foldr (fn ((x, y), r) => f(x, y, r)) e (zip(xs, ys)). *)
+ListPair.foldr;
+> val it = fn : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
+ListPair.foldr (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
+> val it = 21 : int
+ListPair.foldr (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
+> val it = 12 : int
+
+(* [foldrEq f e (xs, ys)] raises UnequalLengths if xs and ys do not
+   have the same length.  Otherwise evaluates f(x1, y1, f(x2, y2,
+   f(..., f(xn, yn, e)))) where xs = [x1, x2, ..., x(n-1), xn], ys =
+   [y1, y2, ..., y(n-1), yn], and n = length xs = length ys.
+   Equivalent to List.foldr (fn ((x,y),r) => f(x,y,r)) e (zipEq(xs,
+   ys)). *)
+ListPair.foldrEq;
+> val it = fn : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
+ListPair.foldrEq (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
+> val it = 21 : int
+ListPair.foldrEq (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
+> uncaught exception UnequalLengths
+>   raised at: stdIn:1.1-1.44
+
+(* [map f (xs, ys)] applies function f to the pairs of corresponding
+   elements of xs and ys from left to right and returns the list of
+   results.  Hence map f (xs, ys) has the same result and effect as
+   List.map f (zip (xs, ys)). *)
+ListPair.map;
+> val it = fn : ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list
+ListPair.map (fn (x, y) => x + y) ([1, 2, 3], [4, 5, 6]);
+> val it = [5,7,9] : int list
+ListPair.map (fn (x, y) => x + y) ([1, 2, 3], [4, 5]);
+> val it = [5,7] : int list
+ListPair.map (fn (x, y) => x + y) ([], [4, 5]);
+> val it = [] : int list
+
+(* [mapEq f (xs, ys)] applies function f to pairs of corresponding
+   elements of xs and ys from left to right, and then returns the list
+   of results if xs and ys have the same length, otherwise raises
+   UnequalLengths.  If f has no side effects and terminates, then it
+   is equivalent to List.map f (zipEq (xs, ys)). *)
+ListPair.mapEq;
+> val it = fn : ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list
+ListPair.mapEq (fn (x, y) => x + y) ([1, 2, 3], [4, 5, 6]);
+> val it = [5,7,9] : int list
+ListPair.mapEq (fn (x, y) => x + y) ([1, 2, 3], [4, 5]);
+> uncaught exception UnequalLengths
+>   raised at: stdIn:1.1-1.35
+ListPair.mapEq (fn (x, y) => x + y) ([], [4, 5]);
+> uncaught exception UnequalLengths
+>   raised at: stdIn:1.1-1.35
+
+(* [unzip xys] returns a pair (xs, ys), where xs is the list of first
+   components of xys, and ys is the list of second components from
+   xys.  Hence zip (unzip xys) has the same result and effect as
+   xys. *)
+ListPair.unzip;
+> val it = fn : ('a * 'b) list -> 'a list * 'b list
+ListPair.unzip [(1, "a"), (2, "b"), (3, "c")];
+> val it = ([1,2,3],["a","b","c"]) : int list * string list
+
+(* [zip (xs, ys)] returns the list of pairs of corresponding elements
+   from xs and ys. *)
+ListPair.zip;
+> val it = fn : 'a list * 'b list -> ('a * 'b) list
+ListPair.zip ([1, 2, 3], ["a", "b", "c"]);
+> val it = [(1,"a"),(2,"b"),(3,"c")] : (int * string) list
+ListPair.zip ([1, 2, 3], ["a", "b"]);
+> val it = [(1,"a"),(2,"b")] : (int * string) list
+ListPair.zip ([], ["a", "b"]);
+> val it = [] : ('a * string) list
+
+(* [zipEq (xs, ys)] returns the list of pairs of corresponding
+   elements from xs and ys.  Raises UnequalLengths if xs and ys do not
+   have the same length. *)
+ListPair.zipEq;
+> val it = fn : 'a list * 'b list -> ('a * 'b) list
+ListPair.zipEq ([1, 2, 3], ["a", "b", "c"]);
+> val it = [(1,"a"),(2,"b"),(3,"c")] : (int * string) list
+ListPair.zipEq ([1, 2, 3], ["a", "b"]);
+> uncaught exception UnequalLengths
+>   raised at: stdIn:1.1-1.39
+ListPair.zipEq ([], ["a", "b"]);
+> uncaught exception UnequalLengths
+>   raised at: stdIn:1.1-1.32
+
+(* Math -------------------------------------------------------- *)
+(* The signature MATH specifies basic mathematical constants, the
+   square root function, and trigonometric, hyperbolic, exponential,
+   and logarithmic functions based on a real type. The functions
+   defined here have roughly the same semantics as their counterparts
+   in ISO C's math.h.
+
+   In the functions below, unless specified otherwise, if any argument
+   is a NaN, the return value is a NaN. In a list of rules specifying
+   the behavior of a function in special cases, the first matching
+   rule defines the semantics. *)
 
 (* "acos x" returns the arc cosine of x. acos is the inverse of cos.
    Its result is guaranteed to be in the closed interval [0, pi]. If
@@ -3849,6 +4099,8 @@ Sys.env ();
 >    ("LESS","order"),
 >    ("List",
 >     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, except:forall 'a. 'a list list -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, intersect:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, `op @`:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+>    ("ListPair",
+>     "{all:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, allEq:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, app:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, appEq:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, exists:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, foldl:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldlEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldr:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldrEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, map:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, mapEq:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, unzip:forall 'a 'b. ('a * 'b) list -> 'a list * 'b list, zip:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list, zipEq:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list}"),
 >    ("Math",
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
 >    ("NONE","'a option"),
@@ -3903,9 +4155,10 @@ Sys.env ();
 >    ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
 >    ("op ~","forall 'a. 'a -> 'a"),("p","char -> bool"),
 >    ("plan","unit -> string"),("plusOne","int -> int"),
->    ("plusThree","int -> int"),("real","int -> real"),
->    ("rev","forall 'a. 'a list -> 'a list"),("round","real -> int"),
->    ("set","forall 'a. string * 'a -> unit"),("show","string -> string option"),
+>    ("plusThree","int -> int"),("print","forall 'a. 'a -> unit"),
+>    ("real","int -> real"),("rev","forall 'a. 'a list -> 'a list"),
+>    ("round","real -> int"),("set","forall 'a. string * 'a -> unit"),
+>    ("show","string -> string option"),
 >    ("showAll","unit -> (string * string option) list"),
 >    ("size","string -> int"),("str","char -> string"),
 >    ("substring","string * int * int -> string"),
@@ -3936,6 +4189,8 @@ env ();
 >    ("LESS","order"),
 >    ("List",
 >     "{all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, at:forall 'a. 'a list * 'a list -> 'a list, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, except:forall 'a. 'a list list -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, intersect:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, `op @`:forall 'a. 'a list * 'a list -> 'a list, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
+>    ("ListPair",
+>     "{all:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, allEq:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, app:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, appEq:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, exists:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, foldl:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldlEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldr:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldrEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, map:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, mapEq:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, unzip:forall 'a 'b. ('a * 'b) list -> 'a list * 'b list, zip:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list, zipEq:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list}"),
 >    ("Math",
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
 >    ("NONE","'a option"),
@@ -3990,9 +4245,10 @@ env ();
 >    ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
 >    ("op ~","forall 'a. 'a -> 'a"),("p","char -> bool"),
 >    ("plan","unit -> string"),("plusOne","int -> int"),
->    ("plusThree","int -> int"),("real","int -> real"),
->    ("rev","forall 'a. 'a list -> 'a list"),("round","real -> int"),
->    ("set","forall 'a. string * 'a -> unit"),("show","string -> string option"),
+>    ("plusThree","int -> int"),("print","forall 'a. 'a -> unit"),
+>    ("real","int -> real"),("rev","forall 'a. 'a list -> 'a list"),
+>    ("round","real -> int"),("set","forall 'a. string * 'a -> unit"),
+>    ("show","string -> string option"),
 >    ("showAll","unit -> (string * string option) list"),
 >    ("size","string -> int"),("str","char -> string"),
 >    ("substring","string * int * int -> string"),

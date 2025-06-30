@@ -22,6 +22,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.SKIP;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
@@ -43,6 +44,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -72,6 +74,7 @@ import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MorelException;
 import org.apache.calcite.runtime.FlatLists;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Helpers for {@link Code}. */
@@ -2176,6 +2179,329 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#LIST_PAIR_ALL */
+  private static final Applicable LIST_PAIR_ALL =
+      new ApplicableImpl(BuiltIn.LIST_PAIR_ALL) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          return listPairAll((Applicable) arg, false);
+        }
+      };
+
+  /** @see BuiltIn#LIST_PAIR_ALL_EQ */
+  private static final Applicable LIST_PAIR_ALL_EQ =
+      new ApplicableImpl(BuiltIn.LIST_PAIR_ALL_EQ) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          return listPairAll((Applicable) arg, true);
+        }
+      };
+
+  private static Applicable listPairAll(Applicable f, boolean eq) {
+    return new ApplicableImpl("ListPair.all$f") {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
+        final List<List<Object>> listPair = (List<List<Object>>) arg;
+        final List<Object> list0 = listPair.get(0);
+        final List<Object> list1 = listPair.get(1);
+        if (eq && list0.size() != list1.size()) {
+          return false;
+        }
+        final Iterator<Object> iter0 = list0.iterator();
+        final Iterator<Object> iter1 = list1.iterator();
+        while (iter0.hasNext() && iter1.hasNext()) {
+          final List<Object> args = FlatLists.of(iter0.next(), iter1.next());
+          if (!(Boolean) f.apply(env, args)) {
+            return false;
+          }
+        }
+        return true;
+      }
+    };
+  }
+
+  /** Helper for {@link #LIST_PAIR_APP} and {@link #LIST_PAIR_APP_EQ}. */
+  private static class ListPairApp extends PositionedApplicableImpl {
+    ListPairApp(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new ListPairApp(builtIn, pos);
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      final Applicable f = (Applicable) arg;
+      return new ListPairApp2(builtIn, pos, f);
+    }
+  }
+
+  /** Second stage of {@link ListPairApp}. */
+  private static class ListPairApp2 extends Applicable1 {
+    private final Applicable f;
+
+    ListPairApp2(BuiltIn builtIn, Pos pos, Applicable f) {
+      super(builtIn, pos);
+      this.f = f;
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      final List<List<Object>> listPair = (List<List<Object>>) arg;
+      final List<Object> list0 = listPair.get(0);
+      final List<Object> list1 = listPair.get(1);
+      if (builtIn == BuiltIn.LIST_PAIR_APP_EQ && list0.size() != list1.size()) {
+        throw new MorelRuntimeException(BuiltInExn.UNEQUAL_LENGTHS, pos);
+      }
+      final Iterator<Object> iter0 = list0.iterator();
+      final Iterator<Object> iter1 = list1.iterator();
+      while (iter0.hasNext() && iter1.hasNext()) {
+        final List<Object> args = FlatLists.of(iter0.next(), iter1.next());
+        f.apply(env, args);
+      }
+      return Unit.INSTANCE;
+    }
+  }
+
+  /** @see BuiltIn#LIST_PAIR_APP */
+  private static final Applicable LIST_PAIR_APP =
+      new ListPairApp(BuiltIn.LIST_PAIR_APP, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_APP_EQ */
+  private static final Applicable LIST_PAIR_APP_EQ =
+      new ListPairApp(BuiltIn.LIST_PAIR_APP_EQ, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_EXISTS */
+  private static final Applicable LIST_PAIR_EXISTS =
+      new ApplicableImpl(BuiltIn.LIST_PAIR_EXISTS) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          return listPairExists((Applicable) arg);
+        }
+      };
+
+  private static Applicable listPairExists(Applicable f) {
+    return new ApplicableImpl("ListPair.exists$f") {
+      @Override
+      public Object apply(EvalEnv env, Object arg) {
+        final List<List<Object>> listPair = (List<List<Object>>) arg;
+        final List<Object> list0 = listPair.get(0);
+        final List<Object> list1 = listPair.get(1);
+        final Iterator<Object> iter0 = list0.iterator();
+        final Iterator<Object> iter1 = list1.iterator();
+        while (iter0.hasNext() && iter1.hasNext()) {
+          final List<Object> args = FlatLists.of(iter0.next(), iter1.next());
+          if ((Boolean) f.apply(env, args)) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+  }
+
+  /**
+   * Helper for {@link #LIST_PAIR_FOLDL}, {@link #LIST_PAIR_FOLDL_EQ}, {@link
+   * #LIST_PAIR_FOLDR}, {@link #LIST_PAIR_FOLDR_EQ}.
+   */
+  private static class ListPairFold extends PositionedApplicableImpl {
+    ListPairFold(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new ListPairFold(builtIn, pos);
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      return new ListPairFold2(builtIn, pos, (Applicable) arg);
+    }
+  }
+
+  /** Second stage of {@link ListPairFold}. */
+  private static class ListPairFold2 extends Applicable1 {
+    private final Applicable f;
+
+    ListPairFold2(BuiltIn builtIn, Pos pos, Applicable f) {
+      super(builtIn, pos);
+      this.f = f;
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      return new ListPairFold3(builtIn, pos, f, arg);
+    }
+  }
+
+  /** Third stage of {@link ListPairFold}. */
+  private static class ListPairFold3 extends Applicable1 {
+    private final Applicable f;
+    private final Object init;
+
+    ListPairFold3(BuiltIn builtIn, Pos pos, Applicable f, Object init) {
+      super(builtIn, pos);
+      this.f = f;
+      this.init = init;
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      final List<List<Object>> pair = (List) arg;
+      final List<Object> list0 = pair.get(0);
+      final List<Object> list1 = pair.get(1);
+      if (eq() && list0.size() != list1.size()) {
+        throw new MorelRuntimeException(BuiltInExn.UNEQUAL_LENGTHS, pos);
+      }
+      final int n = Math.min(list0.size(), list1.size());
+      Object b = init;
+      if (left()) {
+        for (int i = 0; i < n; i++) {
+          b = f.apply(env, FlatLists.of(list0.get(i), list1.get(i), b));
+        }
+      } else {
+        for (int i = n - 1; i >= 0; i--) {
+          b = f.apply(env, FlatLists.of(list0.get(i), list1.get(i), b));
+        }
+      }
+      return b;
+    }
+
+    private boolean eq() {
+      return builtIn == BuiltIn.LIST_PAIR_FOLDL_EQ
+          || builtIn == BuiltIn.LIST_PAIR_FOLDR_EQ;
+    }
+
+    private boolean left() {
+      return builtIn == BuiltIn.LIST_PAIR_FOLDL
+          || builtIn == BuiltIn.LIST_PAIR_FOLDL_EQ;
+    }
+  }
+
+  /** @see BuiltIn#LIST_PAIR_FOLDL */
+  private static final Applicable LIST_PAIR_FOLDL =
+      new ListPairFold(BuiltIn.LIST_PAIR_FOLDL, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_FOLDL_EQ */
+  private static final Applicable LIST_PAIR_FOLDL_EQ =
+      new ListPairFold(BuiltIn.LIST_PAIR_FOLDL_EQ, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_FOLDR */
+  private static final Applicable LIST_PAIR_FOLDR =
+      new ListPairFold(BuiltIn.LIST_PAIR_FOLDR, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_FOLDR_EQ */
+  private static final Applicable LIST_PAIR_FOLDR_EQ =
+      new ListPairFold(BuiltIn.LIST_PAIR_FOLDR_EQ, Pos.ZERO);
+
+  /** Helper for {@link #LIST_PAIR_MAP}, {@link #LIST_PAIR_MAP_EQ}. */
+  private static class ListPairMap extends PositionedApplicableImpl {
+    ListPairMap(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new ListPairMap(builtIn, pos);
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      final Applicable f = (Applicable) arg;
+      return new ListPairMap2(builtIn, pos, f);
+    }
+  }
+
+  /** Second stage of {@link ListPairMap}. */
+  private static class ListPairMap2 extends Applicable1 {
+    private final Applicable f;
+
+    ListPairMap2(BuiltIn builtIn, Pos pos, Applicable f) {
+      super(builtIn, pos);
+      this.f = f;
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      final List<List<Object>> listPair = (List) arg;
+      List<Object> list0 = listPair.get(0);
+      List<Object> list1 = listPair.get(1);
+      if (builtIn == BuiltIn.LIST_PAIR_MAP_EQ && list0.size() != list1.size()) {
+        throw new MorelRuntimeException(BuiltInExn.UNEQUAL_LENGTHS, pos);
+      }
+      final ImmutableList.Builder<@NonNull Object> result =
+          ImmutableList.builder();
+      forEach(
+          list0, list1, (a, b) -> result.add(f.apply(env, FlatLists.of(a, b))));
+      return result.build();
+    }
+  }
+
+  /** @see BuiltIn#LIST_PAIR_MAP */
+  private static final Applicable LIST_PAIR_MAP =
+      new ListPairMap(BuiltIn.LIST_PAIR_MAP, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_MAP_EQ */
+  private static final Applicable LIST_PAIR_MAP_EQ =
+      new ListPairMap(BuiltIn.LIST_PAIR_MAP_EQ, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_UNZIP */
+  private static final Applicable LIST_PAIR_UNZIP =
+      new ApplicableImpl(BuiltIn.LIST_PAIR_UNZIP) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          final List<List<Object>> list = (List) arg;
+          if (list.isEmpty()) {
+            throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
+          }
+          final ImmutableList.Builder<@NonNull Object> builder0 =
+              ImmutableList.builder();
+          final ImmutableList.Builder<@NonNull Object> builder1 =
+              ImmutableList.builder();
+          for (List<Object> pair : list) {
+            builder0.add(pair.get(0));
+            builder1.add(pair.get(1));
+          }
+          return ImmutableList.of(builder0.build(), builder1.build());
+        }
+      };
+
+  /** Helper for {@link #LIST_PAIR_ZIP} and {@link #LIST_PAIR_ZIP_EQ}. */
+  private static class ListPairZip extends PositionedApplicableImpl {
+    ListPairZip(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new ListPairZip(builtIn, pos);
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      List<List<Object>> listPair = (List) arg;
+      final List<Object> list0 = listPair.get(0);
+      final List<Object> list1 = listPair.get(1);
+      if (builtIn == BuiltIn.LIST_PAIR_ZIP_EQ && list0.size() != list1.size()) {
+        throw new MorelRuntimeException(BuiltInExn.UNEQUAL_LENGTHS, pos);
+      }
+      final List<Object> result = new ArrayList<>();
+      forEach(list0, list1, (a, b) -> result.add(FlatLists.of(a, b)));
+      return result;
+    }
+  }
+
+  /** @see BuiltIn#LIST_PAIR_ZIP */
+  private static final Applicable LIST_PAIR_ZIP =
+      new ListPairZip(BuiltIn.LIST_PAIR_ZIP, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_ZIP_EQ */
+  private static final Applicable LIST_PAIR_ZIP_EQ =
+      new ListPairZip(BuiltIn.LIST_PAIR_ZIP_EQ, Pos.ZERO);
+
   /** @see BuiltIn#MATH_ACOS */
   private static final Applicable MATH_ACOS =
       new ApplicableImpl(BuiltIn.MATH_ACOS) {
@@ -3934,6 +4260,20 @@ public abstract class Codes {
           .put(BuiltIn.LIST_ALL, LIST_ALL)
           .put(BuiltIn.LIST_TABULATE, LIST_TABULATE)
           .put(BuiltIn.LIST_COLLATE, LIST_COLLATE)
+          .put(BuiltIn.LIST_PAIR_ALL, LIST_PAIR_ALL)
+          .put(BuiltIn.LIST_PAIR_ALL_EQ, LIST_PAIR_ALL_EQ)
+          .put(BuiltIn.LIST_PAIR_APP, LIST_PAIR_APP)
+          .put(BuiltIn.LIST_PAIR_APP_EQ, LIST_PAIR_APP_EQ)
+          .put(BuiltIn.LIST_PAIR_EXISTS, LIST_PAIR_EXISTS)
+          .put(BuiltIn.LIST_PAIR_FOLDL, LIST_PAIR_FOLDL)
+          .put(BuiltIn.LIST_PAIR_FOLDL_EQ, LIST_PAIR_FOLDL_EQ)
+          .put(BuiltIn.LIST_PAIR_FOLDR, LIST_PAIR_FOLDR)
+          .put(BuiltIn.LIST_PAIR_FOLDR_EQ, LIST_PAIR_FOLDR_EQ)
+          .put(BuiltIn.LIST_PAIR_MAP, LIST_PAIR_MAP)
+          .put(BuiltIn.LIST_PAIR_MAP_EQ, LIST_PAIR_MAP_EQ)
+          .put(BuiltIn.LIST_PAIR_UNZIP, LIST_PAIR_UNZIP)
+          .put(BuiltIn.LIST_PAIR_ZIP, LIST_PAIR_ZIP)
+          .put(BuiltIn.LIST_PAIR_ZIP_EQ, LIST_PAIR_ZIP_EQ)
           .put(BuiltIn.MATH_ACOS, MATH_ACOS)
           .put(BuiltIn.MATH_ASIN, MATH_ASIN)
           .put(BuiltIn.MATH_ATAN, MATH_ATAN)
@@ -5109,6 +5449,7 @@ public abstract class Codes {
     ERROR("Interact", "Error"), // not in standard basis
     SIZE("General", "Size"),
     SUBSCRIPT("General", "Subscript [subscript out of bounds]"),
+    UNEQUAL_LENGTHS("ListPair", "UnequalLengths"),
     UNORDERED("IEEEReal", "Unordered");
 
     public final String structure;
@@ -5421,17 +5762,36 @@ public abstract class Codes {
     Applicable withType(TypeSystem typeSystem, Type type);
   }
 
+  /** Implementation of {@link Applicable} that stores a {@link BuiltIn}. */
+  private abstract static class Applicable1 implements Applicable {
+    final BuiltIn builtIn;
+    final Pos pos;
+
+    protected Applicable1(BuiltIn builtIn, Pos pos) {
+      this.builtIn = builtIn;
+      this.pos = pos;
+    }
+
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(name(), d -> {});
+    }
+
+    protected String name() {
+      return builtIn.mlName.startsWith("op ")
+          ? builtIn.mlName.substring("op ".length())
+          : builtIn.structure + "." + builtIn.mlName;
+    }
+  }
+
   /**
    * Implementation of both {@link Applicable} and {@link Positioned}. Remembers
    * its {@link BuiltIn} so that it can re-position.
    */
-  private abstract static class PositionedApplicableImpl extends ApplicableImpl
+  private abstract static class PositionedApplicableImpl extends Applicable1
       implements Positioned {
-    final BuiltIn builtIn;
-
     protected PositionedApplicableImpl(BuiltIn builtIn, Pos pos) {
       super(builtIn, pos);
-      this.builtIn = builtIn;
     }
   }
 

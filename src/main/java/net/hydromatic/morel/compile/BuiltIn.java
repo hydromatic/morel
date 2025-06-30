@@ -1739,6 +1739,349 @@ public enum BuiltIn {
                       ts.order()))),
 
   /**
+   * Function "ListPair.all", of type "(&alpha; * &beta; &rarr; bool) &rarr;
+   * &alpha; list * &beta; list &rarr; bool".
+   *
+   * <p>"all f (l1, l2)" provides short-circuit testing of a predicate over a
+   * pair of lists.
+   *
+   * <p>It is equivalent to:
+   *
+   * <pre>{@code List.all f (zip (l1, l2))}</pre>
+   */
+  LIST_PAIR_ALL(
+      "ListPair",
+      "all",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), BOOL),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      BOOL))),
+
+  /**
+   * Function "ListPair.allEq", of type "(&alpha; * &beta; &rarr; bool) &rarr;
+   * &alpha; list * &beta; list &rarr; bool"
+   *
+   * <p>"allEq f (l1, l2)" returns true if {@code l1} and {@code l2} have equal
+   * length and all pairs of elements satisfy the predicate {@code f}. That is,
+   * the expression is equivalent to:
+   *
+   * <pre>{@code
+   * (List.length l1 = List.length l2) andalso
+   * (List.all f (zip (l1, l2)))
+   * }</pre>
+   */
+  LIST_PAIR_ALL_EQ(
+      "ListPair",
+      "allEq",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), BOOL),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      BOOL))),
+
+  /**
+   * Function "ListPair.app", of type "(&alpha; * &beta; &rarr; unit) &rarr;
+   * &alpha; list * &beta; list &rarr; unit".
+   *
+   * <p>"app f (xs, ys)" applies the function {@code f} to the list of pairs of
+   * elements generated from left to right from the lists {@code l1} and {@code
+   * l2}. If the lists are of unequal lengths, ignores the excess elements from
+   * the tail of the longer one. It is equivalent to:
+   *
+   * <pre>{@code List.app f (zip (l1, l2))}</pre>
+   *
+   * <p>ignoring possible side effects of the function {@code f}.
+   */
+  LIST_PAIR_APP(
+      "ListPair",
+      "app",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), UNIT),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      UNIT))),
+
+  /**
+   * Function "ListPair.appEq", of type "(&alpha; * &beta; &rarr; unit) &rarr;
+   * &alpha; list * &beta; list &rarr; unit".
+   *
+   * <p>"appEq f (xs, ys)" applies the function {@code f} to the list of pairs
+   * of elements generated from left to right from the lists {@code l1} and
+   * {@code l2}. If the lists are of unequal lengths, raises {@link
+   * BuiltInExn#UNEQUAL_LENGTHS UnequalLengths}. It is equivalent to:
+   *
+   * <pre>{@code List.app f (zipEq (l1, l2))}</pre>
+   *
+   * <p>ignoring possible side effects of the function {@code f}.
+   */
+  LIST_PAIR_APP_EQ(
+      "ListPair",
+      "appEq",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), UNIT),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      UNIT))),
+
+  /**
+   * Function "ListPair.exists", of type "(&alpha; * &beta; &rarr; bool) &rarr;
+   * &alpha; list * &beta; list &rarr; bool".
+   *
+   * <p>"exists f (l1, l2)" provides short-circuit testing of a predicate over a
+   * pair of lists.
+   *
+   * <p>It is equivalent to:
+   *
+   * <pre>{@code List.exists f (zip (l1, l2))}</pre>
+   */
+  LIST_PAIR_EXISTS(
+      "ListPair",
+      "exists",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), BOOL),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      BOOL))),
+
+  /**
+   * Function "ListPair.foldl", of type "(&alpha; * &beta; * &gamma; &rarr;
+   * &gamma;) &rarr; &gamma; &rarr; &alpha; list * &beta; list &rarr; &gamma;".
+   *
+   * <p>"foldl f init (l1, l2)" returns the result of folding the function
+   * {@code f} in the specified direction over the pair of lists {@code l1} and
+   * {@code l2} starting with the value {@code init}. It is equivalent to:
+   *
+   * <pre>{@code List.foldl f' init (zip (l1, l2))}</pre>
+   *
+   * <p>where {@code f'} is {@code fn ((a,b),c) => f(a,b,c)} and ignoring
+   * possible side effects of the function {@code f}.
+   */
+  LIST_PAIR_FOLDL(
+      "ListPair",
+      "foldl",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(
+                          ts.tupleType(h.get(0), h.get(1), h.get(2)), h.get(2)),
+                      h.get(2),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      h.get(2)))),
+
+  /**
+   * Function "ListPair.foldlEq", of type "(&alpha; * &beta; * &gamma; &rarr;
+   * &gamma;) &rarr; &gamma; &rarr; &alpha; list * &beta; list &rarr; &gamma;".
+   *
+   * <p>"foldl fEq init (l1, l2)" returns the result of folding the function
+   * {@code f} in the specified direction over the pair of lists {@code l1} and
+   * {@code l2} starting with the value {@code init}. It is equivalent to:
+   *
+   * <pre>{@code List.foldl f' init (zipEq (l1, l2))}</pre>
+   *
+   * <p>where {@code f'} is {@code fn ((a,b),c) => f(a,b,c)} and ignoring
+   * possible side effects of the function {@code f}.
+   */
+  LIST_PAIR_FOLDL_EQ(
+      "ListPair",
+      "foldlEq",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(
+                          ts.tupleType(h.get(0), h.get(1), h.get(2)), h.get(2)),
+                      h.get(2),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      h.get(2)))),
+
+  /**
+   * Function "ListPair.foldr", of type "(&alpha; * &beta; * &gamma; &rarr;
+   * &gamma;) &rarr; &gamma; &rarr; &alpha; list * &beta; list &rarr; &gamma;".
+   *
+   * <p>"foldr f init (l1, l2)" returns the result of folding the function
+   * {@code f} in the specified direction over the pair of lists {@code l1} and
+   * {@code l2} starting with the value {@code init}. It is equivalent to:
+   *
+   * <pre>{@code List.foldr f' init (zip (l1, l2))}</pre>
+   *
+   * <p>where {@code f'} is {@code fn ((a,b),c) => f(a,b,c)} and ignoring
+   * possible side effects of the function {@code f}.
+   */
+  LIST_PAIR_FOLDR(
+      "ListPair",
+      "foldr",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(
+                          ts.tupleType(h.get(0), h.get(1), h.get(2)), h.get(2)),
+                      h.get(2),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      h.get(2)))),
+
+  /**
+   * Function "ListPair.foldrEq", of type "(&alpha; * &beta; * &gamma; &rarr;
+   * &gamma;) &rarr; &gamma; &rarr; &alpha; list * &beta; list &rarr; &gamma;".
+   *
+   * <p>"foldrEq f init (l1, l2)" returns the result of folding the function
+   * {@code f} in the specified direction over the pair of lists {@code l1} and
+   * {@code l2} starting with the value {@code init}. It is equivalent to:
+   *
+   * <pre>{@code List.foldr f' init (zipEq (l1, l2))}</pre>
+   *
+   * <p>where {@code f'} is {@code fn ((a,b),c) => f(a,b,c)} and ignoring
+   * possible side effects of the function {@code f}.
+   */
+  LIST_PAIR_FOLDR_EQ(
+      "ListPair",
+      "foldrEq",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(
+                          ts.tupleType(h.get(0), h.get(1), h.get(2)), h.get(2)),
+                      h.get(2),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      h.get(2)))),
+
+  /**
+   * Function "ListPair.map", of type "(&alpha; * &beta; &rarr; &gamma;) &rarr;
+   * &alpha; list * &beta; list &rarr; &gamma; list".
+   *
+   * <p>"map f (l1, l2)" maps the function {@code f} over the list of pairs of
+   * elements generated from left to right from the lists {@code l1} and {@code
+   * l2}, returning the list of results. If the lists are of unequal lengths,
+   * ignores the excess elements from the tail of the longer one. Equivalent to:
+   *
+   * <pre>{@code
+   * List.map f (zip (l1, l2))
+   * }</pre>
+   *
+   * <p>ignoring possible side effects of the function {@code f}.
+   */
+  LIST_PAIR_MAP(
+      "ListPair",
+      "map",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(2)),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      h.list(2)))),
+
+  /**
+   * Function "ListPair.mapEq", of type "(&alpha; * &beta; &rarr; &gamma;)
+   * &rarr; &alpha; list * &beta; list &rarr; &gamma; list".
+   *
+   * <p>"mapEq f (l1, l2)" maps the function {@code f} over the list of pairs of
+   * elements generated from left to right from the lists {@code l1} and {@code
+   * l2}, returning the list of results. If the lists are of unequal lengths,
+   * raises {@link BuiltInExn#UNEQUAL_LENGTHS UnequalLengths}. Equivalent to:
+   *
+   * <pre>{@code
+   * List.map f (zipEq (l1, l2))
+   * }</pre>
+   *
+   * <p>ignoring possible side effects of the function {@code f}.
+   */
+  LIST_PAIR_MAP_EQ(
+      "ListPair",
+      "mapEq",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(2)),
+                      ts.tupleType(h.list(0), h.list(1)),
+                      h.list(2)))),
+
+  /**
+   * Function "ListPair.unzip", of type "(&alpha; * &beta;) list &rarr; &alpha;
+   * list * &beta; list".
+   *
+   * <p>"unzip l" returns a pair of lists formed by splitting the elements of
+   * {@code l}. This is the inverse of {@code zip} for equal length lists.
+   */
+  LIST_PAIR_UNZIP(
+      "ListPair",
+      "unzip",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.listType(ts.tupleType(h.get(0), h.get(1))),
+                      ts.tupleType(h.list(0), h.list(1))))),
+
+  /**
+   * Function "ListPair.zip", of type "&alpha; list * &beta; list &rarr;
+   * (&alpha; * &beta;) list".
+   *
+   * <p>"zip (l1, l2)" combines the two lists {@code l1} and {@code l2} into a
+   * list of pairs, with the first element of each list comprising the first
+   * element of the result, the second elements comprising the second element of
+   * the result, and so on. If the lists are of unequal lengths, ignores the
+   * excess elements from the tail of the longer one.
+   */
+  LIST_PAIR_ZIP(
+      "ListPair",
+      "zip",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(h.list(0), h.list(1)),
+                      ts.listType(ts.tupleType(h.get(0), h.get(1)))))),
+
+  /**
+   * Function "ListPair.zipEq", of type "&alpha; list * &beta; list &rarr;
+   * (&alpha; * &beta;) list".
+   *
+   * <p>"zipEq (l1, l2)" combines the two lists {@code l1} and {@code l2} into a
+   * list of pairs, with the first element of each list comprising the first
+   * element of the result, the second elements comprising the second element of
+   * the result, and so on. If the lists are of unequal lengths, raises the
+   * exception {@link BuiltInExn#UNEQUAL_LENGTHS UnequalLengths}.
+   */
+  LIST_PAIR_ZIP_EQ(
+      "ListPair",
+      "zipEq",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(h.list(0), h.list(1)),
+                      ts.listType(ts.tupleType(h.get(0), h.get(1)))))),
+
+  /**
    * Function "Math.acos", of type "real &rarr; real".
    *
    * <p>"acos x" returns the arc cosine of x. acos is the inverse of cos. Its

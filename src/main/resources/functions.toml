@@ -1410,6 +1410,282 @@ description = """
 is `nil`.
 """
 
+# === ListPair structure =============================================
+# Synopsis
+#
+# The ListPair structure provides operations on pairs of lists. The
+# operations fall into two categories. Those in the first category,
+# whose names do not end in "Eq", do not require that the lists have
+# the same length. When the lists are of uneven lengths, the excess
+# elements from the tail of the longer list are ignored. The
+# operations in the second category, whose names have the suffix "Eq",
+# differ from their similarly named operations in the first category
+# only when the list arguments have unequal lengths, in which case
+# they typically raise the UnequalLengths exception.
+#
+# exception UnequalLengths
+# val zip : 'a list * 'b list -> ('a * 'b) list
+# val zipEq : ('a list * 'b list) -> ('a * 'b) list
+# val unzip : ('a * 'b) list -> 'a list * 'b list
+# val app : ('a * 'b -> unit) -> 'a list * 'b list -> unit
+# val appEq : ('a * 'b -> 'c) -> 'a list * 'b list -> unit
+# val map : ('a * 'b -> 'c)   -> 'a list * 'b list -> 'c list
+# val mapEq : ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list
+# val foldl : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
+# val foldlEq : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
+# val foldr : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
+# val foldrEq : ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c
+# val all : ('a * 'b -> bool) -> 'a list * 'b list -> bool
+# val exists : ('a * 'b -> bool) -> 'a list * 'b list -> bool
+# val allEq : ('a * 'b -> bool) -> 'a list * 'b list -> bool
+#
+
+[[exceptions]]
+ordinal = 129
+structure = "ListPair"
+name = "UnequalLengths"
+description = """
+"UnequalLengths" is raised by those functions that require arguments
+of identical length.
+"""
+
+[[functions]]
+ordinal = 141
+structure = "ListPair"
+name = "all"
+specified = "basis"
+type = "(α * β → bool) → α list * β list → bool"
+description = """
+"all f (l1, l2)"
+provides short-circuit testing of a predicate over a pair of lists.
+
+<p>It is equivalent to:
+<pre>List.all f (zip (l1, l2))</pre>
+"""
+
+[[functions]]
+ordinal = 143
+structure = "ListPair"
+name = "allEq"
+specified = "basis"
+type = "(α * β → bool) → α list * β list → bool"
+description = """
+"allEq f (l1, l2)" returns `true` if *l1* and *l2* have equal length
+and all pairs of elements satisfy the predicate *f*. That is, the
+expression is equivalent to:
+
+<pre>
+(List.length l1 = List.length l2) andalso
+(List.all f (zip (l1, l2)))
+</pre>
+
+<p>This function does not appear to have any nice algebraic relation
+with the other functions, but it is included as providing a useful
+notion of equality, analogous to the notion of equality of lists over
+equality types.
+
+<p><b>Implementation note:</b>
+
+<p>The implementation is simple:
+
+<pre>
+fun allEq p ([], []) = true
+  | allEq p (x::xs, y::ys) = p(x,y) andalso allEq p (xs,ys)
+  | allEq _ _ = false
+</pre>
+"""
+
+[[functions]]
+ordinal = 133
+structure = "ListPair"
+name = "app"
+specified = "basis"
+type = "(α * β → unit) → α list * β list → unit"
+description = """
+"app f (l1, l2)" applies the function *f* to the list of pairs of
+elements generated from left to right from the lists *l1* and *l2*. If
+the lists are of unequal lengths, ignores the excess elements from the
+tail of the longer one. It is equivalent to:
+
+<pre>List.app f (zip (l1, l2))</pre>
+
+<p>ignoring possible side effects of the function *f*.
+"""
+
+[[functions]]
+ordinal = 134
+structure = "ListPair"
+name = "appEq"
+specified = "basis"
+type = "(α * β → unit) → α list * β list → unit"
+description = """
+"appEq f (l1, l2)" applies the function *f* to the list of pairs of
+elements generated from left to right from the lists *l1* and *l2*. If
+the lists are of unequal lengths, raises `UnequalLengths`. It is
+equivalent to:
+
+<pre>List.app f (zipEq (l1, l2))</pre>
+
+<p>ignoring possible side effects of the function *f*.
+"""
+
+[[functions]]
+ordinal = 142
+structure = "ListPair"
+name = "exists"
+specified = "basis"
+type = "(α * β → bool) → α list * β list → bool"
+description = """
+"exists f (l1, l2)"
+provides short-circuit testing of a predicate over a pair of lists.
+
+<p>It is equivalent to:
+<pre>List.exists f (zip (l1, l2))</pre>
+"""
+
+[[functions]]
+ordinal = 137
+structure = "ListPair"
+name = "foldl"
+specified = "basis"
+type = "(α * β * γ → γ) → γ → α list * β list → γ"
+description = """
+"foldl f init (l1, l2)" returns the result of folding the function *f*
+in the specified direction over the pair of lists *l1* and *l2*
+starting with the value *init*.  It is equivalent to:
+
+<pre>List.foldl f' init (zip (l1, l2))</pre>
+
+where *f'* is `fn ((a,b),c) => f(a,b,c)` and ignoring possible
+side effects of the function *f*.
+"""
+
+[[functions]]
+ordinal = 139
+structure = "ListPair"
+name = "foldlEq"
+specified = "basis"
+type = "(α * β * γ → γ) → γ → α list * β list → γ"
+description = """
+"foldlEq f init (l1, l2)" returns the result of folding the function
+*f* in the specified direction over the pair of lists *l1* and *l2*
+starting with the value *init*.  It is equivalent to:
+
+<pre>List.foldl f' init (zipEq (l1, l2))</pre>
+
+where *f'* is `fn ((a,b),c) => f(a,b,c)` and ignoring possible
+side effects of the function *f*.
+"""
+
+[[functions]]
+ordinal = 138
+structure = "ListPair"
+name = "foldr"
+specified = "basis"
+type = "(α * β * γ → γ) → γ → α list * β list → γ"
+description = """
+"foldr f init (l1, l2)" returns the result of folding the function *f*
+in the specified direction over the pair of lists *l1* and *l2*
+starting with the value *init*.  It is equivalent to:
+
+<pre>List.foldr f' init (zip (l1, l2))</pre>
+
+where *f'* is `fn ((a,b),c) => f(a,b,c)` and ignoring possible
+side effects of the function *f*.
+"""
+
+[[functions]]
+ordinal = 140
+structure = "ListPair"
+name = "foldrEq"
+specified = "basis"
+type = "(α * β * γ → γ) → γ → α list * β list → γ"
+description = """
+"foldrEq f init (l1, l2)" returns the result of folding the function
+*f* in the specified direction over the pair of lists *l1* and *l2*
+starting with the value *init*.  It is equivalent to:
+
+<pre>List.foldr f' init (zipEq (l1, l2))</pre>
+
+where *f'* is `fn ((a,b),c) => f(a,b,c)` and ignoring possible
+side effects of the function *f*.
+"""
+
+[[functions]]
+ordinal = 135
+structure = "ListPair"
+name = "map"
+specified = "basis"
+type = "(α * β → γ) → α list * β list → γ list"
+description = """
+"map f (l1, l2)" maps the function *f* over the list of pairs of
+elements generated from left to right from the lists *l1* and *l2*,
+returning the list of results.  If the lists are of unequal lengths,
+ignores the excess elements from the tail of the longer one.  It is
+equivalent to:
+
+<pre>List.map f (zip (l1, l2))</pre>
+
+<p>ignoring possible side effects of the function *f*.
+"""
+
+[[functions]]
+ordinal = 136
+structure = "ListPair"
+name = "mapEq"
+specified = "basis"
+type = "(α * β → γ) → α list * β list → γ list"
+description = """
+"mapEq f (l1, l2)" maps the function *f* over the list of pairs of
+elements generated from left to right from the lists *l1* and *l2*,
+returning the list of results.  If the lists are of unequal lengths,
+raises `UnequalLengths`.  It is equivalent to:
+
+<pre>List.map f (zipEq (l1, l2))</pre>
+
+<p>ignoring possible side effects of the function *f*.
+"""
+
+[[functions]]
+ordinal = 132
+structure = "ListPair"
+name = "unzip"
+specified = "basis"
+type = "('a * 'b) list → 'a list * 'b list"
+description = """
+"unzip l" returns a pair of lists formed by splitting the elements of
+*l*. This is the inverse of `zip` for equal length lists.
+"""
+
+[[functions]]
+ordinal = 130
+structure = "ListPair"
+name = "zip"
+specified = "basis"
+type = "α list * β list → (α * β) list"
+description = """
+"zip (l1, l2)" combines the two lists *l1* and *l2* into a list of
+pairs, with the first element of each list comprising the first
+element of the result, the second elements comprising the second
+element of the result, and so on.  If the lists are of unequal
+lengths, `zip` ignores the excess elements from the tail of the longer
+one.
+"""
+
+[[functions]]
+ordinal = 131
+structure = "ListPair"
+name = "zipEq"
+specified = "basis"
+type = "α list * β list → (α * β) list"
+description = """
+"zipEq (l1, l2)" combines the two lists *l1* and *l2* into a list of
+pairs, with the first element of each list comprising the first
+element of the result, the second elements comprising the second
+element of the result, and so on.  If the lists are of unequal
+lengths, `zipEq` raises the exception `UnequalLengths`.
+"""
+
 # === Math structure =================================================
 
 [[functions]]
