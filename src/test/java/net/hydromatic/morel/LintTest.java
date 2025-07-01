@@ -19,6 +19,7 @@
 package net.hydromatic.morel;
 
 import static java.lang.String.format;
+import static net.hydromatic.morel.util.Static.last;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.core.Is.is;
@@ -34,14 +35,17 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Stream;
 import net.hydromatic.morel.util.Generation;
 import net.hydromatic.morel.util.JavaVersion;
 import org.apache.calcite.util.Puffin;
 import org.apache.calcite.util.Source;
 import org.apache.calcite.util.Sources;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
 
 /** Runs Lint-like checks on the source code. Also tests those checks. */
@@ -56,6 +60,7 @@ public class LintTest {
   }
 
   private static void addProgram0(Puffin.Builder<GlobalState, FileState> b) {
+    final Collator collator = Collator.getInstance(Locale.ROOT);
     b.add(
         line -> line.isLast(),
         line -> {
@@ -65,8 +70,7 @@ public class LintTest {
               "// End " + (slash < 0 ? f : f.substring(slash + 1));
           if (!line.line().equals(endMarker)
               && line.filename().endsWith(".java")) {
-            line.state()
-                .message("File must end with '" + endMarker + "'", line);
+            line.state().message(line, "File must end with '%s'", endMarker);
           }
         });
     b.add(line -> line.fnr() == 1, line -> line.globalState().fileCount++);
@@ -74,11 +78,11 @@ public class LintTest {
     // Trailing space
     b.add(
         line -> line.endsWith(" "),
-        line -> line.state().message("Trailing space", line));
+        line -> line.state().message(line, "Trailing space"));
 
     // Tab
     b.add(
-        line -> line.contains("\t"), line -> line.state().message("Tab", line));
+        line -> line.contains("\t"), line -> line.state().message(line, "Tab"));
 
     // Smart quotes
     //noinspection UnnecessaryUnicodeEscape
@@ -89,7 +93,7 @@ public class LintTest {
                 || line.contains("\u2019") // right single quote
                 || line.contains("\u201C") // left double quote
                 || line.contains("\u201D"), // right double quote
-        line -> line.state().message("Smart quote", line));
+        line -> line.state().message(line, "Smart quote"));
 
     // Nullable
     b.add(
@@ -97,8 +101,8 @@ public class LintTest {
         line ->
             line.state()
                 .message(
-                    "use org.checkerframework.checker.nullness.qual.Nullable",
-                    line));
+                    line,
+                    "use org.checkerframework.checker.nullness.qual.Nullable"));
 
     // Nonnull
     b.add(
@@ -106,8 +110,8 @@ public class LintTest {
         line ->
             line.state()
                 .message(
-                    "use org.checkerframework.checker.nullness.qual.NonNull",
-                    line));
+                    line,
+                    "use org.checkerframework.checker.nullness.qual.NonNull"));
 
     // Use of 'Static.' other than in an import.
     b.add(
@@ -126,7 +130,7 @@ public class LintTest {
                 && !line.endsWith("// lint:skip")
                 && !filenameIs(line, "LintTest.java")
                 && !filenameIs(line, "UtilTest.java"),
-        line -> line.state().message("should be static import", line));
+        line -> line.state().message(line, "should be static import"));
 
     // In a test,
     //   assertThat(x.toString(), is(y));
@@ -137,7 +141,7 @@ public class LintTest {
             line.contains(".toString(), is(")
                 && line.filename().endsWith(".java")
                 && !filenameIs(line, "LintTest.java"),
-        line -> line.state().message("use 'Matchers.hasToString'", line));
+        line -> line.state().message(line, "use 'Matchers.hasToString'"));
 
     // Comment without space
     b.add(
@@ -148,7 +152,36 @@ public class LintTest {
                 && !line.contains("//~")
                 && !line.contains("//noinspection")
                 && !line.contains("//CHECKSTYLE"),
-        line -> line.state().message("'//' must be followed by ' '", line));
+        line -> line.state().message(line, "'//' must be followed by ' '"));
+
+    // Add line to sorting
+    b.add(
+        line -> line.state().sortLines != null && !line.contains("// "),
+        line -> {
+          String thisLine = line.line();
+          if (!line.state().sortLines.isEmpty()) {
+            String prevLine = last(line.state().sortLines);
+            if (collator.compare(prevLine, thisLine) > 0) {
+              line.state()
+                  .message(
+                      line,
+                      "Lines must be sorted; '%s' should be before '%s'",
+                      prevLine,
+                      thisLine);
+            }
+          }
+          line.state().sortLines.add(thisLine);
+        });
+
+    // Start sorting
+    b.add(
+        line -> line.contains("// " + "lint:startSorted"),
+        line -> line.state().sortLines = new ArrayList<>());
+
+    // End sorting
+    b.add(
+        line -> line.contains("// " + "lint:endSorted"),
+        line -> line.state().sortLines = null);
 
     // In 'for (int i : list)', colon must be surrounded by space.
     b.add(
@@ -157,7 +190,7 @@ public class LintTest {
                 && !line.matches(".*[^ ][ ][:][ ][^ ].*")
                 && !line.matches(".*[^ ][ ][:]$")
                 && isJava(line.filename()),
-        line -> line.state().message("':' must be surrounded by ' '", line));
+        line -> line.state().message(line, "':' must be surrounded by ' '"));
   }
 
   private void addProgram1(Puffin.Builder<GlobalState, FileState> b) {
@@ -167,7 +200,7 @@ public class LintTest {
             line.matches("^[^\"]*[\"][^\"]*[\"] *\\+ *[\"].*$")
                 && !line.contains("//")
                 && isJava(line.filename()),
-        line -> line.state().message("broken string", line));
+        line -> line.state().message(line, "broken string"));
 
     // Newline should be at end of string literal, not in the middle
     b.add(
@@ -178,22 +211,22 @@ public class LintTest {
                 && isJava(line.filename()),
         line ->
             line.state()
-                .message("newline should be at end of string literal", line));
+                .message(line, "newline should be at end of string literal"));
 
     // Javadoc does not require '</p>', so we do not allow '</p>'
     b.add(
         line -> line.state().inJavadoc() && line.contains("</p>"),
-        line -> line.state().message("no '</p>'", line));
+        line -> line.state().message(line, "no '</p>'"));
 
     // No "**/"
     b.add(
         line -> line.contains(" **/") && line.state().inJavadoc(),
-        line -> line.state().message("no '**/'; use '*/'", line));
+        line -> line.state().message(line, "no '**/'; use '*/'"));
 
     // A Javadoc paragraph '<p>' must not be on its own line.
     b.add(
         line -> line.matches("^ *\\* <p>"),
-        line -> line.state().message("<p> must not be on its own line", line));
+        line -> line.state().message(line, "<p> must not be on its own line"));
 
     // A Javadoc paragraph '<p>' must be preceded by a blank Javadoc
     // line.
@@ -202,7 +235,7 @@ public class LintTest {
         line -> {
           final FileState f = line.state();
           if (f.starLine == line.fnr() - 1) {
-            f.message("duplicate empty line in javadoc", line);
+            f.message(line, "duplicate empty line in javadoc");
           }
           f.starLine = line.fnr();
         });
@@ -212,7 +245,7 @@ public class LintTest {
             line.matches("^ *\\* <p>.*")
                 && line.fnr() - 1 != line.state().starLine,
         line ->
-            line.state().message("<p> must be preceded by blank line", line));
+            line.state().message(line, "<p> must be preceded by blank line"));
 
     // A non-blank line following a blank line must have a '<p>'
     b.add(
@@ -223,7 +256,7 @@ public class LintTest {
                 && line.contains("* ")
                 && line.fnr() - 1 == line.state().starLine
                 && line.matches("^ *\\* [^<@].*"),
-        line -> line.state().message("missing '<p>'", line));
+        line -> line.state().message(line, "missing '<p>'"));
 
     // The first "@param" of a javadoc block must be preceded by a blank
     // line.
@@ -246,7 +279,7 @@ public class LintTest {
               && line.state().atLine < line.state().javadocStartLine
               && line.fnr() - 1 != line.state().starLine) {
             line.state()
-                .message("First @tag must be preceded by blank line", line);
+                .message(line, "First @tag must be preceded by blank line");
           }
           line.state().atLine = line.fnr();
         });
@@ -272,7 +305,7 @@ public class LintTest {
           int closeCount = count(line.line(), "</code>");
           if (openCount != closeCount) {
             line.state()
-                .message("<code> and </code> must be on same line", line);
+                .message(line, "<code> and </code> must be on same line");
           }
         });
 
@@ -287,10 +320,10 @@ public class LintTest {
           if (!version.equals(versionString)) {
             line.state()
                 .message(
-                    format(
-                        "Version '%s' should match '%s'",
-                        version, JavaVersion.MOREL),
-                    line);
+                    line,
+                    "Version '%s' should match '%s'",
+                    version,
+                    JavaVersion.MOREL);
           }
         });
 
@@ -304,10 +337,10 @@ public class LintTest {
           if (!line.line().contains(versionLine)) {
             line.state()
                 .message(
-                    format(
-                        "Version '%s' should match '%s'",
-                        version, JavaVersion.MOREL),
-                    line);
+                    line,
+                    "Version '%s' should match '%s'",
+                    version,
+                    JavaVersion.MOREL);
           }
         });
 
@@ -320,10 +353,10 @@ public class LintTest {
           if (!version.equals(versionString)) {
             line.state()
                 .message(
-                    format(
-                        "Version '%s' should match '%s'",
-                        version, JavaVersion.MOREL),
-                    line);
+                    line,
+                    "Version '%s' should match '%s'",
+                    version,
+                    JavaVersion.MOREL);
           }
         });
     b.add(
@@ -336,10 +369,10 @@ public class LintTest {
           if (expectedVersionCount != line.state().versionCount) {
             line.state()
                 .message(
-                    format(
-                        "Version should appear %d times but appears %d times",
-                        expectedVersionCount, line.state().versionCount),
-                    line);
+                    line,
+                    "Version should appear %d times but appears %d times",
+                    expectedVersionCount,
+                    line.state().versionCount);
           }
         });
   }
@@ -542,6 +575,7 @@ public class LintTest {
   /** Internal state of the lint rules, per file. */
   private static class FileState {
     final GlobalState global;
+    @Nullable List<String> sortLines;
     int versionCount;
     int starLine;
     int atLine;
@@ -554,7 +588,11 @@ public class LintTest {
       this.global = global;
     }
 
-    void message(String message, Puffin.Line<GlobalState, FileState> line) {
+    void message(
+        Puffin.Line<GlobalState, FileState> line,
+        String format,
+        Object... args) {
+      String message = format(format, args);
       global.messages.add(new Message(line.source(), line.fnr(), message));
     }
 
