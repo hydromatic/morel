@@ -2401,6 +2401,11 @@ public class Ast {
           ? this
           : ast.group(pos, groupExps, aggregates);
     }
+
+    /** Returns whether this {@code group} step is an atom. */
+    public boolean isAtom() {
+      return groupExps.size() + aggregates.size() == 1;
+    }
   }
 
   /**

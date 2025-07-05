@@ -2838,6 +2838,7 @@ public class MainTest {
     final String core1 =
         "val it = "
             + "from dno in [30] "
+            + "unorder "
             + "join v in #depts scott "
             + "join name in [#dname v] "
             + "where #deptno v = dno "

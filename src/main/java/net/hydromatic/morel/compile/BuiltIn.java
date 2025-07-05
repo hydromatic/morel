@@ -3487,19 +3487,19 @@ public enum BuiltIn {
   Z_SUM_REAL("$", "sum:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
   /**
-   * Internal type extent, e.g. "extent: bool list" returns "[false, true]",
-   * "extent: (int * bool) list" returns "[(0, false), (0, true), (1, false),
+   * Internal type extent, e.g. "extent: bool bag" returns "bag [false, true]",
+   * "extent: (int * bool) bag" returns "bag [(0, false), (0, true), (1, false),
    * (1, true), ...]".
    *
    * <p>These returns are hypothetical; except for {@code bool} and some
    * algebraic types, the extent is practically infinite. It will need to be
    * removed during planning.
    *
-   * <p>Its type is "unit &rarr; * &alpha; bag". It would not be possible to
+   * <p>Its type is "unit &rarr; &alpha; bag". It would not be possible to
    * derive the type if "extent" were used in code.
    */
   Z_EXTENT(
-      "$", "extent", ts -> ts.forallType(1, h -> ts.fnType(UNIT, h.bag(0)))),
+      "$", "extent", ts -> ts.forallType(1, h -> ts.fnType(UNIT, h.list(0)))),
 
   /**
    * Internal list constructor, e.g. "list (1 + 2, 3)" implements "[1 + 2, 3]".

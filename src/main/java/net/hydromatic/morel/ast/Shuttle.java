@@ -508,7 +508,9 @@ public class Shuttle {
 
   protected Core.Group visit(Core.Group group) {
     return group.copy(
-        visitSortedMap(group.groupExps), visitSortedMap(group.aggregates));
+        group.env.atom,
+        visitSortedMap(group.groupExps),
+        visitSortedMap(group.aggregates));
   }
 
   protected Core.Aggregate visit(Core.Aggregate aggregate) {

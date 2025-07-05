@@ -738,13 +738,20 @@ from e in emps
   yield {d = e.deptno}
   distinct
   order d;
-> val it = [10,20,30] : int list
+> val it = [{d=10},{d=20},{d=30}] : {d:int} list
 
 (*) atom 'yield' with implicit name 'deptno' followed by 'distinct' and 'order'
 from e in emps
   yield e.deptno
   distinct
   order deptno;
+> val it = [10,20,30] : int list
+
+(*) atom 'yield' followed by 'distinct' and 'order'
+from e in emps
+  yield e.deptno
+  distinct
+  order current;
 > val it = [10,20,30] : int list
 
 (*) anonymous 'yield' followed by 'distinct'

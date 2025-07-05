@@ -22,6 +22,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
+import static net.hydromatic.morel.type.TypeSystem.canAssign;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 import static net.hydromatic.morel.util.Static.allMatch;
@@ -1001,6 +1002,12 @@ public class Core {
       this.pat = pat;
       this.exp = exp;
       this.overloadPat = overloadPat;
+      if (!canAssign(exp.type, pat.type)) {
+        throw new IllegalArgumentException(
+            format(
+                "cannot assign '%s' (type '%s') to pattern '%s' (type '%s')",
+                exp, exp.type, pat, pat.type));
+      }
     }
 
     @Override
@@ -1544,14 +1551,6 @@ public class Core {
     }
 
     /**
-     * Returns whether you can assign a value of {@code fromType} to a variable
-     * of type {@code toType}.
-     */
-    private static boolean canAssign(Type fromType, Type toType) {
-      return fromType.equals(toType) || toType.isProgressive();
-    }
-
-    /**
      * {@inheritDoc}
      *
      * <p>A {@code Scan} is ordered only if the input is ordered and {@link
@@ -1903,12 +1902,14 @@ public class Core {
     }
 
     public Group copy(
+        boolean atom,
         SortedMap<Core.IdPat, Exp> groupExps,
         SortedMap<Core.IdPat, Aggregate> aggregates) {
-      return groupExps.equals(this.groupExps)
+      return atom == env.atom
+              && groupExps.equals(this.groupExps)
               && aggregates.equals(this.aggregates)
           ? this
-          : core.group(groupExps, aggregates);
+          : core.group(atom, groupExps, aggregates);
     }
   }
 

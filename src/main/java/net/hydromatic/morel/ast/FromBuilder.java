@@ -298,24 +298,26 @@ public class FromBuilder {
     return addStep(core.union(stepEnv(), distinct, args));
   }
 
+  /** Makes the query unordered. No-op if already unordered. */
   public FromBuilder unorder() {
+    if (!CoreBuilder.fromOrdered(steps)) {
+      return this;
+    }
     return addStep(core.unorder(stepEnv()));
   }
 
   public FromBuilder distinct() {
-    // Do not call group(); it never creates atomic rows, but distinct() needs
-    // to propagate row type.
     final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExpsB =
         ImmutableSortedMap.naturalOrder();
     bindings.forEach(b -> groupExpsB.put((Core.IdPat) b.id, core.id(b.id)));
-    return addStep(
-        new Core.Group(stepEnv(), groupExpsB.build(), ImmutableSortedMap.of()));
+    return group(stepEnv().atom, groupExpsB.build(), ImmutableSortedMap.of());
   }
 
   public FromBuilder group(
+      boolean atom,
       SortedMap<Core.IdPat, Core.Exp> groupExps,
       SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
-    return addStep(core.group(groupExps, aggregates));
+    return addStep(core.group(atom, groupExps, aggregates));
   }
 
   public FromBuilder order(Core.Exp exp) {
@@ -482,7 +484,7 @@ public class FromBuilder {
 
     @Override
     protected void visit(Core.Group group) {
-      group(group.groupExps, group.aggregates);
+      group(group.env.atom, group.groupExps, group.aggregates);
     }
 
     @Override

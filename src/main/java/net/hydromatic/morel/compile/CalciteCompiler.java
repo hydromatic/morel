@@ -275,6 +275,7 @@ public class CalciteCompiler extends Compiler {
                 }
                 return true;
 
+              case BAG_CONCAT:
               case LIST_CONCAT:
               case LIST_EXCEPT:
               case LIST_INTERSECT:
@@ -288,6 +289,7 @@ public class CalciteCompiler extends Compiler {
                 }
                 harmonizeRowTypes(cx.relBuilder, tuple.args.size());
                 switch (builtIn) {
+                  case BAG_CONCAT:
                   case LIST_CONCAT:
                     cx.relBuilder.union(true, tuple.args.size());
                     return true;

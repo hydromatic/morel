@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.UnaryOperator;
 import net.hydromatic.morel.ast.Op;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -93,6 +94,22 @@ public interface Type {
    */
   default boolean isProgressive() {
     return false;
+  }
+
+  /** Returns whether this type contains a progressive type. */
+  default boolean containsProgressive() {
+    final AtomicInteger c = new AtomicInteger();
+    accept(
+        new TypeVisitor<Void>() {
+          @Override
+          public Void visit(RecordType recordType) {
+            if (recordType.isProgressive()) {
+              c.incrementAndGet();
+            }
+            return super.visit(recordType);
+          }
+        });
+    return c.get() > 0;
   }
 
   /**

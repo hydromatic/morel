@@ -32,7 +32,7 @@ from i where i > 0 andalso i < 4 yield {j = i + 1} order DESC j;
 from i where i > 0 andalso i < 10 andalso i mod 3 = 2;
 > val it = [2,5,8] : int bag
 from i where i = 0 orelse i = 12;
-> val it = [0,12] : int list
+> val it = [0,12] : int bag
 from i where i > 0 andalso i < 10 orelse i > 12 andalso i <= 15;
 > val it = [1,2,3,4,5,6,7,8,9,13,14,15] : int bag
 from i
@@ -79,9 +79,9 @@ from i
 
 from i
   where i >= 0 andalso i <= 100
-  yield {j = i mod 3}
+  yield i mod 3
   distinct
-  order DESC j;
+  order DESC current;
 > val it = [2,1,0] : int list
 
 (* [MOREL-258] `take` in query with unbounded variable gives error *)

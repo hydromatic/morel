@@ -482,26 +482,7 @@ public class TypeResolver {
         return reg(list.copy(args2), v, listTerm(vArg2));
 
       case RECORD:
-        final Ast.Record record = (Ast.Record) node;
-        validateRecord(record);
-
-        final NavigableMap<String, Term> labelTypes = new TreeMap<>();
-        final PairList<Ast.Id, Ast.Exp> map2 = PairList.of();
-        record
-            .sortedArgs()
-            .forEach(
-                (id, exp) -> {
-                  final Variable vArg = unifier.variable();
-                  final Ast.Exp e2 = deduceType(env, exp, vArg);
-                  labelTypes.put(id.name, vArg);
-                  map2.add(id, e2);
-                });
-        if (record.with == null) {
-          return reg(record.copy(null, map2), v, recordTerm(labelTypes));
-        } else {
-          final Ast.Exp with2 = deduceType(env, record.with, v);
-          return reg(record.copy(with2, map2), v);
-        }
+        return deduceRecordType(env, (Ast.Record) node, v);
 
       case LET:
         final Ast.Let let = (Ast.Let) node;
@@ -1034,6 +1015,72 @@ public class TypeResolver {
       fromSteps.add(((Ast.Compute) group).copy(aggregates));
       return Triple.singleton(env3, v2);
     }
+  }
+
+  /** Deduces a record constructor expression's type. */
+  private Ast.Record deduceRecordType(
+      TypeEnv env, Ast.Record record, Variable v) {
+    validateRecord(record);
+
+    final NavigableMap<String, Term> labelTypes = new TreeMap<>();
+    final PairList<Ast.Id, Ast.Exp> map = PairList.of();
+    deduceFieldTypes(env, record, labelTypes::put, map::add);
+    if (record.with == null) {
+      return reg(record.copy(null, map), v, recordTerm(labelTypes));
+    }
+
+    final Variable v2 = unifier.variable();
+    final Ast.Exp with2 = deduceType(env, record.with, v2);
+    actionMap.put(
+        v2,
+        (v0, t, substitution, termPairs) -> {
+          // Now we know the type of the expression before 'with', we can unify
+          // the types of the common fields.
+          //
+          // For example, if we have the expression {r with b = SOME "string"}
+          // we have just deduced the type of r. Let's suppose that type is
+          // {a: int, b: alpha option}.
+          //
+          // The common fields are {b}. We need to unify the types "string
+          // option" and "alpha option".
+          if (t instanceof Sequence) {
+            final Sequence sequence = (Sequence) t;
+            final List<String> fieldList = fieldList(sequence);
+            if (fieldList != null) {
+              forEach(
+                  fieldList,
+                  sequence.terms,
+                  (fieldName, term) -> {
+                    final Term labelTerm = labelTypes.get(fieldName);
+                    if (labelTerm != null) {
+                      // This is a common field. Unify the types.
+                      final Term term2 = substitution.resolve(term);
+                      final Term labelTerm2 = substitution.resolve(labelTerm);
+                      termPairs.accept(labelTerm2, term2);
+                    }
+                  });
+            }
+          }
+        });
+
+    equiv(v, v2);
+    return reg(record.copy(with2, map), v);
+  }
+
+  private void deduceFieldTypes(
+      TypeEnv env,
+      Ast.Record record,
+      BiConsumer<String, Term> labelTypes,
+      BiConsumer<Ast.Id, Ast.Exp> map) {
+    record
+        .sortedArgs()
+        .forEach(
+            (id, exp) -> {
+              final Variable vArg = unifier.variable();
+              final Ast.Exp e2 = deduceType(env, exp, vArg);
+              labelTypes.accept(id.name, vArg);
+              map.accept(id, e2);
+            });
   }
 
   /** Validates a {@code Record}. Throws if there are duplicate field names. */

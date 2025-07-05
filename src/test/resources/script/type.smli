@@ -43,10 +43,7 @@
 {{a = "1", b = NONE} with b = SOME "3"};
 > val it = {a="1",b=SOME "3"} : {a:string, b:string option}
 {{a = "1", b = SOME true} with b = NONE};
-> val it = {a="1",b=NONE} : {a:string, b:'a option}
-(* TODO previous should be
 > val it = {a="1",b=NONE} : {a:string, b:bool option}
-*)
 {{a = "1", b = 2, c = true, d = false} with c = false, b = 3};
 > val it = {a="1",b=3,c=false,d=false} : {a:string, b:int, c:bool, d:bool}
 
@@ -338,7 +335,7 @@ from b in [SOME true, NONE];
 
 (*) If a function type is spread over several lines, put '->' at the start of
 (*) the next line.
-val f : ('a -> (int * int) list) -> ('a -> (int * int) list) -> 'a -> (int * int) list = fn a => fn b => fn c => [];
+val f : ('a -> (int * int) list) -> ('b -> (int * int) list) -> 'c -> (int * int) list = fn a => fn b => fn c => [];
 > val f = fn
 >   : ('a -> (int * int) list)
 >     -> ('b -> (int * int) list) -> 'c -> (int * int) list

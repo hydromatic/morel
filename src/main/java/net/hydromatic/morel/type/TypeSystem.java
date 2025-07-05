@@ -603,6 +603,35 @@ public class TypeSystem {
     return forallType(collector.vars.size(), h -> type.substitute(ts, types));
   }
 
+  /**
+   * Returns whether you can assign a value of {@code fromType} to a variable of
+   * type {@code toType}.
+   *
+   * <p>Cases:
+   *
+   * <ul>
+   *   <li>You can assign {@code int} to {@code int};
+   *   <li>You can not assign {@code int} to {@code string};
+   *   <li>You can assign {@code int} to {@code myInt} if {@code myInt} is an
+   *       alias defined by {@code type myInt = int};
+   *   <li>You can assign {@code {emps: {empno: int, ename: string} list, depts:
+   *       {deptno: int} list} } to {@code {}} if the latter is a progressive
+   *       type.
+   * </ul>
+   */
+  public static boolean canAssign(Type fromType, Type toType) {
+    while (fromType instanceof ForallType) {
+      fromType = ((ForallType) fromType).type;
+    }
+    return fromType.equals(toType)
+        || fromType instanceof RecordType && toType.isProgressive()
+        || fromType instanceof ListType
+            && toType instanceof ListType
+            && canAssign(
+                ((ListType) fromType).elementType,
+                ((ListType) toType).elementType);
+  }
+
   /** Visitor that finds all {@link TypeVar} instances within a {@link Type}. */
   private static class VariableCollector extends TypeVisitor<Void> {
     final Set<TypeVar> vars = new LinkedHashSet<>();

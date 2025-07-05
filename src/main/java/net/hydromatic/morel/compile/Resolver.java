@@ -1192,6 +1192,11 @@ public class Resolver {
               ? core.boolLiteral(true)
               : r.withEnv(bindings2).toCore(scan.condition);
       fromBuilder.scan(corePat, coreExp, coreCondition);
+      if (scan.exp == null) {
+        // This is an extent scan. Extents are unordered, which makes the query
+        // unordered.
+        fromBuilder.unorder();
+      }
     }
 
     @Override
@@ -1277,6 +1282,7 @@ public class Resolver {
 
     @Override
     protected void visit(Ast.Group group) {
+      final boolean atom = group.isAtom();
       final Resolver r = withStepEnv(fromBuilder.stepEnv());
       final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExpsB =
           ImmutableSortedMap.naturalOrder();
@@ -1291,7 +1297,7 @@ public class Resolver {
               aggregates.put(
                   toCorePat(aggregate.id),
                   r.toCore(aggregate, groupExps.keySet())));
-      fromBuilder.group(groupExps, aggregates.build());
+      fromBuilder.group(atom, groupExps, aggregates.build());
     }
 
     @Override

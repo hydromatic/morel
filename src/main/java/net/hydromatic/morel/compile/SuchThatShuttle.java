@@ -148,7 +148,8 @@ class SuchThatShuttle extends Shuttle {
             final Core.Group group = (Core.Group) step;
             killTemporaryScans(idPats);
             deferredScans.flush(fromBuilder);
-            fromBuilder.group(group.groupExps, group.aggregates);
+            fromBuilder.group(
+                group.env.atom, group.groupExps, group.aggregates);
             break;
 
           case ORDER:
@@ -267,7 +268,7 @@ class SuchThatShuttle extends Shuttle {
       steps.add(
           unresolvedRefs,
           fromBuilder -> {
-            fromBuilder.scan(pat, exp, condition);
+            fromBuilder.scan(pat, exp, condition).unorder();
             resolve(pat);
           });
     }
@@ -277,7 +278,7 @@ class SuchThatShuttle extends Shuttle {
       steps.add(
           unresolvedRefs,
           fromBuilder -> {
-            fromBuilder.scan(pat, exp);
+            fromBuilder.scan(pat, exp).unorder();
             resolve(pat);
           });
     }

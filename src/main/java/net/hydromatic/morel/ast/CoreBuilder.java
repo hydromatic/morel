@@ -464,7 +464,7 @@ public enum CoreBuilder {
   /**
    * Returns whether the output of the last of a sequence of steps is ordered.
    */
-  private boolean fromOrdered(List<Core.FromStep> steps) {
+  static boolean fromOrdered(List<Core.FromStep> steps) {
     boolean ordered = true;
     for (Core.FromStep step : steps) {
       ordered = step.isOrdered(ordered);
@@ -613,12 +613,12 @@ public enum CoreBuilder {
   }
 
   public Core.Group group(
+      boolean atom,
       SortedMap<Core.IdPat, Core.Exp> groupExps,
       SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
     final List<Binding> bindings = new ArrayList<>();
     groupExps.keySet().forEach(id -> bindings.add(Binding.of(id)));
     aggregates.keySet().forEach(id -> bindings.add(Binding.of(id)));
-    boolean atom = bindings.size() == 1;
     return new Core.Group(
         Core.StepEnv.of(bindings, atom),
         ImmutableSortedMap.copyOfSorted(groupExps),
@@ -742,6 +742,21 @@ public enum CoreBuilder {
   /** Creates a list with one or more elements. */
   public Core.Exp list(TypeSystem typeSystem, Core.Exp arg0, Core.Exp... args) {
     return list(typeSystem, arg0.type, Lists.asList(arg0, args));
+  }
+
+  /** Creates a bag. */
+  public Core.Exp bag(
+      TypeSystem typeSystem, Type elementType, List<Core.Exp> args) {
+    final Core.Exp list = list(typeSystem, elementType, args);
+    final Core.Literal literal =
+        functionLiteral(typeSystem, BuiltIn.BAG_FROM_LIST);
+    final Type bagType = typeSystem.bagType(elementType);
+    return apply(Pos.ZERO, bagType, literal, list);
+  }
+
+  /** Creates a bag with one or more elements. */
+  public Core.Exp bag(TypeSystem typeSystem, Core.Exp arg0, Core.Exp... args) {
+    return bag(typeSystem, arg0.type, Lists.asList(arg0, args));
   }
 
   /**
@@ -881,6 +896,20 @@ public enum CoreBuilder {
         if (apply.isCallTo(BuiltIn.LIST_CONCAT)
             && apply.arg.isCallTo(BuiltIn.Z_LIST)) {
           final Core.Apply apply2 = (Core.Apply) apply.arg;
+          if (allMatch(
+              apply2.args(), exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
+            Pair<Core.Exp, List<Core.Exp>> pair =
+                unionExtents(typeSystem, apply2.args());
+            if (pair.right.isEmpty()) {
+              return pair.left;
+            }
+          }
+        }
+        if (apply.isCallTo(BuiltIn.BAG_CONCAT)
+            && apply.arg.isCallTo(BuiltIn.BAG_FROM_LIST)
+            && ((Core.Apply) apply.arg).arg.isCallTo(BuiltIn.Z_LIST)) {
+          final Core.Apply apply1 = (Core.Apply) apply.arg;
+          final Core.Apply apply2 = (Core.Apply) apply1.arg;
           if (allMatch(
               apply2.args(), exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
             Pair<Core.Exp, List<Core.Exp>> pair =

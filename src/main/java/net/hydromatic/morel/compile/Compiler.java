@@ -822,7 +822,8 @@ public class Compiler {
           matchCodes.add(new MatchCode(ImmutablePairList.of(pat, code), pos));
 
           if (actions != null) {
-            final Type type0 = exp.type;
+            final Type type0 =
+                pat.type.containsProgressive() ? exp.type : pat.type;
             final Type type = typeSystem.ensureClosed(type0);
             actions.add(
                 (outLines, outBindings, evalEnv) -> {
