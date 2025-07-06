@@ -533,7 +533,7 @@ Bag.app (fn x => ignore (x + 2)) (bag []);
 > val it = () : unit
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Bag.app, argCode match(x, apply(fnValue General.ignore, argCode apply2(fnValue +, get(name x), constant(2))))), argCode apply(fnValue Bag.fromList, argCode tuple))"
+>   "apply2(fnValue Bag.app, match(x, apply(fnValue General.ignore, argCode apply2(fnValue +, get(name x), constant(2)))), apply(fnValue Bag.fromList, argCode tuple))"
 >   : string
 
 (*) val map : ('a -> 'b) -> 'a bag -> 'b bag
@@ -545,7 +545,7 @@ Bag.map (fn x => x + 1) (bag []);
 > val it = [] : int bag
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Bag.map, argCode match(x, apply2(fnValue +, get(name x), constant(1)))), argCode apply(fnValue Bag.fromList, argCode tuple))"
+>   "apply2(fnValue Bag.map, match(x, apply2(fnValue +, get(name x), constant(1))), apply(fnValue Bag.fromList, argCode tuple))"
 >   : string
 
 (*) val mapPartial : ('a -> 'b option) -> 'a bag -> 'b bag
@@ -557,7 +557,7 @@ Bag.mapPartial (fn x => if x mod 2 = 0 then NONE else SOME (x + 1)) (bag []);
 > val it = [] : int bag
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Bag.mapPartial, argCode match(x, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply2(fnValue +, get(name x), constant(1)))), argCode apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))))), argCode apply(fnValue Bag.fromList, argCode tuple))"
+>   "apply2(fnValue Bag.mapPartial, match(x, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply2(fnValue +, get(name x), constant(1)))), argCode apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), apply(fnValue Bag.fromList, argCode tuple))"
 >   : string
 
 (*) val find : ('a -> bool) -> 'a bag -> 'a option
@@ -569,7 +569,7 @@ Bag.find (fn x => x mod 11 = 0) (bag [2,3,5,8,13,21,34]);
 > val it = NONE : int option
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Bag.find, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(11)), constant(0)))), argCode apply(fnValue Bag.fromList, argCode tuple(constant(2), constant(3), constant(5), constant(8), constant(13), constant(21), constant(34))))"
+>   "apply2(fnValue Bag.find, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(11)), constant(0))), apply(fnValue Bag.fromList, argCode tuple(constant(2), constant(3), constant(5), constant(8), constant(13), constant(21), constant(34))))"
 >   : string
 
 (*) val filter : ('a -> bool) -> 'a bag -> 'a bag
@@ -583,7 +583,7 @@ Bag.filter (fn x => x mod 2 = 0) (bag []);
 > val it = [] : int bag
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Bag.filter, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode apply(fnValue Bag.fromList, argCode tuple))"
+>   "apply2(fnValue Bag.filter, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))), apply(fnValue Bag.fromList, argCode tuple))"
 >   : string
 
 (*) val partition : ('a -> bool) -> 'a bag -> 'a bag * 'a bag
@@ -597,7 +597,7 @@ Bag.partition (fn x => x mod 2 = 0) (bag []);
 > val it = ([],[]) : int bag * int bag
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Bag.partition, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode apply(fnValue Bag.fromList, argCode tuple))"
+>   "apply2(fnValue Bag.partition, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))), apply(fnValue Bag.fromList, argCode tuple))"
 >   : string
 
 (*) val fold : ('a * 'b -> 'b) -> 'b -> 'a bag -> 'b
@@ -613,7 +613,7 @@ Bag.fold (fn (a, b) => a - b) 0 (bag [1,2,3,4]);
 > val it = 2 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue Bag.fold, argCode match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v)))), argCode constant(0)), argCode apply(fnValue Bag.fromList, argCode tuple(constant(1), constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Bag.fold, match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v))), constant(0), apply(fnValue Bag.fromList, argCode tuple(constant(1), constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) val exists : ('a -> bool) -> 'a bag -> bool
@@ -629,7 +629,7 @@ Bag.`exists` (fn x => x mod 2 = 0) (bag []);
 > val it = false : bool
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Bag.exists, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode apply(fnValue Bag.fromList, argCode tuple))"
+>   "apply2(fnValue Bag.exists, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))), apply(fnValue Bag.fromList, argCode tuple))"
 >   : string
 
 (*) val all : ('a -> bool) -> 'a bag -> bool
@@ -645,7 +645,7 @@ Bag.all (fn x => x mod 2 = 0) (bag []);
 > val it = true : bool
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Bag.all, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode apply(fnValue Bag.fromList, argCode tuple))"
+>   "apply2(fnValue Bag.all, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))), apply(fnValue Bag.fromList, argCode tuple))"
 >   : string
 
 (*) val tabulate : int * (int -> 'a) -> 'a bag
@@ -662,7 +662,7 @@ Bag.tabulate (~1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact
 >   raised at: stdIn:1.1-1.86
 Sys.plan ();
 > val it =
->   "apply(fnValue Bag.tabulate, argCode tuple(constant(-1), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact))))"
+>   "apply2(fnValue Bag.tabulate, constant(-1), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact)))"
 >   : string
 
 (* General ----------------------------------------------------- *)
@@ -686,7 +686,7 @@ plusOne o timesTwo o plusThree;
 > val it = 13 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue o, argCode tuple(get(name plusOne), apply(fnValue o, argCode tuple(get(name timesTwo), get(name plusThree))))), argCode constant(3))"
+>   "apply(fnCode apply2(fnValue o, get(name plusOne), apply2(fnValue o, get(name timesTwo), get(name plusThree))), argCode constant(3))"
 >   : string
 
 ignore;
@@ -842,9 +842,7 @@ String.concatWith "," ["", ""];
 String.concatWith "," [];
 > val it = "" : string
 Sys.plan ();
-> val it =
->   "apply(fnCode apply(fnValue String.concatWith, argCode constant(,)), argCode tuple)"
->   : string
+> val it = "apply2(fnValue String.concatWith, constant(,), tuple)" : string
 
 (*) val str : char -> string
 String.str;
@@ -883,7 +881,7 @@ String.map (fn c => if c = #"a" then #"A" else if c = #"c" then #"C" else c) "";
 > val it = "" : string
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue String.map, argCode match(c, apply(fnCode match(true, constant(A), _, apply(fnCode match(true, constant(C), _, get(name c)), argCode apply2(fnValue =, get(name c), constant(c)))), argCode apply2(fnValue =, get(name c), constant(a))))), argCode constant())"
+>   "apply2(fnValue String.map, match(c, apply(fnCode match(true, constant(A), _, apply(fnCode match(true, constant(C), _, get(name c)), argCode apply2(fnValue =, get(name c), constant(c)))), argCode apply2(fnValue =, get(name c), constant(a)))), constant())"
 >   : string
 
 (*) val translate : (char -> string) -> string -> string
@@ -895,7 +893,7 @@ String.translate (fn c => if c = #"a" then "AA" else if c = #"c" then "CCC" else
 > val it = "" : string
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue String.translate, argCode match(c, apply(fnCode match(true, constant(AA), _, apply(fnCode match(true, constant(CCC), _, constant(-)), argCode apply2(fnValue =, get(name c), constant(c)))), argCode apply2(fnValue =, get(name c), constant(a))))), argCode constant())"
+>   "apply2(fnValue String.translate, match(c, apply(fnCode match(true, constant(AA), _, apply(fnCode match(true, constant(CCC), _, constant(-)), argCode apply2(fnValue =, get(name c), constant(c)))), argCode apply2(fnValue =, get(name c), constant(a)))), constant())"
 >   : string
 
 (*) val tokens : (char -> bool) -> string -> string list
@@ -936,9 +934,17 @@ String.isPrefix "" "hello";
 String.isPrefix "" "";
 > val it = true : bool
 Sys.plan ();
-> val it =
->   "apply(fnCode apply(fnValue String.isPrefix, argCode constant()), argCode constant())"
->   : string
+> val it = "apply2(fnValue String.isPrefix, constant(), constant())" : string
+
+(*) Partial evaluation
+val p = String.isPrefix "he";
+> val p = fn : string -> bool
+Sys.plan ();
+> val it = "apply1(fnValue String.isPrefix, constant(he))" : string
+p "hello";
+> val it = true : bool
+p "goodbye";
+> val it = false : bool
 
 (*) val isSubstring : string -> string -> bool
 String.isSubstring;
@@ -958,9 +964,7 @@ String.isSubstring "" "hello";
 String.isSubstring "" "";
 > val it = true : bool
 Sys.plan ();
-> val it =
->   "apply(fnCode apply(fnValue String.isSubstring, argCode constant()), argCode constant())"
->   : string
+> val it = "apply2(fnValue String.isSubstring, constant(), constant())" : string
 
 (*) val isSuffix    : string -> string -> bool
 String.isSuffix;
@@ -980,9 +984,7 @@ String.isSuffix "" "hello";
 String.isSuffix "" "";
 > val it = true : bool
 Sys.plan ();
-> val it =
->   "apply(fnCode apply(fnValue String.isSuffix, argCode constant()), argCode constant())"
->   : string
+> val it = "apply2(fnValue String.isSuffix, constant(), constant())" : string
 
 (*) val compare : string * string -> order
 String.compare;
@@ -1247,7 +1249,7 @@ List.app (fn x => ignore (x + 2)) [];
 > val it = () : unit
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.app, argCode match(x, apply(fnValue General.ignore, argCode apply2(fnValue +, get(name x), constant(2))))), argCode tuple)"
+>   "apply2(fnValue List.app, match(x, apply(fnValue General.ignore, argCode apply2(fnValue +, get(name x), constant(2)))), tuple)"
 >   : string
 
 (*) val mapi : (int * 'a -> 'b) -> 'a list -> 'b list
@@ -1257,7 +1259,7 @@ List.mapi (fn (i, s) => String.sub (s, i)) ["abc", "xyz"];
 > val it = [#"a",#"y"] : char list
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.mapi, argCode match(v, apply(fnCode match((i, s), apply2(fnValue String.sub, get(name s), get(name i))), argCode get(name v)))), argCode tuple(constant(abc), constant(xyz)))"
+>   "apply2(fnValue List.mapi, match(v, apply(fnCode match((i, s), apply2(fnValue String.sub, get(name s), get(name i))), argCode get(name v))), tuple(constant(abc), constant(xyz)))"
 >   : string
 
 (*) val map : ('a -> 'b) -> 'a list -> 'b list
@@ -1269,7 +1271,7 @@ List.map (fn x => x + 1) [];
 > val it = [] : int list
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.map, argCode match(x, apply2(fnValue +, get(name x), constant(1)))), argCode tuple)"
+>   "apply2(fnValue List.map, match(x, apply2(fnValue +, get(name x), constant(1))), tuple)"
 >   : string
 
 (*) map is alias for List.map
@@ -1278,9 +1280,7 @@ map;
 map (fn x => x) [];
 > val it = [] : 'a list
 Sys.plan ();
-> val it =
->   "apply(fnCode apply(fnValue List.map, argCode match(x, get(name x))), argCode tuple)"
->   : string
+> val it = "apply2(fnValue List.map, match(x, get(name x)), tuple)" : string
 
 (*) val mapPartial : ('a -> 'b option) -> 'a list -> 'b list
 List.mapPartial;
@@ -1291,7 +1291,7 @@ List.mapPartial (fn x => if x mod 2 = 0 then NONE else SOME (x + 1)) [];
 > val it = [] : int list
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.mapPartial, argCode match(x, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply2(fnValue +, get(name x), constant(1)))), argCode apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))))), argCode tuple)"
+>   "apply2(fnValue List.mapPartial, match(x, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply2(fnValue +, get(name x), constant(1)))), argCode apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), tuple)"
 >   : string
 
 (*) val find : ('a -> bool) -> 'a list -> 'a option
@@ -1303,7 +1303,7 @@ List.find (fn x => x mod 11 = 0) [2,3,5,8,13,21,34];
 > val it = NONE : int option
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.find, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(11)), constant(0)))), argCode tuple(constant(2), constant(3), constant(5), constant(8), constant(13), constant(21), constant(34)))"
+>   "apply2(fnValue List.find, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(11)), constant(0))), tuple(constant(2), constant(3), constant(5), constant(8), constant(13), constant(21), constant(34)))"
 >   : string
 
 (*) val filter : ('a -> bool) -> 'a list -> 'a list
@@ -1317,7 +1317,7 @@ List.filter (fn x => x mod 2 = 0) [];
 > val it = [] : int list
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.filter, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode tuple)"
+>   "apply2(fnValue List.filter, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))), tuple)"
 >   : string
 
 (*) val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
@@ -1331,7 +1331,7 @@ List.partition (fn x => x mod 2 = 0) [];
 > val it = ([],[]) : int list * int list
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.partition, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode tuple)"
+>   "apply2(fnValue List.partition, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))), tuple)"
 >   : string
 
 (*) val foldl : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
@@ -1347,7 +1347,7 @@ List.foldl (fn (a, b) => a - b) 0 [1,2,3,4];
 > val it = 2 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue List.foldl, argCode match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v)))), argCode constant(0)), argCode tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   "apply3(fnValue List.foldl, match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v))), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
 >   : string
 
 (*) val foldr : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
@@ -1363,7 +1363,7 @@ List.foldr (fn (a, b) => a - b) 0 [1,2,3,4];
 > val it = ~2 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue List.foldr, argCode match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v)))), argCode constant(0)), argCode tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   "apply3(fnValue List.foldr, match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v))), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
 >   : string
 
 (*) val exists : ('a -> bool) -> 'a list -> bool
@@ -1379,7 +1379,7 @@ List.`exists` (fn x => x mod 2 = 0) [];
 > val it = false : bool
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.exists, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode tuple)"
+>   "apply2(fnValue List.exists, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))), tuple)"
 >   : string
 
 (*) val all : ('a -> bool) -> 'a list -> bool
@@ -1395,7 +1395,7 @@ List.all (fn x => x mod 2 = 0) [];
 > val it = true : bool
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.all, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode tuple)"
+>   "apply2(fnValue List.all, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))), tuple)"
 >   : string
 
 (*) val tabulate : int * (int -> 'a) -> 'a list
@@ -1412,7 +1412,7 @@ List.tabulate (~1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fac
 >   raised at: stdIn:1.1-1.87
 Sys.plan ();
 > val it =
->   "apply(fnValue List.tabulate, argCode tuple(constant(-1), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact))))"
+>   "apply2(fnValue List.tabulate, constant(-1), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact)))"
 >   : string
 
 (*) val collate : ('a * 'a -> order) -> 'a list * 'a list -> order
@@ -1432,7 +1432,7 @@ List.collate (fn (x, y) => if x < y then LESS else if x = y then EQUAL else GREA
 > val it = EQUAL : order
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue List.collate, argCode match(v, apply(fnCode match((x, y), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name x), get(name y)))), argCode apply2(fnValue <, get(name x), get(name y)))), argCode get(name v)))), argCode tuple(tuple, tuple))"
+>   "apply2(fnValue List.collate, match(v, apply(fnCode match((x, y), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name x), get(name y)))), argCode apply2(fnValue <, get(name x), get(name y)))), argCode get(name v))), tuple(tuple, tuple))"
 >   : string
 
 (* ListPair ---------------------------------------------------- *)
@@ -1527,7 +1527,7 @@ ListPair.appEq (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n"
 > val it = () : unit
 ListPair.appEq (fn (x, y) => print (Int.toString x ^ " " ^ Int.toString y ^ "\n")) ([1, 2, 3], [4, 5]);
 > uncaught exception UnequalLengths
->   raised at: stdIn:1.1-1.82
+>   raised at: stdIn:1.1-1.103
 
 (* [exists p (xs, ys)] applies predicate p to the pairs of
    corresponding elements of xs and ys from left to right until p
@@ -1574,7 +1574,7 @@ ListPair.foldlEq (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
 > val it = 21 : int
 ListPair.foldlEq (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
 > uncaught exception UnequalLengths
->   raised at: stdIn:1.1-1.44
+>   raised at: stdIn:1.1-1.67
 
 (* [foldr f e (xs, ys)] evaluates f(x1, y1, f(x2, y2, f(..., f(xn, yn,
    e)))) where xs = [x1, x2, ..., x(n-1), xn, ...], ys = [y1, y2, ...,
@@ -1599,7 +1599,7 @@ ListPair.foldrEq (fn (x, y, r) => x + y + r) 0 ([1, 2, 3], [4, 5, 6]);
 > val it = 21 : int
 ListPair.foldrEq (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
 > uncaught exception UnequalLengths
->   raised at: stdIn:1.1-1.44
+>   raised at: stdIn:1.1-1.67
 
 (* [map f (xs, ys)] applies function f to the pairs of corresponding
    elements of xs and ys from left to right and returns the list of
@@ -1625,10 +1625,10 @@ ListPair.mapEq (fn (x, y) => x + y) ([1, 2, 3], [4, 5, 6]);
 > val it = [5,7,9] : int list
 ListPair.mapEq (fn (x, y) => x + y) ([1, 2, 3], [4, 5]);
 > uncaught exception UnequalLengths
->   raised at: stdIn:1.1-1.35
+>   raised at: stdIn:1.1-1.56
 ListPair.mapEq (fn (x, y) => x + y) ([], [4, 5]);
 > uncaught exception UnequalLengths
->   raised at: stdIn:1.1-1.35
+>   raised at: stdIn:1.1-1.49
 
 (* [unzip xys] returns a pair (xs, ys), where xs is the list of first
    components of xys, and ys is the list of second components from
@@ -2021,8 +2021,7 @@ Option.getOpt (SOME 1, 2);
 Option.getOpt (NONE, 2);
 > val it = 2 : int
 Sys.plan ();
-> val it =
->   "apply(fnValue Option.getOpt, argCode tuple(constant([NONE]), constant(2)))"
+> val it = "apply2(fnValue Option.getOpt, constant([NONE]), constant(2))"
 >   : string
 
 (*) val isSome : 'a option -> bool
@@ -2062,7 +2061,7 @@ Option.filter (fn x => x mod 2 = 0) 2;
 > val it = SOME 2 : int option
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Option.filter, argCode match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0)))), argCode constant(2))"
+>   "apply2(fnValue Option.filter, match(x, apply2(fnValue =, apply2(fnValue mod, get(name x), constant(2)), constant(0))), constant(2))"
 >   : string
 
 (*) val join : 'a option option -> 'a option
@@ -2087,7 +2086,7 @@ Option.app General.ignore NONE;
 > val it = () : unit
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Option.app, argCode constant(General.ignore)), argCode constant([NONE]))"
+>   "apply2(fnValue Option.app, constant(General.ignore), constant([NONE]))"
 >   : string
 
 (*) val map : ('a -> 'b) -> 'a option -> 'b option
@@ -2096,8 +2095,7 @@ Option.map String.size (SOME "xyz");
 Option.map String.size NONE;
 > val it = NONE : int option
 Sys.plan ();
-> val it =
->   "apply(fnCode apply(fnValue Option.map, argCode constant(String.size)), argCode constant([NONE]))"
+> val it = "apply2(fnValue Option.map, constant(String.size), constant([NONE]))"
 >   : string
 
 (*) val mapPartial : ('a -> 'b option) -> 'a option -> 'b option
@@ -2109,7 +2107,7 @@ Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) (SOM
 > val it = NONE : int option
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Option.mapPartial, argCode match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply2(fnValue =, get(name s), constant())))), argCode apply(fnValue tyCon, argCode constant()))"
+>   "apply2(fnValue Option.mapPartial, match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply2(fnValue =, get(name s), constant()))), apply(fnValue tyCon, argCode constant()))"
 >   : string
 
 (*) val compose : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
@@ -2132,7 +2130,7 @@ Option.compose (String.size,
 > val it = NONE : int option
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Option.compose, argCode tuple(constant(String.size), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply3(fnValue String.substring, get(name s), constant(0), apply(fnValue String.size, argCode get(name s))))), argCode apply2(fnValue =, get(name s), constant()))))), argCode constant())"
+>   "apply(fnCode apply2(fnValue Option.compose, constant(String.size), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply3(fnValue String.substring, get(name s), constant(0), apply(fnValue String.size, argCode get(name s))))), argCode apply2(fnValue =, get(name s), constant())))), argCode constant())"
 >   : string
 
 (*) val composePartial : ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option
@@ -2146,7 +2144,7 @@ Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
 > val it = NONE : int option
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Option.composePartial, argCode tuple(match(i, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode get(name i))), argCode apply2(fnValue =, get(name i), constant(0)))), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply2(fnValue =, get(name s), constant()))))), argCode constant())"
+>   "apply(fnCode apply2(fnValue Option.composePartial, match(i, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode get(name i))), argCode apply2(fnValue =, get(name i), constant(0)))), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply2(fnValue =, get(name s), constant())))), argCode constant())"
 >   : string
 
 (* Char -------------------------------------------------------- *)
@@ -2183,13 +2181,13 @@ Char.chr 65;
 > val it = #"A" : char
 Char.chr ~1;
 > uncaught exception Chr
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.12
 Char.chr 256;
 > uncaught exception Chr
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.13
 Char.chr 12345678;
 > uncaught exception Chr
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.18
 
 (* [ord c] returns the code of character c. *)
 Char.ord;
@@ -2207,7 +2205,7 @@ Char.succ (chr 254);
 > val it = #"\255" : char
 Char.succ (chr 255);
 > uncaught exception Chr
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.19
 
 (* [pred c] returns the character immediately preceding c, or raises
    Chr if c = minChar. *)
@@ -2217,7 +2215,7 @@ Char.pred #"B";
 > val it = #"A" : char
 Char.pred (chr 0);
 > uncaught exception Chr
->   raised at: 0.0-0.0
+>   raised at: stdIn:1.1-1.17
 
 (* [isAscii c] returns true if c is an ASCII character (0 to 127). *)
 Char.isAscii;
@@ -3826,11 +3824,15 @@ Relational.iterate
 >   : {empno:int, ename:string, mgr:int} list
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Relational.iterate, argCode from(sink join(pat e_1, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), constant(0)), sink collect(get(name e)))))), argCode match(v, apply(fnCode match((oldList, newList), from(sink join(pat d, exp get(name newList), sink join(pat e, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name d))), sink collect(get(name e))))))), argCode get(name v))))"
+>   "apply2(fnValue Relational.iterate, from(sink join(pat e_1, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), constant(0)), sink collect(get(name e))))), match(v, apply(fnCode match((oldList, newList), from(sink join(pat d, exp get(name newList), sink join(pat e, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name d))), sink collect(get(name e))))))), argCode get(name v))))"
 >   : string
 
 Relational.sum [1, 2, 3];
 > val it = 6 : int
+Sys.plan ();
+> val it =
+>   "apply(fnValue Relational.sum$int, argCode tuple(constant(1), constant(2), constant(3)))"
+>   : string
 Relational.sum [1.0, 2.5, 3.5];
 > val it = 7.0 : real
 Sys.plan ();
@@ -3915,7 +3917,7 @@ List.`except` [[1, 2, 3], List.`intersect` [[1, 3, 5], [2, 3, 4]]];
 > val it = [1,2] : int list
 Sys.plan ();
 > val it =
->   "apply(fnValue List.except, argCode tuple(tuple(constant(1), constant(2), constant(3)), apply(fnValue List.except, argCode tuple(tuple(constant(1), constant(3), constant(5)), tuple(constant(2), constant(3), constant(4))))))"
+>   "apply(fnValue List.except, argCode tuple(tuple(constant(1), constant(2), constant(3)), apply(fnValue List.intersect, argCode tuple(tuple(constant(1), constant(3), constant(5)), tuple(constant(2), constant(3), constant(4))))))"
 >   : string
 
 1 elem [1, 2, 3];
@@ -4379,7 +4381,7 @@ Vector.tabulate (5, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fa
 > val it = #[1,1,2,6,24] : int vector
 Sys.plan ();
 > val it =
->   "apply(fnValue Vector.tabulate, argCode tuple(constant(5), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact))))"
+>   "apply2(fnValue Vector.tabulate, constant(5), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact)))"
 >   : string
 
 (*) Vector.length : 'a vector -> int
@@ -4442,7 +4444,7 @@ Vector.appi (fn (i,s) => ignore s) (Vector.fromList ["a", "b", "c"]);
 > val it = () : unit
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.appi, argCode match(v, apply(fnCode match((i, s), apply(fnValue General.ignore, argCode get(name s))), argCode get(name v)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b), constant(c))))"
+>   "apply2(fnValue Vector.appi, match(v, apply(fnCode match((i, s), apply(fnValue General.ignore, argCode get(name s))), argCode get(name v))), apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b), constant(c))))"
 >   : string
 
 (*) Vector.app  : ('a -> unit) -> 'a vector -> unit
@@ -4452,7 +4454,7 @@ Vector.app (fn s => ignore s) (Vector.fromList ["a", "b", "c"]);
 > val it = () : unit
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.app, argCode match(s, apply(fnValue General.ignore, argCode get(name s)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b), constant(c))))"
+>   "apply2(fnValue Vector.app, match(s, apply(fnValue General.ignore, argCode get(name s))), apply(fnValue Vector.fromList, argCode tuple(constant(a), constant(b), constant(c))))"
 >   : string
 
 (*) Vector.mapi : (int * 'a -> 'b) -> 'a vector -> 'b vector
@@ -4462,7 +4464,7 @@ Vector.mapi (fn (i, s) => String.sub (s, i)) (Vector.fromList ["abc", "xyz"]);
 > val it = #[#"a",#"y"] : char vector
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.mapi, argCode match(v, apply(fnCode match((i, s), apply2(fnValue String.sub, get(name s), get(name i))), argCode get(name v)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(abc), constant(xyz))))"
+>   "apply2(fnValue Vector.mapi, match(v, apply(fnCode match((i, s), apply2(fnValue String.sub, get(name s), get(name i))), argCode get(name v))), apply(fnValue Vector.fromList, argCode tuple(constant(abc), constant(xyz))))"
 >   : string
 
 (*) Vector.map  : ('a -> 'b) -> 'a vector -> 'b vector
@@ -4472,7 +4474,7 @@ Vector.map (fn s => String.sub (s, 0)) (Vector.fromList ["abc", "xyz"]);
 > val it = #[#"a",#"x"] : char vector
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.map, argCode match(s, apply2(fnValue String.sub, get(name s), constant(0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(abc), constant(xyz))))"
+>   "apply2(fnValue Vector.map, match(s, apply2(fnValue String.sub, get(name s), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(abc), constant(xyz))))"
 >   : string
 
 (*) Vector.foldli : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -4482,7 +4484,7 @@ Vector.foldli (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
 > val it = 11 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue Vector.foldli, argCode match(v, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Vector.foldli, match(v, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -4492,7 +4494,7 @@ Vector.foldri (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
 > val it = 11 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue Vector.foldri, argCode match(v, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Vector.foldri, match(v, apply(fnCode match((i, j, a), apply2(fnValue +, get(name a), apply2(fnValue *, get(name i), get(name j)))), argCode get(name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -4502,7 +4504,7 @@ Vector.foldl (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
 > val it = 9 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue Vector.foldl, argCode match(v, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Vector.foldl, match(v, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -4512,7 +4514,7 @@ Vector.foldr (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
 > val it = 9 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnCode apply(fnValue Vector.foldr, argCode match(v, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v)))), argCode constant(0)), argCode apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Vector.foldr, match(v, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option
@@ -4522,7 +4524,7 @@ Vector.findi (fn (i,j) => j < i) (Vector.fromList [10,8,6,4,2]);
 > val it = SOME (4,2) : (int * int) option
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.findi, argCode match(v, apply(fnCode match((i, j), apply2(fnValue <, get(name j), get(name i))), argCode get(name v)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(10), constant(8), constant(6), constant(4), constant(2))))"
+>   "apply2(fnValue Vector.findi, match(v, apply(fnCode match((i, j), apply2(fnValue <, get(name j), get(name i))), argCode get(name v))), apply(fnValue Vector.fromList, argCode tuple(constant(10), constant(8), constant(6), constant(4), constant(2))))"
 >   : string
 
 (*) Vector.find  : ('a -> bool) -> 'a vector -> 'a option
@@ -4532,7 +4534,7 @@ Vector.find (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
 > val it = SOME 8 : int option
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.find, argCode match(j, apply2(fnValue =, apply2(fnValue mod, get(name j), constant(2)), constant(0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+>   "apply2(fnValue Vector.find, match(j, apply2(fnValue =, apply2(fnValue mod, get(name j), constant(2)), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
 >   : string
 
 (*) Vector.exists : ('a -> bool) -> 'a vector -> bool
@@ -4542,7 +4544,7 @@ Vector.`exists` (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
 > val it = true : bool
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.exists, argCode match(j, apply2(fnValue =, apply2(fnValue mod, get(name j), constant(2)), constant(0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+>   "apply2(fnValue Vector.exists, match(j, apply2(fnValue =, apply2(fnValue mod, get(name j), constant(2)), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
 >   : string
 
 (*) Vector.all : ('a -> bool) -> 'a vector -> bool
@@ -4552,7 +4554,7 @@ Vector.all (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
 > val it = false : bool
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.all, argCode match(j, apply2(fnValue =, apply2(fnValue mod, get(name j), constant(2)), constant(0)))), argCode apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+>   "apply2(fnValue Vector.all, match(j, apply2(fnValue =, apply2(fnValue mod, get(name j), constant(2)), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
 >   : string
 
 (*) Vector.collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order
@@ -4564,7 +4566,7 @@ Vector.collate
 > val it = LESS : order
 Sys.plan ();
 > val it =
->   "apply(fnCode apply(fnValue Vector.collate, argCode match(v, apply(fnCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name i), get(name j)))), argCode apply2(fnValue <, get(name i), get(name j)))), argCode get(name v)))), argCode tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
+>   "apply2(fnValue Vector.collate, match(v, apply(fnCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name i), get(name j)))), argCode apply2(fnValue <, get(name i), get(name j)))), argCode get(name v))), tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
 >   : string
 
 (*) End builtIn.smli

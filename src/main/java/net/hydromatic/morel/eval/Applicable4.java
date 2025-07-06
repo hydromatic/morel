@@ -21,10 +21,10 @@ package net.hydromatic.morel.eval;
 import java.util.List;
 
 /**
- * Applicable whose argument is a 3-tuple.
+ * Applicable whose argument is a 4-tuple.
  *
- * <p>Implementations that use {@code Applicable3} are more efficient and
- * concise than {@link Applicable} because there is no need to create an
+ * <p>Implementations that use {@code Applicable4} are more efficient and
+ * concise than {@link ApplicableImpl} because there is no need to create an
  * ephemeral tuple (Java {@link List}) to pass the arguments, and Java's
  * generics provide the casting.
  *
@@ -32,27 +32,26 @@ import java.util.List;
  * evaluates all arguments, even if the function throws) and doesn't use {@link
  * EvalEnv}, so it is not appropriate for all functions.
  *
- * <p>If a function has an {@code Applicable3} implementation and the argument
+ * <p>If a function has an {@code Applicable4} implementation and the argument
  * tuple is evaluated whole, the old evaluation path will be used.
  *
  * @see Applicable2
- * @see Applicable4
- * @see Codes.BaseApplicable3
- * @see Codes.BasePositionedApplicable3
+ * @see Applicable3
  * @param <R> return type
  * @param <A0> type of argument 0
  * @param <A1> type of argument 1
  * @param <A2> type of argument 2
+ * @param <A3> type of argument 3
  */
-public interface Applicable3<R, A0, A1, A2> {
-  /** Applies this function to its three arguments. */
-  R apply(A0 a0, A1 a1, A2 a2);
+public interface Applicable4<R, A0, A1, A2, A3> {
+  /** Applies this function to its four arguments. */
+  R apply(A0 a0, A1 a1, A2 a2, A3 a3);
 
   /**
-   * Converts this function {@code f(a, b, c)} into a function that can be
-   * called {@code f(a)(b)(c)}.
+   * Converts this function {@code f(a, b, c, d)} into a function that can be
+   * called {@code f(a)(b)(c)(d)}.
    */
-  Applicable1<Applicable1<Applicable1<R, A2>, A1>, A0> curry();
+  Applicable1<Applicable1<Applicable1<Applicable1<R, A3>, A2>, A1>, A0> curry();
 }
 
-// End Applicable3.java
+// End Applicable4.java

@@ -234,7 +234,7 @@ public enum BuiltIn {
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
   /** Function "General.ignore", of type "&alpha; &rarr; unit". */
-  IGNORE(
+  GENERAL_IGNORE(
       "General",
       "ignore",
       "ignore",
@@ -2110,7 +2110,7 @@ public enum BuiltIn {
   MATH_ATAN("Math", "atan", ts -> ts.fnType(REAL, REAL)),
 
   /**
-   * Function "Math.atan2", of type "real *real &rarr; real".
+   * Function "Math.atan2", of type "real * real &rarr; real".
    *
    * <p>"atan2 (x, y)" returns the arc tangent of (y / x) in the closed interval
    * [-pi, pi], corresponding to angles within +-180 degrees. The quadrant of
@@ -3505,7 +3505,13 @@ public enum BuiltIn {
    * Internal list constructor, e.g. "list (1 + 2, 3)" implements "[1 + 2, 3]".
    * It cannot be assigned a type, because the tuple is variadic.
    */
-  Z_LIST("$", "list", ts -> UNIT);
+  Z_LIST("$", "list", ts -> UNIT),
+
+  /** Internal accessor of the {@code n}th field of a record. */
+  Z_NTH("$", "nth", ts -> UNIT),
+
+  /** Internal function that constructs a datatype value. */
+  Z_TY_CON("$", "tyCon", ts -> UNIT);
 
   /** Name of the structure (e.g. "List", "String"), or null. */
   public final String structure;

@@ -34,7 +34,7 @@ import net.hydromatic.morel.util.ImmutablePairList;
  * Value that is sufficient for a function to bind its argument and evaluate its
  * body.
  */
-public class Closure implements Comparable<Closure>, Applicable {
+public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
   /**
    * Environment for evaluation. Contains the variables "captured" from the
    * environment when the closure was created.
@@ -119,6 +119,11 @@ public class Closure implements Comparable<Closure>, Applicable {
 
   @Override
   public Object apply(EvalEnv env, Object argValue) {
+    return bindEval(argValue);
+  }
+
+  @Override
+  public Object apply(Object argValue) {
     return bindEval(argValue);
   }
 

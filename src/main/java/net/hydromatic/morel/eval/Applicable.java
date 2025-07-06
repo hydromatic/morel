@@ -25,6 +25,7 @@ package net.hydromatic.morel.eval;
  * creating a new runtime environment.
  */
 public interface Applicable extends Describable {
+  /** Calls this function with an environment and an argument value. */
   Object apply(EvalEnv env, Object argValue);
 
   /**

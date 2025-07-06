@@ -791,7 +791,7 @@ public enum CoreBuilder {
     return core.apply(
         Pos.ZERO,
         bagType,
-        core.functionLiteral(typeSystem, BuiltIn.Z_EXTENT),
+        core.functionLiteral(bagType, BuiltIn.Z_EXTENT),
         core.internalLiteral(new RangeExtent(typeSystem, type, rangeSetMap)));
   }
 

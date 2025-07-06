@@ -39,6 +39,7 @@ import java.text.Collator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import net.hydromatic.morel.util.Generation;
 import net.hydromatic.morel.util.JavaVersion;
@@ -60,7 +61,6 @@ public class LintTest {
   }
 
   private static void addProgram0(Puffin.Builder<GlobalState, FileState> b) {
-    final Collator collator = Collator.getInstance(Locale.ROOT);
     b.add(
         line -> line.isLast(),
         line -> {
@@ -156,32 +156,18 @@ public class LintTest {
 
     // Add line to sorting
     b.add(
-        line -> line.state().sortLines != null && !line.contains("// "),
-        line -> {
-          String thisLine = line.line();
-          if (!line.state().sortLines.isEmpty()) {
-            String prevLine = last(line.state().sortLines);
-            if (collator.compare(prevLine, thisLine) > 0) {
-              line.state()
-                  .message(
-                      line,
-                      "Lines must be sorted; '%s' should be before '%s'",
-                      prevLine,
-                      thisLine);
-            }
-          }
-          line.state().sortLines.add(thisLine);
-        });
+        line -> line.state().sortConsumer != null,
+        line -> line.state().sortConsumer.accept(line));
 
     // Start sorting
     b.add(
         line -> line.contains("// " + "lint:startSorted"),
-        line -> line.state().sortLines = new ArrayList<>());
+        line -> line.state().sortConsumer = new CodesConsumer());
 
     // End sorting
     b.add(
         line -> line.contains("// " + "lint:endSorted"),
-        line -> line.state().sortLines = null);
+        line -> line.state().sortConsumer = null);
 
     // In 'for (int i : list)', colon must be surrounded by space.
     b.add(
@@ -575,7 +561,7 @@ public class LintTest {
   /** Internal state of the lint rules, per file. */
   private static class FileState {
     final GlobalState global;
-    @Nullable List<String> sortLines;
+    @Nullable Consumer<Puffin.Line<GlobalState, FileState>> sortConsumer;
     int versionCount;
     int starLine;
     int atLine;
@@ -598,6 +584,30 @@ public class LintTest {
 
     public boolean inJavadoc() {
       return javadocEndLine < javadocStartLine;
+    }
+  }
+
+  private static class CodesConsumer
+      implements Consumer<Puffin.Line<GlobalState, FileState>> {
+    final Collator collator = Collator.getInstance(Locale.ROOT);
+    final List<String> lines = new ArrayList<>();
+
+    @Override
+    public void accept(Puffin.Line<GlobalState, FileState> line) {
+      String thisLine = line.line();
+      if (thisLine.contains(".put")) {
+        thisLine = thisLine.replaceAll("^ *\\.put[0-9]*", "");
+      } else {
+        return; // skip comment lines, etc.
+      }
+      if (!lines.isEmpty()) {
+        String prevLine = last(lines);
+        if (collator.compare(prevLine, thisLine) > 0) {
+          String format = "Lines must be sorted; '%s' should be before '%s'";
+          line.state().message(line, format, prevLine, thisLine);
+        }
+      }
+      lines.add(thisLine);
     }
   }
 }

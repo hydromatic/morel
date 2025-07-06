@@ -2187,7 +2187,7 @@ yield {r1.j, r1.s};
 >    {j=8,s="morel"}] : {j:int, s:string} list
 Sys.plan();
 > val it =
->   "from(sink join(pat r1, exp apply(fnValue List.tabulate, argCode tuple(constant(6), match(i, tuple(get(name i), apply2(fnValue +, get(name i), constant(3)), apply3(fnValue String.substring, constant(morel), constant(0), get(name i)))))), sink collect(tuple(apply(fnValue nth:1, argCode get(name r1)), apply(fnValue nth:2, argCode get(name r1))))))"
+>   "from(sink join(pat r1, exp apply2(fnValue List.tabulate, constant(6), match(i, tuple(get(name i), apply2(fnValue +, get(name i), constant(3)), apply3(fnValue String.substring, constant(morel), constant(0), get(name i))))), sink collect(tuple(apply(fnValue nth:1, argCode get(name r1)), apply(fnValue nth:2, argCode get(name r1))))))"
 >   : string
 
 

@@ -102,7 +102,7 @@ map (fn e => {a = 1, b = true}) [];
 > val it = [] : {a:int, b:bool} list
 Sys.plan();
 > val it =
->   "apply(fnCode apply(fnValue List.map, argCode match(e, tuple(constant(1), constant(true)))), argCode calcite(plan LogicalValues(tuples=[[]])\n))"
+>   "apply2(fnValue List.map, match(e, tuple(constant(1), constant(true))), calcite(plan LogicalValues(tuples=[[]])\n))"
 >   : string
 
 (*) Query on an empty list whose element is referenced
@@ -119,7 +119,7 @@ map (fn e => {a = 1 + e, b = true}) [];
 > val it = [] : {a:int, b:bool} list
 Sys.plan();
 > val it =
->   "apply(fnCode apply(fnValue List.map, argCode match(e, tuple(apply2(fnValue +, constant(1), get(name e)), constant(true)))), argCode calcite(plan LogicalValues(tuples=[[]])\n))"
+>   "apply2(fnValue List.map, match(e, tuple(apply2(fnValue +, constant(1), get(name e)), constant(true))), calcite(plan LogicalValues(tuples=[[]])\n))"
 >   : string
 
 (*) Query on a singleton list whose element is not referenced
@@ -134,7 +134,7 @@ map (fn e => {a = 1, b = true}) [0];
 > val it = [{a=1,b=true}] : {a:int, b:bool} list
 Sys.plan();
 > val it =
->   "apply(fnCode apply(fnValue List.map, argCode match(e, tuple(constant(1), constant(true)))), argCode calcite(plan LogicalValues(tuples=[[{ 0 }]])\n))"
+>   "apply2(fnValue List.map, match(e, tuple(constant(1), constant(true))), calcite(plan LogicalValues(tuples=[[{ 0 }]])\n))"
 >   : string
 
 (*) Simple query with scan, filter, project
@@ -180,7 +180,7 @@ Bag.map (fn e => (#empno e))
 > val it = [7499,7521,7654,7698,7844,7900] : int bag
 Sys.plan();
 > val it =
->   "apply(fnCode apply(fnValue Bag.map, argCode match(e, apply(fnValue nth:2, argCode get(name e)))), argCode apply(fnCode apply(fnValue Bag.filter, argCode match(e_1, apply2(fnValue =, apply(fnValue nth:1, argCode get(name e)), constant(30)))), argCode calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n  JdbcTableScan(table=[[scott, EMP]])\n)))"
+>   "apply2(fnValue Bag.map, match(e, apply(fnValue nth:2, argCode get(name e))), apply2(fnValue Bag.filter, match(e_1, apply2(fnValue =, apply(fnValue nth:1, argCode get(name e)), constant(30))), calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n  JdbcTableScan(table=[[scott, EMP]])\n)))"
 >   : string
 
 (*) Union followed by group

@@ -32,6 +32,7 @@ import java.util.Map;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.eval.Applicable1;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Unit;
@@ -104,10 +105,13 @@ public class Inliner extends EnvShuttle {
             return core.literal((PrimitiveType) id.type, v);
 
           case FUNCTION_TYPE:
-            assert v instanceof Applicable || v instanceof Macro : v;
+            assert v instanceof Applicable
+                    || v instanceof Applicable1
+                    || v instanceof Macro
+                : v;
             final BuiltIn builtIn = Codes.BUILT_IN_MAP.get(v);
             if (builtIn != null) {
-              return core.functionLiteral(typeSystem, builtIn);
+              return core.functionLiteral(id.type, builtIn);
             }
             // Applicable (including Closure) that does not map to a BuiltIn
             // is not considered 'constant', mainly because it creates messy

@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -38,7 +39,7 @@ import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.AstWriter;
 import net.hydromatic.morel.ast.Pos;
-import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.eval.Applicable1;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.type.DataType;
@@ -280,8 +281,8 @@ public abstract class Matchers {
   }
 
   /**
-   * Creates a Matcher that matches an Applicable, calls it with the given
-   * argument, and checks the result.
+   * Creates a Matcher that matches an {@link Applicable1}, calls it with the
+   * given argument, and checks the result.
    */
   static Matcher<Object> whenAppliedTo(
       Object arg, Matcher<Object> resultMatcher) {
@@ -314,7 +315,7 @@ public abstract class Matchers {
   }
 
   /**
-   * Creates a Matcher that tests for a sub-class and then makes another test.
+   * Creates a Matcher that tests for a subclass and then makes another test.
    *
    * @param <T> Value type
    * @param <T2> Required subtype
@@ -325,14 +326,9 @@ public abstract class Matchers {
       @Override
       protected boolean matchesSafely(T item, Description mismatchDescription) {
         if (!expectedClass.isInstance(item)) {
+          String format = "expected instance of %s but was %s (a %s)";
           mismatchDescription.appendText(
-              "expected instance of "
-                  + expectedClass
-                  + " but was "
-                  + item
-                  + " (a "
-                  + item.getClass()
-                  + ")");
+              format(format, expectedClass, item, item.getClass()));
           return false;
         }
         if (!matcher.matches(item)) {
@@ -438,13 +434,14 @@ public abstract class Matchers {
           .appendDescriptionOf(resultMatcher);
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
     public boolean matches(Object o) {
-      if (!(o instanceof Applicable)) {
+      if (!(o instanceof Applicable1)) {
         return false;
       }
-      final Applicable applicable = (Applicable) o;
-      final Object result = applicable.apply(Codes.emptyEnv(), arg);
+      final Applicable1 applicable = (Applicable1) o;
+      final Object result = applicable.apply(arg);
       return resultMatcher.matches(result);
     }
   }

@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static net.hydromatic.morel.TestUtils.first;
 import static net.hydromatic.morel.TestUtils.n2u;
 import static net.hydromatic.morel.TestUtils.toCamelCase;
@@ -126,9 +127,9 @@ public class ScriptTest {
       // e.g. path = "sql/outer.sml"
       // inUrl = "file:/home/fred/morel/target/test-classes/script/outer.sml"
       final URL inUrl = MainTest.class.getResource("/" + n2u(path));
-      assertThat(inUrl, notNullValue());
+      checkArgument(inUrl != null, "path '%s' not found", path);
       inFile = urlToFile(inUrl);
-      assertThat(inFile, notNullValue());
+      checkArgument(inFile != null, "file '%s' not found", inUrl);
       String outPath = idempotent ? path : path + ".out";
       outFile =
           new File(

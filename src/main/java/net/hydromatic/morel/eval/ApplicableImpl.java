@@ -18,7 +18,6 @@
  */
 package net.hydromatic.morel.eval;
 
-import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
 
 /**
@@ -26,46 +25,27 @@ import net.hydromatic.morel.compile.BuiltIn;
  * constant name.
  */
 abstract class ApplicableImpl implements Applicable {
-  private final String name;
-  final Pos pos;
+  protected final BuiltIn builtIn;
 
-  protected ApplicableImpl(String name, Pos pos) {
-    this.name = name;
-    this.pos = pos;
-  }
-
-  protected ApplicableImpl(String name) {
-    this(name, Pos.ZERO);
-  }
-
-  /**
-   * Creates an ApplicableImpl that directly implements a BuiltIn. The parameter
-   * is currently only for provenance purposes.
-   */
-  protected ApplicableImpl(BuiltIn builtIn, Pos pos) {
-    this(
-        builtIn.mlName.startsWith("op ")
-            ? builtIn.mlName.substring("op ".length())
-            : builtIn.structure + "." + builtIn.mlName,
-        pos);
-  }
-
-  /**
-   * Creates an ApplicableImpl that directly implements a BuiltIn. The parameter
-   * is currently only for provenance purposes.
-   */
+  /** Creates an ApplicableImpl that directly implements a BuiltIn. */
   protected ApplicableImpl(BuiltIn builtIn) {
-    this(builtIn, Pos.ZERO);
+    this.builtIn = builtIn;
+  }
+
+  protected String name() {
+    return builtIn.mlName.startsWith("op ")
+        ? builtIn.mlName.substring("op ".length())
+        : builtIn.structure + "." + builtIn.mlName;
   }
 
   @Override
   public String toString() {
-    return name;
+    return name();
   }
 
   @Override
   public Describer describe(Describer describer) {
-    return describer.start(name, d -> {});
+    return describer.start(name(), d -> {});
   }
 }
 

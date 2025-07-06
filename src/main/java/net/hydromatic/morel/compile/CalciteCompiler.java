@@ -48,6 +48,7 @@ import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.eval.Applicable2;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.eval.EvalEnv;
@@ -65,6 +66,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.ThreadLocals;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.rel.RelNode;
@@ -353,12 +355,14 @@ public class CalciteCompiler extends Compiler {
   @Override
   protected Code finishCompileApply(
       Context cx, Code fnCode, Code argCode, Type argType) {
-    if (argCode instanceof RelCode && cx instanceof RelContext) {
+    if (cx instanceof RelContext) {
       final RelContext rx = (RelContext) cx;
-      if (((RelCode) argCode).toRel(rx, false)) {
-        final Code argCode2 =
-            calcite.code(rx.env, rx.relBuilder.build(), argType);
-        return finishCompileApply(cx, fnCode, argCode2, argType);
+      if (argCode instanceof RelCode) {
+        if (((RelCode) argCode).toRel(rx, false)) {
+          final Code argCode2 =
+              calcite.code(rx.env, rx.relBuilder.build(), argType);
+          return finishCompileApply(cx, fnCode, argCode2, argType);
+        }
       }
     }
     return super.finishCompileApply(cx, fnCode, argCode, argType);
@@ -367,15 +371,38 @@ public class CalciteCompiler extends Compiler {
   @Override
   protected Code finishCompileApply(
       Context cx, Applicable fnValue, Code argCode, Type argType) {
-    if (argCode instanceof RelCode && cx instanceof RelContext) {
+    if (cx instanceof RelContext) {
       final RelContext rx = (RelContext) cx;
-      if (((RelCode) argCode).toRel(rx, false)) {
-        final Code argCode2 =
-            calcite.code(rx.env, rx.relBuilder.build(), argType);
-        return finishCompileApply(cx, fnValue, argCode2, argType);
+      if (argCode instanceof RelCode) {
+        if (((RelCode) argCode).toRel(rx, false)) {
+          final Code argCode2 =
+              calcite.code(rx.env, rx.relBuilder.build(), argType);
+          return finishCompileApply(cx, fnValue, argCode2, argType);
+        }
       }
     }
     return super.finishCompileApply(cx, fnValue, argCode, argType);
+  }
+
+  @SuppressWarnings("rawtypes")
+  @Override
+  protected Code finishCompileApply2(
+      Context cx, Applicable2 applicable2, PairList<Code, Type> argCodes) {
+    if (cx instanceof RelContext) {
+      final RelContext rx = (RelContext) cx;
+      for (int i = 0; i < argCodes.size(); ) {
+        if (argCodes.left(i) instanceof RelCode
+            && ((RelCode) argCodes.left(i)).toRel(rx, false)) {
+          final Code argCode2 =
+              calcite.code(rx.env, rx.relBuilder.build(), argCodes.right(i));
+          argCodes = PairList.copyOf(argCodes);
+          argCodes.leftList().set(i, argCode2);
+        } else {
+          ++i;
+        }
+      }
+    }
+    return super.finishCompileApply2(cx, applicable2, argCodes);
   }
 
   private static void harmonizeRowTypes(RelBuilder relBuilder, int inputCount) {

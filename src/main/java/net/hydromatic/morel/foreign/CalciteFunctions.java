@@ -32,6 +32,7 @@ import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.Compiler;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
+import net.hydromatic.morel.compile.Inliner;
 import net.hydromatic.morel.compile.Resolver;
 import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.eval.Closure;
@@ -286,7 +287,13 @@ public class CalciteFunctions {
         final Core.NonRecValDecl valDecl3 =
             (Core.NonRecValDecl)
                 Resolver.of(resolved.typeMap, env, session).toCore(valDecl2);
-        final Core.Exp e3 = Compiles.toExp(valDecl3);
+
+        // Limited inlining, e.g. to convert "#filter Bag" to a function
+        // literal.
+        final Inliner inliner = Inliner.of(typeSystem, env, null);
+        final Core.NonRecValDecl valDecl4 = valDecl3.accept(inliner);
+
+        final Core.Exp e3 = Compiles.toExp(valDecl4);
         final Compiler compiler = new Compiler(typeSystem);
         return new Compiled(
             ml,
@@ -358,7 +365,13 @@ public class CalciteFunctions {
         final Core.NonRecValDecl valDecl3 =
             (Core.NonRecValDecl)
                 Resolver.of(resolved.typeMap, env, null).toCore(valDecl2);
-        final Core.Exp e3 = Compiles.toExp(valDecl3);
+
+        // Limited inlining, e.g. to convert "#filter Bag" to a function
+        // literal.
+        final Inliner inliner = Inliner.of(typeSystem, env, null);
+        final Core.NonRecValDecl valDecl4 = valDecl3.accept(inliner);
+
+        final Core.Exp e3 = Compiles.toExp(valDecl4);
         code = new Compiler(typeSystem).compile(env, e3);
         f = Converters.toCalcite(e3.type, typeFactory);
       }
@@ -398,7 +411,7 @@ public class CalciteFunctions {
       final Closure fn = (Closure) closure;
       final EvalEnv evalEnv = THREAD_EVAL_ENV.get();
       final Object o = compiled.converter.apply(arg);
-      return fn.apply(evalEnv, o);
+      return fn.apply(o);
     }
 
     /** Compiled state. */

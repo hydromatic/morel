@@ -38,6 +38,7 @@ import static net.hydromatic.morel.Ml.assertError;
 import static net.hydromatic.morel.Ml.ml;
 import static net.hydromatic.morel.Ml.mlE;
 import static net.hydromatic.morel.TestUtils.first;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -56,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.compile.CompileException;
+import net.hydromatic.morel.eval.Applicable1;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.foreign.ForeignValue;
@@ -1137,19 +1139,37 @@ public class MainTest {
    */
   @Test
   void testEvalApply2() {
-    final String ml = "Math.pow (2.0, 3.0)";
-    final String plan =
+    final String ml2 = "Math.pow (2.0, 3.0)";
+    final String plan2 =
         "apply2(fnValue Math.pow, constant(2.0), constant(3.0))";
-    ml(ml).assertEval(is(8f)).assertPlan(isCode(plan));
+    ml(ml2).assertEval(is(8f)).assertPlan(isCode(plan2));
 
     // When the argument tuple is returned from a function call, we evaluate
     // the long way ('apply').
-    final String ml2 = "Math.pow (hd [(2.0, 3.0)])";
-    final String plan2 =
-        "apply(fnValue Math.pow,"
-            + " argCode apply(fnValue List.hd, "
+    final String ml2b = "Math.pow (hd [(2.0, 3.0)])";
+    final String plan2b =
+        "apply2Tuple(fnValue Math.pow,"
+            + " apply(fnValue List.hd, "
             + "argCode tuple(tuple(constant(2.0), constant(3.0)))))";
-    ml(ml2).assertEval(is(8f)).assertPlan(isCode(plan2));
+    ml(ml2b).assertEval(is(8f)).assertPlan(isCode(plan2b));
+
+    // As above with 3 arguments.
+    final String ml3 = "String.substring (\"morel\", 3, 2)";
+    final String plan3 =
+        "apply3(fnValue String.substring, constant(morel), constant(3), constant(2))";
+    ml(ml3).assertEval(is("el")).assertPlan(isCode(plan3));
+
+    final String ml3b = "String.substring (hd [(\"morel\", 3, 2)])";
+    final String plan3b =
+        "apply3Tuple(fnValue String.substring,"
+            + " apply(fnValue List.hd, "
+            + "argCode tuple(tuple(constant(morel), constant(3), constant(2)))))";
+    ml(ml3b).assertEval(is("el")).assertPlan(isCode(plan3b));
+
+    // Invoke a function that has two curried arguments on one argument.
+    final String ml1 = "String.isPrefix \"mo\"";
+    final String plan1 = "apply1(fnValue String.isPrefix, constant(mo))";
+    ml(ml1).assertEval(instanceOf(Applicable1.class)).assertPlan(isCode(plan1));
   }
 
   /**

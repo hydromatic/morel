@@ -42,6 +42,11 @@ import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Extents;
 import net.hydromatic.morel.compile.Resolver;
+import net.hydromatic.morel.eval.Applicable;
+import net.hydromatic.morel.eval.Applicable1;
+import net.hydromatic.morel.eval.Applicable2;
+import net.hydromatic.morel.eval.Applicable3;
+import net.hydromatic.morel.eval.Applicable4;
 import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
@@ -839,6 +844,48 @@ public class Core {
         o = ((Codes.Positioned) o).withPos(first(pos, this.pos));
       }
       return o;
+    }
+
+    /** Converts to an {@link Applicable} with one argument, or returns null. */
+    public @Nullable Applicable1 toApplicable1(
+        TypeSystem typeSystem, @Nullable Pos pos) {
+      Object o = toBuiltIn(typeSystem, pos);
+      if (o instanceof Applicable2) {
+        return ((Applicable2) o).curry();
+      }
+      if (o instanceof Applicable3) {
+        return ((Applicable3) o).curry();
+      }
+      return null;
+    }
+
+    /** Converts to an {@link Applicable2}, or returns null. */
+    public Applicable2 toApplicable2(TypeSystem typeSystem, @Nullable Pos pos) {
+      Object o = toBuiltIn(typeSystem, pos);
+      if (o instanceof Applicable2) {
+        return (Applicable2) o;
+      }
+      return null;
+    }
+
+    /** Converts to an {@link Applicable3}, or returns null. */
+    public @Nullable Applicable3 toApplicable3(
+        TypeSystem typeSystem, @Nullable Pos pos) {
+      Object o = toBuiltIn(typeSystem, pos);
+      if (o instanceof Applicable3) {
+        return (Applicable3) o;
+      }
+      return null;
+    }
+
+    /** Converts to an {@link Applicable4}, or returns null. */
+    public @Nullable Applicable4 toApplicable4(
+        TypeSystem typeSystem, @Nullable Pos pos) {
+      Object o = toBuiltIn(typeSystem, pos);
+      if (o instanceof Applicable4) {
+        return (Applicable4) o;
+      }
+      return null;
     }
 
     @Override

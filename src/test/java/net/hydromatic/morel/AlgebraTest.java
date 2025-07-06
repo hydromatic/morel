@@ -321,12 +321,11 @@ public class AlgebraTest {
             + "  yield {e.empno, e.deptno, d5 = e.deptno + 5})";
     String plan =
         ""
-            + "apply("
-            + "fnCode apply(fnValue Bag.filter, "
-            + "argCode match(x, apply2(fnValue <, "
+            + "apply2(fnValue Bag.filter, "
+            + "match(x, apply2(fnValue <, "
             + "apply(fnValue nth:2, argCode get(name x)),"
-            + " constant(7500)))), "
-            + "argCode calcite("
+            + " constant(7500))), "
+            + "calcite("
             + "plan LogicalProject(d5=[+($1, 5)], deptno=[$1], empno=[$2])\n"
             + "  LogicalFilter(condition=[=($5, 'CLERK')])\n"
             + "    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], "

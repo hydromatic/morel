@@ -19,15 +19,13 @@
 package net.hydromatic.morel.eval;
 
 import java.util.List;
-import net.hydromatic.morel.ast.Pos;
-import net.hydromatic.morel.compile.BuiltIn;
 
 // CHECKSTYLE: IGNORE 30 (long line in javadoc)
 /**
- * Applicable whose argument is a 3-tuple.
+ * Applicable whose argument is a 2-tuple.
  *
  * <p>Implementations that use {@code Applicable3} are more efficient and
- * concise than {@link ApplicableImpl} because there is no need to create an
+ * concise than {@link Applicable} because there is no need to create an
  * ephemeral tuple (Java {@link List}) to pass the arguments, and Java's
  * generics provide the casting.
  *
@@ -55,27 +53,22 @@ import net.hydromatic.morel.compile.BuiltIn;
  * }</pre>
  *
  * @see Applicable3
+ * @see Applicable4
+ * @see Codes.BaseApplicable2
+ * @see Codes.BasePositionedApplicable2
  * @param <R> return type
  * @param <A0> type of argument 0
  * @param <A1> type of argument 1
  */
-@SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class Applicable2<R, A0, A1> extends ApplicableImpl {
-  protected Applicable2(BuiltIn builtIn, Pos pos) {
-    super(builtIn, pos);
-  }
+public interface Applicable2<R, A0, A1> {
+  /** Applies this function to its two arguments. */
+  R apply(A0 a0, A1 a1);
 
-  protected Applicable2(BuiltIn builtIn) {
-    this(builtIn, Pos.ZERO);
-  }
-
-  @Override
-  public Object apply(EvalEnv env, Object argValue) {
-    final List list = (List) argValue;
-    return apply((A0) list.get(0), (A1) list.get(1));
-  }
-
-  public abstract R apply(A0 a0, A1 a1);
+  /**
+   * Converts this function {@code f(a, b)} into a function that can be called
+   * {@code f(a)(b)}.
+   */
+  Applicable1<Applicable1<R, A1>, A0> curry();
 }
 
 // End Applicable2.java

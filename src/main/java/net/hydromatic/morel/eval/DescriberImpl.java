@@ -63,6 +63,9 @@ class DescriberImpl implements Describer {
 
     @Override
     public Detail arg(String name, Object value) {
+      if (value instanceof Describable) {
+        return arg(name, (Describable) value);
+      }
       if (value instanceof Iterable) {
         return args(name, (Iterable<?>) value);
       }
