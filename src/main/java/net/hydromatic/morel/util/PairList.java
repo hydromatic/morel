@@ -285,6 +285,19 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
       return new PairLists.MutablePairList<>(list);
     }
   }
+
+  /**
+   * Converts an input value to a pair of output values.
+   *
+   * @param <T> Input value
+   * @param <U> First output value
+   * @param <R> Second output value
+   */
+  @FunctionalInterface
+  interface BiTransformer<T, U, R> {
+    /** Converts an input value to a pair of output values. */
+    void apply(T t, BiConsumer<U, R> consumer);
+  }
 }
 
 // End PairList.java

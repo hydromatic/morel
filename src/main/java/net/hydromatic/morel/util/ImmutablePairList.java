@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Immutable list of pairs.
@@ -104,6 +106,73 @@ public interface ImmutablePairList<T, U> extends PairList<T, U> {
           list.add(entry.getValue());
         });
     return PairLists.immutableBackedBy(list);
+  }
+
+  /**
+   * Creates an immutable pair list by transforming the elements of an input
+   * list.
+   */
+  static <R, T, U> ImmutablePairList<T, U> fromTransformed(
+      Iterable<? extends R> iterable, BiTransformer<R, T, U> transformer) {
+    // If it's a collection, we know its size, and therefore can create an
+    // array directly, without an intermediate ArrayList.
+    if (iterable instanceof Collection) {
+      return fromTransformed((Collection<? extends R>) iterable, transformer);
+    }
+    final List<Object> list = new ArrayList<>();
+    iterable.forEach(
+        r ->
+            transformer.apply(
+                r,
+                (t, u) -> {
+                  list.add(t);
+                  list.add(u);
+                }));
+    return PairLists.immutableBackedBy(list);
+  }
+
+  /**
+   * Creates an immutable pair list by transforming the elements of an input
+   * list.
+   */
+  @SuppressWarnings("unchecked")
+  static <R, T, U> ImmutablePairList<T, U> fromTransformed(
+      @NonNull Collection<? extends R> collection,
+      BiTransformer<R, T, U> transformer) {
+    // If it's a collection, we know its size, and therefore can create an
+    // array directly, without an intermediate ArrayList.
+    final Object[] elements;
+    switch (collection.size()) {
+      case 0:
+        return of(); // shortcut creating a builder
+
+      case 1:
+        elements = new Object[2];
+        collection.forEach(
+            r ->
+                transformer.apply(
+                    r,
+                    (t, u) -> {
+                      elements[0] = t;
+                      elements[1] = u;
+                    }));
+        return ImmutablePairList.of((T) elements[0], (U) elements[1]);
+
+      default:
+        elements = new Object[collection.size() * 2];
+        final BiConsumer<T, U> consumer =
+            new BiConsumer<T, U>() {
+              int i = 0;
+
+              @Override
+              public void accept(T t, U u) {
+                elements[i++] = t;
+                elements[i++] = u;
+              }
+            };
+        collection.forEach(r -> transformer.apply(r, consumer));
+        return new PairLists.ArrayImmutablePairList<>(elements);
+    }
   }
 
   @Override

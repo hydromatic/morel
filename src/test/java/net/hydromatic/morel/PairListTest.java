@@ -37,9 +37,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.RandomAccess;
+import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.MapEntry;
@@ -603,6 +606,62 @@ class PairListTest {
     b3.add("x", null);
     list.add(Pair.of("x", null));
     validate(b3.build(), list);
+  }
+
+  @Test
+  void testImmutablePairListFromTransformed() {
+    // Tester that calls ImmutablePairList.fromTransformed(List, BiTransformer)
+    final PairList.BiTransformer<String, String, Integer> transformer =
+        (s, consumer) -> consumer.accept(s, s.length());
+    final BiConsumer<List<String>, String> listTester =
+        (list, expected) -> {
+          final ImmutablePairList<String, Integer> pairList =
+              ImmutablePairList.fromTransformed(list, transformer);
+          assertThat(pairList, hasSize(list.size()));
+          assertThat(pairList, hasToString(expected));
+        };
+    // Tester that calls ImmutablePairList.fromTransformed(Iterable,
+    // BiTransformer) with a List
+    final BiConsumer<List<String>, String> iterableTester =
+        (list, expected) -> {
+          final ImmutablePairList<String, Integer> pairList =
+              ImmutablePairList.fromTransformed(
+                  (Iterable<String>) list, transformer);
+          assertThat(pairList, hasSize(list.size()));
+          assertThat(pairList, hasToString(expected));
+        };
+    // Tester that calls ImmutablePairList.fromTransformed(Iterable,
+    // BiTransformer) with a
+    // LinkedHashSet
+    final BiConsumer<List<String>, String> setTester =
+        (list, expected) -> {
+          final Set<String> set = new LinkedHashSet<>(list);
+          final ImmutablePairList<String, Integer> pairList =
+              ImmutablePairList.fromTransformed(set, transformer);
+          assertThat(pairList, hasSize(list.size()));
+          assertThat(pairList, hasToString(expected));
+        };
+    // Tester that calls ImmutablePairList.fromTransformed(Iterable,
+    // BiTransformer) with an Iterable
+    final BiConsumer<List<String>, String> realIterableTester =
+        (list, expected) -> {
+          final Iterable<String> iterable = list::iterator;
+          final ImmutablePairList<String, Integer> pairList =
+              ImmutablePairList.fromTransformed(iterable, transformer);
+          assertThat(pairList, hasSize(list.size()));
+          assertThat(pairList, hasToString(expected));
+        };
+    final BiConsumer<List<String>, String> t =
+        (list, expected) -> {
+          listTester.accept(list, expected);
+          iterableTester.accept(list, expected);
+          setTester.accept(list, expected);
+          realIterableTester.accept(list, expected);
+        };
+    t.accept(Arrays.asList("abc", "", "de"), "[<abc, 3>, <, 0>, <de, 2>]");
+    t.accept(Collections.singletonList("abc"), "[<abc, 3>]");
+    t.accept(Collections.singletonList(""), "[<, 0>]");
+    t.accept(Collections.emptyList(), "[]");
   }
 }
 
