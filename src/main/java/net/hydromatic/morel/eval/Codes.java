@@ -93,277 +93,238 @@ public abstract class Codes {
 
   private Codes() {}
 
-  /** Describes a {@link Code}. */
-  public static String describe(Code code) {
-    final Code code2 = strip(code);
-    return code2.describe(new DescriberImpl()).toString();
+  public static Code from(Supplier<RowSink> rowSinkFactory) {
+    return new FromCode(rowSinkFactory);
+  }
+
+  /** Creates a {@link RowSink} for a {@code join} step. */
+  public static RowSink scanRowSink(
+      Op op, Core.Pat pat, Code code, Code conditionCode, RowSink rowSink) {
+    return new ScanRowSink(op, pat, code, conditionCode, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a {@code where} step. */
+  public static RowSink whereRowSink(Code filterCode, RowSink rowSink) {
+    return new WhereRowSink(filterCode, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a {@code skip} step. */
+  public static RowSink skipRowSink(Code skipCode, RowSink rowSink) {
+    return new SkipRowSink(skipCode, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a {@code take} step. */
+  public static RowSink takeRowSink(Code takeCode, RowSink rowSink) {
+    return new TakeRowSink(takeCode, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for an {@code except} step. */
+  public static RowSink exceptRowSink(
+      boolean distinct,
+      ImmutableList<Code> codes,
+      ImmutableList<String> names,
+      RowSink rowSink) {
+    return distinct
+        ? new ExceptDistinctRowSink(codes, names, rowSink)
+        : new ExceptAllRowSink(codes, names, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for an {@code intersect} step. */
+  public static RowSink intersectRowSink(
+      boolean distinct,
+      ImmutableList<Code> codes,
+      ImmutableList<String> names,
+      RowSink rowSink) {
+    return distinct
+        ? new IntersectDistinctRowSink(codes, names, rowSink)
+        : new IntersectAllRowSink(codes, names, rowSink);
   }
 
   /**
-   * Value of {@link BuiltIn.Constructor#OPTION_NONE}.
-   *
-   * @see #optionSome(Object)
+   * Creates a {@link RowSink} for an {@code except}, {@code intersect} or
+   * {@code union} step.
    */
-  private static final List OPTION_NONE = ImmutableList.of("NONE");
-
-  /** Returns a Code that evaluates to the same value in all environments. */
-  public static Code constant(Object value) {
-    return new ConstantCode(value);
+  public static RowSink unionRowSink(
+      boolean distinct,
+      ImmutableList<Code> codes,
+      ImmutableList<String> names,
+      RowSink rowSink) {
+    return new UnionRowSink(distinct, codes, names, rowSink);
   }
 
-  /** Returns an Applicable that returns its argument. */
-  private static Applicable1 identity(BuiltIn builtIn) {
-    return new BaseApplicable1<Object, Object>(builtIn) {
+  /** Creates a {@link RowSink} for an {@code order} step. */
+  public static RowSink orderRowSink(
+      Code code, Comparator comparator, Core.StepEnv env, RowSink rowSink) {
+    ImmutableList<String> names = transformEager(env.bindings, b -> b.id.name);
+    return new OrderRowSink(code, comparator, names, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a {@code group} step. */
+  public static RowSink groupRowSink(
+      Code keyCode,
+      ImmutableList<Applicable> aggregateCodes,
+      ImmutableList<String> inNames,
+      ImmutableList<String> keyNames,
+      ImmutableList<String> outNames,
+      RowSink rowSink) {
+    return new GroupRowSink(
+        keyCode, aggregateCodes, inNames, keyNames, outNames, rowSink);
+  }
+
+  /** Creates a {@link RowSink} for a non-terminal {@code yield} step. */
+  public static RowSink yieldRowSink(
+      Map<String, Code> yieldCodes, RowSink rowSink) {
+    return new YieldRowSink(
+        ImmutableList.copyOf(yieldCodes.keySet()),
+        ImmutableList.copyOf(yieldCodes.values()),
+        rowSink);
+  }
+
+  /**
+   * Creates a {@link RowSink} to collect the results of a {@code from}
+   * expression.
+   */
+  public static RowSink collectRowSink(Code code) {
+    return new CollectRowSink(code);
+  }
+
+  /** Creates a {@link RowSink} that starts all downstream row sinks. */
+  public static RowSink firstRowSink(RowSink rowSink) {
+    // Use a Describer to walk over the downstream sinks and their codes, and
+    // collect the start actions. The only start action, currently, resets
+    // ordinals to -1.
+    final List<Runnable> startActions = new ArrayList<>();
+    rowSink.describe(
+        new CodeVisitor() {
+          @Override
+          public void addStartAction(Runnable runnable) {
+            startActions.add(runnable);
+          }
+        });
+    if (startActions.isEmpty()) {
+      // There are no start actions, so there's no need to wrap the in a
+      // FirstRowSink.
+      return rowSink;
+    }
+    return new FirstRowSink(rowSink, startActions);
+  }
+
+  /**
+   * Returns an applicable that returns the {@code slot}th field of a tuple or
+   * record.
+   */
+  public static Applicable nth(int slot) {
+    checkArgument(slot >= 0);
+    return new BaseApplicable1<Object, List>(BuiltIn.Z_NTH) {
       @Override
-      public Object apply(Object arg) {
-        return arg;
+      protected String name() {
+        return "nth:" + slot;
+      }
+
+      @Override
+      public Object apply(List list) {
+        return list.get(slot);
       }
     };
   }
 
-  /** @see BuiltIn#OP_EQ */
-  private static final Applicable2 OP_EQ =
-      new BaseApplicable2<Boolean, Object, Object>(BuiltIn.OP_EQ) {
+  // ---------------------------------------------------------------------------
+  // The following section contains fields that implement built-in functions and
+  // values. They are in alphabetical order.
+
+  // lint:startSorted:fields
+
+  /** An applicable that returns the absolute value of an int. */
+  private static final Applicable1 ABS =
+      new BaseApplicable1<Integer, Integer>(BuiltIn.ABS) {
         @Override
-        public Boolean apply(Object a0, Object a1) {
-          return a0.equals(a1);
+        public Integer apply(Integer integer) {
+          return integer >= 0 ? integer : -integer;
         }
       };
 
-  /** @see BuiltIn#OP_NE */
-  private static final Applicable2 OP_NE =
-      new BaseApplicable2<Boolean, Object, Object>(BuiltIn.OP_NE) {
-        @Override
-        public Boolean apply(Object a0, Object a1) {
-          return !a0.equals(a1);
-        }
-      };
+  /** @see BuiltIn#BAG_ALL */
+  private static final Applicable2 BAG_ALL = all(BuiltIn.BAG_ALL);
 
-  /** @see BuiltIn#OP_LT */
-  private static final Applicable2 OP_LT =
-      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LT) {
-        @Override
-        public Boolean apply(Comparable a0, Comparable a1) {
-          if (a0 instanceof Float && Float.isNaN((Float) a0)
-              || a1 instanceof Float && Float.isNaN((Float) a1)) {
-            return false;
-          }
-          return a0.compareTo(a1) < 0;
-        }
-      };
+  /** @see BuiltIn#BAG_APP */
+  private static final Applicable2 BAG_APP = listApp(BuiltIn.BAG_APP);
 
-  /** @see BuiltIn#OP_GT */
-  private static final Applicable2 OP_GT =
-      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GT) {
-        @Override
-        public Boolean apply(Comparable a0, Comparable a1) {
-          if (a0 instanceof Float && Float.isNaN((Float) a0)
-              || a1 instanceof Float && Float.isNaN((Float) a1)) {
-            return false;
-          }
-          return a0.compareTo(a1) > 0;
-        }
-      };
+  /** @see BuiltIn#BAG_AT */
+  private static final Applicable2 BAG_AT = union(BuiltIn.BAG_AT);
 
-  /** @see BuiltIn#OP_LE */
-  private static final Applicable2 OP_LE =
-      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LE) {
-        @Override
-        public Boolean apply(Comparable a0, Comparable a1) {
-          if (a0 instanceof Float && Float.isNaN((Float) a0)
-              || a1 instanceof Float && Float.isNaN((Float) a1)) {
-            return false;
-          }
-          return a0.compareTo(a1) <= 0;
-        }
-      };
+  /** @see BuiltIn#BAG_CONCAT */
+  private static final Applicable BAG_CONCAT = listConcat(BuiltIn.BAG_CONCAT);
 
-  /** @see BuiltIn#OP_GE */
-  private static final Applicable2 OP_GE =
-      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GE) {
-        @Override
-        public Boolean apply(Comparable a0, Comparable a1) {
-          if (a0 instanceof Float && Float.isNaN((Float) a0)
-              || a1 instanceof Float && Float.isNaN((Float) a1)) {
-            return false;
-          }
-          return a0.compareTo(a1) >= 0;
-        }
-      };
+  /** @see BuiltIn#BAG_DROP */
+  private static final Applicable2 BAG_DROP = listDrop(BuiltIn.BAG_DROP);
 
-  /** @see BuiltIn#OP_ELEM */
-  private static final Applicable2 OP_ELEM =
-      new BaseApplicable2<Boolean, Object, List>(BuiltIn.OP_ELEM) {
-        @Override
-        public Boolean apply(Object a0, List a1) {
-          return a1.contains(a0);
-        }
-      };
+  /** @see BuiltIn#BAG_FIND */
+  private static final Applicable2 BAG_FIND = find(BuiltIn.BAG_FIND);
 
-  /** @see BuiltIn#OP_NOT_ELEM */
-  private static final Applicable2 OP_NOT_ELEM =
-      new BaseApplicable2<Boolean, Object, List>(BuiltIn.OP_NOT_ELEM) {
-        @Override
-        public Boolean apply(Object a0, List a1) {
-          return !a1.contains(a0);
-        }
-      };
+  /** @see BuiltIn#BAG_FILTER */
+  private static final Applicable2 BAG_FILTER = listFilter(BuiltIn.BAG_FILTER);
 
-  /** Returns a Code that evaluates "andalso". */
-  public static Code andAlso(Code code0, Code code1) {
-    return new AndAlsoCode(code0, code1);
-  }
+  /** @see BuiltIn#BAG_FOLD */
+  private static final Applicable3 BAG_FOLD =
+      // Order does not matter, but we call with left = true because foldl is
+      // more efficient than foldr.
+      listFold0(BuiltIn.BAG_FOLD, true);
 
-  /** Returns a Code that evaluates "orelse". */
-  public static Code orElse(Code code0, Code code1) {
-    return new OrElseCode(code0, code1);
-  }
+  /** @see BuiltIn#BAG_FROM_LIST */
+  private static final Applicable1 BAG_FROM_LIST =
+      identity(BuiltIn.BAG_FROM_LIST);
 
-  /** Implements {@link #OP_NEGATE} for type {@code int}. */
-  private static final Applicable Z_NEGATE_INT =
-      new BaseApplicable1<Integer, Integer>(BuiltIn.OP_NEGATE) {
-        @Override
-        public Integer apply(Integer i) {
-          return -i;
-        }
-      };
+  /** @see BuiltIn#BAG_EXISTS */
+  private static final Applicable2 BAG_EXISTS = exists(BuiltIn.BAG_EXISTS);
 
-  /** Implements {@link #OP_NEGATE} for type {@code real}. */
-  private static final Applicable Z_NEGATE_REAL =
-      new BaseApplicable1<Float, Float>(BuiltIn.OP_NEGATE) {
-        @Override
-        public Float apply(Float f) {
-          if (Float.isNaN(f)) {
-            // ~nan -> nan
-            // nan (or any other value f such that isNan(f)) -> ~nan
-            return Float.floatToRawIntBits(f)
-                    == Float.floatToRawIntBits(NEGATIVE_NAN)
-                ? Float.NaN
-                : NEGATIVE_NAN;
-          }
-          return -f;
-        }
-      };
+  /** @see BuiltIn#BAG_GET_ITEM */
+  private static final Applicable BAG_GET_ITEM =
+      listGetItem(BuiltIn.BAG_GET_ITEM);
 
-  /** Implements {@link #OP_PLUS} for type {@code int}. */
-  private static final Applicable2 Z_PLUS_INT =
-      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_PLUS) {
-        @Override
-        public Integer apply(Integer a0, Integer a1) {
-          return a0 + a1;
-        }
-      };
+  /** @see BuiltIn#BAG_HD */
+  private static final Applicable BAG_HD =
+      new ListHd(BuiltIn.LIST_HD, Pos.ZERO);
 
-  /** Implements {@link #OP_PLUS} for type {@code real}. */
-  private static final Applicable2 Z_PLUS_REAL =
-      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_PLUS) {
-        @Override
-        public Float apply(Float a0, Float a1) {
-          return a0 + a1;
-        }
-      };
+  /** @see BuiltIn#BAG_LENGTH */
+  private static final Applicable1 BAG_LENGTH = length(BuiltIn.BAG_LENGTH);
 
-  /** Implements {@link #OP_MINUS} for type {@code int}. */
-  private static final Applicable2 Z_MINUS_INT =
-      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_MINUS) {
-        @Override
-        public Integer apply(Integer a0, Integer a1) {
-          return a0 - a1;
-        }
-      };
+  /** @see BuiltIn#BAG_MAP_PARTIAL */
+  private static final Applicable2 BAG_MAP_PARTIAL =
+      listMapPartial(BuiltIn.BAG_MAP_PARTIAL);
 
-  /** Implements {@link #OP_MINUS} for type {@code real}. */
-  private static final Applicable2 Z_MINUS_REAL =
-      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_MINUS) {
-        @Override
-        public Float apply(Float a0, Float a1) {
-          return a0 - a1;
-        }
-      };
+  /** @see BuiltIn#BAG_MAP */
+  private static final Applicable2 BAG_MAP = listMap(BuiltIn.BAG_MAP);
 
-  /** Implements {@link #OP_TIMES} for type {@code int}. */
-  private static final Applicable2 Z_TIMES_INT =
-      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_TIMES) {
-        @Override
-        public Integer apply(Integer a0, Integer a1) {
-          return a0 * a1;
-        }
-      };
+  /** @see BuiltIn#BAG_NTH */
+  private static final Applicable BAG_NTH =
+      new ListNth(BuiltIn.BAG_NTH, Pos.ZERO);
 
-  /** Implements {@link #OP_TIMES} for type {@code real}. */
-  private static final Applicable2 Z_TIMES_REAL =
-      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_TIMES) {
-        @Override
-        public Float apply(Float a0, Float a1) {
-          return a0 * a1;
-        }
-      };
+  /** @see BuiltIn#BAG_NULL */
+  private static final Applicable1 BAG_NULL = empty(BuiltIn.BAG_NULL);
 
-  /** Implements {@link #OP_DIVIDE} for type {@code int}. */
-  private static final Applicable2 Z_DIVIDE_INT =
-      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_DIVIDE) {
-        @Override
-        public Integer apply(Integer a0, Integer a1) {
-          return a0 / a1;
-        }
-      };
+  /** @see BuiltIn#BAG_PARTITION */
+  private static final Applicable2 BAG_PARTITION =
+      listPartition0(BuiltIn.BAG_PARTITION);
 
-  /** Implements {@link #OP_DIVIDE} for type {@code real}. */
-  private static final Applicable2 Z_DIVIDE_REAL =
-      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_DIVIDE) {
-        @Override
-        public Float apply(Float a0, Float a1) {
-          final float v = a0 / a1;
-          if (Float.isNaN(v)) {
-            return Float.NaN; // normalize NaN
-          }
-          return v;
-        }
-      };
+  /** @see BuiltIn#BAG_TABULATE */
+  private static final Applicable BAG_TABULATE =
+      new ListTabulate(BuiltIn.BAG_TABULATE, Pos.ZERO);
 
-  /** @see BuiltIn#OP_NEGATE */
-  private static final Macro OP_NEGATE =
-      (typeSystem, env, argType) -> {
-        switch ((PrimitiveType) argType) {
-          case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_INT);
-          case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_REAL);
-          default:
-            throw new AssertionError("bad type " + argType);
-        }
-      };
+  /** @see BuiltIn#BAG_TAKE */
+  private static final Applicable BAG_TAKE =
+      new ListTake(BuiltIn.BAG_TAKE, Pos.ZERO);
 
-  /** @see BuiltIn#OP_DIVIDE */
-  private static final Macro OP_DIVIDE =
-      (typeSystem, env, argType) -> {
-        final Type resultType = ((TupleType) argType).argTypes.get(0);
-        switch ((PrimitiveType) resultType) {
-          case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_INT);
-          case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_REAL);
-          default:
-            throw new AssertionError("bad type " + argType);
-        }
-      };
+  /** @see BuiltIn#BAG_TO_LIST */
+  private static final Applicable1 BAG_TO_LIST = identity(BuiltIn.BAG_TO_LIST);
 
-  /** @see BuiltIn#OP_DIV */
-  private static final Applicable2 OP_DIV = new IntDiv(BuiltIn.OP_DIV);
-
-  /** @see BuiltIn#GENERAL_OP_O */
-  private static final Applicable2 GENERAL_OP_O =
-      new BaseApplicable2<Applicable1, Applicable1, Applicable1>(
-          BuiltIn.GENERAL_OP_O) {
-        @Override
-        public Applicable1 apply(Applicable1 f, Applicable1 g) {
-          return arg -> f.apply(g.apply(arg));
-        }
-      };
+  /** @see BuiltIn#BAG_TL */
+  private static final Applicable BAG_TL =
+      new ListTl(BuiltIn.LIST_TL, Pos.ZERO);
 
   /** @see BuiltIn#CHAR_CHR */
   private static final Applicable1 CHAR_CHR = new CharChr(Pos.ZERO);
 
+  /** Implements {@link #CHAR_CHR}. */
   private static class CharChr
       extends BasePositionedApplicable1<Character, Integer>
       implements Positioned {
@@ -417,7 +378,7 @@ public abstract class Codes {
   }
 
   /** @see BuiltIn#CHAR_FROM_CSTRING */
-  private static final Applicable1<List, String> CHAR_FROM_CSTRING =
+  private static final Applicable1 CHAR_FROM_CSTRING =
       new BaseApplicable1<List, String>(BuiltIn.CHAR_FROM_CSTRING) {
         @Override
         public List apply(String s) {
@@ -435,13 +396,13 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#CHAR_IS_ALPHA */
-  private static final Applicable CHAR_IS_ALPHA =
-      new CharPredicate(BuiltIn.CHAR_IS_ALPHA, CharPredicate::isAlpha);
-
   /** @see BuiltIn#CHAR_IS_ALPHA_NUM */
   private static final Applicable CHAR_IS_ALPHA_NUM =
       new CharPredicate(BuiltIn.CHAR_IS_ALPHA_NUM, CharPredicate::isAlphaNum);
+
+  /** @see BuiltIn#CHAR_IS_ALPHA */
+  private static final Applicable CHAR_IS_ALPHA =
+      new CharPredicate(BuiltIn.CHAR_IS_ALPHA, CharPredicate::isAlpha);
 
   /** @see BuiltIn#CHAR_IS_ASCII */
   private static final Applicable CHAR_IS_ASCII =
@@ -625,6 +586,25 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#GENERAL_IGNORE */
+  private static final Applicable GENERAL_IGNORE =
+      new BaseApplicable1<Unit, Object>(BuiltIn.GENERAL_IGNORE) {
+        @Override
+        public Unit apply(Object arg) {
+          return Unit.INSTANCE;
+        }
+      };
+
+  /** @see BuiltIn#GENERAL_OP_O */
+  private static final Applicable2 GENERAL_OP_O =
+      new BaseApplicable2<Applicable1, Applicable1, Applicable1>(
+          BuiltIn.GENERAL_OP_O) {
+        @Override
+        public Applicable1 apply(Applicable1 f, Applicable1 g) {
+          return arg -> f.apply(g.apply(arg));
+        }
+      };
+
   /** @see BuiltIn#INT_ABS */
   private static final Applicable INT_ABS =
       new BaseApplicable1<Integer, Integer>(BuiltIn.INT_ABS) {
@@ -706,18 +686,21 @@ public abstract class Codes {
   /** @see BuiltIn#INT_DIV */
   private static final Applicable2 INT_DIV = new IntDiv(BuiltIn.INT_DIV);
 
+  /** Implements {@link #INT_DIV} and {@link #OP_DIV}. */
+  private static class IntDiv
+      extends BaseApplicable2<Integer, Integer, Integer> {
+    IntDiv(BuiltIn builtIn) {
+      super(builtIn);
+    }
+
+    @Override
+    public Integer apply(Integer a0, Integer a1) {
+      return Math.floorDiv(a0, a1);
+    }
+  }
+
   /** @see BuiltIn#INT_MOD */
   private static final Applicable2 INT_MOD = new IntMod(BuiltIn.INT_MOD);
-
-  /** @see BuiltIn#Z_ORDINAL */
-  public static Code ordinalGet(int[] ordinalSlots) {
-    return new OrdinalGetCode(ordinalSlots);
-  }
-
-  /** Helper for {@link #ordinalGet(int[])}. */
-  public static Code ordinalInc(int[] ordinalSlots, Code nextCode) {
-    return new OrdinalIncCode(ordinalSlots, nextCode);
-  }
 
   /** Implements {@link #INT_MOD} and {@link #OP_MOD}. */
   private static class IntMod
@@ -729,19 +712,6 @@ public abstract class Codes {
     @Override
     public Integer apply(Integer a0, Integer a1) {
       return Math.floorMod(a0, a1);
-    }
-  }
-
-  /** Implements {@link #INT_DIV} and {@link #OP_DIV}. */
-  private static class IntDiv
-      extends BaseApplicable2<Integer, Integer, Integer> {
-    IntDiv(BuiltIn builtIn) {
-      super(builtIn);
-    }
-
-    @Override
-    public Integer apply(Integer a0, Integer a1) {
-      return Math.floorDiv(a0, a1);
     }
   }
 
@@ -803,26 +773,13 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#INTERACT_USE */
-  private static final Applicable INTERACT_USE =
-      new InteractUse(Pos.ZERO, false);
-
   /** @see BuiltIn#INTERACT_USE_SILENTLY */
   private static final Applicable INTERACT_USE_SILENTLY =
       new InteractUse(Pos.ZERO, true);
 
-  /**
-   * Removes wrappers, in particular the one due to {@link #wrapRelList(Code)}.
-   */
-  public static Code strip(Code code) {
-    for (; ; ) {
-      if (code instanceof WrapRelList) {
-        code = ((WrapRelList) code).code;
-      } else {
-        return code;
-      }
-    }
-  }
+  /** @see BuiltIn#INTERACT_USE */
+  private static final Applicable INTERACT_USE =
+      new InteractUse(Pos.ZERO, false);
 
   /** Implements {@link #INTERACT_USE}. */
   private static class InteractUse extends BasePositionedApplicable {
@@ -847,717 +804,32 @@ public abstract class Codes {
     }
   }
 
-  /** @see BuiltIn#OP_CARET */
-  private static final Applicable2 OP_CARET =
-      new BaseApplicable2<String, String, String>(BuiltIn.OP_CARET) {
-        @Override
-        public String apply(String a0, String a1) {
-          return a0 + a1;
-        }
-      };
+  /** @see BuiltIn#LIST_ALL */
+  private static final Applicable2 LIST_ALL = all(BuiltIn.LIST_ALL);
 
-  /** @see BuiltIn#OP_CONS */
-  private static final Applicable2 OP_CONS =
-      new BaseApplicable2<List, Object, Iterable>(BuiltIn.OP_CONS) {
-        @Override
-        public List apply(Object e, Iterable iterable) {
-          return ImmutableList.builder().add(e).addAll(iterable).build();
-        }
-      };
-
-  /**
-   * Returns a Code that returns the value of variable "name" in the current
-   * environment.
-   */
-  public static Code get(String name) {
-    return new GetCode(name);
-  }
-
-  /**
-   * Returns a Code that returns a tuple consisting of the values of variables
-   * "name0", ... "nameN" in the current environment.
-   */
-  public static Code getTuple(Iterable<String> names) {
-    if (Iterables.isEmpty(names)) {
-      return new ConstantCode(Unit.INSTANCE);
-    }
-    return new GetTupleCode(ImmutableList.copyOf(names));
-  }
-
-  public static Code let(List<Code> matchCodes, Code resultCode) {
-    switch (matchCodes.size()) {
-      case 0:
-        return resultCode;
-
-      case 1:
-        // Use a more efficient runtime path if the list has only one element.
-        // The effect is the same.
-        return new Let1Code(matchCodes.get(0), resultCode);
-
-      default:
-        return new LetCode(ImmutableList.copyOf(matchCodes), resultCode);
-    }
-  }
-
-  /**
-   * Generates the code for applying a function (or function value) to an
-   * argument.
-   */
-  public static Code apply(Code fnCode, Code argCode) {
-    assert !fnCode.isConstant(); // if constant, use "apply(Closure, Code)"
-    return new ApplyCodeCode(fnCode, argCode);
-  }
-
-  /** Generates the code for applying a function value to an argument. */
-  public static Code apply(Applicable fnValue, Code argCode) {
-    return new ApplyCode(fnValue, argCode);
-  }
-
-  /** Generates the code for applying a function value to an argument. */
-  public static Code apply1(Applicable1 fnValue, Code argCode) {
-    return new ApplyCode1(fnValue, argCode);
-  }
-
-  /** Generates the code for applying a function value to two arguments. */
-  public static Code apply2(Applicable2 fnValue, Code argCode0, Code argCode1) {
-    return new ApplyCode2(fnValue, argCode0, argCode1);
-  }
-
-  /** Generates the code for applying a function value to a 2-tuple argument. */
-  public static Code apply2Tuple(Applicable2 fnValue, Code argCode0) {
-    return new ApplyCode2Tuple(fnValue, argCode0);
-  }
-
-  /** Generates the code for applying a function value to three arguments. */
-  public static Code apply3(
-      Applicable3 fnValue, Code argCode0, Code argCode1, Code argCode2) {
-    return new ApplyCode3(fnValue, argCode0, argCode1, argCode2);
-  }
-
-  /** Generates the code for applying a function value to a 3-tuple argument. */
-  public static Code apply3Tuple(Applicable3 fnValue, Code argCode0) {
-    return new ApplyCode3Tuple(fnValue, argCode0);
-  }
-
-  /** Generates the code for applying a function value to four arguments. */
-  public static Code apply4(
-      Applicable4 fnValue,
-      Code argCode0,
-      Code argCode1,
-      Code argCode2,
-      Code argCode3) {
-    return new ApplyCode4(fnValue, argCode0, argCode1, argCode2, argCode3);
-  }
-
-  public static Code list(Iterable<? extends Code> codes) {
-    return tuple(codes);
-  }
-
-  public static Code tuple(Iterable<? extends Code> codes) {
-    return new TupleCode(ImmutableList.copyOf(codes));
-  }
-
-  public static Code wrapRelList(Code code) {
-    return new WrapRelList(code);
-  }
-
-  /**
-   * Returns an applicable that constructs an instance of a datatype. The
-   * instance is a list with two elements [constructorName, value].
-   */
-  public static Applicable1 tyCon(Type dataType, String name) {
-    requireNonNull(dataType);
-    requireNonNull(name);
-    return new BaseApplicable1(BuiltIn.Z_TY_CON) {
+  private static Applicable2 all(final BuiltIn builtIn) {
+    return new BaseApplicable2<Boolean, Applicable1, List>(builtIn) {
       @Override
-      protected String name() {
-        return "tyCon";
-      }
-
-      @Override
-      public Object apply(Object arg) {
-        return ImmutableList.of(name, arg);
+      public Boolean apply(Applicable1 f, List list) {
+        for (Object o : list) {
+          if (!(Boolean) f.apply(o)) {
+            return false;
+          }
+        }
+        return true;
       }
     };
   }
 
-  public static Code from(Supplier<RowSink> rowSinkFactory) {
-    return new FromCode(rowSinkFactory);
-  }
+  /** @see BuiltIn#LIST_APP */
+  private static final Applicable2 LIST_APP = listApp(BuiltIn.LIST_APP);
 
-  /** Creates a {@link RowSink} for a {@code join} step. */
-  public static RowSink scanRowSink(
-      Op op, Core.Pat pat, Code code, Code conditionCode, RowSink rowSink) {
-    return new ScanRowSink(op, pat, code, conditionCode, rowSink);
-  }
-
-  /** Creates a {@link RowSink} for a {@code where} step. */
-  public static RowSink whereRowSink(Code filterCode, RowSink rowSink) {
-    return new WhereRowSink(filterCode, rowSink);
-  }
-
-  /** Creates a {@link RowSink} for a {@code skip} step. */
-  public static RowSink skipRowSink(Code skipCode, RowSink rowSink) {
-    return new SkipRowSink(skipCode, rowSink);
-  }
-
-  /** Creates a {@link RowSink} for a {@code take} step. */
-  public static RowSink takeRowSink(Code takeCode, RowSink rowSink) {
-    return new TakeRowSink(takeCode, rowSink);
-  }
-
-  /** Creates a {@link RowSink} for an {@code except} step. */
-  public static RowSink exceptRowSink(
-      boolean distinct,
-      ImmutableList<Code> codes,
-      ImmutableList<String> names,
-      RowSink rowSink) {
-    return distinct
-        ? new ExceptDistinctRowSink(codes, names, rowSink)
-        : new ExceptAllRowSink(codes, names, rowSink);
-  }
-
-  /** Creates a {@link RowSink} for an {@code intersect} step. */
-  public static RowSink intersectRowSink(
-      boolean distinct,
-      ImmutableList<Code> codes,
-      ImmutableList<String> names,
-      RowSink rowSink) {
-    return distinct
-        ? new IntersectDistinctRowSink(codes, names, rowSink)
-        : new IntersectAllRowSink(codes, names, rowSink);
-  }
-
-  /**
-   * Creates a {@link RowSink} for an {@code except}, {@code intersect} or
-   * {@code union} step.
-   */
-  public static RowSink unionRowSink(
-      boolean distinct,
-      ImmutableList<Code> codes,
-      ImmutableList<String> names,
-      RowSink rowSink) {
-    return new UnionRowSink(distinct, codes, names, rowSink);
-  }
-
-  /** Creates a {@link RowSink} for an {@code order} step. */
-  public static RowSink orderRowSink(
-      Code code, Comparator comparator, Core.StepEnv env, RowSink rowSink) {
-    ImmutableList<String> names = transformEager(env.bindings, b -> b.id.name);
-    return new OrderRowSink(code, comparator, names, rowSink);
-  }
-
-  /** Creates a {@link RowSink} for a {@code group} step. */
-  public static RowSink groupRowSink(
-      Code keyCode,
-      ImmutableList<Applicable> aggregateCodes,
-      ImmutableList<String> inNames,
-      ImmutableList<String> keyNames,
-      ImmutableList<String> outNames,
-      RowSink rowSink) {
-    return new GroupRowSink(
-        keyCode, aggregateCodes, inNames, keyNames, outNames, rowSink);
-  }
-
-  /** Creates a {@link RowSink} for a non-terminal {@code yield} step. */
-  public static RowSink yieldRowSink(
-      Map<String, Code> yieldCodes, RowSink rowSink) {
-    return new YieldRowSink(
-        ImmutableList.copyOf(yieldCodes.keySet()),
-        ImmutableList.copyOf(yieldCodes.values()),
-        rowSink);
-  }
-
-  /**
-   * Creates a {@link RowSink} to collect the results of a {@code from}
-   * expression.
-   */
-  public static RowSink collectRowSink(Code code) {
-    return new CollectRowSink(code);
-  }
-
-  /** Creates a {@link RowSink} that starts all downstream row sinks. */
-  public static RowSink firstRowSink(RowSink rowSink) {
-    // Use a Describer to walk over the downstream sinks and their codes, and
-    // collect the start actions. The only start action, currently, resets
-    // ordinals to -1.
-    final List<Runnable> startActions = new ArrayList<>();
-    rowSink.describe(
-        new CodeVisitor() {
-          @Override
-          public void addStartAction(Runnable runnable) {
-            startActions.add(runnable);
-          }
-        });
-    if (startActions.isEmpty()) {
-      // There are no start actions, so there's no need to wrap the in a
-      // FirstRowSink.
-      return rowSink;
-    }
-    return new FirstRowSink(rowSink, startActions);
-  }
-
-  /**
-   * Returns an applicable that returns the {@code slot}th field of a tuple or
-   * record.
-   */
-  public static Applicable nth(int slot) {
-    checkArgument(slot >= 0);
-    return new BaseApplicable1<Object, List>(BuiltIn.Z_NTH) {
+  private static Applicable2 listApp(BuiltIn builtIn) {
+    return new BaseApplicable2<Unit, Applicable1, List>(builtIn) {
       @Override
-      protected String name() {
-        return "nth:" + slot;
-      }
-
-      @Override
-      public Object apply(List list) {
-        return list.get(slot);
-      }
-    };
-  }
-
-  /** An applicable that negates a boolean value. */
-  private static final Applicable NOT =
-      new BaseApplicable1<Boolean, Boolean>(BuiltIn.NOT) {
-        @Override
-        public Boolean apply(Boolean b) {
-          return !(Boolean) b;
-        }
-      };
-
-  /** An applicable that returns the absolute value of an int. */
-  private static final Applicable1 ABS =
-      new BaseApplicable1<Integer, Integer>(BuiltIn.ABS) {
-        @Override
-        public Integer apply(Integer integer) {
-          return integer >= 0 ? integer : -integer;
-        }
-      };
-
-  /** @see BuiltIn#GENERAL_IGNORE */
-  private static final Applicable GENERAL_IGNORE =
-      new BaseApplicable1<Unit, Object>(BuiltIn.GENERAL_IGNORE) {
-        @Override
-        public Unit apply(Object arg) {
-          return Unit.INSTANCE;
-        }
-      };
-
-  /** @see BuiltIn#OP_MINUS */
-  private static final Macro OP_MINUS =
-      (typeSystem, env, argType) -> {
-        final Type resultType = ((TupleType) argType).argTypes.get(0);
-        switch ((PrimitiveType) resultType) {
-          case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_INT);
-          case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_REAL);
-          default:
-            throw new AssertionError("bad type " + argType);
-        }
-      };
-
-  /** @see BuiltIn#OP_MOD */
-  private static final Applicable2 OP_MOD = new IntMod(BuiltIn.OP_MOD);
-
-  /** @see BuiltIn#OP_PLUS */
-  private static final Macro OP_PLUS =
-      (typeSystem, env, argType) -> {
-        final Type resultType = ((TupleType) argType).argTypes.get(0);
-        switch ((PrimitiveType) resultType) {
-          case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_INT);
-          case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_REAL);
-          default:
-            throw new AssertionError("bad type " + argType);
-        }
-      };
-
-  /** @see BuiltIn#OP_TIMES */
-  private static final Macro OP_TIMES =
-      (typeSystem, env, argType) -> {
-        final Type resultType = ((TupleType) argType).argTypes.get(0);
-        switch ((PrimitiveType) resultType) {
-          case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_INT);
-          case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_REAL);
-          default:
-            throw new AssertionError("bad type " + argType);
-        }
-      };
-
-  /** @see BuiltIn#STRING_MAX_SIZE */
-  private static final Integer STRING_MAX_SIZE = Integer.MAX_VALUE;
-
-  /** @see BuiltIn#STRING_OP_CARET */
-  private static final Applicable2 STRING_OP_CARET =
-      new BaseApplicable2<String, String, String>(BuiltIn.STRING_OP_CARET) {
-        @Override
-        public String apply(String a0, String a1) {
-          return a0 + a1;
-        }
-      };
-
-  /** @see BuiltIn#STRING_OP_GE */
-  private static final Applicable2 STRING_OP_GE =
-      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_GE) {
-        @Override
-        public Boolean apply(String a0, String a1) {
-          return a0.compareTo(a1) >= 0;
-        }
-      };
-
-  /** @see BuiltIn#STRING_OP_GT */
-  private static final Applicable2 STRING_OP_GT =
-      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_GT) {
-        @Override
-        public Boolean apply(String a0, String a1) {
-          return a0.compareTo(a1) > 0;
-        }
-      };
-
-  /** @see BuiltIn#STRING_OP_LE */
-  private static final Applicable2 STRING_OP_LE =
-      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_LE) {
-        @Override
-        public Boolean apply(String a0, String a1) {
-          return a0.compareTo(a1) <= 0;
-        }
-      };
-
-  /** @see BuiltIn#STRING_OP_LT */
-  private static final Applicable2 STRING_OP_LT =
-      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_LT) {
-        @Override
-        public Boolean apply(String a0, String a1) {
-          return a0.compareTo(a1) < 0;
-        }
-      };
-
-  /** @see BuiltIn#STRING_SIZE */
-  private static final Applicable1 STRING_SIZE =
-      new BaseApplicable1<Integer, String>(BuiltIn.STRING_SIZE) {
-        @Override
-        public Integer apply(String s) {
-          return s.length();
-        }
-      };
-
-  /** @see BuiltIn#STRING_SUB */
-  private static final Applicable2 STRING_SUB = new StringSub(Pos.ZERO);
-
-  /** Implements {@link #STRING_SUB}. */
-  private static class StringSub
-      extends BasePositionedApplicable2<Character, String, Integer> {
-    StringSub(Pos pos) {
-      super(BuiltIn.STRING_SUB, pos);
-    }
-
-    @Override
-    public Character apply(String s, Integer i) {
-      if (i < 0 || i >= s.length()) {
-        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
-      }
-      return s.charAt(i);
-    }
-
-    public StringSub withPos(Pos pos) {
-      return new StringSub(pos);
-    }
-  }
-
-  /** @see BuiltIn#STRING_COLLATE */
-  private static final Applicable2 STRING_COLLATE =
-      new BaseApplicable2<List, Applicable1, List>(BuiltIn.STRING_COLLATE) {
-        @Override
-        public List apply(Applicable1 comparator, List tuple) {
-          final String string0 = (String) tuple.get(0);
-          final String string1 = (String) tuple.get(1);
-          final int n0 = string0.length();
-          final int n1 = string1.length();
-          final int n = Math.min(n0, n1);
-          for (int i = 0; i < n; i++) {
-            final char char0 = string0.charAt(i);
-            final char char1 = string1.charAt(i);
-            final List compare =
-                (List) comparator.apply(FlatLists.of(char0, char1));
-            if (!compare.get(0).equals("EQUAL")) {
-              return compare;
-            }
-          }
-          return order(Integer.compare(n0, n1));
-        }
-      };
-
-  /** @see BuiltIn#STRING_COMPARE */
-  private static final Applicable2 STRING_COMPARE =
-      new BaseApplicable2<List, String, String>(BuiltIn.STRING_COMPARE) {
-        @Override
-        public List apply(String a0, String a1) {
-          return order(a0.compareTo(a1));
-        }
-      };
-
-  /** @see BuiltIn#STRING_EXTRACT */
-  private static final Applicable STRING_EXTRACT = new StringExtract(Pos.ZERO);
-
-  /** @see BuiltIn#STRING_FIELDS */
-  private static final Applicable2 STRING_FIELDS =
-      new StringTokenize(BuiltIn.STRING_FIELDS);
-
-  /** @see BuiltIn#STRING_TOKENS */
-  private static final Applicable2 STRING_TOKENS =
-      new StringTokenize(BuiltIn.STRING_TOKENS);
-
-  /** Implements {@link #STRING_FIELDS} and {@link #STRING_TOKENS}. */
-  private static class StringTokenize
-      extends BaseApplicable2<
-          List<String>, Applicable1<Boolean, Character>, String> {
-    StringTokenize(BuiltIn builtIn) {
-      super(builtIn);
-    }
-
-    @Override
-    public List<String> apply(Applicable1<Boolean, Character> f, String s) {
-      List<String> result = new ArrayList<>();
-      int h = 0;
-      for (int i = 0; i < s.length(); i++) {
-        char c = s.charAt(i);
-        if (f.apply(c)) {
-          if (builtIn == BuiltIn.STRING_FIELDS || i > h) {
-            // String.tokens only adds fields if they are non-empty.
-            result.add(s.substring(h, i));
-          }
-          h = i + 1;
-        }
-      }
-      if (builtIn == BuiltIn.STRING_FIELDS || s.length() > h) {
-        // String.tokens only adds fields if they are non-empty.
-        result.add(s.substring(h));
-      }
-      return result;
-    }
-  }
-
-  /** Implements {@link #STRING_SUB}. */
-  private static class StringExtract
-      extends BasePositionedApplicable3<String, String, Integer, List> {
-    StringExtract(Pos pos) {
-      super(BuiltIn.STRING_EXTRACT, pos);
-    }
-
-    @Override
-    public StringExtract withPos(Pos pos) {
-      return new StringExtract(pos);
-    }
-
-    @Override
-    public String apply(String s, Integer i, List jOpt) {
-      if (i < 0) {
-        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
-      }
-      if (jOpt.size() == 2) {
-        final int j = (Integer) jOpt.get(1);
-        if (j < 0 || i + j > s.length()) {
-          throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
-        }
-        return s.substring(i, i + j);
-      } else {
-        if (i > s.length()) {
-          throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
-        }
-        return s.substring(i);
-      }
-    }
-  }
-
-  /** @see BuiltIn#STRING_SUBSTRING */
-  private static final Applicable3 STRING_SUBSTRING =
-      new StringSubstring(Pos.ZERO);
-
-  /** Implements {@link #STRING_SUBSTRING}. */
-  private static class StringSubstring
-      extends BasePositionedApplicable3<String, String, Integer, Integer> {
-    StringSubstring(Pos pos) {
-      super(BuiltIn.STRING_SUBSTRING, pos);
-    }
-
-    @Override
-    public StringSubstring withPos(Pos pos) {
-      return new StringSubstring(pos);
-    }
-
-    @Override
-    public String apply(String s, Integer i, Integer j) {
-      if (i < 0 || j < 0 || i + j > s.length()) {
-        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
-      }
-      return s.substring(i, i + j);
-    }
-  }
-
-  /** @see BuiltIn#STRING_CONCAT */
-  private static final Applicable1 STRING_CONCAT =
-      new StringConcat(BuiltIn.STRING_CONCAT, Pos.ZERO);
-
-  /** Implements {@link #STRING_CONCAT}. */
-  private static class StringConcat
-      extends BasePositionedApplicable1<String, List<String>> {
-    StringConcat(BuiltIn builtIn, Pos pos) {
-      super(builtIn, pos);
-    }
-
-    @Override
-    public StringConcat withPos(Pos pos) {
-      return new StringConcat(BuiltIn.STRING_CONCAT, pos);
-    }
-
-    @Override
-    public String apply(List<String> list) {
-      long n = 0;
-      for (String s : list) {
-        n += s.length();
-      }
-      if (n > STRING_MAX_SIZE) {
-        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
-      }
-      return String.join("", list);
-    }
-  }
-
-  /** @see BuiltIn#STRING_CONCAT_WITH */
-  private static final Applicable2 STRING_CONCAT_WITH =
-      new StringConcatWith(BuiltIn.STRING_CONCAT_WITH, Pos.ZERO);
-
-  /** Implements {@link #STRING_CONCAT_WITH}. */
-  private static class StringConcatWith
-      extends BasePositionedApplicable2<String, String, List<String>> {
-    StringConcatWith(BuiltIn builtIn, Pos pos) {
-      super(builtIn, pos);
-    }
-
-    @Override
-    public StringConcatWith withPos(Pos pos) {
-      return new StringConcatWith(BuiltIn.STRING_CONCAT_WITH, pos);
-    }
-
-    @Override
-    public String apply(String separator, List<String> list) {
-      long n = 0;
-      for (String s : list) {
-        n += s.length();
-        n += separator.length();
-      }
-      if (n > STRING_MAX_SIZE) {
-        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
-      }
-      return String.join(separator, list);
-    }
-  }
-
-  /** @see BuiltIn#STRING_STR */
-  private static final Applicable STRING_STR =
-      new BaseApplicable1<String, Character>(BuiltIn.STRING_STR) {
-        @Override
-        public String apply(Character character) {
-          return character + "";
-        }
-      };
-
-  /** @see BuiltIn#STRING_IMPLODE */
-  private static final Applicable STRING_IMPLODE =
-      new BaseApplicable1<String, List<Character>>(BuiltIn.STRING_IMPLODE) {
-        @Override
-        public String apply(List<Character> characters) {
-          // Note: In theory this function should raise Size, but it is not
-          // possible in practice because List.size() is never larger than
-          // Integer.MAX_VALUE.
-          return String.valueOf(Chars.toArray(characters));
-        }
-      };
-
-  /** @see BuiltIn#STRING_EXPLODE */
-  private static final Applicable1 STRING_EXPLODE =
-      new BaseApplicable1<List, String>(BuiltIn.STRING_EXPLODE) {
-        @Override
-        public List apply(String s) {
-          return MapList.of(s.length(), s::charAt);
-        }
-      };
-
-  /** @see BuiltIn#STRING_MAP */
-  private static final Applicable2 STRING_MAP =
-      new BaseApplicable2<String, Applicable1<Character, Character>, String>(
-          BuiltIn.STRING_MAP) {
-        @Override
-        public String apply(Applicable1<Character, Character> f, String s) {
-          final StringBuilder buf = new StringBuilder();
-          for (int i = 0; i < s.length(); i++) {
-            final char c = s.charAt(i);
-            final char c2 = f.apply(c);
-            buf.append(c2);
-          }
-          return buf.toString();
-        }
-      };
-
-  /** @see BuiltIn#STRING_TRANSLATE */
-  private static final Applicable2 STRING_TRANSLATE =
-      new BaseApplicable2<String, Applicable1<String, Character>, String>(
-          BuiltIn.STRING_TRANSLATE) {
-        @Override
-        public String apply(Applicable1<String, Character> f, String s) {
-          final StringBuilder buf = new StringBuilder();
-          for (int i = 0; i < s.length(); i++) {
-            final char c = s.charAt(i);
-            final String c2 = f.apply(c);
-            buf.append(c2);
-          }
-          return buf.toString();
-        }
-      };
-
-  /** @see BuiltIn#STRING_IS_PREFIX */
-  private static final Applicable2 STRING_IS_PREFIX =
-      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_IS_PREFIX) {
-        @Override
-        public Boolean apply(String s, String s2) {
-          return s2.startsWith(s);
-        }
-      };
-
-  /** @see BuiltIn#STRING_IS_SUBSTRING */
-  private static final Applicable2 STRING_IS_SUBSTRING =
-      new BaseApplicable2<Boolean, String, String>(
-          BuiltIn.STRING_IS_SUBSTRING) {
-        @Override
-        public Boolean apply(String s, String s2) {
-          return s2.contains(s);
-        }
-      };
-
-  /** @see BuiltIn#STRING_IS_SUFFIX */
-  private static final Applicable2 STRING_IS_SUFFIX =
-      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_IS_SUFFIX) {
-        @Override
-        public Boolean apply(String s, String s2) {
-          return s2.endsWith(s);
-        }
-      };
-
-  /** @see BuiltIn#LIST_NULL */
-  private static final Applicable1 LIST_NULL = empty(BuiltIn.LIST_NULL);
-
-  /** @see BuiltIn#LIST_LENGTH */
-  private static final Applicable1 LIST_LENGTH = length(BuiltIn.LIST_LENGTH);
-
-  private static Applicable1 length(BuiltIn builtIn) {
-    return new BaseApplicable1<Integer, List>(builtIn) {
-      @Override
-      public Integer apply(List list) {
-        return list.size();
+      public Unit apply(Applicable1 consumer, List list) {
+        list.forEach(consumer::apply);
+        return Unit.INSTANCE;
       }
     };
   }
@@ -1574,169 +846,31 @@ public abstract class Codes {
     };
   }
 
-  /** @see BuiltIn#LIST_HD */
-  private static final Applicable LIST_HD =
-      new ListHd(BuiltIn.LIST_HD, Pos.ZERO);
+  /** @see BuiltIn#LIST_COLLATE */
+  private static final Applicable2 LIST_COLLATE = collate(BuiltIn.LIST_COLLATE);
 
-  /** Implements {@link #LIST_HD}. */
-  private static class ListHd extends BasePositionedApplicable1<Object, List> {
-    ListHd(BuiltIn builtIn, Pos pos) {
-      super(builtIn, pos);
-    }
-
-    @Override
-    public Applicable withPos(Pos pos) {
-      return new ListHd(builtIn, pos);
-    }
-
-    @Override
-    public Object apply(List list) {
-      if (list.isEmpty()) {
-        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
-      }
-      return list.get(0);
-    }
-  }
-
-  /** @see BuiltIn#LIST_TL */
-  private static final Applicable LIST_TL =
-      new ListTl(BuiltIn.LIST_TL, Pos.ZERO);
-
-  /** Implements {@link #LIST_TL}. */
-  private static class ListTl extends BasePositionedApplicable1<List, List> {
-    ListTl(BuiltIn builtIn, Pos pos) {
-      super(builtIn, pos);
-    }
-
-    @Override
-    public Applicable withPos(Pos pos) {
-      return new ListTl(builtIn, pos);
-    }
-
-    @Override
-    public List apply(List list) {
-      final int size = list.size();
-      if (size == 0) {
-        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
-      }
-      return list.subList(1, size);
-    }
-  }
-
-  /** @see BuiltIn#LIST_LAST */
-  private static final Applicable LIST_LAST =
-      new ListLast(BuiltIn.LIST_LAST, Pos.ZERO);
-
-  /** Implements {@link #LIST_LAST}. */
-  private static class ListLast
-      extends BasePositionedApplicable1<Object, List> {
-    ListLast(BuiltIn builtIn, Pos pos) {
-      super(builtIn, pos);
-    }
-
-    @Override
-    public Applicable withPos(Pos pos) {
-      return new ListLast(builtIn, pos);
-    }
-
-    @Override
-    public Object apply(List list) {
-      final int size = list.size();
-      if (size == 0) {
-        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
-      }
-      return list.get(size - 1);
-    }
-  }
-
-  /** @see BuiltIn#LIST_GET_ITEM */
-  private static final Applicable LIST_GET_ITEM =
-      listGetItem(BuiltIn.LIST_GET_ITEM);
-
-  private static Applicable listGetItem(BuiltIn builtIn) {
-    return new BaseApplicable1<List, List>(builtIn) {
+  private static Applicable2 collate(final BuiltIn builtIn) {
+    return new BaseApplicable2<Object, Applicable1<List, List>, List>(builtIn) {
       @Override
-      public List apply(List list) {
-        if (list.isEmpty()) {
-          return OPTION_NONE;
-        } else {
-          return optionSome(
-              ImmutableList.of(list.get(0), list.subList(1, list.size())));
+      public Object apply(Applicable1<List, List> comparator, List tuple) {
+        final List list0 = (List) tuple.get(0);
+        final List list1 = (List) tuple.get(1);
+        final int n0 = list0.size();
+        final int n1 = list1.size();
+        final int n = Math.min(n0, n1);
+        for (int i = 0; i < n; i++) {
+          final Object element0 = list0.get(i);
+          final Object element1 = list1.get(i);
+          final List compare =
+              comparator.apply(FlatLists.of(element0, element1));
+          if (!compare.get(0).equals("EQUAL")) {
+            return compare;
+          }
         }
+        return order(Integer.compare(n0, n1));
       }
     };
   }
-
-  /** @see BuiltIn#LIST_NTH */
-  private static final Applicable LIST_NTH =
-      new ListNth(BuiltIn.LIST_NTH, Pos.ZERO);
-
-  /** Implements {@link #LIST_NTH} and {@link #VECTOR_SUB}. */
-  private static class ListNth
-      extends BasePositionedApplicable2<Object, List, Integer> {
-    ListNth(BuiltIn builtIn, Pos pos) {
-      super(builtIn, pos);
-    }
-
-    @Override
-    public ListNth withPos(Pos pos) {
-      return new ListNth(builtIn, pos);
-    }
-
-    @Override
-    public Object apply(List list, Integer i) {
-      if (i < 0 || i >= list.size()) {
-        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
-      }
-      return list.get(i);
-    }
-  }
-
-  /** @see BuiltIn#LIST_TAKE */
-  private static final Applicable LIST_TAKE =
-      new ListTake(BuiltIn.LIST_TAKE, Pos.ZERO);
-
-  /** Implements {@link #LIST_TAKE}. */
-  private static class ListTake
-      extends BasePositionedApplicable2<List, List, Integer> {
-    ListTake(BuiltIn builtIn, Pos pos) {
-      super(builtIn, pos);
-    }
-
-    @Override
-    public ListTake withPos(Pos pos) {
-      return new ListTake(builtIn, pos);
-    }
-
-    @Override
-    public List apply(List list, Integer i) {
-      if (i < 0 || i > list.size()) {
-        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
-      }
-      return list.subList(0, i);
-    }
-  }
-
-  /** @see BuiltIn#LIST_DROP */
-  private static final Applicable2 LIST_DROP = listDrop(BuiltIn.LIST_DROP);
-
-  private static Applicable2<List, List, Integer> listDrop(BuiltIn builtIn) {
-    return new BaseApplicable2<List, List, Integer>(builtIn) {
-      @Override
-      public List apply(List list, Integer i) {
-        return list.subList(i, list.size());
-      }
-    };
-  }
-
-  /** @see BuiltIn#LIST_REV */
-  private static final Applicable LIST_REV =
-      new BaseApplicable1<List, List>(BuiltIn.LIST_REV) {
-        @Override
-        public List apply(List list) {
-          return Lists.reverse(list);
-        }
-      };
 
   /** @see BuiltIn#LIST_CONCAT */
   private static final Applicable LIST_CONCAT = listConcat(BuiltIn.LIST_CONCAT);
@@ -1750,6 +884,18 @@ public abstract class Codes {
           builder.addAll(list);
         }
         return builder.build();
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_DROP */
+  private static final Applicable2 LIST_DROP = listDrop(BuiltIn.LIST_DROP);
+
+  private static Applicable2<List, List, Integer> listDrop(BuiltIn builtIn) {
+    return new BaseApplicable2<List, List, Integer>(builtIn) {
+      @Override
+      public List apply(List list, Integer i) {
+        return list.subList(i, list.size());
       }
     };
   }
@@ -1785,98 +931,19 @@ public abstract class Codes {
     }
   }
 
-  /** @see BuiltIn#LIST_INTERSECT */
-  private static final Applicable LIST_INTERSECT = new ListIntersect(Pos.ZERO);
+  /** @see BuiltIn#LIST_EXISTS */
+  private static final Applicable2 LIST_EXISTS = exists(BuiltIn.LIST_EXISTS);
 
-  /** Implements {@link #LIST_INTERSECT}. */
-  private static class ListIntersect
-      extends BasePositionedApplicable1<List, List<List>> {
-    ListIntersect(Pos pos) {
-      super(BuiltIn.LIST_INTERSECT, pos);
-    }
-
-    @Override
-    public Applicable withPos(Pos pos) {
-      return new ListIntersect(pos);
-    }
-
-    @Override
-    public List apply(List<List> lists) {
-      if (lists.isEmpty()) {
-        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
-      }
-      List collection = new ArrayList(lists.get(0));
-      for (int i = 1; i < lists.size(); i++) {
-        final Set set = new HashSet(lists.get(i));
-        collection.retainAll(set);
-      }
-      if (collection.size() == lists.get(0).size()) {
-        collection = lists.get(0); // save the effort of making a copy
-      }
-      return ImmutableList.copyOf(collection);
-    }
-  }
-
-  /** @see BuiltIn#LIST_REV_APPEND */
-  private static final Applicable2 LIST_REV_APPEND =
-      new BaseApplicable2<List, List, List>(BuiltIn.LIST_REV_APPEND) {
-        @Override
-        public List apply(List list0, List list1) {
-          return ImmutableList.builder()
-              .addAll(Lists.reverse(list0))
-              .addAll(list1)
-              .build();
-        }
-      };
-
-  /** @see BuiltIn#LIST_APP */
-  private static final Applicable2 LIST_APP = listApp(BuiltIn.LIST_APP);
-
-  private static Applicable2 listApp(BuiltIn builtIn) {
-    return new BaseApplicable2<Unit, Applicable1, List>(builtIn) {
+  private static Applicable2 exists(final BuiltIn builtIn) {
+    return new BaseApplicable2<Boolean, Applicable1, List>(builtIn) {
       @Override
-      public Unit apply(Applicable1 consumer, List list) {
-        list.forEach(consumer::apply);
-        return Unit.INSTANCE;
-      }
-    };
-  }
-
-  /** @see BuiltIn#LIST_MAPI */
-  private static final Applicable2 LIST_MAPI = listMapi(BuiltIn.LIST_MAPI);
-
-  /** @see BuiltIn#LIST_MAP */
-  private static final Applicable2 LIST_MAP = listMap(BuiltIn.LIST_MAP);
-
-  private static Applicable2 listMap(BuiltIn builtIn) {
-    return new BaseApplicable2<List, Applicable1, List>(builtIn) {
-      @Override
-      public List apply(Applicable1 f, List list) {
-        final ImmutableList.Builder builder = ImmutableList.builder();
+      public Boolean apply(Applicable1 f, List list) {
         for (Object o : list) {
-          builder.add(f.apply(o));
-        }
-        return builder.build();
-      }
-    };
-  }
-
-  /** @see BuiltIn#LIST_MAP_PARTIAL */
-  private static final Applicable2 LIST_MAP_PARTIAL =
-      listMapPartial(BuiltIn.LIST_MAP_PARTIAL);
-
-  private static Applicable2 listMapPartial(BuiltIn builtIn) {
-    return new BaseApplicable2<List, Applicable1<List, Object>, List>(builtIn) {
-      @Override
-      public List apply(Applicable1<List, Object> f, List list) {
-        final ImmutableList.Builder builder = ImmutableList.builder();
-        for (Object o : list) {
-          final List opt = f.apply(o);
-          if (opt.size() == 2) {
-            builder.add(opt.get(1));
+          if ((Boolean) f.apply(o)) {
+            return true;
           }
         }
-        return builder.build();
+        return false;
       }
     };
   }
@@ -1919,25 +986,6 @@ public abstract class Codes {
     };
   }
 
-  /** @see BuiltIn#LIST_PARTITION */
-  private static final Applicable2 LIST_PARTITION =
-      listPartition0(BuiltIn.LIST_PARTITION);
-
-  private static Applicable2 listPartition0(BuiltIn builtIn) {
-    return new BaseApplicable2<List, Applicable1<Boolean, Object>, List>(
-        builtIn) {
-      @Override
-      public List apply(Applicable1<Boolean, Object> f, List list) {
-        final ImmutableList.Builder trueBuilder = ImmutableList.builder();
-        final ImmutableList.Builder falseBuilder = ImmutableList.builder();
-        for (Object o : list) {
-          (f.apply(o) ? trueBuilder : falseBuilder).add(o);
-        }
-        return ImmutableList.of(trueBuilder.build(), falseBuilder.build());
-      }
-    };
-  }
-
   /** @see BuiltIn#LIST_FOLDL */
   private static final Applicable3 LIST_FOLDL =
       listFold0(BuiltIn.LIST_FOLDL, true);
@@ -1960,102 +1008,205 @@ public abstract class Codes {
     };
   }
 
-  /** @see BuiltIn#LIST_EXISTS */
-  private static final Applicable2 LIST_EXISTS = exists(BuiltIn.LIST_EXISTS);
+  /** @see BuiltIn#LIST_GET_ITEM */
+  private static final Applicable LIST_GET_ITEM =
+      listGetItem(BuiltIn.LIST_GET_ITEM);
 
-  private static Applicable2 exists(final BuiltIn builtIn) {
-    return new BaseApplicable2<Boolean, Applicable1, List>(builtIn) {
+  private static Applicable listGetItem(BuiltIn builtIn) {
+    return new BaseApplicable1<List, List>(builtIn) {
       @Override
-      public Boolean apply(Applicable1 f, List list) {
-        for (Object o : list) {
-          if ((Boolean) f.apply(o)) {
-            return true;
-          }
+      public List apply(List list) {
+        if (list.isEmpty()) {
+          return OPTION_NONE;
+        } else {
+          return optionSome(
+              ImmutableList.of(list.get(0), list.subList(1, list.size())));
         }
-        return false;
       }
     };
   }
 
-  /** @see BuiltIn#LIST_ALL */
-  private static final Applicable2 LIST_ALL = all(BuiltIn.LIST_ALL);
+  /** @see BuiltIn#LIST_HD */
+  private static final Applicable LIST_HD =
+      new ListHd(BuiltIn.LIST_HD, Pos.ZERO);
 
-  private static Applicable2 all(final BuiltIn builtIn) {
-    return new BaseApplicable2<Boolean, Applicable1, List>(builtIn) {
-      @Override
-      public Boolean apply(Applicable1 f, List list) {
-        for (Object o : list) {
-          if (!(Boolean) f.apply(o)) {
-            return false;
-          }
-        }
-        return true;
-      }
-    };
-  }
-
-  /** @see BuiltIn#LIST_TABULATE */
-  private static final Applicable LIST_TABULATE =
-      new ListTabulate(BuiltIn.LIST_TABULATE, Pos.ZERO);
-
-  /** Implements {@link #LIST_TABULATE}. */
-  private static class ListTabulate
-      extends BasePositionedApplicable2<Object, Integer, Applicable1> {
-    ListTabulate(BuiltIn builtIn, Pos pos) {
+  /** Implements {@link #LIST_HD}. */
+  private static class ListHd extends BasePositionedApplicable1<Object, List> {
+    ListHd(BuiltIn builtIn, Pos pos) {
       super(builtIn, pos);
     }
 
     @Override
     public Applicable withPos(Pos pos) {
-      return new ListTabulate(builtIn, pos);
+      return new ListHd(builtIn, pos);
     }
 
     @Override
-    public Object apply(Integer count, Applicable1 f) {
-      if (count < 0) {
-        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
+    public Object apply(List list) {
+      if (list.isEmpty()) {
+        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
       }
-      final ImmutableList.Builder builder = ImmutableList.builder();
-      for (int i = 0; i < count; i++) {
-        builder.add(f.apply(i));
-      }
-      return builder.build();
+      return list.get(0);
     }
   }
 
-  /** @see BuiltIn#LIST_COLLATE */
-  private static final Applicable2 LIST_COLLATE = collate(BuiltIn.LIST_COLLATE);
+  /** @see BuiltIn#LIST_INTERSECT */
+  private static final Applicable LIST_INTERSECT = new ListIntersect(Pos.ZERO);
 
-  private static Applicable2 collate(final BuiltIn builtIn) {
-    return new BaseApplicable2<Object, Applicable1<List, List>, List>(builtIn) {
+  /** Implements {@link #LIST_INTERSECT}. */
+  private static class ListIntersect
+      extends BasePositionedApplicable1<List, List<List>> {
+    ListIntersect(Pos pos) {
+      super(BuiltIn.LIST_INTERSECT, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new ListIntersect(pos);
+    }
+
+    @Override
+    public List apply(List<List> lists) {
+      if (lists.isEmpty()) {
+        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
+      }
+      List collection = new ArrayList(lists.get(0));
+      for (int i = 1; i < lists.size(); i++) {
+        final Set set = new HashSet(lists.get(i));
+        collection.retainAll(set);
+      }
+      if (collection.size() == lists.get(0).size()) {
+        collection = lists.get(0); // save the effort of making a copy
+      }
+      return ImmutableList.copyOf(collection);
+    }
+  }
+
+  /** @see BuiltIn#LIST_LAST */
+  private static final Applicable LIST_LAST =
+      new ListLast(BuiltIn.LIST_LAST, Pos.ZERO);
+
+  /** Implements {@link #LIST_LAST}. */
+  private static class ListLast
+      extends BasePositionedApplicable1<Object, List> {
+    ListLast(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new ListLast(builtIn, pos);
+    }
+
+    @Override
+    public Object apply(List list) {
+      final int size = list.size();
+      if (size == 0) {
+        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
+      }
+      return list.get(size - 1);
+    }
+  }
+
+  /** @see BuiltIn#LIST_LENGTH */
+  private static final Applicable1 LIST_LENGTH = length(BuiltIn.LIST_LENGTH);
+
+  private static Applicable1 length(BuiltIn builtIn) {
+    return new BaseApplicable1<Integer, List>(builtIn) {
       @Override
-      public Object apply(Applicable1<List, List> comparator, List tuple) {
-        final List list0 = (List) tuple.get(0);
-        final List list1 = (List) tuple.get(1);
-        final int n0 = list0.size();
-        final int n1 = list1.size();
-        final int n = Math.min(n0, n1);
-        for (int i = 0; i < n; i++) {
-          final Object element0 = list0.get(i);
-          final Object element1 = list1.get(i);
-          final List compare =
-              comparator.apply(FlatLists.of(element0, element1));
-          if (!compare.get(0).equals("EQUAL")) {
-            return compare;
-          }
-        }
-        return order(Integer.compare(n0, n1));
+      public Integer apply(List list) {
+        return list.size();
       }
     };
   }
 
-  /** @see BuiltIn#LIST_PAIR_ALL */
-  private static final Applicable2 LIST_PAIR_ALL =
-      listPairAll(BuiltIn.LIST_PAIR_ALL, false);
+  /** @see BuiltIn#LIST_MAPI */
+  private static final Applicable2 LIST_MAPI = listMapi(BuiltIn.LIST_MAPI);
+
+  /** Implements {@link #LIST_MAPI}, {@link #VECTOR_MAPI}. */
+  private static Applicable2<List, Applicable1, List> listMapi(
+      BuiltIn builtIn) {
+    return new BaseApplicable2<List, Applicable1, List>(builtIn) {
+      @Override
+      public List apply(Applicable1 f, List vec) {
+        ImmutableList.Builder b = ImmutableList.builder();
+        forEachIndexed(vec, (e, i) -> b.add(f.apply(FlatLists.of(i, e))));
+        return b.build();
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_MAP */
+  private static final Applicable2 LIST_MAP = listMap(BuiltIn.LIST_MAP);
+
+  private static Applicable2 listMap(BuiltIn builtIn) {
+    return new BaseApplicable2<List, Applicable1, List>(builtIn) {
+      @Override
+      public List apply(Applicable1 f, List list) {
+        final ImmutableList.Builder builder = ImmutableList.builder();
+        for (Object o : list) {
+          builder.add(f.apply(o));
+        }
+        return builder.build();
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_MAP_PARTIAL */
+  private static final Applicable2 LIST_MAP_PARTIAL =
+      listMapPartial(BuiltIn.LIST_MAP_PARTIAL);
+
+  private static Applicable2 listMapPartial(BuiltIn builtIn) {
+    return new BaseApplicable2<List, Applicable1<List, Object>, List>(builtIn) {
+      @Override
+      public List apply(Applicable1<List, Object> f, List list) {
+        final ImmutableList.Builder builder = ImmutableList.builder();
+        for (Object o : list) {
+          final List opt = f.apply(o);
+          if (opt.size() == 2) {
+            builder.add(opt.get(1));
+          }
+        }
+        return builder.build();
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_NTH */
+  private static final Applicable LIST_NTH =
+      new ListNth(BuiltIn.LIST_NTH, Pos.ZERO);
+
+  /** Implements {@link #LIST_NTH} and {@link #VECTOR_SUB}. */
+  private static class ListNth
+      extends BasePositionedApplicable2<Object, List, Integer> {
+    ListNth(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public ListNth withPos(Pos pos) {
+      return new ListNth(builtIn, pos);
+    }
+
+    @Override
+    public Object apply(List list, Integer i) {
+      if (i < 0 || i >= list.size()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      return list.get(i);
+    }
+  }
+
+  /** @see BuiltIn#LIST_NULL */
+  private static final Applicable1 LIST_NULL = empty(BuiltIn.LIST_NULL);
 
   /** @see BuiltIn#LIST_PAIR_ALL_EQ */
   private static final Applicable2 LIST_PAIR_ALL_EQ =
       listPairAll(BuiltIn.LIST_PAIR_ALL_EQ, true);
+
+  /** @see BuiltIn#LIST_PAIR_ALL */
+  private static final Applicable2 LIST_PAIR_ALL =
+      listPairAll(BuiltIn.LIST_PAIR_ALL, false);
 
   static Applicable2 listPairAll(BuiltIn builtIn, boolean eq) {
     return new BaseApplicable2<Boolean, Applicable1, List<List<Object>>>(
@@ -2107,13 +1258,13 @@ public abstract class Codes {
     }
   }
 
-  /** @see BuiltIn#LIST_PAIR_APP */
-  private static final Applicable LIST_PAIR_APP =
-      new ListPairApp(BuiltIn.LIST_PAIR_APP, Pos.ZERO);
-
   /** @see BuiltIn#LIST_PAIR_APP_EQ */
   private static final Applicable LIST_PAIR_APP_EQ =
       new ListPairApp(BuiltIn.LIST_PAIR_APP_EQ, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_APP */
+  private static final Applicable LIST_PAIR_APP =
+      new ListPairApp(BuiltIn.LIST_PAIR_APP, Pos.ZERO);
 
   /** @see BuiltIn#LIST_PAIR_EXISTS */
   private static final Applicable2 LIST_PAIR_EXISTS =
@@ -2177,21 +1328,20 @@ public abstract class Codes {
     }
   }
 
+  /** @see BuiltIn#LIST_PAIR_FOLDL_EQ */
+  private static final Applicable LIST_PAIR_FOLDL_EQ =
+      new ListPairFold(BuiltIn.LIST_PAIR_FOLDL_EQ, Pos.ZERO, true, true);
   /** @see BuiltIn#LIST_PAIR_FOLDL */
   private static final Applicable LIST_PAIR_FOLDL =
       new ListPairFold(BuiltIn.LIST_PAIR_FOLDL, Pos.ZERO, false, true);
 
-  /** @see BuiltIn#LIST_PAIR_FOLDL_EQ */
-  private static final Applicable LIST_PAIR_FOLDL_EQ =
-      new ListPairFold(BuiltIn.LIST_PAIR_FOLDL_EQ, Pos.ZERO, true, true);
+  /** @see BuiltIn#LIST_PAIR_FOLDR_EQ */
+  private static final Applicable LIST_PAIR_FOLDR_EQ =
+      new ListPairFold(BuiltIn.LIST_PAIR_FOLDR_EQ, Pos.ZERO, true, false);
 
   /** @see BuiltIn#LIST_PAIR_FOLDR */
   private static final Applicable LIST_PAIR_FOLDR =
       new ListPairFold(BuiltIn.LIST_PAIR_FOLDR, Pos.ZERO, false, false);
-
-  /** @see BuiltIn#LIST_PAIR_FOLDR_EQ */
-  private static final Applicable LIST_PAIR_FOLDR_EQ =
-      new ListPairFold(BuiltIn.LIST_PAIR_FOLDR_EQ, Pos.ZERO, true, false);
 
   /** Helper for {@link #LIST_PAIR_MAP}, {@link #LIST_PAIR_MAP_EQ}. */
   private static class ListPairMap
@@ -2223,13 +1373,13 @@ public abstract class Codes {
     }
   }
 
-  /** @see BuiltIn#LIST_PAIR_MAP */
-  private static final Applicable LIST_PAIR_MAP =
-      new ListPairMap(BuiltIn.LIST_PAIR_MAP, Pos.ZERO, false);
-
   /** @see BuiltIn#LIST_PAIR_MAP_EQ */
   private static final Applicable LIST_PAIR_MAP_EQ =
       new ListPairMap(BuiltIn.LIST_PAIR_MAP_EQ, Pos.ZERO, true);
+
+  /** @see BuiltIn#LIST_PAIR_MAP */
+  private static final Applicable LIST_PAIR_MAP =
+      new ListPairMap(BuiltIn.LIST_PAIR_MAP, Pos.ZERO, false);
 
   /** @see BuiltIn#LIST_PAIR_UNZIP */
   private static final Applicable LIST_PAIR_UNZIP = new ListPairUnzip(Pos.ZERO);
@@ -2286,13 +1436,132 @@ public abstract class Codes {
     }
   }
 
+  /** @see BuiltIn#LIST_PAIR_ZIP_EQ */
+  private static final Applicable LIST_PAIR_ZIP_EQ =
+      new ListPairZip(BuiltIn.LIST_PAIR_ZIP_EQ, Pos.ZERO);
+
   /** @see BuiltIn#LIST_PAIR_ZIP */
   private static final Applicable LIST_PAIR_ZIP =
       new ListPairZip(BuiltIn.LIST_PAIR_ZIP, Pos.ZERO);
 
-  /** @see BuiltIn#LIST_PAIR_ZIP_EQ */
-  private static final Applicable LIST_PAIR_ZIP_EQ =
-      new ListPairZip(BuiltIn.LIST_PAIR_ZIP_EQ, Pos.ZERO);
+  /** @see BuiltIn#LIST_PARTITION */
+  private static final Applicable2 LIST_PARTITION =
+      listPartition0(BuiltIn.LIST_PARTITION);
+
+  private static Applicable2 listPartition0(BuiltIn builtIn) {
+    return new BaseApplicable2<List, Applicable1<Boolean, Object>, List>(
+        builtIn) {
+      @Override
+      public List apply(Applicable1<Boolean, Object> f, List list) {
+        final ImmutableList.Builder trueBuilder = ImmutableList.builder();
+        final ImmutableList.Builder falseBuilder = ImmutableList.builder();
+        for (Object o : list) {
+          (f.apply(o) ? trueBuilder : falseBuilder).add(o);
+        }
+        return ImmutableList.of(trueBuilder.build(), falseBuilder.build());
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_REV_APPEND */
+  private static final Applicable2 LIST_REV_APPEND =
+      new BaseApplicable2<List, List, List>(BuiltIn.LIST_REV_APPEND) {
+        @Override
+        public List apply(List list0, List list1) {
+          return ImmutableList.builder()
+              .addAll(Lists.reverse(list0))
+              .addAll(list1)
+              .build();
+        }
+      };
+
+  /** @see BuiltIn#LIST_REV */
+  private static final Applicable LIST_REV =
+      new BaseApplicable1<List, List>(BuiltIn.LIST_REV) {
+        @Override
+        public List apply(List list) {
+          return Lists.reverse(list);
+        }
+      };
+
+  /** @see BuiltIn#LIST_TABULATE */
+  private static final Applicable LIST_TABULATE =
+      new ListTabulate(BuiltIn.LIST_TABULATE, Pos.ZERO);
+
+  /** Implements {@link #LIST_TABULATE}. */
+  private static class ListTabulate
+      extends BasePositionedApplicable2<Object, Integer, Applicable1> {
+    ListTabulate(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new ListTabulate(builtIn, pos);
+    }
+
+    @Override
+    public Object apply(Integer count, Applicable1 f) {
+      if (count < 0) {
+        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
+      }
+      final ImmutableList.Builder builder = ImmutableList.builder();
+      for (int i = 0; i < count; i++) {
+        builder.add(f.apply(i));
+      }
+      return builder.build();
+    }
+  }
+
+  /** @see BuiltIn#LIST_TAKE */
+  private static final Applicable LIST_TAKE =
+      new ListTake(BuiltIn.LIST_TAKE, Pos.ZERO);
+
+  /** Implements {@link #LIST_TAKE}. */
+  private static class ListTake
+      extends BasePositionedApplicable2<List, List, Integer> {
+    ListTake(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public ListTake withPos(Pos pos) {
+      return new ListTake(builtIn, pos);
+    }
+
+    @Override
+    public List apply(List list, Integer i) {
+      if (i < 0 || i > list.size()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      return list.subList(0, i);
+    }
+  }
+
+  /** @see BuiltIn#LIST_TL */
+  private static final Applicable LIST_TL =
+      new ListTl(BuiltIn.LIST_TL, Pos.ZERO);
+
+  /** Implements {@link #LIST_TL}. */
+  private static class ListTl extends BasePositionedApplicable1<List, List> {
+    ListTl(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new ListTl(builtIn, pos);
+    }
+
+    @Override
+    public List apply(List list) {
+      final int size = list.size();
+      if (size == 0) {
+        throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
+      }
+      return list.subList(1, size);
+    }
+  }
 
   /** @see BuiltIn#MATH_ACOS */
   private static final Applicable MATH_ACOS =
@@ -2435,6 +1704,196 @@ public abstract class Codes {
         }
       };
 
+  /** An applicable that negates a boolean value. */
+  private static final Applicable NOT =
+      new BaseApplicable1<Boolean, Boolean>(BuiltIn.NOT) {
+        @Override
+        public Boolean apply(Boolean b) {
+          return !(Boolean) b;
+        }
+      };
+
+  /** @see BuiltIn#OP_CARET */
+  private static final Applicable2 OP_CARET =
+      new BaseApplicable2<String, String, String>(BuiltIn.OP_CARET) {
+        @Override
+        public String apply(String a0, String a1) {
+          return a0 + a1;
+        }
+      };
+
+  /** @see BuiltIn#OP_CONS */
+  private static final Applicable2 OP_CONS =
+      new BaseApplicable2<List, Object, Iterable>(BuiltIn.OP_CONS) {
+        @Override
+        public List apply(Object e, Iterable iterable) {
+          return ImmutableList.builder().add(e).addAll(iterable).build();
+        }
+      };
+
+  /** @see BuiltIn#OP_DIVIDE */
+  private static final Macro OP_DIVIDE =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
+
+  /** @see BuiltIn#OP_DIV */
+  private static final Applicable2 OP_DIV = new IntDiv(BuiltIn.OP_DIV);
+
+  /** @see BuiltIn#OP_ELEM */
+  private static final Applicable2 OP_ELEM =
+      new BaseApplicable2<Boolean, Object, List>(BuiltIn.OP_ELEM) {
+        @Override
+        public Boolean apply(Object a0, List a1) {
+          return a1.contains(a0);
+        }
+      };
+
+  /** @see BuiltIn#OP_EQ */
+  private static final Applicable2 OP_EQ =
+      new BaseApplicable2<Boolean, Object, Object>(BuiltIn.OP_EQ) {
+        @Override
+        public Boolean apply(Object a0, Object a1) {
+          return a0.equals(a1);
+        }
+      };
+
+  /** @see BuiltIn#OP_GE */
+  private static final Applicable2 OP_GE =
+      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GE) {
+        @Override
+        public Boolean apply(Comparable a0, Comparable a1) {
+          if (a0 instanceof Float && Float.isNaN((Float) a0)
+              || a1 instanceof Float && Float.isNaN((Float) a1)) {
+            return false;
+          }
+          return a0.compareTo(a1) >= 0;
+        }
+      };
+
+  /** @see BuiltIn#OP_GT */
+  private static final Applicable2 OP_GT =
+      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_GT) {
+        @Override
+        public Boolean apply(Comparable a0, Comparable a1) {
+          if (a0 instanceof Float && Float.isNaN((Float) a0)
+              || a1 instanceof Float && Float.isNaN((Float) a1)) {
+            return false;
+          }
+          return a0.compareTo(a1) > 0;
+        }
+      };
+
+  /** @see BuiltIn#OP_LE */
+  private static final Applicable2 OP_LE =
+      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LE) {
+        @Override
+        public Boolean apply(Comparable a0, Comparable a1) {
+          if (a0 instanceof Float && Float.isNaN((Float) a0)
+              || a1 instanceof Float && Float.isNaN((Float) a1)) {
+            return false;
+          }
+          return a0.compareTo(a1) <= 0;
+        }
+      };
+
+  /** @see BuiltIn#OP_LT */
+  private static final Applicable2 OP_LT =
+      new BaseApplicable2<Boolean, Comparable, Comparable>(BuiltIn.OP_LT) {
+        @Override
+        public Boolean apply(Comparable a0, Comparable a1) {
+          if (a0 instanceof Float && Float.isNaN((Float) a0)
+              || a1 instanceof Float && Float.isNaN((Float) a1)) {
+            return false;
+          }
+          return a0.compareTo(a1) < 0;
+        }
+      };
+
+  /** @see BuiltIn#OP_MINUS */
+  private static final Macro OP_MINUS =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
+
+  /** @see BuiltIn#OP_MOD */
+  private static final Applicable2 OP_MOD = new IntMod(BuiltIn.OP_MOD);
+
+  /** @see BuiltIn#OP_NE */
+  private static final Applicable2 OP_NE =
+      new BaseApplicable2<Boolean, Object, Object>(BuiltIn.OP_NE) {
+        @Override
+        public Boolean apply(Object a0, Object a1) {
+          return !a0.equals(a1);
+        }
+      };
+
+  /** @see BuiltIn#OP_NEGATE */
+  private static final Macro OP_NEGATE =
+      (typeSystem, env, argType) -> {
+        switch ((PrimitiveType) argType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
+
+  /** @see BuiltIn#OP_NOT_ELEM */
+  private static final Applicable2 OP_NOT_ELEM =
+      new BaseApplicable2<Boolean, Object, List>(BuiltIn.OP_NOT_ELEM) {
+        @Override
+        public Boolean apply(Object a0, List a1) {
+          return !a1.contains(a0);
+        }
+      };
+
+  /** @see BuiltIn#OP_PLUS */
+  private static final Macro OP_PLUS =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
+
+  /** @see BuiltIn#OP_TIMES */
+  private static final Macro OP_TIMES =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_INT);
+          case REAL:
+            return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_REAL);
+          default:
+            throw new AssertionError("bad type " + argType);
+        }
+      };
+
   /** @see BuiltIn#OPTION_APP */
   private static final Applicable2 OPTION_APP =
       new BaseApplicable2<Unit, Applicable1, List>(BuiltIn.OPTION_APP) {
@@ -2454,6 +1913,53 @@ public abstract class Codes {
         @Override
         public Describer describe(Describer describer) {
           return super.describe(describer);
+        }
+      };
+
+  /** @see BuiltIn#OPTION_COMPOSE_PARTIAL */
+  private static final Applicable2 OPTION_COMPOSE_PARTIAL =
+      new BaseApplicable2<Applicable1, Applicable1<List, Object>, Applicable1>(
+          BuiltIn.OPTION_COMPOSE_PARTIAL) {
+        @Override
+        public Applicable1 apply(Applicable1<List, Object> f, Applicable1 g) {
+          return (Applicable1<List, Object>)
+              arg -> {
+                final List ga = (List) g.apply(arg); // g (a)
+                if (ga.size() == 2) { // SOME v
+                  return f.apply(ga.get(1)); // f (v)
+                }
+                return ga; // NONE
+              };
+        }
+      };
+
+  /** @see BuiltIn#OPTION_COMPOSE */
+  private static final Applicable2 OPTION_COMPOSE =
+      new BaseApplicable2<Applicable1, Applicable1, Applicable1<List, Object>>(
+          BuiltIn.OPTION_COMPOSE) {
+        @Override
+        public Applicable1 apply(Applicable1 f, Applicable1<List, Object> g) {
+          return (Applicable1<List, Object>)
+              arg -> {
+                final List ga = g.apply(arg); // g (a)
+                if (ga.size() == 2) { // SOME v
+                  return optionSome(f.apply(ga.get(1))); // SOME (f (v))
+                }
+                return ga; // NONE
+              };
+        }
+      };
+
+  /** @see BuiltIn#OPTION_FILTER */
+  private static final Applicable2 OPTION_FILTER =
+      new BaseApplicable2<List, Applicable1, Object>(BuiltIn.OPTION_FILTER) {
+        @Override
+        public List apply(Applicable1 f, Object arg) {
+          if ((Boolean) f.apply(arg)) {
+            return optionSome(arg);
+          } else {
+            return OPTION_NONE;
+          }
         }
       };
 
@@ -2479,6 +1985,59 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#OPTION_JOIN */
+  private static final Applicable OPTION_JOIN =
+      new BaseApplicable1<List, List<List>>(BuiltIn.OPTION_JOIN) {
+        @Override
+        public List apply(List<List> opt) {
+          return opt.size() == 2
+              ? opt.get(1) // SOME(SOME(v)) -> SOME(v), SOME(NONE) -> NONE
+              : opt; // NONE -> NONE
+        }
+      };
+
+  /** @see BuiltIn#OPTION_MAP_PARTIAL */
+  private static final Applicable2 OPTION_MAP_PARTIAL =
+      new BaseApplicable2<List, Applicable1<List, Object>, List>(
+          BuiltIn.OPTION_MAP_PARTIAL) {
+        @Override
+        public List apply(Applicable1<List, Object> f, List a) {
+          if (a.size() == 2) { // SOME v
+            return f.apply(a.get(1)); // f v
+          }
+          return a; // NONE
+        }
+      };
+
+  /** @see BuiltIn#OPTION_MAP */
+  private static final Applicable2 OPTION_MAP =
+      new BaseApplicable2<List, Applicable1, List>(BuiltIn.OPTION_MAP) {
+        @Override
+        public List apply(Applicable1 f, List a) {
+          if (a.size() == 2) { // SOME v
+            return optionSome(f.apply(a.get(1))); // SOME (f v)
+          }
+          return a; // NONE
+        }
+      };
+
+  /**
+   * Value of {@link BuiltIn.Constructor#OPTION_NONE}.
+   *
+   * @see #optionSome(Object)
+   */
+  private static final List OPTION_NONE = ImmutableList.of("NONE");
+
+  /**
+   * Creates a value of {@code SOME v}.
+   *
+   * @see net.hydromatic.morel.compile.BuiltIn.Constructor#OPTION_SOME
+   * @see #OPTION_NONE
+   */
+  private static List optionSome(Object o) {
+    return ImmutableList.of(BuiltIn.Constructor.OPTION_SOME.constructor, o);
+  }
+
   /** @see BuiltIn#OPTION_VAL_OF */
   private static final Applicable OPTION_VAL_OF = new OptionValOf(Pos.ZERO);
 
@@ -2503,99 +2062,6 @@ public abstract class Codes {
       }
     }
   }
-
-  /** @see BuiltIn#OPTION_FILTER */
-  private static final Applicable2 OPTION_FILTER =
-      new BaseApplicable2<List, Applicable1, Object>(BuiltIn.OPTION_FILTER) {
-        @Override
-        public List apply(Applicable1 f, Object arg) {
-          if ((Boolean) f.apply(arg)) {
-            return optionSome(arg);
-          } else {
-            return OPTION_NONE;
-          }
-        }
-      };
-
-  /** @see BuiltIn#OPTION_JOIN */
-  private static final Applicable OPTION_JOIN =
-      new BaseApplicable1<List, List<List>>(BuiltIn.OPTION_JOIN) {
-        @Override
-        public List apply(List<List> opt) {
-          return opt.size() == 2
-              ? opt.get(1) // SOME(SOME(v)) -> SOME(v), SOME(NONE) -> NONE
-              : opt; // NONE -> NONE
-        }
-      };
-
-  /** @see BuiltIn#OPTION_MAP */
-  private static final Applicable2 OPTION_MAP =
-      new BaseApplicable2<List, Applicable1, List>(BuiltIn.OPTION_MAP) {
-        @Override
-        public List apply(Applicable1 f, List a) {
-          if (a.size() == 2) { // SOME v
-            return optionSome(f.apply(a.get(1))); // SOME (f v)
-          }
-          return a; // NONE
-        }
-      };
-
-  /**
-   * Creates a value of {@code SOME v}.
-   *
-   * @see net.hydromatic.morel.compile.BuiltIn.Constructor#OPTION_SOME
-   * @see #OPTION_NONE
-   */
-  private static List optionSome(Object o) {
-    return ImmutableList.of(BuiltIn.Constructor.OPTION_SOME.constructor, o);
-  }
-
-  /** @see BuiltIn#OPTION_MAP_PARTIAL */
-  private static final Applicable2 OPTION_MAP_PARTIAL =
-      new BaseApplicable2<List, Applicable1<List, Object>, List>(
-          BuiltIn.OPTION_MAP_PARTIAL) {
-        @Override
-        public List apply(Applicable1<List, Object> f, List a) {
-          if (a.size() == 2) { // SOME v
-            return f.apply(a.get(1)); // f v
-          }
-          return a; // NONE
-        }
-      };
-
-  /** @see BuiltIn#OPTION_COMPOSE */
-  private static final Applicable2 OPTION_COMPOSE =
-      new BaseApplicable2<Applicable1, Applicable1, Applicable1<List, Object>>(
-          BuiltIn.OPTION_COMPOSE) {
-        @Override
-        public Applicable1 apply(Applicable1 f, Applicable1<List, Object> g) {
-          return (Applicable1<List, Object>)
-              arg -> {
-                final List ga = g.apply(arg); // g (a)
-                if (ga.size() == 2) { // SOME v
-                  return optionSome(f.apply(ga.get(1))); // SOME (f (v))
-                }
-                return ga; // NONE
-              };
-        }
-      };
-
-  /** @see BuiltIn#OPTION_COMPOSE_PARTIAL */
-  private static final Applicable2 OPTION_COMPOSE_PARTIAL =
-      new BaseApplicable2<Applicable1, Applicable1<List, Object>, Applicable1>(
-          BuiltIn.OPTION_COMPOSE_PARTIAL) {
-        @Override
-        public Applicable1 apply(Applicable1<List, Object> f, Applicable1 g) {
-          return (Applicable1<List, Object>)
-              arg -> {
-                final List ga = (List) g.apply(arg); // g (a)
-                if (ga.size() == 2) { // SOME v
-                  return f.apply(ga.get(1)); // f (v)
-                }
-                return ga; // NONE
-              };
-        }
-      };
 
   /** @see BuiltIn#REAL_ABS */
   private static final Applicable REAL_ABS =
@@ -2793,30 +2259,6 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#REAL_NEG_INF */
-  private static final float REAL_NEG_INF = Float.NEGATIVE_INFINITY;
-
-  /** @see BuiltIn#REAL_POS_INF */
-  private static final float REAL_POS_INF = Float.POSITIVE_INFINITY;
-
-  /** @see BuiltIn#REAL_RADIX */
-  private static final int REAL_RADIX = 2;
-
-  /** @see BuiltIn#REAL_PRECISION */
-  // value is from jdk.internal.math.FloatConsts#SIGNIFICAND_WIDTH
-  // (32 bit IEEE floating point is 1 sign bit, 8 bit exponent,
-  // 23 bit mantissa)
-  private static final int REAL_PRECISION = 24;
-
-  /** @see BuiltIn#REAL_MIN */
-  private static final Applicable2 REAL_MIN =
-      new BaseApplicable2<Float, Float, Float>(BuiltIn.REAL_MIN) {
-        @Override
-        public Float apply(Float f0, Float f1) {
-          return Float.isNaN(f0) ? f1 : Float.isNaN(f1) ? f0 : Math.min(f0, f1);
-        }
-      };
-
   /** @see BuiltIn#REAL_MAX */
   private static final Applicable2 REAL_MAX =
       new BaseApplicable2<Float, Float, Float>(BuiltIn.REAL_MAX) {
@@ -2829,25 +2271,35 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_MAX_FINITE */
   private static final float REAL_MAX_FINITE = Float.MAX_VALUE;
 
+  /** @see BuiltIn#REAL_MIN */
+  private static final Applicable2 REAL_MIN =
+      new BaseApplicable2<Float, Float, Float>(BuiltIn.REAL_MIN) {
+        @Override
+        public Float apply(Float f0, Float f1) {
+          return Float.isNaN(f0) ? f1 : Float.isNaN(f1) ? f0 : Math.min(f0, f1);
+        }
+      };
+
   /** @see BuiltIn#REAL_MIN_POS */
   private static final float REAL_MIN_POS = Float.MIN_VALUE;
 
   /** @see BuiltIn#REAL_MIN_NORMAL_POS */
   private static final float REAL_MIN_NORMAL_POS = Float.MIN_NORMAL;
 
-  /** @see BuiltIn#REAL_REAL_MOD */
-  private static final Applicable REAL_REAL_MOD =
-      new BaseApplicable1<Float, Float>(BuiltIn.REAL_REAL_MOD) {
-        @Override
-        public Float apply(Float f) {
-          if (Float.isInfinite(f)) {
-            // realMod posInf  => 0.0
-            // realMod negInf  => ~0.0
-            return f > 0f ? 0f : -0f;
-          }
-          return f % 1;
-        }
-      };
+  /** @see BuiltIn#REAL_NEG_INF */
+  private static final float REAL_NEG_INF = Float.NEGATIVE_INFINITY;
+
+  /** @see BuiltIn#REAL_POS_INF */
+  private static final float REAL_POS_INF = Float.POSITIVE_INFINITY;
+
+  /** @see BuiltIn#REAL_PRECISION */
+  // value is from jdk.internal.math.FloatConsts#SIGNIFICAND_WIDTH
+  // (32 bit IEEE floating point is 1 sign bit, 8 bit exponent,
+  // 23 bit mantissa)
+  private static final int REAL_PRECISION = 24;
+
+  /** @see BuiltIn#REAL_RADIX */
+  private static final int REAL_RADIX = 2;
 
   /** @see BuiltIn#REAL_REAL_CEIL */
   private static final Applicable REAL_REAL_CEIL =
@@ -2864,6 +2316,20 @@ public abstract class Codes {
         @Override
         public Float apply(Float f) {
           return (float) Math.floor(f);
+        }
+      };
+
+  /** @see BuiltIn#REAL_REAL_MOD */
+  private static final Applicable REAL_REAL_MOD =
+      new BaseApplicable1<Float, Float>(BuiltIn.REAL_REAL_MOD) {
+        @Override
+        public Float apply(Float f) {
+          if (Float.isInfinite(f)) {
+            // realMod posInf  => 0.0
+            // realMod negInf  => ~0.0
+            return f > 0f ? 0f : -0f;
+          }
+          return f % 1;
         }
       };
 
@@ -3051,15 +2517,6 @@ public abstract class Codes {
   private static final Applicable1 RELATIONAL_COUNT =
       length(BuiltIn.RELATIONAL_COUNT);
 
-  /** @see BuiltIn#RELATIONAL_NON_EMPTY */
-  private static final Applicable1 RELATIONAL_NON_EMPTY =
-      new BaseApplicable1<Boolean, List>(BuiltIn.RELATIONAL_NON_EMPTY) {
-        @Override
-        public Boolean apply(List list) {
-          return !list.isEmpty();
-        }
-      };
-
   /** @see BuiltIn#RELATIONAL_EMPTY */
   private static final Applicable1 RELATIONAL_EMPTY =
       empty(BuiltIn.RELATIONAL_EMPTY);
@@ -3100,6 +2557,33 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#RELATIONAL_MAX */
+  private static final Applicable RELATIONAL_MAX =
+      new BaseApplicable1<Object, List>(BuiltIn.RELATIONAL_MAX) {
+        @Override
+        public Object apply(List list) {
+          return Ordering.natural().max(list);
+        }
+      };
+
+  /** @see BuiltIn#RELATIONAL_MIN */
+  private static final Applicable RELATIONAL_MIN =
+      new BaseApplicable1<Object, List>(BuiltIn.RELATIONAL_MIN) {
+        @Override
+        public Object apply(List list) {
+          return Ordering.natural().min(list);
+        }
+      };
+
+  /** @see BuiltIn#RELATIONAL_NON_EMPTY */
+  private static final Applicable1 RELATIONAL_NON_EMPTY =
+      new BaseApplicable1<Boolean, List>(BuiltIn.RELATIONAL_NON_EMPTY) {
+        @Override
+        public Boolean apply(List list) {
+          return !list.isEmpty();
+        }
+      };
+
   /** @see BuiltIn#RELATIONAL_ONLY */
   private static final Applicable RELATIONAL_ONLY =
       new RelationalOnly(Pos.ZERO);
@@ -3128,42 +2612,6 @@ public abstract class Codes {
     }
   }
 
-  /** Implements {@link #RELATIONAL_SUM} for type {@code int list}. */
-  private static final Applicable Z_SUM_INT =
-      new BaseApplicable1<Integer, List<? extends Number>>(BuiltIn.Z_SUM_INT) {
-        @Override
-        protected String name() {
-          return "Relational.sum$int";
-        }
-
-        @Override
-        public Integer apply(List<? extends Number> numbers) {
-          int sum = 0;
-          for (Number o : numbers) {
-            sum += o.intValue();
-          }
-          return sum;
-        }
-      };
-
-  /** Implements {@link #RELATIONAL_SUM} for type {@code real list}. */
-  private static final Applicable Z_SUM_REAL =
-      new BaseApplicable1<Float, List<? extends Number>>(BuiltIn.Z_SUM_REAL) {
-        @Override
-        protected String name() {
-          return "Relational.sum$real";
-        }
-
-        @Override
-        public Float apply(List<? extends Number> numbers) {
-          float sum = 0;
-          for (Number o : numbers) {
-            sum += o.floatValue();
-          }
-          return sum;
-        }
-      };
-
   /** @see BuiltIn#RELATIONAL_SUM */
   private static final Macro RELATIONAL_SUM =
       (typeSystem, env, argType) -> {
@@ -3179,21 +2627,388 @@ public abstract class Codes {
         throw new AssertionError("bad type " + argType);
       };
 
-  /** @see BuiltIn#RELATIONAL_MIN */
-  private static final Applicable RELATIONAL_MIN =
-      new BaseApplicable1<Object, List>(BuiltIn.RELATIONAL_MIN) {
+  /**
+   * Converts the result of {@link Comparable#compareTo(Object)} to an {@code
+   * Order} value.
+   */
+  static List order(int c) {
+    if (c < 0) {
+      return ORDER_LESS;
+    }
+    if (c > 0) {
+      return ORDER_GREATER;
+    }
+    return ORDER_EQUAL;
+  }
+
+  /** @see BuiltIn.Constructor#ORDER_LESS */
+  private static final List ORDER_LESS =
+      ImmutableList.of(BuiltIn.Constructor.ORDER_LESS.constructor);
+
+  /** @see BuiltIn.Constructor#ORDER_EQUAL */
+  private static final List ORDER_EQUAL =
+      ImmutableList.of(BuiltIn.Constructor.ORDER_EQUAL.constructor);
+
+  /** @see BuiltIn.Constructor#ORDER_GREATER */
+  private static final List ORDER_GREATER =
+      ImmutableList.of(BuiltIn.Constructor.ORDER_GREATER.constructor);
+
+  /** @see BuiltIn#STRING_COLLATE */
+  private static final Applicable2 STRING_COLLATE =
+      new BaseApplicable2<List, Applicable1, List>(BuiltIn.STRING_COLLATE) {
         @Override
-        public Object apply(List list) {
-          return Ordering.natural().min(list);
+        public List apply(Applicable1 comparator, List tuple) {
+          final String string0 = (String) tuple.get(0);
+          final String string1 = (String) tuple.get(1);
+          final int n0 = string0.length();
+          final int n1 = string1.length();
+          final int n = Math.min(n0, n1);
+          for (int i = 0; i < n; i++) {
+            final char char0 = string0.charAt(i);
+            final char char1 = string1.charAt(i);
+            final List compare =
+                (List) comparator.apply(FlatLists.of(char0, char1));
+            if (!compare.get(0).equals("EQUAL")) {
+              return compare;
+            }
+          }
+          return order(Integer.compare(n0, n1));
         }
       };
 
-  /** @see BuiltIn#RELATIONAL_MAX */
-  private static final Applicable RELATIONAL_MAX =
-      new BaseApplicable1<Object, List>(BuiltIn.RELATIONAL_MAX) {
+  /** @see BuiltIn#STRING_COMPARE */
+  private static final Applicable2 STRING_COMPARE =
+      new BaseApplicable2<List, String, String>(BuiltIn.STRING_COMPARE) {
         @Override
-        public Object apply(List list) {
-          return Ordering.natural().max(list);
+        public List apply(String a0, String a1) {
+          return order(a0.compareTo(a1));
+        }
+      };
+
+  /** @see BuiltIn#STRING_CONCAT_WITH */
+  private static final Applicable2 STRING_CONCAT_WITH =
+      new StringConcatWith(BuiltIn.STRING_CONCAT_WITH, Pos.ZERO);
+
+  /** Implements {@link #STRING_CONCAT_WITH}. */
+  private static class StringConcatWith
+      extends BasePositionedApplicable2<String, String, List<String>> {
+    StringConcatWith(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public StringConcatWith withPos(Pos pos) {
+      return new StringConcatWith(BuiltIn.STRING_CONCAT_WITH, pos);
+    }
+
+    @Override
+    public String apply(String separator, List<String> list) {
+      long n = 0;
+      for (String s : list) {
+        n += s.length();
+        n += separator.length();
+      }
+      if (n > STRING_MAX_SIZE) {
+        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
+      }
+      return String.join(separator, list);
+    }
+  }
+
+  /** @see BuiltIn#STRING_CONCAT */
+  private static final Applicable1 STRING_CONCAT =
+      new StringConcat(BuiltIn.STRING_CONCAT, Pos.ZERO);
+
+  /** Implements {@link #STRING_CONCAT}. */
+  private static class StringConcat
+      extends BasePositionedApplicable1<String, List<String>> {
+    StringConcat(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public StringConcat withPos(Pos pos) {
+      return new StringConcat(BuiltIn.STRING_CONCAT, pos);
+    }
+
+    @Override
+    public String apply(List<String> list) {
+      long n = 0;
+      for (String s : list) {
+        n += s.length();
+      }
+      if (n > STRING_MAX_SIZE) {
+        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
+      }
+      return String.join("", list);
+    }
+  }
+
+  /** @see BuiltIn#STRING_EXPLODE */
+  private static final Applicable1 STRING_EXPLODE =
+      new BaseApplicable1<List, String>(BuiltIn.STRING_EXPLODE) {
+        @Override
+        public List apply(String s) {
+          return MapList.of(s.length(), s::charAt);
+        }
+      };
+
+  /** @see BuiltIn#STRING_EXTRACT */
+  private static final Applicable STRING_EXTRACT = new StringExtract(Pos.ZERO);
+
+  /** Implements {@link #STRING_EXTRACT}. */
+  private static class StringExtract
+      extends BasePositionedApplicable3<String, String, Integer, List> {
+    StringExtract(Pos pos) {
+      super(BuiltIn.STRING_EXTRACT, pos);
+    }
+
+    @Override
+    public StringExtract withPos(Pos pos) {
+      return new StringExtract(pos);
+    }
+
+    @Override
+    public String apply(String s, Integer i, List jOpt) {
+      if (i < 0) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      if (jOpt.size() == 2) {
+        final int j = (Integer) jOpt.get(1);
+        if (j < 0 || i + j > s.length()) {
+          throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+        }
+        return s.substring(i, i + j);
+      } else {
+        if (i > s.length()) {
+          throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+        }
+        return s.substring(i);
+      }
+    }
+  }
+
+  /** @see BuiltIn#STRING_FIELDS */
+  private static final Applicable2 STRING_FIELDS =
+      new StringTokenize(BuiltIn.STRING_FIELDS);
+
+  /** @see BuiltIn#STRING_IMPLODE */
+  private static final Applicable STRING_IMPLODE =
+      new BaseApplicable1<String, List<Character>>(BuiltIn.STRING_IMPLODE) {
+        @Override
+        public String apply(List<Character> characters) {
+          // Note: In theory this function should raise Size, but it is not
+          // possible in practice because List.size() is never larger than
+          // Integer.MAX_VALUE.
+          return String.valueOf(Chars.toArray(characters));
+        }
+      };
+
+  /** @see BuiltIn#STRING_IS_PREFIX */
+  private static final Applicable2 STRING_IS_PREFIX =
+      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_IS_PREFIX) {
+        @Override
+        public Boolean apply(String s, String s2) {
+          return s2.startsWith(s);
+        }
+      };
+
+  /** @see BuiltIn#STRING_IS_SUBSTRING */
+  private static final Applicable2 STRING_IS_SUBSTRING =
+      new BaseApplicable2<Boolean, String, String>(
+          BuiltIn.STRING_IS_SUBSTRING) {
+        @Override
+        public Boolean apply(String s, String s2) {
+          return s2.contains(s);
+        }
+      };
+
+  /** @see BuiltIn#STRING_IS_SUFFIX */
+  private static final Applicable2 STRING_IS_SUFFIX =
+      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_IS_SUFFIX) {
+        @Override
+        public Boolean apply(String s, String s2) {
+          return s2.endsWith(s);
+        }
+      };
+
+  /** @see BuiltIn#STRING_MAP */
+  private static final Applicable2 STRING_MAP =
+      new BaseApplicable2<String, Applicable1<Character, Character>, String>(
+          BuiltIn.STRING_MAP) {
+        @Override
+        public String apply(Applicable1<Character, Character> f, String s) {
+          final StringBuilder buf = new StringBuilder();
+          for (int i = 0; i < s.length(); i++) {
+            final char c = s.charAt(i);
+            final char c2 = f.apply(c);
+            buf.append(c2);
+          }
+          return buf.toString();
+        }
+      };
+
+  /** @see BuiltIn#STRING_MAX_SIZE */
+  private static final Integer STRING_MAX_SIZE = Integer.MAX_VALUE;
+
+  /** @see BuiltIn#STRING_OP_CARET */
+  private static final Applicable2 STRING_OP_CARET =
+      new BaseApplicable2<String, String, String>(BuiltIn.STRING_OP_CARET) {
+        @Override
+        public String apply(String a0, String a1) {
+          return a0 + a1;
+        }
+      };
+
+  /** @see BuiltIn#STRING_OP_GE */
+  private static final Applicable2 STRING_OP_GE =
+      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_GE) {
+        @Override
+        public Boolean apply(String a0, String a1) {
+          return a0.compareTo(a1) >= 0;
+        }
+      };
+
+  /** @see BuiltIn#STRING_OP_GT */
+  private static final Applicable2 STRING_OP_GT =
+      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_GT) {
+        @Override
+        public Boolean apply(String a0, String a1) {
+          return a0.compareTo(a1) > 0;
+        }
+      };
+
+  /** @see BuiltIn#STRING_OP_LE */
+  private static final Applicable2 STRING_OP_LE =
+      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_LE) {
+        @Override
+        public Boolean apply(String a0, String a1) {
+          return a0.compareTo(a1) <= 0;
+        }
+      };
+
+  /** @see BuiltIn#STRING_OP_LT */
+  private static final Applicable2 STRING_OP_LT =
+      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_LT) {
+        @Override
+        public Boolean apply(String a0, String a1) {
+          return a0.compareTo(a1) < 0;
+        }
+      };
+
+  /** @see BuiltIn#STRING_SIZE */
+  private static final Applicable1 STRING_SIZE =
+      new BaseApplicable1<Integer, String>(BuiltIn.STRING_SIZE) {
+        @Override
+        public Integer apply(String s) {
+          return s.length();
+        }
+      };
+
+  /** @see BuiltIn#STRING_SUB */
+  private static final Applicable2 STRING_SUB = new StringSub(Pos.ZERO);
+
+  /** Implements {@link #STRING_SUB}. */
+  private static class StringSub
+      extends BasePositionedApplicable2<Character, String, Integer> {
+    StringSub(Pos pos) {
+      super(BuiltIn.STRING_SUB, pos);
+    }
+
+    @Override
+    public Character apply(String s, Integer i) {
+      if (i < 0 || i >= s.length()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      return s.charAt(i);
+    }
+
+    public StringSub withPos(Pos pos) {
+      return new StringSub(pos);
+    }
+  }
+
+  /** @see BuiltIn#STRING_STR */
+  private static final Applicable STRING_STR =
+      new BaseApplicable1<String, Character>(BuiltIn.STRING_STR) {
+        @Override
+        public String apply(Character character) {
+          return character + "";
+        }
+      };
+
+  /** @see BuiltIn#STRING_SUBSTRING */
+  private static final Applicable3 STRING_SUBSTRING =
+      new StringSubstring(Pos.ZERO);
+
+  /** Implements {@link #STRING_SUBSTRING}. */
+  private static class StringSubstring
+      extends BasePositionedApplicable3<String, String, Integer, Integer> {
+    StringSubstring(Pos pos) {
+      super(BuiltIn.STRING_SUBSTRING, pos);
+    }
+
+    @Override
+    public StringSubstring withPos(Pos pos) {
+      return new StringSubstring(pos);
+    }
+
+    @Override
+    public String apply(String s, Integer i, Integer j) {
+      if (i < 0 || j < 0 || i + j > s.length()) {
+        throw new MorelRuntimeException(BuiltInExn.SUBSCRIPT, pos);
+      }
+      return s.substring(i, i + j);
+    }
+  }
+
+  /** @see BuiltIn#STRING_TOKENS */
+  private static final Applicable2 STRING_TOKENS =
+      new StringTokenize(BuiltIn.STRING_TOKENS);
+
+  /** Implements {@link #STRING_FIELDS} and {@link #STRING_TOKENS}. */
+  private static class StringTokenize
+      extends BaseApplicable2<
+          List<String>, Applicable1<Boolean, Character>, String> {
+    StringTokenize(BuiltIn builtIn) {
+      super(builtIn);
+    }
+
+    @Override
+    public List<String> apply(Applicable1<Boolean, Character> f, String s) {
+      List<String> result = new ArrayList<>();
+      int h = 0;
+      for (int i = 0; i < s.length(); i++) {
+        char c = s.charAt(i);
+        if (f.apply(c)) {
+          if (builtIn == BuiltIn.STRING_FIELDS || i > h) {
+            // String.tokens only adds fields if they are non-empty.
+            result.add(s.substring(h, i));
+          }
+          h = i + 1;
+        }
+      }
+      if (builtIn == BuiltIn.STRING_FIELDS || s.length() > h) {
+        // String.tokens only adds fields if they are non-empty.
+        result.add(s.substring(h));
+      }
+      return result;
+    }
+  }
+
+  /** @see BuiltIn#STRING_TRANSLATE */
+  private static final Applicable2 STRING_TRANSLATE =
+      new BaseApplicable2<String, Applicable1<String, Character>, String>(
+          BuiltIn.STRING_TRANSLATE) {
+        @Override
+        public String apply(Applicable1<String, Character> f, String s) {
+          final StringBuilder buf = new StringBuilder();
+          for (int i = 0; i < s.length(); i++) {
+            final char c = s.charAt(i);
+            final String c2 = f.apply(c);
+            buf.append(c2);
+          }
+          return buf.toString();
         }
       };
 
@@ -3254,18 +3069,6 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#SYS_SHOW */
-  private static final Applicable SYS_SHOW =
-      new ApplicableImpl(BuiltIn.SYS_SHOW) {
-        @Override
-        public List apply(EvalEnv env, Object arg) {
-          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
-          final String propName = (String) arg;
-          final Object value = Prop.lookup(propName).get(session.map);
-          return value == null ? OPTION_NONE : optionSome(value.toString());
-        }
-      };
-
   /** @see BuiltIn#SYS_SHOW_ALL */
   private static final Applicable SYS_SHOW_ALL =
       new ApplicableImpl(BuiltIn.SYS_SHOW_ALL) {
@@ -3284,6 +3087,18 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#SYS_SHOW */
+  private static final Applicable SYS_SHOW =
+      new ApplicableImpl(BuiltIn.SYS_SHOW) {
+        @Override
+        public List apply(EvalEnv env, Object arg) {
+          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final String propName = (String) arg;
+          final Object value = Prop.lookup(propName).get(session.map);
+          return value == null ? OPTION_NONE : optionSome(value.toString());
+        }
+      };
+
   /** @see BuiltIn#SYS_UNSET */
   private static final Applicable SYS_UNSET =
       new ApplicableImpl(BuiltIn.SYS_UNSET) {
@@ -3298,50 +3113,162 @@ public abstract class Codes {
         }
       };
 
-  /**
-   * Converts the result of {@link Comparable#compareTo(Object)} to an {@code
-   * Order} value.
-   */
-  static List order(int c) {
-    if (c < 0) {
-      return ORDER_LESS;
-    }
-    if (c > 0) {
-      return ORDER_GREATER;
-    }
-    return ORDER_EQUAL;
-  }
+  /** @see BuiltIn#VECTOR_ALL */
+  private static final Applicable2 VECTOR_ALL = all(BuiltIn.VECTOR_ALL);
 
-  /** @see BuiltIn.Constructor#ORDER_LESS */
-  private static final List ORDER_LESS =
-      ImmutableList.of(BuiltIn.Constructor.ORDER_LESS.constructor);
+  /** @see BuiltIn#VECTOR_APP */
+  private static final Applicable2 VECTOR_APP =
+      new BaseApplicable2<Unit, Applicable1<Unit, Object>, List>(
+          BuiltIn.VECTOR_APP) {
+        @Override
+        public Unit apply(Applicable1 f, List vec) {
+          vec.forEach(f::apply);
+          return Unit.INSTANCE;
+        }
+      };
 
-  /** @see BuiltIn.Constructor#ORDER_EQUAL */
-  private static final List ORDER_EQUAL =
-      ImmutableList.of(BuiltIn.Constructor.ORDER_EQUAL.constructor);
+  /** @see BuiltIn#VECTOR_APPI */
+  private static final Applicable2 VECTOR_APPI =
+      new BaseApplicable2<Unit, Applicable1<Unit, List>, List>(
+          BuiltIn.VECTOR_APPI) {
+        @Override
+        public Unit apply(Applicable1<Unit, List> f, List vec) {
+          forEachIndexed(vec, (e, i) -> f.apply(FlatLists.of(i, e)));
+          return Unit.INSTANCE;
+        }
+      };
 
-  /** @see BuiltIn.Constructor#ORDER_GREATER */
-  private static final List ORDER_GREATER =
-      ImmutableList.of(BuiltIn.Constructor.ORDER_GREATER.constructor);
+  /** @see BuiltIn#VECTOR_COLLATE */
+  private static final Applicable2 VECTOR_COLLATE =
+      collate(BuiltIn.VECTOR_COLLATE);
 
-  /** @see BuiltIn#VECTOR_MAX_LEN */
-  private static final int VECTOR_MAX_LEN = (1 << 24) - 1;
+  /** @see BuiltIn#VECTOR_CONCAT */
+  private static final Applicable VECTOR_CONCAT =
+      new BaseApplicable1<List, List<List>>(BuiltIn.VECTOR_CONCAT) {
+        @Override
+        public List apply(List<List> lists) {
+          final ImmutableList.Builder b = ImmutableList.builder();
+          for (List<Object> list : lists) {
+            b.addAll(list);
+          }
+          return b.build();
+        }
+      };
+
+  /** @see BuiltIn#VECTOR_EXISTS */
+  private static final Applicable2 VECTOR_EXISTS =
+      exists(BuiltIn.VECTOR_EXISTS);
+
+  /** @see BuiltIn#VECTOR_FIND */
+  private static final Applicable2 VECTOR_FIND = find(BuiltIn.VECTOR_FIND);
+
+  /** @see BuiltIn#VECTOR_FINDI */
+  private static final Applicable2 VECTOR_FINDI =
+      new BaseApplicable2<List, Applicable1, List>(BuiltIn.VECTOR_FINDI) {
+        @Override
+        public List apply(Applicable1 f, List vec) {
+          for (int i = 0, n = vec.size(); i < n; i++) {
+            final List<Object> tuple = FlatLists.of(i, vec.get(i));
+            if ((Boolean) f.apply(tuple)) {
+              return optionSome(tuple);
+            }
+          }
+          return OPTION_NONE;
+        }
+      };
+
+  /** @see BuiltIn#VECTOR_FOLDL */
+  private static final Applicable3 VECTOR_FOLDL =
+      new BaseApplicable3<Object, Applicable1<Object, List>, Object, List>(
+          BuiltIn.VECTOR_FOLDL) {
+        @Override
+        public Object apply(
+            Applicable1<Object, List> f, Object init, List vec) {
+          Object acc = init;
+          for (Object o : vec) {
+            acc = f.apply(FlatLists.of(o, acc));
+          }
+          return acc;
+        }
+      };
+
+  /** @see BuiltIn#VECTOR_FOLDLI */
+  private static final Applicable3 VECTOR_FOLDLI =
+      new BaseApplicable3<Object, Applicable1<Object, List>, Object, List>(
+          BuiltIn.VECTOR_FOLDLI) {
+        @Override
+        public Object apply(
+            Applicable1<Object, List> f, Object init, List vec) {
+          Object acc = init;
+          for (int i = 0, n = vec.size(); i < n; i++) {
+            acc = f.apply(FlatLists.of(i, vec.get(i), acc));
+          }
+          return acc;
+        }
+      };
+
+  /** @see BuiltIn#VECTOR_FOLDR */
+  private static final Applicable3 VECTOR_FOLDR =
+      new BaseApplicable3<Object, Applicable1<Object, List>, Object, List>(
+          BuiltIn.VECTOR_FOLDR) {
+        @Override
+        public Object apply(
+            Applicable1<Object, List> f, Object init, List vec) {
+          Object acc = init;
+          for (int i = vec.size() - 1; i >= 0; i--) {
+            acc = f.apply(FlatLists.of(vec.get(i), acc));
+          }
+          return acc;
+        }
+      };
+
+  /** @see BuiltIn#VECTOR_FOLDRI */
+  private static final Applicable3 VECTOR_FOLDRI =
+      new BaseApplicable3<Object, Applicable1<Object, List>, Object, List>(
+          BuiltIn.VECTOR_FOLDRI) {
+        @Override
+        public Object apply(
+            Applicable1<Object, List> f, Object init, List vec) {
+          Object acc = init;
+          for (int i = vec.size() - 1; i >= 0; i--) {
+            acc = f.apply(FlatLists.of(i, vec.get(i), acc));
+          }
+          return acc;
+        }
+      };
 
   /** @see BuiltIn#VECTOR_FROM_LIST */
   private static final Applicable1 VECTOR_FROM_LIST =
       identity(BuiltIn.VECTOR_FROM_LIST);
 
-  /** @see BuiltIn#VECTOR_TABULATE */
-  private static final Applicable VECTOR_TABULATE =
-      new ListTabulate(BuiltIn.VECTOR_TABULATE, Pos.ZERO);
+  /** @see BuiltIn#VECTOR_MAX_LEN */
+  private static final int VECTOR_MAX_LEN = (1 << 24) - 1;
 
   /** @see BuiltIn#VECTOR_LENGTH */
   private static final Applicable1 VECTOR_LENGTH =
       length(BuiltIn.VECTOR_LENGTH);
 
+  /** @see BuiltIn#VECTOR_MAP */
+  private static final Applicable2 VECTOR_MAP =
+      new BaseApplicable2<List, Applicable1, List>(BuiltIn.VECTOR_MAP) {
+        @Override
+        public List apply(Applicable1 f, List vec) {
+          ImmutableList.Builder b = ImmutableList.builder();
+          vec.forEach(e -> b.add(f.apply(e)));
+          return b.build();
+        }
+      };
+
+  /** @see BuiltIn#VECTOR_MAPI */
+  private static final Applicable2 VECTOR_MAPI = listMapi(BuiltIn.VECTOR_MAPI);
+
   /** @see BuiltIn#VECTOR_SUB */
   private static final Applicable VECTOR_SUB =
       new ListNth(BuiltIn.VECTOR_SUB, Pos.ZERO);
+
+  /** @see BuiltIn#VECTOR_TABULATE */
+  private static final Applicable VECTOR_TABULATE =
+      new ListTabulate(BuiltIn.VECTOR_TABULATE, Pos.ZERO);
 
   /** @see BuiltIn#VECTOR_UPDATE */
   private static final Applicable VECTOR_UPDATE = new VectorUpdate(Pos.ZERO);
@@ -3369,234 +3296,27 @@ public abstract class Codes {
     }
   }
 
-  /** @see BuiltIn#VECTOR_CONCAT */
-  private static final Applicable VECTOR_CONCAT =
-      new BaseApplicable1<List, List<List>>(BuiltIn.VECTOR_CONCAT) {
+  /** Implements {@link #OP_DIVIDE} for type {@code int}. */
+  private static final Applicable2 Z_DIVIDE_INT =
+      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_DIVIDE) {
         @Override
-        public List apply(List<List> lists) {
-          final ImmutableList.Builder b = ImmutableList.builder();
-          for (List<Object> list : lists) {
-            b.addAll(list);
+        public Integer apply(Integer a0, Integer a1) {
+          return a0 / a1;
+        }
+      };
+
+  /** Implements {@link #OP_DIVIDE} for type {@code real}. */
+  private static final Applicable2 Z_DIVIDE_REAL =
+      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_DIVIDE) {
+        @Override
+        public Float apply(Float a0, Float a1) {
+          final float v = a0 / a1;
+          if (Float.isNaN(v)) {
+            return Float.NaN; // normalize NaN
           }
-          return b.build();
+          return v;
         }
       };
-
-  /** @see BuiltIn#VECTOR_APPI */
-  private static final Applicable2 VECTOR_APPI =
-      new BaseApplicable2<Unit, Applicable1<Unit, List>, List>(
-          BuiltIn.VECTOR_APPI) {
-        @Override
-        public Unit apply(Applicable1<Unit, List> f, List vec) {
-          forEachIndexed(vec, (e, i) -> f.apply(FlatLists.of(i, e)));
-          return Unit.INSTANCE;
-        }
-      };
-
-  /** @see BuiltIn#VECTOR_APP */
-  private static final Applicable2 VECTOR_APP =
-      new BaseApplicable2<Unit, Applicable1<Unit, Object>, List>(
-          BuiltIn.VECTOR_APP) {
-        @Override
-        public Unit apply(Applicable1 f, List vec) {
-          vec.forEach(f::apply);
-          return Unit.INSTANCE;
-        }
-      };
-
-  /** @see BuiltIn#VECTOR_MAPI */
-  private static final Applicable2 VECTOR_MAPI = listMapi(BuiltIn.VECTOR_MAPI);
-
-  /** Implements {@link #LIST_MAPI}, {@link #VECTOR_MAPI}. */
-  private static Applicable2<List, Applicable1, List> listMapi(
-      BuiltIn builtIn) {
-    return new BaseApplicable2<List, Applicable1, List>(builtIn) {
-      @Override
-      public List apply(Applicable1 f, List vec) {
-        ImmutableList.Builder b = ImmutableList.builder();
-        forEachIndexed(vec, (e, i) -> b.add(f.apply(FlatLists.of(i, e))));
-        return b.build();
-      }
-    };
-  }
-
-  /** @see BuiltIn#VECTOR_MAP */
-  private static final Applicable2 VECTOR_MAP =
-      new BaseApplicable2<List, Applicable1, List>(BuiltIn.VECTOR_MAP) {
-        @Override
-        public List apply(Applicable1 f, List vec) {
-          ImmutableList.Builder b = ImmutableList.builder();
-          vec.forEach(e -> b.add(f.apply(e)));
-          return b.build();
-        }
-      };
-
-  /** @see BuiltIn#VECTOR_FOLDLI */
-  private static final Applicable3 VECTOR_FOLDLI =
-      new BaseApplicable3<Object, Applicable1<Object, List>, Object, List>(
-          BuiltIn.VECTOR_FOLDLI) {
-        @Override
-        public Object apply(
-            Applicable1<Object, List> f, Object init, List vec) {
-          Object acc = init;
-          for (int i = 0, n = vec.size(); i < n; i++) {
-            acc = f.apply(FlatLists.of(i, vec.get(i), acc));
-          }
-          return acc;
-        }
-      };
-
-  /** @see BuiltIn#VECTOR_FOLDRI */
-  private static final Applicable3 VECTOR_FOLDRI =
-      new BaseApplicable3<Object, Applicable1<Object, List>, Object, List>(
-          BuiltIn.VECTOR_FOLDRI) {
-        @Override
-        public Object apply(
-            Applicable1<Object, List> f, Object init, List vec) {
-          Object acc = init;
-          for (int i = vec.size() - 1; i >= 0; i--) {
-            acc = f.apply(FlatLists.of(i, vec.get(i), acc));
-          }
-          return acc;
-        }
-      };
-
-  /** @see BuiltIn#VECTOR_FOLDL */
-  private static final Applicable3 VECTOR_FOLDL =
-      new BaseApplicable3<Object, Applicable1<Object, List>, Object, List>(
-          BuiltIn.VECTOR_FOLDL) {
-        @Override
-        public Object apply(
-            Applicable1<Object, List> f, Object init, List vec) {
-          Object acc = init;
-          for (Object o : vec) {
-            acc = f.apply(FlatLists.of(o, acc));
-          }
-          return acc;
-        }
-      };
-
-  /** @see BuiltIn#VECTOR_FOLDR */
-  private static final Applicable3 VECTOR_FOLDR =
-      new BaseApplicable3<Object, Applicable1<Object, List>, Object, List>(
-          BuiltIn.VECTOR_FOLDR) {
-        @Override
-        public Object apply(
-            Applicable1<Object, List> f, Object init, List vec) {
-          Object acc = init;
-          for (int i = vec.size() - 1; i >= 0; i--) {
-            acc = f.apply(FlatLists.of(vec.get(i), acc));
-          }
-          return acc;
-        }
-      };
-
-  /** @see BuiltIn#VECTOR_FINDI */
-  private static final Applicable2 VECTOR_FINDI =
-      new BaseApplicable2<List, Applicable1, List>(BuiltIn.VECTOR_FINDI) {
-        @Override
-        public List apply(Applicable1 f, List vec) {
-          for (int i = 0, n = vec.size(); i < n; i++) {
-            final List<Object> tuple = FlatLists.of(i, vec.get(i));
-            if ((Boolean) f.apply(tuple)) {
-              return optionSome(tuple);
-            }
-          }
-          return OPTION_NONE;
-        }
-      };
-
-  /** @see BuiltIn#VECTOR_FIND */
-  private static final Applicable2 VECTOR_FIND = find(BuiltIn.VECTOR_FIND);
-
-  /** @see BuiltIn#VECTOR_EXISTS */
-  private static final Applicable2 VECTOR_EXISTS =
-      exists(BuiltIn.VECTOR_EXISTS);
-
-  /** @see BuiltIn#VECTOR_ALL */
-  private static final Applicable2 VECTOR_ALL = all(BuiltIn.VECTOR_ALL);
-
-  /** @see BuiltIn#VECTOR_COLLATE */
-  private static final Applicable2 VECTOR_COLLATE =
-      collate(BuiltIn.VECTOR_COLLATE);
-
-  /** @see BuiltIn#BAG_NULL */
-  private static final Applicable1 BAG_NULL = empty(BuiltIn.BAG_NULL);
-
-  /** @see BuiltIn#BAG_LENGTH */
-  private static final Applicable1 BAG_LENGTH = length(BuiltIn.BAG_LENGTH);
-
-  /** @see BuiltIn#BAG_AT */
-  private static final Applicable2 BAG_AT = union(BuiltIn.BAG_AT);
-
-  /** @see BuiltIn#BAG_HD */
-  private static final Applicable BAG_HD =
-      new ListHd(BuiltIn.LIST_HD, Pos.ZERO);
-
-  /** @see BuiltIn#BAG_TL */
-  private static final Applicable BAG_TL =
-      new ListTl(BuiltIn.LIST_TL, Pos.ZERO);
-
-  /** @see BuiltIn#BAG_GET_ITEM */
-  private static final Applicable BAG_GET_ITEM =
-      listGetItem(BuiltIn.BAG_GET_ITEM);
-
-  /** @see BuiltIn#BAG_NTH */
-  private static final Applicable BAG_NTH =
-      new ListNth(BuiltIn.BAG_NTH, Pos.ZERO);
-
-  /** @see BuiltIn#BAG_TAKE */
-  private static final Applicable BAG_TAKE =
-      new ListTake(BuiltIn.BAG_TAKE, Pos.ZERO);
-
-  /** @see BuiltIn#BAG_DROP */
-  private static final Applicable2 BAG_DROP = listDrop(BuiltIn.BAG_DROP);
-
-  /** @see BuiltIn#BAG_CONCAT */
-  private static final Applicable BAG_CONCAT = listConcat(BuiltIn.BAG_CONCAT);
-
-  /** @see BuiltIn#BAG_APP */
-  private static final Applicable2 BAG_APP = listApp(BuiltIn.BAG_APP);
-
-  /** @see BuiltIn#BAG_MAP */
-  private static final Applicable2 BAG_MAP = listMap(BuiltIn.BAG_MAP);
-
-  /** @see BuiltIn#BAG_MAP_PARTIAL */
-  private static final Applicable2 BAG_MAP_PARTIAL =
-      listMapPartial(BuiltIn.BAG_MAP_PARTIAL);
-
-  /** @see BuiltIn#BAG_FIND */
-  private static final Applicable2 BAG_FIND = find(BuiltIn.BAG_FIND);
-
-  /** @see BuiltIn#BAG_FILTER */
-  private static final Applicable2 BAG_FILTER = listFilter(BuiltIn.BAG_FILTER);
-
-  /** @see BuiltIn#BAG_PARTITION */
-  private static final Applicable2 BAG_PARTITION =
-      listPartition0(BuiltIn.BAG_PARTITION);
-
-  /** @see BuiltIn#BAG_FOLD */
-  private static final Applicable3 BAG_FOLD =
-      // Order does not matter, but we call with left = true because foldl is
-      // more efficient than foldr.
-      listFold0(BuiltIn.BAG_FOLD, true);
-
-  /** @see BuiltIn#BAG_EXISTS */
-  private static final Applicable2 BAG_EXISTS = exists(BuiltIn.BAG_EXISTS);
-
-  /** @see BuiltIn#BAG_ALL */
-  private static final Applicable2 BAG_ALL = all(BuiltIn.BAG_ALL);
-
-  /** @see BuiltIn#BAG_FROM_LIST */
-  private static final Applicable1 BAG_FROM_LIST =
-      identity(BuiltIn.BAG_FROM_LIST);
-
-  /** @see BuiltIn#BAG_TO_LIST */
-  private static final Applicable1 BAG_TO_LIST = identity(BuiltIn.BAG_TO_LIST);
-
-  /** @see BuiltIn#BAG_TABULATE */
-  private static final Applicable BAG_TABULATE =
-      new ListTabulate(BuiltIn.BAG_TABULATE, Pos.ZERO);
 
   /** @see BuiltIn#Z_EXTENT */
   private static final Applicable Z_EXTENT =
@@ -3612,6 +3332,126 @@ public abstract class Codes {
 
   /** @see BuiltIn#Z_LIST */
   private static final Applicable1 Z_LIST = identity(BuiltIn.Z_LIST);
+
+  /** Implements {@link #OP_MINUS} for type {@code int}. */
+  private static final Applicable2 Z_MINUS_INT =
+      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_MINUS) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
+          return a0 - a1;
+        }
+      };
+
+  /** Implements {@link #OP_MINUS} for type {@code real}. */
+  private static final Applicable2 Z_MINUS_REAL =
+      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_MINUS) {
+        @Override
+        public Float apply(Float a0, Float a1) {
+          return a0 - a1;
+        }
+      };
+
+  /** Implements {@link #OP_NEGATE} for type {@code int}. */
+  private static final Applicable Z_NEGATE_INT =
+      new BaseApplicable1<Integer, Integer>(BuiltIn.OP_NEGATE) {
+        @Override
+        public Integer apply(Integer i) {
+          return -i;
+        }
+      };
+
+  /** Implements {@link #OP_NEGATE} for type {@code real}. */
+  private static final Applicable Z_NEGATE_REAL =
+      new BaseApplicable1<Float, Float>(BuiltIn.OP_NEGATE) {
+        @Override
+        public Float apply(Float f) {
+          if (Float.isNaN(f)) {
+            // ~nan -> nan
+            // nan (or any other value f such that isNan(f)) -> ~nan
+            return Float.floatToRawIntBits(f)
+                    == Float.floatToRawIntBits(NEGATIVE_NAN)
+                ? Float.NaN
+                : NEGATIVE_NAN;
+          }
+          return -f;
+        }
+      };
+
+  /** Implements {@link #OP_PLUS} for type {@code int}. */
+  private static final Applicable2 Z_PLUS_INT =
+      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_PLUS) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
+          return a0 + a1;
+        }
+      };
+
+  /** Implements {@link #OP_PLUS} for type {@code real}. */
+  private static final Applicable2 Z_PLUS_REAL =
+      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_PLUS) {
+        @Override
+        public Float apply(Float a0, Float a1) {
+          return a0 + a1;
+        }
+      };
+
+  /** Implements {@link #RELATIONAL_SUM} for type {@code int list}. */
+  private static final Applicable Z_SUM_INT =
+      new BaseApplicable1<Integer, List<? extends Number>>(BuiltIn.Z_SUM_INT) {
+        @Override
+        protected String name() {
+          return "Relational.sum$int";
+        }
+
+        @Override
+        public Integer apply(List<? extends Number> numbers) {
+          int sum = 0;
+          for (Number o : numbers) {
+            sum += o.intValue();
+          }
+          return sum;
+        }
+      };
+
+  /** Implements {@link #RELATIONAL_SUM} for type {@code real list}. */
+  private static final Applicable Z_SUM_REAL =
+      new BaseApplicable1<Float, List<? extends Number>>(BuiltIn.Z_SUM_REAL) {
+        @Override
+        protected String name() {
+          return "Relational.sum$real";
+        }
+
+        @Override
+        public Float apply(List<? extends Number> numbers) {
+          float sum = 0;
+          for (Number o : numbers) {
+            sum += o.floatValue();
+          }
+          return sum;
+        }
+      };
+
+  /** Implements {@link #OP_TIMES} for type {@code int}. */
+  private static final Applicable2 Z_TIMES_INT =
+      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_TIMES) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
+          return a0 * a1;
+        }
+      };
+
+  /** Implements {@link #OP_TIMES} for type {@code real}. */
+  private static final Applicable2 Z_TIMES_REAL =
+      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_TIMES) {
+        @Override
+        public Float apply(Float a0, Float a1) {
+          return a0 * a1;
+        }
+      };
+
+  // lint:endSorted
+
+  // ---------------------------------------------------------------------------
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
     if (SKIP) {
@@ -3641,6 +3481,176 @@ public abstract class Codes {
                 structure.name,
                 transformEager(
                     structure.memberMap.values(), BUILT_IN_VALUES::get)));
+  }
+
+  /** Describes a {@link Code}. */
+  public static String describe(Code code) {
+    final Code code2 = strip(code);
+    return code2.describe(new DescriberImpl()).toString();
+  }
+
+  /**
+   * Removes wrappers, in particular the one due to {@link #wrapRelList(Code)}.
+   */
+  public static Code strip(Code code) {
+    for (; ; ) {
+      if (code instanceof WrapRelList) {
+        code = ((WrapRelList) code).code;
+      } else {
+        return code;
+      }
+    }
+  }
+
+  /** Returns a Code that evaluates to the same value in all environments. */
+  public static Code constant(Object value) {
+    return new ConstantCode(value);
+  }
+
+  /** Returns an Applicable that returns its argument. */
+  private static Applicable1 identity(BuiltIn builtIn) {
+    return new BaseApplicable1<Object, Object>(builtIn) {
+      @Override
+      public Object apply(Object arg) {
+        return arg;
+      }
+    };
+  }
+
+  /** Returns a Code that evaluates "andalso". */
+  public static Code andAlso(Code code0, Code code1) {
+    return new AndAlsoCode(code0, code1);
+  }
+
+  /** Returns a Code that evaluates "orelse". */
+  public static Code orElse(Code code0, Code code1) {
+    return new OrElseCode(code0, code1);
+  }
+
+  /** @see BuiltIn#Z_ORDINAL */
+  public static Code ordinalGet(int[] ordinalSlots) {
+    return new OrdinalGetCode(ordinalSlots);
+  }
+
+  /** Helper for {@link #ordinalGet(int[])}. */
+  public static Code ordinalInc(int[] ordinalSlots, Code nextCode) {
+    return new OrdinalIncCode(ordinalSlots, nextCode);
+  }
+
+  /**
+   * Returns a Code that returns the value of variable "name" in the current
+   * environment.
+   */
+  public static Code get(String name) {
+    return new GetCode(name);
+  }
+
+  /**
+   * Returns a Code that returns a tuple consisting of the values of variables
+   * "name0", ... "nameN" in the current environment.
+   */
+  public static Code getTuple(Iterable<String> names) {
+    if (Iterables.isEmpty(names)) {
+      return new ConstantCode(Unit.INSTANCE);
+    }
+    return new GetTupleCode(ImmutableList.copyOf(names));
+  }
+
+  public static Code let(List<Code> matchCodes, Code resultCode) {
+    switch (matchCodes.size()) {
+      case 0:
+        return resultCode;
+
+      case 1:
+        // Use a more efficient runtime path if the list has only one element.
+        // The effect is the same.
+        return new Let1Code(matchCodes.get(0), resultCode);
+
+      default:
+        return new LetCode(ImmutableList.copyOf(matchCodes), resultCode);
+    }
+  }
+
+  /**
+   * Generates the code for applying a function (or function value) to an
+   * argument.
+   */
+  public static Code apply(Code fnCode, Code argCode) {
+    assert !fnCode.isConstant(); // if constant, use "apply(Closure, Code)"
+    return new ApplyCodeCode(fnCode, argCode);
+  }
+
+  /** Generates the code for applying a function value to an argument. */
+  public static Code apply(Applicable fnValue, Code argCode) {
+    return new ApplyCode(fnValue, argCode);
+  }
+
+  /** Generates the code for applying a function value to an argument. */
+  public static Code apply1(Applicable1 fnValue, Code argCode) {
+    return new ApplyCode1(fnValue, argCode);
+  }
+
+  /** Generates the code for applying a function value to two arguments. */
+  public static Code apply2(Applicable2 fnValue, Code argCode0, Code argCode1) {
+    return new ApplyCode2(fnValue, argCode0, argCode1);
+  }
+
+  /** Generates the code for applying a function value to a 2-tuple argument. */
+  public static Code apply2Tuple(Applicable2 fnValue, Code argCode0) {
+    return new ApplyCode2Tuple(fnValue, argCode0);
+  }
+
+  /** Generates the code for applying a function value to three arguments. */
+  public static Code apply3(
+      Applicable3 fnValue, Code argCode0, Code argCode1, Code argCode2) {
+    return new ApplyCode3(fnValue, argCode0, argCode1, argCode2);
+  }
+
+  /** Generates the code for applying a function value to a 3-tuple argument. */
+  public static Code apply3Tuple(Applicable3 fnValue, Code argCode0) {
+    return new ApplyCode3Tuple(fnValue, argCode0);
+  }
+
+  /** Generates the code for applying a function value to four arguments. */
+  public static Code apply4(
+      Applicable4 fnValue,
+      Code argCode0,
+      Code argCode1,
+      Code argCode2,
+      Code argCode3) {
+    return new ApplyCode4(fnValue, argCode0, argCode1, argCode2, argCode3);
+  }
+
+  public static Code list(Iterable<? extends Code> codes) {
+    return tuple(codes);
+  }
+
+  public static Code tuple(Iterable<? extends Code> codes) {
+    return new TupleCode(ImmutableList.copyOf(codes));
+  }
+
+  public static Code wrapRelList(Code code) {
+    return new WrapRelList(code);
+  }
+
+  /**
+   * Returns an applicable that constructs an instance of a datatype. The
+   * instance is a list with two elements [constructorName, value].
+   */
+  public static Applicable1 tyCon(Type dataType, String name) {
+    requireNonNull(dataType);
+    requireNonNull(name);
+    return new BaseApplicable1(BuiltIn.Z_TY_CON) {
+      @Override
+      protected String name() {
+        return "tyCon";
+      }
+
+      @Override
+      public Object apply(Object arg) {
+        return ImmutableList.of(name, arg);
+      }
+    };
   }
 
   /** Creates an empty evaluation environment. */

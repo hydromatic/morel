@@ -162,7 +162,11 @@ public class LintTest {
     // Start sorting
     b.add(
         line -> line.contains("// " + "lint:startSorted"),
-        line -> line.state().sortConsumer = new CodesConsumer());
+        line ->
+            line.state().sortConsumer =
+                line.contains(":fields")
+                    ? new FieldsConsumer()
+                    : new CodesConsumer());
 
     // End sorting
     b.add(
@@ -599,6 +603,7 @@ public class LintTest {
     }
   }
 
+  /** Consumer that checks that lines that start with ".put" are sorted. */
   private static class CodesConsumer
       implements Consumer<Puffin.Line<GlobalState, FileState>> {
     final Collator collator = Collator.getInstance(Locale.ROOT);
@@ -616,6 +621,36 @@ public class LintTest {
         String prevLine = last(lines);
         if (collator.compare(prevLine, thisLine) > 0) {
           String format = "Lines must be sorted; '%s' should be before '%s'";
+          line.state().message(line, format, prevLine, thisLine);
+        }
+      }
+      lines.add(thisLine);
+    }
+  }
+
+  /**
+   * Consumer that checks that lines that start with "static final" are sorted.
+   */
+  private static class FieldsConsumer
+      implements Consumer<Puffin.Line<GlobalState, FileState>> {
+    final Collator collator = Collator.getInstance(Locale.ROOT);
+    final List<String> lines = new ArrayList<>();
+
+    @Override
+    public void accept(Puffin.Line<GlobalState, FileState> line) {
+      String thisLine = line.line();
+      if (thisLine.matches(
+          "^.*static final (Macro|Applicable[0-4]*) [A-Z_]+ =")) {
+        thisLine =
+            thisLine.replaceAll(
+                "^ *private static final (Macro|Applicable[0-4]*) ", "");
+      } else {
+        return; // skip comment lines, etc.
+      }
+      if (!lines.isEmpty()) {
+        String prevLine = last(lines);
+        if (collator.compare(prevLine, thisLine) > 0) {
+          String format = "Lines must be sorted; '%s' should be after '%s'";
           line.state().message(line, format, prevLine, thisLine);
         }
       }
