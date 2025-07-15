@@ -58,6 +58,8 @@ import net.hydromatic.morel.eval.Comparators;
 import net.hydromatic.morel.eval.Describer;
 import net.hydromatic.morel.eval.EvalEnv;
 import net.hydromatic.morel.eval.Prop;
+import net.hydromatic.morel.eval.RowSink;
+import net.hydromatic.morel.eval.RowSinks;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.foreign.CalciteFunctions;
@@ -525,15 +527,15 @@ public class Compiler {
   }
 
   protected Code compileFrom(Context cx, Core.From from) {
-    Supplier<Codes.RowSink> rowSinkFactory =
+    Supplier<RowSink> rowSinkFactory =
         createRowSinkFactory(
             cx, Core.StepEnv.EMPTY, from.steps, from.type().arg(0));
-    Supplier<Codes.RowSink> firstRowSinkFactory =
-        () -> Codes.firstRowSink(rowSinkFactory.get());
-    return Codes.from(firstRowSinkFactory);
+    Supplier<RowSink> firstRowSinkFactory =
+        () -> RowSinks.first(rowSinkFactory.get());
+    return RowSinks.from(firstRowSinkFactory);
   }
 
-  protected Supplier<Codes.RowSink> createRowSinkFactory(
+  protected Supplier<RowSink> createRowSinkFactory(
       Context cx0,
       Core.StepEnv stepEnv,
       List<Core.FromStep> steps,
@@ -552,10 +554,10 @@ public class Compiler {
       } else {
         code = Codes.getTuple(fieldNames);
       }
-      return () -> Codes.collectRowSink(code);
+      return () -> RowSinks.collect(code);
     }
     final Core.FromStep firstStep = steps.get(0);
-    final Supplier<Codes.RowSink> nextFactory =
+    final Supplier<RowSink> nextFactory =
         createRowSinkFactory(cx, firstStep.env, skip(steps), elementType);
     final ImmutableList<Code> inputCodes;
     final ImmutableList<String> outNames;
@@ -566,30 +568,30 @@ public class Compiler {
         code = compileRow(cx, scan.exp);
         final Code conditionCode = compile(cx, scan.condition);
         return () ->
-            Codes.scanRowSink(
+            RowSinks.scan(
                 firstStep.op, scan.pat, code, conditionCode, nextFactory.get());
 
       case WHERE:
         final Core.Where where = (Core.Where) firstStep;
         final Code filterCode = compileRow(cx, where.exp);
-        return () -> Codes.whereRowSink(filterCode, nextFactory.get());
+        return () -> RowSinks.where(filterCode, nextFactory.get());
 
       case SKIP:
         final Core.Skip skip = (Core.Skip) firstStep;
         final Code skipCode = compile(cx, skip.exp);
-        return () -> Codes.skipRowSink(skipCode, nextFactory.get());
+        return () -> RowSinks.skip(skipCode, nextFactory.get());
 
       case TAKE:
         final Core.Take take = (Core.Take) firstStep;
         final Code takeCode = compile(cx, take.exp);
-        return () -> Codes.takeRowSink(takeCode, nextFactory.get());
+        return () -> RowSinks.take(takeCode, nextFactory.get());
 
       case EXCEPT:
         final Core.Except except = (Core.Except) firstStep;
         inputCodes = transformEager(except.args, arg -> compile(cx, arg));
         outNames = bindingNames(stepEnv.bindings);
         return () ->
-            Codes.exceptRowSink(
+            RowSinks.except(
                 except.distinct, inputCodes, outNames, nextFactory.get());
 
       case INTERSECT:
@@ -597,7 +599,7 @@ public class Compiler {
         inputCodes = transformEager(intersect.args, arg -> compile(cx, arg));
         outNames = bindingNames(stepEnv.bindings);
         return () ->
-            Codes.intersectRowSink(
+            RowSinks.intersect(
                 intersect.distinct, inputCodes, outNames, nextFactory.get());
 
       case UNION:
@@ -605,7 +607,7 @@ public class Compiler {
         inputCodes = transformEager(union.args, arg -> compile(cx, arg));
         outNames = bindingNames(stepEnv.bindings);
         return () ->
-            Codes.unionRowSink(
+            RowSinks.union(
                 union.distinct, inputCodes, outNames, nextFactory.get());
 
       case YIELD:
@@ -614,18 +616,18 @@ public class Compiler {
           // Last step. Use a Collect row sink, and we're done.
           // Note that we don't use nextFactory.
           final Code yieldCode = compileRow(cx, yield.exp);
-          return () -> Codes.collectRowSink(yieldCode);
+          return () -> RowSinks.collect(yieldCode);
         } else if (yield.exp instanceof Core.Tuple) {
           final Core.Tuple tuple = (Core.Tuple) yield.exp;
           final RecordLikeType recordType = tuple.type();
           final Map<String, Code> codeMap =
               compileRowMap(cx, Pair.zip(recordType.argNames(), tuple.args));
-          return () -> Codes.yieldRowSink(codeMap, nextFactory.get());
+          return () -> RowSinks.yield(codeMap, nextFactory.get());
         } else {
           final Binding binding = yield.env.bindings.get(0);
           Map<String, Code> codeMap =
               compileRowMap(cx, PairList.of(binding.id.name, yield.exp));
-          return () -> Codes.yieldRowSink(codeMap, nextFactory.get());
+          return () -> RowSinks.yield(codeMap, nextFactory.get());
         }
 
       case ORDER:
@@ -634,7 +636,7 @@ public class Compiler {
         final Comparator comparator =
             Comparators.comparatorFor(typeSystem, order.exp.type);
         return () ->
-            Codes.orderRowSink(code, comparator, stepEnv, nextFactory.get());
+            RowSinks.order(code, comparator, stepEnv, nextFactory.get());
 
       case UNORDER:
         // No explicit step is required. Unorder is a change in type, but
@@ -693,7 +695,7 @@ public class Compiler {
         final ImmutableList<String> keyNames =
             outNames.subList(0, group.groupExps.size());
         return () ->
-            Codes.groupRowSink(
+            RowSinks.group(
                 keyCode,
                 aggregateCodes,
                 names,
