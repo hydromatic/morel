@@ -23,6 +23,69 @@
 # morel> 3 + 5;
 # morel> it = 8;
 
+# Print usage
+usage() {
+  cd $(dirname $0)
+  head -1 ./README
+  echo "Usage: morel [option...] [file...]"
+  echo
+  echo Options:
+  echo "  --build             Compile the source code first."
+  echo "  -h, --help          Print this help, then exit."
+  echo "  --idempotent        Treat all files (and stdin) as SMLI format."
+  echo "                      Set implicitly if the first file has suffix '.smli'."
+  echo "  --no-build          Don't compile the source code first. (This is the"
+  echo "                      default, but a limited build will always occur if"
+  echo "                      'target/classpath.txt' is not present.)"
+}
+
+# Process options.
+BUILD=
+HELP=
+FORMAT=
+while [ $# -gt 0 ]; do
+  case "$1" in
+    (--help|-h)
+      HELP=true
+      shift
+      ;;
+    (--no-build)
+      BUILD=
+      shift
+      ;;
+    (--build)
+      BUILD=true
+      shift
+      ;;
+    (--idempotent)
+      FORMAT=smli
+      shift
+      ;;
+    (*.smli)
+      if [ "$FILES" = "" ]; then
+        FORMAT=smli
+        FILES="$1"
+      else
+        FILES="$FILES $1"
+      fi
+      shift
+      ;;
+    (*)
+      if [ "$FILES" = "" ]; then
+        FILES="$1"
+      else
+        FILES="$FILES $1"
+      fi
+      shift
+      ;;
+  esac
+done
+
+if [ "$HELP" ]; then
+  usage
+  exit 1
+fi
+
 # Deduce whether we are running cygwin
 case $(uname -s) in
 (CYGWIN*) cygwin=true;;
@@ -32,10 +95,13 @@ esac
 # Build classpath on first call.
 # (To force rebuild, remove target/classpath.txt, or just "./mvnw clean".)
 cd "$(dirname "$0")" || exit
-if [ ! -f target/classpath.txt ]; then
+if [ "$BUILD" ]; then
     ./mvnw -DskipTests \
         dependency:build-classpath -Dmdep.outputFile=target/classpath.txt \
         compile test
+elif [ ! -f target/classpath.txt ]; then
+    ./mvnw -DskipTests \
+        dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 fi
 
 CP="target/classes:\
@@ -52,9 +118,21 @@ fi
 
 export JAVA_OPTS=-Djavax.xml.parsers.DocumentBuilderFactory=com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl
 
-exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell \
-     --foreign='net.hydromatic.morel.BuiltInDataSet$Dictionary' \
-     --directory="$(pwd)" \
-     "$@"
+case "$FORMAT" in
+  (smli)
+    if [ "$FILES" = "" ]; then
+      FILES=-
+    fi
+    exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.ScriptTest \
+        --directory="$(pwd)" \
+        "$FILES"
+    ;;
+  (*)
+    exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell \
+         --foreign='net.hydromatic.morel.BuiltInDataSet$Dictionary' \
+         --directory="$(pwd)" \
+         "$FILES"
+    ;;
+esac
 
 # End morel
