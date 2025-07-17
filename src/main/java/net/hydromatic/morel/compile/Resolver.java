@@ -1491,7 +1491,8 @@ public class Resolver {
 
     @Override
     public List<Binding> bindings() {
-      return aggregates.transform2((id, agg) -> Binding.of(id, Unit.INSTANCE));
+      return aggregates.transformEager(
+          (id, agg) -> Binding.of(id, Unit.INSTANCE));
     }
 
     @Override

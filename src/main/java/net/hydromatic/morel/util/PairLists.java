@@ -126,7 +126,7 @@ class PairLists {
     }
 
     @Override
-    public <R> ImmutableList<R> transform2(BiFunction<T, U, R> function) {
+    public <R> ImmutableList<R> transformEager(BiFunction<T, U, R> function) {
       if (isEmpty()) {
         return ImmutableList.of();
       }
@@ -370,7 +370,7 @@ class PairLists {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <R> ImmutableList<R> transform2(BiFunction<T, U, R> function) {
+    public <R> ImmutableList<R> transformEager(BiFunction<T, U, R> function) {
       if (list.isEmpty()) {
         return ImmutableList.of();
       }
@@ -504,7 +504,7 @@ class PairLists {
     }
 
     @Override
-    public <R> ImmutableList<R> transform2(BiFunction<T, U, R> function) {
+    public <R> ImmutableList<R> transformEager(BiFunction<T, U, R> function) {
       return ImmutableList.of();
     }
 
@@ -626,7 +626,7 @@ class PairLists {
     }
 
     @Override
-    public <R> ImmutableList<R> transform2(BiFunction<T, U, R> function) {
+    public <R> ImmutableList<R> transformEager(BiFunction<T, U, R> function) {
       return ImmutableList.of(function.apply(t, u));
     }
 
@@ -796,7 +796,7 @@ class PairLists {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <R> ImmutableList<R> transform2(BiFunction<T, U, R> function) {
+    public <R> ImmutableList<R> transformEager(BiFunction<T, U, R> function) {
       final ImmutableList.Builder<R> builder = ImmutableList.builder();
       for (int i = 0; i < elements.length; ) {
         final T t = (T) elements[i++];

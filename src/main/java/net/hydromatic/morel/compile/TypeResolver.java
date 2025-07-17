@@ -1244,7 +1244,8 @@ public class TypeResolver {
 
   /** Validates a {@code Record}. Throws if there are duplicate field names. */
   private void validateRecord(Ast.Record record) {
-    final List<String> names = record.args.transform2((id, e) -> id.name);
+    // Lazy transform - we are unlikely to access each element more than once.
+    final List<String> names = record.args.transform((id, e) -> id.name);
     final int i = firstDuplicate(names);
     if (i >= 0) {
       final int j = names.lastIndexOf(names.get(i));

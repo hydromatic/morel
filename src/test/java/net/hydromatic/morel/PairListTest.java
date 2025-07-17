@@ -515,7 +515,7 @@ class PairListTest {
           list3.transform((s, i) -> s + i),
           is(Arrays.asList("a1", "null5", "c3")));
       assertThat(
-          list3.transform2((s, i) -> s + i),
+          list3.transformEager((s, i) -> s + i),
           is(Arrays.asList("a1", "null5", "c3")));
 
       final BiPredicate<String, Integer> gt2 = (s, i) -> i > 2;
@@ -609,7 +609,7 @@ class PairListTest {
   }
 
   @Test
-  void testImmutablePairListFromTransformed() {
+  void testPairListFromTransformed() {
     // Tester that calls ImmutablePairList.fromTransformed(List, BiTransformer)
     final PairList.BiTransformer<String, String, Integer> transformer =
         (s, consumer) -> consumer.accept(s, s.length());
@@ -631,8 +631,7 @@ class PairListTest {
           assertThat(pairList, hasToString(expected));
         };
     // Tester that calls ImmutablePairList.fromTransformed(Iterable,
-    // BiTransformer) with a
-    // LinkedHashSet
+    // BiTransformer) with a LinkedHashSet
     final BiConsumer<List<String>, String> setTester =
         (list, expected) -> {
           final Set<String> set = new LinkedHashSet<>(list);
@@ -651,12 +650,23 @@ class PairListTest {
           assertThat(pairList, hasSize(list.size()));
           assertThat(pairList, hasToString(expected));
         };
+    // Tester that calls PairList.fromTransformed(Iterable,
+    // BiTransformer)
+    final BiConsumer<List<String>, String> mutableTester =
+        (list, expected) -> {
+          final PairList<String, Integer> pairList =
+              PairList.fromTransformed(list, transformer);
+          assertThat(pairList, hasSize(list.size()));
+          assertThat(pairList, hasToString(expected));
+        };
+    // Tester that calls all the above
     final BiConsumer<List<String>, String> t =
         (list, expected) -> {
           listTester.accept(list, expected);
           iterableTester.accept(list, expected);
           setTester.accept(list, expected);
           realIterableTester.accept(list, expected);
+          mutableTester.accept(list, expected);
         };
     t.accept(Arrays.asList("abc", "", "de"), "[<abc, 3>, <, 0>, <de, 2>]");
     t.accept(Collections.singletonList("abc"), "[<abc, 3>]");

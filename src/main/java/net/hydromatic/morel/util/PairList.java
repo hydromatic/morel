@@ -78,6 +78,21 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
     return builder.build();
   }
 
+  /** Creates a PairList by transforming the elements of an iterable. */
+  static <R, T, U> PairList<T, U> fromTransformed(
+      Iterable<? extends R> iterable, BiTransformer<R, T, U> transformer) {
+    List<Object> list = new ArrayList<>();
+    iterable.forEach(
+        r ->
+            transformer.apply(
+                r,
+                (t, u) -> {
+                  list.add(t);
+                  list.add(u);
+                }));
+    return new PairLists.MutablePairList<>(list);
+  }
+
   /** Creates a PairList that is a view of a Map. */
   static <T, U> PairList<T, U> viewOf(Map<T, U> map) {
     return new PairLists.MapPairList<>(map);
@@ -224,18 +239,24 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
    */
   ImmutablePairList<T, U> immutable();
 
-  /** Applies a mapping function to each element of this list. */
+  /**
+   * Applies a mapping function to each element of this list.
+   *
+   * @see PairList#fromTransformed(Iterable, BiTransformer)
+   */
   <R> List<R> transform(BiFunction<T, U, R> function);
 
-  /** Applies a mapping function to each element of this list. */
-  <R> ImmutableList<R> transform2(BiFunction<T, U, R> function);
-
   /**
-   * Returns whether the predicate is true for at least one pair in this list.
+   * Eagerly applies a mapping function to each element of this list.
+   *
+   * @see ImmutablePairList#fromTransformed(Collection, BiTransformer)
    */
+  <R> ImmutableList<R> transformEager(BiFunction<T, U, R> function);
+
+  /** Returns whether a predicate is true for at least one pair in this list. */
   boolean anyMatch(BiPredicate<T, U> predicate);
 
-  /** Returns whether the predicate is true for all pairs in this list. */
+  /** Returns whether a predicate is true for all pairs in this list. */
   boolean allMatch(BiPredicate<T, U> predicate);
 
   /** Returns the index of the first match of a predicate. */
