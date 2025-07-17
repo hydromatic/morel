@@ -219,7 +219,7 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
     return new ZipList<>(ks, vs, size);
   }
 
-  /** Returns whether all pairs match a given predicate. */
+  /** Returns whether all pairs from two iterables match a given predicate. */
   public static <K, V> boolean allMatch(
       Iterable<K> ks, Iterable<V> vs, BiPredicate<K, V> predicate) {
     final Iterator<K> ki = ks.iterator();
@@ -232,7 +232,18 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
     return true;
   }
 
-  /** Returns whether no pair matches a given predicate. */
+  /** Returns whether all pairs from two lists match a given predicate. */
+  public static <K, V> boolean allMatch(
+      List<K> ks, List<V> vs, BiPredicate<K, V> predicate) {
+    for (int i = 0, j = Math.min(ks.size(), vs.size()); i < j; i++) {
+      if (!predicate.test(ks.get(i), vs.get(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Returns whether no pair in two iterables matches a given predicate. */
   public static <K, V> boolean noneMatch(
       Iterable<K> ks, Iterable<V> vs, BiPredicate<K, V> predicate) {
     final Iterator<K> ki = ks.iterator();
@@ -245,7 +256,18 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
     return true;
   }
 
-  /** Returns whether any pair matches a given predicate. */
+  /** Returns whether no pair in two lists matches a given predicate. */
+  public static <K, V> boolean noneMatch(
+      List<K> ks, List<V> vs, BiPredicate<K, V> predicate) {
+    for (int i = 0, j = Math.min(ks.size(), vs.size()); i < j; i++) {
+      if (predicate.test(ks.get(i), vs.get(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Returns whether any pair in two iterables matches a given predicate. */
   public static <K, V> boolean anyMatch(
       Iterable<K> ks, Iterable<V> vs, BiPredicate<K, V> predicate) {
     final Iterator<K> ki = ks.iterator();
@@ -258,13 +280,40 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
     return false;
   }
 
-  /** Returns the index of the first pair that matches a predicate. */
+  /** Returns whether any pair in two lists matches a given predicate. */
+  public static <K, V> boolean anyMatch(
+      List<K> ks, List<V> vs, BiPredicate<K, V> predicate) {
+    for (int i = 0, j = Math.min(ks.size(), vs.size()); i < j; i++) {
+      if (predicate.test(ks.get(i), vs.get(i))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Returns the index of the first pair in two iterables that matches a
+   * predicate.
+   */
   public static <K, V> int firstMatch(
       Iterable<K> ks, Iterable<V> vs, BiPredicate<K, V> predicate) {
     final Iterator<K> ki = ks.iterator();
     final Iterator<V> vi = vs.iterator();
     for (int i = 0; ki.hasNext() && vi.hasNext(); ++i) {
       if (predicate.test(ki.next(), vi.next())) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Returns the index of the first pair in two lists that matches a predicate.
+   */
+  public static <K, V> int firstMatch(
+      List<K> ks, List<V> vs, BiPredicate<K, V> predicate) {
+    for (int i = 0, j = Math.min(ks.size(), vs.size()); i < j; i++) {
+      if (predicate.test(ks.get(i), vs.get(i))) {
         return i;
       }
     }
@@ -278,6 +327,31 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
     final Iterator<V> vi = vs.iterator();
     while (ki.hasNext() && vi.hasNext()) {
       consumer.accept(ki.next(), vi.next());
+    }
+  }
+
+  /** Calls a consumer for each pair of items in two lists. */
+  public static <K, V> void forEach(
+      List<K> ks, List<V> vs, BiConsumer<K, V> consumer) {
+    for (int i = 0, j = Math.min(ks.size(), vs.size()); i < j; i++) {
+      consumer.accept(ks.get(i), vs.get(i));
+    }
+  }
+
+  /**
+   * Applies an action to every element of an iterable of pairs.
+   *
+   * @see Map#forEach(java.util.function.BiConsumer)
+   * @param entries Pairs
+   * @param consumer The action to be performed for each element
+   * @param <K> Left type
+   * @param <V> Right type
+   */
+  public static <K, V> void forEach(
+      final Iterable<? extends Map.Entry<? extends K, ? extends V>> entries,
+      BiConsumer<K, V> consumer) {
+    for (Map.Entry<? extends K, ? extends V> entry : entries) {
+      consumer.accept(entry.getKey(), entry.getValue());
     }
   }
 
@@ -379,23 +453,6 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
   public static <K, V> List<Pair<K, V>> zipMutable(
       final List<K> ks, final List<V> vs) {
     return new MutableZipList<>(ks, vs);
-  }
-
-  /**
-   * Applies an action to every element of an iterable of pairs.
-   *
-   * @see Map#forEach(java.util.function.BiConsumer)
-   * @param entries Pairs
-   * @param consumer The action to be performed for each element
-   * @param <K> Left type
-   * @param <V> Right type
-   */
-  public static <K, V> void forEach(
-      final Iterable<? extends Map.Entry<? extends K, ? extends V>> entries,
-      BiConsumer<K, V> consumer) {
-    for (Map.Entry<? extends K, ? extends V> entry : entries) {
-      consumer.accept(entry.getKey(), entry.getValue());
-    }
   }
 
   /**

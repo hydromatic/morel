@@ -20,7 +20,6 @@ package net.hydromatic.morel.eval;
 
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Pair.allMatch;
-import static net.hydromatic.morel.util.Pair.zip;
 import static net.hydromatic.morel.util.Static.skip;
 
 import com.google.common.collect.ImmutableList;
@@ -30,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import net.hydromatic.morel.ast.Core;
-import net.hydromatic.morel.util.Pair;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Helpers for {@link EvalEnv}. */
@@ -237,25 +235,13 @@ public class EvalEnvs {
         case RECORD_PAT:
           final Core.RecordPat recordPat = (Core.RecordPat) pat;
           listValue = (List) argValue;
-          for (Pair<Core.Pat, Object> pair : zip(recordPat.args, listValue)) {
-            if (!bindRecurse(pair.left, pair.right)) {
-              return false;
-            }
-          }
-          return true;
+          return allMatch(recordPat.args, listValue, this::bindRecurse);
 
         case LIST_PAT:
           final Core.ListPat listPat = (Core.ListPat) pat;
           listValue = (List) argValue;
-          if (listValue.size() != listPat.args.size()) {
-            return false;
-          }
-          for (Pair<Core.Pat, Object> pair : zip(listPat.args, listValue)) {
-            if (!bindRecurse(pair.left, pair.right)) {
-              return false;
-            }
-          }
-          return true;
+          return listValue.size() == listPat.args.size()
+              && allMatch(listPat.args, listValue, this::bindRecurse);
 
         case CONS_PAT:
           final Core.ConPat infixPat = (Core.ConPat) pat;

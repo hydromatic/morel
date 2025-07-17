@@ -32,6 +32,7 @@ import static net.hydromatic.morel.util.Static.transform;
 import static org.apache.calcite.util.Util.range;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
@@ -455,26 +456,81 @@ public class UtilTest {
     assertThat(Float.isNaN(Codes.NEGATIVE_NAN), is(true));
   }
 
+  /**
+   * Tests {@link Pair#anyMatch}, {@link Pair#allMatch}, {@link Pair#noneMatch},
+   * {@link Pair#firstMatch}, and {@link Pair#forEach}.
+   */
   @Test
-  void testPairAllMatch() {
-    final List<Integer> list1 = Arrays.asList(1, 3, 5);
-    final List<Integer> list2 = Arrays.asList(2, 3, 4);
+  void testPairMatch() {
+    final List<Integer> list3a = Arrays.asList(1, 3, 5);
+    final Iterable<Integer> iter3a = list3a::iterator;
+    final List<Integer> list3b = Arrays.asList(2, 3, 4);
+    final Iterable<Integer> iter3b = list3b::iterator;
+    final List<Integer> list2 = Arrays.asList(8, 3);
+    final Iterable<Integer> iter2 = list2::iterator;
     final List<Integer> list0 = Collections.emptyList();
-    assertThat(Pair.anyMatch(list1, list2, Objects::equals), is(true));
-    assertThat(Pair.allMatch(list1, list2, Objects::equals), is(false));
-    assertThat(Pair.noneMatch(list1, list2, Objects::equals), is(false));
+    final Iterable<Integer> iter0 = list0::iterator;
 
-    assertThat(Pair.anyMatch(list1, list2, (i, j) -> i == 0), is(false));
-    assertThat(Pair.allMatch(list1, list2, (i, j) -> i == 0), is(false));
-    assertThat(Pair.noneMatch(list1, list2, (i, j) -> i == 0), is(true));
+    assertThat(Pair.anyMatch(list3a, list3b, Objects::equals), is(true));
+    assertThat(Pair.anyMatch(iter3a, iter3b, Objects::equals), is(true));
+    assertThat(Pair.allMatch(list3a, list3b, Objects::equals), is(false));
+    assertThat(Pair.allMatch(iter3a, iter3b, Objects::equals), is(false));
+    assertThat(Pair.noneMatch(list3a, list3b, Objects::equals), is(false));
+    assertThat(Pair.noneMatch(iter3a, iter3b, Objects::equals), is(false));
+    assertThat(Pair.firstMatch(list3a, list3b, Objects::equals), is(1));
+    assertThat(Pair.firstMatch(iter3a, iter3b, Objects::equals), is(1));
 
-    assertThat(Pair.anyMatch(list1, list2, (i, j) -> i > 0), is(true));
-    assertThat(Pair.allMatch(list1, list2, (i, j) -> i > 0), is(true));
-    assertThat(Pair.noneMatch(list1, list2, (i, j) -> i > 0), is(false));
+    assertThat(Pair.anyMatch(list3a, list3b, (i, j) -> i == 0), is(false));
+    assertThat(Pair.anyMatch(iter3a, iter3b, (i, j) -> i == 0), is(false));
+    assertThat(Pair.allMatch(list3a, list3b, (i, j) -> i == 0), is(false));
+    assertThat(Pair.allMatch(iter3a, iter3b, (i, j) -> i == 0), is(false));
+    assertThat(Pair.noneMatch(list3a, list3b, (i, j) -> i == 0), is(true));
+    assertThat(Pair.noneMatch(iter3a, iter3b, (i, j) -> i == 0), is(true));
+    assertThat(Pair.firstMatch(list3a, list3b, (i, j) -> i == 0), is(-1));
+    assertThat(Pair.firstMatch(iter3a, iter3b, (i, j) -> i == 0), is(-1));
+
+    assertThat(Pair.anyMatch(list3a, list3b, (i, j) -> i > 0), is(true));
+    assertThat(Pair.anyMatch(iter3a, iter3b, (i, j) -> i > 0), is(true));
+    assertThat(Pair.allMatch(list3a, list3b, (i, j) -> i > 0), is(true));
+    assertThat(Pair.allMatch(iter3a, iter3b, (i, j) -> i > 0), is(true));
+    assertThat(Pair.noneMatch(list3a, list3b, (i, j) -> i > 0), is(false));
+    assertThat(Pair.noneMatch(iter3a, iter3b, (i, j) -> i > 0), is(false));
+    assertThat(Pair.firstMatch(list3a, list3b, (i, j) -> i > 0), is(0));
+    assertThat(Pair.firstMatch(iter3a, iter3b, (i, j) -> i > 0), is(0));
 
     assertThat(Pair.anyMatch(list0, list0, (i, j) -> true), is(false));
+    assertThat(Pair.anyMatch(iter0, iter0, (i, j) -> true), is(false));
     assertThat(Pair.allMatch(list0, list0, (i, j) -> true), is(true));
+    assertThat(Pair.allMatch(iter0, iter0, (i, j) -> true), is(true));
     assertThat(Pair.noneMatch(list0, list0, (i, j) -> true), is(true));
+    assertThat(Pair.noneMatch(iter0, iter0, (i, j) -> true), is(true));
+    assertThat(Pair.firstMatch(list0, list0, (i, j) -> true), is(-1));
+    assertThat(Pair.firstMatch(iter0, iter0, (i, j) -> true), is(-1));
+
+    final StringBuilder b = new StringBuilder();
+    final BiConsumer<Integer, Integer> app =
+        (i, j) -> b.append(i).append(':').append(j).append(' ');
+    final BiConsumer<Runnable, Matcher<String>> c =
+        (r, matcher) -> {
+          b.setLength(0);
+          r.run();
+          assertThat(b.toString(), matcher);
+        };
+
+    c.accept(() -> Pair.forEach(list3b, list3b, app), is("2:2 3:3 4:4 "));
+    c.accept(() -> Pair.forEach(iter3b, iter3b, app), is("2:2 3:3 4:4 "));
+    c.accept(
+        () -> Pair.forEach(Pair.zip(list3b, list3b), app), is("2:2 3:3 4:4 "));
+    c.accept(() -> Pair.forEach(list3a, list3b, app), is("1:2 3:3 5:4 "));
+    c.accept(() -> Pair.forEach(iter3a, iter3b, app), is("1:2 3:3 5:4 "));
+    c.accept(
+        () -> Pair.forEach(Pair.zip(list3a, list3b), app), is("1:2 3:3 5:4 "));
+    c.accept(() -> Pair.forEach(list3b, list2, app), is("2:8 3:3 "));
+    c.accept(() -> Pair.forEach(iter3b, iter2, app), is("2:8 3:3 "));
+    c.accept(() -> Pair.forEach(Pair.zip(list3b, list2), app), is("2:8 3:3 "));
+    c.accept(() -> Pair.forEach(list0, list0, app), emptyString());
+    c.accept(() -> Pair.forEach(iter0, iter0, app), emptyString());
+    c.accept(() -> Pair.forEach(Pair.zip(list0, list0), app), emptyString());
   }
 
   @SuppressWarnings("UnstableApiUsage")
