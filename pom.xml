@@ -76,6 +76,7 @@ License.
     <top.dir>${project.basedir}</top.dir>
 
     <!-- Component and plugin versions, in alphabetical order. -->
+    <!-- // lint:startSorted:properties -->
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
     <calcite.version>1.40.0</calcite.version>
     <!-- We support (and test) Checkstyle as low as 9.3.
@@ -93,11 +94,11 @@ License.
          In JDK 8, you must add '-Dhsqldb.version=2.5.1' because
          HSQLDB 2.7.x requires JDK 11 or higher. -->
     <hsqldb.version>2.7.4</hsqldb.version>
-    <java-diff.version>1.1.2</java-diff.version>
-    <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
-    <javacc.version>7.0.13</javacc.version>
-    <jline.version>3.25.0</jline.version>
     <jackson.version>2.19.0</jackson.version>
+    <javacc.version>7.0.13</javacc.version>
+    <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
+    <java-diff.version>1.1.2</java-diff.version>
+    <jline.version>3.25.0</jline.version>
     <jspecify.version>1.0.0</jspecify.version>
     <junit-jupiter.version>5.13.1</junit-jupiter.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
@@ -113,6 +114,7 @@ License.
     <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
     <slf4j.version>2.1.0-alpha1</slf4j.version>
     <versions-maven-plugin.version>2.18.0</versions-maven-plugin.version>
+    <!-- // lint:endSorted -->
 
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
@@ -141,6 +143,7 @@ License.
   </scm>
 
   <dependencies>
+    <!-- // lint:startSorted:groupId6 -->
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-toml</artifactId>
@@ -173,25 +176,25 @@ License.
       <version>${calcite.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.hsqldb</groupId>
-      <artifactId>hsqldb</artifactId>
-      <version>${hsqldb.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jline</groupId>
-      <artifactId>jline</artifactId>
-      <version>${jline.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
       <version>${hamcrest.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.hsqldb</groupId>
+      <artifactId>hsqldb</artifactId>
+      <version>${hsqldb.version}</version>
     </dependency>
     <dependency>
       <groupId>org.incava</groupId>
       <artifactId>java-diff</artifactId>
       <version>${java-diff.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jline</groupId>
+      <artifactId>jline</artifactId>
+      <version>${jline.version}</version>
     </dependency>
     <dependency>
       <groupId>org.jspecify</groupId>
@@ -221,6 +224,7 @@ License.
       <artifactId>slf4j-api</artifactId>
       <version>${slf4j.version}</version>
     </dependency>
+    <!-- // lint:endSorted:groupId6 -->
   </dependencies>
 
   <build>
@@ -228,6 +232,7 @@ License.
     <pluginManagement />
 
     <plugins>
+      <!-- // lint:startSorted:groupId8 -->
       <plugin>
         <groupId>com.theoryinpractise</groupId>
         <artifactId>googleformatter-maven-plugin</artifactId>
@@ -487,9 +492,11 @@ License.
         </configuration>
       </plugin>
     </plugins>
+    <!-- // lint:endSorted:groupId8 -->
   </build>
 
   <reporting>
+    <!-- // lint:startSorted:groupId8 -->
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -506,6 +513,7 @@ License.
         </configuration>
       </plugin>
     </plugins>
+    <!-- // lint:endSorted:groupId8 -->
   </reporting>
 
   <profiles>
