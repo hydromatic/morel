@@ -19,6 +19,7 @@
 package net.hydromatic.morel.eval;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
@@ -137,7 +138,7 @@ public enum Prop {
   public final String camelName;
   private final Class<?> type;
   private final boolean required;
-  private final Object defaultValue;
+  private final @Nullable Object defaultValue;
 
   /**
    * Map of all properties, keyed by both {@link #name()} and {@link
@@ -151,7 +152,8 @@ public enum Prop {
   static {
     final List<Prop> list = Arrays.asList(values());
     final Ordering<Prop> ordering =
-        Ordering.from(Comparator.comparing((Prop o) -> o.camelName));
+        Ordering.from(
+            Comparator.comparing((Prop o) -> requireNonNull(o).camelName));
     BY_CAMEL_NAME = ordering.sortedCopy(list);
 
     final Map<String, Prop> map = new LinkedHashMap<>();
@@ -162,7 +164,11 @@ public enum Prop {
     BY_NAME = ImmutableMap.copyOf(map);
   }
 
-  Prop(String camelName, Class<?> type, boolean required, Object defaultValue) {
+  Prop(
+      String camelName,
+      Class<?> type,
+      boolean required,
+      @Nullable Object defaultValue) {
     this.camelName = camelName;
     this.type = type;
     this.required = required;
@@ -200,8 +206,8 @@ public enum Prop {
   }
 
   /** Returns the value of a property. */
-  public Object get(Map<Prop, Object> map) {
-    Object o = map.get(this);
+  public @Nullable Object get(Map<Prop, Object> map) {
+    @Nullable Object o = map.get(this);
     return o != null ? o : defaultValue;
   }
 
@@ -250,7 +256,7 @@ public enum Prop {
   }
 
   @SuppressWarnings("unchecked")
-  private <T> T typeValue(Object o) {
+  private <T> T typeValue(@Nullable Object o) {
     if (o == null) {
       if (defaultValue == null) {
         throw new RuntimeException(

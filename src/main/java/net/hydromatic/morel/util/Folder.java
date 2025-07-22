@@ -98,7 +98,7 @@ public abstract class Folder<E> {
   }
 
   /**
-   * Sub-class of {@code Folder} that marks the end of a list.
+   * Subclass of {@code Folder} that marks the end of a list.
    *
    * @param <E> element type
    */

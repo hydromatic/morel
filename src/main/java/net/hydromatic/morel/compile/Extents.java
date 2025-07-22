@@ -54,7 +54,6 @@ import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.TriConsumer;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Generates an expression for the set of values that a variable can take in a
@@ -706,7 +705,7 @@ public class Extents {
      * Constructs an expression for the extent of a pattern. You must have
      * called {@link #canGet} first.
      */
-    private @NonNull PairList<Core.Exp, Core.Exp> get_(
+    private PairList<Core.Exp, Core.Exp> get_(
         TypeSystem typeSystem, Core.Pat pat) {
       final PairList<Core.Exp, Core.Exp> foo = map.get(pat);
       if (foo != null && !foo.isEmpty()) {

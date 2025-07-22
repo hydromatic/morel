@@ -18,6 +18,9 @@
  */
 
 /** Evaluates expressions. */
+@NullMarked
 package net.hydromatic.morel.eval;
+
+import org.jspecify.annotations.NullMarked;
 
 // End package-info.java

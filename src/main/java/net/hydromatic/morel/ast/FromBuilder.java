@@ -43,7 +43,6 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -64,7 +63,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class FromBuilder {
   private final TypeSystem typeSystem;
-  private final @Nullable Supplier<@NonNull Environment> envSupplier;
+  private final @Nullable Supplier<Environment> envSupplier;
   private final List<Core.FromStep> steps = new ArrayList<>();
   private final List<Binding> bindings = new ArrayList<>();
   private boolean atom;
@@ -86,8 +85,7 @@ public class FromBuilder {
 
   /** Use {@link net.hydromatic.morel.ast.CoreBuilder#fromBuilder}. */
   FromBuilder(
-      TypeSystem typeSystem,
-      @Nullable Supplier<@NonNull Environment> envSupplier) {
+      TypeSystem typeSystem, @Nullable Supplier<Environment> envSupplier) {
     this.typeSystem = typeSystem;
     this.envSupplier = envSupplier;
   }

@@ -21,6 +21,9 @@
  * Validates programs (represented as {@link net.hydromatic.morel.ast.AstNode}),
  * deduces their type, and compiles them into code that can be evaluated.
  */
+@NullMarked
 package net.hydromatic.morel.compile;
+
+import org.jspecify.annotations.NullMarked;
 
 // End package-info.java

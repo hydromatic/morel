@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Base class for lists whose contents are constant after creation.
@@ -32,12 +31,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 abstract class AbstractImmutableList<E> implements List<E> {
   protected abstract List<E> toList();
 
-  @NonNull
   public Iterator<E> iterator() {
     return toList().iterator();
   }
 
-  @NonNull
   public ListIterator<E> listIterator() {
     return toList().listIterator();
   }
@@ -50,19 +47,19 @@ abstract class AbstractImmutableList<E> implements List<E> {
     throw new UnsupportedOperationException();
   }
 
-  public boolean addAll(@NonNull Collection<? extends E> c) {
+  public boolean addAll(Collection<? extends E> c) {
     throw new UnsupportedOperationException();
   }
 
-  public boolean addAll(int index, @NonNull Collection<? extends E> c) {
+  public boolean addAll(int index, Collection<? extends E> c) {
     throw new UnsupportedOperationException();
   }
 
-  public boolean removeAll(@NonNull Collection<?> c) {
+  public boolean removeAll(Collection<?> c) {
     throw new UnsupportedOperationException();
   }
 
-  public boolean retainAll(@NonNull Collection<?> c) {
+  public boolean retainAll(Collection<?> c) {
     throw new UnsupportedOperationException();
   }
 
@@ -82,12 +79,10 @@ abstract class AbstractImmutableList<E> implements List<E> {
     throw new UnsupportedOperationException();
   }
 
-  @NonNull
   public ListIterator<E> listIterator(int index) {
     return toList().listIterator(index);
   }
 
-  @NonNull
   public List<E> subList(int fromIndex, int toIndex) {
     return toList().subList(fromIndex, toIndex);
   }
@@ -96,7 +91,7 @@ abstract class AbstractImmutableList<E> implements List<E> {
     return indexOf(o) >= 0;
   }
 
-  public boolean containsAll(@NonNull Collection<?> c) {
+  public boolean containsAll(Collection<?> c) {
     for (Object o : c) {
       if (!contains(o)) {
         return false;

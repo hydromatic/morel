@@ -98,6 +98,7 @@ License.
     <javacc.version>7.0.13</javacc.version>
     <jline.version>3.25.0</jline.version>
     <jackson.version>2.19.0</jackson.version>
+    <jspecify.version>1.0.0</jspecify.version>
     <junit-jupiter.version>5.13.1</junit-jupiter.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
@@ -191,6 +192,11 @@ License.
       <artifactId>java-diff</artifactId>
       <version>${java-diff.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jspecify</groupId>
+      <artifactId>jspecify</artifactId>
+      <version>${jspecify.version}</version>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>

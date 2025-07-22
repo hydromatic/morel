@@ -37,7 +37,6 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Given pairs of terms, finds a substitution to minimize those pairs of terms.
@@ -172,7 +171,7 @@ public abstract class Unifier {
         });
   }
 
-  /** Finds an ordinal that makes a name unique among atomcs and variables. */
+  /** Finds an ordinal that makes a name unique among atoms and variables. */
   private <T> T newName(
       String prefix, BiFunction<String, Integer, T> consumer) {
     final AtomicInteger sequence =
@@ -221,7 +220,7 @@ public abstract class Unifier {
     return new Sequence(operator, newTerms.build());
   }
 
-  public abstract @NonNull Result unify(
+  public abstract Result unify(
       List<TermTerm> termPairs,
       Map<Variable, Action> termActions,
       List<Constraint> constraints,
@@ -298,7 +297,7 @@ public abstract class Unifier {
   /**
    * Map from variables to terms.
    *
-   * <p>Quicker to create than its sub-class {@link SubstitutionResult} because
+   * <p>Quicker to create than its subclass {@link SubstitutionResult} because
    * the map is mutable and not sorted.
    */
   public static class Substitution {

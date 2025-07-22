@@ -26,7 +26,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import net.hydromatic.morel.util.Pair;
 import org.apache.calcite.util.mapping.IntPair;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Position of a parse-tree node. */
 public class Pos {
@@ -59,8 +58,7 @@ public class Pos {
    * Creates a Pos from a filename and a string with a delimiter character. The
    * delimiter must occur exactly twice in the string.
    */
-  public static Pair<@NonNull String, @NonNull Pos> split(
-      String s, char delimiter, String file) {
+  public static Pair<String, Pos> split(String s, char delimiter, String file) {
     final int i = s.indexOf(delimiter);
     final int j = s.indexOf(delimiter, i + 1);
     final int k = s.indexOf(delimiter, j + 1);
@@ -215,7 +213,7 @@ public class Pos {
     return sum(poses, startLine, startColumn, endLine, endColumn);
   }
 
-  public Pos plusAll(@NonNull List<? extends AstNode> nodes) {
+  public Pos plusAll(List<? extends AstNode> nodes) {
     //noinspection StaticPseudoFunctionalStyleMethod,ConstantConditions
     return plusAll(Lists.transform(nodes, (AstNode node) -> node.pos));
   }

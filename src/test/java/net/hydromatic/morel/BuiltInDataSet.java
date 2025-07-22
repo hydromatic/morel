@@ -37,7 +37,6 @@ import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.scott.data.hsqldb.ScottHsqldb;
 import org.apache.calcite.adapter.jdbc.JdbcSchema;
 import org.apache.calcite.schema.SchemaPlus;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Data sets for testing. */
 enum BuiltInDataSet implements DataSet {
@@ -156,7 +155,6 @@ enum BuiltInDataSet implements DataSet {
   @SuppressWarnings("unused")
   public static class Dictionary extends AbstractMap<String, DataSet> {
     @Override
-    @NonNull
     public Set<Entry<String, DataSet>> entrySet() {
       return DICTIONARY.entrySet();
     }

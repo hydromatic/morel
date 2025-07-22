@@ -46,6 +46,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.calcite.util.Sources;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.incava.diff.Diff;
 import org.incava.diff.Difference;
 
@@ -94,7 +95,7 @@ public class TestUtils {
     return buf.toString();
   }
 
-  public static File urlToFile(URL url) {
+  public static @Nullable File urlToFile(URL url) {
     if (!"file".equals(url.getProtocol())) {
       return null;
     }

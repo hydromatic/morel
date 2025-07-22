@@ -60,7 +60,6 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MorelException;
 import net.hydromatic.morel.util.Pair;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -305,7 +304,6 @@ public class Shell {
    *
    * <p>Assumes that the class has a public no-arguments constructor.
    */
-  @NonNull
   private static <T> T instantiate(
       String className,
       @SuppressWarnings("SameParameterValue") Class<T> clazz) {

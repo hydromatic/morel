@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.function.UnaryOperator;
 import net.hydromatic.morel.ast.Op;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Type keys. */
 public class Keys {
@@ -287,10 +286,9 @@ public class Keys {
   private static class AliasKey extends Type.Key {
     private final String name;
     private final Type.Key key;
-    private final ImmutableList<Type.@NonNull Key> arguments;
+    private final ImmutableList<Type.Key> arguments;
 
-    AliasKey(
-        String name, Type.Key key, ImmutableList<Type.@NonNull Key> arguments) {
+    AliasKey(String name, Type.Key key, ImmutableList<Type.Key> arguments) {
       super(Op.ALIAS_TYPE);
       this.name = requireNonNull(name);
       this.key = key;

@@ -35,7 +35,6 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import org.apache.calcite.linq4j.function.Functions;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Various implementations of {@link PairList}. */
@@ -66,7 +65,7 @@ class PairLists {
     return elements;
   }
 
-  static void checkElementNotNull(int i, Object element) {
+  static void checkElementNotNull(int i, @Nullable Object element) {
     if (element == null) {
       throw new NullPointerException(
           (i % 2 == 0 ? "key" : "value") + " at index " + (i / 2));
@@ -85,7 +84,7 @@ class PairLists {
      * Returns a list containing the alternating left and right elements of each
      * pair.
      */
-    abstract List<Object> backingList();
+    abstract List<@Nullable Object> backingList();
 
     @Override
     public T left(int index) {
@@ -104,7 +103,7 @@ class PairLists {
      * Mutable subclasses should override.
      */
     @Override
-    public @NonNull PairList<T, U> subList(int fromIndex, int toIndex) {
+    public PairList<T, U> subList(int fromIndex, int toIndex) {
       return new MutablePairList<>(
           unmodifiable(backingList().subList(fromIndex * 2, toIndex * 2)));
     }
@@ -158,7 +157,7 @@ class PairLists {
     }
 
     @Override
-    List<Object> backingList() {
+    List<@Nullable Object> backingList() {
       return list;
     }
 
@@ -207,8 +206,8 @@ class PairLists {
     @Override
     public Map.Entry<T, U> set(int index, T t, U u) {
       int x = index * 2;
-      T t0 = (T) list.set(x, t);
-      U u0 = (U) list.set(x + 1, u);
+      T t0 = (T) requireNonNull(list.set(x, t));
+      U u0 = (U) requireNonNull(list.set(x + 1, u));
       return new MapEntry<>(t0, u0);
     }
 
@@ -216,8 +215,8 @@ class PairLists {
     @Override
     public Map.Entry<T, U> remove(int index) {
       final int x = index * 2;
-      T t = (T) list.remove(x);
-      U u = (U) list.remove(x);
+      T t = (T) requireNonNull(list.remove(x));
+      U u = (U) requireNonNull(list.remove(x));
       return new MapEntry<>(t, u);
     }
 
@@ -273,20 +272,20 @@ class PairLists {
         }
 
         @Override
-        public T get(int index) {
+        public @Nullable T get(int index) {
           return (T) list.get(index * 2);
         }
 
         @Override
-        public T set(int index, T element) {
+        public @Nullable T set(int index, T element) {
           return (T) list.set(index * 2, element);
         }
 
         @Override
         public T remove(int index) {
-          T t = (T) list.remove(index * 2);
+          T t = (T) requireNonNull(list.remove(index * 2));
           @SuppressWarnings("unused")
-          U u = (U) list.remove(index * 2);
+          U u = (U) requireNonNull(list.remove(index * 2));
           return t;
         }
       };
@@ -302,17 +301,17 @@ class PairLists {
         }
 
         @Override
-        public U get(int index) {
+        public @Nullable U get(int index) {
           return (U) list.get(index * 2 + 1);
         }
 
         @Override
-        public U set(int index, U element) {
+        public @Nullable U set(int index, U element) {
           return (U) list.set(index * 2 + 1, element);
         }
 
         @Override
-        public U remove(int index) {
+        public @Nullable U remove(int index) {
           @SuppressWarnings("unused")
           T t = (T) list.remove(index * 2);
           @SuppressWarnings("UnnecessaryLocalVariable")
@@ -323,7 +322,7 @@ class PairLists {
     }
 
     @Override
-    public @NonNull PairList<T, U> subList(int fromIndex, int toIndex) {
+    public PairList<T, U> subList(int fromIndex, int toIndex) {
       return new MutablePairList<>(
           backingList().subList(fromIndex * 2, toIndex * 2));
     }
@@ -465,7 +464,7 @@ class PairLists {
     }
 
     @Override
-    public @NonNull PairList<T, U> subList(int fromIndex, int toIndex) {
+    public PairList<T, U> subList(int fromIndex, int toIndex) {
       if (fromIndex != 0 || toIndex != 0) {
         throw new IndexOutOfBoundsException(
             "Sublist from "
@@ -577,7 +576,7 @@ class PairLists {
     }
 
     @Override
-    public @NonNull PairList<T, U> subList(int fromIndex, int toIndex) {
+    public PairList<T, U> subList(int fromIndex, int toIndex) {
       // Only (0, 0), (0, 1), and (1, 1) are valid.
       if (fromIndex < 0 || 1 < toIndex || toIndex < fromIndex) {
         throw new IndexOutOfBoundsException(
@@ -973,7 +972,7 @@ class PairLists {
     }
 
     @Override
-    public @NonNull Iterator<Map.Entry<T, U>> iterator() {
+    public Iterator<Map.Entry<T, U>> iterator() {
       return map.entrySet().iterator();
     }
 

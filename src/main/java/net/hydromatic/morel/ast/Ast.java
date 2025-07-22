@@ -25,7 +25,6 @@ import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.type.RecordType.compareNames;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
-import static net.hydromatic.morel.util.Pair.forEachIndexed;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -43,7 +42,7 @@ import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Various sub-classes of AST nodes. */
+/** Various subclasses of AST nodes. */
 public class Ast {
   private Ast() {}
 
@@ -1570,7 +1569,7 @@ public class Ast {
    * @see AstBuilder#fieldCount(Exp)
    */
   public static class Record extends Exp {
-    public final Ast.@Nullable Exp with;
+    public final @Nullable Exp with;
     public final PairList<Id, Exp> args;
 
     /** The empty record expression, {@code {}}. */
@@ -1621,7 +1620,7 @@ public class Ast {
     }
 
     public Record copy(
-        Ast.@Nullable Exp with, Collection<Map.Entry<Id, Exp>> args) {
+        @Nullable Exp with, Collection<Map.Entry<Id, Exp>> args) {
       return Objects.equals(with, this.with) && args.equals(this.args)
           ? this
           : ast.record(pos, with, args);

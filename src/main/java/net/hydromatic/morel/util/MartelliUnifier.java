@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -39,7 +38,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class MartelliUnifier extends Unifier {
   @Override
-  public @NonNull Result unify(
+  public Result unify(
       List<TermTerm> termPairs,
       Map<Variable, Action> termActions,
       List<Constraint> constraints,

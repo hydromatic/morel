@@ -18,6 +18,9 @@
  */
 
 /** Abstract syntax tree. */
+@NullMarked
 package net.hydromatic.morel.ast;
+
+import org.jspecify.annotations.NullMarked;
 
 // End package-info.java

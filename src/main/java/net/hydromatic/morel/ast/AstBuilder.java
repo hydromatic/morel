@@ -113,7 +113,7 @@ public enum AstBuilder {
 
   /** Returns whether an expression is a record with one field. */
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-  public boolean isSingletonRecord(Ast.Exp exp) {
+  public boolean isSingletonRecord(Ast.@Nullable Exp exp) {
     return exp instanceof Ast.Record && ((Ast.Record) exp).args.size() == 1;
   }
 

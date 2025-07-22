@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Immutable list of pairs.
@@ -138,8 +137,7 @@ public interface ImmutablePairList<T, U> extends PairList<T, U> {
    */
   @SuppressWarnings("unchecked")
   static <R, T, U> ImmutablePairList<T, U> fromTransformed(
-      @NonNull Collection<? extends R> collection,
-      BiTransformer<R, T, U> transformer) {
+      Collection<? extends R> collection, BiTransformer<R, T, U> transformer) {
     // If it's a collection, we know its size, and therefore can create an
     // array directly, without an intermediate ArrayList.
     final Object[] elements;

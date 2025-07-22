@@ -18,6 +18,9 @@
  */
 
 /** Standard ML interpreter, implemented in Java. */
+@NullMarked
 package net.hydromatic.morel;
+
+import org.jspecify.annotations.NullMarked;
 
 // End package-info.java

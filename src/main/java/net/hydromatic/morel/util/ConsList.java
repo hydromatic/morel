@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -104,29 +103,26 @@ public class ConsList<E> extends AbstractImmutableList<E> {
   }
 
   @Override
-  @NonNull
   public ListIterator<E> listIterator() {
     return toList().listIterator();
   }
 
   @Override
-  @NonNull
   public Iterator<E> iterator() {
     return toList().iterator();
   }
 
   @Override
-  @NonNull
   public ListIterator<E> listIterator(int index) {
     return toList().listIterator(index);
   }
 
-  public @Nullable Object @NonNull [] toArray() {
+  public @Nullable Object[] toArray() {
     return toList().toArray();
   }
 
   @SuppressWarnings("rawtypes")
-  public <T> @Nullable T @NonNull [] toArray(@Nullable T @NonNull [] a) {
+  public <T> @Nullable T[] toArray(@Nullable T[] a) {
     final int s = size();
     if (s > a.length) {
       a = Arrays.copyOf(a, s);

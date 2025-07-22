@@ -47,7 +47,6 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Prints values. */
 class Pretty {
@@ -76,8 +75,7 @@ class Pretty {
   }
 
   /** Prints a value to a buffer. */
-  StringBuilder pretty(
-      @NonNull StringBuilder buf, @NonNull Type type, @NonNull Object value) {
+  StringBuilder pretty(StringBuilder buf, Type type, Object value) {
     int lineEnd = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
     return pretty1(buf, 0, new int[] {lineEnd}, 0, type, value, 0, 0);
   }
@@ -87,12 +85,12 @@ class Pretty {
    * lineEnd}, back-tracks, adds a newline and indent, and tries again one time.
    */
   private StringBuilder pretty1(
-      @NonNull StringBuilder buf,
+      StringBuilder buf,
       int indent,
       int[] lineEnd,
       int depth,
-      @NonNull Type type,
-      @NonNull Object value,
+      Type type,
+      Object value,
       int leftPrec,
       int rightPrec) {
     final int start = buf.length();
@@ -117,19 +115,19 @@ class Pretty {
     return buf;
   }
 
-  private static void indent(@NonNull StringBuilder buf, int indent) {
+  private static void indent(StringBuilder buf, int indent) {
     for (int i = 0; i < indent; i++) {
       buf.append(' ');
     }
   }
 
   private StringBuilder pretty2(
-      @NonNull StringBuilder buf,
+      StringBuilder buf,
       int indent,
       int[] lineEnd,
       int depth,
-      @NonNull Type type,
-      @NonNull Object value,
+      Type type,
+      Object value,
       int leftPrec,
       int rightPrec) {
     // Strip any alias. If 'pair' is an alias for 'int * int', we print a 'pair'
@@ -322,7 +320,7 @@ class Pretty {
    */
   @SuppressWarnings("unchecked")
   private boolean customPrint(
-      @NonNull StringBuilder buf,
+      StringBuilder buf,
       int indent,
       int[] lineEnd,
       int depth,
@@ -677,12 +675,12 @@ class Pretty {
   }
 
   private StringBuilder printList(
-      @NonNull StringBuilder buf,
+      StringBuilder buf,
       int indent,
       int[] lineEnd,
       int depth,
-      @NonNull Type elementType,
-      @NonNull List<Object> list) {
+      Type elementType,
+      List<Object> list) {
     buf.append("[");
     int start = buf.length();
     for (Ord<Object> o : Ord.zip(list)) {

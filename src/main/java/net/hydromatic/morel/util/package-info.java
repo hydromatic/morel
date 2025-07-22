@@ -18,6 +18,9 @@
  */
 
 /** Utilities. */
+@NullMarked
 package net.hydromatic.morel.util;
+
+import org.jspecify.annotations.NullMarked;
 
 // End package-info.java

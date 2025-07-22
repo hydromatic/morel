@@ -124,7 +124,7 @@ public class ScriptTest {
     }
   }
 
-  private Method findMethod(String path) {
+  private @Nullable Method findMethod(String path) {
     // E.g. path "script/simple.sml" gives method "testScriptSimple"
     String methodName =
         toCamelCase(

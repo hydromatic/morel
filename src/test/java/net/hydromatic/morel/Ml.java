@@ -230,6 +230,7 @@ class Ml {
   }
 
   <T> Ml assertParseThrows(Function<Pos, Matcher<T>> matcherSupplier) {
+    requireNonNull(pos);
     return assertParseThrows(matcherSupplier.apply(pos));
   }
 
@@ -305,6 +306,7 @@ class Ml {
   }
 
   <T> Ml assertTypeThrows(Function<Pos, Matcher<T>> matcherSupplier) {
+    requireNonNull(pos);
     return assertTypeThrows(matcherSupplier.apply(pos));
   }
 
@@ -557,7 +559,7 @@ class Ml {
     return result;
   }
 
-  private Object bindingValue(List<Binding> bindings, String name) {
+  private @Nullable Object bindingValue(List<Binding> bindings, String name) {
     for (Binding binding : bindings) {
       if (binding.id.name.equals(name)) {
         return binding.value;
@@ -653,13 +655,13 @@ class Ml {
             this.tracer, exceptionConsumer(matcherFactory)));
   }
 
-  private <T extends Throwable> Consumer<T> exceptionConsumer(
-      Function<Pos, Matcher<T>> exceptionMatcherFactory) {
+  private <T extends @Nullable Throwable> Consumer<T> exceptionConsumer(
+      @Nullable Function<Pos, Matcher<T>> exceptionMatcherFactory) {
     @Nullable
     Matcher<T> matcher =
         exceptionMatcherFactory == null
             ? null
-            : exceptionMatcherFactory.apply(pos);
+            : exceptionMatcherFactory.apply(requireNonNull(pos));
     return e -> {
       if (e != null) {
         if (matcher != null) {

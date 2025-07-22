@@ -65,13 +65,12 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Core expressions.
  *
- * <p>Many expressions are sub-classes of similarly named expressions in {@link
+ * <p>Many expressions are subclasses of similarly named expressions in {@link
  * Ast}. This class functions as a namespace, so that we can keep the class
  * names short.
  */
@@ -836,7 +835,7 @@ public class Core {
     /** Converts to a built-in. */
     public Object toBuiltIn(TypeSystem typeSystem, @Nullable Pos pos) {
       final BuiltIn builtIn = unwrap(BuiltIn.class);
-      Object o = Codes.BUILT_IN_VALUES.get(builtIn);
+      Object o = requireNonNull(Codes.BUILT_IN_VALUES.get(builtIn));
       if (o instanceof Codes.Typed) {
         o = ((Codes.Typed) o).withType(typeSystem, type);
       }
@@ -860,7 +859,8 @@ public class Core {
     }
 
     /** Converts to an {@link Applicable2}, or returns null. */
-    public Applicable2 toApplicable2(TypeSystem typeSystem, @Nullable Pos pos) {
+    public @Nullable Applicable2 toApplicable2(
+        TypeSystem typeSystem, @Nullable Pos pos) {
       Object o = toBuiltIn(typeSystem, pos);
       if (o instanceof Applicable2) {
         return (Applicable2) o;
@@ -978,7 +978,7 @@ public class Core {
   public static class TypeDecl extends Decl {
     public final List<AliasType> types;
 
-    TypeDecl(ImmutableList<@NonNull AliasType> types) {
+    TypeDecl(ImmutableList<AliasType> types) {
       super(Pos.ZERO, Op.TYPE_DECL);
       this.types = requireNonNull(types);
       checkArgument(!this.types.isEmpty());
@@ -1519,7 +1519,7 @@ public class Core {
         return w.append("(").append(this, 0, 0).append(")");
       } else {
         w.append("from");
-        forEachIndexed(steps, (step, i) -> step.unparse(w, this, i, 0, 0));
+        forEachIndexed(steps, (step, i) -> step.unparseStep(w, i, 0, 0));
         return w;
       }
     }
@@ -1566,11 +1566,11 @@ public class Core {
 
     @Override
     final AstWriter unparse(AstWriter w, int left, int right) {
-      return unparse(w, null, -1, left, right);
+      return unparseStep(w, -1, left, right);
     }
 
-    protected abstract AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right);
+    protected abstract AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right);
 
     @Override
     public abstract FromStep accept(Shuttle shuttle);
@@ -1666,8 +1666,8 @@ public class Core {
     }
 
     @Override
-    protected AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right) {
+    protected AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right) {
       w.append(ordinal == 0 ? " " : " join ")
           // for these purposes 'in' has same precedence as '='
           .append(pat, 0, Op.EQ.left);
@@ -1718,8 +1718,8 @@ public class Core {
     }
 
     @Override
-    protected AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right) {
+    protected AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right) {
       return w.append(" where ").append(exp, 0, 0);
     }
 
@@ -1750,8 +1750,8 @@ public class Core {
     }
 
     @Override
-    protected AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right) {
+    protected AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right) {
       return w.append(" skip ").append(exp, 0, 0);
     }
 
@@ -1782,8 +1782,8 @@ public class Core {
     }
 
     @Override
-    protected AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right) {
+    protected AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right) {
       return w.append(" take ").append(exp, 0, 0);
     }
 
@@ -1806,8 +1806,8 @@ public class Core {
     }
 
     @Override
-    protected AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right) {
+    protected AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right) {
       forEachIndexed(
           args,
           (arg, i) -> w.append(i == 0 ? op.padded : ", ").append(arg, 0, 0));
@@ -1934,8 +1934,8 @@ public class Core {
     }
 
     @Override
-    protected AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right) {
+    protected AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right) {
       return w.append(" order ").append(exp, 0, right);
     }
 
@@ -1972,8 +1972,8 @@ public class Core {
     }
 
     @Override
-    protected AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right) {
+    protected AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right) {
       w.append(" group");
       Pair.forEachIndexed( // lint:skip
           groupExps,
@@ -2016,8 +2016,8 @@ public class Core {
     }
 
     @Override
-    protected AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right) {
+    protected AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right) {
       return w.append(" unorder");
     }
 
@@ -2046,8 +2046,8 @@ public class Core {
     }
 
     @Override
-    protected AstWriter unparse(
-        AstWriter w, From from, int ordinal, int left, int right) {
+    protected AstWriter unparseStep(
+        AstWriter w, int ordinal, int left, int right) {
       return w.append(" yield ").append(exp, 0, 0);
     }
 

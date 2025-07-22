@@ -28,12 +28,12 @@ import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Like a list, but {@link #poll} (equivalent to {@code remove(0)} is O(1).
+ * Like a list, but {@link #poll} (equivalent to {@code remove(0)}) is O(1).
  *
  * @param <E> Element type
  */
 public class ArrayQueue<E> {
-  private E[] elements;
+  private @Nullable E[] elements;
   private int start;
   private int end;
 
@@ -74,7 +74,7 @@ public class ArrayQueue<E> {
     if (i < 0 || i >= size()) {
       throw new IndexOutOfBoundsException();
     }
-    return elements[add(start, i, elements.length)];
+    return requireNonNull(elements[add(start, i, elements.length)]);
   }
 
   /** Sets the element at position {@code i}. */
@@ -84,7 +84,7 @@ public class ArrayQueue<E> {
     }
     requireNonNull(e);
     int k = add(start, i, elements.length);
-    E previous = elements[k];
+    E previous = requireNonNull(elements[k]);
     elements[k] = e;
     return previous;
   }
@@ -103,7 +103,8 @@ public class ArrayQueue<E> {
   private void grow() {
     int oldCapacity = elements.length;
     int newCapacity = oldCapacity * 2;
-    final Object[] es = elements = Arrays.copyOf(elements, newCapacity);
+    final @Nullable Object[] es =
+        elements = Arrays.copyOf(elements, newCapacity);
     if (end < start || end == start && es[start] != null) {
       int newSpace = newCapacity - oldCapacity;
       System.arraycopy(es, start, es, start + newSpace, oldCapacity - start);
@@ -191,7 +192,7 @@ public class ArrayQueue<E> {
    * Removes element {@code i} from the queue in O(1) time.
    *
    * <p>If {@code i} is the first element, removes it (equivalent to calling
-   * {@link #poll()}; if {@code i} is the last element, removes it; otherwise
+   * {@link #poll()}); if {@code i} is the last element, removes it; otherwise
    * moves the last element into position {@code i} and shortens the queue.
    */
   public E remove(int i) {
@@ -218,7 +219,7 @@ public class ArrayQueue<E> {
       elements[k] = elements[end];
       elements[end] = null;
     }
-    return e;
+    return requireNonNull(e);
   }
 
   public ListIterator<E> listIterator() {

@@ -49,7 +49,6 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.PairList;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Built-in constants and functions. */
@@ -3514,23 +3513,23 @@ public enum BuiltIn {
   Z_TY_CON("$", "tyCon", ts -> UNIT);
 
   /** Name of the structure (e.g. "List", "String"), or null. */
-  public final String structure;
+  public final @Nullable String structure;
 
   /** Unqualified name, e.g. "map" (for "List.map") or "true". */
   public final String mlName;
 
   /** An alias, or null. For example, "List.map" has an alias "map". */
-  public final String alias;
+  public final @Nullable String alias;
 
   /**
    * Derives a type, in a particular type system, for this constant or function.
    */
   public final Function<TypeSystem, Type> typeFunction;
 
-  private final PrimitiveType preferredType;
+  private final @Nullable PrimitiveType preferredType;
 
   /** Computes a value for a particular session. */
-  public final Function<Session, Object> sessionValue;
+  public final @Nullable Function<Session, Object> sessionValue;
 
   public static final ImmutableMap<String, BuiltIn> BY_ML_NAME;
 
@@ -3578,7 +3577,7 @@ public enum BuiltIn {
   BuiltIn(
       @Nullable String structure,
       String mlName,
-      @NonNull PrimitiveType preferredType,
+      PrimitiveType preferredType,
       Function<TypeSystem, Type> typeFunction) {
     this(structure, mlName, null, typeFunction, preferredType, null);
   }

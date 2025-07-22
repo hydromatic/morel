@@ -83,7 +83,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.JsonBuilder;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Compiles an expression to code that can be evaluated. */
@@ -146,7 +145,7 @@ public class CalciteCompiler extends Compiler {
         expression);
   }
 
-  private RelNode toRel2(RelContext cx, Core.Exp expression) {
+  private @Nullable RelNode toRel2(RelContext cx, Core.Exp expression) {
     if (toRel3(cx, expression, false)) {
       return cx.relBuilder.build();
     } else {
@@ -267,7 +266,9 @@ public class CalciteCompiler extends Compiler {
                       Converters.toCalciteType(
                           removeTypeVars(apply.type),
                           cx.relBuilder.getTypeFactory());
-                  cx.relBuilder.values(calciteType.getComponentType());
+                  final RelDataType componentType =
+                      requireNonNull(calciteType.getComponentType());
+                  cx.relBuilder.values(componentType);
                 } else {
                   for (Core.Exp arg : args) {
                     cx.relBuilder.values(new String[] {"T"}, true);
@@ -318,8 +319,8 @@ public class CalciteCompiler extends Compiler {
         }
         final JsonBuilder jsonBuilder = new JsonBuilder();
         final RelJson relJson = RelJson.create().withJsonBuilder(jsonBuilder);
-        final String jsonRowType =
-            jsonBuilder.toJsonString(relJson.toJson(rowType));
+        final Object json = requireNonNull(relJson.toJson(rowType));
+        final String jsonRowType = jsonBuilder.toJsonString(json);
         final String morelCode = apply.toString();
         ThreadLocals.let(
             CalciteFunctions.THREAD_ENV,
@@ -414,6 +415,7 @@ public class CalciteCompiler extends Compiler {
         relBuilder
             .getTypeFactory()
             .leastRestrictive(transform(inputs, RelNode::getRowType));
+    requireNonNull(rowType);
     for (RelNode input : Lists.reverse(inputs)) {
       relBuilder.push(input).convert(rowType, false);
     }
@@ -458,7 +460,8 @@ public class CalciteCompiler extends Compiler {
         return true;
       }
 
-      private RelContext step(RelContext cx, int i, Core.FromStep fromStep) {
+      private @Nullable RelContext step(
+          RelContext cx, int i, Core.FromStep fromStep) {
         switch (fromStep.op) {
           case EXCEPT:
             return setStep(cx, (Core.Except) fromStep);
@@ -683,8 +686,8 @@ public class CalciteCompiler extends Compiler {
         Converters.toCalciteType(exp.type, typeFactory);
     final JsonBuilder jsonBuilder = new JsonBuilder();
     final RelJson relJson = RelJson.create().withJsonBuilder(jsonBuilder);
-    final String jsonType =
-        jsonBuilder.toJsonString(relJson.toJson(calciteType));
+    final Object json = requireNonNull(relJson.toJson(calciteType));
+    final String jsonType = jsonBuilder.toJsonString(json);
     final String morelCode = exp.toString();
     return cx.relBuilder
         .getRexBuilder()
@@ -709,7 +712,7 @@ public class CalciteCompiler extends Compiler {
             Arrays.asList(cx.relBuilder.literal(morelArgType), fn, arg));
   }
 
-  private Core.Tuple toRecord(RelContext cx, Core.Id id) {
+  private Core.@Nullable Tuple toRecord(RelContext cx, Core.Id id) {
     final Binding binding = cx.env.getOpt(id.idPat);
     checkNotNull(binding, "not found", id);
     final Type type = binding.id.type;
@@ -733,7 +736,7 @@ public class CalciteCompiler extends Compiler {
     return transformEager(exps, exp -> translate(cx, exp));
   }
 
-  private RelContext join(RelContext cx, int i, Core.Scan scan) {
+  private @Nullable RelContext join(RelContext cx, int i, Core.Scan scan) {
     if (!toRel3(cx, scan.exp, true)) {
       return null;
     }
@@ -799,7 +802,7 @@ public class CalciteCompiler extends Compiler {
     return cx;
   }
 
-  private RelContext setStep(RelContext cx, Core.SetStep setStep) {
+  private @Nullable RelContext setStep(RelContext cx, Core.SetStep setStep) {
     int n = 1;
     for (Core.Exp arg : setStep.args) {
       if (!toRel3(cx, arg, true)) {
@@ -915,7 +918,6 @@ public class CalciteCompiler extends Compiler {
    * in environment, and compare with standard implementation of "sum" etc.;
    * support aggregate functions defined by expressions (e.g. lambdas).
    */
-  @NonNull
   private SqlAggFunction aggOp(Core.Exp aggregate) {
     if (aggregate instanceof Core.Literal) {
       switch (((Core.Literal) aggregate).unwrap(BuiltIn.class)) {
@@ -948,11 +950,11 @@ public class CalciteCompiler extends Compiler {
     final ImmutableSortedMap<String, VarData> map;
     final int inputCount;
     final List<CorrelationId> varList = new ArrayList<>();
-    private final RelNode top;
+    private final @Nullable RelNode top;
 
     RelContext(
         Environment env,
-        RelContext parent,
+        @Nullable RelContext parent,
         RelBuilder relBuilder,
         ImmutableSortedMap<String, VarData> map,
         int inputCount) {
@@ -987,7 +989,7 @@ public class CalciteCompiler extends Compiler {
       }
       for (RelContext p = parent; p != null; p = p.parent) {
         if (p.map.containsKey(name)) {
-          final RelOptCluster cluster = p.top.getCluster();
+          final RelOptCluster cluster = requireNonNull(p.top).getCluster();
           final RexCorrelVariable correlVariable =
               (RexCorrelVariable)
                   cluster

@@ -855,7 +855,7 @@ public abstract class Codes {
       public List apply(Applicable1<Boolean, Object> f, List list) {
         final ImmutableList.Builder builder = ImmutableList.builder();
         for (Object o : list) {
-          if ((Boolean) f.apply(o)) {
+          if (f.apply(o)) {
             builder.add(o);
           }
         }
@@ -1244,8 +1244,7 @@ public abstract class Codes {
       if (equal && list0.size() != list1.size()) {
         throw new MorelRuntimeException(BuiltInExn.UNEQUAL_LENGTHS, pos);
       }
-      final ImmutableList.Builder<@NonNull Object> result =
-          ImmutableList.builder();
+      final ImmutableList.Builder<Object> result = ImmutableList.builder();
       forEach(list0, list1, (a, b) -> result.add(f.apply(FlatLists.of(a, b))));
       return result.build();
     }
@@ -1279,10 +1278,8 @@ public abstract class Codes {
       if (lists.isEmpty()) {
         throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
       }
-      final ImmutableList.Builder<@NonNull Object> builder0 =
-          ImmutableList.builder();
-      final ImmutableList.Builder<@NonNull Object> builder1 =
-          ImmutableList.builder();
+      final ImmutableList.Builder<Object> builder0 = ImmutableList.builder();
+      final ImmutableList.Builder<Object> builder1 = ImmutableList.builder();
       for (List<Object> pair : lists) {
         builder0.add(pair.get(0));
         builder1.add(pair.get(1));
@@ -1800,7 +1797,7 @@ public abstract class Codes {
           BuiltIn.OPTION_COMPOSE_PARTIAL) {
         @Override
         public Applicable1 apply(Applicable1<List, Object> f, Applicable1 g) {
-          return (Applicable1<List, Object>)
+          return (Applicable1<@NonNull List, @NonNull Object>)
               arg -> {
                 final List ga = (List) g.apply(arg); // g (a)
                 if (ga.size() == 2) { // SOME v
@@ -1817,7 +1814,7 @@ public abstract class Codes {
           BuiltIn.OPTION_COMPOSE) {
         @Override
         public Applicable1 apply(Applicable1 f, Applicable1<List, Object> g) {
-          return (Applicable1<List, Object>)
+          return (Applicable1<@NonNull List, @NonNull Object>)
               arg -> {
                 final List ga = g.apply(arg); // g (a)
                 if (ga.size() == 2) { // SOME v
@@ -2956,7 +2953,7 @@ public abstract class Codes {
           final ImmutableList.Builder<List<List>> list =
               ImmutableList.builder();
           for (Prop prop : Prop.BY_CAMEL_NAME) {
-            final Object value = prop.get(session.map);
+            final @Nullable Object value = prop.get(session.map);
             List option =
                 value == null ? OPTION_NONE : optionSome(value.toString());
             list.add((List) ImmutableList.of(prop.camelName, option));
@@ -4884,7 +4881,7 @@ public abstract class Codes {
   private static class Builder {
     final PairList<BuiltIn, Object> builtIns = PairList.of();
 
-    ImmutableMap<@NonNull BuiltIn, @NonNull Object> build() {
+    ImmutableMap<BuiltIn, Object> build() {
       return builtIns.toImmutableMap();
     }
 

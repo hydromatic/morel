@@ -31,19 +31,19 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Pair of objects.
  *
- * <p>Because a pair implements {@link #equals(Object)}, {@link #hashCode()} and
+ * <p>Because a Pair implements {@link #equals(Object)}, {@link #hashCode()} and
  * {@link #compareTo(Pair)}, it can be used in any kind of {@link
  * java.util.Collection}.
  *
  * @param <T1> Left-hand type
  * @param <T2> Right-hand type
  */
-public class Pair<T1, T2>
+public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
     implements Comparable<Pair<T1, T2>>, Map.Entry<T1, T2>, Serializable {
 
   public final T1 left;
@@ -111,7 +111,7 @@ public class Pair<T1, T2>
   }
 
   @SuppressWarnings("rawtypes")
-  public int compareTo(@NonNull Pair<T1, T2> that) {
+  public int compareTo(Pair<T1, T2> that) {
     //noinspection unchecked
     int c = compare((Comparable) this.left, (Comparable) that.left);
     if (c == 0) {
@@ -146,7 +146,7 @@ public class Pair<T1, T2>
    * @return a negative integer, zero, or a positive integer if c1 is less than,
    *     equal to, or greater than c2.
    */
-  private static <C extends Comparable<C>> int compare(C c1, C c2) {
+  private static <C extends @Nullable Comparable<C>> int compare(C c1, C c2) {
     if (c1 == null) {
       if (c2 == null) {
         return 0;

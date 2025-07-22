@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Utilities. */
 public class Static {
@@ -403,7 +404,8 @@ public class Static {
    * {@link Collections#singletonList(Object)} but do not. {@link
    * Collections#unmodifiableList(List)} makes sure it does not wrap twice.
    */
-  public static <E> List<E> unmodifiable(List<E> list) {
+  public static <E extends @Nullable Object> List<E> unmodifiable(
+      List<E> list) {
     if (list instanceof ImmutableCollection) {
       // Already immutable, therefore unmodifiable.
       return list;

@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableSortedMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Robinson's unification algorithm. */
 public class RobinsonUnifier extends Unifier {
@@ -36,7 +35,7 @@ public class RobinsonUnifier extends Unifier {
     return composed;
   }
 
-  private @NonNull Result sequenceUnify(Sequence lhs, Sequence rhs) {
+  private Result sequenceUnify(Sequence lhs, Sequence rhs) {
     if (lhs.terms.size() != rhs.terms.size()) {
       return failure("sequences have different length: " + lhs + ", " + rhs);
     }
@@ -71,7 +70,7 @@ public class RobinsonUnifier extends Unifier {
   }
 
   @Override
-  public @NonNull Result unify(
+  public Result unify(
       List<TermTerm> termPairs,
       Map<Variable, Action> termActions,
       List<Constraint> constraints,
@@ -87,7 +86,7 @@ public class RobinsonUnifier extends Unifier {
     }
   }
 
-  public @NonNull Result unify(Term lhs, Term rhs) {
+  public Result unify(Term lhs, Term rhs) {
     if (lhs instanceof Variable) {
       return SubstitutionResult.create((Variable) lhs, rhs);
     }

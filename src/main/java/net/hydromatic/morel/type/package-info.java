@@ -18,6 +18,9 @@
  */
 
 /** Type system. */
+@NullMarked
 package net.hydromatic.morel.type;
+
+import org.jspecify.annotations.NullMarked;
 
 // End package-info.java

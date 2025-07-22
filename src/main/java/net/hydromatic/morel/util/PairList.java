@@ -159,12 +159,12 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
   }
 
   @Override
-  default Map.Entry<T, U> set(int index, Map.Entry<T, U> entry) {
+  default Map.@Nullable Entry<T, U> set(int index, Map.Entry<T, U> entry) {
     return set(index, entry.getKey(), entry.getValue());
   }
 
   /** Sets the entry at position {@code index} to the pair {@code (t, u)}. */
-  default Map.Entry<T, U> set(int index, T t, U u) {
+  default Map.@Nullable Entry<T, U> set(int index, T t, U u) {
     throw new UnsupportedOperationException("set");
   }
 
@@ -213,7 +213,10 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
 
   /**
    * Creates an {@link ImmutableMap} whose entries are the pairs in this list.
-   * Throws if keys are not unique.
+   *
+   * <p>Throws if keys are not unique.
+   *
+   * <p>Throws if any key or value is null.
    */
   default ImmutableMap<T, U> toImmutableMap() {
     final ImmutableMap.Builder<T, U> b = ImmutableMap.builder();
@@ -272,7 +275,8 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
    * @param <U> Second type
    * @see PairList#forEachIndexed(IndexedBiConsumer)
    */
-  interface IndexedBiConsumer<T, U> {
+  interface IndexedBiConsumer<
+      T extends @Nullable Object, U extends @Nullable Object> {
     /**
      * Performs this operation on the given arguments.
      *
