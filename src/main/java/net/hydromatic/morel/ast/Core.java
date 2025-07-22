@@ -1724,7 +1724,9 @@ public class Core {
     public final Exp condition;
 
     Scan(StepEnv env, Pat pat, Exp exp, Exp condition) {
-      super(Op.SCAN, env);
+      super(
+          Op.SCAN,
+          env.withOrdered(env.ordered && exp.type instanceof ListType));
       this.pat = requireNonNull(pat, "pat");
       this.exp = requireNonNull(exp, "exp");
       this.condition = requireNonNull(condition, "condition");
@@ -1920,7 +1922,13 @@ public class Core {
   /** An {@code except} clause in a {@code from} expression. */
   public static class Except extends SetStep {
     Except(StepEnv env, boolean distinct, ImmutableList<Exp> args) {
-      super(Op.EXCEPT, env, distinct, args);
+      super(
+          Op.EXCEPT,
+          env.withOrdered(
+              env.ordered
+                  && allMatch(args, arg -> arg.type instanceof ListType)),
+          distinct,
+          args);
     }
 
     @Override
@@ -1946,7 +1954,13 @@ public class Core {
   /** An {@code intersect} clause in a {@code from} expression. */
   public static class Intersect extends SetStep {
     Intersect(StepEnv env, boolean distinct, ImmutableList<Exp> args) {
-      super(Op.INTERSECT, env, distinct, args);
+      super(
+          Op.INTERSECT,
+          env.withOrdered(
+              env.ordered
+                  && allMatch(args, arg -> arg.type instanceof ListType)),
+          distinct,
+          args);
     }
 
     @Override
@@ -1972,7 +1986,13 @@ public class Core {
   /** A {@code union} clause in a {@code from} expression. */
   public static class Union extends SetStep {
     Union(StepEnv env, boolean distinct, ImmutableList<Exp> args) {
-      super(Op.UNION, env, distinct, args);
+      super(
+          Op.UNION,
+          env.withOrdered(
+              env.ordered
+                  && allMatch(args, arg -> arg.type instanceof ListType)),
+          distinct,
+          args);
     }
 
     @Override
@@ -2000,7 +2020,7 @@ public class Core {
     public final Exp exp;
 
     Order(Core.StepEnv env, Exp exp) {
-      super(Op.ORDER, env);
+      super(Op.ORDER, env.withOrdered(true));
       this.exp = requireNonNull(exp);
     }
 
@@ -2111,7 +2131,7 @@ public class Core {
   /** Step that converts the stream to an unordered collection. */
   public static class Unorder extends FromStep {
     Unorder(Core.StepEnv env) {
-      super(Op.UNORDER, env);
+      super(Op.UNORDER, env.withOrdered(false));
     }
 
     @Override

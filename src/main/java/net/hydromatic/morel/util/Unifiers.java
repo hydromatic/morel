@@ -21,13 +21,22 @@ package net.hydromatic.morel.util;
 import static java.lang.Character.isDigit;
 import static java.lang.Character.isUpperCase;
 import static java.util.stream.Collectors.joining;
+import static net.hydromatic.morel.util.Ord.forEachIndexed;
 
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import net.hydromatic.morel.util.Unifier.Action;
+import net.hydromatic.morel.util.Unifier.Sequence;
+import net.hydromatic.morel.util.Unifier.Term;
+import net.hydromatic.morel.util.Unifier.TermTerm;
+import net.hydromatic.morel.util.Unifier.Variable;
 
 /**
  * Utilities for unification.
@@ -35,19 +44,57 @@ import java.util.Set;
  * @see Unifier
  */
 public abstract class Unifiers {
+  private Unifiers() {}
+
+  /** Creates an action that will fire when all variables have been matched. */
+  public static void onAllVariablesMatched(
+      List<Variable> variables,
+      BiConsumer<Variable, Action> register,
+      Consumer<List<Term>> termConsumer) {
+    final MultiAction multiAction = new MultiAction(variables, termConsumer);
+    forEachIndexed(
+        variables, (v, i) -> register.accept(v, multiAction.action(i)));
+  }
+
+  /** Action that fires when all variables have been matched. */
+  private static class MultiAction {
+    final PairList<Variable, Term> variableTerms;
+    int remaining;
+    final Consumer<List<Term>> termConsumer;
+
+    MultiAction(List<Variable> variables, Consumer<List<Term>> termConsumer) {
+      variableTerms =
+          PairList.fromTransformed(
+              variables, (v, consumer) -> consumer.accept(v, null));
+      remaining = variables.size();
+      this.termConsumer = termConsumer;
+    }
+
+    Action action(int i) {
+      return (variable, term, substitution, termPairs) -> {
+        if (term instanceof Sequence && variableTerms.right(i) == null) {
+          variableTerms.rightList().set(i, term);
+          if (--remaining == 0) {
+            termConsumer.accept(variableTerms.rightList());
+          }
+        }
+      };
+    }
+  }
+
   /**
    * Given several pairs of terms, generates a program that will create those
    * pairs of terms.
    *
    * <p>This is useful if you wish to create a unit test for a {@link Unifier}.
    */
-  public static void dump(PrintWriter pw, Iterable<Unifier.TermTerm> pairs) {
+  public static void dump(PrintWriter pw, Iterable<TermTerm> pairs) {
     new Dumper(pw).dumpAll(pairs);
   }
 
   /** Work space for {@link #dump(PrintWriter, Iterable)}. */
   private static class Dumper {
-    final Map<Unifier.Term, String> terms = new HashMap<>();
+    final Map<Term, String> terms = new HashMap<>();
     final Set<String> names = new HashSet<>();
     final PrintWriter pw;
 
@@ -55,9 +102,9 @@ public abstract class Unifiers {
       this.pw = pw;
     }
 
-    void dumpAll(Iterable<? extends Unifier.TermTerm> pairs) {
+    void dumpAll(Iterable<? extends TermTerm> pairs) {
       pw.printf("List<Unifier.TermTerm> pairs = new ArrayList<>();%n");
-      for (Unifier.TermTerm pair : pairs) {
+      for (TermTerm pair : pairs) {
         String left = lookup(pair.left);
         String right = lookup(pair.right);
         pw.printf("pairs.add(new Unifier.TermTerm(%s, %s));\n", left, right);
@@ -93,7 +140,7 @@ public abstract class Unifiers {
     }
 
     /** Looks up the variable holding a term, registering it if new. */
-    String lookup(Unifier.Term term) {
+    String lookup(Term term) {
       String s = terms.get(term);
       if (s != null) {
         return s;
@@ -110,10 +157,10 @@ public abstract class Unifiers {
     }
 
     /** Registers a term and returns a unique variable name for it. */
-    private String register(Unifier.Term term) {
+    private String register(Term term) {
       String v;
-      if (term instanceof Unifier.Variable) {
-        Unifier.Variable variable = (Unifier.Variable) term;
+      if (term instanceof Variable) {
+        Variable variable = (Variable) term;
         v = var(variable.name);
         if (variable.name.matches("T[0-9]+")) {
           pw.printf(
@@ -124,7 +171,7 @@ public abstract class Unifiers {
               "final Unifier.Variable %s = unifier.variable(\"%s\");%n", v, v);
         }
       } else {
-        Unifier.Sequence sequence = (Unifier.Sequence) term;
+        final Sequence sequence = (Sequence) term;
         if (sequence.terms.isEmpty()) {
           v = var(sequence.operator);
           pw.printf(

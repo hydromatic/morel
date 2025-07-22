@@ -2336,6 +2336,17 @@ public class MainTest {
   }
 
   @Test
+  void testFromType0() {
+    ml("from e in [{deptno=10}]\n"
+            + "  group {e.deptno, parity = e.deptno div 2}\n"
+            + "    compute {sumId = count over e.deptno}\n"
+            + "  group {}\n"
+            + "    compute {c = count over 1,\n"
+            + "      c2 = count over 2}")
+        .assertType("{c:int, c2:int} list");
+  }
+
+  @Test
   void testFromType() {
     // Most type tests migrated to type-inference.smli.
     // Keeping tests with assertParse, assertEval, or other assertions.
@@ -2353,7 +2364,7 @@ public class MainTest {
             "from {a = a, c = c, ...}"
                 + " in [{a = 1.0, b = true, c = 3}, {a = 1.5, b = true, c = 4}]")
         .assertType("{a:real, c:int} list");
-    ml("from d in [{a=1,b=true}] yield d.a into sum")
+    ml("from d in [{a=1,b=true}] yield d.a unorder into sum")
         .assertType("int")
         .assertEval(is(1));
     ml("from a in [1], b in [true] yield {b,a} where b")
@@ -2373,7 +2384,7 @@ public class MainTest {
 
   @Test
   void testFromType2() {
-    ml("from d in [{a=1,b=true}] yield d.a into sum")
+    ml("from d in [{a=1,b=true}] yield d.a unorder into sum")
         .assertType("int")
         .assertEval(is(1));
 

@@ -71,11 +71,9 @@ public class MartelliUnifier extends Unifier {
     for (int iteration = 0; ; iteration++) {
       // delete
       if (!work.deleteQueue.isEmpty()) {
-        @Nullable TermTerm pair = work.deleteQueue.remove(0);
-        if (pair != null) {
-          tracer.onDelete(pair.left, pair.right);
-          continue;
-        }
+        TermTerm pair = work.deleteQueue.remove(0);
+        tracer.onDelete(pair.left, pair.right);
+        continue;
       }
 
       if (!work.seqSeqQueue.isEmpty()) {

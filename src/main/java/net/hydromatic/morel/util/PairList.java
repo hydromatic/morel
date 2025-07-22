@@ -33,6 +33,7 @@ import java.util.SortedMap;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -286,6 +287,23 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
    * Otherwise, returns a new immutable sorted copy.
    */
   ImmutablePairList<T, U> withSortedKeys(Ordering<T> ordering);
+
+  /**
+   * Adds a pair to this list if the left value is not present at least once,
+   * and returns the first right value.
+   *
+   * <p>Analogous to {@link Map#putIfAbsent(Object, Object)}.
+   */
+  default U addIfLeftAbsent(T t, Supplier<U> uSupplier) {
+    final int i = firstMatch((t2, u) -> t2.equals(t));
+    if (i >= 0) {
+      return right(i);
+    } else {
+      final U u = uSupplier.get();
+      add(t, u);
+      return u;
+    }
+  }
 
   /**
    * Action to be taken each step of an indexed iteration over a PairList.

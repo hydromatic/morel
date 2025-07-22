@@ -928,11 +928,55 @@ from i in [2, 1, 2]
 > val it = 1 : int
 (*) "count" used as an ordinary function ("over" is not present)
 from i in [2, 1, 2]
-  compute count ["a", "b"];
+  compute count (bag ["a", "b"]);
 > val it = 2 : int
 from i in [2, 1, 2]
-  group i compute {c = count ["a", "b"]};
+  group i compute {c = count (bag ["a", "b"])};
 > val it = [{c=2,i=1},{c=2,i=2}] : {c:int, i:int} list
+
+(* ---------------------------------------------------------------------------
+ * List and bag aggregate functions can be applied to list and bag inputs. *)
+
+(*) List aggregate function returns first element, bag returns second.
+fun listAgg list = List.hd list;
+> val listAgg = fn : 'a list -> 'a
+fun bagAgg bag = Bag.hd (Bag.tl bag);
+> val bagAgg = fn : 'a bag -> 'a
+
+from i in [1, 2]
+  compute listAgg over i;
+> val it = 1 : int
+from i in bag [1, 2]
+  compute bagAgg over i;
+> val it = 2 : int
+from i in bag [1, 2]
+  compute listAgg over i;
+> val it = 1 : int
+from i in [1, 2]
+  compute bagAgg over i;
+> val it = 2 : int
+
+(*) Polymorphic agg applied to list, then bag
+from i in [1, 2, 3]
+  compute Fn.id over i;
+> val it = [1,2,3] : int list
+from i in bag [1, 2, 3]
+  compute Fn.id over i;
+> val it = [1,2,3] : int bag
+
+(*) Aggregate function that is a closure that references group key.
+(*) Uses List.length (not sum) because sum is bag-only and anonymous
+(*) functions in list context cannot yet adapt bag-only aggregates.
+from (k, v) in [(1, 5), (1, 6), (2, 7), (2, 10)]
+  group k compute {x = (fn vs => k + List.length vs) over v};
+> val it = [{k=1,x=3},{k=2,x=4}] : {k:int, x:int} list
+from (k, v) in [(1, 5), (1, 6), (2, 7), (2, 10)]
+  group {k2 = k} compute {x = (fn vs => k2 + List.length vs) over v};
+> val it = [{k2=1,x=3},{k2=2,x=4}] : {k2:int, x:int} list
+from e in [{a = 1, b = 5}, {a = 0, b = 1}, {a = 1, b = 1}]
+  group e.a compute {rows = (fn x => x) over e};
+> val it = [{a=1,rows=[{a=1,b=5},{a=1,b=1}]},{a=0,rows=[{a=0,b=1}]}]
+>   : {a:int, rows:{a:int, b:int} list} list
 
 (* Theoretically a "group" without a "compute" can be followed by a
  * "compute" step. So, the following is ambiguous. We treat it as a single
@@ -961,6 +1005,10 @@ from i in [1, 2, 3]
   compute elements;
 > val it = [1,2,3] : int list
 
+from i in [1, 2, 3] unorder
+  compute elements;
+> val it = [1,2,3] : int bag
+
 from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
   compute elements;
 > val it = [{i="a",j=1},{i="b",j=4},{i="a",j=3}] : {i:string, j:int} list
@@ -987,6 +1035,14 @@ from i in [1, 2, 3]
 from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
   group {i} compute {s = from r in elements compute sum over r.j} order i;
 > val it = [{i="a",s=4},{i="b",s=4}] : {i:string, s:int} list
+
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  group {i} compute {s = from r in elements unorder compute sum over r.j} order i;
+> val it = [{i="a",s=4},{i="b",s=4}] : {i:string, s:int} list
+
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  group {i} compute {s = from r in elements order r.j take 1 compute sum over r.j} order i;
+> val it = [{i="a",s=1},{i="b",s=4}] : {i:string, s:int} list
 
 from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
   group {i} compute {s = from r in elements where r.j < 2 compute sum over r.j}
@@ -1722,10 +1778,12 @@ from e in emps
 group {} compute {sumId = sum over e.id};
 > val it = [{sumId=406}] : {sumId:int} list
 
-(*) 'group' with aggregate function that references the key
+(*) 'group' with aggregate function that references the key.
+(*) Uses List.length (not sum) because sum is bag-only and anonymous
+(*) functions in list context cannot yet adapt bag-only aggregates.
 from (k, v) in [(1, 5), (1, 6), (2, 7), (2, 10)]
-group k compute {x = (fn vs => k + (sum vs)) over v};
-> val it = [{k=1,x=12},{k=2,x=19}] : {k:int, x:int} list
+group k compute {x = (fn vs => k + List.length vs) over v};
+> val it = [{k=1,x=3},{k=2,x=4}] : {k:int, x:int} list
 
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
   group x compute {z = (fn ys => concat (x :: ys)) over y};
@@ -1785,6 +1843,11 @@ end;
 >   : {deptno:int, my_sum:int} list
 
 (*) Identity aggregate function (equivalent to SQL's COLLECT)
+(* TODO: Type inference gets confused because it doesn't
+ * know whether 'id' is 'a list' or 'a bag'. When
+ * [MOREL-343] "Allow type variables in type constraints"
+ * is fixed, we will be able to constrain 'x' to 'a list' or 'a bag'.
+ *
 let
   fun id x = x
 in
@@ -1798,15 +1861,12 @@ end;
 >    {deptno=30,
 >     rows=[{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]}]
 >   : {deptno:int, rows:{deptno:int, id:int, name:string} list} list
+*)
 
-(*) Identity aggregate function, without 'of'
-let
-  fun id x = x
-in
-  from e in emps
-  group e.deptno compute {rows = id over e}
-  order deptno
-end;
+(*) Identity aggregate function, using Fn.id
+from e in emps
+group e.deptno compute {rows = Fn.id over e}
+order deptno;
 > val it =
 >   [{deptno=10,rows=[{deptno=10,id=100,name="Fred"}]},
 >    {deptno=20,rows=[{deptno=20,id=101,name="Velma"}]},
@@ -2027,6 +2087,7 @@ from e in emps
 (*) Primitive 'yield' followed  by 'into'
 from e in emps
   yield e.deptno
+  unorder
   into sum;
 > val it = 90 : int
 
@@ -2579,12 +2640,11 @@ fun pivot listlists =
     []
   else
     let
-      fun id x = x
       val n = (from list in listlists compute min over length list)
     in
       List.tabulate (n,
         fn i => (from list in listlists
-                 compute id over List.nth (list, i)))
+                 compute Fn.id over List.nth (list, i)))
     end;
 > val pivot = fn : 'a list list -> 'a list list
 pivot [[1,2],[3,4],[5,6]];

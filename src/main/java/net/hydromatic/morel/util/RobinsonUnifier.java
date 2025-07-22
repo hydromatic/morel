@@ -75,6 +75,9 @@ public class RobinsonUnifier extends Unifier {
       Map<Variable, Action> termActions,
       List<Constraint> constraints,
       Tracer tracer) {
+    if (!termActions.isEmpty()) {
+      throw new AssertionError("Actions are not supported");
+    }
     if (!constraints.isEmpty()) {
       throw new AssertionError("Constraints are not supported");
     }

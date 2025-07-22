@@ -98,7 +98,6 @@ import net.hydromatic.morel.util.Unifier.Action;
 import net.hydromatic.morel.util.Unifier.Constraint;
 import net.hydromatic.morel.util.Unifier.Failure;
 import net.hydromatic.morel.util.Unifier.Result;
-import net.hydromatic.morel.util.Unifier.Retry;
 import net.hydromatic.morel.util.Unifier.Sequence;
 import net.hydromatic.morel.util.Unifier.Substitution;
 import net.hydromatic.morel.util.Unifier.Term;
@@ -150,7 +149,7 @@ public class TypeResolver {
       Consumer<CompileException> warningConsumer) {
     final TypeResolver typeResolver =
         new TypeResolver(typeSystem, warningConsumer);
-    Resolved resolved =
+    final Resolved resolved =
         typeResolver.deduceTypeWithRetries(env, decl, typeSystem);
     typeResolver.validations.forEach(v -> v.accept(resolved));
     return resolved;
@@ -206,11 +205,6 @@ public class TypeResolver {
       terms.forEach(tv -> termPairs.add(new TermTerm(tv.term, tv.variable)));
       final Result result =
           unifier.unify(termPairs, actionMap, constraints, tracer);
-      if (result instanceof Retry) {
-        final Retry retry = (Retry) result;
-        retry.amend();
-        continue;
-      }
       if (result instanceof Failure) {
         final String extra =
             ";\n"
@@ -514,6 +508,77 @@ public class TypeResolver {
   }
 
   /**
+   * Returns the collection kind for an aggregate function.
+   *
+   * <p>Returns -2 if the function is a user-defined named function whose type
+   * is not yet available (use {@code mayBeBagOrList}); -1 if the function is
+   * overloaded, polymorphic, or its collection kind is unknown (use {@code
+   * isListOrBagMatchingInput} to link to the input's ordering); 0 if the
+   * function's parameter type is a bag; or 1 if the function's parameter type
+   * is a list.
+   *
+   * <p>Uses {@code getTypeOpt}, not {@code getType}, to avoid re-registering
+   * the function expression with its raw type (which would overwrite the
+   * instantiated type registered by {@code deduceApplyFnType}).
+   */
+  private int collectionKind(TypeEnv env, Ast.Exp fn) {
+    if (fn instanceof Ast.Id) {
+      final Ast.Id id = (Ast.Id) fn;
+      if (env.hasOverloaded(id.name)) {
+        return -1; // overloaded
+      }
+      Type type = env.getTypeOpt(id.name);
+      if (type == null) {
+        // Type not available (user-defined function in current compilation
+        // unit). Don't link to input ordering; instead use mayBeBagOrList
+        // so the function's own type (from deduceApplyFnType) can determine
+        // the collection kind without conflicting with the input ordering.
+        return -2;
+      }
+      return collectionKindOfType(type);
+    }
+    // For qualified names (e.g., Relational.nonEmpty, Fn.id), try to
+    // extract the type from the record structure.
+    if (fn instanceof Ast.Apply) {
+      final Ast.Apply apply = (Ast.Apply) fn;
+      if (apply.fn.op == Op.RECORD_SELECTOR && apply.arg instanceof Ast.Id) {
+        Type argType = env.getTypeOpt(((Ast.Id) apply.arg).name);
+        if (argType instanceof RecordType) {
+          String fieldName = ((Ast.RecordSelector) apply.fn).name;
+          Type fieldType = ((RecordType) argType).argNameTypes.get(fieldName);
+          if (fieldType != null) {
+            return collectionKindOfType(fieldType);
+          }
+        }
+      }
+    }
+    // For anonymous functions and other non-Id expressions,
+    // link to input ordering.
+    return -1;
+  }
+
+  /** Returns the collection kind for a function type. */
+  private static int collectionKindOfType(Type type) {
+    if (type instanceof MultiType) {
+      return -1; // overloaded
+    }
+    if (type instanceof ForallType) {
+      type = ((ForallType) type).type;
+    }
+    if (type instanceof FnType) {
+      final Type paramType = ((FnType) type).paramType;
+      if (paramType instanceof ListType) {
+        return 1; // list
+      }
+      if (paramType instanceof DataType
+          && ((DataType) paramType).name.equals(BAG_TY_CON)) {
+        return 0; // bag
+      }
+    }
+    return -1; // polymorphic or unknown
+  }
+
+  /**
    * Adds a constraint that {@code c0} is a bag or list (of {@code v0}), and
    * {@code c1} is a bag or list (of {@code v1}); if both are lists then {@code
    * c} is a list of {@code v}, otherwise {@code c} is a bag of {@code v}.
@@ -580,6 +645,9 @@ public class TypeResolver {
 
       case INT_LITERAL:
         return reg(node, v, toTerm(PrimitiveType.INT));
+
+      case INTERNAL_LITERAL:
+        return reg(node, v, (Variable) ((Ast.Literal) node).value);
 
       case REAL_LITERAL:
         return reg(node, v, toTerm(PrimitiveType.REAL));
@@ -966,18 +1034,58 @@ public class TypeResolver {
         return deduceGroupStepType((Ast.Group) step, p, fieldVars, steps);
 
       case INTO:
-        // from i in [1,2,3] into f
-        //   f: int list -> string
-        //   expression: string
+        // "into f" applies f to the entire input collection. We use
+        // collectionKind to determine how to link the function's parameter
+        // to the input, and deduceApplyFnType for overloaded dispatch.
         final Ast.Into into = (Ast.Into) step;
-        final Variable v13 = unifier.variable();
-        final Variable v14 = unifier.variable();
-        final Ast.Exp intoExp = deduceExpType(p.env, into.exp, v14);
-        final Sequence fnType = fnTerm(requireNonNull(p.c), v13);
-        equiv(v14, fnType);
+        requireNonNull(p.c);
+        final Variable rv = unifier.variable();
+        final int intoCK = collectionKind(p.env, into.exp);
+        final Ast.Exp intoExp;
+        switch (intoCK) {
+          case -2:
+            // User-defined function whose type is not yet available.
+            // Link directly to p.c to preserve record type propagation.
+            intoExp =
+                deduceExpType(p.env, into.exp, toVariable(fnTerm(p.c, rv)));
+            break;
+          case 0:
+            {
+              // Bag-only function: decouple from input ordering so that
+              // a bag function works with list input.
+              final Variable intoCArg0 = unifier.variable();
+              equiv(intoCArg0, bagTerm(p.v));
+              intoExp =
+                  deduceExpType(
+                      p.env, into.exp, toVariable(fnTerm(intoCArg0, rv)));
+              break;
+            }
+          case 1:
+            {
+              // List-only function: decouple from input ordering.
+              final Variable intoCArg1 = unifier.variable();
+              equiv(intoCArg1, listTerm(p.v));
+              intoExp =
+                  deduceExpType(
+                      p.env, into.exp, toVariable(fnTerm(intoCArg1, rv)));
+              break;
+            }
+          default:
+            {
+              // Overloaded or polymorphic: use deduceApplyFnType for
+              // dispatch, linked to input ordering.
+              final Variable intoCArg = unifier.variable();
+              isListOrBagMatchingInput(intoCArg, p.v, p.c, p.v);
+              final Variable intoVFn = unifier.variable();
+              intoExp =
+                  deduceApplyFnType(p.env, into.exp, intoVFn, intoCArg, rv);
+              reg(into.exp, intoVFn);
+              equiv(intoVFn, fnTerm(intoCArg, rv));
+              break;
+            }
+        }
         steps.add(into.copy(intoExp));
-        // Ordering is irrelevant because result is a singleton.
-        return Triple.singleton(p.rootEnv, p.rootEnv, v13);
+        return Triple.singleton(p.rootEnv, p.env, rv);
 
       case THROUGH:
         // from i in [1,2,3] through p in f
@@ -1222,7 +1330,7 @@ public class TypeResolver {
 
       // Output is ordered iff input is ordered.
       final Variable c2 = unifier.variable();
-      isListOrBagMatchingInput(c2, v2, p.c, p.v);
+      isListOrBagMatchingInput(c2, v2, requireNonNull(p.c), p.v);
       return Triple.of(p.rootEnv, p.rootEnv.bindAll(bindings), v2, c2);
     } else {
       steps.add(((Ast.Compute) group).copy(compute2));
@@ -1446,8 +1554,8 @@ public class TypeResolver {
 
     if (fn2 instanceof Ast.Id) {
       final BuiltIn builtIn = BuiltIn.BY_ML_NAME.get(((Ast.Id) fn2).name);
-      if (builtIn != null) {
-        builtIn.prefer(t -> preferredTypes.add(v, t));
+      if (builtIn != null && builtIn.preferredType != null) {
+        preferredTypes.add(v, builtIn.preferredType);
       }
     }
     return reg(apply.copy(fn2, arg2), v);
@@ -1527,6 +1635,87 @@ public class TypeResolver {
     return reg(id, vFn);
   }
 
+  /**
+   * Deduces the datatype of an aggregate function being applied to an argument.
+   * If the function is overloaded, the argument will help us resolve the
+   * overloading.
+   *
+   * @param env Compile-time environment
+   * @param fn Function expression (often an identifier)
+   * @param vFn Variable for the function type
+   * @param vArg Variable for the argument type
+   * @param vResult Variable for the result type
+   * @return the function expression with its type deduced
+   */
+  private Ast.Exp deduceAggFnType(
+      TypeEnv env,
+      Ast.Exp fn,
+      Variable vFn,
+      Variable vArg,
+      Variable vResult,
+      AtomicBoolean overloaded) {
+    @Nullable Type type = getType(env, fn);
+    if (type instanceof MultiType) {
+      final MultiType multiType = (MultiType) type;
+      final PairList<Term, Term> argResults = PairList.of();
+      for (Type type1 : multiType.types) {
+        Subst subst = Subst.EMPTY;
+        if (type1 instanceof ForallType) {
+          for (int i = 0; i < ((ForallType) type1).parameterCount; i++) {
+            subst = subst.plus(typeSystem.typeVariable(i), unifier.variable());
+          }
+          type1 = typeSystem.unqualified(type1);
+        }
+        FnType fnType = (FnType) type1;
+        argResults.add(
+            toTerm(fnType.paramType, subst), toTerm(fnType.resultType, subst));
+      }
+      constrain(vArg, vResult, argResults);
+      overloaded.set(true);
+      return reg(fn, vFn);
+    }
+
+    if (!(fn instanceof Ast.Id) || !env.hasOverloaded(((Ast.Id) fn).name)) {
+      overloaded.set(false);
+      return deduceExpType(env, fn, vFn);
+    }
+
+    // "apply" is "f arg" and has type "v";
+    // "f" is an overloaded name, and has type "vArg -> v";
+    // "arg" has type "vArg".
+    // To resolve overloading, we gather all known overloads, and apply
+    // them as constraints to "vArg".
+    overloaded.set(true);
+    final Ast.Id id = (Ast.Id) fn;
+    final List<Variable> variables = new ArrayList<>();
+    env.collectInstances(
+        typeSystem,
+        id.name,
+        term -> {
+          final Variable variable = toVariable(term);
+          variables.add(variable);
+          if (term instanceof Sequence) {
+            Sequence sequence = (Sequence) term;
+            if (sequence.operator.equals(FN_TY_CON)) {
+              assert sequence.terms.size() == 2;
+              Term arg = sequence.terms.get(0);
+              Term result = sequence.terms.get(1);
+              overloads.add(
+                  new Inst(
+                      id.name, variable, toVariable(arg), toVariable(result)));
+            }
+          }
+        });
+    final PairList<Term, Term> argResults = PairList.of();
+    for (Inst inst : overloads) {
+      if (inst.name.equals(id.name) && variables.contains(inst.vFn)) {
+        argResults.add(inst.vArg, inst.vResult);
+      }
+    }
+    constrain(vArg, vResult, argResults);
+    return reg(id, vFn);
+  }
+
   private @Nullable Type getType(TypeEnv env, Ast.Exp exp) {
     switch (exp.op) {
       case BOOL_LITERAL:
@@ -1573,9 +1762,11 @@ public class TypeResolver {
     actionMap.put(
         vArg,
         (v, t, substitution, termPairs) -> {
-          // We now know that the type arg, say "{a: int, b: real}".
-          // So, now we can declare that the type of vResult, say "#b", is
-          // "real".
+          // We now know "vArg", the argument type, and so we can deduce
+          // "vResult", the result type.
+          //
+          // Suppose it is "{a: int, b: real}", and "recordSelector" is "#b".
+          // From this, we can declare that the result type is "real".
           if (t instanceof Sequence) {
             final Sequence sequence = (Sequence) t;
             final List<String> fieldList = fieldList(sequence);
@@ -1673,32 +1864,55 @@ public class TypeResolver {
   private Ast.Aggregate deduceAggregateType(
       AggFrame aggFrame, Ast.Aggregate aggregate, Variable v) {
     final Triple p = aggFrame.p;
+    requireNonNull(p.c);
+
+    // The collection that is the input to the aggregate function is
+    // ordered iff the input is ordered.
+    final Variable vArg = unifier.variable();
+    final Variable cArg = unifier.variable();
     final Ast.Exp arg2;
-    final Variable c;
-    if (aggregate.argument == null) {
-      c = p.c;
-      arg2 = null;
-    } else {
-      // The collection that is the input to the aggregate function is
-      // ordered iff the input is ordered.
-      final Variable v10 = unifier.variable();
-      c = unifier.variable();
-      isListOrBagMatchingInput(c, v10, p.c, p.v);
-      try {
-        ++aggFrame.activeCount;
-        arg2 = deduceExpType(p.env, aggregate.argument, v10);
-      } finally {
-        --aggFrame.activeCount;
-      }
+    try {
+      ++aggFrame.activeCount;
+      arg2 = deduceExpType(p.env, aggregate.argument, vArg);
+    } finally {
+      --aggFrame.activeCount;
     }
 
     final Variable vAgg = unifier.variable();
     final Ast.Exp aggregateFn2 =
-        deduceApplyFnType(p.env, aggregate.aggregate, vAgg, c, v);
+        deduceApplyFnType(p.env, aggregate.aggregate, vAgg, cArg, v);
     reg(aggregate.aggregate, vAgg);
 
-    final Sequence fnType = fnTerm(c, v);
+    final Sequence fnType = fnTerm(cArg, v);
     equiv(vAgg, fnType);
+
+    final int collectionKind = collectionKind(p.env, aggregate.aggregate);
+    switch (collectionKind) {
+      case -2:
+        // User-defined named function whose type is not yet available.
+        // Use mayBeBagOrList so the function's own type (from
+        // deduceApplyFnType) can determine the collection kind without
+        // conflicting with the input ordering.
+        mayBeBagOrList(cArg, vArg);
+        break;
+      case 0:
+        // For non-overloaded bag-only aggregates (e.g., sum, count),
+        // directly set the collection kind. This avoids a conflict when
+        // the input ordering differs from the function's parameter type.
+        equiv(cArg, bagTerm(vArg));
+        break;
+      case 1:
+        // Non-overloaded list-only aggregate.
+        equiv(cArg, listTerm(vArg));
+        break;
+      default:
+        // For overloaded, polymorphic, or non-Id aggregates,
+        // link the collection type to the input ordering so the unifier
+        // selects the correct variant or adapts to the input.
+        isListOrBagMatchingInput(cArg, vArg, p.c, p.v);
+        break;
+    }
+
     final Ast.Aggregate aggregate2 = aggregate.copy(aggregateFn2, arg2);
     return reg(aggregate2, v);
   }

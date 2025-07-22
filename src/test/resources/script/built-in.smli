@@ -4058,24 +4058,26 @@ Sys.plan ();
 >   "apply(fnValue Relational.count, argCode apply(fnValue Bag.fromList, argCode tuple(constant(false))))"
 >   : string
 
-Relational.nonEmpty [1, 2, 3];
+Relational.nonEmpty (bag [1, 2, 3]);
 > val it = true : bool
-Relational.nonEmpty [];
+Relational.nonEmpty (bag []);
 > val it = false : bool
-Relational.nonEmpty [false];
+Relational.nonEmpty (bag [false]);
 > val it = true : bool
 Sys.plan ();
-> val it = "apply(fnValue Relational.nonEmpty, argCode tuple(constant(false)))"
+> val it =
+>   "apply(fnValue Relational.nonEmpty, argCode apply(fnValue Bag.fromList, argCode tuple(constant(false))))"
 >   : string
 
-Relational.empty [1, 2, 3];
+Relational.empty (bag [1, 2, 3]);
 > val it = false : bool
-Relational.empty [];
+Relational.empty (bag []);
 > val it = true : bool
-Relational.empty [false];
+Relational.empty (bag [false]);
 > val it = false : bool
 Sys.plan ();
-> val it = "apply(fnValue Relational.empty, argCode tuple(constant(false)))"
+> val it =
+>   "apply(fnValue Relational.empty, argCode apply(fnValue Bag.fromList, argCode tuple(constant(false))))"
 >   : string
 
 val emps = [
@@ -4123,43 +4125,43 @@ Sys.plan ();
 >   "apply2(fnValue Relational.iterate, from(sink join(pat e_1, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), constant(0)), sink collect(get(name e))))), match(v, apply(fnCode match((oldList, newList), from(sink join(pat d, exp get(name newList), sink join(pat e, exp constant([[7839, KING, 0], [7566, JONES, 7839], [7698, BLAKE, 7839], [7782, CLARK, 7839], [7788, SCOTT, 7566], [7902, FORD, 7566], [7499, ALLEN, 7698], [7521, WARD, 7698], [7654, MARTIN, 7698], [7844, TURNER, 7698], [7900, JAMES, 7698], [7934, MILLER, 7782], [7876, ADAMS, 7788], [7369, SMITH, 7902]]), sink where(condition apply2(fnValue =, apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name d))), sink collect(get(name e))))))), argCode get(name v))))"
 >   : string
 
-Relational.sum [1, 2, 3];
+Relational.sum (bag [1, 2, 3]);
 > val it = 6 : int
 Sys.plan ();
 > val it =
->   "apply(fnValue Relational.sum$int, argCode tuple(constant(1), constant(2), constant(3)))"
+>   "apply(fnValue Relational.sum$int, argCode apply(fnValue Bag.fromList, argCode tuple(constant(1), constant(2), constant(3))))"
 >   : string
-Relational.sum [1.0, 2.5, 3.5];
+Relational.sum (bag [1.0, 2.5, 3.5]);
 > val it = 7.0 : real
 Sys.plan ();
 > val it =
->   "apply(fnValue Relational.sum$real, argCode tuple(constant(1.0), constant(2.5), constant(3.5)))"
+>   "apply(fnValue Relational.sum$real, argCode apply(fnValue Bag.fromList, argCode tuple(constant(1.0), constant(2.5), constant(3.5))))"
 >   : string
 
-Relational.max [1, 2, 3];
+Relational.max (bag [1, 2, 3]);
 > val it = 3 : int
-Relational.max [1.0, 2.5, 3.5];
+Relational.max (bag [1.0, 2.5, 3.5]);
 > val it = 3.5 : real
-Relational.max ["a", "bc", "ab"];
+Relational.max (bag ["a", "bc", "ab"]);
 > val it = "bc" : string
-Relational.max [false, true];
+Relational.max (bag [false, true]);
 > val it = true : bool
 Sys.plan ();
 > val it =
->   "apply(fnValue Relational.max, argCode tuple(constant(false), constant(true)))"
+>   "apply(fnValue Relational.max, argCode apply(fnValue Bag.fromList, argCode tuple(constant(false), constant(true))))"
 >   : string
 
-Relational.min [1, 2, 3];
+Relational.min (bag [1, 2, 3]);
 > val it = 1 : int
-Relational.min [1.0, 2.5, 3.5];
+Relational.min (bag [1.0, 2.5, 3.5]);
 > val it = 1.0 : real
-Relational.min ["a", "bc", "ab"];
+Relational.min (bag ["a", "bc", "ab"]);
 > val it = "a" : string
-Relational.min [false, true];
+Relational.min (bag [false, true]);
 > val it = false : bool
 Sys.plan ();
 > val it =
->   "apply(fnValue Relational.min, argCode tuple(constant(false), constant(true)))"
+>   "apply(fnValue Relational.min, argCode apply(fnValue Bag.fromList, argCode tuple(constant(false), constant(true))))"
 >   : string
 
 Relational.only [2];
@@ -4437,7 +4439,7 @@ Sys.env ();
 >    ("Real",
 >     "{/:real * real -> real, abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",
->     "{compare:forall 'a. 'a * 'a -> order, count:multi(forall 'a. 'a bag -> int,forall 'a. 'a list -> int), empty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), min:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), nonEmpty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a)}"),
+>     "{compare:forall 'a. 'a * 'a -> order, count:forall 'a. 'a bag -> int, empty:forall 'a. 'a bag -> bool, iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:forall 'a. 'a bag -> 'a, min:forall 'a. 'a bag -> 'a, nonEmpty:forall 'a. 'a bag -> bool, only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:forall 'a. 'a bag -> 'a}"),
 >    ("SOME","forall 'a. 'a -> 'a option"),("STRING","string -> variant"),
 >    ("String",
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
@@ -4546,7 +4548,7 @@ env ();
 >    ("Real",
 >     "{/:real * real -> real, abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",
->     "{compare:forall 'a. 'a * 'a -> order, count:multi(forall 'a. 'a bag -> int,forall 'a. 'a list -> int), empty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), min:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), nonEmpty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a)}"),
+>     "{compare:forall 'a. 'a * 'a -> order, count:forall 'a. 'a bag -> int, empty:forall 'a. 'a bag -> bool, iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:forall 'a. 'a bag -> 'a, min:forall 'a. 'a bag -> 'a, nonEmpty:forall 'a. 'a bag -> bool, only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:forall 'a. 'a bag -> 'a}"),
 >    ("SOME","forall 'a. 'a -> 'a option"),("STRING","string -> variant"),
 >    ("String",
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),

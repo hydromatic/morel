@@ -916,6 +916,15 @@ public class CalciteCompiler extends Compiler {
    * support aggregate functions defined by expressions (e.g. lambdas).
    */
   private SqlAggFunction aggOp(Core.Exp aggregate) {
+    // Unwrap collection-kind conversion lambdas:
+    //   fn $col => aggFn(converter($col))
+    if (aggregate instanceof Core.Fn) {
+      final Core.Fn fn = (Core.Fn) aggregate;
+      if (fn.exp instanceof Core.Apply) {
+        final Core.Apply apply = (Core.Apply) fn.exp;
+        return aggOp(apply.fn);
+      }
+    }
     if (aggregate instanceof Core.Literal) {
       switch (((Core.Literal) aggregate).unwrap(BuiltIn.class)) {
         case RELATIONAL_SUM:

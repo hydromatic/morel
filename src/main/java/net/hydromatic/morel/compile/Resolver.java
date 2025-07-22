@@ -55,6 +55,7 @@ import java.util.function.Predicate;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
+import net.hydromatic.morel.ast.CoreBuilder;
 import net.hydromatic.morel.ast.FromBuilder;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
@@ -676,12 +677,9 @@ public class Resolver {
   }
 
   private Core.Apply toCore(Ast.Apply apply) {
-    Core.Exp coreArg = toCore(apply.arg);
+    final Core.Exp coreArg = toCore(apply.arg);
     Type type = typeMap.getType(apply);
-    Core.Exp coreFn;
-    @Nullable
-    Binding top =
-        apply.fn.op == Op.ID ? env.getTop(((Ast.Id) apply.fn).name) : null;
+    final Core.Exp coreFn;
     if (apply.fn.op == Op.RECORD_SELECTOR) {
       final Ast.RecordSelector recordSelector = (Ast.RecordSelector) apply.fn;
       RecordLikeType recordType = (RecordLikeType) coreArg.type;
@@ -705,13 +703,26 @@ public class Resolver {
         // available now may be more precise than the deduced type.
         type = ((FnType) coreFn.type).resultType;
       }
-    } else if (apply.fn.op == Op.ID // TODO: change to 'top != null'
-        && resolvedOverloads.containsKey(((Ast.Id) apply.fn).name)) {
-      final Type argType = typeMap.getType(apply.arg);
+    } else {
+      coreFn = fnToCore(apply.fn, typeMap.getType(apply.arg));
+    }
+    return core.apply(apply.pos, type, coreFn, coreArg);
+  }
+
+  /**
+   * Converts a function (inside an {@link Ast.Apply} or {@link Ast.Aggregate})
+   * to a core expression, dealing with overloads (if necessary) based on
+   * argument type.
+   */
+  private Core.Exp fnToCore(Ast.Exp fn, Type argType) {
+    @Nullable
+    Binding top = fn.op == Op.ID ? env.getTop(((Ast.Id) fn).name) : null;
+    if (fn.op == Op.ID // TODO: change to 'top != null'
+        && resolvedOverloads.containsKey(((Ast.Id) fn).name)) {
       final List<Core.IdPat> matchingBindings = new ArrayList<>();
       Pair<Core.IdPat, List<Core.IdPat>> pair =
-          resolvedOverloads.get(((Ast.Id) apply.fn).name);
-      for (Core.IdPat idPat : pair.right) {
+          resolvedOverloads.get(((Ast.Id) fn).name);
+      for (Core.IdPat idPat : requireNonNull(pair.right)) {
         if (idPat.type.canCallArgOf(argType)) {
           matchingBindings.add(idPat);
         }
@@ -719,10 +730,9 @@ public class Resolver {
       if (matchingBindings.size() != 1) {
         throw new AssertionError(matchingBindings);
       }
-      coreFn = core.id(matchingBindings.get(0));
+      return CoreBuilder.core.id(matchingBindings.get(0));
     } else if (top != null && top.isInst()) {
       requireNonNull(top.overloadId);
-      final Type argType = typeMap.getType(apply.arg);
       final List<Core.IdPat> matchingIds = new ArrayList<>();
       for (Core.IdPat idPat : env.getOverloads(top.overloadId)) {
         if (idPat.type.canCallArgOf(argType)) {
@@ -733,11 +743,10 @@ public class Resolver {
         throw new AssertionError(
             "zero or more than one matching bindings: " + matchingIds);
       }
-      coreFn = core.id(getIdPat(apply.fn, matchingIds.get(0)));
+      return core.id(getIdPat(fn, matchingIds.get(0)));
     } else {
-      coreFn = toCore(apply.fn);
+      return toCore(fn);
     }
-    return core.apply(apply.pos, type, coreFn, coreArg);
   }
 
   static @Nullable Object valueOf(Environment env, Core.Exp exp) {
@@ -1235,9 +1244,29 @@ public class Resolver {
     Core.Exp run(Ast.Query query) {
       if (query.isInto()) {
         // Translate "from ... into f" as if they had written "f (from ...)"
-        final Core.Exp coreFrom = run(skipLast(query.steps));
+        Core.Exp coreFrom = run(skipLast(query.steps));
         final Ast.Into into = (Ast.Into) last(query.steps);
-        final Core.Exp exp = toCore(into.exp);
+        // Use fnToCore to resolve overloaded functions based on arg type.
+        final Core.Exp exp = fnToCore(into.exp, coreFrom.type);
+        // If the function's parameter collection kind differs from
+        // the input (e.g. sum expects bag, input is list), wrap the
+        // input with a converter.
+        final boolean inputOrdered = coreFrom.type instanceof ListType;
+        Type expType = exp.type;
+        if (expType instanceof ForallType) {
+          expType = ((ForallType) expType).type;
+        }
+        if (expType instanceof FnType) {
+          final Type paramType = ((FnType) expType).paramType;
+          final boolean fnOrdered = paramType instanceof ListType;
+          if (fnOrdered != inputOrdered) {
+            final BuiltIn converter =
+                inputOrdered ? BuiltIn.BAG_FROM_LIST : BuiltIn.BAG_TO_LIST;
+            final Core.Exp converterLit =
+                core.functionLiteral(typeMap.typeSystem, converter);
+            coreFrom = core.apply(Pos.ZERO, paramType, converterLit, coreFrom);
+          }
+        }
         return core.apply(exp.pos, typeMap.getType(query), exp, coreFrom);
       }
 
@@ -1541,8 +1570,6 @@ public class Resolver {
     private final ImmutableList<Core.IdPat> groupKeys;
     private final Resolver inputResolver;
     private final PairList<Core.IdPat, Core.Aggregate> aggregates;
-
-    @SuppressWarnings("FieldCanBeLocal")
     private final boolean ordered;
 
     private AggregateResolverImpl(
@@ -1568,10 +1595,44 @@ public class Resolver {
         boolean orderedAgg,
         Resolver outerResolver,
         Ast.@Nullable Id id) {
+      final TypeMap typeMap = outerResolver.typeMap;
+      final Type argElementType = typeMap.getType(aggregate.argument);
+      final Type argType =
+          orderedAgg
+              ? typeMap.typeSystem.listType(argElementType)
+              : typeMap.typeSystem.bagType(argElementType);
+      Core.Exp aggFn = outerResolver.fnToCore(aggregate.aggregate, argType);
+      if (orderedAgg != ordered) {
+        // The aggregate function's collection kind differs from the input.
+        // Compose a converter with the aggregate function:
+        //   fn $col => aggFn(converter($col))
+        final BuiltIn converter =
+            ordered
+                ? BuiltIn.BAG_FROM_LIST // input is list, fn expects bag
+                : BuiltIn.BAG_TO_LIST; // input is bag, fn expects list
+        final Type inputCollType =
+            ordered
+                ? typeMap.typeSystem.listType(argElementType)
+                : typeMap.typeSystem.bagType(argElementType);
+        final Core.IdPat param =
+            core.idPat(
+                inputCollType, "$col", typeMap.typeSystem.nameGenerator::inc);
+        final Core.Exp paramRef = core.id(param);
+        final Core.Exp converterLit =
+            core.functionLiteral(typeMap.typeSystem, converter);
+        final Core.Exp converted =
+            core.apply(Pos.ZERO, argType, converterLit, paramRef);
+        final Core.Exp applied =
+            core.apply(Pos.ZERO, typeMap.getType(aggregate), aggFn, converted);
+        final FnType wrappedType =
+            typeMap.typeSystem.fnType(
+                inputCollType, typeMap.getType(aggregate));
+        aggFn = core.fn(wrappedType, param, applied);
+      }
       final Core.Aggregate coreAggregate =
           core.aggregate(
-              outerResolver.typeMap.getType(aggregate),
-              outerResolver.toCore(aggregate.aggregate, null),
+              typeMap.getType(aggregate),
+              aggFn,
               inputResolver.toCore(aggregate.argument));
       final String base =
           id != null
@@ -1587,10 +1648,14 @@ public class Resolver {
     public Core.Exp toCore(Ast.Elements elements, Resolver outerResolver) {
       final TypeMap typeMap = outerResolver.typeMap;
       Type type = typeMap.getType(elements);
+      // elements has the same collection type as the input, so the
+      // aggregate function is the identity with concrete type
+      // (e.g. int list -> int list), not the polymorphic ForallType.
+      final FnType fnType = typeMap.typeSystem.fnType(type, type);
       Core.Aggregate coreAggregate =
           core.aggregate(
               type,
-              core.functionLiteral(typeMap.typeSystem, BuiltIn.FN_ID),
+              core.functionLiteral(fnType, BuiltIn.FN_ID),
               inputResolver.current);
       String base = Op.ELEMENTS.lowerName();
       final String name = generateName(base, this::nameIsUnavailable);

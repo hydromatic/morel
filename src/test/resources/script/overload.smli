@@ -25,6 +25,12 @@ Sys.set ("printLength", 64);
 Sys.set ("stringDepth", ~1);
 > val it = () : unit
 
+(*) Enable functions in the 'Test' structure.
+Sys.set ("excludeStructures", "");
+> val it = () : unit
+Sys.clearEnv ();
+> val it = () : unit
+
 (* ---------------------------------------------------------------------------
  * Example based on "A Second Look at Overloading" by Martin Odersky, Philip
  * Wadler, Martin Wehr (1995). *)
@@ -257,10 +263,172 @@ scan (bag [1]);
 > val it = [1] : int bag
 
 (* ---------------------------------------------------------------------------
- * The built-in 'Relational.nonEmpty' function works on both lists and bags. *)
-Relational.nonEmpty (bag [1]);
-> val it = true : bool
-Relational.nonEmpty [1];
-> val it = true : bool
+ * An overloaded aggregate function is resolved based on whether the input is
+   ordered. *)
+over overAgg;
+> over overAgg
+val inst overAgg = fn bag => if Bag.length bag < 0 then "" else "bag";
+> val overAgg = fn : 'a bag -> string
+val inst overAgg = fn list => if List.length list < 0 then "" else "list";
+> val overAgg = fn : 'a list -> string
+
+from i in [1, 2, 3]
+  compute overAgg over i;
+> val it = "list" : string
+from i in bag [1, 2, 3]
+  compute overAgg over i;
+> val it = "bag" : string
+from i in [1, 2, 3]
+  unorder
+  compute overAgg over i;
+> val it = "bag" : string
+from i in bag [1, 2, 3]
+  order DESC i
+  compute overAgg over i;
+> val it = "list" : string
+
+(*) A non-overloaded aggregate function can adapt.
+(*) 1. List agg applied to list
+from i in [1, 2, 3]
+  compute List.hd over i;
+> val it = 1 : int
+(*) 2. List agg applied to bag
+from i in bag [1, 2, 3]
+  compute List.hd over i;
+> val it = 1 : int
+(*) 3. Bag agg applied to list
+from i in [1, 2, 3]
+  compute Bag.hd over i;
+> val it = 1 : int
+(*) 4. Bag agg applied to bag
+from i in bag [1, 2, 3]
+  compute Bag.hd over i;
+> val it = 1 : int
+
+
+
+(* ---------------------------------------------------------------------------
+ * Synthetic aggregate tests: Test.bagSum, Test.listSum, Test.overSum.
+ *)
+
+(*) Test.bagSum in a bag context
+from e in (from x in [1, 2, 3] unorder)
+ group {} compute Test.bagSum over e;
+> val it = [6] : int bag
+
+(*) Test.bagSum in a list context (should still work)
+from e in [1, 2, 3]
+ group {} compute Test.bagSum over e;
+> val it = [6] : int list
+
+(*) Test.listSum in a list context
+from e in [1, 2, 3]
+ group {} compute Test.listSum over e;
+> val it = [6] : int list
+
+(*) Test.listSum in a bag context (should still work)
+from e in (from x in [1, 2, 3] unorder)
+ group {} compute Test.listSum over e;
+> val it = [6] : int bag
+
+(*) Test.overSum selects bag variant in bag context
+from e in (from x in [1, 2, 3] unorder)
+ group {} compute Test.overSum over e;
+> val it = [6] : int bag
+
+(*) Test.overSum selects list variant in list context
+from e in [1, 2, 3]
+ group {} compute Test.overSum over e;
+> val it = [6] : int list
+
+(*) Test.overCount selects bag variant in bag context (returns count)
+from e in (from x in [1, 2, 3] unorder)
+ group {} compute Test.overCount over e;
+> val it = [3] : int bag
+
+(*) Test.overCount selects list variant in list context (returns count + 1000)
+from e in [1, 2, 3]
+ group {} compute Test.overCount over e;
+> val it = [1003] : int list
+
+(*) A user-defined aggregate works regardless of its collection kind.
+let
+  fun count_list list = List.length list
+  fun count_bag bag = Bag.length bag
+  val emps = [
+      {id = 100, name = "Fred", deptno = 10},
+      {id = 101, name = "Velma", deptno = 20},
+      {id = 102, name = "Shaggy", deptno = 30},
+      {id = 103, name = "Scooby", deptno = 30}]
+in
+  from e in emps
+    group e.deptno
+      compute {c1 = count_list over (), c2 = count_bag over ()}
+    order deptno
+end;
+> val it = [{c1=1,c2=1,deptno=10},{c1=1,c2=1,deptno=20},{c1=2,c2=2,deptno=30}]
+>   : {c1:int, c2:int, deptno:int} list
+
+(* ---------------------------------------------------------------------------
+ * Test 'into' with aggregates: mirrors 'compute' tests above.
+ *)
+
+(*) Test.bagSum into, with bag input
+from e in (from x in [1, 2, 3] unorder) into Test.bagSum;
+> val it = 6 : int
+
+(*) Test.bagSum into, with list input (should still work)
+from e in [1, 2, 3] into Test.bagSum;
+> val it = 6 : int
+
+(*) Test.listSum into, with list input
+from e in [1, 2, 3] into Test.listSum;
+> val it = 6 : int
+
+(*) Test.listSum into, with bag input (should still work)
+from e in (from x in [1, 2, 3] unorder) into Test.listSum;
+> val it = 6 : int
+
+(*) Test.overSum into, selects bag variant in bag context
+from e in (from x in [1, 2, 3] unorder) into Test.overSum;
+> val it = 6 : int
+
+(*) Test.overSum into, selects list variant in list context
+from e in [1, 2, 3] into Test.overSum;
+> val it = 6 : int
+
+(*) Test.overCount into, selects bag variant in bag context (returns count)
+from e in (from x in [1, 2, 3] unorder) into Test.overCount;
+> val it = 3 : int
+
+(*) Test.overCount into, selects list variant in list context (returns count + 1000)
+from e in [1, 2, 3] into Test.overCount;
+> val it = 1003 : int
+
+(*) overAgg into, selects list variant in list context
+from i in [1, 2, 3] into overAgg;
+> val it = "list" : string
+
+(*) overAgg into, selects bag variant in bag context
+from i in bag [1, 2, 3] into overAgg;
+> val it = "bag" : string
+
+(*) Non-overloaded aggregates adapt via into
+from i in [1, 2, 3] into List.hd;
+> val it = 1 : int
+
+from i in bag [1, 2, 3] into List.hd;
+> val it = 1 : int
+
+from i in [1, 2, 3] into Bag.hd;
+> val it = 1 : int
+
+from i in bag [1, 2, 3] into Bag.hd;
+> val it = 1 : int
+
+(*) Qualified-name aggregate works with into regardless of collection kind
+(from e in [1, 2, 3] into List.length,
+ from e in [1, 2, 3] into Bag.length);
+> val it = (3,3) : int * int
 
 (*) End overload.smli

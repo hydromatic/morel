@@ -260,15 +260,6 @@ public abstract class Unifier {
   }
 
   /**
-   * Result indicating that unification may be possible if we adjust some
-   * initial parameters.
-   */
-  public interface Retry extends Result {
-    /** Changes some stuff so that we can try unification again. */
-    void amend();
-  }
-
-  /**
    * The results of a successful unification. Gives access to the raw variable
    * mapping that resulted from the algorithm, but can also resolve a variable
    * to the fullest extent possible with the {@link #resolve} method.
@@ -457,6 +448,19 @@ public abstract class Unifier {
     @Override
     public String toString() {
       return name;
+    }
+
+    @Override
+    public int hashCode() {
+      return name.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj == this
+          || obj instanceof Variable
+              && this.ordinal == ((Variable) obj).ordinal
+              && this.name.equals(((Variable) obj).name);
     }
 
     @Override

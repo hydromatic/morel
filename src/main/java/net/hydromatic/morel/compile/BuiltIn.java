@@ -2906,24 +2906,21 @@ public enum BuiltIn {
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()))),
 
   /**
-   * Function "Relational.count", aka "count", of type "int bag &rarr; int".
+   * Function "Relational.count", aka "count", of type "&alpha; bag &rarr; int".
    *
    * <p>Often used with {@code group}:
    *
    * <pre>{@code
    * from e in emps
-   *   group deptno = (#deptno e)
-   *     compute sumId = sum of (#id e)
+   *   group {deptno = #deptno e}
+   *     compute {c = count over ()}
    * }</pre>
    */
   RELATIONAL_COUNT(
       "Relational",
       "count",
       "count",
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), INT)),
-              ts.forallType(1, h -> ts.fnType(h.list(0), INT)))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), INT))),
 
   /**
    * Function "Relational.empty", aka "empty", of type "&alpha; bag &rarr;
@@ -2955,10 +2952,7 @@ public enum BuiltIn {
       "Relational",
       "empty",
       "empty",
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL)),
-              ts.forallType(1, h -> ts.fnType(h.list(0), BOOL)))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
 
   /**
    * Function "Relational.iterate", aka "iterate", of type "&alpha; bag &rarr;
@@ -2997,10 +2991,7 @@ public enum BuiltIn {
       "Relational",
       "max",
       "max",
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
-              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
 
   /**
    * Function "Relational.min", aka "min", of type "&alpha; bag &rarr; &alpha;"
@@ -3010,10 +3001,7 @@ public enum BuiltIn {
       "Relational",
       "min",
       "min",
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
-              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
 
   /**
    * Function "Relational.nonEmpty", of type "&alpha; bag &rarr; bool".
@@ -3041,18 +3029,15 @@ public enum BuiltIn {
       "Relational",
       "nonEmpty",
       "nonEmpty",
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL)),
-              ts.forallType(1, h -> ts.fnType(h.list(0), BOOL)))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
 
   /**
    * Function "Relational.only", aka "only", of type "&alpha; bag &rarr;
-   * &alpha;".
+   * &alpha;" or "&alpha; list &rarr; &alpha;".
    *
-   * <p>"only bag" returns the only element of {@code bag}. It raises {@link
-   * BuiltInExn#EMPTY Empty} if {@code list} is nil, {@link BuiltInExn#SIZE
-   * Size} if {@code list} has more than one element.
+   * <p>"only collection" returns the only element of {@code collection}. It
+   * raises {@link BuiltInExn#EMPTY Empty} if {@code collection} is nil, {@link
+   * BuiltInExn#SIZE Size} if {@code collection} has more than one element.
    *
    * <p>"only" allows you to write the equivalent of a scalar sub-query:
    *
@@ -3080,18 +3065,15 @@ public enum BuiltIn {
    *
    * <pre>{@code
    * from e in emps
-   * group deptno = (#deptno e)
-   *   compute sumId = sum of (#id e)
+   * group {deptno = #deptno e}
+   *   compute {sumId = sum over #id e}
    * }</pre>
    */
   RELATIONAL_SUM(
       "Relational",
       "sum",
       "sum",
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
-              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
 
   /**
    * Function "String.collate", of type "(char * char &rarr; order) &rarr;
@@ -3386,8 +3368,51 @@ public enum BuiltIn {
   /** Function "Sys.unset", aka "unset", of type "string &rarr; unit". */
   SYS_UNSET("Sys", "unset", "unset", ts -> ts.fnType(STRING, UNIT)),
 
+  /**
+   * Test-only aggregate "Test.bagSum", of type "&alpha; bag &rarr; &alpha;".
+   * Accepts ONLY bag.
+   */
+  TEST_BAG_SUM(
+      "Test",
+      "bagSum",
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
+
   /** Function "Test.foo", of type "int &rarr; int". */
   TEST_FOO("Test", "foo", ts -> ts.fnType(INT, INT)),
+
+  /**
+   * Test-only aggregate "Test.listSum", of type "&alpha; list &rarr; &alpha;".
+   * Accepts ONLY list.
+   */
+  TEST_LIST_SUM(
+      "Test",
+      "listSum",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
+
+  /**
+   * Test-only overloaded aggregate "Test.overCount". The bag variant returns
+   * {@code count}; the list variant returns {@code count + 1000}. This allows
+   * tests to verify which variant was selected at runtime.
+   */
+  TEST_OVER_COUNT(
+      "Test",
+      "overCount",
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), INT)),
+              ts.forallType(1, h -> ts.fnType(h.list(0), INT)))),
+
+  /**
+   * Test-only aggregate "Test.overSum", overloaded with both "&alpha; bag
+   * &rarr; &alpha;" and "&alpha; list &rarr; &alpha;".
+   */
+  TEST_OVER_SUM(
+      "Test",
+      "overSum",
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
+              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
 
   /**
    * Function "Variant.parse", of type "string &rarr; variant".
@@ -3876,6 +3901,20 @@ public enum BuiltIn {
    */
   Z_SUM_REAL("$", "sum:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
+  /**
+   * Internal implementation of the bag variant of "Test.testOverCount". Returns
+   * the count of the bag.
+   */
+  Z_TEST_OVER_COUNT_BAG(
+      "$", "testOverCount:bag", ts -> ts.fnType(ts.bagType(INT), INT)),
+
+  /**
+   * Internal implementation of the list variant of "Test.testOverCount".
+   * Returns the count of the list plus 1000.
+   */
+  Z_TEST_OVER_COUNT_LIST(
+      "$", "testOverCount:list", ts -> ts.fnType(ts.listType(INT), INT)),
+
   /** Internal times operator "*", of type "int * int &rarr; int". */
   Z_TIMES_INT("$", "*:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
@@ -3899,7 +3938,8 @@ public enum BuiltIn {
    */
   public final Function<TypeSystem, Type> typeFunction;
 
-  private final @Nullable PrimitiveType preferredType;
+  /** Preferred argument type, if this built-in has a generic type. */
+  public final @Nullable PrimitiveType preferredType;
 
   /** Computes a value for a particular session. */
   public final @Nullable Function<Session, Object> sessionValue;

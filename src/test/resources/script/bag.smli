@@ -252,18 +252,16 @@ from i in intList except distinct intList;
 from i in intList except distinct intBag;
 > val it = [] : int bag
 
-(*) into requires a function with the same collection type
-(*) ([MOREL-271] will lift this limitation.)
+(*) into adapts collection kind: a bag function works with list input
+(*) and vice versa. [MOREL-271]
 from i in intList into doubleList;
 > val it = [2,4,2,6] : int list
 from i in intList into doubleBag;
-> 0.0-0.0 Error: Cannot deduce type: conflict: list(T3) vs bag(int)
->   raised at: 0.0-0.0
+> val it = [2,4,2,6] : int bag
 from i in intBag into doubleBag;
 > val it = [2,4,2,6] : int bag
 from i in intBag into doubleList;
-> 0.0-0.0 Error: Cannot deduce type: conflict: bag(T3) vs list(int)
->   raised at: 0.0-0.0
+> val it = [2,4,2,6] : int list
 
 (*) through requires a function with the same collection type
 (*) ([MOREL-271] will lift this limitation.)
