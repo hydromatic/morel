@@ -469,6 +469,11 @@ public enum CoreBuilder {
     boolean ordered = true;
     for (Core.FromStep step : steps) {
       ordered = step.isOrdered(ordered);
+      checkArgument(
+          ordered == step.env.ordered,
+          "unexpected ordered [%s] in step [%s]",
+          step.env.ordered,
+          step);
     }
     return ordered;
   }
@@ -615,6 +620,7 @@ public enum CoreBuilder {
 
   public Core.Scan scan(
       Core.StepEnv env, Core.Pat pat, Core.Exp exp, Core.Exp condition) {
+    env = env.withOrdered(env.ordered && exp.type instanceof ListType);
     return new Core.Scan(env, pat, exp, condition);
   }
 
@@ -624,11 +630,12 @@ public enum CoreBuilder {
   }
 
   public Core.Order order(Core.StepEnv env, Core.Exp exp) {
-    return new Core.Order(env, exp);
+    return new Core.Order(env.withOrdered(true), exp);
   }
 
   public Core.Group group(
       boolean atom,
+      boolean ordered,
       SortedMap<Core.IdPat, Core.Exp> groupExps,
       SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
     final List<Binding> bindings = new ArrayList<>();
@@ -640,7 +647,7 @@ public enum CoreBuilder {
         bindings.size(),
         bindings);
     return new Core.Group(
-        Core.StepEnv.of(bindings, atom),
+        Core.StepEnv.of(bindings, atom, ordered),
         ImmutableSortedMap.copyOfSorted(groupExps),
         ImmutableSortedMap.copyOfSorted(aggregates));
   }
@@ -673,7 +680,7 @@ public enum CoreBuilder {
   }
 
   public Core.Unorder unorder(Core.StepEnv env) {
-    return new Core.Unorder(env);
+    return new Core.Unorder(env.withOrdered(false));
   }
 
   public Core.Yield yield_(Core.StepEnv env, Core.Exp exp) {
@@ -681,7 +688,8 @@ public enum CoreBuilder {
   }
 
   /** Derives bindings, then calls {@link #yield_(Core.StepEnv, Core.Exp)}. */
-  public Core.Yield yield_(TypeSystem typeSystem, Core.Exp exp, boolean atom) {
+  public Core.Yield yield_(
+      TypeSystem typeSystem, Core.Exp exp, boolean atom, boolean ordered) {
     final List<Core.NamedPat> idPats = new ArrayList<>();
     if (atom) {
       idPats.add(getIdPat(typeSystem, exp, null));
@@ -697,7 +705,8 @@ public enum CoreBuilder {
               (name, type) ->
                   idPats.add(idPat(type, name, typeSystem.nameGenerator::inc)));
     }
-    return yield_(Core.StepEnv.of(transform(idPats, Binding::of), atom), exp);
+    return yield_(
+        Core.StepEnv.of(transform(idPats, Binding::of), atom, ordered), exp);
   }
 
   private Core.NamedPat getIdPat(

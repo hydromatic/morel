@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.type;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
@@ -395,6 +396,11 @@ public class TypeSystem {
     final ForallHelper helper =
         new ForallHelper() {
           public TypeVar get(int i) {
+            checkArgument(
+                i >= 0 && i < typeCount,
+                "type variable index %s out of range [0, %s)",
+                i,
+                typeCount);
             return typeVariable(i);
           }
 

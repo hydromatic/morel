@@ -228,7 +228,8 @@ public class Resolver {
             current,
             AggregateResolver.UNSUPPORTED);
     final AggregateResolver aggregateResolver =
-        new AggregateResolverImpl(groupKeys, innerResolver, aggregates);
+        new AggregateResolverImpl(
+            groupKeys, stepEnv.ordered, innerResolver, aggregates);
     return new Resolver(
         typeMap,
         nameGenerator,
@@ -528,7 +529,7 @@ public class Resolver {
       case APPLY:
         return toCore((Ast.Apply) exp);
       case AGGREGATE:
-        return aggregateResolver.toCore((Ast.Aggregate) exp, this, id);
+        return toCore((Ast.Aggregate) exp, id);
       case FN:
         return toCore((Ast.Fn) exp);
       case IF:
@@ -743,6 +744,12 @@ public class Resolver {
       }
     }
     return null; // not constant
+  }
+
+  private Core.Exp toCore(Ast.Aggregate aggregate, Ast.@Nullable Id id) {
+    final FnType fnType = (FnType) typeMap.getType(aggregate.aggregate);
+    final boolean orderedAgg = fnType.paramType instanceof ListType;
+    return aggregateResolver.toCore(aggregate, orderedAgg, this, id);
   }
 
   private Core.RecordSelector toCore(Ast.RecordSelector recordSelector) {
@@ -1381,12 +1388,14 @@ public class Resolver {
         final String label;
         if (emptyKey) {
           // No group keys. Since this is atom, compute must be a singleton.
+          requireNonNull(group.aggregate);
           exp = aggregateResolver.toCore(group.aggregate, null);
-          label = ast.implicitLabelOpt(requireNonNull(group.aggregate));
+          label = ast.implicitLabelOpt(group.aggregate);
         } else {
           // One group key. Since this is an atom, compute must be empty.
+          requireNonNull(group.group);
           exp = r.toCore(group.group);
-          label = ast.implicitLabelOpt(requireNonNull(group.group));
+          label = ast.implicitLabelOpt(group.group);
         }
         Core.Id id;
         Core.IdPat idPat;
@@ -1452,11 +1461,31 @@ public class Resolver {
    * Core.Aggregate} and returns its {@link Core.Id}.
    */
   private interface AggregateResolver {
+    /**
+     * Converts an {@link Ast.Aggregate} to a core expression.
+     *
+     * <p>If the value of {@code orderedAgg} is not the same as {@link
+     * AggregateResolverImpl#ordered} (e.g. if the aggregate function expects a
+     * bag, but previous step in the query produced a list) then conversion will
+     * be required.
+     *
+     * @param aggregate Aggregate (function plus argument)
+     * @param orderedAgg Whether the aggregate function expects a list (as
+     *     opposed to a bag)
+     * @param outerResolver Resolver with which to translate the aggregate
+     *     function (evaluated in the context of a group, and therefore
+     *     containing the group key but not individual input rows)
+     * @param id Name for the aggregate; if specified, can generate a more
+     *     meaningful field name in the resulting record.
+     */
     Core.Exp toCore(
-        Ast.Aggregate aggregate, Resolver outerResolver, Ast.@Nullable Id id);
+        Ast.Aggregate aggregate,
+        boolean orderedAgg,
+        Resolver outerResolver,
+        Ast.@Nullable Id id);
 
     AggregateResolver UNSUPPORTED =
-        (aggregate, outerResolver, id) -> {
+        (aggregate, orderedAgg, outerResolver, id) -> {
           throw new UnsupportedOperationException(
               "Aggregate expressions are not supported in this context: "
                   + aggregate);
@@ -1480,11 +1509,16 @@ public class Resolver {
     private final Resolver inputResolver;
     private final PairList<Core.IdPat, Core.Aggregate> aggregates;
 
+    @SuppressWarnings("FieldCanBeLocal")
+    private final boolean ordered;
+
     private AggregateResolverImpl(
         Collection<? extends Core.IdPat> groupKeys,
+        boolean ordered,
         Resolver inputResolver,
         PairList<Core.IdPat, Core.Aggregate> aggregates) {
       this.groupKeys = ImmutableList.copyOf(groupKeys);
+      this.ordered = ordered;
       this.inputResolver = inputResolver;
       this.aggregates = aggregates;
     }
@@ -1497,7 +1531,10 @@ public class Resolver {
 
     @Override
     public Core.Exp toCore(
-        Ast.Aggregate aggregate, Resolver outerResolver, Ast.@Nullable Id id) {
+        Ast.Aggregate aggregate,
+        boolean orderedAgg,
+        Resolver outerResolver,
+        Ast.@Nullable Id id) {
       final Core.Aggregate coreAggregate =
           core.aggregate(
               outerResolver.typeMap.getType(aggregate),

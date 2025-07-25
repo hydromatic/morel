@@ -26,6 +26,7 @@ import static net.hydromatic.morel.util.Static.append;
 import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.skipLast;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Range;
@@ -40,6 +41,7 @@ import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.RefChecker;
 import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
@@ -105,7 +107,8 @@ public class FromBuilder {
 
   /** Returns the environment available after the most recent step. */
   public Core.StepEnv stepEnv() {
-    return Core.StepEnv.of(bindings, atom);
+    final boolean ordered = steps.isEmpty() || last(steps).env.ordered;
+    return Core.StepEnv.of(bindings, atom, ordered);
   }
 
   private FromBuilder addStep(Core.FromStep step) {
@@ -137,6 +140,13 @@ public class FromBuilder {
         }
       }
     }
+    checkArgument(
+        step.env.ordered
+            == step.isOrdered(
+                steps.isEmpty() || step.isOrdered(last(steps).env.ordered)),
+        "step [%s] has wrong ordered [%s]",
+        step,
+        step.env.ordered);
     steps.add(step);
     if (!bindings.equals(step.env.bindings)) {
       bindings.clear();
@@ -171,7 +181,7 @@ public class FromBuilder {
       // This is an atom only if this is the first step.
       // Even if the previous step was empty, e.g.
       // "from () in [()], i in [1,2]" has type "{i:int} list" not "int list".
-      boolean atom1 = this.steps.isEmpty() && lastStep.env.atom;
+      final boolean atom1 = this.steps.isEmpty() && lastStep.env.atom;
 
       final PairList<String, Core.Exp> nameExps = PairList.of();
       boolean uselessIfLast = this.bindings.isEmpty();
@@ -213,13 +223,18 @@ public class FromBuilder {
             return this;
           }
           nameExps.add(idPat.name, ((Core.Yield) lastStep).exp);
-          env = Core.StepEnv.atom(Binding.of(idPat));
-          return yield_(false, env, core.record(typeSystem, nameExps), atom1);
+          final Core.StepEnv env2 =
+              Core.StepEnv.of(
+                  ImmutableList.of(Binding.of(idPat)),
+                  true,
+                  lastStep.env.ordered);
+          return yield_(false, env2, core.record(typeSystem, nameExps), true);
         }
         final Binding binding = lastStep.env.bindings.get(0);
         nameExps.add(idPat.name, core.id(binding.id));
 
-        env = Core.StepEnv.of(append(this.bindings, Binding.of(idPat)), atom1);
+        env =
+            lastStep.env.withBindings(append(this.bindings, Binding.of(idPat)));
       }
       addAll(steps);
       return yield_(
@@ -290,23 +305,36 @@ public class FromBuilder {
   }
 
   public FromBuilder except(boolean distinct, List<Core.Exp> args) {
-    return addStep(core.except(stepEnv(), distinct, args));
+    final Core.StepEnv env = stepEnv();
+    final Core.StepEnv env2 =
+        env.withOrdered(
+            env.ordered && allMatch(args, arg -> arg.type instanceof ListType));
+    return addStep(core.except(env2, distinct, args));
   }
 
   public FromBuilder intersect(boolean distinct, List<Core.Exp> args) {
-    return addStep(core.intersect(stepEnv(), distinct, args));
+    final Core.StepEnv env = stepEnv();
+    final Core.StepEnv env2 =
+        env.withOrdered(
+            env.ordered && allMatch(args, arg -> arg.type instanceof ListType));
+    return addStep(core.intersect(env2, distinct, args));
   }
 
   public FromBuilder union(boolean distinct, List<Core.Exp> args) {
-    return addStep(core.union(stepEnv(), distinct, args));
+    final Core.StepEnv env = stepEnv();
+    final Core.StepEnv env2 =
+        env.withOrdered(
+            env.ordered && allMatch(args, arg -> arg.type instanceof ListType));
+    return addStep(core.union(env2, distinct, args));
   }
 
   /** Makes the query unordered. No-op if already unordered. */
   public FromBuilder unorder() {
-    if (!CoreBuilder.fromOrdered(steps)) {
+    final Core.StepEnv env = stepEnv();
+    if (!env.ordered) {
       return this;
     }
-    return addStep(core.unorder(stepEnv()));
+    return addStep(core.unorder(env));
   }
 
   public FromBuilder distinct() {
@@ -320,7 +348,8 @@ public class FromBuilder {
       boolean atom,
       SortedMap<Core.IdPat, Core.Exp> groupExps,
       SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
-    return addStep(core.group(atom, groupExps, aggregates));
+    final Core.StepEnv env = stepEnv();
+    return addStep(core.group(atom, env.ordered, groupExps, aggregates));
   }
 
   public FromBuilder order(Core.Exp exp) {
@@ -365,11 +394,11 @@ public class FromBuilder {
       Core.Exp exp,
       boolean atom) {
     checkArgument(env2 == null || env2.atom == atom);
+    final Core.StepEnv env = stepEnv();
     boolean uselessIfNotLast = false;
     switch (exp.op) {
       case TUPLE:
-        final TupleType tupleType =
-            tupleType((Core.Tuple) exp, stepEnv(), env2);
+        final TupleType tupleType = tupleType((Core.Tuple) exp, env, env2);
         switch (tupleType) {
           case IDENTITY:
             // A trivial record does not rename, so its only purpose is to
@@ -379,7 +408,7 @@ public class FromBuilder {
               // Singleton record that does not rename, e.g. 'yield {x=x}'.
               // It only has meaning as the last step.
               if (env2 == null) {
-                env2 = Core.StepEnv.of(bindings, false);
+                env2 = Core.StepEnv.of(bindings, false, env.ordered);
               }
               uselessIfNotLast = true;
               break;
@@ -405,17 +434,15 @@ public class FromBuilder {
         if (bindings.size() == 1
             && ((Core.Id) exp).idPat.equals(bindings.get(0).id)
             // After 'yield {x = something}', 'yield x' may seem trivial, but
-            // it converts record to scalar type, so don't remove it.
-            && !(!steps.isEmpty()
-                && last(steps).op == Op.YIELD
-                && ((Core.Yield) last(steps)).exp.op == Op.TUPLE)) {
+            // it converts a singleton record to an atom, so don't remove it.
+            && (steps.isEmpty() || last(steps).env.atom)) {
           return this;
         }
     }
     Core.Yield step =
         env2 != null
-            ? core.yield_(env2, exp)
-            : core.yield_(typeSystem, exp, atom);
+            ? core.yield_(env2.withOrdered(env.ordered), exp)
+            : core.yield_(typeSystem, exp, atom, env.ordered);
     addStep(step);
     removeIfNotLastIndex =
         uselessIfNotLast ? steps.size() - 1 : Integer.MIN_VALUE;

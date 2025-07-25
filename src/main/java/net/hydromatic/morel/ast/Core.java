@@ -27,6 +27,7 @@ import static net.hydromatic.morel.type.TypeSystem.canAssign;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 import static net.hydromatic.morel.util.Static.allMatch;
+import static net.hydromatic.morel.util.Static.last;
 import static org.apache.calcite.util.Util.first;
 
 import com.google.common.collect.ImmutableList;
@@ -1538,6 +1539,11 @@ public class Core {
           ? this
           : core.fromBuilder(typeSystem, env).addAll(steps).build();
     }
+
+    /** Returns whether the collection of elements is ordered. */
+    public boolean isOrdered() {
+      return steps.isEmpty() || last(steps).env.ordered;
+    }
   }
 
   /**
@@ -1578,33 +1584,52 @@ public class Core {
 
   /** Environment for a step. */
   public static class StepEnv {
-    public static final StepEnv EMPTY = new StepEnv(ImmutableList.of(), false);
+    public static final StepEnv EMPTY =
+        new StepEnv(ImmutableList.of(), false, true);
 
     public final ImmutableList<Binding> bindings;
     public final boolean atom;
+    public final boolean ordered;
 
-    private StepEnv(List<Binding> bindings, boolean atom) {
+    private StepEnv(List<Binding> bindings, boolean atom, boolean ordered) {
       this.bindings = ImmutableList.copyOf(bindings);
       this.atom = atom;
+      this.ordered = ordered;
       checkArgument(!atom || bindings.size() == 1);
     }
 
     /** Creates a StepEnv. */
-    public static StepEnv of(List<Binding> bindings, boolean atom) {
-      if (bindings.isEmpty() && !atom) {
+    public static StepEnv of(
+        List<Binding> bindings, boolean atom, boolean ordered) {
+      if (bindings.isEmpty() && !atom && ordered) {
         return EMPTY;
       }
-      return new StepEnv(bindings, atom);
+      return new StepEnv(bindings, atom, ordered);
     }
 
-    /** Creates a StepEnv that is an atom. */
-    public static StepEnv atom(Binding binding) {
-      return new StepEnv(ImmutableList.of(binding), true);
+    /** Returns a copy of this env with the given {@code ordered} property. */
+    public StepEnv withOrdered(boolean ordered) {
+      if (ordered == this.ordered) {
+        return this;
+      }
+      return new StepEnv(bindings, atom, ordered);
+    }
+
+    /** Returns a copy of this env with the given bindings. */
+    public StepEnv withBindings(Iterable<? extends Binding> bindings) {
+      if (bindings.equals(this.bindings)) {
+        return this;
+      }
+      final ImmutableList<Binding> bindings2 = ImmutableList.copyOf(bindings);
+      if (bindings2.equals(this.bindings)) {
+        return this;
+      }
+      return new StepEnv(bindings2, atom, ordered);
     }
 
     @Override
     public int hashCode() {
-      return hash(bindings, atom);
+      return hash(bindings, atom, ordered);
     }
 
     @Override
@@ -1612,6 +1637,7 @@ public class Core {
       return this == obj
           || obj instanceof StepEnv
               && this.atom == ((StepEnv) obj).atom
+              && this.ordered == ((StepEnv) obj).ordered
               && this.bindings.equals(((StepEnv) obj).bindings);
     }
   }
@@ -2000,7 +2026,7 @@ public class Core {
               && groupExps.equals(this.groupExps)
               && aggregates.equals(this.aggregates)
           ? this
-          : core.group(atom, groupExps, aggregates);
+          : core.group(atom, env.ordered, groupExps, aggregates);
     }
   }
 

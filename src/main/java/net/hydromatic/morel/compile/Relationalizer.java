@@ -83,7 +83,8 @@ public class Relationalizer extends EnvShuttle {
                           fnType.resultType,
                           f,
                           core.implicitYieldExp(typeSystem, from.steps)),
-                      fnType.resultType.op() != Op.RECORD_TYPE);
+                      fnType.resultType.op() != Op.RECORD_TYPE,
+                      from.isOrdered());
               return core.from(typeSystem, append(from.steps, yieldStep));
             }
             if (literal.value == BuiltIn.LIST_FILTER
@@ -122,7 +123,7 @@ public class Relationalizer extends EnvShuttle {
       final List<Binding> bindings = new ArrayList<>();
       Compiles.acceptBinding(id, bindings);
       boolean atom = bindings.size() == 1;
-      final Core.StepEnv stepEnv = Core.StepEnv.of(bindings, atom);
+      final Core.StepEnv stepEnv = Core.StepEnv.of(bindings, atom, true);
       final Core.Scan scan =
           core.scan(stepEnv, id, exp, core.boolLiteral(true));
       return core.from(typeSystem, ImmutableList.of(scan));
