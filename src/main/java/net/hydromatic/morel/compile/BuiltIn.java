@@ -1282,6 +1282,124 @@ public enum BuiltIn {
                       ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.bag(0)))),
 
   /**
+   * Function "Fn.apply", of type "(&alpha; &rarr; &beta;) * &alpha; &rarr;
+   * &beta;".
+   */
+  FN_APPLY(
+      "Fn",
+      "apply",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(ts.fnType(h.get(0), h.get(1)), h.get(0)),
+                      h.get(1)))),
+
+  /** Function "Fn.const", of type "&alpha; &rarr; &beta; &rarr; &alpha;". */
+  FN_CONST(
+      "Fn",
+      "const",
+      ts -> ts.forallType(2, h -> ts.fnType(h.get(0), h.get(1), h.get(0)))),
+
+  /**
+   * Function "Fn.curry" of type "(&alpha; * &beta; &rarr; &gamma;) * &alpha; *
+   * &beta; &rarr; &gamma;".
+   */
+  FN_CURRY(
+      "Fn",
+      "curry",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(2)),
+                      h.get(0),
+                      h.get(1),
+                      h.get(2)))),
+
+  /** Function "Fn.equal", of type "&alpha; &rarr; &alpha; &rarr; bool". */
+  FN_EQUAL(
+      "Fn",
+      "equal",
+      ts -> ts.forallType(2, h -> ts.fnType(h.get(0), h.get(0), BOOL))),
+
+  /**
+   * Function "Fn.flip" of type "(&alpha; * &beta; &rarr; &gamma;) * &beta; *
+   * &alpha; &rarr; &gamma;".
+   */
+  FN_FLIP(
+      "Fn",
+      "flip",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(2)),
+                      ts.fnType(ts.tupleType(h.get(1), h.get(0)), h.get(2))))),
+
+  /** Function "Fn.id", of type "&alpha; &rarr; &alpha;". */
+  FN_ID("Fn", "id", ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0)))),
+
+  /** Function "Fn.notEqual", of type "&alpha; &rarr; &alpha; &rarr; bool". */
+  FN_NOT_EQUAL(
+      "Fn",
+      "notEqual",
+      ts -> ts.forallType(2, h -> ts.fnType(h.get(0), h.get(0), BOOL))),
+
+  /**
+   * Operator "Fn.op o", of type "(&beta; &rarr; &gamma;) * (&alpha; &rarr;
+   * &beta;) &rarr; &alpha; &rarr; &gamma;".
+   *
+   * @see #GENERAL_OP_O
+   */
+  FN_OP_O(
+      "Fn",
+      "op o",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(
+                          ts.fnType(h.get(1), h.get(2)),
+                          ts.fnType(h.get(0), h.get(1))),
+                      ts.fnType(h.get(0), h.get(2))))),
+
+  /**
+   * Function "Fn.repeat" of type "int * (&alpha; &rarr; &alpha;) * &alpha;
+   * &rarr; &alpha;".
+   */
+  FN_REPEAT(
+      "Fn",
+      "repeat",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      INT,
+                      ts.fnType(h.get(0), h.get(0)),
+                      ts.fnType(h.get(0), h.get(0))))),
+
+  /**
+   * Function "Fn.uncurry" of type "(&alpha; * &beta; &rarr; &gamma;) * &alpha;
+   * &rarr; &beta; &rarr; &gamma;".
+   */
+  FN_UNCURRY(
+      "Fn",
+      "uncurry",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.get(1), h.get(2)),
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(2))))),
+
+  /**
    * Constant "List.nil", of type "&alpha; list".
    *
    * <p>"nil" is the empty list.

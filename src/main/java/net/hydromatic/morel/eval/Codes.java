@@ -464,6 +464,116 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#FN_APPLY */
+  private static final Applicable2 FN_APPLY =
+      new BaseApplicable2<Object, Applicable1, Object>(BuiltIn.FN_APPLY) {
+        @Override
+        public Object apply(Applicable1 f, Object arg) {
+          return f.apply(arg);
+        }
+      };
+
+  /** @see BuiltIn#FN_CONST */
+  private static final Applicable2 FN_CONST =
+      new BaseApplicable2<Object, Object, Object>(BuiltIn.FN_CONST) {
+        @Override
+        public Object apply(Object a0, Object a1) {
+          return a0;
+        }
+      };
+
+  /** @see BuiltIn#FN_CURRY */
+  private static final Applicable3 FN_CURRY =
+      new BaseApplicable3<Object, Applicable, Object, Object>(
+          BuiltIn.FN_CURRY) {
+        @Override
+        public Object apply(Applicable applicable, Object o, Object o2) {
+          return applicable.apply(null, FlatLists.of(o, o2));
+        }
+      };
+
+  /** @see BuiltIn#FN_EQUAL */
+  private static final Applicable2 FN_EQUAL =
+      new BaseApplicable2<Boolean, Object, Object>(BuiltIn.FN_EQUAL) {
+        @Override
+        public Boolean apply(Object a0, Object a1) {
+          return a0.equals(a1);
+        }
+      };
+
+  /** @see BuiltIn#FN_FLIP */
+  private static final Applicable2 FN_FLIP =
+      new BaseApplicable2<Object, Applicable1, List>(BuiltIn.FN_FLIP) {
+        @Override
+        public Object apply(Applicable1 f, List args) {
+          return f.apply(FlatLists.of(args.get(1), args.get(0)));
+        }
+      };
+
+  /** @see BuiltIn#FN_ID */
+  private static final Applicable1 FN_ID =
+      new BaseApplicable1<Object, Object>(BuiltIn.FN_ID) {
+        @Override
+        public Object apply(Object arg) {
+          return arg;
+        }
+      };
+
+  /** @see BuiltIn#FN_NOT_EQUAL */
+  private static final Applicable2 FN_NOT_EQUAL =
+      new BaseApplicable2<Boolean, Object, Object>(BuiltIn.FN_NOT_EQUAL) {
+        @Override
+        public Boolean apply(Object a0, Object a1) {
+          return !a0.equals(a1);
+        }
+      };
+
+  /** @see BuiltIn#FN_OP_O */
+  private static final Applicable2 FN_OP_O = new OpO(BuiltIn.FN_OP_O);
+
+  /** @see BuiltIn#FN_REPEAT */
+  private static final Applicable2 FN_REPEAT = new FnRepeat(Pos.ZERO);
+
+  /** Implements {@link #FN_REPEAT}. */
+  private static class FnRepeat
+      extends BasePositionedApplicable2<Applicable1, Integer, Applicable1> {
+    FnRepeat(Pos pos) {
+      super(BuiltIn.FN_REPEAT, pos);
+    }
+
+    @Override
+    public FnRepeat withPos(Pos pos) {
+      return new FnRepeat(pos);
+    }
+
+    @Override
+    public Applicable1 apply(Integer n, Applicable1 f) {
+      if (n < 0) {
+        throw new MorelRuntimeException(BuiltInExn.DOMAIN, pos);
+      }
+      return new BaseApplicable1<Object, Object>(builtIn) {
+        @Override
+        public Object apply(Object o) {
+          for (int i = 0; i < n; i++) {
+            o = f.apply(o);
+          }
+          return o;
+        }
+      };
+    }
+  }
+
+  /** @see BuiltIn#FN_UNCURRY */
+  private static final Applicable FN_UNCURRY =
+      new BaseApplicable2<Object, Applicable1<Applicable1, Object>, List>(
+          BuiltIn.FN_UNCURRY) {
+        @Override
+        public Object apply(Applicable1<Applicable1, Object> f, List list) {
+          Applicable1 g = f.apply(list.get(0));
+          return g.apply(list.get(1));
+        }
+      };
+
   /** @see BuiltIn#GENERAL_IGNORE */
   private static final Applicable GENERAL_IGNORE =
       new BaseApplicable1<Unit, Object>(BuiltIn.GENERAL_IGNORE) {
@@ -474,14 +584,20 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#GENERAL_OP_O */
-  private static final Applicable2 GENERAL_OP_O =
-      new BaseApplicable2<Applicable1, Applicable1, Applicable1>(
-          BuiltIn.GENERAL_OP_O) {
-        @Override
-        public Applicable1 apply(Applicable1 f, Applicable1 g) {
-          return arg -> f.apply(g.apply(arg));
-        }
-      };
+  private static final Applicable2 GENERAL_OP_O = new OpO(BuiltIn.GENERAL_OP_O);
+
+  /** Implements {@link #GENERAL_OP_O}, {@link #FN_OP_O}. */
+  private static class OpO
+      extends BaseApplicable2<Applicable1, Applicable1, Applicable1> {
+    OpO(BuiltIn builtIn) {
+      super(builtIn);
+    }
+
+    @Override
+    public Applicable1 apply(Applicable1 f, Applicable1 g) {
+      return arg -> f.apply(g.apply(arg));
+    }
+  }
 
   /** @see BuiltIn#INT_ABS */
   private static final Applicable INT_ABS =
@@ -3620,9 +3736,7 @@ public abstract class Codes {
           .put(BuiltIn.TRUE, true)
           .put(BuiltIn.FALSE, false)
           .put(BuiltIn.NOT, NOT)
-          .put(BuiltIn.ABS, ABS)
-          .put(BuiltIn.GENERAL_IGNORE, GENERAL_IGNORE)
-          .put(BuiltIn.GENERAL_OP_O, GENERAL_OP_O) // lint:startSorted
+          .put(BuiltIn.ABS, ABS) // lint:startSorted
           .put(BuiltIn.BAG_ALL, BAG_ALL)
           .put(BuiltIn.BAG_APP, BAG_APP)
           .put(BuiltIn.BAG_AT, BAG_AT)
@@ -3679,6 +3793,18 @@ public abstract class Codes {
           .put(BuiltIn.CHAR_TO_LOWER, CHAR_TO_LOWER)
           .put(BuiltIn.CHAR_TO_STRING, CHAR_TO_STRING)
           .put(BuiltIn.CHAR_TO_UPPER, CHAR_TO_UPPER)
+          .put(BuiltIn.FN_APPLY, FN_APPLY)
+          .put(BuiltIn.FN_CONST, FN_CONST)
+          .put(BuiltIn.FN_CURRY, FN_CURRY)
+          .put(BuiltIn.FN_EQUAL, FN_EQUAL)
+          .put(BuiltIn.FN_FLIP, FN_FLIP)
+          .put(BuiltIn.FN_ID, FN_ID)
+          .put(BuiltIn.FN_NOT_EQUAL, FN_NOT_EQUAL)
+          .put(BuiltIn.FN_OP_O, FN_OP_O)
+          .put(BuiltIn.FN_REPEAT, FN_REPEAT)
+          .put(BuiltIn.FN_UNCURRY, FN_UNCURRY)
+          .put(BuiltIn.GENERAL_IGNORE, GENERAL_IGNORE)
+          .put(BuiltIn.GENERAL_OP_O, GENERAL_OP_O)
           .put(BuiltIn.INT_ABS, INT_ABS)
           .put(BuiltIn.INT_COMPARE, INT_COMPARE)
           .put(BuiltIn.INT_DIV, INT_DIV)

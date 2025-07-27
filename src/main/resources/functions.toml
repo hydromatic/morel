@@ -684,6 +684,141 @@ description = """
 is a letter (a to z or A to Z); otherwise returns `c`.
 """
 
+# === Fn structure ===================================================
+# The Fn structure provides various combinators to aid computing with
+# function values.
+#
+# val id       : 'a -> 'a
+# val const    : 'a -> 'b -> 'a
+# val apply    : ('a -> 'b) * 'a -> 'b
+# val o        : ('b -> 'c) * ('a -> 'b) -> ('a -> 'c)
+# val curry    : ('a * 'b -> 'c) -> ('a -> 'b -> 'c)
+# val uncurry  : ('a -> 'b -> 'c) -> ('a * 'b -> 'c)
+# val flip     : ('a * 'b -> 'c) -> ('b * 'a -> 'c)
+# val repeat   : int -> ('a -> 'a) -> ('a -> 'a)
+# val equal    : ''a -> ''a -> bool
+# val notEqual : ''a -> ''a -> bool
+
+[[functions]]
+ordinal = 3
+structure = "Fn"
+name = "apply"
+specified = "basis+"
+type = "(α → β) * α → β"
+description = """
+"apply (f, x)"
+applies the function `f` to `x`. Thus, it is equivalent to `f x`.
+"""
+
+[[functions]]
+ordinal = 2
+structure = "Fn"
+name = "const"
+specified = "basis+"
+type = "α → β → α"
+description = """
+"const x y"
+returns the value `x`.
+"""
+
+[[functions]]
+ordinal = 5
+structure = "Fn"
+name = "curry"
+specified = "basis+"
+type = "(α * β → γ) → α → β → γ"
+description = """
+"curry f x y"
+is equivalent to `f (x, y)`; i.e., `curry f` transforms
+the binary function `f` into curried form.
+"""
+
+[[functions]]
+ordinal = 9
+structure = "Fn"
+name = "equal"
+specified = "basis+"
+type = "α → α → bool"
+description = """
+"equal a b"
+returns whether `a` is equal to `b`. It is a curried version of the
+polymorphic equality function (`=`).
+"""
+
+[[functions]]
+ordinal = 7
+structure = "Fn"
+name = "flip"
+specified = "basis+"
+type = "(α * β → γ) → β * α → γ"
+description = """
+"flip f (x, y)"
+is equivalent to `f (y, x)`; i.e., `flip f` flips the argument order
+of the binary function `f`.
+"""
+
+[[functions]]
+ordinal = 1
+structure = "Fn"
+name = "id"
+specified = "basis+"
+type = "α → α"
+description = """
+"id x"
+returns the value `x` It is the polymorphic identity function)
+"""
+
+[[functions]]
+ordinal = 10
+structure = "Fn"
+name = "notEqual"
+specified = "basis+"
+type = "α → α → bool"
+description = """
+"notEqual a b"
+returns whether `a` is not equal to `b`. It is a curried version of
+the polymorphic inequality function (`<>`).
+"""
+
+[[functions]]
+ordinal = 4
+structure = "Fn"
+name = "op o"
+specified = "basis+"
+type = "(β → γ) * (α → β) → α → γ"
+description = """
+"f o g"
+is the function composition of `f` and `g`. Thus, `(f o g) a`
+is equivalent to `f (g a)`. This function is the same as the global
+`o` operator and is also part of the `General` structure.
+"""
+
+[[functions]]
+ordinal = 8
+structure = "Fn"
+name = "repeat"
+specified = "basis+"
+type = "int → (α → α) → α → α"
+description = """
+"repeat n f"
+returns the `n`-fold composition of `f`. If `n` is zero, then
+`repeat n f` returns the identity function. If `n` is negative, then
+it raises the exception `Domain`.
+"""
+
+[[functions]]
+ordinal = 6
+structure = "Fn"
+name = "uncurry"
+specified = "basis+"
+type = "(α → β → γ) → α * β → γ"
+description = """
+"ucurry f (x, y)"
+is equivalent to `f x y`; i.e., `uncurry f` transforms the curried
+function `f` into a binary function. This function is the inverse of
+`curry`.
+"""
+
 # === General structure ==============================================
 
 [[functions]]
@@ -1651,7 +1786,7 @@ ordinal = 132
 structure = "ListPair"
 name = "unzip"
 specified = "basis"
-type = "('a * 'b) list → 'a list * 'b list"
+type = "(α * β) list → α list * β list"
 description = """
 "unzip l" returns a pair of lists formed by splitting the elements of
 *l*. This is the inverse of `zip` for equal length lists.
@@ -2577,7 +2712,7 @@ ordinal = 253
 structure = "Real"
 name = "scan"
 specified = "basis"
-type = "(char,'a) StringCvt.reader → (real,'a) StringCvt.reader"
+type = "(char,α) StringCvt.reader → (real,α) StringCvt.reader"
 implemented = false
 description = """
 "scan getc strm" scans a `real` value from character source. Reads
@@ -2847,10 +2982,10 @@ ordinal = 194
 structure = "String"
 name = "collate"
 specified = "basis"
-type = "(char * char -> order) → string * string → order"
+type = "(char * char → order) → string * string → order"
 description = """
 "collate (f, (s, t))" performs lexicographic comparison of the two
-strings using the given ordering f on characters.
+strings using the given ordering `f` on characters.
 """
 
 [[functions]]

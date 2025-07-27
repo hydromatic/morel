@@ -665,6 +665,91 @@ Sys.plan ();
 >   "apply2(fnValue Bag.tabulate, constant(-1), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact)))"
 >   : string
 
+(* Fn ---------------------------------------------------------- *)
+Fn;
+> val it =
+>   {apply=fn,const=fn,curry=fn,equal=fn,flip=fn,id=fn,notEqual=fn,`op o`=fn,
+>    repeat=fn,uncurry=fn}
+>   : {apply:('a -> 'b) * 'a -> 'b, const:'c -> 'd -> 'c,
+>      curry:('e * 'f -> 'g) -> 'e -> 'f -> 'g, equal:'h -> 'h -> bool,
+>      flip:('i * 'j -> 'k) -> 'j * 'i -> 'k, id:'l -> 'l,
+>      notEqual:'m -> 'm -> bool, `op o`:('n -> 'o) * ('p -> 'n) -> 'p -> 'o,
+>      repeat:int -> ('q -> 'q) -> 'q -> 'q,
+>      uncurry:('r -> 's -> 't) -> 'r * 's -> 't}
+
+Fn.id;
+> val it = fn : 'a -> 'a
+Fn.id "a";
+> val it = "a" : string
+Fn.const;
+> val it = fn : 'a -> 'b -> 'a
+Fn.const "b";
+> val it = fn : 'a -> string
+(* In SMLNJ, the previous line is
+> val it = fn : ?.X1 -> string
+*)
+(Fn.const "b") false;
+> val it = "b" : string
+(Fn.const "b") 3.14;
+> val it = "b" : string
+(Fn.const "b") ();
+> val it = "b" : string
+Fn.apply;
+> val it = fn : ('a -> 'b) * 'a -> 'b
+Fn.apply (fn a => a + 3, 5);
+> val it = 8 : int
+Fn.curry;
+> val it = fn : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
+Fn.curry (fn (a, b) => a + b);
+> val it = fn : int -> int -> int
+Fn.curry (fn (a, b) => a + b) 3 5;
+> val it = 8 : int
+Fn.curry (fn (a, b) => a + b) 3;
+> val it = fn : int -> int
+Fn.uncurry;
+> val it = fn : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
+Fn.uncurry (fn a => fn b => a + b);
+> val it = fn : int * int -> int
+Fn.uncurry (fn a => fn b => a + b) (3, 5);
+> val it = 8 : int
+Fn.flip;
+> val it = fn : ('a * 'b -> 'c) -> 'b * 'a -> 'c
+Fn.flip (fn (a, b) => a - b);
+> val it = fn : int * int -> int
+Fn.flip (fn (a, b) => a - b) (5, 3);
+> val it = ~2 : int
+Fn.repeat;
+> val it = fn : int -> ('a -> 'a) -> 'a -> 'a
+Fn.repeat 5 (fn i => i + 1);
+> val it = fn : int -> int
+it 8;
+> val it = 13 : int
+Fn.repeat 0 (fn i => i + 1);
+> val it = fn : int -> int
+it 8;
+> val it = 8 : int
+Fn.repeat ~2 (fn i => i + 1);
+> uncaught exception Domain
+>   raised at: stdIn:1.1-1.28
+Fn.equal;
+> val it = fn : 'a -> 'a -> bool
+(* ^ SMLNJ gives
+> val it = fn : ''a -> ''a -> bool
+*)
+Fn.equal 3 5;
+> val it = false : bool
+Fn.equal 3 3;
+> val it = true : bool
+Fn.notEqual;
+> val it = fn : 'a -> 'a -> bool
+(* ^ SMLNJ gives
+> val it = fn : ''a -> ''a -> bool
+*)
+Fn.notEqual 3 5;
+> val it = true : bool
+Fn.notEqual 3 3;
+> val it = false : bool
+
 (* General ----------------------------------------------------- *)
 
 (*) op o - function composition
@@ -4092,6 +4177,8 @@ Sys.env ();
 >    ("Char",
 >     "{chr:int -> char, compare:char * char -> order, contains:string -> char -> bool, fromCString:string -> char option, fromString:string -> char option, isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool, isLower:char -> bool, isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char, notContains:string -> char -> bool, `op <`:char * char -> bool, `op <=`:char * char -> bool, `op >`:char * char -> bool, `op >=`:char * char -> bool, ord:char -> int, pred:char -> char, succ:char -> char, toCString:char -> string, toLower:char -> char, toString:char -> string, toUpper:char -> char}"),
 >    ("DESC","forall 'a. 'a -> 'a descending"),("EQUAL","order"),
+>    ("Fn",
+>     "{apply:forall 'a 'b. ('a -> 'b) * 'a -> 'b, const:forall 'a 'b. 'a -> 'b -> 'a, curry:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a -> 'b -> 'c, equal:forall 'a 'b. 'a -> 'a -> bool, flip:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'b * 'a -> 'c, id:forall 'a. 'a -> 'a, notEqual:forall 'a 'b. 'a -> 'a -> bool, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c, repeat:forall 'a. int -> ('a -> 'a) -> 'a -> 'a, uncurry:forall 'a 'b 'c. ('a -> 'b -> 'c) -> 'a * 'b -> 'c}"),
 >    ("GREATER","order"),
 >    ("General",
 >     "{ignore:forall 'a. 'a -> unit, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
@@ -4182,6 +4269,8 @@ env ();
 >    ("Char",
 >     "{chr:int -> char, compare:char * char -> order, contains:string -> char -> bool, fromCString:string -> char option, fromString:string -> char option, isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool, isLower:char -> bool, isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char, notContains:string -> char -> bool, `op <`:char * char -> bool, `op <=`:char * char -> bool, `op >`:char * char -> bool, `op >=`:char * char -> bool, ord:char -> int, pred:char -> char, succ:char -> char, toCString:char -> string, toLower:char -> char, toString:char -> string, toUpper:char -> char}"),
 >    ("DESC","forall 'a. 'a -> 'a descending"),("EQUAL","order"),
+>    ("Fn",
+>     "{apply:forall 'a 'b. ('a -> 'b) * 'a -> 'b, const:forall 'a 'b. 'a -> 'b -> 'a, curry:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a -> 'b -> 'c, equal:forall 'a 'b. 'a -> 'a -> bool, flip:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'b * 'a -> 'c, id:forall 'a. 'a -> 'a, notEqual:forall 'a 'b. 'a -> 'a -> bool, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c, repeat:forall 'a. int -> ('a -> 'a) -> 'a -> 'a, uncurry:forall 'a 'b 'c. ('a -> 'b -> 'c) -> 'a * 'b -> 'c}"),
 >    ("GREATER","order"),
 >    ("General",
 >     "{ignore:forall 'a. 'a -> unit, `op o`:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
