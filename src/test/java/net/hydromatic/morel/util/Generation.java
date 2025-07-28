@@ -133,7 +133,11 @@ public class Generation {
     for (FnDef function : functions) {
       String name2 = munge(function.structure + '.' + function.name);
       String type2 = munge(function.type);
-      String description2 = munge(function.description);
+      String description2 =
+          munge(
+              function.description.startsWith("As ")
+                  ? function.description
+                  : '"' + function.prototype + "\" " + function.description);
       if (function.extra != null) {
         description2 += " " + function.extra.trim();
       }
@@ -173,6 +177,7 @@ public class Generation {
     final String structure;
     final String name;
     final String type;
+    final String prototype;
     final String description;
     final @Nullable String extra;
     final boolean implemented;
@@ -182,6 +187,7 @@ public class Generation {
         String structure,
         String name,
         String type,
+        String prototype,
         String description,
         String extra,
         boolean implemented,
@@ -189,6 +195,7 @@ public class Generation {
       this.structure = requireNonNull(structure, "structure");
       this.name = requireNonNull(name, "name");
       this.type = requireNonNull(type, "type");
+      this.prototype = requireNonNull(prototype, "prototype");
       this.description = requireNonNull(description, "description");
       this.extra = extra;
       this.implemented = implemented;
@@ -204,6 +211,7 @@ public class Generation {
           (String) map.get("structure"),
           (String) map.get("name"),
           (String) map.get("type"),
+          (String) map.get("prototype"),
           (String) map.get("description"),
           (String) map.get("extra"),
           first((Boolean) map.get("implemented"), true),

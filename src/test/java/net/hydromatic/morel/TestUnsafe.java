@@ -160,6 +160,7 @@ public abstract class TestUnsafe {
         "*.sh",
         "*.sml",
         "*.smli",
+        "*.toml",
         "*.txt",
         "*.xml",
         "*.yml",

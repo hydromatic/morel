@@ -598,7 +598,7 @@ Exception:
 | String.isSubstring | string &rarr; string &rarr; bool | "isSubstring s1 s2" returns `true` if the string `s1` is a substring of the string `s2`. Note that the empty string is a substring of any string, and that a string is a substring of itself. |
 | String.isSuffix | string &rarr; string &rarr; bool | "isSuffix s1 s2" returns `true` if the string `s1` is a suffix of the string `s2`. Note that the empty string is a suffix of any string, and that a string is a suffix of itself. |
 | String.map | (char &rarr; char) &rarr; string &rarr; string | "map f s" applies `f` to each element of `s` from left to right, returning the resulting string. It is equivalent to `implode(List.map f (explode s))`. |
-| String.maxSize | int | The longest allowed size of a string. |
+| String.maxSize | int | "maxSize" is the longest allowed size of a string. |
 | String.size | string &rarr; int | "size s" returns \|`s`\|, the number of characters in string `s`. |
 | String.str | char &rarr; string | "str c" is the string of size one containing the character `c`. |
 | String.sub | string * int &rarr; char | "sub (s, i)" returns the `i`(th) character of `s`, counting from zero. This raises `Subscript` if `i` &lt; 0 or \|`s`\| &le; `i`. |
@@ -638,7 +638,7 @@ Not yet implemented
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | Int.fmt | StringCvt.radix &rarr; int &rarr; string | "fmt radix i" returns a string containing a representation of i with #"~" used as the sign for negative numbers. Formats the string according to `radix`; the hexadecimal digits 10 through 15 are represented as #"A" through #"F", respectively. No prefix "0x" is generated for the hexadecimal representation. |
-| Int.scan | scan radix getc strm | Returns `SOME (i,rest)` if an integer in the format denoted by `radix` can be parsed from a prefix of the character stream `strm` after skipping initial whitespace, where `i` is the value of the integer parsed and `rest` is the rest of the character stream. `NONE` is returned otherwise. This function raises `Overflow` when an integer can be parsed, but is too large to be represented by type `int`. |
+| Int.scan | scan radix getc strm | "scan radix getc strm" returns `SOME (i,rest)` if an integer in the format denoted by `radix` can be parsed from a prefix of the character stream `strm` after skipping initial whitespace, where `i` is the value of the integer parsed and `rest` is the rest of the character stream. `NONE` is returned otherwise. This function raises `Overflow` when an integer can be parsed, but is too large to be represented by type `int`. |
 | Real.op != | real * real &rarr; bool | "x != y" is equivalent to `not o op ==` and the IEEE `?&lt;&gt;` operator. |
 | Real.op *+ | real * real * real &rarr; real | "*+ (a, b, c)" returns `a * b + c`. Its behavior on infinities follows from the behaviors derived from addition and multiplication. |
 | Real.op *- | real * real * real &rarr; real | "*- (a, b, c)" returns `a * b - c`. Its behavior on infinities follows from the behaviors derived from subtraction and multiplication. |
@@ -649,13 +649,13 @@ Not yet implemented
 | Real.fmt | StringCvt.realfmt &rarr; real &rarr; string | "fmt spec r" converts a `real` into a `string` according to by `spec`; raises `Size` when `fmt spec` is evaluated if `spec` is an invalid precision |
 | Real.fromDecimal | IEEEReal.decimal_approx &rarr; real | "fromDecimal d" converts decimal approximation to a `real` |
 | Real.fromLarge | IEEEReal.rounding_mode &rarr; real &rarr; real | "toLarge r" converts a value of type `real` to type `LargeReal.real`. If `r` is too small or too large to be represented as a real, converts it to a zero or an infinity. |
-| Real.fromLargeInt | IntInf.int &rarr; real | See "fromInt" |
+| Real.fromLargeInt | IntInf.int &rarr; real | As "fromInt" |
 | Real.nextAfter | real * real &rarr; real | "nextAfter (r, t)" returns the next representable real after `r` in the direction of `t`. Thus, if `t` is less than `r`, `nextAfter` returns the largest representable floating-point number less than `r`. |
 | Real.scan | (char,&alpha;) StringCvt.reader &rarr; (real,&alpha;) StringCvt.reader | "scan getc strm" scans a `real` value from character source. Reads from ARG/strm/ using reader `getc`, ignoring initial whitespace. It returns `SOME (r, rest)` if successful, where `r` is the scanned `real` value and `rest` is the unused portion of the character stream `strm`. Values of too large a magnitude are represented as infinities; values of too small a magnitude are represented as zeros. |
 | Real.toDecimal | real &rarr; IEEEReal.decimal_approx | "toDecimal r" converts a `real` to a decimal approximation |
 | Real.toInt | real &rarr; IEEEReal.rounding_mode &rarr; int | "toInt mode x" converts the argument `x` to an integral type using the specified rounding mode. It raises `Overflow` if the result is not representable, in particular, if `x` is an infinity. It raises `Domain` if the input real is NaN. |
 | Real.toLarge | real &rarr; real | "toLarge r" convert a value of type `real` to type `LargeReal.real`. |
-| Real.toLargeInt | real &rarr; IEEEReal.rounding_mode &rarr; IntInf.int | See "toInt" |
+| Real.toLargeInt | real &rarr; IEEEReal.rounding_mode &rarr; IntInf.int | As "toInt" |
 | String.fromCString | string &rarr; string option | "fromCString s" scans the string `s` as a string in the C language, converting C escape sequences into the appropriate characters. The semantics are identical to `fromString` above, except that C escape sequences are used (see ISO C standard ISO/IEC 9899:1990).  For more information on the allowed escape sequences, see the entry for `CHAR.fromCString`. Note that `fromCString` accepts an unescaped single quote character, but does not accept an unescaped double quote character. |
 | String.toString | string &rarr; string | "toString s" returns a string corresponding to `s`, with non-printable characters replaced by SML escape sequences. This is equivalent to  <pre>translate Char.toString s</pre> |
 | String.scan | (char,&alpha;) StringCvt.reader &rarr; (string,&alpha;) StringCvt.reader | "scan getc strm" scans its character source as a sequence of printable characters, converting SML escape sequences into the appropriate characters. It does not skip leading whitespace. It returns as many characters as can successfully be scanned, stopping when it reaches the end of the string or a non-printing character (i.e., one not satisfying `isPrint`), or if it encounters an improper escape sequence. It returns the remaining characters as the rest of the stream. |

@@ -23,6 +23,7 @@
 #    original reference.md table.
 #  * structure (string) is the name of the structure.
 #  * type (string) is the Standard ML type signature.
+#  * prototype (string) is a prototypical call, e.g. "foo x y".
 #  * description (string) is the description. Multi-line string
 #    wrapped at 70. Identifiers are enclosed in backticks.
 #  * implemented (optional boolean, default true) indicates whether
@@ -41,8 +42,9 @@ structure = "Bag"
 name = "all"
 specified = "morel"
 type = "(α → bool) → α bag → bool"
+prototype = "all f b"
 description = """
-"all f b" applies `f` to each element `x` of the bag `b`, in arbitrary
+applies `f` to each element `x` of the bag `b`, in arbitrary
 order, until `f(x)` evaluates to `false`; it returns `false` if such
 an `x` exists and `true` otherwise. It is equivalent to `not(exists
 (not o f) b))`.
@@ -54,8 +56,9 @@ structure = "Bag"
 name = "app"
 specified = "morel"
 type = "(α → unit) → α bag → unit"
+prototype = "app f b"
 description = """
-"app f b" applies `f` to the elements of `b`.
+applies `f` to the elements of `b`.
 """
 
 [[functions]]
@@ -64,9 +67,9 @@ structure = "Bag"
 name = "at"
 specified = "morel"
 type = "α bag * α bag → α bag"
+prototype = "at (b1, b2)"
 description = """
-"at (b1, b2)" returns the bag that is the concatenation of `b1` and
-`b2`.
+returns the bag that is the concatenation of `b1` and `b2`.
 """
 
 [[functions]]
@@ -75,8 +78,9 @@ structure = "Bag"
 name = "collate"
 specified = "morel"
 type = "(α * α → order) → α bag * α bag → order"
+prototype = "collate f (l1, l2)"
 description = """
-"collate f (l1, l2)" performs lexicographic comparison of the two bags
+performs lexicographic comparison of the two bags
 using the given ordering `f` on the bag elements.
 """
 
@@ -86,9 +90,9 @@ structure = "Bag"
 name = "concat"
 specified = "morel"
 type = "α bag bag → α bag"
+prototype = "concat b"
 description = """
-"concat b" returns the bag that is the concatenation of all the bags
-in `b`.
+returns the bag that is the concatenation of all the bags in `b`.
 """
 
 [[functions]]
@@ -97,8 +101,9 @@ structure = "Bag"
 name = "drop"
 specified = "morel"
 type = "α bag * int → α bag"
+prototype = "drop (b, i)"
 description = """
-"drop (b, i)" returns what is left after dropping an arbitrary `i`
+returns what is left after dropping an arbitrary `i`
 elements of the bag `b`. Raises `Subscript` if `i` < 0 or `i` >
 `length l`.
 
@@ -111,8 +116,9 @@ structure = "Bag"
 name = "exists"
 specified = "morel"
 type = "(α → bool) → α bag → bool"
+prototype = "exists f b"
 description = """
-"exists f b" applies `f` to each element `x` of the bag `b`, in
+applies `f` to each element `x` of the bag `b`, in
 arbitrary order, until `f(x)` evaluates to `true`; it returns `true`
 if such an `x` exists and `false` otherwise.
 """
@@ -123,8 +129,9 @@ structure = "Bag"
 name = "filter"
 specified = "morel"
 type = "(α → bool) → α bag → α bag"
+prototype = "filter f b"
 description = """
-"filter f b" applies `f` to each element `x` of `b` and returns the
+applies `f` to each element `x` of `b` and returns the
 bag of those `x` for which `f x` evaluated to `true`.
 """
 
@@ -134,8 +141,9 @@ structure = "Bag"
 name = "find"
 specified = "morel"
 type = "(α → bool) → α bag → α option"
+prototype = "find f b"
 description = """
-"find f b" applies `f` to each element `x` of the bag `b`, in
+applies `f` to each element `x` of the bag `b`, in
 arbitrary order, until `f x` evaluates to `true`. It returns `SOME
 (x)` if such an `x` exists; otherwise it returns `NONE`.
 """
@@ -146,8 +154,9 @@ structure = "Bag"
 name = "fold"
 specified = "morel"
 type = "(α * β → β) → β → α bag → β"
+prototype = "fold f init (bag \\[x1, x2, ..., xn\\])"
 description = """
-"fold f init (bag \\[x1, x2, ..., xn\\])" returns `f(xn, ... , f(x2,
+returns `f(xn, ... , f(x2,
 f(x1, init))...)` (for some arbitrary reordering of the elements `xi`)
 or `init` if the bag is empty.
 """
@@ -158,8 +167,9 @@ structure = "Bag"
 name = "fromList"
 specified = "morel"
 type = "α list → α bag"
+prototype = "fromList l"
 description = """
-"fromList l" creates a new bag from `l`, whose length is `length l`
+creates a new bag from `l`, whose length is `length l`
 and whose elements are the same as those of `l`. Raises `Size` if
 `maxLen` < `n`.
 """
@@ -170,8 +180,9 @@ structure = "Bag"
 name = "getItem"
 specified = "morel"
 type = "α bag → * (α * α bag) option"
+prototype = "getItem b"
 description = """
-"getItem b" returns `NONE` if the bag `b` is empty, and `SOME (hd b,
+returns `NONE` if the bag `b` is empty, and `SOME (hd b,
 tl b)` otherwise (applying `hd` and `tl` simultaneously so that they
 choose/remove the same arbitrary element).
 """
@@ -182,8 +193,9 @@ structure = "Bag"
 name = "hd"
 specified = "morel"
 type = "α bag → α"
+prototype = "hd b"
 description = """
-"hd b" returns an arbitrary element of bag `b`. Raises `Empty` if `b`
+returns an arbitrary element of bag `b`. Raises `Empty` if `b`
 is `nil`.
 """
 
@@ -193,8 +205,9 @@ structure = "Bag"
 name = "length"
 specified = "morel"
 type = "α bag → int"
+prototype = "length b"
 description = """
-"length b" returns the number of elements in the bag `b`.
+returns the number of elements in the bag `b`.
 """
 
 [[functions]]
@@ -203,8 +216,9 @@ structure = "Bag"
 name = "map"
 specified = "morel"
 type = "(α → β) → α bag → β bag"
+prototype = "map f b"
 description = """
-"map f b" applies `f` to each element of `b`, returning the bag of
+applies `f` to each element of `b`, returning the bag of
 results. This is equivalent to:
 
 <pre>fromList (List.map f (foldr (fn (a,l) => a::l) [] b))</pre>
@@ -216,8 +230,9 @@ structure = "Bag"
 name = "mapPartial"
 specified = "morel"
 type = "(α → β option) → α bag → β bag"
+prototype = "mapPartial f b"
 description = """
-"mapPartial f b" applies `f` to each element of `b`, returning a bag
+applies `f` to each element of `b`, returning a bag
 of results, with `SOME` stripped, where `f` was defined. `f` is not
 defined for an element of `b` if `f` applied to the element returns
 `NONE`. The above expression is equivalent to:
@@ -231,8 +246,9 @@ structure = "Bag"
 name = "nil"
 specified = "morel"
 type = "α bag"
+prototype = "nil"
 description = """
-"nil" is the empty bag.
+is the empty bag.
 """
 
 [[functions]]
@@ -241,8 +257,9 @@ structure = "Bag"
 name = "null"
 specified = "morel"
 type = "α bag → bool"
+prototype = "null b"
 description = """
-"null b" returns `true` if the bag `b` is empty.
+returns `true` if the bag `b` is empty.
 """
 
 [[functions]]
@@ -251,8 +268,9 @@ structure = "Bag"
 name = "partition"
 specified = "morel"
 type = "(α → bool) → α bag → α bag * α bag"
+prototype = "partition f b"
 description = """
-"partition f b" applies `f` to each element `x` of `b`, in arbitrary
+applies `f` to each element `x` of `b`, in arbitrary
 order, and returns a pair `(pos, neg)` where `pos` is the bag of those
 `x` for which `f x` evaluated to `true`, and `neg` is the bag of those
 for which `f x` evaluated to `false`.
@@ -264,8 +282,9 @@ structure = "Bag"
 name = "tabulate"
 specified = "morel"
 type = "int * (int → α) → α bag"
+prototype = "tabulate (n, f)"
 description = """
-"tabulate (n, f)" returns a bag of length `n` equal to `[f(0), f(1),
+returns a bag of length `n` equal to `[f(0), f(1),
 ..., f(n-1)]`. This is equivalent to the expression:
 
 <pre>fromList (List.tabulate (n, f))</pre>
@@ -279,8 +298,9 @@ structure = "Bag"
 name = "take"
 specified = "morel"
 type = "α bag * int → α bag"
+prototype = "take (b, i)"
 description = """
-"take (b, i)" returns an arbitrary `i` elements of the bag `b`. Raises
+returns an arbitrary `i` elements of the bag `b`. Raises
 `Subscript` if `i` < 0 or `i` > `length l`. We have `take(b, length
 b)` = `b`.
 """
@@ -291,8 +311,9 @@ structure = "Bag"
 name = "tl"
 specified = "morel"
 type = "α bag → α bag"
+prototype = "tl b"
 description = """
-"tl b" returns all but one arbitrary element of bag `b`. Raises
+returns all but one arbitrary element of bag `b`. Raises
 `Empty` if `b` is `nil`.
 """
 
@@ -302,8 +323,9 @@ structure = "Bag"
 name = "toList"
 specified = "morel"
 type = "α bag → α list"
+prototype = "toList b"
 description = """
-"toList b" creates a new bag from `b`, whose length is `length b` and
+creates a new bag from `b`, whose length is `length b` and
 whose elements are the same as those of `b`. Raises `Size` if `maxLen`
 < `n`.
 """
@@ -316,8 +338,9 @@ ordinal = 0
 name = "true"
 specified = "basis"
 type = "bool"
+prototype = "true"
 description = """
-Literal true.
+is literally true.
 """
 
 [[values]]
@@ -326,8 +349,9 @@ ordinal = 1
 name = "false"
 specified = "basis"
 type = "bool"
+prototype = "false"
 description = """
-Literal false.
+is literally false.
 """
 
 [[functions]]
@@ -336,8 +360,9 @@ syntax = "prefix"
 name = "not"
 specified = "basis"
 type = "bool → bool"
+prototype = "not b"
 description = """
-"not b" returns the logical inverse of `b`.
+returns the logical inverse of `b`.
 """
 
 [[functions]]
@@ -346,8 +371,9 @@ name = "op implies"
 syntax = "binary"
 specified = "morel"
 type = "bool * bool → bool"
+prototype = "b1 implies b2"
 description = """
-"b1 implies b2" returns `true` if `b1` is `false` or `b2` is `true`.
+returns `true` if `b1` is `false` or `b2` is `true`.
 """
 
 # === Char structure =================================================
@@ -358,8 +384,9 @@ structure = "Char"
 name = "chr"
 specified = "basis"
 type = "int → char"
+prototype = "chr i"
 description = """
-"chr i" returns the character whose code is `i`. Raises `Chr` if `i` <
+returns the character whose code is `i`. Raises `Chr` if `i` <
 0 or `i` > `maxOrd`.
 """
 
@@ -369,8 +396,9 @@ structure = "Char"
 name = "compare"
 specified = "basis"
 type = "char * char → order"
+prototype = "compare (c1, c2)"
 description = """
-"compare (c1, c2)" returns `LESS`, `EQUAL`, or `GREATER` according to
+returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
 second.
 """
@@ -381,8 +409,9 @@ structure = "Char"
 name = "contains"
 specified = "basis"
 type = "char → string → bool"
+prototype = "contains s c"
 description = """
-"contains s c" returns true if character `c` occurs in the string `s`;
+returns true if character `c` occurs in the string `s`;
 false otherwise. The function, when applied to `s`, builds a table and
 returns a function which uses table lookup to decide whether a given
 character is in the string or not. Hence it is relatively expensive to
@@ -396,8 +425,9 @@ structure = "Char"
 name = "fromCString"
 specified = "basis"
 type = "string → char option"
+prototype = "fromCString s"
 description = """
-"fromCString s" scans a `char` value from a string. Returns `SOME (r)`
+scans a `char` value from a string. Returns `SOME (r)`
 if a `char` value can be scanned from a prefix of `s`, ignoring any
 initial whitespace; otherwise, it returns `NONE`. Equivalent to
 `StringCvt.scanString (scan StringCvt.ORD)`.
@@ -409,8 +439,9 @@ structure = "Char"
 name = "fromInt"
 specified = "basis"
 type = "int → char option"
+prototype = "fromInt i"
 description = """
-"fromInt i" converts an `int` into a `char`. Raises `Chr` if `i` < 0
+converts an `int` into a `char`. Raises `Chr` if `i` < 0
 or `i` > `maxOrd`.
 """
 
@@ -420,8 +451,9 @@ structure = "Char"
 name = "fromString"
 specified = "basis"
 type = "string → char option"
+prototype = "fromString s"
 description = """
-"fromString s" attempts to scan a character or ML escape sequence from
+attempts to scan a character or ML escape sequence from
 the string `s`. Does not skip leading whitespace. For instance,
 `fromString "\\\\065"` equals `#"A"`.
 """
@@ -432,8 +464,9 @@ structure = "Char"
 name = "isAlpha"
 specified = "basis"
 type = "char → bool"
+prototype = "isAlpha c"
 description = """
-"isAlpha c" returns true if `c` is a letter (lowercase or uppercase).
+returns true if `c` is a letter (lowercase or uppercase).
 """
 
 [[functions]]
@@ -442,8 +475,9 @@ structure = "Char"
 name = "isAlphaNum"
 specified = "basis"
 type = "char → bool"
+prototype = "isAlphaNum c"
 description = """
-"isAlphaNum c" returns true if `c` is alphanumeric (a letter or a
+returns true if `c` is alphanumeric (a letter or a
 decimal digit).
 """
 
@@ -453,8 +487,9 @@ structure = "Char"
 name = "isAscii"
 specified = "basis"
 type = "char → bool"
+prototype = "isAscii c"
 description = """
-"isAscii c" returns true if 0 ≤ `ord c` ≤ 127 `c`.
+returns true if 0 ≤ `ord c` ≤ 127 `c`.
 """
 
 [[functions]]
@@ -463,8 +498,9 @@ structure = "Char"
 name = "isCntrl"
 specified = "basis"
 type = "char → bool"
+prototype = "isCntrl c"
 description = """
-"isCntrl c" returns true if `c` is a control character, that is, if
+returns true if `c` is a control character, that is, if
 `not (isPrint c)`.
 """
 
@@ -474,8 +510,9 @@ structure = "Char"
 name = "isDigit"
 specified = "basis"
 type = "char → bool"
+prototype = "isDigit c"
 description = """
-"isDigit c" returns true if `c` is a decimal digit (0 to 9).
+returns true if `c` is a decimal digit (0 to 9).
 """
 
 [[functions]]
@@ -484,8 +521,9 @@ structure = "Char"
 name = "isGraph"
 specified = "basis"
 type = "char → bool"
+prototype = "isGraph c"
 description = """
-"isGraph c" returns true if `c` is a graphical character, that is, it
+returns true if `c` is a graphical character, that is, it
 is printable and not a whitespace character.
 """
 
@@ -495,8 +533,9 @@ structure = "Char"
 name = "isHexDigit"
 specified = "basis"
 type = "char → bool"
+prototype = "isHexDigit c"
 description = """
-"isHexDigit c" returns true if `c` is a hexadecimal digit.
+returns true if `c` is a hexadecimal digit.
 """
 
 [[functions]]
@@ -505,8 +544,9 @@ structure = "Char"
 name = "isLower"
 specified = "basis"
 type = "char → bool"
+prototype = "isLower c"
 description = """
-"isLower c" returns true if `c` is a hexadecimal digit (0 to 9 or a to
+returns true if `c` is a hexadecimal digit (0 to 9 or a to
 f or A to F).
 """
 
@@ -516,8 +556,9 @@ structure = "Char"
 name = "isOctDigit"
 specified = "basis"
 type = "char → bool"
+prototype = "isOctDigit c"
 description = """
-"isOctDigit c" returns true if `c` is an octal digit.
+returns true if `c` is an octal digit.
 """
 
 [[functions]]
@@ -526,8 +567,9 @@ structure = "Char"
 name = "isPrint"
 specified = "basis"
 type = "char → bool"
+prototype = "isPrint c"
 description = """
-"isPrint c" returns true if `c` is a printable character (space or
+returns true if `c` is a printable character (space or
 visible).
 """
 
@@ -537,8 +579,9 @@ structure = "Char"
 name = "isPunct"
 specified = "basis"
 type = "char → bool"
+prototype = "isPunct c"
 description = """
-"isPunct c" returns true if `c` is a punctuation character, that is,
+returns true if `c` is a punctuation character, that is,
 graphical but not alphanumeric.
 """
 
@@ -548,8 +591,9 @@ structure = "Char"
 name = "isSpace"
 specified = "basis"
 type = "char → bool"
+prototype = "isSpace c"
 description = """
-"isSpace c" returns true if `c` is a whitespace character (blank,
+returns true if `c` is a whitespace character (blank,
 newline, tab, vertical tab, new page).
 """
 
@@ -559,8 +603,9 @@ structure = "Char"
 name = "isUpper"
 specified = "basis"
 type = "char → bool"
+prototype = "isUpper c"
 description = """
-"isUpper c" returns true if `c` is an uppercase letter (A to Z).
+returns true if `c` is an uppercase letter (A to Z).
 """
 
 [[functions]]
@@ -569,8 +614,9 @@ structure = "Char"
 name = "maxChar"
 specified = "basis"
 type = "int"
+prototype = "maxChar"
 description = """
-"maxChar" is the greatest character in the ordering `<`.
+is the greatest character in the ordering `<`.
 """
 
 [[functions]]
@@ -579,8 +625,9 @@ structure = "Char"
 name = "maxOrd"
 specified = "basis"
 type = "int"
+prototype = "maxOrd"
 description = """
-"maxOrd" is the greatest character code; it equals `ord maxChar`.
+is the greatest character code; it equals `ord maxChar`.
 """
 
 [[functions]]
@@ -589,8 +636,9 @@ structure = "Char"
 name = "minChar"
 specified = "basis"
 type = "char"
+prototype = "minChar"
 description = """
-"minChar" is the minimal (most negative) character representable by
+is the minimal (most negative) character representable by
 `char`. If a value is `NONE`, `char` can represent all negative
 integers, within the limits of the heap size. If `precision` is `SOME
 (n)`, then we have `minChar` = -2<sup>(n-1)</sup>.
@@ -602,8 +650,9 @@ structure = "Char"
 name = "notContains"
 specified = "basis"
 type = "char → string → bool"
+prototype = "notContains s c"
 description = """
-"notContains s c" returns true if character `c` does not occur in the
+returns true if character `c` does not occur in the
 string `s`; false otherwise. Works by construction of a lookup table
 in the same way as `Char.contains`.
 """
@@ -614,8 +663,9 @@ structure = "Char"
 name = "ord"
 specified = "basis"
 type = "char → int"
+prototype = "ord c"
 description = """
-"ord c" returns the code of character `c`.
+returns the code of character `c`.
 """
 
 [[functions]]
@@ -624,8 +674,9 @@ structure = "Char"
 name = "pred"
 specified = "basis"
 type = "char → char"
+prototype = "pred c"
 description = """
-"pred c" returns the predecessor of `c`. Raises `Subscript` if `c` is
+returns the predecessor of `c`. Raises `Subscript` if `c` is
 `minOrd`.
 """
 
@@ -635,8 +686,9 @@ structure = "Char"
 name = "succ"
 specified = "basis"
 type = "char → char"
+prototype = "succ c"
 description = """
-"succ c" returns the character immediately following `c`, or raises
+returns the character immediately following `c`, or raises
 `Chr` if `c` = `maxChar`
 """
 
@@ -646,8 +698,9 @@ structure = "Char"
 name = "toCString"
 specified = "basis"
 type = "char → string"
+prototype = "toCString c"
 description = """
-"toCString c" converts a `char` into a `string`; equivalent to `(fmt
+converts a `char` into a `string`; equivalent to `(fmt
 StringCvt.ORD r)`.
 """
 
@@ -657,8 +710,9 @@ structure = "Char"
 name = "toLower"
 specified = "basis"
 type = "char → char"
+prototype = "toLower c"
 description = """
-"toLower c" returns the lowercase letter corresponding to `c`, if `c`
+returns the lowercase letter corresponding to `c`, if `c`
 is a letter (a to z or A to Z); otherwise returns `c`.
 """
 
@@ -668,8 +722,9 @@ structure = "Char"
 name = "toString"
 specified = "basis"
 type = "char → string"
+prototype = "toString c"
 description = """
-"toString c" converts a `char` into a `string`; equivalent to `(fmt
+converts a `char` into a `string`; equivalent to `(fmt
 StringCvt.ORD r)`.
 """
 
@@ -679,25 +734,15 @@ structure = "Char"
 name = "toUpper"
 specified = "basis"
 type = "char → char"
+prototype = "toUpper c"
 description = """
-"toUpper c" returns the uppercase letter corresponding to `c`, if `c`
+returns the uppercase letter corresponding to `c`, if `c`
 is a letter (a to z or A to Z); otherwise returns `c`.
 """
 
 # === Fn structure ===================================================
 # The Fn structure provides various combinators to aid computing with
 # function values.
-#
-# val id       : 'a -> 'a
-# val const    : 'a -> 'b -> 'a
-# val apply    : ('a -> 'b) * 'a -> 'b
-# val o        : ('b -> 'c) * ('a -> 'b) -> ('a -> 'c)
-# val curry    : ('a * 'b -> 'c) -> ('a -> 'b -> 'c)
-# val uncurry  : ('a -> 'b -> 'c) -> ('a * 'b -> 'c)
-# val flip     : ('a * 'b -> 'c) -> ('b * 'a -> 'c)
-# val repeat   : int -> ('a -> 'a) -> ('a -> 'a)
-# val equal    : ''a -> ''a -> bool
-# val notEqual : ''a -> ''a -> bool
 
 [[functions]]
 ordinal = 3
@@ -705,8 +750,8 @@ structure = "Fn"
 name = "apply"
 specified = "basis+"
 type = "(α → β) * α → β"
+prototype = "apply (f, x)"
 description = """
-"apply (f, x)"
 applies the function `f` to `x`. Thus, it is equivalent to `f x`.
 """
 
@@ -716,8 +761,8 @@ structure = "Fn"
 name = "const"
 specified = "basis+"
 type = "α → β → α"
+prototype = "const x y"
 description = """
-"const x y"
 returns the value `x`.
 """
 
@@ -727,8 +772,8 @@ structure = "Fn"
 name = "curry"
 specified = "basis+"
 type = "(α * β → γ) → α → β → γ"
+prototype = "curry f x y"
 description = """
-"curry f x y"
 is equivalent to `f (x, y)`; i.e., `curry f` transforms
 the binary function `f` into curried form.
 """
@@ -739,8 +784,8 @@ structure = "Fn"
 name = "equal"
 specified = "basis+"
 type = "α → α → bool"
+prototype = "equal a b"
 description = """
-"equal a b"
 returns whether `a` is equal to `b`. It is a curried version of the
 polymorphic equality function (`=`).
 """
@@ -751,8 +796,8 @@ structure = "Fn"
 name = "flip"
 specified = "basis+"
 type = "(α * β → γ) → β * α → γ"
+prototype = "flip f (x, y)"
 description = """
-"flip f (x, y)"
 is equivalent to `f (y, x)`; i.e., `flip f` flips the argument order
 of the binary function `f`.
 """
@@ -763,8 +808,8 @@ structure = "Fn"
 name = "id"
 specified = "basis+"
 type = "α → α"
+prototype = "id x"
 description = """
-"id x"
 returns the value `x` It is the polymorphic identity function)
 """
 
@@ -774,8 +819,8 @@ structure = "Fn"
 name = "notEqual"
 specified = "basis+"
 type = "α → α → bool"
+prototype = "notEqual a b"
 description = """
-"notEqual a b"
 returns whether `a` is not equal to `b`. It is a curried version of
 the polymorphic inequality function (`<>`).
 """
@@ -786,8 +831,8 @@ structure = "Fn"
 name = "op o"
 specified = "basis+"
 type = "(β → γ) * (α → β) → α → γ"
+prototype = "f o g"
 description = """
-"f o g"
 is the function composition of `f` and `g`. Thus, `(f o g) a`
 is equivalent to `f (g a)`. This function is the same as the global
 `o` operator and is also part of the `General` structure.
@@ -799,8 +844,8 @@ structure = "Fn"
 name = "repeat"
 specified = "basis+"
 type = "int → (α → α) → α → α"
+prototype = "repeat n f"
 description = """
-"repeat n f"
 returns the `n`-fold composition of `f`. If `n` is zero, then
 `repeat n f` returns the identity function. If `n` is negative, then
 it raises the exception `Domain`.
@@ -812,8 +857,8 @@ structure = "Fn"
 name = "uncurry"
 specified = "basis+"
 type = "(α → β → γ) → α * β → γ"
+prototype = "ucurry f (x, y)"
 description = """
-"ucurry f (x, y)"
 is equivalent to `f x y`; i.e., `uncurry f` transforms the curried
 function `f` into a binary function. This function is the inverse of
 `curry`.
@@ -827,8 +872,9 @@ structure = "General"
 name = "ignore"
 specified = "basis"
 type = "α → unit"
+prototype = "ignore x"
 description = """
-"ignore x" always returns `unit`. The function evaluates its argument
+always returns `unit`. The function evaluates its argument
 but throws away the value.
 """
 
@@ -838,8 +884,9 @@ structure = "General"
 name = "op o"
 specified = "basis"
 type = "(β → γ) (α → β) → α → γ"
+prototype = "f o g"
 description = """
-"f o g" is the function composition of `f` and `g`. Thus, `(f o g) a`
+is the function composition of `f` and `g`. Thus, `(f o g) a`
 is equivalent to `f (g a)`.
 """
 
@@ -851,8 +898,9 @@ structure = "Int"
 name = "abs"
 specified = "basis"
 type = "int → int"
+prototype = "abs i"
 description = """
-"abs i" returns the absolute value of `i`.
+returns the absolute value of `i`.
 """
 
 [[functions]]
@@ -861,8 +909,9 @@ structure = "Int"
 name = "compare"
 specified = "basis"
 type = "int * int → order"
+prototype = "compare (i, j)"
 description = """
-"compare (i, j)" returns `LESS`, `EQUAL`, or `GREATER` according to
+returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
 second.
 """
@@ -874,8 +923,9 @@ name = "fmt"
 specified = "basis"
 type = "StringCvt.radix → int → string"
 implemented = false
+prototype = "fmt radix i"
 description = """
-"fmt radix i" returns a string containing a representation of i with
+returns a string containing a representation of i with
 #"~" used as the sign for negative numbers. Formats the string
 according to `radix`; the hexadecimal digits 10 through 15 are
 represented as #"A" through #"F", respectively. No prefix "0x" is
@@ -888,8 +938,9 @@ structure = "Int"
 name = "fromInt, int"
 specified = "basis"
 type = "int → int"
+prototype = "fromInt i"
 description = """
-"fromInt i" converts a value from type `int` to the default integer
+converts a value from type `int` to the default integer
 type. Raises `Overflow` if the value does not fit.
 """
 
@@ -899,8 +950,9 @@ structure = "Int"
 name = "fromString"
 specified = "basis"
 type = "string → int option"
+prototype = "fromString s"
 description = """
-"fromString s" scans a `int` value from a string. Returns `SOME (r)`
+scans a `int` value from a string. Returns `SOME (r)`
 if a `int` value can be scanned from a prefix of `s`, ignoring any
 initial whitespace; otherwise, it returns `NONE`. Equivalent to
 `StringCvt.scanString (scan StringCvt.DEC)`.
@@ -912,8 +964,9 @@ structure = "Int"
 name = "max"
 specified = "basis"
 type = "int * int → int"
+prototype = "max (i, j)"
 description = """
-"max (i, j)" returns the larger of the arguments.
+returns the larger of the arguments.
 """
 
 [[functions]]
@@ -922,8 +975,9 @@ structure = "Int"
 name = "maxInt"
 specified = "basis"
 type = "int"
+prototype = "maxInt"
 description = """
-"maxInt" is the maximal (most positive) integer representable by
+is the maximal (most positive) integer representable by
 `int`. If a value is `NONE`, `int` can represent all positive
 integers, within the limits of the heap size. If `precision` is `SOME
 (n)`, then we have `maxInt` = 2<sup>(n-1)</sup> - 1.
@@ -935,8 +989,9 @@ structure = "Int"
 name = "min"
 specified = "basis"
 type = "int * int → int"
+prototype = "min (i, j)"
 description = """
-"min (i, j)" returns the smaller of the arguments.
+returns the smaller of the arguments.
 """
 
 [[functions]]
@@ -945,8 +1000,9 @@ structure = "Int"
 name = "minInt"
 specified = "basis"
 type = "int"
+prototype = "minInt"
 description = """
-"minInt" is the minimal (most negative) integer representable by
+is the minimal (most negative) integer representable by
 `int`. If a value is `NONE`, `int` can represent all negative
 integers, within the limits of the heap size. If `precision` is `SOME
 (n)`, then we have `minInt` = -2<sup>(n-1)</sup>.
@@ -958,8 +1014,9 @@ structure = "Int"
 name = "mod"
 specified = "basis"
 type = "int * int → int"
+prototype = "mod (i, j)"
 description = """
-"mod (i, j)" returns the remainder of the division of `i` by `j`. It
+returns the remainder of the division of `i` by `j`. It
 raises `Div` when `j = 0`. When defined, `(i mod j)` has the same sign
 as `j`, and `(i div j) * j + (i mod j) = i`.
 """
@@ -970,8 +1027,9 @@ structure = "Int"
 name = "op *"
 specified = "basis"
 type = "int * int → int"
+prototype = "i * j"
 description = """
-"i * j" is the product of `i` and `j`. It raises `Overflow` when the
+is the product of `i` and `j`. It raises `Overflow` when the
 result is not representable.
 """
 
@@ -981,8 +1039,9 @@ structure = "Int"
 name = "op +"
 specified = "basis"
 type = "int * int → int"
+prototype = "i + j"
 description = """
-"i + j" is the sum of `i` and `j`. It raises `Overflow` when the
+is the sum of `i` and `j`. It raises `Overflow` when the
 result is not representable.
 """
 
@@ -992,8 +1051,9 @@ structure = "Int"
 name = "op -"
 specified = "basis"
 type = "int * int → int"
+prototype = "i - j"
 description = """
-"i - j" is the difference of `i` and `j`. It raises `Overflow` when
+is the difference of `i` and `j`. It raises `Overflow` when
 the result is not representable.
 """
 
@@ -1003,8 +1063,9 @@ structure = "Int"
 name = "op <"
 specified = "basis"
 type = "int * int → bool"
+prototype = "i < j"
 description = """
-"i < j" returns true if i is less than j.
+returns true if i is less than j.
 """
 
 [[functions]]
@@ -1013,8 +1074,9 @@ structure = "Int"
 name = "op <="
 specified = "basis"
 type = "int * int → bool"
+prototype = "i < j"
 description = """
-"i < j" returns true if i is less than or equal to j.
+returns true if i is less than or equal to j.
 """
 
 [[functions]]
@@ -1023,8 +1085,9 @@ structure = "Int"
 name = "op >"
 specified = "basis"
 type = "int * int → bool"
+prototype = "i < j"
 description = """
-"i < j" returns true if i is greater than j.
+returns true if i is greater than j.
 """
 
 [[functions]]
@@ -1033,8 +1096,9 @@ structure = "Int"
 name = "op >="
 specified = "basis"
 type = "int * int → bool"
+prototype = "i < j"
 description = """
-"i < j" returns true if i is greater than or equal to j.
+returns true if i is greater than or equal to j.
 """
 
 [[functions]]
@@ -1043,8 +1107,9 @@ structure = "Int"
 name = "op div"
 specified = "basis"
 type = "int * int → int"
+prototype = "i div j"
 description = """
-"i div j" returns the greatest integer less than or equal to the
+returns the greatest integer less than or equal to the
 quotient of i by j, i.e., `floor(i / j)`. It raises `Overflow` when
 the result is not representable, or Div when `j = 0`. Note that
 rounding is towards negative infinity, not zero.
@@ -1056,8 +1121,9 @@ structure = "Int"
 name = "op mod"
 specified = "basis"
 type = "int * int → int"
+prototype = "i mod j"
 description = """
-"i mod j" returns the remainder of the division of i by j. It raises
+returns the remainder of the division of i by j. It raises
 `Div` when `j = 0`. When defined, `(i mod j)` has the same sign as
 `j`, and `(i div j) * j + (i mod j) = i`.
 """
@@ -1068,8 +1134,9 @@ structure = "Int"
 name = "op ~"
 specified = "basis"
 type = "int → int"
+prototype = "~ i"
 description = """
-"~ i" returns the negation of `i`.
+returns the negation of `i`.
 """
 
 [[functions]]
@@ -1078,8 +1145,9 @@ structure = "Int"
 name = "precision"
 specified = "basis"
 type = "int"
+prototype = "precision"
 description = """
-"precision" is the precision. If `SOME (n)`, this denotes the number
+is the precision. If `SOME (n)`, this denotes the number
 `n` of significant bits in type `int`, including the sign bit. If it
 is `NONE`, int has arbitrary precision. The precision need not
 necessarily be a power of two.
@@ -1091,8 +1159,9 @@ structure = "Int"
 name = "quot"
 specified = "basis"
 type = "int * int → int"
+prototype = "quot (i, j)"
 description = """
-"quot (i, j)" returns the truncated quotient of the division of `i` by
+returns the truncated quotient of the division of `i` by
 `j`, i.e., it computes `(i / j)` and then drops any fractional part of
 the quotient. It raises `Overflow` when the result is not
 representable, or `Div` when `j = 0`. Note that unlike `div`, `quot`
@@ -1108,8 +1177,9 @@ structure = "Int"
 name = "rem"
 specified = "basis"
 type = "int * int → int"
+prototype = "rem (i, j)"
 description = """
-"rem (i, j)" returns the remainder of the division of `i` by `j`. It
+returns the remainder of the division of `i` by `j`. It
 raises `Div` when `j = 0`. `(i rem j)` has the same sign as i, and it
 holds that `(i quot j) * j + (i rem j) = i`. This is the semantics of
 most hardware divide instructions, so `rem` may be faster than `mod`.
@@ -1121,8 +1191,9 @@ structure = "Int"
 name = "sameSign"
 specified = "basis"
 type = "int * int → bool"
+prototype = "sameSign (i, j)"
 description = """
-"sameSign (i, j)" returns true if `i` and `j` have the same sign. It
+returns true if `i` and `j` have the same sign. It
 is equivalent to `(sign i = sign j)`.
 """
 
@@ -1133,8 +1204,9 @@ name = "scan"
 specified = "basis"
 type = "scan radix getc strm"
 implemented = false
+prototype = "scan radix getc strm"
 description = """
-Returns `SOME (i,rest)` if an integer in the format denoted by `radix`
+returns `SOME (i,rest)` if an integer in the format denoted by `radix`
 can be parsed from a prefix of the character stream `strm` after
 skipping initial whitespace, where `i` is the value of the integer
 parsed and `rest` is the rest of the character stream. `NONE` is
@@ -1148,8 +1220,9 @@ structure = "Int"
 name = "sign"
 specified = "basis"
 type = "int → int"
+prototype = "sign i"
 description = """
-"sign i" returns ~1, 0, or 1 when `i` is less than, equal to, or
+returns ~1, 0, or 1 when `i` is less than, equal to, or
 greater than 0, respectively.
 """
 
@@ -1159,8 +1232,9 @@ structure = "Int"
 name = "toInt"
 specified = "basis"
 type = "int → int"
+prototype = "toInt i"
 description = """
-"toInt i" converts a value from the default integer type to type
+converts a value from the default integer type to type
 `int`. Raises `Overflow` if the value does not fit.
 """
 
@@ -1170,8 +1244,9 @@ structure = "Int"
 name = "toString"
 specified = "basis"
 type = "int → string"
+prototype = "toString i"
 description = """
-"toString i" converts a `int` into a `string`; equivalent to `(fmt
+converts a `int` into a `string`; equivalent to `(fmt
 StringCvt.DEC r)`.
 """
 
@@ -1183,8 +1258,9 @@ structure = "Interact"
 name = "use"
 specified = "morel"
 type = "string → unit"
+prototype = "use f"
 description = """
-"use f" loads source text from the file named `f`.
+loads source text from the file named `f`.
 """
 
 [[functions]]
@@ -1193,8 +1269,9 @@ structure = "Interact"
 name = "useSilently"
 specified = "morel"
 type = "string → unit"
+prototype = "useSilently f"
 description = """
-"useSilently f" loads source text from the file named `f`, without
+loads source text from the file named `f`, without
 printing to stdout.
 """
 
@@ -1206,8 +1283,9 @@ structure = "List"
 name = "all"
 specified = "basis"
 type = "(α → bool) → α list → bool"
+prototype = "all f l"
 description = """
-"all f l" applies `f` to each element `x` of the list `l`, from left
+applies `f` to each element `x` of the list `l`, from left
 to right, until `f(x)` evaluates to `false`; it returns `false` if
 such an `x` exists and `true` otherwise. It is equivalent to
 `not(exists (not o f) l))`.
@@ -1219,8 +1297,9 @@ structure = "List"
 name = "app"
 specified = "basis"
 type = "(α → unit) → α list → unit"
+prototype = "app f l"
 description = """
-"app f l" applies `f` to the elements of `l`, from left to right.
+applies `f` to the elements of `l`, from left to right.
 """
 
 [[functions]]
@@ -1229,8 +1308,9 @@ structure = "List"
 name = "at"
 specified = "basis"
 type = "α list * α list → α list"
+prototype = "at (l1, l2)"
 description = """
-"at (l1, l2)" is equivalent to "l1 @ l2".
+is equivalent to "l1 @ l2".
 """
 
 [[functions]]
@@ -1239,8 +1319,9 @@ structure = "List"
 name = "collate"
 specified = "basis"
 type = "(α * α → order) → α list * α list → order"
+prototype = "collate f (l1, l2)"
 description = """
-"collate f (l1, l2)" performs lexicographic comparison of the two
+performs lexicographic comparison of the two
 lists using the given ordering `f` on the list elements.
 """
 
@@ -1250,8 +1331,9 @@ structure = "List"
 name = "concat"
 specified = "basis"
 type = "α list list → α list"
+prototype = "concat l"
 description = """
-"concat l" returns the list that is the concatenation of all the lists
+returns the list that is the concatenation of all the lists
 in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln`
 """
 
@@ -1261,8 +1343,9 @@ structure = "List"
 name = "drop"
 specified = "basis"
 type = "α list * int → α list"
+prototype = "drop (l, i)"
 description = """
-"drop (l, i)" returns what is left after dropping the first `i`
+returns what is left after dropping the first `i`
 elements of the list `l`. Raises `Subscript` if `i` < 0 or `i` >
 `length l`.
 
@@ -1276,8 +1359,9 @@ structure = "List"
 name = "except"
 specified = "morel"
 type = "α list list → α list"
+prototype = "except l"
 description = """
-"except l" returns the list that is the concatenation of all the lists
+returns the list that is the concatenation of all the lists
 in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln`
 """
 
@@ -1287,8 +1371,9 @@ structure = "List"
 name = "exists"
 specified = "basis"
 type = "(α → bool) → α list → bool"
+prototype = "exists f l"
 description = """
-"exists f l" applies `f` to each element `x` of the list `l`, from
+applies `f` to each element `x` of the list `l`, from
 left to right, until `f(x)` evaluates to `true`; it returns `true` if
 such an `x` exists and `false` otherwise.
 """
@@ -1299,8 +1384,9 @@ structure = "List"
 name = "filter"
 specified = "basis"
 type = "(α → bool) → α list → α list"
+prototype = "filter f l"
 description = """
-"filter f l" applies `f` to each element `x` of `l`, from left to
+applies `f` to each element `x` of `l`, from left to
 right, and returns the list of those `x` for which `f x` evaluated to
 `true`, in the same order as they occurred in the argument list.
 """
@@ -1311,8 +1397,9 @@ structure = "List"
 name = "find"
 specified = "basis"
 type = "(α → bool) → α list → α option"
+prototype = "find f l"
 description = """
-"find f l" applies `f` to each element `x` of the list `l`, from left
+applies `f` to each element `x` of the list `l`, from left
 to right, until `f x` evaluates to `true`. It returns `SOME (x)` if
 such an `x` exists; otherwise it returns `NONE`.
 """
@@ -1323,8 +1410,9 @@ structure = "List"
 name = "foldl"
 specified = "basis"
 type = "(α * β → β) → β → α list → β"
+prototype = "foldl f init \\[x1, x2, ..., xn\\]"
 description = """
-"foldl f init \\[x1, x2, ..., xn\\]" returns `f(xn, ... , f(x2, f(x1,
+returns `f(xn, ... , f(x2, f(x1,
 init))...)` or `init` if the list is empty.
 """
 
@@ -1334,8 +1422,9 @@ structure = "List"
 name = "foldr"
 specified = "basis"
 type = "(α * β → β) → β → α list → β"
+prototype = "foldr f init \\[x1, x2, ..., xn\\]"
 description = """
-"foldr f init \\[x1, x2, ..., xn\\]" returns `f(x1, f(x2, ..., f(xn,
+returns `f(x1, f(x2, ..., f(xn,
 init)...))` or `init` if the list is empty.
 """
 
@@ -1345,8 +1434,9 @@ structure = "List"
 name = "getItem"
 specified = "basis"
 type = "α list → * (α * α list) option"
+prototype = "getItem l"
 description = """
-"getItem l" returns `NONE` if the `list` is empty, and `SOME (hd l, tl
+returns `NONE` if the `list` is empty, and `SOME (hd l, tl
 l)` otherwise. This function is particularly useful for creating value
 readers from lists of characters. For example, `Int.scan StringCvt.DEC
 getItem` has the type `(int, char list) StringCvt.reader` and can be
@@ -1359,8 +1449,9 @@ structure = "List"
 name = "hd"
 specified = "basis"
 type = "α list → α"
+prototype = "hd l"
 description = """
-"hd l" returns the first element of `l`. Raises `Empty` if `l` is
+returns the first element of `l`. Raises `Empty` if `l` is
 `nil`.
 """
 
@@ -1370,8 +1461,9 @@ structure = "List"
 name = "intersect"
 specified = "morel"
 type = "α list list → α list"
+prototype = "intersect l"
 description = """
-"intersect l" returns the list that is the concatenation of all the
+returns the list that is the concatenation of all the
 lists in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @
 ln`
 """
@@ -1382,8 +1474,9 @@ structure = "List"
 name = "last"
 specified = "basis"
 type = "α list → α"
+prototype = "last l"
 description = """
-"last l" returns the last element of `l`. Raises `Empty` if `l` is
+returns the last element of `l`. Raises `Empty` if `l` is
 `nil`.
 """
 
@@ -1393,8 +1486,9 @@ structure = "List"
 name = "length"
 specified = "basis"
 type = "α list → int"
+prototype = "length l"
 description = """
-"length l" returns the number of elements in the list `l`.
+returns the number of elements in the list `l`.
 """
 
 [[functions]]
@@ -1403,8 +1497,9 @@ structure = "List"
 name = "map"
 specified = "basis"
 type = "(α → β) → α list → β list"
+prototype = "map f l"
 description = """
-"map f l" applies `f` to each element of `l` from left to right,
+applies `f` to each element of `l` from left to right,
 returning the list of results.
 """
 
@@ -1414,8 +1509,9 @@ structure = "List"
 name = "mapPartial"
 specified = "basis"
 type = "(α → β option) → α list → β list"
+prototype = "mapPartial f l"
 description = """
-"mapPartial f l" applies `f` to each element of `l` from left to
+applies `f` to each element of `l` from left to
 right, returning a list of results, with `SOME` stripped, where `f`
 was defined. `f` is not defined for an element of `l` if `f` applied
 to the element returns `NONE`. The above expression is equivalent to:
@@ -1429,8 +1525,9 @@ structure = "List"
 name = "mapi"
 specified = "basis"
 type = "(int * α → β) → α list → β list"
+prototype = "mapi f l"
 description = """
-"mapi f l" applies the function `f` to the elements of the argument
+applies the function `f` to the elements of the argument
 list `l`, supplying the list index and element as arguments to each
 call.
 """
@@ -1441,8 +1538,9 @@ structure = "List"
 name = "nil"
 specified = "basis"
 type = "α list"
+prototype = "nil"
 description = """
-"nil" is the empty list.
+is the empty list.
 """
 
 [[functions]]
@@ -1451,8 +1549,9 @@ structure = "List"
 name = "nth"
 specified = "basis"
 type = "α list * int → α"
+prototype = "nth (l, i)"
 description = """
-"nth (l, i)" returns the `i`(th) element of the list `l`, counting
+returns the `i`(th) element of the list `l`, counting
 from 0. Raises `Subscript` if `i` < 0 or `i` &ge; `length l`. We have
 `nth(l, 0)` = `hd l`, ignoring exceptions.
 """
@@ -1463,8 +1562,9 @@ structure = "List"
 name = "null"
 specified = "basis"
 type = "α list → bool"
+prototype = "null l"
 description = """
-"null l" returns `true` if the list `l` is empty.
+returns `true` if the list `l` is empty.
 """
 
 [[functions]]
@@ -1473,8 +1573,9 @@ structure = "List"
 name = "op @"
 specified = "basis"
 type = "α list * α list → α list"
+prototype = "l1 @ l2"
 description = """
-"l1 @ l2" returns the list that is the concatenation of `l1` and `l2`.
+returns the list that is the concatenation of `l1` and `l2`.
 """
 
 [[functions]]
@@ -1483,8 +1584,9 @@ structure = "List"
 name = "partition"
 specified = "basis"
 type = "(α → bool) → α list → α list * α list"
+prototype = "partition f l"
 description = """
-"partition f l" applies `f` to each element `x` of `l`, from left to
+applies `f` to each element `x` of `l`, from left to
 right, and returns a pair `(pos, neg)` where `pos` is the list of
 those `x` for which `f x` evaluated to `true`, and `neg` is the list
 of those for which `f x` evaluated to `false`. The elements of `pos`
@@ -1497,8 +1599,9 @@ structure = "List"
 name = "rev"
 specified = "basis"
 type = "α list → α list"
+prototype = "rev l"
 description = """
-"rev l" returns a list consisting of `l`'s elements in reverse order.
+returns a list consisting of `l`'s elements in reverse order.
 """
 
 [[functions]]
@@ -1507,8 +1610,9 @@ structure = "List"
 name = "revAppend"
 specified = "basis"
 type = "α list * α list → α list"
+prototype = "revAppend (l1, l2)"
 description = """
-"revAppend (l1, l2)" returns `(rev l1) @ l2`.
+returns `(rev l1) @ l2`.
 """
 
 [[functions]]
@@ -1517,8 +1621,9 @@ structure = "List"
 name = "tabulate"
 specified = "basis"
 type = "int * (int → α) → α list"
+prototype = "tabulate (n, f)"
 description = """
-"tabulate (n, f)" returns a list of length `n` equal to `[f(0), f(1),
+returns a list of length `n` equal to `[f(0), f(1),
 ..., f(n-1)]`, created from left to right. Raises `Size` if `n` < 0.
 """
 
@@ -1528,8 +1633,9 @@ structure = "List"
 name = "take"
 specified = "basis"
 type = "α list * int → α list"
+prototype = "take (l, i)"
 description = """
-"take (l, i)" returns the first `i` elements of the list `l`. Raises
+returns the first `i` elements of the list `l`. Raises
 `Subscript` if `i` < 0 or `i` > `length l`. We have `take(l, length
 l)` = `l`.
 """
@@ -1540,8 +1646,9 @@ structure = "List"
 name = "tl"
 specified = "basis"
 type = "α list → α list"
+prototype = "tl l"
 description = """
-"tl l" returns all but the first element of `l`. Raises `Empty` if `l`
+returns all but the first element of `l`. Raises `Empty` if `l`
 is `nil`.
 """
 
@@ -1579,8 +1686,9 @@ is `nil`.
 ordinal = 129
 structure = "ListPair"
 name = "UnequalLengths"
+prototype = "UnequalLengths"
 description = """
-"UnequalLengths" is raised by those functions that require arguments
+is raised by those functions that require arguments
 of identical length.
 """
 
@@ -1590,8 +1698,8 @@ structure = "ListPair"
 name = "all"
 specified = "basis"
 type = "(α * β → bool) → α list * β list → bool"
+prototype = "all f (l1, l2)"
 description = """
-"all f (l1, l2)"
 provides short-circuit testing of a predicate over a pair of lists.
 
 <p>It is equivalent to:
@@ -1604,8 +1712,9 @@ structure = "ListPair"
 name = "allEq"
 specified = "basis"
 type = "(α * β → bool) → α list * β list → bool"
+prototype = "allEq f (l1, l2)"
 description = """
-"allEq f (l1, l2)" returns `true` if *l1* and *l2* have equal length
+returns `true` if *l1* and *l2* have equal length
 and all pairs of elements satisfy the predicate *f*. That is, the
 expression is equivalent to:
 
@@ -1636,8 +1745,9 @@ structure = "ListPair"
 name = "app"
 specified = "basis"
 type = "(α * β → unit) → α list * β list → unit"
+prototype = "app f (l1, l2)"
 description = """
-"app f (l1, l2)" applies the function *f* to the list of pairs of
+applies the function *f* to the list of pairs of
 elements generated from left to right from the lists *l1* and *l2*. If
 the lists are of unequal lengths, ignores the excess elements from the
 tail of the longer one. It is equivalent to:
@@ -1653,8 +1763,9 @@ structure = "ListPair"
 name = "appEq"
 specified = "basis"
 type = "(α * β → unit) → α list * β list → unit"
+prototype = "appEq f (l1, l2)"
 description = """
-"appEq f (l1, l2)" applies the function *f* to the list of pairs of
+applies the function *f* to the list of pairs of
 elements generated from left to right from the lists *l1* and *l2*. If
 the lists are of unequal lengths, raises `UnequalLengths`. It is
 equivalent to:
@@ -1670,8 +1781,8 @@ structure = "ListPair"
 name = "exists"
 specified = "basis"
 type = "(α * β → bool) → α list * β list → bool"
+prototype = "exists f (l1, l2)"
 description = """
-"exists f (l1, l2)"
 provides short-circuit testing of a predicate over a pair of lists.
 
 <p>It is equivalent to:
@@ -1684,8 +1795,9 @@ structure = "ListPair"
 name = "foldl"
 specified = "basis"
 type = "(α * β * γ → γ) → γ → α list * β list → γ"
+prototype = "foldl f init (l1, l2)"
 description = """
-"foldl f init (l1, l2)" returns the result of folding the function *f*
+returns the result of folding the function *f*
 in the specified direction over the pair of lists *l1* and *l2*
 starting with the value *init*.  It is equivalent to:
 
@@ -1701,8 +1813,9 @@ structure = "ListPair"
 name = "foldlEq"
 specified = "basis"
 type = "(α * β * γ → γ) → γ → α list * β list → γ"
+prototype = "foldlEq f init (l1, l2)"
 description = """
-"foldlEq f init (l1, l2)" returns the result of folding the function
+returns the result of folding the function
 *f* in the specified direction over the pair of lists *l1* and *l2*
 starting with the value *init*.  It is equivalent to:
 
@@ -1718,8 +1831,9 @@ structure = "ListPair"
 name = "foldr"
 specified = "basis"
 type = "(α * β * γ → γ) → γ → α list * β list → γ"
+prototype = "foldr f init (l1, l2)"
 description = """
-"foldr f init (l1, l2)" returns the result of folding the function *f*
+returns the result of folding the function *f*
 in the specified direction over the pair of lists *l1* and *l2*
 starting with the value *init*.  It is equivalent to:
 
@@ -1735,8 +1849,9 @@ structure = "ListPair"
 name = "foldrEq"
 specified = "basis"
 type = "(α * β * γ → γ) → γ → α list * β list → γ"
+prototype = "foldrEq f init (l1, l2)"
 description = """
-"foldrEq f init (l1, l2)" returns the result of folding the function
+returns the result of folding the function
 *f* in the specified direction over the pair of lists *l1* and *l2*
 starting with the value *init*.  It is equivalent to:
 
@@ -1752,8 +1867,9 @@ structure = "ListPair"
 name = "map"
 specified = "basis"
 type = "(α * β → γ) → α list * β list → γ list"
+prototype = "map f (l1, l2)"
 description = """
-"map f (l1, l2)" maps the function *f* over the list of pairs of
+maps the function *f* over the list of pairs of
 elements generated from left to right from the lists *l1* and *l2*,
 returning the list of results.  If the lists are of unequal lengths,
 ignores the excess elements from the tail of the longer one.  It is
@@ -1770,8 +1886,9 @@ structure = "ListPair"
 name = "mapEq"
 specified = "basis"
 type = "(α * β → γ) → α list * β list → γ list"
+prototype = "mapEq f (l1, l2)"
 description = """
-"mapEq f (l1, l2)" maps the function *f* over the list of pairs of
+maps the function *f* over the list of pairs of
 elements generated from left to right from the lists *l1* and *l2*,
 returning the list of results.  If the lists are of unequal lengths,
 raises `UnequalLengths`.  It is equivalent to:
@@ -1787,8 +1904,9 @@ structure = "ListPair"
 name = "unzip"
 specified = "basis"
 type = "(α * β) list → α list * β list"
+prototype = "unzip l"
 description = """
-"unzip l" returns a pair of lists formed by splitting the elements of
+returns a pair of lists formed by splitting the elements of
 *l*. This is the inverse of `zip` for equal length lists.
 """
 
@@ -1798,8 +1916,9 @@ structure = "ListPair"
 name = "zip"
 specified = "basis"
 type = "α list * β list → (α * β) list"
+prototype = "zip (l1, l2)"
 description = """
-"zip (l1, l2)" combines the two lists *l1* and *l2* into a list of
+combines the two lists *l1* and *l2* into a list of
 pairs, with the first element of each list comprising the first
 element of the result, the second elements comprising the second
 element of the result, and so on.  If the lists are of unequal
@@ -1813,8 +1932,9 @@ structure = "ListPair"
 name = "zipEq"
 specified = "basis"
 type = "α list * β list → (α * β) list"
+prototype = "zipEq (l1, l2)"
 description = """
-"zipEq (l1, l2)" combines the two lists *l1* and *l2* into a list of
+combines the two lists *l1* and *l2* into a list of
 pairs, with the first element of each list comprising the first
 element of the result, the second elements comprising the second
 element of the result, and so on.  If the lists are of unequal
@@ -1829,8 +1949,9 @@ structure = "Math"
 name = "acos"
 specified = "basis"
 type = "real → real"
+prototype = "acos x"
 description = """
-"acos x" returns the arc cosine of `x`. `acos` is the inverse of
+returns the arc cosine of `x`. `acos` is the inverse of
 `cos`. Its result is guaranteed to be in the closed interval \\[0,
 pi\\]. If the magnitude of `x` exceeds 1.0, returns NaN.
 """
@@ -1841,8 +1962,9 @@ structure = "Math"
 name = "asin"
 specified = "basis"
 type = "real → real"
+prototype = "asin x"
 description = """
-"asin x" returns the arc sine of `x`. `asin` is the inverse of
+returns the arc sine of `x`. `asin` is the inverse of
 `sin`. Its result is guaranteed to be in the closed interval \\[-pi / 2,
 pi / 2\\]. If the magnitude of `x` exceeds 1.0, returns NaN.
 """
@@ -1853,8 +1975,9 @@ structure = "Math"
 name = "atan"
 specified = "basis"
 type = "real → real"
+prototype = "atan x"
 description = """
-"atan x" returns the arc tangent of `x`. `atan` is the inverse of
+returns the arc tangent of `x`. `atan` is the inverse of
 `tan`. For finite arguments, the result is guaranteed to be in the
 open interval (-pi / 2, pi / 2). If `x` is +infinity, it returns pi /
 2; if `x` is -infinity, it returns -pi / 2.
@@ -1866,8 +1989,9 @@ structure = "Math"
 name = "atan2"
 specified = "basis"
 type = "real * real → real"
+prototype = "atan2 (y, x)"
 description = """
-"atan2 (y, x)" returns the arc tangent of `(y / x)` in the closed
+returns the arc tangent of `(y / x)` in the closed
 interval \\[-pi, pi\\], corresponding to angles within +-180 degrees. The
 quadrant of the resulting angle is determined using the signs of both
 `x` and `y`, and is the same as the quadrant of the point `(x,
@@ -1881,8 +2005,9 @@ structure = "Math"
 name = "cos"
 specified = "basis"
 type = "real → real"
+prototype = "cos x"
 description = """
-"cos x" returns the cosine of `x`, measured in radians. If `x` is an
+returns the cosine of `x`, measured in radians. If `x` is an
 infinity, returns NaN.
 """
 
@@ -1892,8 +2017,9 @@ structure = "Math"
 name = "cosh"
 specified = "basis"
 type = "real → real"
+prototype = "cosh x"
 description = """
-"cosh x" returns the hyperbolic cosine of `x`, that is, `(e(x) +
+returns the hyperbolic cosine of `x`, that is, `(e(x) +
 e(-x)) / 2`. Among its properties, cosh +-0 = 1, cosh +-infinity =
 +-infinity.
 """
@@ -1904,8 +2030,9 @@ structure = "Math"
 name = "e"
 specified = "basis"
 type = "real"
+prototype = "e"
 description = """
-"e" is base e (2.718281828...) of the natural logarithm.
+is base e (2.718281828...) of the natural logarithm.
 """
 
 [[functions]]
@@ -1914,8 +2041,9 @@ structure = "Math"
 name = "exp"
 specified = "basis"
 type = "real → real"
+prototype = "exp x"
 description = """
-"exp x" returns `e(x)`, i.e., `e` raised to the `x`<sup>th</sup>
+returns `e(x)`, i.e., `e` raised to the `x`<sup>th</sup>
 power. If `x` is +infinity, returns +infinity; if `x` is -infinity,
 returns 0.
 """
@@ -1926,8 +2054,9 @@ structure = "Math"
 name = "ln"
 specified = "basis"
 type = "real → real"
+prototype = "ln x"
 description = """
-"ln x" returns the natural logarithm (base e) of `x`. If `x` < 0,
+returns the natural logarithm (base e) of `x`. If `x` < 0,
 returns NaN; if `x` = 0, returns -infinity; if `x` is infinity,
 returns infinity.
 """
@@ -1938,8 +2067,9 @@ structure = "Math"
 name = "log10"
 specified = "basis"
 type = "real → real"
+prototype = "log10 x"
 description = """
-"log10 x" returns the decimal logarithm (base 10) of `x`. If `x` < 0,
+returns the decimal logarithm (base 10) of `x`. If `x` < 0,
 returns NaN; if `x` = 0, returns -infinity; if `x` is infinity,
 returns infinity.
 """
@@ -1950,8 +2080,9 @@ structure = "Math"
 name = "pi"
 specified = "basis"
 type = "real"
+prototype = "pi"
 description = """
-"pi" is the constant pi (3.141592653...).
+is the constant pi (3.141592653...).
 """
 
 [[functions]]
@@ -1960,8 +2091,9 @@ structure = "Math"
 name = "pow"
 specified = "basis"
 type = "real * real → real"
+prototype = "pow (x, y)"
 description = """
-"pow (x, y)" returns `x(y)`, i.e., `x` raised to the `y`<sup>th</sup>
+returns `x(y)`, i.e., `x` raised to the `y`<sup>th</sup>
 power. For finite `x` and `y`, this is well-defined when `x` > 0, or
 when `x` < 0 and `y` is integral.
 """
@@ -1972,8 +2104,9 @@ structure = "Math"
 name = "sin"
 specified = "basis"
 type = "real → real"
+prototype = "sin x"
 description = """
-"sin x" returns the sine of `x`, measured in radians. If `x` is an
+returns the sine of `x`, measured in radians. If `x` is an
 infinity, returns NaN.
 """
 
@@ -1983,8 +2116,9 @@ structure = "Math"
 name = "sinh"
 specified = "basis"
 type = "real → real"
+prototype = "sinh x"
 description = """
-"sinh x" returns the hyperbolic sine of `x`, that is, `(e(x) - e(-x))
+returns the hyperbolic sine of `x`, that is, `(e(x) - e(-x))
 / 2`. Among its properties, sinh +-0 = +-0, sinh +-infinity =
 +-infinity.
 """
@@ -1995,8 +2129,9 @@ structure = "Math"
 name = "sqrt"
 specified = "basis"
 type = "real → real"
+prototype = "sqrt x"
 description = """
-"sqrt x" returns the square root of `x`. sqrt (~0.0) = ~0.0. If `x` <
+returns the square root of `x`. sqrt (~0.0) = ~0.0. If `x` <
 0, returns NaN.
 """
 
@@ -2006,8 +2141,9 @@ structure = "Math"
 name = "tan"
 specified = "basis"
 type = "real → real"
+prototype = "tan x"
 description = """
-"tan x" returns the tangent of `x`, measured in radians. If `x` is an
+returns the tangent of `x`, measured in radians. If `x` is an
 infinity, returns NaN. Produces infinities at various finite values,
 roughly corresponding to the singularities of the tangent function.
 """
@@ -2018,8 +2154,9 @@ structure = "Math"
 name = "tanh"
 specified = "basis"
 type = "real → real"
+prototype = "tanh x"
 description = """
-"tanh x" returns the hyperbolic tangent of `x`, that is, `(sinh x) /
+returns the hyperbolic tangent of `x`, that is, `(sinh x) /
 (cosh x)`. Among its properties, tanh +-0 = +-0, tanh +-infinity =
 +-1.
 """
@@ -2032,8 +2169,9 @@ structure = "Option"
 name = "app"
 specified = "basis"
 type = "(α → unit) → α option → unit"
+prototype = "app f opt"
 description = """
-"app f opt" applies the function `f` to the value `v` if `opt` is
+applies the function `f` to the value `v` if `opt` is
 `SOME v`, and otherwise does nothing.
 """
 
@@ -2043,8 +2181,9 @@ structure = "Option"
 name = "compose"
 specified = "basis"
 type = "(α → β) * (γ → α option) → γ → β option"
+prototype = "compose (f, g) a"
 description = """
-"compose (f, g) a" returns `NONE` if `g(a)` is `NONE`; otherwise, if
+returns `NONE` if `g(a)` is `NONE`; otherwise, if
 `g(a)` is `SOME v`, it returns `SOME (f v)`.
 """
 
@@ -2054,8 +2193,9 @@ structure = "Option"
 name = "composePartial"
 specified = "basis"
 type = "(α → β option) * (γ → α option) → γ → β option"
+prototype = "composePartial (f, g) a"
 description = """
-"composePartial (f, g) a" returns `NONE` if `g(a)` is `NONE`;
+returns `NONE` if `g(a)` is `NONE`;
 otherwise, if `g(a)` is `SOME v`, returns `f(v)`.
 """
 
@@ -2065,8 +2205,9 @@ structure = "Option"
 name = "filter"
 specified = "basis"
 type = "(α → bool) → α → α option"
+prototype = "filter f a"
 description = """
-"filter f a" returns `SOME a` if `f(a)` is `true`, `NONE` otherwise.
+returns `SOME a` if `f(a)` is `true`, `NONE` otherwise.
 """
 
 [[functions]]
@@ -2075,8 +2216,9 @@ structure = "Option"
 name = "getOpt"
 specified = "basis"
 type = "α option * α → α"
+prototype = "getOpt (opt, a)"
 description = """
-"getOpt (opt, a)" returns `v` if `opt` is `SOME (v)`; otherwise
+returns `v` if `opt` is `SOME (v)`; otherwise
 returns `a`.
 """
 
@@ -2086,8 +2228,9 @@ structure = "Option"
 name = "isSome"
 specified = "basis"
 type = "α option → bool"
+prototype = "isSome opt"
 description = """
-"isSome opt" returns `true` if `opt` is `SOME v`; otherwise returns
+returns `true` if `opt` is `SOME v`; otherwise returns
 `false`.
 """
 
@@ -2097,8 +2240,9 @@ structure = "Option"
 name = "join"
 specified = "basis"
 type = "α option option → α option"
+prototype = "join opt"
 description = """
-"join opt" maps `NONE` to `NONE` and `SOME v` to `v`.
+maps `NONE` to `NONE` and `SOME v` to `v`.
 """
 
 [[functions]]
@@ -2107,8 +2251,9 @@ structure = "Option"
 name = "map"
 specified = "basis"
 type = "α → β) → α option → β option"
+prototype = "map f opt"
 description = """
-"map f opt" maps `NONE` to `NONE` and `SOME v` to `SOME (f v)`.
+maps `NONE` to `NONE` and `SOME v` to `SOME (f v)`.
 """
 
 [[functions]]
@@ -2117,8 +2262,9 @@ structure = "Option"
 name = "mapPartial"
 specified = "basis"
 type = "α → β option) → α option → β option"
+prototype = "mapPartial f opt"
 description = """
-"mapPartial f opt" maps `NONE` to `NONE` and `SOME v` to `f(v)`.
+maps `NONE` to `NONE` and `SOME v` to `f(v)`.
 """
 
 [[functions]]
@@ -2127,8 +2273,9 @@ structure = "Option"
 name = "valOf"
 specified = "basis"
 type = "α option → α"
+prototype = "valOf opt"
 description = """
-"valOf opt" returns `v` if `opt` is `SOME v`, otherwise raises
+returns `v` if `opt` is `SOME v`, otherwise raises
 `Option`.
 """
 
@@ -2140,8 +2287,9 @@ structure = "Real"
 name = "abs"
 specified = "basis"
 type = "real → real"
+prototype = "abs r"
 description = """
-"abs r" returns the absolute value of `r`.
+returns the absolute value of `r`.
 """
 
 [[functions]]
@@ -2150,8 +2298,9 @@ structure = "Real"
 name = "ceil"
 specified = "basis"
 type = "real → int"
+prototype = "floor r"
 description = """
-"floor r" produces `ceil(r)`, the smallest int not less than `r`.
+produces `ceil(r)`, the smallest int not less than `r`.
 """
 
 [[functions]]
@@ -2160,8 +2309,9 @@ structure = "Real"
 name = "checkFloat"
 specified = "basis"
 type = "real → real"
+prototype = "checkFloat x"
 description = """
-"checkFloat x" raises `Overflow` if x is an infinity, and raises `Div`
+raises `Overflow` if x is an infinity, and raises `Div`
 if x is NaN. Otherwise, it returns its argument.
 """
 
@@ -2172,8 +2322,9 @@ name = "class"
 specified = "basis"
 type = "real → IEEEReal.float_class"
 implemented = false
+prototype = "class x"
 description = """
-"class x" returns the `IEEEReal.float_class` to which x belongs.
+returns the `IEEEReal.float_class` to which x belongs.
 """
 
 [[functions]]
@@ -2182,8 +2333,9 @@ structure = "Real"
 name = "compare"
 specified = "basis"
 type = "real * real → order"
+prototype = "compare (x, y)"
 description = """
-"compare (x, y)" returns `LESS`, `EQUAL`, or `GREATER` according to
+returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
 second. It raises `IEEEReal.Unordered` on unordered arguments.
 """
@@ -2195,8 +2347,9 @@ name = "compareReal"
 specified = "basis"
 type = "real * real → IEEEReal.real_order"
 implemented = false
+prototype = "compareReal (x, y)"
 description = """
-"compareReal (x, y)" behaves similarly to `Real.compare` except that
+behaves similarly to `Real.compare` except that
 the values it returns have the extended type `IEEEReal.real_order` and
 it returns `IEEEReal.UNORDERED` on unordered arguments.
 """
@@ -2207,8 +2360,9 @@ structure = "Real"
 name = "copySign"
 specified = "basis"
 type = "real * real → real"
+prototype = "copySign (x, y)"
 description = """
-"copySign (x, y)" returns `x` with the sign of `y`, even if `y` is
+returns `x` with the sign of `y`, even if `y` is
 NaN.
 """
 
@@ -2218,8 +2372,9 @@ structure = "Real"
 name = "floor"
 specified = "basis"
 type = "real → int"
+prototype = "floor r"
 description = """
-"floor r" produces `floor(r)`, the largest int not larger than `r`.
+produces `floor(r)`, the largest int not larger than `r`.
 """
 
 [[functions]]
@@ -2229,8 +2384,9 @@ name = "fmt"
 specified = "basis"
 type = "StringCvt.realfmt → real → string"
 implemented = false
+prototype = "fmt spec r"
 description = """
-"fmt spec r" converts a `real` into a `string` according to by `spec`;
+converts a `real` into a `string` according to by `spec`;
 raises `Size` when `fmt spec` is evaluated if `spec` is an invalid
 precision
 """
@@ -2242,8 +2398,9 @@ name = "fromDecimal"
 specified = "basis"
 type = "IEEEReal.decimal_approx → real"
 implemented = false
+prototype = "fromDecimal d"
 description = """
-"fromDecimal d" converts decimal approximation to a `real`
+converts decimal approximation to a `real`
 """
 
 [[functions]]
@@ -2252,8 +2409,9 @@ structure = "Real"
 name = "fromInt, real"
 specified = "basis"
 type = "int → real"
+prototype = "fromInt i"
 description = """
-"fromInt i" converts the integer `i` to a `real` value. If the
+converts the integer `i` to a `real` value. If the
 absolute value of `i` is larger than `maxFinite`, then the appropriate
 infinity is returned. If `i` cannot be exactly represented as a `real`
 value, uses current rounding mode to determine the resulting value.
@@ -2266,8 +2424,9 @@ name = "fromLarge"
 specified = "basis"
 type = "IEEEReal.rounding_mode → real → real"
 implemented = false
+prototype = "toLarge r"
 description = """
-"toLarge r" converts a value of type `real` to type
+converts a value of type `real` to type
 `LargeReal.real`. If `r` is too small or too large to be represented
 as a real, converts it to a zero or an infinity.
 """
@@ -2279,8 +2438,9 @@ name = "fromLargeInt"
 specified = "basis"
 type = "IntInf.int → real"
 implemented = false
+prototype = "fromLargeInt i"
 description = """
-See "fromInt"
+As "fromInt"
 """
 
 [[functions]]
@@ -2289,8 +2449,9 @@ structure = "Real"
 name = "fromManExp"
 specified = "basis"
 type = "{exp:int, man:real} → real"
+prototype = "fromManExp r"
 description = """
-"fromManExp r" returns `{man, exp}`, where `man` and `exp` are the
+returns `{man, exp}`, where `man` and `exp` are the
 mantissa and exponent of r, respectively.
 """
 
@@ -2300,8 +2461,9 @@ structure = "Real"
 name = "fromString"
 specified = "basis"
 type = "string → real option"
+prototype = "fromString s"
 description = """
-"fromString s" scans a `real` value from a string. Returns `SOME (r)`
+scans a `real` value from a string. Returns `SOME (r)`
 if a `real` value can be scanned from a prefix of `s`, ignoring any
 initial whitespace; otherwise, it returns `NONE`. This function is
 equivalent to `StringCvt.scanString scan`.
@@ -2313,8 +2475,9 @@ structure = "Real"
 name = "isFinite"
 specified = "basis"
 type = "real → bool"
+prototype = "isFinite x"
 description = """
-"isFinite x" returns true if x is neither NaN nor an infinity.
+returns true if x is neither NaN nor an infinity.
 """
 
 [[functions]]
@@ -2323,8 +2486,9 @@ structure = "Real"
 name = "isNan"
 specified = "basis"
 type = "real → bool"
+prototype = "isNan x"
 description = """
-"isNan x" returns true if x NaN.
+returns true if x NaN.
 """
 
 [[functions]]
@@ -2333,8 +2497,9 @@ structure = "Real"
 name = "isNormal"
 specified = "basis"
 type = "real → bool"
+prototype = "isNormal x"
 description = """
-"isNormal x" returns true if x is normal, i.e., neither zero,
+returns true if x is normal, i.e., neither zero,
 subnormal, infinite nor NaN.
 """
 
@@ -2344,8 +2509,9 @@ structure = "Real"
 name = "max"
 specified = "basis"
 type = "real * real → real"
+prototype = "max (x, y)"
 description = """
-"max (x, y)" returns the larger of the arguments. If exactly one
+returns the larger of the arguments. If exactly one
 argument is NaN, returns the other argument. If both arguments are
 NaN, returns NaN.
 """
@@ -2356,8 +2522,9 @@ structure = "Real"
 name = "maxFinite"
 specified = "basis"
 type = "real"
+prototype = "maxFinite"
 description = """
-"maxFinite" is the maximum finite number.
+is the maximum finite number.
 """
 
 [[functions]]
@@ -2366,8 +2533,9 @@ structure = "Real"
 name = "min"
 specified = "basis"
 type = "real * real → real"
+prototype = "min (x, y)"
 description = """
-"min (x, y)" returns the smaller of the arguments. If exactly one
+returns the smaller of the arguments. If exactly one
 argument is NaN, returns the other argument. If both arguments are
 NaN, returns NaN.
 """
@@ -2378,8 +2546,9 @@ structure = "Real"
 name = "minNormalPos"
 specified = "basis"
 type = "real"
+prototype = "minNormalPos"
 description = """
-"minNormalPos" is the minimum non-zero normalized number.
+is the minimum non-zero normalized number.
 """
 
 [[functions]]
@@ -2388,8 +2557,9 @@ structure = "Real"
 name = "minPos"
 specified = "basis"
 type = "real"
+prototype = "minPos"
 description = """
-"minPos" is the minimum non-zero positive number.
+is the minimum non-zero positive number.
 """
 
 [[functions]]
@@ -2398,8 +2568,9 @@ structure = "Real"
 name = "negInf"
 specified = "basis"
 type = "real"
+prototype = "negInf"
 description = """
-"negInf" is the negative infinity value.
+is the negative infinity value.
 """
 
 [[functions]]
@@ -2409,8 +2580,9 @@ name = "nextAfter"
 specified = "basis"
 type = "real * real → real"
 implemented = false
+prototype = "nextAfter (r, t)"
 description = """
-"nextAfter (r, t)" returns the next representable real after `r` in
+returns the next representable real after `r` in
 the direction of `t`. Thus, if `t` is less than `r`, `nextAfter`
 returns the largest representable floating-point number less than `r`.
 """
@@ -2422,8 +2594,9 @@ name = "op !="
 specified = "basis"
 type = "real * real → bool"
 implemented = false
+prototype = "x != y"
 description = """
-"x != y" is equivalent to `not o op ==` and the IEEE `?<>` operator.
+is equivalent to `not o op ==` and the IEEE `?<>` operator.
 """
 
 [[functions]]
@@ -2432,8 +2605,9 @@ structure = "Real"
 name = "op *"
 specified = "basis"
 type = "real * real → real"
+prototype = "r1 * r2"
 description = """
-"r1 * r2" is the product of `r1` and `r2`. The product of zero and an
+is the product of `r1` and `r2`. The product of zero and an
 infinity produces NaN. Otherwise, if one argument is infinite, the
 result is infinite with the correct sign, e.g., -5 * (-infinity) =
 infinity, infinity * (-infinity) = -infinity.
@@ -2446,8 +2620,9 @@ name = "op *+"
 specified = "basis"
 type = "real * real * real → real"
 implemented = false
+prototype = "*+ (a, b, c)"
 description = """
-"*+ (a, b, c)" returns `a * b + c`. Its behavior on infinities follows
+returns `a * b + c`. Its behavior on infinities follows
 from the behaviors derived from addition and multiplication.
 """
 
@@ -2458,8 +2633,9 @@ name = "op *-"
 specified = "basis"
 type = "real * real * real → real"
 implemented = false
+prototype = "*- (a, b, c)"
 description = """
-"*- (a, b, c)" returns `a * b - c`. Its behavior on infinities follows
+returns `a * b - c`. Its behavior on infinities follows
 from the behaviors derived from subtraction and multiplication.
 """
 
@@ -2469,8 +2645,9 @@ structure = "Real"
 name = "op +"
 specified = "basis"
 type = "real * real → real"
+prototype = "r1 + r2"
 description = """
-"r1 + r2" is the sum of `r1` and `r2`. If one argument is finite and
+is the sum of `r1` and `r2`. If one argument is finite and
 the other infinite, the result is infinite with the correct sign,
 e.g., 5 - (-infinity) = infinity. We also have infinity + infinity =
 infinity and (-infinity) + (-infinity) = (-infinity). Any other
@@ -2483,8 +2660,9 @@ structure = "Real"
 name = "op -"
 specified = "basis"
 type = "real * real → real"
+prototype = "r1 - r2"
 description = """
-"r1 - r2" is the difference of `r1` and `r2`. If one argument is
+is the difference of `r1` and `r2`. If one argument is
 finite and the other infinite, the result is infinite with the correct
 sign, e.g., 5 - (-infinity) = infinity. We also have infinity +
 infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any
@@ -2497,8 +2675,9 @@ structure = "Real"
 name = "op /"
 specified = "basis"
 type = "real * real → real"
+prototype = "r1 / r2"
 description = """
-"r1 / r2" is the quotient of `r1` and `r2`. We have 0 / 0 = NaN and
+is the quotient of `r1` and `r2`. We have 0 / 0 = NaN and
 +-infinity / +-infinity = NaN. Dividing a finite, non-zero number by a
 zero, or an infinity by a finite number produces an infinity with the
 correct sign. (Note that zeros are signed.) A finite number divided by
@@ -2511,8 +2690,9 @@ structure = "Real"
 name = "op <"
 specified = "basis"
 type = "real * real → bool"
+prototype = "x < y"
 description = """
-"x < y" returns true if x is less than y. Return false on unordered
+returns true if x is less than y. Return false on unordered
 arguments, i.e., if either argument is NaN, so that the usual reversal
 of comparison under negation does not hold, e.g., `a < b` is not the
 same as `not (a >= b)`.
@@ -2524,6 +2704,7 @@ structure = "Real"
 name = "op <="
 specified = "basis"
 type = "real * real → bool"
+prototype = "x <= y"
 description = """
 As "<"
 """
@@ -2535,8 +2716,9 @@ name = "op =="
 specified = "basis"
 type = "real * real → bool"
 implemented = false
+prototype = "x == y"
 description = """
-"x == y" returns true if and only if neither y nor x is NaN, and y and
+returns true if and only if neither y nor x is NaN, and y and
 x are equal, ignoring signs on zeros. This is equivalent to the IEEE
 `=` operator.
 """
@@ -2547,6 +2729,7 @@ structure = "Real"
 name = "op >"
 specified = "basis"
 type = "real * real → bool"
+prototype = "x > y"
 description = """
 As "<"
 """
@@ -2557,6 +2740,7 @@ structure = "Real"
 name = "op >="
 specified = "basis"
 type = "real * real → bool"
+prototype = "x >= y"
 description = """
 As "<"
 """
@@ -2568,8 +2752,9 @@ name = "op ?="
 specified = "basis"
 type = "real * real → bool"
 implemented = false
+prototype = "?= (x, y)"
 description = """
-"?= (x, y)" returns true if either argument is NaN or if the arguments
+returns true if either argument is NaN or if the arguments
 are bitwise equal, ignoring signs on zeros. It is equivalent to the
 IEEE `?=` operator.
 """
@@ -2580,8 +2765,9 @@ structure = "Real"
 name = "op ~"
 specified = "basis"
 type = "real → real"
+prototype = "~ r"
 description = """
-"~ r" returns the negation of `r`.
+returns the negation of `r`.
 """
 
 [[functions]]
@@ -2590,8 +2776,9 @@ structure = "Real"
 name = "posInf"
 specified = "basis"
 type = "real"
+prototype = "posInf"
 description = """
-"posInf" is the positive infinity value.
+is the positive infinity value.
 """
 
 [[functions]]
@@ -2600,8 +2787,9 @@ structure = "Real"
 name = "precision"
 specified = "basis"
 type = "int"
+prototype = "precision"
 description = """
-"precision" is the number of digits, each between 0 and `radix` - 1,
+is the number of digits, each between 0 and `radix` - 1,
 in the mantissa. Note that the precision includes the implicit (or
 hidden) bit used in the IEEE representation (e.g., the value of
 Real64.precision is 53).
@@ -2613,8 +2801,9 @@ structure = "Real"
 name = "radix"
 specified = "basis"
 type = "int"
+prototype = "radix"
 description = """
-"radix" is the base of the representation, e.g., 2 or 10 for IEEE
+is the base of the representation, e.g., 2 or 10 for IEEE
 floating point.
 """
 
@@ -2624,8 +2813,9 @@ structure = "Real"
 name = "realCeil"
 specified = "basis"
 type = "real → real"
+prototype = "realCeil r"
 description = """
-"realCeil r" produces `ceil(r)`, the smallest integer not less than
+produces `ceil(r)`, the smallest integer not less than
 `r`.
 """
 
@@ -2635,8 +2825,9 @@ structure = "Real"
 name = "realFloor"
 specified = "basis"
 type = "real → real"
+prototype = "realFloor r"
 description = """
-"realFloor r" produces `floor(r)`, the largest integer not larger than
+produces `floor(r)`, the largest integer not larger than
 `r`.
 """
 
@@ -2646,8 +2837,9 @@ structure = "Real"
 name = "realMod"
 specified = "basis"
 type = "real → real"
+prototype = "realMod r"
 description = """
-"realMod r" returns the fractional parts of `r`; `realMod` is
+returns the fractional parts of `r`; `realMod` is
 equivalent to `#frac o split`.
 """
 
@@ -2657,8 +2849,9 @@ structure = "Real"
 name = "realRound"
 specified = "basis"
 type = "real → real"
+prototype = "realRound r"
 description = """
-"realRound r" rounds to the integer-valued real value that is nearest
+rounds to the integer-valued real value that is nearest
 to `r`. In the case of a tie, it rounds to the nearest even integer.
 """
 
@@ -2668,8 +2861,9 @@ structure = "Real"
 name = "realTrunc"
 specified = "basis"
 type = "real → real"
+prototype = "realTrunc r"
 description = """
-"realTrunc r" rounds `r` towards zero.
+rounds `r` towards zero.
 """
 
 [[functions]]
@@ -2678,8 +2872,9 @@ structure = "Real"
 name = "rem"
 specified = "basis"
 type = "real * real → real"
+prototype = "rem (x, y)"
 description = """
-"rem (x, y)" returns the remainder `x - n * y`, where `n` = `trunc (x
+returns the remainder `x - n * y`, where `n` = `trunc (x
 / y)`. The result has the same sign as `x` and has absolute value less
 than the absolute value of `y`. If `x` is an infinity or `y` is 0,
 `rem` returns NaN. If `y` is an infinity, rem returns `x`.
@@ -2691,8 +2886,9 @@ structure = "Real"
 name = "round"
 specified = "basis"
 type = "real → int"
+prototype = "round r"
 description = """
-"round r" yields the integer nearest to `r`. In the case of a tie, it
+yields the integer nearest to `r`. In the case of a tie, it
 rounds to the nearest even integer.
 """
 
@@ -2702,8 +2898,9 @@ structure = "Real"
 name = "sameSign"
 specified = "basis"
 type = "real * real → bool"
+prototype = "sameSign (r1, r2)"
 description = """
-"sameSign (r1, r2)" returns true if and only if `signBit r1` equals
+returns true if and only if `signBit r1` equals
 `signBit r2`.
 """
 
@@ -2714,8 +2911,9 @@ name = "scan"
 specified = "basis"
 type = "(char,α) StringCvt.reader → (real,α) StringCvt.reader"
 implemented = false
+prototype = "scan getc strm"
 description = """
-"scan getc strm" scans a `real` value from character source. Reads
+scans a `real` value from character source. Reads
 from ARG/strm/ using reader `getc`, ignoring initial whitespace. It
 returns `SOME (r, rest)` if successful, where `r` is the scanned
 `real` value and `rest` is the unused portion of the character stream
@@ -2729,8 +2927,9 @@ structure = "Real"
 name = "sign"
 specified = "basis"
 type = "real → int"
+prototype = "sign r"
 description = """
-"sign r" returns ~1 if r is negative, 0 if r is zero, or 1 if r is
+returns ~1 if r is negative, 0 if r is zero, or 1 if r is
 positive. An infinity returns its sign; a zero returns 0 regardless of
 its sign. It raises `Domain` on NaN.
 """
@@ -2741,8 +2940,9 @@ structure = "Real"
 name = "signBit"
 specified = "basis"
 type = "real → bool"
+prototype = "signBit r"
 description = """
-"signBit r" returns true if and only if the sign of `r` (infinities,
+returns true if and only if the sign of `r` (infinities,
 zeros, and NaN, included) is negative.
 """
 
@@ -2752,8 +2952,9 @@ structure = "Real"
 name = "split"
 specified = "basis"
 type = "real → {frac:real, whole:real}"
+prototype = "split r"
 description = """
-"split r" returns `{frac, whole}`, where `frac` and `whole` are the
+returns `{frac, whole}`, where `frac` and `whole` are the
 fractional and integral parts of `r`, respectively. Specifically,
 `whole` is integral, and `abs frac` < 1.0.
 """
@@ -2765,8 +2966,9 @@ name = "toDecimal"
 specified = "basis"
 type = "real → IEEEReal.decimal_approx"
 implemented = false
+prototype = "toDecimal r"
 description = """
-"toDecimal r" converts a `real` to a decimal approximation
+converts a `real` to a decimal approximation
 """
 
 [[functions]]
@@ -2776,8 +2978,9 @@ name = "toInt"
 specified = "basis"
 type = "real → IEEEReal.rounding_mode → int"
 implemented = false
+prototype = "toInt mode x"
 description = """
-"toInt mode x" converts the argument `x` to an integral type using the
+converts the argument `x` to an integral type using the
 specified rounding mode. It raises `Overflow` if the result is not
 representable, in particular, if `x` is an infinity. It raises
 `Domain` if the input real is NaN.
@@ -2790,8 +2993,9 @@ name = "toLarge"
 specified = "basis"
 type = "real → real"
 implemented = false
+prototype = "toLarge r"
 description = """
-"toLarge r" convert a value of type `real` to type `LargeReal.real`.
+convert a value of type `real` to type `LargeReal.real`.
 """
 
 [[functions]]
@@ -2801,8 +3005,9 @@ name = "toLargeInt"
 specified = "basis"
 type = "real → IEEEReal.rounding_mode → IntInf.int"
 implemented = false
+prototype = "toLargeInt mode r"
 description = """
-See "toInt"
+As "toInt"
 """
 
 [[functions]]
@@ -2811,8 +3016,9 @@ structure = "Real"
 name = "toManExp"
 specified = "basis"
 type = "real → {man:real, exp:int}"
+prototype = "toManExp r"
 description = """
-"toManExp r" returns `{man, exp}`, where `man` and `exp` are the
+returns `{man, exp}`, where `man` and `exp` are the
 mantissa and exponent of r, respectively.
 """
 
@@ -2822,8 +3028,9 @@ structure = "Real"
 name = "toString"
 specified = "basis"
 type = "real → string"
+prototype = "toString r"
 description = """
-"toString r" converts a `real` into a `string`; equivalent to `(fmt
+converts a `real` into a `string`; equivalent to `(fmt
 (StringCvt.GEN NONE) r)`
 """
 
@@ -2833,8 +3040,9 @@ structure = "Real"
 name = "trunc"
 specified = "basis"
 type = "real → int"
+prototype = "trunc r"
 description = """
-"trunc r" rounds r towards zero.
+rounds r towards zero.
 """
 
 [[functions]]
@@ -2843,8 +3051,9 @@ structure = "Real"
 name = "unordered"
 specified = "basis"
 type = "real * real → bool"
+prototype = "unordered (x, y)"
 description = """
-"unordered (x, y)" returns true if x and y are unordered, i.e., at
+returns true if x and y are unordered, i.e., at
 least one of x and y is NaN.
 """
 
@@ -2855,8 +3064,9 @@ structure = "Relational"
 name = "compare"
 specified = "morel"
 type = "α * α → order"
+prototype = "compare (x, y)"
 description = """
-"compare (x, y)" returns `LESS`, `EQUAL`, or `GREATER` according to
+returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
 second.
 
@@ -2878,8 +3088,9 @@ structure = "Relational"
 name = "count, count"
 specified = "morel"
 type = "int list → int"
+prototype = "count list"
 description = """
-"count list" returns the number of elements in `list`. Often used with
+returns the number of elements in `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute countId =
 count`.
 """
@@ -2890,8 +3101,9 @@ structure = "Relational"
 name = "empty, empty"
 specified = "morel"
 type = "α list → bool"
+prototype = "empty list"
 description = """
-"empty list" returns whether the list is empty, for example `from d in
+returns whether the list is empty, for example `from d in
 depts where empty (from e where e.deptno = d.deptno)`.
 """
 
@@ -2901,8 +3113,9 @@ structure = "Relational"
 name = "max, max"
 specified = "morel"
 type = "α list → α"
+prototype = "max list"
 description = """
-"max list" returns the greatest element of `list`. Often used with
+returns the greatest element of `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute maxId =
 max of e.id`.
 """
@@ -2913,8 +3126,9 @@ structure = "Relational"
 name = "min, min"
 specified = "morel"
 type = "α list → α"
+prototype = "min list"
 description = """
-"min list" returns the least element of `list`. Often used with
+returns the least element of `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute minId =
 min of e.id`.
 """
@@ -2925,8 +3139,9 @@ structure = "Relational"
 name = "nonEmpty, nonEmpty"
 specified = "morel"
 type = "α list → bool"
+prototype = "nonEmpty list"
 description = """
-"nonEmpty list" returns whether the list has at least one element, for
+returns whether the list has at least one element, for
 example `from d in depts where nonEmpty (from e where e.deptno =
 d.deptno)`.
 """
@@ -2937,8 +3152,9 @@ structure = "Relational"
 name = "only, only"
 specified = "morel"
 type = "α list → α"
+prototype = "only list"
 description = """
-"only list" returns the sole element of list, for example `from e in
+returns the sole element of list, for example `from e in
 emps yield only (from d where d.deptno = e.deptno)`.
 """
 
@@ -2948,8 +3164,9 @@ structure = "Relational"
 name = "op elem"
 specified = "morel"
 type = "α * α bag → bool, α * α list → bool"
+prototype = "e elem collection"
 description = """
-"e elem collection" returns whether `e` is a member of `collection`.
+returns whether `e` is a member of `collection`.
 """
 
 [[functions]]
@@ -2958,8 +3175,9 @@ structure = "Relational"
 name = "op notelem"
 specified = "morel"
 type = "α * α bag → bool, α * α list → bool"
+prototype = "e notelem collection"
 description = """
-"e notelem collection" returns whether `e` is not a member of
+returns whether `e` is not a member of
 `collection`.
 """
 
@@ -2969,8 +3187,9 @@ structure = "Relational"
 name = "sum, sum"
 specified = "morel"
 type = "int list → int"
+prototype = "sum list"
 description = """
-"sum list" returns the sum of the elements of `list`. Often used with
+returns the sum of the elements of `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute sumId =
 sum of e.id`.
 """
@@ -2983,8 +3202,9 @@ structure = "String"
 name = "collate"
 specified = "basis"
 type = "(char * char → order) → string * string → order"
+prototype = "collate (f, (s, t))"
 description = """
-"collate (f, (s, t))" performs lexicographic comparison of the two
+performs lexicographic comparison of the two
 strings using the given ordering `f` on characters.
 """
 
@@ -2994,8 +3214,9 @@ structure = "String"
 name = "compare"
 specified = "basis"
 type = "string * string → order"
+prototype = "compare (s, t)"
 description = """
-"compare (s, t)" does a lexicographic comparison of the two strings
+does a lexicographic comparison of the two strings
 using the ordering `Char.compare` on the characters. It returns
 `LESS`, `EQUAL`, or `GREATER`, if `s` is less than, equal to, or
 greater than `t`, respectively.
@@ -3007,8 +3228,9 @@ structure = "String"
 name = "concat"
 specified = "basis"
 type = "string list → string"
+prototype = "concat l"
 description = """
-"concat l" is the concatenation of all the strings in `l`. This raises
+is the concatenation of all the strings in `l`. This raises
 `Size` if the sum of all the sizes is greater than `maxSize`.
 """
 
@@ -3018,8 +3240,9 @@ structure = "String"
 name = "concatWith"
 specified = "basis"
 type = "string → string list → string"
+prototype = "concatWith s l"
 description = """
-"concatWith s l" returns the concatenation of the strings in the list
+returns the concatenation of the strings in the list
 `l` using the string `s` as a separator. This raises `Size` if the
 size of the resulting string would be greater than `maxSize`.
 """
@@ -3030,8 +3253,9 @@ structure = "String"
 name = "explode"
 specified = "basis"
 type = "string → char list"
+prototype = "explode s"
 description = """
-"explode s" is the list of characters in the string `s`.
+is the list of characters in the string `s`.
 """
 
 [[functions]]
@@ -3040,8 +3264,10 @@ structure = "String"
 name = "extract"
 specified = "basis"
 type = "string * int * int option → string"
+prototype = "extract (s, i, NONE)"
 description = """
-"extract (s, i, NONE)" and "extract (s, i, SOME j)" return substrings
+and "extract (s, i, SOME j)"
+return substrings
 of `s`. The first returns the substring of `s` from the `i`(th)
 character to the end of the string, i.e., the string
 `s`[`i`..|`s`|-1]. This raises `Subscript` if `i` < 0 or |`s`| < `i`.
@@ -3057,8 +3283,9 @@ structure = "String"
 name = "fields"
 specified = "basis"
 type = "(char → bool) → string → string list"
+prototype = "fields f s"
 description = """
-"fields f s" returns a list of fields derived from `s` from left to
+returns a list of fields derived from `s` from left to
 right. A field is a (possibly empty) maximal substring of `s` not
 containing any delimiter. A delimiter is a character satisfying the
 predicate `f`.
@@ -3077,8 +3304,9 @@ name = "fromCString"
 specified = "basis"
 type = "string → string option"
 implemented = false
+prototype = "fromCString s"
 description = """
-"fromCString s" scans the string `s` as a string in the C language,
+scans the string `s` as a string in the C language,
 converting C escape sequences into the appropriate characters. The
 semantics are identical to `fromString` above, except that C escape
 sequences are used (see ISO C standard ISO/IEC 9899:1990).
@@ -3096,8 +3324,9 @@ name = "fromString"
 specified = "basis"
 type = "string → string option"
 implemented = false
+prototype = "fromString s"
 description = """
-"fromString s" scans the string `s` as a sequence of printable
+scans the string `s` as a sequence of printable
 characters, converting SML escape sequences into the appropriate
 characters. It does not skip leading whitespace. It returns as many
 characters as can successfully be scanned, stopping when it reaches
@@ -3120,19 +3349,27 @@ scanned at all. Here are some sample conversions:
 <pre>
 Input string s fromString s
 ============== ============
-"\\\\q"          NONE
-"a\\^D"         SOME "a"
-"a\\\\ \\\\\\\\q" SOME "a"
-"\\\\ \\\\"      SOME ""
-""             SOME ""
-"\\\\ \\\\\\^D"     SOME ""
-"\\\\ a"         NONE
+"\\\\q"
+         NONE
+"a\\^D"
+        SOME "a"
+"a\\\\ \\\\\\\\q"
+SOME "a"
+"\\\\ \\\\"
+     SOME ""
+""
+            SOME ""
+"\\\\ \\\\\\^D"
+    SOME ""
+"\\\\ a"
+        NONE
 </pre>
 
 *Implementation note*: Because of the special cases, such as
 `fromString ""` = `SOME ""`,
 `fromString "\\\\ \\\\\\^D"` = `SOME ""`, and
-`fromString "\\^D" = NONE`,
+`fromString "\\^D"
+= NONE`,
 the function cannot be implemented as a simple iterative application
 of `CHAR.scan`.
 """
@@ -3143,8 +3380,9 @@ structure = "String"
 name = "implode"
 specified = "basis"
 type = "char list → string"
+prototype = "implode l"
 description = """
-"implode l" generates the string containing the characters in the list
+generates the string containing the characters in the list
 `l`. This is equivalent to `concat (List.map str l)`. This raises
 `Size` if the resulting string would have size greater than `maxSize`.
 """
@@ -3155,8 +3393,9 @@ structure = "String"
 name = "isPrefix"
 specified = "basis"
 type = "string → string → bool"
+prototype = "isPrefix s1 s2"
 description = """
-"isPrefix s1 s2" returns `true` if the string `s1` is a prefix of the
+returns `true` if the string `s1` is a prefix of the
 string `s2`. Note that the empty string is a prefix of any string, and
 that a string is a prefix of itself.
 """
@@ -3167,8 +3406,9 @@ structure = "String"
 name = "isSubstring"
 specified = "basis"
 type = "string → string → bool"
+prototype = "isSubstring s1 s2"
 description = """
-"isSubstring s1 s2" returns `true` if the string `s1` is a substring
+returns `true` if the string `s1` is a substring
 of the string `s2`. Note that the empty string is a substring of any
 string, and that a string is a substring of itself.
 """
@@ -3179,8 +3419,9 @@ structure = "String"
 name = "isSuffix"
 specified = "basis"
 type = "string → string → bool"
+prototype = "isSuffix s1 s2"
 description = """
-"isSuffix s1 s2" returns `true` if the string `s1` is a suffix of the
+returns `true` if the string `s1` is a suffix of the
 string `s2`. Note that the empty string is a suffix of any string, and
 that a string is a suffix of itself.
 """
@@ -3191,8 +3432,9 @@ structure = "String"
 name = "map"
 specified = "basis"
 type = "(char → char) → string → string"
+prototype = "map f s"
 description = """
-"map f s" applies `f` to each element of `s` from left to right,
+applies `f` to each element of `s` from left to right,
 returning the resulting string. It is equivalent to `implode(List.map
 f (explode s))`.
 """
@@ -3203,8 +3445,9 @@ structure = "String"
 name = "maxSize"
 specified = "basis"
 type = "int"
+prototype = "maxSize"
 description = """
-The longest allowed size of a string.
+is the longest allowed size of a string.
 """
 
 [[functions]]
@@ -3213,8 +3456,9 @@ structure = "String"
 name = "op ^"
 specified = "basis"
 type = "string * string → string"
+prototype = "s ^ t"
 description = """
-"s ^ t" is the concatenation of the strings `s` and `t`. This raises
+is the concatenation of the strings `s` and `t`. This raises
 `Size` if `|s| + |t| > maxSize`.
 """
 
@@ -3225,8 +3469,9 @@ name = "scan"
 specified = "basis"
 type = "(char,α) StringCvt.reader → (string,α) StringCvt.reader"
 implemented = false
+prototype = "scan getc strm"
 description = """
-"scan getc strm" scans its character source as a sequence of printable
+scans its character source as a sequence of printable
 characters, converting SML escape sequences into the appropriate
 characters. It does not skip leading whitespace. It returns as many
 characters as can successfully be scanned, stopping when it reaches
@@ -3242,8 +3487,9 @@ structure = "String"
 name = "size"
 specified = "basis"
 type = "string → int"
+prototype = "size s"
 description = """
-"size s" returns |`s`|, the number of characters in string `s`.
+returns |`s`|, the number of characters in string `s`.
 """
 
 [[functions]]
@@ -3252,8 +3498,9 @@ structure = "String"
 name = "str"
 specified = "basis"
 type = "char → string"
+prototype = "str c"
 description = """
-"str c" is the string of size one containing the character `c`.
+is the string of size one containing the character `c`.
 """
 
 [[functions]]
@@ -3262,8 +3509,9 @@ structure = "String"
 name = "sub"
 specified = "basis"
 type = "string * int → char"
+prototype = "sub (s, i)"
 description = """
-"sub (s, i)" returns the `i`(th) character of `s`, counting from
+returns the `i`(th) character of `s`, counting from
 zero. This raises `Subscript` if `i` < 0 or |`s`| &le; `i`.
 """
 
@@ -3273,8 +3521,9 @@ structure = "String"
 name = "substring"
 specified = "basis"
 type = "string * int * int → string"
+prototype = "substring (s, i, j)"
 description = """
-"substring (s, i, j)" returns the substring `s`[`i`..`i`+`j`-1], i.e.,
+returns the substring `s`[`i`..`i`+`j`-1], i.e.,
 the substring of size `j` starting at index `i`. This is equivalent to
 `extract(s, i, SOME j)`.
 """
@@ -3286,8 +3535,9 @@ name = "toCString"
 specified = "basis"
 type = "string → string"
 implemented = false
+prototype = "toCString s"
 description = """
-"toCString s" returns a string corresponding to `s`, with non-printable
+returns a string corresponding to `s`, with non-printable
 characters replaced by C escape sequences. This is equivalent to
 
 <pre>translate Char.toCString s</pre>
@@ -3300,8 +3550,9 @@ name = "toString"
 specified = "basis"
 type = "string → string"
 implemented = false
+prototype = "toString s"
 description = """
-"toString s" returns a string corresponding to `s`, with non-printable
+returns a string corresponding to `s`, with non-printable
 characters replaced by SML escape sequences. This is equivalent to
 
 <pre>translate Char.toString s</pre>
@@ -3313,8 +3564,9 @@ structure = "String"
 name = "tokens"
 specified = "basis"
 type = "(char → bool) → string → string list"
+prototype = "tokens f s"
 description = """
-"tokens f s" returns a list of tokens derived from `s` from left to
+returns a list of tokens derived from `s` from left to
 right. A token is a non-empty maximal substring of `s` not containing
 any delimiter. A delimiter is a character satisfying the predicate
 `f`.
@@ -3332,8 +3584,9 @@ structure = "String"
 name = "translate"
 specified = "basis"
 type = "(char → string) → string → string"
+prototype = "translate f s"
 description = """
-"translate f s" returns the string generated from `s` by mapping each
+returns the string generated from `s` by mapping each
 character in `s` by `f`. It is equivalent to `concat(List.map f
 (explode s))`.
 """
@@ -3346,8 +3599,9 @@ structure = "Sys"
 name = "clearEnv"
 specified = "morel"
 type = "unit → unit"
+prototype = "clearEnv ()"
 description = """
-"clearEnv ()" restores the environment to the initial environment.
+restores the environment to the initial environment.
 """
 
 [[functions]]
@@ -3356,8 +3610,9 @@ structure = "Sys"
 name = "env, env"
 specified = "morel"
 type = "unit → string list"
+prototype = "env ()"
 description = """
-"env ()" prints the environment.
+prints the environment.
 """
 
 [[functions]]
@@ -3366,8 +3621,9 @@ structure = "Sys"
 name = "plan"
 specified = "morel"
 type = "unit → string"
+prototype = "plan ()"
 description = """
-"plan ()" prints the plan of the most recently executed expression.
+prints the plan of the most recently executed expression.
 """
 
 [[functions]]
@@ -3376,8 +3632,9 @@ structure = "Sys"
 name = "set"
 specified = "morel"
 type = "string * α → unit"
+prototype = "set (property, value)"
 description = """
-"set (property, value)" sets the value of `property` to `value`.
+sets the value of `property` to `value`.
 """
 extra = """
 (See [Properties](#properties) below.)
@@ -3389,8 +3646,9 @@ structure = "Sys"
 name = "show"
 specified = "morel"
 type = "string → string option"
+prototype = "show property"
 description = """
-"show property" returns the current the value of `property`, as a
+returns the current the value of `property`, as a
 string, or `NONE` if unset.
 """
 
@@ -3400,8 +3658,9 @@ structure = "Sys"
 name = "showAll"
 specified = "morel"
 type = "unit → string * string option list"
+prototype = "showAll ()"
 description = """
-"showAll ()" returns a list of all properties and their current value
+returns a list of all properties and their current value
 as a string, or `NONE` if unset.
 """
 
@@ -3411,8 +3670,9 @@ structure = "Sys"
 name = "unset"
 specified = "morel"
 type = "string → unit"
+prototype = "unset property"
 description = """
-"unset property" clears the current the value of `property`.
+clears the current the value of `property`.
 """
 
 # === Vector structure ===============================================
@@ -3423,8 +3683,9 @@ structure = "Vector"
 name = "all"
 specified = "basis"
 type = "(α → bool) → α vector → bool"
+prototype = "all f vec"
 description = """
-"all f vec" applies `f` to each element `x` of the vector `vec`, from
+applies `f` to each element `x` of the vector `vec`, from
 left to right, until `f(x)` evaluates to `false`. It returns `false`
 if such an `x` exists; otherwise it returns `true`. It is equivalent
 to `not(exists (not o f) vec)`.
@@ -3436,8 +3697,9 @@ structure = "Vector"
 name = "app"
 specified = "basis"
 type = "(α → unit) → α vector → unit"
+prototype = "app f vec"
 description = """
-"app f vec" applies the function `f` to the elements of a vector in
+applies the function `f` to the elements of a vector in
 left to right order (i.e., in order of increasing indices).
 
 <p>It is equivalent to
@@ -3450,8 +3712,9 @@ structure = "Vector"
 name = "appi"
 specified = "basis"
 type = "(int * α → unit) → α vector → unit"
+prototype = "appi f vec"
 description = """
-"appi f vec" applies the function `f` to the elements of a vector in
+applies the function `f` to the elements of a vector in
 left to right order (i.e., in order of increasing indices).
 
 <p>It is equivalent to
@@ -3464,8 +3727,9 @@ structure = "Vector"
 name = "collate"
 specified = "basis"
 type = ""
+prototype = "collate f (v1, v2)"
 description = """
-"collate f (v1, v2)" performs lexicographic comparison of the two
+performs lexicographic comparison of the two
 vectors using the given ordering `f` on elements.
 """
 
@@ -3475,8 +3739,9 @@ structure = "Vector"
 name = "concat"
 specified = "basis"
 type = "α vector list → α vector"
+prototype = "concat l"
 description = """
-"concat l" returns the vector that is the concatenation of the vectors
+returns the vector that is the concatenation of the vectors
 in the list `l`.  Raises `Size` if the total length of these vectors
 exceeds `maxLen`
 """
@@ -3487,8 +3752,9 @@ structure = "Vector"
 name = "exists"
 specified = "basis"
 type = ""
+prototype = "exists f vec"
 description = """
-"exists f vec" applies `f` to each element `x` of the vector `vec`,
+applies `f` to each element `x` of the vector `vec`,
 from left to right (i.e., increasing indices), until `f(x)` evaluates
 to `true`; it returns `true` if such an `x` exists and `false`
 otherwise.
@@ -3500,8 +3766,9 @@ structure = "Vector"
 name = "find"
 specified = "basis"
 type = "(α → bool) → α vector → α option"
+prototype = "find f vec"
 description = """
-"find f vec" applies `f` to each element `x` of the vector `vec`, from
+applies `f` to each element `x` of the vector `vec`, from
 left to right, until `f(x)` evaluates to `true`. It returns `SOME (x)`
 if such an `x` exists; otherwise it returns `NONE`.
 """
@@ -3512,8 +3779,9 @@ structure = "Vector"
 name = "findi"
 specified = "basis"
 type = "(int * α → bool) → α vector → (int * α) option"
+prototype = "findi f vec"
 description = """
-"findi f vec" applies `f` to each element `x` and element index `i` of
+applies `f` to each element `x` and element index `i` of
 the vector `vec`, from left to right, until `f(i, x)` evaluates to
 `true`. It returns `SOME (i, x)` if such an `x` exists; otherwise it
 returns `NONE`.
@@ -3525,8 +3793,9 @@ structure = "Vector"
 name = "foldl"
 specified = "basis"
 type = "(α * β → β) → β → α vector → β"
+prototype = "foldl f init vec"
 description = """
-"foldl f init vec" folds the function `f` over all the elements of
+folds the function `f` over all the elements of
 vector `vec`, left to right, using the initial value `init`.
 """
 
@@ -3536,8 +3805,9 @@ structure = "Vector"
 name = "foldli"
 specified = "basis"
 type = "(int * α * β → β) → β → α vector → β"
+prototype = "foldli f init vec"
 description = """
-"foldli f init vec" folds the function `f` over all the (index,
+folds the function `f` over all the (index,
 element) pairs of vector `vec`, left to right, using the initial value
 `init`.
 """
@@ -3548,8 +3818,9 @@ structure = "Vector"
 name = "foldr"
 specified = "basis"
 type = "(α * β → β) → β → α vector → β"
+prototype = "foldr f init vec"
 description = """
-"foldr f init vec" folds the function `f` over all the elements of
+folds the function `f` over all the elements of
 vector `vec`, right to left, using the initial value `init`.
 """
 
@@ -3559,8 +3830,9 @@ structure = "Vector"
 name = "foldri"
 specified = "basis"
 type = "(int * α * β → β) → β → α vector → β"
+prototype = "foldri f init vec"
 description = """
-"foldri f init vec" folds the function `f` over all the (index,
+folds the function `f` over all the (index,
 element) pairs of vector `vec`, right to left, using the initial value
 `init`.
 """
@@ -3571,8 +3843,9 @@ structure = "Vector"
 name = "fromList"
 specified = "basis"
 type = "α list → α vector"
+prototype = "fromList l"
 description = """
-"fromList l" creates a new vector from `l`, whose length is `length l`
+creates a new vector from `l`, whose length is `length l`
 and with the `i`<sup>th</sup> element of `l` used as the
 `i`<sup>th</sup> element of the vector. Raises `Size` if `maxLen` <
 `n`.
@@ -3584,8 +3857,9 @@ structure = "Vector"
 name = "length"
 specified = "basis"
 type = "α vector → int"
+prototype = "length v"
 description = """
-"length v" returns the number of elements in the vector `v`.
+returns the number of elements in the vector `v`.
 """
 
 [[functions]]
@@ -3594,8 +3868,9 @@ structure = "Vector"
 name = "map"
 specified = "basis"
 type = "(α → β) → α vector → β vector"
+prototype = "map f vec"
 description = """
-"map f vec" applies the function `f` to the elements of the argument
+applies the function `f` to the elements of the argument
 vector `vec`.
 
 <p>It is equivalent to
@@ -3608,8 +3883,9 @@ structure = "Vector"
 name = "mapi"
 specified = "basis"
 type = "(int * α → β) → α vector → β vector"
+prototype = "mapi f vec"
 description = """
-"mapi f vec" applies the function `f` to the elements of the argument
+applies the function `f` to the elements of the argument
 vector `vec`, supplying the vector index and element as arguments to
 each call.
 
@@ -3623,8 +3899,9 @@ structure = "Vector"
 name = "maxLen"
 specified = "basis"
 type = "int"
+prototype = "maxLen"
 description = """
-"maxLen" returns the maximum length of vectors supported in this
+returns the maximum length of vectors supported in this
 implementation.
 """
 
@@ -3634,8 +3911,9 @@ structure = "Vector"
 name = "sub"
 specified = "basis"
 type = "α vector * int → α"
+prototype = "sub (vec, i)"
 description = """
-"sub (vec, i)" returns the `i`<sup>th</sup> element of vector `vec`.
+returns the `i`<sup>th</sup> element of vector `vec`.
 Raises `Subscript` if `i` < 0 or `size vec` &le; `i`.
 """
 
@@ -3645,8 +3923,9 @@ structure = "Vector"
 name = "tabulate"
 specified = "basis"
 type = "int * (int → α) → α vector"
+prototype = "tabulate (n, f)"
 description = """
-"tabulate (n, f)" returns a vector of length `n` equal to `[f(0),
+returns a vector of length `n` equal to `[f(0),
 f(1), ..., f(n-1)]`, created from left to right. This is equivalent
 to the expression
 
@@ -3661,8 +3940,9 @@ structure = "Vector"
 name = "update"
 specified = "basis"
 type = "α vector * int * α → α vector"
+prototype = "update (vec, i, x)"
 description = """
-"update (vec, i, x)" returns a new vector, identical to `vec`, except
+returns a new vector, identical to `vec`, except
 the `i`<sup>th</sup> element of `vec` is set to `x`. Raises
 `Subscript` if `i` < 0 or `size vec` &le; `i`.
 """
