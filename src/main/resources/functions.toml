@@ -740,6 +740,162 @@ returns the uppercase letter corresponding to `c`, if `c`
 is a letter (a to z or A to Z); otherwise returns `c`.
 """
 
+# === Either structure ===============================================
+# The Either structure provides a polymorphic disjoint-sum type with
+# associated operations.
+
+[[functions]]
+ordinal = 8
+structure = "Either"
+name = "app"
+specified = "basis+"
+type = "('left -> unit) * ('right -> unit) -> ('left, 'right) either -> unit"
+prototype = "app (fl, fr) sm"
+description = """
+applies `fl` to the contents of left values and `fr` to the contents
+of right values.
+"""
+
+[[functions]]
+ordinal = 9
+structure = "Either"
+name = "appLeft"
+specified = "basis+"
+type = "('left -> unit) -> ('left, 'right) either -> unit"
+prototype = "appLeft f sm"
+description = """
+applies `f` to the contents of left values and ignores right values.
+"""
+
+[[functions]]
+ordinal = 10
+structure = "Either"
+name = "appRight"
+specified = "basis+"
+type = "('right -> unit) -> ('left, 'right) either -> unit"
+prototype = "appRight f sm"
+description = """
+applies `f` to the contents of right values and ignores left values.
+"""
+
+[[functions]]
+ordinal = 3
+structure = "Either"
+name = "asLeft"
+specified = "basis+"
+type = "('left, 'right) either → 'left option"
+prototype = "asLeft sm"
+description = """
+returns `SOME (x)` if `sm` is a left value with contents `x`,
+otherwise it returns `NONE`.
+"""
+
+[[functions]]
+ordinal = 4
+structure = "Either"
+name = "asRight"
+specified = "basis+"
+type = "('left, 'right) either → 'right option"
+prototype = "asRight sm"
+description = """
+returns `SOME (x)` if `sm` is a right value with contents `x`,
+otherwise it returns `NONE`.
+"""
+
+[[functions]]
+ordinal = 11
+structure = "Either"
+name = "fold"
+specified = "basis+"
+type = "('left * 'b -> 'b) * ('right * 'b -> 'b) -> 'b -> ('left, 'right) either -> 'b"
+prototype = "fold (fl, fr) init sm"
+description = """
+computes `fx (v, init)`, where `v` is the contents of `sm` and `fx`
+is either `fl` (if `sm` is a left value) or `fr` (if `sm` is a right
+value).
+"""
+
+[[functions]]
+ordinal = 1
+structure = "Either"
+name = "isLeft"
+specified = "basis+"
+type = "('left, 'right) either → bool"
+prototype = "isLeft sm"
+description = """
+returns true if `sm` is a left value.
+"""
+
+[[functions]]
+ordinal = 2
+structure = "Either"
+name = "isRight"
+specified = "basis+"
+type = "('left, 'right) either → bool"
+prototype = "isRight sm"
+description = """
+returns true if `sm` is a right value.
+"""
+
+[[functions]]
+ordinal = 5
+structure = "Either"
+name = "map"
+specified = "basis+"
+type = "('ldom -> 'lrng) * ('rdom -> 'rrng) -> ('ldom, 'rdom) either -> ('lrng, 'rrng) either"
+prototype = "map (fl, fr) sm"
+description = """
+maps `fl` over the contents of left values and `fr` over the contents
+of right values.
+"""
+
+[[functions]]
+ordinal = 6
+structure = "Either"
+name = "mapLeft"
+specified = "basis+"
+type = "('ldom -> 'lrng) -> ('ldom, 'rdom) either -> ('lrng, 'rdom) either"
+prototype = "mapLeft f sm"
+description = """
+maps the function `f` over the contents of left values and acts as the
+identity on right values.
+"""
+
+[[functions]]
+ordinal = 7
+structure = "Either"
+name = "mapRight"
+specified = "basis+"
+type = "('rdom -> 'rrng) -> ('ldom, 'rdom) either -> ('ldom, 'rrng) either"
+prototype = "mapRight f sm"
+description = """
+maps the function `f` over the contents of right values and acts as the
+identity on left values.
+"""
+
+[[functions]]
+ordinal = 13
+structure = "Either"
+name = "partition"
+specified = "basis+"
+type = "('left, 'right) either list -> ('left list * 'right list)"
+prototype = "partition sms"
+description = """
+partitions the list of sum values into a list of left values and a
+list of right values.
+"""
+
+[[functions]]
+ordinal = 12
+structure = "Either"
+name = "proj"
+specified = "basis+"
+type = "('a, 'a) either -> 'a"
+prototype = "proj sm"
+description = """
+projects out the contents of `sm`.
+"""
+
 # === Fn structure ===================================================
 # The Fn structure provides various combinators to aid computing with
 # function values.

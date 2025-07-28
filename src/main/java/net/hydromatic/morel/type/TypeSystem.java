@@ -405,6 +405,10 @@ public class TypeSystem {
             return bagType(get(i));
           }
 
+          public Type either(int i, int j) {
+            return TypeSystem.this.either(get(i), get(j));
+          }
+
           public Type vector(int i) {
             return TypeSystem.this.vector(get(i));
           }
@@ -570,6 +574,16 @@ public class TypeSystem {
   }
 
   /**
+   * Creates an "either" type.
+   *
+   * <p>"either(type1, type2)" is shorthand for "apply(lookup("either"), type)".
+   */
+  public Type either(Type type1, Type type2) {
+    final Type eitherType = lookup(BuiltIn.Datatype.EITHER);
+    return apply(eitherType, type1, type2);
+  }
+
+  /**
    * Creates an "option" type.
    *
    * <p>"option(type)" is shorthand for "apply(lookup("option"), type)".
@@ -667,6 +681,8 @@ public class TypeSystem {
     TypeVar get(int i);
     /** Creates type {@code `i bag}. */
     Type bag(int i);
+    /** Creates type {@code (`i, `j) either}. */
+    Type either(int i, int j);
     /** Creates type {@code `i list}. */
     ListType list(int i);
     /** Creates type {@code `i vector}. */

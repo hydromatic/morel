@@ -1282,6 +1282,176 @@ public enum BuiltIn {
                       ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.bag(0)))),
 
   /**
+   * Function "Either.app", of type "(&alpha; &rarr; unit) * (&beta; &rarr;
+   * unit) * (&alpha;, &beta;) either &rarr; unit".
+   */
+  EITHER_APP(
+      "Either",
+      "app",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(
+                          ts.fnType(h.get(0), UNIT), ts.fnType(h.get(1), UNIT)),
+                      h.either(0, 1),
+                      UNIT))),
+
+  /**
+   * Function "Either.appLeft", of type "(&alpha; &rarr; unit) * (&alpha;,
+   * &beta;) either &rarr; unit".
+   */
+  EITHER_APP_LEFT(
+      "Either",
+      "appLeft",
+      ts ->
+          ts.forallType(
+              2,
+              h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.either(0, 1), UNIT))),
+
+  /**
+   * Function "Either.appRight", of type "(&beta; &rarr; unit) * (&alpha;,
+   * &beta;) either &rarr; unit".
+   */
+  EITHER_APP_RIGHT(
+      "Either",
+      "appRight",
+      ts ->
+          ts.forallType(
+              2,
+              h -> ts.fnType(ts.fnType(h.get(1), UNIT), h.either(0, 1), UNIT))),
+
+  /**
+   * Function "Either.asLeft", of type "(&alpha;, &beta;) either &rarr; &alpha;
+   * option".
+   */
+  EITHER_AS_LEFT(
+      "Either",
+      "asLeft",
+      ts -> ts.forallType(2, h -> ts.fnType(h.either(0, 1), h.option(0)))),
+
+  /**
+   * Function "Either.asRight", of type "(&alpha;, &beta;) either &rarr; &beta;
+   * option".
+   */
+  EITHER_AS_RIGHT(
+      "Either",
+      "asRight",
+      ts -> ts.forallType(2, h -> ts.fnType(h.either(0, 1), h.option(1)))),
+
+  /**
+   * Function "Either.fold", of type "(&alpha; * &beta; &rarr; &alpha;) *
+   * (&gamma; * &beta; &rarr; &beta;) * &beta; (&alpha;, &gamma;) either &rarr;
+   * &beta;".
+   */
+  EITHER_FOLD(
+      "Either",
+      "fold",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(
+                          ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
+                          ts.fnType(
+                              ts.tupleType(h.get(2), h.get(1)), h.get(1))),
+                      h.get(1),
+                      h.either(0, 2),
+                      h.get(1)))),
+
+  /**
+   * Function "Either.isLeft", of type "(&alpha;, &beta;) either &rarr; bool".
+   */
+  EITHER_IS_LEFT(
+      "Either",
+      "isLeft",
+      ts -> ts.forallType(2, h -> ts.fnType(h.either(0, 1), BOOL))),
+
+  /**
+   * Function "Either.isRight", of type "(&alpha;, &beta;) either &rarr; bool".
+   */
+  EITHER_IS_RIGHT(
+      "Either",
+      "isRight",
+      ts -> ts.forallType(2, h -> ts.fnType(h.either(0, 1), BOOL))),
+
+  /**
+   * Function "Either.map", of type "(&alpha; &rarr; &gamma;) * (&beta; &rarr;
+   * &delta;) * (&alpha;, &beta;) either &rarr; (&gamma;, &delta;) either".
+   */
+  EITHER_MAP(
+      "Either",
+      "map",
+      ts ->
+          ts.forallType(
+              4,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(
+                          ts.fnType(h.get(0), h.get(2)),
+                          ts.fnType(h.get(1), h.get(3))),
+                      h.either(0, 1),
+                      h.either(2, 3)))),
+
+  /**
+   * Function "Either.mapLeft", of type "(&alpha; &rarr; &beta;) &rarr;
+   * (&alpha;, &gamma;) either &rarr; (&beta;, &gamma;) either".
+   */
+  EITHER_MAP_LEFT(
+      "Either",
+      "mapLeft",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.get(1)),
+                      h.either(0, 2),
+                      h.either(1, 2)))),
+
+  /**
+   * Function "Either.mapRight", of type "(&alpha; &rarr; &beta;) &rarr;
+   * (&gamma;, &alpha;) either &rarr; (&gamma;, &beta;) either".
+   */
+  EITHER_MAP_RIGHT(
+      "Either",
+      "mapRight",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(1), h.get(2)),
+                      h.either(0, 1),
+                      h.either(0, 2)))),
+
+  /**
+   * Function "Either.partition", of type "(&alpha;, &beta;) either list &rarr;
+   * &alpha; list * &beta; list".
+   */
+  EITHER_PARTITION(
+      "Either",
+      "partition",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.listType(h.either(0, 1)),
+                      ts.tupleType(
+                          ts.listType(h.get(0)), ts.listType(h.get(1)))))),
+
+  /**
+   * Function "Either.proj", of type "(&alpha;, &alpha;) either &rarr; &alpha;".
+   */
+  EITHER_PROJ(
+      "Either",
+      "proj",
+      ts -> ts.forallType(1, h -> ts.fnType(h.either(0, 0), h.get(0)))),
+
+  /**
    * Function "Fn.apply", of type "(&alpha; &rarr; &beta;) * &alpha; &rarr;
    * &beta;".
    */
@@ -3888,6 +4058,12 @@ public enum BuiltIn {
     DESCENDING(
         "descending", false, 1, h -> h.tyCon(Constructor.DESCENDING_DESC)),
 
+    EITHER(
+        "either",
+        false,
+        2,
+        h -> h.tyCon(Constructor.EITHER_INL).tyCon(Constructor.EITHER_INR)),
+
     ORDER(
         "order",
         false,
@@ -3993,6 +4169,8 @@ public enum BuiltIn {
     BOOL_FALSE(Datatype.PSEUDO_BOOL, "FALSE"),
     BOOL_TRUE(Datatype.PSEUDO_BOOL, "TRUE"),
     DESCENDING_DESC(Datatype.DESCENDING, "DESC", h -> h.get(0)),
+    EITHER_INL(Datatype.EITHER, "INL", h -> h.get(0)),
+    EITHER_INR(Datatype.EITHER, "INR", h -> h.get(1)),
     LIST_NIL(Datatype.PSEUDO_LIST, "NIL"),
     LIST_CONS(Datatype.PSEUDO_LIST, "CONS", h -> h.get(0)),
     OPTION_SOME(Datatype.OPTION, "SOME", h -> h.get(0)),
