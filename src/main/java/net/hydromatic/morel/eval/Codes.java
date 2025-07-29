@@ -166,12 +166,12 @@ public abstract class Codes {
   /** @see BuiltIn#BAG_LENGTH */
   private static final Applicable1 BAG_LENGTH = length(BuiltIn.BAG_LENGTH);
 
+  /** @see BuiltIn#BAG_MAP */
+  private static final Applicable2 BAG_MAP = listMap(BuiltIn.BAG_MAP);
+
   /** @see BuiltIn#BAG_MAP_PARTIAL */
   private static final Applicable2 BAG_MAP_PARTIAL =
       listMapPartial(BuiltIn.BAG_MAP_PARTIAL);
-
-  /** @see BuiltIn#BAG_MAP */
-  private static final Applicable2 BAG_MAP = listMap(BuiltIn.BAG_MAP);
 
   /** @see BuiltIn#BAG_NTH */
   private static final Applicable BAG_NTH =
@@ -274,13 +274,13 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#CHAR_IS_ALPHA_NUM */
-  private static final Applicable CHAR_IS_ALPHA_NUM =
-      new CharPredicate(BuiltIn.CHAR_IS_ALPHA_NUM, CharPredicate::isAlphaNum);
-
   /** @see BuiltIn#CHAR_IS_ALPHA */
   private static final Applicable CHAR_IS_ALPHA =
       new CharPredicate(BuiltIn.CHAR_IS_ALPHA, CharPredicate::isAlpha);
+
+  /** @see BuiltIn#CHAR_IS_ALPHA_NUM */
+  private static final Applicable CHAR_IS_ALPHA_NUM =
+      new CharPredicate(BuiltIn.CHAR_IS_ALPHA_NUM, CharPredicate::isAlphaNum);
 
   /** @see BuiltIn#CHAR_IS_ASCII */
   private static final Applicable CHAR_IS_ASCII =
@@ -484,6 +484,24 @@ public abstract class Codes {
     return FlatLists.of(BuiltIn.Constructor.EITHER_INR.constructor, o);
   }
 
+  /** @see BuiltIn#EITHER_APP */
+  private static final Applicable2 EITHER_APP =
+      new BaseApplicable2<Applicable1, Applicable1, Applicable1>(
+          BuiltIn.EITHER_APP) {
+        @Override
+        public Applicable1<Unit, List> apply(Applicable1 f, Applicable1 g) {
+          return either -> {
+            Object o = eitherProj(either);
+            if (isEitherLeft(either)) {
+              f.apply(o);
+            } else {
+              g.apply(o);
+            }
+            return Unit.INSTANCE;
+          };
+        }
+      };
+
   /** @see BuiltIn#EITHER_APP_LEFT */
   private static final Applicable2 EITHER_APP_LEFT =
       new BaseApplicable2<Unit, Applicable1, List>(BuiltIn.EITHER_APP_LEFT) {
@@ -505,24 +523,6 @@ public abstract class Codes {
             f.apply(eitherProj(either));
           }
           return Unit.INSTANCE;
-        }
-      };
-
-  /** @see BuiltIn#EITHER_APP */
-  private static final Applicable2 EITHER_APP =
-      new BaseApplicable2<Applicable1, Applicable1, Applicable1>(
-          BuiltIn.EITHER_APP) {
-        @Override
-        public Applicable1<Unit, List> apply(Applicable1 f, Applicable1 g) {
-          return either -> {
-            Object o = eitherProj(either);
-            if (isEitherLeft(either)) {
-              f.apply(o);
-            } else {
-              g.apply(o);
-            }
-            return Unit.INSTANCE;
-          };
         }
       };
 
@@ -583,6 +583,23 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#EITHER_MAP */
+  private static final Applicable2 EITHER_MAP =
+      new BaseApplicable2<Applicable1, Applicable1, Applicable1>(
+          BuiltIn.EITHER_MAP) {
+        @Override
+        public Applicable1<List, List> apply(Applicable1 f, Applicable1 g) {
+          return either -> {
+            Object o = eitherProj(either);
+            if (isEitherLeft(either)) {
+              return eitherInl(f.apply(o));
+            } else {
+              return eitherInr(g.apply(o));
+            }
+          };
+        }
+      };
+
   /** @see BuiltIn#EITHER_MAP_LEFT */
   private static final Applicable2 EITHER_MAP_LEFT =
       new BaseApplicable2<List, Applicable1, List>(BuiltIn.EITHER_MAP_LEFT) {
@@ -602,23 +619,6 @@ public abstract class Codes {
           return isEitherLeft(either)
               ? either
               : eitherInr(f.apply(eitherProj(either)));
-        }
-      };
-
-  /** @see BuiltIn#EITHER_MAP */
-  private static final Applicable2 EITHER_MAP =
-      new BaseApplicable2<Applicable1, Applicable1, Applicable1>(
-          BuiltIn.EITHER_MAP) {
-        @Override
-        public Applicable1<List, List> apply(Applicable1 f, Applicable1 g) {
-          return either -> {
-            Object o = eitherProj(either);
-            if (isEitherLeft(either)) {
-              return eitherInl(f.apply(o));
-            } else {
-              return eitherInr(g.apply(o));
-            }
-          };
         }
       };
 
@@ -950,13 +950,13 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#INTERACT_USE_SILENTLY */
-  private static final Applicable INTERACT_USE_SILENTLY =
-      new InteractUse(Pos.ZERO, true);
-
   /** @see BuiltIn#INTERACT_USE */
   private static final Applicable INTERACT_USE =
       new InteractUse(Pos.ZERO, false);
+
+  /** @see BuiltIn#INTERACT_USE_SILENTLY */
+  private static final Applicable INTERACT_USE_SILENTLY =
+      new InteractUse(Pos.ZERO, true);
 
   /** Implements {@link #INTERACT_USE}. */
   private static class InteractUse extends BasePositionedApplicable {
@@ -1377,13 +1377,13 @@ public abstract class Codes {
   /** @see BuiltIn#LIST_NULL */
   private static final Applicable1 LIST_NULL = empty(BuiltIn.LIST_NULL);
 
-  /** @see BuiltIn#LIST_PAIR_ALL_EQ */
-  private static final Applicable2 LIST_PAIR_ALL_EQ =
-      listPairAll(BuiltIn.LIST_PAIR_ALL_EQ, true);
-
   /** @see BuiltIn#LIST_PAIR_ALL */
   private static final Applicable2 LIST_PAIR_ALL =
       listPairAll(BuiltIn.LIST_PAIR_ALL, false);
+
+  /** @see BuiltIn#LIST_PAIR_ALL_EQ */
+  private static final Applicable2 LIST_PAIR_ALL_EQ =
+      listPairAll(BuiltIn.LIST_PAIR_ALL_EQ, true);
 
   static Applicable2 listPairAll(BuiltIn builtIn, boolean eq) {
     return new BaseApplicable2<Boolean, Applicable1, List<List<Object>>>(
@@ -1435,13 +1435,13 @@ public abstract class Codes {
     }
   }
 
-  /** @see BuiltIn#LIST_PAIR_APP_EQ */
-  private static final Applicable LIST_PAIR_APP_EQ =
-      new ListPairApp(BuiltIn.LIST_PAIR_APP_EQ, Pos.ZERO);
-
   /** @see BuiltIn#LIST_PAIR_APP */
   private static final Applicable LIST_PAIR_APP =
       new ListPairApp(BuiltIn.LIST_PAIR_APP, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_APP_EQ */
+  private static final Applicable LIST_PAIR_APP_EQ =
+      new ListPairApp(BuiltIn.LIST_PAIR_APP_EQ, Pos.ZERO);
 
   /** @see BuiltIn#LIST_PAIR_EXISTS */
   private static final Applicable2 LIST_PAIR_EXISTS =
@@ -1505,20 +1505,21 @@ public abstract class Codes {
     }
   }
 
-  /** @see BuiltIn#LIST_PAIR_FOLDL_EQ */
-  private static final Applicable LIST_PAIR_FOLDL_EQ =
-      new ListPairFold(BuiltIn.LIST_PAIR_FOLDL_EQ, Pos.ZERO, true, true);
   /** @see BuiltIn#LIST_PAIR_FOLDL */
   private static final Applicable LIST_PAIR_FOLDL =
       new ListPairFold(BuiltIn.LIST_PAIR_FOLDL, Pos.ZERO, false, true);
 
-  /** @see BuiltIn#LIST_PAIR_FOLDR_EQ */
-  private static final Applicable LIST_PAIR_FOLDR_EQ =
-      new ListPairFold(BuiltIn.LIST_PAIR_FOLDR_EQ, Pos.ZERO, true, false);
+  /** @see BuiltIn#LIST_PAIR_FOLDL_EQ */
+  private static final Applicable LIST_PAIR_FOLDL_EQ =
+      new ListPairFold(BuiltIn.LIST_PAIR_FOLDL_EQ, Pos.ZERO, true, true);
 
   /** @see BuiltIn#LIST_PAIR_FOLDR */
   private static final Applicable LIST_PAIR_FOLDR =
       new ListPairFold(BuiltIn.LIST_PAIR_FOLDR, Pos.ZERO, false, false);
+
+  /** @see BuiltIn#LIST_PAIR_FOLDR_EQ */
+  private static final Applicable LIST_PAIR_FOLDR_EQ =
+      new ListPairFold(BuiltIn.LIST_PAIR_FOLDR_EQ, Pos.ZERO, true, false);
 
   /** Helper for {@link #LIST_PAIR_MAP}, {@link #LIST_PAIR_MAP_EQ}. */
   private static class ListPairMap
@@ -1549,13 +1550,13 @@ public abstract class Codes {
     }
   }
 
-  /** @see BuiltIn#LIST_PAIR_MAP_EQ */
-  private static final Applicable LIST_PAIR_MAP_EQ =
-      new ListPairMap(BuiltIn.LIST_PAIR_MAP_EQ, Pos.ZERO, true);
-
   /** @see BuiltIn#LIST_PAIR_MAP */
   private static final Applicable LIST_PAIR_MAP =
       new ListPairMap(BuiltIn.LIST_PAIR_MAP, Pos.ZERO, false);
+
+  /** @see BuiltIn#LIST_PAIR_MAP_EQ */
+  private static final Applicable LIST_PAIR_MAP_EQ =
+      new ListPairMap(BuiltIn.LIST_PAIR_MAP_EQ, Pos.ZERO, true);
 
   /** @see BuiltIn#LIST_PAIR_UNZIP */
   private static final Applicable LIST_PAIR_UNZIP = new ListPairUnzip(Pos.ZERO);
@@ -1610,13 +1611,13 @@ public abstract class Codes {
     }
   }
 
-  /** @see BuiltIn#LIST_PAIR_ZIP_EQ */
-  private static final Applicable LIST_PAIR_ZIP_EQ =
-      new ListPairZip(BuiltIn.LIST_PAIR_ZIP_EQ, Pos.ZERO);
-
   /** @see BuiltIn#LIST_PAIR_ZIP */
   private static final Applicable LIST_PAIR_ZIP =
       new ListPairZip(BuiltIn.LIST_PAIR_ZIP, Pos.ZERO);
+
+  /** @see BuiltIn#LIST_PAIR_ZIP_EQ */
+  private static final Applicable LIST_PAIR_ZIP_EQ =
+      new ListPairZip(BuiltIn.LIST_PAIR_ZIP_EQ, Pos.ZERO);
 
   /** @see BuiltIn#LIST_PARTITION */
   private static final Applicable2 LIST_PARTITION =
@@ -1637,6 +1638,15 @@ public abstract class Codes {
     };
   }
 
+  /** @see BuiltIn#LIST_REV */
+  private static final Applicable LIST_REV =
+      new BaseApplicable1<List, List>(BuiltIn.LIST_REV) {
+        @Override
+        public List apply(List list) {
+          return Lists.reverse(list);
+        }
+      };
+
   /** @see BuiltIn#LIST_REV_APPEND */
   private static final Applicable2 LIST_REV_APPEND =
       new BaseApplicable2<List, List, List>(BuiltIn.LIST_REV_APPEND) {
@@ -1646,15 +1656,6 @@ public abstract class Codes {
               .addAll(Lists.reverse(list0))
               .addAll(list1)
               .build();
-        }
-      };
-
-  /** @see BuiltIn#LIST_REV */
-  private static final Applicable LIST_REV =
-      new BaseApplicable1<List, List>(BuiltIn.LIST_REV) {
-        @Override
-        public List apply(List list) {
-          return Lists.reverse(list);
         }
       };
 
@@ -2090,23 +2091,6 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#OPTION_COMPOSE_PARTIAL */
-  private static final Applicable2 OPTION_COMPOSE_PARTIAL =
-      new BaseApplicable2<Applicable1, Applicable1<List, Object>, Applicable1>(
-          BuiltIn.OPTION_COMPOSE_PARTIAL) {
-        @Override
-        public Applicable1 apply(Applicable1<List, Object> f, Applicable1 g) {
-          return (Applicable1<@NonNull List, @NonNull Object>)
-              arg -> {
-                final List ga = (List) g.apply(arg); // g (a)
-                if (ga.size() == 2) { // SOME v
-                  return f.apply(ga.get(1)); // f (v)
-                }
-                return ga; // NONE
-              };
-        }
-      };
-
   /** @see BuiltIn#OPTION_COMPOSE */
   private static final Applicable2 OPTION_COMPOSE =
       new BaseApplicable2<Applicable1, Applicable1, Applicable1<List, Object>>(
@@ -2118,6 +2102,23 @@ public abstract class Codes {
                 final List ga = g.apply(arg); // g (a)
                 if (ga.size() == 2) { // SOME v
                   return optionSome(f.apply(ga.get(1))); // SOME (f (v))
+                }
+                return ga; // NONE
+              };
+        }
+      };
+
+  /** @see BuiltIn#OPTION_COMPOSE_PARTIAL */
+  private static final Applicable2 OPTION_COMPOSE_PARTIAL =
+      new BaseApplicable2<Applicable1, Applicable1<List, Object>, Applicable1>(
+          BuiltIn.OPTION_COMPOSE_PARTIAL) {
+        @Override
+        public Applicable1 apply(Applicable1<List, Object> f, Applicable1 g) {
+          return (Applicable1<@NonNull List, @NonNull Object>)
+              arg -> {
+                final List ga = (List) g.apply(arg); // g (a)
+                if (ga.size() == 2) { // SOME v
+                  return f.apply(ga.get(1)); // f (v)
                 }
                 return ga; // NONE
               };
@@ -2170,6 +2171,18 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#OPTION_MAP */
+  private static final Applicable2 OPTION_MAP =
+      new BaseApplicable2<List, Applicable1, List>(BuiltIn.OPTION_MAP) {
+        @Override
+        public List apply(Applicable1 f, List a) {
+          if (a.size() == 2) { // SOME v
+            return optionSome(f.apply(a.get(1))); // SOME (f v)
+          }
+          return a; // NONE
+        }
+      };
+
   /** @see BuiltIn#OPTION_MAP_PARTIAL */
   private static final Applicable2 OPTION_MAP_PARTIAL =
       new BaseApplicable2<List, Applicable1<List, Object>, List>(
@@ -2178,18 +2191,6 @@ public abstract class Codes {
         public List apply(Applicable1<List, Object> f, List a) {
           if (a.size() == 2) { // SOME v
             return f.apply(a.get(1)); // f v
-          }
-          return a; // NONE
-        }
-      };
-
-  /** @see BuiltIn#OPTION_MAP */
-  private static final Applicable2 OPTION_MAP =
-      new BaseApplicable2<List, Applicable1, List>(BuiltIn.OPTION_MAP) {
-        @Override
-        public List apply(Applicable1 f, List a) {
-          if (a.size() == 2) { // SOME v
-            return optionSome(f.apply(a.get(1))); // SOME (f v)
           }
           return a; // NONE
         }
@@ -2859,6 +2860,35 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#STRING_CONCAT */
+  private static final Applicable1 STRING_CONCAT =
+      new StringConcat(BuiltIn.STRING_CONCAT, Pos.ZERO);
+
+  /** Implements {@link #STRING_CONCAT}. */
+  private static class StringConcat
+      extends BasePositionedApplicable1<String, List<String>> {
+    StringConcat(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public StringConcat withPos(Pos pos) {
+      return new StringConcat(BuiltIn.STRING_CONCAT, pos);
+    }
+
+    @Override
+    public String apply(List<String> list) {
+      long n = 0;
+      for (String s : list) {
+        n += s.length();
+      }
+      if (n > STRING_MAX_SIZE) {
+        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
+      }
+      return String.join("", list);
+    }
+  }
+
   /** @see BuiltIn#STRING_CONCAT_WITH */
   private static final Applicable2 STRING_CONCAT_WITH =
       new StringConcatWith(BuiltIn.STRING_CONCAT_WITH, Pos.ZERO);
@@ -2886,35 +2916,6 @@ public abstract class Codes {
         throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
       }
       return String.join(separator, list);
-    }
-  }
-
-  /** @see BuiltIn#STRING_CONCAT */
-  private static final Applicable1 STRING_CONCAT =
-      new StringConcat(BuiltIn.STRING_CONCAT, Pos.ZERO);
-
-  /** Implements {@link #STRING_CONCAT}. */
-  private static class StringConcat
-      extends BasePositionedApplicable1<String, List<String>> {
-    StringConcat(BuiltIn builtIn, Pos pos) {
-      super(builtIn, pos);
-    }
-
-    @Override
-    public StringConcat withPos(Pos pos) {
-      return new StringConcat(BuiltIn.STRING_CONCAT, pos);
-    }
-
-    @Override
-    public String apply(List<String> list) {
-      long n = 0;
-      for (String s : list) {
-        n += s.length();
-      }
-      if (n > STRING_MAX_SIZE) {
-        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
-      }
-      return String.join("", list);
     }
   }
 
@@ -3243,6 +3244,18 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#SYS_SHOW */
+  private static final Applicable SYS_SHOW =
+      new ApplicableImpl(BuiltIn.SYS_SHOW) {
+        @Override
+        public List apply(EvalEnv env, Object arg) {
+          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final String propName = (String) arg;
+          final Object value = Prop.lookup(propName).get(session.map);
+          return value == null ? OPTION_NONE : optionSome(value.toString());
+        }
+      };
+
   /** @see BuiltIn#SYS_SHOW_ALL */
   private static final Applicable SYS_SHOW_ALL =
       new ApplicableImpl(BuiltIn.SYS_SHOW_ALL) {
@@ -3258,18 +3271,6 @@ public abstract class Codes {
             list.add((List) ImmutableList.of(prop.camelName, option));
           }
           return list.build();
-        }
-      };
-
-  /** @see BuiltIn#SYS_SHOW */
-  private static final Applicable SYS_SHOW =
-      new ApplicableImpl(BuiltIn.SYS_SHOW) {
-        @Override
-        public List apply(EvalEnv env, Object arg) {
-          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
-          final String propName = (String) arg;
-          final Object value = Prop.lookup(propName).get(session.map);
-          return value == null ? OPTION_NONE : optionSome(value.toString());
         }
       };
 
@@ -3933,8 +3934,8 @@ public abstract class Codes {
           .put(BuiltIn.BAG_GET_ITEM, BAG_GET_ITEM)
           .put(BuiltIn.BAG_HD, BAG_HD)
           .put(BuiltIn.BAG_LENGTH, BAG_LENGTH)
-          .put(BuiltIn.BAG_MAP_PARTIAL, BAG_MAP_PARTIAL)
           .put(BuiltIn.BAG_MAP, BAG_MAP)
+          .put(BuiltIn.BAG_MAP_PARTIAL, BAG_MAP_PARTIAL)
           .put(BuiltIn.BAG_NIL, ImmutableList.of())
           .put(BuiltIn.BAG_NTH, BAG_NTH)
           .put(BuiltIn.BAG_NULL, BAG_NULL)
@@ -3949,8 +3950,8 @@ public abstract class Codes {
           .put(BuiltIn.CHAR_CONTAINS, CHAR_CONTAINS)
           .put(BuiltIn.CHAR_FROM_CSTRING, CHAR_FROM_CSTRING)
           .put(BuiltIn.CHAR_FROM_STRING, CHAR_FROM_STRING)
-          .put(BuiltIn.CHAR_IS_ALPHA_NUM, CHAR_IS_ALPHA_NUM)
           .put(BuiltIn.CHAR_IS_ALPHA, CHAR_IS_ALPHA)
+          .put(BuiltIn.CHAR_IS_ALPHA_NUM, CHAR_IS_ALPHA_NUM)
           .put(BuiltIn.CHAR_IS_ASCII, CHAR_IS_ASCII)
           .put(BuiltIn.CHAR_IS_CNTRL, CHAR_IS_CNTRL)
           .put(BuiltIn.CHAR_IS_DIGIT, CHAR_IS_DIGIT)
@@ -3976,17 +3977,17 @@ public abstract class Codes {
           .put(BuiltIn.CHAR_TO_LOWER, CHAR_TO_LOWER)
           .put(BuiltIn.CHAR_TO_STRING, CHAR_TO_STRING)
           .put(BuiltIn.CHAR_TO_UPPER, CHAR_TO_UPPER)
+          .put(BuiltIn.EITHER_APP, EITHER_APP)
           .put(BuiltIn.EITHER_APP_LEFT, EITHER_APP_LEFT)
           .put(BuiltIn.EITHER_APP_RIGHT, EITHER_APP_RIGHT)
-          .put(BuiltIn.EITHER_APP, EITHER_APP)
           .put(BuiltIn.EITHER_AS_LEFT, EITHER_AS_LEFT)
           .put(BuiltIn.EITHER_AS_RIGHT, EITHER_AS_RIGHT)
           .put(BuiltIn.EITHER_FOLD, EITHER_FOLD)
           .put(BuiltIn.EITHER_IS_LEFT, EITHER_IS_LEFT)
           .put(BuiltIn.EITHER_IS_RIGHT, EITHER_IS_RIGHT)
+          .put(BuiltIn.EITHER_MAP, EITHER_MAP)
           .put(BuiltIn.EITHER_MAP_LEFT, EITHER_MAP_LEFT)
           .put(BuiltIn.EITHER_MAP_RIGHT, EITHER_MAP_RIGHT)
-          .put(BuiltIn.EITHER_MAP, EITHER_MAP)
           .put(BuiltIn.EITHER_PARTITION, EITHER_PARTITION)
           .put(BuiltIn.EITHER_PROJ, EITHER_PROJ)
           .put(BuiltIn.FN_APPLY, FN_APPLY)
@@ -4007,10 +4008,10 @@ public abstract class Codes {
           .put(BuiltIn.INT_FROM_INT, INT_FROM_INT)
           .put(BuiltIn.INT_FROM_LARGE, INT_FROM_LARGE)
           .put(BuiltIn.INT_FROM_STRING, INT_FROM_STRING)
-          .put(BuiltIn.INT_MAX_INT, INT_MAX_INT)
           .put(BuiltIn.INT_MAX, INT_MAX)
-          .put(BuiltIn.INT_MIN_INT, INT_MIN_INT)
+          .put(BuiltIn.INT_MAX_INT, INT_MAX_INT)
           .put(BuiltIn.INT_MIN, INT_MIN)
+          .put(BuiltIn.INT_MIN_INT, INT_MIN_INT)
           .put(BuiltIn.INT_MOD, INT_MOD)
           .put(BuiltIn.INT_PRECISION, INT_PRECISION)
           .put(BuiltIn.INT_QUOT, INT_QUOT)
@@ -4020,8 +4021,8 @@ public abstract class Codes {
           .put(BuiltIn.INT_TO_INT, INT_TO_INT)
           .put(BuiltIn.INT_TO_LARGE, INT_TO_LARGE)
           .put(BuiltIn.INT_TO_STRING, INT_TO_STRING)
-          .put(BuiltIn.INTERACT_USE_SILENTLY, INTERACT_USE_SILENTLY)
           .put(BuiltIn.INTERACT_USE, INTERACT_USE)
+          .put(BuiltIn.INTERACT_USE_SILENTLY, INTERACT_USE_SILENTLY)
           .put(BuiltIn.LIST_ALL, LIST_ALL)
           .put(BuiltIn.LIST_APP, LIST_APP)
           .put(BuiltIn.LIST_AT, LIST_AT)
@@ -4039,30 +4040,30 @@ public abstract class Codes {
           .put(BuiltIn.LIST_INTERSECT, LIST_INTERSECT)
           .put(BuiltIn.LIST_LAST, LIST_LAST)
           .put(BuiltIn.LIST_LENGTH, LIST_LENGTH)
-          .put(BuiltIn.LIST_MAP_PARTIAL, LIST_MAP_PARTIAL)
           .put(BuiltIn.LIST_MAP, LIST_MAP)
+          .put(BuiltIn.LIST_MAP_PARTIAL, LIST_MAP_PARTIAL)
           .put(BuiltIn.LIST_MAPI, LIST_MAPI)
           .put(BuiltIn.LIST_NIL, ImmutableList.of())
           .put(BuiltIn.LIST_NTH, LIST_NTH)
           .put(BuiltIn.LIST_NULL, LIST_NULL)
           .put(BuiltIn.LIST_OP_AT, LIST_AT) // op @ == List.at
-          .put(BuiltIn.LIST_PAIR_ALL_EQ, LIST_PAIR_ALL_EQ)
           .put(BuiltIn.LIST_PAIR_ALL, LIST_PAIR_ALL)
-          .put(BuiltIn.LIST_PAIR_APP_EQ, LIST_PAIR_APP_EQ)
+          .put(BuiltIn.LIST_PAIR_ALL_EQ, LIST_PAIR_ALL_EQ)
           .put(BuiltIn.LIST_PAIR_APP, LIST_PAIR_APP)
+          .put(BuiltIn.LIST_PAIR_APP_EQ, LIST_PAIR_APP_EQ)
           .put(BuiltIn.LIST_PAIR_EXISTS, LIST_PAIR_EXISTS)
-          .put(BuiltIn.LIST_PAIR_FOLDL_EQ, LIST_PAIR_FOLDL_EQ)
           .put(BuiltIn.LIST_PAIR_FOLDL, LIST_PAIR_FOLDL)
-          .put(BuiltIn.LIST_PAIR_FOLDR_EQ, LIST_PAIR_FOLDR_EQ)
+          .put(BuiltIn.LIST_PAIR_FOLDL_EQ, LIST_PAIR_FOLDL_EQ)
           .put(BuiltIn.LIST_PAIR_FOLDR, LIST_PAIR_FOLDR)
-          .put(BuiltIn.LIST_PAIR_MAP_EQ, LIST_PAIR_MAP_EQ)
+          .put(BuiltIn.LIST_PAIR_FOLDR_EQ, LIST_PAIR_FOLDR_EQ)
           .put(BuiltIn.LIST_PAIR_MAP, LIST_PAIR_MAP)
+          .put(BuiltIn.LIST_PAIR_MAP_EQ, LIST_PAIR_MAP_EQ)
           .put(BuiltIn.LIST_PAIR_UNZIP, LIST_PAIR_UNZIP)
-          .put(BuiltIn.LIST_PAIR_ZIP_EQ, LIST_PAIR_ZIP_EQ)
           .put(BuiltIn.LIST_PAIR_ZIP, LIST_PAIR_ZIP)
+          .put(BuiltIn.LIST_PAIR_ZIP_EQ, LIST_PAIR_ZIP_EQ)
           .put(BuiltIn.LIST_PARTITION, LIST_PARTITION)
-          .put(BuiltIn.LIST_REV_APPEND, LIST_REV_APPEND)
           .put(BuiltIn.LIST_REV, LIST_REV)
+          .put(BuiltIn.LIST_REV_APPEND, LIST_REV_APPEND)
           .put(BuiltIn.LIST_TABULATE, LIST_TABULATE)
           .put(BuiltIn.LIST_TAKE, LIST_TAKE)
           .put(BuiltIn.LIST_TL, LIST_TL)
@@ -4101,14 +4102,14 @@ public abstract class Codes {
           .put(BuiltIn.OP_PLUS, OP_PLUS)
           .put(BuiltIn.OP_TIMES, OP_TIMES)
           .put(BuiltIn.OPTION_APP, OPTION_APP)
-          .put(BuiltIn.OPTION_COMPOSE_PARTIAL, OPTION_COMPOSE_PARTIAL)
           .put(BuiltIn.OPTION_COMPOSE, OPTION_COMPOSE)
+          .put(BuiltIn.OPTION_COMPOSE_PARTIAL, OPTION_COMPOSE_PARTIAL)
           .put(BuiltIn.OPTION_FILTER, OPTION_FILTER)
           .put(BuiltIn.OPTION_GET_OPT, OPTION_GET_OPT)
           .put(BuiltIn.OPTION_IS_SOME, OPTION_IS_SOME)
           .put(BuiltIn.OPTION_JOIN, OPTION_JOIN)
-          .put(BuiltIn.OPTION_MAP_PARTIAL, OPTION_MAP_PARTIAL)
           .put(BuiltIn.OPTION_MAP, OPTION_MAP)
+          .put(BuiltIn.OPTION_MAP_PARTIAL, OPTION_MAP_PARTIAL)
           .put(BuiltIn.OPTION_VAL_OF, OPTION_VAL_OF)
           .put(BuiltIn.REAL_ABS, REAL_ABS)
           .put(BuiltIn.REAL_CEIL, REAL_CEIL)
@@ -4122,11 +4123,11 @@ public abstract class Codes {
           .put(BuiltIn.REAL_IS_FINITE, REAL_IS_FINITE)
           .put(BuiltIn.REAL_IS_NAN, REAL_IS_NAN)
           .put(BuiltIn.REAL_IS_NORMAL, REAL_IS_NORMAL)
-          .put(BuiltIn.REAL_MAX_FINITE, REAL_MAX_FINITE)
           .put(BuiltIn.REAL_MAX, REAL_MAX)
+          .put(BuiltIn.REAL_MAX_FINITE, REAL_MAX_FINITE)
+          .put(BuiltIn.REAL_MIN, REAL_MIN)
           .put(BuiltIn.REAL_MIN_NORMAL_POS, REAL_MIN_NORMAL_POS)
           .put(BuiltIn.REAL_MIN_POS, REAL_MIN_POS)
-          .put(BuiltIn.REAL_MIN, REAL_MIN)
           .put(BuiltIn.REAL_NEG_INF, REAL_NEG_INF)
           .put(BuiltIn.REAL_POS_INF, REAL_POS_INF)
           .put(BuiltIn.REAL_PRECISION, REAL_PRECISION)
@@ -4139,8 +4140,8 @@ public abstract class Codes {
           .put(BuiltIn.REAL_REM, REAL_REM)
           .put(BuiltIn.REAL_ROUND, REAL_ROUND)
           .put(BuiltIn.REAL_SAME_SIGN, REAL_SAME_SIGN)
-          .put(BuiltIn.REAL_SIGN_BIT, REAL_SIGN_BIT)
           .put(BuiltIn.REAL_SIGN, REAL_SIGN)
+          .put(BuiltIn.REAL_SIGN_BIT, REAL_SIGN_BIT)
           .put(BuiltIn.REAL_SPLIT, REAL_SPLIT)
           .put(BuiltIn.REAL_TO_MAN_EXP, REAL_TO_MAN_EXP)
           .put(BuiltIn.REAL_TO_STRING, REAL_TO_STRING)
@@ -4157,8 +4158,8 @@ public abstract class Codes {
           .put(BuiltIn.RELATIONAL_SUM, RELATIONAL_SUM)
           .put(BuiltIn.STRING_COLLATE, STRING_COLLATE)
           .put(BuiltIn.STRING_COMPARE, STRING_COMPARE)
-          .put(BuiltIn.STRING_CONCAT_WITH, STRING_CONCAT_WITH)
           .put(BuiltIn.STRING_CONCAT, STRING_CONCAT)
+          .put(BuiltIn.STRING_CONCAT_WITH, STRING_CONCAT_WITH)
           .put(BuiltIn.STRING_EXPLODE, STRING_EXPLODE)
           .put(BuiltIn.STRING_EXTRACT, STRING_EXTRACT)
           .put(BuiltIn.STRING_FIELDS, STRING_FIELDS)
@@ -4186,8 +4187,8 @@ public abstract class Codes {
           .put(BuiltIn.SYS_FILE, ImmutableList.of())
           .put(BuiltIn.SYS_PLAN, SYS_PLAN)
           .put(BuiltIn.SYS_SET, SYS_SET)
-          .put(BuiltIn.SYS_SHOW_ALL, SYS_SHOW_ALL)
           .put(BuiltIn.SYS_SHOW, SYS_SHOW)
+          .put(BuiltIn.SYS_SHOW_ALL, SYS_SHOW_ALL)
           .put(BuiltIn.SYS_UNSET, SYS_UNSET)
           .put(BuiltIn.VECTOR_ALL, VECTOR_ALL)
           .put(BuiltIn.VECTOR_APP, VECTOR_APP)

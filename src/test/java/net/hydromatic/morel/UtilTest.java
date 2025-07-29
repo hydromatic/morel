@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel;
 
+import static java.lang.String.format;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.eval.Codes.isNegative;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
@@ -31,9 +32,11 @@ import static net.hydromatic.morel.util.Static.transform;
 import static org.apache.calcite.util.Util.range;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
@@ -47,11 +50,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
+import com.google.common.graph.GraphBuilder;
+import com.google.common.graph.Graphs;
+import com.google.common.graph.MutableGraph;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -75,8 +82,10 @@ import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
+import net.hydromatic.morel.util.WordComparator;
 import org.apache.calcite.runtime.FlatLists;
 import org.apache.calcite.util.ImmutableIntList;
+import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
 /** Tests for various utility classes. */
@@ -642,6 +651,81 @@ public class UtilTest {
           break;
       }
       assertThat(q.asList(), is(list));
+    }
+  }
+
+  /** Tests {@link WordComparator}. */
+  @Test
+  void testWordComparator() {
+    CompareHelper<String> c = new CompareHelper<>(WordComparator.INSTANCE);
+    c.assertLess("a", "a a", "a_a", "ab", "b");
+    c.assertLess("a b", "a_b", "ab a", "ab_a");
+    c.assertLess("map", "map_partition", "mapi");
+    c.assertLess(
+        "INT_FROM_LARGE(",
+        "INT_SAME_SIGN(",
+        "INTERACT_USE(",
+        "INTERACT_USE_SILENTLY(");
+    c.assertLess("BAG_MAP(", "BAG_MAP_PARTIAL(");
+    c.assertLess(
+        "(BuiltIn.LIST_MAP, LIST_MAP)",
+        "(BuiltIn.LIST_MAP_PARTIAL, LIST_MAP_PARTIAL)",
+        "(BuiltIn.LIST_MAPI)");
+    c.done();
+  }
+
+  /**
+   * Helps validate a comparator.
+   *
+   * @param <T> Type of value to be compared
+   */
+  @SuppressWarnings("UnstableApiUsage")
+  private static class CompareHelper<T> {
+    final Comparator<T> c;
+    final MutableGraph<T> graph = GraphBuilder.directed().build();
+
+    private CompareHelper(Comparator<T> c) {
+      this.c = c;
+    }
+
+    /**
+     * Asserts that {@code x < y}, {@code y < zs[0]}, and so forth.
+     *
+     * <p>Also adds edges to the graph, so that the full transitive closure can
+     * be compared (thus ensuring that the comparator is a total order).
+     */
+    @SafeVarargs
+    final void assertLess(T x, T y, T... zs) {
+      assertCompare(x, y, lessThan(0));
+      graph.putEdge(x, y);
+      T prev = y;
+      for (T s : zs) {
+        assertCompare(prev, s, lessThan(0));
+        graph.putEdge(prev, s);
+        prev = s;
+      }
+    }
+
+    /**
+     * Asserts that {@code s1 < s2} for each ancestor-descendant pair in the
+     * transitive closure.
+     */
+    @SuppressWarnings("SuspiciousNameCombination")
+    private void done() {
+      for (T x : graph.nodes()) {
+        for (T y : Graphs.reachableNodes(graph, x)) {
+          if (x.equals(y)) {
+            continue;
+          }
+          assertCompare(x, y, lessThan(0));
+          assertCompare(y, x, greaterThan(0));
+        }
+      }
+    }
+
+    private void assertCompare(T x, T y, Matcher<Integer> matcher) {
+      String reason = format("compare [%s] to [%s]", x, y);
+      assertThat(reason, c.compare(x, y), matcher);
     }
   }
 }

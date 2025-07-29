@@ -232,33 +232,356 @@ public enum BuiltIn {
           ts.forallType(
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
-  /** Function "General.ignore", of type "&alpha; &rarr; unit". */
-  GENERAL_IGNORE(
-      "General",
-      "ignore",
-      "ignore",
-      ts -> ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
+  // lint:startSorted:enum
 
   /**
-   * Operator "General.op o", of type "(&beta; &rarr; &gamma;) * (&alpha; &rarr;
-   * &beta;) &rarr; &alpha; &rarr; &gamma;"
+   * Function "Bag.all", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; bool".
    *
-   * <p>"f o g" is the function composition of "f" and "g". Thus, "(f o g) a" is
-   * equivalent to "f (g a)".
+   * <p>"all f b" applies f to each element x of the bag b, from left to right,
+   * until {@code f x} evaluates to false; it returns false if such an x exists
+   * and true otherwise. It is equivalent to not(exists (not o f) b)).
    */
-  GENERAL_OP_O(
-      "General",
-      "op o",
-      "op o",
+  BAG_ALL(
+      "Bag",
+      "all",
+      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.bag(0), BOOL))),
+
+  /**
+   * Function "Bag.app", of type "(&alpha; &rarr; unit) &rarr; &alpha; bag
+   * &rarr; unit".
+   *
+   * <p>"app f l" applies f to the elements of l, from left to right.
+   */
+  BAG_APP(
+      "Bag",
+      "app",
       ts ->
           ts.forallType(
-              3,
+              1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.bag(0), UNIT))),
+
+  /**
+   * Function "Bag.at", of type "&alpha; bag * &alpha; bag &rarr; &alpha; bag".
+   *
+   * <p>"l1 @ l2" returns the bag that is the concatenation of l1 and l2.
+   */
+  // TODO: remove
+  BAG_AT(
+      "Bag",
+      "at",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)))),
+
+  /**
+   * Function "Bag.concat", of type "&alpha; bag list &rarr; &alpha; bag".
+   *
+   * <p>"concat l" returns the bag that is the concatenation of all the bags in
+   * l in order. {@code concat[b1,b2,...bn] = b1 @ b2 @ ... @ bn}
+   */
+  BAG_CONCAT(
+      "Bag",
+      "concat",
+      ts -> ts.forallType(1, h -> ts.fnType(ts.listType(h.bag(0)), h.bag(0)))),
+
+  /**
+   * Function "Bag.drop", of type "&alpha; bag * int &rarr; &alpha; bag".
+   *
+   * <p>"drop (b, i)" returns what is left after dropping the first {@code i}
+   * elements of the bag {@code b}.
+   *
+   * <p>It raises {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT
+   * Subscript} if i &lt; 0 or i &gt; length {@code b}.
+   *
+   * <p>It holds that {@code take(b, i) @ drop(b, i) = l} when 0 &le; i &le;
+   * length b.
+   *
+   * <p>We also have {@code drop(b, length b) = []}.
+   */
+  BAG_DROP(
+      "Bag",
+      "drop",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), INT), h.bag(0)))),
+
+  /**
+   * Function "Bag.exists", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; bool".
+   *
+   * <p>"exists f b" applies f to each element x of the bag {@code b}, from left
+   * to right, until {@code f x} evaluates to true; it returns true if such an x
+   * exists and false otherwise.
+   */
+  BAG_EXISTS(
+      "Bag",
+      "exists",
+      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.bag(0), BOOL))),
+
+  /**
+   * Function "Bag.filter", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; &alpha; bag".
+   *
+   * <p>"filter f b" applies {@code f} to each element {@code x} of {@code b},
+   * from left to right, and returns the bag of those {@code x} for which {@code
+   * f x} evaluated to true, in the same order as they occurred in the argument
+   * bag.
+   */
+  BAG_FILTER(
+      "Bag",
+      "filter",
+      ts ->
+          ts.forallType(1, h -> ts.fnType(h.predicate(0), h.bag(0), h.bag(0)))),
+
+  /**
+   * Function "Bag.find", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; &alpha; option".
+   *
+   * <p>"find f b" applies {@code f} to each element {@code x} of the bag {@code
+   * b}, from left to right, until {@code f x} evaluates to true. It returns
+   * SOME(x) if such an x exists; otherwise it returns NONE.
+   */
+  BAG_FIND(
+      "Bag",
+      "find",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(h.predicate(0), h.bag(0), h.option(0)))),
+
+  /**
+   * Function "Bag.fold", of type "(&alpha; * &beta; &rarr; &beta;) &rarr;
+   * &beta; &rarr; &alpha; bag &rarr; &beta;".
+   *
+   * <p>"fold f init [x1, x2, ..., xn]" returns {@code f(xn,...,f(x2, f(x1,
+   * init))...)} or {@code init} if the bag is empty.
+   */
+  BAG_FOLD(
+      "Bag",
+      "fold",
+      ts ->
+          ts.forallType(
+              2,
               h ->
                   ts.fnType(
-                      ts.tupleType(
-                          ts.fnType(h.get(1), h.get(2)),
-                          ts.fnType(h.get(0), h.get(1))),
-                      ts.fnType(h.get(0), h.get(2))))),
+                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
+                      h.get(1),
+                      h.bag(0),
+                      h.get(1)))),
+
+  /**
+   * Function "Bag.fromList" of type "&alpha; list &rarr; &alpha; bag".
+   *
+   * <p>{@code fromList l} creates a new bag from {@code l}, whose length is
+   * {@code length l} and with the {@code i}<sup>th</sup> element of {@code l}
+   * used as the {@code i}<sup>th</sup> element of the bag. If the length of the
+   * list is greater than {@code maxLen}, then the {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception is raised.
+   */
+  BAG_FROM_LIST(
+      "Bag",
+      "fromList",
+      "bag",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.bag(0)))),
+
+  /**
+   * Function "Bag.getItem", of type "&alpha; bag &rarr; (&alpha; * &alpha; bag)
+   * option".
+   *
+   * <p>"getItem l" returns {@code NONE} if the bag is empty, and {@code SOME(hd
+   * l,tl l)} otherwise. This function is particularly useful for creating value
+   * readers from bags of characters. For example, {@code Int.scan StringCvt.DEC
+   * getItem} has the type {@code (int, char bag) StringCvt.reader} and can be
+   * used to scan decimal integers from bags of characters.
+   */
+  BAG_GET_ITEM(
+      "Bag",
+      "getItem",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      h.bag(0), ts.option(ts.tupleType(h.get(0), h.bag(0)))))),
+
+  /**
+   * Function "Bag.hd", of type "&alpha; bag &rarr; &alpha;".
+   *
+   * <p>"hd b" returns the first element of {@code b}. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty} if {@code b} is
+   * nil. Results are nondeterministic because bag elements are unordered.
+   */
+  BAG_HD(
+      "Bag", "hd", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
+
+  /**
+   * Function "Bag.length", of type "&alpha; bag &rarr; int".
+   *
+   * <p>"length b" returns the number of elements in the bag {@code b}.
+   */
+  BAG_LENGTH(
+      "Bag", "length", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), INT))),
+
+  /**
+   * Function "Bag.map", of type "(&alpha; &rarr; &beta;) &rarr; &alpha; bag
+   * &rarr; &beta; bag".
+   *
+   * <p>"map f b" applies f to each element of {@code b} from left to right,
+   * returning the bag of results.
+   */
+  BAG_MAP(
+      "Bag",
+      "map",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.get(1)), h.bag(0), h.bag(1)))),
+
+  /**
+   * Function "Bag.mapPartial", of type "(&alpha; &rarr; &beta; option) &rarr;
+   * &alpha; bag &rarr; &beta; bag".
+   *
+   * <p>"mapPartial f b" applies f to each element of {@code b} from left to
+   * right, returning a bag of results, with SOME stripped, where f was defined.
+   * f is not defined for an element of b if f applied to the element returns
+   * NONE. The above expression is equivalent to: {@code ((map valOf) o (filter
+   * isSome) o (map f)) b}
+   */
+  BAG_MAP_PARTIAL(
+      "Bag",
+      "mapPartial",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.option(1)), h.bag(0), h.bag(1)))),
+
+  /**
+   * Constant "Bag.nil", of type "&alpha; bag".
+   *
+   * <p>"nil" is the empty bag.
+   */
+  BAG_NIL("Bag", "nil", ts -> ts.forallType(1, h -> h.bag(0))),
+
+  /**
+   * Function "Bag.nth", of type "&alpha; bag * int &rarr; &alpha;".
+   *
+   * <p>"nth (l, i)" returns the {@code i}<sup>th</sup> element of the bag
+   * {@code l}, counting from 0. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} if {@code i
+   * < 0} or {@code i >= length l}. We have {@code nth(l,0) = hd l}, ignoring
+   * exceptions.
+   */
+  BAG_NTH(
+      "Bag",
+      "nth",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), INT), h.get(0)))),
+
+  /**
+   * Function "Bag.null", of type "&alpha; bag &rarr; bool".
+   *
+   * <p>"null b" returns true if the bag {@code b} is empty.
+   */
+  BAG_NULL(
+      "Bag", "null", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
+
+  /**
+   * Operator "Bag.op @", of type "&alpha; bag * &alpha; bag &rarr; &alpha;
+   * bag".
+   *
+   * <p>"l1 @ l2" returns the bag that is the concatenation of l1 and l2.
+   */
+  BAG_OP_AT(
+      "Bag",
+      "op @",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)))),
+
+  /**
+   * Function "Bag.partition", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
+   * &rarr; &alpha; bag * &alpha; bag".
+   *
+   * <p>"partition f b" applies {@code f} to each element {@code x} of bag
+   * {@code b}, from left to right, and returns a pair (pos, neg) where pos is
+   * the bag of those x for which {@code f x} evaluated to true, and neg is the
+   * bag of those for which {@code f x} evaluated to false. The elements of pos
+   * and neg retain the same relative order they possessed in {@code b}.
+   */
+  BAG_PARTITION(
+      "Bag",
+      "partition",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      h.predicate(0),
+                      h.bag(0),
+                      ts.tupleType(h.bag(0), h.bag(0))))),
+
+  /**
+   * Function "Bag.tabulate", of type "int * (int &rarr; &alpha;) &rarr; &alpha;
+   * bag".
+   *
+   * <p>"tabulate (n, f)" returns a bag of length n equal to {@code [f(0), f(1),
+   * ..., f(n-1)]}, created from left to right. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if n &lt; 0.
+   */
+  BAG_TABULATE(
+      "Bag",
+      "tabulate",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.bag(0)))),
+
+  /**
+   * Function "Bag.take", of type "&alpha; bag * int &rarr; &alpha; bag".
+   *
+   * <p>"take (b, i)" returns the first i elements of the bag {@code b}. It
+   * raises {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT
+   * Subscript} if i &lt; 0 or i &gt; length {@code b}. We have {@code take(l,
+   * length b) = b}.
+   */
+  BAG_TAKE(
+      "Bag",
+      "take",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.bag(0), INT), h.bag(0)))),
+
+  /**
+   * Function "Bag.tl", of type "&alpha; bag &rarr; &alpha; bag".
+   *
+   * <p>"tl b" returns all but the first element of {@code b}. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY empty} if b is nil.
+   * Results are nondeterministic because bag elements are unordered.
+   */
+  BAG_TL(
+      "Bag", "tl", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.bag(0)))),
+
+  /**
+   * Function "Bag.toList" of type "&alpha; bag &rarr; &alpha; list".
+   *
+   * <p>{@code toList b} creates a new list from {@code b}, whose length is
+   * {@code length b} and with the {@code i}<sup>th</sup> element of {@code b}
+   * used as the {@code i}<sup>th</sup> element of the list. If the length of
+   * the bag is greater than {@code maxLen}, then the {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception is raised.
+   * The order of the list is nondeterministic because bag elements are
+   * unordered.
+   */
+  BAG_TO_LIST(
+      "Bag",
+      "toList",
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.list(0)))),
 
   /**
    * Function "Char.chr" of type "int &rarr; char".
@@ -568,719 +891,6 @@ public enum BuiltIn {
    */
   CHAR_IS_UPPER("Char", "isUpper", ts -> ts.fnType(CHAR, BOOL)),
 
-  /* TODO:
-  val ~ : int -> int
-  val * : int * int -> int
-  val div : int * int -> int
-  val mod : int * int -> int
-  val quot : int * int -> int
-  val rem : int * int -> int
-  val + : int * int -> int
-  val - : int * int -> int
-  val > : int * int -> bool
-  val >= : int * int -> bool
-  val < : int * int -> bool
-  val <= : int * int -> bool
-   */
-
-  /** Function "Int.abs" of type "int &rarr; int". */
-  INT_ABS("Int", "abs", ts -> ts.fnType(INT, INT)),
-
-  /** Function "Int.compare", of type "int * int &rarr; order". */
-  INT_COMPARE(
-      "Int", "compare", ts -> ts.fnType(ts.tupleType(INT, INT), ts.order())),
-
-  /** Function "Int.div", of type "int * int &rarr; int". */
-  INT_DIV("Int", "div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /** Function "Int.toInt", of type "int &rarr; int". */
-  INT_TO_INT("Int", "toInt", ts -> ts.fnType(INT, INT)),
-
-  /** Function "Int.fromInt", of type "int &rarr; int". */
-  INT_FROM_INT("Int", "fromInt", ts -> ts.fnType(INT, INT)),
-
-  /** Function "Int.toLarge", of type "int &rarr; int". */
-  INT_TO_LARGE("Int", "toLarge", ts -> ts.fnType(INT, INT)),
-
-  /** Function "Int.fromLarge", of type "int &rarr; int". */
-  INT_FROM_LARGE("Int", "fromLarge", ts -> ts.fnType(INT, INT)),
-
-  /**
-   * Function "Int.fromString s", of type "string &rarr; int option", scans a
-   * {@code int} value from a {@code string}. Returns {@code SOME(r)} if a
-   * {@code int} value can be scanned from a prefix of {@code s}, ignoring any
-   * initial whitespace; otherwise, it returns {@code NONE}. This function is
-   * equivalent to {@code StringCvt.scanString scan}.
-   */
-  INT_FROM_STRING("Int", "fromString", ts -> ts.fnType(STRING, ts.option(INT))),
-
-  /** Constant "Int.minInt", of type "int option". */
-  INT_MIN_INT("Int", "minInt", ts -> ts.option(INT)),
-
-  /** Constant "Int.maxInt", of type "int option". */
-  INT_MAX_INT("Int", "maxInt", ts -> ts.option(INT)),
-
-  /** Constant "Int.precision", of type "int option". */
-  INT_PRECISION("Int", "precision", ts -> ts.option(INT)),
-
-  /**
-   * Function "Int.max", of type "int * int &rarr; int".
-   *
-   * <p>Returns the larger of the arguments. If exactly one argument is NaN,
-   * returns the other argument. If both arguments are NaN, returns NaN.
-   */
-  INT_MAX("Int", "max", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /**
-   * Function "Int.min", of type "int * int &rarr; int".
-   *
-   * <p>Returns the smaller of the arguments. If exactly one argument is NaN,
-   * returns the other argument. If both arguments are NaN, returns NaN.
-   */
-  INT_MIN("Int", "min", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /** Function "Int.quot", of type "int * int &rarr; int". */
-  INT_QUOT("Int", "quot", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /**
-   * Function "Int.mod", of type "int * int &rarr; int".
-   *
-   * <p>Returns the fractional part of r. "intMod" is equivalent to "#frac o
-   * split".
-   */
-  INT_MOD("Int", "mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /**
-   * Function "Int.rem", of type "int * int &rarr; int".
-   *
-   * <p>Returns the remainder {@code x - n * y}, where {@code n = trunc (x /
-   * y)}. The result has the same sign as {@code x} and has absolute value less
-   * than the absolute value of {@code y}. If {@code x} is an infinity or {@code
-   * y} is 0, returns NaN. If {@code y} is an infinity, returns {@code x}.
-   */
-  INT_REM("Int", "rem", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /**
-   * Function "Int.sameSign", of type "int * int &rarr; bool".
-   *
-   * <p>Returns true if and only if {@code signBit r1} equals {@code signBit
-   * r2}.
-   */
-  INT_SAME_SIGN(
-      "Int", "sameSign", ts -> ts.fnType(ts.tupleType(INT, INT), BOOL)),
-
-  /**
-   * Function "Int.sign", of type "int &rarr; int".
-   *
-   * <p>Returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive. An
-   * infinity returns its sign; a zero returns 0 regardless of its sign. It
-   * raises {@link BuiltInExn#DOMAIN Domain} on NaN.
-   */
-  INT_SIGN("Int", "sign", ts -> ts.fnType(INT, INT)),
-
-  /**
-   * Function "Int.toString", of type "int &rarr; string".
-   *
-   * <p>"toString r" converts ints into strings. The value returned by {@code
-   * toString t} is equivalent to:
-   *
-   * <pre>{@code
-   * (fmt (StringCvt.GEN NONE) r)
-   * }</pre>
-   */
-  INT_TO_STRING("Int", "toString", ts -> ts.fnType(INT, STRING)),
-
-  /**
-   * Function "Interact.use" of type "string &rarr; unit"
-   *
-   * <p>"use f" loads source text from the file named `f`.
-   */
-  INTERACT_USE("Interact", "use", "use", ts -> ts.fnType(STRING, UNIT)),
-
-  /**
-   * Function "Interact.useSilently" of type "string &rarr; unit"
-   *
-   * <p>"useSilently f" loads source text from the file named `f`, without
-   * printing to stdout.
-   */
-  INTERACT_USE_SILENTLY(
-      "Interact", "useSilently", "useSilently", ts -> ts.fnType(STRING, UNIT)),
-
-  /**
-   * Constant "String.maxSize", of type "int".
-   *
-   * <p>"The longest allowed size of a string".
-   */
-  STRING_MAX_SIZE("String", "maxSize", ts -> INT),
-
-  /** Operator "String.op ^", of type "string * string &rarr; string". */
-  STRING_OP_CARET(
-      "String", "op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
-
-  /** Operator "String.op &lt;", of type "string * string &rarr; bool". */
-  STRING_OP_LT(
-      "String", "op <", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
-
-  /** Operator "String.op &lt;=", of type "string * string &rarr; bool". */
-  STRING_OP_LE(
-      "String", "op <=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
-
-  /** Operator "String.op &gt;", of type "string * string &rarr; bool". */
-  STRING_OP_GT(
-      "String", "op >", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
-
-  /** Operator "String.op &gt;=", of type "string * string &rarr; bool". */
-  STRING_OP_GE(
-      "String", "op >=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
-
-  /**
-   * Function "String.size", of type "string &rarr; int".
-   *
-   * <p>"size s" returns |s|, the number of characters in string s.
-   */
-  STRING_SIZE("String", "size", "size", ts -> ts.fnType(STRING, INT)),
-
-  /**
-   * Function "String.sub", of type "string * int &rarr; char".
-   *
-   * <p>"sub (s, i)" returns the {@code i}<sup>th</sup> character of s, counting
-   * from zero. This raises {@link BuiltInExn#SUBSCRIPT Subscript} if i &lt; 0
-   * or |s| &le; i.
-   */
-  STRING_SUB("String", "sub", ts -> ts.fnType(ts.tupleType(STRING, INT), CHAR)),
-
-  /** Function "String.compare", of type "string * string &rarr; order". */
-  STRING_COMPARE(
-      "String",
-      "compare",
-      ts -> ts.fnType(ts.tupleType(STRING, STRING), ts.order())),
-
-  /**
-   * Function "String.collate", of type "(char * char &rarr; order) &rarr;
-   * string * string &rarr; order".
-   */
-  STRING_COLLATE(
-      "String",
-      "collate",
-      ts ->
-          ts.fnType(
-              ts.fnType(ts.tupleType(CHAR, CHAR), ts.order()),
-              ts.tupleType(STRING, STRING),
-              ts.order())),
-
-  /**
-   * Function "String.extract", of type "string * int * int option &rarr;
-   * string".
-   *
-   * <p>"extract (s, i, NONE)" and "extract (s, i, SOME j)" return substrings of
-   * {@code s}. The first returns the substring of {@code s} from the {@code
-   * i}<sup>th</sup> character to the end of the string, i.e., the string {@code
-   * s[i..|s|-1]}. This raises {@link BuiltInExn#SUBSCRIPT Subscript} if {@code
-   * i < 0} or {@code |s| < i}.
-   *
-   * <p>The second form returns the substring of size {@code j} starting at
-   * index {@code i}, i.e., the {@code string s[i..i+j-1]}. It raises {@link
-   * BuiltInExn#SUBSCRIPT Subscript} if {@code i < 0} or {@code j < 0} or {@code
-   * |s| < i + j}. Note that, if defined, extract returns the empty string when
-   * {@code i = |s|}.
-   */
-  STRING_EXTRACT(
-      "String",
-      "extract",
-      ts -> ts.fnType(ts.tupleType(STRING, INT, ts.option(INT)), STRING)),
-
-  /**
-   * Function "String.fields", of type "(char &rarr; bool) &rarr; string &rarr;
-   * string list".
-   */
-  STRING_FIELDS(
-      "String",
-      "fields",
-      "fields",
-      ts -> ts.fnType(ts.fnType(CHAR, BOOL), STRING, ts.listType(STRING))),
-
-  /**
-   * Function "String.tokens", of type "(char &rarr; bool) &rarr; string &rarr;
-   * string list".
-   */
-  STRING_TOKENS(
-      "String",
-      "tokens",
-      "tokens",
-      ts -> ts.fnType(ts.fnType(CHAR, BOOL), STRING, ts.listType(STRING))),
-
-  /**
-   * Function "String.substring", of type "string * int * int &rarr; string".
-   *
-   * <p>"substring (s, i, j)" returns the substring s[i..i+j-1], i.e., the
-   * substring of size j starting at index i. This is equivalent to extract(s,
-   * i, SOME j).
-   */
-  STRING_SUBSTRING(
-      "String",
-      "substring",
-      "substring",
-      ts -> ts.fnType(ts.tupleType(STRING, INT, INT), STRING)),
-
-  /**
-   * Function "String.concat", of type "string list &rarr; string".
-   *
-   * <p>"concat l" is the concatenation of all the strings in l. This raises
-   * {@link BuiltInExn#SIZE Size} if the sum of all the sizes is greater than
-   * maxSize.
-   */
-  STRING_CONCAT(
-      "String",
-      "concat",
-      "concat",
-      ts -> ts.fnType(ts.listType(STRING), STRING)),
-
-  /**
-   * Function "String.concatWith", of type "string &rarr; string list &rarr;
-   * string".
-   *
-   * <p>"concatWith s l" returns the concatenation of the strings in the list l
-   * using the string s as a separator. This raises {@link BuiltInExn#SIZE Size}
-   * if the size of the resulting string would be greater than maxSize.
-   */
-  STRING_CONCAT_WITH(
-      "String",
-      "concatWith",
-      ts -> ts.fnType(STRING, ts.listType(STRING), STRING)),
-
-  /**
-   * Function "String.str", of type "char &rarr; string".
-   *
-   * <p>"str c" is the string of size one containing the character {@code c}.
-   */
-  STRING_STR("String", "str", "str", ts -> ts.fnType(CHAR, STRING)),
-
-  /**
-   * Function "String.implode", of type "char list &rarr; string".
-   *
-   * <p>"implode l" generates the string containing the characters in the list
-   * l. This is equivalent to {@code concat (List.map str l)}. This raises
-   * {@link BuiltInExn#SIZE Size} if the resulting string would have size
-   * greater than maxSize.
-   */
-  STRING_IMPLODE(
-      "String",
-      "implode",
-      "implode",
-      ts -> ts.fnType(ts.listType(CHAR), STRING)),
-
-  /**
-   * Function "String.explode", of type "string &rarr; char list".
-   *
-   * <p>"explode s" is the list of characters in the string s.
-   */
-  STRING_EXPLODE(
-      "String",
-      "explode",
-      "explode",
-      ts -> ts.fnType(STRING, ts.listType(CHAR))),
-
-  /**
-   * Function "String.map", of type "(char &rarr; char) &rarr; string &rarr;
-   * string".
-   *
-   * <p>"map f s" applies f to each element of s from left to right, returning
-   * the resulting string. It is equivalent to {@code implode(List.map f
-   * (explode s))}.
-   */
-  STRING_MAP(
-      "String", "map", ts -> ts.fnType(ts.fnType(CHAR, CHAR), STRING, STRING)),
-
-  /**
-   * Function "String.translate", of type "(char &rarr; string) &rarr; string
-   * &rarr; string".
-   *
-   * <p>"translate f s" returns the string generated from s by mapping each
-   * character in s by f. It is equivalent to {code concat(List.map f (explode
-   * s))}.
-   */
-  STRING_TRANSLATE(
-      "String",
-      "translate",
-      ts -> ts.fnType(ts.fnType(CHAR, STRING), STRING, STRING)),
-
-  /**
-   * Function "String.isPrefix", of type "string &rarr; string &rarr; bool".
-   *
-   * <p>"isPrefix s1 s2" returns true if the string s1 is a prefix of the string
-   * s2. Note that the empty string is a prefix of any string, and that a string
-   * is a prefix of itself.
-   */
-  STRING_IS_PREFIX("String", "isPrefix", ts -> ts.fnType(STRING, STRING, BOOL)),
-
-  /**
-   * Function "String.isSubstring", of type "string &rarr; string &rarr; bool".
-   *
-   * <p>"isSubstring s1 s2" returns true if the string s1 is a substring of the
-   * string s2. Note that the empty string is a substring of any string, and
-   * that a string is a substring of itself.
-   */
-  STRING_IS_SUBSTRING(
-      "String", "isSubstring", ts -> ts.fnType(STRING, STRING, BOOL)),
-
-  /**
-   * Function "String.isSuffix", of type "string &rarr; string &rarr; bool".
-   *
-   * <p>"isSuffix s1 s2" returns true if the string s1 is a suffix of the string
-   * s2. Note that the empty string is a suffix of any string, and that a string
-   * is a suffix of itself.
-   */
-  STRING_IS_SUFFIX("String", "isSuffix", ts -> ts.fnType(STRING, STRING, BOOL)),
-
-  /**
-   * Constant "Bag.nil", of type "&alpha; bag".
-   *
-   * <p>"nil" is the empty bag.
-   */
-  BAG_NIL("Bag", "nil", ts -> ts.forallType(1, h -> h.bag(0))),
-
-  /**
-   * Function "Bag.null", of type "&alpha; bag &rarr; bool".
-   *
-   * <p>"null b" returns true if the bag {@code b} is empty.
-   */
-  BAG_NULL(
-      "Bag", "null", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
-
-  /**
-   * Function "Bag.length", of type "&alpha; bag &rarr; int".
-   *
-   * <p>"length b" returns the number of elements in the bag {@code b}.
-   */
-  BAG_LENGTH(
-      "Bag", "length", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), INT))),
-
-  /**
-   * Function "Bag.at", of type "&alpha; bag * &alpha; bag &rarr; &alpha; bag".
-   *
-   * <p>"l1 @ l2" returns the bag that is the concatenation of l1 and l2.
-   */
-  // TODO: remove
-  BAG_AT(
-      "Bag",
-      "at",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)))),
-
-  /**
-   * Operator "Bag.op @", of type "&alpha; bag * &alpha; bag &rarr; &alpha;
-   * bag".
-   *
-   * <p>"l1 @ l2" returns the bag that is the concatenation of l1 and l2.
-   */
-  BAG_OP_AT(
-      "Bag",
-      "op @",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)))),
-
-  /**
-   * Function "Bag.hd", of type "&alpha; bag &rarr; &alpha;".
-   *
-   * <p>"hd b" returns the first element of {@code b}. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty} if {@code b} is
-   * nil. Results are nondeterministic because bag elements are unordered.
-   */
-  BAG_HD(
-      "Bag", "hd", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
-
-  /**
-   * Function "Bag.tl", of type "&alpha; bag &rarr; &alpha; bag".
-   *
-   * <p>"tl b" returns all but the first element of {@code b}. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY empty} if b is nil.
-   * Results are nondeterministic because bag elements are unordered.
-   */
-  BAG_TL(
-      "Bag", "tl", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.bag(0)))),
-
-  /**
-   * Function "Bag.getItem", of type "&alpha; bag &rarr; (&alpha; * &alpha; bag)
-   * option".
-   *
-   * <p>"getItem l" returns {@code NONE} if the bag is empty, and {@code SOME(hd
-   * l,tl l)} otherwise. This function is particularly useful for creating value
-   * readers from bags of characters. For example, {@code Int.scan StringCvt.DEC
-   * getItem} has the type {@code (int, char bag) StringCvt.reader} and can be
-   * used to scan decimal integers from bags of characters.
-   */
-  BAG_GET_ITEM(
-      "Bag",
-      "getItem",
-      ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      h.bag(0), ts.option(ts.tupleType(h.get(0), h.bag(0)))))),
-
-  /**
-   * Function "Bag.nth", of type "&alpha; bag * int &rarr; &alpha;".
-   *
-   * <p>"nth (l, i)" returns the {@code i}<sup>th</sup> element of the bag
-   * {@code l}, counting from 0. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT Subscript} if {@code i
-   * < 0} or {@code i >= length l}. We have {@code nth(l,0) = hd l}, ignoring
-   * exceptions.
-   */
-  BAG_NTH(
-      "Bag",
-      "nth",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.bag(0), INT), h.get(0)))),
-
-  /**
-   * Function "Bag.take", of type "&alpha; bag * int &rarr; &alpha; bag".
-   *
-   * <p>"take (b, i)" returns the first i elements of the bag {@code b}. It
-   * raises {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT
-   * Subscript} if i &lt; 0 or i &gt; length {@code b}. We have {@code take(l,
-   * length b) = b}.
-   */
-  BAG_TAKE(
-      "Bag",
-      "take",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.bag(0), INT), h.bag(0)))),
-
-  /**
-   * Function "Bag.drop", of type "&alpha; bag * int &rarr; &alpha; bag".
-   *
-   * <p>"drop (b, i)" returns what is left after dropping the first {@code i}
-   * elements of the bag {@code b}.
-   *
-   * <p>It raises {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SUBSCRIPT
-   * Subscript} if i &lt; 0 or i &gt; length {@code b}.
-   *
-   * <p>It holds that {@code take(b, i) @ drop(b, i) = l} when 0 &le; i &le;
-   * length b.
-   *
-   * <p>We also have {@code drop(b, length b) = []}.
-   */
-  BAG_DROP(
-      "Bag",
-      "drop",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.bag(0), INT), h.bag(0)))),
-
-  /**
-   * Function "Bag.concat", of type "&alpha; bag list &rarr; &alpha; bag".
-   *
-   * <p>"concat l" returns the bag that is the concatenation of all the bags in
-   * l in order. {@code concat[b1,b2,...bn] = b1 @ b2 @ ... @ bn}
-   */
-  BAG_CONCAT(
-      "Bag",
-      "concat",
-      ts -> ts.forallType(1, h -> ts.fnType(ts.listType(h.bag(0)), h.bag(0)))),
-
-  /**
-   * Function "Bag.app", of type "(&alpha; &rarr; unit) &rarr; &alpha; bag
-   * &rarr; unit".
-   *
-   * <p>"app f l" applies f to the elements of l, from left to right.
-   */
-  BAG_APP(
-      "Bag",
-      "app",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.bag(0), UNIT))),
-
-  /**
-   * Function "Bag.map", of type "(&alpha; &rarr; &beta;) &rarr; &alpha; bag
-   * &rarr; &beta; bag".
-   *
-   * <p>"map f b" applies f to each element of {@code b} from left to right,
-   * returning the bag of results.
-   */
-  BAG_MAP(
-      "Bag",
-      "map",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(h.get(0), h.get(1)), h.bag(0), h.bag(1)))),
-
-  /**
-   * Function "Bag.mapPartial", of type "(&alpha; &rarr; &beta; option) &rarr;
-   * &alpha; bag &rarr; &beta; bag".
-   *
-   * <p>"mapPartial f b" applies f to each element of {@code b} from left to
-   * right, returning a bag of results, with SOME stripped, where f was defined.
-   * f is not defined for an element of b if f applied to the element returns
-   * NONE. The above expression is equivalent to: {@code ((map valOf) o (filter
-   * isSome) o (map f)) b}
-   */
-  BAG_MAP_PARTIAL(
-      "Bag",
-      "mapPartial",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(h.get(0), h.option(1)), h.bag(0), h.bag(1)))),
-
-  /**
-   * Function "Bag.find", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
-   * &rarr; &alpha; option".
-   *
-   * <p>"find f b" applies {@code f} to each element {@code x} of the bag {@code
-   * b}, from left to right, until {@code f x} evaluates to true. It returns
-   * SOME(x) if such an x exists; otherwise it returns NONE.
-   */
-  BAG_FIND(
-      "Bag",
-      "find",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(h.predicate(0), h.bag(0), h.option(0)))),
-
-  /**
-   * Function "Bag.filter", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
-   * &rarr; &alpha; bag".
-   *
-   * <p>"filter f b" applies {@code f} to each element {@code x} of {@code b},
-   * from left to right, and returns the bag of those {@code x} for which {@code
-   * f x} evaluated to true, in the same order as they occurred in the argument
-   * bag.
-   */
-  BAG_FILTER(
-      "Bag",
-      "filter",
-      ts ->
-          ts.forallType(1, h -> ts.fnType(h.predicate(0), h.bag(0), h.bag(0)))),
-
-  /**
-   * Function "Bag.partition", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
-   * &rarr; &alpha; bag * &alpha; bag".
-   *
-   * <p>"partition f b" applies {@code f} to each element {@code x} of bag
-   * {@code b}, from left to right, and returns a pair (pos, neg) where pos is
-   * the bag of those x for which {@code f x} evaluated to true, and neg is the
-   * bag of those for which {@code f x} evaluated to false. The elements of pos
-   * and neg retain the same relative order they possessed in {@code b}.
-   */
-  BAG_PARTITION(
-      "Bag",
-      "partition",
-      ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      h.predicate(0),
-                      h.bag(0),
-                      ts.tupleType(h.bag(0), h.bag(0))))),
-
-  /**
-   * Function "Bag.fold", of type "(&alpha; * &beta; &rarr; &beta;) &rarr;
-   * &beta; &rarr; &alpha; bag &rarr; &beta;".
-   *
-   * <p>"fold f init [x1, x2, ..., xn]" returns {@code f(xn,...,f(x2, f(x1,
-   * init))...)} or {@code init} if the bag is empty.
-   */
-  BAG_FOLD(
-      "Bag",
-      "fold",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
-                      h.get(1),
-                      h.bag(0),
-                      h.get(1)))),
-
-  /**
-   * Function "Bag.exists", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
-   * &rarr; bool".
-   *
-   * <p>"exists f b" applies f to each element x of the bag {@code b}, from left
-   * to right, until {@code f x} evaluates to true; it returns true if such an x
-   * exists and false otherwise.
-   */
-  BAG_EXISTS(
-      "Bag",
-      "exists",
-      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.bag(0), BOOL))),
-
-  /**
-   * Function "Bag.all", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
-   * &rarr; bool".
-   *
-   * <p>"all f b" applies f to each element x of the bag b, from left to right,
-   * until {@code f x} evaluates to false; it returns false if such an x exists
-   * and true otherwise. It is equivalent to not(exists (not o f) b)).
-   */
-  BAG_ALL(
-      "Bag",
-      "all",
-      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.bag(0), BOOL))),
-
-  /**
-   * Function "Bag.fromList" of type "&alpha; list &rarr; &alpha; bag".
-   *
-   * <p>{@code fromList l} creates a new bag from {@code l}, whose length is
-   * {@code length l} and with the {@code i}<sup>th</sup> element of {@code l}
-   * used as the {@code i}<sup>th</sup> element of the bag. If the length of the
-   * list is greater than {@code maxLen}, then the {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception is raised.
-   */
-  BAG_FROM_LIST(
-      "Bag",
-      "fromList",
-      "bag",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.bag(0)))),
-
-  /**
-   * Function "Bag.toList" of type "&alpha; bag &rarr; &alpha; list".
-   *
-   * <p>{@code toList b} creates a new list from {@code b}, whose length is
-   * {@code length b} and with the {@code i}<sup>th</sup> element of {@code b}
-   * used as the {@code i}<sup>th</sup> element of the list. If the length of
-   * the bag is greater than {@code maxLen}, then the {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} exception is raised.
-   * The order of the list is nondeterministic because bag elements are
-   * unordered.
-   */
-  BAG_TO_LIST(
-      "Bag",
-      "toList",
-      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.list(0)))),
-
-  /**
-   * Function "Bag.tabulate", of type "int * (int &rarr; &alpha;) &rarr; &alpha;
-   * bag".
-   *
-   * <p>"tabulate (n, f)" returns a bag of length n equal to {@code [f(0), f(1),
-   * ..., f(n-1)]}, created from left to right. It raises {@link
-   * net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if n &lt; 0.
-   */
-  BAG_TABULATE(
-      "Bag",
-      "tabulate",
-      ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.bag(0)))),
-
   /**
    * Function "Either.app", of type "(&alpha; &rarr; unit) * (&beta; &rarr;
    * unit) * (&alpha;, &beta;) either &rarr; unit".
@@ -1569,34 +1179,198 @@ public enum BuiltIn {
                       ts.fnType(h.get(0), h.get(1), h.get(2)),
                       ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(2))))),
 
-  /**
-   * Constant "List.nil", of type "&alpha; list".
-   *
-   * <p>"nil" is the empty list.
-   */
-  LIST_NIL("List", "nil", ts -> ts.forallType(1, h -> h.list(0))),
+  /** Function "General.ignore", of type "&alpha; &rarr; unit". */
+  GENERAL_IGNORE(
+      "General",
+      "ignore",
+      "ignore",
+      ts -> ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
 
   /**
-   * Function "List.null", of type "&alpha; list &rarr; bool".
+   * Operator "General.op o", of type "(&beta; &rarr; &gamma;) * (&alpha; &rarr;
+   * &beta;) &rarr; &alpha; &rarr; &gamma;"
    *
-   * <p>"null l" returns true if the list l is empty.
+   * <p>"f o g" is the function composition of "f" and "g". Thus, "(f o g) a" is
+   * equivalent to "f (g a)".
    */
-  LIST_NULL(
-      "List",
-      "null",
-      "null",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
+  GENERAL_OP_O(
+      "General",
+      "op o",
+      "op o",
+      ts ->
+          ts.forallType(
+              3,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(
+                          ts.fnType(h.get(1), h.get(2)),
+                          ts.fnType(h.get(0), h.get(1))),
+                      ts.fnType(h.get(0), h.get(2))))),
+
+  /* TODO:
+  val ~ : int -> int
+  val * : int * int -> int
+  val div : int * int -> int
+  val mod : int * int -> int
+  val quot : int * int -> int
+  val rem : int * int -> int
+  val + : int * int -> int
+  val - : int * int -> int
+  val > : int * int -> bool
+  val >= : int * int -> bool
+  val < : int * int -> bool
+  val <= : int * int -> bool
+   */
+
+  /** Function "Int.abs" of type "int &rarr; int". */
+  INT_ABS("Int", "abs", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.compare", of type "int * int &rarr; order". */
+  INT_COMPARE(
+      "Int", "compare", ts -> ts.fnType(ts.tupleType(INT, INT), ts.order())),
+
+  /** Function "Int.div", of type "int * int &rarr; int". */
+  INT_DIV("Int", "div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Function "Int.toInt", of type "int &rarr; int". */
+  INT_TO_INT("Int", "toInt", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.fromInt", of type "int &rarr; int". */
+  INT_FROM_INT("Int", "fromInt", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.toLarge", of type "int &rarr; int". */
+  INT_TO_LARGE("Int", "toLarge", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.fromLarge", of type "int &rarr; int". */
+  INT_FROM_LARGE("Int", "fromLarge", ts -> ts.fnType(INT, INT)),
 
   /**
-   * Function "List.length", of type "&alpha; list &rarr; int".
-   *
-   * <p>"length l" returns the number of elements in the list l.
+   * Function "Int.fromString s", of type "string &rarr; int option", scans a
+   * {@code int} value from a {@code string}. Returns {@code SOME(r)} if a
+   * {@code int} value can be scanned from a prefix of {@code s}, ignoring any
+   * initial whitespace; otherwise, it returns {@code NONE}. This function is
+   * equivalent to {@code StringCvt.scanString scan}.
    */
-  LIST_LENGTH(
+  INT_FROM_STRING("Int", "fromString", ts -> ts.fnType(STRING, ts.option(INT))),
+
+  /** Constant "Int.minInt", of type "int option". */
+  INT_MIN_INT("Int", "minInt", ts -> ts.option(INT)),
+
+  /** Constant "Int.maxInt", of type "int option". */
+  INT_MAX_INT("Int", "maxInt", ts -> ts.option(INT)),
+
+  /** Constant "Int.precision", of type "int option". */
+  INT_PRECISION("Int", "precision", ts -> ts.option(INT)),
+
+  /**
+   * Function "Int.max", of type "int * int &rarr; int".
+   *
+   * <p>Returns the larger of the arguments. If exactly one argument is NaN,
+   * returns the other argument. If both arguments are NaN, returns NaN.
+   */
+  INT_MAX("Int", "max", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /**
+   * Function "Int.min", of type "int * int &rarr; int".
+   *
+   * <p>Returns the smaller of the arguments. If exactly one argument is NaN,
+   * returns the other argument. If both arguments are NaN, returns NaN.
+   */
+  INT_MIN("Int", "min", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Function "Int.quot", of type "int * int &rarr; int". */
+  INT_QUOT("Int", "quot", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /**
+   * Function "Int.mod", of type "int * int &rarr; int".
+   *
+   * <p>Returns the fractional part of r. "intMod" is equivalent to "#frac o
+   * split".
+   */
+  INT_MOD("Int", "mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /**
+   * Function "Int.rem", of type "int * int &rarr; int".
+   *
+   * <p>Returns the remainder {@code x - n * y}, where {@code n = trunc (x /
+   * y)}. The result has the same sign as {@code x} and has absolute value less
+   * than the absolute value of {@code y}. If {@code x} is an infinity or {@code
+   * y} is 0, returns NaN. If {@code y} is an infinity, returns {@code x}.
+   */
+  INT_REM("Int", "rem", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /**
+   * Function "Int.sameSign", of type "int * int &rarr; bool".
+   *
+   * <p>Returns true if and only if {@code signBit r1} equals {@code signBit
+   * r2}.
+   */
+  INT_SAME_SIGN(
+      "Int", "sameSign", ts -> ts.fnType(ts.tupleType(INT, INT), BOOL)),
+
+  /**
+   * Function "Int.sign", of type "int &rarr; int".
+   *
+   * <p>Returns ~1 if r is negative, 0 if r is zero, or 1 if r is positive. An
+   * infinity returns its sign; a zero returns 0 regardless of its sign. It
+   * raises {@link BuiltInExn#DOMAIN Domain} on NaN.
+   */
+  INT_SIGN("Int", "sign", ts -> ts.fnType(INT, INT)),
+
+  /**
+   * Function "Int.toString", of type "int &rarr; string".
+   *
+   * <p>"toString r" converts ints into strings. The value returned by {@code
+   * toString t} is equivalent to:
+   *
+   * <pre>{@code
+   * (fmt (StringCvt.GEN NONE) r)
+   * }</pre>
+   */
+  INT_TO_STRING("Int", "toString", ts -> ts.fnType(INT, STRING)),
+
+  /**
+   * Function "Interact.use" of type "string &rarr; unit"
+   *
+   * <p>"use f" loads source text from the file named `f`.
+   */
+  INTERACT_USE("Interact", "use", "use", ts -> ts.fnType(STRING, UNIT)),
+
+  /**
+   * Function "Interact.useSilently" of type "string &rarr; unit"
+   *
+   * <p>"useSilently f" loads source text from the file named `f`, without
+   * printing to stdout.
+   */
+  INTERACT_USE_SILENTLY(
+      "Interact", "useSilently", "useSilently", ts -> ts.fnType(STRING, UNIT)),
+
+  /**
+   * Function "List.all", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
+   * &rarr; bool".
+   *
+   * <p>"all f l" applies f to each element x of the list l, from left to right,
+   * until {@code f x} evaluates to false; it returns false if such an x exists
+   * and true otherwise. It is equivalent to not(exists (not o f) l)).
+   */
+  LIST_ALL(
       "List",
-      "length",
-      "length",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
+      "all",
+      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), BOOL))),
+
+  /**
+   * Function "List.app", of type "(&alpha; &rarr; unit) &rarr; &alpha; list
+   * &rarr; unit".
+   *
+   * <p>"app f l" applies f to the elements of l, from left to right.
+   */
+  LIST_APP(
+      "List",
+      "app",
+      "app",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.list(0), UNIT))),
 
   /**
    * Function "List.at", of type "&alpha; list * &alpha; list &rarr; &alpha;
@@ -1614,105 +1388,35 @@ public enum BuiltIn {
               h -> ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
 
   /**
-   * Operator "List.op @", of type "&alpha; list * &alpha; list &rarr; &alpha;
-   * list".
+   * Function "List.collate", of type "(&alpha; * &alpha; &rarr; order) &rarr;
+   * &alpha; list * &alpha; list &rarr; order".
    *
-   * <p>"l1 @ l2" returns the list that is the concatenation of l1 and l2.
+   * <p>"collate f (l1, l2)" performs lexicographic comparison of the two lists
+   * using the given ordering f on the list elements.
    */
-  LIST_OP_AT(
+  LIST_COLLATE(
       "List",
-      "op @",
-      "op @",
-      ts ->
-          ts.forallType(
-              1,
-              h -> ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
-
-  /**
-   * Function "List.hd", of type "&alpha; list &rarr; &alpha;".
-   *
-   * <p>"hd l" returns the first element of l. It raises {@link BuiltInExn#EMPTY
-   * Empty} if l is nil.
-   */
-  LIST_HD(
-      "List",
-      "hd",
-      "hd",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
-
-  /**
-   * Function "List.tl", of type "&alpha; list &rarr; &alpha; list".
-   *
-   * <p>"tl l" returns all but the first element of l. It raises {@link
-   * BuiltInExn#EMPTY Empty} if l is nil.
-   */
-  LIST_TL(
-      "List",
-      "tl",
-      "tl",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
-
-  /**
-   * Function "List.last", of type "&alpha; list &rarr; &alpha;".
-   *
-   * <p>"last l" returns the last element of l. It raises {@link
-   * BuiltInExn#EMPTY Empty} if l is nil.
-   */
-  LIST_LAST(
-      "List",
-      "last",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
-
-  /**
-   * Function "List.getItem", of type "&alpha; list &rarr; (&alpha; * &alpha;
-   * list) option".
-   *
-   * <p>"getItem l" returns {@code NONE} if the list is empty, and {@code
-   * SOME(hd l,tl l)} otherwise. This function is particularly useful for
-   * creating value readers from lists of characters. For example, {@code
-   * Int.scan StringCvt.DEC getItem} has the type {@code (int, char list)
-   * StringCvt.reader} and can be used to scan decimal integers from lists of
-   * characters.
-   */
-  LIST_GET_ITEM(
-      "List",
-      "getItem",
+      "collate",
       ts ->
           ts.forallType(
               1,
               h ->
                   ts.fnType(
-                      h.list(0),
-                      ts.option(ts.tupleType(h.get(0), h.list(0)))))),
+                      ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()),
+                      ts.tupleType(h.list(0), h.list(0)),
+                      ts.order()))),
 
   /**
-   * Function "List.nth", of type "&alpha; list * int &rarr; &alpha;".
+   * Function "List.concat", of type "&alpha; list list &rarr; &alpha; list".
    *
-   * <p>"nth (l, i)" returns the {@code i}<sup>th</sup> element of the list
-   * {@code l}, counting from 0. It raises {@link BuiltInExn#SUBSCRIPT
-   * Subscript} if {@code i < 0} or {@code i >= length l}. We have {@code
-   * nth(l,0) = hd l}, ignoring exceptions.
+   * <p>"concat l" returns the list that is the concatenation of all the lists
+   * in l in order. {@code concat[l1,l2,...ln] = l1 @ l2 @ ... @ ln}
    */
-  LIST_NTH(
+  LIST_CONCAT(
       "List",
-      "nth",
+      "concat",
       ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.list(0), INT), h.get(0)))),
-
-  /**
-   * Function "List.take", of type "&alpha; list * int &rarr; &alpha; list".
-   *
-   * <p>"take (l, i)" returns the first i elements of the list l. It raises
-   * {@link BuiltInExn#SUBSCRIPT Subscript} if i &lt; 0 or i &gt; length l. We
-   * have {@code take(l, length l) = l}.
-   */
-  LIST_TAKE(
-      "List",
-      "take",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.list(0), INT), h.list(0)))),
+          ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
 
   /**
    * Function "List.drop", of type "&alpha; list * int &rarr; &alpha; list".
@@ -1736,29 +1440,6 @@ public enum BuiltIn {
               1, h -> ts.fnType(ts.tupleType(h.list(0), INT), h.list(0)))),
 
   /**
-   * Function "List.rev", of type "&alpha; list &rarr; &alpha; list".
-   *
-   * <p>"rev l" returns a list consisting of l's elements in reverse order.
-   */
-  LIST_REV(
-      "List",
-      "rev",
-      "rev",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
-
-  /**
-   * Function "List.concat", of type "&alpha; list list &rarr; &alpha; list".
-   *
-   * <p>"concat l" returns the list that is the concatenation of all the lists
-   * in l in order. {@code concat[l1,l2,...ln] = l1 @ l2 @ ... @ ln}
-   */
-  LIST_CONCAT(
-      "List",
-      "concat",
-      ts ->
-          ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
-
-  /**
    * Function "List.except", of type "&alpha; list list &rarr; &alpha; list".
    *
    * <p>"except l" returns the list that is the first list in {@code l} minus
@@ -1772,116 +1453,17 @@ public enum BuiltIn {
           ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
 
   /**
-   * Function "List.intersect", of type "&alpha; list list &rarr; &alpha; list".
+   * Function "List.exists", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
+   * &rarr; bool".
    *
-   * <p>"intersect l" returns the list that is the intersection of all lists in
-   * l. It raises {@link BuiltInExn#EMPTY Empty} if {@code l} is empty.
+   * <p>"exists f l" applies f to each element x of the list l, from left to
+   * right, until {@code f x} evaluates to true; it returns true if such an x
+   * exists and false otherwise.
    */
-  LIST_INTERSECT(
+  LIST_EXISTS(
       "List",
-      "intersect",
-      ts ->
-          ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
-
-  /**
-   * Function "List.revAppend", of type "&alpha; list * &alpha; list &rarr;
-   * &alpha; list".
-   *
-   * <p>"revAppend (l1, l2)" returns (rev l1) @ l2.
-   */
-  LIST_REV_APPEND(
-      "List",
-      "revAppend",
-      ts ->
-          ts.forallType(
-              1,
-              h -> ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
-
-  /**
-   * Function "List.app", of type "(&alpha; &rarr; unit) &rarr; &alpha; list
-   * &rarr; unit".
-   *
-   * <p>"app f l" applies f to the elements of l, from left to right.
-   */
-  LIST_APP(
-      "List",
-      "app",
-      "app",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.list(0), UNIT))),
-
-  /**
-   * Function "List.mapi", of type "(int * &alpha; &rarr; &beta;) &rarr; &alpha;
-   * list &rarr; &beta; list".
-   *
-   * <p>"mapi f l" applies f to each element of l from left to right, returning
-   * the list of results.
-   */
-  LIST_MAPI(
-      "List",
-      "mapi",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(ts.tupleType(INT, h.get(0)), h.get(1)),
-                      h.list(0),
-                      h.list(1)))),
-
-  /**
-   * Function "List.map", of type "(&alpha; &rarr; &beta;) &rarr; &alpha; list
-   * &rarr; &beta; list".
-   *
-   * <p>"map f l" applies f to each element of l from left to right, returning
-   * the list of results.
-   */
-  LIST_MAP(
-      "List",
-      "map",
-      "map",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(h.get(0), h.get(1)), h.list(0), h.list(1)))),
-
-  /**
-   * Function "List.mapPartial", of type "(&alpha; &rarr; &beta; option) &rarr;
-   * &alpha; list &rarr; &beta; list".
-   *
-   * <p>"mapPartial f l" applies f to each element of l from left to right,
-   * returning a list of results, with SOME stripped, where f was defined. f is
-   * not defined for an element of l if f applied to the element returns NONE.
-   * The above expression is equivalent to: {@code ((map valOf) o (filter
-   * isSome) o (map f)) l}
-   */
-  LIST_MAP_PARTIAL(
-      "List",
-      "mapPartial",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(h.get(0), h.option(1)), h.list(0), h.list(1)))),
-
-  /**
-   * Function "List.find", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
-   * &rarr; &alpha; option".
-   *
-   * <p>"find f l" applies f to each element x of the list l, from left to
-   * right, until {@code f x} evaluates to true. It returns SOME(x) if such an x
-   * exists; otherwise it returns NONE.
-   */
-  LIST_FIND(
-      "List",
-      "find",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(h.predicate(0), h.list(0), h.option(0)))),
+      "exists",
+      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), BOOL))),
 
   /**
    * Function "List.filter", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
@@ -1899,26 +1481,19 @@ public enum BuiltIn {
               1, h -> ts.fnType(h.predicate(0), h.list(0), h.list(0)))),
 
   /**
-   * Function "List.partition", of type "(&alpha; &rarr; bool) &rarr; &alpha;
-   * list &rarr; &alpha; list * &alpha; list".
+   * Function "List.find", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
+   * &rarr; &alpha; option".
    *
-   * <p>"partition f l" applies f to each element x of l, from left to right,
-   * and returns a pair (pos, neg) where pos is the list of those x for which
-   * {@code f x} evaluated to true, and neg is the list of those for which
-   * {@code f x} evaluated to false. The elements of pos and neg retain the same
-   * relative order they possessed in l.
+   * <p>"find f l" applies f to each element x of the list l, from left to
+   * right, until {@code f x} evaluates to true. It returns SOME(x) if such an x
+   * exists; otherwise it returns NONE.
    */
-  LIST_PARTITION(
+  LIST_FIND(
       "List",
-      "partition",
+      "find",
       ts ->
           ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      h.predicate(0),
-                      h.list(0),
-                      ts.tupleType(h.list(0), h.list(0))))),
+              1, h -> ts.fnType(h.predicate(0), h.list(0), h.option(0)))),
 
   /**
    * Function "List.foldl", of type "(&alpha; * &beta; &rarr; &beta;) &rarr;
@@ -1963,67 +1538,177 @@ public enum BuiltIn {
                       h.get(1)))),
 
   /**
-   * Function "List.exists", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
-   * &rarr; bool".
+   * Function "List.getItem", of type "&alpha; list &rarr; (&alpha; * &alpha;
+   * list) option".
    *
-   * <p>"exists f l" applies f to each element x of the list l, from left to
-   * right, until {@code f x} evaluates to true; it returns true if such an x
-   * exists and false otherwise.
+   * <p>"getItem l" returns {@code NONE} if the list is empty, and {@code
+   * SOME(hd l,tl l)} otherwise. This function is particularly useful for
+   * creating value readers from lists of characters. For example, {@code
+   * Int.scan StringCvt.DEC getItem} has the type {@code (int, char list)
+   * StringCvt.reader} and can be used to scan decimal integers from lists of
+   * characters.
    */
-  LIST_EXISTS(
+  LIST_GET_ITEM(
       "List",
-      "exists",
-      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), BOOL))),
-
-  /**
-   * Function "List.all", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
-   * &rarr; bool".
-   *
-   * <p>"all f l" applies f to each element x of the list l, from left to right,
-   * until {@code f x} evaluates to false; it returns false if such an x exists
-   * and true otherwise. It is equivalent to not(exists (not o f) l)).
-   */
-  LIST_ALL(
-      "List",
-      "all",
-      ts -> ts.forallType(1, h -> ts.fnType(h.predicate(0), h.list(0), BOOL))),
-
-  /**
-   * Function "List.tabulate", of type "int * (int &rarr; &alpha;) &rarr;
-   * &alpha; list".
-   *
-   * <p>"tabulate (n, f)" returns a list of length n equal to {@code [f(0),
-   * f(1), ..., f(n-1)]}, created from left to right. It raises {@link
-   * BuiltInExn#SIZE Size} if n &lt; 0.
-   */
-  LIST_TABULATE(
-      "List",
-      "tabulate",
+      "getItem",
       ts ->
           ts.forallType(
               1,
               h ->
                   ts.fnType(
-                      ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.list(0)))),
+                      h.list(0),
+                      ts.option(ts.tupleType(h.get(0), h.list(0)))))),
 
   /**
-   * Function "List.collate", of type "(&alpha; * &alpha; &rarr; order) &rarr;
-   * &alpha; list * &alpha; list &rarr; order".
+   * Function "List.hd", of type "&alpha; list &rarr; &alpha;".
    *
-   * <p>"collate f (l1, l2)" performs lexicographic comparison of the two lists
-   * using the given ordering f on the list elements.
+   * <p>"hd l" returns the first element of l. It raises {@link BuiltInExn#EMPTY
+   * Empty} if l is nil.
    */
-  LIST_COLLATE(
+  LIST_HD(
       "List",
-      "collate",
+      "hd",
+      "hd",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
+
+  /**
+   * Function "List.intersect", of type "&alpha; list list &rarr; &alpha; list".
+   *
+   * <p>"intersect l" returns the list that is the intersection of all lists in
+   * l. It raises {@link BuiltInExn#EMPTY Empty} if {@code l} is empty.
+   */
+  LIST_INTERSECT(
+      "List",
+      "intersect",
+      ts ->
+          ts.forallType(1, h -> ts.fnType(ts.listType(h.list(0)), h.list(0)))),
+
+  /**
+   * Function "List.last", of type "&alpha; list &rarr; &alpha;".
+   *
+   * <p>"last l" returns the last element of l. It raises {@link
+   * BuiltInExn#EMPTY Empty} if l is nil.
+   */
+  LIST_LAST(
+      "List",
+      "last",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
+
+  /**
+   * Function "List.length", of type "&alpha; list &rarr; int".
+   *
+   * <p>"length l" returns the number of elements in the list l.
+   */
+  LIST_LENGTH(
+      "List",
+      "length",
+      "length",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
+
+  /**
+   * Function "List.map", of type "(&alpha; &rarr; &beta;) &rarr; &alpha; list
+   * &rarr; &beta; list".
+   *
+   * <p>"map f l" applies f to each element of l from left to right, returning
+   * the list of results.
+   */
+  LIST_MAP(
+      "List",
+      "map",
+      "map",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.get(1)), h.list(0), h.list(1)))),
+
+  /**
+   * Function "List.mapPartial", of type "(&alpha; &rarr; &beta; option) &rarr;
+   * &alpha; list &rarr; &beta; list".
+   *
+   * <p>"mapPartial f l" applies f to each element of l from left to right,
+   * returning a list of results, with SOME stripped, where f was defined. f is
+   * not defined for an element of l if f applied to the element returns NONE.
+   * The above expression is equivalent to: {@code ((map valOf) o (filter
+   * isSome) o (map f)) l}
+   */
+  LIST_MAP_PARTIAL(
+      "List",
+      "mapPartial",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.option(1)), h.list(0), h.list(1)))),
+
+  /**
+   * Function "List.mapi", of type "(int * &alpha; &rarr; &beta;) &rarr; &alpha;
+   * list &rarr; &beta; list".
+   *
+   * <p>"mapi f l" applies f to each element of l from left to right, returning
+   * the list of results.
+   */
+  LIST_MAPI(
+      "List",
+      "mapi",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(INT, h.get(0)), h.get(1)),
+                      h.list(0),
+                      h.list(1)))),
+
+  /**
+   * Constant "List.nil", of type "&alpha; list".
+   *
+   * <p>"nil" is the empty list.
+   */
+  LIST_NIL("List", "nil", ts -> ts.forallType(1, h -> h.list(0))),
+
+  /**
+   * Function "List.nth", of type "&alpha; list * int &rarr; &alpha;".
+   *
+   * <p>"nth (l, i)" returns the {@code i}<sup>th</sup> element of the list
+   * {@code l}, counting from 0. It raises {@link BuiltInExn#SUBSCRIPT
+   * Subscript} if {@code i < 0} or {@code i >= length l}. We have {@code
+   * nth(l,0) = hd l}, ignoring exceptions.
+   */
+  LIST_NTH(
+      "List",
+      "nth",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.list(0), INT), h.get(0)))),
+
+  /**
+   * Function "List.null", of type "&alpha; list &rarr; bool".
+   *
+   * <p>"null l" returns true if the list l is empty.
+   */
+  LIST_NULL(
+      "List",
+      "null",
+      "null",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
+
+  /**
+   * Operator "List.op @", of type "&alpha; list * &alpha; list &rarr; &alpha;
+   * list".
+   *
+   * <p>"l1 @ l2" returns the list that is the concatenation of l1 and l2.
+   */
+  LIST_OP_AT(
+      "List",
+      "op @",
+      "op @",
       ts ->
           ts.forallType(
               1,
-              h ->
-                  ts.fnType(
-                      ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()),
-                      ts.tupleType(h.list(0), h.list(0)),
-                      ts.order()))),
+              h -> ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
 
   /**
    * Function "ListPair.all", of type "(&alpha; * &beta; &rarr; bool) &rarr;
@@ -2369,6 +2054,97 @@ public enum BuiltIn {
                       ts.listType(ts.tupleType(h.get(0), h.get(1)))))),
 
   /**
+   * Function "List.partition", of type "(&alpha; &rarr; bool) &rarr; &alpha;
+   * list &rarr; &alpha; list * &alpha; list".
+   *
+   * <p>"partition f l" applies f to each element x of l, from left to right,
+   * and returns a pair (pos, neg) where pos is the list of those x for which
+   * {@code f x} evaluated to true, and neg is the list of those for which
+   * {@code f x} evaluated to false. The elements of pos and neg retain the same
+   * relative order they possessed in l.
+   */
+  LIST_PARTITION(
+      "List",
+      "partition",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      h.predicate(0),
+                      h.list(0),
+                      ts.tupleType(h.list(0), h.list(0))))),
+
+  /**
+   * Function "List.rev", of type "&alpha; list &rarr; &alpha; list".
+   *
+   * <p>"rev l" returns a list consisting of l's elements in reverse order.
+   */
+  LIST_REV(
+      "List",
+      "rev",
+      "rev",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
+
+  /**
+   * Function "List.revAppend", of type "&alpha; list * &alpha; list &rarr;
+   * &alpha; list".
+   *
+   * <p>"revAppend (l1, l2)" returns (rev l1) @ l2.
+   */
+  LIST_REV_APPEND(
+      "List",
+      "revAppend",
+      ts ->
+          ts.forallType(
+              1,
+              h -> ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
+
+  /**
+   * Function "List.tabulate", of type "int * (int &rarr; &alpha;) &rarr;
+   * &alpha; list".
+   *
+   * <p>"tabulate (n, f)" returns a list of length n equal to {@code [f(0),
+   * f(1), ..., f(n-1)]}, created from left to right. It raises {@link
+   * BuiltInExn#SIZE Size} if n &lt; 0.
+   */
+  LIST_TABULATE(
+      "List",
+      "tabulate",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.tupleType(INT, ts.fnType(INT, h.get(0))), h.list(0)))),
+
+  /**
+   * Function "List.take", of type "&alpha; list * int &rarr; &alpha; list".
+   *
+   * <p>"take (l, i)" returns the first i elements of the list l. It raises
+   * {@link BuiltInExn#SUBSCRIPT Subscript} if i &lt; 0 or i &gt; length l. We
+   * have {@code take(l, length l) = l}.
+   */
+  LIST_TAKE(
+      "List",
+      "take",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.list(0), INT), h.list(0)))),
+
+  /**
+   * Function "List.tl", of type "&alpha; list &rarr; &alpha; list".
+   *
+   * <p>"tl l" returns all but the first element of l. It raises {@link
+   * BuiltInExn#EMPTY Empty} if l is nil.
+   */
+  LIST_TL(
+      "List",
+      "tl",
+      "tl",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
+
+  /**
    * Function "Math.acos", of type "real &rarr; real".
    *
    * <p>"acos x" returns the arc cosine of x. acos is the inverse of cos. Its
@@ -2561,82 +2337,6 @@ public enum BuiltIn {
   MATH_TANH("Math", "tanh", ts -> ts.fnType(REAL, REAL)),
 
   /**
-   * Function "Option.getOpt", of type "&alpha; option * &alpha; &rarr;
-   * &alpha;".
-   *
-   * <p>{@code getOpt(opt, a)} returns v if opt is SOME(v); otherwise it returns
-   * a.
-   */
-  OPTION_GET_OPT(
-      "Option",
-      "getOpt",
-      "getOpt",
-      ts ->
-          ts.forallType(
-              1,
-              h -> ts.fnType(ts.tupleType(h.option(0), h.get(0)), h.get(0)))),
-
-  /**
-   * Function "Option.isSome", of type "&alpha; option &rarr; bool".
-   *
-   * <p>{@code isSome opt} returns true if opt is SOME(v); otherwise it returns
-   * false.
-   */
-  OPTION_IS_SOME(
-      "Option",
-      "isSome",
-      "isSome",
-      ts -> ts.forallType(1, h -> ts.fnType(h.option(0), BOOL))),
-
-  /**
-   * Function "Option.valOf", of type "&alpha; option &rarr; &alpha;".
-   *
-   * <p>{@code valOf opt} returns v if opt is SOME(v); otherwise it raises
-   * {@link BuiltInExn#OPTION Option}.
-   */
-  OPTION_VAL_OF(
-      "Option",
-      "valOf",
-      "valOf",
-      ts -> ts.forallType(1, h -> ts.fnType(h.option(0), h.get(0)))),
-
-  /**
-   * Function "Option.filter", of type "(&alpha; &rarr; bool) &rarr; &alpha;
-   * &rarr; &alpha; option".
-   *
-   * <p>{@code filter f a} returns SOME(a) if f(a) is true and NONE otherwise.
-   */
-  OPTION_FILTER(
-      "Option",
-      "filter",
-      ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(ts.fnType(h.get(0), BOOL), h.get(0), h.option(0)))),
-
-  /**
-   * Function "Option.join", of type "&alpha; option option &rarr; &alpha;
-   * option".
-   *
-   * <p>{@code join opt} maps NONE to NONE and SOME(v) to v.
-   *
-   * <p>Because {@code join} is a keyword in Morel, you must quote the function
-   * name using backticks. For example:
-   *
-   * <pre>{@code
-   * Option.`join` (SOME (SOME 1));
-   * > val it = SOME 1 : int option
-   * }</pre>
-   */
-  OPTION_JOIN(
-      "Option",
-      "join",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.option(h.option(0)), h.option(0)))),
-
-  /**
    * Function "Option.app", of type "(&alpha; &rarr; unit) &rarr; &alpha; option
    * &rarr; unit".
    *
@@ -2650,42 +2350,6 @@ public enum BuiltIn {
           ts.forallType(
               1,
               h -> ts.fnType(ts.fnType(h.option(0), UNIT), h.option(0), UNIT))),
-
-  /**
-   * Function "Option.map", of type "(&alpha; &rarr; &beta;) &rarr; &alpha;
-   * option &rarr; &beta; option".
-   *
-   * <p>{@code map f opt} maps NONE to NONE and SOME(v) to SOME(f v).
-   */
-  OPTION_MAP(
-      "Option",
-      "map",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(h.get(0), h.get(1)),
-                      h.option(0),
-                      h.option(1)))),
-
-  /**
-   * Function "Option.mapPartial", of type "(&alpha; &rarr; &beta; option)
-   * &rarr; &alpha; option &rarr; &beta; option".
-   *
-   * <p>{@code mapPartial f opt} maps NONE to NONE and SOME(v) to f (v).
-   */
-  OPTION_MAP_PARTIAL(
-      "Option",
-      "mapPartial",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(h.get(0), h.option(1)),
-                      h.option(0),
-                      h.option(1)))),
 
   /**
    * Function "Option.compose", of type "(&alpha; &rarr; &beta;) * (&gamma;
@@ -2737,6 +2401,118 @@ public enum BuiltIn {
                           ts.fnType(h.get(2), h.option(0))),
                       h.get(2),
                       h.option(1)))),
+
+  /**
+   * Function "Option.filter", of type "(&alpha; &rarr; bool) &rarr; &alpha;
+   * &rarr; &alpha; option".
+   *
+   * <p>{@code filter f a} returns SOME(a) if f(a) is true and NONE otherwise.
+   */
+  OPTION_FILTER(
+      "Option",
+      "filter",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(ts.fnType(h.get(0), BOOL), h.get(0), h.option(0)))),
+
+  /**
+   * Function "Option.getOpt", of type "&alpha; option * &alpha; &rarr;
+   * &alpha;".
+   *
+   * <p>{@code getOpt(opt, a)} returns v if opt is SOME(v); otherwise it returns
+   * a.
+   */
+  OPTION_GET_OPT(
+      "Option",
+      "getOpt",
+      "getOpt",
+      ts ->
+          ts.forallType(
+              1,
+              h -> ts.fnType(ts.tupleType(h.option(0), h.get(0)), h.get(0)))),
+
+  /**
+   * Function "Option.isSome", of type "&alpha; option &rarr; bool".
+   *
+   * <p>{@code isSome opt} returns true if opt is SOME(v); otherwise it returns
+   * false.
+   */
+  OPTION_IS_SOME(
+      "Option",
+      "isSome",
+      "isSome",
+      ts -> ts.forallType(1, h -> ts.fnType(h.option(0), BOOL))),
+
+  /**
+   * Function "Option.join", of type "&alpha; option option &rarr; &alpha;
+   * option".
+   *
+   * <p>{@code join opt} maps NONE to NONE and SOME(v) to v.
+   *
+   * <p>Because {@code join} is a keyword in Morel, you must quote the function
+   * name using backticks. For example:
+   *
+   * <pre>{@code
+   * Option.`join` (SOME (SOME 1));
+   * > val it = SOME 1 : int option
+   * }</pre>
+   */
+  OPTION_JOIN(
+      "Option",
+      "join",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.option(h.option(0)), h.option(0)))),
+
+  /**
+   * Function "Option.map", of type "(&alpha; &rarr; &beta;) &rarr; &alpha;
+   * option &rarr; &beta; option".
+   *
+   * <p>{@code map f opt} maps NONE to NONE and SOME(v) to SOME(f v).
+   */
+  OPTION_MAP(
+      "Option",
+      "map",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.get(1)),
+                      h.option(0),
+                      h.option(1)))),
+
+  /**
+   * Function "Option.mapPartial", of type "(&alpha; &rarr; &beta; option)
+   * &rarr; &alpha; option &rarr; &beta; option".
+   *
+   * <p>{@code mapPartial f opt} maps NONE to NONE and SOME(v) to f (v).
+   */
+  OPTION_MAP_PARTIAL(
+      "Option",
+      "mapPartial",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.option(1)),
+                      h.option(0),
+                      h.option(1)))),
+
+  /**
+   * Function "Option.valOf", of type "&alpha; option &rarr; &alpha;".
+   *
+   * <p>{@code valOf opt} returns v if opt is SOME(v); otherwise it raises
+   * {@link BuiltInExn#OPTION Option}.
+   */
+  OPTION_VAL_OF(
+      "Option",
+      "valOf",
+      "valOf",
+      ts -> ts.forallType(1, h -> ts.fnType(h.option(0), h.get(0)))),
 
   /**
    * Function "Real.abs", of type "real &rarr; real".
@@ -3096,37 +2872,6 @@ public enum BuiltIn {
               ts.forallType(1, h -> ts.fnType(h.list(0), INT)))),
 
   /**
-   * Function "Relational.nonEmpty", of type "&alpha; bag &rarr; bool".
-   *
-   * <p>For example,
-   *
-   * <pre>{@code
-   * from d in depts
-   * where nonEmpty (
-   *   from e in emps
-   *   where e.deptno = d.deptno
-   *   andalso e.job = "CLERK")
-   * }</pre>
-   *
-   * <p>In idiomatic Morel, that would be written using {@code exists}:
-   *
-   * <pre>{@code
-   * from d in depts
-   * where (exists e in emps
-   *   where e.deptno = d.deptno
-   *   andalso e.job = "CLERK")
-   * }</pre>
-   */
-  RELATIONAL_NON_EMPTY(
-      "Relational",
-      "nonEmpty",
-      "nonEmpty",
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL)),
-              ts.forallType(1, h -> ts.fnType(h.list(0), BOOL)))),
-
-  /**
    * Function "Relational.empty", aka "empty", of type "&alpha; bag &rarr;
    * bool".
    *
@@ -3162,32 +2907,6 @@ public enum BuiltIn {
               ts.forallType(1, h -> ts.fnType(h.list(0), BOOL)))),
 
   /**
-   * Function "Relational.only", aka "only", of type "&alpha; bag &rarr;
-   * &alpha;".
-   *
-   * <p>"only bag" returns the only element of {@code bag}. It raises {@link
-   * BuiltInExn#EMPTY Empty} if {@code list} is nil, {@link BuiltInExn#SIZE
-   * Size} if {@code list} has more than one element.
-   *
-   * <p>"only" allows you to write the equivalent of a scalar sub-query:
-   *
-   * <pre>{@code
-   * from e in emps
-   * yield {e.ename, dname = only (from d in depts
-   *                               where d.deptno = e.deptno
-   *                               yield d.dname)}
-   * }</pre>
-   */
-  RELATIONAL_ONLY(
-      "Relational",
-      "only",
-      "only",
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
-              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
-
-  /**
    * Function "Relational.iterate", aka "iterate", of type "&alpha; bag &rarr;
    * (&alpha; bag &rarr; &alpha; bag &rarr; &alpha; bag) &rarr; &alpha; bag".
    *
@@ -3217,27 +2936,6 @@ public enum BuiltIn {
                           h.list(0))))),
 
   /**
-   * Function "Relational.sum", aka "sum", of type "&alpha; bag &rarr; &alpha;"
-   * (where &alpha; must be numeric).
-   *
-   * <p>Often used with {@code group}:
-   *
-   * <pre>{@code
-   * from e in emps
-   * group deptno = (#deptno e)
-   *   compute sumId = sum of (#id e)
-   * }</pre>
-   */
-  RELATIONAL_SUM(
-      "Relational",
-      "sum",
-      "sum",
-      ts ->
-          ts.multi(
-              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
-              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
-
-  /**
    * Function "Relational.max", aka "max", of type "&alpha; bag &rarr; &alpha;"
    * (where &alpha; must be comparable).
    */
@@ -3262,6 +2960,310 @@ public enum BuiltIn {
           ts.multi(
               ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
               ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
+
+  /**
+   * Function "Relational.nonEmpty", of type "&alpha; bag &rarr; bool".
+   *
+   * <p>For example,
+   *
+   * <pre>{@code
+   * from d in depts
+   * where nonEmpty (
+   *   from e in emps
+   *   where e.deptno = d.deptno
+   *   andalso e.job = "CLERK")
+   * }</pre>
+   *
+   * <p>In idiomatic Morel, that would be written using {@code exists}:
+   *
+   * <pre>{@code
+   * from d in depts
+   * where (exists e in emps
+   *   where e.deptno = d.deptno
+   *   andalso e.job = "CLERK")
+   * }</pre>
+   */
+  RELATIONAL_NON_EMPTY(
+      "Relational",
+      "nonEmpty",
+      "nonEmpty",
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL)),
+              ts.forallType(1, h -> ts.fnType(h.list(0), BOOL)))),
+
+  /**
+   * Function "Relational.only", aka "only", of type "&alpha; bag &rarr;
+   * &alpha;".
+   *
+   * <p>"only bag" returns the only element of {@code bag}. It raises {@link
+   * BuiltInExn#EMPTY Empty} if {@code list} is nil, {@link BuiltInExn#SIZE
+   * Size} if {@code list} has more than one element.
+   *
+   * <p>"only" allows you to write the equivalent of a scalar sub-query:
+   *
+   * <pre>{@code
+   * from e in emps
+   * yield {e.ename, dname = only (from d in depts
+   *                               where d.deptno = e.deptno
+   *                               yield d.dname)}
+   * }</pre>
+   */
+  RELATIONAL_ONLY(
+      "Relational",
+      "only",
+      "only",
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
+              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
+
+  /**
+   * Function "Relational.sum", aka "sum", of type "&alpha; bag &rarr; &alpha;"
+   * (where &alpha; must be numeric).
+   *
+   * <p>Often used with {@code group}:
+   *
+   * <pre>{@code
+   * from e in emps
+   * group deptno = (#deptno e)
+   *   compute sumId = sum of (#id e)
+   * }</pre>
+   */
+  RELATIONAL_SUM(
+      "Relational",
+      "sum",
+      "sum",
+      ts ->
+          ts.multi(
+              ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
+              ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
+
+  /**
+   * Function "String.collate", of type "(char * char &rarr; order) &rarr;
+   * string * string &rarr; order".
+   */
+  STRING_COLLATE(
+      "String",
+      "collate",
+      ts ->
+          ts.fnType(
+              ts.fnType(ts.tupleType(CHAR, CHAR), ts.order()),
+              ts.tupleType(STRING, STRING),
+              ts.order())),
+
+  /** Function "String.compare", of type "string * string &rarr; order". */
+  STRING_COMPARE(
+      "String",
+      "compare",
+      ts -> ts.fnType(ts.tupleType(STRING, STRING), ts.order())),
+
+  /**
+   * Function "String.concat", of type "string list &rarr; string".
+   *
+   * <p>"concat l" is the concatenation of all the strings in l. This raises
+   * {@link BuiltInExn#SIZE Size} if the sum of all the sizes is greater than
+   * maxSize.
+   */
+  STRING_CONCAT(
+      "String",
+      "concat",
+      "concat",
+      ts -> ts.fnType(ts.listType(STRING), STRING)),
+
+  /**
+   * Function "String.concatWith", of type "string &rarr; string list &rarr;
+   * string".
+   *
+   * <p>"concatWith s l" returns the concatenation of the strings in the list l
+   * using the string s as a separator. This raises {@link BuiltInExn#SIZE Size}
+   * if the size of the resulting string would be greater than maxSize.
+   */
+  STRING_CONCAT_WITH(
+      "String",
+      "concatWith",
+      ts -> ts.fnType(STRING, ts.listType(STRING), STRING)),
+
+  /**
+   * Function "String.explode", of type "string &rarr; char list".
+   *
+   * <p>"explode s" is the list of characters in the string s.
+   */
+  STRING_EXPLODE(
+      "String",
+      "explode",
+      "explode",
+      ts -> ts.fnType(STRING, ts.listType(CHAR))),
+
+  /**
+   * Function "String.extract", of type "string * int * int option &rarr;
+   * string".
+   *
+   * <p>"extract (s, i, NONE)" and "extract (s, i, SOME j)" return substrings of
+   * {@code s}. The first returns the substring of {@code s} from the {@code
+   * i}<sup>th</sup> character to the end of the string, i.e., the string {@code
+   * s[i..|s|-1]}. This raises {@link BuiltInExn#SUBSCRIPT Subscript} if {@code
+   * i < 0} or {@code |s| < i}.
+   *
+   * <p>The second form returns the substring of size {@code j} starting at
+   * index {@code i}, i.e., the {@code string s[i..i+j-1]}. It raises {@link
+   * BuiltInExn#SUBSCRIPT Subscript} if {@code i < 0} or {@code j < 0} or {@code
+   * |s| < i + j}. Note that, if defined, extract returns the empty string when
+   * {@code i = |s|}.
+   */
+  STRING_EXTRACT(
+      "String",
+      "extract",
+      ts -> ts.fnType(ts.tupleType(STRING, INT, ts.option(INT)), STRING)),
+
+  /**
+   * Function "String.fields", of type "(char &rarr; bool) &rarr; string &rarr;
+   * string list".
+   */
+  STRING_FIELDS(
+      "String",
+      "fields",
+      "fields",
+      ts -> ts.fnType(ts.fnType(CHAR, BOOL), STRING, ts.listType(STRING))),
+
+  /**
+   * Function "String.implode", of type "char list &rarr; string".
+   *
+   * <p>"implode l" generates the string containing the characters in the list
+   * l. This is equivalent to {@code concat (List.map str l)}. This raises
+   * {@link BuiltInExn#SIZE Size} if the resulting string would have size
+   * greater than maxSize.
+   */
+  STRING_IMPLODE(
+      "String",
+      "implode",
+      "implode",
+      ts -> ts.fnType(ts.listType(CHAR), STRING)),
+
+  /**
+   * Function "String.isPrefix", of type "string &rarr; string &rarr; bool".
+   *
+   * <p>"isPrefix s1 s2" returns true if the string s1 is a prefix of the string
+   * s2. Note that the empty string is a prefix of any string, and that a string
+   * is a prefix of itself.
+   */
+  STRING_IS_PREFIX("String", "isPrefix", ts -> ts.fnType(STRING, STRING, BOOL)),
+
+  /**
+   * Function "String.isSubstring", of type "string &rarr; string &rarr; bool".
+   *
+   * <p>"isSubstring s1 s2" returns true if the string s1 is a substring of the
+   * string s2. Note that the empty string is a substring of any string, and
+   * that a string is a substring of itself.
+   */
+  STRING_IS_SUBSTRING(
+      "String", "isSubstring", ts -> ts.fnType(STRING, STRING, BOOL)),
+
+  /**
+   * Function "String.isSuffix", of type "string &rarr; string &rarr; bool".
+   *
+   * <p>"isSuffix s1 s2" returns true if the string s1 is a suffix of the string
+   * s2. Note that the empty string is a suffix of any string, and that a string
+   * is a suffix of itself.
+   */
+  STRING_IS_SUFFIX("String", "isSuffix", ts -> ts.fnType(STRING, STRING, BOOL)),
+
+  /**
+   * Function "String.map", of type "(char &rarr; char) &rarr; string &rarr;
+   * string".
+   *
+   * <p>"map f s" applies f to each element of s from left to right, returning
+   * the resulting string. It is equivalent to {@code implode(List.map f
+   * (explode s))}.
+   */
+  STRING_MAP(
+      "String", "map", ts -> ts.fnType(ts.fnType(CHAR, CHAR), STRING, STRING)),
+
+  /**
+   * Constant "String.maxSize", of type "int".
+   *
+   * <p>"The longest allowed size of a string".
+   */
+  STRING_MAX_SIZE("String", "maxSize", ts -> INT),
+
+  /** Operator "String.op ^", of type "string * string &rarr; string". */
+  STRING_OP_CARET(
+      "String", "op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
+
+  /** Operator "String.op &gt;=", of type "string * string &rarr; bool". */
+  STRING_OP_GE(
+      "String", "op >=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
+  /** Operator "String.op &gt;", of type "string * string &rarr; bool". */
+  STRING_OP_GT(
+      "String", "op >", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
+  /** Operator "String.op &lt;=", of type "string * string &rarr; bool". */
+  STRING_OP_LE(
+      "String", "op <=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
+  /** Operator "String.op &lt;", of type "string * string &rarr; bool". */
+  STRING_OP_LT(
+      "String", "op <", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
+  /**
+   * Function "String.size", of type "string &rarr; int".
+   *
+   * <p>"size s" returns |s|, the number of characters in string s.
+   */
+  STRING_SIZE("String", "size", "size", ts -> ts.fnType(STRING, INT)),
+
+  /**
+   * Function "String.sub", of type "string * int &rarr; char".
+   *
+   * <p>"sub (s, i)" returns the {@code i}<sup>th</sup> character of s, counting
+   * from zero. This raises {@link BuiltInExn#SUBSCRIPT Subscript} if i &lt; 0
+   * or |s| &le; i.
+   */
+  STRING_SUB("String", "sub", ts -> ts.fnType(ts.tupleType(STRING, INT), CHAR)),
+
+  /**
+   * Function "String.str", of type "char &rarr; string".
+   *
+   * <p>"str c" is the string of size one containing the character {@code c}.
+   */
+  STRING_STR("String", "str", "str", ts -> ts.fnType(CHAR, STRING)),
+
+  /**
+   * Function "String.substring", of type "string * int * int &rarr; string".
+   *
+   * <p>"substring (s, i, j)" returns the substring s[i..i+j-1], i.e., the
+   * substring of size j starting at index i. This is equivalent to extract(s,
+   * i, SOME j).
+   */
+  STRING_SUBSTRING(
+      "String",
+      "substring",
+      "substring",
+      ts -> ts.fnType(ts.tupleType(STRING, INT, INT), STRING)),
+
+  /**
+   * Function "String.tokens", of type "(char &rarr; bool) &rarr; string &rarr;
+   * string list".
+   */
+  STRING_TOKENS(
+      "String",
+      "tokens",
+      "tokens",
+      ts -> ts.fnType(ts.fnType(CHAR, BOOL), STRING, ts.listType(STRING))),
+
+  /**
+   * Function "String.translate", of type "(char &rarr; string) &rarr; string
+   * &rarr; string".
+   *
+   * <p>"translate f s" returns the string generated from s by mapping each
+   * character in s by f. It is equivalent to {code concat(List.map f (explode
+   * s))}.
+   */
+  STRING_TRANSLATE(
+      "String",
+      "translate",
+      ts -> ts.fnType(ts.fnType(CHAR, STRING), STRING, STRING)),
 
   /** Function "Sys.clearEnv", of type "unit &rarr; unit". */
   SYS_CLEAR_ENV("Sys", "clearEnv", ts -> ts.fnType(UNIT, UNIT)),
@@ -3322,111 +3324,40 @@ public enum BuiltIn {
   SYS_UNSET("Sys", "unset", "unset", ts -> ts.fnType(STRING, UNIT)),
 
   /**
-   * Constant "Vector.maxLen" of type "int".
+   * Function "Vector.all" of type "(&alpha; &rarr; bool) &rarr; &alpha; vector
+   * &rarr; bool".
    *
-   * <p>The maximum length of vectors supported by this implementation. Attempts
-   * to create larger vectors will result in the {@link BuiltInExn#SIZE Size}
-   * exception being raised.
+   * <p>{@code all f vec} applies {@code f} to each element {@code x} of the
+   * vector {@code vec}, from left to right (i.e., increasing indices), until
+   * {@code f(x)} evaluates to {@code false}; it returns {@code false} if such
+   * an {@code x} exists and {@code true} otherwise. It is equivalent to {@code
+   * not (exists (not o f) vec))}.
    */
-  VECTOR_MAX_LEN("Vector", "maxLen", ts -> INT),
-
-  /**
-   * Function "Vector.fromList" of type "&alpha; list &rarr; &alpha; vector".
-   *
-   * <p>{@code fromList l} creates a new vector from {@code l}, whose length is
-   * {@code length l} and with the {@code i}<sup>th</sup> element of {@code l}
-   * used as the {@code i}<sup>th</sup> element of the vector. If the length of
-   * the list is greater than {@code maxLen}, then the {@link BuiltInExn#SIZE
-   * Size} exception is raised.
-   */
-  VECTOR_FROM_LIST(
+  VECTOR_ALL(
       "Vector",
-      "fromList",
-      "vector",
-      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.vector(0)))),
-
-  /**
-   * Function "Vector.tabulate" of type "int * (int &rarr; &alpha;) &rarr;
-   * &alpha; vector".
-   *
-   * <p>{@code tabulate (n, f)} creates a vector of {@code n} elements, where
-   * the elements are defined in order of increasing index by applying {@code f}
-   * to the element's index. This is equivalent to the expression:
-   *
-   * <pre>{@code fromList (List.tabulate (n, f))}</pre>
-   *
-   * <p>If {@code n < 0} or {@code maxLen < n}, then the {@link BuiltInExn#SIZE
-   * Size} exception is raised.
-   */
-  VECTOR_TABULATE(
-      "Vector",
-      "tabulate",
+      "all",
       ts ->
           ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      ts.tupleType(INT, ts.fnType(INT, h.get(0))),
-                      h.vector(0)))),
+              1, h -> ts.fnType(ts.fnType(h.get(0), BOOL), h.vector(0), BOOL))),
 
   /**
-   * Function "Vector.length" of type "&alpha; vector &rarr; int".
+   * Function "Vector.app" of type "(&alpha; &rarr; unit) &rarr; &alpha; vector
+   * &rarr; unit".
    *
-   * <p>{@code length vec} returns {@code |vec|}, the length of the vector
-   * {@code vec}.
-   */
-  VECTOR_LENGTH(
-      "Vector",
-      "length",
-      ts -> ts.forallType(1, h -> ts.fnType(h.vector(0), INT))),
-
-  /**
-   * Function "Vector.sub" of type "&alpha; vector * int &rarr; &alpha;".
+   * <p>{@code app f vec} applies the function {@code f} to the elements of a
+   * vector in left to right order (i.e., in order of increasing indices).
+   * Equivalent to:
    *
-   * <p>{@code sub (vec, i)} returns the {@code i}<sup>th</sup> element of the
-   * vector {@code vec}. If {@code i < 0} or {@code |vec| <= i}, then the {@link
-   * BuiltInExn#SUBSCRIPT Subscript} exception is raised.
+   * <pre>
+   *   {@code List.app f (foldr (fn (a,l) => a::l) [] vec)}
+   * </pre>
    */
-  VECTOR_SUB(
+  VECTOR_APP(
       "Vector",
-      "sub",
+      "app",
       ts ->
           ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.vector(0), INT), h.get(0)))),
-
-  /**
-   * Function "Vector.update" of type "&alpha; vector * int * &alpha; &rarr;
-   * &alpha; vector".
-   *
-   * <p>{@code update (vec, i, x)} returns a new vector, identical to {@code
-   * vec}, except the {@code i}<sup>th</sup> element of {@code vec} is set to
-   * {@code x}. If {@code i < 0} or {@code |vec| <= i}, then the {@link
-   * BuiltInExn#SUBSCRIPT Subscript} exception is raised.
-   */
-  VECTOR_UPDATE(
-      "Vector",
-      "update",
-      ts ->
-          ts.forallType(
-              1,
-              h ->
-                  ts.fnType(
-                      ts.tupleType(h.vector(0), INT, h.get(0)), h.vector(0)))),
-
-  /**
-   * Function "Vector.concat" of type "&alpha; vector list &rarr; &alpha;
-   * vector".
-   *
-   * <p>{@code concat l} returns the vector that is the concatenation of the
-   * vectors in the list {@code l}. If the total length of these vectors exceeds
-   * {@code maxLen}, then the {@link BuiltInExn#SIZE Size} exception is raised.
-   */
-  VECTOR_CONCAT(
-      "Vector",
-      "concat",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.listType(h.vector(0)), h.vector(0)))),
+              1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.vector(0), UNIT))),
 
   /**
    * Function "Vector.appi" of type "(int * &alpha; &rarr; unit) &rarr; &alpha;
@@ -3455,119 +3386,97 @@ public enum BuiltIn {
                       UNIT))),
 
   /**
-   * Function "Vector.app" of type "(&alpha; &rarr; unit) &rarr; &alpha; vector
-   * &rarr; unit".
+   * Function "Vector.collate" of type "(&alpha; * &alpha; &rarr; order) &rarr;
+   * &alpha; vector * &alpha; vector &rarr; order".
    *
-   * <p>{@code app f vec} applies the function {@code f} to the elements of a
-   * vector in left to right order (i.e., in order of increasing indices).
-   * Equivalent to:
-   *
-   * <pre>
-   *   {@code List.app f (foldr (fn (a,l) => a::l) [] vec)}
-   * </pre>
+   * <p>{@code collate f (v1, v2)} performs lexicographic comparison of the two
+   * vectors using the given ordering {@code f} on elements.
    */
-  VECTOR_APP(
+  VECTOR_COLLATE(
       "Vector",
-      "app",
+      "collate",
       ts ->
           ts.forallType(
-              1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.vector(0), UNIT))),
+              1,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()),
+                      ts.tupleType(h.vector(0), h.vector(0)),
+                      ts.order()))),
 
   /**
-   * Function "Vector.mapi" of type "(int * &alpha; &rarr; &beta;) &rarr;
-   * &alpha; vector &rarr; &beta; vector".
+   * Function "Vector.concat" of type "&alpha; vector list &rarr; &alpha;
+   * vector".
    *
-   * <p>{@code mapi f vec} produces a new vector by mapping the function {@code
-   * f} from left to right over the argument vector. The form {@code mapi} is
-   * more general, and supplies {@code f} with the vector index of an element
-   * along with the element. Equivalent to:
-   *
-   * <pre>
-   * {@code fromList (List.map f (foldri (fn (i,a,l) => (i,a)::l) [] vec))}
-   * </pre>
+   * <p>{@code concat l} returns the vector that is the concatenation of the
+   * vectors in the list {@code l}. If the total length of these vectors exceeds
+   * {@code maxLen}, then the {@link BuiltInExn#SIZE Size} exception is raised.
    */
-  VECTOR_MAPI(
+  VECTOR_CONCAT(
       "Vector",
-      "mapi",
+      "concat",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.listType(h.vector(0)), h.vector(0)))),
+
+  /**
+   * Function "Vector.exists" of type "(&alpha; &rarr; bool) &rarr; &alpha;
+   * vector &rarr; bool".
+   *
+   * <p>{@code exists f vec} applies {@code f} to each element {@code x} of the
+   * vector {@code vec}, from left to right (i.e., increasing indices), until
+   * {@code f(x)} evaluates to {@code true}; it returns {@code true} if such an
+   * {@code x} exists and {@code false} otherwise.
+   */
+  VECTOR_EXISTS(
+      "Vector",
+      "exists",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.fnType(h.get(0), BOOL), h.vector(0), BOOL))),
+
+  /**
+   * Function "Vector.find" of type "(&alpha; &rarr; bool) &rarr; &alpha; vector
+   * &rarr; &alpha; option".
+   *
+   * <p>{@code find f vec} applies {@code f} to each element of the vector
+   * {@code vec}, from left to right (i.e., increasing indices), until a {@code
+   * true} value is returned. If this occurs, the function returns the element;
+   * otherwise, it returns {@code NONE}.
+   */
+  VECTOR_FIND(
+      "Vector",
+      "find",
+      ts ->
+          ts.forallType(
+              1,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), BOOL), h.vector(0), h.option(0)))),
+
+  /**
+   * Function "Vector.findi" of type "(int * &alpha; &rarr; bool) &rarr; &alpha;
+   * vector &rarr; (int * &alpha;) option".
+   *
+   * <p>{@code findi f vec} applies {@code f} to each element of the vector
+   * {@code vec}, from left to right (i.e., increasing indices), until a {@code
+   * true} value is returned. If this occurs, the function returns the element;
+   * otherwise, it return {@code NONE}. The function {@code findi} is more
+   * general than {@code find}, and also supplies {@code f} with the vector
+   * index of the element and, upon finding an entry satisfying the predicate,
+   * returns that index with the element.
+   */
+  VECTOR_FINDI(
+      "Vector",
+      "findi",
       ts ->
           ts.forallType(
               2,
               h ->
                   ts.fnType(
-                      ts.fnType(ts.tupleType(INT, h.get(0)), h.get(1)),
+                      ts.fnType(ts.tupleType(INT, h.get(0)), BOOL),
                       h.vector(0),
-                      h.vector(1)))),
-
-  /**
-   * Function "Vector.map" of type "(&alpha; &rarr; &beta;) &rarr; &alpha;
-   * vector &rarr; &beta; vector".
-   *
-   * <p>{@code map f vec} produces a new vector by mapping the function {@code
-   * f} from left to right over the argument vector. Equivalent to:
-   *
-   * <pre>
-   * {@code fromList (List.map f (foldr (fn (a,l) => a::l) [] vec))}
-   * </pre>
-   */
-  VECTOR_MAP(
-      "Vector",
-      "map",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(h.get(0), h.get(1)),
-                      h.vector(0),
-                      h.vector(1)))),
-
-  /**
-   * Function "Vector.foldli" of type "(int * &alpha; * &beta; &rarr; &beta;)
-   * &rarr; &beta; &rarr; &alpha; vector &rarr; &beta;".
-   *
-   * <p>{@code foldli f init vec} folds the function {@code f} over all the
-   * elements of a vector, using the value {@code init} as the initial value.
-   * Applies the function {@code f} from left to right (increasing indices). The
-   * functions {@code foldli} and {@code foldri} are more general, and supply
-   * both the element and the element's index to the function f.
-   */
-  VECTOR_FOLDLI(
-      "Vector",
-      "foldli",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(
-                          ts.tupleType(INT, h.get(0), h.get(1)), h.get(1)),
-                      h.get(1),
-                      h.vector(0),
-                      h.get(1)))),
-
-  /**
-   * Function "Vector.foldri" of type "(int * &alpha; * &beta; &rarr; &beta;)
-   * &rarr; &beta; &rarr; &alpha; vector &rarr; &beta;".
-   *
-   * <p>{@code foldri f init vec} folds the function {@code f} over all the
-   * elements of a vector, using the value {@code init} as the initial value.
-   * Applies the function {@code f} from right to left (decreasing indices). The
-   * functions {@code foldli} and {@code foldri} are more general, and supply
-   * both the element and the element's index to the function f.
-   */
-  VECTOR_FOLDRI(
-      "Vector",
-      "foldri",
-      ts ->
-          ts.forallType(
-              2,
-              h ->
-                  ts.fnType(
-                      ts.fnType(
-                          ts.tupleType(INT, h.get(0), h.get(1)), h.get(1)),
-                      h.get(1),
-                      h.vector(0),
-                      h.get(1)))),
+                      ts.option(ts.tupleType(INT, h.get(0)))))),
 
   /**
    * Function "Vector.foldl" of type "(&alpha; * &beta; &rarr; &beta;) &rarr;
@@ -3591,6 +3500,30 @@ public enum BuiltIn {
               h ->
                   ts.fnType(
                       ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(1)),
+                      h.get(1),
+                      h.vector(0),
+                      h.get(1)))),
+
+  /**
+   * Function "Vector.foldli" of type "(int * &alpha; * &beta; &rarr; &beta;)
+   * &rarr; &beta; &rarr; &alpha; vector &rarr; &beta;".
+   *
+   * <p>{@code foldli f init vec} folds the function {@code f} over all the
+   * elements of a vector, using the value {@code init} as the initial value.
+   * Applies the function {@code f} from left to right (increasing indices). The
+   * functions {@code foldli} and {@code foldri} are more general, and supply
+   * both the element and the element's index to the function f.
+   */
+  VECTOR_FOLDLI(
+      "Vector",
+      "foldli",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(
+                          ts.tupleType(INT, h.get(0), h.get(1)), h.get(1)),
                       h.get(1),
                       h.vector(0),
                       h.get(1)))),
@@ -3622,99 +3555,168 @@ public enum BuiltIn {
                       h.get(1)))),
 
   /**
-   * Function "Vector.findi" of type "(int * &alpha; &rarr; bool) &rarr; &alpha;
-   * vector &rarr; (int * &alpha;) option".
+   * Function "Vector.foldri" of type "(int * &alpha; * &beta; &rarr; &beta;)
+   * &rarr; &beta; &rarr; &alpha; vector &rarr; &beta;".
    *
-   * <p>{@code findi f vec} applies {@code f} to each element of the vector
-   * {@code vec}, from left to right (i.e., increasing indices), until a {@code
-   * true} value is returned. If this occurs, the function returns the element;
-   * otherwise, it return {@code NONE}. The function {@code findi} is more
-   * general than {@code find}, and also supplies {@code f} with the vector
-   * index of the element and, upon finding an entry satisfying the predicate,
-   * returns that index with the element.
+   * <p>{@code foldri f init vec} folds the function {@code f} over all the
+   * elements of a vector, using the value {@code init} as the initial value.
+   * Applies the function {@code f} from right to left (decreasing indices). The
+   * functions {@code foldli} and {@code foldri} are more general, and supply
+   * both the element and the element's index to the function f.
    */
-  VECTOR_FINDI(
+  VECTOR_FOLDRI(
       "Vector",
-      "findi",
+      "foldri",
       ts ->
           ts.forallType(
               2,
               h ->
                   ts.fnType(
-                      ts.fnType(ts.tupleType(INT, h.get(0)), BOOL),
+                      ts.fnType(
+                          ts.tupleType(INT, h.get(0), h.get(1)), h.get(1)),
+                      h.get(1),
                       h.vector(0),
-                      ts.option(ts.tupleType(INT, h.get(0)))))),
+                      h.get(1)))),
 
   /**
-   * Function "Vector.find" of type "(&alpha; &rarr; bool) &rarr; &alpha; vector
-   * &rarr; &alpha; option".
+   * Function "Vector.fromList" of type "&alpha; list &rarr; &alpha; vector".
    *
-   * <p>{@code find f vec} applies {@code f} to each element of the vector
-   * {@code vec}, from left to right (i.e., increasing indices), until a {@code
-   * true} value is returned. If this occurs, the function returns the element;
-   * otherwise, it returns {@code NONE}.
+   * <p>{@code fromList l} creates a new vector from {@code l}, whose length is
+   * {@code length l} and with the {@code i}<sup>th</sup> element of {@code l}
+   * used as the {@code i}<sup>th</sup> element of the vector. If the length of
+   * the list is greater than {@code maxLen}, then the {@link BuiltInExn#SIZE
+   * Size} exception is raised.
    */
-  VECTOR_FIND(
+  VECTOR_FROM_LIST(
       "Vector",
-      "find",
+      "fromList",
+      "vector",
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.vector(0)))),
+
+  /**
+   * Function "Vector.length" of type "&alpha; vector &rarr; int".
+   *
+   * <p>{@code length vec} returns {@code |vec|}, the length of the vector
+   * {@code vec}.
+   */
+  VECTOR_LENGTH(
+      "Vector",
+      "length",
+      ts -> ts.forallType(1, h -> ts.fnType(h.vector(0), INT))),
+
+  /**
+   * Function "Vector.map" of type "(&alpha; &rarr; &beta;) &rarr; &alpha;
+   * vector &rarr; &beta; vector".
+   *
+   * <p>{@code map f vec} produces a new vector by mapping the function {@code
+   * f} from left to right over the argument vector. Equivalent to:
+   *
+   * <pre>
+   * {@code fromList (List.map f (foldr (fn (a,l) => a::l) [] vec))}
+   * </pre>
+   */
+  VECTOR_MAP(
+      "Vector",
+      "map",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(h.get(0), h.get(1)),
+                      h.vector(0),
+                      h.vector(1)))),
+
+  /**
+   * Function "Vector.mapi" of type "(int * &alpha; &rarr; &beta;) &rarr;
+   * &alpha; vector &rarr; &beta; vector".
+   *
+   * <p>{@code mapi f vec} produces a new vector by mapping the function {@code
+   * f} from left to right over the argument vector. The form {@code mapi} is
+   * more general, and supplies {@code f} with the vector index of an element
+   * along with the element. Equivalent to:
+   *
+   * <pre>
+   * {@code fromList (List.map f (foldri (fn (i,a,l) => (i,a)::l) [] vec))}
+   * </pre>
+   */
+  VECTOR_MAPI(
+      "Vector",
+      "mapi",
+      ts ->
+          ts.forallType(
+              2,
+              h ->
+                  ts.fnType(
+                      ts.fnType(ts.tupleType(INT, h.get(0)), h.get(1)),
+                      h.vector(0),
+                      h.vector(1)))),
+
+  /**
+   * Constant "Vector.maxLen" of type "int".
+   *
+   * <p>The maximum length of vectors supported by this implementation. Attempts
+   * to create larger vectors will result in the {@link BuiltInExn#SIZE Size}
+   * exception being raised.
+   */
+  VECTOR_MAX_LEN("Vector", "maxLen", ts -> INT),
+
+  /**
+   * Function "Vector.sub" of type "&alpha; vector * int &rarr; &alpha;".
+   *
+   * <p>{@code sub (vec, i)} returns the {@code i}<sup>th</sup> element of the
+   * vector {@code vec}. If {@code i < 0} or {@code |vec| <= i}, then the {@link
+   * BuiltInExn#SUBSCRIPT Subscript} exception is raised.
+   */
+  VECTOR_SUB(
+      "Vector",
+      "sub",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.vector(0), INT), h.get(0)))),
+
+  /**
+   * Function "Vector.tabulate" of type "int * (int &rarr; &alpha;) &rarr;
+   * &alpha; vector".
+   *
+   * <p>{@code tabulate (n, f)} creates a vector of {@code n} elements, where
+   * the elements are defined in order of increasing index by applying {@code f}
+   * to the element's index. This is equivalent to the expression:
+   *
+   * <pre>{@code fromList (List.tabulate (n, f))}</pre>
+   *
+   * <p>If {@code n < 0} or {@code maxLen < n}, then the {@link BuiltInExn#SIZE
+   * Size} exception is raised.
+   */
+  VECTOR_TABULATE(
+      "Vector",
+      "tabulate",
       ts ->
           ts.forallType(
               1,
               h ->
                   ts.fnType(
-                      ts.fnType(h.get(0), BOOL), h.vector(0), h.option(0)))),
+                      ts.tupleType(INT, ts.fnType(INT, h.get(0))),
+                      h.vector(0)))),
 
   /**
-   * Function "Vector.exists" of type "(&alpha; &rarr; bool) &rarr; &alpha;
-   * vector &rarr; bool".
+   * Function "Vector.update" of type "&alpha; vector * int * &alpha; &rarr;
+   * &alpha; vector".
    *
-   * <p>{@code exists f vec} applies {@code f} to each element {@code x} of the
-   * vector {@code vec}, from left to right (i.e., increasing indices), until
-   * {@code f(x)} evaluates to {@code true}; it returns {@code true} if such an
-   * {@code x} exists and {@code false} otherwise.
+   * <p>{@code update (vec, i, x)} returns a new vector, identical to {@code
+   * vec}, except the {@code i}<sup>th</sup> element of {@code vec} is set to
+   * {@code x}. If {@code i < 0} or {@code |vec| <= i}, then the {@link
+   * BuiltInExn#SUBSCRIPT Subscript} exception is raised.
    */
-  VECTOR_EXISTS(
+  VECTOR_UPDATE(
       "Vector",
-      "exists",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.fnType(h.get(0), BOOL), h.vector(0), BOOL))),
-
-  /**
-   * Function "Vector.all" of type "(&alpha; &rarr; bool) &rarr; &alpha; vector
-   * &rarr; bool".
-   *
-   * <p>{@code all f vec} applies {@code f} to each element {@code x} of the
-   * vector {@code vec}, from left to right (i.e., increasing indices), until
-   * {@code f(x)} evaluates to {@code false}; it returns {@code false} if such
-   * an {@code x} exists and {@code true} otherwise. It is equivalent to {@code
-   * not (exists (not o f) vec))}.
-   */
-  VECTOR_ALL(
-      "Vector",
-      "all",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.fnType(h.get(0), BOOL), h.vector(0), BOOL))),
-
-  /**
-   * Function "Vector.collate" of type "(&alpha; * &alpha; &rarr; order) &rarr;
-   * &alpha; vector * &alpha; vector &rarr; order".
-   *
-   * <p>{@code collate f (v1, v2)} performs lexicographic comparison of the two
-   * vectors using the given ordering {@code f} on elements.
-   */
-  VECTOR_COLLATE(
-      "Vector",
-      "collate",
+      "update",
       ts ->
           ts.forallType(
               1,
               h ->
                   ts.fnType(
-                      ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()),
-                      ts.tupleType(h.vector(0), h.vector(0)),
-                      ts.order()))),
+                      ts.tupleType(h.vector(0), INT, h.get(0)), h.vector(0)))),
 
   /** Internal operator "andalso", of type "bool * bool &rarr; bool". */
   Z_ANDALSO("$", "andalso", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
@@ -3799,6 +3801,8 @@ public enum BuiltIn {
 
   /** Internal function that constructs a datatype value. */
   Z_TY_CON("$", "tyCon", ts -> UNIT);
+
+  // lint:endSorted
 
   /** Name of the structure (e.g. "List", "String"), or null. */
   public final @Nullable String structure;
