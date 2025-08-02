@@ -576,11 +576,12 @@ public enum AstBuilder {
    * Returns a reference to a built-in: either a name (e.g. "true") or a field
    * reference (e.g. "#hd List").
    */
-  private Ast.Exp ref(Pos pos, BuiltIn builtIn) {
+  public Ast.Exp ref(Pos pos, BuiltIn builtIn) {
     if (builtIn.structure == null) {
       return id(pos, builtIn.mlName);
     } else {
-      return apply(id(pos, builtIn.structure), id(pos, builtIn.mlName));
+      return apply(
+          recordSelector(pos, builtIn.mlName), id(pos, builtIn.structure));
     }
   }
 
