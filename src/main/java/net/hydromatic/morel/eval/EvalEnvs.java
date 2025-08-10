@@ -60,7 +60,7 @@ public class EvalEnvs {
       parentEnv.visit(consumer);
     }
 
-    public Object getOpt(String name) {
+    public @Nullable Object getOpt(String name) {
       for (SubEvalEnv e = this; ; ) {
         if (name.equals(e.name)) {
           return e.value;
@@ -94,7 +94,7 @@ public class EvalEnvs {
   static class ArraySubEvalEnv implements EvalEnv {
     protected final EvalEnv parentEnv;
     protected final ImmutableList<String> names;
-    protected Object[] values;
+    protected @Nullable Object[] values;
 
     ArraySubEvalEnv(
         EvalEnv parentEnv,
@@ -112,7 +112,7 @@ public class EvalEnvs {
       parentEnv.visit(consumer);
     }
 
-    public Object getOpt(String name) {
+    public @Nullable Object getOpt(String name) {
       final int i = names.indexOf(name);
       if (i >= 0) {
         return values[i];
@@ -295,7 +295,7 @@ public class EvalEnvs {
       parentEnv.visit(consumer);
     }
 
-    public Object getOpt(String name) {
+    public @Nullable Object getOpt(String name) {
       final int i = names.indexOf(name);
       if (i >= 0) {
         return values.get(i);
@@ -333,7 +333,7 @@ public class EvalEnvs {
       this.valueMap = ImmutableMap.copyOf(valueMap);
     }
 
-    public Object getOpt(String name) {
+    public @Nullable Object getOpt(String name) {
       return valueMap.get(name);
     }
 

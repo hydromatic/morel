@@ -18,6 +18,9 @@
  */
 
 /** Provides access to external data sources. */
+@NullMarked
 package net.hydromatic.morel.foreign;
+
+import org.jspecify.annotations.NullMarked;
 
 // End package-info.java

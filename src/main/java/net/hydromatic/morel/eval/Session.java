@@ -30,6 +30,7 @@ import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.util.MorelException;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Session environment.
@@ -39,9 +40,9 @@ import net.hydromatic.morel.util.MorelException;
  */
 public class Session {
   /** The plan of the previous command. */
-  public Code code;
+  public @Nullable Code code;
   /** The output lines of the previous command. */
-  public List<String> out;
+  public @Nullable List<String> out;
   /** Property values. */
   public final Map<Prop, Object> map;
 

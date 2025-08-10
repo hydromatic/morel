@@ -638,25 +638,23 @@ Pair<Pat, Exp> fromSource() :
   final Pat pat;
 }
 {
-  (
-    LOOKAHEAD(
+  LOOKAHEAD(
       (<IDENTIFIER> | <QUOTED_IDENTIFIER>)
       (<COMMA> | <JOIN> | <WHERE> | <GROUP> | <COMPUTE>
         | <SKIP_> | <TAKE> | <YIELD> | <EOF>))
     id = identifier() {
       return Pair.of(ast.idPat(id.pos, id.name), null);
     }
-  |
-    pat = pat()
-    (
-      <IN> exp = expression() {
+|
+  pat = pat()
+  (
+    <IN> exp = expression() {
         return Pair.of(pat, exp);
       }
-    |
-      <EQ> exp = expression() {
+  |
+    <EQ> exp = expression() {
         return Pair.of(pat, ast.fromEq(exp));
       }
-    )
   )
 }
 
@@ -1243,21 +1241,19 @@ Pair<Pos, List<Ast.TyVar>> tyVars() :
   TyVar tyVar;
 }
 {
-  (
-    tyVar = tyVar() { return Pair.of(tyVar.pos, ImmutableList.of(tyVar)); }
-  |
-    <LPAREN> { pos = pos(); final List<TyVar> tyVars = new ArrayList<>(); }
+  tyVar = tyVar() { return Pair.of(tyVar.pos, ImmutableList.of(tyVar)); }
+|
+  <LPAREN> { pos = pos(); final List<TyVar> tyVars = new ArrayList<>(); }
     tyVar = tyVar() { tyVars.add(tyVar); }
     (
-      <COMMA> tyVar = tyVar() {
+    <COMMA> tyVar = tyVar() {
         tyVars.add(tyVar);
       }
-    )*
-    <RPAREN>
-    { return Pair.of(pos.plusAll(tyVars), tyVars); }
-  |
-    { return Pair.of(pos(), ImmutableList.of()); }
-  )
+  )*
+  <RPAREN>
+  { return Pair.of(pos.plusAll(tyVars), tyVars); }
+|
+  { return Pair.of(pos(), ImmutableList.of()); }
 }
 
 /** Parses a type declaration, e.g.
@@ -1771,12 +1767,6 @@ AstNode statementEof() :
     < SCIENTIFIC_LITERAL: ("~")?(["0"-"9"])+
                           ("." (["0"-"9"])+)?
                           ["e", "E"] ("~")?(["0"-"9"])+>
-    |
-    < #HEXDIGIT: ["0"-"9","a"-"f","A"-"F"] >
-    |
-    < #WHITESPACE:
-    [ " ","\t","\n","\r","\f" ]
-    >
     |
     < QUOTED_STRING: <DOUBLE_QUOTE>
                      ( (~["\"", "\\"])

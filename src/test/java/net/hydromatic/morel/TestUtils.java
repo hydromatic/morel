@@ -27,9 +27,6 @@ import com.google.common.collect.ImmutableList;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -42,6 +39,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -149,9 +147,8 @@ public class TestUtils {
    *
    * <p>Does not use the default character set.
    */
-  public static PrintWriter printWriter(File file)
-      throws FileNotFoundException {
-    return printWriter(new FileOutputStream(file));
+  public static PrintWriter printWriter(File file) throws IOException {
+    return printWriter(Files.newOutputStream(file.toPath()));
   }
 
   /**
@@ -171,8 +168,8 @@ public class TestUtils {
    *
    * <p>Does not use the default character set.
    */
-  public static BufferedReader reader(File file) throws FileNotFoundException {
-    return reader(new FileInputStream(file));
+  public static BufferedReader reader(File file) throws IOException {
+    return reader(Files.newInputStream(file.toPath()));
   }
 
   /**

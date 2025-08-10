@@ -28,7 +28,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class TypeUnifier {
 
-  private Map<Integer, Type> variables = new HashMap<>();
+  private final Map<Integer, Type> variables = new HashMap<>();
 
   public static @Nullable Map<Integer, Type> unify(Type type1, Type type2) {
     TypeUnifier unifier = new TypeUnifier();

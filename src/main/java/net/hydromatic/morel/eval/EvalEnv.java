@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.eval;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +28,7 @@ import java.util.function.BiConsumer;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.compile.Environment;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Evaluation environment.
@@ -39,8 +42,18 @@ public interface EvalEnv {
   String SESSION = "$session";
 
   /** Returns the binding of {@code name} if bound, null if not. */
+  @Nullable
   Object getOpt(String name);
 
+  /** Returns the binding of {@code name} if bound, throws if not. */
+  default Object get(String name) {
+    return requireNonNull(getOpt(name), name);
+  }
+
+  /** Returns the current session. */
+  default Session getSession() {
+    return (Session) get(SESSION);
+  }
   /**
    * Creates an environment that has the same content as this one, plus the
    * binding (name, value).

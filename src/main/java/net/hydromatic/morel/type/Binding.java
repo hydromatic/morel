@@ -34,7 +34,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class Binding {
   public final Core.NamedPat id;
-  public final Core.Exp exp;
+  public final Core.@Nullable Exp exp;
   public final Object value;
   /** If true, the binding is ignored by inlining. */
   public final boolean parameter;
@@ -46,7 +46,7 @@ public class Binding {
   private Binding(
       Core.NamedPat id,
       Core.@Nullable IdPat overloadId,
-      Core.Exp exp,
+      Core.@Nullable Exp exp,
       Object value,
       boolean parameter,
       Kind kind) {

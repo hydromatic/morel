@@ -79,7 +79,7 @@ public abstract class TestUnsafe {
     pb.directory(directory);
     pb.redirectErrorStream(true);
     if (logger != null) {
-      logger.info("start process: " + pb.command());
+      logger.info("start process: {}", pb.command());
     }
     Process p = pb.start();
 
@@ -114,7 +114,7 @@ public abstract class TestUnsafe {
 
     int status = p.exitValue();
     if (logger != null) {
-      logger.info("exit status=" + status + " from " + pb.command());
+      logger.info("exit status={} from {}", status, pb.command());
     }
     return status;
   }

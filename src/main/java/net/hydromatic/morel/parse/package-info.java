@@ -18,6 +18,9 @@
  */
 
 /** Parser. */
+@NullMarked
 package net.hydromatic.morel.parse;
+
+import org.jspecify.annotations.NullMarked;
 
 // End package-info.java

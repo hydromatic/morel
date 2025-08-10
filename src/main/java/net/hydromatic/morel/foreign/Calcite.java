@@ -53,6 +53,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Runtime context. */
 public class Calcite {
@@ -176,7 +177,7 @@ public class Calcite {
       throw new UnsupportedOperationException();
     }
 
-    public Object get(String name) {
+    public @Nullable Object get(String name) {
       return null;
     }
   }

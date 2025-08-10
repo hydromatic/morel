@@ -240,7 +240,9 @@ public abstract class RowSinks {
     }
 
     static boolean isConstantTrue(Code code) {
-      return code.isConstant() && Objects.equals(code.eval(null), true);
+      return code.isConstant()
+          && Objects.equals(
+              code.eval(EvalEnvs.copyOf(ImmutableMap.of())), true);
     }
 
     @Override
@@ -250,7 +252,7 @@ public abstract class RowSinks {
       for (Object element : elements) {
         if (mutableEvalEnv.setOpt(element)) {
           Boolean b = (Boolean) conditionCode.eval(mutableEvalEnv);
-          if (b != null && b) {
+          if (b) {
             rowSink.accept(mutableEvalEnv);
           }
         }

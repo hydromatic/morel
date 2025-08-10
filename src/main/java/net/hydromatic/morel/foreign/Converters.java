@@ -19,6 +19,7 @@
 package net.hydromatic.morel.foreign;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static org.apache.calcite.avatica.util.DateTimeUtils.unixDateToString;
@@ -151,7 +152,7 @@ public class Converters {
     }
     if (type instanceof PrimitiveType) {
       RelDataTypeField field =
-          Iterables.getOnlyElement(fromType.getFieldList());
+          requireNonNull(Iterables.getOnlyElement(fromType.getFieldList()));
       return (Converter<E>) ofField(field.getType(), 0);
     }
     if (type instanceof RecordLikeType) {
@@ -408,6 +409,7 @@ public class Converters {
       final Enumerable<Object> enumerable = Linq4j.asEnumerable((List) v);
       if (morelType.isCollection()) {
         final Type elementType = morelType.arg(0);
+        requireNonNull(calciteType.getComponentType());
         final C2m c = new C2m(calciteType.getComponentType(), elementType);
         if (c.morelType instanceof PrimitiveType) {
           if (c.calciteType.isStruct()) {

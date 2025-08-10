@@ -48,6 +48,7 @@ import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.type.Type.Key;
 import net.hydromatic.morel.util.ComparableSingletonList;
 import net.hydromatic.morel.util.Pair;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A table that contains all types in use, indexed by their description (e.g.
@@ -528,7 +529,7 @@ public class TypeSystem {
         });
   }
 
-  public Pair<DataType, Type.Key> lookupTyCon(String tyConName) {
+  public @Nullable Pair<DataType, Type.Key> lookupTyCon(String tyConName) {
     return typeConstructorByName.get(tyConName);
   }
 

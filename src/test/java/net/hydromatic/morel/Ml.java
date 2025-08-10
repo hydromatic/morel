@@ -541,7 +541,7 @@ class Ml {
     tracer.onWarnings(warningList);
     final Object result;
     if (statement instanceof Ast.Exp) {
-      result = bindingValue(bindings, "it");
+      result = requireNonNull(bindingValue(bindings, "it"));
     } else if (bindings.size() == 1) {
       result = bindings.get(0).value;
     } else {
@@ -555,7 +555,9 @@ class Ml {
       result = map;
     }
     tracer.onResult(result);
-    tracer.onPlan(session.code);
+    if (session.code != null) {
+      tracer.onPlan(session.code);
+    }
     return result;
   }
 

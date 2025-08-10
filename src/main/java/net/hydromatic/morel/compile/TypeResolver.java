@@ -377,7 +377,7 @@ public class TypeResolver {
     return realTypes;
   }
 
-  private Type deduceRealType(
+  private @Nullable Type deduceRealType(
       Ast.Pat pat,
       @Nullable Type annotatedType,
       Ast.Exp exp,
@@ -427,7 +427,8 @@ public class TypeResolver {
     return null;
   }
 
-  private Type deduceRealType(@Nullable Type annotatedType, Ast.Exp exp) {
+  private @Nullable Type deduceRealType(
+      @Nullable Type annotatedType, Ast.Exp exp) {
     if (exp instanceof Ast.AnnotatedExp) {
       final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) exp;
       final Type annotatedType2 = toType(annotatedExp.type, typeSystem);
@@ -812,7 +813,7 @@ public class TypeResolver {
     Term term =
         query.op == Op.EXISTS || query.op == Op.FORALL
             ? toTerm(PrimitiveType.BOOL)
-            : query.isCompute() || query.isInto() ? p.v : p.c;
+            : query.isCompute() || query.isInto() ? p.v : requireNonNull(p.c);
     return reg(query.copy(fromSteps), v, term);
   }
 
@@ -877,7 +878,7 @@ public class TypeResolver {
         final Ast.SetStep setStep = (Ast.SetStep) step;
         final List<Ast.Exp> args2 = new ArrayList<>();
         final List<Term> terms = new ArrayList<>();
-        terms.add(p.c);
+        terms.add(requireNonNull(p.c));
         for (Ast.Exp arg : setStep.args) {
           final Variable v15 = unifier.variable();
           terms.add(v15);
@@ -900,7 +901,7 @@ public class TypeResolver {
         //   map: 'a -> 'b -> 'a list -> 'b list
         //   map: 'a -> 'b -> 'a bag -> 'b bag
         final Variable c6 = unifier.variable();
-        isListOrBagMatchingInput(c6, v6, p.c, p.v);
+        isListOrBagMatchingInput(c6, v6, requireNonNull(p.c), p.v);
 
         if (yieldExp2.op == Op.RECORD) {
           final Ast.Record record2 = (Ast.Record) yieldExp2;
@@ -921,7 +922,8 @@ public class TypeResolver {
           }
         } else {
           String label =
-              first(ast.implicitLabelOpt(yield.exp), Op.CURRENT.opName);
+              requireNonNull(
+                  first(ast.implicitLabelOpt(yield.exp), Op.CURRENT.opName));
           envs.bind(label, v6);
           fieldVars.clear();
           fieldVars.add(ast.id(Pos.ZERO, label), v6);
@@ -953,7 +955,7 @@ public class TypeResolver {
         final Variable v13 = unifier.variable();
         final Variable v14 = unifier.variable();
         final Ast.Exp intoExp = deduceType(p.env, into.exp, v14);
-        final Sequence fnType = fnTerm(p.c, v13);
+        final Sequence fnType = fnTerm(requireNonNull(p.c), v13);
         equiv(v14, fnType);
         fromSteps.add(into.copy(intoExp));
         // Ordering is irrelevant because result is a singleton.
@@ -974,7 +976,7 @@ public class TypeResolver {
         reg(through, c18);
 
         // Input collection (p.c) is either a bag of p.v or a list of p.v.
-        mayBeBagOrList(p.c, p.v);
+        mayBeBagOrList(requireNonNull(p.c), p.v);
 
         final List<PatTerm> termMap = new ArrayList<>();
         pat = deducePatType(env, through.pat, termMap::add, null, v18, t -> t);
@@ -1006,6 +1008,7 @@ public class TypeResolver {
     final Variable c0;
     final List<PatTerm> termMap = new ArrayList<>();
     final CollectionType containerize;
+    requireNonNull(p.c);
     if (scan.exp == null) {
       scanExp3 = null;
       // If we're iterating over 'all values' of the type, we'd better not
@@ -2155,7 +2158,7 @@ public class TypeResolver {
         if (pair1 != null) {
           // It is a zero argument constructor, e.g. the LESS constructor of the
           // 'order' type.
-          final DataType dataType0 = pair1.left;
+          final DataType dataType0 = requireNonNull(pair1.left);
           return reg(pat, v, toTerm(dataType0, Subst.EMPTY));
         }
         termMap.accept(new PatTerm(idPat, v, accessor));
@@ -2265,8 +2268,8 @@ public class TypeResolver {
         if (pair == null) {
           throw new AssertionError("not found: " + conPat.tyCon.name);
         }
-        final DataType dataType = pair.left;
-        final Type argType = pair.right.toType(typeSystem);
+        final DataType dataType = requireNonNull(pair.left);
+        final Type argType = requireNonNull(pair.right).toType(typeSystem);
         final Variable vArg = unifier.variable();
         pat2 = deducePatType(env, conPat.pat, termMap, null, vArg, t -> vArg);
         final Term argTerm = toTerm(argType, Subst.EMPTY);
@@ -2295,7 +2298,7 @@ public class TypeResolver {
         if (pair0 == null) {
           throw new AssertionError();
         }
-        final DataType dataType0 = pair0.left;
+        final DataType dataType0 = requireNonNull(pair0.left);
         return reg(con0Pat, v, toTerm(dataType0, Subst.EMPTY));
 
       case LIST_PAT:
@@ -2323,10 +2326,6 @@ public class TypeResolver {
     }
   }
 
-  private Term getTerm(Type type) {
-    return toTerm(type, Subst.EMPTY);
-  }
-
   /** Registers an infix operator whose type is a given type. */
   private Ast.Exp infix(
       TypeEnv env, Ast.InfixCall call, Variable v, Type type) {
@@ -2338,18 +2337,15 @@ public class TypeResolver {
 
   /** Registers an infix operator. */
   private Ast.Exp infix(TypeEnv env, Ast.InfixCall call, Variable v) {
-    return deduceType(
-        env,
-        ast.apply(
-            ast.id(Pos.ZERO, call.op.opName),
-            ast.tuple(Pos.ZERO, ImmutableList.of(call.a0, call.a1))),
-        v);
+    Ast.Id id = ast.id(Pos.ZERO, requireNonNull(call.op.opName));
+    Ast.Tuple arg = ast.tuple(Pos.ZERO, ImmutableList.of(call.a0, call.a1));
+    return deduceType(env, ast.apply(id, arg), v);
   }
 
   /** Registers a prefix operator. */
   private Ast.Exp prefix(TypeEnv env, Ast.PrefixCall call, Variable v) {
-    return deduceType(
-        env, ast.apply(ast.id(Pos.ZERO, call.op.opName), call.a), v);
+    Ast.Id id = ast.id(Pos.ZERO, requireNonNull(call.op.opName));
+    return deduceType(env, ast.apply(id, call.a), v);
   }
 
   /** Converts a term to a variable. */
@@ -2645,6 +2641,7 @@ public class TypeResolver {
         if (binding.kind == Kind.VAL) {
           return binding.id.type;
         }
+        requireNonNull(binding.overloadId);
         return typeSystem.multi(
             transformEager(
                 env.getOverloads(binding.overloadId), Core.Pat::type));
@@ -2905,7 +2902,7 @@ public class TypeResolver {
       return new PlusSubst(this, typeVar, variable);
     }
 
-    abstract Variable get(TypeVar typeVar);
+    abstract @Nullable Variable get(TypeVar typeVar);
   }
 
   /** Empty substitution. */
@@ -2916,6 +2913,7 @@ public class TypeResolver {
     }
 
     @Override
+    @Nullable
     Variable get(TypeVar typeVar) {
       return null;
     }
@@ -2937,6 +2935,7 @@ public class TypeResolver {
     }
 
     @Override
+    @Nullable
     Variable get(TypeVar typeVar) {
       return typeVar.equals(this.typeVar) ? variable : parent.get(typeVar);
     }
@@ -3030,7 +3029,7 @@ public class TypeResolver {
     /** Collection (list or bag) type; null if not a collection. */
     final @Nullable Variable c;
 
-    private Triple(TypeEnv env, Variable v, Variable c) {
+    private Triple(TypeEnv env, Variable v, @Nullable Variable c) {
       this.env = requireNonNull(env);
       this.v = requireNonNull(v);
       this.c = c;

@@ -975,7 +975,7 @@ public abstract class Codes {
     @Override
     public Object apply(EvalEnv env, Object arg) {
       final String f = (String) arg;
-      final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+      final Session session = env.getSession();
       session.use(f, silent, pos);
       return Unit.INSTANCE;
     }
@@ -3192,7 +3192,7 @@ public abstract class Codes {
       new ApplicableImpl(BuiltIn.SYS_CLEAR_ENV) {
         @Override
         public Object apply(EvalEnv env, Object arg) {
-          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final Session session = env.getSession();
           session.clearEnv();
           return Unit.INSTANCE;
         }
@@ -3225,8 +3225,8 @@ public abstract class Codes {
       new ApplicableImpl(BuiltIn.SYS_PLAN) {
         @Override
         public Object apply(EvalEnv env, Object arg) {
-          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
-          return Codes.describe(session.code);
+          final Session session = env.getSession();
+          return Codes.describe(requireNonNull(session.code));
         }
       };
 
@@ -3235,7 +3235,7 @@ public abstract class Codes {
       new ApplicableImpl(BuiltIn.SYS_SET) {
         @Override
         public Unit apply(EvalEnv env, Object arg) {
-          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final Session session = env.getSession();
           final List list = (List) arg;
           final String propName = (String) list.get(0);
           final Object value = list.get(1);
@@ -3249,7 +3249,7 @@ public abstract class Codes {
       new ApplicableImpl(BuiltIn.SYS_SHOW) {
         @Override
         public List apply(EvalEnv env, Object arg) {
-          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final Session session = env.getSession();
           final String propName = (String) arg;
           final Object value = Prop.lookup(propName).get(session.map);
           return value == null ? OPTION_NONE : optionSome(value.toString());
@@ -3261,7 +3261,7 @@ public abstract class Codes {
       new ApplicableImpl(BuiltIn.SYS_SHOW_ALL) {
         @Override
         public List apply(EvalEnv env, Object arg) {
-          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final Session session = env.getSession();
           final ImmutableList.Builder<List<List>> list =
               ImmutableList.builder();
           for (Prop prop : Prop.BY_CAMEL_NAME) {
@@ -3279,7 +3279,7 @@ public abstract class Codes {
       new ApplicableImpl(BuiltIn.SYS_UNSET) {
         @Override
         public Unit apply(EvalEnv env, Object arg) {
-          final Session session = (Session) env.getOpt(EvalEnv.SESSION);
+          final Session session = env.getSession();
           final String propName = (String) arg;
           final Prop prop = Prop.lookup(propName);
           @SuppressWarnings("unused")

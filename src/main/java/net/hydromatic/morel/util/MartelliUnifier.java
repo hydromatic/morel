@@ -372,7 +372,6 @@ public class MartelliUnifier extends Unifier {
   private static class MutableConstraint {
     final Variable v;
     Term arg;
-    Variable result;
     final PairList<Term, Constraint.Action> termActions;
 
     /** Creates a MutableConstraint. */
@@ -390,7 +389,7 @@ public class MartelliUnifier extends Unifier {
 
     @Override
     public String toString() {
-      return format("{constraint %s = %s %s %s}", v, arg, result, termActions);
+      return format("{constraint %s = %s %s}", v, arg, termActions);
     }
   }
 }

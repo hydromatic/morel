@@ -78,6 +78,7 @@ class PairLists {
    * @param <T> First type
    * @param <U> Second type
    */
+  @SuppressWarnings("NullableProblems")
   abstract static class AbstractPairList<T, U>
       extends AbstractList<Map.Entry<T, U>> implements PairList<T, U> {
     /**
@@ -149,6 +150,7 @@ class PairLists {
    * @param <T> First type
    * @param <U> Second type
    */
+  @SuppressWarnings("DataFlowIssue")
   static class MutablePairList<T, U> extends AbstractPairList<T, U> {
     final List<@Nullable Object> list;
 
@@ -199,6 +201,7 @@ class PairLists {
 
     @Override
     public Map.Entry<T, U> set(int index, Map.Entry<T, U> entry) {
+      requireNonNull(entry);
       return set(index, entry.getKey(), entry.getValue());
     }
 
@@ -349,6 +352,7 @@ class PairLists {
       }
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public ImmutablePairList<T, U> immutable() {
       return immutableBackedBy(list);

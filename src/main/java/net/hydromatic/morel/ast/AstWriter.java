@@ -233,10 +233,17 @@ public class AstWriter {
           .append(((String) value).replace("\\", "\\\\").replace("\"", "\\\""))
           .append("\"");
     } else if (value instanceof Character) {
-      final Character c = (Character) value;
-      append("#\"")
-          .append(c == '"' ? "\\\"" : c == '\\' ? "\\\\" : c.toString())
-          .append("\"");
+      switch ((char) value) {
+        case '"':
+          append("#\"\\\"\"");
+          break;
+        case '\\':
+          append("#\"\\\\\"");
+          break;
+        default:
+          append("#\"").append(value.toString()).append("\"");
+          break;
+      }
     } else if (value instanceof BigDecimal) {
       BigDecimal c = (BigDecimal) value;
       if (c.compareTo(BigDecimal.ZERO) < 0) {

@@ -192,7 +192,7 @@ public class LintTest {
         line -> line.state().message(line, "':' must be surrounded by ' '"));
   }
 
-  private void addProgram1(Puffin.Builder<GlobalState, FileState> b) {
+  private static void addProgram1(Puffin.Builder<GlobalState, FileState> b) {
     // Broken string, "latch" + "string", should be "latchstring".
     b.add(
         line ->
@@ -402,7 +402,7 @@ public class LintTest {
   }
 
   /** Returns the number of occurrences of a string in a string. */
-  private int count(String s, String sub) {
+  private static int count(String s, String sub) {
     int count = 0;
     for (int i = 0; i < s.length(); ) {
       i = s.indexOf(sub, i);

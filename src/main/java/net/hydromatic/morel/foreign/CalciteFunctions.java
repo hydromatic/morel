@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.foreign;
 
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Static.transform;
 
 import java.io.IOException;
@@ -79,7 +80,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * and returns the result as a relation.
  */
 public class CalciteFunctions {
-  public static final ThreadLocal<Context> THREAD_ENV = new ThreadLocal<>();
+  public static final ThreadLocal<@Nullable Context> THREAD_ENV =
+      new ThreadLocal<>();
 
   /**
    * Used to pass Morel's evaluation environment into Calcite, so that it is
@@ -90,7 +92,7 @@ public class CalciteFunctions {
    * Calcite#code}) and Morel-to-Calcite (see {@link #TABLE_OPERATOR} and {@link
    * #SCALAR_OPERATOR}) boundaries.
    */
-  public static final ThreadLocal<EvalEnv> THREAD_EVAL_ENV =
+  public static final ThreadLocal<@Nullable EvalEnv> THREAD_EVAL_ENV =
       new ThreadLocal<>();
 
   private CalciteFunctions() {}
@@ -112,8 +114,9 @@ public class CalciteFunctions {
                   f -> f.createSqlType(SqlTypeName.VARCHAR),
                   SqlTypeFamily.STRING,
                   false)),
-          TableFunctionImpl.create(
-              CalciteFunctions.MorelTableFunction.class, "eval"));
+          requireNonNull(
+              TableFunctionImpl.create(
+                  CalciteFunctions.MorelTableFunction.class, "eval")));
 
   public static final SqlOperator SCALAR_OPERATOR =
       new SqlUserDefinedFunction(
@@ -132,8 +135,9 @@ public class CalciteFunctions {
                   f -> f.createSqlType(SqlTypeName.VARCHAR),
                   SqlTypeFamily.STRING,
                   false)),
-          ScalarFunctionImpl.create(
-              CalciteFunctions.MorelScalarFunction.class, "eval"));
+          requireNonNull(
+              ScalarFunctionImpl.create(
+                  CalciteFunctions.MorelScalarFunction.class, "eval")));
 
   public static final SqlOperator APPLY_OPERATOR =
       new SqlUserDefinedFunction(
@@ -157,8 +161,9 @@ public class CalciteFunctions {
                   f -> f.createSqlType(SqlTypeName.VARCHAR),
                   SqlTypeFamily.STRING,
                   false)),
-          ScalarFunctionImpl.create(
-              CalciteFunctions.MorelApplyFunction.class, "eval"));
+          requireNonNull(
+              ScalarFunctionImpl.create(
+                  CalciteFunctions.MorelApplyFunction.class, "eval")));
 
   private static RelDataType inferReturnType(SqlOperatorBinding b) {
     return b.getTypeFactory().createSqlType(SqlTypeName.INTEGER);
@@ -169,22 +174,20 @@ public class CalciteFunctions {
    * table.
    */
   public static class MorelTableFunction {
-    private final Context cx = THREAD_ENV.get();
-    private final Compiled compiled;
+    private final Context cx = requireNonNull(THREAD_ENV.get());
+    private final RelDataTypeFactory typeFactory =
+        requireNonNull(cx.typeFactory);
+    private final @Nullable Compiled compiled;
 
     public MorelTableFunction(org.apache.calcite.plan.Context context) {
-      final List<Object> args = context.unwrap(List.class);
+      @SuppressWarnings("unchecked")
+      final @Nullable List<Object> args = context.unwrap(List.class);
       if (args != null) {
         String ml = (String) args.get(0);
         String typeJson = (String) args.get(1);
         compiled =
             Compiled.create(
-                ml,
-                typeJson,
-                cx.typeFactory,
-                cx.env,
-                cx.typeSystem,
-                cx.session);
+                ml, typeJson, typeFactory, cx.env, cx.typeSystem, cx.session);
       } else {
         compiled = null;
       }
@@ -201,12 +204,7 @@ public class CalciteFunctions {
           this.compiled != null
               ? this.compiled
               : Compiled.create(
-                  ml,
-                  typeJson,
-                  cx.typeFactory,
-                  cx.env,
-                  cx.typeSystem,
-                  cx.session);
+                  ml, typeJson, typeFactory, cx.env, cx.typeSystem, cx.session);
       return new ScannableTable() {
         @Override
         public RelDataType getRowType(RelDataTypeFactory factory) {
@@ -242,8 +240,8 @@ public class CalciteFunctions {
         public boolean rolledUpColumnValidInsideAgg(
             String column,
             SqlCall call,
-            SqlNode parent,
-            CalciteConnectionConfig config) {
+            @Nullable SqlNode parent,
+            @Nullable CalciteConnectionConfig config) {
           return false;
         }
       };
@@ -309,19 +307,19 @@ public class CalciteFunctions {
    * scalar value.
    */
   public static class MorelScalarFunction {
-    private final Context cx = THREAD_ENV.get();
-    private final Compiled compiled;
+    private final Context cx = requireNonNull(THREAD_ENV.get());
+    private final RelDataTypeFactory typeFactory =
+        requireNonNull(cx.typeFactory);
+    private final @Nullable Compiled compiled;
 
     public MorelScalarFunction(org.apache.calcite.plan.Context context) {
-      final List<Object> args = context.unwrap(List.class);
+      @SuppressWarnings("unchecked")
+      final @Nullable List<Object> args = context.unwrap(List.class);
       if (args != null) {
+        final String ml = (String) args.get(0);
+        final String typeJson = (String) args.get(1);
         compiled =
-            new Compiled(
-                cx.env,
-                cx.typeSystem,
-                cx.typeFactory,
-                (String) args.get(0),
-                (String) args.get(1));
+            new Compiled(cx.env, cx.typeSystem, typeFactory, ml, typeJson);
       } else {
         compiled = null;
       }
@@ -337,9 +335,8 @@ public class CalciteFunctions {
       final Compiled compiled =
           this.compiled != null
               ? this.compiled
-              : new Compiled(
-                  cx.env, cx.typeSystem, cx.typeFactory, ml, typeJson);
-      final EvalEnv evalEnv = THREAD_EVAL_ENV.get();
+              : new Compiled(cx.env, cx.typeSystem, typeFactory, ml, typeJson);
+      final EvalEnv evalEnv = requireNonNull(THREAD_EVAL_ENV.get());
       Object v = compiled.code.eval(evalEnv);
       return compiled.f.apply(v);
     }
@@ -383,15 +380,17 @@ public class CalciteFunctions {
    * an argument.
    */
   public static class MorelApplyFunction {
-    final Context cx = THREAD_ENV.get();
-    final Compiled compiled;
+    private final Context cx = requireNonNull(THREAD_ENV.get());
+    private final RelDataTypeFactory typeFactory =
+        requireNonNull(cx.typeFactory);
+    private final @Nullable Compiled compiled;
 
     public MorelApplyFunction(org.apache.calcite.plan.Context context) {
-      final List<Object> args = context.unwrap(List.class);
+      @SuppressWarnings("unchecked")
+      final @Nullable List<Object> args = context.unwrap(List.class);
       if (args != null) {
         final String morelArgTypeJson = (String) args.get(0);
-        compiled =
-            new Compiled(morelArgTypeJson, cx.typeFactory, cx.typeSystem);
+        compiled = new Compiled(morelArgTypeJson, typeFactory, cx.typeSystem);
       } else {
         compiled = null;
       }
@@ -407,7 +406,7 @@ public class CalciteFunctions {
       final Compiled compiled =
           this.compiled != null
               ? this.compiled
-              : new Compiled(morelArgTypeJson, cx.typeFactory, cx.typeSystem);
+              : new Compiled(morelArgTypeJson, typeFactory, cx.typeSystem);
       final Closure fn = (Closure) closure;
       final EvalEnv evalEnv = THREAD_EVAL_ENV.get();
       final Object o = compiled.converter.apply(arg);
@@ -484,7 +483,7 @@ public class CalciteFunctions {
     public final Session session;
     public final Environment env;
     public final TypeSystem typeSystem;
-    public final RelDataTypeFactory typeFactory;
+    public final @Nullable RelDataTypeFactory typeFactory;
 
     public Context(
         Session session,

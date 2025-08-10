@@ -863,7 +863,9 @@ public class Compiler {
   }
 
   private void compileOverDecl(
-      Core.OverDecl overDecl, List<Binding> bindings, List<Action> actions) {
+      Core.OverDecl overDecl,
+      List<Binding> bindings,
+      @Nullable List<Action> actions) {
     bindings.add(Binding.over(overDecl.pat));
     if (actions != null) {
       actions.add(
@@ -873,7 +875,9 @@ public class Compiler {
   }
 
   private void compileTypeDecl(
-      List<AliasType> types, List<Binding> bindings, List<Action> actions) {
+      List<AliasType> types,
+      List<Binding> bindings,
+      @Nullable List<Action> actions) {
     if (actions != null) {
       for (AliasType type : types) {
         actions.add(
@@ -884,7 +888,9 @@ public class Compiler {
   }
 
   private void compileDatatypeDecl(
-      List<DataType> dataTypes, List<Binding> bindings, List<Action> actions) {
+      List<DataType> dataTypes,
+      List<Binding> bindings,
+      @Nullable List<Action> actions) {
     for (DataType dataType : dataTypes) {
       final List<Binding> newBindings = new TailList<>(bindings);
       dataType
@@ -932,7 +938,7 @@ public class Compiler {
       Set<Core.Exp> queriesToWrap,
       List<Code> matchCodes,
       List<Binding> bindings,
-      List<Action> actions) {
+      @Nullable List<Action> actions) {
     Compiles.bindPattern(typeSystem, bindings, valDecl);
     final List<Binding> newBindings = new TailList<>(bindings);
     final Map<Core.NamedPat, LinkCode> linkCodes = new HashMap<>();
@@ -965,8 +971,7 @@ public class Compiler {
             final Type type = typeSystem.ensureClosed(type0);
             actions.add(
                 (outLines, outBindings, evalEnv) -> {
-                  final Session session =
-                      (Session) evalEnv.getOpt(EvalEnv.SESSION);
+                  final Session session = evalEnv.getSession();
                   final StringBuilder buf = new StringBuilder();
                   final List<String> outs = new ArrayList<>();
                   try {
@@ -1065,7 +1070,7 @@ public class Compiler {
    * when the function has been compiled.
    */
   private static class LinkCode implements Code {
-    private Code refCode;
+    private @Nullable Code refCode;
 
     @Override
     public Describer describe(Describer describer) {
