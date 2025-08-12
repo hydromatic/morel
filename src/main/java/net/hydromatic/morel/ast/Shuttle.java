@@ -84,6 +84,10 @@ public class Shuttle {
     return current;
   }
 
+  protected Ast.Elements visit(Ast.Elements elements) {
+    return elements;
+  }
+
   protected Ast.Ordinal visit(Ast.Ordinal ordinal) {
     return ordinal;
   }

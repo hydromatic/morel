@@ -2186,8 +2186,8 @@ public class Core {
   /**
    * Call to an aggregate function in a {@code compute} clause.
    *
-   * <p>For example, in {@code compute sumId = sum of #id e}, {@code aggregate}
-   * is "sum", {@code argument} is "#id e".
+   * <p>For example, in {@code compute {sumId = sum over #id e}}, {@code
+   * aggregate} is "sum", {@code argument} is "#id e".
    */
   public static class Aggregate extends BaseNode {
     public final Type type;
@@ -2215,7 +2215,7 @@ public class Core {
     AstWriter unparse(AstWriter w, int left, int right) {
       w.append(aggregate, 0, 0);
       if (argument != null) {
-        w.append(" of ").append(argument, 0, 0);
+        w.append(" over ").append(argument, 0, 0);
       }
       return w;
     }

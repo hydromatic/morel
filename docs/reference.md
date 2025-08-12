@@ -75,6 +75,7 @@ In Morel but not Standard ML:
   `implies`,
   `notelem` binary operators
 * `current`,
+  `elements`,
   `ordinal` nilary operators
 * `typeof` type operator
 * <code><i>lab</i> =</code> is optional in <code><i>exprow</i></code>
@@ -181,8 +182,9 @@ In Standard ML but not in Morel:
     | <b>case</b> <i>exp</i> <b>of</b> <i>match</i>         case analysis
     | <b>fn</b> <i>match</i>                  function
     | <b>current</b>                   current element (only valid in a query step)
+    | <b>elements</b>                  elements of current group (only valid in compute)
     | <b>ordinal</b>                   element ordinal (only valid in a query step)
-    | <i>exp<sub>1</sub></i> <b>over</b> <i>exp<sub>2</sub></i>            aggregate (only valid in <b>compute</b>)
+    | <i>exp<sub>1</sub></i> <b>over</b> <i>exp<sub>2</sub></i>            aggregate (only valid in compute)
     | <b>from</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step<sub>1</sub></i> ... <i>step<sub>t</sub></i> [ <i>terminalStep</i> ]
                                 relational expression (<i>s</i> &ge; 0, <i>t</i> &ge; 0)
     | <b>exists</b> [ <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i> ] <i>step<sub>1</sub></i> ... <i>step<sub>t</sub></i>

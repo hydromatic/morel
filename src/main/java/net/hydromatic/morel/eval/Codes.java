@@ -4214,6 +4214,7 @@ public abstract class Codes {
           .put(BuiltIn.Z_CURRENT, Unit.INSTANCE)
           .put(BuiltIn.Z_DIVIDE_INT, Z_DIVIDE_INT)
           .put(BuiltIn.Z_DIVIDE_REAL, Z_DIVIDE_REAL)
+          .put(BuiltIn.Z_ELEMENTS, Unit.INSTANCE)
           .put(BuiltIn.Z_EXTENT, Z_EXTENT)
           .put(BuiltIn.Z_LIST, Z_LIST)
           .put(BuiltIn.Z_MINUS_INT, Z_MINUS_INT)

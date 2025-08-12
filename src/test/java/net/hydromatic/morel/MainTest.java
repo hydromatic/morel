@@ -2174,6 +2174,15 @@ public class MainTest {
             + "group {} compute 1 + sum over 2 * e.sal")
         .assertParse(
             "from e in emps group {} compute 1 + (sum over 2 * #sal e)");
+    ml("from e in emps\n"
+            + "group e.deptno\n"
+            + "  compute {s = from x in elements compute sum over e.sal}\n"
+            + "order deptno")
+        .assertParse(
+            "from e in emps "
+                + "group #deptno e"
+                + " compute {s = from x in elements compute sum over #sal e} "
+                + "order deptno");
   }
 
   /**

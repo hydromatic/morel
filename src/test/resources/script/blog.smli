@@ -1970,6 +1970,66 @@ from i in [1, 2, 3]
 >
 > val it : {j:int} list
 
+(* For each department, compute the total salary of the clerks. *)
+from e in scott.emps
+  group e.deptno
+    compute {s = (from x in elements
+                    where x.job = "CLERK"
+                    compute sum over x.sal)}
+  order deptno;
+> deptno s
+> ------ ------
+> 10     1300.0
+> 20     1900.0
+> 30     950.0
+>
+> val it : {deptno:int, s:real} list
+
+(* Gather the departments in each region. *)
+let
+  fun region d =
+    case d.loc of
+        "CHICAGO" => "MIDWEST"
+      | "DALLAS" => "SOUTH"
+      | _ => "NORTHEAST"
+in
+  from d in scott.depts
+    group {r = region d} compute elements
+    order r
+end;
+> val it =
+>   [
+>    {elements=[{deptno=30,dname="SALES",loc="CHICAGO"}],
+>     r="MIDWEST"},
+>    {
+>     elements=
+>     [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>      {deptno=40,dname="OPERATIONS",loc="BOSTON"}],r="NORTHEAST"},
+>    {elements=[{deptno=20,dname="RESEARCH",loc="DALLAS"}],
+>     r="SOUTH"}]
+>   :
+>     {elements:{deptno:int, dname:string, loc:string} bag,
+>      r:string} list
+
+(* How many employees in each department? *)
+from e in scott.emps
+  group e.deptno compute {c = Bag.length elements}
+  order deptno;
+> c deptno
+> - ------
+> 3 10
+> 5 20
+> 6 30
+>
+> val it : {c:int, deptno:int} list
+
+(* `elements` is only available inside a `compute` step, or the
+   `compute` clause of a `group` step. *)
+from e in scott.emps
+  yield length elements;
+> stdIn:2.16-2.24 Error: 'elements' is only valid in a 'compute' clause
+>   raised at: stdIn:2.16-2.24
+
 (* Print the top 5 employees by salary, and their rank. *)
 from e in scott.emps
   order DESC e.sal

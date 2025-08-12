@@ -936,6 +936,91 @@ from (i, j) in [(1, 1), (2, 3), (3, 4)]
 > val it = [{count=2,j=1,sum=5},{count=1,j=0,sum=3}]
 >   : {count:int, j:int, sum:int} list
 
+(* Elements --------------------------------------------------- *)
+from i in [1, 2, 3]
+  compute elements;
+> val it = [1,2,3] : int list
+
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  compute elements;
+> val it = [{i="a",j=1},{i="b",j=4},{i="a",j=3}] : {i:string, j:int} list
+
+from t in [("a", 1), ("b", 4), ("a", 3)]
+  compute elements;
+> val it = [("a",1),("b",4),("a",3)] : (string * int) list
+
+from i in [1, 2, 3]
+  group i compute length elements;
+> stdIn:2.19-2.34 Error: cannot derive label for compute expression
+>   raised at: stdIn:2.19-2.34
+
+from i in [1, 2, 3]
+  group i compute {l = length elements};
+> val it = [{i=1,l=1},{i=2,l=1},{i=3,l=1}] : {i:int, l:int} list
+
+from i in [1, 2, 3]
+  group i compute elements order i;
+> val it = [{elements=[1],i=1},{elements=[2],i=2},{elements=[3],i=3}]
+>   : {elements:int list, i:int} list
+
+(*) Use "elements" in a query
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  group {i} compute {s = from r in elements compute sum over r.j} order i;
+> val it = [{i="a",s=4},{i="b",s=4}] : {i:string, s:int} list
+
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  group {i} compute {s = from r in elements where r.j < 2 compute sum over r.j}
+  order DESC i;
+> val it = [{i="b",s=0},{i="a",s=1}] : {i:string, s:int} list
+
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  group {i} compute {c = length elements} order i;
+> val it = [{c=2,i="a"},{c=1,i="b"}] : {c:int, i:string} list
+
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  group {i} compute {elements, c = (length elements) - 1} order i;
+> val it =
+>   [{c=1,elements=[{i="a",j=1},{i="a",j=3}],i="a"},
+>    {c=0,elements=[{i="b",j=4}],i="b"}]
+>   : {c:int, elements:{i:string, j:int} list, i:string} list
+
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  group i compute elements order i;
+> val it =
+>   [{elements=[{i="a",j=1},{i="a",j=3}],i="a"},{elements=[{i="b",j=4}],i="b"}]
+>   : {elements:{i:string, j:int} list, i:string} list
+
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  group {i} compute {s = from r in elements compute sum over r.j} order i;
+> val it = [{i="a",s=4},{i="b",s=4}] : {i:string, s:int} list
+
+(*) "elements" invalid in "group"
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  group {i, elements} compute {one = 1};
+> stdIn:2.13-2.21 Error: 'elements' is only valid in a 'compute' clause
+>   raised at: stdIn:2.13-2.21
+
+(*) "elements" is invalid in "yield"
+from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
+  yield length elements;
+> stdIn:2.16-2.24 Error: 'elements' is only valid in a 'compute' clause
+>   raised at: stdIn:2.16-2.24
+
+(*) "elements" is invalid at top-level
+elements;
+> stdIn:1.1-1.9 Error: 'elements' is only valid in a 'compute' clause
+>   raised at: stdIn:1.1-1.9
+
+length elements;
+> stdIn:1.8-1.16 Error: 'elements' is only valid in a 'compute' clause
+>   raised at: stdIn:1.8-1.16
+
+from e in elements;
+> stdIn:1.11-1.19 Error: 'elements' is only valid in a 'compute' clause
+>   raised at: stdIn:1.11-1.19
+
+(* Yield ------------------------------------------------------ *)
+
 from i in [1, 2, 3]
   yield {i = {i = i}};
 > val it = [{i={i=1}},{i={i=2}},{i={i=3}}] : {i:{i:int}} list

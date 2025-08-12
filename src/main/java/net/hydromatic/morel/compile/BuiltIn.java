@@ -3732,6 +3732,13 @@ public enum BuiltIn {
   Z_CURRENT("$", "$current", ts -> UNIT),
 
   /**
+   * Internal value "$elements", of type "unit". It is used to implement the
+   * {@code elements} keyword and its type is not necessarily {@code unit}. This
+   * enum member is mainly to provide a single definition for the name.
+   */
+  Z_ELEMENTS("$", "$elements", ts -> UNIT),
+
+  /**
    * Internal value "$ordinal", of type "int", used to implement the {@code
    * ordinal} keyword.
    */

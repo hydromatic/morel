@@ -67,6 +67,7 @@ public enum AstBuilder {
   public @Nullable String implicitLabelOpt(Ast.Exp exp) {
     switch (exp.op) {
       case CURRENT:
+      case ELEMENTS:
       case ORDINAL:
         return exp.op.lowerName();
       case ID:
@@ -191,6 +192,10 @@ public enum AstBuilder {
 
   public Ast.Current current(Pos pos) {
     return new Ast.Current(pos);
+  }
+
+  public Ast.Elements elements(Pos pos) {
+    return new Ast.Elements(pos);
   }
 
   public Ast.Ordinal ordinal(Pos pos) {

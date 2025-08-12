@@ -288,6 +288,14 @@ Current current() : {}
   }
 }
 
+/** Parses the {@code elements} keyword. */
+Elements elements() : {}
+{
+  <ELEMENTS> {
+    return ast.elements(pos());
+  }
+}
+
 /** Parses the {@code ordinal} keyword. */
 Ordinal ordinal() : {}
 {
@@ -1024,6 +1032,8 @@ Exp atom() :
 |
   e = current() { return e; }
 |
+  e = elements() { return e; }
+|
   e = ordinal() { return e; }
 |
   e = recordSelector() { return e; }
@@ -1724,6 +1734,7 @@ AstNode statementEof() :
 | < CURRENT: "current" >
 | < DISTINCT: "distinct" >
 | < ELEM: "elem" >
+| < ELEMENTS: "elements" >
 | < EXCEPT: "except" >
 | < EXISTS: "exists" >
 | < FORALL: "forall" >

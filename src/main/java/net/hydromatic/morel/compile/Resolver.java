@@ -518,6 +518,8 @@ public class Resolver {
         return toCore((Ast.Id) exp);
       case CURRENT:
         return toCore((Ast.Current) exp);
+      case ELEMENTS:
+        return toCore((Ast.Elements) exp);
       case ORDINAL:
         return toCore((Ast.Ordinal) exp);
       case ANDALSO:
@@ -750,6 +752,12 @@ public class Resolver {
     final FnType fnType = (FnType) typeMap.getType(aggregate.aggregate);
     final boolean orderedAgg = fnType.paramType instanceof ListType;
     return aggregateResolver.toCore(aggregate, orderedAgg, this, id);
+  }
+
+  private Core.Exp toCore(Ast.Elements elements) {
+    // Translate "elements" as if it were an aggregate "Fn.id over current",
+    // which contains all rows in the current group.
+    return aggregateResolver.toCore(elements, this);
   }
 
   private Core.RecordSelector toCore(Ast.RecordSelector recordSelector) {
@@ -1478,23 +1486,28 @@ public class Resolver {
      * @param id Name for the aggregate; if specified, can generate a more
      *     meaningful field name in the resulting record.
      */
-    Core.Exp toCore(
+    default Core.Exp toCore(
         Ast.Aggregate aggregate,
         boolean orderedAgg,
         Resolver outerResolver,
-        Ast.@Nullable Id id);
+        Ast.@Nullable Id id) {
+      throw new UnsupportedOperationException(
+          "Aggregate expressions are not supported in this context: "
+              + aggregate);
+    }
 
-    AggregateResolver UNSUPPORTED =
-        (aggregate, orderedAgg, outerResolver, id) -> {
-          throw new UnsupportedOperationException(
-              "Aggregate expressions are not supported in this context: "
-                  + aggregate);
-        };
+    default Core.Exp toCore(Ast.Elements elements, Resolver outerResolver) {
+      throw new UnsupportedOperationException(
+          "Aggregate expressions are not supported in this context: "
+              + elements);
+    }
 
     /** Returns the additional bindings created by this resolver. */
     default List<Binding> bindings() {
       return ImmutableList.of();
     }
+
+    AggregateResolver UNSUPPORTED = new AggregateResolver() {};
   }
 
   /**
@@ -1544,6 +1557,22 @@ public class Resolver {
           id != null
               ? id.name
               : first(ast.implicitLabelOpt(aggregate), "aggregate");
+      final String name = generateName(base, this::nameIsUnavailable);
+      final Core.IdPat idPat = core.idPat(coreAggregate.type, name, 0);
+      aggregates.add(idPat, coreAggregate);
+      return core.id(idPat);
+    }
+
+    @Override
+    public Core.Exp toCore(Ast.Elements elements, Resolver outerResolver) {
+      final TypeMap typeMap = outerResolver.typeMap;
+      Type type = typeMap.getType(elements);
+      Core.Aggregate coreAggregate =
+          core.aggregate(
+              type,
+              core.functionLiteral(typeMap.typeSystem, BuiltIn.FN_ID),
+              inputResolver.current);
+      String base = Op.ELEMENTS.lowerName();
       final String name = generateName(base, this::nameIsUnavailable);
       final Core.IdPat idPat = core.idPat(coreAggregate.type, name, 0);
       aggregates.add(idPat, coreAggregate);

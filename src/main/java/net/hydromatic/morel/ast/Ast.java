@@ -967,6 +967,33 @@ public class Ast {
   }
 
   /**
+   * Parse tree node of the "elements" reference.
+   *
+   * <p>{@code elements} references the elements in the current group.
+   */
+  public static class Elements extends Exp {
+    /** Creates a Elements. */
+    Elements(Pos pos) {
+      super(pos, Op.ELEMENTS);
+    }
+
+    @Override
+    public Elements accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.id("elements");
+    }
+  }
+
+  /**
    * Parse tree node of the "ordinal" reference.
    *
    * <p>{@code ordinal} is the 0-based ordinal of the current element in an

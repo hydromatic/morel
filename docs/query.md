@@ -401,9 +401,11 @@ Expressions within query steps use the same syntax as
 expressions elsewhere in Morel, but they execute within an
 enhanced environment that provides additional operations.
 
-Query step expressions have access to two special operations
+Query step expressions have access to three special operations
 not available in other contexts:
  * `current` - references the current row being processed
+ * `elements` - references the collection of elements in the current
+   group
  * `ordinal` - provides the position/index of the current row
 
 Most query steps evaluate once per row and run within a specialized
@@ -474,13 +476,84 @@ val it : {i:int, j:string} list</i>
 <i>val it = [{j=2}, {j=3}, {j=4}] : {j:int} list</i>
 </pre>
 
+#### The `elements` expression
+
+The `elements` expression returns the collection of elements in the
+current group. It can only be used in the `compute` clause of a
+`group` step, or in a `compute` step.
+
+<pre>
+<i>(* For each department, compute the total salary of the clerks. *)</i>
+<b>from</b> e <b>in</b> scott.emps
+  <b>group</b> e.deptno
+    <b>compute</b> {s = (<b>from</b> x <b>in</b> <b>elements</b>
+                    <b>where</b> x.job = "CLERK"
+                    <b>compute</b> sum <b>over</b> x.sal)};
+<i>
+deptno s
+------ ------
+10     1300.0
+20     1900.0
+30     950.0
+
+val it : {deptno:int, s:real} list</i>
+
+<i>(* Gather the departments in each region. *)</i>
+<b>let</b>
+  <b>fun</b> region d =
+    <b>case</b> d.loc <b>of</b>
+        "CHICAGO" => "MIDWEST"
+      | "DALLAS" => "SOUTH"
+      | _ => "NORTHEAST"
+<b>in</b>
+  <b>from</b> d <b>in</b> scott.depts
+    <b>group</b> {r = region d} <b>compute</b> <b>elements</b>
+    <b>order</b> r
+<b>end</b>;
+<i>
+val it =
+  [{r="MIDWEST",
+    elements=[{deptno=30,dname="SALES",loc="CHICAGO"}]},
+   {r="NORTHEAST",
+    elements=
+    [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+     {deptno=40,dname="OPERATIONS",loc="BOSTON"}]},
+   {r="SOUTH",
+    elements=[{deptno=20,dname="RESEARCH",loc="DALLAS"}]}]
+  : {elements:{deptno:int, dname:string, loc:string} bag, r:string} list</i>
+
+<i>(* How many employees in each department? *)</i>
+<b>from</b> e <b>in</b> scott.emps
+  <b>group</b> e.deptno <b>compute</b> {c = length elements}
+  <b>order</b> deptno;
+
+<i>c deptno
+- ------
+3 10
+5 20
+6 30
+
+val it : {c:int, deptno:int} list</i>
+</pre>
+
+`elements` is only available inside a `compute` step, or the `compute`
+clause of a `group` step.
+
+<pre>
+<b>from</b> e <b>in</b> scott.emps
+  <b>yield</b> length <b>elements</b>;
+<i>
+stdIn:2.16-2.24 Error: 'elements' is only valid in a 'compute' clause
+  raised at: stdIn:2.16-2.24</i>
+</pre>
+
 #### The `ordinal` expression
 
 The `ordinal` expression refers to the ordinal number of the current
 row, starting at 0.
 
 <pre>
-(* Print the top 5 employees by salary, and their rank. *)
+<i>(* Print the top 5 employees by salary, and their rank. *)</i>
 <b>from</b> e <b>in</b> scott.emps
   <b>order</b> <b>DESC</b> e.sal
   <b>take</b> 5

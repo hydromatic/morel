@@ -36,6 +36,8 @@ public class Visitor {
 
   protected void visit(Ast.Current current) {}
 
+  protected void visit(Ast.Elements elements) {}
+
   protected void visit(Ast.Ordinal ordinal) {}
 
   protected void visit(Ast.AnnotatedExp annotatedExp) {

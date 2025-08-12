@@ -41,6 +41,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -112,6 +113,7 @@ public class TypeResolver {
   private final TypeSystem typeSystem;
   private final Consumer<CompileException> warningConsumer;
   private final PairList<Ast.FromStep, Triple> stepStack = PairList.of();
+  private final PairList<Ast.Group, Triple> computeStack = PairList.of();
   private final List<Consumer<Resolved>> validations = new ArrayList<>();
   private final Unifier unifier = new MartelliUnifier();
   private final List<TermVariable> terms = new ArrayList<>();
@@ -676,11 +678,7 @@ public class TypeResolver {
 
       case ORDINAL:
         final Ast.Ordinal ordinal = (Ast.Ordinal) node;
-        final Term term3 =
-            env.get(
-                typeSystem,
-                BuiltIn.Z_CURRENT.mlName,
-                TypeEnv.onlyValidInQuery(ordinal));
+        checkInQuery(env, ordinal);
         final Triple step = last(stepStack.rightList());
         validations.add(
             resolved -> {
@@ -695,12 +693,14 @@ public class TypeResolver {
 
       case CURRENT:
         final Ast.Current current = (Ast.Current) node;
-        final Term term2 =
-            env.get(
-                typeSystem,
-                BuiltIn.Z_CURRENT.mlName,
-                TypeEnv.onlyValidInQuery(current));
+        final Term term2 = checkInQuery(env, current);
         return reg(current, v, term2);
+
+      case ELEMENTS:
+        final Ast.Elements elements = (Ast.Elements) node;
+        checkInCompute(env, elements);
+        final Triple step4 = last(computeStack.rightList());
+        return reg(elements, v, requireNonNull(step4.c));
 
       case FN:
         final Ast.Fn fn = (Ast.Fn) node;
@@ -755,6 +755,24 @@ public class TypeResolver {
       default:
         throw new AssertionError("cannot deduce type for " + node.op);
     }
+  }
+
+  /** Throws if the current expression is not within a query. */
+  @CanIgnoreReturnValue
+  private Term checkInQuery(TypeEnv env, Ast.Exp node) {
+    return env.get(
+        typeSystem, BuiltIn.Z_CURRENT.mlName, TypeEnv.onlyValidInQuery(node));
+  }
+
+  /**
+   * Throws if the current expression is not within a {@code compute} clause.
+   */
+  @CanIgnoreReturnValue
+  private Term checkInCompute(TypeEnv env, Ast.Exp node) {
+    return env.get(
+        typeSystem,
+        BuiltIn.Z_ELEMENTS.mlName,
+        TypeEnv.onlyValidInCompute(node));
   }
 
   private Ast.Type deduceTypeType(TypeEnv env, Ast.Type type, Variable v) {
@@ -1131,28 +1149,16 @@ public class TypeResolver {
           fieldVars.add(id, v7);
           groupExps.add(id, exp2);
         });
+    bindings.add(BuiltIn.Z_ELEMENTS.mlName, requireNonNull(p.c));
 
     final Ast.Record compute = group.compute();
-    final PairList<Ast.Id, Ast.Exp> args2 = PairList.of();
-    final TypeEnv groupEnv = env.bindAll(bindings);
-    compute.args.forEach(
-        (id, exp) -> {
-          final Variable v8 = unifier.variable();
-          reg(id, v8);
-          final Ast.Exp exp2;
-          final AggFrame aggFrame =
-              new AggFrame(p.withEnv(p.env.bindAll(bindings)));
-          try {
-            aggregateTripleStack.push(aggFrame);
-            exp2 = deduceType(groupEnv, exp, v8);
-          } finally {
-            aggregateTripleStack.pop();
-          }
-          bindings.add(id.name, v8);
-          fieldVars.add(id, v8);
-          args2.add(id, exp2);
-          reg(exp2, v8);
-        });
+    final PairList<Ast.Id, Ast.Exp> args2;
+    try {
+      computeStack.add(group, p);
+      args2 = deduceComputeTypes(env, compute, p, fieldVars, bindings);
+    } finally {
+      computeStack.remove(computeStack.size() - 1);
+    }
 
     final Ast.Exp group2;
     if (groupExps.size() == 1 && group.isAtom()) {
@@ -1178,6 +1184,35 @@ public class TypeResolver {
       fromSteps.add(((Ast.Compute) group).copy(compute2));
       return Triple.singleton(env.bindAll(bindings), v2);
     }
+  }
+
+  private PairList<Ast.Id, Ast.Exp> deduceComputeTypes(
+      TypeEnv env,
+      Ast.Record compute,
+      Triple p,
+      PairList<Ast.Id, Variable> fieldVars,
+      PairList<String, Term> bindings) {
+    final PairList<Ast.Id, Ast.Exp> args2 = PairList.of();
+    final TypeEnv groupEnv = env.bindAll(bindings);
+    compute.args.forEach(
+        (id, exp) -> {
+          final Variable v8 = unifier.variable();
+          reg(id, v8);
+          final Ast.Exp exp2;
+          final AggFrame aggFrame =
+              new AggFrame(p.withEnv(p.env.bindAll(bindings)));
+          try {
+            aggregateTripleStack.push(aggFrame);
+            exp2 = deduceType(groupEnv, exp, v8);
+          } finally {
+            aggregateTripleStack.pop();
+          }
+          bindings.add(id.name, v8);
+          fieldVars.add(id, v8);
+          args2.add(id, exp2);
+          reg(exp2, v8);
+        });
+    return args2;
   }
 
   /** Deduces a record constructor expression's type. */
@@ -2574,6 +2609,18 @@ public class TypeResolver {
       return name ->
           new CompileException(
               "'" + node + "' is only valid in a query", false, node.pos);
+    }
+
+    /**
+     * Exception factory where a missing symbol is because we are not in a
+     * {@code compute} clause.
+     */
+    static Function<String, RuntimeException> onlyValidInCompute(AstNode node) {
+      return name ->
+          new CompileException(
+              "'" + node + "' is only valid in a 'compute' clause",
+              false,
+              node.pos);
     }
 
     /** Exception factory where a missing symbol is a user error. */
