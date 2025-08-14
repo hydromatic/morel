@@ -306,7 +306,7 @@ class Ml {
   }
 
   <T> Ml assertTypeThrows(Function<Pos, Matcher<T>> matcherSupplier) {
-    requireNonNull(pos);
+    requireNonNull(pos, "pos");
     return assertTypeThrows(matcherSupplier.apply(pos));
   }
 

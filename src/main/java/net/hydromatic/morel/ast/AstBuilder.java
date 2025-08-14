@@ -18,6 +18,9 @@
  */
 package net.hydromatic.morel.ast;
 
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -27,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.util.ImmutablePairList;
@@ -41,6 +45,8 @@ public enum AstBuilder {
    */
   // CHECKSTYLE: IGNORE 1
   ast;
+
+  private static final Ast.Id MISSING_ID = new Ast.Id(Pos.ZERO, "");
 
   /**
    * Returns the implicit label for when an expression occurs within a record,
@@ -61,9 +67,8 @@ public enum AstBuilder {
   public @Nullable String implicitLabelOpt(Ast.Exp exp) {
     switch (exp.op) {
       case CURRENT:
-        return "current";
       case ORDINAL:
-        return "ordinal";
+        return exp.op.lowerName();
       case ID:
         return ((Ast.Id) exp).name;
       case AGGREGATE:
@@ -83,29 +88,36 @@ public enum AstBuilder {
 
   /** Returns an expression's implicit label, or throws. */
   public Ast.Id implicitLabel(Ast.Exp exp) {
-    return implicitLabel(exp, null);
-  }
-
-  /** Returns an expression's implicit label, or uses a default. */
-  public Ast.Id implicitLabel(Ast.Exp exp, @Nullable String defaultLabel) {
     String value = implicitLabelOpt(exp);
     if (value != null) {
       return id(exp.pos, value);
     }
-    if (defaultLabel != null) {
-      return id(exp.pos, defaultLabel);
+    String message = format("cannot derive label for expression %s", exp);
+    throw new CompileException(message, false, exp.pos);
+  }
+
+  /** Returns an expression's implicit label, or uses a default. */
+  public Ast.Id implicitLabel(Ast.Exp exp, String defaultLabel) {
+    requireNonNull(defaultLabel);
+    String value = implicitLabelOpt(exp);
+    if (value != null) {
+      return id(exp.pos, value);
     }
-    throw new IllegalArgumentException(
-        "cannot derive label for expression " + exp);
+    return id(exp.pos, defaultLabel);
   }
 
   /**
-   * Converts an expression to record. (If it is not a record, returns a
-   * singleton record, deriving a label, if using the given default label.)
+   * Converts an expression to a record.
+   *
+   * <p>If it is a record, ensures that every field has a label. Throws if an
+   * implicit label cannot be derived for any field expression.
+   *
+   * <p>If it is not a record, returns a singleton record, using the implicit
+   * label. Throws if an implicit label cannot be derived.
    */
   public Ast.Record toRecord(Ast.Exp exp, String defaultLabel) {
     if (exp instanceof Ast.Record) {
-      return (Ast.Record) exp;
+      return ((Ast.Record) exp).validate();
     }
     final Ast.Id label = implicitLabel(exp, defaultLabel);
     return ast.record(Pos.ZERO, null, ImmutablePairList.of(label, exp));
@@ -187,6 +199,23 @@ public enum AstBuilder {
 
   public Ast.Id id(Pos pos, String name) {
     return new Ast.Id(pos, name);
+  }
+
+  /**
+   * Returns an identifier that is the empty string, and is used to indicate a
+   * missing label in a record expression.
+   *
+   * <p>An empty identifier can never be created by the parser, so this
+   * identifier is clearly distinguished.
+   *
+   * <p>An example of a missing label is the first field in {@code {w.x, y =
+   * 2}}. This expression is equivalent to {@code {x = w.x, y = 2}} when the
+   * implicit "{@code x =}" label has been added.
+   *
+   * @see #implicitLabelOpt(Ast.Exp)
+   */
+  public Ast.Id missingId() {
+    return MISSING_ID;
   }
 
   public Ast.TyVar tyVar(Pos pos, String name) {

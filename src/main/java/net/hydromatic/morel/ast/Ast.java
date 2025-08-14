@@ -19,12 +19,14 @@
 package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.type.RecordType.compareNames;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static org.apache.calcite.util.Util.firstDuplicate;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -37,6 +39,7 @@ import java.util.Objects;
 import java.util.SortedMap;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
+import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
@@ -1611,7 +1614,7 @@ public class Ast {
             if (i > 0) {
               w.append(", ");
             }
-            if (!k.name.equals(ast.implicitLabelOpt(v))) {
+            if (!(k.name.isEmpty() || k.name.equals(ast.implicitLabelOpt(v)))) {
               w.append(k, 0, 0).append(" = ");
             }
             w.append(v, 0, 0);
@@ -1628,6 +1631,34 @@ public class Ast {
 
     public SortedMap<Id, Exp> sortedArgs() {
       return args.toImmutableSortedMap();
+    }
+
+    /**
+     * Returns a copy of this Record with implicit labels made explicit.
+     *
+     * <p>Throws if there are duplicate field names.
+     */
+    public Record validate() {
+      final PairList<Ast.Id, Ast.Exp> args2 = PairList.of();
+      args.forEach(
+          (id, exp) -> {
+            if (id.name.isEmpty()) {
+              // Throws if no implicit label can be derived.
+              id = ast.implicitLabel(exp);
+            }
+            args2.add(id, exp);
+          });
+
+      // Lazy transform - we are unlikely to access each element more than once
+      final List<String> names = args2.transform((id, e) -> id.name);
+      final int i = firstDuplicate(names);
+      if (i >= 0) {
+        final int j = names.lastIndexOf(names.get(i));
+        throw new TypeResolver.TypeException(
+            format("duplicate field '%s' in record", names.get(i)),
+            args.left(j).pos);
+      }
+      return copy(with, args2);
     }
   }
 

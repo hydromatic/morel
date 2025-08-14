@@ -66,6 +66,7 @@ import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.ast.Shuttle;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.Binding;
@@ -932,9 +933,9 @@ public class TypeResolver {
 
       case ORDER:
         final Ast.Order order = (Ast.Order) step;
-        validateOrder(order);
-        final Ast.Exp exp = deduceType(p.env, order.exp, unifier.variable());
-        fromSteps.add(order.copy(exp));
+        final Ast.Order order2 = validateOrder(order);
+        final Ast.Exp exp = deduceType(p.env, order2.exp, unifier.variable());
+        fromSteps.add(order2.copy(exp));
         return Triple.of(p.env, p.v, toVariable(listTerm(p.v)));
 
       case UNORDER:
@@ -1181,8 +1182,8 @@ public class TypeResolver {
 
   /** Deduces a record constructor expression's type. */
   private Ast.Record deduceRecordType(
-      TypeEnv env, Ast.Record record, Variable v) {
-    validateRecord(record);
+      TypeEnv env, Ast.Record record0, Variable v) {
+    Ast.Record record = record0.validate();
 
     final NavigableMap<String, Term> labelTypes = new TreeMap<>();
     final PairList<Ast.Id, Ast.Exp> map = PairList.of();
@@ -1245,22 +1246,10 @@ public class TypeResolver {
             });
   }
 
-  /** Validates a {@code Record}. Throws if there are duplicate field names. */
-  private void validateRecord(Ast.Record record) {
-    // Lazy transform - we are unlikely to access each element more than once.
-    final List<String> names = record.args.transform((id, e) -> id.name);
-    final int i = firstDuplicate(names);
-    if (i >= 0) {
-      final int j = names.lastIndexOf(names.get(i));
-      throw new TypeException(
-          format("duplicate field '%s' in record", names.get(i)),
-          record.args.left(j).pos);
-    }
-  }
-
   /**
    * Validates a {@code Group}. Throws if there are duplicate names among the
-   * keys and aggregates.
+   * keys and aggregates (including among the labels that are generated
+   * implicitly).
    */
   private void validateGroup(Ast.Group group) {
     final List<String> names = new ArrayList<>();
@@ -1302,24 +1291,29 @@ public class TypeResolver {
    * Validates an {@code Order}. Warns if asked so sort on a record expression
    * where the fields are not in alphabetical order.
    */
-  private void validateOrder(Ast.Order order) {
-    order.exp.accept(
-        new Visitor() {
-          @Override
-          protected void visit(Ast.Record record) {
-            final List<Pos> positions =
-                transformEager(
-                    record.args.toImmutableSortedMap().values(), e -> e.pos);
-            if (!Ordering.from(Pos::compare).isOrdered(positions)) {
-              String message =
-                  "Sorting on a record whose fields are not in alphabetical "
-                      + "order. Sort order may not be what you expect.";
-              warningConsumer.accept(
-                  new CompileException(message, true, record.pos));
-            }
-            super.visit(record);
-          }
-        });
+  private Ast.Order validateOrder(Ast.Order order) {
+    Ast.Exp exp2 =
+        order.exp.accept(
+            new Shuttle(typeSystem) {
+              @Override
+              protected Ast.Exp visit(Ast.Record record0) {
+                final Ast.Record record = record0.validate();
+                final List<Pos> positions =
+                    transformEager(
+                        record.args.toImmutableSortedMap().values(),
+                        e -> e.pos);
+                if (!Ordering.from(Pos::compare).isOrdered(positions)) {
+                  String message =
+                      "Sorting on a record whose fields are not in "
+                          + "alphabetical order. Sort order may not be what "
+                          + "you expect.";
+                  warningConsumer.accept(
+                      new CompileException(message, true, record.pos));
+                }
+                return super.visit(record);
+              }
+            });
+    return order.copy(exp2);
   }
 
   private Variable fieldVar(

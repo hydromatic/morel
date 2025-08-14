@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
@@ -304,7 +305,7 @@ public class Main {
               subShell,
               outLines,
               session1 -> subShell.command(statement, outLines));
-        } catch (MorelParseException e) {
+        } catch (MorelParseException | CompileException e) {
           final String message = e.getMessage();
           if (message.startsWith("Encountered \"<EOF>\" ")) {
             break;

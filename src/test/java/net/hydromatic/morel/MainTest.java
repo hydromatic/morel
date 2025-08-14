@@ -251,9 +251,9 @@ public class MainTest {
             "fn x : typeof case x of 0 => true | _ => false => ()");
 
     ml("fn x : typeof {a = 1, b = bool} => ()").assertParseSame();
-    mlE("fn x : typeof ${a: int}$ => ()")
-        .assertParseThrowsIllegalArgumentException(
-            is("cannot derive label for expression a : int"));
+    mlE("fn x : typeof {$a: int$} => ()")
+        .assertTypeThrowsCompileException(
+            "cannot derive label for expression a : int");
     ml("fn x : typeof ([1, 2, 3]) => ()").assertParseSame();
     ml("let val (v : typeof (hd ([1, 2, 3]))) = 0 in v + 1 end")
         .assertParseEquivalent(
@@ -462,28 +462,35 @@ public class MainTest {
   /**
    * Tests that the abbreviated record syntax "{a, e.b, #c e, d = e}" is
    * expanded to "{a = a, b = e.b, c = #c e, d = e}".
+   *
+   * <p>The test is a mixture of tests for parsing and type-checking because
+   * expansion used to happen during parsing, but now happens during
+   * type-checking.
    */
   @Test
-  void testParseAbbreviatedRecord() {
+  void testAbbreviatedRecord() {
     ml("{a, #b e, #c e, #d (e + 1), e = f + g}")
         .assertParseEquivalent("{a, e.b, #c e, #d (e + 1), e = f + g}");
     ml("{v = a, w = #b e, x = #c e, y = #d (e + 1), z = #f 2}")
         .assertParseEquivalent(
             "{v = a, w = e.b, x = #c e, y = #d (e + 1), z = (#f 2)}");
     ml("{w = a = b + c, a = b + c}").assertParseSame();
-    ml("{1}")
-        .assertParseThrowsIllegalArgumentException(
-            is("cannot derive label for expression 1"));
-    ml("{a, b + c}")
-        .assertParseThrowsIllegalArgumentException(
-            is("cannot derive label for expression b + c"));
+    mlE("{$1$}")
+        .assertTypeThrowsCompileException(
+            "cannot derive label for expression 1");
+    mlE("{a, $b + c$}")
+        .assertTypeThrowsCompileException(
+            "cannot derive label for expression b + c");
 
-    ml("case x of {a = a, b} => a + b")
-        .assertParse("case x of {a = a, b = b} => a + b");
-    ml("case x of {a, b = 2, ...} => a + b")
-        .assertParse("case x of {a = a, b = 2, ...} => a + b");
-    ml("fn {a, b = 2, ...} => a + b")
-        .assertParse("fn {a = a, b = 2, ...} => a + b");
+    ml("fn (x, a) => case x of {a = a, b} => a + b")
+        .assertParse("fn (x, a) => case x of {a = a, b = b} => a + b")
+        .assertType("{a:int, b:int} * 'a -> int");
+    ml("fn x => case x of {a, b = 2, ...} => a + 5")
+        .assertParse("fn x => case x of {a = a, b = 2, ...} => a + 5")
+        .assertType("'a -> int");
+    ml("fn {a, b = 2, ...} => a + 5")
+        .assertParse("fn {a = a, b = 2, ...} => a + 5")
+        .assertType("'a -> int");
   }
 
   @Test
@@ -3412,17 +3419,20 @@ public class MainTest {
 
   @Test
   void testGroupAs2() {
-    ml("from e in emps group {e.deptno, e.deptno + e.empid}")
-        .assertParseThrowsIllegalArgumentException(
-            is("cannot derive label for expression #deptno e + #empid e"));
+    mlE("from e in [{deptno=10, empid=1}]\n"
+            + "  group {e.deptno, $e.deptno + e.empid$}")
+        .assertTypeThrowsCompileException(
+            "cannot derive label for expression #deptno e + #empid e");
     ml("from e in emps group 1").assertParseSame();
-    ml("from e in emps group {1}")
-        .assertParseThrowsIllegalArgumentException(
-            is("cannot derive label for expression 1"));
-    ml("from e in emps group e.deptno compute {(fn x => x) over e.job}")
-        .assertParseThrowsIllegalArgumentException(
-            is("cannot derive label for expression fn x => x over #job e"));
-    // If there is only one expression in the group, we do not require that it
+    mlE("from e in [{deptno=10, empid=1}] group {$1$}")
+        .assertTypeThrowsCompileException(
+            "cannot derive label for expression 1");
+    // Nit: error region should start before '('
+    mlE("from e in [{deptno=10, empid=1}]\n"
+            + "  group e.deptno compute {($fn x => x) over e.job$}")
+        .assertTypeThrowsCompileException(
+            "cannot derive label for expression fn x => x over #job e");
+    // If there is only one expression in the group, we do not require that
     // we can derive a name for the expression.
     ml("from e in emps group {} compute (fn x => x) over e.job")
         .assertParse("from e in emps group {} compute fn x => x over #job e");
@@ -3491,10 +3501,10 @@ public class MainTest {
         .assertEvalIter(equalsUnordered(list(0, 0), list(1, 1)));
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group {a = e.x, a = e.y}")
-        .assertTypeThrowsRuntimeException("Duplicate field name 'a' in group");
+        .assertTypeThrowsRuntimeException("duplicate field 'a' in record");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group {e.x, x = e.y}")
-        .assertTypeThrowsRuntimeException("Duplicate field name 'x' in group");
+        .assertTypeThrowsRuntimeException("duplicate field 'x' in record");
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group {a = e.x}\n"
             + "compute {b = sum over e.y}")
@@ -3515,7 +3525,7 @@ public class MainTest {
     ml("from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]\n"
             + "group {a = e.x}\n"
             + "compute {c = sum over e.y, c = sum over e.x}")
-        .assertTypeThrowsRuntimeException("Duplicate field name 'c' in group");
+        .assertTypeThrowsRuntimeException("duplicate field 'c' in record");
   }
 
   /**

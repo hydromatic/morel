@@ -99,6 +99,15 @@ from e in emps yield {deptno = #deptno e, one = 1};
 >   [{deptno=10,one=1},{deptno=20,one=1},{deptno=30,one=1},{deptno=30,one=1}]
 >   : {deptno:int, one:int} list
 
+from e in emps yield {e.deptno, 1 + 2};
+> stdIn:1.33-1.38 Error: cannot derive label for expression 1 + 2
+>   raised at: stdIn:1.33-1.38
+
+from e in emps yield {e.deptno, three = 1 + 2};
+> val it =
+>   [{deptno=10,three=3},{deptno=20,three=3},{deptno=30,three=3},
+>    {deptno=30,three=3}] : {deptno:int, three:int} list
+
 from e in emps yield {deptno = e.deptno, one = 1};
 > val it =
 >   [{deptno=10,one=1},{deptno=20,one=1},{deptno=30,one=1},{deptno=30,one=1}]
@@ -781,6 +790,22 @@ from e in emps
   group d compute {c = count over ()}
   order d;
 > val it = [{c=1,d=10},{c=1,d=20},{c=2,d=30}] : {c:int, d:int} list
+
+(* a singleton compute expression does not need a derivable label
+   if group key is empty *)
+from i in [1,2]
+  group {} compute 1 + 2;
+> val it = [3] : int list
+from i in [1,2]
+  group i compute 1 + 2;
+> stdIn:2.19-2.24 Error: cannot derive label for compute expression
+>   raised at: stdIn:2.19-2.24
+from i in [1,2]
+  group i compute {three = 1 + 2};
+> val it = [{i=1,three=3},{i=2,three=3}] : {i:int, three:int} list
+from i in [1,2]
+  compute 1 + 2;
+> val it = 3 : int
 
 (*) singleton record 'yield' followed by 'order'
 from e in emps

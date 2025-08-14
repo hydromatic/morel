@@ -1009,7 +1009,7 @@ void namedExpression(PairList<Id, Exp> list) :
   }
 |
   exp = expression() {
-    list.add(ast.implicitLabel(exp), exp);
+    list.add(ast.missingId(), exp);
   }
 }
 
@@ -1101,7 +1101,7 @@ Exp atom() :
         }
       |
         {
-          nameExps.add(ast.implicitLabel(exp), exp);
+          nameExps.add(ast.missingId(), exp);
         }
       )
     )
@@ -1145,8 +1145,7 @@ void recordExp(PairList<Id, Exp> nameExps) :
   labeledRecordExp(nameExps)
 |
   exp = expression() {
-    final Ast.Id label = ast.implicitLabel(exp);
-    nameExps.add(label, exp);
+    nameExps.add(ast.missingId(), exp);
   }
 }
 
