@@ -903,7 +903,7 @@ public enum BuiltIn {
       "app",
       ts ->
           ts.forallType(
-              3,
+              2,
               h ->
                   ts.fnType(
                       ts.tupleType(
@@ -1106,7 +1106,7 @@ public enum BuiltIn {
   FN_EQUAL(
       "Fn",
       "equal",
-      ts -> ts.forallType(2, h -> ts.fnType(h.get(0), h.get(0), BOOL))),
+      ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0), BOOL))),
 
   /**
    * Function "Fn.flip" of type "(&alpha; * &beta; &rarr; &gamma;) * &beta; *

@@ -418,4 +418,4 @@ shortest_path edges;
 >    {source="d",target="c",weight=1},{source="d",target="d",weight=0}]
 >   : {source:string, target:string, weight:int} list
 
-(*) End fixedPoint.smli
+(*) End fixed-point.smli

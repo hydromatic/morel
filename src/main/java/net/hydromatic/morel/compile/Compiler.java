@@ -970,81 +970,9 @@ public class Compiler {
           matchCodes.add(new MatchCode(ImmutablePairList.of(pat, code), pos));
 
           if (actions != null) {
-            final Type type0 =
-                pat.type.containsProgressive() ? exp.type : pat.type;
-            final Type type = typeSystem.ensureClosed(type0);
             actions.add(
-                (outLines, outBindings, evalEnv) -> {
-                  final Session session = evalEnv.getSession();
-                  final StringBuilder buf = new StringBuilder();
-                  final List<String> outs = new ArrayList<>();
-                  try {
-                    final Object o = code.eval(evalEnv);
-                    final List<Binding> outBindings0 = new ArrayList<>();
-                    if (!Closure.bindRecurse(
-                        pat.withType(type),
-                        o,
-                        (pat2, o2) ->
-                            outBindings0.add(
-                                overloadPat == null
-                                    ? Binding.of(pat2, o2)
-                                    : Binding.inst(pat2, overloadPat, o2)))) {
-                      throw new Codes.MorelRuntimeException(
-                          Codes.BuiltInExn.BIND, pos);
-                    }
-                    for (Binding binding : outBindings0) {
-                      outBindings.accept(binding);
-                      if (binding.id != skipPat) {
-                        int stringDepth =
-                            Prop.STRING_DEPTH.intValue(session.map);
-                        int lineWidth = Prop.LINE_WIDTH.intValue(session.map);
-                        Prop.Output output =
-                            Prop.OUTPUT.enumValue(
-                                session.map, Prop.Output.class);
-                        int printDepth = Prop.PRINT_DEPTH.intValue(session.map);
-                        int printLength =
-                            Prop.PRINT_LENGTH.intValue(session.map);
-                        final Pretty pretty =
-                            new Pretty(
-                                typeSystem,
-                                lineWidth,
-                                output,
-                                printLength,
-                                printDepth,
-                                stringDepth);
-                        final Pretty.TypedVal typedVal;
-                        final Core.NamedPat id =
-                            binding.overloadId != null
-                                ? binding.overloadId
-                                : binding.id;
-                        if (binding.value instanceof TypedValue) {
-                          TypedValue typedValue = (TypedValue) binding.value;
-                          typedVal =
-                              new Pretty.TypedVal(
-                                  id.name,
-                                  typedValue.valueAs(Object.class),
-                                  Keys.toProgressive(binding.id.type().key())
-                                      .toType(typeSystem));
-                        } else {
-                          typedVal =
-                              new Pretty.TypedVal(
-                                  id.name, binding.value, binding.id.type);
-                        }
-                        pretty.pretty(buf, binding.id.type, typedVal);
-                        final String line = str(buf);
-                        outs.add(line);
-                        outLines.accept(line);
-                      }
-                    }
-                  } catch (Codes.MorelRuntimeException e) {
-                    session.handle(e, buf);
-                    final String line = str(buf);
-                    outs.add(line);
-                    outLines.accept(line);
-                  }
-                  session.code = code;
-                  session.out = ImmutableList.copyOf(outs);
-                });
+                new ActionImpl(
+                    typeSystem, code, pat, exp, overloadPat, pos, skipPat));
           }
         });
 
@@ -1181,6 +1109,101 @@ public class Compiler {
           && (args.get(i).type instanceof TupleType
               || args.get(i).type instanceof RecordType)
           && ((RecordLikeType) args.get(i).type).argTypes().size() == arity;
+    }
+  }
+
+  private static class ActionImpl implements Action {
+    private final TypeSystem typeSystem;
+    private final Code code;
+    private final Core.NamedPat pat;
+    private final Type type;
+    private final Core.@Nullable IdPat overloadPat;
+    private final Pos pos;
+    private final Core.@Nullable Pat skipPat;
+
+    ActionImpl(
+        TypeSystem typeSystem,
+        Code code,
+        Core.NamedPat pat,
+        Core.Exp exp,
+        Core.@Nullable IdPat overloadPat,
+        Pos pos,
+        Core.@Nullable Pat skipPat) {
+      this.typeSystem = typeSystem;
+      this.code = code;
+      this.pat = pat;
+      final Type type0 = pat.type.containsProgressive() ? exp.type : pat.type;
+      this.type = typeSystem.ensureClosed(type0);
+      this.overloadPat = overloadPat;
+      this.pos = pos;
+      this.skipPat = skipPat;
+    }
+
+    @Override
+    public void apply(
+        Consumer<String> outLines,
+        Consumer<Binding> outBindings,
+        EvalEnv evalEnv) {
+      final Session session = evalEnv.getSession();
+      final StringBuilder buf = new StringBuilder();
+      final List<String> outs = new ArrayList<>();
+      try {
+        final Object o = code.eval(evalEnv);
+        final List<Binding> outBindings0 = new ArrayList<>();
+        if (!Closure.bindRecurse(
+            pat.withType(type),
+            o,
+            (pat2, o2) ->
+                outBindings0.add(
+                    overloadPat == null
+                        ? Binding.of(pat2, o2)
+                        : Binding.inst(pat2, overloadPat, o2)))) {
+          throw new Codes.MorelRuntimeException(Codes.BuiltInExn.BIND, pos);
+        }
+        for (Binding binding : outBindings0) {
+          outBindings.accept(binding);
+          if (binding.id == skipPat) {
+            continue;
+          }
+          final Pretty pretty = getPretty(session.map);
+          final Core.NamedPat id =
+              binding.overloadId != null ? binding.overloadId : binding.id;
+          final Pretty.TypedVal typedVal = getTypedVal(binding, id);
+          pretty.pretty(buf, binding.id.type, typedVal);
+          final String line = str(buf);
+          outs.add(line);
+          outLines.accept(line);
+        }
+      } catch (Codes.MorelRuntimeException e) {
+        session.handle(e, buf);
+        final String line = str(buf);
+        outs.add(line);
+        outLines.accept(line);
+      }
+      session.code = code;
+      session.out = ImmutableList.copyOf(outs);
+    }
+
+    private Pretty.TypedVal getTypedVal(Binding binding, Core.NamedPat id) {
+      if (binding.value instanceof TypedValue) {
+        TypedValue typedValue = (TypedValue) binding.value;
+        return new Pretty.TypedVal(
+            id.name,
+            typedValue.valueAs(Object.class),
+            Keys.toProgressive(binding.id.type().key()).toType(typeSystem));
+      } else {
+        return new Pretty.TypedVal(id.name, binding.value, binding.id.type);
+      }
+    }
+
+    private Pretty getPretty(Map<Prop, Object> map) {
+      int stringDepth = Prop.STRING_DEPTH.intValue(map);
+      int lineWidth = Prop.LINE_WIDTH.intValue(map);
+      Prop.Output output = Prop.OUTPUT.enumValue(map, Prop.Output.class);
+      int printDepth = Prop.PRINT_DEPTH.intValue(map);
+      int printLength = Prop.PRINT_LENGTH.intValue(map);
+      return new Pretty(
+          typeSystem, lineWidth, output, printLength, printDepth, stringDepth);
     }
   }
 }

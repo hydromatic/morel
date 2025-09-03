@@ -448,7 +448,8 @@ This grammar uses the following notation:
 Primitive: `bool`, `char`, `int`, `real`, `string`, `unit`
 
 Datatype:
-* `datatype 'a descending = DESC of 'a (in structure `Relational`)
+* `datatype 'a descending = DESC of 'a` (in structure `Relational`)
+* `datatype ('l, 'r) either = INL of 'l | INR of 'r` (in structure `Either`)
 * `datatype 'a list = nil | :: of 'a * 'a list` (in structure `List`)
 * `datatype 'a option = NONE | SOME of 'a` (in structure `Option`)
 * `datatype 'a order = LESS | EQUAL | GREATER`

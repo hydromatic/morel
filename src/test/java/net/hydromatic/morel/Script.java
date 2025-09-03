@@ -122,7 +122,7 @@ public class Script {
                 .getPath()
                 .matches(
                     ".*/(blog|dummy|foreign|hybrid|logic|pretty"
-                        + "|suchThat)\\.(sml|smli)");
+                        + "|such-that)\\.(sml|smli)");
 
     return new Script(
         inFile, outFile, noInput, echo, idempotent, loadDictionary);
