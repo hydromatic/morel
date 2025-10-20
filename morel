@@ -31,6 +31,7 @@ usage() {
   echo
   echo Options:
   echo "  --build             Compile the source code first."
+  echo "  --echo              Send script output stdout as well as file."
   echo "  -h, --help          Print this help, then exit."
   echo "  --idempotent        Treat all files (and stdin) as SMLI format."
   echo "                      Set implicitly if the first file has suffix '.smli'."
@@ -55,6 +56,10 @@ while [ $# -gt 0 ]; do
       ;;
     (--build)
       BUILD=true
+      shift
+      ;;
+    (--echo)
+      ECHO=true
       shift
       ;;
     (--idempotent)
@@ -96,12 +101,13 @@ esac
 # (To force rebuild, remove target/classpath.txt, or just "./mvnw clean".)
 cd "$(dirname "$0")" || exit
 if [ "$BUILD" ]; then
-    ./mvnw -DskipTests \
+    ./mvnw \
         dependency:build-classpath -Dmdep.outputFile=target/classpath.txt \
-        compile test
+        compile test-compile
 elif [ ! -f target/classpath.txt ]; then
     ./mvnw -DskipTests \
-        dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+        dependency:build-classpath -Dmdep.outputFile=target/classpath.txt \
+        compile test-compile
 fi
 
 CP="target/classes:\
@@ -123,7 +129,8 @@ case "$FORMAT" in
     if [ "$FILES" = "" ]; then
       FILES=-
     fi
-    exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.ScriptTest \
+    exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Script \
+        $(if [ "$ECHO" ]; then echo --echo; fi) \
         --directory="$(pwd)" \
         "$FILES"
     ;;
