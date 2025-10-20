@@ -117,6 +117,11 @@ public class ScriptTest {
   void testScript() throws Exception {
     checkRun("script.sml");
   }
+
+  @Test
+  void testTypeInference() throws Exception {
+    checkRun("script/type-inference.smli");
+  }
 }
 
 // End ScriptTest.java

@@ -49,6 +49,15 @@ public interface CompiledStatement {
       Consumer<Binding> outBindings);
 
   Type getType();
+
+  /**
+   * Returns the bindings (variables and their types) for this statement without
+   * evaluating it. This is useful for type-only mode where we want to know the
+   * types but not execute the code.
+   *
+   * @param outBindings Consumer to receive the bindings
+   */
+  void getBindings(Consumer<Binding> outBindings);
 }
 
 // End CompiledStatement.java

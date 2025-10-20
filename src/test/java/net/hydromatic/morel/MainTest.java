@@ -40,7 +40,6 @@ import static net.hydromatic.morel.Ml.mlE;
 import static net.hydromatic.morel.TestUtils.first;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
@@ -531,157 +530,8 @@ public class MainTest {
     assertThat(new TypeVar(26 * 26 * 26), hasToString("'baaa"));
   }
 
-  @Test
-  void testType() {
-    ml("1").assertType("int");
-    ml("0e0").assertType("real");
-    ml("1 + 2").assertType("int");
-    ml("1 - 2").assertType("int");
-    ml("1 * 2").assertType("int");
-    ml("1 / 2").assertType("int");
-    ml("1 / ~2").assertType("int");
-    ml("1.0 + ~2.0").assertType("real");
-    ml("\"\"").assertType("string");
-    ml("true andalso false").assertType("bool");
-    ml("if true then 1.0 else 2.0").assertType("real");
-    ml("(1, true)").assertType("int * bool");
-    ml("(1, true, false andalso false)").assertType("int * bool * bool");
-    ml("(1)").assertType("int");
-    ml("()").assertType("unit");
-    ml("{a = 1, b = true}").assertType("{a:int, b:bool}");
-    ml("(fn x => x + 1, fn y => y + 1)")
-        .assertType("(int -> int) * (int -> int)");
-    ml("let val x = 1.0 in x + 2.0 end").assertType("real");
-
-    final String ml =
-        "let val x = 1 in\n"
-            + "  let val y = 2 in\n"
-            + "    x + y\n"
-            + "  end\n"
-            + "end";
-    ml(ml).assertType("int");
-
-    ml("1 + \"a\"")
-        .assertTypeThrowsRuntimeException(
-            "Cannot deduce type: conflict: int vs string");
-
-    ml("NONE").assertType("'a option");
-    ml("SOME 4").assertType("int option");
-    ml("SOME (SOME true)").assertType("bool option option");
-    ml("SOME (SOME [1, 2])").assertType("int list option option");
-    ml("SOME (SOME {a=1, b=true})").assertType("{a:int, b:bool} option option");
-
-    ml("{a=1,b=true}").assertType("{a:int, b:bool}");
-    ml("{{a=1,b=true} with b=false}").assertType("{a:int, b:bool}");
-  }
-
-  @Test
-  void testTypeFn() {
-    ml("fn x => x + 1").assertType("int -> int");
-    ml("fn x => fn y => x + y").assertType("int -> int -> int");
-    ml("fn x => case x of 0 => 1 | _ => 2").assertType("int -> int");
-    ml("fn x => case x of 0 => \"zero\" | _ => \"nonzero\"")
-        .assertType("int -> string");
-    ml("fn x: int => true").assertType("int -> bool");
-    ml("fn x: int * int => true").assertType("int * int -> bool");
-    ml("fn x: int * string => (false, #2 x)")
-        .assertType("int * string -> bool * string");
-  }
-
-  @Test
-  void testTypeFnTuple() {
-    ml("fn (x, y) => (x + 1, y + 1)").assertType("int * int -> int * int");
-    ml("(fn x => x + 1, fn y => y + 1)")
-        .assertType("(int -> int) * (int -> int)");
-    ml("fn x => fn (y, z) => x + y + z").assertType("int -> int * int -> int");
-    ml("fn (x, y) => (x + 1, fn z => (x + z, y + z), y)")
-        .assertType("int * int -> int * (int -> int * int) * int");
-    ml("fn {a = x, b = y, c} => x + y")
-        .assertType("{a:int, b:int, c:'a} -> int");
-  }
-
-  @Test
-  void testTypeLetRecFn() {
-    final String ml =
-        "let\n"
-            + "  val rec f = fn n => if n = 0 then 1 else n * (f (n - 1))\n"
-            + "in\n"
-            + "  f 5\n"
-            + "end";
-    ml(ml).assertType("int");
-
-    final String ml2 = ml.replace(" rec", "");
-    assertThat(ml2, not(is(ml)));
-    ml(ml2).assertError(is("f not found"));
-
-    ml("let val rec x = 1 and y = 2 in x + y end")
-        .assertError("Error: fn expression required on rhs of val rec");
-  }
-
-  @Test
-  void testRecordType() {
-    final String ml = "map #empno [{empno = 10, name = \"Shaggy\"}]";
-    ml(ml).assertType("int list");
-
-    ml("{a=1, b=true}").assertType("{a:int, b:bool}");
-    ml("{c=1, b=true}").assertType("{b:bool, c:int}");
-    mlE("{a=1, b=true, $a$=3}")
-        .assertTypeThrowsTypeException("duplicate field 'a' in record");
-  }
-
-  @Test
-  void testIncompleteRecordType() {
-    final String ml = "fn (e, job) => e.job = job";
-    String message =
-        "unresolved flex record (can't tell what fields there are besides #job)";
-    ml(ml).assertTypeThrowsRuntimeException(message);
-  }
-
-  @Test
-  void testOverload() {
-    final String ml =
-        "let\n"
-            + "  over foo\n"
-            + "  val inst foo = fn i: int => i\n"
-            + "  val inst foo = fn b: bool => b\n"
-            + "in\n"
-            + "  foo false\n"
-            + "end";
-    String expected = "bool";
-    ml(ml).assertType(expected);
-  }
-
-  @Test
-  void testOverload1() {
-    final String ml =
-        "let\n"
-            + "  over foo\n"
-            + "  val inst foo = fn NONE => [] | SOME x => [x]\n"
-            + "  val inst foo = fn list => List.null list\n"
-            + "in\n"
-            + "  foo (SOME 1)\n"
-            + "end";
-    String expected = "int list";
-    ml(ml).assertType(expected);
-  }
-
-  @Test
-  void testApply() {
-    ml("hd [\"abc\"]").assertType("string");
-  }
-
-  @Test
-  void testApply2() {
-    ml("map (fn x => String.size x) [\"abc\", \"de\"]").assertType("int list");
-  }
-
-  @Test
-  void testApplyIsMonomorphic() {
-    // cannot be typed, since the parameter f is in a monomorphic position
-    ml("fn f => (f true, f 0)")
-        .assertTypeThrowsRuntimeException(
-            "Cannot deduce type: conflict: int vs bool");
-  }
+  // testOverload, testOverload1, testApply, testApply2 migrated to
+  // type-inference.smli
 
   @Disabled("disable failing test - enable when we have polymorphic types")
   @Test
@@ -705,28 +555,11 @@ public class MainTest {
 
   @Test
   void testTypeVariable() {
-    // constant
-    ml("fn _ => 42").assertType("'a -> int");
+    // Type tests migrated to type-inference.smli; keeping eval tests here
     ml("(fn _ => 42) 2").assertEval(is(42));
-    ml("fn _ => fn _ => 42").assertType("'a -> 'b -> int");
-
-    // identity
-    ml("fn x => x").assertType("'a -> 'a");
     ml("(fn x => x) 2").assertEval(is(2));
     ml("(fn x => x) \"foo\"").assertEval(is("foo"));
     ml("(fn x => x) true").assertEval(is(true));
-    ml("let fun id x = x in id end").assertType("'a -> 'a");
-    ml("fun id x = x").assertType("'a -> 'a");
-
-    // first/second
-    ml("fn x => fn y => x").assertType("'a -> 'b -> 'a");
-    ml("let fun first x y = x in first end").assertType("'a -> 'b -> 'a");
-    ml("fun first x y = x").assertType("'a -> 'b -> 'a");
-    ml("fun second x y = y").assertType("'a -> 'b -> 'b");
-    ml("fun choose b x y = if b then x else y")
-        .assertType("bool -> 'a -> 'a -> 'a");
-    ml("fun choose b (x, y) = if b then x else y")
-        .assertType("bool -> 'a * 'a -> 'a");
   }
 
   @Disabled("disable failing test - enable when we have polymorphic types")
@@ -1435,29 +1268,15 @@ public class MainTest {
 
   @Test
   void testRecordTuple() {
-    ml("{ 1 = true, 2 = 0}").assertType("bool * int");
-    ml("{2=0,1=true}").assertType("bool * int");
-    ml("{3=0,1=true,11=false}").assertType("{1:bool, 3:int, 11:bool}");
-    ml("#1 {1=true,2=0}").assertType("bool");
-    ml("#1 (true, 0)").assertType("bool");
+    // Type tests migrated to type-inference.smli; keeping eval tests here
     ml("#2 (true, 0)").assertType("int").assertEval(is(0));
-
-    // empty record = () = unit
-    ml("()").assertType("unit");
     ml("{}").assertType("unit").assertEval(is(ImmutableList.of()));
   }
 
   @Test
   void testList() {
-    ml("[1]").assertType("int list");
-    ml("[[1]]").assertType("int list list");
-    ml("[(1, true), (2, false)]").assertType("(int * bool) list");
-    ml("1 :: [2]").assertType("int list");
-    ml("1 :: [2, 3]").assertType("int list");
-    ml("[1] :: [[2], [3]]").assertType("int list list");
-    ml("1 :: []").assertType("int list");
+    // Type tests migrated to type-inference.smli; keeping eval test here
     ml("1 :: 2 :: []").assertType("int list").assertEval(is(list(1, 2)));
-    ml("fn [] => 0").assertType("'a list -> int");
   }
 
   @Disabled("need type annotations")
@@ -2453,17 +2272,8 @@ public class MainTest {
 
   @Test
   void testFromType() {
-    ml("from i in [1]").assertType("int list");
-    ml("from i in bag [1]").assertType("int bag");
-    ml("from i in (from j in bag [1])").assertType("int bag");
-    ml("from i in (\n"
-            + "  from e in bag [{deptno=10}]\n"
-            + "  yield e.deptno)\n"
-            + "where i > 10\n"
-            + "yield i / 10")
-        .assertType("int bag");
-    ml("from (i, j) in [(\"a\", 1)]").assertType("{i:string, j:int} list");
-    ml("from (i, j) in [(1, 1), (2, 3)]").assertType("{i:int, j:int} list");
+    // Most type tests migrated to type-inference.smli.
+    // Keeping tests with assertParse, assertEval, or other assertions.
     ml("from (x, y) in [(1,2),(3,4),(3,0)] group x + y")
         .assertParse("from (x, y) in [(1, 2), (3, 4), (3, 0)] group x + y")
         .assertType(hasMoniker("int list"))
@@ -2478,114 +2288,12 @@ public class MainTest {
             "from {a = a, c = c, ...}"
                 + " in [{a = 1.0, b = true, c = 3}, {a = 1.5, b = true, c = 4}]")
         .assertType("{a:real, c:int} list");
-    ml("from i in [1] group i compute count over i")
-        .assertType("{count:int, i:int} list");
-    ml("from i in bag [1] group i compute count over i")
-        .assertType("{count:int, i:int} bag");
-    ml("from (r, s) in [(1.0, \"a\")]\n"
-            + "  group r compute {x = 1 + sum over size s}")
-        .assertType("{r:real, x:int} list");
-    ml("from (r, s) in [(1.0, \"a\")]\n"
-            + "  group r compute {x = 1 + sum over size s,\n"
-            + "                   y = 0,\n"
-            + "                   z = concat over s}")
-        .assertType("{r:real, x:int, y:int, z:string} list");
-    ml("from p in [{r=1.0, s=\"a\"}]\n" //
-            + "  group p.r compute {x = r}")
-        .assertType("{r:real, x:real} list");
-    mlE("from p in [{r=1.0, s=\"a\"}]\n" //
-            + "  group p.r compute {x = $p$.r}")
-        .assertTypeThrowsCompileException("unbound variable or constructor: p");
     ml("from d in [{a=1,b=true}] yield d.a into sum")
         .assertType("int")
         .assertEval(is(1));
-    ml("fn f => from i in [1, 2, 3] join j in [3, 4] on f (i, j) yield i + j")
-        .assertType("(int * int -> bool) -> int list");
-    ml("fn f => from i in [1, 2, 3] where f i")
-        .assertType("(int -> bool) -> int list");
-    ml("from a in [1], b in [true]").assertType("{a:int, b:bool} list");
-    ml("from a in [1], b in [()]").assertType("{a:int, b:unit} list");
-    ml("from a in [1], _ in [true]").assertType("int list");
-    ml("from a in [1], _ in bag [true]").assertType("int bag");
-    ml("from a in [1], _ = ()").assertType("int list");
-    ml("from a in bag [1], _ = ()").assertType("int bag");
-
-    ml("from a in [1], b in [true] yield a").assertType("int list");
-    ml("from a in [1], b in [true] yield {a,b}")
-        .assertType("{a:int, b:bool} list");
-    ml("from a in [1], b in [true] yield {y=a,b}")
-        .assertType("{b:bool, y:int} list");
-    ml("from a in [1], b in [true] yield {y=a,x=b,z=a}")
-        .assertType("{x:bool, y:int, z:int} list");
-    ml("from a in [1], b in [true] yield {y=a,x=b,z=a} yield {z,x}")
-        .assertType("{x:bool, z:int} list");
-    ml("from a in [1], b in [true] yield {y=a,x=b,z=a} yield {z}")
-        .assertType("{z:int} list");
-    ml("from a in [1], b in [true] yield (b,a)")
-        .assertType("(bool * int) list");
-    ml("from a in [1], b in [true] yield (b)").assertType("bool list");
-    ml("from a in [1], b in [true] yield {b,a} yield a").assertType("int list");
-    mlE("from a in [1], b in [true] yield (b,a) where $c$")
-        .assertCompileException("unbound variable or constructor: c");
-    ml("from a in [1], b in [true] yield {b,a} where b")
-        .assertType("{a:int, b:bool} list");
-    ml("from a in [1], b in [true] yield {b,a,c=\"c\"} where b")
-        .assertType("{a:int, b:bool, c:string} list");
-    ml("from a in [1], b in [true] yield (b,a) where true")
-        .assertType("(bool * int) list");
-    mlE("from a in [1], b in [true] yield (b,a) where $b$")
-        .assertCompileException("unbound variable or constructor: b");
     ml("from a in [1], b in [true] yield {b,a} where b")
         .assertType("{a:int, b:bool} list")
         .assertEval(is(list(list(1, true))));
-    ml("from d in [{a=1,b=true}], i in [2] yield i").assertType("int list");
-    ml("from d in [{a=1,b=true}], i in [2] yield {d}")
-        .assertType("{d:{a:int, b:bool}} list");
-    ml("from d in [{a=1,b=true}], i in [2] yield {d} where true")
-        .assertType("{d:{a:int, b:bool}} list");
-    mlE("from d in [{a=1,b=true}], i in [2] yield {d} yield $a$")
-        .assertCompileException(
-            pos ->
-                throwsA(
-                    CompileException.class,
-                    "unbound variable or constructor: a",
-                    pos));
-    ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} yield a")
-        .assertType("int list");
-    ml("from d in [{a=1,b=true}], i in [2] yield i yield 3")
-        .assertType("int list");
-    ml("from d in [{a=1,b=true}], i in [2] yield d")
-        .assertType("{a:int, b:bool} list");
-    mlE("from d in [{a=1,b=true}], i in [2] yield d yield $a$")
-        .assertCompileException("unbound variable or constructor: a");
-    ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} yield a")
-        .assertType("int list");
-    ml("from d in [{a=1,b=true}], i in [2] yield (d.b, i) yield #1 current")
-        .assertType("bool list");
-    ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} order a")
-        .assertType("{a:int, b:bool} list");
-    ml("from d in [{a=1,b=true}], i in [2] yield {d.a,d.b} order current.a")
-        .assertType("{a:int, b:bool} list");
-    ml("from d in [{a=1,b=true}], i in [2] yield d where true")
-        .assertType("{a:int, b:bool} list");
-    ml("from d in [{a=1,b=true}], i in [2] yield d distinct")
-        .assertType("{a:int, b:bool} list");
-    ml("from d in [{a=1,b=true}], i in [2] yield d yield d.a")
-        .assertType("int list");
-    ml("from d in [{a=1,b=true}], i in [2] yield d order d.a")
-        .assertType("{a:int, b:bool} list");
-    ml("from d in [{a=1,b=true}], i in [2] yield i yield 3.0")
-        .assertType("real list");
-
-    // order
-    ml("from e in [{empno=1,deptno=10,name=\"Fred\"},\n"
-            + "        {empno=2,deptno=10,name=\"Jane\"}]\n"
-            + "  order (e.empno, e.deptno)")
-        .assertType("{deptno:int, empno:int, name:string} list");
-    ml("from e in [{empno=1,deptno=10,name=\"Fred\"},\n"
-            + "        {empno=2,deptno=10,name=\"Jane\"}]\n"
-            + "  order {e.deptno, e.empno}")
-        .assertType("{deptno:int, empno:int, name:string} list");
     mlE("from e in [{empno=1,deptno=10,name=\"Fred\"},\n"
             + "         ${$empno=2,deptno=10,name=\"Jane\"}]\n"
             + "  order {e.empno, e.deptno}")
@@ -2596,69 +2304,13 @@ public class MainTest {
                     + "order. Sort order may not be what you expect. "
                     + "at stdIn:3.9-3.28]"))
         .assertType("{deptno:int, empno:int, name:string} list");
-
-    // unorder
-    ml("from d in [{a=1,b=true}], i in [2] unorder")
-        .assertType("{d:{a:int, b:bool}, i:int} bag");
-    ml("from d in [{a=1,b=true}], i in [2] unorder unorder")
-        .assertType("{d:{a:int, b:bool}, i:int} bag");
-    ml("from d in [{a=1,b=true}], i in [2] unorder order i")
-        .assertType("{d:{a:int, b:bool}, i:int} list");
   }
 
   @Test
   void testFromType2() {
-    // ordinal doesn't affect type but is only valid in an ordered query
-    ml("from i in [1,2,3,4,5] yield i + ordinal").assertType("int list");
-    mlE("from i in bag [1,2,3,4,5] yield i + $ordinal$")
-        .assertTypeThrowsTypeException(
-            "cannot use 'ordinal' in unordered query");
-    ml("from i in bag [1,2,3,4,5] order DESC i yield i + ordinal")
-        .assertType("int list");
-
-    // current
-    mlE("from i in [1,2,3,4,5] take $current$")
-        .assertCompileException("'current' is only valid in a query");
-    ml("from i in [1,2,3,4,5] yield substring(\"hello\", 1, current)")
-        .assertType("string list");
-
-    // with
-    ml("from d in [{a=1,b=true}], i in [2] yield {d with b=false}")
-        .assertType("{a:int, b:bool} list");
-    if (false) {
-      // Type inference with "with" is just too hard.
-      ml("from d in [{a=1,b=true}], i in [2] yield {d with b=false} where b")
-          .assertType("{a:int, b:bool} list");
-      ml("from d in [{a=1,b=true}], i in [2] yield {d with b=false} order b")
-          .assertType("{a:int, b:bool} list");
-    }
-
-    ml("from e in [{x=1,y=2},{x=3,y=4},{x=5,y=6}]\n"
-            + "  yield {z=e.x}\n"
-            + "  where z > 2\n"
-            + "  order DESC z\n"
-            + "  yield {z=z}")
-        .assertType("{z:int} list");
-    mlE("from d in [{a=1,b=true}] yield d.$x$")
-        .assertTypeThrowsTypeException(
-            "no field 'x' in type '{a:int, b:bool}'");
-    mlE("from d in [{a=1,b=true}] yield $#x$ d")
-        .assertTypeThrowsTypeException(
-            "no field 'x' in type '{a:int, b:bool}'");
-
-    // into
-    ml("from d in [{a=1,b=true}] yield d.a into List.length").assertType("int");
-    ml("from d in bag [{a=1,b=true}] yield d.a into Bag.length")
-        .assertType("int");
     ml("from d in [{a=1,b=true}] yield d.a into sum")
         .assertType("int")
         .assertEval(is(1));
-
-    // exists, forall
-    ml("exists d in [{a=1,b=true}] where d.a = 0").assertType("bool");
-    ml("forall d in [{a=1,b=true}] require d.a = 0").assertType("bool");
-
-    // functions based on set operators
 
     // TODO when [MOREL-270] is fixed, we can deduce that the type is
     // constrained, e.g. "multi (int list * int bag -> int bag, int list * int
@@ -2670,47 +2322,6 @@ public class MainTest {
     ml("fn (a: int list, b) => from i in a except b")
         .assertType("int list * 'a -> 'b");
 
-    // invalid last step
-    mlE("from d in [{a=1,b=true}] yield d.a into sum $yield \"a\"$")
-        .assertCompileException("'into' step must be last in 'from'");
-    mlE("exists d in [{a=1,b=true}] yield d.a $into sum$")
-        .assertCompileException("'into' step must not occur in 'exists'");
-    mlE("forall d in [{a=1,b=true}] yield d.a $into sum$")
-        .assertCompileException("'into' step must not occur in 'forall'");
-    mlE("forall d in [{a=1,b=true}] yield d.a $compute sum over current$")
-        .assertCompileException("'compute' step must not occur in 'forall'");
-    mlE("forall d in [{a=1,b=true}] $yield d.a$")
-        .assertCompileException("last step of 'forall' must be 'require'");
-    mlE("forall $d in [{a=1,b=true}]$")
-        .assertCompileException("last step of 'forall' must be 'require'");
-
-    // let
-    ml("let\n"
-            + "  val records = from r in bag [1,2]\n"
-            + "in\n"
-            + "  from r2 in records\n"
-            + "end")
-        .assertType("int bag");
-    ml("let\n"
-            + "  val records = from r in [{i=1,j=2}]\n"
-            + "in\n"
-            + "  from r2 in records\n"
-            + "end")
-        .assertType("{i:int, j:int} list");
-
-    // "map String.size" has type "string list -> int list",
-    // and therefore the type of "j" is "int"
-    ml("from s in [\"ab\",\"c\"]\n" //
-            + " through j in (map String.size)")
-        .assertType("int list");
-    ml("from s in [\"ab\",\"c\"]\n"
-            + " through j in (map String.size)\n"
-            + " yield j + 2")
-        .assertType("int list");
-    ml("from s in bag [\"ab\",\"c\"]\n"
-            + " through j in (Bag.map String.size)\n"
-            + " yield j + 2")
-        .assertType("int bag");
     ml("from d in [{a=1,b=true},{a=2,b=false}]\n"
             + " yield d.a\n"
             + " through s in (fn ints =>\n"
