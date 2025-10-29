@@ -28,9 +28,9 @@ Sys.set ("printDepth", ~1);
 > val it = ~1 : int
 2 * 3;
 > val it = 6 : int
-2 / 3;
+2 div 3;
 > val it = 0 : int
-3 / 2;
+3 div 2;
 > val it = 1 : int
 3 mod 2;
 > val it = 1 : int

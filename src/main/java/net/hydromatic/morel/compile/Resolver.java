@@ -53,6 +53,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.Predicate;
 import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.FromBuilder;
 import net.hydromatic.morel.ast.Op;
@@ -516,6 +517,8 @@ public class Resolver {
         return toCore(((Ast.AnnotatedExp) exp).exp);
       case ID:
         return toCore((Ast.Id) exp);
+      case OP_SECTION:
+        return toCore((Ast.OpSection) exp);
       case CURRENT:
         return toCore((Ast.Current) exp);
       case ELEMENTS:
@@ -566,6 +569,16 @@ public class Resolver {
     return core.id(idPat);
   }
 
+  private Core.Exp toCore(Ast.OpSection opSection) {
+    final Binding binding = env.getOpt("op " + opSection.name);
+    checkNotNull(binding, "not found", opSection);
+
+    // Just return a reference to the operator binding
+    // The operator is already defined as a function value
+    final Core.NamedPat idPat = getIdPat(opSection, binding.id);
+    return core.id(idPat);
+  }
+
   private Core.Exp toCore(Ast.Current ignoredCurrent) {
     return requireNonNull(this.current);
   }
@@ -587,7 +600,7 @@ public class Resolver {
    * Converts an Id that is a reference to a variable into an IdPat that
    * represents its declaration.
    */
-  private Core.NamedPat getIdPat(Ast.Id id, Core.NamedPat coreId) {
+  private Core.NamedPat getIdPat(AstNode id, Core.NamedPat coreId) {
     final Type type = typeMap.getType(id);
     if (type == coreId.type) {
       return coreId;

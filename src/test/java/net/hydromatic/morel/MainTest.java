@@ -702,8 +702,8 @@ public class MainTest {
     ml("2 * 3 + 4 * 5").assertEval(is(26));
     ml("2 - 3").assertEval(is(-1));
     ml("2 * 3").assertEval(is(6));
-    ml("20 / 3").assertEval(is(6));
-    ml("20 / ~3").assertEval(is(-6));
+    ml("20.0 / 4.0").assertEval(is(5f));
+    ml("20.0 / ~5.0").assertEval(is(-4f));
 
     ml("10 mod 3").assertEval(is(1));
     ml("~10 mod 3").assertEval(is(2));

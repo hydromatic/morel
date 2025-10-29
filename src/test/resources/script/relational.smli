@@ -824,14 +824,14 @@ from e in emps
 from e in emps
   yield {d = e.deptno}
   order DESC d
-  yield {tens = d / 10, units = d mod 10};
+  yield {tens = d div 10, units = d mod 10};
 > val it = [{tens=3,units=0},{tens=3,units=0},{tens=2,units=0},{tens=1,units=0}]
 >   : {tens:int, units:int} list
 
 (*) assignment to 'd' via a pattern
 from {deptno = d} in [{deptno=10}, {deptno=20}]
   order DESC d
-  yield {tens = d / 10, units = d mod 10};
+  yield {tens = d div 10, units = d mod 10};
 > val it = [{tens=2,units=0},{tens=1,units=0}] : {tens:int, units:int} list
 
 (*) record whose only field is a record with only one field
@@ -902,7 +902,7 @@ from i in [2, 1, 2]
   group i compute {x = from j in [3, 4] yield j + (sum over i)};
 > val it = [{i=1,x=[4,5]},{i=2,x=[7,8]}] : {i:int, x:int list} list
 from (i, j) in [(2, 5), (1, 1), (2, 7)]
-  group i compute {mid = ((min over j) + (max over j)) / 2};
+  group i compute {mid = ((min over j) + (max over j)) div 2};
 > val it = [{i=1,mid=1},{i=2,mid=6}] : {i:int, mid:int} list
 from i in [2, 1, 2]
   compute 1;
@@ -1513,7 +1513,7 @@ let
   fun foldl f start [] = start
     | foldl f start (hd :: tl) = foldl f (f (start, hd)) tl
 in
-  foldl (fn (x, y) => x + y) 0 [2,3,4]
+  foldl (op +) 0 [2,3,4]
 end;
 > val it = 9 : int
 
@@ -1835,7 +1835,7 @@ from e in emps
 group e.deptno
   compute {sumId = sum over e.id,
            count = count over e}
-yield {deptno, avgId = sumId / count}
+yield {deptno, avgId = sumId div count}
 order deptno;
 > val it = [{avgId=100,deptno=10},{avgId=101,deptno=20},{avgId=102,deptno=30}]
 >   : {avgId:int, deptno:int} list
@@ -1846,7 +1846,7 @@ from g in (
   group e.deptno
     compute {sumId = sum over e.id,
              count = count over e})
-yield {g.deptno, avgId = g.sumId / g.count}
+yield {g.deptno, avgId = g.sumId div g.count}
 order deptno;
 > val it = [{avgId=100,deptno=10},{avgId=101,deptno=20},{avgId=102,deptno=30}]
 >   : {avgId:int, deptno:int} list
@@ -1857,7 +1857,7 @@ group e.deptno
   compute {sumId = sum over e.id,
            count = count over e}
 order DESC deptno
-yield {deptno, avgId = sumId / count};
+yield {deptno, avgId = sumId div count};
 > val it = [{avgId=102,deptno=30},{avgId=101,deptno=20},{avgId=100,deptno=10}]
 >   : {avgId:int, deptno:int} list
 

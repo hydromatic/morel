@@ -122,4 +122,52 @@ in
 end;
 > val it = ["a"] : string list
 
+(* -------------------------------------------------------------
+ * [MOREL-311] op
+ *)
+foldl (op +) 0 [2,3,4];
+> val it = 9 : int
+foldl (op +) 0.0 [2.0,3.5,4.5];
+> val it = 10.0 : real
+op +;
+> val it = fn : int * int -> int
+op *;
+> val it = fn : int * int -> int
+op ~;
+> val it = fn : int -> int
+op div;
+> val it = fn : int * int -> int
+op /;
+> val it = fn : real * real -> real
+op x;
+> stdIn:1.1-1.5 Error: unbound variable or constructor: op x
+>   raised at: stdIn:1.1-1.5
+(* TODO sml-nj allows "op SOME" and "op NONE"
+   but I'm not sure whether Morel should allow them.
+op SOME;
+> val it = fn : 'a -> 'a option
+op NONE;
+> val it = NONE : 'a option
+*)
+(op ~) o (op ~);
+> val it = fn : int -> int
+it 5;
+> val it = 5 : int
+op ~ o op ~ o op ~;
+> val it = fn : int -> int
+it 5;
+> val it = ~5 : int
+(op *) (8,3);
+> val it = 24 : int
+(op +) (3,4);
+> val it = 7 : int
+(op /) (6.0, 4.0);
+> val it = 1.5 : real
+(op ^) ("foo","bar");
+> val it = "foobar" : string
+(op ::) (1,[2,3,4]);
+> val it = [1,2,3,4] : int list
+(op @) ([1,2],[3,4]);
+> val it = [1,2,3,4] : int list
+
 (*) End misc.smli

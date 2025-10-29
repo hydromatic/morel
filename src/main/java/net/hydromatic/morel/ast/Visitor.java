@@ -34,6 +34,8 @@ public class Visitor {
 
   protected void visit(Ast.Id id) {}
 
+  protected void visit(Ast.OpSection opSection) {}
+
   protected void visit(Ast.Current current) {}
 
   protected void visit(Ast.Elements elements) {}

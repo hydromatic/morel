@@ -158,20 +158,21 @@ Real;
 >   {abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,fromInt=fn,
 >    fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,max=fn,
 >    maxFinite=3.4028235E38,min=fn,minNormalPos=1.1754944E~38,minPos=1.4E~45,
->    negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,realFloor=fn,
->    realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,sameSign=fn,sign=fn,
->    signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,unordered=fn}
+>    negInf=~inf,`op /`=fn,posInf=inf,precision=24,radix=2,realCeil=fn,
+>    realFloor=fn,realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,
+>    sameSign=fn,sign=fn,signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,
+>    unordered=fn}
 >   : {abs:real -> real, ceil:real -> int, checkFloat:real -> real,
 >      compare:real * real -> order, copySign:real * real -> real,
 >      floor:real -> int, fromInt:int -> real,
 >      fromManExp:{exp:int, man:real} -> real, fromString:string -> real option,
 >      isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool,
 >      max:real * real -> real, maxFinite:real, min:real * real -> real,
->      minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int,
->      radix:int, realCeil:real -> real, realFloor:real -> real,
->      realMod:real -> real, realRound:real -> real, realTrunc:real -> real,
->      rem:real * real -> real, round:real -> int, sameSign:real * real -> bool,
->      sign:real -> int, signBit:real -> bool,
+>      minNormalPos:real, minPos:real, negInf:real, `op /`:real * real -> real,
+>      posInf:real, precision:int, radix:int, realCeil:real -> real,
+>      realFloor:real -> real, realMod:real -> real, realRound:real -> real,
+>      realTrunc:real -> real, rem:real * real -> real, round:real -> int,
+>      sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool,
 >      split:real -> {frac:real, whole:real},
 >      toManExp:real -> {exp:int, man:real}, toString:real -> string,
 >      trunc:real -> int, unordered:real * real -> bool}
@@ -262,10 +263,24 @@ DESC (DESC "a");
 (*) TODO !;
 (* "val := : 'a ref * 'a -> unit" maps to "General.:=" *)
 (*) TODO :=;
+(* "val ~ : int -> int" maps to "Int.~" *)
+op ~;
+> val it = fn : int -> int
+(* "val + : int * int -> int" maps to "Int.+" *)
+op +;
+> val it = fn : int * int -> int
+(* "val - : int * int -> int" maps to "Int.-" *)
+op -;
+> val it = fn : int * int -> int
+(* "val * : int * int -> int" maps to "Int.*" *)
+op *;
+> val it = fn : int * int -> int
 (* "val @ : ('a list * 'a list) -> 'a list" maps to "List.@" *)
-(*) TODO @;
+op @;
+> val it = fn : 'a list * 'a list -> 'a list
 (* "val ^ : string * string -> string" maps to "String.^" *)
-(*) TODO ^;
+op ^;
+> val it = fn : string * string -> string
 (* "val app : ('a -> unit) -> 'a list -> unit" maps to "List.app" *)
 app;
 > val it = fn : ('a -> unit) -> 'a list -> unit
@@ -1523,15 +1538,17 @@ List.foldl;
 > val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
 List.foldl (fn (a, b) => a + b) 0 [1,2,3];
 > val it = 6 : int
-List.foldl (fn (a, b) => a + b) 0 [];
+List.foldl (op +) 0 [1,2,3];
+> val it = 6 : int
+List.foldl (op +) 0 [];
 > val it = 0 : int
 List.foldl (fn (a, b) => b) 0 [1,2,3];
 > val it = 0 : int
-List.foldl (fn (a, b) => a - b) 0 [1,2,3,4];
+List.foldl (op -) 0 [1,2,3,4];
 > val it = 2 : int
 Sys.plan ();
 > val it =
->   "apply3(fnValue List.foldl, match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v))), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   "apply3(fnValue List.foldl, constant(-), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
 >   : string
 
 (*) val foldr : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
@@ -1539,15 +1556,17 @@ List.foldr;
 > val it = fn : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
 List.foldr (fn (a, b) => a + b) 0 [1,2,3];
 > val it = 6 : int
-List.foldr (fn (a, b) => a + b) 0 [];
+List.foldr (op +) 0 [1,2,3];
+> val it = 6 : int
+List.foldr (op +) 0 [];
 > val it = 0 : int
 List.foldr (fn (a, b) => b) 0 [1,2,3];
 > val it = 0 : int
-List.foldr (fn (a, b) => a - b) 0 [1,2,3,4];
+List.foldr (op -) 0 [1,2,3,4];
 > val it = ~2 : int
 Sys.plan ();
 > val it =
->   "apply3(fnValue List.foldr, match(v, apply(fnCode match((a, b), apply2(fnValue -, get(name a), get(name b))), argCode get(name v))), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   "apply3(fnValue List.foldr, constant(-), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
 >   : string
 
 (*) val exists : ('a -> bool) -> 'a list -> bool
@@ -1791,11 +1810,11 @@ ListPair.foldrEq (fn (x, y, r) => x + y + r) 0 ([1, 2], [4, 5, 6]);
    List.map f (zip (xs, ys)). *)
 ListPair.map;
 > val it = fn : ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list
-ListPair.map (fn (x, y) => x + y) ([1, 2, 3], [4, 5, 6]);
+ListPair.map (op +) ([1, 2, 3], [4, 5, 6]);
 > val it = [5,7,9] : int list
-ListPair.map (fn (x, y) => x + y) ([1, 2, 3], [4, 5]);
+ListPair.map (op +) ([1, 2, 3], [4, 5]);
 > val it = [5,7] : int list
-ListPair.map (fn (x, y) => x + y) ([], [4, 5]);
+ListPair.map (op +) ([], [4, 5]);
 > val it = [] : int list
 
 (* [mapEq f (xs, ys)] applies function f to pairs of corresponding
@@ -1805,14 +1824,14 @@ ListPair.map (fn (x, y) => x + y) ([], [4, 5]);
    is equivalent to List.map f (zipEq (xs, ys)). *)
 ListPair.mapEq;
 > val it = fn : ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list
-ListPair.mapEq (fn (x, y) => x + y) ([1, 2, 3], [4, 5, 6]);
+ListPair.mapEq (op +) ([1, 2, 3], [4, 5, 6]);
 > val it = [5,7,9] : int list
-ListPair.mapEq (fn (x, y) => x + y) ([1, 2, 3], [4, 5]);
+ListPair.mapEq (op +) ([1, 2, 3], [4, 5]);
 > uncaught exception UnequalLengths
->   raised at: stdIn:1.1-1.56
-ListPair.mapEq (fn (x, y) => x + y) ([], [4, 5]);
+>   raised at: stdIn:1.1-1.42
+ListPair.mapEq (op +) ([], [4, 5]);
 > uncaught exception UnequalLengths
->   raised at: stdIn:1.1-1.49
+>   raised at: stdIn:1.1-1.35
 
 (* [unzip xys] returns a pair (xs, ys), where xs is the list of first
    components of xys, and ys is the list of second components from
@@ -2963,6 +2982,8 @@ Real.negInf * Real.negInf;
    or an infinity by a finite number produces an infinity with the correct sign.
    (Note that zeros are signed.) A finite number divided by an infinity is 0
    with the correct sign. *)
+Real.`op /`;
+> val it = fn : real * real -> real
 0.0 / 0.0;
 > val it = nan : real
 Real.posInf / Real.negInf;
@@ -4299,7 +4320,7 @@ Sys.env ();
 >    ("Option",
 >     "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
 >    ("Real",
->     "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
+>     "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, `op /`:real * real -> real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",
 >     "{compare:forall 'a. 'a * 'a -> order, count:multi(forall 'a. 'a bag -> int,forall 'a. 'a list -> int), empty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), min:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), nonEmpty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a)}"),
 >    ("SOME","forall 'a. 'a -> 'a option"),
@@ -4333,7 +4354,7 @@ Sys.env ();
 >    ("noneInt","int option"),("not","bool -> bool"),
 >    ("null","forall 'a. 'a list -> bool"),("only","forall 'a. 'a bag -> 'a"),
 >    ("op *","forall 'a. 'a * 'a -> 'a"),("op +","forall 'a. 'a * 'a -> 'a"),
->    ("op -","forall 'a. 'a * 'a -> 'a"),("op /","forall 'a. 'a * 'a -> 'a"),
+>    ("op -","forall 'a. 'a * 'a -> 'a"),("op /","real * real -> real"),
 >    ("op ::","forall 'a. 'a * 'a list -> 'a list"),
 >    ("op <","forall 'a. 'a * 'a -> bool"),
 >    ("op <=","forall 'a. 'a * 'a -> bool"),
@@ -4396,7 +4417,7 @@ env ();
 >    ("Option",
 >     "{app:forall 'a. ('a option -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
 >    ("Real",
->     "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
+>     "{abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, `op /`:real * real -> real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",
 >     "{compare:forall 'a. 'a * 'a -> order, count:multi(forall 'a. 'a bag -> int,forall 'a. 'a list -> int), empty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), min:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), nonEmpty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a)}"),
 >    ("SOME","forall 'a. 'a -> 'a option"),
@@ -4430,7 +4451,7 @@ env ();
 >    ("noneInt","int option"),("not","bool -> bool"),
 >    ("null","forall 'a. 'a list -> bool"),("only","forall 'a. 'a bag -> 'a"),
 >    ("op *","forall 'a. 'a * 'a -> 'a"),("op +","forall 'a. 'a * 'a -> 'a"),
->    ("op -","forall 'a. 'a * 'a -> 'a"),("op /","forall 'a. 'a * 'a -> 'a"),
+>    ("op -","forall 'a. 'a * 'a -> 'a"),("op /","real * real -> real"),
 >    ("op ::","forall 'a. 'a * 'a list -> 'a list"),
 >    ("op <","forall 'a. 'a * 'a -> bool"),
 >    ("op <=","forall 'a. 'a * 'a -> bool"),
@@ -4698,11 +4719,11 @@ Sys.plan ();
 (*) Vector.foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
 Vector.foldl;
 > val it = fn : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
-Vector.foldl (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
+Vector.foldl (op +) 0 (Vector.fromList [2,3,4]);
 > val it = 9 : int
 Sys.plan ();
 > val it =
->   "apply3(fnValue Vector.foldl, match(v, apply(fnCode match((j, a), apply2(fnValue +, get(name a), get(name j))), argCode get(name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Vector.foldl, constant(+), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b

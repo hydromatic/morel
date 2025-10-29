@@ -28,6 +28,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public enum Op {
   // identifiers
   ID(true),
+  OP_SECTION(true),
   CURRENT(" current ", 99, 99),
   ELEMENTS(" elements ", 99, 99),
   ORDINAL(" ordinal ", 99, 99),

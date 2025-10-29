@@ -206,6 +206,10 @@ public enum AstBuilder {
     return new Ast.Id(pos, name);
   }
 
+  public Ast.OpSection opSection(Pos pos, String name) {
+    return new Ast.OpSection(pos, name);
+  }
+
   /**
    * Returns an identifier that is the empty string, and is used to indicate a
    * missing label in a record expression.

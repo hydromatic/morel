@@ -936,6 +936,37 @@ public class Ast {
   }
 
   /**
+   * Parse tree node of an operator section, e.g. {@code op +}.
+   *
+   * <p>The {@code op} keyword converts an infix operator to a value. For
+   * example, {@code op +} is equivalent to {@code fn (x, y) => x + y}.
+   */
+  public static class OpSection extends Exp {
+    public final String name;
+
+    /** Creates an OpSection. */
+    OpSection(Pos pos, String name) {
+      super(pos, Op.OP_SECTION);
+      this.name = requireNonNull(name);
+    }
+
+    @Override
+    public OpSection accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("op ").id(name);
+    }
+  }
+
+  /**
    * Parse tree node of the "current" reference.
    *
    * <p>{@code current} references the current row in a step of a query. Also,

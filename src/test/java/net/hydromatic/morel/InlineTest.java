@@ -344,19 +344,19 @@ public class InlineTest {
             + "  from e in scott.emps\n"
             + "  yield e.deptno)\n"
             + "where i > 10\n"
-            + "yield i / 10";
+            + "yield i div 10";
     final String core0 =
         "val it = "
             + "from e in #emps scott "
             + "yield {i = #deptno e} "
             + "where i > 10 "
-            + "yield i / 10";
+            + "yield i div 10";
     final String core1 =
         "val it = "
             + "from e in #emps scott "
             + "yield {i = #deptno e} "
             + "where i > 10 "
-            + "yield /:int (i, 10)";
+            + "yield op div (i, 10)";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertCoreString(

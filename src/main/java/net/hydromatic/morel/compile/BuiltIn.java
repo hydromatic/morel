@@ -86,18 +86,6 @@ public enum BuiltIn {
   /** Infix operator "div", of type "int * int &rarr; int". */
   OP_DIV(null, "op div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
-  /**
-   * Infix operator "/", of type "&alpha; * &alpha; &rarr; &alpha;" (where
-   * &alpha; must be numeric).
-   */
-  OP_DIVIDE(
-      null,
-      "op /",
-      PrimitiveType.INT,
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
-
   /** Infix operator "=", of type "&alpha; * &alpha; &rarr; bool". */
   OP_EQ(
       null,
@@ -218,7 +206,10 @@ public enum BuiltIn {
    * be numeric).
    */
   OP_NEGATE(
-      null, "op ~", ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0)))),
+      null,
+      "op ~",
+      PrimitiveType.INT,
+      ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0)))),
 
   /**
    * Infix operator "-", of type "&alpha; * &alpha; &rarr; &alpha;" (where
@@ -2553,6 +2544,10 @@ public enum BuiltIn {
   REAL_COPY_SIGN(
       "Real", "copySign", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
+  /** Function "Real./", of type "real * real &rarr; real". */
+  REAL_DIVIDE(
+      "Real", "op /", "op /", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
   /**
    * Function "Real.floor", of type "real &rarr; int".
    *
@@ -3749,12 +3744,6 @@ public enum BuiltIn {
 
   /** Internal unary negation operator "~", of type "real &rarr; real". */
   Z_NEGATE_REAL("$", "~:real", ts -> ts.fnType(REAL, REAL)),
-
-  /** Internal divide operator "/", of type "int * int &rarr; int". */
-  Z_DIVIDE_INT("$", "/:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /** Internal divide operator "/", of type "real * real &rarr; real". */
-  Z_DIVIDE_REAL("$", "/:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
   /** Internal minus operator "-", of type "int * int &rarr; int". */
   Z_MINUS_INT("$", "-:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),

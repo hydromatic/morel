@@ -80,6 +80,10 @@ public class Shuttle {
     return id; // leaf
   }
 
+  protected Ast.OpSection visit(Ast.OpSection opSection) {
+    return opSection;
+  }
+
   protected Ast.Current visit(Ast.Current current) {
     return current;
   }

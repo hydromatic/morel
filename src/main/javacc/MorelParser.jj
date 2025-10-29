@@ -280,6 +280,41 @@ Id identifier() : {}
   }
 }
 
+/** Parses an operator. */
+OpSection opSection() : {
+  final Pos pos;
+  final String name;
+}
+{
+  <OP> { pos = pos(); }
+  (
+    <IDENTIFIER> { name = token.image; }
+  | <QUOTED_IDENTIFIER> { name = unquoteIdentifier(token.image); }
+  | <PLUS> { name = "+"; }
+  | <MINUS> { name = "-"; }
+  | <STAR> { name = "*"; }
+  | <SLASH> { name = "/"; }
+  | <CARET> { name = "^"; }
+  | <TILDE> { name = "~"; }
+  | <CONS> { name = "::"; }
+  | <AT> { name = "@"; }
+  | <EQ> { name = "="; }
+  | <NE> { name = "<>"; }
+  | <LT> { name = "<"; }
+  | <GT> { name = ">"; }
+  | <LE> { name = "<="; }
+  | <GE> { name = ">="; }
+  | <DIV> { name = "div"; }
+  | <MOD> { name = "mod"; }
+  | <ANDALSO> { name = "andalso"; }
+  | <ORELSE> { name = "orelse"; }
+  | <O> { name = "o"; }
+  )
+  {
+    return ast.opSection(pos.plus(pos()), name);
+  }
+}
+
 /** Parses the {@code current} keyword. */
 Current current() : {}
 {
@@ -1030,6 +1065,8 @@ Exp atom() :
 {
   e = identifier() { return e; }
 |
+  e = opSection() { return e; }
+|
   e = current() { return e; }
 |
   e = elements() { return e; }
@@ -1723,6 +1760,7 @@ AstNode statementEof() :
 | < MOD: "mod" >
 | < O: "o" >
 | < OF: "of" >
+| < OP: "op" >
 | < ORELSE: "orelse" >
 | < REC: "rec" >
 | < THEN: "then" >

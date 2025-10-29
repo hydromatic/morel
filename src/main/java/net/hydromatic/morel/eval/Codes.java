@@ -1906,20 +1906,6 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#OP_DIVIDE */
-  private static final Macro OP_DIVIDE =
-      (typeSystem, env, argType) -> {
-        final Type resultType = ((TupleType) argType).argTypes.get(0);
-        switch ((PrimitiveType) resultType) {
-          case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_INT);
-          case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_DIVIDE_REAL);
-          default:
-            throw new AssertionError("bad type " + argType);
-        }
-      };
-
   /** @see BuiltIn#OP_DIV */
   private static final Applicable2 OP_DIV = new IntDiv(BuiltIn.OP_DIV);
 
@@ -2333,6 +2319,26 @@ public abstract class Codes {
           return Math.copySign(f0, f1);
         }
       };
+
+  /** @see BuiltIn#REAL_DIVIDE */
+  private static final Applicable2 REAL_DIVIDE =
+      new RealDivide(BuiltIn.REAL_DIVIDE);
+
+  /** Implements {@link #REAL_DIVIDE}. */
+  private static class RealDivide extends BaseApplicable2<Float, Float, Float> {
+    RealDivide(BuiltIn builtIn) {
+      super(builtIn);
+    }
+
+    @Override
+    public Float apply(Float a0, Float a1) {
+      final float v = a0 / a1;
+      if (Float.isNaN(v)) {
+        return Float.NaN; // normalize NaN
+      }
+      return v;
+    }
+  }
 
   /** @see BuiltIn#REAL_FLOOR */
   private static final Applicable REAL_FLOOR =
@@ -3471,28 +3477,6 @@ public abstract class Codes {
     }
   }
 
-  /** Implements {@link #OP_DIVIDE} for type {@code int}. */
-  private static final Applicable2 Z_DIVIDE_INT =
-      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_DIVIDE) {
-        @Override
-        public Integer apply(Integer a0, Integer a1) {
-          return a0 / a1;
-        }
-      };
-
-  /** Implements {@link #OP_DIVIDE} for type {@code real}. */
-  private static final Applicable2 Z_DIVIDE_REAL =
-      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_DIVIDE) {
-        @Override
-        public Float apply(Float a0, Float a1) {
-          final float v = a0 / a1;
-          if (Float.isNaN(v)) {
-            return Float.NaN; // normalize NaN
-          }
-          return v;
-        }
-      };
-
   /** @see BuiltIn#Z_EXTENT */
   private static final Applicable Z_EXTENT =
       new BaseApplicable1<List, RangeExtent>(BuiltIn.Z_EXTENT) {
@@ -4087,7 +4071,6 @@ public abstract class Codes {
           .put(BuiltIn.OP_CARET, OP_CARET)
           .put(BuiltIn.OP_CONS, OP_CONS)
           .put(BuiltIn.OP_DIV, OP_DIV)
-          .put(BuiltIn.OP_DIVIDE, OP_DIVIDE)
           .put(BuiltIn.OP_ELEM, OP_ELEM)
           .put(BuiltIn.OP_EQ, OP_EQ)
           .put(BuiltIn.OP_GE, OP_GE)
@@ -4116,6 +4099,7 @@ public abstract class Codes {
           .put(BuiltIn.REAL_CHECK_FLOAT, REAL_CHECK_FLOAT)
           .put(BuiltIn.REAL_COMPARE, REAL_COMPARE)
           .put(BuiltIn.REAL_COPY_SIGN, REAL_COPY_SIGN)
+          .put(BuiltIn.REAL_DIVIDE, REAL_DIVIDE)
           .put(BuiltIn.REAL_FLOOR, REAL_FLOOR)
           .put(BuiltIn.REAL_FROM_INT, REAL_FROM_INT)
           .put(BuiltIn.REAL_FROM_MAN_EXP, REAL_FROM_MAN_EXP)
@@ -4212,8 +4196,6 @@ public abstract class Codes {
           .put(BuiltIn.VECTOR_UPDATE, VECTOR_UPDATE)
           .put(BuiltIn.Z_ANDALSO, Unit.INSTANCE)
           .put(BuiltIn.Z_CURRENT, Unit.INSTANCE)
-          .put(BuiltIn.Z_DIVIDE_INT, Z_DIVIDE_INT)
-          .put(BuiltIn.Z_DIVIDE_REAL, Z_DIVIDE_REAL)
           .put(BuiltIn.Z_ELEMENTS, Unit.INSTANCE)
           .put(BuiltIn.Z_EXTENT, Z_EXTENT)
           .put(BuiltIn.Z_LIST, Z_LIST)

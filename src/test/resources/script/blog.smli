@@ -574,9 +574,6 @@ end;
 (*) === 2020/03/03: Morel: The basic language =======================
 
 (*) WordCount in Standard ML
-(* Note: The blog post used Standard ML. Here, to accommodate missing
-   language features in Morel, we have changed "(op +)" to
-   "(fn (x, y) => x + y)". *)
 fun mapReduce mapper reducer list =
   let
     fun update (key, value, []) = [(key, [value])]
@@ -608,7 +605,7 @@ fun wc_mapper line =
     List.map (fn w => (w, 1)) (split line)
   end;
 > val wc_mapper = fn : string -> (string * int) list
-fun wc_reducer (key, values) = List.foldl (fn (x, y) => x + y) 0 values;
+fun wc_reducer (key, values) = List.foldl (op +) 0 values;
 > val wc_reducer = fn : 'a * int list -> int
 
 (*) Check that they work on discrete values
@@ -923,7 +920,7 @@ fun emps2 () =
        e.name,
        e.deptno,
        comp = fn revenue => case e.deptno of
-           30 => e.id + revenue / 2
+           30 => e.id + revenue div 2
          | _ => e.id};
 > val emps2 = fn
 >   : unit -> {comp:int -> int, deptno:int, id:int, name:string} list
