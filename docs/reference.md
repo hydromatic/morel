@@ -482,7 +482,7 @@ Exception:
 | Bag.fromList | &alpha; list &rarr; &alpha; bag | "fromList l" creates a new bag from `l`, whose length is `length l` and whose elements are the same as those of `l`. Raises `Size` if `maxLen` &lt; `n`. |
 | Bag.toList | &alpha; bag &rarr; &alpha; list | "toList b" creates a new bag from `b`, whose length is `length b` and whose elements are the same as those of `b`. Raises `Size` if `maxLen` &lt; `n`. |
 | Bag.length | &alpha; bag &rarr; int | "length b" returns the number of elements in the bag `b`. |
-| Bag.at | &alpha; bag * &alpha; bag &rarr; &alpha; bag | "at (b1, b2)" returns the bag that is the concatenation of `b1` and `b2`. |
+| Bag.@ | &alpha; bag * &alpha; bag &rarr; &alpha; bag | "@ (b1, b2)" returns the bag that is the concatenation of `b1` and `b2`. |
 | Bag.hd | &alpha; bag &rarr; &alpha; | "hd b" returns an arbitrary element of bag `b`. Raises `Empty` if `b` is `nil`. |
 | Bag.tl | &alpha; bag &rarr; &alpha; bag | "tl b" returns all but one arbitrary element of bag `b`. Raises `Empty` if `b` is `nil`. |
 | Bag.getItem | &alpha; bag &rarr; * (&alpha; * &alpha; bag) option | "getItem b" returns `NONE` if the bag `b` is empty, and `SOME (hd b, tl b)` otherwise (applying `hd` and `tl` simultaneously so that they choose/remove the same arbitrary element). |
@@ -500,8 +500,10 @@ Exception:
 | Bag.all | (&alpha; &rarr; bool) &rarr; &alpha; bag &rarr; bool | "all f b" applies `f` to each element `x` of the bag `b`, in arbitrary order, until `f(x)` evaluates to `false`; it returns `false` if such an `x` exists and `true` otherwise. It is equivalent to `not(exists (not o f) b))`. |
 | Bag.tabulate | int * (int &rarr; &alpha;) &rarr; &alpha; bag | "tabulate (n, f)" returns a bag of length `n` equal to `[f(0), f(1), ..., f(n-1)]`. This is equivalent to the expression:  <pre>fromList (List.tabulate (n, f))</pre>  Raises `Size` if `n` &lt; 0. |
 | Bag.collate | (&alpha; * &alpha; &rarr; order) &rarr; &alpha; bag * &alpha; bag &rarr; order | "collate f (l1, l2)" performs lexicographic comparison of the two bags using the given ordering `f` on the bag elements. |
+| Bool.fromString | string &rarr; bool option | "fromString s" scans a `bool` value from the string `s`. Returns `SOME (true)` if `s` is "true", `SOME (false)` if `s` is "false", and `NONE` otherwise. |
+| Bool.implies | bool * bool &rarr; bool | "b1 implies b2" returns `true` if `b1` is `false` or `b2` is `true`. |
 | Bool.not | bool &rarr; bool | "not b" returns the logical inverse of `b`. |
-| Bool.op implies | bool * bool &rarr; bool | "b1 implies b2" returns `true` if `b1` is `false` or `b2` is `true`. |
+| Bool.toString | bool &rarr; string | "toString b" returns the string representation of `b`, either "true" or "false". |
 | Char.chr | int &rarr; char | "chr i" returns the character whose code is `i`. Raises `Chr` if `i` &lt; 0 or `i` &gt; `maxOrd`. |
 | Char.compare | char * char &rarr; order | "compare (c1, c2)" returns `LESS`, `EQUAL`, or `GREATER` according to whether its first argument is less than, equal to, or greater than the second. |
 | Char.contains | char &rarr; string &rarr; bool | "contains s c" returns true if character `c` occurs in the string `s`; false otherwise. The function, when applied to `s`, builds a table and returns a function which uses table lookup to decide whether a given character is in the string or not. Hence it is relatively expensive to compute `val p = contains s` but very fast to compute `p(c)` for any given character. |
@@ -522,7 +524,7 @@ Exception:
 | Char.isSpace | char &rarr; bool | "isSpace c" returns true if `c` is a whitespace character (blank, newline, tab, vertical tab, new page). |
 | Char.isUpper | char &rarr; bool | "isUpper c" returns true if `c` is an uppercase letter (A to Z). |
 | Char.maxOrd | int | "maxOrd" is the greatest character code; it equals `ord maxChar`. |
-| Char.maxChar | int | "maxChar" is the greatest character in the ordering `&lt;`. |
+| Char.maxChar | int | "maxChar" is the greatest character in the ordering `<`. |
 | Char.minChar | char | "minChar" is the minimal (most negative) character representable by `char`. If a value is `NONE`, `char` can represent all negative integers, within the limits of the heap size. If `precision` is `SOME (n)`, then we have `minChar` = -2<sup>(n-1)</sup>. |
 | Char.notContains | char &rarr; string &rarr; bool | "notContains s c" returns true if character `c` does not occur in the string `s`; false otherwise. Works by construction of a lookup table in the same way as `Char.contains`. |
 | Char.ord | char &rarr; int | "ord c" returns the code of character `c`. |
@@ -545,28 +547,31 @@ Exception:
 | Either.fold | ('left * 'b -&gt; 'b) * ('right * 'b -&gt; 'b) -&gt; 'b -&gt; ('left, 'right) either -&gt; 'b | "fold (fl, fr) init sm" computes `fx (v, init)`, where `v` is the contents of `sm` and `fx` is either `fl` (if `sm` is a left value) or `fr` (if `sm` is a right value). |
 | Either.proj | ('a, 'a) either -&gt; 'a | "proj sm" projects out the contents of `sm`. |
 | Either.partition | ('left, 'right) either list -&gt; ('left list * 'right list) | "partition sms" partitions the list of sum values into a list of left values and a list of right values. |
-| Fn.id | &alpha; &rarr; &alpha; | "id x" returns the value `x` It is the polymorphic identity function) |
+| Fn.id | &alpha; &rarr; &alpha; | "id x" returns the value `x`. (`id` is the polymorphic identity function.) |
 | Fn.const | &alpha; &rarr; &beta; &rarr; &alpha; | "const x y" returns the value `x`. |
 | Fn.apply | (&alpha; &rarr; &beta;) * &alpha; &rarr; &beta; | "apply (f, x)" applies the function `f` to `x`. Thus, it is equivalent to `f x`. |
-| Fn.op o | (&beta; &rarr; &gamma;) * (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma; | "f o g" is the function composition of `f` and `g`. Thus, `(f o g) a` is equivalent to `f (g a)`. This function is the same as the global `o` operator and is also part of the `General` structure. |
+| Fn.o | (&beta; &rarr; &gamma;) * (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma; | "f o g" is the function composition of `f` and `g`. Thus, `(f o g) a` is equivalent to `f (g a)`. This function is the same as the global `o` operator and is also part of the `General` structure. |
 | Fn.curry | (&alpha; * &beta; &rarr; &gamma;) &rarr; &alpha; &rarr; &beta; &rarr; &gamma; | "curry f x y" is equivalent to `f (x, y)`; i.e., `curry f` transforms the binary function `f` into curried form. |
 | Fn.uncurry | (&alpha; &rarr; &beta; &rarr; &gamma;) &rarr; &alpha; * &beta; &rarr; &gamma; | "ucurry f (x, y)" is equivalent to `f x y`; i.e., `uncurry f` transforms the curried function `f` into a binary function. This function is the inverse of `curry`. |
 | Fn.flip | (&alpha; * &beta; &rarr; &gamma;) &rarr; &beta; * &alpha; &rarr; &gamma; | "flip f (x, y)" is equivalent to `f (y, x)`; i.e., `flip f` flips the argument order of the binary function `f`. |
 | Fn.repeat | int &rarr; (&alpha; &rarr; &alpha;) &rarr; &alpha; &rarr; &alpha; | "repeat n f" returns the `n`-fold composition of `f`. If `n` is zero, then `repeat n f` returns the identity function. If `n` is negative, then it raises the exception `Domain`. |
 | Fn.equal | &alpha; &rarr; &alpha; &rarr; bool | "equal a b" returns whether `a` is equal to `b`. It is a curried version of the polymorphic equality function (`=`). |
-| Fn.notEqual | &alpha; &rarr; &alpha; &rarr; bool | "notEqual a b" returns whether `a` is not equal to `b`. It is a curried version of the polymorphic inequality function (`&lt;&gt;`). |
+| Fn.notEqual | &alpha; &rarr; &alpha; &rarr; bool | "notEqual a b" returns whether `a` is not equal to `b`. It is a curried version of the polymorphic inequality function (`<>`). |
+| General.exnName | exn &rarr; string | "exnName ex" returns a name for the exception `ex`. The name returned may be that of any exception constructor aliasing with `ex`. For instance,  <pre>let exception E1; exception E2 = E1 in exnName E2 end</pre>  might evaluate to "E1" or "E2". |
+| General.exnMessage | exn &rarr; string | "exnMessage ex" returns a message corresponding to exception `ex`. The precise format of the message may vary between implementations and locales, but will at least contain the string `exnName ex`.<br><br>**Example:**  <pre>exnMessage Div = "Div" exnMessage (OS.SysErr ("No such file", NONE)) =   "OS.SysErr "No such file""</pre> |
+| General.o | (&beta; &rarr; &gamma;) (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma; | "f o g" is the function composition of `f` and `g`. Thus, `(f o g) a` is equivalent to `f (g a)`. |
+| General.before | &alpha; * unit &rarr; &alpha; | "a before b" returns `a`. It provides a notational shorthand for evaluating `a`, then `b`, before returning the value of `a`. |
 | General.ignore | &alpha; &rarr; unit | "ignore x" always returns `unit`. The function evaluates its argument but throws away the value. |
-| General.op o | (&beta; &rarr; &gamma;) (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma; | "f o g" is the function composition of `f` and `g`. Thus, `(f o g) a` is equivalent to `f (g a)`. |
-| Int.op * | int * int &rarr; int | "i * j" is the product of `i` and `j`. It raises `Overflow` when the result is not representable. |
-| Int.op + | int * int &rarr; int | "i + j" is the sum of `i` and `j`. It raises `Overflow` when the result is not representable. |
-| Int.op - | int * int &rarr; int | "i - j" is the difference of `i` and `j`. It raises `Overflow` when the result is not representable. |
-| Int.op div | int * int &rarr; int | "i div j" returns the greatest integer less than or equal to the quotient of i by j, i.e., `floor(i / j)`. It raises `Overflow` when the result is not representable, or Div when `j = 0`. Note that rounding is towards negative infinity, not zero. |
-| Int.op mod | int * int &rarr; int | "i mod j" returns the remainder of the division of i by j. It raises `Div` when `j = 0`. When defined, `(i mod j)` has the same sign as `j`, and `(i div j) * j + (i mod j) = i`. |
-| Int.op &lt; | int * int &rarr; bool | "i &lt; j" returns true if i is less than j. |
-| Int.op &lt;= | int * int &rarr; bool | "i &lt; j" returns true if i is less than or equal to j. |
-| Int.op &gt; | int * int &rarr; bool | "i &lt; j" returns true if i is greater than j. |
-| Int.op &gt;= | int * int &rarr; bool | "i &lt; j" returns true if i is greater than or equal to j. |
-| Int.op ~ | int &rarr; int | "~ i" returns the negation of `i`. |
+| Int.* | int * int &rarr; int | "i * j" is the product of `i` and `j`. It raises `Overflow` when the result is not representable. |
+| Int.+ | int * int &rarr; int | "i + j" is the sum of `i` and `j`. It raises `Overflow` when the result is not representable. |
+| Int.- | int * int &rarr; int | "i - j" is the difference of `i` and `j`. It raises `Overflow` when the result is not representable. |
+| Int.div | int * int &rarr; int | "i div j" returns the greatest integer less than or equal to the quotient of `i` by j, i.e., `floor(i / j)`. It raises `Overflow` when the result is not representable, or Div when `j = 0`. Note that rounding is towards negative infinity, not zero. |
+| Int.mod | int * int &rarr; int | "i mod j" returns the remainder of the division of `i` by `j`. It raises `Div` when `j = 0`. When defined, `(i mod j)` has the same sign as `j`, and `(i div j) * j + (i mod j) = i`. |
+| Int.&lt; | int * int &rarr; bool | "i &lt; j" returns true if `i` is less than `j`. |
+| Int.&lt;= | int * int &rarr; bool | "i &lt;= j" returns true if `i` is less than or equal to `j`. |
+| Int.&gt; | int * int &rarr; bool | "i &gt; j" returns true if `i` is greater than `j`. |
+| Int.&gt;= | int * int &rarr; bool | "i &gt;= j" returns true if `i` is greater than or equal to `j`. |
+| Int.~ | int &rarr; int | "~ i" returns the negation of `i`. |
 | Int.abs | int &rarr; int | "abs i" returns the absolute value of `i`. |
 | Int.compare | int * int &rarr; order | "compare (i, j)" returns `LESS`, `EQUAL`, or `GREATER` according to whether its first argument is less than, equal to, or greater than the second. |
 | Int.fromInt, int | int &rarr; int | "fromInt i" converts a value from type `int` to the default integer type. Raises `Overflow` if the value does not fit. |
@@ -588,7 +593,7 @@ Exception:
 | List.nil | &alpha; list | "nil" is the empty list. |
 | List.null | &alpha; list &rarr; bool | "null l" returns `true` if the list `l` is empty. |
 | List.length | &alpha; list &rarr; int | "length l" returns the number of elements in the list `l`. |
-| List.op @ | &alpha; list * &alpha; list &rarr; &alpha; list | "l1 @ l2" returns the list that is the concatenation of `l1` and `l2`. |
+| List.@ | &alpha; list * &alpha; list &rarr; &alpha; list | "l1 @ l2" returns the list that is the concatenation of `l1` and `l2`. |
 | List.at | &alpha; list * &alpha; list &rarr; &alpha; list | "at (l1, l2)" is equivalent to "l1 @ l2". |
 | List.hd | &alpha; list &rarr; &alpha; | "hd l" returns the first element of `l`. Raises `Empty` if `l` is `nil`. |
 | List.tl | &alpha; list &rarr; &alpha; list | "tl l" returns all but the first element of `l`. Raises `Empty` if `l` is `nil`. |
@@ -628,7 +633,7 @@ Exception:
 | ListPair.foldrEq | (&alpha; * &beta; * &gamma; &rarr; &gamma;) &rarr; &gamma; &rarr; &alpha; list * &beta; list &rarr; &gamma; | "foldrEq f init (l1, l2)" returns the result of folding the function *f* in the specified direction over the pair of lists *l1* and *l2* starting with the value *init*.  It is equivalent to:  <pre>List.foldr f' init (zipEq (l1, l2))</pre>  where *f'* is `fn ((a,b),c) =&gt; f(a,b,c)` and ignoring possible side effects of the function *f*. |
 | ListPair.all | (&alpha; * &beta; &rarr; bool) &rarr; &alpha; list * &beta; list &rarr; bool | "all f (l1, l2)" provides short-circuit testing of a predicate over a pair of lists.<br><br>It is equivalent to: <pre>List.all f (zip (l1, l2))</pre> |
 | ListPair.exists | (&alpha; * &beta; &rarr; bool) &rarr; &alpha; list * &beta; list &rarr; bool | "exists f (l1, l2)" provides short-circuit testing of a predicate over a pair of lists.<br><br>It is equivalent to: <pre>List.exists f (zip (l1, l2))</pre> |
-| ListPair.allEq | (&alpha; * &beta; &rarr; bool) &rarr; &alpha; list * &beta; list &rarr; bool | "allEq f (l1, l2)" returns `true` if *l1* and *l2* have equal length and all pairs of elements satisfy the predicate *f*. That is, the expression is equivalent to:  <pre> (List.length l1 = List.length l2) andalso (List.all f (zip (l1, l2))) </pre><br><br>This function does not appear to have any nice algebraic relation with the other functions, but it is included as providing a useful notion of equality, analogous to the notion of equality of lists over equality types.<br><br>&lt;b&gt;Implementation note:&lt;/b&gt;<br><br>The implementation is simple:  <pre> fun allEq p ([], []) = true   \| allEq p (x::xs, y::ys) = p(x,y) andalso allEq p (xs,ys)   \| allEq _ _ = false </pre> |
+| ListPair.allEq | (&alpha; * &beta; &rarr; bool) &rarr; &alpha; list * &beta; list &rarr; bool | "allEq f (l1, l2)" returns `true` if *l1* and *l2* have equal length and all pairs of elements satisfy the predicate *f*. That is, the expression is equivalent to:  <pre> (List.length l1 = List.length l2) andalso (List.all f (zip (l1, l2))) </pre><br><br>This function does not appear to have any nice algebraic relation with the other functions, but it is included as providing a useful notion of equality, analogous to the notion of equality of lists over equality types.<br><br>**Implementation note:**<br><br>The implementation is simple:  <pre> fun allEq p ([], []) = true   \| allEq p (x::xs, y::ys) = p(x,y) andalso allEq p (xs,ys)   \| allEq _ _ = false </pre> |
 | Math.acos | real &rarr; real | "acos x" returns the arc cosine of `x`. `acos` is the inverse of `cos`. Its result is guaranteed to be in the closed interval \[0, pi\]. If the magnitude of `x` exceeds 1.0, returns NaN. |
 | Math.asin | real &rarr; real | "asin x" returns the arc sine of `x`. `asin` is the inverse of `sin`. Its result is guaranteed to be in the closed interval \[-pi / 2, pi / 2\]. If the magnitude of `x` exceeds 1.0, returns NaN. |
 | Math.atan | real &rarr; real | "atan x" returns the arc tangent of `x`. `atan` is the inverse of `tan`. For finite arguments, the result is guaranteed to be in the open interval (-pi / 2, pi / 2). If `x` is +infinity, it returns pi / 2; if `x` is -infinity, it returns -pi / 2. |
@@ -656,15 +661,15 @@ Exception:
 | Option.filter | (&alpha; &rarr; bool) &rarr; &alpha; &rarr; &alpha; option | "filter f a" returns `SOME a` if `f(a)` is `true`, `NONE` otherwise. |
 | Option.join | &alpha; option option &rarr; &alpha; option | "join opt" maps `NONE` to `NONE` and `SOME v` to `v`. |
 | Option.valOf | &alpha; option &rarr; &alpha; | "valOf opt" returns `v` if `opt` is `SOME v`, otherwise raises `Option`. |
-| Real.op * | real * real &rarr; real | "r1 * r2" is the product of `r1` and `r2`. The product of zero and an infinity produces NaN. Otherwise, if one argument is infinite, the result is infinite with the correct sign, e.g., -5 * (-infinity) = infinity, infinity * (-infinity) = -infinity. |
-| Real.op + | real * real &rarr; real | "r1 + r2" is the sum of `r1` and `r2`. If one argument is finite and the other infinite, the result is infinite with the correct sign, e.g., 5 - (-infinity) = infinity. We also have infinity + infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any other combination of two infinities produces NaN. |
-| Real.op - | real * real &rarr; real | "r1 - r2" is the difference of `r1` and `r2`. If one argument is finite and the other infinite, the result is infinite with the correct sign, e.g., 5 - (-infinity) = infinity. We also have infinity + infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any other combination of two infinities produces NaN. |
-| Real.op / | real * real &rarr; real | "r1 / r2" is the quotient of `r1` and `r2`. We have 0 / 0 = NaN and +-infinity / +-infinity = NaN. Dividing a finite, non-zero number by a zero, or an infinity by a finite number produces an infinity with the correct sign. (Note that zeros are signed.) A finite number divided by an infinity is 0 with the correct sign. |
-| Real.op &lt; | real * real &rarr; bool | "x &lt; y" returns true if x is less than y. Return false on unordered arguments, i.e., if either argument is NaN, so that the usual reversal of comparison under negation does not hold, e.g., `a &lt; b` is not the same as `not (a &gt;= b)`. |
-| Real.op &lt;= | real * real &rarr; bool | As "&lt;" |
-| Real.op &gt; | real * real &rarr; bool | As "&lt;" |
-| Real.op &gt;= | real * real &rarr; bool | As "&lt;" |
-| Real.op ~ | real &rarr; real | "~ r" returns the negation of `r`. |
+| Real.* | real * real &rarr; real | "r1 * r2" is the product of `r1` and `r2`. The product of zero and an infinity produces NaN. Otherwise, if one argument is infinite, the result is infinite with the correct sign, e.g., -5 * (-infinity) = infinity, infinity * (-infinity) = -infinity. |
+| Real.+ | real * real &rarr; real | "r1 + r2" is the sum of `r1` and `r2`. If one argument is finite and the other infinite, the result is infinite with the correct sign, e.g., 5 - (-infinity) = infinity. We also have infinity + infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any other combination of two infinities produces NaN. |
+| Real.- | real * real &rarr; real | "r1 - r2" is the difference of `r1` and `r2`. If one argument is finite and the other infinite, the result is infinite with the correct sign, e.g., 5 - (-infinity) = infinity. We also have infinity + infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any other combination of two infinities produces NaN. |
+| Real./ | real * real &rarr; real | "r1 / r2" is the quotient of `r1` and `r2`. We have 0 / 0 = NaN and +-infinity / +-infinity = NaN. Dividing a finite, non-zero number by a zero, or an infinity by a finite number produces an infinity with the correct sign. (Note that zeros are signed.) A finite number divided by an infinity is 0 with the correct sign. |
+| Real.&lt; | real * real &rarr; bool | "x &lt; y" returns true if `x` is less than `y`. Return `false` on unordered arguments, i.e., if either argument is NaN, so that the usual reversal of comparison under negation does not hold, e.g., `a < b` is not the same as `not (a >= b)`. |
+| Real.&lt;= | real * real &rarr; bool | As "&lt;" |
+| Real.&gt; | real * real &rarr; bool | As "&lt;" |
+| Real.&gt;= | real * real &rarr; bool | As "&lt;" |
+| Real.~ | real &rarr; real | "~ r" returns the negation of `r`. |
 | Real.abs | real &rarr; real | "abs r" returns the absolute value of `r`. |
 | Real.ceil | real &rarr; int | "floor r" produces `ceil(r)`, the smallest int not less than `r`. |
 | Real.checkFloat | real &rarr; real | "checkFloat x" raises `Overflow` if x is an infinity, and raises `Div` if x is NaN. Otherwise, it returns its argument. |
@@ -708,17 +713,17 @@ Exception:
 | Relational.min, min | &alpha; list &rarr; &alpha; | "min list" returns the least element of `list`. Often used with `group`, for example `from e in emps group e.deptno compute minId = min of e.id`. |
 | Relational.nonEmpty, nonEmpty | &alpha; list &rarr; bool | "nonEmpty list" returns whether the list has at least one element, for example `from d in depts where nonEmpty (from e where e.deptno = d.deptno)`. |
 | Relational.only, only | &alpha; list &rarr; &alpha; | "only list" returns the sole element of list, for example `from e in emps yield only (from d where d.deptno = e.deptno)`. |
-| Relational.op elem | &alpha; * &alpha; bag &rarr; bool, &alpha; * &alpha; list &rarr; bool | "e elem collection" returns whether `e` is a member of `collection`. |
-| Relational.op notelem | &alpha; * &alpha; bag &rarr; bool, &alpha; * &alpha; list &rarr; bool | "e notelem collection" returns whether `e` is not a member of `collection`. |
+| Relational.elem | &alpha; * &alpha; bag &rarr; bool, &alpha; * &alpha; list &rarr; bool | "e elem collection" returns whether `e` is a member of `collection`. |
+| Relational.notelem | &alpha; * &alpha; bag &rarr; bool, &alpha; * &alpha; list &rarr; bool | "e notelem collection" returns whether `e` is not a member of `collection`. |
 | Relational.sum, sum | int list &rarr; int | "sum list" returns the sum of the elements of `list`. Often used with `group`, for example `from e in emps group e.deptno compute sumId = sum of e.id`. |
 | String.collate | (char * char &rarr; order) &rarr; string * string &rarr; order | "collate (f, (s, t))" performs lexicographic comparison of the two strings using the given ordering `f` on characters. |
 | String.compare | string * string &rarr; order | "compare (s, t)" does a lexicographic comparison of the two strings using the ordering `Char.compare` on the characters. It returns `LESS`, `EQUAL`, or `GREATER`, if `s` is less than, equal to, or greater than `t`, respectively. |
-| String.fields | (char &rarr; bool) &rarr; string &rarr; string list | "fields f s" returns a list of fields derived from `s` from left to right. A field is a (possibly empty) maximal substring of `s` not containing any delimiter. A delimiter is a character satisfying the predicate `f`.  Two tokens may be separated by more than one delimiter, whereas two fields are separated by exactly one delimiter. For example, if the only delimiter is the character `#"\|"`, then the string `"\|abc\|\|def"` contains two tokens `"abc"` and `"def"`, whereas it contains the four fields `""`, `"abc"`, `""` and `"def"`. |
-| String.op ^ | string * string &rarr; string | "s ^ t" is the concatenation of the strings `s` and `t`. This raises `Size` if `\|s\| + \|t\| &gt; maxSize`. |
+| String.^ | string * string &rarr; string | "s ^ t" is the concatenation of the strings `s` and `t`. This raises `Size` if `\|s\| + \|t\| &gt; maxSize`. |
 | String.concat | string list &rarr; string | "concat l" is the concatenation of all the strings in `l`. This raises `Size` if the sum of all the sizes is greater than `maxSize`. |
 | String.concatWith | string &rarr; string list &rarr; string | "concatWith s l" returns the concatenation of the strings in the list `l` using the string `s` as a separator. This raises `Size` if the size of the resulting string would be greater than `maxSize`. |
 | String.explode | string &rarr; char list | "explode s" is the list of characters in the string `s`. |
 | String.extract | string * int * int option &rarr; string | "extract (s, i, NONE)" and "extract (s, i, SOME j)" return substrings of `s`. The first returns the substring of `s` from the `i`(th) character to the end of the string, i.e., the string `s`[`i`..\|`s`\|-1]. This raises `Subscript` if `i` &lt; 0 or \|`s`\| &lt; `i`.<br><br>The second form returns the substring of size `j` starting at index `i`, i.e., the string `s`[`i`..`i`+`j`-1]. Raises `Subscript` if `i` &lt; 0 or `j` &lt; 0 or \|`s`\| &lt; `i` + `j`. Note that, if defined, `extract` returns the empty string when `i` = \|`s`\|. |
+| String.fields | (char &rarr; bool) &rarr; string &rarr; string list | "fields f s" returns a list of fields derived from `s` from left to right. A field is a (possibly empty) maximal substring of `s` not containing any delimiter. A delimiter is a character satisfying the predicate `f`.  Two tokens may be separated by more than one delimiter, whereas two fields are separated by exactly one delimiter. For example, if the only delimiter is the character `#"\|"`, then the string `"\|abc\|\|def"` contains two tokens `"abc"` and `"def"`, whereas it contains the four fields `""`, `"abc"`, `""` and `"def"`. |
 | String.implode | char list &rarr; string | "implode l" generates the string containing the characters in the list `l`. This is equivalent to `concat (List.map str l)`. This raises `Size` if the resulting string would have size greater than `maxSize`. |
 | String.isPrefix | string &rarr; string &rarr; bool | "isPrefix s1 s2" returns `true` if the string `s1` is a prefix of the string `s2`. Note that the empty string is a prefix of any string, and that a string is a prefix of itself. |
 | String.isSubstring | string &rarr; string &rarr; bool | "isSubstring s1 s2" returns `true` if the string `s1` is a substring of the string `s2`. Note that the empty string is a substring of any string, and that a string is a substring of itself. |
@@ -763,13 +768,13 @@ Not yet implemented
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| Int.fmt | StringCvt.radix &rarr; int &rarr; string | "fmt radix i" returns a string containing a representation of i with #"~" used as the sign for negative numbers. Formats the string according to `radix`; the hexadecimal digits 10 through 15 are represented as #"A" through #"F", respectively. No prefix "0x" is generated for the hexadecimal representation. |
+| Int.fmt | StringCvt.radix &rarr; int &rarr; string | "fmt radix i" returns a string containing a representation of `i` with #"~" used as the sign for negative numbers. Formats the string according to `radix`; the hexadecimal digits 10 through 15 are represented as #"A" through #"F", respectively. No prefix "0x" is generated for the hexadecimal representation. |
 | Int.scan | scan radix getc strm | "scan radix getc strm" returns `SOME (i,rest)` if an integer in the format denoted by `radix` can be parsed from a prefix of the character stream `strm` after skipping initial whitespace, where `i` is the value of the integer parsed and `rest` is the rest of the character stream. `NONE` is returned otherwise. This function raises `Overflow` when an integer can be parsed, but is too large to be represented by type `int`. |
-| Real.op != | real * real &rarr; bool | "x != y" is equivalent to `not o op ==` and the IEEE `?&lt;&gt;` operator. |
-| Real.op *+ | real * real * real &rarr; real | "*+ (a, b, c)" returns `a * b + c`. Its behavior on infinities follows from the behaviors derived from addition and multiplication. |
-| Real.op *- | real * real * real &rarr; real | "*- (a, b, c)" returns `a * b - c`. Its behavior on infinities follows from the behaviors derived from subtraction and multiplication. |
-| Real.op == | real * real &rarr; bool | "x == y" returns true if and only if neither y nor x is NaN, and y and x are equal, ignoring signs on zeros. This is equivalent to the IEEE `=` operator. |
-| Real.op ?= | real * real &rarr; bool | "?= (x, y)" returns true if either argument is NaN or if the arguments are bitwise equal, ignoring signs on zeros. It is equivalent to the IEEE `?=` operator. |
+| Real.!= | real * real &rarr; bool | "x != y" is equivalent to `not o op ==` and the IEEE `?<>` operator. |
+| Real.*+ | real * real * real &rarr; real | "*+ (a, b, c)" returns `a * b + c`. Its behavior on infinities follows from the behaviors derived from addition and multiplication. |
+| Real.*- | real * real * real &rarr; real | "*- (a, b, c)" returns `a * b - c`. Its behavior on infinities follows from the behaviors derived from subtraction and multiplication. |
+| Real.== | real * real &rarr; bool | "x == y" returns `true` if and only if neither `y` nor `x` is NaN, and `y` and `x` are equal, ignoring signs on zeros. This is equivalent to the IEEE `=` operator. |
+| Real.?= | real * real &rarr; bool | "?= (x, y)" returns `true` if either argument is NaN or if the arguments are bitwise equal, ignoring signs on zeros. It is equivalent to the IEEE `?=` operator. |
 | Real.class | real &rarr; IEEEReal.float_class | "class x" returns the `IEEEReal.float_class` to which x belongs. |
 | Real.compareReal | real * real &rarr; IEEEReal.real_order | "compareReal (x, y)" behaves similarly to `Real.compare` except that the values it returns have the extended type `IEEEReal.real_order` and it returns `IEEEReal.UNORDERED` on unordered arguments. |
 | Real.fmt | StringCvt.realfmt &rarr; real &rarr; string | "fmt spec r" converts a `real` into a `string` according to by `spec`; raises `Size` when `fmt spec` is evaluated if `spec` is an invalid precision |

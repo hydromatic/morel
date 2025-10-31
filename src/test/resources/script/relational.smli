@@ -2263,7 +2263,7 @@ flatMap explode ["ab", "", "def"];
 > val it = [#"a",#"b",#"d",#"e",#"f"] : char list
 
 (*) Here's another way to define flatMap
-fun flatMap2 f l = foldl List.at [] (map f l);
+fun flatMap2 f l = foldl (op @) [] (map f l);
 > val flatMap2 = fn : ('a -> 'b list) -> 'a list -> 'b list
 flatMap2 explode ["ab", "", "def"];
 > val it = [#"d",#"e",#"f",#"a",#"b"] : char list

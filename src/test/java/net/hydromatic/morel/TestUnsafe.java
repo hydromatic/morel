@@ -158,6 +158,7 @@ public abstract class TestUnsafe {
         "*.md",
         "*.properties",
         "*.sh",
+        "*.sig",
         "*.sml",
         "*.smli",
         "*.toml",

@@ -22,6 +22,7 @@ import static com.google.common.base.Strings.repeat;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Static.last;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasToString;
@@ -72,11 +73,13 @@ public class LintTest {
         line -> {
           String f = line.filename();
           final int slash = f.lastIndexOf('/');
-          final String endMarker =
-              "// End " + (slash < 0 ? f : f.substring(slash + 1));
-          if (!line.line().equals(endMarker)
-              && line.filename().endsWith(".java")) {
-            line.state().message(line, "File must end with '%s'", endMarker);
+          final String comment = getCommentStyleForFile(f);
+          if (comment != null) {
+            final String endMarker =
+                comment + " End " + (slash < 0 ? f : f.substring(slash + 1));
+            if (!line.line().equals(endMarker)) {
+              line.state().message(line, "File must end with '%s'", endMarker);
+            }
           }
         });
     b.add(line -> line.fnr() == 1, line -> line.globalState().fileCount++);
@@ -425,6 +428,29 @@ public class LintTest {
         .isPresent();
   }
 
+  /**
+   * Returns the comment style for a file based on its extension, or null if the
+   * file type doesn't require an end marker.
+   */
+  private static String getCommentStyleForFile(String filename) {
+    // Find the file extension
+    final int dot = filename.lastIndexOf('.');
+    if (dot < 0) {
+      return null;
+    }
+    final String extension = filename.substring(dot);
+
+    switch (extension) {
+      case ".java":
+        return "//";
+      case ".smli":
+      case ".sig":
+        return "(*)";
+      default:
+        return null;
+    }
+  }
+
   /** Returns whether we are in a file that contains Java code. */
   private static boolean isJava(String filename) {
     return filename.endsWith(".java")
@@ -677,6 +703,29 @@ public class LintTest {
               + genFile
               + "\n" //
               + diff);
+    }
+  }
+
+  /**
+   * Validates that signature files in the lib directory are well-formed and
+   * that their value and exception declarations match the corresponding entries
+   * in the {@link net.hydromatic.morel.compile.BuiltIn} and {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn} enums.
+   */
+  @Test
+  void testSignatures() throws Exception {
+    final File libDir = new File("lib");
+    assertThat(libDir.exists(), is(true));
+    assertThat(libDir.isDirectory(), is(true));
+
+    final File[] files =
+        libDir.listFiles(
+            (dir, name) -> name.endsWith(".sig") || name.endsWith(".sml"));
+    assertThat("no files to test in lib directory", files, notNullValue());
+
+    final SignatureChecker checker = new SignatureChecker();
+    for (File file : files) {
+      checker.checkSignatureFile(file);
     }
   }
 

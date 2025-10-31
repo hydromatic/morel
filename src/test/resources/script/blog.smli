@@ -585,7 +585,7 @@ fun mapReduce mapper reducer list =
     fun dedup ([], dict) = dict
       | dedup ((key, value) :: tail, dict) =
           dedup (tail, update (key, value, dict))
-    fun flatMap f list = List.foldl List.at [] (List.map f list)
+    fun flatMap f list = List.foldl (op @) [] (List.map f list)
     val keyValueList = flatMap mapper list
     val keyValuesList = dedup (keyValueList, [])
   in

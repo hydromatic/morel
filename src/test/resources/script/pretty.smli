@@ -102,4 +102,4 @@ Sys.set ("output", "tabular");
 >   [{address={state="CA",zip=94705},id=1},{address={state="CA",zip=94618},id=2}]
 >   : {address:{state:string, zip:int}, id:int} list
 
-(*) End output.smli
+(*) End pretty.smli

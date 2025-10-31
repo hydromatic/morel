@@ -37,6 +37,17 @@
 # === Bag structure ==================================================
 
 [[functions]]
+ordinal = 8
+structure = "Bag"
+name = "@"
+specified = "morel"
+type = "α bag * α bag → α bag"
+prototype = "@ (b1, b2)"
+description = """
+returns the bag that is the concatenation of `b1` and `b2`.
+"""
+
+[[functions]]
 ordinal = 23
 structure = "Bag"
 name = "all"
@@ -59,17 +70,6 @@ type = "(α → unit) → α bag → unit"
 prototype = "app f b"
 description = """
 applies `f` to the elements of `b`.
-"""
-
-[[functions]]
-ordinal = 8
-structure = "Bag"
-name = "at"
-specified = "morel"
-type = "α bag * α bag → α bag"
-prototype = "at (b1, b2)"
-description = """
-returns the bag that is the concatenation of `b1` and `b2`.
 """
 
 [[functions]]
@@ -356,6 +356,31 @@ is literally false.
 
 [[functions]]
 structure = "Bool"
+ordinal = 2
+name = "fromString"
+specified = "basis"
+type = "string → bool option"
+prototype = "fromString s"
+description = """
+scans a `bool` value from the string `s`. Returns `SOME (true)` if
+`s` is "true", `SOME (false)` if `s` is "false", and `NONE` otherwise.
+"""
+
+[[functions]]
+structure = "Bool"
+ordinal = 3
+name = "implies"
+syntax = "binary"
+specified = "morel"
+type = "bool * bool → bool"
+prototype = "b1 implies b2"
+description = """
+returns `true` if `b1` is `false` or `b2` is `true`.
+"""
+
+[[functions]]
+structure = "Bool"
+ordinal = 4
 syntax = "prefix"
 name = "not"
 specified = "basis"
@@ -367,13 +392,13 @@ returns the logical inverse of `b`.
 
 [[functions]]
 structure = "Bool"
-name = "op implies"
-syntax = "binary"
-specified = "morel"
-type = "bool * bool → bool"
-prototype = "b1 implies b2"
+ordinal = 5
+name = "toString"
+specified = "basis"
+type = "bool → string"
+prototype = "toString b"
 description = """
-returns `true` if `b1` is `false` or `b2` is `true`.
+returns the string representation of `b`, either "true" or "false".
 """
 
 # === Char structure =================================================
@@ -966,7 +991,7 @@ specified = "basis+"
 type = "α → α"
 prototype = "id x"
 description = """
-returns the value `x` It is the polymorphic identity function)
+returns the value `x`. (`id` is the polymorphic identity function.)
 """
 
 [[functions]]
@@ -984,7 +1009,7 @@ the polymorphic inequality function (`<>`).
 [[functions]]
 ordinal = 4
 structure = "Fn"
-name = "op o"
+name = "o"
 specified = "basis+"
 type = "(β → γ) * (α → β) → α → γ"
 prototype = "f o g"
@@ -1023,6 +1048,52 @@ function `f` into a binary function. This function is the inverse of
 # === General structure ==============================================
 
 [[functions]]
+ordinal = 55
+structure = "General"
+name = "before"
+specified = "basis"
+type = "α * unit → α"
+prototype = "a before b"
+description = """
+returns `a`. It provides a notational shorthand for evaluating `a`,
+then `b`, before returning the value of `a`.
+"""
+
+[[functions]]
+ordinal = 53
+structure = "General"
+name = "exnMessage"
+specified = "basis"
+type = "exn → string"
+prototype = "exnMessage ex"
+description = """
+returns a message corresponding to exception `ex`. The precise format
+of the message may vary between implementations and locales, but will
+at least contain the string `exnName ex`.
+
+<p>**Example:**
+
+<pre>exnMessage Div = "Div"
+exnMessage (OS.SysErr ("No such file", NONE)) =
+  "OS.SysErr \"No such file\""</pre>
+"""
+
+[[functions]]
+ordinal = 52
+structure = "General"
+name = "exnName"
+specified = "basis"
+type = "exn → string"
+prototype = "exnName ex"
+description = """
+returns a name for the exception `ex`. The name returned may be that
+of any exception constructor aliasing with `ex`. For instance,
+
+<pre>let exception E1; exception E2 = E1 in exnName E2 end</pre>
+
+might evaluate to "E1" or "E2"."""
+
+[[functions]]
 ordinal = 56
 structure = "General"
 name = "ignore"
@@ -1035,9 +1106,9 @@ but throws away the value.
 """
 
 [[functions]]
-ordinal = 57
+ordinal = 54
 structure = "General"
-name = "op o"
+name = "o"
 specified = "basis"
 type = "(β → γ) (α → β) → α → γ"
 prototype = "f o g"
@@ -1047,6 +1118,86 @@ is equivalent to `f (g a)`.
 """
 
 # === Int structure ==================================================
+
+[[functions]]
+ordinal = 60
+structure = "Int"
+name = "*"
+specified = "basis"
+type = "int * int → int"
+prototype = "i * j"
+description = """
+is the product of `i` and `j`. It raises `Overflow` when the
+result is not representable.
+"""
+
+[[functions]]
+ordinal = 61
+structure = "Int"
+name = "+"
+specified = "basis"
+type = "int * int → int"
+prototype = "i + j"
+description = """
+is the sum of `i` and `j`. It raises `Overflow` when the
+result is not representable.
+"""
+
+[[functions]]
+ordinal = 62
+structure = "Int"
+name = "-"
+specified = "basis"
+type = "int * int → int"
+prototype = "i - j"
+description = """
+is the difference of `i` and `j`. It raises `Overflow` when
+the result is not representable.
+"""
+
+[[functions]]
+ordinal = 65
+structure = "Int"
+name = "<"
+specified = "basis"
+type = "int * int → bool"
+prototype = "i < j"
+description = """
+returns true if `i` is less than `j`.
+"""
+
+[[functions]]
+ordinal = 66
+structure = "Int"
+name = "<="
+specified = "basis"
+type = "int * int → bool"
+prototype = "i <= j"
+description = """
+returns true if `i` is less than or equal to `j`.
+"""
+
+[[functions]]
+ordinal = 67
+structure = "Int"
+name = ">"
+specified = "basis"
+type = "int * int → bool"
+prototype = "i > j"
+description = """
+returns true if `i` is greater than `j`.
+"""
+
+[[functions]]
+ordinal = 68
+structure = "Int"
+name = ">="
+specified = "basis"
+type = "int * int → bool"
+prototype = "i >= j"
+description = """
+returns true if `i` is greater than or equal to `j`.
+"""
 
 [[functions]]
 ordinal = 70
@@ -1073,6 +1224,20 @@ second.
 """
 
 [[functions]]
+ordinal = 63
+structure = "Int"
+name = "div"
+specified = "basis"
+type = "int * int → int"
+prototype = "i div j"
+description = """
+returns the greatest integer less than or equal to the
+quotient of `i` by j, i.e., `floor(i / j)`. It raises `Overflow` when
+the result is not representable, or Div when `j = 0`. Note that
+rounding is towards negative infinity, not zero.
+"""
+
+[[functions]]
 ordinal = 239
 structure = "Int"
 name = "fmt"
@@ -1081,7 +1246,7 @@ type = "StringCvt.radix → int → string"
 implemented = false
 prototype = "fmt radix i"
 description = """
-returns a string containing a representation of i with
+returns a string containing a representation of `i` with
 #"~" used as the sign for negative numbers. Formats the string
 according to `radix`; the hexadecimal digits 10 through 15 are
 represented as #"A" through #"F", respectively. No prefix "0x" is
@@ -1178,121 +1343,16 @@ as `j`, and `(i div j) * j + (i mod j) = i`.
 """
 
 [[functions]]
-ordinal = 60
-structure = "Int"
-name = "op *"
-specified = "basis"
-type = "int * int → int"
-prototype = "i * j"
-description = """
-is the product of `i` and `j`. It raises `Overflow` when the
-result is not representable.
-"""
-
-[[functions]]
-ordinal = 61
-structure = "Int"
-name = "op +"
-specified = "basis"
-type = "int * int → int"
-prototype = "i + j"
-description = """
-is the sum of `i` and `j`. It raises `Overflow` when the
-result is not representable.
-"""
-
-[[functions]]
-ordinal = 62
-structure = "Int"
-name = "op -"
-specified = "basis"
-type = "int * int → int"
-prototype = "i - j"
-description = """
-is the difference of `i` and `j`. It raises `Overflow` when
-the result is not representable.
-"""
-
-[[functions]]
-ordinal = 65
-structure = "Int"
-name = "op <"
-specified = "basis"
-type = "int * int → bool"
-prototype = "i < j"
-description = """
-returns true if i is less than j.
-"""
-
-[[functions]]
-ordinal = 66
-structure = "Int"
-name = "op <="
-specified = "basis"
-type = "int * int → bool"
-prototype = "i < j"
-description = """
-returns true if i is less than or equal to j.
-"""
-
-[[functions]]
-ordinal = 67
-structure = "Int"
-name = "op >"
-specified = "basis"
-type = "int * int → bool"
-prototype = "i < j"
-description = """
-returns true if i is greater than j.
-"""
-
-[[functions]]
-ordinal = 68
-structure = "Int"
-name = "op >="
-specified = "basis"
-type = "int * int → bool"
-prototype = "i < j"
-description = """
-returns true if i is greater than or equal to j.
-"""
-
-[[functions]]
-ordinal = 63
-structure = "Int"
-name = "op div"
-specified = "basis"
-type = "int * int → int"
-prototype = "i div j"
-description = """
-returns the greatest integer less than or equal to the
-quotient of i by j, i.e., `floor(i / j)`. It raises `Overflow` when
-the result is not representable, or Div when `j = 0`. Note that
-rounding is towards negative infinity, not zero.
-"""
-
-[[functions]]
 ordinal = 64
 structure = "Int"
-name = "op mod"
+name = "mod"
 specified = "basis"
 type = "int * int → int"
 prototype = "i mod j"
 description = """
-returns the remainder of the division of i by j. It raises
+returns the remainder of the division of `i` by `j`. It raises
 `Div` when `j = 0`. When defined, `(i mod j)` has the same sign as
 `j`, and `(i div j) * j + (i mod j) = i`.
-"""
-
-[[functions]]
-ordinal = 69
-structure = "Int"
-name = "op ~"
-specified = "basis"
-type = "int → int"
-prototype = "~ i"
-description = """
-returns the negation of `i`.
 """
 
 [[functions]]
@@ -1406,6 +1466,17 @@ converts a `int` into a `string`; equivalent to `(fmt
 StringCvt.DEC r)`.
 """
 
+[[functions]]
+ordinal = 69
+structure = "Int"
+name = "~"
+specified = "basis"
+type = "int → int"
+prototype = "~ i"
+description = """
+returns the negation of `i`.
+"""
+
 # === Interact structure =============================================
 
 [[functions]]
@@ -1432,6 +1503,17 @@ printing to stdout.
 """
 
 # === List structure =================================================
+
+[[functions]]
+ordinal = 89
+structure = "List"
+name = "@"
+specified = "basis"
+type = "α list * α list → α list"
+prototype = "l1 @ l2"
+description = """
+returns the list that is the concatenation of `l1` and `l2`.
+"""
 
 [[functions]]
 ordinal = 113
@@ -1724,17 +1806,6 @@ returns `true` if the list `l` is empty.
 """
 
 [[functions]]
-ordinal = 89
-structure = "List"
-name = "op @"
-specified = "basis"
-type = "α list * α list → α list"
-prototype = "l1 @ l2"
-description = """
-returns the list that is the concatenation of `l1` and `l2`.
-"""
-
-[[functions]]
 ordinal = 109
 structure = "List"
 name = "partition"
@@ -1884,7 +1955,7 @@ with the other functions, but it is included as providing a useful
 notion of equality, analogous to the notion of equality of lists over
 equality types.
 
-<p><b>Implementation note:</b>
+<p>**Implementation note:**
 
 <p>The implementation is simple:
 
@@ -2438,6 +2509,178 @@ returns `v` if `opt` is `SOME v`, otherwise raises
 # === Real structure =================================================
 
 [[functions]]
+ordinal = 241
+structure = "Real"
+name = "!="
+specified = "basis"
+type = "real * real → bool"
+implemented = false
+prototype = "x != y"
+description = """
+is equivalent to `not o op ==` and the IEEE `?<>` operator.
+"""
+
+[[functions]]
+ordinal = 143
+structure = "Real"
+name = "*"
+specified = "basis"
+type = "real * real → real"
+prototype = "r1 * r2"
+description = """
+is the product of `r1` and `r2`. The product of zero and an
+infinity produces NaN. Otherwise, if one argument is infinite, the
+result is infinite with the correct sign, e.g., -5 * (-infinity) =
+infinity, infinity * (-infinity) = -infinity.
+"""
+
+[[functions]]
+ordinal = 242
+structure = "Real"
+name = "*+"
+specified = "basis"
+type = "real * real * real → real"
+implemented = false
+prototype = "*+ (a, b, c)"
+description = """
+returns `a * b + c`. Its behavior on infinities follows
+from the behaviors derived from addition and multiplication.
+"""
+
+[[functions]]
+ordinal = 243
+structure = "Real"
+name = "*-"
+specified = "basis"
+type = "real * real * real → real"
+implemented = false
+prototype = "*- (a, b, c)"
+description = """
+returns `a * b - c`. Its behavior on infinities follows
+from the behaviors derived from subtraction and multiplication.
+"""
+
+[[functions]]
+ordinal = 144
+structure = "Real"
+name = "+"
+specified = "basis"
+type = "real * real → real"
+prototype = "r1 + r2"
+description = """
+is the sum of `r1` and `r2`. If one argument is finite and
+the other infinite, the result is infinite with the correct sign,
+e.g., 5 - (-infinity) = infinity. We also have infinity + infinity =
+infinity and (-infinity) + (-infinity) = (-infinity). Any other
+combination of two infinities produces NaN.
+"""
+
+[[functions]]
+ordinal = 145
+structure = "Real"
+name = "-"
+specified = "basis"
+type = "real * real → real"
+prototype = "r1 - r2"
+description = """
+is the difference of `r1` and `r2`. If one argument is
+finite and the other infinite, the result is infinite with the correct
+sign, e.g., 5 - (-infinity) = infinity. We also have infinity +
+infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any
+other combination of two infinities produces NaN.
+"""
+
+[[functions]]
+ordinal = 146
+structure = "Real"
+name = "/"
+specified = "basis"
+type = "real * real → real"
+prototype = "r1 / r2"
+description = """
+is the quotient of `r1` and `r2`. We have 0 / 0 = NaN and
++-infinity / +-infinity = NaN. Dividing a finite, non-zero number by a
+zero, or an infinity by a finite number produces an infinity with the
+correct sign. (Note that zeros are signed.) A finite number divided by
+an infinity is 0 with the correct sign.
+"""
+
+[[functions]]
+ordinal = 147
+structure = "Real"
+name = "<"
+specified = "basis"
+type = "real * real → bool"
+prototype = "x < y"
+description = """
+returns true if `x` is less than `y`. Return `false` on unordered
+arguments, i.e., if either argument is NaN, so that the usual reversal
+of comparison under negation does not hold, e.g., `a < b` is not the
+same as `not (a >= b)`.
+"""
+
+[[functions]]
+ordinal = 148
+structure = "Real"
+name = "<="
+specified = "basis"
+type = "real * real → bool"
+prototype = "x <= y"
+description = """
+As "<"
+"""
+
+[[functions]]
+ordinal = 244
+structure = "Real"
+name = "=="
+specified = "basis"
+type = "real * real → bool"
+implemented = false
+prototype = "x == y"
+description = """
+returns `true` if and only if neither `y` nor `x` is NaN, and `y` and
+`x` are equal, ignoring signs on zeros. This is equivalent to the IEEE
+`=` operator.
+"""
+
+[[functions]]
+ordinal = 149
+structure = "Real"
+name = ">"
+specified = "basis"
+type = "real * real → bool"
+prototype = "x > y"
+description = """
+As "<"
+"""
+
+[[functions]]
+ordinal = 150
+structure = "Real"
+name = ">="
+specified = "basis"
+type = "real * real → bool"
+prototype = "x >= y"
+description = """
+As "<"
+"""
+
+[[functions]]
+ordinal = 245
+structure = "Real"
+name = "?="
+specified = "basis"
+type = "real * real → bool"
+implemented = false
+prototype = "?= (x, y)"
+description = """
+returns `true` if either argument is NaN or if the arguments
+are bitwise equal, ignoring signs on zeros. It is equivalent to the
+IEEE `?=` operator.
+"""
+
+[[functions]]
 ordinal = 152
 structure = "Real"
 name = "abs"
@@ -2744,189 +2987,6 @@ returns the largest representable floating-point number less than `r`.
 """
 
 [[functions]]
-ordinal = 241
-structure = "Real"
-name = "op !="
-specified = "basis"
-type = "real * real → bool"
-implemented = false
-prototype = "x != y"
-description = """
-is equivalent to `not o op ==` and the IEEE `?<>` operator.
-"""
-
-[[functions]]
-ordinal = 143
-structure = "Real"
-name = "op *"
-specified = "basis"
-type = "real * real → real"
-prototype = "r1 * r2"
-description = """
-is the product of `r1` and `r2`. The product of zero and an
-infinity produces NaN. Otherwise, if one argument is infinite, the
-result is infinite with the correct sign, e.g., -5 * (-infinity) =
-infinity, infinity * (-infinity) = -infinity.
-"""
-
-[[functions]]
-ordinal = 242
-structure = "Real"
-name = "op *+"
-specified = "basis"
-type = "real * real * real → real"
-implemented = false
-prototype = "*+ (a, b, c)"
-description = """
-returns `a * b + c`. Its behavior on infinities follows
-from the behaviors derived from addition and multiplication.
-"""
-
-[[functions]]
-ordinal = 243
-structure = "Real"
-name = "op *-"
-specified = "basis"
-type = "real * real * real → real"
-implemented = false
-prototype = "*- (a, b, c)"
-description = """
-returns `a * b - c`. Its behavior on infinities follows
-from the behaviors derived from subtraction and multiplication.
-"""
-
-[[functions]]
-ordinal = 144
-structure = "Real"
-name = "op +"
-specified = "basis"
-type = "real * real → real"
-prototype = "r1 + r2"
-description = """
-is the sum of `r1` and `r2`. If one argument is finite and
-the other infinite, the result is infinite with the correct sign,
-e.g., 5 - (-infinity) = infinity. We also have infinity + infinity =
-infinity and (-infinity) + (-infinity) = (-infinity). Any other
-combination of two infinities produces NaN.
-"""
-
-[[functions]]
-ordinal = 145
-structure = "Real"
-name = "op -"
-specified = "basis"
-type = "real * real → real"
-prototype = "r1 - r2"
-description = """
-is the difference of `r1` and `r2`. If one argument is
-finite and the other infinite, the result is infinite with the correct
-sign, e.g., 5 - (-infinity) = infinity. We also have infinity +
-infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any
-other combination of two infinities produces NaN.
-"""
-
-[[functions]]
-ordinal = 146
-structure = "Real"
-name = "op /"
-specified = "basis"
-type = "real * real → real"
-prototype = "r1 / r2"
-description = """
-is the quotient of `r1` and `r2`. We have 0 / 0 = NaN and
-+-infinity / +-infinity = NaN. Dividing a finite, non-zero number by a
-zero, or an infinity by a finite number produces an infinity with the
-correct sign. (Note that zeros are signed.) A finite number divided by
-an infinity is 0 with the correct sign.
-"""
-
-[[functions]]
-ordinal = 147
-structure = "Real"
-name = "op <"
-specified = "basis"
-type = "real * real → bool"
-prototype = "x < y"
-description = """
-returns true if x is less than y. Return false on unordered
-arguments, i.e., if either argument is NaN, so that the usual reversal
-of comparison under negation does not hold, e.g., `a < b` is not the
-same as `not (a >= b)`.
-"""
-
-[[functions]]
-ordinal = 148
-structure = "Real"
-name = "op <="
-specified = "basis"
-type = "real * real → bool"
-prototype = "x <= y"
-description = """
-As "<"
-"""
-
-[[functions]]
-ordinal = 244
-structure = "Real"
-name = "op =="
-specified = "basis"
-type = "real * real → bool"
-implemented = false
-prototype = "x == y"
-description = """
-returns true if and only if neither y nor x is NaN, and y and
-x are equal, ignoring signs on zeros. This is equivalent to the IEEE
-`=` operator.
-"""
-
-[[functions]]
-ordinal = 149
-structure = "Real"
-name = "op >"
-specified = "basis"
-type = "real * real → bool"
-prototype = "x > y"
-description = """
-As "<"
-"""
-
-[[functions]]
-ordinal = 150
-structure = "Real"
-name = "op >="
-specified = "basis"
-type = "real * real → bool"
-prototype = "x >= y"
-description = """
-As "<"
-"""
-
-[[functions]]
-ordinal = 245
-structure = "Real"
-name = "op ?="
-specified = "basis"
-type = "real * real → bool"
-implemented = false
-prototype = "?= (x, y)"
-description = """
-returns true if either argument is NaN or if the arguments
-are bitwise equal, ignoring signs on zeros. It is equivalent to the
-IEEE `?=` operator.
-"""
-
-[[functions]]
-ordinal = 151
-structure = "Real"
-name = "op ~"
-specified = "basis"
-type = "real → real"
-prototype = "~ r"
-description = """
-returns the negation of `r`.
-"""
-
-[[functions]]
 ordinal = 170
 structure = "Real"
 name = "posInf"
@@ -3213,6 +3273,17 @@ returns true if x and y are unordered, i.e., at
 least one of x and y is NaN.
 """
 
+[[functions]]
+ordinal = 151
+structure = "Real"
+name = "~"
+specified = "basis"
+type = "real → real"
+prototype = "~ r"
+description = """
+returns the negation of `r`.
+"""
+
 # === Relational structure ===========================================
 
 [[functions]]
@@ -3249,6 +3320,17 @@ description = """
 returns the number of elements in `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute countId =
 count`.
+"""
+
+[[functions]]
+ordinal = 194
+structure = "Relational"
+name = "elem"
+specified = "morel"
+type = "α * α bag → bool, α * α list → bool"
+prototype = "e elem collection"
+description = """
+returns whether `e` is a member of `collection`.
 """
 
 [[functions]]
@@ -3303,6 +3385,18 @@ d.deptno)`.
 """
 
 [[functions]]
+ordinal = 195
+structure = "Relational"
+name = "notelem"
+specified = "morel"
+type = "α * α bag → bool, α * α list → bool"
+prototype = "e notelem collection"
+description = """
+returns whether `e` is not a member of
+`collection`.
+"""
+
+[[functions]]
 ordinal = 193
 structure = "Relational"
 name = "only, only"
@@ -3312,29 +3406,6 @@ prototype = "only list"
 description = """
 returns the sole element of list, for example `from e in
 emps yield only (from d where d.deptno = e.deptno)`.
-"""
-
-[[functions]]
-ordinal = 194
-structure = "Relational"
-name = "op elem"
-specified = "morel"
-type = "α * α bag → bool, α * α list → bool"
-prototype = "e elem collection"
-description = """
-returns whether `e` is a member of `collection`.
-"""
-
-[[functions]]
-ordinal = 195
-structure = "Relational"
-name = "op notelem"
-specified = "morel"
-type = "α * α bag → bool, α * α list → bool"
-prototype = "e notelem collection"
-description = """
-returns whether `e` is not a member of
-`collection`.
 """
 
 [[functions]]
@@ -3351,6 +3422,18 @@ sum of e.id`.
 """
 
 # === String structure ===============================================
+
+[[functions]]
+ordinal = 196
+structure = "String"
+name = "^"
+specified = "basis"
+type = "string * string → string"
+prototype = "s ^ t"
+description = """
+is the concatenation of the strings `s` and `t`. This raises
+`Size` if `|s| + |t| > maxSize`.
+"""
 
 [[functions]]
 ordinal = 194
@@ -3604,18 +3687,6 @@ type = "int"
 prototype = "maxSize"
 description = """
 is the longest allowed size of a string.
-"""
-
-[[functions]]
-ordinal = 196
-structure = "String"
-name = "op ^"
-specified = "basis"
-type = "string * string → string"
-prototype = "s ^ t"
-description = """
-is the concatenation of the strings `s` and `t`. This raises
-`Size` if `|s| + |t| > maxSize`.
 """
 
 [[functions]]

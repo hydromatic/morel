@@ -71,6 +71,12 @@ public class TestUtils {
     return e0 != null ? e0 : e1;
   }
 
+  /** Converts "abc_def" to "AbcDef". */
+  public static String toPascalCase(String name) {
+    return toCamelCase("_" + name);
+  }
+
+  /** Converts "abc_def" to "abcDef". */
   public static String toCamelCase(String name) {
     StringBuilder buf = new StringBuilder();
     int nextUpper = -1;
@@ -88,6 +94,23 @@ public class TestUtils {
 
         buf.append(c);
       }
+    }
+
+    return buf.toString();
+  }
+
+  /** Converts "abcDef" to "abc_def". */
+  public static String toSnakeCase(String name) {
+    final StringBuilder buf = new StringBuilder();
+    for (int i = 0; i < name.length(); ++i) {
+      char c = name.charAt(i);
+      if (Character.isUpperCase(c)) {
+        if (i > 0) {
+          buf.append('_');
+        }
+        c = Character.toLowerCase(c);
+      }
+      buf.append(c);
     }
 
     return buf.toString();

@@ -201,6 +201,39 @@ public abstract class Codes {
   /** @see BuiltIn#BAG_TO_LIST */
   private static final Applicable1 BAG_TO_LIST = identity(BuiltIn.BAG_TO_LIST);
 
+  /** @see BuiltIn#BOOL_FROM_STRING */
+  private static final Applicable BOOL_FROM_STRING =
+      new BaseApplicable1<List, String>(BuiltIn.BOOL_FROM_STRING) {
+        @Override
+        public List apply(String s) {
+          if ("true".equals(s)) {
+            return optionSome(true);
+          } else if ("false".equals(s)) {
+            return optionSome(false);
+          } else {
+            return OPTION_NONE;
+          }
+        }
+      };
+
+  /** @see BuiltIn#BOOL_NOT */
+  private static final Applicable BOOL_NOT =
+      new BaseApplicable1<Boolean, Boolean>(BuiltIn.BOOL_NOT) {
+        @Override
+        public Boolean apply(Boolean b) {
+          return !b;
+        }
+      };
+
+  /** @see BuiltIn#BOOL_TO_STRING */
+  private static final Applicable BOOL_TO_STRING =
+      new BaseApplicable1<String, Boolean>(BuiltIn.BOOL_TO_STRING) {
+        @Override
+        public String apply(Boolean b) {
+          return b ? "true" : "false";
+        }
+      };
+
   /** @see BuiltIn#CHAR_CHR */
   private static final Applicable1 CHAR_CHR = new CharChr(Pos.ZERO);
 
@@ -713,8 +746,8 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#FN_OP_O */
-  private static final Applicable2 FN_OP_O = new OpO(BuiltIn.FN_OP_O);
+  /** @see BuiltIn#FN_O */
+  private static final Applicable2 FN_OP_O = new OpO(BuiltIn.FN_O);
 
   /** @see BuiltIn#FN_REPEAT */
   private static final Applicable2 FN_REPEAT = new FnRepeat(Pos.ZERO);
@@ -759,6 +792,34 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#GENERAL_BEFORE */
+  private static final Applicable GENERAL_BEFORE =
+      new BaseApplicable1<Object, List>(BuiltIn.GENERAL_BEFORE) {
+        @Override
+        public Object apply(List arg) {
+          // Returns first element of tuple (a, unit), ignoring the second
+          return arg.get(0);
+        }
+      };
+
+  /** @see BuiltIn#GENERAL_EXN_MESSAGE */
+  private static final Applicable GENERAL_EXN_MESSAGE =
+      new BaseApplicable1<String, BuiltInExn>(BuiltIn.GENERAL_EXN_MESSAGE) {
+        @Override
+        public String apply(BuiltInExn arg) {
+          return arg.mlName;
+        }
+      };
+
+  /** @see BuiltIn#GENERAL_EXN_NAME */
+  private static final Applicable GENERAL_EXN_NAME =
+      new BaseApplicable1<String, BuiltInExn>(BuiltIn.GENERAL_EXN_NAME) {
+        @Override
+        public String apply(BuiltInExn arg) {
+          return arg.structure + "." + arg.mlName;
+        }
+      };
+
   /** @see BuiltIn#GENERAL_IGNORE */
   private static final Applicable GENERAL_IGNORE =
       new BaseApplicable1<Unit, Object>(BuiltIn.GENERAL_IGNORE) {
@@ -768,8 +829,8 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#GENERAL_OP_O */
-  private static final Applicable2 GENERAL_OP_O = new OpO(BuiltIn.GENERAL_OP_O);
+  /** @see BuiltIn#GENERAL_O */
+  private static final Applicable2 GENERAL_OP_O = new OpO(BuiltIn.GENERAL_O);
 
   /** Implements {@link #GENERAL_OP_O}, {@link #FN_OP_O}. */
   private static class OpO
@@ -3924,12 +3985,14 @@ public abstract class Codes {
           .put(BuiltIn.BAG_NIL, ImmutableList.of())
           .put(BuiltIn.BAG_NTH, BAG_NTH)
           .put(BuiltIn.BAG_NULL, BAG_NULL)
-          .put(BuiltIn.BAG_OP_AT, BAG_AT) // op @ == Bag.at
           .put(BuiltIn.BAG_PARTITION, BAG_PARTITION)
           .put(BuiltIn.BAG_TABULATE, BAG_TABULATE)
           .put(BuiltIn.BAG_TAKE, BAG_TAKE)
           .put(BuiltIn.BAG_TL, BAG_TL)
           .put(BuiltIn.BAG_TO_LIST, BAG_TO_LIST)
+          .put(BuiltIn.BOOL_FROM_STRING, BOOL_FROM_STRING)
+          .put(BuiltIn.BOOL_NOT, BOOL_NOT)
+          .put(BuiltIn.BOOL_TO_STRING, BOOL_TO_STRING)
           .put(BuiltIn.CHAR_CHR, CHAR_CHR)
           .put(BuiltIn.CHAR_COMPARE, CHAR_COMPARE)
           .put(BuiltIn.CHAR_CONTAINS, CHAR_CONTAINS)
@@ -3982,11 +4045,14 @@ public abstract class Codes {
           .put(BuiltIn.FN_FLIP, FN_FLIP)
           .put(BuiltIn.FN_ID, FN_ID)
           .put(BuiltIn.FN_NOT_EQUAL, FN_NOT_EQUAL)
-          .put(BuiltIn.FN_OP_O, FN_OP_O)
+          .put(BuiltIn.FN_O, FN_OP_O)
           .put(BuiltIn.FN_REPEAT, FN_REPEAT)
           .put(BuiltIn.FN_UNCURRY, FN_UNCURRY)
+          .put(BuiltIn.GENERAL_BEFORE, GENERAL_BEFORE)
+          .put(BuiltIn.GENERAL_EXN_MESSAGE, GENERAL_EXN_MESSAGE)
+          .put(BuiltIn.GENERAL_EXN_NAME, GENERAL_EXN_NAME)
           .put(BuiltIn.GENERAL_IGNORE, GENERAL_IGNORE)
-          .put(BuiltIn.GENERAL_OP_O, GENERAL_OP_O)
+          .put(BuiltIn.GENERAL_O, GENERAL_OP_O)
           .put(BuiltIn.INT_ABS, INT_ABS)
           .put(BuiltIn.INT_COMPARE, INT_COMPARE)
           .put(BuiltIn.INT_DIV, INT_DIV)
@@ -4031,7 +4097,6 @@ public abstract class Codes {
           .put(BuiltIn.LIST_NIL, ImmutableList.of())
           .put(BuiltIn.LIST_NTH, LIST_NTH)
           .put(BuiltIn.LIST_NULL, LIST_NULL)
-          .put(BuiltIn.LIST_OP_AT, LIST_AT) // op @ == List.at
           .put(BuiltIn.LIST_PAIR_ALL, LIST_PAIR_ALL)
           .put(BuiltIn.LIST_PAIR_ALL_EQ, LIST_PAIR_ALL_EQ)
           .put(BuiltIn.LIST_PAIR_APP, LIST_PAIR_APP)
@@ -4391,7 +4456,11 @@ public abstract class Codes {
 
     @Override
     public StringBuilder describeTo(StringBuilder buf) {
-      return buf.append("uncaught exception ").append(e.mlName);
+      buf.append("uncaught exception ").append(e.mlName);
+      if (e.description != null) {
+        buf.append(" [").append(e.description).append("]");
+      }
+      return buf;
     }
 
     @Override
@@ -4402,25 +4471,30 @@ public abstract class Codes {
 
   /** Definitions of Morel built-in exceptions. */
   public enum BuiltInExn {
-    EMPTY("List", "Empty"),
-    BIND("General", "Bind"),
-    CHR("General", "Chr"),
-    DIV("General", "Div"),
-    DOMAIN("General", "Domain"),
-    OPTION("Option", "Option"),
-    OVERFLOW("General", "Overflow"),
-    ERROR("Interact", "Error"), // not in standard basis
-    SIZE("General", "Size"),
-    SUBSCRIPT("General", "Subscript [subscript out of bounds]"),
-    UNEQUAL_LENGTHS("ListPair", "UnequalLengths"),
-    UNORDERED("IEEEReal", "Unordered");
+    EMPTY("List", "Empty", null),
+    BIND("General", "Bind", null),
+    CHR("General", "Chr", null),
+    DIV("General", "Div", null),
+    DOMAIN("General", "Domain", null),
+    FAIL("General", "Fail", null),
+    MATCH("General", "Match", null),
+    OPTION("Option", "Option", null),
+    OVERFLOW("General", "Overflow", null),
+    ERROR("Interact", "Error", null), // not in standard basis
+    SIZE("General", "Size", null),
+    SPAN("General", "Span", null),
+    SUBSCRIPT("General", "Subscript", "subscript out of bounds"),
+    UNEQUAL_LENGTHS("ListPair", "UnequalLengths", null),
+    UNORDERED("IEEEReal", "Unordered", null);
 
     public final String structure;
     public final String mlName;
+    public final @Nullable String description;
 
-    BuiltInExn(String structure, String mlName) {
+    BuiltInExn(String structure, String mlName, @Nullable String description) {
       this.structure = structure;
       this.mlName = mlName;
+      this.description = description;
     }
   }
 

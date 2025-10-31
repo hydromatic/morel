@@ -252,14 +252,14 @@ public enum BuiltIn {
               1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.bag(0), UNIT))),
 
   /**
-   * Function "Bag.at", of type "&alpha; bag * &alpha; bag &rarr; &alpha; bag".
+   * Operator "Bag.op @", of type "&alpha; bag * &alpha; bag &rarr; &alpha;
+   * bag".
    *
    * <p>"l1 @ l2" returns the bag that is the concatenation of l1 and l2.
    */
-  // TODO: remove
   BAG_AT(
       "Bag",
-      "at",
+      "@",
       ts ->
           ts.forallType(
               1, h -> ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)))),
@@ -481,19 +481,6 @@ public enum BuiltIn {
       "Bag", "null", ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
 
   /**
-   * Operator "Bag.op @", of type "&alpha; bag * &alpha; bag &rarr; &alpha;
-   * bag".
-   *
-   * <p>"l1 @ l2" returns the bag that is the concatenation of l1 and l2.
-   */
-  BAG_OP_AT(
-      "Bag",
-      "op @",
-      ts ->
-          ts.forallType(
-              1, h -> ts.fnType(ts.tupleType(h.bag(0), h.bag(0)), h.bag(0)))),
-
-  /**
    * Function "Bag.partition", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
    * &rarr; &alpha; bag * &alpha; bag".
    *
@@ -573,6 +560,31 @@ public enum BuiltIn {
       "Bag",
       "toList",
       ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.list(0)))),
+
+  /**
+   * Function "Bool.fromString", of type "string &rarr; bool option".
+   *
+   * <p>"fromString s" scans a bool value from the string s. Returns {@code SOME
+   * true} if s is "true", {@code SOME false} if s is "false", and {@code NONE}
+   * otherwise.
+   */
+  BOOL_FROM_STRING(
+      "Bool", "fromString", ts -> ts.fnType(STRING, ts.option(BOOL))),
+
+  /**
+   * Function "Bool.not", of type "bool &rarr; bool".
+   *
+   * <p>"not b" returns the logical negation of the boolean value <em>b</em>.
+   */
+  BOOL_NOT("Bool", "not", ts -> ts.fnType(BOOL, BOOL)),
+
+  /**
+   * Function "Bool.toString", of type "bool &rarr; string".
+   *
+   * <p>"toString b" returns the string representation of <em>b</em>, either
+   * "true" or "false".
+   */
+  BOOL_TO_STRING("Bool", "toString", ts -> ts.fnType(BOOL, STRING)),
 
   /**
    * Function "Char.chr" of type "int &rarr; char".
@@ -747,32 +759,32 @@ public enum BuiltIn {
   CHAR_NOT_CONTAINS("Char", "notContains", ts -> ts.fnType(STRING, CHAR, BOOL)),
 
   /**
-   * Operator "Char.op &gt;=", of type "char * char &rarr; bool".
+   * Operator "Char.&gt;=", of type "char * char &rarr; bool".
    *
    * <p>"c1 &ge; c2" returns true if {@code ord(c1)} &ge; {@code ord(c2)}.
    */
-  CHAR_OP_GE("Char", "op >=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+  CHAR_OP_GE("Char", ">=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
 
   /**
-   * Operator "Char.op &gt;", of type "char * char &rarr; bool".
+   * Operator "Char.&gt;", of type "char * char &rarr; bool".
    *
    * <p>"c1 &gt; c2" returns true if {@code ord(c1)} &gt; {@code ord(c2)}.
    */
-  CHAR_OP_GT("Char", "op >", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+  CHAR_OP_GT("Char", ">", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
 
   /**
-   * Operator "Char.op &lt;=", of type "char * char &rarr; bool".
+   * Operator "Char.&lt;=", of type "char * char &rarr; bool".
    *
    * <p>"c1 &le; c2" returns true if {@code ord(c1)} &le; {@code ord(c2)}.
    */
-  CHAR_OP_LE("Char", "op <=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+  CHAR_OP_LE("Char", "<=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
 
   /**
-   * Operator "Char.op &lt;", of type "char * char &rarr; bool".
+   * Operator "Char.&lt;", of type "char * char &rarr; bool".
    *
    * <p>"c1 &lt; c2" returns true if {@code ord(c1)} &lt; {@code ord(c2)}.
    */
-  CHAR_OP_LT("Char", "op <", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+  CHAR_OP_LT("Char", "<", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
 
   /**
    * Function "Char.ord" of type "char &rarr; int".
@@ -1121,14 +1133,14 @@ public enum BuiltIn {
       ts -> ts.forallType(2, h -> ts.fnType(h.get(0), h.get(0), BOOL))),
 
   /**
-   * Operator "Fn.op o", of type "(&beta; &rarr; &gamma;) * (&alpha; &rarr;
-   * &beta;) &rarr; &alpha; &rarr; &gamma;".
+   * Operator "Fn.o", of type "(&beta; &rarr; &gamma;) * (&alpha; &rarr; &beta;)
+   * &rarr; &alpha; &rarr; &gamma;".
    *
-   * @see #GENERAL_OP_O
+   * @see #GENERAL_O
    */
-  FN_OP_O(
+  FN_O(
       "Fn",
-      "op o",
+      "o",
       ts ->
           ts.forallType(
               3,
@@ -1170,6 +1182,34 @@ public enum BuiltIn {
                       ts.fnType(h.get(0), h.get(1), h.get(2)),
                       ts.fnType(ts.tupleType(h.get(0), h.get(1)), h.get(2))))),
 
+  /**
+   * Function "General.before" of type "&alpha; * unit &rarr; &alpha;".
+   *
+   * <p>Evaluates to the first argument, ignoring the second.
+   */
+  GENERAL_BEFORE(
+      "General",
+      "before",
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.get(0), UNIT), h.get(0)))),
+
+  /**
+   * Function "General.exnMessage" of type "exn &rarr; string".
+   *
+   * <p>Returns a message associated with an exception.
+   */
+  GENERAL_EXN_MESSAGE(
+      "General", "exnMessage", ts -> ts.fnType(ts.lookup("exn"), STRING)),
+
+  /**
+   * Function "General.exnName" of type "exn &rarr; string".
+   *
+   * <p>Returns the name of an exception.
+   */
+  GENERAL_EXN_NAME(
+      "General", "exnName", ts -> ts.fnType(ts.lookup("exn"), STRING)),
+
   /** Function "General.ignore", of type "&alpha; &rarr; unit". */
   GENERAL_IGNORE(
       "General",
@@ -1178,15 +1218,15 @@ public enum BuiltIn {
       ts -> ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
 
   /**
-   * Operator "General.op o", of type "(&beta; &rarr; &gamma;) * (&alpha; &rarr;
-   * &beta;) &rarr; &alpha; &rarr; &gamma;"
+   * Function "General.o", and operator "op o", of type "(&beta; &rarr; &gamma;)
+   * * (&alpha; &rarr; &beta;) &rarr; &alpha; &rarr; &gamma;"
    *
    * <p>"f o g" is the function composition of "f" and "g". Thus, "(f o g) a" is
    * equivalent to "f (g a)".
    */
-  GENERAL_OP_O(
+  GENERAL_O(
       "General",
-      "op o",
+      "o",
       "op o",
       ts ->
           ts.forallType(
@@ -1364,15 +1404,15 @@ public enum BuiltIn {
               1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.list(0), UNIT))),
 
   /**
-   * Function "List.at", of type "&alpha; list * &alpha; list &rarr; &alpha;
-   * list".
+   * Function "List.@", and operator "@", of type "&alpha; list * &alpha; list
+   * &rarr; &alpha; list".
    *
    * <p>"l1 @ l2" returns the list that is the concatenation of l1 and l2.
    */
-  // TODO: remove
   LIST_AT(
       "List",
-      "at",
+      "@",
+      "op @",
       ts ->
           ts.forallType(
               1,
@@ -1685,21 +1725,6 @@ public enum BuiltIn {
       "null",
       "null",
       ts -> ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
-
-  /**
-   * Operator "List.op @", of type "&alpha; list * &alpha; list &rarr; &alpha;
-   * list".
-   *
-   * <p>"l1 @ l2" returns the list that is the concatenation of l1 and l2.
-   */
-  LIST_OP_AT(
-      "List",
-      "op @",
-      "op @",
-      ts ->
-          ts.forallType(
-              1,
-              h -> ts.fnType(ts.tupleType(h.list(0), h.list(0)), h.list(0)))),
 
   /**
    * Function "ListPair.all", of type "(&alpha; * &beta; &rarr; bool) &rarr;
@@ -2339,8 +2364,7 @@ public enum BuiltIn {
       "app",
       ts ->
           ts.forallType(
-              1,
-              h -> ts.fnType(ts.fnType(h.option(0), UNIT), h.option(0), UNIT))),
+              1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.option(0), UNIT))),
 
   /**
    * Function "Option.compose", of type "(&alpha; &rarr; &beta;) * (&gamma;
@@ -2546,7 +2570,7 @@ public enum BuiltIn {
 
   /** Function "Real./", of type "real * real &rarr; real". */
   REAL_DIVIDE(
-      "Real", "op /", "op /", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+      "Real", "/", "op /", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
   /**
    * Function "Real.floor", of type "real &rarr; int".
@@ -3181,25 +3205,25 @@ public enum BuiltIn {
    */
   STRING_MAX_SIZE("String", "maxSize", ts -> INT),
 
-  /** Operator "String.op ^", of type "string * string &rarr; string". */
+  /** Operator "String.^", of type "string * string &rarr; string". */
   STRING_OP_CARET(
-      "String", "op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
+      "String", "^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
 
-  /** Operator "String.op &gt;=", of type "string * string &rarr; bool". */
+  /** Operator "String.&gt;=", of type "string * string &rarr; bool". */
   STRING_OP_GE(
-      "String", "op >=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+      "String", ">=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
 
-  /** Operator "String.op &gt;", of type "string * string &rarr; bool". */
+  /** Operator "String.&gt;", of type "string * string &rarr; bool". */
   STRING_OP_GT(
-      "String", "op >", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+      "String", ">", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
 
-  /** Operator "String.op &lt;=", of type "string * string &rarr; bool". */
+  /** Operator "String.&lt;=", of type "string * string &rarr; bool". */
   STRING_OP_LE(
-      "String", "op <=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+      "String", "<=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
 
-  /** Operator "String.op &lt;", of type "string * string &rarr; bool". */
+  /** Operator "String.&lt;", of type "string * string &rarr; bool". */
   STRING_OP_LT(
-      "String", "op <", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+      "String", "<", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
 
   /**
    * Function "String.size", of type "string &rarr; int".
@@ -4061,6 +4085,8 @@ public enum BuiltIn {
         false,
         2,
         h -> h.tyCon(Constructor.EITHER_INL).tyCon(Constructor.EITHER_INR)),
+
+    EXN("exn", false, 0, h -> h),
 
     ORDER(
         "order",
