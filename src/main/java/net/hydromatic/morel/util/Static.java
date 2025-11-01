@@ -416,6 +416,68 @@ public class Static {
     }
     return Collections.unmodifiableList(list);
   }
+
+  /**
+   * Splits a string into a list of substrings, using a separator character,
+   * taking into account quoted substrings.
+   *
+   * <p>For example, {@code split("a,'b,c',d", ',', '\'')} returns the list
+   * {@code ["a", "b,c", "d"]}.
+   */
+  public static List<String> splitQuoted(String s, char sep, char quote) {
+    if (s.isEmpty()) {
+      return ImmutableList.of();
+    }
+
+    final ImmutableList.Builder<String> result = ImmutableList.builder();
+    final StringBuilder current = new StringBuilder();
+    boolean inQuote = false;
+
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      if (c == quote) {
+        inQuote = !inQuote;
+      } else if (c == sep && !inQuote) {
+        result.add(current.toString());
+        current.setLength(0);
+      } else {
+        current.append(c);
+      }
+    }
+
+    // Add the last part
+    result.add(current.toString());
+
+    return result.build();
+  }
+
+  /**
+   * Inverse of {@link #splitQuoted(String, char, char)}.
+   *
+   * <p>For example, {@code join(Arrays.asList("a", "b,c", "d"), ',', '\'')}
+   * returns {@code "a,'b,c',d"}.
+   */
+  public static String joinQuoted(
+      Iterable<String> strings, char sep, char quote) {
+    final StringBuilder result = new StringBuilder();
+    boolean first = true;
+
+    for (String s : strings) {
+      if (!first) {
+        result.append(sep);
+      }
+      first = false;
+
+      // Quote the string if it contains the separator
+      if (s.indexOf(sep) >= 0) {
+        result.append(quote).append(s).append(quote);
+      } else {
+        result.append(s);
+      }
+    }
+
+    return result.toString();
+  }
 }
 
 // End Static.java

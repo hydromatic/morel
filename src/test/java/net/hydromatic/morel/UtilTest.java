@@ -731,6 +731,22 @@ public class UtilTest {
   }
 
   /**
+   * Tests {@link Static#splitQuoted(String, char, char)} and {@link
+   * Static#joinQuoted(Iterable, char, char)}.
+   */
+  @Test
+  void testSplitJoin() {
+    checkSplitJoin("", Collections.emptyList());
+    checkSplitJoin("a,'b,c',d", Arrays.asList("a", "b,c", "d"));
+    checkSplitJoin(",a,,bc,", Arrays.asList("", "a", "", "bc", ""));
+  }
+
+  private static void checkSplitJoin(String s, List<String> list) {
+    assertThat(Static.splitQuoted(s, ',', '\''), is(list));
+    assertThat(Static.joinQuoted(list, ',', '\''), is(s));
+  }
+
+  /**
    * Helps validate a comparator.
    *
    * @param <T> Type of value to be compared
