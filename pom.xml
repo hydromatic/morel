@@ -76,7 +76,7 @@ License.
     <top.dir>${project.basedir}</top.dir>
 
     <!-- Component and plugin versions, in alphabetical order. -->
-    <!-- // lint:startSorted:properties -->
+    <!-- // lint: sort until 'maven-javadoc-plugin.additionalOptions' where '##<[a-z]' -->
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
     <calcite.version>1.40.0</calcite.version>
     <!-- We support (and test) Checkstyle as low as 9.3.
@@ -114,7 +114,6 @@ License.
     <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
     <slf4j.version>2.1.0-alpha1</slf4j.version>
     <versions-maven-plugin.version>2.18.0</versions-maven-plugin.version>
-    <!-- // lint:endSorted -->
 
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
@@ -143,7 +142,7 @@ License.
   </scm>
 
   <dependencies>
-    <!-- // lint:startSorted:groupId6 -->
+    <!-- // lint: sort until '#</dependencies>' where '##  <groupId>' -->
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-toml</artifactId>
@@ -224,7 +223,6 @@ License.
       <artifactId>slf4j-api</artifactId>
       <version>${slf4j.version}</version>
     </dependency>
-    <!-- // lint:endSorted:groupId6 -->
   </dependencies>
 
   <build>
@@ -232,7 +230,7 @@ License.
     <pluginManagement />
 
     <plugins>
-      <!-- // lint:startSorted:groupId8 -->
+      <!-- // lint: sort until '#</plugins>' where '##  <groupId>' -->
       <plugin>
         <groupId>com.theoryinpractise</groupId>
         <artifactId>googleformatter-maven-plugin</artifactId>
@@ -496,8 +494,8 @@ License.
   </build>
 
   <reporting>
-    <!-- // lint:startSorted:groupId8 -->
     <plugins>
+      <!-- // lint: sort until '#</plugins>' where '##  <groupId>' -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
@@ -513,7 +511,6 @@ License.
         </configuration>
       </plugin>
     </plugins>
-    <!-- // lint:endSorted:groupId8 -->
   </reporting>
 
   <profiles>

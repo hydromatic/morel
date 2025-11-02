@@ -110,7 +110,9 @@ public abstract class Codes {
   // The following section contains fields that implement built-in functions and
   // values. They are in alphabetical order.
 
-  // lint:startSorted:fields
+  // lint: sort until '#}' \
+  //   where '##private static final [^ ]+ [^ ]+ =' \
+  //   erase 'private static final [^ ]+ '
 
   /** An applicable that returns the absolute value of an int. */
   private static final Applicable1 ABS =
@@ -136,11 +138,14 @@ public abstract class Codes {
   /** @see BuiltIn#BAG_DROP */
   private static final Applicable2 BAG_DROP = listDrop(BuiltIn.BAG_DROP);
 
-  /** @see BuiltIn#BAG_FIND */
-  private static final Applicable2 BAG_FIND = find(BuiltIn.BAG_FIND);
+  /** @see BuiltIn#BAG_EXISTS */
+  private static final Applicable2 BAG_EXISTS = exists(BuiltIn.BAG_EXISTS);
 
   /** @see BuiltIn#BAG_FILTER */
   private static final Applicable2 BAG_FILTER = listFilter(BuiltIn.BAG_FILTER);
+
+  /** @see BuiltIn#BAG_FIND */
+  private static final Applicable2 BAG_FIND = find(BuiltIn.BAG_FIND);
 
   /** @see BuiltIn#BAG_FOLD */
   private static final Applicable3 BAG_FOLD =
@@ -151,9 +156,6 @@ public abstract class Codes {
   /** @see BuiltIn#BAG_FROM_LIST */
   private static final Applicable1 BAG_FROM_LIST =
       identity(BuiltIn.BAG_FROM_LIST);
-
-  /** @see BuiltIn#BAG_EXISTS */
-  private static final Applicable2 BAG_EXISTS = exists(BuiltIn.BAG_EXISTS);
 
   /** @see BuiltIn#BAG_GET_ITEM */
   private static final Applicable BAG_GET_ITEM =
@@ -192,12 +194,12 @@ public abstract class Codes {
   private static final Applicable BAG_TAKE =
       new ListTake(BuiltIn.BAG_TAKE, Pos.ZERO);
 
-  /** @see BuiltIn#BAG_TO_LIST */
-  private static final Applicable1 BAG_TO_LIST = identity(BuiltIn.BAG_TO_LIST);
-
   /** @see BuiltIn#BAG_TL */
   private static final Applicable BAG_TL =
       new ListTl(BuiltIn.LIST_TL, Pos.ZERO);
+
+  /** @see BuiltIn#BAG_TO_LIST */
+  private static final Applicable1 BAG_TO_LIST = identity(BuiltIn.BAG_TO_LIST);
 
   /** @see BuiltIn#CHAR_CHR */
   private static final Applicable1 CHAR_CHR = new CharChr(Pos.ZERO);
@@ -800,6 +802,9 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#INT_DIV */
+  private static final Applicable2 INT_DIV = new IntDiv(BuiltIn.INT_DIV);
+
   /** @see BuiltIn#INT_FROM_INT */
   private static final Applicable1 INT_FROM_INT =
       identity(BuiltIn.INT_FROM_INT);
@@ -859,9 +864,6 @@ public abstract class Codes {
 
   /** @see BuiltIn#INT_MIN_INT */
   private static final List INT_MIN_INT = optionSome(Integer.MAX_VALUE);
-
-  /** @see BuiltIn#INT_DIV */
-  private static final Applicable2 INT_DIV = new IntDiv(BuiltIn.INT_DIV);
 
   /** Implements {@link #INT_DIV} and {@link #OP_DIV}. */
   private static class IntDiv
@@ -1125,24 +1127,6 @@ public abstract class Codes {
     };
   }
 
-  /** @see BuiltIn#LIST_FIND */
-  private static final Applicable2 LIST_FIND = find(BuiltIn.LIST_FIND);
-
-  private static Applicable2 find(BuiltIn builtIn) {
-    return new BaseApplicable2<List, Applicable1<Boolean, Object>, List>(
-        builtIn) {
-      @Override
-      public List apply(Applicable1<Boolean, Object> f, List list) {
-        for (Object o : list) {
-          if (f.apply(o)) {
-            return optionSome(o);
-          }
-        }
-        return OPTION_NONE;
-      }
-    };
-  }
-
   /** @see BuiltIn#LIST_FILTER */
   private static final Applicable2 LIST_FILTER =
       listFilter(BuiltIn.LIST_FILTER);
@@ -1159,6 +1143,24 @@ public abstract class Codes {
           }
         }
         return builder.build();
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_FIND */
+  private static final Applicable2 LIST_FIND = find(BuiltIn.LIST_FIND);
+
+  private static Applicable2 find(BuiltIn builtIn) {
+    return new BaseApplicable2<List, Applicable1<Boolean, Object>, List>(
+        builtIn) {
+      @Override
+      public List apply(Applicable1<Boolean, Object> f, List list) {
+        for (Object o : list) {
+          if (f.apply(o)) {
+            return optionSome(o);
+          }
+        }
+        return OPTION_NONE;
       }
     };
   }
@@ -1297,22 +1299,6 @@ public abstract class Codes {
     };
   }
 
-  /** @see BuiltIn#LIST_MAPI */
-  private static final Applicable2 LIST_MAPI = listMapi(BuiltIn.LIST_MAPI);
-
-  /** Implements {@link #LIST_MAPI}, {@link #VECTOR_MAPI}. */
-  private static Applicable2<List, Applicable1, List> listMapi(
-      BuiltIn builtIn) {
-    return new BaseApplicable2<List, Applicable1, List>(builtIn) {
-      @Override
-      public List apply(Applicable1 f, List vec) {
-        ImmutableList.Builder b = ImmutableList.builder();
-        forEachIndexed(vec, (e, i) -> b.add(f.apply(FlatLists.of(i, e))));
-        return b.build();
-      }
-    };
-  }
-
   /** @see BuiltIn#LIST_MAP */
   private static final Applicable2 LIST_MAP = listMap(BuiltIn.LIST_MAP);
 
@@ -1345,6 +1331,22 @@ public abstract class Codes {
           }
         }
         return builder.build();
+      }
+    };
+  }
+
+  /** @see BuiltIn#LIST_MAPI */
+  private static final Applicable2 LIST_MAPI = listMapi(BuiltIn.LIST_MAPI);
+
+  /** Implements {@link #LIST_MAPI}, {@link #VECTOR_MAPI}. */
+  private static Applicable2<List, Applicable1, List> listMapi(
+      BuiltIn builtIn) {
+    return new BaseApplicable2<List, Applicable1, List>(builtIn) {
+      @Override
+      public List apply(Applicable1 f, List vec) {
+        ImmutableList.Builder b = ImmutableList.builder();
+        forEachIndexed(vec, (e, i) -> b.add(f.apply(FlatLists.of(i, e))));
+        return b.build();
       }
     };
   }
@@ -2224,6 +2226,32 @@ public abstract class Codes {
     }
   }
 
+  /** @see BuiltIn.Constructor#ORDER_EQUAL */
+  private static final List ORDER_EQUAL =
+      ImmutableList.of(BuiltIn.Constructor.ORDER_EQUAL.constructor);
+
+  /** @see BuiltIn.Constructor#ORDER_GREATER */
+  private static final List ORDER_GREATER =
+      ImmutableList.of(BuiltIn.Constructor.ORDER_GREATER.constructor);
+
+  /** @see BuiltIn.Constructor#ORDER_LESS */
+  private static final List ORDER_LESS =
+      ImmutableList.of(BuiltIn.Constructor.ORDER_LESS.constructor);
+
+  /**
+   * Converts the result of {@link Comparable#compareTo(Object)} to an {@code
+   * Order} value.
+   */
+  static List order(int c) {
+    if (c < 0) {
+      return ORDER_LESS;
+    }
+    if (c > 0) {
+      return ORDER_GREATER;
+    }
+    return ORDER_EQUAL;
+  }
+
   /** @see BuiltIn#REAL_ABS */
   private static final Applicable REAL_ABS =
       new BaseApplicable1<Float, Float>(BuiltIn.REAL_ABS) {
@@ -2461,11 +2489,11 @@ public abstract class Codes {
         }
       };
 
-  /** @see BuiltIn#REAL_MIN_POS */
-  private static final float REAL_MIN_POS = Float.MIN_VALUE;
-
   /** @see BuiltIn#REAL_MIN_NORMAL_POS */
   private static final float REAL_MIN_NORMAL_POS = Float.MIN_NORMAL;
+
+  /** @see BuiltIn#REAL_MIN_POS */
+  private static final float REAL_MIN_POS = Float.MIN_VALUE;
 
   /** @see BuiltIn#REAL_NEG_INF */
   private static final float REAL_NEG_INF = Float.NEGATIVE_INFINITY;
@@ -2808,32 +2836,6 @@ public abstract class Codes {
         throw new AssertionError("bad type " + argType);
       };
 
-  /**
-   * Converts the result of {@link Comparable#compareTo(Object)} to an {@code
-   * Order} value.
-   */
-  static List order(int c) {
-    if (c < 0) {
-      return ORDER_LESS;
-    }
-    if (c > 0) {
-      return ORDER_GREATER;
-    }
-    return ORDER_EQUAL;
-  }
-
-  /** @see BuiltIn.Constructor#ORDER_LESS */
-  private static final List ORDER_LESS =
-      ImmutableList.of(BuiltIn.Constructor.ORDER_LESS.constructor);
-
-  /** @see BuiltIn.Constructor#ORDER_EQUAL */
-  private static final List ORDER_EQUAL =
-      ImmutableList.of(BuiltIn.Constructor.ORDER_EQUAL.constructor);
-
-  /** @see BuiltIn.Constructor#ORDER_GREATER */
-  private static final List ORDER_GREATER =
-      ImmutableList.of(BuiltIn.Constructor.ORDER_GREATER.constructor);
-
   /** @see BuiltIn#STRING_COLLATE */
   private static final Applicable2 STRING_COLLATE =
       new BaseApplicable2<List, Applicable1, List>(BuiltIn.STRING_COLLATE) {
@@ -3086,6 +3088,15 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#STRING_STR */
+  private static final Applicable STRING_STR =
+      new BaseApplicable1<String, Character>(BuiltIn.STRING_STR) {
+        @Override
+        public String apply(Character character) {
+          return character + "";
+        }
+      };
+
   /** @see BuiltIn#STRING_SUB */
   private static final Applicable2 STRING_SUB = new StringSub(Pos.ZERO);
 
@@ -3108,15 +3119,6 @@ public abstract class Codes {
       return new StringSub(pos);
     }
   }
-
-  /** @see BuiltIn#STRING_STR */
-  private static final Applicable STRING_STR =
-      new BaseApplicable1<String, Character>(BuiltIn.STRING_STR) {
-        @Override
-        public String apply(Character character) {
-          return character + "";
-        }
-      };
 
   /** @see BuiltIn#STRING_SUBSTRING */
   private static final Applicable3 STRING_SUBSTRING =
@@ -3422,9 +3424,6 @@ public abstract class Codes {
   private static final Applicable1 VECTOR_FROM_LIST =
       identity(BuiltIn.VECTOR_FROM_LIST);
 
-  /** @see BuiltIn#VECTOR_MAX_LEN */
-  private static final int VECTOR_MAX_LEN = (1 << 24) - 1;
-
   /** @see BuiltIn#VECTOR_LENGTH */
   private static final Applicable1 VECTOR_LENGTH =
       length(BuiltIn.VECTOR_LENGTH);
@@ -3442,6 +3441,9 @@ public abstract class Codes {
 
   /** @see BuiltIn#VECTOR_MAPI */
   private static final Applicable2 VECTOR_MAPI = listMapi(BuiltIn.VECTOR_MAPI);
+
+  /** @see BuiltIn#VECTOR_MAX_LEN */
+  private static final int VECTOR_MAX_LEN = (1 << 24) - 1;
 
   /** @see BuiltIn#VECTOR_SUB */
   private static final Applicable VECTOR_SUB =
@@ -3607,8 +3609,6 @@ public abstract class Codes {
           return a0 * a1;
         }
       };
-
-  // lint:endSorted
 
   // ---------------------------------------------------------------------------
 
@@ -3904,7 +3904,8 @@ public abstract class Codes {
           .put(BuiltIn.TRUE, true)
           .put(BuiltIn.FALSE, false)
           .put(BuiltIn.NOT, NOT)
-          .put(BuiltIn.ABS, ABS) // lint:startSorted
+          // lint: sort until '#.build\\(\\);' where '##\\.put'
+          .put(BuiltIn.ABS, ABS)
           .put(BuiltIn.BAG_ALL, BAG_ALL)
           .put(BuiltIn.BAG_APP, BAG_APP)
           .put(BuiltIn.BAG_AT, BAG_AT)
@@ -4213,7 +4214,7 @@ public abstract class Codes {
           .put(BuiltIn.Z_TIMES_INT, Z_TIMES_INT)
           .put(BuiltIn.Z_TIMES_REAL, Z_TIMES_REAL)
           .put(BuiltIn.Z_TY_CON, Unit.INSTANCE)
-          .build(); // lint:endSorted
+          .build();
 
   @SuppressWarnings("TrivialFunctionalExpressionUsage")
   public static final Map<Applicable, BuiltIn> BUILT_IN_MAP =

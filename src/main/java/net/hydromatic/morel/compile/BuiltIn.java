@@ -223,7 +223,7 @@ public enum BuiltIn {
           ts.forallType(
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
-  // lint:startSorted:enum
+  // lint: sort until '##public' where '##[A-Z_]+\('
 
   /**
    * Function "Bag.all", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
@@ -625,6 +625,98 @@ public enum BuiltIn {
       "Char", "fromString", ts -> ts.fnType(STRING, ts.option(CHAR))),
 
   /**
+   * Function "Char.isAlpha" of type "char &rarr; bool".
+   *
+   * <p>"isAlpha c" returns true if {@code c} is a letter (lowercase or
+   * uppercase).
+   */
+  CHAR_IS_ALPHA("Char", "isAlpha", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isAlphaNum" of type "char &rarr; bool".
+   *
+   * <p>"isAlphaNum c" returns true if {@code c} is alphanumeric (a letter or a
+   * decimal digit).
+   */
+  CHAR_IS_ALPHA_NUM("Char", "isAlphaNum", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isAscii" of type "char &rarr; bool".
+   *
+   * <p>"isAscii c" returns true if {@code 0 <= ord c <= 127}.
+   */
+  CHAR_IS_ASCII("Char", "isAscii", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isCntrl" of type "char &rarr; bool".
+   *
+   * <p>"isCntrl c" returns true if {@code c} is a control character, that is,
+   * if {@code not (isPrint c)}.
+   */
+  CHAR_IS_CNTRL("Char", "isCntrl", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isDigit" of type "char &rarr; bool".
+   *
+   * <p>"isDigit c" returns true if {@code c} is a decimal digit (0 to 9).
+   */
+  CHAR_IS_DIGIT("Char", "isDigit", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isGraph" of type "char &rarr; bool".
+   *
+   * <p>"isGraph c" returns true if {@code c} is a graphical character, that is,
+   * it is printable and not a whitespace character.
+   */
+  CHAR_IS_GRAPH("Char", "isGraph", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isHexDigit" of type "char &rarr; bool".
+   *
+   * <p>"isHexDigit c" returns true if {@code c} is a hexadecimal digit (0 to 9
+   * or a to f or A to F).
+   */
+  CHAR_IS_HEX_DIGIT("Char", "isHexDigit", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isLower" of type "char &rarr; bool".
+   *
+   * <p>"isLower c" returns true if {@code c} is a lowercase letter (a to z).
+   */
+  CHAR_IS_LOWER("Char", "isLower", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isPrint" of type "char &rarr; bool".
+   *
+   * <p>"isPrint c" returns true if {@code c} is a printable character (space or
+   * visible).
+   */
+  CHAR_IS_PRINT("Char", "isPrint", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isPunct" of type "char &rarr; bool".
+   *
+   * <p>"isPunct c" returns true if {@code c} is a punctuation character, that
+   * is, graphical but not alphanumeric.
+   */
+  CHAR_IS_PUNCT("Char", "isPunct", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isSpace" of type "char &rarr; bool".
+   *
+   * <p>"isSpace c" returns true if {@code c} is a whitespace character (blank,
+   * newline, tab, vertical tab, new page).
+   */
+  CHAR_IS_SPACE("Char", "isSpace", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
+   * Function "Char.isUpper" of type "char &rarr; bool".
+   *
+   * <p>"isUpper c" returns true if {@code c} is an uppercase letter (A to Z).
+   */
+  CHAR_IS_UPPER("Char", "isUpper", ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
    * Constant "Char.maxChar", of type "char".
    *
    * <p>The greatest character in the ordering &lt;.
@@ -655,25 +747,11 @@ public enum BuiltIn {
   CHAR_NOT_CONTAINS("Char", "notContains", ts -> ts.fnType(STRING, CHAR, BOOL)),
 
   /**
-   * Function "Char.ord" of type "char &rarr; int".
+   * Operator "Char.op &gt;=", of type "char * char &rarr; bool".
    *
-   * <p>"ord c" returns the code of character {@code c}.
+   * <p>"c1 &ge; c2" returns true if {@code ord(c1)} &ge; {@code ord(c2)}.
    */
-  CHAR_ORD("Char", "ord", ts -> ts.fnType(CHAR, INT)),
-
-  /**
-   * Operator "Char.op &lt;", of type "char * char &rarr; bool".
-   *
-   * <p>"c1 &lt; c2" returns true if {@code ord(c1)} &lt; {@code ord(c2)}.
-   */
-  CHAR_OP_LT("Char", "op <", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
-
-  /**
-   * Operator "Char.op &lt;=", of type "char * char &rarr; bool".
-   *
-   * <p>"c1 &le; c2" returns true if {@code ord(c1)} &le; {@code ord(c2)}.
-   */
-  CHAR_OP_LE("Char", "op <=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+  CHAR_OP_GE("Char", "op >=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
 
   /**
    * Operator "Char.op &gt;", of type "char * char &rarr; bool".
@@ -683,11 +761,25 @@ public enum BuiltIn {
   CHAR_OP_GT("Char", "op >", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
 
   /**
-   * Operator "Char.op &gt;=", of type "char * char &rarr; bool".
+   * Operator "Char.op &lt;=", of type "char * char &rarr; bool".
    *
-   * <p>"c1 &ge; c2" returns true if {@code ord(c1)} &ge; {@code ord(c2)}.
+   * <p>"c1 &le; c2" returns true if {@code ord(c1)} &le; {@code ord(c2)}.
    */
-  CHAR_OP_GE("Char", "op >=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+  CHAR_OP_LE("Char", "op <=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+
+  /**
+   * Operator "Char.op &lt;", of type "char * char &rarr; bool".
+   *
+   * <p>"c1 &lt; c2" returns true if {@code ord(c1)} &lt; {@code ord(c2)}.
+   */
+  CHAR_OP_LT("Char", "op <", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+
+  /**
+   * Function "Char.ord" of type "char &rarr; int".
+   *
+   * <p>"ord c" returns the code of character {@code c}.
+   */
+  CHAR_ORD("Char", "ord", ts -> ts.fnType(CHAR, INT)),
 
   /**
    * Function "Char.pred" of type "char &rarr; char".
@@ -789,98 +881,6 @@ public enum BuiltIn {
    * {@code c} is a letter (a to z or A to Z); otherwise returns {@code c}.
    */
   CHAR_TO_UPPER("Char", "toUpper", ts -> ts.fnType(CHAR, CHAR)),
-
-  /**
-   * Function "Char.isAlpha" of type "char &rarr; bool".
-   *
-   * <p>"isAlpha c" returns true if {@code c} is a letter (lowercase or
-   * uppercase).
-   */
-  CHAR_IS_ALPHA("Char", "isAlpha", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isAlphaNum" of type "char &rarr; bool".
-   *
-   * <p>"isAlphaNum c" returns true if {@code c} is alphanumeric (a letter or a
-   * decimal digit).
-   */
-  CHAR_IS_ALPHA_NUM("Char", "isAlphaNum", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isAscii" of type "char &rarr; bool".
-   *
-   * <p>"isAscii c" returns true if {@code 0 <= ord c <= 127}.
-   */
-  CHAR_IS_ASCII("Char", "isAscii", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isCntrl" of type "char &rarr; bool".
-   *
-   * <p>"isCntrl c" returns true if {@code c} is a control character, that is,
-   * if {@code not (isPrint c)}.
-   */
-  CHAR_IS_CNTRL("Char", "isCntrl", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isDigit" of type "char &rarr; bool".
-   *
-   * <p>"isDigit c" returns true if {@code c} is a decimal digit (0 to 9).
-   */
-  CHAR_IS_DIGIT("Char", "isDigit", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isGraph" of type "char &rarr; bool".
-   *
-   * <p>"isGraph c" returns true if {@code c} is a graphical character, that is,
-   * it is printable and not a whitespace character.
-   */
-  CHAR_IS_GRAPH("Char", "isGraph", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isHexDigit" of type "char &rarr; bool".
-   *
-   * <p>"isHexDigit c" returns true if {@code c} is a hexadecimal digit (0 to 9
-   * or a to f or A to F).
-   */
-  CHAR_IS_HEX_DIGIT("Char", "isHexDigit", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isLower" of type "char &rarr; bool".
-   *
-   * <p>"isLower c" returns true if {@code c} is a lowercase letter (a to z).
-   */
-  CHAR_IS_LOWER("Char", "isLower", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isPrint" of type "char &rarr; bool".
-   *
-   * <p>"isPrint c" returns true if {@code c} is a printable character (space or
-   * visible).
-   */
-  CHAR_IS_PRINT("Char", "isPrint", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isPunct" of type "char &rarr; bool".
-   *
-   * <p>"isPunct c" returns true if {@code c} is a punctuation character, that
-   * is, graphical but not alphanumeric.
-   */
-  CHAR_IS_PUNCT("Char", "isPunct", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isSpace" of type "char &rarr; bool".
-   *
-   * <p>"isSpace c" returns true if {@code c} is a whitespace character (blank,
-   * newline, tab, vertical tab, new page).
-   */
-  CHAR_IS_SPACE("Char", "isSpace", ts -> ts.fnType(CHAR, BOOL)),
-
-  /**
-   * Function "Char.isUpper" of type "char &rarr; bool".
-   *
-   * <p>"isUpper c" returns true if {@code c} is an uppercase letter (A to Z).
-   */
-  CHAR_IS_UPPER("Char", "isUpper", ts -> ts.fnType(CHAR, BOOL)),
 
   /**
    * Function "Either.app", of type "(&alpha; &rarr; unit) * (&beta; &rarr;
@@ -1223,14 +1223,8 @@ public enum BuiltIn {
   /** Function "Int.div", of type "int * int &rarr; int". */
   INT_DIV("Int", "div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
-  /** Function "Int.toInt", of type "int &rarr; int". */
-  INT_TO_INT("Int", "toInt", ts -> ts.fnType(INT, INT)),
-
   /** Function "Int.fromInt", of type "int &rarr; int". */
   INT_FROM_INT("Int", "fromInt", ts -> ts.fnType(INT, INT)),
-
-  /** Function "Int.toLarge", of type "int &rarr; int". */
-  INT_TO_LARGE("Int", "toLarge", ts -> ts.fnType(INT, INT)),
 
   /** Function "Int.fromLarge", of type "int &rarr; int". */
   INT_FROM_LARGE("Int", "fromLarge", ts -> ts.fnType(INT, INT)),
@@ -1244,15 +1238,6 @@ public enum BuiltIn {
    */
   INT_FROM_STRING("Int", "fromString", ts -> ts.fnType(STRING, ts.option(INT))),
 
-  /** Constant "Int.minInt", of type "int option". */
-  INT_MIN_INT("Int", "minInt", ts -> ts.option(INT)),
-
-  /** Constant "Int.maxInt", of type "int option". */
-  INT_MAX_INT("Int", "maxInt", ts -> ts.option(INT)),
-
-  /** Constant "Int.precision", of type "int option". */
-  INT_PRECISION("Int", "precision", ts -> ts.option(INT)),
-
   /**
    * Function "Int.max", of type "int * int &rarr; int".
    *
@@ -1260,6 +1245,9 @@ public enum BuiltIn {
    * returns the other argument. If both arguments are NaN, returns NaN.
    */
   INT_MAX("Int", "max", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Constant "Int.maxInt", of type "int option". */
+  INT_MAX_INT("Int", "maxInt", ts -> ts.option(INT)),
 
   /**
    * Function "Int.min", of type "int * int &rarr; int".
@@ -1269,8 +1257,8 @@ public enum BuiltIn {
    */
   INT_MIN("Int", "min", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
-  /** Function "Int.quot", of type "int * int &rarr; int". */
-  INT_QUOT("Int", "quot", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+  /** Constant "Int.minInt", of type "int option". */
+  INT_MIN_INT("Int", "minInt", ts -> ts.option(INT)),
 
   /**
    * Function "Int.mod", of type "int * int &rarr; int".
@@ -1279,6 +1267,12 @@ public enum BuiltIn {
    * split".
    */
   INT_MOD("Int", "mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Constant "Int.precision", of type "int option". */
+  INT_PRECISION("Int", "precision", ts -> ts.option(INT)),
+
+  /** Function "Int.quot", of type "int * int &rarr; int". */
+  INT_QUOT("Int", "quot", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
   /**
    * Function "Int.rem", of type "int * int &rarr; int".
@@ -1307,6 +1301,12 @@ public enum BuiltIn {
    * raises {@link BuiltInExn#DOMAIN Domain} on NaN.
    */
   INT_SIGN("Int", "sign", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.toInt", of type "int &rarr; int". */
+  INT_TO_INT("Int", "toInt", ts -> ts.fnType(INT, INT)),
+
+  /** Function "Int.toLarge", of type "int &rarr; int". */
+  INT_TO_LARGE("Int", "toLarge", ts -> ts.fnType(INT, INT)),
 
   /**
    * Function "Int.toString", of type "int &rarr; string".
@@ -2610,37 +2610,6 @@ public enum BuiltIn {
   REAL_IS_NORMAL("Real", "isNormal", ts -> ts.fnType(REAL, BOOL)),
 
   /**
-   * Constant "Real.negInf", of type "real".
-   *
-   * <p>The negative infinity value.
-   */
-  REAL_NEG_INF("Real", "negInf", ts -> REAL),
-
-  /**
-   * Constant "Real.posInf", of type "real".
-   *
-   * <p>The positive infinity value.
-   */
-  REAL_POS_INF("Real", "posInf", ts -> REAL),
-
-  /**
-   * Constant "Real.radix", of type "int".
-   *
-   * <p>The base of the representation, e.g., 2 or 10 for IEEE floating point.
-   */
-  REAL_RADIX("Real", "radix", ts -> INT),
-
-  /**
-   * Constant "Real.precision", of type "int".
-   *
-   * <p>The number of digits, each between 0 and {@code radix - 1}, in the
-   * mantissa. Note that the precision includes the implicit (or hidden) bit
-   * used in the IEEE representation (e.g., the value of Real64.precision is
-   * 53).
-   */
-  REAL_PRECISION("Real", "precision", ts -> INT),
-
-  /**
    * Function "Real.max", of type "real * real &rarr; real".
    *
    * <p>Returns the returns the larger of the arguments. If exactly one argument
@@ -2664,13 +2633,6 @@ public enum BuiltIn {
   REAL_MIN("Real", "min", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
   /**
-   * Constant "Real.minPos", of type "real".
-   *
-   * <p>The minimum non-zero positive number.
-   */
-  REAL_MIN_POS("Real", "minPos", ts -> REAL),
-
-  /**
    * Constant "Real.minNormalPos", of type "real".
    *
    * <p>The minimum non-zero normalized number.
@@ -2678,12 +2640,42 @@ public enum BuiltIn {
   REAL_MIN_NORMAL_POS("Real", "minNormalPos", ts -> REAL),
 
   /**
-   * Function "Real.realMod", of type "real * real &rarr; real".
+   * Constant "Real.minPos", of type "real".
    *
-   * <p>Returns the fractional part of r. "realMod" is equivalent to "#frac o
-   * split".
+   * <p>The minimum non-zero positive number.
    */
-  REAL_REAL_MOD("Real", "realMod", ts -> ts.fnType(REAL, REAL)),
+  REAL_MIN_POS("Real", "minPos", ts -> REAL),
+
+  /**
+   * Constant "Real.negInf", of type "real".
+   *
+   * <p>The negative infinity value.
+   */
+  REAL_NEG_INF("Real", "negInf", ts -> REAL),
+
+  /**
+   * Constant "Real.posInf", of type "real".
+   *
+   * <p>The positive infinity value.
+   */
+  REAL_POS_INF("Real", "posInf", ts -> REAL),
+
+  /**
+   * Constant "Real.precision", of type "int".
+   *
+   * <p>The number of digits, each between 0 and {@code radix - 1}, in the
+   * mantissa. Note that the precision includes the implicit (or hidden) bit
+   * used in the IEEE representation (e.g., the value of Real64.precision is
+   * 53).
+   */
+  REAL_PRECISION("Real", "precision", ts -> INT),
+
+  /**
+   * Constant "Real.radix", of type "int".
+   *
+   * <p>The base of the representation, e.g., 2 or 10 for IEEE floating point.
+   */
+  REAL_RADIX("Real", "radix", ts -> INT),
 
   /**
    * Function "Real.realCeil", of type "real &rarr; real".
@@ -2698,6 +2690,14 @@ public enum BuiltIn {
    * <p>Returns the largest integer-valued real not larger than {@code r}.
    */
   REAL_REAL_FLOOR("Real", "realFloor", ts -> ts.fnType(REAL, REAL)),
+
+  /**
+   * Function "Real.realMod", of type "real * real &rarr; real".
+   *
+   * <p>Returns the fractional part of r. "realMod" is equivalent to "#frac o
+   * split".
+   */
+  REAL_REAL_MOD("Real", "realMod", ts -> ts.fnType(REAL, REAL)),
 
   /**
    * Function "Real.realRound", of type "real &rarr; real".
@@ -3209,6 +3209,13 @@ public enum BuiltIn {
   STRING_SIZE("String", "size", "size", ts -> ts.fnType(STRING, INT)),
 
   /**
+   * Function "String.str", of type "char &rarr; string".
+   *
+   * <p>"str c" is the string of size one containing the character {@code c}.
+   */
+  STRING_STR("String", "str", "str", ts -> ts.fnType(CHAR, STRING)),
+
+  /**
    * Function "String.sub", of type "string * int &rarr; char".
    *
    * <p>"sub (s, i)" returns the {@code i}<sup>th</sup> character of s, counting
@@ -3216,13 +3223,6 @@ public enum BuiltIn {
    * or |s| &le; i.
    */
   STRING_SUB("String", "sub", ts -> ts.fnType(ts.tupleType(STRING, INT), CHAR)),
-
-  /**
-   * Function "String.str", of type "char &rarr; string".
-   *
-   * <p>"str c" is the string of size one containing the character {@code c}.
-   */
-  STRING_STR("String", "str", "str", ts -> ts.fnType(CHAR, STRING)),
 
   /**
    * Function "String.substring", of type "string * int * int &rarr; string".
@@ -3716,9 +3716,6 @@ public enum BuiltIn {
   /** Internal operator "andalso", of type "bool * bool &rarr; bool". */
   Z_ANDALSO("$", "andalso", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
 
-  /** Internal operator "orelse", of type "bool * bool &rarr; bool". */
-  Z_ORELSE("$", "orelse", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
-
   /**
    * Internal value "$current", of type "unit". It is used to implement the
    * {@code current} keyword and its type is not necessarily {@code unit}. This
@@ -3732,44 +3729,6 @@ public enum BuiltIn {
    * enum member is mainly to provide a single definition for the name.
    */
   Z_ELEMENTS("$", "$elements", ts -> UNIT),
-
-  /**
-   * Internal value "$ordinal", of type "int", used to implement the {@code
-   * ordinal} keyword.
-   */
-  Z_ORDINAL("$", "$ordinal", ts -> INT),
-
-  /** Internal unary negation operator "~", of type "int &rarr; int". */
-  Z_NEGATE_INT("$", "~:int", ts -> ts.fnType(INT, INT)),
-
-  /** Internal unary negation operator "~", of type "real &rarr; real". */
-  Z_NEGATE_REAL("$", "~:real", ts -> ts.fnType(REAL, REAL)),
-
-  /** Internal minus operator "-", of type "int * int &rarr; int". */
-  Z_MINUS_INT("$", "-:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /** Internal minus operator "-", of type "real * real &rarr; real". */
-  Z_MINUS_REAL("$", "-:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
-
-  /** Internal plus operator "+", of type "int * int &rarr; int". */
-  Z_PLUS_INT("$", "+:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /** Internal plus operator "+", of type "real * real &rarr; real". */
-  Z_PLUS_REAL("$", "+:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
-
-  /** Internal times operator "*", of type "int * int &rarr; int". */
-  Z_TIMES_INT("$", "*:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /** Internal times operator "*", of type "real * real &rarr; real". */
-  Z_TIMES_REAL("$", "*:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
-
-  /** Internal relational sum operator "sum", of type "int * int &rarr; int". */
-  Z_SUM_INT("$", "sum:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /**
-   * Internal relational sum operator "sum", of type "real * real &rarr; real".
-   */
-  Z_SUM_REAL("$", "sum:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
   /**
    * Internal type extent, e.g. "extent: bool bag" returns "bag [false, true]",
@@ -3792,13 +3751,52 @@ public enum BuiltIn {
    */
   Z_LIST("$", "list", ts -> UNIT),
 
+  /** Internal minus operator "-", of type "int * int &rarr; int". */
+  Z_MINUS_INT("$", "-:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Internal minus operator "-", of type "real * real &rarr; real". */
+  Z_MINUS_REAL("$", "-:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Internal unary negation operator "~", of type "int &rarr; int". */
+  Z_NEGATE_INT("$", "~:int", ts -> ts.fnType(INT, INT)),
+
+  /** Internal unary negation operator "~", of type "real &rarr; real". */
+  Z_NEGATE_REAL("$", "~:real", ts -> ts.fnType(REAL, REAL)),
+
   /** Internal accessor of the {@code n}th field of a record. */
   Z_NTH("$", "nth", ts -> UNIT),
 
+  /**
+   * Internal value "$ordinal", of type "int", used to implement the {@code
+   * ordinal} keyword.
+   */
+  Z_ORDINAL("$", "$ordinal", ts -> INT),
+
+  /** Internal operator "orelse", of type "bool * bool &rarr; bool". */
+  Z_ORELSE("$", "orelse", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
+
+  /** Internal plus operator "+", of type "int * int &rarr; int". */
+  Z_PLUS_INT("$", "+:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Internal plus operator "+", of type "real * real &rarr; real". */
+  Z_PLUS_REAL("$", "+:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Internal relational sum operator "sum", of type "int * int &rarr; int". */
+  Z_SUM_INT("$", "sum:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /**
+   * Internal relational sum operator "sum", of type "real * real &rarr; real".
+   */
+  Z_SUM_REAL("$", "sum:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /** Internal times operator "*", of type "int * int &rarr; int". */
+  Z_TIMES_INT("$", "*:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /** Internal times operator "*", of type "real * real &rarr; real". */
+  Z_TIMES_REAL("$", "*:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
   /** Internal function that constructs a datatype value. */
   Z_TY_CON("$", "tyCon", ts -> UNIT);
-
-  // lint:endSorted
 
   /** Name of the structure (e.g. "List", "String"), or null. */
   public final @Nullable String structure;
