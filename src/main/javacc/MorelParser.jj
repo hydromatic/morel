@@ -280,37 +280,39 @@ Id identifier() : {}
   }
 }
 
+/** Parses an identifier, quoted identifier, or symbol. */
+String identifierOrSymbol() : {}
+{
+    <IDENTIFIER> { return token.image; }
+  | <QUOTED_IDENTIFIER> { return unquoteIdentifier(token.image); }
+  | <PLUS> { return "+"; }
+  | <MINUS> { return "-"; }
+  | <STAR> { return "*"; }
+  | <SLASH> { return "/"; }
+  | <CARET> { return "^"; }
+  | <TILDE> { return "~"; }
+  | <CONS> { return "::"; }
+  | <AT> { return "@"; }
+  | <EQ> { return "="; }
+  | <NE> { return "<>"; }
+  | <LT> { return "<"; }
+  | <GT> { return ">"; }
+  | <LE> { return "<="; }
+  | <GE> { return ">="; }
+  | <DIV> { return "div"; }
+  | <MOD> { return "mod"; }
+  | <ANDALSO> { return "andalso"; }
+  | <ORELSE> { return "orelse"; }
+  | <O> { return "o"; }
+}
+
 /** Parses an operator. */
 OpSection opSection() : {
   final Pos pos;
   final String name;
 }
 {
-  <OP> { pos = pos(); }
-  (
-    <IDENTIFIER> { name = token.image; }
-  | <QUOTED_IDENTIFIER> { name = unquoteIdentifier(token.image); }
-  | <PLUS> { name = "+"; }
-  | <MINUS> { name = "-"; }
-  | <STAR> { name = "*"; }
-  | <SLASH> { name = "/"; }
-  | <CARET> { name = "^"; }
-  | <TILDE> { name = "~"; }
-  | <CONS> { name = "::"; }
-  | <AT> { name = "@"; }
-  | <EQ> { name = "="; }
-  | <NE> { name = "<>"; }
-  | <LT> { name = "<"; }
-  | <GT> { name = ">"; }
-  | <LE> { name = "<="; }
-  | <GE> { name = ">="; }
-  | <DIV> { name = "div"; }
-  | <MOD> { name = "mod"; }
-  | <ANDALSO> { name = "andalso"; }
-  | <ORELSE> { name = "orelse"; }
-  | <O> { name = "o"; }
-  )
-  {
+  <OP> { pos = pos(); } name = identifierOrSymbol() {
     return ast.opSection(pos.plus(pos()), name);
   }
 }
@@ -1251,6 +1253,8 @@ Ast.Decl decl() :
 |
   n = funDecl() { return n; }
 |
+  n = signatureDecl() { return n; }
+|
   n = overDecl() { return n; }
 }
 
@@ -1445,17 +1449,155 @@ void funMatch(List<FunMatch> list) :
   Ast.Pat pat;
   final List<Ast.Pat> patList = new ArrayList<>();
   final Ast.Exp expression;
-  Ast.Type returnType = null;
+  final Ast.Type returnType;
 }
 {
   id = identifier()
   ( pat = atomPat() { patList.add(pat); } )+
-  [ <COLON> returnType = type() ]
+  ( <COLON> returnType = type() | { returnType = null; } )
   <EQ> expression = expression() {
     list.add(
         ast.funMatch(id.pos.plus(expression.pos), id.name, patList, returnType,
             expression));
   }
+}
+
+/** Parses a signature declaration, e.g.
+* {@code signature STACK = sig type 'a stack val empty : 'a stack end}. */
+Ast.SignatureDecl signatureDecl() :
+{
+  final Span span;
+  final List<SignatureBind> binds = new ArrayList<>();
+}
+{
+  <SIGNATURE> { span = Span.of(pos()); }
+  signatureBind(binds)
+  (
+    <AND> signatureBind(binds)
+  )*
+  { return ast.signatureDecl(span.end(this), binds); }
+}
+
+/** Parses a signature binding and adds it to a list. */
+void signatureBind(List<SignatureBind> list) :
+{
+  final Ast.Id name;
+  final List<Spec> specs = new ArrayList<>();
+  Spec spec;
+}
+{
+  name = identifier()
+  <EQ>
+  <SIG>
+  (
+    spec = spec() { specs.add(spec); }
+  )*
+  <END>
+  {
+    list.add(ast.signatureBind(name.pos, name, specs));
+  }
+}
+
+/** Parses a specification inside a signature. */
+Ast.Spec spec() :
+{
+  final Ast.Spec spec;
+}
+{
+  spec = valSpec() { return spec; }
+|
+  spec = typeSpec() { return spec; }
+|
+  spec = datatypeSpec() { return spec; }
+|
+  spec = exceptionSpec() { return spec; }
+}
+
+/** Parses a value specification, e.g. {@code val empty : 'a stack}
+ * or {@code val + : int * int -> int}
+ * or {@code val op o : ...}. */
+Ast.ValSpec valSpec() :
+{
+  final Span span;
+  final String name;
+  final Ast.Id id;
+  final Ast.Type type;
+  boolean hasOp = false;
+}
+{
+  <VAL> { span = Span.of(pos()); }
+  ( <OP> { hasOp = true; } )?
+  name = identifierOrSymbol()
+  {
+    id = ast.id(pos(), hasOp ? "op " + name : name);
+  }
+  <COLON>
+  type = type()
+  { return ast.valSpec(span.end(this), id, type); }
+}
+
+/** Parses a type specification, e.g. {@code type 'a stack},
+ * or an eqtype specification, e.g. {@code eqtype int}.
+ *
+ * <p>For now, we treat {@code eqtype} the same as {@code type} in the AST. */
+Ast.TypeSpec typeSpec() :
+{
+  final boolean eq;
+  final Span span;
+  final Pair<Pos, List<TyVar>> pair;
+  final Ast.Id name;
+  final Ast.Type type;
+}
+{
+  (
+    <TYPE> { eq = false; }
+  |
+    <EQTYPE> { eq = true; }
+  )
+  { span = Span.of(pos()); }
+  pair = tyVars()
+  name = identifier()
+  ( <EQ> type = type() | { type = null; } )
+  { return ast.typeSpec(span.end(this), pair.right, name, type); }
+}
+
+/** Parses a datatype specification, e.g.
+* {@code datatype 'a tree = Leaf | Node of 'a * 'a tree * 'a tree}. */
+Ast.DatatypeSpec datatypeSpec() :
+{
+  final Span span;
+  Pair<Pos, List<TyVar>> pair;
+  final Ast.Id name;
+  final List<TyCon> tyCons = new ArrayList<>();
+  TyCon tyCon;
+}
+{
+  <DATATYPE> { span = Span.of(pos()); }
+  pair = tyVars()
+  name = identifier()
+  <EQ>
+  tyCon = typeConstructor() { tyCons.add(tyCon); }
+  (
+    <BAR> tyCon = typeConstructor() { tyCons.add(tyCon); }
+  )*
+  { return ast.datatypeSpec(span.end(this), pair.right, name, tyCons); }
+}
+
+/** Parses an exception specification, e.g. {@code exception Empty}. */
+Ast.ExceptionSpec exceptionSpec() :
+{
+  final Span span;
+  final Ast.Id name;
+  Ast.Type type = null;
+}
+{
+  <EXCEPTION> { span = Span.of(pos()); }
+  name = identifier()
+  [
+    <OF>
+    type = type()
+  ]
+  { return ast.exceptionSpec(span.end(this), name, type); }
 }
 
 /** Parses a pattern. */
@@ -1752,6 +1894,8 @@ AstNode statementEof() :
 | < DIV: "div" >
 | < ELSE: "else" >
 | < END: "end" >
+| < EQTYPE: "eqtype" >
+| < EXCEPTION: "exception" >
 | < FN: "fn" >
 | < FUN: "fun" >
 | < IF: "if" >
@@ -1763,6 +1907,8 @@ AstNode statementEof() :
 | < OP: "op" >
 | < ORELSE: "orelse" >
 | < REC: "rec" >
+| < SIG: "sig" >
+| < SIGNATURE: "signature" >
 | < THEN: "then" >
 | < TYPE: "type" >
 | < VAL: "val" >

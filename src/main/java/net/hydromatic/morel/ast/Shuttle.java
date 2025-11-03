@@ -251,6 +251,42 @@ public class Shuttle {
         funMatch.exp.accept(this));
   }
 
+  protected Ast.SignatureDecl visit(Ast.SignatureDecl signatureDecl) {
+    return ast.signatureDecl(signatureDecl.pos, visitList(signatureDecl.binds));
+  }
+
+  protected Ast.SignatureBind visit(Ast.SignatureBind signatureBind) {
+    return ast.signatureBind(
+        signatureBind.pos, signatureBind.name, visitList(signatureBind.specs));
+  }
+
+  protected Ast.ValSpec visit(Ast.ValSpec valSpec) {
+    return ast.valSpec(valSpec.pos, valSpec.name, valSpec.type.accept(this));
+  }
+
+  protected Ast.TypeSpec visit(Ast.TypeSpec typeSpec) {
+    return ast.typeSpec(
+        typeSpec.pos,
+        typeSpec.tyVars,
+        typeSpec.name,
+        typeSpec.type == null ? null : typeSpec.type.accept(this));
+  }
+
+  protected Ast.DatatypeSpec visit(Ast.DatatypeSpec datatypeSpec) {
+    return ast.datatypeSpec(
+        datatypeSpec.pos,
+        datatypeSpec.tyVars,
+        datatypeSpec.name,
+        visitList(datatypeSpec.tyCons));
+  }
+
+  protected Ast.ExceptionSpec visit(Ast.ExceptionSpec exceptionSpec) {
+    return ast.exceptionSpec(
+        exceptionSpec.pos,
+        exceptionSpec.name,
+        exceptionSpec.type == null ? null : exceptionSpec.type.accept(this));
+  }
+
   protected Ast.ValDecl visit(Ast.ValDecl valDecl) {
     return ast.valDecl(
         valDecl.pos, valDecl.rec, valDecl.inst, visitList(valDecl.valBinds));

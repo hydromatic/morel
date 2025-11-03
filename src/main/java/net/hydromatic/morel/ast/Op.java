@@ -77,6 +77,12 @@ public enum Op {
   FUN_DECL,
   VAL_DECL(" = "),
   REC_VAL_DECL(" = "),
+  SIGNATURE_DECL,
+  SIGNATURE_BIND,
+  SPEC_VAL,
+  SPEC_TYPE,
+  SPEC_DATATYPE,
+  SPEC_EXCEPTION,
 
   // internal
   FROM_EQ("$FROM_EQ "),

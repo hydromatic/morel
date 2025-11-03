@@ -1,0 +1,100 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests for signature declarations.
+ *)
+
+(* Simple signature with a type specification *)
+signature ORDERED =
+sig
+  type t
+  val lt : t * t -> bool
+  val eq : t * t -> bool
+end;
+> signature ORDERED = sig type t val lt : t * t -> bool val eq : t * t -> bool end
+
+(* Signature with polymorphic type and value specifications *)
+signature STACK =
+sig
+  type 'a stack
+  exception Empty
+  val empty : 'a stack
+  val isEmpty : 'a stack -> bool
+  val push : 'a * 'a stack -> 'a stack
+  val pop : 'a stack -> 'a stack
+  val top : 'a stack -> 'a
+end;
+> signature STACK = sig type 'a stack exception Empty val empty : 'a stack val isEmpty : 'a stack -> bool val push : 'a * 'a stack -> 'a stack val pop : 'a stack -> 'a stack val top : 'a stack -> 'a end
+
+(* Signature with datatype specification *)
+signature TREE =
+sig
+  datatype 'a tree = Leaf | Node of 'a * 'a tree * 'a tree
+  val size : 'a tree -> int
+  val height : 'a tree -> int
+end;
+> signature TREE = sig datatype 'a tree = Leaf | Node of 'a * 'a tree * 'a tree val size : 'a tree -> int val height : 'a tree -> int end
+
+(* Signature with concrete type (type alias) *)
+signature POINT =
+sig
+  type point = real * real
+  val origin : point
+  val distance : point * point -> real
+end;
+> signature POINT = sig type point = real * real val origin : point val distance : point * point -> real end
+
+(* Signature with multiple type variables *)
+signature MAP =
+sig
+  type ('k, 'v) map
+  val empty : ('k, 'v) map
+  val insert : 'k * 'v * ('k, 'v) map -> ('k, 'v) map
+  val lookup : 'k * ('k, 'v) map -> 'v option
+end;
+> signature MAP = sig type ('k, 'v) map val empty : ('k, 'v) map val insert : 'k * 'v * ('k, 'v) map -> ('k, 'v) map val lookup : 'k * ('k, 'v) map -> 'v option end
+
+(* Signature with exception carrying a value *)
+signature QUEUE =
+sig
+  type 'a queue
+  exception QueueError of string
+  val empty : 'a queue
+  val enqueue : 'a * 'a queue -> 'a queue
+  val dequeue : 'a queue -> 'a * 'a queue
+end;
+> signature QUEUE = sig type 'a queue exception QueueError of string val empty : 'a queue val enqueue : 'a * 'a queue -> 'a queue val dequeue : 'a queue -> 'a * 'a queue end
+
+(* Multiple signatures bound together with 'and' *)
+signature EQ =
+sig
+  type t
+  val eq : t * t -> bool
+end
+and ORD =
+sig
+  type t
+  val lt : t * t -> bool
+  val le : t * t -> bool
+  val gt : t * t -> bool
+  val ge : t * t -> bool
+end;
+> signature EQ = sig type t val eq : t * t -> bool end
+> signature ORD = sig type t val lt : t * t -> bool val le : t * t -> bool val gt : t * t -> bool val ge : t * t -> bool end
+
+(*) End signature.smli

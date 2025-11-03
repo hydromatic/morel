@@ -502,6 +502,42 @@ public enum AstBuilder {
         pos, name, ImmutableList.copyOf(patList), returnType, exp);
   }
 
+  public Ast.SignatureDecl signatureDecl(
+      Pos pos, Iterable<? extends Ast.SignatureBind> binds) {
+    return new Ast.SignatureDecl(pos, ImmutableList.copyOf(binds));
+  }
+
+  public Ast.SignatureBind signatureBind(
+      Pos pos, Ast.Id name, Iterable<? extends Ast.Spec> specs) {
+    return new Ast.SignatureBind(pos, name, ImmutableList.copyOf(specs));
+  }
+
+  public Ast.ValSpec valSpec(Pos pos, Ast.Id name, Ast.Type type) {
+    return new Ast.ValSpec(pos, name, type);
+  }
+
+  public Ast.TypeSpec typeSpec(
+      Pos pos,
+      Iterable<Ast.TyVar> tyVars,
+      Ast.Id name,
+      Ast.@Nullable Type type) {
+    return new Ast.TypeSpec(pos, ImmutableList.copyOf(tyVars), name, type);
+  }
+
+  public Ast.DatatypeSpec datatypeSpec(
+      Pos pos,
+      Iterable<Ast.TyVar> tyVars,
+      Ast.Id name,
+      Iterable<Ast.TyCon> tyCons) {
+    return new Ast.DatatypeSpec(
+        pos, ImmutableList.copyOf(tyVars), name, ImmutableList.copyOf(tyCons));
+  }
+
+  public Ast.ExceptionSpec exceptionSpec(
+      Pos pos, Ast.Id name, Ast.@Nullable Type type) {
+    return new Ast.ExceptionSpec(pos, name, type);
+  }
+
   public Ast.Apply apply(Ast.Exp fn, Ast.Exp arg) {
     return new Ast.Apply(fn.pos.plus(arg.pos), fn, arg);
   }

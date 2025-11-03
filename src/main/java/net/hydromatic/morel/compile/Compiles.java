@@ -39,6 +39,8 @@ import net.hydromatic.morel.foreign.Calcite;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -96,6 +98,32 @@ public abstract class Compiles {
       Ast.Decl decl,
       Consumer<CompileException> warningConsumer,
       Tracer tracer) {
+    // Handle signature declarations specially - they just get printed, not
+    // compiled
+    if (decl instanceof Ast.SignatureDecl) {
+      final Ast.SignatureDecl signatureDecl = (Ast.SignatureDecl) decl;
+      return new CompiledStatement() {
+        public Type getType() {
+          return PrimitiveType.UNIT;
+        }
+
+        public void eval(
+            Session session,
+            Environment env,
+            Consumer<String> outLines,
+            Consumer<Binding> outBindings) {
+          // Print each signature binding with "signature" keyword
+          for (Ast.SignatureBind bind : signatureDecl.binds) {
+            outLines.accept("signature " + bind.toString());
+          }
+        }
+
+        public void getBindings(Consumer<Binding> outBindings) {
+          // Signatures don't create bindings
+        }
+      };
+    }
+
     final TypeResolver.Resolved resolved =
         TypeResolver.deduceType(env, decl, typeSystem, warningConsumer);
     final boolean hybrid = Prop.HYBRID.booleanValue(session.map);

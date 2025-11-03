@@ -1762,6 +1762,12 @@ public class TypeResolver {
         final Ast.DatatypeDecl datatypeDecl = (Ast.DatatypeDecl) node;
         return deduceDataTypeDeclType(env, datatypeDecl, termMap);
 
+      case SIGNATURE_DECL:
+        // Signatures are interface declarations that don't evaluate to anything
+        // For now, we just parse them and return unit type
+        map.put(node, toTerm(PrimitiveType.UNIT));
+        return node;
+
       default:
         throw new AssertionError(
             "cannot deduce type for " + node.op + " [" + node + "]");

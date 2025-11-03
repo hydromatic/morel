@@ -1484,6 +1484,279 @@ public class Ast {
     }
   }
 
+  /** Parse tree node of a signature declaration. */
+  public static class SignatureDecl extends Decl {
+    public final List<SignatureBind> binds;
+
+    SignatureDecl(Pos pos, ImmutableList<SignatureBind> binds) {
+      super(pos, Op.SIGNATURE_DECL);
+      this.binds = requireNonNull(binds);
+      checkArgument(!binds.isEmpty());
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(binds);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof SignatureDecl
+              && binds.equals(((SignatureDecl) o).binds);
+    }
+
+    public Decl accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.appendAll(binds, "signature ", " and ", "");
+    }
+  }
+
+  /**
+   * Parse tree node of a signature binding.
+   *
+   * <p>Example: the signature declaration {@code signature STACK = sig type 'a
+   * stack val empty : 'a stack end}
+   */
+  public static class SignatureBind extends AstNode {
+    public final Id name;
+    public final List<Spec> specs;
+
+    SignatureBind(Pos pos, Id name, ImmutableList<Spec> specs) {
+      super(pos, Op.SIGNATURE_BIND);
+      this.name = requireNonNull(name);
+      this.specs = requireNonNull(specs);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(name, specs);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof SignatureBind
+              && name.equals(((SignatureBind) o).name)
+              && specs.equals(((SignatureBind) o).specs);
+    }
+
+    public SignatureBind accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      w.id(name.name).append(" = sig");
+      for (Spec spec : specs) {
+        w.append(" ").append(spec, 0, 0);
+      }
+      return w.append(" end");
+    }
+  }
+
+  /** Base class for specifications inside a signature. */
+  public abstract static class Spec extends AstNode {
+    Spec(Pos pos, Op op) {
+      super(pos, op);
+    }
+
+    @Override
+    public abstract Spec accept(Shuttle shuttle);
+  }
+
+  /** Value specification in a signature. */
+  public static class ValSpec extends Spec {
+    public final Id name;
+    public final Type type;
+
+    ValSpec(Pos pos, Id name, Type type) {
+      super(pos, Op.SPEC_VAL);
+      this.name = requireNonNull(name);
+      this.type = requireNonNull(type);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(name, type);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof ValSpec
+              && name.equals(((ValSpec) o).name)
+              && type.equals(((ValSpec) o).type);
+    }
+
+    public ValSpec accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("val ").id(name.name).append(" : ").append(type, 0, 0);
+    }
+  }
+
+  /** Type specification in a signature. */
+  public static class TypeSpec extends Spec {
+    public final List<TyVar> tyVars;
+    public final Id name;
+    public final @Nullable Type type;
+
+    TypeSpec(
+        Pos pos, ImmutableList<TyVar> tyVars, Id name, @Nullable Type type) {
+      super(pos, Op.SPEC_TYPE);
+      this.tyVars = requireNonNull(tyVars);
+      this.name = requireNonNull(name);
+      this.type = type; // optional - if null, it's an abstract type
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(tyVars, name, type);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof TypeSpec
+              && tyVars.equals(((TypeSpec) o).tyVars)
+              && name.equals(((TypeSpec) o).name)
+              && Objects.equals(type, ((TypeSpec) o).type);
+    }
+
+    public TypeSpec accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      TyVar.unparseList(w.append("type "), tyVars).id(name.name);
+      if (type != null) {
+        w.append(" = ").append(type, 0, 0);
+      }
+      return w;
+    }
+  }
+
+  /** Datatype specification in a signature. */
+  public static class DatatypeSpec extends Spec {
+    public final List<TyVar> tyVars;
+    public final Id name;
+    public final List<TyCon> tyCons;
+
+    DatatypeSpec(
+        Pos pos,
+        ImmutableList<TyVar> tyVars,
+        Id name,
+        ImmutableList<TyCon> tyCons) {
+      super(pos, Op.SPEC_DATATYPE);
+      this.tyVars = requireNonNull(tyVars);
+      this.name = requireNonNull(name);
+      this.tyCons = requireNonNull(tyCons);
+      checkArgument(!tyCons.isEmpty());
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(tyVars, name, tyCons);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof DatatypeSpec
+              && tyVars.equals(((DatatypeSpec) o).tyVars)
+              && name.equals(((DatatypeSpec) o).name)
+              && tyCons.equals(((DatatypeSpec) o).tyCons);
+    }
+
+    public DatatypeSpec accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return TyVar.unparseList(w.append("datatype "), tyVars)
+          .id(name.name)
+          .appendAll(tyCons, " = ", " | ", "");
+    }
+  }
+
+  /** Exception specification in a signature. */
+  public static class ExceptionSpec extends Spec {
+    public final Id name;
+    public final @Nullable Type type;
+
+    ExceptionSpec(Pos pos, Id name, @Nullable Type type) {
+      super(pos, Op.SPEC_EXCEPTION);
+      this.name = requireNonNull(name);
+      this.type = type; // optional
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(name, type);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof ExceptionSpec
+              && name.equals(((ExceptionSpec) o).name)
+              && Objects.equals(type, ((ExceptionSpec) o).type);
+    }
+
+    public ExceptionSpec accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("exception ").id(name.name);
+      if (type != null) {
+        w.append(" of ").append(type, 0, 0);
+      }
+      return w;
+    }
+  }
+
   /**
    * One of the branches (separated by 'and') in a 'fun' function declaration.
    */

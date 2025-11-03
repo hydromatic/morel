@@ -175,6 +175,34 @@ public class Visitor {
     funMatch.exp.accept(this);
   }
 
+  protected void visit(Ast.SignatureDecl signatureDecl) {
+    signatureDecl.binds.forEach(this::accept);
+  }
+
+  protected void visit(Ast.SignatureBind signatureBind) {
+    signatureBind.specs.forEach(this::accept);
+  }
+
+  protected void visit(Ast.ValSpec valSpec) {
+    valSpec.type.accept(this);
+  }
+
+  protected void visit(Ast.TypeSpec typeSpec) {
+    if (typeSpec.type != null) {
+      typeSpec.type.accept(this);
+    }
+  }
+
+  protected void visit(Ast.DatatypeSpec datatypeSpec) {
+    datatypeSpec.tyCons.forEach(this::accept);
+  }
+
+  protected void visit(Ast.ExceptionSpec exceptionSpec) {
+    if (exceptionSpec.type != null) {
+      exceptionSpec.type.accept(this);
+    }
+  }
+
   protected void visit(Ast.ValDecl valDecl) {
     valDecl.valBinds.forEach(this::accept);
   }

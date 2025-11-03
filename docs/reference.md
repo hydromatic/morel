@@ -54,8 +54,8 @@ just because they take effort to build.
 Contributions are welcome!
 
 In Morel but not Standard ML:
-* Queries (expressions starting with `exists`, `forall` or `from`) with
-  `compute`,
+* Queries (expressions starting with `exists`, `forall` or
+  `from`) with `compute`,
   `distinct`,
   `except`,
   `group`,
@@ -95,7 +95,9 @@ In Standard ML but not in Morel:
 * data type replication (`type`)
 * `withtype` in `datatype` declaration
 * abstract type (`abstype`)
-* modules (`structure` and `signature`)
+* structures (`structure`)
+* signature refinement (`where type`)
+* signature sharing constraints
 * local declarations (`local`)
 * operator declarations (`nonfix`, `infix`, `infixr`)
 * `open`
@@ -262,9 +264,10 @@ In Standard ML but not in Morel:
     | <b>fun</b> <i>funbind</i>               function
     | <b>type</b> <i>typbind</i>              type
     | <b>datatype</b> <i>datbind</i>          data type
+    | <b>signature</b> <i>sigbind</i>         signature
     | <b>over</b> <i>id</i>                   overloaded name
     | <i>empty</i>
-    | <i>dec<sub>1</sub></i> [<b>;</b>] <i>dec<sub>2</sub></i>              sequence
+    | <i>dec<sub>1</sub></i> [<b>;</b>] <i>dec<sub>2</sub></i>             sequence
 <i>valbind</i> &rarr; <i>pat</i> <b>=</b> <i>exp</i> [ <b>and</b> <i>valbind</i> ]*
                                 destructuring
     | <b>rec</b> <i>valbind</i>               recursive
@@ -291,6 +294,113 @@ In Standard ML but not in Morel:
 <i>vars</i> &rarr; <i>var</i>
     | '<b>(</b>' <i>var</i> [<b>,</b> <i>var</i>]* '<b>)</b>'
 </pre>
+
+### Modules
+
+<pre>
+<i>sigbind</i> &rarr; <i>id</i> <b>=</b> <b>sig</b> <i>spec</i> <b>end</b> [ <b>and</b> <i>sigbind</i> ]*
+                                signature
+<i>spec</i> &rarr; <b>val</b> <i>valdesc</i>              value
+    | <b>type</b> <i>typdesc</i>              abstract type
+    | <b>type</b> <i>typbind</i>              type abbreviation
+    | <b>datatype</b> <i>datdesc</i>          data type
+    | <b>exception</b> <i>exndesc</i>         exception
+    | <i>empty</i>
+    | <i>spec<sub>1</sub></i> [<b>;</b>] <i>spec<sub>2</sub></i>           sequence
+<i>valdesc</i> &rarr; <i>id</i> <b>:</b> <i>typ</i> [ <b>and</b> <i>valdesc</i> ]*
+                                value specification
+<i>typdesc</i> &rarr; [ <i>vars</i> ] <i>id</i> [ <b>and</b> <i>typdesc</i> ]*
+                                type specification
+<i>datdesc</i> &rarr; <i>datdescItem</i> [ <b>and</b> <i>datdescItem</i> ]*
+                                datatype specification
+<i>datdescItem</i> &rarr; [ <i>vars</i> ] <i>id</i> <b>=</b> <i>conbind</i>
+<i>exndesc</i> &rarr; <i>id</i> [ <b>of</b> <i>typ</i> ] [ <b>and</b> <i>exndesc</i> ]*
+                                exception specification
+</pre>
+
+A **signature** defines an interface that specifies types,
+values, datatypes, and exceptions without providing
+implementations. Signatures are used to document module
+interfaces and, in future versions of Morel, will be used to
+constrain structure implementations.
+
+Signature declarations appear at the top level (see grammar in
+[Declarations](#declarations)).
+
+#### Specifications
+
+A signature body contains **specifications** that describe the
+interface:
+
+**Value specifications** declare the type of a value without
+defining it:
+```sml
+val empty : 'a stack
+val push : 'a * 'a stack -> 'a stack
+```
+
+**Type specifications** can be abstract (no definition) or
+concrete (type alias):
+```sml
+type 'a stack              (* abstract type *)
+type point = real * real   (* concrete type alias *)
+type ('k, 'v) map          (* abstract with multiple params *)
+```
+
+**Datatype specifications** describe algebraic datatypes:
+```sml
+datatype 'a tree = Leaf | Node of 'a * 'a tree * 'a tree
+```
+
+**Exception specifications** declare exceptions:
+```sml
+exception Empty                  (* exception without payload *)
+exception QueueError of string   (* exception with payload *)
+```
+
+#### Examples
+
+A simple signature with abstract type and value specifications:
+
+```sml
+signature STACK =
+sig
+  type 'a stack
+  exception Empty
+  val empty : 'a stack
+  val isEmpty : 'a stack -> bool
+  val push : 'a * 'a stack -> 'a stack
+  val pop : 'a stack -> 'a stack
+  val top : 'a stack -> 'a
+end
+```
+
+Multiple signatures declared together using `and`:
+
+```sml
+signature EQ =
+sig
+  type t
+  val eq : t * t -> bool
+end
+and ORD =
+sig
+  type t
+  val lt : t * t -> bool
+  val le : t * t -> bool
+end
+```
+
+#### Current Limitations
+
+The current implementation supports parsing and
+pretty-printing signatures but does not yet support:
+* Structure declarations that implement signatures
+* Signature refinement (`where type`)
+* Signature sharing constraints
+* Signature inclusion (`include`)
+
+These features may be added in future versions.
 
 ### Notation
 
@@ -341,7 +451,8 @@ Datatype:
 * `datatype 'a descending = DESC of 'a (in structure `Relational`)
 * `datatype 'a list = nil | :: of 'a * 'a list` (in structure `List`)
 * `datatype 'a option = NONE | SOME of 'a` (in structure `Option`)
-* `datatype 'a order = LESS | EQUAL | GREATER` (in structure `General`)
+* `datatype 'a order = LESS | EQUAL | GREATER`
+  (in structure `General`)
 
 Eqtype:
 * `eqtype 'a bag = 'a bag` (in structure `Bag`)

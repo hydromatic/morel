@@ -278,6 +278,19 @@ public class MainTest {
             "let val v : typeof x = y = false in v orelse true end");
   }
 
+  /**
+   * Tests parsing a signature declaration. More tests in {@code
+   * signature.smli}.
+   */
+  @Test
+  void testParseSignature() {
+    // Simple signature with abstract type and value specs
+    ml("signature ORDERED = sig type t val lt : t * t -> bool end")
+        .assertParseDecl(
+            Ast.SignatureDecl.class,
+            "signature ORDERED = sig type t val lt : t * t -> bool end");
+  }
+
   @Test
   void testParse1b() {
     // parentheses creating left precedence, which is the natural precedence for
