@@ -543,39 +543,66 @@ Exp forall() :
 
 void fromFirstScan(List<FromStep> steps) :
 {
-  final Pair<Pat, Exp> patExp;
+  final Id id;
+  final Exp exp;
+  final Pat pat;
 }
 {
-  patExp = fromSource() {
-    final Span span =
-        patExp.right != null
-          ? Span.of(patExp.left, patExp.right)
-          : Span.of(patExp.left);
-    steps.add(ast.scan(span.pos(), patExp.left, patExp.right, null));
+  LOOKAHEAD(
+      (<IDENTIFIER> | <QUOTED_IDENTIFIER>)
+      (<COMMA> | <JOIN> | <WHERE> | <GROUP> | <COMPUTE>
+        | <SKIP_> | <TAKE> | <YIELD> | <EOF>))
+  id = identifier() {
+    pat = ast.idPat(id.pos, id.name);
+    steps.add(ast.scan(id.pos.plus(pos()), pat, null, null));
   }
+|
+  pat = pat()
+  (
+    <IN> exp = expression() {
+      steps.add(ast.scan(pat.pos.plus(pos()), pat, exp, null));
+    }
+  |
+    <EQ> exp = expression() {
+      steps.add(ast.scan(pat.pos.plus(pos()), pat, ast.fromEq(exp), null));
+    }
+  )
 }
 
 void fromScan(List<FromStep> steps) :
 {
-  final Pair<Pat, Exp> patExp;
-  final Exp condition;
+  final Id id;
+  final Exp exp;
+  final Pat pat;
+  final /*Nullable*/ Exp condition;
 }
 {
-  patExp = fromSource() {
-    final Span span =
-        patExp.right != null
-          ? Span.of(patExp.left, patExp.right)
-          : Span.of(patExp.left);
+  LOOKAHEAD(
+      (<IDENTIFIER> | <QUOTED_IDENTIFIER>)
+      (<COMMA> | <JOIN> | <WHERE> | <GROUP> | <COMPUTE>
+        | <SKIP_> | <TAKE> | <YIELD> | <EOF>))
+  id = identifier() {
+    pat = ast.idPat(id.pos, id.name);
+    steps.add(ast.scan(id.pos.plus(pos()), pat, null, null));
   }
+|
+  pat = pat()
   (
-    LOOKAHEAD(2)
-    <ON> condition = expression()
+    <IN> exp = expression()
+    (
+      LOOKAHEAD(2)
+      <ON> condition = expression()
+    |
+      { condition = null; }
+    )
+    {
+      steps.add(ast.scan(pat.pos.plus(pos()), pat, exp, condition));
+    }
   |
-    { condition = null; }
+    <EQ> exp = expression() {
+      steps.add(ast.scan(pat.pos.plus(pos()), pat, ast.fromEq(exp), null));
+    }
   )
-  {
-    steps.add(ast.scan(span.end(this), patExp.left, patExp.right, condition));
-  }
 }
 
 void fromStep(List<FromStep> steps) :
@@ -674,33 +701,6 @@ void fromStep(List<FromStep> steps) :
   <YIELD> { span = Span.of(pos()); } yieldExp = expression() {
     steps.add(ast.yield(span.end(this), yieldExp));
   }
-}
-
-Pair<Pat, Exp> fromSource() :
-{
-  final Id id;
-  final Exp exp;
-  final Pat pat;
-}
-{
-  LOOKAHEAD(
-      (<IDENTIFIER> | <QUOTED_IDENTIFIER>)
-      (<COMMA> | <JOIN> | <WHERE> | <GROUP> | <COMPUTE>
-        | <SKIP_> | <TAKE> | <YIELD> | <EOF>))
-    id = identifier() {
-      return Pair.of(ast.idPat(id.pos, id.name), null);
-    }
-|
-  pat = pat()
-  (
-    <IN> exp = expression() {
-        return Pair.of(pat, exp);
-      }
-  |
-    <EQ> exp = expression() {
-        return Pair.of(pat, ast.fromEq(exp));
-      }
-  )
 }
 
 /** Returns true if {@code distinct} is present, otherwise false. */

@@ -1879,6 +1879,14 @@ public class MainTest {
         .assertParseSame();
     ml("from e in emps distinct").assertParseSame();
     ml("from e in emps distinct where deptno > 10").assertParseSame();
+
+    // Until [MOREL-317], "on" after singleton "join =" was allowed.
+    mlE("from x in [1, 2]\n" //
+            + "  join y = 3 $on$ y = x + 1")
+        .assertParseThrowsParseException("Encountered \" \"on\" \"on \"\"");
+    mlE("from x = 3 $on$ false")
+        .assertParseThrowsParseException("Encountered \" \"on\" \"on \"\"");
+
     ml("from e in emps\n"
             + " group e.deptno\n"
             + " join d in depts on deptno = d.deptno\n"
