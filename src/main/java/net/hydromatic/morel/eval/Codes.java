@@ -39,12 +39,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -1160,14 +1158,28 @@ public abstract class Codes {
       if (lists.isEmpty()) {
         throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
       }
-      List collection = new ArrayList(lists.get(0));
+      // Build a multiset of elements to exclude from the right-hand lists.
+      final Map<Object, Integer> toRemove = new HashMap<>();
       for (int i = 1; i < lists.size(); i++) {
-        collection.removeAll(lists.get(i));
+        for (Object element : lists.get(i)) {
+          toRemove.merge(element, 1, Integer::sum);
+        }
       }
-      if (collection.size() == lists.get(0).size()) {
-        collection = lists.get(0); // save the effort of making a copy
+      // Iterate through the left-hand list, skipping the first N occurrences
+      // of each element (where N is the count in toRemove).
+      final List result = new ArrayList();
+      for (Object element : lists.get(0)) {
+        Integer count = toRemove.get(element);
+        if (count != null && count > 0) {
+          // Element is in the exclusion multiset; decrement and skip.
+          toRemove.put(element, count - 1);
+        } else {
+          // Element is not in the exclusion multiset (or count exhausted);
+          // include it.
+          result.add(element);
+        }
       }
-      return ImmutableList.copyOf(collection);
+      return ImmutableList.copyOf(result);
     }
   }
 
@@ -1310,15 +1322,66 @@ public abstract class Codes {
       if (lists.isEmpty()) {
         throw new MorelRuntimeException(BuiltInExn.EMPTY, pos);
       }
-      List collection = new ArrayList(lists.get(0));
-      for (int i = 1; i < lists.size(); i++) {
-        final Set set = new HashSet(lists.get(i));
-        collection.retainAll(set);
+      if (lists.size() == 1) {
+        return lists.get(0);
       }
-      if (collection.size() == lists.get(0).size()) {
-        collection = lists.get(0); // save the effort of making a copy
+
+      // For each of the right inputs, count the occurrences of each element.
+      final Map<Object, int[]> map = new HashMap<>();
+      forEachIndexed(
+          lists,
+          (list, i) -> {
+            if (i > 0) {
+              final Function<Object, int[]> create =
+                  k -> new int[lists.size() - 1];
+              final int j = i - 1;
+              for (Object o : list) {
+                int @Nullable [] ints = map.computeIfAbsent(o, create);
+                ints[j]++;
+              }
+            }
+          });
+
+      // If there is more than one right input, put the minimum of the counts
+      // into slot 0. Remove the element from the map if the count from any
+      // input is 0.
+      if (lists.size() > 2) {
+        Iterator<Map.Entry<Object, int[]>> iterator = map.entrySet().iterator();
+        next_element:
+        while (iterator.hasNext()) {
+          Map.Entry<Object, int[]> entry = iterator.next();
+          int[] counts = entry.getValue();
+          int m = counts[0];
+          if (m == 0) {
+            iterator.remove();
+            continue;
+          }
+          for (int i = 1; i < counts.length; i++) {
+            if (counts[i] < counts[0]) {
+              if (counts[i] == 0) {
+                iterator.remove();
+                continue next_element;
+              }
+              counts[0] = counts[i];
+            }
+          }
+        }
       }
-      return ImmutableList.copyOf(collection);
+
+      // Now read input 0. If an element is in the map, decrement its count.
+      // If the count reaches 0, remove it from the map.
+      List<Object> result = new ArrayList(lists.get(0).size());
+      for (Object o : lists.get(0)) {
+        int @Nullable [] counts = map.get(o);
+        if (counts != null) {
+          counts[0]--;
+          if (counts[0] == 0) {
+            map.remove(o);
+          }
+          result.add(o);
+        }
+      }
+      return ImmutableList.copyOf(result);
     }
   }
 

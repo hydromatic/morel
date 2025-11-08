@@ -691,7 +691,7 @@ The output fields are the same as the input fields.
 <b>from</b> i <b>in</b> ["candy", "soda", "soda", "candy", "candy"]
   <b>except</b> ["soda", "candy"];
 
-<i>val it = ["candy","candy","soda"] : string list</i>
+<i>val it = ["soda","candy","candy"] : string list</i>
 </pre>
 
 ### Group step
@@ -813,7 +813,7 @@ The output fields are the same as the input fields.
       <b>where</b> e.deptno = 30
       <b>yield</b> e.job);
 
-<i>val it = ["CLERK","MANAGER"] : string bag</i>
+<i>val it = ["MANAGER","CLERK"] : string bag</i>
 </pre>
 
 <pre>

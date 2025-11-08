@@ -1351,7 +1351,7 @@ from e in emps
 from e in emps
   yield e.deptno
   intersect (from d in depts yield d.deptno);
-> val it = [20,10,30] : int list
+> val it = [10,20,30] : int list
 
 (*) intersect distinct (matches SQL's INTERSECT DISTINCT)
 from e in emps
@@ -1407,21 +1407,25 @@ from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4], [2];
 from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4], [2, 2, 2];
 > val it = [1,3] : int list
 
+(*) 2 occurs twice on left, once on right, so should be output once.
+from i in [1,2,3,4,5,1,5,1,2] except [2,4];
+> val it = [1,3,5,1,5,1,2] : int list
+
 (*) Hybrid union/intersect/except (list and bag) yields bag
 from d in scott.depts yield d.deptno;
 > val it = [10,20,30,40] : int bag
 from i in [10, 15, 20] union (from d in scott.depts yield d.deptno);
 > val it = [10,15,20,10,20,30,40] : int bag
 from i in [10, 15, 20] intersect (from d in scott.depts yield d.deptno);
-> val it = [20,10] : int bag
+> val it = [10,20] : int bag
 from i in [10, 15, 20] except (from d in scott.depts yield d.deptno);
 > val it = [15] : int bag
 from d in scott.depts yield d.deptno union [10, 15, 20];
 > val it = [10,20,30,40,10,15,20] : int bag
 from d in scott.depts yield d.deptno intersect [10, 15, 20];
-> val it = [20,10] : int bag
+> val it = [10,20] : int bag
 from d in scott.depts yield d.deptno except [10, 15, 20];
-> val it = [40,30] : int bag
+> val it = [30,40] : int bag
 
 (*) Set operators are not "lateral". They can't see the "current row".
 val orders = [{id=1, items=["beer"]}, {id=2, items=[]}];

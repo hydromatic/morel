@@ -1496,30 +1496,30 @@ val empsAdded = from e in emps4 except scott.emps;
 val empsRemoved = from e in scott.emps except emps4;
 > val empsRemoved =
 >   [
->    {comm=0.0,deptno=10,empno=7934,ename="MILLER",hiredate="1982-01-23",
->     job="CLERK",mgr=7782,sal=1300.0},
 >    {comm=300.0,deptno=30,empno=7499,ename="ALLEN",hiredate="1981-02-20",
 >     job="SALESMAN",mgr=7698,sal=1600.0},
->    {comm=0.0,deptno=10,empno=7782,ename="CLARK",hiredate="1981-06-09",
->     job="MANAGER",mgr=7839,sal=2450.0},
->    {comm=0.0,deptno=20,empno=7902,ename="FORD",hiredate="1981-12-03",
->     job="ANALYST",mgr=7566,sal=3000.0},
->    {comm=0.0,deptno=20,empno=7566,ename="JONES",hiredate="1981-02-04",
->     job="MANAGER",mgr=7839,sal=2975.0},
->    {comm=0.0,deptno=30,empno=7844,ename="TURNER",hiredate="1981-09-08",
->     job="SALESMAN",mgr=7698,sal=1500.0},
->    {comm=0.0,deptno=30,empno=7698,ename="BLAKE",hiredate="1981-01-05",
->     job="MANAGER",mgr=7839,sal=2850.0},
->    {comm=0.0,deptno=10,empno=7839,ename="KING",hiredate="1981-11-17",
->     job="PRESIDENT",mgr=0,sal=5000.0},
 >    {comm=500.0,deptno=30,empno=7521,ename="WARD",hiredate="1981-02-22",
 >     job="SALESMAN",mgr=7698,sal=1250.0},
->    {comm=0.0,deptno=20,empno=7876,ename="ADAMS",hiredate="1987-05-23",
->     job="CLERK",mgr=7788,sal=1100.0},
+>    {comm=0.0,deptno=20,empno=7566,ename="JONES",hiredate="1981-02-04",
+>     job="MANAGER",mgr=7839,sal=2975.0},
+>    {comm=1400.0,deptno=30,empno=7654,ename="MARTIN",hiredate="1981-09-28",
+>     job="SALESMAN",mgr=7698,sal=1250.0},
+>    {comm=0.0,deptno=30,empno=7698,ename="BLAKE",hiredate="1981-01-05",
+>     job="MANAGER",mgr=7839,sal=2850.0},
+>    {comm=0.0,deptno=10,empno=7782,ename="CLARK",hiredate="1981-06-09",
+>     job="MANAGER",mgr=7839,sal=2450.0},
 >    {comm=0.0,deptno=20,empno=7788,ename="SCOTT",hiredate="1987-04-19",
 >     job="ANALYST",mgr=7566,sal=3000.0},
->    {comm=1400.0,deptno=30,empno=7654,ename="MARTIN",hiredate="1981-09-28",
->     job="SALESMAN",mgr=7698,sal=1250.0}]
+>    {comm=0.0,deptno=10,empno=7839,ename="KING",hiredate="1981-11-17",
+>     job="PRESIDENT",mgr=0,sal=5000.0},
+>    {comm=0.0,deptno=30,empno=7844,ename="TURNER",hiredate="1981-09-08",
+>     job="SALESMAN",mgr=7698,sal=1500.0},
+>    {comm=0.0,deptno=20,empno=7876,ename="ADAMS",hiredate="1987-05-23",
+>     job="CLERK",mgr=7788,sal=1100.0},
+>    {comm=0.0,deptno=20,empno=7902,ename="FORD",hiredate="1981-12-03",
+>     job="ANALYST",mgr=7566,sal=3000.0},
+>    {comm=0.0,deptno=10,empno=7934,ename="MILLER",hiredate="1982-01-23",
+>     job="CLERK",mgr=7782,sal=1300.0}]
 >   :
 >     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
 >      job:string, mgr:int, sal:real} bag
@@ -2072,7 +2072,12 @@ from e in scott.emps
    one soda and two candies. What do I have left? *)
 from i in ["candy", "soda", "soda", "candy", "candy"]
   except ["soda", "candy"];
-> val it = ["candy","candy","soda"] : string list
+> val it = ["soda","candy","candy"] : string list
+
+(* List.except has the same semantics as a query. *)
+List.`except` [["candy", "soda", "soda", "candy", "candy"],
+   ["soda", "candy"]];
+> val it = ["soda","candy","candy"] : string list
 
 (* Count employees and compute total salary for each
    department. *)
@@ -2115,7 +2120,7 @@ from e in scott.emps
     (from e in scott.emps
       where e.deptno = 30
       yield e.job);
-> val it = ["CLERK","MANAGER"] : string bag
+> val it = ["MANAGER","CLERK"] : string bag
 
 (* I have two sodas and three candies, and my friend
    has one soda, one donut, and four candies. What do we
@@ -2123,7 +2128,12 @@ from e in scott.emps
 from i in ["candy", "soda", "soda", "candy", "candy"]
   intersect ["soda", "donut", "candy",
              "donut", "candy", "candy"];
-> val it = ["candy","candy","candy","soda"] : string list
+> val it = ["candy","soda","candy","candy"] : string list
+
+(* List.intersect has the same semantics as a query. *)
+List.`intersect` [["candy", "soda", "soda", "candy", "candy"],
+   ["soda", "donut", "candy", "donut", "candy", "candy"]];
+> val it = ["candy","soda","candy","candy"] : string list
 
 (* Find the name of each department and the name of all
    employees in those departments. *)
