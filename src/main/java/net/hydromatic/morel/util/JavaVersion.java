@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jline.terminal.Terminal;
 
 /**
  * Version of the JDK.
@@ -38,8 +40,11 @@ public class JavaVersion implements Comparable<JavaVersion> {
   /** Version of the current JVM. */
   public static final JavaVersion CURRENT;
 
+  /** Morel's product name. */
+  public static final String MOREL_PRODUCT = "morel-java";
+
   /** Morel's current version. */
-  public static final JavaVersion MOREL = JavaVersion.of(0, 7, 0);
+  public static final JavaVersion MOREL_VERSION = JavaVersion.of(0, 7, 0);
 
   static {
     String versionString = System.getProperty("java.version");
@@ -77,6 +82,27 @@ public class JavaVersion implements Comparable<JavaVersion> {
       componentList = componentList.subList(1, componentList.size());
     }
     return new JavaVersion(ImmutableList.copyOf(componentList));
+  }
+
+  /** Generates a banner, optionally including terminal information. */
+  public static String banner(@Nullable Terminal terminal1) {
+    return terminal1 == null
+        ? String.format(
+            "%s version %s (java version \"%s\", JRE %s (build %s))",
+            MOREL_PRODUCT,
+            MOREL_VERSION,
+            System.getProperty("java.version"),
+            System.getProperty("java.vendor.version"),
+            System.getProperty("java.vm.version"))
+        : String.format(
+            "%s version %s (java version \"%s\", JRE %s (build %s), %s, %s)",
+            MOREL_PRODUCT,
+            MOREL_VERSION,
+            System.getProperty("java.version"),
+            System.getProperty("java.vendor.version"),
+            System.getProperty("java.vm.version"),
+            terminal1.getName(),
+            terminal1.getType());
   }
 
   @Override
