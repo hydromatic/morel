@@ -42,6 +42,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @see Session#map
  */
 public enum Prop {
+  // lint: sort until '##public ' where '##[A-Z]'
+
   /**
    * File property "directory" is the path of the directory that the {@code
    * file} variable maps to in this connection.
@@ -53,13 +55,6 @@ public enum Prop {
   DIRECTORY("directory", File.class, true, new File("")),
 
   /**
-   * File property "scriptDirectory" is the path of the directory where the
-   * {@code use} command looks for scripts. When running a script, it is
-   * generally set to the directory that contains the script.
-   */
-  SCRIPT_DIRECTORY("scriptDirectory", File.class, true, new File("")),
-
-  /**
    * Boolean property "hybrid" controls whether to try to create a hybrid
    * execution plan that uses Apache Calcite relational algebra wherever
    * possible. Default is false.
@@ -68,6 +63,16 @@ public enum Prop {
 
   /** Maximum number of inlining passes. */
   INLINE_PASS_COUNT("inlinePassCount", Integer.class, true, 5),
+
+  /**
+   * Integer property "lineWidth" controls printing. The length at which lines
+   * are wrapped.
+   *
+   * <p>It is based upon the "linewidth" property in the <a
+   * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
+   * signature</a> of the Standard Basis Library. Default is 79.
+   */
+  LINE_WIDTH("lineWidth", Integer.class, true, 79),
 
   /**
    * Boolean property "matchCoverageEnabled" controls whether to check the
@@ -116,6 +121,13 @@ public enum Prop {
   RELATIONALIZE("relationalize", Boolean.class, true, false),
 
   /**
+   * File property "scriptDirectory" is the path of the directory where the
+   * {@code use} command looks for scripts. When running a script, it is
+   * generally set to the directory that contains the script.
+   */
+  SCRIPT_DIRECTORY("scriptDirectory", File.class, true, new File("")),
+
+  /**
    * Integer property "stringDepth" is the length of strings at which ellipsis
    * begins.
    *
@@ -123,17 +135,7 @@ public enum Prop {
    * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
    * signature</a> of the Standard Basis Library. Default is 70.
    */
-  STRING_DEPTH("stringDepth", Integer.class, true, 70),
-
-  /**
-   * Integer property "lineWidth" controls printing. The length at which lines
-   * are wrapped.
-   *
-   * <p>It is based upon the "linewidth" property in the <a
-   * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
-   * signature</a> of the Standard Basis Library. Default is 79.
-   */
-  LINE_WIDTH("lineWidth", Integer.class, true, 79);
+  STRING_DEPTH("stringDepth", Integer.class, true, 70);
 
   public final String camelName;
   private final Class<?> type;

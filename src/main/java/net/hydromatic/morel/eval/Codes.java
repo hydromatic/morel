@@ -4471,16 +4471,17 @@ public abstract class Codes {
 
   /** Definitions of Morel built-in exceptions. */
   public enum BuiltInExn {
-    EMPTY("List", "Empty", null),
+    // lint: sort until '##public ' where '##[A-Z]'
     BIND("General", "Bind", null),
     CHR("General", "Chr", null),
     DIV("General", "Div", null),
     DOMAIN("General", "Domain", null),
+    EMPTY("List", "Empty", null),
+    ERROR("Interact", "Error", null), // not in standard basis
     FAIL("General", "Fail", null),
     MATCH("General", "Match", null),
     OPTION("Option", "Option", null),
     OVERFLOW("General", "Overflow", null),
-    ERROR("Interact", "Error", null), // not in standard basis
     SIZE("General", "Size", null),
     SPAN("General", "Span", null),
     SUBSCRIPT("General", "Subscript", "subscript out of bounds"),

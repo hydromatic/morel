@@ -4077,6 +4077,8 @@ public enum BuiltIn {
    * <p>are not available from within programs but used for internal purposes.
    */
   public enum Datatype implements BuiltInType {
+    // lint: sort until '##private ' where '##[A-Z]'
+
     DESCENDING(
         "descending", false, 1, h -> h.tyCon(Constructor.DESCENDING_DESC)),
 
@@ -4088,6 +4090,12 @@ public enum BuiltIn {
 
     EXN("exn", false, 0, h -> h),
 
+    OPTION(
+        "option",
+        false,
+        1,
+        h -> h.tyCon(Constructor.OPTION_NONE).tyCon(Constructor.OPTION_SOME)),
+
     ORDER(
         "order",
         false,
@@ -4097,21 +4105,13 @@ public enum BuiltIn {
                 .tyCon(Constructor.ORDER_EQUAL)
                 .tyCon(Constructor.ORDER_GREATER)),
 
-    OPTION(
-        "option",
-        false,
-        1,
-        h -> h.tyCon(Constructor.OPTION_NONE).tyCon(Constructor.OPTION_SOME)),
-
     /**
-     * Analog of {@code list} for checking that matches are exhaustive. Owns the
-     * {@code NIL} and {@code CONS} type constructors.
+     * The type of the value created by an {@code over} declaration.
+     *
+     * <p>After "{@code o}", {@code o} has type {@code overload}. The type
+     * system will then allow subsequent {@code val inst o} declarations.
      */
-    PSEUDO_LIST(
-        "$list",
-        true,
-        1,
-        h -> h.tyCon(Constructor.LIST_NIL).tyCon(Constructor.LIST_CONS)),
+    OVERLOAD("$overload", true, 0, h -> h),
 
     /**
      * Analog of {@code bool} for checking that matches are exhaustive. Owns the
@@ -4124,12 +4124,14 @@ public enum BuiltIn {
         h -> h.tyCon(Constructor.BOOL_FALSE).tyCon(Constructor.BOOL_TRUE)),
 
     /**
-     * The type of the value created by an {@code over} declaration.
-     *
-     * <p>After "{@code o}", {@code o} has type {@code overload}. The type
-     * system will then allow subsequent {@code val inst o} declarations.
+     * Analog of {@code list} for checking that matches are exhaustive. Owns the
+     * {@code NIL} and {@code CONS} type constructors.
      */
-    OVERLOAD("$overload", true, 0, h -> h);
+    PSEUDO_LIST(
+        "$list",
+        true,
+        1,
+        h -> h.tyCon(Constructor.LIST_NIL).tyCon(Constructor.LIST_CONS));
 
     private final String mlName;
     private final boolean internal;
@@ -4165,6 +4167,8 @@ public enum BuiltIn {
 
   /** Built-in equality type. */
   public enum Eqtype implements BuiltInType {
+    // lint: sort until '##private ' where '##[A-Z]'
+
     BAG("bag", 1),
     LIST("list", 1),
     VECTOR("vector", 1);
@@ -4190,18 +4194,19 @@ public enum BuiltIn {
 
   /** Built-in constructor of a datatype. */
   public enum Constructor {
+    // lint: sort until '##public ' where '##[A-Z]'
     BOOL_FALSE(Datatype.PSEUDO_BOOL, "FALSE"),
     BOOL_TRUE(Datatype.PSEUDO_BOOL, "TRUE"),
     DESCENDING_DESC(Datatype.DESCENDING, "DESC", h -> h.get(0)),
     EITHER_INL(Datatype.EITHER, "INL", h -> h.get(0)),
     EITHER_INR(Datatype.EITHER, "INR", h -> h.get(1)),
-    LIST_NIL(Datatype.PSEUDO_LIST, "NIL"),
     LIST_CONS(Datatype.PSEUDO_LIST, "CONS", h -> h.get(0)),
-    OPTION_SOME(Datatype.OPTION, "SOME", h -> h.get(0)),
+    LIST_NIL(Datatype.PSEUDO_LIST, "NIL"),
     OPTION_NONE(Datatype.OPTION, "NONE"),
-    ORDER_LESS(Datatype.ORDER, "LESS"),
+    OPTION_SOME(Datatype.OPTION, "SOME", h -> h.get(0)),
     ORDER_EQUAL(Datatype.ORDER, "EQUAL"),
-    ORDER_GREATER(Datatype.ORDER, "GREATER");
+    ORDER_GREATER(Datatype.ORDER, "GREATER"),
+    ORDER_LESS(Datatype.ORDER, "LESS");
 
     public final Datatype datatype;
     public final String constructor;
