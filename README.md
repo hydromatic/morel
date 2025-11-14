@@ -70,7 +70,7 @@ If you are using Java 8, you should add parameters
 
 ```bash
 $ ./morel
-morel version 0.7.0 (java version "21", JLine terminal, xterm-256color)
+morel-java version 0.7.0 (java version "21", JLine terminal, xterm-256color)
 - "Hello, world!";
 val it = "Hello, world!" : string
 - exit

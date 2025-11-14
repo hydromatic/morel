@@ -87,7 +87,7 @@ public class ShellTest {
     fixture()
         .withArgList(argList)
         .withInputString("")
-        .assertOutput(containsString("morel version"));
+        .assertOutput(containsString("morel-java version"));
   }
 
   /** Tests {@link Shell} with empty input and banner disabled. */

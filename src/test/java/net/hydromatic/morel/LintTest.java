@@ -352,11 +352,12 @@ public class LintTest {
           }
         });
 
-    // README.md must have a line "morel version x.y.z (java version ...)"
-    final String versionString = JavaVersion.MOREL.toString();
+    // README.md must have a line "morel-java version x.y.z (java version ...)"
+    final String versionString = JavaVersion.MOREL_VERSION.toString();
     b.add(
         line ->
-            filenameIs(line, "README.md") && line.startsWith("morel version "),
+            filenameIs(line, "README.md")
+                && line.startsWith("morel-java version "),
         line -> {
           line.state().versionCount++;
           final String version = line.line().split(" ")[2];
@@ -366,12 +367,13 @@ public class LintTest {
                     line,
                     "Version '%s' should match '%s'",
                     version,
-                    JavaVersion.MOREL);
+                    JavaVersion.MOREL_VERSION);
           }
         });
 
     // README.md must have a line "<version>x.y.z</version>"
-    final String versionLine = "<version>" + JavaVersion.MOREL + "</version>";
+    final String versionLine =
+        "<version>" + JavaVersion.MOREL_VERSION + "</version>";
     b.add(
         line -> filenameIs(line, "README.md") && line.matches("  <version>.*"),
         line -> {
@@ -383,23 +385,25 @@ public class LintTest {
                     line,
                     "Version '%s' should match '%s'",
                     version,
-                    JavaVersion.MOREL);
+                    JavaVersion.MOREL_VERSION);
           }
         });
 
     // README must have a line "Morel release x.y.z"
     b.add(
-        line -> filenameIs(line, "README") && line.startsWith("Morel release "),
+        line ->
+            filenameIs(line, "README")
+                && line.startsWith("Morel Java release "),
         line -> {
           line.state().versionCount++;
-          final String version = line.line().split(" ")[2];
+          final String version = line.line().split(" ")[3];
           if (!version.equals(versionString)) {
             line.state()
                 .message(
                     line,
                     "Version '%s' should match '%s'",
                     version,
-                    JavaVersion.MOREL);
+                    JavaVersion.MOREL_VERSION);
           }
         });
     b.add(

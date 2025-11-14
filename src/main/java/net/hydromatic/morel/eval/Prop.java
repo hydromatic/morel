@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+import net.hydromatic.morel.util.JavaVersion;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -43,6 +44,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public enum Prop {
   // lint: sort until '##public ' where '##[A-Z]'
+
+  /**
+   * String property "banner" is the startup banner message displayed when
+   * launching the Morel shell.
+   *
+   * <p>The format matches the output of {@code Shell.banner()}. This property
+   * is read-only and should not be modified via {@code Sys.set}.
+   */
+  BANNER("banner", String.class, true, JavaVersion.banner(null)),
 
   /**
    * File property "directory" is the path of the directory that the {@code
@@ -113,6 +123,26 @@ public enum Prop {
    * <p>Default is 12.
    */
   PRINT_LENGTH("printLength", Integer.class, true, 12),
+
+  /**
+   * String property "productName" is the name of the Morel product.
+   *
+   * <p>The value is sourced from {@link JavaVersion#MOREL_PRODUCT}. This
+   * property is read-only and should not be modified via {@code Sys.set}.
+   */
+  PRODUCT_NAME("productName", String.class, true, JavaVersion.MOREL_PRODUCT),
+
+  /**
+   * String property "productVersion" is the current version of Morel.
+   *
+   * <p>The value is sourced from {@link JavaVersion#MOREL_VERSION}. This
+   * property is read-only and should not be modified via {@code Sys.set}.
+   */
+  PRODUCT_VERSION(
+      "productVersion",
+      String.class,
+      true,
+      JavaVersion.MOREL_VERSION.toString()),
 
   /**
    * Boolean property "relationalize" is whether to convert to relational

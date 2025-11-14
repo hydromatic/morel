@@ -210,18 +210,6 @@ public class Shell {
         && (trimmedLine.isEmpty() || trimmedLine.equals(";"));
   }
 
-  /** Generates a banner to be shown on startup. */
-  private String banner() {
-    return String.format(
-        "morel version %s (java version \"%s\", JRE %s (build %s), %s, %s)",
-        JavaVersion.MOREL,
-        System.getProperty("java.version"),
-        System.getProperty("java.vendor.version"),
-        System.getProperty("java.vm.version"),
-        terminal.getName(),
-        terminal.getType());
-  }
-
   public void run() {
     if (config.help) {
       usage(terminal.writer()::println);
@@ -265,7 +253,7 @@ public class Shell {
             .toAnsi(terminal);
 
     if (config.banner) {
-      terminal.writer().println(banner());
+      terminal.writer().println(JavaVersion.banner(this.terminal));
     }
     LineReader lineReader =
         LineReaderBuilder.builder()

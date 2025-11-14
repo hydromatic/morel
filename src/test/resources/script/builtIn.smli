@@ -4585,23 +4585,58 @@ showAll;
 > val it = fn : unit -> (string * string option) list
 map
   (fn (p,v) =>
-    (p, if p = "directory" orelse p = "scriptDirectory" then SOME "?" else v))
+    (p, if p elem ["directory", "scriptDirectory", "banner", "productVersion"]
+      then SOME "?" else v))
   (Sys.showAll ());
 > val it =
->   [("directory",SOME "?"),("hybrid",SOME "true"),("inlinePassCount",SOME "5"),
->    ("lineWidth",SOME "78"),("matchCoverageEnabled",SOME "true"),
->    ("optionalInt",NONE),("output",SOME "CLASSIC"),("printDepth",SOME "5"),
->    ("printLength",SOME "999"),("relationalize",SOME "false"),
+>   [("banner",SOME "?"),("directory",SOME "?"),("hybrid",SOME "true"),
+>    ("inlinePassCount",SOME "5"),("lineWidth",SOME "78"),
+>    ("matchCoverageEnabled",SOME "true"),("optionalInt",NONE),
+>    ("output",SOME "CLASSIC"),("printDepth",SOME "5"),
+>    ("printLength",SOME "999"),("productName",SOME "morel-java"),
+>    ("productVersion",SOME "?"),("relationalize",SOME "false"),
 >    ("scriptDirectory",SOME "?"),("stringDepth",SOME "-1")]
 >   : (string * string option) list
 List.length (Sys.showAll ());
-> val it = 12 : int
+> val it = 15 : int
 List.length (showAll ());
-> val it = 12 : int
+> val it = 15 : int
 Sys.plan ();
 > val it =
 >   "apply(fnValue List.length, argCode apply(fnValue Sys.showAll, argCode constant([])))"
 >   : string
+
+(*) Test new product properties (MOREL-319)
+Sys.show "productName";
+> val it = SOME "morel-java" : string option
+
+(*) Mask version number since it changes with each release
+case Sys.show "productVersion" of
+  SOME v => String.size v > 0
+| NONE => false;
+> val it = true : bool
+
+(*) Mask banner since it includes version and Java version
+case Sys.show "banner" of
+  SOME v => String.isPrefix "morel-java version " v
+| NONE => false;
+> val it = true : bool
+
+(*) Verify new properties are in showAll
+case List.find (fn (p, v) => p = "productName") (Sys.showAll ()) of
+  SOME (p, v) => p = "productName"
+| NONE => false;
+> val it = true : bool
+
+case List.find (fn (p, v) => p = "productVersion") (Sys.showAll ()) of
+  SOME (p, v) => p = "productVersion"
+| NONE => false;
+> val it = true : bool
+
+case List.find (fn (p, v) => p = "banner") (Sys.showAll ()) of
+  SOME (p, v) => p = "banner"
+| NONE => false;
+> val it = true : bool
 
 Sys.set ("optionalInt", ~5);
 > val it = () : unit
