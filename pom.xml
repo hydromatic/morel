@@ -81,40 +81,42 @@ License.
     <calcite.version>1.41.0</calcite.version>
     <central-publishing-maven-plugin.version>0.8.0</central-publishing-maven-plugin.version>
     <!-- We support (and test) Checkstyle as low as 9.3.
-         In JDK 8, you must add '-Dcheckstyle.version=9.3' because
-         Checkstyle 10 requires JDK 11 or higher. -->
-    <checkstyle.version>10.25.0</checkstyle.version>
+         In JDK 8 through 10, you must add '-Dcheckstyle.version=9.3'
+         because Checkstyle 10 requires JDK 11 or higher.
+         In JDK 11 through 16, you must add '-Dcheckstyle.version=10.26.1'
+         because Checkstyle 11 and 12 require JDK 17 or higher. -->
+    <checkstyle.version>12.1.2</checkstyle.version>
     <findbugs.version>3.0.2</findbugs.version>
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
     <googleformatter-maven-plugin.version>1.7.5</googleformatter-maven-plugin.version>
     <!-- We support (and test) Guava as low as 23.1-jre. -->
-    <guava.version>33.4.8-jre</guava.version>
+    <guava.version>33.5.0-jre</guava.version>
     <hamcrest.version>3.0</hamcrest.version>
     <!-- We support (and test) HSQLDB as low as 2.5.1.
          In JDK 8, you must add '-Dhsqldb.version=2.5.1' because
          HSQLDB 2.7.x requires JDK 11 or higher. -->
     <hsqldb.version>2.7.4</hsqldb.version>
-    <jackson.version>2.19.0</jackson.version>
+    <jackson.version>2.20.1</jackson.version>
     <javacc.version>7.0.13</javacc.version>
     <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
     <java-diff.version>1.1.2</java-diff.version>
     <jline.version>3.25.0</jline.version>
     <jspecify.version>1.0.0</jspecify.version>
-    <junit-jupiter.version>5.13.1</junit-jupiter.version>
+    <junit-jupiter.version>5.14.1</junit-jupiter.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-    <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
-    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
-    <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
+    <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+    <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
+    <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
     <maven-project-info-reports-plugin.version>3.9.0</maven-project-info-reports-plugin.version>
     <maven-release-plugin.version>2.4.2</maven-release-plugin.version>
     <maven-scm-provider-gitexe.version>1.9.1</maven-scm-provider-gitexe.version>
-    <maven-site-plugin.version>3.12.1</maven-site-plugin.version>
+    <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
     <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
-    <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
-    <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
+    <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
+    <scott-data-hsqldb.version>0.3</scott-data-hsqldb.version>
     <slf4j.version>2.1.0-alpha1</slf4j.version>
-    <versions-maven-plugin.version>2.18.0</versions-maven-plugin.version>
+    <versions-maven-plugin.version>2.19.1</versions-maven-plugin.version>
 
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-javadoc-plugin.excludePackageNames>net.hydromatic.morel.parse</maven-javadoc-plugin.excludePackageNames>
