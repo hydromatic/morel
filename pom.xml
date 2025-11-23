@@ -77,8 +77,9 @@ License.
 
     <!-- Component and plugin versions, in alphabetical order. -->
     <!-- // lint: sort until 'maven-javadoc-plugin.additionalOptions' where '##<[a-z]' -->
-    <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
-    <calcite.version>1.40.0</calcite.version>
+    <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
+    <calcite.version>1.41.0</calcite.version>
+    <central-publishing-maven-plugin.version>0.8.0</central-publishing-maven-plugin.version>
     <!-- We support (and test) Checkstyle as low as 9.3.
          In JDK 8, you must add '-Dcheckstyle.version=9.3' because
          Checkstyle 10 requires JDK 11 or higher. -->
@@ -460,6 +461,16 @@ License.
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <version>${central-publishing-maven-plugin.version}</version>
+        <extensions>true</extensions>
+        <configuration>
+          <publishingServerId>central</publishingServerId>
+          <autoPublish>true</autoPublish>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>pl.project13.maven</groupId>
