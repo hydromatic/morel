@@ -27,7 +27,7 @@ License.
   </parent>
 
   <artifactId>morel</artifactId>
-  <version>0.8.0-SNAPSHOT</version>
+  <version>0.8.0</version>
   <packaging>jar</packaging>
 
   <name>morel</name>
@@ -141,7 +141,7 @@ License.
     <connection>scm:git:git://github.com/hydromatic/morel.git</connection>
     <developerConnection>scm:git:git@github.com:hydromatic/morel.git</developerConnection>
     <url>scm:git:git://github.com/hydromatic/morel.git</url>
-    <tag>HEAD</tag>
+    <tag>morel-0.8.0</tag>
   </scm>
 
   <dependencies>
