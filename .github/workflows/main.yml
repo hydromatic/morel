@@ -22,6 +22,11 @@ on:
     branches:
       - '*'
   workflow_dispatch: # allow manual triggering
+    inputs:
+      commit_sha:
+        description: 'Commit SHA to checkout and deploy'
+        required: true
+        type: string
   schedule:
     # Run at 0543 UTC on the 7th day of each month
     #        m  h  dom mon dow
