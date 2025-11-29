@@ -495,7 +495,8 @@ class Ml {
   Ml assertEval() {
     return withValidate(
         (resolved, calcite) -> {
-          final Session session = new Session(propMap);
+          final Session session =
+              new Session(propMap, resolved.typeMap.typeSystem);
           eval(
               session,
               resolved.env,

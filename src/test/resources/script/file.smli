@@ -22,7 +22,8 @@
 (*) The "file" value represents the file system, starting in the current
 (*) directory.
 file;
-> val it = {scott={},wordle={}} : {scott:{...}, wordle:{...}, ...}
+> val it = {map={},scott={},wordle={}}
+>   : {map:{...}, scott:{...}, wordle:{...}, ...}
 
 (*) A subdirectory.
 file.wordle;
@@ -31,8 +32,9 @@ file.wordle;
 
 (*) Now we've gone into the directory, the type of 'file' has widened.
 file;
-> val it = {scott={},wordle={answers=<relation>,words=<relation>}}
->   : {scott:{...}, wordle:{answers:{...} list, words:{...} list, ...}, ...}
+> val it = {map={},scott={},wordle={answers=<relation>,words=<relation>}}
+>   : {map:{...}, scott:{...}, wordle:{answers:{...} list, words:{...} list, ...},
+>      ...}
 
 (*) A variable via which we can access relations.
 val s = file.scott;
@@ -84,11 +86,11 @@ from b in scott.bonuses;
 (*) The type of 'file' has widened further.
 file;
 > val it =
->   {
+>   {map={},
 >    scott=
 >    {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>},
 >    wordle={answers=<relation>,words=<relation>}}
->   : {
+>   : {map:{...},
 >      scott:{bonuses:{bonus:real, ename:string, job:string, sal:real} list,
 >             depts:{deptno:int, dname:string, loc:string} list,
 >             emps:

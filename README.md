@@ -93,6 +93,7 @@ file:
 
 * [Morel language reference](docs/reference.md)
 * [Query reference](docs/query.md)
+* [Datalog support](docs/datalog.md)
 * ["How to" guide](docs/howto.md)
 * [Change log](HISTORY.md)
 * Reading [test reference logs](src/test/resources/script)

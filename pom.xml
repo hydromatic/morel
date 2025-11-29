@@ -457,6 +457,7 @@ License.
             <configuration>
               <includes>
                 <include>**/MorelParser.jj</include>
+                <include>**/DatalogParser.jj</include>
               </includes>
               <lookAhead>1</lookAhead>
               <isStatic>false</isStatic>

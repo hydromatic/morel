@@ -903,6 +903,33 @@ public enum BuiltIn {
   CHAR_TO_UPPER("Char", "toUpper", ts -> ts.fnType(CHAR, CHAR)),
 
   /**
+   * Function "Datalog.execute", of type "string &rarr; variant".
+   *
+   * <p>Executes a Datalog program and returns formatted output as a variant.
+   */
+  DATALOG_EXECUTE(
+      "Datalog",
+      "execute",
+      ts -> ts.fnType(STRING, ts.lookup(Datatype.VARIANT))),
+
+  /**
+   * Function "Datalog.translate", of type "string &rarr; string option".
+   *
+   * <p>Translates a Datalog program to Morel source code, returning SOME(code)
+   * if valid or NONE if invalid.
+   */
+  DATALOG_TRANSLATE(
+      "Datalog", "translate", ts -> ts.fnType(STRING, ts.option(STRING))),
+
+  /**
+   * Function "Datalog.validate", of type "string &rarr; string".
+   *
+   * <p>Validates a Datalog program and returns type information or error
+   * message.
+   */
+  DATALOG_VALIDATE("Datalog", "validate", ts -> ts.fnType(STRING, STRING)),
+
+  /**
    * Function "Either.app", of type "(&alpha; &rarr; unit) * (&beta; &rarr;
    * unit) * (&alpha;, &beta;) either &rarr; unit".
    */

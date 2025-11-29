@@ -1,0 +1,749 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *)
+Sys.set ("printDepth", ~1);
+> val it = () : unit
+Sys.set ("printLength", ~1);
+> val it = () : unit
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+(*) Basic validation - valid program
+val program = ".decl edge(x:int, y:int)
+edge(1,2).
+edge(2,3).
+.output edge";
+> val program =
+>   ".decl edge(x:int, y:int)\nedge(1,2).\nedge(2,3).\n.output edge"
+>   : string
+
+Datalog.validate program;
+> val it = "{edge:{x:int, y:int} list}" : string
+
+Datalog.execute program;
+> val it = {edge=[{x=1,y=2},{x=2,y=3}]} : {edge:{x:int, y:int} list} variant
+
+Datalog.translate program;
+> val it =
+>   SOME "let\n  val edge = [(1, 2), (2, 3)]\nin\n  {edge = from (x, y) in edge}\nend"
+>   : string option
+
+(*) Basic validation - parse error
+Datalog.validate ".decl edge(x:int";
+> val it =
+>   "Parse error: Encountered \"<EOF>\" at line 1, column 16.\nWas expecting one of:\n    \")\" ...\n    \",\" ...\n    "
+>   : string
+
+(*) Schema validation - arity mismatch in fact
+Datalog.validate ".decl edge(x:int, y:int)
+edge(1,2,3).";
+> val it = "Compilation error: Atom edge/3 does not match declaration edge/2"
+>   : string
+
+(*) Schema validation - arity mismatch in rule head
+Datalog.validate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+path(X,Y,Z) :- edge(X,Y).";
+> val it = "Compilation error: Atom path/3 does not match declaration path/2"
+>   : string
+
+(*) Schema validation - arity mismatch in rule body
+Datalog.validate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+path(X,Y) :- edge(X).";
+> val it = "Compilation error: Atom edge/1 does not match declaration edge/2"
+>   : string
+
+(*) Schema validation - undeclared relation
+Datalog.validate ".decl edge(x:int, y:int)
+path(1,2).";
+> val it = "Compilation error: Relation 'path' used in fact but not declared"
+>   : string
+
+(*) Safety - unsafe rule (variable in head not in body)
+Datalog.validate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+path(X,Y) :- edge(X,Z).";
+> val it =
+>   "Compilation error: Rule is unsafe. Variable 'Y' in head does not appear in positive body atom"
+>   : string
+
+(*) Safety - unsafe negation (variable only in negated atom)
+Datalog.validate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+path(X,Y) :- edge(X,Z), !edge(Y,W).";
+> val it =
+>   "Compilation error: Rule is unsafe. Variable 'Y' in head does not appear in positive body atom"
+>   : string
+
+(*) Stratification - negation cycle
+Datalog.validate ".decl edge(x:int, y:int)
+.decl p(x:int)
+.decl q(x:int)
+edge(1,2).
+p(X) :- edge(X,Y), !q(X).
+q(X) :- edge(X,Y), !p(X).";
+> val it =
+>   "Compilation error: Program is not stratified. Negation cycle detected involving relation: p"
+>   : string
+
+(*) Stratification - valid stratified program
+Datalog.execute ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+edge(1,2).
+path(X,Y) :- edge(X,Y).
+path(X,Z) :- path(X,Y), edge(Y,Z).
+.output path";
+> val it = {path=[{x=1,y=2}]} : {path:{x:int, y:int} list} variant
+
+(*) Multiple .output directives
+Datalog.execute ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+edge(1,2).
+path(X,Y) :- edge(X,Y).
+.output edge
+.output path";
+> val it = {edge=[{x=1,y=2}],path=[{x=1,y=2}]}
+>   : {edge:{x:int, y:int} list, path:{x:int, y:int} list} variant
+
+(*) Basic facts - number type
+Datalog.execute ".decl num(n:int)
+num(42).
+num(0).
+.output num";
+> val it = {num=[42,0]} : {num:int list} variant
+
+(*) Basic facts - string type
+Datalog.execute ".decl person(name:string)
+person(\"Alice\").
+person(\"Bob\").
+.output person";
+> val it = {person=["Alice","Bob"]} : {person:string list} variant
+
+(*) Basic facts - symbol type (now using string type since Souffle has no symbols)
+Datalog.execute ".decl color(c:string)
+color(\"red\").
+color(\"blue\").
+color(\"green\").
+.output color";
+> val it = {color=["red","blue","green"]} : {color:string list} variant
+
+(*) Basic facts - mixed types
+Datalog.execute ".decl employee(name:string, age:int, dept:string)
+employee(\"Alice\", 30, \"engineering\").
+employee(\"Bob\", 25, \"sales\").
+.output employee";
+> val it =
+>   {
+>    employee=
+>    [{age=30,dept="engineering",name="Alice"},{age=25,dept="sales",name="Bob"}]}
+>   : {employee:{age:int, dept:string, name:string} list} variant
+
+(*) Basic facts - more than one output
+Datalog.execute ".decl employee(name:string, age:int, dept:int)
+.decl department(name:string, dept:int)
+employee(\"Alice\", 30, 10).
+employee(\"Bob\", 25, 20).
+department(\"Sales\", 20).
+department(\"Engineering\", 10).
+.output employee
+.output department";
+> val it =
+>   {department=[{dept=20,name="Sales"},{dept=10,name="Engineering"}],
+>    employee=[{age=30,dept=10,name="Alice"},{age=25,dept=20,name="Bob"}]}
+>   : {department:{dept:int, name:string} list,
+>      employee:{age:int, dept:int, name:string} list} variant
+
+(*) Basic facts - no output
+Datalog.execute ".decl employee(name:string, age:int, dept:int)
+.decl department(name:string, dept:int)
+employee(\"Alice\", 30, 10).
+employee(\"Bob\", 25, 20).
+department(\"Sales\", 20).
+department(\"Engineering\", 10).";
+> val it = () : unit variant
+
+(*) Type mismatch - number for string
+Datalog.validate ".decl person(name:string)
+person(42).";
+> val it =
+>   "Compilation error: Type mismatch in fact person(...): expected string, got int for parameter name"
+>   : string
+
+(*) Type mismatch - string for number
+Datalog.validate ".decl num(n:int)
+num(\"hello\").";
+> val it =
+>   "Compilation error: Type mismatch in fact num(...): expected int, got string for parameter n"
+>   : string
+
+(*) Variables in facts are not allowed
+Datalog.validate ".decl num(n:int)
+num(Foo).";
+> val it = "Compilation error: Argument in fact is not constant: Foo" : string
+
+(* Transitive closure
+
+   Input graph:
+        1 ---> 2 ---> 3
+*)
+val program = ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+edge(1,2).
+edge(2,3).
+path(X,Y) :- edge(X,Y).
+path(X,Z) :- path(X,Y), edge(Y,Z).
+.output path";
+> val program =
+>   ".decl edge(x:int, y:int)\n.decl path(x:int, y:int)\nedge(1,2).\nedge(2,3).\npath(X,Y) :- edge(X,Y).\npath(X,Z) :- path(X,Y), edge(Y,Z).\n.output path"
+>   : string
+Datalog.execute program;
+> val it = {path=[{x=1,y=2},{x=2,y=3},{x=1,y=3}]}
+>   : {path:{x:int, y:int} list} variant
+Datalog.translate program;
+> val it =
+>   SOME "let\n  val edge = [(1, 2), (2, 3)]\n  val path =\n    Relational.iterate edge\n      (fn (allPath, newPath) =>\n        from (x, y) in newPath, (v0, z) in edge where y = v0 yield (x, z))\nin\n  {path = from (x, y) in path}\nend"
+>   : string option
+
+(*) Simple rule - join
+Datalog.execute ".decl parent(p:string, c:string)
+.decl sibling(x:string, y:string)
+parent(\"Alice\", \"Bob\").
+parent(\"Alice\", \"Carol\").
+sibling(X,Y) :- parent(P,X), parent(P,Y).
+.output sibling";
+> val it =
+>   {
+>    sibling=
+>    [{x="Bob",y="Bob"},{x="Bob",y="Carol"},{x="Carol",y="Bob"},
+>     {x="Carol",y="Carol"}]} : {sibling:{x:string, y:string} list} variant
+
+(*) Join, avoiding symmetric
+Datalog.execute ".decl parent(p:string, c:string)
+.decl sibling(x:string, y:string)
+parent(\"Alice\", \"Bob\").
+parent(\"Alice\", \"Carol\").
+sibling(X,Y) :- parent(P,X), parent(P,Y), X != Y.
+.output sibling";
+> val it = {sibling=[{x="Bob",y="Carol"},{x="Carol",y="Bob"}]}
+>   : {sibling:{x:string, y:string} list} variant
+
+(*) Join, avoiding symmetric and duplicates
+Datalog.execute ".decl parent(p:string, c:string)
+.decl sibling(x:string, y:string)
+parent(\"Alice\", \"Bob\").
+parent(\"Alice\", \"Carol\").
+sibling(X,Y) :- parent(P,X), parent(P,Y), X < Y.
+.output sibling";
+> val it = {sibling=[{x="Bob",y="Carol"}]}
+>   : {sibling:{x:string, y:string} list} variant
+
+(*) Negation - set difference
+Datalog.execute ".decl student(name:string)
+.decl graduate(name:string)
+.decl undergraduate(name:string)
+student(\"Alice\").
+student(\"Bob\").
+graduate(\"Alice\").
+undergraduate(X) :- student(X), !graduate(X).
+.output undergraduate";
+> val it = {undergraduate=["Bob"]} : {undergraduate:string list} variant
+
+(*) Complex example - ancestor queries
+Datalog.execute ".decl parent(p:string, c:string)
+.decl ancestor(a:string, d:string)
+.decl descendant(p:string, d:string)
+parent(\"Alice\", \"Bob\").
+parent(\"Bob\", \"Carol\").
+parent(\"Carol\", \"Dan\").
+ancestor(P,C) :- parent(P,C).
+ancestor(A,D) :- ancestor(A,X), parent(X,D).
+descendant(P,D) :- ancestor(D,P).
+.output ancestor
+.output descendant";
+> val it =
+>   {
+>    ancestor=
+>    [{a="Alice",d="Bob"},{a="Bob",d="Carol"},{a="Carol",d="Dan"},
+>     {a="Alice",d="Carol"},{a="Bob",d="Dan"},{a="Alice",d="Dan"}],
+>    descendant=
+>    [{d="Alice",p="Bob"},{d="Bob",p="Carol"},{d="Carol",p="Dan"},
+>     {d="Alice",p="Carol"},{d="Bob",p="Dan"},{d="Alice",p="Dan"}]}
+>   : {ancestor:{a:string, d:string} list, descendant:{d:string, p:string} list} variant
+
+(*) Empty relation
+Datalog.validate ".decl empty(x:int)
+.output empty";
+> val it = "{empty:'a list}" : string
+
+(*) Comments in Datalog
+Datalog.execute "// Line comment
+.decl edge(x:int, y:int)
+/* Block comment */
+edge(1,2).
+.output edge";
+> val it = {edge=[{x=1,y=2}]} : {edge:{x:int, y:int} list} variant
+
+(*) Execution - basic facts
+Datalog.execute ".decl num(n:int)
+num(1).
+num(2).
+num(3).
+.output num";
+> val it = {num=[1,2,3]} : {num:int list} variant
+
+(*) Execution - transitive closure
+Datalog.execute ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+edge(1,2).
+edge(2,3).
+path(X,Y) :- edge(X,Y).
+path(X,Z) :- path(X,Y), edge(Y,Z).
+.output path";
+> val it = {path=[{x=1,y=2},{x=2,y=3},{x=1,y=3}]}
+>   : {path:{x:int, y:int} list} variant
+
+(*
+Translated:
+
+fun edge(x, y) = (x, y) elem [(1, 2), (2, 3)];
+fun path(x, z) = edge(x, z)
+ orelse (exists y where path(x, y) andalso edge(y, z));
+from x, z where path(x, z);
+
+Expanded:
+
+fun edge(x, y) = (x, y) elem [(1, 2), (2, 3)];
+> val edge = fn : int * int -> bool
+fun path(x, z) = edge(x, z) orelse
+  (exists y in [1,2,3] where path(x, y) andalso edge(y, z));
+> val path = fn : int * int -> bool
+from x in [1,2,3], z in [1,2,3] where path(x, z);
+
+*)
+
+(*) Comparison operators - less than
+Datalog.execute ".decl num(n:int)
+.decl small(n:int)
+num(1).
+num(5).
+num(10).
+small(X) :- num(X), X < 7.
+.output small";
+> val it = {small=[1,5]} : {small:int list} variant
+
+(*) Comparison operators - greater than or equal
+Datalog.execute ".decl num(n:int)
+.decl large(n:int)
+num(1).
+num(5).
+num(10).
+large(X) :- num(X), X >= 5.
+.output large";
+> val it = {large=[5,10]} : {large:int list} variant
+
+(*) Comparison operators - not equal
+Datalog.execute ".decl num(n:int)
+.decl not_five(n:int)
+num(1).
+num(5).
+num(10).
+not_five(X) :- num(X), X != 5.
+.output not_five";
+> val it = {not_five=[1,10]} : {not_five:int list} variant
+
+(*) Comparison operators - equal
+Datalog.execute ".decl edge(x:int, y:int)
+.decl self_loop(x:int)
+edge(1, 1).
+edge(2, 3).
+edge(4, 4).
+self_loop(X) :- edge(X, Y), X = Y.
+.output self_loop";
+> val it = {self_loop=[1,4]} : {self_loop:int list} variant
+
+(*) Comparison operators - contains
+(* TODO: implement contains
+Datalog.execute ".decl stringTable(t:string)
+.decl substringTable(t:string)
+.decl outputData(substr:string, str:string)
+.output outputData
+outputData(x,y) :- substringTable(x), stringTable(y), contains(x,y).
+stringTable(\"aaaa\").
+stringTable(\"abba\").
+stringTable(\"bcab\").
+stringTable(\"bdab\").
+substringTable(\"a\").
+substringTable(\"ab\").
+substringTable(\"cab\")."
+
+Output:
+a  aaaa
+a  abba
+a  bcab
+a  bdab
+ab  abba
+ab  bcab
+ab  bdab
+cab  bcab
+*)
+
+(*) Comparison operators - match
+(* TODO: implement match
+Datalog.execute ".decl inputData(t:string)
+.decl outputData(t:string)
+.output outputData
+outputData(x) :- inputData(x), match("a.*",x).
+inputData(\"aaaa\").
+inputData(\"abba\").
+inputData(\"bcab\").
+inputData(\"bdab\").";
+> val it = {outputData = "aaaa", "abba"} : {outputData:string list} variant
+*)
+
+(*) TODO true rule
+(*) TODO false rule
+
+(* Multiple heads
+ *
+ * A(x,y), C(x,y) :- B(x,y).
+ *
+ * is syntactic sugar for
+ *
+ * A(x,y) :- B(x,y).
+ * C(x,y) :- B(x,y).
+ *
+ * express edge/path using multiple heads.
+ *)
+(* TODO implement multiple heads
+Datalog.execute ".decl reversed_edge(x:int, y:int)
+.decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+reversed_edge(2,1).
+reversed_edge(3,2).
+path(X,Y), edge(X,Y) :- reversed_edge(Y,X).
+path(X,Z) :- path(X,Y), edge(Y,Z).
+.output path";
+*)
+
+(* Multiple facts are not allowed. *)
+(* Souffle gives 'Error: syntax error, unexpected ., expecting :- or ","'. *)
+(* TODO implement multiple heads
+Datalog.validate ".decl num(n:int)
+num(1), num(2), num(3).
+.output num";
+> val it = "an error" : string
+*)
+
+(* Factorial ------------------------------------------------------ *)
+
+val program = ".decl fact(n:int, value:int)
+fact(0, 1).
+fact(N + 1, value * (N + 1)) :- fact(N, value), N < 10.
+.output fact";
+> val program =
+>   ".decl fact(n:int, value:int)\nfact(0, 1).\nfact(N + 1, value * (N + 1)) :- fact(N, value), N < 10.\n.output fact"
+>   : string
+
+Datalog.translate program;
+> val it =
+>   SOME "let\n  val fact =\n    Relational.iterate [(0, 1)]\n      (fn (allFact, newFact) =>\n        from (n, value) in newFact where n < 10 yield (n + 1, value * (n + 1)))\nin\n  {fact = from (n, value) in fact}\nend"
+>   : string option
+
+Datalog.execute program;
+> val it =
+>   {
+>    fact=
+>    [{n=0,value=1},{n=1,value=1},{n=2,value=2},{n=3,value=6},{n=4,value=24},
+>     {n=5,value=120},{n=6,value=720},{n=7,value=5040},{n=8,value=40320},
+>     {n=9,value=362880},{n=10,value=3628800}]}
+>   : {fact:{n:int, value:int} list} variant
+
+(* Fibonacci sequence --------------------------------------------- *)
+
+(* Not valid, because the variable idx is not bound as an argument
+ * of a positive predicate in the body. In the example, variable
+ * idx occurs in the predicates fib(idx-1, x) and fib(idx-2, y)
+ * but as arguments of a functor rather than as a direct
+ * argument. *)
+Datalog.validate ".decl fib(idx:int, value:int)
+fib(1,1).
+fib(2,1).
+fib(idx, x + y) :- fib(idx - 1, x), fib(idx - 2, y), idx <= 10.
+.output fib";
+> val it =
+>   "Compilation error: Rule is unsafe. Variable 'idx' in head does not appear in positive body atom"
+>   : string
+
+(* To make variable idx bound, we can shift the index by one and
+ * obtain a program whose variables are grounded. *)
+Datalog.translate ".decl fib(idx:int, value:int)
+fib(1,1).
+fib(2,1).
+fib(idx + 1, x + y) :- fib(idx, x), fib(idx - 1, y), idx <= 9.
+.output fib";
+> val it =
+>   SOME "let\n  val fib =\n    Relational.iterate [(1, 1), (2, 1)]\n      (fn (allFib, newFib) =>\n        from (idx, x) in newFib, (v0, y) in allFib where v0 = idx - 1 andalso idx <= 9 yield (idx + 1, x + y))\nin\n  {fib = from (idx, value) in fib}\nend"
+>   : string option
+
+(* Queries for existence of odd cycle ------------------------------
+ *
+ * "Linear Datalog and bounded path duality of relational structures"
+ * (Dalmau, 2004) gives the query more concisely as
+ *
+ *   P(x,y) :- E(x,y)
+ *   P(x,y) :- P(x,z),E(z,u),E(u,y)
+ *   Q :- P(x,x)
+ *)
+Datalog.execute ".decl edge(x:string, y:string)
+.decl odd_path(x:string, y:string)
+.decl exists_odd_cycle()
+edge(\"a\", \"b\").
+edge(\"b\", \"c\").
+edge(\"c\", \"a\").
+odd_path(X,Y) :- edge(X,Y).
+odd_path(X,Y) :- odd_path(X,Z), edge(Z,U), edge(U,Y).
+exists_odd_cycle() :- odd_path(X,X).
+.output exists_odd_cycle";
+> val it = {exists_odd_cycle=[()]} : {exists_odd_cycle:unit list} variant
+
+(*) Same query on a data set that has an even cycle but no odd cycle.
+Datalog.execute ".decl edge(x:string, y:string)
+.decl odd_path(x:string, y:string)
+.decl exists_odd_cycle()
+edge(\"a\", \"b\").
+edge(\"b\", \"c\").
+edge(\"b\", \"a\").
+odd_path(X,Y) :- edge(X,Y).
+odd_path(X,Y) :- odd_path(X,Z), edge(Z,U), edge(U,Y).
+exists_odd_cycle() :- odd_path(X,X).
+.output exists_odd_cycle";
+> val it = {exists_odd_cycle=[]} : {exists_odd_cycle:unit list} variant
+
+(* -------------------------------------------------------------------
+ * The next few queries perform transitive closure and bounded
+ * transitive closure over a graph. They all use the following
+ * graph.
+ *
+ *   a ---> b ---> c ---> d ---> e ---> f
+ *   |             ^
+ *   +-------------+
+ *
+ * From a: b is 1 hop, c is 1 hop (shortcut), d is 2 hops (a->c->d),
+ * e is 3 hops (a->c->d->e), f is 4 hops (a->c->d->e->f).
+ *)
+
+(*) Transitive closure
+Datalog.execute ".decl edge(x:string, y:string)
+.decl path(x:string, y:string)
+edge(\"a\", \"b\").
+edge(\"b\", \"c\").
+edge(\"c\", \"d\").
+edge(\"d\", \"e\").
+edge(\"e\", \"f\").
+edge(\"a\", \"c\").
+path(X,Y) :- edge(X,Y).
+path(X,Z) :- path(X,Y), edge(Y,Z).
+.output path";
+> val it =
+>   {
+>    path=
+>    [{x="a",y="b"},{x="b",y="c"},{x="c",y="d"},{x="d",y="e"},{x="e",y="f"},
+>     {x="a",y="c"},{x="b",y="d"},{x="c",y="e"},{x="d",y="f"},{x="a",y="d"},
+>     {x="b",y="e"},{x="c",y="f"},{x="a",y="e"},{x="b",y="f"},{x="a",y="f"}]}
+>   : {path:{x:string, y:string} list} variant
+
+(*) Shortest path - computing reachability at different hop counts
+Datalog.execute ".decl edge(x:string, y:string)
+.decl reach1(x:string, y:string)
+.decl reach2(x:string, y:string)
+edge(\"a\", \"b\").
+edge(\"b\", \"c\").
+edge(\"c\", \"d\").
+edge(\"d\", \"e\").
+edge(\"e\", \"f\").
+edge(\"a\", \"c\").
+reach1(X, Y) :- edge(X, Y).
+reach2(X, Z) :- edge(X, Y), edge(Y, Z).
+.output reach1
+.output reach2";
+> val it =
+>   {
+>    reach1=
+>    [{x="a",y="b"},{x="b",y="c"},{x="c",y="d"},{x="d",y="e"},{x="e",y="f"},
+>     {x="a",y="c"}],
+>    reach2=
+>    [{x="a",y="c"},{x="b",y="d"},{x="c",y="e"},{x="d",y="f"},{x="a",y="d"}]}
+>   : {reach1:{x:string, y:string} list, reach2:{x:string, y:string} list} variant
+
+(*
+ * Shortest path with distance parameter.
+ *
+ * This is the standard way to express shortest path in Datalog:
+ *  - Base case: direct edges have distance 1
+ *  - Recursive case: extend a path by one edge, incrementing distance
+ *)
+val program = ".decl edge(x:string, y:string)
+.decl path(x:string, y:string, n:int)
+edge(\"a\", \"b\").
+edge(\"b\", \"c\").
+edge(\"c\", \"d\").
+edge(\"d\", \"e\").
+edge(\"e\", \"f\").
+edge(\"a\", \"c\").
+path(X, Y, 1) :- edge(X, Y).
+path(X, Z, N+1) :- path(X, Y, N), edge(Y, Z).
+.output path";
+> val program =
+>   ".decl edge(x:string, y:string)\n.decl path(x:string, y:string, n:int)\nedge(\"a\", \"b\").\nedge(\"b\", \"c\").\nedge(\"c\", \"d\").\nedge(\"d\", \"e\").\nedge(\"e\", \"f\").\nedge(\"a\", \"c\").\npath(X, Y, 1) :- edge(X, Y).\npath(X, Z, N+1) :- path(X, Y, N), edge(Y, Z).\n.output path"
+>   : string
+
+Datalog.translate program;
+> val it =
+>   SOME "let\n  val edge = [(\"a\", \"b\"), (\"b\", \"c\"), (\"c\", \"d\"), (\"d\", \"e\"), (\"e\", \"f\"), (\"a\", \"c\")]\n  val path =\n    Relational.iterate []\n      (fn (allPath, newPath) =>\n        (from (x, y) in edge yield (x, y, 1))\n        @ (from (x, y, n) in newPath, (v0, z) in edge where y = v0 yield (x, z, n + 1)))\nin\n  {path = from (x, y, n) in path}\nend"
+>   : string option
+
+Datalog.execute program;
+> val it =
+>   {
+>    path=
+>    [{n=1,x="a",y="b"},{n=1,x="b",y="c"},{n=1,x="c",y="d"},{n=1,x="d",y="e"},
+>     {n=1,x="e",y="f"},{n=1,x="a",y="c"},{n=2,x="a",y="c"},{n=2,x="b",y="d"},
+>     {n=2,x="c",y="e"},{n=2,x="d",y="f"},{n=2,x="a",y="d"},{n=3,x="a",y="d"},
+>     {n=3,x="b",y="e"},{n=3,x="c",y="f"},{n=3,x="a",y="e"},{n=4,x="a",y="e"},
+>     {n=4,x="b",y="f"},{n=4,x="a",y="f"},{n=5,x="a",y="f"}]}
+>   : {path:{n:int, x:string, y:string} list} variant
+
+(*
+ * Shortest path using aggregation - Datalog with min
+ *
+ * An alternative formulation uses 'min' aggregation to find the
+ * shortest distance among all paths. First compute all paths with
+ * their distances, then select the minimum.
+ *
+ * Note: This requires both arithmetic (N+1) and aggregation (min),
+ * neither of which is yet supported.
+ *)
+(* TODO
+Datalog.execute ".decl edge(x:string, y:string)
+.decl dist(x:string, y:string, n:int)
+.decl shortest(x:string, y:string, n:int)
+edge(\"a\", \"b\").
+edge(\"b\", \"c\").
+edge(\"c\", \"d\").
+edge(\"d\", \"e\").
+edge(\"e\", \"f\").
+edge(\"a\", \"c\").
+dist(X, Y, 1) :- edge(X, Y).
+dist(X, Z, N+1) :- dist(X, Y, N), edge(Y, Z).
+shortest(X, Y, min N) :- dist(X, Y, N).
+.output shortest";
+*)
+
+(*
+ * Bounded transitive closure - find all paths of length <= 3.
+ *
+ * This query finds all pairs (X, Y) reachable in at most 3 hops.
+ * The bound is a parameter, not hardcoded as separate reach1, reach2,
+ * reach3 relations. The guard N < 3 in the recursive rule stops
+ * extension beyond the bound.
+ *
+ * From a: e is reachable (3 hops: a->c->d->e) but f is not (4 hops).
+ *)
+val program = ".decl edge(x:string, y:string)
+.decl path(x:string, y:string, n:int)
+edge(\"a\", \"b\").
+edge(\"b\", \"c\").
+edge(\"c\", \"d\").
+edge(\"d\", \"e\").
+edge(\"e\", \"f\").
+edge(\"a\", \"c\").
+path(X, Y, 1) :- edge(X, Y).
+path(X, Z, N+1) :- path(X, Y, N), edge(Y, Z), N < 3.
+.output path";
+> val program =
+>   ".decl edge(x:string, y:string)\n.decl path(x:string, y:string, n:int)\nedge(\"a\", \"b\").\nedge(\"b\", \"c\").\nedge(\"c\", \"d\").\nedge(\"d\", \"e\").\nedge(\"e\", \"f\").\nedge(\"a\", \"c\").\npath(X, Y, 1) :- edge(X, Y).\npath(X, Z, N+1) :- path(X, Y, N), edge(Y, Z), N < 3.\n.output path"
+>   : string
+
+Datalog.translate program;
+> val it =
+>   SOME "let\n  val edge = [(\"a\", \"b\"), (\"b\", \"c\"), (\"c\", \"d\"), (\"d\", \"e\"), (\"e\", \"f\"), (\"a\", \"c\")]\n  val path =\n    Relational.iterate []\n      (fn (allPath, newPath) =>\n        (from (x, y) in edge yield (x, y, 1))\n        @ (from (x, y, n) in newPath, (v0, z) in edge where y = v0 andalso n < 3 yield (x, z, n + 1)))\nin\n  {path = from (x, y, n) in path}\nend"
+>   : string option
+
+Datalog.execute program;
+> val it =
+>   {
+>    path=
+>    [{n=1,x="a",y="b"},{n=1,x="b",y="c"},{n=1,x="c",y="d"},{n=1,x="d",y="e"},
+>     {n=1,x="e",y="f"},{n=1,x="a",y="c"},{n=2,x="a",y="c"},{n=2,x="b",y="d"},
+>     {n=2,x="c",y="e"},{n=2,x="d",y="f"},{n=2,x="a",y="d"},{n=3,x="a",y="d"},
+>     {n=3,x="b",y="e"},{n=3,x="c",y="f"},{n=3,x="a",y="e"}]}
+>   : {path:{n:int, x:string, y:string} list} variant
+
+(* .input directive --------------------------------------------------
+ * Souffle's ".input" directive read facts from CSV file.
+ *
+ * The following query reads a relation from CSV and outputs it
+ * directly.
+ *)
+Datalog.execute ".decl dept(deptno:int, dname:string, loc:string)
+.input dept \"data/scott/depts.csv\"
+.output dept";
+> val it =
+>   {
+>    dept=
+>    [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>     {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>     {deptno=30,dname="SALES",loc="CHICAGO"},
+>     {deptno=40,dname="OPERATIONS",loc="BOSTON"}]}
+>   : {dept:{deptno:int, dname:string, loc:string} list} variant
+
+(*) Which states adjoin both Florida and Tennessee?
+Datalog.execute ".decl adj(state:string, adjacent:string)
+.decl result(state:string)
+.input adj \"data/map/adjacent-states.csv\"
+result(state) :- adj(state, \"FL\"), adj(state, \"TN\").
+.output result";
+> val it = {result=["AL","GA"]} : {result:string list} variant
+
+(*) Exactly two hops from Florida (which includes Florida)
+Datalog.execute ".decl adj(state:string, adjacent:string)
+.decl path(state:string, adjacent:string, distance:int)
+.decl result(state:string)
+.input adj \"data/map/adjacent-states.csv\"
+path(X, Y, 1) :- adj(X, Y).
+path(X, Z, N+1) :- path(X, Y, N), adj(Y, Z), N < 3.
+result(state) :- path(\"FL\", state, 2).
+.output result";
+> val it = {result=["FL","GA","MS","TN","AL","NC","SC"]}
+>   : {result:string list} variant
+
+(*) Exactly two hops from Maine (which does not includes NH)
+Datalog.execute ".decl adj(state:string, adjacent:string)
+.decl path(state:string, adjacent:string, distance:int)
+.decl result(state:string)
+.input adj \"data/map/adjacent-states.csv\"
+path(X, Y, 1) :- adj(X, Y).
+path(X, Z, N+1) :- path(X, Y, N), adj(Y, Z), N < 3.
+result(state) :- path(\"ME\", state, 2).
+.output result";
+> val it = {result=["MA","ME","VT"]} : {result:string list} variant
+
+(*) End datalog.smli

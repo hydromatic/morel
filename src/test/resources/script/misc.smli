@@ -26,9 +26,9 @@
  * test in the script.
  *)
 
-(*) Initial environment has 94 values.
+(*) Number of values in initial environment.
 val eLen = List.length (Sys.env());
-> val eLen = 110 : int
+> val eLen = 111 : int
 
 (*) Now we have one more (due to "it").
 List.length (Sys.env()) - eLen;
@@ -63,7 +63,7 @@ Sys.clearEnv();
 > val it = () : unit
 (*) Back down to the original eLen plus one (for "it").
 List.length (Sys.env());
-> val it = 111 : int
+> val it = 112 : int
 List.last (Sys.env());
 > val it = ("vector","forall 'a. 'a list -> 'a vector") : string * string
 

@@ -57,6 +57,7 @@ import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
+import net.hydromatic.morel.datalog.DatalogEvaluator;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.type.DataType;
@@ -503,6 +504,36 @@ public abstract class Codes {
         @Override
         public Character apply(Character c) {
           return Character.toUpperCase(c);
+        }
+      };
+
+  /** @see BuiltIn#DATALOG_EXECUTE */
+  private static final Applicable DATALOG_EXECUTE =
+      new BaseApplicable(BuiltIn.DATALOG_EXECUTE) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          String program = (String) arg;
+          return DatalogEvaluator.execute(program, env.getSession());
+        }
+      };
+
+  /** @see BuiltIn#DATALOG_TRANSLATE */
+  private static final Applicable DATALOG_TRANSLATE =
+      new BaseApplicable(BuiltIn.DATALOG_TRANSLATE) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          String program = (String) arg;
+          return DatalogEvaluator.translate(program, env.getSession());
+        }
+      };
+
+  /** @see BuiltIn#DATALOG_VALIDATE */
+  private static final Applicable DATALOG_VALIDATE =
+      new BaseApplicable(BuiltIn.DATALOG_VALIDATE) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          String program = (String) arg;
+          return DatalogEvaluator.validate(program, env.getSession());
         }
       };
 
@@ -4271,6 +4302,9 @@ public abstract class Codes {
           .put(BuiltIn.CHAR_TO_LOWER, CHAR_TO_LOWER)
           .put(BuiltIn.CHAR_TO_STRING, CHAR_TO_STRING)
           .put(BuiltIn.CHAR_TO_UPPER, CHAR_TO_UPPER)
+          .put(BuiltIn.DATALOG_EXECUTE, DATALOG_EXECUTE)
+          .put(BuiltIn.DATALOG_TRANSLATE, DATALOG_TRANSLATE)
+          .put(BuiltIn.DATALOG_VALIDATE, DATALOG_VALIDATE)
           .put(BuiltIn.EITHER_APP, EITHER_APP)
           .put(BuiltIn.EITHER_APP_LEFT, EITHER_APP_LEFT)
           .put(BuiltIn.EITHER_APP_RIGHT, EITHER_APP_RIGHT)

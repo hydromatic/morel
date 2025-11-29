@@ -1,0 +1,378 @@
+/*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ */
+
+options {
+  STATIC = false;
+  IGNORE_CASE = false;
+  UNICODE_INPUT = true;
+}
+
+PARSER_BEGIN(DatalogParserImpl)
+
+package net.hydromatic.morel.datalog;
+
+import net.hydromatic.morel.datalog.DatalogAst.ArithmeticExpr;
+import net.hydromatic.morel.datalog.DatalogAst.ArithOp;
+import net.hydromatic.morel.datalog.DatalogAst.Atom;
+import net.hydromatic.morel.datalog.DatalogAst.BodyAtom;
+import net.hydromatic.morel.datalog.DatalogAst.CompOp;
+import net.hydromatic.morel.datalog.DatalogAst.Comparison;
+import net.hydromatic.morel.datalog.DatalogAst.Constant;
+import net.hydromatic.morel.datalog.DatalogAst.Declaration;
+import net.hydromatic.morel.datalog.DatalogAst.Fact;
+import net.hydromatic.morel.datalog.DatalogAst.Input;
+import net.hydromatic.morel.datalog.DatalogAst.Output;
+import net.hydromatic.morel.datalog.DatalogAst.Param;
+import net.hydromatic.morel.datalog.DatalogAst.Program;
+import net.hydromatic.morel.datalog.DatalogAst.Rule;
+import net.hydromatic.morel.datalog.DatalogAst.Statement;
+import net.hydromatic.morel.datalog.DatalogAst.Term;
+import net.hydromatic.morel.datalog.DatalogAst.Variable;
+
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
+
+/** Parser for Datalog, generated from DatalogParser.jj by JavaCC. */
+public class DatalogParserImpl {
+  /** Parses a Datalog program from a string. */
+  public static Program parse(String input) throws ParseException {
+    StringReader reader = new StringReader(input);
+    DatalogParserImpl parser = new DatalogParserImpl(reader);
+    return parser.program();
+  }
+}
+
+PARSER_END(DatalogParserImpl)
+
+SKIP :
+{
+  " "
+| "\t"
+| "\r"
+| "\n"
+| < COMMENT: "//" (~["\n", "\r"])* ("\n" | "\r" | "\r\n") >
+| < MULTI_LINE_COMMENT: "/*" (~["*"])* "*" ("*" | ~["*", "/"] (~["*"])* "*")* "/" >
+| < HASH_COMMENT: "#" (~["\n", "\r"])* ("\n" | "\r" | "\r\n") >
+}
+
+TOKEN :
+{
+  < DECL: ".decl" >
+| < INPUT: ".input" >
+| < OUTPUT: ".output" >
+| < INT_TYPE: "int" >
+| < STRING_TYPE: "string" >
+| < LPAREN: "(" >
+| < RPAREN: ")" >
+| < COMMA: "," >
+| < DOT: "." >
+| < COLON: ":" >
+| < COLONMINUS: ":-" >
+| < EXCLAMATION: "!" >
+| < LE: "<=" >
+| < GE: ">=" >
+| < NE: "!=" >
+| < LT: "<" >
+| < GT: ">" >
+| < EQ: "=" >
+| < PLUS: "+" >
+| < MINUS: "-" >
+| < STAR: "*" >
+| < SLASH: "/" >
+}
+
+TOKEN :
+{
+  < INTEGER_LITERAL: (["0"-"9"])+ >
+| < STRING_LITERAL: "\"" (~["\"", "\\", "\n", "\r"] | "\\" (["\\", "\"", "n", "r", "t"]))* "\"" >
+| < IDENTIFIER: ["a"-"z", "A"-"Z", "_"] (["a"-"z", "A"-"Z", "0"-"9", "_"])* >
+}
+
+/** Parses a complete Datalog program. */
+Program program() :
+{
+  final List<Statement> statements = new ArrayList<Statement>();
+  Statement stmt;
+}
+{
+  (
+    stmt = statement() { statements.add(stmt); }
+  )*
+  <EOF>
+  { return new Program(statements); }
+}
+
+/** Parses a single statement (declaration, input, output, fact, or rule). */
+Statement statement() :
+{
+  final Statement stmt;
+}
+{
+  (
+    stmt = declaration() { return stmt; }
+  | stmt = input() { return stmt; }
+  | stmt = output() { return stmt; }
+  | stmt = factOrRule() { return stmt; }
+  )
+}
+
+/** Parses a declaration: {@code .decl relation(var:type, ...)} */
+Declaration declaration() :
+{
+  Token name;
+  List<Param> params;
+}
+{
+  <DECL> name = <IDENTIFIER> <LPAREN> params = paramList() <RPAREN>
+  { return new Declaration(name.image, params); }
+}
+
+/** Parses a parameter list for a declaration. */
+List<Param> paramList() :
+{
+  final List<Param> params = new ArrayList<Param>();
+  Param param;
+}
+{
+  param = param() { params.add(param); }
+  (
+    <COMMA> param = param() { params.add(param); }
+  )*
+  { return params; }
+|
+  { return params; } // empty list
+}
+
+/** Parses a single parameter: {@code var:type}. */
+Param param() :
+{
+  final Token name;
+  final String type;
+}
+{
+  name = <IDENTIFIER> <COLON> type = datalogType()
+  { return new Param(name.image, type); }
+}
+
+/** Parses a Datalog type. */
+String datalogType() :
+{
+  final Token t;
+}
+{
+  (
+    t = <INT_TYPE> { return t.image; }
+  | t = <STRING_TYPE> { return t.image; }
+  )
+}
+
+/** Parses an input directive: {@code .input relation [file_name]}. */
+Input input() :
+{
+  final Token name;
+  Token fileName = null;
+}
+{
+  <INPUT> name = <IDENTIFIER> [ fileName = <STRING_LITERAL> ]
+  {
+    String file = null;
+    if (fileName != null) {
+      file = fileName.image.substring(1, fileName.image.length() - 1)
+          .replace("\\n", "\n")
+          .replace("\\r", "\r")
+          .replace("\\t", "\t")
+          .replace("\\\\", "\\")
+          .replace("\\\"", "\"");
+    }
+    return new Input(name.image, file);
+  }
+}
+
+/** Parses an output directive: {@code .output relation}. */
+Output output() :
+{
+  final Token name;
+}
+{
+  <OUTPUT> name = <IDENTIFIER>
+  { return new Output(name.image); }
+}
+
+/** Parses a fact ({@code atom.}) or rule ({@code atom :- body.}). */
+Statement factOrRule() :
+{
+  final Atom head;
+  final List<BodyAtom> body;
+}
+{
+  head = atom()
+  (
+    <COLONMINUS> body = ruleBody() <DOT>
+    { return new Rule(head, body); }
+  | <DOT>
+    { return new Fact(head); }
+  )
+}
+
+/** Parses the body of a rule: a comma-separated list of (possibly negated)
+ * atoms. */
+List<BodyAtom> ruleBody() :
+{
+  final List<BodyAtom> bodyAtoms = new ArrayList<BodyAtom>();
+  BodyAtom bodyAtom;
+}
+{
+  bodyAtom = bodyAtom() { bodyAtoms.add(bodyAtom); }
+  (
+    <COMMA> bodyAtom = bodyAtom() { bodyAtoms.add(bodyAtom); }
+  )*
+  { return bodyAtoms; }
+}
+
+/** Parses a body atom (optionally negated). */
+BodyAtom bodyAtom() :
+{
+  boolean negated = false;
+  final Atom atom;
+  final Term left, right;
+  final CompOp op;
+}
+{
+  LOOKAHEAD(2)
+  left = term()
+  op = compOp()
+  right = term()
+  { return new Comparison(left, op, right); }
+|
+  ( <EXCLAMATION> { negated = true; } )?
+  atom = atom()
+  { return new BodyAtom(atom, negated); }
+}
+
+/** Parses a comparison operator. */
+CompOp compOp() :
+{}
+{
+  <EQ> { return CompOp.EQ; }
+| <NE> { return CompOp.NE; }
+| <LE> { return CompOp.LE; }
+| <GE> { return CompOp.GE; }
+| <LT> { return CompOp.LT; }
+| <GT> { return CompOp.GT; }
+}
+
+/** Parses an atom: {@code relation(term, ...)}. */
+Atom atom() :
+{
+  final Token name;
+  final List<Term> terms;
+}
+{
+  name = <IDENTIFIER> <LPAREN> terms = termList() <RPAREN>
+  { return new Atom(name.image, terms); }
+}
+
+/** Parses a term list. */
+List<Term> termList() :
+{
+  final List<Term> terms = new ArrayList<Term>();
+  Term term;
+}
+{
+  term = term() { terms.add(term); }
+  (
+    <COMMA> term = term() { terms.add(term); }
+  )*
+  { return terms; }
+|
+  { return terms; } // empty list
+}
+
+/** Parses a term (possibly an additive expression). */
+Term term() :
+{
+  Term t;
+  Term right;
+  ArithOp op;
+}
+{
+  t = multiplicativeTerm()
+  (
+    ( <PLUS> { op = ArithOp.PLUS; } | <MINUS> { op = ArithOp.MINUS; } )
+    right = multiplicativeTerm()
+    { t = new ArithmeticExpr(t, op, right); }
+  )*
+  { return t; }
+}
+
+/** Parses a multiplicative term. */
+Term multiplicativeTerm() :
+{
+  Term t;
+  Term right;
+  ArithOp op;
+}
+{
+  t = primaryTerm()
+  (
+    ( <STAR> { op = ArithOp.TIMES; } | <SLASH> { op = ArithOp.DIVIDE; } )
+    right = primaryTerm()
+    { t = new ArithmeticExpr(t, op, right); }
+  )*
+  { return t; }
+}
+
+/** Parses a primary term (variable, constant, or parenthesized expression). */
+Term primaryTerm() :
+{
+  final Token t;
+  final String strValue;
+  final int intValue;
+  final Term inner;
+}
+{
+  t = <IDENTIFIER>
+  {
+    // Souffle convention: All identifiers are variables
+    // (both foo and Foo are variables, "foo" is a string constant)
+    return new Variable(t.image);
+  }
+| t = <INTEGER_LITERAL>
+  {
+    intValue = Integer.parseInt(t.image);
+    return new Constant(intValue, "int");
+  }
+| t = <STRING_LITERAL>
+  {
+    // Remove quotes from string literal, and unescape
+    strValue = t.image.substring(1, t.image.length() - 1)
+        .replace("\\n", "\n")
+        .replace("\\r", "\r")
+        .replace("\\t", "\t")
+        .replace("\\\\", "\\")
+        .replace("\\\"", "\"");
+    // String literals have type "string" (Souffle doesn't have separate symbol type)
+    return new Constant(strValue, "string");
+  }
+| <LPAREN> inner = term() <RPAREN>
+  { return inner; }
+}
+
+// End DatalogParser.jj
