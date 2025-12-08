@@ -36,9 +36,10 @@ import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.ForallType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeCon;
 import net.hydromatic.morel.type.TypeSystem;
-import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Sat;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Checks whether patterns are exhaustive and/or redundant.
@@ -227,12 +228,12 @@ class PatternCoverageChecker {
   }
 
   private Sat.Variable typeConstructorTerm(Path path, String con) {
-    final Pair<DataType, Type.Key> pair = typeSystem.lookupTyCon(con);
-    final DataType dataType = pair.left;
+    final @Nullable TypeCon typeCon =
+        requireNonNull(typeSystem.lookupTyCon(con));
     DataTypeSlot slot =
         pathSlots.computeIfAbsent(
-            path, p -> new DataTypeSlot(dataType, p, sat));
-    return slot.constructorMap.get(con);
+            path, p -> new DataTypeSlot(typeCon.dataType, p, sat));
+    return requireNonNull(slot.constructorMap.get(con));
   }
 
   /**

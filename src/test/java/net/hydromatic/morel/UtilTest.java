@@ -80,6 +80,7 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.ArrayQueue;
 import net.hydromatic.morel.util.Folder;
 import net.hydromatic.morel.util.MapList;
+import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
@@ -454,6 +455,40 @@ public class UtilTest {
     assertThat(isNegative(Codes.NEGATIVE_NAN), is(false));
     assertThat(Float.isNaN(Float.NaN), is(true));
     assertThat(Float.isNaN(Codes.NEGATIVE_NAN), is(true));
+  }
+
+  /** Tests {@link Codes#parseReal(String, boolean)}. */
+  @Test
+  void testParseReal() {
+    checkParseRealStrict("1", is(1.0f));
+    checkParseRealStrict("~2", is(-2.0f));
+
+    checkParseRealBoth("1.5", is(1.5f));
+    checkParseRealBoth("~12.25", is(-12.25f));
+    checkParseRealBoth("~12.25e9", is(-1.225e10f));
+    checkParseRealBoth("~1e4", is(-10000.0f));
+    checkParseRealBoth("~30e4", is(-300000.0f));
+    checkParseRealBoth("~2e~4", is(-2.0e-4f));
+    checkParseRealBoth("~2E~4", is(-2.0e-4f));
+  }
+
+  private static void checkParseRealStrict(String s, Matcher<Float> matcher) {
+    Ord<Float> ord = Codes.parseReal(s, true);
+    assertThat(ord, nullValue());
+
+    Ord<Float> ord2 = Codes.parseReal(s, false);
+    assertThat(ord2, notNullValue());
+    assertThat(ord2.e, matcher);
+  }
+
+  private static void checkParseRealBoth(String s, Matcher<Float> matcher) {
+    Ord<Float> ord = Codes.parseReal(s, true);
+    assertThat(ord, notNullValue());
+    assertThat(ord.e, matcher);
+
+    Ord<Float> ord2 = Codes.parseReal(s, false);
+    assertThat(ord2, notNullValue());
+    assertThat(ord2.e, matcher);
   }
 
   /**

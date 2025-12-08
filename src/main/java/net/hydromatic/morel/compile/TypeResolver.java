@@ -82,6 +82,7 @@ import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
+import net.hydromatic.morel.type.TypeCon;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.type.TypedValue;
@@ -89,7 +90,6 @@ import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MartelliUnifier;
 import net.hydromatic.morel.util.Ord;
-import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.Tracers;
 import net.hydromatic.morel.util.TriConsumer;
@@ -2229,13 +2229,11 @@ public class TypeResolver {
 
       case ID_PAT:
         final Ast.IdPat idPat = (Ast.IdPat) pat;
-        final Pair<DataType, Type.Key> pair1 =
-            typeSystem.lookupTyCon(idPat.name);
-        if (pair1 != null) {
+        final @Nullable TypeCon typeCon = typeSystem.lookupTyCon(idPat.name);
+        if (typeCon != null) {
           // It is a zero argument constructor, e.g. the LESS constructor of the
           // 'order' type.
-          final DataType dataType0 = requireNonNull(pair1.left);
-          return reg(pat, v, toTerm(dataType0, Subst.EMPTY));
+          return reg(pat, v, toTerm(typeCon.dataType, Subst.EMPTY));
         }
         termMap.accept(new PatTerm(idPat, v, accessor));
         // fall through
@@ -2339,13 +2337,13 @@ public class TypeResolver {
       case CON_PAT:
         final Ast.ConPat conPat = (Ast.ConPat) pat;
         // e.g. "SOME x" has type "int option"; "x" has type "int".
-        final Pair<DataType, Type.Key> pair =
+        final @Nullable TypeCon typeCon1 =
             typeSystem.lookupTyCon(conPat.tyCon.name);
-        if (pair == null) {
+        if (typeCon1 == null) {
           throw new AssertionError("not found: " + conPat.tyCon.name);
         }
-        final DataType dataType = requireNonNull(pair.left);
-        final Type argType = requireNonNull(pair.right).toType(typeSystem);
+        final DataType dataType = typeCon1.dataType;
+        final Type argType = typeCon1.argTypeKey.toType(typeSystem);
         final Variable vArg = unifier.variable();
         pat2 = deducePatType(env, conPat.pat, termMap, null, vArg, t -> vArg);
         final Term argTerm = toTerm(argType, Subst.EMPTY);
@@ -2369,13 +2367,9 @@ public class TypeResolver {
 
       case CON0_PAT:
         final Ast.Con0Pat con0Pat = (Ast.Con0Pat) pat;
-        final Pair<DataType, Type.Key> pair0 =
-            typeSystem.lookupTyCon(con0Pat.tyCon.name);
-        if (pair0 == null) {
-          throw new AssertionError();
-        }
-        final DataType dataType0 = requireNonNull(pair0.left);
-        return reg(con0Pat, v, toTerm(dataType0, Subst.EMPTY));
+        final TypeCon typeCon2 =
+            requireNonNull(typeSystem.lookupTyCon(con0Pat.tyCon.name));
+        return reg(con0Pat, v, toTerm(typeCon2.dataType, Subst.EMPTY));
 
       case LIST_PAT:
         final Ast.ListPat listPat = (Ast.ListPat) pat;

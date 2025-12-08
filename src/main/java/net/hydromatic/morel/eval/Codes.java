@@ -65,6 +65,7 @@ import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MorelException;
+import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
 import org.apache.calcite.runtime.FlatLists;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -883,20 +884,8 @@ public abstract class Codes {
       new BaseApplicable1<List, String>(BuiltIn.INT_FROM_STRING) {
         @Override
         public List apply(String s) {
-          final String s2 = s.replace('~', '-');
-          final Matcher matcher = INT_PATTERN.matcher(s2);
-          if (!matcher.find(0)) {
-            return OPTION_NONE;
-          }
-          final String s3 = s2.substring(0, matcher.end());
-          try {
-            final int f = Integer.parseInt(s3);
-            return optionSome(f);
-          } catch (NumberFormatException e) {
-            // We should not have reached this point. The pattern
-            // should not have matched the input.
-            throw new AssertionError(e);
-          }
+          final Ord<Integer> ord = parseInt(s);
+          return ord == null ? OPTION_NONE : optionSome(ord.e);
         }
       };
 
@@ -1004,12 +993,20 @@ public abstract class Codes {
       new BaseApplicable1<String, Integer>(BuiltIn.INT_TO_STRING) {
         @Override
         public String apply(Integer f) {
-          // Java's formatting is reasonably close to ML's formatting,
-          // if we replace minus signs.
-          final String s = Integer.toString(f);
-          return s.replace('-', '~');
+          return intToString(f);
         }
       };
+
+  /**
+   * Converts a Java {@code int} value to the format expected of Standard ML
+   * {@code int} values.
+   */
+  public static String intToString(int i) {
+    // Java's formatting is reasonably close to ML's formatting,
+    // if we replace minus signs.
+    final String s = Integer.toString(i);
+    return s.replace('-', '~');
+  }
 
   /** @see BuiltIn#INTERACT_USE */
   private static final Applicable INTERACT_USE =
@@ -2542,25 +2539,62 @@ public abstract class Codes {
   static final Pattern FLOAT_PATTERN =
       Pattern.compile("^ *-?([0-9]*\\.)?[0-9]+([Ee]-?[0-9]+)?");
 
+  /**
+   * Parses an integer from a string that may use Standard ML negation syntax.
+   *
+   * @param s String to parse (may use ~ or - for negation)
+   * @return Ord containing the parsed integer and character count, or null if
+   *     the string does not start with a valid integer
+   */
+  static @Nullable Ord<Integer> parseInt(String s) {
+    final String s2 = s.replace('~', '-');
+    final Matcher matcher = INT_PATTERN.matcher(s2);
+    if (!matcher.find(0)) {
+      return null;
+    }
+    final String s3 = s2.substring(0, matcher.end());
+    try {
+      final int value = Integer.parseInt(s3);
+      return Ord.of(matcher.end(), value);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Parses a Morel {@code real} value (Java {@code float}) from a string that
+   * may use Standard ML negation syntax.
+   *
+   * @param s String to parse (may use either "~" or "-" for negation)
+   * @param strict Whether the string must be a real, not an integer
+   * @return Ord containing the parsed float and character count, or null if the
+   *     string does not start with a valid real number
+   */
+  public static @Nullable Ord<Float> parseReal(String s, boolean strict) {
+    final String s2 = s.replace('~', '-');
+    final Matcher matcher = FLOAT_PATTERN.matcher(s2);
+    if (!matcher.find(0)) {
+      return null;
+    }
+    final String s3 = s2.substring(0, matcher.end());
+    if (strict && !s3.contains(".") && !s3.contains("e") && !s3.contains("E")) {
+      return null;
+    }
+    try {
+      final float value = Float.parseFloat(s3);
+      return Ord.of(matcher.end(), value);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
   /** @see BuiltIn#REAL_FROM_STRING */
   private static final Applicable REAL_FROM_STRING =
       new BaseApplicable1<List, String>(BuiltIn.REAL_FROM_STRING) {
         @Override
         public List<Float> apply(String s) {
-          final String s2 = s.replace('~', '-');
-          final Matcher matcher = FLOAT_PATTERN.matcher(s2);
-          if (!matcher.find(0)) {
-            return OPTION_NONE;
-          }
-          final String s3 = s2.substring(0, matcher.end());
-          try {
-            final float f = Float.parseFloat(s3);
-            return optionSome(f);
-          } catch (NumberFormatException e) {
-            // We should not have reached this point. The pattern
-            // should not have matched the input.
-            throw new AssertionError(e);
-          }
+          final Ord<Float> ord = parseReal(s, false);
+          return ord == null ? OPTION_NONE : optionSome(ord.e);
         }
       };
 
@@ -4377,7 +4411,6 @@ public abstract class Codes {
    * Converts a Java {@code float} to the format expected of Standard ML {@code
    * real} values.
    */
-  @VisibleForTesting
   public static String floatToString(float f) {
     if (Float.isFinite(f)) {
       final String s = FLOAT_TO_STRING.apply(f);

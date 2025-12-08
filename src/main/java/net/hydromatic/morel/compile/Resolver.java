@@ -96,7 +96,7 @@ public class Resolver {
   final NameGenerator nameGenerator;
   final Environment env;
   final @Nullable Session session;
-  final Core.Exp current;
+  final Core.@Nullable Exp current;
   final AggregateResolver aggregateResolver;
   final Map<String, Pair<Core.IdPat, List<Core.IdPat>>> resolvedOverloads;
 
@@ -308,7 +308,7 @@ public class Resolver {
         : nonRecValDecl;
   }
 
-  private Core.@Nullable IdPat getOverload(Core.IdPat pat) {
+  private Core.IdPat getOverload(Core.IdPat pat) {
     for (Pair<Core.IdPat, List<Core.IdPat>> pair : resolvedOverloads.values()) {
       if (pair.right.contains(pat)) {
         return pair.left;
@@ -722,6 +722,7 @@ public class Resolver {
       }
       coreFn = core.id(matchingBindings.get(0));
     } else if (top != null && top.isInst()) {
+      requireNonNull(top.overloadId);
       final Type argType = typeMap.getType(apply.arg);
       final List<Core.IdPat> matchingIds = new ArrayList<>();
       for (Core.IdPat idPat : env.getOverloads(top.overloadId)) {
@@ -733,14 +734,14 @@ public class Resolver {
         throw new AssertionError(
             "zero or more than one matching bindings: " + matchingIds);
       }
-      coreFn = core.id(getIdPat((Ast.Id) apply.fn, matchingIds.get(0)));
+      coreFn = core.id(getIdPat(apply.fn, matchingIds.get(0)));
     } else {
       coreFn = toCore(apply.fn);
     }
     return core.apply(apply.pos, type, coreFn, coreArg);
   }
 
-  static Object valueOf(Environment env, Core.Exp exp) {
+  static @Nullable Object valueOf(Environment env, Core.Exp exp) {
     if (exp instanceof Core.Literal) {
       return ((Core.Literal) exp).value;
     }
@@ -888,7 +889,7 @@ public class Resolver {
                 final List<Core.IdPat> coreIds = new ArrayList<>();
                 Core.IdPat coreOverloadId;
                 if (top != null) {
-                  coreOverloadId = top.overloadId;
+                  coreOverloadId = requireNonNull(top.overloadId);
                   env.collect(
                       top.overloadId, b -> coreIds.add((Core.IdPat) b.id));
                 } else {
