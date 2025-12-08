@@ -23,13 +23,22 @@ import static net.hydromatic.morel.util.Static.unmodifiable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Ordering;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.util.AbstractCollection;
 import java.util.AbstractList;
+import java.util.AbstractSet;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.RandomAccess;
+import java.util.Set;
+import java.util.SortedMap;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -176,6 +185,21 @@ class PairLists {
     @Override
     public boolean isEmpty() {
       return list.isEmpty();
+    }
+
+    @Override
+    public SortedMap<T, U> asSortedMap() {
+      return immutable().asSortedMap();
+    }
+
+    @Override
+    public ImmutablePairList<T, U> withSortedKeys(Ordering<T> ordering) {
+      // Check if already sorted
+      if (ordering.isStrictlyOrdered(leftList())) {
+        return immutable();
+      }
+
+      return ArrayImmutablePairList.sortedCopyOf(list.toArray(), ordering);
     }
 
     @SuppressWarnings("unchecked")
@@ -496,6 +520,17 @@ class PairLists {
     }
 
     @Override
+    public SortedMap<T, U> asSortedMap() {
+      return ImmutableSortedMap.of();
+    }
+
+    @Override
+    public ImmutablePairList<T, U> withSortedKeys(Ordering<T> ordering) {
+      // Empty list is already sorted
+      return this;
+    }
+
+    @Override
     public void forEach(BiConsumer<T, U> consumer) {}
 
     @Override
@@ -614,6 +649,19 @@ class PairLists {
     }
 
     @Override
+    public SortedMap<T, U> asSortedMap() {
+      // A singleton map is always sorted.
+      Object[] elements = {t, u};
+      return new ArrayImmutablePairList<T, U>(elements).asSortedMap();
+    }
+
+    @Override
+    public ImmutablePairList<T, U> withSortedKeys(Ordering<T> ordering) {
+      // Singleton list is already sorted
+      return this;
+    }
+
+    @Override
     public void forEach(BiConsumer<T, U> consumer) {
       consumer.accept(t, u);
     }
@@ -683,6 +731,44 @@ class PairLists {
      */
     ArrayImmutablePairList(Object[] elements) {
       this.elements = checkElementsNotNull(elements);
+    }
+
+    /**
+     * Creates a sorted copy of the given elements array.
+     *
+     * @param elements Array of alternating keys and values
+     * @param ordering Ordering to sort by
+     * @return A new ArrayImmutablePairList with elements sorted by key
+     */
+    @SuppressWarnings("unchecked")
+    static <T, U> ArrayImmutablePairList<T, U> sortedCopyOf(
+        Object[] elements, Ordering<T> ordering) {
+      final int n = elements.length / 2;
+
+      // Create a list of indices to sort
+      final Integer[] indices = new Integer[n];
+      for (int i = 0; i < n; i++) {
+        indices[i] = i;
+      }
+
+      // Sort indices by comparing the keys
+      Arrays.sort(
+          indices,
+          (i, j) -> {
+            T keyI = (T) elements[i * 2];
+            T keyJ = (T) elements[j * 2];
+            return ordering.compare(keyI, keyJ);
+          });
+
+      // Create a new array with elements in sorted order
+      final Object[] sorted = new Object[elements.length];
+      int i = 0;
+      for (int index : indices) {
+        sorted[i++] = elements[index * 2]; // key
+        sorted[i++] = elements[index * 2 + 1]; // value
+      }
+
+      return new ArrayImmutablePairList<>(sorted);
     }
 
     @Override
@@ -762,6 +848,26 @@ class PairLists {
           }
         }
       };
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public SortedMap<T, U> asSortedMap() {
+      Ordering<? super T> ordering = (Ordering<? super T>) Ordering.natural();
+      if (!ordering.isStrictlyOrdered(leftList())) {
+        throw new IllegalArgumentException("Keys are not distinct and sorted");
+      }
+      return new ArraySortedMap<>(elements, 0, elements.length / 2, ordering);
+    }
+
+    @Override
+    public ImmutablePairList<T, U> withSortedKeys(Ordering<T> ordering) {
+      // Check if already sorted
+      if (ordering.isStrictlyOrdered(leftList())) {
+        return this;
+      }
+
+      return sortedCopyOf(elements, ordering);
     }
 
     @SuppressWarnings("unchecked")
@@ -951,6 +1057,17 @@ class PairLists {
     }
 
     @Override
+    public SortedMap<T, U> asSortedMap() {
+      return (SortedMap<T, U>) map;
+    }
+
+    @Override
+    public ImmutablePairList<T, U> withSortedKeys(Ordering<T> ordering) {
+      // Convert to immutable and sort
+      return immutable().withSortedKeys(ordering);
+    }
+
+    @Override
     public void forEach(BiConsumer<T, U> consumer) {
       map.forEach(consumer);
     }
@@ -983,6 +1100,331 @@ class PairLists {
     @Override
     public Map.Entry<T, U> get(int index) {
       return new MapEntry<>(left(index), right(index));
+    }
+  }
+
+  /**
+   * Implementation of {@link SortedMap} that is backed by an immutable array
+   * whose elements are alternating keys and values, and whose keys are sorted.
+   *
+   * <p>The {@code start} and {@code end} fields are pair indices (not element
+   * array indices). For example, if the map contains pairs 2-4 from a 10-pair
+   * array, {@code start = 2} and {@code end = 5} (exclusive).
+   *
+   * @param <T> Key type
+   * @param <U> Value type
+   */
+  static class ArraySortedMap<T, U> implements SortedMap<T, U> {
+    private final Ordering<? super T> ordering;
+    private final Object[] elements;
+    private final int start; // Pair index (inclusive)
+    private final int end; // Pair index (exclusive)
+
+    ArraySortedMap(
+        Object[] elements, int start, int end, Ordering<? super T> ordering) {
+      this.elements = requireNonNull(elements);
+      this.start = start;
+      this.end = end;
+      this.ordering = requireNonNull(ordering);
+    }
+
+    @Override
+    public Comparator<? super T> comparator() {
+      return ordering;
+    }
+
+    /**
+     * Binary search for a key in the elements array.
+     *
+     * @param key Key to search for
+     * @return Pair index if found, or negative insertion point if not found
+     */
+    @SuppressWarnings("unchecked")
+    private int binarySearch(Object key) {
+      int low = start;
+      int high = end - 1; // Last pair index
+
+      while (low <= high) {
+        int mid = (low + high) >>> 1;
+        T midVal = (T) elements[mid * 2];
+        int cmp = ordering.compare(midVal, (T) key);
+
+        if (cmp < 0) {
+          low = mid + 1;
+        } else if (cmp > 0) {
+          high = mid - 1;
+        } else {
+          return mid; // key found
+        }
+      }
+      return -(low + 1); // key not found, return insertion point
+    }
+
+    /**
+     * Binary search for the first key that is greater than or equal to the
+     * given key, using lower bound semantics.
+     *
+     * <p>This implements the standard lower_bound algorithm: finds the first
+     * position where {@code key} could be inserted while maintaining sorted
+     * order.
+     *
+     * @param key Search key
+     * @return Pair index, or end if all keys are less than {@code key}
+     */
+    @SuppressWarnings("unchecked")
+    private int lowerBound(T key) {
+      int low = start;
+      int high = end - 1; // Last pair index
+      int result = end;
+
+      while (low <= high) {
+        int mid = (low + high) >>> 1;
+        T midVal = (T) elements[mid * 2];
+        int cmp = ordering.compare(midVal, key);
+
+        if (cmp < 0) {
+          low = mid + 1;
+        } else {
+          result = mid;
+          high = mid - 1;
+        }
+      }
+      return result;
+    }
+
+    private SortedMap<T, U> sub(int newStart, int newEnd) {
+      if (newStart == this.start && newEnd == this.end) {
+        return this;
+      }
+      if (newStart >= newEnd) {
+        return ImmutableSortedMap.of();
+      }
+      return new ArraySortedMap<>(elements, newStart, newEnd, ordering);
+    }
+
+    @Override
+    public SortedMap<T, U> subMap(T fromKey, T toKey) {
+      if (ordering.compare(fromKey, toKey) > 0) {
+        throw new IllegalArgumentException(
+            "fromKey > toKey: " + fromKey + " > " + toKey);
+      }
+      int newStart = lowerBound(fromKey);
+      int newEnd = lowerBound(toKey);
+      return sub(newStart, newEnd);
+    }
+
+    @Override
+    public SortedMap<T, U> headMap(T toKey) {
+      int newEnd = lowerBound(toKey);
+      return sub(start, newEnd);
+    }
+
+    @Override
+    public SortedMap<T, U> tailMap(T fromKey) {
+      int newStart = lowerBound(fromKey);
+      return sub(newStart, end);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public T firstKey() {
+      if (isEmpty()) {
+        throw new NoSuchElementException();
+      }
+      return (T) elements[start * 2];
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public T lastKey() {
+      if (isEmpty()) {
+        throw new NoSuchElementException();
+      }
+      return (T) elements[(end - 1) * 2];
+    }
+
+    @Override
+    public Set<T> keySet() {
+      return new AbstractSet<T>() {
+        @Override
+        public int size() {
+          return ArraySortedMap.this.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+          return ArraySortedMap.this.isEmpty();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+          return containsKey(o);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public Iterator<T> iterator() {
+          return new Iterator<T>() {
+            int pairIndex = start;
+
+            @Override
+            public boolean hasNext() {
+              return pairIndex < end;
+            }
+
+            @Override
+            public T next() {
+              if (!hasNext()) {
+                throw new NoSuchElementException();
+              }
+              T key = (T) elements[pairIndex * 2];
+              pairIndex++;
+              return key;
+            }
+          };
+        }
+      };
+    }
+
+    @Override
+    public Collection<U> values() {
+      return new AbstractCollection<U>() {
+        @Override
+        public int size() {
+          return ArraySortedMap.this.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+          return ArraySortedMap.this.isEmpty();
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public Iterator<U> iterator() {
+          return new Iterator<U>() {
+            int pairIndex = start;
+
+            @Override
+            public boolean hasNext() {
+              return pairIndex < end;
+            }
+
+            @Override
+            public U next() {
+              if (!hasNext()) {
+                throw new NoSuchElementException();
+              }
+              U value = (U) elements[pairIndex * 2 + 1];
+              pairIndex++;
+              return value;
+            }
+          };
+        }
+      };
+    }
+
+    @Override
+    public Set<Entry<T, U>> entrySet() {
+      return new AbstractSet<Entry<T, U>>() {
+        @Override
+        public int size() {
+          return ArraySortedMap.this.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+          return ArraySortedMap.this.isEmpty();
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public Iterator<Entry<T, U>> iterator() {
+          return new Iterator<Entry<T, U>>() {
+            int pairIndex = start;
+
+            @Override
+            public boolean hasNext() {
+              return pairIndex < end;
+            }
+
+            @Override
+            public Entry<T, U> next() {
+              if (!hasNext()) {
+                throw new NoSuchElementException();
+              }
+              T key = (T) elements[pairIndex * 2];
+              U value = (U) elements[pairIndex * 2 + 1];
+              pairIndex++;
+              return new MapEntry<>(key, value);
+            }
+          };
+        }
+      };
+    }
+
+    @Override
+    public int size() {
+      return end - start;
+    }
+
+    @Override
+    public boolean isEmpty() {
+      return start >= end;
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+      try {
+        int index = binarySearch(key);
+        return index >= 0;
+      } catch (ClassCastException e) {
+        return false;
+      }
+    }
+
+    @Override
+    public boolean containsValue(Object value) {
+      for (int i = start; i < end; i++) {
+        if (elements[i * 2 + 1].equals(value)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public @Nullable U get(Object key) {
+      try {
+        int pairIndex = binarySearch(key);
+        if (pairIndex >= 0) {
+          return (U) elements[pairIndex * 2 + 1];
+        }
+        return null;
+      } catch (ClassCastException e) {
+        return null;
+      }
+    }
+
+    @Override
+    public U put(T key, U value) {
+      throw new UnsupportedOperationException("ArraySortedMap is immutable");
+    }
+
+    @Override
+    public U remove(Object key) {
+      throw new UnsupportedOperationException("ArraySortedMap is immutable");
+    }
+
+    @Override
+    public void putAll(Map<? extends T, ? extends U> m) {
+      throw new UnsupportedOperationException("ArraySortedMap is immutable");
+    }
+
+    @Override
+    public void clear() {
+      throw new UnsupportedOperationException("ArraySortedMap is immutable");
     }
   }
 }

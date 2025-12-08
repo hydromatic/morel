@@ -22,8 +22,10 @@ import static net.hydromatic.morel.util.Static.anyMatch;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
@@ -32,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.RandomAccess;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import net.hydromatic.morel.util.ImmutablePairList;
@@ -672,6 +676,49 @@ class PairListTest {
     t.accept(Collections.singletonList("abc"), "[<abc, 3>]");
     t.accept(Collections.singletonList(""), "[<, 0>]");
     t.accept(Collections.emptyList(), "[]");
+  }
+
+  @Test
+  void testAsSortedMap() {
+    final PairList<String, Integer> unsortedPairList =
+        PairList.copyOf("c", 3, "a", 1, "b", 2);
+    assertThrows(IllegalArgumentException.class, unsortedPairList::asSortedMap);
+
+    final PairList<String, Integer> pairList =
+        PairList.copyOf("a", 3, "b", 1, "c", 2);
+    SortedMap<String, Integer> sortedMap = pairList.asSortedMap();
+    assertThat(sortedMap, aMapWithSize(3));
+    assertThat(sortedMap.containsKey("b"), is(true));
+    assertThat(sortedMap.get("b"), is(1));
+    assertThat(sortedMap.containsKey("bb"), is(false));
+    assertThat(sortedMap.get("bb"), nullValue());
+    assertThat(sortedMap.containsKey("z"), is(false));
+    assertThat(sortedMap.get("z"), nullValue());
+
+    final SortedMap<String, Integer> sortedMap1 =
+        ImmutableSortedMap.of("a", 3, "b", 1, "c", 2);
+    checkSortedMap(sortedMap, sortedMap1);
+    checkSortedMap(sortedMap.headMap("bb"), sortedMap1.headMap("bb"));
+    checkSortedMap(sortedMap.tailMap("bb"), sortedMap1.tailMap("bb"));
+    checkSortedMap(sortedMap.headMap("a"), sortedMap1.headMap("a"));
+    checkSortedMap(sortedMap.tailMap("a"), sortedMap1.tailMap("a"));
+  }
+
+  private static void checkSortedMap(
+      SortedMap<String, Integer> m, SortedMap<String, Integer> m2) {
+    assertThat(m.keySet(), hasToString(m2.keySet().toString()));
+    assertThat(m.values(), hasToString(m2.values().toString()));
+    assertThat(m.entrySet(), hasSize(m2.size()));
+    assertThat(m.values(), hasSize(m2.size()));
+    assertThat(m, aMapWithSize(m2.size()));
+    assertThat(iterString(m.keySet()), is(iterString(m2.keySet())));
+    assertThat(iterString(m.values()), is(iterString(m2.values())));
+  }
+
+  private static String iterString(Iterable<?> iterable) {
+    final StringBuilder b = new StringBuilder();
+    iterable.forEach(o -> b.append(o).append(';'));
+    return b.toString();
   }
 }
 

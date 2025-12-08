@@ -24,10 +24,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -238,6 +240,14 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
   }
 
   /**
+   * Returns a view of this PairList as a {@link SortedMap}.
+   *
+   * <p>Throws if entries are not sorted by key. Makes an immutable copy if not
+   * already immutable.
+   */
+  SortedMap<T, U> asSortedMap();
+
+  /**
    * Returns an ImmutablePairList whose contents are the same as this PairList.
    */
   ImmutablePairList<T, U> immutable();
@@ -267,6 +277,15 @@ public interface PairList<T, U> extends List<Map.Entry<T, U>> {
 
   /** Returns whether the predicate is true for no pairs in this list. */
   boolean noneMatch(BiPredicate<T, U> predicate);
+
+  /**
+   * Returns an immutable PairList with keys sorted according to the given
+   * ordering.
+   *
+   * <p>Returns {@code this} if the list is already immutable and sorted.
+   * Otherwise, returns a new immutable sorted copy.
+   */
+  ImmutablePairList<T, U> withSortedKeys(Ordering<T> ordering);
 
   /**
    * Action to be taken each step of an indexed iteration over a PairList.
