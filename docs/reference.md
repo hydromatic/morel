@@ -744,6 +744,8 @@ Exception:
 | Sys.show | string &rarr; string option | "show property" returns the current the value of `property`, as a string, or `NONE` if unset. |
 | Sys.showAll | unit &rarr; string * string option list | "showAll ()" returns a list of all properties and their current value as a string, or `NONE` if unset. |
 | Sys.unset | string &rarr; unit | "unset property" clears the current the value of `property`. |
+| Variant.parse | string &rarr; variant | "parse s" parses a variant from its string representation.  The string is in the format produced by the `print` function, and therefore `parse (print v) = v` for all variant values `v`. |
+| Variant.print | variant &rarr; string | "print v" converts a variant to a string.  For example, `print (BOOL true)` returns `"BOOL true"`; `print (LIST [INT 1, INT 2])` returns `"LIST [INT 1, INT 2]"`. |
 | Vector.all | (&alpha; &rarr; bool) &rarr; &alpha; vector &rarr; bool | "all f vec" applies `f` to each element `x` of the vector `vec`, from left to right, until `f(x)` evaluates to `false`. It returns `false` if such an `x` exists; otherwise it returns `true`. It is equivalent to `not(exists (not o f) vec)`. |
 | Vector.app | (&alpha; &rarr; unit) &rarr; &alpha; vector &rarr; unit | "app f vec" applies the function `f` to the elements of a vector in left to right order (i.e., in order of increasing indices).<br><br>It is equivalent to <pre>List.app f (foldr (fn (a,l) =&gt; a::l) [] vec)</pre> |
 | Vector.appi | (int * &alpha; &rarr; unit) &rarr; &alpha; vector &rarr; unit | "appi f vec" applies the function `f` to the elements of a vector in left to right order (i.e., in order of increasing indices).<br><br>It is equivalent to <pre>List.app f (foldri (fn (i,a,l) =&gt; (i,a)::l) [] vec)</pre> |

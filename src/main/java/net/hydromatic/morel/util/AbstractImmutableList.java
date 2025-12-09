@@ -28,15 +28,13 @@ import java.util.ListIterator;
  *
  * @param <E> Element type
  */
-abstract class AbstractImmutableList<E> implements List<E> {
-  protected abstract List<E> toList();
-
+public abstract class AbstractImmutableList<E> implements List<E> {
   public Iterator<E> iterator() {
-    return toList().iterator();
+    return listIterator();
   }
 
   public ListIterator<E> listIterator() {
-    return toList().listIterator();
+    return listIterator(0);
   }
 
   public boolean isEmpty() {
@@ -77,14 +75,6 @@ abstract class AbstractImmutableList<E> implements List<E> {
 
   public E remove(int index) {
     throw new UnsupportedOperationException();
-  }
-
-  public ListIterator<E> listIterator(int index) {
-    return toList().listIterator(index);
-  }
-
-  public List<E> subList(int fromIndex, int toIndex) {
-    return toList().subList(fromIndex, toIndex);
   }
 
   public boolean contains(Object o) {

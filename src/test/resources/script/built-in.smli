@@ -4366,11 +4366,13 @@ Sys.env;
 > val it = fn : unit -> (string * string) list
 Sys.env ();
 > val it =
->   [
+>   [("BAG","variant list -> variant"),("BOOL","bool -> variant"),
 >    ("Bag",
 >     "{@:forall 'a. 'a bag * 'a bag -> 'a bag, all:forall 'a. ('a -> bool) -> 'a bag -> bool, app:forall 'a. ('a -> unit) -> 'a bag -> unit, concat:forall 'a. 'a bag list -> 'a bag, drop:forall 'a. 'a bag * int -> 'a bag, exists:forall 'a. ('a -> bool) -> 'a bag -> bool, filter:forall 'a. ('a -> bool) -> 'a bag -> 'a bag, find:forall 'a. ('a -> bool) -> 'a bag -> 'a option, fold:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a bag -> 'b, fromList:forall 'a. 'a list -> 'a bag, getItem:forall 'a. 'a bag -> ('a * 'a bag) option, hd:forall 'a. 'a bag -> 'a, length:forall 'a. 'a bag -> int, map:forall 'a 'b. ('a -> 'b) -> 'a bag -> 'b bag, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a bag -> 'b bag, nil:forall 'a. 'a bag, nth:forall 'a. 'a bag * int -> 'a, null:forall 'a. 'a bag -> bool, partition:forall 'a. ('a -> bool) -> 'a bag -> 'a bag * 'a bag, tabulate:forall 'a. int * (int -> 'a) -> 'a bag, take:forall 'a. 'a bag * int -> 'a bag, tl:forall 'a. 'a bag -> 'a bag, toList:forall 'a. 'a bag -> 'a list}"),
 >    ("Bool",
 >     "{fromString:string -> bool option, not:bool -> bool, toString:bool -> string}"),
+>    ("CHAR","char -> variant"),("CONSTANT","string -> variant"),
+>    ("CONSTRUCT","string * variant -> variant"),
 >    ("Char",
 >     "{<:char * char -> bool, <=:char * char -> bool, >:char * char -> bool, >=:char * char -> bool, chr:int -> char, compare:char * char -> order, contains:string -> char -> bool, fromCString:string -> char option, fromString:string -> char option, isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool, isLower:char -> bool, isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char, notContains:string -> char -> bool, ord:char -> int, pred:char -> char, succ:char -> char, toCString:char -> string, toLower:char -> char, toString:char -> string, toUpper:char -> char}"),
 >    ("DESC","forall 'a. 'a -> 'a descending"),("EQUAL","order"),
@@ -4382,11 +4384,11 @@ Sys.env ();
 >    ("General",
 >     "{before:forall 'a. 'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string, ignore:forall 'a. 'a -> unit, o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
 >    ("INL","forall 'a 'b. 'a -> ('a,'b) either"),
->    ("INR","forall 'a 'b. 'b -> ('a,'b) either"),
+>    ("INR","forall 'a 'b. 'b -> ('a,'b) either"),("INT","int -> variant"),
 >    ("Int",
 >     "{abs:int -> int, compare:int * int -> order, div:int * int -> int, fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option, max:int * int -> int, maxInt:int option, min:int * int -> int, minInt:int option, mod:int * int -> int, precision:int option, quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool, sign:int -> int, toInt:int -> int, toLarge:int -> int, toString:int -> string}"),
 >    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
->    ("LESS","order"),
+>    ("LESS","order"),("LIST","variant list -> variant"),
 >    ("List",
 >     "{@:forall 'a. 'a list * 'a list -> 'a list, all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, except:forall 'a. 'a list list -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, intersect:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
 >    ("ListPair",
@@ -4396,15 +4398,19 @@ Sys.env ();
 >    ("NONE","'a option"),
 >    ("Option",
 >     "{app:forall 'a. ('a -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
+>    ("REAL","real -> variant"),("RECORD","(string * variant) list -> variant"),
 >    ("Real",
 >     "{/:real * real -> real, abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",
 >     "{compare:forall 'a. 'a * 'a -> order, count:multi(forall 'a. 'a bag -> int,forall 'a. 'a list -> int), empty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), min:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), nonEmpty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a)}"),
->    ("SOME","forall 'a. 'a -> 'a option"),
+>    ("SOME","forall 'a. 'a -> 'a option"),("STRING","string -> variant"),
 >    ("String",
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
 >     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>    ("UNIT","variant"),("VARIANT_NONE","variant"),
+>    ("VARIANT_SOME","variant -> variant"),("VECTOR","variant list -> variant"),
+>    ("Variant","{parse:string -> variant, print:variant -> string}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
@@ -4465,11 +4471,13 @@ env;
 > val it = fn : unit -> (string * string) list
 env ();
 > val it =
->   [
+>   [("BAG","variant list -> variant"),("BOOL","bool -> variant"),
 >    ("Bag",
 >     "{@:forall 'a. 'a bag * 'a bag -> 'a bag, all:forall 'a. ('a -> bool) -> 'a bag -> bool, app:forall 'a. ('a -> unit) -> 'a bag -> unit, concat:forall 'a. 'a bag list -> 'a bag, drop:forall 'a. 'a bag * int -> 'a bag, exists:forall 'a. ('a -> bool) -> 'a bag -> bool, filter:forall 'a. ('a -> bool) -> 'a bag -> 'a bag, find:forall 'a. ('a -> bool) -> 'a bag -> 'a option, fold:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a bag -> 'b, fromList:forall 'a. 'a list -> 'a bag, getItem:forall 'a. 'a bag -> ('a * 'a bag) option, hd:forall 'a. 'a bag -> 'a, length:forall 'a. 'a bag -> int, map:forall 'a 'b. ('a -> 'b) -> 'a bag -> 'b bag, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a bag -> 'b bag, nil:forall 'a. 'a bag, nth:forall 'a. 'a bag * int -> 'a, null:forall 'a. 'a bag -> bool, partition:forall 'a. ('a -> bool) -> 'a bag -> 'a bag * 'a bag, tabulate:forall 'a. int * (int -> 'a) -> 'a bag, take:forall 'a. 'a bag * int -> 'a bag, tl:forall 'a. 'a bag -> 'a bag, toList:forall 'a. 'a bag -> 'a list}"),
 >    ("Bool",
 >     "{fromString:string -> bool option, not:bool -> bool, toString:bool -> string}"),
+>    ("CHAR","char -> variant"),("CONSTANT","string -> variant"),
+>    ("CONSTRUCT","string * variant -> variant"),
 >    ("Char",
 >     "{<:char * char -> bool, <=:char * char -> bool, >:char * char -> bool, >=:char * char -> bool, chr:int -> char, compare:char * char -> order, contains:string -> char -> bool, fromCString:string -> char option, fromString:string -> char option, isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool, isLower:char -> bool, isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char, notContains:string -> char -> bool, ord:char -> int, pred:char -> char, succ:char -> char, toCString:char -> string, toLower:char -> char, toString:char -> string, toUpper:char -> char}"),
 >    ("DESC","forall 'a. 'a -> 'a descending"),("EQUAL","order"),
@@ -4481,11 +4489,11 @@ env ();
 >    ("General",
 >     "{before:forall 'a. 'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string, ignore:forall 'a. 'a -> unit, o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
 >    ("INL","forall 'a 'b. 'a -> ('a,'b) either"),
->    ("INR","forall 'a 'b. 'b -> ('a,'b) either"),
+>    ("INR","forall 'a 'b. 'b -> ('a,'b) either"),("INT","int -> variant"),
 >    ("Int",
 >     "{abs:int -> int, compare:int * int -> order, div:int * int -> int, fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option, max:int * int -> int, maxInt:int option, min:int * int -> int, minInt:int option, mod:int * int -> int, precision:int option, quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool, sign:int -> int, toInt:int -> int, toLarge:int -> int, toString:int -> string}"),
 >    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
->    ("LESS","order"),
+>    ("LESS","order"),("LIST","variant list -> variant"),
 >    ("List",
 >     "{@:forall 'a. 'a list * 'a list -> 'a list, all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, except:forall 'a. 'a list list -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, intersect:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
 >    ("ListPair",
@@ -4495,15 +4503,19 @@ env ();
 >    ("NONE","'a option"),
 >    ("Option",
 >     "{app:forall 'a. ('a -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
+>    ("REAL","real -> variant"),("RECORD","(string * variant) list -> variant"),
 >    ("Real",
 >     "{/:real * real -> real, abs:real -> real, ceil:real -> int, checkFloat:real -> real, compare:real * real -> order, copySign:real * real -> real, floor:real -> int, fromInt:int -> real, fromManExp:{exp:int, man:real} -> real, fromString:string -> real option, isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool, max:real * real -> real, maxFinite:real, min:real * real -> real, minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int, radix:int, realCeil:real -> real, realFloor:real -> real, realMod:real -> real, realRound:real -> real, realTrunc:real -> real, rem:real * real -> real, round:real -> int, sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool, split:real -> {frac:real, whole:real}, toManExp:real -> {exp:int, man:real}, toString:real -> string, trunc:real -> int, unordered:real * real -> bool}"),
 >    ("Relational",
 >     "{compare:forall 'a. 'a * 'a -> order, count:multi(forall 'a. 'a bag -> int,forall 'a. 'a list -> int), empty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), min:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), nonEmpty:multi(forall 'a. 'a bag -> bool,forall 'a. 'a list -> bool), only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a)}"),
->    ("SOME","forall 'a. 'a -> 'a option"),
+>    ("SOME","forall 'a. 'a -> 'a option"),("STRING","string -> variant"),
 >    ("String",
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
 >     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>    ("UNIT","variant"),("VARIANT_NONE","variant"),
+>    ("VARIANT_SOME","variant -> variant"),("VECTOR","variant list -> variant"),
+>    ("Variant","{parse:string -> variant, print:variant -> string}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
 >    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
@@ -4901,5 +4913,61 @@ Sys.plan ();
 > val it =
 >   "apply2(fnValue Vector.collate, match(v, apply(fnCode match((i, j), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name i), get(name j)))), argCode apply2(fnValue <, get(name i), get(name j)))), argCode get(name v))), tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
 >   : string
+
+(*) Value structure tests
+
+(*) value datatype constructors exist
+UNIT;
+> val it = () : unit variant
+BOOL true;
+> val it = true : bool variant
+INT 42;
+> val it = 42 : int variant
+REAL 3.14;
+> val it = 3.14 : real variant
+CHAR #"x";
+> val it = #"x" : char variant
+STRING "hello";
+> val it = "hello" : string variant
+LIST [INT 1, INT 2];
+> val it = [1,2] : int list variant
+BAG [INT 3];
+> val it = [3] : int bag variant
+VECTOR [STRING "a"];
+> val it = #["a"] : string vector variant
+VARIANT_NONE;
+> val it = NONE : variant option variant
+VARIANT_SOME (INT 5);
+> val it = SOME 5 : int option variant
+RECORD [("x", INT 1)];
+> val it = {x=1} : {x:int} variant
+CONSTANT "LESS";
+> val it = LESS : order variant
+CONSTRUCT ("INL", INT 1);
+> val it = INL 1 : (int,'b) either variant
+
+(*) Value.print : value -> string (TODO: implement)
+(* Value.print;
+> val it = fn : value -> string
+Value.print UNIT;
+> val it = "()" : string
+Value.print (INT 42);
+> val it = "42" : string
+Value.print (STRING "hello");
+> val it = "\"hello\"" : string
+Value.print (LIST [INT 1, INT 2, INT 3]);
+> val it = "[1, 2, 3]" : string
+*)
+
+(*) Value.parse : string -> value (TODO: implement)
+(* Value.parse;
+> val it = fn : string -> value
+Value.parse "()";
+> val it = UNIT : value
+Value.parse "42";
+> val it = INT 42 : value
+Value.parse "true";
+> val it = BOOL true : value
+*)
 
 (*) End built-in.smli

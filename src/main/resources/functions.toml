@@ -3902,6 +3902,35 @@ description = """
 clears the current the value of `property`.
 """
 
+# === Variant structure ==============================================
+
+[[functions]]
+structure = "Variant"
+name = "parse"
+specified = "morel"
+type = "string → variant"
+prototype = "parse s"
+description = """
+parses a variant from its string representation.
+
+The string is in the format produced by the `print` function,
+and therefore `parse (print v) = v` for all variant values `v`.
+"""
+
+[[functions]]
+structure = "Variant"
+name = "print"
+specified = "morel"
+type = "variant → string"
+prototype = "print v"
+description = """
+converts a variant to a string.
+
+For example,
+`print (BOOL true)` returns `"BOOL true"`;
+`print (LIST [INT 1, INT 2])` returns `"LIST [INT 1, INT 2]"`.
+"""
+
 # === Vector structure ===============================================
 
 [[functions]]

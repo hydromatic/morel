@@ -78,20 +78,20 @@ public class ConsList<E> extends AbstractImmutableList<E> {
 
   @Override
   public int hashCode() {
-    return toList().hashCode();
+    return flatten().hashCode();
   }
 
   @Override
   public boolean equals(Object o) {
-    return o == this || o instanceof List && toList().equals(o);
+    return o == this || o instanceof List && flatten().equals(o);
   }
 
   @Override
   public String toString() {
-    return toList().toString();
+    return flatten().toString();
   }
 
-  protected final List<E> toList() {
+  protected final List<E> flatten() {
     final List<E> list = new ArrayList<>();
     for (ConsList<E> c = this; ; c = (ConsList<E>) c.rest) {
       list.add(c.first);
@@ -103,22 +103,27 @@ public class ConsList<E> extends AbstractImmutableList<E> {
   }
 
   @Override
+  public List<E> subList(int fromIndex, int toIndex) {
+    return flatten().subList(fromIndex, toIndex);
+  }
+
+  @Override
   public ListIterator<E> listIterator() {
-    return toList().listIterator();
+    return flatten().listIterator();
   }
 
   @Override
   public Iterator<E> iterator() {
-    return toList().iterator();
+    return flatten().iterator();
   }
 
   @Override
   public ListIterator<E> listIterator(int index) {
-    return toList().listIterator(index);
+    return flatten().listIterator(index);
   }
 
   public @Nullable Object[] toArray() {
-    return toList().toArray();
+    return flatten().toArray();
   }
 
   @SuppressWarnings("rawtypes")
@@ -143,11 +148,11 @@ public class ConsList<E> extends AbstractImmutableList<E> {
   }
 
   public int indexOf(Object o) {
-    return toList().indexOf(o);
+    return flatten().indexOf(o);
   }
 
   public int lastIndexOf(Object o) {
-    return toList().lastIndexOf(o);
+    return flatten().lastIndexOf(o);
   }
 }
 

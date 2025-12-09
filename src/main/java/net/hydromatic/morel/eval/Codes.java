@@ -56,6 +56,7 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.parse.Parsers;
+import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RangeExtent;
@@ -2310,7 +2311,7 @@ public abstract class Codes {
    *
    * @see #optionSome(Object)
    */
-  private static final List OPTION_NONE = ImmutableList.of("NONE");
+  static final List OPTION_NONE = ImmutableList.of("NONE");
 
   /**
    * Creates a value of {@code SOME v}.
@@ -2318,7 +2319,7 @@ public abstract class Codes {
    * @see net.hydromatic.morel.compile.BuiltIn.Constructor#OPTION_SOME
    * @see #OPTION_NONE
    */
-  private static List optionSome(Object o) {
+  static List optionSome(Object o) {
     return ImmutableList.of(BuiltIn.Constructor.OPTION_SOME.constructor, o);
   }
 
@@ -3454,6 +3455,48 @@ public abstract class Codes {
         }
       };
 
+  /** Value of {@link BuiltIn.Constructor#VARIANT_UNIT}. */
+  public static final List VARIANT_UNIT =
+      Variant.of(PrimitiveType.UNIT, Unit.INSTANCE);
+
+  /** @see BuiltIn#VARIANT_PARSE */
+  private static final Typed VARIANT_PARSE = new VariantParser(null);
+
+  /**
+   * Implementation of {@link #VARIANT_PARSE}.
+   *
+   * <p>It implements {@link Typed} only because the implementation needs a
+   * {@link TypeSystem} value.
+   */
+  static class VariantParser extends BaseApplicable1<Variant, String>
+      implements Typed {
+    private final @Nullable TypeSystem typeSystem;
+
+    VariantParser(@Nullable TypeSystem typeSystem) {
+      super(BuiltIn.VARIANT_PARSE);
+      this.typeSystem = typeSystem;
+    }
+
+    @Override
+    public Applicable withType(TypeSystem typeSystem, Type ignored) {
+      return new VariantParser(requireNonNull(typeSystem));
+    }
+
+    @Override
+    public Variant apply(String s) {
+      return Variants.parse(s, requireNonNull(typeSystem));
+    }
+  }
+
+  /** @see BuiltIn#VARIANT_PRINT */
+  private static final Applicable1 VARIANT_PRINT =
+      new BaseApplicable1<String, Variant>(BuiltIn.VARIANT_PRINT) {
+        @Override
+        public String apply(Variant arg) {
+          return arg.print();
+        }
+      };
+
   /** @see BuiltIn#VECTOR_ALL */
   private static final Applicable2 VECTOR_ALL = all(BuiltIn.VECTOR_ALL);
 
@@ -3951,12 +3994,21 @@ public abstract class Codes {
   }
 
   /**
-   * Returns an applicable that constructs an instance of a datatype. The
-   * instance is a list with two elements [constructorName, value].
+   * Returns an applicable that constructs an instance of a datatype.
+   *
+   * <p>For the {@code variant} datatype, creates a {@link Variant}. For other
+   * datatypes, creates a {@link List} with two elements [constructorName,
+   * value].
    */
-  public static Applicable1 tyCon(Type dataType, String name) {
+  public static Applicable tyCon(Type dataType, String name) {
     requireNonNull(dataType);
     requireNonNull(name);
+    // Special handling for "variant" datatype: create Variant instances.
+    if (dataType instanceof DataType
+        && ((DataType) dataType).name.equals("variant")) {
+      return new ValueTyCon(name);
+    }
+    // Standard datatype constructor - return List
     return new BaseApplicable1(BuiltIn.Z_TY_CON) {
       @Override
       protected String name() {
@@ -3968,6 +4020,42 @@ public abstract class Codes {
         return ImmutableList.of(name, arg);
       }
     };
+  }
+
+  /**
+   * Type constructor for {@code variant} datatype that creates {@link Variant}
+   * instances.
+   *
+   * <p>To ensure {@code apply(EvalEnv, Object)} is always called, only
+   * implements {@link Applicable} (not {@link Applicable1}). This provides
+   * access to {@link TypeSystem} via {@link Session}.
+   */
+  static class ValueTyCon extends ApplicableImpl {
+    private final String tyConName;
+
+    ValueTyCon(String tyConName) {
+      super(BuiltIn.Z_TY_CON);
+      this.tyConName = tyConName;
+    }
+
+    @Override
+    protected String name() {
+      return "tyCon";
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      final Session session = env.getSession();
+      final TypeSystem typeSystem = session.typeSystem;
+      if (typeSystem == null) {
+        throw new IllegalStateException(
+            "Variant constructor "
+                + tyConName
+                + " requires TypeSystem but session.typeSystem is null");
+      }
+      // Create Value instance based on constructor name
+      return Variants.fromConstructor(tyConName, arg, typeSystem);
+    }
   }
 
   /** Creates an empty evaluation environment. */
@@ -4337,6 +4425,8 @@ public abstract class Codes {
           .put(BuiltIn.SYS_SHOW, SYS_SHOW)
           .put(BuiltIn.SYS_SHOW_ALL, SYS_SHOW_ALL)
           .put(BuiltIn.SYS_UNSET, SYS_UNSET)
+          .put(BuiltIn.VARIANT_PARSE, VARIANT_PARSE)
+          .put(BuiltIn.VARIANT_PRINT, VARIANT_PRINT)
           .put(BuiltIn.VECTOR_ALL, VECTOR_ALL)
           .put(BuiltIn.VECTOR_APP, VECTOR_APP)
           .put(BuiltIn.VECTOR_APPI, VECTOR_APPI)

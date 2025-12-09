@@ -202,6 +202,9 @@ public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
 
       case CONS_PAT:
         final Core.ConPat consPat = (Core.ConPat) pat;
+        if (argValue instanceof Variant) {
+          return Variant.bindConsPat(envRef, (Variant) argValue, consPat);
+        }
         @SuppressWarnings("unchecked")
         final List<Object> consValue = (List) argValue;
         if (consValue.isEmpty()) {
@@ -220,6 +223,11 @@ public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
 
       case CON_PAT:
         final Core.ConPat conPat = (Core.ConPat) pat;
+        if (argValue instanceof Variant) {
+          final Variant value = (Variant) argValue;
+          return Variant.bindConPat(envRef, value, conPat);
+        }
+        // Old-style [tag, payload] representation
         final List conValue = (List) argValue;
         return conValue.get(0).equals(conPat.tyCon)
             && bindRecurse(conPat.pat, conValue.get(1), envRef);

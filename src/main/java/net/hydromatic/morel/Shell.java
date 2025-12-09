@@ -268,7 +268,7 @@ public class Shell {
     final Map<Prop, Object> map = new LinkedHashMap<>();
     Prop.DIRECTORY.set(map, config.directory);
     Prop.SCRIPT_DIRECTORY.set(map, config.directory);
-    final Session session = new Session(map);
+    final Session session = new Session(map, typeSystem);
     Environment env = Environments.env(typeSystem, session, config.valueMap);
     final LineFn lineFn =
         new TerminalLineFn(minusPrompt, equalsPrompt, lineReader);

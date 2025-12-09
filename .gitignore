@@ -23,6 +23,9 @@ settings.xml
 .classpath.txt
 .fullclasspath.txt
 
+# test output
+*.smli.out
+
 # eclipse
 .project
 .buildpath

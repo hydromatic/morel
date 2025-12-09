@@ -33,6 +33,7 @@ import java.util.List;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
+import net.hydromatic.morel.eval.Variant;
 import net.hydromatic.morel.foreign.RelList;
 import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.type.AliasType;
@@ -94,6 +95,11 @@ class Pretty {
       Object value,
       int leftPrec,
       int rightPrec) {
+    if (value instanceof Variant) {
+      Variant v = (Variant) value;
+      return pretty1(
+          buf, indent, lineEnd, depth, v.type, v.value, leftPrec, rightPrec);
+    }
     final int start = buf.length();
     final int end = lineEnd[0];
     pretty2(buf, indent, lineEnd, depth, type, value, leftPrec, rightPrec);
@@ -143,7 +149,8 @@ class Pretty {
       appendId(buf2, typedVal.name);
       if (customPrint(buf, indent, end, depth, typedVal.type, typedVal.o)) {
         end[0] = -1; // no limit
-        prettyRaw(buf, indent, end, depth, buf2.toString());
+        Object v2 = buf2.toString();
+        prettyRaw(buf, indent, end, depth, v2);
       } else {
         buf2.append(" = ");
         prettyRaw(buf, indent, end, depth, buf2.toString());
@@ -151,8 +158,13 @@ class Pretty {
             buf, indent + 2, end, depth + 1, typedVal.type, typedVal.o, 0, 0);
       }
       buf.append(' ');
-      TypeVal typeVal =
-          new TypeVal(": ", typeSystem.unqualified(typedVal.type));
+      final TypeVal typeVal;
+      if (typedVal.o instanceof Variant) {
+        final Type type1 = ((Variant) typedVal.o).type;
+        typeVal = new TypeVal(": ", typeSystem.unqualified(type1), " variant");
+      } else {
+        typeVal = new TypeVal(": ", typeSystem.unqualified(typedVal.type), "");
+      }
       prettyRaw(buf, indent + 2, end, depth, typeVal);
       return buf;
     }
@@ -168,7 +180,7 @@ class Pretty {
       final LabelVal labelVal = (LabelVal) value;
       final String prefix =
           appendId(new StringBuilder(), labelVal.label).append(':').toString();
-      TypeVal typeVal = new TypeVal(prefix, labelVal.type);
+      TypeVal typeVal = new TypeVal(prefix, labelVal.type, "");
       pretty1(buf, indent, end, depth, type, typeVal, 0, 0);
       return buf;
     }
@@ -176,6 +188,7 @@ class Pretty {
     if (value instanceof TypeVal) {
       TypeVal typeVal = (TypeVal) value;
       prettyType(buf, indent, end, depth, type, typeVal, leftPrec, rightPrec);
+      buf.append(typeVal.suffix);
       return buf;
     }
 
@@ -421,7 +434,10 @@ class Pretty {
         dataType.typeConstructors(typeSystem).get(tyConName);
     requireNonNull(typeConArgType);
     if (list.size() == 2) {
-      final Object arg = list.get(1);
+      Object arg = list.get(1);
+      if (arg instanceof Variant) {
+        arg = ((Variant) arg).value;
+      }
       buf.append(' ');
       final boolean needParentheses =
           typeConArgType.op() == Op.DATA_TYPE && arg instanceof List;
@@ -505,7 +521,7 @@ class Pretty {
           if (buf.length() > start) {
             pretty1(buf, indent2, end, depth, type, " * ", 0, 0);
           }
-          final TypeVal typeVal1 = new TypeVal("", argType);
+          final TypeVal typeVal1 = new TypeVal("", argType, "");
           final int leftPrec1 = i == 0 ? leftPrec : Op.TUPLE_TYPE.right;
           final int rightPrec1 =
               i == argTypes.size() - 1 ? rightPrec : Op.TUPLE_TYPE.left;
@@ -545,10 +561,10 @@ class Pretty {
           return buf;
         }
         final FnType fnType = (FnType) typeVal.type;
-        final TypeVal typeVal1 = new TypeVal("", fnType.paramType);
+        final TypeVal typeVal1 = new TypeVal("", fnType.paramType, "");
         final int rightPrec1 = Op.FUNCTION_TYPE.left;
         pretty1(buf, indent2, end, depth, type, typeVal1, leftPrec, rightPrec1);
-        final TypeVal typeVal2 = new TypeVal(" -> ", fnType.resultType);
+        final TypeVal typeVal2 = new TypeVal(" -> ", fnType.resultType, "");
         final int leftPrec1 = Op.FUNCTION_TYPE.right;
         pretty1(buf, indent2, end, depth, type, typeVal2, leftPrec1, rightPrec);
         return buf;
@@ -578,7 +594,7 @@ class Pretty {
     checkArgument(
         typeVal.type.isCollection(), "not a collection type: %s", type);
     final Type elementType = typeVal.type.arg(0);
-    final TypeVal typeVal1 = new TypeVal("", elementType);
+    final TypeVal typeVal1 = new TypeVal("", elementType, "");
     pretty1(
         buf, indent2, lineEnd, depth, type, typeVal1, leftPrec, Op.LIST.left);
     return buf.append(" ").append(typeName);
@@ -658,10 +674,12 @@ class Pretty {
   private static class TypeVal {
     final String prefix;
     final Type type;
+    final String suffix;
 
-    TypeVal(String prefix, Type type) {
+    TypeVal(String prefix, Type type, String suffix) {
       this.prefix = prefix;
       this.type = type;
+      this.suffix = suffix;
     }
   }
 }

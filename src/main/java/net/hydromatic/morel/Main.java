@@ -121,7 +121,7 @@ public class Main {
     this.out = buffer(out);
     this.echo = argList.contains("--echo");
     this.valueMap = ImmutableMap.copyOf(valueMap);
-    this.session = new Session(propMap);
+    this.session = new Session(propMap, typeSystem);
     this.idempotent = idempotent;
   }
 

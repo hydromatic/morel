@@ -27,6 +27,7 @@ import static net.hydromatic.morel.type.PrimitiveType.STRING;
 import static net.hydromatic.morel.type.PrimitiveType.UNIT;
 import static net.hydromatic.morel.util.Static.SKIP;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import java.util.ArrayList;
@@ -3343,6 +3344,22 @@ public enum BuiltIn {
   SYS_UNSET("Sys", "unset", "unset", ts -> ts.fnType(STRING, UNIT)),
 
   /**
+   * Function "Variant.parse", of type "string &rarr; variant".
+   *
+   * <p>"parse s" parses a string representation into a variant.
+   */
+  VARIANT_PARSE(
+      "Variant", "parse", ts -> ts.fnType(STRING, ts.lookup(Datatype.VARIANT))),
+
+  /**
+   * Function "Variant.print", of type "variant &rarr; string".
+   *
+   * <p>"print v" converts a variant to its compact string representation.
+   */
+  VARIANT_PRINT(
+      "Variant", "print", ts -> ts.fnType(ts.lookup(Datatype.VARIANT), STRING)),
+
+  /**
    * Function "Vector.all" of type "(&alpha; &rarr; bool) &rarr; &alpha; vector
    * &rarr; bool".
    *
@@ -4131,7 +4148,48 @@ public enum BuiltIn {
         "$list",
         true,
         1,
-        h -> h.tyCon(Constructor.LIST_NIL).tyCon(Constructor.LIST_CONS));
+        h -> h.tyCon(Constructor.LIST_NIL).tyCon(Constructor.LIST_CONS)),
+
+    /**
+     * Universal value representation for embedded language interoperability.
+     *
+     * <pre>{@code
+     * datatype variant =
+     *     UNIT
+     *   | BOOL of bool
+     *   | INT of int
+     *   | REAL of real
+     *   | CHAR of char
+     *   | STRING of string
+     *   | LIST of variant list
+     *   | BAG of variant list
+     *   | VECTOR of variant list
+     *   | VARIANT_NONE
+     *   | VARIANT_SOME of variant
+     *   | RECORD of (string * variant) list
+     *   | CONSTANT of string
+     *   | CONSTRUCT of string * variant
+     * }</pre>
+     */
+    VARIANT(
+        "variant",
+        false,
+        0,
+        h ->
+            h.tyCon(Constructor.VARIANT_UNIT)
+                .tyCon(Constructor.VARIANT_BOOL)
+                .tyCon(Constructor.VARIANT_INT)
+                .tyCon(Constructor.VARIANT_REAL)
+                .tyCon(Constructor.VARIANT_CHAR)
+                .tyCon(Constructor.VARIANT_STRING)
+                .tyCon(Constructor.VARIANT_LIST)
+                .tyCon(Constructor.VARIANT_BAG)
+                .tyCon(Constructor.VARIANT_VECTOR)
+                .tyCon(Constructor.VARIANT_NONE)
+                .tyCon(Constructor.VARIANT_SOME)
+                .tyCon(Constructor.VARIANT_RECORD)
+                .tyCon(Constructor.VARIANT_CONSTRUCT)
+                .tyCon(Constructor.VARIANT_CONSTANT));
 
     private final String mlName;
     private final boolean internal;
@@ -4206,7 +4264,32 @@ public enum BuiltIn {
     OPTION_SOME(Datatype.OPTION, "SOME", h -> h.get(0)),
     ORDER_EQUAL(Datatype.ORDER, "EQUAL"),
     ORDER_GREATER(Datatype.ORDER, "GREATER"),
-    ORDER_LESS(Datatype.ORDER, "LESS");
+    ORDER_LESS(Datatype.ORDER, "LESS"),
+    VARIANT_BAG(Datatype.VARIANT, "BAG", h -> Keys.list(Keys.name("variant"))),
+    VARIANT_BOOL(Datatype.VARIANT, "BOOL", h -> BOOL.key()),
+    VARIANT_CHAR(Datatype.VARIANT, "CHAR", h -> CHAR.key()),
+    VARIANT_CONSTANT(Datatype.VARIANT, "CONSTANT", h -> STRING.key()),
+    VARIANT_CONSTRUCT(
+        Datatype.VARIANT,
+        "CONSTRUCT",
+        h -> Keys.tuple(ImmutableList.of(STRING.key(), Keys.name("variant")))),
+    VARIANT_INT(Datatype.VARIANT, "INT", h -> INT.key()),
+    VARIANT_LIST(
+        Datatype.VARIANT, "LIST", h -> Keys.list(Keys.name("variant"))),
+    VARIANT_NONE(Datatype.VARIANT, "VARIANT_NONE"),
+    VARIANT_REAL(Datatype.VARIANT, "REAL", h -> REAL.key()),
+    VARIANT_RECORD(
+        Datatype.VARIANT,
+        "RECORD",
+        h ->
+            Keys.list(
+                Keys.tuple(
+                    ImmutableList.of(STRING.key(), Keys.name("variant"))))),
+    VARIANT_SOME(Datatype.VARIANT, "VARIANT_SOME", h -> Keys.name("variant")),
+    VARIANT_STRING(Datatype.VARIANT, "STRING", h -> STRING.key()),
+    VARIANT_UNIT(Datatype.VARIANT, "UNIT"),
+    VARIANT_VECTOR(
+        Datatype.VARIANT, "VECTOR", h -> Keys.list(Keys.name("variant")));
 
     public final Datatype datatype;
     public final String constructor;

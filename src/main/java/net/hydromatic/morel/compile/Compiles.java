@@ -58,7 +58,7 @@ public abstract class Compiles {
       Map<String, ForeignValue> valueMap,
       Consumer<CompileException> warningConsumer) {
     final TypeSystem typeSystem = new TypeSystem();
-    final Session session = new Session(propMap);
+    final Session session = new Session(propMap, typeSystem);
     final Environment env = Environments.env(typeSystem, session, valueMap);
     return TypeResolver.deduceType(
         env, toDecl(statement), typeSystem, warningConsumer);
