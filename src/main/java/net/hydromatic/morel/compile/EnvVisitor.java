@@ -120,9 +120,7 @@ abstract class EnvVisitor extends Visitor {
   protected void visit(Core.Scan scan) {
     scan.pat.accept(this);
     scan.exp.accept(this);
-    if (scan.condition != null) {
-      scan.condition.accept(bind(scan.env.bindings));
-    }
+    scan.condition.accept(bind(scan.env.bindings));
   }
 
   @Override

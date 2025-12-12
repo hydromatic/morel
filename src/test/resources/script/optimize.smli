@@ -104,7 +104,7 @@ Sys.plan ();
 > val it = "constant(no)" : string
 Sys.planEx "~1";
 > val it = "val it = case false of true => \"yes\" | _ => \"no\"" : string
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = \"no\"" : string
 
 (*) Boolean case.
@@ -128,14 +128,14 @@ Sys.plan ();
 (*) Real case.
 let val r = 1.0 in case r of 0.0 => 0 | 1.0 => 1 | _ => 2 end;
 > val it = 1 : int
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = 1" : string
 
 (*) Unit case.
 let val u = () in case u of () => "unit" | _ => "not unit" end;
 > stdIn:1.44-1.59 Error: match redundant
 >   raised at: stdIn:1.44-1.59
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = \"unit\"" : string
 
 (*) Tuple case.
@@ -152,7 +152,7 @@ Sys.planEx "~1";
 > val it =
 >   "val it = let val t = (1, \"a\") in case t of (0, _) => \"zero\" | (1, s) => \"one:\" ^ s | _ => \"other\" end"
 >   : string
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = op ^ (\"one:\", \"a\")" : string
 
 (*) Record case.
@@ -169,7 +169,7 @@ Sys.planEx "~1";
 > val it =
 >   "val it = let val t = {a = 1, b = \"a\"} in case t of {a = 0, b = _} => \"zero\" | {a = 1, b = s} => \"one:\" ^ s | _ => \"other\" end"
 >   : string
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = op ^ (\"one:\", \"a\")" : string
 
 (*) Enum case
@@ -186,7 +186,7 @@ Sys.planEx "~1";
 > val it =
 >   "val it = let val ordering = LESS in case ordering of LESS => \"LESS\" | GREATER => \"GREATER\" | _ => \"?\" end"
 >   : string
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = \"LESS\"" : string
 
 (*) Option case (an enum with one argument).
@@ -203,7 +203,7 @@ Sys.planEx "~1";
 > val it =
 >   "val it = let val someA = SOME \"a\" in case someA of SOME(\"0\") => \"some0\" | SOME(s) => \"some:\" ^ s | NONE => \"none\" end"
 >   : string
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = op ^ (\"some:\", \"a\")" : string
 
 let
@@ -219,7 +219,7 @@ Sys.planEx "~1";
 > val it =
 >   "val it = let val none = NONE in case none of SOME(\"0\") => \"some0\" | SOME(s) => \"some:\" ^ s | NONE => \"none\" end"
 >   : string
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = \"none\"" : string
 
 (*) Either case (an enum with two type parameters).
@@ -233,7 +233,7 @@ Sys.planEx "~1";
 > val it =
 >   "val it = let val left = INL \"a\" in case left of INL(s) => \"left:\" ^ s | INR(s_1) => \"right:\" ^ s_1 end"
 >   : string
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = op ^ (\"left:\", \"a\")" : string
 
 (*) Tree case (an enum with a tuple value)
@@ -248,7 +248,7 @@ Sys.planEx "~1";
 > val it =
 >   "val it = local datatype tree in let val v = NODE (NODE (EMPTY, 1, \"a\"), 2, \"b\") in case v of EMPTY => \"empty\" | NODE((t, i, s)) => s end end"
 >   : string
-Sys.planEx "0";
+Sys.planEx "1";
 > val it = "val it = local datatype tree in \"b\" end" : string
 
 (*) End optimize.smli

@@ -284,8 +284,7 @@ public class FromBuilder {
   }
 
   public FromBuilder where(Core.Exp condition) {
-    if (condition.op == Op.BOOL_LITERAL
-        && ((Core.Literal) condition).unwrap(Boolean.class)) {
+    if (condition.isBoolLiteral(true)) {
       // skip "where true"
       return this;
     }

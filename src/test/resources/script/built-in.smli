@@ -4622,10 +4622,8 @@ val zebra = true;
 val aardvark = 1 + (if zebra then 2 else 3);
 > val aardvark = 3 : int
 Sys.planEx "0";
-> val it = "val aardvark = 1 + 2" : string
-Sys.planEx "-1";
 > val it = "val aardvark = 1 + (case true of true => 2 | _ => 3)" : string
-Sys.planEx "1";
+Sys.planEx "-1";
 > val it = "val aardvark = 1 + 2" : string
 
 (*) val set : string * 'a -> unit

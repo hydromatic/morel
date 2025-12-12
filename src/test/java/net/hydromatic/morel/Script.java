@@ -121,7 +121,7 @@ public class Script {
             || inFile
                 .getPath()
                 .matches(
-                    ".*/(blog|dummy|foreign|hybrid|logic|pretty"
+                    ".*/(blog|dummy|dummy2|foreign|hybrid|logic|pretty"
                         + "|such-that)\\.(sml|smli)");
 
     return new Script(

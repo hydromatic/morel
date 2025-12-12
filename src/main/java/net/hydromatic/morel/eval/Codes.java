@@ -41,8 +41,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -2923,25 +2925,32 @@ public abstract class Codes {
   private static final Applicable2 RELATIONAL_ITERATE =
       new BaseApplicable2<List, List, Applicable1<List, List>>(
           BuiltIn.RELATIONAL_ITERATE) {
+        @SuppressWarnings({"rawtypes", "unchecked"})
         @Override
         public List apply(
             final List initialList, Applicable1<List, List> update) {
           List list = initialList;
           List newList = list;
+          final Set seen = new LinkedHashSet(list);
           for (; ; ) {
             List nextList = update.apply(FlatLists.of(list, newList));
-            if (nextList.isEmpty()) {
+            // Subtract already-seen elements (semi-naive evaluation).
+            // Without this, cyclic graphs would cause infinite iteration.
+            final List genuinelyNew = new ArrayList();
+            for (Object o : nextList) {
+              if (seen.add(o)) {
+                genuinelyNew.add(o);
+              }
+            }
+            if (genuinelyNew.isEmpty()) {
               return list;
             }
-            // REVIEW:
-            // 1. should we eliminate duplicates when computing "oldList
-            //   union newList"?
-            // 2. should we subtract oldList before checking whether newList
-            //    is empty?
-            // 3. add an "iterateDistinct" variant?
             list =
-                ImmutableList.builder().addAll(list).addAll(nextList).build();
-            newList = nextList;
+                ImmutableList.builder()
+                    .addAll(list)
+                    .addAll(genuinelyNew)
+                    .build();
+            newList = genuinelyNew;
           }
         }
       };

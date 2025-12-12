@@ -35,6 +35,7 @@ import static org.apache.calcite.util.Util.first;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -60,6 +61,7 @@ import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RangeExtent;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
@@ -145,6 +147,25 @@ public class Core {
             }
           };
       return unparse(w);
+    }
+
+    /** Returns all named patterns in this pattern. */
+    public List<NamedPat> expand() {
+      final ImmutableList.Builder<NamedPat> list = ImmutableList.builder();
+      accept(
+          new Visitor() {
+            @Override
+            protected void visit(Core.IdPat idPat) {
+              list.add(idPat);
+            }
+
+            @Override
+            protected void visit(Core.AsPat asPat) {
+              list.add(asPat);
+              super.visit(asPat);
+            }
+          });
+      return list.build();
     }
   }
 
@@ -246,6 +267,11 @@ public class Core {
     @Override
     public void accept(Visitor visitor) {
       visitor.visit(this);
+    }
+
+    @Override
+    public List<NamedPat> expand() {
+      return ImmutableList.of(this);
     }
 
     @Override
@@ -680,9 +706,17 @@ public class Core {
       return false;
     }
 
+    /**
+     * Returns the {@link BuiltIn} that this is a call to, or {@link
+     * BuiltIn#FALSE} if not a call.
+     */
+    public BuiltIn builtIn() {
+      return BuiltIn.FALSE;
+    }
+
     /** Returns whether this expression is a call to the given built-in. */
     public boolean isCallTo(BuiltIn builtIn) {
-      return false;
+      return builtIn() == builtIn;
     }
 
     /**
@@ -691,6 +725,28 @@ public class Core {
      */
     public boolean isCallTo(BuiltIn.Constructor constructor) {
       return false;
+    }
+
+    /**
+     * Returns whether this expression iterates over the values of a type. Some
+     * extents are infinite.
+     */
+    public boolean isExtent() {
+      return isCallTo(BuiltIn.Z_EXTENT);
+    }
+
+    /** Returns the extent, or throws if not {@link #isExtent()}. */
+    public RangeExtent getRangeExtent() {
+      checkArgument(isExtent());
+      final Apply apply = (Apply) this;
+      final Core.Literal argLiteral = (Core.Literal) apply.arg;
+      return argLiteral.unwrap(RangeExtent.class);
+    }
+
+    /** Returns whether this is a boolean literal with value {@code b}. */
+    public boolean isBoolLiteral(boolean b) {
+      return op == Op.BOOL_LITERAL
+          && ((Literal) this).unwrap(Boolean.class) == b;
     }
   }
 
@@ -1719,15 +1775,10 @@ public class Core {
       } else {
         w.append(" in ").append(exp, Op.EQ.right, 0);
       }
-      if (!isLiteralTrue()) {
+      if (!condition.isBoolLiteral(true)) {
         w.append(" on ").append(condition, 0, 0);
       }
       return w;
-    }
-
-    private boolean isLiteralTrue() {
-      return condition.op == Op.BOOL_LITERAL
-          && ((Literal) condition).unwrap(Boolean.class);
     }
 
     public Scan copy(StepEnv env, Pat pat, Exp exp, Exp condition) {
@@ -2191,6 +2242,36 @@ public class Core {
           : core.apply(pos, type, fn, arg);
     }
 
+    /**
+     * Creates an Apply with the same function and a list of new arguments. If
+     * the arguments are the same, returns this Apply.
+     */
+    public Apply withArgs(List<Exp> args) {
+      if (args.size() == 1) {
+        return copy(fn, args.get(0));
+      }
+      return withTupleArgs(args);
+    }
+
+    /**
+     * Creates an Apply with the same function and new arguments. If the
+     * arguments are the same, returns this Apply.
+     */
+    public Apply withArgs(Exp arg0, Exp... args) {
+      if (args.length == 0) {
+        return copy(fn, arg0);
+      }
+      return withArgs(Lists.asList(arg0, args));
+    }
+
+    private Apply withTupleArgs(List<Exp> args) {
+      if (args.equals(args())) {
+        return this;
+      }
+      final Tuple newArg = core.tuple((RecordLikeType) this.arg.type, args);
+      return core.apply(pos, type, fn, newArg);
+    }
+
     @Override
     public boolean isConstant() {
       // A list of constants is constant
@@ -2198,9 +2279,11 @@ public class Core {
     }
 
     @Override
-    public boolean isCallTo(BuiltIn builtIn) {
-      return fn.op == Op.FN_LITERAL
-          && ((Literal) fn).unwrap(BuiltIn.class) == builtIn;
+    public BuiltIn builtIn() {
+      if (fn.op == Op.FN_LITERAL) {
+        return ((Literal) fn).unwrap(BuiltIn.class);
+      }
+      return super.builtIn();
     }
 
     @Override

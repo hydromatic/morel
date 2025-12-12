@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import net.hydromatic.morel.ast.Core;
@@ -32,7 +34,7 @@ abstract class EnvShuttle extends Shuttle {
   /** Creates an EnvShuttle. */
   protected EnvShuttle(TypeSystem typeSystem, Environment env) {
     super(typeSystem);
-    this.env = env;
+    this.env = requireNonNull(env);
   }
 
   /** Creates a shuttle the same as this but with a new environment. */
@@ -87,6 +89,7 @@ abstract class EnvShuttle extends Shuttle {
   protected Core.RecValDecl visit(Core.RecValDecl recValDecl) {
     final List<Binding> bindings = new ArrayList<>();
     recValDecl.list.forEach(decl -> Compiles.acceptBinding(decl.pat, bindings));
+    //    Compiles.bindPattern(typeSystem, bindings, recValDecl);
     return recValDecl.copy(bind(bindings).visitList(recValDecl.list));
   }
 
@@ -100,7 +103,10 @@ abstract class EnvShuttle extends Shuttle {
       env = step2.env;
     }
 
-    return from.copy(typeSystem, this.env, steps);
+    // Don't pass outer env for validation. Steps reference patterns
+    // defined within the FROM itself, which may not be in the outer env.
+    // The step traversal above already validates with appropriate bindings.
+    return from.copy(typeSystem, null, steps);
   }
 }
 

@@ -79,8 +79,9 @@ public class FromBuilderTest {
     }
 
     Core.Exp record(Core.Id... ids) {
-      final PairList<String, Core.Exp> nameExps = PairList.of();
-      Arrays.asList(ids).forEach(id -> nameExps.add(id.idPat.name, id));
+      final PairList<String, Core.Exp> nameExps =
+          PairList.fromTransformed(
+              Arrays.asList(ids), (id, c) -> c.accept(id.idPat.name, id));
       return core.record(typeSystem, nameExps);
     }
 

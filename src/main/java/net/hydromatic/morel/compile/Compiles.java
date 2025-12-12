@@ -196,7 +196,6 @@ public abstract class Compiles {
             mayContainUnbounded = false;
           }
         }
-        coreDecl = Extents.infinitePats(typeSystem, coreDecl);
         if (coreDecl == coreDecl2) {
           break;
         }
@@ -263,7 +262,7 @@ public abstract class Compiles {
         Math.max(Prop.INLINE_PASS_COUNT.intValue(session.map), 0);
     final boolean relationalize = Prop.RELATIONALIZE.booleanValue(session.map);
 
-    if (inlinePassCount == 0 || targetPass < 0) {
+    if (inlinePassCount == 0 || targetPass == 0) {
       // Inlining is disabled. Use the Inliner in a limited mode.
       final Inliner inliner = Inliner.of(typeSystem, env, null);
       return coreDecl0.accept(inliner);
@@ -275,7 +274,6 @@ public abstract class Compiles {
     // Run inlining passes
     Core.Decl coreDecl = coreDecl0;
     boolean mayContainUnbounded = true;
-    int currentPass = 1;
 
     for (int i = 0; i < inlinePassCount; i++) {
       final Analyzer.Analysis analysis =
@@ -289,8 +287,8 @@ public abstract class Compiles {
       if (coreDecl == coreDecl2) {
         break;
       }
-      currentPass = i + 2;
-      if (targetPass >= 0 && currentPass == targetPass) {
+      final int currentPass = i + 2;
+      if (currentPass == targetPass) {
         return coreDecl;
       }
     }
@@ -305,12 +303,11 @@ public abstract class Compiles {
           mayContainUnbounded = false;
         }
       }
-      coreDecl = Extents.infinitePats(typeSystem, coreDecl);
       if (coreDecl == coreDecl2) {
         break;
       }
-      currentPass = i + 2;
-      if (targetPass >= 0 && currentPass == targetPass) {
+      final int currentPass = i + 2;
+      if (currentPass == targetPass) {
         return coreDecl;
       }
     }

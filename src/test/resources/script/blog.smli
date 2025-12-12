@@ -1525,10 +1525,8 @@ val empsRemoved = from e in scott.emps except emps4;
 >     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
 >      job:string, mgr:int, sal:real} bag
 
-(*) Empty summary table. (TODO: Use record type.)
-val summary =
-  from s in [{deptno = 0, c = 0, sum_sal = 0.0}]
-    where false;
+(*) Empty summary table.
+val summary = [] : {c:int, deptno:int, sum_sal:real} list;
 > val summary = [] : {c:int, deptno:int, sum_sal:real} list
 
 (* Compute the updated summary table. *)
@@ -1564,7 +1562,7 @@ from (parent, child) in parents
 >   [{child="arwen",parent="elrond"},{child="elladan",parent="elrond"},
 >    {child="elrohir",parent="elrond"}] : {child:string, parent:string} list
 
-(*) TODO Fix the UnsupportedOperationException
+(*) TODO Fix the IllegalArgumentException
 fun ancestors () =
   from (x, y) in parents
     union
@@ -1613,19 +1611,33 @@ fun isAncestor (x, z) =
     orelse (exists y
       where isAncestor(x, y)
         andalso (y, z) elem parents);
-> com.google.common.base.VerifyException: not found [isAncestor]
+> val isAncestor = fn : string * string -> bool
 
-from a
-  where isAncestor(a, "arwen");
-> stdIn:2.9-2.19 Error: unbound variable or constructor: isAncestor
->   raised at: stdIn:2.9-2.19
-(*) TODO should return ["earendil", "elrond"] : string list
+(* TODO remove 'let' when predicate-inversion is smarter *)
+let
+  fun isAncestor (x, z) =
+    (x, z) elem parents
+      orelse (exists y
+        where isAncestor(x, y)
+          andalso (y, z) elem parents);
+in
+  from a
+    where isAncestor(a, "arwen")
+end;
+> val it = ["elrond","earendil"] : string bag
 
-from d
-  where isAncestor("earendil", d);
-> stdIn:2.9-2.19 Error: unbound variable or constructor: isAncestor
->   raised at: stdIn:2.9-2.19
-(*) TODO should return ["elrond", "arwen", "elladan", "elrohir"] : string list
+(* TODO remove 'let' when predicate-inversion is smarter *)
+let
+  fun isAncestor (x, z) =
+    (x, z) elem parents
+      orelse (exists y
+        where isAncestor(x, y)
+          andalso (y, z) elem parents);
+in
+  from d
+    where isAncestor("earendil", d)
+end;
+> val it = ["elrond","arwen","elladan","elrohir"] : string bag
 
 (*) Recipe optimization
 from b, c

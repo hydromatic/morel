@@ -20,13 +20,17 @@ package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Maps.transformValues;
+import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
+import static net.hydromatic.morel.util.PairList.fromTransformed;
 import static net.hydromatic.morel.util.Static.allMatch;
 import static net.hydromatic.morel.util.Static.filterEager;
 import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.plus;
 import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformEager;
+import static net.hydromatic.morel.util.Static.transformToMap;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -323,9 +327,11 @@ public enum CoreBuilder {
     return new Core.TuplePat(type, ImmutableList.copyOf(args));
   }
 
-  public Core.TuplePat tuplePat(TypeSystem typeSystem, List<Core.Pat> args) {
-    return tuplePat(
-        typeSystem.tupleType(transform(args, Core.Pat::type)), args);
+  public Core.TuplePat tuplePat(
+      TypeSystem typeSystem, List<? extends Core.Pat> args) {
+    RecordLikeType tupleType =
+        typeSystem.tupleType(transform(args, Core.Pat::type));
+    return tuplePat(tupleType, args);
   }
 
   public Core.ListPat listPat(Type type, Iterable<? extends Core.Pat> args) {
@@ -344,7 +350,7 @@ public enum CoreBuilder {
   }
 
   public Core.RecordPat recordPat(
-      RecordType type, List<? extends Core.Pat> args) {
+      RecordType type, Iterable<? extends Core.Pat> args) {
     return new Core.RecordPat(type, ImmutableList.copyOf(args));
   }
 
@@ -356,8 +362,22 @@ public enum CoreBuilder {
         ImmutableSortedMap.copyOf(namePats, ORDERING);
     final RecordLikeType recordType =
         typeSystem.recordType(transformValues(sortedNamePats, Core.Pat::type));
+    return recordPat((RecordType) recordType, sortedNamePats.values());
+  }
+
+  /**
+   * Creates a pattern for a list of named patterns.
+   *
+   * <p>If the list has one element, returns that element. Otherwise, returns a
+   * record pattern with the patterns as fields.
+   */
+  public Core.Pat recordOrAtomPat(
+      TypeSystem typeSystem, List<? extends Core.NamedPat> pats) {
+    if (pats.size() == 1) {
+      return pats.get(0);
+    }
     return recordPat(
-        (RecordType) recordType, ImmutableList.copyOf(sortedNamePats.values()));
+        typeSystem, transformToMap(pats, (p, c) -> c.accept(p.name, p)));
   }
 
   public Core.Tuple tuple(
@@ -574,24 +594,12 @@ public enum CoreBuilder {
   }
 
   /**
-   * Creates a {@link Core.Apply} with two or more arguments, packing the
-   * arguments into a tuple.
+   * Creates a {@link Core.Apply}, assuming that the expression has a function
+   * type.
    */
-  public Core.Apply apply(
-      Pos pos,
-      TypeSystem typeSystem,
-      BuiltIn builtIn,
-      Core.Exp arg0,
-      Core.Exp arg1,
-      Core.Exp... args) {
-    final Core.Literal fn = functionLiteral(typeSystem, builtIn);
-    FnType fnType = (FnType) fn.type;
-    TupleType tupleType = (TupleType) fnType.paramType;
-    return apply(
-        pos,
-        fnType.resultType,
-        fn,
-        tuple(tupleType, Lists.asList(arg0, arg1, args)));
+  public Core.Apply apply(Pos pos, Core.Exp fn, Core.Exp arg) {
+    final FnType fnType = (FnType) fn.type;
+    return apply(pos, fnType.resultType, fn, arg);
   }
 
   public Core.Case ifThenElse(
@@ -790,6 +798,29 @@ public enum CoreBuilder {
     return bag(typeSystem, arg0.type, Lists.asList(arg0, args));
   }
 
+  /** Converts a collection to ordered (list) or unordered (bag). */
+  public Core.Exp withOrdered(
+      boolean ordered, Core.Exp collection, TypeSystem typeSystem) {
+    if (ordered == (collection.type instanceof ListType)) {
+      return collection;
+    }
+    final Type elementType = collection.type.elementType();
+    final BuiltIn builtIn;
+    final Type collectionType;
+    if (ordered) {
+      builtIn = BuiltIn.BAG_TO_LIST;
+      collectionType = typeSystem.listType(elementType);
+    } else {
+      builtIn = BuiltIn.BAG_FROM_LIST;
+      collectionType = typeSystem.bagType(elementType);
+    }
+    return core.apply(
+        Pos.ZERO,
+        collectionType,
+        core.functionLiteral(typeSystem, builtIn),
+        collection);
+  }
+
   /**
    * Creates an extent. It returns a list of all values of a given type that
    * fall into a given range-set. The range-set might consist of just {@link
@@ -836,10 +867,8 @@ public enum CoreBuilder {
             new ArrayList<>();
         final List<Core.Exp> remainingExps = new ArrayList<>();
         for (Core.Exp exp : exps) {
-          if (exp.isCallTo(BuiltIn.Z_EXTENT)) {
-            final Core.Literal argLiteral =
-                (Core.Literal) ((Core.Apply) exp).arg;
-            final RangeExtent list = argLiteral.unwrap(RangeExtent.class);
+          if (exp.isExtent()) {
+            final RangeExtent list = exp.getRangeExtent();
             rangeSetMaps.add(list.rangeSetMap);
             continue;
           }
@@ -874,12 +903,8 @@ public enum CoreBuilder {
             new ArrayList<>();
         final List<Core.Exp> remainingExps = new ArrayList<>();
         for (Core.Exp exp : exps) {
-          if (exp.isCallTo(BuiltIn.Z_EXTENT)) {
-            final Core.Literal argLiteral =
-                (Core.Literal) ((Core.Apply) exp).arg;
-            final Core.Wrapper wrapper = (Core.Wrapper) argLiteral.value;
-            final RangeExtent list = wrapper.unwrap(RangeExtent.class);
-            rangeSetMaps.add(list.rangeSetMap);
+          if (exp.isExtent()) {
+            rangeSetMaps.add(exp.getRangeExtent().rangeSetMap);
             continue;
           }
           remainingExps.add(exp);
@@ -917,24 +942,28 @@ public enum CoreBuilder {
     switch (exp.op) {
       case TUPLE:
         final Core.Tuple tuple = (Core.Tuple) exp;
-        return tuple.copy(
-            typeSystem, transform(tuple.args, e -> simplify(typeSystem, e)));
+        final List<Core.Exp> simplifiedArgs =
+            transformEager(tuple.args, e -> simplify(typeSystem, e));
+        final Core.Exp simplified = simplifyTuple(simplifiedArgs, tuple.type());
+        if (simplified != null) {
+          return simplified;
+        }
+        return tuple.copy(typeSystem, simplifiedArgs);
 
       case APPLY:
         Core.Apply apply = (Core.Apply) exp;
-        final Core.Exp simplifiedArgs = simplify(typeSystem, apply.arg);
-        if (!simplifiedArgs.equals(apply.arg)) {
-          apply = apply.copy(apply.fn, simplifiedArgs);
+        final Core.Exp simplifiedArg = simplify(typeSystem, apply.arg);
+        if (!simplifiedArg.equals(apply.arg)) {
+          apply = apply.copy(apply.fn, simplifiedArg);
         }
         if (apply.isCallTo(BuiltIn.LIST_CONCAT)
             && apply.arg.isCallTo(BuiltIn.Z_LIST)) {
           final Core.Apply apply2 = (Core.Apply) apply.arg;
-          if (allMatch(
-              apply2.args(), exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
+          if (allMatch(apply2.args(), Core.Exp::isExtent)) {
             Pair<Core.Exp, List<Core.Exp>> pair =
                 unionExtents(typeSystem, apply2.args());
-            if (pair.right.isEmpty()) {
-              return pair.left;
+            if (requireNonNull(pair.right).isEmpty()) {
+              return requireNonNull(pair.left);
             }
           }
         }
@@ -943,56 +972,60 @@ public enum CoreBuilder {
             && ((Core.Apply) apply.arg).arg.isCallTo(BuiltIn.Z_LIST)) {
           final Core.Apply apply1 = (Core.Apply) apply.arg;
           final Core.Apply apply2 = (Core.Apply) apply1.arg;
-          if (allMatch(
-              apply2.args(), exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
+          if (allMatch(apply2.args(), Core.Exp::isExtent)) {
             Pair<Core.Exp, List<Core.Exp>> pair =
                 unionExtents(typeSystem, apply2.args());
-            if (pair.right.isEmpty()) {
-              return pair.left;
+            if (requireNonNull(pair.right).isEmpty()) {
+              return requireNonNull(pair.left);
             }
           }
         }
         if (apply.isCallTo(BuiltIn.LIST_INTERSECT)
             && apply.arg.isCallTo(BuiltIn.Z_LIST)) {
           final Core.Apply apply2 = (Core.Apply) apply.arg;
-          if (allMatch(
-              apply2.args(), exp1 -> exp1.isCallTo(BuiltIn.Z_EXTENT))) {
+          if (allMatch(apply2.args(), Core.Exp::isExtent)) {
             Pair<Core.Exp, List<Core.Exp>> pair =
                 intersectExtents(typeSystem, apply2.args());
-            if (pair.right.isEmpty()) {
-              return pair.left;
+            if (requireNonNull(pair.right).isEmpty()) {
+              return requireNonNull(pair.left);
             }
           }
         }
+        return apply;
     }
     return exp;
-  }
-
-  /** Creates a record from a map of named expressions. */
-  public Core.Exp record(
-      TypeSystem typeSystem, Map<String, ? extends Core.Exp> nameExps) {
-    return record_(
-        typeSystem, ImmutableSortedMap.copyOf(nameExps, RecordType.ORDERING));
   }
 
   /** Creates a record from a collection of named expressions. */
   public Core.Exp record(
       TypeSystem typeSystem,
       Collection<? extends Map.Entry<String, ? extends Core.Exp>> nameExps) {
-    return record_(
-        typeSystem, ImmutableSortedMap.copyOf(nameExps, RecordType.ORDERING));
+    // Ensure sorted. If the names need to be permuted, apply the same
+    // permutation to patterns and types.
+    final SortedMap<String, Core.Exp> sortedNameExps =
+        ImmutableSortedMap.copyOf(nameExps, ORDERING);
+    final RecordLikeType recordType =
+        typeSystem.recordType(transformValues(sortedNameExps, Core.Exp::type));
+    return tuple(typeSystem, recordType, sortedNameExps.values());
   }
 
-  private Core.Tuple record_(
-      TypeSystem typeSystem, ImmutableSortedMap<String, Core.Exp> nameExps) {
-    final PairList<String, Type> argNameTypes = PairList.of();
-    nameExps.forEach((name, exp) -> argNameTypes.add(name, exp.type));
-    return tuple(
-        typeSystem, typeSystem.recordType(argNameTypes), nameExps.values());
+  /**
+   * Creates an expression for a list of named patterns.
+   *
+   * <p>If the list has one element, returns an id expression for that pattern.
+   * Otherwise, returns a record expression with the patterns as fields.
+   */
+  public Core.Exp recordOrAtom(
+      TypeSystem typeSystem, List<? extends Core.NamedPat> pats) {
+    if (pats.size() == 1) {
+      return id(pats.get(0));
+    }
+    return record(
+        typeSystem, fromTransformed(pats, (p, c) -> c.accept(p.name, id(p))));
   }
 
   /** Calls a built-in function. */
-  private Core.Apply call(
+  public Core.Apply call(
       TypeSystem typeSystem, BuiltIn builtIn, Core.Exp... args) {
     final Core.Literal literal = functionLiteral(typeSystem, builtIn);
     final FnType fnType = (FnType) literal.type;
@@ -1166,28 +1199,6 @@ public enum CoreBuilder {
   }
 
   /**
-   * Returns an expression substituting every given expression as true.
-   *
-   * <p>For example, if {@code exp} is "{@code x = 1 andalso y > 2}" and {@code
-   * trueExps} is [{@code x = 1}, {@code z = 2}], returns "{@code y > 2}".
-   */
-  public Core.Exp subTrue(
-      TypeSystem typeSystem, Core.Exp exp, List<Core.Exp> trueExps) {
-    List<Core.Exp> conjunctions = decomposeAnd(exp);
-    List<Core.Exp> conjunctions2 = new ArrayList<>();
-    for (Core.Exp conjunction : conjunctions) {
-      if (!trueExps.contains(conjunction)) {
-        conjunctions2.add(conjunction);
-      }
-    }
-    if (conjunctions.size() == conjunctions2.size()) {
-      // Don't create a new expression unless we have to.
-      return exp;
-    }
-    return andAlso(typeSystem, conjunctions2);
-  }
-
-  /**
    * Decomposes an {@code andalso} expression; inverse of {@link
    * #andAlso(TypeSystem, Iterable)}.
    *
@@ -1230,7 +1241,7 @@ public enum CoreBuilder {
   /** Flattens the {@code andalso}s in an expression into a consumer. */
   public void flattenAnd(Core.Exp exp, Consumer<Core.Exp> consumer) {
     //noinspection StatementWithEmptyBody
-    if (exp.op == Op.BOOL_LITERAL && (boolean) ((Core.Literal) exp).value) {
+    if (exp.isBoolLiteral(true)) {
       // don't add 'true' to the list
     } else if (exp.op == Op.APPLY
         && ((Core.Apply) exp).fn.op == Op.FN_LITERAL
@@ -1249,7 +1260,7 @@ public enum CoreBuilder {
   /** Flattens the {@code orelse}s in an expression into a consumer. */
   public void flattenOr(Core.Exp exp, Consumer<Core.Exp> consumer) {
     //noinspection StatementWithEmptyBody
-    if (exp.op == Op.BOOL_LITERAL && !(boolean) ((Core.Literal) exp).value) {
+    if (exp.isBoolLiteral(false)) {
       // don't add 'false' to the list
     } else if (exp.op == Op.APPLY
         && ((Core.Apply) exp).fn.op == Op.FN_LITERAL
@@ -1263,6 +1274,105 @@ public enum CoreBuilder {
   /** Flattens the {@code orelse}s in every expression into a consumer. */
   public void flattenOrs(List<Core.Exp> exps, Consumer<Core.Exp> consumer) {
     exps.forEach(arg -> flattenOr(arg, consumer));
+  }
+
+  /**
+   * Converts an expression to the equivalent pattern.
+   *
+   * <p>For example, converts {@code id(x)} to {@code idPat(x)}, and {@code
+   * tuple(id(x), id(y))} to {@code tuplePat(idPat(x), idPat(y))}.
+   *
+   * @see Op#toPat()
+   */
+  public Core.Pat toPat(Core.Exp exp) {
+    switch (exp.op) {
+      case ID:
+        return ((Core.Id) exp).idPat;
+
+      case TUPLE:
+        final Core.Tuple tuple = (Core.Tuple) exp;
+        if (tuple.type.op() == Op.RECORD_TYPE) {
+          return recordPat(
+              (RecordType) tuple.type(),
+              transformEager(tuple.args, this::toPat));
+        } else {
+          return tuplePat(
+              tuple.type(), transformEager(tuple.args, this::toPat));
+        }
+
+      case BOOL_LITERAL:
+      case CHAR_LITERAL:
+      case INT_LITERAL:
+      case REAL_LITERAL:
+      case STRING_LITERAL:
+      case UNIT_LITERAL:
+        final Core.Literal literal = (Core.Literal) exp;
+        return literalPat(exp.op.toPat(), exp.type, literal.value);
+
+      case APPLY:
+        // Handle field access like #1 p or #x p
+        // Create a fresh pattern that matches the field value
+        final Core.Apply apply = (Core.Apply) exp;
+        if (apply.fn.op == Op.RECORD_SELECTOR) {
+          final Core.RecordSelector selector = (Core.RecordSelector) apply.fn;
+          // Use field name as variable name prefix (e.g., "x" for #x, "f1" for
+          // #1)
+          final String fieldName = selector.fieldName();
+          final String varName =
+              Character.isDigit(fieldName.charAt(0))
+                  ? "f" + fieldName
+                  : fieldName;
+          return idPat(exp.type, varName, 0);
+        }
+        // For other applies, create a fresh pattern
+        return idPat(exp.type, "v", 0);
+
+      default:
+        throw new AssertionError("cannot convert " + exp + " to pattern");
+    }
+  }
+
+  /**
+   * Simplifies a tuple expression like {@code (#1 x, #2 x, ...)} to {@code x}
+   * if the tuple references all fields of {@code x} in order.
+   *
+   * @param args the tuple arguments (already simplified)
+   * @param recordLikeType the type of the tuple
+   * @return the simplified expression, or null if no simplification is possible
+   */
+  public Core.@Nullable Exp simplifyTuple(
+      List<Core.Exp> args, RecordLikeType recordLikeType) {
+    if (args.isEmpty()) {
+      // Cannot simplify unit, "()".
+      return null;
+    }
+    if (args.size() != recordLikeType.argTypes().size()) {
+      // Cannot simplify "(#1 x, #2 x)" to "x" if x has 3 or more fields.
+      return null;
+    }
+    Core.Exp arg = null;
+    for (int i = 0; i < args.size(); i++) {
+      final Core.Exp a = args.get(i);
+      if (!(a instanceof Core.Apply)) {
+        return null;
+      }
+      final Core.Apply apply = (Core.Apply) a;
+      if (!(apply.fn instanceof Core.RecordSelector)) {
+        return null;
+      }
+      final Core.RecordSelector recordSelector = (Core.RecordSelector) apply.fn;
+      if (recordSelector.slot != i) {
+        // Field access is not in order, e.g. "(#2 x, #1 x)".
+        return null;
+      }
+      if (i == 0) {
+        arg = apply.arg;
+      } else if (!arg.equals(apply.arg)) {
+        // Arguments are not the same, e.g. "(#1 x, #2 y)".
+        return null;
+      }
+    }
+    return arg;
   }
 }
 

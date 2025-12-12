@@ -16,39 +16,310 @@
  * language governing permissions and limitations under the
  * License.
  *
- * Tests for queries with unbounded variables.  (Originally, such
- * queries used a 'suchthat' keyword, but that keyword has since been
- * removed.)
+ * Tests for queries with unbounded variables (also called 'domain
+ * variables' because they range over a domain such as integers
+ * or positive integers). Queries with unbounded variables are made
+ * runnable using a technique called 'predicate inversion'.
+ *
+ * Originally, such queries used a 'suchthat' keyword, but that
+ * keyword has since been removed.
  *)
+Sys.set ("output", "tabular");
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
 
 (* Convert predicates into ranges --------------------------------- *)
 
 from i where i > 0 andalso i < 10;
 > val it = [1,2,3,4,5,6,7,8,9] : int bag
+Sys.planEx "3";
+> val it = "val it = from i in #tabulate Bag (9, fn k => op + (1, k))" : string
+
+from i where i >= 0 andalso i <= 10;
+> val it = [0,1,2,3,4,5,6,7,8,9,10] : int bag
+Sys.planEx "3";
+> val it = "val it = from i in #tabulate Bag (11, fn k => 0 + k)" : string
+
+from i where i >= 0 andalso i <= 5 orelse i = 8 orelse i > 20 andalso i < 22;
+> val it = [1,2,3,4,5,21,8,0] : int bag
+Sys.planEx "3";
+> val it =
+>   "val it = from i in #concat Bag ([#tabulate Bag (6, fn k => 0 + k), #fromList Bag ([8]), #tabulate Bag (1, fn k => op + (21, k))]) group i where i >= 0 andalso i <= 5 orelse i = 8 orelse i > 20 andalso i < 22"
+>   : string
+
 from i where i > 0 andalso i < 4 yield {j = i + 1};
-> val it = [{j=2},{j=3},{j=4}] : {j:int} bag
+> j
+> -
+> 2
+> 3
+> 4
+>
+> val it : {j:int} bag
+
 from i where i > 0 andalso i < 4 yield {j = i + 1} order DESC j;
-> val it = [{j=4},{j=3},{j=2}] : {j:int} list
+> j
+> -
+> 4
+> 3
+> 2
+>
+> val it : {j:int} list
+
 from i where i > 0 andalso i < 10 andalso i mod 3 = 2;
 > val it = [2,5,8] : int bag
+
+from i where i = 0;
+> val it = [0] : int bag
+
+from s where s = "abc";
+> val it = ["abc"] : string bag
+
 from i where i = 0 orelse i = 12;
-> val it = [0,12] : int bag
+> val it = [12,0] : int bag
+
 from i where i > 0 andalso i < 10 orelse i > 12 andalso i <= 15;
 > val it = [1,2,3,4,5,6,7,8,9,13,14,15] : int bag
+
 from i
 where i > 0 andalso i < 10
 join b
 where b = true;
-> val it =
->   [{b=true,i=1},{b=true,i=2},{b=true,i=3},{b=true,i=4},{b=true,i=5},
->    {b=true,i=6},{b=true,i=7},{b=true,i=8},{b=true,i=9}] : {b:bool, i:int} bag
+> b    i
+> ---- -
+> true 1
+> true 2
+> true 3
+> true 4
+> true 5
+> true 6
+> true 7
+> true 8
+> true 9
+>
+> val it : {b:bool, i:int} bag
+
 from i
 where i > 0 andalso i < 10
 join b
 where b = (i mod 2 = 0);
+> b     i
+> ----- -
+> false 1
+> true  2
+> false 3
+> true  4
+> false 5
+> true  6
+> false 7
+> true  8
+> false 9
+>
+> val it : {b:bool, i:int} bag
+
+(* -- elem -------------------------------------------------------- *)
+let
+  val nums = [1, 2, 3, 4, 5]
+in
+  from n where n elem nums
+end;
+> val it = [1,2,3,4,5] : int bag
+
+(* -- andalso becomes join ---------------------------------------- *)
+val nums = [1, 2, 3, 4, 5];
+> val nums = [1,2,3,4,5] : int list
+
+fun isNum n = n elem nums;
+> val isNum = fn : int -> bool
+
+fun isEven n = n mod 2 = 0;
+> val isEven = fn : int -> bool
+
+let (* TODO remove 'let' when we have fixed inlining *)
+  fun isNum n = n elem nums
+  fun isEven n = n mod 2 = 0
+in
+  from n where isNum n andalso isEven n
+end;
+> val it = [2,4] : int bag
+
+(*) Case
+from x where case x of y => y elem [1,2];
+> val it = [1,2] : int bag
+
+(*) Case with multiple arms
+(* TODO currently gives 'x is not grounded'
+from x where (case x of 1 => true | 3 => true | _ => false);
+> val it = [1,3] : int bag
+Sys.planEx "3";
+> val it = "..." : string
+*)
+
+(* Predicate cannot be inverted.
+ *
+ * With symbolic math we could deduce that the solution is [~2,3],
+ * but we don't have symbolic math. *)
+(* TODO: better exception *)
+from x where (x + 2) * (x - 3) = 0;
+> java.lang.IllegalArgumentException: pattern x_1 is not grounded
+
+(*) Pattern
+from x, y where (x, y) elem [(1,true),(2,false)];
+> x y
+> - -----
+> 1 true
+> 2 false
+>
+> val it : {x:int, y:bool} bag
+
+(*) Reversed pattern
+from x, y where (y, x) elem [(1,true),(2,false)];
+> x     y
+> ----- -
+> true  1
+> false 2
+>
+> val it : {x:bool, y:int} bag
+
+(*) Reversed pattern via case
+from x, y where case (y, x) of (a, b) => (a, b) elem [(1,true),(2,false)];
+> x     y
+> ----- -
+> true  1
+> false 2
+>
+> val it : {x:bool, y:int} bag
+
+(*) Record pattern
+from x, y where {y, x} elem [{y=1,x=true},{y=2,x=false}];
+> x     y
+> ----- -
+> true  1
+> false 2
+>
+> val it : {x:bool, y:int} bag
+
+from x where (x, "b") elem [(1,"a"),(2,"b")];
+> val it = [2] : int bag
+
+from x where (1, x) elem [(1,"a"),(2,"b")];
+> val it = ["a"] : string bag
+
+from x where (1, x, true) elem [(1,"a",false),(2,"b",true),(1,"c",true)];
+> val it = ["c"] : string bag
+
+(* -- orelse becomes union ---------------------------------------- *)
+fun isSmall n = n elem [1, 2];
+> val isSmall = fn : int -> bool
+
+fun isLarge n = n elem [10, 20];
+> val isLarge = fn : int -> bool
+
+let (* TODO remove 'let' when we have fixed inlining *)
+  fun isSmall n = n elem [1, 2]
+  fun isLarge n = n elem [10, 20]
+in
+  from n where isSmall n orelse isLarge n
+end;
+> val it = [1,2,20,10] : int bag
+
+(* -- Predicate inversion ----------------------------------------- *)
+
+(* 1. Simple elem
+ *
+ * Invert 'from x where x elem list' to 'from x in list'. *)
+from x where x elem [1, 2, 4];
+> val it = [1,2,4] : int bag
+(* TODO: remove spurious 'where op elem (x, [1, 2, 4])' *)
+Sys.planEx "999";
 > val it =
->   [{b=false,i=1},{b=true,i=2},{b=false,i=3},{b=true,i=4},{b=false,i=5},
->    {b=true,i=6},{b=false,i=7},{b=true,i=8},{b=false,i=9}] : {b:bool, i:int} bag
+>   "val it = from x in #fromList Bag ([1, 2, 4]) where op elem (x, [1, 2, 4])"
+>   : string
+
+(* In the following case, we solve for x given a value of y. This
+   requires predicate-inversion because it cannot be solved using
+   ranges alone. *)
+from x, y in [0, 2, 9] where x > y andalso x < y + 5;
+> x  y
+> -- -
+> 1  0
+> 2  0
+> 3  0
+> 4  0
+> 3  2
+> 4  2
+> 5  2
+> 6  2
+> 10 9
+> 11 9
+> 12 9
+> 13 9
+>
+> val it : {x:int, y:int} bag
+
+(* Similar, but we know the values of x. *)
+from x in [3, 5, 7], y where x > y andalso x < y + 5 yield y;
+> val it = [~1,0,1,2,1,2,3,4,3,4,5,6] : int bag
+Sys.planEx "3";
+> val it =
+>   "val it = from x in [3, 5, 7] join y in #tabulate Bag (op + (op - (-:int (x, 1), -:int (x, 5) + 1), 1), fn k => -:int (x, 5) + 1 + k) where x > y andalso x < y + 5 yield y"
+>   : string
+
+from x in [3, 5, 7], y
+  where x > y andalso x < y + 5
+  group y compute count over ();
+> count y
+> ----- --
+> 2     1
+> 2     2
+> 2     3
+> 2     4
+> 1     5
+> 1     6
+> 1     -1
+> 1     0
+>
+> val it : {count:int, y:int} bag
+
+from x where x = 3 andalso x < 10;
+> val it = [3] : int bag
+
+from x where x = 3 andalso x > 10;
+> val it = [] : int bag
+
+from x where x = 3 orelse x > 0 andalso x < 5;
+> val it = [1,2,3,4] : int bag
+
+from x where x = 3 orelse x > 10 andalso x < 15;
+> val it = [3,11,12,13,14] : int bag
+
+from b where b > false;
+> val it = [true] : bool bag
+
+from b where b > false andalso true;
+> val it = [true] : bool bag
+
+from b where b > false andalso false;
+> val it = [] : bool bag
+
+(*) With spurious 'andalso true'
+from x, y in [2,3] where x > y andalso true andalso x < 5;
+> x y
+> - -
+> 3 2
+> 4 2
+> 4 3
+>
+> val it : {x:int, y:int} bag
+
+from x, y in [2,3] where x > y andalso true where x < 5;
+> x y
+> - -
+> 3 2
+> 4 2
+> 4 3
+>
+> val it : {x:int, y:int} bag
 
 (*) Unbound variables in declared 'join';
 (*) condition on 'j' occurs after 'join'
@@ -58,12 +329,50 @@ join k, m
 where j > 4 andalso j < 7
   andalso k > 8 andalso k < 11
   andalso m > 12 andalso m < 15;
-> val it =
->   [{i=1,j=5,k=9,m=13},{i=1,j=5,k=9,m=14},{i=1,j=5,k=10,m=13},
->    {i=1,j=5,k=10,m=14},{i=1,j=6,k=9,m=13},{i=1,j=6,k=9,m=14},
->    {i=1,j=6,k=10,m=13},{i=1,j=6,k=10,m=14},{i=2,j=5,k=9,m=13},
->    {i=2,j=5,k=9,m=14},{i=2,j=5,k=10,m=13},{i=2,j=5,k=10,m=14},...]
->   : {i:int, j:int, k:int, m:int} bag
+> i j k  m
+> - - -- --
+> 1 5 9  13
+> 1 5 9  14
+> 1 5 10 13
+> 1 5 10 14
+> 1 6 9  13
+> 1 6 9  14
+> 1 6 10 13
+> 1 6 10 14
+> 2 5 9  13
+> 2 5 9  14
+> 2 5 10 13
+> 2 5 10 14
+> 2 6 9  13
+> 2 6 9  14
+> 2 6 10 13
+> 2 6 10 14
+>
+> val it : {i:int, j:int, k:int, m:int} bag
+
+(* -- Emp and dept examples --------------------------------------- *)
+
+(*) Previously MainTest.testFromSuchThat
+let
+  val emps = [
+    {id = 100, name = "Fred", deptno = 10},
+    {id = 101, name = "Velma", deptno = 20},
+    {id = 102, name = "Shaggy", deptno = 30},
+    {id = 103, name = "Scooby", deptno = 30}]
+  fun hasEmpNameInDept (n, d) =
+    (n, d) elem (from e in emps yield (e.name, e.deptno))
+in
+  from n, d
+    where hasEmpNameInDept (n, d)
+    where d = 30
+    yield {d, n}
+end;
+> d  n
+> -- ------
+> 30 Shaggy
+> 30 Scooby
+>
+> val it : {d:int, n:string} bag
 
 (* Unbounded variables with `take` and other clauses -------------- *)
 
@@ -73,8 +382,12 @@ from i
   yield {i, odd = i mod 2 = 1}
   group odd compute count over ()
   order odd;
-> val it = [{count=34,odd=false},{count=50,odd=true}]
->   : {count:int, odd:bool} list
+> count odd
+> ----- -----
+> 34    false
+> 50    true
+>
+> val it : {count:int, odd:bool} list
 
 from i
   where i >= 0 andalso i <= 100
@@ -128,43 +441,113 @@ forall i
   require i + 100 < 155;
 > val it = true : bool
 
+exists x, y
+  where (x, y) elem [(1, 2), (1, 3), (4, 3)];
+> val it = true : bool
+
+exists x
+  where (x, 2) elem [(1, 2), (1, 3), (4, 3)];
+> val it = true : bool
+
+exists x
+  where (x, 0) elem [(1, 2), (1, 3), (4, 3)];
+> val it = false : bool
+
+(*) w, y unused
+exists w, x, y
+  where (x, 2) elem [(1, 2), (1, 3), (4, 3)];
+> val it = true : bool
+
+exists w, x, y
+  where (x, 0) elem [(1, 2), (1, 3), (4, 3)];
+> val it = false : bool
+
+exists w, x where x = 3;
+> val it = true : bool
+
+exists w, x where x = 3 andalso x < 10;
+> val it = true : bool
+
+exists w, x where x = 3 andalso x > 10;
+> val it = false : bool
+
+exists x
+  where (exists y
+    where (x, y) elem [(1, 2), (1, 3), (4, 3)]);
+> val it = true : bool
+
+(*) The same query with parentheses.
+exists x
+  where (exists y
+    where (x, y) elem [(1, 2), (1, 3), (4, 3)]);
+> val it = true : bool
+
+from x
+  where exists y
+    where (x, y) elem [(1, 2), (1, 3), (4, 3)];
+> val it = [1,4] : int bag
+
+(*) Be sure to eliminate duplicates. (_, 2, 3) occurs twice in the list.
+from y
+  where exists x
+    where (x, y, 3) elem [(1, 2, 3), (2, 3, 4), (5, 4, 3), (4, 2, 3)];
+> val it = [2,4] : int bag
+
 (*) 'on' in 'from'
 from i in [1, 2, 3],
   j in [2, 3, 4] on j = i;
-> val it = [{i=2,j=2},{i=3,j=3}] : {i:int, j:int} list
+> i j
+> - -
+> 2 2
+> 3 3
+>
+> val it : {i:int, j:int} list
 
 from a in [1, 2],
     b in [3, 4, 5] on a + b = 6
 where b < 5
 join c in [6, 7] on b + c = 10,
     d in [7, 8];
-> val it = [{a=2,b=4,c=6,d=7},{a=2,b=4,c=6,d=8}]
->   : {a:int, b:int, c:int, d:int} list
+> a b c d
+> - - - -
+> 2 4 6 7
+> 2 4 6 8
+>
+> val it : {a:int, b:int, c:int, d:int} list
+
+useSilently "scott.smli";
+> [opening scott.smli]
+> val it = () : unit
 
 from dno, name, loc
 where {deptno = dno, dname = name, loc} elem scott.depts
   andalso dno > 20;
-> val it =
->   [{dno=30,loc="CHICAGO",name="SALES"},{dno=40,loc="BOSTON",name="OPERATIONS"}]
->   : {dno:int, loc:string, name:string} bag
+> dno loc     name
+> --- ------- ----------
+> 30  CHICAGO SALES
+> 40  BOSTON  OPERATIONS
+>
+> val it : {dno:int, loc:string, name:string} bag
 
 (*) As previous but with a literal in the record.
 from dno, name
 where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
   andalso dno > 20;
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
-
-(*) Equivalent to previous, rephrasing 'suchthat' as 'where'
-from dno, name
-where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
-  andalso dno > 20;
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
+> dno name
+> --- -----
+> 30  SALES
+>
+> val it : {dno:int, name:string} bag
 
 (*) Equivalent to previous, splitting 'where'
 from dno, name
 where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
 where dno > 20;
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
+> dno name
+> --- -----
+> 30  SALES
+>
+> val it : {dno:int, name:string} bag
 
 (*) Variables 'dno', 'name' are infinite until constrained by conditions.
 from v, dno, name
@@ -173,7 +556,11 @@ where v.deptno = dno
 where name = v.dname
 where v.loc = "CHICAGO"
 yield {dno, name = #dname v};
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
+> dno name
+> --- -----
+> 30  SALES
+>
+> val it : {dno:int, name:string} bag
 
 (*) Forward references are required. 'dno' is infinite until we see the
 (*) condition 'v.deptno = dno', and at that point we haven't declared
@@ -184,7 +571,11 @@ where v.deptno = dno
 where name = v.dname
 where v.loc = "CHICAGO"
 yield {dno = #deptno v, name = #dname v};
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
+> dno name
+> --- -----
+> 30  SALES
+>
+> val it : {dno:int, name:string} bag
 
 (*) An extra condition on 'dno' yields empty result.
 from dno, name, v
@@ -194,7 +585,10 @@ where name = v.dname
 where v.loc = "CHICAGO"
 where dno = 20
 yield {dno = #deptno v, name = #dname v};
-> val it = [] : {dno:int, name:string} bag
+> dno name
+> --- ----
+>
+> val it : {dno:int, name:string} bag
 
 (*) Inequality on 'dno'
 from dno, name, v
@@ -204,7 +598,11 @@ where name = v.dname
 where v.loc = "CHICAGO"
 where dno > 20
 yield {dno = #deptno v, name = #dname v};
-> val it = [{dno=30,name="SALES"}] : {dno:int, name:string} bag
+> dno name
+> --- -----
+> 30  SALES
+>
+> val it : {dno:int, name:string} bag
 
 (*) We can iterate over a finite datatype
 from i
@@ -268,8 +666,6 @@ end;
 > val it = ["SMITH","ADAMS"] : string bag
 
 (*) A disjunctive condition prevents the extent.
-(*) TODO: throw an error, rather than returning an empty list
-(*
 let
   fun isEmp50 e =
     e elem scott.emps orelse e.deptno = 50
@@ -278,7 +674,7 @@ in
     where isEmp50 e
     yield e.ename
 end;
-*)
+> java.lang.IllegalArgumentException: pattern e_10 is not grounded
 
 (*) A function with external extent.
 (* TODO enable when we have types
@@ -313,45 +709,139 @@ in
 end;
 *)
 
+(* 2. String prefix.
+ *
+ * Invert
+ *   from p where ifPrefix p s'
+ * to
+ *   from p in List.tabulate(String.size s + 1,
+ *                           fn i => String.substring(s, 0, i))
+ *)
+from p where String.isPrefix p "abcd";
+> val it = ["","a","ab","abc","abcd"] : string bag
+Sys.planEx "999";
+> val it =
+>   "val it = from p in #tabulate Bag (#size String \"abcd\" + 1, fn i => #substring String (\"abcd\", 0, i))"
+>   : string
+
+from s in ["abcd", "ant"], p where String.isPrefix p s;
+> p    s
+> ---- ----
+>      abcd
+> a    abcd
+> ab   abcd
+> abc  abcd
+> abcd abcd
+>      ant
+> a    ant
+> an   ant
+> ant  ant
+>
+> val it : {p:string, s:string} bag
+Sys.planEx "999";
+> val it =
+>   "val it = from s in [\"abcd\", \"ant\"] join p in #tabulate Bag (#size String s + 1, fn i => #substring String (s, 0, i))"
+>   : string
+
+from s in ["abcd", "ant"], p where String.isPrefix p s yield p distinct;
+> val it = ["a","ab","abc","ant","abcd","an",""] : string bag
+
+from p where (exists s in ["abcd", "ant"] where String.isPrefix p s) order p;
+> val it = ["","a","ab","abc","abcd","an","ant"] : string list
+(* TODO: remove spurious 'where' *)
+Sys.planEx "999";
+> val it =
+>   "val it = from s in [\"abcd\", \"ant\"] join p in #tabulate Bag (#size String s + 1, fn i => #substring String (s, 0, i)) yield p group p where #nonEmpty Relational (from s in [\"abcd\", \"ant\"] where #isPrefix String p s) order p"
+>   : string
+
 (*) A string function with external extent.
 (*) Given s2, we could generate finite s1.
-fun isPrefix (s1, s2) =
-  String.isPrefix s1 s2;
-> val isPrefix = fn : string * string -> bool
-(*) This is invalid, but it could be valid
-(*
-from s where isPrefix (s, "abcd");
-> val it = ["", "a", "ab", "abc", "abcd"] : string list
-*)
+let
+  fun isPrefix (s1, s2) = String.isPrefix s1 s2
+in
+  from s where isPrefix (s, "abcd")
+end;
+> val it = ["","a","ab","abc","abcd"] : string bag
 
 (*) An integer function with external extent.
 (*) Given j, k we could generate finite i.
-fun isBetween (i, j, k) =
-  i <= j andalso j <= k;
-> val isBetween = fn : 'a * 'a * 'a -> bool
-(*
-from i where isBetween (i, 5, 8);
-> val it = [5, 6, 7, 8] : int list
-*)
+let
+  fun isBetween (i, j, k) = j <= i andalso i <= k
+in
+  from i where isBetween (i, 5, 8)
+end;
+> val it = [5,6,7,8] : int bag
 
 (* -------------------------------------------------------------------
  * Convenience function that converts a predicate to a relation.
  *)
 
-(*
+(* TODO. Currently throws 'pattern r is not grounded'
 fun enumerate predicate =
   from r where predicate r;
-*)
-(* TODO should print
-val enumerate = fn : ('a -> bool) -> 'a list
-*)
-(*) TODO should return non-empty list
-(*
-enumerate isEmp;
+> val enumerate = fn : ('a -> bool) -> 'a bag
 *)
 
+(* Join inversion. *)
+(* TODO
+let
+  fun empInDept (empno, deptno) =
+    exists e in scott.emps where e.empno = empno andalso e.deptno = deptno
+  fun deptName(deptno, dname) =
+    exists d in scott.depts where d.deptno = deptno andalso d.dname = dname
+  fun empInDeptName(empno, dname) =
+    exists deptno where empInDept(empno, deptno) andalso deptName(deptno, dname)
+in
+  from empno
+    where empInDeptName(empno, "SALES")
+end;
+*)
+
+(* TODO: Remove the 'let', when inlining is working. *)
+let
+  fun isClerk e =
+    e elem scott.emps andalso e.job = "CLERK"
+  fun enumerate predicate =
+    from r where predicate r
+in
+  enumerate isClerk
+end;
+> comm deptno empno ename  hiredate   job   mgr  sal
+> ---- ------ ----- ------ ---------- ----- ---- ------
+> 0.0  20     7369  SMITH  1980-12-17 CLERK 7902 800.0
+> 0.0  20     7876  ADAMS  1987-05-23 CLERK 7788 1100.0
+> 0.0  30     7900  JAMES  1981-12-03 CLERK 7698 950.0
+> 0.0  10     7934  MILLER 1982-01-23 CLERK 7782 1300.0
+>
+> val it : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
+
+(* ------------------------------------------------------------------
+ * Datalog programming in Morel.
+ *
+ * The following queries are "simple" examples of functional
+ * programming, expressed in Datalog, then converted to
+ * Morel's "such that" style. They are difficult to invert
+ * and in some cases will not terminate if called with a
+ * value outside the acceptable range.
+ *)
+
+(*) Factorial
+(* TODO Query runs but the result is incorrect. It should include
+ * all values of n between 0 and 10. *)
+let
+  val fact_facts = [(0, 1)]
+  fun fact (n, value) =
+    (n, value) elem fact_facts orelse
+        (exists v0 where fact (n - 1, v0)
+            andalso n - 1 < 10
+            andalso value = v0 * (n - 1 + 1))
+in
+  {fact = from n, value where fact (n, value)}
+end;
+> val it = {fact=[{n=0,value=1}]} : {fact:{n:int, value:int} bag}
+
 (* -------------------------------------------------------------------
- * The following example from Souffle,
+ * The following example is from Souffle,
  * https://souffle-lang.github.io/simple.
  *
  * Say we have a Datalog file example.dl, whose contents are as shown:
@@ -391,20 +881,119 @@ enumerate isEmp;
 val edges = [
  {x = 1, y = 2},
  {x = 2, y = 3}];
-> val edges = [{x=1,y=2},{x=2,y=3}] : {x:int, y:int} list
-fun edge (x, y) = {x, y} elem edges;
-> val edge = fn : int * int -> bool
-(* TODO
-fun path (x, y) =
-  edge (x, y)
-  orelse exists (
-    from z where path (x, z) andalso edge (z, y));
-> val path = fn : int * int -> bool
-*)
-(* TODO
-from p where path p;
-> val it = [(1,2),(2,3),(1,3)] : (int * int) list
-*)
+> x y
+> - -
+> 1 2
+> 2 3
+>
+> val edges : {x:int, y:int} list
+
+let
+  fun edge (x, y) = {x, y} elem edges
+  fun path (x, y) =
+    edge (x, y) orelse
+    (exists z where path (x, z) andalso edge (z, y))
+in
+  from p where path p
+end;
+> val it = [(1,2),(2,3),(1,3)] : (int * int) bag
+
+(*) Same problem, but edges are tuples, not records.
+let
+  val edges = [(1, 2), (2, 3)]
+  fun edge (x, y) = (x, y) elem edges
+  fun path (x, y) =
+    edge (x, y) orelse
+    (exists z where path (x, z) andalso edge (z, y))
+in
+  from p where path p
+end;
+> val it = [(1,2),(2,3),(1,3)] : (int * int) bag
+
+(*) Same problem using tuple arguments: e and p rather than (x, y)
+let
+  val edges = [(1, 2), (2, 3)]
+  fun edge e = e elem edges
+  fun path p =
+    edge p orelse
+    (exists z where path (#1 p, z) andalso edge (z, #2 p))
+in
+  from p where path p
+end;
+> val it = [(1,2),(2,3),(1,3)] : (int * int) bag
+
+(*) Same problem, using 'from x, y' rather than 'from p'
+let
+  val edges = [(1, 2), (2, 3)]
+  fun edge e = e elem edges
+  fun path p =
+    edge p orelse
+    (exists z where path (#1 p, z) andalso edge (z, #2 p))
+in
+  from x, y where path (x, y)
+end;
+> x y
+> - -
+> 1 2
+> 2 3
+> 1 3
+>
+> val it : {x:int, y:int} bag
+
+(*) Find symmetric elements of a relation
+let
+  val edges = [(1, 1), (2, 3), (4, 4)]
+  fun edge (x, y) = (x, y) elem edges
+  fun self_loop x =
+    (exists y where edge (x, y) andalso x = y)
+in
+  from x where self_loop x
+end;
+> val it = [1,4] : int bag
+
+(*) Odd cycle
+let
+  val edge_facts = [("a", "b"), ("b", "c"), ("c", "a")]
+  fun edge (x, y) = (x, y) elem edge_facts
+  fun odd_path (x, y) = edge (x, y) orelse
+    (exists v0, v1 where odd_path (x, v0) andalso edge (v0, v1) andalso edge (v1, y))
+  fun exists_odd_cycle () = (exists v0 where odd_path (v0, v0))
+in
+  {exists_odd_cycle = from  where exists_odd_cycle ()}
+end;
+> val it = {exists_odd_cycle=[()]} : {exists_odd_cycle:unit list}
+
+(*) Bounded transitive closure
+let
+  val edge_facts = [("a", "b"), ("b", "c"), ("c", "d"), ("d", "e"), ("e", "f"), ("a", "c")]
+  fun edge (x, y) = (x, y) elem edge_facts
+  fun path (x, y, n) =
+    (edge (x, y) andalso n = 1) orelse
+    (exists v0 where path (x, v0, n - 1) andalso edge (v0, y) andalso n + 1 < 3)
+in
+  {path = from x, y, n where path (x, y, n)}
+end;
+> val it =
+>   {
+>    path=
+>    [{n=1,x="a",y="b"},{n=1,x="b",y="c"},{n=1,x="c",y="d"},{n=1,x="d",y="e"},
+>     {n=1,x="e",y="f"},{n=1,x="a",y="c"}]}
+>   : {path:{n:int, x:string, y:string} bag}
+
+(*) Siblings
+let
+  val parents = [("Alice", "Bob"), ("Alice", "Carol")]
+  fun parent (p, c) = (p, c) elem parents
+  fun sibling (x, y) =
+    (exists v0 where parent (v0, x) andalso parent (v0, y))
+in
+  {sibling = from x, y where sibling (x, y)}
+end;
+> val it =
+>   {
+>    sibling=
+>    [{x="Bob",y="Bob"},{x="Bob",y="Carol"},{x="Carol",y="Bob"},
+>     {x="Carol",y="Carol"}]} : {sibling:{x:string, y:string} bag}
 
 (* More edges *)
 (*
@@ -415,37 +1004,77 @@ from p where path p;
 *)
 val edges = [(1, 2), (2, 3), (1, 4), (4, 2), (4, 3)];
 > val edges = [(1,2),(2,3),(1,4),(4,2),(4,3)] : (int * int) list
+
 fun edge (x, y) = (x, y) elem edges;
 > val edge = fn : int * int -> bool
 
+let (* TODO remove 'let' when we have fixed inlining *)
+  fun edge (x, y) = (x, y) elem edges
+in
+  from x, y where edge (x, y)
+end;
+> x y
+> - -
+> 1 2
+> 2 3
+> 1 4
+> 4 2
+> 4 3
+>
+> val it : {x:int, y:int} bag
+
 (*) Return points that are 2 hops apart.
-(*
-from x, y, z where edge (x, y) andalso edge (y, z) andalso x <> z
-  group x, z;
+let
+  fun edge (x, y) = (x, y) elem edges
+in
+  from x, y, z where edge (x, y) andalso edge (y, z) andalso x <> z
+    group {x, z}
+end;
+> x z
+> - -
+> 4 3
+> 1 2
+> 1 3
+>
+> val it : {x:int, z:int} bag
+
+(* TODO: Previous is equivalent to following. (Which implies a theorem connecting
+   'exists' with 'group' and variable elimination.)
+let
+  fun edge (x, y) = (x, y) elem edges
+in
+  from x, z
+    where (exists y where edge (x, y) andalso edge (y, z))
+    andalso x <> z
+end;
 *)
 
-(* Previous is equivalent to following. (Which implies a theorem connecting
-   'exists' with 'group' and variable elimination.) *)
-(*
-from x, z
-  where exists (from y where edge (x, y) andalso edge (y, z))
-  andalso x <> z;
+(* TODO: Also equivalent.
+let
+  fun edge (x, y) = (x, y) elem edges
+in
+  from x, z
+    where (exists y where edge (x, y) andalso edge (y, z) andalso x <> z)
+end;
 *)
 
 (*) Also equivalent.
-(*
-from x, z where exists (
-   from y where edge (x, y) andalso edge (y, z) andalso x <> z);
-*)
-
-(*) Also equivalent.
-(*
-from x, y
-  where edge (x, y)
-  join y2, z
-  where y2 = y andalso edge (y, z) andalso x <> z
-  group x, y;
-*)
+let
+  fun edge (x, y) = (x, y) elem edges
+in
+  from x, y
+    where edge (x, y)
+    join y2, z
+    where y2 = y andalso edge (y, z) andalso x <> z
+    group {x, y}
+end;
+> x y
+> - -
+> 1 2
+> 1 4
+> 4 2
+>
+> val it : {x:int, y:int} bag
 
 (* Joe's bar --------------------------------------------------------
  *
@@ -458,10 +1087,15 @@ val barPatrons = [
   {bar = "cask", patron = "scooby"},
   {bar = "cask", patron = "shaggy"},
   {bar = "cask", patron = "velma"}];
-> val barPatrons =
->   [{bar="squirrel",patron="shaggy"},{bar="cask",patron="fred"},
->    {bar="cask",patron="scooby"},{bar="cask",patron="shaggy"},
->    {bar="cask",patron="velma"}] : {bar:string, patron:string} list
+> bar      patron
+> -------- ------
+> squirrel shaggy
+> cask     fred
+> cask     scooby
+> cask     shaggy
+> cask     velma
+>
+> val barPatrons : {bar:string, patron:string} list
 
 val barBeers = [
   {bar =  "squirrel", beer =  "ipa", price =  2},
@@ -469,18 +1103,27 @@ val barBeers = [
   {bar =  "squirrel", beer =  "amber", price =  3},
   {bar =  "cask", beer =  "stout", price =  4},
   {bar =  "cask", beer =  "ipa", price =  5}];
-> val barBeers =
->   [{bar="squirrel",beer="ipa",price=2},{bar="squirrel",beer="pale",price=2},
->    {bar="squirrel",beer="amber",price=3},{bar="cask",beer="stout",price=4},
->    {bar="cask",beer="ipa",price=5}] : {bar:string, beer:string, price:int} list
+> bar      beer  price
+> -------- ----- -----
+> squirrel ipa   2
+> squirrel pale  2
+> squirrel amber 3
+> cask     stout 4
+> cask     ipa   5
+>
+> val barBeers : {bar:string, beer:string, price:int} list
 
 val patronBeers = [
   {patron =  "shaggy", beer = "amber"},
   {patron =  "fred", beer = "amber"},
   {patron =  "velma", beer = "stout"}];
-> val patronBeers =
->   [{beer="amber",patron="shaggy"},{beer="amber",patron="fred"},
->    {beer="stout",patron="velma"}] : {beer:string, patron:string} list
+> beer  patron
+> ----- ------
+> amber shaggy
+> amber fred
+> stout velma
+>
+> val patronBeers : {beer:string, patron:string} list
 
 fun frequents (patron, bar) =
   {patron, bar} elem barPatrons;
@@ -758,11 +1401,299 @@ andalso 100 * b + 150 * c <= 500   (*) butter
 andalso 75 * c <= 500              (*) cocoa
 yield {b, c, profit = 400 * b + 450 * c}
 order DESC profit;
+> b c profit
+> - - ------
+> 2 2 1700
+> 3 1 1650
+> 0 3 1350
+> 1 2 1300
+> 2 1 1250
+> 3 0 1200
+> 0 2 900
+> 1 1 850
+> 2 0 800
+> 0 1 450
+> 1 0 400
+> 0 0 0
+>
+> val it : {b:int, c:int, profit:int} list
+
+(* -------------------------------------------------------------------
+ * Extracted testFromSuchThat* tests from MainTest.java.
+ *)
+
+Sys.set ("stringDepth", 1000);
+> val it = () : unit
+
+(* testFromSuchThat - Basic function with elem predicate *)
+let
+  val emps = [
+    {id = 100, name = "Fred", deptno = 10},
+    {id = 101, name = "Velma", deptno = 20},
+    {id = 102, name = "Shaggy", deptno = 30},
+    {id = 103, name = "Scooby", deptno = 30}]
+  fun hasEmpNameInDept (n, d) =
+    (n, d) elem (from e in emps yield (e.name, e.deptno))
+in
+  from n, d
+    where hasEmpNameInDept (n, d)
+    where d = 30
+    yield {d, n}
+end;
+> d  n
+> -- ------
+> 30 Shaggy
+> 30 Scooby
+>
+> val it : {d:int, n:string} bag
+(*) Expected code:
+(*) "from(sink
+(*)   join(pat e, exp tuple(
+(*)   tuple(constant(10), constant(100), constant(Fred)),
+(*)   tuple(constant(20), constant(101), constant(Velma)),
+(*)   tuple(constant(30), constant(102), constant(Shaggy)),
+(*)   tuple(constant(30), constant(103), constant(Scooby))),
+(*)  sink yield(codes [tuple(apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name e)))], sink join(pat n_1, exp tuple( apply(fnValue nth:0, argCode get(name v$1))), sink join(pat d_1, exp tuple(constant(30)), sink where(condition apply2(fnValue elem,
+(*)                             tuple(get(name n), get(name d)), from(sink join(pat e, exp tuple(
+(*)   tuple(constant(10), constant(100), constant(Fred)),
+(*)   tuple(constant(20), constant(101), constant(Velma)),
+(*)   tuple(constant(30), constant(102), constant(Shaggy)),
+(*)   tuple(constant(30), constant(103), constant(Scooby))), sink yield(codes [tuple(apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name e)))], sink apply(fnValue $.extent, argCode constant(()))))), sink where(condition apply2(fnValue =, get(name d), constant(30)), sink collect(tuple(get(name d), get(name n)))))))))))"
+(*
+Sys.planEx "code";
+> [actual output would appear here]
+*)
+
+(* testFromSuchThat2 - Complex function with division and elem *)
+(* TODO - currently not fully working
+let
+  fun hasJob (d, job) =
+    (d div 2, job)
+      elem (from e in scott.emps yield (e.deptno, e.job))
+in
+  from d in scott.depts, j
+    where hasJob (d.deptno, j)
+    yield j
+end;
+> val it : string bag
+Sys.planEx "code";
 > val it =
->   [{b=2,c=2,profit=1700},{b=3,c=1,profit=1650},{b=0,c=3,profit=1350},
->    {b=1,c=2,profit=1300},{b=2,c=1,profit=1250},{b=3,c=0,profit=1200},
->    {b=0,c=2,profit=900},{b=1,c=1,profit=850},{b=2,c=0,profit=800},
->    {b=0,c=1,profit=450},{b=1,c=0,profit=400},{b=0,c=0,profit=0}]
->   : {b:int, c:int, profit:int} list
+ "from(sink join(pat d_1,
+     exp apply(fnValue nth:1, argCode get(name scott)),
+   sink join(pat j,
+       exp apply(
+         fnCode apply(fnValue List.filter,
+           argCode match(j,
+             apply(fnCode match((d, job),
+               apply2(fnValue elem,
+                 tuple(apply2(fnValue div, get(name d), constant(2)),
+                 get(name job)),
+               from(
+               sink join(pat e,
+                 exp apply(fnValue nth:2, argCode get(name scott)),
+                 sink collect(
+                   tuple(apply(fnValue nth:1, argCode get(name e)),
+                     apply(fnValue nth:5, argCode get(name e)))))))),
+               argCode tuple(
+                 apply(fnValue nth:0, argCode get(name d)),
+                 get(name j))))),
+         argCode apply(fnValue $.extent, argCode constant(()))),
+     sink collect(get(name j)))))"
+*)
+
+(* testFromSuchThat2b - Simple "d elem list" pattern *)
+from d where d elem scott.depts;
+> deptno dname      loc
+> ------ ---------- --------
+> 10     ACCOUNTING NEW YORK
+> 20     RESEARCH   DALLAS
+> 30     SALES      CHICAGO
+> 40     OPERATIONS BOSTON
+>
+> val it : {deptno:int, dname:string, loc:string} bag
+Sys.planEx "0";
+> val it =
+>   "val it = from d : {deptno:int, dname:string, loc:string} where op elem (d, #depts scott)"
+>   : string
+Sys.planEx "3";
+> val it = "val it = from d in #depts scott" : string
+
+(* testFromSuchThat2c - Record pattern with field renaming *)
+from loc, deptno, name
+where {deptno, loc, dname = name} elem scott.depts;
+> deptno loc      name
+> ------ -------- ----------
+> 10     NEW YORK ACCOUNTING
+> 20     DALLAS   RESEARCH
+> 30     CHICAGO  SALES
+> 40     BOSTON   OPERATIONS
+>
+> val it : {deptno:int, loc:string, name:string} bag
+Sys.planEx "0";
+> val it =
+>   "val it = from loc : string join deptno : int join name : string where op elem ({deptno = deptno, dname = name, loc = loc}, #depts scott)"
+>   : string
+(* TODO: remove spurious 'where' *)
+Sys.planEx "3";
+> val it =
+>   "val it = from ({deptno = deptno, dname = name, loc = loc}) in #depts scott where op elem ({deptno = deptno, dname = name, loc = loc}, #depts scott)"
+>   : string
+
+(* testFromSuchThat2d - Record pattern with literal and additional
+   constraint. Same as testFromSuchThat2c but with a literal. *)
+from dno, name
+  where {deptno = dno, dname = name, loc = "CHICAGO"}
+      elem scott.depts
+    andalso dno > 20;
+> dno name
+> --- -----
+> 30  SALES
+>
+> val it : {dno:int, name:string} bag
+Sys.planEx "0";
+> val it =
+>   "val it = from dno : int join name : string where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"}, #depts scott) andalso dno > 20"
+>   : string
+(* TODO: remove spurious 'where' *)
+Sys.planEx "3";
+> val it =
+>   "val it = from ({deptno = dno, dname = name, loc = \"CHICAGO\"}) in #depts scott where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"}, #depts scott) andalso dno > 20"
+>   : string
+
+(* testFromSuchThat2d3 - Forward references with equality constraint *)
+from dno, name, v
+where v elem scott.depts
+where v.deptno = dno
+where name = v.dname
+where v.loc = "CHICAGO"
+where dno = 30
+yield {dno = #deptno v, name = #dname v};
+> dno name
+> --- -----
+> 30  SALES
+>
+> val it : {dno:int, name:string} bag
+Sys.planEx "0";
+> val it =
+>   "val it = from dno : int join name : string join v : {deptno:int, dname:string, loc:string} where op elem (v, #depts scott) where #deptno v = dno where name = #dname v where #loc v = \"CHICAGO\" where dno = 30 yield {dno = #deptno v, name = #dname v}"
+>   : string
+Sys.planEx "3";
+> val it =
+>   "val it = from v in #depts scott join dno in #fromList Bag ([#deptno v]) join name in #fromList Bag ([#dname v]) where #loc v = \"CHICAGO\" where dno = 30 yield {dno = #deptno v, name = #dname v}"
+>   : string
+
+(* testFromSuchThat2d4 - Forward references with inequality constraint *)
+from dno, name, v
+where v elem scott.depts
+where v.deptno = dno
+where name = v.dname
+where v.loc = "CHICAGO"
+where dno > 25
+yield {dno = #deptno v, name = #dname v};
+> dno name
+> --- -----
+> 30  SALES
+>
+> val it : {dno:int, name:string} bag
+Sys.planEx "0";
+> val it =
+>   "val it = from dno : int join name : string join v : {deptno:int, dname:string, loc:string} where op elem (v, #depts scott) where #deptno v = dno where name = #dname v where #loc v = \"CHICAGO\" where dno > 25 yield {dno = #deptno v, name = #dname v}"
+>   : string
+Sys.planEx "3";
+> val it =
+>   "val it = from v in #depts scott join dno in #fromList Bag ([#deptno v]) join name in #fromList Bag ([#dname v]) where #loc v = \"CHICAGO\" where dno > 25 yield {dno = #deptno v, name = #dname v}"
+>   : string
+
+(* testFromSuchThat2e - Function inlining with elem predicate.
+ * As testFromSuchThat2d but using a function. (Simple enough
+ * that the function can be handled by inlining. *)
+let
+  fun isDept d =
+    d elem scott.depts
+in
+  from d
+    where isDept d andalso d.deptno = 20
+    yield d.dname
+end;
+> val it = ["RESEARCH"] : string bag
+Sys.planEx "0";
+> val it =
+>   "val it = let val isDept = fn d => op elem (d, #depts scott) in from d_1 : {deptno:int, dname:string, loc:string} where isDept d_1 andalso #deptno d_1 = 20 yield #dname d_1 end"
+>   : string
+(* TODO: remove spurious 'where op elem (d, #depts scott)' *)
+Sys.planEx "999";
+> val it =
+>   "val it = from d in #depts scott where op elem (d, #depts scott) andalso #deptno d = 20 yield #dname d"
+>   : string
+
+(* testFromSuchThat2f - Join via suchthat with two functions *)
+let
+  fun isDept d =
+    d elem scott.depts
+  fun isEmp e =
+    e elem scott.emps
+in
+  from d, e
+    where isDept d
+    andalso isEmp e
+    andalso d.deptno = e.deptno
+    andalso d.deptno = 20
+    yield d.dname
+end;
+> val it = ["RESEARCH","RESEARCH","RESEARCH","RESEARCH","RESEARCH"] : string bag
+Sys.planEx "0";
+> val it =
+>   "val it = let val isDept = fn d => op elem (d, #depts scott) in let val isEmp = fn e => op elem (e, #emps scott) in from d_1 : {deptno:int, dname:string, loc:string} join e_1 : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} where isDept d_1 andalso isEmp e_1 andalso #deptno d_1 = #deptno e_1 andalso #deptno d_1 = 20 yield #dname d_1 end end"
+>   : string
+(* TODO: remove spurious 'where op elem (d, #depts scott) andalso op elem (e, #emps scott)' *)
+Sys.planEx "999";
+> val it =
+>   "val it = from d in #depts scott join e in #emps scott where op elem (d, #depts scott) andalso op elem (e, #emps scott) andalso #deptno d = #deptno e andalso #deptno d = 20 yield #dname d"
+>   : string
+
+(* testFromSuchThat3 - Smaller version of testFromSuchThat *)
+let
+  val emps = [
+    {id = 102, name = "Shaggy", deptno = 30},
+    {id = 103, name = "Scooby", deptno = 30}]
+  fun hasEmpNameInDept (n, d) =
+    (n, d) elem (from e in emps yield (e.name, e.deptno))
+in
+  from n, d
+    where hasEmpNameInDept (n, d)
+    where d = 30
+    yield {d, n}
+end;
+> d  n
+> -- ------
+> 30 Shaggy
+> 30 Scooby
+>
+> val it : {d:int, n:string} bag
+(*) Expected code:
+(*) "from(sink
+(*)   join(pat (n_1, d_1),
+(*)   exp apply(
+(*)     fnCode apply(fnValue List.filter,
+(*)       argCode match(v$0,
+(*)         apply(fnCode match((n_1, d_1),
+(*)             apply(fnCode match((n, d),
+(*)                 apply2(fnValue elem,
+(*)                   tuple(get(name n), get(name d)),
+(*)                   from(sink
+(*)                     join(pat e, exp tuple(
+(*)   tuple(constant(30), constant(102), constant(Shaggy)),
+(*)   tuple(constant(30), constant(103), constant(Scooby))),
+(*)       sink collect(tuple(apply(fnValue nth:2, argCode get(name e)),
+(*)         apply(fnValue nth:0, argCode get(name e)))))))),
+(*)                argCode tuple(get(name n), get(name d)))),
+(*)             argCode get(name v$0)))),
+(*)           argCode apply(fnValue $.extent, argCode constant(()))),
+(*)         sink where(condition apply2(fnValue =, get(name d), constant(30)),
+(*)           sink collect(tuple(get(name d), get(name n))))))"
+(*
+Sys.planEx "code";
+> [actual output would appear here]
+*)
 
 (*) End such-that.smli
