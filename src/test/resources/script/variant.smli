@@ -1,0 +1,380 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Variant structure tests - universal value representation for
+ * embedded language interoperability
+ *)
+Sys.set ("printDepth", ~1);
+> val it = () : unit
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+(*) Test the variant datatype constructors
+
+(*) UNIT constructor
+UNIT;
+> val it = () : unit variant
+
+(*) BOOL constructor
+BOOL true;
+> val it = true : bool variant
+BOOL false;
+> val it = false : bool variant
+
+(*) INT constructor
+INT 0;
+> val it = 0 : int variant
+INT 42;
+> val it = 42 : int variant
+INT ~5;
+> val it = ~5 : int variant
+
+(*) REAL constructor
+REAL 0.0;
+> val it = 0.0 : real variant
+REAL 3.14;
+> val it = 3.14 : real variant
+REAL ~2.5;
+> val it = ~2.5 : real variant
+
+(*) CHAR constructor
+CHAR #"a";
+> val it = #"a" : char variant
+CHAR #"Z";
+> val it = #"Z" : char variant
+CHAR #"\n";
+> val it = #"\n" : char variant
+
+(*) STRING constructor
+STRING "";
+> val it = "" : string variant
+STRING "hello";
+> val it = "hello" : string variant
+STRING "hello\nworld";
+> val it = "hello\nworld" : string variant
+
+(*) LIST constructor - empty list; element type is 'variant' because it is empty
+LIST [];
+> val it = [] : variant list variant
+
+(*) LIST constructor - list of ints; element type is 'int' because it is homogeneous
+LIST [INT 1, INT 2, INT 3];
+> val it = [1,2,3] : int list variant
+
+(*) LIST constructor - nested lists; element type is 'int list'
+LIST [LIST [INT 1, INT 2], LIST [INT 3]];
+> val it = [[1,2],[3]] : int list list variant
+
+(*) BAG constructor - empty bag
+BAG [];
+> val it = [] : variant bag variant
+
+(*) BAG constructor - bag of ints
+BAG [INT 1, INT 2, INT 3, INT 2];
+> val it = [1,2,3,2] : int bag variant
+
+(*) VECTOR constructor - empty vector
+VECTOR [];
+> val it = #[] : variant vector variant
+
+(*) VECTOR constructor - vector of strings
+VECTOR [STRING "a", STRING "b", STRING "c"];
+> val it = #["a","b","c"] : string vector variant
+
+(*) VECTOR constructor - vector of string lists
+VECTOR [LIST [STRING "a"], LIST [STRING "b", STRING "c"]];
+> val it = #[["a"],["b","c"]] : string list vector variant
+
+(*) VECTOR constructor - vector of string lists, one of them empty
+(*) TODO: Type should be 'string list vector', notwithstanding the empty list
+VECTOR [LIST [STRING "a"], LIST [], LIST [STRING "b", STRING "c"]];
+> val it = #[["a"],[],["b","c"]] : variant vector variant
+
+(*) VARIANT_NONE constructor
+VARIANT_NONE;
+> val it = NONE : variant option variant
+
+(*) VARIANT_SOME constructor - with INT
+VARIANT_SOME (INT 42);
+> val it = SOME 42 : int option variant
+
+(*) VARIANT_SOME constructor - with STRING
+VARIANT_SOME (STRING "hello");
+> val it = SOME "hello" : string option variant
+
+(*) RECORD constructor - empty record
+RECORD [];
+> val it = () : unit variant
+
+(*) RECORD constructor
+RECORD [("x", INT 1), ("y", BOOL true)];
+> val it = {x=1,y=true} : {x:int, y:bool} variant
+
+(*) RECORD constructor - various types, fields not in alphabetical order
+RECORD [("name", STRING "Alice"), ("age", INT 30), ("b", BOOL true), ("i", INT 42), ("pets", LIST [STRING "cat", STRING "dog"])];
+> val it = {age=30,b=true,i=42,name="Alice",pets=["cat","dog"]}
+>   : {age:int, b:bool, i:int, name:string, pets:string list} variant
+
+(*) CONSTANT constructor - nullary constructor
+CONSTANT "LESS";
+> val it = LESS : order variant
+
+(*) TODO: better error message
+CONSTANT "missing";
+> java.lang.IllegalArgumentException: Unknown constructor: missing
+
+(*) CONSTRUCT constructor - unary constructor
+CONSTRUCT ("SOME", INT 42);
+> val it = SOME 42 : int option variant
+
+(*) CONSTRUCT constructor - constructor with tuple
+(* The "$list" isn't pretty. It's because CONS belongs to an internal datatype. *)
+CONSTRUCT ("CONS", RECORD [("1", INT 1), ("2", CONSTANT "NIL")]);
+> val it = CONS (1,NIL) : (int * 'a $list) $list variant
+
+(*) List of homogeneous records
+LIST [
+  RECORD [("name", STRING "Alice"), ("age", INT 30)],
+  RECORD [("name", STRING "Bob"), ("age", INT 25)]
+];
+> val it = [{age=30,name="Alice"},{age=25,name="Bob"}]
+>   : {age:int, name:string} list variant
+
+(*) List of heterogeneous records
+LIST [
+  RECORD [("name", STRING "Alice"), ("age", INT 30)],
+  RECORD [("name", STRING "Bob")]
+];
+> val it = [{age=30,name="Alice"},{name="Bob"}] : variant list variant
+
+(*) List of heterogeneous records and values
+LIST [
+  RECORD [("name", STRING "Alice"), ("age", INT 30)],
+  STRING "Bob",
+  LIST [INT 1, STRING "Carol"]
+];
+> val it = [{age=30,name="Alice"},"Bob",[1,"Carol"]] : variant list variant
+
+(*) Pattern matching on value
+fun isUnit v =
+  case v of
+    UNIT => true
+  | _ => false;
+> val isUnit = fn : variant -> bool
+
+isUnit UNIT;
+> val it = true : bool
+isUnit (INT 42);
+> val it = false : bool
+
+(*) Pattern matching to extract values
+fun getInt v =
+  case v of
+    INT i => SOME i
+  | _ => NONE;
+> val getInt = fn : variant -> int option
+
+getInt (INT 42);
+> val it = SOME 42 : int option
+getInt (STRING "hello");
+> val it = NONE : int option
+
+(*) Recursive function on variant
+fun variantDepth v =
+  case v of
+    UNIT => 0
+  | BOOL _ => 0
+  | INT _ => 0
+  | REAL _ => 0
+  | CHAR _ => 0
+  | STRING _ => 0
+  | LIST [] => 0
+  | LIST (v::vs) => Int.max (1 + (variantDepth v), variantDepth (LIST vs))
+  | BAG [] => 0
+  | BAG (v::vs) => Int.max (1 + (variantDepth v), variantDepth (BAG vs))
+  | VECTOR [] => 0
+  | VECTOR (v::vs) => Int.max (1 + (variantDepth v), variantDepth (VECTOR vs))
+  | VARIANT_NONE => 0
+  | VARIANT_SOME v => 1 + variantDepth v
+  | RECORD [] => 0
+  | RECORD ((_, v)::rest) => Int.max (1 + (variantDepth v), variantDepth (RECORD rest))
+  | CONSTANT _ => 0
+  | CONSTRUCT (_, v) => 1 + variantDepth v;
+> val variantDepth = fn : variant -> int
+
+variantDepth UNIT;
+> val it = 0 : int
+variantDepth (INT 42);
+> val it = 0 : int
+variantDepth (LIST [INT 1, INT 2]);
+> val it = 1 : int
+variantDepth (LIST [LIST [INT 1]]);
+> val it = 2 : int
+variantDepth (RECORD [("x", LIST [INT 1, INT 2])]);
+> val it = 2 : int
+
+(*) Round-trip tests: parse (print v) = v
+fun testRoundTrip v =
+  let
+    val s = Variant.print v
+    val v2 = Variant.parse s
+  in
+    v = v2
+  end;
+> val testRoundTrip = fn : variant -> bool
+
+(*) Test primitives round-trip
+testRoundTrip UNIT;
+> val it = true : bool
+testRoundTrip (BOOL true);
+> val it = true : bool
+testRoundTrip (BOOL false);
+> val it = true : bool
+testRoundTrip (INT 0);
+> val it = true : bool
+testRoundTrip (INT 42);
+> val it = true : bool
+testRoundTrip (INT ~5);
+> val it = true : bool
+(*) REAL comparisons - note: real is not an equality type in Standard ML
+(*) so we can't directly compare REAL values; skip these tests
+(*testRoundTrip (REAL 0.0);*)
+(*> val it = true : bool*)
+(*testRoundTrip (REAL 3.14);*)
+(*> val it = true : bool*)
+testRoundTrip (CHAR #"a");
+> val it = true : bool
+testRoundTrip (CHAR #"\n");
+> val it = true : bool
+testRoundTrip (STRING "");
+> val it = true : bool
+testRoundTrip (STRING "hello");
+> val it = true : bool
+testRoundTrip (STRING "hello\nworld");
+> val it = true : bool
+
+(*) Test collections round-trip
+testRoundTrip (LIST []);
+> val it = true : bool
+testRoundTrip (LIST [INT 1, INT 2, INT 3]);
+> val it = true : bool
+testRoundTrip (LIST [LIST [INT 1], LIST [INT 2]]);
+> val it = true : bool
+testRoundTrip (BAG [INT 1, INT 2]);
+> val it = true : bool
+testRoundTrip (VECTOR [STRING "a", STRING "b"]);
+> val it = true : bool
+
+(*) Test VARIANT_NONE and VARIANT_SOME round-trip
+testRoundTrip VARIANT_NONE;
+> val it = true : bool
+testRoundTrip (VARIANT_SOME (INT 42));
+> val it = true : bool
+
+(*) Test record round-trip
+testRoundTrip (RECORD []);
+> val it = true : bool
+testRoundTrip (RECORD [("x", INT 1), ("y", INT 2)]);
+> val it = true : bool
+testRoundTrip (RECORD [("name", STRING "Alice"), ("age", INT 30)]);
+> val it = true : bool
+
+(*) Test CONSTANT and CONSTRUCT round-trip
+testRoundTrip (CONSTANT "LESS");
+> val it = true : bool
+testRoundTrip (CONSTRUCT ("SOME", INT 42));
+> val it = true : bool
+
+(*) Test complex nested structure round-trip
+testRoundTrip
+  (LIST [
+    RECORD [("name", STRING "Alice"), ("age", INT 30)],
+    RECORD [("name", STRING "Bob"), ("age", INT 25)]
+  ]);
+> val it = true : bool
+
+(*) Test parsing negative integers and reals
+Variant.parse "~5";
+> val it = ~5 : int variant
+Variant.parse "~3.14";
+> val it = ~3.14 : real variant
+Variant.parse "~20e~6";
+> val it = ~2.0E~5 : real variant
+
+(*) Test round-trip for negative integers
+testRoundTrip (INT ~5);
+> val it = true : bool
+testRoundTrip (INT ~100);
+> val it = true : bool
+
+(*) Test deeply nested structure with list field in record in list in list
+val deeplyNested =
+  LIST [
+    LIST [
+      RECORD [
+        ("name", STRING "Alice"),
+        ("scores", LIST [INT 95, INT 87, INT 92]),
+        ("active", BOOL true)
+      ],
+      RECORD [
+        ("name", STRING "Bob"),
+        ("scores", LIST [INT 88, INT 90]),
+        ("active", BOOL false)
+      ]
+    ],
+    LIST [
+      RECORD [
+        ("name", STRING "Charlie"),
+        ("scores", LIST [INT 76, INT 82, INT 79, INT 85]),
+        ("active", BOOL true)
+      ]
+    ]
+  ];
+> val deeplyNested =
+>   [
+>    [{active=true,name="Alice",scores=[95,87,92]},
+>     {active=false,name="Bob",scores=[88,90]}],
+>    [{active=true,name="Charlie",scores=[76,82,79,85]}]]
+>   : {active:bool, name:string, scores:int list} list list variant
+
+(*) Test round-trip on deeply nested structure
+testRoundTrip deeplyNested;
+> val it = true : bool
+
+(*) Test print on deeply nested structure (should preserve all nesting)
+Variant.print deeplyNested;
+> val it =
+>   "LIST [LIST [RECORD [(\"active\", BOOL true), (\"name\", STRING \"Alice\"), (\"scores\", LIST [INT 95, INT 87, INT 92])], RECORD [(\"active\", BOOL false), (\"name\", STRING \"Bob\"), (\"scores\", LIST [INT 88, INT 90])]], LIST [RECORD [(\"active\", BOOL true), (\"name\", STRING \"Charlie\"), (\"scores\", LIST [INT 76, INT 82, INT 79, INT 85])]]]"
+>   : string
+
+(*) Parse the printed representation and verify it matches
+Variant.parse (Variant.print deeplyNested) = deeplyNested;
+> val it = true : bool
+
+(*) Test accessing nested data after round-trip
+let
+  val printed = Variant.print deeplyNested
+  val parsed = Variant.parse printed
+in
+  parsed = deeplyNested
+end;
+> val it = true : bool
+
+(*) End variant.smli
