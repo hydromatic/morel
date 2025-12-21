@@ -2928,7 +2928,7 @@ public enum BuiltIn {
 
   /**
    * Function "Relational.iterate", aka "iterate", of type "&alpha; bag &rarr;
-   * (&alpha; bag &rarr; &alpha; bag &rarr; &alpha; bag) &rarr; &alpha; bag".
+   * (&alpha; bag * &alpha; bag &rarr; &alpha; bag) &rarr; &alpha; bag".
    *
    * <p>"iterate initialList listUpdate" computes a fixed point, starting with a
    * list and iterating by passing it to a function.

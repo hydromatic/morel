@@ -3346,6 +3346,19 @@ depts where empty (from e where e.deptno = d.deptno)`.
 """
 
 [[functions]]
+ordinal = 189
+structure = "Relational"
+name = "iterate, iterate"
+specified = "morel"
+type = "α bag → (α bag * α bag → α bag) → α bag"
+prototype = "iterate initialList listUpdate"
+description = """
+computes a fixed point, starting with `initialList` and calling
+`listUpdate prevList newList` each iteration, terminating the
+iteration when it returns `newList`.
+"""
+
+[[functions]]
 ordinal = 190
 structure = "Relational"
 name = "max, max"
