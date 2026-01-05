@@ -75,6 +75,14 @@ public class DataType extends ParameterizedType {
     return name.equals(BuiltIn.Eqtype.BAG.mlName());
   }
 
+  @Override
+  public Type elementType() {
+    if (isCollection()) {
+      return arg(0);
+    }
+    return super.elementType();
+  }
+
   public <R> R accept(TypeVisitor<R> typeVisitor) {
     return typeVisitor.visit(this);
   }

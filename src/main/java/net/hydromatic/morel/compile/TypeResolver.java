@@ -416,7 +416,7 @@ public class TypeResolver {
       if (!listExp.args.isEmpty()) {
         final Type annotatedType2 =
             annotatedType instanceof ListType
-                ? ((ListType) annotatedType).elementType
+                ? annotatedType.elementType()
                 : null;
         final Type elementType =
             deduceRealType(annotatedType2, listExp.args.get(0));
@@ -445,7 +445,7 @@ public class TypeResolver {
       if (!listExp.args.isEmpty()) {
         final Type annotatedType2 =
             annotatedType instanceof ListType
-                ? ((ListType) annotatedType).elementType
+                ? annotatedType.elementType()
                 : null;
         final Type elementType =
             deduceRealType(annotatedType2, listExp.args.get(0));
@@ -2493,7 +2493,7 @@ public class TypeResolver {
         final DataType dataType = (DataType) type;
         if (dataType.name.equals(BAG_TY_CON)) {
           assert dataType.arguments.size() == 1;
-          return bagTerm(toTerm(dataType.arg(0), subst));
+          return bagTerm(toTerm(dataType.elementType(), subst));
         }
         return unifier.apply(
             dataType.name(), toTerms(dataType.arguments, subst));
@@ -2525,8 +2525,7 @@ public class TypeResolver {
         final List<Term> args = toTerms(argNameTypes.values(), subst);
         return unifier.apply(result, args);
       case LIST:
-        final ListType listType = (ListType) type;
-        return listTerm(toTerm(listType.elementType, subst));
+        return listTerm(toTerm(type.elementType(), subst));
       case FORALL_TYPE:
         final ForallType forallType = (ForallType) type;
         Subst subst2 = subst;

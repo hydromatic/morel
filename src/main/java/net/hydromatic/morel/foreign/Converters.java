@@ -137,7 +137,7 @@ public class Converters {
   public static Function<Enumerable<Object[]>, List<Object>> fromEnumerable(
       RelNode rel, Type type) {
     checkArgument(type.isCollection(), "not a collection type: %s", type);
-    final Type elementType = type.arg(0);
+    final Type elementType = type.elementType();
     final RelDataType rowType = rel.getRowType();
     final Function<Object[], Object> elementConverter =
         forType(rowType, elementType);
@@ -393,7 +393,8 @@ public class Converters {
         boolean recordList) {
       checkArgument(type.isCollection(), "not a collection type: %s", type);
       RelDataType elementType =
-          forMorel(type.arg(0), typeFactory, nullable, false).calciteType;
+          forMorel(type.elementType(), typeFactory, nullable, false)
+              .calciteType;
       if (recordList && !elementType.isStruct()) {
         elementType = typeFactory.builder().add("1", elementType).build();
       }
@@ -408,7 +409,7 @@ public class Converters {
       @SuppressWarnings({"unchecked", "rawtypes"})
       final Enumerable<Object> enumerable = Linq4j.asEnumerable((List) v);
       if (morelType.isCollection()) {
-        final Type elementType = morelType.arg(0);
+        final Type elementType = morelType.elementType();
         requireNonNull(calciteType.getComponentType());
         final C2m c = new C2m(calciteType.getComponentType(), elementType);
         if (c.morelType instanceof PrimitiveType) {

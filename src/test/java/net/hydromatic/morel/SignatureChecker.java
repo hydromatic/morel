@@ -352,7 +352,7 @@ class SignatureChecker {
           }
         case LIST:
           final ListType listType = (ListType) t;
-          return format("ts.list(%s)", str(listType.elementType));
+          return format("ts.list(%s)", str(listType.elementType()));
         case RECORD_TYPE:
           final RecordType recordType = (RecordType) t;
           if (recordType.argNameTypes.isEmpty()) {

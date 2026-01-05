@@ -51,6 +51,11 @@ public class ListType extends BaseType {
     return true;
   }
 
+  @Override
+  public Type elementType() {
+    return elementType;
+  }
+
   public <R> R accept(TypeVisitor<R> typeVisitor) {
     return typeVisitor.visit(this);
   }

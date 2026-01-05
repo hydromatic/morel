@@ -661,9 +661,7 @@ public class TypeSystem {
         || toType.containsAlias()
         || fromType instanceof ListType
             && toType instanceof ListType
-            && canAssign(
-                ((ListType) fromType).elementType,
-                ((ListType) toType).elementType);
+            && canAssign(fromType.elementType(), toType.elementType());
   }
 
   /** Visitor that finds all {@link TypeVar} instances within a {@link Type}. */

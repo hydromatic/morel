@@ -2984,7 +2984,7 @@ public abstract class Codes {
   private static final Macro RELATIONAL_SUM =
       (typeSystem, env, argType) -> {
         if (argType.isCollection()) {
-          final Type resultType = argType.arg(0);
+          final Type resultType = argType.elementType();
           switch ((PrimitiveType) resultType) {
             case INT:
               return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_INT);

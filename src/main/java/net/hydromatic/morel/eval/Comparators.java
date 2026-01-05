@@ -127,13 +127,13 @@ public class Comparators {
               };
 
         case LIST:
-          return listComparator(type.arg(0));
+          return listComparator(type.elementType());
 
         case DATA_TYPE:
           DataType dataType = (DataType) type;
           switch (dataType.name) {
             case "bag":
-              return listComparator(dataType.arg(0));
+              return listComparator(dataType.elementType());
 
             case "descending":
               Comparator<Object> objectComparator =

@@ -533,7 +533,7 @@ public class Compiler {
   protected Code compileFrom(Context cx, Core.From from) {
     Supplier<RowSink> rowSinkFactory =
         createRowSinkFactory(
-            cx, Core.StepEnv.EMPTY, from.steps, from.type().arg(0));
+            cx, Core.StepEnv.EMPTY, from.steps, from.type().elementType());
     Supplier<RowSink> firstRowSinkFactory =
         () -> RowSinks.first(rowSinkFactory.get());
     return RowSinks.from(firstRowSinkFactory);

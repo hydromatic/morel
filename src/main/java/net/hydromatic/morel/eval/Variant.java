@@ -301,20 +301,17 @@ public class Variant extends AbstractImmutableList<Object> {
       BiConsumer<Core.NamedPat, Object> envRef,
       Variant variant,
       Core.ConPat consPat) {
-    ListType listType = (ListType) variant.type;
     @SuppressWarnings("unchecked")
     final List<Object> consValue = (List<Object>) variant.value;
     if (consValue.isEmpty()) {
       return false;
     }
-    final Variant head = of(listType.elementType, consValue.get(0));
+    final Type elementType = variant.type.elementType();
+    final Variant head = of(elementType, consValue.get(0));
     final List<Variant> tail =
         transformEager(
             skip(consValue),
-            e ->
-                e instanceof Variant
-                    ? (Variant) e
-                    : of(listType.elementType, e));
+            e -> e instanceof Variant ? (Variant) e : of(elementType, e));
     List<Core.Pat> patArgs = ((Core.TuplePat) consPat.pat).args;
     return Closure.bindRecurse(patArgs.get(0), head, envRef)
         && Closure.bindRecurse(patArgs.get(1), tail, envRef);
@@ -331,7 +328,6 @@ public class Variant extends AbstractImmutableList<Object> {
     // For record types, reconstruct (name, value) pairs.
     Object innerValue;
     if (variant.type instanceof ListType) {
-      final ListType listType = (ListType) variant.type;
       final List<?> list = (List<?>) variant.value;
       // Check if elements are already Variants
       if (!list.isEmpty() && !(list.get(0) instanceof Variant)) {
@@ -342,7 +338,7 @@ public class Variant extends AbstractImmutableList<Object> {
                 e ->
                     e instanceof Variant
                         ? (Variant) e
-                        : of(listType.elementType, e));
+                        : of(variant.type.elementType(), e));
       } else {
         innerValue = variant.value;
       }
@@ -673,8 +669,7 @@ public class Variant extends AbstractImmutableList<Object> {
 
     // Handle list types
     if (type instanceof ListType) {
-      final ListType listType = (ListType) type;
-      return appendList(buf, "LIST [", value, listType.elementType, "]");
+      return appendList(buf, "LIST [", value, type.elementType(), "]");
     }
 
     // Handle DataTypes (bag, vector, option, custom datatypes)

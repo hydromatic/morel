@@ -700,8 +700,7 @@ public class Resolver {
               typeMap.typeSystem, recordType, recordSelector.name);
       if (type.op() == Op.TY_VAR && coreFn.type.op() == Op.FUNCTION_TYPE
           || type.isProgressive()
-          || type instanceof ListType
-              && ((ListType) type).elementType.isProgressive()) {
+          || type instanceof ListType && type.elementType().isProgressive()) {
         // If we are dereferencing a field in a progressive type, the type
         // available now may be more precise than the deduced type.
         type = ((FnType) coreFn.type).resultType;
@@ -1031,9 +1030,7 @@ public class Resolver {
         if (expectedType.op() != Op.LIST) {
           return false;
         }
-        return subsumes(
-            ((ListType) actualType).elementType,
-            ((ListType) expectedType).elementType);
+        return subsumes(actualType.elementType(), expectedType.elementType());
       case RECORD_TYPE:
         if (expectedType.op() != Op.RECORD_TYPE) {
           return false;
@@ -1301,7 +1298,7 @@ public class Resolver {
                 ImmutableRangeSet.of(Range.all()));
       } else {
         coreExp = r.toCore(scan.exp);
-        final Type elementType = coreExp.type.arg(0);
+        final Type elementType = coreExp.type.elementType();
         corePat = r.toCore(scan.pat, elementType);
       }
       final List<Binding> bindings2 =

@@ -1660,7 +1660,7 @@ public class Core {
         throw new IllegalArgumentException(
             "scan expression must be list or bag: " + exp.type);
       }
-      if (!canAssign(exp.type.arg(0), pat.type)) {
+      if (!canAssign(exp.type.elementType(), pat.type)) {
         throw new IllegalArgumentException(
             format("cannot assign elements of %s to %s", exp.type, pat.type));
       }
@@ -1699,7 +1699,7 @@ public class Core {
           .append(pat, 0, Op.EQ.left);
       if (Extents.isInfinite(exp)) {
         // Print "from x : int" rather "from x in extent 'int'"
-        w.append(" : ").append(exp.type.arg(0).moniker());
+        w.append(" : ").append(exp.type.elementType().moniker());
       } else {
         w.append(" in ").append(exp, Op.EQ.right, 0);
       }

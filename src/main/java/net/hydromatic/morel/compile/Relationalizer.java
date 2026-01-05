@@ -116,7 +116,7 @@ public class Relationalizer extends EnvShuttle {
     } else {
       checkArgument(
           exp.type.isCollection(), "not a collection type: %s", exp.type);
-      final Type elementType = exp.type.arg(0);
+      final Type elementType = exp.type.elementType();
       final String name = typeSystem.nameGenerator.get();
       final Core.IdPat id =
           core.idPat(elementType, name, typeSystem.nameGenerator::inc);

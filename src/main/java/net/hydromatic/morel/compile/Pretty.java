@@ -40,7 +40,6 @@ import net.hydromatic.morel.type.AliasType;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ForallType;
-import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
@@ -206,7 +205,6 @@ class Pretty {
         return buf.append("fn");
 
       case LIST:
-        final ListType listType = (ListType) type;
         list = toList(value);
         if (list instanceof RelList) {
           // Do not attempt to print the elements of a foreign list. It might be
@@ -219,7 +217,7 @@ class Pretty {
           // see the contents of each file they should use a query.
           return buf.append(RelList.RELATION);
         }
-        return printList(buf, indent, end, depth, listType.elementType, list);
+        return printList(buf, indent, end, depth, type.elementType(), list);
 
       case RECORD_TYPE:
         final RecordType recordType = (RecordType) type;
@@ -287,7 +285,7 @@ class Pretty {
       Type type,
       Object o) {
     if (output != Prop.Output.CLASSIC && canPrintTabular(type)) {
-      final RecordType recordType = (RecordType) type.arg(0);
+      final RecordType recordType = (RecordType) type.elementType();
       final List<List<String>> recordList = new ArrayList<>();
       final List<String> valueList = new ArrayList<>();
       for (List<?> record : (List<List<?>>) o) {
@@ -328,8 +326,8 @@ class Pretty {
   /** Can print a type in tabular format if it is a list of records. */
   private static boolean canPrintTabular(Type type) {
     return type.isCollection()
-        && type.arg(0) instanceof RecordType
-        && canPrintTabular2((RecordType) type.arg(0));
+        && type.elementType() instanceof RecordType
+        && canPrintTabular2((RecordType) type.elementType());
   }
 
   /** Can print a record in tabular format if its fields are all primitive. */
@@ -425,8 +423,8 @@ class Pretty {
         // be huge.
         return buf.append(RelList.RELATION);
       }
-      final Type argType = dataType.arg(0);
-      return printList(buf, indent, lineEnd, depth, argType, list);
+      final Type elementType = dataType.elementType();
+      return printList(buf, indent, lineEnd, depth, elementType, list);
     }
     final String tyConName = (String) list.get(0);
     buf.append(tyConName);
@@ -593,7 +591,7 @@ class Pretty {
     }
     checkArgument(
         typeVal.type.isCollection(), "not a collection type: %s", type);
-    final Type elementType = typeVal.type.arg(0);
+    final Type elementType = typeVal.type.elementType();
     final TypeVal typeVal1 = new TypeVal("", elementType, "");
     pretty1(
         buf, indent2, lineEnd, depth, type, typeVal1, leftPrec, Op.LIST.left);

@@ -121,12 +121,24 @@ public interface Type {
   }
 
   /**
-   * Whether this is a collection type (list or bag).
+   * Whether this is a collection type ({@code list} or {@code bag}).
    *
-   * <p>If a type is a collection type, {@code arg(0)} returns the element type.
+   * <p>{@code vector} is not currently regarded as a collection type.
+   *
+   * <p>If a type is a collection type, {@link #elementType()} returns the
+   * element type.
    */
   default boolean isCollection() {
     return false;
+  }
+
+  /**
+   * Returns a collection's element type; throws if not a collection.
+   *
+   * @see #isCollection()
+   */
+  default Type elementType() {
+    throw new IllegalArgumentException("not a collection type: " + this);
   }
 
   /**

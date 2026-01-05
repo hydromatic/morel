@@ -112,11 +112,9 @@ public class TypeUnifier {
         }
 
       case LIST:
-        list1 = (ListType) type1;
         switch (type2.op()) {
           case LIST:
-            list2 = (ListType) type2;
-            return tryUnify(list1.elementType, list2.elementType);
+            return tryUnify(type1.elementType(), type2.elementType());
 
           default:
             return false;

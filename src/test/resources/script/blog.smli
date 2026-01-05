@@ -1571,7 +1571,7 @@ fun ancestors () =
         (y2, z) in ancestors ()
       where y = y2
       yield (x, z));
-> java.lang.UnsupportedOperationException
+> java.lang.IllegalArgumentException: not a collection type: 'a
 
 (* Morel "forwards" relation *)
 (* Relation defined using algebra. *)
