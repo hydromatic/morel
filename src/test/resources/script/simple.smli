@@ -265,6 +265,16 @@ fun compareInt (x: int, y: int) : `order` =
      "f";
 > val it = "af" : string
 
+(* Multiple levels of nesting, and output lines *)
+"a" ^ (* level 1
+        "b" ^ (* level 2
+           "c" ^ (* level 3 *) "d" ^
+> val it = "spurious, but must be preserved in output" : string
+           still in level 2 *) "e" ^
+        still in level 1 *)
+     "f";
+> val it = "af" : string
+
 (* Empty nested comment *)
 "a" ^ (* outer (* *) inner *) "b";
 > val it = "ab" : string
@@ -328,6 +338,20 @@ str #"(" ^ str #"*" ^ str #")";
 (* String with escaped quotes and comment syntax *)
 "\"(*\" and \"*)\"";
 > val it = "\"(*\" and \"*)\"" : string
+
+(* The scripting framework gets confused by output lines ('>')
+   after a line comment ('(*)') inside a
+   block comment. *)
+
+(* A block comment.
+
+(*) A line comment, followed by a command that is not executed.
+1 + 2;
+> val it = "wrong" : string
+
+End of block comment. *)
+"correct";
+> val it = "correct" : string
 
 (* Simple commands --------------------------------------------- *)
 val x = 1;

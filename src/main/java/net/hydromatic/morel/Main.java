@@ -192,16 +192,52 @@ public class Main {
         b.append(s, i, k);
         i = k;
       } else if (j == j5) {
-        // If a line contains "(*", next search begins at the next "*)".
-        int k = s.indexOf("*)", j + "(*".length());
-        if (k < 0) {
-          k = n;
-        }
+        // If a line contains "(*", skip the block comment (accounting for
+        // nesting) and continue searching after it.
+        int k = skipBlockComment(s, j + "(*".length(), n);
         b.append(s, i, k);
         i = k;
       }
     }
     return new StringReader(b.toString());
+  }
+
+  /**
+   * Skips a block comment in the input string, accounting for nested comments.
+   *
+   * @param s Input string
+   * @param pos Position after the opening "(*"
+   * @param n Length of the string
+   * @return Position after the closing "*)" or end of string if no closing
+   *     found
+   */
+  private static int skipBlockComment(String s, int pos, int n) {
+    while (pos < n) {
+      // Check for nested "(*" (but not "(*)").
+      int nextOpen = s.indexOf("(*", pos);
+      int nextClose = s.indexOf("*)", pos);
+
+      if (nextClose < 0) {
+        // No closing "*)" found.
+        return n;
+      }
+
+      if (nextOpen >= 0 && nextOpen < nextClose) {
+        // Found a nested "(*" before the closing "*)".
+        // Check if it's actually "(*)" which is not a nested comment.
+        if (nextOpen + 2 < n && s.charAt(nextOpen + 2) == ')') {
+          // It's "(*)", skip it and continue searching.
+          pos = nextOpen + 3;
+        } else {
+          // It's a nested comment, recursively skip it.
+          pos = skipBlockComment(s, nextOpen + 2, n);
+        }
+      } else {
+        // Found the closing "*)".
+        return nextClose + 2;
+      }
+    }
+    return n;
   }
 
   /**
@@ -505,26 +541,6 @@ public class Main {
 
     public String flush() {
       return str(buf);
-    }
-
-    /** Peeks at the next line without consuming it. Returns null if at EOF. */
-    public String peekLine() throws IOException {
-      mark(1000);
-      try {
-        StringBuilder sb = new StringBuilder();
-        int c;
-        while ((c = read()) != -1) {
-          if (c == '\n') {
-            break;
-          }
-          sb.append((char) c);
-        }
-        return sb.length() == 0 && c == -1 ? null : sb.toString();
-      } finally {
-        reset();
-        // Clear the buffer since we're peeking
-        buf.setLength(0);
-      }
     }
   }
 }
