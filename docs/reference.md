@@ -85,6 +85,7 @@ In Morel but not Standard ML:
   (for example, <code>\`an identifier\`</code>)
 * `with` functional update for record values
 * overloaded functions may be declared using `over` and `inst`
+* `(*)` line comments (syntax as SML/NJ and MLton)
 
 In Standard ML but not in Morel:
 * `word` constant

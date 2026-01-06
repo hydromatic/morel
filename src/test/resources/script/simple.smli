@@ -19,7 +19,7 @@
 Sys.set ("lineWidth", 78);
 > val it = () : unit
 
-(*) Literals
+(* Literals ---------------------------------------------------- *)
 1;
 > val it = 1 : int
 ~2;
@@ -160,7 +160,7 @@ String.size "\^@";
 String.implode [#"\t", #"a", #"\128", #"b"];
 > val it = "\ta\128b" : string
 
-(*) Identifiers
+(* Identifiers ------------------------------------------------- *)
 val x = 1
 and x' = 2
 and x'' = 3
@@ -221,7 +221,115 @@ fun compareInt (x: int, y: int) : `order` =
   else EQUAL;
 > val compareInt = fn : int * int -> order
 
-(*) Simple commands
+(* Comments ---------------------------------------------------- *)
+1 + (* 2 + *) 3;
+> val it = 4 : int
+
+1 +
+(* 2 +
+ *) 3;
+> val it = 4 : int
+
+(* 1 +
+2 +
+3 *) 5 + 6;
+> val it = 11 : int
+
+(* Test nested block comments *)
+"a" ^ (* outer comment
+       "b" ^ (* nested comment *) "c" ^
+       end of outer *)
+     "d";
+> val it = "ad" : string
+
+(* Test line comment inside block comment *)
+"a" ^ (* block comment start
+       "b" ^ (*) this is a line comment, not end of block
+       "c" ^
+       end of block *)
+    "d";
+> val it = "ad" : string
+
+(* Test block comment syntax inside line comment *)
+"a" ^ (*) line comment with (* fake block comment
+"b" ^
+"c";
+> val it = "abc" : string
+
+(* Multiple levels of nesting *)
+"a" ^ (* level 1
+        "b" ^ (* level 2
+           "c" ^ (* level 3 *) "d" ^
+           still in level 2 *) "e" ^
+        still in level 1 *)
+     "f";
+> val it = "af" : string
+
+(* Empty nested comment *)
+"a" ^ (* outer (* *) inner *) "b";
+> val it = "ab" : string
+
+(* Multiple stars before closing paren *)
+"a" ^ (***) "b" ^ "c";
+> val it = "abc" : string
+
+"a" ^ (* comment ***) "b";
+> val it = "ab" : string
+
+(* Adjacent comments *)
+"a" ^ (* block *) (*) line
+"b";
+> val it = "ab" : string
+
+(* Comments with many stars and parens *)
+"a" ^ (* *** *) "b" ^ (******) "c";
+> val it = "abc" : string
+
+(* Empty block comment *)
+"a" ^ (**) "b";
+> val it = "ab" : string
+
+(* Nested line comments inside block *)
+"a" ^ (* start
+         (*) line 1
+         (*) line 2
+         end *) "b";
+> val it = "ab" : string
+
+(* Comments interspersed in expression *)
+"a" (* c1 *) ^ (* c2 *) "b" (* c3 *) ^ (* c4 *) "c";
+> val it = "abc" : string
+
+(* Comment syntax in string literals should NOT be treated as comments *)
+"(*" ^ "*)";
+> val it = "(**)" : string
+
+"a (* comment? *) b";
+> val it = "a (* comment? *) b" : string
+
+"(*) line comment?";
+> val it = "(*) line comment?" : string
+
+"nested (* outer (* inner *) end *)";
+> val it = "nested (* outer (* inner *) end *)" : string
+
+(* Comment syntax inside char literals *)
+str #"(" ^ str #"*" ^ str #")";
+> val it = "(*)" : string
+
+(* Mixing real comments with string literals containing comment syntax *)
+"a" ^ (* real comment *) "(*fake*)" ^ "b";
+> val it = "a(*fake*)b" : string
+
+(*) "c" ^ (* This whole line is a comment including the string "and this"
+"d";
+> val it = "d" : string
+
+(* String with escaped quotes and comment syntax *)
+"\"(*\" and \"*)\"";
+> val it = "\"(*\" and \"*)\"" : string
+
+(* Simple commands --------------------------------------------- *)
 val x = 1;
 > val x = 1 : int
 x + 2;
@@ -531,7 +639,7 @@ end;
 Sys.unset "matchCoverageEnabled";
 > val it = () : unit
 
-(*) Patterns
+(* Patterns ---------------------------------------------------- *)
 
 (*) The following example is from "Introduction to Standard ML" by Robert Harper.
 val x = (( "foo", true ), 17 );
@@ -586,7 +694,7 @@ val x as y as z = 3;
 > val y = 3 : int
 > val z = 3 : int
 
-(*) Errors
+(* Errors ------------------------------------------------------ *)
 (* The first is printed as '1.9', the second as '1.9-1.11', and the third as '1.9-1.12'. *)
 "a string literal to reset the line counter after the comment";
 > val it = "a string literal to reset the line counter after the comment"

@@ -279,10 +279,13 @@ Bugs:
 
 ## Extensions
 
-Morel has a few extensions to Standard ML: postfix labels,
-implicit labels in record expressions, and relational extensions.
+Morel has a few extensions to Standard ML, including postfix labels,
+implicit labels in record expressions, and relational extensions. The
+Language Reference lists
+[other differences](docs/reference.md#differences-between-morel-and-sml).
+
 Postfix labels and implicit labels are intended to make relational
-expressions more concise and more similar to SQL but they can be used
+expressions more concise and more similar to SQL, but they can be used
 anywhere in Morel, not just in relational expressions.
 
 ### Postfix labels

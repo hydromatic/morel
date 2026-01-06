@@ -2070,10 +2070,17 @@ SPECIAL_TOKEN :
     <SINGLE_LINE_COMMENT: "\n" | "\r" | "\r\n" > { popState(); }
 }
 
+<IN_COMMENT> MORE :
+{
+    "(*)" { pushState(); } : IN_LINE_COMMENT
+|
+    "(*" { pushState(); }
+}
+
 <IN_COMMENT>
 SPECIAL_TOKEN :
 {
-    <END_COMMENT: ~["("] "*)"  > { popState(); }
+    <END_COMMENT: "*)" > { popState(); }
 }
 
 <IN_COMMENT, IN_LINE_COMMENT>

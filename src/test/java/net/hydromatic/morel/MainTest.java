@@ -416,6 +416,31 @@ public class MainTest {
             + "2 +\n"
             + "3 *) 5 + 6")
         .assertParse("5 + 6");
+
+    // Block comment inside block comment
+    ml("(* Start block\n" //
+            + "  (* nested block *)\n"
+            + "  2 +\n"
+            + "*)\n"
+            + "1")
+        .assertParse("1");
+
+    // Line comment inside block comment
+    ml("(* Start block\n"
+            + "  3 + (*) Line comment\n"
+            + "  2 +\n"
+            + "*)\n"
+            + "1")
+        .assertParse("1");
+
+    // Block comment inside line comment
+    ml("1 +\n"
+            + "2 + (*) Line (* comment *) 3 +\n"
+            + "4 +\n"
+            + "5 + (*) Line 2 (* comment\n"
+            + "6 + (*) Line 3 comment *) + 7 +\n"
+            + "8")
+        .assertParse("1 + 2 + 4 + 5 + 6 + 8");
   }
 
   @Test
