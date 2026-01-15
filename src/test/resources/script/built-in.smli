@@ -181,9 +181,10 @@ Relational;
 >      sum:'i bag -> 'i}
 Sys;
 > val it =
->   {clearEnv=fn,env=fn,file={},plan=fn,set=fn,show=fn,showAll=fn,unset=fn}
+>   {clearEnv=fn,env=fn,file={},plan=fn,planEx=fn,set=fn,show=fn,showAll=fn,
+>    unset=fn}
 >   : {clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...},
->      plan:unit -> string, set:string * 'a -> unit,
+>      plan:unit -> string, planEx:string -> string, set:string * 'a -> unit,
 >      show:string -> string option,
 >      showAll:unit -> (string * string option) list, unset:string -> unit}
 
@@ -4407,7 +4408,7 @@ Sys.env ();
 >    ("String",
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
->     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
 >    ("UNIT","variant"),("VARIANT_NONE","variant"),
 >    ("VARIANT_SOME","variant -> variant"),("VECTOR","variant list -> variant"),
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
@@ -4512,7 +4513,7 @@ env ();
 >    ("String",
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
->     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
 >    ("UNIT","variant"),("VARIANT_NONE","variant"),
 >    ("VARIANT_SOME","variant -> variant"),("VECTOR","variant list -> variant"),
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
@@ -4580,6 +4581,20 @@ Sys.plan;
 Sys.plan ();
 > val it = "apply2(fnValue +, constant(1), constant(2))" : string
 
+(*) val planEx : string -> string
+Sys.planEx;
+> val it = fn : string -> string
+val zebra = true;
+> val zebra = true : bool
+val aardvark = 1 + (if zebra then 2 else 3);
+> val aardvark = 3 : int
+Sys.planEx "0";
+> val it = "val aardvark = 1 + (case true of true => 2 | _ => 3)" : string
+Sys.planEx "-1";
+> val it = "val aardvark = 1 + (case true of true => 2 | _ => 3)" : string
+Sys.planEx "1";
+> val it = "val aardvark = 1 + (case true of true => 2 | _ => 3)" : string
+
 (*) val set : string * 'a -> unit
 Sys.set;
 > val it = fn : string * 'a -> unit
@@ -4589,6 +4604,16 @@ Sys.plan ();
 > val it =
 >   "apply(fnValue Sys.set, argCode tuple(constant(hybrid), constant(false)))"
 >   : string
+
+(*) val planEx : string -> string
+Sys.planEx;
+> val it = fn : string -> string
+val x = 1 + 2;
+> val x = 3 : int
+Sys.planEx "0";
+> val it = "val x = 1 + 2" : string
+Sys.planEx "-1";
+> val it = "val x = 1 + 2" : string
 
 (*) val show : string -> string option
 Sys.show;

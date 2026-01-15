@@ -135,6 +135,13 @@ public abstract class Compiles {
     final Core.Decl coreDecl0 = resolver.toCore(resolved.node);
     tracer.onCore(0, coreDecl0);
 
+    // Store the initial Core.Decl and environment for Sys.planEx,
+    // but skip if the current command is a planEx or plan call itself
+    if (!isPlanExCall(coreDecl0)) {
+      session.coreDecl = coreDecl0;
+      session.environment = env;
+    }
+
     // Should we skip printing the root pattern?
     // Yes, if they wrote 'val x = 1 and y = 2' and
     // core became 'val it as (x, y) = (1, 2)'.
@@ -225,6 +232,127 @@ public abstract class Compiles {
 
     return compiler.compileStatement(
         env, coreDecl, skipPat, queriesToWrap.build());
+  }
+
+  /**
+   * Re-runs compilation of a Core.Decl to a specific phase.
+   *
+   * @param coreDecl0 The initial Core.Decl (pass 0)
+   * @param typeSystem The type system
+   * @param env The compilation environment
+   * @param session The session (for properties)
+   * @param phase The phase to compile to: "0" (initial), "-1" (final), or a
+   *     specific pass number
+   * @return The Core.Decl at the requested phase
+   */
+  public static Core.Decl replanToPhase(
+      Core.Decl coreDecl0,
+      TypeSystem typeSystem,
+      Environment env,
+      Session session,
+      String phase) {
+    final int targetPass;
+    try {
+      targetPass = Integer.parseInt(phase);
+    } catch (NumberFormatException e) {
+      // Not "0" or "-1": return the initial AST
+      return coreDecl0;
+    }
+
+    final int inlinePassCount =
+        Math.max(Prop.INLINE_PASS_COUNT.intValue(session.map), 0);
+    final boolean relationalize = Prop.RELATIONALIZE.booleanValue(session.map);
+
+    if (inlinePassCount == 0) {
+      // Inlining is disabled. Use the Inliner in a limited mode.
+      final Inliner inliner = Inliner.of(typeSystem, env, null);
+      return coreDecl0.accept(inliner);
+    }
+
+    final @Nullable Relationalizer relationalizer =
+        relationalize ? Relationalizer.of(typeSystem, env) : null;
+
+    // Run inlining passes
+    Core.Decl coreDecl = coreDecl0;
+    boolean mayContainUnbounded = true;
+    int currentPass = 1;
+
+    for (int i = 0; i < inlinePassCount; i++) {
+      final Analyzer.Analysis analysis =
+          Analyzer.analyze(typeSystem, env, coreDecl);
+      final Inliner inliner = Inliner.of(typeSystem, env, analysis);
+      final Core.Decl coreDecl2 = coreDecl;
+      coreDecl = coreDecl2.accept(inliner);
+      if (relationalizer != null) {
+        coreDecl = coreDecl.accept(relationalizer);
+      }
+      if (coreDecl == coreDecl2) {
+        break;
+      }
+      currentPass = i + 2;
+      if (targetPass >= 0 && currentPass == targetPass) {
+        return coreDecl;
+      }
+    }
+
+    // Run SuchThat and Extents passes
+    for (int i = 0; i < inlinePassCount; i++) {
+      final Core.Decl coreDecl2 = coreDecl;
+      if (mayContainUnbounded) {
+        if (SuchThatShuttle.containsUnbounded(coreDecl)) {
+          coreDecl = coreDecl.accept(new SuchThatShuttle(typeSystem, env));
+        } else {
+          mayContainUnbounded = false;
+        }
+      }
+      coreDecl = Extents.infinitePats(typeSystem, coreDecl);
+      if (coreDecl == coreDecl2) {
+        break;
+      }
+      currentPass = i + 2;
+      if (targetPass >= 0 && currentPass == targetPass) {
+        return coreDecl;
+      }
+    }
+
+    // Pass -1 or any pass beyond the last: return the final result
+    return coreDecl;
+  }
+
+  /**
+   * Returns true if the Core.Decl is a call to Sys.planEx or Sys.plan.
+   *
+   * <p>We don't want to update the stored coreDecl when the user calls planEx
+   * or plan, because these should operate on the previous command, not
+   * themselves.
+   */
+  private static boolean isPlanExCall(Core.Decl decl) {
+    if (!(decl instanceof Core.NonRecValDecl)) {
+      return false;
+    }
+    final Core.NonRecValDecl valDecl = (Core.NonRecValDecl) decl;
+    final Core.Exp exp = valDecl.exp;
+
+    // Check if it's a call to a BuiltIn (after inlining)
+    if (exp.isCallTo(BuiltIn.SYS_PLAN_EX) || exp.isCallTo(BuiltIn.SYS_PLAN)) {
+      return true;
+    }
+
+    // Check if it's a record selector call (before inlining): #planEx Sys ...
+    if (exp instanceof Core.Apply) {
+      final Core.Apply apply = (Core.Apply) exp;
+      if (apply.fn instanceof Core.Apply) {
+        final Core.Apply innerApply = (Core.Apply) apply.fn;
+        if (innerApply.fn instanceof Core.RecordSelector) {
+          final Core.RecordSelector selector =
+              (Core.RecordSelector) innerApply.fn;
+          final String fieldName = selector.fieldName();
+          return "planEx".equals(fieldName) || "plan".equals(fieldName);
+        }
+      }
+    }
+
+    return false;
   }
 
   /**

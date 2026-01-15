@@ -26,8 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.CompileException;
+import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.NameGenerator;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MorelException;
@@ -44,6 +46,10 @@ public class Session {
   public @Nullable Code code;
   /** The output lines of the previous command. */
   public @Nullable List<String> out;
+  /** The AST of the previous command, for re-planning. */
+  public Core.@Nullable Decl coreDecl;
+  /** The compile environment of the previous command, for re-planning. */
+  public @Nullable Environment environment;
   /** Property values. */
   public final Map<Prop, Object> map;
 

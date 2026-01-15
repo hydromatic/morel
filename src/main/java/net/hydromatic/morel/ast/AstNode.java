@@ -20,6 +20,11 @@ package net.hydromatic.morel.ast;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /** Abstract syntax tree node. */
 public abstract class AstNode {
   public final Pos pos;
@@ -47,6 +52,11 @@ public abstract class AstNode {
     return unparse(new AstWriter());
   }
 
+  /** Converts this node into a string with fewer id ordinals. */
+  public final String unparseRenumbered() {
+    return unparse(new RenumberingAstWriter());
+  }
+
   /** Converts this node into an ML string, with a given writer. */
   public final String unparse(AstWriter w) {
     return unparse(w, 0, 0).toString();
@@ -67,6 +77,30 @@ public abstract class AstNode {
    * this node, and returning the result.
    */
   public abstract void accept(Visitor visitor);
+
+  /**
+   * Implementation of {@link net.hydromatic.morel.ast.AstWriter} that remembers
+   * occurrences of {@link Core.NamedPat}.
+   */
+  private static class RenumberingAstWriter extends AstWriter {
+    final Map<String, List<Integer>> nameIds = new HashMap<>();
+
+    private int register(String name, int i) {
+      final List<Integer> list =
+          nameIds.computeIfAbsent(name, id_ -> new ArrayList<>());
+      int j = list.indexOf(i);
+      if (j < 0) {
+        j = list.size();
+        list.add(i);
+      }
+      return j;
+    }
+
+    @Override
+    public AstWriter id(String name, int i) {
+      return super.id(name, register(name, i));
+    }
+  }
 }
 
 // End AstNode.java

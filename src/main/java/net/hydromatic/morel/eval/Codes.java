@@ -52,6 +52,7 @@ import java.util.stream.Collectors;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.foreign.RelList;
@@ -3397,6 +3398,37 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#SYS_PLAN_EX */
+  private static final Applicable SYS_PLAN_EX =
+      new ApplicableImpl(BuiltIn.SYS_PLAN_EX) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          final Session session = env.getSession();
+          final String phase = (String) arg;
+          if (session.coreDecl == null) {
+            return "No previous command to re-plan";
+          }
+          if (session.typeSystem == null) {
+            return "Type system not available";
+          }
+          if (session.environment == null) {
+            return "Environment not available";
+          }
+          try {
+            final Core.Decl coreAtPhase =
+                Compiles.replanToPhase(
+                    session.coreDecl,
+                    session.typeSystem,
+                    session.environment,
+                    session,
+                    phase);
+            return coreAtPhase.unparseRenumbered();
+          } catch (Exception e) {
+            return "Error re-planning: " + e.getMessage();
+          }
+        }
+      };
+
   /** @see BuiltIn#SYS_SET */
   private static final Applicable SYS_SET =
       new ApplicableImpl(BuiltIn.SYS_SET) {
@@ -4421,6 +4453,7 @@ public abstract class Codes {
           // be a List because it has (progressive) record type.
           .put(BuiltIn.SYS_FILE, ImmutableList.of())
           .put(BuiltIn.SYS_PLAN, SYS_PLAN)
+          .put(BuiltIn.SYS_PLAN_EX, SYS_PLAN_EX)
           .put(BuiltIn.SYS_SET, SYS_SET)
           .put(BuiltIn.SYS_SHOW, SYS_SHOW)
           .put(BuiltIn.SYS_SHOW_ALL, SYS_SHOW_ALL)

@@ -741,6 +741,7 @@ Exception:
 | Sys.clearEnv | unit &rarr; unit | "clearEnv ()" restores the environment to the initial environment. |
 | Sys.env, env | unit &rarr; string list | "env ()" prints the environment. |
 | Sys.plan | unit &rarr; string | "plan ()" prints the plan of the most recently executed expression. |
+| Sys.planEx | string &rarr; string | "planEx phase" re-plans the most recently executed expression and returns the Core representation at the specified phase. The phase argument can be "0" (initial), "-1" (final), or a specific pass number. |
 | Sys.set | string * &alpha; &rarr; unit | "set (property, value)" sets the value of `property` to `value`. (See [Properties](#properties) below.) |
 | Sys.show | string &rarr; string option | "show property" returns the current the value of `property`, as a string, or `NONE` if unset. |
 | Sys.showAll | unit &rarr; string * string option list | "showAll ()" returns a list of all properties and their current value as a string, or `NONE` if unset. |

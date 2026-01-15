@@ -3856,6 +3856,19 @@ prints the plan of the most recently executed expression.
 [[functions]]
 ordinal = 215
 structure = "Sys"
+name = "planEx"
+specified = "morel"
+type = "string → string"
+prototype = "planEx phase"
+description = """
+re-plans the most recently executed expression and returns the Core
+representation at the specified phase. The phase argument can be "0" (initial),
+"-1" (final), or a specific pass number.
+"""
+
+[[functions]]
+ordinal = 216
+structure = "Sys"
 name = "set"
 specified = "morel"
 type = "string * α → unit"
@@ -3868,7 +3881,7 @@ extra = """
 """
 
 [[functions]]
-ordinal = 216
+ordinal = 217
 structure = "Sys"
 name = "show"
 specified = "morel"
@@ -3880,7 +3893,7 @@ string, or `NONE` if unset.
 """
 
 [[functions]]
-ordinal = 217
+ordinal = 218
 structure = "Sys"
 name = "showAll"
 specified = "morel"
@@ -3892,7 +3905,7 @@ as a string, or `NONE` if unset.
 """
 
 [[functions]]
-ordinal = 218
+ordinal = 219
 structure = "Sys"
 name = "unset"
 specified = "morel"

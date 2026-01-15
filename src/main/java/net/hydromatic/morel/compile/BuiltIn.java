@@ -3316,6 +3316,15 @@ public enum BuiltIn {
   /** Function "Sys.plan", aka "plan", of type "unit &rarr; string". */
   SYS_PLAN("Sys", "plan", "plan", ts -> ts.fnType(UNIT, STRING)),
 
+  /**
+   * Function "Sys.planEx", of type "string &rarr; string".
+   *
+   * <p>"planEx phase" re-plans the most recently executed expression and
+   * returns the Core representation at the specified phase. The phase argument
+   * can be "0" (initial), "-1" (final), or a specific pass number.
+   */
+  SYS_PLAN_EX("Sys", "planEx", ts -> ts.fnType(STRING, STRING)),
+
   /** Function "Sys.set", aka "set", of type "string * &alpha; &rarr; unit". */
   SYS_SET(
       "Sys",
