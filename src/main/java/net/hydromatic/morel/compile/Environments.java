@@ -142,7 +142,7 @@ public abstract class Environments {
             bindings.add(
                 Binding.of(
                     core.idPat(type, structure.name, nameGen),
-                    emptyEnv.getOpt(structure.name))));
+                    requireNonNull(emptyEnv.getOpt(structure.name)))));
 
     foreignBindings(typeSystem, valueMap, bindings);
     return bind(environment, bindings);
@@ -184,7 +184,7 @@ public abstract class Environments {
           ImmutableMultimap.builder();
       for (Binding binding : bindings) {
         if (binding.isInst()) {
-          instanceBuilder.put(binding.overloadId, binding);
+          instanceBuilder.put(requireNonNull(binding.overloadId), binding);
         } else {
           builder.put(binding.id, binding);
         }

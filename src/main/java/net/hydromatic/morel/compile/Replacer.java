@@ -24,20 +24,22 @@ import java.util.Map;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.type.TypeSystem;
 
-/** Replaces identifiers with other identifiers. */
+/** Replaces identifiers with expressions. */
 public class Replacer extends EnvShuttle {
-  private final Map<Core.Id, Core.Id> substitution;
+  private final Map<Core.Id, ? extends Core.Exp> substitution;
 
   private Replacer(
       TypeSystem typeSystem,
       Environment env,
-      Map<Core.Id, Core.Id> substitution) {
+      Map<Core.Id, ? extends Core.Exp> substitution) {
     super(typeSystem, env);
     this.substitution = requireNonNull(substitution);
   }
 
   static Core.Exp substitute(
-      TypeSystem typeSystem, Map<Core.Id, Core.Id> substitution, Core.Exp exp) {
+      TypeSystem typeSystem,
+      Map<Core.Id, ? extends Core.Exp> substitution,
+      Core.Exp exp) {
     final Replacer replacer =
         new Replacer(typeSystem, Environments.empty(), substitution);
     return exp.accept(replacer);
@@ -50,8 +52,8 @@ public class Replacer extends EnvShuttle {
 
   @Override
   protected Core.Exp visit(Core.Id id) {
-    final Core.Id id2 = substitution.get(id);
-    return id2 != null ? id2 : id;
+    final Core.Exp exp = substitution.get(id);
+    return exp != null ? exp : id;
   }
 }
 

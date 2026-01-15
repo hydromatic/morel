@@ -263,7 +263,7 @@ public abstract class Compiles {
         Math.max(Prop.INLINE_PASS_COUNT.intValue(session.map), 0);
     final boolean relationalize = Prop.RELATIONALIZE.booleanValue(session.map);
 
-    if (inlinePassCount == 0) {
+    if (inlinePassCount == 0 || targetPass < 0) {
       // Inlining is disabled. Use the Inliner in a limited mode.
       final Inliner inliner = Inliner.of(typeSystem, env, null);
       return coreDecl0.accept(inliner);

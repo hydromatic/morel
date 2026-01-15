@@ -2305,12 +2305,16 @@ Option.valOf (SOME 1);
 Option.valOf NONE;
 > uncaught exception Option
 >   raised at: stdIn:1.1-1.18
+Sys.set ("inlinePassCount", 0);
+> val it = () : unit
 val noneInt = if true then NONE else SOME 0;
 > val noneInt = NONE : int option
 Sys.plan ();
 > val it =
 >   "apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode constant(0))), argCode constant(true))"
 >   : string
+Sys.unset "inlinePassCount";
+> val it = () : unit
 Option.valOf noneInt;
 > uncaught exception Option
 >   raised at: stdIn:1.1-1.21
@@ -4589,11 +4593,11 @@ val zebra = true;
 val aardvark = 1 + (if zebra then 2 else 3);
 > val aardvark = 3 : int
 Sys.planEx "0";
-> val it = "val aardvark = 1 + (case true of true => 2 | _ => 3)" : string
+> val it = "val aardvark = 1 + 2" : string
 Sys.planEx "-1";
 > val it = "val aardvark = 1 + (case true of true => 2 | _ => 3)" : string
 Sys.planEx "1";
-> val it = "val aardvark = 1 + (case true of true => 2 | _ => 3)" : string
+> val it = "val aardvark = 1 + 2" : string
 
 (*) val set : string * 'a -> unit
 Sys.set;

@@ -33,12 +33,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Helpers for {@link EvalEnv}. */
 public class EvalEnvs {
+  private static final EvalEnv EMPTY = copyOf(ImmutableMap.of());
+
+  private EvalEnvs() {}
+
+  /** Returns an empty evaluation environment. */
+  public static EvalEnv empty() {
+    return EMPTY;
+  }
+
   /** Creates an evaluation environment with the given (name, value) map. */
   public static EvalEnv copyOf(Map<String, Object> valueMap) {
     return new MapEvalEnv(valueMap);
   }
-
-  private EvalEnvs() {}
 
   /**
    * Evaluation environment that inherits from a parent environment and adds one

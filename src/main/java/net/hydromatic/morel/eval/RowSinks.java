@@ -243,8 +243,7 @@ public abstract class RowSinks {
 
     static boolean isConstantTrue(Code code) {
       return code.isConstant()
-          && Objects.equals(
-              code.eval(EvalEnvs.copyOf(ImmutableMap.of())), true);
+          && Objects.equals(code.eval(EvalEnvs.empty()), true);
     }
 
     @Override

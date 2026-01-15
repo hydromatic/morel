@@ -29,18 +29,25 @@ import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Applicable1;
+import net.hydromatic.morel.eval.Closure;
 import net.hydromatic.morel.eval.Code;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.eval.EvalEnvs;
 import net.hydromatic.morel.eval.Unit;
 import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.util.PairList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Shuttle that inlines constant values. */
@@ -174,11 +181,44 @@ public class Inliner extends EnvShuttle {
       // becomes
       //   fn x => x + 1
       final Core.Match match = matchList.get(0);
-      final Map<Core.Id, Core.Id> substitution = getSub(exp, match);
+      final Map<Core.Id, Core.Exp> substitution = getSub(exp, match);
       if (substitution != null) {
         return Replacer.substitute(typeSystem, substitution, match.exp);
       }
     }
+
+    // If exp is a literal (simple or nullary constructor), find the matching
+    // branch and return it directly. For example,
+    //   case 2 of 1 => "one" | 2 => "two" | _ => "large"
+    // becomes
+    //   "two"
+    // Only do this when analysis is available (full inlining mode),
+    // and when there is more than one branch.
+    if (analysis != null && matchList.size() > 1) {
+      final @Nullable Object value = expToValue(exp);
+      if (value != null) {
+        for (Core.Match match : matchList) {
+          final PairList<Core.NamedPat, Object> binds = PairList.of();
+          if (Closure.bindRecurse(match.pat, value, binds::add)) {
+            final AtomicReference<Core.Exp> r =
+                new AtomicReference<>(match.exp);
+            binds.forEach(
+                (pat, v) -> {
+                  // Pattern like "x => x + 1" where x binds to the literal.
+                  // Convert to: let x = <literal> in <match.exp>
+                  final Core.Exp e = valueToExp(typeSystem, pat.type, v);
+                  r.set(
+                      core.let(
+                          core.nonRecValDecl(caseOf.pos, pat, null, e),
+                          r.get()));
+                });
+            return r.get();
+          }
+          // Unknown pattern type; try next pattern
+        }
+      }
+    }
+
     if (exp.type != caseOf.exp.type) {
       // Type has become less general. For example,
       //   case x of NONE => [] | SOME y => [y]
@@ -198,27 +238,124 @@ public class Inliner extends EnvShuttle {
     return caseOf.copy(exp, matchList);
   }
 
-  private @Nullable Map<Core.Id, Core.Id> getSub(
+  private @Nullable Map<Core.Id, Core.Exp> getSub(
       Core.Exp exp, Core.Match match) {
-    if (exp.op == Op.ID && match.pat.op == Op.ID_PAT) {
-      return ImmutableMap.of(core.id((Core.IdPat) match.pat), (Core.Id) exp);
+    if (match.pat.op == Op.ID_PAT && isAtomic(exp)) {
+      return ImmutableMap.of(core.id((Core.IdPat) match.pat), exp);
     }
     if (exp.op == Op.TUPLE && match.pat.op == Op.TUPLE_PAT) {
       final Core.Tuple tuple = (Core.Tuple) exp;
       final Core.TuplePat tuplePat = (Core.TuplePat) match.pat;
-      if (allMatch(tuple.args, arg -> arg.op == Op.ID)
+      if (allMatch(tuple.args, Inliner::isAtomic)
           && allMatch(tuplePat.args, arg -> arg.op == Op.ID_PAT)) {
-        final ImmutableMap.Builder<Core.Id, Core.Id> builder =
+        final ImmutableMap.Builder<Core.Id, Core.Exp> builder =
             ImmutableMap.builder();
         forEach(
             tuple.args,
             tuplePat.args,
-            (arg, pat) ->
-                builder.put(core.id((Core.IdPat) pat), (Core.Id) arg));
+            (arg, pat) -> builder.put(core.id((Core.IdPat) pat), arg));
         return builder.build();
       }
     }
     return null;
+  }
+
+  /** Returns whether an expression can be inlined without expansion. */
+  static boolean isAtomic(Core.Exp exp) {
+    return exp instanceof Core.Literal || exp instanceof Core.Id;
+  }
+
+  /**
+   * Returns the runtime value of a constant expression, or null if it is not
+   * constant. Examples of constant expressions include literals {@code 1},
+   * {@code "xyz"}, {@code true} and datatype constructors {@code NONE}, {@code
+   * SOME 1}.
+   *
+   * @see #valueToExp(TypeSystem, Type, Object)
+   */
+  private static @Nullable Object expToValue(Core.Exp exp) {
+    switch (exp.op) {
+      case BOOL_LITERAL:
+      case CHAR_LITERAL:
+      case STRING_LITERAL:
+      case UNIT_LITERAL:
+        return ((Core.Literal) exp).value;
+      case REAL_LITERAL:
+        return ((Core.Literal) exp).unwrap(Double.class);
+      case INT_LITERAL:
+        return ((Core.Literal) exp).unwrap(Integer.class);
+      case VALUE_LITERAL:
+        return ((Core.Literal) exp).unwrap(List.class);
+      case TUPLE:
+        final Core.Tuple tuple = (Core.Tuple) exp;
+        final ImmutableList.Builder<Object> args = ImmutableList.builder();
+        for (Core.Exp arg : tuple.args) {
+          final Object value = expToValue(arg);
+          if (value == null) {
+            return null;
+          }
+          args.add(value);
+        }
+        return args.build();
+
+      case APPLY:
+        final Core.Apply apply = (Core.Apply) exp;
+        if (apply.fn instanceof Core.Id && apply.type instanceof DataType) {
+          final String conName = ((Core.Id) apply.fn).idPat.name;
+          final DataType dataType = (DataType) apply.type;
+          if (dataType.typeConstructors.containsKey(conName)) {
+            final Applicable tyCon = Codes.tyCon(apply.type, conName);
+            final Object arg = expToValue(apply.arg);
+            if (arg == null) {
+              return null;
+            }
+            return tyCon.apply(EvalEnvs.empty(), arg);
+          }
+        }
+
+        // fall through
+      default:
+        return null;
+    }
+  }
+
+  /** Converts a runtime value to constant expression (usually a literal). */
+  @SuppressWarnings("unchecked")
+  private static Core.Exp valueToExp(
+      TypeSystem typeSystem, Type type, Object value) {
+    final List<Object> list;
+    switch (type.op()) {
+      case ID:
+        return core.literal((PrimitiveType) type, value);
+
+      case DATA_TYPE:
+        list = (List<Object>) value;
+        String name = (String) list.get(0);
+        final Core.IdPat idPat = core.idPat(type, name, 0);
+        Core.Id id = core.id(idPat);
+        if (list.size() == 1) {
+          return core.valueLiteral(id, list.get(0));
+        }
+        Type argType = ((DataType) type).typeConstructors(typeSystem).get(name);
+        Core.Exp arg = valueToExp(typeSystem, argType, list.get(1));
+        return core.apply(Pos.ZERO, type, id, arg);
+
+      case TUPLE_TYPE:
+        final TupleType tupleType = (TupleType) type;
+        list = (List<Object>) value;
+        final ImmutableList.Builder<Core.Exp> args = ImmutableList.builder();
+        forEach(
+            tupleType.argTypes,
+            list,
+            (t, v) -> args.add(valueToExp(typeSystem, t, v)));
+        return core.tuple(tupleType, args.build());
+
+      default:
+        throw new AssertionError(
+            format(
+                "cannot convert value [%s] of type [%s] to expression",
+                value, type));
+    }
   }
 
   @Override

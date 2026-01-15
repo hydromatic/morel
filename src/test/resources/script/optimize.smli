@@ -1,0 +1,254 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests for inlining and other optimizations.
+ *)
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+(*) === Variable inlining ===
+
+(*) A variable used once is inlined.
+let val x = 1 in x + 2 end;
+> val it = 3 : int
+Sys.plan ();
+> val it = "apply2(fnValue +, constant(1), constant(2))" : string
+
+(*) A variable used twice is not inlined if non-atomic.
+let val x = 1 + 1 in x + x end;
+> val it = 4 : int
+Sys.plan ();
+> val it =
+>   "let1(matchCode match(x, apply2(fnValue +, constant(1), constant(1))), resultCode apply2(fnValue +, get(name x), get(name x)))"
+>   : string
+
+(*) An atomic variable (bound to a literal) used twice is inlined.
+let val x = 5 in x + x end;
+> val it = 10 : int
+Sys.plan ();
+> val it = "apply2(fnValue +, constant(5), constant(5))" : string
+
+(*) A dead variable (not used) is removed.
+let val x = 1 val y = 2 in y end;
+> val it = 2 : int
+Sys.plan ();
+> val it = "constant(2)" : string
+
+(*) === Function inlining ===
+
+(*) A function applied once is inlined.
+let val f = fn x => x + 1 in f 5 end;
+> val it = 6 : int
+Sys.plan ();
+> val it = "apply2(fnValue +, constant(5), constant(1))" : string
+
+(*) === Singleton case inlining ===
+
+(*) A singleton case with id pattern is inlined.
+let val f = fn x => case x of y => y + 2 in f 3 end;
+> val it = 5 : int
+Sys.plan ();
+> val it = "apply2(fnValue +, constant(3), constant(2))" : string
+
+(*) === Constant case inlining (issue #330) ===
+
+(*) Case on a constant matching a literal pattern.
+let val x = 2 in case x of 1 => "one" | 2 => "two" | _ => "large" end;
+> val it = "two" : string
+Sys.plan ();
+> val it = "constant(two)" : string
+
+(*) Case on a constant matching the first pattern.
+let val x = 1 in case x of 1 => "one" | 2 => "two" | _ => "large" end;
+> val it = "one" : string
+Sys.plan ();
+> val it = "constant(one)" : string
+
+(*) Case on a constant matching the wildcard pattern.
+let val x = 99 in case x of 1 => "one" | 2 => "two" | _ => "large" end;
+> val it = "large" : string
+Sys.plan ();
+> val it = "constant(large)" : string
+
+(*) Case on a constant with id pattern that binds the value.
+let val x = 5 in case x of y => y + 10 end;
+> val it = 15 : int
+Sys.plan ();
+> val it = "apply2(fnValue +, constant(5), constant(10))" : string
+
+(*) If-then-else with constant true condition.
+if true then "yes" else "no";
+> val it = "yes" : string
+Sys.plan ();
+> val it = "constant(yes)" : string
+
+(*) If-then-else with constant false condition.
+if false then "yes" else "no";
+> val it = "no" : string
+Sys.plan ();
+> val it = "constant(no)" : string
+Sys.planEx "~1";
+> val it = "val it = case false of true => \"yes\" | _ => \"no\"" : string
+Sys.planEx "0";
+> val it = "val it = \"no\"" : string
+
+(*) Boolean case.
+let val b = true in case b of true => 1 | false => 0 end;
+> val it = 1 : int
+Sys.plan ();
+> val it = "constant(1)" : string
+
+(*) String case.
+let val s = "hello" in case s of "hello" => 1 | "world" => 2 | _ => 3 end;
+> val it = 1 : int
+Sys.plan ();
+> val it = "constant(1)" : string
+
+(*) Char case.
+let val c = #"a" in case c of #"a" => 1 | #"b" => 2 | _ => 3 end;
+> val it = 1 : int
+Sys.plan ();
+> val it = "constant(1)" : string
+
+(*) Real case.
+let val r = 1.0 in case r of 0.0 => 0 | 1.0 => 1 | _ => 2 end;
+> val it = 1 : int
+Sys.planEx "0";
+> val it = "val it = 1" : string
+
+(*) Unit case.
+let val u = () in case u of () => "unit" | _ => "not unit" end;
+> stdIn:1.44-1.59 Error: match redundant
+>   raised at: stdIn:1.44-1.59
+Sys.planEx "0";
+> val it = "val it = \"unit\"" : string
+
+(*) Tuple case.
+let
+  val t = (1, "a")
+in
+  case t of
+     (0, _) => "zero"
+   | (1, s) => "one:" ^ s
+   | _ => "other"
+end;
+> val it = "one:a" : string
+Sys.planEx "~1";
+> val it =
+>   "val it = let val t = (1, \"a\") in case t of (0, _) => \"zero\" | (1, s) => \"one:\" ^ s | _ => \"other\" end"
+>   : string
+Sys.planEx "0";
+> val it = "val it = op ^ (\"one:\", \"a\")" : string
+
+(*) Record case.
+let
+  val t = {a = 1, b = "a"}
+in
+  case t of
+     {a = 0, ...} => "zero"
+   | {a = 1, b = s} => "one:" ^ s
+   | _ => "other"
+end;
+> val it = "one:a" : string
+Sys.planEx "~1";
+> val it =
+>   "val it = let val t = {a = 1, b = \"a\"} in case t of {a = 0, b = _} => \"zero\" | {a = 1, b = s} => \"one:\" ^ s | _ => \"other\" end"
+>   : string
+Sys.planEx "0";
+> val it = "val it = op ^ (\"one:\", \"a\")" : string
+
+(*) Enum case
+let
+  val ordering = LESS
+in
+  case ordering of
+     LESS => "LESS"
+   | GREATER => "GREATER"
+   | _ => "?"
+end;
+> val it = "LESS" : string
+Sys.planEx "~1";
+> val it =
+>   "val it = let val ordering = LESS in case ordering of LESS => \"LESS\" | GREATER => \"GREATER\" | _ => \"?\" end"
+>   : string
+Sys.planEx "0";
+> val it = "val it = \"LESS\"" : string
+
+(*) Option case (an enum with one argument).
+let
+  val someA = SOME "a"
+in
+  case someA of
+      SOME "0" => "some0"
+    | SOME s => "some:" ^ s
+    | NONE => "none"
+end;
+> val it = "some:a" : string
+Sys.planEx "~1";
+> val it =
+>   "val it = let val someA = SOME \"a\" in case someA of SOME(\"0\") => \"some0\" | SOME(s) => \"some:\" ^ s | NONE => \"none\" end"
+>   : string
+Sys.planEx "0";
+> val it = "val it = op ^ (\"some:\", \"a\")" : string
+
+let
+  val none = NONE
+in
+  case none of
+      SOME "0" => "some0"
+    | SOME s => "some:" ^ s
+    | NONE => "none"
+end;
+> val it = "none" : string
+Sys.planEx "~1";
+> val it =
+>   "val it = let val none = NONE in case none of SOME(\"0\") => \"some0\" | SOME(s) => \"some:\" ^ s | NONE => \"none\" end"
+>   : string
+Sys.planEx "0";
+> val it = "val it = \"none\"" : string
+
+(*) Either case (an enum with two type parameters).
+let
+  val left = INL "a"
+in
+  case left of INL s => "left:" ^ s | INR s => "right:" ^ s
+end;
+> val it = "left:a" : string
+Sys.planEx "~1";
+> val it =
+>   "val it = let val left = INL \"a\" in case left of INL(s) => \"left:\" ^ s | INR(s_1) => \"right:\" ^ s_1 end"
+>   : string
+Sys.planEx "0";
+> val it = "val it = op ^ (\"left:\", \"a\")" : string
+
+(*) Tree case (an enum with a tuple value)
+let
+  datatype tree = EMPTY | NODE of (tree, int, string)
+  val v = NODE (NODE (EMPTY, 1, "a"), 2, "b")
+in
+  case v of EMPTY => "empty" | NODE (t, i, s) => s
+end;
+> val it = "b" : string
+Sys.planEx "~1";
+> val it =
+>   "val it = local datatype tree in let val v = NODE (NODE (EMPTY, 1, \"a\"), 2, \"b\") in case v of EMPTY => \"empty\" | NODE((t, i, s)) => s end end"
+>   : string
+Sys.planEx "0";
+> val it = "val it = local datatype tree in \"b\" end" : string
+
+(*) End optimize.smli

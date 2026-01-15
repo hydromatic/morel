@@ -2433,7 +2433,7 @@ end;
 > val it = ["Shaggy","Scooby"] : string list
 Sys.plan();
 > val it =
->   "from(sink join(pat e139, exp apply(fnCode match((emps, deptno), from(sink join(pat e138, exp get(name emps), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e138)), get(name deptno)), sink collect(get(name e138)))))), argCode tuple(constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), constant(30))), sink collect(apply(fnValue nth:2, argCode get(name e139)))))"
+>   "from(sink join(pat e138, exp constant([[10, 100, Fred], [20, 101, Velma], [30, 102, Shaggy], [30, 103, Scooby]]), sink where(condition apply2(fnValue =, apply(fnValue nth:0, argCode get(name e138)), constant(30)), sink yield(codes [get(name e138)], sink collect(apply(fnValue nth:2, argCode get(name e139)))))))"
 >   : string
 
 (*) Same, via a predicate
