@@ -29,8 +29,11 @@ import static net.hydromatic.morel.util.Static.filterEager;
 import static net.hydromatic.morel.util.Static.nextPowerOfTwo;
 import static net.hydromatic.morel.util.Static.noneMatch;
 import static net.hydromatic.morel.util.Static.transform;
+import static net.hydromatic.morel.util.Static.transformToMap;
 import static org.apache.calcite.util.Util.range;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.greaterThan;
@@ -82,6 +85,7 @@ import net.hydromatic.morel.util.Folder;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.Pair;
+import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.Static;
 import net.hydromatic.morel.util.TailList;
 import net.hydromatic.morel.util.WordComparator;
@@ -399,6 +403,22 @@ public class UtilTest {
     assertThat(allMatch(emptyList, String::isEmpty), is(true));
     assertThat(anyMatch(emptyList, String::isEmpty), is(false));
     assertThat(noneMatch(emptyList, String::isEmpty), is(true));
+  }
+
+  /** Tests {@link Static#transformToMap(Iterable, PairList.BiTransformer)}. */
+  @Test
+  void testTransformToMap() {
+    final List<String> list =
+        ImmutableList.of("john", "paul", "george", "ringo");
+    final ImmutableMap<Object, Object> map =
+        transformToMap(list, (e, c) -> c.accept(e, e.length()));
+    assertThat(map, aMapWithSize(4));
+    assertThat(map, hasToString("{john=4, paul=4, george=6, ringo=5}"));
+
+    final List<String> emptyList = ImmutableList.of();
+    final ImmutableMap<Object, Object> emptyMap =
+        transformToMap(emptyList, (e, c) -> c.accept(e, e.length()));
+    assertThat(emptyMap, anEmptyMap());
   }
 
   /**

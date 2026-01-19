@@ -346,6 +346,16 @@ public class Static {
     return b.build();
   }
 
+  /** Creates an {@link ImmutableMap} by transforming a collection. */
+  public static <E, K, V> ImmutableMap<K, V> transformToMap(
+      Iterable<E> iterable, PairList.BiTransformer<E, K, V> mapper) {
+    final ImmutableMap.Builder<K, V> b = ImmutableMap.builder();
+    for (E e : iterable) {
+      mapper.apply(e, b::put);
+    }
+    return b.build();
+  }
+
   /** Returns the first index in a list where a predicate is true, or -1. */
   public static <E> int find(List<? extends E> list, Predicate<E> predicate) {
     if (list instanceof RandomAccess) {
