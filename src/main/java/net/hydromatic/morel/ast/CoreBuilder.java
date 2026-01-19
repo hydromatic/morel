@@ -19,6 +19,7 @@
 package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.Maps.transformValues;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.allMatch;
@@ -39,7 +40,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
@@ -349,13 +349,15 @@ public enum CoreBuilder {
   }
 
   public Core.Pat recordPat(
-      TypeSystem typeSystem, Set<String> argNames, List<Core.Pat> args) {
-    final ImmutableSortedMap.Builder<String, Type> argNameTypes =
-        ImmutableSortedMap.orderedBy(ORDERING);
-    forEach(
-        argNames, args, (argName, arg) -> argNameTypes.put(argName, arg.type));
+      TypeSystem typeSystem, Map<String, Core.Pat> namePats) {
+    // Ensure sorted. If the names need to be permuted, apply the same
+    // permutation to patterns and types.
+    final ImmutableSortedMap<String, Core.Pat> sortedNamePats =
+        ImmutableSortedMap.copyOf(namePats, ORDERING);
+    final RecordLikeType recordType =
+        typeSystem.recordType(transformValues(sortedNamePats, Core.Pat::type));
     return recordPat(
-        (RecordType) typeSystem.recordType(argNameTypes.build()), args);
+        (RecordType) recordType, ImmutableList.copyOf(sortedNamePats.values()));
   }
 
   public Core.Tuple tuple(

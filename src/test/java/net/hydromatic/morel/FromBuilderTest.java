@@ -23,8 +23,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -452,9 +451,7 @@ public class FromBuilderTest {
     fromBuilder
         .scan(
             core.recordPat(
-                f.typeSystem,
-                ImmutableSet.of("i", "j"),
-                ImmutableList.of(f.aPat, f.bPat)),
+                f.typeSystem, ImmutableMap.of("i", f.aPat, "j", f.bPat)),
             innerFrom)
         .where(core.lessThan(f.typeSystem, f.iId, f.jId));
 

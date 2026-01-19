@@ -517,9 +517,7 @@ public class Shuttle {
 
   protected Core.Pat visit(Core.RecordPat recordPat) {
     return recordPat.copy(
-        typeSystem,
-        recordPat.type().argNameTypes.keySet(),
-        visitList(recordPat.args));
+        typeSystem, recordPat.type(), visitList(recordPat.args));
   }
 
   protected Core.Exp visit(Core.Fn fn) {

@@ -26,9 +26,11 @@ import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.type.TypeSystem.canAssign;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
 import static net.hydromatic.morel.util.Static.allMatch;
 import static net.hydromatic.morel.util.Static.last;
+import static net.hydromatic.morel.util.Static.transform;
 import static org.apache.calcite.util.Util.first;
 
 import com.google.common.collect.ImmutableList;
@@ -37,7 +39,6 @@ import com.google.common.collect.Ordering;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.ObjIntConsumer;
 import net.hydromatic.morel.compile.BuiltIn;
@@ -621,11 +622,25 @@ public class Core {
       visitor.visit(this);
     }
 
-    public Pat copy(
-        TypeSystem typeSystem, Set<String> argNames, List<Pat> args) {
-      return args.equals(this.args)
-          ? this
-          : core.recordPat(typeSystem, argNames, args);
+    public Pat copy(TypeSystem typeSystem, RecordType type, List<Pat> args) {
+      if (args.equals(this.args)) {
+        return this;
+      }
+      if (!transform(args, Core.Pat::type).equals(type.argTypes())) {
+        // The field types do not match. Create a new record type with the same
+        // field names, new field types.
+        final ImmutableSortedMap.Builder<String, Type> nameTypes =
+            ImmutableSortedMap.orderedBy(RecordType.ORDERING);
+        forEach(
+            type.argNames(),
+            args,
+            (name, pat) -> nameTypes.put(name, pat.type));
+
+        // Cast is safe. If the previous type was a record type (non-empty,
+        // field names are not consecutive integers) the new one will be also.
+        type = (RecordType) typeSystem.recordType(nameTypes.build());
+      }
+      return core.recordPat(type, args);
     }
   }
 
