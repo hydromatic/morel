@@ -772,12 +772,17 @@ Exp expression9() :
 {
   Exp e;
   Id id;
+  String fieldName;
 }
 {
   e = atom()
   (
-    <DOT> id = identifier() {
-      final Exp s = ast.recordSelector(pos(), id.name);
+    <DOT>
+    ( id = identifier() { fieldName = id.name; }
+    | <NON_NEGATIVE_INTEGER_LITERAL> { fieldName = token.image; }
+    )
+    {
+      final Exp s = ast.recordSelector(pos(), fieldName);
       e = ast.apply(s, e);
     }
   )*

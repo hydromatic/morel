@@ -496,6 +496,16 @@ public class MainTest {
         .assertParseThrowsParseException("Encountered \" \"(\" \"( \"\"");
   }
 
+  /** Tests that "tuple.1" is de-sugared to "#1 tuple". */
+  @Test
+  void testParseTupleDot() {
+    ml("#1 t").assertParseEquivalent("t.1");
+    // Chained numeric access requires parentheses because '1.2' is a real
+    ml("#2 (#1 t)").assertParseEquivalent("(t.1).2");
+    ml("#x (#1 t)").assertParseEquivalent("t.1.x");
+    ml("#3 (#x (#1 t))").assertParseEquivalent("(t.1).x.3");
+  }
+
   /**
    * Tests that the abbreviated record syntax "{a, e.b, #c e, d = e}" is
    * expanded to "{a = a, b = e.b, c = #c e, d = e}".

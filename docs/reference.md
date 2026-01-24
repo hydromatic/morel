@@ -80,7 +80,9 @@ In Morel but not Standard ML:
 * `typeof` type operator
 * <code><i>lab</i> =</code> is optional in <code><i>exprow</i></code>
 * <code><i>record</i>.<i>lab</i></code> as an alternative to
-  <code>#<i>lab</i> <i>record</i></code>
+  <code>#<i>lab</i> <i>record</i></code>;
+  for tuples, <code><i>tuple</i>.1</code>, <code><i>tuple</i>.2</code> etc.
+  as an alternative to <code>#1 <i>tuple</i></code>, <code>#2 <i>tuple</i></code>
 * identifiers and type names may be quoted
   (for example, <code>\`an identifier\`</code>)
 * `with` functional update for record values
