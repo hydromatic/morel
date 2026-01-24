@@ -114,6 +114,18 @@ public class Ord<E> implements Map.Entry<Integer, E> {
     }
   }
 
+  /** Returns whether all elements of a collection match a predicate. */
+  public static <E> boolean allMatchIndexed(
+      Iterable<? extends E> list, IntObjPredicate<E> p) {
+    int i = 0;
+    for (E e : list) {
+      if (!p.test(i++, e)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /**
    * Iterates over an array in reverse order.
    *
@@ -231,6 +243,29 @@ public class Ord<E> implements Map.Entry<Integer, E> {
   @FunctionalInterface
   public interface IntObjObjConsumer<K, V> {
     void accept(int i, K key, V value);
+  }
+
+  /**
+   * Represents a predicate that accepts an {@code int}-valued and an
+   * object-valued argument.
+   *
+   * <p>This is the {@code (int, reference)} specialization of {@link
+   * BiConsumer}, just as {@link ObjIntConsumer} is a specialization of {@link
+   * BiConsumer}.
+   *
+   * @param <T> Type of the second argument to the predicate
+   */
+  @FunctionalInterface
+  public interface IntObjPredicate<T> {
+    /**
+     * Evaluates this predicate on the given argument.
+     *
+     * @param i ordinal
+     * @param t the input argument
+     * @return {@code true} if the input arguments match the predicate,
+     *     otherwise {@code false}
+     */
+    boolean test(int i, T t);
   }
 }
 

@@ -21,6 +21,7 @@ package net.hydromatic.morel;
 import static java.lang.String.format;
 import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.eval.Codes.isNegative;
+import static net.hydromatic.morel.util.Ord.allMatchIndexed;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Static.allMatch;
 import static net.hydromatic.morel.util.Static.anyMatch;
@@ -143,6 +144,21 @@ public class UtilTest {
     forEachIndexed(
         abc, (e, i) -> buf.append(i).append("#").append(e).append(";"));
     assertThat(buf, hasToString("0#a;1#b;2#c;"));
+  }
+
+  @Test
+  void testOrdAllMatch() {
+    final Ord.IntObjPredicate<String> predicate =
+        (i, s) -> s.equals(Integer.toString(i));
+    final List<String> list0 = ImmutableList.of("0");
+    final List<String> list1 = ImmutableList.of("1");
+    final List<String> list012 = ImmutableList.of("0", "1", "2");
+    final List<String> list02 = ImmutableList.of("0", "2");
+    assertThat(allMatchIndexed(ImmutableList.of(), predicate), is(true));
+    assertThat(allMatchIndexed(list0, predicate), is(true));
+    assertThat(allMatchIndexed(list1, predicate), is(false));
+    assertThat(allMatchIndexed(list012, predicate), is(true));
+    assertThat(allMatchIndexed(list02, predicate), is(false));
   }
 
   @Test
