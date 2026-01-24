@@ -23,13 +23,16 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasToString;
 
 import com.google.common.collect.ImmutableSortedMap;
 import java.util.ArrayList;
+import java.util.Map;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.PairList;
@@ -177,6 +180,36 @@ public class TypeTest {
     } else {
       assertThat(name1 + " != " + name2, subsumes(t1, t2), is(false));
     }
+  }
+
+  @Test
+  void testRecordTypeMap() {
+    final Map<String, Integer> map1 = RecordType.map("a", 1);
+    assertThat(map1, hasToString("{a=1}"));
+
+    final Map<String, Integer> map2 = RecordType.map("b", 2, "a", 1);
+    assertThat(map2, hasToString("{a=1, b=2}"));
+
+    // Numeric field names sort in numeric order
+    final Map<String, Integer> mapNumeric =
+        RecordType.map(
+            "1", 1, "2", 2, "3", 3, "4", 4, "5", 5, "6", 6, "7", 7, "8", 8, "9",
+            9, "10", 10, "11", 11, "12", 12);
+    assertThat(
+        mapNumeric,
+        hasToString(
+            "{1=1, 2=2, 3=3, 4=4, 5=5, 6=6, 7=7, 8=8, 9=9, 10=10, 11=11, 12=12}"));
+
+    // Numeric field names sort before alpha field names. Field names that start
+    // with "0" are not regarded as numeric.
+    final Map<String, Integer> mapAlphaNumeric =
+        RecordType.map(
+            "0", 0, "1", 1, "2", 2, "a", 3, "A", 4, "aa", 5, "AAA", 6, "z", 7,
+            "00", 8, "002", 9);
+    assertThat(
+        mapAlphaNumeric,
+        hasToString(
+            "{1=1, 2=2, 0=0, 00=8, 002=9, A=4, AAA=6, a=3, aa=5, z=7}"));
   }
 }
 

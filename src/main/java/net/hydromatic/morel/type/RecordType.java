@@ -105,10 +105,11 @@ public class RecordType extends BaseType implements RecordLikeType {
   @SuppressWarnings("unchecked")
   public static <V> SortedMap<String, V> map(
       String name, V v0, Object... entries) {
+    checkArgument(entries.length % 2 == 0);
     final ImmutableSortedMap.Builder<String, V> builder =
         ImmutableSortedMap.orderedBy(ORDERING);
     builder.put(name, v0);
-    for (int i = 0; i < entries.length / 2; i += 2) {
+    for (int i = 0; i < entries.length; i += 2) {
       builder.put((String) entries[i], (V) entries[i + 1]);
     }
     return builder.build();
@@ -133,8 +134,8 @@ public class RecordType extends BaseType implements RecordLikeType {
   /**
    * Parses a string that contains an integer value; returns {@link
    * Integer#MAX_VALUE} if the string does not contain an integer, or if the
-   * value is less than zero, or if the value is greater than or equal to 1
-   * billion.
+   * value is less than or equal to zero, or if the string starts with '0', or
+   * if the value is greater than or equal to 1 billion.
    *
    * <p>This approach is much faster for our purposes than {@link
    * Integer#parseInt(String)}, which has to create and throw an exception if
@@ -151,6 +152,10 @@ public class RecordType extends BaseType implements RecordLikeType {
     int n = 0;
     for (int i = 0; i < length; i++) {
       char c = s.charAt(i);
+      if (i == 0 && c == '0') {
+        // We do not regard '0' or '01' or '007' as positive integer values.
+        return Integer.MAX_VALUE;
+      }
       if (c < '0' || c > '9') {
         return Integer.MAX_VALUE;
       }

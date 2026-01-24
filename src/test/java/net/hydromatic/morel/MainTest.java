@@ -504,6 +504,15 @@ public class MainTest {
     ml("#2 (#1 t)").assertParseEquivalent("(t.1).2");
     ml("#x (#1 t)").assertParseEquivalent("t.1.x");
     ml("#3 (#x (#1 t))").assertParseEquivalent("(t.1).x.3");
+    mlE("(1, 2).$0$")
+        .assertParseThrowsParseException(
+            "Encountered \" "
+                + "<NON_NEGATIVE_INTEGER_LITERAL> \"0 \"\" at line 1, column 8.\n"
+                + "Was expecting one of:\n"
+                + "    <NATURAL_LITERAL> ...\n"
+                + "    <IDENTIFIER> ...\n"
+                + "    <QUOTED_IDENTIFIER> ...\n"
+                + "    ");
   }
 
   /**

@@ -207,7 +207,7 @@ Literal numericLiteral() :
   final BigDecimal d;
 }
 {
-  (<NON_NEGATIVE_INTEGER_LITERAL> | <NEGATIVE_INTEGER_LITERAL>) {
+  (<NATURAL_LITERAL> | <NON_NEGATIVE_INTEGER_LITERAL> | <NEGATIVE_INTEGER_LITERAL>) {
     if (token.image.startsWith("~")) {
       d = new BigDecimal(token.image.substring(1)).negate();
     } else {
@@ -779,7 +779,7 @@ Exp expression9() :
   (
     <DOT>
     ( id = identifier() { fieldName = id.name; }
-    | <NON_NEGATIVE_INTEGER_LITERAL> { fieldName = token.image; }
+    | <NATURAL_LITERAL> { fieldName = token.image; }
     )
     {
       final Exp s = ast.recordSelector(pos(), fieldName);
@@ -1145,7 +1145,7 @@ Exp atom() :
   }
   [
     (
-      LOOKAHEAD((<NON_NEGATIVE_INTEGER_LITERAL> | <IDENTIFIER> | <QUOTED_IDENTIFIER>) <EQ>)
+      LOOKAHEAD((<NATURAL_LITERAL> | <IDENTIFIER> | <QUOTED_IDENTIFIER>) <EQ>)
       labeledRecordExp(nameExps)
     |
       exp = expression()
@@ -1175,8 +1175,8 @@ void labeledRecordExp(PairList<Id, Exp> nameExps) :
   final Ast.Exp exp;
 }
 {
-  LOOKAHEAD(<NON_NEGATIVE_INTEGER_LITERAL> <EQ>)
-  <NON_NEGATIVE_INTEGER_LITERAL> { id = ast.id(pos(), token.image); }
+  LOOKAHEAD(<NATURAL_LITERAL> <EQ>)
+  <NATURAL_LITERAL> { id = ast.id(pos(), token.image); }
   <EQ> exp = expression() { nameExps.add(id, exp); }
 |
   LOOKAHEAD(<IDENTIFIER> <EQ>)
@@ -1195,7 +1195,7 @@ void recordExp(PairList<Id, Exp> nameExps) :
   final Ast.Exp exp;
 }
 {
-  LOOKAHEAD((<NON_NEGATIVE_INTEGER_LITERAL> | <IDENTIFIER> | <QUOTED_IDENTIFIER>) <EQ>)
+  LOOKAHEAD((<NATURAL_LITERAL> | <IDENTIFIER> | <QUOTED_IDENTIFIER>) <EQ>)
   labeledRecordExp(nameExps)
 |
   exp = expression() {
@@ -1742,7 +1742,7 @@ void recordPat(Map<String, Pat> map) :
   final Ast.Pat pat;
 }
 {
-  ( <NON_NEGATIVE_INTEGER_LITERAL> { id = token.image; }
+  ( <NATURAL_LITERAL> { id = token.image; }
   | <IDENTIFIER> { id = token.image; }
   | <QUOTED_IDENTIFIER> { id = unquoteIdentifier(token.image); }
   )
@@ -1957,6 +1957,8 @@ AstNode statementEof() :
 
 <DEFAULT> TOKEN :
 {
+    < NATURAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+    |
     < NON_NEGATIVE_INTEGER_LITERAL: (["0"-"9"])+ >
     |
     < NEGATIVE_INTEGER_LITERAL: "~"(["0"-"9"])+ >
