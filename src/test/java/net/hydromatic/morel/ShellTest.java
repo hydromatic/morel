@@ -90,6 +90,47 @@ public class ShellTest {
         .assertOutput(containsString("morel-java version"));
   }
 
+  /** Tests {@link Shell} with -e (eval) option. */
+  @Test
+  void testEval() throws IOException {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final ByteArrayInputStream bais = new ByteArrayInputStream(new byte[0]);
+    final Shell.Config config =
+        Shell.parse(
+                Shell.Config.DEFAULT,
+                ImmutableList.of(
+                    "--system=false",
+                    "--terminal=dumb",
+                    "--banner=false",
+                    "-e",
+                    "from i in [1,2] yield i + 3"))
+            .withPauseFn(ShellTest::pauseForTenMilliseconds);
+    final Shell shell = Shell.create(config, bais, baos);
+    shell.run();
+    final String outString = baos.toString(UTF_8.name()).replace("\r\n", "\n");
+    assertThat(outString, is("val it = [4,5] : int list\n"));
+  }
+
+  /** Tests {@link Shell} with --eval= option. */
+  @Test
+  void testEvalEquals() throws IOException {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final ByteArrayInputStream bais = new ByteArrayInputStream(new byte[0]);
+    final Shell.Config config =
+        Shell.parse(
+                Shell.Config.DEFAULT,
+                ImmutableList.of(
+                    "--system=false",
+                    "--terminal=dumb",
+                    "--banner=false",
+                    "--eval=1 + 2"))
+            .withPauseFn(ShellTest::pauseForTenMilliseconds);
+    final Shell shell = Shell.create(config, bais, baos);
+    shell.run();
+    final String outString = baos.toString(UTF_8.name()).replace("\r\n", "\n");
+    assertThat(outString, is("val it = 3 : int\n"));
+  }
+
   /** Tests {@link Shell} with empty input and banner disabled. */
   @Test
   void testShellNoBanner() {

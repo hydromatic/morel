@@ -32,6 +32,7 @@ usage() {
   echo Options:
   echo "  --build             Compile the source code first."
   echo "  --echo              Send script output stdout as well as file."
+  echo "  -e, --eval <expr>   Evaluate expression and exit."
   echo "  -h, --help          Print this help, then exit."
   echo "  --idempotent        Treat all files (and stdin) as SMLI format."
   echo "                      Set implicitly if the first file has suffix '.smli'."
@@ -44,6 +45,7 @@ usage() {
 BUILD=
 HELP=
 FORMAT=
+EVAL_EXPR=
 while [ $# -gt 0 ]; do
   case "$1" in
     (--help|-h)
@@ -60,6 +62,14 @@ while [ $# -gt 0 ]; do
       ;;
     (--echo)
       ECHO=true
+      shift
+      ;;
+    (-e|--eval)
+      EVAL_EXPR="$2"
+      shift 2
+      ;;
+    (--eval=*)
+      EVAL_EXPR="${1#--eval=}"
       shift
       ;;
     (--idempotent)
@@ -135,10 +145,19 @@ case "$FORMAT" in
         "$FILES"
     ;;
   (*)
-    exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell \
-         --foreign='net.hydromatic.morel.BuiltInDataSet$Dictionary' \
-         --directory="$(pwd)" \
-         "$FILES"
+    if [ -n "$EVAL_EXPR" ]; then
+      exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell \
+           --foreign='net.hydromatic.morel.BuiltInDataSet$Dictionary' \
+           --directory="$(pwd)" \
+           --terminal=dumb \
+           --banner=false \
+           -e "$EVAL_EXPR"
+    else
+      exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Shell \
+           --foreign='net.hydromatic.morel.BuiltInDataSet$Dictionary' \
+           --directory="$(pwd)" \
+           "$FILES"
+    fi
     ;;
 esac
 
