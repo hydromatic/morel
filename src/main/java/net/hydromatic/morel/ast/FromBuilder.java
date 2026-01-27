@@ -42,6 +42,7 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.RefChecker;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.ListType;
+import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
@@ -338,6 +339,13 @@ public class FromBuilder {
   }
 
   public FromBuilder distinct() {
+    if (bindings.size() == 1 && bindings.get(0).id.type == PrimitiveType.UNIT) {
+      // It is not valid to translate "from [(), ()] where <predicate> distinct"
+      // to "from [(), ()] where <predicate> group {}" because "group {}" always
+      // returns one row. Instead, translate to "from [(), ()] where <predicate>
+      // take 1", which correctly returns zero rows when input is empty.
+      return take(core.intLiteral(BigDecimal.ONE));
+    }
     final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExpsB =
         ImmutableSortedMap.naturalOrder();
     bindings.forEach(b -> groupExpsB.put((Core.IdPat) b.id, core.id(b.id)));

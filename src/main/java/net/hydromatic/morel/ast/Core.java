@@ -19,6 +19,7 @@
 package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.lang.String.format;
 import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
@@ -2000,21 +2001,32 @@ public class Core {
     @Override
     protected AstWriter unparseStep(
         AstWriter w, int ordinal, int left, int right) {
-      w.append(" group");
-      Pair.forEachIndexed( // lint:skip
-          groupExps,
-          (i, id, exp) ->
-              w.append(i == 0 ? " " : ", ")
-                  .append(id, 0, 0)
-                  .append(" = ")
-                  .append(exp, 0, 0));
-      Pair.forEachIndexed( // lint:skip
-          aggregates,
-          (i, name, aggregate) ->
-              w.append(i == 0 ? " compute " : ", ")
-                  .append(name, 0, 0)
-                  .append(" = ")
-                  .append(aggregate, 0, 0));
+      if (env.atom) {
+        if (aggregates.isEmpty()) {
+          w.append(" group ")
+              .append(getOnlyElement(groupExps.values()), 0, right);
+        } else {
+          w.append(" group {} compute ")
+              .append(getOnlyElement(aggregates.values()), 0, right);
+        }
+      } else {
+        w.append(" group");
+        Pair.forEachIndexed( // lint:skip
+            groupExps,
+            (i, id, exp) ->
+                w.append(i == 0 ? " {" : ", ")
+                    .append(id, 0, 0)
+                    .append(" = ")
+                    .append(exp, 0, 0));
+        Pair.forEachIndexed( // lint:skip
+            aggregates,
+            (i, name, aggregate) ->
+                w.append(i == 0 ? "} compute {" : ", ")
+                    .append(name, 0, 0)
+                    .append(" = ")
+                    .append(aggregate, 0, 0));
+        w.append("}");
+      }
       return w;
     }
 

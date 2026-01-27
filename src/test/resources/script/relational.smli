@@ -770,6 +770,23 @@ from i in [1, 2, 3],
   distinct;
 > val it = [2,3,4,5,6] : int list
 
+(*) 'distinct' applied to zero-field relation is non-empty
+from u in [(), (), ()]
+  distinct;
+> val it = [()] : unit list
+
+(*) 'distinct' applied to empty zero-field relation is empty
+from u in [(), (), ()]
+  where false
+  distinct;
+> val it = [] : unit list
+
+(*) 'group {}' applied to empty zero-field relation is non-empty
+from i in [1, 2, 3]
+  where false
+  group {};
+> val it = [()] : unit list
+
 (*) singleton record 'yield' followed by 'yield'
 from i in [1, 2, 3],
     j in [1, 2, 3]
