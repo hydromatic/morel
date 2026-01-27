@@ -132,7 +132,8 @@ public class Shell {
     ConfigImpl c = (ConfigImpl) config;
     final ImmutableMap.Builder<String, ForeignValue> valueMapBuilder =
         ImmutableMap.builder();
-    for (String arg : argList) {
+    for (int i = 0; i < argList.size(); i++) {
+      String arg = argList.get(i);
       if (arg.equals("--banner=false")) {
         c = c.withBanner(false);
       }
@@ -163,6 +164,14 @@ public class Shell {
             Integer.parseInt(arg.substring("--maxUseDepth=".length()));
         c = c.withMaxUseDepth(maxUseDepth);
       }
+      if (arg.equals("-e") || arg.equals("--eval")) {
+        if (i + 1 < argList.size()) {
+          c = c.withEval(argList.get(++i));
+        }
+      }
+      if (arg.startsWith("--eval=")) {
+        c = c.withEval(arg.substring("--eval=".length()));
+      }
     }
 
     return c.withValueMap(valueMapBuilder.build());
@@ -170,7 +179,11 @@ public class Shell {
 
   static void usage(Consumer<String> outLines) {
     String[] usageLines = {
-      "Usage: java " + Shell.class.getName(),
+      "Usage: java " + Shell.class.getName() + " [options]",
+      "",
+      "Options:",
+      "  -e, --eval <expr>   Evaluate expression and exit",
+      "  --help              Print this help",
     };
     Arrays.asList(usageLines).forEach(outLines);
   }
@@ -182,6 +195,46 @@ public class Shell {
       "    quit   Quit shell",
     };
     Arrays.asList(helpLines).forEach(outLines);
+  }
+
+  /** Evaluates a single expression and prints the result. */
+  private void runEval() {
+    final TypeSystem typeSystem = new TypeSystem();
+    final Map<Prop, Object> map = new LinkedHashMap<>();
+    Prop.DIRECTORY.set(map, config.directory);
+    Prop.SCRIPT_DIRECTORY.set(map, config.directory);
+    final Session session = new Session(map, typeSystem);
+    Environment env = Environments.env(typeSystem, session, config.valueMap);
+
+    String code = config.eval;
+    // Ensure the code ends with a semicolon
+    if (!code.trim().endsWith(";")) {
+      code = code + ";";
+    }
+
+    try {
+      final MorelParserImpl smlParser =
+          new MorelParserImpl(new StringReader(code));
+      smlParser.zero("eval");
+      final AstNode statement = smlParser.statementSemicolonSafe();
+      final List<CompileException> warningList = new ArrayList<>();
+      final Tracer tracer = Tracers.empty();
+      final CompiledStatement compiled =
+          Compiles.prepareStatement(
+              typeSystem,
+              session,
+              env,
+              statement,
+              null,
+              warningList::add,
+              tracer);
+      final List<Binding> bindings = new ArrayList<>();
+      compiled.eval(session, env, terminal.writer()::println, bindings::add);
+      warningList.forEach(w -> terminal.writer().println(w.getMessage()));
+    } catch (MorelParseException | CompileException e) {
+      terminal.writer().println(e.getMessage());
+    }
+    terminal.writer().flush();
   }
 
   /**
@@ -213,6 +266,11 @@ public class Shell {
   public void run() {
     if (config.help) {
       usage(terminal.writer()::println);
+      return;
+    }
+
+    if (config.eval != null) {
+      runEval();
       return;
     }
 
@@ -310,18 +368,7 @@ public class Shell {
   /** Shell configuration. */
   @SuppressWarnings("unused")
   public interface Config {
-    @SuppressWarnings("UnstableApiUsage")
-    Config DEFAULT =
-        new ConfigImpl(
-            true,
-            false,
-            true,
-            false,
-            false,
-            ImmutableMap.of(),
-            new File(""),
-            Runnables.doNothing(),
-            -1);
+    Config DEFAULT = ConfigImpl.DEFAULT;
 
     Config withBanner(boolean banner);
 
@@ -340,6 +387,8 @@ public class Shell {
     Config withPauseFn(Runnable runnable);
 
     Config withMaxUseDepth(int maxUseDepth);
+
+    Config withEval(@Nullable String eval);
   }
 
   /** Implementation of {@link Config}. */
@@ -353,6 +402,20 @@ public class Shell {
     private final File directory;
     private final Runnable pauseFn;
     private final int maxUseDepth;
+    private final @Nullable String eval;
+
+    static final ConfigImpl DEFAULT =
+        new ConfigImpl(
+            true,
+            false,
+            true,
+            false,
+            false,
+            ImmutableMap.of(),
+            new File(""),
+            Runnables.doNothing(),
+            -1,
+            null);
 
     private ConfigImpl(
         boolean banner,
@@ -363,7 +426,8 @@ public class Shell {
         ImmutableMap<String, ForeignValue> valueMap,
         File directory,
         Runnable pauseFn,
-        int maxUseDepth) {
+        int maxUseDepth,
+        @Nullable String eval) {
       this.banner = banner;
       this.dumb = dumb;
       this.system = system;
@@ -373,6 +437,7 @@ public class Shell {
       this.directory = requireNonNull(directory, "directory");
       this.pauseFn = requireNonNull(pauseFn, "pauseFn");
       this.maxUseDepth = maxUseDepth;
+      this.eval = eval;
     }
 
     @Override
@@ -389,7 +454,8 @@ public class Shell {
           valueMap,
           directory,
           pauseFn,
-          maxUseDepth);
+          maxUseDepth,
+          eval);
     }
 
     @Override
@@ -406,7 +472,8 @@ public class Shell {
           valueMap,
           directory,
           pauseFn,
-          maxUseDepth);
+          maxUseDepth,
+          eval);
     }
 
     @Override
@@ -423,7 +490,8 @@ public class Shell {
           valueMap,
           directory,
           pauseFn,
-          maxUseDepth);
+          maxUseDepth,
+          eval);
     }
 
     @Override
@@ -440,7 +508,8 @@ public class Shell {
           valueMap,
           directory,
           pauseFn,
-          maxUseDepth);
+          maxUseDepth,
+          eval);
     }
 
     @Override
@@ -457,7 +526,8 @@ public class Shell {
           valueMap,
           directory,
           pauseFn,
-          maxUseDepth);
+          maxUseDepth,
+          eval);
     }
 
     @Override
@@ -476,7 +546,8 @@ public class Shell {
           immutableValueMap,
           directory,
           pauseFn,
-          maxUseDepth);
+          maxUseDepth,
+          eval);
     }
 
     @Override
@@ -493,7 +564,8 @@ public class Shell {
           valueMap,
           directory,
           pauseFn,
-          maxUseDepth);
+          maxUseDepth,
+          eval);
     }
 
     @Override
@@ -510,7 +582,8 @@ public class Shell {
           valueMap,
           directory,
           pauseFn,
-          maxUseDepth);
+          maxUseDepth,
+          eval);
     }
 
     @Override
@@ -527,7 +600,26 @@ public class Shell {
           valueMap,
           directory,
           pauseFn,
-          maxUseDepth);
+          maxUseDepth,
+          eval);
+    }
+
+    @Override
+    public ConfigImpl withEval(@Nullable String eval) {
+      if (java.util.Objects.equals(this.eval, eval)) {
+        return this;
+      }
+      return new ConfigImpl(
+          banner,
+          dumb,
+          system,
+          echo,
+          help,
+          valueMap,
+          directory,
+          pauseFn,
+          maxUseDepth,
+          eval);
     }
   }
 
