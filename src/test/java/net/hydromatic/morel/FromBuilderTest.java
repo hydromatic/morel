@@ -114,13 +114,16 @@ public class FromBuilderTest {
   @Test
   void testDistinct() {
     // from i in [1, 2] distinct
+    // The output type should remain 'int list', not '{i: int} list'.
     final Fixture f = new Fixture();
     final FromBuilder fromBuilder = f.fromBuilder();
     fromBuilder.scan(f.iPat, f.list12);
     fromBuilder.distinct();
 
     final Core.From from = fromBuilder.build();
-    assertThat(from, hasToString("from i in [1, 2] group i = i"));
+    // Verify the output type is 'int list', not '{i: int} list'
+    assertThat(from.type.elementType(), is(f.intType));
+    assertThat(from, hasToString("from i in [1, 2] group i"));
 
     // from i in [1, 2],
     //   j in [3, 4]
@@ -133,11 +136,42 @@ public class FromBuilderTest {
     fromBuilder.where(core.lessThan(f.typeSystem, f.iId, f.jId));
 
     final Core.From from2 = fromBuilder.build();
-    assertThat(
-        from2,
-        hasToString(
-            "from i in [1, 2] join j in [3, 4] "
-                + "group i = i, j = j where i < j"));
+    final String s2 =
+        "from i in [1, 2] join j in [3, 4] " //
+            + "group {i = i, j = j} where i < j";
+    assertThat(from2, hasToString(s2));
+    assertThat(from2.type.elementType(), hasToString("{i:int, j:int}"));
+
+    // from u in [(), (), ()] distinct
+    fromBuilder.clear();
+    fromBuilder.scan(
+        f.uPat,
+        core.list(
+            f.typeSystem,
+            core.unitLiteral(),
+            core.unitLiteral(),
+            core.unitLiteral()));
+    fromBuilder.distinct();
+    final Core.From from3 = fromBuilder.build();
+    final String s3 = "from u in [(), (), ()] take 1";
+    assertThat(from3, hasToString(s3));
+    assertThat(from3.type.elementType(), hasToString("unit"));
+
+    // from u in [(), (), ()] where false distinct
+    fromBuilder.clear();
+    fromBuilder.scan(
+        f.uPat,
+        core.list(
+            f.typeSystem,
+            core.unitLiteral(),
+            core.unitLiteral(),
+            core.unitLiteral()));
+    fromBuilder.where(core.boolLiteral(false));
+    fromBuilder.distinct();
+    final Core.From from4 = fromBuilder.build();
+    final String s4 = "from u in [(), (), ()] where false take 1";
+    assertThat(from4, hasToString(s4));
+    assertThat(from4.type.elementType(), hasToString("unit"));
   }
 
   @Test
