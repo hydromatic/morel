@@ -78,7 +78,7 @@ public class Script {
   /**
    * Creates a Script from just a path.
    *
-   * <p>This is the entry point for {@link ScriptTest}.)
+   * <p>This is the entry point for {@link ScriptTest}.
    */
   public static Script create(String path) throws IOException {
     return create(path, null, false);

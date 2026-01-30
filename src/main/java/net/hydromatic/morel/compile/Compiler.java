@@ -1165,7 +1165,7 @@ public class Compiler {
           if (binding.id == skipPat) {
             continue;
           }
-          final Pretty pretty = getPretty(session.map);
+          final Pretty pretty = getPretty(session.map, session.bagPrinter());
           final Core.NamedPat id =
               binding.overloadId != null ? binding.overloadId : binding.id;
           final Pretty.TypedVal typedVal = getTypedVal(binding, id);
@@ -1196,14 +1196,20 @@ public class Compiler {
       }
     }
 
-    private Pretty getPretty(Map<Prop, Object> map) {
+    private Pretty getPretty(Map<Prop, Object> map, BagPrinter bagPrinter) {
       int stringDepth = Prop.STRING_DEPTH.intValue(map);
       int lineWidth = Prop.LINE_WIDTH.intValue(map);
       Prop.Output output = Prop.OUTPUT.enumValue(map, Prop.Output.class);
       int printDepth = Prop.PRINT_DEPTH.intValue(map);
       int printLength = Prop.PRINT_LENGTH.intValue(map);
       return new Pretty(
-          typeSystem, lineWidth, output, printLength, printDepth, stringDepth);
+          typeSystem,
+          lineWidth,
+          output,
+          printLength,
+          printDepth,
+          stringDepth,
+          bagPrinter);
     }
   }
 }

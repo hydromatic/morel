@@ -39,9 +39,12 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Pos;
@@ -50,6 +53,7 @@ import net.hydromatic.morel.compile.CompiledStatement;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Environments;
+import net.hydromatic.morel.compile.OutputMatcher;
 import net.hydromatic.morel.compile.Tracer;
 import net.hydromatic.morel.compile.Tracers;
 import net.hydromatic.morel.eval.Codes;
@@ -61,10 +65,11 @@ import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MorelException;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Standard ML REPL. */
 public class Main {
-  private final BufferedReader in;
+  private final BufferingReader in;
   private final PrintWriter out;
   private final boolean echo;
   private final Map<String, ForeignValue> valueMap;
@@ -117,12 +122,19 @@ public class Main {
       Map<String, ForeignValue> valueMap,
       Map<Prop, Object> propMap,
       boolean idempotent) {
-    this.in = buffer(idempotent ? stripOutLines(in) : in);
     this.out = buffer(out);
     this.echo = argList.contains("--echo");
     this.valueMap = ImmutableMap.copyOf(valueMap);
     this.session = new Session(propMap, typeSystem);
     this.idempotent = idempotent;
+    if (idempotent) {
+      StripResult result = stripAndCaptureOutLines(in);
+      this.in =
+          new BufferingReader(
+              new StringReader(result.code), result.expectedOutputByOffset);
+    } else {
+      this.in = new BufferingReader(buffer(in));
+    }
   }
 
   private static void readerToString(Reader r, StringBuilder b) {
@@ -140,10 +152,12 @@ public class Main {
     }
   }
 
-  private static Reader stripOutLines(Reader in) {
+  /** Strips output lines and captures expected output by offset. */
+  private static StripResult stripAndCaptureOutLines(Reader in) {
     final StringBuilder b = new StringBuilder();
     readerToString(in, b);
     final String s = str(b);
+    final NavigableMap<Integer, String> expectedMap = new TreeMap<>();
 
     for (int i = 0, n = s.length(); ; ) {
       int j0 = i == 0 && (s.startsWith("> ") || s.startsWith(">\n")) ? 0 : -1;
@@ -158,11 +172,56 @@ public class Main {
         break;
       }
       if (j == j0 || j == j1 || j == j2) {
-        // Skip line beginning ">"
+        // Skip lines beginning ">"
         b.append(s, i, j);
-        int k = s.indexOf("\n", j + 1);
-        if (k < 0) {
-          k = n;
+        final int offsetInStripped = b.length();
+        // Collect all consecutive ">" lines as expected output
+        final StringBuilder expectedBuf = new StringBuilder();
+        int k = j;
+        while (k < n) {
+          // If k == j and j == j0, we're at position 0
+          // Otherwise we need a newline before ">"
+          if (k == j && j == j0) {
+            // At start of string: line begins with ">" at position 0
+          } else if (k < n && s.charAt(k) == '\n') {
+            k++; // skip the newline before ">"
+          } else {
+            break;
+          }
+          if (k >= n || s.charAt(k) != '>') {
+            break;
+          }
+          // We have a ">" line: find end of line
+          int lineEnd = s.indexOf("\n", k + 1);
+          if (lineEnd < 0) {
+            lineEnd = n;
+          }
+          String line = s.substring(k, lineEnd);
+          // Remove "> " prefix (or just ">")
+          if (line.startsWith("> ")) {
+            line = line.substring(2);
+          } else if (line.equals(">")) {
+            line = "";
+          } else {
+            break;
+          }
+          if (expectedBuf.length() > 0) {
+            expectedBuf.append('\n');
+          }
+          expectedBuf.append(line);
+          k = lineEnd;
+          // Check if next line also starts with ">"
+          if (k < n && s.charAt(k) == '\n') {
+            int peek = k + 1;
+            if (peek < n && s.charAt(peek) == '>') {
+              // Continue collecting
+              continue;
+            }
+          }
+          break;
+        }
+        if (expectedBuf.length() > 0) {
+          expectedMap.put(offsetInStripped, expectedBuf.toString());
         }
         i = k;
       } else if (j == j3) {
@@ -199,7 +258,12 @@ public class Main {
         i = k;
       }
     }
-    return new StringReader(b.toString());
+    return new StripResult(b.toString(), expectedMap);
+  }
+
+  /** Strips output lines without capturing expected output (for sub-shells). */
+  private static Reader stripOutLines(Reader in) {
+    return new StringReader(stripAndCaptureOutLines(in).code);
   }
 
   /**
@@ -288,15 +352,34 @@ public class Main {
     session.withShell(
         shell,
         outLines,
-        session1 ->
-            shell.run(session1, new BufferingReader(in), echoLines, outLines));
+        session1 -> shell.run(session1, in, echoLines, outLines));
     out.flush();
   }
 
-  /** Precedes every line in 'x' with a caret. */
-  private static String prefixLines(String s) {
-    String s2 = "> " + s.replace("\n", "\n> "); // lint:skip
-    return s2.replace("> \n", ">\n");
+  /**
+   * Precedes every line in 'x' with a caret. The caret is followed by a space
+   * except if the line is empty.
+   */
+  static String prefixLines(String s) {
+    final int capacity = s.length() + 16; // expansion room for 8 lines
+    final StringBuilder b = new StringBuilder(capacity);
+    b.append('>');
+    int lineStart = b.length();
+    for (int i = 0; i < s.length(); ++i) {
+      final char c = s.charAt(i);
+      if (c == '\n') {
+        b.append('\n');
+        b.append('>');
+        lineStart = b.length();
+      } else {
+        if (b.length() == lineStart) {
+          // Convert ">" to "> " now we know the line is not empty.
+          b.append(' ');
+        }
+        b.append(c);
+      }
+    }
+    return b.toString();
   }
 
   /**
@@ -334,14 +417,19 @@ public class Main {
         Consumer<String> echoLines,
         Consumer<String> outLines) {
       final MorelParserImpl parser = new MorelParserImpl(in2);
+      final LineConsumer lineConsumer =
+          main.idempotent
+              ? new BufferingLineConsumer(outLines)
+              : new DirectLineConsumer(outLines);
       final SubShell subShell =
-          new SubShell(main, echoLines, outLines, bindingMap, env0);
+          new SubShell(main, echoLines, lineConsumer, bindingMap, env0);
       for (; ; ) {
         try {
           Pos pos = parser.nextTokenPos();
           parser.zero("stdIn");
           final AstNode statement = parser.statementSemicolonOrEofSafe();
           String code = in2.flush();
+          final @Nullable String expectedOutput = in2.expectedOutput();
           if (main.idempotent) {
             if (code.startsWith("\n")) {
               code = code.substring(1);
@@ -368,7 +456,9 @@ public class Main {
           session.withShell(
               subShell,
               outLines,
-              session1 -> subShell.command(statement, outLines, typeOnly));
+              session1 ->
+                  subShell.command(
+                      statement, lineConsumer, typeOnly, expectedOutput));
         } catch (MorelParseException | CompileException e) {
           final String message = e.getMessage();
           if (message.startsWith("Encountered \"<EOF>\" ")) {
@@ -408,6 +498,71 @@ public class Main {
     public void clearEnv() {
       bindingMap.clear();
     }
+
+    /**
+     * Implementation of {@link LineConsumer} that appends a copy of each line
+     * received to an internal list.
+     */
+    private static class BufferingLineConsumer implements LineConsumer {
+      private final List<String> lines = new ArrayList<>();
+      private final Consumer<String> consumer;
+
+      BufferingLineConsumer(Consumer<String> consumer) {
+        this.consumer = consumer;
+      }
+
+      @Override
+      public Consumer<String> consumer() {
+        return consumer;
+      }
+
+      @Override
+      public void start() {
+        lines.clear();
+      }
+
+      @Override
+      public List<String> bufferedLines() {
+        return ImmutableList.copyOf(lines);
+      }
+
+      @Override
+      public void accept(String line) {
+        lines.add(line);
+      }
+    }
+
+    /**
+     * Implementation of {@link LineConsumer} that does not buffer, writing
+     * lines to a downstream consumer.
+     */
+    private static class DirectLineConsumer implements LineConsumer {
+      private final Consumer<String> outLines;
+
+      DirectLineConsumer(Consumer<String> outLines) {
+        this.outLines = outLines;
+      }
+
+      @Override
+      public Consumer<String> consumer() {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void start() {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public List<String> bufferedLines() {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void accept(String line) {
+        outLines.accept(line);
+      }
+    }
   }
 
   /**
@@ -429,6 +584,8 @@ public class Main {
 
     @Override
     public void use(String fileName, boolean silent, Pos pos) {
+      // In idempotent mode, route through commandOutLines so that
+      // emitOutput can compare actual vs expected output correctly.
       outLines.accept("[opening " + fileName + "]");
       File file = new File(fileName);
       if (!file.isAbsolute()) {
@@ -459,7 +616,14 @@ public class Main {
     }
 
     void command(
-        AstNode statement, Consumer<String> outLines, boolean typeOnly) {
+        AstNode statement,
+        LineConsumer outLines,
+        boolean typeOnly,
+        @Nullable String expectedOutput) {
+      if (expectedOutput != null) {
+        outLines.start();
+      }
+
       try {
         final Environment env = env0.bindAll(bindingMap.values());
         final Tracer tracer = Tracers.empty();
@@ -486,6 +650,24 @@ public class Main {
           compiled.eval(main.session, env, outLines, bindings::add);
         }
 
+        if (expectedOutput != null) {
+          // Expected output is provided. If the expected and actual output are
+          // same modulo whitespace, line endings and re-ordered elements of
+          // bags, emit the expected output.
+          final List<String> actualLines = outLines.bufferedLines();
+          final String actualOutput = String.join("\n", actualLines);
+          if (actualOutput.equals(expectedOutput)
+              || new OutputMatcher(main.typeSystem)
+                  .equivalent(
+                      compiled.getType(), actualOutput, expectedOutput)) {
+            // Expected and actual are equivalent; emit expected verbatim
+            Arrays.stream(expectedOutput.split("\n", -1))
+                .forEach(outLines.consumer());
+          } else {
+            actualLines.forEach(outLines.consumer());
+          }
+        }
+
         // Add the new bindings to the map. Overloaded bindings (INST) add to
         // previous bindings; ordinary bindings (VAL) replace previous bindings
         // of the same name.
@@ -505,7 +687,7 @@ public class Main {
       }
     }
 
-    private void appendToOutput(MorelException e, Consumer<String> outLines) {
+    private void appendToOutput(MorelException e, LineConsumer outLines) {
       final StringBuilder buf = new StringBuilder();
       main.session.handle(e, buf);
       outLines.accept(buf.toString());
@@ -518,15 +700,27 @@ public class Main {
    */
   static class BufferingReader extends FilterReader {
     final StringBuilder buf = new StringBuilder();
+    private final @Nullable NavigableMap<Integer, String> expectedMap;
+    private int offset = 0;
+    private int flushStart = 0;
 
     protected BufferingReader(Reader in) {
+      this(in, null);
+    }
+
+    BufferingReader(
+        Reader in, @Nullable NavigableMap<Integer, String> expectedMap) {
       super(in);
+      this.expectedMap = expectedMap;
     }
 
     @Override
     public int read() throws IOException {
       int c = super.read();
-      buf.append(c);
+      if (c >= 0) {
+        buf.append((char) c);
+        offset++;
+      }
       return c;
     }
 
@@ -535,13 +729,53 @@ public class Main {
       int n = super.read(cbuf, off, 1);
       if (n > 0) {
         buf.append(cbuf, off, n);
+        offset += n;
       }
       return n;
     }
 
     public String flush() {
+      flushStart = offset;
       return str(buf);
     }
+
+    /**
+     * Returns expected output for the most recently flushed chunk, or null.
+     * Uses position-based lookup to stay in sync.
+     */
+    public @Nullable String expectedOutput() {
+      if (expectedMap == null) {
+        return null;
+      }
+      Map.Entry<Integer, String> entry = expectedMap.floorEntry(flushStart);
+      return entry != null ? entry.getValue() : null;
+    }
+  }
+
+  /** Result of stripping output lines from an idempotent script. */
+  static class StripResult {
+    final String code;
+    final NavigableMap<Integer, String> expectedOutputByOffset;
+
+    StripResult(
+        String code, NavigableMap<Integer, String> expectedOutputByOffset) {
+      this.code = code;
+      this.expectedOutputByOffset = expectedOutputByOffset;
+    }
+  }
+
+  /** Can consume output lines. */
+  interface LineConsumer extends Consumer<String> {
+    /** Starts recording output lines. */
+    void start();
+
+    /**
+     * Returns a list of lines that were output since {@link #start} was called.
+     */
+    List<String> bufferedLines();
+
+    /** Returns the downstream consumer. */
+    Consumer<String> consumer();
   }
 }
 

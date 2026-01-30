@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.compile.BagPrinter;
 import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.NameGenerator;
@@ -74,6 +75,9 @@ public class Session {
    * in this session do not overlap.
    */
   public final NameGenerator nameGenerator = new NameGenerator();
+
+  /** Controls element ordering when printing bag values. */
+  private BagPrinter bagPrinter = BagPrinter.NATURAL;
 
   /** Implementation of "use". */
   private Shell shell = Shells.INSTANCE;
@@ -144,6 +148,16 @@ public class Session {
 
   public void clearEnv() {
     shell.clearEnv();
+  }
+
+  /** Returns the current BagPrinter. */
+  public BagPrinter bagPrinter() {
+    return bagPrinter;
+  }
+
+  /** Sets the BagPrinter. */
+  public void setBagPrinter(BagPrinter bagPrinter) {
+    this.bagPrinter = requireNonNull(bagPrinter);
   }
 
   /** Callback to implement "use" command. */

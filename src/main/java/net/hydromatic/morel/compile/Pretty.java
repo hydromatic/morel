@@ -58,6 +58,7 @@ class Pretty {
   private final int printDepth;
   private final int stringDepth;
   private final char newline;
+  private final BagPrinter bagPrinter;
 
   Pretty(
       TypeSystem typeSystem,
@@ -65,7 +66,8 @@ class Pretty {
       Prop.Output output,
       int printLength,
       int printDepth,
-      int stringDepth) {
+      int stringDepth,
+      BagPrinter bagPrinter) {
     this.typeSystem = requireNonNull(typeSystem);
     this.lineWidth = lineWidth;
     this.output = requireNonNull(output);
@@ -73,6 +75,7 @@ class Pretty {
     this.printDepth = printDepth;
     this.stringDepth = stringDepth;
     this.newline = '\n';
+    this.bagPrinter = requireNonNull(bagPrinter);
   }
 
   /** Prints a value to a buffer. */
@@ -424,7 +427,8 @@ class Pretty {
         return buf.append(RelList.RELATION);
       }
       final Type elementType = dataType.elementType();
-      return printList(buf, indent, lineEnd, depth, elementType, list);
+      final List<Object> ordered = bagPrinter.order(list, elementType);
+      return printList(buf, indent, lineEnd, depth, elementType, ordered);
     }
     final String tyConName = (String) list.get(0);
     buf.append(tyConName);

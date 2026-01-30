@@ -817,6 +817,24 @@ public class UtilTest {
     assertThat(Static.joinQuoted(list, ',', '\''), is(s));
   }
 
+  @Test
+  void testPrefixLines() {
+    assertThat(Main.prefixLines(""), is(">"));
+    assertThat(Main.prefixLines("abc"), is("> abc"));
+    final String abcNewlineCaret =
+        "> abc\n" //
+            + ">";
+    final String abcNewline = "abc\n";
+    assertThat(Main.prefixLines(abcNewline), is(abcNewlineCaret));
+    final String abcNewlineDef =
+        "abc\n" //
+            + "def";
+    final String abcNewlineDefCaret =
+        "> abc\n" //
+            + "> def";
+    assertThat(Main.prefixLines(abcNewlineDef), is(abcNewlineDefCaret));
+  }
+
   /**
    * Helps validate a comparator.
    *

@@ -885,4 +885,121 @@ f ~1;
 > uncaught exception Subscript [subscript out of bounds]
 >   raised at: stdIn:1.11-1.43
 
+(* Bag printing with various data types --------------------------- *)
+(*) Tests that the BagPrinter reordering handles various element
+(*) types, whitespace, and line breaks in expected output.
+
+(*) bag of ints, including a negative value;
+(*) elements reordered vs natural iteration order
+bag [3, 1, ~2];
+> val it = [~2,1,3] : int bag
+
+(*) same query, different order, that's ok
+bag [3, 1, ~2];
+> val it = [3,~2,1] : int bag
+
+(*) bag of strings;
+(*) elements reordered and output split across lines with extra whitespace
+bag ["cherry", "apple", "banana"];
+> val it = ["banana","apple",
+>    "cherry"] : string bag
+
+(*) bag of strings with commas and brackets inside;
+(*) elements reordered
+bag ["a,b", "[c]", "(d,e)"];
+> val it = ["(d,e)","a,b","[c]"] : string bag
+
+(*) bag of booleans; elements reordered
+bag [true, false, true];
+> val it = [false,true,true] : bool bag
+
+(*) bag of chars; elements reordered
+bag [#"x", #"y", #"z"];
+> val it = [#"z",#"x",#"y"] : char bag
+
+(*) bag of reals; elements reordered
+bag [1.5, 2.5, 3.5];
+> val it = [3.5,1.5,2.5] : real bag
+
+(*) bag of tuples; elements reordered
+bag [(1, "a"), (2, "b"), (3, "c")];
+> val it = [(3,"c"),(1,"a"),(2,"b")] : (int * string) bag
+
+(*) bag of records, elements reordered but fields still alphabetical
+bag [{name="bob", age=30}, {name="alice", age=25}];
+> val it = [{age=25,name="alice"},
+>           {age=30,name="bob"}]
+>   : {age:int, name:string} bag
+
+(*) bag of nested lists; elements reordered
+bag [[1, 2], [3, 4, 5], [6]];
+> val it = [[6],[1,2],[3,4,5]] : int list bag
+
+(*) bag of unit
+bag [(), ()];
+> val it = [(),()] : unit bag
+
+(*) single-element bag
+bag [42];
+> val it = [42] : int bag
+
+(*) empty bag
+bag ([] : string list);
+> val it = [] : string bag
+
+(*) bag of bags (elements reordered, and with whitespace)
+bag [bag [1, 2], bag [3]];
+> val it = [[3],[1,          2]] : int bag bag
+
+(*) bag of int list options; elements reordered, extra whitespace
+bag [SOME [1,2], NONE, SOME [2,0]];
+> val it = [NONE,SOME [1,2],  SOME [2,0]] : int list option bag
+
+(*) record containing a bag field; bag elements reordered
+val r = {name = "test", values = bag [10, 20, 30]};
+> val r = {name="test",values=[30,10,20]} : {name:string, values:int bag}
+
+(*) list of bags
+[bag [1, 2], bag [3, 4]];
+> val it = [[1,2],[3,4]] : int bag list
+
+(*) same, with whitespace
+[bag [1, 2], bag [3, 4]];
+> val it = [[1,  2],
+> [3,4]] : int bag list
+
+(*) tuple containing a bag; bag elements reordered
+(bag [1, 2], "hello");
+> val it = ([2,1],"hello") : int bag * string
+
+(*) option containing a bag; bag elements reordered
+SOME (bag [5, 10]);
+> val it = SOME ([10,5]) : int bag option
+
+(*) bag resulting from group-by (a common source of ordering issues);
+(*) elements reordered
+from i in bag [1, 1, 2, 3, 2, 1] group i compute count over ();
+> val it = [{count=1,i=3},{count=3,i=1},{count=2,i=2}] : {count:int, i:int} bag
+
+(*) long record values in a bag that wrap across lines;
+(*) extra whitespace in expected output
+bag [{a="aaaaaaaaaa", b="bbbbbbbbbb", c="cccccccccc", d="dddddddddd"}];
+> val it =
+>   [{a="aaaaaaaaaa",b="bbbbbbbbbb",c="cccccccccc",d="dddddddddd"}]
+>   : {a:string, b:string, c:string, d:string} bag
+
+(*) bag with wrapped type line; extra whitespace
+bag [{name="alice", age=25, city="wonderland"}];
+> val it =
+>   [{age=25,city="wonderland",name="alice"}]
+>   : {age:int, city:string, name:string} bag
+
+(*) group-by with aggregate producing nested bag in output;
+(*) elements reordered, output split across lines differently
+from r in bag [{x=1, y="a"}, {x=1, y="b"}, {x=2, y="c"}]
+  group r.x compute {ys = (fn v => v) over r.y};
+> val it =
+>   [{x=2,ys=["c"]},{x=1,ys=["a","b"]}]
+>   : {x:int, ys:string bag} bag
+
 (*) End simple.smli
