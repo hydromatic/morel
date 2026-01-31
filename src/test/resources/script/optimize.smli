@@ -21,7 +21,7 @@
 Sys.set ("stringDepth", ~1);
 > val it = () : unit
 
-(*) === Variable inlining ===
+(* --- Variable inlining ------------------------------------------ *)
 
 (*) A variable used once is inlined.
 let val x = 1 in x + 2 end;
@@ -49,7 +49,7 @@ let val x = 1 val y = 2 in y end;
 Sys.plan ();
 > val it = "constant(2)" : string
 
-(*) === Function inlining ===
+(* --- Function inlining ------------------------------------------ *)
 
 (*) A function applied once is inlined.
 let val f = fn x => x + 1 in f 5 end;
@@ -57,7 +57,7 @@ let val f = fn x => x + 1 in f 5 end;
 Sys.plan ();
 > val it = "apply2(fnValue +, constant(5), constant(1))" : string
 
-(*) === Singleton case inlining ===
+(* --- Singleton case inlining ------------------------------------ *)
 
 (*) A singleton case with id pattern is inlined.
 let val f = fn x => case x of y => y + 2 in f 3 end;
@@ -65,7 +65,7 @@ let val f = fn x => case x of y => y + 2 in f 3 end;
 Sys.plan ();
 > val it = "apply2(fnValue +, constant(3), constant(2))" : string
 
-(*) === Constant case inlining (issue #330) ===
+(* --- Constant case inlining (issue #330) ------------------------ *)
 
 (*) Case on a constant matching a literal pattern.
 let val x = 2 in case x of 1 => "one" | 2 => "two" | _ => "large" end;

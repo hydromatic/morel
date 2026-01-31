@@ -17,7 +17,7 @@
  * License.
  *)
 
-(*** Types ***)
+(* Types ---------------------------------------------------------- *)
 
 val n : int = 66;
 val n = 66 : int
@@ -83,7 +83,7 @@ pair = pair2;
 val it = true : bool
 
 
-(*** Functions ***)
+(* Functions ------------------------------------------------------ *)
 
 fun factorial n =
   if n < 1
@@ -168,7 +168,8 @@ stdIn:1.19-1.28 Error: unbound variable or constructor: gray_code
   raised at: stdIn:1.19-1.28
 
 
-(*** Type declarations ***)
+(* Type declarations ---------------------------------------------- *)
+
 (* TODO
 type int_pair = int * int;
 fun swap_int_pair ((i,j) : int_pair) = (j,i);

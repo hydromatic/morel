@@ -28,7 +28,8 @@ Sys.set ("stringDepth", ~1);
 fun print x = ignore x;
 > val print = fn : 'a -> unit
 
-(* Structures -------------------------------------------------- *)
+(* Structures ----------------------------------------------------- *)
+
 Char;
 > val it =
 >   {<=fn,<==fn,>=fn,>==fn,chr=fn,compare=fn,contains=fn,fromCString=fn,
@@ -188,7 +189,8 @@ Sys;
 >      show:string -> string option,
 >      showAll:unit -> (string * string option) list, unset:string -> unit}
 
-(* Operators --------------------------------------------------- *)
+(* Operators ------------------------------------------------------ *)
+
 2 + 3;
 > val it = 5 : int
 2 + 3 * 4;
@@ -215,7 +217,7 @@ Sys.plan ();
 val nan = Real.posInf / Real.posInf;
 > val nan = nan : real
 
-(* Datatypes --------------------------------------------------- *)
+(* Datatypes ------------------------------------------------------ *)
 
 (*
  * The "option" datatype, declared as follows:
@@ -249,11 +251,12 @@ DESC 1;
 DESC (DESC "a");
 > val it = DESC (DESC "a") : string descending descending
 
-(* Top-level environment --------------------------------------- *)
-(* A few functions and operators belong to signatures but can be
-   used unqualified. For example, "hd" is shorthand for "List.hd".
-   The following are all of the top-level functions and operators
-   defined by Standard ML. *)
+(* Top-level environment ---------------------------------------------
+ * A few functions and operators belong to signatures but can be used
+ * unqualified. For example, "hd" is shorthand for "List.hd".  The
+ * following are all of the top-level functions and operators defined
+ * by Standard ML.
+ *)
 
 (* "val ! : 'a ref -> 'a" maps to "General.!" *)
 (*) TODO !;
@@ -383,7 +386,7 @@ valOf;
 vector;
 > val it = fn : 'a list -> 'a vector
 
-(* Bag --------------------------------------------------------- *)
+(* Bag ------------------------------------------------------------ *)
 
 (*) val nil : 'a bag
 (* TODO
@@ -676,7 +679,8 @@ Sys.plan ();
 >   "apply2(fnValue Bag.tabulate, constant(-1), let1(matchCode match(fact, match(n, apply(fnCode match(true, constant(1), _, apply2(fnValue *, get(name n), apply(fnCode link, argCode apply2(fnValue -, get(name n), constant(1))))), argCode apply2(fnValue =, get(name n), constant(0))))), resultCode get(name fact)))"
 >   : string
 
-(* Bool -------------------------------------------------------- *)
+(* Bool ----------------------------------------------------------- *)
+
 Bool;
 > val it = {fromString=fn,not=fn,toString=fn}
 >   : {fromString:string -> bool option, not:bool -> bool,
@@ -696,7 +700,8 @@ Bool.not true;
 Bool.not false;
 > val it = true : bool
 
-(* Either ------------------------------------------------------ *)
+(* Either --------------------------------------------------------- *)
+
 Either;
 > val it =
 >   {app=fn,appLeft=fn,appRight=fn,asLeft=fn,asRight=fn,fold=fn,isLeft=fn,
@@ -795,7 +800,7 @@ Either.partition;
 Either.partition [yes, ten];
 > val it = ([true],[10]) : bool list * int list
 
-(* Fn ---------------------------------------------------------- *)
+(* Fn ------------------------------------------------------------- *)
 Fn;
 > val it =
 >   {apply=fn,const=fn,curry=fn,equal=fn,flip=fn,id=fn,notEqual=fn,o=fn,
@@ -880,7 +885,8 @@ Fn.notEqual 3 5;
 Fn.notEqual 3 3;
 > val it = false : bool
 
-(* General ----------------------------------------------------- *)
+(* General -------------------------------------------------------- *)
+
 General;
 > val it = {before=fn,exnMessage=fn,exnName=fn,ignore=fn,o=fn}
 >   : {before:'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string,
@@ -954,7 +960,7 @@ Sys.plan ();
 >   "apply(fnValue General.ignore, argCode apply2(fnValue +, constant(1), constant(2)))"
 >   : string
 
-(* Interact ---------------------------------------------------- *)
+(* Interact ------------------------------------------------------- *)
 
 (*) use - load source from a file
 Interact.use;
@@ -962,7 +968,7 @@ Interact.use;
 use;
 > val it = fn : string -> unit
 
-(* String ------------------------------------------------------ *)
+(* String --------------------------------------------------------- *)
 
 (*) val maxSize : int
 String.maxSize;
@@ -1307,7 +1313,7 @@ String.`>=`;
 (*) val toCString : string -> String.string
 (*) val fromCString : String.string -> string option
 
-(* List -------------------------------------------------------- *)
+(* List ----------------------------------------------------------- *)
 
 (*) val nil : 'a list
 List.nil;
@@ -1698,7 +1704,7 @@ Sys.plan ();
 >   "apply2(fnValue List.collate, match(v, apply(fnCode match((x, y), apply(fnCode match(true, constant([LESS]), _, apply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name x), get(name y)))), argCode apply2(fnValue <, get(name x), get(name y)))), argCode get(name v))), tuple(tuple, tuple))"
 >   : string
 
-(* ListPair ---------------------------------------------------- *)
+(* ListPair ------------------------------------------------------- *)
 
 (* The ListPair structure provides operations on pairs of lists. The
    operations fall into two categories. Those in the first category,
@@ -1927,17 +1933,19 @@ ListPair.zipEq ([], ["a", "b"]);
 > uncaught exception UnequalLengths
 >   raised at: stdIn:1.1-1.32
 
-(* Math -------------------------------------------------------- *)
-(* The signature MATH specifies basic mathematical constants, the
-   square root function, and trigonometric, hyperbolic, exponential,
-   and logarithmic functions based on a real type. The functions
-   defined here have roughly the same semantics as their counterparts
-   in ISO C's math.h.
-
-   In the functions below, unless specified otherwise, if any argument
-   is a NaN, the return value is a NaN. In a list of rules specifying
-   the behavior of a function in special cases, the first matching
-   rule defines the semantics. *)
+(* Math --------------------------------------------------------------
+ *
+ * The signature MATH specifies basic mathematical constants, the
+ * square root function, and trigonometric, hyperbolic, exponential,
+ * and logarithmic functions based on a real type. The functions
+ * defined here have roughly the same semantics as their counterparts
+ * in ISO C's math.h.
+ *
+ * In the functions below, unless specified otherwise, if any argument
+ * is a NaN, the return value is a NaN. In a list of rules specifying
+ * the behavior of a function in special cases, the first matching
+ * rule defines the semantics.
+ *)
 
 (* "acos x" returns the arc cosine of x. acos is the inverse of cos.
    Its result is guaranteed to be in the closed interval [0, pi]. If
@@ -2277,7 +2285,8 @@ List.map (fn x => (x, Math.tanh x))
 >   [(0.0,0.0),(~0.0,~0.0),(1.0,0.7615942),(inf,1.0),(~inf,~1.0),(nan,nan)]
 >   : (real * real) list
 
-(* Option ------------------------------------------------------ *)
+(* Option --------------------------------------------------------- *)
+
 (*) val getOpt : 'a option * 'a -> 'a
 Option.getOpt (SOME 1, 2);
 > val it = 1 : int
@@ -2414,7 +2423,7 @@ Sys.plan ();
 >   "apply(fnCode apply2(fnValue Option.composePartial, match(i, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode get(name i))), argCode apply2(fnValue =, get(name i), constant(0)))), match(s, apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode apply(fnValue String.size, argCode get(name s)))), argCode apply2(fnValue =, get(name s), constant())))), argCode constant())"
 >   : string
 
-(* Char -------------------------------------------------------- *)
+(* Char ----------------------------------------------------------- *)
 
 (* Utility function used to test the functions below. *)
 fun testChar (p: char -> bool) =
@@ -2859,7 +2868,8 @@ Char.compare (#"D", #"a");
 Char.compare (#"a", #"D");
 > val it = GREATER : order
 
-(* Int --------------------------------------------------------- *)
+(* Int ------------------------------------------------------------ *)
+
 Int.abs;
 > val it = fn : int -> int
 Int.abs 5;
@@ -2969,7 +2979,7 @@ Int.toString;
 Int.toString ~345;
 > val it = "~345" : string
 
-(* Real -------------------------------------------------------- *)
+(* Real ----------------------------------------------------------- *)
 
 (*) val radix : int
 Real.radix;
@@ -4018,7 +4028,7 @@ List.map (fn x => (x, Real.toString x))
   see the technical report by Gay[CITE]. *)
 (*) TODO
 
-(* Relational -------------------------------------------------- *)
+(* Relational ----------------------------------------------------- *)
 
 Relational.count (bag [1, 2, 3]);
 > val it = 3 : int
@@ -4364,7 +4374,7 @@ List.collate Relational.compare ([NONE, SOME 1], [NONE, SOME 1, NONE]);
 Vector.collate Relational.compare (Vector.fromList [1,2,3], Vector.fromList [1,2,4]);
 > val it = LESS : order
 
-(* Sys --------------------------------------------------------- *)
+(* Sys ------------------------------------------------------------ *)
 
 (*) val env : unit -> string list
 Sys.env;
@@ -4710,7 +4720,7 @@ Sys.unset "optionalInt";
 Sys.plan ();
 > val it = "apply(fnValue Sys.unset, argCode constant(optionalInt))" : string
 
-(* Vector ------------------------------------------------------ *)
+(* Vector --------------------------------------------------------- *)
 
 (*) Vector.fromList : 'a list -> 'a vector
 Vector.fromList;

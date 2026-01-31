@@ -19,7 +19,8 @@
 Sys.set ("lineWidth", 78);
 > val it = () : unit
 
-(* Literals ---------------------------------------------------- *)
+(* Literals ------------------------------------------------------- *)
+
 1;
 > val it = 1 : int
 ~2;
@@ -167,7 +168,8 @@ String.size "\^@";
 String.implode [#"\t", #"a", #"\128", #"b"];
 > val it = "\ta\128b" : string
 
-(* Identifiers ------------------------------------------------- *)
+(* Identifiers ---------------------------------------------------- *)
+
 val x = 1
 and x' = 2
 and x'' = 3
@@ -228,7 +230,8 @@ fun compareInt (x: int, y: int) : `order` =
   else EQUAL;
 > val compareInt = fn : int * int -> order
 
-(* Comments ---------------------------------------------------- *)
+(* Comments ------------------------------------------------------- *)
+
 1 + (* 2 + *) 3;
 > val it = 4 : int
 
@@ -360,7 +363,8 @@ End of block comment. *)
 "correct";
 > val it = "correct" : string
 
-(* Simple commands --------------------------------------------- *)
+(* Simple commands ------------------------------------------------ *)
+
 val x = 1;
 > val x = 1 : int
 x + 2;
@@ -670,9 +674,11 @@ end;
 Sys.unset "matchCoverageEnabled";
 > val it = () : unit
 
-(* Patterns ---------------------------------------------------- *)
+(* Patterns ------------------------------------------------------- *)
 
-(*) The following example is from "Introduction to Standard ML" by Robert Harper.
+(* The following example is from "Introduction to Standard ML" by
+ * Robert Harper. *)
+
 val x = (( "foo", true ), 17 );
 > val x = (("foo",true),17) : string * bool * int
 val ( l as (ll,lr), r ) = x;
@@ -725,7 +731,7 @@ val x as y as z = 3;
 > val y = 3 : int
 > val z = 3 : int
 
-(* Field access ------------------------------------------------ *)
+(* Field access --------------------------------------------------- *)
 
 (*) Record field access using accessor
 val r = {a = 1, b = "two"};
@@ -851,8 +857,10 @@ tup .1;
 > stdIn:1.11 Error: no field '4' in type 'int * int * int'
 >   raised at: stdIn:1.11
 
-(* Errors ------------------------------------------------------ *)
-(* The first is printed as '1.9', the second as '1.9-1.11', and the third as '1.9-1.12'. *)
+(* Errors --------------------------------------------------------- *)
+
+(* The first is printed as '1.9', the second as '1.9-1.11', and the
+ * third as '1.9-1.12'. *)
 "a string literal to reset the line counter after the comment";
 > val it = "a string literal to reset the line counter after the comment"
 >   : string

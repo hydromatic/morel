@@ -91,7 +91,7 @@ ack 2 3;
 ack 3 3;
 > val it = 61 : int
 
-(* Various types, exhaustive & non-exhaustive ------------------ *)
+(* Various types, exhaustive & non-exhaustive --------------------- *)
 (*) From https://smlhelp.github.io/book/docs/start/syntax/
 
 (*) unit, exhaustive
@@ -161,7 +161,7 @@ ack 3 3;
   | (n,_) => false);
 > val it = fn : int * bool -> bool
 
-(* Exhaustive function of option list  ------------------------- *)
+(* Exhaustive function of option list  ---------------------------- *)
 (*) Non-exhaustive function
 fun f [(SOME i)] = i
   | f [] = 0;

@@ -16,13 +16,13 @@
  * language governing permissions and limitations under the
  * License.
  *
- * Tests for queries with unbounded variables.
- * (Originally, such queries used a 'suchthat' keyword, but that keyword
- * has since been removed.)
+ * Tests for queries with unbounded variables.  (Originally, such
+ * queries used a 'suchthat' keyword, but that keyword has since been
+ * removed.)
  *)
 
-(* ------------------------------------------------------ *)
-(* Convert predicates into ranges. *)
+(* Convert predicates into ranges --------------------------------- *)
+
 from i where i > 0 andalso i < 10;
 > val it = [1,2,3,4,5,6,7,8,9] : int bag
 from i where i > 0 andalso i < 4 yield {j = i + 1};
@@ -65,8 +65,7 @@ where j > 4 andalso j < 7
 >    {i=2,j=5,k=9,m=14},{i=2,j=5,k=10,m=13},{i=2,j=5,k=10,m=14},...]
 >   : {i:int, j:int, k:int, m:int} bag
 
-(* ------------------------------------------------------ *)
-(* Unbounded variables with `take` and other clauses. *)
+(* Unbounded variables with `take` and other clauses -------------- *)
 
 (* Odd and even numbers that are not a multiple of 6. *)
 from i
@@ -335,9 +334,10 @@ from i where isBetween (i, 5, 8);
 > val it = [5, 6, 7, 8] : int list
 *)
 
-(* ------------------------------------------------------ *)
-(* Convenience function that converts a predicate to a
- * relation. *)
+(* -------------------------------------------------------------------
+ * Convenience function that converts a predicate to a relation.
+ *)
+
 (*
 fun enumerate predicate =
   from r where predicate r;
@@ -350,8 +350,8 @@ val enumerate = fn : ('a -> bool) -> 'a list
 enumerate isEmp;
 *)
 
-(* ------------------------------------------------------ *)
-(* The following example from Souffle,
+(* -------------------------------------------------------------------
+ * The following example from Souffle,
  * https://souffle-lang.github.io/simple.
  *
  * Say we have a Datalog file example.dl, whose contents are as shown:
@@ -447,8 +447,8 @@ from x, y
   group x, y;
 *)
 
-(* ------------------------------------------------------ *)
-(* Joe's bar.
+(* Joe's bar --------------------------------------------------------
+ *
  * See http://infolab.stanford.edu/~ullman/fcdb/aut07/slides/dlog.pdf.
  *)
 
@@ -689,8 +689,8 @@ enumerate cousin2;
 > Error: non-stratified
 *)
 
-(* ------------------------------------------------------ *)
-(* Coloring Australia using three colors.
+(* -------------------------------------------------------------------
+ * Coloring Australia using three colors.
  * (From "Basic Modelling in MiniZinc".)
  *
  * Australia has six federated states (New South Wales, Queensland,
@@ -735,17 +735,18 @@ where q = RED
 >    {nsw=RED,nt=GREEN,q=RED,sa=BLUE,t=GREEN,v=GREEN,wa=RED}]
 >   : {nsw:Color, nt:Color, q:Color, sa:Color, t:Color, v:Color, wa:Color} bag
 
-(* ------------------------------------------------------ *)
-(* Arithmetic optimization.
+(* Arithmetic optimization -------------------------------------------
+ *
  * (From "Basic Modelling in MiniZinc".)
  *
- * A banana cake which takes 250g of self-raising flour, 2 mashed bananas,
- * 75g sugar and 100g of butter, and a chocolate cake which takes 200g of
- * self-raising flour, 75g of cocoa, 150g sugar and 150g of butter. We can sell
- * a chocolate cake for $4.50 and a banana cake for $4.00. And we have 4kg
- * self-raising flour, 6 bananas, 2kg of sugar, 500g of butter and 500g of
- * cocoa. The question is how many of each sort of cake should we bake for the
- * fete to maximize the profit.
+ * A banana cake which takes 250g of self-raising flour, 2 mashed
+ * bananas, 75g sugar and 100g of butter, and a chocolate cake which
+ * takes 200g of self-raising flour, 75g of cocoa, 150g sugar and 150g
+ * of butter. We can sell a chocolate cake for $4.50 and a banana cake
+ * for $4.00. And we have 4kg self-raising flour, 6 bananas, 2kg of
+ * sugar, 500g of butter and 500g of cocoa. The question is how many
+ * of each sort of cake should we bake for the fete to maximize the
+ * profit.
  *)
 from b, c
 where b >= 0 andalso b <= 100      (*) number of banana cakes

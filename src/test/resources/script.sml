@@ -17,7 +17,7 @@
  * License.
  *)
 
-(*** Types ***)
+(* Types ---------------------------------------------------------- *)
 
 val n : int = 66;
 val x : real = ~23.0;
@@ -46,7 +46,7 @@ r = r2;
 val pair2 = { 1 = "a", 2 = "b" };
 pair = pair2;
 
-(*** Functions ***)
+(* Functions ------------------------------------------------------ *)
 
 fun factorial n =
   if n < 1
@@ -97,7 +97,8 @@ fun gray_code n =
        end;
 val gray_code_3 = gray_code 3;
 
-(*** Type declarations ***)
+(* Type declarations ---------------------------------------------- *)
+
 (* TODO
 type int_pair = int * int;
 fun swap_int_pair ((i,j) : int_pair) = (j,i);

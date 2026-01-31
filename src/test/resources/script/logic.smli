@@ -27,7 +27,7 @@ val emps = scott.emps;
 val depts = scott.depts;
 > val depts = <relation> : {deptno:int, dname:string, loc:string} bag
 
-(* == Simple examples ================================== *)
+(* --- Simple examples -------------------------------------------- *)
 
 (* Q1. Do any employees have a salary under 900? *)
 exists e in emps
@@ -128,7 +128,7 @@ from d in depts
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
 >   : {deptno:int, dname:string, loc:string} bag
 
-(* == Implies ========================================== *)
+(* --- Implies ---------------------------------------------------- *)
 false implies false;
 > val it = true : bool
 false implies true;
@@ -167,7 +167,7 @@ from d in scott.depts
 >    {deptno=40,dname="OPERATIONS",loc="BOSTON"}]
 >   : {deptno:int, dname:string, loc:string} bag
 
-(* == Exists =========================================== *)
+(* --- Exists ----------------------------------------------------- *)
 
 (* Exists in a lambda. *)
 val g = fn f => exists i in [1, 2, 3] where f i;
@@ -220,7 +220,8 @@ exists e in scott.emps where e.deptno = 20 require false;
 > stdIn:1.44-1.57 Error: 'require' step must not occur in 'exists'
 >   raised at: stdIn:1.44-1.57
 
-(* == Forall =========================================== *)
+(* --- Forall ----------------------------------------------------- *)
+
 forall i in [2, 4, 6] require i mod 2 = 0;
 > val it = true : bool
 forall i in [2, 3, 4] require i mod 2 = 0;

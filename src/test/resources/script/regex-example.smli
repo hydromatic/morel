@@ -18,8 +18,9 @@
  *
  * Example of matching regular expressions using combinators.
  *
- * Code and text is based upon sections 3.2 and 3.3 of "Seminaïve Evaluation for
- * a Higher-Order Functional Language" (Arntzenius, Krishnaswami, 2020).
+ * Code and text is based upon sections 3.2 and 3.3 of "Seminaïve
+ * Evaluation for a Higher-Order Functional Language" (Arntzenius,
+ * Krishnaswami, 2020).
  *)
 
 (* "chars" splits a string into a list of (index, character) pairs. *)
@@ -133,24 +134,30 @@ val matches =
 matchStrings matches "hello world";
 > val it = ["e","el","ell","r","rl"] : string list
 
-(* -------------------------------------------------------------------------- *)
-(* The combinators in the previous section found all matches within a given
-   substring, but often we are not interested in all matches: we only want to
-   know if a string can match starting at a particular location. We can easily
-   refactor the combinators above to work in this style, which illustrates
-   the benefits of tightly integrating functional and relational styles of
-   programming – we can use functions to manage strict input/output divisions,
-   and relations to manage nondeterminism and search.
+(* -------------------------------------------------------------------
+ * The combinators in the previous section found all matches within a
+ * given substring, but often we are not interested in all matches: we
+ * only want to know if a string can match starting at a particular
+ * location. We can easily refactor the combinators above to work in
+ * this style, which illustrates the benefits of tightly integrating
+ * functional and relational styles of programming – we can use
+ * functions to manage strict input/output divisions, and relations to
+ * manage nondeterminism and search.
+ *
+ *   type re = (string * int) -> int list
+ *
+ * Our new type of combinators takes a string and a starting position,
+ * and returns a set of ending positions. For example, "sym c" checks
+ * if "c" occurs at the start position "i", yielding "[i + 1]" if it
+ * does and the empty set otherwise, while epsilon simply returns the
+ * start position i.
+ *)
 
-     type re = (string * int) -> int list
-
-   Our new type of combinators takes a string and a starting position, and
-   returns a set of ending positions. For example, "sym c" checks if "c" occurs
-   at the start position "i", yielding "[i + 1]" if it does and the empty set
-   otherwise, while epsilon simply returns the start position i. *)
-
-(* "matchStringsPos" iterates over all positions in a string, returning
-    print a pair (index, substring) for each match. It helps with testing. *)
+(*
+ * "matchStringsPos" iterates over all positions in a string,
+ * returning print a pair (index, substring) for each match. It helps
+ * with testing.
+ *)
 fun range n =
     List.tabulate (n, fn i => i);
 > val range = fn : int -> int list
