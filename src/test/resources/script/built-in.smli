@@ -262,9 +262,13 @@ DESC (DESC "a");
 (*) TODO !;
 (* "val := : 'a ref * 'a -> unit" maps to "General.:=" *)
 (*) TODO :=;
-(* "val ~ : int -> int" maps to "Int.~" *)
+(* "val ~ : int -> int" maps to "Int.~"; overloaded for real *)
 op ~;
 > val it = fn : int -> int
+~ 5;
+> val it = ~5 : int
+~ 3.5;
+> val it = ~3.5 : real
 (* "val + : int * int -> int" maps to "Int.+" *)
 op +;
 > val it = fn : int * int -> int
@@ -280,6 +284,16 @@ op @;
 (* "val ^ : string * string -> string" maps to "String.^" *)
 op ^;
 > val it = fn : string * string -> string
+(* "val abs : int -> int" maps to "Int.abs"; overloaded for real *)
+abs;
+> val it = fn : 'a -> 'a
+abs ~3;
+> val it = 3 : int
+abs (valOf Int.minInt);
+> uncaught exception Overflow
+>   raised at: stdIn:1.1-1.22
+abs ~3.5;
+> val it = 3.5 : real
 (* "val app : ('a -> unit) -> 'a list -> unit" maps to "List.app" *)
 app;
 > val it = fn : ('a -> unit) -> 'a list -> unit
@@ -2876,6 +2890,9 @@ Int.abs 5;
 > val it = 5 : int
 Int.abs ~3;
 > val it = 3 : int
+Int.abs (valOf Int.minInt);
+> uncaught exception Overflow
+>   raised at: stdIn:1.1-1.26
 Int.compare;
 > val it = fn : int * int -> order
 Int.compare (4, 3);
@@ -4428,7 +4445,8 @@ Sys.env ();
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
->    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
+>    ("abs","forall 'a. 'a -> 'a"),
+>    ("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
 >    ("bag","forall 'a. 'a list -> 'a bag"),("ceil","real -> int"),
 >    ("chr","int -> char"),("compare","forall 'a. 'a * 'a -> order"),
 >    ("concat","string list -> string"),("count","forall 'a. 'a bag -> int"),
@@ -4533,7 +4551,8 @@ env ();
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
->    ("abs","int -> int"),("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
+>    ("abs","forall 'a. 'a -> 'a"),
+>    ("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
 >    ("bag","forall 'a. 'a list -> 'a bag"),("ceil","real -> int"),
 >    ("chr","int -> char"),("compare","forall 'a. 'a * 'a -> order"),
 >    ("concat","string list -> string"),("count","forall 'a. 'a bag -> int"),

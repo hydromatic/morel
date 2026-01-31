@@ -765,7 +765,7 @@ public class TypeResolver {
 
   /**
    * Registers the preferred overload of a built-in operator such as "op +" or
-   * "op ~".
+   * "op ~", or a built-in function such as "abs".
    */
   private void preferredOverload(@Nullable BuiltIn builtIn, Variable v) {
     if (builtIn == null) {
@@ -777,7 +777,7 @@ public class TypeResolver {
           final Function<Term, Term> fnType =
               arg ->
                   fnTerm(
-                      builtIn == BuiltIn.OP_NEGATE
+                      builtIn == BuiltIn.OP_NEGATE || builtIn == BuiltIn.ABS
                           ? arg
                           : tupleTerm(ImmutableList.of(arg, arg)),
                       arg);

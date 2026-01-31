@@ -63,8 +63,15 @@ public enum BuiltIn {
   /** Function "not", of type "bool &rarr; bool". */
   NOT(null, "not", ts -> ts.fnType(BOOL, BOOL)),
 
-  /** Function "abs", of type "int &rarr; int". */
-  ABS(null, "abs", ts -> ts.fnType(INT, INT)),
+  /**
+   * Function "abs", of type "&alpha; &rarr; &alpha;" (where &alpha; must be
+   * numeric).
+   */
+  ABS(
+      null,
+      "abs",
+      PrimitiveType.INT,
+      ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0)))),
 
   /** Infix operator "^", of type "string * string &rarr; string". */
   OP_CARET(null, "op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),

@@ -1330,19 +1330,6 @@ integers, within the limits of the heap size. If `precision` is `SOME
 """
 
 [[functions]]
-ordinal = 78
-structure = "Int"
-name = "mod"
-specified = "basis"
-type = "int * int → int"
-prototype = "mod (i, j)"
-description = """
-returns the remainder of the division of `i` by `j`. It
-raises `Div` when `j = 0`. When defined, `(i mod j)` has the same sign
-as `j`, and `(i div j) * j + (i mod j) = i`.
-"""
-
-[[functions]]
 ordinal = 64
 structure = "Int"
 name = "mod"

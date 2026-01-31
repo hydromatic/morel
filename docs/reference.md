@@ -446,6 +446,12 @@ This grammar uses the following notation:
 | orelse   |    infix 1 | Logical or |
 | implies  |    infix 0 | Logical implication |
 
+`abs` is a built-in function (not an operator, because it uses function
+syntax rather than prefix or infix syntax). It is overloaded: its type is
+`int -> int` when applied to an `int` argument, and `real -> real` when
+applied to a `real` argument. It is equivalent to `Int.abs` and `Real.abs`
+respectively.
+
 ## Built-in types
 
 Primitive: `bool`, `char`, `int`, `real`, `string`, `unit`
@@ -584,7 +590,6 @@ Exception:
 | Int.maxInt | int | "maxInt" is the maximal (most positive) integer representable by `int`. If a value is `NONE`, `int` can represent all positive integers, within the limits of the heap size. If `precision` is `SOME (n)`, then we have `maxInt` = 2<sup>(n-1)</sup> - 1. |
 | Int.min | int * int &rarr; int | "min (i, j)" returns the smaller of the arguments. |
 | Int.minInt | int | "minInt" is the minimal (most negative) integer representable by `int`. If a value is `NONE`, `int` can represent all negative integers, within the limits of the heap size. If `precision` is `SOME (n)`, then we have `minInt` = -2<sup>(n-1)</sup>. |
-| Int.mod | int * int &rarr; int | "mod (i, j)" returns the remainder of the division of `i` by `j`. It raises `Div` when `j = 0`. When defined, `(i mod j)` has the same sign as `j`, and `(i div j) * j + (i mod j) = i`. |
 | Int.precision | int | "precision" is the precision. If `SOME (n)`, this denotes the number `n` of significant bits in type `int`, including the sign bit. If it is `NONE`, int has arbitrary precision. The precision need not necessarily be a power of two. |
 | Int.quot | int * int &rarr; int | "quot (i, j)" returns the truncated quotient of the division of `i` by `j`, i.e., it computes `(i / j)` and then drops any fractional part of the quotient. It raises `Overflow` when the result is not representable, or `Div` when `j = 0`. Note that unlike `div`, `quot` rounds towards zero. In addition, unlike `div` and `mod`, neither `quot` nor `rem` are infix by default; an appropriate infix declaration would be `infix 7 quot rem`. This is the semantics of most hardware divide instructions, so `quot` may be faster than `div`. |
 | Int.rem | int * int &rarr; int | "rem (i, j)" returns the remainder of the division of `i` by `j`. It raises `Div` when `j = 0`. `(i rem j)` has the same sign as i, and it holds that `(i quot j) * j + (i rem j) = i`. This is the semantics of most hardware divide instructions, so `rem` may be faster than `mod`. |

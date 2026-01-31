@@ -47,6 +47,7 @@ import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
+import net.hydromatic.morel.type.TypeVar;
 import net.hydromatic.morel.util.PairList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -95,11 +96,13 @@ public class Inliner extends EnvShuttle {
       }
       Object v = binding.value;
       if (v instanceof Macro) {
-        final Macro macro = (Macro) binding.value;
-        final Core.Exp x =
-            macro.expand(typeSystem, env, ((FnType) id.type).paramType);
-        if (x instanceof Core.Literal) {
-          return x;
+        final Type paramType = ((FnType) id.type).paramType;
+        if (!(paramType instanceof TypeVar)) {
+          final Macro macro = (Macro) binding.value;
+          final Core.Exp x = macro.expand(typeSystem, env, paramType);
+          if (x instanceof Core.Literal) {
+            return x;
+          }
         }
       }
       if (v != Unit.INSTANCE) {
