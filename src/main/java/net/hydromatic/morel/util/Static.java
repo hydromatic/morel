@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Utilities. */
@@ -204,7 +205,7 @@ public class Static {
   /** Lazily transforms a list, applying a mapping function to each element. */
   public static <E, T> List<T> transform(
       List<? extends E> elements, Function<E, T> mapper) {
-    return org.apache.calcite.util.Util.transform(elements, mapper);
+    return Util.transform(elements, mapper);
   }
 
   /**

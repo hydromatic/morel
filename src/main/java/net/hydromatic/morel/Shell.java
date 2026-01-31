@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Pos;
@@ -606,7 +607,7 @@ public class Shell {
 
     @Override
     public ConfigImpl withEval(@Nullable String eval) {
-      if (java.util.Objects.equals(this.eval, eval)) {
+      if (Objects.equals(this.eval, eval)) {
         return this;
       }
       return new ConfigImpl(

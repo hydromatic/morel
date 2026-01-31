@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.hydromatic.morel.util.Generation;
@@ -64,10 +65,22 @@ public class LintTest {
         Puffin.builder(GlobalState::new, global -> new FileState(global));
     addProgram0(b);
     addProgram1(b);
+    addProgram2(b);
     return b.build();
   }
 
   private static void addProgram0(Puffin.Builder<GlobalState, FileState> b) {
+    // Track "// lint:skip" and "// lint:skip N" comments.
+    b.add(
+        line -> true,
+        line -> {
+          // lint:skip 1
+          java.util.regex.Matcher m = LINT_SKIP_PATTERN.matcher(line.line());
+          if (m.find()) {
+            int n = m.group(1) != null ? Integer.parseInt(m.group(1)) : 1;
+            line.state().lintEnableLine = line.fnr() + n + 1;
+          }
+        });
     b.add(
         line -> line.isLast(),
         line -> {
@@ -136,7 +149,7 @@ public class LintTest {
                 && line.filename().endsWith(".java")
                 && !line.startsWith("import static")
                 && !line.matches("^ *// .*$")
-                && !line.endsWith("// lint:skip")
+                && !lintSkip(line)
                 && !filenameIs(line, "LintTest.java")
                 && !filenameIs(line, "UtilTest.java"),
         line -> line.state().message(line, "should be static import"));
@@ -424,6 +437,39 @@ public class LintTest {
         });
   }
 
+  private static void addProgram2(Puffin.Builder<GlobalState, FileState> b) {
+    // Fully-qualified class name (e.g. "java.util.List") should use import.
+    // Allowed in: imports, package declarations, javadoc @link/@see, comments,
+    // string literals, and lines with "// lint:skip".
+    b.add(
+        line ->
+            line.matches(
+                    ".*\\b(java|javax|com|net|org)\\.[a-z]+(\\.[a-z]+)*\\.[A-Z].*")
+                && isJava(line.filename())
+                && !line.startsWith("import ")
+                && !line.startsWith("import static ")
+                && !line.startsWith("package ")
+                && !line.matches("^ */\\*.*")
+                && !line.matches("^ *\\* .*")
+                && !line.matches("^ *\\*\\*.*")
+                && !line.matches("^ *//.*")
+                && !line.contains("{@link ")
+                && !line.contains("{@code ")
+                && !lintSkip(line)
+                && !isInStringLiteral(line.line()),
+        line ->
+            line.state()
+                .message(line, "fully-qualified class name; use import"));
+  }
+
+  /**
+   * Returns whether lint is disabled for this line by a "// lint:skip" or "//
+   * lint:skip N" comment on this or a preceding line.
+   */
+  private static boolean lintSkip(Puffin.Line<GlobalState, FileState> line) {
+    return line.fnr() < line.state().lintEnableLine;
+  }
+
   private static boolean filenameIs(
       Puffin.Line<GlobalState, FileState> line, String anObject) {
     return line.source()
@@ -463,6 +509,38 @@ public class LintTest {
         || filename.endsWith(".ftl")
         || filename.equals("GuavaCharSource{memory}"); // for testing
   }
+
+  /**
+   * Returns whether a fully-qualified class name pattern on this line occurs
+   * only inside a string literal. A simple heuristic: if the pattern match
+   * occurs after an odd number of unescaped double-quotes, it is inside a
+   * string.
+   */
+  private static boolean isInStringLiteral(String line) {
+    // Find each match of a fully-qualified name and check whether it occurs
+    // after an odd number of unescaped double-quotes (i.e. inside a string).
+    Matcher m = FULLY_QUALIFIED_PATTERN.matcher(line);
+    while (m.find()) {
+      int quotes = 0;
+      for (int i = 0; i < m.start(); i++) {
+        if (line.charAt(i) == '"' && (i == 0 || line.charAt(i - 1) != '\\')) {
+          quotes++;
+        }
+      }
+      if (quotes % 2 == 0) {
+        return false; // this match is outside a string literal
+      }
+    }
+    return true; // all matches are inside string literals
+  }
+
+  private static final Pattern FULLY_QUALIFIED_PATTERN =
+      Pattern.compile(
+          "\\b(java|javax|com|net|org)\\.[a-z]+(\\.[a-z]+)*\\.[A-Z]");
+
+  /** Matches "// lint:skip" or "// lint:skip N". */
+  private static final Pattern LINT_SKIP_PATTERN =
+      Pattern.compile("// lint:skip(?: (\\d+))?\\s*$");
 
   /** Returns the number of occurrences of a string in a string. */
   private static int count(String s, String sub) {
@@ -516,6 +594,12 @@ public class LintTest {
             + "      \"at end of line\";\n"
             + "  // A comment with <code>on one line and\n"
             + "  // </code> on the next.\n"
+            + "  java.util.List list = null;\n"
+            + "  /** See {@link java.util.List}. */\n"
+            + "  String s = \"java.util.List is ok in a string\";\n"
+            + "  // java.util.List is ok in a comment\n"
+            + "  Ast.Literal ok = null;\n"
+            + "  Object o = new org.foo.Bar();\n"
             + "}\n";
     final String expectedMessages =
         "["
@@ -552,7 +636,11 @@ public class LintTest {
             + "GuavaCharSource{memory}:33:"
             + "<code> and </code> must be on same line\n"
             + "GuavaCharSource{memory}:34:"
-            + "<code> and </code> must be on same line\n";
+            + "<code> and </code> must be on same line\n"
+            + "GuavaCharSource{memory}:35:"
+            + "fully-qualified class name; use import\n"
+            + "GuavaCharSource{memory}:40:"
+            + "fully-qualified class name; use import\n";
     final Puffin.Program<GlobalState> program = makeProgram();
     final StringWriter sw = new StringWriter();
     final GlobalState g;
@@ -769,6 +857,7 @@ public class LintTest {
     int javadocEndLine;
     int blockquoteCount;
     int ulCount;
+    int lintEnableLine;
 
     FileState(GlobalState global) {
       this.global = global;

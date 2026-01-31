@@ -179,6 +179,7 @@ public class CalciteFunctions {
         requireNonNull(cx.typeFactory);
     private final @Nullable Compiled compiled;
 
+    // lint:skip 1
     public MorelTableFunction(org.apache.calcite.plan.Context context) {
       @SuppressWarnings("unchecked")
       final @Nullable List<Object> args = context.unwrap(List.class);
@@ -312,6 +313,7 @@ public class CalciteFunctions {
         requireNonNull(cx.typeFactory);
     private final @Nullable Compiled compiled;
 
+    // lint:skip 1
     public MorelScalarFunction(org.apache.calcite.plan.Context context) {
       @SuppressWarnings("unchecked")
       final @Nullable List<Object> args = context.unwrap(List.class);
@@ -385,6 +387,7 @@ public class CalciteFunctions {
         requireNonNull(cx.typeFactory);
     private final @Nullable Compiled compiled;
 
+    // lint:skip 1
     public MorelApplyFunction(org.apache.calcite.plan.Context context) {
       @SuppressWarnings("unchecked")
       final @Nullable List<Object> args = context.unwrap(List.class);

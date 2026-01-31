@@ -52,12 +52,13 @@ public class Files {
   private Files() {}
 
   /** Creates a file (or directory). Never returns null. */
+  // lint:skip 1
   public static File create(java.io.File ioFile) {
     return createUnknown(null, ioFile).expand();
   }
 
   static UnknownFile createUnknown(
-      @Nullable Directory directory, java.io.File ioFile) {
+      @Nullable Directory directory, java.io.File ioFile) { // lint:skip
     FileType fileType;
     if (ioFile.isDirectory()) {
       fileType = FileType.DIRECTORY;
@@ -153,12 +154,12 @@ public class Files {
 
   /** Abstract implementation of File. */
   abstract static class AbstractFile implements File {
-    final java.io.File ioFile;
+    final java.io.File ioFile; // lint:skip
     final String baseName;
     final FileType fileType;
 
     /** Creates an AbstractFile. */
-    AbstractFile(java.io.File ioFile, FileType fileType) {
+    AbstractFile(java.io.File ioFile, FileType fileType) { // lint:skip
       this.ioFile = requireNonNull(ioFile, "file");
       this.baseName = removeSuffix(ioFile.getName(), fileType.suffix);
       this.fileType = requireNonNull(fileType, "fileType");
@@ -172,15 +173,15 @@ public class Files {
 
   /** File that is a directory. */
   private static class Directory extends AbstractList<File> implements File {
-    final java.io.File ioFile;
+    final java.io.File ioFile; // lint:skip
     final SortedMap<String, File> entries; // mutable
 
-    Directory(java.io.File file) {
+    Directory(java.io.File file) { // lint:skip
       this.ioFile = file;
 
       entries = new TreeMap<>(RecordType.ORDERING);
-      for (java.io.File subFile :
-          first(ioFile.listFiles(), new java.io.File[0])) {
+      for (java.io.File subFile : // lint:skip
+          first(ioFile.listFiles(), new java.io.File[0])) { // lint:skip
         UnknownFile f = createUnknown(this, subFile);
         entries.put(f.baseName, f);
       }
@@ -239,7 +240,7 @@ public class Files {
     final PairList<Integer, Function<String, Object>> parsers;
 
     DataFile(
-        java.io.File file,
+        java.io.File file, // lint:skip
         FileType fileType,
         Type.Key typeKey,
         PairList<Integer, Function<String, Object>> parsers) {
@@ -300,7 +301,7 @@ public class Files {
      */
     static final Type.Key PROGRESSIVE_UNIT_LIST = Keys.list(PROGRESSIVE_UNIT);
 
-    protected UnknownFile(java.io.File file, FileType fileType) {
+    protected UnknownFile(java.io.File file, FileType fileType) { // lint:skip
       super(file, fileType);
     }
 
@@ -367,7 +368,9 @@ public class Files {
     private final Directory directory;
 
     protected UnknownChildFile(
-        Directory directory, java.io.File file, FileType fileType) {
+        Directory directory,
+        java.io.File file, // lint:skip
+        FileType fileType) {
       super(file, fileType);
       this.directory = requireNonNull(directory, "directory");
     }
@@ -409,7 +412,7 @@ public class Files {
       this.list = list;
     }
 
-    BufferedReader open(java.io.File file) throws IOException {
+    BufferedReader open(java.io.File file) throws IOException { // lint:skip
       switch (this) {
         case CSV:
           return Util.reader(file);
