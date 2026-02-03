@@ -456,8 +456,10 @@ public class Keys {
 
     @Override
     public StringBuilder describe(StringBuilder buf, int left, int right) {
-      return TypeSystem.unparse(buf, args.get(0), 0, Op.LIST.right)
-          .append(" list");
+      // Use NAMED_TYPE precedence for type printing (list types have same
+      // precedence as named types like "int list")
+      final Op op = Op.NAMED_TYPE;
+      return TypeSystem.unparse(buf, args.get(0), 0, op.right).append(" list");
     }
 
     @Override

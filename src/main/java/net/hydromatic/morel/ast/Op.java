@@ -89,7 +89,7 @@ public enum Op {
 
   // value constructors
   TUPLE(true),
-  LIST(" list", 8),
+  LIST(true),
   RECORD(true),
   FN(" -> ", 6, false),
 

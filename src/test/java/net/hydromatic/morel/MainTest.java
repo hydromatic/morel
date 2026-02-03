@@ -252,10 +252,10 @@ public class MainTest {
     mlE("fn x : typeof {$a: int$} => ()")
         .assertTypeThrowsCompileException(
             "cannot derive label for expression a : int");
-    ml("fn x : typeof ([1, 2, 3]) => ()").assertParseSame();
-    ml("let val (v : typeof (hd ([1, 2, 3]))) = 0 in v + 1 end")
+    ml("fn x : typeof [1, 2, 3] => ()").assertParseSame();
+    ml("let val (v : typeof (hd [1, 2, 3])) = 0 in v + 1 end")
         .assertParseEquivalent(
-            "let val (v : typeof (hd [1, 2, 3])) = 0 in v + 1 end")
+            "let val (v : typeof (hd ([1, 2, 3]))) = 0 in v + 1 end")
         .assertParseEquivalent(
             "let val v : typeof (hd [1, 2, 3]) = 0 in v + 1 end");
 
@@ -396,6 +396,7 @@ public class MainTest {
 
     // apply
     ml("(fn x => x + 1) 3").assertParseSame();
+    ml("hd [1, 2, 3]").assertParseSame();
 
     // with
     ml("{e with deptno = 10}").assertParseSame();

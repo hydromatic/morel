@@ -587,7 +587,10 @@ class Pretty {
       int rightPrec,
       int indent2,
       String typeName) {
-    if (leftPrec > Op.LIST.left || rightPrec > Op.LIST.right) {
+    // Use NAMED_TYPE precedence for type printing (collection types have same
+    // precedence as named types like "int list")
+    final Op op = Op.NAMED_TYPE;
+    if (leftPrec > op.left || rightPrec > op.right) {
       pretty1(buf, indent2, lineEnd, depth, type, "(", 0, 0);
       pretty1(buf, indent2, lineEnd, depth, type, typeVal, 0, 0);
       pretty1(buf, indent2, lineEnd, depth, type, ")", 0, 0);
@@ -597,8 +600,7 @@ class Pretty {
         typeVal.type.isCollection(), "not a collection type: %s", type);
     final Type elementType = typeVal.type.elementType();
     final TypeVal typeVal1 = new TypeVal("", elementType, "");
-    pretty1(
-        buf, indent2, lineEnd, depth, type, typeVal1, leftPrec, Op.LIST.left);
+    pretty1(buf, indent2, lineEnd, depth, type, typeVal1, leftPrec, op.left);
     return buf.append(" ").append(typeName);
   }
 
