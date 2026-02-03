@@ -63,6 +63,15 @@ public class LintTest {
   private static final ThreadLocal<@Nullable String> THREAD_FILE_NAME =
       new ThreadLocal<>();
 
+  /** Maximum line length in Java files. */
+  public static final int JAVA_WIDTH = 80;
+
+  /** Maximum line length in Markdown files. */
+  public static final int MD_WIDTH = 80;
+
+  /** Maximum line length in Morel files. */
+  public static final int MOREL_WIDTH = 70;
+
   private Puffin.Program<GlobalState> makeProgram() {
     Puffin.Builder<GlobalState, FileState> b =
         Puffin.builder(GlobalState::new, global -> new FileState(global));
@@ -70,6 +79,7 @@ public class LintTest {
     addProgram1(b);
     addProgram2(b);
     addProgram3(b);
+    addProgram4(b);
     return b.build();
   }
 
@@ -82,10 +92,7 @@ public class LintTest {
           if (filename == null) {
             filename = line.filename();
           }
-          line.state().language =
-              isJava(filename)
-                  ? Language.JAVA
-                  : isMorel(filename) ? Language.MOREL : Language.UNKNOWN;
+          line.state().language = languageOf(filename);
         });
 
     // Track "// lint:skip" and "// lint:skip N" comments.
@@ -271,9 +278,9 @@ public class LintTest {
     // Broken string, "yoyo\n" + "string", should be on separate lines.
     b.add(
         line ->
-            line.matches(".*[^\\\\][\\\\]n[\"] *\\+ *[\"].*")
-                && !line.contains("//")
-                && isJava(line.filename()),
+            line.state().language == Language.JAVA
+                && line.matches(".*[^\\\\][\\\\]n[\"] *\\+ *[\"].*")
+                && !line.contains("//"),
         line -> line.state().message(line, "broken string"));
 
     // Newline should be at end of string literal, not in the middle
@@ -505,11 +512,14 @@ public class LintTest {
               if (!s.startsWith(" *")) {
                 f.message(line, "block comment line must start with ' *'");
               }
-              if (s.length() > 70
+              if (s.length() > MOREL_WIDTH
                   && !s.contains("http://")
                   && !s.contains("https://")) {
                 f.message(
-                    line, "block comment line length %d > 70", s.length());
+                    line,
+                    "block comment line length %d > %d",
+                    s.length(),
+                    MOREL_WIDTH);
               }
             }
           }
@@ -544,7 +554,8 @@ public class LintTest {
           }
         });
 
-    // Rule: decorative single-line headers with "---" must be 70 chars.
+    // Rule: decorative single-line headers with "---" must be MOREL_WIDTH (70)
+    // chars.
     b.add(
         line ->
             line.state().language == Language.MOREL
@@ -552,12 +563,13 @@ public class LintTest {
                 && line.line().endsWith("*)")
                 && line.line().contains("---"),
         line -> {
-          if (line.line().length() != 70) {
+          if (line.line().length() != MOREL_WIDTH) {
             line.state()
                 .message(
                     line,
-                    "decorative comment length %d != 70",
-                    line.line().length());
+                    "decorative comment length %d != %d",
+                    line.line().length(),
+                    MOREL_WIDTH);
           }
         });
 
@@ -586,11 +598,103 @@ public class LintTest {
                     line.line().contains("***") ? "***" : "==="));
   }
 
-  /** Returns whether we are in a file that contains Morel code. */
-  private static boolean isMorel(String filename) {
-    return filename.endsWith(".sml")
+  private static void addProgram4(Puffin.Builder<GlobalState, FileState> b) {
+    // Markdown: line length check (MD_WIDTH chars, with exceptions)
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.line().length() > MD_WIDTH
+                && !line.state().inCodeBlock
+                && !line.state().inPreBlock
+                && !line.state().inComment
+                && !line.line().contains("http://")
+                && !line.line().contains("https://")
+                && !line.line().contains("src=\"") // HTML img tags
+                && !line.line().contains("href=\"") // HTML link tags
+                && !line.line().startsWith("|") // table row
+                && !line.line().startsWith("```")
+                && !line.line().startsWith("    ") // indented code
+                && !line.line().startsWith("<i>") // syntax definition
+                && !line.line().matches("^[-|:]+$") // table separator
+                && !lintSkip(line),
+        line ->
+            line.state()
+                .message(
+                    line,
+                    "line length %d > %d",
+                    line.line().length(),
+                    MD_WIDTH));
+
+    // Track code blocks in Markdown (``` fences)
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.line().startsWith("```"),
+        line -> line.state().inCodeBlock = !line.state().inCodeBlock);
+
+    // Track <pre> blocks in Markdown
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.line().contains("<pre>"),
+        line -> line.state().inPreBlock = true);
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.line().contains("</pre>"),
+        line -> line.state().inPreBlock = false);
+
+    // Track Jekyll comment blocks
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.line().contains("{% comment %}"),
+        line -> line.state().inComment = true);
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.line().contains("{% endcomment %}"),
+        line -> line.state().inComment = false);
+
+    // Markdown files in docs/ must have license header
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.fnr() == 1
+                && line.filename().contains("/docs/")
+                && !line.line().equals("<!--"),
+        line -> line.state().message(line, "missing license header"));
+
+    // Markdown license header must start with "<!--"
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.fnr() == 1
+                && !line.filename().contains("/docs/")
+                && !filenameIs(line, "HISTORY.md")
+                && !filenameIs(line, "README.md")
+                && !line.line().equals("<!--"),
+        line -> line.state().message(line, "missing license header"));
+  }
+
+  /** Deduces the language of a file from its filename. */
+  private static Language languageOf(String filename) {
+    if (filename.endsWith(".java")
+        || filename.endsWith(".jj")
+        || filename.endsWith(".fmpp")
+        || filename.endsWith(".ftl")
+        || filename.equals("GuavaCharSource{memory}")) { // for testing
+      return Language.JAVA;
+    }
+    if (filename.endsWith(".sml")
         || filename.endsWith(".smli")
-        || filename.endsWith(".sig");
+        || filename.endsWith(".sig")) {
+      return Language.MOREL;
+    }
+    if (filename.endsWith(".md")) {
+      return Language.MARKDOWN;
+    }
+    return Language.UNKNOWN;
   }
 
   /**
@@ -630,15 +734,6 @@ public class LintTest {
       default:
         return null;
     }
-  }
-
-  /** Returns whether we are in a file that contains Java code. */
-  private static boolean isJava(String filename) {
-    return filename.endsWith(".java")
-        || filename.endsWith(".jj")
-        || filename.endsWith(".fmpp")
-        || filename.endsWith(".ftl")
-        || filename.equals("GuavaCharSource{memory}"); // for testing
   }
 
   /**
@@ -812,7 +907,9 @@ public class LintTest {
             + "GuavaCharSource{memory}:12:"
             + "block comment line must start with ' *'\n"
             + "GuavaCharSource{memory}:14:"
-            + "decorative comment length 27 != 70\n"
+            + "decorative comment length 27 != "
+            + MOREL_WIDTH
+            + "\n"
             + "GuavaCharSource{memory}:15:"
             + "decorative comment; use '---' not '***'\n";
     final Puffin.Program<GlobalState> program = makeProgram();
@@ -1039,6 +1136,9 @@ public class LintTest {
     int commentDepth;
     int commentStartLine;
     int pendingBlockOpenLine;
+    boolean inCodeBlock;
+    boolean inPreBlock;
+    boolean inComment;
 
     FileState(GlobalState global) {
       this.global = global;
@@ -1218,6 +1318,7 @@ public class LintTest {
 
   enum Language {
     JAVA,
+    MARKDOWN,
     MOREL,
     UNKNOWN
   }

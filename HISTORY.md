@@ -135,7 +135,8 @@ Julian Hyde
   ([#298](https://github.com/hydromatic/morel/issues/298))
 * Add method `ImmutablePairList.fromTransformed`
 * Refactor: Add `copy` methods for various AST nodes
-* Assert that in an assignment `val p = e`, pattern and expression have same type
+* Assert that in an assignment `val p = e`, pattern and expression
+  have same type
 * Environment for an `EnvVisitor` should be the output from the previous step
 * Refactor: Change type of `Ast.Record.args` from `SortedMap` to `PairList`
 * Add method `PairList.toImmutableSortedMap`
