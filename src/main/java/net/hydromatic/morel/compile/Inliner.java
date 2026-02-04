@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
+import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.eval.Applicable;
 import net.hydromatic.morel.eval.Applicable1;
 import net.hydromatic.morel.eval.Closure;
@@ -48,6 +49,7 @@ import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypeVar;
+import net.hydromatic.morel.type.TypeVisitor;
 import net.hydromatic.morel.util.PairList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -84,14 +86,39 @@ public class Inliner extends EnvShuttle {
     final Binding binding = env.getOpt(id.idPat);
     if (binding != null && !binding.parameter) {
       if (binding.exp != null) {
-        final Analyzer.Use use =
-            analysis == null
-                ? Analyzer.Use.MULTI_UNSAFE
-                : requireNonNull(analysis.map.get(id.idPat));
-        switch (use) {
-          case ATOMIC:
-          case ONCE_SAFE:
+        // For bindings from previous compile units (identified by having both
+        // exp and a non-Unit value), we can inline if:
+        // 1. The expression is atomic (literals, IDs), or
+        // 2. The expression is a non-recursive function
+        // Recursive functions would cause infinite expansion.
+        final boolean isEvalTimeBinding = binding.value != Unit.INSTANCE;
+        if (isEvalTimeBinding) {
+          // For cross-unit inlining, we can inline:
+          // 1. Atomic expressions (literals, IDs)
+          // 2. Non-recursive functions that:
+          //    - don't contain nested recursive definitions
+          //    - don't have free variables (other than the parameter)
+          // Polymorphic functions are inlined with type unification.
+          if (isAtomic(binding.exp)) {
             return binding.exp.accept(this);
+          }
+          if (binding.exp.op == Op.FN
+              && !containsReference(binding.exp, binding.id)
+              && !containsTypeVar(binding.exp.type)
+              && !containsRecursiveDecl(binding.exp)
+              && !hasFreeVariables((Core.Fn) binding.exp, env)) {
+            return binding.exp.accept(this);
+          }
+        } else {
+          final Analyzer.Use use =
+              analysis == null
+                  ? Analyzer.Use.MULTI_UNSAFE
+                  : requireNonNull(analysis.map.get(id.idPat));
+          switch (use) {
+            case ATOMIC:
+            case ONCE_SAFE:
+              return binding.exp.accept(this);
+          }
         }
       }
       Object v = binding.value;
@@ -269,6 +296,85 @@ public class Inliner extends EnvShuttle {
   }
 
   /**
+   * Returns whether an expression contains a reference to the given pattern.
+   * Used to detect recursive functions that should not be inlined.
+   */
+  private static boolean containsReference(Core.Exp exp, Core.NamedPat pat) {
+    final boolean[] found = {false};
+    exp.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Core.Id id) {
+            if (id.idPat.equals(pat)) {
+              found[0] = true;
+            }
+          }
+        });
+    return found[0];
+  }
+
+  /**
+   * Returns whether a type contains type variables. Used to detect polymorphic
+   * functions that require type unification.
+   */
+  private static boolean containsTypeVar(Type type) {
+    final boolean[] found = {false};
+    type.accept(
+        new TypeVisitor<Void>() {
+          @Override
+          public Void visit(TypeVar typeVar) {
+            found[0] = true;
+            return null;
+          }
+        });
+    return found[0];
+  }
+
+  /**
+   * Returns whether an expression contains a recursive declaration. Used to
+   * detect functions with nested recursive definitions that should not be
+   * inlined (because inlining would cause issues with unbound references).
+   */
+  private static boolean containsRecursiveDecl(Core.Exp exp) {
+    final boolean[] found = {false};
+    exp.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Core.RecValDecl recValDecl) {
+            found[0] = true;
+          }
+        });
+    return found[0];
+  }
+
+  /**
+   * Returns whether a function has free variables (references to identifiers
+   * other than its parameter that are not available in the given environment).
+   * Used to detect functions that capture variables from their definition
+   * environment, which cannot be safely inlined across compile units.
+   */
+  private static boolean hasFreeVariables(Core.Fn fn, Environment env) {
+    final boolean[] found = {false};
+    fn.exp.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Core.Id id) {
+            // Skip references to the function's own parameter
+            if (id.idPat.equals(fn.idPat)) {
+              return;
+            }
+            // Check if this reference is available in the inlining environment
+            final Binding binding = env.getOpt(id.idPat);
+            if (binding == null) {
+              // This is a free variable not available in the current env
+              found[0] = true;
+            }
+          }
+        });
+    return found[0];
+  }
+
+  /**
    * Returns the runtime value of a constant expression, or null if it is not
    * constant. Examples of constant expressions include literals {@code 1},
    * {@code "xyz"}, {@code true} and datatype constructors {@code NONE}, {@code
@@ -306,6 +412,10 @@ public class Inliner extends EnvShuttle {
         if (apply.fn instanceof Core.Id && apply.type instanceof DataType) {
           final String conName = ((Core.Id) apply.fn).idPat.name;
           final DataType dataType = (DataType) apply.type;
+          // Skip variant types because they require a session to construct
+          if ("variant".equals(dataType.name)) {
+            return null;
+          }
           if (dataType.typeConstructors.containsKey(conName)) {
             final Applicable tyCon = Codes.tyCon(apply.type, conName);
             final Object arg = expToValue(apply.arg);

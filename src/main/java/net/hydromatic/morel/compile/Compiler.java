@@ -1116,6 +1116,7 @@ public class Compiler {
     private final TypeSystem typeSystem;
     private final Code code;
     private final Core.NamedPat pat;
+    private final Core.Exp exp;
     private final Type type;
     private final Core.@Nullable IdPat overloadPat;
     private final Pos pos;
@@ -1132,6 +1133,7 @@ public class Compiler {
       this.typeSystem = typeSystem;
       this.code = code;
       this.pat = pat;
+      this.exp = exp;
       final Type type0 = pat.type.containsProgressive() ? exp.type : pat.type;
       this.type = typeSystem.ensureClosed(type0);
       this.overloadPat = overloadPat;
@@ -1150,14 +1152,20 @@ public class Compiler {
       try {
         final Object o = code.eval(evalEnv);
         final List<Binding> outBindings0 = new ArrayList<>();
+        // For simple IdPat bindings, store the expression so it can be inlined
+        // in subsequent compile units. For compound patterns (tuples), we don't
+        // track sub-expressions.
+        final Core.@Nullable Exp expForBinding =
+            pat instanceof Core.IdPat ? exp : null;
         if (!Closure.bindRecurse(
             pat.withType(type),
             o,
             (pat2, o2) ->
                 outBindings0.add(
                     overloadPat == null
-                        ? Binding.of(pat2, o2)
-                        : Binding.inst(pat2, overloadPat, o2)))) {
+                        ? Binding.of(pat2, expForBinding, o2)
+                        : Binding.inst(
+                            pat2, overloadPat, expForBinding, o2)))) {
           throw new Codes.MorelRuntimeException(Codes.BuiltInExn.BIND, pos);
         }
         for (Binding binding : outBindings0) {

@@ -85,9 +85,18 @@ public class Binding {
     return new Binding(id, null, null, value, false, Kind.VAL);
   }
 
+  public static Binding of(Core.NamedPat id, Core.Exp exp, Object value) {
+    return new Binding(id, null, exp, value, false, Kind.VAL);
+  }
+
   public static Binding inst(
       Core.NamedPat id, Core.IdPat overloadId, Object value) {
     return new Binding(id, overloadId, null, value, false, Kind.INST);
+  }
+
+  public static Binding inst(
+      Core.NamedPat id, Core.IdPat overloadId, Core.Exp exp, Object value) {
+    return new Binding(id, overloadId, exp, value, false, Kind.INST);
   }
 
   /** Used by {@link Environment#renumber()}. */

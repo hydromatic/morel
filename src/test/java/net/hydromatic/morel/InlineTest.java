@@ -436,6 +436,49 @@ public class InlineTest {
                     + "end"))
         .assertEval(is(8));
   }
+
+  // ==========================================================================
+  // Tests for cross-compile-unit inlining (issue #223)
+  // ==========================================================================
+
+  /**
+   * Tests that a function from a previous compile unit can be called and
+   * inlined. Also see tests in {@code optimize.smli}.
+   */
+  @Test
+  void testCrossUnitFunctionCall() {
+    // Function is called but not inlined (yet)
+    final String input =
+        "fun plus1 x = x + 1;\n" //
+            + "plus1 5;\n";
+    final String expected =
+        "val plus1 = fn : int -> int\n" //
+            + "val it = 6 : int\n";
+    ShellTest.fixture()
+        .withRaw(true)
+        .withInputString(input)
+        .assertOutput(is(expected));
+  }
+
+  /**
+   * Tests chained function calls across compile units work correctly. Also see
+   * tests in {@code optimize.smli}.
+   */
+  @Test
+  void testCrossUnitChainedFunctionCalls() {
+    final String input =
+        "fun double x = x * 2;\n"
+            + "fun quadruple x = double (double x);\n"
+            + "quadruple 3;\n";
+    final String expected =
+        "val double = fn : int -> int\n"
+            + "val quadruple = fn : int -> int\n"
+            + "val it = 12 : int\n";
+    ShellTest.fixture()
+        .withRaw(true)
+        .withInputString(input)
+        .assertOutput(is(expected));
+  }
 }
 
 // End InlineTest.java

@@ -135,12 +135,7 @@ fun isNum n = n elem nums;
 fun isEven n = n mod 2 = 0;
 > val isEven = fn : int -> bool
 
-let (* TODO remove 'let' when we have fixed inlining *)
-  fun isNum n = n elem nums
-  fun isEven n = n mod 2 = 0
-in
-  from n where isNum n andalso isEven n
-end;
+from n where isNum n andalso isEven n;
 > val it = [2,4] : int bag
 
 (*) Case
@@ -215,12 +210,7 @@ fun isSmall n = n elem [1, 2];
 fun isLarge n = n elem [10, 20];
 > val isLarge = fn : int -> bool
 
-let (* TODO remove 'let' when we have fixed inlining *)
-  fun isSmall n = n elem [1, 2]
-  fun isLarge n = n elem [10, 20]
-in
-  from n where isSmall n orelse isLarge n
-end;
+from n where isSmall n orelse isLarge n;
 > val it = [1,2,20,10] : int bag
 
 (* -- Predicate inversion ----------------------------------------- *)
@@ -630,39 +620,27 @@ end;
 > val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string bag
 
 (*) As above, using 'andalso' rather than 'where'
-let
-  fun isEmp e =
-    e elem scott.emps
-in
-  from e
-    where isEmp e andalso e.deptno = 20
-    yield e.ename
-end;
-> val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string bag
-
-(*) As previous, but 'fun' followed by 'from' without using 'let'
-(*) TODO should return same as previous, currently can't inline fun declared separately
 fun isEmp e =
   e elem scott.emps;
 > val isEmp = fn
 >   :
 >     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
 >      job:string, mgr:int, sal:real} -> bool
-(*
 from e
   where isEmp e andalso e.deptno = 20
   yield e.ename;
-*)
+> val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string bag
 
 (*) Similar to 'isEmp' but with a conjunctive condition.
-let
-  fun isClerk e =
-    e elem scott.emps andalso e.job = "CLERK"
-in
-  from e
-    where isClerk e andalso e.deptno = 20
-    yield e.ename
-end;
+fun isClerk e =
+  e elem scott.emps andalso e.job = "CLERK";
+> val isClerk = fn
+>   :
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} -> bool
+from e
+  where isClerk e andalso e.deptno = 20
+  yield e.ename;
 > val it = ["SMITH","ADAMS"] : string bag
 
 (*) A disjunctive condition prevents the extent.
@@ -674,29 +652,26 @@ in
     where isEmp50 e
     yield e.ename
 end;
-> java.lang.IllegalArgumentException: pattern e_10 is not grounded
+> java.lang.IllegalArgumentException: pattern e_9 is not grounded
 
 (*) A function with external extent.
-(* TODO enable when we have types
-fun hasJob (e, job) =
+fun hasJob (e: typeof (Bag.hd scott.emps),
+            job) =
   e.job = job;
- *)
+> val hasJob = fn
+>   :
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} * string -> bool
 
 (*) Valid, because the argument has an extent.
-(*
-let
-  fun hasJob (e, job) =
-    e.job = job
-in
-  from e in scott.emps,
-      j
-    where hasJob (e, j)
-    yield j
-end;
-val it =
-  ["CLERK","SALESMAN","SALESMAN","MANAGER","SALESMAN","MANAGER","MANAGER",
-   "ANALYST","PRESIDENT","SALESMAN","CLERK","CLERK",...] : string list
-*)
+from e in scott.emps,
+    j
+  where hasJob (e, j)
+  yield j;
+> val it =
+>   ["CLERK","SALESMAN","SALESMAN","MANAGER","SALESMAN","MANAGER","MANAGER",
+>    "ANALYST","PRESIDENT","SALESMAN","CLERK","CLERK","ANALYST","CLERK"]
+>   : string bag
 
 (*) Invalid, because the argument has no extent.
 (*) TODO should give error 'e not grounded'
@@ -782,8 +757,7 @@ fun enumerate predicate =
 > val enumerate = fn : ('a -> bool) -> 'a bag
 *)
 
-(* Join inversion. *)
-(* TODO
+(* Join inversion ------------------------------------------------- *)
 let
   fun empInDept (empno, deptno) =
     exists e in scott.emps where e.empno = empno andalso e.deptno = deptno
@@ -795,12 +769,17 @@ in
   from empno
     where empInDeptName(empno, "SALES")
 end;
-*)
+> val it = [7521,7844,7654,7499,7698,7900] : int bag
 
-(* TODO: Remove the 'let', when inlining is working. *)
+(* Invert a function that tests membership of table --------------- *)
+fun isClerk e =
+  e elem scott.emps andalso e.job = "CLERK";
+> val isClerk = fn
+>   :
+>     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      job:string, mgr:int, sal:real} -> bool
+
 let
-  fun isClerk e =
-    e elem scott.emps andalso e.job = "CLERK"
   fun enumerate predicate =
     from r where predicate r
 in
@@ -1008,11 +987,7 @@ val edges = [(1, 2), (2, 3), (1, 4), (4, 2), (4, 3)];
 fun edge (x, y) = (x, y) elem edges;
 > val edge = fn : int * int -> bool
 
-let (* TODO remove 'let' when we have fixed inlining *)
-  fun edge (x, y) = (x, y) elem edges
-in
-  from x, y where edge (x, y)
-end;
+from x, y where edge (x, y);
 > x y
 > - -
 > 1 2
@@ -1038,25 +1013,39 @@ end;
 >
 > val it : {x:int, z:int} bag
 
-(* TODO: Previous is equivalent to following. (Which implies a theorem connecting
-   'exists' with 'group' and variable elimination.)
+(* The previous is equivalent to following. (Which implies a theorem
+ * connecting 'exists' with 'group' and variable elimination.) *)
 let
   fun edge (x, y) = (x, y) elem edges
 in
   from x, z
     where (exists y where edge (x, y) andalso edge (y, z))
-    andalso x <> z
+      andalso x <> z
+    distinct (*) TODO: "distinct" should not be required
 end;
-*)
+> x z
+> - -
+> 4 3
+> 1 2
+> 1 3
+>
+> val it : {x:int, z:int} bag
 
-(* TODO: Also equivalent.
+(*) Also equivalent.
 let
   fun edge (x, y) = (x, y) elem edges
 in
   from x, z
     where (exists y where edge (x, y) andalso edge (y, z) andalso x <> z)
+    distinct (*) TODO: "distinct" should not be required
 end;
-*)
+> x z
+> - -
+> 4 3
+> 1 2
+> 1 3
+>
+> val it : {x:int, z:int} bag
 
 (*) Also equivalent.
 let
@@ -1141,20 +1130,17 @@ fun sells (bar, beer, price) =
  * Datalog:
  *    Happy(p) <- Frequents(p, bar) AND Likes(p, beer) AND Sells(bar, beer)
  *)
-(* TODO
 fun happy patron =
-  exists (
-    from bar, beer, price
+  exists bar, beer, price
       where frequents (patron, bar)
       andalso likes (patron, beer)
-      andalso sells (bar, beer, price));
+      andalso sells (bar, beer, price);
 > val happy = fn : string -> bool
-*)
 
 (* Find happy patrons. Shaggy is happy because the Squirrel and Cask sell
    Amber; Velma is happy because Cask sells Stout. Fred and Scooby are not
    happy. *)
-(* TODO
+(* TODO: Make predicate inversion work
 from p where happy p;
 > val it = ["shaggy", "velma"] : string list
 *)
@@ -1166,20 +1152,17 @@ from p where happy p;
  *   Cheap(beer) <- Sells(bar1, beer, p1) AND Sells(bar2, beer, p2)
  *     AND p1 < 3 AND p2 < 3 AND bar1 <> bar2
  *)
-(* TODO
 fun cheap beer =
-  exists (
-    from bar1, price1, bar2, price2
-      where sells (bar1, beer, price1)
-        andalso sells (bar2, beer, price2)
-        andalso price1 < 3
-        andalso price2 < 3
-        andalso bar1 <> bar2);
+  exists bar1, price1, bar2, price2
+    where sells (bar1, beer, price1)
+      andalso sells (bar2, beer, price2)
+      andalso price1 < 3
+      andalso price2 < 3
+      andalso bar1 <> bar2;
 > val cheap = fn : string -> bool
-*)
 
 (*) Pale is cheap
-(* TODO
+(* TODO: Make predicate inversion work
 from b where cheap b;
 > val it = ["pale"] : string list
 *)
@@ -1209,7 +1192,7 @@ from b where cheap b;
 fun isR y = true;
 > val isR = fn : 'a -> bool
 (* TODO
-fun isS1 x = exists (from y where isR y);
+fun isS1 x = exists y where isR y;
 > val isS1 = fn : 'a -> bool
 *)
 
@@ -1247,11 +1230,9 @@ from x where isS3 x;
  *   Answer(p) <- Likes(p, b)
  *     AND NOT JoeSells(b)
  *)
-(* TODO
 fun caskSells b =
-  exists (from beer, price where sells ("cask", beer, price));
-> val caskSells = fn : 'a -> bool
-*)
+  exists price where sells ("cask", b, price);
+> val caskSells = fn : string -> bool
 
 (* TODO
 from p where exists (
@@ -1607,18 +1588,16 @@ Sys.planEx "3";
 (* testFromSuchThat2e - Function inlining with elem predicate.
  * As testFromSuchThat2d but using a function. (Simple enough
  * that the function can be handled by inlining. *)
-let
-  fun isDept d =
-    d elem scott.depts
-in
-  from d
-    where isDept d andalso d.deptno = 20
-    yield d.dname
-end;
+fun isDept d =
+  d elem scott.depts;
+> val isDept = fn : {deptno:int, dname:string, loc:string} -> bool
+from d
+  where isDept d andalso d.deptno = 20
+  yield d.dname;
 > val it = ["RESEARCH"] : string bag
 Sys.planEx "0";
 > val it =
->   "val it = let val isDept = fn d => op elem (d, #depts scott) in from d_1 : {deptno:int, dname:string, loc:string} where isDept d_1 andalso #deptno d_1 = 20 yield #dname d_1 end"
+>   "val it = from d : {deptno:int, dname:string, loc:string} where (let val d_1 = d in op elem (d_1, #depts scott) end) andalso #deptno d = 20 yield #dname d"
 >   : string
 (* TODO: remove spurious 'where op elem (d, #depts scott)' *)
 Sys.planEx "999";

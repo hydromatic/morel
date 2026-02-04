@@ -1613,30 +1613,12 @@ fun isAncestor (x, z) =
         andalso (y, z) elem parents);
 > val isAncestor = fn : string * string -> bool
 
-(* TODO remove 'let' when predicate-inversion is smarter *)
-let
-  fun isAncestor (x, z) =
-    (x, z) elem parents
-      orelse (exists y
-        where isAncestor(x, y)
-          andalso (y, z) elem parents);
-in
-  from a
-    where isAncestor(a, "arwen")
-end;
+from a
+  where isAncestor(a, "arwen");
 > val it = ["elrond","earendil"] : string bag
 
-(* TODO remove 'let' when predicate-inversion is smarter *)
-let
-  fun isAncestor (x, z) =
-    (x, z) elem parents
-      orelse (exists y
-        where isAncestor(x, y)
-          andalso (y, z) elem parents);
-in
-  from d
-    where isAncestor("earendil", d)
-end;
+from d
+  where isAncestor("earendil", d);
 > val it = ["elrond","arwen","elladan","elrohir"] : string bag
 
 (*) Recipe optimization
