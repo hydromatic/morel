@@ -62,14 +62,17 @@ public class OutputMatcher {
    * <p>If in doubt, we return false; we cannot afford false-positives.
    */
   public boolean equivalent(Type type, String actual, String expected) {
-    // Extract value portions
-    final String code0 = extractValue(actual);
-    final String code1 = extractValue(expected);
-    if (code0 == null || code1 == null) {
+    final Split split0 = Split.of(actual);
+    final Split split1 = Split.of(expected);
+    if (split0.val == null || split1.val == null) {
       return false;
     }
 
-    return codeEqual(type, code0, code1);
+    if (split0.type == null || !split0.type.equals(split1.type)) {
+      return false;
+    }
+
+    return codeEqual(type, split0.val, split1.val);
   }
 
   /** Returns whether two value strings are equivalent. */
@@ -81,58 +84,6 @@ public class OutputMatcher {
     } catch (RuntimeException e) {
       return false;
     }
-  }
-
-  /**
-   * Extracts the value portion from output like "val x = value : type" or
-   * "value : type".
-   */
-  static @Nullable String extractValue(String s) {
-    // Find start of value: after "val <name> = " if present
-    int valueStart = 0;
-    int eqIdx = indexOfEqWhitespace(s);
-    if (eqIdx >= 0 && s.substring(0, eqIdx).contains("val ")) {
-      // Skip "=" and any following whitespace (space, newline, etc.)
-      int start = eqIdx + 1;
-      while (start < s.length() && isWhitespaceChar(s.charAt(start))) {
-        start++;
-      }
-      valueStart = start;
-    }
-
-    // Find end of value: before the last top-level " : "
-    int depth = 0;
-    boolean inString = false;
-    int lastColon = -1;
-    for (int i = 0; i < s.length(); i++) {
-      char c = s.charAt(i);
-      if (inString) {
-        if (c == '"') {
-          inString = false;
-        } else if (c == '\\') {
-          i++;
-        }
-        continue;
-      }
-      if (c == '"') {
-        inString = true;
-      } else if (c == '(' || c == '[' || c == '{') {
-        depth++;
-      } else if (c == ')' || c == ']' || c == '}') {
-        depth--;
-      } else if (c == ':'
-          && depth == 0
-          && i > 0
-          && s.charAt(i - 1) == ' '
-          && i + 1 < s.length()
-          && s.charAt(i + 1) == ' ') {
-        lastColon = i;
-      }
-    }
-    if (lastColon < 0) {
-      return null;
-    }
-    return s.substring(valueStart, lastColon - 1);
   }
 
   static String normalizeWhitespace(String s) {
@@ -148,7 +99,6 @@ public class OutputMatcher {
         } else if (c == '\\' && i + 1 < s.length()) {
           buf.append(s.charAt(++i));
         }
-        lastWasSpace = false;
         continue;
       }
       if (c == '"') {
@@ -191,20 +141,6 @@ public class OutputMatcher {
 
   private static boolean isWordChar(char c) {
     return Character.isLetterOrDigit(c) || c == '_' || c == '\'' || c == '~';
-  }
-
-  private static boolean isWhitespaceChar(char c) {
-    return c == ' ' || c == '\n' || c == '\r' || c == '\t';
-  }
-
-  /** Finds the first '=' followed by whitespace (space or newline). */
-  private static int indexOfEqWhitespace(String s) {
-    for (int i = 0; i < s.length() - 1; i++) {
-      if (s.charAt(i) == '=' && isWhitespaceChar(s.charAt(i + 1))) {
-        return i;
-      }
-    }
-    return -1;
   }
 
   // --- Value parser ---
@@ -503,24 +439,6 @@ public class OutputMatcher {
       return i < s.length() ? s.charAt(i) : 0;
     }
 
-    /**
-     * Peeks at the next word without consuming it. Returns null if next token
-     * is not a word.
-     */
-    @Nullable
-    String peekWord() {
-      skipSpaces();
-      if (pos >= s.length() || !isWordChar(s.charAt(pos))) {
-        return null;
-      }
-      int start = pos;
-      int end = start;
-      while (end < s.length() && isWordChar(s.charAt(end))) {
-        end++;
-      }
-      return s.substring(start, end);
-    }
-
     void consume(String expected) {
       skipSpaces();
       if (!s.startsWith(expected, pos)) {
@@ -588,6 +506,108 @@ public class OutputMatcher {
       while (pos < s.length() && s.charAt(pos) == ' ') {
         pos++;
       }
+    }
+  }
+
+  /** An output line split into sections. */
+  private static class Split {
+    final String prefix;
+    final @Nullable String val;
+    final @Nullable String type;
+
+    private Split(String prefix, @Nullable String val, @Nullable String type) {
+      this.prefix = prefix;
+      this.val = val;
+      this.type = type;
+    }
+
+    /**
+     * Splits an output line. Given "val x = value : type", returns ["val x = ",
+     * "value", "type"].
+     */
+    static Split of(String s) {
+      // Start of value: after "val <name> = " if present
+      final int valueStart = valueStart(s);
+
+      // Find end of value: before the last top-level " : "
+      int lastColon = lastColon(s);
+      String prefix = s.substring(0, valueStart);
+      if (lastColon < 0) {
+        return new Split(prefix, null, null);
+      } else {
+        String val = s.substring(valueStart, lastColon - 1);
+        String type = s.substring(lastColon + 1);
+        return new Split(prefix, val, type);
+      }
+    }
+
+    private static int valueStart(String s) {
+      final int eq = indexOfEqWhitespace(s);
+      if (eq < 0 || !s.substring(0, eq).contains("val ")) {
+        return 0;
+      }
+      // Skip "=" and any following whitespace (space, newline, etc.)
+      int start = eq + 1;
+      while (start < s.length() && isWhitespaceChar(s.charAt(start))) {
+        start++;
+      }
+      return start;
+    }
+
+    private static int lastColon(String s) {
+      int depth = 0;
+      boolean inString = false;
+      int lastColon = -1;
+      for (int i = 0; i < s.length(); i++) {
+        final char c = s.charAt(i);
+        if (inString) {
+          if (c == '"') {
+            inString = false;
+          } else if (c == '\\') {
+            i++;
+          }
+        } else {
+          switch (c) {
+            case '"':
+              inString = true;
+              break;
+            case '(':
+            case '[':
+            case '{':
+              depth++;
+              break;
+            case ')':
+            case ']':
+            case '}':
+              depth--;
+              break;
+            case ':':
+              if (depth == 0
+                  && i > 0
+                  && s.charAt(i - 1) == ' '
+                  && i + 1 < s.length()
+                  && s.charAt(i + 1) == ' ') {
+                lastColon = i;
+              }
+              break;
+          }
+        }
+      }
+      return lastColon;
+    }
+
+    private static boolean isWhitespaceChar(char c) {
+      return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+    }
+
+    /** Finds the first '=' followed by whitespace (space or newline). */
+    private static int indexOfEqWhitespace(String s) {
+      for (int i = 0; i < s.length() - 1; i++) {
+        if (s.charAt(i) == '=' && isWhitespaceChar(s.charAt(i + 1))) {
+          return i;
+        }
+      }
+      return -1;
     }
   }
 }
