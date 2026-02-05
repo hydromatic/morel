@@ -37,6 +37,7 @@ import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.scott.data.hsqldb.ScottHsqldb;
 import org.apache.calcite.adapter.jdbc.JdbcSchema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 /** Data sets for testing. */
 enum BuiltInDataSet implements DataSet {
@@ -63,11 +64,8 @@ enum BuiltInDataSet implements DataSet {
   FOODMART("foodmart", NameConverter.TO_LOWER) {
     SchemaPlus schema(SchemaPlus rootSchema) {
       final DataSource dataSource =
-          JdbcSchema.dataSource(
-              FoodmartHsqldb.URI,
-              null,
-              FoodmartHsqldb.USER,
-              FoodmartHsqldb.PASSWORD);
+          createDataSource(
+              FoodmartHsqldb.URI, FoodmartHsqldb.USER, FoodmartHsqldb.PASSWORD);
       String hsqldbSchema = "foodmart";
       final JdbcSchema schema =
           JdbcSchema.create(
@@ -94,8 +92,8 @@ enum BuiltInDataSet implements DataSet {
   SCOTT("scott", BuiltInDataSet::scottNameConverter) {
     SchemaPlus schema(SchemaPlus rootSchema) {
       final DataSource dataSource =
-          JdbcSchema.dataSource(
-              ScottHsqldb.URI, null, ScottHsqldb.USER, ScottHsqldb.PASSWORD);
+          createDataSource(
+              ScottHsqldb.URI, ScottHsqldb.USER, ScottHsqldb.PASSWORD);
       final String hsqldbSchema = "SCOTT";
       final JdbcSchema schema =
           JdbcSchema.create(
@@ -113,6 +111,25 @@ enum BuiltInDataSet implements DataSet {
       Stream.of(BuiltInDataSet.values())
           .collect(
               Collectors.toMap(d -> d.name().toLowerCase(Locale.ROOT), d -> d));
+
+  /**
+   * Creates a DataSource with connection pool settings suitable for parallel
+   * test execution.
+   *
+   * <p>Uses a larger pool size (50) to handle concurrent test threads, and a
+   * borrow timeout (5 seconds) so tests fail fast instead of hanging forever if
+   * the pool is exhausted.
+   */
+  private static DataSource createDataSource(
+      String url, String user, String password) {
+    final BasicDataSource dataSource = new BasicDataSource();
+    dataSource.setUrl(url);
+    dataSource.setUsername(user);
+    dataSource.setPassword(password);
+    dataSource.setMaxTotal(50);
+    dataSource.setMaxWaitMillis(5000);
+    return dataSource;
+  }
 
   final String schemaName;
   final NameConverter nameConverter;
