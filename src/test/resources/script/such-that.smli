@@ -142,13 +142,65 @@ from n where isNum n andalso isEven n;
 from x where case x of y => y elem [1,2];
 > val it = [1,2] : int bag
 
-(*) Case with multiple arms
-(* TODO currently gives 'x is not grounded'
+(*) Case with multiple arms (issue #341)
 from x where (case x of 1 => true | 3 => true | _ => false);
 > val it = [1,3] : int bag
-Sys.planEx "3";
-> val it = "..." : string
+
+(*) Case with explicit false arm excludes that value
+from x where (case x of 1 => true | 2 => false | 3 => true | _ => false);
+> val it = [1,3] : int bag
+
+(*) Simple boolean inversion: 'not b' generates false
+from b where not b;
+> val it = [false] : bool bag
+
+(*) Case with variable pattern and range predicate
+from x where (case x of 0 => true | n => n >= 5 andalso n <= 8);
+> val it = [0,5,6,7,8] : int bag
+
+(* TODO: Exclusion constraints need to become post-generation filters
+(*) Case where explicit false shadows later variable match
+from x where (case x of 6 => false | n => n >= 5 andalso n <= 8);
+> val it = [5,7,8] : int bag
 *)
+
+(*) Simple constructor pattern test - single arm with range constraint
+from e where (case e of INL n => n >= 5 andalso n <= 8 | _ => false);
+> val it = [INL 5,INL 6,INL 7,INL 8] : (int,'a) either bag
+
+(*) Constructor pattern with boolean payload
+from e where (case e of INR b => b | _ => false);
+> val it = [INR true] : ('a,bool) either bag
+
+(*) Constructor pattern with boolean payload - "not b" inverts to "b = false"
+from e where (case e of INR b => not b | _ => false);
+> val it = [INR false] : ('a,bool) either bag
+
+(*) Constructor pattern with (boolean * int) payload
+from e where (case e of INR (b, i) => b andalso i > 5 andalso i < 15 andalso i mod 3 = 1 | _ => false);
+> val it = [INR (true,7),INR (true,10),INR (true,13)]
+>   : ('a,(bool * int)) either bag
+
+from e where (case e of INR (b, i) => i > 0 andalso i < 5 andalso b = (i mod 2 = 0) | _ => false);
+> val it = [INR (false,1),INR (false,3),INR (true,2),INR (true,4)]
+>   : ('a,(bool * int)) either bag
+
+(*) Multiple constructor arms combined with orelse (via maybeUnion)
+from e where (case e of
+    INL n => n >= 5 andalso n <= 8
+  | INR b => not b);
+> val it = [INL 5,INL 6,INL 7,INL 8,INR false] : (int,bool) either bag
+
+(*) Case with constructor patterns - INL/INR (issue #341)
+(* Multiple arms with literal patterns, variable patterns, and exclusions *)
+from e where (case e of
+    INL 0 => true
+  | INL 6 => false
+  | INR b => not b
+  | INL 7 => true
+  | INL 100 => true
+  | INL n => n >= 5 andalso n <= 8);
+> val it = [INL 0,INR false,INL 7,INL 100,INL 5,INL 8] : (int,bool) either bag
 
 (* Predicate cannot be inverted.
  *
@@ -156,7 +208,7 @@ Sys.planEx "3";
  * but we don't have symbolic math. *)
 (* TODO: better exception *)
 from x where (x + 2) * (x - 3) = 0;
-> java.lang.IllegalArgumentException: pattern x_1 is not grounded
+> java.lang.IllegalArgumentException: pattern 'x' is not grounded
 
 (*) Pattern
 from x, y where (x, y) elem [(1,true),(2,false)];
@@ -652,7 +704,7 @@ in
     where isEmp50 e
     yield e.ename
 end;
-> java.lang.IllegalArgumentException: pattern e_9 is not grounded
+> java.lang.IllegalArgumentException: pattern 'e' is not grounded
 
 (*) A function with external extent.
 fun hasJob (e: typeof (Bag.hd scott.emps),
@@ -751,7 +803,7 @@ end;
  * Convenience function that converts a predicate to a relation.
  *)
 
-(* TODO. Currently throws 'pattern r is not grounded'
+(* TODO. Currently throws "pattern 'r' is not grounded"
 fun enumerate predicate =
   from r where predicate r;
 > val enumerate = fn : ('a -> bool) -> 'a bag
@@ -1021,7 +1073,6 @@ in
   from x, z
     where (exists y where edge (x, y) andalso edge (y, z))
       andalso x <> z
-    distinct (*) TODO: "distinct" should not be required
 end;
 > x z
 > - -
@@ -1037,7 +1088,6 @@ let
 in
   from x, z
     where (exists y where edge (x, y) andalso edge (y, z) andalso x <> z)
-    distinct (*) TODO: "distinct" should not be required
 end;
 > x z
 > - -
@@ -1065,109 +1115,8 @@ end;
 >
 > val it : {x:int, y:int} bag
 
-(* Joe's bar --------------------------------------------------------
- *
- * See http://infolab.stanford.edu/~ullman/fcdb/aut07/slides/dlog.pdf.
- *)
-
-val barPatrons = [
-  {bar = "squirrel", patron = "shaggy"},
-  {bar = "cask", patron = "fred"},
-  {bar = "cask", patron = "scooby"},
-  {bar = "cask", patron = "shaggy"},
-  {bar = "cask", patron = "velma"}];
-> bar      patron
-> -------- ------
-> squirrel shaggy
-> cask     fred
-> cask     scooby
-> cask     shaggy
-> cask     velma
->
-> val barPatrons : {bar:string, patron:string} list
-
-val barBeers = [
-  {bar =  "squirrel", beer =  "ipa", price =  2},
-  {bar =  "squirrel", beer =  "pale", price =  2},
-  {bar =  "squirrel", beer =  "amber", price =  3},
-  {bar =  "cask", beer =  "stout", price =  4},
-  {bar =  "cask", beer =  "ipa", price =  5}];
-> bar      beer  price
-> -------- ----- -----
-> squirrel ipa   2
-> squirrel pale  2
-> squirrel amber 3
-> cask     stout 4
-> cask     ipa   5
->
-> val barBeers : {bar:string, beer:string, price:int} list
-
-val patronBeers = [
-  {patron =  "shaggy", beer = "amber"},
-  {patron =  "fred", beer = "amber"},
-  {patron =  "velma", beer = "stout"}];
-> beer  patron
-> ----- ------
-> amber shaggy
-> amber fred
-> stout velma
->
-> val patronBeers : {beer:string, patron:string} list
-
-fun frequents (patron, bar) =
-  {patron, bar} elem barPatrons;
-> val frequents = fn : string * string -> bool
-fun likes (patron, beer) =
-  {patron, beer} elem patronBeers;
-> val likes = fn : string * string -> bool
-fun sells (bar, beer, price) =
-  {bar, beer, price} elem barBeers;
-> val sells = fn : string * string * int -> bool
-
-(* Patron p is happy if there exists a bar, a beer, and a price such that p
- * frequents the bar, likes the beer, and the bar sells the beer at price p.
- *
- * Datalog:
- *    Happy(p) <- Frequents(p, bar) AND Likes(p, beer) AND Sells(bar, beer)
- *)
-fun happy patron =
-  exists bar, beer, price
-      where frequents (patron, bar)
-      andalso likes (patron, beer)
-      andalso sells (bar, beer, price);
-> val happy = fn : string -> bool
-
-(* Find happy patrons. Shaggy is happy because the Squirrel and Cask sell
-   Amber; Velma is happy because Cask sells Stout. Fred and Scooby are not
-   happy. *)
-(* TODO: Make predicate inversion work
-from p where happy p;
-> val it = ["shaggy", "velma"] : string list
-*)
-
-(* A beer is considered cheap if there are at least two bars that sell it for
- * under $3.
- *
- * Datalog:
- *   Cheap(beer) <- Sells(bar1, beer, p1) AND Sells(bar2, beer, p2)
- *     AND p1 < 3 AND p2 < 3 AND bar1 <> bar2
- *)
-fun cheap beer =
-  exists bar1, price1, bar2, price2
-    where sells (bar1, beer, price1)
-      andalso sells (bar2, beer, price2)
-      andalso price1 < 3
-      andalso price2 < 3
-      andalso bar1 <> bar2;
-> val cheap = fn : string -> bool
-
-(*) Pale is cheap
-(* TODO: Make predicate inversion work
-from b where cheap b;
-> val it = ["pale"] : string list
-*)
-
-(* A rule is safe if:
+(* Safety ------------------------------------------------------------
+ * A rule is safe if:
  * 1. Each distinguished variable,
  * 2. Each variable in an arithmetic subgoal, and
  * 3. Each variable in a negated subgoal,
@@ -1222,6 +1171,106 @@ from x where isS3 x;
 > Unsafe
 *)
 
+(* Joe's bar --------------------------------------------------------
+ *
+ * See http://infolab.stanford.edu/~ullman/fcdb/aut07/slides/dlog.pdf.
+ *)
+
+val barPatrons = [
+  {bar = "squirrel", patron = "shaggy"},
+  {bar = "cask", patron = "fred"},
+  {bar = "cask", patron = "scooby"},
+  {bar = "cask", patron = "shaggy"},
+  {bar = "cask", patron = "velma"}];
+> bar      patron
+> -------- ------
+> squirrel shaggy
+> cask     fred
+> cask     scooby
+> cask     shaggy
+> cask     velma
+>
+> val barPatrons : {bar:string, patron:string} list
+
+val barBeers = [
+  {bar =  "squirrel", beer =  "ipa", price =  2},
+  {bar =  "squirrel", beer =  "pale", price =  2},
+  {bar =  "squirrel", beer =  "amber", price =  3},
+  {bar =  "cask", beer =  "stout", price =  4},
+  {bar =  "cask", beer =  "ipa", price =  5},
+  {bar =  "big_al", beer =  "pale", price =  1}];
+> bar      beer  price
+> -------- ----- -----
+> squirrel ipa   2
+> squirrel pale  2
+> squirrel amber 3
+> cask     stout 4
+> cask     ipa   5
+> big_al   pale  1
+>
+> val barBeers : {bar:string, beer:string, price:int} list
+
+val patronBeers = [
+  {patron =  "shaggy", beer = "amber"},
+  {patron =  "fred", beer = "amber"},
+  {patron =  "velma", beer = "stout"}];
+> beer  patron
+> ----- ------
+> amber shaggy
+> amber fred
+> stout velma
+>
+> val patronBeers : {beer:string, patron:string} list
+
+fun frequents (patron, bar) =
+  {patron, bar} elem barPatrons;
+> val frequents = fn : string * string -> bool
+fun likes (patron, beer) =
+  {patron, beer} elem patronBeers;
+> val likes = fn : string * string -> bool
+fun sells (bar, beer, price) =
+  {bar, beer, price} elem barBeers;
+> val sells = fn : string * string * int -> bool
+
+(* Patron p is happy if there exists a bar, a beer, and a price such that p
+ * frequents the bar, likes the beer, and the bar sells the beer at price p.
+ *
+ * Datalog:
+ *    Happy(p) <- Frequents(p, bar) AND Likes(p, beer) AND Sells(bar, beer)
+ *)
+fun happy patron =
+  exists bar, beer, price
+      where frequents (patron, bar)
+      andalso likes (patron, beer)
+      andalso sells (bar, beer, price);
+> val happy = fn : string -> bool
+
+(* Find happy patrons. Shaggy is happy because the Squirrel and Cask sell
+   Amber; Velma is happy because Cask sells Stout. Fred and Scooby are not
+   happy. *)
+from p where happy p;
+> val it = ["shaggy","velma"] : string bag
+
+(* A beer is considered cheap if there are at least two bars that sell it for
+ * under $3.
+ *
+ * Datalog:
+ *   Cheap(beer) <- Sells(bar1, beer, p1) AND Sells(bar2, beer, p2)
+ *     AND p1 < 3 AND p2 < 3 AND bar1 <> bar2
+ *)
+fun cheap beer =
+  exists bar1, price1, bar2, price2
+    where sells (bar1, beer, price1)
+      andalso sells (bar2, beer, price2)
+      andalso price1 < 3
+      andalso price2 < 3
+      andalso bar1 <> bar2;
+> val cheap = fn : string -> bool
+
+(*) Pale is cheap
+from b where cheap b;
+> val it = ["pale"] : string bag
+
 (* Example Datalog Program. Using EDB Sells (bar, beer, price) and
  * Likes (patron, beer), find the patrons who like beers Joe doesn't sell.
  *
@@ -1234,18 +1283,27 @@ fun caskSells b =
   exists price where sells ("cask", b, price);
 > val caskSells = fn : string -> bool
 
-(* TODO
-from p where exists (
-  from b where likes (p, b) andalso not (caskSells b));
-> val it = ["foo"] : string list
-*)
+from p
+  where (exists b where likes (p, b) andalso not (caskSells b));
+> val it = ["shaggy","fred"] : string bag
 
-(* Cousin
+(* Family relationships ----------------------------------------------
  *
  * Datalog:
  *   Sib(x,y) <- Par(x,p) AND Par(y,p) AND x<>y
  *   Cousin(x,y) <- Sib(x,y)
  *   Cousin(x,y) <- Par(x,xp) AND Par(y,yp) AND Cousin(xp,yp)
+ *
+ * The data:
+ *         a       d       h
+ *       /   \   /   \    /
+ *      b      c      e  /
+ *      |     /       | /
+ *      f    g        i
+ *    /   \ /
+ *   j     k
+ *
+ * Siblings: {b, c}, {c, e}, {j, k}
  *)
 fun par (x, p) =
   (p, x) elem [
@@ -1261,21 +1319,17 @@ fun par (x, p) =
     ("g", "k"),
     ("h", "i")];
 > val par = fn : string * string -> bool
-(* TODO
-fun sib (x, y) = exists (
-  from p where par (x, p) andalso par (y, p) andalso x <> y);
+fun sib (x, y) =
+  exists p where par (x, p) andalso par (y, p) andalso x <> y;
 > val sib = fn : string * string -> bool
-*)
 
-(* TODO
 fun cousin (x, y) = sib (x, y)
-  orelse exists (
-    from xp, yp
+  orelse
+    exists xp, yp
       where par (x, xp)
       andalso par (y, yp)
-      andalso cousin (xp, yp));
+      andalso cousin (xp, yp);
 > val cousin = fn : string * string -> bool
-*)
 
 (*
  Round 1: (b, c), (c, e), (g, h), (j, k)
@@ -1283,33 +1337,31 @@ fun cousin (x, y) = sib (x, y)
  Round 3: add (f, g), (f, h), (g, i), (i, k)
  Round 4: add (i, j), (k, k)
  *)
-(* TODO
-enumerate sib;
-> val it = [("b","c")] : (string * string) list
-*)
+from p where sib p;
+> val it = [("b","c"),("j","k"),("c","e"),("e","c"),("c","b"),("k","j")]
+>   : (string * string) bag
 
-(*
-enumerate cousin;
-> val it = [("b","c"), ("c","e"),("g","h"),("j","k"),("f","g"),("f","h"),("g","i"),("i","k"),("i","j"),("k","k")] : (string * string) list
-*)
+from p where cousin p;
+> val it =
+>   [("b","c"),("j","k"),("c","e"),("e","c"),("c","b"),("k","j"),("c","c"),
+>    ("k","k"),("b","e"),("e","e"),("b","b"),("e","b"),("j","j")]
+>   : (string * string) bag
 
 (* Nonmonotone relation.
  * 'cousin2' is as 'cousin', but 'orelse' has become 'and not'.
  * The graph is not stratified: there is a path with an infinite number
  * of 'not' as we traverse the cycle cousin - s2 - cousin,
  * where s2 is the expression 'notExists (...)'. *)
-(* TODO
 fun cousin2 (x, y) = sib (x, y)
-  andalso notExists (
-    from (xp, yp)
+  andalso not (
+    exists xp, yp
       where par (x, xp)
       andalso par (y, yp)
       andalso cousin2 (xp, yp));
 > val cousin2 = fn : string * string -> bool
-*)
 
 (* TODO
-enumerate cousin2;
+from p where cousin2 p;
 > Error: non-stratified
 *)
 

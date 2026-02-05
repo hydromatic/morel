@@ -19,6 +19,7 @@
 package net.hydromatic.morel.compile;
 
 import static com.google.common.collect.Iterables.getLast;
+import static java.lang.String.format;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.compile.Generators.maybeGenerator;
 import static net.hydromatic.morel.util.Static.append;
@@ -91,7 +92,7 @@ public class Expander {
             if (generator == null
                 || generator.cardinality == Generator.Cardinality.INFINITE) {
               throw new IllegalArgumentException(
-                  "pattern " + namedPat + " is not grounded");
+                  format("pattern '%s' is not grounded", namedPat.name));
             }
           }
         }
@@ -103,11 +104,20 @@ public class Expander {
     return from2.equals(from) ? from : from2;
   }
 
+  /** Processing state for a pattern during generator expansion. */
+  enum PatternState {
+    /** Pattern is currently being processed; used to detect cycles. */
+    IN_PROGRESS,
+    /** Pattern has been fully processed and has a scan. */
+    DONE
+  }
+
   private static Core.From expandFrom2(
       Generators.Cache cache, Environment env, StepVarSet stepVarSet) {
     // Build the set of patterns that are assigned in some scan.
     final TypeSystem typeSystem = cache.typeSystem;
-    final Set<Core.NamedPat> done = new HashSet<>();
+    // Tracks processing state for each pattern.
+    final Map<Core.NamedPat, PatternState> patternState = new HashMap<>();
     final Set<Core.NamedPat> allPats = new HashSet<>();
     // All patterns defined in any scan step (extent or not). Used to
     // distinguish local scan patterns from outer-scope variables.
@@ -145,8 +155,12 @@ public class Expander {
     // For example, for "exists v0 where parent(v0, x) andalso parent(v0, y)",
     // both the generator for x and the generator for y have v0 in their
     // patterns. We need v0 in allPats so the second generator can join on it.
+    // Use a Set to deduplicate generators (the same generator may be indexed
+    // under multiple patterns in generatorMap).
     final Map<Core.NamedPat, Integer> patternCounts = new HashMap<>();
-    for (Generator generator : generatorMap.values()) {
+    final Set<Generator> uniqueGenerators =
+        new HashSet<>(generatorMap.values());
+    for (Generator generator : uniqueGenerators) {
       for (Core.NamedPat p : generator.pat.expand()) {
         patternCounts.merge(p, 1, Integer::sum);
       }
@@ -167,7 +181,7 @@ public class Expander {
           for (Core.NamedPat freePat : freePats) {
             addGeneratorScan(
                 typeSystem,
-                done,
+                patternState,
                 freePat,
                 generatorMap,
                 allPats,
@@ -184,7 +198,7 @@ public class Expander {
                 if (stepVarSet.usedPats.contains(p)) {
                   addGeneratorScan(
                       typeSystem,
-                      done,
+                      patternState,
                       p,
                       generatorMap,
                       allPats,
@@ -203,7 +217,9 @@ public class Expander {
             }
             // The pattern(s) defined in the scan are now available to
             // subsequent steps.
-            done.addAll(scan.pat.expand());
+            for (Core.NamedPat p : scan.pat.expand()) {
+              patternState.put(p, PatternState.DONE);
+            }
           }
 
           // The step is not a scan over an extent. Add it now.
@@ -219,6 +235,9 @@ public class Expander {
                 (p, generator) ->
                     conditionRef.set(
                         generator.simplify(typeSystem, p, conditionRef.get())));
+            // Note: satisfiedConstraints simplification is intentionally
+            // not applied here. The generator-based simplification above
+            // handles the cases that matter.
             fromBuilder.where(conditionRef.get());
             return;
           }
@@ -237,8 +256,13 @@ public class Expander {
         }
       }
       if (toProject.size() < fromBuilder.stepEnv().bindings.size()) {
-        // Some shared patterns need to be projected away
+        // Some shared patterns need to be projected away.
+        // We also need distinct because projecting away variables that were
+        // used for joining (like y in "exists y where edge(x,y) andalso
+        // edge(y,z)") can cause duplicates. For example, (1, 3) would appear
+        // twice if there are two different y values connecting x=1 to z=3.
         fromBuilder.yield_(core.recordOrAtom(typeSystem, toProject));
+        fromBuilder.distinct();
       }
     }
 
@@ -256,13 +280,13 @@ public class Expander {
    */
   private static void addGeneratorScan(
       TypeSystem typeSystem,
-      Set<Core.NamedPat> done,
+      Map<Core.NamedPat, PatternState> patternState,
       Core.NamedPat freePat,
       Map<Core.NamedPat, Generator> generatorMap,
       Set<Core.NamedPat> allPats,
       Set<Core.NamedPat> allScanPats,
       FromBuilder fromBuilder) {
-    if (done.contains(freePat) || !allPats.contains(freePat)) {
+    if (patternState.containsKey(freePat) || !allPats.contains(freePat)) {
       return;
     }
 
@@ -272,36 +296,48 @@ public class Expander {
       return;
     }
 
+    // Mark this pattern as "in progress" to prevent infinite recursion.
+    // If a dependency cycles back to this pattern, we'll detect it via
+    // patternState.containsKey() and stop recursing.
+    patternState.put(freePat, PatternState.IN_PROGRESS);
+
     // Make sure all dependencies have a scan.
     for (Core.NamedPat p : generator.freePats) {
       addGeneratorScan(
-          typeSystem, done, p, generatorMap, allPats, allScanPats, fromBuilder);
+          typeSystem,
+          patternState,
+          p,
+          generatorMap,
+          allPats,
+          allScanPats,
+          fromBuilder);
     }
 
     // Check that all dependencies are now satisfied.
     // If a dependency is from a scan in this from expression that hasn't been
     // processed yet, we cannot add this generator now - it will be added later
-    // when the dependency is in `done` (e.g., when processing the WHERE
-    // clause). Free variables from outer scopes (e.g., a variable defined in
-    // an enclosing let) are already bound and don't need to be "done".
+    // when the dependency is DONE (e.g., when processing the WHERE clause).
+    // Free variables from outer scopes (e.g., a variable defined in an
+    // enclosing let) are already bound and don't need to be DONE.
     for (Core.NamedPat p : generator.freePats) {
-      if (allScanPats.contains(p) && !done.contains(p)) {
+      if (allScanPats.contains(p) && patternState.get(p) != PatternState.DONE) {
+        patternState.remove(freePat);
         return;
       }
     }
 
     // The patterns we need (requiredPats) are those provided by the generator,
     // which are used in later steps (allPats),
-    // and are not provided by earlier steps (done).
+    // and are not already DONE.
     final List<Core.NamedPat> expandedPats = generator.pat.expand();
     final List<Core.NamedPat> requiredPats =
         new ArrayList<>(expandedPats.size());
     for (Core.NamedPat p : expandedPats) {
-      if (allPats.contains(p) && !done.contains(p)) {
+      if (allPats.contains(p) && patternState.get(p) != PatternState.DONE) {
         requiredPats.add(p);
       }
     }
-    // Now all dependencies are done, add a scan for the generator.
+    // Now all dependencies are DONE, add a scan for the generator.
     if (expandedPats.equals(requiredPats)) {
       if (generator.unique) {
         // Add "join (x, y, z) in collection".
@@ -323,7 +359,8 @@ public class Expander {
       final Map<Core.NamedPat, Core.IdPat> renameMap = new HashMap<>();
       final List<Core.Exp> joinConditions = new ArrayList<>();
       for (Core.NamedPat p : expandedPats) {
-        if (done.contains(p) && !requiredPats.contains(p)) {
+        if (patternState.get(p) == PatternState.DONE
+            && !requiredPats.contains(p)) {
           // Create a fresh pattern variable for the subquery's binding.
           final Core.IdPat freshPat = core.idPat(p.type, p.name + "'", 0);
           renameMap.put(p, freshPat);
@@ -347,7 +384,7 @@ public class Expander {
       // 1. The generator may produce duplicates (!generator.unique), or
       // 2. We're projecting away inner variables (not outer-bound).
       //
-      // If patterns are projected away because they're in `done` (already bound
+      // If patterns are projected away because they're DONE (already bound
       // from outer scans), we don't need distinct - the outer context provides
       // uniqueness via the join condition.
       // If patterns are projected away because they're not in `allPats` (inner
@@ -355,7 +392,8 @@ public class Expander {
       boolean needsDistinct = !generator.unique;
       if (!needsDistinct) {
         for (Core.NamedPat p : expandedPats) {
-          if (!requiredPats.contains(p) && !done.contains(p)) {
+          if (!requiredPats.contains(p)
+              && patternState.get(p) != PatternState.DONE) {
             needsDistinct = true;
             break;
           }
@@ -370,7 +408,9 @@ public class Expander {
       final Core.From subquery = fromBuilder2.build();
       fromBuilder.scan(scanPat2, subquery);
     }
-    done.addAll(requiredPats);
+    for (Core.NamedPat p : requiredPats) {
+      patternState.put(p, PatternState.DONE);
+    }
   }
 
   /**

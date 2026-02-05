@@ -26,8 +26,11 @@ import static net.hydromatic.morel.compile.FreeFinder.freePats;
 import static net.hydromatic.morel.util.Static.transformEager;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableRangeSet;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
+import com.google.common.collect.Range;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -43,6 +46,8 @@ import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.ast.Visitor;
 import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.DataType;
+import net.hydromatic.morel.type.FnType;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RangeExtent;
@@ -81,6 +86,10 @@ class Generators {
     }
 
     if (maybeFunction(cache, pat, ordered, constraints)) {
+      return true;
+    }
+
+    if (maybeCase(cache, pat, ordered, constraints)) {
       return true;
     }
 
@@ -126,6 +135,9 @@ class Generators {
           for (Core.FromStep step : from.steps) {
             switch (step.op) {
               case SCAN:
+              case YIELD:
+              case GROUP:
+                // Skip these steps - they don't add constraints
                 break;
               case WHERE:
                 // Decompose "andalso" to allow each conjunct to be processed
@@ -139,11 +151,10 @@ class Generators {
                   final Generator gen =
                       cache.bestGenerator((Core.NamedPat) pat);
                   if (gen != null) {
-                    // Check if any freePat is from inner scans OR if the
-                    // generator's pattern contains inner scan variables
+                    // Check if any free variable of the generator expression
+                    // comes from inner scans. If so, we need to join with those
+                    // scans to bind those variables before using the generator.
                     boolean dependsOnInnerScan = false;
-
-                    // Check free variables in the generator expression
                     for (Core.NamedPat freePat : gen.freePats) {
                       for (Core.Scan innerScan : innerScans) {
                         if (innerScan.pat.expand().contains(freePat)) {
@@ -153,24 +164,46 @@ class Generators {
                       }
                     }
 
-                    // Also check if the generator's pattern contains inner
-                    // scan variables (e.g., for elem patterns like
-                    // "(v0, x) elem list" where v0 is from the exists clause)
-                    if (!dependsOnInnerScan) {
-                      for (Core.NamedPat patVar : gen.pat.expand()) {
-                        for (Core.Scan innerScan : innerScans) {
-                          if (innerScan.pat.expand().contains(patVar)) {
-                            dependsOnInnerScan = true;
-                            break;
-                          }
-                        }
-                      }
-                    }
-
                     if (dependsOnInnerScan) {
                       // Replace the generator with one that includes inner
                       // scans
                       createJoinedGenerator(cache, pat, gen, innerScans);
+                    } else {
+                      // Check if remaining constraints only reference inner
+                      // scans and bound patterns (by name, not identity). If
+                      // they reference other extent patterns, skip
+                      // createFilteredGenerator to avoid circular dependencies.
+                      final Set<String> boundNames = new HashSet<>();
+                      for (Core.NamedPat p : gen.pat.expand()) {
+                        boundNames.add(p.name);
+                      }
+                      final Set<String> innerNames = new HashSet<>();
+                      for (Core.Scan innerScan : innerScans) {
+                        for (Core.NamedPat p : innerScan.pat.expand()) {
+                          innerNames.add(p.name);
+                        }
+                      }
+                      boolean referencesOtherExtent = false;
+                      for (Core.Exp c : constraints2) {
+                        for (Core.NamedPat fp : freePats(cache.typeSystem, c)) {
+                          // Skip patterns bound in environment (functions, etc)
+                          if (cache.env.getOpt(fp) != null) {
+                            continue;
+                          }
+                          if (!boundNames.contains(fp.name)
+                              && !innerNames.contains(fp.name)) {
+                            referencesOtherExtent = true;
+                            break;
+                          }
+                        }
+                        if (referencesOtherExtent) {
+                          break;
+                        }
+                      }
+                      if (!referencesOtherExtent) {
+                        createFilteredGenerator(
+                            cache, pat, gen, constraints2, innerScans);
+                      }
                     }
                   }
                   return true;
@@ -215,17 +248,29 @@ class Generators {
     final Set<Core.NamedPat> coveredByGenerator =
         new HashSet<>(dependentGen.pat.expand());
 
-    // Add inner scans first (only if not already covered by the generator)
+    // Add inner scans first (only if not already covered by the generator).
+    // For multi-pattern scans (e.g., {bar, beer, price} in extent), we must
+    // decompose and add separate extent scans only for uncovered patterns,
+    // to avoid duplicating patterns that are already covered.
     for (Core.Scan scan : innerScans) {
-      boolean scanCovered = true;
-      for (Core.NamedPat scanPat : scan.pat.expand()) {
-        if (!coveredByGenerator.contains(scanPat)) {
-          scanCovered = false;
-          break;
+      final List<Core.NamedPat> scanPats = scan.pat.expand();
+      if (scanPats.size() == 1) {
+        // Single-pattern scan: add if not covered
+        if (!coveredByGenerator.contains(scanPats.get(0))) {
+          fromBuilder.scan(scan.pat, scan.exp);
         }
-      }
-      if (!scanCovered) {
-        fromBuilder.scan(scan.pat, scan.exp);
+      } else {
+        // Multi-pattern scan: add separate extent scans for uncovered patterns
+        for (Core.NamedPat scanPat : scanPats) {
+          if (!coveredByGenerator.contains(scanPat)) {
+            final Core.Exp extent =
+                core.extent(
+                    typeSystem,
+                    scanPat.type,
+                    ImmutableRangeSet.of(Range.all()));
+            fromBuilder.scan(scanPat, extent);
+          }
+        }
       }
     }
 
@@ -260,6 +305,175 @@ class Generators {
   static class ExistsJoinGenerator extends Generator {
     ExistsJoinGenerator(
         Core.Pat pat,
+        Core.Exp exp,
+        Iterable<? extends Core.NamedPat> freePats) {
+      super(exp, freePats, pat, Cardinality.FINITE, true);
+    }
+
+    @Override
+    Core.Exp simplify(TypeSystem typeSystem, Core.Pat pat, Core.Exp exp) {
+      // The exists constraint is satisfied by this generator
+      return exp;
+    }
+  }
+
+  /**
+   * Creates a generator that applies remaining constraints as a WHERE filter.
+   *
+   * <p>For example, if we have:
+   *
+   * <pre>{@code
+   * from b where cheap b
+   * }</pre>
+   *
+   * <p>Where {@code cheap} is defined as:
+   *
+   * <pre>{@code
+   * fun cheap beer = exists bar1, price1, bar2, price2
+   *   where sells(bar1, beer, price1) andalso sells(bar2, beer, price2)
+   *     andalso price1 < 3 andalso price2 < 3 andalso bar1 <> bar2
+   * }</pre>
+   *
+   * <p>The generator from {@code sells(bar1, beer, price1)} produces {@code
+   * {bar1, beer, price1}} tuples. This method creates a filtered generator that
+   * applies the remaining constraints:
+   *
+   * <pre>{@code
+   * from {bar1, beer, price1} in barBeers
+   *   where price1 < 3
+   *     andalso exists {bar2, price2} in barBeers
+   *       where beer = beer andalso price2 < 3 andalso bar1 <> bar2
+   *   yield beer
+   *   distinct
+   * }</pre>
+   */
+  private static void createFilteredGenerator(
+      Cache cache,
+      Core.Pat pat,
+      Generator sourceGen,
+      List<Core.Exp> remainingConstraints,
+      List<Core.Scan> innerScans) {
+    final TypeSystem typeSystem = cache.typeSystem;
+    final FromBuilder fromBuilder = core.fromBuilder(typeSystem);
+
+    // Add the source generator scan
+    fromBuilder.scan(sourceGen.pat, sourceGen.exp);
+
+    // Filter out constraints that have been satisfied by generators
+    // (e.g., function calls like par(x, y) that were inlined to create
+    // generators). These are already encoded in the source generator's
+    // expression and don't need to be re-checked.
+    final List<Core.Exp> effectiveConstraints = new ArrayList<>();
+    for (Core.Exp constraint : remainingConstraints) {
+      if (!cache.satisfiedConstraints.contains(constraint)) {
+        effectiveConstraints.add(constraint);
+      }
+    }
+
+    // Identify which constraints can be applied directly (those that only
+    // reference variables from the source generator) vs those that need
+    // to remain as exists subqueries (those that reference inner scan
+    // variables not in the source generator).
+    final Set<Core.NamedPat> boundPats = new HashSet<>(sourceGen.pat.expand());
+    final List<Core.Exp> directConstraints = new ArrayList<>();
+    final List<Core.Exp> existsConstraints = new ArrayList<>();
+
+    for (Core.Exp constraint : effectiveConstraints) {
+      final Set<Core.NamedPat> freeInConstraint =
+          freePats(typeSystem, constraint);
+      boolean needsExists = false;
+      for (Core.NamedPat freePat : freeInConstraint) {
+        if (!boundPats.contains(freePat)) {
+          // This constraint references a variable not bound by the generator
+          for (Core.Scan innerScan : innerScans) {
+            if (innerScan.pat.expand().contains(freePat)) {
+              needsExists = true;
+              break;
+            }
+          }
+        }
+      }
+      if (needsExists) {
+        existsConstraints.add(constraint);
+      } else {
+        directConstraints.add(constraint);
+      }
+    }
+
+    // Apply direct constraints as WHERE
+    if (!directConstraints.isEmpty()) {
+      fromBuilder.where(core.andAlso(typeSystem, directConstraints));
+    }
+
+    // If there are exists constraints, wrap them in an exists subquery.
+    // Use the inner scans directly (they have the proper source collections).
+    if (!existsConstraints.isEmpty()) {
+      // Find which inner scans are needed for the exists constraints
+      final Set<Core.NamedPat> neededPats = new HashSet<>();
+      for (Core.Exp constraint : existsConstraints) {
+        neededPats.addAll(freePats(typeSystem, constraint));
+      }
+      neededPats.removeAll(boundPats);
+
+      // Build the exists subquery using inner scans that provide needed
+      // patterns
+      final FromBuilder existsBuilder = core.fromBuilder(typeSystem);
+      for (Core.Scan innerScan : innerScans) {
+        boolean scanNeeded = false;
+        for (Core.NamedPat scanPat : innerScan.pat.expand()) {
+          if (neededPats.contains(scanPat)) {
+            scanNeeded = true;
+            break;
+          }
+        }
+        if (scanNeeded) {
+          existsBuilder.scan(innerScan.pat, innerScan.exp);
+        }
+      }
+      existsBuilder.where(core.andAlso(typeSystem, existsConstraints));
+      final Core.From existsFrom = existsBuilder.build();
+
+      // Add the exists check as a WHERE condition
+      final Core.Exp existsCheck =
+          core.apply(
+              Pos.ZERO,
+              PrimitiveType.BOOL,
+              core.functionLiteral(typeSystem, BuiltIn.RELATIONAL_NON_EMPTY),
+              existsFrom);
+      fromBuilder.where(existsCheck);
+    }
+
+    // Yield just the target pattern. We need to find the pattern within
+    // sourceGen.pat that corresponds to pat (they may be different objects).
+    Core.NamedPat yieldPat = null;
+    final String patName = ((Core.NamedPat) pat).name;
+    for (Core.NamedPat p : sourceGen.pat.expand()) {
+      if (p.name.equals(patName)) {
+        yieldPat = p;
+        break;
+      }
+    }
+    if (yieldPat == null) {
+      // pat is not in sourceGen.pat - this shouldn't happen
+      return;
+    }
+    fromBuilder.yield_(core.id(yieldPat));
+    fromBuilder.distinct();
+
+    final Core.From filteredFrom = fromBuilder.build();
+    final Set<Core.NamedPat> freePats2 = freePats(typeSystem, filteredFrom);
+
+    // Replace the generator with the filtered one
+    cache.remove((Core.NamedPat) pat);
+    cache.add(
+        new ExistsFilterGenerator(
+            (Core.NamedPat) pat, filteredFrom, freePats2));
+  }
+
+  /** Generator created from an exists pattern with remaining constraints. */
+  static class ExistsFilterGenerator extends Generator {
+    ExistsFilterGenerator(
+        Core.NamedPat pat,
         Core.Exp exp,
         Iterable<? extends Core.NamedPat> freePats) {
       super(exp, freePats, pat, Cardinality.FINITE, true);
@@ -366,6 +580,7 @@ class Generators {
       Core.Pat goalPat,
       boolean ordered,
       List<Core.Exp> constraints) {
+    boolean anySuccess = false;
     for (Core.Exp constraint : constraints) {
       // Step 0: Handle CASE expression (from tuple pattern matching)
       // This occurs when a tuple-parameter function like f(x, y) is compiled
@@ -374,6 +589,22 @@ class Generators {
         final Core.Case caseExp = (Core.Case) constraint;
         if (caseExp.matchList.size() == 1) {
           final Core.Match match = caseExp.matchList.get(0);
+
+          // Step 0a: Handle constructor patterns (CON_PAT and CON0_PAT)
+          // For "case e of INL n => body", generate values for n, wrap with INL
+          if (match.pat.op == Op.CON_PAT) {
+            if (maybeConPat(cache, goalPat, ordered, match)) {
+              return true;
+            }
+            continue;
+          }
+          if (match.pat.op == Op.CON0_PAT) {
+            if (maybeCon0Pat(cache, goalPat, ordered, match)) {
+              return true;
+            }
+            continue;
+          }
+
           final Core.Exp inlinedBody =
               substituteArgs(
                   cache.typeSystem,
@@ -475,6 +706,12 @@ class Generators {
       // then recursively try to find a generator for the substituted body.
       // For recursive functions, inline only the non-recursive branches of
       // any top-level orelse to avoid infinite expansion.
+      //
+      // Do not return early here: the inlined body may produce generators
+      // for sub-patterns of goalPat (e.g., field components of a tuple).
+      // Continue processing remaining constraints so that all components
+      // can be covered, allowing deriveFieldGenerators to reconstruct the
+      // full tuple.
       final Core.Exp inlinedBody =
           inlineFunctionBody(cache.typeSystem, cache.env, fn, apply.arg);
       final Core.Exp safeBody =
@@ -485,11 +722,28 @@ class Generators {
         // Decompose "andalso" into individual conjuncts for range detection.
         if (maybeGenerator(
             cache, goalPat, ordered, core.decomposeAnd(safeBody))) {
-          return true;
+          anySuccess = true;
+          // Record the original constraint as satisfied so it can be
+          // simplified to true during expansion. This is needed because
+          // the generator's simplify method only recognizes the inlined
+          // (elem) form, not the original function call form.
+          cache.satisfiedConstraints.add(constraint);
+          // If goalPat now has a finite generator, stop. Processing
+          // further constraints might create conflicting generators that
+          // replace the current best without preserving the constraints
+          // already marked as satisfied. Continue only when goalPat
+          // is a NamedPat that still has no finite generator (e.g.,
+          // because only field sub-patterns have been found so far,
+          // and deriveFieldGenerators needs more fields).
+          final Generator bestGen = cache.bestGeneratorForPat(goalPat);
+          if (bestGen != null
+              && bestGen.cardinality != Generator.Cardinality.INFINITE) {
+            return true;
+          }
         }
       }
     }
-    return false;
+    return anySuccess;
   }
 
   /** Tries to create a transitive closure generator for a full application. */
@@ -1774,8 +2028,10 @@ class Generators {
           // If predicate is "(p, q) elem links", first create a generator
           // for "p2 elem links", where "p2 as (p, q)".
           final Core.Exp collection = predicate.arg(1);
-          final Core.Pat pat = requireNonNull(wholePat(predicate.arg(0)));
+          final Core.Pat pat = cache.patForExp(predicate.arg(0));
           CollectionGenerator.create(cache, ordered, pat, collection);
+          // Check if field mappings complete any tuple variable
+          cache.deriveFieldGenerators(ordered);
           return true;
         }
       }
@@ -1819,6 +2075,334 @@ class Generators {
     final Core.Exp exp = core.apply(Pos.ZERO, collectionType, fn, arg);
     final Set<Core.NamedPat> freePats = freePats(cache.typeSystem, exp);
     return cache.add(new UnionGenerator(exp, freePats, generators));
+  }
+
+  /**
+   * Attempts to invert a case expression with multiple arms into a generator.
+   *
+   * <p>Transforms a case expression like:
+   *
+   * <pre>{@code
+   * case x of p1 => e1 | p2 => e2 | ... | _ => false
+   * }</pre>
+   *
+   * <p>into an orelse of constraints, one per arm. Each arm's constraint is:
+   *
+   * <ul>
+   *   <li>For literal patterns: {@code (x = literal) andalso body}
+   *   <li>For constructor patterns: a single-arm case for maybeFunction
+   *   <li>For id patterns: the body with subject substituted for the variable
+   * </ul>
+   *
+   * <p>Exclusion constraints are added for earlier arms that returned false.
+   */
+  static boolean maybeCase(
+      Cache cache, Core.Pat pat, boolean ordered, List<Core.Exp> constraints) {
+    for (Core.Exp constraint : constraints) {
+      if (constraint.op != Op.CASE) {
+        continue;
+      }
+      final Core.Case caseExp = (Core.Case) constraint;
+
+      // Only handle case expressions with boolean result type
+      if (caseExp.type != PrimitiveType.BOOL) {
+        continue;
+      }
+
+      // Need at least 2 arms to be interesting
+      if (caseExp.matchList.size() < 2) {
+        continue;
+      }
+
+      // Collect literal values from arms that return false for exclusion
+      final List<Core.Exp> excludeValues = new ArrayList<>();
+
+      // Build an orelse of constraints for each arm
+      final List<Core.Exp> branches = new ArrayList<>();
+      for (Core.Match match : caseExp.matchList) {
+        // Skip wildcard and id patterns at top level
+        if (match.pat.op == Op.WILDCARD_PAT) {
+          continue;
+        }
+        if (match.pat.op == Op.ID_PAT) {
+          if (!match.exp.isBoolLiteral(false)) {
+            Core.Exp substituted =
+                substituteArgs(
+                    cache.typeSystem,
+                    cache.env,
+                    match.pat,
+                    caseExp.exp,
+                    match.exp);
+            // Apply exclusion constraints for earlier false-returning patterns
+            // Use "not (x = v)" rather than "x <> v" for set-minus semantics
+            for (Core.Exp excludeValue : excludeValues) {
+              final Core.Exp eq =
+                  core.equal(cache.typeSystem, caseExp.exp, excludeValue);
+              final Core.Exp notEq =
+                  core.call(cache.typeSystem, BuiltIn.NOT, eq);
+              substituted = core.andAlso(cache.typeSystem, substituted, notEq);
+            }
+            branches.add(substituted);
+          }
+          continue;
+        }
+
+        // If this arm returns false, collect literal value for exclusion
+        if (match.exp.isBoolLiteral(false)) {
+          final Core.Exp literalValue = patternToLiteral(match.pat);
+          if (literalValue != null) {
+            excludeValues.add(literalValue);
+          }
+          continue;
+        }
+
+        // Create constraint for this arm
+        final Core.Exp armConstraint =
+            createArmConstraint(
+                cache.typeSystem, cache.env, caseExp.exp, match, caseExp.pos);
+        if (armConstraint == null) {
+          continue;
+        }
+
+        // Apply exclusion constraints for earlier false-returning patterns
+        // Use "not (x = v)" rather than "x <> v" for set-minus semantics
+        Core.Exp branchExp = armConstraint;
+        for (Core.Exp excludeValue : excludeValues) {
+          final Core.Exp eq =
+              core.equal(cache.typeSystem, caseExp.exp, excludeValue);
+          final Core.Exp notEq = core.call(cache.typeSystem, BuiltIn.NOT, eq);
+          branchExp = core.andAlso(cache.typeSystem, branchExp, notEq);
+        }
+
+        branches.add(branchExp);
+
+        // Add literal value to exclusions if this is a constant pattern
+        final Core.Exp literalValue = patternToLiteral(match.pat);
+        if (literalValue != null) {
+          excludeValues.add(literalValue);
+        }
+      }
+
+      if (branches.isEmpty()) {
+        continue;
+      }
+
+      // Combine branches with orelse and delegate to maybeGenerator
+      final Core.Exp orElseExp = core.orElse(cache.typeSystem, branches);
+      final List<Core.Exp> newConstraints =
+          ImmutableList.<Core.Exp>builder()
+              .add(orElseExp)
+              .addAll(
+                  constraints.stream()
+                      .filter(c -> c != constraint)
+                      .collect(ImmutableList.toImmutableList()))
+              .build();
+      return maybeGenerator(cache, pat, ordered, newConstraints);
+    }
+    return false;
+  }
+
+  /** Converts a literal pattern to its corresponding literal expression. */
+  private static Core.@Nullable Exp patternToLiteral(Core.Pat pat) {
+    if (!(pat instanceof Core.LiteralPat)) {
+      return null;
+    }
+    final Core.LiteralPat literalPat = (Core.LiteralPat) pat;
+    if (!(literalPat.type instanceof PrimitiveType)) {
+      return null;
+    }
+    return core.literal((PrimitiveType) literalPat.type, literalPat.value);
+  }
+
+  /**
+   * Converts a pattern to an expression that references the pattern's
+   * variables.
+   *
+   * <p>For example, converts pattern {@code (x, y)} to expression {@code (x,
+   * y)}.
+   */
+  private static Core.Exp patToExp(TypeSystem ts, Core.Pat pat) {
+    if (pat instanceof Core.IdPat) {
+      return core.id((Core.IdPat) pat);
+    }
+    if (pat instanceof Core.TuplePat) {
+      final Core.TuplePat tuplePat = (Core.TuplePat) pat;
+      final List<Core.Exp> args = new ArrayList<>();
+      for (Core.Pat arg : tuplePat.args) {
+        args.add(patToExp(ts, arg));
+      }
+      return core.tuple(tuplePat.type(), args);
+    }
+    if (pat instanceof Core.RecordPat) {
+      final Core.RecordPat recordPat = (Core.RecordPat) pat;
+      final Map<String, Core.Exp> expArgs = new LinkedHashMap<>();
+      final List<String> names =
+          new ArrayList<>(recordPat.type().argNameTypes.keySet());
+      for (int i = 0; i < recordPat.args.size(); i++) {
+        expArgs.put(names.get(i), patToExp(ts, recordPat.args.get(i)));
+      }
+      return core.record(ts, expArgs.entrySet());
+    }
+    throw new AssertionError("unexpected pattern type: " + pat.op);
+  }
+
+  /** Creates a constraint expression for a case arm. */
+  private static Core.@Nullable Exp createArmConstraint(
+      TypeSystem typeSystem,
+      Environment env,
+      Core.Exp subject,
+      Core.Match match,
+      Pos pos) {
+    final Core.Pat pat = match.pat;
+    final Core.Exp body = match.exp;
+
+    switch (pat.op) {
+      case BOOL_LITERAL_PAT:
+      case CHAR_LITERAL_PAT:
+      case INT_LITERAL_PAT:
+      case REAL_LITERAL_PAT:
+      case STRING_LITERAL_PAT:
+        // Literal pattern: (subject = literal) andalso body
+        final Core.Exp literal = patternToLiteral(pat);
+        if (literal == null) {
+          return null;
+        }
+        final Core.Exp eq = core.equal(typeSystem, subject, literal);
+        if (body.isBoolLiteral(true)) {
+          return eq;
+        }
+        return core.andAlso(typeSystem, eq, body);
+
+      case CON0_PAT:
+      case CON_PAT:
+        // Constructor pattern: create single-arm case for maybeFunction
+        return core.caseOf(
+            pos, PrimitiveType.BOOL, subject, ImmutableList.of(match));
+
+      case ID_PAT:
+        // Variable pattern: substitute subject for variable in body
+        return substituteArgs(typeSystem, env, pat, subject, body);
+
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Handles a constructor pattern with a payload (CON_PAT).
+   *
+   * <p>For a pattern like {@code INL n => n >= 5 andalso n <= 8}, this method:
+   *
+   * <ol>
+   *   <li>Recursively generates values for the inner pattern {@code n}
+   *   <li>Wraps each generated value with the constructor {@code INL}
+   * </ol>
+   *
+   * @param cache The generator cache
+   * @param goalPat The pattern we're generating values for (e.g., {@code e})
+   * @param ordered Whether to generate a list (true) or bag (false)
+   * @param match The case arm with a CON_PAT pattern
+   * @return true if a generator was created, false otherwise
+   */
+  private static boolean maybeConPat(
+      Cache cache, Core.Pat goalPat, boolean ordered, Core.Match match) {
+    final TypeSystem ts = cache.typeSystem;
+    final Core.ConPat conPat = (Core.ConPat) match.pat;
+    final Core.Pat innerPat = conPat.pat;
+    final Core.Exp body = match.exp;
+
+    // Build the constructor application: CON(value)
+    // The constructor type is: innerType -> dataType
+    final DataType dataType = (DataType) conPat.type;
+    final Type innerType = innerPat.type;
+    final FnType conFnType = ts.fnType(innerType, dataType);
+    final Core.IdPat conIdPat = core.idPat(conFnType, conPat.tyCon, 0);
+    final Core.Id conId = core.id(conIdPat);
+
+    // Handle literal patterns: INL 0 => true
+    // For literals, generate a single value: CON(literal)
+    if (innerPat instanceof Core.LiteralPat) {
+      final Core.LiteralPat literalPat = (Core.LiteralPat) innerPat;
+      // Body must be true for a literal pattern to generate a value
+      if (!body.isBoolLiteral(true)) {
+        return false;
+      }
+      // Convert the literal pattern to a literal expression
+      final Core.Exp literalExp = patternToLiteral(literalPat);
+      if (literalExp == null) {
+        return false;
+      }
+      // Create CON(literal)
+      final Core.Exp conLiteralExp =
+          core.apply(Pos.ZERO, dataType, conId, literalExp);
+      // Create a point generator for this single value
+      PointGenerator.create(cache, goalPat, ordered, conLiteralExp);
+      return true;
+    }
+
+    // Handle IdPat or TuplePat: INL n => constraint, INR (b, i) => constraint
+    // Build wrapper: from innerPat in extent where body yield CON(innerPat)
+    // The body (constraint) filters the extent values, then wraps with the
+    // constructor. The Expander will use maybeGenerator to convert infinite
+    // extents to finite generators based on the constraints.
+    final FromBuilder fb = core.fromBuilder(ts);
+
+    // Add scans for all component patterns
+    for (Core.NamedPat p : innerPat.expand()) {
+      final Core.Exp extentExp =
+          core.extent(ts, p.type, ImmutableRangeSet.of(Range.all()));
+      fb.scan(p, extentExp);
+    }
+
+    if (!body.isBoolLiteral(true)) {
+      fb.where(body);
+    }
+
+    // Create the yield expression: CON(innerPat)
+    final Core.Exp innerPatRef = patToExp(ts, innerPat);
+    final Core.Exp yieldExp =
+        core.apply(Pos.ZERO, dataType, conId, innerPatRef);
+    fb.yield_(yieldExp);
+
+    final Core.Exp wrapperExp = fb.build();
+
+    // Create a generator for goalPat
+    CollectionGenerator.create(cache, ordered, goalPat, wrapperExp);
+    return true;
+  }
+
+  /**
+   * Handles a zero-argument constructor pattern (CON0_PAT).
+   *
+   * <p>For a pattern like {@code NONE => true}, this generates a single value
+   * (the constructor constant) for the goal pattern.
+   *
+   * @param cache The generator cache
+   * @param goalPat The pattern we're generating values for
+   * @param ordered Whether to generate a list (true) or bag (false)
+   * @param match The case arm with a CON0_PAT pattern
+   * @return true if a generator was created, false otherwise
+   */
+  private static boolean maybeCon0Pat(
+      Cache cache, Core.Pat goalPat, boolean ordered, Core.Match match) {
+    final TypeSystem ts = cache.typeSystem;
+    final Core.Con0Pat con0Pat = (Core.Con0Pat) match.pat;
+    final Core.Exp body = match.exp;
+
+    // Only handle if body is true (unconditional)
+    if (!body.isBoolLiteral(true)) {
+      return false;
+    }
+
+    // Create the constructor constant value
+    // For Con0Pat, the value is just the constructor name wrapped in a list
+    final DataType dataType = (DataType) con0Pat.type;
+    final Core.IdPat conIdPat = core.idPat(dataType, con0Pat.tyCon, 0);
+    final Core.Id conValue = core.id(conIdPat);
+
+    // Create a point generator for this single value
+    PointGenerator.create(cache, goalPat, ordered, conValue);
+    return true;
   }
 
   static boolean maybeUnion(
@@ -2642,16 +3226,255 @@ class Generators {
     }
   }
 
-  /** Generators that have been created to date. */
+  /**
+   * Monotonic cache of generators and derived facts.
+   *
+   * <p>Serves as a memoized deductive store during generator expansion. Facts
+   * (generators, field mappings) are only added, never removed. Each fact is
+   * true forever — fresh pattern variables ensure that new facts have their own
+   * identity and don't conflict with existing ones.
+   *
+   * <p>The cache supports dynamic programming: when asked for a generator for a
+   * pattern, it first checks whether one has already been computed. If not, it
+   * may derive one from accumulated facts (e.g., composing field generators
+   * into a tuple reconstruction).
+   *
+   * <p>The monotonicity invariant means {@code bestGenerator} can safely return
+   * the most recently added generator for a pattern, since later additions are
+   * refinements (e.g., an ExistsJoinGenerator that subsumes a raw
+   * CollectionGenerator).
+   */
   static class Cache {
     final TypeSystem typeSystem;
     final Environment env;
     final Multimap<Core.NamedPat, Generator> generators =
         MultimapBuilder.hashKeys().arrayListValues().build();
 
+    /**
+     * Maps (variable, fieldIndex) to the fresh pattern created for {@code #i
+     * variable} by {@link #patForExp}.
+     */
+    final Map<Pair<Core.NamedPat, Integer>, Core.IdPat> fieldPats =
+        new LinkedHashMap<>();
+
+    /**
+     * Constraints that have been used to derive generators and should be
+     * simplified to {@code true} during expansion. This handles the case where
+     * a function call like {@code par(x, y)} was inlined to an {@code elem}
+     * expression to find a generator, but the original function call form
+     * remains in the WHERE clause.
+     */
+    final Set<Core.Exp> satisfiedConstraints = new HashSet<>();
+
     Cache(TypeSystem typeSystem, Environment env) {
       this.typeSystem = requireNonNull(typeSystem);
       this.env = requireNonNull(env);
+    }
+
+    /**
+     * Creates a pattern for an expression, recording field-access
+     * relationships.
+     *
+     * <p>Unlike {@code wholePat} + {@code toPat}, this method remembers which
+     * fresh patterns correspond to which field accesses, enabling {@link
+     * #deriveFieldGenerators} to reconstruct tuple generators.
+     *
+     * <ul>
+     *   <li>{@code patForExp(id(x))} returns {@code idPat(x)}
+     *   <li>{@code patForExp(tuple(id(x), id(y)))} returns {@code tuplePat(x,
+     *       y)}
+     *   <li>{@code patForExp(#1 p)} creates fresh {@code f1}, records {@code
+     *       (p, 0) -> f1}, returns {@code f1}
+     * </ul>
+     */
+    Core.Pat patForExp(Core.Exp exp) {
+      switch (exp.op) {
+        case ID:
+          return ((Core.Id) exp).idPat;
+
+        case TUPLE:
+          final Core.Tuple tuple = (Core.Tuple) exp;
+          final List<Core.Pat> patList = new ArrayList<>();
+          for (Core.Exp arg : tuple.args) {
+            patList.add(patForExp(arg));
+          }
+          final RecordLikeType type = tuple.type();
+          return type instanceof RecordType
+              ? core.recordPat((RecordType) type, patList)
+              : core.tuplePat(type, patList);
+
+        case APPLY:
+          final Core.Apply apply = (Core.Apply) exp;
+          if (apply.fn.op == Op.RECORD_SELECTOR && apply.arg.op == Op.ID) {
+            final Core.RecordSelector selector = (Core.RecordSelector) apply.fn;
+            final Core.NamedPat basePat = ((Core.Id) apply.arg).idPat;
+            final int slot = selector.slot;
+            final Pair<Core.NamedPat, Integer> key = Pair.of(basePat, slot);
+            return fieldPats.computeIfAbsent(
+                key,
+                k -> {
+                  final String fieldName = selector.fieldName();
+                  final String varName =
+                      Character.isDigit(fieldName.charAt(0))
+                          ? "f" + fieldName
+                          : fieldName;
+                  return core.idPat(exp.type, varName, 0);
+                });
+          }
+          // For other applies, create a fresh pattern (same as toPat)
+          return core.idPat(exp.type, "v", 0);
+
+        case BOOL_LITERAL:
+        case CHAR_LITERAL:
+        case INT_LITERAL:
+        case REAL_LITERAL:
+        case STRING_LITERAL:
+        case UNIT_LITERAL:
+          return core.toPat(exp);
+
+        default:
+          return core.toPat(exp);
+      }
+    }
+
+    /**
+     * Checks whether all fields of some tuple-typed variable have fresh
+     * patterns in {@link #fieldPats}, and if so creates a self-contained {@link
+     * CollectionGenerator} that reconstructs the tuple by joining the
+     * underlying collection scans.
+     *
+     * <p>For example, if {@code fieldPats} contains {@code (p, 0) -> f1} and
+     * {@code (p, 1) -> f2}, with generators {@code (p1, f1) in edges} and
+     * {@code (p2, f2) in edges}, creates:
+     *
+     * <pre>{@code
+     * from (p1, f1) in edges, (p2, f2) in edges
+     *   where p1 = p2
+     *   yield (f1, f2)
+     *   distinct
+     * }</pre>
+     */
+    void deriveFieldGenerators(boolean ordered) {
+      // Collect all base patterns that have field entries
+      final Map<Core.NamedPat, Map<Integer, Core.IdPat>> byBase =
+          new LinkedHashMap<>();
+      for (Map.Entry<Pair<Core.NamedPat, Integer>, Core.IdPat> entry :
+          fieldPats.entrySet()) {
+        byBase
+            .computeIfAbsent(entry.getKey().left, k -> new LinkedHashMap<>())
+            .put(entry.getKey().right, entry.getValue());
+      }
+      for (Map.Entry<Core.NamedPat, Map<Integer, Core.IdPat>> entry :
+          byBase.entrySet()) {
+        final Core.NamedPat basePat = entry.getKey();
+        final Map<Integer, Core.IdPat> fields = entry.getValue();
+        // Check if basePat is tuple-typed with all fields covered
+        if (!(basePat.type instanceof RecordLikeType)) {
+          continue;
+        }
+        final RecordLikeType recordType = (RecordLikeType) basePat.type;
+        final int arity = recordType.argNameTypes().size();
+        final Generator existing = bestGenerator(basePat);
+        final boolean hasFiniteGenerator =
+            existing != null
+                && existing.cardinality != Generator.Cardinality.INFINITE;
+        if (fields.size() != arity || hasFiniteGenerator) {
+          continue;
+        }
+        // All fields covered and no finite generator — derive one.
+        // Verify all field patterns exist.
+        final List<Core.IdPat> fieldPatList = new ArrayList<>();
+        boolean complete = true;
+        for (int i = 0; i < arity; i++) {
+          final Core.IdPat fieldPat = fields.get(i);
+          if (fieldPat == null) {
+            complete = false;
+            break;
+          }
+          fieldPatList.add(fieldPat);
+        }
+        if (!complete) {
+          continue;
+        }
+
+        // Find the generator for each field pattern and build a FROM
+        // expression that joins them.
+        final FromBuilder fromBuilder = core.fromBuilder(typeSystem);
+        final List<Core.NamedPat> sharedPats = new ArrayList<>();
+        boolean first = true;
+        for (Core.IdPat fieldPat : fieldPatList) {
+          final Generator fieldGen = bestGenerator(fieldPat);
+          if (fieldGen == null) {
+            complete = false;
+            break;
+          }
+          if (first) {
+            // First scan: use the generator's pattern and expression as-is
+            fromBuilder.scan(fieldGen.pat, fieldGen.exp);
+            // Track non-field patterns for joining
+            for (Core.NamedPat p : fieldGen.pat.expand()) {
+              if (!fieldPatList.contains(p)) {
+                sharedPats.add(p);
+              }
+            }
+            first = false;
+          } else {
+            // Subsequent scans: need to create fresh patterns for
+            // non-field components and add equality constraints for
+            // shared variables (like p' that appears in both generators).
+            final List<Core.NamedPat> genPats = fieldGen.pat.expand();
+            final List<Core.Pat> freshPats = new ArrayList<>();
+            final List<Core.Exp> eqConstraints = new ArrayList<>();
+            for (Core.NamedPat gp : genPats) {
+              if (fieldPatList.contains(gp)) {
+                freshPats.add(gp);
+              } else {
+                // Create a fresh pattern for this shared/auxiliary variable
+                final Core.IdPat freshPat =
+                    core.idPat(gp.type, gp.name + "$", 0);
+                freshPats.add(freshPat);
+                // Find matching shared pattern from earlier scan
+                for (Core.NamedPat sp : sharedPats) {
+                  if (sp.name.equals(gp.name)) {
+                    eqConstraints.add(
+                        core.equal(typeSystem, core.id(sp), core.id(freshPat)));
+                    break;
+                  }
+                }
+              }
+            }
+            final Core.Pat scanPat = core.tuplePat(typeSystem, freshPats);
+            fromBuilder.scan(scanPat, fieldGen.exp);
+            for (Core.Exp eq : eqConstraints) {
+              fromBuilder.where(eq);
+            }
+          }
+        }
+        if (!complete) {
+          continue;
+        }
+
+        // Group by the reconstructed tuple to get distinct values.
+        // Use group with atom=true and a single key, rather than
+        // yield + distinct, to avoid a pre-existing bug where
+        // yield(tuple) + distinct produces null for tuple-typed atoms.
+        final List<Core.Exp> fieldExps = new ArrayList<>();
+        for (Core.IdPat fp : fieldPatList) {
+          fieldExps.add(core.id(fp));
+        }
+        final Core.Exp tupleExp =
+            core.tuple(typeSystem, fieldExps.toArray(new Core.Exp[0]));
+        final Core.IdPat resultPat = core.idPat(basePat.type, basePat.name, 0);
+        final ImmutableSortedMap<Core.IdPat, Core.Exp> groupExps =
+            ImmutableSortedMap.of(resultPat, tupleExp);
+        fromBuilder.group(true, groupExps, ImmutableSortedMap.of());
+
+        final Core.From derivedFrom = fromBuilder.build();
+        // Convert the derived FROM to a list to prevent FromBuilder.scan
+        // from inlining it (which would break variable scoping).
+        final Core.Exp asList = core.withOrdered(true, derivedFrom, typeSystem);
+        CollectionGenerator.create(this, ordered, basePat, asList);
+      }
     }
 
     @Nullable
