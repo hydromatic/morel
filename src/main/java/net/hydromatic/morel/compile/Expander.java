@@ -40,7 +40,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.FromBuilder;
@@ -225,20 +224,41 @@ public class Expander {
           // The step is not a scan over an extent. Add it now.
           step = Replacer.substitute(typeSystem, env, substitution, step);
 
-          // For "where" steps, simplify the condition using generators that
-          // can reliably simplify predicates they satisfy.
-          // This removes predicates that are satisfied by the generator.
+          // For "where" steps, simplify the condition by removing
+          // predicates that are subsumed by generators.
+          //
+          // Two levels of simplification:
+          // 1. Provenance: remove conjuncts that appear in any
+          //    generator's provenance (exact object identity).
+          // 2. Simplify: apply each generator's simplify method to
+          //    remaining conjuncts (semantic equivalence).
           if (step instanceof Core.Where) {
-            final AtomicReference<Core.Exp> conditionRef =
-                new AtomicReference<>(((Core.Where) step).exp);
-            generatorMap.forEach(
-                (p, generator) ->
-                    conditionRef.set(
-                        generator.simplify(typeSystem, p, conditionRef.get())));
-            // Note: satisfiedConstraints simplification is intentionally
-            // not applied here. The generator-based simplification above
-            // handles the cases that matter.
-            fromBuilder.where(conditionRef.get());
+            final Core.Where where = (Core.Where) step;
+
+            // Collect all provenance constraints from sealed generators.
+            // Sealed generators fully encode their provenance, so their
+            // constraints can safely be removed from WHERE. Unsealed
+            // generators' provenance is advisory only.
+            final Set<Core.Exp> allProvenance = new HashSet<>();
+            for (Generator g : generatorMap.values()) {
+              if (g.sealed) {
+                allProvenance.addAll(g.provenance);
+              }
+            }
+            // Decompose, filter by provenance, then simplify remainder.
+            final List<Core.Exp> remaining = new ArrayList<>();
+            for (Core.Exp conjunct : core.decomposeAnd(where.exp)) {
+              if (allProvenance.contains(conjunct)) {
+                continue; // subsumed by a generator
+              }
+              // Apply generator-based simplification.
+              final Core.Exp[] simplified = {conjunct};
+              generatorMap.forEach(
+                  (p, g) ->
+                      simplified[0] = g.simplify(typeSystem, p, simplified[0]));
+              remaining.add(simplified[0]);
+            }
+            fromBuilder.where(core.andAlso(typeSystem, remaining));
             return;
           }
 
@@ -503,7 +523,8 @@ public class Expander {
     infiniteGenerators.forEach(
         (pat, generator) -> {
           final boolean ordered = generator.exp.type instanceof ListType;
-          if (maybeGenerator(cache, pat, ordered, constraints)) {
+          if (maybeGenerator(
+              cache, pat, ordered, new Generators.Context(constraints))) {
             Generator g = getLast(cache.generators.get(pat));
             g.pat.expand().forEach(p2 -> generators.put(p2, g));
           }

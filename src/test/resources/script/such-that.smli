@@ -272,11 +272,8 @@ from n where isSmall n orelse isLarge n;
  * Invert 'from x where x elem list' to 'from x in list'. *)
 from x where x elem [1, 2, 4];
 > val it = [1,2,4] : int bag
-(* TODO: remove spurious 'where op elem (x, [1, 2, 4])' *)
 Sys.planEx "999";
-> val it =
->   "val it = from x in #fromList Bag ([1, 2, 4]) where op elem (x, [1, 2, 4])"
->   : string
+> val it = "val it = from x in #fromList Bag ([1, 2, 4])" : string
 
 (* In the following case, we solve for x given a value of y. This
    requires predicate-inversion because it cannot be solved using
@@ -304,7 +301,7 @@ from x in [3, 5, 7], y where x > y andalso x < y + 5 yield y;
 > val it = [~1,0,1,2,1,2,3,4,3,4,5,6] : int bag
 Sys.planEx "3";
 > val it =
->   "val it = from x in [3, 5, 7] join y in #tabulate Bag (op + (op - (-:int (x, 1), -:int (x, 5) + 1), 1), fn k => -:int (x, 5) + 1 + k) where x > y andalso x < y + 5 yield y"
+>   "val it = from x in [3, 5, 7] join y in #tabulate Bag (op + (op - (-:int (x, 1), -:int (x, 5) + 1), 1), fn k => -:int (x, 5) + 1 + k) yield y"
 >   : string
 
 from x in [3, 5, 7], y
@@ -1569,7 +1566,7 @@ Sys.planEx "0";
 (* TODO: remove spurious 'where' *)
 Sys.planEx "3";
 > val it =
->   "val it = from ({deptno = deptno, dname = name, loc = loc}) in #depts scott where op elem ({deptno = deptno, dname = name, loc = loc}, #depts scott)"
+>   "val it = from ({deptno = deptno, dname = name, loc = loc}) in #depts scott"
 >   : string
 
 (* testFromSuchThat2d - Record pattern with literal and additional
@@ -1587,10 +1584,9 @@ Sys.planEx "0";
 > val it =
 >   "val it = from dno : int join name : string where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"}, #depts scott) andalso dno > 20"
 >   : string
-(* TODO: remove spurious 'where' *)
 Sys.planEx "3";
 > val it =
->   "val it = from ({deptno = dno, dname = name, loc = \"CHICAGO\"}) in #depts scott where op elem ({deptno = dno, dname = name, loc = \"CHICAGO\"}, #depts scott) andalso dno > 20"
+>   "val it = from ({deptno = dno, dname = name, loc = \"CHICAGO\"}) in #depts scott where dno > 20"
 >   : string
 
 (* testFromSuchThat2d3 - Forward references with equality constraint *)
@@ -1651,10 +1647,8 @@ Sys.planEx "0";
 > val it =
 >   "val it = from d : {deptno:int, dname:string, loc:string} where (let val d_1 = d in op elem (d_1, #depts scott) end) andalso #deptno d = 20 yield #dname d"
 >   : string
-(* TODO: remove spurious 'where op elem (d, #depts scott)' *)
 Sys.planEx "999";
-> val it =
->   "val it = from d in #depts scott where op elem (d, #depts scott) andalso #deptno d = 20 yield #dname d"
+> val it = "val it = from d in #depts scott where #deptno d = 20 yield #dname d"
 >   : string
 
 (* testFromSuchThat2f - Join via suchthat with two functions *)
@@ -1676,11 +1670,47 @@ Sys.planEx "0";
 > val it =
 >   "val it = let val isDept = fn d => op elem (d, #depts scott) in let val isEmp = fn e => op elem (e, #emps scott) in from d_1 : {deptno:int, dname:string, loc:string} join e_1 : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} where isDept d_1 andalso isEmp e_1 andalso #deptno d_1 = #deptno e_1 andalso #deptno d_1 = 20 yield #dname d_1 end end"
 >   : string
-(* TODO: remove spurious 'where op elem (d, #depts scott) andalso op elem (e, #emps scott)' *)
 Sys.planEx "999";
 > val it =
->   "val it = from d in #depts scott join e in #emps scott where op elem (d, #depts scott) andalso op elem (e, #emps scott) andalso #deptno d = #deptno e andalso #deptno d = 20 yield #dname d"
+>   "val it = from d in #depts scott join e in #emps scott where #deptno d = #deptno e andalso #deptno d = 20 yield #dname d"
 >   : string
+
+(* testProvenanceThroughFunction - Provenance propagation through
+ * function inversion. When 'f x' appears in WHERE, maybeFunction
+ * inlines the body and creates a Collection generator for x. The
+ * provenance system adds 'f x' to the generator's provenance,
+ * so expandFrom2 can remove it from WHERE. At plan level 999,
+ * there is no WHERE clause. *)
+let
+  val xs = [1, 2, 3]
+  fun f x = x elem xs
+in
+  from x where f x
+end;
+> val it = [1,2,3] : int bag
+Sys.planEx "0";
+> val it =
+>   "val it = let val xs = [1, 2, 3] in let val f = fn x => op elem (x, xs) in from x_1 : int where f x_1 end end"
+>   : string
+Sys.planEx "999";
+> val it = "val it = from x in #fromList Bag ([1, 2, 3])" : string
+
+(* testProvenanceThroughFunctionWithFilter - Same as above but
+ * with an additional filter. Provenance removes 'f x'
+ * but keeps 'x > 1'. *)
+let
+  val xs = [1, 2, 3]
+  fun f x = x elem xs
+in
+  from x where f x andalso x > 1
+end;
+> val it = [2,3] : int bag
+Sys.planEx "0";
+> val it =
+>   "val it = let val xs = [1, 2, 3] in let val f = fn x => op elem (x, xs) in from x_1 : int where f x_1 andalso x_1 > 1 end end"
+>   : string
+Sys.planEx "999";
+> val it = "val it = from x in #fromList Bag ([1, 2, 3]) where x > 1" : string
 
 (* testFromSuchThat3 - Smaller version of testFromSuchThat *)
 let

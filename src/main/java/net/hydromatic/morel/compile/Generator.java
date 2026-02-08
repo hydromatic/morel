@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.util.Util.isDistinct;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import net.hydromatic.morel.ast.Core;
@@ -41,18 +43,57 @@ abstract class Generator {
   /** Whether the generator produces unique values (no duplicates). */
   final boolean unique;
 
+  /**
+   * Whether every value produced by this generator satisfies all constraints in
+   * {@link #provenance}.
+   *
+   * <p>A sealed generator's provenance can be used to remove redundant WHERE
+   * conjuncts in {@code expandFrom2}. An unsealed generator's provenance is
+   * advisory only — the WHERE conjuncts must be kept for correctness.
+   */
+  final boolean sealed;
+
+  /**
+   * The constraints from the original WHERE clause that this generator
+   * subsumes. Every value produced by the generator satisfies all of these
+   * constraints.
+   *
+   * <p>This should be the minimal set needed to derive the generator. Smaller
+   * provenance means broader reuse.
+   *
+   * <p>Append-only: entries are added during derivation (e.g., when {@code
+   * maybeFunction} discovers that a generator subsumes the original
+   * function-call constraint) but never removed. This preserves the
+   * monotonicity invariant of the {@link Generators.Cache}.
+   */
+  final Set<Core.Exp> provenance;
+
   Generator(
       Core.Exp exp,
       Iterable<? extends Core.NamedPat> freePats,
       Core.Pat pat,
       Cardinality cardinality,
-      boolean unique) {
+      boolean unique,
+      boolean sealed,
+      Set<Core.Exp> provenance) {
     this.exp = requireNonNull(exp);
     this.freePats = ImmutableList.copyOf(freePats);
     checkArgument(freePats instanceof Set || isDistinct(this.freePats));
     this.pat = requireNonNull(pat);
     this.cardinality = requireNonNull(cardinality);
     this.unique = unique;
+    this.sealed = sealed;
+    this.provenance = new LinkedHashSet<>(provenance);
+  }
+
+  Generator(
+      Core.Exp exp,
+      Iterable<? extends Core.NamedPat> freePats,
+      Core.Pat pat,
+      Cardinality cardinality,
+      boolean unique,
+      boolean sealed) {
+    this(exp, freePats, pat, cardinality, unique, sealed, ImmutableSet.of());
   }
 
   /**
