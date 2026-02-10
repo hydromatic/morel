@@ -20,7 +20,6 @@ package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Maps.transformValues;
-import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.PairList.fromTransformed;
@@ -962,8 +961,8 @@ public enum CoreBuilder {
           if (allMatch(apply2.args(), Core.Exp::isExtent)) {
             Pair<Core.Exp, List<Core.Exp>> pair =
                 unionExtents(typeSystem, apply2.args());
-            if (requireNonNull(pair.right).isEmpty()) {
-              return requireNonNull(pair.left);
+            if (pair.right.isEmpty()) {
+              return pair.left;
             }
           }
         }
@@ -975,8 +974,8 @@ public enum CoreBuilder {
           if (allMatch(apply2.args(), Core.Exp::isExtent)) {
             Pair<Core.Exp, List<Core.Exp>> pair =
                 unionExtents(typeSystem, apply2.args());
-            if (requireNonNull(pair.right).isEmpty()) {
-              return requireNonNull(pair.left);
+            if (pair.right.isEmpty()) {
+              return pair.left;
             }
           }
         }
@@ -986,8 +985,8 @@ public enum CoreBuilder {
           if (allMatch(apply2.args(), Core.Exp::isExtent)) {
             Pair<Core.Exp, List<Core.Exp>> pair =
                 intersectExtents(typeSystem, apply2.args());
-            if (requireNonNull(pair.right).isEmpty()) {
-              return requireNonNull(pair.left);
+            if (pair.right.isEmpty()) {
+              return pair.left;
             }
           }
         }

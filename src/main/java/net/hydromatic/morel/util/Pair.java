@@ -43,7 +43,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <T1> Left-hand type
  * @param <T2> Right-hand type
  */
-public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
+public class Pair<T1, T2>
     implements Comparable<Pair<T1, T2>>, Map.Entry<T1, T2>, Serializable {
 
   public final T1 left;
@@ -103,6 +103,7 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
    * <p>Computes hash code consistent with {@link
    * java.util.Map.Entry#hashCode()}.
    */
+  @SuppressWarnings("ConstantValue")
   @Override
   public int hashCode() {
     int keyHash = left == null ? 0 : left.hashCode();
@@ -621,10 +622,6 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
     public Pair<E, E> next() {
       return of(first, iterator.next());
     }
-
-    public void remove() {
-      throw new UnsupportedOperationException("remove");
-    }
   }
 
   /**
@@ -665,14 +662,12 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
    * @param <E> Element type
    */
   private static class AdjacentIterator<E> implements Iterator<Pair<E, E>> {
-    private final E first;
     private final Iterator<E> iterator;
-    E previous;
+    private E previous;
 
     AdjacentIterator(Iterator<E> iterator) {
       this.iterator = requireNonNull(iterator);
-      this.first = iterator.next();
-      previous = first;
+      previous = iterator.next();
     }
 
     public boolean hasNext() {
@@ -684,10 +679,6 @@ public class Pair<T1 extends @Nullable Object, T2 extends @Nullable Object>
       final Pair<E, E> pair = of(previous, current);
       previous = current;
       return pair;
-    }
-
-    public void remove() {
-      throw new UnsupportedOperationException("remove");
     }
   }
 
