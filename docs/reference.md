@@ -822,6 +822,7 @@ and unset using `Sys.unset name`.
 | -------------------- | ------ | ------- | ----------- |
 | banner               | string | Morel version ... | Startup banner message displayed when launching the Morel shell. |
 | directory            | file   |         | Path of the directory that the 'file' variable maps to in this connection. |
+| excludeStructures    | string | ^Test$  | Regular expression that controls which built-in structures are excluded from the environment. |
 | hybrid               | bool   | false   | Whether to try to create a hybrid execution plan that uses Apache Calcite relational algebra. |
 | inlinePassCount      | int    | 5       | Maximum number of inlining passes. |
 | lineWidth            | int    | 79      | When printing, the length at which lines are wrapped. |

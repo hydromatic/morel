@@ -33,11 +33,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
+import java.util.regex.Pattern;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.EvalEnv;
+import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.eval.Session;
 import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.type.Binding;
@@ -86,11 +89,22 @@ public abstract class Environments {
     }
     final List<Binding> bindings = new ArrayList<>();
     BuiltIn.dataTypes(typeSystem, bindings);
+    final Predicate<String> excludeStructure;
+    if (session != null) {
+      final String regex = Prop.EXCLUDE_STRUCTURES.stringValue(session.map);
+      final Pattern pattern = Pattern.compile(regex);
+      excludeStructure = s -> pattern.matcher(s).matches();
+    } else {
+      excludeStructure = s -> false;
+    }
     final ToIntFunction<String> nameGen = typeSystem.nameGenerator::inc;
     Codes.BUILT_IN_VALUES.forEach(
         (key, value) -> {
           if ("$".equals(key.structure)) {
             return; // ignore Z_ANDALSO, Z_LIST, etc.
+          }
+          if (key.structure != null && excludeStructure.test(key.structure)) {
+            return; // skip built-ins in excluded structures
           }
           final Type type = key.typeFunction.apply(typeSystem);
           if (key.sessionValue != null) {
@@ -138,11 +152,16 @@ public abstract class Environments {
     final EvalEnv emptyEnv = Codes.emptyEnv();
     BuiltIn.forEachStructure(
         typeSystem,
-        (structure, type) ->
-            bindings.add(
-                Binding.of(
-                    core.idPat(type, structure.name, nameGen),
-                    requireNonNull(emptyEnv.getOpt(structure.name)))));
+        (structure, type) -> {
+          if (excludeStructure.test(structure.name)) {
+            return;
+          }
+
+          bindings.add(
+              Binding.of(
+                  core.idPat(type, structure.name, nameGen),
+                  requireNonNull(emptyEnv.getOpt(structure.name))));
+        });
 
     foreignBindings(typeSystem, valueMap, bindings);
     return bind(environment, bindings);

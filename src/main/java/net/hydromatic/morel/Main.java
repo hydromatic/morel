@@ -389,7 +389,7 @@ public class Main {
    */
   static class Shell implements Session.Shell {
     protected final Main main;
-    protected final Environment env0;
+    protected Environment env0;
     protected final Consumer<String> echoLines;
     protected final Consumer<String> outLines;
     /**
@@ -497,6 +497,7 @@ public class Main {
     @Override
     public void clearEnv() {
       bindingMap.clear();
+      env0 = Environments.env(main.typeSystem, main.session, main.valueMap);
     }
 
     /**

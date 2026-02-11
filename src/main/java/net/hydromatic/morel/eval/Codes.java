@@ -3547,6 +3547,15 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#TEST_FOO */
+  private static final Applicable1 TEST_FOO =
+      new BaseApplicable1<Integer, Integer>(BuiltIn.TEST_FOO) {
+        @Override
+        public Integer apply(Integer arg) {
+          return arg + 1;
+        }
+      };
+
   /** Value of {@link BuiltIn.Constructor#VARIANT_UNIT}. */
   public static final List VARIANT_UNIT =
       Variant.of(PrimitiveType.UNIT, Unit.INSTANCE);
@@ -4521,6 +4530,7 @@ public abstract class Codes {
           .put(BuiltIn.SYS_SHOW, SYS_SHOW)
           .put(BuiltIn.SYS_SHOW_ALL, SYS_SHOW_ALL)
           .put(BuiltIn.SYS_UNSET, SYS_UNSET)
+          .put(BuiltIn.TEST_FOO, TEST_FOO)
           .put(BuiltIn.VARIANT_PARSE, VARIANT_PARSE)
           .put(BuiltIn.VARIANT_PRINT, VARIANT_PRINT)
           .put(BuiltIn.VECTOR_ALL, VECTOR_ALL)

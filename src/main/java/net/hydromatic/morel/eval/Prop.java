@@ -77,6 +77,21 @@ public enum Prop {
           + "this connection."),
 
   /**
+   * String property "excludeStructures" is a Java regular expression that
+   * controls which built-in structures are excluded from the environment. A
+   * structure whose name matches the regex is excluded.
+   *
+   * <p>Default is "^Test$", which excludes the {@code Test} structure.
+   */
+  EXCLUDE_STRUCTURES(
+      "excludeStructures",
+      String.class,
+      true,
+      "^Test$",
+      "Regular expression that controls which built-in structures are excluded "
+          + "from the environment."),
+
+  /**
    * Boolean property "hybrid" controls whether to try to create a hybrid
    * execution plan that uses Apache Calcite relational algebra wherever
    * possible. Default is false.

@@ -4679,7 +4679,8 @@ map
       then SOME "?" else v))
   (Sys.showAll ());
 > val it =
->   [("banner",SOME "?"),("directory",SOME "?"),("hybrid",SOME "true"),
+>   [("banner",SOME "?"),("directory",SOME "?"),
+>    ("excludeStructures",SOME "^Test$"),("hybrid",SOME "true"),
 >    ("inlinePassCount",SOME "5"),("lineWidth",SOME "78"),
 >    ("matchCoverageEnabled",SOME "true"),("optionalInt",NONE),
 >    ("output",SOME "CLASSIC"),("printDepth",SOME "5"),
@@ -4688,9 +4689,9 @@ map
 >    ("scriptDirectory",SOME "?"),("stringDepth",SOME "-1")]
 >   : (string * string option) list
 List.length (Sys.showAll ());
-> val it = 15 : int
+> val it = 16 : int
 List.length (showAll ());
-> val it = 15 : int
+> val it = 16 : int
 Sys.plan ();
 > val it =
 >   "apply(fnValue List.length, argCode apply(fnValue Sys.showAll, argCode constant([])))"
