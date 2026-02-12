@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.util;
 
+import static com.google.common.base.Strings.repeat;
 import static com.google.common.collect.ImmutableList.sortedCopyOf;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Static.filterEager;
@@ -35,12 +36,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import net.hydromatic.morel.Main;
 import net.hydromatic.morel.TestUtils;
+import net.hydromatic.morel.eval.Prop;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Generates code from metadata. */
@@ -51,104 +54,117 @@ public class Generation {
    * Reads the {@code functions.toml} file and generates a table of function
    * definitions into {@code reference.md}.
    */
-  @SuppressWarnings("unchecked")
   public static void generateFunctionTable(PrintWriter pw) throws IOException {
-    final URL inUrl = Main.class.getResource("/functions.toml");
-    assertThat(inUrl, notNullValue());
-    final File file = TestUtils.urlToFile(inUrl);
+    new FunctionTableGenerator(pw).generate();
+  }
 
-    final TomlMapper mapper = new TomlMapper();
-    try (MappingIterator<Object> it =
-        mapper.readerForMapOf(Object.class).readValues(file)) {
-      while (it.hasNextValue()) {
-        final Map<String, Object> row = (Map<String, Object>) it.nextValue();
-        final List<FnDef> fnDefs =
-            transformEager(
-                (List<Map<String, Object>>) row.get("functions"),
-                FnDef::create);
+  private static class FunctionTableGenerator {
+    private final PrintWriter pw;
 
-        // The functions in the toml file must be sorted by name.
-        // This reduces the chance of merge conflicts.
-        final List<String> names = new ArrayList<>();
-        for (FnDef fnDef : fnDefs) {
-          names.add(fnDef.structure + '.' + fnDef.name);
-        }
-        if (!Ordering.natural().isOrdered(names)) {
-          fail(
-              "Names are not sorted\n"
-                  + TestUtils.diffLines(names, sortedCopyOf(names)));
-        }
+    FunctionTableGenerator(PrintWriter pw) {
+      this.pw = pw;
+    }
 
-        // Build sorted list of functions. First add the ones with ordinals,
-        // sorted by ordinal. Then add the rest, sorted by name.
-        final List<FnDef> sortedFnDefs = new ArrayList<>();
-        for (FnDef fnDef : fnDefs) {
-          if (fnDef.ordinal >= 0) {
-            sortedFnDefs.add(fnDef);
+    @SuppressWarnings("unchecked")
+    void generate() throws IOException {
+      final URL inUrl = Main.class.getResource("/functions.toml");
+      assertThat(inUrl, notNullValue());
+      final File file = TestUtils.urlToFile(inUrl);
+
+      final TomlMapper mapper = new TomlMapper();
+      try (MappingIterator<Object> it =
+          mapper.readerForMapOf(Object.class).readValues(file)) {
+        while (it.hasNextValue()) {
+          final Map<String, Object> row = (Map<String, Object>) it.nextValue();
+          final List<FnDef> fnDefs =
+              transformEager(
+                  (List<Map<String, Object>>) row.get("functions"),
+                  FnDef::create);
+
+          // The functions in the toml file must be sorted by name.
+          // This reduces the chance of merge conflicts.
+          final List<String> names = new ArrayList<>();
+          for (FnDef fnDef : fnDefs) {
+            names.add(fnDef.structure + '.' + fnDef.name);
+          }
+          if (!Ordering.natural().isOrdered(names)) {
+            fail(
+                "Names are not sorted\n"
+                    + TestUtils.diffLines(names, sortedCopyOf(names)));
+          }
+
+          // Build sorted list of functions. First add the ones with ordinals,
+          // sorted by ordinal. Then add the rest, sorted by name.
+          final List<FnDef> sortedFnDefs = new ArrayList<>();
+          for (FnDef fnDef : fnDefs) {
+            if (fnDef.ordinal >= 0) {
+              sortedFnDefs.add(fnDef);
+            }
+          }
+          sortedFnDefs.sort(
+              Comparator.<FnDef, String>comparing(f -> f.structure)
+                  .thenComparingInt(f -> f.ordinal));
+          for (FnDef fnDef : fnDefs) {
+            if (fnDef.ordinal <= 0) {
+              int i =
+                  findMax(
+                      sortedFnDefs,
+                      f ->
+                          f.qualifiedName().compareTo(fnDef.qualifiedName())
+                              < 0);
+              sortedFnDefs.add(i, fnDef);
+            }
+          }
+
+          List<FnDef> implemented =
+              filterEager(sortedFnDefs, fn -> fn.implemented);
+          generateTable(implemented);
+
+          List<FnDef> notImplemented =
+              filterEager(sortedFnDefs, fn -> !fn.implemented);
+          if (!notImplemented.isEmpty()) {
+            pw.printf("Not yet implemented%n");
+            generateTable(notImplemented);
           }
         }
-        sortedFnDefs.sort(
-            Comparator.<FnDef, String>comparing(f -> f.structure)
-                .thenComparingInt(f -> f.ordinal));
-        for (FnDef fnDef : fnDefs) {
-          if (fnDef.ordinal <= 0) {
-            int i =
-                findMax(
-                    sortedFnDefs,
-                    f ->
-                        f.qualifiedName().compareTo(fnDef.qualifiedName()) < 0);
-            sortedFnDefs.add(i, fnDef);
-          }
-        }
+      }
+    }
 
-        List<FnDef> implemented =
-            filterEager(sortedFnDefs, fn -> fn.implemented);
-        generateTable(pw, implemented);
-
-        List<FnDef> notImplemented =
-            filterEager(sortedFnDefs, fn -> !fn.implemented);
-        if (!notImplemented.isEmpty()) {
-          pw.printf("Not yet implemented%n");
-          generateTable(pw, notImplemented);
+    /** Returns the first index of the list where the predicate is false. */
+    private static <E> int findMax(List<E> list, Predicate<E> predicate) {
+      for (int i = 0; i < list.size(); i++) {
+        E e = list.get(i);
+        if (!predicate.test(e)) {
+          return i;
         }
       }
+      return -1;
     }
-  }
 
-  /** Returns the first index of the list where the predicate is false. */
-  private static <E> int findMax(List<E> list, Predicate<E> predicate) {
-    for (int i = 0; i < list.size(); i++) {
-      E e = list.get(i);
-      if (!predicate.test(e)) {
-        return i;
+    void generateTable(List<FnDef> functions) {
+      pw.printf("%n");
+      final Tabulator tabulator = new Tabulator(pw, 4, -1, -1);
+      tabulator.header("Name", "Type", "Description");
+      for (FnDef function : functions) {
+        String name2 = munge(function.structure + '.' + function.name);
+        String type2 = munge(function.type);
+        String description2 =
+            munge(
+                function.description.startsWith("As ")
+                    ? function.description
+                    : '"' + function.prototype + "\" " + function.description);
+        if (function.extra != null) {
+          description2 += " " + function.extra.trim();
+        }
+        tabulator.row(name2, type2, description2);
       }
+      pw.printf("%n");
     }
-    return -1;
   }
 
-  private static void generateTable(PrintWriter pw, List<FnDef> functions) {
-    pw.printf("%n");
-    row(pw, "Name", "Type", "Description");
-    row(pw, "----", "----", "-----------");
-    for (FnDef function : functions) {
-      String name2 = munge(function.structure + '.' + function.name);
-      String type2 = munge(function.type);
-      String description2 =
-          munge(
-              function.description.startsWith("As ")
-                  ? function.description
-                  : '"' + function.prototype + "\" " + function.description);
-      if (function.extra != null) {
-        description2 += " " + function.extra.trim();
-      }
-      row(pw, name2, type2, description2);
-    }
-    pw.printf("%n");
-  }
-
-  private static void row(
-      PrintWriter pw, String name, String type, String description) {
-    pw.printf("| %s | %s | %s |\n", name, type, description);
+  /** Generates a table of properties into {@code reference.md}. */
+  public static void generatePropertyTable(PrintWriter pw) {
+    new PropertyTableGenerator(pw).generate();
   }
 
   private static String munge(String s) {
@@ -221,6 +237,65 @@ public class Generation {
           (String) map.get("extra"),
           first((Boolean) map.get("implemented"), true),
           map.containsKey("ordinal") ? (Integer) map.get("ordinal") : -1);
+    }
+  }
+
+  /** Generates a table of {@link Prop} values. */
+  private static class PropertyTableGenerator {
+    private final PrintWriter pw;
+
+    PropertyTableGenerator(PrintWriter pw) {
+      this.pw = pw;
+    }
+
+    void generate() {
+      pw.printf("%n");
+      final List<Prop> propList =
+          Ordering.from(Comparator.comparing((Prop p) -> p.name()))
+              .sortedCopy(Arrays.asList(Prop.values()));
+      final Tabulator tabulator = new Tabulator(pw, 20, 6, 7, -1);
+      tabulator.header("Name", "Type", "Default", "Description");
+      for (Prop p : propList) {
+        tabulator.row(
+            p.camelName, p.typeName(), p.defaultValue(), munge(p.description));
+      }
+      pw.printf("%n");
+    }
+  }
+
+  /** Generates a Markdown table. */
+  private static class Tabulator {
+    private final PrintWriter pw;
+    private final String format;
+    private final int[] widths;
+
+    private Tabulator(PrintWriter pw, int... widths) {
+      this.pw = pw;
+      this.widths = widths;
+
+      final StringBuilder b = new StringBuilder("|");
+      for (int width : widths) {
+        b.append(" ")
+            .append(width < 0 ? "%s" : "%-" + width + "s")
+            .append(" |");
+      }
+      b.append("%n");
+      this.format = b.toString();
+    }
+
+    void row(Object... values) {
+      pw.printf(format, values);
+    }
+
+    void header(String... names) {
+      row((Object[]) names);
+
+      Object[] hyphens = new Object[names.length];
+      for (int i = 0; i < names.length; i++) {
+        String name = names[i];
+        hyphens[i] = repeat("-", Math.max(widths[i], name.length()));
+      }
+      row(hyphens);
     }
   }
 }

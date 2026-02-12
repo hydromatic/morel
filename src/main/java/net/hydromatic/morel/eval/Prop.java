@@ -52,7 +52,13 @@ public enum Prop {
    * <p>The format matches the output of {@code Shell.banner()}. This property
    * is read-only and should not be modified via {@code Sys.set}.
    */
-  BANNER("banner", String.class, true, JavaVersion.banner(null)),
+  BANNER(
+      "banner",
+      String.class,
+      true,
+      JavaVersion.banner(null),
+      "Startup banner message displayed when launching the Morel " //
+          + "shell."),
 
   /**
    * File property "directory" is the path of the directory that the {@code
@@ -62,17 +68,33 @@ public enum Prop {
    * "src/test/resources" directory; when launched via the {@code morel} shell
    * script, the default value is the shell's current directory.
    */
-  DIRECTORY("directory", File.class, true, new File("")),
+  DIRECTORY(
+      "directory",
+      File.class,
+      true,
+      new File(""),
+      "Path of the directory that the 'file' variable maps to in " //
+          + "this connection."),
 
   /**
    * Boolean property "hybrid" controls whether to try to create a hybrid
    * execution plan that uses Apache Calcite relational algebra wherever
    * possible. Default is false.
    */
-  HYBRID("hybrid", Boolean.class, true, false),
+  HYBRID(
+      "hybrid",
+      Boolean.class,
+      true,
+      false,
+      "Whether to try to create a hybrid execution plan that uses Apache Calcite relational algebra."),
 
   /** Maximum number of inlining passes. */
-  INLINE_PASS_COUNT("inlinePassCount", Integer.class, true, 5),
+  INLINE_PASS_COUNT(
+      "inlinePassCount",
+      Integer.class,
+      true,
+      5,
+      "Maximum number of inlining passes."),
 
   /**
    * Integer property "lineWidth" controls printing. The length at which lines
@@ -82,7 +104,12 @@ public enum Prop {
    * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
    * signature</a> of the Standard Basis Library. Default is 79.
    */
-  LINE_WIDTH("lineWidth", Integer.class, true, 79),
+  LINE_WIDTH(
+      "lineWidth",
+      Integer.class,
+      true,
+      79,
+      "When printing, the length at which lines are wrapped."),
 
   /**
    * Boolean property "matchCoverageEnabled" controls whether to check the
@@ -91,16 +118,26 @@ public enum Prop {
    * does not analyze pattern coverage, and therefore will not give warnings or
    * errors.
    */
-  MATCH_COVERAGE_ENABLED("matchCoverageEnabled", Boolean.class, true, true),
+  MATCH_COVERAGE_ENABLED(
+      "matchCoverageEnabled",
+      Boolean.class,
+      true,
+      true,
+      "Whether to check whether patterns are exhaustive and/or redundant."),
 
   /** Integer property "optionalInt" is for testing. Default is null. */
-  OPTIONAL_INT("optionalInt", Integer.class, false, null),
+  OPTIONAL_INT("optionalInt", Integer.class, false, null, "For testing."),
 
   /**
    * String property "output" controls how values are printed in the shell.
    * Default is "classic".
    */
-  OUTPUT("output", Output.class, true, Output.CLASSIC),
+  OUTPUT(
+      "output",
+      Output.class,
+      true,
+      Output.CLASSIC,
+      "How values should be formatted. \"classic\" (the default) prints values in a compact nested format; \"tabular\" prints values in a table if their type is a list of records."),
 
   /**
    * Integer property "printDepth" controls printing. The depth of nesting of
@@ -110,7 +147,12 @@ public enum Prop {
    * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
    * signature</a> of the Standard Basis Library. Default is 5.
    */
-  PRINT_DEPTH("printDepth", Integer.class, true, 5),
+  PRINT_DEPTH(
+      "printDepth",
+      Integer.class,
+      true,
+      5,
+      "When printing, the depth of nesting of recursive data structure at which ellipsis begins."),
 
   /**
    * Integer property "printLength" controls printing. The length of lists at
@@ -122,7 +164,12 @@ public enum Prop {
    *
    * <p>Default is 12.
    */
-  PRINT_LENGTH("printLength", Integer.class, true, 12),
+  PRINT_LENGTH(
+      "printLength",
+      Integer.class,
+      true,
+      12,
+      "When printing, the length of lists at which ellipsis begins."),
 
   /**
    * String property "productName" is the name of the Morel product.
@@ -130,7 +177,12 @@ public enum Prop {
    * <p>The value is sourced from {@link JavaVersion#MOREL_PRODUCT}. This
    * property is read-only and should not be modified via {@code Sys.set}.
    */
-  PRODUCT_NAME("productName", String.class, true, JavaVersion.MOREL_PRODUCT),
+  PRODUCT_NAME(
+      "productName",
+      String.class,
+      true,
+      JavaVersion.MOREL_PRODUCT,
+      "Name of the Morel product."),
 
   /**
    * String property "productVersion" is the current version of Morel.
@@ -142,20 +194,33 @@ public enum Prop {
       "productVersion",
       String.class,
       true,
-      JavaVersion.MOREL_VERSION.toString()),
+      JavaVersion.MOREL_VERSION.toString(),
+      "Current version of Morel."),
 
   /**
    * Boolean property "relationalize" is whether to convert to relational
    * algebra. Default is false.
    */
-  RELATIONALIZE("relationalize", Boolean.class, true, false),
+  RELATIONALIZE(
+      "relationalize",
+      Boolean.class,
+      true,
+      false,
+      "Whether to convert to relational algebra."),
 
   /**
    * File property "scriptDirectory" is the path of the directory where the
    * {@code use} command looks for scripts. When running a script, it is
    * generally set to the directory that contains the script.
    */
-  SCRIPT_DIRECTORY("scriptDirectory", File.class, true, new File("")),
+  SCRIPT_DIRECTORY(
+      "scriptDirectory",
+      File.class,
+      true,
+      new File(""),
+      "Path of the directory where the 'use' command looks for scripts. "
+          + "When running a script, it is generally set to the directory that "
+          + "contains the script."),
 
   /**
    * Integer property "stringDepth" is the length of strings at which ellipsis
@@ -165,12 +230,18 @@ public enum Prop {
    * href="https://www.smlnj.org/doc/Compiler/pages/printcontrol.html">PRINTCONTROL
    * signature</a> of the Standard Basis Library. Default is 70.
    */
-  STRING_DEPTH("stringDepth", Integer.class, true, 70);
+  STRING_DEPTH(
+      "stringDepth",
+      Integer.class,
+      true,
+      70,
+      "When printing, the length of strings at which ellipsis begins.");
 
   public final String camelName;
-  private final Class<?> type;
+  public final Class<?> type;
   private final boolean required;
   private final @Nullable Object defaultValue;
+  public final String description;
 
   /**
    * Map of all properties, keyed by both {@link #name()} and {@link
@@ -200,11 +271,13 @@ public enum Prop {
       String camelName,
       Class<?> type,
       boolean required,
-      @Nullable Object defaultValue) {
+      @Nullable Object defaultValue,
+      String description) {
     this.camelName = camelName;
     this.type = type;
     this.required = required;
     this.defaultValue = defaultValue;
+    this.description = description;
     checkArgument(
         CaseFormat.LOWER_CAMEL
             .to(CaseFormat.UPPER_UNDERSCORE, camelName)
@@ -340,6 +413,37 @@ public enum Prop {
    */
   public Object remove(Map<Prop, Object> map) {
     return map.remove(this);
+  }
+
+  /** The type name, in printable form. */
+  public String typeName() {
+    if (type.isEnum()) {
+      return "enum";
+    } else if (type == Integer.class) {
+      return "int";
+    } else if (type == String.class) {
+      return "string";
+    } else if (type == File.class) {
+      return "file";
+    } else if (type == Boolean.class) {
+      return "bool";
+    } else {
+      throw new IllegalArgumentException(type.getTypeName());
+    }
+  }
+
+  /** The default value, in printable form. */
+  public @Nullable Object defaultValue() {
+    switch (this) {
+      case BANNER:
+        return "Morel version ...";
+      case OUTPUT:
+        return requireNonNull((Output) defaultValue)
+            .name()
+            .toLowerCase(Locale.ROOT);
+      default:
+        return defaultValue;
+    }
   }
 
   /** Allowed values for {@link #OUTPUT} property. */

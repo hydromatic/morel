@@ -484,7 +484,7 @@ Exception:
 
 ## Built-in functions
 
-{% comment %}START TABLE{% endcomment %}
+[//]: # (start:built-in-functions)
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -807,7 +807,7 @@ Not yet implemented
 | String.fromString | string &rarr; string option | "fromString s" scans the string `s` as a sequence of printable characters, converting SML escape sequences into the appropriate characters. It does not skip leading whitespace. It returns as many characters as can successfully be scanned, stopping when it reaches the end of the string or a non-printing character (i.e., one not satisfying `isPrint`), or if it encounters an improper escape sequence. It ignores the remaining characters.  If no conversion is possible, e.g., if the first character is non-printable or begins an illegal escape sequence, `NONE` is returned. Note, however, that `fromString ""` returns `SOME("")`.  For more information on the allowed escape sequences, see the entry for `CHAR.fromString`. SML source also allows escaped formatting sequences, which are ignored during conversion. The rule is that if any prefix of the input is successfully scanned, including an escaped formatting sequence, the function returns some string. It only returns `NONE` in the case where the prefix of the input cannot be scanned at all. Here are some sample conversions:  <pre> Input string s fromString s ============== ============ "\\q"          NONE "a\^D"         SOME "a" "a\\ \\\\q" SOME "a" "\\ \\"      SOME "" ""             SOME "" "\\ \\\^D"     SOME "" "\\ a"         NONE </pre>  *Implementation note*: Because of the special cases, such as `fromString ""` = `SOME ""`, `fromString "\\ \\\^D"` = `SOME ""`, and `fromString "\^D" = NONE`, the function cannot be implemented as a simple iterative application of `CHAR.scan`. |
 | String.toCString | string &rarr; string | "toCString s" returns a string corresponding to `s`, with non-printable characters replaced by C escape sequences. This is equivalent to  <pre>translate Char.toCString s</pre> |
 
-{% comment %}END TABLE{% endcomment %}
+[//]: # (end:built-in-functions)
 
 ## Properties
 
@@ -816,13 +816,24 @@ displayed using `Sys.show name`,
 and unset using `Sys.unset name`.
 `Sys.showAll ()` shows all properties and their values.
 
-| Name                 | Type | Default | Description |
-| -------------------- | ---- | ------- | ----------- |
-| hybrid               | bool | false   | Whether to try to create a hybrid execution plan that uses Apache Calcite relational algebra. |
-| inlinePassCount      | int  | 5       | Maximum number of inlining passes. |
-| lineWidth            | int  | 79      | When printing, the length at which lines are wrapped. |
-| matchCoverageEnabled | bool | true    | Whether to check whether patterns are exhaustive and/or redundant. |
-| output               | enum | classic | How values should be formatted. "classic" (the default) prints values in a compact nested format; "tabular" prints values in a table if their type is a list of records. |
-| printDepth           | int  | 5       | When printing, the depth of nesting of recursive data structure at which ellipsis begins. |
-| printLength          | int  | 12      | When printing, the length of lists at which ellipsis begins. |
-| stringDepth          | int  | 70      | When printing, the length of strings at which ellipsis begins. |
+[//]: # (start:properties)
+
+| Name                 | Type   | Default | Description |
+| -------------------- | ------ | ------- | ----------- |
+| banner               | string | Morel version ... | Startup banner message displayed when launching the Morel shell. |
+| directory            | file   |         | Path of the directory that the 'file' variable maps to in this connection. |
+| hybrid               | bool   | false   | Whether to try to create a hybrid execution plan that uses Apache Calcite relational algebra. |
+| inlinePassCount      | int    | 5       | Maximum number of inlining passes. |
+| lineWidth            | int    | 79      | When printing, the length at which lines are wrapped. |
+| matchCoverageEnabled | bool   | true    | Whether to check whether patterns are exhaustive and/or redundant. |
+| optionalInt          | int    | null    | For testing. |
+| output               | enum   | classic | How values should be formatted. "classic" (the default) prints values in a compact nested format; "tabular" prints values in a table if their type is a list of records. |
+| printDepth           | int    | 5       | When printing, the depth of nesting of recursive data structure at which ellipsis begins. |
+| printLength          | int    | 12      | When printing, the length of lists at which ellipsis begins. |
+| productName          | string | morel-java | Name of the Morel product. |
+| productVersion       | string | 0.7.0   | Current version of Morel. |
+| relationalize        | bool   | false   | Whether to convert to relational algebra. |
+| scriptDirectory      | file   |         | Path of the directory where the 'use' command looks for scripts. When running a script, it is generally set to the directory that contains the script. |
+| stringDepth          | int    | 70      | When printing, the length of strings at which ellipsis begins. |
+
+[//]: # (end:properties)

@@ -1047,15 +1047,20 @@ public class LintTest {
         if (line == null) {
           break;
         }
-        if (line.equals("{% comment %}END TABLE{% endcomment %}")) {
+        if (line.equals("[//]: # (end:built-in-functions)")
+            || line.equals("[//]: # (end:properties)")) {
           emit = true;
         }
         if (emit) {
           pw.println(line);
         }
-        if (line.equals("{% comment %}START TABLE{% endcomment %}")) {
+        if (line.equals("[//]: # (start:built-in-functions)")) {
           emit = false;
           Generation.generateFunctionTable(pw);
+        }
+        if (line.equals("[//]: # (start:properties)")) {
+          emit = false;
+          Generation.generatePropertyTable(pw);
         }
       }
     }
