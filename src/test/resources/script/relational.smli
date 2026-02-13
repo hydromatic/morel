@@ -1396,10 +1396,6 @@ yield e.name;
 
 (* Set operations (union, intersect, except) ---------------------- *)
 
-(* Workaround for [MOREL-270] Ambiguous collection types. *)
-fun mustBeList (list: 'a list) = list;
-> val mustBeList = fn : 'a list -> 'a list
-
 (*) union (matches SQL's UNION ALL)
 from e in emps
   yield e.deptno
@@ -2181,7 +2177,7 @@ from
 
 (*) Patterns left of 'in'
 fun sumPairs pairs =
-  from (l, r) in mustBeList pairs
+  from (l, r) in (pairs : 'a list)
   yield l + r;
 > val sumPairs = fn : (int * int) list -> int list
 sumPairs [];

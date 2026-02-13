@@ -690,4 +690,20 @@ forall d in [{a=1,b=true}];
 > stdIn:1.8-1.27 Error: last step of 'forall' must be 'require'
 >   raised at: stdIn:1.8-1.27
 
+(*) [MOREL-343] Same type var constrains both params to same type
+fun same (x: 'a, y: 'a) = (x, y);
+> val same = fn : 'a * 'a -> 'a * 'a
+
+(*) Same type var across params and result list
+fun foo (x: 'a list, y: 'a) = x @ [y];
+> val foo = fn : 'a list * 'a -> 'a list
+
+(*) Same type var in param and return type
+fun bar (x: 'a) : 'a option = SOME x;
+> val bar = fn : 'a -> 'a option
+
+(*) Type var in val declaration
+val myid: 'a -> 'a list = fn x => [x];
+> val myid = fn : 'a -> 'a list
+
 (*) End type-inference.smli

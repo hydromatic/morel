@@ -124,6 +124,9 @@ public class TypeResolver {
   private final List<Constraint> constraints = new ArrayList<>();
   private final Deque<AggFrame> aggregateTripleStack = new ArrayDeque<>();
 
+  /** Type variable scopes for val/fun declarations (innermost last). */
+  private final Deque<Map<String, Variable>> tyVarScopes = new ArrayDeque<>();
+
   static final String BAG_TY_CON = BuiltIn.Eqtype.BAG.mlName();
   static final String TUPLE_TY_CON = "tuple";
   static final String ARG_TY_CON = "$arg";
@@ -882,7 +885,9 @@ public class TypeResolver {
   }
 
   private Ast.Type deduceTypeType(TypeEnv env, Ast.Type type, Variable v) {
-    return new TypeToTermConverter(env).typeTerm(type, v);
+    final Map<String, Variable> scope =
+        tyVarScopes.isEmpty() ? ImmutableMap.of() : tyVarScopes.peek();
+    return new TypeToTermConverter(env, scope).typeTerm(type, v);
   }
 
   private Ast.Query deduceQueryType(TypeEnv env, Ast.Query query, Variable v) {
@@ -1922,29 +1927,35 @@ public class TypeResolver {
       Ast.ValBind valBind,
       PairList<Ast.IdPat, Term> termMap,
       Variable vPat) {
-    final Consumer<PatTerm> consumer = p -> termMap.add(p.id, p.term);
-    final Ast.Pat pat =
-        deducePatType(env, valBind.pat, consumer, null, vPat, t -> t);
-    final Ast.Exp exp = deduceExpType(env, valBind.exp, vPat);
-    final Ast.ValBind valBind2 = valBind.copy(pat, exp);
-    if (valBind2.pat instanceof Ast.IdPat) {
-      if (env.hasOverloaded(((Ast.IdPat) valBind2.pat).name)) {
-        // We are assigning to an overloaded name. Morel only allows overloads
-        // for function values. So, create a function type so that we can (after
-        // resolution) access the argument and result type. In
-        //   over foo;
-        //   val inst foo = fn NONE => [] | SOME x => [x]
-        // "inst foo" has function type "'a option -> 'a list" (vPat),
-        // argument "'a option" (v2), result "'a list" (v3).
-        final Variable v2 = unifier.variable();
-        final Variable v3 = unifier.variable();
-        overloads.add(new Inst(((Ast.IdPat) valBind2.pat).name, vPat, v2, v3));
-        Term term = fnTerm(v2, v3);
-        equiv(vPat, term);
+    tyVarScopes.push(new HashMap<>());
+    try {
+      final Consumer<PatTerm> consumer = p -> termMap.add(p.id, p.term);
+      final Ast.Pat pat =
+          deducePatType(env, valBind.pat, consumer, null, vPat, t -> t);
+      final Ast.Exp exp = deduceExpType(env, valBind.exp, vPat);
+      final Ast.ValBind valBind2 = valBind.copy(pat, exp);
+      if (valBind2.pat instanceof Ast.IdPat) {
+        if (env.hasOverloaded(((Ast.IdPat) valBind2.pat).name)) {
+          // We are assigning to an overloaded name. Morel only allows overloads
+          // for function values. So, create a function type so that we can
+          // (after resolution) access the argument and result type. In
+          //   over foo;
+          //   val inst foo = fn NONE => [] | SOME x => [x]
+          // "inst foo" has function type "'a option -> 'a list" (vPat),
+          // argument "'a option" (v2), result "'a list" (v3).
+          final Variable v2 = unifier.variable();
+          final Variable v3 = unifier.variable();
+          overloads.add(
+              new Inst(((Ast.IdPat) valBind2.pat).name, vPat, v2, v3));
+          Term term = fnTerm(v2, v3);
+          equiv(vPat, term);
+        }
       }
+      map.put(valBind2, toTerm(PrimitiveType.UNIT));
+      return valBind2;
+    } finally {
+      tyVarScopes.pop();
     }
-    map.put(valBind2, toTerm(PrimitiveType.UNIT));
-    return valBind2;
   }
 
   private static TypeEnv bindAll(
@@ -2171,11 +2182,12 @@ public class TypeResolver {
 
   /** Workspace for converting types to terms. */
   private class TypeToTermConverter {
-    final Map<String, Variable> tyVarMap = new HashMap<>();
+    final Map<String, Variable> tyVarMap;
     final TypeEnv env;
 
-    TypeToTermConverter(TypeEnv env) {
+    TypeToTermConverter(TypeEnv env, Map<String, Variable> tyVarMap) {
       this.env = env;
+      this.tyVarMap = tyVarMap;
     }
 
     /** Converts an AST type into a type term. */

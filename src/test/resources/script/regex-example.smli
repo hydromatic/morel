@@ -64,16 +64,12 @@ epsilon "";
 epsilon "abc";
 > val it = [(0,0),(1,1),(2,2),(3,3)] : (int * int) list
 
-(* Workaround for [MOREL-270] Ambiguous collection types. *)
-fun mustBeList (list: 'a list) = list;
-> val mustBeList = fn : 'a list -> 'a list
-
 (* Appending regexes r1, r2 amounts to relation composition, since we wish to
    find all substrings consisting of adjacent substrings "si . . . sj − 1" and
    "sj . . . sk − 1" matching r1 and r2 respectively: *)
 fun seq r1 r2 s =
-    from (i, j) in mustBeList (r1 s),
-        (j2, k) in mustBeList (r2 s)
+    from (i, j) in (r1 s : 'a list),
+        (j2, k) in (r2 s : 'a list)
       where j = j2 + 0
       yield (i + 0, k + 0);
 > val seq = fn
@@ -93,8 +89,8 @@ syms "el" "hello";
 (* Similarly, regex alternation "r1 | r2" is accomplished by unioning all
    matches of each: *)
 fun alt r1 r2 s =
-  from i in mustBeList (r1 s)
-    union mustBeList (r2 s);
+  from i in (r1 s : 'a list)
+    union (r2 s : 'a list);
 > val alt = fn : ('a -> 'b list) -> ('a -> 'b list) -> 'a -> 'b list
 (*) match "e" or "o" in "hello"
 val matches = alt (sym #"e") (sym #"o") "hello";
@@ -106,8 +102,8 @@ matchStrings matches "hello";
 fun trans edges =
     Relational.iterate edges
         fn (oldEdges, newEdges) =>
-            from (i, j) in mustBeList newEdges,
-                (j2, k) in mustBeList edges
+            from (i, j) in (newEdges : 'a list),
+                (j2, k) in (edges : 'a list)
               where j = j2
               yield (i, k);
 > val trans = fn : ('a * 'a) list -> ('a * 'a) list
@@ -163,7 +159,7 @@ fun range n =
 > val range = fn : int -> int list
 fun matchStringsPos r s =
   from i in range (size s),
-      j in mustBeList (r (s, i))
+      j in (r (s, i) : 'a list)
     yield (i, substring (s, i, j - i));
 > val matchStringsPos = fn
 >   : (string * int -> int list) -> string -> (int * string) list
@@ -194,8 +190,8 @@ matchStringsPos r "hello";
 (* Appending regexes "seq r1 r2" simply applies "r2" starting from every ending
    position that "r1" can find: *)
 fun seqPos r1 r2 (s, i) =
-    from j in mustBeList (r1 (s, i)),
-        k in mustBeList (r2 (s, j))
+    from j in (r1 (s, i) : 'a list),
+        k in (r2 (s, j) : 'b list)
       yield k;
 > val seqPos = fn
 >   : ('a * 'b -> 'c list) -> ('a * 'c -> 'd list) -> 'a * 'b -> 'd list
@@ -205,7 +201,7 @@ matchStringsPos r "hello";
 > val it = [(3,"lo")] : (int * string) list
 
 (* Regex alternation "alt" is effectively unchanged: *)
-fun altPos r1 r2 x = from i in mustBeList (r1 x) union mustBeList (r2 x);
+fun altPos r1 r2 x = from i in (r1 x : 'a list) union (r2 x : 'a list);
 > val altPos = fn : ('a -> 'b list) -> ('a -> 'b list) -> 'a -> 'b list
 val r = altPos (symPos #"e") (symPos #"o");
 > val r = fn : string * int -> int list
@@ -222,7 +218,7 @@ fun starPos r (s, i) =
     Relational.iterate [i]
         fn (oldList, newList) =>
             from j in newList,
-                k in mustBeList (r (s, j))
+                k in (r (s, j) : 'a list)
               yield k;
 > val starPos = fn : ('a * 'b -> 'b list) -> 'a * 'b -> 'b list
 val r = starPos (symPos #"l");

@@ -1214,10 +1214,6 @@ Sys.plan();
 >   "calcite(plan LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n  LogicalFilter(condition=[IS NULL($4)])\n    LogicalJoin(condition=[=($0, $3)], joinType=[left])\n      LogicalProject(deptno=[$0], dname=[$1], loc=[$2])\n        JdbcTableScan(table=[[scott, DEPT]])\n      LogicalProject(deptno=[$0], $f1=[true])\n        LogicalAggregate(group=[{0}])\n          LogicalProject(deptno=[$1])\n            LogicalFilter(condition=[AND(=($5, 'CLERK'), IS NOT NULL($1))])\n              LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n                JdbcTableScan(table=[[scott, EMP]])\n)"
 >   : string
 
-(* Workaround for [MOREL-270] Ambiguous collection types. *)
-fun mustBeList (list: 'a list) = list;
-> val mustBeList = fn : 'a list -> 'a list
-
 (*) Functional programming <=> relational programming
 fun squareList [] = []
   | squareList (x :: xs) = x * x :: squareList xs;
@@ -1229,7 +1225,7 @@ fun squareList xs = List.map (fn x => x * 2) xs;
 squareList [1, 2, 3];
 > val it = [2,4,6] : int list
 fun squareList xs =
-  from x in mustBeList xs
+  from x in (xs : 'a list)
     yield x * x;
 > val squareList = fn : int list -> int list
 squareList [1, 2, 3];
@@ -1237,8 +1233,8 @@ squareList [1, 2, 3];
 
 (*) wordCount again
 fun mapReduce mapper reducer list =
-  from e in mustBeList list,
-      (k, v) in mustBeList (mapper e)
+  from e in (list : 'a list),
+      (k, v) in (mapper e : 'b list)
     group k compute {c = (fn vs => reducer (k, vs)) over v};
 > val mapReduce = fn
 >   : ('a -> ('b * 'c) list)

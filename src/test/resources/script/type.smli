@@ -306,7 +306,84 @@ map len (map explode ["ab", "", "cde"]);
 map (fn s => len (explode s)) ["ab", "", "cde"];
 > val it = [2,0,3] : int list
 
-(*) Type resolution involving record selectors
+(* Polymorphic type constraints ----------------------------------- *)
+
+(*) id_list returns its argument but that argument must be a list
+fun id_list (x: 'a list) = x;
+> val id_list = fn : 'a list -> 'a list
+id_list [1,2];
+> val it = [1,2] : int list
+id_list ["a","b"];
+> val it = ["a","b"] : string list
+id_list (true, 1);
+> 0.0-0.0 Error: Cannot deduce type: conflict: tuple(bool, int) vs list(T6)
+>   raised at: 0.0-0.0
+id_list (bag [false,true]);
+> 0.0-0.0 Error: Cannot deduce type: conflict: list(T9) vs bag(T7)
+>   raised at: 0.0-0.0
+
+(*) Same, without parentheses around the argument.
+fun id_list x: 'a list = x;
+> val id_list = fn : 'a list -> 'a list
+id_list [1,2];
+> val it = [1,2] : int list
+
+(*) Constraint after parentheses is on the return type.
+fun two_list (x, y): 'a list = [x, y];
+> val two_list = fn : 'a * 'a -> 'a list
+two_list ("a", "b");
+> val it = ["a","b"] : string list
+
+(*) ...even there is only one argument.
+fun one_list (x): 'a list = [x];
+> val one_list = fn : 'a -> 'a list
+one_list "a";
+> val it = ["a"] : string list
+one_list ("a", "b");
+> val it = [("a","b")] : (string * string) list
+
+(*) Four type parameters collapse to two
+fun four_list (a: 'a, b: 'b, c: 'c, d: 'd) = [(a, true, b), (c, d, b)];
+> val four_list = fn : 'a * 'b * 'a * bool -> ('a * bool * 'b) list
+four_list (1, "a", 2, false);
+> val it = [(1,true,"a"),(2,false,"a")] : (int * bool * string) list
+
+(*) first_pair returns the first item, but requires types to be the same
+fun first_pair (list: ('a * 'a) list) = hd list;
+> val first_pair = fn : ('a * 'a) list -> 'a * 'a
+first_pair [(1,2),(3,4)];
+> val it = (1,2) : int * int
+first_pair [("a","b"),("c","d")];
+> val it = ("a","b") : string * string
+first_pair [("a",true),("c",false)];
+> 0.0-0.0 Error: Cannot deduce type: conflict: string vs bool
+>   raised at: 0.0-0.0
+first_pair (bag [("a","b"),("c","d")]);
+> 0.0-0.0 Error: Cannot deduce type: conflict: bag(T11) vs list(tuple(T13, T13))
+>   raised at: 0.0-0.0
+
+(* Function that uses its argument in a query and therefore requires
+ * it to be a list or a bag. *)
+(*) TODO With no constraints, 'IllegalArgumentException' is not a great error
+fun sumPairs list =
+  from (l, r) in list yield l + r;
+> java.lang.IllegalArgumentException: not a collection type: 'a
+
+(*) With a "('b * 'b) list" constraint, it can deduce that 'b should be int
+fun sumPairs (list: ('b * 'b) list) =
+  from (l, r) in list yield l + r;
+> val sumPairs = fn : (int * int) list -> int list
+sumPairs [(1,2),(3,4)];
+> val it = [3,7] : int list
+
+(*) Ditto with a "('a * 'b) list" constraint.
+fun sumPairs (list: ('a * 'b) list) =
+  from (l, r) in list yield l + r;
+> val sumPairs = fn : (int * int) list -> int list
+sumPairs [(1,2),(3,4)];
+> val it = [3,7] : int list
+
+(* Type resolution involving record selectors --------------------- *)
 val emps =
   [{id = 100, name = "Fred", deptno = 10},
    {id = 101, name = "Velma", deptno = 20},

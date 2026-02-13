@@ -2388,9 +2388,6 @@ public class MainTest {
         .assertType("int")
         .assertEval(is(1));
 
-    // TODO when [MOREL-270] is fixed, we can deduce that the type is
-    // constrained, e.g. "multi (int list * int bag -> int bag, int list * int
-    // list -> int list)"
     ml("fn (a: int list, b) => from i in a union b")
         .assertType("int list * 'a -> 'b");
     ml("fn (a: int list, b) => from i in a intersect b")
