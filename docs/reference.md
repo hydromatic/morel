@@ -84,6 +84,9 @@ In Morel but not Standard ML:
   for tuples, <code><i>tuple</i>.1</code>, <code><i>tuple</i>.2</code> etc.
   as an alternative to <code>#1 <i>tuple</i></code>,
   <code>#2 <i>tuple</i></code>
+* postfix method-call syntax <code><i>exp</i>.<i>f</i> ()</code> and
+  <code><i>exp</i>.<i>f</i> <i>arg</i></code>, where `f` is a function
+  whose first parameter is named `self`
 * identifiers and type names may be quoted
   (for example, <code>\`an identifier\`</code>)
 * `with` functional update for record values
@@ -180,6 +183,8 @@ In Standard ML but not in Morel:
     | '<b>(</b>' <i>exp<sub>1</sub></i> <b>;</b> ... <b>;</b> <i>exp<sub>n</sub></i> '<b>)</b>' sequence (n &ge; 2)
     | <b>let</b> <i>dec</i> <b>in</b> <i>exp<sub>1</sub></i> ; ... ; <i>exp<sub>n</sub></i> <b>end</b>
                                 local declaration (n ≥ 1)
+    | <i>exp</i> <b>.</b> <i>lab</i> <b>()</b>              postfix call (no argument)
+    | <i>exp<sub>1</sub></i> <b>.</b> <i>lab</i> <i>exp<sub>2</sub></i>            postfix call (with argument)
     | <i>exp</i> <b>:</b> <i>type</i>                type annotation
     | <i>exp<sub>1</sub></i> <b>andalso</b> <i>exp<sub>2</sub></i>         conjunction
     | <i>exp<sub>1</sub></i> <b>orelse</b> <i>exp<sub>2</sub></i>          disjunction

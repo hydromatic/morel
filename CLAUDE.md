@@ -175,7 +175,7 @@ infrastructure:
   - Run via `MainTest` methods that check actual vs. expected output
 
 Key test files in `src/test/resources/script/`:
-- `builtIn.smli`: Tests for built-in functions and operators
+- `built-in.smli`: Tests for built-in functions and operators
 - `relational.smli`: Tests for relational/query features
 - `simple.smli`: Basic language features
 - `datatype.smli`: Algebraic data types

@@ -515,6 +515,68 @@ public class MainTest {
                 + "    ");
   }
 
+  /** Tests postfix method-call syntax: {@code x.f ()} and {@code x.f arg}. */
+  @Test
+  void testParsePostfix() {
+    // No-arg form "x.f ()" fires the paren branch and creates a PostfixApp,
+    // even when the receiver is a bare identifier.
+    ml("xs.length ()").assertParseSame();
+
+    // Paren form "x.f(expr)" fires the paren branch when the field name is a
+    // known selfFirst built-in (here "drop" is LIST_DROP).  The canonical
+    // unparse uses parens so the result can be dot-chained.
+    ml("xs.drop 1").assertParse("#drop xs 1");
+    ml("xs.drop(1)").assertParse("xs.drop 1");
+
+    // Chaining works: both dots are handled inside expression9's DOT loop,
+    // so the second ".length ()" sees a non-Id receiver (PostfixApp result)
+    // and fires freely.
+    ml("xs.drop (1).length ()").assertParseSame();
+
+    // Atom-arg form on a bare identifier: the eIsId guard blocks the PostfixApp
+    // LOOKAHEAD, so the dot becomes a field projection and the argument is
+    // applied at expression8 level.  TypeResolver later intercepts the pattern
+    // and re-dispatches as a postfix call.
+    // The canonical parse of "xs.drop 2" is "#drop xs 2".
+    ml("#drop xs 2").assertParseEquivalent("xs.drop 2");
+
+    // Atom-arg form works when the receiver is a non-identifier expression
+    // (e.g. a list literal), because eIsId is false for non-identifiers.
+    // The canonical unparse of a PostfixApp with a non-unit arg uses parens,
+    // so "[1, 2, 3].drop 2" round-trips as "[1, 2, 3].drop(2)".
+    ml("[1, 2, 3].drop 2").assertParseEquivalent("[1, 2, 3].drop(2)");
+
+    // Postfix calls chain when the receiver is a non-identifier expression.
+    ml("[1, 2, 3].rev ().length ()").assertParseSame();
+
+    // Module-qualified calls: uppercase-initial identifiers (eIsModule = true)
+    // are never postfix receivers.  The dot is a field projection, and any
+    // following atom is left for expression8 to apply.
+    // "String.size \"abc\"" parses as "#size String \"abc\"".
+    ml("#size String \"abc\"").assertParseEquivalent("String.size \"abc\"");
+
+    // Multi-arg module calls must not be consumed as postfix.
+    // "Option.app General.ignore NONE" is a three-argument curried call;
+    // "General.ignore" and "NONE" must remain at expression8 level.
+    // The canonical form uses explicit field-projection syntax.
+    ml("#app Option (#ignore General) NONE")
+        .assertParseEquivalent("Option.app General.ignore NONE");
+
+    // Paren branch is also blocked for uppercase-initial receivers.
+    // "Char.compare" is not a postfix receiver even when followed by "(...)"
+    // -- the tuple is a regular argument at expression8 level.
+    ml("#collate String (#compare Char) (\"Hello\", \"hello\")")
+        .assertParseEquivalent(
+            "String.collate Char.compare (\"Hello\", \"hello\")");
+
+    // A non-selfFirst field name on a lowercase bare-Id receiver is treated as
+    // field projection even when followed by "(...)": the parens belong to an
+    // expression8-level application, not a PostfixApp.
+    // "r.empno (7369)" parses as "(#empno r) 7369", not PostfixApp.
+    // (Evaluation-level correctness is tested in postfix.smli.)
+    ml("r.empno (7369)").assertParse("#empno r 7369");
+  }
+
   /**
    * Tests that the abbreviated record syntax "{a, e.b, #c e, d = e}" is
    * expanded to "{a = a, b = e.b, c = #c e, d = e}".

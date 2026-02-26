@@ -210,6 +210,10 @@ public class Shuttle {
     return ast.apply(apply.fn.accept(this), apply.arg.accept(this));
   }
 
+  protected Ast.Exp visit(Ast.PostfixApp app) {
+    return app.copy(app.receiver.accept(this), app.arg.accept(this));
+  }
+
   protected Ast.Exp visit(Ast.RecordSelector recordSelector) {
     return recordSelector; // leaf
   }

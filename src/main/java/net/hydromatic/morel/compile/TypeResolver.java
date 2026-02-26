@@ -37,6 +37,7 @@ import static org.apache.calcite.util.Util.first;
 import static org.apache.calcite.util.Util.firstDuplicate;
 
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -48,11 +49,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -123,6 +126,18 @@ public class TypeResolver {
   private final List<Inst> overloads = new ArrayList<>();
   private final List<Constraint> constraints = new ArrayList<>();
   private final Deque<AggFrame> aggregateTripleStack = new ArrayDeque<>();
+
+  /**
+   * Names of user-defined functions whose first parameter is named {@code self}
+   * (curried form).
+   */
+  private final Set<String> selfFirstNames = new HashSet<>();
+
+  /**
+   * Names of user-defined functions whose first parameter is a tuple whose
+   * first element is named {@code self} (tuple-splicing form).
+   */
+  private final Set<String> selfFirstTupleNames = new HashSet<>();
 
   /** Type variable scopes for val/fun declarations (innermost last). */
   private final Deque<Map<String, Variable>> tyVarScopes = new ArrayDeque<>();
@@ -792,7 +807,9 @@ public class TypeResolver {
         return reg(fn2b, v);
 
       case APPLY:
-        return deduceApplyType(env, (Ast.Apply) node, v);
+        return deduceApplyOrPostfixType(env, (Ast.Apply) node, v);
+      case POSTFIX_APP:
+        return deducePostfixAppType(env, (Ast.PostfixApp) node, v);
 
       case AGGREGATE:
         final AggFrame aggFrame = aggregateTripleStack.peek();
@@ -1525,6 +1542,44 @@ public class TypeResolver {
     }
   }
 
+  /**
+   * Handles an {@link Ast.Apply} node, intercepting the pattern {@code
+   * Apply(Apply(RecordSelector(name), receiverExpr), arg)} that the parser
+   * emits for {@code receiverExpr.name arg} when {@code receiverExpr} is a bare
+   * identifier (because the {@code eIsId} guard in the parser suppresses the
+   * atom-arg LOOKAHEAD for bare-identifier receivers).
+   *
+   * <p>When the receiver is a non-record value and {@code name} is a {@code
+   * selfFirst}-eligible built-in or user-defined function, the apply is
+   * desugared into an equivalent {@link Ast.PostfixApp} and dispatched to
+   * {@link #deducePostfixAppType}.
+   *
+   * <p>Otherwise, the call is forwarded to {@link #deduceApplyType}.
+   */
+  private Ast.Exp deduceApplyOrPostfixType(
+      TypeEnv env, Ast.Apply apply, Variable v) {
+    // Pattern: Apply(Apply(RecordSelector(name), Id(receiver)), arg)
+    if (apply.fn instanceof Ast.Apply) {
+      final Ast.Apply fnApply = (Ast.Apply) apply.fn;
+      if (fnApply.fn instanceof Ast.RecordSelector
+          && fnApply.arg instanceof Ast.Id) {
+        final String name = ((Ast.RecordSelector) fnApply.fn).name;
+        final Ast.Id receiverId = (Ast.Id) fnApply.arg;
+        final Type receiverType = env.getTypeOpt(receiverId.name);
+        // Intercept only when the receiver is a known non-record type and
+        // 'name' is a selfFirst-eligible function.
+        if (receiverType != null
+            && !(receiverType instanceof RecordType)
+            && (!BuiltIn.BY_SELF_FIRST_NAME.get(name).isEmpty()
+                || selfFirstNames.contains(name) && env.has(name))) {
+          return deducePostfixAppType(
+              env, ast.postfixApp(apply.pos, receiverId, name, apply.arg), v);
+        }
+      }
+    }
+    return deduceApplyType(env, apply, v);
+  }
+
   private Ast.Apply deduceApplyType(TypeEnv env, Ast.Apply apply, Variable v) {
     final Variable vFn = unifier.variable();
     final Variable vArg = unifier.variable();
@@ -1564,6 +1619,463 @@ public class TypeResolver {
       }
     }
     return reg(apply.copy(fn2, arg2), v);
+  }
+
+  /**
+   * Deduces the type of a postfix method call {@code x.f ()} or {@code x.f
+   * arg}, desugaring to a regular function application.
+   *
+   * <p>For example:
+   *
+   * <ul>
+   *   <li>{@code xs.length ()} &rarr; {@code length xs}
+   *   <li>{@code xs.drop n} &rarr; {@code List.drop (xs, n)}
+   *   <li>{@code s.size ()} &rarr; {@code size s}
+   * </ul>
+   */
+  private Ast.Exp deducePostfixAppType(
+      TypeEnv env, Ast.PostfixApp postfixApp, Variable v) {
+    final String name = postfixApp.methodName;
+    final Pos pos = postfixApp.pos;
+
+    // If the receiver is an identifier that names a record/structure containing
+    // field 'name', treat this as a field projection + application rather than
+    // a postfix call.  This preserves existing syntax such as
+    // {@code String.size "hello"} and {@code Sys.set ("x", 1)}.
+    if (postfixApp.receiver instanceof Ast.Id) {
+      final Type receiverType =
+          env.getTypeOpt(((Ast.Id) postfixApp.receiver).name);
+      if (receiverType instanceof RecordType
+          && ((RecordType) receiverType).argNameTypes.containsKey(name)) {
+        return deduceFieldProjectionApp(env, postfixApp, v);
+      }
+    }
+
+    // Collect built-in candidates.
+    final ImmutableCollection<BuiltIn> builtInCandidates =
+        BuiltIn.BY_SELF_FIRST_NAME.get(name);
+    final boolean hasUserFn = selfFirstNames.contains(name) && env.has(name);
+
+    if (builtInCandidates.isEmpty() && !hasUserFn) {
+      // No postfix-eligible function found; fall back to field projection.
+      return deduceFieldProjectionApp(env, postfixApp, v);
+    }
+
+    // Elaborate the receiver.
+    final Variable vReceiver = unifier.variable();
+    final Ast.Exp receiver2 =
+        deduceExpType(env, postfixApp.receiver, vReceiver);
+
+    // Pick a candidate and determine the calling form.
+    final Ast.Exp fnExp;
+    final boolean isTuple;
+    if (!builtInCandidates.isEmpty()) {
+      final BuiltIn builtIn =
+          pickBuiltInCandidate(
+              env,
+              postfixApp.receiver,
+              vReceiver,
+              postfixApp.arg,
+              builtInCandidates);
+      fnExp = postfixBuiltInFnExp(pos, builtIn);
+      isTuple = isPostfixBuiltInTuple(builtIn);
+    } else {
+      fnExp = ast.id(pos, name);
+      isTuple = selfFirstTupleNames.contains(name);
+    }
+
+    // Desugar the postfix call to a regular application.
+    if (postfixApp.arg.op == Op.UNIT_LITERAL) {
+      // x.f () → f x  (curried, no extra argument)
+      return deduceExpType(env, ast.apply(fnExp, receiver2), v);
+    } else if (isTuple) {
+      // x.f y → f (x, y)  or  x.f (a, b) → f (x, a, b)
+      final List<Ast.Exp> elems = new ArrayList<>();
+      elems.add(receiver2);
+      if (postfixApp.arg instanceof Ast.Tuple) {
+        elems.addAll(((Ast.Tuple) postfixApp.arg).args);
+      } else {
+        elems.add(postfixApp.arg);
+      }
+      final Ast.Tuple spliced = ast.tuple(pos, elems);
+      return deduceExpType(env, ast.apply(fnExp, spliced), v);
+    } else {
+      // x.f y → f x y  (curried with one extra argument)
+      return deduceExpType(
+          env, ast.apply(ast.apply(fnExp, receiver2), postfixApp.arg), v);
+    }
+  }
+
+  /**
+   * Desugars a {@link Ast.PostfixApp} as a field projection plus application:
+   * {@code x.f arg} &rarr; {@code (#f x) arg}, {@code x.f ()} &rarr; {@code (#f
+   * x) ()}.
+   */
+  private Ast.Exp deduceFieldProjectionApp(
+      TypeEnv env, Ast.PostfixApp postfixApp, Variable v) {
+    final Pos pos = postfixApp.pos;
+    final Ast.Exp selector = ast.recordSelector(pos, postfixApp.methodName);
+    final Ast.Exp projected = ast.apply(selector, postfixApp.receiver);
+    return deduceExpType(env, ast.apply(projected, postfixApp.arg), v);
+  }
+
+  /**
+   * Returns an expression that refers to a built-in function eligible for
+   * postfix dispatch.
+   */
+  private static Ast.Exp postfixBuiltInFnExp(Pos pos, BuiltIn builtIn) {
+    if (builtIn.alias != null) {
+      return ast.id(pos, builtIn.alias);
+    } else if (builtIn.structure != null && !builtIn.structure.equals("$")) {
+      return ast.apply(
+          ast.recordSelector(pos, builtIn.mlName),
+          ast.id(pos, builtIn.structure));
+    } else {
+      return ast.id(pos, builtIn.mlName);
+    }
+  }
+
+  /**
+   * Returns true if the built-in function takes its first argument as part of a
+   * tuple (tuple-splicing form), false if it takes it as a curried argument.
+   */
+  private boolean isPostfixBuiltInTuple(BuiltIn builtIn) {
+    Type type = builtIn.typeFunction.apply(typeSystem);
+    if (type instanceof ForallType) {
+      type = ((ForallType) type).type;
+    }
+    return type instanceof FnType
+        && ((FnType) type).paramType instanceof TupleType;
+  }
+
+  /**
+   * Picks the best built-in candidate for a postfix call by matching the
+   * receiver's type constructor.
+   *
+   * <p>When multiple built-ins share an {@code mlName} (e.g. {@code
+   * List.length}, {@code Bag.length}, {@code Vector.length}), we use three
+   * strategies to determine the receiver's type constructor:
+   *
+   * <ol>
+   *   <li>Scan recently-added type constraints ({@link #termOperatorOf}) — fast
+   *       for literals and bound variables.
+   *   <li>Inspect the receiver AST ({@link #receiverTypeHint}) — handles {@code
+   *       Apply} nodes such as {@code bag [1,2]}.
+   *   <li>Inspect the argument type ({@link #argTypeHint}) — handles chains
+   *       through polymorphic functions such as {@code getOpt}, where the
+   *       receiver type equals the argument type (e.g. {@code compare}, {@code
+   *       max}, {@code min}, {@code rem}).
+   * </ol>
+   *
+   * <p>If only one candidate exists, or we cannot determine the receiver's type
+   * operator, we return the first candidate (which may still fail type-checking
+   * if the type is wrong).
+   */
+  private BuiltIn pickBuiltInCandidate(
+      TypeEnv env,
+      Ast.Exp receiver,
+      Variable vReceiver,
+      Ast.Exp arg,
+      ImmutableCollection<BuiltIn> candidates) {
+    if (candidates.size() == 1) {
+      return candidates.iterator().next();
+    }
+    String op = termOperatorOf(vReceiver);
+    if (op == null) {
+      op = receiverTypeHint(env, receiver);
+    }
+    if (op == null) {
+      op = argTypeHint(env, arg, candidates);
+    }
+    if (op != null) {
+      for (BuiltIn b : candidates) {
+        if (firstParamReceiverTypeOp(b).equals(op)) {
+          return b;
+        }
+      }
+    }
+    return candidates.iterator().next();
+  }
+
+  /**
+   * Returns the type-term operator of the argument, used as a fallback
+   * disambiguation strategy when the receiver's type is not directly
+   * determinable.
+   *
+   * <p>Applies only to tuple-splicing built-ins where receiver type equals
+   * argument type (e.g. {@code compare : T * T → order}, {@code max : T * T →
+   * T}). For such functions, the argument's static type identifies the right
+   * candidate.
+   *
+   * <p>Only uses the result if exactly one candidate matches, to avoid false
+   * disambiguation.
+   */
+  private @Nullable String argTypeHint(
+      TypeEnv env, Ast.Exp arg, ImmutableCollection<BuiltIn> candidates) {
+    final Type argType = getType(env, arg);
+    if (argType == null) {
+      return null;
+    }
+    final String op = headTypeTermOp(argType);
+    if (op == null) {
+      return null;
+    }
+    // Accept only when exactly one candidate has this receiver type,
+    // to avoid false disambiguation.
+    long matches =
+        candidates.stream()
+            .filter(b -> firstParamReceiverTypeOp(b).equals(op))
+            .count();
+    return matches == 1 ? op : null;
+  }
+
+  /**
+   * Infers the type-term operator for a receiver expression by inspecting its
+   * AST structure, before full type elaboration.
+   *
+   * <p>Supplements {@link #termOperatorOf} for cases such as {@code Apply}
+   * nodes (e.g. {@code bag [1,2]}) where the type variable is only indirectly
+   * constrained.
+   */
+  private @Nullable String receiverTypeHint(TypeEnv env, Ast.Exp receiver) {
+    switch (receiver.op) {
+      case LIST:
+        return LIST_TY_CON;
+      case ID:
+        {
+          final Type type = env.getTypeOpt(((Ast.Id) receiver).name);
+          return type != null ? headTypeTermOp(type) : null;
+        }
+      case APPLY:
+        return applyReceiverTypeHint(env, (Ast.Apply) receiver);
+      case POSTFIX_APP:
+        return postfixReceiverTypeHint(env, (Ast.PostfixApp) receiver);
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Returns the type-term operator for the result of a {@link Ast.PostfixApp}
+   * receiver, examined before full elaboration.
+   *
+   * <p>For example, {@code xs.drop(1)} (a PostfixApp whose method is "drop" and
+   * whose receiver is {@code xs : int list}) has result type {@code int list},
+   * so this returns "list". This allows the outer call in {@code
+   * xs.drop(1).drop 1} to disambiguate its candidate (List.drop vs Bag.drop vs
+   * Vector.drop).
+   */
+  private @Nullable String postfixReceiverTypeHint(
+      TypeEnv env, Ast.PostfixApp postfixApp) {
+    final String name = postfixApp.methodName;
+    final ImmutableCollection<BuiltIn> candidates =
+        BuiltIn.BY_SELF_FIRST_NAME.get(name);
+    if (candidates.isEmpty()) {
+      return null;
+    }
+    final String innerHint = receiverTypeHint(env, postfixApp.receiver);
+    if (innerHint == null && candidates.size() > 1) {
+      return null;
+    }
+    final BuiltIn best;
+    if (candidates.size() == 1) {
+      best = candidates.iterator().next();
+    } else {
+      best =
+          candidates.stream()
+              .filter(b -> firstParamReceiverTypeOp(b).equals(innerHint))
+              .findFirst()
+              .orElse(null);
+      if (best == null) {
+        return null;
+      }
+    }
+    return fnResultTypeTermOp(best.typeFunction.apply(typeSystem));
+  }
+
+  /**
+   * Returns the type-term operator for the result of an {@link Ast.Apply}
+   * receiver expression, examining its structure before full elaboration.
+   *
+   * <p>Handles three shapes:
+   *
+   * <ol>
+   *   <li>{@code Id(f) arg} — result type of function {@code f} in env.
+   *   <li>{@code RecordSelector(field) Id(r)} — type of field {@code field} in
+   *       the record type of {@code r}.
+   *   <li>{@code Apply(RecordSelector(name), Id(r)) arg} — result type of the
+   *       selfFirst built-in {@code name} applied to receiver {@code r}; used
+   *       when {@code r.name arg} was parsed as a field-projection chain due to
+   *       the {@code eIsId} guard in the parser.
+   * </ol>
+   */
+  private @Nullable String applyReceiverTypeHint(TypeEnv env, Ast.Apply apply) {
+    if (apply.fn instanceof Ast.Id) {
+      // e.g. bag [1, 2] → result type of bag()
+      final Type fnType = env.getTypeOpt(((Ast.Id) apply.fn).name);
+      return fnType != null ? fnResultTypeTermOp(fnType) : null;
+    }
+    if (apply.fn instanceof Ast.RecordSelector && apply.arg instanceof Ast.Id) {
+      // e.g. Apply(#i, r) where r : {i:int, ...} → "int"
+      final String fieldName = ((Ast.RecordSelector) apply.fn).name;
+      final Type argType = env.getTypeOpt(((Ast.Id) apply.arg).name);
+      if (argType instanceof RecordType) {
+        final Type fieldType =
+            ((RecordType) argType).argNameTypes.get(fieldName);
+        if (fieldType != null) {
+          return headTypeTermOp(fieldType);
+        }
+      }
+      return null;
+    }
+    if (apply.fn instanceof Ast.Apply) {
+      // e.g. Apply(Apply(RecordSelector("drop"), Id("xs")), 2)
+      // — the result of xs.drop 2 intercepted as a postfix call.
+      // Return the result type of the selfFirst built-in "drop" on xs.
+      final Ast.Apply innerApply = (Ast.Apply) apply.fn;
+      if (innerApply.fn instanceof Ast.RecordSelector
+          && innerApply.arg instanceof Ast.Id) {
+        final String name = ((Ast.RecordSelector) innerApply.fn).name;
+        final ImmutableCollection<BuiltIn> candidates =
+            BuiltIn.BY_SELF_FIRST_NAME.get(name);
+        if (!candidates.isEmpty()) {
+          final String innerHint = receiverTypeHint(env, innerApply.arg);
+          if (innerHint == null && candidates.size() > 1) {
+            return null;
+          }
+          final BuiltIn best;
+          if (candidates.size() == 1) {
+            best = candidates.iterator().next();
+          } else {
+            best =
+                candidates.stream()
+                    .filter(b -> firstParamReceiverTypeOp(b).equals(innerHint))
+                    .findFirst()
+                    .orElse(null);
+            if (best == null) {
+              return null;
+            }
+          }
+          return fnResultTypeTermOp(best.typeFunction.apply(typeSystem));
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns the top-level type-term operator for the given type, unwrapping
+   * {@link ForallType} if needed.
+   */
+  private @Nullable String headTypeTermOp(Type type) {
+    if (type instanceof ForallType) {
+      type = ((ForallType) type).type;
+    }
+    final String op = typeTermOp(type);
+    return op.isEmpty() ? null : op;
+  }
+
+  /**
+   * Returns the result type's operator for a function type, unwrapping {@link
+   * ForallType} if needed.
+   */
+  private @Nullable String fnResultTypeTermOp(Type type) {
+    if (type instanceof ForallType) {
+      type = ((ForallType) type).type;
+    }
+    if (type instanceof FnType) {
+      return headTypeTermOp(((FnType) type).resultType);
+    }
+    return null;
+  }
+
+  /**
+   * Returns the type-term operator of the receiver type for a {@code selfFirst}
+   * built-in function.
+   *
+   * <p>For example, {@code List.length} has first-param type {@code list('a)},
+   * so this returns "list"; {@code Bag.length} returns "bag"; {@code Int.abs}
+   * returns "int". For tuple-splicing forms (e.g. {@code List.drop}), the first
+   * element of the tuple is the receiver.
+   */
+  private String firstParamReceiverTypeOp(BuiltIn b) {
+    Type type = b.typeFunction.apply(typeSystem);
+    if (type instanceof ForallType) {
+      type = ((ForallType) type).type;
+    }
+    if (!(type instanceof FnType)) {
+      return "";
+    }
+    return typeTermOp(((FnType) type).paramType);
+  }
+
+  /**
+   * Returns the type-term operator for the given type, extracting the first
+   * element for tuple types (used to identify the receiver type in
+   * tuple-splicing form).
+   */
+  private String typeTermOp(Type type) {
+    if (type instanceof ListType) {
+      return LIST_TY_CON;
+    }
+    if (type instanceof DataType) {
+      return ((DataType) type).name;
+    }
+    if (type instanceof PrimitiveType) {
+      return ((PrimitiveType) type).moniker;
+    }
+    if (type instanceof TupleType) {
+      // Tuple-splicing form: receiver is the first element of the tuple.
+      final List<Type> argTypes = ((TupleType) type).argTypes;
+      if (!argTypes.isEmpty()) {
+        return typeTermOp(argTypes.get(0));
+      }
+    }
+    return "";
+  }
+
+  /**
+   * Scans the accumulated type constraints to find the type-term operator most
+   * recently assigned to a variable.
+   *
+   * <p>After elaborating a receiver expression {@code e} with variable {@code
+   * v}, the constraint {@code v = list(T)} (or "bag", "vector", etc.) will have
+   * been added to {@link #terms}. This method scans backwards to find the
+   * operator, following {@link Variable}-to-{@link Variable} links (which arise
+   * when the receiver is a bound identifier whose type was inferred earlier).
+   *
+   * @return the operator string (e.g. "list", "bag", "vector"), or null if the
+   *     variable is not yet constrained to a concrete type constructor
+   */
+  private @Nullable String termOperatorOf(Variable v) {
+    return termOperatorOf(v, new HashSet<>());
+  }
+
+  private @Nullable String termOperatorOf(Variable v, Set<Variable> visited) {
+    if (!visited.add(v)) {
+      return null; // cycle guard
+    }
+    for (int i = terms.size() - 1; i >= 0; i--) {
+      final TermVariable tv = terms.get(i);
+      if (tv.variable.equals(v)) {
+        if (tv.term instanceof Sequence) {
+          final String op = ((Sequence) tv.term).operator;
+          // Skip structural operators that are not type constructors.
+          if (!op.equals(FN_TY_CON)
+              && !op.equals(TUPLE_TY_CON)
+              && !op.startsWith(RECORD_TY_CON)) {
+            return op;
+          }
+        } else if (tv.term instanceof Variable) {
+          // Follow variable-to-variable links (e.g. bound identifier).
+          final String op = termOperatorOf((Variable) tv.term, visited);
+          if (op != null) {
+            return op;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -2316,8 +2828,42 @@ public class TypeResolver {
     final List<Ast.ValBind> valBindList = new ArrayList<>();
     for (Ast.FunBind funBind : funDecl.funBinds) {
       valBindList.add(toValBind(env, funBind));
+      registerSelfFirst(funBind);
     }
     return ast.valDecl(funDecl.pos, true, false, valBindList);
+  }
+
+  /** Records whether a function's first parameter is named {@code self}. */
+  private void registerSelfFirst(Ast.FunBind funBind) {
+    if (funBind.matchList.isEmpty()) {
+      return;
+    }
+    final List<Ast.Pat> patList = funBind.matchList.get(0).patList;
+    if (patList.isEmpty()) {
+      return;
+    }
+    final Ast.Pat first = unwrapPat(patList.get(0));
+    if (first instanceof Ast.IdPat && ((Ast.IdPat) first).name.equals("self")) {
+      selfFirstNames.add(funBind.name);
+    } else if (first instanceof Ast.TuplePat) {
+      final Ast.TuplePat tp = (Ast.TuplePat) first;
+      if (!tp.args.isEmpty()) {
+        final Ast.Pat firstTupleElem = unwrapPat(tp.args.get(0));
+        if (firstTupleElem instanceof Ast.IdPat
+            && ((Ast.IdPat) firstTupleElem).name.equals("self")) {
+          selfFirstNames.add(funBind.name);
+          selfFirstTupleNames.add(funBind.name);
+        }
+      }
+    }
+  }
+
+  /** Unwraps an annotated pattern to get the underlying pattern. */
+  private static Ast.Pat unwrapPat(Ast.Pat pat) {
+    while (pat instanceof Ast.AnnotatedPat) {
+      pat = ((Ast.AnnotatedPat) pat).pat;
+    }
+    return pat;
   }
 
   private Ast.ValBind toValBind(TypeEnv env, Ast.FunBind funBind) {

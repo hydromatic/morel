@@ -3023,6 +3023,57 @@ public class Ast {
     }
   }
 
+  /** Postfix method call: {@code x.f ()} or {@code x.f arg}. */
+  public static class PostfixApp extends Exp {
+    public final Exp receiver;
+    public final String methodName;
+    public final Exp arg;
+
+    PostfixApp(Pos pos, Exp receiver, String methodName, Exp arg) {
+      super(pos, Op.POSTFIX_APP);
+      this.receiver = requireNonNull(receiver);
+      this.methodName = requireNonNull(methodName);
+      this.arg = requireNonNull(arg);
+    }
+
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      w.append(receiver, left, op.left)
+          .append(".")
+          .append(methodName)
+          .append(" ");
+      if (arg.op == Op.UNIT_LITERAL
+          || arg.op == Op.TUPLE
+          || right < Op.POSTFIX_APP.left) {
+        // No need to add parentheses to the arguments of 'x.f ()' or
+        // 'x.f (1, 2)' because as tuples they already have parentheses; or to
+        // 'x.f 1'
+        // if it is not followed by another postfix call.
+        w.append(arg, 0, right);
+      } else {
+        // x.f(arg) -- parenthesised so the result can be dot-chained:
+        //   x.f (e).g ()
+        w.append("(").append(arg, 0, 0).append(")");
+      }
+      return w;
+    }
+
+    public PostfixApp copy(Exp receiver, Exp arg) {
+      return this.receiver.equals(receiver) && this.arg.equals(arg)
+          ? this
+          : new PostfixApp(pos, receiver, methodName, arg);
+    }
+  }
+
   /**
    * Call to an aggregate function. It is an expression but may only occur in a
    * {@code compute} step or a {@code compute} clause of a {@code group} step.

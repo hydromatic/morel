@@ -1,0 +1,197 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+
+(* Field projection still works with structures (backward compatible) *)
+String.size "abc";
+> val it = 3 : int
+
+(* Field projection still works with record values *)
+val r = {name = "alice", age = 30};
+> val r = {age=30,name="alice"} : {age:int, name:string}
+
+r.name;
+> val it = "alice" : string
+
+r.age;
+> val it = 30 : int
+
+(* Atom-arg form works with bound variables (not just with literals).
+   These exercise the case where the receiver is a bare identifier that
+   refers to a non-record value, not a module/structure. *)
+val xs = [3, 1, 4, 1, 5];
+> val xs = [3,1,4,1,5] : int list
+xs.drop 2;
+> val it = [4,1,5] : int list
+xs.drop(2).drop 1;
+> val it = [1,5] : int list
+
+xs.length ();
+> val it = 5 : int
+xs.drop(1).length ();
+> val it = 4 : int
+
+val s = "hello";
+> val s = "hello" : string
+s.sub 1;
+> val it = #"e" : char
+
+val n = 4;
+> val n = 4 : int
+n.compare 3;
+> val it = GREATER : order
+
+(SOME 5).getOpt(0).compare(3);
+> val it = GREATER : order
+NONE.getOpt(0).compare(3);
+> val it = LESS : order
+(SOME #"a").getOpt(#"p").compare(#"g");
+> val it = LESS : order
+fun f (x: int option) = x.getOpt(0).compare(3);
+> val f = fn : int option -> order
+f (SOME 5);
+> val it = GREATER : order
+f (SOME ~5);
+> val it = LESS : order
+f NONE;
+> val it = LESS : order
+
+val r = {i = 1, n};
+> val r = {i=1,n=4} : {i:int, n:int}
+r.i.compare (r.n);
+> val it = LESS : order
+r.n.compare 3;
+> val it = GREATER : order
+
+(* When the receiver is a field access (e.ename), the receiver is not
+   a bare identifier, and atom-arg postfix works correctly. *)
+from e in [{ename = "alice"}, {ename = "bob"}]
+yield {size = e.ename.size (), initial = e.ename.sub 0};
+> val it = [{initial=#"a",size=5},{initial=#"b",size=3}]
+>   : {initial:char, size:int} list
+
+(* User-defined postfix functions work when the function definition and call
+   site are in the same TypeResolver scope (e.g. the same let expression).
+   Limitation: a function defined at the top level in a previous statement is
+   not visible to the postfix interceptor in a later statement, because each
+   statement is resolved independently. *)
+let
+  fun greet self = "Hello, " ^ self
+in
+  "world".greet ()
+end;
+> val it = "Hello, world" : string
+
+(* User-defined function with self as first element of a tuple. *)
+let
+  fun pad (self : string, width : int) =
+      let val n = String.size self
+      in if n >= width then self
+         else self ^ String.implode (List.tabulate (width - n, fn _ => #" "))
+      end
+in
+  "hi".pad 5
+end;
+> val it = "hi   " : string
+
+(* Disambiguation between functions with the same name in different structures.
+   Six names are shared between Int and Real: abs, max, min, rem, sign,
+   toString. Bool and Char also have toString.
+   Disambiguation uses the receiver's type, resolved via the type constraint
+   chain (termOperatorOf follows variable-to-variable links so that bound
+   identifiers like 'r' are correctly resolved to their concrete type). *)
+
+(* Int.abs vs Real.abs — literal receivers *)
+(~3).abs ();
+> val it = 3 : int
+
+(~3.0).abs ();
+> val it = 3.0 : real
+
+(* Int.abs vs Real.abs — bound-variable receivers *)
+let val n = ~3   in n.abs () end;
+> val it = 3 : int
+
+let val r = ~3.0 in r.abs () end;
+> val it = 3.0 : real
+
+(* Int.max vs Real.max — tuple-splicing form *)
+(4).max 3;
+> val it = 4 : int
+
+(4.0).max 3.0;
+> val it = 4.0 : real
+
+(* Int.min vs Real.min *)
+(4).min 3;
+> val it = 3 : int
+
+(4.0).min 3.0;
+> val it = 3.0 : real
+
+(* Int.rem vs Real.rem *)
+(14).rem 3;
+> val it = 2 : int
+
+(14.0).rem 3.0;
+> val it = 2.0 : real
+
+(* Int.sign vs Real.sign *)
+(~5).sign ();
+> val it = ~1 : int
+
+(~2.5).sign ();
+> val it = ~1 : int
+
+(* toString — four candidates: Bool, Char, Int, Real *)
+true.toString ();
+> val it = "true" : string
+
+(#"A").toString ();
+> val it = "A" : string
+
+(42).toString ();
+> val it = "42" : string
+
+(3.14).toString ();
+> val it = "3.14" : string
+
+(* Bound-variable receivers for toString *)
+let val b = true   in b.toString () end;
+> val it = "true" : string
+
+let val c = #"A"   in c.toString () end;
+> val it = "A" : string
+
+let val n = 42     in n.toString () end;
+> val it = "42" : string
+
+let val r = 3.14   in r.toString () end;
+> val it = "3.14" : string
+
+(* The following would work if the limitation were lifted: a top-level
+   function definition followed by a postfix call in a separate statement.
+fun greet self = "Hello, " ^ self;
+> val greet = fn : string -> string
+"world".greet ();
+> val it = "Hello, world" : string
+*)
+
+(*) End postfix.smli

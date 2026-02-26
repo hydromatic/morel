@@ -415,7 +415,11 @@ Bag.null;
 > val it = fn : 'a bag -> bool
 Bag.null (bag []);
 > val it = true : bool
+(bag []).null ();
+> val it = true : bool
 Bag.null (bag [1]);
+> val it = false : bool
+(bag [1]).null ();
 > val it = false : bool
 Sys.plan ();
 > val it =
@@ -428,6 +432,8 @@ Bag.length;
 Bag.length (bag []);
 > val it = 0 : int
 Bag.length (bag [1,2]);
+> val it = 2 : int
+(bag [1,2]).length ();
 > val it = 2 : int
 Sys.plan ();
 > val it =
@@ -468,6 +474,8 @@ Sys.plan ();
 Bag.hd;
 > val it = fn : 'a bag -> 'a
 Bag.hd (bag [1,2,3]);
+> val it = 1 : int
+(bag [1,2,3]).hd ();
 > val it = 1 : int
 Bag.hd (bag []);
 > uncaught exception Empty
@@ -528,6 +536,8 @@ Bag.drop;
 Bag.drop (bag [1,2,3], 0);
 > val it = [1,2,3] : int bag
 Bag.drop (bag [1,2,3], 1);
+> val it = [2,3] : int bag
+(bag [1,2,3]).drop 1;
 > val it = [2,3] : int bag
 Bag.drop (bag [1,2,3], 3);
 > val it = [] : int bag
@@ -709,7 +719,11 @@ Bool.toString true;
 > val it = "true" : string
 Bool.toString false;
 > val it = "false" : string
+false.toString ();
+> val it = "false" : string
 Bool.not true;
+> val it = false : bool
+true.not ();
 > val it = false : bool
 Bool.not false;
 > val it = true : bool
@@ -995,6 +1009,8 @@ String.size;
 > val it = fn : string -> int
 String.size "abc";
 > val it = 3 : int
+"abc".size ();
+> val it = 3 : int
 String.size "";
 > val it = 0 : int
 Sys.plan ();
@@ -1004,6 +1020,8 @@ Sys.plan ();
 String.sub;
 > val it = fn : string * int -> char
 String.sub("abc", 0);
+> val it = #"a" : char
+"abc".sub 0;
 > val it = #"a" : char
 String.sub("abc", 2);
 > val it = #"c" : char
@@ -1057,6 +1075,8 @@ Sys.plan ();
 String.substring;
 > val it = fn : string * int * int -> string
 String.substring("hello, world", 2, 7);
+> val it = "llo, wo" : string
+"hello, world".substring (2, 7);
 > val it = "llo, wo" : string
 String.substring("hello, world", 0, 1);
 > val it = "h" : string
@@ -1340,7 +1360,11 @@ List.null;
 > val it = fn : 'a list -> bool
 List.null [];
 > val it = true : bool
+[].null ();
+> val it = true : bool
 List.null [1];
+> val it = false : bool
+[1].null ();
 > val it = false : bool
 Sys.plan ();
 > val it = "apply(fnValue List.null, argCode tuple(constant(1)))" : string
@@ -1351,6 +1375,8 @@ List.length;
 List.length [];
 > val it = 0 : int
 List.length [1,2];
+> val it = 2 : int
+[1,2].length ();
 > val it = 2 : int
 Sys.plan ();
 > val it = "apply(fnValue List.length, argCode tuple(constant(1), constant(2)))"
@@ -1385,6 +1411,8 @@ List.hd;
 > val it = fn : 'a list -> 'a
 List.hd [1,2,3];
 > val it = 1 : int
+[1,2,3].hd ();
+> val it = 1 : int
 List.hd [];
 > uncaught exception Empty
 >   raised at: stdIn:1.1-1.11
@@ -1395,6 +1423,8 @@ Sys.plan ();
 List.tl;
 > val it = fn : 'a list -> 'a list
 List.tl [1,2,3];
+> val it = [2,3] : int list
+[1,2,3].tl ();
 > val it = [2,3] : int list
 List.tl [];
 > uncaught exception Empty
@@ -1427,6 +1457,8 @@ Sys.plan ();
 List.nth;
 > val it = fn : 'a list * int -> 'a
 List.nth ([1,2,3], 2);
+> val it = 3 : int
+[1,2,3].nth 2;
 > val it = 3 : int
 List.nth ([1], 0);
 > val it = 1 : int
@@ -1468,6 +1500,8 @@ List.drop ([1,2,3], 0);
 > val it = [1,2,3] : int list
 List.drop ([1,2,3], 1);
 > val it = [2,3] : int list
+[1,2,3].drop 1;
+> val it = [2,3] : int list
 List.drop ([1,2,3], 3);
 > val it = [] : int list
 Sys.plan ();
@@ -1479,6 +1513,8 @@ Sys.plan ();
 List.rev;
 > val it = fn : 'a list -> 'a list
 List.rev [1,2,3];
+> val it = [3,2,1] : int list
+[1,2,3].rev ();
 > val it = [3,2,1] : int list
 List.rev [2,1];
 > val it = [1,2] : int list
@@ -2313,6 +2349,8 @@ Sys.plan ();
 (*) val isSome : 'a option -> bool
 Option.isSome (SOME 1);
 > val it = true : bool
+(SOME 1).isSome ();
+> val it = true : bool
 Option.isSome NONE;
 > val it = false : bool
 Sys.plan ();
@@ -2320,6 +2358,8 @@ Sys.plan ();
 
 (*) val valOf : 'a option -> 'a
 Option.valOf (SOME 1);
+> val it = 1 : int
+(SOME 1).valOf ();
 > val it = 1 : int
 (* sml-nj gives:
     stdIn:6.1-6.18 Warning: type vars not generalized because of
@@ -2484,12 +2524,16 @@ Char.ord;
 > val it = fn : char -> int
 Char.ord #"A";
 > val it = 65 : int
+#"A".ord ();
+> val it = 65 : int
 
 (* [succ c] returns the character immediately following c, or raises
    Chr if c = maxChar. *)
 Char.succ;
 > val it = fn : char -> char
 Char.succ #"A";
+> val it = #"B" : char
+#"A".succ ();
 > val it = #"B" : char
 Char.succ (chr 254);
 > val it = #"\255" : char
@@ -2536,6 +2580,8 @@ Char.isAlpha;
 > val it = fn : char -> bool
 Char.isAlpha #"A";
 > val it = true : bool
+#"A".isAlpha ();
+> val it = true : bool
 testChar Char.isAlpha;
 > val it = [(false,"0! \\t\\128\\255"),(true,"Abz")] : (bool * string) list
 
@@ -2543,6 +2589,8 @@ testChar Char.isAlpha;
 Char.isDigit;
 > val it = fn : char -> bool
 Char.isDigit #"A";
+> val it = false : bool
+#"A".isDigit ();
 > val it = false : bool
 testChar Char.isDigit;
 > val it = [(false,"Abz! \\t\\128\\255"),(true,"0")] : (bool * string) list
@@ -2618,6 +2666,8 @@ testChar Char.isAscii;
 Char.toLower;
 > val it = fn : char -> char
 Char.toLower #"A";
+> val it = #"a" : char
+#"A".toLower ();
 > val it = #"a" : char
 Char.toLower #"a";
 > val it = #"a" : char
@@ -2723,6 +2773,8 @@ Char.fromString "\\009";
 Char.toString;
 > val it = fn : char -> string
 Char.toString #"A";
+> val it = "A" : string
+#"A".toString ();
 > val it = "A" : string
 Char.toString #"\\";
 > val it = "\\\\" : string
@@ -2888,7 +2940,11 @@ Int.abs;
 > val it = fn : int -> int
 Int.abs 5;
 > val it = 5 : int
+5.abs ();
+> val it = 5 : int
 Int.abs ~3;
+> val it = 3 : int
+(~3).abs ();
 > val it = 3 : int
 Int.abs (valOf Int.minInt);
 > uncaught exception Overflow
@@ -2896,6 +2952,8 @@ Int.abs (valOf Int.minInt);
 Int.compare;
 > val it = fn : int * int -> order
 Int.compare (4, 3);
+> val it = GREATER : order
+4.compare 3;
 > val it = GREATER : order
 Int.`div`;
 > val it = fn : int * int -> int
@@ -2925,11 +2983,15 @@ Int.max;
 > val it = fn : int * int -> int
 Int.max (4, 3);
 > val it = 4 : int
+4.max 3;
+> val it = 4 : int
 Int.maxInt;
 > val it = SOME 2147483647 : int option
 Int.min;
 > val it = fn : int * int -> int
 Int.min (4, 3);
+> val it = 3 : int
+4.min 3;
 > val it = 3 : int
 Int.`mod`;
 > val it = fn : int * int -> int
@@ -2983,6 +3045,8 @@ Int.sign;
 > val it = fn : int -> int
 Int.sign ~3;
 > val it = ~1 : int
+(~3).sign ();
+> val it = ~1 : int
 Int.toInt;
 > val it = fn : int -> int
 Int.toInt 3;
@@ -2994,6 +3058,8 @@ Int.toLarge 3;
 Int.toString;
 > val it = fn : int -> string
 Int.toString ~345;
+> val it = "~345" : string
+(~345).toString ();
 > val it = "~345" : string
 
 (* Real ----------------------------------------------------------- *)
@@ -3100,6 +3166,8 @@ Real.rem;
 > val it = fn : real * real -> real
 Real.rem (13.0, 5.0);
 > val it = 3.0 : real
+13.0.rem 5.0;
+> val it = 3.0 : real
 Real.rem (~13.0, 5.0);
 > val it = ~3.0 : real
 Real.rem (13.0, ~5.0);
@@ -3148,6 +3216,8 @@ Sys.plan ();
 Real.abs;
 > val it = fn : real -> real
 Real.abs ~5.5;
+> val it = 5.5 : real
+(~5.5).abs ();
 > val it = 5.5 : real
 Real.abs Real.posInf;
 > val it = inf : real
@@ -3203,6 +3273,8 @@ Sys.plan ();
 Real.sign;
 > val it = fn : real -> int
 Real.sign 2.0;
+> val it = 1 : int
+2.0.sign ();
 > val it = 1 : int
 Real.sign ~3.0;
 > val it = ~1 : int
@@ -3941,6 +4013,8 @@ Real.toString;
 > val it = fn : real -> string
 Real.toString 0.0;
 > val it = "0.0" : string
+0.0.toString ();
+> val it = "0.0" : string
 Sys.plan ();
 > val it = "apply(fnValue Real.toString, argCode constant(0.0))" : string
 Real.toString ~0.0;
@@ -4140,6 +4214,8 @@ Sys.plan ();
 
 Relational.max (bag [1, 2, 3]);
 > val it = 3 : int
+(bag [1, 2, 3]).max ();
+> val it = 3 : int
 Relational.max (bag [1.0, 2.5, 3.5]);
 > val it = 3.5 : real
 Relational.max (bag ["a", "bc", "ab"]);
@@ -4152,6 +4228,8 @@ Sys.plan ();
 >   : string
 
 Relational.min (bag [1, 2, 3]);
+> val it = 1 : int
+(bag [1, 2, 3]).min ();
 > val it = 1 : int
 Relational.min (bag [1.0, 2.5, 3.5]);
 > val it = 1.0 : real

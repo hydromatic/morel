@@ -542,6 +542,11 @@ public enum AstBuilder {
     return new Ast.Apply(fn.pos.plus(arg.pos), fn, arg);
   }
 
+  public Ast.PostfixApp postfixApp(
+      Pos pos, Ast.Exp receiver, String methodName, Ast.Exp arg) {
+    return new Ast.PostfixApp(pos, receiver, methodName, arg);
+  }
+
   public Ast.Exp ifThenElse(
       Pos pos, Ast.Exp condition, Ast.Exp ifTrue, Ast.Exp ifFalse) {
     return new Ast.If(pos, condition, ifTrue, ifFalse);
