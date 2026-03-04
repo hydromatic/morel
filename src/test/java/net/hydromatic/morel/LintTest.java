@@ -21,7 +21,6 @@ package net.hydromatic.morel;
 import static com.google.common.base.Strings.repeat;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static net.hydromatic.morel.util.Static.last;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -49,11 +48,11 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.hydromatic.morel.util.Generation;
 import net.hydromatic.morel.util.JavaVersion;
+import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.WordComparator;
 import org.apache.calcite.util.Puffin;
 import org.apache.calcite.util.Source;
 import org.apache.calcite.util.Sources;
-import org.apache.calcite.util.Util;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -962,7 +961,8 @@ public class LintTest {
             + "  }\n"
             + "}\n",
         "GuavaCharSource{memory}:7:"
-            + "Lines must be sorted; '  case b' should be before '  case c'");
+            + "Lines must be sorted; '  case b' should be before '  case c'"
+            + " (move to line 5)");
 
     // With "until" and "where"; cases after "until" should be ignored.
     checkSortSpec(
@@ -978,7 +978,8 @@ public class LintTest {
             + "  }\n"
             + "}\n",
         "GuavaCharSource{memory}:9:"
-            + "Lines must be sorted; '  case a' should be before '  case x'");
+            + "Lines must be sorted; '  case a' should be before '  case x'"
+            + " (move to line 4)");
 
     // Change '##}' to '#}' to make the test pass.
     checkSortSpec(
@@ -1004,7 +1005,8 @@ public class LintTest {
             + "  }\n"
             + "}\n",
         "GuavaCharSource{memory}:4:"
-            + "Lines must be sorted; 'a' should be before 'c'");
+            + "Lines must be sorted; 'a' should be before 'c'"
+            + " (move to line 3)");
 
     // Specification is spread over multiple lines.
     checkSortSpec(
@@ -1018,7 +1020,8 @@ public class LintTest {
             + "  }\n"
             + "}\n",
         "GuavaCharSource{memory}:6:"
-            + "Lines must be sorted; 'a' should be before 'c'");
+            + "Lines must be sorted; 'a' should be before 'c'"
+            + " (move to line 5)");
   }
 
   private void checkSortSpec(String code, String... expectedMessages) {
@@ -1267,7 +1270,7 @@ public class LintTest {
       implements Consumer<Puffin.Line<GlobalState, FileState>> {
     final Sort sort;
     final Comparator<String> comparator = WordComparator.INSTANCE;
-    final List<String> lines = new ArrayList<>();
+    final PairList<String, Integer> lines = PairList.of();
     boolean done = false;
 
     SortConsumer(Sort sort) {
@@ -1307,17 +1310,22 @@ public class LintTest {
     protected void addLine(
         Puffin.Line<GlobalState, FileState> line, String thisLine) {
       if (!lines.isEmpty()) {
-        String prevLine = last(lines);
+        String prevLine = lines.left(lines.size() - 1);
         if (comparator.compare(prevLine, thisLine) > 0) {
-          String earlierLine =
-              Util.filter(lines, s -> comparator.compare(s, thisLine) > 0)
-                  .iterator()
-                  .next();
-          String format = "Lines must be sorted; '%s' should be before '%s'";
-          line.state().message(line, format, thisLine, earlierLine);
+          for (int i = 0; i < lines.size(); i++) {
+            if (comparator.compare(lines.left(i), thisLine) > 0) {
+              String format =
+                  "Lines must be sorted; '%s' should be before '%s'"
+                      + " (move to line %d)";
+              line.state()
+                  .message(
+                      line, format, thisLine, lines.left(i), lines.right(i));
+              break;
+            }
+          }
         }
       }
-      lines.add(thisLine);
+      lines.add(thisLine, line.fnr());
     }
   }
 
