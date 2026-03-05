@@ -217,13 +217,22 @@ public class FromBuilder {
             && ((Core.Yield) lastStep).exp.op != Op.RECORD) {
           // The last step is a yield scalar, say 'yield x + 1'.
           // Translate it to a yield singleton record, say 'yield {y = x + 1}'
+          final Core.Yield yieldStep = (Core.Yield) lastStep;
           addAll(steps);
-          if (((Core.Yield) lastStep).exp.op == Op.ID
-              && this.bindings.size() == 1) {
-            // The last step is 'yield e'. Skip it.
-            return this;
+          if (yieldStep.exp.op == Op.ID) {
+            if (this.bindings.size() == 1) {
+              // The last step is 'yield e'. Skip it.
+              return this;
+            }
+            if (((Core.Id) yieldStep.exp).idPat.equals(idPat)) {
+              // Multiple bindings exist (e.g., from inlining a subquery with a
+              // scan of multiple variables like (source, target)). The subquery
+              // yields exactly the variable we're binding to via 'yield
+              // target'. Add a scalar yield to project away the extra bindings.
+              return yield_(yieldStep.exp);
+            }
           }
-          nameExps.add(idPat.name, ((Core.Yield) lastStep).exp);
+          nameExps.add(idPat.name, yieldStep.exp);
           final Core.StepEnv env2 =
               Core.StepEnv.of(
                   ImmutableList.of(Binding.of(idPat)),

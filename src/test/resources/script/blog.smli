@@ -2399,6 +2399,30 @@ forall e in scott.emps
     andalso e.job elem ["CLERK", "MANAGER", "PRESIDENT"];
 > val it = false : bool
 
+(* --- Datalog ---------------------------------------------------- *)
+fun edge (x, y) =
+  (x, y) elem [(1,2),(2,3),(1,4),(4,5),(5,1),(5,6)];
+> val edge = fn : int * int -> bool
+
+fun reachable (x, y) =
+  edge (x, y) orelse
+  exists z where edge (x, z) andalso reachable (z, y);
+> val reachable = fn : int * int -> bool
+
+from source in [1,2,3,4,5,6]
+  yield {source,
+         c = count (from target where reachable (source, target))};
+> c source
+> - ------
+> 6 1
+> 1 2
+> 0 3
+> 6 4
+> 6 5
+> 0 6
+>
+> val it : {c:int, source:int} list
+
 (* --- Coda ------------------------------------------------------- *)
 from message in ["the end"];
 > val it = ["the end"] : string list

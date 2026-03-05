@@ -379,8 +379,12 @@ public class Expander {
       final Map<Core.NamedPat, Core.IdPat> renameMap = new HashMap<>();
       final List<Core.Exp> joinConditions = new ArrayList<>();
       for (Core.NamedPat p : expandedPats) {
-        if (patternState.get(p) == PatternState.DONE
-            && !requiredPats.contains(p)) {
+        // A pattern is already bound if it's DONE (scanned earlier in this
+        // from) or if it's not in allScanPats (bound in an outer scope).
+        final boolean alreadyBound =
+            patternState.get(p) == PatternState.DONE
+                || !allScanPats.contains(p);
+        if (alreadyBound && !requiredPats.contains(p)) {
           // Create a fresh pattern variable for the subquery's binding.
           final Core.IdPat freshPat = core.idPat(p.type, p.name + "'", 0);
           renameMap.put(p, freshPat);
@@ -412,8 +416,12 @@ public class Expander {
       boolean needsDistinct = !generator.unique;
       if (!needsDistinct) {
         for (Core.NamedPat p : expandedPats) {
+          // Outer-scope variables (!allScanPats) have join conditions added
+          // above and don't require distinct. Only inner variables (those that
+          // are local to this from but not required) need distinct.
           if (!requiredPats.contains(p)
-              && patternState.get(p) != PatternState.DONE) {
+              && patternState.get(p) != PatternState.DONE
+              && allScanPats.contains(p)) {
             needsDistinct = true;
             break;
           }
