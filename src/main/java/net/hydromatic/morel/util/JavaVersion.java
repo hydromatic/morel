@@ -44,7 +44,7 @@ public class JavaVersion implements Comparable<JavaVersion> {
   public static final String MOREL_PRODUCT = "morel-java";
 
   /** Morel's current version. */
-  public static final JavaVersion MOREL_VERSION = JavaVersion.of(0, 7, 0);
+  public static final JavaVersion MOREL_VERSION = JavaVersion.of(0, 8, 0);
 
   static {
     String versionString = System.getProperty("java.version");

@@ -837,7 +837,7 @@ and unset using `Sys.unset name`.
 | printDepth           | int    | 5       | When printing, the depth of nesting of recursive data structure at which ellipsis begins. |
 | printLength          | int    | 12      | When printing, the length of lists at which ellipsis begins. |
 | productName          | string | morel-java | Name of the Morel product. |
-| productVersion       | string | 0.7.0   | Current version of Morel. |
+| productVersion       | string | 0.8.0   | Current version of Morel. |
 | relationalize        | bool   | false   | Whether to convert to relational algebra. |
 | scriptDirectory      | file   |         | Path of the directory where the 'use' command looks for scripts. When running a script, it is generally set to the directory that contains the script. |
 | stringDepth          | int    | 70      | When printing, the length of strings at which ellipsis begins. |
