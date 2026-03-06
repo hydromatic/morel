@@ -92,6 +92,7 @@ file:
 ## Documentation
 
 * [Morel language reference](docs/reference.md)
+* [Library](docs/lib/index.md)
 * [Query reference](docs/query.md)
 * [Datalog support](docs/datalog.md)
 * ["How to" guide](docs/howto.md)

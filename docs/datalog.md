@@ -253,6 +253,11 @@ Multiple outputs are supported:
 
 ## API
 
+See the [Datalog structure](lib/datalog.md), and functions
+[execute](lib/datalog.md#execute),
+[translate](lib/datalog.md#translate),
+[validate](lib/datalog.md#validate).
+
 ### Datalog.execute
 
 Executes a Datalog program and returns a variant:

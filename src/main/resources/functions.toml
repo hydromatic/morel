@@ -36,6 +36,17 @@
 
 # === Bag structure ==================================================
 
+[[structures]]
+name = "Bag"
+specified = "morel"
+description = "Unordered collection of elements with duplicates."
+overview = """
+The `Bag` structure provides operations on bags (also known as
+multisets), which are unordered collections that may contain duplicate
+elements. Unlike lists, bags do not maintain element order; unlike sets,
+bags track multiplicity.
+"""
+
 [[functions]]
 ordinal = 8
 structure = "Bag"
@@ -252,6 +263,18 @@ is the empty bag.
 """
 
 [[functions]]
+structure = "Bag"
+name = "nth"
+specified = "morel"
+type = "α bag * int → α"
+prototype = "nth (b, i)"
+description = """
+returns the `i`th element of the bag `b`, counting from 0. Raises
+`Subscript` if `i` < 0 or `i` >= `length b`. We have `nth(b,0) = hd
+b`, ignoring exceptions.
+"""
+
+[[functions]]
 ordinal = 4
 structure = "Bag"
 name = "null"
@@ -332,6 +355,21 @@ whose elements are the same as those of `b`. Raises `Size` if `maxLen`
 
 # === Bool structure =================================================
 
+[[structures]]
+name = "Bool"
+description = "Boolean values and operations."
+overview = """
+The `Bool` structure provides the boolean type and associated operations.
+"""
+
+[[types]]
+structure = "Bool"
+name = "bool"
+type = "eqtype bool"
+description = """
+is the type of boolean values `true` and `false`.
+"""
+
 [[values]]
 structure = "Bool"
 ordinal = 0
@@ -402,6 +440,69 @@ returns the string representation of `b`, either "true" or "false".
 """
 
 # === Char structure =================================================
+
+[[structures]]
+name = "Char"
+description = "Character values and operations."
+overview = """
+The `Char` structure provides the character type and associated
+operations for examining and converting characters. Characters are
+identified by their Unicode code points.
+"""
+
+[[functions]]
+structure = "Char"
+name = "<"
+specified = "basis"
+syntax = "infix"
+type = "char * char → bool"
+prototype = "c1 < c2"
+description = """
+returns true if `c1` is less than `c2` in the character ordering.
+"""
+
+[[functions]]
+structure = "Char"
+name = "<="
+specified = "basis"
+syntax = "infix"
+type = "char * char → bool"
+prototype = "c1 <= c2"
+description = """
+returns true if `c1` is less than or equal to `c2` in the character
+ordering.
+"""
+
+[[functions]]
+structure = "Char"
+name = ">"
+specified = "basis"
+syntax = "infix"
+type = "char * char → bool"
+prototype = "c1 > c2"
+description = """
+returns true if `c1` is greater than `c2` in the character ordering.
+"""
+
+[[functions]]
+structure = "Char"
+name = ">="
+specified = "basis"
+syntax = "infix"
+type = "char * char → bool"
+prototype = "c1 >= c2"
+description = """
+returns true if `c1` is greater than or equal to `c2` in the character
+ordering.
+"""
+
+[[types]]
+structure = "Char"
+name = "char"
+type = "eqtype char"
+description = """
+is the type of characters.
+"""
 
 [[functions]]
 ordinal = 26
@@ -765,9 +866,63 @@ returns the uppercase letter corresponding to `c`, if `c`
 is a letter (a to z or A to Z); otherwise returns `c`.
 """
 
+# === Datalog structure ==============================================
+
+[[structures]]
+name = "Datalog"
+specified = "morel"
+description = "Datalog query interface."
+overview = """
+The `Datalog` structure provides functions to parse, validate, translate,
+and execute Datalog programs within Morel.
+"""
+
+[[functions]]
+structure = "Datalog"
+name = "execute"
+specified = "morel"
+type = "string → variant"
+prototype = "execute program"
+description = """
+executes a Datalog program and returns formatted output as a variant.
+"""
+
+[[functions]]
+structure = "Datalog"
+name = "translate"
+specified = "morel"
+type = "string → string option"
+prototype = "translate program"
+description = """
+translates a Datalog program to Morel source code, returning `SOME
+code` if valid or `NONE` if invalid.
+"""
+
+[[functions]]
+structure = "Datalog"
+name = "validate"
+specified = "morel"
+type = "string → string"
+prototype = "validate program"
+description = """
+validates a Datalog program and returns type information or error
+message.
+"""
+
 # === Either structure ===============================================
 # The Either structure provides a polymorphic disjoint-sum type with
 # associated operations.
+
+[[structures]]
+name = "Either"
+specified = "morel"
+description = "Values that are one of two types."
+overview = """
+The `Either` structure provides a polymorphic disjoint-sum type
+`('left, 'right) either` whose values are either `INL v` (left) or
+`INR v` (right), along with operations for examining and transforming
+such values.
+"""
 
 [[functions]]
 ordinal = 8
@@ -825,6 +980,15 @@ prototype = "asRight sm"
 description = """
 returns `SOME (x)` if `sm` is a right value with contents `x`,
 otherwise it returns `NONE`.
+"""
+
+[[types]]
+structure = "Either"
+name = "either"
+type = "datatype ('left, 'right) either = INL of 'left | INR of 'right"
+description = """
+is the type of disjoint-sum values; `INL v` represents a left value and
+`INR v` represents a right value.
 """
 
 [[functions]]
@@ -924,6 +1088,14 @@ projects out the contents of `sm`.
 # === Fn structure ===================================================
 # The Fn structure provides various combinators to aid computing with
 # function values.
+
+[[structures]]
+name = "Fn"
+description = "Higher-order function combinators."
+overview = """
+The `Fn` structure provides combinators for working with function values,
+including application, composition, currying, and fixpoint operators.
+"""
 
 [[functions]]
 ordinal = 3
@@ -1047,6 +1219,89 @@ function `f` into a binary function. This function is the inverse of
 
 # === General structure ==============================================
 
+[[structures]]
+name = "General"
+description = "Basic types, exceptions, and utility functions."
+overview = """
+The `General` structure provides the fundamental types `unit`, `exn`,
+and `order`, the standard exceptions raised by the runtime, and a few
+utility functions. Its contents are available without qualification in
+every Morel program.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Bind"
+description = """
+is raised when pattern matching fails in a `val` binding.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Chr"
+description = """
+is raised by `Char.chr` when given an integer outside the valid range.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Div"
+description = """
+is raised on integer division by zero.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Domain"
+description = """
+is raised when a function is applied outside its domain.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Fail"
+type = "string"
+description = """
+is a general-purpose exception carrying a descriptive message string.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Match"
+description = """
+is raised when pattern matching fails in a `case` expression or
+function application.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Overflow"
+description = """
+is raised when an integer arithmetic result is too large to represent.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Size"
+description = """
+is raised when a size argument is negative or exceeds the maximum
+allowed.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Span"
+description = """
+is raised when an invalid source span is supplied.
+"""
+
+[[exceptions]]
+structure = "General"
+name = "Subscript"
+description = """
+is raised when a sequence index is out of bounds.
+"""
+
 [[functions]]
 ordinal = 55
 structure = "General"
@@ -1057,6 +1312,15 @@ prototype = "a before b"
 description = """
 returns `a`. It provides a notational shorthand for evaluating `a`,
 then `b`, before returning the value of `a`.
+"""
+
+[[types]]
+structure = "General"
+name = "exn"
+type = "type exn = exn"
+description = """
+is the type of exceptions. Every exception constructor creates a value
+of this type, and the `raise` and `handle` constructs operate on it.
 """
 
 [[functions]]
@@ -1117,7 +1381,81 @@ is the function composition of `f` and `g`. Thus, `(f o g) a`
 is equivalent to `f (g a)`.
 """
 
+[[types]]
+structure = "General"
+name = "order"
+type = "datatype order = LESS | EQUAL | GREATER"
+description = """
+is the type for comparing two values. `LESS`, `EQUAL`, or `GREATER`
+indicates the result of the comparison.
+"""
+
+[[types]]
+structure = "General"
+name = "unit"
+type = "eqtype unit"
+description = """
+is the type that contains the single value `()`. It is used as the
+result type of functions called for side effects.
+"""
+
+# === IEEEReal structure =============================================
+
+[[structures]]
+name = "IEEEReal"
+description = "IEEE 754 floating-point definitions."
+overview = """
+The `IEEEReal` structure provides types and constants related to
+IEEE 754 floating-point arithmetic, including rounding modes,
+floating-point classes, and a decimal approximation record type.
+"""
+
+[[types]]
+structure = "IEEEReal"
+name = "decimal_approx"
+type = "type decimal_approx"
+implemented = false
+description = """
+is a record type representing a decimal approximation of a
+floating-point number.
+"""
+
+[[types]]
+structure = "IEEEReal"
+name = "float_class"
+type = "datatype float_class = NAN | INF | ZERO | NORMAL | SUBNORMAL"
+implemented = false
+description = """
+classifies a floating-point value.
+"""
+
+[[types]]
+structure = "IEEEReal"
+name = "real_order"
+type = "datatype real_order = LESS | EQUAL | GREATER | UNORDERED"
+implemented = false
+description = """
+is like `order` but adds `UNORDERED` for comparisons involving NaN.
+"""
+
+[[types]]
+structure = "IEEEReal"
+name = "rounding_mode"
+type = "datatype rounding_mode = TO_NEAREST | TO_NEGINF | TO_POSINF | TO_ZERO"
+implemented = false
+description = """
+specifies the IEEE 754 rounding mode for floating-point operations.
+"""
+
 # === Int structure ==================================================
+
+[[structures]]
+name = "Int"
+description = "Fixed-precision integer operations."
+overview = """
+The `Int` structure provides arithmetic, comparison, and conversion
+operations for the default fixed-precision integer type.
+"""
 
 [[functions]]
 ordinal = 60
@@ -1266,6 +1604,17 @@ type. Raises `Overflow` if the value does not fit.
 """
 
 [[functions]]
+structure = "Int"
+name = "fromLarge"
+specified = "basis"
+type = "int → int"
+prototype = "fromLarge i"
+description = """
+converts a value from the default integer type to type `int`. In Morel,
+this is an identity function as there is only one integer type.
+"""
+
+[[functions]]
 ordinal = 73
 structure = "Int"
 name = "fromString"
@@ -1277,6 +1626,14 @@ scans a `int` value from a string. Returns `SOME (r)`
 if a `int` value can be scanned from a prefix of `s`, ignoring any
 initial whitespace; otherwise, it returns `NONE`. Equivalent to
 `StringCvt.scanString (scan StringCvt.DEC)`.
+"""
+
+[[types]]
+structure = "Int"
+name = "int"
+type = "eqtype int"
+description = """
+is the type of fixed-precision integers.
 """
 
 [[functions]]
@@ -1442,6 +1799,17 @@ converts a value from the default integer type to type
 """
 
 [[functions]]
+structure = "Int"
+name = "toLarge"
+specified = "basis"
+type = "int → int"
+prototype = "toLarge i"
+description = """
+converts a value of type `int` to the default integer type. In Morel,
+this is an identity function as there is only one integer type.
+"""
+
+[[functions]]
 ordinal = 85
 structure = "Int"
 name = "toString"
@@ -1464,7 +1832,36 @@ description = """
 returns the negation of `i`.
 """
 
+# === IntInf structure ===============================================
+
+[[structures]]
+name = "IntInf"
+description = "Arbitrary-precision integer operations."
+overview = """
+The `IntInf` structure provides arithmetic and conversion operations for
+arbitrary-precision integers. Operations are analogous to those in `Int`
+but operate on unbounded values.
+"""
+
+[[types]]
+structure = "IntInf"
+name = "int"
+type = "eqtype int"
+implemented = false
+description = """
+is the type of arbitrary-precision integers.
+"""
+
 # === Interact structure =============================================
+
+[[structures]]
+name = "Interact"
+specified = "morel"
+description = "Interactive session utilities."
+overview = """
+The `Interact` structure provides functions for interacting with the
+Morel REPL, such as loading source files.
+"""
 
 [[functions]]
 ordinal = 58
@@ -1491,6 +1888,16 @@ printing to stdout.
 
 # === List structure =================================================
 
+[[structures]]
+name = "List"
+description = "Polymorphic singly-linked lists."
+overview = """
+The `List` structure provides the `list` type and a comprehensive
+set of operations for constructing, examining, and transforming
+singly-linked lists. Many operations are provided in both left-to-right
+and right-to-left variants.
+"""
+
 [[functions]]
 ordinal = 89
 structure = "List"
@@ -1500,6 +1907,14 @@ type = "α list * α list → α list"
 prototype = "l1 @ l2"
 description = """
 returns the list that is the concatenation of `l1` and `l2`.
+"""
+
+[[exceptions]]
+structure = "List"
+name = "Empty"
+description = """
+is raised by operations that require a non-empty list when given an
+empty list.
 """
 
 [[functions]]
@@ -1716,6 +2131,14 @@ description = """
 returns the number of elements in the list `l`.
 """
 
+[[types]]
+structure = "List"
+name = "list"
+type = "datatype 'a list = nil | :: of 'a * 'a list"
+description = """
+is the type of polymorphic singly-linked lists.
+"""
+
 [[functions]]
 ordinal = 104
 structure = "List"
@@ -1895,6 +2318,16 @@ is `nil`.
 # val exists : ('a * 'b -> bool) -> 'a list * 'b list -> bool
 # val allEq : ('a * 'b -> bool) -> 'a list * 'b list -> bool
 #
+
+[[structures]]
+name = "ListPair"
+description = "Operations on pairs of lists."
+overview = """
+The `ListPair` structure provides operations for working with two lists
+simultaneously. Operations whose names do not end in `Eq` silently
+ignore excess elements of the longer list; those ending in `Eq` raise
+`UnequalLengths` when the lists differ in length.
+"""
 
 [[exceptions]]
 ordinal = 129
@@ -2157,6 +2590,15 @@ lengths, `zipEq` raises the exception `UnequalLengths`.
 
 # === Math structure =================================================
 
+[[structures]]
+name = "Math"
+description = "Mathematical functions for real numbers."
+overview = """
+The `Math` structure provides standard mathematical functions operating
+on `real` values, including trigonometric, logarithmic, exponential,
+and rounding operations, along with mathematical constants.
+"""
+
 [[functions]]
 ordinal = 116
 structure = "Math"
@@ -2377,6 +2819,22 @@ returns the hyperbolic tangent of `x`, that is, `(sinh x) /
 
 # === Option structure ===============================================
 
+[[structures]]
+name = "Option"
+description = "Optional values."
+overview = """
+The `Option` structure provides the `option` type `'a option` whose
+values are either `NONE` (absent) or `SOME v` (present), along with
+operations for creating, examining, and transforming optional values.
+"""
+
+[[exceptions]]
+structure = "Option"
+name = "Option"
+description = """
+is raised by `valOf` when applied to `NONE`.
+"""
+
 [[functions]]
 ordinal = 133
 structure = "Option"
@@ -2481,6 +2939,17 @@ description = """
 maps `NONE` to `NONE` and `SOME v` to `f(v)`.
 """
 
+[[types]]
+structure = "Option"
+name = "option"
+type = "datatype 'a option = NONE | SOME of 'a"
+description = """
+The type `option` provides a distinction between some value and no
+value, and is often used for representing the result of partially
+defined functions. It can be viewed as a typed version of the C
+convention of returning a NULL pointer to indicate no value.
+"""
+
 [[functions]]
 ordinal = 142
 structure = "Option"
@@ -2494,6 +2963,15 @@ returns `v` if `opt` is `SOME v`, otherwise raises
 """
 
 # === Real structure =================================================
+
+[[structures]]
+name = "Real"
+description = "Floating-point number operations."
+overview = """
+The `Real` structure provides arithmetic, comparison, conversion, and
+classification operations for IEEE 754 double-precision floating-point
+numbers.
+"""
 
 [[functions]]
 ordinal = 241
@@ -3010,6 +3488,14 @@ is the base of the representation, e.g., 2 or 10 for IEEE
 floating point.
 """
 
+[[types]]
+structure = "Real"
+name = "real"
+type = "type real"
+description = """
+is the type of IEEE 754 double-precision floating-point numbers.
+"""
+
 [[functions]]
 ordinal = 173
 structure = "Real"
@@ -3273,6 +3759,16 @@ returns the negation of `r`.
 
 # === Relational structure ===========================================
 
+[[structures]]
+name = "Relational"
+specified = "morel"
+description = "Relational algebra operations for Morel queries."
+overview = """
+The `Relational` structure provides aggregation, comparison, and set
+operations that are used in Morel `from` expressions. These functions
+extend Standard ML with relational-algebra capabilities.
+"""
+
 [[functions]]
 structure = "Relational"
 name = "compare"
@@ -3307,6 +3803,16 @@ description = """
 returns the number of elements in `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute countId =
 count`.
+"""
+
+[[types]]
+structure = "Relational"
+name = "descending"
+type = "datatype 'a descending = DESC of 'a"
+specified = "morel"
+description = """
+wraps a value so that it sorts in descending order when used with
+`Relational.compare`.
 """
 
 [[functions]]
@@ -3422,6 +3928,60 @@ sum of e.id`.
 """
 
 # === String structure ===============================================
+
+[[structures]]
+name = "String"
+description = "String operations."
+overview = """
+The `String` structure provides the `string` type and a comprehensive
+set of operations for constructing, examining, searching, and converting
+strings.
+"""
+
+[[functions]]
+structure = "String"
+name = "<"
+specified = "basis"
+syntax = "infix"
+type = "string * string → bool"
+prototype = "s < t"
+description = """
+returns true if `s` is less than `t` in the string ordering.
+"""
+
+[[functions]]
+structure = "String"
+name = "<="
+specified = "basis"
+syntax = "infix"
+type = "string * string → bool"
+prototype = "s <= t"
+description = """
+returns true if `s` is less than or equal to `t` in the string ordering.
+"""
+
+[[functions]]
+structure = "String"
+name = ">"
+specified = "basis"
+syntax = "infix"
+type = "string * string → bool"
+prototype = "s > t"
+description = """
+returns true if `s` is greater than `t` in the string ordering.
+"""
+
+[[functions]]
+structure = "String"
+name = ">="
+specified = "basis"
+syntax = "infix"
+type = "string * string → bool"
+prototype = "s >= t"
+description = """
+returns true if `s` is greater than or equal to `t` in the string
+ordering.
+"""
 
 [[functions]]
 ordinal = 196
@@ -3730,6 +4290,14 @@ description = """
 is the string of size one containing the character `c`.
 """
 
+[[types]]
+structure = "String"
+name = "string"
+type = "eqtype string"
+description = """
+is the type of character strings.
+"""
+
 [[functions]]
 ordinal = 209
 structure = "String"
@@ -3818,7 +4386,58 @@ character in `s` by `f`. It is equivalent to `concat(List.map f
 (explode s))`.
 """
 
+# === StringCvt structure ============================================
+
+[[structures]]
+name = "StringCvt"
+description = "String conversion utilities and types."
+overview = """
+The `StringCvt` structure provides types and utilities to support
+formatted string scanning and conversion, including numeric radix
+specifiers and reader types.
+"""
+
+[[types]]
+structure = "StringCvt"
+name = "radix"
+type = "datatype radix = BIN | OCT | DEC | HEX"
+implemented = false
+description = """
+specifies the numeric base: binary (2), octal (8), decimal (10), or
+hexadecimal (16).
+"""
+
+[[types]]
+structure = "StringCvt"
+name = "reader"
+type = "type ('a, 'b) reader = 'b -> ('a * 'b) option"
+implemented = false
+description = """
+is the type of a scanning function that reads one value of type `'a`
+from a stream of type `'b`, returning the value and the remaining
+stream, or `NONE` at end of input.
+"""
+
+[[types]]
+structure = "StringCvt"
+name = "realfmt"
+type = "datatype realfmt = SCI of int option | FIX of int option | GEN of int option | EXACT"
+implemented = false
+description = """
+specifies the format for converting real numbers to strings.
+"""
+
 # === Sys structure ==================================================
+
+[[structures]]
+name = "Sys"
+specified = "morel"
+description = "System interface utilities."
+overview = """
+The `Sys` structure provides functions for interacting with the Morel
+execution environment, such as reading properties and managing the
+environment.
+"""
 
 [[functions]]
 ordinal = 212
@@ -3840,6 +4459,17 @@ type = "unit → string list"
 prototype = "env ()"
 description = """
 prints the environment.
+"""
+
+[[functions]]
+structure = "Sys"
+name = "file"
+specified = "morel"
+type = "{...}"
+prototype = "file"
+description = """
+is a view of the file system as a record. The fields of the record
+depend on the files and directories under the configured directory.
 """
 
 [[functions]]
@@ -3917,6 +4547,16 @@ clears the current the value of `property`.
 
 # === Variant structure ==============================================
 
+[[structures]]
+name = "Variant"
+specified = "morel"
+description = "Dynamically-typed variant values."
+overview = """
+The `Variant` structure provides operations for working with the
+`variant` type, which can hold values of any type in a dynamically-typed
+fashion.
+"""
+
 [[functions]]
 structure = "Variant"
 name = "parse"
@@ -3944,7 +4584,25 @@ For example,
 `print (LIST [INT 1, INT 2])` returns `"LIST [INT 1, INT 2]"`.
 """
 
+[[types]]
+structure = "Variant"
+name = "variant"
+type = "datatype variant = UNIT | BOOL of bool | INT of int | REAL of real | CHAR of char | STRING of string | LIST of variant list | BAG of variant list | VECTOR of variant list | VARIANT_NONE | VARIANT_SOME of variant | RECORD of (string * variant) list | CONSTANT of string | CONSTRUCT of string * variant"
+specified = "morel"
+description = """
+is a dynamically-typed value that can hold any Morel value.
+"""
+
 # === Vector structure ===============================================
+
+[[structures]]
+name = "Vector"
+description = "Immutable fixed-length arrays."
+overview = """
+The `Vector` structure provides the `vector` type and operations for
+creating, examining, and transforming immutable fixed-length sequences
+of elements.
+"""
 
 [[functions]]
 ordinal = 219
@@ -3995,7 +4653,7 @@ ordinal = 222
 structure = "Vector"
 name = "collate"
 specified = "basis"
-type = ""
+type = "(α * α -> order) -> α vector * α vector -> order"
 prototype = "collate f (v1, v2)"
 description = """
 performs lexicographic comparison of the two
@@ -4020,7 +4678,7 @@ ordinal = 224
 structure = "Vector"
 name = "exists"
 specified = "basis"
-type = ""
+type = "(α -> bool) -> α vector -> bool"
 prototype = "exists f vec"
 description = """
 applies `f` to each element `x` of the vector `vec`,
@@ -4214,6 +4872,15 @@ description = """
 returns a new vector, identical to `vec`, except
 the `i`<sup>th</sup> element of `vec` is set to `x`. Raises
 `Subscript` if `i` < 0 or `size vec` &le; `i`.
+"""
+
+[[types]]
+structure = "Vector"
+name = "vector"
+type = "eqtype 'a vector"
+description = """
+is the type of immutable fixed-length arrays with elements of type
+`'a`.
 """
 
 # End functions.toml

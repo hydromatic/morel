@@ -42,10 +42,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.util.Generation;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.PairList;
@@ -598,6 +601,18 @@ public class LintTest {
   }
 
   private static void addProgram4(Puffin.Builder<GlobalState, FileState> b) {
+    // Track generated blocks in Markdown ([//]: # (start:...) / (end:...))
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.line().startsWith("[//]: # (start:"),
+        line -> line.state().inGeneratedBlock = true);
+    b.add(
+        line ->
+            line.state().language == Language.MARKDOWN
+                && line.line().startsWith("[//]: # (end:"),
+        line -> line.state().inGeneratedBlock = false);
+
     // Markdown: line length check (MD_WIDTH chars, with exceptions)
     b.add(
         line ->
@@ -606,6 +621,7 @@ public class LintTest {
                 && !line.state().inCodeBlock
                 && !line.state().inPreBlock
                 && !line.state().inComment
+                && !line.state().inGeneratedBlock
                 && !line.line().contains("http://")
                 && !line.line().contains("https://")
                 && !line.line().contains("src=\"") // HTML img tags
@@ -881,7 +897,7 @@ public class LintTest {
   }
 
   @Test
-  void testProgramWorksMorel() throws IOException {
+  void testProgramWorksMorel() {
     // We write test content to a temp .smli file so isMorel matches.
     final String code =
         "(* single-line comment *)\n"
@@ -1034,49 +1050,162 @@ public class LintTest {
     assertThat(g.messages, hasToString(Arrays.toString(expectedMessages)));
   }
 
-  /** Parses the "reference.md" file. */
+  /**
+   * Checks all generated sections in all {@code .md} files under {@code docs/}.
+   *
+   * <p>Scans every {@code .md} file, finds {@code [//]: # (start:KEY)} markers,
+   * calls {@link Generation#generateSection} with the key, and diffs the result
+   * against the committed file.
+   */
   @Test
-  void testFunctionTable() throws IOException {
-    File baseDir = TestUtils.getBaseDir(TestUtils.class);
-    final File file = new File(baseDir, "docs/reference.md");
-    final File genFile = new File(baseDir, "target/reference.md");
-    try (Reader r = new FileReader(file);
-        BufferedReader br = new BufferedReader(r);
-        Writer w = new FileWriter(genFile);
-        PrintWriter pw = new PrintWriter(w)) {
-      boolean emit = true;
-      for (; ; ) {
-        String line = br.readLine();
-        if (line == null) {
-          break;
-        }
-        if (line.equals("[//]: # (end:built-in-functions)")
-            || line.equals("[//]: # (end:properties)")) {
-          emit = true;
-        }
-        if (emit) {
-          pw.println(line);
-        }
-        if (line.equals("[//]: # (start:built-in-functions)")) {
-          emit = false;
-          Generation.generateFunctionTable(pw);
-        }
-        if (line.equals("[//]: # (start:properties)")) {
-          emit = false;
-          Generation.generatePropertyTable(pw);
+  void testGeneratedSections() throws IOException {
+    final File baseDir = TestUtils.getBaseDir(TestUtils.class);
+    final File docsDir = new File(baseDir, "docs");
+    final File targetDocsDir = new File(baseDir, "target/docs");
+    final List<String> errors = new ArrayList<>();
+    final List<File> mdFiles = new ArrayList<>();
+    collectMdFiles(docsDir, mdFiles);
+    mdFiles.sort(Comparator.comparing(File::getPath));
+    for (File file : mdFiles) {
+      final String relPath = docsDir.toURI().relativize(file.toURI()).getPath();
+      final File genFile = new File(targetDocsDir, relPath);
+      genFile.getParentFile().mkdirs();
+      try (Reader r = new FileReader(file);
+          BufferedReader br = new BufferedReader(r);
+          Writer w = new FileWriter(genFile);
+          PrintWriter pw = new PrintWriter(w)) {
+        boolean emit = true;
+        for (String line = br.readLine(); line != null; line = br.readLine()) {
+          if (line.startsWith("[//]: # (end:")) {
+            emit = true;
+          }
+          if (emit) {
+            pw.println(line);
+          }
+          if (line.startsWith("[//]: # (start:")) {
+            final String key = line.substring(15, line.length() - 1);
+            emit = false;
+            Generation.generateSection(key, pw);
+          }
         }
       }
+      final String diff = TestUtils.diff(file, genFile);
+      if (!diff.isEmpty()) {
+        errors.add(
+            "Files differ: "
+                + file
+                + " "
+                + genFile
+                + "\n" //
+                + diff);
+      }
     }
+    if (!errors.isEmpty()) {
+      fail(String.join("\n", errors));
+    }
+  }
 
-    final String diff = TestUtils.diff(file, genFile);
-    if (!diff.isEmpty()) {
+  /** Collects all {@code .md} files recursively under {@code dir}. */
+  private static void collectMdFiles(File dir, List<File> files) {
+    final File[] children = dir.listFiles();
+    if (children == null) {
+      return;
+    }
+    for (File f : children) {
+      if (f.isDirectory()) {
+        collectMdFiles(f, files);
+      } else if (f.getName().endsWith(".md")) {
+        files.add(f);
+      }
+    }
+  }
+
+  /**
+   * Checks that every non-internal {@link BuiltIn} entry (i.e., those belonging
+   * to a named structure such as {@code Char}, {@code List}, etc.) has a
+   * corresponding entry in {@code functions.toml}.
+   *
+   * <p>Entries in the internal {@code "$"} pseudo-structure are excluded.
+   * Entries in the {@code "Test"} pseudo-structure (test-only built-ins) are
+   * also excluded. Null-structure entries (top-level built-ins such as {@code
+   * not}, {@code abs}) are also excluded.
+   */
+  @Test
+  void testBuiltInsDocumented() throws IOException {
+    final Set<String> documented = Generation.functionNames();
+    final File file = Generation.getFile();
+
+    final Set<String> missing = new TreeSet<>();
+    for (BuiltIn builtIn : BuiltIn.values()) {
+      final String structure = builtIn.structure;
+      if (structure == null
+          || structure.equals("$")
+          || structure.equals("Test")) {
+        continue;
+      }
+      final String key = structure + "." + builtIn.mlName;
+      if (!documented.contains(key)) {
+        missing.add(key);
+      }
+    }
+    if (!missing.isEmpty()) {
       fail(
-          "Files differ: "
-              + file
-              + " "
-              + genFile
-              + "\n" //
-              + diff);
+          format(
+              "BuiltIn entries not documented in functions.toml: %s\n"
+                  + "Add an entry for each to %s",
+              missing, file.getAbsolutePath()));
+    }
+  }
+
+  /**
+   * Checks that every non-internal {@link BuiltIn.Datatype} entry has a
+   * corresponding {@code [[types]]} entry in {@code functions.toml}.
+   */
+  @Test
+  void testDatatypesDocumented() throws IOException {
+    final Set<List<String>> documented = Generation.typeNames();
+    final File file = Generation.getFile();
+
+    final List<String> missing = new ArrayList<>();
+    for (BuiltIn.Datatype datatype : BuiltIn.Datatype.values()) {
+      final String structure = datatype.structure;
+      if (structure.equals("$")) {
+        continue;
+      }
+      if (!documented.contains(Arrays.asList(structure, datatype.mlName()))) {
+        missing.add(structure + "." + datatype.mlName());
+      }
+    }
+    if (!missing.isEmpty()) {
+      fail(
+          format(
+              "Datatype entries not documented in functions.toml: %s\n" //
+                  + "Add a [[types]] entry for each to %s",
+              missing, file.getAbsolutePath()));
+    }
+  }
+
+  /**
+   * Checks that for every {@code [[structures]]} entry in {@code
+   * functions.toml} there is a corresponding {@code docs/lib/{name}.md} file.
+   */
+  @Test
+  void testStructureDocs() throws IOException {
+    final File baseDir = TestUtils.getBaseDir(TestUtils.class);
+    final File libDir = new File(baseDir, "docs/lib");
+    final List<String> missing = new ArrayList<>();
+    for (String structureName : Generation.structureNames()) {
+      final String fileName = Generation.toKebab(structureName) + ".md";
+      if (!new File(libDir, fileName).exists()) {
+        missing.add(fileName);
+      }
+    }
+    if (!missing.isEmpty()) {
+      fail(
+          format(
+              "Missing docs/lib files: %s\n" //
+                  + "Create a file for each in %s",
+              missing, libDir.getAbsolutePath()));
     }
   }
 
@@ -1147,6 +1276,7 @@ public class LintTest {
     boolean inCodeBlock;
     boolean inPreBlock;
     boolean inComment;
+    boolean inGeneratedBlock;
 
     FileState(GlobalState global) {
       this.global = global;

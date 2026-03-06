@@ -4319,23 +4319,30 @@ public enum BuiltIn {
     // lint: sort until '##private ' where '##[A-Z]'
 
     DESCENDING(
-        "descending", false, 1, h -> h.tyCon(Constructor.DESCENDING_DESC)),
+        "Relational",
+        "descending",
+        false,
+        1,
+        h -> h.tyCon(Constructor.DESCENDING_DESC)),
 
     EITHER(
+        "Either",
         "either",
         false,
         2,
         h -> h.tyCon(Constructor.EITHER_INL).tyCon(Constructor.EITHER_INR)),
 
-    EXN("exn", false, 0, h -> h),
+    EXN("General", "exn", false, 0, h -> h),
 
     OPTION(
+        "Option",
         "option",
         false,
         1,
         h -> h.tyCon(Constructor.OPTION_NONE).tyCon(Constructor.OPTION_SOME)),
 
     ORDER(
+        "General",
         "order",
         false,
         0,
@@ -4350,13 +4357,14 @@ public enum BuiltIn {
      * <p>After "{@code o}", {@code o} has type {@code overload}. The type
      * system will then allow subsequent {@code val inst o} declarations.
      */
-    OVERLOAD("$overload", true, 0, h -> h),
+    OVERLOAD("$", "$overload", true, 0, h -> h),
 
     /**
      * Analog of {@code bool} for checking that matches are exhaustive. Owns the
      * {@code FALSE} and {@code TRUE} type constructors.
      */
     PSEUDO_BOOL(
+        "$",
         "$bool",
         true,
         0,
@@ -4367,6 +4375,7 @@ public enum BuiltIn {
      * {@code NIL} and {@code CONS} type constructors.
      */
     PSEUDO_LIST(
+        "$",
         "$list",
         true,
         1,
@@ -4394,6 +4403,7 @@ public enum BuiltIn {
      * }</pre>
      */
     VARIANT(
+        "Variant",
         "variant",
         false,
         0,
@@ -4413,16 +4423,19 @@ public enum BuiltIn {
                 .tyCon(Constructor.VARIANT_CONSTRUCT)
                 .tyCon(Constructor.VARIANT_CONSTANT));
 
+    public final String structure;
     private final String mlName;
     private final boolean internal;
     private final int varCount;
     private final UnaryOperator<DataTypeHelper> transform;
 
     Datatype(
+        String structure,
         String mlName,
         boolean internal,
         int varCount,
         UnaryOperator<DataTypeHelper> transform) {
+      this.structure = requireNonNull(structure, "structure");
       this.mlName = requireNonNull(mlName, "mlName");
       this.internal = internal;
       this.varCount = varCount;
