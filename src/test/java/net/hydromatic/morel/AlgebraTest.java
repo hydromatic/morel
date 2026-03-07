@@ -539,7 +539,7 @@ public class AlgebraTest {
             + "end";
     String plan =
         "let(matchCode0 match(plus, match(v, "
-            + "apply(fnCode match((x, y), apply2(fnValue +, "
+            + "tailApply(fnCode match((x, y), apply2(fnValue +, "
             + "get(name x), get(name y))), "
             + "argCode get(name v)))), "
             + "resultCode let(matchCode0 match(five, constant(5)), "

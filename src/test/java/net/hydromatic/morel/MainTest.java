@@ -1080,7 +1080,7 @@ public class MainTest {
     // With inlining, we want the plan to simplify to
     // "fn (a, b, c) => (a + b) * 3 - c"
     final String plan =
-        "match(v, apply(fnCode match((a, b, c), "
+        "match(v, tailApply(fnCode match((a, b, c), "
             + "apply2(fnValue -, apply2(fnValue *, "
             + "apply2(fnValue +, get(name a), get(name b)), "
             + "constant(3)), get(name c))), argCode get(name v)))";
@@ -1177,61 +1177,6 @@ public class MainTest {
     ml(ml)
         .assertEval(whenAppliedTo(17, is(list(false, false, true))))
         .assertEval(whenAppliedTo(18, is(list(true, false, false))));
-  }
-
-  /**
-   * Tests a recursive {@code let} that includes a pattern. I'm not sure whether
-   * this is valid Standard ML; SML-NJ doesn't like it.
-   */
-  @Disabled("until mutual recursion bug is fixed")
-  @Test
-  void testCompositeRecursiveLet() {
-    final String ml =
-        "let\n"
-            + "  val rec (x, y) = (1, 2)\n"
-            + "  and f = fn n => if n = 1 then 1 else n * f (n - 1)\n"
-            + "in\n"
-            + "  x + f 5 + y\n"
-            + "end";
-    ml(ml).assertEval(is(123));
-  }
-
-  /**
-   * Tests that inlining of mutually recursive functions does not prevent
-   * compilation from terminating.
-   *
-   * <p>Per GHC inlining, (f, g, h), (g, p, q) are strongly connected components
-   * of the dependency graph. In each group, the inliner should choose one
-   * function as 'loop-breaker' that will not be inlined; say f and q.
-   */
-  @Disabled("until mutual recursion bug is fixed")
-  @Test
-  void testMutualRecursionComplex() {
-    final String ml0 =
-        "let\n"
-            + "  fun f i = g (i + 1)\n"
-            + "  and g i = h (i + 2) + p (i + 4)\n"
-            + "  and h i = if i > 100 then i + 8 else f (i + 16)\n"
-            + "  and p i = q (i + 32)\n"
-            + "  and q i = if i > 200 then i + 64 else g (i + 128)\n"
-            + "in\n"
-            + "  g 7\n"
-            + "end";
-    final String ml =
-        "let\n"
-            + "  val rec f = fn i => g (i + 1)\n"
-            + "  and g = fn i => h (i + 2) + p (i + 4)\n"
-            + "  and h = fn i => if i > 100 then i + 8 else f (i + 16)\n"
-            + "  and p = fn i => q (i + 32)\n"
-            + "  and q = fn i => if i > 200 then i + 64 else g (i + 128)\n"
-            + "in\n"
-            + "  g 7\n"
-            + "end";
-    ml(ml)
-        // answers checked on SMLJ
-        .assertEval(whenAppliedTo(1, is(4003)))
-        .assertEval(whenAppliedTo(6, is(3381)))
-        .assertEval(whenAppliedTo(7, is(3394)));
   }
 
   /**
@@ -1726,25 +1671,6 @@ public class MainTest {
             + "  end\n"
             + "end";
     ml(ml).assertType("int").assertEval(is(20));
-  }
-
-  /**
-   * Mutually recursive functions: the definition of 'even' references 'odd' and
-   * the definition of 'odd' references 'even'.
-   */
-  @Disabled("not working yet")
-  @Test
-  void testMutuallyRecursiveFunctions() {
-    final String ml =
-        "let\n"
-            + "  fun even 0 = true\n"
-            + "    | even n = odd (n - 1)\n"
-            + "  and odd 0 = false\n"
-            + "    | odd n = even (n - 1)\n"
-            + "in\n"
-            + "  odd 7\n"
-            + "end";
-    ml(ml).assertType("boolean").assertEval(is(true));
   }
 
   /** A function with two arguments. */

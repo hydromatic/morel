@@ -180,7 +180,7 @@ Bag.map (fn e => (#empno e))
 > val it = [7499,7521,7654,7698,7844,7900] : int bag
 Sys.plan();
 > val it =
->   "apply2(fnValue Bag.map, match(e, apply(fnValue nth:2, argCode get(name e))), apply2(fnValue Bag.filter, match(e_1, apply2(fnValue =, apply(fnValue nth:1, argCode get(name e)), constant(30))), calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n  JdbcTableScan(table=[[scott, EMP]])\n)))"
+>   "apply2(fnValue Bag.map, match(e, tailApply(fnValue nth:2, argCode get(name e))), apply2(fnValue Bag.filter, match(e_1, apply2(fnValue =, apply(fnValue nth:1, argCode get(name e)), constant(30))), calcite(plan LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n  JdbcTableScan(table=[[scott, EMP]])\n)))"
 >   : string
 
 (*) Union followed by group

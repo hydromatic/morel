@@ -1,0 +1,166 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests for tail-call optimization (TCO).
+ * See https://github.com/hydromatic/morel/issues/151.
+ *)
+
+(* Simple tail recursion ------------------------------------------
+ * resum: a simple tail-recursive accumulator.
+ * Needs TCO to handle large inputs (depth > ~1,000).
+ *)
+let
+  fun resum (m, n) =
+    if m = 0 then n
+    else resum (m - 1, n + 1)
+in
+  resum (1000, 0)
+end;
+> val it = 1000 : int
+
+let fun resum (m, n) = if m = 0 then n else resum (m - 1, n + 1)
+in resum (1000000, 0) end;
+> val it = 1000000 : int
+
+(* Coprime numbers -------------------------------------------------------
+ * coprime: tests whether two numbers are coprime.
+ * a and b are coprime if their greatest common divisor is 1.
+ * Uses mutual tail recursion.
+ *)
+fun coprime (a, b) =
+  if a < 1 orelse b < 1 then false
+  else if a = 1 orelse b = 1 then true
+  else if a < b then coprime (a, b mod a)
+  else if a > b then coprime (a mod b, b)
+  else false;
+> val coprime = fn : int * int -> bool
+
+coprime (3, 2);
+> val it = true : bool
+
+coprime (6, 1);
+> val it = true : bool
+
+coprime (1, 8);
+> val it = true : bool
+
+coprime (~6, 2);
+> val it = false : bool
+
+coprime (15, 3);
+> val it = false : bool
+
+coprime (15, 6);
+> val it = false : bool
+
+coprime (6, 15);
+> val it = false : bool
+
+coprime (21, 10);
+> val it = true : bool
+
+(*) the 46th and 45th terms in the fibonacci sequence
+coprime (1836311903, 1134903170);
+> val it = true : bool
+
+(* Mutual tail recursion ------------------------------------------
+ * Mutual tail recursion: even/odd parity test.
+ * Uses 'fun ... and ...' to declare two mutually tail-recursive functions.
+ *)
+fun even n = if n = 0 then true else odd (n - 1)
+and odd n = if n = 0 then false else even (n - 1);
+> val even = fn : int -> bool
+> val odd = fn : int -> bool
+
+even 0;
+> val it = true : bool
+
+even 1;
+> val it = false : bool
+
+odd 3;
+> val it = true : bool
+
+(*) Large inputs require TCO to avoid stack overflow.
+even 100000;
+> val it = true : bool
+
+odd 100000;
+> val it = false : bool
+
+odd 99999;
+> val it = true : bool
+
+(* Mutual recursion ----------------------------------------------- *)
+
+(* Test a recursive "let" that includes a pattern. I'm not sure
+ * whether this is valid Standard ML; SML-NJ doesn't like it. *)
+let
+  val rec (x, y) = (1, 2)
+  and f = fn n => if n = 1 then 1 else n * f (n - 1)
+in
+  x + f 5 + y
+end;
+> val it = 123 : int
+
+(* The following test ensures that inlining of mutually recursive
+ * functions does not prevent compilation from terminating.
+ *
+ * Per GHC inlining, (f, g, h), (g, p, q) are strongly connected
+ * components of the dependency graph. In each group, the inliner
+ * should choose one function as 'loop-breaker' that will not be
+ * inlined; say f and q.
+ *)
+val p =
+  let
+    val rec f = fn i => g (i + 1)
+    and g = fn i => h (i + 2) + p (i + 4)
+    and h = fn i => if i > 100 then i + 8 else f (i + 16)
+    and p = fn i => q (i + 32)
+    and q = fn i => if i > 200 then i + 64 else g (i + 128)
+  in
+    g
+  end;
+> val p = fn : int -> int
+p 1;
+> val it = 4003 : int
+p 6;
+> val it = 3381 : int
+p 7;
+> val it = 3394 : int
+
+(*) Same logic, using 'fun' syntax
+fun q n =
+  let
+    fun f i = g (i + 1)
+    and g i = h (i + 2) + p (i + 4)
+    and h i = if i > 100 then i + 8 else f (i + 16)
+    and p i = q (i + 32)
+    and q i = if i > 200 then i + 64 else g (i + 128)
+  in
+    g n
+  end;
+> val q = fn : int -> int
+q 1;
+> val it = 4003 : int
+q 6;
+> val it = 3381 : int
+q 7;
+> val it = 3394 : int
+
+(*) End tail-recursion.smli

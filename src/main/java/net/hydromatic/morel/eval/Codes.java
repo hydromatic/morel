@@ -4084,6 +4084,16 @@ public abstract class Codes {
     return new ApplyCode(fnValue, argCode);
   }
 
+  /** Generates tail-call code for a dynamic function application. */
+  public static Code tailApply(Code fnCode, Code argCode) {
+    return new TailApplyCodeCode(fnCode, argCode);
+  }
+
+  /** Generates tail-call code for a known function application. */
+  public static Code tailApply(Applicable fnValue, Code argCode) {
+    return new TailApplyCode(fnValue, argCode);
+  }
+
   /** Generates the code for applying a function value to an argument. */
   public static Code apply1(Applicable1 fnValue, Code argCode) {
     return new ApplyCode1(fnValue, argCode);
@@ -5183,6 +5193,62 @@ public abstract class Codes {
       final Applicable1 fnValue = (Applicable1) fnCode.eval(env);
       final Object arg = argCode.eval(env);
       return fnValue.apply(arg);
+    }
+  }
+
+  /** Sentinel value returned from tail-call positions. */
+  static final class TailCall {
+    final Applicable fn;
+    final Object arg;
+
+    private TailCall(Applicable fn, Object arg) {
+      this.fn = fn;
+      this.arg = arg;
+    }
+  }
+
+  /** Tail-call variant of {@link ApplyCode}: returns {@link TailCall}. */
+  private static class TailApplyCode implements Code {
+    private final Applicable fnValue;
+    private final Code argCode;
+
+    TailApplyCode(Applicable fnValue, Code argCode) {
+      this.fnValue = fnValue;
+      this.argCode = argCode;
+    }
+
+    @Override
+    public Object eval(EvalEnv env) {
+      return new TailCall(fnValue, argCode.eval(env));
+    }
+
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "tailApply", d -> d.arg("fnValue", fnValue).arg("argCode", argCode));
+    }
+  }
+
+  /** Tail-call variant of {@link ApplyCodeCode}: returns {@link TailCall}. */
+  static class TailApplyCodeCode implements Code {
+    public final Code fnCode;
+    public final Code argCode;
+
+    TailApplyCodeCode(Code fnCode, Code argCode) {
+      this.fnCode = fnCode;
+      this.argCode = argCode;
+    }
+
+    @Override
+    public Object eval(EvalEnv env) {
+      final Applicable fn = (Applicable) fnCode.eval(env);
+      return new TailCall(fn, argCode.eval(env));
+    }
+
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start(
+          "tailApply", d -> d.arg("fnCode", fnCode).arg("argCode", argCode));
     }
   }
 

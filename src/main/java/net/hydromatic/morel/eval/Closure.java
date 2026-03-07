@@ -104,8 +104,12 @@ public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
     throw new AssertionError("no match");
   }
 
-  /** Similar to {@link #bind}, but also evaluates. */
-  Object bindEval(Object argValue) {
+  /**
+   * Similar to {@link #bind}, but also evaluates. May return a {@link
+   * Codes.TailCall} sentinel; callers must trampoline if they need a real
+   * value.
+   */
+  private Object bindEvalBody(Object argValue) {
     final EvalEnvHolder envRef = new EvalEnvHolder(evalEnv);
     for (Map.Entry<Core.Pat, Code> patCode : patCodes) {
       final Core.Pat pat = patCode.getKey();
@@ -115,6 +119,23 @@ public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
       }
     }
     throw new Codes.MorelRuntimeException(Codes.BuiltInExn.BIND, pos);
+  }
+
+  /**
+   * Similar to {@link #bindEvalBody}, but trampolines {@link Codes.TailCall}
+   * sentinels so that tail-recursive calls execute in O(1) Java stack space.
+   */
+  private Object bindEval(Object argValue) {
+    Object result = bindEvalBody(argValue);
+    while (result instanceof Codes.TailCall) {
+      final Codes.TailCall tc = (Codes.TailCall) result;
+      if (tc.fn instanceof Closure) {
+        result = ((Closure) tc.fn).bindEvalBody(tc.arg);
+      } else {
+        result = tc.fn.apply(evalEnv, tc.arg);
+      }
+    }
+    return result;
   }
 
   @Override

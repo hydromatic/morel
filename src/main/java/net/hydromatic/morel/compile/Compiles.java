@@ -396,6 +396,28 @@ public abstract class Compiles {
         return nonRecValDecl.pat;
       }
     }
+    if (coreDecl instanceof Core.RecValDecl && decl instanceof Ast.ValDecl) {
+      // For 'fun f ... and g ...' (desugared to a RecValDecl with a synthetic
+      // 'it as (f, g)' binding), suppress the 'it' binding from the output.
+      final Core.RecValDecl recValDecl = (Core.RecValDecl) coreDecl;
+      final Ast.ValDecl valDecl = (Ast.ValDecl) decl;
+      for (Core.NonRecValDecl binding : recValDecl.list) {
+        if (binding.pat.name.equals("it")) {
+          // Don't skip if the user explicitly wrote 'val rec it = ...'
+          final boolean userWroteIt =
+              valDecl.valBinds.stream()
+                  .anyMatch(
+                      b ->
+                          b.pat instanceof Ast.IdPat
+                                  && ((Ast.IdPat) b.pat).name.equals("it")
+                              || b.pat instanceof Ast.AsPat
+                                  && ((Ast.AsPat) b.pat).id.name.equals("it"));
+          if (!userWroteIt) {
+            return binding.pat;
+          }
+        }
+      }
+    }
     return null;
   }
 
