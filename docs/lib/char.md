@@ -85,7 +85,7 @@ is the type of characters.
 <a id="compare-impl"></a>
 <h3><code>compare</code></h3>
 
-`compare (c1, c2)` returns `LESS`, `EQUAL`, or `GREATER` according to
+`compare (c1, c2)` (or `c1.compare c2`) returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
 second.
 
@@ -123,45 +123,45 @@ the string `s`. Does not skip leading whitespace. For instance,
 <a id="isAlpha-impl"></a>
 <h3><code>isAlpha</code></h3>
 
-`isAlpha c` returns true if `c` is a letter (lowercase or uppercase).
+`isAlpha c` (or `c.isAlpha ()`) returns true if `c` is a letter (lowercase or uppercase).
 
 <a id="isAlphaNum-impl"></a>
 <h3><code>isAlphaNum</code></h3>
 
-`isAlphaNum c` returns true if `c` is alphanumeric (a letter or a
+`isAlphaNum c` (or `c.isAlphaNum ()`) returns true if `c` is alphanumeric (a letter or a
 decimal digit).
 
 <a id="isAscii-impl"></a>
 <h3><code>isAscii</code></h3>
 
-`isAscii c` returns true if 0 ≤ `ord c` ≤ 127 `c`.
+`isAscii c` (or `c.isAscii ()`) returns true if 0 ≤ `ord c` ≤ 127 `c`.
 
 <a id="isCntrl-impl"></a>
 <h3><code>isCntrl</code></h3>
 
-`isCntrl c` returns true if `c` is a control character, that is, if
+`isCntrl c` (or `c.isCntrl ()`) returns true if `c` is a control character, that is, if
 `not (isPrint c)`.
 
 <a id="isDigit-impl"></a>
 <h3><code>isDigit</code></h3>
 
-`isDigit c` returns true if `c` is a decimal digit (0 to 9).
+`isDigit c` (or `c.isDigit ()`) returns true if `c` is a decimal digit (0 to 9).
 
 <a id="isGraph-impl"></a>
 <h3><code>isGraph</code></h3>
 
-`isGraph c` returns true if `c` is a graphical character, that is, it
+`isGraph c` (or `c.isGraph ()`) returns true if `c` is a graphical character, that is, it
 is printable and not a whitespace character.
 
 <a id="isHexDigit-impl"></a>
 <h3><code>isHexDigit</code></h3>
 
-`isHexDigit c` returns true if `c` is a hexadecimal digit.
+`isHexDigit c` (or `c.isHexDigit ()`) returns true if `c` is a hexadecimal digit.
 
 <a id="isLower-impl"></a>
 <h3><code>isLower</code></h3>
 
-`isLower c` returns true if `c` is a hexadecimal digit (0 to 9 or a to
+`isLower c` (or `c.isLower ()`) returns true if `c` is a hexadecimal digit (0 to 9 or a to
 f or A to F).
 
 <a id="isOctDigit-impl"></a>
@@ -172,25 +172,25 @@ f or A to F).
 <a id="isPrint-impl"></a>
 <h3><code>isPrint</code></h3>
 
-`isPrint c` returns true if `c` is a printable character (space or
+`isPrint c` (or `c.isPrint ()`) returns true if `c` is a printable character (space or
 visible).
 
 <a id="isPunct-impl"></a>
 <h3><code>isPunct</code></h3>
 
-`isPunct c` returns true if `c` is a punctuation character, that is,
+`isPunct c` (or `c.isPunct ()`) returns true if `c` is a punctuation character, that is,
 graphical but not alphanumeric.
 
 <a id="isSpace-impl"></a>
 <h3><code>isSpace</code></h3>
 
-`isSpace c` returns true if `c` is a whitespace character (blank,
+`isSpace c` (or `c.isSpace ()`) returns true if `c` is a whitespace character (blank,
 newline, tab, vertical tab, new page).
 
 <a id="isUpper-impl"></a>
 <h3><code>isUpper</code></h3>
 
-`isUpper c` returns true if `c` is an uppercase letter (A to Z).
+`isUpper c` (or `c.isUpper ()`) returns true if `c` is an uppercase letter (A to Z).
 
 <a id="maxOrd-impl"></a>
 <h3><code>maxOrd</code></h3>
@@ -220,42 +220,42 @@ in the same way as `Char.contains`.
 <a id="ord-impl"></a>
 <h3><code>ord</code></h3>
 
-`ord c` returns the code of character `c`.
+`ord c` (or `c.ord ()`) returns the code of character `c`.
 
 <a id="pred-impl"></a>
 <h3><code>pred</code></h3>
 
-`pred c` returns the predecessor of `c`. Raises `Subscript` if `c` is
+`pred c` (or `c.pred ()`) returns the predecessor of `c`. Raises `Subscript` if `c` is
 `minOrd`.
 
 <a id="succ-impl"></a>
 <h3><code>succ</code></h3>
 
-`succ c` returns the character immediately following `c`, or raises
+`succ c` (or `c.succ ()`) returns the character immediately following `c`, or raises
 `Chr` if `c` = `maxChar`
 
 <a id="toCString-impl"></a>
 <h3><code>toCString</code></h3>
 
-`toCString c` converts a `char` into a `string`; equivalent to `(fmt
+`toCString c` (or `c.toCString ()`) converts a `char` into a `string`; equivalent to `(fmt
 StringCvt.ORD r)`.
 
 <a id="toLower-impl"></a>
 <h3><code>toLower</code></h3>
 
-`toLower c` returns the lowercase letter corresponding to `c`, if `c`
+`toLower c` (or `c.toLower ()`) returns the lowercase letter corresponding to `c`, if `c`
 is a letter (a to z or A to Z); otherwise returns `c`.
 
 <a id="toString-impl"></a>
 <h3><code>toString</code></h3>
 
-`toString c` converts a `char` into a `string`; equivalent to `(fmt
+`toString c` (or `c.toString ()`) converts a `char` into a `string`; equivalent to `(fmt
 StringCvt.ORD r)`.
 
 <a id="toUpper-impl"></a>
 <h3><code>toUpper</code></h3>
 
-`toUpper c` returns the uppercase letter corresponding to `c`, if `c`
+`toUpper c` (or `c.toUpper ()`) returns the uppercase letter corresponding to `c`, if `c`
 is a letter (a to z or A to Z); otherwise returns `c`.
 
 <a id="<-impl"></a>

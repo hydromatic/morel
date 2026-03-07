@@ -162,7 +162,7 @@ and with the `i`<sup>th</sup> element of `l` used as the
 <a id="length-impl"></a>
 <h3><code>length</code></h3>
 
-`length v` returns the number of elements in the vector `v`.
+`length v` (or `v.length ()`) returns the number of elements in the vector `v`.
 
 <a id="map-impl"></a>
 <h3><code>map</code></h3>
@@ -192,7 +192,7 @@ implementation.
 <a id="sub-impl"></a>
 <h3><code>sub</code></h3>
 
-`sub (vec, i)` returns the `i`<sup>th</sup> element of vector `vec`.
+`sub (vec, i)` (or `vec.sub i`) returns the `i`<sup>th</sup> element of vector `vec`.
 Raises `Subscript` if `i` < 0 or `size vec` &le; `i`.
 
 <a id="tabulate-impl"></a>

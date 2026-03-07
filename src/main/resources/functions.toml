@@ -113,6 +113,7 @@ name = "drop"
 specified = "morel"
 type = "α bag * int → α bag"
 prototype = "drop (b, i)"
+method = true
 description = """
 returns what is left after dropping an arbitrary `i`
 elements of the bag `b`. Raises `Subscript` if `i` < 0 or `i` >
@@ -192,6 +193,7 @@ name = "getItem"
 specified = "morel"
 type = "α bag → * (α * α bag) option"
 prototype = "getItem b"
+method = true
 description = """
 returns `NONE` if the bag `b` is empty, and `SOME (hd b,
 tl b)` otherwise (applying `hd` and `tl` simultaneously so that they
@@ -205,6 +207,7 @@ name = "hd"
 specified = "morel"
 type = "α bag → α"
 prototype = "hd b"
+method = true
 description = """
 returns an arbitrary element of bag `b`. Raises `Empty` if `b`
 is `nil`.
@@ -217,6 +220,7 @@ name = "length"
 specified = "morel"
 type = "α bag → int"
 prototype = "length b"
+method = true
 description = """
 returns the number of elements in the bag `b`.
 """
@@ -248,7 +252,7 @@ of results, with `SOME` stripped, where `f` was defined. `f` is not
 defined for an element of `b` if `f` applied to the element returns
 `NONE`. The above expression is equivalent to:
 
-<pre>((map valOf) o (filter isSome) o (map f)) b`</pre>
+<pre>((map valOf) o (filter isSome) o (map f)) b</pre>
 """
 
 [[functions]]
@@ -268,6 +272,7 @@ name = "nth"
 specified = "morel"
 type = "α bag * int → α"
 prototype = "nth (b, i)"
+method = true
 description = """
 returns the `i`th element of the bag `b`, counting from 0. Raises
 `Subscript` if `i` < 0 or `i` >= `length b`. We have `nth(b,0) = hd
@@ -281,6 +286,7 @@ name = "null"
 specified = "morel"
 type = "α bag → bool"
 prototype = "null b"
+method = true
 description = """
 returns `true` if the bag `b` is empty.
 """
@@ -322,6 +328,7 @@ name = "take"
 specified = "morel"
 type = "α bag * int → α bag"
 prototype = "take (b, i)"
+method = true
 description = """
 returns an arbitrary `i` elements of the bag `b`. Raises
 `Subscript` if `i` < 0 or `i` > `length l`. We have `take(b, length
@@ -335,6 +342,7 @@ name = "tl"
 specified = "morel"
 type = "α bag → α bag"
 prototype = "tl b"
+method = true
 description = """
 returns all but one arbitrary element of bag `b`. Raises
 `Empty` if `b` is `nil`.
@@ -347,6 +355,7 @@ name = "toList"
 specified = "morel"
 type = "α bag → α list"
 prototype = "toList b"
+method = true
 description = """
 creates a new bag from `b`, whose length is `length b` and
 whose elements are the same as those of `b`. Raises `Size` if `maxLen`
@@ -424,6 +433,7 @@ name = "not"
 specified = "basis"
 type = "bool → bool"
 prototype = "not b"
+method = true
 description = """
 returns the logical inverse of `b`.
 """
@@ -435,6 +445,7 @@ name = "toString"
 specified = "basis"
 type = "bool → string"
 prototype = "toString b"
+method = true
 description = """
 returns the string representation of `b`, either "true" or "false".
 """
@@ -523,6 +534,7 @@ name = "compare"
 specified = "basis"
 type = "char * char → order"
 prototype = "compare (c1, c2)"
+method = true
 description = """
 returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
@@ -591,6 +603,7 @@ name = "isAlpha"
 specified = "basis"
 type = "char → bool"
 prototype = "isAlpha c"
+method = true
 description = """
 returns true if `c` is a letter (lowercase or uppercase).
 """
@@ -602,6 +615,7 @@ name = "isAlphaNum"
 specified = "basis"
 type = "char → bool"
 prototype = "isAlphaNum c"
+method = true
 description = """
 returns true if `c` is alphanumeric (a letter or a
 decimal digit).
@@ -614,6 +628,7 @@ name = "isAscii"
 specified = "basis"
 type = "char → bool"
 prototype = "isAscii c"
+method = true
 description = """
 returns true if 0 ≤ `ord c` ≤ 127 `c`.
 """
@@ -625,6 +640,7 @@ name = "isCntrl"
 specified = "basis"
 type = "char → bool"
 prototype = "isCntrl c"
+method = true
 description = """
 returns true if `c` is a control character, that is, if
 `not (isPrint c)`.
@@ -637,6 +653,7 @@ name = "isDigit"
 specified = "basis"
 type = "char → bool"
 prototype = "isDigit c"
+method = true
 description = """
 returns true if `c` is a decimal digit (0 to 9).
 """
@@ -648,6 +665,7 @@ name = "isGraph"
 specified = "basis"
 type = "char → bool"
 prototype = "isGraph c"
+method = true
 description = """
 returns true if `c` is a graphical character, that is, it
 is printable and not a whitespace character.
@@ -660,6 +678,7 @@ name = "isHexDigit"
 specified = "basis"
 type = "char → bool"
 prototype = "isHexDigit c"
+method = true
 description = """
 returns true if `c` is a hexadecimal digit.
 """
@@ -671,6 +690,7 @@ name = "isLower"
 specified = "basis"
 type = "char → bool"
 prototype = "isLower c"
+method = true
 description = """
 returns true if `c` is a hexadecimal digit (0 to 9 or a to
 f or A to F).
@@ -694,6 +714,7 @@ name = "isPrint"
 specified = "basis"
 type = "char → bool"
 prototype = "isPrint c"
+method = true
 description = """
 returns true if `c` is a printable character (space or
 visible).
@@ -706,6 +727,7 @@ name = "isPunct"
 specified = "basis"
 type = "char → bool"
 prototype = "isPunct c"
+method = true
 description = """
 returns true if `c` is a punctuation character, that is,
 graphical but not alphanumeric.
@@ -718,6 +740,7 @@ name = "isSpace"
 specified = "basis"
 type = "char → bool"
 prototype = "isSpace c"
+method = true
 description = """
 returns true if `c` is a whitespace character (blank,
 newline, tab, vertical tab, new page).
@@ -730,6 +753,7 @@ name = "isUpper"
 specified = "basis"
 type = "char → bool"
 prototype = "isUpper c"
+method = true
 description = """
 returns true if `c` is an uppercase letter (A to Z).
 """
@@ -790,6 +814,7 @@ name = "ord"
 specified = "basis"
 type = "char → int"
 prototype = "ord c"
+method = true
 description = """
 returns the code of character `c`.
 """
@@ -801,6 +826,7 @@ name = "pred"
 specified = "basis"
 type = "char → char"
 prototype = "pred c"
+method = true
 description = """
 returns the predecessor of `c`. Raises `Subscript` if `c` is
 `minOrd`.
@@ -813,6 +839,7 @@ name = "succ"
 specified = "basis"
 type = "char → char"
 prototype = "succ c"
+method = true
 description = """
 returns the character immediately following `c`, or raises
 `Chr` if `c` = `maxChar`
@@ -825,6 +852,7 @@ name = "toCString"
 specified = "basis"
 type = "char → string"
 prototype = "toCString c"
+method = true
 description = """
 converts a `char` into a `string`; equivalent to `(fmt
 StringCvt.ORD r)`.
@@ -837,6 +865,7 @@ name = "toLower"
 specified = "basis"
 type = "char → char"
 prototype = "toLower c"
+method = true
 description = """
 returns the lowercase letter corresponding to `c`, if `c`
 is a letter (a to z or A to Z); otherwise returns `c`.
@@ -849,6 +878,7 @@ name = "toString"
 specified = "basis"
 type = "char → string"
 prototype = "toString c"
+method = true
 description = """
 converts a `char` into a `string`; equivalent to `(fmt
 StringCvt.ORD r)`.
@@ -861,6 +891,7 @@ name = "toUpper"
 specified = "basis"
 type = "char → char"
 prototype = "toUpper c"
+method = true
 description = """
 returns the uppercase letter corresponding to `c`, if `c`
 is a letter (a to z or A to Z); otherwise returns `c`.
@@ -965,6 +996,7 @@ name = "asLeft"
 specified = "basis+"
 type = "('left, 'right) either → 'left option"
 prototype = "asLeft sm"
+method = true
 description = """
 returns `SOME (x)` if `sm` is a left value with contents `x`,
 otherwise it returns `NONE`.
@@ -977,6 +1009,7 @@ name = "asRight"
 specified = "basis+"
 type = "('left, 'right) either → 'right option"
 prototype = "asRight sm"
+method = true
 description = """
 returns `SOME (x)` if `sm` is a right value with contents `x`,
 otherwise it returns `NONE`.
@@ -1011,6 +1044,7 @@ name = "isLeft"
 specified = "basis+"
 type = "('left, 'right) either → bool"
 prototype = "isLeft sm"
+method = true
 description = """
 returns true if `sm` is a left value.
 """
@@ -1022,6 +1056,7 @@ name = "isRight"
 specified = "basis+"
 type = "('left, 'right) either → bool"
 prototype = "isRight sm"
+method = true
 description = """
 returns true if `sm` is a right value.
 """
@@ -1081,6 +1116,7 @@ name = "proj"
 specified = "basis+"
 type = "('a, 'a) either -> 'a"
 prototype = "proj sm"
+method = true
 description = """
 projects out the contents of `sm`.
 """
@@ -1544,6 +1580,7 @@ name = "abs"
 specified = "basis"
 type = "int → int"
 prototype = "abs i"
+method = true
 description = """
 returns the absolute value of `i`.
 """
@@ -1555,6 +1592,7 @@ name = "compare"
 specified = "basis"
 type = "int * int → order"
 prototype = "compare (i, j)"
+method = true
 description = """
 returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
@@ -1643,6 +1681,7 @@ name = "max"
 specified = "basis"
 type = "int * int → int"
 prototype = "max (i, j)"
+method = true
 description = """
 returns the larger of the arguments.
 """
@@ -1668,6 +1707,7 @@ name = "min"
 specified = "basis"
 type = "int * int → int"
 prototype = "min (i, j)"
+method = true
 description = """
 returns the smaller of the arguments.
 """
@@ -1720,6 +1760,7 @@ name = "quot"
 specified = "basis"
 type = "int * int → int"
 prototype = "quot (i, j)"
+method = true
 description = """
 returns the truncated quotient of the division of `i` by
 `j`, i.e., it computes `(i / j)` and then drops any fractional part of
@@ -1738,6 +1779,7 @@ name = "rem"
 specified = "basis"
 type = "int * int → int"
 prototype = "rem (i, j)"
+method = true
 description = """
 returns the remainder of the division of `i` by `j`. It
 raises `Div` when `j = 0`. `(i rem j)` has the same sign as i, and it
@@ -1752,6 +1794,7 @@ name = "sameSign"
 specified = "basis"
 type = "int * int → bool"
 prototype = "sameSign (i, j)"
+method = true
 description = """
 returns true if `i` and `j` have the same sign. It
 is equivalent to `(sign i = sign j)`.
@@ -1781,6 +1824,7 @@ name = "sign"
 specified = "basis"
 type = "int → int"
 prototype = "sign i"
+method = true
 description = """
 returns ~1, 0, or 1 when `i` is less than, equal to, or
 greater than 0, respectively.
@@ -1816,6 +1860,7 @@ name = "toString"
 specified = "basis"
 type = "int → string"
 prototype = "toString i"
+method = true
 description = """
 converts a `int` into a `string`; equivalent to `(fmt
 StringCvt.DEC r)`.
@@ -1984,6 +2029,7 @@ name = "drop"
 specified = "basis"
 type = "α list * int → α list"
 prototype = "drop (l, i)"
+method = true
 description = """
 returns what is left after dropping the first `i`
 elements of the list `l`. Raises `Subscript` if `i` < 0 or `i` >
@@ -2075,6 +2121,7 @@ name = "getItem"
 specified = "basis"
 type = "α list → * (α * α list) option"
 prototype = "getItem l"
+method = true
 description = """
 returns `NONE` if the `list` is empty, and `SOME (hd l, tl
 l)` otherwise. This function is particularly useful for creating value
@@ -2090,6 +2137,7 @@ name = "hd"
 specified = "basis"
 type = "α list → α"
 prototype = "hd l"
+method = true
 description = """
 returns the first element of `l`. Raises `Empty` if `l` is
 `nil`.
@@ -2115,6 +2163,7 @@ name = "last"
 specified = "basis"
 type = "α list → α"
 prototype = "last l"
+method = true
 description = """
 returns the last element of `l`. Raises `Empty` if `l` is
 `nil`.
@@ -2127,6 +2176,7 @@ name = "length"
 specified = "basis"
 type = "α list → int"
 prototype = "length l"
+method = true
 description = """
 returns the number of elements in the list `l`.
 """
@@ -2164,7 +2214,7 @@ right, returning a list of results, with `SOME` stripped, where `f`
 was defined. `f` is not defined for an element of `l` if `f` applied
 to the element returns `NONE`. The above expression is equivalent to:
 
-<pre>((map valOf) o (filter isSome) o (map f)) b`</pre>
+<pre>((map valOf) o (filter isSome) o (map f)) b</pre>
 """
 
 [[functions]]
@@ -2198,6 +2248,7 @@ name = "nth"
 specified = "basis"
 type = "α list * int → α"
 prototype = "nth (l, i)"
+method = true
 description = """
 returns the `i`(th) element of the list `l`, counting
 from 0. Raises `Subscript` if `i` < 0 or `i` &ge; `length l`. We have
@@ -2211,6 +2262,7 @@ name = "null"
 specified = "basis"
 type = "α list → bool"
 prototype = "null l"
+method = true
 description = """
 returns `true` if the list `l` is empty.
 """
@@ -2237,6 +2289,7 @@ name = "rev"
 specified = "basis"
 type = "α list → α list"
 prototype = "rev l"
+method = true
 description = """
 returns a list consisting of `l`'s elements in reverse order.
 """
@@ -2248,6 +2301,7 @@ name = "revAppend"
 specified = "basis"
 type = "α list * α list → α list"
 prototype = "revAppend (l1, l2)"
+method = true
 description = """
 returns `(rev l1) @ l2`.
 """
@@ -2271,6 +2325,7 @@ name = "take"
 specified = "basis"
 type = "α list * int → α list"
 prototype = "take (l, i)"
+method = true
 description = """
 returns the first `i` elements of the list `l`. Raises
 `Subscript` if `i` < 0 or `i` > `length l`. We have `take(l, length
@@ -2284,6 +2339,7 @@ name = "tl"
 specified = "basis"
 type = "α list → α list"
 prototype = "tl l"
+method = true
 description = """
 returns all but the first element of `l`. Raises `Empty` if `l`
 is `nil`.
@@ -2889,6 +2945,7 @@ name = "getOpt"
 specified = "basis"
 type = "α option * α → α"
 prototype = "getOpt (opt, a)"
+method = true
 description = """
 returns `v` if `opt` is `SOME (v)`; otherwise
 returns `a`.
@@ -2901,6 +2958,7 @@ name = "isSome"
 specified = "basis"
 type = "α option → bool"
 prototype = "isSome opt"
+method = true
 description = """
 returns `true` if `opt` is `SOME v`; otherwise returns
 `false`.
@@ -2957,6 +3015,7 @@ name = "valOf"
 specified = "basis"
 type = "α option → α"
 prototype = "valOf opt"
+method = true
 description = """
 returns `v` if `opt` is `SOME v`, otherwise raises
 `Option`.
@@ -3152,6 +3211,7 @@ name = "abs"
 specified = "basis"
 type = "real → real"
 prototype = "abs r"
+method = true
 description = """
 returns the absolute value of `r`.
 """
@@ -3162,7 +3222,8 @@ structure = "Real"
 name = "ceil"
 specified = "basis"
 type = "real → int"
-prototype = "floor r"
+prototype = "ceil r"
+method = true
 description = """
 produces `ceil(r)`, the smallest int not less than `r`.
 """
@@ -3174,6 +3235,7 @@ name = "checkFloat"
 specified = "basis"
 type = "real → real"
 prototype = "checkFloat x"
+method = true
 description = """
 raises `Overflow` if x is an infinity, and raises `Div`
 if x is NaN. Otherwise, it returns its argument.
@@ -3198,6 +3260,7 @@ name = "compare"
 specified = "basis"
 type = "real * real → order"
 prototype = "compare (x, y)"
+method = true
 description = """
 returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
@@ -3225,6 +3288,7 @@ name = "copySign"
 specified = "basis"
 type = "real * real → real"
 prototype = "copySign (x, y)"
+method = true
 description = """
 returns `x` with the sign of `y`, even if `y` is
 NaN.
@@ -3237,6 +3301,7 @@ name = "floor"
 specified = "basis"
 type = "real → int"
 prototype = "floor r"
+method = true
 description = """
 produces `floor(r)`, the largest int not larger than `r`.
 """
@@ -3340,6 +3405,7 @@ name = "isFinite"
 specified = "basis"
 type = "real → bool"
 prototype = "isFinite x"
+method = true
 description = """
 returns true if x is neither NaN nor an infinity.
 """
@@ -3351,6 +3417,7 @@ name = "isNan"
 specified = "basis"
 type = "real → bool"
 prototype = "isNan x"
+method = true
 description = """
 returns true if x NaN.
 """
@@ -3362,6 +3429,7 @@ name = "isNormal"
 specified = "basis"
 type = "real → bool"
 prototype = "isNormal x"
+method = true
 description = """
 returns true if x is normal, i.e., neither zero,
 subnormal, infinite nor NaN.
@@ -3374,6 +3442,7 @@ name = "max"
 specified = "basis"
 type = "real * real → real"
 prototype = "max (x, y)"
+method = true
 description = """
 returns the larger of the arguments. If exactly one
 argument is NaN, returns the other argument. If both arguments are
@@ -3398,6 +3467,7 @@ name = "min"
 specified = "basis"
 type = "real * real → real"
 prototype = "min (x, y)"
+method = true
 description = """
 returns the smaller of the arguments. If exactly one
 argument is NaN, returns the other argument. If both arguments are
@@ -3503,6 +3573,7 @@ name = "realCeil"
 specified = "basis"
 type = "real → real"
 prototype = "realCeil r"
+method = true
 description = """
 produces `ceil(r)`, the smallest integer not less than
 `r`.
@@ -3515,6 +3586,7 @@ name = "realFloor"
 specified = "basis"
 type = "real → real"
 prototype = "realFloor r"
+method = true
 description = """
 produces `floor(r)`, the largest integer not larger than
 `r`.
@@ -3527,6 +3599,7 @@ name = "realMod"
 specified = "basis"
 type = "real → real"
 prototype = "realMod r"
+method = true
 description = """
 returns the fractional parts of `r`; `realMod` is
 equivalent to `#frac o split`.
@@ -3539,6 +3612,7 @@ name = "realRound"
 specified = "basis"
 type = "real → real"
 prototype = "realRound r"
+method = true
 description = """
 rounds to the integer-valued real value that is nearest
 to `r`. In the case of a tie, it rounds to the nearest even integer.
@@ -3551,6 +3625,7 @@ name = "realTrunc"
 specified = "basis"
 type = "real → real"
 prototype = "realTrunc r"
+method = true
 description = """
 rounds `r` towards zero.
 """
@@ -3562,6 +3637,7 @@ name = "rem"
 specified = "basis"
 type = "real * real → real"
 prototype = "rem (x, y)"
+method = true
 description = """
 returns the remainder `x - n * y`, where `n` = `trunc (x
 / y)`. The result has the same sign as `x` and has absolute value less
@@ -3576,6 +3652,7 @@ name = "round"
 specified = "basis"
 type = "real → int"
 prototype = "round r"
+method = true
 description = """
 yields the integer nearest to `r`. In the case of a tie, it
 rounds to the nearest even integer.
@@ -3588,6 +3665,7 @@ name = "sameSign"
 specified = "basis"
 type = "real * real → bool"
 prototype = "sameSign (r1, r2)"
+method = true
 description = """
 returns true if and only if `signBit r1` equals
 `signBit r2`.
@@ -3617,6 +3695,7 @@ name = "sign"
 specified = "basis"
 type = "real → int"
 prototype = "sign r"
+method = true
 description = """
 returns ~1 if r is negative, 0 if r is zero, or 1 if r is
 positive. An infinity returns its sign; a zero returns 0 regardless of
@@ -3630,6 +3709,7 @@ name = "signBit"
 specified = "basis"
 type = "real → bool"
 prototype = "signBit r"
+method = true
 description = """
 returns true if and only if the sign of `r` (infinities,
 zeros, and NaN, included) is negative.
@@ -3642,6 +3722,7 @@ name = "split"
 specified = "basis"
 type = "real → {frac:real, whole:real}"
 prototype = "split r"
+method = true
 description = """
 returns `{frac, whole}`, where `frac` and `whole` are the
 fractional and integral parts of `r`, respectively. Specifically,
@@ -3706,6 +3787,7 @@ name = "toManExp"
 specified = "basis"
 type = "real → {man:real, exp:int}"
 prototype = "toManExp r"
+method = true
 description = """
 returns `{man, exp}`, where `man` and `exp` are the
 mantissa and exponent of r, respectively.
@@ -3718,6 +3800,7 @@ name = "toString"
 specified = "basis"
 type = "real → string"
 prototype = "toString r"
+method = true
 description = """
 converts a `real` into a `string`; equivalent to `(fmt
 (StringCvt.GEN NONE) r)`
@@ -3730,6 +3813,7 @@ name = "trunc"
 specified = "basis"
 type = "real → int"
 prototype = "trunc r"
+method = true
 description = """
 rounds r towards zero.
 """
@@ -3741,6 +3825,7 @@ name = "unordered"
 specified = "basis"
 type = "real * real → bool"
 prototype = "unordered (x, y)"
+method = true
 description = """
 returns true if x and y are unordered, i.e., at
 least one of x and y is NaN.
@@ -3799,6 +3884,7 @@ name = "count, count"
 specified = "morel"
 type = "int list → int"
 prototype = "count list"
+method = true
 description = """
 returns the number of elements in `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute countId =
@@ -3833,6 +3919,7 @@ name = "empty, empty"
 specified = "morel"
 type = "α list → bool"
 prototype = "empty list"
+method = true
 description = """
 returns whether the list is empty, for example `from d in
 depts where empty (from e where e.deptno = d.deptno)`.
@@ -3845,9 +3932,10 @@ name = "iterate, iterate"
 specified = "morel"
 type = "α bag → (α bag * α bag → α bag) → α bag"
 prototype = "iterate initialList listUpdate"
+method = true
 description = """
 computes a fixed point, starting with `initialList` and calling
-`listUpdate prevList newList` each iteration, terminating the
+`listUpdate (prevList, newList)` each iteration, terminating the
 iteration when it returns `newList`.
 """
 
@@ -3858,6 +3946,7 @@ name = "max, max"
 specified = "morel"
 type = "α list → α"
 prototype = "max list"
+method = true
 description = """
 returns the greatest element of `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute maxId =
@@ -3871,6 +3960,7 @@ name = "min, min"
 specified = "morel"
 type = "α list → α"
 prototype = "min list"
+method = true
 description = """
 returns the least element of `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute minId =
@@ -3884,6 +3974,7 @@ name = "nonEmpty, nonEmpty"
 specified = "morel"
 type = "α list → bool"
 prototype = "nonEmpty list"
+method = true
 description = """
 returns whether the list has at least one element, for
 example `from d in depts where nonEmpty (from e where e.deptno =
@@ -3909,6 +4000,7 @@ name = "only, only"
 specified = "morel"
 type = "α list → α"
 prototype = "only list"
+method = true
 description = """
 returns the sole element of list, for example `from e in
 emps yield only (from d where d.deptno = e.deptno)`.
@@ -3921,6 +4013,7 @@ name = "sum, sum"
 specified = "morel"
 type = "int list → int"
 prototype = "sum list"
+method = true
 description = """
 returns the sum of the elements of `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute sumId =
@@ -4014,6 +4107,7 @@ name = "compare"
 specified = "basis"
 type = "string * string → order"
 prototype = "compare (s, t)"
+method = true
 description = """
 does a lexicographic comparison of the two strings
 using the ordering `Char.compare` on the characters. It returns
@@ -4053,6 +4147,7 @@ name = "explode"
 specified = "basis"
 type = "string → char list"
 prototype = "explode s"
+method = true
 description = """
 is the list of characters in the string `s`.
 """
@@ -4064,6 +4159,7 @@ name = "extract"
 specified = "basis"
 type = "string * int * int option → string"
 prototype = "extract (s, i, NONE)"
+method = true
 description = """
 and "extract (s, i, SOME j)"
 return substrings
@@ -4275,6 +4371,7 @@ name = "size"
 specified = "basis"
 type = "string → int"
 prototype = "size s"
+method = true
 description = """
 returns |`s`|, the number of characters in string `s`.
 """
@@ -4305,6 +4402,7 @@ name = "sub"
 specified = "basis"
 type = "string * int → char"
 prototype = "sub (s, i)"
+method = true
 description = """
 returns the `i`(th) character of `s`, counting from
 zero. This raises `Subscript` if `i` < 0 or |`s`| &le; `i`.
@@ -4317,6 +4415,7 @@ name = "substring"
 specified = "basis"
 type = "string * int * int → string"
 prototype = "substring (s, i, j)"
+method = true
 description = """
 returns the substring `s`[`i`..`i`+`j`-1], i.e.,
 the substring of size `j` starting at index `i`. This is equivalent to
@@ -4576,6 +4675,7 @@ name = "print"
 specified = "morel"
 type = "variant → string"
 prototype = "print v"
+method = true
 description = """
 converts a variant to a string.
 
@@ -4785,6 +4885,7 @@ name = "length"
 specified = "basis"
 type = "α vector → int"
 prototype = "length v"
+method = true
 description = """
 returns the number of elements in the vector `v`.
 """
@@ -4839,6 +4940,7 @@ name = "sub"
 specified = "basis"
 type = "α vector * int → α"
 prototype = "sub (vec, i)"
+method = true
 description = """
 returns the `i`<sup>th</sup> element of vector `vec`.
 Raises `Subscript` if `i` < 0 or `size vec` &le; `i`.

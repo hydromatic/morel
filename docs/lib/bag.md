@@ -66,7 +66,7 @@ val <a id='nth' href="#nth-impl">nth</a> : 'a bag * int -> 'a
 <a id="null-impl"></a>
 <h3><code>null</code></h3>
 
-`null b` returns `true` if the bag `b` is empty.
+`null b` (or `b.null ()`) returns `true` if the bag `b` is empty.
 
 <a id="fromList-impl"></a>
 <h3><code>fromList</code></h3>
@@ -78,14 +78,14 @@ and whose elements are the same as those of `l`. Raises `Size` if
 <a id="toList-impl"></a>
 <h3><code>toList</code></h3>
 
-`toList b` creates a new bag from `b`, whose length is `length b` and
+`toList b` (or `b.toList ()`) creates a new bag from `b`, whose length is `length b` and
 whose elements are the same as those of `b`. Raises `Size` if `maxLen`
 < `n`.
 
 <a id="length-impl"></a>
 <h3><code>length</code></h3>
 
-`length b` returns the number of elements in the bag `b`.
+`length b` (or `b.length ()`) returns the number of elements in the bag `b`.
 
 <a id="at-impl"></a>
 <h3><code>@</code></h3>
@@ -95,33 +95,33 @@ whose elements are the same as those of `b`. Raises `Size` if `maxLen`
 <a id="hd-impl"></a>
 <h3><code>hd</code></h3>
 
-`hd b` returns an arbitrary element of bag `b`. Raises `Empty` if `b`
+`hd b` (or `b.hd ()`) returns an arbitrary element of bag `b`. Raises `Empty` if `b`
 is `nil`.
 
 <a id="tl-impl"></a>
 <h3><code>tl</code></h3>
 
-`tl b` returns all but one arbitrary element of bag `b`. Raises
+`tl b` (or `b.tl ()`) returns all but one arbitrary element of bag `b`. Raises
 `Empty` if `b` is `nil`.
 
 <a id="getItem-impl"></a>
 <h3><code>getItem</code></h3>
 
-`getItem b` returns `NONE` if the bag `b` is empty, and `SOME (hd b,
+`getItem b` (or `b.getItem ()`) returns `NONE` if the bag `b` is empty, and `SOME (hd b,
 tl b)` otherwise (applying `hd` and `tl` simultaneously so that they
 choose/remove the same arbitrary element).
 
 <a id="take-impl"></a>
 <h3><code>take</code></h3>
 
-`take (b, i)` returns an arbitrary `i` elements of the bag `b`. Raises
+`take (b, i)` (or `b.take i`) returns an arbitrary `i` elements of the bag `b`. Raises
 `Subscript` if `i` < 0 or `i` > `length l`. We have `take(b, length
 b)` = `b`.
 
 <a id="drop-impl"></a>
 <h3><code>drop</code></h3>
 
-`drop (b, i)` returns what is left after dropping an arbitrary `i`
+`drop (b, i)` (or `b.drop i`) returns what is left after dropping an arbitrary `i`
 elements of the bag `b`. Raises `Subscript` if `i` < 0 or `i` >
 `length l`.
 
@@ -153,7 +153,7 @@ of results, with `SOME` stripped, where `f` was defined. `f` is not
 defined for an element of `b` if `f` applied to the element returns
 `NONE`. The above expression is equivalent to:
 
-<pre>((map valOf) o (filter isSome) o (map f)) b`</pre>
+<pre>((map valOf) o (filter isSome) o (map f)) b</pre>
 
 <a id="find-impl"></a>
 <h3><code>find</code></h3>
@@ -217,7 +217,7 @@ using the given ordering `f` on the bag elements.
 <a id="nth-impl"></a>
 <h3><code>nth</code></h3>
 
-`nth (b, i)` returns the `i`th element of the bag `b`, counting from 0. Raises
+`nth (b, i)` (or `b.nth i`) returns the `i`th element of the bag `b`, counting from 0. Raises
 `Subscript` if `i` < 0 or `i` >= `length b`. We have `nth(b,0) = hd
 b`, ignoring exceptions.
 

@@ -54,12 +54,12 @@ is the type of boolean values `true` and `false`.
 <a id="not-impl"></a>
 <h3><code>not</code></h3>
 
-`not b` returns the logical inverse of `b`.
+`not b` (or `b.not ()`) returns the logical inverse of `b`.
 
 <a id="toString-impl"></a>
 <h3><code>toString</code></h3>
 
-`toString b` returns the string representation of `b`, either "true" or "false".
+`toString b` (or `b.toString ()`) returns the string representation of `b`, either "true" or "false".
 
 <a id="implies-impl"></a>
 <h3><code>implies</code></h3>

@@ -67,7 +67,7 @@ and therefore `parse (print v) = v` for all variant values `v`.
 <a id="print-impl"></a>
 <h3><code>print</code></h3>
 
-`print v` converts a variant to a string.
+`print v` (or `v.print ()`) converts a variant to a string.
 
 For example,
 `print (BOOL true)` returns `"BOOL true"`;

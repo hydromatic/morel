@@ -58,23 +58,23 @@ is the type of disjoint-sum values; `INL v` represents a left value and
 <a id="isLeft-impl"></a>
 <h3><code>isLeft</code></h3>
 
-`isLeft sm` returns true if `sm` is a left value.
+`isLeft sm` (or `sm.isLeft ()`) returns true if `sm` is a left value.
 
 <a id="isRight-impl"></a>
 <h3><code>isRight</code></h3>
 
-`isRight sm` returns true if `sm` is a right value.
+`isRight sm` (or `sm.isRight ()`) returns true if `sm` is a right value.
 
 <a id="asLeft-impl"></a>
 <h3><code>asLeft</code></h3>
 
-`asLeft sm` returns `SOME (x)` if `sm` is a left value with contents `x`,
+`asLeft sm` (or `sm.asLeft ()`) returns `SOME (x)` if `sm` is a left value with contents `x`,
 otherwise it returns `NONE`.
 
 <a id="asRight-impl"></a>
 <h3><code>asRight</code></h3>
 
-`asRight sm` returns `SOME (x)` if `sm` is a right value with contents `x`,
+`asRight sm` (or `sm.asRight ()`) returns `SOME (x)` if `sm` is a right value with contents `x`,
 otherwise it returns `NONE`.
 
 <a id="map-impl"></a>
@@ -121,7 +121,7 @@ value).
 <a id="proj-impl"></a>
 <h3><code>proj</code></h3>
 
-`proj sm` projects out the contents of `sm`.
+`proj sm` (or `sm.proj ()`) projects out the contents of `sm`.
 
 <a id="partition-impl"></a>
 <h3><code>partition</code></h3>

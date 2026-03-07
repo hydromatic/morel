@@ -1326,7 +1326,7 @@ public enum BuiltIn {
       ts -> ts.fnType(ts.tupleType(INT, INT), ts.order())),
 
   /** Function "Int.div", of type "int * int &rarr; int". */
-  INT_DIV("Int", "div", true, ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+  INT_DIV("Int", "div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
   /** Function "Int.fromInt", of type "int &rarr; int". */
   INT_FROM_INT("Int", "fromInt", ts -> ts.fnType(INT, INT)),
@@ -1371,7 +1371,7 @@ public enum BuiltIn {
    * <p>Returns the fractional part of r. "intMod" is equivalent to "#frac o
    * split".
    */
-  INT_MOD("Int", "mod", true, ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+  INT_MOD("Int", "mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
   /** Constant "Int.precision", of type "int option". */
   INT_PRECISION("Int", "precision", ts -> ts.option(INT)),
@@ -4028,13 +4028,18 @@ public enum BuiltIn {
    *
    * <p>When true, {@code f x} can be written {@code x.f ()}, and {@code f (x,
    * y)} can be written {@code x.f y}.
+   *
+   * <p>The term "method" refers to a function that is eligible for postfix
+   * calls; this may be because the first parameter is called {@code self}, or
+   * because it is a built-in function whose first argument matches the
+   * characteristic type of its structure.
    */
-  public final boolean selfFirst;
+  public final boolean method;
 
   public static final ImmutableMap<String, BuiltIn> BY_ML_NAME;
 
-  /** Built-ins eligible for postfix dispatch, keyed by unqualified name. */
-  public static final ImmutableMultimap<String, BuiltIn> BY_SELF_FIRST_NAME;
+  /** Built-in functions eligible for postfix dispatch, by unqualified name. */
+  public static final ImmutableMultimap<String, BuiltIn> BY_METHOD_NAME;
 
   public static final SortedMap<String, Structure> BY_STRUCTURE;
 
@@ -4068,14 +4073,14 @@ public enum BuiltIn {
         (structure, mapBuilder) ->
             b.put(structure, new Structure(structure, mapBuilder.build())));
     BY_STRUCTURE = b.build();
-    final ImmutableListMultimap.Builder<String, BuiltIn> selfFirstBuilder =
+    final ImmutableListMultimap.Builder<String, BuiltIn> methodBuilder =
         ImmutableListMultimap.builder();
     for (BuiltIn builtIn : values()) {
-      if (builtIn.selfFirst) {
-        selfFirstBuilder.put(builtIn.mlName, builtIn);
+      if (builtIn.method) {
+        methodBuilder.put(builtIn.mlName, builtIn);
       }
     }
-    BY_SELF_FIRST_NAME = selfFirstBuilder.build();
+    BY_METHOD_NAME = methodBuilder.build();
   }
 
   BuiltIn(
@@ -4101,23 +4106,23 @@ public enum BuiltIn {
     this(structure, mlName, alias, typeFunction, null, null, false);
   }
 
-  /** Constructor for a selfFirst built-in without an alias. */
+  /** Constructor for a function (or method) without an alias. */
   BuiltIn(
       @Nullable String structure,
       String mlName,
-      boolean selfFirst,
+      boolean method,
       Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, null, typeFunction, null, null, selfFirst);
+    this(structure, mlName, null, typeFunction, null, null, method);
   }
 
-  /** Constructor for a selfFirst built-in with an alias. */
+  /** Constructor for a function (or method) with an alias. */
   BuiltIn(
       @Nullable String structure,
       String mlName,
       @Nullable String alias,
-      boolean selfFirst,
+      boolean method,
       Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, alias, typeFunction, null, null, selfFirst);
+    this(structure, mlName, alias, typeFunction, null, null, method);
   }
 
   BuiltIn(
@@ -4144,14 +4149,14 @@ public enum BuiltIn {
       Function<TypeSystem, Type> typeFunction,
       @Nullable PrimitiveType preferredType,
       @Nullable Function<Session, Object> sessionValue,
-      boolean selfFirst) {
+      boolean method) {
     this.structure = structure;
     this.mlName = requireNonNull(mlName, "mlName");
     this.alias = alias;
     this.typeFunction = requireNonNull(typeFunction, "typeFunction");
     this.preferredType = preferredType;
     this.sessionValue = sessionValue;
-    this.selfFirst = selfFirst;
+    this.method = method;
   }
 
   /** Calls a consumer once per value. */

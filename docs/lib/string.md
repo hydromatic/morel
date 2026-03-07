@@ -80,7 +80,7 @@ strings using the given ordering `f` on characters.
 <a id="compare-impl"></a>
 <h3><code>compare</code></h3>
 
-`compare (s, t)` does a lexicographic comparison of the two strings
+`compare (s, t)` (or `s.compare t`) does a lexicographic comparison of the two strings
 using the ordering `Char.compare` on the characters. It returns
 `LESS`, `EQUAL`, or `GREATER`, if `s` is less than, equal to, or
 greater than `t`, respectively.
@@ -107,12 +107,12 @@ size of the resulting string would be greater than `maxSize`.
 <a id="explode-impl"></a>
 <h3><code>explode</code></h3>
 
-`explode s` is the list of characters in the string `s`.
+`explode s` (or `s.explode ()`) is the list of characters in the string `s`.
 
 <a id="extract-impl"></a>
 <h3><code>extract</code></h3>
 
-`extract (s, i, NONE)` and "extract (s, i, SOME j)"
+`extract (s, i, NONE)` (or `s.extract (i, NONE)`) and "extract (s, i, SOME j)"
 return substrings
 of `s`. The first returns the substring of `s` from the `i`(th)
 character to the end of the string, i.e., the string
@@ -166,7 +166,7 @@ f (explode s))`.
 <a id="size-impl"></a>
 <h3><code>size</code></h3>
 
-`size s` returns |`s`|, the number of characters in string `s`.
+`size s` (or `s.size ()`) returns |`s`|, the number of characters in string `s`.
 
 <a id="str-impl"></a>
 <h3><code>str</code></h3>
@@ -176,13 +176,13 @@ f (explode s))`.
 <a id="sub-impl"></a>
 <h3><code>sub</code></h3>
 
-`sub (s, i)` returns the `i`(th) character of `s`, counting from
+`sub (s, i)` (or `s.sub i`) returns the `i`(th) character of `s`, counting from
 zero. This raises `Subscript` if `i` < 0 or |`s`| &le; `i`.
 
 <a id="substring-impl"></a>
 <h3><code>substring</code></h3>
 
-`substring (s, i, j)` returns the substring `s`[`i`..`i`+`j`-1], i.e.,
+`substring (s, i, j)` (or `s.substring (i, j)`) returns the substring `s`[`i`..`i`+`j`-1], i.e.,
 the substring of size `j` starting at index `i`. This is equivalent to
 `extract(s, i, SOME j)`.
 

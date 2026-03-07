@@ -55,48 +55,48 @@ wraps a value so that it sorts in descending order when used with
 <a id="count-impl"></a>
 <h3><code>count</code></h3>
 
-`count list` returns the number of elements in `list`. Often used with
+`count list` (or `list.count ()`) returns the number of elements in `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute countId =
 count`.
 
 <a id="empty-impl"></a>
 <h3><code>empty</code></h3>
 
-`empty list` returns whether the list is empty, for example `from d in
+`empty list` (or `list.empty ()`) returns whether the list is empty, for example `from d in
 depts where empty (from e where e.deptno = d.deptno)`.
 
 <a id="iterate-impl"></a>
 <h3><code>iterate</code></h3>
 
-`iterate initialList listUpdate` computes a fixed point, starting with `initialList` and calling
-`listUpdate prevList newList` each iteration, terminating the
+`iterate initialList listUpdate` (or `initialList.iterate listUpdate`) computes a fixed point, starting with `initialList` and calling
+`listUpdate (prevList, newList)` each iteration, terminating the
 iteration when it returns `newList`.
 
 <a id="max-impl"></a>
 <h3><code>max</code></h3>
 
-`max list` returns the greatest element of `list`. Often used with
+`max list` (or `list.max ()`) returns the greatest element of `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute maxId =
 max of e.id`.
 
 <a id="min-impl"></a>
 <h3><code>min</code></h3>
 
-`min list` returns the least element of `list`. Often used with
+`min list` (or `list.min ()`) returns the least element of `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute minId =
 min of e.id`.
 
 <a id="nonEmpty-impl"></a>
 <h3><code>nonEmpty</code></h3>
 
-`nonEmpty list` returns whether the list has at least one element, for
+`nonEmpty list` (or `list.nonEmpty ()`) returns whether the list has at least one element, for
 example `from d in depts where nonEmpty (from e where e.deptno =
 d.deptno)`.
 
 <a id="only-impl"></a>
 <h3><code>only</code></h3>
 
-`only list` returns the sole element of list, for example `from e in
+`only list` (or `list.only ()`) returns the sole element of list, for example `from e in
 emps yield only (from d where d.deptno = e.deptno)`.
 
 <a id="elem-impl"></a>
@@ -113,7 +113,7 @@ emps yield only (from d where d.deptno = e.deptno)`.
 <a id="sum-impl"></a>
 <h3><code>sum</code></h3>
 
-`sum list` returns the sum of the elements of `list`. Often used with
+`sum list` (or `list.sum ()`) returns the sum of the elements of `list`. Often used with
 `group`, for example `from e in emps group e.deptno compute sumId =
 sum of e.id`.
 

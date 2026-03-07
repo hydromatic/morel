@@ -85,6 +85,111 @@ public class Generation {
     return names;
   }
 
+  /**
+   * Returns the set of "Structure.name" keys documented in {@code
+   * functions.toml} as {@code method = true}.
+   */
+  @SuppressWarnings("unchecked")
+  public static Set<String> methodNames() throws IOException {
+    final File file = getFile();
+    final Set<String> names = new HashSet<>();
+    final TomlMapper mapper = new TomlMapper();
+    try (MappingIterator<Object> it =
+        mapper.readerForMapOf(Object.class).readValues(file)) {
+      while (it.hasNextValue()) {
+        final Map<String, Object> row = (Map<String, Object>) it.nextValue();
+        for (FnDef fn :
+            transformEager(
+                (List<Map<String, Object>>) row.get("functions"),
+                FnDef::create)) {
+          if (fn.method) {
+            names.add(fn.structure + "." + fn.canonicalName());
+          }
+        }
+      }
+    }
+    return names;
+  }
+
+  /**
+   * Returns the postfix form of a function call prototype.
+   *
+   * <p>Given a prototype like {@code "length l"}, returns {@code "l.length
+   * ()"}. Given {@code "drop (l, i)"}, returns {@code "l.drop i"}. Given {@code
+   * "substring (s, i, j)"}, returns {@code "s.substring (i, j)"}. Given the
+   * curried {@code "iterate initialList listUpdate"}, returns {@code
+   * "initialList.iterate listUpdate"}.
+   *
+   * <p>Rules (where {@code self} is the first argument):
+   *
+   * <ul>
+   *   <li>Prefix unary {@code "name self"}: {@code self.name ()}
+   *   <li>Prefix curried {@code "name self arg"}: {@code self.name arg}
+   *   <li>Prefix 2-tuple {@code "name (self, arg)"}: {@code self.name arg}
+   *   <li>Prefix 3+-tuple {@code "name (self, a, ...)"}: {@code self.name (a,
+   *       ...)}
+   * </ul>
+   */
+  static String postfixForm(String prototype) {
+    final int space = prototype.indexOf(' ');
+    if (space < 0) {
+      // No arguments: shouldn't happen for documented functions, but handle
+      return prototype + " ()";
+    }
+    final String name = prototype.substring(0, space);
+    final String args = prototype.substring(space + 1).trim();
+    if (!args.startsWith("(")) {
+      // No parens: bare identifier (unary) or space-separated curried args.
+      final int argSpace = args.indexOf(' ');
+      if (argSpace < 0) {
+        // Unary: self.name ()
+        return args + "." + name + " ()";
+      } else {
+        // Curried: first token is self, remainder is the extra arg(s).
+        return args.substring(0, argSpace)
+            + "."
+            + name
+            + " "
+            + args.substring(argSpace + 1);
+      }
+    }
+    // Tuple: parse top-level comma-separated elements inside outer parens
+    final List<String> parts =
+        splitTopLevel(args.substring(1, args.length() - 1));
+    if (parts.size() == 1) {
+      return parts.get(0).trim() + "." + name + " ()";
+    } else if (parts.size() == 2) {
+      return parts.get(0).trim() + "." + name + " " + parts.get(1).trim();
+    } else {
+      // 3 or more: self.name (rest...)
+      final String remaining =
+          parts.subList(1, parts.size()).stream()
+              .map(String::trim)
+              .collect(Collectors.joining(", "));
+      return parts.get(0).trim() + "." + name + " (" + remaining + ")";
+    }
+  }
+
+  /** Splits a string at top-level commas (ignoring commas inside parens). */
+  private static List<String> splitTopLevel(String s) {
+    final List<String> parts = new ArrayList<>();
+    int depth = 0;
+    int start = 0;
+    for (int i = 0; i < s.length(); i++) {
+      final char c = s.charAt(i);
+      if (c == '(') {
+        depth++;
+      } else if (c == ')') {
+        depth--;
+      } else if (c == ',' && depth == 0) {
+        parts.add(s.substring(start, i));
+        start = i + 1;
+      }
+    }
+    parts.add(s.substring(start));
+    return parts;
+  }
+
   /** The {@code functions.toml} file as a URL. */
   public static URL getResource() {
     return requireNonNull(Main.class.getResource("/functions.toml"));
@@ -455,6 +560,7 @@ public class Generation {
     final boolean implemented;
     final int ordinal;
     final String specified;
+    final boolean method;
 
     FnDef(
         String structure,
@@ -465,7 +571,8 @@ public class Generation {
         String extra,
         boolean implemented,
         int ordinal,
-        String specified) {
+        String specified,
+        boolean method) {
       this.structure = requireNonNull(structure, "structure");
       this.name = requireNonNull(name, "name");
       requireNonNull(type, "type");
@@ -478,6 +585,7 @@ public class Generation {
       this.implemented = implemented;
       this.ordinal = ordinal;
       this.specified = requireNonNull(specified, "specified");
+      this.method = method;
     }
 
     String qualifiedName() {
@@ -502,7 +610,8 @@ public class Generation {
           map.containsKey("ordinal") ? (Integer) map.get("ordinal") : -1,
           map.containsKey("specified")
               ? (String) map.get("specified")
-              : "basis");
+              : "basis",
+          first((Boolean) map.get("method"), false));
     }
   }
 
@@ -851,18 +960,22 @@ public class Generation {
       pw.format(Locale.ROOT, "<a id=\"%s-impl\"></a>%n", fnAnchors.get(fn));
       pw.format(Locale.ROOT, "<h3><code>%s</code></h3>%n", fn.canonicalName());
       pw.println();
+      final String postfix =
+          fn.method ? " (or `" + postfixForm(fn.prototype) + "`)" : "";
       if (fn.extra != null) {
         pw.format(
             Locale.ROOT,
-            "`%s` %s %s%n",
+            "`%s`%s %s %s%n",
             fn.prototype,
+            postfix,
             processDesc(fn.description),
             fn.extra.trim());
       } else {
         pw.format(
             Locale.ROOT,
-            "`%s` %s%n",
+            "`%s`%s %s%n",
             fn.prototype,
+            postfix,
             processDesc(fn.description));
       }
       if (!fn.implemented) {

@@ -90,12 +90,12 @@ empty list.
 <a id="null-impl"></a>
 <h3><code>null</code></h3>
 
-`null l` returns `true` if the list `l` is empty.
+`null l` (or `l.null ()`) returns `true` if the list `l` is empty.
 
 <a id="length-impl"></a>
 <h3><code>length</code></h3>
 
-`length l` returns the number of elements in the list `l`.
+`length l` (or `l.length ()`) returns the number of elements in the list `l`.
 
 <a id="at-impl"></a>
 <h3><code>@</code></h3>
@@ -110,25 +110,25 @@ empty list.
 <a id="hd-impl"></a>
 <h3><code>hd</code></h3>
 
-`hd l` returns the first element of `l`. Raises `Empty` if `l` is
+`hd l` (or `l.hd ()`) returns the first element of `l`. Raises `Empty` if `l` is
 `nil`.
 
 <a id="tl-impl"></a>
 <h3><code>tl</code></h3>
 
-`tl l` returns all but the first element of `l`. Raises `Empty` if `l`
+`tl l` (or `l.tl ()`) returns all but the first element of `l`. Raises `Empty` if `l`
 is `nil`.
 
 <a id="last-impl"></a>
 <h3><code>last</code></h3>
 
-`last l` returns the last element of `l`. Raises `Empty` if `l` is
+`last l` (or `l.last ()`) returns the last element of `l`. Raises `Empty` if `l` is
 `nil`.
 
 <a id="getItem-impl"></a>
 <h3><code>getItem</code></h3>
 
-`getItem l` returns `NONE` if the `list` is empty, and `SOME (hd l, tl
+`getItem l` (or `l.getItem ()`) returns `NONE` if the `list` is empty, and `SOME (hd l, tl
 l)` otherwise. This function is particularly useful for creating value
 readers from lists of characters. For example, `Int.scan StringCvt.DEC
 getItem` has the type `(int, char list) StringCvt.reader` and can be
@@ -137,21 +137,21 @@ used to scan decimal integers from lists of characters.
 <a id="nth-impl"></a>
 <h3><code>nth</code></h3>
 
-`nth (l, i)` returns the `i`(th) element of the list `l`, counting
+`nth (l, i)` (or `l.nth i`) returns the `i`(th) element of the list `l`, counting
 from 0. Raises `Subscript` if `i` < 0 or `i` &ge; `length l`. We have
 `nth(l, 0)` = `hd l`, ignoring exceptions.
 
 <a id="take-impl"></a>
 <h3><code>take</code></h3>
 
-`take (l, i)` returns the first `i` elements of the list `l`. Raises
+`take (l, i)` (or `l.take i`) returns the first `i` elements of the list `l`. Raises
 `Subscript` if `i` < 0 or `i` > `length l`. We have `take(l, length
 l)` = `l`.
 
 <a id="drop-impl"></a>
 <h3><code>drop</code></h3>
 
-`drop (l, i)` returns what is left after dropping the first `i`
+`drop (l, i)` (or `l.drop i`) returns what is left after dropping the first `i`
 elements of the list `l`. Raises `Subscript` if `i` < 0 or `i` >
 `length l`.
 
@@ -161,7 +161,7 @@ It holds that `take(l, i) @ drop(l, i)` = `l` when 0 &le;
 <a id="rev-impl"></a>
 <h3><code>rev</code></h3>
 
-`rev l` returns a list consisting of `l`'s elements in reverse order.
+`rev l` (or `l.rev ()`) returns a list consisting of `l`'s elements in reverse order.
 
 <a id="concat-impl"></a>
 <h3><code>concat</code></h3>
@@ -172,7 +172,7 @@ in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln`
 <a id="revAppend-impl"></a>
 <h3><code>revAppend</code></h3>
 
-`revAppend (l1, l2)` returns `(rev l1) @ l2`.
+`revAppend (l1, l2)` (or `l1.revAppend l2`) returns `(rev l1) @ l2`.
 
 <a id="app-impl"></a>
 <h3><code>app</code></h3>
@@ -200,7 +200,7 @@ right, returning a list of results, with `SOME` stripped, where `f`
 was defined. `f` is not defined for an element of `l` if `f` applied
 to the element returns `NONE`. The above expression is equivalent to:
 
-<pre>((map valOf) o (filter isSome) o (map f)) b`</pre>
+<pre>((map valOf) o (filter isSome) o (map f)) b</pre>
 
 <a id="find-impl"></a>
 <h3><code>find</code></h3>

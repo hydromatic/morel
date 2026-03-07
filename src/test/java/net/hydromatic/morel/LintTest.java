@@ -1158,6 +1158,51 @@ public class LintTest {
   }
 
   /**
+   * Checks that the {@code method} flag in {@code functions.toml} is consistent
+   * with {@link BuiltIn#method} in the Java source.
+   *
+   * <p>Every {@link BuiltIn} with {@code method = true} must have a
+   * corresponding {@code [[functions]]} entry in {@code functions.toml} with
+   * {@code method = true}, and vice versa. Internal structures ({@code $},
+   * {@code Test}) are excluded.
+   */
+  @Test
+  void testMethodConsistent() throws IOException {
+    final Set<String> tomlMethod = Generation.methodNames();
+    final File file = Generation.getFile();
+
+    final List<String> errors = new ArrayList<>();
+    for (BuiltIn builtIn : BuiltIn.values()) {
+      final String structure = builtIn.structure;
+      if (structure == null
+          || structure.equals("$")
+          || structure.equals("Test")) {
+        continue;
+      }
+      final String key = structure + "." + builtIn.mlName;
+      if (builtIn.method && !tomlMethod.contains(key)) {
+        errors.add(
+            "BuiltIn " + key + " has method=true but functions.toml does not");
+      } else if (!builtIn.method && tomlMethod.contains(key)) {
+        errors.add(
+            "functions.toml has method=true for "
+                + key
+                + " but BuiltIn does not");
+      }
+    }
+    if (!errors.isEmpty()) {
+      fail(
+          format(
+              "%d method inconsistencies between BuiltIn and functions.toml"
+                  + " (%s):\n" //
+                  + "%s",
+              errors.size(),
+              file.getAbsolutePath(),
+              String.join("\n", errors)));
+    }
+  }
+
+  /**
    * Checks that every non-internal {@link BuiltIn.Datatype} entry has a
    * corresponding {@code [[types]]} entry in {@code functions.toml}.
    */

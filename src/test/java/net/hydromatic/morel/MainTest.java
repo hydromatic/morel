@@ -523,7 +523,7 @@ public class MainTest {
     ml("xs.length ()").assertParseSame();
 
     // Paren form "x.f(expr)" fires the paren branch when the field name is a
-    // known selfFirst built-in (here "drop" is LIST_DROP).  The canonical
+    // known method (here "drop" is LIST_DROP).  The canonical
     // unparse uses parens so the result can be dot-chained.
     ml("xs.drop 1").assertParse("#drop xs 1");
     ml("xs.drop(1)").assertParse("xs.drop 1");
@@ -569,7 +569,7 @@ public class MainTest {
         .assertParseEquivalent(
             "String.collate Char.compare (\"Hello\", \"hello\")");
 
-    // A non-selfFirst field name on a lowercase bare-Id receiver is treated as
+    // A non-method field name on a lowercase bare-Id receiver is treated as
     // field projection even when followed by "(...)": the parens belong to an
     // expression8-level application, not a PostfixApp.
     // "r.empno (7369)" parses as "(#empno r) 7369", not PostfixApp.

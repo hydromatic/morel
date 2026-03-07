@@ -131,12 +131,12 @@ rounding is towards negative infinity, not zero.
 <a id="abs-impl"></a>
 <h3><code>abs</code></h3>
 
-`abs i` returns the absolute value of `i`.
+`abs i` (or `i.abs ()`) returns the absolute value of `i`.
 
 <a id="compare-impl"></a>
 <h3><code>compare</code></h3>
 
-`compare (i, j)` returns `LESS`, `EQUAL`, or `GREATER` according to
+`compare (i, j)` (or `i.compare j`) returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
 second.
 
@@ -157,7 +157,7 @@ initial whitespace; otherwise, it returns `NONE`. Equivalent to
 <a id="max-impl"></a>
 <h3><code>max</code></h3>
 
-`max (i, j)` returns the larger of the arguments.
+`max (i, j)` (or `i.max j`) returns the larger of the arguments.
 
 <a id="maxInt-impl"></a>
 <h3><code>maxInt</code></h3>
@@ -170,7 +170,7 @@ integers, within the limits of the heap size. If `precision` is `SOME
 <a id="min-impl"></a>
 <h3><code>min</code></h3>
 
-`min (i, j)` returns the smaller of the arguments.
+`min (i, j)` (or `i.min j`) returns the smaller of the arguments.
 
 <a id="minInt-impl"></a>
 <h3><code>minInt</code></h3>
@@ -191,7 +191,7 @@ necessarily be a power of two.
 <a id="quot-impl"></a>
 <h3><code>quot</code></h3>
 
-`quot (i, j)` returns the truncated quotient of the division of `i` by
+`quot (i, j)` (or `i.quot j`) returns the truncated quotient of the division of `i` by
 `j`, i.e., it computes `(i / j)` and then drops any fractional part of
 the quotient. It raises `Overflow` when the result is not
 representable, or `Div` when `j = 0`. Note that unlike `div`, `quot`
@@ -203,7 +203,7 @@ hardware divide instructions, so `quot` may be faster than `div`.
 <a id="rem-impl"></a>
 <h3><code>rem</code></h3>
 
-`rem (i, j)` returns the remainder of the division of `i` by `j`. It
+`rem (i, j)` (or `i.rem j`) returns the remainder of the division of `i` by `j`. It
 raises `Div` when `j = 0`. `(i rem j)` has the same sign as i, and it
 holds that `(i quot j) * j + (i rem j) = i`. This is the semantics of
 most hardware divide instructions, so `rem` may be faster than `mod`.
@@ -211,13 +211,13 @@ most hardware divide instructions, so `rem` may be faster than `mod`.
 <a id="sameSign-impl"></a>
 <h3><code>sameSign</code></h3>
 
-`sameSign (i, j)` returns true if `i` and `j` have the same sign. It
+`sameSign (i, j)` (or `i.sameSign j`) returns true if `i` and `j` have the same sign. It
 is equivalent to `(sign i = sign j)`.
 
 <a id="sign-impl"></a>
 <h3><code>sign</code></h3>
 
-`sign i` returns ~1, 0, or 1 when `i` is less than, equal to, or
+`sign i` (or `i.sign ()`) returns ~1, 0, or 1 when `i` is less than, equal to, or
 greater than 0, respectively.
 
 <a id="toInt-impl"></a>
@@ -229,7 +229,7 @@ greater than 0, respectively.
 <a id="toString-impl"></a>
 <h3><code>toString</code></h3>
 
-`toString i` converts a `int` into a `string`; equivalent to `(fmt
+`toString i` (or `i.toString ()`) converts a `int` into a `string`; equivalent to `(fmt
 StringCvt.DEC r)`.
 
 <a id="fmt-impl"></a>

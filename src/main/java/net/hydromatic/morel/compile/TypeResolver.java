@@ -129,15 +129,16 @@ public class TypeResolver {
 
   /**
    * Names of user-defined functions whose first parameter is named {@code self}
-   * (curried form).
+   * (curried form); these can be invoked as methods.
    */
-  private final Set<String> selfFirstNames = new HashSet<>();
+  private final Set<String> methodNames = new HashSet<>();
 
   /**
    * Names of user-defined functions whose first parameter is a tuple whose
-   * first element is named {@code self} (tuple-splicing form).
+   * first element is named {@code self} (tuple-splicing form); these can be
+   * invoked as methods.
    */
-  private final Set<String> selfFirstTupleNames = new HashSet<>();
+  private final Set<String> methodTupleNames = new HashSet<>();
 
   /** Type variable scopes for val/fun declarations (innermost last). */
   private final Deque<Map<String, Variable>> tyVarScopes = new ArrayDeque<>();
@@ -1549,10 +1550,9 @@ public class TypeResolver {
    * identifier (because the {@code eIsId} guard in the parser suppresses the
    * atom-arg LOOKAHEAD for bare-identifier receivers).
    *
-   * <p>When the receiver is a non-record value and {@code name} is a {@code
-   * selfFirst}-eligible built-in or user-defined function, the apply is
-   * desugared into an equivalent {@link Ast.PostfixApp} and dispatched to
-   * {@link #deducePostfixAppType}.
+   * <p>When the receiver is a non-record value and {@code name} is a method,
+   * the apply is desugared into an equivalent {@link Ast.PostfixApp} and
+   * dispatched to {@link #deducePostfixAppType}.
    *
    * <p>Otherwise, the call is forwarded to {@link #deduceApplyType}.
    */
@@ -1567,11 +1567,11 @@ public class TypeResolver {
         final Ast.Id receiverId = (Ast.Id) fnApply.arg;
         final Type receiverType = env.getTypeOpt(receiverId.name);
         // Intercept only when the receiver is a known non-record type and
-        // 'name' is a selfFirst-eligible function.
+        // 'name' is a method.
         if (receiverType != null
             && !(receiverType instanceof RecordType)
-            && (!BuiltIn.BY_SELF_FIRST_NAME.get(name).isEmpty()
-                || selfFirstNames.contains(name) && env.has(name))) {
+            && (!BuiltIn.BY_METHOD_NAME.get(name).isEmpty()
+                || methodNames.contains(name) && env.has(name))) {
           return deducePostfixAppType(
               env, ast.postfixApp(apply.pos, receiverId, name, apply.arg), v);
         }
@@ -1653,8 +1653,8 @@ public class TypeResolver {
 
     // Collect built-in candidates.
     final ImmutableCollection<BuiltIn> builtInCandidates =
-        BuiltIn.BY_SELF_FIRST_NAME.get(name);
-    final boolean hasUserFn = selfFirstNames.contains(name) && env.has(name);
+        BuiltIn.BY_METHOD_NAME.get(name);
+    final boolean hasUserFn = methodNames.contains(name) && env.has(name);
 
     if (builtInCandidates.isEmpty() && !hasUserFn) {
       // No postfix-eligible function found; fall back to field projection.
@@ -1681,7 +1681,7 @@ public class TypeResolver {
       isTuple = isPostfixBuiltInTuple(builtIn);
     } else {
       fnExp = ast.id(pos, name);
-      isTuple = selfFirstTupleNames.contains(name);
+      isTuple = methodTupleNames.contains(name);
     }
 
     // Desugar the postfix call to a regular application.
@@ -1869,7 +1869,7 @@ public class TypeResolver {
       TypeEnv env, Ast.PostfixApp postfixApp) {
     final String name = postfixApp.methodName;
     final ImmutableCollection<BuiltIn> candidates =
-        BuiltIn.BY_SELF_FIRST_NAME.get(name);
+        BuiltIn.BY_METHOD_NAME.get(name);
     if (candidates.isEmpty()) {
       return null;
     }
@@ -1903,10 +1903,10 @@ public class TypeResolver {
    *   <li>{@code Id(f) arg} — result type of function {@code f} in env.
    *   <li>{@code RecordSelector(field) Id(r)} — type of field {@code field} in
    *       the record type of {@code r}.
-   *   <li>{@code Apply(RecordSelector(name), Id(r)) arg} — result type of the
-   *       selfFirst built-in {@code name} applied to receiver {@code r}; used
-   *       when {@code r.name arg} was parsed as a field-projection chain due to
-   *       the {@code eIsId} guard in the parser.
+   *   <li>{@code Apply(RecordSelector(name), Id(r)) arg} — result type of
+   *       method {@code name} applied to receiver {@code r}; used when {@code
+   *       r.name arg} was parsed as a field-projection chain due to the {@code
+   *       eIsId} guard in the parser.
    * </ol>
    */
   private @Nullable String applyReceiverTypeHint(TypeEnv env, Ast.Apply apply) {
@@ -1931,13 +1931,13 @@ public class TypeResolver {
     if (apply.fn instanceof Ast.Apply) {
       // e.g. Apply(Apply(RecordSelector("drop"), Id("xs")), 2)
       // — the result of xs.drop 2 intercepted as a postfix call.
-      // Return the result type of the selfFirst built-in "drop" on xs.
+      // Return the result type of method "drop" on xs.
       final Ast.Apply innerApply = (Ast.Apply) apply.fn;
       if (innerApply.fn instanceof Ast.RecordSelector
           && innerApply.arg instanceof Ast.Id) {
         final String name = ((Ast.RecordSelector) innerApply.fn).name;
         final ImmutableCollection<BuiltIn> candidates =
-            BuiltIn.BY_SELF_FIRST_NAME.get(name);
+            BuiltIn.BY_METHOD_NAME.get(name);
         if (!candidates.isEmpty()) {
           final String innerHint = receiverTypeHint(env, innerApply.arg);
           if (innerHint == null && candidates.size() > 1) {
@@ -1990,8 +1990,7 @@ public class TypeResolver {
   }
 
   /**
-   * Returns the type-term operator of the receiver type for a {@code selfFirst}
-   * built-in function.
+   * Returns the type-term operator of the receiver type for a method.
    *
    * <p>For example, {@code List.length} has first-param type {@code list('a)},
    * so this returns "list"; {@code Bag.length} returns "bag"; {@code Int.abs}
@@ -2828,13 +2827,16 @@ public class TypeResolver {
     final List<Ast.ValBind> valBindList = new ArrayList<>();
     for (Ast.FunBind funBind : funDecl.funBinds) {
       valBindList.add(toValBind(env, funBind));
-      registerSelfFirst(funBind);
+      registerMethod(funBind);
     }
     return ast.valDecl(funDecl.pos, true, false, valBindList);
   }
 
-  /** Records whether a function's first parameter is named {@code self}. */
-  private void registerSelfFirst(Ast.FunBind funBind) {
+  /**
+   * Records whether a function is a method (first parameter named {@code
+   * self}).
+   */
+  private void registerMethod(Ast.FunBind funBind) {
     if (funBind.matchList.isEmpty()) {
       return;
     }
@@ -2844,15 +2846,15 @@ public class TypeResolver {
     }
     final Ast.Pat first = unwrapPat(patList.get(0));
     if (first instanceof Ast.IdPat && ((Ast.IdPat) first).name.equals("self")) {
-      selfFirstNames.add(funBind.name);
+      methodNames.add(funBind.name);
     } else if (first instanceof Ast.TuplePat) {
       final Ast.TuplePat tp = (Ast.TuplePat) first;
       if (!tp.args.isEmpty()) {
         final Ast.Pat firstTupleElem = unwrapPat(tp.args.get(0));
         if (firstTupleElem instanceof Ast.IdPat
             && ((Ast.IdPat) firstTupleElem).name.equals("self")) {
-          selfFirstNames.add(funBind.name);
-          selfFirstTupleNames.add(funBind.name);
+          methodNames.add(funBind.name);
+          methodTupleNames.add(funBind.name);
         }
       }
     }

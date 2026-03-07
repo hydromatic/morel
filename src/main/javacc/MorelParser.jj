@@ -832,7 +832,7 @@ Exp expression9() :
            - Blocked for uppercase-initial receivers (isModule), so that
              "Char.compare(...)" is not consumed as a postfix call.
            - For a bare-Id receiver, only fires when fieldName is a
-             known selfFirst built-in; otherwise "(arg)" belongs to
+             known method; otherwise "(arg)" belongs to
              expression8's application level (e.g. "p.adjacent(n-1)").
            - For non-Id receivers, always fires; atom() handles all three
              sub-forms: "()" unit, "(e)" single arg, "(e1,e2)" tuple.
@@ -852,7 +852,7 @@ Exp expression9() :
           isAtomStart()
           && !isModule(e)
           && (getToken(1).kind == LPAREN
-              ? !isId(e) || BuiltIn.BY_SELF_FIRST_NAME.containsKey(fieldName)
+              ? !isId(e) || BuiltIn.BY_METHOD_NAME.containsKey(fieldName)
               : !isId(e) && getToken(2).kind != DOT)
       })
       arg = atom()

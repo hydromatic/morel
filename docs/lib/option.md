@@ -93,13 +93,13 @@ otherwise, if `g(a)` is `SOME v`, returns `f(v)`.
 <a id="getOpt-impl"></a>
 <h3><code>getOpt</code></h3>
 
-`getOpt (opt, a)` returns `v` if `opt` is `SOME (v)`; otherwise
+`getOpt (opt, a)` (or `opt.getOpt a`) returns `v` if `opt` is `SOME (v)`; otherwise
 returns `a`.
 
 <a id="isSome-impl"></a>
 <h3><code>isSome</code></h3>
 
-`isSome opt` returns `true` if `opt` is `SOME v`; otherwise returns
+`isSome opt` (or `opt.isSome ()`) returns `true` if `opt` is `SOME v`; otherwise returns
 `false`.
 
 <a id="filter-impl"></a>
@@ -115,7 +115,7 @@ returns `a`.
 <a id="valOf-impl"></a>
 <h3><code>valOf</code></h3>
 
-`valOf opt` returns `v` if `opt` is `SOME v`, otherwise raises
+`valOf opt` (or `opt.valOf ()`) returns `v` if `opt` is `SOME v`, otherwise raises
 `Option`.
 
 [//]: # (end:lib/option)

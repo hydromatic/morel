@@ -170,36 +170,36 @@ same as `not (a >= b)`.
 <a id="abs-impl"></a>
 <h3><code>abs</code></h3>
 
-`abs r` returns the absolute value of `r`.
+`abs r` (or `r.abs ()`) returns the absolute value of `r`.
 
 <a id="ceil-impl"></a>
 <h3><code>ceil</code></h3>
 
-`floor r` produces `ceil(r)`, the smallest int not less than `r`.
+`ceil r` (or `r.ceil ()`) produces `ceil(r)`, the smallest int not less than `r`.
 
 <a id="checkFloat-impl"></a>
 <h3><code>checkFloat</code></h3>
 
-`checkFloat x` raises `Overflow` if x is an infinity, and raises `Div`
+`checkFloat x` (or `x.checkFloat ()`) raises `Overflow` if x is an infinity, and raises `Div`
 if x is NaN. Otherwise, it returns its argument.
 
 <a id="compare-impl"></a>
 <h3><code>compare</code></h3>
 
-`compare (x, y)` returns `LESS`, `EQUAL`, or `GREATER` according to
+`compare (x, y)` (or `x.compare y`) returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
 second. It raises `IEEEReal.Unordered` on unordered arguments.
 
 <a id="copySign-impl"></a>
 <h3><code>copySign</code></h3>
 
-`copySign (x, y)` returns `x` with the sign of `y`, even if `y` is
+`copySign (x, y)` (or `x.copySign y`) returns `x` with the sign of `y`, even if `y` is
 NaN.
 
 <a id="floor-impl"></a>
 <h3><code>floor</code></h3>
 
-`floor r` produces `floor(r)`, the largest int not larger than `r`.
+`floor r` (or `r.floor ()`) produces `floor(r)`, the largest int not larger than `r`.
 
 <a id="fromInt-impl"></a>
 <h3><code>fromInt</code></h3>
@@ -226,23 +226,23 @@ equivalent to `StringCvt.scanString scan`.
 <a id="isFinite-impl"></a>
 <h3><code>isFinite</code></h3>
 
-`isFinite x` returns true if x is neither NaN nor an infinity.
+`isFinite x` (or `x.isFinite ()`) returns true if x is neither NaN nor an infinity.
 
 <a id="isNan-impl"></a>
 <h3><code>isNan</code></h3>
 
-`isNan x` returns true if x NaN.
+`isNan x` (or `x.isNan ()`) returns true if x NaN.
 
 <a id="isNormal-impl"></a>
 <h3><code>isNormal</code></h3>
 
-`isNormal x` returns true if x is normal, i.e., neither zero,
+`isNormal x` (or `x.isNormal ()`) returns true if x is normal, i.e., neither zero,
 subnormal, infinite nor NaN.
 
 <a id="max-impl"></a>
 <h3><code>max</code></h3>
 
-`max (x, y)` returns the larger of the arguments. If exactly one
+`max (x, y)` (or `x.max y`) returns the larger of the arguments. If exactly one
 argument is NaN, returns the other argument. If both arguments are
 NaN, returns NaN.
 
@@ -254,7 +254,7 @@ NaN, returns NaN.
 <a id="min-impl"></a>
 <h3><code>min</code></h3>
 
-`min (x, y)` returns the smaller of the arguments. If exactly one
+`min (x, y)` (or `x.min y`) returns the smaller of the arguments. If exactly one
 argument is NaN, returns the other argument. If both arguments are
 NaN, returns NaN.
 
@@ -295,36 +295,36 @@ floating point.
 <a id="realCeil-impl"></a>
 <h3><code>realCeil</code></h3>
 
-`realCeil r` produces `ceil(r)`, the smallest integer not less than
+`realCeil r` (or `r.realCeil ()`) produces `ceil(r)`, the smallest integer not less than
 `r`.
 
 <a id="realFloor-impl"></a>
 <h3><code>realFloor</code></h3>
 
-`realFloor r` produces `floor(r)`, the largest integer not larger than
+`realFloor r` (or `r.realFloor ()`) produces `floor(r)`, the largest integer not larger than
 `r`.
 
 <a id="realMod-impl"></a>
 <h3><code>realMod</code></h3>
 
-`realMod r` returns the fractional parts of `r`; `realMod` is
+`realMod r` (or `r.realMod ()`) returns the fractional parts of `r`; `realMod` is
 equivalent to `#frac o split`.
 
 <a id="realRound-impl"></a>
 <h3><code>realRound</code></h3>
 
-`realRound r` rounds to the integer-valued real value that is nearest
+`realRound r` (or `r.realRound ()`) rounds to the integer-valued real value that is nearest
 to `r`. In the case of a tie, it rounds to the nearest even integer.
 
 <a id="realTrunc-impl"></a>
 <h3><code>realTrunc</code></h3>
 
-`realTrunc r` rounds `r` towards zero.
+`realTrunc r` (or `r.realTrunc ()`) rounds `r` towards zero.
 
 <a id="rem-impl"></a>
 <h3><code>rem</code></h3>
 
-`rem (x, y)` returns the remainder `x - n * y`, where `n` = `trunc (x
+`rem (x, y)` (or `x.rem y`) returns the remainder `x - n * y`, where `n` = `trunc (x
 / y)`. The result has the same sign as `x` and has absolute value less
 than the absolute value of `y`. If `x` is an infinity or `y` is 0,
 `rem` returns NaN. If `y` is an infinity, rem returns `x`.
@@ -332,56 +332,56 @@ than the absolute value of `y`. If `x` is an infinity or `y` is 0,
 <a id="round-impl"></a>
 <h3><code>round</code></h3>
 
-`round r` yields the integer nearest to `r`. In the case of a tie, it
+`round r` (or `r.round ()`) yields the integer nearest to `r`. In the case of a tie, it
 rounds to the nearest even integer.
 
 <a id="sameSign-impl"></a>
 <h3><code>sameSign</code></h3>
 
-`sameSign (r1, r2)` returns true if and only if `signBit r1` equals
+`sameSign (r1, r2)` (or `r1.sameSign r2`) returns true if and only if `signBit r1` equals
 `signBit r2`.
 
 <a id="sign-impl"></a>
 <h3><code>sign</code></h3>
 
-`sign r` returns ~1 if r is negative, 0 if r is zero, or 1 if r is
+`sign r` (or `r.sign ()`) returns ~1 if r is negative, 0 if r is zero, or 1 if r is
 positive. An infinity returns its sign; a zero returns 0 regardless of
 its sign. It raises `Domain` on NaN.
 
 <a id="signBit-impl"></a>
 <h3><code>signBit</code></h3>
 
-`signBit r` returns true if and only if the sign of `r` (infinities,
+`signBit r` (or `r.signBit ()`) returns true if and only if the sign of `r` (infinities,
 zeros, and NaN, included) is negative.
 
 <a id="split-impl"></a>
 <h3><code>split</code></h3>
 
-`split r` returns `{frac, whole}`, where `frac` and `whole` are the
+`split r` (or `r.split ()`) returns `{frac, whole}`, where `frac` and `whole` are the
 fractional and integral parts of `r`, respectively. Specifically,
 `whole` is integral, and `abs frac` < 1.0.
 
 <a id="trunc-impl"></a>
 <h3><code>trunc</code></h3>
 
-`trunc r` rounds r towards zero.
+`trunc r` (or `r.trunc ()`) rounds r towards zero.
 
 <a id="toManExp-impl"></a>
 <h3><code>toManExp</code></h3>
 
-`toManExp r` returns `{man, exp}`, where `man` and `exp` are the
+`toManExp r` (or `r.toManExp ()`) returns `{man, exp}`, where `man` and `exp` are the
 mantissa and exponent of r, respectively.
 
 <a id="toString-impl"></a>
 <h3><code>toString</code></h3>
 
-`toString r` converts a `real` into a `string`; equivalent to `(fmt
+`toString r` (or `r.toString ()`) converts a `real` into a `string`; equivalent to `(fmt
 (StringCvt.GEN NONE) r)`
 
 <a id="unordered-impl"></a>
 <h3><code>unordered</code></h3>
 
-`unordered (x, y)` returns true if x and y are unordered, i.e., at
+`unordered (x, y)` (or `x.unordered y`) returns true if x and y are unordered, i.e., at
 least one of x and y is NaN.
 
 <a id="!=-impl"></a>
