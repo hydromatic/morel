@@ -25,12 +25,15 @@ import static net.hydromatic.morel.TestUtils.urlToFile;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.PatternFilenameFilter;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.Comparator;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
@@ -40,6 +43,19 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /** Test that runs files and checks the results. */
 public class ScriptTest {
+  /** The slowest tests in the system and how many seconds they take to run. */
+  private static final Map<String, Integer> TEST_TIMINGS =
+      ImmutableMap.<String, Integer>builder()
+          .put("script/wordle.smli", 44)
+          .put("script/built-in.smli", 5)
+          .put("script/blog.smli", 20)
+          .put("script/pretty.smli", 14)
+          .put("script/such-that.smli", 16)
+          .put("script/hybrid.smli", 18)
+          .put("script/foreign.smli", 13)
+          .put("script/logic.smli", 15)
+          .build();
+
   public ScriptTest() {}
 
   /** For {@link ParameterizedTest} runner. */
@@ -107,10 +123,21 @@ public class ScriptTest {
     final FilenameFilter filter = new PatternFilenameFilter(".*\\.(sml|smli)$");
     File[] files = dir.listFiles(filter);
     return Stream.of(first(files, new File[0]))
-        .map(
-            f ->
-                Arguments.of(
-                    f.getAbsolutePath().substring(commonPrefixLength)));
+        .map(f -> f.getAbsolutePath().substring(commonPrefixLength))
+        .sorted(
+            Comparator.comparingInt(ScriptTest::slowPriority)
+                .thenComparing(Comparator.naturalOrder()))
+        .map(Arguments::of);
+  }
+
+  /**
+   * Returns a large negative integer if {@code testPath} is a slow test, a
+   * small negative integer if it is faster, and zero if its running time is
+   * negligible. Sorting by these integers puts the slow tests first, which
+   * minimizes the time for the whole suite when run in parallel.
+   */
+  private static int slowPriority(String testPath) {
+    return -TEST_TIMINGS.getOrDefault(testPath, 0);
   }
 
   @Test
