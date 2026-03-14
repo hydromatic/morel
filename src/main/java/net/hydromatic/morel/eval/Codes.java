@@ -35,7 +35,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
+import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +52,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -540,6 +548,262 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#DATE_COMPARE */
+  private static final Applicable DATE_COMPARE =
+      new BaseApplicable2<List, OffsetDateTime, OffsetDateTime>(
+          BuiltIn.DATE_COMPARE) {
+        @Override
+        public List apply(OffsetDateTime d1, OffsetDateTime d2) {
+          return order(d1.toInstant().compareTo(d2.toInstant()));
+        }
+      };
+
+  /** @see BuiltIn#DATE_DATE */
+  private static final Applicable DATE_DATE = new DateDate(Pos.ZERO);
+
+  /** Implements {@link #DATE_DATE}. */
+  private static class DateDate
+      extends BasePositionedApplicable1<OffsetDateTime, List> {
+    DateDate(Pos pos) {
+      super(BuiltIn.DATE_DATE, pos);
+    }
+
+    @Override
+    public DateDate withPos(Pos pos) {
+      return new DateDate(pos);
+    }
+
+    @Override
+    public Object apply(EvalEnv env, Object arg) {
+      return apply((List) arg, sessionZone(env.getSession()));
+    }
+
+    @Override
+    public OffsetDateTime apply(List r) {
+      return apply(r, ZoneId.systemDefault());
+    }
+
+    private OffsetDateTime apply(List r, ZoneId defaultZone) {
+      // Record fields in alphabetical order:
+      // day, hour, minute, month, offset, second, year
+      final int day = (Integer) r.get(0);
+      final int hour = (Integer) r.get(1);
+      final int minute = (Integer) r.get(2);
+      final List monthVal = (List) r.get(3);
+      final List offsetOpt = (List) r.get(4);
+      final int second = (Integer) r.get(5);
+      final int year = (Integer) r.get(6);
+      final Month month = dateMonthFromName((String) monthVal.get(0));
+      try {
+        final LocalDateTime ldt =
+            LocalDateTime.of(
+                year, month.getValue(), day, hour, minute, second, 0);
+        final ZoneOffset zone;
+        if (offsetOpt.size() == 2) {
+          final long offsetNanos = (Long) offsetOpt.get(1);
+          zone =
+              ZoneOffset.ofTotalSeconds((int) (offsetNanos / 1_000_000_000L));
+        } else {
+          zone = defaultZone.getRules().getOffset(ldt);
+        }
+        return OffsetDateTime.of(ldt, zone);
+      } catch (DateTimeException e) {
+        throw new MorelRuntimeException(BuiltInExn.DATE, pos);
+      }
+    }
+  }
+
+  /** @see BuiltIn#DATE_DAY */
+  private static final Applicable DATE_DAY =
+      new BaseApplicable1<Integer, OffsetDateTime>(BuiltIn.DATE_DAY) {
+        @Override
+        public Integer apply(OffsetDateTime d) {
+          return d.getDayOfMonth();
+        }
+      };
+
+  /** @see BuiltIn#DATE_FMT */
+  private static final Applicable DATE_FMT =
+      new BaseApplicable1<Applicable, String>(BuiltIn.DATE_FMT) {
+        @Override
+        public Applicable apply(String fmt) {
+          return new BaseApplicable1<String, OffsetDateTime>(BuiltIn.DATE_FMT) {
+            @Override
+            public String apply(OffsetDateTime d) {
+              return dateFmt(fmt, d);
+            }
+          };
+        }
+      };
+
+  /** @see BuiltIn#DATE_FROM_STRING */
+  private static final Applicable DATE_FROM_STRING =
+      new BaseApplicable1<List, String>(BuiltIn.DATE_FROM_STRING) {
+        @Override
+        public List apply(String s) {
+          try {
+            return optionSome(parseAscTime(s));
+          } catch (Exception e) {
+            return OPTION_NONE;
+          }
+        }
+      };
+
+  /** @see BuiltIn#DATE_FROM_TIME_LOCAL */
+  private static final Applicable DATE_FROM_TIME_LOCAL =
+      new ApplicableImpl(BuiltIn.DATE_FROM_TIME_LOCAL) {
+        @Override
+        public Object apply(EvalEnv env, Object arg) {
+          return timeToDate((Long) arg, sessionZone(env.getSession()));
+        }
+      };
+
+  /** @see BuiltIn#DATE_FROM_TIME_UNIV */
+  private static final Applicable DATE_FROM_TIME_UNIV =
+      new BaseApplicable1<OffsetDateTime, Long>(BuiltIn.DATE_FROM_TIME_UNIV) {
+        @Override
+        public OffsetDateTime apply(Long t) {
+          return timeToDate(t, ZoneOffset.UTC);
+        }
+      };
+
+  /** @see BuiltIn#DATE_HOUR */
+  private static final Applicable DATE_HOUR =
+      new BaseApplicable1<Integer, OffsetDateTime>(BuiltIn.DATE_HOUR) {
+        @Override
+        public Integer apply(OffsetDateTime d) {
+          return d.getHour();
+        }
+      };
+
+  /** @see BuiltIn#DATE_IS_DST */
+  private static final Applicable DATE_IS_DST =
+      new BaseApplicable1<List, OffsetDateTime>(BuiltIn.DATE_IS_DST) {
+        @Override
+        public List apply(OffsetDateTime d) {
+          return OPTION_NONE; // OffsetDateTime does not carry DST information
+        }
+      };
+
+  /** @see BuiltIn#DATE_LOCAL_OFFSET */
+  private static final ApplicableImpl DATE_LOCAL_OFFSET =
+      new ApplicableImpl(BuiltIn.DATE_LOCAL_OFFSET) {
+        @Override
+        public Long apply(EvalEnv env, Object arg) {
+          final Session session = env.getSession();
+          final int totalSeconds =
+              sessionZone(session)
+                  .getRules()
+                  .getOffset(sessionNow(session))
+                  .getTotalSeconds();
+          return (long) totalSeconds * 1_000_000_000L;
+        }
+      };
+
+  /** @see BuiltIn#DATE_MINUTE */
+  private static final Applicable DATE_MINUTE =
+      new BaseApplicable1<Integer, OffsetDateTime>(BuiltIn.DATE_MINUTE) {
+        @Override
+        public Integer apply(OffsetDateTime d) {
+          return d.getMinute();
+        }
+      };
+
+  /** @see BuiltIn#DATE_MONTH_FN */
+  private static final Applicable DATE_MONTH_FN =
+      new BaseApplicable1<List, OffsetDateTime>(BuiltIn.DATE_MONTH_FN) {
+        @Override
+        public List apply(OffsetDateTime d) {
+          return DATE_MONTHS.get(d.getMonthValue() - 1);
+        }
+      };
+
+  /**
+   * Month values for {@link BuiltIn#DATE_MONTH_FN}, indexed Jan(0)..Dec(11).
+   */
+  private static final List<List<String>> DATE_MONTHS =
+      transformEager(
+          BuiltIn.Datatype.DATE_MONTH.constructors(),
+          c -> ImmutableList.of(c.constructor));
+
+  /** @see BuiltIn#DATE_SECOND */
+  private static final Applicable DATE_SECOND =
+      new BaseApplicable1<Integer, OffsetDateTime>(BuiltIn.DATE_SECOND) {
+        @Override
+        public Integer apply(OffsetDateTime d) {
+          return d.getSecond();
+        }
+      };
+
+  /** @see BuiltIn#DATE_TO_STRING */
+  private static final Applicable DATE_TO_STRING =
+      new BaseApplicable1<String, OffsetDateTime>(BuiltIn.DATE_TO_STRING) {
+        @Override
+        public String apply(OffsetDateTime d) {
+          return dateToString(d);
+        }
+      };
+
+  /** @see BuiltIn#DATE_TO_TIME */
+  private static final Applicable DATE_TO_TIME =
+      new BaseApplicable1<Long, OffsetDateTime>(BuiltIn.DATE_TO_TIME) {
+        @Override
+        public Long apply(OffsetDateTime d) {
+          final Instant inst = d.toInstant();
+          return inst.getEpochSecond() * 1_000_000_000L + inst.getNano();
+        }
+      };
+
+  /** @see BuiltIn#DATE_WEEK_DAY */
+  private static final Applicable DATE_WEEK_DAY =
+      new BaseApplicable1<List, OffsetDateTime>(BuiltIn.DATE_WEEK_DAY) {
+        @Override
+        public List apply(OffsetDateTime d) {
+          return DATE_WEEKDAYS.get(d.getDayOfWeek().getValue() - 1);
+        }
+      };
+
+  /**
+   * Weekday values for {@link BuiltIn#DATE_WEEK_DAY}, indexed Mon(0)..Sun(6).
+   */
+  private static final List<List<String>> DATE_WEEKDAYS =
+      transformEager(
+          BuiltIn.Datatype.DATE_WEEKDAY.constructors(),
+          c -> ImmutableList.of(c.constructor));
+
+  /** @see BuiltIn#DATE_YEAR */
+  private static final Applicable DATE_YEAR =
+      new BaseApplicable1<Integer, OffsetDateTime>(BuiltIn.DATE_YEAR) {
+        @Override
+        public Integer apply(OffsetDateTime d) {
+          return d.getYear();
+        }
+      };
+
+  /** @see BuiltIn#DATE_YEAR_DAY */
+  private static final Applicable DATE_YEAR_DAY =
+      new BaseApplicable1<Integer, OffsetDateTime>(BuiltIn.DATE_YEAR_DAY) {
+        @Override
+        public Integer apply(OffsetDateTime d) {
+          return d.getDayOfYear() - 1; // 0-based in SML
+        }
+      };
+
+  /** Converts a nanosecond time value to an {@link OffsetDateTime}. */
+  private static OffsetDateTime timeToDate(long t, ZoneId zone) {
+    return OffsetDateTime.ofInstant(
+        Instant.ofEpochSecond(t / 1_000_000_000L, t % 1_000_000_000L), zone);
+  }
+
+  /**
+   * Returns the local timezone from the session's {@code timeZone} property, or
+   * the JVM default if the property is not set.
+   */
+  private static ZoneId sessionZone(Session session) {
+    final String zoneId = (String) Prop.TIME_ZONE.get(session.map);
+    return zoneId != null ? ZoneId.of(zoneId) : ZoneId.systemDefault();
+  }
+
   /**
    * Returns the current instant from the session's {@code now} property, or
    * {@link Instant#now()} if the property is not set.
@@ -547,6 +811,160 @@ public abstract class Codes {
   private static Instant sessionNow(Session session) {
     final String now = (String) Prop.NOW.get(session.map);
     return now != null ? Instant.parse(now) : Instant.now();
+  }
+
+  /** Converts a month constructor name (e.g., "Jan") to a {@link Month}. */
+  private static Month dateMonthFromName(String name) {
+    switch (name) {
+      case "Jan":
+        return Month.JANUARY;
+      case "Feb":
+        return Month.FEBRUARY;
+      case "Mar":
+        return Month.MARCH;
+      case "Apr":
+        return Month.APRIL;
+      case "May":
+        return Month.MAY;
+      case "Jun":
+        return Month.JUNE;
+      case "Jul":
+        return Month.JULY;
+      case "Aug":
+        return Month.AUGUST;
+      case "Sep":
+        return Month.SEPTEMBER;
+      case "Oct":
+        return Month.OCTOBER;
+      case "Nov":
+        return Month.NOVEMBER;
+      case "Dec":
+        return Month.DECEMBER;
+      default:
+        throw new AssertionError(name);
+    }
+  }
+
+  /**
+   * Formats an {@link OffsetDateTime} using an SML {@code strftime}-style
+   * format string.
+   */
+  private static String dateFmt(String fmt, OffsetDateTime d) {
+    final StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < fmt.length(); i++) {
+      final char c = fmt.charAt(i);
+      if (c == '%' && i + 1 < fmt.length()) {
+        final char code = fmt.charAt(++i);
+        switch (code) {
+          case 'a':
+            sb.append(d.format(Formatters.EEE));
+            break;
+          case 'A':
+            sb.append(d.format(Formatters.EEEE));
+            break;
+          case 'b':
+          case 'h':
+            sb.append(d.format(Formatters.MMM));
+            break;
+          case 'B':
+            sb.append(d.format(Formatters.MMMM));
+            break;
+          case 'c':
+            sb.append(dateToString(d));
+            break;
+          case 'd':
+            sb.append(format("%02d", d.getDayOfMonth()));
+            break;
+          case 'e':
+            sb.append(format("%2d", d.getDayOfMonth()));
+            break;
+          case 'H':
+            sb.append(format("%02d", d.getHour()));
+            break;
+          case 'I':
+            sb.append(format("%02d", ((d.getHour() - 1 + 12) % 12) + 1));
+            break;
+          case 'j':
+            sb.append(format("%03d", d.getDayOfYear()));
+            break;
+          case 'm':
+            sb.append(format("%02d", d.getMonthValue()));
+            break;
+          case 'M':
+            sb.append(format("%02d", d.getMinute()));
+            break;
+          case 'n':
+            sb.append('\n');
+            break;
+          case 'p':
+            sb.append(d.getHour() < 12 ? "AM" : "PM");
+            break;
+          case 'S':
+            sb.append(format("%02d", d.getSecond()));
+            break;
+          case 't':
+            sb.append('\t');
+            break;
+          case 'w':
+            sb.append(d.getDayOfWeek().getValue() % 7); // 0=Sun, 6=Sat
+            break;
+          case 'y':
+            sb.append(format("%02d", d.getYear() % 100));
+            break;
+          case 'Y':
+            sb.append(format("%04d", d.getYear()));
+            break;
+          case 'Z':
+            sb.append(d.getOffset().getId());
+            break;
+          case '%':
+            sb.append('%');
+            break;
+          default:
+            sb.append('%').append(code);
+        }
+      } else {
+        sb.append(c);
+      }
+    }
+    return sb.toString();
+  }
+
+  /**
+   * Formats an {@link OffsetDateTime} as "Www Mmm DD HH:MM:SS YYYY", the format
+   * used by SML's {@code Date.toString}.
+   */
+  private static String dateToString(OffsetDateTime d) {
+    return format(
+        Locale.ROOT,
+        "%s %s %2d %02d:%02d:%02d %4d",
+        d.format(Formatters.EEE),
+        d.format(Formatters.MMM),
+        d.getDayOfMonth(),
+        d.getHour(),
+        d.getMinute(),
+        d.getSecond(),
+        d.getYear());
+  }
+
+  /**
+   * Parses an asctime-format date string (e.g., "Thu Jan 1 00:00:00 1970") into
+   * an {@link OffsetDateTime} in UTC.
+   */
+  private static OffsetDateTime parseAscTime(String s) {
+    final String[] parts = s.trim().split("\\s+");
+    if (parts.length != 5) {
+      throw new IllegalArgumentException(s);
+    }
+    final Month month = dateMonthFromName(parts[1]);
+    final int day = Integer.parseInt(parts[2]);
+    final String[] timeParts = parts[3].split(":");
+    final int hour = Integer.parseInt(timeParts[0]);
+    final int minute = Integer.parseInt(timeParts[1]);
+    final int second = Integer.parseInt(timeParts[2]);
+    final int year = Integer.parseInt(parts[4]);
+    return OffsetDateTime.of(
+        year, month.getValue(), day, hour, minute, second, 0, ZoneOffset.UTC);
   }
 
   /** Returns whether an {@code either} value is a left value. */
@@ -4617,6 +5035,24 @@ public abstract class Codes {
           .put(BuiltIn.DATALOG_EXECUTE, DATALOG_EXECUTE)
           .put(BuiltIn.DATALOG_TRANSLATE, DATALOG_TRANSLATE)
           .put(BuiltIn.DATALOG_VALIDATE, DATALOG_VALIDATE)
+          .put(BuiltIn.DATE_COMPARE, DATE_COMPARE)
+          .put(BuiltIn.DATE_DATE, DATE_DATE)
+          .put(BuiltIn.DATE_DAY, DATE_DAY)
+          .put(BuiltIn.DATE_FMT, DATE_FMT)
+          .put(BuiltIn.DATE_FROM_STRING, DATE_FROM_STRING)
+          .put(BuiltIn.DATE_FROM_TIME_LOCAL, DATE_FROM_TIME_LOCAL)
+          .put(BuiltIn.DATE_FROM_TIME_UNIV, DATE_FROM_TIME_UNIV)
+          .put(BuiltIn.DATE_HOUR, DATE_HOUR)
+          .put(BuiltIn.DATE_IS_DST, DATE_IS_DST)
+          .put(BuiltIn.DATE_LOCAL_OFFSET, DATE_LOCAL_OFFSET)
+          .put(BuiltIn.DATE_MINUTE, DATE_MINUTE)
+          .put(BuiltIn.DATE_MONTH_FN, DATE_MONTH_FN)
+          .put(BuiltIn.DATE_SECOND, DATE_SECOND)
+          .put(BuiltIn.DATE_TO_STRING, DATE_TO_STRING)
+          .put(BuiltIn.DATE_TO_TIME, DATE_TO_TIME)
+          .put(BuiltIn.DATE_WEEK_DAY, DATE_WEEK_DAY)
+          .put(BuiltIn.DATE_YEAR, DATE_YEAR)
+          .put(BuiltIn.DATE_YEAR_DAY, DATE_YEAR_DAY)
           .put(BuiltIn.EITHER_APP, EITHER_APP)
           .put(BuiltIn.EITHER_APP_LEFT, EITHER_APP_LEFT)
           .put(BuiltIn.EITHER_APP_RIGHT, EITHER_APP_RIGHT)
@@ -5097,6 +5533,7 @@ public abstract class Codes {
     // lint: sort until '##public ' where '##[A-Z]'
     BIND("General", "Bind", null),
     CHR("General", "Chr", null),
+    DATE("Date", "Date", null),
     DIV("General", "Div", null),
     DOMAIN("General", "Domain", null),
     EMPTY("List", "Empty", null),
@@ -5983,6 +6420,17 @@ public abstract class Codes {
     public Describer describe(Describer describer) {
       return parent.describe(describer);
     }
+  }
+
+  static class Formatters {
+    static final DateTimeFormatter EEE =
+        DateTimeFormatter.ofPattern("EEE", Locale.ROOT);
+    static final DateTimeFormatter EEEE =
+        DateTimeFormatter.ofPattern("EEEE", Locale.ROOT);
+    static final DateTimeFormatter MMM =
+        DateTimeFormatter.ofPattern("MMM", Locale.ROOT);
+    static final DateTimeFormatter MMMM =
+        DateTimeFormatter.ofPattern("MMMM", Locale.ROOT);
   }
 }
 

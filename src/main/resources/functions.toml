@@ -940,6 +940,255 @@ validates a Datalog program and returns type information or error
 message.
 """
 
+# === Date structure =================================================
+
+[[structures]]
+name = "Date"
+specified = "basis"
+description = "Calendar date and time values."
+overview = """
+The `Date` structure provides an abstract type for calendar dates and
+times, with fields for year, month, day, hour, minute, and second. Dates
+can be constructed from `Time.time` values, decomposed into fields,
+formatted as strings, and compared.
+"""
+
+[[exceptions]]
+structure = "Date"
+name = "Date"
+description = """
+is raised when a date cannot be constructed from the given fields
+(for example, if the day or month is out of range).
+"""
+
+[[functions]]
+structure = "Date"
+name = "compare"
+specified = "basis"
+type = "date * date → order"
+prototype = "compare (d1, d2)"
+method = true
+description = """
+returns `LESS`, `EQUAL`, or `GREATER` depending on whether `d1` is less
+than, equal to, or greater than `d2` (comparing instants in time).
+"""
+
+[[functions]]
+structure = "Date"
+name = "date"
+specified = "basis"
+type = "{day:int, hour:int, minute:int, month:month, offset:time option, second:int, year:int} → date"
+prototype = "date {year, month, day, hour, minute, second, offset}"
+description = """
+constructs a date from the given fields. If `offset` is `NONE`, the date
+is in local time; if `SOME t`, the date is in the timezone with offset `t`
+from UTC.
+"""
+
+[[types]]
+structure = "Date"
+name = "date"
+type = "eqtype date"
+description = """
+is an equality type representing a calendar date and time of day,
+with an associated timezone offset.
+"""
+
+[[functions]]
+structure = "Date"
+name = "day"
+specified = "basis"
+type = "date → int"
+prototype = "day d"
+method = true
+description = """
+returns the day of the month of `d`, in the range `[1, 31]`.
+"""
+
+[[functions]]
+structure = "Date"
+name = "fmt"
+specified = "basis"
+type = "string → date → string"
+prototype = "fmt s d"
+description = """
+formats `d` using the strftime-style format string `s`. Recognized
+format codes include `%Y` (4-digit year), `%m` (2-digit month),
+`%d` (2-digit day), `%H` (hour), `%M` (minute), `%S` (second),
+`%a` (abbreviated weekday), `%b` (abbreviated month), and `%%` (literal `%`).
+"""
+
+[[functions]]
+structure = "Date"
+name = "fromString"
+specified = "basis"
+type = "string → date option"
+prototype = "fromString s"
+description = """
+parses a date from the string `s`, which should be in the format
+produced by `toString` (e.g., `"Thu Jan  1 00:00:00 1970"`).
+Returns `SOME d` if successful, `NONE` otherwise.
+"""
+
+[[functions]]
+structure = "Date"
+name = "fromTimeLocal"
+specified = "basis"
+type = "time → date"
+prototype = "fromTimeLocal t"
+description = """
+converts the time value `t` to a date in the local timezone.
+"""
+
+[[functions]]
+structure = "Date"
+name = "fromTimeUniv"
+specified = "basis"
+type = "time → date"
+prototype = "fromTimeUniv t"
+description = """
+converts the time value `t` to a date in UTC.
+"""
+
+[[functions]]
+structure = "Date"
+name = "hour"
+specified = "basis"
+type = "date → int"
+prototype = "hour d"
+method = true
+description = """
+returns the hour of `d`, in the range `[0, 23]`.
+"""
+
+[[functions]]
+structure = "Date"
+name = "isDst"
+specified = "basis"
+type = "date → bool option"
+prototype = "isDst d"
+method = true
+description = """
+returns `SOME true` if `d` is in daylight saving time, `SOME false` if
+not, or `NONE` if the information is not available.
+"""
+
+[[functions]]
+structure = "Date"
+name = "localOffset"
+specified = "basis"
+type = "unit → time"
+prototype = "localOffset ()"
+description = """
+returns the offset of the local timezone from UTC as a `time` value
+(nanoseconds).
+"""
+
+[[functions]]
+structure = "Date"
+name = "minute"
+specified = "basis"
+type = "date → int"
+prototype = "minute d"
+method = true
+description = """
+returns the minute of `d`, in the range `[0, 59]`.
+"""
+
+[[functions]]
+structure = "Date"
+name = "month"
+specified = "basis"
+type = "date → month"
+prototype = "month d"
+method = true
+description = """
+returns the month of `d`.
+"""
+
+[[types]]
+structure = "Date"
+name = "month"
+type = "datatype month = Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec"
+description = """
+is the type of month values.
+"""
+
+[[functions]]
+structure = "Date"
+name = "second"
+specified = "basis"
+type = "date → int"
+prototype = "second d"
+method = true
+description = """
+returns the second of `d`, in the range `[0, 59]`.
+"""
+
+[[functions]]
+structure = "Date"
+name = "toString"
+specified = "basis"
+type = "date → string"
+prototype = "toString d"
+method = true
+description = """
+formats `d` as a string in the format `"Www Mmm DD HH:MM:SS YYYY"`,
+for example `"Thu Jan  1 00:00:00 1970"`.
+"""
+
+[[functions]]
+structure = "Date"
+name = "toTime"
+specified = "basis"
+type = "date → time"
+prototype = "toTime d"
+method = true
+description = """
+converts `d` to a `time` value (nanoseconds since the Unix epoch).
+"""
+
+[[functions]]
+structure = "Date"
+name = "weekDay"
+specified = "basis"
+type = "date → weekday"
+prototype = "weekDay d"
+method = true
+description = """
+returns the day of the week of `d`.
+"""
+
+[[types]]
+structure = "Date"
+name = "weekday"
+type = "datatype weekday = Mon | Tue | Wed | Thu | Fri | Sat | Sun"
+description = """
+is the type of weekday values.
+"""
+
+[[functions]]
+structure = "Date"
+name = "year"
+specified = "basis"
+type = "date → int"
+prototype = "year d"
+method = true
+description = """
+returns the year of `d`.
+"""
+
+[[functions]]
+structure = "Date"
+name = "yearDay"
+specified = "basis"
+type = "date → int"
+prototype = "yearDay d"
+method = true
+description = """
+returns the day of the year of `d`, in the range `[0, 365]`.
+"""
+
 # === Either structure ===============================================
 # The Either structure provides a polymorphic disjoint-sum type with
 # associated operations.

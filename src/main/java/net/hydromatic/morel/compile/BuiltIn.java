@@ -951,6 +951,132 @@ public enum BuiltIn {
    */
   DATALOG_VALIDATE("Datalog", "validate", ts -> ts.fnType(STRING, STRING)),
 
+  /** Function "Date.compare", of type "date * date &rarr; order". */
+  DATE_COMPARE(
+      "Date",
+      "compare",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(ts.lookup(Eqtype.DATE), ts.lookup(Eqtype.DATE)),
+              ts.order())),
+
+  /**
+   * Function "Date.date", of type "{day:int, hour:int, minute:int, month:month,
+   * offset:time option, second:int, year:int} &rarr; date".
+   */
+  DATE_DATE(
+      "Date",
+      "date",
+      ts ->
+          ts.fnType(
+              ts.recordType(
+                  RecordType.map(
+                      "day",
+                      INT,
+                      "hour",
+                      INT,
+                      "minute",
+                      INT,
+                      "month",
+                      ts.lookup(Datatype.DATE_MONTH),
+                      "offset",
+                      ts.option(ts.lookup(Eqtype.TIME)),
+                      "second",
+                      INT,
+                      "year",
+                      INT)),
+              ts.lookup(Eqtype.DATE))),
+
+  /** Function "Date.day", of type "date &rarr; int". */
+  DATE_DAY("Date", "day", true, ts -> ts.fnType(ts.lookup(Eqtype.DATE), INT)),
+
+  /** Function "Date.fmt", of type "string &rarr; date &rarr; string". */
+  DATE_FMT(
+      "Date",
+      "fmt",
+      ts -> ts.fnType(STRING, ts.fnType(ts.lookup(Eqtype.DATE), STRING))),
+
+  /** Function "Date.fromString", of type "string &rarr; date option". */
+  DATE_FROM_STRING(
+      "Date",
+      "fromString",
+      ts -> ts.fnType(STRING, ts.option(ts.lookup(Eqtype.DATE)))),
+
+  /** Function "Date.fromTimeLocal", of type "time &rarr; date". */
+  DATE_FROM_TIME_LOCAL(
+      "Date",
+      "fromTimeLocal",
+      ts -> ts.fnType(ts.lookup(Eqtype.TIME), ts.lookup(Eqtype.DATE))),
+
+  /** Function "Date.fromTimeUniv", of type "time &rarr; date". */
+  DATE_FROM_TIME_UNIV(
+      "Date",
+      "fromTimeUniv",
+      ts -> ts.fnType(ts.lookup(Eqtype.TIME), ts.lookup(Eqtype.DATE))),
+
+  /** Function "Date.hour", of type "date &rarr; int". */
+  DATE_HOUR("Date", "hour", true, ts -> ts.fnType(ts.lookup(Eqtype.DATE), INT)),
+
+  /** Function "Date.isDst", of type "date &rarr; bool option". */
+  DATE_IS_DST(
+      "Date",
+      "isDst",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DATE), ts.option(BOOL))),
+
+  /** Function "Date.localOffset", of type "unit &rarr; time". */
+  DATE_LOCAL_OFFSET(
+      "Date", "localOffset", ts -> ts.fnType(UNIT, ts.lookup(Eqtype.TIME))),
+
+  /** Function "Date.minute", of type "date &rarr; int". */
+  DATE_MINUTE(
+      "Date", "minute", true, ts -> ts.fnType(ts.lookup(Eqtype.DATE), INT)),
+
+  /**
+   * Function "Date.month", of type "date &rarr; month".
+   *
+   * <p>Named DATE_MONTH_FN to avoid clashing with {@link Datatype#DATE_MONTH}.
+   */
+  DATE_MONTH_FN(
+      "Date",
+      "month",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DATE), ts.lookup(Datatype.DATE_MONTH))),
+
+  /** Function "Date.second", of type "date &rarr; int". */
+  DATE_SECOND(
+      "Date", "second", true, ts -> ts.fnType(ts.lookup(Eqtype.DATE), INT)),
+
+  /** Function "Date.toString", of type "date &rarr; string". */
+  DATE_TO_STRING(
+      "Date",
+      "toString",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DATE), STRING)),
+
+  /** Function "Date.toTime", of type "date &rarr; time". */
+  DATE_TO_TIME(
+      "Date",
+      "toTime",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.DATE), ts.lookup(Eqtype.TIME))),
+
+  /** Function "Date.weekDay", of type "date &rarr; weekday". */
+  DATE_WEEK_DAY(
+      "Date",
+      "weekDay",
+      true,
+      ts ->
+          ts.fnType(ts.lookup(Eqtype.DATE), ts.lookup(Datatype.DATE_WEEKDAY))),
+
+  /** Function "Date.year", of type "date &rarr; int". */
+  DATE_YEAR("Date", "year", true, ts -> ts.fnType(ts.lookup(Eqtype.DATE), INT)),
+
+  /** Function "Date.yearDay", of type "date &rarr; int". */
+  DATE_YEAR_DAY(
+      "Date", "yearDay", true, ts -> ts.fnType(ts.lookup(Eqtype.DATE), INT)),
+
   /**
    * Function "Either.app", of type "(&alpha; &rarr; unit) * (&beta; &rarr;
    * unit) * (&alpha;, &beta;) either &rarr; unit".
@@ -4441,6 +4567,10 @@ public enum BuiltIn {
     default boolean isInternal() {
       return false;
     }
+
+    default List<Constructor> constructors() {
+      return ImmutableList.of();
+    }
   }
 
   /**
@@ -4466,6 +4596,39 @@ public enum BuiltIn {
    */
   public enum Datatype implements BuiltInType {
     // lint: sort until '##private ' where '##[A-Z]'
+
+    DATE_MONTH(
+        "Date",
+        "month",
+        false,
+        0,
+        h ->
+            h.tyCon(Constructor.DATE_MONTH_JAN)
+                .tyCon(Constructor.DATE_MONTH_FEB)
+                .tyCon(Constructor.DATE_MONTH_MAR)
+                .tyCon(Constructor.DATE_MONTH_APR)
+                .tyCon(Constructor.DATE_MONTH_MAY)
+                .tyCon(Constructor.DATE_MONTH_JUN)
+                .tyCon(Constructor.DATE_MONTH_JUL)
+                .tyCon(Constructor.DATE_MONTH_AUG)
+                .tyCon(Constructor.DATE_MONTH_SEP)
+                .tyCon(Constructor.DATE_MONTH_OCT)
+                .tyCon(Constructor.DATE_MONTH_NOV)
+                .tyCon(Constructor.DATE_MONTH_DEC)),
+
+    DATE_WEEKDAY(
+        "Date",
+        "weekday",
+        false,
+        0,
+        h ->
+            h.tyCon(Constructor.DATE_WEEKDAY_MON)
+                .tyCon(Constructor.DATE_WEEKDAY_TUE)
+                .tyCon(Constructor.DATE_WEEKDAY_WED)
+                .tyCon(Constructor.DATE_WEEKDAY_THU)
+                .tyCon(Constructor.DATE_WEEKDAY_FRI)
+                .tyCon(Constructor.DATE_WEEKDAY_SAT)
+                .tyCon(Constructor.DATE_WEEKDAY_SUN)),
 
     DESCENDING(
         "Relational",
@@ -4605,6 +4768,25 @@ public enum BuiltIn {
     public boolean isInternal() {
       return internal;
     }
+
+    @Override
+    public List<Constructor> constructors() {
+      final ImmutableList.Builder<Constructor> list = ImmutableList.builder();
+      transform.apply(
+          new DataTypeHelper() {
+            @Override
+            public DataTypeHelper tyCon(Constructor constructor) {
+              list.add(constructor);
+              return this;
+            }
+
+            @Override
+            public Type.Key get(int i) {
+              throw new UnsupportedOperationException();
+            }
+          });
+      return list.build();
+    }
   }
 
   /** Built-in equality type. */
@@ -4612,6 +4794,7 @@ public enum BuiltIn {
     // lint: sort until '##private ' where '##[A-Z]'
 
     BAG("bag", 1),
+    DATE("date", 0),
     LIST("list", 1),
     TIME("time", 0),
     VECTOR("vector", 1);
@@ -4640,6 +4823,25 @@ public enum BuiltIn {
     // lint: sort until '##public ' where '##[A-Z]'
     BOOL_FALSE(Datatype.PSEUDO_BOOL, "FALSE"),
     BOOL_TRUE(Datatype.PSEUDO_BOOL, "TRUE"),
+    DATE_MONTH_APR(Datatype.DATE_MONTH, "Apr"),
+    DATE_MONTH_AUG(Datatype.DATE_MONTH, "Aug"),
+    DATE_MONTH_DEC(Datatype.DATE_MONTH, "Dec"),
+    DATE_MONTH_FEB(Datatype.DATE_MONTH, "Feb"),
+    DATE_MONTH_JAN(Datatype.DATE_MONTH, "Jan"),
+    DATE_MONTH_JUL(Datatype.DATE_MONTH, "Jul"),
+    DATE_MONTH_JUN(Datatype.DATE_MONTH, "Jun"),
+    DATE_MONTH_MAR(Datatype.DATE_MONTH, "Mar"),
+    DATE_MONTH_MAY(Datatype.DATE_MONTH, "May"),
+    DATE_MONTH_NOV(Datatype.DATE_MONTH, "Nov"),
+    DATE_MONTH_OCT(Datatype.DATE_MONTH, "Oct"),
+    DATE_MONTH_SEP(Datatype.DATE_MONTH, "Sep"),
+    DATE_WEEKDAY_FRI(Datatype.DATE_WEEKDAY, "Fri"),
+    DATE_WEEKDAY_MON(Datatype.DATE_WEEKDAY, "Mon"),
+    DATE_WEEKDAY_SAT(Datatype.DATE_WEEKDAY, "Sat"),
+    DATE_WEEKDAY_SUN(Datatype.DATE_WEEKDAY, "Sun"),
+    DATE_WEEKDAY_THU(Datatype.DATE_WEEKDAY, "Thu"),
+    DATE_WEEKDAY_TUE(Datatype.DATE_WEEKDAY, "Tue"),
+    DATE_WEEKDAY_WED(Datatype.DATE_WEEKDAY, "Wed"),
     DESCENDING_DESC(Datatype.DESCENDING, "DESC", h -> h.get(0)),
     EITHER_INL(Datatype.EITHER, "INL", h -> h.get(0)),
     EITHER_INR(Datatype.EITHER, "INR", h -> h.get(1)),

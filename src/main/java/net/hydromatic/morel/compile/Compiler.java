@@ -1158,7 +1158,8 @@ public class Compiler {
         case FN_LITERAL:
           if (apply.arg instanceof Core.Tuple) {
             Core.Tuple arg = (Core.Tuple) apply.arg;
-            if (arity(apply.fn) == arg.args.size()) {
+            final int a = arity(apply.fn);
+            if (a == arg.args.size() && a <= 4) {
               return new Gather((Core.Literal) apply.fn, arg.args);
             }
           }

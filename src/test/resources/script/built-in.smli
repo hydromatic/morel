@@ -588,6 +588,125 @@ true.not ();
 Bool.not false;
 > val it = true : bool
 
+(* Date ----------------------------------------------------------- *)
+Date;
+> val it =
+>   {compare=fn,date=fn,day=fn,fmt=fn,fromString=fn,fromTimeLocal=fn,
+>    fromTimeUniv=fn,hour=fn,isDst=fn,localOffset=fn,minute=fn,month=fn,
+>    second=fn,toString=fn,toTime=fn,weekDay=fn,year=fn,yearDay=fn}
+>   : {compare:date * date -> order,
+>      date:
+>           {day:int, hour:int, minute:int, month:month, offset:time option,
+>            second:int, year:int} -> date, day:date -> int,
+>      fmt:string -> date -> string, fromString:string -> date option,
+>      fromTimeLocal:time -> date, fromTimeUniv:time -> date, hour:date -> int,
+>      isDst:date -> bool option, localOffset:unit -> time, minute:date -> int,
+>      month:date -> month, second:date -> int, toString:date -> string,
+>      toTime:date -> time, weekDay:date -> weekday, year:date -> int,
+>      yearDay:date -> int}
+
+Date.fromString "Wed Mar 08 19:06:45 1995";
+> val it = SOME 1995-03-08T19:06:45Z : date option
+
+Date.fromTimeUniv (Time.zeroTime);
+> val it = 1970-01-01T00:00Z : date
+
+Date.month (Date.fromTimeUniv (Time.zeroTime));
+> val it = Jan : month
+
+Date.weekDay (Date.fromTimeUniv (Time.zeroTime));
+> val it = Thu : weekday
+
+(*) Negative time (one day before epoch)
+Date.fromTimeUniv (Time.fromSeconds (~86400));
+> val it = 1969-12-31T00:00Z : date
+
+Date.toString (Date.fromTimeUniv (Time.fromSeconds (~86400)));
+> val it = "Wed Dec 31 00:00:00 1969" : string
+
+(*) With timeZone=UTC, fromTimeLocal same as fromTimeUniv
+Date.fromTimeLocal (Time.zeroTime);
+> val it = 1970-01-01T00:00Z : date
+
+(*) localOffset returns 0 when timeZone=UTC
+Date.localOffset ();
+> val it = 0 : time
+
+(*) Date.date with offset=NONE uses timeZone property (UTC)
+Date.date {year=1970, month=Jan, day=1, hour=0, minute=0, second=0, offset=NONE};
+> val it = 1970-01-01T00:00Z : date
+
+(*) Date exception: day out of range
+Date.date {year=1970, month=Jan, day=32, hour=0, minute=0, second=0, offset=NONE};
+> uncaught exception Date
+>   raised at: stdIn:1.1-1.82
+
+(*) Date exception: hour out of range
+Date.date {year=1970, month=Jan, day=1, hour=25, minute=0, second=0, offset=NONE};
+> uncaught exception Date
+>   raised at: stdIn:1.1-1.82
+
+(*) Remaining Date functions, using epoch as a convenient date
+Date.year (Date.fromTimeUniv (Time.zeroTime));
+> val it = 1970 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).year ();
+> val it = 1970 : int
+
+Date.day (Date.fromTimeUniv (Time.zeroTime));
+> val it = 1 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).day ();
+> val it = 1 : int
+
+Date.hour (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).hour ();
+> val it = 0 : int
+
+Date.minute (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).minute ();
+> val it = 0 : int
+
+Date.second (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).second ();
+> val it = 0 : int
+
+Date.yearDay (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).yearDay ();
+> val it = 0 : int
+
+Date.isDst (Date.fromTimeUniv (Time.zeroTime));
+> val it = NONE : bool option
+
+(Date.fromTimeUniv (Time.zeroTime)).isDst ();
+> val it = NONE : bool option
+
+Date.toTime (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : time
+
+(Date.fromTimeUniv (Time.zeroTime)).toTime ();
+> val it = 0 : time
+
+Date.compare (Date.fromTimeUniv (Time.zeroTime), Date.fromTimeUniv (Time.zeroTime));
+> val it = EQUAL : order
+
+Date.compare (Date.fromTimeUniv (Time.zeroTime), Date.fromTimeUniv (Time.fromSeconds 1));
+> val it = LESS : order
+
+(Date.fromTimeUniv (Time.zeroTime)).compare (Date.fromTimeUniv (Time.fromSeconds 1));
+> val it = LESS : order
+
+Date.fmt "%Y-%m-%d" (Date.fromTimeUniv (Time.zeroTime));
+> val it = "1970-01-01" : string
+
 (* Either --------------------------------------------------------- *)
 Either;
 > val it =
@@ -4475,7 +4594,8 @@ Sys.env;
 > val it = fn : unit -> (string * string) list
 Sys.env ();
 > val it =
->   [("BAG","variant list -> variant"),("BOOL","bool -> variant"),
+>   [("Apr","month"),("Aug","month"),("BAG","variant list -> variant"),
+>    ("BOOL","bool -> variant"),
 >    ("Bag",
 >     "{@:forall 'a. 'a bag * 'a bag -> 'a bag, all:forall 'a. ('a -> bool) -> 'a bag -> bool, app:forall 'a. ('a -> unit) -> 'a bag -> unit, concat:forall 'a. 'a bag list -> 'a bag, drop:forall 'a. 'a bag * int -> 'a bag, exists:forall 'a. ('a -> bool) -> 'a bag -> bool, filter:forall 'a. ('a -> bool) -> 'a bag -> 'a bag, find:forall 'a. ('a -> bool) -> 'a bag -> 'a option, fold:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a bag -> 'b, fromList:forall 'a. 'a list -> 'a bag, getItem:forall 'a. 'a bag -> ('a * 'a bag) option, hd:forall 'a. 'a bag -> 'a, length:forall 'a. 'a bag -> int, map:forall 'a 'b. ('a -> 'b) -> 'a bag -> 'b bag, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a bag -> 'b bag, nil:forall 'a. 'a bag, nth:forall 'a. 'a bag * int -> 'a, null:forall 'a. 'a bag -> bool, partition:forall 'a. ('a -> bool) -> 'a bag -> 'a bag * 'a bag, tabulate:forall 'a. int * (int -> 'a) -> 'a bag, take:forall 'a. 'a bag * int -> 'a bag, tl:forall 'a. 'a bag -> 'a bag, toList:forall 'a. 'a bag -> 'a list}"),
 >    ("Bool",
@@ -4487,12 +4607,15 @@ Sys.env ();
 >    ("DESC","forall 'a. 'a -> 'a descending"),
 >    ("Datalog",
 >     "{execute:string -> variant, translate:string -> string option, validate:string -> string}"),
->    ("EQUAL","order"),
+>    ("Date",
+>     "{compare:date * date -> order, date:{day:int, hour:int, minute:int, month:month, offset:time option, second:int, year:int} -> date, day:date -> int, fmt:string -> date -> string, fromString:string -> date option, fromTimeLocal:time -> date, fromTimeUniv:time -> date, hour:date -> int, isDst:date -> bool option, localOffset:unit -> time, minute:date -> int, month:date -> month, second:date -> int, toString:date -> string, toTime:date -> time, weekDay:date -> weekday, year:date -> int, yearDay:date -> int}"),
+>    ("Dec","month"),("EQUAL","order"),
 >    ("Either",
 >     "{app:forall 'a 'b. ('a -> unit) * ('b -> unit) -> ('a,'b) either -> unit, appLeft:forall 'a 'b. ('a -> unit) -> ('a,'b) either -> unit, appRight:forall 'a 'b. ('b -> unit) -> ('a,'b) either -> unit, asLeft:forall 'a 'b. ('a,'b) either -> 'a option, asRight:forall 'a 'b. ('a,'b) either -> 'b option, fold:forall 'a 'b 'c. ('a * 'b -> 'b) * ('c * 'b -> 'b) -> 'b -> ('a,'c) either -> 'b, isLeft:forall 'a 'b. ('a,'b) either -> bool, isRight:forall 'a 'b. ('a,'b) either -> bool, map:forall 'a 'b 'c 'd. ('a -> 'c) * ('b -> 'd) -> ('a,'b) either -> ('c,'d) either, mapLeft:forall 'a 'b 'c. ('a -> 'b) -> ('a,'c) either -> ('b,'c) either, mapRight:forall 'a 'b 'c. ('b -> 'c) -> ('a,'b) either -> ('a,'c) either, partition:forall 'a 'b. ('a,'b) either list -> 'a list * 'b list, proj:forall 'a. ('a,'a) either -> 'a}"),
+>    ("Feb","month"),
 >    ("Fn",
 >     "{apply:forall 'a 'b. ('a -> 'b) * 'a -> 'b, const:forall 'a 'b. 'a -> 'b -> 'a, curry:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a -> 'b -> 'c, equal:forall 'a. 'a -> 'a -> bool, flip:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'b * 'a -> 'c, id:forall 'a. 'a -> 'a, notEqual:forall 'a 'b. 'a -> 'a -> bool, o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c, repeat:forall 'a. int -> ('a -> 'a) -> 'a -> 'a, uncurry:forall 'a 'b 'c. ('a -> 'b -> 'c) -> 'a * 'b -> 'c}"),
->    ("GREATER","order"),
+>    ("Fri","weekday"),("GREATER","order"),
 >    ("General",
 >     "{before:forall 'a. 'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string, ignore:forall 'a. 'a -> unit, o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
 >    ("INL","forall 'a 'b. 'a -> ('a,'b) either"),
@@ -4500,14 +4623,17 @@ Sys.env ();
 >    ("Int",
 >     "{abs:int -> int, compare:int * int -> order, div:int * int -> int, fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option, max:int * int -> int, maxInt:int option, min:int * int -> int, minInt:int option, mod:int * int -> int, precision:int option, quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool, sign:int -> int, toInt:int -> int, toLarge:int -> int, toString:int -> string}"),
 >    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
->    ("LESS","order"),("LIST","variant list -> variant"),
+>    ("Jan","month"),("Jul","month"),("Jun","month"),("LESS","order"),
+>    ("LIST","variant list -> variant"),
 >    ("List",
 >     "{@:forall 'a. 'a list * 'a list -> 'a list, all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, except:forall 'a. 'a list list -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, intersect:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
 >    ("ListPair",
 >     "{all:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, allEq:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, app:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, appEq:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, exists:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, foldl:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldlEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldr:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldrEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, map:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, mapEq:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, unzip:forall 'a 'b. ('a * 'b) list -> 'a list * 'b list, zip:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list, zipEq:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list}"),
+>    ("Mar","month"),
 >    ("Math",
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
->    ("NONE","'a option"),
+>    ("May","month"),("Mon","weekday"),("NONE","'a option"),("Nov","month"),
+>    ("Oct","month"),
 >    ("Option",
 >     "{app:forall 'a. ('a -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
 >    ("REAL","real -> variant"),("RECORD","(string * variant) list -> variant"),
@@ -4516,18 +4642,21 @@ Sys.env ();
 >    ("Relational",
 >     "{compare:forall 'a. 'a * 'a -> order, count:forall 'a. 'a bag -> int, empty:forall 'a. 'a bag -> bool, iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:forall 'a. 'a bag -> 'a, min:forall 'a. 'a bag -> 'a, nonEmpty:forall 'a. 'a bag -> bool, only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:forall 'a. 'a bag -> 'a}"),
 >    ("SOME","forall 'a. 'a -> 'a option"),("STRING","string -> variant"),
+>    ("Sat","weekday"),("Sep","month"),
 >    ("String",
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
+>    ("Sun","weekday"),
 >    ("Sys",
 >     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>    ("Thu","weekday"),
 >    ("Time",
 >     "{+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}"),
->    ("UNIT","variant"),("VARIANT_NONE","variant"),
+>    ("Tue","weekday"),("UNIT","variant"),("VARIANT_NONE","variant"),
 >    ("VARIANT_SOME","variant -> variant"),("VECTOR","variant list -> variant"),
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
->    ("abs","forall 'a. 'a -> 'a"),
+>    ("Wed","weekday"),("abs","forall 'a. 'a -> 'a"),
 >    ("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
 >    ("bag","forall 'a. 'a list -> 'a bag"),("ceil","real -> int"),
 >    ("chr","int -> char"),("compare","forall 'a. 'a * 'a -> order"),
@@ -4586,7 +4715,8 @@ env;
 > val it = fn : unit -> (string * string) list
 env ();
 > val it =
->   [("BAG","variant list -> variant"),("BOOL","bool -> variant"),
+>   [("Apr","month"),("Aug","month"),("BAG","variant list -> variant"),
+>    ("BOOL","bool -> variant"),
 >    ("Bag",
 >     "{@:forall 'a. 'a bag * 'a bag -> 'a bag, all:forall 'a. ('a -> bool) -> 'a bag -> bool, app:forall 'a. ('a -> unit) -> 'a bag -> unit, concat:forall 'a. 'a bag list -> 'a bag, drop:forall 'a. 'a bag * int -> 'a bag, exists:forall 'a. ('a -> bool) -> 'a bag -> bool, filter:forall 'a. ('a -> bool) -> 'a bag -> 'a bag, find:forall 'a. ('a -> bool) -> 'a bag -> 'a option, fold:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a bag -> 'b, fromList:forall 'a. 'a list -> 'a bag, getItem:forall 'a. 'a bag -> ('a * 'a bag) option, hd:forall 'a. 'a bag -> 'a, length:forall 'a. 'a bag -> int, map:forall 'a 'b. ('a -> 'b) -> 'a bag -> 'b bag, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a bag -> 'b bag, nil:forall 'a. 'a bag, nth:forall 'a. 'a bag * int -> 'a, null:forall 'a. 'a bag -> bool, partition:forall 'a. ('a -> bool) -> 'a bag -> 'a bag * 'a bag, tabulate:forall 'a. int * (int -> 'a) -> 'a bag, take:forall 'a. 'a bag * int -> 'a bag, tl:forall 'a. 'a bag -> 'a bag, toList:forall 'a. 'a bag -> 'a list}"),
 >    ("Bool",
@@ -4598,12 +4728,15 @@ env ();
 >    ("DESC","forall 'a. 'a -> 'a descending"),
 >    ("Datalog",
 >     "{execute:string -> variant, translate:string -> string option, validate:string -> string}"),
->    ("EQUAL","order"),
+>    ("Date",
+>     "{compare:date * date -> order, date:{day:int, hour:int, minute:int, month:month, offset:time option, second:int, year:int} -> date, day:date -> int, fmt:string -> date -> string, fromString:string -> date option, fromTimeLocal:time -> date, fromTimeUniv:time -> date, hour:date -> int, isDst:date -> bool option, localOffset:unit -> time, minute:date -> int, month:date -> month, second:date -> int, toString:date -> string, toTime:date -> time, weekDay:date -> weekday, year:date -> int, yearDay:date -> int}"),
+>    ("Dec","month"),("EQUAL","order"),
 >    ("Either",
 >     "{app:forall 'a 'b. ('a -> unit) * ('b -> unit) -> ('a,'b) either -> unit, appLeft:forall 'a 'b. ('a -> unit) -> ('a,'b) either -> unit, appRight:forall 'a 'b. ('b -> unit) -> ('a,'b) either -> unit, asLeft:forall 'a 'b. ('a,'b) either -> 'a option, asRight:forall 'a 'b. ('a,'b) either -> 'b option, fold:forall 'a 'b 'c. ('a * 'b -> 'b) * ('c * 'b -> 'b) -> 'b -> ('a,'c) either -> 'b, isLeft:forall 'a 'b. ('a,'b) either -> bool, isRight:forall 'a 'b. ('a,'b) either -> bool, map:forall 'a 'b 'c 'd. ('a -> 'c) * ('b -> 'd) -> ('a,'b) either -> ('c,'d) either, mapLeft:forall 'a 'b 'c. ('a -> 'b) -> ('a,'c) either -> ('b,'c) either, mapRight:forall 'a 'b 'c. ('b -> 'c) -> ('a,'b) either -> ('a,'c) either, partition:forall 'a 'b. ('a,'b) either list -> 'a list * 'b list, proj:forall 'a. ('a,'a) either -> 'a}"),
+>    ("Feb","month"),
 >    ("Fn",
 >     "{apply:forall 'a 'b. ('a -> 'b) * 'a -> 'b, const:forall 'a 'b. 'a -> 'b -> 'a, curry:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a -> 'b -> 'c, equal:forall 'a. 'a -> 'a -> bool, flip:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'b * 'a -> 'c, id:forall 'a. 'a -> 'a, notEqual:forall 'a 'b. 'a -> 'a -> bool, o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c, repeat:forall 'a. int -> ('a -> 'a) -> 'a -> 'a, uncurry:forall 'a 'b 'c. ('a -> 'b -> 'c) -> 'a * 'b -> 'c}"),
->    ("GREATER","order"),
+>    ("Fri","weekday"),("GREATER","order"),
 >    ("General",
 >     "{before:forall 'a. 'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string, ignore:forall 'a. 'a -> unit, o:forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c}"),
 >    ("INL","forall 'a 'b. 'a -> ('a,'b) either"),
@@ -4611,14 +4744,17 @@ env ();
 >    ("Int",
 >     "{abs:int -> int, compare:int * int -> order, div:int * int -> int, fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option, max:int * int -> int, maxInt:int option, min:int * int -> int, minInt:int option, mod:int * int -> int, precision:int option, quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool, sign:int -> int, toInt:int -> int, toLarge:int -> int, toString:int -> string}"),
 >    ("Interact","{use:string -> unit, useSilently:string -> unit}"),
->    ("LESS","order"),("LIST","variant list -> variant"),
+>    ("Jan","month"),("Jul","month"),("Jun","month"),("LESS","order"),
+>    ("LIST","variant list -> variant"),
 >    ("List",
 >     "{@:forall 'a. 'a list * 'a list -> 'a list, all:forall 'a. ('a -> bool) -> 'a list -> bool, app:forall 'a. ('a -> unit) -> 'a list -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a list * 'a list -> order, concat:forall 'a. 'a list list -> 'a list, drop:forall 'a. 'a list * int -> 'a list, except:forall 'a. 'a list list -> 'a list, exists:forall 'a. ('a -> bool) -> 'a list -> bool, filter:forall 'a. ('a -> bool) -> 'a list -> 'a list, find:forall 'a. ('a -> bool) -> 'a list -> 'a option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a list -> 'b, getItem:forall 'a. 'a list -> ('a * 'a list) option, hd:forall 'a. 'a list -> 'a, intersect:forall 'a. 'a list list -> 'a list, last:forall 'a. 'a list -> 'a, length:forall 'a. 'a list -> int, map:forall 'a 'b. ('a -> 'b) -> 'a list -> 'b list, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a list -> 'b list, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a list -> 'b list, nil:forall 'a. 'a list, nth:forall 'a. 'a list * int -> 'a, null:forall 'a. 'a list -> bool, partition:forall 'a. ('a -> bool) -> 'a list -> 'a list * 'a list, rev:forall 'a. 'a list -> 'a list, revAppend:forall 'a. 'a list * 'a list -> 'a list, tabulate:forall 'a. int * (int -> 'a) -> 'a list, take:forall 'a. 'a list * int -> 'a list, tl:forall 'a. 'a list -> 'a list}"),
 >    ("ListPair",
 >     "{all:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, allEq:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, app:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, appEq:forall 'a 'b. ('a * 'b -> unit) -> 'a list * 'b list -> unit, exists:forall 'a 'b. ('a * 'b -> bool) -> 'a list * 'b list -> bool, foldl:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldlEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldr:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, foldrEq:forall 'a 'b 'c. ('a * 'b * 'c -> 'c) -> 'c -> 'a list * 'b list -> 'c, map:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, mapEq:forall 'a 'b 'c. ('a * 'b -> 'c) -> 'a list * 'b list -> 'c list, unzip:forall 'a 'b. ('a * 'b) list -> 'a list * 'b list, zip:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list, zipEq:forall 'a 'b. 'a list * 'b list -> ('a * 'b) list}"),
+>    ("Mar","month"),
 >    ("Math",
 >     "{acos:real -> real, asin:real -> real, atan:real -> real, atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real, exp:real -> real, ln:real -> real, log10:real -> real, pi:real, pow:real * real -> real, sin:real -> real, sinh:real -> real, sqrt:real -> real, tan:real -> real, tanh:real -> real}"),
->    ("NONE","'a option"),
+>    ("May","month"),("Mon","weekday"),("NONE","'a option"),("Nov","month"),
+>    ("Oct","month"),
 >    ("Option",
 >     "{app:forall 'a. ('a -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, join:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
 >    ("REAL","real -> variant"),("RECORD","(string * variant) list -> variant"),
@@ -4627,18 +4763,21 @@ env ();
 >    ("Relational",
 >     "{compare:forall 'a. 'a * 'a -> order, count:forall 'a. 'a bag -> int, empty:forall 'a. 'a bag -> bool, iterate:multi(forall 'a. 'a bag -> ('a bag * 'a bag -> 'a bag) -> 'a bag,forall 'a. 'a list -> ('a list * 'a list -> 'a list) -> 'a list), max:forall 'a. 'a bag -> 'a, min:forall 'a. 'a bag -> 'a, nonEmpty:forall 'a. 'a bag -> bool, only:multi(forall 'a. 'a bag -> 'a,forall 'a. 'a list -> 'a), sum:forall 'a. 'a bag -> 'a}"),
 >    ("SOME","forall 'a. 'a -> 'a option"),("STRING","string -> variant"),
+>    ("Sat","weekday"),("Sep","month"),
 >    ("String",
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
+>    ("Sun","weekday"),
 >    ("Sys",
 >     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>    ("Thu","weekday"),
 >    ("Time",
 >     "{+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}"),
->    ("UNIT","variant"),("VARIANT_NONE","variant"),
+>    ("Tue","weekday"),("UNIT","variant"),("VARIANT_NONE","variant"),
 >    ("VARIANT_SOME","variant -> variant"),("VECTOR","variant list -> variant"),
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, exists:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
->    ("abs","forall 'a. 'a -> 'a"),
+>    ("Wed","weekday"),("abs","forall 'a. 'a -> 'a"),
 >    ("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
 >    ("bag","forall 'a. 'a list -> 'a bag"),("ceil","real -> int"),
 >    ("chr","int -> char"),("compare","forall 'a. 'a * 'a -> order"),
