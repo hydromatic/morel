@@ -536,6 +536,7 @@ and unset using `Sys.unset name`.
 | inlinePassCount      | int    | 5       | Maximum number of inlining passes. |
 | lineWidth            | int    | 79      | When printing, the length at which lines are wrapped. |
 | matchCoverageEnabled | bool   | true    | Whether to check whether patterns are exhaustive and/or redundant. |
+| now                  | string | null    | Overrides the current time. Value is an ISO-8601 string (e.g. '2024-01-01T00:00:00Z'). If not set, the system clock is used. |
 | optionalInt          | int    | null    | For testing. |
 | output               | enum   | classic | How values should be formatted. "classic" (the default) prints values in a compact nested format; "tabular" prints values in a table if their type is a list of records. |
 | printDepth           | int    | 5       | When printing, the depth of nesting of recursive data structure at which ellipsis begins. |
@@ -545,5 +546,6 @@ and unset using `Sys.unset name`.
 | relationalize        | bool   | false   | Whether to convert to relational algebra. |
 | scriptDirectory      | file   |         | Path of the directory where the 'use' command looks for scripts. When running a script, it is generally set to the directory that contains the script. |
 | stringDepth          | int    | 70      | When printing, the length of strings at which ellipsis begins. |
+| timeZone             | string | null    | Overrides the local timezone. Value is a timezone ID (e.g. 'UTC' or 'America/New_York'). If not set, the JVM default timezone is used. |
 
 [//]: # (end:properties)

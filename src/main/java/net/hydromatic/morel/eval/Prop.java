@@ -140,6 +140,20 @@ public enum Prop {
       true,
       "Whether to check whether patterns are exhaustive and/or redundant."),
 
+  /**
+   * String property "now" overrides the current time returned by {@code
+   * Time.now()} and used by {@code Date.localOffset()}. Value is an ISO-8601
+   * instant string (e.g. {@code "2024-01-01T00:00:00Z"}). If not set, the
+   * system clock is used.
+   */
+  NOW(
+      "now",
+      String.class,
+      false,
+      null,
+      "Overrides the current time. Value is an ISO-8601 string (e.g. "
+          + "'2024-01-01T00:00:00Z'). If not set, the system clock is used."),
+
   /** Integer property "optionalInt" is for testing. Default is null. */
   OPTIONAL_INT("optionalInt", Integer.class, false, null, "For testing."),
 
@@ -250,7 +264,21 @@ public enum Prop {
       Integer.class,
       true,
       70,
-      "When printing, the length of strings at which ellipsis begins.");
+      "When printing, the length of strings at which ellipsis begins."),
+
+  /**
+   * String property "timeZone" overrides the local timezone used by {@code
+   * Date.fromTimeLocal()}, {@code Date.localOffset()}, and {@code Date.date}
+   * when {@code offset=NONE}. Value is a timezone ID (e.g. {@code "UTC"} or
+   * {@code "America/New_York"}). If not set, the JVM default timezone is used.
+   */
+  TIME_ZONE(
+      "timeZone",
+      String.class,
+      false,
+      null,
+      "Overrides the local timezone. Value is a timezone ID (e.g. 'UTC' or "
+          + "'America/New_York'). If not set, the JVM default timezone is used.");
 
   public final String camelName;
   public final Class<?> type;

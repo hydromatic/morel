@@ -4762,16 +4762,16 @@ map
 >   [("banner",SOME "?"),("directory",SOME "?"),
 >    ("excludeStructures",SOME "^Test$"),("hybrid",SOME "true"),
 >    ("inlinePassCount",SOME "5"),("lineWidth",SOME "78"),
->    ("matchCoverageEnabled",SOME "true"),("optionalInt",NONE),
+>    ("matchCoverageEnabled",SOME "true"),("now",NONE),("optionalInt",NONE),
 >    ("output",SOME "CLASSIC"),("printDepth",SOME "5"),
 >    ("printLength",SOME "999"),("productName",SOME "morel-java"),
 >    ("productVersion",SOME "?"),("relationalize",SOME "false"),
->    ("scriptDirectory",SOME "?"),("stringDepth",SOME "-1")]
+>    ("scriptDirectory",SOME "?"),("stringDepth",SOME "-1"),("timeZone",NONE)]
 >   : (string * string option) list
 List.length (Sys.showAll ());
-> val it = 16 : int
+> val it = 18 : int
 List.length (showAll ());
-> val it = 16 : int
+> val it = 18 : int
 Sys.plan ();
 > val it =
 >   "apply(fnValue List.length, argCode apply(fnValue Sys.showAll, argCode constant([])))"
