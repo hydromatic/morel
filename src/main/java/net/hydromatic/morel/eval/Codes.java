@@ -19,6 +19,7 @@
 package net.hydromatic.morel.eval;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
@@ -34,6 +35,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
+import java.time.Instant;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -239,7 +241,7 @@ public abstract class Codes {
       new BaseApplicable1<String, Boolean>(BuiltIn.BOOL_TO_STRING) {
         @Override
         public String apply(Boolean b) {
-          return b ? "true" : "false";
+          return b.toString();
         }
       };
 
@@ -537,6 +539,15 @@ public abstract class Codes {
           return DatalogEvaluator.validate(program, env.getSession());
         }
       };
+
+  /**
+   * Returns the current instant from the session's {@code now} property, or
+   * {@link Instant#now()} if the property is not set.
+   */
+  private static Instant sessionNow(Session session) {
+    final String now = (String) Prop.NOW.get(session.map);
+    return now != null ? Instant.parse(now) : Instant.now();
+  }
 
   /** Returns whether an {@code either} value is a left value. */
   private static boolean isEitherLeft(List either) {
@@ -3576,6 +3587,250 @@ public abstract class Codes {
   /** @see BuiltIn#TEST_OVER_SUM */
   private static final Macro TEST_OVER_SUM = RELATIONAL_SUM;
 
+  /** @see BuiltIn#TIME_ADD */
+  private static final Applicable2 TIME_ADD =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.TIME_ADD) {
+        @Override
+        public Long apply(Long t1, Long t2) {
+          return t1 + t2;
+        }
+      };
+
+  /** @see BuiltIn#TIME_COMPARE */
+  private static final Applicable2 TIME_COMPARE =
+      new BaseApplicable2<List, Long, Long>(BuiltIn.TIME_COMPARE) {
+        @Override
+        public List apply(Long t1, Long t2) {
+          return order(Long.compare(t1, t2));
+        }
+      };
+
+  /** @see BuiltIn#TIME_FMT */
+  private static final Applicable1 TIME_FMT =
+      new BaseApplicable1<Applicable, Integer>(BuiltIn.TIME_FMT) {
+        @Override
+        public Applicable apply(Integer n) {
+          return new BaseApplicable1<String, Long>(BuiltIn.TIME_FMT) {
+            @Override
+            public String apply(Long t) {
+              return timeFmt(n, t);
+            }
+          };
+        }
+      };
+
+  /** @see BuiltIn#TIME_FROM_MICROSECONDS */
+  private static final Applicable1 TIME_FROM_MICROSECONDS =
+      new BaseApplicable1<Long, Integer>(BuiltIn.TIME_FROM_MICROSECONDS) {
+        @Override
+        public Long apply(Integer n) {
+          return (long) n * 1_000L;
+        }
+      };
+
+  /** @see BuiltIn#TIME_FROM_MILLISECONDS */
+  private static final Applicable1 TIME_FROM_MILLISECONDS =
+      new BaseApplicable1<Long, Integer>(BuiltIn.TIME_FROM_MILLISECONDS) {
+        @Override
+        public Long apply(Integer n) {
+          return (long) n * 1_000_000L;
+        }
+      };
+
+  /** @see BuiltIn#TIME_FROM_NANOSECONDS */
+  private static final Applicable1 TIME_FROM_NANOSECONDS =
+      new BaseApplicable1<Long, Integer>(BuiltIn.TIME_FROM_NANOSECONDS) {
+        @Override
+        public Long apply(Integer n) {
+          return (long) n;
+        }
+      };
+
+  /** @see BuiltIn#TIME_FROM_REAL */
+  private static final Applicable1 TIME_FROM_REAL = new TimeFromReal(Pos.ZERO);
+
+  /** Implements {@link #TIME_FROM_REAL}. */
+  private static class TimeFromReal
+      extends BasePositionedApplicable1<Long, Float> {
+    TimeFromReal(Pos pos) {
+      super(BuiltIn.TIME_FROM_REAL, pos);
+    }
+
+    @Override
+    public TimeFromReal withPos(Pos pos) {
+      return new TimeFromReal(pos);
+    }
+
+    @Override
+    public Long apply(Float r) {
+      if (Float.isNaN(r) || Float.isInfinite(r)) {
+        throw new MorelRuntimeException(BuiltInExn.TIME, pos);
+      }
+      return (long) ((double) r * 1_000_000_000d);
+    }
+  }
+
+  /** @see BuiltIn#TIME_FROM_SECONDS */
+  private static final Applicable1 TIME_FROM_SECONDS =
+      new BaseApplicable1<Long, Integer>(BuiltIn.TIME_FROM_SECONDS) {
+        @Override
+        public Long apply(Integer n) {
+          return (long) n * 1_000_000_000L;
+        }
+      };
+
+  /** @see BuiltIn#TIME_FROM_STRING */
+  private static final Applicable1 TIME_FROM_STRING =
+      new BaseApplicable1<List, String>(BuiltIn.TIME_FROM_STRING) {
+        @Override
+        public List apply(String s) {
+          try {
+            double seconds = Double.parseDouble(s);
+            return optionSome((long) (seconds * 1_000_000_000d));
+          } catch (NumberFormatException e) {
+            return OPTION_NONE;
+          }
+        }
+      };
+
+  /** @see BuiltIn#TIME_GE */
+  private static final Applicable2 TIME_GE =
+      new BaseApplicable2<Boolean, Long, Long>(BuiltIn.TIME_GE) {
+        @Override
+        public Boolean apply(Long t1, Long t2) {
+          return t1 >= t2;
+        }
+      };
+
+  /** @see BuiltIn#TIME_GT */
+  private static final Applicable2 TIME_GT =
+      new BaseApplicable2<Boolean, Long, Long>(BuiltIn.TIME_GT) {
+        @Override
+        public Boolean apply(Long t1, Long t2) {
+          return t1 > t2;
+        }
+      };
+
+  /** @see BuiltIn#TIME_LE */
+  private static final Applicable2 TIME_LE =
+      new BaseApplicable2<Boolean, Long, Long>(BuiltIn.TIME_LE) {
+        @Override
+        public Boolean apply(Long t1, Long t2) {
+          return t1 <= t2;
+        }
+      };
+
+  /** @see BuiltIn#TIME_LT */
+  private static final Applicable2 TIME_LT =
+      new BaseApplicable2<Boolean, Long, Long>(BuiltIn.TIME_LT) {
+        @Override
+        public Boolean apply(Long t1, Long t2) {
+          return t1 < t2;
+        }
+      };
+
+  /** @see BuiltIn#TIME_NOW */
+  private static final ApplicableImpl TIME_NOW =
+      new ApplicableImpl(BuiltIn.TIME_NOW) {
+        @Override
+        public Long apply(EvalEnv env, Object arg) {
+          final Instant now = sessionNow(env.getSession());
+          return now.getEpochSecond() * 1_000_000_000L + now.getNano();
+        }
+      };
+
+  /** @see BuiltIn#TIME_SUBTRACT */
+  private static final Applicable2 TIME_SUBTRACT =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.TIME_SUBTRACT) {
+        @Override
+        public Long apply(Long t1, Long t2) {
+          return t1 - t2;
+        }
+      };
+
+  /** @see BuiltIn#TIME_TO_MICROSECONDS */
+  private static final Applicable1 TIME_TO_MICROSECONDS =
+      new BaseApplicable1<Integer, Long>(BuiltIn.TIME_TO_MICROSECONDS) {
+        @Override
+        public Integer apply(Long t) {
+          return (int) (t / 1_000L);
+        }
+      };
+
+  /** @see BuiltIn#TIME_TO_MILLISECONDS */
+  private static final Applicable1 TIME_TO_MILLISECONDS =
+      new BaseApplicable1<Integer, Long>(BuiltIn.TIME_TO_MILLISECONDS) {
+        @Override
+        public Integer apply(Long t) {
+          return (int) (t / 1_000_000L);
+        }
+      };
+
+  /** @see BuiltIn#TIME_TO_NANOSECONDS */
+  private static final Applicable1 TIME_TO_NANOSECONDS =
+      new BaseApplicable1<Integer, Long>(BuiltIn.TIME_TO_NANOSECONDS) {
+        @Override
+        public Integer apply(Long t) {
+          return (int) (long) t;
+        }
+      };
+
+  /** @see BuiltIn#TIME_TO_REAL */
+  private static final Applicable1 TIME_TO_REAL =
+      new BaseApplicable1<Float, Long>(BuiltIn.TIME_TO_REAL) {
+        @Override
+        public Float apply(Long t) {
+          return (float) (t / 1e9);
+        }
+      };
+
+  /** @see BuiltIn#TIME_TO_SECONDS */
+  private static final Applicable1 TIME_TO_SECONDS =
+      new BaseApplicable1<Integer, Long>(BuiltIn.TIME_TO_SECONDS) {
+        @Override
+        public Integer apply(Long t) {
+          return (int) (t / 1_000_000_000L);
+        }
+      };
+
+  /** @see BuiltIn#TIME_TO_STRING */
+  private static final Applicable1 TIME_TO_STRING =
+      new BaseApplicable1<String, Long>(BuiltIn.TIME_TO_STRING) {
+        @Override
+        public String apply(Long t) {
+          return timeFmt(3, t);
+        }
+      };
+
+  /** @see BuiltIn#TIME_ZERO_TIME */
+  private static final Long TIME_ZERO_TIME = 0L;
+
+  /**
+   * Formats a time value as decimal seconds with {@code n} fractional digits,
+   * using {@code ~} prefix for negative values (SML convention).
+   */
+  private static String timeFmt(int n, long t) {
+    final boolean negative = t < 0;
+    final long abs = negative ? -t : t;
+    final long seconds = abs / 1_000_000_000L;
+    final StringBuilder b = new StringBuilder();
+    if (negative) {
+      b.append('~');
+    }
+    b.append(seconds);
+    if (n > 0) {
+      b.append('.');
+      final long nanos = abs % 1_000_000_000L;
+      String frac = format("%09d", nanos).substring(0, Math.min(n, 9));
+      b.append(frac);
+      while (frac.length() < n) {
+        b.append('0');
+        --n;
+      }
+    }
+    return b.toString();
+  }
+
   /** Value of {@link BuiltIn.Constructor#VARIANT_UNIT}. */
   public static final List VARIANT_UNIT =
       Variant.of(PrimitiveType.UNIT, Unit.INSTANCE);
@@ -4578,11 +4833,33 @@ public abstract class Codes {
           .put(BuiltIn.SYS_SHOW, SYS_SHOW)
           .put(BuiltIn.SYS_SHOW_ALL, SYS_SHOW_ALL)
           .put(BuiltIn.SYS_UNSET, SYS_UNSET)
-          .put(BuiltIn.TEST_FOO, TEST_FOO)
           .put(BuiltIn.TEST_BAG_SUM, TEST_BAG_SUM)
+          .put(BuiltIn.TEST_FOO, TEST_FOO)
           .put(BuiltIn.TEST_LIST_SUM, TEST_LIST_SUM)
           .put(BuiltIn.TEST_OVER_COUNT, TEST_OVER_COUNT)
           .put(BuiltIn.TEST_OVER_SUM, TEST_OVER_SUM)
+          .put(BuiltIn.TIME_ADD, TIME_ADD)
+          .put(BuiltIn.TIME_COMPARE, TIME_COMPARE)
+          .put(BuiltIn.TIME_FMT, TIME_FMT)
+          .put(BuiltIn.TIME_FROM_MICROSECONDS, TIME_FROM_MICROSECONDS)
+          .put(BuiltIn.TIME_FROM_MILLISECONDS, TIME_FROM_MILLISECONDS)
+          .put(BuiltIn.TIME_FROM_NANOSECONDS, TIME_FROM_NANOSECONDS)
+          .put(BuiltIn.TIME_FROM_REAL, TIME_FROM_REAL)
+          .put(BuiltIn.TIME_FROM_SECONDS, TIME_FROM_SECONDS)
+          .put(BuiltIn.TIME_FROM_STRING, TIME_FROM_STRING)
+          .put(BuiltIn.TIME_GE, TIME_GE)
+          .put(BuiltIn.TIME_GT, TIME_GT)
+          .put(BuiltIn.TIME_LE, TIME_LE)
+          .put(BuiltIn.TIME_LT, TIME_LT)
+          .put(BuiltIn.TIME_NOW, TIME_NOW)
+          .put(BuiltIn.TIME_SUBTRACT, TIME_SUBTRACT)
+          .put(BuiltIn.TIME_TO_MICROSECONDS, TIME_TO_MICROSECONDS)
+          .put(BuiltIn.TIME_TO_MILLISECONDS, TIME_TO_MILLISECONDS)
+          .put(BuiltIn.TIME_TO_NANOSECONDS, TIME_TO_NANOSECONDS)
+          .put(BuiltIn.TIME_TO_REAL, TIME_TO_REAL)
+          .put(BuiltIn.TIME_TO_SECONDS, TIME_TO_SECONDS)
+          .put(BuiltIn.TIME_TO_STRING, TIME_TO_STRING)
+          .put(BuiltIn.TIME_ZERO_TIME, TIME_ZERO_TIME)
           .put(BuiltIn.VARIANT_PARSE, VARIANT_PARSE)
           .put(BuiltIn.VARIANT_PRINT, VARIANT_PRINT)
           .put(BuiltIn.VECTOR_ALL, VECTOR_ALL)
@@ -4831,6 +5108,7 @@ public abstract class Codes {
     SIZE("General", "Size", null),
     SPAN("General", "Span", null),
     SUBSCRIPT("General", "Subscript", "subscript out of bounds"),
+    TIME("Time", "Time", null),
     UNEQUAL_LENGTHS("ListPair", "UnequalLengths", null),
     UNORDERED("IEEEReal", "Unordered", null);
 

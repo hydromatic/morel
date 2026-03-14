@@ -192,6 +192,57 @@ Key test files in `src/test/resources/script/`:
 3. Add tests in the corresponding `src/test/resources/script/` file
 4. Update type signatures if polymorphic
 
+### Adding a Standard Basis Library Structure
+
+When implementing a structure from the
+[SML Standard Basis Library](https://smlfamily.github.io/Basis/):
+
+1. **`BuiltIn.java`** — If the structure introduces a new abstract type
+   (e.g., `eqtype time`), add it to the `Eqtype` enum (zero type parameters)
+   or `Datatype` enum (with type parameters). Then add one enum constant per
+   function/value in the structure, named `STRUCTNAME_FUNCTIONNAME` (e.g.,
+   `TIME_FROM_REAL`). Mark a constant as a method (`true` flag) if its first
+   argument — or the first element of its tuple argument — is the structure's
+   own type, following the same pattern as `REAL_COMPARE`.
+
+2. **`Codes.java`** — Add an `Applicable` implementation for each function
+   and register it in the `CODES` static map. If the structure has an
+   exception (e.g., `exception Time`), add it to `BuiltInExn`.
+
+3. **`functions.toml`** — Add `[[structures]]`, `[[exceptions]]` (if any),
+   `[[types]]` (if any), and `[[functions]]` entries. All entries must be
+   interleaved alphabetically (functions, types, and exceptions together, not
+   grouped by kind). Copy descriptions from https://smlfamily.github.io/Basis/
+   and adapt them. Assign new ordinals continuing from the current maximum.
+   Mark functions with `method = true` where appropriate. Use
+   `specified = "basis"` for standard functions.
+
+4. **`src/test/resources/script/built-in.smli`** — Add tests for all
+   functions, inserted alphabetically by structure name. Include a test that
+   prints the whole structure (e.g., `Time;`) and postfix syntax tests for
+   method functions (e.g., `t.toReal ()`). Update any environment count tests
+   in `misc.smli` if they exist.
+
+5. **`docs/lib/{name}.md`** (new file) — Create a doc page using the license
+   header from an existing page, with `[//]: # (start:lib/{name})` and
+   `[//]: # (end:lib/{name})` markers. The content between the markers is
+   auto-generated from `functions.toml`.
+
+6. **Regenerate docs** — Run `./mvnw test -Dtest=LintTest` to validate. The
+   test fails with diffs showing what content to insert between the markers in
+   the `.md` files. Copy the generated content into `docs/lib/{name}.md`,
+   `docs/lib/index.md`, and `docs/reference.md`.
+
+Notes:
+- `scan` functions (those taking a `StringCvt.reader`) are omitted since
+  Morel does not implement `StringCvt`.
+- In Morel, `LargeReal.real` = `real` and `LargeInt.int` = `int`.
+- Enum constants in `BuiltIn.java` and `Codes.java` must be in alphabetical
+  order within their sort region (checked by `LintTest.testLint`).
+- For opaque eqtypes (like `time`) backed by non-List Java objects,
+  `Pretty.java` handles printing via `!(value instanceof List)` in
+  `prettyDataType`.
+
 ### Adding a Language Feature
 
 1. Update `MorelParser.jj` grammar

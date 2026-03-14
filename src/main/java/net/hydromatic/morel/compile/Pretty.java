@@ -411,6 +411,10 @@ class Pretty {
       int depth,
       DataType dataType,
       Object value) {
+    if (!(value instanceof List)) {
+      // Opaque value (e.g., "time" backed by Long): print directly.
+      return buf.append(value);
+    }
     final List<Object> list = toList(value);
     if (dataType.name.equals("vector")) {
       final Type argType = dataType.arg(0);

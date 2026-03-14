@@ -4644,6 +4644,301 @@ description = """
 clears the current the value of `property`.
 """
 
+# === Time structure =================================================
+
+[[structures]]
+name = "Time"
+specified = "basis"
+description = "Time values and operations."
+overview = """
+The `Time` structure provides an abstract type for representing both absolute
+times and time intervals, with functions for conversion, arithmetic, comparison,
+formatting, and parsing. Time values are measured in nanoseconds internally,
+and conversions to/from seconds, milliseconds, microseconds, and nanoseconds
+are provided.
+"""
+
+[[functions]]
+ordinal = 250
+structure = "Time"
+name = "+"
+specified = "basis"
+type = "time * time → time"
+prototype = "t1 + t2"
+method = true
+description = """
+returns the sum of the two time values `t1` and `t2`.
+"""
+
+[[functions]]
+ordinal = 251
+structure = "Time"
+name = "-"
+specified = "basis"
+type = "time * time → time"
+prototype = "t1 - t2"
+method = true
+description = """
+returns the difference of the two time values `t1` and `t2`.
+"""
+
+[[functions]]
+ordinal = 253
+structure = "Time"
+name = "<"
+specified = "basis"
+type = "time * time → bool"
+prototype = "t1 < t2"
+method = true
+description = """
+returns `true` if `t1` is less than `t2`.
+"""
+
+[[functions]]
+ordinal = 254
+structure = "Time"
+name = "<="
+specified = "basis"
+type = "time * time → bool"
+prototype = "t1 <= t2"
+method = true
+description = """
+returns `true` if `t1` is less than or equal to `t2`.
+"""
+
+[[functions]]
+ordinal = 255
+structure = "Time"
+name = ">"
+specified = "basis"
+type = "time * time → bool"
+prototype = "t1 > t2"
+method = true
+description = """
+returns `true` if `t1` is greater than `t2`.
+"""
+
+[[functions]]
+ordinal = 256
+structure = "Time"
+name = ">="
+specified = "basis"
+type = "time * time → bool"
+prototype = "t1 >= t2"
+method = true
+description = """
+returns `true` if `t1` is greater than or equal to `t2`.
+"""
+
+[[exceptions]]
+structure = "Time"
+name = "Time"
+description = """
+is raised when a conversion produces a value that cannot be represented as a
+`time` value (for example, when `fromReal` is called with `NaN` or infinity).
+"""
+
+[[functions]]
+ordinal = 252
+structure = "Time"
+name = "compare"
+specified = "basis"
+type = "time * time → order"
+prototype = "compare (t1, t2)"
+method = true
+description = """
+returns `LESS`, `EQUAL`, or `GREATER` depending on whether `t1` is less than,
+equal to, or greater than `t2`.
+"""
+
+[[functions]]
+ordinal = 258
+structure = "Time"
+name = "fmt"
+specified = "basis"
+type = "int → time → string"
+prototype = "fmt n t"
+description = """
+formats `t` as a decimal number of seconds with `n` fractional digits.
+For example, `fmt 3 (fromReal 1.5)` returns `"1.500"`. Negative time
+values are formatted with a leading `~`.
+"""
+
+[[functions]]
+ordinal = 248
+structure = "Time"
+name = "fromMicroseconds"
+specified = "basis"
+type = "int → time"
+prototype = "fromMicroseconds n"
+description = """
+returns the `time` value corresponding to `n` microseconds.
+"""
+
+[[functions]]
+ordinal = 247
+structure = "Time"
+name = "fromMilliseconds"
+specified = "basis"
+type = "int → time"
+prototype = "fromMilliseconds n"
+description = """
+returns the `time` value corresponding to `n` milliseconds.
+"""
+
+[[functions]]
+ordinal = 249
+structure = "Time"
+name = "fromNanoseconds"
+specified = "basis"
+type = "int → time"
+prototype = "fromNanoseconds n"
+description = """
+returns the `time` value corresponding to `n` nanoseconds.
+"""
+
+[[functions]]
+ordinal = 240
+structure = "Time"
+name = "fromReal"
+specified = "basis"
+type = "real → time"
+prototype = "fromReal r"
+description = """
+converts `r` (measured in seconds) to a `time` value.
+Raises `Time` if `r` is `NaN`, infinite, or otherwise not representable.
+"""
+
+[[functions]]
+ordinal = 246
+structure = "Time"
+name = "fromSeconds"
+specified = "basis"
+type = "int → time"
+prototype = "fromSeconds n"
+description = """
+returns the `time` value corresponding to `n` seconds.
+"""
+
+[[functions]]
+ordinal = 260
+structure = "Time"
+name = "fromString"
+specified = "basis"
+type = "string → time option"
+prototype = "fromString s"
+description = """
+parses a time value from the string `s`, which should be a decimal number
+of seconds. Returns `SOME t` if successful, `NONE` otherwise.
+"""
+
+[[functions]]
+ordinal = 257
+structure = "Time"
+name = "now"
+specified = "basis"
+type = "unit → time"
+prototype = "now ()"
+description = """
+returns the current time.
+"""
+
+[[types]]
+structure = "Time"
+name = "time"
+type = "eqtype time"
+description = """
+is an equality type representing both absolute times (relative to the Unix
+epoch, 1970-01-01T00:00:00Z) and time durations. Both absolute times and
+intervals are represented identically; the interpretation is contextual.
+Negative values represent times before the epoch or negative intervals.
+"""
+
+[[functions]]
+ordinal = 244
+structure = "Time"
+name = "toMicroseconds"
+specified = "basis"
+type = "time → int"
+prototype = "toMicroseconds t"
+method = true
+description = """
+returns the number of whole microseconds in `t`, truncated toward zero.
+"""
+
+[[functions]]
+ordinal = 243
+structure = "Time"
+name = "toMilliseconds"
+specified = "basis"
+type = "time → int"
+prototype = "toMilliseconds t"
+method = true
+description = """
+returns the number of whole milliseconds in `t`, truncated toward zero.
+"""
+
+[[functions]]
+ordinal = 245
+structure = "Time"
+name = "toNanoseconds"
+specified = "basis"
+type = "time → int"
+prototype = "toNanoseconds t"
+method = true
+description = """
+returns the number of whole nanoseconds in `t`.
+"""
+
+[[functions]]
+ordinal = 241
+structure = "Time"
+name = "toReal"
+specified = "basis"
+type = "time → real"
+prototype = "toReal t"
+method = true
+description = """
+converts the time value `t` to a real number representing seconds.
+"""
+
+[[functions]]
+ordinal = 242
+structure = "Time"
+name = "toSeconds"
+specified = "basis"
+type = "time → int"
+prototype = "toSeconds t"
+method = true
+description = """
+returns the number of whole seconds in `t`, truncated toward zero.
+"""
+
+[[functions]]
+ordinal = 259
+structure = "Time"
+name = "toString"
+specified = "basis"
+type = "time → string"
+prototype = "toString t"
+method = true
+description = """
+formats `t` as a decimal number of seconds with 3 fractional digits.
+Equivalent to `fmt 3 t`.
+"""
+
+[[functions]]
+ordinal = 239
+structure = "Time"
+name = "zeroTime"
+specified = "basis"
+type = "time"
+prototype = "zeroTime"
+description = """
+denotes an empty interval and serves as the reference point for absolute
+times. It is equivalent to `fromReal(0.0)`.
+"""
+
 # === Variant structure ==============================================
 
 [[structures]]

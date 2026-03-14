@@ -23,171 +23,16 @@ Sys.set ("printLength", 999);
 Sys.set ("stringDepth", ~1);
 > val it = () : unit
 
+(*) Set properties for deterministic Date/Time tests.
+Sys.set ("timeZone", "UTC");
+> val it = () : unit
+Sys.set ("now", "2024-01-01T00:00:00Z");
+> val it = () : unit
+
 (* Until we have a real "print" function, we use "ignore" to
    suppress the output of expressions. *)
 fun print x = ignore x;
 > val print = fn : 'a -> unit
-
-(* Structures ----------------------------------------------------- *)
-
-Char;
-> val it =
->   {<=fn,<==fn,>=fn,>==fn,chr=fn,compare=fn,contains=fn,fromCString=fn,
->    fromString=fn,isAlpha=fn,isAlphaNum=fn,isAscii=fn,isCntrl=fn,isDigit=fn,
->    isGraph=fn,isHexDigit=fn,isLower=fn,isPrint=fn,isPunct=fn,isSpace=fn,
->    isUpper=fn,maxChar=#"\255",maxOrd=255,minChar=#"\^@",notContains=fn,ord=fn,
->    pred=fn,succ=fn,toCString=fn,toLower=fn,toString=fn,toUpper=fn}
->   : {<:char * char -> bool, <=:char * char -> bool, >:char * char -> bool,
->      >=:char * char -> bool, chr:int -> char, compare:char * char -> order,
->      contains:string -> char -> bool, fromCString:string -> char option,
->      fromString:string -> char option, isAlpha:char -> bool,
->      isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool,
->      isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool,
->      isLower:char -> bool, isPrint:char -> bool, isPunct:char -> bool,
->      isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int,
->      minChar:char, notContains:string -> char -> bool, ord:char -> int,
->      pred:char -> char, succ:char -> char, toCString:char -> string,
->      toLower:char -> char, toString:char -> string, toUpper:char -> char}
-Int;
-> val it =
->   {abs=fn,compare=fn,div=fn,fromInt=fn,fromLarge=fn,fromString=fn,max=fn,
->    maxInt=SOME 2147483647,min=fn,minInt=SOME ~2147483648,mod=fn,
->    precision=SOME 32,quot=fn,rem=fn,sameSign=fn,sign=fn,toInt=fn,toLarge=fn,
->    toString=fn}
->   : {abs:int -> int, compare:int * int -> order, div:int * int -> int,
->      fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option,
->      max:int * int -> int, maxInt:int option, min:int * int -> int,
->      minInt:int option, mod:int * int -> int, precision:int option,
->      quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool,
->      sign:int -> int, toInt:int -> int, toLarge:int -> int,
->      toString:int -> string}
-Interact;
-> val it = {use=fn,useSilently=fn}
->   : {use:string -> unit, useSilently:string -> unit}
-List;
-> val it =
->   {@=fn,all=fn,app=fn,collate=fn,concat=fn,drop=fn,except=fn,exists=fn,
->    filter=fn,find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,intersect=fn,last=fn,
->    length=fn,map=fn,mapPartial=fn,mapi=fn,nil=[],nth=fn,null=fn,partition=fn,
->    rev=fn,revAppend=fn,tabulate=fn,take=fn,tl=fn}
->   : {@:'a list * 'a list -> 'a list, all:('b -> bool) -> 'b list -> bool,
->      app:('c -> unit) -> 'c list -> unit,
->      collate:('d * 'd -> order) -> 'd list * 'd list -> order,
->      concat:'e list list -> 'e list, drop:'f list * int -> 'f list,
->      except:'g list list -> 'g list, exists:('h -> bool) -> 'h list -> bool,
->      filter:('i -> bool) -> 'i list -> 'i list,
->      find:('j -> bool) -> 'j list -> 'j option,
->      foldl:('k * 'l -> 'l) -> 'l -> 'k list -> 'l,
->      foldr:('m * 'n -> 'n) -> 'n -> 'm list -> 'n,
->      getItem:'o list -> ('o * 'o list) option, hd:'p list -> 'p,
->      intersect:'q list list -> 'q list, last:'r list -> 'r,
->      length:'s list -> int, map:('t -> 'u) -> 't list -> 'u list,
->      mapPartial:('v -> 'w option) -> 'v list -> 'w list,
->      mapi:(int * 'x -> 'y) -> 'x list -> 'y list, nil:'z list,
->      nth:'ba list * int -> 'ba, null:'bb list -> bool,
->      partition:('bc -> bool) -> 'bc list -> 'bc list * 'bc list,
->      rev:'bd list -> 'bd list, revAppend:'be list * 'be list -> 'be list,
->      tabulate:int * (int -> 'bf) -> 'bf list, take:'bg list * int -> 'bg list,
->      tl:'bh list -> 'bh list}
-ListPair;
-> val it =
->   {all=fn,allEq=fn,app=fn,appEq=fn,exists=fn,foldl=fn,foldlEq=fn,foldr=fn,
->    foldrEq=fn,map=fn,mapEq=fn,unzip=fn,zip=fn,zipEq=fn}
->   : {all:('a * 'b -> bool) -> 'a list * 'b list -> bool,
->      allEq:('c * 'd -> bool) -> 'c list * 'd list -> bool,
->      app:('e * 'f -> unit) -> 'e list * 'f list -> unit,
->      appEq:('g * 'h -> unit) -> 'g list * 'h list -> unit,
->      exists:('i * 'j -> bool) -> 'i list * 'j list -> bool,
->      foldl:('k * 'l * 'm -> 'm) -> 'm -> 'k list * 'l list -> 'm,
->      foldlEq:('n * 'o * 'p -> 'p) -> 'p -> 'n list * 'o list -> 'p,
->      foldr:('q * 'r * 's -> 's) -> 's -> 'q list * 'r list -> 's,
->      foldrEq:('t * 'u * 'v -> 'v) -> 'v -> 't list * 'u list -> 'v,
->      map:('w * 'x -> 'y) -> 'w list * 'x list -> 'y list,
->      mapEq:('z * 'ba -> 'bb) -> 'z list * 'ba list -> 'bb list,
->      unzip:('bc * 'bd) list -> 'bc list * 'bd list,
->      zip:'be list * 'bf list -> ('be * 'bf) list,
->      zipEq:'bg list * 'bh list -> ('bg * 'bh) list}
-Math;
-> val it =
->   {acos=fn,asin=fn,atan=fn,atan2=fn,cos=fn,cosh=fn,e=2.7182817,exp=fn,ln=fn,
->    log10=fn,pi=3.1415927,pow=fn,sin=fn,sinh=fn,sqrt=fn,tan=fn,tanh=fn}
->   : {acos:real -> real, asin:real -> real, atan:real -> real,
->      atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real,
->      exp:real -> real, ln:real -> real, log10:real -> real, pi:real,
->      pow:real * real -> real, sin:real -> real, sinh:real -> real,
->      sqrt:real -> real, tan:real -> real, tanh:real -> real}
-Option;
-> val it =
->   {app=fn,compose=fn,composePartial=fn,filter=fn,getOpt=fn,isSome=fn,join=fn,
->    map=fn,mapPartial=fn,valOf=fn}
->   : {app:('a -> unit) -> 'a option -> unit,
->      compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option,
->      composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option,
->      filter:('h -> bool) -> 'h -> 'h option, getOpt:'i option * 'i -> 'i,
->      isSome:'j option -> bool, join:'k option option -> 'k option,
->      map:('l -> 'm) -> 'l option -> 'm option,
->      mapPartial:('n -> 'o option) -> 'n option -> 'o option,
->      valOf:'p option -> 'p}
-String;
-> val it =
->   {<=fn,<==fn,>=fn,>==fn,^=fn,collate=fn,compare=fn,concat=fn,concatWith=fn,
->    explode=fn,extract=fn,fields=fn,implode=fn,isPrefix=fn,isSubstring=fn,
->    isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,substring=fn,
->    tokens=fn,translate=fn}
->   : {<:string * string -> bool, <=:string * string -> bool,
->      >:string * string -> bool, >=:string * string -> bool,
->      ^:string * string -> string,
->      collate:(char * char -> order) -> string * string -> order,
->      compare:string * string -> order, concat:string list -> string,
->      concatWith:string -> string list -> string, explode:string -> char list,
->      extract:string * int * int option -> string,
->      fields:(char -> bool) -> string -> string list,
->      implode:char list -> string, isPrefix:string -> string -> bool,
->      isSubstring:string -> string -> bool, isSuffix:string -> string -> bool,
->      map:(char -> char) -> string -> string, maxSize:int, size:string -> int,
->      str:char -> string, sub:string * int -> char,
->      substring:string * int * int -> string,
->      tokens:(char -> bool) -> string -> string list,
->      translate:(char -> string) -> string -> string}
-Real;
-> val it =
->   {/=fn,abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,
->    fromInt=fn,fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,
->    max=fn,maxFinite=3.4028235E38,min=fn,minNormalPos=1.1754944E~38,
->    minPos=1.4E~45,negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,
->    realFloor=fn,realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,
->    sameSign=fn,sign=fn,signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,
->    unordered=fn}
->   : {/:real * real -> real, abs:real -> real, ceil:real -> int,
->      checkFloat:real -> real, compare:real * real -> order,
->      copySign:real * real -> real, floor:real -> int, fromInt:int -> real,
->      fromManExp:{exp:int, man:real} -> real, fromString:string -> real option,
->      isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool,
->      max:real * real -> real, maxFinite:real, min:real * real -> real,
->      minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int,
->      radix:int, realCeil:real -> real, realFloor:real -> real,
->      realMod:real -> real, realRound:real -> real, realTrunc:real -> real,
->      rem:real * real -> real, round:real -> int, sameSign:real * real -> bool,
->      sign:real -> int, signBit:real -> bool,
->      split:real -> {frac:real, whole:real},
->      toManExp:real -> {exp:int, man:real}, toString:real -> string,
->      trunc:real -> int, unordered:real * real -> bool}
-Relational;
-> val it =
->   {compare=fn,count=fn,empty=fn,iterate=fn,max=fn,min=fn,nonEmpty=fn,only=fn,
->    sum=fn}
->   : {compare:'a * 'a -> order, count:'b bag -> int, empty:'c bag -> bool,
->      iterate:'d bag -> ('d bag * 'd bag -> 'd bag) -> 'd bag, max:'e bag -> 'e,
->      min:'f bag -> 'f, nonEmpty:'g bag -> bool, only:'h bag -> 'h,
->      sum:'i bag -> 'i}
-Sys;
-> val it =
->   {clearEnv=fn,env=fn,file={},plan=fn,planEx=fn,set=fn,show=fn,showAll=fn,
->    unset=fn}
->   : {clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...},
->      plan:unit -> string, planEx:string -> string, set:string * 'a -> unit,
->      show:string -> string option,
->      showAll:unit -> (string * string option) list, unset:string -> unit}
 
 (* Operators ------------------------------------------------------ *)
 
@@ -401,14 +246,30 @@ vector;
 > val it = fn : 'a list -> 'a vector
 
 (* Bag ------------------------------------------------------------ *)
+Bag;
+> val it =
+>   {@=fn,all=fn,app=fn,concat=fn,drop=fn,exists=fn,filter=fn,find=fn,fold=fn,
+>    fromList=fn,getItem=fn,hd=fn,length=fn,map=fn,mapPartial=fn,nil=[],nth=fn,
+>    null=fn,partition=fn,tabulate=fn,take=fn,tl=fn,toList=fn}
+>   : {@:'a bag * 'a bag -> 'a bag, all:('b -> bool) -> 'b bag -> bool,
+>      app:('c -> unit) -> 'c bag -> unit, concat:'d bag list -> 'd bag,
+>      drop:'e bag * int -> 'e bag, exists:('f -> bool) -> 'f bag -> bool,
+>      filter:('g -> bool) -> 'g bag -> 'g bag,
+>      find:('h -> bool) -> 'h bag -> 'h option,
+>      fold:('i * 'j -> 'j) -> 'j -> 'i bag -> 'j, fromList:'k list -> 'k bag,
+>      getItem:'l bag -> ('l * 'l bag) option, hd:'m bag -> 'm,
+>      length:'n bag -> int, map:('o -> 'p) -> 'o bag -> 'p bag,
+>      mapPartial:('q -> 'r option) -> 'q bag -> 'r bag, nil:'s bag,
+>      nth:'t bag * int -> 't, null:'u bag -> bool,
+>      partition:('v -> bool) -> 'v bag -> 'v bag * 'v bag,
+>      tabulate:int * (int -> 'w) -> 'w bag, take:'x bag * int -> 'x bag,
+>      tl:'y bag -> 'y bag, toList:'z bag -> 'z list}
 
 (*) val nil : 'a bag
-(* TODO
 Bag.nil;
 > val it = [] : 'a bag
 Sys.plan ();
 > val it = "constant([])" : string
-*)
 
 (*) val null : 'a bag -> bool
 Bag.null;
@@ -704,7 +565,6 @@ Sys.plan ();
 >   : string
 
 (* Bool ----------------------------------------------------------- *)
-
 Bool;
 > val it = {fromString=fn,not=fn,toString=fn}
 >   : {fromString:string -> bool option, not:bool -> bool,
@@ -729,7 +589,6 @@ Bool.not false;
 > val it = true : bool
 
 (* Either --------------------------------------------------------- *)
-
 Either;
 > val it =
 >   {app=fn,appLeft=fn,appRight=fn,asLeft=fn,asRight=fn,fold=fn,isLeft=fn,
@@ -914,7 +773,6 @@ Fn.notEqual 3 3;
 > val it = false : bool
 
 (* General -------------------------------------------------------- *)
-
 General;
 > val it = {before=fn,exnMessage=fn,exnName=fn,ignore=fn,o=fn}
 >   : {before:'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string,
@@ -989,6 +847,9 @@ Sys.plan ();
 >   : string
 
 (* Interact ------------------------------------------------------- *)
+Interact;
+> val it = {use=fn,useSilently=fn}
+>   : {use:string -> unit, useSilently:string -> unit}
 
 (*) use - load source from a file
 Interact.use;
@@ -997,6 +858,27 @@ use;
 > val it = fn : string -> unit
 
 (* String --------------------------------------------------------- *)
+String;
+> val it =
+>   {<=fn,<==fn,>=fn,>==fn,^=fn,collate=fn,compare=fn,concat=fn,concatWith=fn,
+>    explode=fn,extract=fn,fields=fn,implode=fn,isPrefix=fn,isSubstring=fn,
+>    isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,substring=fn,
+>    tokens=fn,translate=fn}
+>   : {<:string * string -> bool, <=:string * string -> bool,
+>      >:string * string -> bool, >=:string * string -> bool,
+>      ^:string * string -> string,
+>      collate:(char * char -> order) -> string * string -> order,
+>      compare:string * string -> order, concat:string list -> string,
+>      concatWith:string -> string list -> string, explode:string -> char list,
+>      extract:string * int * int option -> string,
+>      fields:(char -> bool) -> string -> string list,
+>      implode:char list -> string, isPrefix:string -> string -> bool,
+>      isSubstring:string -> string -> bool, isSuffix:string -> string -> bool,
+>      map:(char -> char) -> string -> string, maxSize:int, size:string -> int,
+>      str:char -> string, sub:string * int -> char,
+>      substring:string * int * int -> string,
+>      tokens:(char -> bool) -> string -> string list,
+>      translate:(char -> string) -> string -> string}
 
 (*) val maxSize : int
 String.maxSize;
@@ -1348,6 +1230,31 @@ String.`>=`;
 (*) val fromCString : String.string -> string option
 
 (* List ----------------------------------------------------------- *)
+List;
+> val it =
+>   {@=fn,all=fn,app=fn,collate=fn,concat=fn,drop=fn,except=fn,exists=fn,
+>    filter=fn,find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,intersect=fn,last=fn,
+>    length=fn,map=fn,mapPartial=fn,mapi=fn,nil=[],nth=fn,null=fn,partition=fn,
+>    rev=fn,revAppend=fn,tabulate=fn,take=fn,tl=fn}
+>   : {@:'a list * 'a list -> 'a list, all:('b -> bool) -> 'b list -> bool,
+>      app:('c -> unit) -> 'c list -> unit,
+>      collate:('d * 'd -> order) -> 'd list * 'd list -> order,
+>      concat:'e list list -> 'e list, drop:'f list * int -> 'f list,
+>      except:'g list list -> 'g list, exists:('h -> bool) -> 'h list -> bool,
+>      filter:('i -> bool) -> 'i list -> 'i list,
+>      find:('j -> bool) -> 'j list -> 'j option,
+>      foldl:('k * 'l -> 'l) -> 'l -> 'k list -> 'l,
+>      foldr:('m * 'n -> 'n) -> 'n -> 'm list -> 'n,
+>      getItem:'o list -> ('o * 'o list) option, hd:'p list -> 'p,
+>      intersect:'q list list -> 'q list, last:'r list -> 'r,
+>      length:'s list -> int, map:('t -> 'u) -> 't list -> 'u list,
+>      mapPartial:('v -> 'w option) -> 'v list -> 'w list,
+>      mapi:(int * 'x -> 'y) -> 'x list -> 'y list, nil:'z list,
+>      nth:'ba list * int -> 'ba, null:'bb list -> bool,
+>      partition:('bc -> bool) -> 'bc list -> 'bc list * 'bc list,
+>      rev:'bd list -> 'bd list, revAppend:'be list * 'be list -> 'be list,
+>      tabulate:int * (int -> 'bf) -> 'bf list, take:'bg list * int -> 'bg list,
+>      tl:'bh list -> 'bh list}
 
 (*) val nil : 'a list
 List.nil;
@@ -1754,28 +1661,27 @@ Sys.plan ();
 >   "apply2(fnValue List.collate, match(v, tailApply(fnCode match((x, y), tailApply(fnCode match(true, constant([LESS]), _, tailApply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name x), get(name y)))), argCode apply2(fnValue <, get(name x), get(name y)))), argCode get(name v))), tuple(tuple, tuple))"
 >   : string
 
-(* ListPair ------------------------------------------------------- *)
-
-(* The ListPair structure provides operations on pairs of lists. The
-   operations fall into two categories. Those in the first category,
-   whose names do not end in "Eq", do not require that the lists have
-   the same length. When the lists are of uneven lengths, the excess
-   elements from the tail of the longer list are ignored. The
-   operations in the second category, whose names have the suffix
-   "Eq", differ from their similarly named operations in the first
-   category only when the list arguments have unequal lengths, in
-   which case they typically raise the UnequalLengths exception.
-
-   There are three groups of functions:
-    * zip, map, app, all, exists, foldr and foldl raise no exception
-      when the argument lists are found to be of unequal length; the
-      excess elements from the longer list are simply disregarded.
-    * zipEq, mapEq, appEq, foldrEq and foldlEq raise exception
-      UnequalLengths when the argument lists are found to be of
-      unequal length.
-    * allEq raises no exception but returns false if the lists are
-      found to have unequal lengths (after traversing the lists).
-*)
+(* ListPair ----------------------------------------------------------
+ * The ListPair structure provides operations on pairs of lists. The
+ * operations fall into two categories. Those in the first category,
+ * whose names do not end in "Eq", do not require that the lists have
+ * the same length. When the lists are of uneven lengths, the excess
+ * elements from the tail of the longer list are ignored. The
+ * operations in the second category, whose names have the suffix
+ * "Eq", differ from their similarly named operations in the first
+ * category only when the list arguments have unequal lengths, in
+ * which case they typically raise the UnequalLengths exception.
+ *
+ * There are three groups of functions:
+ *  * zip, map, app, all, exists, foldr and foldl raise no exception
+ *    when the argument lists are found to be of unequal length; the
+ *    excess elements from the longer list are simply disregarded.
+ *  * zipEq, mapEq, appEq, foldrEq and foldlEq raise exception
+ *    UnequalLengths when the argument lists are found to be of
+ *    unequal length.
+ *  * allEq raises no exception but returns false if the lists are
+ *    found to have unequal lengths (after traversing the lists).
+ *)
 ListPair;
 > val it =
 >   {all=fn,allEq=fn,app=fn,appEq=fn,exists=fn,foldl=fn,foldlEq=fn,foldr=fn,
@@ -1996,6 +1902,15 @@ ListPair.zipEq ([], ["a", "b"]);
  * the behavior of a function in special cases, the first matching
  * rule defines the semantics.
  *)
+Math;
+> val it =
+>   {acos=fn,asin=fn,atan=fn,atan2=fn,cos=fn,cosh=fn,e=2.7182817,exp=fn,ln=fn,
+>    log10=fn,pi=3.1415927,pow=fn,sin=fn,sinh=fn,sqrt=fn,tan=fn,tanh=fn}
+>   : {acos:real -> real, asin:real -> real, atan:real -> real,
+>      atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real,
+>      exp:real -> real, ln:real -> real, log10:real -> real, pi:real,
+>      pow:real * real -> real, sin:real -> real, sinh:real -> real,
+>      sqrt:real -> real, tan:real -> real, tanh:real -> real}
 
 (* "acos x" returns the arc cosine of x. acos is the inverse of cos.
    Its result is guaranteed to be in the closed interval [0, pi]. If
@@ -2336,6 +2251,18 @@ List.map (fn x => (x, Math.tanh x))
 >   : (real * real) list
 
 (* Option --------------------------------------------------------- *)
+Option;
+> val it =
+>   {app=fn,compose=fn,composePartial=fn,filter=fn,getOpt=fn,isSome=fn,join=fn,
+>    map=fn,mapPartial=fn,valOf=fn}
+>   : {app:('a -> unit) -> 'a option -> unit,
+>      compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option,
+>      composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option,
+>      filter:('h -> bool) -> 'h -> 'h option, getOpt:'i option * 'i -> 'i,
+>      isSome:'j option -> bool, join:'k option option -> 'k option,
+>      map:('l -> 'm) -> 'l option -> 'm option,
+>      mapPartial:('n -> 'o option) -> 'n option -> 'o option,
+>      valOf:'p option -> 'p}
 
 (*) val getOpt : 'a option * 'a -> 'a
 Option.getOpt (SOME 1, 2);
@@ -2478,6 +2405,24 @@ Sys.plan ();
 >   : string
 
 (* Char ----------------------------------------------------------- *)
+Char;
+> val it =
+>   {<=fn,<==fn,>=fn,>==fn,chr=fn,compare=fn,contains=fn,fromCString=fn,
+>    fromString=fn,isAlpha=fn,isAlphaNum=fn,isAscii=fn,isCntrl=fn,isDigit=fn,
+>    isGraph=fn,isHexDigit=fn,isLower=fn,isPrint=fn,isPunct=fn,isSpace=fn,
+>    isUpper=fn,maxChar=#"\255",maxOrd=255,minChar=#"\^@",notContains=fn,ord=fn,
+>    pred=fn,succ=fn,toCString=fn,toLower=fn,toString=fn,toUpper=fn}
+>   : {<:char * char -> bool, <=:char * char -> bool, >:char * char -> bool,
+>      >=:char * char -> bool, chr:int -> char, compare:char * char -> order,
+>      contains:string -> char -> bool, fromCString:string -> char option,
+>      fromString:string -> char option, isAlpha:char -> bool,
+>      isAlphaNum:char -> bool, isAscii:char -> bool, isCntrl:char -> bool,
+>      isDigit:char -> bool, isGraph:char -> bool, isHexDigit:char -> bool,
+>      isLower:char -> bool, isPrint:char -> bool, isPunct:char -> bool,
+>      isSpace:char -> bool, isUpper:char -> bool, maxChar:char, maxOrd:int,
+>      minChar:char, notContains:string -> char -> bool, ord:char -> int,
+>      pred:char -> char, succ:char -> char, toCString:char -> string,
+>      toLower:char -> char, toString:char -> string, toUpper:char -> char}
 
 (* Utility function used to test the functions below. *)
 fun testChar (p: char -> bool) =
@@ -2935,6 +2880,19 @@ Char.compare (#"a", #"D");
 > val it = GREATER : order
 
 (* Int ------------------------------------------------------------ *)
+Int;
+> val it =
+>   {abs=fn,compare=fn,div=fn,fromInt=fn,fromLarge=fn,fromString=fn,max=fn,
+>    maxInt=SOME 2147483647,min=fn,minInt=SOME ~2147483648,mod=fn,
+>    precision=SOME 32,quot=fn,rem=fn,sameSign=fn,sign=fn,toInt=fn,toLarge=fn,
+>    toString=fn}
+>   : {abs:int -> int, compare:int * int -> order, div:int * int -> int,
+>      fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option,
+>      max:int * int -> int, maxInt:int option, min:int * int -> int,
+>      minInt:int option, mod:int * int -> int, precision:int option,
+>      quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool,
+>      sign:int -> int, toInt:int -> int, toLarge:int -> int,
+>      toString:int -> string}
 
 Int.abs;
 > val it = fn : int -> int
@@ -3063,6 +3021,29 @@ Int.toString ~345;
 > val it = "~345" : string
 
 (* Real ----------------------------------------------------------- *)
+Real;
+> val it =
+>   {/=fn,abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,
+>    fromInt=fn,fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,
+>    max=fn,maxFinite=3.4028235E38,min=fn,minNormalPos=1.1754944E~38,
+>    minPos=1.4E~45,negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,
+>    realFloor=fn,realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,
+>    sameSign=fn,sign=fn,signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,
+>    unordered=fn}
+>   : {/:real * real -> real, abs:real -> real, ceil:real -> int,
+>      checkFloat:real -> real, compare:real * real -> order,
+>      copySign:real * real -> real, floor:real -> int, fromInt:int -> real,
+>      fromManExp:{exp:int, man:real} -> real, fromString:string -> real option,
+>      isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool,
+>      max:real * real -> real, maxFinite:real, min:real * real -> real,
+>      minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int,
+>      radix:int, realCeil:real -> real, realFloor:real -> real,
+>      realMod:real -> real, realRound:real -> real, realTrunc:real -> real,
+>      rem:real * real -> real, round:real -> int, sameSign:real * real -> bool,
+>      sign:real -> int, signBit:real -> bool,
+>      split:real -> {frac:real, whole:real},
+>      toManExp:real -> {exp:int, man:real}, toString:real -> string,
+>      trunc:real -> int, unordered:real * real -> bool}
 
 (*) val radix : int
 Real.radix;
@@ -4120,6 +4101,14 @@ List.map (fn x => (x, Real.toString x))
 (*) TODO
 
 (* Relational ----------------------------------------------------- *)
+Relational;
+> val it =
+>   {compare=fn,count=fn,empty=fn,iterate=fn,max=fn,min=fn,nonEmpty=fn,only=fn,
+>    sum=fn}
+>   : {compare:'a * 'a -> order, count:'b bag -> int, empty:'c bag -> bool,
+>      iterate:'d bag -> ('d bag * 'd bag -> 'd bag) -> 'd bag, max:'e bag -> 'e,
+>      min:'f bag -> 'f, nonEmpty:'g bag -> bool, only:'h bag -> 'h,
+>      sum:'i bag -> 'i}
 
 Relational.count (bag [1, 2, 3]);
 > val it = 3 : int
@@ -4472,6 +4461,14 @@ Vector.collate Relational.compare (Vector.fromList [1,2,3], Vector.fromList [1,2
 > val it = LESS : order
 
 (* Sys ------------------------------------------------------------ *)
+Sys;
+> val it =
+>   {clearEnv=fn,env=fn,file={},plan=fn,planEx=fn,set=fn,show=fn,showAll=fn,
+>    unset=fn}
+>   : {clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...},
+>      plan:unit -> string, planEx:string -> string, set:string * 'a -> unit,
+>      show:string -> string option,
+>      showAll:unit -> (string * string option) list, unset:string -> unit}
 
 (*) val env : unit -> string list
 Sys.env;
@@ -4523,6 +4520,8 @@ Sys.env ();
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
 >     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>    ("Time",
+>     "{+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}"),
 >    ("UNIT","variant"),("VARIANT_NONE","variant"),
 >    ("VARIANT_SOME","variant -> variant"),("VECTOR","variant list -> variant"),
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
@@ -4632,6 +4631,8 @@ env ();
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
 >    ("Sys",
 >     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>    ("Time",
+>     "{+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}"),
 >    ("UNIT","variant"),("VARIANT_NONE","variant"),
 >    ("VARIANT_SOME","variant -> variant"),("VECTOR","variant list -> variant"),
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
@@ -4762,12 +4763,12 @@ map
 >   [("banner",SOME "?"),("directory",SOME "?"),
 >    ("excludeStructures",SOME "^Test$"),("hybrid",SOME "true"),
 >    ("inlinePassCount",SOME "5"),("lineWidth",SOME "78"),
->    ("matchCoverageEnabled",SOME "true"),("now",NONE),("optionalInt",NONE),
->    ("output",SOME "CLASSIC"),("printDepth",SOME "5"),
+>    ("matchCoverageEnabled",SOME "true"),("now",SOME "2024-01-01T00:00:00Z"),
+>    ("optionalInt",NONE),("output",SOME "CLASSIC"),("printDepth",SOME "5"),
 >    ("printLength",SOME "999"),("productName",SOME "morel-java"),
 >    ("productVersion",SOME "?"),("relationalize",SOME "false"),
->    ("scriptDirectory",SOME "?"),("stringDepth",SOME "-1"),("timeZone",NONE)]
->   : (string * string option) list
+>    ("scriptDirectory",SOME "?"),("stringDepth",SOME "-1"),
+>    ("timeZone",SOME "UTC")] : (string * string option) list
 List.length (Sys.showAll ());
 > val it = 18 : int
 List.length (showAll ());
@@ -4824,7 +4825,249 @@ Sys.unset "optionalInt";
 Sys.plan ();
 > val it = "apply(fnValue Sys.unset, argCode constant(optionalInt))" : string
 
+(* Time ----------------------------------------------------------- *)
+Time;
+> val it =
+>   {+=fn,-=fn,<=fn,<==fn,>=fn,>==fn,compare=fn,fmt=fn,fromMicroseconds=fn,
+>    fromMilliseconds=fn,fromNanoseconds=fn,fromReal=fn,fromSeconds=fn,
+>    fromString=fn,now=fn,toMicroseconds=fn,toMilliseconds=fn,toNanoseconds=fn,
+>    toReal=fn,toSeconds=fn,toString=fn,zeroTime=0}
+>   : {+:time * time -> time, -:time * time -> time, <:time * time -> bool,
+>      <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool,
+>      compare:time * time -> order, fmt:int -> time -> string,
+>      fromMicroseconds:int -> time, fromMilliseconds:int -> time,
+>      fromNanoseconds:int -> time, fromReal:real -> time,
+>      fromSeconds:int -> time, fromString:string -> time option,
+>      now:unit -> time, toMicroseconds:time -> int, toMilliseconds:time -> int,
+>      toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int,
+>      toString:time -> string, zeroTime:time}
+
+Time.zeroTime;
+> val it = 0 : time
+
+Time.fromSeconds 1;
+> val it = 1000000000 : time
+
+Time.toSeconds (Time.fromSeconds 42);
+> val it = 42 : int
+
+(Time.fromSeconds 42).toSeconds ();
+> val it = 42 : int
+
+Time.fromMilliseconds 1500;
+> val it = 1500000000 : time
+
+Time.toMilliseconds (Time.fromSeconds 2);
+> val it = 2000 : int
+
+(Time.fromSeconds 2).toMilliseconds ();
+> val it = 2000 : int
+
+Time.fromMicroseconds 1000000;
+> val it = 1000000000 : time
+
+Time.toMicroseconds (Time.fromSeconds 1);
+> val it = 1000000 : int
+
+(Time.fromSeconds 1).toMicroseconds ();
+> val it = 1000000 : int
+
+Time.fromNanoseconds 1000000000;
+> val it = 1000000000 : time
+
+Time.toNanoseconds (Time.fromSeconds 1);
+> val it = 1000000000 : int
+
+(Time.fromSeconds 1).toNanoseconds ();
+> val it = 1000000000 : int
+
+Time.fromReal 1.5;
+> val it = 1500000000 : time
+
+Time.toReal (Time.fromReal 2.5);
+> val it = 2.5 : real
+
+(Time.fromReal 2.5).toReal ();
+> val it = 2.5 : real
+
+Time.toString Time.zeroTime;
+> val it = "0.000" : string
+
+Time.zeroTime.toString ();
+> val it = "0.000" : string
+
+Time.fmt 0 Time.zeroTime;
+> val it = "0" : string
+
+Time.fmt 6 (Time.fromReal 1.5);
+> val it = "1.500000" : string
+
+Time.fromString "1.5";
+> val it = SOME 1500000000 : time option
+
+Time.fromString "bad";
+> val it = NONE : time option
+
+Time.compare (Time.fromSeconds 1, Time.fromSeconds 2);
+> val it = LESS : order
+
+Time.compare (Time.fromSeconds 2, Time.fromSeconds 1);
+> val it = GREATER : order
+
+Time.compare (Time.fromSeconds 1, Time.fromSeconds 1);
+> val it = EQUAL : order
+
+(Time.fromSeconds 1).compare (Time.fromSeconds 2);
+> val it = LESS : order
+
+(Time.fromSeconds 2).compare (Time.fromSeconds 1);
+> val it = GREATER : order
+
+Time.`+` (Time.fromSeconds 1, Time.fromSeconds 2);
+> val it = 3000000000 : time
+
+(Time.fromSeconds 1).`+` (Time.fromSeconds 2);
+> val it = 3000000000 : time
+
+Time.`-` (Time.fromSeconds 3, Time.fromSeconds 1);
+> val it = 2000000000 : time
+
+(Time.fromSeconds 3).`-` (Time.fromSeconds 1);
+> val it = 2000000000 : time
+
+Time.`<` (Time.fromSeconds 1, Time.fromSeconds 2);
+> val it = true : bool
+
+(Time.fromSeconds 1).`<` (Time.fromSeconds 2);
+> val it = true : bool
+
+Time.`<=` (Time.fromSeconds 1, Time.fromSeconds 1);
+> val it = true : bool
+
+(Time.fromSeconds 1).`<=` (Time.fromSeconds 1);
+> val it = true : bool
+
+Time.`>` (Time.fromSeconds 2, Time.fromSeconds 1);
+> val it = true : bool
+
+(Time.fromSeconds 2).`>` (Time.fromSeconds 1);
+> val it = true : bool
+
+Time.`>=` (Time.fromSeconds 2, Time.fromSeconds 1);
+> val it = true : bool
+
+(Time.fromSeconds 2).`>=` (Time.fromSeconds 1);
+> val it = true : bool
+
+(*) Negative time (one second before epoch)
+Time.fromSeconds (~1);
+> val it = -1000000000 : time
+
+Time.toSeconds (Time.fromSeconds (~1));
+> val it = ~1 : int
+
+Time.toString (Time.fromSeconds (~1));
+> val it = "~1.000" : string
+
+(*) Time exception: positive infinity
+Time.fromReal Real.posInf;
+> uncaught exception Time
+>   raised at: stdIn:1.1-1.26
+
+(*) Time exception: negative infinity
+Time.fromReal Real.negInf;
+> uncaught exception Time
+>   raised at: stdIn:1.1-1.26
+
+(*) Time exception: NaN
+Time.fromReal (0.0/0.0);
+> uncaught exception Time
+>   raised at: stdIn:1.1-1.23
+
+(*) Time.now uses the 'now' property (set to 2024-01-01T00:00:00Z above)
+Time.now ();
+> val it = 1704067200000000000 : time
+
+(* Variant -------------------------------------------------------- *)
+Variant;
+> val it = {parse=fn,print=fn}
+>   : {parse:string -> variant, print:variant -> string}
+
+(*) value datatype constructors exist
+UNIT;
+> val it = () : unit variant
+BOOL true;
+> val it = true : bool variant
+INT 42;
+> val it = 42 : int variant
+REAL 3.14;
+> val it = 3.14 : real variant
+CHAR #"x";
+> val it = #"x" : char variant
+STRING "hello";
+> val it = "hello" : string variant
+LIST [INT 1, INT 2];
+> val it = [1,2] : int list variant
+BAG [INT 3];
+> val it = [3] : int bag variant
+VECTOR [STRING "a"];
+> val it = #["a"] : string vector variant
+VARIANT_NONE;
+> val it = NONE : variant option variant
+VARIANT_SOME (INT 5);
+> val it = SOME 5 : int option variant
+RECORD [("x", INT 1)];
+> val it = {x=1} : {x:int} variant
+CONSTANT "LESS";
+> val it = LESS : order variant
+CONSTRUCT ("INL", INT 1);
+> val it = INL 1 : (int,'b) either variant
+
+(*) Variant.print : variant -> string
+Variant.print;
+> val it = fn : variant -> string
+Variant.print UNIT;
+> val it = "UNIT" : string
+Variant.print (INT 42);
+> val it = "INT 42" : string
+Variant.print (STRING "hello");
+> val it = "STRING \"hello\"" : string
+Variant.print (LIST [INT 1, INT 2, INT 3]);
+> val it = "LIST [INT 1, INT 2, INT 3]" : string
+
+(*) Variant.parse : string -> variant
+Variant.parse;
+> val it = fn : string -> variant
+Variant.parse "()";
+> val it = () : unit variant
+Variant.parse "42";
+> val it = 42 : int variant
+Variant.parse "true";
+> val it = true : bool variant
+
 (* Vector --------------------------------------------------------- *)
+Vector;
+> val it =
+>   {all=fn,app=fn,appi=fn,collate=fn,concat=fn,exists=fn,find=fn,findi=fn,
+>    foldl=fn,foldli=fn,foldr=fn,foldri=fn,fromList=fn,length=fn,map=fn,mapi=fn,
+>    maxLen=16777215,sub=fn,tabulate=fn,update=fn}
+>   : {all:('a -> bool) -> 'a vector -> bool,
+>      app:('b -> unit) -> 'b vector -> unit,
+>      appi:(int * 'c -> unit) -> 'c vector -> unit,
+>      collate:('d * 'd -> order) -> 'd vector * 'd vector -> order,
+>      concat:'e vector list -> 'e vector,
+>      exists:('f -> bool) -> 'f vector -> bool,
+>      find:('g -> bool) -> 'g vector -> 'g option,
+>      findi:(int * 'h -> bool) -> 'h vector -> (int * 'h) option,
+>      foldl:('i * 'j -> 'j) -> 'j -> 'i vector -> 'j,
+>      foldli:(int * 'k * 'l -> 'l) -> 'l -> 'k vector -> 'l,
+>      foldr:('m * 'n -> 'n) -> 'n -> 'm vector -> 'n,
+>      foldri:(int * 'o * 'p -> 'p) -> 'p -> 'o vector -> 'p,
+>      fromList:'q list -> 'q vector, length:'r vector -> int,
+>      map:('s -> 't) -> 's vector -> 't vector,
+>      mapi:(int * 'u -> 'v) -> 'u vector -> 'v vector, maxLen:int,
+>      sub:'w vector * int -> 'w, tabulate:int * (int -> 'x) -> 'x vector,
+>      update:'y vector * int * 'y -> 'y vector}
 
 (*) Vector.fromList : 'a list -> 'a vector
 Vector.fromList;
@@ -5056,61 +5299,5 @@ Sys.plan ();
 > val it =
 >   "apply2(fnValue Vector.collate, match(v, tailApply(fnCode match((i, j), tailApply(fnCode match(true, constant([LESS]), _, tailApply(fnCode match(true, constant([EQUAL]), _, constant([GREATER])), argCode apply2(fnValue =, get(name i), get(name j)))), argCode apply2(fnValue <, get(name i), get(name j)))), argCode get(name v))), tuple(apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(5))), apply(fnValue Vector.fromList, argCode tuple(constant(1), constant(3), constant(6)))))"
 >   : string
-
-(*) Value structure tests
-
-(*) value datatype constructors exist
-UNIT;
-> val it = () : unit variant
-BOOL true;
-> val it = true : bool variant
-INT 42;
-> val it = 42 : int variant
-REAL 3.14;
-> val it = 3.14 : real variant
-CHAR #"x";
-> val it = #"x" : char variant
-STRING "hello";
-> val it = "hello" : string variant
-LIST [INT 1, INT 2];
-> val it = [1,2] : int list variant
-BAG [INT 3];
-> val it = [3] : int bag variant
-VECTOR [STRING "a"];
-> val it = #["a"] : string vector variant
-VARIANT_NONE;
-> val it = NONE : variant option variant
-VARIANT_SOME (INT 5);
-> val it = SOME 5 : int option variant
-RECORD [("x", INT 1)];
-> val it = {x=1} : {x:int} variant
-CONSTANT "LESS";
-> val it = LESS : order variant
-CONSTRUCT ("INL", INT 1);
-> val it = INL 1 : (int,'b) either variant
-
-(*) Value.print : value -> string (TODO: implement)
-(* Value.print;
-> val it = fn : value -> string
-Value.print UNIT;
-> val it = "()" : string
-Value.print (INT 42);
-> val it = "42" : string
-Value.print (STRING "hello");
-> val it = "\"hello\"" : string
-Value.print (LIST [INT 1, INT 2, INT 3]);
-> val it = "[1, 2, 3]" : string
-*)
-
-(*) Value.parse : string -> value (TODO: implement)
-(* Value.parse;
-> val it = fn : string -> value
-Value.parse "()";
-> val it = UNIT : value
-Value.parse "42";
-> val it = INT 42 : value
-Value.parse "true";
-> val it = BOOL true : value
-*)
 
 (*) End built-in.smli

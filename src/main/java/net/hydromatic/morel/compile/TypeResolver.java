@@ -1904,9 +1904,12 @@ public class TypeResolver {
    *   <li>{@code RecordSelector(field) Id(r)} — type of field {@code field} in
    *       the record type of {@code r}.
    *   <li>{@code Apply(RecordSelector(name), Id(r)) arg} — result type of
-   *       method {@code name} applied to receiver {@code r}; used when {@code
-   *       r.name arg} was parsed as a field-projection chain due to the {@code
-   *       eIsId} guard in the parser.
+   *       method or qualified function {@code name} applied to receiver {@code
+   *       r}; used when {@code r.name arg} was parsed as a field-projection
+   *       chain due to the {@code eIsId} guard in the parser. Handles both
+   *       method-style calls (looked up via {@link BuiltIn#BY_METHOD_NAME}) and
+   *       qualified calls like {@code Time.fromSeconds} (looked up via {@link
+   *       BuiltIn#BY_STRUCTURE}).
    * </ol>
    */
   private @Nullable String applyReceiverTypeHint(TypeEnv env, Ast.Apply apply) {
@@ -1957,6 +1960,16 @@ public class TypeResolver {
             }
           }
           return fnResultTypeTermOp(best.typeFunction.apply(typeSystem));
+        }
+        // Not a method: look up by structure name (e.g. "Time.fromSeconds").
+        final String structureName = ((Ast.Id) innerApply.arg).name;
+        final BuiltIn.Structure structure =
+            BuiltIn.BY_STRUCTURE.get(structureName);
+        if (structure != null) {
+          final BuiltIn builtIn = structure.memberMap.get(name);
+          if (builtIn != null) {
+            return fnResultTypeTermOp(builtIn.typeFunction.apply(typeSystem));
+          }
         }
       }
     }

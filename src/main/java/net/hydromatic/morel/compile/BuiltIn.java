@@ -3488,6 +3488,150 @@ public enum BuiltIn {
               ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0))),
               ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0))))),
 
+  /** Function "Time.+", of type "time * time &rarr; time". */
+  TIME_ADD(
+      "Time",
+      "+",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(ts.lookup(Eqtype.TIME), ts.lookup(Eqtype.TIME)),
+              ts.lookup(Eqtype.TIME))),
+
+  /** Function "Time.compare", of type "time * time &rarr; order". */
+  TIME_COMPARE(
+      "Time",
+      "compare",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(ts.lookup(Eqtype.TIME), ts.lookup(Eqtype.TIME)),
+              ts.order())),
+
+  /** Function "Time.fmt", of type "int &rarr; time &rarr; string". */
+  TIME_FMT(
+      "Time",
+      "fmt",
+      ts -> ts.fnType(INT, ts.fnType(ts.lookup(Eqtype.TIME), STRING))),
+
+  /** Function "Time.fromMicroseconds", of type "int &rarr; time". */
+  TIME_FROM_MICROSECONDS(
+      "Time", "fromMicroseconds", ts -> ts.fnType(INT, ts.lookup(Eqtype.TIME))),
+
+  /** Function "Time.fromMilliseconds", of type "int &rarr; time". */
+  TIME_FROM_MILLISECONDS(
+      "Time", "fromMilliseconds", ts -> ts.fnType(INT, ts.lookup(Eqtype.TIME))),
+
+  /** Function "Time.fromNanoseconds", of type "int &rarr; time". */
+  TIME_FROM_NANOSECONDS(
+      "Time", "fromNanoseconds", ts -> ts.fnType(INT, ts.lookup(Eqtype.TIME))),
+
+  /** Function "Time.fromReal", of type "real &rarr; time". */
+  TIME_FROM_REAL(
+      "Time", "fromReal", ts -> ts.fnType(REAL, ts.lookup(Eqtype.TIME))),
+
+  /** Function "Time.fromSeconds", of type "int &rarr; time". */
+  TIME_FROM_SECONDS(
+      "Time", "fromSeconds", ts -> ts.fnType(INT, ts.lookup(Eqtype.TIME))),
+
+  /** Function "Time.fromString", of type "string &rarr; time option". */
+  TIME_FROM_STRING(
+      "Time",
+      "fromString",
+      ts -> ts.fnType(STRING, ts.option(ts.lookup(Eqtype.TIME)))),
+
+  /** Function "Time.&gt;=", of type "time * time &rarr; bool". */
+  TIME_GE(
+      "Time",
+      ">=",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(ts.lookup(Eqtype.TIME), ts.lookup(Eqtype.TIME)),
+              BOOL)),
+
+  /** Function "Time.&gt;", of type "time * time &rarr; bool". */
+  TIME_GT(
+      "Time",
+      ">",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(ts.lookup(Eqtype.TIME), ts.lookup(Eqtype.TIME)),
+              BOOL)),
+
+  /** Function "Time.&lt;=", of type "time * time &rarr; bool". */
+  TIME_LE(
+      "Time",
+      "<=",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(ts.lookup(Eqtype.TIME), ts.lookup(Eqtype.TIME)),
+              BOOL)),
+
+  /** Function "Time.&lt;", of type "time * time &rarr; bool". */
+  TIME_LT(
+      "Time",
+      "<",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(ts.lookup(Eqtype.TIME), ts.lookup(Eqtype.TIME)),
+              BOOL)),
+
+  /** Function "Time.now", of type "unit &rarr; time". */
+  TIME_NOW("Time", "now", ts -> ts.fnType(UNIT, ts.lookup(Eqtype.TIME))),
+
+  /** Function "Time.-", of type "time * time &rarr; time". */
+  TIME_SUBTRACT(
+      "Time",
+      "-",
+      true,
+      ts ->
+          ts.fnType(
+              ts.tupleType(ts.lookup(Eqtype.TIME), ts.lookup(Eqtype.TIME)),
+              ts.lookup(Eqtype.TIME))),
+
+  /** Function "Time.toMicroseconds", of type "time &rarr; int". */
+  TIME_TO_MICROSECONDS(
+      "Time",
+      "toMicroseconds",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.TIME), INT)),
+
+  /** Function "Time.toMilliseconds", of type "time &rarr; int". */
+  TIME_TO_MILLISECONDS(
+      "Time",
+      "toMilliseconds",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.TIME), INT)),
+
+  /** Function "Time.toNanoseconds", of type "time &rarr; int". */
+  TIME_TO_NANOSECONDS(
+      "Time",
+      "toNanoseconds",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.TIME), INT)),
+
+  /** Function "Time.toReal", of type "time &rarr; real". */
+  TIME_TO_REAL(
+      "Time", "toReal", true, ts -> ts.fnType(ts.lookup(Eqtype.TIME), REAL)),
+
+  /** Function "Time.toSeconds", of type "time &rarr; int". */
+  TIME_TO_SECONDS(
+      "Time", "toSeconds", true, ts -> ts.fnType(ts.lookup(Eqtype.TIME), INT)),
+
+  /** Function "Time.toString", of type "time &rarr; string". */
+  TIME_TO_STRING(
+      "Time",
+      "toString",
+      true,
+      ts -> ts.fnType(ts.lookup(Eqtype.TIME), STRING)),
+
+  /** Constant "Time.zeroTime", of type "time". */
+  TIME_ZERO_TIME("Time", "zeroTime", ts -> ts.lookup(Eqtype.TIME)),
+
   /**
    * Function "Variant.parse", of type "string &rarr; variant".
    *
@@ -4469,6 +4613,7 @@ public enum BuiltIn {
 
     BAG("bag", 1),
     LIST("list", 1),
+    TIME("time", 0),
     VECTOR("vector", 1);
 
     private final String mlName;
