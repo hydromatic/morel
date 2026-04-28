@@ -1,0 +1,76 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `Range` structure.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+Range;
+> val it =
+>   {complement=fn,contains=fn,continuousSetOf=fn,discreteSetOf=fn,ranges=fn,
+>    toBag=fn,toList=fn}
+>   : {complement:'a continuous_set -> 'a continuous_set,
+>      contains:'b range -> 'b -> bool,
+>      continuousSetOf:'c range list -> 'c continuous_set,
+>      discreteSetOf:'d range list -> 'd discrete_set,
+>      ranges:'e continuous_set -> 'e range list,
+>      toBag:'f discrete_set -> 'f bag, toList:'g discrete_set -> 'g list}
+
+CLOSED (3, 7) : int range;
+> val it = CLOSED (3,7) : int range
+
+(*) Range.contains: prefix and postfix.
+Range.contains (CLOSED (3, 7)) 5;
+> val it = true : bool
+
+CLOSED (3, 7).contains 5;
+> val it = true : bool
+
+(*) Range.continuousSetOf normalizes overlapping ranges.
+Range.continuousSetOf [CLOSED (5, 10), CLOSED (1, 3), CLOSED (3, 6)];
+> val it = CONTINUOUS_SET [CLOSED (1,10)] : int continuous_set
+
+(*) Range.discreteSetOf normalizes overlapping and adjacent ranges.
+Range.discreteSetOf [CLOSED (5, 10), CLOSED (1, 3), CLOSED (3, 6)];
+> val it = DISCRETE_SET [CLOSED (1,10)] : int discrete_set
+
+(*) continuous_set.contains and discrete_set.contains (postfix).
+(Range.continuousSetOf [CLOSED (1, 3), CLOSED (7, 9)]).contains 2;
+> val it = true : bool
+
+(Range.discreteSetOf [CLOSED (1, 3), CLOSED (7, 9)]).contains 2;
+> val it = true : bool
+
+(*) Range.ranges returns the list of ranges in a continuous_set.
+(Range.continuousSetOf [CLOSED (1, 3), CLOSED (7, 9)]).ranges ();
+> val it = [CLOSED (1,3),CLOSED (7,9)] : int range list
+
+(*) Range.toList enumerates values.
+(Range.discreteSetOf [CLOSED (5, 10)]).toList ();
+> val it = [5,6,7,8,9,10] : int list
+
+(*) Range.toBag enumerates values as a bag.
+(Range.discreteSetOf [CLOSED (1, 3)]).toBag ();
+> val it = [1,2,3] : int bag
+
+(*) End range.smli

@@ -1,0 +1,182 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `Option` structure, defined
+ * by the Standard ML Basis Library.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+Option;
+> val it =
+>   {app=fn,compose=fn,composePartial=fn,filter=fn,getOpt=fn,isSome=fn,join=fn,
+>    map=fn,mapPartial=fn,valOf=fn}
+>   : {app:('a -> unit) -> 'a option -> unit,
+>      compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option,
+>      composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option,
+>      filter:('h -> bool) -> 'h -> 'h option, getOpt:'i option * 'i -> 'i,
+>      isSome:'j option -> bool, join:'k option option -> 'k option,
+>      map:('l -> 'm) -> 'l option -> 'm option,
+>      mapPartial:('n -> 'o option) -> 'n option -> 'o option,
+>      valOf:'p option -> 'p}
+
+(*) val getOpt : 'a option * 'a -> 'a
+Option.getOpt (SOME 1, 2);
+> val it = 1 : int
+Option.getOpt (NONE, 2);
+> val it = 2 : int
+Sys.plan ();
+> val it = "apply2(fnValue Option.getOpt, constant([NONE]), constant(2))"
+>   : string
+
+(*) val isSome : 'a option -> bool
+Option.isSome (SOME 1);
+> val it = true : bool
+(SOME 1).isSome ();
+> val it = true : bool
+Option.isSome NONE;
+> val it = false : bool
+Sys.plan ();
+> val it = "apply(fnValue Option.isSome, argCode constant([NONE]))" : string
+
+(*) val valOf : 'a option -> 'a
+Option.valOf (SOME 1);
+> val it = 1 : int
+(SOME 1).valOf ();
+> val it = 1 : int
+(* sml-nj gives:
+    stdIn:6.1-6.18 Warning: type vars not generalized because of
+       value restriction are instantiated to dummy types (X1,X2,...)
+ *)
+Option.valOf NONE;
+> uncaught exception Option
+>   raised at: stdIn:1.1-1.18
+Sys.set ("inlinePassCount", 0);
+> val it = () : unit
+val noneInt = if true then NONE else SOME 0;
+> val noneInt = NONE : int option
+Sys.plan ();
+> val it =
+>   "globalMarshal(globals [SOME], body apply(fnCode match(true, constant([NONE]), _, apply(fnValue tyCon, argCode constant(0))), argCode constant(true)))"
+>   : string
+Sys.unset "inlinePassCount";
+> val it = () : unit
+Option.valOf noneInt;
+> uncaught exception Option
+>   raised at: stdIn:1.1-1.21
+Sys.plan ();
+> val it = "apply(fnValue Option.valOf, argCode constant([NONE]))" : string
+
+(*) val filter : ('a -> bool) -> 'a -> 'a option
+Option.filter (fn x => x mod 2 = 0) 1;
+> val it = NONE : int option
+Option.filter (fn x => x mod 2 = 0) 2;
+> val it = SOME 2 : int option
+Sys.plan ();
+> val it =
+>   "apply2(fnValue Option.filter, match(x, apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name x), constant(2)), constant(0))), constant(2))"
+>   : string
+
+(*) val join : 'a option option -> 'a option
+(*) (The function name is quoted using backticks because 'join' is a keyword.)
+Option.`join` (SOME (SOME 1));
+> val it = SOME 1 : int option
+Option.`join` (SOME noneInt);
+> val it = NONE : int option
+(* sml-nj gives
+  stdIn:1.2-1.18 Warning: type vars not generalized because of
+     value restriction are instantiated to dummy types (X1,X2,...)
+*)
+Option.`join` NONE;
+> val it = NONE : 'a option
+Sys.plan ();
+> val it = "apply(fnValue Option.join, argCode constant([NONE]))" : string
+
+(*) val app : ('a -> unit) -> 'a option -> unit
+Option.app General.ignore (SOME 1);
+> val it = () : unit
+Option.app General.ignore NONE;
+> val it = () : unit
+Sys.plan ();
+> val it =
+>   "apply2(fnValue Option.app, constant(General.ignore), constant([NONE]))"
+>   : string
+
+(*) val map : ('a -> 'b) -> 'a option -> 'b option
+Option.map String.size (SOME "xyz");
+> val it = SOME 3 : int option
+Option.map String.size NONE;
+> val it = NONE : int option
+Sys.plan ();
+> val it = "apply2(fnValue Option.map, constant(String.size), constant([NONE]))"
+>   : string
+
+(*) val mapPartial : ('a -> 'b option) -> 'a option -> 'b option
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) (SOME "xyz");
+> val it = SOME 3 : int option
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) NONE;
+> val it = NONE : int option
+Option.mapPartial (fn s => if s = "" then NONE else (SOME (String.size s))) (SOME "");
+> val it = NONE : int option
+Sys.plan ();
+> val it =
+>   "globalMarshal(globals [SOME], body apply2(fnValue Option.mapPartial, match(s, tailApply(fnCode match(true, constant([NONE]), _, tailApply(fnValue tyCon, argCode apply(fnValue String.size, argCode stack(offset 1, name s)))), argCode apply2(fnValue =, stack(offset 1, name s), constant()))), apply(fnValue tyCon, argCode constant())))"
+>   : string
+
+(*) val compose : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
+Option.compose;
+> val it = fn : ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 1, String.size s))))
+               "";
+> val it = NONE : int option
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 0, String.size s))))
+               "a";
+> val it = SOME 1 : int option
+Option.compose (String.size,
+                (fn s => if s = "" then NONE
+                 else SOME (String.substring (s, 0, String.size s))))
+               "";
+> val it = NONE : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply2(fnValue Option.compose, constant(String.size), match(s, tailApply(fnCode match(true, constant([NONE]), _, tailApply(fnValue tyCon, argCode apply3(fnValue String.substring, stack(offset 1, name s), constant(0), apply(fnValue String.size, argCode stack(offset 1, name s))))), argCode apply2(fnValue =, stack(offset 1, name s), constant())))), argCode constant())"
+>   : string
+
+(*) val composePartial : ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option
+Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
+                       fn s => if s = "" then NONE else SOME (String.size s))
+                      "abc";
+> val it = SOME 3 : int option
+Option.composePartial (fn i => if i = 0 then NONE else (SOME i),
+                       fn s => if s = "" then NONE else SOME (String.size s))
+                      "";
+> val it = NONE : int option
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply2(fnValue Option.composePartial, match(i, tailApply(fnCode match(true, constant([NONE]), _, tailApply(fnValue tyCon, argCode stack(offset 1, name i))), argCode apply2(fnValue =, stack(offset 1, name i), constant(0)))), match(s, tailApply(fnCode match(true, constant([NONE]), _, tailApply(fnValue tyCon, argCode apply(fnValue String.size, argCode stack(offset 1, name s)))), argCode apply2(fnValue =, stack(offset 1, name s), constant())))), argCode constant())"
+>   : string
+
+(*) End option.smli

@@ -26,12 +26,13 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.PatternFilenameFilter;
 import java.io.File;
-import java.io.FilenameFilter;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -120,10 +121,21 @@ public class ScriptTest {
     assertThat(firstFile, notNullValue());
     final int commonPrefixLength =
         firstFile.getAbsolutePath().length() - first.length();
-    final File dir = firstFile.getParentFile();
-    @SuppressWarnings("UnstableApiUsage")
-    final FilenameFilter filter = new PatternFilenameFilter(".*\\.(sml|smli)$");
-    File[] files = dir.listFiles(filter);
+    final Path dir = firstFile.getParentFile().toPath();
+    final Stream<Path> walk;
+    try {
+      walk = Files.walk(dir);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    // Skip the "surefire" subdirectory; it contains output files written by
+    // previous test runs (which have the same .smli suffix).
+    final File[] files =
+        walk.filter(Files::isRegularFile)
+            .filter(p -> p.getFileName().toString().matches(".*\\.(sml|smli)$"))
+            .filter(p -> !p.toString().contains(File.separator + "surefire"))
+            .map(Path::toFile)
+            .toArray(File[]::new);
     return Stream.of(first(files, new File[0]))
         .map(f -> f.getAbsolutePath().substring(commonPrefixLength))
         .sorted(

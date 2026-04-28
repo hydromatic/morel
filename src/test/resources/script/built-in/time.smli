@@ -1,0 +1,195 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `Time` structure, defined
+ * by the Standard ML Basis Library.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+Sys.set ("timeZone", "UTC");
+> val it = () : unit
+Sys.set ("now", "2024-01-01T00:00:00Z");
+> val it = () : unit
+
+Time;
+> val it =
+>   {+=fn,-=fn,<=fn,<==fn,>=fn,>==fn,compare=fn,fmt=fn,fromMicroseconds=fn,
+>    fromMilliseconds=fn,fromNanoseconds=fn,fromReal=fn,fromSeconds=fn,
+>    fromString=fn,now=fn,toMicroseconds=fn,toMilliseconds=fn,toNanoseconds=fn,
+>    toReal=fn,toSeconds=fn,toString=fn,zeroTime=0}
+>   : {+:time * time -> time, -:time * time -> time, <:time * time -> bool,
+>      <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool,
+>      compare:time * time -> order, fmt:int -> time -> string,
+>      fromMicroseconds:int -> time, fromMilliseconds:int -> time,
+>      fromNanoseconds:int -> time, fromReal:real -> time,
+>      fromSeconds:int -> time, fromString:string -> time option,
+>      now:unit -> time, toMicroseconds:time -> int, toMilliseconds:time -> int,
+>      toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int,
+>      toString:time -> string, zeroTime:time}
+
+Time.zeroTime;
+> val it = 0 : time
+
+Time.fromSeconds 1;
+> val it = 1000000000 : time
+
+Time.toSeconds (Time.fromSeconds 42);
+> val it = 42 : int
+
+(Time.fromSeconds 42).toSeconds ();
+> val it = 42 : int
+
+Time.fromMilliseconds 1500;
+> val it = 1500000000 : time
+
+Time.toMilliseconds (Time.fromSeconds 2);
+> val it = 2000 : int
+
+(Time.fromSeconds 2).toMilliseconds ();
+> val it = 2000 : int
+
+Time.fromMicroseconds 1000000;
+> val it = 1000000000 : time
+
+Time.toMicroseconds (Time.fromSeconds 1);
+> val it = 1000000 : int
+
+(Time.fromSeconds 1).toMicroseconds ();
+> val it = 1000000 : int
+
+Time.fromNanoseconds 1000000000;
+> val it = 1000000000 : time
+
+Time.toNanoseconds (Time.fromSeconds 1);
+> val it = 1000000000 : int
+
+(Time.fromSeconds 1).toNanoseconds ();
+> val it = 1000000000 : int
+
+Time.fromReal 1.5;
+> val it = 1500000000 : time
+
+Time.toReal (Time.fromReal 2.5);
+> val it = 2.5 : real
+
+(Time.fromReal 2.5).toReal ();
+> val it = 2.5 : real
+
+Time.toString Time.zeroTime;
+> val it = "0.000" : string
+
+Time.zeroTime.toString ();
+> val it = "0.000" : string
+
+Time.fmt 0 Time.zeroTime;
+> val it = "0" : string
+
+Time.fmt 6 (Time.fromReal 1.5);
+> val it = "1.500000" : string
+
+Time.fromString "1.5";
+> val it = SOME 1500000000 : time option
+
+Time.fromString "bad";
+> val it = NONE : time option
+
+Time.compare (Time.fromSeconds 1, Time.fromSeconds 2);
+> val it = LESS : order
+
+Time.compare (Time.fromSeconds 2, Time.fromSeconds 1);
+> val it = GREATER : order
+
+Time.compare (Time.fromSeconds 1, Time.fromSeconds 1);
+> val it = EQUAL : order
+
+(Time.fromSeconds 1).compare (Time.fromSeconds 2);
+> val it = LESS : order
+
+(Time.fromSeconds 2).compare (Time.fromSeconds 1);
+> val it = GREATER : order
+
+Time.`+` (Time.fromSeconds 1, Time.fromSeconds 2);
+> val it = 3000000000 : time
+
+(Time.fromSeconds 1).`+` (Time.fromSeconds 2);
+> val it = 3000000000 : time
+
+Time.`-` (Time.fromSeconds 3, Time.fromSeconds 1);
+> val it = 2000000000 : time
+
+(Time.fromSeconds 3).`-` (Time.fromSeconds 1);
+> val it = 2000000000 : time
+
+Time.`<` (Time.fromSeconds 1, Time.fromSeconds 2);
+> val it = true : bool
+
+(Time.fromSeconds 1).`<` (Time.fromSeconds 2);
+> val it = true : bool
+
+Time.`<=` (Time.fromSeconds 1, Time.fromSeconds 1);
+> val it = true : bool
+
+(Time.fromSeconds 1).`<=` (Time.fromSeconds 1);
+> val it = true : bool
+
+Time.`>` (Time.fromSeconds 2, Time.fromSeconds 1);
+> val it = true : bool
+
+(Time.fromSeconds 2).`>` (Time.fromSeconds 1);
+> val it = true : bool
+
+Time.`>=` (Time.fromSeconds 2, Time.fromSeconds 1);
+> val it = true : bool
+
+(Time.fromSeconds 2).`>=` (Time.fromSeconds 1);
+> val it = true : bool
+
+(*) Negative time (one second before epoch)
+Time.fromSeconds (~1);
+> val it = -1000000000 : time
+
+Time.toSeconds (Time.fromSeconds (~1));
+> val it = ~1 : int
+
+Time.toString (Time.fromSeconds (~1));
+> val it = "~1.000" : string
+
+(*) Time exception: positive infinity
+Time.fromReal Real.posInf;
+> uncaught exception Time
+>   raised at: stdIn:1.1-1.26
+
+(*) Time exception: negative infinity
+Time.fromReal Real.negInf;
+> uncaught exception Time
+>   raised at: stdIn:1.1-1.26
+
+(*) Time exception: NaN
+Time.fromReal (0.0/0.0);
+> uncaught exception Time
+>   raised at: stdIn:1.1-1.23
+
+(*) Time.now uses the 'now' property (set to 2024-01-01T00:00:00Z above)
+Time.now ();
+> val it = 1704067200000000000 : time
+
+(*) End time.smli

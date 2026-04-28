@@ -1,0 +1,84 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `Variant` structure.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+Variant;
+> val it = {parse=fn,print=fn}
+>   : {parse:string -> variant, print:variant -> string}
+
+(*) value datatype constructors exist
+UNIT;
+> val it = () : unit variant
+BOOL true;
+> val it = true : bool variant
+INT 42;
+> val it = 42 : int variant
+REAL 3.14;
+> val it = 3.14 : real variant
+CHAR #"x";
+> val it = #"x" : char variant
+STRING "hello";
+> val it = "hello" : string variant
+LIST [INT 1, INT 2];
+> val it = [1,2] : int list variant
+BAG [INT 3];
+> val it = [3] : int bag variant
+VECTOR [STRING "a"];
+> val it = #["a"] : string vector variant
+VARIANT_NONE;
+> val it = NONE : variant option variant
+VARIANT_SOME (INT 5);
+> val it = SOME 5 : int option variant
+RECORD [("x", INT 1)];
+> val it = {x=1} : {x:int} variant
+CONSTANT "LESS";
+> val it = LESS : order variant
+CONSTRUCT ("INL", INT 1);
+> val it = INL 1 : (int,'b) either variant
+
+(*) Variant.print : variant -> string
+Variant.print;
+> val it = fn : variant -> string
+Variant.print UNIT;
+> val it = "UNIT" : string
+Variant.print (INT 42);
+> val it = "INT 42" : string
+Variant.print (STRING "hello");
+> val it = "STRING \"hello\"" : string
+Variant.print (LIST [INT 1, INT 2, INT 3]);
+> val it = "LIST [INT 1, INT 2, INT 3]" : string
+
+(*) Variant.parse : string -> variant
+Variant.parse;
+> val it = fn : string -> variant
+Variant.parse "()";
+> val it = () : unit variant
+Variant.parse "42";
+> val it = 42 : int variant
+Variant.parse "true";
+> val it = true : bool variant
+
+(*) End variant.smli

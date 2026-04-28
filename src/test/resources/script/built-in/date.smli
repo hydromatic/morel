@@ -1,0 +1,151 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `Date` structure, defined
+ * by the Standard ML Basis Library.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+Sys.set ("timeZone", "UTC");
+> val it = () : unit
+Sys.set ("now", "2024-01-01T00:00:00Z");
+> val it = () : unit
+
+Date;
+> val it =
+>   {compare=fn,date=fn,day=fn,fmt=fn,fromString=fn,fromTimeLocal=fn,
+>    fromTimeUniv=fn,hour=fn,isDst=fn,localOffset=fn,minute=fn,month=fn,
+>    second=fn,toString=fn,toTime=fn,weekDay=fn,year=fn,yearDay=fn}
+>   : {compare:date * date -> order,
+>      date:
+>           {day:int, hour:int, minute:int, month:month, offset:time option,
+>            second:int, year:int} -> date, day:date -> int,
+>      fmt:string -> date -> string, fromString:string -> date option,
+>      fromTimeLocal:time -> date, fromTimeUniv:time -> date, hour:date -> int,
+>      isDst:date -> bool option, localOffset:unit -> time, minute:date -> int,
+>      month:date -> month, second:date -> int, toString:date -> string,
+>      toTime:date -> time, weekDay:date -> weekday, year:date -> int,
+>      yearDay:date -> int}
+
+Date.fromString "Wed Mar 08 19:06:45 1995";
+> val it = SOME 1995-03-08T19:06:45Z : date option
+
+Date.fromTimeUniv (Time.zeroTime);
+> val it = 1970-01-01T00:00Z : date
+
+Date.month (Date.fromTimeUniv (Time.zeroTime));
+> val it = Jan : month
+
+Date.weekDay (Date.fromTimeUniv (Time.zeroTime));
+> val it = Thu : weekday
+
+(*) Negative time (one day before epoch)
+Date.fromTimeUniv (Time.fromSeconds (~86400));
+> val it = 1969-12-31T00:00Z : date
+
+Date.toString (Date.fromTimeUniv (Time.fromSeconds (~86400)));
+> val it = "Wed Dec 31 00:00:00 1969" : string
+
+(*) With timeZone=UTC, fromTimeLocal same as fromTimeUniv
+Date.fromTimeLocal (Time.zeroTime);
+> val it = 1970-01-01T00:00Z : date
+
+(*) localOffset returns 0 when timeZone=UTC
+Date.localOffset ();
+> val it = 0 : time
+
+(*) Date.date with offset=NONE uses timeZone property (UTC)
+Date.date {year=1970, month=Jan, day=1, hour=0, minute=0, second=0, offset=NONE};
+> val it = 1970-01-01T00:00Z : date
+
+(*) Date exception: day out of range
+Date.date {year=1970, month=Jan, day=32, hour=0, minute=0, second=0, offset=NONE};
+> uncaught exception Date
+>   raised at: stdIn:1.1-1.82
+
+(*) Date exception: hour out of range
+Date.date {year=1970, month=Jan, day=1, hour=25, minute=0, second=0, offset=NONE};
+> uncaught exception Date
+>   raised at: stdIn:1.1-1.82
+
+(*) Remaining Date functions, using epoch as a convenient date
+Date.year (Date.fromTimeUniv (Time.zeroTime));
+> val it = 1970 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).year ();
+> val it = 1970 : int
+
+Date.day (Date.fromTimeUniv (Time.zeroTime));
+> val it = 1 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).day ();
+> val it = 1 : int
+
+Date.hour (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).hour ();
+> val it = 0 : int
+
+Date.minute (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).minute ();
+> val it = 0 : int
+
+Date.second (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).second ();
+> val it = 0 : int
+
+Date.yearDay (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : int
+
+(Date.fromTimeUniv (Time.zeroTime)).yearDay ();
+> val it = 0 : int
+
+Date.isDst (Date.fromTimeUniv (Time.zeroTime));
+> val it = NONE : bool option
+
+(Date.fromTimeUniv (Time.zeroTime)).isDst ();
+> val it = NONE : bool option
+
+Date.toTime (Date.fromTimeUniv (Time.zeroTime));
+> val it = 0 : time
+
+(Date.fromTimeUniv (Time.zeroTime)).toTime ();
+> val it = 0 : time
+
+Date.compare (Date.fromTimeUniv (Time.zeroTime), Date.fromTimeUniv (Time.zeroTime));
+> val it = EQUAL : order
+
+Date.compare (Date.fromTimeUniv (Time.zeroTime), Date.fromTimeUniv (Time.fromSeconds 1));
+> val it = LESS : order
+
+(Date.fromTimeUniv (Time.zeroTime)).compare (Date.fromTimeUniv (Time.fromSeconds 1));
+> val it = LESS : order
+
+Date.fmt "%Y-%m-%d" (Date.fromTimeUniv (Time.zeroTime));
+> val it = "1970-01-01" : string
+
+(*) End date.smli

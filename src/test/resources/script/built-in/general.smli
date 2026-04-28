@@ -1,0 +1,102 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `General` structure, defined
+ * by the Standard ML Basis Library.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+General;
+> val it = {before=fn,exnMessage=fn,exnName=fn,ignore=fn,o=fn}
+>   : {before:'a * unit -> 'a, exnMessage:exn -> string, exnName:exn -> string,
+>      ignore:'b -> unit, o:('c -> 'd) * ('e -> 'c) -> 'e -> 'd}
+
+(*) val exnMessage : exn -> string
+General.exnMessage;
+> val it = fn : exn -> string
+(* TODO
+General.exnMessage Bind;
+> val it = "nonexhaustive binding failure" : string
+General.exnMessage Divide;
+> val it = "division by zero" : string
+General.exnMessage Overflow;
+> val it = "integer overflow" : string
+*)
+
+(*) val exnName : exn -> string
+General.exnName;
+> val it = fn : exn -> string
+(* TODO
+General.exnName Bind;
+> val it = "Bind" : string
+General.exnName Divide;
+> val it = "Divide" : string
+General.exnName Overflow;
+> val it = "Overflow" : string
+*)
+
+(*) op o - function composition
+General.`o`;
+> val it = fn : ('a -> 'b) * ('c -> 'a) -> 'c -> 'b
+String.size;
+> val it = fn : string -> int
+Char.chr;
+> val it = fn : int -> char
+General.`o` (Char.chr, String.size);
+> val it = fn : string -> char
+General.`o` (Char.chr, String.size) "012345678901234567890123456789012";
+> val it = #"!" : char
+(op o) (Char.chr, String.size) "012345678901234567890123456789012";
+> val it = #"!" : char
+
+val plusOne = fn x => x + 1;
+> val plusOne = fn : int -> int
+val timesTwo = fn x => x * 2;
+> val timesTwo = fn : int -> int
+val plusThree = fn x => x + 3;
+> val plusThree = fn : int -> int
+plusOne o timesTwo;
+> val it = fn : int -> int
+(plusOne o timesTwo) 3;
+> val it = 7 : int
+plusOne o timesTwo o plusThree;
+> val it = fn : int -> int
+((plusOne o timesTwo) o plusThree) 3;
+> val it = 13 : int
+(plusOne o (timesTwo o plusThree)) 3;
+> val it = 13 : int
+Sys.plan ();
+> val it =
+>   "apply(fnCode apply2(fnValue General.o, match(x, apply2(fnValue +, stack(offset 1, name x), constant(1))), apply2(fnValue General.o, match(x_1, apply2(fnValue *, stack(offset 1, name x), constant(2))), match(x_2, apply2(fnValue +, stack(offset 1, name x), constant(3))))), argCode constant(3))"
+>   : string
+
+General.ignore;
+> val it = fn : 'a -> unit
+General.ignore (1 + 2);
+> val it = () : unit
+Sys.plan ();
+> val it =
+>   "apply(fnValue General.ignore, argCode apply2(fnValue +, constant(1), constant(2)))"
+>   : string
+
+(*) End general.smli
