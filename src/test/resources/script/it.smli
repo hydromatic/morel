@@ -1,0 +1,87 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests that 'it' is bound only by bare expressions, never by value
+ * declarations, regardless of pattern shape.
+ *)
+
+(*) At the start of a session, 'it' is unbound.
+it;
+> stdIn:1.1-1.3 Error: unbound variable or constructor: it
+>   raised at: stdIn:1.1-1.3
+
+(*) A simple value declaration leaves 'it' unbound.
+val x = 5;
+> val x = 5 : int
+it;
+> stdIn:1.1-1.3 Error: unbound variable or constructor: it
+>   raised at: stdIn:1.1-1.3
+
+(*) A composite tuple pattern leaves 'it' unbound.
+val (a, b) = ("hello", true);
+> val a = "hello" : string
+> val b = true : bool
+it;
+> stdIn:1.1-1.3 Error: unbound variable or constructor: it
+>   raised at: stdIn:1.1-1.3
+
+(*) A list-cons pattern leaves 'it' unbound.
+val h :: t = [1.0, 2.0, 3.0];
+> val h = 1 : real
+> val t = [2,3] : real list
+it;
+> stdIn:1.1-1.3 Error: unbound variable or constructor: it
+>   raised at: stdIn:1.1-1.3
+
+(*) A constructor pattern leaves 'it' unbound.
+val SOME n = SOME 1;
+> val n = 1 : int
+it;
+> stdIn:1.1-1.3 Error: unbound variable or constructor: it
+>   raised at: stdIn:1.1-1.3
+
+(*) An empty (unit) value declaration leaves 'it' unbound.
+val () = ();
+it;
+> stdIn:1.1-1.3 Error: unbound variable or constructor: it
+>   raised at: stdIn:1.1-1.3
+
+(*) A bare expression assigns 'it', as expected.
+"now bound";
+> val it = "now bound" : string
+it;
+> val it = "now bound" : string
+
+(*) After 'it' has been bound by a bare expression, subsequent value
+(*) declarations still do not change it.
+val (a, b) = (1, 2);
+> val a = 1 : int
+> val b = 2 : int
+it;
+> val it = "now bound" : string
+val () = ();
+it;
+> val it = "now bound" : string
+
+(*) Explicit 'val it = ...' does change 'it' (and prints feedback).
+val it = 42;
+> val it = 42 : int
+it;
+> val it = 42 : int
+
+(*) End it.smli

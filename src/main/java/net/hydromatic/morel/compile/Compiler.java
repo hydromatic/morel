@@ -2132,15 +2132,20 @@ public class Compiler {
         }
         // Add the new bindings to session.globalEnv so closures created by
         // this statement automatically see the latest bindings (including
-        // themselves) when they are eventually invoked.
+        // themselves) when they are eventually invoked. The synthetic 'it'
+        // binding produced for composite val declarations (skipPat) is
+        // intentionally omitted: it must not become user-visible.
         for (Binding b : outBindings0) {
+          if (b.id == skipPat) {
+            continue;
+          }
           session.globalEnv.put(b.id.name, b.value);
         }
         for (Binding binding : outBindings0) {
-          outBindings.accept(binding);
           if (binding.id == skipPat) {
             continue;
           }
+          outBindings.accept(binding);
           final Pretty pretty = getPretty(session.map, session.bagPrinter());
           final Core.NamedPat id =
               binding.overloadId != null ? binding.overloadId : binding.id;

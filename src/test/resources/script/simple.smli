@@ -642,20 +642,30 @@ in
   x + y
 end;
 > val it = 3 : int
+(*) Set 'it' to a value of a distinct type before the next tests, so
+(*) that the assertions that follow show whether the val declarations
+(*) leave 'it' alone.
+"composite";
+> val it = "composite" : string
 val (x, y) = (1, 2);
 > val x = 1 : int
 > val y = 2 : int
+(*) Composite val declarations do not assign 'it'.
 it;
-> val it = (1,2) : int * int
+> val it = "composite" : string
 val (x, 2) = (1, 2);
 > val x = 1 : int
 it;
-> val it = (1,2) : int * int
+> val it = "composite" : string
 val h :: t = [1, 2, 3];
 > val h = 1 : int
 > val t = [2,3] : int list
 it;
-> val it = [1,2,3] : int list
+> val it = "composite" : string
+(*) Empty (unit) value declarations do not assign 'it'.
+val () = ();
+it;
+> val it = "composite" : string
 val _ = 3;
 
 val SOME i = SOME 1;
