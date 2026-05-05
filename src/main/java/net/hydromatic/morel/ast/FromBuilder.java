@@ -160,7 +160,8 @@ public class FromBuilder {
   /** Creates an unbounded scan, "from pat". */
   public FromBuilder scan(Core.Pat pat) {
     final Core.Exp extent =
-        core.extent(typeSystem, pat.type, ImmutableRangeSet.of(Range.all()));
+        core.extent(
+            Pos.ZERO, typeSystem, pat.type, ImmutableRangeSet.of(Range.all()));
     return scan(pat, extent, core.boolLiteral(true));
   }
 

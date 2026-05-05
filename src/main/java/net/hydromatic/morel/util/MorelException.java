@@ -25,8 +25,30 @@ public interface MorelException {
   /** Returns the position. */
   Pos pos();
 
-  /** Writes a description of this exception. */
+  /** Appends to {@code buf} a description of this exception. */
   StringBuilder describeTo(StringBuilder buf);
+
+  /**
+   * Appends to {@code buf} the standard two-line representation of this
+   * exception used by both compile-time and run-time error reporting.
+   *
+   * <p>For example:
+   *
+   * <pre>{@code
+   * - val x = abc;
+   * stdIn:1.9-1.12 Error: unbound variable or constructor: abc
+   *    raised at: stdIn:1.9-1.12
+   * }</pre>
+   */
+  default StringBuilder describe(StringBuilder buf) {
+    describeTo(buf).append("\n").append("  raised at: ");
+    return pos().describeTo(buf);
+  }
+
+  /** As {@link #describe}, but returns a {@code String}. */
+  default String description() {
+    return describe(new StringBuilder()).toString();
+  }
 }
 
 // End MorelException.java

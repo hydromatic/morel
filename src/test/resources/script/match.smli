@@ -161,7 +161,7 @@ ack 3 3;
   | (n,_) => false);
 > val it = fn : int * bool -> bool
 
-(* Exhaustive function of option list  ---------------------------- *)
+(* Exhaustive function of option list ----------------------------- *)
 
 (*) Non-exhaustive function
 fun f [(SOME i)] = i

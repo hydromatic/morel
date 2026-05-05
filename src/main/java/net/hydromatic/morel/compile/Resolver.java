@@ -1328,6 +1328,7 @@ public class Resolver {
         corePat = r.toCore(scan.pat);
         coreExp =
             core.extent(
+                scan.pat.pos,
                 typeMap.typeSystem,
                 corePat.type,
                 ImmutableRangeSet.of(Range.all()));

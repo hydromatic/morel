@@ -232,9 +232,9 @@ public class Shell {
               tracer);
       final List<Binding> bindings = new ArrayList<>();
       compiled.eval(session, env, terminal.writer()::println, bindings::add);
-      warningList.forEach(w -> terminal.writer().println(w.getMessage()));
+      warningList.forEach(w -> terminal.writer().println(w.description()));
     } catch (MorelParseException | CompileException e) {
-      terminal.writer().println(e.getMessage());
+      terminal.writer().println(e.description());
     }
     terminal.writer().flush();
   }
@@ -744,7 +744,7 @@ public class Shell {
                   bindingMap.clear();
                   bindings.clear();
                 } catch (MorelParseException | CompileException e) {
-                  outLines.accept(e.getMessage());
+                  outLines.accept(e.description());
                 }
                 if (echo) {
                   outLines.accept(code);
@@ -815,9 +815,7 @@ public class Shell {
           throw e;
         }
         if (e instanceof MorelException) {
-          final MorelException me = (MorelException) e;
-          me.describeTo(buf).append("\n").append("  raised at: ");
-          me.pos().describeTo(buf);
+          ((MorelException) e).describe(buf);
         } else {
           buf.append(e);
         }

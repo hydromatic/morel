@@ -90,8 +90,9 @@ public class Expander {
             final Generator generator = cache.bestGenerator(namedPat);
             if (generator == null
                 || generator.cardinality == Generator.Cardinality.INFINITE) {
-              throw new IllegalArgumentException(
-                  format("pattern '%s' is not grounded", namedPat.name));
+              final String message =
+                  format("pattern '%s' is not grounded", namedPat.name);
+              throw new CompileException(message, false, scan.exp.pos);
             }
           }
         }

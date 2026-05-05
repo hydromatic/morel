@@ -559,15 +559,14 @@ public class Main {
                   subShell.command(
                       statement, lineConsumer, typeOnly, expectedOutput));
         } catch (MorelParseException | CompileException e) {
-          final String message = e.getMessage();
-          if (message.startsWith("Encountered \"<EOF>\" ")) {
+          if (e.getMessage().startsWith("Encountered \"<EOF>\" ")) {
             break;
           }
           String code = in2.flush();
           if (main.echo) {
             outLines.accept(code);
           }
-          outLines.accept(message);
+          outLines.accept(e.description());
           if (code.isEmpty()) {
             // If we consumed no input, we're not making progress, so we'll
             // never finish. Abort.
@@ -585,9 +584,7 @@ public class Main {
     @Override
     public void handle(RuntimeException e, StringBuilder buf) {
       if (e instanceof MorelException) {
-        final MorelException me = (MorelException) e;
-        me.describeTo(buf).append("\n").append("  raised at: ");
-        me.pos().describeTo(buf);
+        ((MorelException) e).describe(buf);
       } else {
         buf.append(e);
       }

@@ -828,20 +828,30 @@ public enum CoreBuilder {
    * Creates an extent. It returns a list of all values of a given type that
    * fall into a given range-set. The range-set might consist of just {@link
    * Range#all()}, in which case, the list returns all values of the type.
+   *
+   * <p>The position is attached to the resulting expression so that downstream
+   * errors (e.g. "pattern is not grounded") can point back to the original
+   * {@code from} pattern; pass {@link Pos#ZERO} for compiler-synthesized
+   * extents that have no source location.
    */
   @SuppressWarnings({"rawtypes", "unchecked"})
-  public Core.Exp extent(TypeSystem typeSystem, Type type, RangeSet rangeSet) {
+  public Core.Exp extent(
+      Pos pos, TypeSystem typeSystem, Type type, RangeSet rangeSet) {
     final Map<String, ImmutableRangeSet> map;
     if (rangeSet.complement().isEmpty()) {
       map = ImmutableMap.of();
     } else {
       map = ImmutableMap.of("/", ImmutableRangeSet.copyOf(rangeSet));
     }
-    return extent(typeSystem, type, map);
+    return extent(pos, typeSystem, type, map);
   }
 
+  /**
+   * As {@link #extent(Pos, TypeSystem, Type, RangeSet)}, with a range-set map.
+   */
   @SuppressWarnings("rawtypes")
   public Core.Exp extent(
+      Pos pos,
       TypeSystem typeSystem,
       Type type,
       Map<String, ImmutableRangeSet> rangeSetMap) {
@@ -849,7 +859,7 @@ public enum CoreBuilder {
     // Store an ImmutableRangeSet value inside a literal of type 'unit'.
     // The value of such literals is usually Unit.INSTANCE, but we cheat.
     return core.apply(
-        Pos.ZERO,
+        pos,
         bagType,
         core.functionLiteral(bagType, BuiltIn.Z_EXTENT),
         core.internalLiteral(new RangeExtent(typeSystem, type, rangeSetMap)));
@@ -885,7 +895,10 @@ public enum CoreBuilder {
                 typeSystem,
                 plus(
                     core.extent(
-                        typeSystem, listType.elementType(), rangeSetMap),
+                        Pos.ZERO,
+                        typeSystem,
+                        listType.elementType(),
+                        rangeSetMap),
                     remainingExps));
         return Pair.of(exp, remainingExps);
     }
@@ -920,7 +933,10 @@ public enum CoreBuilder {
                 typeSystem,
                 plus(
                     core.extent(
-                        typeSystem, listType.elementType(), rangeSetMap),
+                        Pos.ZERO,
+                        typeSystem,
+                        listType.elementType(),
+                        rangeSetMap),
                     remainingExps));
         return Pair.of(exp, remainingExps);
     }

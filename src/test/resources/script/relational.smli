@@ -439,6 +439,7 @@ from e in emps, i in bag [1]
   yield {ordinal, e.name};
 > stdIn:2.10-2.17 Error: cannot use 'ordinal' in unordered query
 >   raised at: stdIn:2.10-2.17
+
 from e in emps, i in bag [1]
   order e.deptno
   yield {ordinal, e.name};
@@ -938,8 +939,43 @@ from i in [2, 1, 2]
   group i compute {c = count (bag ["a", "b"])};
 > val it = [{c=2,i=1},{c=2,i=2}] : {c:int, i:int} list
 
+(*) Duplicate field name across 'group' and 'compute' clauses. The
+(*) error points at the offending label (the second occurrence).
+from e in [{x = 1, y = 5}]
+  group {a = e.x}
+  compute {a = sum over e.y};
+> stdIn:3.12 Error: duplicate field name 'a' in group
+>   raised at: stdIn:3.12
+
+(*) When the duplicate label is implicit (derived from the field
+(*) expression), the error position is the field expression itself.
+from e in [{x = 1, y = 5}]
+  group {sum = e.x}
+  compute sum over e.y;
+> stdIn:3.11-3.23 Error: duplicate field name 'sum' in group
+>   raised at: stdIn:3.11-3.23
+
+(*) Duplicate field name within the 'compute' record itself. The error
+(*) position is the second occurrence of the label.
+from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]
+  group {a = e.x, a = e.y};
+> stdIn:2.19 Error: duplicate field 'a' in record
+>   raised at: stdIn:2.19
+
+from e in [{x = 1, y = 5}, {x = 0, y = 1}, {x = 1, y = 1}]
+  group {e.x, x = e.y};
+> stdIn:2.15 Error: duplicate field 'x' in record
+>   raised at: stdIn:2.15
+
+from e in [{x = 1, y = 5}]
+  group {a = e.x}
+  compute {c = sum over e.y, c = sum over e.x};
+> stdIn:3.30 Error: duplicate field 'c' in record
+>   raised at: stdIn:3.30
+
 (* -------------------------------------------------------------------
- * List and bag aggregate functions can be applied to list and bag inputs. *)
+ * List and bag aggregate functions can be applied to list and bag
+ * inputs. *)
 
 (*) List aggregate function returns first element, bag returns second.
 fun listAgg list = List.hd list;
@@ -1139,7 +1175,6 @@ from e in scott.emps
 >    {deptno=30,job="CLERK"},{deptno=10,job="MANAGER"},{deptno=20,job="MANAGER"},
 >    {deptno=30,job="MANAGER"},{deptno=10,job="PRESIDENT"},
 >    {deptno=30,job="SALESMAN"}] : {deptno:int, job:string} list
-
 
 (*) Function defined inside query
 from e in emps
@@ -2087,6 +2122,12 @@ from e in emps
 (*) Primitive 'yield' followed  by 'into'
 from e in emps
   yield e.deptno
+  into sum;
+> val it = 90 : int
+
+(*) As previous, with 'unorder'
+from e in emps
+  yield e.deptno
   unorder
   into sum;
 > val it = 90 : int
@@ -2132,7 +2173,7 @@ end;
 
 (*) Empty from with yield
 let
-  val ten = 6 + 4;
+  val ten = 6 + 4
 in
   from
     yield {ten, nine = ten - 1}
@@ -2156,8 +2197,8 @@ from
 
 (*) Empty from with group
 let
-  val ten = 6 + 4;
-  val eleven = ten + 1;
+  val ten = 6 + 4
+  val eleven = ten + 1
 in
   from
     group ten compute {sumEleven = sum over eleven}
@@ -2269,9 +2310,9 @@ fun listFields2 (lists: 'a list) =
   from {a, b} in lists
   yield a + 1;
 > val listFields2 = fn : {a:int, b:'a} list -> int list
-listFields [];
+listFields2 [];
 > val it = [] : int list
-listFields [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
+listFields2 [{a = 1, b = 2}, {a = 3, b = 0}, {a = 4, b = 5}];
 > val it = [2,4,5] : int list
 
 (*) Layered patterns
@@ -2319,7 +2360,7 @@ let
   fun abbrev s =
     if size s > 5
     then (substring (s, 0, 3)) ^ "."
-    else s;
+    else s
   fun shouldPromote e =
     e.id < e.deptno * 4
 in

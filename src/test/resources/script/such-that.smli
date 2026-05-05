@@ -240,9 +240,9 @@ from e where (case e of
  *
  * With symbolic math we could deduce that the solution is [~2,3],
  * but we don't have symbolic math. *)
-(* TODO: better exception *)
 from x where (x + 2) * (x - 3) = 0;
-> java.lang.IllegalArgumentException: pattern 'x' is not grounded
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
 
 (*) Pattern
 from x, y where (x, y) elem [(1,true),(2,false)];
@@ -735,7 +735,8 @@ in
     where isEmp50 e
     yield e.ename
 end;
-> java.lang.IllegalArgumentException: pattern 'e' is not grounded
+> stdIn:5.8 Error: pattern 'e' is not grounded
+>   raised at: stdIn:5.8
 
 (*) A function with external extent.
 fun hasJob (e: typeof (Bag.hd scott.emps),

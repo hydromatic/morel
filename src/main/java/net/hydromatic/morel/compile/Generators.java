@@ -338,6 +338,7 @@ class Generators {
           if (!coveredByGenerator.contains(scanPat)) {
             final Core.Exp extent =
                 core.extent(
+                    Pos.ZERO,
                     typeSystem,
                     scanPat.type,
                     ImmutableRangeSet.of(Range.all()));
@@ -2464,7 +2465,7 @@ class Generators {
     // Add scans for all component patterns
     for (Core.NamedPat p : innerPat.expand()) {
       final Core.Exp extentExp =
-          core.extent(ts, p.type, ImmutableRangeSet.of(Range.all()));
+          core.extent(Pos.ZERO, ts, p.type, ImmutableRangeSet.of(Range.all()));
       fb.scan(p, extentExp);
     }
 

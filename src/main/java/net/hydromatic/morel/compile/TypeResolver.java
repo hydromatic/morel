@@ -34,7 +34,6 @@ import static net.hydromatic.morel.util.Static.splitQuoted;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 import static org.apache.calcite.util.Util.first;
-import static org.apache.calcite.util.Util.firstDuplicate;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableCollection;
@@ -727,11 +726,12 @@ public class TypeResolver {
 
       case RECORD_SELECTOR:
         final Ast.RecordSelector recordSelector = (Ast.RecordSelector) node;
-        throw new RuntimeException(
+        throw new TypeException(
             format(
-                "Error: unresolved flex record\n"
-                    + "   (can't tell what fields there are besides #%s)",
-                recordSelector.name));
+                "unresolved flex record (can't tell what fields there are "
+                    + "besides #%s)",
+                recordSelector.name),
+            recordSelector.pos);
 
       case IF:
         return deduceIfType(env, (Ast.If) node, v);
@@ -1481,12 +1481,20 @@ public class TypeResolver {
       // synthetic "_group" and "_compute" labels will not appear.
       final Ast.Record groupRecord = group.key();
       final Ast.Record aggregateRecord = group.compute();
-      groupRecord.args.forEach((id, e) -> names.add(id.name));
-      aggregateRecord.args.forEach((id, e) -> names.add(id.name));
-      int duplicate = firstDuplicate(names);
-      if (duplicate >= 0) {
-        throw new RuntimeException(
-            "Duplicate field name '" + names.get(duplicate) + "' in group");
+      final Set<String> seen = new HashSet<>();
+      final List<Ast.Id> ids = new ArrayList<>();
+      groupRecord.args.forEach((id, e) -> ids.add(id));
+      aggregateRecord.args.forEach((id, e) -> ids.add(id));
+      for (Ast.Id id : ids) {
+        if (!seen.add(id.name)) {
+          // The id's position is the label if it is explicit (e.g. 'a' in
+          // 'compute {a = sum over e.y}'), or the field expression if the
+          // label is implicit (e.g. 'sum over e.y' in 'compute sum over e.y'),
+          // because AstBuilder.implicitLabel synthesizes the id with the
+          // expression's position.
+          throw new TypeException(
+              "duplicate field name '" + id.name + "' in group", id.pos);
+        }
       }
     }
   }
