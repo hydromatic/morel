@@ -169,6 +169,7 @@ public enum Op {
   THROUGH,
   AGGREGATE,
   IF,
+  RAISE,
   OVER_DECL;
 
   /** Padded name, e.g. " : ". */

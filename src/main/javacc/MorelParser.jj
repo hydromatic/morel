@@ -468,6 +468,18 @@ Exp ifThenElse() :
   }
 }
 
+/** Parses a "raise exp" expression. */
+Exp raise() :
+{
+  final Span span;
+  final Exp exp;
+}
+{
+  <RAISE> { span = Span.of(pos()); } exp = expression() {
+    return ast.raise(span.end(this), exp);
+  }
+}
+
 /** Parses a "let ... in expression end" expression. */
 Exp let() :
 {
@@ -1221,6 +1233,8 @@ Exp atom() :
   e = fn() { return e; }
 |
   e = ifThenElse() { return e; }
+|
+  e = raise() { return e; }
 |
   e = caseOf() { return e; }
 |
@@ -2043,6 +2057,7 @@ AstNode statementEof() :
 | < OF: "of" >
 | < OP: "op" >
 | < ORELSE: "orelse" >
+| < RAISE: "raise" >
 | < REC: "rec" >
 | < SIG: "sig" >
 | < SIGNATURE: "signature" >

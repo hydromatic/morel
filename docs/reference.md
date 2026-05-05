@@ -97,7 +97,8 @@ In Standard ML but not in Morel:
 * `word` constant
 * `longid` identifier
 * references (`ref` and operators `!` and `:=`)
-* exceptions (`raise`, `handle`, `exception`)
+* exceptions: `handle` and user-defined `exception` declarations
+  (`raise` and built-in exceptions are supported)
 * `while` loop
 * data type replication (`type`)
 * `withtype` in `datatype` declaration
@@ -191,6 +192,7 @@ In Standard ML but not in Morel:
     | <b>if</b> <i>exp<sub>1</sub></i> <b>then</b> <i>exp<sub>2</sub></i> <b>else</b> <i>exp<sub>3</sub></i>
                                 conditional
     | <b>case</b> <i>exp</i> <b>of</b> <i>match</i>         case analysis
+    | <b>raise</b> <i>exp</i>                 exception raising
     | <b>fn</b> <i>match</i>                  function
     | <b>current</b>                   current element (only valid in a query step)
     | <b>elements</b>                  elements of current group (only valid in compute)

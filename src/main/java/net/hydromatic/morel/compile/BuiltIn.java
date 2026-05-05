@@ -4793,7 +4793,25 @@ public enum BuiltIn {
         2,
         h -> h.tyCon(Constructor.EITHER_INL).tyCon(Constructor.EITHER_INR)),
 
-    EXN("General", "exn", false, 0, h -> h),
+    EXN(
+        "General",
+        "exn",
+        false,
+        0,
+        h ->
+            h.tyCon(Constructor.EXN_BIND)
+                .tyCon(Constructor.EXN_CHR)
+                .tyCon(Constructor.EXN_DIV)
+                .tyCon(Constructor.EXN_DOMAIN)
+                .tyCon(Constructor.EXN_EMPTY)
+                .tyCon(Constructor.EXN_FAIL)
+                .tyCon(Constructor.EXN_MATCH)
+                .tyCon(Constructor.EXN_OVERFLOW)
+                .tyCon(Constructor.EXN_SIZE)
+                .tyCon(Constructor.EXN_SPAN)
+                .tyCon(Constructor.EXN_SUBSCRIPT)
+                .tyCon(Constructor.EXN_UNEQUAL_LENGTHS)
+                .tyCon(Constructor.EXN_UNORDERED)),
 
     OPTION(
         "Option",
@@ -5023,6 +5041,28 @@ public enum BuiltIn {
                 Keys.apply(Keys.name("range"), ImmutableList.of(h.get(0))))),
     EITHER_INL(Datatype.EITHER, "INL", h -> h.get(0)),
     EITHER_INR(Datatype.EITHER, "INR", h -> h.get(1)),
+    // Built-in exceptions. Some (Date, Error, Option, Time) are not chained
+    // on the EXN datatype below — they are intentionally not visible at top
+    // level (Date/Option/Time would clash with a structure name; Error is
+    // not in the standard basis). They exist here so that
+    // Codes.BuiltInExn can refer to them by name.
+    EXN_BIND(Datatype.EXN, "Bind"),
+    EXN_CHR(Datatype.EXN, "Chr"),
+    EXN_DATE(Datatype.EXN, "Date"),
+    EXN_DIV(Datatype.EXN, "Div"),
+    EXN_DOMAIN(Datatype.EXN, "Domain"),
+    EXN_EMPTY(Datatype.EXN, "Empty"),
+    EXN_ERROR(Datatype.EXN, "Error"),
+    EXN_FAIL(Datatype.EXN, "Fail", h -> STRING.key()),
+    EXN_MATCH(Datatype.EXN, "Match"),
+    EXN_OPTION(Datatype.EXN, "Option"),
+    EXN_OVERFLOW(Datatype.EXN, "Overflow"),
+    EXN_SIZE(Datatype.EXN, "Size"),
+    EXN_SPAN(Datatype.EXN, "Span"),
+    EXN_SUBSCRIPT(Datatype.EXN, "Subscript"),
+    EXN_TIME(Datatype.EXN, "Time"),
+    EXN_UNEQUAL_LENGTHS(Datatype.EXN, "UnequalLengths"),
+    EXN_UNORDERED(Datatype.EXN, "Unordered"),
     LIST_CONS(Datatype.PSEUDO_LIST, "CONS", h -> h.get(0)),
     LIST_NIL(Datatype.PSEUDO_LIST, "NIL"),
     OPTION_NONE(Datatype.OPTION, "NONE"),

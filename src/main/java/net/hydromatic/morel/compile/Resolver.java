@@ -549,6 +549,8 @@ public class Resolver {
         return toCore((Ast.Fn) exp);
       case IF:
         return toCore((Ast.If) exp);
+      case RAISE:
+        return toCore((Ast.Raise) exp);
       case CASE:
         return toCore((Ast.Case) exp);
       case LET:
@@ -832,6 +834,10 @@ public class Resolver {
   private Core.Case toCore(Ast.If if_) {
     return core.ifThenElse(
         toCore(if_.condition), toCore(if_.ifTrue), toCore(if_.ifFalse));
+  }
+
+  private Core.Raise toCore(Ast.Raise raise) {
+    return core.raise(raise.pos, typeMap.getType(raise), toCore(raise.exp));
   }
 
   private Core.Case toCore(Ast.Case case_) {

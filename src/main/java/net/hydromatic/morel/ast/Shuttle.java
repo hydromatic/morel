@@ -111,6 +111,10 @@ public class Shuttle {
         ifThenElse.ifFalse.accept(this));
   }
 
+  protected Ast.Exp visit(Ast.Raise raise) {
+    return ast.raise(raise.pos, raise.exp.accept(this));
+  }
+
   protected Ast.Let visit(Ast.Let let) {
     return ast.let(let.pos, visitList(let.decls), let.exp);
   }
@@ -530,6 +534,10 @@ public class Shuttle {
 
   protected Core.Exp visit(Core.Case caseOf) {
     return caseOf.copy(caseOf.exp.accept(this), visitList(caseOf.matchList));
+  }
+
+  protected Core.Exp visit(Core.Raise raise) {
+    return raise.copy(raise.type, raise.exp.accept(this));
   }
 
   protected Core.Match visit(Core.Match match) {

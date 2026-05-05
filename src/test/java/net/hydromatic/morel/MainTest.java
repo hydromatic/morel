@@ -624,7 +624,7 @@ public class MainTest {
             + "    1, 15)$ ^\n"
             + "  \"y\"\n")
         .assertEvalError(
-            pos -> throwsA(Codes.BuiltInExn.SUBSCRIPT.mlName, pos));
+            pos -> throwsA(Codes.BuiltInExn.SUBSCRIPT.mlName(), pos));
   }
 
   /** Tests the name of {@link TypeVar}. */

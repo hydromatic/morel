@@ -734,14 +734,10 @@ public class TypeResolver {
                 recordSelector.name));
 
       case IF:
-        final Ast.If if_ = (Ast.If) node;
-        v2 = unifier.variable();
-        final Ast.Exp condition2 = deduceExpType(env, if_.condition, v2);
-        equiv(v2, toTerm(PrimitiveType.BOOL));
-        final Ast.Exp ifTrue2 = deduceExpType(env, if_.ifTrue, v);
-        final Ast.Exp ifFalse2 = deduceExpType(env, if_.ifFalse, v);
-        final Ast.If if2 = if_.copy(condition2, ifTrue2, ifFalse2);
-        return reg(if2, v);
+        return deduceIfType(env, (Ast.If) node, v);
+
+      case RAISE:
+        return deduceRaiseType(env, (Ast.Raise) node, v);
 
       case CASE:
         return deduceCaseType(env, (Ast.Case) node, v);
@@ -2372,6 +2368,24 @@ public class TypeResolver {
       matchList2.add(match.copy(pat2, exp2));
     }
     return matchList2;
+  }
+
+  private Ast.If deduceIfType(TypeEnv env, Ast.If if_, Variable v) {
+    final Variable v2 = unifier.variable();
+    final Ast.Exp condition2 = deduceExpType(env, if_.condition, v2);
+    equiv(v2, toTerm(PrimitiveType.BOOL));
+    final Ast.Exp ifTrue2 = deduceExpType(env, if_.ifTrue, v);
+    final Ast.Exp ifFalse2 = deduceExpType(env, if_.ifFalse, v);
+    return reg(if_.copy(condition2, ifTrue2, ifFalse2), v);
+  }
+
+  private Ast.Raise deduceRaiseType(TypeEnv env, Ast.Raise raise, Variable v) {
+    // 'raise' takes an expression of type 'exn' and returns a value of any
+    // type, since it never returns.
+    final Variable vExn = unifier.variable();
+    equiv(vExn, toTerm(typeSystem.lookup("exn"), Subst.EMPTY));
+    final Ast.Exp exp2 = deduceExpType(env, raise.exp, vExn);
+    return reg(raise.copy(exp2), v);
   }
 
   private Ast.Case deduceCaseType(TypeEnv env, Ast.Case case_, Variable v) {

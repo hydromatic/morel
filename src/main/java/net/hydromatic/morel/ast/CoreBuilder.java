@@ -615,6 +615,10 @@ public enum CoreBuilder {
             match(pos, truePat, ifTrue), match(pos, boolWildcardPat, ifFalse)));
   }
 
+  public Core.Raise raise(Pos pos, Type type, Core.Exp exp) {
+    return new Core.Raise(pos, type, exp);
+  }
+
   public Core.OverDecl overDecl(Core.IdPat pat) {
     return new Core.OverDecl(pat);
   }

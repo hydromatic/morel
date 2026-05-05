@@ -186,7 +186,7 @@ class SignatureChecker {
     boolean found = false;
     for (Codes.BuiltInExn builtInExn : Codes.BuiltInExn.values()) {
       if (structure.equals(builtInExn.structure)
-          && exnName.equals(builtInExn.mlName)) {
+          && exnName.equals(builtInExn.mlName())) {
         found = true;
         break;
       }

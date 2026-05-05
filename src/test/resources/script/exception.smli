@@ -1,0 +1,69 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests for exceptions, including the `raise` expression.
+ *)
+
+(*) The built-in exception 'Bind' is a value of type exn.
+Bind;
+> val it = Bind : exn
+
+(*) The built-in exception 'Fail' is a constructor of type 'string -> exn'.
+Fail;
+> val it = fn : string -> exn
+
+(*) Applying Fail to a string yields a value of type exn.
+Fail "boom";
+> val it = Fail "boom" : exn
+
+(*) 'raise' on a nullary built-in exception.
+raise Bind;
+> uncaught exception Bind
+>   raised at: stdIn:1.1-1.11
+
+(*) 'raise' on a built-in exception with a payload prints the payload.
+raise Fail "Function not yet implemented";
+> uncaught exception Fail [Fail: Function not yet implemented]
+>   raised at: stdIn:1.1-1.42
+
+(*) 'raise' does not constrain the surrounding type.
+fun h x = raise Fail x;
+> val h = fn : string -> 'a
+
+fn x => [raise Bind, raise Subscript];
+> val it = fn : 'a -> 'b list
+
+fn x => [raise Bind, raise Subscript, 3];
+> val it = fn : 'a -> int list
+
+fn s => [raise Bind, raise Subscript, raise Fail s, 3];
+> val it = fn : string -> int list
+
+(*) Conditional raise inside a function: the unraised branch determines
+(*) the function's result type.
+fun f x = if x > 0 then raise Bind else ();
+> val f = fn : int -> unit
+
+f 0;
+> val it = () : unit
+
+f 1;
+> uncaught exception Bind
+>   raised at: stdIn:1.25-1.35
+
+(*) End exception.smli

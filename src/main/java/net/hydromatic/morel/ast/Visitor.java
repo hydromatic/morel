@@ -53,6 +53,10 @@ public class Visitor {
     anIf.ifFalse.accept(this);
   }
 
+  protected void visit(Ast.Raise raise) {
+    raise.exp.accept(this);
+  }
+
   protected void visit(Ast.Let let) {
     let.decls.forEach(this::accept);
     let.exp.accept(this);
@@ -368,6 +372,10 @@ public class Visitor {
   protected void visit(Core.Case kase) {
     kase.exp.accept(this);
     kase.matchList.forEach(this::accept);
+  }
+
+  protected void visit(Core.Raise raise) {
+    raise.exp.accept(this);
   }
 
   protected void visit(Core.Apply apply) {

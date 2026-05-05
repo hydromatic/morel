@@ -552,6 +552,10 @@ public enum AstBuilder {
     return new Ast.If(pos, condition, ifTrue, ifFalse);
   }
 
+  public Ast.Raise raise(Pos pos, Ast.Exp exp) {
+    return new Ast.Raise(pos, exp);
+  }
+
   public Ast.InfixPat infixPat(Pos pos, Op op, Ast.Pat p0, Ast.Pat p1) {
     return new Ast.InfixPat(pos, op, p0, p1);
   }

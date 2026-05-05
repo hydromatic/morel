@@ -394,6 +394,10 @@ public class Compiler {
         argCode = compile(cx, case_.exp);
         return Codes.apply(matchCode, argCode);
 
+      case RAISE:
+        final Core.Raise raise = (Core.Raise) expression;
+        return Codes.raise(compile(cx, raise.exp), raise.pos);
+
       case RECORD_SELECTOR:
         final Core.RecordSelector recordSelector =
             (Core.RecordSelector) expression;

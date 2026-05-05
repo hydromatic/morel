@@ -1275,7 +1275,7 @@ public abstract class Codes {
       new BaseApplicable1<String, BuiltInExn>(BuiltIn.GENERAL_EXN_MESSAGE) {
         @Override
         public String apply(BuiltInExn arg) {
-          return arg.mlName;
+          return arg.mlName();
         }
       };
 
@@ -1284,7 +1284,7 @@ public abstract class Codes {
       new BaseApplicable1<String, BuiltInExn>(BuiltIn.GENERAL_EXN_NAME) {
         @Override
         public String apply(BuiltInExn arg) {
-          return arg.structure + "." + arg.mlName;
+          return arg.structure + "." + arg.mlName();
         }
       };
 
@@ -4745,6 +4745,11 @@ public abstract class Codes {
     return new OrElseCode(code0, code1);
   }
 
+  /** Returns a Code that implements a {@code raise} expression. */
+  public static Code raise(Code expCode, Pos pos) {
+    return new RaiseCode(expCode, pos);
+  }
+
   /** @see BuiltIn#Z_ORDINAL */
   public static Code ordinalGet(int[] ordinalSlots) {
     return new OrdinalGetCode(ordinalSlots);
@@ -5722,23 +5727,37 @@ public abstract class Codes {
   public static class MorelRuntimeException extends RuntimeException
       implements MorelException {
     private final BuiltInExn e;
+    private final @Nullable Object payload;
     private final Pos pos;
 
     /** Creates a MorelRuntimeException. */
     public MorelRuntimeException(BuiltInExn e, Pos pos) {
+      this(e, null, pos);
+    }
+
+    /** Creates a MorelRuntimeException with a runtime payload. */
+    public MorelRuntimeException(
+        BuiltInExn e, @Nullable Object payload, Pos pos) {
       this.e = requireNonNull(e);
+      this.payload = payload;
       this.pos = requireNonNull(pos);
     }
 
     @Override
     public String toString() {
-      return e.mlName + " at " + pos;
+      return e.mlName() + " at " + pos;
     }
 
     @Override
     public StringBuilder describeTo(StringBuilder buf) {
-      buf.append("uncaught exception ").append(e.mlName);
-      if (e.description != null) {
+      buf.append("uncaught exception ").append(e.mlName());
+      if (payload != null) {
+        buf.append(" [")
+            .append(e.mlName())
+            .append(": ")
+            .append(payload)
+            .append("]");
+      } else if (e.description != null) {
         buf.append(" [").append(e.description).append("]");
       }
       return buf;
@@ -5753,32 +5772,54 @@ public abstract class Codes {
   /** Definitions of Morel built-in exceptions. */
   public enum BuiltInExn {
     // lint: sort until '##public ' where '##[A-Z]'
-    BIND("General", "Bind", null),
-    CHR("General", "Chr", null),
-    DATE("Date", "Date", null),
-    DIV("General", "Div", null),
-    DOMAIN("General", "Domain", null),
-    EMPTY("List", "Empty", null),
-    ERROR("Interact", "Error", null), // not in standard basis
-    FAIL("General", "Fail", null),
-    MATCH("General", "Match", null),
-    OPTION("Option", "Option", null),
-    OVERFLOW("General", "Overflow", null),
-    SIZE("General", "Size", null),
-    SPAN("General", "Span", null),
-    SUBSCRIPT("General", "Subscript", "subscript out of bounds"),
-    TIME("Time", "Time", null),
-    UNEQUAL_LENGTHS("ListPair", "UnequalLengths", null),
-    UNORDERED("IEEEReal", "Unordered", null);
+    BIND("General", BuiltIn.Constructor.EXN_BIND, null),
+    CHR("General", BuiltIn.Constructor.EXN_CHR, null),
+    DATE("Date", BuiltIn.Constructor.EXN_DATE, null),
+    DIV("General", BuiltIn.Constructor.EXN_DIV, null),
+    DOMAIN("General", BuiltIn.Constructor.EXN_DOMAIN, null),
+    EMPTY("List", BuiltIn.Constructor.EXN_EMPTY, null),
+    ERROR("Interact", BuiltIn.Constructor.EXN_ERROR, null), // not in basis
+    FAIL("General", BuiltIn.Constructor.EXN_FAIL, null),
+    MATCH("General", BuiltIn.Constructor.EXN_MATCH, null),
+    OPTION("Option", BuiltIn.Constructor.EXN_OPTION, null),
+    OVERFLOW("General", BuiltIn.Constructor.EXN_OVERFLOW, null),
+    SIZE("General", BuiltIn.Constructor.EXN_SIZE, null),
+    SPAN("General", BuiltIn.Constructor.EXN_SPAN, null),
+    SUBSCRIPT(
+        "General",
+        BuiltIn.Constructor.EXN_SUBSCRIPT,
+        "subscript out of bounds"),
+    TIME("Time", BuiltIn.Constructor.EXN_TIME, null),
+    UNEQUAL_LENGTHS("ListPair", BuiltIn.Constructor.EXN_UNEQUAL_LENGTHS, null),
+    UNORDERED("IEEEReal", BuiltIn.Constructor.EXN_UNORDERED, null);
+
+    private static final Map<String, BuiltInExn> BY_ML_NAME =
+        Arrays.stream(BuiltInExn.values())
+            .collect(
+                ImmutableMap.toImmutableMap(
+                    BuiltInExn::mlName, e -> e, (a, b) -> a));
+
+    /** Returns the BuiltInExn whose ML-level name is {@code name}, or null. */
+    public static @Nullable BuiltInExn forMlName(String name) {
+      return BY_ML_NAME.get(name);
+    }
 
     public final String structure;
-    public final String mlName;
+    public final BuiltIn.Constructor constructor;
     public final @Nullable String description;
 
-    BuiltInExn(String structure, String mlName, @Nullable String description) {
+    BuiltInExn(
+        String structure,
+        BuiltIn.Constructor constructor,
+        @Nullable String description) {
       this.structure = structure;
-      this.mlName = mlName;
+      this.constructor = constructor;
       this.description = description;
+    }
+
+    /** The exception's ML-level name, taken from its {@link #constructor}. */
+    public String mlName() {
+      return constructor.constructor;
     }
   }
 
@@ -5857,6 +5898,37 @@ public abstract class Codes {
     public Object eval(Stack stack) {
       // Lazy evaluation. If code0 returns true, code1 is never evaluated.
       return (boolean) code0.eval(stack) || (boolean) code1.eval(stack);
+    }
+  }
+
+  /** Code that implements {@link #raise(Code, Pos)}. */
+  private static class RaiseCode implements Code {
+    private final Code expCode;
+    private final Pos pos;
+
+    RaiseCode(Code expCode, Pos pos) {
+      this.expCode = expCode;
+      this.pos = pos;
+    }
+
+    @Override
+    public Describer describe(Describer describer) {
+      return describer.start("raise", d -> d.arg("exp", expCode));
+    }
+
+    @Override
+    public Object eval(Stack stack) {
+      final Object value = expCode.eval(stack);
+      // The runtime value of an `exn` is a list whose head is the constructor
+      // name; subsequent elements (if any) are the payload.
+      final List<?> list = (List<?>) value;
+      final String name = (String) list.get(0);
+      final BuiltInExn e = BuiltInExn.forMlName(name);
+      if (e == null) {
+        throw new IllegalStateException("unknown exception: " + name);
+      }
+      final Object payload = list.size() > 1 ? list.get(1) : null;
+      throw new MorelRuntimeException(e, payload, pos);
     }
   }
 

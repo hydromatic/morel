@@ -1525,6 +1525,39 @@ public class Core {
   }
 
   /**
+   * Raise expression: evaluates {@code exp} (of type {@code exn}) and throws.
+   */
+  public static class Raise extends Exp {
+    public final Exp exp;
+
+    Raise(Pos pos, Type type, Exp exp) {
+      super(pos, Op.RAISE, type);
+      this.exp = requireNonNull(exp);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("raise ").append(exp, 0, right);
+    }
+
+    @Override
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public Raise copy(Type type, Exp exp) {
+      return type == this.type && exp == this.exp
+          ? this
+          : new Raise(pos, type, exp);
+    }
+  }
+
+  /**
    * Case expression.
    *
    * <p>Also implements {@link Ast.If}.

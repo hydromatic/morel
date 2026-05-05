@@ -2109,6 +2109,35 @@ public class Ast {
     }
   }
 
+  /** "Raise" expression. */
+  public static class Raise extends Exp {
+    public final Exp exp;
+
+    public Raise(Pos pos, Exp exp) {
+      super(pos, Op.RAISE);
+      this.exp = requireNonNull(exp);
+    }
+
+    public Exp accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append("raise ").append(exp, 0, right);
+    }
+
+    /** Creates a copy of this {@code Raise}, or {@code this} if unchanged. */
+    public Raise copy(Exp exp) {
+      return this.exp.equals(exp) ? this : new Raise(pos, exp);
+    }
+  }
+
   /** "Let" expression. */
   public static class Let extends Exp {
     public final List<Decl> decls;

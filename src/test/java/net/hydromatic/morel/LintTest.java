@@ -41,6 +41,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -49,6 +50,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.util.Generation;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.PairList;
@@ -1233,6 +1235,29 @@ public class LintTest {
               "Datatype entries not documented in functions.toml: %s\n" //
                   + "Add a [[types]] entry for each to %s",
               missing, file.getAbsolutePath()));
+    }
+  }
+
+  /**
+   * Checks that every {@link BuiltIn.Constructor} entry whose datatype is
+   * {@link BuiltIn.Datatype#EXN} is referenced by some {@link Codes.BuiltInExn}
+   * entry.
+   */
+  @Test
+  void testBuiltInExnsConsistent() {
+    final EnumSet<BuiltIn.Constructor> missing =
+        EnumSet.allOf(BuiltIn.Constructor.class);
+    missing.removeIf(c -> c.datatype != BuiltIn.Datatype.EXN);
+    for (Codes.BuiltInExn exn : EnumSet.allOf(Codes.BuiltInExn.class)) {
+      missing.remove(exn.constructor);
+    }
+    if (!missing.isEmpty()) {
+      fail(
+          format(
+              "EXN-datatype constructors with no matching "
+                  + "Codes.BuiltInExn entry: %s\n"
+                  + "Add a BuiltInExn variant referencing each.",
+              missing));
     }
   }
 
