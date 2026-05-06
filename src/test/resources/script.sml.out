@@ -51,7 +51,7 @@ val t3b = (3, "yes", true);
 val t3b = (3,"yes",true) : int * string * bool
 
 val t2 = ((1, 2), 3);
-val t2 = ((1,2),3) : int * int * int
+val t2 = ((1,2),3) : (int * int) * int
 
 
 val pair = ("a", "b");

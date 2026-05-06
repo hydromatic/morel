@@ -156,8 +156,7 @@ public class AstWriter {
 
   /** Appends a parse tree node. */
   public AstWriter append(AstNode node, int left, int right) {
-    final boolean p =
-        parenthesize || left > node.op.left || node.op.right < right;
+    final boolean p = parenthesize || node.op.wraps(left, right);
     if (p) {
       b.append('(');
       left = right = 0;

@@ -101,6 +101,18 @@ Sys.unset "optionalInt";
 Sys.show "optionalInt";
 > val it = NONE : string option
 
+(*) Setting the "output" property is case-insensitive
+Sys.set ("output", "classic");
+> val it = () : unit
+Sys.set ("output", "CLASSIC");
+> val it = () : unit
+Sys.set ("output", "ClasSic");
+> val it = () : unit
+Sys.set ("output", "tabular");
+> val it = () : unit
+Sys.set ("output", "classic");
+> val it = () : unit
+
 (* -------------------------------------------------------------------
  * Bug gave 'AssertionError: op not handled: EQ'
  *)
@@ -193,6 +205,10 @@ val x = z;
 val x = abc;
 > stdIn:1.9-1.12 Error: unbound variable or constructor: abc
 >   raised at: stdIn:1.9-1.12
+
+(*) Nested block comments ([MOREL-306])
+(* outer (* inner *) still outer *) 1 + 2;
+> val it = 3 : int
 
 (* -------------------------------------------------------------------
  * [MOREL-342] Conditional inclusion of built-in structures

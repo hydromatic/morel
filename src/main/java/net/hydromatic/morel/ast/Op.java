@@ -27,41 +27,41 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /** Subtypes of {@link AstNode}. */
 public enum Op {
   // identifiers
-  ID(true),
-  OP_SECTION(true),
-  CURRENT(" current ", 99, 99),
-  ELEMENTS(" elements ", 99, 99),
-  ORDINAL(" ordinal ", 99, 99),
-  RECORD_SELECTOR(true),
+  ID(Assoc.ATOM),
+  OP_SECTION(Assoc.ATOM),
+  CURRENT(" current ", Assoc.ATOM),
+  ELEMENTS(" elements ", Assoc.ATOM),
+  ORDINAL(" ordinal ", Assoc.ATOM),
+  RECORD_SELECTOR(Assoc.ATOM),
 
   // literals
-  BOOL_LITERAL(true),
-  CHAR_LITERAL(true),
-  INT_LITERAL(true),
-  REAL_LITERAL(true),
-  STRING_LITERAL(true),
-  UNIT_LITERAL(true),
+  BOOL_LITERAL(Assoc.ATOM),
+  CHAR_LITERAL(Assoc.ATOM),
+  INT_LITERAL(Assoc.ATOM),
+  REAL_LITERAL(Assoc.ATOM),
+  STRING_LITERAL(Assoc.ATOM),
+  UNIT_LITERAL(Assoc.ATOM),
   /** Literal whose value is a {@link net.hydromatic.morel.compile.BuiltIn}. */
-  FN_LITERAL(true), // occurs in Core, not in Ast
+  FN_LITERAL(Assoc.ATOM), // occurs in Core, not in Ast
   /** Literal whose value is a non-atomic value, such as a record or list. */
-  VALUE_LITERAL(true), // occurs in Core, not in Ast
-  INTERNAL_LITERAL(true), // occurs in Core, not in Ast
+  VALUE_LITERAL(Assoc.ATOM), // occurs in Core, not in Ast
+  INTERNAL_LITERAL(Assoc.ATOM), // occurs in Core, not in Ast
 
   // patterns
-  ID_PAT(true),
+  ID_PAT(Assoc.ATOM),
   WILDCARD_PAT,
   AS_PAT(" as "),
   CON_PAT(" "),
   CON0_PAT(" "),
-  TUPLE_PAT(true),
+  TUPLE_PAT(Assoc.ATOM),
   RECORD_PAT,
   LIST_PAT,
   CONS_PAT(" :: "),
-  BOOL_LITERAL_PAT(true),
-  CHAR_LITERAL_PAT(true),
-  INT_LITERAL_PAT(true),
-  REAL_LITERAL_PAT(true),
-  STRING_LITERAL_PAT(true),
+  BOOL_LITERAL_PAT(Assoc.ATOM),
+  CHAR_LITERAL_PAT(Assoc.ATOM),
+  INT_LITERAL_PAT(Assoc.ATOM),
+  REAL_LITERAL_PAT(Assoc.ATOM),
+  STRING_LITERAL_PAT(Assoc.ATOM),
   // annotated pattern "p: t"
   ANNOTATED_PAT(" : "),
 
@@ -88,25 +88,27 @@ public enum Op {
   FROM_EQ("$FROM_EQ "),
 
   // value constructors
-  TUPLE(true),
-  LIST(true),
-  RECORD(true),
-  FN(" -> ", 6, false),
+  TUPLE(Assoc.ATOM),
+  LIST(Assoc.ATOM),
+  RECORD(Assoc.ATOM),
+  FN(" -> ", 6, Assoc.RIGHT),
 
   // types
-  TY_VAR(true),
-  RECORD_TYPE(true),
-  PROGRESSIVE_RECORD_TYPE(true),
+  TY_VAR(Assoc.ATOM),
+  RECORD_TYPE(Assoc.ATOM),
+  PROGRESSIVE_RECORD_TYPE(Assoc.ATOM),
   DATA_TYPE(" ", 8),
   /**
    * Used internally, as the 'type' of a type constructor that does not contain
    * data.
    */
-  DUMMY_TYPE(true),
+  DUMMY_TYPE(Assoc.ATOM),
   APPLY_TYPE(" ", 8),
-  TUPLE_TYPE(" * ", 7),
+  // '*' is non-associative: '(t1 * t2) * t3', 't1 * (t2 * t3)' and
+  // 't1 * t2 * t3' are three distinct types in SML.
+  TUPLE_TYPE(" * ", 7, Assoc.NONE),
   COMPOSITE_TYPE,
-  FUNCTION_TYPE(" -> ", 6, false),
+  FUNCTION_TYPE(" -> ", 6, Assoc.RIGHT),
   NAMED_TYPE(" ", 8),
   ALIAS_TYPE(" ", 8),
   EXPRESSION_TYPE("typeof ", 9),
@@ -124,8 +126,8 @@ public enum Op {
   MINUS(" - ", 6),
   CARET(" ^ ", 6),
   NEGATE("~ "),
-  CONS(" :: ", 5, false),
-  AT(" @ ", 5, false),
+  CONS(" :: ", 5, Assoc.RIGHT),
+  AT(" @ ", 5, Assoc.RIGHT),
   LE(" <= ", 4),
   LT(" < ", 4),
   GE(" >= ", 4),
@@ -178,6 +180,8 @@ public enum Op {
   public final int left;
   /** Right precedence */
   public final int right;
+  /** Associativity (LEFT, RIGHT, or NONE). */
+  private final Assoc assoc;
   /** Operator name. Sometimes null, sometimes something like "op +". */
   public final @Nullable String opName;
 
@@ -199,34 +203,63 @@ public enum Op {
   }
 
   Op() {
-    this("", 0, 0);
+    this("", 0, Assoc.AST);
   }
 
-  Op(boolean atom) {
-    this("", 99);
-    assert atom;
+  Op(Assoc assoc) {
+    this("", assoc);
+  }
+
+  Op(String padded, Assoc assoc) {
+    this(padded, assoc == Assoc.ATOM ? Assoc.ATOM_PRECEDENCE : 0, assoc);
   }
 
   Op(String padded) {
-    this(padded, 0, 0);
+    this(padded, Assoc.NONE);
   }
 
-  Op(String padded, int leftPrecedence) {
-    this(padded, leftPrecedence, true);
+  Op(String padded, int precedence) {
+    this(padded, precedence, Assoc.LEFT);
   }
 
-  Op(String padded, int precedence, boolean leftAssociative) {
-    this(
-        padded,
-        precedence * 2 + (leftAssociative ? 0 : 1),
-        precedence * 2 + (leftAssociative ? 1 : 0));
-  }
-
-  Op(String padded, int left, int right) {
+  Op(String padded, int precedence, Assoc assoc) {
     this.padded = requireNonNull(padded);
-    this.left = left;
-    this.right = right;
+    this.left = precedence * 2 + (assoc == Assoc.LEFT ? 0 : 1);
+    this.right = precedence * 2 + (assoc == Assoc.RIGHT ? 0 : 1);
+    this.assoc = assoc;
     this.opName = padded.isEmpty() ? null : "op " + padded.trim();
+  }
+
+  /** Associativity of an operator. */
+  private enum Assoc {
+    /** Left-associative binary infix, e.g. {@code +}. */
+    LEFT,
+    /** Right-associative binary infix, e.g. {@code ->}. */
+    RIGHT,
+    /** Non-associative binary infix, e.g. {@code *} as a type constructor. */
+    NONE,
+    /** Atomic; not an infix operator (e.g. literals, identifiers). */
+    ATOM,
+    /** Not an expression. */
+    AST;
+
+    /** Precedence for atoms; higher than any infix operator. */
+    static final int ATOM_PRECEDENCE = 99;
+  }
+
+  /**
+   * Returns whether an expression of this operator should be parenthesised when
+   * nested inside a context with the given precedence bounds. For associative
+   * operators the comparison is strict; for non-associative operators it is
+   * non-strict, so that a child of equal precedence wraps — for example, {@code
+   * (int * bool) * int} keeps its inner parens rather than flattening into
+   * {@code int * bool * int}.
+   */
+  public boolean wraps(int leftBound, int rightBound) {
+    if (assoc == Assoc.NONE) {
+      return leftBound >= left || rightBound >= right;
+    }
+    return leftBound > left || rightBound > right;
   }
 
   /** Returns the name in lower case, e.g. "exists" for {@link #EXISTS}. */

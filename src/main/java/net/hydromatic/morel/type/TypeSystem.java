@@ -494,7 +494,7 @@ public class TypeSystem {
 
   static StringBuilder unparse(
       StringBuilder builder, Type.Key type, int left, int right) {
-    if (left > type.op.left || type.op.right < right) {
+    if (type.op.wraps(left, right)) {
       builder.append("(");
       unparse(builder, type, 0, 0);
       return builder.append(")");

@@ -181,7 +181,7 @@ public class Keys {
       default:
         if (op == Op.TUPLE_TYPE) {
           return TypeSystem.unparseList(
-              buf, Op.TIMES, left, right, argNameTypes.values());
+              buf, Op.TUPLE_TYPE, left, right, argNameTypes.values());
         }
         // fall through
       case 1:
@@ -404,6 +404,13 @@ public class Keys {
     public Type toType(TypeSystem typeSystem) {
       final Type type = key.toType(typeSystem);
       if (type instanceof ForallType) {
+        final ForallType forallType = (ForallType) type;
+        checkArgument(
+            args.size() == forallType.parameterCount,
+            "type %s expects %s argument(s), got %s",
+            key,
+            forallType.parameterCount,
+            args.size());
         return type.substitute(typeSystem, typeSystem.typesFor(args));
       }
       throw new AssertionError();

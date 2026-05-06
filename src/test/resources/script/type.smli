@@ -57,6 +57,20 @@
 () = {};
 > val it = true : bool
 
+(*) Nested tuple
+(1,true,7);
+> val it = (1,true,7) : int * bool * int
+((1,true),7);
+> val it = ((1,true),7) : (int * bool) * int
+(1,(true,7));
+> val it = (1,(true,7)) : int * (bool * int)
+fn (x: (int * bool) * int) => true;
+> val it = fn : (int * bool) * int -> bool
+fn (x: int * (bool * int)) => true;
+> val it = fn : int * (bool * int) -> bool
+fn (x: int * bool * int) => true;
+> val it = fn : int * bool * int -> bool
+
 (*) Expressions with type annotations
 1: int;
 > val it = 1 : int
@@ -66,6 +80,29 @@
 > val it = [(2,true)] : (int * bool) list
 (2, [true]): int * (bool list);
 > val it = (2,[true]) : int * bool list
+(*) Multi-arg type constructors do not parenthesise tuple-typed arguments
+(*) (the outer '(', ',', ')' already disambiguates them); single-arg
+(*) constructors do.
+INL (1, true);
+> val it = INL (1,true) : (int * bool,'a) either
+INR ((1, true), 7);
+> val it = INR ((1,true),7) : ('a,(int * bool) * int) either
+INR (1, (true, 7));
+> val it = INR (1,(true,7)) : ('a,int * (bool * int)) either
+
+(*) Tuple types and function types interact correctly: '*' binds tighter
+(*) than '->' in both source syntax and printed form. A tuple as a
+(*) function arg or result needs no parens; a function as a tuple element
+(*) does.
+fun f (x: int * bool) = 1;
+> val f = fn : int * bool -> int
+fn x: int * bool => x;
+> val it = fn : int * bool -> int * bool
+fn x: int -> int * bool => 1;
+> val it = fn : (int -> int * bool) -> int
+fn x: (int -> int) * bool => 1;
+> val it = fn : (int -> int) * bool -> int
+
 []: int list;
 > val it = [] : int list
 []: {a: int, b: string} list;
@@ -480,6 +517,12 @@ end;
 from b in [SOME true, NONE];
 > val it = [SOME true,NONE] : bool option list
 
+(*) List of polymorphic type.
+[INR(true,1)];
+> val it = [INR (true,1)] : ('a,bool * int) either list
+[INR(true,1),INL "x"];
+> val it = [INR (true,1),INL "x"] : (string,bool * int) either list
+
 (*) If a function type is spread over several lines, put '->' at the start of
 (*) the next line.
 val f : ('a -> (int * int) list) -> ('a -> (int * int) list) -> 'a -> (int * int) list = fn a => fn b => fn c => [];
@@ -746,6 +789,7 @@ val all_cases = (quadratic_case(), nested_quadratic_case(), cross_chain());
 >   ((fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn),
 >    (fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn),(fn,fn,fn,fn,fn,fn,fn,fn,fn,fn,fn))
 >   :
+>     (
 >     ('a -> 'a) * ('b -> 'b * 'b) * ('c -> 'c list) * ('d -> 'd option) *
 >     ('e -> 'e * 'e * 'e) * ('f -> 'g -> 'f * 'g) * ('h -> {field:'h}) *
 >     ('i -> 'i) * ('j -> 'j * 'j) * ('k -> 'k * 'k * 'k) * ('l -> 'l tree) *
@@ -753,7 +797,7 @@ val all_cases = (quadratic_case(), nested_quadratic_case(), cross_chain());
 >     ('r -> 's -> 'r * ('s * 'r)) * ('t -> 'u -> 'u * 't * 't) *
 >     ('v -> 'w -> 'x -> 'v * 'w * 'x) * ('y -> 'z -> 'y) * ('ba -> 'bb -> 'bb)
 >      * ('bc -> ('bc -> 'bd) -> 'bd) *
->     ('be -> ('bf -> 'bg) -> ('be -> 'bf) -> 'bg) *
+>     ('be -> ('bf -> 'bg) -> ('be -> 'bf) -> 'bg)) *
 >     (
 >     ('bh -> 'bh) * ('bi -> 'bi * 'bi) * ('bj -> 'bj list) * ('bk -> 'bk option)
 >      * ('bl -> 'bl * 'bl * 'bl) * ('bm -> 'bn -> 'bm * 'bn) *

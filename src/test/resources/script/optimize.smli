@@ -238,7 +238,7 @@ Sys.planEx "1";
 
 (*) Tree case (an enum with a tuple value)
 let
-  datatype tree = EMPTY | NODE of (tree, int, string)
+  datatype tree = EMPTY | NODE of tree * int * string
   val v = NODE (NODE (EMPTY, 1, "a"), 2, "b")
 in
   case v of EMPTY => "empty" | NODE (t, i, s) => s

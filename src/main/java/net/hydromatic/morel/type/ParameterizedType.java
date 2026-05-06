@@ -64,7 +64,8 @@ public abstract class ParameterizedType extends BaseType implements NamedType {
       return name;
     }
     final StringBuilder b = new StringBuilder();
-    if (typeVars.size() > 1) {
+    final boolean multi = typeVars.size() > 1;
+    if (multi) {
       b.append('(');
     }
     forEachIndexed(
@@ -73,13 +74,17 @@ public abstract class ParameterizedType extends BaseType implements NamedType {
           if (i > 0) {
             b.append(",");
           }
-          if (t instanceof TupleType) {
+          // Only single-arg type constructors need extra parens around a
+          // tuple-typed argument to disambiguate '*' from the constructor;
+          // multi-arg constructors already use '(' ',' ')' to delimit their
+          // arguments.
+          if (!multi && t instanceof TupleType) {
             b.append('(').append(t.moniker()).append(')');
           } else {
             b.append(t.moniker());
           }
         });
-    if (typeVars.size() > 1) {
+    if (multi) {
       b.append(')');
     }
     return b.append(' ').append(name).toString();

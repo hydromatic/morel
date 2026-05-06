@@ -213,11 +213,11 @@ from e where (case e of INR b => not b | _ => false);
 (*) Constructor pattern with (boolean * int) payload
 from e where (case e of INR (b, i) => b andalso i > 5 andalso i < 15 andalso i mod 3 = 1 | _ => false);
 > val it = [INR (true,7),INR (true,10),INR (true,13)]
->   : ('a,(bool * int)) either bag
+>   : ('a,bool * int) either bag
 
 from e where (case e of INR (b, i) => i > 0 andalso i < 5 andalso b = (i mod 2 = 0) | _ => false);
 > val it = [INR (false,1),INR (false,3),INR (true,2),INR (true,4)]
->   : ('a,(bool * int)) either bag
+>   : ('a,bool * int) either bag
 
 (*) Multiple constructor arms combined with orelse (via maybeUnion)
 from e where (case e of
@@ -243,6 +243,8 @@ from e where (case e of
 from x where (x + 2) * (x - 3) = 0;
 > stdIn:1.6 Error: pattern 'x' is not grounded
 >   raised at: stdIn:1.6
+
+(* -- elem patterns ----------------------------------------------- *)
 
 (*) Pattern
 from x, y where (x, y) elem [(1,true),(2,false)];
@@ -703,6 +705,17 @@ end;
 > val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string bag
 
 (*) As above, using 'andalso' rather than 'where'
+let
+  fun isEmp e =
+    e elem scott.emps
+in
+  from e
+    where isEmp e andalso e.deptno = 20
+    yield e.ename
+end;
+> val it = ["SMITH","JONES","SCOTT","ADAMS","FORD"] : string bag
+
+(*) As previous, but 'fun' followed by 'from' without using 'let'
 fun isEmp e =
   e elem scott.emps;
 > val isEmp = fn
@@ -1490,9 +1503,6 @@ order DESC profit;
 (* -------------------------------------------------------------------
  * Extracted testFromSuchThat* tests from MainTest.java.
  *)
-
-Sys.set ("stringDepth", 1000);
-> val it = () : unit
 
 (* testFromSuchThat - Basic function with elem predicate *)
 let

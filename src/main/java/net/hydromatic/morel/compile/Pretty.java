@@ -492,7 +492,8 @@ class Pretty {
 
     final int indent2 = indent + prefix.length();
     final int start;
-    switch (typeVal.type.op()) {
+    final Op op = typeVal.type.op();
+    switch (op) {
       case DATA_TYPE:
         if (typeVal.type.isCollection()) {
           return prettyCollectionType(
@@ -526,7 +527,11 @@ class Pretty {
             BuiltIn.Eqtype.LIST.mlName());
 
       case TUPLE_TYPE:
-        if (leftPrec > Op.TUPLE_TYPE.left || rightPrec > Op.TUPLE_TYPE.right) {
+        // Op.TUPLE_TYPE is non-associative; Op.wraps applies '>=' rather than
+        // '>' for non-associative operators, which forces children of equal
+        // precedence to wrap. For example '(false, (1, true), 7)' must print
+        // as 'bool * (int * bool) * int' rather than 'bool * int * bool * int'.
+        if (op.wraps(leftPrec, rightPrec)) {
           pretty1(buf, indent2, end, depth, type, "(", 0, 0);
           pretty1(buf, indent2, end, depth, type, typeVal, 0, 0);
           pretty1(buf, indent2, end, depth, type, ")", 0, 0);
@@ -534,16 +539,16 @@ class Pretty {
         }
         final TupleType tupleType = (TupleType) typeVal.type;
         start = buf.length();
-        List<Type> argTypes = tupleType.argTypes;
-        for (int i = 0; i < argTypes.size(); i++) {
+        final List<Type> argTypes = tupleType.argTypes;
+        final int argCount = argTypes.size();
+        for (int i = 0; i < argCount; i++) {
           Type argType = argTypes.get(i);
           if (buf.length() > start) {
             pretty1(buf, indent2, end, depth, type, " * ", 0, 0);
           }
           final TypeVal typeVal1 = new TypeVal("", argType, "");
-          final int leftPrec1 = i == 0 ? leftPrec : Op.TUPLE_TYPE.right;
-          final int rightPrec1 =
-              i == argTypes.size() - 1 ? rightPrec : Op.TUPLE_TYPE.left;
+          final int leftPrec1 = i == 0 ? leftPrec : op.right;
+          final int rightPrec1 = i == argCount - 1 ? rightPrec : op.left;
           pretty1(
               buf, indent2, end, depth, type, typeVal1, leftPrec1, rightPrec1);
         }
@@ -572,8 +577,7 @@ class Pretty {
         return buf.append("}");
 
       case FUNCTION_TYPE:
-        if (leftPrec > Op.FUNCTION_TYPE.left
-            || rightPrec > Op.FUNCTION_TYPE.right) {
+        if (op.wraps(leftPrec, rightPrec)) {
           pretty1(buf, indent2, end, depth, type, "(", 0, 0);
           pretty1(buf, indent2, end, depth, type, typeVal, 0, 0);
           pretty1(buf, indent2, end, depth, type, ")", 0, 0);
@@ -581,11 +585,9 @@ class Pretty {
         }
         final FnType fnType = (FnType) typeVal.type;
         final TypeVal typeVal1 = new TypeVal("", fnType.paramType, "");
-        final int rightPrec1 = Op.FUNCTION_TYPE.left;
-        pretty1(buf, indent2, end, depth, type, typeVal1, leftPrec, rightPrec1);
+        pretty1(buf, indent2, end, depth, type, typeVal1, leftPrec, op.left);
         final TypeVal typeVal2 = new TypeVal(" -> ", fnType.resultType, "");
-        final int leftPrec1 = Op.FUNCTION_TYPE.right;
-        pretty1(buf, indent2, end, depth, type, typeVal2, leftPrec1, rightPrec);
+        pretty1(buf, indent2, end, depth, type, typeVal2, op.right, rightPrec);
         return buf;
 
       default:
@@ -607,7 +609,7 @@ class Pretty {
     // Use NAMED_TYPE precedence for type printing (collection types have same
     // precedence as named types like "int list")
     final Op op = Op.NAMED_TYPE;
-    if (leftPrec > op.left || rightPrec > op.right) {
+    if (op.wraps(leftPrec, rightPrec)) {
       pretty1(buf, indent2, lineEnd, depth, type, "(", 0, 0);
       pretty1(buf, indent2, lineEnd, depth, type, typeVal, 0, 0);
       pretty1(buf, indent2, lineEnd, depth, type, ")", 0, 0);

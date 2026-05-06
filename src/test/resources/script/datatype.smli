@@ -138,10 +138,38 @@ Y (1, true);
 Z;
 > val it = Z : bar
 
-(*) The following is syntax error:
-(*
+(*) `(t1, ..., tn)` is only valid as the argument list of a parameterized
+(*) type such as `(int, string) either`. The following are all errors;
+(*) use `int * bool` for a tuple type.
 datatype bar = X of int | Y of (int, bool) | Z;
-*)
+> stdIn:1.32-1.43 Error: type-application argument list `(t1, ..., tn)` must be followed by a type constructor name; use `t1 * ... * tn` for a tuple type
+>   raised at: stdIn:1.32-1.43
+type t = (bool, int list);
+> stdIn:1.10-1.26 Error: type-application argument list `(t1, ..., tn)` must be followed by a type constructor name; use `t1 * ... * tn` for a tuple type
+>   raised at: stdIn:1.10-1.26
+val x : (int, int) = (1, 2);
+> stdIn:1.9-1.19 Error: type-application argument list `(t1, ..., tn)` must be followed by a type constructor name; use `t1 * ... * tn` for a tuple type
+>   raised at: stdIn:1.9-1.19
+
+(*) The arity must match the type constructor's arity.
+fn (x: (bool, int) list) => 1;
+> stdIn:1.8-1.24 Error: type constructor list given 2 arguments, wants 1
+>   raised at: stdIn:1.8-1.24
+type t2 = (bool, int) list * unit;
+> stdIn:1.11-1.27 Error: type constructor list given 2 arguments, wants 1
+>   raised at: stdIn:1.11-1.27
+fn (x: int either) => 1;
+> stdIn:1.8-1.18 Error: type constructor either given 1 argument, wants 2
+>   raised at: stdIn:1.8-1.18
+
+(*) The valid forms. Parentheses around a single type are allowed (just
+(*) like in expressions).
+type t = bool * int list;
+> type t = bool * int list
+fn (x: (int) list) => 1;
+> val it = fn : int list -> int
+fn (x: (int, string) either) => 1;
+> val it = fn : (int,string) either -> int
 
 (*) A recursive type, without generics
 datatype inttree = Empty | Node of inttree * int * inttree;
