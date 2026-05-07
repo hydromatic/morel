@@ -1206,7 +1206,7 @@ class Generators {
     }
     final Core.From existsFrom = (Core.From) nonEmpty.arg;
 
-    // Extract intermediate var and where clause
+    // Extract intermediate var and where clause.
     Core.Pat intermediateVar = null;
     Core.Exp whereClause = null;
     for (Core.FromStep step : existsFrom.steps) {
@@ -1362,22 +1362,23 @@ class Generators {
     }
     final Core.From existsFrom = (Core.From) nonEmpty.arg;
 
-    // Extract intermediate var and where clause
-    Core.Pat intermediateVar = null;
+    // Extract all intermediate vars (existential SCAN patterns) and the
+    // single WHERE clause from the existential's from-expression.
+    final List<Core.Pat> intermediateVars = new ArrayList<>();
     Core.Exp whereClause = null;
     for (Core.FromStep step : existsFrom.steps) {
       if (step.op == Op.SCAN) {
-        intermediateVar = ((Core.Scan) step).pat;
+        intermediateVars.add(((Core.Scan) step).pat);
       } else if (step.op == Op.WHERE) {
         whereClause = ((Core.Where) step).exp;
       }
     }
 
-    if (intermediateVar == null || whereClause == null) {
+    if (intermediateVars.isEmpty() || whereClause == null) {
       return null;
     }
 
-    // Decompose where clause into step predicate and recursive call
+    // Decompose where clause into step predicates and recursive call
     Core.Apply recursiveCall = null;
     final List<Core.Exp> stepPredicates = new ArrayList<>();
 
@@ -1397,16 +1398,12 @@ class Generators {
       return null;
     }
 
-    // Build the step predicate
-    final Core.Exp stepPredicate =
-        core.andAlso(cache.typeSystem, stepPredicates);
-
     return new TransitiveClosurePattern(
         fnName,
         formalParams,
         baseCase,
-        intermediateVar,
-        stepPredicate,
+        intermediateVars,
+        stepPredicates,
         recursiveCall,
         callArgs);
   }
@@ -1450,13 +1447,47 @@ class Generators {
     final Generator baseGenerator =
         requireNonNull(baseCache.bestGeneratorForPat(goalPat));
 
-    // Note: We don't need to create a step generator. The step function in
-    // Relational.iterate just scans the base edges and joins with newPaths.
-    // The base generator provides the edges collection which is used for both
-    // the initial seed and the step computation.
+    // For path-like patterns the recursive call carries at least one formal
+    // parameter through (e.g. path(z, y) keeps y; odd_path(x, v0) keeps x), so
+    // we generate a path-extension iterate. For cousin-like patterns where all
+    // recursive-call args are existentials (e.g. cousin(xp, yp)), we generate
+    // a multi-step iterate that walks the relation in parallel along each
+    // formal's chain.
+    if (carriesFormalThrough(pattern)) {
+      return buildRelationalIterate(cache, baseGenerator, goalPat, ordered);
+    }
+    return buildBidirectionalIterate(
+        cache, pattern, baseGenerator, goalPat, ordered);
+  }
 
-    // Build the Relational.iterate expression
-    return buildRelationalIterate(cache, baseGenerator, goalPat, ordered);
+  /**
+   * Returns whether the recursive call has at least one argument that directly
+   * references one of the formal parameters (i.e. a formal "carries through"
+   * the recursion). The reference can be direct, e.g. {@code path(z, y)} uses
+   * formal {@code y}; or indirect via a record selector or other
+   * sub-expression, e.g. {@code path(#1 p, z)} references formal {@code p}. A
+   * purely existential call like {@code cousin(xp, yp)} returns false.
+   */
+  private static boolean carriesFormalThrough(
+      TransitiveClosurePattern pattern) {
+    final Set<String> formalNames = new HashSet<>();
+    for (Core.NamedPat np : pattern.formalParams.expand()) {
+      formalNames.add(np.name);
+    }
+    final AtomicBoolean found = new AtomicBoolean(false);
+    final Visitor visitor =
+        new Visitor() {
+          @Override
+          protected void visit(Core.Id id) {
+            if (formalNames.contains(id.idPat.name)) {
+              found.set(true);
+            }
+          }
+        };
+    for (Core.Exp arg : flattenTupleExp(pattern.recursiveCall.arg)) {
+      arg.accept(visitor);
+    }
+    return found.get();
   }
 
   /**
@@ -1560,6 +1591,228 @@ class Generators {
     }
 
     // Build: Relational.iterate seedExp stepFn
+    final Core.Exp iterateFn =
+        core.functionLiteral(ts, BuiltIn.RELATIONAL_ITERATE);
+    final Core.Exp iterateWithBase =
+        core.apply(
+            Pos.ZERO,
+            ts.fnType(stepFn.type, resultCollectionType),
+            iterateFn,
+            seedExp);
+    return core.withOrdered(
+        ordered,
+        core.apply(Pos.ZERO, resultCollectionType, iterateWithBase, stepFn),
+        ts);
+  }
+
+  /**
+   * Builds an {@code iterate} expression for fixed-point computation when the
+   * recursive call uses no formal parameters directly (i.e. every formal is
+   * "rebound" through its own step predicate).
+   *
+   * <p>For example, given
+   *
+   * <pre>{@code
+   * fun cousin (x, y) =
+   *   sib (x, y)
+   *   orelse exists xp, yp where par(x, xp)
+   *                       andalso par(y, yp)
+   *                       andalso cousin(xp, yp);
+   * }</pre>
+   *
+   * <p>generates the equivalent of
+   *
+   * <pre>{@code
+   * Relational.iterate sib
+   *   (fn (allCousins, newCousins) =>
+   *     from prev in newCousins,
+   *          x in <par inverted on column 2 = #1 prev>,
+   *          y in <par inverted on column 2 = #2 prev>
+   *       yield (x, y))
+   * }</pre>
+   */
+  private static Core.@Nullable Exp buildBidirectionalIterate(
+      Cache cache,
+      TransitiveClosurePattern pattern,
+      Generator baseGenerator,
+      Core.Pat goalPat,
+      boolean ordered) {
+    final TypeSystem ts = cache.typeSystem;
+    final Type baseElementType = baseGenerator.exp.type.elementType();
+
+    // Get the original collection type by unwrapping any #fromList Bag wrapper
+    // that was added by core.withOrdered when ordered=false
+    final Type originalCollectionType;
+    if (baseGenerator.exp.isCallTo(BuiltIn.BAG_FROM_LIST)) {
+      originalCollectionType = ((Core.Apply) baseGenerator.exp).arg.type;
+    } else {
+      originalCollectionType = baseGenerator.exp.type;
+    }
+
+    final Type resultElementType = goalPat.type;
+    final Type resultCollectionType =
+        originalCollectionType instanceof ListType
+            ? ts.listType(resultElementType)
+            : ts.bagType(resultElementType);
+
+    final Core.IdPat allPaths = core.idPat(resultCollectionType, "allPaths", 0);
+    final Core.IdPat newPaths = core.idPat(resultCollectionType, "newPaths", 0);
+
+    final Environment env =
+        cache.env.bindAll(
+            ImmutableList.of(Binding.of(allPaths), Binding.of(newPaths)));
+    final FromBuilder fb = core.fromBuilder(ts, env);
+
+    // Scan prev in newPaths
+    final Core.IdPat prevPat = core.idPat(resultElementType, "prev", 0);
+    fb.scan(prevPat, core.id(newPaths));
+    final Core.Exp prevId = core.id(prevPat);
+
+    // Build substitution map: each recursive-call arg a_i is mapped to #i prev.
+    // Carry-through formals (a_i = formal x_j) and existentials are both mapped
+    // through prev fields.
+    final List<Core.Exp> recArgs = flattenTupleExp(pattern.recursiveCall.arg);
+    final Map<Core.NamedPat, Core.Exp> subs = new LinkedHashMap<>();
+    for (int i = 0; i < recArgs.size(); i++) {
+      final Core.Exp a = recArgs.get(i);
+      if (a.op == Op.ID) {
+        subs.put(((Core.Id) a).idPat, core.field(ts, prevId, i));
+      }
+    }
+
+    // For each formal, decide where its value comes from and add scans for
+    // rebound formals.
+    final Environment stepEnv = env.bind(Binding.of(prevPat));
+    final List<? extends Core.NamedPat> formals = pattern.formalParams.expand();
+    final Map<String, Core.Exp> formalValue = new LinkedHashMap<>();
+
+    for (Core.NamedPat formal : formals) {
+      final Core.Exp sub = subs.get(formal);
+      if (sub != null) {
+        // Carry-through: value is the substituted prev field
+        formalValue.put(formal.name, sub);
+        continue;
+      }
+
+      // Rebound: find a step predicate that mentions this formal, and invert
+      // it manually by inlining the function and projecting from its
+      // collection.
+      Core.Exp matchingPred = null;
+      for (Core.Exp pred : pattern.stepPredicates) {
+        if (containsRef(pred, formal)) {
+          matchingPred = pred;
+          break;
+        }
+      }
+      if (matchingPred == null) {
+        return null;
+      }
+
+      final Core.Exp substitutedPred =
+          Replacer.substitute(ts, stepEnv, subs, matchingPred);
+
+      if (substitutedPred.op != Op.APPLY) {
+        return null;
+      }
+      final Core.Apply applyPred = (Core.Apply) substitutedPred;
+      if (applyPred.fn.op != Op.ID) {
+        return null;
+      }
+      final String fnName = ((Core.Id) applyPred.fn).idPat.name;
+      final Binding binding = stepEnv.getTop(fnName);
+      if (binding == null || binding.exp == null || binding.exp.op != Op.FN) {
+        return null;
+      }
+      final Core.Fn predFn = (Core.Fn) binding.exp;
+      final Core.Exp inlined =
+          inlineFunctionBody(ts, stepEnv, predFn, applyPred.arg);
+
+      if (!inlined.isCallTo(BuiltIn.OP_ELEM)) {
+        return null;
+      }
+      final Core.Apply elemCall = (Core.Apply) inlined;
+      final Core.Exp tupleExpr = elemCall.arg(0);
+      final Core.Exp collection = elemCall.arg(1);
+      final List<Core.Exp> tupleArgs = flattenTupleExp(tupleExpr);
+
+      // For each component of the inlined tuple, classify as bound (filter)
+      // or as the rebound formal (yield).
+      final List<Core.Pat> scanPats = new ArrayList<>();
+      final List<Core.Exp> filterEqs = new ArrayList<>();
+      Core.NamedPat formalScanPat = null;
+      for (int i = 0; i < tupleArgs.size(); i++) {
+        final Core.Exp comp = tupleArgs.get(i);
+        if (comp.op == Op.ID
+            && ((Core.Id) comp).idPat.name.equals(formal.name)) {
+          scanPats.add(formal);
+          formalScanPat = formal;
+        } else {
+          final Core.IdPat freshPat =
+              core.idPat(comp.type, formal.name + "$f" + i, 0);
+          scanPats.add(freshPat);
+          filterEqs.add(core.equal(ts, core.id(freshPat), comp));
+        }
+      }
+      if (formalScanPat == null) {
+        return null;
+      }
+      final Core.Pat scanTuplePat;
+      if (scanPats.size() == 1) {
+        scanTuplePat = scanPats.get(0);
+      } else {
+        scanTuplePat = core.tuplePat(ts, ImmutableList.copyOf(scanPats));
+      }
+
+      // Wrap the inversion in its own from-expression so the surrounding
+      // builder sees a single yield of the formal's value.
+      final FromBuilder invFb = core.fromBuilder(ts, stepEnv);
+      invFb.scan(scanTuplePat, collection);
+      for (Core.Exp eq : filterEqs) {
+        invFb.where(eq);
+      }
+      invFb.yield_(core.id(formalScanPat));
+      final Core.Exp formalGen = invFb.build();
+
+      fb.scan(formal, formalGen);
+      formalValue.put(formal.name, core.id(formal));
+    }
+
+    // Yield: tuple of formal values in declaration order
+    final List<Core.Exp> yieldExps = new ArrayList<>();
+    for (Core.NamedPat formal : formals) {
+      yieldExps.add(formalValue.get(formal.name));
+    }
+    fb.yield_(
+        CoreBuilder.core.tuple((RecordLikeType) resultElementType, yieldExps));
+    final Core.From stepBody = fb.build();
+
+    // Create the step function: fn (all, new) => stepBody
+    final Core.TuplePat stepArgPat =
+        core.tuplePat(ts, ImmutableList.of(allPaths, newPaths));
+    final Core.Fn stepFn =
+        core.fn(
+            Pos.ZERO,
+            ts.fnType(stepArgPat.type, resultCollectionType),
+            ImmutableList.of(core.match(Pos.ZERO, stepArgPat, stepBody)),
+            value -> 0);
+
+    // Convert base generator to result type if needed (same as path-extension)
+    final Core.Exp seedExp;
+    if (baseElementType.equals(resultElementType)) {
+      seedExp = baseGenerator.exp;
+    } else {
+      final FromBuilder seedFb = core.fromBuilder(ts);
+      final Core.IdPat seedPat = core.idPat(baseElementType, "e", 0);
+      seedFb.scan(seedPat, baseGenerator.exp);
+      final Core.Exp seedId = core.id(seedPat);
+      final List<Core.Exp> seedFields = new ArrayList<>();
+      for (int i = 0; i < formals.size(); i++) {
+        seedFields.add(core.field(ts, seedId, i));
+      }
+      seedFb.yield_(core.tuple((RecordLikeType) resultElementType, seedFields));
+      seedExp = seedFb.build();
+    }
+
     final Core.Exp iterateFn =
         core.functionLiteral(ts, BuiltIn.RELATIONAL_ITERATE);
     final Core.Exp iterateWithBase =
@@ -2057,11 +2310,19 @@ class Generators {
     final Core.Pat formalParams;
     /** The base case predicate (e.g., edge(x, y)). */
     final Core.Exp baseCase;
-    /** The intermediate variable from exists (z). */
-    final Core.Pat intermediateVar;
-    /** The step predicate (e.g., edge(x, z)). */
-    final Core.Exp stepPredicate;
-    /** The recursive call (e.g., path(z, y)). */
+    /**
+     * The intermediate variables from exists (z, or xp/yp). For the simple
+     * path-extension pattern there is one; for patterns like cousin there can
+     * be several.
+     */
+    final List<Core.Pat> intermediateVars;
+    /**
+     * The step predicates (e.g., edge(x, z) or par(x, xp) and par(y, yp)).
+     * Their conjunction together with the recursive call forms the body of the
+     * existential.
+     */
+    final List<Core.Exp> stepPredicates;
+    /** The recursive call (e.g., path(z, y) or cousin(xp, yp)). */
     final Core.Apply recursiveCall;
     /** The actual arguments at the call site. */
     final Core.Exp callArgs;
@@ -2070,17 +2331,27 @@ class Generators {
         String fnName,
         Core.Pat formalParams,
         Core.Exp baseCase,
-        Core.Pat intermediateVar,
-        Core.Exp stepPredicate,
+        List<Core.Pat> intermediateVars,
+        List<Core.Exp> stepPredicates,
         Core.Apply recursiveCall,
         Core.Exp callArgs) {
       this.fnName = requireNonNull(fnName);
       this.formalParams = requireNonNull(formalParams);
       this.baseCase = requireNonNull(baseCase);
-      this.intermediateVar = requireNonNull(intermediateVar);
-      this.stepPredicate = requireNonNull(stepPredicate);
+      this.intermediateVars = ImmutableList.copyOf(intermediateVars);
+      this.stepPredicates = ImmutableList.copyOf(stepPredicates);
       this.recursiveCall = requireNonNull(recursiveCall);
       this.callArgs = requireNonNull(callArgs);
+    }
+
+    /** Convenience accessor — the first intermediate variable. */
+    Core.Pat intermediateVar() {
+      return intermediateVars.get(0);
+    }
+
+    /** Convenience accessor — the conjunction of all step predicates. */
+    Core.Exp stepPredicate(TypeSystem ts) {
+      return CoreBuilder.core.andAlso(ts, stepPredicates);
     }
   }
 
