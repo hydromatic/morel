@@ -200,4 +200,4 @@ foo;
 (*) or 'Error: unbound variable or constructor: bar'
 5 + bar + 6 + foo;
 
-(* end script.sml *)
+(*) End script.sml

@@ -329,4 +329,4 @@ stdIn:1.5-1.8 Error: unbound variable or constructor: bar
   raised at: stdIn:1.5-1.8
 
 
-(* end script.sml *)
+(*) End script.sml

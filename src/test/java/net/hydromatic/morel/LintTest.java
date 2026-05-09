@@ -23,8 +23,10 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -38,9 +40,11 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -66,6 +70,18 @@ import org.junit.jupiter.api.Test;
 public class LintTest {
   private static final ThreadLocal<@Nullable String> THREAD_FILE_NAME =
       new ThreadLocal<>();
+
+  /** Matches a class/enum/interface declaration. Captures the type name. */
+  private static final Pattern CLASS_DECL_PAT =
+      Pattern.compile("(?:^|\\W)(?:class|enum|interface)\\s+([A-Z][\\w$]*)\\b");
+
+  private static final Pattern FULLY_QUALIFIED_PATTERN =
+      Pattern.compile(
+          "\\b(java|javax|com|net|org)\\.[a-z]+(\\.[a-z]+)*\\.[A-Z]");
+
+  /** Matches "// lint:skip" or "// lint:skip N". */
+  private static final Pattern LINT_SKIP_PATTERN =
+      Pattern.compile("// lint:skip(?: (\\d+))?\\s*$");
 
   /** Maximum line length in Java files. */
   public static final int JAVA_WIDTH = 80;
@@ -115,11 +131,12 @@ public class LintTest {
         line -> {
           String f = line.filename();
           final int slash = f.lastIndexOf('/');
-          final String comment = getCommentStyleForFile(f);
+          final String comment = line.state().language.comment;
           if (comment != null) {
             final String endMarker =
                 comment + " End " + (slash < 0 ? f : f.substring(slash + 1));
-            if (!line.line().equals(endMarker)) {
+            if (!line.line().equals(endMarker)
+                && !line.filename().equals("GuavaCharSource{memory}")) {
               line.state().message(line, "File must end with '%s'", endMarker);
             }
           }
@@ -694,6 +711,199 @@ public class LintTest {
                 && !filenameIs(line, "README.md")
                 && !line.line().equals("<!--"),
         line -> line.state().message(line, "missing license header"));
+
+    // Detect class/enum with one than one primary constructor.
+    b.add(
+        line -> line.state().language == Language.JAVA,
+        line -> processPrimaryConstructorLine(line));
+  }
+
+  /** Single-line state-machine step for the primary-constructor rule. */
+  private static void processPrimaryConstructorLine(
+      Puffin.Line<GlobalState, FileState> line) {
+    final FileState f = line.state();
+    final String code = stripJavaLine(line.line(), f);
+
+    // 1. Detect class/enum/interface declaration on this line.
+    Matcher cm = CLASS_DECL_PAT.matcher(code);
+    while (cm.find()) {
+      f.pendingClassName = cm.group(1);
+    }
+
+    // 2. Detect a constructor signature for the innermost class. Only fires
+    // when this line is at the immediate top of the class body, and we are
+    // not already mid-way through processing a previous constructor.
+    if (!f.classStack.isEmpty()
+        && f.javaBraceDepth == f.classStack.peek().depth
+        && f.pendingCtorSigLine == 0) {
+      final ClassFrame top = f.classStack.element();
+      final Pattern ctorPat =
+          Pattern.compile(
+              "^\\s*(?:public|private|protected|abstract|final|static"
+                  + "|\\s)*\\b"
+                  + Pattern.quote(top.name)
+                  + "\\s*\\(");
+      if (ctorPat.matcher(code).find()) {
+        f.pendingCtorSigLine = line.fnr();
+        f.pendingCtorSawBrace = false;
+      }
+    }
+
+    // 3. If we are inside a pending constructor body, look for the body's
+    // first non-trivial statement and classify primary vs delegating.
+    if (f.pendingCtorSigLine > 0) {
+      classifyPendingConstructor(line, code);
+    }
+
+    // 4. Update brace depth for this line.
+    f.javaBraceDepth += countChar(code, '{') - countChar(code, '}');
+
+    // 5. Push the pending class once its opening brace has appeared.
+    if (f.pendingClassName != null && code.indexOf('{') >= 0) {
+      f.classStack.push(new ClassFrame(f.pendingClassName, f.javaBraceDepth));
+      f.pendingClassName = null;
+    }
+
+    // 6. Pop class frames whose body has been exited.
+    while (!f.classStack.isEmpty()
+        && f.javaBraceDepth < f.classStack.peek().depth) {
+      f.classStack.pop();
+    }
+  }
+
+  /**
+   * Looks at {@code code} (the stripped current line) for the body of the
+   * currently pending constructor. Reports a violation if this turns out to be
+   * a second primary constructor.
+   */
+  private static void classifyPendingConstructor(
+      Puffin.Line<GlobalState, FileState> line, String code) {
+    final FileState f = line.state();
+    final String firstStmt;
+    if (!f.pendingCtorSawBrace) {
+      // Body's opening '{' has not been seen yet.
+      final int braceIdx = code.indexOf('{');
+      if (braceIdx < 0) {
+        return;
+      }
+      f.pendingCtorSawBrace = true;
+      firstStmt = code.substring(braceIdx + 1).trim();
+      if (firstStmt.isEmpty()) {
+        return; // wait for next line
+      }
+    } else {
+      firstStmt = code.trim();
+      if (firstStmt.isEmpty()) {
+        return;
+      }
+    }
+
+    final ClassFrame top = f.classStack.element();
+    final int sigLine = f.pendingCtorSigLine;
+    f.pendingCtorSigLine = 0;
+    f.pendingCtorSawBrace = false;
+
+    if (firstStmt.matches("^this\\s*\\(.*")) {
+      return; // delegating
+    }
+    if (top.firstPrimaryLine == 0) {
+      top.firstPrimaryLine = sigLine;
+      return;
+    }
+    if (sigLine < f.lintEnableLine) {
+      return; // suppressed by '// lint:skip'
+    }
+    f.message(
+        line,
+        sigLine,
+        "class '%s' already has a primary constructor (A primary "
+            + "constructor sets fields directly rather than delegating to "
+            + "another constructor. To fix, use 'this(...)' to call the "
+            + "existing primary constructor at line %d, or change it to "
+            + "call this constructor.)",
+        top.name,
+        top.firstPrimaryLine);
+  }
+
+  /**
+   * Strips line and block comments, string literals, and char literals from a
+   * Java line, replacing them with spaces (so column positions are preserved).
+   * Block-comment state is carried across lines via {@link
+   * FileState#inJavaBlockComment}.
+   */
+  private static String stripJavaLine(String line, FileState f) {
+    final StringBuilder sb = new StringBuilder(line.length());
+    int i = 0;
+    while (i < line.length()) {
+      final char c = line.charAt(i);
+      if (f.inJavaBlockComment) {
+        if (c == '*' && i + 1 < line.length() && line.charAt(i + 1) == '/') {
+          sb.append("  ");
+          f.inJavaBlockComment = false;
+          i += 2;
+        } else {
+          sb.append(' ');
+          i++;
+        }
+      } else if (c == '/'
+          && i + 1 < line.length()
+          && line.charAt(i + 1) == '*') {
+        sb.append("  ");
+        f.inJavaBlockComment = true;
+        i += 2;
+      } else if (c == '/'
+          && i + 1 < line.length()
+          && line.charAt(i + 1) == '/') {
+        while (i < line.length()) {
+          sb.append(' ');
+          i++;
+        }
+      } else if (c == '"' || c == '\'') {
+        sb.append(c);
+        i++;
+        while (i < line.length() && line.charAt(i) != c) {
+          if (line.charAt(i) == '\\' && i + 1 < line.length()) {
+            sb.append("  ");
+            i += 2;
+          } else {
+            sb.append(' ');
+            i++;
+          }
+        }
+        if (i < line.length()) {
+          sb.append(c);
+          i++;
+        }
+      } else {
+        sb.append(c);
+        i++;
+      }
+    }
+    return sb.toString();
+  }
+
+  private static int countChar(String s, char c) {
+    int n = 0;
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == c) {
+        n++;
+      }
+    }
+    return n;
+  }
+
+  /** A class/enum declaration encountered while scanning a Java file. */
+  private static class ClassFrame {
+    final String name;
+    /** Brace depth INSIDE the class body. */
+    final int depth;
+    /** Line of the first primary constructor seen, or 0 if none yet. */
+    int firstPrimaryLine;
+
+    ClassFrame(String name, int depth) {
+      this.name = name;
+      this.depth = depth;
+    }
   }
 
   /** Deduces the language of a file from its filename. */
@@ -733,29 +943,6 @@ public class LintTest {
   }
 
   /**
-   * Returns the comment style for a file based on its extension, or null if the
-   * file type doesn't require an end marker.
-   */
-  private static String getCommentStyleForFile(String filename) {
-    // Find the file extension
-    final int dot = filename.lastIndexOf('.');
-    if (dot < 0) {
-      return null;
-    }
-    final String extension = filename.substring(dot);
-
-    switch (extension) {
-      case ".java":
-        return "//";
-      case ".smli":
-      case ".sig":
-        return "(*)";
-      default:
-        return null;
-    }
-  }
-
-  /**
    * Returns whether a fully-qualified class name pattern on this line occurs
    * only inside a string literal. A simple heuristic: if the pattern match
    * occurs after an odd number of unescaped double-quotes, it is inside a
@@ -778,14 +965,6 @@ public class LintTest {
     }
     return true; // all matches are inside string literals
   }
-
-  private static final Pattern FULLY_QUALIFIED_PATTERN =
-      Pattern.compile(
-          "\\b(java|javax|com|net|org)\\.[a-z]+(\\.[a-z]+)*\\.[A-Z]");
-
-  /** Matches "// lint:skip" or "// lint:skip N". */
-  private static final Pattern LINT_SKIP_PATTERN =
-      Pattern.compile("// lint:skip(?: (\\d+))?\\s*$");
 
   /** Returns the number of occurrences of a string in a string. */
   private static int count(String s, String sub) {
@@ -969,6 +1148,55 @@ public class LintTest {
     assertThat("Lint violations:\n" + b, g.messages, empty());
   }
 
+  /** Tests the primary-constructor rule against synthetic source code. */
+  @Test
+  void testPrimaryConstructorRule() {
+    // Two primary constructors — should fail.
+    final String bad =
+        "class Foo {\n"
+            + "  Foo(int i) {\n"
+            + "    this.i = i;\n"
+            + "  }\n"
+            + "  Foo(String s) {\n"
+            + "    this.s = s;\n"
+            + "  }\n"
+            + "}\n";
+    String result = programResult("Foo.java", bad);
+    assertThat(result, containsString("Foo"));
+    assertThat(result, containsString("primary constructor"));
+
+    // One primary, others delegate — should pass.
+    final String good =
+        "class Bar {\n"
+            + "  private Bar(int i, String s) {\n"
+            + "    this.i = i;\n"
+            + "    this.s = s;\n"
+            + "  }\n"
+            + "  Bar(int i) {\n"
+            + "    this(i, \"\");\n"
+            + "  }\n"
+            + "  Bar(String s) {\n"
+            + "    this(0, s);\n"
+            + "  }\n"
+            + "}\n";
+    final String goodResult = programResult("Bar.java", good);
+    assertThat(goodResult, not(containsString("primary constructor")));
+
+    // 'bad' with a `// lint:skip` before the second constructor — should pass.
+    final String suppressed =
+        "class Foo {\n"
+            + "  Foo(int i) {\n"
+            + "    this.i = i;\n"
+            + "  }\n"
+            + "  // lint:skip\n"
+            + "  Foo(String s) {\n"
+            + "    this.s = s;\n"
+            + "  }\n"
+            + "}\n";
+    final String suppressedResult = programResult("Foo.java", suppressed);
+    assertThat(suppressedResult, not(containsString("primary constructor")));
+  }
+
   /** Tests the Sort specification syntax. */
   @Test
   void testSort() {
@@ -1115,7 +1343,7 @@ public class LintTest {
 
   /** Collects all {@code .md} files recursively under {@code dir}. */
   private static void collectMdFiles(File dir, List<File> files) {
-    final File[] children = dir.listFiles();
+    final File @Nullable [] children = dir.listFiles();
     if (children == null) {
       return;
     }
@@ -1297,7 +1525,7 @@ public class LintTest {
     assertThat(libDir.exists(), is(true));
     assertThat(libDir.isDirectory(), is(true));
 
-    final File[] files =
+    final File @Nullable [] files =
         libDir.listFiles(
             (dir, name) -> name.endsWith(".sig") || name.endsWith(".sml"));
     assertThat("no files to test in lib directory", files, notNullValue());
@@ -1353,6 +1581,24 @@ public class LintTest {
     boolean inPreBlock;
     boolean inComment;
     boolean inGeneratedBlock;
+    /** Java {@code /* ... *}{@code /} block-comment state across lines. */
+    boolean inJavaBlockComment;
+    /** Stack of class/enum declarations currently in scope. */
+    final Deque<ClassFrame> classStack = new ArrayDeque<>();
+    /** Brace depth in the Java file (with strings/comments stripped). */
+    int javaBraceDepth;
+    /**
+     * Name from a {@code class} / {@code enum} declaration whose opening brace
+     * has not been seen yet, or null.
+     */
+    @Nullable String pendingClassName;
+    /**
+     * Line number (1-based) of a constructor signature whose body's first
+     * statement has not yet been classified, or 0 if none.
+     */
+    int pendingCtorSigLine;
+    /** Whether the body's opening {@code &#123;} has been seen yet. */
+    boolean pendingCtorSawBrace;
 
     FileState(GlobalState global) {
       this.global = global;
@@ -1362,8 +1608,16 @@ public class LintTest {
         Puffin.Line<GlobalState, FileState> line,
         String format,
         Object... args) {
+      message(line, line.fnr(), format, args);
+    }
+
+    void message(
+        Puffin.Line<GlobalState, FileState> line,
+        int lineNumber,
+        String format,
+        Object... args) {
       String message = format(format, args);
-      global.messages.add(new Message(line.source(), line.fnr(), message));
+      global.messages.add(new Message(line.source(), lineNumber, message));
     }
 
     public boolean inJavadoc() {
@@ -1536,10 +1790,16 @@ public class LintTest {
   }
 
   enum Language {
-    JAVA,
-    MARKDOWN,
-    MOREL,
-    UNKNOWN
+    JAVA("//"),
+    MARKDOWN(null),
+    MOREL("(*)"),
+    UNKNOWN(null);
+
+    final @Nullable String comment;
+
+    Language(@Nullable String comment) {
+      this.comment = comment;
+    }
   }
 }
 

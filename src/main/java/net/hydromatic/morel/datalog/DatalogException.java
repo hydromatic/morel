@@ -27,6 +27,9 @@ public class DatalogException extends RuntimeException {
     super(message);
   }
 
+  // Silence the "class ... already has a primary constructor" lint error,
+  // because it is normal for Java exception classes to have two constructors.
+  // lint:skip
   public DatalogException(String message, Throwable cause) {
     super(message, cause);
   }
