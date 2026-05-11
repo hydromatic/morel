@@ -293,7 +293,10 @@ class Pretty {
       final List<String> valueList = new ArrayList<>();
       for (List<?> record : (List<List<?>>) o) {
         for (Object value : record) {
-          valueList.add(value.toString());
+          valueList.add(
+              value instanceof Float
+                  ? Codes.floatToString((Float) value)
+                  : value.toString());
         }
         recordList.add(ImmutableList.copyOf(valueList));
         valueList.clear();

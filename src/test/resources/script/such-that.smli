@@ -828,11 +828,10 @@ Sys.planEx "999";
 
 (*) A string function with external extent.
 (*) Given s2, we could generate finite s1.
-let
-  fun isPrefix (s1, s2) = String.isPrefix s1 s2
-in
-  from s where isPrefix (s, "abcd")
-end;
+fun isPrefix (s1, s2) =
+  String.isPrefix s1 s2;
+> val isPrefix = fn : string * string -> bool
+from s where isPrefix (s, "abcd");
 > val it = ["","a","ab","abc","abcd"] : string bag
 
 (*) An integer function with external extent.
@@ -888,11 +887,11 @@ in
   enumerate isClerk
 end;
 > comm deptno empno ename  hiredate   job   mgr  sal
-> ---- ------ ----- ------ ---------- ----- ---- ------
-> 0.0  20     7369  SMITH  1980-12-17 CLERK 7902 800.0
-> 0.0  20     7876  ADAMS  1987-05-23 CLERK 7788 1100.0
-> 0.0  30     7900  JAMES  1981-12-03 CLERK 7698 950.0
-> 0.0  10     7934  MILLER 1982-01-23 CLERK 7782 1300.0
+> ---- ------ ----- ------ ---------- ----- ---- ----
+> 0    20     7369  SMITH  1980-12-17 CLERK 7902 800
+> 0    20     7876  ADAMS  1987-05-23 CLERK 7788 1100
+> 0    30     7900  JAMES  1981-12-03 CLERK 7698 950
+> 0    10     7934  MILLER 1982-01-23 CLERK 7782 1300
 >
 > val it : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
 

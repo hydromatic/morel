@@ -1963,10 +1963,10 @@ from e in scott.emps
                     compute sum over x.sal)}
   order deptno;
 > deptno s
-> ------ ------
-> 10     1300.0
-> 20     1900.0
-> 30     950.0
+> ------ ----
+> 10     1300
+> 20     1900
+> 30     950
 >
 > val it : {deptno:int, s:real} list
 
@@ -2021,12 +2021,12 @@ from e in scott.emps
   take 5
   yield {e.ename, e.sal, rank = ordinal + 1};
 > ename rank sal
-> ----- ---- ------
-> KING  1    5000.0
-> SCOTT 2    3000.0
-> FORD  3    3000.0
-> JONES 4    2975.0
-> BLAKE 5    2850.0
+> ----- ---- ----
+> KING  1    5000
+> SCOTT 2    3000
+> FORD  3    3000
+> JONES 4    2975
+> BLAKE 5    2850
 >
 > val it : {ename:string, rank:int, sal:real} list
 
@@ -2075,10 +2075,10 @@ from e in scott.emps
     compute {count over (), sumSal = sum over e.sal}
   order deptno unorder;
 > count deptno sumSal
-> ----- ------ -------
-> 3     10     8750.0
-> 5     20     10875.0
-> 6     30     9400.0
+> ----- ------ ------
+> 3     10     8750
+> 5     20     10875
+> 6     30     9400
 >
 > val it : {count:int, deptno:int, sumSal:real} bag
 
@@ -2153,21 +2153,21 @@ from e in scott.emps
   order (DESC e.sal, e.ename)
   yield {e.ename, e.job, e.sal};
 > ename  job       sal
-> ------ --------- ------
-> KING   PRESIDENT 5000.0
-> FORD   ANALYST   3000.0
-> SCOTT  ANALYST   3000.0
-> JONES  MANAGER   2975.0
-> BLAKE  MANAGER   2850.0
-> CLARK  MANAGER   2450.0
-> ALLEN  SALESMAN  1600.0
-> TURNER SALESMAN  1500.0
-> MILLER CLERK     1300.0
-> MARTIN SALESMAN  1250.0
-> WARD   SALESMAN  1250.0
-> ADAMS  CLERK     1100.0
-> JAMES  CLERK     950.0
-> SMITH  CLERK     800.0
+> ------ --------- ----
+> KING   PRESIDENT 5000
+> FORD   ANALYST   3000
+> SCOTT  ANALYST   3000
+> JONES  MANAGER   2975
+> BLAKE  MANAGER   2850
+> CLARK  MANAGER   2450
+> ALLEN  SALESMAN  1600
+> TURNER SALESMAN  1500
+> MILLER CLERK     1300
+> MARTIN SALESMAN  1250
+> WARD   SALESMAN  1250
+> ADAMS  CLERK     1100
+> JAMES  CLERK     950
+> SMITH  CLERK     800
 >
 > val it : {ename:string, job:string, sal:real} list
 
@@ -2181,21 +2181,21 @@ from e in scott.emps
 > stdIn:2.9-2.23 Warning: Sorting on a record whose fields are not in alphabetical order. Sort order may not be what you expect.
 >   raised at: stdIn:2.9-2.23
 > ename  job       sal
-> ------ --------- ------
-> SCOTT  ANALYST   3000.0
-> FORD   ANALYST   3000.0
-> SMITH  CLERK     800.0
-> JAMES  CLERK     950.0
-> ADAMS  CLERK     1100.0
-> MILLER CLERK     1300.0
-> CLARK  MANAGER   2450.0
-> BLAKE  MANAGER   2850.0
-> JONES  MANAGER   2975.0
-> KING   PRESIDENT 5000.0
-> WARD   SALESMAN  1250.0
-> MARTIN SALESMAN  1250.0
-> TURNER SALESMAN  1500.0
-> ALLEN  SALESMAN  1600.0
+> ------ --------- ----
+> SCOTT  ANALYST   3000
+> FORD   ANALYST   3000
+> SMITH  CLERK     800
+> JAMES  CLERK     950
+> ADAMS  CLERK     1100
+> MILLER CLERK     1300
+> CLARK  MANAGER   2450
+> BLAKE  MANAGER   2850
+> JONES  MANAGER   2975
+> KING   PRESIDENT 5000
+> WARD   SALESMAN  1250
+> MARTIN SALESMAN  1250
+> TURNER SALESMAN  1500
+> ALLEN  SALESMAN  1600
 >
 > val it : {ename:string, job:string, sal:real} list
 
@@ -2263,10 +2263,10 @@ from e in scott.emps
   unorder
   yield {e.ename, e.job, e.sal};
 > ename job       sal
-> ----- --------- ------
-> KING  PRESIDENT 5000.0
-> SCOTT ANALYST   3000.0
-> FORD  ANALYST   3000.0
+> ----- --------- ----
+> KING  PRESIDENT 5000
+> SCOTT ANALYST   3000
+> FORD  ANALYST   3000
 >
 > val it : {ename:string, job:string, sal:real} bag
 
@@ -2292,20 +2292,20 @@ from e in scott.emps
       annualSalary = e.sal * 12.0};
 > annualSalary name   position
 > ------------ ------ ---------
-> 9600.0       SMITH  clerk
-> 19200.0      ALLEN  salesman
-> 15000.0      WARD   salesman
-> 35700.0      JONES  manager
-> 15000.0      MARTIN salesman
-> 34200.0      BLAKE  manager
-> 29400.0      CLARK  manager
-> 36000.0      SCOTT  analyst
-> 60000.0      KING   president
-> 18000.0      TURNER salesman
-> 13200.0      ADAMS  clerk
-> 11400.0      JAMES  clerk
-> 36000.0      FORD   analyst
-> 15600.0      MILLER clerk
+> 9600         SMITH  clerk
+> 19200        ALLEN  salesman
+> 15000        WARD   salesman
+> 35700        JONES  manager
+> 15000        MARTIN salesman
+> 34200        BLAKE  manager
+> 29400        CLARK  manager
+> 36000        SCOTT  analyst
+> 60000        KING   president
+> 18000        TURNER salesman
+> 13200        ADAMS  clerk
+> 11400        JAMES  clerk
+> 36000        FORD   analyst
+> 15600        MILLER clerk
 >
 > val it : {annualSalary:real, name:string, position:string} bag
 
