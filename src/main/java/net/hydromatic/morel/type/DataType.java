@@ -112,26 +112,54 @@ public class DataType extends ParameterizedType {
    * Writes out the definition of the datatype. For example,
    *
    * <pre>{@code
-   * datatype ('a,'b) tree =
-   *     Empty
+   * datatype color = RED | GREEN | BLUE
+   * }</pre>
+   *
+   * <p>Wraps to one constructor per line, in the style of SML/NJ's {@code
+   * Control.Print.linewidth}, when the single-line form would exceed {@code
+   * lineWidth} characters:
+   *
+   * <pre>{@code
+   * datatype ('a,'b) tree
+   *   = Empty
    *   | Node of ('a,'b) tree * 'b * 'a * ('a,'b) tree
    * }</pre>
+   *
+   * @param buf buffer to append to
+   * @param lineWidth column at which to wrap, or a negative value to never wrap
+   *     (matches the convention used elsewhere for {@code lineWidth})
    */
-  public StringBuilder describe(StringBuilder buf) {
-    buf.append("datatype ").append(moniker).append(" = ");
+  public StringBuilder describe(StringBuilder buf, int lineWidth) {
     final int initialSize = buf.length();
+    buf.append("datatype ").append(moniker).append(" = ");
+    final int beforeCons = buf.length();
     typeConstructors.forEach(
         (name, typeKey) -> {
-          if (buf.length() > initialSize) {
+          if (buf.length() > beforeCons) {
             buf.append(" | ");
           }
-          buf.append(name);
-          if (typeKey.op != Op.DUMMY_TYPE) {
-            buf.append(" of ");
-            typeKey.describe(buf, 0, 0);
-          }
+          appendConstructor(buf, name, typeKey);
         });
+    if (lineWidth >= 0 && buf.length() - initialSize > lineWidth) {
+      buf.setLength(initialSize);
+      buf.append("datatype ").append(moniker);
+      int i = 0;
+      for (Map.Entry<String, Type.Key> entry : typeConstructors.entrySet()) {
+        buf.append("\n  ").append(i == 0 ? "= " : "| ");
+        appendConstructor(buf, entry.getKey(), entry.getValue());
+        i++;
+      }
+    }
     return buf;
+  }
+
+  private static void appendConstructor(
+      StringBuilder buf, String name, Type.Key typeKey) {
+    buf.append(name);
+    if (typeKey.op != Op.DUMMY_TYPE) {
+      buf.append(" of ");
+      typeKey.describe(buf, 0, 0);
+    }
   }
 
   @Override

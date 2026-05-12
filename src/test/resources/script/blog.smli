@@ -1381,7 +1381,9 @@ from e in scott.emps
 datatype personnel_id =
     EMPLOYEE of int
   | CONTRACTOR of {ssid: string, agency: string};
-> datatype personnel_id = EMPLOYEE of int | CONTRACTOR of {agency:string, ssid:string}
+> datatype personnel_id
+>   = EMPLOYEE of int
+>   | CONTRACTOR of {agency:string, ssid:string}
 (* Disabled until "[MOREL-285] Type declaration" is fixed.
 type member = {name: string, deptno: int, id: personnel_id};
 *)

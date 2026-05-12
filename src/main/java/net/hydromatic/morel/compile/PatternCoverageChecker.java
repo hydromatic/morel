@@ -262,10 +262,21 @@ class PatternCoverageChecker {
     //   or not (tag=B or tag=C)
     //   or not (tag=C or tag=A))
     // because at most one tag must be present.
+    //
+    // When the slot contains all of the datatype's constructors,
+    // `sat.slot(...)` already enforces the same semantics by enumerating
+    // one-hot assignments, so the manual constraint is redundant. Skipping
+    // it is a significant speed-up: the manual at-most-one term has size
+    // O(N^2) in the number of constructors, and gets walked on every
+    // candidate assignment.
     pathSlots
         .values()
         .forEach(
             slot -> {
+              if (slot.constructorMap.size()
+                  == slot.dataType.typeConstructors.size()) {
+                return;
+              }
               final List<Sat.Term> terms2 =
                   new ArrayList<>(slot.constructorMap.values());
               terms1.add(sat.or(terms2));
@@ -364,6 +375,19 @@ class PatternCoverageChecker {
       parent.path(b);
       b.append(ordinal).append('.');
     }
+
+    @Override
+    public int hashCode() {
+      return parent.hashCode() * 31 + ordinal;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o == this
+          || o instanceof SubPath
+              && ((SubPath) o).ordinal == ordinal
+              && ((SubPath) o).parent.equals(parent);
+    }
   }
 
   /**
@@ -382,6 +406,10 @@ class PatternCoverageChecker {
       dataType.typeConstructors.forEach(
           (name, type) -> b.put(name, sat.variable(path.toVar(name))));
       this.constructorMap = b.build();
+      // Register the constructor variables as a mutually exclusive slot so
+      // the SAT solver enumerates one assignment per constructor (N) rather
+      // than over all 2^N truth-value combinations.
+      sat.slot(this.constructorMap.values());
     }
   }
 }

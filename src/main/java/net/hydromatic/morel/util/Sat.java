@@ -22,41 +22,116 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Boolean satisfiability. */
 public class Sat {
-  private final Map<Integer, Variable> variablesById = new HashMap<>();
+  private final Map<Integer, Variable> variablesById = new LinkedHashMap<>();
   private final Map<String, Variable> variablesByName = new HashMap<>();
   private int nextVariable = 0;
+  /**
+   * Each slot is a group of variables of which exactly one is true. Variables
+   * not in any slot are searched by brute force (both {@code false} and {@code
+   * true}).
+   */
+  private final List<List<Variable>> slots = new ArrayList<>();
+
+  /**
+   * Declares that {@code vars} is a "slot": exactly one of them is true in any
+   * satisfying assignment. Allows {@link #solve} to enumerate {@code N}
+   * candidates (one per variable in the slot) rather than {@code 2^N}.
+   */
+  public List<Variable> slot(Variable... vars) {
+    return slot(ImmutableList.copyOf(vars));
+  }
+
+  /** As {@link #slot(Variable...)}. */
+  public List<Variable> slot(Iterable<? extends Variable> vars) {
+    final List<Variable> slot = ImmutableList.copyOf(vars);
+    slots.add(slot);
+    return slot;
+  }
 
   /**
    * Finds an assignment of variables such that a term evaluates to true, or
    * null if there is no solution.
+   *
+   * <p>Enumerates candidates as the Cartesian product of:
+   *
+   * <ul>
+   *   <li>{@code 2^F} settings of the {@code F} variables that are not in any
+   *       slot, and
+   *   <li>{@code N_i} one-hot settings for each slot of size {@code N_i}.
+   * </ul>
+   *
+   * <p>This is exact, simpler than a general SAT solver, and avoids the {@code
+   * 2^N} blow-up when every variable belongs to a one-hot group.
    */
   public @Nullable Map<Variable, Boolean> solve(Term term) {
-    final List<List<Assignment>> allAssignments = new ArrayList<>();
-    for (Variable variable : variablesById.values()) {
-      allAssignments.add(
-          ImmutableList.of(
-              new Assignment(variable, false), new Assignment(variable, true)));
+    final boolean[] env = new boolean[nextVariable];
+
+    final boolean[] inSlot = new boolean[nextVariable];
+    for (List<Variable> slot : slots) {
+      for (Variable v : slot) {
+        inSlot[v.id] = true;
+      }
+    }
+    final List<Variable> freeVars = new ArrayList<>();
+    for (Variable v : variablesById.values()) {
+      if (!inSlot[v.id]) {
+        freeVars.add(v);
+      }
     }
 
-    final boolean[] env = new boolean[nextVariable];
-    for (List<Assignment> assignments :
-        Lists.cartesianProduct(allAssignments)) {
-      assignments.forEach(a -> env[a.variable.id] = a.value);
-      if (term.evaluate(env)) {
-        final ImmutableMap.Builder<Variable, Boolean> builder =
-            ImmutableMap.builder();
-        assignments.forEach(a -> builder.put(a.variable, a.value));
-        return builder.build();
+    return enumerate(env, freeVars, 0, term);
+  }
+
+  private @Nullable Map<Variable, Boolean> enumerate(
+      boolean[] env, List<Variable> freeVars, int freeIdx, Term term) {
+    if (freeIdx < freeVars.size()) {
+      final Variable v = freeVars.get(freeIdx);
+      for (boolean value : new boolean[] {false, true}) {
+        env[v.id] = value;
+        final Map<Variable, Boolean> r =
+            enumerate(env, freeVars, freeIdx + 1, term);
+        if (r != null) {
+          return r;
+        }
       }
+      return null;
+    }
+    return enumerateSlots(env, 0, term);
+  }
+
+  private @Nullable Map<Variable, Boolean> enumerateSlots(
+      boolean[] env, int slotIdx, Term term) {
+    if (slotIdx == slots.size()) {
+      if (term.evaluate(env)) {
+        final ImmutableMap.Builder<Variable, Boolean> b =
+            ImmutableMap.builder();
+        for (Variable v : variablesById.values()) {
+          b.put(v, env[v.id]);
+        }
+        return b.build();
+      }
+      return null;
+    }
+    final List<Variable> slot = slots.get(slotIdx);
+    for (Variable v : slot) {
+      env[v.id] = false;
+    }
+    for (Variable trueVar : slot) {
+      env[trueVar.id] = true;
+      final Map<Variable, Boolean> r = enumerateSlots(env, slotIdx + 1, term);
+      if (r != null) {
+        return r;
+      }
+      env[trueVar.id] = false;
     }
     return null;
   }
@@ -136,7 +211,7 @@ public class Sat {
 
   /** Term that has a variable number of arguments ("and" or "or"). */
   abstract static class Node extends Term {
-    public final ImmutableList<Term> terms;
+    final ImmutableList<Term> terms;
 
     Node(Op op, ImmutableList<Term> terms) {
       super(op);
@@ -207,7 +282,7 @@ public class Sat {
 
   /** "Not" term. */
   static class Not extends Term {
-    public final Term term;
+    final Term term;
 
     Not(Term term) {
       super(Op.NOT);
@@ -245,17 +320,6 @@ public class Sat {
       this.right = right;
       this.str = str;
       this.emptyName = emptyName;
-    }
-  }
-
-  /** Assignment of a variable to a value. */
-  private static class Assignment {
-    final Variable variable;
-    final boolean value;
-
-    Assignment(Variable variable, boolean value) {
-      this.variable = requireNonNull(variable, "variable");
-      this.value = value;
     }
   }
 }

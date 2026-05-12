@@ -193,4 +193,106 @@ fun f [(SOME i)] = i
   | f (one :: two :: rest) = ~2;
 > val f = fn : int option list -> int
 
+(* Exhaustive, but the previously the brute-force checker couldn't handle it
+ * because 35 constructors require 2^35 states. *)
+datatype big = C01 | C02 | C03 | C04 | C05 | C06 | C07 | C08 | C09 | C10
+             | C11 | C12 | C13 | C14 | C15 | C16 | C17 | C18 | C19 | C20
+             | C21 | C22 | C23 | C24 | C25 | C26 | C27 | C28 | C29 | C30
+             | C31 | C32 | C33 | C34 | C35;
+> datatype big
+>   = C01
+>   | C02
+>   | C03
+>   | C04
+>   | C05
+>   | C06
+>   | C07
+>   | C08
+>   | C09
+>   | C10
+>   | C11
+>   | C12
+>   | C13
+>   | C14
+>   | C15
+>   | C16
+>   | C17
+>   | C18
+>   | C19
+>   | C20
+>   | C21
+>   | C22
+>   | C23
+>   | C24
+>   | C25
+>   | C26
+>   | C27
+>   | C28
+>   | C29
+>   | C30
+>   | C31
+>   | C32
+>   | C33
+>   | C34
+>   | C35
+fun classify C01 = "first" | classify _ = "other";
+> val classify = fn : big -> string
+
+datatype color = RED | GREEN | BLUE;
+> datatype color = RED | GREEN | BLUE
+fun classify (C01, RED) = "first, red"
+  | classify (C02, _) = "second"
+  | classify (C03, _) = "third"
+  | classify (C04, _) = "fourth"
+  | classify (C05, _) = "fifth"
+  | classify (C06, _) = "sixth"
+  | classify (C07, _) = "seventh"
+  | classify (C08, _) = "eighth"
+  | classify (C09, _) = "ninth"
+  | classify (C10, _) = "tenth"
+  | classify (C11, _) = "eleventh"
+  | classify (C12, _) = "twelfth"
+  | classify (C13, _) = "thirteenth"
+  | classify (C14, _) = "fourteenth"
+  | classify (C15, _) = "fifteenth"
+  | classify (C16, _) = "sixteenth"
+  | classify (C17, _) = "seventeenth"
+  | classify (C18, _) = "eighteenth"
+  | classify (C19, _) = "nineteenth"
+  | classify (C20, _) = "twentieth"
+  | classify (C21, _) = "twenty-first"
+  | classify (C22, _) = "twenty-second"
+  | classify (C23, _) = "twenty-third"
+  | classify (C24, _) = "twenty-fourth"
+  | classify (C25, _) = "twenty-fifth"
+  | classify (C26, _) = "twenty-sixth"
+  | classify (C27, _) = "twenty-seventh"
+  | classify (C28, _) = "twenty-eighth"
+  | classify (C29, _) = "twenty-ninth"
+  | classify (C30, _) = "thirtieth"
+  | classify (C31, _) = "thirty-first"
+  | classify (C32, _) = "thirty-second"
+  | classify (C33, _) = "thirty-third"
+  | classify (C34, _) = "thirty-fourth"
+  | classify (C35, GREEN) = "thirty-fifth";
+> 0.0-0.0 Warning: match nonexhaustive
+>   raised at: 0.0-0.0
+> val classify = fn : big * color -> string
+
+fn (C01, RED) => "first"
+  | (_, GREEN) => "green"
+  | (_, BLUE) => "blue"
+  | (_, RED) => "red";
+> val classify = fn : big * color -> string
+
+fun classify (C01, RED) = "first, red"
+  | classify (C01, GREEN) = "first, green"
+  | classify (C01, BLUE) = "first, blue"
+  | classify (_, GREEN) = "green"
+  | classify (_, BLUE) = "blue"
+  | classify (_, RED) = "red"
+  | classify (C01, _) = "first, other";
+> stdIn:7.5-7.39 Error: match redundant
+>   raised at: stdIn:7.5-7.39
+
 (*) End match.smli

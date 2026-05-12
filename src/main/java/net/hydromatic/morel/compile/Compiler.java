@@ -1553,7 +1553,10 @@ public class Compiler {
             ImmutableList.copyOf(newBindings);
         actions.add(
             (outLines, outBindings, evalEnv) -> {
-              String line = dataType.describe(new StringBuilder()).toString();
+              final int lineWidth =
+                  Prop.LINE_WIDTH.intValue(evalEnv.getSession().map);
+              String line =
+                  dataType.describe(new StringBuilder(), lineWidth).toString();
               outLines.accept(line);
               immutableBindings.forEach(outBindings);
             });
