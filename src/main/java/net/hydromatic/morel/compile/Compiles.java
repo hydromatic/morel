@@ -98,6 +98,26 @@ public abstract class Compiles {
       Ast.Decl decl,
       Consumer<CompileException> warningConsumer,
       Tracer tracer) {
+    // Strip attributes off declarations: they are inert at this stage.
+    while (decl instanceof Ast.AttributedDecl) {
+      decl = ((Ast.AttributedDecl) decl).decl;
+    }
+    // A floating attribute is a no-op declaration.
+    if (decl instanceof Ast.FloatingAttrDecl) {
+      return new CompiledStatement() {
+        public Type getType() {
+          return PrimitiveType.UNIT;
+        }
+
+        public void eval(
+            Session session,
+            Environment env,
+            Consumer<String> outLines,
+            Consumer<Binding> outBindings) {}
+
+        public void getBindings(Consumer<Binding> outBindings) {}
+      };
+    }
     // Handle signature declarations specially - they just get printed, not
     // compiled
     if (decl instanceof Ast.SignatureDecl) {

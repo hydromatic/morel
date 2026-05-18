@@ -171,6 +171,43 @@ public class AstDumper {
       b.append(')');
       return true;
     }
+    if (node instanceof Ast.AttributedExp) {
+      final Ast.AttributedExp a = (Ast.AttributedExp) node;
+      b.append("(attributedExp ");
+      dump(b, a.exp);
+      for (Ast.Attribute attr : a.attributes) {
+        b.append(' ');
+        dump(b, attr);
+      }
+      b.append(')');
+      return true;
+    }
+    if (node instanceof Ast.Attribute) {
+      final Ast.Attribute a = (Ast.Attribute) node;
+      final String marker;
+      switch (a.kind) {
+        case EXP:
+          marker = "@";
+          break;
+        case DECL:
+          marker = "@@";
+          break;
+        case FLOATING:
+        default:
+          marker = "@@@";
+          break;
+      }
+      b.append("(attribute ").append(marker).append(a.name);
+      if (a.payload != null) {
+        b.append(' ');
+        dump(b, a.payload);
+      } else if (a.typePayload != null) {
+        b.append(" : ");
+        dump(b, a.typePayload);
+      }
+      b.append(')');
+      return true;
+    }
     return dumpExp2(b, node);
   }
 
@@ -239,6 +276,17 @@ public class AstDumper {
       b.append(')');
       return true;
     }
+    if (node instanceof Ast.AttributedType) {
+      final Ast.AttributedType t = (Ast.AttributedType) node;
+      b.append("(attributedType ");
+      dump(b, t.type);
+      for (Ast.Attribute a : t.attributes) {
+        b.append(' ');
+        dump(b, a);
+      }
+      b.append(')');
+      return true;
+    }
     return false;
   }
 
@@ -297,6 +345,24 @@ public class AstDumper {
     }
     if (node instanceof Ast.FunMatch) {
       dumpFunMatch(b, (Ast.FunMatch) node);
+      return true;
+    }
+    if (node instanceof Ast.AttributedDecl) {
+      final Ast.AttributedDecl d = (Ast.AttributedDecl) node;
+      b.append("(attributedDecl ");
+      dump(b, d.decl);
+      for (Ast.Attribute a : d.attributes) {
+        b.append(' ');
+        dump(b, a);
+      }
+      b.append(')');
+      return true;
+    }
+    if (node instanceof Ast.FloatingAttrDecl) {
+      final Ast.FloatingAttrDecl d = (Ast.FloatingAttrDecl) node;
+      b.append("(floatingAttrDecl ");
+      dump(b, d.attribute);
+      b.append(')');
       return true;
     }
     return false;

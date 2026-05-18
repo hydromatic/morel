@@ -705,6 +705,8 @@ public class TypeResolver {
     final Variable v2;
     final PairList<Ast.IdPat, Term> termMap;
     switch (node.op) {
+      case ATTRIBUTED_EXP:
+        return deduceExpType(env, ((Ast.AttributedExp) node).exp, v);
       case BOOL_LITERAL:
         return reg(node, v, toTerm(PrimitiveType.BOOL));
 
@@ -2588,6 +2590,18 @@ public class TypeResolver {
       case SIGNATURE_DECL:
         // Signatures are interface declarations that don't evaluate to anything
         // For now, we just parse them and return unit type
+        map.put(node, toTerm(PrimitiveType.UNIT));
+        return node;
+
+      case ATTRIBUTED_DECL:
+        // Attributes are inert: type-check the inner decl, discard the
+        // wrapper. (Tooling that wants the attributes can use Sys.parseTree
+        // on the original source.)
+        return deduceDeclType(env, ((Ast.AttributedDecl) node).decl, termMap);
+
+      case FLOATING_ATTR_DECL:
+        // Floating attributes evaluate to unit; they carry no runtime
+        // semantics yet.
         map.put(node, toTerm(PrimitiveType.UNIT));
         return node;
 

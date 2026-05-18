@@ -47,6 +47,20 @@ public class Visitor {
     annotatedExp.type.accept(this);
   }
 
+  protected void visit(Ast.AttributedExp attributedExp) {
+    attributedExp.exp.accept(this);
+  }
+
+  protected void visit(Ast.AttributedDecl attributedDecl) {
+    attributedDecl.decl.accept(this);
+  }
+
+  protected void visit(Ast.AttributedType attributedType) {
+    attributedType.type.accept(this);
+  }
+
+  protected void visit(Ast.FloatingAttrDecl floatingAttrDecl) {}
+
   protected void visit(Ast.If anIf) {
     anIf.condition.accept(this);
     anIf.ifTrue.accept(this);

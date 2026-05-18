@@ -118,6 +118,13 @@ public enum Op {
   // annotated expression "e: t"
   ANNOTATED_EXP(" : ", 0),
 
+  // attributes
+  ATTRIBUTE,
+  ATTRIBUTED_DECL,
+  ATTRIBUTED_EXP,
+  ATTRIBUTED_TYPE,
+  FLOATING_ATTR_DECL,
+
   TIMES(" * ", 7),
   DIVIDE(" / ", 7),
   DIV(" div ", 7),

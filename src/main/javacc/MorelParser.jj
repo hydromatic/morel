@@ -44,7 +44,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -837,45 +839,46 @@ Exp expression9() :
   Exp arg;
   Id id;
   String fieldName;
+  final List<Attribute> attrs = new ArrayList<Attribute>();
 }
 {
   e = atom()
   (
-    /* When parsing a function argument (inArg=true), skip the
-       DOT chain for non-identifier receivers such as tuple literals. For
-       example, in "CLOSED (3,7).contains 5", the "(3,7)" is a non-Id atom
-       being passed as an argument; suppressing the DOT here lets expression8
-       attach ".contains 5" to the full "CLOSED (3,7)" application instead. */
+    // When parsing a function argument (inArg=true), skip the
+    // DOT chain for non-identifier receivers such as tuple literals. For
+    // example, in "CLOSED (3,7).contains 5", the "(3,7)" is a non-Id atom
+    // being passed as an argument; suppressing the DOT here lets expression8
+    // attach ".contains 5" to the full "CLOSED (3,7)" application instead.
     LOOKAHEAD({ getToken(1).kind == DOT && !(inArg && !isId(e)) })
     <DOT>
     ( id = identifier() { fieldName = id.name; }
     | <NATURAL_LITERAL> { fieldName = token.image; }
     )
     (
-      /* x.f arg -- postfix method call (paren or bare-atom arg form).
-         Both forms share the same action; the LOOKAHEAD distinguishes
-         them from the field-projection case and from each other.
-
-         When the next token is "(":
-           - Blocked for uppercase-initial receivers (isModule), so that
-             "Char.compare(...)" is not consumed as a postfix call.
-           - For a bare-Id receiver, only fires when fieldName is a
-             known method; otherwise "(arg)" belongs to
-             expression8's application level (e.g. "p.adjacent(n-1)").
-           - For non-Id receivers, always fires; atom() handles all three
-             sub-forms: "()" unit, "(e)" single arg, "(e1,e2)" tuple.
-             Staying inside the DOT loop enables chaining:
-               xs.drop(1).length ()
-               ≡ PostfixApp(PostfixApp(xs,"drop",1),"length",())
-
-         When the next token is not "(":
-           - Only fires for non-Id receivers (isId(e) = false), which
-             occur after a prior PostfixApp or field-projection step.
-             Bare-Id receivers fall through to field projection;
-             TypeResolver rewrites those later if appropriate.
-           - getToken(2) != DOT prevents consuming an identifier that is
-             itself followed by "." as a postfix arg (e.g. "expr.fn Id.g"
-             must not consume "Id"). */
+      // x.f arg -- postfix method call (paren or bare-atom arg form).
+      // Both forms share the same action; the LOOKAHEAD distinguishes
+      // them from the field-projection case and from each other.
+      //
+      // When the next token is "(":
+      //   - Blocked for uppercase-initial receivers (isModule), so that
+      //     "Char.compare(...)" is not consumed as a postfix call.
+      //   - For a bare-Id receiver, only fires when fieldName is a
+      //     known method; otherwise "(arg)" belongs to
+      //     expression8's application level (e.g. "p.adjacent(n-1)").
+      //   - For non-Id receivers, always fires; atom() handles all three
+      //     sub-forms: "()" unit, "(e)" single arg, "(e1,e2)" tuple.
+      //     Staying inside the DOT loop enables chaining:
+      //       xs.drop(1).length ()
+      //       ≡ PostfixApp(PostfixApp(xs,"drop",1),"length",())
+      //
+      // When the next token is not "(":
+      //   - Only fires for non-Id receivers (isId(e) = false), which
+      //     occur after a prior PostfixApp or field-projection step.
+      //     Bare-Id receivers fall through to field projection;
+      //     TypeResolver rewrites those later if appropriate.
+      //   - getToken(2) != DOT prevents consuming an identifier that is
+      //     itself followed by "." as a postfix arg (e.g. "expr.fn Id.g"
+      //     must not consume "Id").
       LOOKAHEAD({
           isAtomStart()
           && !isModule(e)
@@ -886,14 +889,62 @@ Exp expression9() :
       arg = atom()
       { e = ast.postfixApp(pos(), e, fieldName, arg); }
     |
-      /* x.f -- field projection, existing behaviour */
       {
         final Exp s = ast.recordSelector(pos(), fieldName);
         e = ast.apply(s, e);
       }
     )
   )*
-  { return e; }
+  ( expAttribute(attrs) )*
+  {
+    if (!attrs.isEmpty()) {
+      e = ast.attributedExp(e.pos.plus(pos()), e, attrs);
+    }
+    return e;
+  }
+}
+
+/** Parses an attribute name, e.g. {@code deprecated}, {@code foo.bar}. */
+String attributeName() :
+{
+  Id id;
+  StringBuilder b;
+}
+{
+  id = identifier() { b = new StringBuilder(id.name); }
+  (
+    <DOT> id = identifier() { b.append('.').append(id.name); }
+  )*
+  { return b.toString(); }
+}
+
+/** Parses an expression / type attribute, e.g. {@code [@deprecated]},
+ *  and appends the parsed {@link Attribute} to {@code attrs}. */
+void expAttribute(List<Attribute> attrs) :
+{
+  final Span span;
+  final String name;
+  Exp payload = null;
+  Type typePayload = null;
+}
+{
+  <LBRACKET_AT> { span = Span.of(pos()); }
+  name = attributeName()
+  (
+    <COLON> typePayload = type()
+  |
+    [ payload = expression() ]
+  )
+  <RBRACKET> {
+    if (typePayload != null) {
+      attrs.add(
+          ast.attributeWithType(
+              span.end(this), Ast.AttributeKind.EXP, name, typePayload));
+    } else {
+      attrs.add(
+          ast.attribute(span.end(this), Ast.AttributeKind.EXP, name, payload));
+    }
+  }
 }
 
 /** Parses an expression of precedence level 8 (function application). */
@@ -1938,6 +1989,7 @@ Ast.Type atomicType() :
 Ast.Type type7() :
 {
   Type t;
+  final List<Attribute> attrs = new ArrayList<Attribute>();
 }
 {
   t = atomicType()
@@ -1950,7 +2002,13 @@ Ast.Type type7() :
       t = ast.namedType(t.pos.plus(pos()), types, token.image);
     }
   )*
-  { return t; }
+  ( expAttribute(attrs) )*
+  {
+    if (!attrs.isEmpty()) {
+      t = ast.attributedType(t.pos.plus(pos()), t, attrs);
+    }
+    return t;
+  }
 }
 
 Ast.Type type6() :
@@ -1998,12 +2056,117 @@ Ast.Type namedType() : {}
 
 AstNode statement() :
 {
-  final AstNode n;
+  AstNode n;
+  Decl d;
+  Attribute attr;
+  final List<Attribute> declAttrs = new ArrayList<Attribute>();
 }
 {
-  n = expression() { return n; }
+  // Floating attribute, e.g. [@@@id payload?]. Treat as top-level statement.
+  attr = floatingAttribute() {
+    return ast.floatingAttrDecl(attr.pos, attr);
+  }
 |
-  n = decl() { return n; }
+  // A declaration can be preceded by a doc-comment (which is desugared to
+  // an attribute) and leading [@@id] attributes, and followed by trailing
+  // [@@id] attributes.
+  { collectLeadingDocComments(declAttrs); }
+  ( declAttribute(declAttrs) )*
+  d = decl()
+  ( declAttribute(declAttrs) )*
+  {
+    if (!declAttrs.isEmpty()) {
+      return ast.attributedDecl(d.pos.plus(pos()), d, declAttrs);
+    }
+    return d;
+  }
+|
+  n = expression() { return n; }
+}
+
+/** Walks the {@code specialToken} chain on the next lookahead token and
+ *  appends one {@code [@@doc "..."]} attribute per doc comment found,
+ *  in source order, to {@code attrs}. */
+JAVACODE void collectLeadingDocComments(List<Attribute> attrs) {
+  Token tok = getToken(1);
+  if (tok == null) {
+    return;
+  }
+  // The specialToken chain is most-recent-first; collect into a stack
+  // and pop in source order.
+  Deque<Token> docs = new ArrayDeque<Token>();
+  Token s = tok.specialToken;
+  while (s != null) {
+    if (s.kind == DOC_COMMENT) {
+      docs.push(s);
+    }
+    s = s.specialToken;
+  }
+  for (Token t : docs) {
+    String image = t.image;
+    // image is "(** content *)"; strip the markers.
+    String content = image.substring(3, image.length() - 2);
+    Pos p = pos(t);
+    Exp payload = ast.stringLiteral(p, content);
+    attrs.add(ast.attribute(p, Ast.AttributeKind.DECL, "doc", payload));
+  }
+}
+
+/** Parses a declaration attribute, e.g. {@code [@@deprecated]}, and
+ *  appends the parsed {@link Attribute} to {@code attrs}. Maps to
+ *  OCaml's {@code [@@id payload?]}. */
+void declAttribute(List<Attribute> attrs) :
+{
+  final Span span;
+  final String name;
+  Exp payload = null;
+  Type typePayload = null;
+}
+{
+  <LBRACKET_AT_AT> { span = Span.of(pos()); }
+  name = attributeName()
+  (
+    <COLON> typePayload = type()
+  |
+    [ payload = expression() ]
+  )
+  <RBRACKET> {
+    if (typePayload != null) {
+      attrs.add(
+          ast.attributeWithType(
+              span.end(this), Ast.AttributeKind.DECL, name, typePayload));
+    } else {
+      attrs.add(
+          ast.attribute(span.end(this), Ast.AttributeKind.DECL, name, payload));
+    }
+  }
+}
+
+/** Parses a floating attribute, e.g. {@code [@@@warning "-32"]}. Stands
+ *  alone as a structure or file item. Maps to OCaml's {@code [@@@id payload?]}. */
+Attribute floatingAttribute() :
+{
+  final Span span;
+  final String name;
+  Exp payload = null;
+  Type typePayload = null;
+}
+{
+  <LBRACKET_AT_AT_AT> { span = Span.of(pos()); }
+  name = attributeName()
+  (
+    <COLON> typePayload = type()
+  |
+    [ payload = expression() ]
+  )
+  <RBRACKET> {
+    if (typePayload != null) {
+      return ast.attributeWithType(
+          span.end(this), Ast.AttributeKind.FLOATING, name, typePayload);
+    }
+    return ast.attribute(
+        span.end(this), Ast.AttributeKind.FLOATING, name, payload);
+  }
 }
 
 AstNode statementSemicolon() :
@@ -2134,6 +2297,9 @@ AstNode statementEof() :
     | < RPAREN: ")">
     | < LBRACE: "{" >
     | < RBRACE: "}" >
+    | < LBRACKET_AT_AT_AT: "[@@@" >
+    | < LBRACKET_AT_AT: "[@@" >
+    | < LBRACKET_AT: "[@" >
     | < LBRACKET: "[" >
     | < RBRACKET: "]" >
     | < SEMICOLON: ";" >
@@ -2188,14 +2354,24 @@ TOKEN_MGR_DECLS : {
 /*
 Lexical states:
 
-DEFAULT:
-IN_COMMENT:
-IN_LINE_COMMENT:
+DEFAULT:        the normal state.
+IN_COMMENT:     inside a non-documentation block comment, "(* ... *)".
+IN_LINE_COMMENT: inside a line comment, "(*) ... <nl>".
+IN_DOC_COMMENT: inside a documentation comment, "(** ... *)". On the
+                terminating "*)" we emit a DOC_COMMENT special token
+                whose image is the whole comment, including markers.
+IN_DOC_NESTED:  inside a "(* ... *)" block nested in a doc comment.
+                Unlike IN_COMMENT we do NOT emit an END_COMMENT
+                special token when the inner "*)" matches, because
+                doing so would flush the doc comment's accumulator.
+                Instead we just popState and let the chars accumulate
+                into the eventual DOC_COMMENT image.
+IN_DOC_LINE:    inside a "(*) ... <nl>" line comment nested in a doc
+                comment. As with IN_DOC_NESTED, no special token is
+                emitted on terminator; we just popState.
 
-DEFAULT is the normal state.
-
-After a comment has completed, the lexer returns to the previous state, one
-of the 'normal states'.
+After a comment has completed, the lexer returns to the previous state.
+Nesting works correctly even at arbitrary depth.
 */
 
 /* WHITE SPACE */
@@ -2211,9 +2387,23 @@ of the 'normal states'.
 
 /* COMMENTS */
 
+<DEFAULT> SPECIAL_TOKEN :
+{
+    /* Treat (**) and (***) as ordinary (empty / single-star) block
+       comments, matching OCaml's special-case. These longer matches
+       must win over the "(**" doc-comment opener below. */
+    < EMPTY_BLOCK_COMMENT: "(**)" >
+|
+    < SINGLE_STAR_COMMENT: "(***)" >
+}
+
 <DEFAULT> MORE :
 {
     "(*)" { pushState(); } : IN_LINE_COMMENT
+|
+    /* (** starts a doc comment; content runs to *) and is captured as a
+       SPECIAL_TOKEN named DOC_COMMENT. */
+    "(**" { pushState(); } : IN_DOC_COMMENT
 |
     "(*" { pushState(); } : IN_COMMENT
 }
@@ -2237,7 +2427,43 @@ SPECIAL_TOKEN :
     <END_COMMENT: "*)" > { popState(); }
 }
 
-<IN_COMMENT, IN_LINE_COMMENT>
+<IN_DOC_COMMENT> MORE :
+{
+    "(*)" { pushState(); } : IN_DOC_LINE
+|
+    "(*" { pushState(); } : IN_DOC_NESTED
+}
+
+<IN_DOC_COMMENT>
+SPECIAL_TOKEN :
+{
+    <DOC_COMMENT: "*)" > { popState(); }
+}
+
+/* A block comment nested inside a doc comment. Same shape as
+   IN_COMMENT but we don't emit a token on close, so the chars
+   continue to accumulate into the enclosing doc comment's image. */
+<IN_DOC_NESTED> MORE :
+{
+    "(*)" { pushState(); } : IN_DOC_LINE
+|
+    "(*" { pushState(); }
+|
+    "*)" { popState(); }
+}
+
+/* A line comment nested inside a doc comment. Same shape as
+   IN_LINE_COMMENT but we don't emit a token on the newline. */
+<IN_DOC_LINE> MORE :
+{
+    "\n" { popState(); }
+|
+    "\r\n" { popState(); }
+|
+    "\r" { popState(); }
+}
+
+<IN_COMMENT, IN_LINE_COMMENT, IN_DOC_COMMENT, IN_DOC_NESTED, IN_DOC_LINE>
 MORE :
 {
     < ~[] >

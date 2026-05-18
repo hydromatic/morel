@@ -329,6 +329,10 @@ Sys.parseTree "val x = 1 + 2";
 Sys.parseTree "";
 > val it = "()" : string
 
+(*) Attributes are reflected in the parse tree.
+Sys.parseTree "1 [@a]";
+> val it = "(attributedExp (int_literal 1) (attribute @a))" : string
+
 (*) val plan : unit -> string
 Sys.plan;
 > val it = fn : unit -> string

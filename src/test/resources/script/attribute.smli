@@ -1,0 +1,260 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests for OCaml-style attributes:
+ *   [@a]    expression-level   (attaches to an atomic expression)
+ *   [@@a]   declaration-level  (attaches to a declaration)
+ *   [@@@a]  floating           (stands alone as a structure item)
+ *   (** *)  doc-comment sugar  (immediately above a decl)
+ *
+ * Attributes are parsed but are (for now, at least) otherwise inert;
+ * tests inspect the parser output via Sys.parseTree.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+(* --- Expression-level [@id] (attaches to an atom) --------------- *)
+Sys.parseTree "1 [@a]";
+> val it = "(attributedExp (int_literal 1) (attribute @a))" : string
+
+(*) Multiple attributes stack on the same atom.
+Sys.parseTree "1 [@a] [@b]";
+> val it = "(attributedExp (int_literal 1) (attribute @a) (attribute @b))"
+>   : string
+
+(*) Attribute carries an optional payload.
+Sys.parseTree "1 [@since 42]";
+> val it =
+>   "(attributedExp (int_literal 1) (attribute @since (int_literal 42)))"
+>   : string
+
+(* --- Precedence: [@id] binds at atom level ---------------------- *)
+Sys.parseTree "1 + 2 [@a]";
+> val it =
+>   "(plus (int_literal 1) (attributedExp (int_literal 2) (attribute @a)))"
+>   : string
+
+(*) Parens widen the attribute scope.
+Sys.parseTree "(1 + 2) [@a]";
+> val it =
+>   "(attributedExp (plus (int_literal 1) (int_literal 2)) (attribute @a))"
+>   : string
+
+(*) Application: the attribute attaches to the argument, not the call.
+Sys.parseTree "f x [@a]";
+> val it = "(apply (id f) (attributedExp (id x) (attribute @a)))" : string
+
+(*) Parenthesize the call to attach to it as a whole.
+Sys.parseTree "(f x) [@a]";
+> val it = "(attributedExp (apply (id f) (id x)) (attribute @a))" : string
+
+(*) Inside an arithmetic expression: only the immediate atom is wrapped.
+Sys.parseTree "1 * 2 + 3 [@a]";
+> val it =
+>   "(plus (times (int_literal 1) (int_literal 2)) (attributedExp (int_literal 3) (attribute @a)))"
+>   : string
+
+(*) List literal as the atom.
+Sys.parseTree "[1, 2] [@a]";
+> val it =
+>   "(attributedExp (list (int_literal 1) (int_literal 2)) (attribute @a))"
+>   : string
+
+(* --- Declaration-level [@@id] ----------------------------------- *)
+Sys.parseTree "val x = 1 [@@a]";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@a))"
+>   : string
+
+(*) Multiple declaration attributes.
+Sys.parseTree "val x = 1 [@@a] [@@b]";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@a) (attribute @@b))"
+>   : string
+
+(*) On a function declaration.
+Sys.parseTree "fun f x = x [@@inline]";
+> val it =
+>   "(attributedDecl (fun (funBind (funMatch f (idPat x) (id x)))) (attribute @@inline))"
+>   : string
+
+(*) Declaration attribute with payload.
+Sys.parseTree "val x = 1 [@@deprecated \"use y instead\"]";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@deprecated (string_literal \"use y instead\")))"
+>   : string
+
+(*) Leading [@@id] before a decl (matches OCaml; both before and
+(*) after positions are accepted and merged).
+Sys.parseTree "[@@a] val x = 1";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@a))"
+>   : string
+
+(*) Leading and trailing combined; order preserved.
+Sys.parseTree "[@@a] val x = 1 [@@b]";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@a) (attribute @@b))"
+>   : string
+
+(* --- Floating [@@@id] (stands alone) ---------------------------- *)
+Sys.parseTree "[@@@a]";
+> val it = "(floatingAttrDecl (attribute @@@a))" : string
+
+(*) With a payload.
+Sys.parseTree "[@@@warning 32]";
+> val it = "(floatingAttrDecl (attribute @@@warning (int_literal 32)))"
+>   : string
+
+(* --- Attributes on types ---------------------------------------- *)
+(*) The attribute attaches at the atom level (after any type-application
+(*) chain), so it binds tighter than `*` or `->`.
+Sys.parseTree "type distance = real [@unit]";
+> val it = "(type_decl type distance = real [@unit])" : string
+
+(*) On a function type, the attribute attaches to the result type's atom.
+Sys.parseTree "type t = int -> int [@a]";
+> val it = "(type_decl type t = int -> (int [@a]))" : string
+
+(*) Inside a value annotation.
+Sys.parseTree "val x : int [@a] = 1";
+> val it =
+>   "(val (valBind (annotatedPat (idPat x) (attributedType (named int) (attribute @a))) (int_literal 1)))"
+>   : string
+
+(* --- Dotted attribute names ------------------------------------- *)
+Sys.parseTree "1 [@foo.bar]";
+> val it = "(attributedExp (int_literal 1) (attribute @foo.bar))" : string
+Sys.parseTree "val x = 1 [@@deriving.show]";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@deriving.show))"
+>   : string
+Sys.parseTree "[@@@a.b.c]";
+> val it = "(floatingAttrDecl (attribute @@@a.b.c))" : string
+
+(* --- Type payload `[@a: typ]` ----------------------------------- *)
+(*) An attribute payload may be a type rather than an expression,
+(*) introduced by `:`. Mirrors OCaml's PTyp payload form.
+Sys.parseTree "1 [@a: int]";
+> val it = "(attributedExp (int_literal 1) (attribute @a : (named int)))"
+>   : string
+Sys.parseTree "val x = 1 [@@a: int list]";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@a : (named list (named int))))"
+>   : string
+Sys.parseTree "[@@@a: int -> string]";
+> val it =
+>   "(floatingAttrDecl (attribute @@@a : (fnType (named int) (named string))))"
+>   : string
+
+(* --- Doc-comment sugar: (** text *) ==> [@@doc "text"] ---------- *)
+Sys.parseTree "(** Hello world. *) val x = 1";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" Hello world. \")))"
+>   : string
+
+(*) Doc + explicit [@@a] combine in source order.
+Sys.parseTree "(** doc *) val x = 1 [@@a]";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" doc \")) (attribute @@a))"
+>   : string
+
+(*) Doc comment on a fun decl.
+Sys.parseTree "(** Returns x. *) fun id x = x";
+> val it =
+>   "(attributedDecl (fun (funBind (funMatch id (idPat x) (id x)))) (attribute @@doc (string_literal \" Returns x. \")))"
+>   : string
+
+(*) Empty/single-star comments remain ordinary and do NOT desugar.
+Sys.parseTree "(**) val x = 1";
+> val it = "(val (valBind (idPat x) (int_literal 1)))" : string
+Sys.parseTree "(***) val x = 1";
+> val it = "(val (valBind (idPat x) (int_literal 1)))" : string
+
+(*) A doc comment may contain nested block comments, even multiple
+(*) levels deep; they are captured verbatim as part of the doc text.
+Sys.parseTree "(** outer (* nested *) end *) val x = 1";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" outer (* nested *) end \")))"
+>   : string
+Sys.parseTree "(** outer (* one (* two *) *) end *) val x = 1";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" outer (* one (* two *) *) end \")))"
+>   : string
+
+(*) Line comments nested inside a doc comment are also captured;
+(*) the embedded newline becomes part of the doc text.
+Sys.parseTree "(** outer (*) line\n  rest *) val x = 1";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" outer (*) line\n  rest \")))"
+>   : string
+
+(* Multi-line doc comment: content (including newlines) is captured
+ * verbatim, matching OCaml. The two forms below use, respectively,
+ * `\n` escapes and real newlines in the source string; both produce
+ * the same parse tree.
+ *)
+Sys.parseTree "(** First line\n * Second line\n * Third line *) val x = 1";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" First line\n * Second line\n * Third line \")))"
+>   : string
+Sys.parseTree "(** First line
+ * Second line
+ * Third line *) val x = 1";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" First line\n * Second line\n * Third line \")))"
+>   : string
+
+(*) Body-on-its-own-lines style: opening `(**` on its own line.
+Sys.parseTree "(**\n * Body lines\n *) val x = 1";
+> val it =
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \"\n * Body lines\n \")))"
+>   : string
+
+(* --- Attributes are inert: code evaluates normally -------------- *)
+val x = 1 [@@deprecated];
+> val x = 1 : int
+fun double n = n * 2 [@@inline];
+> val double = fn : int -> int
+double 7;
+> val it = 14 : int
+
+(** A documented function. *)
+fun triple n = n * 3;
+> val triple = fn : int -> int
+triple 7;
+> val it = 21 : int
+
+(*) Floating attributes are no-ops.
+[@@@warning "unused"];
+
+(*) Expression-level attribute is invisible to evaluation.
+1 + 2 [@unit];
+> val it = 3 : int
+
+(*) Existing empty / single-star comments are unaffected.
+"a" ^ (**) "b";
+> val it = "ab" : string
+"a" ^ (***) "b";
+> val it = "ab" : string
+
+(*) End attribute.smli

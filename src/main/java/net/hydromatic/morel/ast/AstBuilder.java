@@ -565,6 +565,35 @@ public enum AstBuilder {
     return new Ast.AnnotatedExp(pos, expression, type);
   }
 
+  public Ast.Attribute attribute(
+      Pos pos, Ast.AttributeKind kind, String name, Ast.@Nullable Exp payload) {
+    return new Ast.Attribute(pos, kind, name, payload, null);
+  }
+
+  public Ast.Attribute attributeWithType(
+      Pos pos, Ast.AttributeKind kind, String name, Ast.Type typePayload) {
+    return new Ast.Attribute(pos, kind, name, null, typePayload);
+  }
+
+  public Ast.AttributedExp attributedExp(
+      Pos pos, Ast.Exp exp, Iterable<? extends Ast.Attribute> attributes) {
+    return new Ast.AttributedExp(pos, exp, ImmutableList.copyOf(attributes));
+  }
+
+  public Ast.AttributedDecl attributedDecl(
+      Pos pos, Ast.Decl decl, Iterable<? extends Ast.Attribute> attributes) {
+    return new Ast.AttributedDecl(pos, decl, ImmutableList.copyOf(attributes));
+  }
+
+  public Ast.AttributedType attributedType(
+      Pos pos, Ast.Type type, Iterable<? extends Ast.Attribute> attributes) {
+    return new Ast.AttributedType(pos, type, ImmutableList.copyOf(attributes));
+  }
+
+  public Ast.FloatingAttrDecl floatingAttrDecl(Pos pos, Ast.Attribute a) {
+    return new Ast.FloatingAttrDecl(pos, a);
+  }
+
   public Ast.Exp infixCall(Pos pos, Op op, Ast.Exp a0, Ast.Exp a1) {
     return new Ast.InfixCall(pos, op, a0, a1);
   }
