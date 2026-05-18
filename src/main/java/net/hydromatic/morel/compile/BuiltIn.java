@@ -3655,6 +3655,18 @@ public enum BuiltIn {
       null,
       session -> session.file.get()),
 
+  /**
+   * Function "Sys.parseTree", of type "string &rarr; string".
+   *
+   * <p>{@code parseTree s} parses {@code s} as a top-level Morel statement and
+   * returns a parenthesized S-expression-style dump of the resulting AST.
+   * Useful for testing parser behavior (e.g. operator precedence and attribute
+   * attachment) from {@code .smli} scripts.
+   *
+   * <p>Raises {@code Error} if the string does not parse.
+   */
+  SYS_PARSE_TREE("Sys", "parseTree", ts -> ts.fnType(STRING, STRING)),
+
   /** Function "Sys.plan", aka "plan", of type "unit &rarr; string". */
   SYS_PLAN("Sys", "plan", "plan", ts -> ts.fnType(UNIT, STRING)),
 

@@ -5031,7 +5031,7 @@ environment.
 """
 
 [[functions]]
-ordinal = 212
+ordinal = 210
 structure = "Sys"
 name = "clearEnv"
 specified = "morel"
@@ -5042,7 +5042,7 @@ restores the environment to the initial environment.
 """
 
 [[functions]]
-ordinal = 213
+ordinal = 211
 structure = "Sys"
 name = "env, env"
 specified = "morel"
@@ -5053,6 +5053,7 @@ prints the environment.
 """
 
 [[functions]]
+ordinal = 212
 structure = "Sys"
 name = "file"
 specified = "morel"
@@ -5061,6 +5062,20 @@ prototype = "file"
 description = """
 is a view of the file system as a record. The fields of the record
 depend on the files and directories under the configured directory.
+"""
+
+[[functions]]
+ordinal = 213
+structure = "Sys"
+name = "parseTree"
+specified = "morel"
+type = "string → string"
+prototype = "parseTree s"
+description = """
+parses `s` as a top-level Morel statement and returns a parenthesized
+S-expression-style dump of the resulting abstract syntax tree. Useful for
+testing parser behavior (e.g. operator precedence and attribute attachment)
+from `.smli` scripts. Raises `Error` if the string does not parse.
 """
 
 [[functions]]

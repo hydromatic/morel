@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
+import java.io.StringReader;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -61,6 +62,8 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import net.hydromatic.morel.ast.AstDumper;
+import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
@@ -69,6 +72,7 @@ import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
 import net.hydromatic.morel.datalog.DatalogEvaluator;
 import net.hydromatic.morel.foreign.RelList;
+import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.FnType;
@@ -3925,6 +3929,28 @@ public abstract class Codes {
         core.tuple(typeSystem, null, args));
   }
 
+  /** @see BuiltIn#SYS_PARSE_TREE */
+  private static final Applicable SYS_PARSE_TREE =
+      new ApplicableImpl(BuiltIn.SYS_PARSE_TREE) {
+        @Override
+        public Object apply(Stack stack, Object arg) {
+          final String source = (String) arg;
+          final MorelParserImpl parser =
+              new MorelParserImpl(new StringReader(source));
+          parser.zero("parseTree");
+          final AstNode node;
+          try {
+            node = parser.statementSemicolonOrEofSafe();
+          } catch (RuntimeException e) {
+            throw new RuntimeException("Sys.parseTree: " + e.getMessage(), e);
+          }
+          if (node == null) {
+            return "()";
+          }
+          return AstDumper.dump(node);
+        }
+      };
+
   /** @see BuiltIn#SYS_PLAN */
   private static final Applicable SYS_PLAN =
       new ApplicableImpl(BuiltIn.SYS_PLAN) {
@@ -5420,6 +5446,7 @@ public abstract class Codes {
           // Value of Sys.file comes from Session.file, but initial value must
           // be a List because it has (progressive) record type.
           .put(BuiltIn.SYS_FILE, ImmutableList.of())
+          .put(BuiltIn.SYS_PARSE_TREE, SYS_PARSE_TREE)
           .put(BuiltIn.SYS_PLAN, SYS_PLAN)
           .put(BuiltIn.SYS_PLAN_EX, SYS_PLAN_EX)
           .put(BuiltIn.SYS_SET, SYS_SET)

@@ -31,11 +31,11 @@ Sys.set ("now", "2024-01-01T00:00:00Z");
 
 Sys;
 > val it =
->   {clearEnv=fn,env=fn,file={},plan=fn,planEx=fn,set=fn,show=fn,showAll=fn,
->    unset=fn}
+>   {clearEnv=fn,env=fn,file={},parseTree=fn,plan=fn,planEx=fn,set=fn,show=fn,
+>    showAll=fn,unset=fn}
 >   : {clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...},
->      plan:unit -> string, planEx:string -> string, set:string * 'a -> unit,
->      show:string -> string option,
+>      parseTree:string -> string, plan:unit -> string, planEx:string -> string,
+>      set:string * 'a -> unit, show:string -> string option,
 >      showAll:unit -> (string * string option) list, unset:string -> unit}
 
 (*) val env : unit -> string list
@@ -113,7 +113,7 @@ Sys.env ();
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
 >    ("Subscript","exn"),("Sun","weekday"),
 >    ("Sys",
->     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, parseTree:string -> string, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
 >    ("Thu","weekday"),
 >    ("Time",
 >     "{+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}"),
@@ -244,7 +244,7 @@ env ();
 >     "{<:string * string -> bool, <=:string * string -> bool, >:string * string -> bool, >=:string * string -> bool, ^:string * string -> string, collate:(char * char -> order) -> string * string -> order, compare:string * string -> order, concat:string list -> string, concatWith:string -> string list -> string, explode:string -> char list, extract:string * int * int option -> string, fields:(char -> bool) -> string -> string list, implode:char list -> string, isPrefix:string -> string -> bool, isSubstring:string -> string -> bool, isSuffix:string -> string -> bool, map:(char -> char) -> string -> string, maxSize:int, size:string -> int, str:char -> string, sub:string * int -> char, substring:string * int * int -> string, tokens:(char -> bool) -> string -> string list, translate:(char -> string) -> string -> string}"),
 >    ("Subscript","exn"),("Sun","weekday"),
 >    ("Sys",
->     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
+>     "{clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...}, parseTree:string -> string, plan:unit -> string, planEx:string -> string, set:forall 'a. string * 'a -> unit, show:string -> string option, showAll:unit -> (string * string option) list, unset:string -> unit}"),
 >    ("Thu","weekday"),
 >    ("Time",
 >     "{+:time * time -> time, -:time * time -> time, <:time * time -> bool, <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool, compare:time * time -> order, fmt:int -> time -> string, fromMicroseconds:int -> time, fromMilliseconds:int -> time, fromNanoseconds:int -> time, fromReal:real -> time, fromSeconds:int -> time, fromString:string -> time option, now:unit -> time, toMicroseconds:time -> int, toMilliseconds:time -> int, toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int, toString:time -> string, zeroTime:time}"),
@@ -300,6 +300,34 @@ env ();
 >    ("trunc","real -> int"),("unset","string -> unit"),("use","string -> unit"),
 >    ("useSilently","string -> unit"),("valOf","forall 'a. 'a option -> 'a"),
 >    ("vector","forall 'a. 'a list -> 'a vector")] : (string * string) list
+
+(*) val parseTree : string -> string
+Sys.parseTree;
+> val it = fn : string -> string
+
+(*) Atoms and literals. A trailing `;` is optional.
+Sys.parseTree "42";
+> val it = "(int_literal 42)" : string
+Sys.parseTree "\"hi\"";
+> val it = "(string_literal \"hi\")" : string
+Sys.parseTree "x";
+> val it = "(id x)" : string
+
+(*) Infix and application.
+Sys.parseTree "1 + 2";
+> val it = "(plus (int_literal 1) (int_literal 2))" : string
+Sys.parseTree "f x";
+> val it = "(apply (id f) (id x))" : string
+
+(*) Declaration.
+Sys.parseTree "val x = 1 + 2";
+> val it =
+>   "(val (valBind (idPat x) (plus (int_literal 1) (int_literal 2))))"
+>   : string
+
+(*) Empty input round-trips to "()".
+Sys.parseTree "";
+> val it = "()" : string
 
 (*) val plan : unit -> string
 Sys.plan;
