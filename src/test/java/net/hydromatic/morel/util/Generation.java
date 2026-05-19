@@ -23,21 +23,16 @@ import static com.google.common.base.Strings.repeat;
 import static com.google.common.collect.ImmutableList.sortedCopyOf;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static net.hydromatic.morel.util.Static.transformEager;
-import static org.apache.calcite.util.Util.first;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.fasterxml.jackson.databind.MappingIterator;
-import com.fasterxml.jackson.dataformat.toml.TomlMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -46,8 +41,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
-import net.hydromatic.morel.Main;
+import net.hydromatic.morel.SignatureChecker;
 import net.hydromatic.morel.TestUtils;
 import net.hydromatic.morel.eval.Prop;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -57,58 +53,154 @@ public class Generation {
   private Generation() {}
 
   /**
-   * Returns the set of "Structure.name" keys documented in {@code
-   * functions.toml}.
-   *
-   * <p>Names with a disambiguation qualifier (e.g. {@code "fromInt, int"}) are
-   * normalized by stripping everything from the first {@code ", "} onwards, so
-   * the returned key for such an entry is {@code "Int.fromInt"}.
+   * Loads the data model of all structures, types, exceptions, and functions
+   * from the {@code lib/*.sig} files. The result is immutable; callers should
+   * hold the model and pass it to the methods that consume it.
    */
-  @SuppressWarnings("unchecked")
-  public static Set<String> functionNames() throws IOException {
-    final File file = getFile();
-
-    final Set<String> names = new HashSet<>();
-    final TomlMapper mapper = new TomlMapper();
-    try (MappingIterator<Object> it =
-        mapper.readerForMapOf(Object.class).readValues(file)) {
-      while (it.hasNextValue()) {
-        final Map<String, Object> row = (Map<String, Object>) it.nextValue();
-        for (FnDef fn :
-            transformEager(
-                (List<Map<String, Object>>) row.get("functions"),
-                FnDef::create)) {
-          names.add(fn.structure + "." + fn.canonicalName());
+  public static Model loadModel() throws IOException {
+    final File libDir = new File("lib");
+    checkArgument(libDir.isDirectory(), "lib directory not found: %s", libDir);
+    final SignatureChecker checker = new SignatureChecker();
+    final Map<String, StrDef> structures = new TreeMap<>();
+    final File @Nullable [] files =
+        libDir.listFiles((d, n) -> n.endsWith(".sig"));
+    requireNonNull(files, "no .sig files under lib/");
+    for (File f : files) {
+      final String structure =
+          SignatureChecker.structureFromSigFileName(f.getName());
+      if (structure == null) {
+        continue;
+      }
+      final SignatureChecker.ParseResult parsed = checker.parseSpecsAndMeta(f);
+      final Map<String, String> meta =
+          parsed.structureMeta.getOrDefault(structure, Collections.emptyMap());
+      final List<FnDef> fns = new ArrayList<>();
+      final List<TyDef> tys = new ArrayList<>();
+      final List<ExnDef> exns = new ArrayList<>();
+      final List<SignatureChecker.SpecInfo> infos =
+          parsed.specs.getOrDefault(structure, Collections.emptyList());
+      for (SignatureChecker.SpecInfo info : infos) {
+        switch (info.kind) {
+          case FUNCTION:
+            fns.add(
+                new FnDef(
+                    structure,
+                    info.name,
+                    info.displayType,
+                    info.prototype == null ? "" : info.prototype,
+                    info.description == null ? "" : info.description,
+                    info.extra,
+                    info.implemented,
+                    info.specified,
+                    info.method));
+            break;
+          case TYPE:
+            tys.add(
+                new TyDef(
+                    structure,
+                    info.name,
+                    info.typeDecl,
+                    info.description == null ? "" : info.description,
+                    info.implemented));
+            break;
+          case EXCEPTION:
+            exns.add(
+                new ExnDef(
+                    structure,
+                    info.name,
+                    info.exceptionType,
+                    info.description == null ? "" : info.description,
+                    info.implemented));
+            break;
+          default:
+            break;
         }
       }
+      structures.put(
+          structure,
+          new StrDef(
+              structure,
+              meta.getOrDefault("description", ""),
+              meta.getOrDefault("overview", ""),
+              meta.getOrDefault("specified", "basis"),
+              fns,
+              tys,
+              exns));
     }
-    return names;
+    return new ModelImpl(structures);
   }
 
   /**
-   * Returns the set of "Structure.name" keys documented in {@code
-   * functions.toml} as {@code method = true}.
+   * Handle to the snapshot of all structures (each with its functions, types,
+   * and exceptions) loaded from {@code lib/*.sig}. Callers obtain a Model via
+   * {@link #loadModel()} and use the probe / iteration methods on it; the
+   * underlying data is not part of the public API.
    */
-  @SuppressWarnings("unchecked")
-  public static Set<String> methodNames() throws IOException {
-    final File file = getFile();
-    final Set<String> names = new HashSet<>();
-    final TomlMapper mapper = new TomlMapper();
-    try (MappingIterator<Object> it =
-        mapper.readerForMapOf(Object.class).readValues(file)) {
-      while (it.hasNextValue()) {
-        final Map<String, Object> row = (Map<String, Object>) it.nextValue();
-        for (FnDef fn :
-            transformEager(
-                (List<Map<String, Object>>) row.get("functions"),
-                FnDef::create)) {
-          if (fn.method) {
-            names.add(fn.structure + "." + fn.canonicalName());
-          }
-        }
-      }
+  public interface Model {
+    /** Names of all structures, in sorted order. */
+    Set<String> structureNames();
+
+    /**
+     * True if structure {@code s} has a {@code val} spec named {@code name}.
+     */
+    boolean containsFunction(String s, String name);
+
+    /**
+     * True if structure {@code s} has a {@code val} spec named {@code name}
+     * annotated with {@code [@@method]}.
+     */
+    boolean containsMethod(String s, String name);
+
+    /**
+     * True if structure {@code s} has a {@code type}, {@code eqtype}, or {@code
+     * datatype} spec named {@code name}.
+     */
+    boolean containsType(String s, String name);
+  }
+
+  /**
+   * Backing data for {@link Model}; field access is via the {@code impl(model)}
+   * downcast within Generation.
+   */
+  private static class ModelImpl implements Model {
+    final Map<String, StrDef> structures;
+
+    ModelImpl(Map<String, StrDef> structures) {
+      this.structures = structures;
     }
-    return names;
+
+    @Override
+    public Set<String> structureNames() {
+      return structures.keySet();
+    }
+
+    @Override
+    public boolean containsFunction(String s, String name) {
+      final StrDef str = structures.get(s);
+      return str != null
+          && str.functions.stream()
+              .anyMatch(fn -> fn.canonicalName().equals(name));
+    }
+
+    @Override
+    public boolean containsMethod(String s, String name) {
+      final StrDef str = structures.get(s);
+      return str != null
+          && str.functions.stream()
+              .anyMatch(fn -> fn.method && fn.canonicalName().equals(name));
+    }
+
+    @Override
+    public boolean containsType(String s, String name) {
+      final StrDef str = structures.get(s);
+      return str != null
+          && str.types.stream().anyMatch(ty -> ty.name.equals(name));
+    }
+  }
+
+  /** Returns the {@link ModelImpl} fields backing {@code model}. */
+  private static ModelImpl impl(Model model) {
+    return (ModelImpl) model;
   }
 
   /**
@@ -190,260 +282,64 @@ public class Generation {
     return parts;
   }
 
-  /** The {@code functions.toml} file as a URL. */
-  public static URL getResource() {
-    return requireNonNull(Main.class.getResource("/functions.toml"));
-  }
-
-  /** The {@code functions.toml} file. */
-  public static File getFile() {
-    return requireNonNull(TestUtils.urlToFile(getResource()));
-  }
-
   /**
-   * Returns entries in file order from {@code [[functions]]}, {@code
-   * [[types]]}, and {@code [[exceptions]]} blocks. {@code [[values]]} and
-   * {@code [[structures]]} blocks are excluded.
-   *
-   * <p>Each key is {@code "Foo.bar (function)"}, {@code "Foo.bar (type)"}, or
-   * {@code "Foo.Bar (exception)"} — the qualified name followed by the element
-   * kind in parentheses. Each value is the 1-based line number of the {@code
-   * [[...]]} header.
-   */
-  static PairList<String, Integer> allEntryNamesInOrder(File file)
-      throws IOException {
-    final PairList<String, Integer> entries = PairList.of();
-    String blockType = null; // "function", "type", "exception", or null (skip)
-    int headerLine = -1;
-    String structure = null;
-    String name = null;
-    int lineNumber = 0;
-    try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-      for (String line = br.readLine(); line != null; line = br.readLine()) {
-        lineNumber++;
-        if (line.startsWith("[[")) {
-          if (blockType != null && structure != null && name != null) {
-            entries.add(
-                structure + "." + name + " (" + blockType + ")", headerLine);
-          }
-          structure = null;
-          name = null;
-          headerLine = lineNumber;
-          switch (line) {
-            case "[[functions]]":
-              blockType = "function";
-              break;
-            case "[[types]]":
-              blockType = "type";
-              break;
-            case "[[exceptions]]":
-              blockType = "exception";
-              break;
-            default:
-              blockType = null; // skip [[values]], [[structures]], etc.
-          }
-        } else if (blockType != null) {
-          if (line.startsWith("structure = \"")) {
-            structure = line.substring(13, line.length() - 1);
-          } else if (line.startsWith("name = \"")) {
-            name = line.substring(8, line.length() - 1);
-            final int comma = name.indexOf(", ");
-            if (comma >= 0) {
-              name = name.substring(0, comma);
-            }
-          }
-        }
-      }
-    }
-    if (blockType != null && structure != null && name != null) {
-      entries.add(structure + "." + name + " (" + blockType + ")", headerLine);
-    }
-    return entries;
-  }
-
-  /**
-   * Returns the list of structure names declared in {@code functions.toml}, in
-   * file order.
-   */
-  @SuppressWarnings("unchecked")
-  public static List<String> structureNames() throws IOException {
-    final File file = getFile();
-    final List<String> names = new ArrayList<>();
-    final TomlMapper mapper = new TomlMapper();
-    try (MappingIterator<Object> it =
-        mapper.readerForMapOf(Object.class).readValues(file)) {
-      while (it.hasNextValue()) {
-        final Map<String, Object> row = (Map<String, Object>) it.nextValue();
-        final Object structuresObj = row.get("structures");
-        if (structuresObj != null) {
-          for (StrDef strDef :
-              transformEager(
-                  (List<Map<String, Object>>) structuresObj, StrDef::create)) {
-            names.add(strDef.name);
-          }
-        }
-      }
-    }
-    return names;
-  }
-
-  /**
-   * Reads the {@code functions.toml} file and returns the set of (structure,
-   * name) pairs from {@code [[types]]} entries.
-   */
-  @SuppressWarnings("unchecked")
-  public static Set<List<String>> typeNames() throws IOException {
-    final File file = getFile();
-    final Set<List<String>> names = new HashSet<>();
-    final TomlMapper mapper = new TomlMapper();
-    try (MappingIterator<Object> it =
-        mapper.readerForMapOf(Object.class).readValues(file)) {
-      while (it.hasNextValue()) {
-        final Map<String, Object> row = (Map<String, Object>) it.nextValue();
-        final Object typesObj = row.get("types");
-        if (typesObj != null) {
-          for (TyDef ty :
-              transformEager(
-                  (List<Map<String, Object>>) typesObj, TyDef::create)) {
-            names.add(Arrays.asList(ty.structure, ty.name));
-          }
-        }
-      }
-    }
-    return names;
-  }
-
-  /**
-   * Reads the {@code functions.toml} file and generates a two-column index
-   * table of structures into {@code reference.md}.
+   * Generates a two-column index table of structures into {@code reference.md}.
    *
    * <p>Each row links the structure name to its {@code docs/lib/{name}.md}
    * page; the description column contains the one-sentence description followed
    * by a comma-separated list of hyperlinked members (types, exceptions,
    * functions).
-   *
-   * <p>Also validates that {@code [[structures]]} entries are sorted by name,
-   * and that all {@code [[functions]]}, {@code [[types]]}, and {@code
-   * [[exceptions]]} entries are sorted within each structure.
    */
-  public static void generateStructureIndex(PrintWriter pw) throws IOException {
-    generateStructureIndexImpl(pw, "lib/", true);
+  public static void generateStructureIndex(Model model, PrintWriter pw) {
+    generateStructureIndexImpl(model, pw, "lib/", true);
   }
 
   /**
-   * Reads the {@code functions.toml} file and generates a two-column index
-   * table of structures into {@code docs/lib/index.md}.
+   * Generates a two-column index table of structures into {@code
+   * docs/lib/index.md}.
    *
    * <p>Like {@link #generateStructureIndex} but uses local links (no {@code
    * lib/} prefix) since the file is already inside {@code docs/lib/}.
    */
-  public static void generateLibIndex(PrintWriter pw) throws IOException {
-    generateStructureIndexImpl(pw, "", false);
+  public static void generateLibIndex(Model model, PrintWriter pw) {
+    generateStructureIndexImpl(model, pw, "", false);
   }
 
-  @SuppressWarnings("unchecked")
   private static void generateStructureIndexImpl(
-      PrintWriter pw, String linkPrefix, boolean checkSort) throws IOException {
-    final File file = getFile();
-    final List<StrDef> allStrDefs = new ArrayList<>();
-    final Map<String, LinkedHashSet<String>> membersByStructure =
-        new LinkedHashMap<>();
-    final TomlMapper mapper = new TomlMapper();
-    try (MappingIterator<Object> it =
-        mapper.readerForMapOf(Object.class).readValues(file)) {
-      while (it.hasNextValue()) {
-        final Map<String, Object> row = (Map<String, Object>) it.nextValue();
-        final Object structuresObj = row.get("structures");
-        if (structuresObj != null) {
-          final List<StrDef> strDefs =
-              transformEager(
-                  (List<Map<String, Object>>) structuresObj, StrDef::create);
-          if (checkSort) {
-            final List<String> structureNames =
-                transformEager(strDefs, s -> s.name);
-            if (!Ordering.natural().isOrdered(structureNames)) {
-              fail(
-                  "Structure names are not sorted\n"
-                      + TestUtils.diffLines(
-                          structureNames, sortedCopyOf(structureNames)));
-            }
-          }
-          allStrDefs.addAll(strDefs);
-          for (StrDef s : strDefs) {
-            membersByStructure.put(s.name, new LinkedHashSet<>());
-          }
-        }
-        final Object typesObj = row.get("types");
-        if (typesObj != null) {
-          for (TyDef ty :
-              transformEager(
-                  (List<Map<String, Object>>) typesObj, TyDef::create)) {
-            membersByStructure
-                .computeIfAbsent(ty.structure, k -> new LinkedHashSet<>())
-                .add(ty.name);
-          }
-        }
-        final Object exceptionsObj = row.get("exceptions");
-        if (exceptionsObj != null) {
-          for (ExnDef e :
-              transformEager(
-                  (List<Map<String, Object>>) exceptionsObj, ExnDef::create)) {
-            membersByStructure
-                .computeIfAbsent(e.structure, k -> new LinkedHashSet<>())
-                .add(e.name);
-          }
-        }
-        final Object functionsObj = row.get("functions");
-        if (functionsObj != null) {
-          for (FnDef fn :
-              transformEager(
-                  (List<Map<String, Object>>) functionsObj, FnDef::create)) {
-            membersByStructure
-                .computeIfAbsent(fn.structure, k -> new LinkedHashSet<>())
-                .add(fn.canonicalName());
-          }
-        }
-      }
-    }
-
+      Model model, PrintWriter pw, String linkPrefix, boolean checkSort) {
+    final ModelImpl m = impl(model);
+    // Structures are sorted alphabetically by TreeMap.
     if (checkSort) {
-      // All entries (functions, types, exceptions) must be sorted.
-      final PairList<String, Integer> entries = allEntryNamesInOrder(file);
-      final List<String> names = entries.leftList();
-      final List<Integer> lines = entries.rightList();
-      for (int i = 1; i < names.size(); i++) {
-        final String curr = names.get(i);
-        final String prev = names.get(i - 1);
-        if (prev.compareTo(curr) > 0) {
-          final int currLine = lines.get(i);
-          for (int j = 0; j < i; j++) {
-            final String targetName = names.get(j);
-            if (targetName.compareTo(curr) > 0) {
-              Integer targetLine = lines.get(j);
-              fail(
-                  format(
-                      "%s:%d: %s is out of order; move before %s at line %d",
-                      file.getName(), currLine, curr, targetName, targetLine));
-              break;
-            }
-          }
-          break;
-        }
+      final List<String> structureNames =
+          new ArrayList<>(m.structures.keySet());
+      if (!Ordering.natural().isOrdered(structureNames)) {
+        fail(
+            "Structure names are not sorted\n"
+                + TestUtils.diffLines(
+                    structureNames, sortedCopyOf(structureNames)));
       }
     }
-
     pw.printf("%n");
     final Tabulator tabulator = new Tabulator(pw, -1, -1);
     tabulator.header("Structure", "Description");
-    for (StrDef strDef : allStrDefs) {
+    for (StrDef strDef : m.structures.values()) {
       final String kebab = toKebab(strDef.name);
       final String link =
           "[" + strDef.name + "](" + linkPrefix + kebab + ".md)";
       final String linkBase = linkPrefix + kebab + ".md";
+      final LinkedHashSet<String> members = new LinkedHashSet<>();
+      for (TyDef ty : strDef.types) {
+        members.add(ty.name);
+      }
+      for (ExnDef e : strDef.exceptions) {
+        members.add(e.name);
+      }
+      for (FnDef fn : strDef.functions) {
+        members.add(fn.canonicalName());
+      }
       final String memberList =
-          membersByStructure.getOrDefault(strDef.name, new LinkedHashSet<>())
-              .stream()
-              .map(m -> "[`" + m + "`](" + linkBase + "#" + m + "-impl)")
+          members.stream()
+              .map(mn -> "[`" + mn + "`](" + linkBase + "#" + mn + "-impl)")
               .collect(Collectors.joining(", "));
       tabulator.row(link, munge(strDef.description) + "<br>" + memberList);
     }
@@ -464,12 +360,34 @@ public class Generation {
   }
 
   /**
-   * Reads the {@code functions.toml} file and generates the body of a
-   * per-structure page at {@code docs/lib/{structure}.md}.
+   * Inverse of {@link #toKebab}. Splits at hyphens and title-cases each
+   * segment, with the single exception of {@code "ieee"}, which uppercases to
+   * {@code "IEEE"}.
+   *
+   * <p>Examples: {@code "ieee-real"} &rarr; {@code "IEEEReal"}, {@code
+   * "list-pair"} &rarr; {@code "ListPair"}, {@code "string-cvt"} &rarr; {@code
+   * "StringCvt"}.
    */
-  public static void generateStructureDoc(String structure, PrintWriter pw)
-      throws IOException {
-    new StructureDocGenerator(structure, pw).generate();
+  public static String fromKebab(String kebab) {
+    final StringBuilder sb = new StringBuilder();
+    for (String segment : kebab.split("-")) {
+      if (segment.isEmpty()) {
+        continue;
+      }
+      if (segment.equals("ieee")) {
+        sb.append("IEEE");
+      } else {
+        sb.append(Character.toUpperCase(segment.charAt(0)));
+        sb.append(segment, 1, segment.length());
+      }
+    }
+    return sb.toString();
+  }
+
+  /** Generates the body of a per-structure docs page. */
+  public static void generateStructureDoc(
+      Model model, String structure, PrintWriter pw) {
+    new StructureDocGenerator(model, structure, pw).generate();
   }
 
   /** Generates a table of properties into {@code reference.md}. */
@@ -494,30 +412,29 @@ public class Generation {
    *
    * <p>Unrecognized keys are silently ignored (no output written).
    */
-  public static void generateSection(String key, PrintWriter pw)
-      throws IOException {
+  public static void generateSection(Model model, String key, PrintWriter pw) {
     switch (key) {
       case "structures":
-        generateStructureIndex(pw);
+        generateStructureIndex(model, pw);
         break;
       case "properties":
         generatePropertyTable(pw);
         break;
       case "lib/index":
-        generateLibIndex(pw);
+        generateLibIndex(model, pw);
         break;
       default:
         if (key.startsWith("lib/")) {
           final String kebab = key.substring(4);
           final String structureName =
-              structureNames().stream()
+              model.structureNames().stream()
                   .filter(n -> toKebab(n).equals(kebab))
                   .findFirst()
                   .orElseThrow(
                       () ->
                           new IllegalArgumentException(
                               "No structure for key: " + key));
-          generateStructureDoc(structureName, pw);
+          generateStructureDoc(model, structureName, pw);
         }
         break;
     }
@@ -558,7 +475,6 @@ public class Generation {
     final String description;
     final @Nullable String extra;
     final boolean implemented;
-    final int ordinal;
     final String specified;
     final boolean method;
 
@@ -570,7 +486,6 @@ public class Generation {
         String description,
         String extra,
         boolean implemented,
-        int ordinal,
         String specified,
         boolean method) {
       this.structure = requireNonNull(structure, "structure");
@@ -583,7 +498,6 @@ public class Generation {
       this.description = requireNonNull(description, "description");
       this.extra = extra;
       this.implemented = implemented;
-      this.ordinal = ordinal;
       this.specified = requireNonNull(specified, "specified");
       this.method = method;
     }
@@ -597,50 +511,37 @@ public class Generation {
       int comma = name.indexOf(", ");
       return comma >= 0 ? name.substring(0, comma) : name;
     }
-
-    static FnDef create(Map<String, Object> map) {
-      return new FnDef(
-          (String) map.get("structure"),
-          (String) map.get("name"),
-          (String) map.get("type"),
-          (String) map.get("prototype"),
-          (String) map.get("description"),
-          (String) map.get("extra"),
-          first((Boolean) map.get("implemented"), true),
-          map.containsKey("ordinal") ? (Integer) map.get("ordinal") : -1,
-          map.containsKey("specified")
-              ? (String) map.get("specified")
-              : "basis",
-          first((Boolean) map.get("method"), false));
-    }
   }
 
-  /** Structure definition (from {@code [[structures]]} in functions.toml). */
+  /** Structure definition. */
   private static class StrDef {
     final String name;
     final String description;
     final String overview;
     final String specified;
+    final ImmutableList<FnDef> functions;
+    final ImmutableList<TyDef> types;
+    final ImmutableList<ExnDef> exceptions;
 
-    StrDef(String name, String description, String overview, String specified) {
+    StrDef(
+        String name,
+        String description,
+        String overview,
+        String specified,
+        Iterable<FnDef> functions,
+        Iterable<TyDef> types,
+        Iterable<ExnDef> exceptions) {
       this.name = requireNonNull(name, "name");
       this.description = requireNonNull(description, "description");
       this.overview = requireNonNull(overview, "overview");
       this.specified = requireNonNull(specified, "specified");
-    }
-
-    static StrDef create(Map<String, Object> map) {
-      return new StrDef(
-          (String) map.get("name"),
-          (String) map.get("description"),
-          (String) map.get("overview"),
-          map.containsKey("specified")
-              ? (String) map.get("specified")
-              : "basis");
+      this.functions = ImmutableList.copyOf(functions);
+      this.types = ImmutableList.copyOf(types);
+      this.exceptions = ImmutableList.copyOf(exceptions);
     }
   }
 
-  /** Type definition (from {@code [[types]]} in functions.toml). */
+  /** Type definition. */
   private static class TyDef {
     final String structure;
     final String name;
@@ -664,53 +565,31 @@ public class Generation {
     String qualifiedName() {
       return structure + '.' + name;
     }
-
-    static TyDef create(Map<String, Object> map) {
-      return new TyDef(
-          (String) map.get("structure"),
-          (String) map.get("name"),
-          (String) map.get("type"),
-          (String) map.get("description"),
-          first((Boolean) map.get("implemented"), true));
-    }
   }
 
-  /** Exception definition (from {@code [[exceptions]]} in functions.toml). */
+  /** Exception definition. */
   private static class ExnDef {
     final String structure;
     final String name;
     final @Nullable String type;
     final String description;
     final boolean implemented;
-    final int ordinal;
 
     ExnDef(
         String structure,
         String name,
         @Nullable String type,
         String description,
-        boolean implemented,
-        int ordinal) {
+        boolean implemented) {
       this.structure = requireNonNull(structure, "structure");
       this.name = requireNonNull(name, "name");
       this.type = type;
       this.description = requireNonNull(description, "description");
       this.implemented = implemented;
-      this.ordinal = ordinal;
     }
 
     String qualifiedName() {
       return structure + '.' + name;
-    }
-
-    static ExnDef create(Map<String, Object> map) {
-      return new ExnDef(
-          (String) map.get("structure"),
-          (String) map.get("name"),
-          (String) map.get("type"),
-          (String) map.get("description"),
-          first((Boolean) map.get("implemented"), true),
-          map.containsKey("ordinal") ? (Integer) map.get("ordinal") : -1);
     }
   }
 
@@ -726,81 +605,27 @@ public class Generation {
     final List<FnDef> allFns;
     final Map<FnDef, String> fnAnchors;
 
-    @SuppressWarnings("unchecked")
-    StructureDocGenerator(String structure, PrintWriter pw) throws IOException {
+    StructureDocGenerator(Model model, String structure, PrintWriter pw) {
       this.structure = structure;
       this.pw = pw;
-      final File file = getFile();
-      StrDef foundStrDef = null;
-      final List<TyDef> tyList = new ArrayList<>();
-      final List<ExnDef> exnList = new ArrayList<>();
-      final List<FnDef> fnList = new ArrayList<>();
-      final TomlMapper mapper = new TomlMapper();
-      try (MappingIterator<Object> it =
-          mapper.readerForMapOf(Object.class).readValues(file)) {
-        while (it.hasNextValue()) {
-          final Map<String, Object> row = (Map<String, Object>) it.nextValue();
-          final Object structuresObj = row.get("structures");
-          if (structuresObj != null) {
-            for (StrDef s :
-                transformEager(
-                    (List<Map<String, Object>>) structuresObj,
-                    StrDef::create)) {
-              if (s.name.equals(structure)) {
-                foundStrDef = s;
-              }
-            }
-          }
-          final Object typesObj = row.get("types");
-          if (typesObj != null) {
-            for (TyDef t :
-                transformEager(
-                    (List<Map<String, Object>>) typesObj, TyDef::create)) {
-              if (t.structure.equals(structure)) {
-                tyList.add(t);
-              }
-            }
-          }
-          final Object exceptionsObj = row.get("exceptions");
-          if (exceptionsObj != null) {
-            for (ExnDef e :
-                transformEager(
-                    (List<Map<String, Object>>) exceptionsObj,
-                    ExnDef::create)) {
-              if (e.structure.equals(structure)) {
-                exnList.add(e);
-              }
-            }
-          }
-          for (FnDef fn :
-              transformEager(
-                  (List<Map<String, Object>>) row.get("functions"),
-                  FnDef::create)) {
-            if (fn.structure.equals(structure)) {
-              fnList.add(fn);
-            }
-          }
-        }
-      }
       this.strDef =
-          requireNonNull(foundStrDef, "structure not found: " + structure);
-      this.tyDefs = tyList;
-      this.exnDefs = exnList;
-      final Comparator<FnDef> byOrdinal =
-          Comparator.comparingInt(
-                  (FnDef f) -> f.ordinal < 0 ? Integer.MAX_VALUE : f.ordinal)
-              .thenComparing(f -> f.name);
+          requireNonNull(
+              impl(model).structures.get(structure),
+              "structure not found: " + structure);
+      this.tyDefs = strDef.types;
+      this.exnDefs = strDef.exceptions;
+      // Within the structure's doc page, basis-specified functions are
+      // listed first, then a "Morel extensions" section. Preserve physical
+      // .sig file order within each group.
       this.basisFns = new ArrayList<>();
       this.morelFns = new ArrayList<>();
-      for (FnDef fn : fnList) {
+      for (FnDef fn : strDef.functions) {
         if ("morel".equals(fn.specified)) {
           morelFns.add(fn);
         } else {
           basisFns.add(fn);
         }
       }
-      basisFns.sort(byOrdinal);
-      morelFns.sort(byOrdinal);
       this.allFns = new ArrayList<>();
       allFns.addAll(basisFns);
       allFns.addAll(morelFns);
@@ -808,7 +633,7 @@ public class Generation {
     }
 
     void generate() {
-      pw.println(strDef.overview.trim());
+      pw.println(stripLeadingSpace(strDef.overview.trim()));
       pw.println();
       if ("basis".equals(strDef.specified)) {
         pw.format(
@@ -962,22 +787,26 @@ public class Generation {
       pw.println();
       final String postfix =
           fn.method ? " (or `" + postfixForm(fn.prototype) + "`)" : "";
+      final String line;
       if (fn.extra != null) {
-        pw.format(
-            Locale.ROOT,
-            "`%s`%s %s %s%n",
-            fn.prototype,
-            postfix,
-            processDesc(fn.description),
-            fn.extra.trim());
+        line =
+            format(
+                Locale.ROOT,
+                "`%s`%s %s %s",
+                fn.prototype,
+                postfix,
+                processDesc(fn.description),
+                fn.extra.trim());
       } else {
-        pw.format(
-            Locale.ROOT,
-            "`%s`%s %s%n",
-            fn.prototype,
-            postfix,
-            processDesc(fn.description));
+        line =
+            format(
+                Locale.ROOT,
+                "`%s`%s %s",
+                fn.prototype,
+                postfix,
+                processDesc(fn.description));
       }
+      pw.println(line.replaceAll("\\s+$", ""));
       if (!fn.implemented) {
         pw.println();
         pw.println("*Not yet implemented.*");
@@ -986,7 +815,7 @@ public class Generation {
     }
 
     static String processDesc(String desc) {
-      return desc.trim()
+      return stripLeadingSpace(desc.trim())
           .replace(
               "\n" //
                   + "\n" //
@@ -1002,7 +831,15 @@ public class Generation {
                   + "\n" //
                   + "\n",
               "\n" //
-                  + "\n");
+                  + "\n")
+          // Strip trailing whitespace from every line (after <p> rewrites,
+          // which can otherwise leave a stranded leading-space-only line).
+          .replaceAll("(?m)[ \\t]+$", "");
+    }
+
+    /** Strips the cosmetic space left by ocamldoc-style {@code * } lines. */
+    static String stripLeadingSpace(String s) {
+      return s.replaceAll("(?m)^ ", "");
     }
 
     static String toSml(String type) {

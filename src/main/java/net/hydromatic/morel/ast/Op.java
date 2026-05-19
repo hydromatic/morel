@@ -83,6 +83,8 @@ public enum Op {
   SPEC_TYPE,
   SPEC_DATATYPE,
   SPEC_EXCEPTION,
+  ATTRIBUTED_SPEC,
+  FLOATING_ATTR_SPEC,
 
   // internal
   FROM_EQ("$FROM_EQ "),

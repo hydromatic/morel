@@ -226,6 +226,12 @@ public class Visitor {
     }
   }
 
+  protected void visit(Ast.AttributedSpec attributedSpec) {
+    attributedSpec.spec.accept(this);
+  }
+
+  protected void visit(Ast.FloatingAttrSpec floatingAttrSpec) {}
+
   protected void visit(Ast.ValDecl valDecl) {
     valDecl.valBinds.forEach(this::accept);
   }

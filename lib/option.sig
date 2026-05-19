@@ -20,53 +20,75 @@
  * There is no OPTION signature, but we define it here for
  * validation purposes.
  *)
+(**
+ * The `Option` structure provides the `option` type `'a option` whose
+ * values are either `NONE` (absent) or `SOME v` (present), along with
+ * operations for creating, examining, and transforming optional values.
+ *)
 signature OPTION =
 sig
+
+  (**
+   * The type `option` provides a distinction between some value and no
+   * value, and is often used for representing the result of partially
+   * defined functions. It can be viewed as a typed version of the C
+   * convention of returning a NULL pointer to indicate no value.
+   *)
   datatype 'a option = NONE | SOME of 'a
+  (** is raised by `valOf` when applied to `NONE`. *)
   exception Option
 
-  (* Returns the value v if opt is SOME(v); otherwise returns the default
-   * value a. Provides a default value when an option is empty. *)
-  val getOpt : 'a option * 'a -> 'a
+  (**
+   * returns `v` if `opt` is `SOME (v)`; otherwise
+   * returns `a`.
+   *)
+  val getOpt : 'a option * 'a -> 'a [@@method] [@@prototype "getOpt (opt, a)"]
 
-  (* Returns true if opt is SOME(v); otherwise returns false.
-   * Checks whether an option contains a value. *)
-  val isSome : 'a option -> bool
+  (**
+   * returns `true` if `opt` is `SOME v`; otherwise returns
+   * `false`.
+   *)
+  val isSome : 'a option -> bool [@@method] [@@prototype "isSome opt"]
 
-  (* Returns v if opt is SOME(v); otherwise raises the Option exception.
-   * Extracts the value from an option or fails. *)
-  val valOf : 'a option -> 'a
+  (**
+   * returns `v` if `opt` is `SOME v`, otherwise raises
+   * `Option`.
+   *)
+  val valOf : 'a option -> 'a [@@method] [@@prototype "valOf opt"]
 
-  (* Returns SOME(a) if f(a) is true and NONE otherwise.
-   * Wraps a value in SOME only if it satisfies a predicate. *)
-  val filter : ('a -> bool) -> 'a -> 'a option
+  (** returns `SOME a` if `f(a)` is `true`, `NONE` otherwise. *)
+  val filter : ('a -> bool) -> 'a -> 'a option [@@prototype "filter f a"]
 
-  (* Maps NONE to NONE and SOME(v) to v.
-   * Flattens a nested option type by one level. *)
-  val `join` : 'a option option -> 'a option
+  (** maps `NONE` to `NONE` and `SOME v` to `v`. *)
+  val `join` : 'a option option -> 'a option [@@prototype "join opt"]
 
-  (* Applies the function f to the value v if opt is SOME(v), and otherwise
-   * does nothing. Executes a side effect if an option contains a value. *)
-  val app : ('a -> unit) -> 'a option -> unit
+  (**
+   * applies the function `f` to the value `v` if `opt` is
+   * `SOME v`, and otherwise does nothing.
+   *)
+  val app : ('a -> unit) -> 'a option -> unit [@@prototype "app f opt"]
 
-  (* Maps NONE to NONE and SOME(v) to SOME(f v).
-   * Transforms the contained value without changing the option structure. *)
-  val map : ('a -> 'b) -> 'a option -> 'b option
+  (** maps `NONE` to `NONE` and `SOME v` to `SOME (f v)`. *)
+  val map : ('a -> 'b) -> 'a option -> 'b option [@@prototype "map f opt"]
 
-  (* Maps NONE to NONE and SOME(v) to f(v).
-   * Applies a partial function to a contained value, flattening the result. *)
+  (** maps `NONE` to `NONE` and `SOME v` to `f(v)`. *)
   val mapPartial : ('a -> 'b option)
-                   -> 'a option -> 'b option
+                   -> 'a option -> 'b option [@@prototype "mapPartial f opt"]
 
-  (* Composes a total function with a partial function.
-   * Returns NONE if the partial function produces NONE. *)
+  (**
+   * returns `NONE` if `g(a)` is `NONE`; otherwise, if
+   * `g(a)` is `SOME v`, it returns `SOME (f v)`.
+   *)
   val compose : ('a -> 'b) * ('c -> 'a option)
-                -> 'c -> 'b option
+                -> 'c -> 'b option [@@prototype "compose (f, g) a"]
 
-  (* Composes two partial functions together.
-   * Returns NONE if either function produces NONE. *)
+  (**
+   * returns `NONE` if `g(a)` is `NONE`;
+   * otherwise, if `g(a)` is `SOME v`, returns `f(v)`.
+   *)
   val composePartial : ('a -> 'b option) * ('c -> 'a option)
-                       -> 'c -> 'b option
+                       -> 'c -> 'b option [@@prototype "composePartial (f, g) a"]
 end
+[@@description "Optional values."]
 
 (*) End option.sig

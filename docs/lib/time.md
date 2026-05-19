@@ -35,7 +35,7 @@ are provided.
 ## Synopsis
 
 <pre>
-eqtype <a id='time' href="#time-impl">time</a>
+type <a id='time' href="#time-impl">time</a>
 
 exception <a id='Time' href="#Time-impl">Time</a>
 
@@ -64,7 +64,7 @@ val <a id='fromString' href="#fromString-impl">fromString</a> : string -> time o
 </pre>
 
 <a id="time-impl"></a>
-<h3><code><strong>eqtype</strong> time</code></h3>
+<h3><code><strong>type</strong> time</code></h3>
 
 is an equality type representing both absolute times (relative to the Unix
 epoch, 1970-01-01T00:00:00Z) and time durations. Both absolute times and

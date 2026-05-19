@@ -320,6 +320,17 @@ public class Shuttle {
         exceptionSpec.type == null ? null : exceptionSpec.type.accept(this));
   }
 
+  protected Ast.Spec visit(Ast.AttributedSpec attributedSpec) {
+    return ast.attributedSpec(
+        attributedSpec.pos,
+        attributedSpec.spec.accept(this),
+        attributedSpec.attributes);
+  }
+
+  protected Ast.Spec visit(Ast.FloatingAttrSpec floatingAttrSpec) {
+    return floatingAttrSpec;
+  }
+
   protected Ast.ValDecl visit(Ast.ValDecl valDecl) {
     return ast.valDecl(
         valDecl.pos, valDecl.rec, valDecl.inst, visitList(valDecl.valBinds));

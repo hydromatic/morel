@@ -31,25 +31,17 @@ The `Bool` structure provides the boolean type and associated operations.
 ## Synopsis
 
 <pre>
-eqtype <a id='bool' href="#bool-impl">bool</a>
+datatype <a id='bool' href="#bool-impl">bool</a> = false | true
 
-val <a id='fromString' href="#fromString-impl">fromString</a> : string -> bool option
 val <a id='not' href="#not-impl">not</a> : bool -> bool
 val <a id='toString' href="#toString-impl">toString</a> : bool -> string
-(* Morel extensions *)
-val <a id='implies' href="#implies-impl">implies</a> : bool * bool -> bool
+val <a id='fromString' href="#fromString-impl">fromString</a> : string -> bool option
 </pre>
 
 <a id="bool-impl"></a>
-<h3><code><strong>eqtype</strong> bool</code></h3>
+<h3><code><strong>datatype</strong> bool</code></h3>
 
 is the type of boolean values `true` and `false`.
-
-<a id="fromString-impl"></a>
-<h3><code>fromString</code></h3>
-
-`fromString s` scans a `bool` value from the string `s`. Returns `SOME (true)` if
-`s` is "true", `SOME (false)` if `s` is "false", and `NONE` otherwise.
 
 <a id="not-impl"></a>
 <h3><code>not</code></h3>
@@ -61,9 +53,10 @@ is the type of boolean values `true` and `false`.
 
 `toString b` (or `b.toString ()`) returns the string representation of `b`, either "true" or "false".
 
-<a id="implies-impl"></a>
-<h3><code>implies</code></h3>
+<a id="fromString-impl"></a>
+<h3><code>fromString</code></h3>
 
-`b1 implies b2` returns `true` if `b1` is `false` or `b2` is `true`.
+`fromString s` scans a `bool` value from the string `s`. Returns `SOME (true)` if
+`s` is "true", `SOME (false)` if `s` is "false", and `NONE` otherwise.
 
 [//]: # (end:lib/bool)

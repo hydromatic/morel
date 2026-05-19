@@ -1978,6 +1978,91 @@ public class Ast {
     }
   }
 
+  /** Specification with one or more attached {@code [@@attr]} attributes. */
+  public static class AttributedSpec extends Spec {
+    public final Spec spec;
+    public final List<Attribute> attributes;
+
+    AttributedSpec(Pos pos, Spec spec, ImmutableList<Attribute> attributes) {
+      super(pos, Op.ATTRIBUTED_SPEC);
+      this.spec = requireNonNull(spec);
+      this.attributes = requireNonNull(attributes);
+      checkArgument(!attributes.isEmpty());
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(spec, attributes);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return this == obj
+          || obj instanceof AttributedSpec
+              && spec.equals(((AttributedSpec) obj).spec)
+              && attributes.equals(((AttributedSpec) obj).attributes);
+    }
+
+    @Override
+    public Spec accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      w.append(spec, 0, 0);
+      for (Attribute a : attributes) {
+        w.append(" ").append(a, 0, 0);
+      }
+      return w;
+    }
+  }
+
+  /**
+   * Floating attribute {@code [@@@attr]} that stands alone inside a {@code
+   * sig...end} body. Carries structure-level metadata.
+   */
+  public static class FloatingAttrSpec extends Spec {
+    public final Attribute attribute;
+
+    FloatingAttrSpec(Pos pos, Attribute attribute) {
+      super(pos, Op.FLOATING_ATTR_SPEC);
+      this.attribute = requireNonNull(attribute);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash(attribute);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return this == obj
+          || obj instanceof FloatingAttrSpec
+              && attribute.equals(((FloatingAttrSpec) obj).attribute);
+    }
+
+    @Override
+    public Spec accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(attribute, 0, 0);
+    }
+  }
+
   /** Exception specification in a signature. */
   public static class ExceptionSpec extends Spec {
     public final Id name;

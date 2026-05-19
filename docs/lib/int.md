@@ -32,61 +32,74 @@ operations for the default fixed-precision integer type.
 ## Synopsis
 
 <pre>
-eqtype <a id='int' href="#int-impl">int</a>
+type <a id='int' href="#int-impl">int</a>
 
-val <a id='*' href="#*-impl">*</a> : int * int -> int
-val <a id='+' href="#+-impl">+</a> : int * int -> int
-val <a id='-' href="#--impl">-</a> : int * int -> int
+val <a id='toLarge' href="#toLarge-impl">toLarge</a> : int -> int
+val <a id='fromLarge' href="#fromLarge-impl">fromLarge</a> : int -> int
+val <a id='toInt' href="#toInt-impl">toInt</a> : int -> int
+val <a id='fromInt' href="#fromInt-impl">fromInt</a> : int -> int
+val <a id='precision' href="#precision-impl">precision</a> : int option
+val <a id='minInt' href="#minInt-impl">minInt</a> : int option
+val <a id='maxInt' href="#maxInt-impl">maxInt</a> : int option
 val <a id='div' href="#div-impl">div</a> : int * int -> int
 val <a id='mod' href="#mod-impl">mod</a> : int * int -> int
-val <a id='<' href="#<-impl"><</a> : int * int -> bool
-val <a id='<=' href="#<=-impl"><=</a> : int * int -> bool
-val <a id='>' href="#>-impl">></a> : int * int -> bool
-val <a id='>=' href="#>=-impl">>=</a> : int * int -> bool
-val <a id='~' href="#~-impl">~</a> : int -> int
-val <a id='abs' href="#abs-impl">abs</a> : int -> int
-val <a id='compare' href="#compare-impl">compare</a> : int * int -> order
-val <a id='fromInt' href="#fromInt-impl">fromInt</a> : int -> int
-val <a id='fromString' href="#fromString-impl">fromString</a> : string -> int option
-val <a id='max' href="#max-impl">max</a> : int * int -> int
-val <a id='maxInt' href="#maxInt-impl">maxInt</a> : int
-val <a id='min' href="#min-impl">min</a> : int * int -> int
-val <a id='minInt' href="#minInt-impl">minInt</a> : int
-val <a id='precision' href="#precision-impl">precision</a> : int
 val <a id='quot' href="#quot-impl">quot</a> : int * int -> int
 val <a id='rem' href="#rem-impl">rem</a> : int * int -> int
-val <a id='sameSign' href="#sameSign-impl">sameSign</a> : int * int -> bool
+val <a id='compare' href="#compare-impl">compare</a> : int * int -> order
+val <a id='abs' href="#abs-impl">abs</a> : int -> int
+val <a id='min' href="#min-impl">min</a> : int * int -> int
+val <a id='max' href="#max-impl">max</a> : int * int -> int
 val <a id='sign' href="#sign-impl">sign</a> : int -> int
-val <a id='toInt' href="#toInt-impl">toInt</a> : int -> int
+val <a id='sameSign' href="#sameSign-impl">sameSign</a> : int * int -> bool
 val <a id='toString' href="#toString-impl">toString</a> : int -> string
-val <a id='fmt' href="#fmt-impl">fmt</a> : StringCvt.radix -> int -> string
-val <a id='scan' href="#scan-impl">scan</a> : scan radix getc strm
-val <a id='fromLarge' href="#fromLarge-impl">fromLarge</a> : int -> int
-val <a id='toLarge' href="#toLarge-impl">toLarge</a> : int -> int
+val <a id='fromString' href="#fromString-impl">fromString</a> : string -> int option
 </pre>
 
 <a id="int-impl"></a>
-<h3><code><strong>eqtype</strong> int</code></h3>
+<h3><code><strong>type</strong> int</code></h3>
 
 is the type of fixed-precision integers.
 
-<a id="*-impl"></a>
-<h3><code>*</code></h3>
+<a id="toLarge-impl"></a>
+<h3><code>toLarge</code></h3>
 
-`i * j` is the product of `i` and `j`. It raises `Overflow` when the
-result is not representable.
+`toLarge i`
 
-<a id="+-impl"></a>
-<h3><code>+</code></h3>
+<a id="fromLarge-impl"></a>
+<h3><code>fromLarge</code></h3>
 
-`i + j` is the sum of `i` and `j`. It raises `Overflow` when the
-result is not representable.
+`fromLarge i`
 
-<a id="--impl"></a>
-<h3><code>-</code></h3>
+<a id="toInt-impl"></a>
+<h3><code>toInt</code></h3>
 
-`i - j` is the difference of `i` and `j`. It raises `Overflow` when
-the result is not representable.
+`toInt i`
+
+<a id="fromInt-impl"></a>
+<h3><code>fromInt</code></h3>
+
+`fromInt i`
+
+<a id="precision-impl"></a>
+<h3><code>precision</code></h3>
+
+`precision`
+
+<a id="minInt-impl"></a>
+<h3><code>minInt</code></h3>
+
+`minInt` is the minimal (most negative) integer representable by
+`int`. If a value is `NONE`, `int` can represent all negative
+integers, within the limits of the heap size. If `precision` is `SOME
+(n)`, then we have `minInt` = -2<sup>(n-1)</sup>.
+
+<a id="maxInt-impl"></a>
+<h3><code>maxInt</code></h3>
+
+`maxInt` is the maximal (most positive) integer representable by
+`int`. If a value is `NONE`, `int` can represent all positive
+integers, within the limits of the heap size. If `precision` is `SOME
+(n)`, then we have `maxInt` = 2<sup>(n-1)</sup> - 1.
 
 <a id="div-impl"></a>
 <h3><code>div</code></h3>
@@ -102,91 +115,6 @@ rounding is towards negative infinity, not zero.
 `i mod j` returns the remainder of the division of `i` by `j`. It raises
 `Div` when `j = 0`. When defined, `(i mod j)` has the same sign as
 `j`, and `(i div j) * j + (i mod j) = i`.
-
-<a id="<-impl"></a>
-<h3><code><</code></h3>
-
-`i < j` returns true if `i` is less than `j`.
-
-<a id="<=-impl"></a>
-<h3><code><=</code></h3>
-
-`i <= j` returns true if `i` is less than or equal to `j`.
-
-<a id=">-impl"></a>
-<h3><code>></code></h3>
-
-`i > j` returns true if `i` is greater than `j`.
-
-<a id=">=-impl"></a>
-<h3><code>>=</code></h3>
-
-`i >= j` returns true if `i` is greater than or equal to `j`.
-
-<a id="~-impl"></a>
-<h3><code>~</code></h3>
-
-`~ i` returns the negation of `i`.
-
-<a id="abs-impl"></a>
-<h3><code>abs</code></h3>
-
-`abs i` (or `i.abs ()`) returns the absolute value of `i`.
-
-<a id="compare-impl"></a>
-<h3><code>compare</code></h3>
-
-`compare (i, j)` (or `i.compare j`) returns `LESS`, `EQUAL`, or `GREATER` according to
-whether its first argument is less than, equal to, or greater than the
-second.
-
-<a id="fromInt-impl"></a>
-<h3><code>fromInt</code></h3>
-
-`fromInt i` converts a value from type `int` to the default integer
-type. Raises `Overflow` if the value does not fit.
-
-<a id="fromString-impl"></a>
-<h3><code>fromString</code></h3>
-
-`fromString s` scans a `int` value from a string. Returns `SOME (r)`
-if a `int` value can be scanned from a prefix of `s`, ignoring any
-initial whitespace; otherwise, it returns `NONE`. Equivalent to
-`StringCvt.scanString (scan StringCvt.DEC)`.
-
-<a id="max-impl"></a>
-<h3><code>max</code></h3>
-
-`max (i, j)` (or `i.max j`) returns the larger of the arguments.
-
-<a id="maxInt-impl"></a>
-<h3><code>maxInt</code></h3>
-
-`maxInt` is the maximal (most positive) integer representable by
-`int`. If a value is `NONE`, `int` can represent all positive
-integers, within the limits of the heap size. If `precision` is `SOME
-(n)`, then we have `maxInt` = 2<sup>(n-1)</sup> - 1.
-
-<a id="min-impl"></a>
-<h3><code>min</code></h3>
-
-`min (i, j)` (or `i.min j`) returns the smaller of the arguments.
-
-<a id="minInt-impl"></a>
-<h3><code>minInt</code></h3>
-
-`minInt` is the minimal (most negative) integer representable by
-`int`. If a value is `NONE`, `int` can represent all negative
-integers, within the limits of the heap size. If `precision` is `SOME
-(n)`, then we have `minInt` = -2<sup>(n-1)</sup>.
-
-<a id="precision-impl"></a>
-<h3><code>precision</code></h3>
-
-`precision` is the precision. If `SOME (n)`, this denotes the number
-`n` of significant bits in type `int`, including the sign bit. If it
-is `NONE`, int has arbitrary precision. The precision need not
-necessarily be a power of two.
 
 <a id="quot-impl"></a>
 <h3><code>quot</code></h3>
@@ -208,23 +136,38 @@ raises `Div` when `j = 0`. `(i rem j)` has the same sign as i, and it
 holds that `(i quot j) * j + (i rem j) = i`. This is the semantics of
 most hardware divide instructions, so `rem` may be faster than `mod`.
 
+<a id="compare-impl"></a>
+<h3><code>compare</code></h3>
+
+`compare (i, j)` (or `i.compare j`) returns `LESS`, `EQUAL`, or `GREATER` according to
+whether its first argument is less than, equal to, or greater than the
+second.
+
+<a id="abs-impl"></a>
+<h3><code>abs</code></h3>
+
+`abs i` (or `i.abs ()`) returns the absolute value of `i`.
+
+<a id="min-impl"></a>
+<h3><code>min</code></h3>
+
+`min (i, j)` (or `i.min j`) returns the smaller of the arguments.
+
+<a id="max-impl"></a>
+<h3><code>max</code></h3>
+
+`max (i, j)` (or `i.max j`) returns the larger of the arguments.
+
+<a id="sign-impl"></a>
+<h3><code>sign</code></h3>
+
+`sign i` (or `i.sign ()`)
+
 <a id="sameSign-impl"></a>
 <h3><code>sameSign</code></h3>
 
 `sameSign (i, j)` (or `i.sameSign j`) returns true if `i` and `j` have the same sign. It
 is equivalent to `(sign i = sign j)`.
-
-<a id="sign-impl"></a>
-<h3><code>sign</code></h3>
-
-`sign i` (or `i.sign ()`) returns ~1, 0, or 1 when `i` is less than, equal to, or
-greater than 0, respectively.
-
-<a id="toInt-impl"></a>
-<h3><code>toInt</code></h3>
-
-`toInt i` converts a value from the default integer type to type
-`int`. Raises `Overflow` if the value does not fit.
 
 <a id="toString-impl"></a>
 <h3><code>toString</code></h3>
@@ -232,39 +175,12 @@ greater than 0, respectively.
 `toString i` (or `i.toString ()`) converts a `int` into a `string`; equivalent to `(fmt
 StringCvt.DEC r)`.
 
-<a id="fmt-impl"></a>
-<h3><code>fmt</code></h3>
+<a id="fromString-impl"></a>
+<h3><code>fromString</code></h3>
 
-`fmt radix i` returns a string containing a representation of `i` with
-#"~" used as the sign for negative numbers. Formats the string
-according to `radix`; the hexadecimal digits 10 through 15 are
-represented as #"A" through #"F", respectively. No prefix "0x" is
-generated for the hexadecimal representation.
-
-*Not yet implemented.*
-
-<a id="scan-impl"></a>
-<h3><code>scan</code></h3>
-
-`scan radix getc strm` returns `SOME (i,rest)` if an integer in the format denoted by `radix`
-can be parsed from a prefix of the character stream `strm` after
-skipping initial whitespace, where `i` is the value of the integer
-parsed and `rest` is the rest of the character stream. `NONE` is
-returned otherwise. This function raises `Overflow` when an integer
-can be parsed, but is too large to be represented by type `int`.
-
-*Not yet implemented.*
-
-<a id="fromLarge-impl"></a>
-<h3><code>fromLarge</code></h3>
-
-`fromLarge i` converts a value from the default integer type to type `int`. In Morel,
-this is an identity function as there is only one integer type.
-
-<a id="toLarge-impl"></a>
-<h3><code>toLarge</code></h3>
-
-`toLarge i` converts a value of type `int` to the default integer type. In Morel,
-this is an identity function as there is only one integer type.
+`fromString s` scans a `int` value from a string. Returns `SOME (r)`
+if a `int` value can be scanned from a prefix of `s`, ignoring any
+initial whitespace; otherwise, it returns `NONE`. Equivalent to
+`StringCvt.scanString (scan StringCvt.DEC)`.
 
 [//]: # (end:lib/int)

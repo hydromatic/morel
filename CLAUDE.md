@@ -209,13 +209,44 @@ When implementing a structure from the
    and register it in the `CODES` static map. If the structure has an
    exception (e.g., `exception Time`), add it to `BuiltInExn`.
 
-3. **`functions.toml`** — Add `[[structures]]`, `[[exceptions]]` (if any),
-   `[[types]]` (if any), and `[[functions]]` entries. All entries must be
-   interleaved alphabetically (functions, types, and exceptions together, not
-   grouped by kind). Copy descriptions from https://smlfamily.github.io/Basis/
-   and adapt them. Assign new ordinals continuing from the current maximum.
-   Mark functions with `method = true` where appropriate. Use
-   `specified = "basis"` for standard functions.
+3. **`lib/{name}.sig`** — Add a signature file declaring each `val`,
+   `eqtype`/`type`, `datatype`, and `exception` in the structure. Types
+   must agree with `BuiltIn.java` — `LintTest#testSignatures` cross-checks
+   the two. Wrap reserved-word names (e.g., `take`, `order`, `exists`) and
+   operator symbols (e.g., `^`, `<`, `@`) in backticks. Comment out
+   unimplemented entries with a block comment so they remain visible.
+
+   **Spec-attribute convention.** Use attributes in `.sig` files to carry
+   metadata for generated docs and lint checks.
+
+   On a `val` spec:
+
+   * `(** description text *)` — prose description, immediately above
+     the spec. Desugars to `[@@doc "..."]`.
+   * `[@@prototype "drop (b, i)"]` — call form with named parameters,
+     for use in generated docs.
+   * `[@@method]` — function is postfix-callable (its first argument,
+     or the first element of its tuple argument, is the structure's
+     own type).
+   * `[@@specified "morel"]` — distinguishes Morel extensions from
+     SML Basis members; defaults to `"basis"` if absent.
+   * `[@@syntax "infix"]` — declares operator syntax (`"infix"`,
+     `"prefix"`); omit for ordinary functions.
+   * `[@@extra "..."]` — supplemental sentence appended after the
+     description in generated docs.
+
+   On a `type`, `datatype`, or `exception` spec: the same `(** ... *)`
+   doc-comment convention applies; `[@@specified "morel"]` may appear
+   where relevant.
+
+   Structure-level metadata follows the `end` of the signature declaration:
+
+   * `[@@description "one-line summary."]` — short description for
+     the structure-index table.
+   * `(** Longer paragraph(s)... *)` — multi-paragraph
+     overview shown at the top of the structure's doc page.
+   * `[@@specified "morel"]` — defaults `specified` for every spec
+     in the structure to this value.
 
 4. **`src/test/resources/script/built-in.smli`** — Add tests for all
    functions, inserted alphabetically by structure name. Include a test that
@@ -226,7 +257,7 @@ When implementing a structure from the
 5. **`docs/lib/{name}.md`** (new file) — Create a doc page using the license
    header from an existing page, with `[//]: # (start:lib/{name})` and
    `[//]: # (end:lib/{name})` markers. The content between the markers is
-   auto-generated from `functions.toml`.
+   auto-generated from `lib/{name}.sig`.
 
 6. **Regenerate docs** — Run `./mvnw test -Dtest=LintTest` to validate. The
    test fails with diffs showing what content to insert between the markers in

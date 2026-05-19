@@ -16,26 +16,33 @@
  * language governing permissions and limitations under the
  * License.
  *
- * The BOOL signature, per the Standard ML Basis Library.
+ * The DATALOG signature, a Morel extension.
  *)
-(** The `Bool` structure provides the boolean type and associated operations. *)
-signature BOOL =
+(**
+ * The `Datalog` structure provides functions to parse, validate, translate,
+ * and execute Datalog programs within Morel.
+ *)
+signature DATALOG =
 sig
 
-  (** is the type of boolean values `true` and `false`. *)
-  datatype bool = `false` | `true`
-  (** returns the logical inverse of `b`. *)
-  val not : bool -> bool [@@method] [@@prototype "not b"] [@@syntax "prefix"]
   (**
-   * returns the string representation of `b`, either "true" or "false".
+   * executes a Datalog program and returns formatted output as a variant.
    *)
-  val toString : bool -> string [@@method] [@@prototype "toString b"]
-  (**
-   * scans a `bool` value from the string `s`. Returns `SOME (true)` if
-   * `s` is "true", `SOME (false)` if `s` is "false", and `NONE` otherwise.
-   *)
-  val fromString : string -> bool option [@@prototype "fromString s"]
-end
-[@@description "Boolean values and operations."]
+  val execute : string -> variant [@@prototype "execute program"]
 
-(*) End bool.sig
+  (**
+   * translates a Datalog program to Morel source code, returning `SOME
+   * code` if valid or `NONE` if invalid.
+   *)
+  val translate : string -> string option [@@prototype "translate program"]
+
+  (**
+   * validates a Datalog program and returns type information or error
+   * message.
+   *)
+  val validate : string -> string [@@prototype "validate program"]
+end
+[@@description "Datalog query interface."]
+[@@specified "morel"]
+
+(*) End datalog.sig

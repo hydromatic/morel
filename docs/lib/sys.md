@@ -32,14 +32,14 @@ environment.
 
 <pre>
 val <a id='clearEnv' href="#clearEnv-impl">clearEnv</a> : unit -> unit
-val <a id='env' href="#env-impl">env</a> : unit -> string list
-val <a id='file' href="#file-impl">file</a> : {...}
+val <a id='env' href="#env-impl">env</a> : unit -> (string * string) list
+val <a id='file' href="#file-impl">file</a> : {}
 val <a id='parseTree' href="#parseTree-impl">parseTree</a> : string -> string
 val <a id='plan' href="#plan-impl">plan</a> : unit -> string
 val <a id='planEx' href="#planEx-impl">planEx</a> : string -> string
 val <a id='set' href="#set-impl">set</a> : string * 'a -> unit
 val <a id='show' href="#show-impl">show</a> : string -> string option
-val <a id='showAll' href="#showAll-impl">showAll</a> : unit -> string * string option list
+val <a id='showAll' href="#showAll-impl">showAll</a> : unit -> (string * string option) list
 val <a id='unset' href="#unset-impl">unset</a> : string -> unit
 </pre>
 

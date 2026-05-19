@@ -1686,17 +1686,44 @@ void signatureBind(List<SignatureBind> list) :
   final Ast.Id name;
   final List<Spec> specs = new ArrayList<>();
   Spec spec;
+  Attribute attr;
 }
 {
   name = identifier()
   <EQ>
   <SIG>
   (
-    spec = spec() { specs.add(spec); }
+    LOOKAHEAD(<LBRACKET_AT_AT_AT>)
+    attr = floatingAttribute() {
+      specs.add(ast.floatingAttrSpec(attr.pos, attr));
+    }
+  |
+    spec = attributedSpec() { specs.add(spec); }
   )*
   <END>
   {
     list.add(ast.signatureBind(name.pos, name, specs));
+  }
+}
+
+/** Parses a specification, with an optional leading doc-comment and
+ *  zero or more postfix {@code [@@id]} attributes (matching OCaml's
+ *  attribute convention: every {@code [@@id]} attaches to the
+ *  immediately preceding declaration). */
+Ast.Spec attributedSpec() :
+{
+  final List<Attribute> attrs = new ArrayList<Attribute>();
+  final Ast.Spec spec;
+}
+{
+  { collectLeadingDocComments(attrs); }
+  spec = spec()
+  ( declAttribute(attrs) )*
+  {
+    if (attrs.isEmpty()) {
+      return spec;
+    }
+    return ast.attributedSpec(spec.pos.plus(pos()), spec, attrs);
   }
 }
 
@@ -2104,8 +2131,13 @@ JAVACODE void collectLeadingDocComments(List<Attribute> attrs) {
   }
   for (Token t : docs) {
     String image = t.image;
-    // image is "(** content *)"; strip the markers.
+    // image is "(** content *)"; strip the markers, then strip the leading
+    // whitespace and a single '*' from each continuation line, matching
+    // ocamldoc's -stars behavior: any whitespace before the asterisk is
+    // dropped along with the asterisk, but whitespace AFTER the asterisk
+    // is preserved.
     String content = image.substring(3, image.length() - 2);
+    content = content.replaceAll("(?m)^[ \\t]*\\*", "");
     Pos p = pos(t);
     Exp payload = ast.stringLiteral(p, content);
     attrs.add(ast.attribute(p, Ast.AttributeKind.DECL, "doc", payload));

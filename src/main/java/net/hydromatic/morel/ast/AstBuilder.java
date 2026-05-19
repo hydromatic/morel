@@ -594,6 +594,15 @@ public enum AstBuilder {
     return new Ast.FloatingAttrDecl(pos, a);
   }
 
+  public Ast.AttributedSpec attributedSpec(
+      Pos pos, Ast.Spec spec, Iterable<? extends Ast.Attribute> attributes) {
+    return new Ast.AttributedSpec(pos, spec, ImmutableList.copyOf(attributes));
+  }
+
+  public Ast.FloatingAttrSpec floatingAttrSpec(Pos pos, Ast.Attribute a) {
+    return new Ast.FloatingAttrSpec(pos, a);
+  }
+
   public Ast.Exp infixCall(Pos pos, Op op, Ast.Exp a0, Ast.Exp a1) {
     return new Ast.InfixCall(pos, op, a0, a1);
   }

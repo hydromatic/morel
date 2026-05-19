@@ -208,26 +208,29 @@ Sys.parseTree "(** outer (*) line\n  rest *) val x = 1";
 >   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" outer (*) line\n  rest \")))"
 >   : string
 
-(* Multi-line doc comment: content (including newlines) is captured
- * verbatim, matching OCaml. The two forms below use, respectively,
- * `\n` escapes and real newlines in the source string; both produce
- * the same parse tree.
+(* Multi-line doc comment: content (including newlines) is captured,
+ * with the leading whitespace and `*` on each continuation line
+ * stripped (matching OCaml's `ocamldoc -stars` convention: any
+ * whitespace before the asterisk is dropped along with the asterisk,
+ * but whitespace AFTER the asterisk is preserved). The two forms
+ * below use, respectively, `\n` escapes and real newlines in the
+ * source string; both produce the same parse tree.
  *)
 Sys.parseTree "(** First line\n * Second line\n * Third line *) val x = 1";
 > val it =
->   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" First line\n * Second line\n * Third line \")))"
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" First line\n Second line\n Third line \")))"
 >   : string
 Sys.parseTree "(** First line
  * Second line
  * Third line *) val x = 1";
 > val it =
->   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" First line\n * Second line\n * Third line \")))"
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" First line\n Second line\n Third line \")))"
 >   : string
 
 (*) Body-on-its-own-lines style: opening `(**` on its own line.
 Sys.parseTree "(**\n * Body lines\n *) val x = 1";
 > val it =
->   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \"\n * Body lines\n \")))"
+>   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \"\n Body lines\n \")))"
 >   : string
 
 (* --- Attributes are inert: code evaluates normally -------------- *)
@@ -256,5 +259,42 @@ triple 7;
 > val it = "ab" : string
 "a" ^ (***) "b";
 > val it = "ab" : string
+
+(* --- Attributes on signature specs ------------------------------ *)
+(*) Baseline: signature with no attributes.
+Sys.parseTree "signature S = sig val x : int end";
+> val it = "(signature_decl signature S = sig val x : int end)" : string
+
+(*) Trailing [@@id] on a val spec.
+Sys.parseTree "signature S = sig val x : int [@@a] end";
+> val it = "(signature_decl signature S = sig val x : int [@@a] end)" : string
+
+(*) Doc-comment immediately above a spec desugars to [@@doc].
+Sys.parseTree "signature S = sig (** doc *) val x : int end";
+> val it = "(signature_decl signature S = sig val x : int [@@doc \" doc \"] end)"
+>   : string
+
+(*) Multiple attributes (including doc) can stack on a spec.
+Sys.parseTree
+  "signature S = sig (** d *) val x : int [@@a] [@@b] end";
+> val it =
+>   "(signature_decl signature S = sig val x : int [@@doc \" d \"] [@@a] [@@b] end)"
+>   : string
+
+(*) Attributes on type and exception specs.
+Sys.parseTree "signature S = sig type t [@@a] exception E [@@b] end";
+> val it =
+>   "(signature_decl signature S = sig type t [@@a] exception E [@@b] end)"
+>   : string
+
+(*) Floating [@@@id] inside sig...end carries structure-level metadata.
+Sys.parseTree "signature S = sig [@@@a] val x : int end";
+> val it = "(signature_decl signature S = sig [@@@a] val x : int end)" : string
+
+(*) Floating attribute with payload.
+Sys.parseTree "signature S = sig [@@@description \"doc\"] val x : int end";
+> val it =
+>   "(signature_decl signature S = sig [@@@description \"doc\"] val x : int end)"
+>   : string
 
 (*) End attribute.smli

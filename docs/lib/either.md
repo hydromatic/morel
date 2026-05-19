@@ -46,7 +46,7 @@ val <a id='appLeft' href="#appLeft-impl">appLeft</a> : ('left -> unit) -> ('left
 val <a id='appRight' href="#appRight-impl">appRight</a> : ('right -> unit) -> ('left, 'right) either -> unit
 val <a id='fold' href="#fold-impl">fold</a> : ('left * 'b -> 'b) * ('right * 'b -> 'b) -> 'b -> ('left, 'right) either -> 'b
 val <a id='proj' href="#proj-impl">proj</a> : ('a, 'a) either -> 'a
-val <a id='partition' href="#partition-impl">partition</a> : ('left, 'right) either list -> ('left list * 'right list)
+val <a id='partition' href="#partition-impl">partition</a> : ('left, 'right) either list -> 'left list * 'right list
 </pre>
 
 <a id="either-impl"></a>

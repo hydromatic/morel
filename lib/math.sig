@@ -18,62 +18,128 @@
  *
  * The MATH signature, per the Standard ML Basis Library.
  *)
+(**
+ * The `Math` structure provides standard mathematical functions operating
+ * on `real` values, including trigonometric, logarithmic, exponential,
+ * and rounding operations, along with mathematical constants.
+ *)
 signature MATH =
 sig
+
   type real
 
-  (* The constant pi (3.141592653...). *)
-  val pi : real
+  (** is the constant pi (3.141592653...). *)
+  val pi : real [@@prototype "pi"]
 
-  (* The base e (2.718281828...) of the natural logarithm. *)
-  val e : real
+  (** is base e (2.718281828...) of the natural logarithm. *)
+  val e : real [@@prototype "e"]
 
-  (* Returns the square root; returns NaN for negative values. *)
-  val sqrt : real -> real
+  (**
+   * returns the square root of `x`. sqrt (~0.0) = ~0.0. If `x` <
+   * 0, returns NaN.
+   *)
+  val sqrt : real -> real [@@prototype "sqrt x"]
 
-  (* Returns the sine of the argument (in radians). *)
-  val sin : real -> real
+  (**
+   * returns the sine of `x`, measured in radians. If `x` is an
+   * infinity, returns NaN.
+   *)
+  val sin : real -> real [@@prototype "sin x"]
 
-  (* Returns the cosine of the argument (in radians). *)
-  val cos : real -> real
+  (**
+   * returns the cosine of `x`, measured in radians. If `x` is an
+   * infinity, returns NaN.
+   *)
+  val cos : real -> real [@@prototype "cos x"]
 
-  (* Returns the tangent of the argument (in radians). *)
-  val tan : real -> real
+  (**
+   * returns the tangent of `x`, measured in radians. If `x` is an
+   * infinity, returns NaN. Produces infinities at various finite values,
+   * roughly corresponding to the singularities of the tangent function.
+   *)
+  val tan : real -> real [@@prototype "tan x"]
 
-  (* Returns the arc sine in the range [-pi/2, pi/2]; returns NaN if |x| > 1. *)
-  val asin : real -> real
+  (**
+   * returns the arc sine of `x`. `asin` is the inverse of
+   * `sin`. Its result is guaranteed to be in the closed interval \[-pi / 2,
+   * pi / 2\]. If the magnitude of `x` exceeds 1.0, returns NaN.
+   *)
+  val asin : real -> real [@@prototype "asin x"]
 
-  (* Returns the arc cosine in the range [0, pi]; returns NaN if |x| > 1. *)
-  val acos : real -> real
+  (**
+   * returns the arc cosine of `x`. `acos` is the inverse of
+   * `cos`. Its result is guaranteed to be in the closed interval \[0,
+   * pi\]. If the magnitude of `x` exceeds 1.0, returns NaN.
+   *)
+  val acos : real -> real [@@prototype "acos x"]
 
-  (* Returns the arc tangent in the range (-pi/2, pi/2). *)
-  val atan : real -> real
+  (**
+   * returns the arc tangent of `x`. `atan` is the inverse of
+   * `tan`. For finite arguments, the result is guaranteed to be in the
+   * open interval (-pi / 2, pi / 2). If `x` is +infinity, it returns pi /
+   * 2; if `x` is -infinity, it returns -pi / 2.
+   *)
+  val atan : real -> real [@@prototype "atan x"]
 
-  (* Returns the arc tangent of y/x in the range [-pi, pi]. *)
-  val atan2 : real * real -> real
+  (**
+   * returns the arc tangent of `(y / x)` in the closed
+   * interval \[-pi, pi\], corresponding to angles within +-180 degrees. The
+   * quadrant of the resulting angle is determined using the signs of both
+   * `x` and `y`, and is the same as the quadrant of the point `(x,
+   * y)`. When `x` = 0, this corresponds to an angle of 90 degrees, and the
+   * result is `(real (sign y)) * pi / 2.0`.
+   *)
+  val atan2 : real * real -> real [@@prototype "atan2 (y, x)"]
 
-  (* Returns e raised to the power of the argument. *)
-  val exp : real -> real
+  (**
+   * returns `e(x)`, i.e., `e` raised to the `x`<sup>th</sup>
+   * power. If `x` is +infinity, returns +infinity; if `x` is -infinity,
+   * returns 0.
+   *)
+  val exp : real -> real [@@prototype "exp x"]
 
-  (* Returns x raised to the power y. *)
-  val pow : real * real -> real
+  (**
+   * returns `x(y)`, i.e., `x` raised to the `y`<sup>th</sup>
+   * power. For finite `x` and `y`, this is well-defined when `x` > 0, or
+   * when `x` < 0 and `y` is integral.
+   *)
+  val pow : real * real -> real [@@prototype "pow (x, y)"]
 
-  (* Returns the natural logarithm; returns -infinity for 0, NaN for
-   * negative values. *)
-  val ln    : real -> real
+  (**
+   * returns the natural logarithm (base e) of `x`. If `x` < 0,
+   * returns NaN; if `x` = 0, returns -infinity; if `x` is infinity,
+   * returns infinity.
+   *)
+  val ln    : real -> real [@@prototype "ln x"]
 
-  (* Returns the base-10 logarithm; returns -infinity for 0, NaN for
-   * negative values. *)
-  val log10 : real -> real
+  (**
+   * returns the decimal logarithm (base 10) of `x`. If `x` < 0,
+   * returns NaN; if `x` = 0, returns -infinity; if `x` is infinity,
+   * returns infinity.
+   *)
+  val log10 : real -> real [@@prototype "log10 x"]
 
-  (* Returns the hyperbolic sine. *)
-  val sinh : real -> real
+  (**
+   * returns the hyperbolic sine of `x`, that is, `(e(x) - e(-x))
+   * / 2`. Among its properties, sinh +-0 = +-0, sinh +-infinity =
+   * +-infinity.
+   *)
+  val sinh : real -> real [@@prototype "sinh x"]
 
-  (* Returns the hyperbolic cosine. *)
-  val cosh : real -> real
+  (**
+   * returns the hyperbolic cosine of `x`, that is, `(e(x) +
+   * e(-x)) / 2`. Among its properties, cosh +-0 = 1, cosh +-infinity =
+   * +-infinity.
+   *)
+  val cosh : real -> real [@@prototype "cosh x"]
 
-  (* Returns the hyperbolic tangent. *)
-  val tanh : real -> real
+  (**
+   * returns the hyperbolic tangent of `x`, that is, `(sinh x) /
+   * (cosh x)`. Among its properties, tanh +-0 = +-0, tanh +-infinity =
+   * +-1.
+   *)
+  val tanh : real -> real [@@prototype "tanh x"]
 end
+[@@description "Mathematical functions for real numbers."]
 
 (*) End math.sig

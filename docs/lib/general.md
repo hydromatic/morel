@@ -34,16 +34,16 @@ every Morel program.
 ## Synopsis
 
 <pre>
+type <a id='unit' href="#unit-impl">unit</a>
 type <a id='exn' href="#exn-impl">exn</a> = exn
 datatype <a id='order' href="#order-impl">order</a> = LESS | EQUAL | GREATER
-eqtype <a id='unit' href="#unit-impl">unit</a>
 
 exception <a id='Bind' href="#Bind-impl">Bind</a>
+exception <a id='Match' href="#Match-impl">Match</a>
 exception <a id='Chr' href="#Chr-impl">Chr</a>
 exception <a id='Div' href="#Div-impl">Div</a>
 exception <a id='Domain' href="#Domain-impl">Domain</a>
 exception <a id='Fail' href="#Fail-impl">Fail</a> of string
-exception <a id='Match' href="#Match-impl">Match</a>
 exception <a id='Overflow' href="#Overflow-impl">Overflow</a>
 exception <a id='Size' href="#Size-impl">Size</a>
 exception <a id='Span' href="#Span-impl">Span</a>
@@ -51,10 +51,17 @@ exception <a id='Subscript' href="#Subscript-impl">Subscript</a>
 
 val <a id='exnName' href="#exnName-impl">exnName</a> : exn -> string
 val <a id='exnMessage' href="#exnMessage-impl">exnMessage</a> : exn -> string
-val <a id='o' href="#o-impl">o</a> : ('b -> 'c) ('a -> 'b) -> 'a -> 'c
+val <a id='o' href="#o-impl">o</a> : ('b -> 'c) * ('a -> 'b) -> 'a -> 'c
 val <a id='before' href="#before-impl">before</a> : 'a * unit -> 'a
 val <a id='ignore' href="#ignore-impl">ignore</a> : 'a -> unit
+val <a id='deref' href="#deref-impl">!</a> : 'a ref -> 'a val := : 'a ref * 'a -> unit
 </pre>
+
+<a id="unit-impl"></a>
+<h3><code><strong>type</strong> unit</code></h3>
+
+is the type that contains the single value `()`. It is used as the
+result type of functions called for side effects.
 
 <a id="exn-impl"></a>
 <h3><code><strong>type</strong> exn</code></h3>
@@ -65,19 +72,18 @@ of this type, and the `raise` and `handle` constructs operate on it.
 <a id="order-impl"></a>
 <h3><code><strong>datatype</strong> order</code></h3>
 
-is the type for comparing two values. `LESS`, `EQUAL`, or `GREATER`
-indicates the result of the comparison.
 
-<a id="unit-impl"></a>
-<h3><code><strong>eqtype</strong> unit</code></h3>
-
-is the type that contains the single value `()`. It is used as the
-result type of functions called for side effects.
 
 <a id="Bind-impl"></a>
 <h3><code><strong>exception</strong> Bind</code></h3>
 
 is raised when pattern matching fails in a `val` binding.
+
+<a id="Match-impl"></a>
+<h3><code><strong>exception</strong> Match</code></h3>
+
+is raised when pattern matching fails in a `case` expression or
+function application.
 
 <a id="Chr-impl"></a>
 <h3><code><strong>exception</strong> Chr</code></h3>
@@ -98,12 +104,6 @@ is raised when a function is applied outside its domain.
 <h3><code><strong>exception</strong> Fail</code></h3>
 
 is a general-purpose exception carrying a descriptive message string.
-
-<a id="Match-impl"></a>
-<h3><code><strong>exception</strong> Match</code></h3>
-
-is raised when pattern matching fails in a `case` expression or
-function application.
 
 <a id="Overflow-impl"></a>
 <h3><code><strong>exception</strong> Overflow</code></h3>
@@ -166,5 +166,12 @@ then `b`, before returning the value of `a`.
 
 `ignore x` always returns `unit`. The function evaluates its argument
 but throws away the value.
+
+<a id="deref-impl"></a>
+<h3><code>!</code></h3>
+
+``
+
+*Not yet implemented.*
 
 [//]: # (end:lib/general)

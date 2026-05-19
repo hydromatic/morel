@@ -33,12 +33,6 @@ but operate on unbounded values.
 ## Synopsis
 
 <pre>
-eqtype <a id='int' href="#int-impl">int</a>
 </pre>
-
-<a id="int-impl"></a>
-<h3><code><strong>eqtype</strong> int</code></h3>
-
-is the type of arbitrary-precision integers.
 
 [//]: # (end:lib/int-inf)

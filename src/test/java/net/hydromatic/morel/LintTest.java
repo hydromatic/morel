@@ -71,6 +71,21 @@ public class LintTest {
   private static final ThreadLocal<@Nullable String> THREAD_FILE_NAME =
       new ThreadLocal<>();
 
+  /**
+   * Snapshot of the {@code lib/*.sig} model. Loaded once for the test class;
+   * shared across all tests in {@link LintTest} so we parse each signature file
+   * only once.
+   */
+  private static final Generation.Model MODEL;
+
+  static {
+    try {
+      MODEL = Generation.loadModel();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   /** Matches a class/enum/interface declaration. Captures the type name. */
   private static final Pattern CLASS_DECL_PAT =
       Pattern.compile("(?:^|\\W)(?:class|enum|interface)\\s+([A-Z][\\w$]*)\\b");
@@ -1321,7 +1336,7 @@ public class LintTest {
           if (line.startsWith("[//]: # (start:")) {
             final String key = line.substring(15, line.length() - 1);
             emit = false;
-            Generation.generateSection(key, pw);
+            Generation.generateSection(MODEL, key, pw);
           }
         }
       }
@@ -1357,9 +1372,8 @@ public class LintTest {
   }
 
   /**
-   * Checks that every non-internal {@link BuiltIn} entry (i.e., those belonging
-   * to a named structure such as {@code Char}, {@code List}, etc.) has a
-   * corresponding entry in {@code functions.toml}.
+   * Checks that every non-internal {@link BuiltIn} entry has a corresponding
+   * {@code val} spec in {@code lib/*.sig}.
    *
    * <p>Entries in the internal {@code "$"} pseudo-structure are excluded.
    * Entries in the {@code "Test"} pseudo-structure (test-only built-ins) are
@@ -1367,10 +1381,7 @@ public class LintTest {
    * not}, {@code abs}) are also excluded.
    */
   @Test
-  void testBuiltInsDocumented() throws IOException {
-    final Set<String> documented = Generation.functionNames();
-    final File file = Generation.getFile();
-
+  void testBuiltInsDocumented() {
     final Set<String> missing = new TreeSet<>();
     for (BuiltIn builtIn : BuiltIn.values()) {
       final String structure = builtIn.structure;
@@ -1379,34 +1390,35 @@ public class LintTest {
           || structure.equals("Test")) {
         continue;
       }
-      final String key = structure + "." + builtIn.mlName;
-      if (!documented.contains(key)) {
-        missing.add(key);
+      // Datatype constructors that exist as a BuiltIn entry are documented
+      // via the surrounding `datatype` declaration in the .sig, not as a
+      // separate `val` spec. (See LIST_NIL: declared as a constructor of
+      // `datatype 'a list = nil | ...` in list.sig.)
+      if ("List".equals(structure)
+          && ("nil".equals(builtIn.mlName) || "op ::".equals(builtIn.mlName))) {
+        continue;
+      }
+      if (!MODEL.containsFunction(structure, builtIn.mlName)) {
+        missing.add(structure + "." + builtIn.mlName);
       }
     }
     if (!missing.isEmpty()) {
       fail(
           format(
-              "BuiltIn entries not documented in functions.toml: %s\n"
-                  + "Add an entry for each to %s",
-              missing, file.getAbsolutePath()));
+              "BuiltIn entries not documented in any lib/*.sig: %s\n"
+                  + "Add a val/type/exception spec for each.",
+              missing));
     }
   }
 
   /**
-   * Checks that the {@code method} flag in {@code functions.toml} is consistent
-   * with {@link BuiltIn#method} in the Java source.
+   * Checks that {@code [@@method]} in {@code lib/*.sig} is consistent with
+   * {@link BuiltIn#method}.
    *
-   * <p>Every {@link BuiltIn} with {@code method = true} must have a
-   * corresponding {@code [[functions]]} entry in {@code functions.toml} with
-   * {@code method = true}, and vice versa. Internal structures ({@code $},
-   * {@code Test}) are excluded.
+   * <p>Internal structures ({@code $}, {@code Test}) are excluded.
    */
   @Test
-  void testMethodConsistent() throws IOException {
-    final Set<String> tomlMethod = Generation.methodNames();
-    final File file = Generation.getFile();
-
+  void testMethodConsistent() {
     final List<String> errors = new ArrayList<>();
     for (BuiltIn builtIn : BuiltIn.values()) {
       final String structure = builtIn.structure;
@@ -1415,54 +1427,50 @@ public class LintTest {
           || structure.equals("Test")) {
         continue;
       }
+      final boolean sigHasMethod =
+          MODEL.containsMethod(structure, builtIn.mlName);
       final String key = structure + "." + builtIn.mlName;
-      if (builtIn.method && !tomlMethod.contains(key)) {
+      if (builtIn.method && !sigHasMethod) {
         errors.add(
-            "BuiltIn " + key + " has method=true but functions.toml does not");
-      } else if (!builtIn.method && tomlMethod.contains(key)) {
-        errors.add(
-            "functions.toml has method=true for "
+            "BuiltIn "
                 + key
-                + " but BuiltIn does not");
+                + " has method=true but .sig has no [@@method]"
+                + " on the corresponding val spec");
+      } else if (!builtIn.method && sigHasMethod) {
+        errors.add(".sig has [@@method] for " + key + " but BuiltIn does not");
       }
     }
     if (!errors.isEmpty()) {
       fail(
           format(
-              "%d method inconsistencies between BuiltIn and functions.toml"
-                  + " (%s):\n" //
+              "%d method inconsistencies between BuiltIn and lib/*.sig:\n" //
                   + "%s",
-              errors.size(),
-              file.getAbsolutePath(),
-              String.join("\n", errors)));
+              errors.size(), String.join("\n", errors)));
     }
   }
 
   /**
    * Checks that every non-internal {@link BuiltIn.Datatype} entry has a
-   * corresponding {@code [[types]]} entry in {@code functions.toml}.
+   * corresponding type or datatype spec in {@code lib/*.sig}.
    */
   @Test
-  void testDatatypesDocumented() throws IOException {
-    final Set<List<String>> documented = Generation.typeNames();
-    final File file = Generation.getFile();
-
+  void testDatatypesDocumented() {
     final List<String> missing = new ArrayList<>();
     for (BuiltIn.Datatype datatype : BuiltIn.Datatype.values()) {
       final String structure = datatype.structure;
       if (structure.equals("$")) {
         continue;
       }
-      if (!documented.contains(Arrays.asList(structure, datatype.mlName()))) {
+      if (!MODEL.containsType(structure, datatype.mlName())) {
         missing.add(structure + "." + datatype.mlName());
       }
     }
     if (!missing.isEmpty()) {
       fail(
           format(
-              "Datatype entries not documented in functions.toml: %s\n" //
-                  + "Add a [[types]] entry for each to %s",
-              missing, file.getAbsolutePath()));
+              "Datatype entries not declared in any lib/*.sig: %s\n"
+                  + "Add a type/datatype spec for each.",
+              missing));
     }
   }
 
@@ -1490,15 +1498,15 @@ public class LintTest {
   }
 
   /**
-   * Checks that for every {@code [[structures]]} entry in {@code
-   * functions.toml} there is a corresponding {@code docs/lib/{name}.md} file.
+   * Checks that every {@code lib/*.sig} structure has a corresponding {@code
+   * docs/lib/{name}.md} file.
    */
   @Test
-  void testStructureDocs() throws IOException {
+  void testStructureDocs() {
     final File baseDir = TestUtils.getBaseDir(TestUtils.class);
     final File libDir = new File(baseDir, "docs/lib");
     final List<String> missing = new ArrayList<>();
-    for (String structureName : Generation.structureNames()) {
+    for (String structureName : MODEL.structureNames()) {
       final String fileName = Generation.toKebab(structureName) + ".md";
       if (!new File(libDir, fileName).exists()) {
         missing.add(fileName);

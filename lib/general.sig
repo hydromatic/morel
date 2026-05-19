@@ -18,50 +18,91 @@
  *
  * The INTEGER signature, per the Standard ML Basis Library.
  *)
+(**
+ * The `General` structure provides the fundamental types `unit`, `exn`,
+ * and `order`, the standard exceptions raised by the runtime, and a few
+ * utility functions. Its contents are available without qualification in
+ * every Morel program.
+ *)
 signature GENERAL =
 sig
-  (* The unit type; contains a single value (). *)
+
+  (**
+   * is the type that contains the single value `()`. It is used as the
+   * result type of functions called for side effects.
+   *)
   eqtype unit
 
-  (* The type of exceptions. *)
+  (**
+   * is the type of exceptions. Every exception constructor creates a value
+   * of this type, and the `raise` and `handle` constructs operate on it.
+   *)
   type exn = exn
 
-  (* Raised when pattern matching fails in val bindings. *)
+  (** is raised when pattern matching fails in a `val` binding. *)
   exception Bind
 
-  (* Raised when pattern matching fails in case expressions and function
-   * applications. *)
+  (**
+   * is raised when pattern matching fails in a `case` expression or
+   * function application.
+   *)
   exception Match
 
-  (* Raised when character operations are given invalid arguments. *)
+  (**
+   * is raised by `Char.chr` when given an integer outside the valid range.
+   *)
   exception Chr
 
-  (* Raised on integer division by zero. *)
+  (** is raised on integer division by zero. *)
   exception Div
 
-  (* Raised when a function is applied outside its domain. *)
+  (** is raised when a function is applied outside its domain. *)
   exception Domain
 
-  (* General-purpose exception with a message string. *)
+  (**
+   * is a general-purpose exception carrying a descriptive message string.
+   *)
   exception Fail of string
 
-  (* Raised on integer overflow. *)
+  (**
+   * is raised when an integer arithmetic result is too large to represent.
+   *)
   exception Overflow
 
-  (* Raised when a size is too large or negative. *)
+  (**
+   * is raised when a size argument is negative or exceeds the maximum
+   * allowed.
+   *)
   exception Size
 
-  (* Raised when a span is invalid. *)
+  (** is raised when an invalid source span is supplied. *)
   exception Span
 
-  (* Raised when an index is out of bounds. *)
+  (** is raised when a sequence index is out of bounds. *)
   exception Subscript
 
-  (* Returns the name of an exception. *)
-  val exnName : exn -> string
+  (**
+   * returns a name for the exception `ex`. The name returned may be that
+   * of any exception constructor aliasing with `ex`. For instance,
+   *
+   * <pre>let exception E1; exception E2 = E1 in exnName E2 end</pre>
+   *
+   * might evaluate to "E1" or "E2".
+   *)
+  val exnName : exn -> string [@@prototype "exnName ex"]
 
-  (* Returns the message associated with an exception. *)
-  val exnMessage : exn -> string
+  (**
+   * returns a message corresponding to exception `ex`. The precise format
+   * of the message may vary between implementations and locales, but will
+   * at least contain the string `exnName ex`.
+   *
+   * <p>**Example:**
+   *
+   * <pre>exnMessage Div = "Div"
+   * exnMessage (OS.SysErr ("No such file", NONE)) =
+   *   "OS.SysErr "No such file""</pre>
+   *)
+  val exnMessage : exn -> string [@@prototype "exnMessage ex"]
 
   (* The type for ordering values. *)
   datatype `order` = LESS | EQUAL | GREATER
@@ -69,14 +110,24 @@ sig
   val ! : 'a ref -> 'a
   val := : 'a ref * 'a -> unit
 *)
-  (* Function composition; (f o g) x equals f(g(x)). *)
-  val o : ('b -> 'c) * ('a -> 'b) -> 'a -> 'c
+  (**
+   * is the function composition of `f` and `g`. Thus, `(f o g) a`
+   * is equivalent to `f (g a)`.
+   *)
+  val o : ('b -> 'c) * ('a -> 'b) -> 'a -> 'c [@@prototype "f o g"]
 
-  (* Evaluates both arguments and returns the first, ignoring the second. *)
-  val before : 'a * unit -> 'a
+  (**
+   * returns `a`. It provides a notational shorthand for evaluating `a`,
+   * then `b`, before returning the value of `a`.
+   *)
+  val before : 'a * unit -> 'a [@@prototype "a before b"]
 
-  (* Evaluates its argument and returns (). *)
-  val ignore : 'a -> unit
+  (**
+   * always returns `unit`. The function evaluates its argument
+   * but throws away the value.
+   *)
+  val ignore : 'a -> unit [@@prototype "ignore x"]
 end
+[@@description "Basic types, exceptions, and utility functions."]
 
 (*) End general.sig

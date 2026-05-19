@@ -24,30 +24,15 @@
  *)
 
 (* Variant structure signature *)
+(**
+ * The `Variant` structure provides operations for working with the
+ * `variant` type, which can hold values of any type in a dynamically-typed
+ * fashion.
+ *)
 signature VARIANT =
 sig
-  (* The `variant` datatype that can express all Morel values
-   * (primitives, lists, bags, vectors, and instances of datatypes).
-   *
-   * One application is to return values from a dynamically typed
-   * API. See, for example, Datalog integration.
-   *
-   * `UNIT`, `BOOL`, `INT`, `REAL`, `CHAR`, `STRING` cover Morel's
-   * primitive data types.
-   *
-   * `LIST`, `BAG`, `VECTOR` represent the three main collection
-   * types.
-   *
-   * `RECORD` handles both records and tuples. (Tuples are records
-   * with numeric labels like "1", "2", etc.)
-   *
-   * `VARIANT_NONE` and `VARIANT_SOME` create option values. They are
-   * so-named because NONE and SOME are constructors of the real
-   * `option` datatype.
-   *
-   * `CONSTRUCT` and `CONSTANT` provide support for constructors of
-   * any datatype (with and without payloads, respectively).
-   *)
+
+  (** is a dynamically-typed value that can hold any Morel value. *)
   datatype variant =
       UNIT
     | BOOL of bool
@@ -64,26 +49,24 @@ sig
     | CONSTANT of string
     | CONSTRUCT of string * variant
 
-  (*
-   * parse : string -> variant
+  (**
+   * parses a variant from its string representation.
    *
-   * Parses a string representation into a variant.
-   *
-   * The string should be in the format produced by the print function.
-   * This enables round-tripping: `parse (print v) = v` for any variant
-   * value `v`.
+   * The string is in the format produced by the `print` function,
+   * and therefore `parse (print v) = v` for all variant values `v`.
    *)
-  val parse : string -> variant
+  val parse : string -> variant [@@prototype "parse s"]
 
-  (*
-   * print : variant -> string
+  (**
+   * converts a variant to a string.
    *
-   * Converts a variant to its compact string representation.
-   *
-   * The output is a valid Standard ML expression that can be parsed
-   * back into the same variant using the parse function.
+   * For example,
+   * `print (BOOL true)` returns `"BOOL true"`;
+   * `print (LIST [INT 1, INT 2])` returns `"LIST [INT 1, INT 2]"`.
    *)
-  val print : variant -> string
+  val print : variant -> string [@@method] [@@prototype "print v"]
 end
+[@@description "Dynamically-typed variant values."]
+[@@specified "morel"]
 
 (*) End variant.sig

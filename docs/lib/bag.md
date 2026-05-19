@@ -32,6 +32,8 @@ bags track multiplicity.
 ## Synopsis
 
 <pre>
+type 'a <a id='bag' href="#bag-impl">bag</a>
+
 val <a id='nil' href="#nil-impl">nil</a> : 'a bag
 val <a id='null' href="#null-impl">null</a> : 'a bag -> bool
 val <a id='fromList' href="#fromList-impl">fromList</a> : 'a list -> 'a bag
@@ -40,10 +42,10 @@ val <a id='length' href="#length-impl">length</a> : 'a bag -> int
 val <a id='at' href="#at-impl">@</a> : 'a bag * 'a bag -> 'a bag
 val <a id='hd' href="#hd-impl">hd</a> : 'a bag -> 'a
 val <a id='tl' href="#tl-impl">tl</a> : 'a bag -> 'a bag
-val <a id='getItem' href="#getItem-impl">getItem</a> : 'a bag -> * ('a * 'a bag) option
+val <a id='getItem' href="#getItem-impl">getItem</a> : 'a bag -> ('a * 'a bag) option
 val <a id='take' href="#take-impl">take</a> : 'a bag * int -> 'a bag
 val <a id='drop' href="#drop-impl">drop</a> : 'a bag * int -> 'a bag
-val <a id='concat' href="#concat-impl">concat</a> : 'a bag bag -> 'a bag
+val <a id='concat' href="#concat-impl">concat</a> : 'a bag list -> 'a bag
 val <a id='app' href="#app-impl">app</a> : ('a -> unit) -> 'a bag -> unit
 val <a id='map' href="#map-impl">map</a> : ('a -> 'b) -> 'a bag -> 'b bag
 val <a id='mapPartial' href="#mapPartial-impl">mapPartial</a> : ('a -> 'b option) -> 'a bag -> 'b bag
@@ -54,9 +56,13 @@ val <a id='fold' href="#fold-impl">fold</a> : ('a * 'b -> 'b) -> 'b -> 'a bag ->
 val <a id='exists' href="#exists-impl">exists</a> : ('a -> bool) -> 'a bag -> bool
 val <a id='all' href="#all-impl">all</a> : ('a -> bool) -> 'a bag -> bool
 val <a id='tabulate' href="#tabulate-impl">tabulate</a> : int * (int -> 'a) -> 'a bag
-val <a id='collate' href="#collate-impl">collate</a> : ('a * 'a -> order) -> 'a bag * 'a bag -> order
 val <a id='nth' href="#nth-impl">nth</a> : 'a bag * int -> 'a
 </pre>
+
+<a id="bag-impl"></a>
+<h3><code><strong>type</strong> 'a bag</code></h3>
+
+
 
 <a id="nil-impl"></a>
 <h3><code>nil</code></h3>
@@ -179,7 +185,7 @@ for which `f x` evaluated to `false`.
 <a id="fold-impl"></a>
 <h3><code>fold</code></h3>
 
-`fold f init (bag \[x1, x2, ..., xn\])` returns `f(xn, ... , f(x2,
+`fold f init (bag [x1, x2, ..., xn])` returns `f(xn, ... , f(x2,
 f(x1, init))...)` (for some arbitrary reordering of the elements `xi`)
 or `init` if the bag is empty.
 
@@ -207,12 +213,6 @@ an `x` exists and `true` otherwise. It is equivalent to `not(exists
 <pre>fromList (List.tabulate (n, f))</pre>
 
 Raises `Size` if `n` < 0.
-
-<a id="collate-impl"></a>
-<h3><code>collate</code></h3>
-
-`collate f (l1, l2)` performs lexicographic comparison of the two bags
-using the given ordering `f` on the bag elements.
 
 <a id="nth-impl"></a>
 <h3><code>nth</code></h3>

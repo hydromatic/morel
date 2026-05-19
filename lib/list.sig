@@ -18,103 +18,210 @@
  *
  * The LIST signature, per the Standard ML Basis Library.
  *)
+(**
+ * The `List` structure provides the `list` type and a comprehensive
+ * set of operations for constructing, examining, and transforming
+ * singly-linked lists. Many operations are provided in both left-to-right
+ * and right-to-left variants.
+ *)
 signature LIST =
 sig
+
+  (** is the type of polymorphic singly-linked lists. *)
   datatype 'a list = nil | `::` of 'a * 'a list
+  (**
+   * is raised by operations that require a non-empty list when given an
+   * empty list.
+   *)
   exception Empty
 
-  (* Returns true if the list is empty. *)
-  val null : 'a list -> bool
+  (** returns `true` if the list `l` is empty. *)
+  val null : 'a list -> bool [@@method] [@@prototype "null l"]
 
-  (* Returns the number of elements in the list. *)
-  val length : 'a list -> int
+  (** returns the number of elements in the list `l`. *)
+  val length : 'a list -> int [@@method] [@@prototype "length l"]
 
-  (* Returns the concatenation of two lists. *)
-  val @ : 'a list * 'a list -> 'a list
+  (** returns the list that is the concatenation of `l1` and `l2`. *)
+  val @ : 'a list * 'a list -> 'a list [@@prototype "l1 @ l2"]
 
-  (* Returns the first element; raises Empty if the list is nil. *)
-  val hd : 'a list -> 'a
+  (**
+   * returns the first element of `l`. Raises `Empty` if `l` is
+   * `nil`.
+   *)
+  val hd : 'a list -> 'a [@@method] [@@prototype "hd l"]
 
-  (* Returns all but the first element; raises Empty if the list is nil. *)
-  val tl : 'a list -> 'a list
+  (**
+   * returns all but the first element of `l`. Raises `Empty` if `l`
+   * is `nil`.
+   *)
+  val tl : 'a list -> 'a list [@@method] [@@prototype "tl l"]
 
-  (* Returns the last element; raises Empty if the list is nil. *)
-  val last : 'a list -> 'a
+  (**
+   * returns the last element of `l`. Raises `Empty` if `l` is
+   * `nil`.
+   *)
+  val last : 'a list -> 'a [@@method] [@@prototype "last l"]
 
-  (* Returns NONE if the list is empty, SOME(hd, tl) otherwise. *)
+  (**
+   * returns `NONE` if the `list` is empty, and `SOME (hd l, tl
+   * l)` otherwise. This function is particularly useful for creating value
+   * readers from lists of characters. For example, `Int.scan StringCvt.DEC
+   * getItem` has the type `(int, char list) StringCvt.reader` and can be
+   * used to scan decimal integers from lists of characters.
+   *)
   val getItem : 'a list -> ('a * 'a list) option
+      [@@method] [@@prototype "getItem l"]
 
-  (* Returns the i-th element (0-indexed); raises Subscript if out of bounds. *)
-  val nth : 'a list * int -> 'a
+  (**
+   * returns the `i`(th) element of the list `l`, counting
+   * from 0. Raises `Subscript` if `i` < 0 or `i` &ge; `length l`. We have
+   * `nth(l, 0)` = `hd l`, ignoring exceptions.
+   *)
+  val nth : 'a list * int -> 'a [@@method] [@@prototype "nth (l, i)"]
 
-  (* Returns the first i elements; raises Subscript if i < 0 or
-   * i > length. *)
-  val `take` : 'a list * int -> 'a list
+  (**
+   * returns the first `i` elements of the list `l`. Raises
+   * `Subscript` if `i` < 0 or `i` > `length l`. We have `take(l, length
+   * l)` = `l`.
+   *)
+  val `take` : 'a list * int -> 'a list [@@method] [@@prototype "take (l, i)"]
 
-  (* Returns the list after dropping the first i elements; raises
-   * Subscript if out of bounds. *)
-  val drop : 'a list * int -> 'a list
+  (**
+   * returns what is left after dropping the first `i`
+   * elements of the list `l`. Raises `Subscript` if `i` < 0 or `i` >
+   * `length l`.
+   *
+   * <p>It holds that `take(l, i) @ drop(l, i)` = `l` when 0 &le;
+   * `i` &le; `length l`. We also have `drop(l, length l)` = `[]`.
+   *)
+  val drop : 'a list * int -> 'a list [@@method] [@@prototype "drop (l, i)"]
 
-  (* Returns the list with elements in reverse order. *)
-  val rev : 'a list -> 'a list
+  (** returns a list consisting of `l`'s elements in reverse order. *)
+  val rev : 'a list -> 'a list [@@method] [@@prototype "rev l"]
 
-  (* Returns the concatenation of all lists in order. *)
-  val concat : 'a list list -> 'a list
+  (**
+   * returns the list that is the concatenation of all the lists
+   * in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln`
+   *)
+  val concat : 'a list list -> 'a list [@@prototype "concat l"]
 
-  (* Returns (rev l1) @ l2. *)
+  (** returns `(rev l1) @ l2`. *)
   val revAppend : 'a list * 'a list -> 'a list
+      [@@method] [@@prototype "revAppend (l1, l2)"]
 
-  (* Applies a function to each element from left to right for side effects. *)
-  val app : ('a -> unit) -> 'a list -> unit
+  (** applies `f` to the elements of `l`, from left to right. *)
+  val app : ('a -> unit) -> 'a list -> unit [@@prototype "app f l"]
 
-  (* Applies a function to each element, returning the list of results. *)
-  val map : ('a -> 'b) -> 'a list -> 'b list
+  (**
+   * applies `f` to each element of `l` from left to right,
+   * returning the list of results.
+   *)
+  val map : ('a -> 'b) -> 'a list -> 'b list [@@prototype "map f l"]
 
-  (* Applies a partial function to each element; filters out NONE results
-   * and unwraps SOME. *)
+  (**
+   * applies `f` to each element of `l` from left to
+   * right, returning a list of results, with `SOME` stripped, where `f`
+   * was defined. `f` is not defined for an element of `l` if `f` applied
+   * to the element returns `NONE`. The above expression is equivalent to:
+   *
+   * <pre>((map valOf) o (filter isSome) o (map f)) b</pre>
+   *)
   val mapPartial : ('a -> 'b option) -> 'a list -> 'b list
+      [@@prototype "mapPartial f l"]
 
-  (* Returns SOME(x) for the first element where f(x) is true, or NONE. *)
-  val find : ('a -> bool) -> 'a list -> 'a option
+  (**
+   * applies `f` to each element `x` of the list `l`, from left
+   * to right, until `f x` evaluates to `true`. It returns `SOME (x)` if
+   * such an `x` exists; otherwise it returns `NONE`.
+   *)
+  val find : ('a -> bool) -> 'a list -> 'a option [@@prototype "find f l"]
 
-  (* Returns the list of elements for which the predicate returns true. *)
-  val filter : ('a -> bool) -> 'a list -> 'a list
+  (**
+   * applies `f` to each element `x` of `l`, from left to
+   * right, and returns the list of those `x` for which `f x` evaluated to
+   * `true`, in the same order as they occurred in the argument list.
+   *)
+  val filter : ('a -> bool) -> 'a list -> 'a list [@@prototype "filter f l"]
 
-  (* Partitions the list into elements satisfying and not satisfying the
-   * predicate. *)
+  (**
+   * applies `f` to each element `x` of `l`, from left to
+   * right, and returns a pair `(pos, neg)` where `pos` is the list of
+   * those `x` for which `f x` evaluated to `true`, and `neg` is the list
+   * of those for which `f x` evaluated to `false`. The elements of `pos`
+   * and `neg` retain the same relative order they possessed in `l`.
+   *)
   val partition : ('a -> bool)
-                    -> 'a list -> 'a list * 'a list
+                    -> 'a list -> 'a list * 'a list [@@prototype "partition f l"]
 
-  (* Left-associative fold; reduces the list from left to right with an
-   * accumulator. *)
-  val foldl : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+  (**
+   * returns `f(xn, ... , f(x2, f(x1,
+   * init))...)` or `init` if the list is empty.
+   *)
+  val foldl : ('a * 'b -> 'b)
+              -> 'b
+              -> 'a list
+              -> 'b [@@prototype "foldl f init [x1, x2, ..., xn]"]
 
-  (* Right-associative fold; reduces the list from right to left with an
-   * accumulator. *)
-  val foldr : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
+  (**
+   * returns `f(x1, f(x2, ..., f(xn,
+   * init)...))` or `init` if the list is empty.
+   *)
+  val foldr : ('a * 'b -> 'b)
+              -> 'b
+              -> 'a list
+              -> 'b [@@prototype "foldr f init [x1, x2, ..., xn]"]
 
-  (* Returns true if the predicate is true for at least one element. *)
-  val `exists` : ('a -> bool) -> 'a list -> bool
+  (**
+   * applies `f` to each element `x` of the list `l`, from
+   * left to right, until `f(x)` evaluates to `true`; it returns `true` if
+   * such an `x` exists and `false` otherwise.
+   *)
+  val `exists` : ('a -> bool) -> 'a list -> bool [@@prototype "exists f l"]
 
-  (* Returns true if the predicate is true for all elements. *)
-  val all : ('a -> bool) -> 'a list -> bool
+  (**
+   * applies `f` to each element `x` of the list `l`, from left
+   * to right, until `f(x)` evaluates to `false`; it returns `false` if
+   * such an `x` exists and `true` otherwise. It is equivalent to
+   * `not(exists (not o f) l))`.
+   *)
+  val all : ('a -> bool) -> 'a list -> bool [@@prototype "all f l"]
 
-  (* Returns a list of length n equal to [f(0), f(1), ..., f(n-1)]. *)
-  val tabulate : int * (int -> 'a) -> 'a list
+  (**
+   * returns a list of length `n` equal to `[f(0), f(1),
+   * ..., f(n-1)]`, created from left to right. Raises `Size` if `n` < 0.
+   *)
+  val tabulate : int * (int -> 'a) -> 'a list [@@prototype "tabulate (n, f)"]
 
-  (* Performs lexicographic comparison of two lists using the given ordering. *)
+  (**
+   * performs lexicographic comparison of the two
+   * lists using the given ordering `f` on the list elements.
+   *)
   val collate : ('a * 'a -> `order`)
-                  -> 'a list * 'a list -> `order`
+                  -> 'a list * 'a list -> `order` [@@prototype "collate f (l1, l2)"]
 
   (* Morel extensions *)
-  (* Returns the set difference of lists. *)
+  (**
+   * returns the list that is the concatenation of all the lists
+   * in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln`
+   *)
   val `except` : 'a list list -> 'a list
+      [@@specified "morel"] [@@prototype "except l"]
 
-  (* Returns the set intersection of lists. *)
+  (**
+   * returns the list that is the concatenation of all the
+   * lists in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @
+   * ln`
+   *)
   val `intersect` : 'a list list -> 'a list
+      [@@specified "morel"] [@@prototype "intersect l"]
 
-  (* Maps over a list with index; applies f to (index, element) pairs. *)
-  val mapi : (int * 'a -> 'b) -> 'a list -> 'b list
+  (**
+   * applies the function `f` to the elements of the argument
+   * list `l`, supplying the list index and element as arguments to each
+   * call.
+   *)
+  val mapi : (int * 'a -> 'b) -> 'a list -> 'b list [@@prototype "mapi f l"]
 end
+[@@description "Polymorphic singly-linked lists."]
 
 (*) End list.sig

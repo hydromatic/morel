@@ -19,49 +19,86 @@
  * The FN signature, a proposed addition to the standard basis
  * library.
  *)
+(**
+ * The `Fn` structure provides combinators for working with function values,
+ * including application, composition, currying, and fixpoint operators.
+ *)
 signature FN =
 sig
-  (* Returns the value unchanged; the polymorphic identity function. *)
-  val id       : 'a -> 'a
 
-  (* Returns the first argument, ignoring the second;
-   * useful for creating constant functions. *)
-  val const    : 'a -> 'b -> 'a
+  (**
+   * returns the value `x`. (`id` is the polymorphic identity function.)
+   *)
+  val id       : 'a -> 'a [@@prototype "id x"]
 
-  (* Applies a function to an argument;
-   * equivalent to direct function application. *)
-  val apply    : ('a -> 'b) * 'a -> 'b
+  (** returns the value `x`. *)
+  val const    : 'a -> 'b -> 'a [@@prototype "const x y"]
 
-  (* Composes two functions; (f o g) x evaluates to f (g x). *)
-  val o        : ('b -> 'c) * ('a -> 'b) -> ('a -> 'c)
+  (**
+   * applies the function `f` to `x`. Thus, it is equivalent to `f x`.
+   *)
+  val apply    : ('a -> 'b) * 'a -> 'b [@@prototype "apply (f, x)"]
 
-  (* Transforms a binary function into curried form,
-   * taking arguments separately. *)
-  val curry    : ('a * 'b -> 'c) -> ('a -> 'b -> 'c)
+  (**
+   * is the function composition of `f` and `g`. Thus, `(f o g) a`
+   * is equivalent to `f (g a)`. This function is the same as the global
+   * `o` operator and is also part of the `General` structure.
+   *)
+  val o        : ('b -> 'c) * ('a -> 'b) -> ('a -> 'c) [@@prototype "f o g"]
 
-  (* Transforms a curried function into binary form,
-   * taking a tuple argument. *)
+  (**
+   * is equivalent to `f (x, y)`; i.e., `curry f` transforms
+   * the binary function `f` into curried form.
+   *)
+  val curry    : ('a * 'b -> 'c) -> ('a -> 'b -> 'c) [@@prototype "curry f x y"]
+
+  (**
+   * is equivalent to `f x y`; i.e., `uncurry f` transforms the curried
+   * function `f` into a binary function. This function is the inverse of
+   * `curry`.
+   *)
   val uncurry  : ('a -> 'b -> 'c) -> ('a * 'b -> 'c)
+      [@@prototype "ucurry f (x, y)"]
 
-  (* Reverses argument order for a binary function;
-   * flip f (x, y) becomes f (y, x). *)
+  (**
+   * is equivalent to `f (y, x)`; i.e., `flip f` flips the argument order
+   * of the binary function `f`.
+   *)
   val flip     : ('a * 'b -> 'c) -> ('b * 'a -> 'c)
+      [@@prototype "flip f (x, y)"]
 
-  (* Returns the n-fold composition of a function;
-   * raises Domain exception if n is negative. *)
-  val repeat   : int -> ('a -> 'a) -> ('a -> 'a)
+  (**
+   * returns the `n`-fold composition of `f`. If `n` is zero, then
+   * `repeat n f` returns the identity function. If `n` is negative, then
+   * it raises the exception `Domain`.
+   *)
+  val repeat   : int -> ('a -> 'a) -> ('a -> 'a) [@@prototype "repeat n f"]
 
 (* TODO support eqtype in signatures
-  val equal    : ''a -> ''a -> bool
+  (**
+   * returns whether `a` is equal to `b`. It is a curried version of the
+   * polymorphic equality function (`=`).
+   *)
+  val equal    : ''a -> ''a -> bool [@@prototype "equal a b"]
+  (**
+   * returns whether `a` is not equal to `b`. It is a curried version of
+   * the polymorphic inequality function (`<>`).
+   *)
   val notEqual : ''a -> ''a -> bool
-*)
-  (* Curried version of the polymorphic equality operator
-   * for functional composition. *)
-  val equal    : 'a -> 'a -> bool
+*) [@@prototype "notEqual a b"]
+  (**
+   * returns whether `a` is equal to `b`. It is a curried version of the
+   * polymorphic equality function (`=`).
+   *)
+  val equal    : 'a -> 'a -> bool [@@prototype "equal a b"]
 
-  (* Curried version of the polymorphic inequality operator
-   * for functional composition. *)
-  val notEqual : 'a -> 'a -> bool
+  (**
+   * returns whether `a` is not equal to `b`. It is a curried version of
+   * the polymorphic inequality function (`<>`).
+   *)
+  val notEqual : 'a -> 'a -> bool [@@prototype "notEqual a b"]
 end
+[@@description "Higher-order function combinators."]
+[@@specified "basis+"]
 
 (*) End fn.sig

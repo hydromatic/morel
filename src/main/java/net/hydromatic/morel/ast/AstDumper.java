@@ -365,6 +365,24 @@ public class AstDumper {
       b.append(')');
       return true;
     }
+    if (node instanceof Ast.AttributedSpec) {
+      final Ast.AttributedSpec s = (Ast.AttributedSpec) node;
+      b.append("(attributedSpec ");
+      dump(b, s.spec);
+      for (Ast.Attribute a : s.attributes) {
+        b.append(' ');
+        dump(b, a);
+      }
+      b.append(')');
+      return true;
+    }
+    if (node instanceof Ast.FloatingAttrSpec) {
+      final Ast.FloatingAttrSpec s = (Ast.FloatingAttrSpec) node;
+      b.append("(floatingAttrSpec ");
+      dump(b, s.attribute);
+      b.append(')');
+      return true;
+    }
     return false;
   }
 

@@ -38,15 +38,13 @@ datatype 'a <a id='list' href="#list-impl">list</a> = nil | :: of 'a * 'a list
 
 exception <a id='Empty' href="#Empty-impl">Empty</a>
 
-val <a id='nil' href="#nil-impl">nil</a> : 'a list
 val <a id='null' href="#null-impl">null</a> : 'a list -> bool
 val <a id='length' href="#length-impl">length</a> : 'a list -> int
 val <a id='at' href="#at-impl">@</a> : 'a list * 'a list -> 'a list
-val <a id='at-fn' href="#at-fn-impl">at</a> : 'a list * 'a list -> 'a list
 val <a id='hd' href="#hd-impl">hd</a> : 'a list -> 'a
 val <a id='tl' href="#tl-impl">tl</a> : 'a list -> 'a list
 val <a id='last' href="#last-impl">last</a> : 'a list -> 'a
-val <a id='getItem' href="#getItem-impl">getItem</a> : 'a list -> * ('a * 'a list) option
+val <a id='getItem' href="#getItem-impl">getItem</a> : 'a list -> ('a * 'a list) option
 val <a id='nth' href="#nth-impl">nth</a> : 'a list * int -> 'a
 val <a id='take' href="#take-impl">take</a> : 'a list * int -> 'a list
 val <a id='drop' href="#drop-impl">drop</a> : 'a list * int -> 'a list
@@ -55,7 +53,6 @@ val <a id='concat' href="#concat-impl">concat</a> : 'a list list -> 'a list
 val <a id='revAppend' href="#revAppend-impl">revAppend</a> : 'a list * 'a list -> 'a list
 val <a id='app' href="#app-impl">app</a> : ('a -> unit) -> 'a list -> unit
 val <a id='map' href="#map-impl">map</a> : ('a -> 'b) -> 'a list -> 'b list
-val <a id='mapi' href="#mapi-impl">mapi</a> : (int * 'a -> 'b) -> 'a list -> 'b list
 val <a id='mapPartial' href="#mapPartial-impl">mapPartial</a> : ('a -> 'b option) -> 'a list -> 'b list
 val <a id='find' href="#find-impl">find</a> : ('a -> bool) -> 'a list -> 'a option
 val <a id='filter' href="#filter-impl">filter</a> : ('a -> bool) -> 'a list -> 'a list
@@ -66,6 +63,7 @@ val <a id='exists' href="#exists-impl">exists</a> : ('a -> bool) -> 'a list -> b
 val <a id='all' href="#all-impl">all</a> : ('a -> bool) -> 'a list -> bool
 val <a id='tabulate' href="#tabulate-impl">tabulate</a> : int * (int -> 'a) -> 'a list
 val <a id='collate' href="#collate-impl">collate</a> : ('a * 'a -> order) -> 'a list * 'a list -> order
+val <a id='mapi' href="#mapi-impl">mapi</a> : (int * 'a -> 'b) -> 'a list -> 'b list
 (* Morel extensions *)
 val <a id='except' href="#except-impl">except</a> : 'a list list -> 'a list
 val <a id='intersect' href="#intersect-impl">intersect</a> : 'a list list -> 'a list
@@ -82,11 +80,6 @@ is the type of polymorphic singly-linked lists.
 is raised by operations that require a non-empty list when given an
 empty list.
 
-<a id="nil-impl"></a>
-<h3><code>nil</code></h3>
-
-`nil` is the empty list.
-
 <a id="null-impl"></a>
 <h3><code>null</code></h3>
 
@@ -101,11 +94,6 @@ empty list.
 <h3><code>@</code></h3>
 
 `l1 @ l2` returns the list that is the concatenation of `l1` and `l2`.
-
-<a id="at-fn-impl"></a>
-<h3><code>at</code></h3>
-
-`at (l1, l2)` is equivalent to "l1 @ l2".
 
 <a id="hd-impl"></a>
 <h3><code>hd</code></h3>
@@ -185,13 +173,6 @@ in `l` in order. `concat [l1, l2, ... ln]` = `l1 @ l2 @ ... @ ln`
 `map f l` applies `f` to each element of `l` from left to right,
 returning the list of results.
 
-<a id="mapi-impl"></a>
-<h3><code>mapi</code></h3>
-
-`mapi f l` applies the function `f` to the elements of the argument
-list `l`, supplying the list index and element as arguments to each
-call.
-
 <a id="mapPartial-impl"></a>
 <h3><code>mapPartial</code></h3>
 
@@ -228,13 +209,13 @@ and `neg` retain the same relative order they possessed in `l`.
 <a id="foldl-impl"></a>
 <h3><code>foldl</code></h3>
 
-`foldl f init \[x1, x2, ..., xn\]` returns `f(xn, ... , f(x2, f(x1,
+`foldl f init [x1, x2, ..., xn]` returns `f(xn, ... , f(x2, f(x1,
 init))...)` or `init` if the list is empty.
 
 <a id="foldr-impl"></a>
 <h3><code>foldr</code></h3>
 
-`foldr f init \[x1, x2, ..., xn\]` returns `f(x1, f(x2, ..., f(xn,
+`foldr f init [x1, x2, ..., xn]` returns `f(x1, f(x2, ..., f(xn,
 init)...))` or `init` if the list is empty.
 
 <a id="exists-impl"></a>
@@ -263,6 +244,13 @@ such an `x` exists and `true` otherwise. It is equivalent to
 
 `collate f (l1, l2)` performs lexicographic comparison of the two
 lists using the given ordering `f` on the list elements.
+
+<a id="mapi-impl"></a>
+<h3><code>mapi</code></h3>
+
+`mapi f l` applies the function `f` to the elements of the argument
+list `l`, supplying the list index and element as arguments to each
+call.
 
 <a id="except-impl"></a>
 <h3><code>except</code></h3>

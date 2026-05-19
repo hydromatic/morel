@@ -19,56 +19,104 @@
  * The EITHER signature, a proposed addition to the standard basis
  * library.
  *)
+(**
+ * The `Either` structure provides a polymorphic disjoint-sum type
+ * `('left, 'right) either` whose values are either `INL v` (left) or
+ * `INR v` (right), along with operations for examining and transforming
+ * such values.
+ *)
 signature EITHER =
 sig
-  (* A generic union type with left and right variants. *)
+
+  (**
+   * is the type of disjoint-sum values; `INL v` represents a left value and
+   * `INR v` represents a right value.
+   *)
   datatype ('left, 'right) either = INL of 'left | INR of 'right
 
-  (* Tests whether the value is a left variant. *)
+  (** returns true if `sm` is a left value. *)
   val isLeft  : ('left, 'right) either -> bool
+      [@@method] [@@prototype "isLeft sm"]
 
-  (* Tests whether the value is a right variant. *)
+  (** returns true if `sm` is a right value. *)
   val isRight : ('left, 'right) either -> bool
+      [@@method] [@@prototype "isRight sm"]
 
-  (* Extracts left value as option; returns SOME if left, NONE otherwise. *)
+  (**
+   * returns `SOME (x)` if `sm` is a left value with contents `x`,
+   * otherwise it returns `NONE`.
+   *)
   val asLeft  : ('left, 'right) either -> 'left option
+      [@@method] [@@prototype "asLeft sm"]
 
-  (* Extracts right value as option; returns SOME if right, NONE otherwise. *)
+  (**
+   * returns `SOME (x)` if `sm` is a right value with contents `x`,
+   * otherwise it returns `NONE`.
+   *)
   val asRight : ('left, 'right) either -> 'right option
+      [@@method] [@@prototype "asRight sm"]
 
-  (* Applies left function to left values, right function to right values. *)
+  (**
+   * maps `fl` over the contents of left values and `fr` over the contents
+   * of right values.
+   *)
   val map : ('ldom -> 'lrng) * ('rdom -> 'rrng)
           -> ('ldom, 'rdom) either
-            -> ('lrng, 'rrng) either
+            -> ('lrng, 'rrng) either [@@prototype "map (fl, fr) sm"]
 
-  (* Maps function over left values; acts as identity on right values. *)
+  (**
+   * maps the function `f` over the contents of left values and acts as the
+   * identity on right values.
+   *)
   val mapLeft  : ('ldom -> 'lrng)
-               -> ('ldom, 'rdom) either -> ('lrng, 'rdom) either
+               -> ('ldom, 'rdom) either -> ('lrng, 'rdom) either [@@prototype "mapLeft f sm"]
 
-  (* Maps function over right values; acts as identity on left values. *)
+  (**
+   * maps the function `f` over the contents of right values and acts as the
+   * identity on left values.
+   *)
   val mapRight : ('rdom -> 'rrng)
-               -> ('ldom, 'rdom) either -> ('ldom, 'rrng) either
+               -> ('ldom, 'rdom) either -> ('ldom, 'rrng) either [@@prototype "mapRight f sm"]
 
-  (* Applies left function to left values, right function to right values. *)
+  (**
+   * applies `fl` to the contents of left values and `fr` to the contents
+   * of right values.
+   *)
   val app : ('left -> unit) * ('right -> unit)
           -> ('left, 'right) either
-            -> unit
+            -> unit [@@prototype "app (fl, fr) sm"]
 
-  (* Applies function to left values; ignores right values. *)
+  (**
+   * applies `f` to the contents of left values and ignores right values.
+   *)
   val appLeft  : ('left -> unit) -> ('left, 'right) either -> unit
+      [@@prototype "appLeft f sm"]
 
-  (* Applies function to right values; ignores left values. *)
+  (**
+   * applies `f` to the contents of right values and ignores left values.
+   *)
   val appRight : ('right -> unit) -> ('left, 'right) either -> unit
+      [@@prototype "appRight f sm"]
 
-  (* Reduces either value using appropriate function with accumulator. *)
+  (**
+   * computes `fx (v, init)`, where `v` is the contents of `sm` and `fx`
+   * is either `fl` (if `sm` is a left value) or `fr` (if `sm` is a right
+   * value).
+   *)
   val fold : ('left * 'b -> 'b) * ('right * 'b -> 'b)
-           -> 'b -> ('left, 'right) either -> 'b
+           -> 'b -> ('left, 'right) either -> 'b [@@prototype "fold (fl, fr) init sm"]
 
-  (* Extracts contents when both variants contain the same type. *)
-  val proj : ('a, 'a) either -> 'a
+  (** projects out the contents of `sm`. *)
+  val proj : ('a, 'a) either -> 'a [@@method] [@@prototype "proj sm"]
 
-  (* Separates list of either values into left and right components. *)
+  (**
+   * partitions the list of sum values into a list of left values and a
+   * list of right values.
+   *)
   val partition : (('left, 'right) either) list -> ('left list * 'right list)
+      [@@prototype "partition sms"]
 end
+[@@description "Values that are one of two types."]
+[@@specified "basis+"]
 
 (*) End either.sig

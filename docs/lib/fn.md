@@ -27,8 +27,6 @@ License.
 The `Fn` structure provides combinators for working with function values,
 including application, composition, currying, and fixpoint operators.
 
-*Specified by the [Standard ML Basis Library](https://smlfamily.github.io/Basis/fn.html).*
-
 ## Synopsis
 
 <pre>

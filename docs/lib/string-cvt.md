@@ -33,31 +33,6 @@ specifiers and reader types.
 ## Synopsis
 
 <pre>
-datatype <a id='radix' href="#radix-impl">radix</a> = BIN | OCT | DEC | HEX
-type ('a, 'b) <a id='reader' href="#reader-impl">reader</a> = 'b -> ('a * 'b) option
-datatype <a id='realfmt' href="#realfmt-impl">realfmt</a>
-  = SCI of int option
-  | FIX of int option
-  | GEN of int option
-  | EXACT
 </pre>
-
-<a id="radix-impl"></a>
-<h3><code><strong>datatype</strong> radix</code></h3>
-
-specifies the numeric base: binary (2), octal (8), decimal (10), or
-hexadecimal (16).
-
-<a id="reader-impl"></a>
-<h3><code><strong>type</strong> ('a, 'b) reader</code></h3>
-
-is the type of a scanning function that reads one value of type `'a`
-from a stream of type `'b`, returning the value and the remaining
-stream, or `NONE` at end of input.
-
-<a id="realfmt-impl"></a>
-<h3><code><strong>datatype</strong> realfmt</code></h3>
-
-specifies the format for converting real numbers to strings.
 
 [//]: # (end:lib/string-cvt)
