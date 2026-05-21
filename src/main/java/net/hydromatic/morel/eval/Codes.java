@@ -1251,6 +1251,25 @@ public abstract class Codes {
         }
       };
     }
+
+    /**
+     * Overrides the default curry to validate {@code n} as soon as it arrives,
+     * rather than waiting for the second argument. Matches the SML/NJ behavior
+     * of {@code Fn.repeat ~5} raising {@code Domain} immediately.
+     */
+    @Override
+    public Applicable1<Applicable1<Applicable1, Applicable1>, Integer> curry() {
+      return new CurriedApplicable1<
+          Applicable1<Applicable1, Applicable1>, Integer>(builtIn, this) {
+        @Override
+        public Applicable1<Applicable1, Applicable1> apply(Integer n) {
+          if (n < 0) {
+            throw new MorelRuntimeException(BuiltInExn.DOMAIN, pos);
+          }
+          return f -> FnRepeat.this.apply(n, f);
+        }
+      };
+    }
   }
 
   /** @see BuiltIn#FN_UNCURRY */

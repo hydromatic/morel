@@ -91,6 +91,11 @@ it 8;
 Fn.repeat ~2 (fn i => i + 1);
 > uncaught exception Domain
 >   raised at: stdIn:1.1-1.28
+(* Partial application with a negative count should raise immediately,
+ * before the second argument arrives. *)
+Fn.repeat ~5;
+> uncaught exception Domain
+>   raised at: stdIn:1.1-1.13
 Fn.equal;
 > val it = fn : 'a -> 'a -> bool
 (* ^ SMLNJ gives
