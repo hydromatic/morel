@@ -26,6 +26,7 @@ import static net.hydromatic.morel.eval.Slots.maxOf;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.SKIP;
+import static net.hydromatic.morel.util.Static.padRightTo;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
@@ -36,6 +37,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 import java.io.StringReader;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -1372,6 +1376,34 @@ public abstract class Codes {
 
   /** @see BuiltIn#INT_DIV */
   private static final Applicable2 INT_DIV = new IntDiv(BuiltIn.INT_DIV);
+
+  /** @see BuiltIn#INT_FMT */
+  private static final Applicable2 INT_FMT =
+      new BaseApplicable2<String, List, Integer>(BuiltIn.INT_FMT) {
+        @Override
+        public String apply(List radix, Integer i) {
+          final int base;
+          switch ((String) radix.get(0)) {
+            case "BIN":
+              base = 2;
+              break;
+            case "OCT":
+              base = 8;
+              break;
+            case "DEC":
+              base = 10;
+              break;
+            case "HEX":
+              base = 16;
+              break;
+            default:
+              throw new AssertionError(radix);
+          }
+          // Use upper-case digits A..F for hex, prefix '-' with '~'.
+          final String s = Integer.toString(i, base).toUpperCase(Locale.ROOT);
+          return s.startsWith("-") ? "~" + s.substring(1) : s;
+        }
+      };
 
   /** @see BuiltIn#INT_FROM_INT */
   private static final Applicable1 INT_FROM_INT =
@@ -3058,6 +3090,222 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#REAL_FMT */
+  private static final Applicable2 REAL_FMT = new RealFmt(Pos.ZERO);
+
+  /** Implements {@link #REAL_FMT}. */
+  private static class RealFmt
+      extends BasePositionedApplicable2<String, List, Float> {
+    RealFmt(Pos pos) {
+      super(BuiltIn.REAL_FMT, pos);
+    }
+
+    @Override
+    public RealFmt withPos(Pos pos) {
+      return new RealFmt(pos);
+    }
+
+    @Override
+    public String apply(List spec, Float r) {
+      return format(parseSpec(spec), r);
+    }
+
+    /**
+     * Validates {@code spec} on partial application so that {@code Real.fmt
+     * (StringCvt.SCI (SOME ~1))} raises {@code Size} immediately, matching
+     * SML/NJ's behavior.
+     */
+    @Override
+    public Applicable1<Applicable1<String, Float>, List> curry() {
+      return new CurriedApplicable1<Applicable1<String, Float>, List>(
+          builtIn, this) {
+        @Override
+        public Applicable1<String, Float> apply(List spec) {
+          final FmtSpec info = parseSpec(spec);
+          return r -> format(info, r);
+        }
+      };
+    }
+
+    /** Spec kind + precision, after validation. */
+    private static class FmtSpec {
+      final String kind;
+      final int n;
+
+      FmtSpec(String kind, int n) {
+        this.kind = kind;
+        this.n = n;
+      }
+    }
+
+    private FmtSpec parseSpec(List spec) {
+      final String kind = (String) spec.get(0);
+      if (kind.equals("EXACT")) {
+        return new FmtSpec("EXACT", 0);
+      }
+      final List opt = (List) spec.get(1);
+      final Integer n = opt.size() == 2 ? (Integer) opt.get(1) : null;
+      final int defaultN;
+      final int minN;
+      switch (kind) {
+        case "SCI":
+          defaultN = 6;
+          minN = 0;
+          break;
+        case "FIX":
+          defaultN = 6;
+          minN = 0;
+          break;
+        case "GEN":
+          defaultN = 12;
+          minN = 1;
+          break;
+        default:
+          throw new AssertionError("unknown realfmt: " + kind);
+      }
+      if (n != null && n < minN) {
+        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
+      }
+      return new FmtSpec(kind, n != null ? n : defaultN);
+    }
+
+    private static String format(FmtSpec info, float r) {
+      if (Float.isNaN(r)) {
+        return "nan";
+      }
+      if (r == Float.POSITIVE_INFINITY) {
+        return "inf";
+      }
+      if (r == Float.NEGATIVE_INFINITY) {
+        return "~inf";
+      }
+      switch (info.kind) {
+        case "SCI":
+          return formatSci(r, info.n);
+        case "FIX":
+          return formatFix(r, info.n);
+        case "GEN":
+          return formatGen(r, info.n);
+        case "EXACT":
+          return formatExact(r);
+        default:
+          throw new AssertionError();
+      }
+    }
+
+    /** Returns "~" for negative reals (including {@code ~0.0}), else "". */
+    private static String signPrefix(float r) {
+      return Float.floatToRawIntBits(r) < 0 ? "~" : "";
+    }
+
+    /** Formats {@code abs} as a non-negative BigDecimal with the bits of r. */
+    private static BigDecimal toBigDecimal(float r) {
+      return new BigDecimal(FLOAT_TO_STRING.apply(Math.abs(r)));
+    }
+
+    private static String formatFix(float r, int n) {
+      final StringBuilder sb = new StringBuilder(signPrefix(r));
+      if (r == 0.0f) {
+        sb.append('0');
+        if (n > 0) {
+          sb.append('.');
+          padRightTo(sb, sb.length() + n, '0');
+        }
+        return sb.toString();
+      }
+      final BigDecimal bd = toBigDecimal(r).setScale(n, RoundingMode.HALF_DOWN);
+      return sb.append(bd.toPlainString()).toString();
+    }
+
+    /** Formats r as {@code D.dddE±exp} with n digits after the decimal. */
+    private static String formatSci(float r, int n) {
+      final StringBuilder sb = new StringBuilder(signPrefix(r));
+      if (r == 0.0f) {
+        sb.append('0');
+        if (n > 0) {
+          sb.append('.');
+          padRightTo(sb, sb.length() + n, '0');
+        }
+        return sb.append("E0").toString();
+      }
+      // Express |r| as mantissa * 10^exp where mantissa in [1, 10).
+      final BigDecimal bd = toBigDecimal(r);
+      int exp = decimalExp(bd);
+      BigDecimal mantissa =
+          bd.movePointLeft(exp).setScale(n, RoundingMode.HALF_DOWN);
+      // Rounding may push the mantissa to exactly 10; renormalize.
+      if (mantissa.compareTo(BigDecimal.TEN) >= 0) {
+        mantissa = mantissa.movePointLeft(1);
+        exp++;
+      }
+      sb.append(mantissa.toPlainString()).append('E');
+      return appendSmlExp(sb, exp).toString();
+    }
+
+    /** Formats r as {@code 0.dddE±exp} with no trailing zeros. */
+    private static String formatExact(float r) {
+      final StringBuilder sb = new StringBuilder(signPrefix(r));
+      if (r == 0.0f) {
+        return sb.append("0.0").toString();
+      }
+      // bd is already non-negative because toBigDecimal uses Math.abs.
+      final BigDecimal bd = toBigDecimal(r).stripTrailingZeros();
+      // Emit as 0.<digits>; the exponent is one greater than the standard
+      // scientific exponent because the implied decimal point moves left by 1.
+      sb.append("0.").append(bd.unscaledValue().toString());
+      final int exp = decimalExp(bd) + 1;
+      if (exp == 0) {
+        return sb.toString();
+      }
+      return appendSmlExp(sb.append('E'), exp).toString();
+    }
+
+    /**
+     * Formats r with at most n significant digits, using fixed-point notation
+     * when the exponent is in {@code [-2, n)}, scientific notation otherwise.
+     * Trailing zeros are dropped.
+     */
+    private static String formatGen(float r, int n) {
+      final StringBuilder sb = new StringBuilder(signPrefix(r));
+      if (r == 0.0f) {
+        return sb.append('0').toString();
+      }
+      // Round to n significant digits, drop trailing zeros, then compute the
+      // exponent (rounding 9.99 to 3 s.f. gives 10.0, which is 1E1).
+      final BigDecimal bd =
+          toBigDecimal(r)
+              .round(new MathContext(n, RoundingMode.HALF_DOWN))
+              .stripTrailingZeros();
+      final int exp = decimalExp(bd);
+      // SML/NJ uses scientific form when exp <= -3 or exp >= n (i.e., the
+      // value would otherwise need leading zeros or be very large).
+      if (exp <= -3 || exp >= n) {
+        sb.append(bd.movePointLeft(exp).toPlainString()).append('E');
+        return appendSmlExp(sb, exp).toString();
+      }
+      // Fixed: emit at full precision, no trailing zeros.
+      return sb.append(bd.toPlainString()).toString();
+    }
+
+    /**
+     * The exponent that would appear in standard scientific notation — 0 for
+     * [1, 10), 1 for [10, 100), -1 for [0.1, 1), etc. Assumes {@code bd} is
+     * non-zero.
+     */
+    private static int decimalExp(BigDecimal bd) {
+      return bd.precision() - bd.scale() - 1;
+    }
+
+    /** Appends {@code exp} to {@code sb} using SML's {@code ~} for negative. */
+    private static StringBuilder appendSmlExp(StringBuilder sb, int exp) {
+      if (exp < 0) {
+        sb.append('~');
+        exp = -exp;
+      }
+      return sb.append(exp);
+    }
+  }
+
   /** @see BuiltIn#REAL_FROM_INT */
   private static final Applicable REAL_FROM_INT =
       new BaseApplicable1<Float, Integer>(BuiltIn.REAL_FROM_INT) {
@@ -3647,6 +3895,35 @@ public abstract class Codes {
       return String.join(separator, list);
     }
   }
+
+  /** @see BuiltIn#STRING_CVT_PAD_LEFT */
+  private static final Applicable STRING_CVT_PAD_LEFT =
+      new BaseApplicable3<String, Character, Integer, String>(
+          BuiltIn.STRING_CVT_PAD_LEFT) {
+        @Override
+        public String apply(Character c, Integer i, String s) {
+          if (s.length() >= i) {
+            return s;
+          }
+          final StringBuilder sb = new StringBuilder(i);
+          padRightTo(sb, i - s.length(), c);
+          return sb.append(s).toString();
+        }
+      };
+
+  /** @see BuiltIn#STRING_CVT_PAD_RIGHT */
+  private static final Applicable STRING_CVT_PAD_RIGHT =
+      new BaseApplicable3<String, Character, Integer, String>(
+          BuiltIn.STRING_CVT_PAD_RIGHT) {
+        @Override
+        public String apply(Character c, Integer i, String s) {
+          if (s.length() >= i) {
+            return s;
+          }
+          final StringBuilder sb = new StringBuilder(i).append(s);
+          return padRightTo(sb, i, c).toString();
+        }
+      };
 
   /** @see BuiltIn#STRING_EXPLODE */
   private static final Applicable1 STRING_EXPLODE =
@@ -5269,6 +5546,7 @@ public abstract class Codes {
           .put(BuiltIn.INT_ABS, INT_ABS)
           .put(BuiltIn.INT_COMPARE, INT_COMPARE)
           .put(BuiltIn.INT_DIV, INT_DIV)
+          .put(BuiltIn.INT_FMT, INT_FMT)
           .put(BuiltIn.INT_FROM_INT, INT_FROM_INT)
           .put(BuiltIn.INT_FROM_LARGE, INT_FROM_LARGE)
           .put(BuiltIn.INT_FROM_STRING, INT_FROM_STRING)
@@ -5380,6 +5658,7 @@ public abstract class Codes {
           .put(BuiltIn.REAL_COPY_SIGN, REAL_COPY_SIGN)
           .put(BuiltIn.REAL_DIVIDE, REAL_DIVIDE)
           .put(BuiltIn.REAL_FLOOR, REAL_FLOOR)
+          .put(BuiltIn.REAL_FMT, REAL_FMT)
           .put(BuiltIn.REAL_FROM_INT, REAL_FROM_INT)
           .put(BuiltIn.REAL_FROM_MAN_EXP, REAL_FROM_MAN_EXP)
           .put(BuiltIn.REAL_FROM_STRING, REAL_FROM_STRING)
@@ -5440,6 +5719,8 @@ public abstract class Codes {
           .put(BuiltIn.STRING_COMPARE, STRING_COMPARE)
           .put(BuiltIn.STRING_CONCAT, STRING_CONCAT)
           .put(BuiltIn.STRING_CONCAT_WITH, STRING_CONCAT_WITH)
+          .put(BuiltIn.STRING_CVT_PAD_LEFT, STRING_CVT_PAD_LEFT)
+          .put(BuiltIn.STRING_CVT_PAD_RIGHT, STRING_CVT_PAD_RIGHT)
           .put(BuiltIn.STRING_EXPLODE, STRING_EXPLODE)
           .put(BuiltIn.STRING_EXTRACT, STRING_EXTRACT)
           .put(BuiltIn.STRING_FIELDS, STRING_FIELDS)

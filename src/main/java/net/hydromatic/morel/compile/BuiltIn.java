@@ -1455,6 +1455,20 @@ public enum BuiltIn {
   /** Function "Int.div", of type "int * int &rarr; int". */
   INT_DIV("Int", "div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
+  /**
+   * Function "Int.fmt", of type "StringCvt.radix &rarr; int &rarr; string".
+   *
+   * <p>{@code fmt radix i} converts {@code i} to a string. The hexadecimal
+   * digits 10 through 15 are represented as {@code A} through {@code F}, and a
+   * negative number is prefixed with a tilde {@code ~}.
+   */
+  INT_FMT(
+      "Int",
+      "fmt",
+      ts ->
+          ts.fnType(
+              ts.lookup(Datatype.STRING_CVT_RADIX), ts.fnType(INT, STRING))),
+
   /** Function "Int.fromInt", of type "int &rarr; int". */
   INT_FROM_INT("Int", "fromInt", ts -> ts.fnType(INT, INT)),
 
@@ -2917,6 +2931,22 @@ public enum BuiltIn {
   REAL_FLOOR("Real", "floor", "floor", true, ts -> ts.fnType(REAL, INT)),
 
   /**
+   * Function "Real.fmt", of type "StringCvt.realfmt &rarr; real &rarr; string".
+   *
+   * <p>{@code fmt spec r} converts {@code r} to a string according to {@code
+   * spec}. Raises {@code Size} if {@code spec} is an invalid precision (e.g. a
+   * negative count, or {@code GEN (SOME 0)}). The precision is validated as
+   * soon as {@code spec} is bound.
+   */
+  REAL_FMT(
+      "Real",
+      "fmt",
+      true,
+      ts ->
+          ts.fnType(
+              ts.lookup(Datatype.STRING_CVT_REALFMT), ts.fnType(REAL, STRING))),
+
+  /**
    * Function "Real.fromInt", of type "int &rarr; real". Converts the integer
    * {@code i} to a {@code real} value. If the absolute value of {@code i} is
    * larger than {@code maxFinite}, then the appropriate infinity is returned.
@@ -3441,6 +3471,28 @@ public enum BuiltIn {
       "String",
       "concatWith",
       ts -> ts.fnType(STRING, ts.listType(STRING), STRING)),
+
+  /**
+   * Function "StringCvt.padLeft", of type "char &rarr; int &rarr; string &rarr;
+   * string".
+   *
+   * <p>{@code padLeft c i s} returns {@code s} padded on the left with {@code
+   * c} characters so that the result has length at least {@code i}. If {@code
+   * s} is already at least {@code i} characters long, it is returned unchanged.
+   */
+  STRING_CVT_PAD_LEFT(
+      "StringCvt", "padLeft", ts -> ts.fnType(CHAR, INT, STRING, STRING)),
+
+  /**
+   * Function "StringCvt.padRight", of type "char &rarr; int &rarr; string
+   * &rarr; string".
+   *
+   * <p>{@code padRight c i s} returns {@code s} padded on the right with {@code
+   * c} characters so that the result has length at least {@code i}. If {@code
+   * s} is already at least {@code i} characters long, it is returned unchanged.
+   */
+  STRING_CVT_PAD_RIGHT(
+      "StringCvt", "padRight", ts -> ts.fnType(CHAR, INT, STRING, STRING)),
 
   /**
    * Function "String.explode", of type "string &rarr; char list".
@@ -4889,6 +4941,28 @@ public enum BuiltIn {
                 .tyCon(Constructor.RANGE_OPEN_CLOSED)
                 .tyCon(Constructor.RANGE_POINT)),
 
+    STRING_CVT_RADIX(
+        "StringCvt",
+        "radix",
+        false,
+        0,
+        h ->
+            h.tyCon(Constructor.STRING_CVT_RADIX_BIN)
+                .tyCon(Constructor.STRING_CVT_RADIX_DEC)
+                .tyCon(Constructor.STRING_CVT_RADIX_HEX)
+                .tyCon(Constructor.STRING_CVT_RADIX_OCT)),
+
+    STRING_CVT_REALFMT(
+        "StringCvt",
+        "realfmt",
+        false,
+        0,
+        h ->
+            h.tyCon(Constructor.STRING_CVT_REALFMT_EXACT)
+                .tyCon(Constructor.STRING_CVT_REALFMT_FIX)
+                .tyCon(Constructor.STRING_CVT_REALFMT_GEN)
+                .tyCon(Constructor.STRING_CVT_REALFMT_SCI)),
+
     /**
      * Universal value representation for embedded language interoperability.
      *
@@ -5104,6 +5178,23 @@ public enum BuiltIn {
         "OPEN_CLOSED",
         h -> Keys.tuple(ImmutableList.of(h.get(0), h.get(0)))),
     RANGE_POINT(Datatype.RANGE, "POINT", h -> h.get(0)),
+    STRING_CVT_RADIX_BIN(Datatype.STRING_CVT_RADIX, "BIN"),
+    STRING_CVT_RADIX_DEC(Datatype.STRING_CVT_RADIX, "DEC"),
+    STRING_CVT_RADIX_HEX(Datatype.STRING_CVT_RADIX, "HEX"),
+    STRING_CVT_RADIX_OCT(Datatype.STRING_CVT_RADIX, "OCT"),
+    STRING_CVT_REALFMT_EXACT(Datatype.STRING_CVT_REALFMT, "EXACT"),
+    STRING_CVT_REALFMT_FIX(
+        Datatype.STRING_CVT_REALFMT,
+        "FIX",
+        h -> Keys.apply(Keys.name("option"), ImmutableList.of(INT.key()))),
+    STRING_CVT_REALFMT_GEN(
+        Datatype.STRING_CVT_REALFMT,
+        "GEN",
+        h -> Keys.apply(Keys.name("option"), ImmutableList.of(INT.key()))),
+    STRING_CVT_REALFMT_SCI(
+        Datatype.STRING_CVT_REALFMT,
+        "SCI",
+        h -> Keys.apply(Keys.name("option"), ImmutableList.of(INT.key()))),
     VARIANT_BAG(Datatype.VARIANT, "BAG", h -> Keys.list(Keys.name("variant"))),
     VARIANT_BOOL(Datatype.VARIANT, "BOOL", h -> BOOL.key()),
     VARIANT_CHAR(Datatype.VARIANT, "CHAR", h -> CHAR.key()),

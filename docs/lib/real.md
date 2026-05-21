@@ -70,6 +70,7 @@ val <a id='ceil' href="#ceil-impl">ceil</a> : real -> int
 val <a id='trunc' href="#trunc-impl">trunc</a> : real -> int
 val <a id='round' href="#round-impl">round</a> : real -> int
 val <a id='fromInt' href="#fromInt-impl">fromInt</a> : int -> real
+val <a id='fmt' href="#fmt-impl">fmt</a> : realfmt -> real -> string
 val <a id='toString' href="#toString-impl">toString</a> : real -> string
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> real option
 </pre>
@@ -290,6 +291,13 @@ rounds to the nearest even integer.
 absolute value of `i` is larger than `maxFinite`, then the appropriate
 infinity is returned. If `i` cannot be exactly represented as a `real`
 value, uses current rounding mode to determine the resulting value.
+
+<a id="fmt-impl"></a>
+<h3><code>fmt</code></h3>
+
+`fmt spec r` (or `spec.fmt r`) converts a `real` into a `string` according to `spec`. Raises
+`Size` when `fmt spec` is evaluated if `spec` is an invalid
+precision (negative for `SCI` or `FIX`, less than 1 for `GEN`).
 
 <a id="toString-impl"></a>
 <h3><code>toString</code></h3>

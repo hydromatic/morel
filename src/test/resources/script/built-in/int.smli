@@ -28,17 +28,17 @@ Sys.set ("stringDepth", ~1);
 
 Int;
 > val it =
->   {abs=fn,compare=fn,div=fn,fromInt=fn,fromLarge=fn,fromString=fn,max=fn,
->    maxInt=SOME 2147483647,min=fn,minInt=SOME ~2147483648,mod=fn,
+>   {abs=fn,compare=fn,div=fn,fmt=fn,fromInt=fn,fromLarge=fn,fromString=fn,
+>    max=fn,maxInt=SOME 2147483647,min=fn,minInt=SOME ~2147483648,mod=fn,
 >    precision=SOME 32,quot=fn,rem=fn,sameSign=fn,sign=fn,toInt=fn,toLarge=fn,
 >    toString=fn}
 >   : {abs:int -> int, compare:int * int -> order, div:int * int -> int,
->      fromInt:int -> int, fromLarge:int -> int, fromString:string -> int option,
->      max:int * int -> int, maxInt:int option, min:int * int -> int,
->      minInt:int option, mod:int * int -> int, precision:int option,
->      quot:int * int -> int, rem:int * int -> int, sameSign:int * int -> bool,
->      sign:int -> int, toInt:int -> int, toLarge:int -> int,
->      toString:int -> string}
+>      fmt:radix -> int -> string, fromInt:int -> int, fromLarge:int -> int,
+>      fromString:string -> int option, max:int * int -> int, maxInt:int option,
+>      min:int * int -> int, minInt:int option, mod:int * int -> int,
+>      precision:int option, quot:int * int -> int, rem:int * int -> int,
+>      sameSign:int * int -> bool, sign:int -> int, toInt:int -> int,
+>      toLarge:int -> int, toString:int -> string}
 
 Int.abs;
 > val it = fn : int -> int
@@ -75,6 +75,20 @@ Int.fromInt;
 > val it = fn : int -> int
 Int.fromInt 3;
 > val it = 3 : int
+Int.fmt;
+> val it = fn : radix -> int -> string
+Int.fmt DEC 42;
+> val it = "42" : string
+Int.fmt BIN 10;
+> val it = "1010" : string
+Int.fmt OCT 255;
+> val it = "377" : string
+Int.fmt HEX 255;
+> val it = "FF" : string
+Int.fmt HEX ~255;
+> val it = "~FF" : string
+Int.fmt DEC 0;
+> val it = "0" : string
 Int.fromLarge;
 > val it = fn : int -> int
 Int.fromLarge 3;
@@ -165,5 +179,46 @@ Int.toString ~345;
 > val it = "~345" : string
 (~345).toString ();
 > val it = "~345" : string
+
+(* Side-by-side comparison of how each Int.fmt radix renders a range of
+ * values. To run in SML, prepend `open StringCvt;` (Morel exposes the
+ * radix constructors at the top level). `Sys.set` is Morel-only; SML
+ * users will see the record list in classic notation. *)
+Sys.set ("output", "tabular");
+> val it = () : unit
+List.map (fn (Name, X) =>
+             {Name = Name,
+              X = X,
+              dec = Int.fmt DEC X,
+              hex = Int.fmt HEX X,
+              oct = Int.fmt OCT X,
+              bin = Int.fmt BIN X,
+              toString = Int.toString X})
+  [("0", 0),
+   ("1", 1),
+   ("~1", ~1),
+   ("42", 42),
+   ("~42", ~42),
+   ("255", 255),
+   ("~255", ~255),
+   ("1024", 1024),
+   ("Int.maxInt", valOf Int.maxInt),
+   ("Int.minInt", valOf Int.minInt)];
+> Name       X           bin                               dec         hex       oct          toString
+> ---------- ----------- --------------------------------- ----------- --------- ------------ -----------
+> 0          0           0                                 0           0         0            0
+> 1          1           1                                 1           1         1            1
+> ~1         -1          ~1                                ~1          ~1        ~1           ~1
+> 42         42          101010                            42          2A        52           42
+> ~42        -42         ~101010                           ~42         ~2A       ~52          ~42
+> 255        255         11111111                          255         FF        377          255
+> ~255       -255        ~11111111                         ~255        ~FF       ~377         ~255
+> 1024       1024        10000000000                       1024        400       2000         1024
+> Int.maxInt 2147483647  1111111111111111111111111111111   2147483647  7FFFFFFF  17777777777  2147483647
+> Int.minInt -2147483648 ~10000000000000000000000000000000 ~2147483648 ~80000000 ~20000000000 ~2147483648
+>
+> val it : {Name:string, X:int, bin:string, dec:string, hex:string, oct:string, toString:string} list
+Sys.unset "output";
+> val it = () : unit
 
 (*) End int.smli

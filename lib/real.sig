@@ -363,14 +363,13 @@ sig
   val fromLarge : IEEEReal.rounding_mode -> LargeReal.real -> real
 *) [@@prototype "toLarge r"]
 
-(*
   (**
-   * converts a `real` into a `string` according to by `spec`;
-   * raises `Size` when `fmt spec` is evaluated if `spec` is an invalid
-   * precision
+   * converts a `real` into a `string` according to `spec`. Raises
+   * `Size` when `fmt spec` is evaluated if `spec` is an invalid
+   * precision (negative for `SCI` or `FIX`, less than 1 for `GEN`).
    *)
-  val fmt : StringCvt.realfmt -> real -> string
-*) [@@prototype "fmt spec r"]
+  val fmt : realfmt -> real -> string
+      [@@method] [@@prototype "fmt spec r"]
 
   (**
    * converts a `real` into a `string`; equivalent to `(fmt

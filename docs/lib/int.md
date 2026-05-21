@@ -51,6 +51,7 @@ val <a id='min' href="#min-impl">min</a> : int * int -> int
 val <a id='max' href="#max-impl">max</a> : int * int -> int
 val <a id='sign' href="#sign-impl">sign</a> : int -> int
 val <a id='sameSign' href="#sameSign-impl">sameSign</a> : int * int -> bool
+val <a id='fmt' href="#fmt-impl">fmt</a> : radix -> int -> string
 val <a id='toString' href="#toString-impl">toString</a> : int -> string
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> int option
 </pre>
@@ -168,6 +169,15 @@ second.
 
 `sameSign (i, j)` (or `i.sameSign j`) returns true if `i` and `j` have the same sign. It
 is equivalent to `(sign i = sign j)`.
+
+<a id="fmt-impl"></a>
+<h3><code>fmt</code></h3>
+
+`fmt radix i` returns a string containing a representation of `i` with
+#"~" used as the sign for negative numbers. Formats the string
+according to `radix`; the hexadecimal digits 10 through 15 are
+represented as #"A" through #"F", respectively. No prefix "0x" is
+generated for the hexadecimal representation.
 
 <a id="toString-impl"></a>
 <h3><code>toString</code></h3>

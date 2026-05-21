@@ -30,7 +30,7 @@ val nan = Real.posInf / Real.posInf;
 
 Real;
 > val it =
->   {/=fn,abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,
+>   {/=fn,abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,fmt=fn,
 >    fromInt=fn,fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,
 >    max=fn,maxFinite=3.4028235E38,min=fn,minNormalPos=1.1754944E~38,
 >    minPos=1.4E~45,negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,
@@ -39,7 +39,8 @@ Real;
 >    unordered=fn}
 >   : {/:real * real -> real, abs:real -> real, ceil:real -> int,
 >      checkFloat:real -> real, compare:real * real -> order,
->      copySign:real * real -> real, floor:real -> int, fromInt:int -> real,
+>      copySign:real * real -> real, floor:real -> int,
+>      fmt:realfmt -> real -> string, fromInt:int -> real,
 >      fromManExp:{exp:int, man:real} -> real, fromString:string -> real option,
 >      isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool,
 >      max:real * real -> real, maxFinite:real, min:real * real -> real,
@@ -925,18 +926,60 @@ Real.fromString "-inf";
 Real.fromString "nan";
 > val it = NONE : real option
 
-List.map (fn x => (x, Real.fromString (Real.toString x)))
-  [1.0, 0.0, ~0.0, ~1.0, 0.5, 2.0,
-   0.0000123456, 0.00000123456, 0.000000123456, ~0.00000123456,
-   Real.minPos, Real.minNormalPos, Real.maxFinite, ~Real.maxFinite,
-   Real.posInf, Real.negInf, nan];
-> val it =
->   [(1,SOME 1),(0,SOME 0),(~0,SOME ~0),(~1,SOME ~1),(0.5,SOME 0.5),(2,SOME 2),
->    (1.23456E~5,SOME 1.23456E~5),(1.23456E~6,SOME 1.23456E~6),
->    (1.23456E~7,SOME 1.23456E~7),(~1.23456E~6,SOME ~1.23456E~6),
->    (1.4E~45,SOME 1.4E~45),(1.1754944E~38,SOME 1.1754944E~38),
->    (3.4028235E38,SOME 3.4028235E38),(~3.4028235E38,SOME ~3.4028235E38),
->    (inf,NONE),(~inf,NONE),(nan,NONE)] : (real * real option) list
+(* Side-by-side comparison of how each format handles a range of values.
+ * To run in SML, prepend `open StringCvt;` (Morel exposes the constructors
+ * at the top level). `Sys.set` is Morel-only; SML users will see the
+ * record list in classic notation. *)
+Sys.set ("output", "tabular");
+> val it = () : unit
+List.map (fn (Name, X) =>
+             {Name = Name,
+              X = X,
+              toString = Real.toString X,
+              sci3 = Real.fmt (SCI (SOME 3)) X,
+              fix3 = Real.fmt (FIX (SOME 3)) X,
+              gen6 = Real.fmt (GEN (SOME 6)) X,
+              exact = Real.fmt EXACT X})
+  [("1.0", 1.0),
+   ("0.0", 0.0),
+   ("~0.0", ~0.0),
+   ("~1.0", ~1.0),
+   ("0.5", 0.5),
+   ("2.0", 2.0),
+   ("1.23456e~5", 0.0000123456),
+   ("1.23456e~6", 0.00000123456),
+   ("1.23456e~7", 0.000000123456),
+   ("~1.23456e~6", ~0.00000123456),
+   ("Real.minPos", Real.minPos),
+   ("Real.minNormalPos", Real.minNormalPos),
+   ("Real.maxFinite", Real.maxFinite),
+   ("~Real.maxFinite", ~Real.maxFinite),
+   ("Real.posInf", Real.posInf),
+   ("Real.negInf", Real.negInf),
+   ("nan", nan)];
+> Name              X             exact          fix3                                         gen6        sci3      toString
+> ----------------- ------------- -------------- -------------------------------------------- ----------- --------- -------------
+> 1.0               1             0.1E1          1.000                                        1           1.000E0   1
+> 0.0               0             0.0            0.000                                        0           0.000E0   0
+> ~0.0              ~0            ~0.0           ~0.000                                       ~0          ~0.000E0  ~0
+> ~1.0              ~1            ~0.1E1         ~1.000                                       ~1          ~1.000E0  ~1
+> 0.5               0.5           0.5            0.500                                        0.5         5.000E~1  0.5
+> 2.0               2             0.2E1          2.000                                        2           2.000E0   2
+> 1.23456e~5        1.23456E~5    0.123456E~4    0.000                                        1.23456E~5  1.235E~5  1.23456E~5
+> 1.23456e~6        1.23456E~6    0.123456E~5    0.000                                        1.23456E~6  1.235E~6  1.23456E~6
+> 1.23456e~7        1.23456E~7    0.123456E~6    0.000                                        1.23456E~7  1.235E~7  1.23456E~7
+> ~1.23456e~6       ~1.23456E~6   ~0.123456E~5   ~0.000                                       ~1.23456E~6 ~1.235E~6 ~1.23456E~6
+> Real.minPos       1.4E~45       0.14E~44       0.000                                        1.4E~45     1.400E~45 1.4E~45
+> Real.minNormalPos 1.1754944E~38 0.11754944E~37 0.000                                        1.17549E~38 1.175E~38 1.1754944E~38
+> Real.maxFinite    3.4028235E38  0.34028235E39  340282350000000000000000000000000000000.000  3.40282E38  3.403E38  3.4028235E38
+> ~Real.maxFinite   ~3.4028235E38 ~0.34028235E39 ~340282350000000000000000000000000000000.000 ~3.40282E38 ~3.403E38 ~3.4028235E38
+> Real.posInf       inf           inf            inf                                          inf         inf       inf
+> Real.negInf       ~inf          ~inf           ~inf                                         ~inf        ~inf      ~inf
+> nan               nan           nan            nan                                          nan         nan       nan
+>
+> val it : {Name:string, X:real, exact:string, fix3:string, gen6:string, sci3:string, toString:string} list
+Sys.unset "output";
+> val it = () : unit
 
 (* "toLarge r", "fromLarge r" convert between values of type real and type
    LargeReal.real. If r is too small or too large to be represented as a real,
@@ -993,7 +1036,105 @@ List.map (fn x => (x, Real.fromString (Real.toString x)))
   The value returned by toString is equivalent to:
     (fmt (StringCvt.GEN NONE) r)
  *)
-(*) TODO Real.fmt
+Real.fmt;
+> val it = fn : realfmt -> real -> string
+
+(* SCI: scientific notation with one digit before the point and n after. *)
+Real.fmt (SCI NONE) 1.23456789;
+> val it = "1.234568E0" : string
+Real.fmt (SCI (SOME 0)) 1.23456789;
+> val it = "1E0" : string
+Real.fmt (SCI (SOME 3)) 1.23456789;
+> val it = "1.235E0" : string
+Real.fmt (SCI (SOME 6)) 1.23456789;
+> val it = "1.234568E0" : string
+Real.fmt (SCI (SOME 3)) ~1.23456789;
+> val it = "~1.235E0" : string
+Real.fmt (SCI (SOME 3)) 0.0;
+> val it = "0.000E0" : string
+
+(* FIX: fixed-point with n digits after the point. *)
+Real.fmt (FIX NONE) 1.23456789;
+> val it = "1.234568" : string
+Real.fmt (FIX (SOME 0)) 1.23456789;
+> val it = "1" : string
+Real.fmt (FIX (SOME 3)) 1.23456789;
+> val it = "1.235" : string
+Real.fmt (FIX (SOME 6)) 1.23456789;
+> val it = "1.234568" : string
+Real.fmt (FIX (SOME 3)) 0.0;
+> val it = "0.000" : string
+Real.fmt (FIX (SOME 3)) ~0.0;
+> val it = "~0.000" : string
+
+(* GEN: shortest of SCI / FIX, with n significant digits. *)
+Real.fmt (GEN (SOME 1)) 1.23456789;
+> val it = "1" : string
+Real.fmt (GEN (SOME 3)) 1.23456789;
+> val it = "1.23" : string
+Real.fmt (GEN (SOME 3)) 1234567.89;
+> val it = "1.23E6" : string
+Real.fmt (GEN (SOME 3)) 0.000123;
+> val it = "1.23E~4" : string
+Real.fmt (GEN (SOME 3)) 0.0123;
+> val it = "0.0123" : string
+Real.fmt (GEN (SOME 3)) 100.0;
+> val it = "100" : string
+Real.fmt (GEN (SOME 3)) 1000.0;
+> val it = "1E3" : string
+
+(* EXACT: 0.<digits>E<exp> form with no trailing zeros. *)
+Real.fmt EXACT 0.0;
+> val it = "0.0" : string
+Real.fmt EXACT 1.0;
+> val it = "0.1E1" : string
+Real.fmt EXACT 1.5;
+> val it = "0.15E1" : string
+Real.fmt EXACT 0.1;
+> val it = "0.1" : string
+
+(* Ties round half toward zero, matching SML/NJ. *)
+Real.fmt (FIX (SOME 0)) 1.5;
+> val it = "1" : string
+Real.fmt (FIX (SOME 0)) 2.5;
+> val it = "2" : string
+Real.fmt (FIX (SOME 0)) 9.5;
+> val it = "9" : string
+
+(* Special values. *)
+Real.fmt (FIX (SOME 3)) (0.0 / 0.0);
+> val it = "nan" : string
+Real.fmt (FIX (SOME 3)) (1.0 / 0.0);
+> val it = "inf" : string
+Real.fmt (FIX (SOME 3)) (~1.0 / 0.0);
+> val it = "~inf" : string
+
+(* Invalid precision raises Size. *)
+Real.fmt (SCI (SOME ~1)) 1.0;
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.29
+Real.fmt (FIX (SOME ~1)) 1.0;
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.29
+Real.fmt (GEN (SOME 0)) 1.0;
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.28
+Real.fmt (GEN (SOME ~1)) 1.0;
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.29
+(* Partial application validates the spec immediately,
+ * before the second argument arrives. *)
+Real.fmt (SCI (SOME ~1));
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.23
+Real.fmt (FIX (SOME ~1));
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.23
+Real.fmt (GEN (SOME 0));
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.22
+Real.fmt EXACT;
+> val it = fn : real -> string
 
 Real.toString;
 > val it = fn : real -> string

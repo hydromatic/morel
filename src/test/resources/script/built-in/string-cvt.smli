@@ -1,0 +1,84 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `StringCvt` structure, defined
+ * by the Standard ML Basis Library.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+StringCvt;
+> val it = {padLeft=fn,padRight=fn}
+>   : {padLeft:char -> int -> string -> string,
+>      padRight:char -> int -> string -> string}
+
+(*) The constructors of `radix` and `realfmt` are at the top level.
+BIN;
+> val it = BIN : radix
+DEC;
+> val it = DEC : radix
+HEX;
+> val it = HEX : radix
+OCT;
+> val it = OCT : radix
+SCI;
+> val it = fn : int option -> realfmt
+FIX;
+> val it = fn : int option -> realfmt
+GEN;
+> val it = fn : int option -> realfmt
+EXACT;
+> val it = EXACT : realfmt
+
+(* "padLeft c i s" returns s padded on the left with c characters to length
+   at least i; if s is already at least i characters long, returns s unchanged. *)
+StringCvt.padLeft;
+> val it = fn : char -> int -> string -> string
+StringCvt.padLeft #" " 5 "ab";
+> val it = "   ab" : string
+StringCvt.padLeft #"0" 4 "42";
+> val it = "0042" : string
+StringCvt.padLeft #" " 3 "abcdef";
+> val it = "abcdef" : string
+StringCvt.padLeft #"x" 3 "ab";
+> val it = "xab" : string
+StringCvt.padLeft #" " 0 "ab";
+> val it = "ab" : string
+StringCvt.padLeft #"*" 5 "";
+> val it = "*****" : string
+
+(* "padRight c i s" returns s padded on the right with c characters to length
+   at least i; if s is already at least i characters long, returns s unchanged. *)
+StringCvt.padRight;
+> val it = fn : char -> int -> string -> string
+StringCvt.padRight #" " 5 "ab";
+> val it = "ab   " : string
+StringCvt.padRight #"." 5 "ab";
+> val it = "ab..." : string
+StringCvt.padRight #" " 3 "abcdef";
+> val it = "abcdef" : string
+StringCvt.padRight #" " 0 "ab";
+> val it = "ab" : string
+StringCvt.padRight #"*" 5 "";
+> val it = "*****" : string
+
+(*) End string-cvt.smli

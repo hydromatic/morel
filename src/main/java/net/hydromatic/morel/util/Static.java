@@ -502,6 +502,18 @@ public class Static {
 
     return result.toString();
   }
+
+  /**
+   * Appends copies of {@code c} to {@code sb} until its length reaches {@code
+   * length}. If {@code sb} is already at least that long, it is unchanged.
+   * Returns {@code sb} for chaining.
+   */
+  public static StringBuilder padRightTo(StringBuilder sb, int length, char c) {
+    while (sb.length() < length) {
+      sb.append(c);
+    }
+    return sb;
+  }
 }
 
 // End Static.java

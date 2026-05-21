@@ -149,7 +149,6 @@ sig
    *)
   val sameSign : int * int -> bool [@@method] [@@prototype "sameSign (i, j)"]
 
-(*
   (**
    * returns a string containing a representation of `i` with
    * #"~" used as the sign for negative numbers. Formats the string
@@ -157,8 +156,7 @@ sig
    * represented as #"A" through #"F", respectively. No prefix "0x" is
    * generated for the hexadecimal representation.
    *)
-  val fmt      : StringCvt.radix -> int -> string
-*) [@@prototype "fmt radix i"]
+  val fmt      : radix -> int -> string [@@prototype "fmt radix i"]
   (**
    * converts a `int` into a `string`; equivalent to `(fmt
    * StringCvt.DEC r)`.

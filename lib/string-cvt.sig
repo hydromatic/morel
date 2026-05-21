@@ -26,13 +26,11 @@
 signature STRING_CVT =
 sig
 
-(*
   (**
    * specifies the numeric base: binary (2), octal (8), decimal (10), or
    * hexadecimal (16).
    *)
   datatype radix = BIN | OCT | DEC | HEX
-*)
 
 (*
   (**
@@ -43,10 +41,24 @@ sig
   type ('a, 'b) reader = 'b -> ('a * 'b) option
 *)
 
-(*
   (** specifies the format for converting real numbers to strings. *)
   datatype realfmt = SCI of int option | FIX of int option | GEN of int option | EXACT
-*)
+
+  (**
+   * `padLeft c i s` returns `s` padded on the left with `c` characters so
+   * that the result has length at least `i`. If `s` is already at least
+   * `i` characters long, it is returned unchanged.
+   *)
+  val padLeft  : char -> int -> string -> string
+      [@@prototype "padLeft c i s"]
+
+  (**
+   * `padRight c i s` returns `s` padded on the right with `c` characters
+   * so that the result has length at least `i`. If `s` is already at
+   * least `i` characters long, it is returned unchanged.
+   *)
+  val padRight : char -> int -> string -> string
+      [@@prototype "padRight c i s"]
 end
 [@@description "String conversion utilities and types."]
 
