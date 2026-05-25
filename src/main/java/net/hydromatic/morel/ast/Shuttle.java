@@ -222,6 +222,22 @@ public class Shuttle {
     return ast.list(list.pos, visitList(list.args));
   }
 
+  protected Ast.RangeList visit(Ast.RangeList list) {
+    final List<Ast.RangeListItem> newItems = new ArrayList<>(list.items.size());
+    boolean changed = false;
+    for (Ast.RangeListItem item : list.items) {
+      Ast.Exp newLo = item.lo == null ? null : item.lo.accept(this);
+      Ast.Exp newHi = item.hi == null ? null : item.hi.accept(this);
+      if (newLo != item.lo || newHi != item.hi) {
+        changed = true;
+        newItems.add(new Ast.RangeListItem(item.kind, newLo, newHi));
+      } else {
+        newItems.add(item);
+      }
+    }
+    return changed ? ast.rangeList(list.pos, newItems) : list;
+  }
+
   protected Ast.Exp visit(Ast.Record record) {
     return ast.record(
         record.pos,

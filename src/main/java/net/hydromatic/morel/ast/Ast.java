@@ -2245,6 +2245,126 @@ public class Ast {
   }
 
   /**
+   * List expression that contains one or more range items, e.g. {@code [3 .. 7,
+   * 10]}. Desugared to {@code Range.flatten [...]} during type resolution.
+   */
+  public static class RangeList extends Exp {
+    public final List<RangeListItem> items;
+
+    RangeList(Pos pos, Iterable<? extends RangeListItem> items) {
+      super(pos, Op.RANGE_LIST);
+      this.items = ImmutableList.copyOf(items);
+    }
+
+    @Override
+    public void forEachArg(ObjIntConsumer<Exp> action) {
+      int i = 0;
+      for (RangeListItem item : items) {
+        if (item.lo != null) {
+          action.accept(item.lo, i++);
+        }
+        if (item.hi != null) {
+          action.accept(item.hi, i++);
+        }
+      }
+    }
+
+    public RangeList accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      w.append("[");
+      for (int i = 0; i < items.size(); i++) {
+        if (i > 0) {
+          w.append(", ");
+        }
+        items.get(i).unparse(w);
+      }
+      return w.append("]");
+    }
+  }
+
+  /**
+   * One item in a {@link RangeList}: either a point (a plain expression) or a
+   * range with one of the nine non-point {@link Kind} forms.
+   */
+  public static class RangeListItem {
+    public final Kind kind;
+    /**
+     * Lower bound; null for {@link Kind#ALL}, {@link Kind#AT_MOST}, {@link
+     * Kind#LESS_THAN}.
+     */
+    public final @Nullable Exp lo;
+    /**
+     * Upper bound; null for {@link Kind#ALL}, {@link Kind#AT_LEAST}, {@link
+     * Kind#GREATER_THAN}, {@link Kind#POINT}.
+     */
+    public final @Nullable Exp hi;
+
+    public RangeListItem(Kind kind, @Nullable Exp lo, @Nullable Exp hi) {
+      this.kind = kind;
+      this.lo = lo;
+      this.hi = hi;
+    }
+
+    void unparse(AstWriter w) {
+      switch (kind) {
+        case POINT:
+          w.append(lo, 0, 0);
+          break;
+        case CLOSED:
+          w.append(lo, 0, 0).append(" .. ").append(hi, 0, 0);
+          break;
+        case CLOSED_OPEN:
+          w.append(lo, 0, 0).append(" ..^ ").append(hi, 0, 0);
+          break;
+        case OPEN_CLOSED:
+          w.append(lo, 0, 0).append(" ^.. ").append(hi, 0, 0);
+          break;
+        case OPEN:
+          w.append(lo, 0, 0).append(" ^..^ ").append(hi, 0, 0);
+          break;
+        case AT_LEAST:
+          w.append(lo, 0, 0).append(" ..");
+          break;
+        case GREATER_THAN:
+          w.append(lo, 0, 0).append(" ^..");
+          break;
+        case AT_MOST:
+          w.append(".. ").append(hi, 0, 0);
+          break;
+        case LESS_THAN:
+          w.append("..^ ").append(hi, 0, 0);
+          break;
+        case ALL:
+          w.append("..");
+          break;
+      }
+    }
+
+    /** Kind of a {@link RangeListItem}, one per {@code Range} constructor. */
+    public enum Kind {
+      POINT,
+      CLOSED,
+      CLOSED_OPEN,
+      OPEN_CLOSED,
+      OPEN,
+      AT_LEAST,
+      GREATER_THAN,
+      AT_MOST,
+      LESS_THAN,
+      ALL
+    }
+  }
+
+  /**
    * Record.
    *
    * @see AstBuilder#isSingletonRecord(Exp)

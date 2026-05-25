@@ -92,6 +92,7 @@ public enum Op {
   // value constructors
   TUPLE(Assoc.ATOM),
   LIST(Assoc.ATOM),
+  RANGE_LIST(Assoc.ATOM),
   RECORD(Assoc.ATOM),
   FN(" -> ", 6, Assoc.RIGHT),
 

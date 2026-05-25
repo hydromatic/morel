@@ -22,14 +22,15 @@
 (* Range structure *)
 Range;
 > val it =
->   {complement=fn,contains=fn,continuousSetOf=fn,discreteSetOf=fn,ranges=fn,
->    toBag=fn,toList=fn}
+>   {complement=fn,contains=fn,continuousSetOf=fn,discreteSetOf=fn,flatten=fn,
+>    ranges=fn,toBag=fn,toList=fn}
 >   : {complement:'a continuous_set -> 'a continuous_set,
 >      contains:'b range -> 'b -> bool,
 >      continuousSetOf:'c range list -> 'c continuous_set,
 >      discreteSetOf:'d range list -> 'd discrete_set,
->      ranges:'e continuous_set -> 'e range list, toBag:'f discrete_set -> 'f bag,
->      toList:'g discrete_set -> 'g list}
+>      flatten:'e range list -> 'e list,
+>      ranges:'f continuous_set -> 'f range list, toBag:'g discrete_set -> 'g bag,
+>      toList:'h discrete_set -> 'h list}
 
 (*) Constructors.
 POINT 5 : int range;
@@ -209,15 +210,18 @@ Range.discreteSetOf [CLOSED (1, 3), POINT 0, CLOSED (7, 8), POINT 10, CLOSED (4,
 
 (*) discreteSetOf requires a discrete element type; string is not discrete.
 Range.discreteSetOf [CLOSED ("a", "z")];
-> java.lang.IllegalArgumentException: not a discrete type: string
+> 0.0-0.0 Error: not a discrete type: string
+>   raised at: 0.0-0.0
 
 (*) real is not discrete.
 Range.discreteSetOf [CLOSED (1.0, 3.0)];
-> java.lang.IllegalArgumentException: not a discrete type: real
+> 0.0-0.0 Error: not a discrete type: real
+>   raised at: 0.0-0.0
 
 (*) A tuple containing a non-discrete component is not discrete.
 Range.discreteSetOf [CLOSED ((false, "a"), (true, "z"))];
-> java.lang.IllegalArgumentException: not a discrete type: string
+> 0.0-0.0 Error: not a discrete type: string
+>   raised at: 0.0-0.0
 
 (*) contains on continuous_set (postfix syntax).
 val cs = Range.continuousSetOf [CLOSED (1, 3), CLOSED (7, 9)];
@@ -395,5 +399,194 @@ fun f (INL LESS) = 1 | f (INR true) = 1 | f _ = 0;
 
 List.map f (eitherSet.toList ());
 > val it = [1,0,0,0,1] : int list
+
+(* Range.flatten -------------------------------------------------- *)
+
+(*) flatten concatenates the ranges, preserving order and duplicates.
+Range.flatten [CLOSED (0, 3), POINT 10, CLOSED (2, 5)];
+> val it = [0,1,2,3,10,2,3,4,5] : int list
+
+(*) flatten on a single CLOSED range.
+Range.flatten [CLOSED (1, 5)];
+> val it = [1,2,3,4,5] : int list
+
+(*) flatten preserves duplicate POINTs.
+Range.flatten [POINT 1, POINT 2, POINT 1, POINT 3];
+> val it = [1,2,1,3] : int list
+
+(*) flatten on an empty list.
+Range.flatten ([] : int range list);
+> val it = [] : int list
+
+(* Range list syntax ---------------------------------------------- *)
+
+(*) Plain list literal: no ranges, unchanged.
+[1, 2, 3];
+> val it = [1,2,3] : int list
+
+(*) CLOSED.
+[1 .. 5];
+> val it = [1,2,3,4,5] : int list
+
+(*) CLOSED_OPEN.
+[1 ..^ 5];
+> val it = [1,2,3,4] : int list
+
+(*) OPEN_CLOSED.
+[1 ^.. 5];
+> val it = [2,3,4,5] : int list
+
+(*) OPEN.
+[1 ^..^ 5];
+> val it = [2,3,4] : int list
+
+(*) Singleton range = POINT becomes ordinary list literal.
+[5];
+> val it = [5] : int list
+
+(*) Mixed POINTs and ranges.
+[1 .. 5, 10];
+> val it = [1,2,3,4,5,10] : int list
+
+(*) Multiple ranges; duplicates are preserved.
+[0..3, 10, 2..5, 10];
+> val it = [0,1,2,3,10,2,3,4,5,10] : int list
+
+(*) char ranges.
+[#"a" .. #"e"];
+> val it = [#"a",#"b",#"c",#"d",#"e"] : char list
+
+(*) bool range.
+[false .. true];
+> val it = [false,true] : bool list
+
+(*) Bag variant: `bag` is a regular function, so the range syntax works
+(*) inside its argument.
+bag [0 .. 5, 10];
+> val it = [0,1,2,3,4,5,10] : int bag
+
+(* Lexer disambiguation between `^` (string concat) and the new tokens. *)
+
+(*) Plain `^` is string concatenation.
+"a" ^ "b";
+> val it = "ab" : string
+
+(*) Plain comparison in a where clause.
+from x in [1, 2, 3] where x < 2;
+> val it = [1] : int list
+
+(*) `^..^` between values: OPEN.
+[1 ^..^ 5];
+> val it = [2,3,4] : int list
+
+(*) Whitespace insensitivity.
+[1^..^5];
+> val it = [2,3,4] : int list
+
+[1^..5];
+> val it = [2,3,4,5] : int list
+
+[1..^5];
+> val it = [1,2,3,4] : int list
+
+(*) Comparison expressions as range operands (parens required;
+(*) bool ranges enumerate `false, true`).
+[(1 < 2) .. (3 < 4)];
+> val it = [true] : bool list
+
+[(1 < 2) .. (3 > 4)];
+> val it = [] : bool list
+
+(*) List of bool comparisons: no `..` involved, plain list literal.
+[1 < 2, 3 < 4, 5 < 6];
+> val it = [true,true,true] : bool list
+
+(* Infinite forms (runtime error) --------------------------------- *)
+
+(*) AT_LEAST is unbounded above; enumeration raises Size.
+[5 ..] : int list;
+> uncaught exception Size
+>   raised at: 0.0-0.0
+
+(*) Similar for GREATER_THAN.
+[5 ^..] : int list;
+> uncaught exception Size
+>   raised at: 0.0-0.0
+
+(* Membership in infinite range-lists ----------------------------- *)
+
+(*) Unbounded discrete range: AT_LEAST.
+5 elem [0..];
+> val it = true : bool
+
+~3 elem [0..];
+> val it = false : bool
+
+5 notelem [0..];
+> val it = false : bool
+
+~3 notelem [0..];
+> val it = true : bool
+
+(*) Unbounded discrete range: LESS_THAN.
+0 elem [..^ 5];
+> val it = true : bool
+
+10 elem [..^ 5];
+> val it = false : bool
+
+(*) ALL: any value of the element type belongs.
+#"c" elem [..];
+> val it = true : bool
+
+(*) Continuous range over real.
+5.5 elem [0.0 .. 10.0];
+> val it = true : bool
+
+15.0 elem [0.0 .. 10.0];
+> val it = false : bool
+
+(*) Endpoint inclusion follows the operator.
+5 elem [0 ..^ 5];
+> val it = false : bool
+
+5 elem [0 ^.. 5];
+> val it = true : bool
+
+(*) Mixed bounded + unbounded items.
+5 elem [0..3, 10..];
+> val it = false : bool
+
+12 elem [0..3, 10..];
+> val it = true : bool
+
+(*) String range (continuous-style; non-POINT ranges allowed for elem).
+"b" elem ["a" ..^ "z"];
+> val it = true : bool
+
+(* Non-discrete element type -------------------------------------- *)
+
+(*) POINT items over real are finite.
+[1.0];
+> val it = [1] : real list
+
+[1.0, 2.5, 1.0];
+> val it = [1,2.5,1] : real list
+
+Range.flatten [POINT 1.0, POINT 3.0, POINT 1.0];
+> val it = [1,3,1] : real list
+
+(*) Non-POINT ranges over real are infinite.
+[0.0 .. 1.0];
+> uncaught exception Size
+>   raised at: 0.0-0.0
+
+(*) Same for string.
+["a"];
+> val it = ["a"] : string list
+
+["a" .. "z"];
+> uncaught exception Size
+>   raised at: 0.0-0.0
 
 (*) End range.smli

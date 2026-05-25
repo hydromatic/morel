@@ -2875,6 +2875,18 @@ public enum BuiltIn {
       ts -> ts.forallType(1, h -> ts.fnType(h.discreteSet(0), h.list(0)))),
 
   /**
+   * Function "Range.flatten", of type "&alpha; range list &rarr; &alpha; list".
+   *
+   * <p>Enumerates the values in the given list of ranges, preserving the order
+   * of first occurrence and dropping duplicates.
+   */
+  RANGE_FLATTEN(
+      "Range",
+      "flatten",
+      ts ->
+          ts.forallType(1, h -> ts.fnType(ts.listType(h.range(0)), h.list(0)))),
+
+  /**
    * Function "Real.abs", of type "real &rarr; real".
    *
    * <p>Returns the absolute value of {@code r}.

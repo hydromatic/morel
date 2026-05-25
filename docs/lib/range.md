@@ -58,6 +58,7 @@ val <a id='toBag' href="#toBag-impl">toBag</a> : 'a discrete_set -> 'a bag
 val <a id='toList' href="#toList-impl">toList</a> : 'a discrete_set -> 'a list
 val <a id='continuousSetOf' href="#continuousSetOf-impl">continuousSetOf</a> : 'a range list -> 'a continuous_set
 val <a id='discreteSetOf' href="#discreteSetOf-impl">discreteSetOf</a> : 'a range list -> 'a discrete_set
+val <a id='flatten' href="#flatten-impl">flatten</a> : 'a range list -> 'a list
 val <a id='ranges' href="#ranges-impl">ranges</a> : 'a discrete_set -> 'a range list
 val <a id='complement' href="#complement-impl">complement</a> : 'a discrete_set -> 'a discrete_set
 </pre>
@@ -150,6 +151,27 @@ The ordering and discreteness are implicit, derived from the element type.
 val evens = DISCRETE_SET [CLOSED (0,2),CLOSED (4,6),CLOSED (8,10)] : int discrete_set
 - evens.toList ();
 val it = [0,1,2,4,5,6,8,9,10] : int list
+```
+
+<a id="flatten-impl"></a>
+<h3><code>flatten</code></h3>
+
+`flatten ranges` concatenates the values in `ranges`. Within each range, values
+appear in ascending order; ranges are concatenated in the order
+they appear in the input, and duplicate values are preserved. To
+eliminate duplicates, apply `distinct` to the result.
+
+The element type may be any ordered type, but a range over a
+non-discrete type (e.g. `real`) is infinite unless it is a
+`POINT`, and unbounded ranges over a discrete type (e.g.
+`AT_LEAST 5 : int range`) are also infinite. Raises `Size` at
+runtime if any range is infinite.
+
+```
+- Range.flatten [CLOSED (0, 3), POINT 10, CLOSED (2, 5)];
+val it = [0,1,2,3,10,2,3,4,5] : int list
+- Range.flatten [POINT 1.0, POINT 3.0, POINT 1.0];
+val it = [1.0,3.0,1.0] : real list
 ```
 
 <a id="ranges-impl"></a>

@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.eval.Discrete;
 import net.hydromatic.morel.eval.Discretes;
 import net.hydromatic.morel.eval.Unit;
@@ -219,14 +220,14 @@ class DiscreteTest {
   @Test
   void testRealNotDiscrete() {
     assertThrows(
-        IllegalArgumentException.class,
+        CompileException.class,
         () -> Discretes.discreteFor(typeSystem, PrimitiveType.REAL));
   }
 
   @Test
   void testStringNotDiscrete() {
     assertThrows(
-        IllegalArgumentException.class,
+        CompileException.class,
         () -> Discretes.discreteFor(typeSystem, PrimitiveType.STRING));
   }
 }

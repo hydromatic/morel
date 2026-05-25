@@ -464,6 +464,19 @@ from i
 >
 > val it : {count:int, odd:bool} list
 
+(*) Equivalent to previous, using range-list syntax.
+from i in [0..100]
+  where i mod 6 <> 0
+  yield {i, odd = i mod 2 = 1}
+  group odd compute count over ()
+  order odd;
+> count odd
+> ----- -----
+> 34    false
+> 50    true
+>
+> val it : {count:int, odd:bool} list
+
 from i
   where i >= 0 andalso i <= 100
   yield i mod 3
@@ -498,12 +511,19 @@ exists i
   where i >= 0 andalso i <= 100;
 > val it = true : bool
 
+exists i in [0..100];
+> val it = true : bool
+
 exists i
   where i >= 30 andalso i <= 40 andalso i mod 17 = 0;
 > val it = true : bool
 
 exists i
   where i >= 40 andalso i <= 50 andalso i mod 17 = 0;
+> val it = false : bool
+
+exists i in [40..50]
+  where i mod 17 = 0;
 > val it = false : bool
 
 forall i
@@ -513,6 +533,10 @@ forall i
 
 forall i
   where i >= 40 andalso i < 50
+  require i + 100 < 155;
+> val it = true : bool
+
+forall i in [40..^50]
   require i + 100 < 155;
 > val it = true : bool
 

@@ -27,14 +27,15 @@ Sys.set ("stringDepth", ~1);
 
 Range;
 > val it =
->   {complement=fn,contains=fn,continuousSetOf=fn,discreteSetOf=fn,ranges=fn,
->    toBag=fn,toList=fn}
+>   {complement=fn,contains=fn,continuousSetOf=fn,discreteSetOf=fn,flatten=fn,
+>    ranges=fn,toBag=fn,toList=fn}
 >   : {complement:'a continuous_set -> 'a continuous_set,
 >      contains:'b range -> 'b -> bool,
 >      continuousSetOf:'c range list -> 'c continuous_set,
 >      discreteSetOf:'d range list -> 'd discrete_set,
->      ranges:'e continuous_set -> 'e range list,
->      toBag:'f discrete_set -> 'f bag, toList:'g discrete_set -> 'g list}
+>      flatten:'e range list -> 'e list,
+>      ranges:'f continuous_set -> 'f range list,
+>      toBag:'g discrete_set -> 'g bag, toList:'h discrete_set -> 'h list}
 
 CLOSED (3, 7) : int range;
 > val it = CLOSED (3,7) : int range
@@ -72,5 +73,10 @@ Range.discreteSetOf [CLOSED (5, 10), CLOSED (1, 3), CLOSED (3, 6)];
 (*) Range.toBag enumerates values as a bag.
 (Range.discreteSetOf [CLOSED (1, 3)]).toBag ();
 > val it = [1,2,3] : int bag
+
+(*) Range.flatten concatenates ranges in input order, preserving
+(*) duplicates.
+Range.flatten [CLOSED (0, 3), POINT 10, CLOSED (2, 5)];
+> val it = [0,1,2,3,10,2,3,4,5] : int list
 
 (*) End range.smli

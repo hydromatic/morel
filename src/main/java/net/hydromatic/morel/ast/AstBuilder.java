@@ -323,6 +323,16 @@ public enum AstBuilder {
     return new Ast.ListExp(pos, list);
   }
 
+  public Ast.RangeList rangeList(
+      Pos pos, Iterable<? extends Ast.RangeListItem> items) {
+    return new Ast.RangeList(pos, items);
+  }
+
+  public Ast.RangeListItem rangeListItem(
+      Ast.RangeListItem.Kind kind, Ast.@Nullable Exp lo, Ast.@Nullable Exp hi) {
+    return new Ast.RangeListItem(kind, lo, hi);
+  }
+
   public Ast.Record record(
       Pos pos, Ast.@Nullable Exp with, PairList<Ast.Id, Ast.Exp> args) {
     return new Ast.Record(pos, with, ImmutablePairList.copyOf(args));

@@ -71,6 +71,7 @@ import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.Compiles;
 import net.hydromatic.morel.compile.Environment;
 import net.hydromatic.morel.compile.Macro;
@@ -2961,6 +2962,10 @@ public abstract class Codes {
       new DiscreteSetEnumerate(
           BuiltIn.RANGE_DISCRETE_SET_TO_LIST, Discretes.dummy());
 
+  /** @see BuiltIn#RANGE_FLATTEN */
+  private static final Applicable RANGE_FLATTEN =
+      new RangeFlatten(Discretes.dummy());
+
   /** @see BuiltIn#REAL_ABS */
   private static final Applicable REAL_ABS =
       new BaseApplicable1<Float, Float>(BuiltIn.REAL_ABS) {
@@ -5706,6 +5711,7 @@ public abstract class Codes {
           .put(BuiltIn.RANGE_DISCRETE_SET_RANGES, RANGE_DISCRETE_SET_RANGES)
           .put(BuiltIn.RANGE_DISCRETE_SET_TO_BAG, RANGE_DISCRETE_SET_TO_BAG)
           .put(BuiltIn.RANGE_DISCRETE_SET_TO_LIST, RANGE_DISCRETE_SET_TO_LIST)
+          .put(BuiltIn.RANGE_FLATTEN, RANGE_FLATTEN)
           .put(BuiltIn.RELATIONAL_COMPARE, RELATIONAL_COMPARE)
           .put(BuiltIn.RELATIONAL_COUNT, RELATIONAL_COUNT)
           .put(BuiltIn.RELATIONAL_EMPTY, RELATIONAL_EMPTY)
@@ -7496,6 +7502,58 @@ public abstract class Codes {
       final ImmutableList.Builder<Object> result = ImmutableList.builder();
       ranges.forEach(
           (lo, hi) -> Bound.enumerate(discrete, lo, hi, result::add));
+      return result.build();
+    }
+  }
+
+  /** Implementation of {@link BuiltIn#RANGE_FLATTEN}. */
+  @SuppressWarnings("rawtypes")
+  private static class RangeFlatten extends BaseApplicable1<List, List>
+      implements Typed {
+    /**
+     * Discrete instance for the element type, or null if not discrete (e.g.
+     * {@code real}). When null, only POINT items are finite at runtime.
+     */
+    private final @Nullable Discrete<Object> discrete;
+
+    RangeFlatten(@Nullable Discrete<Object> discrete) {
+      super(BuiltIn.RANGE_FLATTEN);
+      this.discrete = discrete;
+    }
+
+    @Override
+    public Applicable withType(TypeSystem typeSystem, Type type) {
+      Type elemType = rangeElementType(type);
+      Discrete<Object> d;
+      try {
+        d = Discretes.discreteFor(typeSystem, elemType);
+      } catch (CompileException ex) {
+        // Element type is not discrete (e.g. real). POINT items are still
+        // finite; non-POINT items raise Size at runtime.
+        d = null;
+      }
+      return new RangeFlatten(d);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public List apply(List ranges) {
+      final ImmutableList.Builder<Object> result = ImmutableList.builder();
+      for (Object r : ranges) {
+        final List range = (List) r;
+        if (discrete == null) {
+          // Only POINT items are finite over a non-discrete element type.
+          if (!BuiltIn.Constructor.RANGE_POINT.constructor.equals(
+              range.get(0))) {
+            throw new MorelRuntimeException(BuiltInExn.SIZE, Pos.ZERO);
+          }
+          result.add(Bound.lowerBound(range).value);
+        } else {
+          final Bound lo = Bound.lowerBound(range);
+          final Bound hi = Bound.upperBound(range);
+          Bound.enumerate(discrete, lo, hi, result::add);
+        }
+      }
       return result.build();
     }
   }

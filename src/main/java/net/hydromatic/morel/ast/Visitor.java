@@ -146,6 +146,18 @@ public class Visitor {
     list.args.forEach(this::accept);
   }
 
+  protected void visit(Ast.RangeList list) {
+    list.items.forEach(
+        item -> {
+          if (item.lo != null) {
+            accept(item.lo);
+          }
+          if (item.hi != null) {
+            accept(item.hi);
+          }
+        });
+  }
+
   protected void visit(Ast.Record record) {
     record.args.rightList().forEach(this::accept);
   }

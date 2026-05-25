@@ -26,7 +26,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.Keys;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -51,7 +53,7 @@ public class Discretes {
 
   /**
    * Returns a {@link Discrete} domain for the given type, or throws {@link
-   * IllegalArgumentException} if the type is not discrete.
+   * CompileException} if the type is not discrete.
    */
   @SuppressWarnings("unchecked")
   public static Discrete<Object> discreteFor(TypeSystem typeSystem, Type type) {
@@ -66,7 +68,8 @@ public class Discretes {
         case UNIT:
           return (Discrete<Object>) (Discrete<?>) UNIT;
         default:
-          throw new IllegalArgumentException("not a discrete type: " + type);
+          throw new CompileException(
+              "not a discrete type: " + type, false, Pos.ZERO);
       }
     }
     if (type instanceof RecordLikeType) {
@@ -75,7 +78,7 @@ public class Discretes {
     if (type instanceof DataType) {
       return dataTypeDiscrete(typeSystem, (DataType) type);
     }
-    throw new IllegalArgumentException("not a discrete type: " + type);
+    throw new CompileException("not a discrete type: " + type, false, Pos.ZERO);
   }
 
   /** Creates a {@link Discrete} for a tuple or record type. */
@@ -168,8 +171,9 @@ public class Discretes {
         try {
           ctorDiscretes.add(
               Optional.of(discreteFor(typeSystem, ctorTypes.get(e.getKey()))));
-        } catch (IllegalArgumentException ex) {
-          throw new IllegalArgumentException("not a discrete type: " + dt);
+        } catch (CompileException ex) {
+          throw new CompileException(
+              "not a discrete type: " + dt, false, Pos.ZERO);
         }
       }
     }
@@ -179,7 +183,7 @@ public class Discretes {
       return new SumDiscrete(cmp, names, ctorDiscretes.build());
     }
 
-    throw new IllegalArgumentException("not a discrete type: " + dt);
+    throw new CompileException("not a discrete type: " + dt, false, Pos.ZERO);
   }
 
   private static final Comparator<Object> NATURAL = Comparators::compare;

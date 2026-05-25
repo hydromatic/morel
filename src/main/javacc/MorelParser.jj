@@ -1321,17 +1321,32 @@ Exp atom() :
 |
   <LBRACKET> {
     span = Span.of(pos());
-    final List<Exp> list = new ArrayList<>();
-    Exp e2;
+    final List<RangeListItem> items = new ArrayList<>();
   }
   [
-    e2 = expression() { list.add(e2); }
+    rangeListItem(items)
     (
-      <COMMA> e2 = expression() { list.add(e2); }
+      <COMMA> rangeListItem(items)
     )*
   ]
   <RBRACKET> {
-    return ast.list(span.end(this), list);
+    // If every item is a POINT, build an ordinary list literal; otherwise
+    // build a RangeList that desugars to Range.flatten in TypeResolver.
+    boolean anyRange = false;
+    for (RangeListItem it : items) {
+      if (it.kind != RangeListItem.Kind.POINT) {
+        anyRange = true;
+        break;
+      }
+    }
+    if (anyRange) {
+      return ast.rangeList(span.end(this), items);
+    }
+    final List<Exp> exps = new ArrayList<>(items.size());
+    for (RangeListItem it : items) {
+      exps.add(it.lo);
+    }
+    return ast.list(span.end(this), exps);
   }
 |
   <LBRACE> {
@@ -1398,6 +1413,83 @@ void recordExp(PairList<Id, Exp> nameExps) :
   exp = expression() {
     nameExps.add(ast.missingId(), exp);
   }
+}
+
+/**
+ * Parses one item in a bracketed list literal: either a plain expression
+ * (POINT), or a range form involving "..", "..^", "^..", or "^..^". A
+ * caret marks an excluded endpoint.
+ *
+ * <p>Forms recognised:
+ * <ul>
+ *   <li>{@code e}           &rarr; {@code POINT e}
+ *   <li>{@code e .. e'}     &rarr; {@code CLOSED (e, e')}
+ *   <li>{@code e ..^ e'}    &rarr; {@code CLOSED_OPEN (e, e')}
+ *   <li>{@code e ^.. e'}    &rarr; {@code OPEN_CLOSED (e, e')}
+ *   <li>{@code e ^..^ e'}   &rarr; {@code OPEN (e, e')}
+ *   <li>{@code e ..}        &rarr; {@code AT_LEAST e}
+ *   <li>{@code e ^..}       &rarr; {@code GREATER_THAN e}
+ *   <li>{@code .. e}        &rarr; {@code AT_MOST e}
+ *   <li>{@code ..^ e}       &rarr; {@code LESS_THAN e}
+ *   <li>{@code ..}          &rarr; {@code ALL}
+ * </ul>
+ */
+void rangeListItem(List<RangeListItem> items) :
+{
+  Exp e;
+  Exp e2;
+}
+{
+  // Leading-".." forms: ALL, AT_MOST, LESS_THAN.
+  <DOT_DOT>
+  (
+    LOOKAHEAD({ getToken(1).kind == COMMA || getToken(1).kind == RBRACKET })
+    { items.add(ast.rangeListItem(RangeListItem.Kind.ALL, null, null)); }
+  |
+    e = expression() {
+      items.add(ast.rangeListItem(RangeListItem.Kind.AT_MOST, null, e));
+    }
+  )
+|
+  <DOT_DOT_CARET> e = expression() {
+    items.add(ast.rangeListItem(RangeListItem.Kind.LESS_THAN, null, e));
+  }
+|
+  // Expression-first forms: POINT, CLOSED, CLOSED_OPEN, OPEN_CLOSED, OPEN,
+  // AT_LEAST, GREATER_THAN.
+  e = expression()
+  (
+    <DOT_DOT>
+    (
+      LOOKAHEAD({ getToken(1).kind == COMMA || getToken(1).kind == RBRACKET })
+      { items.add(ast.rangeListItem(RangeListItem.Kind.AT_LEAST, e, null)); }
+    |
+      e2 = expression() {
+        items.add(ast.rangeListItem(RangeListItem.Kind.CLOSED, e, e2));
+      }
+    )
+  |
+    <DOT_DOT_CARET> e2 = expression() {
+      items.add(ast.rangeListItem(RangeListItem.Kind.CLOSED_OPEN, e, e2));
+    }
+  |
+    <CARET_DOT_DOT>
+    (
+      LOOKAHEAD({ getToken(1).kind == COMMA || getToken(1).kind == RBRACKET })
+      { items.add(
+          ast.rangeListItem(RangeListItem.Kind.GREATER_THAN, e, null)); }
+    |
+      e2 = expression() {
+        items.add(ast.rangeListItem(RangeListItem.Kind.OPEN_CLOSED, e, e2));
+      }
+    )
+  |
+    <CARET_DOT_DOT_CARET> e2 = expression() {
+      items.add(ast.rangeListItem(RangeListItem.Kind.OPEN, e, e2));
+    }
+  |
+    { items.add(ast.rangeListItem(RangeListItem.Kind.POINT, e, null)); }
+  )
 }
 
 /** Parses a value declaration, and adds it to a list. */
@@ -2362,6 +2454,10 @@ AstNode statementEof() :
     | < CONS: "::" >
     | < AT: "@" >
     | < ELLIPSIS: "..." >
+    | < DOT_DOT: ".." >
+    | < DOT_DOT_CARET: "..^" >
+    | < CARET_DOT_DOT: "^.." >
+    | < CARET_DOT_DOT_CARET: "^..^" >
     | < QUOTE: "'" >
     | < DOUBLE_QUOTE: "\"" >
 }
