@@ -4740,6 +4740,14 @@ public enum BuiltIn {
         return OP_GE;
       case OP_LT:
         return OP_GT;
+      case CHAR_OP_GE:
+        return CHAR_OP_LE;
+      case CHAR_OP_GT:
+        return CHAR_OP_LT;
+      case CHAR_OP_LE:
+        return CHAR_OP_GE;
+      case CHAR_OP_LT:
+        return CHAR_OP_GT;
       default:
         throw new AssertionError("unexpected: " + this);
     }

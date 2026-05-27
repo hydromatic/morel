@@ -381,7 +381,7 @@ from i where i > 0 andalso i < 10 orelse i > 12 andalso i <= 15;
 > val it = [1,2,3,4,5,6,7,8,9,13,14,15] : int bag
 Sys.planEx "1";
 > val it =
->   "val it = from i in #toBag Range (#discreteSetOf Range ([OPEN (0, 10), OPEN_CLOSED (12, 15)]))"
+>   "val it = from i in #fromList Bag (#flatten Range ([OPEN (0, 10), OPEN_CLOSED (12, 15)]))"
 >   : string
 
 (*) Point (i = v) and range branches are also merged.
@@ -389,7 +389,7 @@ from i where i = 1 orelse i > 5 andalso i < 8 orelse i = 3;
 > val it = [1,3,6,7] : int bag
 Sys.planEx "1";
 > val it =
->   "val it = from i in #toBag Range (#discreteSetOf Range ([POINT 1, OPEN (5, 8), POINT 3]))"
+>   "val it = from i in #fromList Bag (#flatten Range ([POINT 1, OPEN (5, 8), POINT 3]))"
 >   : string
 
 (*) Char is a finite type (256 values), so the plan filters the extent directly.
@@ -399,5 +399,106 @@ Sys.planEx "1";
 > val it =
 >   "val it = from c in extent \"char\" where c >= #\"a\" andalso c <= #\"e\" orelse c >= #\"x\" andalso c <= #\"z\""
 >   : string
+
+(* --- FBBT (feasibility-based bound tightening) ---------------------
+ * FBBT uses inequality conditions and tightens bounds to those that
+ * could pass the filters (are 'feasible').
+ *)
+
+(* For abs, FBBT recognizes `abs x OP c` for the connected-interval
+ * cases and * emits the equivalent two-sided bounds. *)
+from x where abs x < 5;
+> val it = [~4,~3,~2,~1,0,1,2,3,4] : int bag
+Sys.planEx "3";
+> val it =
+>   "val it = from x in #fromList Bag (#flatten Range ([OPEN (~5, 5)])) where #abs Int x < 5"
+>   : string
+from x where abs x <= 3;
+> val it = [~3,~2,~1,0,1,2,3] : int bag
+from x where 5 > abs x;
+> val it = [~4,~3,~2,~1,0,1,2,3,4] : int bag
+from x where abs x = 0;
+> val it = [0] : int bag
+from x where abs x < 10 andalso x > 0;
+> val it = [1,2,3,4,5,6,7,8,9] : int bag
+(*) Disjoint case (abs x > c) is two intervals — FBBT skips and the
+(*) constraint cannot be inverted by the existing extractor either.
+from x where abs x > 5;
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
+
+(* Strengthened bounds via a non-linear constraint. FBBT recognizes
+ * `(varA + kA) * (varB + kB) OP c` and propagates one side's bounds to
+ * the other (positive quadrant only). *)
+Bag.length (from x, y where x >= 1 andalso y >= 1 andalso x * (y + 3) < 30);
+> val it = 51 : int
+Sys.planEx "3";
+> val it =
+>   "val it = #length Bag (from x in #fromList Bag (#flatten Range ([CLOSED (1, 7)])) join y in #fromList Bag (#flatten Range ([CLOSED_OPEN (1, 27)])) where *:int (x, y + 3) < 30)"
+>   : string
+
+(* Same strengthening via the literal range-list syntax. FBBT injects
+ * the implied lower bounds from `[1..]`, propagates through the
+ * multiplication constraint, and pushes the deduced upper bounds back
+ * into each scan's range constructor — turning `[1..]` into `[1..7]`
+ * and `[1..^27]`. Preserves the original `int list` (ordered) type. *)
+from x in [1..] where x < 5;
+> val it = [1,2,3,4] : int list
+List.length (from x in [1..], y in [1..] where x * (y + 3) < 30);
+> val it = 51 : int
+Sys.planEx "3";
+> val it =
+>   "val it = #length List (from x in #flatten Range ([CLOSED (1, 7)]) join y in #flatten Range ([CLOSED_OPEN (1, 27)]) where *:int (x, y + 3) < 30)"
+>   : string
+
+(* RangePushdown also handles char-typed infinite range scans. *)
+from c in [#"a"..] where c < #"e";
+> val it = [#"a",#"b",#"c",#"d"] : char list
+Sys.planEx "3";
+> val it = "val it = from c in #flatten Range ([CLOSED_OPEN (#\"a\", #\"e\")])"
+>   : string
+from c in [#"a"..] where c <= #"d";
+> val it = [#"a",#"b",#"c",#"d"] : char list
+
+(* Cyclic bounds resolved by FBBT.
+ *
+ * Each variable's generator depends on another. FBBT propagates the
+ * constants through the cycle to deduce constant bounds for each
+ * variable: the deduced bounds let the extractor build a finite range
+ * for each generator, and the original cross-variable predicates
+ * (e.g. `x < y`) remain as post-generation filters. *)
+Bag.length (from x, y where x > 0 andalso x < y andalso y < 10);
+> val it = 36 : int
+Sys.planEx "3";
+> val it =
+>   "val it = #length Bag (from x in #fromList Bag (#flatten Range ([OPEN (0, 10)])) join y in #fromList Bag (#flatten Range ([OPEN (0, 10)])) where x < y)"
+>   : string
+Bag.length (from x, y where y > 0 andalso y < x andalso x < 10);
+> val it = 36 : int
+Bag.length (from x, y, z where x > 0 andalso x < y andalso y < z andalso z < 10);
+> val it = 84 : int
+from x where x > 0 andalso x < x + 1 andalso x < 5;
+> val it = [1,2,3,4] : int bag
+
+(* Ranges that cannot be deduced even with FBBT.
+ *
+ * The first query is feasible but unbounded (`x < y andalso y < x + 10`
+ * admits any x). The second has a non-linear constraint that needs
+ * monotonicity reasoning. The third is a tilted polytope where the
+ * variables only acquire bounds after pairs of constraints are added,
+ * which is the job of Fourier-Motzkin elimination, not FBBT. All three
+ * report 'not grounded' for now; subsequent techniques will handle
+ * them. *)
+from x, y where x < y andalso y < x + 10;
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
+from x, y where x > 0 andalso x * y = 100 andalso y > 0;
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
+from x, y
+  where x + y >= 0 andalso x + y <= 10
+  andalso x - y >= ~3 andalso x - y <= 3;
+> stdIn:1.6 Error: pattern 'x' is not grounded
+>   raised at: stdIn:1.6
 
 (*) End optimize.smli
