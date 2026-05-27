@@ -123,20 +123,12 @@ class Generators {
       return true;
     }
     if (hasBounds && pat.type.isDiscrete(cache.typeSystem)) {
-      final @Nullable Pair<Core.Exp, Boolean> lower =
+      final @Nullable Bound lower =
           lowerBound(cache.typeSystem, pat, context.constraints);
-      final @Nullable Pair<Core.Exp, Boolean> upper =
+      final @Nullable Bound upper =
           upperBound(cache.typeSystem, pat, context.constraints);
       if (lower != null && upper != null) {
-        generateRange(
-            cache,
-            ordered,
-            (Core.NamedPat) pat,
-            context.constraints,
-            lower.left,
-            lower.right,
-            upper.left,
-            upper.right);
+        generateRange(cache, ordered, (Core.NamedPat) pat, lower, upper);
         return true;
       }
     }
@@ -2408,8 +2400,13 @@ class Generators {
       boolean ordered,
       List<Generator> generators,
       Core.@Nullable Exp constraint) {
-    // If every branch is a RangeGenerator or PointGenerator, merge all range
-    // expressions into a single discreteSetOf call.
+    // If every branch is a RangeGenerator or PointGenerator, merge their
+    // range constructors into one generator. When the ctors are provably
+    // disjoint (over int literal endpoints), emit the flatten-based shape
+    // that matches generateRange and user-written [k..n] syntax. When we
+    // can't prove disjointness (overlapping ranges, tuple endpoints,
+    // variable endpoints), fall back to Range.discreteSetOf — which has
+    // set semantics and so handles deduplication.
     if (generators.stream()
         .allMatch(
             g -> g instanceof RangeGenerator || g instanceof PointGenerator)) {
@@ -2422,19 +2419,40 @@ class Generators {
               .flatMap(g -> g.rangeExp(typeSystem).stream())
               .collect(ImmutableList.toImmutableList());
       final Core.Exp rangeListExp = core.list(typeSystem, rangeType, rangeExps);
-      final Core.Apply discreteSetExp =
-          core.call(
-              typeSystem,
-              BuiltIn.RANGE_DISCRETE_SET_OF,
-              type,
-              Pos.ZERO,
-              rangeListExp);
-      final BuiltIn toListOrBag =
-          ordered
-              ? BuiltIn.RANGE_DISCRETE_SET_TO_LIST
-              : BuiltIn.RANGE_DISCRETE_SET_TO_BAG;
-      final Core.Apply mergedExp =
-          core.call(typeSystem, toListOrBag, type, Pos.ZERO, discreteSetExp);
+      final boolean disjoint = rangesAreDisjointNumericLiterals(rangeExps);
+      final Core.Exp mergedExp;
+      if (disjoint) {
+        final Core.Apply flattenExp =
+            core.call(
+                typeSystem,
+                BuiltIn.RANGE_FLATTEN,
+                type,
+                Pos.ZERO,
+                rangeListExp);
+        mergedExp =
+            ordered
+                ? flattenExp
+                : core.call(
+                    typeSystem,
+                    BuiltIn.BAG_FROM_LIST,
+                    type,
+                    Pos.ZERO,
+                    flattenExp);
+      } else {
+        final Core.Apply discreteSetExp =
+            core.call(
+                typeSystem,
+                BuiltIn.RANGE_DISCRETE_SET_OF,
+                type,
+                Pos.ZERO,
+                rangeListExp);
+        final BuiltIn toListOrBag =
+            ordered
+                ? BuiltIn.RANGE_DISCRETE_SET_TO_LIST
+                : BuiltIn.RANGE_DISCRETE_SET_TO_BAG;
+        mergedExp =
+            core.call(typeSystem, toListOrBag, type, Pos.ZERO, discreteSetExp);
+      }
       final Core.Exp simplified = Simplifier.simplify(typeSystem, mergedExp);
       final Set<Core.NamedPat> freePats = freePats(typeSystem, simplified);
       final ImmutableSet<Core.Exp> mergedProvenance =
@@ -2827,6 +2845,24 @@ class Generators {
     return false;
   }
 
+  /**
+   * The bound value and strictness derived from a single source constraint.
+   * {@code source} is the constraint that yielded this bound; it is added to
+   * the generator's provenance so it can be dropped from the surrounding {@code
+   * where} clause.
+   */
+  static class Bound {
+    final Core.Exp value;
+    final boolean strict;
+    final Core.Exp source;
+
+    Bound(Core.Exp value, boolean strict, Core.Exp source) {
+      this.value = value;
+      this.strict = strict;
+      this.source = source;
+    }
+  }
+
   /** Returns whether a constraint is a comparison bound on {@code pat}. */
   private static boolean isBoundConstraint(Core.Exp constraint, Core.Pat pat) {
     switch (constraint.builtIn()) {
@@ -2852,39 +2888,225 @@ class Generators {
   }
 
   /**
+   * Returns whether the given list of range constructor applications (each one
+   * a {@code CTOR(args)} Apply expression) is pairwise disjoint, given that
+   * every endpoint is an int or real literal. Returns false conservatively if
+   * any endpoint is not a numeric literal (e.g. tuples, variables, char).
+   *
+   * <p>Adjacent-but-touching ranges (e.g. {@code CLOSED (1, 5)} and {@code
+   * CLOSED (5, 10)}) are NOT considered disjoint, because the point 5 belongs
+   * to both. {@code CLOSED (1, 5)} and {@code OPEN (5, 10)} are disjoint (5
+   * belongs only to the first).
+   */
+  private static boolean rangesAreDisjointNumericLiterals(
+      List<Core.Apply> rangeExps) {
+    final List<RangeEndpoints> endpoints = new ArrayList<>(rangeExps.size());
+    for (Core.Apply rangeExp : rangeExps) {
+      final RangeEndpoints e = extractNumericLiteralEndpoints(rangeExp);
+      if (e == null) {
+        return false;
+      }
+      endpoints.add(e);
+    }
+    // Sort by low endpoint (-inf first; ties broken by closed-before-open).
+    endpoints.sort(RangeEndpoints::compareByLow);
+    // Pairwise check.
+    for (int i = 0; i + 1 < endpoints.size(); i++) {
+      final RangeEndpoints a = endpoints.get(i);
+      final RangeEndpoints b = endpoints.get(i + 1);
+      if (!a.isStrictlyBelow(b)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Extracts (low, lowOpen, high, highOpen) from a range constructor Apply.
+   * Endpoints must be int or real literals; returns null otherwise (or for
+   * ctors we don't recognize).
+   */
+  private static @Nullable RangeEndpoints extractNumericLiteralEndpoints(
+      Core.Apply rangeExp) {
+    if (!(rangeExp.fn instanceof Core.Id)) {
+      return null;
+    }
+    final BuiltIn.Constructor ctor =
+        BuiltIn.Constructor.forName(((Core.Id) rangeExp.fn).idPat.name);
+    if (ctor == null) {
+      return null;
+    }
+    final Core.Exp arg = rangeExp.arg;
+    switch (ctor) {
+      case RANGE_ALL:
+        return new RangeEndpoints(null, false, null, false);
+      case RANGE_AT_LEAST:
+        {
+          Core.@Nullable Literal vLit = Bounds.numericLiteral(arg);
+          BigDecimal v = vLit == null ? null : vLit.unwrap(BigDecimal.class);
+          return v == null ? null : new RangeEndpoints(v, false, null, false);
+        }
+      case RANGE_AT_MOST:
+        {
+          Core.@Nullable Literal vLit = Bounds.numericLiteral(arg);
+          BigDecimal v = vLit == null ? null : vLit.unwrap(BigDecimal.class);
+          return v == null ? null : new RangeEndpoints(null, false, v, false);
+        }
+      case RANGE_GREATER_THAN:
+        {
+          Core.@Nullable Literal vLit = Bounds.numericLiteral(arg);
+          BigDecimal v = vLit == null ? null : vLit.unwrap(BigDecimal.class);
+          return v == null ? null : new RangeEndpoints(v, true, null, false);
+        }
+      case RANGE_LESS_THAN:
+        {
+          Core.@Nullable Literal vLit = Bounds.numericLiteral(arg);
+          BigDecimal v = vLit == null ? null : vLit.unwrap(BigDecimal.class);
+          return v == null ? null : new RangeEndpoints(null, false, v, true);
+        }
+      case RANGE_POINT:
+        {
+          Core.@Nullable Literal vLit = Bounds.numericLiteral(arg);
+          BigDecimal v = vLit == null ? null : vLit.unwrap(BigDecimal.class);
+          return v == null ? null : new RangeEndpoints(v, false, v, false);
+        }
+      case RANGE_CLOSED:
+      case RANGE_CLOSED_OPEN:
+      case RANGE_OPEN_CLOSED:
+      case RANGE_OPEN:
+        {
+          if (arg.op != Op.TUPLE) {
+            return null;
+          }
+          final Core.Tuple tuple = (Core.Tuple) arg;
+          if (tuple.args.size() != 2) {
+            return null;
+          }
+          final Core.@Nullable Literal loLit =
+              Bounds.numericLiteral(tuple.args.get(0));
+          final Core.@Nullable Literal hiLit =
+              Bounds.numericLiteral(tuple.args.get(1));
+          final BigDecimal lo =
+              loLit == null ? null : loLit.unwrap(BigDecimal.class);
+          final BigDecimal hi =
+              hiLit == null ? null : hiLit.unwrap(BigDecimal.class);
+          if (lo == null || hi == null) {
+            return null;
+          }
+          final boolean lowOpen =
+              ctor == BuiltIn.Constructor.RANGE_OPEN
+                  || ctor == BuiltIn.Constructor.RANGE_OPEN_CLOSED;
+          final boolean highOpen =
+              ctor == BuiltIn.Constructor.RANGE_OPEN
+                  || ctor == BuiltIn.Constructor.RANGE_CLOSED_OPEN;
+          return new RangeEndpoints(lo, lowOpen, hi, highOpen);
+        }
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * A real-number interval with optional open/closed endpoints. {@link #low} ==
+   * null means -infinity; {@link #high} == null means +infinity.
+   */
+  private static final class RangeEndpoints {
+    final @Nullable BigDecimal low;
+    final boolean lowOpen;
+    final @Nullable BigDecimal high;
+    final boolean highOpen;
+
+    RangeEndpoints(
+        @Nullable BigDecimal low,
+        boolean lowOpen,
+        @Nullable BigDecimal high,
+        boolean highOpen) {
+      this.low = low;
+      this.lowOpen = lowOpen;
+      this.high = high;
+      this.highOpen = highOpen;
+    }
+
+    /**
+     * Sort order: -inf first; then by value; closed-low before open-low at the
+     * same value.
+     */
+    int compareByLow(RangeEndpoints other) {
+      if (this.low == null && other.low == null) {
+        return 0;
+      }
+      if (this.low == null) {
+        return -1;
+      }
+      if (other.low == null) {
+        return 1;
+      }
+      final int cmp = this.low.compareTo(other.low);
+      if (cmp != 0) {
+        return cmp;
+      }
+      return Boolean.compare(this.lowOpen, other.lowOpen);
+    }
+
+    /**
+     * Returns whether this range lies strictly below {@code other} on the real
+     * number line (no shared point).
+     */
+    boolean isStrictlyBelow(RangeEndpoints other) {
+      if (this.high == null) {
+        return false;
+      }
+      if (other.low == null) {
+        return false;
+      }
+      final int cmp = this.high.compareTo(other.low);
+      if (cmp < 0) {
+        return true;
+      }
+      if (cmp > 0) {
+        return false;
+      }
+      // Same value at the boundary: disjoint iff at least one side is open.
+      return this.highOpen || other.lowOpen;
+    }
+  }
+
+  /**
    * Creates an expression that generates a range of integer values.
    *
-   * <p>For example, {@code generateRange(3, true, 8, false)} generates a range
-   * {@code 3 < x <= 8}, which yields the values {@code [4, 5, 6, 7, 8]}.
+   * <p>For example, a {@code lower} of {@code (3, true)} and an {@code upper}
+   * of {@code (8, false)} generate the range {@code 3 < x <= 8}, yielding
+   * {@code [4, 5, 6, 7, 8]}.
    *
-   * @param ordered If true, generate a `list`, otherwise a `bag`
+   * @param ordered If true, generate a {@code list}; otherwise a {@code bag}
    * @param pat Pattern
-   * @param constraints Constraints to scan for bound provenance
-   * @param lower Lower bound
-   * @param lowerStrict Whether the lower bound is strict (exclusive): true for
-   *     {@code x > lower}, false for {@code x >= lower}
-   * @param upper Upper bound
-   * @param upperStrict Whether the upper bound is strict (exclusive): true for
-   *     {@code x < upper}, false for {@code x <= upper}
+   * @param lower Lower bound (value, strictness, source constraint)
+   * @param upper Upper bound (value, strictness, source constraint)
    */
   static Generator generateRange(
       Cache cache,
       boolean ordered,
       Core.NamedPat pat,
-      ImmutableList<Core.Exp> constraints,
-      Core.Exp lower,
-      boolean lowerStrict,
-      Core.Exp upper,
-      boolean upperStrict) {
+      Bound lower,
+      Bound upper) {
+    final Core.Exp lowerValue = lower.value;
+    final boolean lowerStrict = lower.strict;
+    final Core.Exp upperValue = upper.value;
+    final boolean upperStrict = upper.strict;
+    // Provenance is exactly the two source constraints from which the
+    // chosen lower and upper bounds were extracted. The wider Expander
+    // pipeline uses this to drop subsumed conjuncts from the surrounding
+    // where clause. Other bound-shaped constraints (e.g. "x < y") may
+    // remain as filters, so we must not add them to provenance.
     final ImmutableSet.Builder<Core.Exp> provenance = ImmutableSet.builder();
-    for (Core.Exp c : constraints) {
-      if (isBoundConstraint(c, pat)) {
-        provenance.add(c);
-      }
-    }
-    // Range.discreteSetOf [CTOR (lower, upper)] |> Range.toList
-    // or Range.discreteSetOf [CTOR (lower, upper)] |> Range.toBag
+    provenance.add(lower.source);
+    provenance.add(upper.source);
+    // Emit: Range.flatten [CTOR (lower, upper)]                 (list)
+    //   or: Bag.fromList (Range.flatten [CTOR (lower, upper)])  (bag)
     // where CTOR is CLOSED, CLOSED_OPEN, OPEN_CLOSED, or OPEN.
+    // (A single ctor means there's no overlap to deduplicate, so we don't
+    // need Range.discreteSetOf; the shape matches user-written [k..n] /
+    // bag [k..n] syntax.)
     final TypeSystem typeSystem = cache.typeSystem;
     final BuiltIn.Constructor rangeCtor =
         getConstructor(lowerStrict, upperStrict);
@@ -2898,22 +3120,17 @@ class Generators {
             Pos.ZERO,
             rangeType,
             core.id(conIdPat),
-            core.tuple(typeSystem, lower, upper));
+            core.tuple(typeSystem, lowerValue, upperValue));
     final Core.Exp rangeListExp =
         core.list(typeSystem, rangeType, ImmutableList.of(rangeExp));
-    final Core.Apply discreteSetExp =
+    final Core.Apply flattenExp =
         core.call(
-            typeSystem,
-            BuiltIn.RANGE_DISCRETE_SET_OF,
-            type,
-            Pos.ZERO,
-            rangeListExp);
-    final BuiltIn toListOrBag =
+            typeSystem, BuiltIn.RANGE_FLATTEN, type, Pos.ZERO, rangeListExp);
+    final Core.Exp exp =
         ordered
-            ? BuiltIn.RANGE_DISCRETE_SET_TO_LIST
-            : BuiltIn.RANGE_DISCRETE_SET_TO_BAG;
-    final Core.Apply exp =
-        core.call(typeSystem, toListOrBag, type, Pos.ZERO, discreteSetExp);
+            ? flattenExp
+            : core.call(
+                typeSystem, BuiltIn.BAG_FROM_LIST, type, Pos.ZERO, flattenExp);
     final Core.Exp simplified = Simplifier.simplify(typeSystem, exp);
     final Set<Core.NamedPat> freePats = freePats(typeSystem, simplified);
     return cache.add(
@@ -2979,48 +3196,88 @@ class Generators {
    * y"? If the goal is to convert an infinite generator to a finite generator,
    * any constraint is good enough.
    */
-  static @Nullable Pair<Core.Exp, Boolean> lowerBound(
+  static @Nullable Bound lowerBound(
       TypeSystem typeSystem, Core.Pat pat, List<Core.Exp> constraints) {
+    // Two passes: first prefer a bound whose value is a constant
+    // expression. A constant bound makes the generator independent of other
+    // variables; a variable bound creates a generator-scheduling dependency
+    // that can fail to break a cycle even when the system is finite. If no
+    // constant bound exists, fall back to the first bound of any shape.
+    final Bound constant = lowerBound1(typeSystem, pat, constraints, true);
+    if (constant != null) {
+      return constant;
+    }
+    return lowerBound1(typeSystem, pat, constraints, false);
+  }
+
+  /**
+   * Helper for {@link #lowerBound}. When {@code requireConstant} is true, skips
+   * any candidate whose bound expression is not a constant.
+   */
+  private static @Nullable Bound lowerBound1(
+      TypeSystem typeSystem,
+      Core.Pat pat,
+      List<Core.Exp> constraints,
+      boolean requireConstant) {
     for (Core.Exp constraint : constraints) {
       switch (constraint.builtIn()) {
         case OP_GT:
         case OP_GE:
           if (references(constraint.arg(0), pat)) {
             // "p > e" -> (strict, e); "p >= e" -> (non-strict, e).
+            final Core.Exp bound = constraint.arg(1);
+            if (requireConstant && !bound.isConstant()) {
+              continue;
+            }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_GT;
-            return Pair.of(constraint.arg(1), strict);
+            return new Bound(bound, strict, constraint);
           }
           // Check for "e > p + k" -> "p < e - k" (this is an upper bound, skip)
           break;
         case CHAR_OP_GT:
         case CHAR_OP_GE:
           if (references(constraint.arg(0), pat)) {
-            return Pair.of(
-                constraint.arg(1), constraint.builtIn() == BuiltIn.CHAR_OP_GT);
+            final Core.Exp bound = constraint.arg(1);
+            if (requireConstant && !bound.isConstant()) {
+              continue;
+            }
+            return new Bound(
+                bound, constraint.builtIn() == BuiltIn.CHAR_OP_GT, constraint);
           }
           break;
         case OP_LT:
         case OP_LE:
           if (references(constraint.arg(1), pat)) {
             // "e < p" -> (strict, e); "e <= p" -> (non-strict, e).
+            final Core.Exp bound = constraint.arg(0);
+            if (requireConstant && !bound.isConstant()) {
+              continue;
+            }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_LT;
-            return Pair.of(constraint.arg(0), strict);
+            return new Bound(bound, strict, constraint);
           }
           // Check for "e < p + k" -> "p > e - k" -> lower bound = e - k
           final BigDecimal offset = extractOffset(constraint.arg(1), pat);
           if (offset != null) {
             // "e < p + k" -> "p > e - k"
+            if (requireConstant && !constraint.arg(0).isConstant()) {
+              continue;
+            }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_LT;
             final Core.Exp bound =
                 adjustBound(constraint.arg(0), offset, typeSystem);
-            return Pair.of(bound, strict);
+            return new Bound(bound, strict, constraint);
           }
           break;
         case CHAR_OP_LT:
         case CHAR_OP_LE:
           if (references(constraint.arg(1), pat)) {
-            return Pair.of(
-                constraint.arg(0), constraint.builtIn() == BuiltIn.CHAR_OP_LT);
+            final Core.Exp bound = constraint.arg(0);
+            if (requireConstant && !bound.isConstant()) {
+              continue;
+            }
+            return new Bound(
+                bound, constraint.builtIn() == BuiltIn.CHAR_OP_LT, constraint);
           }
           break;
       }
@@ -3037,48 +3294,81 @@ class Generators {
    *
    * <p>Analogous to {@link #lowerBound(TypeSystem, Core.Pat, List)}.
    */
-  static @Nullable Pair<Core.Exp, Boolean> upperBound(
+  static @Nullable Bound upperBound(
       TypeSystem typeSystem, Core.Pat pat, List<Core.Exp> constraints) {
+    // See {@link #lowerBound}: prefer a constant bound to avoid a cyclic
+    // generator dependency.
+    final Bound constant = upperBound1(typeSystem, pat, constraints, true);
+    if (constant != null) {
+      return constant;
+    }
+    return upperBound1(typeSystem, pat, constraints, false);
+  }
+
+  private static @Nullable Bound upperBound1(
+      TypeSystem typeSystem,
+      Core.Pat pat,
+      List<Core.Exp> constraints,
+      boolean requireConstant) {
     for (Core.Exp constraint : constraints) {
       switch (constraint.builtIn()) {
         case OP_LT:
         case OP_LE:
           if (references(constraint.arg(0), pat)) {
             // "p < e" -> (strict, e); "p <= e" -> (non-strict, e).
+            final Core.Exp bound = constraint.arg(1);
+            if (requireConstant && !bound.isConstant()) {
+              continue;
+            }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_LT;
-            return Pair.of(constraint.arg(1), strict);
+            return new Bound(bound, strict, constraint);
           }
           // Check for "e < p + k" -> "p > e - k" (this is a lower bound, skip)
           break;
         case CHAR_OP_LT:
         case CHAR_OP_LE:
           if (references(constraint.arg(0), pat)) {
-            return Pair.of(
-                constraint.arg(1), constraint.builtIn() == BuiltIn.CHAR_OP_LT);
+            final Core.Exp bound = constraint.arg(1);
+            if (requireConstant && !bound.isConstant()) {
+              continue;
+            }
+            return new Bound(
+                bound, constraint.builtIn() == BuiltIn.CHAR_OP_LT, constraint);
           }
           break;
         case OP_GT:
         case OP_GE:
           if (references(constraint.arg(1), pat)) {
             // "e > p" -> (strict, e); "e >= p" -> (non-strict, e).
+            final Core.Exp bound = constraint.arg(0);
+            if (requireConstant && !bound.isConstant()) {
+              continue;
+            }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_GT;
-            return Pair.of(constraint.arg(0), strict);
+            return new Bound(bound, strict, constraint);
           }
           // Check for "e > p + k" -> "p < e - k" -> upper bound = e - k
           final BigDecimal offset = extractOffset(constraint.arg(1), pat);
           if (offset != null) {
             // "e > p + k" -> "p < e - k"
+            if (requireConstant && !constraint.arg(0).isConstant()) {
+              continue;
+            }
             final boolean strict = constraint.builtIn() == BuiltIn.OP_GT;
             final Core.Exp bound =
                 adjustBound(constraint.arg(0), offset, typeSystem);
-            return Pair.of(bound, strict);
+            return new Bound(bound, strict, constraint);
           }
           break;
         case CHAR_OP_GT:
         case CHAR_OP_GE:
           if (references(constraint.arg(1), pat)) {
-            return Pair.of(
-                constraint.arg(0), constraint.builtIn() == BuiltIn.CHAR_OP_GT);
+            final Core.Exp bound = constraint.arg(0);
+            if (requireConstant && !bound.isConstant()) {
+              continue;
+            }
+            return new Bound(
+                bound, constraint.builtIn() == BuiltIn.CHAR_OP_GT, constraint);
           }
           break;
       }

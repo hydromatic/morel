@@ -44,6 +44,7 @@ import java.util.function.BiConsumer;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.FromBuilder;
 import net.hydromatic.morel.ast.Op;
+import net.hydromatic.morel.ast.Pos;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.TypeSystem;
@@ -67,6 +68,11 @@ public class Expander {
    */
   public static Core.From expandFrom(
       TypeSystem typeSystem, Environment env, Core.From from) {
+    // Pre-pass: run FBBT to deduce tighter bounds for unbounded patterns
+    // and strengthen any 'where' clause with the new bounds. The existing
+    // extractor (below) then picks them up as finite generators.
+    from = applyFbbt(typeSystem, from);
+
     final Generators.Cache cache = new Generators.Cache(typeSystem, env);
     final Expander expander = new Expander(cache, ImmutableList.of());
 
@@ -104,6 +110,127 @@ public class Expander {
     return from2.equals(from) ? from : from2;
   }
 
+  /**
+   * Runs FBBT over each {@code where} step in {@code from}, strengthening its
+   * expression with newly-deduced bounds on the in-scope unbounded patterns.
+   * Returns the original {@code from} if FBBT made no progress.
+   *
+   * <p>"In-scope unbounded patterns" at a given step are the extent-scan
+   * patterns seen earlier in the same {@code from}. We don't track wider scope;
+   * deductions about an outer-bound variable would require treating it as a
+   * free variable here, which the current scope does not handle.
+   */
+  private static Core.From applyFbbt(TypeSystem typeSystem, Core.From from) {
+    // Collect all patterns from extent scans AND infinite-range scans so
+    // FBBT can deduce bounds for them via cross-variable reasoning. For
+    // infinite-range scans, FBBT also needs to *see* the scan's implied
+    // bound (e.g. `x >= 1` from `from x in [1..]`), so we synthesize that
+    // bound into the where.
+    final Set<Core.NamedPat> unboundedPats = new HashSet<>();
+    final List<Core.Exp> rangeImpliedBounds = new ArrayList<>();
+    for (Core.FromStep step : from.steps) {
+      if (step.op == Op.SCAN) {
+        final Core.Scan scan = (Core.Scan) step;
+        if (scan.exp.isExtent()) {
+          unboundedPats.addAll(scan.pat.expand());
+        } else {
+          final RangePushdown.ScanInfo info = RangePushdown.match(scan);
+          if (info != null) {
+            unboundedPats.add(info.pat);
+            rangeImpliedBounds.add(info.boundExp(typeSystem));
+          }
+        }
+      }
+    }
+
+    boolean changed = false;
+    final List<Core.FromStep> newSteps = new ArrayList<>(from.steps.size());
+    boolean injectedImplied = false;
+    for (Core.FromStep step : from.steps) {
+      if (step instanceof Core.Where && !unboundedPats.isEmpty()) {
+        final Core.Where where = (Core.Where) step;
+        // Augment the where's conjuncts with the infinite-range implied
+        // bounds before strengthening, so FBBT can use them. Only inject
+        // into the first where step.
+        final boolean injectHere =
+            !injectedImplied && !rangeImpliedBounds.isEmpty();
+        final Core.Exp whereWithImplied;
+        if (injectHere) {
+          whereWithImplied =
+              core.andAlso(
+                  typeSystem,
+                  ImmutableList.<Core.Exp>builder()
+                      .addAll(rangeImpliedBounds)
+                      .add(where.exp)
+                      .build());
+          injectedImplied = true;
+        } else {
+          whereWithImplied = where.exp;
+        }
+        final Core.Exp strengthened =
+            Fbbt.strengthen(typeSystem, unboundedPats, whereWithImplied);
+        // The injected bounds were only useful as input to FBBT (they let
+        // it deduce cross-variable bounds). Once FBBT is done, they are
+        // implied by the original scan range and would just appear as
+        // redundant filters in the final query. Strip them.
+        final Core.Exp cleaned =
+            injectHere
+                ? stripConjunctsByIdentity(
+                    typeSystem, strengthened, rangeImpliedBounds)
+                : strengthened;
+        if (cleaned != where.exp) {
+          newSteps.add(where.copy(cleaned, where.env));
+          changed = true;
+        } else {
+          newSteps.add(step);
+        }
+      } else {
+        newSteps.add(step);
+      }
+    }
+    Core.From result = changed ? core.from(typeSystem, newSteps) : from;
+    // Second pass: push literal-bound where conjuncts into the range
+    // constructor of infinite-range scans, turning e.g.
+    //   from x in [1..] where x < 5
+    // into
+    //   from x in [1..^5]
+    // (i.e. Range.flatten([CLOSED_OPEN (1, 5)])). This preserves the
+    // scan's result type (still a list) and removes the runtime need to
+    // materialize the infinite range.
+    return RangePushdown.apply(typeSystem, result);
+  }
+
+  /**
+   * Returns {@code whereExp} with any top-level conjuncts (those at the leaves
+   * of an {@code andalso} tree) that are reference-equal (==) to one of {@code
+   * toStrip} removed. Used to drop synthetic FBBT-input bounds after FBBT has
+   * used them.
+   */
+  private static Core.Exp stripConjunctsByIdentity(
+      TypeSystem typeSystem, Core.Exp whereExp, List<Core.Exp> toStrip) {
+    if (toStrip.isEmpty()) {
+      return whereExp;
+    }
+    final List<Core.Exp> conjuncts = core.decomposeAnd(whereExp);
+    final List<Core.Exp> remaining = new ArrayList<>(conjuncts.size());
+    for (Core.Exp c : conjuncts) {
+      boolean strip = false;
+      for (Core.Exp t : toStrip) {
+        if (c == t) {
+          strip = true;
+          break;
+        }
+      }
+      if (!strip) {
+        remaining.add(c);
+      }
+    }
+    if (remaining.size() == conjuncts.size()) {
+      return whereExp;
+    }
+    return core.andAlso(typeSystem, remaining);
+  }
+
   /** Processing state for a pattern during generator expansion. */
   enum PatternState {
     /** Pattern is currently being processed; used to detect cycles. */
@@ -123,6 +250,8 @@ public class Expander {
     // distinguish local scan patterns from outer-scope variables.
     final Set<Core.NamedPat> allScanPats = new HashSet<>();
     final Map<Core.NamedPat, Generator> generatorMap = new HashMap<>();
+    // Source position of each extent pattern, for error reporting.
+    final Map<Core.NamedPat, Pos> patternPos = new HashMap<>();
     stepVarSet.stepVars.forEach(
         (step, vars) -> {
           if (step.op == Op.SCAN) {
@@ -131,6 +260,7 @@ public class Expander {
             allScanPats.addAll(namedPats);
             if (scan.exp.isExtent()) {
               for (Core.NamedPat namedPat : namedPats) {
+                patternPos.put(namedPat, scan.exp.pos);
                 if (!stepVarSet.usedPats.contains(namedPat)) {
                   // Ignore patterns that are not used. For example, "y" is
                   // unused in "exists x, y where x elem [1,2,3]".
@@ -266,6 +396,8 @@ public class Expander {
           fromBuilder.addAll(ImmutableList.of(step));
         });
 
+    checkAllGrounded(stepVarSet, originalPats, patternState, patternPos);
+
     // If we added shared patterns for joining, project them away at the end.
     // The final result should only contain the original query patterns.
     if (!sharedPats.isEmpty()) {
@@ -288,6 +420,46 @@ public class Expander {
     }
 
     return fromBuilder.build();
+  }
+
+  /**
+   * Throws "pattern '...' is not grounded" if any extent pattern is not {@link
+   * PatternState#DONE}.
+   *
+   * <p>This happens when a pattern has a generator but the generator depends on
+   * another pattern's generator and the dependency cycles back. For example, in
+   * {@code from x, y where x > 0 andalso x < y andalso y < 10}, x's generator
+   * depends on y (upper bound) and y's generator depends on x (lower bound).
+   * Without bound propagation across the cycle, neither can be scheduled.
+   */
+  private static void checkAllGrounded(
+      StepVarSet stepVarSet,
+      Set<Core.NamedPat> originalPats,
+      Map<Core.NamedPat, PatternState> patternState,
+      Map<Core.NamedPat, Pos> patternPos) {
+    // Iterate in source order so the error is deterministic and points at
+    // the first ungrounded pattern.
+    stepVarSet.stepVars.forEach(
+        (step, vars) -> {
+          if (step.op != Op.SCAN) {
+            return;
+          }
+          final Core.Scan scan = (Core.Scan) step;
+          if (!scan.exp.isExtent()) {
+            return;
+          }
+          for (Core.NamedPat p : scan.pat.expand()) {
+            if (!stepVarSet.usedPats.contains(p) || !originalPats.contains(p)) {
+              continue;
+            }
+            if (patternState.get(p) != PatternState.DONE) {
+              throw new CompileException(
+                  format("pattern '%s' is not grounded", p.name),
+                  false,
+                  patternPos.getOrDefault(p, Pos.ZERO));
+            }
+          }
+        });
   }
 
   /**

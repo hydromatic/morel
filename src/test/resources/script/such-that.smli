@@ -34,22 +34,20 @@ Sys.set ("stringDepth", ~1);
 from i where i > 0 andalso i < 10;
 > val it = [1,2,3,4,5,6,7,8,9] : int bag
 Sys.planEx "3";
-> val it =
->   "val it = from i in #toBag Range (#discreteSetOf Range ([OPEN (0, 10)]))"
+> val it = "val it = from i in #fromList Bag (#flatten Range ([OPEN (0, 10)]))"
 >   : string
 
 from i where i >= 0 andalso i <= 10;
 > val it = [0,1,2,3,4,5,6,7,8,9,10] : int bag
 Sys.planEx "3";
-> val it =
->   "val it = from i in #toBag Range (#discreteSetOf Range ([CLOSED (0, 10)]))"
+> val it = "val it = from i in #fromList Bag (#flatten Range ([CLOSED (0, 10)]))"
 >   : string
 
 from i where i >= 0 andalso i <= 5 orelse i = 8 orelse i > 20 andalso i < 22;
 > val it = [1,2,3,4,5,21,8,0] : int bag
 Sys.planEx "3";
 > val it =
->   "val it = from i in #toBag Range (#discreteSetOf Range ([CLOSED (0, 5), POINT 8, OPEN (20, 22)]))"
+>   "val it = from i in #fromList Bag (#flatten Range ([CLOSED (0, 5), POINT 8, OPEN (20, 22)]))"
 >   : string
 
 from i where i > 0 andalso i < 4 yield {j = i + 1};
@@ -86,7 +84,7 @@ from i where i > 0 andalso i < 10 orelse i > 12 andalso i <= 15;
 > val it = [1,2,3,4,5,6,7,8,9,13,14,15] : int bag
 Sys.planEx "3";
 > val it =
->   "val it = from i in #toBag Range (#discreteSetOf Range ([OPEN (0, 10), OPEN_CLOSED (12, 15)]))"
+>   "val it = from i in #fromList Bag (#flatten Range ([OPEN (0, 10), OPEN_CLOSED (12, 15)]))"
 >   : string
 
 (*) Ranges over int * bool: point constraints merged into a single discreteSetOf.
@@ -112,7 +110,7 @@ from t where t >= (1, false, 2, true) andalso t <= (1, false, 4, false);
 >   : (int * bool * int * bool) bag
 Sys.planEx "3";
 > val it =
->   "val it = from t in #toBag Range (#discreteSetOf Range ([CLOSED ((1, false, 2, true), (1, false, 4, false))]))"
+>   "val it = from t in #fromList Bag (#flatten Range ([CLOSED ((1, false, 2, true), (1, false, 4, false))]))"
 >   : string
 
 from i
@@ -244,6 +242,19 @@ from x where (x + 2) * (x - 3) = 0;
 > stdIn:1.6 Error: pattern 'x' is not grounded
 >   raised at: stdIn:1.6
 
+(* FBBT (feasibility-based bound tightening) lets the planner ground
+ * some patterns that would otherwise not be grounded. Here, the
+ * pattern is bounded by `abs x < 5`. *)
+from x where abs x < 5;
+> val it = [~4,~3,~2,~1,0,1,2,3,4] : int bag
+
+(* And here, each variable's bound depends on the other; FBBT
+ * propagates the constants through the cycle to deduce finite bounds
+ * for both. (Without FBBT, this would not be grounded; see
+ * optimize.smli for more cases.) *)
+Bag.length (from x, y where x > 0 andalso x < y andalso y < 10);
+> val it = 36 : int
+
 (* -- elem patterns ----------------------------------------------- *)
 
 (*) Pattern
@@ -337,7 +348,7 @@ from x in [3, 5, 7], y where x > y andalso x < y + 5 yield y;
 > val it = [~1,0,1,2,1,2,3,4,3,4,5,6] : int bag
 Sys.planEx "3";
 > val it =
->   "val it = from x in [3, 5, 7] join y in #toBag Range (#discreteSetOf Range ([OPEN (-:int (x, 5), x)])) yield y"
+>   "val it = from x in [3, 5, 7] join y in #fromList Bag (#flatten Range ([OPEN (-:int (x, 5), x)])) yield y"
 >   : string
 
 from x in [3, 5, 7], y
