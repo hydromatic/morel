@@ -29,20 +29,20 @@ Sys.set ("output", "tabular");
 from e in scott.depts;
 > deptno dname      loc
 > ------ ---------- --------
-> 10     ACCOUNTING NEW YORK
-> 20     RESEARCH   DALLAS
-> 30     SALES      CHICAGO
-> 40     OPERATIONS BOSTON
+>     10 ACCOUNTING NEW YORK
+>     20 RESEARCH   DALLAS
+>     30 SALES      CHICAGO
+>     40 OPERATIONS BOSTON
 >
 > val it : {deptno:int, dname:string, loc:string} bag
 
 from e in scott.depts order DESC e.deptno;
 > deptno dname      loc
 > ------ ---------- --------
-> 40     OPERATIONS BOSTON
-> 30     SALES      CHICAGO
-> 20     RESEARCH   DALLAS
-> 10     ACCOUNTING NEW YORK
+>     40 OPERATIONS BOSTON
+>     30 SALES      CHICAGO
+>     20 RESEARCH   DALLAS
+>     10 ACCOUNTING NEW YORK
 >
 > val it : {deptno:int, dname:string, loc:string} list
 
@@ -81,10 +81,16 @@ Sys.set ("output", "tabular");
 > val it = {employed=false,id=1,name="julian"}
 >   : {employed:bool, id:int, name:string}
 
-(* List of records with a list field uses classic style. *)
+(* List of records with a list field is tabular: the list expands
+ * vertically under its header. *)
 [{id=1, pets=["ruby"]}, {id=2, pets=["stealth", "luna"]}];
-> val it = [{id=1,pets=["ruby"]},{id=2,pets=["stealth","luna"]}]
->   : {id:int, pets:string list} list
+> id pets
+> -- -------
+>  1 ruby
+>  2 stealth
+>    luna
+>
+> val it : {id:int, pets:string list} list
 
 (* List of records with a sum-type field uses classic style. *)
 [{id=1, salary=NONE}, {id=2, salary=SOME 100}];
@@ -101,5 +107,272 @@ Sys.set ("output", "tabular");
 > val it =
 >   [{address={state="CA",zip=94705},id=1},{address={state="CA",zip=94618},id=2}]
 >   : {address:{state:string, zip:int}, id:int} list
+
+(* -------------------------------------------------------------------
+ * [MOREL-376] Tabular mode for nested collections
+ *)
+
+(* Issue example (a): one field is an `int list`. Rows expand
+ * vertically; an empty list contributes zero lines. *)
+[{id = 1, name = "alpha", scores = [10, 20]},
+ {id = 2, name = "beta",  scores = [30]},
+ {id = 3, name = "gamma", scores = []}];
+> id name  scores
+> -- ----- ------
+>  1 alpha     10
+>              20
+>  2 beta      30
+>  3 gamma
+>
+> val it : {id:int, name:string, scores:int list} list
+
+(* Issue example (b): one field is a record bag, another is an
+ * `int list`. Nested record-bag fields get a second header row of
+ * sub-column names. *)
+[{id = 1,
+  events = bag [{a = 100, b = true}, {a = 200, b = false}],
+  scores = [10, 20, 30]},
+ {id = 2,
+  events = bag [{a = 300, b = true}],
+  scores = [5]}];
+> events    id scores
+> a   b
+> --- ----- -- ------
+> 100 true   1     10
+> 200 false        20
+>                  30
+> 300 true   2      5
+>
+> val it : {events:{a:int, b:bool} bag, id:int, scores:int list} list
+
+(* Tuple fields are treated like records, with sub-columns named
+ * "1", "2", etc. *)
+[{id = 1, pair = [(10, true), (20, false)]},
+ {id = 2, pair = [(30, true)]}];
+> id pair
+>    1  2
+> -- -- -----
+>  1 10 true
+>    20 false
+>  2 30 true
+>
+> val it : {id:int, pair:(int * bool) list} list
+
+(* Top-level list of tuples renders as a table with columns named
+ * "1", "2", "3". *)
+[(1, "a"), (2, "b"), (3, "c")];
+> 1 2
+> - -
+> 1 a
+> 2 b
+> 3 c
+>
+> val it : (int * string) list
+
+(* Two levels of nested collections: a list of records whose
+ * record-list field contains records that themselves have a
+ * scalar-list field. *)
+[{id = 1,
+  items = [{name = "a", tags = ["x", "y"]},
+           {name = "b", tags = ["z"]}]},
+ {id = 2,
+  items = [{name = "c", tags = []}]}];
+> id items
+>    name tags
+> -- ---- ----
+>  1 a    x
+>         y
+>    b    z
+>  2 c
+>
+> val it : {id:int, items:{name:string, tags:string list} list} list
+
+(* Edge case: a row where every nested field is empty still occupies
+ * a single line of scalar values. *)
+[{id = 1, names = ([]: string list), scores = ([]: int list)},
+ {id = 2, names = ["x"],           scores = [10]}];
+> id names scores
+> -- ----- ------
+>  1
+>  2 x         10
+>
+> val it : {id:int, names:string list, scores:int list} list
+
+(* Edge case: empty outer collection still prints headers plus the
+ * dashed separator. *)
+([]: {a:int, b:string} list);
+> a b
+> - -
+>
+> val it : {a:int, b:string} list
+
+(* -------------------------------------------------------------------
+ * Tabular mode observes printDepth and stringDepth.
+ *)
+
+(* String values longer than stringDepth are truncated with `#`,
+ * including in width computation. *)
+Sys.set ("stringDepth", 4);
+> val it = () : unit
+
+[{id=1, name="alpha"}, {id=2, name="beta"}, {id=3, name="gammaray"}];
+> id name
+> -- -----
+>  1 alph#
+>  2 beta
+>  3 gamm#
+>
+> val it : {id:int, name:string} list
+
+Sys.unset "stringDepth";
+> val it = () : unit
+
+(* printDepth=0 means classic would print the list's elements as `#`,
+ * so tabular declines and lets classic render the `#`. *)
+Sys.set ("printDepth", 0);
+> val it = # : unit
+
+[{id=1, name="alpha"}];
+> val it = # : {id:int, name:string} list
+
+(* printDepth=1 leaves elements visible, so tabular renders. *)
+Sys.set ("printDepth", 1);
+> val it = () : unit
+
+[{id=1, name="alpha"}];
+> id name
+> -- -----
+>  1 alpha
+>
+> val it : {id:int, name:string} list
+
+Sys.unset "printDepth";
+> val it = () : unit
+
+(* -------------------------------------------------------------------
+ * Tabular mode observes printLength.
+ *)
+
+Sys.set ("printLength", 3);
+> val it = () : unit
+
+(* Top-level table: rows beyond printLength are replaced with `...`. *)
+[{id=1, name="a"}, {id=2, name="b"}, {id=3, name="c"},
+ {id=4, name="d"}, {id=5, name="e"}];
+> id name
+> -- ----
+>  1 a
+>  2 b
+>  3 c
+> ...
+>
+> val it : {id:int, name:string} list
+
+(* Nested scalar-list: items beyond printLength are replaced with `...`
+ * inside the cell column. *)
+[{id=1, scores=[10, 20, 30, 40, 50]}];
+> id scores
+> -- ------
+>  1     10
+>        20
+>        30
+>       ...
+>
+> val it : {id:int, scores:int list} list
+
+(* Nested record-list: records beyond printLength are replaced with
+ * `...` inside the cell. *)
+[{id=1, items=[{name="a"}, {name="b"}, {name="c"}, {name="d"}]}];
+> id items
+>    name
+> -- -----
+>  1 a
+>    b
+>    c
+>    ...
+>
+> val it : {id:int, items:{name:string} list} list
+
+Sys.unset "printLength";
+> val it = () : unit
+
+(* -------------------------------------------------------------------
+ * Tabular mode: stringFold folds long strings to multiple lines,
+ * preferring word boundaries when possible.
+ *)
+
+Sys.set ("stringFold", 10);
+> val it = () : unit
+
+(* Word-boundary folding: spaces are the preferred break points,
+ * with the space itself consumed in the break. *)
+[{id=1, name="The Avocado Tofu Salad"},
+ {id=2, name="Cheese Omelette"},
+ {id=3, name="A"}];
+> id name
+> -- ----------
+>  1 The
+>    Avocado
+>    Tofu Salad
+>  2 Cheese
+>    Omelette
+>  3 A
+>
+> val it : {id:int, name:string} list
+
+(* Hard-break: no whitespace available, split at the fold width. *)
+Sys.set ("stringFold", 5);
+> val it = () : unit
+
+[{id=1, name="verylongwordhere"}];
+> id name
+> -- -----
+>  1 veryl
+>    ongwo
+>    rdher
+>    e
+>
+> val it : {id:int, name:string} list
+
+(* stringFold combined with a nested record list: each row's height is
+ * max(folded-string lines, nested record count). The folded cell and
+ * the nested cell advance independently within one logical row. *)
+Sys.set ("stringFold", 10);
+> val it = () : unit
+
+[{id=1,
+  description="The quick brown fox jumps over the lazy dog",
+  items=[{name="a"}, {name="b"}, {name="c"}]},
+ {id=2,
+  description="Short text",
+  items=[{name="d"}]}];
+> description id items
+>                name
+> ----------- -- -----
+> The quick    1 a
+> brown fox      b
+> jumps over     c
+> the lazy
+> dog
+> Short text   2 d
+>
+> val it : {description:string, id:int, items:{name:string} list} list
+
+Sys.unset "stringFold";
+> val it = () : unit
+
+(* A negative stringFold is treated as if unset: no folding. *)
+Sys.set ("stringFold", ~3);
+> val it = () : unit
+
+[{id=1, name="The Avocado Tofu Salad"}];
+> id name
+> -- ----------------------
+>  1 The Avocado Tofu Salad
+>
+> val it : {id:int, name:string} list
+
+Sys.unset "stringFold";
+> val it = () : unit
 
 (*) End pretty.smli
