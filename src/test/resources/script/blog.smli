@@ -1694,6 +1694,8 @@ Sys.set ("output", "tabular");
 > val it = () : unit
 Sys.set ("lineWidth", 65);
 > val it = () : unit
+Sys.set ("printLength", 20);
+> val it = () : unit
 
 from e in scott.emps
   where e.deptno = 10
@@ -1766,10 +1768,10 @@ val clients =
    {cname = "IBM", contact = 7654, city = "BOSTON"}];
 > city   cname  contact
 > ------ ------ -------
-> BOSTON Apple  7654
-> BOSTON Disney 7499
-> BOSTON Ford   7521
-> BOSTON IBM    7654
+> BOSTON Apple     7654
+> BOSTON Disney    7499
+> BOSTON Ford      7521
+> BOSTON IBM       7654
 >
 > val clients : {city:string, cname:string, contact:int} list
 
@@ -1793,16 +1795,14 @@ val shipments =
   [{id=1, shipping=10.0, items=[{product="soda", quantity=12},
                                 {product="beer", quantity=3}]},
    {id=2, shipping=7.5, items=[{product="cider",quantity=4}]}];
-> val shipments =
->   [
->    {id=1,
->     items=
->     [{product="soda",quantity=12},{product="beer",quantity=3}],
->     shipping=10},
->    {id=2,items=[{product="cider",quantity=4}],shipping=7.5}]
->   :
->     {id:int, items:{product:string, quantity:int} list,
->      shipping:real} list
+> id items            shipping
+>    product quantity
+> -- ------- -------- --------
+>  1 soda          12       10
+>    beer           3
+>  2 cider          4      7.5
+>
+> val shipments : {id:int, items:{product:string, quantity:int} list, shipping:real} list
 
 (* Iterate over the shipments and their items. *)
 from s in shipments,
@@ -1810,9 +1810,9 @@ from s in shipments,
   yield {s.id, i.product, i.quantity};
 > id product quantity
 > -- ------- --------
-> 1  soda    12
-> 1  beer    3
-> 2  cider   4
+>  1 soda          12
+>  1 beer           3
+>  2 cider          4
 >
 > val it : {id:int, product:string, quantity:int} list
 
@@ -1900,14 +1900,14 @@ from deptno in [10, 20],
   yield {deptno, emp.job, initial = String.sub(emp.ename, 1)};
 > deptno initial job
 > ------ ------- ---------
-> 10     L       MANAGER
-> 10     I       PRESIDENT
-> 10     I       CLERK
-> 20     M       CLERK
-> 20     O       MANAGER
-> 20     C       ANALYST
-> 20     D       CLERK
-> 20     O       ANALYST
+>     10 L       MANAGER
+>     10 I       PRESIDENT
+>     10 I       CLERK
+>     20 M       CLERK
+>     20 O       MANAGER
+>     20 C       ANALYST
+>     20 D       CLERK
+>     20 O       ANALYST
 >
 > val it : {deptno:int, initial:char, job:string} bag
 
@@ -1966,9 +1966,9 @@ from e in scott.emps
   order deptno;
 > deptno s
 > ------ ----
-> 10     1300
-> 20     1900
-> 30     950
+>     10 1300
+>     20 1900
+>     30  950
 >
 > val it : {deptno:int, s:real} list
 
@@ -1984,19 +1984,15 @@ in
     group {r = region d} compute elements
     order r
 end;
-> val it =
->   [
->    {elements=[{deptno=30,dname="SALES",loc="CHICAGO"}],
->     r="MIDWEST"},
->    {
->     elements=
->     [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
->      {deptno=40,dname="OPERATIONS",loc="BOSTON"}],r="NORTHEAST"},
->    {elements=[{deptno=20,dname="RESEARCH",loc="DALLAS"}],
->     r="SOUTH"}]
->   :
->     {elements:{deptno:int, dname:string, loc:string} bag,
->      r:string} list
+> elements                   r
+> deptno dname      loc
+> ------ ---------- -------- ---------
+>     30 SALES      CHICAGO  MIDWEST
+>     10 ACCOUNTING NEW YORK NORTHEAST
+>     40 OPERATIONS BOSTON
+>     20 RESEARCH   DALLAS   SOUTH
+>
+> val it : {elements:{deptno:int, dname:string, loc:string} bag, r:string} list
 
 (* How many employees in each department? *)
 from e in scott.emps
@@ -2004,9 +2000,9 @@ from e in scott.emps
   order deptno;
 > c deptno
 > - ------
-> 3 10
-> 5 20
-> 6 30
+> 3     10
+> 5     20
+> 6     30
 >
 > val it : {c:int, deptno:int} list
 
@@ -2024,11 +2020,11 @@ from e in scott.emps
   yield {e.ename, e.sal, rank = ordinal + 1};
 > ename rank sal
 > ----- ---- ----
-> KING  1    5000
-> SCOTT 2    3000
-> FORD  3    3000
-> JONES 4    2975
-> BLAKE 5    2850
+> KING     1 5000
+> SCOTT    2 3000
+> FORD     3 3000
+> JONES    4 2975
+> BLAKE    5 2850
 >
 > val it : {ename:string, rank:int, sal:real} list
 
@@ -2078,9 +2074,9 @@ from e in scott.emps
   order deptno unorder;
 > count deptno sumSal
 > ----- ------ ------
-> 3     10     8750
-> 5     20     10875
-> 6     30     9400
+>     3     10   8750
+>     5     20  10875
+>     6     30   9400
 >
 > val it : {count:int, deptno:int, sumSal:real} bag
 
@@ -2168,8 +2164,8 @@ from e in scott.emps
 > MARTIN SALESMAN  1250
 > WARD   SALESMAN  1250
 > ADAMS  CLERK     1100
-> JAMES  CLERK     950
-> SMITH  CLERK     800
+> JAMES  CLERK      950
+> SMITH  CLERK      800
 >
 > val it : {ename:string, job:string, sal:real} list
 
@@ -2186,8 +2182,8 @@ from e in scott.emps
 > ------ --------- ----
 > SCOTT  ANALYST   3000
 > FORD   ANALYST   3000
-> SMITH  CLERK     800
-> JAMES  CLERK     950
+> SMITH  CLERK      800
+> JAMES  CLERK      950
 > ADAMS  CLERK     1100
 > MILLER CLERK     1300
 > CLARK  MANAGER   2450
@@ -2294,20 +2290,20 @@ from e in scott.emps
       annualSalary = e.sal * 12.0};
 > annualSalary name   position
 > ------------ ------ ---------
-> 9600         SMITH  clerk
-> 19200        ALLEN  salesman
-> 15000        WARD   salesman
-> 35700        JONES  manager
-> 15000        MARTIN salesman
-> 34200        BLAKE  manager
-> 29400        CLARK  manager
-> 36000        SCOTT  analyst
-> 60000        KING   president
-> 18000        TURNER salesman
-> 13200        ADAMS  clerk
-> 11400        JAMES  clerk
-> 36000        FORD   analyst
-> 15600        MILLER clerk
+>         9600 SMITH  clerk
+>        19200 ALLEN  salesman
+>        15000 WARD   salesman
+>        35700 JONES  manager
+>        15000 MARTIN salesman
+>        34200 BLAKE  manager
+>        29400 CLARK  manager
+>        36000 SCOTT  analyst
+>        60000 KING   president
+>        18000 TURNER salesman
+>        13200 ADAMS  clerk
+>        11400 JAMES  clerk
+>        36000 FORD   analyst
+>        15600 MILLER clerk
 >
 > val it : {annualSalary:real, name:string, position:string} bag
 
@@ -2411,12 +2407,12 @@ from source in [1,2,3,4,5,6]
          c = count (from target where reachable (source, target))};
 > c source
 > - ------
-> 6 1
-> 1 2
-> 0 3
-> 6 4
-> 6 5
-> 0 6
+> 6      1
+> 1      2
+> 0      3
+> 6      4
+> 6      5
+> 0      6
 >
 > val it : {c:int, source:int} list
 

@@ -89,7 +89,12 @@ Sys.planEx "3";
 
 (*) Ranges over int * bool: point constraints merged into a single discreteSetOf.
 from t where t = (1, true) orelse t = (3, false);
-> val it = [(1,true),(3,false)] : (int * bool) bag
+> 1 2
+> - -----
+> 1 true
+> 3 false
+>
+> val it : (int * bool) bag
 Sys.planEx "3";
 > val it =
 >   "val it = from t in #toBag Range (#discreteSetOf Range ([POINT (1, true), POINT (3, false)]))"
@@ -97,7 +102,14 @@ Sys.planEx "3";
 
 (*) Ranges over bool * int: a point and a range.
 from t where t = (true, 1) orelse t >= (false, 3) andalso t <= (false, 5);
-> val it = [(false,3),(false,4),(false,5),(true,1)] : (bool * int) bag
+> 1     2
+> ----- -
+> false 3
+> false 4
+> false 5
+> true  1
+>
+> val it : (bool * int) bag
 Sys.planEx "3";
 > val it =
 >   "val it = from t in #toBag Range (#discreteSetOf Range ([POINT (true, 1), CLOSED ((false, 3), (false, 5))]))"
@@ -105,9 +117,14 @@ Sys.planEx "3";
 
 (*) Ranges over int * bool * int * bool (4-tuple): a single closed range.
 from t where t >= (1, false, 2, true) andalso t <= (1, false, 4, false);
-> val it =
->   [(1,false,2,true),(1,false,3,false),(1,false,3,true),(1,false,4,false)]
->   : (int * bool * int * bool) bag
+> 1 2     3 4
+> - ----- - -----
+> 1 false 2 true
+> 1 false 3 false
+> 1 false 3 true
+> 1 false 4 false
+>
+> val it : (int * bool * int * bool) bag
 Sys.planEx "3";
 > val it =
 >   "val it = from t in #fromList Bag (#flatten Range ([CLOSED ((1, false, 2, true), (1, false, 4, false))]))"
@@ -328,14 +345,14 @@ Sys.planEx "999";
 from x, y in [0, 2, 9] where x > y andalso x < y + 5;
 > x  y
 > -- -
-> 1  0
-> 2  0
-> 3  0
-> 4  0
-> 3  2
-> 4  2
-> 5  2
-> 6  2
+>  1 0
+>  2 0
+>  3 0
+>  4 0
+>  3 2
+>  4 2
+>  5 2
+>  6 2
 > 10 9
 > 11 9
 > 12 9
@@ -356,14 +373,14 @@ from x in [3, 5, 7], y
   group y compute count over ();
 > count y
 > ----- --
-> 2     1
-> 2     2
-> 2     3
-> 2     4
-> 1     5
-> 1     6
-> 1     -1
-> 1     0
+>     2  1
+>     2  2
+>     2  3
+>     2  4
+>     1  5
+>     1  6
+>     1 -1
+>     1  0
 >
 > val it : {count:int, y:int} bag
 
@@ -417,22 +434,19 @@ where j > 4 andalso j < 7
   andalso m > 12 andalso m < 15;
 > i j k  m
 > - - -- --
-> 1 5 9  13
-> 1 5 9  14
+> 1 5  9 13
+> 1 5  9 14
 > 1 5 10 13
 > 1 5 10 14
-> 1 6 9  13
-> 1 6 9  14
+> 1 6  9 13
+> 1 6  9 14
 > 1 6 10 13
 > 1 6 10 14
-> 2 5 9  13
-> 2 5 9  14
+> 2 5  9 13
+> 2 5  9 14
 > 2 5 10 13
 > 2 5 10 14
-> 2 6 9  13
-> 2 6 9  14
-> 2 6 10 13
-> 2 6 10 14
+> ...
 >
 > val it : {i:int, j:int, k:int, m:int} bag
 
@@ -470,8 +484,8 @@ from i
   order odd;
 > count odd
 > ----- -----
-> 34    false
-> 50    true
+>    34 false
+>    50 true
 >
 > val it : {count:int, odd:bool} list
 
@@ -483,8 +497,8 @@ from i in [0..100]
   order odd;
 > count odd
 > ----- -----
-> 34    false
-> 50    true
+>    34 false
+>    50 true
 >
 > val it : {count:int, odd:bool} list
 
@@ -634,8 +648,8 @@ where {deptno = dno, dname = name, loc} elem scott.depts
   andalso dno > 20;
 > dno loc     name
 > --- ------- ----------
-> 30  CHICAGO SALES
-> 40  BOSTON  OPERATIONS
+>  30 CHICAGO SALES
+>  40 BOSTON  OPERATIONS
 >
 > val it : {dno:int, loc:string, name:string} bag
 
@@ -645,7 +659,7 @@ where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
   andalso dno > 20;
 > dno name
 > --- -----
-> 30  SALES
+>  30 SALES
 >
 > val it : {dno:int, name:string} bag
 
@@ -655,7 +669,7 @@ where {deptno = dno, dname = name, loc = "CHICAGO"} elem scott.depts
 where dno > 20;
 > dno name
 > --- -----
-> 30  SALES
+>  30 SALES
 >
 > val it : {dno:int, name:string} bag
 
@@ -668,7 +682,7 @@ where v.loc = "CHICAGO"
 yield {dno, name = #dname v};
 > dno name
 > --- -----
-> 30  SALES
+>  30 SALES
 >
 > val it : {dno:int, name:string} bag
 
@@ -683,7 +697,7 @@ where v.loc = "CHICAGO"
 yield {dno = #deptno v, name = #dname v};
 > dno name
 > --- -----
-> 30  SALES
+>  30 SALES
 >
 > val it : {dno:int, name:string} bag
 
@@ -710,7 +724,7 @@ where dno > 20
 yield {dno = #deptno v, name = #dname v};
 > dno name
 > --- -----
-> 30  SALES
+>  30 SALES
 >
 > val it : {dno:int, name:string} bag
 
@@ -923,10 +937,10 @@ in
 end;
 > comm deptno empno ename  hiredate   job   mgr  sal
 > ---- ------ ----- ------ ---------- ----- ---- ----
-> 0    20     7369  SMITH  1980-12-17 CLERK 7902 800
-> 0    20     7876  ADAMS  1987-05-23 CLERK 7788 1100
-> 0    30     7900  JAMES  1981-12-03 CLERK 7698 950
-> 0    10     7934  MILLER 1982-01-23 CLERK 7782 1300
+>    0     20  7369 SMITH  1980-12-17 CLERK 7902  800
+>    0     20  7876 ADAMS  1987-05-23 CLERK 7788 1100
+>    0     30  7900 JAMES  1981-12-03 CLERK 7698  950
+>    0     10  7934 MILLER 1982-01-23 CLERK 7782 1300
 >
 > val it : {comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real} bag
 
@@ -1011,7 +1025,13 @@ fun path (x, y) =
 > val path = fn : int * int -> bool
 
 from p where path p;
-> val it = [(1,2),(2,3),(1,3)] : (int * int) bag
+> 1 2
+> - -
+> 1 2
+> 2 3
+> 1 3
+>
+> val it : (int * int) bag
 
 (*) Same problem, but edges are tuples, not records.
 let
@@ -1023,7 +1043,13 @@ let
 in
   from p where path p
 end;
-> val it = [(1,2),(2,3),(1,3)] : (int * int) bag
+> 1 2
+> - -
+> 1 2
+> 2 3
+> 1 3
+>
+> val it : (int * int) bag
 
 (*) Same problem using tuple arguments: e and p rather than (x, y)
 let
@@ -1035,7 +1061,13 @@ let
 in
   from p where path p
 end;
-> val it = [(1,2),(2,3),(1,3)] : (int * int) bag
+> 1 2
+> - -
+> 1 2
+> 2 3
+> 1 3
+>
+> val it : (int * int) bag
 
 (*) Same problem, using 'from x, y' rather than 'from p'
 let
@@ -1118,7 +1150,15 @@ end;
    +---> 2 --> 3
 *)
 val edges = [(1, 2), (2, 3), (1, 4), (4, 2), (4, 3)];
-> val edges = [(1,2),(2,3),(1,4),(4,2),(4,3)] : (int * int) list
+> 1 2
+> - -
+> 1 2
+> 2 3
+> 1 4
+> 4 2
+> 4 3
+>
+> val edges : (int * int) list
 
 fun edge (x, y) = (x, y) elem edges;
 > val edge = fn : int * int -> bool
@@ -1296,12 +1336,12 @@ val barBeers = [
   {bar =  "big_al", beer =  "pale", price =  1}];
 > bar      beer  price
 > -------- ----- -----
-> squirrel ipa   2
-> squirrel pale  2
-> squirrel amber 3
-> cask     stout 4
-> cask     ipa   5
-> big_al   pale  1
+> squirrel ipa       2
+> squirrel pale      2
+> squirrel amber     3
+> cask     stout     4
+> cask     ipa       5
+> big_al   pale      1
 >
 > val barBeers : {bar:string, beer:string, price:int} list
 
@@ -1427,8 +1467,16 @@ fun cousin (x, y) = sib (x, y)
 > val cousin = fn : string * string -> bool
 
 from p where sib p;
-> val it = [("b","c"),("j","k"),("c","e"),("e","c"),("c","b"),("k","j")]
->   : (string * string) bag
+> 1 2
+> - -
+> b c
+> j k
+> c e
+> e c
+> c b
+> k j
+>
+> val it : (string * string) bag
 
 (*
  * Evaluating the "cousins" query:
@@ -1437,9 +1485,21 @@ from p where sib p;
  * (k,k)                                  child of (f,g) and (g,f)
  *)
 from p where cousin p;
-> val it =
->   [("b","c"),("c","b"),("c","e"),("e","c"),("j","k"),("k","j"),("f","g"),
->    ("g","f"),("g","i"),("i","g"),("k","k")] : (string * string) bag
+> 1 2
+> - -
+> b c
+> j k
+> c e
+> e c
+> c b
+> k j
+> f g
+> g i
+> i g
+> g f
+> k k
+>
+> val it : (string * string) bag
 
 (* Nonmonotone relation.
  * 'cousin2' is as 'cousin', but 'orelse' has become 'and not'.
@@ -1530,18 +1590,18 @@ yield {b, c, profit = 400 * b + 450 * c}
 order DESC profit;
 > b c profit
 > - - ------
-> 2 2 1700
-> 3 1 1650
-> 0 3 1350
-> 1 2 1300
-> 2 1 1250
-> 3 0 1200
-> 0 2 900
-> 1 1 850
-> 2 0 800
-> 0 1 450
-> 1 0 400
-> 0 0 0
+> 2 2   1700
+> 3 1   1650
+> 0 3   1350
+> 1 2   1300
+> 2 1   1250
+> 3 0   1200
+> 0 2    900
+> 1 1    850
+> 2 0    800
+> 0 1    450
+> 1 0    400
+> 0 0      0
 >
 > val it : {b:int, c:int, profit:int} list
 
@@ -1629,10 +1689,10 @@ Sys.planEx "code";
 from d where d elem scott.depts;
 > deptno dname      loc
 > ------ ---------- --------
-> 10     ACCOUNTING NEW YORK
-> 20     RESEARCH   DALLAS
-> 30     SALES      CHICAGO
-> 40     OPERATIONS BOSTON
+>     10 ACCOUNTING NEW YORK
+>     20 RESEARCH   DALLAS
+>     30 SALES      CHICAGO
+>     40 OPERATIONS BOSTON
 >
 > val it : {deptno:int, dname:string, loc:string} bag
 Sys.planEx "0";
@@ -1647,10 +1707,10 @@ from loc, deptno, name
 where {deptno, loc, dname = name} elem scott.depts;
 > deptno loc      name
 > ------ -------- ----------
-> 10     NEW YORK ACCOUNTING
-> 20     DALLAS   RESEARCH
-> 30     CHICAGO  SALES
-> 40     BOSTON   OPERATIONS
+>     10 NEW YORK ACCOUNTING
+>     20 DALLAS   RESEARCH
+>     30 CHICAGO  SALES
+>     40 BOSTON   OPERATIONS
 >
 > val it : {deptno:int, loc:string, name:string} bag
 Sys.planEx "0";
@@ -1671,7 +1731,7 @@ from dno, name
     andalso dno > 20;
 > dno name
 > --- -----
-> 30  SALES
+>  30 SALES
 >
 > val it : {dno:int, name:string} bag
 Sys.planEx "0";
@@ -1693,7 +1753,7 @@ where dno = 30
 yield {dno = #deptno v, name = #dname v};
 > dno name
 > --- -----
-> 30  SALES
+>  30 SALES
 >
 > val it : {dno:int, name:string} bag
 Sys.planEx "0";
@@ -1715,7 +1775,7 @@ where dno > 25
 yield {dno = #deptno v, name = #dname v};
 > dno name
 > --- -----
-> 30  SALES
+>  30 SALES
 >
 > val it : {dno:int, name:string} bag
 Sys.planEx "0";

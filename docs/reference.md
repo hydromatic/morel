@@ -575,6 +575,7 @@ and unset using `Sys.unset name`.
 | relationalize        | bool   | false   | Whether to convert to relational algebra. |
 | scriptDirectory      | file   |         | Path of the directory where the 'use' command looks for scripts. When running a script, it is generally set to the directory that contains the script. |
 | stringDepth          | int    | 70      | When printing, the length of strings at which ellipsis begins. |
+| stringFold           | int    | null    | In tabular mode, the column width at which long strings are folded across multiple lines. If not set, folding is disabled. Legal values are 1 or greater. |
 | timeZone             | string | null    | Overrides the local timezone. Value is a timezone ID (e.g. 'UTC' or 'America/New_York'). If not set, the JVM default timezone is used. |
 
 [//]: # (end:properties)
