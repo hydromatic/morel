@@ -420,6 +420,10 @@ public class Shuttle {
     return ast.yield(yield.pos, yield.exp.accept(this));
   }
 
+  protected AstNode visit(Ast.YieldAll yieldAll) {
+    return ast.yieldAll(yieldAll.pos, yieldAll.exp.accept(this));
+  }
+
   protected AstNode visit(Ast.Into into) {
     return ast.into(into.pos, into.exp);
   }

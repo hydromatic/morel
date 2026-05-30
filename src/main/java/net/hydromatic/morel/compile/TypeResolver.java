@@ -1088,6 +1088,9 @@ public class TypeResolver {
       case YIELD:
         return deduceYieldStepType((Ast.Yield) step, p, fieldVars, steps);
 
+      case YIELD_ALL:
+        return deduceYieldAllStepType((Ast.YieldAll) step, p, fieldVars, steps);
+
       case ORDER:
         final Ast.Order order = (Ast.Order) step;
         final Ast.Order order2 = validateOrder(order);
@@ -1352,6 +1355,47 @@ public class TypeResolver {
       fieldVars.add(ast.id(Pos.ZERO, label), v6);
     }
     return Triple.of(p.rootEnv, envs.typeEnv, v6, c6);
+  }
+
+  /**
+   * Deduces the type of a {@code yieldAll} step.
+   *
+   * <p>"yieldAll e" evaluates the collection-valued expression "e" for each
+   * input row and emits each of its elements, flattening the result -- the
+   * relational equivalent of flatMap (monadic bind). It is type-checked here as
+   * a first-class step, so that "ordinal" and "current" resolve against the
+   * input row and a type error points at "e" itself; it is lowered to a scan
+   * followed by a yield in {@link Resolver}. Flatten semantics: the prior
+   * bindings are dropped and each element of "e" becomes a row, visible
+   * downstream as "current".
+   */
+  private Triple deduceYieldAllStepType(
+      Ast.YieldAll yieldAll,
+      Triple p,
+      PairList<Ast.Id, Variable> fieldVars,
+      List<Ast.FromStep> steps) {
+    final Variable elem = unifier.variable();
+    final Variable c0 = unifier.variable();
+    final Ast.Exp exp = deduceExpType(p.env, yieldAll.exp, c0);
+    reg(yieldAll.exp, c0);
+    // "e" must evaluate to a list or a bag (of element type "elem").
+    mayBeBagOrList(c0, elem);
+    // The output is a list if both the input and "e" are lists, and a bag if
+    // either is a bag -- the same rule as a comma-join scan.
+    final Variable c = unifier.variable();
+    isListIfBothAreLists(
+        requireNonNull(p.c),
+        unifier.variable(),
+        c0,
+        unifier.variable(),
+        c,
+        elem);
+    steps.add(yieldAll.copy(exp));
+    final TypeEnvHolder envs = new TypeEnvHolder(p.rootEnv);
+    envs.bind(Op.CURRENT.opName, elem);
+    fieldVars.clear();
+    fieldVars.add(ast.id(Pos.ZERO, Op.CURRENT.opName), elem);
+    return Triple.of(p.rootEnv, envs.typeEnv, elem, c);
   }
 
   private Triple deduceGroupStepType(

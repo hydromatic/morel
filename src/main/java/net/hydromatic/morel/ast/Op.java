@@ -177,6 +177,7 @@ public enum Op {
   INTERSECT(" intersect "),
   UNION(" union "),
   YIELD,
+  YIELD_ALL,
   INTO,
   THROUGH,
   AGGREGATE,

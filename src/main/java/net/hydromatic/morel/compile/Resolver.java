@@ -1429,6 +1429,24 @@ public class Resolver {
     }
 
     @Override
+    protected void visit(Ast.YieldAll yieldAll) {
+      // Lower "yieldAll e" to a scan over the collection-valued expression "e"
+      // followed by a yield of the freshly-bound element, i.e.
+      // ", v in e yield v". The flatten (flatMap) semantics fall out of the
+      // scan-then-yield: the scan multiplies each input row by the elements of
+      // "e", then the yield drops the input bindings, keeping only the element.
+      // "e" may be correlated (reference the input row); the unsafeToInline
+      // guard in FromBuilder keeps that lowering correct.
+      final Resolver r = withStepEnv(fromBuilder.stepEnv());
+      final Core.Exp coreExp = r.toCore(yieldAll.exp);
+      final Type elementType = coreExp.type.elementType();
+      final Core.IdPat pat =
+          core.idPat(elementType, typeMap.typeSystem.nameGenerator::get);
+      fromBuilder.scan(pat, coreExp);
+      fromBuilder.yield_(core.id(pat));
+    }
+
+    @Override
     protected void visit(Ast.Compute compute) {
       visit((Ast.Group) compute);
     }

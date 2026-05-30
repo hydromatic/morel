@@ -3283,6 +3283,35 @@ public class Ast {
     }
   }
 
+  /** A {@code yieldAll} step in a {@code from} expression. */
+  public static class YieldAll extends FromStep {
+    public final Exp exp;
+
+    YieldAll(Pos pos, Exp exp) {
+      super(pos, Op.YIELD_ALL);
+      this.exp = exp;
+    }
+
+    @Override
+    AstWriter unparse(AstWriter w, int left, int right) {
+      return w.append(" yieldAll ").append(exp, 0, 0);
+    }
+
+    @Override
+    public AstNode accept(Shuttle shuttle) {
+      return shuttle.visit(this);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+      visitor.visit(this);
+    }
+
+    public YieldAll copy(Exp exp) {
+      return this.exp.equals(exp) ? this : new YieldAll(pos, exp);
+    }
+  }
+
   /** An {@code into} step in a {@code from} expression. */
   public static class Into extends FromStep {
     public final Exp exp;

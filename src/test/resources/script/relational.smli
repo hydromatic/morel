@@ -177,6 +177,64 @@ from p in [{x = 1, y = 2},{x = 3, y = 5}]
 from e in [1, 2, 3], v in (from i in [1, 2] yield e * i) yield v;
 > val it = [1,2,2,4,3,6] : int list
 
+(*) 'yieldAll' evaluates a collection-valued expression for each input row
+(*) and emits each of its elements, flattening (monadic flatMap). The
+(*) flattened element becomes the current value, referenced as 'current'.
+from x in [[1,2],[3],[4,5]] yieldAll x;
+> val it = [1,2,3,4,5] : int list
+
+(*) 'yieldAll' over records; downstream steps see the element as 'current'
+from i in [{a=1},{a=2}] yieldAll [{b=i.a},{b=i.a+10}];
+> val it = [{b=1},{b=11},{b=2},{b=12}] : {b:int} list
+
+(*) 'yieldAll e' is equivalent to ', v in e yield v'
+from i in [{a=1},{a=2}], j in [{b=i.a},{b=i.a+10}] yield j;
+> val it = [{b=1},{b=11},{b=2},{b=12}] : {b:int} list
+
+(*) A step after a scalar 'yieldAll' refers to the element via 'current'
+from xs in [[1,2,3],[4,5]] yieldAll xs where current mod 2 = 0;
+> val it = [2,4] : int list
+
+(*) A step after a record 'yieldAll' refers to fields via 'current.field'
+from i in [{a=1},{a=2}] yieldAll [{b=i.a},{b=i.a+10}] where current.b > 5;
+> val it = [{b=11},{b=12}] : {b:int} list
+
+(*) 'yieldAll' over empty collections emits nothing for those rows
+from x in [[],[1],[]] yieldAll x;
+> val it = [1] : int list
+
+(*) 'yieldAll' can emulate 'where': emit a singleton to keep a row, empty to
+(*) drop it.
+from i in [1, 2, 3, 4] yieldAll (if i mod 2 = 0 then [i] else []);
+> val it = [2,4] : int list
+
+(*) 'ordinal' and 'current' are in scope in the 'yieldAll' expression and
+(*) refer to the input row.
+from i in [10, 20] yieldAll [i + ordinal + current];
+> val it = [20,41] : int list
+
+(*) 'yieldAll' over a correlated subquery (the LATERAL/flatMap case): the
+(*) subquery references the outer row. This works because 'yieldAll' desugars
+(*) to a scan, '<prior>, v in e yield v'.
+from e in [1, 2, 3] yieldAll (from i in [1, 2] yield e * i);
+> val it = [1,2,2,4,3,6] : int list
+
+from e in [1, 2, 3] yieldAll (from i in [1, 2] yield e * 100 + i);
+> val it = [101,102,201,202,301,302] : int list
+
+(*) The 'yieldAll' expression must be a collection; a scalar is an error.
+(*) (This is the standard type-conflict error; 'yieldAll' adds no synthesized
+(*) scan or yield to the message.)
+from i in [1, 2] yieldAll i > 1;
+> 0.0-0.0 Error: Cannot deduce type: no valid overloads
+>   raised at: 0.0-0.0
+
+(*) A 'yieldAll' expression that references an unbound variable is an error,
+(*) reported at the offending reference.
+from i in [1, 2] yieldAll i + unknown;
+> stdIn:1.31-1.38 Error: unbound variable or constructor: unknown
+>   raised at: stdIn:1.31-1.38
+
 from e in emps
   yield {x = e.id + e.deptno, y = e.id - e.deptno}
   yield x + y;
