@@ -1429,6 +1429,32 @@ public class Resolver {
     }
 
     @Override
+    protected void visit(Ast.YieldAll yieldAll) {
+      // Lower "yieldAll e" to a scan over the collection-valued expression "e"
+      // followed by a yield of the freshly-bound element. For example,
+      //
+      //   from r in orders
+      //     yieldAll r.items
+      //
+      // becomes
+      //
+      //   from r in orders,
+      //       i in r.items
+      //     yield i
+      //
+      // The scan multiplies each input row by the elements of "e" ("r.items"),
+      // then the yield drops the input bindings ("r"), keeping only the element
+      // ("i").
+      final Resolver r = withStepEnv(fromBuilder.stepEnv());
+      final Core.Exp coreExp = r.toCore(yieldAll.exp);
+      final Type elementType = coreExp.type.elementType();
+      final Core.IdPat pat =
+          core.idPat(elementType, typeMap.typeSystem.nameGenerator::get);
+      fromBuilder.scan(pat, coreExp);
+      fromBuilder.yield_(core.id(pat));
+    }
+
+    @Override
     protected void visit(Ast.Compute compute) {
       visit((Ast.Group) compute);
     }

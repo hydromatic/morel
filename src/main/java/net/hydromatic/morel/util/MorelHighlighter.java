@@ -128,7 +128,8 @@ public class MorelHighlighter {
           "take",
           "unorder",
           "union",
-          "yield");
+          "yield",
+          "yieldAll");
 
   /**
    * DML keywords, not active by default. Pass to {@link

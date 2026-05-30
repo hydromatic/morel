@@ -116,6 +116,7 @@ The formal syntax of queries is as follows.
                                 union step (<i>u</i> &ge; 1)
     | <b>where</b> <i>exp</i>                 filter step
     | <b>yield</b> <i>exp</i>                 yield step
+    | <b>yieldAll</b> <i>exp</i>              yieldAll step
 
 <i>terminalStep</i> &rarr; <b>into</b> <i>exp</i>         into step
     | <b>compute</b> <i>exp</i>               compute step
@@ -1057,6 +1058,66 @@ The output fields are the same as the input fields.
   <b>take</b> 3;
 <i>
 val it = [1,2,3] : int list</i>
+</pre>
+
+### YieldAll step
+
+<pre>
+<b>yieldAll</b> <i>exp</i>
+</pre>
+
+#### Description
+
+Evaluates a collection-valued expression for each row and emits each
+of its elements, flattening the results. It is the relational
+equivalent of a `flatMap` (or monadic `bind`) operation, and the
+flatten-shaped sibling of [`yield`](#yield-step): where `yield` emits
+one row per input row, `yieldAll` emits every element of a collection.
+
+The expression <code><i>exp</i></code> must evaluate to a collection
+(a `list` or a `bag`). The step returns one row per element of that
+collection, so <code><b>yieldAll</b> <i>exp</i></code> is equivalent to
+a scan <code><b>,</b> v <b>in</b> <i>exp</i> <b>yield</b> v</code>. As
+for a comma-join scan, the output is a `list` if both the input and
+<code><i>exp</i></code> are lists, and a `bag` otherwise.
+
+A subsequent step refers to the flattened element as `current` (or
+`current.field` if the element is a record), just as it would refer
+to the value produced by a `yield` step. Within <code><i>exp</i></code>
+itself, `ordinal` and `current` refer to the input row. If the
+expression has type `t list`, the output collection has element type
+`t`.
+
+#### Example
+
+<pre>
+<i>(* Flatten a collection of lists. *)</i>
+<b>from</b> i <b>in</b> [[1, 2], [3], [4, 5]]
+  <b>yieldAll</b> i;
+<i>
+val it = [1,2,3,4,5] : int list</i>
+</pre>
+
+Emitting a singleton to keep a row, or an empty collection to drop it,
+lets <code><b>yieldAll</b></code> express the same filtering as `where`:
+
+<pre>
+<b>from</b> i <b>in</b> [1, 2, 3, 4]
+  <b>yieldAll</b> (<b>if</b> i <b>mod</b> 2 = 0 <b>then</b> [i] <b>else</b> []);
+<i>
+val it = [2,4] : int list</i>
+</pre>
+
+Because <code><b>yieldAll</b></code> expands a collection that may depend
+on the current row, it expresses a correlated (lateral) join. In the
+following query the subquery references the outer variable
+<code>e</code>:
+
+<pre>
+<b>from</b> e <b>in</b> [1, 2, 3]
+  <b>yieldAll</b> (<b>from</b> i <b>in</b> [1, 2] <b>yield</b> e * i);
+<i>
+val it = [1,2,2,4,3,6] : int list</i>
 </pre>
 
 ### Through step

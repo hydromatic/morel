@@ -70,7 +70,8 @@ In Morel but not Standard ML:
   `union`,
   `unorder`,
   `where`,
-  `yield` steps and `in` and `of` keywords
+  `yield`,
+  `yieldAll` steps and `in` and `of` keywords
 * `elem`,
   `implies`,
   `notelem` binary operators
@@ -233,6 +234,7 @@ In Standard ML but not in Morel:
                                 union step (<i>u</i> &ge; 1)
     | <b>where</b> <i>exp</i>                 filter step
     | <b>yield</b> <i>exp</i>                 yield step
+    | <b>yieldAll</b> <i>exp</i>              yieldAll step
 <i>terminalStep</i> &rarr; <b>into</b> <i>exp</i>         into step
     | <b>compute</b> <i>exp</i>               compute step
 <i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>

@@ -576,7 +576,7 @@ void fromFirstScan(List<FromStep> steps) :
   LOOKAHEAD(
       (<IDENTIFIER> | <QUOTED_IDENTIFIER>)
       (<COMMA> | <JOIN> | <WHERE> | <GROUP> | <COMPUTE>
-        | <SKIP_> | <TAKE> | <YIELD> | <EOF>))
+        | <SKIP_> | <TAKE> | <YIELD> | <YIELDALL> | <EOF>))
   id = identifier() {
     pat = ast.idPat(id.pos, id.name);
     steps.add(ast.scan(id.pos.plus(pos()), pat, null, null));
@@ -605,7 +605,7 @@ void fromScan(List<FromStep> steps) :
   LOOKAHEAD(
       (<IDENTIFIER> | <QUOTED_IDENTIFIER>)
       (<COMMA> | <JOIN> | <WHERE> | <GROUP> | <COMPUTE>
-        | <SKIP_> | <TAKE> | <YIELD> | <EOF>))
+        | <SKIP_> | <TAKE> | <YIELD> | <YIELDALL> | <EOF>))
   id = identifier() {
     pat = ast.idPat(id.pos, id.name);
     steps.add(ast.scan(id.pos.plus(pos()), pat, null, null));
@@ -725,6 +725,10 @@ void fromStep(List<FromStep> steps) :
 |
   <YIELD> { span = Span.of(pos()); } yieldExp = expression() {
     steps.add(ast.yield(span.end(this), yieldExp));
+  }
+|
+  <YIELDALL> { span = Span.of(pos()); } yieldExp = expression() {
+    steps.add(ast.yieldAll(span.end(this), yieldExp));
   }
 }
 
@@ -2381,6 +2385,7 @@ AstNode statementEof() :
 | < WHERE: "where" >
 | < WITH: "with" >
 | < YIELD: "yield" >
+| < YIELDALL: "yieldAll" >
 
 // The following are extensions for overloaded operators:
 | < INST: "inst" >
