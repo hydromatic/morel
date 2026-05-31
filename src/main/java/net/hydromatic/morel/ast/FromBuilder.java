@@ -174,7 +174,8 @@ public class FromBuilder {
     if (exp.op == Op.FROM
         && core.boolLiteral(true).equals(condition)
         && isSimplePat(pat, (Core.From) exp)
-        && !containsOrdinal(exp)) {
+        && !containsOrdinal(exp)
+        && !unsafeToInline((Core.From) exp)) {
       final Core.From from = (Core.From) exp;
       final Core.FromStep lastStep = last(from.steps);
       final List<Core.FromStep> steps =
@@ -270,6 +271,23 @@ public class FromBuilder {
           }
         });
     return b.get();
+  }
+
+  /**
+   * Returns whether it would be unsafe to inline the subquery {@code from} into
+   * the enclosing {@code from}, given the bindings already accumulated.
+   *
+   * <p>The inlining optimization in {@link #scan} drops the subquery's trailing
+   * {@code yield} (via {@code skipLast}) and rebuilds the projection from the
+   * subquery's surviving bindings. When this builder already has bindings (that
+   * is, the scan is a join rather than the first step) and the subquery ends in
+   * a {@code yield}, the rebuilt projection references the dropped yield's
+   * binding, which is no longer in scope, and validation ({@link RefChecker})
+   * fails. In that case we fall back to a plain scan, which handles such
+   * subqueries (including correlated ones) correctly.
+   */
+  private boolean unsafeToInline(Core.From from) {
+    return !bindings.isEmpty() && last(from.steps).op == Op.YIELD;
   }
 
   private static boolean isSimplePat(Core.Pat pat, Core.From exp) {

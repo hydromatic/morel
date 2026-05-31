@@ -169,6 +169,14 @@ from p in [{x = 1, y = 2},{x = 3, y = 5}]
   yield case p of {x, y} => (x, y);
 > val it = [(1,2),(3,5)] : (int * int) list
 
+(*) Correlated (lateral) scan: a 'from' subquery on the right of a comma-join
+(*) that references an outer variable. Previously this crashed during
+(*) resolution ("VerifyException: not found") because subquery inlining
+(*) dropped the inner subquery's trailing 'yield' binding while keeping a
+(*) reference to it; such subqueries now fall back to a plain scan.
+from e in [1, 2, 3], v in (from i in [1, 2] yield e * i) yield v;
+> val it = [1,2,2,4,3,6] : int list
+
 from e in emps
   yield {x = e.id + e.deptno, y = e.id - e.deptno}
   yield x + y;
