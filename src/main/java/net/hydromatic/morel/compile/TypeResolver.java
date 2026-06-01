@@ -82,6 +82,7 @@ import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.MultiType;
 import net.hydromatic.morel.type.ParameterizedType;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
@@ -364,6 +365,8 @@ public class TypeResolver {
                   (Ast.RecordSelector) apply.fn;
               if (typeMap.typeIsVariable(apply.arg)) {
                 variableConsumer.accept(apply);
+              } else if (recordSelector.safe) {
+                checkSafeNav(apply, recordSelector, typeMap);
               } else {
                 final Collection<String> fieldNames =
                     typeMap.typeFieldNames(apply.arg);
@@ -380,6 +383,59 @@ public class TypeResolver {
             super.visit(apply);
           }
         });
+  }
+
+  /**
+   * Checks a resolved safe-navigation selector {@code e?.f}: the receiver must
+   * be a record wrapped in one or more functor layers (option or list), and the
+   * record must contain field {@code f}. Throws {@link TypeException} with a
+   * positioned message otherwise.
+   */
+  private static void checkSafeNav(
+      Ast.Apply apply, Ast.RecordSelector recordSelector, TypeMap typeMap) {
+    final Type argType = typeMap.getType(apply.arg);
+    Type type = argType;
+    boolean tunneled = false;
+    for (Type element; (element = safeNavElement(type)) != null; ) {
+      type = element;
+      tunneled = true;
+    }
+    if (!tunneled) {
+      throw new TypeException(
+          "'?.' applied to non-functor type "
+              + argType
+              + " (expected option or list)",
+          apply.arg.pos);
+    }
+    if (type.op() != Op.RECORD_TYPE && type.op() != Op.TUPLE_TYPE) {
+      throw new TypeException(
+          "reference to field "
+              + recordSelector.name
+              + " of non-record type "
+              + type,
+          apply.arg.pos);
+    }
+    final RecordLikeType recordType = (RecordLikeType) type;
+    if (!recordType.argNameTypes().containsKey(recordSelector.name)) {
+      throw new TypeException(
+          "no field '" + recordSelector.name + "' in type '" + type + "'",
+          apply.fn.pos);
+    }
+  }
+
+  /**
+   * If {@code type} is a safe-navigation functor (option or list), returns its
+   * element type; otherwise returns null.
+   */
+  private static @Nullable Type safeNavElement(Type type) {
+    if (type instanceof ListType) {
+      return type.elementType();
+    }
+    if (type.op() == Op.DATA_TYPE
+        && isSafeNavFunctor(((DataType) type).name())) {
+      return ((DataType) type).arguments.get(0);
+    }
+    return null;
   }
 
   /**
@@ -2483,29 +2539,120 @@ public class TypeResolver {
       Variable vArg,
       Variable vResult) {
     final String fieldName = recordSelector.name;
-    actionMap.put(
-        vArg,
-        (v, t, substitution, termPairs) -> {
-          // We now know "vArg", the argument type, and so we can deduce
-          // "vResult", the result type.
-          //
-          // Suppose it is "{a: int, b: real}", and "recordSelector" is "#b".
-          // From this, we can declare that the result type is "real".
-          if (t instanceof Sequence) {
-            final Sequence sequence = (Sequence) t;
-            final List<String> fieldList = fieldList(sequence);
-            if (fieldList != null) {
-              int i = fieldList.indexOf(fieldName);
-              if (i >= 0) {
-                final Term result2 = substitution.resolve(vResult);
-                final Term term = sequence.terms.get(i);
-                final Term term2 = substitution.resolve(term);
-                termPairs.accept(result2, term2);
-              }
+    if (recordSelector.safe) {
+      // Safe navigation "e?.f": the receiver "e" is a record wrapped in one or
+      // more functor layers (option, list). Tunnel through all the layers to
+      // the record, project "f", and re-wrap the field type in the same layers.
+      // The field's own type is preserved: if "e" has type "{f:int option}
+      // option" then "e?.f" has type "int option option".
+      actionMap.put(
+          vArg,
+          (v, t, substitution, termPairs) ->
+              resolveSafeField(
+                  ImmutableList.of(),
+                  fieldName,
+                  t,
+                  vResult,
+                  substitution,
+                  termPairs));
+    } else {
+      // Plain "#f e": when we resolve "vArg" (the argument type) to a record
+      // "{a: int, b: real}" and "f" is "b", we can declare "vResult" to be
+      // "real".
+      actionMap.put(
+          vArg,
+          (v, t, substitution, termPairs) -> {
+            final Term fieldType = lookupField(t, fieldName, substitution);
+            if (fieldType != null) {
+              termPairs.accept(substitution.resolve(vResult), fieldType);
             }
-          }
-        });
+          });
+    }
     return recordSelector;
+  }
+
+  /**
+   * Tunnels through the functor layers of a safe-navigation receiver to the
+   * record, projects {@code fieldName}, and binds {@code vResult} to the field
+   * type re-wrapped in those layers. {@code functors} is the stack of layers
+   * peeled so far (outermost first). Defers if a layer is not yet resolved.
+   */
+  private void resolveSafeField(
+      List<String> functors,
+      String fieldName,
+      Term term,
+      Variable vResult,
+      Unifier.Substitution substitution,
+      BiConsumer<Term, Term> termPairs) {
+    final Term t = substitution.resolve(term);
+    if (t instanceof Variable) {
+      // A layer (or the record) is not yet resolved; defer until it is.
+      actionMap.put(
+          (Variable) t,
+          (v, t2, sub, tp) ->
+              resolveSafeField(functors, fieldName, t2, vResult, sub, tp));
+      return;
+    }
+    if (!(t instanceof Sequence)) {
+      return; // not a record or functor; reported by the post-pass
+    }
+    final Sequence seq = (Sequence) t;
+    if (isSafeNavFunctor(seq.operator) && seq.terms.size() == 1) {
+      // Tunnel through this functor layer.
+      resolveSafeField(
+          ImmutableList.<String>builder()
+              .addAll(functors)
+              .add(seq.operator)
+              .build(),
+          fieldName,
+          seq.terms.get(0),
+          vResult,
+          substitution,
+          termPairs);
+      return;
+    }
+    // Reached a non-functor type; it must be a record with field "f".
+    final Term fieldType = lookupField(seq, fieldName, substitution);
+    if (fieldType == null) {
+      return; // not a record, or no such field; reported by the post-pass
+    }
+    // Re-wrap the field type in the functor layers (innermost layer first).
+    Term result = fieldType;
+    for (int i = functors.size() - 1; i >= 0; i--) {
+      result = unifier.apply(functors.get(i), result);
+    }
+    termPairs.accept(substitution.resolve(vResult), result);
+  }
+
+  /**
+   * Whether {@code op} is a functor type-constructor through which safe
+   * navigation {@code ?.} projects fields.
+   */
+  private static boolean isSafeNavFunctor(String op) {
+    return op.equals("option")
+        || op.equals("vector")
+        || op.equals(LIST_TY_CON)
+        || op.equals(BAG_TY_CON);
+  }
+
+  /**
+   * Looks up field {@code fieldName} in record term {@code t}, returning the
+   * resolved field-type term, or null if {@code t} is not a record or has no
+   * such field.
+   */
+  private static @Nullable Term lookupField(
+      Term t, String fieldName, Unifier.Substitution substitution) {
+    if (t instanceof Sequence) {
+      final Sequence sequence = (Sequence) t;
+      final List<String> fieldList = fieldList(sequence);
+      if (fieldList != null) {
+        final int i = fieldList.indexOf(fieldName);
+        if (i >= 0) {
+          return substitution.resolve(sequence.terms.get(i));
+        }
+      }
+    }
+    return null;
   }
 
   /** Inverse of {@link #recordLabel(NavigableSet)}. */

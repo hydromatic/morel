@@ -236,7 +236,11 @@ public enum AstBuilder {
   }
 
   public Ast.RecordSelector recordSelector(Pos pos, String name) {
-    return new Ast.RecordSelector(pos, name);
+    return new Ast.RecordSelector(pos, name, false);
+  }
+
+  public Ast.RecordSelector recordSelector(Pos pos, String name, boolean safe) {
+    return new Ast.RecordSelector(pos, name, safe);
   }
 
   public Ast.Type namedType(

@@ -856,6 +856,7 @@ Exp expression9() :
   Exp arg;
   Id id;
   String fieldName;
+  boolean safe = false;
   final List<Attribute> attrs = new ArrayList<Attribute>();
 }
 {
@@ -866,8 +867,11 @@ Exp expression9() :
     // example, in "CLOSED (3,7).contains 5", the "(3,7)" is a non-Id atom
     // being passed as an argument; suppressing the DOT here lets expression8
     // attach ".contains 5" to the full "CLOSED (3,7)" application instead.
-    LOOKAHEAD({ getToken(1).kind == DOT && !(inArg && !isId(e)) })
-    <DOT>
+    LOOKAHEAD({ (getToken(1).kind == DOT || getToken(1).kind == QDOT)
+                && !(inArg && !isId(e)) })
+    // ".f" is a plain field projection or postfix method call; "?.f" is a
+    // safe-navigation projection through the receiver's functor.
+    ( <DOT> { safe = false; } | <QDOT> { safe = true; } )
     ( id = identifier() { fieldName = id.name; }
     | <NATURAL_LITERAL> { fieldName = token.image; }
     )
@@ -896,8 +900,10 @@ Exp expression9() :
       //   - getToken(2) != DOT prevents consuming an identifier that is
       //     itself followed by "." as a postfix arg (e.g. "expr.fn Id.g"
       //     must not consume "Id").
+      // Postfix method call applies only to plain ".f", never safe "?.f".
       LOOKAHEAD({
-          isAtomStart()
+          !safe
+          && isAtomStart()
           && !isModule(e)
           && (getToken(1).kind == LPAREN
               ? !isId(e) || BuiltIn.BY_METHOD_NAME.containsKey(fieldName)
@@ -907,7 +913,7 @@ Exp expression9() :
       { e = ast.postfixApp(pos(), e, fieldName, arg); }
     |
       {
-        final Exp s = ast.recordSelector(pos(), fieldName);
+        final Exp s = ast.recordSelector(pos(), fieldName, safe);
         e = ast.apply(s, e);
       }
     )
@@ -2446,6 +2452,7 @@ AstNode statementEof() :
     | < RBRACKET: "]" >
     | < SEMICOLON: ";" >
     | < BAR: "|" >
+    | < QDOT: "?." >
     | < DOT: "." >
     | < COMMA: "," >
     | < RARROW: "=>" >

@@ -684,6 +684,9 @@ public class Resolver {
     final Core.Exp coreFn;
     if (apply.fn.op == Op.RECORD_SELECTOR) {
       final Ast.RecordSelector recordSelector = (Ast.RecordSelector) apply.fn;
+      if (recordSelector.safe) {
+        return toCoreSafeNav(apply, recordSelector, coreArg, type);
+      }
       RecordLikeType recordType = (RecordLikeType) coreArg.type;
       if (coreArg.type.isProgressive()) {
         Object o = valueOf(env, coreArg);
@@ -709,6 +712,93 @@ public class Resolver {
       coreFn = fnToCore(apply.fn, typeMap.getType(apply.arg));
     }
     return core.apply(apply.pos, type, coreFn, coreArg);
+  }
+
+  /**
+   * Lowers safe navigation {@code e?.f} by tunneling through the receiver's
+   * functor layers (option, list): {@code F1.map (F2.map (... (Fn.map #f))) e}.
+   * The field's own type is preserved (no flattening).
+   */
+  private Core.Apply toCoreSafeNav(
+      Ast.Apply apply,
+      Ast.RecordSelector recordSelector,
+      Core.Exp coreArg,
+      Type type) {
+    final TypeSystem ts = typeMap.typeSystem;
+    // Peel the functor layers (outermost first) down to the record.
+    final List<BuiltIn> maps = new ArrayList<>();
+    Type t = coreArg.type;
+    while (true) {
+      if (t instanceof ListType) {
+        maps.add(BuiltIn.LIST_MAP);
+        t = t.elementType();
+      } else if (t.op() == Op.DATA_TYPE
+          && functorMap(((DataType) t).name()) != null) {
+        maps.add(functorMap(((DataType) t).name()));
+        t = ((DataType) t).arguments.get(0);
+      } else {
+        break;
+      }
+    }
+
+    final Core.RecordSelector selector =
+        core.recordSelector(ts, (RecordLikeType) t, recordSelector.name);
+    // Build "F1.map (F2.map (... (Fn.map #f)))", innermost layer first, then
+    // apply to the receiver.
+    Core.Exp fn = selector;
+    Type inType = t; // record type
+    Type outType = ((FnType) selector.type).resultType; // field type
+    for (int i = maps.size() - 1; i >= 0; i--) {
+      final BuiltIn mapBuiltIn = maps.get(i);
+      final Type fInType = wrapFunctor(ts, mapBuiltIn, inType);
+      final Type fOutType = wrapFunctor(ts, mapBuiltIn, outType);
+      fn =
+          core.apply(
+              apply.pos,
+              ts.fnType(fInType, fOutType),
+              core.functionLiteral(ts, mapBuiltIn),
+              fn);
+      inType = fInType;
+      outType = fOutType;
+    }
+    return core.apply(apply.pos, type, fn, coreArg);
+  }
+
+  /**
+   * Returns the {@code map} built-in for a safe-navigation functor (option,
+   * bag, vector) named {@code name}, or null if {@code name} is not such a
+   * functor. (List is handled separately, as it is a {@link ListType} rather
+   * than a {@link DataType}.)
+   */
+  private static @Nullable BuiltIn functorMap(String name) {
+    switch (name) {
+      case "option":
+        return BuiltIn.OPTION_MAP;
+      case "bag":
+        return BuiltIn.BAG_MAP;
+      case "vector":
+        return BuiltIn.VECTOR_MAP;
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Builds {@code F elementType}, where {@code F} is the functor of {@code
+   * mapBuiltIn} (LIST_MAP, OPTION_MAP, BAG_MAP or VECTOR_MAP).
+   */
+  private static Type wrapFunctor(
+      TypeSystem ts, BuiltIn mapBuiltIn, Type elementType) {
+    switch (mapBuiltIn) {
+      case LIST_MAP:
+        return ts.listType(elementType);
+      case BAG_MAP:
+        return ts.bagType(elementType);
+      case VECTOR_MAP:
+        return ts.vector(elementType);
+      default:
+        return ts.option(elementType);
+    }
   }
 
   /**

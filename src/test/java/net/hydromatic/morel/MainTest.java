@@ -447,6 +447,10 @@ public class MainTest {
     ml("{e with deptno = 10, empno = 100}").assertParseSame();
     ml("{hd scott.emps with deptno = 10, empno = 100}")
         .assertParse("{hd (#emps scott) with deptno = 10, empno = 100}");
+
+    // safe navigation
+    ml("e?.deptno").assertParseSame();
+    ml("a?.b?.c").assertParseSame();
   }
 
   @Test

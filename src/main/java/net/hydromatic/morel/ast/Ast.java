@@ -1235,10 +1235,23 @@ public class Ast {
   public static class RecordSelector extends Exp {
     public final String name;
 
+    /**
+     * Whether this is a safe-navigation selector ({@code e?.f}), which projects
+     * the field through the receiver's functor (e.g. {@code Option.map #f e}),
+     * rather than a plain selector ({@code #f e}).
+     */
+    public final boolean safe;
+
     /** Creates a record selector. */
     RecordSelector(Pos pos, String name) {
+      this(pos, name, false);
+    }
+
+    /** Creates a plain or safe-navigation record selector. */
+    RecordSelector(Pos pos, String name, boolean safe) {
       super(pos, Op.RECORD_SELECTOR);
       this.name = requireNonNull(name);
+      this.safe = safe;
       assert !name.startsWith("#");
     }
 
@@ -3540,6 +3553,13 @@ public class Ast {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
+      if (fn instanceof RecordSelector && ((RecordSelector) fn).safe) {
+        // Safe navigation "e?.f" unparses postfix; the plain selector "#f e"
+        // has no prefix safe spelling.
+        return w.append(arg, left, op.left)
+            .append("?.")
+            .append(((RecordSelector) fn).name);
+      }
       return w.infix(left, fn, op, arg, right);
     }
 
