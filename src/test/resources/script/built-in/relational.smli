@@ -348,8 +348,8 @@ Relational.compare ({c=1, b=2.0}, {c=2, b=1.0});
 Relational.compare (SOME 1, NONE);
 > val it = GREATER : order
 Relational.compare (SOME 1, SOME "a");
-> 0.0-0.0 Error: Cannot deduce type: conflict: int vs string
->   raised at: 0.0-0.0
+> stdIn:1.1-1.38 Error: Cannot deduce type: conflict: int vs string
+>   raised at: stdIn:1.1-1.38
 Relational.compare (SOME ~1, NONE);
 > val it = GREATER : order
 Relational.compare (NONE, NONE);

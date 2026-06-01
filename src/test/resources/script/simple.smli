@@ -883,6 +883,27 @@ tup .1;
 > stdIn:1.11 Error: no field '4' in type 'int * int * int'
 >   raised at: stdIn:1.11
 
+(*) Field of a non-record value whose type is not yet known (e.g. a 'let'-bound
+(*) variable) is a type error, not an internal exception.
+let val n = 5 in n.x end;
+> stdIn:1.18 Error: reference to field x of non-record type int
+>   raised at: stdIn:1.18
+
+(*) Arithmetic operators are not defined for non-numeric types; the error is a
+(*) positioned type error, not an internal exception.
+true + true;
+> stdIn:1.1-1.12 Error: operator '+' is not defined for type 'bool'
+>   raised at: stdIn:1.1-1.12
+"a" + "b";
+> stdIn:1.1-1.10 Error: operator '+' is not defined for type 'string'
+>   raised at: stdIn:1.1-1.10
+~true;
+> stdIn:1.2-1.6 Error: operator '~' is not defined for type 'bool'
+>   raised at: stdIn:1.2-1.6
+abs true;
+> stdIn:1.1-1.9 Error: operator 'abs' is not defined for type 'bool'
+>   raised at: stdIn:1.1-1.9
+
 (* Errors --------------------------------------------------------- *)
 
 (* The first is printed as '1.9', the second as '1.9-1.11', and the

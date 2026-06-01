@@ -109,8 +109,8 @@ let
 in
   o1 "a string"
 end;
-> 0.0-0.0 Error: Cannot deduce type: no valid overloads
->   raised at: 0.0-0.0
+> stdIn:1.1-7.4 Error: Cannot deduce type: no valid overloads
+>   raised at: stdIn:1.1-7.4
 
 (* As previous, but at top level. *)
 over o1a;
@@ -124,8 +124,8 @@ o1a true;
 o1a 1;
 > val it = 18 : int
 o1a "a string";
-> 0.0-0.0 Error: Cannot deduce type: no valid overloads
->   raised at: 0.0-0.0
+> stdIn:1.1-1.15 Error: Cannot deduce type: no valid overloads
+>   raised at: stdIn:1.1-1.15
 
 (* As previous, but with an empty environment. The number of variables in the
  * environment can cause subtle differences in behavior, so we test it both

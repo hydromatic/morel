@@ -31,18 +31,7 @@ public enum PrimitiveType implements RecordLikeType {
   INT,
   REAL,
   STRING,
-  UNIT {
-    @Override
-    public SortedMap<String, Type> argNameTypes() {
-      // "unit" behaves like a record/tuple type with no fields
-      return ImmutableSortedMap.of();
-    }
-
-    @Override
-    public Type argType(int i) {
-      throw new IndexOutOfBoundsException();
-    }
-  };
+  UNIT;
 
   /** The name in the language, e.g. {@code bool}. */
   public final String moniker = name().toLowerCase(Locale.ROOT);
@@ -90,14 +79,17 @@ public enum PrimitiveType implements RecordLikeType {
     return this;
   }
 
+  // A primitive type has zero fields; "argNameTypes" and "argType" treat it
+  // like a record (or tuple) with no fields, rather than throwing.
+
   @Override
   public SortedMap<String, Type> argNameTypes() {
-    throw new UnsupportedOperationException();
+    return ImmutableSortedMap.of();
   }
 
   @Override
   public Type argType(int i) {
-    throw new UnsupportedOperationException();
+    throw new IndexOutOfBoundsException();
   }
 
   @Override

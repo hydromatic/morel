@@ -148,7 +148,10 @@ public abstract class Codes {
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.REAL_ABS);
           default:
-            throw new AssertionError("bad type " + argType);
+            throw new CompileException(
+                "operator not defined for type '" + argType + "'",
+                false,
+                Pos.ZERO);
         }
       };
 
@@ -2652,7 +2655,10 @@ public abstract class Codes {
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_REAL);
           default:
-            throw new AssertionError("bad type " + argType);
+            throw new CompileException(
+                "operator not defined for type '" + argType + "'",
+                false,
+                Pos.ZERO);
         }
       };
 
@@ -2677,7 +2683,10 @@ public abstract class Codes {
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_REAL);
           default:
-            throw new AssertionError("bad type " + argType);
+            throw new CompileException(
+                "operator not defined for type '" + argType + "'",
+                false,
+                Pos.ZERO);
         }
       };
 
@@ -2700,7 +2709,10 @@ public abstract class Codes {
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_REAL);
           default:
-            throw new AssertionError("bad type " + argType);
+            throw new CompileException(
+                "operator not defined for type '" + argType + "'",
+                false,
+                Pos.ZERO);
         }
       };
 
@@ -2714,7 +2726,10 @@ public abstract class Codes {
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_REAL);
           default:
-            throw new AssertionError("bad type " + argType);
+            throw new CompileException(
+                "operator not defined for type '" + argType + "'",
+                false,
+                Pos.ZERO);
         }
       };
 
@@ -3807,7 +3822,8 @@ public abstract class Codes {
               return core.functionLiteral(typeSystem, BuiltIn.Z_SUM_REAL);
           }
         }
-        throw new AssertionError("bad type " + argType);
+        throw new CompileException(
+            "operator not defined for type '" + argType + "'", false, Pos.ZERO);
       };
 
   /** @see BuiltIn#STRING_COLLATE */

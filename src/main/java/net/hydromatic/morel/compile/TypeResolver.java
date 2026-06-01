@@ -230,7 +230,7 @@ public class TypeResolver {
                 + join("\n", transform(terms, Object::toString));
         final Failure failure = (Failure) result;
         throw new TypeException(
-            "Cannot deduce type: " + failure.reason(), Pos.ZERO);
+            "Cannot deduce type: " + failure.reason(), decl.pos);
       }
 
       final TypeMap typeMap0 =
@@ -273,8 +273,44 @@ public class TypeResolver {
       } else {
         checkNoUnresolvedFieldRefs(node2, typeMap);
       }
+      checkNumericOperators(node2, typeMap);
       return Resolved.of(env, decl, node2, typeMap);
     }
+  }
+
+  /**
+   * Checks that arithmetic operators ({@code +}, {@code -}, {@code *}, {@code
+   * ~}, {@code abs}) are applied to numeric (int or real) operands. Throws a
+   * positioned {@link TypeException} otherwise, e.g. for "true + true".
+   */
+  private static void checkNumericOperators(Ast.Decl decl, TypeMap typeMap) {
+    decl.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Ast.Apply apply) {
+            if (apply.fn instanceof Ast.Id) {
+              final String name = ((Ast.Id) apply.fn).name;
+              final BuiltIn builtIn = BuiltIn.BY_ML_NAME.get(name);
+              if (builtIn != null && builtIn.preferredType != null) {
+                final Type type = typeMap.getType(apply);
+                if (type != PrimitiveType.INT
+                    && type != PrimitiveType.REAL
+                    && !(type instanceof TypeVar)) {
+                  final String opName =
+                      name.startsWith("op ") ? name.substring(3) : name;
+                  throw new TypeException(
+                      "operator '"
+                          + opName
+                          + "' is not defined for type '"
+                          + type
+                          + "'",
+                      apply.pos);
+                }
+              }
+            }
+            super.visit(apply);
+          }
+        });
   }
 
   /**
@@ -3129,7 +3165,7 @@ public class TypeResolver {
           prevReturnTypePos = funMatch.pos;
         }
       }
-      exp = ast.caseOf(Pos.ZERO, idTuple(varNames), matchList);
+      exp = ast.caseOf(Pos.sum(matchList), idTuple(varNames), matchList);
     }
     if (returnType != null) {
       exp = ast.annotatedExp(exp.pos, exp, returnType);
@@ -3423,8 +3459,8 @@ public class TypeResolver {
         && call.a1 instanceof Ast.RangeList) {
       return elemOnRangeList(env, call, v);
     }
-    Ast.Id id = ast.id(Pos.ZERO, requireNonNull(call.op.opName));
-    Ast.Tuple arg = ast.tuple(Pos.ZERO, ImmutableList.of(call.a0, call.a1));
+    Ast.Id id = ast.id(call.pos, requireNonNull(call.op.opName));
+    Ast.Tuple arg = ast.tuple(call.pos, ImmutableList.of(call.a0, call.a1));
     return deduceExpType(env, ast.apply(id, arg), v);
   }
 
@@ -3460,7 +3496,7 @@ public class TypeResolver {
 
   /** Registers a prefix operator. */
   private Ast.Exp prefix(TypeEnv env, Ast.PrefixCall call, Variable v) {
-    Ast.Id id = ast.id(Pos.ZERO, requireNonNull(call.op.opName));
+    Ast.Id id = ast.id(call.pos, requireNonNull(call.op.opName));
     return deduceExpType(env, ast.apply(id, call.a), v);
   }
 

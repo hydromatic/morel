@@ -166,24 +166,24 @@ ack 3 3;
 (*) Non-exhaustive function
 fun f [(SOME i)] = i
   | f [] = 0;
-> 0.0-0.0 Warning: match nonexhaustive
->   raised at: 0.0-0.0
+> stdIn:1.5-2.13 Warning: match nonexhaustive
+>   raised at: stdIn:1.5-2.13
 > val f = fn : int option list -> int
 
 (*) Add NONE, still non-exhaustive
 fun f [(SOME i)] = i
   | f [NONE] = ~1
   | f [] = 0;
-> 0.0-0.0 Warning: match nonexhaustive
->   raised at: 0.0-0.0
+> stdIn:1.5-3.13 Warning: match nonexhaustive
+>   raised at: stdIn:1.5-3.13
 > val f = fn : int option list -> int
 
 (*) Allow list longer than 1, still non-exhaustive
 fun f [(SOME i)] = i
   | f [] = 0
   | f (one :: two :: rest) = ~2;
-> 0.0-0.0 Warning: match nonexhaustive
->   raised at: 0.0-0.0
+> stdIn:1.5-3.32 Warning: match nonexhaustive
+>   raised at: stdIn:1.5-3.32
 > val f = fn : int option list -> int
 
 (*) Exhaustive
@@ -275,8 +275,8 @@ fun classify (C01, RED) = "first, red"
   | classify (C33, _) = "thirty-third"
   | classify (C34, _) = "thirty-fourth"
   | classify (C35, GREEN) = "thirty-fifth";
-> 0.0-0.0 Warning: match nonexhaustive
->   raised at: 0.0-0.0
+> stdIn:1.5-35.43 Warning: match nonexhaustive
+>   raised at: stdIn:1.5-35.43
 > val classify = fn : big * color -> string
 
 fn (C01, RED) => "first"

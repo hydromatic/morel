@@ -34,6 +34,7 @@ import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
+import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
 import net.hydromatic.morel.type.Type;
@@ -154,7 +155,13 @@ public class TypeMap {
     }
     if (term instanceof Unifier.Variable) {
       final Type type = termToType(term);
-      if (type instanceof RecordLikeType) {
+      // A scalar primitive (int, bool, char, real, string) is not a record, so
+      // returning null here makes a field reference report "non-record type"
+      // rather than "no field". (unit is the empty record, so it is allowed
+      // through.)
+      final boolean scalar =
+          type instanceof PrimitiveType && type != PrimitiveType.UNIT;
+      if (type instanceof RecordLikeType && !scalar) {
         return (SortedSet<String>)
             ((RecordLikeType) type).argNameTypes().keySet();
       }

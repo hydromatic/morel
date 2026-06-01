@@ -179,8 +179,8 @@ fun countOption2 NONE: int = 0
 > val countOption2 = fn : 'a option -> int
 fun firstOrSecond (e1 :: e2 :: rest): int = e2
   | firstOrSecond (e1 :: rest) = e1;
-> 0.0-0.0 Warning: match nonexhaustive
->   raised at: 0.0-0.0
+> stdIn:1.5-2.36 Warning: match nonexhaustive
+>   raised at: stdIn:1.5-2.36
 > val firstOrSecond = fn : int list -> int
 
 (*
@@ -353,11 +353,11 @@ id_list [1,2];
 id_list ["a","b"];
 > val it = ["a","b"] : string list
 id_list (true, 1);
-> 0.0-0.0 Error: Cannot deduce type: conflict: tuple(bool, int) vs list(T6)
->   raised at: 0.0-0.0
+> stdIn:1.1-1.18 Error: Cannot deduce type: conflict: tuple(bool, int) vs list(T6)
+>   raised at: stdIn:1.1-1.18
 id_list (bag [false,true]);
-> 0.0-0.0 Error: Cannot deduce type: conflict: list(T9) vs bag(T7)
->   raised at: 0.0-0.0
+> stdIn:1.1-1.26 Error: Cannot deduce type: conflict: list(T9) vs bag(T7)
+>   raised at: stdIn:1.1-1.26
 
 (*) Same, without parentheses around the argument.
 fun id_list x: 'a list = x;
@@ -393,11 +393,11 @@ first_pair [(1,2),(3,4)];
 first_pair [("a","b"),("c","d")];
 > val it = ("a","b") : string * string
 first_pair [("a",true),("c",false)];
-> 0.0-0.0 Error: Cannot deduce type: conflict: string vs bool
->   raised at: 0.0-0.0
+> stdIn:1.1-1.36 Error: Cannot deduce type: conflict: string vs bool
+>   raised at: stdIn:1.1-1.36
 first_pair (bag [("a","b"),("c","d")]);
-> 0.0-0.0 Error: Cannot deduce type: conflict: bag(T11) vs list(tuple(T13, T13))
->   raised at: 0.0-0.0
+> stdIn:1.1-1.38 Error: Cannot deduce type: conflict: bag(T11) vs list(tuple(T13, T13))
+>   raised at: stdIn:1.1-1.38
 
 (* Function that uses its argument in a query and therefore requires
  * it to be a list or a bag. *)

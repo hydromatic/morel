@@ -215,8 +215,8 @@ end;
 > val it : int
 :t
 1 + "a";
-> 0.0-0.0 Error: Cannot deduce type: conflict: int vs string
->   raised at: 0.0-0.0
+> stdIn:1.1-1.8 Error: Cannot deduce type: conflict: int vs string
+>   raised at: stdIn:1.1-1.8
 :t NONE;
 > val it : 'a option
 :t SOME 4;
@@ -344,8 +344,8 @@ end;
 
 (*) Cannot be typed, since the parameter f is in a monomorphic position
 :t fn f => (f true, f 0);
-> 0.0-0.0 Error: Cannot deduce type: conflict: int vs bool
->   raised at: 0.0-0.0
+> stdIn:1.14-1.35 Error: Cannot deduce type: conflict: int vs bool
+>   raised at: stdIn:1.14-1.35
 
 (*) Recursive function types
 :t
