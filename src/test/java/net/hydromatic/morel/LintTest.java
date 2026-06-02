@@ -55,6 +55,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.parse.MorelParserImplConstants;
+import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.util.Generation;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.PairList;
@@ -1161,6 +1163,28 @@ public class LintTest {
       System.out.println(message);
     }
     assertThat("Lint violations:\n" + b, g.messages, empty());
+  }
+
+  /**
+   * Tests that {@link Parsers#RESERVED_WORDS} matches the alphabetic keyword
+   * tokens generated from {@code MorelParser.jj}. If this fails, a keyword was
+   * added or removed; update {@code RESERVED_WORDS} to match.
+   */
+  @Test
+  void testReservedWords() {
+    final TreeSet<String> fromGrammar = new TreeSet<>();
+    for (String image : MorelParserImplConstants.tokenImage) {
+      // A keyword token's image is the quoted literal, e.g. "\"left\"".
+      if (image.length() >= 3
+          && image.charAt(0) == '"'
+          && image.charAt(image.length() - 1) == '"') {
+        final String word = image.substring(1, image.length() - 1);
+        if (word.matches("[a-z]+")) {
+          fromGrammar.add(word);
+        }
+      }
+    }
+    assertThat(new TreeSet<>(Parsers.RESERVED_WORDS), is(fromGrammar));
   }
 
   /** Tests the primary-constructor rule against synthetic source code. */

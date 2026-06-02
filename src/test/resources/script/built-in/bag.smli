@@ -27,12 +27,12 @@ Sys.set ("stringDepth", ~1);
 
 Bag;
 > val it =
->   {@=fn,all=fn,app=fn,concat=fn,drop=fn,exists=fn,filter=fn,find=fn,fold=fn,
+>   {@=fn,all=fn,app=fn,concat=fn,drop=fn,`exists`=fn,filter=fn,find=fn,fold=fn,
 >    fromList=fn,getItem=fn,hd=fn,length=fn,map=fn,mapPartial=fn,nil=[],nth=fn,
->    null=fn,partition=fn,tabulate=fn,take=fn,tl=fn,toList=fn}
+>    null=fn,partition=fn,tabulate=fn,`take`=fn,tl=fn,toList=fn}
 >   : {@:'a bag * 'a bag -> 'a bag, all:('b -> bool) -> 'b bag -> bool,
 >      app:('c -> unit) -> 'c bag -> unit, concat:'d bag list -> 'd bag,
->      drop:'e bag * int -> 'e bag, exists:('f -> bool) -> 'f bag -> bool,
+>      drop:'e bag * int -> 'e bag, `exists`:('f -> bool) -> 'f bag -> bool,
 >      filter:('g -> bool) -> 'g bag -> 'g bag,
 >      find:('h -> bool) -> 'h bag -> 'h option,
 >      fold:('i * 'j -> 'j) -> 'j -> 'i bag -> 'j, fromList:'k list -> 'k bag,
@@ -41,7 +41,7 @@ Bag;
 >      mapPartial:('q -> 'r option) -> 'q bag -> 'r bag, nil:'s bag,
 >      nth:'t bag * int -> 't, null:'u bag -> bool,
 >      partition:('v -> bool) -> 'v bag -> 'v bag * 'v bag,
->      tabulate:int * (int -> 'w) -> 'w bag, take:'x bag * int -> 'x bag,
+>      tabulate:int * (int -> 'w) -> 'w bag, `take`:'x bag * int -> 'x bag,
 >      tl:'y bag -> 'y bag, toList:'z bag -> 'z list}
 
 (*) val nil : 'a bag

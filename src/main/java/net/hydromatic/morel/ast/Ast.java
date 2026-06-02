@@ -96,7 +96,7 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.id(name);
+      return w.idQuoted(name);
     }
   }
 
@@ -904,7 +904,7 @@ public class Ast {
           fieldTypes,
           (i, field, type) ->
               w.append(i > 0 ? ", " : "")
-                  .id(field)
+                  .idQuoted(field)
                   .append(": ")
                   .append(type, 0, 0));
       return w.append("}");
@@ -1105,7 +1105,7 @@ public class Ast {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.id(name);
+      return w.idQuoted(name);
     }
 
     @Override
@@ -2161,7 +2161,7 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
-      w.id(name);
+      w.idQuoted(name);
       for (Pat pat : patList) {
         w.append(" ").append(pat, Op.APPLY.left, Op.APPLY.right);
       }

@@ -50,13 +50,13 @@ fun print x = ignore x;
 
 ListPair;
 > val it =
->   {all=fn,allEq=fn,app=fn,appEq=fn,exists=fn,foldl=fn,foldlEq=fn,foldr=fn,
+>   {all=fn,allEq=fn,app=fn,appEq=fn,`exists`=fn,foldl=fn,foldlEq=fn,foldr=fn,
 >    foldrEq=fn,map=fn,mapEq=fn,unzip=fn,zip=fn,zipEq=fn}
 >   : {all:('a * 'b -> bool) -> 'a list * 'b list -> bool,
 >      allEq:('c * 'd -> bool) -> 'c list * 'd list -> bool,
 >      app:('e * 'f -> unit) -> 'e list * 'f list -> unit,
 >      appEq:('g * 'h -> unit) -> 'g list * 'h list -> unit,
->      exists:('i * 'j -> bool) -> 'i list * 'j list -> bool,
+>      `exists`:('i * 'j -> bool) -> 'i list * 'j list -> bool,
 >      foldl:('k * 'l * 'm -> 'm) -> 'm -> 'k list * 'l list -> 'm,
 >      foldlEq:('n * 'o * 'p -> 'p) -> 'p -> 'n list * 'o list -> 'p,
 >      foldr:('q * 'r * 's -> 's) -> 's -> 'q list * 'r list -> 's,

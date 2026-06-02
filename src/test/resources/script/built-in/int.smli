@@ -28,14 +28,14 @@ Sys.set ("stringDepth", ~1);
 
 Int;
 > val it =
->   {abs=fn,compare=fn,div=fn,fmt=fn,fromInt=fn,fromLarge=fn,fromString=fn,
->    max=fn,maxInt=SOME 2147483647,min=fn,minInt=SOME ~2147483648,mod=fn,
+>   {abs=fn,compare=fn,`div`=fn,fmt=fn,fromInt=fn,fromLarge=fn,fromString=fn,
+>    max=fn,maxInt=SOME 2147483647,min=fn,minInt=SOME ~2147483648,`mod`=fn,
 >    precision=SOME 32,quot=fn,rem=fn,sameSign=fn,sign=fn,toInt=fn,toLarge=fn,
 >    toString=fn}
->   : {abs:int -> int, compare:int * int -> order, div:int * int -> int,
+>   : {abs:int -> int, compare:int * int -> order, `div`:int * int -> int,
 >      fmt:radix -> int -> string, fromInt:int -> int, fromLarge:int -> int,
 >      fromString:string -> int option, max:int * int -> int, maxInt:int option,
->      min:int * int -> int, minInt:int option, mod:int * int -> int,
+>      min:int * int -> int, minInt:int option, `mod`:int * int -> int,
 >      precision:int option, quot:int * int -> int, rem:int * int -> int,
 >      sameSign:int * int -> bool, sign:int -> int, toInt:int -> int,
 >      toLarge:int -> int, toString:int -> string}

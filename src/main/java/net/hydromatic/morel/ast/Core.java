@@ -145,6 +145,12 @@ public class Core {
               int j = describer.register(name, i);
               return super.id(name, j);
             }
+
+            @Override
+            public AstWriter idQuoted(String name, int i) {
+              int j = describer.register(name, i);
+              return super.idQuoted(name, j);
+            }
           };
       return unparse(w);
     }
@@ -256,7 +262,7 @@ public class Core {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.id(name, i);
+      return w.idQuoted(name, i);
     }
 
     @Override
@@ -795,7 +801,7 @@ public class Core {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
-      return w.id(idPat.name, idPat.i);
+      return w.idQuoted(idPat.name, idPat.i);
     }
   }
 

@@ -516,25 +516,27 @@ from e in emps
   order e.deptno
   yield {ordinal, e.name};
 > val it =
->   [{name="Fred",ordinal=0},{name="Velma",ordinal=1},{name="Shaggy",ordinal=2},
->    {name="Scooby",ordinal=3}] : {name:string, ordinal:int} list
+>   [{name="Fred",`ordinal`=0},{name="Velma",`ordinal`=1},
+>    {name="Shaggy",`ordinal`=2},{name="Scooby",`ordinal`=3}]
+>   : {name:string, `ordinal`:int} list
 
 from e in emps
   order e.deptno
   where e.deptno = 30
   yield {ordinal, e.name};
-> val it = [{name="Shaggy",ordinal=0},{name="Scooby",ordinal=1}]
->   : {name:string, ordinal:int} list
+> val it = [{name="Shaggy",`ordinal`=0},{name="Scooby",`ordinal`=1}]
+>   : {name:string, `ordinal`:int} list
 
 from e in emps
   order e.deptno
   join i in [2,3]
   yield {ordinal, e.name};
 > val it =
->   [{name="Fred",ordinal=0},{name="Fred",ordinal=1},{name="Velma",ordinal=2},
->    {name="Velma",ordinal=3},{name="Shaggy",ordinal=4},
->    {name="Shaggy",ordinal=5},{name="Scooby",ordinal=6},
->    {name="Scooby",ordinal=7}] : {name:string, ordinal:int} list
+>   [{name="Fred",`ordinal`=0},{name="Fred",`ordinal`=1},
+>    {name="Velma",`ordinal`=2},{name="Velma",`ordinal`=3},
+>    {name="Shaggy",`ordinal`=4},{name="Shaggy",`ordinal`=5},
+>    {name="Scooby",`ordinal`=6},{name="Scooby",`ordinal`=7}]
+>   : {name:string, `ordinal`:int} list
 
 (*) 'ordinal' cannot be used in an unordered query
 from e in emps, i in bag [1]
@@ -546,8 +548,9 @@ from e in emps, i in bag [1]
   order e.deptno
   yield {ordinal, e.name};
 > val it =
->   [{name="Fred",ordinal=0},{name="Velma",ordinal=1},{name="Shaggy",ordinal=2},
->    {name="Scooby",ordinal=3}] : {name:string, ordinal:int} list
+>   [{name="Fred",`ordinal`=0},{name="Velma",`ordinal`=1},
+>    {name="Shaggy",`ordinal`=2},{name="Scooby",`ordinal`=3}]
+>   : {name:string, `ordinal`:int} list
 
 (*) A 'where' clause after 'yield ordinal' creates gaps in the ordinals.
 from e in emps
@@ -556,9 +559,9 @@ from e in emps
   yield {ordinal, e.name}
   where String.sub(name, 0) = #"S";
 > val it =
->   [{name="Shaggy",ordinal=4},{name="Shaggy",ordinal=5},
->    {name="Scooby",ordinal=6},{name="Scooby",ordinal=7}]
->   : {name:string, ordinal:int} list
+>   [{name="Shaggy",`ordinal`=4},{name="Shaggy",`ordinal`=5},
+>    {name="Scooby",`ordinal`=6},{name="Scooby",`ordinal`=7}]
+>   : {name:string, `ordinal`:int} list
 
 (*) Do the equivalent of 'take' using ordinal.
 from e in emps
@@ -579,14 +582,14 @@ from i in [3,1,4,5,3,5,8,9,7]
   yield {ordinal, i}
   where i > 5
   where ordinal > 1;
-> val it = [{i=7,ordinal=8}] : {i:int, ordinal:int} list
+> val it = [{i=7,`ordinal`=8}] : {i:int, `ordinal`:int} list
 
 from i in [3,1,4,5,3,5,8,9,7]
   yield {ordinal, i}
   where i > 5
   where `ordinal` > 1;
-> val it = [{i=8,ordinal=6},{i=9,ordinal=7},{i=7,ordinal=8}]
->   : {i:int, ordinal:int} list
+> val it = [{i=8,`ordinal`=6},{i=9,`ordinal`=7},{i=7,`ordinal`=8}]
+>   : {i:int, `ordinal`:int} list
 
 from e in scott.emps
   yield {e.ename, e.sal, rank = ordinal + 1};
@@ -1170,8 +1173,8 @@ from i in [1, 2, 3]
 
 from i in [1, 2, 3]
   group i compute elements order i;
-> val it = [{elements=[1],i=1},{elements=[2],i=2},{elements=[3],i=3}]
->   : {elements:int list, i:int} list
+> val it = [{`elements`=[1],i=1},{`elements`=[2],i=2},{`elements`=[3],i=3}]
+>   : {`elements`:int list, i:int} list
 
 (*) Use "elements" in a query
 from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
@@ -1198,15 +1201,16 @@ from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
 from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
   group {i} compute {elements, c = (length elements) - 1} order i;
 > val it =
->   [{c=1,elements=[{i="a",j=1},{i="a",j=3}],i="a"},
->    {c=0,elements=[{i="b",j=4}],i="b"}]
->   : {c:int, elements:{i:string, j:int} list, i:string} list
+>   [{c=1,`elements`=[{i="a",j=1},{i="a",j=3}],i="a"},
+>    {c=0,`elements`=[{i="b",j=4}],i="b"}]
+>   : {c:int, `elements`:{i:string, j:int} list, i:string} list
 
 from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
   group i compute elements order i;
 > val it =
->   [{elements=[{i="a",j=1},{i="a",j=3}],i="a"},{elements=[{i="b",j=4}],i="b"}]
->   : {elements:{i:string, j:int} list, i:string} list
+>   [{`elements`=[{i="a",j=1},{i="a",j=3}],i="a"},
+>    {`elements`=[{i="b",j=4}],i="b"}]
+>   : {`elements`:{i:string, j:int} list, i:string} list
 
 from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
   group {i} compute {s = from r in elements compute sum over r.j} order i;

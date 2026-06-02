@@ -20,11 +20,78 @@ package net.hydromatic.morel.parse;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.common.collect.ImmutableSet;
+import java.util.Set;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Utilities for parsing. */
 public final class Parsers {
   private Parsers() {}
+
+  /**
+   * Reserved words. These cannot be used as identifiers unless quoted with
+   * back-ticks, so {@link #appendId} quotes them. Must be kept in sync with the
+   * keyword tokens in {@code MorelParser.jj}.
+   */
+  public static final Set<String> RESERVED_WORDS =
+      ImmutableSet.of(
+          "and",
+          "andalso",
+          "as",
+          "case",
+          "compute",
+          "current",
+          "datatype",
+          "distinct",
+          "div",
+          "elem",
+          "elements",
+          "else",
+          "end",
+          "eqtype",
+          "except",
+          "exception",
+          "exists",
+          "fn",
+          "forall",
+          "from",
+          "fun",
+          "group",
+          "if",
+          "implies",
+          "in",
+          "inst",
+          "intersect",
+          "into",
+          "join",
+          "let",
+          "mod",
+          "notelem",
+          "o",
+          "of",
+          "on",
+          "op",
+          "order",
+          "ordinal",
+          "orelse",
+          "over",
+          "raise",
+          "rec",
+          "require",
+          "sig",
+          "signature",
+          "skip",
+          "take",
+          "then",
+          "through",
+          "type",
+          "typeof",
+          "union",
+          "unorder",
+          "val",
+          "where",
+          "with",
+          "yield");
 
   /**
    * Given quoted identifier {@code `abc`} returns {@code abc}. Converts any
@@ -167,11 +234,14 @@ public final class Parsers {
     return false;
   }
 
-  /** Appends an identifier. Encloses it in back-ticks if necessary. */
+  /**
+   * Appends an identifier or label, enclosing it in back-ticks if necessary
+   * (because it contains a back-tick or space, or is a reserved word).
+   */
   public static StringBuilder appendId(StringBuilder buf, String id) {
     if (id.contains("`")) {
       return buf.append("`").append(id.replaceAll("`", "``")).append("`");
-    } else if (id.contains(" ")) {
+    } else if (id.contains(" ") || RESERVED_WORDS.contains(id)) {
       return buf.append("`").append(id).append("`");
     } else {
       return buf.append(id);

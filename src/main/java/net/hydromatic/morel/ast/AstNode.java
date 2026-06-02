@@ -100,6 +100,11 @@ public abstract class AstNode {
     public AstWriter id(String name, int i) {
       return super.id(name, register(name, i));
     }
+
+    @Override
+    public AstWriter idQuoted(String name, int i) {
+      return super.idQuoted(name, register(name, i));
+    }
   }
 }
 

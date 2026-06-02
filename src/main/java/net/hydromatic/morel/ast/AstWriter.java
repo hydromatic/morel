@@ -22,6 +22,7 @@ import com.google.common.collect.Lists;
 import java.math.BigDecimal;
 import java.util.List;
 import net.hydromatic.morel.compile.BuiltIn;
+import net.hydromatic.morel.parse.Parsers;
 
 /** Context for writing an AST out as a string. */
 public class AstWriter {
@@ -60,22 +61,48 @@ public class AstWriter {
     return this;
   }
 
-  /** Appends an identifier to the output. */
+  /**
+   * Appends a name to the output verbatim (no quoting). Use for type names,
+   * type variables, and keywords that unparse themselves (e.g. {@code
+   * ordinal}); use {@link #idQuoted} for variable identifiers and record
+   * labels, which must be quoted if they are reserved words.
+   */
   public AstWriter id(String name) {
     b.append(name);
     return this;
   }
 
   /**
-   * Appends an ordinal-qualified-identifier to the output.
+   * Appends an ordinal-qualified identifier to the output, verbatim.
    *
-   * <p>Prints "v" for {@code id("v", 0)}, "v#1" for {@code id("v", 1)}, and so
+   * <p>Prints "v" for {@code id("v", 0)}, "v_1" for {@code id("v", 1)}, and so
    * forth.
    */
   public AstWriter id(String name, int i) {
     b.append(name);
     if (i > 0) {
       b.append('_').append(i);
+    }
+    return this;
+  }
+
+  /**
+   * Appends a variable identifier or record label, quoting it with back-ticks
+   * if it is a reserved word (or otherwise requires quoting), so that, for
+   * example, a variable named {@code left} round-trips.
+   */
+  public AstWriter idQuoted(String name) {
+    Parsers.appendId(b, name);
+    return this;
+  }
+
+  /** Appends an ordinal-qualified variable identifier, quoting if necessary. */
+  public AstWriter idQuoted(String name, int i) {
+    if (i == 0) {
+      Parsers.appendId(b, name);
+    } else {
+      // "name_i" is never a reserved word, so it does not need quoting.
+      b.append(name).append('_').append(i);
     }
     return this;
   }

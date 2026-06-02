@@ -53,7 +53,7 @@ public class InlineTest {
     final String map =
         "{aUnused=DEAD, bOnce=ONCE_SAFE, cOnce=ONCE_SAFE, "
             + "dOnce=ONCE_SAFE, eTwice=MULTI_UNSAFE, fMultiSafe=MULTI_SAFE, "
-            + "gAtomic=ATOMIC, it=MULTI_UNSAFE, op +=MULTI_UNSAFE, "
+            + "gAtomic=ATOMIC, it=MULTI_UNSAFE, `op +`=MULTI_UNSAFE, "
             + "x=ONCE_SAFE, x0=ONCE_SAFE, x2=DEAD, x3=DEAD, xs=DEAD, z=DEAD}";
     ml(ml).assertAnalyze(hasToString(map));
   }

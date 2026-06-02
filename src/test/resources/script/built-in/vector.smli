@@ -28,7 +28,7 @@ Sys.set ("stringDepth", ~1);
 
 Vector;
 > val it =
->   {all=fn,app=fn,appi=fn,collate=fn,concat=fn,exists=fn,find=fn,findi=fn,
+>   {all=fn,app=fn,appi=fn,collate=fn,concat=fn,`exists`=fn,find=fn,findi=fn,
 >    foldl=fn,foldli=fn,foldr=fn,foldri=fn,fromList=fn,length=fn,map=fn,mapi=fn,
 >    maxLen=16777215,sub=fn,tabulate=fn,update=fn}
 >   : {all:('a -> bool) -> 'a vector -> bool,
@@ -36,7 +36,7 @@ Vector;
 >      appi:(int * 'c -> unit) -> 'c vector -> unit,
 >      collate:('d * 'd -> order) -> 'd vector * 'd vector -> order,
 >      concat:'e vector list -> 'e vector,
->      exists:('f -> bool) -> 'f vector -> bool,
+>      `exists`:('f -> bool) -> 'f vector -> bool,
 >      find:('g -> bool) -> 'g vector -> 'g option,
 >      findi:(int * 'h -> bool) -> 'h vector -> (int * 'h) option,
 >      foldl:('i * 'j -> 'j) -> 'j -> 'i vector -> 'j,

@@ -1992,7 +1992,7 @@ end;
 >     40 OPERATIONS BOSTON
 >     20 RESEARCH   DALLAS   SOUTH
 >
-> val it : {elements:{deptno:int, dname:string, loc:string} bag, r:string} list
+> val it : {`elements`:{deptno:int, dname:string, loc:string} bag, r:string} list
 
 (* How many employees in each department? *)
 from e in scott.emps
