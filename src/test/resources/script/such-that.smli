@@ -731,8 +731,13 @@ yield {dno = #deptno v, name = #dname v};
 (*) We can iterate over a finite datatype
 from i
 where Option.getOpt i;
-> val it = [(NONE,true),(SOME true,false),(SOME true,true)]
->   : (bool option * bool) bag
+> 1    2
+> ---- -----
+>      true
+> true false
+> true true
+>
+> val it : (bool option * bool) bag
 
 (*) If the expression is 'elem set' we can deduce the extent.
 from e

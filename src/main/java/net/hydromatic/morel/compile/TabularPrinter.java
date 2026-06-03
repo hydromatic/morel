@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
 import net.hydromatic.morel.eval.Codes;
+import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.RecordType;
@@ -134,6 +135,7 @@ class TabularPrinter {
    *
    * <ul>
    *   <li>a primitive (scalar leaf);
+   *   <li>an option of a primitive (scalar leaf; {@code NONE} prints as blank);
    *   <li>a collection of primitives (scalar list);
    *   <li>a collection of records or tuples, each field of which is itself
    *       tabular-printable as a field (recursive).
@@ -141,6 +143,9 @@ class TabularPrinter {
    */
   private static boolean canPrintField(Type type) {
     if (type instanceof PrimitiveType) {
+      return true;
+    }
+    if (optionScalar(type) != null) {
       return true;
     }
     if (type.isCollection()) {
@@ -154,6 +159,22 @@ class TabularPrinter {
       }
     }
     return false;
+  }
+
+  /**
+   * If {@code type} is {@code T option} where {@code T} is a primitive, returns
+   * {@code T}; otherwise returns null. Such a field is rendered as a scalar
+   * column: {@code SOME x} as {@code x}, and {@code NONE} as a blank cell.
+   */
+  private static @Nullable PrimitiveType optionScalar(Type type) {
+    if (type instanceof DataType) {
+      final DataType dataType = (DataType) type;
+      if (dataType.name.equals("option")
+          && dataType.arg(0) instanceof PrimitiveType) {
+        return (PrimitiveType) dataType.arg(0);
+      }
+    }
+    return null;
   }
 
   /** Emits one header line for the given top-level sections. */
@@ -223,6 +244,20 @@ class TabularPrinter {
       return s;
     }
     return value.toString();
+  }
+
+  /**
+   * Renders the value of a {@code string option} cell so that it cannot be
+   * confused with the blank cell used for {@code NONE}. A string is shown as an
+   * SML string literal (in double-quotes, with embedded double-quotes and
+   * backslashes escaped) if it is empty or contains a double-quote; otherwise
+   * it is shown verbatim (subject to {@code stringDepth} truncation).
+   */
+  private static String optionString(String s, int stringDepth) {
+    if (s.isEmpty() || s.indexOf('"') >= 0) {
+      return '"' + s.replace("\\", "\\\\").replace("\"", "\\\"") + '"';
+    }
+    return stringifyScalar(s, stringDepth);
   }
 
   /**
@@ -305,14 +340,25 @@ class TabularPrinter {
     final Kind kind;
     final String name;
     final boolean rightAlign;
+    /**
+     * Whether a SCALAR value is wrapped in {@code option} (so {@code SOME x}
+     * prints as {@code x} and {@code NONE} as a blank cell).
+     */
+    final boolean optional;
+
     final List<Section> children;
     int width;
 
     private Section(
-        Kind kind, String name, boolean rightAlign, List<Section> children) {
+        Kind kind,
+        String name,
+        boolean rightAlign,
+        boolean optional,
+        List<Section> children) {
       this.kind = kind;
       this.name = name;
       this.rightAlign = rightAlign;
+      this.optional = optional;
       this.children = children;
       this.width = name.length();
     }
@@ -321,7 +367,7 @@ class TabularPrinter {
     static Section forRecord(String name, RecordLikeType recordType) {
       final List<Section> children =
           transformEntries(recordType.argNameTypes(), Section::forField);
-      return new Section(Kind.RECORD_LIST, name, false, children);
+      return new Section(Kind.RECORD_LIST, name, false, false, children);
     }
 
     /** Builds a Section for one field of a record-like type. */
@@ -331,7 +377,13 @@ class TabularPrinter {
             Kind.SCALAR,
             name,
             isNumeric((PrimitiveType) type),
+            false,
             ImmutableList.of());
+      }
+      final PrimitiveType optionType = optionScalar(type);
+      if (optionType != null) {
+        return new Section(
+            Kind.SCALAR, name, isNumeric(optionType), true, ImmutableList.of());
       }
       final Type elementType = type.elementType();
       if (elementType instanceof PrimitiveType) {
@@ -339,6 +391,7 @@ class TabularPrinter {
             Kind.SCALAR_LIST,
             name,
             isNumeric((PrimitiveType) elementType),
+            false,
             ImmutableList.of());
       }
       // Element is a record or tuple: recurse.
@@ -364,7 +417,25 @@ class TabularPrinter {
       switch (kind) {
         case SCALAR:
           {
-            final String s = stringifyScalar(value, stringDepth);
+            final String s;
+            if (optional) {
+              // Runtime form: NONE is ["NONE"]; SOME x is ["SOME", x].
+              final List<?> option = (List<?>) value;
+              if (option.size() == 1) {
+                s = ""; // NONE: a blank cell
+              } else {
+                final Object some = option.get(1);
+                // A 'string option' value must be distinguishable from the
+                // blank 'NONE' cell, so an empty or quote-containing string is
+                // shown as a quoted SML string literal.
+                s =
+                    some instanceof String
+                        ? optionString((String) some, stringDepth)
+                        : stringifyScalar(some, stringDepth);
+              }
+            } else {
+              s = stringifyScalar(value, stringDepth);
+            }
             final List<String> lines = foldString(s, stringFold);
             for (String line : lines) {
               if (line.length() > width) {

@@ -92,10 +92,29 @@ Sys.set ("output", "tabular");
 >
 > val it : {id:int, pets:string list} list
 
-(* List of records with a sum-type field uses classic style. *)
+(* A column of primitive option renders 'NONE' as a blank cell. *)
 [{id=1, salary=NONE}, {id=2, salary=SOME 100}];
-> val it = [{id=1,salary=NONE},{id=2,salary=SOME 100}]
->   : {id:int, salary:int option} list
+> id salary
+> -- ------
+>  1
+>  2    100
+>
+> val it : {id:int, salary:int option} list
+
+(* In a 'string option' column, 'NONE' must be distinguishable from every
+ * 'SOME' value, including the empty string. A string is quoted (as an SML
+ * literal) when it is empty or contains a double-quote, and shown verbatim
+ * otherwise. *)
+[{s=NONE}, {s=SOME "hello"}, {s=SOME ""}, {s=SOME "a\"b"}, {s=SOME "\"\""}];
+> s
+> ------
+>
+> hello
+> ""
+> "a\"b"
+> "\"\""
+>
+> val it : {s:string option} list
 
 (* List of records with a tuple field uses classic style. *)
 [{id=1, address=(94705,"CA")}, {id=2, address=(94618,"CA")}];
