@@ -29,10 +29,12 @@ public interface MorelParser {
   void zero(String file);
 
   /**
-   * Wraps a parse exception in a {@link
-   * net.hydromatic.morel.util.MorelException} with the current position.
+   * Wraps a parse error in a {@link net.hydromatic.morel.util.MorelException}
+   * with the current position. The argument is a {@link Throwable} because a
+   * lexical error arrives as a {@code TokenMgrError}, which is an {@link
+   * Error}, not an {@link Exception}.
    */
-  MorelParseException wrap(Exception parseException);
+  MorelParseException wrap(Throwable parseException);
 }
 
 // End MorelParser.java

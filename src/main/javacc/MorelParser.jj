@@ -101,15 +101,28 @@ public class MorelParserImpl implements MorelParser
   /** Reads the position of the upcoming Token, but does not make it current. */
   final public Pos nextTokenPos() {
     if (token.next == null) {
-       token.next = token_source.getNextToken();
+       try {
+         token.next = token_source.getNextToken();
+       } catch (Error e) {
+         // A lexical error here (a TokenMgrError) would otherwise escape
+         // uncaught, because the caller is not inside a parse method.
+         throw wrap(e);
+       }
     }
     return pos(token.next);
   }
 
   @Override
-  public MorelParseException wrap(Exception x) {
-    ParseException e = (ParseException) x;
-    return new MorelParseException(e, pos(e.currentToken.next));
+  public MorelParseException wrap(Throwable x) {
+    if (x instanceof ParseException) {
+      ParseException e = (ParseException) x;
+      return new MorelParseException(e, pos(e.currentToken.next));
+    }
+    // A lexical error is a TokenMgrError, an Error rather than an Exception, so
+    // catch it (and any other Error) here rather than letting it crash the
+    // shell.
+    return new MorelParseException(
+        x, Parsers.lexicalPos(x.getMessage(), file, lineOffset));
   }
 
   /** As {@link #statementEof()}, but wraps any exception as a
@@ -117,7 +130,7 @@ public class MorelParserImpl implements MorelParser
   public AstNode statementEofSafe() {
     try {
       return statementEof();
-    } catch (ParseException e) {
+    } catch (ParseException | Error e) {
       throw wrap(e);
     }
   }
@@ -127,7 +140,7 @@ public class MorelParserImpl implements MorelParser
   public Ast.Literal literalEofSafe() {
     try {
       return literalEof();
-    } catch (ParseException e) {
+    } catch (ParseException | Error e) {
       throw wrap(e);
     }
   }
@@ -137,7 +150,7 @@ public class MorelParserImpl implements MorelParser
   public Ast.Decl declEofSafe() {
     try {
       return declEof();
-    } catch (ParseException e) {
+    } catch (ParseException | Error e) {
       throw wrap(e);
     }
   }
@@ -147,7 +160,7 @@ public class MorelParserImpl implements MorelParser
   public Ast.Exp expressionSafe() {
     try {
       return expression();
-    } catch (ParseException e) {
+    } catch (ParseException | Error e) {
       throw wrap(e);
     }
   }
@@ -157,7 +170,7 @@ public class MorelParserImpl implements MorelParser
   public AstNode statementSemicolonSafe() {
     try {
       return statementSemicolon();
-    } catch (ParseException e) {
+    } catch (ParseException | Error e) {
       throw wrap(e);
     }
   }
@@ -167,7 +180,7 @@ public class MorelParserImpl implements MorelParser
   public AstNode statementSemicolonOrEofSafe() {
     try {
       return statementSemicolonOrEof();
-    } catch (ParseException e) {
+    } catch (ParseException | Error e) {
       throw wrap(e);
     }
   }
@@ -177,7 +190,7 @@ public class MorelParserImpl implements MorelParser
   public Ast.Type typeSafe() {
     try {
       return type();
-    } catch (ParseException e) {
+    } catch (ParseException | Error e) {
       throw wrap(e);
     }
   }

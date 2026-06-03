@@ -22,11 +22,35 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import net.hydromatic.morel.ast.Pos;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Utilities for parsing. */
 public final class Parsers {
   private Parsers() {}
+
+  private static final Pattern LEXICAL_POS =
+      Pattern.compile("line (\\d+), column (\\d+)");
+
+  /**
+   * Returns the position embedded in a lexical-error message (e.g. "Lexical
+   * error at line 1, column 25"), adjusted by {@code lineOffset}, or {@link
+   * Pos#ZERO} if the message contains no position.
+   */
+  public static Pos lexicalPos(
+      @Nullable String message, String file, int lineOffset) {
+    if (message != null) {
+      final Matcher matcher = LEXICAL_POS.matcher(message);
+      if (matcher.find()) {
+        final int line = Integer.parseInt(matcher.group(1)) - lineOffset;
+        final int column = Integer.parseInt(matcher.group(2));
+        return new Pos(file, line, column, line, column);
+      }
+    }
+    return Pos.ZERO;
+  }
 
   /**
    * Reserved words. These cannot be used as identifiers unless quoted with

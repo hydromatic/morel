@@ -26,7 +26,7 @@ public class MorelParseException extends RuntimeException
     implements MorelException {
   private final Pos pos;
 
-  MorelParseException(Exception cause, Pos pos) {
+  MorelParseException(Throwable cause, Pos pos) {
     super(cause.getMessage(), cause);
     this.pos = pos;
   }
@@ -38,7 +38,7 @@ public class MorelParseException extends RuntimeException
 
   @Override
   public StringBuilder describeTo(StringBuilder buf) {
-    return pos.describeTo(buf).append(getCause().getMessage());
+    return pos.describeTo(buf).append(' ').append(getCause().getMessage());
   }
 }
 

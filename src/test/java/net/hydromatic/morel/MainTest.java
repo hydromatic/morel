@@ -37,6 +37,7 @@ import static net.hydromatic.morel.Ml.assertError;
 import static net.hydromatic.morel.Ml.ml;
 import static net.hydromatic.morel.Ml.mlE;
 import static net.hydromatic.morel.TestUtils.first;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -59,6 +60,7 @@ import net.hydromatic.morel.eval.Applicable1;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.eval.Prop;
 import net.hydromatic.morel.foreign.ForeignValue;
+import net.hydromatic.morel.parse.MorelParseException;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.TypeVar;
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -125,6 +127,48 @@ public class MainTest {
     // true and false are variables, not actually literals
     ml("true").assertParseStmt(Ast.Id.class, "true");
     ml("false").assertParseStmt(Ast.Id.class, "false");
+  }
+
+  /**
+   * Tests that a lexical error (here, a stray backslash) is reported as a parse
+   * exception with a position, rather than escaping as a {@code TokenMgrError}
+   * (which is an {@link Error}, not an {@link Exception}) and crashing the
+   * shell.
+   */
+  @Test
+  void testLexicalError() {
+    ml("1 \\ 2")
+        .assertParseThrows(
+            throwsA(
+                MorelParseException.class,
+                containsString("Lexical error at line 1, column 3")));
+  }
+
+  /**
+   * Tests that a lexical error is printed in the standard form &mdash; with a
+   * space between the position and the message &mdash; and does not crash the
+   * shell. Unlike {@link #testLexicalError}, this exercises the shell's output
+   * path (via {@link Main}), so it would catch a missing separator.
+   */
+  @Test
+  void testLexicalErrorOutput() {
+    final String ml = "1 \\ 2;\n";
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try (PrintStream ps = new PrintStream(out)) {
+      final InputStream in = new ByteArrayInputStream(ml.getBytes());
+      final Main main =
+          new Main(
+              ImmutableList.of(),
+              in,
+              ps,
+              ImmutableMap.of(),
+              ImmutableMap.of(),
+              false);
+      main.run();
+    }
+    assertThat(
+        out.toString(),
+        containsString("stdIn:1.3-1.3 Lexical error at line 1, column 3"));
   }
 
   @Test
