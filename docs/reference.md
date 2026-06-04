@@ -225,7 +225,8 @@ In Standard ML but not in Morel:
                                 group step
     | <b>intersect</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>i</sub></i>
                                 intersect step (<i>i</i> &ge; 1)
-    | <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>  join step (<i>s</i> &ge; 1)
+    | [ <b>left</b> | <b>right</b> | <b>full</b> ] <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>
+                                join step (<i>s</i> &ge; 1)
     | <b>order</b> <i>exp</i>                 order step
     | <b>skip</b> <i>exp</i>                  skip step
     | <b>take</b> <i>exp</i>                  take step

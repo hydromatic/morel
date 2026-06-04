@@ -681,6 +681,60 @@ public class Compiler {
     return ImmutableMap.copyOf(map);
   }
 
+  /**
+   * Creates the {@link RowSink} factory for a scan, inner {@code join}, {@code
+   * left join}, {@code right join} or {@code full join} step.
+   */
+  private Supplier<RowSink> createScanRowSinkFactory(
+      Context cx,
+      Context cxFrom,
+      ImmutableMap<String, Binding> allScope,
+      Core.Scan scan,
+      List<Core.FromStep> steps,
+      Type elementType) {
+    final Code code = compileRow(cx, scan.exp);
+    // Extend the layout with scan variable patterns at stack slots.
+    StackLayout scanLayout = cx.layout;
+    int depth = cx.localDepth;
+    for (Core.NamedPat scanPat : scan.pat.expand()) {
+      scanLayout = scanLayout.with(scanPat, depth++);
+    }
+    final List<Binding> scanBindings = new ArrayList<>();
+    Compiles.acceptBinding(typeSystem, scan.pat, scanBindings);
+    final Context cxScan =
+        new Context(cx.env.bindAll(scanBindings), scanLayout, depth);
+    final Code conditionCode = compile(cxScan, scan.condition);
+    final ImmutableMap<String, Binding> scanAllScope =
+        shadowMerge(allScope, scan.env.bindings);
+    final Supplier<RowSink> scanNextFactory =
+        createRowSinkFactory(
+            cxScan, cxFrom, scanAllScope, scan.env, skip(steps), elementType);
+    final int scanVarCount = depth - cx.localDepth;
+    if (scan.op.optionalizesLeft()) {
+      // 'right join' or 'full join': the source may produce rows that match no
+      // input row, so use a build-side sink that materializes the source and
+      // emits unmatched source rows at the end.
+      final int leftSlotCount = cx.localDepth - cxFrom.localDepth;
+      return () ->
+          RowSinks.buildJoin(
+              scan.op,
+              scan.pat,
+              scanVarCount,
+              leftSlotCount,
+              code,
+              conditionCode,
+              scanNextFactory.get());
+    }
+    return () ->
+        RowSinks.scan(
+            scan.op,
+            scan.pat,
+            scanVarCount,
+            code,
+            conditionCode,
+            scanNextFactory.get());
+  }
+
   private Supplier<RowSink> createRowSinkFactory(
       Context cx0,
       Context cxFrom,
@@ -712,38 +766,11 @@ public class Compiler {
     final Code code;
     switch (firstStep.op) {
       case SCAN:
-        final Core.Scan scan = (Core.Scan) firstStep;
-        code = compileRow(cx, scan.exp);
-        // Extend the layout with scan variable patterns at stack slots.
-        StackLayout scanLayout = cx.layout;
-        int depth = cx.localDepth;
-        for (Core.NamedPat scanPat : scan.pat.expand()) {
-          scanLayout = scanLayout.with(scanPat, depth++);
-        }
-        final List<Binding> scanBindings = new ArrayList<>();
-        Compiles.acceptBinding(typeSystem, scan.pat, scanBindings);
-        final Context cxScan =
-            new Context(cx.env.bindAll(scanBindings), scanLayout, depth);
-        final Code conditionCode = compile(cxScan, scan.condition);
-        final ImmutableMap<String, Binding> scanAllScope =
-            shadowMerge(allScope2, firstStep.env.bindings);
-        final Supplier<RowSink> scanNextFactory =
-            createRowSinkFactory(
-                cxScan,
-                cxFrom,
-                scanAllScope,
-                firstStep.env,
-                skip(steps),
-                elementType);
-        final int scanVarCount = depth - cx.localDepth;
-        return () ->
-            RowSinks.scan(
-                firstStep.op,
-                scan.pat,
-                scanVarCount,
-                code,
-                conditionCode,
-                scanNextFactory.get());
+      case LEFT_JOIN:
+      case RIGHT_JOIN:
+      case FULL_JOIN:
+        return createScanRowSinkFactory(
+            cx, cxFrom, allScope2, (Core.Scan) firstStep, steps, elementType);
 
       case WHERE:
         final Core.Where where = (Core.Where) firstStep;

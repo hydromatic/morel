@@ -2001,11 +2001,9 @@ public class MainTest {
     ml("from e in emps join d in depts where c").assertError("Xx");
     ml("from e in emps join d in depts on c")
         .assertParse("from e in emps, d in depts on c");
-    if ("TODO".isEmpty()) {
-      ml("from e in emps left join d in depts on c").assertParseSame();
-      ml("from e in emps right join d in depts on c").assertParseSame();
-      ml("from e in emps full join d in depts on c").assertParseSame();
-    }
+    ml("from e in emps left join d in depts on c").assertParseSame();
+    ml("from e in emps right join d in depts on c").assertParseSame();
+    ml("from e in emps full join d in depts on c").assertParseSame();
     ml("from e in (from z in emps), d in (from y in depts) on c")
         .assertParseSame();
     ml("from e in emps distinct").assertParseSame();

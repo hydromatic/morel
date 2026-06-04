@@ -2822,11 +2822,24 @@ public class Ast {
         forEachIndexed(
             steps,
             (step, i) -> {
-              if (step.op == Op.SCAN && i > 0) {
-                if (steps.get(i - 1).op == Op.SCAN) {
-                  w.append(",");
-                } else {
-                  w.append(" join");
+              if (step.op.isJoin() && i > 0) {
+                switch (step.op) {
+                  case SCAN:
+                    // A bare scan after another scan is a comma; after a
+                    // non-scan step (e.g. group) it is an inner join.
+                    w.append(steps.get(i - 1).op == Op.SCAN ? "," : " join");
+                    break;
+                  case LEFT_JOIN:
+                    w.append(" left join");
+                    break;
+                  case RIGHT_JOIN:
+                    w.append(" right join");
+                    break;
+                  case FULL_JOIN:
+                    w.append(" full join");
+                    break;
+                  default:
+                    break;
                 }
               }
               step.unparse(w, 0, 0);
@@ -2948,8 +2961,9 @@ public class Ast {
     public final @Nullable Exp exp;
     public final @Nullable Exp condition;
 
-    Scan(Pos pos, Pat pat, @Nullable Exp exp, @Nullable Exp condition) {
-      super(pos, Op.SCAN);
+    Scan(Pos pos, Op op, Pat pat, @Nullable Exp exp, @Nullable Exp condition) {
+      super(pos, op);
+      checkArgument(op.isJoin(), "not a join: %s", op);
       this.pat = pat;
       this.exp = exp;
       this.condition = condition;
@@ -2957,7 +2971,9 @@ public class Ast {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
-      w.append(op.padded).append(pat, 0, 0);
+      // The join keyword (",", "join", "left join", ...) is emitted by
+      // From.unparse; here we just separate from it with a space.
+      w.append(" ").append(pat, 0, 0);
       if (exp != null) {
         if (exp.op == Op.FROM_EQ) {
           w.append(" = ").append(((PrefixCall) this.exp).a, Op.EQ.right, 0);
@@ -2986,7 +3002,7 @@ public class Ast {
               && Objects.equals(this.exp, exp)
               && Objects.equals(this.condition, condition)
           ? this
-          : new Scan(pos, pat, exp, condition);
+          : new Scan(pos, op, pat, exp, condition);
     }
   }
 

@@ -535,7 +535,7 @@ Exp from() :
 {
   <FROM> { span = Span.of(pos()); }
   [ fromFirstScan(steps)
-    ( <COMMA> fromScan(steps) )*
+    ( <COMMA> fromScan(Op.SCAN, steps) )*
   ]
   ( fromStep(steps) )*
   {
@@ -553,7 +553,7 @@ Exp exists() :
 {
   <EXISTS> { span = Span.of(pos()); }
   [ fromFirstScan(steps)
-    ( <COMMA> fromScan(steps) )*
+    ( <COMMA> fromScan(Op.SCAN, steps) )*
   ]
   ( fromStep(steps) )*
   {
@@ -571,7 +571,7 @@ Exp forall() :
 {
   <FORALL> { span = Span.of(pos()); }
   [ fromFirstScan(steps)
-    ( <COMMA> fromScan(steps) )*
+    ( <COMMA> fromScan(Op.SCAN, steps) )*
   ]
   ( fromStep(steps) )*
   {
@@ -607,7 +607,7 @@ void fromFirstScan(List<FromStep> steps) :
   )
 }
 
-void fromScan(List<FromStep> steps) :
+void fromScan(Op op, List<FromStep> steps) :
 {
   final Id id;
   final Exp exp;
@@ -621,7 +621,7 @@ void fromScan(List<FromStep> steps) :
         | <SKIP_> | <TAKE> | <YIELD> | <YIELDALL> | <EOF>))
   id = identifier() {
     pat = ast.idPat(id.pos, id.name);
-    steps.add(ast.scan(id.pos.plus(pos()), pat, null, null));
+    steps.add(ast.scan(id.pos.plus(pos()), op, pat, null, null));
   }
 |
   pat = pat()
@@ -634,11 +634,12 @@ void fromScan(List<FromStep> steps) :
       { condition = null; }
     )
     {
-      steps.add(ast.scan(pat.pos.plus(pos()), pat, exp, condition));
+      steps.add(ast.scan(pat.pos.plus(pos()), op, pat, exp, condition));
     }
   |
     <EQ> exp = expression() {
-      steps.add(ast.scan(pat.pos.plus(pos()), pat, ast.fromEq(exp), null));
+      steps.add(
+          ast.scan(pat.pos.plus(pos()), op, pat, ast.fromEq(exp), null));
     }
   )
 }
@@ -662,9 +663,14 @@ void fromStep(List<FromStep> steps) :
   final boolean distinct;
 }
 {
-  <JOIN>
-  fromScan(steps)
-  ( <COMMA> fromScan(steps) )*
+  (
+    <LEFT> <JOIN> { op = Op.LEFT_JOIN; }
+  | <RIGHT> <JOIN> { op = Op.RIGHT_JOIN; }
+  | <FULL> <JOIN> { op = Op.FULL_JOIN; }
+  | <JOIN> { op = Op.SCAN; }
+  )
+  fromScan(op, steps)
+  ( <COMMA> fromScan(Op.SCAN, steps) )*
 |
   <DISTINCT> {
     steps.add(ast.distinct(pos()));
@@ -2385,14 +2391,17 @@ AstNode statementEof() :
 | < EXISTS: "exists" >
 | < FORALL: "forall" >
 | < FROM: "from" >
+| < FULL: "full" >
 | < GROUP: "group" >
 | < IMPLIES: "implies" >
 | < INTERSECT: "intersect" >
 | < INTO: "into" >
 | < JOIN: "join" >
+| < LEFT: "left" >
 | < NOT_ELEM: "notelem" >
 | < ON: "on" >
 | < ORDER: "order" >
+| < RIGHT: "right" >
 | < ORDINAL: "ordinal" >
 | < REQUIRE: "require" >
 | < SKIP_: "skip" >

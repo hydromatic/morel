@@ -1434,7 +1434,7 @@ public class Resolver {
           scan.condition == null
               ? core.boolLiteral(true)
               : r.withEnv(bindings2).toCore(scan.condition);
-      fromBuilder.scan(corePat, coreExp, coreCondition);
+      fromBuilder.scan(scan.op, corePat, coreExp, coreCondition);
       if (scan.exp == null) {
         // This is an extent scan. Extents are unordered, which makes the query
         // unordered.

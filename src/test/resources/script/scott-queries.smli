@@ -1,0 +1,67 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Queries on the 'scott' data set (emps and depts), as tables.
+ *)
+useSilently "scott.smli";
+> [opening scott.smli]
+> val it = () : unit
+
+(* A local data set of assignments; the last references an employee (9999) who
+ * is not in 'scott.emps'. *)
+val assignments =
+  [{empno = 7839, task = "Plan budget"},
+   {empno = 7566, task = "Review code"},
+   {empno = 9999, task = "Orphaned task"}];
+> val assignments =
+>   [{empno=7839,task="Plan budget"},{empno=7566,task="Review code"},
+>    {empno=9999,task="Orphaned task"}] : {empno:int, task:string} list
+Sys.set ("output", "tabular");
+> val it = () : unit
+
+(* A 'left join' makes the employee optional; 'e?.ename' is the employee's name,
+ * or a blank cell for the orphaned task. *)
+from a in assignments
+  left join e in scott.emps on a.empno = e.empno
+  yield {a.task, who = e?.ename};
+> task          who
+> ------------- -----
+> Plan budget   KING
+> Review code   JONES
+> Orphaned task
+>
+> val it : {task:string, who:string option} bag
+
+(* A 'right join' keeps every department, even OPERATIONS (40), which has no
+ * manager and so shows a blank. *)
+from e in (from x in scott.emps where x.job = "MANAGER")
+  right join d in scott.depts on e.deptno = d.deptno
+  yield {d.dname, manager = e?.ename};
+> dname      manager
+> ---------- -------
+> RESEARCH   JONES
+> SALES      BLAKE
+> ACCOUNTING CLARK
+> OPERATIONS
+>
+> val it : {dname:string, manager:string option} bag
+
+Sys.set ("output", "classic");
+> val it = () : unit
+
+(*) End scott-queries.smli

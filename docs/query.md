@@ -107,7 +107,8 @@ The formal syntax of queries is as follows.
                                 group step
     | <b>intersect</b> [ <b>distinct</b> ] <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>i</sub></i>
                                 intersect step (<i>i</i> &ge; 1)
-    | <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>  join step (<i>s</i> &ge; 1)
+    | [ <b>left</b> | <b>right</b> | <b>full</b> ] <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>
+                                join step (<i>s</i> &ge; 1)
     | <b>order</b> <i>exp</i>                 order step
     | <b>skip</b> <i>exp</i>                  skip step
     | <b>take</b> <i>exp</i>                  take step
@@ -831,7 +832,7 @@ The output fields are the same as the input fields.
 ### Join step
 
 <pre>
-<b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>   (<i>s</i> &ge; 1)
+[ <b>left</b> | <b>right</b> | <b>full</b> ] <b>join</b> <i>scan<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>scan<sub>s</sub></i>   (<i>s</i> &ge; 1)
 
 <i>scan</i> &rarr; <i>pat</i> <b>in</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]
     | <i>pat</i> <b>=</b> <i>exp</i> [ <b>on</b> <i>exp</i> ]
@@ -851,7 +852,29 @@ If any scan has an `on` clause, the expression must be of type
 including the output fields of the previous step, and fields defined
 by any preceding scans in this `join`.
 
-Morel does not yet implement [outer join](https://github.com/hydromatic/morel/issues/75).
+A plain `join` is an *inner* join: a row appears in the output only if
+its `on` condition holds. The `left`, `right` and `full` variants are
+*outer* joins, which also keep rows that have no match on the other
+side, filling the missing fields with `NONE`:
+
+* `left join` keeps every input row; the scan's fields become `option`
+  (`NONE` when the scan has no matching row);
+* `right join` keeps every row of the scan; the input fields become
+  `option` (`NONE` when the input has no matching row);
+* `full join` keeps rows from both sides; the fields on either side
+  become `option`.
+
+The `on` condition always sees the non-optional values. Outer joins are
+applied one step at a time, so a field that is already optional gains
+another `option` layer (for example `int option option`); the
+safe-navigation operator `?.` is a convenient way to read through the
+layers.
+
+The source <code><i>exp</i></code> of a `right join` or `full join` may
+produce rows that match no input row, so it must not depend on the
+query's input: it may not reference the variables of earlier steps, nor
+`current` or `ordinal`. (A `left join` source is evaluated for each
+input row, so it may be correlated.)
 
 #### Example
 
@@ -880,6 +903,25 @@ SALES      TURNER
 SALES      JAMES
 
 val it : {dname:string, ename:string} bag</i>
+</pre>
+
+<pre>
+<i>(* Each department, and its president if it has one. A 'left join'
+   keeps every department, so departments with no president (every
+   one except ACCOUNTING) have a blank 'president' cell. *)</i>
+<b>from</b> d <b>in</b> scott.depts
+  <b>left join</b> e <b>in</b> scott.emps
+    <b>on</b> e.deptno = d.deptno <b>andalso</b> e.job = "PRESIDENT"
+  <b>yield</b> {d.dname, president = e?.ename};
+<i>
+dname      president
+---------- ---------
+ACCOUNTING KING
+RESEARCH
+SALES
+OPERATIONS
+
+val it : {dname:string, president:string option} bag</i>
 </pre>
 
 ### Order step

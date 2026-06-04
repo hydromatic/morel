@@ -655,6 +655,88 @@ from i in [1,2]
 > val it = [{i=1,j=0},{i=1,j=1},{i=1,j=2},{i=2,j=0},{i=2,j=1},{i=2,j=2}]
 >   : {i:int, j:int} list
 
+(* Outer joins ---------------------------------------------------- *)
+
+(* The source of a 'right join' or 'full join' generates null rows on its
+ * left, so it must not depend on the query's input. The error's span is the
+ * offending reference. *)
+from r in orders right join i in r.items;
+> stdIn:1.34 Error: join source must not reference 'r' (right and full joins must be independent)
+>   raised at: stdIn:1.34
+
+(*) It may not reference an input variable directly, ...
+from i in [1, 2] right join j in [i] on true;
+> stdIn:1.35 Error: join source must not reference 'i' (right and full joins must be independent)
+>   raised at: stdIn:1.35
+
+(*) ... nor a variable bound by an earlier join, ...
+from i in [1, 2] join k in [3] right join j in [k] on true;
+> stdIn:1.49 Error: join source must not reference 'k' (right and full joins must be independent)
+>   raised at: stdIn:1.49
+
+(*) ... nor 'current', ...
+from i in [1, 2] right join j in [current] on true;
+> stdIn:1.35-1.42 Error: join source must not reference 'current' (right and full joins must be independent)
+>   raised at: stdIn:1.35-1.42
+
+(*) ... nor 'ordinal'.
+from i in [1, 2] right join j in [ordinal] on true;
+> stdIn:1.35-1.42 Error: join source must not reference 'ordinal' (right and full joins must be independent)
+>   raised at: stdIn:1.35-1.42
+
+(*) 'full join' has the same restriction.
+from i in [1, 2] full join j in [i] on true;
+> stdIn:1.34 Error: join source must not reference 'i' (right and full joins must be independent)
+>   raised at: stdIn:1.34
+
+(* A 'left join' wraps the right fields in 'option'; an input ('left') row
+ * with no matching right row is emitted with 'NONE'. *)
+from i in [1, 2, 3] left join j in [1, 2] on i = j;
+> val it = [{i=1,j=SOME 1},{i=2,j=SOME 2},{i=3,j=NONE}]
+>   : {i:int, j:int option} list
+
+(*) Every input row matches at least once.
+from i in [1, 2] left join j in [1, 2] on i = j;
+> val it = [{i=1,j=SOME 1},{i=2,j=SOME 2}] : {i:int, j:int option} list
+
+(*) The source of a 'left join' may be correlated with the input.
+from r in orders
+  left join i in r.items on i.units > 2;
+> val it =
+>   [
+>    {i=SOME {product="soda",units=3},
+>     r={id=1,items=[{product="beer",units=1},{product="soda",units=3}]}},
+>    {i=SOME {product="milk",units=5},
+>     r={id=2,items=[{product="milk",units=5},{product="beer",units=2}]}},
+>    {i=NONE,r={id=3,items=[{product="soda",units=1},{product="beer",units=1}]}}]
+>   :
+>     {i:{product:string, units:int} option,
+>      r:{id:int, items:{product:string, units:int} list}} list
+
+(* A 'right join' wraps the input ('left') fields in 'option'. A source row
+ * matching no input row is emitted with 'NONE' for the input fields; an input
+ * row matching no source row is dropped. *)
+from i in [1, 2, 3] right join j in [2, 4] on i = j;
+> val it = [{i=SOME 2,j=2},{i=NONE,j=4}] : {i:int option, j:int} list
+
+(* A 'full join' keeps unmatched rows from both sides. *)
+from i in [1, 3] full join j in [3, 5] on i = j;
+> val it = [{i=SOME 1,j=NONE},{i=SOME 3,j=SOME 3},{i=NONE,j=SOME 5}]
+>   : {i:int option, j:int option} list
+
+(* Order is preserved: matched rows come first (in input order), then the
+ * unmatched source rows in source order (5 before 4), not sorted by key. *)
+from i in [3, 1] right join j in [5, 3, 1, 4] on i = j;
+> val it = [{i=SOME 3,j=3},{i=SOME 1,j=1},{i=NONE,j=5},{i=NONE,j=4}]
+>   : {i:int option, j:int} list
+
+(* The same holds for a non-equi condition (whose evaluation might use a
+ * different data structure to match rows). The unmatched source rows 2 and 1
+ * are emitted in source order, not sorted. *)
+from i in [3] right join j in [5, 2, 8, 1] on i < j;
+> val it = [{i=SOME 3,j=5},{i=SOME 3,j=8},{i=NONE,j=2},{i=NONE,j=1}]
+>   : {i:int option, j:int} list
+
 (* Degenerate joins ----------------------------------------------- *)
 
 (*) Join atom to list of units

@@ -697,7 +697,16 @@ public enum AstBuilder {
 
   public Ast.Scan scan(
       Pos pos, Ast.Pat pat, Ast.Exp exp, Ast.@Nullable Exp condition) {
-    return new Ast.Scan(pos, pat, exp, condition);
+    return new Ast.Scan(pos, Op.SCAN, pat, exp, condition);
+  }
+
+  public Ast.Scan scan(
+      Pos pos,
+      Op op,
+      Ast.Pat pat,
+      Ast.@Nullable Exp exp,
+      Ast.@Nullable Exp condition) {
+    return new Ast.Scan(pos, op, pat, exp, condition);
   }
 
   public Ast.Order order(Pos pos, Ast.Exp exp) {

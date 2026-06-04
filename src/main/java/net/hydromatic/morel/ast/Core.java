@@ -1769,10 +1769,9 @@ public class Core {
     public final Exp exp;
     public final Exp condition;
 
-    Scan(StepEnv env, Pat pat, Exp exp, Exp condition) {
-      super(
-          Op.SCAN,
-          env.withOrdered(env.ordered && exp.type instanceof ListType));
+    Scan(Op op, StepEnv env, Pat pat, Exp exp, Exp condition) {
+      super(op, env.withOrdered(env.ordered && exp.type instanceof ListType));
+      checkArgument(op.isJoin(), "not a join: %s", op);
       this.pat = requireNonNull(pat, "pat");
       this.exp = requireNonNull(exp, "exp");
       this.condition = requireNonNull(condition, "condition");
@@ -1814,7 +1813,21 @@ public class Core {
     @Override
     protected AstWriter unparseStep(
         AstWriter w, int ordinal, int left, int right) {
-      w.append(ordinal == 0 ? " " : " join ")
+      final String keyword;
+      switch (op) {
+        case LEFT_JOIN:
+          keyword = " left join ";
+          break;
+        case RIGHT_JOIN:
+          keyword = " right join ";
+          break;
+        case FULL_JOIN:
+          keyword = " full join ";
+          break;
+        default:
+          keyword = ordinal == 0 ? " " : " join ";
+      }
+      w.append(keyword)
           // for these purposes 'in' has same precedence as '='
           .append(pat, 0, Op.EQ.left);
       if (Extents.isInfinite(exp)) {
@@ -1835,7 +1848,7 @@ public class Core {
               && condition == this.condition
               && env.equals(this.env)
           ? this
-          : core.scan(env, pat, exp, condition);
+          : core.scan(op, env, pat, exp, condition);
     }
   }
 

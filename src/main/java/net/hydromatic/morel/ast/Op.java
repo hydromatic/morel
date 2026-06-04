@@ -163,6 +163,9 @@ public enum Op {
   EXISTS,
   FORALL,
   SCAN(" "),
+  LEFT_JOIN(" left join "),
+  RIGHT_JOIN(" right join "),
+  FULL_JOIN(" full join "),
   DISTINCT,
   WHERE,
   GROUP,
@@ -271,6 +274,37 @@ public enum Op {
       return leftBound >= left || rightBound >= right;
     }
     return leftBound > left || rightBound > right;
+  }
+
+  /**
+   * Returns whether this is a join operator ({@link #SCAN}, {@link #LEFT_JOIN},
+   * {@link #RIGHT_JOIN}, {@link #FULL_JOIN}).
+   */
+  public boolean isJoin() {
+    return this == SCAN
+        || this == LEFT_JOIN
+        || this == RIGHT_JOIN
+        || this == FULL_JOIN;
+  }
+
+  /**
+   * Returns whether this join operator makes the variables already in scope
+   * optional, that is, wraps them in {@code option} (yielding {@code NONE} for
+   * an input row that has no matching source row). True for {@code right join}
+   * and {@code full join}.
+   */
+  public boolean optionalizesLeft() {
+    return this == RIGHT_JOIN || this == FULL_JOIN;
+  }
+
+  /**
+   * Returns whether this join operator makes the newly scanned variable
+   * optional, that is, wraps it in {@code option} (yielding {@code NONE} for a
+   * source row that has no matching input row). True for {@code left join} and
+   * {@code full join}.
+   */
+  public boolean optionalizesRight() {
+    return this == LEFT_JOIN || this == FULL_JOIN;
   }
 
   /** Returns the name in lower case, e.g. "exists" for {@link #EXISTS}. */

@@ -633,8 +633,13 @@ public enum CoreBuilder {
 
   public Core.Scan scan(
       Core.StepEnv env, Core.Pat pat, Core.Exp exp, Core.Exp condition) {
+    return scan(Op.SCAN, env, pat, exp, condition);
+  }
+
+  public Core.Scan scan(
+      Op op, Core.StepEnv env, Core.Pat pat, Core.Exp exp, Core.Exp condition) {
     env = env.withOrdered(env.ordered && exp.type instanceof ListType);
-    return new Core.Scan(env, pat, exp, condition);
+    return new Core.Scan(op, env, pat, exp, condition);
   }
 
   public Core.Aggregate aggregate(
