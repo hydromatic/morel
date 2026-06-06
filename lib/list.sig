@@ -80,6 +80,12 @@ sig
   val nth : 'a list * int -> 'a [@@method] [@@prototype "nth (l, i)"]
 
   (**
+   * returns the only element of list `l`. Raises `Empty` if `l` is empty,
+   * `Size` if `l` has more than one element.
+   *)
+  val only : 'a list -> 'a [@@method] [@@prototype "only l"]
+
+  (**
    * returns the first `i` elements of the list `l`. Raises
    * `Subscript` if `i` < 0 or `i` > `length l`. We have `take(l, length
    * l)` = `l`.

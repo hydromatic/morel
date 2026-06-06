@@ -34,6 +34,16 @@ Relational;
 >      min:'f bag -> 'f, nonEmpty:'g bag -> bool, only:'h bag -> 'h,
 >      sum:'i bag -> 'i}
 
+(* Descending:
+     datatype descending = DESC of 'a
+*)
+DESC;
+> val it = fn : 'a -> 'a descending
+DESC "a";
+> val it = DESC "a" : string descending
+DESC (DESC "a");
+> val it = DESC (DESC "a") : string descending descending
+
 Relational.count (bag [1, 2, 3]);
 > val it = 3 : int
 Relational.count (bag []);

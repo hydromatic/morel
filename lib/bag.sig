@@ -182,6 +182,12 @@ sig
    * b`, ignoring exceptions.
    *)
   val nth : 'a bag * int -> 'a [@@method] [@@prototype "nth (b, i)"]
+
+  (**
+   * returns the only element of bag `b`. Raises `Empty` if `b` is empty,
+   * `Size` if `b` has more than one element.
+   *)
+  val only : 'a bag -> 'a [@@method] [@@prototype "only b"]
 end
 [@@description "Unordered collection of elements with duplicates."]
 [@@specified "morel"]

@@ -30,8 +30,8 @@ List;
 > val it =
 >   {@=fn,all=fn,app=fn,collate=fn,concat=fn,drop=fn,`except`=fn,`exists`=fn,
 >    filter=fn,find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,`intersect`=fn,last=fn,
->    length=fn,map=fn,mapPartial=fn,mapi=fn,nil=[],nth=fn,null=fn,partition=fn,
->    rev=fn,revAppend=fn,tabulate=fn,`take`=fn,tl=fn}
+>    length=fn,map=fn,mapPartial=fn,mapi=fn,nil=[],nth=fn,null=fn,only=fn,
+>    partition=fn,rev=fn,revAppend=fn,tabulate=fn,`take`=fn,tl=fn}
 >   : {@:'a list * 'a list -> 'a list, all:('b -> bool) -> 'b list -> bool,
 >      app:('c -> unit) -> 'c list -> unit,
 >      collate:('d * 'd -> order) -> 'd list * 'd list -> order,
@@ -47,11 +47,11 @@ List;
 >      length:'s list -> int, map:('t -> 'u) -> 't list -> 'u list,
 >      mapPartial:('v -> 'w option) -> 'v list -> 'w list,
 >      mapi:(int * 'x -> 'y) -> 'x list -> 'y list, nil:'z list,
->      nth:'ba list * int -> 'ba, null:'bb list -> bool,
->      partition:('bc -> bool) -> 'bc list -> 'bc list * 'bc list,
->      rev:'bd list -> 'bd list, revAppend:'be list * 'be list -> 'be list,
->      tabulate:int * (int -> 'bf) -> 'bf list,
->      `take`:'bg list * int -> 'bg list, tl:'bh list -> 'bh list}
+>      nth:'ba list * int -> 'ba, null:'bb list -> bool, only:'bc list -> 'bc,
+>      partition:('bd -> bool) -> 'bd list -> 'bd list * 'bd list,
+>      rev:'be list -> 'be list, revAppend:'bf list * 'bf list -> 'bf list,
+>      tabulate:int * (int -> 'bg) -> 'bg list,
+>      `take`:'bh list * int -> 'bh list, tl:'bi list -> 'bi list}
 
 (*) val nil : 'a list
 List.nil;
@@ -176,6 +176,18 @@ Sys.plan ();
 > val it =
 >   "apply2(fnValue List.nth, tuple(constant(1), constant(2), constant(3)), constant(-1))"
 >   : string
+
+(*) val only : 'a list -> 'a
+List.only [2];
+> val it = 2 : int
+[2].only ();
+> val it = 2 : int
+List.only [1, 2, 3];
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.20
+List.only [];
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.13
 
 (*) val take : 'a list * int -> 'a list
 List.`take`;

@@ -195,6 +195,10 @@ sig
    * ordering.
    *)
   val `>=` : string * string -> bool [@@prototype "s >= t"] [@@syntax "infix"]
+  (** returns true if `s` and `t` are equal. *)
+  val `=`  : string * string -> bool [@@prototype "s = t"] [@@syntax "infix"]
+  (** returns true if `s` and `t` are not equal. *)
+  val `<>` : string * string -> bool [@@prototype "s <> t"] [@@syntax "infix"]
 
 (*
   (**

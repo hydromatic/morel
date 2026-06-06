@@ -60,12 +60,12 @@ sig
    *)
   val maxInt : int option [@@prototype "maxInt"]
 
-(*
   (**
    * is the sum of `i` and `j`. It raises `Overflow` when the
    * result is not representable.
    *)
-  val + : int * int -> int [@@prototype "i + j"]
+  val `+` : int * int -> int [@@prototype "i + j"] [@@syntax "infix"]
+(*
   (**
    * is the difference of `i` and `j`. It raises `Overflow` when
    * the result is not representable.
@@ -127,10 +127,9 @@ sig
   val >  : int * int -> bool [@@prototype "i > j"]
   (** returns true if `i` is greater than or equal to `j`. *)
   val >= : int * int -> bool [@@prototype "i >= j"]
+*)
   (** returns the negation of `i`. *)
-
-  val ~ : int -> int
-*) [@@prototype "~ i"]
+  val `~` : int -> int [@@prototype "~ i"] [@@syntax "prefix"]
   (** returns the absolute value of `i`. *)
   val abs : int -> int [@@method] [@@prototype "abs i"]
 

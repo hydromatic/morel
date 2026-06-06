@@ -25,6 +25,11 @@ Sys.set ("lineWidth", 78);
 Sys.set ("stringDepth", ~1);
 > val it = () : unit
 
+Datalog;
+> val it = {execute=fn,translate=fn,validate=fn}
+>   : {execute:string -> variant, translate:string -> string option,
+>      validate:string -> string}
+
 (*) Basic validation - valid program
 val program = ".decl edge(x:int, y:int)
 edge(1,2).

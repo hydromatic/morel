@@ -30,14 +30,17 @@ val nan = Real.posInf / Real.posInf;
 
 Real;
 > val it =
->   {/=fn,abs=fn,ceil=fn,checkFloat=fn,compare=fn,copySign=fn,floor=fn,fmt=fn,
->    fromInt=fn,fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,
->    max=fn,maxFinite=3.4028235E38,min=fn,minNormalPos=1.1754944E~38,
->    minPos=1.4E~45,negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,
->    realFloor=fn,realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,
->    sameSign=fn,sign=fn,signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,
->    unordered=fn}
->   : {/:real * real -> real, abs:real -> real, ceil:real -> int,
+>   {*=fn,+=fn,-=fn,/=fn,<=fn,<==fn,<>=fn,==fn,>=fn,>==fn,abs=fn,ceil=fn,
+>    checkFloat=fn,compare=fn,copySign=fn,floor=fn,fmt=fn,fromInt=fn,
+>    fromManExp=fn,fromString=fn,isFinite=fn,isNan=fn,isNormal=fn,max=fn,
+>    maxFinite=3.4028235E38,min=fn,minNormalPos=1.1754944E~38,minPos=1.4E~45,
+>    negInf=~inf,posInf=inf,precision=24,radix=2,realCeil=fn,realFloor=fn,
+>    realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,sameSign=fn,sign=fn,
+>    signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,unordered=fn,~=fn}
+>   : {*:real * real -> real, +:real * real -> real, -:real * real -> real,
+>      /:real * real -> real, <:real * real -> bool, <=:real * real -> bool,
+>      <>:real * real -> bool, =:real * real -> bool, >:real * real -> bool,
+>      >=:real * real -> bool, abs:real -> real, ceil:real -> int,
 >      checkFloat:real -> real, compare:real * real -> order,
 >      copySign:real * real -> real, floor:real -> int,
 >      fmt:realfmt -> real -> string, fromInt:int -> real,
@@ -51,7 +54,7 @@ Real;
 >      sign:real -> int, signBit:real -> bool,
 >      split:real -> {frac:real, whole:real},
 >      toManExp:real -> {exp:int, man:real}, toString:real -> string,
->      trunc:real -> int, unordered:real * real -> bool}
+>      trunc:real -> int, unordered:real * real -> bool, ~:real -> real}
 
 (*) val radix : int
 Real.radix;
@@ -146,6 +149,51 @@ Real.posInf / Real.negInf;
 > val it = 0 : real
 0.0 + ~0.0;
 > val it = 0 : real
+
+(* Arithmetic operators are also available as members of the Real structure. *)
+Real.`+` (1.0, 2.0);
+> val it = 3 : real
+Real.`+` (1.0, Real.posInf);
+> val it = inf : real
+Real.`-` (5.0, 2.0);
+> val it = 3 : real
+Real.`-` (Real.posInf, Real.posInf);
+> val it = nan : real
+Real.`*` (0.5, 34.6);
+> val it = 17.3 : real
+Real.`*` (0.0, Real.posInf);
+> val it = nan : real
+Real.`~` 2.0;
+> val it = ~2 : real
+Real.`~` Real.posInf;
+> val it = ~inf : real
+
+(* Comparison operators are also available as members. They return false if
+   either argument is NaN. *)
+Real.`<` (3.0, 5.0);
+> val it = true : bool
+Real.`<` (3.0, nan);
+> val it = false : bool
+Real.`<=` (3.0, 3.0);
+> val it = true : bool
+Real.`<=` (nan, 5.0);
+> val it = false : bool
+Real.`>` (5.0, 3.0);
+> val it = true : bool
+Real.`>` (3.0, nan);
+> val it = false : bool
+Real.`>=` (3.0, 3.0);
+> val it = true : bool
+Real.`>=` (3.0, Real.negInf);
+> val it = true : bool
+Real.`=` (1.0, 1.0);
+> val it = true : bool
+Real.`=` (1.0, 2.0);
+> val it = false : bool
+Real.`<>` (1.0, 2.0);
+> val it = true : bool
+Real.`<>` (1.0, 1.0);
+> val it = false : bool
 
 (* "rem (x, y)" returns the remainder x - n * y, where n = trunc (x / y). The
     result has the same sign as x and has absolute value less than the absolute

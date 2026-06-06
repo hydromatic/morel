@@ -60,11 +60,6 @@ sig
   (** is the negative infinity value. *)
   val negInf : real [@@prototype "negInf"]
 
-  (* These compute sum and difference. Special cases:
-   * - finite ± infinity = infinity with correct sign
-   * - infinity + infinity = infinity
-   * - other infinity combinations yield NaN *)
-(*
   (**
    * is the sum of `r1` and `r2`. If one argument is finite and
    * the other infinite, the result is infinite with the correct sign,
@@ -72,7 +67,7 @@ sig
    * infinity and (-infinity) + (-infinity) = (-infinity). Any other
    * combination of two infinities produces NaN.
    *)
-  val `+` : real * real -> real [@@prototype "r1 + r2"]
+  val `+` : real * real -> real [@@prototype "r1 + r2"] [@@syntax "infix"]
   (**
    * is the difference of `r1` and `r2`. If one argument is
    * finite and the other infinite, the result is infinite with the correct
@@ -80,18 +75,15 @@ sig
    * infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any
    * other combination of two infinities produces NaN.
    *)
-  val `-` : real * real -> real
-*) [@@prototype "r1 - r2"]
+  val `-` : real * real -> real [@@prototype "r1 - r2"] [@@syntax "infix"]
 
-(*
   (**
    * is the product of `r1` and `r2`. The product of zero and an
    * infinity produces NaN. Otherwise, if one argument is infinite, the
    * result is infinite with the correct sign, e.g., -5 * (-infinity) =
    * infinity, infinity * (-infinity) = -infinity.
    *)
-  val `*` : real * real -> real
-*) [@@prototype "r1 * r2"]
+  val `*` : real * real -> real [@@prototype "r1 * r2"] [@@syntax "infix"]
 
   (**
    * is the quotient of `r1` and `r2`. We have 0 / 0 = NaN and
@@ -123,10 +115,8 @@ sig
   val `*-` : real * real * real -> real
 *) [@@prototype "*- (a, b, c)"]
 
-(*
   (** returns the negation of `r`. *)
-  val `~` : real -> real
-*) [@@prototype "~ r"]
+  val `~` : real -> real [@@prototype "~ r"] [@@syntax "prefix"]
 
   (** returns the absolute value of `r`. *)
   val abs : real -> real [@@method] [@@prototype "abs r"]
@@ -186,21 +176,23 @@ sig
   val compareReal : real * real -> IEEEReal.real_order
 *) [@@prototype "compareReal (x, y)"]
 
-(*
   (**
    * returns true if `x` is less than `y`. Return `false` on unordered
    * arguments, i.e., if either argument is NaN, so that the usual reversal
    * of comparison under negation does not hold, e.g., `a < b` is not the
    * same as `not (a >= b)`.
    *)
-  val `<`  : real * real -> bool [@@prototype "x < y"]
+  val `<`  : real * real -> bool [@@prototype "x < y"] [@@syntax "infix"]
   (** As "<" *)
-  val `<=` : real * real -> bool [@@prototype "x <= y"]
+  val `<=` : real * real -> bool [@@prototype "x <= y"] [@@syntax "infix"]
   (** As "<" *)
-  val `>`  : real * real -> bool [@@prototype "x > y"]
+  val `>`  : real * real -> bool [@@prototype "x > y"] [@@syntax "infix"]
   (** As "<" *)
-  val `>=` : real * real -> bool
-*) [@@prototype "x >= y"]
+  val `>=` : real * real -> bool [@@prototype "x >= y"] [@@syntax "infix"]
+  (** returns true if `x` and `y` are equal. *)
+  val `=`  : real * real -> bool [@@prototype "x = y"] [@@syntax "infix"]
+  (** returns true if `x` and `y` are not equal. *)
+  val `<>` : real * real -> bool [@@prototype "x <> y"] [@@syntax "infix"]
 
 (*
   (**

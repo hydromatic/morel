@@ -46,6 +46,7 @@ val <a id='tl' href="#tl-impl">tl</a> : 'a list -> 'a list
 val <a id='last' href="#last-impl">last</a> : 'a list -> 'a
 val <a id='getItem' href="#getItem-impl">getItem</a> : 'a list -> ('a * 'a list) option
 val <a id='nth' href="#nth-impl">nth</a> : 'a list * int -> 'a
+val <a id='only' href="#only-impl">only</a> : 'a list -> 'a
 val <a id='take' href="#take-impl">take</a> : 'a list * int -> 'a list
 val <a id='drop' href="#drop-impl">drop</a> : 'a list * int -> 'a list
 val <a id='rev' href="#rev-impl">rev</a> : 'a list -> 'a list
@@ -128,6 +129,12 @@ used to scan decimal integers from lists of characters.
 `nth (l, i)` (or `l.nth i`) returns the `i`(th) element of the list `l`, counting
 from 0. Raises `Subscript` if `i` < 0 or `i` &ge; `length l`. We have
 `nth(l, 0)` = `hd l`, ignoring exceptions.
+
+<a id="only-impl"></a>
+<h3><code>only</code></h3>
+
+`only l` (or `l.only ()`) returns the only element of list `l`. Raises `Empty` if `l` is empty,
+`Size` if `l` has more than one element.
 
 <a id="take-impl"></a>
 <h3><code>take</code></h3>

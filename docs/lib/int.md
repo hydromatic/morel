@@ -41,11 +41,13 @@ val <a id='fromInt' href="#fromInt-impl">fromInt</a> : int -> int
 val <a id='precision' href="#precision-impl">precision</a> : int option
 val <a id='minInt' href="#minInt-impl">minInt</a> : int option
 val <a id='maxInt' href="#maxInt-impl">maxInt</a> : int option
+val <a id='+' href="#+-impl">+</a> : int * int -> int
 val <a id='div' href="#div-impl">div</a> : int * int -> int
 val <a id='mod' href="#mod-impl">mod</a> : int * int -> int
 val <a id='quot' href="#quot-impl">quot</a> : int * int -> int
 val <a id='rem' href="#rem-impl">rem</a> : int * int -> int
 val <a id='compare' href="#compare-impl">compare</a> : int * int -> order
+val <a id='~' href="#~-impl">~</a> : int -> int
 val <a id='abs' href="#abs-impl">abs</a> : int -> int
 val <a id='min' href="#min-impl">min</a> : int * int -> int
 val <a id='max' href="#max-impl">max</a> : int * int -> int
@@ -102,6 +104,12 @@ integers, within the limits of the heap size. If `precision` is `SOME
 integers, within the limits of the heap size. If `precision` is `SOME
 (n)`, then we have `maxInt` = 2<sup>(n-1)</sup> - 1.
 
+<a id="+-impl"></a>
+<h3><code>+</code></h3>
+
+`i + j` is the sum of `i` and `j`. It raises `Overflow` when the
+result is not representable.
+
 <a id="div-impl"></a>
 <h3><code>div</code></h3>
 
@@ -143,6 +151,11 @@ most hardware divide instructions, so `rem` may be faster than `mod`.
 `compare (i, j)` (or `i.compare j`) returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
 second.
+
+<a id="~-impl"></a>
+<h3><code>~</code></h3>
+
+`~ i` returns the negation of `i`.
 
 <a id="abs-impl"></a>
 <h3><code>abs</code></h3>

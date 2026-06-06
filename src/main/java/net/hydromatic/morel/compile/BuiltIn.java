@@ -504,6 +504,20 @@ public enum BuiltIn {
       ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
 
   /**
+   * Function "Bag.only", of type "&alpha; bag &rarr; &alpha;".
+   *
+   * <p>"only b" returns the only element of bag {@code b}. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty} if {@code b} is
+   * empty, {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if
+   * {@code b} has more than one element.
+   */
+  BAG_ONLY(
+      "Bag",
+      "only",
+      true,
+      ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
+
+  /**
    * Function "Bag.partition", of type "(&alpha; &rarr; bool) &rarr; &alpha; bag
    * &rarr; &alpha; bag * &alpha; bag".
    *
@@ -590,6 +604,16 @@ public enum BuiltIn {
       ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.list(0)))),
 
   /**
+   * Function "Bool.andalso", of type "bool * bool &rarr; bool".
+   *
+   * <p>"andalso (b1, b2)" returns the logical conjunction of <em>b1</em> and
+   * <em>b2</em>. Unlike the {@code andalso} keyword, this is a function and so
+   * always evaluates both arguments.
+   */
+  BOOL_ANDALSO(
+      "Bool", "andalso", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
+
+  /**
    * Function "Bool.fromString", of type "string &rarr; bool option".
    *
    * <p>"fromString s" scans a bool value from the string s. Returns {@code SOME
@@ -600,11 +624,63 @@ public enum BuiltIn {
       "Bool", "fromString", ts -> ts.fnType(STRING, ts.option(BOOL))),
 
   /**
+   * Function "Bool.implies", of type "bool * bool &rarr; bool".
+   *
+   * <p>"implies (b1, b2)" returns the logical implication of <em>b1</em> and
+   * <em>b2</em>; that is, false only if <em>b1</em> is true and <em>b2</em> is
+   * false. Unlike the {@code implies} keyword, this is a function and so always
+   * evaluates both arguments.
+   */
+  BOOL_IMPLIES(
+      "Bool", "implies", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
+
+  /**
    * Function "Bool.not", of type "bool &rarr; bool".
    *
    * <p>"not b" returns the logical negation of the boolean value <em>b</em>.
    */
   BOOL_NOT("Bool", "not", true, ts -> ts.fnType(BOOL, BOOL)),
+
+  /**
+   * Operator "Bool.=", of type "bool * bool &rarr; bool".
+   *
+   * <p>"b1 = b2" returns true if <em>b1</em> and <em>b2</em> are equal.
+   */
+  BOOL_OP_EQ("Bool", "=", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
+
+  /**
+   * Operator "Bool.&gt;", of type "bool * bool &rarr; bool".
+   *
+   * <p>"b1 &gt; b2" returns true if <em>b1</em> is true and <em>b2</em> is
+   * false (treating false as less than true).
+   */
+  BOOL_OP_GT("Bool", ">", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
+
+  /**
+   * Operator "Bool.&lt;", of type "bool * bool &rarr; bool".
+   *
+   * <p>"b1 &lt; b2" returns true if <em>b1</em> is false and <em>b2</em> is
+   * true (treating false as less than true).
+   */
+  BOOL_OP_LT("Bool", "<", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
+
+  /**
+   * Operator "Bool.&lt;&gt;", of type "bool * bool &rarr; bool".
+   *
+   * <p>"b1 &lt;&gt; b2" returns true if <em>b1</em> and <em>b2</em> are not
+   * equal.
+   */
+  BOOL_OP_NE("Bool", "<>", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
+
+  /**
+   * Function "Bool.orelse", of type "bool * bool &rarr; bool".
+   *
+   * <p>"orelse (b1, b2)" returns the logical disjunction of <em>b1</em> and
+   * <em>b2</em>. Unlike the {@code orelse} keyword, this is a function and so
+   * always evaluates both arguments.
+   */
+  BOOL_ORELSE(
+      "Bool", "orelse", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
 
   /**
    * Function "Bool.toString", of type "bool &rarr; string".
@@ -656,6 +732,15 @@ public enum BuiltIn {
    */
   CHAR_FROM_CSTRING(
       "Char", "fromCString", ts -> ts.fnType(STRING, ts.option(CHAR))),
+
+  /**
+   * Function "Char.fromInt" of type "int &rarr; char option".
+   *
+   * <p>"fromInt i" returns {@code SOME c} where {@code c} is the character
+   * whose code is {@code i}, or {@code NONE} if {@code i} is not in the range
+   * {@code 0 .. maxOrd}.
+   */
+  CHAR_FROM_INT("Char", "fromInt", ts -> ts.fnType(INT, ts.option(CHAR))),
 
   /**
    * Function "Char.fromString" of type "string &rarr; char option".
@@ -729,6 +814,13 @@ public enum BuiltIn {
   CHAR_IS_LOWER("Char", "isLower", true, ts -> ts.fnType(CHAR, BOOL)),
 
   /**
+   * Function "Char.isOctDigit" of type "char &rarr; bool".
+   *
+   * <p>"isOctDigit c" returns true if {@code c} is an octal digit (0 to 7).
+   */
+  CHAR_IS_OCT_DIGIT("Char", "isOctDigit", true, ts -> ts.fnType(CHAR, BOOL)),
+
+  /**
    * Function "Char.isPrint" of type "char &rarr; bool".
    *
    * <p>"isPrint c" returns true if {@code c} is a printable character (space or
@@ -790,6 +882,14 @@ public enum BuiltIn {
   CHAR_NOT_CONTAINS("Char", "notContains", ts -> ts.fnType(STRING, CHAR, BOOL)),
 
   /**
+   * Operator "Char.=", of type "char * char &rarr; bool".
+   *
+   * <p>"c1 = c2" returns true if {@code c1} and {@code c2} are the same
+   * character.
+   */
+  CHAR_OP_EQ("Char", "=", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+
+  /**
    * Operator "Char.&gt;=", of type "char * char &rarr; bool".
    *
    * <p>"c1 &ge; c2" returns true if {@code ord(c1)} &ge; {@code ord(c2)}.
@@ -816,6 +916,14 @@ public enum BuiltIn {
    * <p>"c1 &lt; c2" returns true if {@code ord(c1)} &lt; {@code ord(c2)}.
    */
   CHAR_OP_LT("Char", "<", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
+
+  /**
+   * Operator "Char.&lt;&gt;", of type "char * char &rarr; bool".
+   *
+   * <p>"c1 &lt;&gt; c2" returns true if {@code c1} and {@code c2} are different
+   * characters.
+   */
+  CHAR_OP_NE("Char", "<>", ts -> ts.fnType(ts.tupleType(CHAR, CHAR), BOOL)),
 
   /**
    * Function "Char.ord" of type "char &rarr; int".
@@ -1514,6 +1622,20 @@ public enum BuiltIn {
    */
   INT_MOD("Int", "mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
+  /**
+   * Operator "Int.~", of type "int &rarr; int".
+   *
+   * <p>"~ i" returns the negation of {@code i}.
+   */
+  INT_OP_NEGATE("Int", "~", ts -> ts.fnType(INT, INT)),
+
+  /**
+   * Operator "Int.+", of type "int * int &rarr; int".
+   *
+   * <p>"i + j" returns the sum of {@code i} and {@code j}.
+   */
+  INT_OP_PLUS("Int", "+", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
   /** Constant "Int.precision", of type "int option". */
   INT_PRECISION("Int", "precision", ts -> ts.option(INT)),
 
@@ -1938,6 +2060,20 @@ public enum BuiltIn {
       "null",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
+
+  /**
+   * Function "List.only", of type "&alpha; list &rarr; &alpha;".
+   *
+   * <p>"only l" returns the only element of list {@code l}. It raises {@link
+   * net.hydromatic.morel.eval.Codes.BuiltInExn#EMPTY Empty} if {@code l} is
+   * empty, {@link net.hydromatic.morel.eval.Codes.BuiltInExn#SIZE Size} if
+   * {@code l} has more than one element.
+   */
+  LIST_ONLY(
+      "List",
+      "only",
+      true,
+      ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
 
   /**
    * Function "ListPair.all", of type "(&alpha; * &beta; &rarr; bool) &rarr;
@@ -3059,6 +3195,80 @@ public enum BuiltIn {
   REAL_NEG_INF("Real", "negInf", ts -> REAL),
 
   /**
+   * Operator "Real.=", of type "real * real &rarr; bool".
+   *
+   * <p>"x = y" returns true if {@code x} and {@code y} are equal.
+   */
+  REAL_OP_EQ("Real", "=", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
+
+  /**
+   * Operator "Real.&gt;=", of type "real * real &rarr; bool".
+   *
+   * <p>"x &ge; y" returns true if {@code x} is greater than or equal to {@code
+   * y}. Returns false if either argument is NaN.
+   */
+  REAL_OP_GE("Real", ">=", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
+
+  /**
+   * Operator "Real.&gt;", of type "real * real &rarr; bool".
+   *
+   * <p>"x &gt; y" returns true if {@code x} is greater than {@code y}. Returns
+   * false if either argument is NaN.
+   */
+  REAL_OP_GT("Real", ">", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
+
+  /**
+   * Operator "Real.&lt;=", of type "real * real &rarr; bool".
+   *
+   * <p>"x &le; y" returns true if {@code x} is less than or equal to {@code y}.
+   * Returns false if either argument is NaN.
+   */
+  REAL_OP_LE("Real", "<=", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
+
+  /**
+   * Operator "Real.&lt;", of type "real * real &rarr; bool".
+   *
+   * <p>"x &lt; y" returns true if {@code x} is less than {@code y}. Returns
+   * false if either argument is NaN.
+   */
+  REAL_OP_LT("Real", "<", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
+
+  /**
+   * Operator "Real.-", of type "real * real &rarr; real".
+   *
+   * <p>"x - y" returns the difference of {@code x} and {@code y}.
+   */
+  REAL_OP_MINUS("Real", "-", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /**
+   * Operator "Real.&lt;&gt;", of type "real * real &rarr; bool".
+   *
+   * <p>"x &lt;&gt; y" returns true if {@code x} and {@code y} are not equal.
+   */
+  REAL_OP_NE("Real", "<>", ts -> ts.fnType(ts.tupleType(REAL, REAL), BOOL)),
+
+  /**
+   * Operator "Real.~", of type "real &rarr; real".
+   *
+   * <p>"~ x" returns the negation of {@code x}.
+   */
+  REAL_OP_NEGATE("Real", "~", ts -> ts.fnType(REAL, REAL)),
+
+  /**
+   * Operator "Real.+", of type "real * real &rarr; real".
+   *
+   * <p>"x + y" returns the sum of {@code x} and {@code y}.
+   */
+  REAL_OP_PLUS("Real", "+", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /**
+   * Operator "Real.*", of type "real * real &rarr; real".
+   *
+   * <p>"x * y" returns the product of {@code x} and {@code y}.
+   */
+  REAL_OP_TIMES("Real", "*", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+
+  /**
    * Constant "Real.posInf", of type "real".
    *
    * <p>The positive infinity value.
@@ -3614,6 +3824,10 @@ public enum BuiltIn {
   STRING_OP_CARET(
       "String", "^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
 
+  /** Operator "String.=", of type "string * string &rarr; bool". */
+  STRING_OP_EQ(
+      "String", "=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
   /** Operator "String.&gt;=", of type "string * string &rarr; bool". */
   STRING_OP_GE(
       "String", ">=", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
@@ -3629,6 +3843,10 @@ public enum BuiltIn {
   /** Operator "String.&lt;", of type "string * string &rarr; bool". */
   STRING_OP_LT(
       "String", "<", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
+
+  /** Operator "String.&lt;&gt;", of type "string * string &rarr; bool". */
+  STRING_OP_NE(
+      "String", "<>", ts -> ts.fnType(ts.tupleType(STRING, STRING), BOOL)),
 
   /**
    * Function "String.size", of type "string &rarr; int".

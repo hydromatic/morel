@@ -91,6 +91,10 @@ sig
    * ordering.
    *)
   val `>=` : char * char -> bool [@@prototype "c1 >= c2"] [@@syntax "infix"]
+  (** returns true if `c1` and `c2` are the same character. *)
+  val `=`  : char * char -> bool [@@prototype "c1 = c2"] [@@syntax "infix"]
+  (** returns true if `c1` and `c2` are different characters. *)
+  val `<>` : char * char -> bool [@@prototype "c1 <> c2"] [@@syntax "infix"]
 
   (**
    * returns true if character `c` occurs in the string `s`;
@@ -151,6 +155,9 @@ sig
   (** returns true if `c` is a hexadecimal digit. *)
   val isHexDigit : char -> bool [@@method] [@@prototype "isHexDigit c"]
 
+  (** returns true if `c` is an octal digit (0 to 7). *)
+  val isOctDigit : char -> bool [@@method] [@@prototype "isOctDigit c"]
+
   (**
    * returns true if `c` is a hexadecimal digit (0 to 9 or a to
    * f or A to F).
@@ -186,6 +193,10 @@ sig
 *)
   (* Scans a character from a string, returning SOME c or NONE. *)
   val fromString : (*String.*)string -> char option [@@prototype "fromString s"]
+
+  (** returns `SOME c`, the character with code `i`, or `NONE` if `i` is not in
+   * the range `0` to `maxOrd`. *)
+  val fromInt : int -> char option [@@prototype "fromInt i"]
 
   (* Returns a string corresponding to the C-language representation of
    * the character. *)

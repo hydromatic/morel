@@ -36,6 +36,13 @@ datatype <a id='bool' href="#bool-impl">bool</a> = false | true
 val <a id='not' href="#not-impl">not</a> : bool -> bool
 val <a id='toString' href="#toString-impl">toString</a> : bool -> string
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> bool option
+val <a id='andalso' href="#andalso-impl">andalso</a> : bool * bool -> bool
+val <a id='orelse' href="#orelse-impl">orelse</a> : bool * bool -> bool
+val <a id='implies' href="#implies-impl">implies</a> : bool * bool -> bool
+val <a id='=' href="#=-impl">=</a> : bool * bool -> bool
+val <a id='<>' href="#<>-impl"><></a> : bool * bool -> bool
+val <a id='<' href="#<-impl"><</a> : bool * bool -> bool
+val <a id='>' href="#>-impl">></a> : bool * bool -> bool
 </pre>
 
 <a id="bool-impl"></a>
@@ -58,5 +65,44 @@ is the type of boolean values `true` and `false`.
 
 `fromString s` scans a `bool` value from the string `s`. Returns `SOME (true)` if
 `s` is "true", `SOME (false)` if `s` is "false", and `NONE` otherwise.
+
+<a id="andalso-impl"></a>
+<h3><code>andalso</code></h3>
+
+`andalso (b1, b2)` returns the logical conjunction of `b1` and `b2`. Unlike the `andalso`
+keyword, always evaluates both arguments.
+
+<a id="orelse-impl"></a>
+<h3><code>orelse</code></h3>
+
+`orelse (b1, b2)` returns the logical disjunction of `b1` and `b2`. Unlike the `orelse`
+keyword, always evaluates both arguments.
+
+<a id="implies-impl"></a>
+<h3><code>implies</code></h3>
+
+`implies (b1, b2)` returns the logical implication of `b1` and `b2`; that is, false only if
+`b1` is true and `b2` is false. Unlike the `implies` keyword, always
+evaluates both arguments.
+
+<a id="=-impl"></a>
+<h3><code>=</code></h3>
+
+`b1 = b2` returns true if `b1` and `b2` are equal.
+
+<a id="<>-impl"></a>
+<h3><code><></code></h3>
+
+`b1 <> b2` returns true if `b1` and `b2` are not equal.
+
+<a id="<-impl"></a>
+<h3><code><</code></h3>
+
+`b1 < b2` returns true if `b1` is false and `b2` is true.
+
+<a id=">-impl"></a>
+<h3><code>></code></h3>
+
+`b1 > b2` returns true if `b1` is true and `b2` is false.
 
 [//]: # (end:lib/bool)

@@ -42,8 +42,12 @@ val <a id='minPos' href="#minPos-impl">minPos</a> : real
 val <a id='minNormalPos' href="#minNormalPos-impl">minNormalPos</a> : real
 val <a id='posInf' href="#posInf-impl">posInf</a> : real
 val <a id='negInf' href="#negInf-impl">negInf</a> : real
+val <a id='+' href="#+-impl">+</a> : real * real -> real
+val <a id='-' href="#--impl">-</a> : real * real -> real
+val <a id='*' href="#*-impl">*</a> : real * real -> real
 val <a id='/' href="#/-impl">/</a> : real * real -> real
 val <a id='rem' href="#rem-impl">rem</a> : real * real -> real
+val <a id='~' href="#~-impl">~</a> : real -> real
 val <a id='abs' href="#abs-impl">abs</a> : real -> real
 val <a id='min' href="#min-impl">min</a> : real * real -> real
 val <a id='max' href="#max-impl">max</a> : real * real -> real
@@ -52,6 +56,12 @@ val <a id='signBit' href="#signBit-impl">signBit</a> : real -> bool
 val <a id='sameSign' href="#sameSign-impl">sameSign</a> : real * real -> bool
 val <a id='copySign' href="#copySign-impl">copySign</a> : real * real -> real
 val <a id='compare' href="#compare-impl">compare</a> : real * real -> order
+val <a id='<' href="#<-impl"><</a> : real * real -> bool
+val <a id='<=' href="#<=-impl"><=</a> : real * real -> bool
+val <a id='>' href="#>-impl">></a> : real * real -> bool
+val <a id='>=' href="#>=-impl">>=</a> : real * real -> bool
+val <a id='=' href="#=-impl">=</a> : real * real -> bool
+val <a id='<>' href="#<>-impl"><></a> : real * real -> bool
 val <a id='unordered' href="#unordered-impl">unordered</a> : real * real -> bool
 val <a id='isFinite' href="#isFinite-impl">isFinite</a> : real -> bool
 val <a id='isNan' href="#isNan-impl">isNan</a> : real -> bool
@@ -119,6 +129,32 @@ Real64.precision is 53).
 
 `negInf` is the negative infinity value.
 
+<a id="+-impl"></a>
+<h3><code>+</code></h3>
+
+`r1 + r2` is the sum of `r1` and `r2`. If one argument is finite and
+the other infinite, the result is infinite with the correct sign,
+e.g., 5 - (-infinity) = infinity. We also have infinity + infinity =
+infinity and (-infinity) + (-infinity) = (-infinity). Any other
+combination of two infinities produces NaN.
+
+<a id="--impl"></a>
+<h3><code>-</code></h3>
+
+`r1 - r2` is the difference of `r1` and `r2`. If one argument is
+finite and the other infinite, the result is infinite with the correct
+sign, e.g., 5 - (-infinity) = infinity. We also have infinity +
+infinity = infinity and (-infinity) + (-infinity) = (-infinity). Any
+other combination of two infinities produces NaN.
+
+<a id="*-impl"></a>
+<h3><code>*</code></h3>
+
+`r1 * r2` is the product of `r1` and `r2`. The product of zero and an
+infinity produces NaN. Otherwise, if one argument is infinite, the
+result is infinite with the correct sign, e.g., -5 * (-infinity) =
+infinity, infinity * (-infinity) = -infinity.
+
 <a id="/-impl"></a>
 <h3><code>/</code></h3>
 
@@ -135,6 +171,11 @@ an infinity is 0 with the correct sign.
 / y)`. The result has the same sign as `x` and has absolute value less
 than the absolute value of `y`. If `x` is an infinity or `y` is 0,
 `rem` returns NaN. If `y` is an infinity, rem returns `x`.
+
+<a id="~-impl"></a>
+<h3><code>~</code></h3>
+
+`~ r` returns the negation of `r`.
 
 <a id="abs-impl"></a>
 <h3><code>abs</code></h3>
@@ -186,6 +227,39 @@ NaN.
 `compare (x, y)` (or `x.compare y`) returns `LESS`, `EQUAL`, or `GREATER` according to
 whether its first argument is less than, equal to, or greater than the
 second. It raises `IEEEReal.Unordered` on unordered arguments.
+
+<a id="<-impl"></a>
+<h3><code><</code></h3>
+
+`x < y` returns true if `x` is less than `y`. Return `false` on unordered
+arguments, i.e., if either argument is NaN, so that the usual reversal
+of comparison under negation does not hold, e.g., `a < b` is not the
+same as `not (a >= b)`.
+
+<a id="<=-impl"></a>
+<h3><code><=</code></h3>
+
+`x <= y` As "<"
+
+<a id=">-impl"></a>
+<h3><code>></code></h3>
+
+`x > y` As "<"
+
+<a id=">=-impl"></a>
+<h3><code>>=</code></h3>
+
+`x >= y` As "<"
+
+<a id="=-impl"></a>
+<h3><code>=</code></h3>
+
+`x = y` returns true if `x` and `y` are equal.
+
+<a id="<>-impl"></a>
+<h3><code><></code></h3>
+
+`x <> y` returns true if `x` and `y` are not equal.
 
 <a id="unordered-impl"></a>
 <h3><code>unordered</code></h3>

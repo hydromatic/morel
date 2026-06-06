@@ -57,6 +57,7 @@ val <a id='exists' href="#exists-impl">exists</a> : ('a -> bool) -> 'a bag -> bo
 val <a id='all' href="#all-impl">all</a> : ('a -> bool) -> 'a bag -> bool
 val <a id='tabulate' href="#tabulate-impl">tabulate</a> : int * (int -> 'a) -> 'a bag
 val <a id='nth' href="#nth-impl">nth</a> : 'a bag * int -> 'a
+val <a id='only' href="#only-impl">only</a> : 'a bag -> 'a
 </pre>
 
 <a id="bag-impl"></a>
@@ -220,5 +221,11 @@ Raises `Size` if `n` < 0.
 `nth (b, i)` (or `b.nth i`) returns the `i`th element of the bag `b`, counting from 0. Raises
 `Subscript` if `i` < 0 or `i` >= `length b`. We have `nth(b,0) = hd
 b`, ignoring exceptions.
+
+<a id="only-impl"></a>
+<h3><code>only</code></h3>
+
+`only b` (or `b.only ()`) returns the only element of bag `b`. Raises `Empty` if `b` is empty,
+`Size` if `b` has more than one element.
 
 [//]: # (end:lib/bag)

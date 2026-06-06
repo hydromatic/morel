@@ -214,6 +214,10 @@ public abstract class Codes {
   /** @see BuiltIn#BAG_NULL */
   private static final Applicable1 BAG_NULL = empty(BuiltIn.BAG_NULL);
 
+  /** @see BuiltIn#BAG_ONLY */
+  private static final Applicable BAG_ONLY =
+      new RelationalOnly(BuiltIn.BAG_ONLY, Pos.ZERO);
+
   /** @see BuiltIn#BAG_PARTITION */
   private static final Applicable2 BAG_PARTITION =
       listPartition0(BuiltIn.BAG_PARTITION);
@@ -233,6 +237,15 @@ public abstract class Codes {
   /** @see BuiltIn#BAG_TO_LIST */
   private static final Applicable1 BAG_TO_LIST = identity(BuiltIn.BAG_TO_LIST);
 
+  /** @see BuiltIn#BOOL_ANDALSO */
+  private static final Applicable2 BOOL_ANDALSO =
+      new BaseApplicable2<Boolean, Boolean, Boolean>(BuiltIn.BOOL_ANDALSO) {
+        @Override
+        public Boolean apply(Boolean a0, Boolean a1) {
+          return a0 && a1;
+        }
+      };
+
   /** @see BuiltIn#BOOL_FROM_STRING */
   private static final Applicable BOOL_FROM_STRING =
       new BaseApplicable1<List, String>(BuiltIn.BOOL_FROM_STRING) {
@@ -248,12 +261,66 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#BOOL_IMPLIES */
+  private static final Applicable2 BOOL_IMPLIES =
+      new BaseApplicable2<Boolean, Boolean, Boolean>(BuiltIn.BOOL_IMPLIES) {
+        @Override
+        public Boolean apply(Boolean a0, Boolean a1) {
+          return !a0 || a1;
+        }
+      };
+
   /** @see BuiltIn#BOOL_NOT */
   private static final Applicable BOOL_NOT =
       new BaseApplicable1<Boolean, Boolean>(BuiltIn.BOOL_NOT) {
         @Override
         public Boolean apply(Boolean b) {
           return !b;
+        }
+      };
+
+  /** @see BuiltIn#BOOL_OP_EQ */
+  private static final Applicable2 BOOL_OP_EQ =
+      new BaseApplicable2<Boolean, Boolean, Boolean>(BuiltIn.BOOL_OP_EQ) {
+        @Override
+        public Boolean apply(Boolean a0, Boolean a1) {
+          return a0.equals(a1);
+        }
+      };
+
+  /** @see BuiltIn#BOOL_OP_GT */
+  private static final Applicable2 BOOL_OP_GT =
+      new BaseApplicable2<Boolean, Boolean, Boolean>(BuiltIn.BOOL_OP_GT) {
+        @Override
+        public Boolean apply(Boolean a0, Boolean a1) {
+          return a0 && !a1;
+        }
+      };
+
+  /** @see BuiltIn#BOOL_OP_LT */
+  private static final Applicable2 BOOL_OP_LT =
+      new BaseApplicable2<Boolean, Boolean, Boolean>(BuiltIn.BOOL_OP_LT) {
+        @Override
+        public Boolean apply(Boolean a0, Boolean a1) {
+          return !a0 && a1;
+        }
+      };
+
+  /** @see BuiltIn#BOOL_OP_NE */
+  private static final Applicable2 BOOL_OP_NE =
+      new BaseApplicable2<Boolean, Boolean, Boolean>(BuiltIn.BOOL_OP_NE) {
+        @Override
+        public Boolean apply(Boolean a0, Boolean a1) {
+          return !a0.equals(a1);
+        }
+      };
+
+  /** @see BuiltIn#BOOL_ORELSE */
+  private static final Applicable2 BOOL_ORELSE =
+      new BaseApplicable2<Boolean, Boolean, Boolean>(BuiltIn.BOOL_ORELSE) {
+        @Override
+        public Boolean apply(Boolean a0, Boolean a1) {
+          return a0 || a1;
         }
       };
 
@@ -331,6 +398,18 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#CHAR_FROM_INT */
+  private static final Applicable CHAR_FROM_INT =
+      new BaseApplicable1<List, Integer>(BuiltIn.CHAR_FROM_INT) {
+        @Override
+        public List apply(Integer ord) {
+          if (ord < 0 || ord > 255) {
+            return OPTION_NONE;
+          }
+          return optionSome((char) ord.intValue());
+        }
+      };
+
   /** @see BuiltIn#CHAR_FROM_STRING */
   private static final Applicable CHAR_FROM_STRING =
       new BaseApplicable1<List, String>(BuiltIn.CHAR_FROM_STRING) {
@@ -373,6 +452,10 @@ public abstract class Codes {
   private static final Applicable CHAR_IS_LOWER =
       new CharPredicate(BuiltIn.CHAR_IS_LOWER, CharPredicate::isLower);
 
+  /** @see BuiltIn#CHAR_IS_OCT_DIGIT */
+  private static final Applicable CHAR_IS_OCT_DIGIT =
+      new CharPredicate(BuiltIn.CHAR_IS_OCT_DIGIT, CharPredicate::isOctDigit);
+
   /** @see BuiltIn#CHAR_IS_PRINT */
   private static final Applicable CHAR_IS_PRINT =
       new CharPredicate(BuiltIn.CHAR_IS_PRINT, CharPredicate::isPrint);
@@ -401,6 +484,15 @@ public abstract class Codes {
   /** @see BuiltIn#CHAR_NOT_CONTAINS */
   private static final Applicable2 CHAR_NOT_CONTAINS =
       charContains(BuiltIn.CHAR_NOT_CONTAINS);
+
+  /** @see BuiltIn#CHAR_OP_EQ */
+  private static final Applicable2 CHAR_OP_EQ =
+      new BaseApplicable2<Boolean, Character, Character>(BuiltIn.CHAR_OP_EQ) {
+        @Override
+        public Boolean apply(Character a0, Character a1) {
+          return a0.equals(a1);
+        }
+      };
 
   /** @see BuiltIn#CHAR_OP_GE */
   private static final Applicable2 CHAR_OP_GE =
@@ -435,6 +527,15 @@ public abstract class Codes {
         @Override
         public Boolean apply(Character a0, Character a1) {
           return a0 < a1;
+        }
+      };
+
+  /** @see BuiltIn#CHAR_OP_NE */
+  private static final Applicable2 CHAR_OP_NE =
+      new BaseApplicable2<Boolean, Character, Character>(BuiltIn.CHAR_OP_NE) {
+        @Override
+        public Boolean apply(Character a0, Character a1) {
+          return !a0.equals(a1);
         }
       };
 
@@ -1486,6 +1587,24 @@ public abstract class Codes {
     }
   }
 
+  /** @see BuiltIn#INT_OP_NEGATE */
+  private static final Applicable1 INT_OP_NEGATE =
+      new BaseApplicable1<Integer, Integer>(BuiltIn.INT_OP_NEGATE) {
+        @Override
+        public Integer apply(Integer i) {
+          return -i;
+        }
+      };
+
+  /** @see BuiltIn#INT_OP_PLUS */
+  private static final Applicable2 INT_OP_PLUS =
+      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.INT_OP_PLUS) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
+          return a0 + a1;
+        }
+      };
+
   /** @see BuiltIn#INT_PRECISION */
   private static final List INT_PRECISION = optionSome(32); // Java int 32 bits
 
@@ -2042,6 +2161,10 @@ public abstract class Codes {
 
   /** @see BuiltIn#LIST_NULL */
   private static final Applicable1 LIST_NULL = empty(BuiltIn.LIST_NULL);
+
+  /** @see BuiltIn#LIST_ONLY */
+  private static final Applicable LIST_ONLY =
+      new RelationalOnly(BuiltIn.LIST_ONLY, Pos.ZERO);
 
   /** @see BuiltIn#LIST_PAIR_ALL */
   private static final Applicable2 LIST_PAIR_ALL =
@@ -3480,6 +3603,102 @@ public abstract class Codes {
   /** @see BuiltIn#REAL_NEG_INF */
   private static final float REAL_NEG_INF = Float.NEGATIVE_INFINITY;
 
+  /** @see BuiltIn#REAL_OP_EQ */
+  private static final Applicable2 REAL_OP_EQ =
+      new BaseApplicable2<Boolean, Float, Float>(BuiltIn.REAL_OP_EQ) {
+        @Override
+        public Boolean apply(Float a0, Float a1) {
+          return a0.equals(a1);
+        }
+      };
+
+  /** @see BuiltIn#REAL_OP_GE */
+  private static final Applicable2 REAL_OP_GE =
+      new BaseApplicable2<Boolean, Float, Float>(BuiltIn.REAL_OP_GE) {
+        @Override
+        public Boolean apply(Float a0, Float a1) {
+          return a0 >= a1;
+        }
+      };
+
+  /** @see BuiltIn#REAL_OP_GT */
+  private static final Applicable2 REAL_OP_GT =
+      new BaseApplicable2<Boolean, Float, Float>(BuiltIn.REAL_OP_GT) {
+        @Override
+        public Boolean apply(Float a0, Float a1) {
+          return a0 > a1;
+        }
+      };
+
+  /** @see BuiltIn#REAL_OP_LE */
+  private static final Applicable2 REAL_OP_LE =
+      new BaseApplicable2<Boolean, Float, Float>(BuiltIn.REAL_OP_LE) {
+        @Override
+        public Boolean apply(Float a0, Float a1) {
+          return a0 <= a1;
+        }
+      };
+
+  /** @see BuiltIn#REAL_OP_LT */
+  private static final Applicable2 REAL_OP_LT =
+      new BaseApplicable2<Boolean, Float, Float>(BuiltIn.REAL_OP_LT) {
+        @Override
+        public Boolean apply(Float a0, Float a1) {
+          return a0 < a1;
+        }
+      };
+
+  /** @see BuiltIn#REAL_OP_MINUS */
+  private static final Applicable2 REAL_OP_MINUS =
+      new BaseApplicable2<Float, Float, Float>(BuiltIn.REAL_OP_MINUS) {
+        @Override
+        public Float apply(Float a0, Float a1) {
+          return a0 - a1;
+        }
+      };
+
+  /** @see BuiltIn#REAL_OP_NE */
+  private static final Applicable2 REAL_OP_NE =
+      new BaseApplicable2<Boolean, Float, Float>(BuiltIn.REAL_OP_NE) {
+        @Override
+        public Boolean apply(Float a0, Float a1) {
+          return !a0.equals(a1);
+        }
+      };
+
+  /** @see BuiltIn#REAL_OP_NEGATE */
+  private static final Applicable1 REAL_OP_NEGATE =
+      new BaseApplicable1<Float, Float>(BuiltIn.REAL_OP_NEGATE) {
+        @Override
+        public Float apply(Float f) {
+          if (Float.isNaN(f)) {
+            return Float.floatToRawIntBits(f)
+                    == Float.floatToRawIntBits(NEGATIVE_NAN)
+                ? Float.NaN
+                : NEGATIVE_NAN;
+          }
+          return -f;
+        }
+      };
+
+  /** @see BuiltIn#REAL_OP_PLUS */
+  private static final Applicable2 REAL_OP_PLUS =
+      new BaseApplicable2<Float, Float, Float>(BuiltIn.REAL_OP_PLUS) {
+        @Override
+        public Float apply(Float a0, Float a1) {
+          return a0 + a1;
+        }
+      };
+
+  /** @see BuiltIn#REAL_OP_TIMES */
+  private static final Applicable2 REAL_OP_TIMES =
+      new BaseApplicable2<Float, Float, Float>(BuiltIn.REAL_OP_TIMES) {
+        @Override
+        public Float apply(Float a0, Float a1) {
+          return a0 * a1;
+        }
+      };
+
   /** @see BuiltIn#REAL_POS_INF */
   private static final float REAL_POS_INF = Float.POSITIVE_INFINITY;
 
@@ -3784,18 +4003,21 @@ public abstract class Codes {
 
   /** @see BuiltIn#RELATIONAL_ONLY */
   private static final Applicable RELATIONAL_ONLY =
-      new RelationalOnly(Pos.ZERO);
+      new RelationalOnly(BuiltIn.RELATIONAL_ONLY, Pos.ZERO);
 
-  /** Implements {@link #RELATIONAL_ONLY}. */
+  /**
+   * Implements {@link #RELATIONAL_ONLY}, {@link #LIST_ONLY} and {@link
+   * #BAG_ONLY}.
+   */
   private static class RelationalOnly
       extends BasePositionedApplicable1<Object, List> {
-    RelationalOnly(Pos pos) {
-      super(BuiltIn.RELATIONAL_ONLY, pos);
+    RelationalOnly(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
     }
 
     @Override
     public Applicable withPos(Pos pos) {
-      return new RelationalOnly(pos);
+      return new RelationalOnly(builtIn, pos);
     }
 
     @Override
@@ -4062,6 +4284,15 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#STRING_OP_EQ */
+  private static final Applicable2 STRING_OP_EQ =
+      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_EQ) {
+        @Override
+        public Boolean apply(String a0, String a1) {
+          return a0.equals(a1);
+        }
+      };
+
   /** @see BuiltIn#STRING_OP_GE */
   private static final Applicable2 STRING_OP_GE =
       new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_GE) {
@@ -4095,6 +4326,15 @@ public abstract class Codes {
         @Override
         public Boolean apply(String a0, String a1) {
           return a0.compareTo(a1) < 0;
+        }
+      };
+
+  /** @see BuiltIn#STRING_OP_NE */
+  private static final Applicable2 STRING_OP_NE =
+      new BaseApplicable2<Boolean, String, String>(BuiltIn.STRING_OP_NE) {
+        @Override
+        public Boolean apply(String a0, String a1) {
+          return !a0.equals(a1);
         }
       };
 
@@ -5475,18 +5715,27 @@ public abstract class Codes {
           .put(BuiltIn.BAG_NIL, ImmutableList.of())
           .put(BuiltIn.BAG_NTH, BAG_NTH)
           .put(BuiltIn.BAG_NULL, BAG_NULL)
+          .put(BuiltIn.BAG_ONLY, BAG_ONLY)
           .put(BuiltIn.BAG_PARTITION, BAG_PARTITION)
           .put(BuiltIn.BAG_TABULATE, BAG_TABULATE)
           .put(BuiltIn.BAG_TAKE, BAG_TAKE)
           .put(BuiltIn.BAG_TL, BAG_TL)
           .put(BuiltIn.BAG_TO_LIST, BAG_TO_LIST)
+          .put(BuiltIn.BOOL_ANDALSO, BOOL_ANDALSO)
           .put(BuiltIn.BOOL_FROM_STRING, BOOL_FROM_STRING)
+          .put(BuiltIn.BOOL_IMPLIES, BOOL_IMPLIES)
           .put(BuiltIn.BOOL_NOT, BOOL_NOT)
+          .put(BuiltIn.BOOL_OP_EQ, BOOL_OP_EQ)
+          .put(BuiltIn.BOOL_OP_GT, BOOL_OP_GT)
+          .put(BuiltIn.BOOL_OP_LT, BOOL_OP_LT)
+          .put(BuiltIn.BOOL_OP_NE, BOOL_OP_NE)
+          .put(BuiltIn.BOOL_ORELSE, BOOL_ORELSE)
           .put(BuiltIn.BOOL_TO_STRING, BOOL_TO_STRING)
           .put(BuiltIn.CHAR_CHR, CHAR_CHR)
           .put(BuiltIn.CHAR_COMPARE, CHAR_COMPARE)
           .put(BuiltIn.CHAR_CONTAINS, CHAR_CONTAINS)
           .put(BuiltIn.CHAR_FROM_CSTRING, CHAR_FROM_CSTRING)
+          .put(BuiltIn.CHAR_FROM_INT, CHAR_FROM_INT)
           .put(BuiltIn.CHAR_FROM_STRING, CHAR_FROM_STRING)
           .put(BuiltIn.CHAR_IS_ALPHA, CHAR_IS_ALPHA)
           .put(BuiltIn.CHAR_IS_ALPHA_NUM, CHAR_IS_ALPHA_NUM)
@@ -5496,6 +5745,7 @@ public abstract class Codes {
           .put(BuiltIn.CHAR_IS_GRAPH, CHAR_IS_GRAPH)
           .put(BuiltIn.CHAR_IS_HEX_DIGIT, CHAR_IS_HEX_DIGIT)
           .put(BuiltIn.CHAR_IS_LOWER, CHAR_IS_LOWER)
+          .put(BuiltIn.CHAR_IS_OCT_DIGIT, CHAR_IS_OCT_DIGIT)
           .put(BuiltIn.CHAR_IS_PRINT, CHAR_IS_PRINT)
           .put(BuiltIn.CHAR_IS_PUNCT, CHAR_IS_PUNCT)
           .put(BuiltIn.CHAR_IS_SPACE, CHAR_IS_SPACE)
@@ -5504,10 +5754,12 @@ public abstract class Codes {
           .put(BuiltIn.CHAR_MAX_ORD, CHAR_MAX_ORD)
           .put(BuiltIn.CHAR_MIN_CHAR, CHAR_MIN_CHAR)
           .put(BuiltIn.CHAR_NOT_CONTAINS, CHAR_NOT_CONTAINS)
+          .put(BuiltIn.CHAR_OP_EQ, CHAR_OP_EQ)
           .put(BuiltIn.CHAR_OP_GE, CHAR_OP_GE)
           .put(BuiltIn.CHAR_OP_GT, CHAR_OP_GT)
           .put(BuiltIn.CHAR_OP_LE, CHAR_OP_LE)
           .put(BuiltIn.CHAR_OP_LT, CHAR_OP_LT)
+          .put(BuiltIn.CHAR_OP_NE, CHAR_OP_NE)
           .put(BuiltIn.CHAR_ORD, CHAR_ORD)
           .put(BuiltIn.CHAR_PRED, CHAR_PRED)
           .put(BuiltIn.CHAR_SUCC, CHAR_SUCC)
@@ -5576,6 +5828,8 @@ public abstract class Codes {
           .put(BuiltIn.INT_MIN, INT_MIN)
           .put(BuiltIn.INT_MIN_INT, INT_MIN_INT)
           .put(BuiltIn.INT_MOD, INT_MOD)
+          .put(BuiltIn.INT_OP_NEGATE, INT_OP_NEGATE)
+          .put(BuiltIn.INT_OP_PLUS, INT_OP_PLUS)
           .put(BuiltIn.INT_PRECISION, INT_PRECISION)
           .put(BuiltIn.INT_QUOT, INT_QUOT)
           .put(BuiltIn.INT_REM, INT_REM)
@@ -5609,6 +5863,7 @@ public abstract class Codes {
           .put(BuiltIn.LIST_NIL, ImmutableList.of())
           .put(BuiltIn.LIST_NTH, LIST_NTH)
           .put(BuiltIn.LIST_NULL, LIST_NULL)
+          .put(BuiltIn.LIST_ONLY, LIST_ONLY)
           .put(BuiltIn.LIST_PAIR_ALL, LIST_PAIR_ALL)
           .put(BuiltIn.LIST_PAIR_ALL_EQ, LIST_PAIR_ALL_EQ)
           .put(BuiltIn.LIST_PAIR_APP, LIST_PAIR_APP)
@@ -5692,6 +5947,16 @@ public abstract class Codes {
           .put(BuiltIn.REAL_MIN_NORMAL_POS, REAL_MIN_NORMAL_POS)
           .put(BuiltIn.REAL_MIN_POS, REAL_MIN_POS)
           .put(BuiltIn.REAL_NEG_INF, REAL_NEG_INF)
+          .put(BuiltIn.REAL_OP_EQ, REAL_OP_EQ)
+          .put(BuiltIn.REAL_OP_GE, REAL_OP_GE)
+          .put(BuiltIn.REAL_OP_GT, REAL_OP_GT)
+          .put(BuiltIn.REAL_OP_LE, REAL_OP_LE)
+          .put(BuiltIn.REAL_OP_LT, REAL_OP_LT)
+          .put(BuiltIn.REAL_OP_MINUS, REAL_OP_MINUS)
+          .put(BuiltIn.REAL_OP_NE, REAL_OP_NE)
+          .put(BuiltIn.REAL_OP_NEGATE, REAL_OP_NEGATE)
+          .put(BuiltIn.REAL_OP_PLUS, REAL_OP_PLUS)
+          .put(BuiltIn.REAL_OP_TIMES, REAL_OP_TIMES)
           .put(BuiltIn.REAL_POS_INF, REAL_POS_INF)
           .put(BuiltIn.REAL_PRECISION, REAL_PRECISION)
           .put(BuiltIn.REAL_RADIX, REAL_RADIX)
@@ -5753,10 +6018,12 @@ public abstract class Codes {
           .put(BuiltIn.STRING_MAP, STRING_MAP)
           .put(BuiltIn.STRING_MAX_SIZE, STRING_MAX_SIZE)
           .put(BuiltIn.STRING_OP_CARET, STRING_OP_CARET)
+          .put(BuiltIn.STRING_OP_EQ, STRING_OP_EQ)
           .put(BuiltIn.STRING_OP_GE, STRING_OP_GE)
           .put(BuiltIn.STRING_OP_GT, STRING_OP_GT)
           .put(BuiltIn.STRING_OP_LE, STRING_OP_LE)
           .put(BuiltIn.STRING_OP_LT, STRING_OP_LT)
+          .put(BuiltIn.STRING_OP_NE, STRING_OP_NE)
           .put(BuiltIn.STRING_SIZE, STRING_SIZE)
           .put(BuiltIn.STRING_STR, STRING_STR)
           .put(BuiltIn.STRING_SUB, STRING_SUB)
@@ -7195,6 +7462,10 @@ public abstract class Codes {
 
     static boolean isHexDigit(char c) {
       return isDigit(c) || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F';
+    }
+
+    static boolean isOctDigit(char c) {
+      return '0' <= c && c <= '7';
     }
 
     static boolean isPunct(char c) {

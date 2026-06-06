@@ -48,6 +48,8 @@ val <a id='<' href="#<-impl"><</a> : char * char -> bool
 val <a id='<=' href="#<=-impl"><=</a> : char * char -> bool
 val <a id='>' href="#>-impl">></a> : char * char -> bool
 val <a id='>=' href="#>=-impl">>=</a> : char * char -> bool
+val <a id='=' href="#=-impl">=</a> : char * char -> bool
+val <a id='<>' href="#<>-impl"><></a> : char * char -> bool
 val <a id='contains' href="#contains-impl">contains</a> : string -> char -> bool
 val <a id='notContains' href="#notContains-impl">notContains</a> : string -> char -> bool
 val <a id='isAscii' href="#isAscii-impl">isAscii</a> : char -> bool
@@ -59,6 +61,7 @@ val <a id='isCntrl' href="#isCntrl-impl">isCntrl</a> : char -> bool
 val <a id='isDigit' href="#isDigit-impl">isDigit</a> : char -> bool
 val <a id='isGraph' href="#isGraph-impl">isGraph</a> : char -> bool
 val <a id='isHexDigit' href="#isHexDigit-impl">isHexDigit</a> : char -> bool
+val <a id='isOctDigit' href="#isOctDigit-impl">isOctDigit</a> : char -> bool
 val <a id='isLower' href="#isLower-impl">isLower</a> : char -> bool
 val <a id='isPrint' href="#isPrint-impl">isPrint</a> : char -> bool
 val <a id='isSpace' href="#isSpace-impl">isSpace</a> : char -> bool
@@ -66,6 +69,7 @@ val <a id='isPunct' href="#isPunct-impl">isPunct</a> : char -> bool
 val <a id='isUpper' href="#isUpper-impl">isUpper</a> : char -> bool
 val <a id='toString' href="#toString-impl">toString</a> : char -> string
 val <a id='fromString' href="#fromString-impl">fromString</a> : string -> char option
+val <a id='fromInt' href="#fromInt-impl">fromInt</a> : int -> char option
 val <a id='toCString' href="#toCString-impl">toCString</a> : char -> string
 val <a id='fromCString' href="#fromCString-impl">fromCString</a> : string -> char option
 val <a id='scan' href="#scan-impl">scan</a> : (Char.char, 'a) StringCvt.reader -> (char, 'a) StringCvt.reader
@@ -151,6 +155,16 @@ ordering.
 `c1 >= c2` returns true if `c1` is greater than or equal to `c2` in the character
 ordering.
 
+<a id="=-impl"></a>
+<h3><code>=</code></h3>
+
+`c1 = c2` returns true if `c1` and `c2` are the same character.
+
+<a id="<>-impl"></a>
+<h3><code><></code></h3>
+
+`c1 <> c2` returns true if `c1` and `c2` are different characters.
+
 <a id="contains-impl"></a>
 <h3><code>contains</code></h3>
 
@@ -218,6 +232,11 @@ is printable and not a whitespace character.
 
 `isHexDigit c` (or `c.isHexDigit ()`) returns true if `c` is a hexadecimal digit.
 
+<a id="isOctDigit-impl"></a>
+<h3><code>isOctDigit</code></h3>
+
+`isOctDigit c` (or `c.isOctDigit ()`) returns true if `c` is an octal digit (0 to 7).
+
 <a id="isLower-impl"></a>
 <h3><code>isLower</code></h3>
 
@@ -256,6 +275,12 @@ graphical but not alphanumeric.
 <h3><code>fromString</code></h3>
 
 `fromString s`
+
+<a id="fromInt-impl"></a>
+<h3><code>fromInt</code></h3>
+
+`fromInt i` returns `SOME c`, the character with code `i`, or `NONE` if `i` is not in
+the range `0` to `maxOrd`.
 
 <a id="toCString-impl"></a>
 <h3><code>toCString</code></h3>

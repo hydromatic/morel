@@ -29,7 +29,7 @@ Bag;
 > val it =
 >   {@=fn,all=fn,app=fn,concat=fn,drop=fn,`exists`=fn,filter=fn,find=fn,fold=fn,
 >    fromList=fn,getItem=fn,hd=fn,length=fn,map=fn,mapPartial=fn,nil=[],nth=fn,
->    null=fn,partition=fn,tabulate=fn,`take`=fn,tl=fn,toList=fn}
+>    null=fn,only=fn,partition=fn,tabulate=fn,`take`=fn,tl=fn,toList=fn}
 >   : {@:'a bag * 'a bag -> 'a bag, all:('b -> bool) -> 'b bag -> bool,
 >      app:('c -> unit) -> 'c bag -> unit, concat:'d bag list -> 'd bag,
 >      drop:'e bag * int -> 'e bag, `exists`:('f -> bool) -> 'f bag -> bool,
@@ -39,10 +39,10 @@ Bag;
 >      getItem:'l bag -> ('l * 'l bag) option, hd:'m bag -> 'm,
 >      length:'n bag -> int, map:('o -> 'p) -> 'o bag -> 'p bag,
 >      mapPartial:('q -> 'r option) -> 'q bag -> 'r bag, nil:'s bag,
->      nth:'t bag * int -> 't, null:'u bag -> bool,
->      partition:('v -> bool) -> 'v bag -> 'v bag * 'v bag,
->      tabulate:int * (int -> 'w) -> 'w bag, `take`:'x bag * int -> 'x bag,
->      tl:'y bag -> 'y bag, toList:'z bag -> 'z list}
+>      nth:'t bag * int -> 't, null:'u bag -> bool, only:'v bag -> 'v,
+>      partition:('w -> bool) -> 'w bag -> 'w bag * 'w bag,
+>      tabulate:int * (int -> 'x) -> 'x bag, `take`:'y bag * int -> 'y bag,
+>      tl:'z bag -> 'z bag, toList:'ba bag -> 'ba list}
 
 (*) val nil : 'a bag
 Bag.nil;
@@ -65,6 +65,32 @@ Sys.plan ();
 > val it =
 >   "apply(fnValue Bag.null, argCode apply(fnValue Bag.fromList, argCode tuple(constant(1))))"
 >   : string
+
+(*) val only : 'a bag -> 'a
+Bag.only (bag [2]);
+> val it = 2 : int
+(bag [2]).only ();
+> val it = 2 : int
+Bag.only (bag [1, 2, 3]);
+> uncaught exception Size
+>   raised at: stdIn:1.1-1.24
+Bag.only (bag []);
+> uncaught exception Empty
+>   raised at: stdIn:1.1-1.17
+
+(*) val nth : 'a bag * int -> 'a
+Bag.nth (bag [1, 2, 3], 0);
+> val it = 1 : int
+Bag.nth (bag [1, 2, 3], 2);
+> val it = 3 : int
+(bag [1, 2, 3]).nth 1;
+> val it = 2 : int
+Bag.nth (bag [1, 2, 3], 3);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.27
+Bag.nth (bag [1, 2, 3], ~1);
+> uncaught exception Subscript [subscript out of bounds]
+>   raised at: stdIn:1.1-1.28
 
 (*) val length : 'a bag -> int
 Bag.length;

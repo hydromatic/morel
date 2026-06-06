@@ -27,9 +27,15 @@ Sys.set ("stringDepth", ~1);
 > val it = () : unit
 
 Bool;
-> val it = {fromString=fn,not=fn,toString=fn}
->   : {fromString:string -> bool option, not:bool -> bool,
->      toString:bool -> string}
+> val it =
+>   {<=fn,<>=fn,==fn,>=fn,`andalso`=fn,fromString=fn,`implies`=fn,not=fn,
+>    `orelse`=fn,toString=fn}
+>   : {<:bool * bool -> bool, <>:bool * bool -> bool, =:bool * bool -> bool,
+>      >:bool * bool -> bool, `andalso`:bool * bool -> bool,
+>      fromString:string -> bool option, `implies`:bool * bool -> bool,
+>      not:bool -> bool, `orelse`:bool * bool -> bool, toString:bool -> string}
+Bool.fromString;
+> val it = fn : string -> bool option
 Bool.fromString "true";
 > val it = SOME true : bool option
 Bool.fromString "false";
@@ -42,11 +48,59 @@ Bool.toString false;
 > val it = "false" : string
 false.toString ();
 > val it = "false" : string
+Bool.not;
+> val it = fn : bool -> bool
 Bool.not true;
 > val it = false : bool
 true.not ();
 > val it = false : bool
 Bool.not false;
 > val it = true : bool
+Bool.`implies`;
+> val it = fn : bool * bool -> bool
+Bool.`implies` (true, true);
+> val it = true : bool
+Bool.`implies` (true, false);
+> val it = false : bool
+Bool.`implies` (false, true);
+> val it = true : bool
+Bool.`implies` (false, false);
+> val it = true : bool
+Bool.toString;
+> val it = fn : bool -> string
+Bool.toString true;
+> val it = "true" : string
+Bool.toString false;
+> val it = "false" : string
+Bool.`andalso` (true, true);
+> val it = true : bool
+Bool.`andalso` (true, false);
+> val it = false : bool
+Bool.`andalso` (false, false);
+> val it = false : bool
+Bool.`orelse` (false, false);
+> val it = false : bool
+Bool.`orelse` (true, false);
+> val it = true : bool
+Bool.`=` (true, true);
+> val it = true : bool
+Bool.`=` (true, false);
+> val it = false : bool
+Bool.`<>` (true, false);
+> val it = true : bool
+Bool.`<>` (true, true);
+> val it = false : bool
+Bool.`<` (false, true);
+> val it = true : bool
+Bool.`<` (true, true);
+> val it = false : bool
+Bool.`<` (true, false);
+> val it = false : bool
+Bool.`>` (true, false);
+> val it = true : bool
+Bool.`>` (false, false);
+> val it = false : bool
+Bool.`>` (false, true);
+> val it = false : bool
 
 (*) End bool.smli

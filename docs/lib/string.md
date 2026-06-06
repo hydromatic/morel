@@ -60,6 +60,8 @@ val <a id='<' href="#<-impl"><</a> : string * string -> bool
 val <a id='<=' href="#<=-impl"><=</a> : string * string -> bool
 val <a id='>' href="#>-impl">></a> : string * string -> bool
 val <a id='>=' href="#>=-impl">>=</a> : string * string -> bool
+val <a id='=' href="#=-impl">=</a> : string * string -> bool
+val <a id='<>' href="#<>-impl"><></a> : string * string -> bool
 </pre>
 
 <a id="string-impl"></a>
@@ -242,5 +244,15 @@ strings using the given ordering `f` on characters.
 
 `s >= t` returns true if `s` is greater than or equal to `t` in the string
 ordering.
+
+<a id="=-impl"></a>
+<h3><code>=</code></h3>
+
+`s = t` returns true if `s` and `t` are equal.
+
+<a id="<>-impl"></a>
+<h3><code><></code></h3>
+
+`s <> t` returns true if `s` and `t` are not equal.
 
 [//]: # (end:lib/string)
