@@ -307,9 +307,27 @@ public class FromBuilder {
    * a {@code yield}, it would not be safe to inline, because the rebuilt
    * projection would reference the dropped yield's binding, which is no longer
    * in scope.
+   *
+   * <p>It is also unsafe to inline unless every step that would be merged (all
+   * but a trailing {@code yield}) is a {@code scan} or {@code where}. Those
+   * steps distribute over the enclosing loop, but steps such as {@code take},
+   * {@code skip}, {@code order} and {@code group} do not. For example, in
+   * {@code from i in [1,2,3], j in (from k in ["a","b","c"] take i)} the
+   * subquery's {@code take} must be applied per outer row; merging it into the
+   * enclosing {@code from} would turn it into a single {@code take} over the
+   * whole stream (and, being lateral, would read {@code i} before it is bound).
    */
   private boolean safeToInline(Core.From from) {
-    return bindings.isEmpty() || last(from.steps).op != Op.YIELD;
+    if (bindings.isEmpty()) {
+      // The subquery is the first source, so there is no enclosing loop to
+      // distribute over; inlining any steps preserves meaning.
+      return true;
+    }
+    if (last(from.steps).op == Op.YIELD) {
+      return false;
+    }
+    return from.steps.stream()
+        .allMatch(step -> step.op == Op.SCAN || step.op == Op.WHERE);
   }
 
   private static boolean isSimplePat(Core.Pat pat, Core.From exp) {
