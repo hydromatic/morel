@@ -1059,4 +1059,50 @@ let  val i0 = 0; val i1 = 1; val i2 = 2; val i3 = 3; val i4 = i2 * i2; val i5 = 
 >      * int * int * int * int * int * int * int * int * int * int * int * int *
 >     int * int * int * int * int
 
+(*) A type alias's body may not use a type variable that is not in the head;
+(*) declare it, e.g. `type 'a my_list = ...`.
+type my_list = 'a list;
+> stdIn:1.16-1.18 Error: unbound type variable in type declaration: 'a
+>   raised at: stdIn:1.16-1.18
+type 'a my_list = 'a list;
+> type 'a my_list = 'a list
+(*) The body uses 'b, which is not in the head.
+type 'a bad = 'a -> 'b;
+> stdIn:1.21-1.23 Error: unbound type variable in type declaration: 'b
+>   raised at: stdIn:1.21-1.23
+type ('a, 'b) good = 'a -> 'b;
+> type ('a,'b) good = 'a -> 'b
+(*) A head type variable need not be used in the body; 'a is unused here.
+type ('a, 'b) partial = 'b list;
+> type ('a,'b) partial = 'b list
+
+(*) An alias is a type function: applying it to arguments substitutes them into
+(*) the body and expands. 'int my_list' becomes 'int list'.
+val x = [1, 2] : int my_list;
+> val x = [1,2] : int list
+val y = ["a", "b"] : string my_list;
+> val y = ["a","b"] : string list
+(*) The annotation supplies the element type for an empty list.
+val e = [] : int my_list;
+> val e = [] : int list
+(*) An alias may be applied to an alias application.
+val n = [[1], [2]] : int my_list my_list;
+> val n = [[1],[2]] : int list list
+
+(*) The unused head variable is simply discarded; '(int, bool) partial' is
+(*) 'bool list'.
+val z = [true, false] : (int, bool) partial;
+> val z = [true,false] : bool list
+
+(*) A head variable may be used more than once in the body.
+type 'a pair = 'a * 'a;
+> type 'a pair = 'a * 'a
+val p = (1, 2) : int pair;
+> val p = (1,2) : int * int
+
+(*) Applying an alias with the wrong number of arguments is an error.
+val w = [1] : my_list;
+> stdIn:1.15-1.22 Error: type constructor my_list given 0 arguments, wants 1
+>   raised at: stdIn:1.15-1.22
+
 (*) End type.smli

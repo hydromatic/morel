@@ -28,15 +28,24 @@ import net.hydromatic.morel.ast.Op;
 /**
  * Type that is an alias for another type.
  *
- * <p>For example, "{@code type point = real list real}" creates a type "point"
- * as an alias for "real list".
+ * <p>For example, "{@code type point = real list}" creates a type "point" as an
+ * alias for "real list".
+ *
+ * <p>An alias is a <em>type function</em>: a name, a list of head type
+ * variables (its {@link #arguments}), and a body ({@link #type}). For example,
+ * "{@code type 'a my_list = 'a list}" has one head type variable and body
+ * "{@code 'a list}". Unlike a {@link DataType}, which is nominal, an alias is
+ * transparent: it is applied by substituting its arguments into the body (e.g.
+ * "{@code int my_list}" expands to "{@code int list}"), not by creating a
+ * distinct type. The {@link #parameterTypes parameter count} records its arity.
  */
 public class AliasType extends ParameterizedType {
   public final Type type;
   public final List<Type> arguments;
 
   AliasType(String name, Type type, List<Type> arguments) {
-    super(Op.ALIAS_TYPE, name, name, 0);
+    super(
+        Op.ALIAS_TYPE, name, computeMoniker(name, arguments), arguments.size());
     this.type = type;
     this.arguments = ImmutableList.copyOf(arguments);
   }

@@ -413,6 +413,19 @@ public class Keys {
             args.size());
         return type.substitute(typeSystem, typeSystem.typesFor(args));
       }
+      if (type instanceof AliasType) {
+        // An alias is a type function: applying it substitutes the arguments
+        // into the body. For example, 'int my_list' (where 'type 'a my_list =
+        // 'a list') expands to 'int list'.
+        final AliasType aliasType = (AliasType) type;
+        checkArgument(
+            args.size() == aliasType.arguments.size(),
+            "type %s expects %s argument(s), got %s",
+            key,
+            aliasType.arguments.size(),
+            args.size());
+        return aliasType.type.substitute(typeSystem, typeSystem.typesFor(args));
+      }
       throw new AssertionError();
     }
 

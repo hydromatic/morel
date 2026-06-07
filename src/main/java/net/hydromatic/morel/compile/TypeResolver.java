@@ -3095,6 +3095,8 @@ public class TypeResolver {
       // Check that every type-constructor reference in the body has the right
       // number of arguments before we materialize the key.
       checkTypeConstructorArities(typeSystem, bind.type);
+      // The body may not use a type variable that is not in the head.
+      checkBoundTyVars(bind.tyVars, ImmutableList.of(bind.type));
       final KeyBuilder keyBuilder = new KeyBuilder();
       bind.tyVars.forEach(keyBuilder::toTypeKey);
 
@@ -3102,7 +3104,7 @@ public class TypeResolver {
           Keys.alias(
               bind.name.name,
               keyBuilder.toTypeKey(bind.type),
-              ImmutableList.of()));
+              Keys.ordinals(bind.tyVars.size())));
     }
     final List<Type> types = typeSystem.typesFor(keys);
 
@@ -3116,6 +3118,16 @@ public class TypeResolver {
       PairList<Ast.IdPat, Term> termMap) {
     final List<Keys.DataTypeKey> keys = new ArrayList<>();
     for (Ast.DatatypeBind bind : datatypeDecl.binds) {
+      // A constructor's argument type may not use a type variable that is not
+      // in the head.
+      final List<Ast.Type> bodyTypes = new ArrayList<>();
+      for (Ast.TyCon tyCon : bind.tyCons) {
+        if (tyCon.type != null) {
+          bodyTypes.add(tyCon.type);
+        }
+      }
+      checkBoundTyVars(bind.tyVars, bodyTypes);
+
       final KeyBuilder keyBuilder = new KeyBuilder();
       bind.tyVars.forEach(keyBuilder::toTypeKey);
 
@@ -3155,6 +3167,36 @@ public class TypeResolver {
 
     map.put(datatypeDecl, toTerm(PrimitiveType.UNIT));
     return datatypeDecl;
+  }
+
+  /**
+   * Checks that every type variable used in the body of a {@code type} or
+   * {@code datatype} declaration is one of the type variables in the head.
+   *
+   * <p>For example, {@code datatype my_option = MY_NONE | MY_SOME of 'a} is
+   * invalid because {@code 'a} is not declared in the head; you must write
+   * {@code datatype 'a my_option = MY_NONE | MY_SOME of 'a}.
+   *
+   * @throws CompileException if {@code bodies} use a type variable that is not
+   *     in {@code tyVars}
+   */
+  private static void checkBoundTyVars(
+      List<Ast.TyVar> tyVars, Iterable<Ast.Type> bodies) {
+    final Set<String> bound = new HashSet<>();
+    tyVars.forEach(tyVar -> bound.add(tyVar.name));
+    final Visitor visitor =
+        new Visitor() {
+          @Override
+          protected void visit(Ast.TyVar tyVar) {
+            if (!bound.contains(tyVar.name)) {
+              throw new CompileException(
+                  "unbound type variable in type declaration: " + tyVar.name,
+                  false,
+                  tyVar.pos);
+            }
+          }
+        };
+    bodies.forEach(body -> body.accept(visitor));
   }
 
   private Ast.Decl deduceOverDeclType(
@@ -3354,8 +3396,21 @@ public class TypeResolver {
           final Type aliasType = typeSystem.lookupOpt(namedType.name);
           checkTypeConstructorArity(namedType, aliasType);
           if (aliasType instanceof AliasType) {
-            final Term aliasTerm = toTerm(aliasType, Subst.EMPTY);
-            return reg(type, v, aliasTerm);
+            // An alias is a type function: substitute the use-site arguments
+            // for the head type variables, then expand the body. For example,
+            // given 'type 'a my_list = 'a list', 'int my_list' expands to
+            // 'int list'.
+            final AliasType alias = (AliasType) aliasType;
+            final PairList<Ast.Type, Variable> argTerms =
+                typeTerms(namedType.types);
+            Subst subst = Subst.EMPTY;
+            for (int i = 0; i < alias.parameterTypes.size(); i++) {
+              subst =
+                  subst.plus(
+                      (TypeVar) alias.parameterTypes.get(i), argTerms.right(i));
+            }
+            final Term aliasTerm = toTerm(alias.type, subst);
+            return reg(namedType.copy(argTerms.leftList()), v, aliasTerm);
           }
 
           final PairList<Ast.Type, Variable> typeTerms2 =

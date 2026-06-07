@@ -1560,7 +1560,8 @@ public class Compiler {
       for (AliasType type : types) {
         actions.add(
             (outLines, outBindings, evalEnv) ->
-                outLines.accept("type " + type.name + " = " + type.type.key()));
+                outLines.accept(
+                    "type " + type.moniker() + " = " + type.type.key()));
       }
     }
   }

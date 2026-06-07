@@ -162,6 +162,24 @@ fn (x: int either) => 1;
 > stdIn:1.8-1.18 Error: type constructor either given 1 argument, wants 2
 >   raised at: stdIn:1.8-1.18
 
+(*) A datatype's body may not use a type variable that is not in the head;
+(*) declare it, e.g. `datatype 'a my_option = ...`.
+datatype my_option = MY_NONE | MY_SOME of 'a;
+> stdIn:1.43-1.45 Error: unbound type variable in type declaration: 'a
+>   raised at: stdIn:1.43-1.45
+datatype 'a my_option = MY_NONE | MY_SOME of 'a;
+> datatype 'a my_option = MY_NONE | MY_SOME of 'a
+(*) The body uses 'b, which is not in the head.
+datatype 'a pair = PAIR of 'a * 'b;
+> stdIn:1.33-1.35 Error: unbound type variable in type declaration: 'b
+>   raised at: stdIn:1.33-1.35
+datatype ('a, 'b) pair = PAIR of 'a * 'b;
+> datatype ('a,'b) pair = PAIR of 'a * 'b
+(*) A head type variable need not be used in the body; here 'b is a phantom
+(*) type, used in the head but not the body. Standard ML allows this.
+datatype ('a, 'b) phantom = PHANTOM of 'a;
+> datatype ('a,'b) phantom = PHANTOM of 'a
+
 (*) The valid forms. Parentheses around a single type are allowed (just
 (*) like in expressions).
 type t = bool * int list;
