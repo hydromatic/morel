@@ -75,7 +75,7 @@ HELP=
 EVAL_EXPR=
 ECHO=
 FOREIGN=
-FILES=
+FILES=()
 while [ $# -gt 0 ]; do
   case "$1" in
     (--help|-h)
@@ -111,14 +111,14 @@ while [ $# -gt 0 ]; do
       shift
       ;;
     (*.smli)
-      if [ "$FILES" = "" ] && [ "$SUBCMD" = "execute" ]; then
+      if [ ${#FILES[@]} -eq 0 ] && [ "$SUBCMD" = "execute" ]; then
         SUBCMD=smli
       fi
-      FILES="$FILES $1"
+      FILES+=("$1")
       shift
       ;;
     (*)
-      FILES="$FILES $1"
+      FILES+=("$1")
       shift
       ;;
   esac
@@ -174,20 +174,20 @@ fi
 
 case "$SUBCMD" in
   (smli)
-    if [ "$FILES" = "" ]; then
-      FILES=-
+    if [ ${#FILES[@]} -eq 0 ]; then
+      FILES=(-)
     fi
     exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Script \
         $(if [ "$ECHO" ]; then echo --echo; fi) \
         --directory="$(pwd)" \
-        "$FILES"
+        "${FILES[@]}"
     ;;
   (darn-update|darn-verify|darn-probe)
     exec java $VM_OPTS -cp "${CP}" $JAVA_OPTS net.hydromatic.morel.Main \
         "$SUBCMD" \
         "$DEFAULT_FOREIGN" \
         $FOREIGN \
-        $FILES
+        "${FILES[@]}"
     ;;
   (execute)
     if [ -n "$EVAL_EXPR" ]; then
@@ -204,7 +204,7 @@ case "$SUBCMD" in
            $FOREIGN \
            --directory="$(pwd)" \
            $HEADLESS_OPTS \
-           "$FILES"
+           "${FILES[@]}"
     fi
     ;;
 esac
