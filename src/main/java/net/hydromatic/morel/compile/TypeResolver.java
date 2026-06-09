@@ -1270,7 +1270,6 @@ public class TypeResolver {
         final Ast.Through through = (Ast.Through) step;
         final Variable v18 = unifier.variable();
         final Variable c18 = unifier.variable();
-        reg(through, c18);
 
         // Input collection (p.c) is either a bag of p.v or a list of p.v.
         mayBeBagOrList(requireNonNull(p.c), p.v);
@@ -1282,7 +1281,13 @@ public class TypeResolver {
         final Variable v17 = toVariable(fnTerm(p.c, c18));
         final Ast.Exp throughExp = deduceExpType(p.env, through.exp, v17);
         mayBeBagOrList(c18, v18);
-        steps.add(through.copy(pat, throughExp));
+        // Register the rewritten node (the one added to 'steps', which the
+        // resolver later looks up), not only the original: type resolution may
+        // have rewritten the expression (e.g. 'List.map ...'), giving a new
+        // node that would otherwise have no registered type.
+        final Ast.Through through2 = through.copy(pat, throughExp);
+        reg(through2, c18);
+        steps.add(through2);
         TypeEnv env5 = p.rootEnv;
         fieldVars.clear();
         for (PatTerm e : termMap) {

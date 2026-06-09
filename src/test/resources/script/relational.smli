@@ -2851,6 +2851,13 @@ from i in [1,2,3]
   through i3 in (map (fn x => [x]));
 > val it = [[[1]],[[2]],[[3]]] : int list list list
 
+(* The function in a 'through' may be a structure member such as
+   'List.map'; resolving it rewrites the expression, which once left the
+   step's type unregistered and threw a NullPointerException. *)
+from i in [1,2,3]
+  through xs in (List.map (fn x => x * 10));
+> val it = [10,20,30] : int list
+
 let
   fun clean emps =
     from e in emps
