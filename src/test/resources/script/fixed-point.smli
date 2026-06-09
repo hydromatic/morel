@@ -1027,10 +1027,10 @@ in
   from r in loop 10 init order r.state
 end;
 > val it =
->   [{rank=0.14123239,state="AZ"},{rank=0.090164624,state="CA"},
->    {rank=0.0901931,state="CO"},{rank=0.11877356,state="ID"},
->    {rank=0.0901931,state="NM"},{rank=0.14095598,state="NV"},
->    {rank=0.120069236,state="OR"},{rank=0.14098151,state="UT"},
+>   [{rank=0.14123239,state="AZ"},{rank=0.09016462,state="CA"},
+>    {rank=0.09019309,state="CO"},{rank=0.11877356,state="ID"},
+>    {rank=0.09019309,state="NM"},{rank=0.14095598,state="NV"},
+>    {rank=0.12006924,state="OR"},{rank=0.14098151,state="UT"},
 >    {rank=0.06743651,state="WA"}] : {rank:real, state:string} list
 
 (* 7. Single-Source Shortest Paths (SSSP) ----------------------------

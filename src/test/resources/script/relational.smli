@@ -1029,6 +1029,12 @@ from i in [1, 2, 3],
   distinct;
 > val it = [2,3,4,5,6] : int list
 
+(* 'distinct' preserves arrival order: each value appears in the position
+   of its first occurrence, not in sorted order. *)
+from i in [3, 1, 2, 1, 3]
+  distinct;
+> val it = [3,1,2] : int list
+
 (*) 'distinct' applied to zero-field relation is non-empty
 from u in [(), (), ()]
   distinct;
@@ -1172,14 +1178,14 @@ from i in [2, 1, 2]
 > val it = {s=5,t=16} : {s:int, t:int}
 from i in [2, 1, 2]
   group i compute (sum over i);
-> val it = [{i=1,sum=1},{i=2,sum=4}] : {i:int, sum:int} list
+> val it = [{i=2,sum=4},{i=1,sum=1}] : {i:int, sum:int} list
 (*) Aggregate used in a subquery
 from i in [2, 1, 2]
   group i compute {x = from j in [3, 4] yield j + (sum over i)};
-> val it = [{i=1,x=[4,5]},{i=2,x=[7,8]}] : {i:int, x:int list} list
+> val it = [{i=2,x=[7,8]},{i=1,x=[4,5]}] : {i:int, x:int list} list
 from (i, j) in [(2, 5), (1, 1), (2, 7)]
   group i compute {mid = ((min over j) + (max over j)) div 2};
-> val it = [{i=1,mid=1},{i=2,mid=6}] : {i:int, mid:int} list
+> val it = [{i=2,mid=6},{i=1,mid=1}] : {i:int, mid:int} list
 from i in [2, 1, 2]
   compute 1;
 > val it = 1 : int
@@ -1189,7 +1195,7 @@ from i in [2, 1, 2]
 > val it = 2 : int
 from i in [2, 1, 2]
   group i compute {c = count (bag ["a", "b"])};
-> val it = [{c=2,i=1},{c=2,i=2}] : {c:int, i:int} list
+> val it = [{c=2,i=2},{c=2,i=1}] : {c:int, i:int} list
 
 (*) Duplicate field name across 'group' and 'compute' clauses. The
 (*) error points at the offending label (the second occurrence).
@@ -1743,7 +1749,7 @@ from i in [2, 1, 2, 2, 2, 3] union [2, 2, 4];
 from i in [2, 1, 2, 2, 2, 3] union distinct [2, 2, 4];
 > val it = [2,1,3,4] : int list
 from i in [2, 1, 2, 2, 2, 3] union [2, 2, 4] distinct;
-> val it = [1,2,3,4] : int list
+> val it = [2,1,3,4] : int list
 from i in [2, 1, 2, 2, 2, 3] intersect [2, 2, 4];
 > val it = [2,2] : int list
 from i in [2, 1, 2, 2, 2, 3] intersect distinct [2, 2, 4];
@@ -2047,8 +2053,8 @@ from e in emps, d in depts
 where e.deptno = d.deptno
 group d;
 > val it =
->   [{deptno=20,name="HR"},{deptno=30,name="Engineering"},
->    {deptno=10,name="Sales"}] : {deptno:int, name:string} list
+>   [{deptno=10,name="Sales"},{deptno=20,name="HR"},
+>    {deptno=30,name="Engineering"}] : {deptno:int, name:string} list
 
 (*) Yield a variable whose value is a record.
 from e in emps, d in depts
@@ -2094,7 +2100,7 @@ from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w",
 (*) similar, but with composite key
 from (x, y, z) in [("a", "p", "e"), ("m", "a", "n"), ("a", "l", "e"), ("a", "w", "e")]
   group {x, z} compute {a = (fn ys => x ^ ":" ^ z ^ ":" ^ (concat ys)) over y};
-> val it = [{a="m:n:a",x="m",z="n"},{a="a:e:plw",x="a",z="e"}]
+> val it = [{a="a:e:plw",x="a",z="e"},{a="m:n:a",x="m",z="n"}]
 >   : {a:string, x:string, z:string} list
 
 (*) similar, but aggregate does not reference key

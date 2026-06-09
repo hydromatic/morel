@@ -373,14 +373,14 @@ from x in [3, 5, 7], y
   group y compute count over ();
 > count y
 > ----- --
+>     1 -1
+>     1  0
 >     2  1
 >     2  2
 >     2  3
 >     2  4
 >     1  5
 >     1  6
->     1 -1
->     1  0
 >
 > val it : {count:int, y:int} bag
 
@@ -1188,9 +1188,9 @@ in
 end;
 > x z
 > - -
-> 4 3
-> 1 2
 > 1 3
+> 1 2
+> 4 3
 >
 > val it : {x:int, z:int} bag
 
@@ -1202,9 +1202,9 @@ from x, z
   distinct;
 > x z
 > - -
-> 4 3
-> 1 2
 > 1 3
+> 1 2
+> 4 3
 >
 > val it : {x:int, z:int} bag
 
@@ -1214,9 +1214,9 @@ from x, z
   distinct;
 > x z
 > - -
-> 4 3
-> 1 2
 > 1 3
+> 1 2
+> 4 3
 >
 > val it : {x:int, z:int} bag
 
@@ -1475,10 +1475,10 @@ from p where sib p;
 > 1 2
 > - -
 > b c
-> j k
+> c b
 > c e
 > e c
-> c b
+> j k
 > k j
 >
 > val it : (string * string) bag
@@ -1493,15 +1493,15 @@ from p where cousin p;
 > 1 2
 > - -
 > b c
-> j k
+> c b
 > c e
 > e c
-> c b
+> j k
 > k j
 > f g
+> g f
 > g i
 > i g
-> g f
 > k k
 >
 > val it : (string * string) bag

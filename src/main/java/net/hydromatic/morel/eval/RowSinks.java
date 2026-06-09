@@ -22,11 +22,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.MultimapBuilder;
 import com.google.common.collect.Multimaps;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -1101,7 +1101,10 @@ public abstract class RowSinks {
     final int scanDepth;
 
     final ImmutableList<Applicable> aggregateCodes;
-    final ListMultimap<Object, Object> map = ArrayListMultimap.create();
+    // Keys iterate in the order they first arrive (not hash order), so that
+    // 'group' and 'distinct' preserve the input's arrival order.
+    final ListMultimap<Object, Object> map =
+        MultimapBuilder.linkedHashKeys().arrayListValues().build();
     final Object[] values;
 
     GroupRowSink(
