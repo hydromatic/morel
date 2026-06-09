@@ -1702,7 +1702,6 @@ public class TypeResolver {
           fieldVars.add(id, v7);
           groupExps.add(id, exp2);
         });
-    bindings.add(BuiltIn.Z_ELEMENTS.mlName, requireNonNull(p.c));
 
     final Ast.Record compute = group.compute();
     final PairList<Ast.Id, Ast.Exp> args2;
@@ -1744,14 +1743,26 @@ public class TypeResolver {
       PairList<Ast.Id, Variable> fieldVars,
       PairList<String, Term> bindings) {
     final PairList<Ast.Id, Ast.Exp> args2 = PairList.of();
-    final TypeEnv groupEnv = p.rootEnv.bindAll(bindings);
+    // 'elements' is in scope only within the 'compute' clause; bind it in the
+    // local environments here rather than in 'bindings', so that it does not
+    // leak into the step's output environment (which would let 'elements' be
+    // referenced, and crash, in a following step such as 'yield').
+    final Term elementsTerm = requireNonNull(p.c);
+    final TypeEnv groupEnv =
+        p.rootEnv
+            .bindAll(bindings)
+            .bind(BuiltIn.Z_ELEMENTS.mlName, elementsTerm);
     compute.args.forEach(
         (id, exp) -> {
           final Variable v8 = unifier.variable();
           reg(id, v8);
           final Ast.Exp exp2;
           final AggFrame aggFrame =
-              new AggFrame(p.withEnv(p.env.bindAll(bindings)));
+              new AggFrame(
+                  p.withEnv(
+                      p.env
+                          .bindAll(bindings)
+                          .bind(BuiltIn.Z_ELEMENTS.mlName, elementsTerm)));
           try {
             aggregateTripleStack.push(aggFrame);
             exp2 = deduceExpType(groupEnv, exp, v8);

@@ -1375,6 +1375,20 @@ from (i, j) in [("a", 1), ("b", 4), ("a", 3)]
 > stdIn:2.16-2.24 Error: 'elements' is only valid in a 'compute' clause
 >   raised at: stdIn:2.16-2.24
 
+(* "elements" is invalid in a "yield" that follows a "group" whose "compute"
+   created a field called "elements". (Previously this crashed the compiler
+   because "elements" remained bound after the "compute" clause.) *)
+from i in [1, 2, 3]
+  group i compute {elements}
+  yield elements;
+> stdIn:3.9-3.17 Error: 'elements' is only valid in a 'compute' clause
+>   raised at: stdIn:3.9-3.17
+
+from i in [1, 2, 3]
+  group {j = i mod 2} compute {elements}
+  yield `elements`;
+> val it = [[1,3],[2]] : int list list
+
 (*) "elements" is invalid at top-level
 elements;
 > stdIn:1.1-1.9 Error: 'elements' is only valid in a 'compute' clause
