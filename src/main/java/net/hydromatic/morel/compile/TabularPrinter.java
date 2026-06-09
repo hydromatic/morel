@@ -148,6 +148,18 @@ class TabularPrinter {
     if (optionScalar(type) != null) {
       return true;
     }
+    // A bare record or tuple field: a one-row nested sub-table.
+    if (type instanceof RecordType || type instanceof TupleType) {
+      return canPrintRecord((RecordLikeType) type);
+    }
+    // A record/tuple 'option' field: a nested sub-table, blank for 'NONE'. It
+    // is renderable only if at least one field is non-option; otherwise a
+    // 'NONE' (every cell blank) could not be told apart from a 'SOME' whose
+    // every field happens to be 'NONE'.
+    final RecordLikeType optionRecord = optionRecord(type);
+    if (optionRecord != null) {
+      return canPrintRecord(optionRecord) && !allFieldsOption(optionRecord);
+    }
     if (type.isCollection()) {
       Type elementType = type.elementType();
       if (elementType instanceof PrimitiveType) {
@@ -159,6 +171,33 @@ class TabularPrinter {
       }
     }
     return false;
+  }
+
+  /**
+   * If {@code type} is {@code T option} where {@code T} is a record or tuple,
+   * returns {@code T}; otherwise returns null.
+   */
+  private static @Nullable RecordLikeType optionRecord(Type type) {
+    if (type instanceof DataType) {
+      final DataType dataType = (DataType) type;
+      if (dataType.name.equals("option")
+          && (dataType.arg(0) instanceof RecordType
+              || dataType.arg(0) instanceof TupleType)) {
+        return (RecordLikeType) dataType.arg(0);
+      }
+    }
+    return null;
+  }
+
+  /** Returns whether every field of {@code recordType} has an option type. */
+  private static boolean allFieldsOption(RecordLikeType recordType) {
+    return PairList.viewOf(recordType.argNameTypes())
+        .allMatch((label, type) -> isOption(type));
+  }
+
+  /** Returns whether {@code type} is an {@code option}. */
+  private static boolean isOption(Type type) {
+    return type instanceof DataType && ((DataType) type).name.equals("option");
   }
 
   /**
@@ -337,6 +376,19 @@ class TabularPrinter {
       RECORD_LIST
     }
 
+    /** For a {@link Kind#RECORD_LIST}, how its value maps to a list of rows. */
+    enum RecordShape {
+      /** Value is already a list of records (a nested collection). */
+      LIST,
+      /** Value is a single record; render it as a one-row sub-table. */
+      SINGLE,
+      /**
+       * Value is a record {@code option}; {@code SOME} is one row, {@code NONE}
+       * is no rows (so its columns are blank).
+       */
+      OPTION
+    }
+
     final Kind kind;
     final String name;
     final boolean rightAlign;
@@ -345,6 +397,9 @@ class TabularPrinter {
      * prints as {@code x} and {@code NONE} as a blank cell).
      */
     final boolean optional;
+
+    /** For a RECORD_LIST, how its value maps to a list of records. */
+    final RecordShape shape;
 
     final List<Section> children;
     int width;
@@ -355,19 +410,36 @@ class TabularPrinter {
         boolean rightAlign,
         boolean optional,
         List<Section> children) {
+      this(kind, name, rightAlign, optional, RecordShape.LIST, children);
+    }
+
+    private Section(
+        Kind kind,
+        String name,
+        boolean rightAlign,
+        boolean optional,
+        RecordShape shape,
+        List<Section> children) {
       this.kind = kind;
       this.name = name;
       this.rightAlign = rightAlign;
       this.optional = optional;
+      this.shape = shape;
       this.children = children;
       this.width = name.length();
     }
 
     /** Builds a Section tree for a record-like (record or tuple) type. */
     static Section forRecord(String name, RecordLikeType recordType) {
+      return forRecord(name, recordType, RecordShape.LIST);
+    }
+
+    /** Builds a Section tree for a record-like type with a given shape. */
+    static Section forRecord(
+        String name, RecordLikeType recordType, RecordShape shape) {
       final List<Section> children =
           transformEntries(recordType.argNameTypes(), Section::forField);
-      return new Section(Kind.RECORD_LIST, name, false, false, children);
+      return new Section(Kind.RECORD_LIST, name, false, false, shape, children);
     }
 
     /** Builds a Section for one field of a record-like type. */
@@ -384,6 +456,16 @@ class TabularPrinter {
       if (optionType != null) {
         return new Section(
             Kind.SCALAR, name, isNumeric(optionType), true, ImmutableList.of());
+      }
+      // A bare record or tuple field renders as a one-row nested sub-table.
+      if (type instanceof RecordType || type instanceof TupleType) {
+        return forRecord(name, (RecordLikeType) type, RecordShape.SINGLE);
+      }
+      // A record/tuple 'option' field renders as a nested sub-table that is
+      // blank for 'NONE'.
+      final RecordLikeType optionRecord = optionRecord(type);
+      if (optionRecord != null) {
+        return forRecord(name, optionRecord, RecordShape.OPTION);
       }
       final Type elementType = type.elementType();
       if (elementType instanceof PrimitiveType) {
@@ -470,10 +552,30 @@ class TabularPrinter {
         case RECORD_LIST:
         default:
           {
+            // Normalize the value to a list of records according to the shape:
+            // a nested collection is already a list; a single record becomes a
+            // one-element list; a record option becomes empty (NONE) or a
+            // one-element list (SOME).
+            final List<List<?>> recordList;
+            switch (shape) {
+              case SINGLE:
+                recordList = ImmutableList.of((List<?>) value);
+                break;
+              case OPTION:
+                final List<?> option = (List<?>) value;
+                recordList =
+                    option.size() == 1
+                        ? ImmutableList.of()
+                        : ImmutableList.of((List<?>) option.get(1));
+                break;
+              case LIST:
+              default:
+                recordList = (List<List<?>>) value;
+            }
             final List<List<Cell>> records = new ArrayList<>();
             boolean truncated = false;
             int count = 0;
-            for (List<?> record : (List<List<?>>) value) {
+            for (List<?> record : recordList) {
               if (printLength >= 0 && count >= printLength) {
                 truncated = true;
                 break;

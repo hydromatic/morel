@@ -116,16 +116,74 @@ Sys.set ("output", "tabular");
 >
 > val it : {s:string option} list
 
-(* List of records with a tuple field uses classic style. *)
+(* List of records with a tuple field: the tuple is a nested sub-table. *)
 [{id=1, address=(94705,"CA")}, {id=2, address=(94618,"CA")}];
-> val it = [{address=(94705,"CA"),id=1},{address=(94618,"CA"),id=2}]
->   : {address:int * string, id:int} list
+> address  id
+> 1     2
+> ----- -- --
+> 94705 CA  1
+> 94618 CA  2
+>
+> val it : {address:int * string, id:int} list
 
-(* List of records with a record field uses classic style. *)
+(* List of records with a record field: the record is a nested sub-table. *)
 [{id=1, address={zip=94705,state="CA"}}, {id=2, address={zip=94618, state="CA"}}];
-> val it =
->   [{address={state="CA",zip=94705},id=1},{address={state="CA",zip=94618},id=2}]
->   : {address:{state:string, zip:int}, id:int} list
+> address     id
+> state zip
+> ----- ----- --
+> CA    94705  1
+> CA    94618  2
+>
+> val it : {address:{state:string, zip:int}, id:int} list
+
+(* A record-'option' field is a nested sub-table; 'NONE' leaves its columns
+ * blank, distinguishable from a 'SOME' because at least one field is not an
+ * option. *)
+[{id=1, addr=SOME {zip=94705, state="CA"}}, {id=2, addr=NONE}];
+> addr        id
+> state zip
+> ----- ----- --
+> CA    94705  1
+>              2
+>
+> val it : {addr:{state:string, zip:int} option, id:int} list
+
+(* A record-'option' field whose record is entirely options cannot be
+ * tabulated -- 'NONE' would be indistinguishable from a 'SOME' whose every
+ * field is 'NONE' -- so it falls back to classic style. *)
+[{id=1, addr=SOME {zip=SOME 94705}}, {id=2, addr=NONE}];
+> val it = [{addr=SOME {zip=SOME 94705},id=1},{addr=NONE,id=2}]
+>   : {addr:{zip:int option} option, id:int} list
+
+(* A doubly-'option' field (e.g. from a right join of a right join) is not
+ * tabulated either: a blank cell cannot tell 'NONE' from 'SOME NONE'. Classic
+ * style keeps all three states distinct. *)
+[{id=1, p=SOME (SOME 7)}, {id=2, p=SOME NONE}, {id=3, p=NONE}];
+> val it = [{id=1,p=SOME (SOME 7)},{id=2,p=SOME NONE},{id=3,p=NONE}]
+>   : {id:int, p:int option option} list
+
+(* Records nested to three levels: the header grows one level per depth. *)
+[{id=1, a={b={c=10, d="p"}, e=2}}, {id=2, a={b={c=20, d="q"}, e=3}}];
+> a      id
+> b    e
+> c  d
+> -- - - --
+> 10 p 2  1
+> 20 q 3  2
+>
+> val it : {a:{b:{c:int, d:string}, e:int}, id:int} list
+
+(* Three levels with 'option' at the outer and an inner level; an outer 'NONE'
+ * blanks the whole nested block. *)
+[{id=1, a=SOME {b={c=10}, e=SOME {f="x"}}}, {id=2, a=NONE}];
+> a    id
+> b  e
+> c  f
+> -- - --
+> 10 x  1
+>       2
+>
+> val it : {a:{b:{c:int}, e:{f:string} option} option, id:int} list
 
 (* -------------------------------------------------------------------
  * [MOREL-376] Tabular mode for nested collections

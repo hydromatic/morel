@@ -1856,44 +1856,19 @@ from
 
 from deptno in [10, 20],
     emp in scott.emps on emp.deptno = deptno;
-> val it =
->   [
->    {deptno=10,
->     emp=
->     {comm=0,deptno=10,empno=7782,ename="CLARK",
->      hiredate="1981-06-09",job="MANAGER",mgr=7839,sal=2450}},
->    {deptno=10,
->     emp=
->     {comm=0,deptno=10,empno=7839,ename="KING",
->      hiredate="1981-11-17",job="PRESIDENT",mgr=0,sal=5000}},
->    {deptno=10,
->     emp=
->     {comm=0,deptno=10,empno=7934,ename="MILLER",
->      hiredate="1982-01-23",job="CLERK",mgr=7782,sal=1300}},
->    {deptno=20,
->     emp=
->     {comm=0,deptno=20,empno=7369,ename="SMITH",
->      hiredate="1980-12-17",job="CLERK",mgr=7902,sal=800}},
->    {deptno=20,
->     emp=
->     {comm=0,deptno=20,empno=7566,ename="JONES",
->      hiredate="1981-02-04",job="MANAGER",mgr=7839,sal=2975}},
->    {deptno=20,
->     emp=
->     {comm=0,deptno=20,empno=7788,ename="SCOTT",
->      hiredate="1987-04-19",job="ANALYST",mgr=7566,sal=3000}},
->    {deptno=20,
->     emp=
->     {comm=0,deptno=20,empno=7876,ename="ADAMS",
->      hiredate="1987-05-23",job="CLERK",mgr=7788,sal=1100}},
->    {deptno=20,
->     emp=
->     {comm=0,deptno=20,empno=7902,ename="FORD",
->      hiredate="1981-12-03",job="ANALYST",mgr=7566,sal=3000}}]
->   :
->     {deptno:int,
->      emp:{comm:real, deptno:int, empno:int, ename:string,
->           hiredate:string, job:string, mgr:int, sal:real}} bag
+> deptno emp
+>        comm deptno empno ename  hiredate   job       mgr  sal
+> ------ ---- ------ ----- ------ ---------- --------- ---- ----
+>     10    0     10  7782 CLARK  1981-06-09 MANAGER   7839 2450
+>     10    0     10  7839 KING   1981-11-17 PRESIDENT    0 5000
+>     10    0     10  7934 MILLER 1982-01-23 CLERK     7782 1300
+>     20    0     20  7369 SMITH  1980-12-17 CLERK     7902  800
+>     20    0     20  7566 JONES  1981-02-04 MANAGER   7839 2975
+>     20    0     20  7788 SCOTT  1987-04-19 ANALYST   7566 3000
+>     20    0     20  7876 ADAMS  1987-05-23 CLERK     7788 1100
+>     20    0     20  7902 FORD   1981-12-03 ANALYST   7566 3000
+>
+> val it : {deptno:int, emp:{comm:real, deptno:int, empno:int, ename:string, hiredate:string, job:string, mgr:int, sal:real}} bag
 
 from deptno in [10, 20],
     emp in scott.emps on emp.deptno = deptno
