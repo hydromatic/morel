@@ -21,6 +21,7 @@ package net.hydromatic.morel.type;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Comparator;
 import java.util.Objects;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.compile.Environment;
@@ -33,6 +34,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * <p>Used in {@link net.hydromatic.morel.compile.Environment}.
  */
 public class Binding {
+  /** Compares bindings by name. */
+  public static final Comparator<Binding> COMPARATOR =
+      Comparator.comparing((Binding b) -> b.id.name, RecordType.ORDERING);
+
   public final Core.NamedPat id;
   public final Core.@Nullable Exp exp;
   public final Object value;

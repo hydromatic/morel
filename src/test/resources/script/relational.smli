@@ -1763,6 +1763,50 @@ from i in [2, 1, 2, 2, 2, 3] except distinct [2, 2, 4];
 from i in [2, 1, 2, 2, 2, 3] except [2, 2, 4] distinct;
 > val it = [1,2,3] : int list
 
+(* A set operation may directly follow a 'distinct' (or 'group') step, where
+   the row's variables live in the environment rather than on the stack.
+   To make this work in morel-java, the compiler adds a 'rematerialize'
+   adapter. *)
+from i in [2, 1, 2, 3] distinct except [2];
+> val it = [1,3] : int list
+from i in [2, 1, 2, 3] distinct union [9];
+> val it = [2,1,3,9] : int list
+from i in [2, 1, 2, 3] distinct intersect [2];
+> val it = [2] : int list
+from i in [2, 1, 2, 3] group i except [2];
+> val it = [1,3] : int list
+
+from i in [2, 1, 2, 2, 2, 3]
+  distinct
+  except (from j in [2, 4] distinct)
+  distinct;
+> val it = [1,3] : int list
+
+(* Set operations over record-valued rows. *)
+from i in [1, 2, 3]
+  yield {a = i, b = i + 1}
+  except [{a = 2, b = 3}];
+> val it = [{a=1,b=2},{a=3,b=4}] : {a:int, b:int} list
+from i in [1, 2, 3]
+  yield {a = i, b = i + 1}
+  intersect [{a = 2, b = 3}];
+> val it = [{a=2,b=3}] : {a:int, b:int} list
+from e in scott.emps
+  group e.deptno compute {c = count over ()}
+  except [{c = 3, deptno = 10}]
+  order deptno;
+> val it = [{c=5,deptno=20},{c=6,deptno=30}] : {c:int, deptno:int} list
+
+(* In the morel-java implementation, the scan emits {j, i} records, which
+   an adapter permutes to {i, j} to match those from except's argument. *)
+from j in [1, 2],
+    i in ["x", "y"]
+  except [{i = "y", j = 2}];
+> val it = [{i="x",j=1},{i="y",j=1},{i="x",j=2}] : {i:string, j:int} list
+from i in [(1, "x"), (2, "y")]
+  except [(2, "y")];
+> val it = [(1,"x")] : (int * string) list
+
 (*) Two arguments to union, except, intersect
 from i in [2, 1, 2, 2, 2, 3] union [2, 2, 4];
 > val it = [2,1,2,2,2,3,2,2,4] : int list

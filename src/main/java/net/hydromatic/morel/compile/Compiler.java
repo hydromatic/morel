@@ -26,6 +26,7 @@ import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.last;
 import static net.hydromatic.morel.util.Static.plus;
 import static net.hydromatic.morel.util.Static.skip;
+import static net.hydromatic.morel.util.Static.sort;
 import static net.hydromatic.morel.util.Static.str;
 import static net.hydromatic.morel.util.Static.transformEager;
 
@@ -270,6 +271,146 @@ public class Compiler {
     Context withRecPeers(List<Core.NamedPat> recPeers) {
       return new Context(env, layout, localDepth, globalSlotMap, recPeers);
     }
+
+    /**
+     * Returns the {@link Code} that reads named pattern {@code idPat} from this
+     * context: {@link Codes#stackGet} if it is on the stack, otherwise {@link
+     * Codes#get(String)}.
+     */
+    Code fieldCode(Core.NamedPat idPat) {
+      final int slotIndex = layout.get(idPat);
+      if (slotIndex >= 0) {
+        // Offset is 1-based from the current top of the stack. localDepth is
+        // the
+        // number of slots currently allocated; slot i (0-based) is at offset
+        // (localDepth - i) from the top.
+        return Codes.stackGet(localDepth - slotIndex, idPat.name);
+      }
+      // Check globalSlotMap: pre-marshaled globals pushed at statement start.
+      // Only use the stack slot if the binding in the current context is still
+      // the original global value (not shadowed by a step output or
+      // current-stmt placeholder with Unit.INSTANCE).
+      final Integer globalSlot = globalSlotMap.get(idPat.name);
+      if (globalSlot != null) {
+        final Binding slotBinding = env.getOpt(idPat);
+        if (slotBinding != null
+            && !(slotBinding.value instanceof Code)
+            && slotBinding.value != Unit.INSTANCE) {
+          return Codes.stackGet(localDepth - globalSlot, idPat.name);
+        }
+      }
+      final Binding binding = env.getOpt(idPat);
+      if (binding != null && binding.value instanceof Code) {
+        // Don't inline LinkCode (recursive bindings): the code is a
+        // StackMatchCode whose capture offsets were computed at the outer
+        // context's depth. Inlining at a different depth produces wrong
+        // captures; use a runtime lookup instead.
+        if (binding.value instanceof LinkCode) {
+          return Codes.get(idPat.name);
+        }
+        return (Code) binding.value;
+      }
+      return Codes.get(idPat.name);
+    }
+
+    /**
+     * Builds (name, code) slots reading each environment-based binding (one not
+     * in this layout), in {@code bindings} order. Matches the slot-assignment
+     * order of {@link #withStackSlots}. Empty if every binding is on the stack.
+     */
+    ImmutablePairList<String, Code> envRowSlots(List<Binding> bindings) {
+      final PairList<String, Code> slots = PairList.of();
+      for (Binding b : bindings) {
+        if (layout.get(b.id) < 0) {
+          slots.add(b.id.name, fieldCode(b.id));
+        }
+      }
+      return slots.immutable();
+    }
+
+    /**
+     * Returns a context that assigns fresh stack slots to any {@code bindings}
+     * not already in the layout (in {@code bindings} order), or {@code this} if
+     * all are already on the stack.
+     */
+    Context withStackSlots(Collection<Binding> bindings) {
+      StackLayout extLayout = layout;
+      int extLocalDepth = localDepth;
+      for (Binding b : bindings) {
+        if (layout.get(b.id) < 0) {
+          extLayout = extLayout.with(b.id, extLocalDepth++);
+        }
+      }
+      if (extLocalDepth == localDepth) {
+        return this;
+      }
+      return new Context(env, extLayout, extLocalDepth, globalSlotMap);
+    }
+
+    /**
+     * Negotiates handing a row -- whose variables are described by this context
+     * and listed in {@code order} -- to a downstream sink that requires the row
+     * {@code onStack} (its variables pushed positionally) and/or in {@code
+     * recordOrder} ({@link RecordType#ORDERING}).
+     *
+     * <p>The producer offers two facts: this context (where each variable
+     * lives) and {@code order} (the order it emits them). The two flags are the
+     * consumer's requirement. The result, a {@link RowHandoff}, reconciles them
+     * at the two points in a sink's construction where it matters -- {@link
+     * RowHandoff#cx} and {@link RowHandoff#order} are used while building the
+     * sink and its downstream, and {@link RowHandoff#finish} wraps the finished
+     * sink.
+     */
+    RowHandoff handoff(
+        List<Binding> order, boolean onStack, boolean recordOrder) {
+      final List<Binding> normalOrder =
+          recordOrder
+              ? sort(order, Binding.COMPARATOR)
+              : ImmutableList.copyOf(order);
+      if (onStack) {
+        // Variables that the producer leaves in the env are pushed onto the
+        // stack by a 'rematerialize' adapter (see RowHandoff.finish). Read them
+        // from this context, but compile the sink and its downstream sink in
+        // the stack-extended context so their slot offsets account for the
+        // values the adapter pushes. The adapter pushes in 'normalOrder', the
+        // same order 'withStackSlots' assigns slots, so a record-order
+        // requirement needs no separate column-reordering adapter.
+        return new RowHandoff(
+            normalOrder, withStackSlots(normalOrder), envRowSlots(normalOrder));
+      } else {
+        return new RowHandoff(normalOrder, this, ImmutablePairList.of());
+      }
+    }
+  }
+
+  /**
+   * Outcome of {@link Context#handoff}: how a producer's row is normalized for
+   * a consuming {@link RowSink}.
+   *
+   * <p>{@link #order} is the row's bindings in the order the consumer asked for
+   * (record order, if any) -- use it for the sink's key field names. {@link
+   * #cx} is the context to compile the sink and its downstream in. {@link
+   * #finish} wraps the built sink in a {@code rematerialize} adapter when the
+   * row had env-resident variables that the consumer needed on the stack;
+   * otherwise it returns the sink unchanged.
+   */
+  static final class RowHandoff {
+    final List<Binding> order;
+    final Context cx;
+    private final ImmutablePairList<String, Code> envSlots;
+
+    RowHandoff(
+        List<Binding> order,
+        Context cx,
+        ImmutablePairList<String, Code> envSlots) {
+      this.order = order;
+      this.cx = cx;
+      this.envSlots = envSlots;
+    }
+
+    RowSink finish(RowSink sink) {
+      return envSlots.isEmpty() ? sink : RowSinks.rematerialize(envSlots, sink);
+    }
   }
 
   public final Code compile(Environment env, Core.Exp expression) {
@@ -411,7 +552,7 @@ public class Compiler {
 
       case ID:
         final Core.Id id = (Core.Id) expression;
-        return compileFieldName(cx, id.idPat);
+        return cx.fieldCode(id.idPat);
 
       case TUPLE:
         final Core.Tuple tuple = (Core.Tuple) expression;
@@ -424,41 +565,6 @@ public class Compiler {
       default:
         throw new AssertionError("op not handled: " + expression.op);
     }
-  }
-
-  private Code compileFieldName(Context cx, Core.NamedPat idPat) {
-    final int slotIndex = cx.layout.get(idPat);
-    if (slotIndex >= 0) {
-      // Offset is 1-based from the current top of the stack.
-      // localDepth is the number of slots currently allocated;
-      // slot i (0-based) is at offset (localDepth - i) from the top.
-      return Codes.stackGet(cx.localDepth - slotIndex, idPat.name);
-    }
-    // Check globalSlotMap: pre-marshaled globals pushed at statement start.
-    // Only use the stack slot if the binding in the current context is still
-    // the original global value (not shadowed by a step output or current-stmt
-    // placeholder with Unit.INSTANCE).
-    final Integer globalSlot = cx.globalSlotMap.get(idPat.name);
-    if (globalSlot != null) {
-      final Binding slotBinding = cx.env.getOpt(idPat);
-      if (slotBinding != null
-          && !(slotBinding.value instanceof Code)
-          && slotBinding.value != Unit.INSTANCE) {
-        return Codes.stackGet(cx.localDepth - globalSlot, idPat.name);
-      }
-    }
-    final Binding binding = cx.env.getOpt(idPat);
-    if (binding != null && binding.value instanceof Code) {
-      // Don't inline LinkCode (recursive bindings): the code will be a
-      // StackMatchCode whose capture offsets were computed at the outer
-      // context's depth. Inlining it here (at a different stack depth)
-      // produces wrong captures. Use a runtime lookup instead.
-      if (binding.value instanceof LinkCode) {
-        return Codes.get(idPat.name);
-      }
-      return (Code) binding.value;
-    }
-    return Codes.get(idPat.name);
   }
 
   protected Code compileApply(Context cx, Core.Apply apply) {
@@ -655,7 +761,20 @@ public class Compiler {
     return RowSinks.from(firstRowSinkFactory);
   }
 
-  protected Supplier<RowSink> createRowSinkFactory(
+  /**
+   * Supplier of a {@link RowSink}. Each {@code from} step compiles to a factory
+   * that, when invoked, builds its sink and wires in the downstream sink it was
+   * given; deferring construction lets one compiled query be evaluated more
+   * than once.
+   *
+   * <p>A step whose sink requires its row in a normalized form -- on the stack,
+   * or with fields in record order -- negotiates that when the sink tree is
+   * built, via {@link Context#handoff}. See {@link #compileSetSink}.
+   */
+  @FunctionalInterface
+  public interface RowSinkFactory extends Supplier<RowSink> {}
+
+  protected RowSinkFactory createRowSinkFactory(
       Context cx0,
       Core.StepEnv stepEnv,
       List<Core.FromStep> steps,
@@ -685,7 +804,7 @@ public class Compiler {
    * Creates the {@link RowSink} factory for a scan, inner {@code join}, {@code
    * left join}, {@code right join} or {@code full join} step.
    */
-  private Supplier<RowSink> createScanRowSinkFactory(
+  private RowSinkFactory createScanRowSinkFactory(
       Context cx,
       Context cxFrom,
       ImmutableMap<String, Binding> allScope,
@@ -735,7 +854,7 @@ public class Compiler {
             scanNextFactory.get());
   }
 
-  private Supplier<RowSink> createRowSinkFactory(
+  private RowSinkFactory createRowSinkFactory(
       Context cx0,
       Context cxFrom,
       ImmutableMap<String, Binding> allScopeBindings,
@@ -746,7 +865,7 @@ public class Compiler {
     final ImmutableMap<String, Binding> allScope2 =
         shadowMerge(allScopeBindings, stepEnv.bindings);
     if (steps.isEmpty()) {
-      // Terminal collect: use compileFieldName so scan vars use StackCode.
+      // Terminal collect: use fieldCode so scan vars use StackCode.
       final List<Binding> sortedBindings =
           stepEnv.bindings.stream()
               .sorted(Comparator.comparing(b -> b.id.name))
@@ -754,10 +873,10 @@ public class Compiler {
       final Code code;
       if (sortedBindings.size() == 1
           && sortedBindings.get(0).id.type.equals(elementType)) {
-        code = compileFieldName(cx, sortedBindings.get(0).id);
+        code = cx.fieldCode(sortedBindings.get(0).id);
       } else {
         final List<Code> codes =
-            transformEager(sortedBindings, b -> compileFieldName(cx, b.id));
+            transformEager(sortedBindings, b -> cx.fieldCode(b.id));
         code = Codes.tuple(codes);
       }
       return () -> RowSinks.collect(code);
@@ -913,7 +1032,7 @@ public class Compiler {
   }
 
   /** Compiles an ORDER step into a {@link RowSink} factory. */
-  private Supplier<RowSink> compileOrderSink(
+  private RowSinkFactory compileOrderSink(
       Context cx,
       Context cxFrom,
       ImmutableMap<String, Binding> allScopeBindings,
@@ -927,16 +1046,11 @@ public class Compiler {
     // yet in the stack layout, e.g. GROUP output vars) are assigned new slot
     // indices starting at cx.localDepth. This allows sort key and downstream
     // code to reference all scope vars via StackCode (no GetCode/env lookup).
-    final Context cxResult =
-        buildEnvSlotsContext(cx, allScopeBindings.values());
+    final Context cxResult = cx.withStackSlots(allScopeBindings.values());
     // Sort key compiled with cxResult: all scope vars use StackCode.
     final Code code = compile(cxResult, order.exp);
     final Comparator comparator =
         Comparators.comparatorFor(typeSystem, order.exp.type);
-    // scanDepth: number of allScopeBindings entries that are in the original cx
-    // stack layout (stack-based vars). Used only to partition inSlots for the
-    // row sink; after cxResult extension all vars become stack-based.
-    final int scanDepth = countStackBased(cx, allScopeBindings.values());
     // Downstream compiled with cxResult so StackCode offsets match the
     // push-back of all inSlots values (including formerly env-based vars).
     final Supplier<RowSink> nextFactory =
@@ -947,12 +1061,11 @@ public class Compiler {
             order.env,
             remainingSteps,
             elementType);
-    return () ->
-        RowSinks.order(code, comparator, inSlots, scanDepth, nextFactory.get());
+    return () -> RowSinks.order(code, comparator, inSlots, nextFactory.get());
   }
 
   /** Compiles a GROUP step into a {@link RowSink} factory. */
-  private Supplier<RowSink> compileGroupSink(
+  private RowSinkFactory compileGroupSink(
       Context cx,
       Context cxFrom,
       ImmutableMap<String, Binding> allScopeBindings,
@@ -1019,7 +1132,8 @@ public class Compiler {
     final ImmutableList<Code> groupCodes = groupCodesB.build();
     final Code keyCode = Codes.tuple(groupCodes);
     final ImmutableList<Applicable> aggregateCodes = aggregateCodesB.build();
-    final ImmutableList<String> outNames = bindingNames(group.env.bindings);
+    final ImmutableList<String> outNames =
+        transformEager(group.env.bindings, b -> b.id.name);
     final ImmutableList<String> keyNames =
         outNames.subList(0, group.groupExps.size());
     // Downstream uses cxFrom with GROUP output names stripped from the layout,
@@ -1051,7 +1165,7 @@ public class Compiler {
   }
 
   /** Compiles an EXCEPT/INTERSECT/UNION step into a {@link RowSink} factory. */
-  private Supplier<RowSink> compileSetSink(
+  private RowSinkFactory compileSetSink(
       Context cx,
       Context cxFrom,
       ImmutableMap<String, Binding> allScopeBindings,
@@ -1061,78 +1175,53 @@ public class Compiler {
       Op op,
       List<Core.FromStep> remainingSteps,
       Type elementType) {
-    // RHS codes: non-distinct EXCEPT/INTERSECT evaluate codes in accept() when
-    // scan vars ARE on the stack, so use cx. UNION and distinct
-    // EXCEPT/INTERSECT evaluate codes in result() when scan vars are NOT on the
-    // stack, so use cxFrom (which has the correct offsets without scan vars).
-    final boolean codesAtAcceptTime =
-        !distinct && (op == Op.EXCEPT || op == Op.INTERSECT);
-    final Context codeCx;
-    if (codesAtAcceptTime) {
-      // When a preceding UNION (or other SET step) resets context to cxFrom,
-      // scan vars from allScopeBindings that are absent from cx.layout are
-      // still present on the stack at accept() time. Bump localDepth so that
-      // StackCode offsets in the RHS expression are computed correctly.
-      int lostScanVarCount =
-          (int)
-              allScopeBindings.values().stream()
-                  .filter(b -> cx.layout.get(b.id) < 0)
-                  .count();
-      codeCx =
-          lostScanVarCount == 0
-              ? cx
-              : new Context(
-                  cx.env, cx.layout, cx.localDepth + lostScanVarCount);
-    } else {
-      codeCx = cxFrom;
-    }
-    final ImmutableList<Code> codes =
-        transformEager(args, a -> compile(codeCx, a));
-    final ImmutableList<String> names = bindingNames(stepEnv.bindings);
-    // inSlots: capture all scope vars during accept() using cx.
+    // The set sink keys rows on their whole record, so it requires its row on
+    // the stack (the downstream reads a fixed stack layout) and in record order
+    // (the left and right sides build matching keys). Negotiate that with the
+    // producer: 'cx' says where each variable lives, 'stepEnv.bindings' the
+    // order it emits them. 'handoff.cx' is the (stack-extended) context to
+    // compile everything in; 'handoff.finish' inserts a 'rematerialize' adapter
+    // if the producer left any variable in the env.
+    final RowHandoff handoff = cx.handoff(stepEnv.bindings, true, true);
+    final ImmutableList<String> names =
+        transformEager(handoff.order, b -> b.id.name);
     final ImmutablePairList<String, Code> inSlots =
-        buildInSlots(cx, allScopeBindings.values());
-    // scanDepth: how many of the SET step's output vars are in the stack
-    // layout. These are pushed back at result() time via withRowFromKey().
-    final int scanDepth =
-        (int)
-            stepEnv.bindings.stream()
-                .filter(b -> cx.layout.get(b.id) >= 0)
-                .count();
-    // cxResult: extends cx so that env-based stepEnv output vars (those not
-    // yet in the stack layout) are assigned new slot indices. This allows
-    // downstream code to reference all SET output vars via StackCode.
-    final Context cxResult = buildEnvSlotsContext(cx, stepEnv.bindings);
-    // Downstream compiled with ImmutableMap.of() as allScopeBindings: the SET
-    // step is a scope boundary (like GROUP), so outer scan vars (e.g. the
-    // SCAN var 'e' that fed into the SET step) must not appear in the
-    // downstream's inSlots.  If they did, deferred sinks (GROUP, ORDER) would
-    // try to capture/restore them via StackCode at result() time when the scan
-    // vars are no longer on the stack, causing an AIOBE.
-    final Supplier<RowSink> nextFactory =
+        buildInSlots(handoff.cx, allScopeBindings.values());
+    final ImmutableList<Code> codes;
+    if ((op == Op.EXCEPT || op == Op.INTERSECT) && !distinct) {
+      // The right-hand-side codes are evaluated when the first row is on the
+      // stack. This reduces work if the input is empty, but requires a
+      // custom compilation environment.
+      codes = transformEager(args, a -> compile(handoff.cx, a));
+    } else {
+      // The right-hand-side codes are evaluated in result(), when the row is
+      // not on the stack. Use cxFrom, whose offsets omit the row's variables.
+      codes = transformEager(args, a -> compile(cxFrom, a));
+    }
+    final RowSinkFactory nextFactory =
         createRowSinkFactory(
-            cxResult,
+            handoff.cx,
             cxFrom,
             ImmutableMap.of(),
             stepEnv,
             remainingSteps,
             elementType);
-    switch (op) {
-      case EXCEPT:
-        return () ->
-            RowSinks.except(
-                distinct, codes, names, inSlots, scanDepth, nextFactory.get());
-      case INTERSECT:
-        return () ->
-            RowSinks.intersect(
-                distinct, codes, names, inSlots, scanDepth, nextFactory.get());
-      case UNION:
-        return () ->
-            RowSinks.union(
-                distinct, codes, names, inSlots, scanDepth, nextFactory.get());
-      default:
-        throw new AssertionError(op);
-    }
+    return () -> {
+      final RowSink next = nextFactory.get();
+      switch (op) {
+        case EXCEPT:
+          return handoff.finish(
+              RowSinks.except(distinct, codes, names, inSlots, next));
+        case INTERSECT:
+          return handoff.finish(
+              RowSinks.intersect(distinct, codes, names, inSlots, next));
+        case UNION:
+          return handoff.finish(
+              RowSinks.union(distinct, codes, names, inSlots, next));
+        default:
+          throw new AssertionError(op);
+      }
+    };
   }
 
   /**
@@ -1170,49 +1259,19 @@ public class Compiler {
       Context cx, Collection<Binding> bindings) {
     return ImmutablePairList.fromTransformed(
         sortedInBindings(cx, bindings),
-        (b, add) -> add.accept(b.id.name, compileFieldName(cx, b.id)));
-  }
-
-  /**
-   * Returns a context that extends {@code cx} by assigning stack slot indices
-   * to any bindings in {@code bindings} that are not already in the layout.
-   *
-   * <p>Stack-based bindings keep their existing slot indices. Env-based
-   * bindings are assigned new slots starting at {@code cx.localDepth}, in the
-   * order returned by {@link #sortedInBindings} (which matches the capture
-   * order in {@link #buildInSlots}).
-   *
-   * <p>If all bindings are already in the layout, returns {@code cx} unchanged.
-   */
-  private Context buildEnvSlotsContext(
-      Context cx, Collection<Binding> bindings) {
-    StackLayout extLayout = cx.layout;
-    int extLocalDepth = cx.localDepth;
-    for (Binding b : bindings) {
-      if (cx.layout.get(b.id) < 0) {
-        extLayout = extLayout.with(b.id, extLocalDepth++);
-      }
-    }
-    if (extLocalDepth == cx.localDepth) {
-      return cx;
-    }
-    return new Context(cx.env, extLayout, extLocalDepth, cx.globalSlotMap);
+        (b, add) -> add.accept(b.id.name, cx.fieldCode(b.id)));
   }
 
   /** Sorts bindings: those in the layout by slot index, then the rest. */
   private List<Binding> sortedInBindings(
       Context cx, Collection<Binding> bindings) {
-    return ImmutableList.sortedCopyOf(
+    return sort(
+        bindings,
         Comparator.comparingInt(
             b -> {
               int slot = cx.layout.get(b.id);
               return slot >= 0 ? slot : Integer.MAX_VALUE;
-            }),
-        bindings);
-  }
-
-  private ImmutableList<String> bindingNames(List<Binding> bindings) {
-    return transformEager(bindings, b -> b.id.name);
+            }));
   }
 
   /** Returns the number of bindings whose pattern is in {@code cx.layout}. */

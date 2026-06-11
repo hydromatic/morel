@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
 import static net.hydromatic.morel.util.Static.last;
+import static net.hydromatic.morel.util.Static.sort;
 import static net.hydromatic.morel.util.Static.transform;
 import static net.hydromatic.morel.util.Static.transformEager;
 
@@ -949,8 +950,7 @@ public class CalciteCompiler extends Compiler {
   private static RelContext getRelContext(
       RelContext cx, Environment env, List<String> names) {
     // Permute the fields so that they are sorted by name, per Morel records.
-    final List<String> sortedNames =
-        Ordering.natural().immutableSortedCopy(names);
+    final List<String> sortedNames = sort(names, Ordering.natural());
     cx.relBuilder.rename(names).project(cx.relBuilder.fields(sortedNames));
     final RelDataType rowType = cx.relBuilder.peek().getRowType();
     final SortedMap<String, VarData> map = new TreeMap<>();

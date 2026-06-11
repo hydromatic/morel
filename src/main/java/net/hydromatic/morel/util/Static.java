@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.util;
 
+import static com.google.common.collect.Comparators.isInOrder;
+
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -122,6 +124,18 @@ public class Static {
   /** Returns every element of a list but its last {@code n} elements. */
   public static <E> List<E> skipLast(List<E> list, int n) {
     return list.subList(0, list.size() - n);
+  }
+
+  /**
+   * Returns an immutable sorted copy of a collection; does not copy if the
+   * collection is already sorted.
+   */
+  public static <E> ImmutableList<E> sort(
+      Iterable<? extends E> iterable, Comparator<? super E> comparator) {
+    if (isInOrder(iterable, comparator)) {
+      return ImmutableList.copyOf(iterable);
+    }
+    return ImmutableList.sortedCopyOf(comparator, iterable);
   }
 
   /**
