@@ -40,6 +40,7 @@ import static net.hydromatic.morel.TestUtils.first;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
@@ -52,6 +53,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.hydromatic.morel.ast.Ast;
@@ -109,6 +111,50 @@ public class MainTest {
             + "val it = fn : int -> int\n"
             + "val it = 6 : int\n";
     assertThat(out, hasToString(expected));
+  }
+
+  /**
+   * Tests the script-test harness's strict output matching ({@code
+   * matchStrict}). In the default lenient mode, output that differs from the
+   * expected output only in whitespace (here, spaces after commas in a list
+   * value) is accepted, and the expected text is preserved. In strict mode the
+   * difference is rejected, and the actual (canonical) output is emitted
+   * instead.
+   *
+   * <p>This cannot be tested from within a script: a script whose output
+   * matches passes whether or not strict mode is enabled.
+   */
+  @Test
+  void testScriptStrictMatch() {
+    final String input =
+        "[1, 2, 3];\n" //
+            + "> val it = [1, 2, 3] : int list\n";
+    // Lenient (default): the spaced expected output is preserved.
+    final String lenient = runIdempotent(input, false);
+    assertThat(lenient, containsString("> val it = [1, 2, 3] : int list"));
+    // Strict: the difference is rejected and the actual output is emitted.
+    final String strict = runIdempotent(input, true);
+    assertThat(strict, containsString("> val it = [1,2,3] : int list"));
+    assertThat(strict, not(containsString("> val it = [1, 2, 3]")));
+  }
+
+  /**
+   * Runs {@code input} through the idempotent (script-test) harness, with or
+   * without strict output matching, and returns the regenerated output.
+   */
+  private static String runIdempotent(String input, boolean strict) {
+    final List<String> argList = ImmutableList.of("--echo");
+    final Map<String, ForeignValue> valueMap = ImmutableMap.of();
+    final Map<Prop, Object> propMap = new LinkedHashMap<>();
+    if (strict) {
+      propMap.put(Prop.MATCH_STRICT, true);
+    }
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try (PrintStream ps = new PrintStream(out)) {
+      final InputStream in = new ByteArrayInputStream(input.getBytes());
+      new Main(argList, in, ps, valueMap, propMap, true).run();
+    }
+    return out.toString();
   }
 
   @Test

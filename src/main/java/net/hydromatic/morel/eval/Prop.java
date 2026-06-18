@@ -141,6 +141,21 @@ public enum Prop {
       "Whether to check whether patterns are exhaustive and/or redundant."),
 
   /**
+   * Boolean property "matchStrict" controls how the script-test harness
+   * compares actual output against the expected output in a {@code .smli}
+   * script. If false (the default), output matches if it is equivalent modulo
+   * whitespace, line breaks and the order of bag elements. If true, output must
+   * match character-for-character; this is useful for testing pretty-printing.
+   */
+  MATCH_STRICT(
+      "matchStrict",
+      Boolean.class,
+      true,
+      false,
+      "Whether the script-test harness compares output verbatim, rather than "
+          + "modulo whitespace and bag-element order."),
+
+  /**
    * String property "now" overrides the current time returned by {@code
    * Time.now()} and used by {@code Date.localOffset()}. Value is an ISO-8601
    * instant string (e.g. {@code "2024-01-01T00:00:00Z"}). If not set, the
