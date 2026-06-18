@@ -753,10 +753,15 @@ public class Main {
           // bags, emit the expected output.
           final List<String> actualLines = outLines.bufferedLines();
           final String actualOutput = String.join("\n", actualLines);
+          // In strict mode, output must match character-for-character;
+          // otherwise it may differ in whitespace and bag-element order.
+          final boolean strict =
+              Prop.MATCH_STRICT.booleanValue(main.session.map);
           if (actualOutput.equals(expectedOutput)
-              || new OutputMatcher(main.typeSystem)
-                  .equivalent(
-                      compiled.getType(), actualOutput, expectedOutput)) {
+              || !strict
+                  && new OutputMatcher(main.typeSystem)
+                      .equivalent(
+                          compiled.getType(), actualOutput, expectedOutput)) {
             // Expected and actual are equivalent; emit expected verbatim
             Arrays.stream(expectedOutput.split("\n", -1))
                 .forEach(outLines.consumer());
