@@ -80,7 +80,7 @@ class Pretty {
   /** Prints a value to a buffer. */
   StringBuilder pretty(StringBuilder buf, Type type, Object value) {
     int lineEnd = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
-    return pretty1(buf, 0, new int[] {lineEnd}, 0, type, value, 0, 0);
+    return pretty1(buf, 0, new int[] {lineEnd}, 0, type, value);
   }
 
   /**
@@ -93,18 +93,36 @@ class Pretty {
       int[] lineEnd,
       int depth,
       Type type,
+      Object value) {
+    return pretty1(buf, indent, lineEnd, depth, type, value, 0, 0, false);
+  }
+
+  /**
+   * As {@link #pretty1}, but if {@code glue} is true never back-tracks to a new
+   * line before the value. The value stays attached to the preceding text (for
+   * example an opening "[" or ": ") and is allowed to wrap internally, the way
+   * SML/NJ keeps "[{" together and breaks within the record.
+   */
+  private StringBuilder pretty1(
+      StringBuilder buf,
+      int indent,
+      int[] lineEnd,
+      int depth,
+      Type type,
       Object value,
       int leftPrec,
-      int rightPrec) {
+      int rightPrec,
+      boolean glue) {
     if (value instanceof Variant) {
       Variant v = (Variant) value;
       return pretty1(
-          buf, indent, lineEnd, depth, v.type, v.value, leftPrec, rightPrec);
+          buf, indent, lineEnd, depth, v.type, v.value, leftPrec, rightPrec,
+          glue);
     }
     final int start = buf.length();
     final int end = lineEnd[0];
     pretty2(buf, indent, lineEnd, depth, type, value, leftPrec, rightPrec);
-    if (end >= 0 && buf.length() > end) {
+    if (!glue && end >= 0 && buf.length() > end) {
       // Reset to start, remove trailing whitespace, add newline
       buf.setLength(start);
       while (buf.length() > 0
@@ -155,8 +173,7 @@ class Pretty {
       } else {
         buf2.append(" = ");
         prettyRaw(buf, indent, end, depth, buf2.toString());
-        pretty1(
-            buf, indent + 2, end, depth + 1, typedVal.type, typedVal.o, 0, 0);
+        pretty1(buf, indent + 2, end, depth + 1, typedVal.type, typedVal.o);
       }
       buf.append(' ');
       final TypeVal typeVal;
@@ -173,7 +190,7 @@ class Pretty {
     if (value instanceof NamedVal) {
       final NamedVal namedVal = (NamedVal) value;
       appendId(buf, namedVal.name).append('=');
-      pretty1(buf, indent, end, depth, type, namedVal.o, 0, 0);
+      pretty1(buf, indent, end, depth, type, namedVal.o);
       return buf;
     }
 
@@ -182,7 +199,7 @@ class Pretty {
       final String prefix =
           appendId(new StringBuilder(), labelVal.label).append(':').toString();
       TypeVal typeVal = new TypeVal(prefix, labelVal.type, "");
-      pretty1(buf, indent, end, depth, type, typeVal, 0, 0);
+      pretty1(buf, indent, end, depth, type, typeVal);
       return buf;
     }
 
@@ -234,7 +251,7 @@ class Pretty {
               }
               final Object o = iterator.next();
               final NamedVal namedVal = new NamedVal(name, o);
-              pretty1(buf, indent + 1, end, depth + 1, type1, namedVal, 0, 0);
+              pretty1(buf, indent + 1, end, depth + 1, type1, namedVal);
             });
         return buf.append("}");
 
@@ -250,7 +267,7 @@ class Pretty {
               if (buf.length() > start) {
                 buf.append(",");
               }
-              pretty1(buf, indent + 1, end, depth + 1, elementType, o, 0, 0);
+              pretty1(buf, indent + 1, end, depth + 1, elementType, o);
             });
         return buf.append(")");
 
@@ -268,7 +285,7 @@ class Pretty {
 
   private void prettyRaw(
       StringBuilder buf, int indent, int[] end, int depth, Object value) {
-    pretty1(buf, indent, end, depth, PrimitiveType.BOOL, value, 0, 0);
+    pretty1(buf, indent, end, depth, PrimitiveType.BOOL, value);
   }
 
   /**
@@ -443,8 +460,7 @@ class Pretty {
       case ID:
       case ALIAS_TYPE:
       case TY_VAR:
-        return pretty1(
-            buf, indent2, end, depth, type, typeVal.type.moniker(), 0, 0);
+        return pretty1(buf, indent2, end, depth, type, typeVal.type.moniker());
 
       case LIST:
         return prettyCollectionType(
@@ -464,9 +480,9 @@ class Pretty {
         // precedence to wrap. For example '(false, (1, true), 7)' must print
         // as 'bool * (int * bool) * int' rather than 'bool * int * bool * int'.
         if (op.wraps(leftPrec, rightPrec)) {
-          pretty1(buf, indent2, end, depth, type, "(", 0, 0);
-          pretty1(buf, indent2, end, depth, type, typeVal, 0, 0);
-          pretty1(buf, indent2, end, depth, type, ")", 0, 0);
+          pretty1(buf, indent2, end, depth, type, "(");
+          pretty1(buf, indent2, end, depth, type, typeVal);
+          pretty1(buf, indent2, end, depth, type, ")");
           return buf;
         }
         final TupleType tupleType = (TupleType) typeVal.type;
@@ -476,13 +492,21 @@ class Pretty {
         for (int i = 0; i < argCount; i++) {
           Type argType = argTypes.get(i);
           if (buf.length() > start) {
-            pretty1(buf, indent2, end, depth, type, " * ", 0, 0);
+            pretty1(buf, indent2, end, depth, type, " * ");
           }
           final TypeVal typeVal1 = new TypeVal("", argType, "");
           final int leftPrec1 = i == 0 ? leftPrec : op.right;
           final int rightPrec1 = i == argCount - 1 ? rightPrec : op.left;
           pretty1(
-              buf, indent2, end, depth, type, typeVal1, leftPrec1, rightPrec1);
+              buf,
+              indent2,
+              end,
+              depth,
+              type,
+              typeVal1,
+              leftPrec1,
+              rightPrec1,
+              false);
         }
         return buf;
 
@@ -498,28 +522,31 @@ class Pretty {
                 buf.append(", ");
               }
               LabelVal labelVal = new LabelVal(name, elementType);
-              pretty1(buf, indent2 + 1, end, depth, type, labelVal, 0, 0);
+              pretty1(buf, indent2 + 1, end, depth, type, labelVal);
             });
         if (progressive) {
           if (buf.length() > start) {
             buf.append(", ");
           }
-          pretty1(buf, indent2 + 1, end, depth, type, "...", 0, 0);
+          pretty1(buf, indent2 + 1, end, depth, type, "...");
         }
         return buf.append("}");
 
       case FUNCTION_TYPE:
         if (op.wraps(leftPrec, rightPrec)) {
-          pretty1(buf, indent2, end, depth, type, "(", 0, 0);
-          pretty1(buf, indent2, end, depth, type, typeVal, 0, 0);
-          pretty1(buf, indent2, end, depth, type, ")", 0, 0);
+          pretty1(buf, indent2, end, depth, type, "(");
+          pretty1(buf, indent2, end, depth, type, typeVal);
+          pretty1(buf, indent2, end, depth, type, ")");
           return buf;
         }
         final FnType fnType = (FnType) typeVal.type;
         final TypeVal typeVal1 = new TypeVal("", fnType.paramType, "");
-        pretty1(buf, indent2, end, depth, type, typeVal1, leftPrec, op.left);
+        pretty1(
+            buf, indent2, end, depth, type, typeVal1, leftPrec, op.left, false);
         final TypeVal typeVal2 = new TypeVal(" -> ", fnType.resultType, "");
-        pretty1(buf, indent2, end, depth, type, typeVal2, op.right, rightPrec);
+        pretty1(
+            buf, indent2, end, depth, type, typeVal2, op.right, rightPrec,
+            false);
         return buf;
 
       default:
@@ -542,16 +569,19 @@ class Pretty {
     // precedence as named types like "int list")
     final Op op = Op.NAMED_TYPE;
     if (op.wraps(leftPrec, rightPrec)) {
-      pretty1(buf, indent2, lineEnd, depth, type, "(", 0, 0);
-      pretty1(buf, indent2, lineEnd, depth, type, typeVal, 0, 0);
-      pretty1(buf, indent2, lineEnd, depth, type, ")", 0, 0);
+      pretty1(buf, indent2, lineEnd, depth, type, "(");
+      pretty1(buf, indent2, lineEnd, depth, type, typeVal);
+      pretty1(buf, indent2, lineEnd, depth, type, ")");
       return buf;
     }
     checkArgument(
         typeVal.type.isCollection(), "not a collection type: %s", type);
     final Type elementType = typeVal.type.elementType();
     final TypeVal typeVal1 = new TypeVal("", elementType, "");
-    pretty1(buf, indent2, lineEnd, depth, type, typeVal1, leftPrec, op.left);
+    // Keep the element type attached to its prefix (e.g. ": ") and wrap it
+    // internally, rather than starting it on a fresh line.
+    pretty1(
+        buf, indent2, lineEnd, depth, type, typeVal1, leftPrec, op.left, true);
     return buf.append(" ").append(typeName);
   }
 
@@ -581,7 +611,12 @@ class Pretty {
         prettyRaw(buf, indent + 1, lineEnd, depth + 1, "...");
         break;
       } else {
-        pretty1(buf, indent + 1, lineEnd, depth + 1, elementType, o.e, 0, 0);
+        // Keep the first element attached to '[' (glue), so that a list whose
+        // sole element is too wide prints as "[{...}" and breaks inside the
+        // element, rather than putting "{" on its own line.
+        final boolean glue = o.i == 0;
+        pretty1(
+            buf, indent + 1, lineEnd, depth + 1, elementType, o.e, 0, 0, glue);
       }
     }
     return buf.append("]");

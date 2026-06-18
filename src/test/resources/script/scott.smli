@@ -56,8 +56,7 @@ val scott = {
 >     {deptno=30,dname="SALES",loc="CHICAGO"},
 >     {deptno=40,dname="OPERATIONS",loc="BOSTON"}],
 >    emps=
->    [
->     {comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",
+>    [{comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",
 >      job="CLERK",mgr=7902,sal=800},
 >     {comm=300,deptno=30,empno=7499,ename="ALLEN",hiredate="1981-02-20",
 >      job="SALESMAN",mgr=7698,sal=1600},
@@ -91,8 +90,7 @@ val scott = {
 >     {grade=5,hisal=9999,losal=3001}]}
 >   : {bonuses:{comm:real, ename:string, job:string, sal:real} bag,
 >      depts:{deptno:int, dname:string, loc:string} bag,
->      emps:
->           {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>      emps:{comm:real, deptno:int, empno:int, ename:string, hiredate:string,
 >            job:string, mgr:int, sal:real} bag,
 >      salgrades:{grade:int, hisal:real, losal:real} bag}
 

@@ -768,14 +768,12 @@ from i in [1, 2] left join j in [1, 2] on i = j;
 from r in orders
   left join i in r.items on i.units > 2;
 > val it =
->   [
->    {i=SOME {product="soda",units=3},
+>   [{i=SOME {product="soda",units=3},
 >     r={id=1,items=[{product="beer",units=1},{product="soda",units=3}]}},
 >    {i=SOME {product="milk",units=5},
 >     r={id=2,items=[{product="milk",units=5},{product="beer",units=2}]}},
 >    {i=NONE,r={id=3,items=[{product="soda",units=1},{product="beer",units=1}]}}]
->   :
->     {i:{product:string, units:int} option,
+>   : {i:{product:string, units:int} option,
 >      r:{id:int, items:{product:string, units:int} list}} list
 
 (* A 'right join' wraps the input ('left') fields in 'option'. A source row
@@ -2243,8 +2241,7 @@ where e.deptno = d.deptno
 group e.deptno compute {rows = (fn x => x) over current}
 order deptno;
 > val it =
->   [
->    {deptno=10,
+>   [{deptno=10,
 >     rows=[{d={deptno=10,name="Sales"},e={deptno=10,id=100,name="Fred"}}]},
 >    {deptno=20,
 >     rows=[{d={deptno=20,name="HR"},e={deptno=20,id=101,name="Velma"}}]},
@@ -2252,8 +2249,7 @@ order deptno;
 >     rows=
 >     [{d={deptno=30,name="Engineering"},e={deptno=30,id=102,name="Shaggy"}},
 >      {d={deptno=30,name="Engineering"},e={deptno=30,id=103,name="Scooby"}}]}]
->   :
->     {deptno:int,
+>   : {deptno:int,
 >      rows:{d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}} list} list
 
 (*) Group followed by yield

@@ -482,12 +482,25 @@ Sys.set ("matchStrict", true);
  * the element's '{' and breaks between the record's fields. *)
 val emps = [{comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",job="CLERK",mgr=7902,sal=800}];
 > val emps =
->   [
->    {comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",job="CLERK",
+>   [{comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",job="CLERK",
 >     mgr=7902,sal=800}]
->   :
->     {comm:int, deptno:int, empno:int, ename:string, hiredate:string, job:string,
+>   : {comm:int, deptno:int, empno:int, ename:string, hiredate:string, job:string,
 >      mgr:int, sal:int} list
+
+(* The same 'glue', shown small: a one-element list that does not fit. '['
+ * stays attached to '{', and ':' to the type, so the record and type wrap at
+ * a field boundary. Without glue, '{' would drop onto a line of its own:
+ *   [
+ *    {aa=1,bb=2,cc=3,
+ *     dd=4}] *)
+Sys.set ("lineWidth", 20);
+> val it = () : unit
+[{aa=1,bb=2,cc=3,dd=4}];
+> val it =
+>   [{aa=1,bb=2,cc=3,
+>     dd=4}]
+>   : {aa:int, bb:int,
+>      cc:int, dd:int} list
 
 (* Line width: how values and types wrap as 'lineWidth' shrinks. *)
 Sys.set ("lineWidth", 100);
@@ -571,16 +584,12 @@ Sys.set ("lineWidth", 1);
 >     int
 x;
 > val it =
->   [
->    [
->     1,
+>   [[1,
 >     2,
 >     3],
->    [
->     4,
+>    [4,
 >     5],
->    [
->     6],
+>    [6],
 >    []]
 >   :
 >     int list list
@@ -596,16 +605,12 @@ Sys.set ("lineWidth", 0);
 >     int
 x;
 > val it =
->   [
->    [
->     1,
+>   [[1,
 >     2,
 >     3],
->    [
->     4,
+>    [4,
 >     5],
->    [
->     6],
+>    [6],
 >    []]
 >   :
 >     int list list
