@@ -279,7 +279,11 @@ public class AstWriter {
       append(c.toString().replace("+", ""));
     } else if (value instanceof BuiltIn) {
       final BuiltIn builtIn = (BuiltIn) value;
-      if (builtIn.structure != null && !builtIn.structure.equals("$")) {
+      if (builtIn == BuiltIn.BOOL_NOT) {
+        // The "not" prefix operator prints unqualified, not as "#not Bool".
+        append("not");
+      } else if (!builtIn.structure.equals("Top")
+          && !builtIn.structure.equals("$")) {
         // E.g. "#find List" for the List.find function
         append("#")
             .append(builtIn.mlName)

@@ -92,7 +92,7 @@ Vector.tabulate (5, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fa
 > val it = #[1,1,2,6,24] : int vector
 Sys.plan ();
 > val it =
->   "apply2(fnValue Vector.tabulate, constant(5), let(matchCode0 match(n, tailApply(fnCode match(true, constant(1), _, apply2(fnValue *, stack(offset 2, name n), apply(fnCode stack(offset 1, name fact), argCode apply2(fnValue -, stack(offset 2, name n), constant(1))))), argCode apply2(fnValue =, stack(offset 1, name n), constant(0)))), resultCode stack(offset 1, name fact)))"
+>   "apply2(fnValue Vector.tabulate, constant(5), let(matchCode0 match(n, tailApply(fnCode match(true, constant(1), _, apply2(fnValue Int.*, stack(offset 2, name n), apply(fnCode stack(offset 1, name fact), argCode apply2(fnValue Int.-, stack(offset 2, name n), constant(1))))), argCode apply2(fnValue =, stack(offset 1, name n), constant(0)))), resultCode stack(offset 1, name fact)))"
 >   : string
 
 (*) Vector.length : 'a vector -> int
@@ -195,7 +195,7 @@ Vector.foldli (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
 > val it = 11 : int
 Sys.plan ();
 > val it =
->   "apply3(fnValue Vector.foldli, match(v, tailApply(fnCode match((i, j, a), apply2(fnValue +, stack(offset 1, name a), apply2(fnValue *, stack(offset 3, name i), stack(offset 2, name j)))), argCode stack(offset 1, name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Vector.foldli, match(v, tailApply(fnCode match((i, j, a), apply2(fnValue Int.+, stack(offset 1, name a), apply2(fnValue Int.*, stack(offset 3, name i), stack(offset 2, name j)))), argCode stack(offset 1, name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldri : (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -205,7 +205,7 @@ Vector.foldri (fn (i,j,a) => a + i * j) 0 (Vector.fromList [2,3,4]);
 > val it = 11 : int
 Sys.plan ();
 > val it =
->   "apply3(fnValue Vector.foldri, match(v, tailApply(fnCode match((i, j, a), apply2(fnValue +, stack(offset 1, name a), apply2(fnValue *, stack(offset 3, name i), stack(offset 2, name j)))), argCode stack(offset 1, name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Vector.foldri, match(v, tailApply(fnCode match((i, j, a), apply2(fnValue Int.+, stack(offset 1, name a), apply2(fnValue Int.*, stack(offset 3, name i), stack(offset 2, name j)))), argCode stack(offset 1, name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldl  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -215,7 +215,7 @@ Vector.foldl (op +) 0 (Vector.fromList [2,3,4]);
 > val it = 9 : int
 Sys.plan ();
 > val it =
->   "apply3(fnValue Vector.foldl, constant(+), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Vector.foldl, constant(Int.+), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.foldr  : ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b
@@ -225,7 +225,7 @@ Vector.foldr (fn (j,a) => a + j) 0 (Vector.fromList [2,3,4]);
 > val it = 9 : int
 Sys.plan ();
 > val it =
->   "apply3(fnValue Vector.foldr, match(v, tailApply(fnCode match((j, a), apply2(fnValue +, stack(offset 1, name a), stack(offset 2, name j))), argCode stack(offset 1, name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
+>   "apply3(fnValue Vector.foldr, match(v, tailApply(fnCode match((j, a), apply2(fnValue Int.+, stack(offset 1, name a), stack(offset 2, name j))), argCode stack(offset 1, name v))), constant(0), apply(fnValue Vector.fromList, argCode tuple(constant(2), constant(3), constant(4))))"
 >   : string
 
 (*) Vector.findi : (int * 'a -> bool) -> 'a vector -> (int * 'a) option
@@ -245,7 +245,7 @@ Vector.find (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
 > val it = SOME 8 : int option
 Sys.plan ();
 > val it =
->   "apply2(fnValue Vector.find, match(j, apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name j), constant(2)), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+>   "apply2(fnValue Vector.find, match(j, apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name j), constant(2)), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
 >   : string
 
 (*) Vector.exists : ('a -> bool) -> 'a vector -> bool
@@ -255,7 +255,7 @@ Vector.`exists` (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
 > val it = true : bool
 Sys.plan ();
 > val it =
->   "apply2(fnValue Vector.exists, match(j, apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name j), constant(2)), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+>   "apply2(fnValue Vector.exists, match(j, apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name j), constant(2)), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
 >   : string
 
 (*) Vector.all : ('a -> bool) -> 'a vector -> bool
@@ -265,7 +265,7 @@ Vector.all (fn j => j mod 2 = 0) (Vector.fromList [3,5,7,8,9]);
 > val it = false : bool
 Sys.plan ();
 > val it =
->   "apply2(fnValue Vector.all, match(j, apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name j), constant(2)), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
+>   "apply2(fnValue Vector.all, match(j, apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name j), constant(2)), constant(0))), apply(fnValue Vector.fromList, argCode tuple(constant(3), constant(5), constant(7), constant(8), constant(9))))"
 >   : string
 
 (*) Vector.collate : ('a * 'a -> order) -> 'a vector * 'a vector -> order

@@ -324,7 +324,7 @@ Real.sign Real.posInf;
 Real.sign Real.negInf;
 > val it = ~1 : int
 Real.sign nan;
-> uncaught exception Domain
+> uncaught exception Domain [domain error]
 >   raised at: stdIn:1.1-1.14
 Sys.plan ();
 > val it = "apply(fnValue Real.sign, argCode constant(NaN))" : string
@@ -353,7 +353,7 @@ Real.signBit (~nan);
 > val it = false : bool
 Sys.plan ();
 > val it =
->   "apply(fnValue Real.signBit, argCode apply(fnValue ~, argCode constant(NaN)))"
+>   "apply(fnValue Real.signBit, argCode apply(fnValue Real.~, argCode constant(NaN)))"
 >   : string
 Real.signBit (~(~nan));
 > val it = true : bool
@@ -777,17 +777,17 @@ Real.checkFloat ~0.0;
 Real.checkFloat 1.5;
 > val it = 1.5 : real
 Real.checkFloat Real.posInf;
-> uncaught exception Overflow
+> uncaught exception Overflow [overflow]
 >   raised at: stdIn:1.1-1.28
 Real.checkFloat Real.negInf;
-> uncaught exception Overflow
+> uncaught exception Overflow [overflow]
 >   raised at: stdIn:1.1-1.28
 Real.checkFloat Real.minNormalPos;
 > val it = 1.1754944E~38 : real
 Real.checkFloat Real.minPos;
 > val it = 1.4E~45 : real
 Real.checkFloat nan;
-> uncaught exception Div
+> uncaught exception Div [divide by zero]
 >   raised at: stdIn:1.1-1.20
 
 (* "realFloor r", "realCeil r", "realTrunc r", "realRound r" convert real values
@@ -1159,27 +1159,27 @@ Real.fmt (FIX (SOME 3)) (~1.0 / 0.0);
 
 (* Invalid precision raises Size. *)
 Real.fmt (SCI (SOME ~1)) 1.0;
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.29
 Real.fmt (FIX (SOME ~1)) 1.0;
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.29
 Real.fmt (GEN (SOME 0)) 1.0;
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.28
 Real.fmt (GEN (SOME ~1)) 1.0;
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.29
 (* Partial application validates the spec immediately,
  * before the second argument arrives. *)
 Real.fmt (SCI (SOME ~1));
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.23
 Real.fmt (FIX (SOME ~1));
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.23
 Real.fmt (GEN (SOME 0));
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.22
 Real.fmt EXACT;
 > val it = fn : real -> string

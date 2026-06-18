@@ -1108,7 +1108,7 @@ public enum CoreBuilder {
   }
 
   public Core.Exp not(TypeSystem typeSystem, Core.Exp a0) {
-    Core.Literal not = functionLiteral(typeSystem, BuiltIn.NOT);
+    Core.Literal not = functionLiteral(typeSystem, BuiltIn.BOOL_NOT);
     return apply(a0.pos, PrimitiveType.BOOL, not, a0);
   }
 

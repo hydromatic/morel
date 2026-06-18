@@ -1404,19 +1404,29 @@ public abstract class Codes {
 
   /** @see BuiltIn#GENERAL_EXN_MESSAGE */
   private static final Applicable GENERAL_EXN_MESSAGE =
-      new BaseApplicable1<String, BuiltInExn>(BuiltIn.GENERAL_EXN_MESSAGE) {
+      new BaseApplicable1<String, List>(BuiltIn.GENERAL_EXN_MESSAGE) {
         @Override
-        public String apply(BuiltInExn arg) {
-          return arg.mlName();
+        public String apply(List arg) {
+          // An exception value is a tagged list whose first element is the
+          // constructor name; built-in exceptions may have a description.
+          final String name = (String) arg.get(0);
+          final BuiltInExn exn = BuiltInExn.forMlName(name);
+          if (exn != null && exn.description != null) {
+            return exn.description;
+          }
+          if (arg.size() > 1) {
+            return name + ": " + arg.get(1);
+          }
+          return name;
         }
       };
 
   /** @see BuiltIn#GENERAL_EXN_NAME */
   private static final Applicable GENERAL_EXN_NAME =
-      new BaseApplicable1<String, BuiltInExn>(BuiltIn.GENERAL_EXN_NAME) {
+      new BaseApplicable1<String, List>(BuiltIn.GENERAL_EXN_NAME) {
         @Override
-        public String apply(BuiltInExn arg) {
-          return arg.structure + "." + arg.mlName();
+        public String apply(List arg) {
+          return (String) arg.get(0);
         }
       };
 
@@ -1558,7 +1568,7 @@ public abstract class Codes {
   /** @see BuiltIn#INT_MIN_INT */
   private static final List INT_MIN_INT = optionSome(Integer.MIN_VALUE);
 
-  /** Implements {@link #INT_DIV} and {@link #OP_DIV}. */
+  /** Implements {@link #INT_DIV}. */
   private static class IntDiv
       extends BaseApplicable2<Integer, Integer, Integer> {
     IntDiv(BuiltIn builtIn) {
@@ -1574,7 +1584,7 @@ public abstract class Codes {
   /** @see BuiltIn#INT_MOD */
   private static final Applicable2 INT_MOD = new IntMod(BuiltIn.INT_MOD);
 
-  /** Implements {@link #INT_MOD} and {@link #OP_MOD}. */
+  /** Implements {@link #INT_MOD}. */
   private static class IntMod
       extends BaseApplicable2<Integer, Integer, Integer> {
     IntMod(BuiltIn builtIn) {
@@ -1586,6 +1596,51 @@ public abstract class Codes {
       return Math.floorMod(a0, a1);
     }
   }
+
+  /** @see BuiltIn#INT_OP_GE */
+  private static final Applicable2 INT_OP_GE =
+      new BaseApplicable2<Boolean, Integer, Integer>(BuiltIn.INT_OP_GE) {
+        @Override
+        public Boolean apply(Integer a0, Integer a1) {
+          return a0 >= a1;
+        }
+      };
+
+  /** @see BuiltIn#INT_OP_GT */
+  private static final Applicable2 INT_OP_GT =
+      new BaseApplicable2<Boolean, Integer, Integer>(BuiltIn.INT_OP_GT) {
+        @Override
+        public Boolean apply(Integer a0, Integer a1) {
+          return a0 > a1;
+        }
+      };
+
+  /** @see BuiltIn#INT_OP_LE */
+  private static final Applicable2 INT_OP_LE =
+      new BaseApplicable2<Boolean, Integer, Integer>(BuiltIn.INT_OP_LE) {
+        @Override
+        public Boolean apply(Integer a0, Integer a1) {
+          return a0 <= a1;
+        }
+      };
+
+  /** @see BuiltIn#INT_OP_LT */
+  private static final Applicable2 INT_OP_LT =
+      new BaseApplicable2<Boolean, Integer, Integer>(BuiltIn.INT_OP_LT) {
+        @Override
+        public Boolean apply(Integer a0, Integer a1) {
+          return a0 < a1;
+        }
+      };
+
+  /** @see BuiltIn#INT_OP_MINUS */
+  private static final Applicable2 INT_OP_MINUS =
+      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.INT_OP_MINUS) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
+          return a0 - a1;
+        }
+      };
 
   /** @see BuiltIn#INT_OP_NEGATE */
   private static final Applicable1 INT_OP_NEGATE =
@@ -1602,6 +1657,15 @@ public abstract class Codes {
         @Override
         public Integer apply(Integer a0, Integer a1) {
           return a0 + a1;
+        }
+      };
+
+  /** @see BuiltIn#INT_OP_TIMES */
+  private static final Applicable2 INT_OP_TIMES =
+      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.INT_OP_TIMES) {
+        @Override
+        public Integer apply(Integer a0, Integer a1) {
+          return a0 * a1;
         }
       };
 
@@ -2668,24 +2732,6 @@ public abstract class Codes {
         }
       };
 
-  /** An applicable that negates a boolean value. */
-  private static final Applicable NOT =
-      new BaseApplicable1<Boolean, Boolean>(BuiltIn.NOT) {
-        @Override
-        public Boolean apply(Boolean b) {
-          return !(Boolean) b;
-        }
-      };
-
-  /** @see BuiltIn#OP_CARET */
-  private static final Applicable2 OP_CARET =
-      new BaseApplicable2<String, String, String>(BuiltIn.OP_CARET) {
-        @Override
-        public String apply(String a0, String a1) {
-          return a0 + a1;
-        }
-      };
-
   /** @see BuiltIn#OP_CONS */
   private static final Applicable2 OP_CONS =
       new BaseApplicable2<List, Object, Iterable>(BuiltIn.OP_CONS) {
@@ -2694,9 +2740,6 @@ public abstract class Codes {
           return ImmutableList.builder().add(e).addAll(iterable).build();
         }
       };
-
-  /** @see BuiltIn#OP_DIV */
-  private static final Applicable2 OP_DIV = new IntDiv(BuiltIn.OP_DIV);
 
   /** @see BuiltIn#OP_ELEM */
   private static final Applicable2 OP_ELEM =
@@ -2774,9 +2817,9 @@ public abstract class Codes {
         final Type resultType = ((TupleType) argType).argTypes.get(0);
         switch ((PrimitiveType) resultType) {
           case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_INT);
+            return core.functionLiteral(typeSystem, BuiltIn.INT_OP_MINUS);
           case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_MINUS_REAL);
+            return core.functionLiteral(typeSystem, BuiltIn.REAL_OP_MINUS);
           default:
             throw new CompileException(
                 "operator not defined for type '" + argType + "'",
@@ -2784,9 +2827,6 @@ public abstract class Codes {
                 Pos.ZERO);
         }
       };
-
-  /** @see BuiltIn#OP_MOD */
-  private static final Applicable2 OP_MOD = new IntMod(BuiltIn.OP_MOD);
 
   /** @see BuiltIn#OP_NE */
   private static final Applicable2 OP_NE =
@@ -2802,9 +2842,9 @@ public abstract class Codes {
       (typeSystem, env, argType) -> {
         switch ((PrimitiveType) argType) {
           case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_INT);
+            return core.functionLiteral(typeSystem, BuiltIn.INT_OP_NEGATE);
           case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_NEGATE_REAL);
+            return core.functionLiteral(typeSystem, BuiltIn.REAL_OP_NEGATE);
           default:
             throw new CompileException(
                 "operator not defined for type '" + argType + "'",
@@ -2828,9 +2868,9 @@ public abstract class Codes {
         final Type resultType = ((TupleType) argType).argTypes.get(0);
         switch ((PrimitiveType) resultType) {
           case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_INT);
+            return core.functionLiteral(typeSystem, BuiltIn.INT_OP_PLUS);
           case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_PLUS_REAL);
+            return core.functionLiteral(typeSystem, BuiltIn.REAL_OP_PLUS);
           default:
             throw new CompileException(
                 "operator not defined for type '" + argType + "'",
@@ -2845,9 +2885,9 @@ public abstract class Codes {
         final Type resultType = ((TupleType) argType).argTypes.get(0);
         switch ((PrimitiveType) resultType) {
           case INT:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_INT);
+            return core.functionLiteral(typeSystem, BuiltIn.INT_OP_TIMES);
           case REAL:
-            return core.functionLiteral(typeSystem, BuiltIn.Z_TIMES_REAL);
+            return core.functionLiteral(typeSystem, BuiltIn.REAL_OP_TIMES);
           default:
             throw new CompileException(
                 "operator not defined for type '" + argType + "'",
@@ -5118,68 +5158,6 @@ public abstract class Codes {
   /** @see BuiltIn#Z_LIST */
   private static final Applicable1 Z_LIST = identity(BuiltIn.Z_LIST);
 
-  /** Implements {@link #OP_MINUS} for type {@code int}. */
-  private static final Applicable2 Z_MINUS_INT =
-      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_MINUS) {
-        @Override
-        public Integer apply(Integer a0, Integer a1) {
-          return a0 - a1;
-        }
-      };
-
-  /** Implements {@link #OP_MINUS} for type {@code real}. */
-  private static final Applicable2 Z_MINUS_REAL =
-      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_MINUS) {
-        @Override
-        public Float apply(Float a0, Float a1) {
-          return a0 - a1;
-        }
-      };
-
-  /** Implements {@link #OP_NEGATE} for type {@code int}. */
-  private static final Applicable Z_NEGATE_INT =
-      new BaseApplicable1<Integer, Integer>(BuiltIn.OP_NEGATE) {
-        @Override
-        public Integer apply(Integer i) {
-          return -i;
-        }
-      };
-
-  /** Implements {@link #OP_NEGATE} for type {@code real}. */
-  private static final Applicable Z_NEGATE_REAL =
-      new BaseApplicable1<Float, Float>(BuiltIn.OP_NEGATE) {
-        @Override
-        public Float apply(Float f) {
-          if (Float.isNaN(f)) {
-            // ~nan -> nan
-            // nan (or any other value f such that isNan(f)) -> ~nan
-            return Float.floatToRawIntBits(f)
-                    == Float.floatToRawIntBits(NEGATIVE_NAN)
-                ? Float.NaN
-                : NEGATIVE_NAN;
-          }
-          return -f;
-        }
-      };
-
-  /** Implements {@link #OP_PLUS} for type {@code int}. */
-  private static final Applicable2 Z_PLUS_INT =
-      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_PLUS) {
-        @Override
-        public Integer apply(Integer a0, Integer a1) {
-          return a0 + a1;
-        }
-      };
-
-  /** Implements {@link #OP_PLUS} for type {@code real}. */
-  private static final Applicable2 Z_PLUS_REAL =
-      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_PLUS) {
-        @Override
-        public Float apply(Float a0, Float a1) {
-          return a0 + a1;
-        }
-      };
-
   /** Implements {@link #RELATIONAL_SUM} for type {@code int list}. */
   private static final Applicable Z_SUM_INT =
       new BaseApplicable1<Integer, List<? extends Number>>(BuiltIn.Z_SUM_INT) {
@@ -5234,24 +5212,6 @@ public abstract class Codes {
         }
       };
 
-  /** Implements {@link #OP_TIMES} for type {@code int}. */
-  private static final Applicable2 Z_TIMES_INT =
-      new BaseApplicable2<Integer, Integer, Integer>(BuiltIn.OP_TIMES) {
-        @Override
-        public Integer apply(Integer a0, Integer a1) {
-          return a0 * a1;
-        }
-      };
-
-  /** Implements {@link #OP_TIMES} for type {@code real}. */
-  private static final Applicable2 Z_TIMES_REAL =
-      new BaseApplicable2<Float, Float, Float>(BuiltIn.OP_TIMES) {
-        @Override
-        public Float apply(Float a0, Float a1) {
-          return a0 * a1;
-        }
-      };
-
   // ---------------------------------------------------------------------------
 
   private static void populateBuiltIns(Map<String, Object> valueMap) {
@@ -5268,11 +5228,11 @@ public abstract class Codes {
           if (value == null) {
             throw new AssertionError("no implementation for " + key);
           }
-          if (key.structure == null) {
+          if (key.structure.equals("Top")) {
             valueMap.put(key.mlName, value);
           }
-          if (key.alias != null) {
-            valueMap.put(key.alias, value);
+          for (String alias : key.aliases()) {
+            valueMap.put(alias, value);
           }
         });
     BuiltIn.forEachStructure(
@@ -5553,14 +5513,14 @@ public abstract class Codes {
     BUILT_IN_VALUES.forEach(
         (key, value) -> {
           final Type type = key.typeFunction.apply(typeSystem);
-          if (key.structure == null) {
+          if (key.structure.equals("Top")) {
             final Core.IdPat idPat =
                 core.idPat(type, key.mlName, typeSystem.nameGenerator::inc);
             hEnv[0] = hEnv[0].bind(idPat, value);
           }
-          if (key.alias != null) {
+          for (String alias : key.aliases()) {
             final Core.IdPat idPat =
-                core.idPat(type, key.alias, typeSystem.nameGenerator::inc);
+                core.idPat(type, alias, typeSystem.nameGenerator::inc);
             hEnv[0] = hEnv[0].bind(idPat, value);
           }
         });
@@ -5692,9 +5652,6 @@ public abstract class Codes {
 
   public static final ImmutableMap<BuiltIn, Object> BUILT_IN_VALUES =
       new Builder()
-          .put(BuiltIn.TRUE, true)
-          .put(BuiltIn.FALSE, false)
-          .put(BuiltIn.NOT, NOT)
           // lint: sort until '#.build\\(\\);' where '##\\.put'
           .put(BuiltIn.ABS, ABS)
           .put(BuiltIn.BAG_ALL, BAG_ALL)
@@ -5828,8 +5785,14 @@ public abstract class Codes {
           .put(BuiltIn.INT_MIN, INT_MIN)
           .put(BuiltIn.INT_MIN_INT, INT_MIN_INT)
           .put(BuiltIn.INT_MOD, INT_MOD)
+          .put(BuiltIn.INT_OP_GE, INT_OP_GE)
+          .put(BuiltIn.INT_OP_GT, INT_OP_GT)
+          .put(BuiltIn.INT_OP_LE, INT_OP_LE)
+          .put(BuiltIn.INT_OP_LT, INT_OP_LT)
+          .put(BuiltIn.INT_OP_MINUS, INT_OP_MINUS)
           .put(BuiltIn.INT_OP_NEGATE, INT_OP_NEGATE)
           .put(BuiltIn.INT_OP_PLUS, INT_OP_PLUS)
+          .put(BuiltIn.INT_OP_TIMES, INT_OP_TIMES)
           .put(BuiltIn.INT_PRECISION, INT_PRECISION)
           .put(BuiltIn.INT_QUOT, INT_QUOT)
           .put(BuiltIn.INT_REM, INT_REM)
@@ -5901,9 +5864,7 @@ public abstract class Codes {
           .put(BuiltIn.MATH_SQRT, MATH_SQRT)
           .put(BuiltIn.MATH_TAN, MATH_TAN)
           .put(BuiltIn.MATH_TANH, MATH_TANH)
-          .put(BuiltIn.OP_CARET, OP_CARET)
           .put(BuiltIn.OP_CONS, OP_CONS)
-          .put(BuiltIn.OP_DIV, OP_DIV)
           .put(BuiltIn.OP_ELEM, OP_ELEM)
           .put(BuiltIn.OP_EQ, OP_EQ)
           .put(BuiltIn.OP_GE, OP_GE)
@@ -5911,7 +5872,6 @@ public abstract class Codes {
           .put(BuiltIn.OP_LE, OP_LE)
           .put(BuiltIn.OP_LT, OP_LT)
           .put(BuiltIn.OP_MINUS, OP_MINUS)
-          .put(BuiltIn.OP_MOD, OP_MOD)
           .put(BuiltIn.OP_NE, OP_NE)
           .put(BuiltIn.OP_NEGATE, OP_NEGATE)
           .put(BuiltIn.OP_NOT_ELEM, OP_NOT_ELEM)
@@ -6096,22 +6056,15 @@ public abstract class Codes {
           .put(BuiltIn.Z_ELEMENTS, Unit.INSTANCE)
           .put(BuiltIn.Z_EXTENT, Z_EXTENT)
           .put(BuiltIn.Z_LIST, Z_LIST)
-          .put(BuiltIn.Z_MINUS_INT, Z_MINUS_INT)
-          .put(BuiltIn.Z_MINUS_REAL, Z_MINUS_REAL)
-          .put(BuiltIn.Z_NEGATE_INT, Z_NEGATE_INT)
-          .put(BuiltIn.Z_NEGATE_REAL, Z_NEGATE_REAL)
           .put(BuiltIn.Z_NTH, Unit.INSTANCE)
           .put(BuiltIn.Z_ORDINAL, 0)
           .put(BuiltIn.Z_ORELSE, Unit.INSTANCE)
-          .put(BuiltIn.Z_PLUS_INT, Z_PLUS_INT)
-          .put(BuiltIn.Z_PLUS_REAL, Z_PLUS_REAL)
           .put(BuiltIn.Z_SUM_INT, Z_SUM_INT)
           .put(BuiltIn.Z_SUM_REAL, Z_SUM_REAL)
           .put(BuiltIn.Z_TEST_OVER_COUNT_BAG, Z_TEST_OVER_COUNT_BAG)
           .put(BuiltIn.Z_TEST_OVER_COUNT_LIST, Z_TEST_OVER_COUNT_LIST)
-          .put(BuiltIn.Z_TIMES_INT, Z_TIMES_INT)
-          .put(BuiltIn.Z_TIMES_REAL, Z_TIMES_REAL)
           .put(BuiltIn.Z_TY_CON, Unit.INSTANCE)
+          .put(BuiltIn.Z_VOID, Unit.INSTANCE)
           .build();
 
   @SuppressWarnings("TrivialFunctionalExpressionUsage")
@@ -6388,18 +6341,24 @@ public abstract class Codes {
   /** Definitions of Morel built-in exceptions. */
   public enum BuiltInExn {
     // lint: sort until '##public ' where '##[A-Z]'
-    BIND("General", BuiltIn.Constructor.EXN_BIND, null),
+    BIND(
+        "General",
+        BuiltIn.Constructor.EXN_BIND,
+        "nonexhaustive binding failure"),
     CHR("General", BuiltIn.Constructor.EXN_CHR, null),
     DATE("Date", BuiltIn.Constructor.EXN_DATE, null),
-    DIV("General", BuiltIn.Constructor.EXN_DIV, null),
-    DOMAIN("General", BuiltIn.Constructor.EXN_DOMAIN, null),
+    DIV("General", BuiltIn.Constructor.EXN_DIV, "divide by zero"),
+    DOMAIN("General", BuiltIn.Constructor.EXN_DOMAIN, "domain error"),
     EMPTY("List", BuiltIn.Constructor.EXN_EMPTY, null),
     ERROR("Interact", BuiltIn.Constructor.EXN_ERROR, null), // not in basis
     FAIL("General", BuiltIn.Constructor.EXN_FAIL, null),
-    MATCH("General", BuiltIn.Constructor.EXN_MATCH, null),
+    MATCH(
+        "General",
+        BuiltIn.Constructor.EXN_MATCH,
+        "nonexhaustive match failure"),
     OPTION("Option", BuiltIn.Constructor.EXN_OPTION, null),
-    OVERFLOW("General", BuiltIn.Constructor.EXN_OVERFLOW, null),
-    SIZE("General", BuiltIn.Constructor.EXN_SIZE, null),
+    OVERFLOW("General", BuiltIn.Constructor.EXN_OVERFLOW, "overflow"),
+    SIZE("General", BuiltIn.Constructor.EXN_SIZE, "size"),
     SPAN("General", BuiltIn.Constructor.EXN_SPAN, null),
     SUBSCRIPT(
         "General",

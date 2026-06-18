@@ -2148,7 +2148,8 @@ class Generators {
 
   /** Returns whether exp is "param - 1". */
   private static boolean isDecrementOf(Core.Exp exp, Core.NamedPat param) {
-    if (!exp.isCallTo(BuiltIn.OP_MINUS) && !exp.isCallTo(BuiltIn.Z_MINUS_INT)) {
+    if (!exp.isCallTo(BuiltIn.OP_MINUS)
+        && !exp.isCallTo(BuiltIn.INT_OP_MINUS)) {
       return false;
     }
     final Core.Apply minus = (Core.Apply) exp;
@@ -2585,7 +2586,7 @@ class Generators {
               final Core.Exp eq =
                   core.equal(cache.typeSystem, caseExp.exp, excludeValue);
               final Core.Exp notEq =
-                  core.call(cache.typeSystem, BuiltIn.NOT, eq);
+                  core.call(cache.typeSystem, BuiltIn.BOOL_NOT, eq);
               substituted = core.andAlso(cache.typeSystem, substituted, notEq);
             }
             branches.add(substituted);
@@ -2616,7 +2617,8 @@ class Generators {
         for (Core.Exp excludeValue : excludeValues) {
           final Core.Exp eq =
               core.equal(cache.typeSystem, caseExp.exp, excludeValue);
-          final Core.Exp notEq = core.call(cache.typeSystem, BuiltIn.NOT, eq);
+          final Core.Exp notEq =
+              core.call(cache.typeSystem, BuiltIn.BOOL_NOT, eq);
           branchExp = core.andAlso(cache.typeSystem, branchExp, notEq);
         }
 
@@ -3553,7 +3555,7 @@ class Generators {
     if (exp instanceof Core.Apply) {
       final Core.Apply apply = (Core.Apply) exp;
       switch (apply.builtIn()) {
-        case Z_PLUS_INT:
+        case INT_OP_PLUS:
         case OP_PLUS:
           // pat + k
           if (references(apply.arg(0), pat) && apply.arg(1).isConstant()) {
@@ -3570,7 +3572,7 @@ class Generators {
             }
           }
           break;
-        case Z_MINUS_INT:
+        case INT_OP_MINUS:
         case OP_MINUS:
           // pat - k
           if (references(apply.arg(0), pat) && apply.arg(1).isConstant()) {
@@ -3596,7 +3598,7 @@ class Generators {
       return exp;
     }
     return core.call(
-        typeSystem, BuiltIn.Z_MINUS_INT, exp, core.intLiteral(offset));
+        typeSystem, BuiltIn.INT_OP_MINUS, exp, core.intLiteral(offset));
   }
 
   /**
@@ -3839,7 +3841,8 @@ class Generators {
       // Build: String.size s + 1
       final Core.Exp sizeExp = core.call(ts, BuiltIn.STRING_SIZE, strExp);
       final Core.Literal one = core.intLiteral(BigDecimal.ONE);
-      final Core.Exp countExp = core.call(ts, BuiltIn.Z_PLUS_INT, sizeExp, one);
+      final Core.Exp countExp =
+          core.call(ts, BuiltIn.INT_OP_PLUS, sizeExp, one);
 
       // Build: fn i => String.substring(s, 0, i)
       final Core.IdPat iPat = core.idPat(PrimitiveType.INT, "i", 0);

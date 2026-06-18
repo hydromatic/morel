@@ -27,7 +27,7 @@ fun f 1 = 0;
 f 1;
 > val it = 0 : int
 f 2;
-> uncaught exception Bind
+> uncaught exception Bind [nonexhaustive binding failure]
 >   raised at: stdIn:1.5-1.12
 
 (*) Warning: match nonexhaustive, twice
@@ -46,7 +46,7 @@ fun f x =
 f 1;
 > val it = 3 : int
 f 2;
-> uncaught exception Bind
+> uncaught exception Bind [nonexhaustive binding failure]
 >   raised at: stdIn:3.9-3.16
 
 (*) Error: match redundant and nonexhaustive

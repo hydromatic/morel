@@ -410,7 +410,7 @@ from x in [3, 5, 7], y where x > y andalso x < y + 5 yield y;
 > val it = [~1,0,1,2,1,2,3,4,3,4,5,6] : int bag
 Sys.planEx "3";
 > val it =
->   "val it = from x in [3, 5, 7] join y in #fromList Bag (#flatten Range ([OPEN (-:int (x, 5), x)])) yield y"
+>   "val it = from x in [3, 5, 7] join y in #fromList Bag (#flatten Range ([OPEN (#- Int (x, 5), x)])) yield y"
 >   : string
 
 from x in [3, 5, 7], y

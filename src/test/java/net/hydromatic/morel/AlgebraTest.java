@@ -422,7 +422,7 @@ public class AlgebraTest {
   @Test
   void testCalciteWithVariable() {
     final String plan =
-        "let1(expCode apply2(fnValue +, constant(2), constant(3)), "
+        "let1(expCode apply2(fnValue Int.+, constant(2), constant(3)), "
             + "resultCode calcite(plan "
             + "LogicalProject(d5=[+($1, morelScalar('five', '{\n"
             + "  \"type\": \"INTEGER\",\n"
@@ -447,8 +447,8 @@ public class AlgebraTest {
   @Test
   void testCalciteWithVariableNoInlining() {
     final String plan =
-        "let1(expCode apply2(fnValue +, constant(2), constant(3)), "
-            + "resultCode let1(expCode apply2(fnValue +, "
+        "let1(expCode apply2(fnValue Int.+, constant(2), constant(3)), "
+            + "resultCode let1(expCode apply2(fnValue Int.+, "
             + "stack(offset 1, name five), stack(offset 1, name five)), "
             + "resultCode calcite(plan "
             + "LogicalProject(d5=[+($1, morelScalar('five', '{\n"
@@ -499,7 +499,7 @@ public class AlgebraTest {
             + "  yield twice d.deptno\n"
             + "end";
     String plan =
-        "let1(expCode match(x, apply2(fnValue +,"
+        "let1(expCode match(x, apply2(fnValue Int.+,"
             + " stack(offset 1, name x), stack(offset 1, name x))), "
             + "resultCode calcite(plan "
             + "LogicalProject($f0=[morelScalar('int', "
@@ -537,7 +537,7 @@ public class AlgebraTest {
             + "end";
     String plan =
         "let1(expCode match(v, tailApply(fnCode match((x, y),"
-            + " apply2(fnValue +, stack(offset 2, name x),"
+            + " apply2(fnValue Int.+, stack(offset 2, name x),"
             + " stack(offset 1, name y))), argCode stack(offset 1, name v))), "
             + "resultCode let1(expCode constant(5), "
             + "resultCode calcite(plan "

@@ -2182,9 +2182,10 @@ public class TypeResolver {
    * postfix dispatch.
    */
   private static Ast.Exp postfixBuiltInFnExp(Pos pos, BuiltIn builtIn) {
-    if (builtIn.alias != null) {
-      return ast.id(pos, builtIn.alias);
-    } else if (builtIn.structure != null && !builtIn.structure.equals("$")) {
+    if (!builtIn.aliases().isEmpty()) {
+      return ast.id(pos, builtIn.aliases().get(0));
+    } else if (!builtIn.structure.equals("Top")
+        && !builtIn.structure.equals("$")) {
       return ast.apply(
           ast.recordSelector(pos, builtIn.mlName),
           ast.id(pos, builtIn.structure));

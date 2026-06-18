@@ -183,7 +183,7 @@ List.only [2];
 [2].only ();
 > val it = 2 : int
 List.only [1, 2, 3];
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.20
 List.only [];
 > uncaught exception Empty
@@ -280,7 +280,7 @@ List.app (fn x => ignore (x + 2)) [];
 > val it = () : unit
 Sys.plan ();
 > val it =
->   "apply2(fnValue List.app, match(x, tailApply(fnValue General.ignore, argCode apply2(fnValue +, stack(offset 1, name x), constant(2)))), tuple)"
+>   "apply2(fnValue List.app, match(x, tailApply(fnValue General.ignore, argCode apply2(fnValue Int.+, stack(offset 1, name x), constant(2)))), tuple)"
 >   : string
 
 (*) val mapi : (int * 'a -> 'b) -> 'a list -> 'b list
@@ -302,7 +302,7 @@ List.map (fn x => x + 1) [];
 > val it = [] : int list
 Sys.plan ();
 > val it =
->   "apply2(fnValue List.map, match(x, apply2(fnValue +, stack(offset 1, name x), constant(1))), tuple)"
+>   "apply2(fnValue List.map, match(x, apply2(fnValue Int.+, stack(offset 1, name x), constant(1))), tuple)"
 >   : string
 
 (*) map is alias for List.map
@@ -323,7 +323,7 @@ List.mapPartial (fn x => if x mod 2 = 0 then NONE else SOME (x + 1)) [];
 > val it = [] : int list
 Sys.plan ();
 > val it =
->   "apply2(fnValue List.mapPartial, match(x, tailApply(fnCode match(true, constant([NONE]), _, tailApply(fnValue tyCon, argCode apply2(fnValue +, stack(offset 1, name x), constant(1)))), argCode apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name x), constant(2)), constant(0)))), tuple)"
+>   "apply2(fnValue List.mapPartial, match(x, tailApply(fnCode match(true, constant([NONE]), _, tailApply(fnValue tyCon, argCode apply2(fnValue Int.+, stack(offset 1, name x), constant(1)))), argCode apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name x), constant(2)), constant(0)))), tuple)"
 >   : string
 
 (*) val find : ('a -> bool) -> 'a list -> 'a option
@@ -335,7 +335,7 @@ List.find (fn x => x mod 11 = 0) [2,3,5,8,13,21,34];
 > val it = NONE : int option
 Sys.plan ();
 > val it =
->   "apply2(fnValue List.find, match(x, apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name x), constant(11)), constant(0))), tuple(constant(2), constant(3), constant(5), constant(8), constant(13), constant(21), constant(34)))"
+>   "apply2(fnValue List.find, match(x, apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name x), constant(11)), constant(0))), tuple(constant(2), constant(3), constant(5), constant(8), constant(13), constant(21), constant(34)))"
 >   : string
 
 (*) val filter : ('a -> bool) -> 'a list -> 'a list
@@ -349,7 +349,7 @@ List.filter (fn x => x mod 2 = 0) [];
 > val it = [] : int list
 Sys.plan ();
 > val it =
->   "apply2(fnValue List.filter, match(x, apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name x), constant(2)), constant(0))), tuple)"
+>   "apply2(fnValue List.filter, match(x, apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name x), constant(2)), constant(0))), tuple)"
 >   : string
 
 (*) val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
@@ -363,7 +363,7 @@ List.partition (fn x => x mod 2 = 0) [];
 > val it = ([],[]) : int list * int list
 Sys.plan ();
 > val it =
->   "apply2(fnValue List.partition, match(x, apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name x), constant(2)), constant(0))), tuple)"
+>   "apply2(fnValue List.partition, match(x, apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name x), constant(2)), constant(0))), tuple)"
 >   : string
 
 (*) val foldl : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
@@ -381,7 +381,7 @@ List.foldl (op -) 0 [1,2,3,4];
 > val it = 2 : int
 Sys.plan ();
 > val it =
->   "apply3(fnValue List.foldl, constant(-), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   "apply3(fnValue List.foldl, constant(Int.-), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
 >   : string
 
 (*) val foldr : ('a * 'b -> 'b) -> 'b -> 'a list -> 'b
@@ -399,7 +399,7 @@ List.foldr (op -) 0 [1,2,3,4];
 > val it = ~2 : int
 Sys.plan ();
 > val it =
->   "apply3(fnValue List.foldr, constant(-), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
+>   "apply3(fnValue List.foldr, constant(Int.-), constant(0), tuple(constant(1), constant(2), constant(3), constant(4)))"
 >   : string
 
 (*) val exists : ('a -> bool) -> 'a list -> bool
@@ -415,7 +415,7 @@ List.`exists` (fn x => x mod 2 = 0) [];
 > val it = false : bool
 Sys.plan ();
 > val it =
->   "apply2(fnValue List.exists, match(x, apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name x), constant(2)), constant(0))), tuple)"
+>   "apply2(fnValue List.exists, match(x, apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name x), constant(2)), constant(0))), tuple)"
 >   : string
 
 (*) val all : ('a -> bool) -> 'a list -> bool
@@ -431,7 +431,7 @@ List.all (fn x => x mod 2 = 0) [];
 > val it = true : bool
 Sys.plan ();
 > val it =
->   "apply2(fnValue List.all, match(x, apply2(fnValue =, apply2(fnValue mod, stack(offset 1, name x), constant(2)), constant(0))), tuple)"
+>   "apply2(fnValue List.all, match(x, apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name x), constant(2)), constant(0))), tuple)"
 >   : string
 
 (*) val tabulate : int * (int -> 'a) -> 'a list
@@ -444,11 +444,11 @@ List.tabulate (1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact
 List.tabulate (0, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
 > val it = [] : int list
 List.tabulate (~1, let fun fact n = if n = 0 then 1 else n * fact (n - 1) in fact end);
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.87
 Sys.plan ();
 > val it =
->   "apply2(fnValue List.tabulate, constant(-1), let(matchCode0 match(n, tailApply(fnCode match(true, constant(1), _, apply2(fnValue *, stack(offset 2, name n), apply(fnCode stack(offset 1, name fact), argCode apply2(fnValue -, stack(offset 2, name n), constant(1))))), argCode apply2(fnValue =, stack(offset 1, name n), constant(0)))), resultCode stack(offset 1, name fact)))"
+>   "apply2(fnValue List.tabulate, constant(-1), let(matchCode0 match(n, tailApply(fnCode match(true, constant(1), _, apply2(fnValue Int.*, stack(offset 2, name n), apply(fnCode stack(offset 1, name fact), argCode apply2(fnValue Int.-, stack(offset 2, name n), constant(1))))), argCode apply2(fnValue =, stack(offset 1, name n), constant(0)))), resultCode stack(offset 1, name fact)))"
 >   : string
 
 (*) val collate : ('a * 'a -> order) -> 'a list * 'a list -> order

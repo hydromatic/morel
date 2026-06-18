@@ -672,7 +672,7 @@ val SOME i = SOME 1;
 > val i = 1 : int
 
 val SOME i = NONE;
-> uncaught exception Bind
+> uncaught exception Bind [nonexhaustive binding failure]
 >   raised at: stdIn:1.5-1.18
 
 val SOME (q as (1, i), SOME true) = SOME ((1, 2), SOME true);
@@ -680,7 +680,7 @@ val SOME (q as (1, i), SOME true) = SOME ((1, 2), SOME true);
 > val i = 2 : int
 
 val SOME (i, NONE) = SOME (1, SOME false);
-> uncaught exception Bind
+> uncaught exception Bind [nonexhaustive binding failure]
 >   raised at: stdIn:1.5-1.42
 
 Sys.set ("matchCoverageEnabled", false);
@@ -688,14 +688,14 @@ Sys.set ("matchCoverageEnabled", false);
 val (i, true) = (1, true);
 > val i = 1 : int
 val (i, false) = (1, true);
-> uncaught exception Bind
+> uncaught exception Bind [nonexhaustive binding failure]
 >   raised at: stdIn:1.5-1.27
 let
   val (i, false) = (1, true)
 in
   i + 1
 end;
-> uncaught exception Bind
+> uncaught exception Bind [nonexhaustive binding failure]
 >   raised at: stdIn:2.7-2.29
 Sys.unset "matchCoverageEnabled";
 > val it = () : unit

@@ -145,7 +145,7 @@ class Simplifier {
         }
 
         if (apply.isCallTo(BuiltIn.OP_MINUS)
-            || apply.isCallTo(BuiltIn.Z_MINUS_INT)) {
+            || apply.isCallTo(BuiltIn.INT_OP_MINUS)) {
           // Check for
           //   (x + y) - x => y
           //   (y + x) - x => y
@@ -153,7 +153,7 @@ class Simplifier {
           if (args.get(0).op == Op.APPLY) {
             Core.Apply left = (Core.Apply) args.get(0);
             if (left.isCallTo(BuiltIn.OP_PLUS)
-                || left.isCallTo(BuiltIn.Z_PLUS_INT)) {
+                || left.isCallTo(BuiltIn.INT_OP_PLUS)) {
               // Check if leftApply.arg(0) equals right: (x + y) - x => y
               if (expEquals(left.arg(0), args.get(1))) {
                 return left.arg(1);
@@ -166,7 +166,7 @@ class Simplifier {
               if (args.get(1).op == Op.APPLY) {
                 Core.Apply rightApply = (Core.Apply) args.get(1);
                 if (rightApply.isCallTo(BuiltIn.OP_PLUS)
-                    || rightApply.isCallTo(BuiltIn.Z_PLUS_INT)) {
+                    || rightApply.isCallTo(BuiltIn.INT_OP_PLUS)) {
                   // Check if leftApply.arg(0) equals rightApply.arg(0):
                   // (x + y) - (x + z) => y - z
                   if (expEquals(left.arg(0), rightApply.arg(0))) {
@@ -208,7 +208,8 @@ class Simplifier {
                     ((Core.Literal) args.get(1)).unwrap(BigDecimal.class);
                 Core.Exp c3 = core.intLiteral(c1.subtract(c2));
                 return simplify(
-                    core.call(typeSystem, BuiltIn.Z_PLUS_INT, left.arg(0), c3));
+                    core.call(
+                        typeSystem, BuiltIn.INT_OP_PLUS, left.arg(0), c3));
               }
             }
           }
@@ -234,7 +235,7 @@ class Simplifier {
           }
           return apply;
         } else if (apply.isCallTo(BuiltIn.OP_PLUS)
-            || apply.isCallTo(BuiltIn.Z_PLUS_INT)) {
+            || apply.isCallTo(BuiltIn.INT_OP_PLUS)) {
           // Check for constant addition
           if (args.get(0).op == Op.INT_LITERAL
               && args.get(1).op == Op.INT_LITERAL) {
@@ -250,17 +251,17 @@ class Simplifier {
           if (args.get(0).op == Op.APPLY) {
             Core.Apply left = (Core.Apply) args.get(0);
             if (left.isCallTo(BuiltIn.OP_PLUS)
-                || left.isCallTo(BuiltIn.Z_PLUS_INT)) {
+                || left.isCallTo(BuiltIn.INT_OP_PLUS)) {
               Core.Exp x = left.arg(0);
               Core.Exp y = left.arg(1);
               if (args.get(1).op == Op.INT_LITERAL) {
                 return simplify(
                     core.call(
                         typeSystem,
-                        BuiltIn.Z_PLUS_INT,
+                        BuiltIn.INT_OP_PLUS,
                         x,
                         core.call(
-                            typeSystem, BuiltIn.Z_PLUS_INT, y, args.get(1))));
+                            typeSystem, BuiltIn.INT_OP_PLUS, y, args.get(1))));
               }
             }
           }

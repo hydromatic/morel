@@ -1129,8 +1129,8 @@ public class MainTest {
     // "fn (a, b, c) => (a + b) * 3 - c"
     final String plan =
         "match(v, tailApply(fnCode match((a, b, c), "
-            + "apply2(fnValue -, apply2(fnValue *, "
-            + "apply2(fnValue +, stack(offset 3, name a), stack(offset 2, name b)), "
+            + "apply2(fnValue Int.-, apply2(fnValue Int.*, "
+            + "apply2(fnValue Int.+, stack(offset 3, name a), stack(offset 2, name b)), "
             + "constant(3)), stack(offset 1, name c))), argCode stack(offset 1, name v)))";
     ml(ml)
         // g (4, 3, 2) = (4 + 3) * 3 - 2 = 19
@@ -2924,7 +2924,7 @@ public class MainTest {
             + "sink group(key tuple(apply(fnValue nth:0, argCode stack(offset 1, name r))), "
             + "agg aggregate, "
             + "sink collect(tuple(get(name a), "
-            + "apply2(fnValue +, get(name a), get(name a)), "
+            + "apply2(fnValue Int.+, get(name a), get(name a)), "
             + "get(name sb))))))";
     ml(ml)
         .assertParse(expected)

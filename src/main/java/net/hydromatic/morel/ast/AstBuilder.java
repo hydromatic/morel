@@ -683,7 +683,7 @@ public enum AstBuilder {
    * reference (e.g. "#hd List").
    */
   public Ast.Exp ref(Pos pos, BuiltIn builtIn) {
-    if (builtIn.structure == null) {
+    if (builtIn.structure.equals("Top")) {
       return id(pos, builtIn.mlName);
     } else {
       return apply(

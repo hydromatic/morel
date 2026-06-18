@@ -1409,7 +1409,7 @@ public class LintTest {
     final Set<String> missing = new TreeSet<>();
     for (BuiltIn builtIn : BuiltIn.values()) {
       final String structure = builtIn.structure;
-      if (structure == null
+      if (structure.equals("Top")
           || structure.equals("$")
           || structure.equals("Test")) {
         continue;
@@ -1446,7 +1446,7 @@ public class LintTest {
     final List<String> errors = new ArrayList<>();
     for (BuiltIn builtIn : BuiltIn.values()) {
       final String structure = builtIn.structure;
-      if (structure == null
+      if (structure.equals("Top")
           || structure.equals("$")
           || structure.equals("Test")) {
         continue;

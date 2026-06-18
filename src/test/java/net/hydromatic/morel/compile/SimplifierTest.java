@@ -65,7 +65,7 @@ public class SimplifierTest {
     checkSimplify(
         "(x + y) - (x + z) => y - z",
         "fn (x: int, y: int, z: int) => (x + y) - (x + z)",
-        "fn v => case v of (x, y, z) => -:int (y, z)");
+        "fn v => case v of (x, y, z) => #- Int (y, z)");
     checkSimplify("4 + 1 => 5", "4 + 1", "5");
     checkSimplify("4 - 1 => 3", "4 - 1", "3");
     checkSimplify("(9 + 1) - 2 => 8", "9 + 1 - 2", "8");

@@ -86,6 +86,11 @@ public class TypeSystem {
         // Nullary variant constructors: create proper variant instance.
         o = Variants.fromConstructor(tyConName, Unit.INSTANCE, this);
       }
+      if (dataType.name.equals(BuiltIn.Datatype.PSEUDO_BOOL.mlName())) {
+        // Boolean constructors: bind primitive values 'true' and 'false'.
+        o = Boolean.parseBoolean(tyConName);
+        return Binding.of(core.idPat(PrimitiveType.BOOL, tyConName, 0), o);
+      }
       return Binding.of(core.idPat(dataType, tyConName, 0), Codes.constant(o));
     } else {
       final Type type2 = wrap(dataType, fnType(type, dataType));

@@ -33,7 +33,7 @@ Fail "boom";
 
 (*) 'raise' on a nullary built-in exception.
 raise Bind;
-> uncaught exception Bind
+> uncaught exception Bind [nonexhaustive binding failure]
 >   raised at: stdIn:1.1-1.11
 
 (*) 'raise' on a built-in exception with a payload prints the payload.
@@ -63,7 +63,7 @@ f 0;
 > val it = () : unit
 
 f 1;
-> uncaught exception Bind
+> uncaught exception Bind [nonexhaustive binding failure]
 >   raised at: stdIn:1.25-1.35
 
 (*) End exception.smli

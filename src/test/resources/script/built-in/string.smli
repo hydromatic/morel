@@ -162,7 +162,7 @@ String.`^`;
 > val it = "abcdef" : string
 Sys.plan ();
 > val it =
->   "apply2(fnValue ^, apply2(fnValue ^, apply2(fnValue ^, constant(a), constant(bc)), constant()), constant(def))"
+>   "apply2(fnValue String.^, apply2(fnValue String.^, apply2(fnValue String.^, constant(a), constant(bc)), constant()), constant(def))"
 >   : string
 
 (*) val concat : string list -> string

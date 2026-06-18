@@ -505,12 +505,12 @@ from x in [1, 2, 3] where x < 2;
 
 (*) AT_LEAST is unbounded above; enumeration raises Size.
 [5 ..] : int list;
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: 0.0-0.0
 
 (*) Similar for GREATER_THAN.
 [5 ^..] : int list;
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: 0.0-0.0
 
 (* Membership in infinite range-lists ----------------------------- *)
@@ -578,7 +578,7 @@ Range.flatten [POINT 1.0, POINT 3.0, POINT 1.0];
 
 (*) Non-POINT ranges over real are infinite.
 [0.0 .. 1.0];
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: 0.0-0.0
 
 (*) Same for string.
@@ -586,7 +586,7 @@ Range.flatten [POINT 1.0, POINT 3.0, POINT 1.0];
 > val it = ["a"] : string list
 
 ["a" .. "z"];
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: 0.0-0.0
 
 (*) End range.smli

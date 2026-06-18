@@ -168,7 +168,7 @@ Sys.plan ();
 Relational.only [2];
 > val it = 2 : int
 Relational.only [1, 2, 3];
-> uncaught exception Size
+> uncaught exception Size [size]
 >   raised at: stdIn:1.1-1.26
 Relational.only [];
 > uncaught exception Empty

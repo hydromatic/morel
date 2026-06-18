@@ -29,7 +29,7 @@ val a = 2 + 3;
 val a = 5 : int
 
 Sys.plan();
-val it = "apply2(fnValue +, constant(2), constant(3))" : string
+val it = "apply2(fnValue Int.+, constant(2), constant(3))" : string
 
 val b = 20;
 val b = 20 : int
@@ -50,7 +50,7 @@ uncaught exception Subscript [subscript out of bounds]
 (*) plan is for the unsuccessful expression:
 Sys.plan();
 val it =
-  "apply2(fnValue String.sub, constant(xyz), apply2(fnValue -, constant(20), constant(1)))"
+  "apply2(fnValue String.sub, constant(xyz), apply2(fnValue Int.-, constant(20), constant(1)))"
   : string
 
 (*) a is still an int:

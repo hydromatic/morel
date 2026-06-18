@@ -696,7 +696,7 @@ public class SignatureChecker {
 
   private static String alphaName(String signatureName) {
     switch (signatureName) {
-        // lint: sort until '#}' where '##case '
+        // lint: sort until '#}' where '#case '
       case "/":
         return "divide";
       case "^":

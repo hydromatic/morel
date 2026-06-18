@@ -115,9 +115,9 @@ class PatternCoverageChecker {
         return;
 
       case BOOL_LITERAL_PAT:
-        // Transform false to FALSE and true to TRUE, constructor of the
+        // Transform the boolean literal to the corresponding constructor of the
         // internal $bool datatype:
-        //   datatype $bool = FALSE | TRUE
+        //   datatype $bool = false | true
         // Knowing there are only two values allows us to prove that patterns
         // are exhaustive.
         final DataType boolDataType =

@@ -62,8 +62,8 @@ public class InlineTest {
   void testInline() {
     final String ml = "fun f x = let val y = x + 1 in y + 2 end";
     final String plan =
-        "match(x, apply2(fnValue +, "
-            + "apply2(fnValue +, stack(offset 1, name x), constant(1)), "
+        "match(x, apply2(fnValue Int.+, "
+            + "apply2(fnValue Int.+, stack(offset 1, name x), constant(1)), "
             + "constant(2)))";
     ml(ml).assertPlan(isCode(plan));
   }
@@ -78,7 +78,7 @@ public class InlineTest {
             + "    succ x\n"
             + "  end";
     final String plan =
-        "match(x, apply2(fnValue +, stack(offset 1, name x), constant(1)))";
+        "match(x, apply2(fnValue Int.+, stack(offset 1, name x), constant(1)))";
     ml(ml).assertPlan(isCode(plan)).assertEval(whenAppliedTo(2, is(3)));
   }
 
@@ -202,11 +202,11 @@ public class InlineTest {
     final String core1 =
         "val it = "
             + "from e in #emps scott "
-            + "where let val n = #empno e in op mod (n, 2) = 0 end yield #deptno e";
+            + "where let val n = #empno e in #mod Int (n, 2) = 0 end yield #deptno e";
     final String core2 =
         "val it = "
             + "from e in #emps scott "
-            + "where op mod (#empno e, 2) = 0 yield #deptno e";
+            + "where #mod Int (#empno e, 2) = 0 yield #deptno e";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertCoreString(
@@ -243,14 +243,14 @@ public class InlineTest {
             + "from e_1 in "
             + "(let val x = 1"
             + " in from e in #emps scott"
-            + " where op mod (#empno e, 2) = 0 "
+            + " where #mod Int (#empno e, 2) = 0 "
             + "end)"
             + " where #deptno e_1 = 10"
             + " yield #ename e_1";
     final String core2 =
         "val it = "
             + "from e in #emps scott "
-            + "where op mod (#empno e, 2) = 0 "
+            + "where #mod Int (#empno e, 2) = 0 "
             + "yield {e = e} "
             + "where #deptno e_1 = 10 "
             + "yield #ename e_1";
@@ -357,7 +357,7 @@ public class InlineTest {
             + "from e in #emps scott "
             + "yield {i = #deptno e} "
             + "where i > 10 "
-            + "yield op div (i, 10)";
+            + "yield #div Int (i, 10)";
     ml(ml)
         .withBinding("scott", BuiltInDataSet.SCOTT)
         .assertCoreString(
@@ -433,7 +433,7 @@ public class InlineTest {
             hasToString(
                 "val it = "
                     + "let val v = (13, 5) "
-                    + "in case v of (x, y) => -:int (x, y) "
+                    + "in case v of (x, y) => #- Int (x, y) "
                     + "end"))
         .assertEval(is(8));
   }

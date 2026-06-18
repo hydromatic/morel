@@ -34,26 +34,28 @@ General;
 (*) val exnMessage : exn -> string
 General.exnMessage;
 > val it = fn : exn -> string
-(* TODO
 General.exnMessage Bind;
 > val it = "nonexhaustive binding failure" : string
-General.exnMessage Divide;
-> val it = "division by zero" : string
+General.exnMessage Div;
+> val it = "divide by zero" : string
 General.exnMessage Overflow;
-> val it = "integer overflow" : string
-*)
+> val it = "overflow" : string
+General.exnMessage Subscript;
+> val it = "subscript out of bounds" : string
+General.exnMessage (Fail "oops");
+> val it = "Fail: oops" : string
 
 (*) val exnName : exn -> string
 General.exnName;
 > val it = fn : exn -> string
-(* TODO
 General.exnName Bind;
 > val it = "Bind" : string
-General.exnName Divide;
-> val it = "Divide" : string
+General.exnName Div;
+> val it = "Div" : string
 General.exnName Overflow;
 > val it = "Overflow" : string
-*)
+General.exnName (Fail "x");
+> val it = "Fail" : string
 
 (*) op o - function composition
 General.`o`;
@@ -87,7 +89,7 @@ plusOne o timesTwo o plusThree;
 > val it = 13 : int
 Sys.plan ();
 > val it =
->   "apply(fnCode apply2(fnValue General.o, match(x, apply2(fnValue +, stack(offset 1, name x), constant(1))), apply2(fnValue General.o, match(x_1, apply2(fnValue *, stack(offset 1, name x), constant(2))), match(x_2, apply2(fnValue +, stack(offset 1, name x), constant(3))))), argCode constant(3))"
+>   "apply(fnCode apply2(fnValue General.o, match(x, apply2(fnValue Int.+, stack(offset 1, name x), constant(1))), apply2(fnValue General.o, match(x_1, apply2(fnValue Int.*, stack(offset 1, name x), constant(2))), match(x_2, apply2(fnValue Int.+, stack(offset 1, name x), constant(3))))), argCode constant(3))"
 >   : string
 
 General.ignore;
@@ -96,7 +98,7 @@ General.ignore (1 + 2);
 > val it = () : unit
 Sys.plan ();
 > val it =
->   "apply(fnValue General.ignore, argCode apply2(fnValue +, constant(1), constant(2)))"
+>   "apply(fnValue General.ignore, argCode apply2(fnValue Int.+, constant(1), constant(2)))"
 >   : string
 
 (*) End general.smli

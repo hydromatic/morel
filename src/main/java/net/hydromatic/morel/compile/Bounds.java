@@ -73,12 +73,12 @@ final class Bounds {
     }
     final Core.Apply apply = (Core.Apply) exp;
     final BuiltIn op = apply.builtIn();
-    if (op != BuiltIn.Z_PLUS_INT
+    if (op != BuiltIn.INT_OP_PLUS
         && op != BuiltIn.OP_PLUS
-        && op != BuiltIn.Z_MINUS_INT
+        && op != BuiltIn.INT_OP_MINUS
         && op != BuiltIn.OP_MINUS
-        && op != BuiltIn.Z_PLUS_REAL
-        && op != BuiltIn.Z_MINUS_REAL) {
+        && op != BuiltIn.REAL_OP_PLUS
+        && op != BuiltIn.REAL_OP_MINUS) {
       return null;
     }
     final Term a = linearTerm(apply.arg(0));
@@ -87,9 +87,9 @@ final class Bounds {
       return null;
     }
     final boolean minus =
-        op == BuiltIn.Z_MINUS_INT
+        op == BuiltIn.INT_OP_MINUS
             || op == BuiltIn.OP_MINUS
-            || op == BuiltIn.Z_MINUS_REAL;
+            || op == BuiltIn.REAL_OP_MINUS;
     final BigDecimal otherOffset = minus ? b.offset.negate() : b.offset;
     if (a.var != null && b.var != null) {
       // Linear combination of two distinct variables; we don't model

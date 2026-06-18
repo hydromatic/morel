@@ -28,11 +28,13 @@ Sys.set ("stringDepth", ~1);
 
 Int;
 > val it =
->   {+=fn,abs=fn,compare=fn,`div`=fn,fmt=fn,fromInt=fn,fromLarge=fn,
->    fromString=fn,max=fn,maxInt=SOME 2147483647,min=fn,minInt=SOME ~2147483648,
->    `mod`=fn,precision=SOME 32,quot=fn,rem=fn,sameSign=fn,sign=fn,toInt=fn,
->    toLarge=fn,toString=fn,~=fn}
->   : {+:int * int -> int, abs:int -> int, compare:int * int -> order,
+>   {*=fn,+=fn,-=fn,<=fn,<==fn,>=fn,>==fn,abs=fn,compare=fn,`div`=fn,fmt=fn,
+>    fromInt=fn,fromLarge=fn,fromString=fn,max=fn,maxInt=SOME 2147483647,min=fn,
+>    minInt=SOME ~2147483648,`mod`=fn,precision=SOME 32,quot=fn,rem=fn,
+>    sameSign=fn,sign=fn,toInt=fn,toLarge=fn,toString=fn,~=fn}
+>   : {*:int * int -> int, +:int * int -> int, -:int * int -> int,
+>      <:int * int -> bool, <=:int * int -> bool, >:int * int -> bool,
+>      >=:int * int -> bool, abs:int -> int, compare:int * int -> order,
 >      `div`:int * int -> int, fmt:radix -> int -> string, fromInt:int -> int,
 >      fromLarge:int -> int, fromString:string -> int option,
 >      max:int * int -> int, maxInt:int option, min:int * int -> int,
@@ -41,13 +43,26 @@ Int;
 >      sign:int -> int, toInt:int -> int, toLarge:int -> int,
 >      toString:int -> string, ~:int -> int}
 
-(* Operators "+" and "~" are also available as members of the Int structure. *)
+(* The arithmetic and comparison operators are also available as members of
+ * the Int structure. *)
 Int.`+` (1, 2);
 > val it = 3 : int
+Int.`-` (5, 3);
+> val it = 2 : int
+Int.`*` (5, 3);
+> val it = 15 : int
 Int.`~` 2;
 > val it = ~2 : int
 Int.`~` ~3;
 > val it = 3 : int
+Int.`<` (3, 5);
+> val it = true : bool
+Int.`<=` (5, 5);
+> val it = true : bool
+Int.`>` (3, 5);
+> val it = false : bool
+Int.`>=` (5, 5);
+> val it = true : bool
 
 Int.abs;
 > val it = fn : int -> int
@@ -60,7 +75,7 @@ Int.abs ~3;
 (~3).abs ();
 > val it = 3 : int
 Int.abs (valOf Int.minInt);
-> uncaught exception Overflow
+> uncaught exception Overflow [overflow]
 >   raised at: stdIn:1.1-1.26
 Int.compare;
 > val it = fn : int * int -> order

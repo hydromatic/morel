@@ -35,7 +35,6 @@ import static org.apache.calcite.util.Util.first;
 import static org.apache.calcite.util.Util.intersects;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.Range;
 import java.math.BigDecimal;
@@ -81,18 +80,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Converts AST expressions to Core expressions. */
 public class Resolver {
-  /** Map from {@link Op} to {@link BuiltIn}. */
-  public static final ImmutableMap<Op, BuiltIn> OP_BUILT_IN_MAP =
-      Init.INSTANCE.opBuiltInMap;
-
-  /**
-   * Map from {@link BuiltIn}, to {@link Op}; the reverse of {@link
-   * #OP_BUILT_IN_MAP}, and needed when we convert an optimized expression back
-   * to human-readable Morel code.
-   */
-  public static final ImmutableMap<BuiltIn, Op> BUILT_IN_OP_MAP =
-      Init.INSTANCE.builtInOpMap;
-
   final TypeMap typeMap;
   final NameGenerator nameGenerator;
   final Environment env;
@@ -910,8 +897,70 @@ public class Resolver {
         typeMap.typeSystem, core.not(typeMap.typeSystem, core0), core1);
   }
 
+  /** Returns the built-in function that an infix operator resolves to. */
   private BuiltIn toBuiltIn(Op op) {
-    return OP_BUILT_IN_MAP.get(op);
+    switch (op) {
+      case AT:
+        return BuiltIn.LIST_AT;
+      case CONS:
+        return BuiltIn.OP_CONS;
+      case EQ:
+        return BuiltIn.OP_EQ;
+      case GE:
+        return BuiltIn.OP_GE;
+      case GT:
+        return BuiltIn.OP_GT;
+      case LE:
+        return BuiltIn.OP_LE;
+      case LT:
+        return BuiltIn.OP_LT;
+      case NE:
+        return BuiltIn.OP_NE;
+      case ANDALSO:
+        return BuiltIn.Z_ANDALSO;
+      case ORELSE:
+        return BuiltIn.Z_ORELSE;
+      case PLUS:
+        return BuiltIn.REAL_OP_PLUS;
+      default:
+        throw new AssertionError(op);
+    }
+  }
+
+  /**
+   * Returns the infix operator that a built-in function renders as, or null if
+   * it has no infix form. The reverse of {@link #toBuiltIn}; used to convert an
+   * optimized expression back to human-readable Morel code (see {@link
+   * Core.Apply#unparse}).
+   */
+  public static @Nullable Op toOp(BuiltIn builtIn) {
+    switch (builtIn) {
+      case LIST_AT:
+        return Op.AT;
+      case OP_CONS:
+        return Op.CONS;
+      case OP_EQ:
+        return Op.EQ;
+      case OP_GE:
+        return Op.GE;
+      case OP_GT:
+        return Op.GT;
+      case OP_LE:
+        return Op.LE;
+      case OP_LT:
+        return Op.LT;
+      case OP_NE:
+        return Op.NE;
+      case Z_ANDALSO:
+        return Op.ANDALSO;
+      case Z_ORELSE:
+        return Op.ORELSE;
+      case INT_OP_PLUS:
+      case REAL_OP_PLUS:
+        return Op.PLUS;
+      default:
+        return null;
+    }
   }
 
   private Core.Fn toCore(Ast.Fn fn) {
@@ -1168,40 +1217,6 @@ public class Resolver {
   }
 
   /** Helper for initialization. */
-  private enum Init {
-    INSTANCE;
-
-    final ImmutableMap<Op, BuiltIn> opBuiltInMap;
-    final ImmutableMap<BuiltIn, Op> builtInOpMap;
-
-    Init() {
-      Object[] values = {
-        BuiltIn.LIST_AT, Op.AT,
-        BuiltIn.OP_CONS, Op.CONS,
-        BuiltIn.OP_EQ, Op.EQ,
-        BuiltIn.OP_GE, Op.GE,
-        BuiltIn.OP_GT, Op.GT,
-        BuiltIn.OP_LE, Op.LE,
-        BuiltIn.OP_LT, Op.LT,
-        BuiltIn.OP_NE, Op.NE,
-        BuiltIn.Z_ANDALSO, Op.ANDALSO,
-        BuiltIn.Z_ORELSE, Op.ORELSE,
-        BuiltIn.Z_PLUS_INT, Op.PLUS,
-        BuiltIn.Z_PLUS_REAL, Op.PLUS,
-      };
-      final ImmutableMap.Builder<BuiltIn, Op> b2o = ImmutableMap.builder();
-      final Map<Op, BuiltIn> o2b = new HashMap<>();
-      for (int i = 0; i < values.length / 2; i++) {
-        BuiltIn builtIn = (BuiltIn) values[i * 2];
-        Op op = (Op) values[i * 2 + 1];
-        b2o.put(builtIn, op);
-        o2b.put(op, builtIn);
-      }
-      builtInOpMap = b2o.build();
-      opBuiltInMap = ImmutableMap.copyOf(o2b);
-    }
-  }
-
   /**
    * Resolved declaration. It can be converted to an expression given a result
    * expression; depending on sub-type, that expression will either be a {@code

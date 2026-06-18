@@ -909,9 +909,9 @@ class Fbbt {
         return false;
       }
       final BuiltIn op = exp.builtIn();
-      return op == BuiltIn.Z_TIMES_INT
+      return op == BuiltIn.INT_OP_TIMES
           || op == BuiltIn.OP_TIMES
-          || op == BuiltIn.Z_TIMES_REAL;
+          || op == BuiltIn.REAL_OP_TIMES;
     }
   }
 }

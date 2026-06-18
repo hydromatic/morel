@@ -57,34 +57,22 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Built-in constants and functions. */
 public enum BuiltIn {
-  /** Literal "true", of type "bool". */
-  TRUE(null, "true", ts -> BOOL),
-
-  /** Literal "false", of type "bool". */
-  FALSE(null, "false", ts -> BOOL),
-
-  /** Function "not", of type "bool &rarr; bool". */
-  NOT(null, "not", ts -> ts.fnType(BOOL, BOOL)),
-
   /**
    * Function "abs", of type "&alpha; &rarr; &alpha;" (where &alpha; must be
    * numeric).
    */
   ABS(
-      null,
+      "Top",
       "abs",
       PrimitiveType.INT,
       ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0)))),
-
-  /** Infix operator "^", of type "string * string &rarr; string". */
-  OP_CARET(null, "op ^", ts -> ts.fnType(ts.tupleType(STRING, STRING), STRING)),
 
   /**
    * Infix operator "::" (list cons), of type "&alpha; * &alpha; list &rarr;
    * &alpha; list".
    */
   OP_CONS(
-      null,
+      "Top",
       "op ::",
       ts ->
           ts.forallType(
@@ -94,12 +82,9 @@ public enum BuiltIn {
                       ts.tupleType(h.get(0), ts.listType(h.get(0))),
                       ts.listType(h.get(0))))),
 
-  /** Infix operator "div", of type "int * int &rarr; int". */
-  OP_DIV(null, "op div", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
   /** Infix operator "=", of type "&alpha; * &alpha; &rarr; bool". */
   OP_EQ(
-      null,
+      "Top",
       "op =",
       ts ->
           ts.forallType(
@@ -110,7 +95,7 @@ public enum BuiltIn {
    * &alpha; must be comparable).
    */
   OP_GE(
-      null,
+      "Top",
       "op >=",
       ts ->
           ts.forallType(
@@ -121,7 +106,7 @@ public enum BuiltIn {
    * &alpha; must be comparable).
    */
   OP_GT(
-      null,
+      "Top",
       "op >",
       ts ->
           ts.forallType(
@@ -132,7 +117,7 @@ public enum BuiltIn {
    * &alpha; must be comparable).
    */
   OP_LE(
-      null,
+      "Top",
       "op <=",
       ts ->
           ts.forallType(
@@ -143,7 +128,7 @@ public enum BuiltIn {
    * &alpha; must be comparable).
    */
   OP_LT(
-      null,
+      "Top",
       "op <",
       ts ->
           ts.forallType(
@@ -151,7 +136,7 @@ public enum BuiltIn {
 
   /** Infix operator "&lt;&gt;", of type "&alpha; * &alpha; &rarr; bool". */
   OP_NE(
-      null,
+      "Top",
       "op <>",
       ts ->
           ts.forallType(
@@ -162,7 +147,7 @@ public enum BuiltIn {
    * bool" and "&alpha; * &alpha; list &rarr; bool".
    */
   OP_ELEM(
-      null,
+      "Top",
       "op elem",
       ts ->
           ts.multi(
@@ -176,7 +161,7 @@ public enum BuiltIn {
    * bool". and "&alpha; * &alpha; list &rarr; bool".
    */
   OP_NOT_ELEM(
-      null,
+      "Top",
       "op notelem",
       ts ->
           ts.multi(
@@ -190,22 +175,19 @@ public enum BuiltIn {
    * &alpha; must be numeric).
    */
   OP_MINUS(
-      null,
+      "Top",
       "op -",
       PrimitiveType.INT,
       ts ->
           ts.forallType(
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
 
-  /** Infix operator "mod", of type "int * int &rarr; int". */
-  OP_MOD(null, "op mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
   /**
    * Infix operator "+", of type "&alpha; * &alpha; &rarr; &alpha;" (where
    * &alpha; must be numeric).
    */
   OP_PLUS(
-      null,
+      "Top",
       "op +",
       PrimitiveType.INT,
       ts ->
@@ -217,7 +199,7 @@ public enum BuiltIn {
    * be numeric).
    */
   OP_NEGATE(
-      null,
+      "Top",
       "op ~",
       PrimitiveType.INT,
       ts -> ts.forallType(1, h -> ts.fnType(h.get(0), h.get(0)))),
@@ -227,7 +209,7 @@ public enum BuiltIn {
    * &alpha; must be numeric).
    */
   OP_TIMES(
-      null,
+      "Top",
       "op *",
       PrimitiveType.INT,
       ts ->
@@ -383,7 +365,6 @@ public enum BuiltIn {
   BAG_FROM_LIST(
       "Bag",
       "fromList",
-      "bag",
       ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.bag(0)))),
 
   /**
@@ -696,7 +677,7 @@ public enum BuiltIn {
    * <p>"chr i" returns the character whose code is {@code i}. Raises {@link
    * BuiltInExn#CHR Chr} if {@code i < 0 or i > maxOrd}.
    */
-  CHAR_CHR("Char", "chr", "chr", ts -> ts.fnType(INT, CHAR)),
+  CHAR_CHR("Char", "chr", ts -> ts.fnType(INT, CHAR)),
 
   /**
    * Function "Char.compare" of type "char * char &rarr; order".
@@ -1511,7 +1492,6 @@ public enum BuiltIn {
   GENERAL_IGNORE(
       "General",
       "ignore",
-      "ignore",
       ts -> ts.forallType(1, h -> ts.fnType(h.get(0), UNIT))),
 
   /**
@@ -1524,7 +1504,6 @@ public enum BuiltIn {
   GENERAL_O(
       "General",
       "o",
-      "op o",
       ts ->
           ts.forallType(
               3,
@@ -1623,6 +1602,42 @@ public enum BuiltIn {
   INT_MOD("Int", "mod", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
   /**
+   * Operator "Int.&gt;=", of type "int * int &rarr; bool".
+   *
+   * <p>"i &ge; j" returns true if {@code i} is greater than or equal to {@code
+   * j}.
+   */
+  INT_OP_GE("Int", ">=", ts -> ts.fnType(ts.tupleType(INT, INT), BOOL)),
+
+  /**
+   * Operator "Int.&gt;", of type "int * int &rarr; bool".
+   *
+   * <p>"i &gt; j" returns true if {@code i} is greater than {@code j}.
+   */
+  INT_OP_GT("Int", ">", ts -> ts.fnType(ts.tupleType(INT, INT), BOOL)),
+
+  /**
+   * Operator "Int.&lt;=", of type "int * int &rarr; bool".
+   *
+   * <p>"i &le; j" returns true if {@code i} is less than or equal to {@code j}.
+   */
+  INT_OP_LE("Int", "<=", ts -> ts.fnType(ts.tupleType(INT, INT), BOOL)),
+
+  /**
+   * Operator "Int.&lt;", of type "int * int &rarr; bool".
+   *
+   * <p>"i &lt; j" returns true if {@code i} is less than {@code j}.
+   */
+  INT_OP_LT("Int", "<", ts -> ts.fnType(ts.tupleType(INT, INT), BOOL)),
+
+  /**
+   * Operator "Int.-", of type "int * int &rarr; int".
+   *
+   * <p>"i - j" returns the difference of {@code i} and {@code j}.
+   */
+  INT_OP_MINUS("Int", "-", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /**
    * Operator "Int.~", of type "int &rarr; int".
    *
    * <p>"~ i" returns the negation of {@code i}.
@@ -1635,6 +1650,13 @@ public enum BuiltIn {
    * <p>"i + j" returns the sum of {@code i} and {@code j}.
    */
   INT_OP_PLUS("Int", "+", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
+
+  /**
+   * Operator "Int.*", of type "int * int &rarr; int".
+   *
+   * <p>"i * j" returns the product of {@code i} and {@code j}.
+   */
+  INT_OP_TIMES("Int", "*", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
 
   /** Constant "Int.precision", of type "int option". */
   INT_PRECISION("Int", "precision", ts -> ts.option(INT)),
@@ -1693,7 +1715,7 @@ public enum BuiltIn {
    *
    * <p>"use f" loads source text from the file named `f`.
    */
-  INTERACT_USE("Interact", "use", "use", ts -> ts.fnType(STRING, UNIT)),
+  INTERACT_USE("Interact", "use", ts -> ts.fnType(STRING, UNIT)),
 
   /**
    * Function "Interact.useSilently" of type "string &rarr; unit"
@@ -1702,7 +1724,7 @@ public enum BuiltIn {
    * printing to stdout.
    */
   INTERACT_USE_SILENTLY(
-      "Interact", "useSilently", "useSilently", ts -> ts.fnType(STRING, UNIT)),
+      "Interact", "useSilently", ts -> ts.fnType(STRING, UNIT)),
 
   /**
    * Function "List.all", of type "(&alpha; &rarr; bool) &rarr; &alpha; list
@@ -1726,7 +1748,6 @@ public enum BuiltIn {
   LIST_APP(
       "List",
       "app",
-      "app",
       ts ->
           ts.forallType(
               1, h -> ts.fnType(ts.fnType(h.get(0), UNIT), h.list(0), UNIT))),
@@ -1740,7 +1761,6 @@ public enum BuiltIn {
   LIST_AT(
       "List",
       "@",
-      "op @",
       ts ->
           ts.forallType(
               1,
@@ -1865,7 +1885,6 @@ public enum BuiltIn {
   LIST_FOLDL(
       "List",
       "foldl",
-      "foldl",
       ts ->
           ts.forallType(
               2,
@@ -1885,7 +1904,6 @@ public enum BuiltIn {
    */
   LIST_FOLDR(
       "List",
-      "foldr",
       "foldr",
       ts ->
           ts.forallType(
@@ -1929,7 +1947,6 @@ public enum BuiltIn {
   LIST_HD(
       "List",
       "hd",
-      "hd",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.get(0)))),
 
@@ -1965,7 +1982,6 @@ public enum BuiltIn {
   LIST_LENGTH(
       "List",
       "length",
-      "length",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.list(0), INT))),
 
@@ -1978,7 +1994,6 @@ public enum BuiltIn {
    */
   LIST_MAP(
       "List",
-      "map",
       "map",
       ts ->
           ts.forallType(
@@ -2056,7 +2071,6 @@ public enum BuiltIn {
    */
   LIST_NULL(
       "List",
-      "null",
       "null",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.list(0), BOOL))),
@@ -2448,7 +2462,6 @@ public enum BuiltIn {
   LIST_REV(
       "List",
       "rev",
-      "rev",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
 
@@ -2508,7 +2521,6 @@ public enum BuiltIn {
    */
   LIST_TL(
       "List",
-      "tl",
       "tl",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.list(0)))),
@@ -2795,7 +2807,6 @@ public enum BuiltIn {
   OPTION_GET_OPT(
       "Option",
       "getOpt",
-      "getOpt",
       true,
       ts ->
           ts.forallType(
@@ -2810,7 +2821,6 @@ public enum BuiltIn {
    */
   OPTION_IS_SOME(
       "Option",
-      "isSome",
       "isSome",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.option(0), BOOL))),
@@ -2881,7 +2891,6 @@ public enum BuiltIn {
   OPTION_VAL_OF(
       "Option",
       "valOf",
-      "valOf",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.option(0), h.get(0)))),
 
@@ -2902,7 +2911,6 @@ public enum BuiltIn {
   RANGE_CONTINUOUS_SET_COMPLEMENT(
       "Range",
       "complement",
-      "$csComplement",
       true,
       ts ->
           ts.forallType(
@@ -2915,7 +2923,6 @@ public enum BuiltIn {
   RANGE_CONTINUOUS_SET_CONTAINS(
       "Range",
       "contains",
-      "$csContains",
       true,
       ts ->
           ts.forallType(1, h -> ts.fnType(h.continuousSet(0), h.get(0), BOOL))),
@@ -2950,7 +2957,6 @@ public enum BuiltIn {
   RANGE_DISCRETE_SET_COMPLEMENT(
       "Range",
       "complement",
-      "$dsComplement",
       true,
       ts ->
           ts.forallType(1, h -> ts.fnType(h.discreteSet(0), h.discreteSet(0)))),
@@ -2962,7 +2968,6 @@ public enum BuiltIn {
   RANGE_DISCRETE_SET_CONTAINS(
       "Range",
       "contains",
-      "$dsContains",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.discreteSet(0), h.get(0), BOOL))),
 
@@ -2984,7 +2989,6 @@ public enum BuiltIn {
   RANGE_DISCRETE_SET_RANGES(
       "Range",
       "ranges",
-      "$dsRanges",
       true,
       ts ->
           ts.forallType(
@@ -3034,7 +3038,7 @@ public enum BuiltIn {
    *
    * <p>Returns largest int not larger than {@code r}.
    */
-  REAL_CEIL("Real", "ceil", "ceil", true, ts -> ts.fnType(REAL, INT)),
+  REAL_CEIL("Real", "ceil", true, ts -> ts.fnType(REAL, INT)),
 
   /**
    * Function "Real.checkFloat", of type "real &rarr; real".
@@ -3068,15 +3072,14 @@ public enum BuiltIn {
       ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
   /** Function "Real./", of type "real * real &rarr; real". */
-  REAL_DIVIDE(
-      "Real", "/", "op /", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
+  REAL_DIVIDE("Real", "/", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
   /**
    * Function "Real.floor", of type "real &rarr; int".
    *
    * <p>Returns smallest int not less than {@code r}.
    */
-  REAL_FLOOR("Real", "floor", "floor", true, ts -> ts.fnType(REAL, INT)),
+  REAL_FLOOR("Real", "floor", true, ts -> ts.fnType(REAL, INT)),
 
   /**
    * Function "Real.fmt", of type "StringCvt.realfmt &rarr; real &rarr; string".
@@ -3102,7 +3105,7 @@ public enum BuiltIn {
    * the current rounding mode is used to determine the resulting value. The
    * top-level function {@code real} is an alias for {@code Real.fromInt}.
    */
-  REAL_FROM_INT("Real", "fromInt", "real", ts -> ts.fnType(INT, REAL)),
+  REAL_FROM_INT("Real", "fromInt", ts -> ts.fnType(INT, REAL)),
 
   /**
    * Function "Real.fromManExp r", of type "{exp:int, man:real} &rarr; real"
@@ -3346,7 +3349,7 @@ public enum BuiltIn {
    * <p>Returns the integer nearest to {@code r}. In the case of a tie, it
    * rounds to the nearest even integer.
    */
-  REAL_ROUND("Real", "round", "round", true, ts -> ts.fnType(REAL, INT)),
+  REAL_ROUND("Real", "round", true, ts -> ts.fnType(REAL, INT)),
 
   /**
    * Function "Real.sameSign", of type "real * real &rarr; bool".
@@ -3429,7 +3432,7 @@ public enum BuiltIn {
    *
    * <p>Returns {@code r} rounded towards zero.
    */
-  REAL_TRUNC("Real", "trunc", "trunc", true, ts -> ts.fnType(REAL, INT)),
+  REAL_TRUNC("Real", "trunc", true, ts -> ts.fnType(REAL, INT)),
 
   /**
    * Function "Real.unordered", of type "real * real &rarr; bool".
@@ -3465,7 +3468,6 @@ public enum BuiltIn {
   RELATIONAL_COMPARE(
       "Relational",
       "compare",
-      "compare",
       ts ->
           ts.forallType(
               1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), ts.order()))),
@@ -3483,7 +3485,6 @@ public enum BuiltIn {
    */
   RELATIONAL_COUNT(
       "Relational",
-      "count",
       "count",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), INT))),
@@ -3517,7 +3518,6 @@ public enum BuiltIn {
   RELATIONAL_EMPTY(
       "Relational",
       "empty",
-      "empty",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
 
@@ -3530,7 +3530,6 @@ public enum BuiltIn {
    */
   RELATIONAL_ITERATE(
       "Relational",
-      "iterate",
       "iterate",
       true,
       ts ->
@@ -3558,7 +3557,6 @@ public enum BuiltIn {
   RELATIONAL_MAX(
       "Relational",
       "max",
-      "max",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
 
@@ -3568,7 +3566,6 @@ public enum BuiltIn {
    */
   RELATIONAL_MIN(
       "Relational",
-      "min",
       "min",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
@@ -3598,7 +3595,6 @@ public enum BuiltIn {
   RELATIONAL_NON_EMPTY(
       "Relational",
       "nonEmpty",
-      "nonEmpty",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), BOOL))),
 
@@ -3622,7 +3618,6 @@ public enum BuiltIn {
   RELATIONAL_ONLY(
       "Relational",
       "only",
-      "only",
       true,
       ts ->
           ts.multi(
@@ -3643,7 +3638,6 @@ public enum BuiltIn {
    */
   RELATIONAL_SUM(
       "Relational",
-      "sum",
       "sum",
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.bag(0), h.get(0)))),
@@ -3676,10 +3670,7 @@ public enum BuiltIn {
    * maxSize.
    */
   STRING_CONCAT(
-      "String",
-      "concat",
-      "concat",
-      ts -> ts.fnType(ts.listType(STRING), STRING)),
+      "String", "concat", ts -> ts.fnType(ts.listType(STRING), STRING)),
 
   /**
    * Function "String.concatWith", of type "string &rarr; string list &rarr;
@@ -3722,11 +3713,7 @@ public enum BuiltIn {
    * <p>"explode s" is the list of characters in the string s.
    */
   STRING_EXPLODE(
-      "String",
-      "explode",
-      "explode",
-      true,
-      ts -> ts.fnType(STRING, ts.listType(CHAR))),
+      "String", "explode", true, ts -> ts.fnType(STRING, ts.listType(CHAR))),
 
   /**
    * Function "String.extract", of type "string * int * int option &rarr;
@@ -3757,7 +3744,6 @@ public enum BuiltIn {
   STRING_FIELDS(
       "String",
       "fields",
-      "fields",
       ts -> ts.fnType(ts.fnType(CHAR, BOOL), STRING, ts.listType(STRING))),
 
   /**
@@ -3769,10 +3755,7 @@ public enum BuiltIn {
    * greater than maxSize.
    */
   STRING_IMPLODE(
-      "String",
-      "implode",
-      "implode",
-      ts -> ts.fnType(ts.listType(CHAR), STRING)),
+      "String", "implode", ts -> ts.fnType(ts.listType(CHAR), STRING)),
 
   /**
    * Function "String.isPrefix", of type "string &rarr; string &rarr; bool".
@@ -3853,14 +3836,14 @@ public enum BuiltIn {
    *
    * <p>"size s" returns |s|, the number of characters in string s.
    */
-  STRING_SIZE("String", "size", "size", true, ts -> ts.fnType(STRING, INT)),
+  STRING_SIZE("String", "size", true, ts -> ts.fnType(STRING, INT)),
 
   /**
    * Function "String.str", of type "char &rarr; string".
    *
    * <p>"str c" is the string of size one containing the character {@code c}.
    */
-  STRING_STR("String", "str", "str", ts -> ts.fnType(CHAR, STRING)),
+  STRING_STR("String", "str", ts -> ts.fnType(CHAR, STRING)),
 
   /**
    * Function "String.sub", of type "string * int &rarr; char".
@@ -3882,7 +3865,6 @@ public enum BuiltIn {
   STRING_SUBSTRING(
       "String",
       "substring",
-      "substring",
       true,
       ts -> ts.fnType(ts.tupleType(STRING, INT, INT), STRING)),
 
@@ -3892,7 +3874,6 @@ public enum BuiltIn {
    */
   STRING_TOKENS(
       "String",
-      "tokens",
       "tokens",
       ts -> ts.fnType(ts.fnType(CHAR, BOOL), STRING, ts.listType(STRING))),
 
@@ -3916,7 +3897,6 @@ public enum BuiltIn {
   SYS_ENV(
       "Sys",
       "env",
-      "env",
       ts -> ts.fnType(UNIT, ts.listType(ts.tupleType(STRING, STRING)))),
 
   /**
@@ -3928,7 +3908,6 @@ public enum BuiltIn {
    */
   SYS_FILE(
       "Sys",
-      "file",
       "file",
       ts ->
           ts.progressiveRecordType(
@@ -3950,7 +3929,7 @@ public enum BuiltIn {
   SYS_PARSE_TREE("Sys", "parseTree", ts -> ts.fnType(STRING, STRING)),
 
   /** Function "Sys.plan", aka "plan", of type "unit &rarr; string". */
-  SYS_PLAN("Sys", "plan", "plan", ts -> ts.fnType(UNIT, STRING)),
+  SYS_PLAN("Sys", "plan", ts -> ts.fnType(UNIT, STRING)),
 
   /**
    * Function "Sys.planEx", of type "string &rarr; string".
@@ -3965,13 +3944,12 @@ public enum BuiltIn {
   SYS_SET(
       "Sys",
       "set",
-      "set",
       ts ->
           ts.forallType(
               1, h -> ts.fnType(ts.tupleType(STRING, h.get(0)), UNIT))),
 
   /** Function "Sys.show", aka "show", of type "string &rarr; string option". */
-  SYS_SHOW("Sys", "show", "show", ts -> ts.fnType(STRING, ts.option(STRING))),
+  SYS_SHOW("Sys", "show", ts -> ts.fnType(STRING, ts.option(STRING))),
 
   /**
    * Function "Sys.showAll", aka "showAll", of type "unit &rarr; (string *
@@ -3980,13 +3958,12 @@ public enum BuiltIn {
   SYS_SHOW_ALL(
       "Sys",
       "showAll",
-      "showAll",
       ts ->
           ts.fnType(
               UNIT, ts.listType(ts.tupleType(STRING, ts.option(STRING))))),
 
   /** Function "Sys.unset", aka "unset", of type "string &rarr; unit". */
-  SYS_UNSET("Sys", "unset", "unset", ts -> ts.fnType(STRING, UNIT)),
+  SYS_UNSET("Sys", "unset", ts -> ts.fnType(STRING, UNIT)),
 
   /**
    * Test-only aggregate "Test.bagSum", of type "&alpha; bag &rarr; &alpha;".
@@ -4464,7 +4441,6 @@ public enum BuiltIn {
   VECTOR_FROM_LIST(
       "Vector",
       "fromList",
-      "vector",
       ts -> ts.forallType(1, h -> ts.fnType(h.list(0), h.vector(0)))),
 
   /**
@@ -4632,18 +4608,6 @@ public enum BuiltIn {
    */
   Z_LIST("$", "list", ts -> UNIT),
 
-  /** Internal minus operator "-", of type "int * int &rarr; int". */
-  Z_MINUS_INT("$", "-:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /** Internal minus operator "-", of type "real * real &rarr; real". */
-  Z_MINUS_REAL("$", "-:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
-
-  /** Internal unary negation operator "~", of type "int &rarr; int". */
-  Z_NEGATE_INT("$", "~:int", ts -> ts.fnType(INT, INT)),
-
-  /** Internal unary negation operator "~", of type "real &rarr; real". */
-  Z_NEGATE_REAL("$", "~:real", ts -> ts.fnType(REAL, REAL)),
-
   /** Internal accessor of the {@code n}th field of a record. */
   Z_NTH("$", "nth", ts -> UNIT),
 
@@ -4655,12 +4619,6 @@ public enum BuiltIn {
 
   /** Internal operator "orelse", of type "bool * bool &rarr; bool". */
   Z_ORELSE("$", "orelse", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
-
-  /** Internal plus operator "+", of type "int * int &rarr; int". */
-  Z_PLUS_INT("$", "+:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /** Internal plus operator "+", of type "real * real &rarr; real". */
-  Z_PLUS_REAL("$", "+:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
 
   /** Internal relational sum operator "sum", of type "int * int &rarr; int". */
   Z_SUM_INT("$", "sum:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
@@ -4684,23 +4642,23 @@ public enum BuiltIn {
   Z_TEST_OVER_COUNT_LIST(
       "$", "testOverCount:list", ts -> ts.fnType(ts.listType(INT), INT)),
 
-  /** Internal times operator "*", of type "int * int &rarr; int". */
-  Z_TIMES_INT("$", "*:int", ts -> ts.fnType(ts.tupleType(INT, INT), INT)),
-
-  /** Internal times operator "*", of type "real * real &rarr; real". */
-  Z_TIMES_REAL("$", "*:real", ts -> ts.fnType(ts.tupleType(REAL, REAL), REAL)),
-
   /** Internal function that constructs a datatype value. */
-  Z_TY_CON("$", "tyCon", ts -> UNIT);
+  Z_TY_CON("$", "tyCon", ts -> UNIT),
 
-  /** Name of the structure (e.g. "List", "String"), or null. */
-  public final @Nullable String structure;
+  /**
+   * Sentinel returned by {@link net.hydromatic.morel.ast.Core.Exp#builtIn()}
+   * when an expression is not a call to a built-in.
+   */
+  Z_VOID("$", "$void", ts -> UNIT);
+
+  /**
+   * Name of the structure (e.g. "List"), "$" for an internal built-in, or "Top"
+   * for a top-level built-in that belongs to no structure.
+   */
+  public final String structure;
 
   /** Unqualified name, e.g. "map" (for "List.map") or "true". */
   public final String mlName;
-
-  /** An alias, or null. For example, "List.map" has an alias "map". */
-  public final @Nullable String alias;
 
   /**
    * Derives a type, in a particular type system, for this constant or function.
@@ -4733,17 +4691,18 @@ public enum BuiltIn {
 
   public static final SortedMap<String, Structure> BY_STRUCTURE;
 
+  /** Aliases of each built-in, by built-in. */
+  private static final ImmutableListMultimap<BuiltIn, String> ALIASES;
+
   static {
     ImmutableMap.Builder<String, BuiltIn> byMlName = ImmutableMap.builder();
     // Use TreeMap<String, BuiltIn> for each structure member map so that
     // overloaded methods (e.g. multiple "contains" variants) do not cause
     // duplicate-key errors; the first occurrence wins.
     final SortedMap<String, SortedMap<String, BuiltIn>> map = new TreeMap<>();
+    forEachAlias(byMlName::put);
     for (BuiltIn builtIn : values()) {
-      if (builtIn.alias != null) {
-        byMlName.put(builtIn.alias, builtIn);
-      }
-      if (builtIn.structure == null) {
+      if (builtIn.structure.equals("Top")) {
         byMlName.put(builtIn.mlName, builtIn);
       } else if (builtIn.structure.equals("$")) {
         // ignore internal operators such as "list"
@@ -4774,82 +4733,139 @@ public enum BuiltIn {
       }
     }
     BY_METHOD_NAME = methodBuilder.build();
+    final ImmutableListMultimap.Builder<BuiltIn, String> aliasBuilder =
+        ImmutableListMultimap.builder();
+    forEachAlias((alias, builtIn) -> aliasBuilder.put(builtIn, alias));
+    ALIASES = aliasBuilder.build();
   }
 
   BuiltIn(
-      @Nullable String structure,
+      String structure,
       String mlName,
       Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, null, typeFunction, null, null, false);
+    this(structure, mlName, typeFunction, null, null, false);
   }
 
   BuiltIn(
-      @Nullable String structure,
+      String structure,
       String mlName,
       PrimitiveType preferredType,
       Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, null, typeFunction, preferredType, null, false);
+    this(structure, mlName, typeFunction, preferredType, null, false);
   }
 
+  /** Constructor for a function (or method). */
   BuiltIn(
-      @Nullable String structure,
-      String mlName,
-      @Nullable String alias,
-      Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, alias, typeFunction, null, null, false);
-  }
-
-  /** Constructor for a function (or method) without an alias. */
-  BuiltIn(
-      @Nullable String structure,
+      String structure,
       String mlName,
       boolean method,
       Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, null, typeFunction, null, null, method);
-  }
-
-  /** Constructor for a function (or method) with an alias. */
-  BuiltIn(
-      @Nullable String structure,
-      String mlName,
-      @Nullable String alias,
-      boolean method,
-      Function<TypeSystem, Type> typeFunction) {
-    this(structure, mlName, alias, typeFunction, null, null, method);
+    this(structure, mlName, typeFunction, null, null, method);
   }
 
   BuiltIn(
-      @Nullable String structure,
+      String structure,
       String mlName,
-      @Nullable String alias,
       Function<TypeSystem, Type> typeFunction,
       @Nullable PrimitiveType preferredType,
       @Nullable Function<Session, Object> sessionValue) {
-    this(
-        structure,
-        mlName,
-        alias,
-        typeFunction,
-        preferredType,
-        sessionValue,
-        false);
+    this(structure, mlName, typeFunction, preferredType, sessionValue, false);
   }
 
   BuiltIn(
-      @Nullable String structure,
+      String structure,
       String mlName,
-      @Nullable String alias,
       Function<TypeSystem, Type> typeFunction,
       @Nullable PrimitiveType preferredType,
       @Nullable Function<Session, Object> sessionValue,
       boolean method) {
-    this.structure = structure;
+    this.structure = requireNonNull(structure, "structure");
     this.mlName = requireNonNull(mlName, "mlName");
-    this.alias = alias;
     this.typeFunction = requireNonNull(typeFunction, "typeFunction");
     this.preferredType = preferredType;
     this.sessionValue = sessionValue;
     this.method = method;
+  }
+
+  /**
+   * Calls {@code consumer} once for each top-level alias and the built-in it
+   * names. An alias is an additional name (beyond {@code structure.mlName}) by
+   * which a built-in is bound -- e.g. {@code hd} for {@code List.hd}, or the
+   * operator forms {@code o}/{@code op o} for {@code General.o}.
+   */
+  public static void forEachAlias(BiConsumer<String, BuiltIn> consumer) {
+    // lint: sort until '#}' where '##consumer' erase '.*,'
+    consumer.accept("bag", BAG_FROM_LIST);
+    consumer.accept("not", BOOL_NOT);
+    consumer.accept("chr", CHAR_CHR);
+    consumer.accept("ord", CHAR_ORD);
+    consumer.accept("before", GENERAL_BEFORE);
+    consumer.accept("exnMessage", GENERAL_EXN_MESSAGE);
+    consumer.accept("exnName", GENERAL_EXN_NAME);
+    consumer.accept("ignore", GENERAL_IGNORE);
+    consumer.accept("o", GENERAL_O);
+    consumer.accept("op o", GENERAL_O);
+    consumer.accept("op div", INT_DIV);
+    consumer.accept("op mod", INT_MOD);
+    consumer.accept("use", INTERACT_USE);
+    consumer.accept("useSilently", INTERACT_USE_SILENTLY);
+    consumer.accept("app", LIST_APP);
+    consumer.accept("@", LIST_AT);
+    consumer.accept("op @", LIST_AT);
+    consumer.accept("foldl", LIST_FOLDL);
+    consumer.accept("foldr", LIST_FOLDR);
+    consumer.accept("hd", LIST_HD);
+    consumer.accept("length", LIST_LENGTH);
+    consumer.accept("map", LIST_MAP);
+    consumer.accept("null", LIST_NULL);
+    consumer.accept("rev", LIST_REV);
+    consumer.accept("tl", LIST_TL);
+    consumer.accept("getOpt", OPTION_GET_OPT);
+    consumer.accept("isSome", OPTION_IS_SOME);
+    consumer.accept("valOf", OPTION_VAL_OF);
+    consumer.accept("$csComplement", RANGE_CONTINUOUS_SET_COMPLEMENT);
+    consumer.accept("$csContains", RANGE_CONTINUOUS_SET_CONTAINS);
+    consumer.accept("$dsComplement", RANGE_DISCRETE_SET_COMPLEMENT);
+    consumer.accept("$dsContains", RANGE_DISCRETE_SET_CONTAINS);
+    consumer.accept("$dsRanges", RANGE_DISCRETE_SET_RANGES);
+    consumer.accept("ceil", REAL_CEIL);
+    consumer.accept("op /", REAL_DIVIDE);
+    consumer.accept("floor", REAL_FLOOR);
+    consumer.accept("real", REAL_FROM_INT);
+    consumer.accept("round", REAL_ROUND);
+    consumer.accept("trunc", REAL_TRUNC);
+    consumer.accept("compare", RELATIONAL_COMPARE);
+    consumer.accept("count", RELATIONAL_COUNT);
+    consumer.accept("empty", RELATIONAL_EMPTY);
+    consumer.accept("iterate", RELATIONAL_ITERATE);
+    consumer.accept("max", RELATIONAL_MAX);
+    consumer.accept("min", RELATIONAL_MIN);
+    consumer.accept("nonEmpty", RELATIONAL_NON_EMPTY);
+    consumer.accept("only", RELATIONAL_ONLY);
+    consumer.accept("sum", RELATIONAL_SUM);
+    consumer.accept("concat", STRING_CONCAT);
+    consumer.accept("explode", STRING_EXPLODE);
+    consumer.accept("fields", STRING_FIELDS);
+    consumer.accept("implode", STRING_IMPLODE);
+    consumer.accept("^", STRING_OP_CARET);
+    consumer.accept("op ^", STRING_OP_CARET);
+    consumer.accept("size", STRING_SIZE);
+    consumer.accept("str", STRING_STR);
+    consumer.accept("substring", STRING_SUBSTRING);
+    consumer.accept("tokens", STRING_TOKENS);
+    consumer.accept("env", SYS_ENV);
+    consumer.accept("file", SYS_FILE);
+    consumer.accept("plan", SYS_PLAN);
+    consumer.accept("set", SYS_SET);
+    consumer.accept("show", SYS_SHOW);
+    consumer.accept("showAll", SYS_SHOW_ALL);
+    consumer.accept("unset", SYS_UNSET);
+    consumer.accept("vector", VECTOR_FROM_LIST);
+  }
+
+  /** Returns the top-level aliases of this built-in (may be empty). */
+  public ImmutableList<String> aliases() {
+    return ALIASES.get(this);
   }
 
   /** Calls a consumer once per value. */
@@ -4933,7 +4949,10 @@ public enum BuiltIn {
     final DataType dataType =
         (DataType) (type instanceof DataType ? type : ((ForallType) type).type);
     ts.setBuiltIn(builtInType);
-    if (!builtInType.isInternal()) {
+    // Bind the constructors as values. Internal datatypes are skipped (their
+    // constructors exist only for exhaustiveness checking), except 'bool',
+    // whose 'true' and 'false' constructors are bound as primitive bool values.
+    if (builtInType == Datatype.PSEUDO_BOOL || !builtInType.isInternal()) {
       tyCons
           .leftList()
           .forEach(
@@ -5142,7 +5161,7 @@ public enum BuiltIn {
 
     /**
      * Analog of {@code bool} for checking that matches are exhaustive. Owns the
-     * {@code FALSE} and {@code TRUE} type constructors.
+     * {@code false} and {@code true} type constructors.
      */
     PSEUDO_BOOL(
         "$",
@@ -5329,8 +5348,8 @@ public enum BuiltIn {
   /** Built-in constructor of a datatype. */
   public enum Constructor {
     // lint: sort until '##public ' where '##[A-Z]'
-    BOOL_FALSE(Datatype.PSEUDO_BOOL, "FALSE"),
-    BOOL_TRUE(Datatype.PSEUDO_BOOL, "TRUE"),
+    BOOL_FALSE(Datatype.PSEUDO_BOOL, "false"),
+    BOOL_TRUE(Datatype.PSEUDO_BOOL, "true"),
     CONTINUOUS_SET_CONTINUOUS_SET(
         Datatype.CONTINUOUS_SET,
         "CONTINUOUS_SET",
