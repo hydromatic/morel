@@ -273,6 +273,59 @@ Notes:
 - For opaque eqtypes (like `time`) backed by non-List Java objects,
   `Pretty.java` handles printing via `!(value instanceof List)` in
   `prettyDataType`.
+- A `.sig` file is signature-driven for lint: as soon as `lib/{name}.sig`
+  exists, `LintTest` (`testSignatures`, `testStructureDocs`,
+  `testGeneratedSections`) requires the full `BuiltIn`/`Codes`
+  implementation, a `docs/lib/{name}.md` page, and the
+  `index.md`/`reference.md` rows. You cannot land the `.sig` on its own;
+  add it together with the implementation and docs.
+- `LintTest.testSignatures` emits the exact expected `BuiltIn` enum entries
+  (rendered from the `.sig`); copy them as a starting point. It matches by
+  `(structure, mlName, type)`, not by Java constant name, but the constant
+  names must still be alphabetically sorted and follow the `STRUCT_OP_PLUS`
+  convention for operator members.
+- Regenerate idempotent `.smli` expected output by putting a single `> x`
+  placeholder line after each command and running
+  `./morel --echo <abs-path>`; the generated `<file>.smli.out` holds the
+  authoritative output (a single placeholder expands to a multi-line result).
+  Copy it back over the source. Operator/reserved members are invoked with
+  backticks, e.g. `` Word.`<<` (a, b) ``.
+- Adding a structure adds one top-level binding, so regenerate the
+  environment-count tests in `built-in/sys.smli` and `misc.smli`.
+
+#### When the structure introduces a new primitive type with literals
+
+`Word` added a new `PrimitiveType` (`WORD`) with literal syntax (`0w255`,
+`0wx1f`). This is beyond the 6-step recipe above; it follows the
+"Adding a Language Feature" path and touches:
+
+- `type/PrimitiveType.java` — new enum constant (auto-registered by name via
+  `TypeSystem`'s `PrimitiveType.values()` loop). **Literals must be a
+  `PrimitiveType`, not an `Eqtype`** — the literal pipeline (Ast to Core to
+  Code) only carries `PrimitiveType` values. (The `.sig` still writes
+  `eqtype word`, as `int.sig` writes `eqtype int`.)
+- `ast/Op.java` — `X_LITERAL` and `X_LITERAL_PAT` ops, plus the `toPat()`
+  case.
+- `MorelParser.jj` — lexer token(s) and a production wired into `literal()`
+  (which feeds both expressions and patterns).
+- `ast/Ast.java` **and** `ast/Core.java` — add the new pat op to the
+  `LiteralPat` constructor `checkArgument` whitelists (easy to miss; the Core
+  one surfaces only at runtime as a swallowed compile error).
+- `ast/AstBuilder.java`, `ast/CoreBuilder.java` — `xLiteral` builders and the
+  `CoreBuilder.literal(PrimitiveType, ...)` switch case.
+- `compile/TypeResolver.java` (expr + pat + `getType`), `compile/Resolver.java`
+  (expr + pat), `compile/Compiler.java` (constant lowering).
+- `eval/Closure.java` — both literal-pattern matchers (`bindRecurse` and
+  `StackClosure.pushBindings`).
+- `compile/PatternCoverageChecker.java`, `compile/Generators.java` — the
+  literal-pat switches.
+- `compile/Pretty.java` — `prettyPrimitive` (sorted; `word` after `unit`).
+- `SignatureChecker.java` (test) — add the type name to the `str()` switch so
+  it renders as the bare constant (e.g. `WORD`), matching `BuiltIn`.
+
+Note the `LargeInt`-is-fixed-precision gotcha: `LargeInt.int` = the 32-bit
+`int`, so `Word.toLargeInt`/`toLargeIntX` raise `Overflow` for values that
+don't fit in `int` and cannot honor the spec's "never raises" for `toLargeIntX`.
 
 ### Adding a Language Feature
 

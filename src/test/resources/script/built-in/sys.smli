@@ -130,8 +130,10 @@ Sys.env ();
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, `exists`:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
->    ("Wed","weekday"),("^","string * string -> string"),
->    ("abs","forall 'a. 'a -> 'a"),
+>    ("Wed","weekday"),
+>    ("Word",
+>     "{*:word * word -> word, +:word * word -> word, -:word * word -> word, <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool, >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word, andb:word * word -> word, compare:word * word -> order, `div`:word * word -> word, fmt:radix -> word -> string, fromInt:int -> word, fromLarge:word -> word, fromLargeInt:int -> word, fromLargeWord:word -> word, fromString:string -> word option, max:word * word -> word, min:word * word -> word, `mod`:word * word -> word, notb:word -> word, orb:word * word -> word, toInt:word -> int, toIntX:word -> int, toLarge:word -> word, toLargeInt:word -> int, toLargeIntX:word -> int, toLargeWord:word -> word, toLargeWordX:word -> word, toLargeX:word -> word, toString:word -> string, wordSize:int, xorb:word * word -> word, ~:word -> word, ~>>:word * word -> word}"),
+>    ("^","string * string -> string"),("abs","forall 'a. 'a -> 'a"),
 >    ("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
 >    ("bag","forall 'a. 'a list -> 'a bag"),
 >    ("before","forall 'a. 'a * unit -> 'a"),("ceil","real -> int"),
@@ -165,8 +167,9 @@ Sys.env ();
 >    ("op =","forall 'a. 'a * 'a -> bool"),("op >","forall 'a. 'a * 'a -> bool"),
 >    ("op >=","forall 'a. 'a * 'a -> bool"),
 >    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op ^","string * string -> string"),("op div","int * int -> int"),
->    ("op elem","forall 'a. 'a * 'a bag -> bool"),("op mod","int * int -> int"),
+>    ("op ^","string * string -> string"),("op div","forall 'a. 'a * 'a -> 'a"),
+>    ("op elem","forall 'a. 'a * 'a bag -> bool"),
+>    ("op mod","forall 'a. 'a * 'a -> 'a"),
 >    ("op notelem","forall 'a. 'a * 'a bag -> bool"),
 >    ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
 >    ("op ~","forall 'a. 'a -> 'a"),("ord","char -> int"),
@@ -273,8 +276,10 @@ env ();
 >    ("Variant","{parse:string -> variant, print:variant -> string}"),
 >    ("Vector",
 >     "{all:forall 'a. ('a -> bool) -> 'a vector -> bool, app:forall 'a. ('a -> unit) -> 'a vector -> unit, appi:forall 'a. (int * 'a -> unit) -> 'a vector -> unit, collate:forall 'a. ('a * 'a -> order) -> 'a vector * 'a vector -> order, concat:forall 'a. 'a vector list -> 'a vector, `exists`:forall 'a. ('a -> bool) -> 'a vector -> bool, find:forall 'a. ('a -> bool) -> 'a vector -> 'a option, findi:forall 'a 'b. (int * 'a -> bool) -> 'a vector -> (int * 'a) option, foldl:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldli:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldr:forall 'a 'b. ('a * 'b -> 'b) -> 'b -> 'a vector -> 'b, foldri:forall 'a 'b. (int * 'a * 'b -> 'b) -> 'b -> 'a vector -> 'b, fromList:forall 'a. 'a list -> 'a vector, length:forall 'a. 'a vector -> int, map:forall 'a 'b. ('a -> 'b) -> 'a vector -> 'b vector, mapi:forall 'a 'b. (int * 'a -> 'b) -> 'a vector -> 'b vector, maxLen:int, sub:forall 'a. 'a vector * int -> 'a, tabulate:forall 'a. int * (int -> 'a) -> 'a vector, update:forall 'a. 'a vector * int * 'a -> 'a vector}"),
->    ("Wed","weekday"),("^","string * string -> string"),
->    ("abs","forall 'a. 'a -> 'a"),
+>    ("Wed","weekday"),
+>    ("Word",
+>     "{*:word * word -> word, +:word * word -> word, -:word * word -> word, <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool, >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word, andb:word * word -> word, compare:word * word -> order, `div`:word * word -> word, fmt:radix -> word -> string, fromInt:int -> word, fromLarge:word -> word, fromLargeInt:int -> word, fromLargeWord:word -> word, fromString:string -> word option, max:word * word -> word, min:word * word -> word, `mod`:word * word -> word, notb:word -> word, orb:word * word -> word, toInt:word -> int, toIntX:word -> int, toLarge:word -> word, toLargeInt:word -> int, toLargeIntX:word -> int, toLargeWord:word -> word, toLargeWordX:word -> word, toLargeX:word -> word, toString:word -> string, wordSize:int, xorb:word * word -> word, ~:word -> word, ~>>:word * word -> word}"),
+>    ("^","string * string -> string"),("abs","forall 'a. 'a -> 'a"),
 >    ("app","forall 'a. ('a -> unit) -> 'a list -> unit"),
 >    ("bag","forall 'a. 'a list -> 'a bag"),
 >    ("before","forall 'a. 'a * unit -> 'a"),("ceil","real -> int"),
@@ -308,8 +313,9 @@ env ();
 >    ("op =","forall 'a. 'a * 'a -> bool"),("op >","forall 'a. 'a * 'a -> bool"),
 >    ("op >=","forall 'a. 'a * 'a -> bool"),
 >    ("op @","forall 'a. 'a list * 'a list -> 'a list"),
->    ("op ^","string * string -> string"),("op div","int * int -> int"),
->    ("op elem","forall 'a. 'a * 'a bag -> bool"),("op mod","int * int -> int"),
+>    ("op ^","string * string -> string"),("op div","forall 'a. 'a * 'a -> 'a"),
+>    ("op elem","forall 'a. 'a * 'a bag -> bool"),
+>    ("op mod","forall 'a. 'a * 'a -> 'a"),
 >    ("op notelem","forall 'a. 'a * 'a bag -> bool"),
 >    ("op o","forall 'a 'b 'c. ('b -> 'c) * ('a -> 'b) -> 'a -> 'c"),
 >    ("op ~","forall 'a. 'a -> 'a"),("ord","char -> int"),
@@ -376,6 +382,12 @@ Sys.planEx "0";
 > val it = "val aardvark = 1 + (case true of true => 2 | _ => 3)" : string
 Sys.planEx "-1";
 > val it = "val aardvark = 1 + 2" : string
+
+(*) Word literals are unparsed in hexadecimal (e.g. "0wxAB") in the plan.
+val warthog = 0wxAB + 0w1;
+> val warthog = 0wxAC : word
+Sys.planEx "0";
+> val it = "val warthog = #+ Word (0wxAB, 0wx1)" : string
 
 (*) val set : string * 'a -> unit
 Sys.set;

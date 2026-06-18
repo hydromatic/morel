@@ -25,6 +25,7 @@ import static net.hydromatic.morel.type.PrimitiveType.INT;
 import static net.hydromatic.morel.type.PrimitiveType.REAL;
 import static net.hydromatic.morel.type.PrimitiveType.STRING;
 import static net.hydromatic.morel.type.PrimitiveType.UNIT;
+import static net.hydromatic.morel.type.PrimitiveType.WORD;
 import static net.hydromatic.morel.util.Static.SKIP;
 
 import com.google.common.collect.ImmutableList;
@@ -211,6 +212,30 @@ public enum BuiltIn {
   OP_TIMES(
       "Top",
       "op *",
+      PrimitiveType.INT,
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
+
+  /**
+   * Infix operator "div", of type "&alpha; * &alpha; &rarr; &alpha;" (where
+   * &alpha; must be {@code int} or {@code word}).
+   */
+  OP_DIV(
+      "Top",
+      "op div",
+      PrimitiveType.INT,
+      ts ->
+          ts.forallType(
+              1, h -> ts.fnType(ts.tupleType(h.get(0), h.get(0)), h.get(0)))),
+
+  /**
+   * Infix operator "mod", of type "&alpha; * &alpha; &rarr; &alpha;" (where
+   * &alpha; must be {@code int} or {@code word}).
+   */
+  OP_MOD(
+      "Top",
+      "op mod",
       PrimitiveType.INT,
       ts ->
           ts.forallType(
@@ -4570,6 +4595,61 @@ public enum BuiltIn {
                   ts.fnType(
                       ts.tupleType(h.vector(0), INT, h.get(0)), h.vector(0)))),
 
+  WORD_ANDB(
+      "Word", "andb", true, ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_COMPARE(
+      "Word",
+      "compare",
+      true,
+      ts -> ts.fnType(ts.tupleType(WORD, WORD), ts.order())),
+  WORD_DIV("Word", "div", ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_FMT(
+      "Word",
+      "fmt",
+      ts ->
+          ts.fnType(
+              ts.lookup(Datatype.STRING_CVT_RADIX), ts.fnType(WORD, STRING))),
+  WORD_FROM_INT("Word", "fromInt", ts -> ts.fnType(INT, WORD)),
+  WORD_FROM_LARGE("Word", "fromLarge", ts -> ts.fnType(WORD, WORD)),
+  WORD_FROM_LARGE_INT("Word", "fromLargeInt", ts -> ts.fnType(INT, WORD)),
+  WORD_FROM_LARGE_WORD("Word", "fromLargeWord", ts -> ts.fnType(WORD, WORD)),
+  WORD_FROM_STRING(
+      "Word", "fromString", ts -> ts.fnType(STRING, ts.option(WORD))),
+  WORD_MAX(
+      "Word", "max", true, ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_MIN(
+      "Word", "min", true, ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_MOD("Word", "mod", ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_NOTB("Word", "notb", true, ts -> ts.fnType(WORD, WORD)),
+  WORD_OP_GE("Word", ">=", ts -> ts.fnType(ts.tupleType(WORD, WORD), BOOL)),
+  WORD_OP_GT("Word", ">", ts -> ts.fnType(ts.tupleType(WORD, WORD), BOOL)),
+  WORD_OP_LE("Word", "<=", ts -> ts.fnType(ts.tupleType(WORD, WORD), BOOL)),
+  WORD_OP_LT("Word", "<", ts -> ts.fnType(ts.tupleType(WORD, WORD), BOOL)),
+  WORD_OP_MINUS("Word", "-", ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_OP_NEGATE("Word", "~", ts -> ts.fnType(WORD, WORD)),
+  WORD_OP_PLUS("Word", "+", ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_OP_SHIFT_LEFT(
+      "Word", "<<", ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_OP_SHIFT_RIGHT(
+      "Word", ">>", ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_OP_SHIFT_RIGHT_ARITHMETIC(
+      "Word", "~>>", ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_OP_TIMES("Word", "*", ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_ORB(
+      "Word", "orb", true, ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+  WORD_TO_INT("Word", "toInt", ts -> ts.fnType(WORD, INT)),
+  WORD_TO_INT_X("Word", "toIntX", ts -> ts.fnType(WORD, INT)),
+  WORD_TO_LARGE("Word", "toLarge", ts -> ts.fnType(WORD, WORD)),
+  WORD_TO_LARGE_INT("Word", "toLargeInt", ts -> ts.fnType(WORD, INT)),
+  WORD_TO_LARGE_INT_X("Word", "toLargeIntX", ts -> ts.fnType(WORD, INT)),
+  WORD_TO_LARGE_WORD("Word", "toLargeWord", ts -> ts.fnType(WORD, WORD)),
+  WORD_TO_LARGE_WORD_X("Word", "toLargeWordX", ts -> ts.fnType(WORD, WORD)),
+  WORD_TO_LARGE_X("Word", "toLargeX", ts -> ts.fnType(WORD, WORD)),
+  WORD_TO_STRING("Word", "toString", true, ts -> ts.fnType(WORD, STRING)),
+  WORD_WORD_SIZE("Word", "wordSize", ts -> INT),
+  WORD_XORB(
+      "Word", "xorb", true, ts -> ts.fnType(ts.tupleType(WORD, WORD), WORD)),
+
   /** Internal operator "andalso", of type "bool * bool &rarr; bool". */
   Z_ANDALSO("$", "andalso", ts -> ts.fnType(ts.tupleType(BOOL, BOOL), BOOL)),
 
@@ -4805,8 +4885,6 @@ public enum BuiltIn {
     consumer.accept("ignore", GENERAL_IGNORE);
     consumer.accept("o", GENERAL_O);
     consumer.accept("op o", GENERAL_O);
-    consumer.accept("op div", INT_DIV);
-    consumer.accept("op mod", INT_MOD);
     consumer.accept("use", INTERACT_USE);
     consumer.accept("useSilently", INTERACT_USE_SILENTLY);
     consumer.accept("app", LIST_APP);
@@ -5011,6 +5089,27 @@ public enum BuiltIn {
   public void prefer(Consumer<PrimitiveType> consumer) {
     if (preferredType != null) {
       consumer.accept(preferredType);
+    }
+  }
+
+  /**
+   * Maps a comparison operator to its unsigned {@code Word} counterpart ({@link
+   * #OP_LT} to {@link #WORD_OP_LT}, and similarly {@code <=}, {@code >}, {@code
+   * >=}); returns {@code this} for any other built-in. Used to give {@code
+   * word} operands unsigned comparison semantics.
+   */
+  public BuiltIn toWord() {
+    switch (this) {
+      case OP_LT:
+        return WORD_OP_LT;
+      case OP_LE:
+        return WORD_OP_LE;
+      case OP_GT:
+        return WORD_OP_GT;
+      case OP_GE:
+        return WORD_OP_GE;
+      default:
+        return this;
     }
   }
 

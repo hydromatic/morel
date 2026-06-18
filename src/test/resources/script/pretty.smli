@@ -452,4 +452,20 @@ Sys.set ("stringFold", ~3);
 Sys.unset "stringFold";
 > val it = () : unit
 
+(* Word values render in hexadecimal in tabular mode, as in classic mode. *)
+Sys.set ("output", "tabular");
+> val it = () : unit
+from i in [0w1, 0wxff, 0wxffffffffffffffff]
+  order i
+  yield {w = i, hex = Word.toString i, dec = Word.fmt DEC i};
+> dec                  hex              w
+> -------------------- ---------------- -------------------
+> 1                    1                               0wx1
+> 255                  FF                             0wxFF
+> 18446744073709551615 FFFFFFFFFFFFFFFF 0wxFFFFFFFFFFFFFFFF
+>
+> val it : {dec:string, hex:string, w:word} list
+Sys.unset "output";
+> val it = () : unit
+
 (*) End pretty.smli

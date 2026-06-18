@@ -19,8 +19,10 @@
 package net.hydromatic.morel.ast;
 
 import com.google.common.collect.Lists;
+import com.google.common.primitives.UnsignedLong;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import net.hydromatic.morel.compile.BuiltIn;
 import net.hydromatic.morel.parse.Parsers;
 
@@ -258,6 +260,12 @@ public class AstWriter {
       append("\"")
           .append(((String) value).replace("\\", "\\\\").replace("\"", "\\\""))
           .append("\"");
+    } else if (value instanceof UnsignedLong) {
+      // A word, e.g. "0wxFF". Like Standard ML, print in hexadecimal.
+      append("0wx")
+          .append(
+              Long.toUnsignedString(((UnsignedLong) value).longValue(), 16)
+                  .toUpperCase(Locale.ROOT));
     } else if (value instanceof Character) {
       switch ((char) value) {
         case '"':

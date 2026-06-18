@@ -167,13 +167,13 @@ public enum AstBuilder {
     return new Ast.Literal(pos, Op.INT_LITERAL, value);
   }
 
-  /** Creates a {@code float} literal. */
+  /** Creates a {@code real} literal. */
   public Ast.Literal realLiteral(Pos pos, BigDecimal value) {
     return new Ast.Literal(pos, Op.REAL_LITERAL, value);
   }
 
   /**
-   * Creates a {@code float} literal for a special IEEE floating point value:
+   * Creates a {@code real} literal for a special IEEE floating point value:
    * NaN, negative zero, positive and negative infinity.
    */
   public Ast.Literal realLiteral(Pos pos, Float value) {
@@ -188,6 +188,11 @@ public enum AstBuilder {
   /** Creates a unit literal. */
   public Ast.Literal unitLiteral(Pos p) {
     return new Ast.Literal(p, Op.UNIT_LITERAL, Unit.INSTANCE);
+  }
+
+  /** Creates a {@code word} literal. */
+  public Ast.Literal wordLiteral(Pos pos, BigDecimal value) {
+    return new Ast.Literal(pos, Op.WORD_LITERAL, value);
   }
 
   public Ast.Current current(Pos pos) {

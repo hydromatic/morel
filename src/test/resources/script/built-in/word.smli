@@ -1,0 +1,177 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `Word` structure, defined
+ * by the Standard ML Basis Library.
+ *)
+Sys.set ("printLength", 999);
+> val it = () : unit
+
+Word;
+> val it =
+>   {*=fn,+=fn,-=fn,<=fn,<<=fn,<==fn,>=fn,>==fn,>>=fn,andb=fn,compare=fn,`div`=fn,
+>    fmt=fn,fromInt=fn,fromLarge=fn,fromLargeInt=fn,fromLargeWord=fn,
+>    fromString=fn,max=fn,min=fn,`mod`=fn,notb=fn,orb=fn,toInt=fn,toIntX=fn,
+>    toLarge=fn,toLargeInt=fn,toLargeIntX=fn,toLargeWord=fn,toLargeWordX=fn,
+>    toLargeX=fn,toString=fn,wordSize=64,xorb=fn,~=fn,~>>=fn}
+>   : {*:word * word -> word, +:word * word -> word, -:word * word -> word,
+>      <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool,
+>      >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word,
+>      andb:word * word -> word, compare:word * word -> order,
+>      `div`:word * word -> word, fmt:radix -> word -> string,
+>      fromInt:int -> word, fromLarge:word -> word, fromLargeInt:int -> word,
+>      fromLargeWord:word -> word, fromString:string -> word option,
+>      max:word * word -> word, min:word * word -> word,
+>      `mod`:word * word -> word, notb:word -> word, orb:word * word -> word,
+>      toInt:word -> int, toIntX:word -> int, toLarge:word -> word,
+>      toLargeInt:word -> int, toLargeIntX:word -> int, toLargeWord:word -> word,
+>      toLargeWordX:word -> word, toLargeX:word -> word, toString:word -> string,
+>      wordSize:int, xorb:word * word -> word, ~:word -> word,
+>      ~>>:word * word -> word}
+
+(*) wordSize
+Word.wordSize;
+> val it = 64 : int
+
+(*) Conversions
+Word.fromInt 255;
+> val it = 0wxFF : word
+Word.fromInt ~1;
+> val it = 0wxFFFFFFFFFFFFFFFF : word
+Word.toInt 0w42;
+> val it = 42 : int
+Word.toIntX 0wxffffffffffffffff;
+> val it = ~1 : int
+Word.toLargeInt 0w42;
+> val it = 42 : int
+Word.toLargeIntX 0wxffffffffffffffff;
+> val it = ~1 : int
+Word.fromLargeInt 255;
+> val it = 0wxFF : word
+Word.toLarge 0w7;
+> val it = 0wx7 : word
+Word.toLargeX 0w7;
+> val it = 0wx7 : word
+Word.toLargeWord 0w7;
+> val it = 0wx7 : word
+Word.toLargeWordX 0w7;
+> val it = 0wx7 : word
+Word.fromLarge 0w7;
+> val it = 0wx7 : word
+Word.fromLargeWord 0w7;
+> val it = 0wx7 : word
+
+(*) Bitwise operations
+Word.andb (0wxff, 0wx0f);
+> val it = 0wxF : word
+Word.orb (0wxf0, 0wx0f);
+> val it = 0wxFF : word
+Word.xorb (0wxff, 0wx0f);
+> val it = 0wxF0 : word
+Word.notb 0w0;
+> val it = 0wxFFFFFFFFFFFFFFFF : word
+Word.`<<` (0w1, 0w4);
+> val it = 0wx10 : word
+Word.`>>` (0wx100, 0w4);
+> val it = 0wx10 : word
+Word.`~>>` (0wxffffffffffffffff, 0w4);
+> val it = 0wxFFFFFFFFFFFFFFFF : word
+Word.`~>>` (0wx8000000000000000, 0w4);
+> val it = 0wxF800000000000000 : word
+
+(*) Arithmetic
+Word.`+` (0w1, 0w2);
+> val it = 0wx3 : word
+Word.`-` (0w2, 0w5);
+> val it = 0wxFFFFFFFFFFFFFFFD : word
+Word.`*` (0w3, 0w4);
+> val it = 0wxC : word
+Word.`div` (0w17, 0w5);
+> val it = 0wx3 : word
+Word.`mod` (0w17, 0w5);
+> val it = 0wx2 : word
+Word.`~` 0w1;
+> val it = 0wxFFFFFFFFFFFFFFFF : word
+
+(*) Comparison (unsigned)
+Word.compare (0w3, 0w7);
+> val it = LESS : order
+Word.compare (0w7, 0w7);
+> val it = EQUAL : order
+Word.`<` (0w3, 0w7);
+> val it = true : bool
+Word.`<=` (0w7, 0w7);
+> val it = true : bool
+Word.`>` (0w3, 0w7);
+> val it = false : bool
+Word.`>=` (0w7, 0w7);
+> val it = true : bool
+Word.min (0w3, 0w7);
+> val it = 0wx3 : word
+Word.max (0w3, 0w7);
+> val it = 0wx7 : word
+
+(*) Comparison is unsigned: a word with the high bit set is large
+Word.`<` (0wxffffffffffffffff, 0w1);
+> val it = false : bool
+
+(*) Formatting and string conversion
+Word.fmt BIN 0w10;
+> val it = "1010" : string
+Word.fmt OCT 0w64;
+> val it = "100" : string
+Word.fmt DEC 0w255;
+> val it = "255" : string
+Word.fmt HEX 0w255;
+> val it = "FF" : string
+Word.toString 0w255;
+> val it = "FF" : string
+Word.fromString "ff";
+> val it = SOME 0wxFF : word option
+Word.fromString "  1a";
+> val it = SOME 0wx1A : word option
+Word.fromString "xyz";
+> val it = NONE : word option
+
+(*) fromString accepts an optional 0x / 0X / 0wx / 0wX prefix
+Word.fromString "0x1A";
+> val it = SOME 0wx1A : word option
+Word.fromString "0wxFF";
+> val it = SOME 0wxFF : word option
+Word.fromString "0X10";
+> val it = SOME 0wx10 : word option
+Word.fromString "0xG";
+> val it = SOME 0wx0 : word option
+
+(*) Postfix (method) syntax
+(0wxff).andb (0wx0f);
+> val it = 0wxF : word
+(0wxf0).orb (0wx0f);
+> val it = 0wxFF : word
+(0wxff).xorb (0wx0f);
+> val it = 0wxF0 : word
+(0w3).compare (0w7);
+> val it = LESS : order
+(0w3).min (0w7);
+> val it = 0wx3 : word
+(0w3).max (0w7);
+> val it = 0wx7 : word
+(0w255).toString ();
+> val it = "FF" : string
+
+(*) End word.smli

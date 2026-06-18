@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.compile;
 
+import static java.lang.Character.isDigit;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -280,7 +281,7 @@ public class OutputMatcher {
       return "#" + sc.consumeString();
     } else if (c == '"') {
       return sc.consumeString();
-    } else if (c == '~' || Character.isDigit(c)) {
+    } else if (c == '~' || isDigit(c)) {
       return sc.consumeNumber();
     } else if (c == '(' && sc.peekAt(1) == ')') {
       sc.consume("(");
@@ -482,11 +483,33 @@ public class OutputMatcher {
     String consumeNumber() {
       skipSpaces();
       int start = pos;
+      // Word literal: "0w" + decimal digits, or "0wx" + hex digits.
+      // Canonicalize to "0w" + unsigned decimal so that different
+      // representations of the same value (e.g. 0wxFF and 0w255) match, but
+      // different values do not.
+      if (pos + 1 < s.length()
+          && s.charAt(pos) == '0'
+          && s.charAt(pos + 1) == 'w') {
+        pos += 2;
+        int radix = 10;
+        if (pos < s.length()
+            && (s.charAt(pos) == 'x' || s.charAt(pos) == 'X')) {
+          pos++;
+          radix = 16;
+        }
+        final int digitsStart = pos;
+        while (pos < s.length() && isHexDigit(s.charAt(pos))) {
+          pos++;
+        }
+        final String digits = s.substring(digitsStart, pos);
+        return "0w"
+            + Long.toUnsignedString(Long.parseUnsignedLong(digits, radix));
+      }
       if (pos < s.length() && s.charAt(pos) == '~') {
         pos++; // negative sign
       }
       while (pos < s.length()
-          && (Character.isDigit(s.charAt(pos)) || s.charAt(pos) == '.')) {
+          && (isDigit(s.charAt(pos)) || s.charAt(pos) == '.')) {
         pos++;
       }
       // Handle 'E' in real literals
@@ -495,7 +518,7 @@ public class OutputMatcher {
         if (pos < s.length() && s.charAt(pos) == '~') {
           pos++;
         }
-        while (pos < s.length() && Character.isDigit(s.charAt(pos))) {
+        while (pos < s.length() && isDigit(s.charAt(pos))) {
           pos++;
         }
       }
@@ -506,6 +529,10 @@ public class OutputMatcher {
       while (pos < s.length() && s.charAt(pos) == ' ') {
         pos++;
       }
+    }
+
+    private static boolean isHexDigit(char c) {
+      return isDigit(c) || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F';
     }
   }
 

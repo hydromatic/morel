@@ -37,9 +37,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Chars;
 import java.io.StringReader;
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -101,7 +98,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Codes {
   /** Converts a {@code float} to a String per the JDK. */
-  private static final Function<Float, String> FLOAT_TO_STRING =
+  static final Function<Float, String> FLOAT_TO_STRING =
       JavaVersion.CURRENT.compareTo(JavaVersion.of(19)) >= 0
           ? f -> Float.toString(f)
           : Codes::floatToString0;
@@ -1497,25 +1494,10 @@ public abstract class Codes {
       new BaseApplicable2<String, List, Integer>(BuiltIn.INT_FMT) {
         @Override
         public String apply(List radix, Integer i) {
-          final int base;
-          switch ((String) radix.get(0)) {
-            case "BIN":
-              base = 2;
-              break;
-            case "OCT":
-              base = 8;
-              break;
-            case "DEC":
-              base = 10;
-              break;
-            case "HEX":
-              base = 16;
-              break;
-            default:
-              throw new AssertionError(radix);
-          }
           // Use upper-case digits A..F for hex, prefix '-' with '~'.
-          final String s = Integer.toString(i, base).toUpperCase(Locale.ROOT);
+          final String s =
+              Integer.toString(i, Radix.of(radix).base)
+                  .toUpperCase(Locale.ROOT);
           return s.startsWith("-") ? "~" + s.substring(1) : s;
         }
       };
@@ -2741,6 +2723,23 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#OP_DIV */
+  private static final Macro OP_DIV =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.INT_DIV);
+          case WORD:
+            return core.functionLiteral(typeSystem, BuiltIn.WORD_DIV);
+          default:
+            throw new CompileException(
+                "operator not defined for type '" + argType + "'",
+                false,
+                Pos.ZERO);
+        }
+      };
+
   /** @see BuiltIn#OP_ELEM */
   private static final Applicable2 OP_ELEM =
       new BaseApplicable2<Boolean, Object, List>(BuiltIn.OP_ELEM) {
@@ -2820,6 +2819,25 @@ public abstract class Codes {
             return core.functionLiteral(typeSystem, BuiltIn.INT_OP_MINUS);
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.REAL_OP_MINUS);
+          case WORD:
+            return core.functionLiteral(typeSystem, BuiltIn.WORD_OP_MINUS);
+          default:
+            throw new CompileException(
+                "operator not defined for type '" + argType + "'",
+                false,
+                Pos.ZERO);
+        }
+      };
+
+  /** @see BuiltIn#OP_MOD */
+  private static final Macro OP_MOD =
+      (typeSystem, env, argType) -> {
+        final Type resultType = ((TupleType) argType).argTypes.get(0);
+        switch ((PrimitiveType) resultType) {
+          case INT:
+            return core.functionLiteral(typeSystem, BuiltIn.INT_MOD);
+          case WORD:
+            return core.functionLiteral(typeSystem, BuiltIn.WORD_MOD);
           default:
             throw new CompileException(
                 "operator not defined for type '" + argType + "'",
@@ -2845,6 +2863,8 @@ public abstract class Codes {
             return core.functionLiteral(typeSystem, BuiltIn.INT_OP_NEGATE);
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.REAL_OP_NEGATE);
+          case WORD:
+            return core.functionLiteral(typeSystem, BuiltIn.WORD_OP_NEGATE);
           default:
             throw new CompileException(
                 "operator not defined for type '" + argType + "'",
@@ -2871,6 +2891,8 @@ public abstract class Codes {
             return core.functionLiteral(typeSystem, BuiltIn.INT_OP_PLUS);
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.REAL_OP_PLUS);
+          case WORD:
+            return core.functionLiteral(typeSystem, BuiltIn.WORD_OP_PLUS);
           default:
             throw new CompileException(
                 "operator not defined for type '" + argType + "'",
@@ -2888,6 +2910,8 @@ public abstract class Codes {
             return core.functionLiteral(typeSystem, BuiltIn.INT_OP_TIMES);
           case REAL:
             return core.functionLiteral(typeSystem, BuiltIn.REAL_OP_TIMES);
+          case WORD:
+            return core.functionLiteral(typeSystem, BuiltIn.WORD_OP_TIMES);
           default:
             throw new CompileException(
                 "operator not defined for type '" + argType + "'",
@@ -3290,7 +3314,7 @@ public abstract class Codes {
 
     @Override
     public String apply(List spec, Float r) {
-      return format(parseSpec(spec), r);
+      return FmtSpec.parse(spec, pos).format(r);
     }
 
     /**
@@ -3304,188 +3328,10 @@ public abstract class Codes {
           builtIn, this) {
         @Override
         public Applicable1<String, Float> apply(List spec) {
-          final FmtSpec info = parseSpec(spec);
-          return r -> format(info, r);
+          final FmtSpec info = FmtSpec.parse(spec, pos);
+          return info::format;
         }
       };
-    }
-
-    /** Spec kind + precision, after validation. */
-    private static class FmtSpec {
-      final String kind;
-      final int n;
-
-      FmtSpec(String kind, int n) {
-        this.kind = kind;
-        this.n = n;
-      }
-    }
-
-    private FmtSpec parseSpec(List spec) {
-      final String kind = (String) spec.get(0);
-      if (kind.equals("EXACT")) {
-        return new FmtSpec("EXACT", 0);
-      }
-      final List opt = (List) spec.get(1);
-      final Integer n = opt.size() == 2 ? (Integer) opt.get(1) : null;
-      final int defaultN;
-      final int minN;
-      switch (kind) {
-        case "SCI":
-          defaultN = 6;
-          minN = 0;
-          break;
-        case "FIX":
-          defaultN = 6;
-          minN = 0;
-          break;
-        case "GEN":
-          defaultN = 12;
-          minN = 1;
-          break;
-        default:
-          throw new AssertionError("unknown realfmt: " + kind);
-      }
-      if (n != null && n < minN) {
-        throw new MorelRuntimeException(BuiltInExn.SIZE, pos);
-      }
-      return new FmtSpec(kind, n != null ? n : defaultN);
-    }
-
-    private static String format(FmtSpec info, float r) {
-      if (Float.isNaN(r)) {
-        return "nan";
-      }
-      if (r == Float.POSITIVE_INFINITY) {
-        return "inf";
-      }
-      if (r == Float.NEGATIVE_INFINITY) {
-        return "~inf";
-      }
-      switch (info.kind) {
-        case "SCI":
-          return formatSci(r, info.n);
-        case "FIX":
-          return formatFix(r, info.n);
-        case "GEN":
-          return formatGen(r, info.n);
-        case "EXACT":
-          return formatExact(r);
-        default:
-          throw new AssertionError();
-      }
-    }
-
-    /** Returns "~" for negative reals (including {@code ~0.0}), else "". */
-    private static String signPrefix(float r) {
-      return Float.floatToRawIntBits(r) < 0 ? "~" : "";
-    }
-
-    /** Formats {@code abs} as a non-negative BigDecimal with the bits of r. */
-    private static BigDecimal toBigDecimal(float r) {
-      return new BigDecimal(FLOAT_TO_STRING.apply(Math.abs(r)));
-    }
-
-    private static String formatFix(float r, int n) {
-      final StringBuilder sb = new StringBuilder(signPrefix(r));
-      if (r == 0.0f) {
-        sb.append('0');
-        if (n > 0) {
-          sb.append('.');
-          padRightTo(sb, sb.length() + n, '0');
-        }
-        return sb.toString();
-      }
-      final BigDecimal bd = toBigDecimal(r).setScale(n, RoundingMode.HALF_DOWN);
-      return sb.append(bd.toPlainString()).toString();
-    }
-
-    /** Formats r as {@code D.dddE±exp} with n digits after the decimal. */
-    private static String formatSci(float r, int n) {
-      final StringBuilder sb = new StringBuilder(signPrefix(r));
-      if (r == 0.0f) {
-        sb.append('0');
-        if (n > 0) {
-          sb.append('.');
-          padRightTo(sb, sb.length() + n, '0');
-        }
-        return sb.append("E0").toString();
-      }
-      // Express |r| as mantissa * 10^exp where mantissa in [1, 10).
-      final BigDecimal bd = toBigDecimal(r);
-      int exp = decimalExp(bd);
-      BigDecimal mantissa =
-          bd.movePointLeft(exp).setScale(n, RoundingMode.HALF_DOWN);
-      // Rounding may push the mantissa to exactly 10; renormalize.
-      if (mantissa.compareTo(BigDecimal.TEN) >= 0) {
-        mantissa = mantissa.movePointLeft(1);
-        exp++;
-      }
-      sb.append(mantissa.toPlainString()).append('E');
-      return appendSmlExp(sb, exp).toString();
-    }
-
-    /** Formats r as {@code 0.dddE±exp} with no trailing zeros. */
-    private static String formatExact(float r) {
-      final StringBuilder sb = new StringBuilder(signPrefix(r));
-      if (r == 0.0f) {
-        return sb.append("0.0").toString();
-      }
-      // bd is already non-negative because toBigDecimal uses Math.abs.
-      final BigDecimal bd = toBigDecimal(r).stripTrailingZeros();
-      // Emit as 0.<digits>; the exponent is one greater than the standard
-      // scientific exponent because the implied decimal point moves left by 1.
-      sb.append("0.").append(bd.unscaledValue().toString());
-      final int exp = decimalExp(bd) + 1;
-      if (exp == 0) {
-        return sb.toString();
-      }
-      return appendSmlExp(sb.append('E'), exp).toString();
-    }
-
-    /**
-     * Formats r with at most n significant digits, using fixed-point notation
-     * when the exponent is in {@code [-2, n)}, scientific notation otherwise.
-     * Trailing zeros are dropped.
-     */
-    private static String formatGen(float r, int n) {
-      final StringBuilder sb = new StringBuilder(signPrefix(r));
-      if (r == 0.0f) {
-        return sb.append('0').toString();
-      }
-      // Round to n significant digits, drop trailing zeros, then compute the
-      // exponent (rounding 9.99 to 3 s.f. gives 10.0, which is 1E1).
-      final BigDecimal bd =
-          toBigDecimal(r)
-              .round(new MathContext(n, RoundingMode.HALF_DOWN))
-              .stripTrailingZeros();
-      final int exp = decimalExp(bd);
-      // SML/NJ uses scientific form when exp <= -3 or exp >= n (i.e., the
-      // value would otherwise need leading zeros or be very large).
-      if (exp <= -3 || exp >= n) {
-        sb.append(bd.movePointLeft(exp).toPlainString()).append('E');
-        return appendSmlExp(sb, exp).toString();
-      }
-      // Fixed: emit at full precision, no trailing zeros.
-      return sb.append(bd.toPlainString()).toString();
-    }
-
-    /**
-     * The exponent that would appear in standard scientific notation — 0 for
-     * [1, 10), 1 for [10, 100), -1 for [0.1, 1), etc. Assumes {@code bd} is
-     * non-zero.
-     */
-    private static int decimalExp(BigDecimal bd) {
-      return bd.precision() - bd.scale() - 1;
-    }
-
-    /** Appends {@code exp} to {@code sb} using SML's {@code ~} for negative. */
-    private static StringBuilder appendSmlExp(StringBuilder sb, int exp) {
-      if (exp < 0) {
-        sb.append('~');
-        exp = -exp;
-      }
-      return sb.append(exp);
     }
   }
 
@@ -5143,6 +4989,394 @@ public abstract class Codes {
     }
   }
 
+  // Word values are stored as the bit pattern of a signed Java 'long';
+  // wordSize is 64. Unsigned semantics use the Long.*Unsigned helpers.
+
+  /** @see BuiltIn#WORD_ANDB */
+  private static final Applicable2 WORD_ANDB =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_ANDB) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return a0 & a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_COMPARE */
+  private static final Applicable2 WORD_COMPARE =
+      new BaseApplicable2<List, Long, Long>(BuiltIn.WORD_COMPARE) {
+        @Override
+        public List apply(Long a0, Long a1) {
+          return order(Long.compareUnsigned(a0, a1));
+        }
+      };
+
+  /** @see BuiltIn#WORD_DIV */
+  private static final Applicable2 WORD_DIV =
+      new WordDiv(BuiltIn.WORD_DIV, Pos.ZERO);
+
+  /** Implements {@link #WORD_DIV}. */
+  private static class WordDiv
+      extends BasePositionedApplicable2<Long, Long, Long> {
+    WordDiv(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new WordDiv(builtIn, pos);
+    }
+
+    @Override
+    public Long apply(Long a0, Long a1) {
+      if (a1 == 0) {
+        throw new MorelRuntimeException(BuiltInExn.DIV, pos);
+      }
+      return Long.divideUnsigned(a0, a1);
+    }
+  }
+
+  /** @see BuiltIn#WORD_FMT */
+  private static final Applicable2 WORD_FMT =
+      new BaseApplicable2<String, List, Long>(BuiltIn.WORD_FMT) {
+        @Override
+        public String apply(List radix, Long w) {
+          return Long.toUnsignedString(w, Radix.of(radix).base)
+              .toUpperCase(Locale.ROOT);
+        }
+      };
+
+  /** @see BuiltIn#WORD_FROM_INT */
+  private static final Applicable1 WORD_FROM_INT =
+      new BaseApplicable1<Long, Integer>(BuiltIn.WORD_FROM_INT) {
+        @Override
+        public Long apply(Integer i) {
+          return (long) i;
+        }
+      };
+
+  /** @see BuiltIn#WORD_FROM_LARGE */
+  private static final Applicable1 WORD_FROM_LARGE =
+      identity(BuiltIn.WORD_FROM_LARGE);
+
+  /** @see BuiltIn#WORD_FROM_LARGE_INT */
+  private static final Applicable1 WORD_FROM_LARGE_INT =
+      new BaseApplicable1<Long, Integer>(BuiltIn.WORD_FROM_LARGE_INT) {
+        @Override
+        public Long apply(Integer i) {
+          return (long) i;
+        }
+      };
+
+  /** @see BuiltIn#WORD_FROM_LARGE_WORD */
+  private static final Applicable1 WORD_FROM_LARGE_WORD =
+      identity(BuiltIn.WORD_FROM_LARGE_WORD);
+
+  /**
+   * Matches optional whitespace, an optional {@code 0x}/{@code 0X}/{@code
+   * 0wx}/{@code 0wX} prefix, then one or more hex digits. The prefix is only
+   * consumed when followed by a hex digit (regex backtracking), so {@code
+   * "0xG"} parses as just {@code "0"}.
+   */
+  static final Pattern WORD_HEX_PATTERN =
+      Pattern.compile("^\\s*(?:0[wW]?[xX])?([0-9a-fA-F]+)");
+
+  /** @see BuiltIn#WORD_FROM_STRING */
+  private static final Applicable WORD_FROM_STRING =
+      new WordFromString(BuiltIn.WORD_FROM_STRING, Pos.ZERO);
+
+  /** Implements {@link #WORD_FROM_STRING}. */
+  private static class WordFromString
+      extends BasePositionedApplicable1<List, String> {
+    WordFromString(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new WordFromString(builtIn, pos);
+    }
+
+    @Override
+    public List apply(String s) {
+      final Matcher m = WORD_HEX_PATTERN.matcher(s);
+      if (!m.find()) {
+        return OPTION_NONE;
+      }
+      try {
+        return optionSome(Long.parseUnsignedLong(m.group(1), 16));
+      } catch (NumberFormatException e) {
+        throw new MorelRuntimeException(BuiltInExn.OVERFLOW, pos);
+      }
+    }
+  }
+
+  /** @see BuiltIn#WORD_MAX */
+  private static final Applicable2 WORD_MAX =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_MAX) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return Long.compareUnsigned(a0, a1) >= 0 ? a0 : a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_MIN */
+  private static final Applicable2 WORD_MIN =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_MIN) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return Long.compareUnsigned(a0, a1) <= 0 ? a0 : a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_MOD */
+  private static final Applicable2 WORD_MOD =
+      new WordMod(BuiltIn.WORD_MOD, Pos.ZERO);
+
+  /** Implements {@link #WORD_MOD}. */
+  private static class WordMod
+      extends BasePositionedApplicable2<Long, Long, Long> {
+    WordMod(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new WordMod(builtIn, pos);
+    }
+
+    @Override
+    public Long apply(Long a0, Long a1) {
+      if (a1 == 0) {
+        throw new MorelRuntimeException(BuiltInExn.DIV, pos);
+      }
+      return Long.remainderUnsigned(a0, a1);
+    }
+  }
+
+  /** @see BuiltIn#WORD_NOTB */
+  private static final Applicable1 WORD_NOTB =
+      new BaseApplicable1<Long, Long>(BuiltIn.WORD_NOTB) {
+        @Override
+        public Long apply(Long w) {
+          return ~w;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_GE */
+  private static final Applicable2 WORD_OP_GE =
+      new BaseApplicable2<Boolean, Long, Long>(BuiltIn.WORD_OP_GE) {
+        @Override
+        public Boolean apply(Long a0, Long a1) {
+          return Long.compareUnsigned(a0, a1) >= 0;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_GT */
+  private static final Applicable2 WORD_OP_GT =
+      new BaseApplicable2<Boolean, Long, Long>(BuiltIn.WORD_OP_GT) {
+        @Override
+        public Boolean apply(Long a0, Long a1) {
+          return Long.compareUnsigned(a0, a1) > 0;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_LE */
+  private static final Applicable2 WORD_OP_LE =
+      new BaseApplicable2<Boolean, Long, Long>(BuiltIn.WORD_OP_LE) {
+        @Override
+        public Boolean apply(Long a0, Long a1) {
+          return Long.compareUnsigned(a0, a1) <= 0;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_LT */
+  private static final Applicable2 WORD_OP_LT =
+      new BaseApplicable2<Boolean, Long, Long>(BuiltIn.WORD_OP_LT) {
+        @Override
+        public Boolean apply(Long a0, Long a1) {
+          return Long.compareUnsigned(a0, a1) < 0;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_MINUS */
+  private static final Applicable2 WORD_OP_MINUS =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_OP_MINUS) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return a0 - a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_NEGATE */
+  private static final Applicable1 WORD_OP_NEGATE =
+      new BaseApplicable1<Long, Long>(BuiltIn.WORD_OP_NEGATE) {
+        @Override
+        public Long apply(Long w) {
+          return -w;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_PLUS */
+  private static final Applicable2 WORD_OP_PLUS =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_OP_PLUS) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return a0 + a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_SHIFT_LEFT */
+  private static final Applicable2 WORD_OP_SHIFT_LEFT =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_OP_SHIFT_LEFT) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return Long.compareUnsigned(a1, 64) >= 0 ? 0L : a0 << a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_SHIFT_RIGHT */
+  private static final Applicable2 WORD_OP_SHIFT_RIGHT =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_OP_SHIFT_RIGHT) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return Long.compareUnsigned(a1, 64) >= 0 ? 0L : a0 >>> a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_SHIFT_RIGHT_ARITHMETIC */
+  private static final Applicable2 WORD_OP_SHIFT_RIGHT_ARITHMETIC =
+      new BaseApplicable2<Long, Long, Long>(
+          BuiltIn.WORD_OP_SHIFT_RIGHT_ARITHMETIC) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          if (Long.compareUnsigned(a1, 64) >= 0) {
+            return a0 < 0 ? -1L : 0L;
+          }
+          return a0 >> a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_OP_TIMES */
+  private static final Applicable2 WORD_OP_TIMES =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_OP_TIMES) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return a0 * a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_ORB */
+  private static final Applicable2 WORD_ORB =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_ORB) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return a0 | a1;
+        }
+      };
+
+  /** @see BuiltIn#WORD_TO_INT */
+  private static final Applicable WORD_TO_INT =
+      new WordToInt(BuiltIn.WORD_TO_INT, Pos.ZERO);
+
+  /**
+   * Implements {@link #WORD_TO_INT} and {@link #WORD_TO_LARGE_INT}: treats the
+   * word as an unsigned value and raises {@code Overflow} if it does not fit in
+   * {@code int}.
+   */
+  private static class WordToInt
+      extends BasePositionedApplicable1<Integer, Long> {
+    WordToInt(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new WordToInt(builtIn, pos);
+    }
+
+    @Override
+    public Integer apply(Long w) {
+      if (Long.compareUnsigned(w, Integer.MAX_VALUE) > 0) {
+        throw new MorelRuntimeException(BuiltInExn.OVERFLOW, pos);
+      }
+      return (int) (long) w;
+    }
+  }
+
+  /** @see BuiltIn#WORD_TO_INT_X */
+  private static final Applicable WORD_TO_INT_X =
+      new WordToIntX(BuiltIn.WORD_TO_INT_X, Pos.ZERO);
+
+  /**
+   * Implements {@link #WORD_TO_INT_X} and {@link #WORD_TO_LARGE_INT_X}: treats
+   * the word as a signed 2's-complement value and raises {@code Overflow} if it
+   * does not fit in {@code int}.
+   */
+  private static class WordToIntX
+      extends BasePositionedApplicable1<Integer, Long> {
+    WordToIntX(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new WordToIntX(builtIn, pos);
+    }
+
+    @Override
+    public Integer apply(Long w) {
+      if (w < Integer.MIN_VALUE || w > Integer.MAX_VALUE) {
+        throw new MorelRuntimeException(BuiltInExn.OVERFLOW, pos);
+      }
+      return (int) (long) w;
+    }
+  }
+
+  /** @see BuiltIn#WORD_TO_LARGE */
+  private static final Applicable1 WORD_TO_LARGE =
+      identity(BuiltIn.WORD_TO_LARGE);
+
+  /** @see BuiltIn#WORD_TO_LARGE_INT */
+  private static final Applicable WORD_TO_LARGE_INT =
+      new WordToInt(BuiltIn.WORD_TO_LARGE_INT, Pos.ZERO);
+
+  /** @see BuiltIn#WORD_TO_LARGE_INT_X */
+  private static final Applicable WORD_TO_LARGE_INT_X =
+      new WordToIntX(BuiltIn.WORD_TO_LARGE_INT_X, Pos.ZERO);
+
+  /** @see BuiltIn#WORD_TO_LARGE_WORD */
+  private static final Applicable1 WORD_TO_LARGE_WORD =
+      identity(BuiltIn.WORD_TO_LARGE_WORD);
+
+  /** @see BuiltIn#WORD_TO_LARGE_WORD_X */
+  private static final Applicable1 WORD_TO_LARGE_WORD_X =
+      identity(BuiltIn.WORD_TO_LARGE_WORD_X);
+
+  /** @see BuiltIn#WORD_TO_LARGE_X */
+  private static final Applicable1 WORD_TO_LARGE_X =
+      identity(BuiltIn.WORD_TO_LARGE_X);
+
+  /** @see BuiltIn#WORD_TO_STRING */
+  private static final Applicable1 WORD_TO_STRING =
+      new BaseApplicable1<String, Long>(BuiltIn.WORD_TO_STRING) {
+        @Override
+        public String apply(Long w) {
+          return Long.toUnsignedString(w, 16).toUpperCase(Locale.ROOT);
+        }
+      };
+
+  /** @see BuiltIn#WORD_WORD_SIZE */
+  private static final int WORD_WORD_SIZE = 64;
+
+  /** @see BuiltIn#WORD_XORB */
+  private static final Applicable2 WORD_XORB =
+      new BaseApplicable2<Long, Long, Long>(BuiltIn.WORD_XORB) {
+        @Override
+        public Long apply(Long a0, Long a1) {
+          return a0 ^ a1;
+        }
+      };
+
   /** @see BuiltIn#Z_EXTENT */
   private static final Applicable Z_EXTENT =
       new BaseApplicable1<List, RangeExtent>(BuiltIn.Z_EXTENT) {
@@ -5865,6 +6099,7 @@ public abstract class Codes {
           .put(BuiltIn.MATH_TAN, MATH_TAN)
           .put(BuiltIn.MATH_TANH, MATH_TANH)
           .put(BuiltIn.OP_CONS, OP_CONS)
+          .put(BuiltIn.OP_DIV, OP_DIV)
           .put(BuiltIn.OP_ELEM, OP_ELEM)
           .put(BuiltIn.OP_EQ, OP_EQ)
           .put(BuiltIn.OP_GE, OP_GE)
@@ -5872,6 +6107,7 @@ public abstract class Codes {
           .put(BuiltIn.OP_LE, OP_LE)
           .put(BuiltIn.OP_LT, OP_LT)
           .put(BuiltIn.OP_MINUS, OP_MINUS)
+          .put(BuiltIn.OP_MOD, OP_MOD)
           .put(BuiltIn.OP_NE, OP_NE)
           .put(BuiltIn.OP_NEGATE, OP_NEGATE)
           .put(BuiltIn.OP_NOT_ELEM, OP_NOT_ELEM)
@@ -6051,6 +6287,44 @@ public abstract class Codes {
           .put(BuiltIn.VECTOR_SUB, VECTOR_SUB)
           .put(BuiltIn.VECTOR_TABULATE, VECTOR_TABULATE)
           .put(BuiltIn.VECTOR_UPDATE, VECTOR_UPDATE)
+          .put(BuiltIn.WORD_ANDB, WORD_ANDB)
+          .put(BuiltIn.WORD_COMPARE, WORD_COMPARE)
+          .put(BuiltIn.WORD_DIV, WORD_DIV)
+          .put(BuiltIn.WORD_FMT, WORD_FMT)
+          .put(BuiltIn.WORD_FROM_INT, WORD_FROM_INT)
+          .put(BuiltIn.WORD_FROM_LARGE, WORD_FROM_LARGE)
+          .put(BuiltIn.WORD_FROM_LARGE_INT, WORD_FROM_LARGE_INT)
+          .put(BuiltIn.WORD_FROM_LARGE_WORD, WORD_FROM_LARGE_WORD)
+          .put(BuiltIn.WORD_FROM_STRING, WORD_FROM_STRING)
+          .put(BuiltIn.WORD_MAX, WORD_MAX)
+          .put(BuiltIn.WORD_MIN, WORD_MIN)
+          .put(BuiltIn.WORD_MOD, WORD_MOD)
+          .put(BuiltIn.WORD_NOTB, WORD_NOTB)
+          .put(BuiltIn.WORD_OP_GE, WORD_OP_GE)
+          .put(BuiltIn.WORD_OP_GT, WORD_OP_GT)
+          .put(BuiltIn.WORD_OP_LE, WORD_OP_LE)
+          .put(BuiltIn.WORD_OP_LT, WORD_OP_LT)
+          .put(BuiltIn.WORD_OP_MINUS, WORD_OP_MINUS)
+          .put(BuiltIn.WORD_OP_NEGATE, WORD_OP_NEGATE)
+          .put(BuiltIn.WORD_OP_PLUS, WORD_OP_PLUS)
+          .put(BuiltIn.WORD_OP_SHIFT_LEFT, WORD_OP_SHIFT_LEFT)
+          .put(BuiltIn.WORD_OP_SHIFT_RIGHT, WORD_OP_SHIFT_RIGHT)
+          .put(
+              BuiltIn.WORD_OP_SHIFT_RIGHT_ARITHMETIC,
+              WORD_OP_SHIFT_RIGHT_ARITHMETIC)
+          .put(BuiltIn.WORD_OP_TIMES, WORD_OP_TIMES)
+          .put(BuiltIn.WORD_ORB, WORD_ORB)
+          .put(BuiltIn.WORD_TO_INT, WORD_TO_INT)
+          .put(BuiltIn.WORD_TO_INT_X, WORD_TO_INT_X)
+          .put(BuiltIn.WORD_TO_LARGE, WORD_TO_LARGE)
+          .put(BuiltIn.WORD_TO_LARGE_INT, WORD_TO_LARGE_INT)
+          .put(BuiltIn.WORD_TO_LARGE_INT_X, WORD_TO_LARGE_INT_X)
+          .put(BuiltIn.WORD_TO_LARGE_WORD, WORD_TO_LARGE_WORD)
+          .put(BuiltIn.WORD_TO_LARGE_WORD_X, WORD_TO_LARGE_WORD_X)
+          .put(BuiltIn.WORD_TO_LARGE_X, WORD_TO_LARGE_X)
+          .put(BuiltIn.WORD_TO_STRING, WORD_TO_STRING)
+          .put(BuiltIn.WORD_WORD_SIZE, WORD_WORD_SIZE)
+          .put(BuiltIn.WORD_XORB, WORD_XORB)
           .put(BuiltIn.Z_ANDALSO, Unit.INSTANCE)
           .put(BuiltIn.Z_CURRENT, Unit.INSTANCE)
           .put(BuiltIn.Z_ELEMENTS, Unit.INSTANCE)

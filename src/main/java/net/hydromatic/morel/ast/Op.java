@@ -40,6 +40,7 @@ public enum Op {
   INT_LITERAL(Assoc.ATOM),
   REAL_LITERAL(Assoc.ATOM),
   STRING_LITERAL(Assoc.ATOM),
+  WORD_LITERAL(Assoc.ATOM),
   UNIT_LITERAL(Assoc.ATOM),
   /** Literal whose value is a {@link net.hydromatic.morel.compile.BuiltIn}. */
   FN_LITERAL(Assoc.ATOM), // occurs in Core, not in Ast
@@ -62,6 +63,7 @@ public enum Op {
   INT_LITERAL_PAT(Assoc.ATOM),
   REAL_LITERAL_PAT(Assoc.ATOM),
   STRING_LITERAL_PAT(Assoc.ATOM),
+  WORD_LITERAL_PAT(Assoc.ATOM),
   // annotated pattern "p: t"
   ANNOTATED_PAT(" : "),
 
@@ -328,6 +330,8 @@ public enum Op {
         return REAL_LITERAL_PAT;
       case STRING_LITERAL:
         return STRING_LITERAL_PAT;
+      case WORD_LITERAL:
+        return WORD_LITERAL_PAT;
       case TUPLE:
         return TUPLE_PAT;
       default:

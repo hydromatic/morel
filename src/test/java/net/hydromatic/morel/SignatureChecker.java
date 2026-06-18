@@ -981,6 +981,7 @@ public class SignatureChecker {
             case "real":
             case "string":
             case "unit":
+            case "word":
               // The 'int' type is in a constant called 'INT'.
               return namedType.name.toUpperCase(Locale.ROOT);
             case "option":

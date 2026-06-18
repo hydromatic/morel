@@ -113,7 +113,8 @@ DESC (DESC "a");
 0;
 > val it = 0 : int
 (* "eqtype word" maps to "Word" *)
-(*) TODO word
+0w0;
+> val it = 0wx0 : word
 (* "type real" maps to "Real" *)
 1.5;
 > val it = 1.5 : real
@@ -581,43 +582,56 @@ Interact.useSilently;
 (* Overloaded operators ------------------------------------------- *)
 (* Standard ML overloads twelve operators. Each is shown with its default
  * signature, then applied to a value of each type for which it is defined.
- * Morel does not implement the "word" type, so word instances are absent. *)
+ * Word arithmetic ("+", "-", "*", "div", "mod", "~") wraps modulo
+ * 2^wordSize, and word division and comparison are unsigned. *)
 
-(* "op +" : numeric (int, real); default "int * int -> int". *)
+(* "op +" : numeric (int, real, word); default "int * int -> int". *)
 op +;
 > val it = fn : int * int -> int
 1 + 2;
 > val it = 3 : int
 1.0 + 2.0;
 > val it = 3 : real
+0wx8 + 0w9;
+> val it = 0wx11 : word
 
-(* "op -" : numeric (int, real). *)
+(* "op -" : numeric (int, real, word). *)
 op -;
 > val it = fn : int * int -> int
 3 - 1;
 > val it = 2 : int
 3.0 - 1.0;
 > val it = 2 : real
+0w3 - 0w1;
+> val it = 0wx2 : word
 
-(* "op *" : numeric (int, real). *)
+(* "op *" : numeric (int, real, word). *)
 op *;
 > val it = fn : int * int -> int
 2 * 3;
 > val it = 6 : int
 2.0 * 3.0;
 > val it = 6 : real
+0w2 * 0w3;
+> val it = 0wx6 : word
 
-(* "op div" : integer (int; word not implemented). *)
+(* "op div" : wordint (int, word). Word division is unsigned. *)
 op div;
 > val it = fn : int * int -> int
 7 div 2;
 > val it = 3 : int
+0w17 div 0w5;
+> val it = 0wx3 : word
+0wxffffffffffffffff div 0w2;
+> val it = 0wx7FFFFFFFFFFFFFFF : word
 
-(* "op mod" : integer (int; word not implemented). *)
+(* "op mod" : wordint (int, word). *)
 op mod;
 > val it = fn : int * int -> int
 7 mod 2;
 > val it = 1 : int
+0w17 mod 0w5;
+> val it = 0wx2 : word
 
 (* "op /" : real only; applying to int is a type error. *)
 op /;
@@ -628,13 +642,15 @@ op /;
 > stdIn:1.1-1.6 Error: Cannot deduce type: conflict: int vs real
 >   raised at: stdIn:1.1-1.6
 
-(* "op ~" : numeric (int, real). *)
+(* "op ~" : num (int, real, word). For word, '~' is the 2's complement. *)
 op ~;
 > val it = fn : int -> int
 ~ 5;
 > val it = ~5 : int
 ~ 5.0;
 > val it = ~5 : real
+~ 0w1;
+> val it = 0wxFFFFFFFFFFFFFFFF : word
 
 (* "abs" : a function (not an operator), numeric (int, real). *)
 abs;
@@ -644,7 +660,8 @@ abs ~5;
 abs ~5.0;
 > val it = 5 : real
 
-(* "op <" : numtext (int, real, string, char). *)
+(* "op <" : numtext (int, real, string, char, word). Word is unsigned, so a
+ * word with the high bit set is large. *)
 op <;
 > val it = fn : 'a * 'a -> bool
 1 < 2;
@@ -655,8 +672,12 @@ op <;
 > val it = true : bool
 #"a" < #"b";
 > val it = true : bool
+0w1 < 0w2;
+> val it = true : bool
+0wxffffffffffffffff < 0w1;
+> val it = false : bool
 
-(* "op >" : numtext (int, real, string, char). *)
+(* "op >" : numtext (int, real, string, char, word). *)
 op >;
 > val it = fn : 'a * 'a -> bool
 2 > 1;
@@ -667,8 +688,10 @@ op >;
 > val it = true : bool
 #"b" > #"a";
 > val it = true : bool
+0wxffffffffffffffff > 0w1;
+> val it = true : bool
 
-(* "op <=" : numtext (int, real, string, char). *)
+(* "op <=" : numtext (int, real, string, char, word). *)
 op <=;
 > val it = fn : 'a * 'a -> bool
 2 <= 2;
@@ -679,8 +702,10 @@ op <=;
 > val it = true : bool
 #"a" <= #"a";
 > val it = true : bool
+0w7 <= 0w7;
+> val it = true : bool
 
-(* "op >=" : numtext (int, real, string, char). *)
+(* "op >=" : numtext (int, real, string, char, word). *)
 op >=;
 > val it = fn : 'a * 'a -> bool
 2 >= 3;
@@ -691,5 +716,7 @@ op >=;
 > val it = false : bool
 #"a" >= #"b";
 > val it = false : bool
+0wx8000000000000000 >= 0w1;
+> val it = true : bool
 
 (*) End built-in.smli

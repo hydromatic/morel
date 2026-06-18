@@ -43,10 +43,13 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -281,8 +284,40 @@ public class TypeResolver {
   }
 
   /**
+   * SML overload class {@code num}: types of {@code +}, {@code -}, {@code *},
+   * {@code ~}.
+   */
+  private static final EnumSet<PrimitiveType> NUM =
+      EnumSet.of(PrimitiveType.INT, PrimitiveType.REAL, PrimitiveType.WORD);
+
+  /** SML overload class {@code realint}: types of {@code abs}. */
+  private static final EnumSet<PrimitiveType> REALINT =
+      EnumSet.of(PrimitiveType.INT, PrimitiveType.REAL);
+
+  /** SML overload class {@code wordint}: types of {@code div}, {@code mod}. */
+  private static final EnumSet<PrimitiveType> WORDINT =
+      EnumSet.of(PrimitiveType.INT, PrimitiveType.WORD);
+
+  /**
+   * Returns the set of types for which an overloaded numeric operator is
+   * defined.
+   */
+  private static EnumSet<PrimitiveType> overloadDomain(BuiltIn builtIn) {
+    switch (builtIn) {
+      case OP_DIV:
+      case OP_MOD:
+        return WORDINT;
+      case ABS:
+        return REALINT;
+      default: // OP_PLUS, OP_MINUS, OP_TIMES, OP_NEGATE
+        return NUM;
+    }
+  }
+
+  /**
    * Checks that arithmetic operators ({@code +}, {@code -}, {@code *}, {@code
-   * ~}, {@code abs}) are applied to numeric (int or real) operands. Throws a
+   * ~}, {@code abs}, {@code div}, {@code mod}) are applied to operands of a
+   * type in their overload class (see {@link #overloadDomain}). Throws a
    * positioned {@link TypeException} otherwise, e.g. for "true + true".
    */
   private static void checkNumericOperators(Ast.Decl decl, TypeMap typeMap) {
@@ -295,9 +330,8 @@ public class TypeResolver {
               final BuiltIn builtIn = BuiltIn.BY_ML_NAME.get(name);
               if (builtIn != null && builtIn.preferredType != null) {
                 final Type type = typeMap.getType(apply);
-                if (type != PrimitiveType.INT
-                    && type != PrimitiveType.REAL
-                    && !(type instanceof TypeVar)) {
+                if (!(type instanceof TypeVar)
+                    && !overloadDomain(builtIn).contains(type)) {
                   final String opName =
                       name.startsWith("op ") ? name.substring(3) : name;
                   throw new TypeException(
@@ -793,6 +827,46 @@ public class TypeResolver {
     return deduceExpType(env, node, v);
   }
 
+  /**
+   * Checks that an {@code int} or {@code word} literal value fits its type,
+   * throwing a {@link TypeException} if not. {@code int} is signed 32-bit;
+   * {@code word} is unsigned 64-bit. {@code node} is an {@link Ast.Literal} or
+   * {@link Ast.LiteralPat}.
+   */
+  private static void checkLiteralRange(AstNode node, PrimitiveType type) {
+    final Comparable comparable =
+        node instanceof Ast.Literal
+            ? ((Ast.Literal) node).value
+            : ((Ast.LiteralPat) node).value;
+    final BigInteger i = ((BigDecimal) comparable).toBigInteger();
+    switch (type) {
+      case INT:
+        // 'int' is signed 32-bit; negatives are allowed and bitLength excludes
+        // the sign bit.
+        validateLiteralRange(type, i, true, 31, "" + i, node.pos);
+        return;
+      case WORD:
+        // 'word' is unsigned 64-bit; negatives are not allowed.
+        validateLiteralRange(type, i, false, 64, "0w" + i, node.pos);
+    }
+  }
+
+  private static void validateLiteralRange(
+      PrimitiveType type,
+      BigInteger i,
+      boolean signed,
+      int bits,
+      String text,
+      Pos pos) {
+    if (i.bitLength() > bits || !signed && i.signum() < 0) {
+      throw new TypeException(
+          format(
+              "literal '%s' is too large for type %s",
+              first(pos.text(), text), type),
+          pos);
+    }
+  }
+
   private Ast.Exp deduceExpType(TypeEnv env, Ast.Exp node, Variable v) {
     final List<Ast.Exp> args2;
     final Variable v2;
@@ -802,24 +876,22 @@ public class TypeResolver {
         return deduceExpType(env, ((Ast.AttributedExp) node).exp, v);
       case BOOL_LITERAL:
         return reg(node, v, toTerm(PrimitiveType.BOOL));
-
       case CHAR_LITERAL:
         return reg(node, v, toTerm(PrimitiveType.CHAR));
-
       case INT_LITERAL:
+        checkLiteralRange(node, PrimitiveType.INT);
         return reg(node, v, toTerm(PrimitiveType.INT));
-
       case INTERNAL_LITERAL:
         return reg(node, v, (Variable) ((Ast.Literal) node).value);
-
       case REAL_LITERAL:
         return reg(node, v, toTerm(PrimitiveType.REAL));
-
       case STRING_LITERAL:
         return reg(node, v, toTerm(PrimitiveType.STRING));
-
       case UNIT_LITERAL:
         return reg(node, v, toTerm(PrimitiveType.UNIT));
+      case WORD_LITERAL:
+        checkLiteralRange(node, PrimitiveType.WORD);
+        return reg(node, v, toTerm(PrimitiveType.WORD));
 
       case ANNOTATED_EXP:
         final Ast.AnnotatedExp annotatedExp = (Ast.AnnotatedExp) node;
@@ -2719,6 +2791,8 @@ public class TypeResolver {
         return PrimitiveType.STRING;
       case UNIT_LITERAL:
         return PrimitiveType.UNIT;
+      case WORD_LITERAL:
+        return PrimitiveType.WORD;
       case ID:
         final Ast.Id id = (Ast.Id) exp;
         Type type = env.getTypeOpt(id.name);
@@ -3673,6 +3747,7 @@ public class TypeResolver {
         return reg(pat, v, toTerm(PrimitiveType.CHAR));
 
       case INT_LITERAL_PAT:
+        checkLiteralRange(pat, PrimitiveType.INT);
         return reg(pat, v, toTerm(PrimitiveType.INT));
 
       case REAL_LITERAL_PAT:
@@ -3680,6 +3755,10 @@ public class TypeResolver {
 
       case STRING_LITERAL_PAT:
         return reg(pat, v, toTerm(PrimitiveType.STRING));
+
+      case WORD_LITERAL_PAT:
+        checkLiteralRange(pat, PrimitiveType.WORD);
+        return reg(pat, v, toTerm(PrimitiveType.WORD));
 
       case ID_PAT:
         final Ast.IdPat idPat = (Ast.IdPat) pat;

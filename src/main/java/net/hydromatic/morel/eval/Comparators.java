@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.DummyType;
+import net.hydromatic.morel.type.PrimitiveType;
 import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
@@ -49,6 +50,11 @@ public class Comparators {
   @SuppressWarnings("unchecked")
   public static int compare(Object o1, Object o2) {
     return ((Comparable) o1).compareTo(o2);
+  }
+
+  /** Compares two {@code word} values (Java {@code Long}) as unsigned. */
+  public static int compareUnsigned(Object o1, Object o2) {
+    return Long.compareUnsigned((Long) o1, (Long) o2);
   }
 
   /** Sentinel value. */
@@ -106,7 +112,11 @@ public class Comparators {
       switch (type.op()) {
         case ID:
         case TY_VAR:
-          // Primitive types are compared using their natural order.
+          // 'word' is an unsigned Long; other primitive types use their
+          // natural order.
+          if (type == PrimitiveType.WORD) {
+            return Comparators::compareUnsigned;
+          }
           return Comparators::compare;
 
         case TUPLE_TYPE:

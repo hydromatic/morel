@@ -31,6 +31,7 @@ public enum PrimitiveType implements RecordLikeType {
   INT,
   REAL,
   STRING,
+  WORD,
   UNIT;
 
   /** The name in the language, e.g. {@code bool}. */

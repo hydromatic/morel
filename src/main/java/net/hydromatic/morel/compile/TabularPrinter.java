@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
@@ -275,6 +276,12 @@ class TabularPrinter {
     if (value instanceof Float) {
       return Codes.floatToString((Float) value);
     }
+    if (value instanceof Long) {
+      // The only Long-backed primitive type is 'word'; print it in hexadecimal,
+      // like classic mode (and Word.toString).
+      return "0wx"
+          + Long.toUnsignedString((Long) value, 16).toUpperCase(Locale.ROOT);
+    }
     if (value instanceof String && stringDepth >= 0) {
       final String s = (String) value;
       if (s.length() > stringDepth) {
@@ -481,7 +488,9 @@ class TabularPrinter {
     }
 
     private static boolean isNumeric(PrimitiveType type) {
-      return type == PrimitiveType.INT || type == PrimitiveType.REAL;
+      return type == PrimitiveType.INT
+          || type == PrimitiveType.REAL
+          || type == PrimitiveType.WORD;
     }
 
     /**

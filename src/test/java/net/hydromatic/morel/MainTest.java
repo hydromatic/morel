@@ -124,6 +124,13 @@ public class MainTest {
     ml("#\"\\\"\"").assertParseLiteral(isLiteral('"', "#\"\\\"\""));
     ml("#\"\\\\\"").assertParseLiteral(isLiteral('\\', "#\"\\\\\""));
 
+    // word literals unparse in upper-case hexadecimal, prefixed "0wx"
+    ml("0wxAB").assertParse("0wxAB");
+    ml("0w171").assertParse("0wxAB");
+    ml("0wxab").assertParse("0wxAB");
+    ml("0w0").assertParse("0wx0");
+    ml("fn 0wxAB => 1 | _ => 2").assertParse("fn 0wxAB => 1 | _ => 2");
+
     // true and false are variables, not actually literals
     ml("true").assertParseStmt(Ast.Id.class, "true");
     ml("false").assertParseStmt(Ast.Id.class, "false");

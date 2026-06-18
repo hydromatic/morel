@@ -383,6 +383,16 @@ Relational.compare ([], [1, 2]);
 > val it = LESS : order
 Relational.compare ([SOME 1, NONE], [SOME 1, SOME 2, SOME 3, NONE]);
 > val it = LESS : order
+(* 'word' compares as unsigned: a word with the high bit set is the largest
+   value, and 'order'/'order DESC' sort accordingly. *)
+Relational.compare (0wxffffffffffffffff, 0w1);
+> val it = GREATER : order
+Relational.compare (0w3, 0w7);
+> val it = LESS : order
+from x in [0wxffffffffffffffff, 0w7, 0w1] order x;
+> val it = [0wx1,0wx7,0wxFFFFFFFFFFFFFFFF] : word list
+from x in [0wxffffffffffffffff, 0w7, 0w1] order DESC x;
+> val it = [0wxFFFFFFFFFFFFFFFF,0wx7,0wx1] : word list
 
 (*) Use Relational.compare as comparator for List.collate and Vector.collate.
 List.collate Relational.compare ([1,2,3],[1,2,4]);

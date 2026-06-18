@@ -2710,6 +2710,7 @@ class Generators {
       case INT_LITERAL_PAT:
       case REAL_LITERAL_PAT:
       case STRING_LITERAL_PAT:
+      case WORD_LITERAL_PAT:
         // Literal pattern: (subject = literal) andalso body
         final Core.Exp literal = patternToLiteral(pat);
         if (literal == null) {

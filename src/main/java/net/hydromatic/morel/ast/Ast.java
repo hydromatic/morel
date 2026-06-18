@@ -32,6 +32,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
+import com.google.common.primitives.UnsignedLong;
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -117,7 +119,8 @@ public class Ast {
               || op == Op.CHAR_LITERAL_PAT
               || op == Op.INT_LITERAL_PAT
               || op == Op.REAL_LITERAL_PAT
-              || op == Op.STRING_LITERAL_PAT);
+              || op == Op.STRING_LITERAL_PAT
+              || op == Op.WORD_LITERAL_PAT);
     }
 
     @Override
@@ -142,6 +145,10 @@ public class Ast {
     }
 
     AstWriter unparse(AstWriter w, int left, int right) {
+      if (op == Op.WORD_LITERAL_PAT) {
+        return w.appendLiteral(
+            UnsignedLong.valueOf(((BigDecimal) value).toBigIntegerExact()));
+      }
       return w.appendLiteral(value);
     }
   }
@@ -1312,6 +1319,10 @@ public class Ast {
 
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
+      if (op == Op.WORD_LITERAL) {
+        return w.appendLiteral(
+            UnsignedLong.valueOf(((BigDecimal) value).toBigIntegerExact()));
+      }
       return w.appendLiteral(value);
     }
   }

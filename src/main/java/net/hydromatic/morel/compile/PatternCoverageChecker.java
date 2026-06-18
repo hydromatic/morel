@@ -135,6 +135,7 @@ class PatternCoverageChecker {
       case INT_LITERAL_PAT:
       case REAL_LITERAL_PAT:
       case STRING_LITERAL_PAT:
+      case WORD_LITERAL_PAT:
         final Core.LiteralPat literalPat = (Core.LiteralPat) pat;
         terms.add(sat.variable(path.toVar(literalPat.value.toString())));
         return;

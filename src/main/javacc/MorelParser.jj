@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -216,6 +217,8 @@ Literal literal() :
   e = stringLiteral() { return e; }
 |
   e = charLiteral() { return e; }
+|
+  e = wordLiteral() { return e; }
 }
 
 /** Parses a literal expression followed by end-of-file. */
@@ -239,7 +242,7 @@ Literal numericLiteral() :
     } else {
       d = new BigDecimal(token.image);
     }
-    return ast.intLiteral(pos(), d);
+    return ast.intLiteral(pos().withText(token.image), d);
   }
 |
   <REAL_LITERAL> {
@@ -292,6 +295,20 @@ Literal charLiteral() : {}
 {
   <CHAR_LITERAL> {
     return ast.charLiteral(pos(), unquoteCharLiteral(token.image));
+  }
+}
+
+/** Parses a word literal, e.g. {@code 0w255} (decimal) or {@code 0wx1f}
+ * (hexadecimal). */
+Literal wordLiteral() : {}
+{
+  (<WORD_LITERAL> | <WORD_HEX_LITERAL>) {
+    final String image = token.image;
+    final boolean hex = image.length() > 2
+        && (image.charAt(2) == 'x' || image.charAt(2) == 'X');
+    final BigInteger value =
+        new BigInteger(image.substring(hex ? 3 : 2), hex ? 16 : 10);
+    return ast.wordLiteral(pos().withText(image), new BigDecimal(value));
   }
 }
 
@@ -2444,6 +2461,10 @@ AstNode statementEof() :
                      <DOUBLE_QUOTE> >
     |
     < CHAR_LITERAL: ("#") <QUOTED_STRING> >
+    |
+    < WORD_HEX_LITERAL: "0wx" (["0"-"9", "a"-"f", "A"-"F"])+ >
+    |
+    < WORD_LITERAL: "0w" (["0"-"9"])+ >
 }
 
 /* SEPARATORS */

@@ -31,6 +31,19 @@ Sys.set ("lineWidth", 78);
 > val it = ~2147483648 : int
 2147483647;
 > val it = 2147483647 : int
+
+(* Integer literals outside the 32-bit 'int' range (~2147483648 to
+   2147483647) are rejected during validation. *)
+2147483648;
+> stdIn:1.1-1.11 Error: literal '2147483648' is too large for type int
+>   raised at: stdIn:1.1-1.11
+~2147483649;
+> stdIn:1.1-1.12 Error: literal '~2147483649' is too large for type int
+>   raised at: stdIn:1.1-1.12
+9999999999;
+> stdIn:1.1-1.11 Error: literal '9999999999' is too large for type int
+>   raised at: stdIn:1.1-1.11
+
 1.0;
 > val it = 1 : real
 0.0;
@@ -1049,5 +1062,51 @@ from r in bag [{x=1, y="a"}, {x=1, y="b"}, {x=2, y="c"}]
 > val it =
 >   [{x=2,ys=["c"]},{x=1,ys=["a","b"]}]
 >   : {x:int, ys:string bag} bag
+
+(*) Word literals: decimal and hexadecimal
+0w255;
+> val it = 0wxFF : word
+0wxff;
+> val it = 0wxFF : word
+0w0;
+> val it = 0wx0 : word
+0w18446744073709551615;
+> val it = 0wxFFFFFFFFFFFFFFFF : word
+0wxffffffffffffffff;
+> val it = 0wxFFFFFFFFFFFFFFFF : word
+
+(* Word literals outside the unsigned 64-bit 'word' range (0w0 to
+   0w18446744073709551615) are rejected during validation, in both decimal and
+   hexadecimal forms. *)
+0w18446744073709551616;
+> stdIn:1.1-1.23 Error: literal '0w18446744073709551616' is too large for type word
+>   raised at: stdIn:1.1-1.23
+0wx10000000000000000;
+> stdIn:1.1-1.21 Error: literal '0wx10000000000000000' is too large for type word
+>   raised at: stdIn:1.1-1.21
+0wxffffffffffffffffff;
+> stdIn:1.1-1.22 Error: literal '0wxffffffffffffffffff' is too large for type word
+>   raised at: stdIn:1.1-1.22
+
+0wxFF = 0w255;
+> val it = true : bool
+[0w1, 0w2, 0w3];
+> val it = [0wx1,0wx2,0wx3] : word list
+
+(*) word in a tuple and a record
+(0w1, 0wx10);
+> val it = (0wx1,0wx10) : word * word
+{a = 0w5};
+> val it = {a=0wx5} : {a:word}
+
+(*) word literal patterns in 'case' and 'fn'
+case 0w1 of 0w1 => "one" | _ => "other";
+> val it = "one" : string
+val classify = fn 0w0 => "zero" | _ => "nonzero";
+> val classify = fn : word -> string
+classify 0w0;
+> val it = "zero" : string
+classify 0w7;
+> val it = "nonzero" : string
 
 (*) End simple.smli

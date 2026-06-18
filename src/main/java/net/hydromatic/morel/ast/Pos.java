@@ -18,6 +18,8 @@
  */
 package net.hydromatic.morel.ast;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import java.util.AbstractList;
@@ -26,6 +28,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import net.hydromatic.morel.util.Pair;
 import org.apache.calcite.util.mapping.IntPair;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Position of a parse-tree node. */
 public class Pos {
@@ -52,6 +55,11 @@ public class Pos {
     IntPair start = lineCol(ml, startOffset);
     IntPair end = lineCol(ml, endOffset);
     return new Pos(file, start.source, start.target, end.source, end.target);
+  }
+
+  /** Attaches source text to a Pos. */
+  public Pos withText(String text) {
+    return new TextPos(file, startLine, startColumn, endLine, endColumn, text);
   }
 
   /**
@@ -246,6 +254,32 @@ public class Pos {
       return Integer.compare(p1.startColumn, p2.startColumn);
     }
     return 1;
+  }
+
+  /** Returns the source text, or null. */
+  public @Nullable String text() {
+    return null;
+  }
+
+  /** Position with source text attached. */
+  private static class TextPos extends Pos {
+    private final String text;
+
+    TextPos(
+        String file,
+        int startLine,
+        int startColumn,
+        int endLine,
+        int endColumn,
+        String text) {
+      super(file, startLine, startColumn, endLine, endColumn);
+      this.text = requireNonNull(text);
+    }
+
+    @Override
+    public String text() {
+      return text;
+    }
   }
 }
 

@@ -510,6 +510,8 @@ public class Resolver {
         return core.stringLiteral((String) ((Ast.Literal) exp).value);
       case UNIT_LITERAL:
         return core.unitLiteral();
+      case WORD_LITERAL:
+        return core.wordLiteral((BigDecimal) ((Ast.Literal) exp).value);
       case ANNOTATED_EXP:
         return toCore(((Ast.AnnotatedExp) exp).exp);
       case ID:
@@ -794,6 +796,18 @@ public class Resolver {
    * argument type.
    */
   private Core.Exp fnToCore(Ast.Exp fn, Type argType) {
+    // The comparison operators '<', '<=', '>', '>=' are polymorphic, but word
+    // comparison must be unsigned, so route word operands to the Word structure
+    // members (which use Long.compareUnsigned).
+    if (fn.op == Op.ID
+        && argType instanceof TupleType
+        && !((TupleType) argType).argTypes.isEmpty()
+        && ((TupleType) argType).argType(0) == PrimitiveType.WORD) {
+      final BuiltIn op = BuiltIn.BY_ML_NAME.get(((Ast.Id) fn).name);
+      if (op != null && op.toWord() != op) {
+        return core.functionLiteral(typeMap.typeSystem, op.toWord());
+      }
+    }
     @Nullable
     Binding top = fn.op == Op.ID ? env.getTop(((Ast.Id) fn).name) : null;
     if (fn.op == Op.ID // TODO: change to 'top != null'
@@ -881,7 +895,13 @@ public class Resolver {
   private Core.Apply toCore(Ast.InfixCall call) {
     Core.Exp core0 = toCore(call.a0);
     Core.Exp core1 = toCore(call.a1);
-    final BuiltIn builtIn = toBuiltIn(call.op);
+    // The comparison operators '<', '<=', '>', '>=' are polymorphic, but word
+    // comparison must be unsigned, so route word operands to the Word structure
+    // members (which use Long.compareUnsigned).
+    BuiltIn builtIn = toBuiltIn(call.op);
+    if (core0.type == PrimitiveType.WORD) {
+      builtIn = builtIn.toWord();
+    }
     return core.apply(
         call.pos,
         typeMap.getType(call),
@@ -1077,6 +1097,7 @@ public class Resolver {
       case INT_LITERAL_PAT:
       case REAL_LITERAL_PAT:
       case STRING_LITERAL_PAT:
+      case WORD_LITERAL_PAT:
         return core.literalPat(pat.op, type, ((Ast.LiteralPat) pat).value);
 
       case WILDCARD_PAT:

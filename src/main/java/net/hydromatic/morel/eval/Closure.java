@@ -179,6 +179,10 @@ public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
         literalPat = (Core.LiteralPat) pat;
         return ((BigDecimal) literalPat.value).intValue() == (Integer) argValue;
 
+      case WORD_LITERAL_PAT:
+        literalPat = (Core.LiteralPat) pat;
+        return ((BigDecimal) literalPat.value).longValue() == (Long) argValue;
+
       case REAL_LITERAL_PAT:
         literalPat = (Core.LiteralPat) pat;
         return ((BigDecimal) literalPat.value).doubleValue()
@@ -440,6 +444,10 @@ public class Closure implements Comparable<Closure>, Applicable, Applicable1 {
           literalPat = (Core.LiteralPat) pat;
           return ((BigDecimal) literalPat.value).intValue()
               == (Integer) argValue;
+
+        case WORD_LITERAL_PAT:
+          literalPat = (Core.LiteralPat) pat;
+          return ((BigDecimal) literalPat.value).longValue() == (Long) argValue;
 
         case REAL_LITERAL_PAT:
           literalPat = (Core.LiteralPat) pat;
