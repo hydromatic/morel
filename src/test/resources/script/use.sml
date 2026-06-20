@@ -20,8 +20,8 @@
  *)
 Sys.set ("stringDepth", ~1);
 
-(*) First, let's check that plans are assigned, but variables
-(*) are not assigned, when there are exceptions.
+(* First, let's check that plans are assigned, but variables
+ * are not assigned, when there are exceptions. *)
 
 val a = 2 + 3;
 Sys.plan();
@@ -44,8 +44,8 @@ use "use-1.sml";
 "x is now " ^ x;
 plus3 7;
 
-(*) Now, define x as an integer, which will cause failures in the invoked
-(*) script, but the script won't bail out.
+(* Now, define x as an integer, which will cause failures in the invoked
+ * script, but the script won't bail out. *)
 val x = 10;
 use "use-1.sml";
 "x is now " ^ x;

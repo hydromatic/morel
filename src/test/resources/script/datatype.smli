@@ -138,9 +138,9 @@ Y (1, true);
 Z;
 > val it = Z : bar
 
-(*) `(t1, ..., tn)` is only valid as the argument list of a parameterized
-(*) type such as `(int, string) either`. The following are all errors;
-(*) use `int * bool` for a tuple type.
+(* `(t1, ..., tn)` is only valid as the argument list of a parameterized
+ * type such as `(int, string) either`. The following are all errors;
+ * use `int * bool` for a tuple type. *)
 datatype bar = X of int | Y of (int, bool) | Z;
 > stdIn:1.32-1.43 Error: type-application argument list `(t1, ..., tn)` must be followed by a type constructor name; use `t1 * ... * tn` for a tuple type
 >   raised at: stdIn:1.32-1.43
@@ -162,8 +162,8 @@ fn (x: int either) => 1;
 > stdIn:1.8-1.18 Error: type constructor either given 1 argument, wants 2
 >   raised at: stdIn:1.8-1.18
 
-(*) A datatype's body may not use a type variable that is not in the head;
-(*) declare it, e.g. `datatype 'a my_option = ...`.
+(* A datatype's body may not use a type variable that is not in the head;
+ * declare it, e.g. `datatype 'a my_option = ...`. *)
 datatype my_option = MY_NONE | MY_SOME of 'a;
 > stdIn:1.43-1.45 Error: unbound type variable in type declaration: 'a
 >   raised at: stdIn:1.43-1.45
@@ -175,13 +175,13 @@ datatype 'a pair = PAIR of 'a * 'b;
 >   raised at: stdIn:1.33-1.35
 datatype ('a, 'b) pair = PAIR of 'a * 'b;
 > datatype ('a,'b) pair = PAIR of 'a * 'b
-(*) A head type variable need not be used in the body; here 'b is a phantom
-(*) type, used in the head but not the body. Standard ML allows this.
+(* A head type variable need not be used in the body; here 'b is a phantom
+ * type, used in the head but not the body. Standard ML allows this. *)
 datatype ('a, 'b) phantom = PHANTOM of 'a;
 > datatype ('a,'b) phantom = PHANTOM of 'a
 
-(*) The valid forms. Parentheses around a single type are allowed (just
-(*) like in expressions).
+(* The valid forms. Parentheses around a single type are allowed (just
+ * like in expressions). *)
 type t = bool * int list;
 > type t = bool * int list
 fn (x: (int) list) => 1;
@@ -270,9 +270,9 @@ Cons (Empty, Nil);
 Cons (Empty, Cons (Node (true, Nil), Nil));
 > val it = Cons (Empty,Cons (Node (true,Nil),Nil)) : bool forest
 
-(*) Parentheses are required for 2 or more type parameters,
-(*) optional for 1 type parameter,
-(*) not allowed for 0 type parameters.
+(* Parentheses are required for 2 or more type parameters,
+ * optional for 1 type parameter,
+ * not allowed for 0 type parameters. *)
 datatype ('a, 'b) pair = Pair of 'a * 'b;
 > datatype ('a,'b) pair = Pair of 'a * 'b
 (* disabled; should throw

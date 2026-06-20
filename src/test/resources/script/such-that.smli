@@ -469,8 +469,8 @@ from x, y in [2,3] where x > y andalso true where x < 5;
 >
 > val it : {x:int, y:int} bag
 
-(*) Unbound variables in declared 'join';
-(*) condition on 'j' occurs after 'join'
+(* Unbound variables in declared 'join';
+ * condition on 'j' occurs after 'join' *)
 from i, j
 where i > 0 andalso i < 3
 join k, m
@@ -731,9 +731,9 @@ yield {dno, name = #dname v};
 >
 > val it : {dno:int, name:string} bag
 
-(*) Forward references are required. 'dno' is infinite until we see the
-(*) condition 'v.deptno = dno', and at that point we haven't declared
-(*) 'v'. So we defer 'dno' until after 'v'.
+(* Forward references are required. 'dno' is infinite until we see the
+ * condition 'v.deptno = dno', and at that point we haven't declared
+ * 'v'. So we defer 'dno' until after 'v'. *)
 from dno, name, v
 where v elem scott.depts
 where v.deptno = dno
@@ -925,16 +925,16 @@ Sys.planEx "999";
 >   "val it = from s in [\"abcd\", \"ant\"] join p in #tabulate Bag (#size String s + 1, fn i => #substring String (s, 0, i)) yield p group p where #nonEmpty Relational (from s in [\"abcd\", \"ant\"] where #isPrefix String p s) order p"
 >   : string
 
-(*) A string function with external extent.
-(*) Given s2, we could generate finite s1.
+(* A string function with external extent.
+ * Given s2, we could generate finite s1. *)
 fun isPrefix (s1, s2) =
   String.isPrefix s1 s2;
 > val isPrefix = fn : string * string -> bool
 from s where isPrefix (s, "abcd");
 > val it = ["","a","ab","abc","abcd"] : string bag
 
-(*) An integer function with external extent.
-(*) Given j, k we could generate finite i.
+(* An integer function with external extent.
+ * Given j, k we could generate finite i. *)
 let
   fun isBetween (i, j, k) = j <= i andalso i <= k
 in
@@ -1341,12 +1341,12 @@ from x where isS3 x;
 > Unsafe
 *)
 
-(*) Ungrounded tuple-pattern call. The body of `tuPair` places no
-(*) constraint on its arguments, so neither component of `p` can
-(*) be grounded. morel-java reports `pattern 'p' is not grounded`;
-(*) `destructure_tuple_extents_for_fn_calls` splits `p` into
-(*) `p__1, p__2` before this point, so morel-rust reports the
-(*) same shape using the destructured component name.
+(* Ungrounded tuple-pattern call. The body of `tuPair` places no
+ * constraint on its arguments, so neither component of `p` can
+ * be grounded. morel-java reports `pattern 'p' is not grounded`;
+ * `destructure_tuple_extents_for_fn_calls` splits `p` into
+ * `p__1, p__2` before this point, so morel-rust reports the
+ * same shape using the destructured component name. *)
 fun tuPair (a, b) = true;
 > val tuPair = fn : 'a * 'b -> bool
 from p where tuPair p;
@@ -1680,19 +1680,19 @@ end;
 > 30 Scooby
 >
 > val it : {d:int, n:string} bag
-(*) Expected code:
-(*) "from(sink
-(*)   join(pat e, exp tuple(
-(*)   tuple(constant(10), constant(100), constant(Fred)),
-(*)   tuple(constant(20), constant(101), constant(Velma)),
-(*)   tuple(constant(30), constant(102), constant(Shaggy)),
-(*)   tuple(constant(30), constant(103), constant(Scooby))),
-(*)  sink yield(codes [tuple(apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name e)))], sink join(pat n_1, exp tuple( apply(fnValue nth:0, argCode get(name v$1))), sink join(pat d_1, exp tuple(constant(30)), sink where(condition apply2(fnValue elem,
-(*)                             tuple(get(name n), get(name d)), from(sink join(pat e, exp tuple(
-(*)   tuple(constant(10), constant(100), constant(Fred)),
-(*)   tuple(constant(20), constant(101), constant(Velma)),
-(*)   tuple(constant(30), constant(102), constant(Shaggy)),
-(*)   tuple(constant(30), constant(103), constant(Scooby))), sink yield(codes [tuple(apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name e)))], sink apply(fnValue $.extent, argCode constant(()))))), sink where(condition apply2(fnValue =, get(name d), constant(30)), sink collect(tuple(get(name d), get(name n)))))))))))"
+(* Expected code:
+ * "from(sink
+ *   join(pat e, exp tuple(
+ *   tuple(constant(10), constant(100), constant(Fred)),
+ *   tuple(constant(20), constant(101), constant(Velma)),
+ *   tuple(constant(30), constant(102), constant(Shaggy)),
+ *   tuple(constant(30), constant(103), constant(Scooby))),
+ *  sink yield(codes [tuple(apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name e)))], sink join(pat n_1, exp tuple( apply(fnValue nth:0, argCode get(name v$1))), sink join(pat d_1, exp tuple(constant(30)), sink where(condition apply2(fnValue elem,
+ *                             tuple(get(name n), get(name d)), from(sink join(pat e, exp tuple(
+ *   tuple(constant(10), constant(100), constant(Fred)),
+ *   tuple(constant(20), constant(101), constant(Velma)),
+ *   tuple(constant(30), constant(102), constant(Shaggy)),
+ *   tuple(constant(30), constant(103), constant(Scooby))), sink yield(codes [tuple(apply(fnValue nth:2, argCode get(name e)), apply(fnValue nth:0, argCode get(name e)))], sink apply(fnValue $.extent, argCode constant(()))))), sink where(condition apply2(fnValue =, get(name d), constant(30)), sink collect(tuple(get(name d), get(name n)))))))))))" *)
 (*
 Sys.planEx "code";
 > [actual output would appear here]
@@ -1935,27 +1935,27 @@ end;
 > 30 Scooby
 >
 > val it : {d:int, n:string} bag
-(*) Expected code:
-(*) "from(sink
-(*)   join(pat (n_1, d_1),
-(*)   exp apply(
-(*)     fnCode apply(fnValue List.filter,
-(*)       argCode match(v$0,
-(*)         apply(fnCode match((n_1, d_1),
-(*)             apply(fnCode match((n, d),
-(*)                 apply2(fnValue elem,
-(*)                   tuple(get(name n), get(name d)),
-(*)                   from(sink
-(*)                     join(pat e, exp tuple(
-(*)   tuple(constant(30), constant(102), constant(Shaggy)),
-(*)   tuple(constant(30), constant(103), constant(Scooby))),
-(*)       sink collect(tuple(apply(fnValue nth:2, argCode get(name e)),
-(*)         apply(fnValue nth:0, argCode get(name e)))))))),
-(*)                argCode tuple(get(name n), get(name d)))),
-(*)             argCode get(name v$0)))),
-(*)           argCode apply(fnValue $.extent, argCode constant(()))),
-(*)         sink where(condition apply2(fnValue =, get(name d), constant(30)),
-(*)           sink collect(tuple(get(name d), get(name n))))))"
+(* Expected code:
+ * "from(sink
+ *   join(pat (n_1, d_1),
+ *   exp apply(
+ *     fnCode apply(fnValue List.filter,
+ *       argCode match(v$0,
+ *         apply(fnCode match((n_1, d_1),
+ *             apply(fnCode match((n, d),
+ *                 apply2(fnValue elem,
+ *                   tuple(get(name n), get(name d)),
+ *                   from(sink
+ *                     join(pat e, exp tuple(
+ *   tuple(constant(30), constant(102), constant(Shaggy)),
+ *   tuple(constant(30), constant(103), constant(Scooby))),
+ *       sink collect(tuple(apply(fnValue nth:2, argCode get(name e)),
+ *         apply(fnValue nth:0, argCode get(name e)))))))),
+ *                argCode tuple(get(name n), get(name d)))),
+ *             argCode get(name v$0)))),
+ *           argCode apply(fnValue $.extent, argCode constant(()))),
+ *         sink where(condition apply2(fnValue =, get(name d), constant(30)),
+ *           sink collect(tuple(get(name d), get(name n))))))" *)
 (*
 Sys.planEx "code";
 > [actual output would appear here]

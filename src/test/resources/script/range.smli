@@ -123,8 +123,8 @@ Range.contains (LESS_THAN 7) 7;
 (CLOSED (3, 7)).contains 5;
 > val it = true : bool
 
-(*) Postfix syntax without outer parens: "CTOR arg.method" parses as
-(*) "(CTOR arg).method", not "CTOR (arg.method)".
+(* Postfix syntax without outer parens: "CTOR arg.method" parses as
+ * "(CTOR arg).method", not "CTOR (arg.method)". *)
 CLOSED (3, 7).contains 5;
 > val it = true : bool
 
@@ -233,8 +233,8 @@ cs.contains 2;
 cs.contains 5;
 > val it = false : bool
 
-(*) Boundary and corner cases for set contains (exercises binary search).
-(*) Before first range.
+(* Boundary and corner cases for set contains (exercises binary search).
+ * Before first range. *)
 cs.contains 0;
 > val it = false : bool
 
@@ -460,8 +460,8 @@ Range.flatten ([] : int range list);
 [false .. true];
 > val it = [false,true] : bool list
 
-(*) Bag variant: `bag` is a regular function, so the range syntax works
-(*) inside its argument.
+(* Bag variant: `bag` is a regular function, so the range syntax works
+ * inside its argument. *)
 bag [0 .. 5, 10];
 > val it = [0,1,2,3,4,5,10] : int bag
 
@@ -489,8 +489,8 @@ from x in [1, 2, 3] where x < 2;
 [1..^5];
 > val it = [1,2,3,4] : int list
 
-(*) Comparison expressions as range operands (parens required;
-(*) bool ranges enumerate `false, true`).
+(* Comparison expressions as range operands (parens required;
+ * bool ranges enumerate `false, true`). *)
 [(1 < 2) .. (3 < 4)];
 > val it = [true] : bool list
 

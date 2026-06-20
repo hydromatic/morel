@@ -298,8 +298,8 @@ end;
 > stdIn:1.29 Error: unresolved flex record (can't tell what fields there are besides #job)
 >   raised at: stdIn:1.29
 
-(*) A bare record selector cannot determine the record type either, and
-(*) the error position is the selector itself.
+(* A bare record selector cannot determine the record type either, and
+ * the error position is the selector itself. *)
 #a;
 > stdIn:1.1-1.3 Error: unresolved flex record (can't tell what fields there are besides #a)
 >   raised at: stdIn:1.1-1.3

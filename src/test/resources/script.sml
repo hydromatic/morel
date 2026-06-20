@@ -196,8 +196,8 @@ foo;
 (*) Should give 'Error: unbound variable or constructor: foo'
 5 + foo;
 
-(*) Should give 'Error: unbound variable or constructor: foo'
-(*) or 'Error: unbound variable or constructor: bar'
+(* Should give 'Error: unbound variable or constructor: foo'
+ * or 'Error: unbound variable or constructor: bar' *)
 5 + bar + 6 + foo;
 
 (*) End script.sml

@@ -103,8 +103,8 @@ Sys.parseTree "val x = 1 [@@deprecated \"use y instead\"]";
 >   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@deprecated (string_literal \"use y instead\")))"
 >   : string
 
-(*) Leading [@@id] before a decl (matches OCaml; both before and
-(*) after positions are accepted and merged).
+(* Leading [@@id] before a decl (matches OCaml; both before and
+ * after positions are accepted and merged). *)
 Sys.parseTree "[@@a] val x = 1";
 > val it =
 >   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@a))"
@@ -126,8 +126,8 @@ Sys.parseTree "[@@@warning 32]";
 >   : string
 
 (* --- Attributes on types ---------------------------------------- *)
-(*) The attribute attaches at the atom level (after any type-application
-(*) chain), so it binds tighter than `*` or `->`.
+(* The attribute attaches at the atom level (after any type-application
+ * chain), so it binds tighter than `*` or `->`. *)
 Sys.parseTree "type distance = real [@unit]";
 > val it = "(type_decl type distance = real [@unit])" : string
 
@@ -152,8 +152,8 @@ Sys.parseTree "[@@@a.b.c]";
 > val it = "(floatingAttrDecl (attribute @@@a.b.c))" : string
 
 (* --- Type payload `[@a: typ]` ----------------------------------- *)
-(*) An attribute payload may be a type rather than an expression,
-(*) introduced by `:`. Mirrors OCaml's PTyp payload form.
+(* An attribute payload may be a type rather than an expression,
+ * introduced by `:`. Mirrors OCaml's PTyp payload form. *)
 Sys.parseTree "1 [@a: int]";
 > val it = "(attributedExp (int_literal 1) (attribute @a : (named int)))"
 >   : string
@@ -190,8 +190,8 @@ Sys.parseTree "(**) val x = 1";
 Sys.parseTree "(***) val x = 1";
 > val it = "(val (valBind (idPat x) (int_literal 1)))" : string
 
-(*) A doc comment may contain nested block comments, even multiple
-(*) levels deep; they are captured verbatim as part of the doc text.
+(* A doc comment may contain nested block comments, even multiple
+ * levels deep; they are captured verbatim as part of the doc text. *)
 Sys.parseTree "(** outer (* nested *) end *) val x = 1";
 > val it =
 >   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" outer (* nested *) end \")))"
@@ -201,8 +201,8 @@ Sys.parseTree "(** outer (* one (* two *) *) end *) val x = 1";
 >   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" outer (* one (* two *) *) end \")))"
 >   : string
 
-(*) Line comments nested inside a doc comment are also captured;
-(*) the embedded newline becomes part of the doc text.
+(* Line comments nested inside a doc comment are also captured;
+ * the embedded newline becomes part of the doc text. *)
 Sys.parseTree "(** outer (*) line\n  rest *) val x = 1";
 > val it =
 >   "(attributedDecl (val (valBind (idPat x) (int_literal 1))) (attribute @@doc (string_literal \" outer (*) line\n  rest \")))"

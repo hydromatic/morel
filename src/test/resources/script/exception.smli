@@ -54,8 +54,8 @@ fn x => [raise Bind, raise Subscript, 3];
 fn s => [raise Bind, raise Subscript, raise Fail s, 3];
 > val it = fn : string -> int list
 
-(*) Conditional raise inside a function: the unraised branch determines
-(*) the function's result type.
+(* Conditional raise inside a function: the unraised branch determines
+ * the function's result type. *)
 fun f x = if x > 0 then raise Bind else ();
 > val f = fn : int -> unit
 

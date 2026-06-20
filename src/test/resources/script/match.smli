@@ -72,8 +72,8 @@ fun f (1, _) = 1
 > stdIn:3.5-3.17 Error: match redundant
 >   raised at: stdIn:3.5-3.17
 
-(*) The Ackermann-Péter function
-(*) See "Recursion Equations as a Programming Language", D A Turner 1982
+(* The Ackermann-Péter function
+ * See "Recursion Equations as a Programming Language", D A Turner 1982 *)
 fun ack 0 n = n + 1
   | ack m 0 = ack (m - 1) 1
   | ack m n = ack (m - 1) (ack m (n - 1));

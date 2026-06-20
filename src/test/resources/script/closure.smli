@@ -140,9 +140,9 @@ in
 end;
 > val it = 60 : int
 
-(*) As previous, replacing captured variable with constant.
-(*) The implementation may still use a closure, so that the recursive function
-(*) can reference itself by name.
+(* As previous, replacing captured variable with constant.
+ * The implementation may still use a closure, so that the recursive function
+ * can reference itself by name. *)
 let
   val rec perm3 = fn n => if n = 3 then n else n * perm3 (n - 1)
 in

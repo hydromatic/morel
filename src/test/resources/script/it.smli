@@ -67,8 +67,8 @@ it;
 it;
 > val it = "now bound" : string
 
-(*) After 'it' has been bound by a bare expression, subsequent value
-(*) declarations still do not change it.
+(* After 'it' has been bound by a bare expression, subsequent value
+ * declarations still do not change it. *)
 val (a, b) = (1, 2);
 > val a = 1 : int
 > val b = 2 : int

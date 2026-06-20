@@ -263,8 +263,8 @@ where d.deptno notelem (from e in scott.emps
 > val it = [{deptno=40,dname="OPERATIONS",loc="BOSTON"}]
 >   : {deptno:int, dname:string, loc:string} bag
 
-(*) Functions
-(*) Clerks get a 20% raise each year; everyone else gets 5%
+(* Functions
+ * Clerks get a 20% raise each year; everyone else gets 5% *)
 val emp2 =
   from e in scott.emps
   yield {e.deptno, e.job, e.ename,

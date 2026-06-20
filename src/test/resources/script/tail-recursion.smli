@@ -95,8 +95,8 @@ fun threat (x, y) (x', y') =
 fun conflict pos = List.`exists` (threat pos);
 > val conflict = fn : int * int -> (int * int) list -> bool
 
-(*) 'addQueen' tries to place a queen in row i using continuations.
-(*) 'try' and 'addQueen' are mutually tail-recursive so depth is O(n).
+(* 'addQueen' tries to place a queen in row i using continuations.
+ * 'try' and 'addQueen' are mutually tail-recursive so depth is O(n). *)
 fun addQueen (i, n, qs, fc) =
   let
     fun try j =

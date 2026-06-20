@@ -340,8 +340,8 @@ fun compareInt (x: int, y: int) : `order` =
 
 (* Nested line comments inside block *)
 "a" ^ (* start
-         (*) line 1
-         (*) line 2
+         (* line 1
+          * line 2 *)
          end *) "b";
 > val it = "ab" : string
 
@@ -557,8 +557,8 @@ in
 end;
 > val it = 11 : int
 
-(*) Similar to "Closure", but the two occurrences of 'x'
-(*) have different data types, so that the bug is more obvious.
+(* Similar to "Closure", but the two occurrences of 'x'
+ * have different data types, so that the bug is more obvious. *)
 let
   val x = "abc";
   fun g y = size x + y;
@@ -655,9 +655,9 @@ in
   x + y
 end;
 > val it = 3 : int
-(*) Set 'it' to a value of a distinct type before the next tests, so
-(*) that the assertions that follow show whether the val declarations
-(*) leave 'it' alone.
+(* Set 'it' to a value of a distinct type before the next tests, so
+ * that the assertions that follow show whether the val declarations
+ * leave 'it' alone. *)
 "composite";
 > val it = "composite" : string
 val (x, y) = (1, 2);
@@ -840,8 +840,8 @@ val t2 = (({x = (100, 200)}, "a"), "b");
 ((t2.1).1).x.2;
 > val it = 200 : int
 
-(*) Syntactic ambiguity: real literals vs tuple access
-(*) 3.1 is a real literal, not tuple access
+(* Syntactic ambiguity: real literals vs tuple access
+ * 3.1 is a real literal, not tuple access *)
 3.1;
 > val it = 3.1 : real
 
@@ -896,14 +896,14 @@ tup .1;
 > stdIn:1.11 Error: no field '4' in type 'int * int * int'
 >   raised at: stdIn:1.11
 
-(*) Field of a non-record value whose type is not yet known (e.g. a 'let'-bound
-(*) variable) is a type error, not an internal exception.
+(* Field of a non-record value whose type is not yet known (e.g. a 'let'-bound
+ * variable) is a type error, not an internal exception. *)
 let val n = 5 in n.x end;
 > stdIn:1.18 Error: reference to field x of non-record type int
 >   raised at: stdIn:1.18
 
-(*) Arithmetic operators are not defined for non-numeric types; the error is a
-(*) positioned type error, not an internal exception.
+(* Arithmetic operators are not defined for non-numeric types; the error is a
+ * positioned type error, not an internal exception. *)
 true + true;
 > stdIn:1.1-1.12 Error: operator '+' is not defined for type 'bool'
 >   raised at: stdIn:1.1-1.12
@@ -950,8 +950,8 @@ f ~1;
  * types, whitespace, and line breaks in expected output.
  *)
 
-(*) bag of ints, including a negative value;
-(*) elements reordered vs natural iteration order
+(* bag of ints, including a negative value;
+ * elements reordered vs natural iteration order *)
 bag [3, 1, ~2];
 > val it = [~2,1,3] : int bag
 
@@ -959,14 +959,14 @@ bag [3, 1, ~2];
 bag [3, 1, ~2];
 > val it = [3,~2,1] : int bag
 
-(*) bag of strings;
-(*) elements reordered and output split across lines with extra whitespace
+(* bag of strings;
+ * elements reordered and output split across lines with extra whitespace *)
 bag ["cherry", "apple", "banana"];
 > val it = ["banana","apple",
 >    "cherry"] : string bag
 
-(*) bag of strings with commas and brackets inside;
-(*) elements reordered
+(* bag of strings with commas and brackets inside;
+ * elements reordered *)
 bag ["a,b", "[c]", "(d,e)"];
 > val it = ["(d,e)","a,b","[c]"] : string bag
 
@@ -1037,13 +1037,13 @@ val r = {name = "test", values = bag [10, 20, 30]};
 SOME (bag [5, 10]);
 > val it = SOME ([10,5]) : int bag option
 
-(*) bag resulting from group-by (a common source of ordering issues);
-(*) elements reordered
+(* bag resulting from group-by (a common source of ordering issues);
+ * elements reordered *)
 from i in bag [1, 1, 2, 3, 2, 1] group i compute count over ();
 > val it = [{count=1,i=3},{count=3,i=1},{count=2,i=2}] : {count:int, i:int} bag
 
-(*) long record values in a bag that wrap across lines;
-(*) extra whitespace in expected output
+(* long record values in a bag that wrap across lines;
+ * extra whitespace in expected output *)
 bag [{a="aaaaaaaaaa", b="bbbbbbbbbb", c="cccccccccc", d="dddddddddd"}];
 > val it =
 >   [{a="aaaaaaaaaa",b="bbbbbbbbbb",c="cccccccccc",d="dddddddddd"}]
@@ -1055,8 +1055,8 @@ bag [{name="alice", age=25, city="wonderland"}];
 >   [{age=25,city="wonderland",name="alice"}]
 >   : {age:int, city:string, name:string} bag
 
-(*) group-by with aggregate producing nested bag in output;
-(*) elements reordered, output split across lines differently
+(* group-by with aggregate producing nested bag in output;
+ * elements reordered, output split across lines differently *)
 from r in bag [{x=1, y="a"}, {x=1, y="b"}, {x=2, y="c"}]
   group r.x compute {ys = (fn v => v) over r.y};
 > val it =

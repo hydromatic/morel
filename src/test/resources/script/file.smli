@@ -19,8 +19,8 @@
  * Tests for the file system ("file").
  *)
 
-(*) The "file" value represents the file system, starting in the current
-(*) directory.
+(* The "file" value represents the file system, starting in the current
+ * directory. *)
 file;
 > val it = {map={},scott={},wordle={}}
 >   : {map:{...}, scott:{...}, wordle:{...}, ...}

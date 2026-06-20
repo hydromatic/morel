@@ -45,8 +45,8 @@ Sys.plan();
 >   "globalMarshal(globals [scott], body calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 20)])\n    LogicalTableFunctionScan(invocation=[morelTable('#filter Bag (fn e2 => #empno e2 < 7700) (#emps scott)', '{\n  \"fields\": [\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"comm\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"deptno\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"empno\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"ename\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"hiredate\"\n    },\n    {\n      \"type\": \"VARCHAR\",\n      \"nullable\": false,\n      \"precision\": -1,\n      \"name\": \"job\"\n    },\n    {\n      \"type\": \"INTEGER\",\n      \"nullable\": false,\n      \"name\": \"mgr\"\n    },\n    {\n      \"type\": \"REAL\",\n      \"nullable\": false,\n      \"name\": \"sal\"\n    }\n  ],\n  \"nullable\": false\n}')], rowType=[RecordType(REAL comm, INTEGER deptno, INTEGER empno, VARCHAR ename, VARCHAR hiredate, VARCHAR job, INTEGER mgr, REAL sal)])\n))"
 >   : string
 
-(*) Query in Hybrid mode (99% Calcite; there is a variable but it is not
-(*) referenced by Calcite code)
+(* Query in Hybrid mode (99% Calcite; there is a variable but it is not
+ * referenced by Calcite code) *)
 let
   val twenty = 20
 in
@@ -60,8 +60,8 @@ Sys.plan();
 >   "globalMarshal(globals [scott], body calcite(plan LogicalProject(empno=[$2])\n  LogicalFilter(condition=[=($1, 20)])\n    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n      JdbcTableScan(table=[[scott, EMP]])\n))"
 >   : string
 
-(*) Query in Hybrid mode (90% Calcite; Calcite code references a variable
-(*) and an expression from the enclosing environment)
+(* Query in Hybrid mode (90% Calcite; Calcite code references a variable
+ * and an expression from the enclosing environment) *)
 let
   val ten = 7 + 3
   val deptNos = ten :: 20 :: 30 :: [40]
@@ -76,8 +76,8 @@ Sys.plan();
 >   "globalMarshal(globals [scott], body let1(expCode apply2(fnValue Int.+, constant(7), constant(3)), resultCode calcite(plan LogicalProject($f0=[+($2, MOD(13, morelScalar('ten', '{\n  \"type\": \"INTEGER\",\n  \"nullable\": false\n}')))])\n  LogicalFilter(condition=[=($1, morelScalar('#nth List (ten :: 20 :: 30 :: [40], 1)', '{\n  \"type\": \"INTEGER\",\n  \"nullable\": false\n}'))])\n    LogicalProject(comm=[$6], deptno=[$7], empno=[$0], ename=[$1], hiredate=[$4], job=[$2], mgr=[$3], sal=[$5])\n      JdbcTableScan(table=[[scott, EMP]])\n)))"
 >   : string
 
-(*) Query in Hybrid mode (90% Calcite; Calcite code references a function
-(*) from the enclosing environment)
+(* Query in Hybrid mode (90% Calcite; Calcite code references a function
+ * from the enclosing environment) *)
 let
   fun double x = x * 2
 in

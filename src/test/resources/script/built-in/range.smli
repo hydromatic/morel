@@ -74,8 +74,8 @@ Range.discreteSetOf [CLOSED (5, 10), CLOSED (1, 3), CLOSED (3, 6)];
 (Range.discreteSetOf [CLOSED (1, 3)]).toBag ();
 > val it = [1,2,3] : int bag
 
-(*) Range.flatten concatenates ranges in input order, preserving
-(*) duplicates.
+(* Range.flatten concatenates ranges in input order, preserving
+ * duplicates. *)
 Range.flatten [CLOSED (0, 3), POINT 10, CLOSED (2, 5)];
 > val it = [0,1,2,3,10,2,3,4,5] : int list
 

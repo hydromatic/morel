@@ -392,15 +392,15 @@ from s in states_within "ME" 3 order s;
 > val it = ["CT","MA","NH","NY","RI","VT"] : string list
  (*) maine is not 3 steps from itself
 
-(*) Finding a square root using the Babylonian method
-(*) (An example of a scalar fixed-point query.)
+(* Finding a square root using the Babylonian method
+ * (An example of a scalar fixed-point query.) *)
 fun approx_sqrt n a = (n / a + a) * 0.5;
 > val approx_sqrt = fn : real -> real -> real
 approx_sqrt 100.0 1.0;
 > val it = 50.5 : real
 
-(*) Create a closure for the problem of finding the square root of 100.
-(*) Applying the function to its own result, we approach the correct answer.
+(* Create a closure for the problem of finding the square root of 100.
+ * Applying the function to its own result, we approach the correct answer. *)
 val as100 = approx_sqrt 100.0;
 > val as100 = fn : real -> real
 as100 100.0;
@@ -412,9 +412,9 @@ as100 (as100 (as100 100.0));
 as100 (as100 (as100 (as100 100.0)));
 > val it = 10.840435 : real
 
-(*) A fixed-point operator will carry out the iteration for us,
-(*) given any scalar function f and an initial approximation a.
-(*) "fixp" stands for "fixed-point over projection".
+(* A fixed-point operator will carry out the iteration for us,
+ * given any scalar function f and an initial approximation a.
+ * "fixp" stands for "fixed-point over projection". *)
 fun fixp f a =
   let
     val a2 = f a
@@ -434,8 +434,8 @@ fixp as100 0.0;
 fixp as100 ~1.0;
 > val it = ~10 : real
 
-(*) Given a list of strings, 'prefixes' returns a list of their
-(*) prefixes that are one character shorter.
+(* Given a list of strings, 'prefixes' returns a list of their
+ * prefixes that are one character shorter. *)
 val prefixes = List.map (fn s =>
   if s = "" then s
   else String.substring(s, 0, String.size s - 1));
@@ -443,9 +443,9 @@ val prefixes = List.map (fn s =>
 prefixes ["cat", "dog", "", "car", "cart"];
 > val it = ["ca","do","","ca","car"] : string list
 
-(*) Fixed-point over union.
-(*) A naive algorithm recomputes the whole set each hop,
-(*) so is not very efficient.
+(* Fixed-point over union.
+ * A naive algorithm recomputes the whole set each hop,
+ * so is not very efficient. *)
 fun fixu_naive f a =
   let
     val a2 = f a
@@ -460,10 +460,10 @@ fun fixu_naive f a =
 from p in fixu_naive prefixes ["cat", "dog", "", "car", "cart"] order p;
 > val it = ["","c","ca","car","cart","cat","d","do","dog"] : string list
 
-(*) Fixed-point over union, with an iteration limit 'n'.
-(*) A semi-naive algorithm applies the function only to
-(*) the deltas (the elements added by the function last
-(*) time) so is more efficient than the naive algorithm.
+(* Fixed-point over union, with an iteration limit 'n'.
+ * A semi-naive algorithm applies the function only to
+ * the deltas (the elements added by the function last
+ * time) so is more efficient than the naive algorithm. *)
 fun fixu_semi_naive (f, a, n) =
   let
     fun contains (list, e) =
@@ -487,8 +487,8 @@ fun fixu_semi_naive (f, a, n) =
 fixu_semi_naive (prefixes, ["cat", "dog", "", "car", "cart"], ~1);
 > val it = ["ca","do","","ca","car","c","d","c"] : string list
 
-(*) Now, back to the states.
-(*) The semi-naive algorithm gets to 11 hops more efficiently.
+(* Now, back to the states.
+ * The semi-naive algorithm gets to 11 hops more efficiently. *)
 fun states_within2 s n =
   fixu_semi_naive ((fn states =>
     from s in states,
@@ -509,8 +509,8 @@ from s in states_within2 "CA" 10 group {} compute count over ();
 from s in states_within2 "CA" 11 group {} compute count over ();
 > val it = [49] : int list
 
-(*) Floyd-Warshall algorithm (shortest path in weighted graph)
-(*) Data from https://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
+(* Floyd-Warshall algorithm (shortest path in weighted graph)
+ * Data from https://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm *)
 val edges =
  [{source="b", target="a", weight=4},
   {source="a", target="c", weight=~2},

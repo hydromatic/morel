@@ -407,11 +407,11 @@ String.`<>` ("a", "b");
 String.`<>` ("a", "a");
 > val it = false : bool
 
-(*) val toString : string -> String.string
-(*) val scan       : (char, 'a) StringCvt.reader
-(*)                    -> (string, 'a) StringCvt.reader
-(*) val fromString : String.string -> string option
-(*) val toCString : string -> String.string
-(*) val fromCString : String.string -> string option
+(* val toString : string -> String.string
+ * val scan       : (char, 'a) StringCvt.reader
+ *                    -> (string, 'a) StringCvt.reader
+ * val fromString : String.string -> string option
+ * val toCString : string -> String.string
+ * val fromCString : String.string -> string option *)
 
 (*) End string.smli

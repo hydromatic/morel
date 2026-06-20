@@ -288,8 +288,8 @@ from i in bag [1, 2, 3]
   compute overAgg over i;
 > val it = "list" : string
 
-(*) A non-overloaded aggregate function can adapt.
-(*) 1. List agg applied to list
+(* A non-overloaded aggregate function can adapt.
+ * 1. List agg applied to list *)
 from i in [1, 2, 3]
   compute List.hd over i;
 > val it = 1 : int

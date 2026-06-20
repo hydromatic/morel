@@ -253,8 +253,8 @@ testRoundTrip (INT 42);
 > val it = true : bool
 testRoundTrip (INT ~5);
 > val it = true : bool
-(*) REAL comparisons - note: real is not an equality type in Standard ML
-(*) so we can't directly compare REAL values; skip these tests
+(* REAL comparisons - note: real is not an equality type in Standard ML
+ * so we can't directly compare REAL values; skip these tests *)
 (*testRoundTrip (REAL 0.0);*)
 (*> val it = true : bool*)
 (*testRoundTrip (REAL 3.14);*)

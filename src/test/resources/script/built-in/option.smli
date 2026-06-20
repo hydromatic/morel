@@ -96,8 +96,8 @@ Sys.plan ();
 >   "apply2(fnValue Option.filter, match(x, apply2(fnValue =, apply2(fnValue Int.mod, stack(offset 1, name x), constant(2)), constant(0))), constant(2))"
 >   : string
 
-(*) val join : 'a option option -> 'a option
-(*) (The function name is quoted using backticks because 'join' is a keyword.)
+(* val join : 'a option option -> 'a option
+ * (The function name is quoted using backticks because 'join' is a keyword.) *)
 Option.`join` (SOME (SOME 1));
 > val it = SOME 1 : int option
 Option.`join` (SOME noneInt);

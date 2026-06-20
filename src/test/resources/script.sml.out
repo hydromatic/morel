@@ -322,8 +322,8 @@ stdIn:1.5-1.8 Error: unbound variable or constructor: foo
   raised at: stdIn:1.5-1.8
 
 
-(*) Should give 'Error: unbound variable or constructor: foo'
-(*) or 'Error: unbound variable or constructor: bar'
+(* Should give 'Error: unbound variable or constructor: foo'
+ * or 'Error: unbound variable or constructor: bar' *)
 5 + bar + 6 + foo;
 stdIn:1.5-1.8 Error: unbound variable or constructor: bar
   raised at: stdIn:1.5-1.8
