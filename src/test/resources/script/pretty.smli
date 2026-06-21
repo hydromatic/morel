@@ -468,4 +468,215 @@ from i in [0w1, 0wxff, 0wxffffffffffffffff]
 Sys.unset "output";
 > val it = () : unit
 
+(* -------------------------------------------------------------------
+ * [MOREL-398] Match SML/NJ's compact pretty-printing.
+ *
+ * 'matchStrict' makes the harness compare output character-for-character,
+ * rather than ignoring whitespace and bag order, so that formatting is
+ * actually tested.
+ *)
+Sys.set ("matchStrict", true);
+> val it = () : unit
+
+(* A list whose single element is too wide to fit: SML keeps '[' attached to
+ * the element's '{' and breaks between the record's fields. *)
+val emps = [{comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",job="CLERK",mgr=7902,sal=800}];
+> val emps =
+>   [
+>    {comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",job="CLERK",
+>     mgr=7902,sal=800}]
+>   :
+>     {comm:int, deptno:int, empno:int, ename:string, hiredate:string, job:string,
+>      mgr:int, sal:int} list
+
+(* Line width: how values and types wrap as 'lineWidth' shrinks. *)
+Sys.set ("lineWidth", 100);
+> val it = () : unit
+100;
+> val it = 100 : int
+val x = [[1,2,3], [4,5], [6], []];
+> val x = [[1,2,3],[4,5],[6],[]] : int list list
+val y = ([1,2,3], [4,5], [6], []);
+> val y = ([1,2,3],[4,5],[6],[]) : int list * int list * int list * 'a list
+val z = {a=[1,2,3], b=[4,5], c=[6], d=()};
+> val z = {a=[1,2,3],b=[4,5],c=[6],d=()} : {a:int list, b:int list, c:int list, d:unit}
+val r = {x=x,y=y,z=z};
+> val r = {x=[[1,2,3],[4,5],[6],[]],y=([1,2,3],[4,5],[6],[]),z={a=[1,2,3],b=[4,5],c=[6],d=()}}
+>   : {x:int list list, y:int list * int list * int list * 'a list,
+>      z:{a:int list, b:int list, c:int list, d:unit}}
+val f = fn s => String.size s;
+> val f = fn : string -> int
+Sys.set ("lineWidth", 40);
+> val it = () : unit
+40;
+> val it = 40 : int
+x;
+> val it = [[1,2,3],[4,5],[6],[]]
+>   : int list list
+y;
+> val it = ([1,2,3],[4,5],[6],[])
+>   : int list * int list * int list *
+>     'a list
+z;
+> val it = {a=[1,2,3],b=[4,5],c=[6],d=()}
+>   : {a:int list, b:int list, c:int list,
+>      d:unit}
+r;
+> val it =
+>   {x=[[1,2,3],[4,5],[6],[]],
+>    y=([1,2,3],[4,5],[6],[]),
+>    z={a=[1,2,3],b=[4,5],c=[6],d=()}}
+>   : {x:int list list,
+>      y:int list * int list * int list *
+>        'a list,
+>      z:{a:int list, b:int list,
+>         c:int list, d:unit}}
+Sys.set ("lineWidth", 20);
+> val it = () : unit
+20;
+> val it = 20 : int
+x;
+> val it =
+>   [[1,2,3],[4,5],[6],
+>    []]
+>   : int list list
+y;
+> val it =
+>   ([1,2,3],[4,5],[6],
+>    [])
+>   : int list *
+>     int list *
+>     int list *
+>     'a list
+z;
+> val it =
+>   {a=[1,2,3],b=[4,5],
+>    c=[6],d=()}
+>   : {a:int list,
+>      b:int list,
+>      c:int list,
+>      d:unit}
+f;
+> val it = fn
+>   : string -> int
+Sys.set ("lineWidth", 1);
+> val it =
+>   ()
+>   :
+>     unit
+1;
+> val it =
+>   1
+>   :
+>     int
+x;
+> val it =
+>   [
+>    [
+>     1,
+>     2,
+>     3],
+>    [
+>     4,
+>     5],
+>    [
+>     6],
+>    []]
+>   :
+>     int list list
+Sys.set ("lineWidth", 0);
+> val it =
+>   ()
+>   :
+>     unit
+0;
+> val it =
+>   0
+>   :
+>     int
+x;
+> val it =
+>   [
+>    [
+>     1,
+>     2,
+>     3],
+>    [
+>     4,
+>     5],
+>    [
+>     6],
+>    []]
+>   :
+>     int list list
+Sys.set ("lineWidth", ~1);
+> val it = () : unit
+~1;
+> val it = ~1 : int
+x;
+> val it = [[1,2,3],[4,5],[6],[]] : int list list
+
+(* Print depth: '#' replaces values nested deeper than 'printDepth'. *)
+Sys.set ("lineWidth", 70);
+> val it = () : unit
+val x = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[8],i={j=[9]}}]}]};
+> val x = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=#,h=#,i=#}]}]}
+>   : {a:int, b:int list,
+>      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+Sys.set ("printDepth", 6);
+> val it = () : unit
+x;
+> val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[#],i={j=#}}]}]}
+>   : {a:int, b:int list,
+>      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+Sys.set ("printDepth", 5);
+> val it = () : unit
+x;
+> val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=#,h=#,i=#}]}]}
+>   : {a:int, b:int list,
+>      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+Sys.set ("printDepth", 4);
+> val it = () : unit
+x;
+> val it = {a=1,b=[2,3],c=[{d=4,e=[#,#],f=[#]}]}
+>   : {a:int, b:int list,
+>      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+Sys.set ("printDepth", 3);
+> val it = () : unit
+x;
+> val it = {a=1,b=[2,3],c=[{d=#,e=#,f=#}]}
+>   : {a:int, b:int list,
+>      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+Sys.set ("printDepth", 2);
+> val it = () : unit
+x;
+> val it = {a=1,b=[#,#],c=[#]}
+>   : {a:int, b:int list,
+>      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+Sys.set ("printDepth", 1);
+> val it = () : unit
+x;
+> val it = {a=#,b=#,c=#}
+>   : {a:int, b:int list,
+>      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+Sys.set ("printDepth", 0);
+> val it = # : unit
+x;
+> val it = #
+>   : {a:int, b:int list,
+>      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+Sys.set ("printDepth", ~1);
+> val it = () : unit
+x;
+> val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[8],i={j=[9]}}]}]}
+>   : {a:int, b:int list,
+>      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+
+Sys.unset "printDepth";
+> val it = () : unit
+Sys.unset "lineWidth";
+> val it = () : unit
+Sys.unset "matchStrict";
+> val it = () : unit
+
 (*) End pretty.smli

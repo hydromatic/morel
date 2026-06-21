@@ -569,6 +569,7 @@ and unset using `Sys.unset name`.
 | inlinePassCount      | int    | 5       | Maximum number of inlining passes. |
 | lineWidth            | int    | 79      | When printing, the length at which lines are wrapped. |
 | matchCoverageEnabled | bool   | true    | Whether to check whether patterns are exhaustive and/or redundant. |
+| matchStrict          | bool   | false   | Whether the script-test harness compares output verbatim, rather than modulo whitespace and bag-element order. |
 | now                  | string | null    | Overrides the current time. Value is an ISO-8601 string (e.g. '2024-01-01T00:00:00Z'). If not set, the system clock is used. |
 | optionalInt          | int    | null    | For testing. |
 | output               | enum   | classic | How values should be formatted. "classic" (the default) prints values in a compact nested format; "tabular" prints values in a table if their type is a list of records. |
