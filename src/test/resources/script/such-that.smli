@@ -818,9 +818,9 @@ end;
 fun isEmp e =
   e elem scott.emps;
 > val isEmp = fn
->   :
->     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->      job:string, mgr:int, sal:real} -> bool
+>   : {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>       job:string, mgr:int, sal:real}
+>      -> bool
 from e
   where isEmp e andalso e.deptno = 20
   yield e.ename;
@@ -830,9 +830,9 @@ from e
 fun isClerk e =
   e elem scott.emps andalso e.job = "CLERK";
 > val isClerk = fn
->   :
->     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->      job:string, mgr:int, sal:real} -> bool
+>   : {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>       job:string, mgr:int, sal:real}
+>      -> bool
 from e
   where isClerk e andalso e.deptno = 20
   yield e.ename;
@@ -855,9 +855,9 @@ fun hasJob (e: typeof (Bag.hd scott.emps),
             job) =
   e.job = job;
 > val hasJob = fn
->   :
->     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->      job:string, mgr:int, sal:real} * string -> bool
+>   : {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>       job:string, mgr:int, sal:real} * string
+>      -> bool
 
 (*) Valid, because the argument has an extent.
 from e in scott.emps,
@@ -975,9 +975,9 @@ end;
 fun isClerk e =
   e elem scott.emps andalso e.job = "CLERK";
 > val isClerk = fn
->   :
->     {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->      job:string, mgr:int, sal:real} -> bool
+>   : {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>       job:string, mgr:int, sal:real}
+>      -> bool
 
 let
   fun enumerate predicate =

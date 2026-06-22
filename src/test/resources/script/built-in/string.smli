@@ -30,24 +30,26 @@ String;
 > val it =
 >   {<=fn,<==fn,<>=fn,==fn,>=fn,>==fn,^=fn,collate=fn,compare=fn,concat=fn,
 >    concatWith=fn,explode=fn,extract=fn,fields=fn,implode=fn,isPrefix=fn,
->    isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,sub=fn,
->    substring=fn,tokens=fn,translate=fn}
+>    isSubstring=fn,isSuffix=fn,map=fn,maxSize=2147483647,size=fn,str=fn,
+>    sub=fn,substring=fn,tokens=fn,translate=fn}
 >   : {<:string * string -> bool, <=:string * string -> bool,
->      <>:string * string -> bool, =:string * string -> bool,
->      >:string * string -> bool, >=:string * string -> bool,
->      ^:string * string -> string,
->      collate:(char * char -> order) -> string * string -> order,
->      compare:string * string -> order, concat:string list -> string,
->      concatWith:string -> string list -> string, explode:string -> char list,
->      extract:string * int * int option -> string,
->      fields:(char -> bool) -> string -> string list,
->      implode:char list -> string, isPrefix:string -> string -> bool,
->      isSubstring:string -> string -> bool, isSuffix:string -> string -> bool,
->      map:(char -> char) -> string -> string, maxSize:int, size:string -> int,
->      str:char -> string, sub:string * int -> char,
->      substring:string * int * int -> string,
->      tokens:(char -> bool) -> string -> string list,
->      translate:(char -> string) -> string -> string}
+>       <>:string * string -> bool, =:string * string -> bool,
+>       >:string * string -> bool, >=:string * string -> bool,
+>       ^:string * string -> string,
+>       collate:(char * char -> order) -> string * string -> order,
+>       compare:string * string -> order, concat:string list -> string,
+>       concatWith:string -> string list -> string,
+>       explode:string -> char list,
+>       extract:string * int * int option -> string,
+>       fields:(char -> bool) -> string -> string list,
+>       implode:char list -> string, isPrefix:string -> string -> bool,
+>       isSubstring:string -> string -> bool,
+>       isSuffix:string -> string -> bool,
+>       map:(char -> char) -> string -> string, maxSize:int,
+>       size:string -> int, str:char -> string, sub:string * int -> char,
+>       substring:string * int * int -> string,
+>       tokens:(char -> bool) -> string -> string list,
+>       translate:(char -> string) -> string -> string}
 
 (*) val maxSize : int
 String.maxSize;

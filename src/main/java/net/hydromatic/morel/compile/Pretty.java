@@ -18,12 +18,23 @@
  */
 package net.hydromatic.morel.compile;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.parse.Parsers.appendId;
+import static net.hydromatic.morel.util.Lindig.EMPTY;
+import static net.hydromatic.morel.util.Lindig.HARD_LINE;
+import static net.hydromatic.morel.util.Lindig.LINE;
+import static net.hydromatic.morel.util.Lindig.align;
+import static net.hydromatic.morel.util.Lindig.beside;
+import static net.hydromatic.morel.util.Lindig.fill;
+import static net.hydromatic.morel.util.Lindig.flatten;
+import static net.hydromatic.morel.util.Lindig.group;
+import static net.hydromatic.morel.util.Lindig.nest;
+import static net.hydromatic.morel.util.Lindig.render;
+import static net.hydromatic.morel.util.Lindig.text;
+import static net.hydromatic.morel.util.Lindig.union;
 import static net.hydromatic.morel.util.Pair.forEachIndexed;
-import static net.hydromatic.morel.util.Static.endsWith;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -43,7 +54,7 @@ import net.hydromatic.morel.type.TupleType;
 import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.type.TypedValue;
-import net.hydromatic.morel.util.Ord;
+import net.hydromatic.morel.util.Lindig.Doc;
 
 /** Prints values. */
 class Pretty {
@@ -54,7 +65,6 @@ class Pretty {
   private final int printDepth;
   private final int stringDepth;
   private final int stringFold;
-  private final char newline;
   private final BagPrinter bagPrinter;
 
   Pretty(
@@ -73,240 +83,21 @@ class Pretty {
     this.printDepth = printDepth;
     this.stringDepth = stringDepth;
     this.stringFold = stringFold;
-    this.newline = '\n';
     this.bagPrinter = requireNonNull(bagPrinter);
   }
 
-  /** Prints a value to a buffer. */
-  StringBuilder pretty(StringBuilder buf, Type type, Object value) {
-    int lineEnd = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
-    return pretty1(buf, 0, new int[] {lineEnd}, 0, type, value);
-  }
-
-  /**
-   * Prints a value to a buffer. If the first attempt goes beyond {@code
-   * lineEnd}, back-tracks, adds a newline and indent, and tries again one time.
-   */
-  private StringBuilder pretty1(
-      StringBuilder buf,
-      int indent,
-      int[] lineEnd,
-      int depth,
-      Type type,
-      Object value) {
-    return pretty1(buf, indent, lineEnd, depth, type, value, 0, 0, false);
-  }
-
-  /**
-   * As {@link #pretty1}, but if {@code glue} is true never back-tracks to a new
-   * line before the value. The value stays attached to the preceding text (for
-   * example an opening "[" or ": ") and is allowed to wrap internally, the way
-   * SML/NJ keeps "[{" together and breaks within the record.
-   */
-  private StringBuilder pretty1(
-      StringBuilder buf,
-      int indent,
-      int[] lineEnd,
-      int depth,
-      Type type,
-      Object value,
-      int leftPrec,
-      int rightPrec,
-      boolean glue) {
-    if (value instanceof Variant) {
-      Variant v = (Variant) value;
-      return pretty1(
-          buf, indent, lineEnd, depth, v.type, v.value, leftPrec, rightPrec,
-          glue);
-    }
-    final int start = buf.length();
-    final int end = lineEnd[0];
-    pretty2(buf, indent, lineEnd, depth, type, value, leftPrec, rightPrec);
-    if (!glue && end >= 0 && buf.length() > end) {
-      // Reset to start, remove trailing whitespace, add newline
-      buf.setLength(start);
-      while (buf.length() > 0
-          && (buf.charAt(buf.length() - 1) == ' '
-              || buf.charAt(buf.length() - 1) == newline)) {
-        buf.setLength(buf.length() - 1);
-      }
-      if (buf.length() > 0) {
-        buf.append(newline);
-      }
-
-      lineEnd[0] = lineWidth < 0 ? -1 : (buf.length() + lineWidth);
-      indent(buf, indent);
-      pretty2(buf, indent, lineEnd, depth, type, value, leftPrec, rightPrec);
-    }
-    return buf;
-  }
-
-  private static void indent(StringBuilder buf, int indent) {
-    for (int i = 0; i < indent; i++) {
-      buf.append(' ');
-    }
-  }
-
-  private StringBuilder pretty2(
-      StringBuilder buf,
-      int indent,
-      int[] end,
-      int depth,
-      Type type,
-      Object value,
-      int leftPrec,
-      int rightPrec) {
-    // Strip any alias. If 'pair' is an alias for 'int * int', we print a 'pair'
-    // value the same way we would print an 'int * int' value.
-    while (type instanceof AliasType) {
-      type = ((AliasType) type).type;
-    }
-
-    if (value instanceof TypedVal) {
-      final TypedVal typedVal = (TypedVal) value;
-      final StringBuilder buf2 = new StringBuilder("val ");
-      appendId(buf2, typedVal.name);
-      if (customPrint(buf, indent, end, depth, typedVal.type, typedVal.o)) {
-        end[0] = -1; // no limit
-        Object v2 = buf2.toString();
-        prettyRaw(buf, indent, end, depth, v2);
-      } else {
-        buf2.append(" = ");
-        prettyRaw(buf, indent, end, depth, buf2.toString());
-        pretty1(buf, indent + 2, end, depth + 1, typedVal.type, typedVal.o);
-      }
-      buf.append(' ');
-      final TypeVal typeVal;
-      if (typedVal.o instanceof Variant) {
-        final Type type1 = ((Variant) typedVal.o).type;
-        typeVal = new TypeVal(": ", typeSystem.unqualified(type1), " variant");
-      } else {
-        typeVal = new TypeVal(": ", typeSystem.unqualified(typedVal.type), "");
-      }
-      prettyRaw(buf, indent + 2, end, depth, typeVal);
+  /** Prints a binding to a buffer. */
+  StringBuilder pretty(StringBuilder buf, TypedVal typedVal) {
+    // In tabular mode, a value whose type is a list of records prints as a
+    // table. The tabular printer may still decline at runtime (e.g. when
+    // "printDepth" is too low to show the rows); then, and for every other
+    // value, we use the classic printer.
+    if (output == Prop.Output.TABULAR
+        && TabularPrinter.canPrint(typedVal.type)
+        && prettyTabular(buf, typedVal)) {
       return buf;
     }
-
-    if (value instanceof NamedVal) {
-      final NamedVal namedVal = (NamedVal) value;
-      appendId(buf, namedVal.name).append('=');
-      pretty1(buf, indent, end, depth, type, namedVal.o);
-      return buf;
-    }
-
-    if (value instanceof LabelVal) {
-      final LabelVal labelVal = (LabelVal) value;
-      final String prefix =
-          appendId(new StringBuilder(), labelVal.label).append(':').toString();
-      TypeVal typeVal = new TypeVal(prefix, labelVal.type, "");
-      pretty1(buf, indent, end, depth, type, typeVal);
-      return buf;
-    }
-
-    if (value instanceof TypeVal) {
-      TypeVal typeVal = (TypeVal) value;
-      prettyType(buf, indent, end, depth, type, typeVal, leftPrec, rightPrec);
-      buf.append(typeVal.suffix);
-      return buf;
-    }
-
-    if (printDepth >= 0 && depth > printDepth) {
-      buf.append('#');
-      return buf;
-    }
-    final List<Object> list;
-    final int start;
-    switch (type.op()) {
-      case ID:
-        return prettyPrimitive(buf, (PrimitiveType) type, value);
-
-      case FUNCTION_TYPE:
-        return buf.append("fn");
-
-      case LIST:
-        list = toList(value);
-        if (list instanceof RelList) {
-          // Do not attempt to print the elements of a foreign list. It might be
-          // huge.
-          return buf.append(RelList.RELATION);
-        }
-        if (value instanceof TypedValue) {
-          // A TypedValue is probably a field in a record that represents a
-          // database catalog or a directory of CSV files. If the user wishes to
-          // see the contents of each file they should use a query.
-          return buf.append(RelList.RELATION);
-        }
-        return printList(buf, indent, end, depth, type.elementType(), list);
-
-      case RECORD_TYPE:
-        final RecordType recordType = (RecordType) type;
-        list = toList(value);
-        buf.append("{");
-        start = buf.length();
-        final Iterator<Object> iterator = list.iterator();
-        recordType.argNameTypes.forEach(
-            (name, type1) -> {
-              if (buf.length() > start) {
-                buf.append(",");
-              }
-              final Object o = iterator.next();
-              final NamedVal namedVal = new NamedVal(name, o);
-              pretty1(buf, indent + 1, end, depth + 1, type1, namedVal);
-            });
-        return buf.append("}");
-
-      case TUPLE_TYPE:
-        final TupleType tupleType = (TupleType) type;
-        list = toList(value);
-        buf.append("(");
-        start = buf.length();
-        forEachIndexed(
-            list,
-            tupleType.argTypes,
-            (ordinal, o, elementType) -> {
-              if (buf.length() > start) {
-                buf.append(",");
-              }
-              pretty1(buf, indent + 1, end, depth + 1, elementType, o);
-            });
-        return buf.append(")");
-
-      case FORALL_TYPE:
-        return pretty2(
-            buf, indent, end, depth + 1, ((ForallType) type).type, value, 0, 0);
-
-      case DATA_TYPE:
-        return prettyDataType(buf, indent, end, depth, (DataType) type, value);
-
-      default:
-        return buf.append(value);
-    }
-  }
-
-  private void prettyRaw(
-      StringBuilder buf, int indent, int[] end, int depth, Object value) {
-    pretty1(buf, indent, end, depth, PrimitiveType.BOOL, value);
-  }
-
-  /**
-   * Tries to print a value using a custom formatter.
-   *
-   * <p>If successful, returns true, and {@code buf} contains the value; if
-   * unsuccessful, returns false, and the contents of {@code buf} are not
-   * changed.
-   */
-  private boolean customPrint(
-      StringBuilder buf,
-      int indent,
-      int[] lineEnd,
-      int depth,
-      Type type,
-      Object o) {
-    if (output == Prop.Output.CLASSIC || !TabularPrinter.canPrint(type)) {
-      return false;
-    }
-    return new TabularPrinter(printDepth, printLength, stringDepth, stringFold)
-        .print(buf, depth, type, o);
+    return prettyClassic(buf, typedVal);
   }
 
   private StringBuilder prettyPrimitive(
@@ -353,238 +144,6 @@ class Pretty {
     }
   }
 
-  private StringBuilder prettyDataType(
-      StringBuilder buf,
-      int indent,
-      int[] lineEnd,
-      int depth,
-      DataType dataType,
-      Object value) {
-    if (!(value instanceof List)) {
-      // Opaque value (e.g., "time" backed by Long): print directly.
-      return buf.append(value);
-    }
-    final List<Object> list = toList(value);
-    if (dataType.name.equals("vector")) {
-      final Type argType = dataType.arg(0);
-      return printList(buf.append('#'), indent, lineEnd, depth, argType, list);
-    }
-    if (dataType.name.equals("bag")) {
-      // A bag value is printed the same as a list, distinguishable only by
-      // its type, e.g.
-      //  val odds = [1,3,5] : int list
-      //  val evens = [0,2,4] : int bag
-      if (list instanceof RelList) {
-        // Do not attempt to print the elements of a foreign list. It might
-        // be huge.
-        return buf.append(RelList.RELATION);
-      }
-      final Type elementType = dataType.elementType();
-      final List<Object> ordered = bagPrinter.order(list, elementType);
-      return printList(buf, indent, lineEnd, depth, elementType, ordered);
-    }
-    final String tyConName = (String) list.get(0);
-    buf.append(tyConName);
-    final Type typeConArgType =
-        dataType.typeConstructors(typeSystem).get(tyConName);
-    requireNonNull(typeConArgType);
-    if (list.size() == 2) {
-      Object arg = list.get(1);
-      if (arg instanceof Variant) {
-        arg = ((Variant) arg).value;
-      }
-      if (dataType.name.equals("continuous_set")
-          || dataType.name.equals("discrete_set")) {
-        arg = Codes.setToRangeList(arg);
-      }
-      buf.append(' ');
-      // Parens disambiguate when the arg is itself a multi-token
-      // constructor (e.g. `SOME (INL x)`). Nullary constructor args
-      // (stored as a 1-element list like ["LESS"]) print as a single
-      // token and don't need parens.
-      final boolean needParentheses =
-          typeConArgType.op() == Op.DATA_TYPE
-              && arg instanceof List
-              && ((List<?>) arg).size() > 1;
-      if (needParentheses) {
-        buf.append('(');
-      }
-      // Do not increment depth for a constructor's arg: the arg is at
-      // the same conceptual level as the constructor (e.g., `INL LESS`
-      // is one step, not two).
-      pretty2(buf, indent, lineEnd, depth, typeConArgType, arg, 0, 0);
-      if (needParentheses) {
-        buf.append(')');
-      }
-    }
-    return buf;
-  }
-
-  private StringBuilder prettyType(
-      StringBuilder buf,
-      int indent,
-      int[] end,
-      int depth,
-      Type type,
-      TypeVal typeVal,
-      int leftPrec,
-      int rightPrec) {
-    String prefix = typeVal.prefix;
-    if (endsWith(buf, " ")) {
-      // If the buffer ends with space, don't print any spaces at the start of
-      // the prefix.
-      while (prefix.startsWith(" ")) {
-        prefix = prefix.substring(1);
-      }
-    }
-    buf.append(prefix);
-
-    final int indent2 = indent + prefix.length();
-    final int start;
-    final Op op = typeVal.type.op();
-    switch (op) {
-      case DATA_TYPE:
-        if (typeVal.type.isCollection()) {
-          return prettyCollectionType(
-              buf,
-              end,
-              depth,
-              type,
-              typeVal,
-              leftPrec,
-              rightPrec,
-              indent2,
-              BuiltIn.Eqtype.BAG.mlName());
-        }
-        // fall through
-      case ID:
-      case ALIAS_TYPE:
-      case TY_VAR:
-        return pretty1(buf, indent2, end, depth, type, typeVal.type.moniker());
-
-      case LIST:
-        return prettyCollectionType(
-            buf,
-            end,
-            depth,
-            type,
-            typeVal,
-            leftPrec,
-            rightPrec,
-            indent2,
-            BuiltIn.Eqtype.LIST.mlName());
-
-      case TUPLE_TYPE:
-        // Op.TUPLE_TYPE is non-associative; Op.wraps applies '>=' rather than
-        // '>' for non-associative operators, which forces children of equal
-        // precedence to wrap. For example '(false, (1, true), 7)' must print
-        // as 'bool * (int * bool) * int' rather than 'bool * int * bool * int'.
-        if (op.wraps(leftPrec, rightPrec)) {
-          pretty1(buf, indent2, end, depth, type, "(");
-          pretty1(buf, indent2, end, depth, type, typeVal);
-          pretty1(buf, indent2, end, depth, type, ")");
-          return buf;
-        }
-        final TupleType tupleType = (TupleType) typeVal.type;
-        start = buf.length();
-        final List<Type> argTypes = tupleType.argTypes;
-        final int argCount = argTypes.size();
-        for (int i = 0; i < argCount; i++) {
-          Type argType = argTypes.get(i);
-          if (buf.length() > start) {
-            pretty1(buf, indent2, end, depth, type, " * ");
-          }
-          final TypeVal typeVal1 = new TypeVal("", argType, "");
-          final int leftPrec1 = i == 0 ? leftPrec : op.right;
-          final int rightPrec1 = i == argCount - 1 ? rightPrec : op.left;
-          pretty1(
-              buf,
-              indent2,
-              end,
-              depth,
-              type,
-              typeVal1,
-              leftPrec1,
-              rightPrec1,
-              false);
-        }
-        return buf;
-
-      case RECORD_TYPE:
-      case PROGRESSIVE_RECORD_TYPE:
-        final RecordType recordType = (RecordType) typeVal.type;
-        final boolean progressive = typeVal.type.isProgressive();
-        buf.append("{");
-        start = buf.length();
-        recordType.argNameTypes.forEach(
-            (name, elementType) -> {
-              if (buf.length() > start) {
-                buf.append(", ");
-              }
-              LabelVal labelVal = new LabelVal(name, elementType);
-              pretty1(buf, indent2 + 1, end, depth, type, labelVal);
-            });
-        if (progressive) {
-          if (buf.length() > start) {
-            buf.append(", ");
-          }
-          pretty1(buf, indent2 + 1, end, depth, type, "...");
-        }
-        return buf.append("}");
-
-      case FUNCTION_TYPE:
-        if (op.wraps(leftPrec, rightPrec)) {
-          pretty1(buf, indent2, end, depth, type, "(");
-          pretty1(buf, indent2, end, depth, type, typeVal);
-          pretty1(buf, indent2, end, depth, type, ")");
-          return buf;
-        }
-        final FnType fnType = (FnType) typeVal.type;
-        final TypeVal typeVal1 = new TypeVal("", fnType.paramType, "");
-        pretty1(
-            buf, indent2, end, depth, type, typeVal1, leftPrec, op.left, false);
-        final TypeVal typeVal2 = new TypeVal(" -> ", fnType.resultType, "");
-        pretty1(
-            buf, indent2, end, depth, type, typeVal2, op.right, rightPrec,
-            false);
-        return buf;
-
-      default:
-        throw new AssertionError("unknown type " + typeVal.type);
-    }
-  }
-
-  /** Prints "list" and "bag" types in a similar way. */
-  private StringBuilder prettyCollectionType(
-      StringBuilder buf,
-      int[] lineEnd,
-      int depth,
-      Type type,
-      TypeVal typeVal,
-      int leftPrec,
-      int rightPrec,
-      int indent2,
-      String typeName) {
-    // Use NAMED_TYPE precedence for type printing (collection types have same
-    // precedence as named types like "int list")
-    final Op op = Op.NAMED_TYPE;
-    if (op.wraps(leftPrec, rightPrec)) {
-      pretty1(buf, indent2, lineEnd, depth, type, "(");
-      pretty1(buf, indent2, lineEnd, depth, type, typeVal);
-      pretty1(buf, indent2, lineEnd, depth, type, ")");
-      return buf;
-    }
-    checkArgument(
-        typeVal.type.isCollection(), "not a collection type: %s", type);
-    final Type elementType = typeVal.type.elementType();
-    final TypeVal typeVal1 = new TypeVal("", elementType, "");
-    // Keep the element type attached to its prefix (e.g. ": ") and wrap it
-    // internally, rather than starting it on a fresh line.
-    pretty1(
-        buf, indent2, lineEnd, depth, type, typeVal1, leftPrec, op.left, true);
-    return buf.append(" ").append(typeName);
-  }
-
   @SuppressWarnings("unchecked")
   private static List<Object> toList(Object value) {
     if (value instanceof TypedValue) {
@@ -592,34 +151,6 @@ class Pretty {
       return (List<Object>) typedValue.valueAs(List.class);
     }
     return (List<Object>) value;
-  }
-
-  private StringBuilder printList(
-      StringBuilder buf,
-      int indent,
-      int[] lineEnd,
-      int depth,
-      Type elementType,
-      List<Object> list) {
-    buf.append("[");
-    int start = buf.length();
-    for (Ord<Object> o : Ord.zip(list)) {
-      if (buf.length() > start) {
-        buf.append(",");
-      }
-      if (printLength >= 0 && o.i >= printLength) {
-        prettyRaw(buf, indent + 1, lineEnd, depth + 1, "...");
-        break;
-      } else {
-        // Keep the first element attached to '[' (glue), so that a list whose
-        // sole element is too wide prints as "[{...}" and breaks inside the
-        // element, rather than putting "{" on its own line.
-        final boolean glue = o.i == 0;
-        pretty1(
-            buf, indent + 1, lineEnd, depth + 1, elementType, o.e, 0, 0, glue);
-      }
-    }
-    return buf.append("]");
   }
 
   /**
@@ -638,39 +169,370 @@ class Pretty {
     }
   }
 
-  /** Wrapper that indicates that a value should be printed "name = value". */
-  private static class NamedVal {
-    final String name;
-    final Object o;
+  // -- Classic (default) output ---------------------------------------------
+  //
+  // Builds a "util.Lindig.Doc" for the value and lets that engine choose line
+  // breaks. Leaf values (primitives, "fn") are rendered directly by
+  // "flatLeaf"; the list/record/tuple/data-type structure becomes a Doc.
+  // Rendering at "lineWidth - 1" matches SML/NJ's right margin: its Oppen
+  // printer allows one more column than ours before breaking.
 
-    NamedVal(String name, Object o) {
-      this.name = name;
-      this.o = o;
+  /** Renders a binding in classic (the default, non-tabular) style. */
+  private StringBuilder prettyClassic(StringBuilder buf, TypedVal typedVal) {
+    final StringBuilder prefix = new StringBuilder("val ");
+    appendId(prefix, typedVal.name).append(" =");
+    // The value is one level below the binding, so start at depth 1: at
+    // "printDepth" 0 the whole value prints as "#", matching SML/NJ.
+    final Doc valueDoc = valueDoc(typedVal.type, typedVal.o, 1);
+    // A "variant" value prints its declared type with a " variant" suffix,
+    // e.g. "INT 3 : int variant".
+    final Doc typeBody;
+    if (typedVal.o instanceof Variant) {
+      final Type type1 = ((Variant) typedVal.o).type;
+      typeBody =
+          beside(
+              typeDoc(typeSystem.unqualified(type1), 0, 0), text(" variant"));
+    } else {
+      typeBody = typeDoc(typeSystem.unqualified(typedVal.type), 0, 0);
     }
+    // The value stays on the "val ... =" line only if it fits there entirely
+    // flat; otherwise the whole value moves to its own line, indented by 2,
+    // where it is free to wrap. Likewise the type stays on the value's last
+    // line if it fits flat there, otherwise it moves to its own line. The
+    // "wide" alternative is flattened so the decision is made on the value (or
+    // type) as a whole, not deferred to its internal line breaks. This matches
+    // how SML/NJ lays out a binding.
+    final Doc valuePart =
+        union(
+            beside(text(" "), flatten(valueDoc)),
+            nest(2, beside(HARD_LINE, valueDoc)));
+    final Doc typePart =
+        union(
+            beside(text(" : "), flatten(typeBody)),
+            nest(2, beside(HARD_LINE, beside(text(": "), typeBody))));
+    final Doc doc =
+        beside(text(prefix.toString()), beside(valuePart, typePart));
+    final int width = lineWidth < 0 ? Integer.MAX_VALUE : lineWidth - 1;
+    return buf.append(render(width, doc));
   }
 
-  /** Wrapper that indicates that a value should be printed "label:type". */
-  private static class LabelVal {
-    final String label;
-    final Type type;
-
-    LabelVal(String label, Type type) {
-      this.label = label;
-      this.type = type;
+  /**
+   * Tries to render a binding as a table, for "output = tabular". On success
+   * the table is written to {@code buf}, followed by a "val name : type" line
+   * (there is no "= value" because the value is the table), and returns true.
+   * If the tabular printer declines (for example when {@code printDepth} is too
+   * low to show the rows), leaves {@code buf} unchanged and returns false.
+   */
+  private boolean prettyTabular(StringBuilder buf, TypedVal typedVal) {
+    final int start = buf.length();
+    final boolean printed =
+        new TabularPrinter(printDepth, printLength, stringDepth, stringFold)
+            .print(buf, 0, typedVal.type, typedVal.o);
+    if (!printed) {
+      buf.setLength(start);
+      return false;
     }
-  }
-
-  /** Wrapper around a type value. */
-  private static class TypeVal {
-    final String prefix;
+    final StringBuilder line = new StringBuilder("val ");
+    appendId(line, typedVal.name).append(" : ");
+    // A "variant" value prints its declared type with a " variant" suffix.
     final Type type;
     final String suffix;
-
-    TypeVal(String prefix, Type type, String suffix) {
-      this.prefix = prefix;
-      this.type = type;
-      this.suffix = suffix;
+    if (typedVal.o instanceof Variant) {
+      type = ((Variant) typedVal.o).type;
+      suffix = " variant";
+    } else {
+      type = typedVal.type;
+      suffix = "";
     }
+    line.append(
+        render(Integer.MAX_VALUE, typeDoc(typeSystem.unqualified(type), 0, 0)));
+    line.append(suffix);
+    buf.append(line);
+    return true;
+  }
+
+  /**
+   * Renders a leaf value (a primitive or a function) as a string. The Doc
+   * printer handles all composite types itself, so this is only ever reached
+   * for a value whose type is a primitive or a function.
+   */
+  private String flatLeaf(Object value, Type type) {
+    if (type.op() == Op.FUNCTION_TYPE) {
+      return "fn";
+    }
+    if (type instanceof PrimitiveType) {
+      return prettyPrimitive(new StringBuilder(), (PrimitiveType) type, value)
+          .toString();
+    }
+    return String.valueOf(value);
+  }
+
+  /** Builds a Doc for a value of the given type. */
+  private Doc valueDoc(Type type, Object value, int depth) {
+    while (type instanceof AliasType) {
+      type = ((AliasType) type).type;
+    }
+    if (value instanceof Variant) {
+      final Variant v = (Variant) value;
+      return valueDoc(v.type, v.value, depth);
+    }
+    if (printDepth >= 0 && depth > printDepth) {
+      return text("#");
+    }
+    switch (type.op()) {
+      case LIST:
+        final List<Object> list = toList(value);
+        if (list instanceof RelList || value instanceof TypedValue) {
+          return text(RelList.RELATION);
+        }
+        return seqDoc("[", "]", elementDocs(type.elementType(), list, depth));
+
+      case RECORD_TYPE:
+        final RecordType recordType = (RecordType) type;
+        final Iterator<Object> iterator = toList(value).iterator();
+        final List<Doc> fields = new ArrayList<>();
+        final int fieldDepth = depth + 1;
+        recordType.argNameTypes.forEach(
+            (name, fieldType) -> {
+              final StringBuilder b = new StringBuilder();
+              appendId(b, name).append('=');
+              fields.add(
+                  beside(
+                      text(b.toString()),
+                      valueDoc(fieldType, iterator.next(), fieldDepth)));
+            });
+        return seqDoc("{", "}", fields);
+
+      case TUPLE_TYPE:
+        final TupleType tupleType = (TupleType) type;
+        final List<Doc> elements = new ArrayList<>();
+        forEachIndexed(
+            toList(value),
+            tupleType.argTypes,
+            (ordinal, o, elementType) ->
+                elements.add(valueDoc(elementType, o, depth + 1)));
+        return seqDoc("(", ")", elements);
+
+      case FORALL_TYPE:
+        return valueDoc(((ForallType) type).type, value, depth + 1);
+
+      case DATA_TYPE:
+        return dataTypeDoc((DataType) type, value, depth);
+
+      default:
+        return text(flatLeaf(value, type));
+    }
+  }
+
+  /**
+   * Builds a Doc for a value of a data type: a "bag" or "vector" lays out like
+   * a list, an opaque value prints directly, and a constructor application
+   * prints its name followed by its (possibly parenthesized) argument.
+   */
+  private Doc dataTypeDoc(DataType dataType, Object value, int depth) {
+    if (!(value instanceof List)) {
+      // A "doc" (pretty-printer document) is abstract; print it as "-", as
+      // Standard ML prints a value of an abstract type. Other opaque values
+      // (e.g. "time" backed by Long) print directly.
+      return text(dataType.name.equals("doc") ? "-" : String.valueOf(value));
+    }
+    final List<Object> list = toList(value);
+    if (dataType.name.equals("vector")) {
+      return beside(
+          text("#"),
+          seqDoc("[", "]", elementDocs(dataType.arg(0), list, depth)));
+    }
+    if (dataType.isCollection()) {
+      // A bag prints like a list, distinguishable only by its type.
+      if (list instanceof RelList) {
+        return text(RelList.RELATION);
+      }
+      final Type elementType = dataType.elementType();
+      final List<Object> ordered = bagPrinter.order(list, elementType);
+      return seqDoc("[", "]", elementDocs(elementType, ordered, depth));
+    }
+    final String tyConName = (String) list.get(0);
+    if (list.size() < 2) {
+      return text(tyConName); // nullary constructor, e.g. "LESS"
+    }
+    Object arg = list.get(1);
+    if (arg instanceof Variant) {
+      arg = ((Variant) arg).value;
+    }
+    if (dataType.name.equals("continuous_set")
+        || dataType.name.equals("discrete_set")) {
+      arg = Codes.setToRangeList(arg);
+    }
+    final Type argType = dataType.typeConstructors(typeSystem).get(tyConName);
+    // Parens disambiguate when the arg is itself a multi-token constructor
+    // (e.g. "SOME (INL x)"). The arg is at the same conceptual level as the
+    // constructor, so its depth is not incremented.
+    final boolean needParentheses =
+        argType.op() == Op.DATA_TYPE
+            && arg instanceof List
+            && ((List<?>) arg).size() > 1;
+    Doc argDoc = valueDoc(argType, arg, depth);
+    if (needParentheses) {
+      argDoc = beside(text("("), beside(argDoc, text(")")));
+    }
+    return beside(text(tyConName), beside(text(" "), argDoc));
+  }
+
+  /** Builds Docs for list elements, applying the {@code printLength} limit. */
+  private List<Doc> elementDocs(
+      Type elementType, List<Object> list, int depth) {
+    final List<Doc> docs = new ArrayList<>();
+    int i = 0;
+    for (Object o : list) {
+      if (printLength >= 0 && i >= printLength) {
+        docs.add(text("..."));
+        break;
+      }
+      docs.add(valueDoc(elementType, o, depth + 1));
+      ++i;
+    }
+    return docs;
+  }
+
+  /**
+   * Builds a Doc for a bracketed sequence (a list, record, or tuple). Renders
+   * flat as {@code (a,b,c)}, and when it does not fit, with each element on its
+   * own line, aligned under the first.
+   */
+  private Doc seqDoc(String open, String close, List<Doc> docs) {
+    if (docs.isEmpty()) {
+      return text(open + close);
+    }
+    // Elements fill across lines: as many as fit share a line, and each element
+    // is treated as a unit (a record in a list of records stays together, and
+    // the list wraps between records). There is no space after the comma, the
+    // way SML/NJ prints list, tuple, and record values. Continuation lines
+    // align under the first element.
+    final List<Doc> items = new ArrayList<>();
+    for (int i = 0; i < docs.size(); i++) {
+      items.add(
+          i < docs.size() - 1 ? beside(docs.get(i), text(",")) : docs.get(i));
+    }
+    return beside(text(open), beside(align(fill(EMPTY, items)), text(close)));
+  }
+
+  /**
+   * Builds a Doc for a type. Record types fill their fields across lines (as
+   * many per line as fit, aligned under the first field), the way SML/NJ wraps
+   * a wide record type; other composite types follow type-operator precedence,
+   * adding parentheses where needed.
+   */
+  private Doc typeDoc(Type type, int leftPrec, int rightPrec) {
+    // Unlike a value (see valueDoc), a type keeps its alias: a value of type
+    // "myInt" (an alias for "int") prints its type as "myInt", not "int".
+    final Op op = type.op();
+    switch (op) {
+      case DATA_TYPE:
+        if (type.isCollection()) {
+          return collectionTypeDoc(
+              type, leftPrec, rightPrec, BuiltIn.Eqtype.BAG.mlName());
+        }
+        // fall through
+      case ID:
+      case ALIAS_TYPE:
+      case TY_VAR:
+        return text(type.moniker());
+
+      case LIST:
+        return collectionTypeDoc(
+            type, leftPrec, rightPrec, BuiltIn.Eqtype.LIST.mlName());
+
+      case TUPLE_TYPE:
+        if (op.wraps(leftPrec, rightPrec)) {
+          return parenthesize(typeDoc(type, 0, 0));
+        }
+        // A tuple type fills across lines like SML/NJ, breaking before "*": the
+        // "*" leads the continuation line. Each element after the first is
+        // prefixed with "* "; packed with a single space, the result reads
+        // "a * b * c".
+        final List<Type> argTypes = ((TupleType) type).argTypes;
+        final List<Doc> productItems = new ArrayList<>();
+        for (int i = 0; i < argTypes.size(); i++) {
+          final int leftPrec1 = i == 0 ? leftPrec : op.right;
+          final int rightPrec1 = i == argTypes.size() - 1 ? rightPrec : op.left;
+          final Doc argDoc = typeDoc(argTypes.get(i), leftPrec1, rightPrec1);
+          productItems.add(i == 0 ? argDoc : beside(text("* "), argDoc));
+        }
+        // Continuation lines indent one column past the first element, as
+        // SML/NJ does (the same "+1" offset as a record type).
+        return align(nest(1, fill(text(" "), productItems)));
+
+      case RECORD_TYPE:
+      case PROGRESSIVE_RECORD_TYPE:
+        final RecordType recordType = (RecordType) type;
+        final List<Doc> fields = new ArrayList<>();
+        recordType.argNameTypes.forEach(
+            (name, fieldType) -> {
+              final StringBuilder b = new StringBuilder();
+              appendId(b, name).append(':');
+              fields.add(beside(text(b.toString()), typeDoc(fieldType, 0, 0)));
+            });
+        if (type.isProgressive()) {
+          fields.add(text("..."));
+        }
+        // Fields fill across lines, joined by ", " when packed, so as many as
+        // fit share a line. Unlike record values, SML/NJ indents continuation
+        // lines of a record type to one column past the first field (the "{"
+        // column plus two), so we align and then nest by one.
+        final List<Doc> fieldItems = new ArrayList<>();
+        for (int i = 0; i < fields.size(); i++) {
+          fieldItems.add(
+              i < fields.size() - 1
+                  ? beside(fields.get(i), text(","))
+                  : fields.get(i));
+        }
+        final Doc fieldsDoc = fill(text(" "), fieldItems);
+        return beside(text("{"), beside(align(nest(1, fieldsDoc)), text("}")));
+
+      case FUNCTION_TYPE:
+        if (op.wraps(leftPrec, rightPrec)) {
+          return parenthesize(typeDoc(type, 0, 0));
+        }
+        // A function type breaks before "->", which leads the continuation
+        // line (indented one column, like a record or tuple type). We must use
+        // an explicit union rather than "group": the result may contain a
+        // breakable structure (a tuple or collection type), and "group" would
+        // defer to that inner break and leave this "->" flat, cramming the
+        // whole type onto one line. Flattening the wide branch makes the fit
+        // test honest, so the outermost "->" that does not fit breaks first,
+        // matching SML/NJ.
+        final FnType fnType = (FnType) type;
+        final Doc paramDoc = typeDoc(fnType.paramType, leftPrec, op.left);
+        final Doc resultDoc = typeDoc(fnType.resultType, op.right, rightPrec);
+        return union(
+            flatten(beside(paramDoc, beside(text(" -> "), resultDoc))),
+            align(
+                nest(
+                    1,
+                    beside(
+                        paramDoc,
+                        beside(HARD_LINE, beside(text("-> "), resultDoc))))));
+
+      default:
+        return text(type.moniker());
+    }
+  }
+
+  /** Builds a Doc for a "list" or "bag" type, e.g. {@code int list}. */
+  private Doc collectionTypeDoc(
+      Type type, int leftPrec, int rightPrec, String typeName) {
+    final Op op = Op.NAMED_TYPE;
+    if (op.wraps(leftPrec, rightPrec)) {
+      return parenthesize(typeDoc(type, 0, 0));
+    }
+    final Doc elementDoc = typeDoc(type.elementType(), leftPrec, op.left);
+    // The "list"/"bag" keyword may break onto its own line when the element
+    // type does not leave room for it.
+    return align(beside(elementDoc, group(beside(LINE, text(typeName)))));
+  }
+
+  private static Doc parenthesize(Doc doc) {
+    return beside(text("("), beside(doc, text(")")));
   }
 }
 

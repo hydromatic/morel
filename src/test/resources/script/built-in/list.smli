@@ -29,29 +29,29 @@ Sys.set ("stringDepth", ~1);
 List;
 > val it =
 >   {@=fn,all=fn,app=fn,collate=fn,concat=fn,drop=fn,`except`=fn,`exists`=fn,
->    filter=fn,find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,`intersect`=fn,last=fn,
->    length=fn,map=fn,mapPartial=fn,mapi=fn,nil=[],nth=fn,null=fn,only=fn,
->    partition=fn,rev=fn,revAppend=fn,tabulate=fn,`take`=fn,tl=fn}
+>    filter=fn,find=fn,foldl=fn,foldr=fn,getItem=fn,hd=fn,`intersect`=fn,
+>    last=fn,length=fn,map=fn,mapPartial=fn,mapi=fn,nil=[],nth=fn,null=fn,
+>    only=fn,partition=fn,rev=fn,revAppend=fn,tabulate=fn,`take`=fn,tl=fn}
 >   : {@:'a list * 'a list -> 'a list, all:('b -> bool) -> 'b list -> bool,
->      app:('c -> unit) -> 'c list -> unit,
->      collate:('d * 'd -> order) -> 'd list * 'd list -> order,
->      concat:'e list list -> 'e list, drop:'f list * int -> 'f list,
->      `except`:'g list list -> 'g list,
->      `exists`:('h -> bool) -> 'h list -> bool,
->      filter:('i -> bool) -> 'i list -> 'i list,
->      find:('j -> bool) -> 'j list -> 'j option,
->      foldl:('k * 'l -> 'l) -> 'l -> 'k list -> 'l,
->      foldr:('m * 'n -> 'n) -> 'n -> 'm list -> 'n,
->      getItem:'o list -> ('o * 'o list) option, hd:'p list -> 'p,
->      `intersect`:'q list list -> 'q list, last:'r list -> 'r,
->      length:'s list -> int, map:('t -> 'u) -> 't list -> 'u list,
->      mapPartial:('v -> 'w option) -> 'v list -> 'w list,
->      mapi:(int * 'x -> 'y) -> 'x list -> 'y list, nil:'z list,
->      nth:'ba list * int -> 'ba, null:'bb list -> bool, only:'bc list -> 'bc,
->      partition:('bd -> bool) -> 'bd list -> 'bd list * 'bd list,
->      rev:'be list -> 'be list, revAppend:'bf list * 'bf list -> 'bf list,
->      tabulate:int * (int -> 'bg) -> 'bg list,
->      `take`:'bh list * int -> 'bh list, tl:'bi list -> 'bi list}
+>       app:('c -> unit) -> 'c list -> unit,
+>       collate:('d * 'd -> order) -> 'd list * 'd list -> order,
+>       concat:'e list list -> 'e list, drop:'f list * int -> 'f list,
+>       `except`:'g list list -> 'g list,
+>       `exists`:('h -> bool) -> 'h list -> bool,
+>       filter:('i -> bool) -> 'i list -> 'i list,
+>       find:('j -> bool) -> 'j list -> 'j option,
+>       foldl:('k * 'l -> 'l) -> 'l -> 'k list -> 'l,
+>       foldr:('m * 'n -> 'n) -> 'n -> 'm list -> 'n,
+>       getItem:'o list -> ('o * 'o list) option, hd:'p list -> 'p,
+>       `intersect`:'q list list -> 'q list, last:'r list -> 'r,
+>       length:'s list -> int, map:('t -> 'u) -> 't list -> 'u list,
+>       mapPartial:('v -> 'w option) -> 'v list -> 'w list,
+>       mapi:(int * 'x -> 'y) -> 'x list -> 'y list, nil:'z list,
+>       nth:'ba list * int -> 'ba, null:'bb list -> bool, only:'bc list -> 'bc,
+>       partition:('bd -> bool) -> 'bd list -> 'bd list * 'bd list,
+>       rev:'be list -> 'be list, revAppend:'bf list * 'bf list -> 'bf list,
+>       tabulate:int * (int -> 'bg) -> 'bg list,
+>       `take`:'bh list * int -> 'bh list, tl:'bi list -> 'bi list}
 
 (*) val nil : 'a list
 List.nil;

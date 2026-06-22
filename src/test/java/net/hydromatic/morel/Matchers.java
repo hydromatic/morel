@@ -299,6 +299,15 @@ public abstract class Matchers {
   }
 
   /**
+   * Creates a Matcher that matches a string equal to {@code lines} joined by
+   * newlines (with no trailing newline). For example, {@code isLines("a", "b")}
+   * matches the two-line string {@code a} then {@code b}.
+   */
+  public static Matcher<String> isLines(String... lines) {
+    return is(String.join("\n", lines));
+  }
+
+  /**
    * Creates a Matcher that matches an {@link Applicable1}, calls it with the
    * given argument, and checks the result.
    */

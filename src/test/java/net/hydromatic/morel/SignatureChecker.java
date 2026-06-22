@@ -633,6 +633,8 @@ public class SignatureChecker {
         return "Bool";
       case "INTEGER":
         return "Int";
+      case "PP":
+        return "PP";
       default:
         return toPascalCase(bind.name.name);
     }

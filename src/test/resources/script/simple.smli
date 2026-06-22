@@ -99,7 +99,7 @@ true;
 >   {1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11,a="a",a1="a1",a10="a10",
 >    a2="a2"}
 >   : {1:int, 2:int, 3:int, 4:int, 5:int, 6:int, 7:int, 8:int, 9:int, 10:int,
->      11:int, a:string, a1:string, a10:string, a2:string}
+>       11:int, a:string, a1:string, a10:string, a2:string}
 {1=1,2=2,3=3,4=4,5=5,6=6,7=7,8=8,9=9,10=10,11=11};
 > val it = (1,2,3,4,5,6,7,8,9,10,11)
 >   : int * int * int * int * int * int * int * int * int * int * int
@@ -234,7 +234,7 @@ fun foo x
  `A bc` = 8};
 > val it = {`A bc`=8,ABC123=5,Abc_=7,Abc_123=6,x=1,x'=2,x''=3,x'y=4}
 >   : {`A bc`:int, ABC123:int, Abc_:int, Abc_123:int, x:int, x':int, x'':int,
->      x'y:int}
+>       x'y:int}
 
 (*) Quoted identifiers
 val `identifier with space` = 1;
@@ -433,8 +433,8 @@ strTimes "" 12 [];
 >    "aaaaa","aaaa","aaa","aa","a",""] : string list
 strTimes "" 13 [];
 > val it =
->   ["aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa","aaaaaaa",
->    "aaaaaa","aaaaa","aaaa","aaa","aa","a",...] : string list
+>   ["aaaaaaaaaaaa","aaaaaaaaaaa","aaaaaaaaaa","aaaaaaaaa","aaaaaaaa",
+>    "aaaaaaa","aaaaaa","aaaaa","aaaa","aaa","aa","a",...] : string list
 strTimes "" 20 [];
 > val it =
 >   ["aaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaa",
@@ -458,7 +458,7 @@ strTimes "" 20 [];
 > val it =
 >   {a=1,b=2,c=3,d=4,e=5,f=6,g=7,h=8,i=9,j=10,k=11,l=12,m=13,n=14,o_=15,p=16}
 >   : {a:int, b:int, c:int, d:int, e:int, f:int, g:int, h:int, i:int, j:int,
->      k:int, l:int, m:int, n:int, o_:int, p:int}
+>       k:int, l:int, m:int, n:int, o_:int, p:int}
 (*
 sml prints the following, but we cannot split types yet:
 
@@ -469,7 +469,8 @@ val it = {a=1,b={a=2,b={a=3,b={a=4,b={a=#,b=#}}}}}
 {a=1,b={a=2,b={a=3,b={a=4,b={a=5,b={a=6,b={a=7,b={}}}}}}}};
 > val it = {a=1,b={a=2,b={a=3,b={a=4,b={a=#,b=#}}}}}
 >   : {a:int,
->      b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:unit}}}}}}}
+>       b:{a:int,
+>           b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:{a:int, b:unit}}}}}}}
 
 (*) Bug: Fails due to lack of parentheses
 (*

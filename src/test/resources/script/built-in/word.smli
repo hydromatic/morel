@@ -24,25 +24,25 @@ Sys.set ("printLength", 999);
 
 Word;
 > val it =
->   {*=fn,+=fn,-=fn,<=fn,<<=fn,<==fn,>=fn,>==fn,>>=fn,andb=fn,compare=fn,`div`=fn,
->    fmt=fn,fromInt=fn,fromLarge=fn,fromLargeInt=fn,fromLargeWord=fn,
+>   {*=fn,+=fn,-=fn,<=fn,<<=fn,<==fn,>=fn,>==fn,>>=fn,andb=fn,compare=fn,
+>    `div`=fn,fmt=fn,fromInt=fn,fromLarge=fn,fromLargeInt=fn,fromLargeWord=fn,
 >    fromString=fn,max=fn,min=fn,`mod`=fn,notb=fn,orb=fn,toInt=fn,toIntX=fn,
 >    toLarge=fn,toLargeInt=fn,toLargeIntX=fn,toLargeWord=fn,toLargeWordX=fn,
 >    toLargeX=fn,toString=fn,wordSize=64,xorb=fn,~=fn,~>>=fn}
 >   : {*:word * word -> word, +:word * word -> word, -:word * word -> word,
->      <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool,
->      >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word,
->      andb:word * word -> word, compare:word * word -> order,
->      `div`:word * word -> word, fmt:radix -> word -> string,
->      fromInt:int -> word, fromLarge:word -> word, fromLargeInt:int -> word,
->      fromLargeWord:word -> word, fromString:string -> word option,
->      max:word * word -> word, min:word * word -> word,
->      `mod`:word * word -> word, notb:word -> word, orb:word * word -> word,
->      toInt:word -> int, toIntX:word -> int, toLarge:word -> word,
->      toLargeInt:word -> int, toLargeIntX:word -> int, toLargeWord:word -> word,
->      toLargeWordX:word -> word, toLargeX:word -> word, toString:word -> string,
->      wordSize:int, xorb:word * word -> word, ~:word -> word,
->      ~>>:word * word -> word}
+>       <:word * word -> bool, <<:word * word -> word, <=:word * word -> bool,
+>       >:word * word -> bool, >=:word * word -> bool, >>:word * word -> word,
+>       andb:word * word -> word, compare:word * word -> order,
+>       `div`:word * word -> word, fmt:radix -> word -> string,
+>       fromInt:int -> word, fromLarge:word -> word, fromLargeInt:int -> word,
+>       fromLargeWord:word -> word, fromString:string -> word option,
+>       max:word * word -> word, min:word * word -> word,
+>       `mod`:word * word -> word, notb:word -> word, orb:word * word -> word,
+>       toInt:word -> int, toIntX:word -> int, toLarge:word -> word,
+>       toLargeInt:word -> int, toLargeIntX:word -> int,
+>       toLargeWord:word -> word, toLargeWordX:word -> word,
+>       toLargeX:word -> word, toString:word -> string, wordSize:int,
+>       xorb:word * word -> word, ~:word -> word, ~>>:word * word -> word}
 
 (*) wordSize
 Word.wordSize;

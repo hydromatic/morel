@@ -31,11 +31,11 @@ Fn;
 >   {apply=fn,const=fn,curry=fn,equal=fn,flip=fn,id=fn,notEqual=fn,`o`=fn,
 >    repeat=fn,uncurry=fn}
 >   : {apply:('a -> 'b) * 'a -> 'b, const:'c -> 'd -> 'c,
->      curry:('e * 'f -> 'g) -> 'e -> 'f -> 'g, equal:'h -> 'h -> bool,
->      flip:('i * 'j -> 'k) -> 'j * 'i -> 'k, id:'l -> 'l,
->      notEqual:'m -> 'm -> bool, `o`:('n -> 'o) * ('p -> 'n) -> 'p -> 'o,
->      repeat:int -> ('q -> 'q) -> 'q -> 'q,
->      uncurry:('r -> 's -> 't) -> 'r * 's -> 't}
+>       curry:('e * 'f -> 'g) -> 'e -> 'f -> 'g, equal:'h -> 'h -> bool,
+>       flip:('i * 'j -> 'k) -> 'j * 'i -> 'k, id:'l -> 'l,
+>       notEqual:'m -> 'm -> bool, `o`:('n -> 'o) * ('p -> 'n) -> 'p -> 'o,
+>       repeat:int -> ('q -> 'q) -> 'q -> 'q,
+>       uncurry:('r -> 's -> 't) -> 'r * 's -> 't}
 
 Fn.id;
 > val it = fn : 'a -> 'a

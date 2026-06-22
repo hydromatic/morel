@@ -25,12 +25,12 @@ Range;
 >   {complement=fn,contains=fn,continuousSetOf=fn,discreteSetOf=fn,flatten=fn,
 >    ranges=fn,toBag=fn,toList=fn}
 >   : {complement:'a continuous_set -> 'a continuous_set,
->      contains:'b range -> 'b -> bool,
->      continuousSetOf:'c range list -> 'c continuous_set,
->      discreteSetOf:'d range list -> 'd discrete_set,
->      flatten:'e range list -> 'e list,
->      ranges:'f continuous_set -> 'f range list, toBag:'g discrete_set -> 'g bag,
->      toList:'h discrete_set -> 'h list}
+>       contains:'b range -> 'b -> bool,
+>       continuousSetOf:'c range list -> 'c continuous_set,
+>       discreteSetOf:'d range list -> 'd discrete_set,
+>       flatten:'e range list -> 'e list,
+>       ranges:'f continuous_set -> 'f range list,
+>       toBag:'g discrete_set -> 'g bag, toList:'h discrete_set -> 'h list}
 
 (*) Constructors.
 POINT 5 : int range;

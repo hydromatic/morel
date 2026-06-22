@@ -29,7 +29,7 @@ Sys.set ("stringDepth", ~1);
 StringCvt;
 > val it = {padLeft=fn,padRight=fn}
 >   : {padLeft:char -> int -> string -> string,
->      padRight:char -> int -> string -> string}
+>       padRight:char -> int -> string -> string}
 
 (*) The constructors of `radix` and `realfmt` are at the top level.
 BIN;

@@ -554,7 +554,7 @@ fun shortest_path (edges: 'a list) =
   end;
 > val shortest_path = fn
 >   : {source:'a, target:'a, weight:int} list
->     -> {source:'a, target:'a, weight:int} list
+>      -> {source:'a, target:'a, weight:int} list
 shortest_path edges;
 > val it =
 >   [{source="a",target="a",weight=0},{source="a",target="b",weight=~1},

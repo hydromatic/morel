@@ -68,15 +68,15 @@ from e in scott.depts order DESC e.deptno;
 Sys.set ("output", "tabular");
 > val it = () : unit
 
-(* List of primitives uses classic style. *)
+(* A list of primitives is not a table, so it prints normally. *)
 [1,2,3];
 > val it = [1,2,3] : int list
 
-(* List of lists uses classic style. *)
+(* A list of lists is not a table, so it prints normally. *)
 [[1,2],[3,4]];
 > val it = [[1,2],[3,4]] : int list list
 
-(* Record uses classic style. *)
+(* A record is not a table, so it prints normally. *)
 {id=1, name="julian", employed=false};
 > val it = {employed=false,id=1,name="julian"}
 >   : {employed:bool, id:int, name:string}
@@ -150,14 +150,14 @@ Sys.set ("output", "tabular");
 
 (* A record-'option' field whose record is entirely options cannot be
  * tabulated -- 'NONE' would be indistinguishable from a 'SOME' whose every
- * field is 'NONE' -- so it falls back to classic style. *)
+ * field is 'NONE' -- so it prints normally (not as a table). *)
 [{id=1, addr=SOME {zip=SOME 94705}}, {id=2, addr=NONE}];
 > val it = [{addr=SOME {zip=SOME 94705},id=1},{addr=NONE,id=2}]
 >   : {addr:{zip:int option} option, id:int} list
 
 (* A doubly-'option' field (e.g. from a right join of a right join) is not
- * tabulated either: a blank cell cannot tell 'NONE' from 'SOME NONE'. Classic
- * style keeps all three states distinct. *)
+ * tabulated either: a blank cell cannot tell 'NONE' from 'SOME NONE'.
+ * Normal (non-tabular) style keeps all three states distinct. *)
 [{id=1, p=SOME (SOME 7)}, {id=2, p=SOME NONE}, {id=3, p=NONE}];
 > val it = [{id=1,p=SOME (SOME 7)},{id=2,p=SOME NONE},{id=3,p=NONE}]
 >   : {id:int, p:int option option} list
@@ -304,8 +304,8 @@ Sys.set ("stringDepth", 4);
 Sys.unset "stringDepth";
 > val it = () : unit
 
-(* printDepth=0 means classic would print the list's elements as `#`,
- * so tabular declines and lets classic render the `#`. *)
+(* printDepth=0 means the elements would print as `#`, so tabular
+ * declines and lets the classic printer render the `#`. *)
 Sys.set ("printDepth", 0);
 > val it = # : unit
 
@@ -452,7 +452,7 @@ Sys.set ("stringFold", ~3);
 Sys.unset "stringFold";
 > val it = () : unit
 
-(* Word values render in hexadecimal in tabular mode, as in classic mode. *)
+(* Word values render in hexadecimal in tabular mode, as elsewhere. *)
 Sys.set ("output", "tabular");
 > val it = () : unit
 from i in [0w1, 0wxff, 0wxffffffffffffffff]
@@ -482,10 +482,10 @@ Sys.set ("matchStrict", true);
  * the element's '{' and breaks between the record's fields. *)
 val emps = [{comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",job="CLERK",mgr=7902,sal=800}];
 > val emps =
->   [{comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",job="CLERK",
->     mgr=7902,sal=800}]
->   : {comm:int, deptno:int, empno:int, ename:string, hiredate:string, job:string,
->      mgr:int, sal:int} list
+>   [{comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",
+>     job="CLERK",mgr=7902,sal=800}]
+>   : {comm:int, deptno:int, empno:int, ename:string, hiredate:string,
+>       job:string, mgr:int, sal:int} list
 
 (* The same 'glue', shown small: a one-element list that does not fit. '['
  * stays attached to '{', and ':' to the type, so the record and type wrap at
@@ -499,8 +499,10 @@ Sys.set ("lineWidth", 20);
 > val it =
 >   [{aa=1,bb=2,cc=3,
 >     dd=4}]
->   : {aa:int, bb:int,
->      cc:int, dd:int} list
+>   : {aa:int,
+>       bb:int,
+>       cc:int,
+>       dd:int} list
 
 (* Line width: how values and types wrap as 'lineWidth' shrinks. *)
 Sys.set ("lineWidth", 100);
@@ -516,7 +518,7 @@ val z = {a=[1,2,3], b=[4,5], c=[6], d=()};
 val r = {x=x,y=y,z=z};
 > val r = {x=[[1,2,3],[4,5],[6],[]],y=([1,2,3],[4,5],[6],[]),z={a=[1,2,3],b=[4,5],c=[6],d=()}}
 >   : {x:int list list, y:int list * int list * int list * 'a list,
->      z:{a:int list, b:int list, c:int list, d:unit}}
+>       z:{a:int list, b:int list, c:int list, d:unit}}
 val f = fn s => String.size s;
 > val f = fn : string -> int
 Sys.set ("lineWidth", 40);
@@ -528,60 +530,59 @@ x;
 >   : int list list
 y;
 > val it = ([1,2,3],[4,5],[6],[])
->   : int list * int list * int list *
->     'a list
+>   : int list * int list * int list
+>      * 'a list
 z;
 > val it = {a=[1,2,3],b=[4,5],c=[6],d=()}
->   : {a:int list, b:int list, c:int list,
->      d:unit}
+>   : {a:int list, b:int list,
+>       c:int list, d:unit}
 r;
 > val it =
 >   {x=[[1,2,3],[4,5],[6],[]],
 >    y=([1,2,3],[4,5],[6],[]),
 >    z={a=[1,2,3],b=[4,5],c=[6],d=()}}
 >   : {x:int list list,
->      y:int list * int list * int list *
->        'a list,
->      z:{a:int list, b:int list,
->         c:int list, d:unit}}
+>       y:int list * int list * int list
+>          * 'a list,
+>       z:{a:int list, b:int list,
+>           c:int list, d:unit}}
 Sys.set ("lineWidth", 20);
 > val it = () : unit
 20;
 > val it = 20 : int
 x;
 > val it =
->   [[1,2,3],[4,5],[6],
->    []]
+>   [[1,2,3],[4,5],
+>    [6],[]]
 >   : int list list
 y;
 > val it =
->   ([1,2,3],[4,5],[6],
->    [])
->   : int list *
->     int list *
->     int list *
->     'a list
+>   ([1,2,3],[4,5],
+>    [6],[])
+>   : int list
+>      * int list
+>      * int list
+>      * 'a list
 z;
 > val it =
->   {a=[1,2,3],b=[4,5],
->    c=[6],d=()}
+>   {a=[1,2,3],
+>    b=[4,5],c=[6],
+>    d=()}
 >   : {a:int list,
->      b:int list,
->      c:int list,
->      d:unit}
+>       b:int list,
+>       c:int list,
+>       d:unit}
 f;
 > val it = fn
 >   : string -> int
 Sys.set ("lineWidth", 1);
 > val it =
 >   ()
->   :
->     unit
+>   : unit
 1;
 > val it =
 >   1
->   :
->     int
+>   : int
 x;
 > val it =
 >   [[1,
@@ -591,18 +592,17 @@ x;
 >     5],
 >    [6],
 >    []]
->   :
->     int list list
+>   : int
+>     list
+>     list
 Sys.set ("lineWidth", 0);
 > val it =
 >   ()
->   :
->     unit
+>   : unit
 0;
 > val it =
 >   0
->   :
->     int
+>   : int
 x;
 > val it =
 >   [[1,
@@ -612,8 +612,9 @@ x;
 >     5],
 >    [6],
 >    []]
->   :
->     int list list
+>   : int
+>     list
+>     list
 Sys.set ("lineWidth", ~1);
 > val it = () : unit
 ~1;
@@ -627,58 +628,153 @@ Sys.set ("lineWidth", 70);
 val x = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[8],i={j=[9]}}]}]};
 > val x = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=#,h=#,i=#}]}]}
 >   : {a:int, b:int list,
->      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+>       c:{d:int, e:int list,
+>           f:{g:int, h:int list, i:{j:int list}} list} list}
 Sys.set ("printDepth", 6);
 > val it = () : unit
 x;
 > val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[#],i={j=#}}]}]}
 >   : {a:int, b:int list,
->      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+>       c:{d:int, e:int list,
+>           f:{g:int, h:int list, i:{j:int list}} list} list}
 Sys.set ("printDepth", 5);
 > val it = () : unit
 x;
 > val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=#,h=#,i=#}]}]}
 >   : {a:int, b:int list,
->      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+>       c:{d:int, e:int list,
+>           f:{g:int, h:int list, i:{j:int list}} list} list}
 Sys.set ("printDepth", 4);
 > val it = () : unit
 x;
 > val it = {a=1,b=[2,3],c=[{d=4,e=[#,#],f=[#]}]}
 >   : {a:int, b:int list,
->      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+>       c:{d:int, e:int list,
+>           f:{g:int, h:int list, i:{j:int list}} list} list}
 Sys.set ("printDepth", 3);
 > val it = () : unit
 x;
 > val it = {a=1,b=[2,3],c=[{d=#,e=#,f=#}]}
 >   : {a:int, b:int list,
->      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+>       c:{d:int, e:int list,
+>           f:{g:int, h:int list, i:{j:int list}} list} list}
 Sys.set ("printDepth", 2);
 > val it = () : unit
 x;
 > val it = {a=1,b=[#,#],c=[#]}
 >   : {a:int, b:int list,
->      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+>       c:{d:int, e:int list,
+>           f:{g:int, h:int list, i:{j:int list}} list} list}
 Sys.set ("printDepth", 1);
 > val it = () : unit
 x;
 > val it = {a=#,b=#,c=#}
 >   : {a:int, b:int list,
->      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+>       c:{d:int, e:int list,
+>           f:{g:int, h:int list, i:{j:int list}} list} list}
 Sys.set ("printDepth", 0);
 > val it = # : unit
 x;
 > val it = #
 >   : {a:int, b:int list,
->      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+>       c:{d:int, e:int list,
+>           f:{g:int, h:int list, i:{j:int list}} list} list}
 Sys.set ("printDepth", ~1);
 > val it = () : unit
 x;
 > val it = {a=1,b=[2,3],c=[{d=4,e=[5,6],f=[{g=7,h=[8],i={j=[9]}}]}]}
 >   : {a:int, b:int list,
->      c:{d:int, e:int list, f:{g:int, h:int list, i:{j:int list}} list} list}
+>       c:{d:int, e:int list,
+>           f:{g:int, h:int list, i:{j:int list}} list} list}
 
 Sys.unset "printDepth";
 > val it = () : unit
+
+(* -------------------------------------------------------------------
+ * Value layout (the classic, default printer).
+ *
+ * The classic printer packs as many elements per line as fit (a
+ * "fill"), treats each element as a unit so a list of records wraps
+ * between records, and moves a value or its type to its own indented
+ * line when it does not fit flat. These value layouts match SML/NJ; the
+ * "Divergences" section below shows where the classic printer and
+ * SML/NJ's Oppen-based printer still differ.
+ *)
+Sys.set ("output", "classic");
+> val it = () : unit
+
+(*) Values that fit stay on one line.
+Sys.set ("lineWidth", 80);
+> val it = () : unit
+[1,2,3];
+> val it = [1,2,3] : int list
+(1,true,"x");
+> val it = (1,true,"x") : int * bool * string
+{a=1,b=2,c=3};
+> val it = {a=1,b=2,c=3} : {a:int, b:int, c:int}
+
+(* A list of scalars fills: as many elements per line as fit, the rest
+ * wrapping aligned under the first element. *)
+Sys.set ("lineWidth", 22);
+> val it = () : unit
+[1,2,3,4,5,6,7,8,9,10,11];
+> val it =
+>   [1,2,3,4,5,6,7,8,9,
+>    10,11] : int list
+
+(*) A record value fills its fields the same way.
+{aa=111,bb=222,cc=333};
+> val it =
+>   {aa=111,bb=222,
+>    cc=333}
+>   : {aa:int, bb:int,
+>       cc:int}
+
+(* A list of records wraps between records: each record stays intact,
+ * and the value moves to its own line. *)
+[{a=1,b=2},{a=3,b=4}];
+> val it =
+>   [{a=1,b=2},
+>    {a=3,b=4}]
+>   : {a:int, b:int}
+>     list
+
+(*) A value too wide to fit flat moves to its own line, indented by two.
+[10,20,30,40,50,60,70,80,90];
+> val it =
+>   [10,20,30,40,50,60,
+>    70,80,90]
+>   : int list
+
+(* -------------------------------------------------------------------
+ * Divergences from SML/NJ.
+ *
+ * With the right margin calibrated (the printer renders at 'lineWidth -
+ * 1', matching SML/NJ's Oppen margin), value layouts now match SML/NJ
+ * almost exactly. One systematic difference remains, in the type; we
+ * accept it rather than distort our layout to reproduce SML/NJ's
+ * Oppen indentation.
+ *)
+
+(* Type continuation indent. SML/NJ indents the continuation lines of a
+ * wrapped type -- both the fields of a record type and a trailing
+ * "list"/"bag" keyword -- more deeply than we do, and leaves a trailing
+ * space before a wrapped keyword. We keep the type more compact. Here
+ * the value matches SML/NJ but SML/NJ indents "bbb" and "ccc" one
+ * column further right. *)
+Sys.set ("lineWidth", 22);
+> val it = () : unit
+[{aaa=1,bbb=2,ccc=3}];
+> val it =
+>   [{aaa=1,bbb=2,
+>     ccc=3}]
+>   : {aaa:int,
+>       bbb:int,
+>       ccc:int} list
+
+Sys.unset "output";
+> val it = () : unit
+
 Sys.unset "lineWidth";
 > val it = () : unit
 Sys.unset "matchStrict";

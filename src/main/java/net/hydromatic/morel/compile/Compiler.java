@@ -2249,7 +2249,7 @@ public class Compiler {
           final Core.NamedPat id =
               binding.overloadId != null ? binding.overloadId : binding.id;
           final Pretty.TypedVal typedVal = getTypedVal(binding, id);
-          pretty.pretty(buf, binding.id.type, typedVal);
+          pretty.pretty(buf, typedVal);
           final String line = str(buf);
           outs.add(line);
           outLines.accept(line);

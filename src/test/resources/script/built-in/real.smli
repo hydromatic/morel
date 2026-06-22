@@ -38,23 +38,24 @@ Real;
 >    realMod=fn,realRound=fn,realTrunc=fn,rem=fn,round=fn,sameSign=fn,sign=fn,
 >    signBit=fn,split=fn,toManExp=fn,toString=fn,trunc=fn,unordered=fn,~=fn}
 >   : {*:real * real -> real, +:real * real -> real, -:real * real -> real,
->      /:real * real -> real, <:real * real -> bool, <=:real * real -> bool,
->      <>:real * real -> bool, =:real * real -> bool, >:real * real -> bool,
->      >=:real * real -> bool, abs:real -> real, ceil:real -> int,
->      checkFloat:real -> real, compare:real * real -> order,
->      copySign:real * real -> real, floor:real -> int,
->      fmt:realfmt -> real -> string, fromInt:int -> real,
->      fromManExp:{exp:int, man:real} -> real, fromString:string -> real option,
->      isFinite:real -> bool, isNan:real -> bool, isNormal:real -> bool,
->      max:real * real -> real, maxFinite:real, min:real * real -> real,
->      minNormalPos:real, minPos:real, negInf:real, posInf:real, precision:int,
->      radix:int, realCeil:real -> real, realFloor:real -> real,
->      realMod:real -> real, realRound:real -> real, realTrunc:real -> real,
->      rem:real * real -> real, round:real -> int, sameSign:real * real -> bool,
->      sign:real -> int, signBit:real -> bool,
->      split:real -> {frac:real, whole:real},
->      toManExp:real -> {exp:int, man:real}, toString:real -> string,
->      trunc:real -> int, unordered:real * real -> bool, ~:real -> real}
+>       /:real * real -> real, <:real * real -> bool, <=:real * real -> bool,
+>       <>:real * real -> bool, =:real * real -> bool, >:real * real -> bool,
+>       >=:real * real -> bool, abs:real -> real, ceil:real -> int,
+>       checkFloat:real -> real, compare:real * real -> order,
+>       copySign:real * real -> real, floor:real -> int,
+>       fmt:realfmt -> real -> string, fromInt:int -> real,
+>       fromManExp:{exp:int, man:real} -> real,
+>       fromString:string -> real option, isFinite:real -> bool,
+>       isNan:real -> bool, isNormal:real -> bool, max:real * real -> real,
+>       maxFinite:real, min:real * real -> real, minNormalPos:real,
+>       minPos:real, negInf:real, posInf:real, precision:int, radix:int,
+>       realCeil:real -> real, realFloor:real -> real, realMod:real -> real,
+>       realRound:real -> real, realTrunc:real -> real,
+>       rem:real * real -> real, round:real -> int,
+>       sameSign:real * real -> bool, sign:real -> int, signBit:real -> bool,
+>       split:real -> {frac:real, whole:real},
+>       toManExp:real -> {exp:int, man:real}, toString:real -> string,
+>       trunc:real -> int, unordered:real * real -> bool, ~:real -> real}
 
 (*) val radix : int
 Real.radix;
@@ -701,9 +702,9 @@ List.map (fn x => (x, Real.fromManExp (Real.toManExp x)))
 > val it =
 >   [(1,1),(0,0),(~0,~0),(~1,~1),(0.5,0.5),(2,2),(1.23456E~5,1.23456E~5),
 >    (1.23456E~6,1.23456E~6),(1.23456E~7,1.23456E~7),(~1.23456E~6,~1.23456E~6),
->    (1.4E~45,1.4E~45),(1.1754944E~38,1.1754944E~38),(3.4028235E38,3.4028235E38),
->    (~3.4028235E38,~3.4028235E38),(inf,inf),(~inf,~inf),(nan,nan)]
->   : (real * real) list
+>    (1.4E~45,1.4E~45),(1.1754944E~38,1.1754944E~38),
+>    (3.4028235E38,3.4028235E38),(~3.4028235E38,~3.4028235E38),(inf,inf),
+>    (~inf,~inf),(nan,nan)] : (real * real) list
 
 (* "split r" returns {whole, frac}, where frac and whole are the fractional and
    integral parts of r, respectively. Specifically, whole is integral,
@@ -977,7 +978,7 @@ Real.fromString "nan";
 (* Side-by-side comparison of how each format handles a range of values.
  * To run in SML, prepend `open StringCvt;` (Morel exposes the constructors
  * at the top level). `Sys.set` is Morel-only; SML users will see the
- * record list in classic notation. *)
+ * record list in non-tabular notation. *)
 Sys.set ("output", "tabular");
 > val it = () : unit
 List.map (fn (Name, X) =>

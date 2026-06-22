@@ -33,15 +33,15 @@ file.wordle;
 (*) Now we've gone into the directory, the type of 'file' has widened.
 file;
 > val it = {map={},scott={},wordle={answers=<relation>,words=<relation>}}
->   : {map:{...}, scott:{...}, wordle:{answers:{...} list, words:{...} list, ...},
->      ...}
+>   : {map:{...}, scott:{...},
+>       wordle:{answers:{...} list, words:{...} list, ...}, ...}
 
 (*) A variable via which we can access relations.
 val s = file.scott;
 > val s =
 >   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
 >   : {bonuses:{...} list, depts:{...} list, emps:{...} list,
->      salgrades:{...} list, ...}
+>       salgrades:{...} list, ...}
 
 (*) Access two relations (emps, depts) simultaneously via a variable (s).
 from d in s.depts
@@ -77,8 +77,8 @@ val scott = file.scott;
 > val scott =
 >   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
 >   : {bonuses:{...} list, depts:{deptno:int, dname:string, loc:string} list,
->      emps:{comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->            job:string, mgrno:int, sal:real} list, salgrades:{...} list, ...}
+>       emps:{comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>              job:string, mgrno:int, sal:real} list, salgrades:{...} list, ...}
 from b in scott.bonuses;
 > val it = [] : {bonus:real, ename:string, job:string, sal:real} list
 
@@ -86,23 +86,22 @@ from b in scott.bonuses;
 file;
 > val it =
 >   {map={},
->    scott=
->    {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>},
->    wordle={answers=<relation>,words=<relation>}}
+>    scott={bonuses=<relation>,depts=<relation>,emps=<relation>,
+>           salgrades=<relation>},wordle={answers=<relation>,words=<relation>}}
 >   : {map:{...},
->      scott:{bonuses:{bonus:real, ename:string, job:string, sal:real} list,
->             depts:{deptno:int, dname:string, loc:string} list,
->             emps:{comm:real, deptno:int, empno:int, ename:string,
->                   hiredate:string, job:string, mgrno:int, sal:real} list,
->             salgrades:{...} list, ...},
->      wordle:{answers:{...} list, words:{...} list, ...}, ...}
+>       scott:{bonuses:{bonus:real, ename:string, job:string, sal:real} list,
+>               depts:{deptno:int, dname:string, loc:string} list,
+>               emps:{comm:real, deptno:int, empno:int, ename:string,
+>                      hiredate:string, job:string, mgrno:int, sal:real} list,
+>               salgrades:{...} list, ...},
+>       wordle:{answers:{...} list, words:{...} list, ...}, ...}
 
 file.scott;
 > val it =
 >   {bonuses=<relation>,depts=<relation>,emps=<relation>,salgrades=<relation>}
 >   : {bonuses:{bonus:real, ename:string, job:string, sal:real} list,
->      depts:{deptno:int, dname:string, loc:string} list,
->      emps:{comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->            job:string, mgrno:int, sal:real} list, salgrades:{...} list, ...}
+>       depts:{deptno:int, dname:string, loc:string} list,
+>       emps:{comm:real, deptno:int, empno:int, ename:string, hiredate:string,
+>              job:string, mgrno:int, sal:real} list, salgrades:{...} list, ...}
 
 (*) End file.smli

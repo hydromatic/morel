@@ -86,6 +86,7 @@ import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.JavaVersion;
+import net.hydromatic.morel.util.Lindig;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MorelException;
 import net.hydromatic.morel.util.Ord;
@@ -3115,6 +3116,218 @@ public abstract class Codes {
     return ORDER_EQUAL;
   }
 
+  /** @see BuiltIn#PP_ALIGN */
+  private static final Applicable PP_ALIGN =
+      new BaseApplicable1<Lindig.Doc, Lindig.Doc>(BuiltIn.PP_ALIGN) {
+        @Override
+        public Lindig.Doc apply(Lindig.Doc doc) {
+          return Lindig.align(doc);
+        }
+      };
+
+  /** @see BuiltIn#PP_BESIDE */
+  private static final Applicable PP_BESIDE =
+      new BaseApplicable2<Lindig.Doc, Lindig.Doc, Lindig.Doc>(
+          BuiltIn.PP_BESIDE) {
+        @Override
+        public Lindig.Doc apply(Lindig.Doc a, Lindig.Doc b) {
+          return Lindig.beside(a, b);
+        }
+      };
+
+  /** @see BuiltIn#PP_BRACES */
+  private static final Applicable PP_BRACES =
+      new BaseApplicable1<Lindig.Doc, Lindig.Doc>(BuiltIn.PP_BRACES) {
+        @Override
+        public Lindig.Doc apply(Lindig.Doc doc) {
+          return Lindig.braces(doc);
+        }
+      };
+
+  /** @see BuiltIn#PP_BRACKETS */
+  private static final Applicable PP_BRACKETS =
+      new BaseApplicable1<Lindig.Doc, Lindig.Doc>(BuiltIn.PP_BRACKETS) {
+        @Override
+        public Lindig.Doc apply(Lindig.Doc doc) {
+          return Lindig.brackets(doc);
+        }
+      };
+
+  /** @see BuiltIn#PP_CAT */
+  private static final Applicable PP_CAT =
+      new BaseApplicable1<Lindig.Doc, List>(BuiltIn.PP_CAT) {
+        @Override
+        public Lindig.Doc apply(List docs) {
+          return Lindig.cat(docs);
+        }
+      };
+
+  /** @see BuiltIn#PP_EMPTY */
+  private static final Lindig.Doc PP_EMPTY = Lindig.EMPTY;
+
+  /** @see BuiltIn#PP_ENCLOSE_SEP */
+  private static final Applicable PP_ENCLOSE_SEP =
+      new BaseApplicable1<Lindig.Doc, List>(BuiltIn.PP_ENCLOSE_SEP) {
+        @Override
+        public Lindig.Doc apply(List args) {
+          return Lindig.encloseSep(
+              (Lindig.Doc) args.get(0),
+              (Lindig.Doc) args.get(1),
+              (Lindig.Doc) args.get(2),
+              (List) args.get(3));
+        }
+      };
+
+  /** @see BuiltIn#PP_FILL_CAT */
+  private static final Applicable PP_FILL_CAT =
+      new BaseApplicable1<Lindig.Doc, List>(BuiltIn.PP_FILL_CAT) {
+        @Override
+        public Lindig.Doc apply(List docs) {
+          return Lindig.fillCat(docs);
+        }
+      };
+
+  /** @see BuiltIn#PP_FILL_SEP */
+  private static final Applicable PP_FILL_SEP =
+      new BaseApplicable1<Lindig.Doc, List>(BuiltIn.PP_FILL_SEP) {
+        @Override
+        public Lindig.Doc apply(List docs) {
+          return Lindig.fillSep(docs);
+        }
+      };
+
+  /** @see BuiltIn#PP_GROUP */
+  private static final Applicable PP_GROUP =
+      new BaseApplicable1<Lindig.Doc, Lindig.Doc>(BuiltIn.PP_GROUP) {
+        @Override
+        public Lindig.Doc apply(Lindig.Doc doc) {
+          return Lindig.group(doc);
+        }
+      };
+
+  /** @see BuiltIn#PP_HANG */
+  private static final Applicable PP_HANG =
+      new BaseApplicable2<Lindig.Doc, Integer, Lindig.Doc>(BuiltIn.PP_HANG) {
+        @Override
+        public Lindig.Doc apply(Integer indent, Lindig.Doc doc) {
+          return Lindig.hang(indent, doc);
+        }
+      };
+
+  /** @see BuiltIn#PP_HARD_LINE */
+  private static final Lindig.Doc PP_HARD_LINE = Lindig.HARD_LINE;
+
+  /** @see BuiltIn#PP_HCAT */
+  private static final Applicable PP_HCAT =
+      new BaseApplicable1<Lindig.Doc, List>(BuiltIn.PP_HCAT) {
+        @Override
+        public Lindig.Doc apply(List docs) {
+          return Lindig.hcat(docs);
+        }
+      };
+
+  /** @see BuiltIn#PP_HSEP */
+  private static final Applicable PP_HSEP =
+      new BaseApplicable1<Lindig.Doc, List>(BuiltIn.PP_HSEP) {
+        @Override
+        public Lindig.Doc apply(List docs) {
+          return Lindig.hsep(docs);
+        }
+      };
+
+  /** @see BuiltIn#PP_INDENT */
+  private static final Applicable PP_INDENT =
+      new BaseApplicable2<Lindig.Doc, Integer, Lindig.Doc>(BuiltIn.PP_INDENT) {
+        @Override
+        public Lindig.Doc apply(Integer indent, Lindig.Doc doc) {
+          return Lindig.indent(indent, doc);
+        }
+      };
+
+  /** @see BuiltIn#PP_LINE */
+  private static final Lindig.Doc PP_LINE = Lindig.LINE;
+
+  /** @see BuiltIn#PP_LINE_BREAK */
+  private static final Lindig.Doc PP_LINE_BREAK = Lindig.LINE_BREAK;
+
+  /** @see BuiltIn#PP_NEST */
+  private static final Applicable PP_NEST =
+      new BaseApplicable2<Lindig.Doc, Integer, Lindig.Doc>(BuiltIn.PP_NEST) {
+        @Override
+        public Lindig.Doc apply(Integer indent, Lindig.Doc doc) {
+          return Lindig.nest(indent, doc);
+        }
+      };
+
+  /** @see BuiltIn#PP_PARENS */
+  private static final Applicable PP_PARENS =
+      new BaseApplicable1<Lindig.Doc, Lindig.Doc>(BuiltIn.PP_PARENS) {
+        @Override
+        public Lindig.Doc apply(Lindig.Doc doc) {
+          return Lindig.parens(doc);
+        }
+      };
+
+  /** @see BuiltIn#PP_PUNCTUATE */
+  private static final Applicable PP_PUNCTUATE =
+      new BaseApplicable2<List, Lindig.Doc, List>(BuiltIn.PP_PUNCTUATE) {
+        @Override
+        public List apply(Lindig.Doc separator, List docs) {
+          return Lindig.punctuate(separator, docs);
+        }
+      };
+
+  /** @see BuiltIn#PP_RENDER */
+  private static final Applicable PP_RENDER =
+      new BaseApplicable2<String, Integer, Lindig.Doc>(BuiltIn.PP_RENDER) {
+        @Override
+        public String apply(Integer width, Lindig.Doc doc) {
+          return Lindig.render(width, doc);
+        }
+      };
+
+  /** @see BuiltIn#PP_SEP */
+  private static final Applicable PP_SEP =
+      new BaseApplicable1<Lindig.Doc, List>(BuiltIn.PP_SEP) {
+        @Override
+        public Lindig.Doc apply(List docs) {
+          return Lindig.sep(docs);
+        }
+      };
+
+  /** @see BuiltIn#PP_SOFT_BREAK */
+  private static final Lindig.Doc PP_SOFT_BREAK = Lindig.SOFT_BREAK;
+
+  /** @see BuiltIn#PP_SOFT_LINE */
+  private static final Lindig.Doc PP_SOFT_LINE = Lindig.SOFT_LINE;
+
+  /** @see BuiltIn#PP_TEXT */
+  private static final Applicable PP_TEXT =
+      new BaseApplicable1<Lindig.Doc, String>(BuiltIn.PP_TEXT) {
+        @Override
+        public Lindig.Doc apply(String s) {
+          return Lindig.text(s);
+        }
+      };
+
+  /** @see BuiltIn#PP_VCAT */
+  private static final Applicable PP_VCAT =
+      new BaseApplicable1<Lindig.Doc, List>(BuiltIn.PP_VCAT) {
+        @Override
+        public Lindig.Doc apply(List docs) {
+          return Lindig.vcat(docs);
+        }
+      };
+
+  /** @see BuiltIn#PP_VSEP */
+  private static final Applicable PP_VSEP =
+      new BaseApplicable1<Lindig.Doc, List>(BuiltIn.PP_VSEP) {
+        @Override
+        public Lindig.Doc apply(List docs) {
+          return Lindig.vsep(docs);
+        }
+      };
+
   /** @see BuiltIn#RANGE_CONTAINS */
   private static final Applicable RANGE_CONTAINS =
       new RangeContains(Comparators::compare);
@@ -6125,6 +6338,33 @@ public abstract class Codes {
     b.add(BuiltIn.OPTION_MAP, OPTION_MAP);
     b.add(BuiltIn.OPTION_MAP_PARTIAL, OPTION_MAP_PARTIAL);
     b.add(BuiltIn.OPTION_VAL_OF, OPTION_VAL_OF);
+    b.add(BuiltIn.PP_ALIGN, PP_ALIGN);
+    b.add(BuiltIn.PP_BESIDE, PP_BESIDE);
+    b.add(BuiltIn.PP_BRACES, PP_BRACES);
+    b.add(BuiltIn.PP_BRACKETS, PP_BRACKETS);
+    b.add(BuiltIn.PP_CAT, PP_CAT);
+    b.add(BuiltIn.PP_EMPTY, PP_EMPTY);
+    b.add(BuiltIn.PP_ENCLOSE_SEP, PP_ENCLOSE_SEP);
+    b.add(BuiltIn.PP_FILL_CAT, PP_FILL_CAT);
+    b.add(BuiltIn.PP_FILL_SEP, PP_FILL_SEP);
+    b.add(BuiltIn.PP_GROUP, PP_GROUP);
+    b.add(BuiltIn.PP_HANG, PP_HANG);
+    b.add(BuiltIn.PP_HARD_LINE, PP_HARD_LINE);
+    b.add(BuiltIn.PP_HCAT, PP_HCAT);
+    b.add(BuiltIn.PP_HSEP, PP_HSEP);
+    b.add(BuiltIn.PP_INDENT, PP_INDENT);
+    b.add(BuiltIn.PP_LINE, PP_LINE);
+    b.add(BuiltIn.PP_LINE_BREAK, PP_LINE_BREAK);
+    b.add(BuiltIn.PP_NEST, PP_NEST);
+    b.add(BuiltIn.PP_PARENS, PP_PARENS);
+    b.add(BuiltIn.PP_PUNCTUATE, PP_PUNCTUATE);
+    b.add(BuiltIn.PP_RENDER, PP_RENDER);
+    b.add(BuiltIn.PP_SEP, PP_SEP);
+    b.add(BuiltIn.PP_SOFT_BREAK, PP_SOFT_BREAK);
+    b.add(BuiltIn.PP_SOFT_LINE, PP_SOFT_LINE);
+    b.add(BuiltIn.PP_TEXT, PP_TEXT);
+    b.add(BuiltIn.PP_VCAT, PP_VCAT);
+    b.add(BuiltIn.PP_VSEP, PP_VSEP);
     b.add(BuiltIn.RANGE_CONTAINS, RANGE_CONTAINS);
     b.add(
         BuiltIn.RANGE_CONTINUOUS_SET_COMPLEMENT,

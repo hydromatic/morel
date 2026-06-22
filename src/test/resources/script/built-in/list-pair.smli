@@ -53,19 +53,19 @@ ListPair;
 >   {all=fn,allEq=fn,app=fn,appEq=fn,`exists`=fn,foldl=fn,foldlEq=fn,foldr=fn,
 >    foldrEq=fn,map=fn,mapEq=fn,unzip=fn,zip=fn,zipEq=fn}
 >   : {all:('a * 'b -> bool) -> 'a list * 'b list -> bool,
->      allEq:('c * 'd -> bool) -> 'c list * 'd list -> bool,
->      app:('e * 'f -> unit) -> 'e list * 'f list -> unit,
->      appEq:('g * 'h -> unit) -> 'g list * 'h list -> unit,
->      `exists`:('i * 'j -> bool) -> 'i list * 'j list -> bool,
->      foldl:('k * 'l * 'm -> 'm) -> 'm -> 'k list * 'l list -> 'm,
->      foldlEq:('n * 'o * 'p -> 'p) -> 'p -> 'n list * 'o list -> 'p,
->      foldr:('q * 'r * 's -> 's) -> 's -> 'q list * 'r list -> 's,
->      foldrEq:('t * 'u * 'v -> 'v) -> 'v -> 't list * 'u list -> 'v,
->      map:('w * 'x -> 'y) -> 'w list * 'x list -> 'y list,
->      mapEq:('z * 'ba -> 'bb) -> 'z list * 'ba list -> 'bb list,
->      unzip:('bc * 'bd) list -> 'bc list * 'bd list,
->      zip:'be list * 'bf list -> ('be * 'bf) list,
->      zipEq:'bg list * 'bh list -> ('bg * 'bh) list}
+>       allEq:('c * 'd -> bool) -> 'c list * 'd list -> bool,
+>       app:('e * 'f -> unit) -> 'e list * 'f list -> unit,
+>       appEq:('g * 'h -> unit) -> 'g list * 'h list -> unit,
+>       `exists`:('i * 'j -> bool) -> 'i list * 'j list -> bool,
+>       foldl:('k * 'l * 'm -> 'm) -> 'm -> 'k list * 'l list -> 'm,
+>       foldlEq:('n * 'o * 'p -> 'p) -> 'p -> 'n list * 'o list -> 'p,
+>       foldr:('q * 'r * 's -> 's) -> 's -> 'q list * 'r list -> 's,
+>       foldrEq:('t * 'u * 'v -> 'v) -> 'v -> 't list * 'u list -> 'v,
+>       map:('w * 'x -> 'y) -> 'w list * 'x list -> 'y list,
+>       mapEq:('z * 'ba -> 'bb) -> 'z list * 'ba list -> 'bb list,
+>       unzip:('bc * 'bd) list -> 'bc list * 'bd list,
+>       zip:'be list * 'bf list -> ('be * 'bf) list,
+>       zipEq:'bg list * 'bh list -> ('bg * 'bh) list}
 
 (* [all p (xs, ys)] applies predicate p to the pairs of corresponding
    elements of xs and ys from left to right until p evaluates to false

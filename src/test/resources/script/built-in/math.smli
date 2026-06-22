@@ -44,10 +44,10 @@ Math;
 >   {acos=fn,asin=fn,atan=fn,atan2=fn,cos=fn,cosh=fn,e=2.7182817,exp=fn,ln=fn,
 >    log10=fn,pi=3.1415927,pow=fn,sin=fn,sinh=fn,sqrt=fn,tan=fn,tanh=fn}
 >   : {acos:real -> real, asin:real -> real, atan:real -> real,
->      atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real,
->      exp:real -> real, ln:real -> real, log10:real -> real, pi:real,
->      pow:real * real -> real, sin:real -> real, sinh:real -> real,
->      sqrt:real -> real, tan:real -> real, tanh:real -> real}
+>       atan2:real * real -> real, cos:real -> real, cosh:real -> real, e:real,
+>       exp:real -> real, ln:real -> real, log10:real -> real, pi:real,
+>       pow:real * real -> real, sin:real -> real, sinh:real -> real,
+>       sqrt:real -> real, tan:real -> real, tanh:real -> real}
 
 (* "acos x" returns the arc cosine of x. acos is the inverse of cos.
    Its result is guaranteed to be in the closed interval [0, pi]. If
@@ -136,9 +136,9 @@ Sys.plan ();
 List.map (fn x => (x, Math.atan2 (x, 1.0)))
   [1.0, 0.0, ~1.0, 0.5, Math.sqrt 0.5, 2.0, Real.posInf, Real.negInf, nan];
 > val it =
->   [(1,0.7853982),(0,0),(~1,~0.7853982),(0.5,0.4636476),(0.70710677,0.6154797),
->    (2,1.1071488),(inf,1.5707964),(~inf,~1.5707964),(nan,nan)]
->   : (real * real) list
+>   [(1,0.7853982),(0,0),(~1,~0.7853982),(0.5,0.4636476),
+>    (0.70710677,0.6154797),(2,1.1071488),(inf,1.5707964),(~inf,~1.5707964),
+>    (nan,nan)] : (real * real) list
 List.map (fn (x, y) => (x, y, Math.atan2 (x, y)))
   [(0.0, 1.0), (~0.0, 1.0),
    (0.0, 0.0), (~0.0, 0.0),
@@ -222,8 +222,8 @@ Sys.plan ();
 List.map (fn x => (x, Math.ln x))
   [1.0, 2.718, Math.e, 0.0, ~0.0, ~3.0, Real.posInf, Real.negInf, nan];
 > val it =
->   [(1,0),(2.718,0.9998963),(2.7182817,0.99999994),(0,~inf),(~0,~inf),(~3,nan),
->    (inf,inf),(~inf,nan),(nan,nan)] : (real * real) list
+>   [(1,0),(2.718,0.9998963),(2.7182817,0.99999994),(0,~inf),(~0,~inf),
+>    (~3,nan),(inf,inf),(~inf,nan),(nan,nan)] : (real * real) list
 
 (* "log10 x" returns the decimal logarithm (base 10) of x. If x < 0,
    returns NaN; if x = 0, returns -infinity; if x is infinity, returns

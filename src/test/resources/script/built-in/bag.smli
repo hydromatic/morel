@@ -27,22 +27,23 @@ Sys.set ("stringDepth", ~1);
 
 Bag;
 > val it =
->   {@=fn,all=fn,app=fn,concat=fn,drop=fn,`exists`=fn,filter=fn,find=fn,fold=fn,
->    fromList=fn,getItem=fn,hd=fn,length=fn,map=fn,mapPartial=fn,nil=[],nth=fn,
->    null=fn,only=fn,partition=fn,tabulate=fn,`take`=fn,tl=fn,toList=fn}
+>   {@=fn,all=fn,app=fn,concat=fn,drop=fn,`exists`=fn,filter=fn,find=fn,
+>    fold=fn,fromList=fn,getItem=fn,hd=fn,length=fn,map=fn,mapPartial=fn,
+>    nil=[],nth=fn,null=fn,only=fn,partition=fn,tabulate=fn,`take`=fn,tl=fn,
+>    toList=fn}
 >   : {@:'a bag * 'a bag -> 'a bag, all:('b -> bool) -> 'b bag -> bool,
->      app:('c -> unit) -> 'c bag -> unit, concat:'d bag list -> 'd bag,
->      drop:'e bag * int -> 'e bag, `exists`:('f -> bool) -> 'f bag -> bool,
->      filter:('g -> bool) -> 'g bag -> 'g bag,
->      find:('h -> bool) -> 'h bag -> 'h option,
->      fold:('i * 'j -> 'j) -> 'j -> 'i bag -> 'j, fromList:'k list -> 'k bag,
->      getItem:'l bag -> ('l * 'l bag) option, hd:'m bag -> 'm,
->      length:'n bag -> int, map:('o -> 'p) -> 'o bag -> 'p bag,
->      mapPartial:('q -> 'r option) -> 'q bag -> 'r bag, nil:'s bag,
->      nth:'t bag * int -> 't, null:'u bag -> bool, only:'v bag -> 'v,
->      partition:('w -> bool) -> 'w bag -> 'w bag * 'w bag,
->      tabulate:int * (int -> 'x) -> 'x bag, `take`:'y bag * int -> 'y bag,
->      tl:'z bag -> 'z bag, toList:'ba bag -> 'ba list}
+>       app:('c -> unit) -> 'c bag -> unit, concat:'d bag list -> 'd bag,
+>       drop:'e bag * int -> 'e bag, `exists`:('f -> bool) -> 'f bag -> bool,
+>       filter:('g -> bool) -> 'g bag -> 'g bag,
+>       find:('h -> bool) -> 'h bag -> 'h option,
+>       fold:('i * 'j -> 'j) -> 'j -> 'i bag -> 'j, fromList:'k list -> 'k bag,
+>       getItem:'l bag -> ('l * 'l bag) option, hd:'m bag -> 'm,
+>       length:'n bag -> int, map:('o -> 'p) -> 'o bag -> 'p bag,
+>       mapPartial:('q -> 'r option) -> 'q bag -> 'r bag, nil:'s bag,
+>       nth:'t bag * int -> 't, null:'u bag -> bool, only:'v bag -> 'v,
+>       partition:('w -> bool) -> 'w bag -> 'w bag * 'w bag,
+>       tabulate:int * (int -> 'x) -> 'x bag, `take`:'y bag * int -> 'y bag,
+>       tl:'z bag -> 'z bag, toList:'ba bag -> 'ba list}
 
 (*) val nil : 'a bag
 Bag.nil;

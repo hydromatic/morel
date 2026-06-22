@@ -28,7 +28,7 @@ Sys.set ("stringDepth", ~1);
 Datalog;
 > val it = {execute=fn,translate=fn,validate=fn}
 >   : {execute:string -> variant, translate:string -> string option,
->      validate:string -> string}
+>       validate:string -> string}
 
 (*) Basic validation - valid program
 val program = ".decl edge(x:int, y:int)
@@ -156,9 +156,8 @@ employee(\"Alice\", 30, \"engineering\").
 employee(\"Bob\", 25, \"sales\").
 .output employee";
 > val it =
->   {
->    employee=
->    [{age=30,dept="engineering",name="Alice"},{age=25,dept="sales",name="Bob"}]}
+>   {employee=[{age=30,dept="engineering",name="Alice"},
+>              {age=25,dept="sales",name="Bob"}]}
 >   : {employee:{age:int, dept:string, name:string} list} variant
 
 (*) Basic facts - more than one output
@@ -174,7 +173,7 @@ department(\"Engineering\", 10).
 >   {department=[{dept=20,name="Sales"},{dept=10,name="Engineering"}],
 >    employee=[{age=30,dept=10,name="Alice"},{age=25,dept=20,name="Bob"}]}
 >   : {department:{dept:int, name:string} list,
->      employee:{age:int, dept:int, name:string} list} variant
+>       employee:{age:int, dept:int, name:string} list} variant
 
 (*) Basic facts - no output
 Datalog.execute ".decl employee(name:string, age:int, dept:int)
@@ -235,10 +234,9 @@ parent(\"Alice\", \"Carol\").
 sibling(X,Y) :- parent(P,X), parent(P,Y).
 .output sibling";
 > val it =
->   {
->    sibling=
->    [{x="Bob",y="Bob"},{x="Bob",y="Carol"},{x="Carol",y="Bob"},
->     {x="Carol",y="Carol"}]} : {sibling:{x:string, y:string} list} variant
+>   {sibling=[{x="Bob",y="Bob"},{x="Bob",y="Carol"},{x="Carol",y="Bob"},
+>             {x="Carol",y="Carol"}]}
+>   : {sibling:{x:string, y:string} list} variant
 
 (*) Join, avoiding symmetric
 Datalog.execute ".decl parent(p:string, c:string)
@@ -284,14 +282,12 @@ descendant(P,D) :- ancestor(D,P).
 .output ancestor
 .output descendant";
 > val it =
->   {
->    ancestor=
->    [{a="Alice",d="Bob"},{a="Bob",d="Carol"},{a="Carol",d="Dan"},
->     {a="Alice",d="Carol"},{a="Bob",d="Dan"},{a="Alice",d="Dan"}],
->    descendant=
->    [{d="Alice",p="Bob"},{d="Bob",p="Carol"},{d="Carol",p="Dan"},
->     {d="Alice",p="Carol"},{d="Bob",p="Dan"},{d="Alice",p="Dan"}]}
->   : {ancestor:{a:string, d:string} list, descendant:{d:string, p:string} list} variant
+>   {ancestor=[{a="Alice",d="Bob"},{a="Bob",d="Carol"},{a="Carol",d="Dan"},
+>              {a="Alice",d="Carol"},{a="Bob",d="Dan"},{a="Alice",d="Dan"}],
+>    descendant=[{d="Alice",p="Bob"},{d="Bob",p="Carol"},{d="Carol",p="Dan"},
+>                {d="Alice",p="Carol"},{d="Bob",p="Dan"},{d="Alice",p="Dan"}]}
+>   : {ancestor:{a:string, d:string} list,
+>       descendant:{d:string, p:string} list} variant
 
 (*) Empty relation
 Datalog.validate ".decl empty(x:int)
@@ -474,11 +470,9 @@ Datalog.translate program;
 
 Datalog.execute program;
 > val it =
->   {
->    fact=
->    [{n=0,value=1},{n=1,value=1},{n=2,value=2},{n=3,value=6},{n=4,value=24},
->     {n=5,value=120},{n=6,value=720},{n=7,value=5040},{n=8,value=40320},
->     {n=9,value=362880},{n=10,value=3628800}]}
+>   {fact=[{n=0,value=1},{n=1,value=1},{n=2,value=2},{n=3,value=6},
+>          {n=4,value=24},{n=5,value=120},{n=6,value=720},{n=7,value=5040},
+>          {n=8,value=40320},{n=9,value=362880},{n=10,value=3628800}]}
 >   : {fact:{n:int, value:int} list} variant
 
 (* Fibonacci sequence --------------------------------------------- *)
@@ -568,11 +562,10 @@ path(X,Y) :- edge(X,Y).
 path(X,Z) :- path(X,Y), edge(Y,Z).
 .output path";
 > val it =
->   {
->    path=
->    [{x="a",y="b"},{x="b",y="c"},{x="c",y="d"},{x="d",y="e"},{x="e",y="f"},
->     {x="a",y="c"},{x="b",y="d"},{x="c",y="e"},{x="d",y="f"},{x="a",y="d"},
->     {x="b",y="e"},{x="c",y="f"},{x="a",y="e"},{x="b",y="f"},{x="a",y="f"}]}
+>   {path=[{x="a",y="b"},{x="b",y="c"},{x="c",y="d"},{x="d",y="e"},
+>          {x="e",y="f"},{x="a",y="c"},{x="b",y="d"},{x="c",y="e"},
+>          {x="d",y="f"},{x="a",y="d"},{x="b",y="e"},{x="c",y="f"},
+>          {x="a",y="e"},{x="b",y="f"},{x="a",y="f"}]}
 >   : {path:{x:string, y:string} list} variant
 
 (*) Shortest path - computing reachability at different hop counts
@@ -590,13 +583,12 @@ reach2(X, Z) :- edge(X, Y), edge(Y, Z).
 .output reach1
 .output reach2";
 > val it =
->   {
->    reach1=
->    [{x="a",y="b"},{x="b",y="c"},{x="c",y="d"},{x="d",y="e"},{x="e",y="f"},
->     {x="a",y="c"}],
->    reach2=
->    [{x="a",y="c"},{x="b",y="d"},{x="c",y="e"},{x="d",y="f"},{x="a",y="d"}]}
->   : {reach1:{x:string, y:string} list, reach2:{x:string, y:string} list} variant
+>   {reach1=[{x="a",y="b"},{x="b",y="c"},{x="c",y="d"},{x="d",y="e"},
+>            {x="e",y="f"},{x="a",y="c"}],
+>    reach2=[{x="a",y="c"},{x="b",y="d"},{x="c",y="e"},{x="d",y="f"},
+>            {x="a",y="d"}]}
+>   : {reach1:{x:string, y:string} list,
+>       reach2:{x:string, y:string} list} variant
 
 (*
  * Shortest path with distance parameter.
@@ -627,13 +619,13 @@ Datalog.translate program;
 
 Datalog.execute program;
 > val it =
->   {
->    path=
->    [{n=1,x="a",y="b"},{n=1,x="b",y="c"},{n=1,x="c",y="d"},{n=1,x="d",y="e"},
->     {n=1,x="e",y="f"},{n=1,x="a",y="c"},{n=2,x="a",y="c"},{n=2,x="b",y="d"},
->     {n=2,x="c",y="e"},{n=2,x="d",y="f"},{n=2,x="a",y="d"},{n=3,x="a",y="d"},
->     {n=3,x="b",y="e"},{n=3,x="c",y="f"},{n=3,x="a",y="e"},{n=4,x="a",y="e"},
->     {n=4,x="b",y="f"},{n=4,x="a",y="f"},{n=5,x="a",y="f"}]}
+>   {path=[{n=1,x="a",y="b"},{n=1,x="b",y="c"},{n=1,x="c",y="d"},
+>          {n=1,x="d",y="e"},{n=1,x="e",y="f"},{n=1,x="a",y="c"},
+>          {n=2,x="a",y="c"},{n=2,x="b",y="d"},{n=2,x="c",y="e"},
+>          {n=2,x="d",y="f"},{n=2,x="a",y="d"},{n=3,x="a",y="d"},
+>          {n=3,x="b",y="e"},{n=3,x="c",y="f"},{n=3,x="a",y="e"},
+>          {n=4,x="a",y="e"},{n=4,x="b",y="f"},{n=4,x="a",y="f"},
+>          {n=5,x="a",y="f"}]}
 >   : {path:{n:int, x:string, y:string} list} variant
 
 (*
@@ -694,12 +686,11 @@ Datalog.translate program;
 
 Datalog.execute program;
 > val it =
->   {
->    path=
->    [{n=1,x="a",y="b"},{n=1,x="b",y="c"},{n=1,x="c",y="d"},{n=1,x="d",y="e"},
->     {n=1,x="e",y="f"},{n=1,x="a",y="c"},{n=2,x="a",y="c"},{n=2,x="b",y="d"},
->     {n=2,x="c",y="e"},{n=2,x="d",y="f"},{n=2,x="a",y="d"},{n=3,x="a",y="d"},
->     {n=3,x="b",y="e"},{n=3,x="c",y="f"},{n=3,x="a",y="e"}]}
+>   {path=[{n=1,x="a",y="b"},{n=1,x="b",y="c"},{n=1,x="c",y="d"},
+>          {n=1,x="d",y="e"},{n=1,x="e",y="f"},{n=1,x="a",y="c"},
+>          {n=2,x="a",y="c"},{n=2,x="b",y="d"},{n=2,x="c",y="e"},
+>          {n=2,x="d",y="f"},{n=2,x="a",y="d"},{n=3,x="a",y="d"},
+>          {n=3,x="b",y="e"},{n=3,x="c",y="f"},{n=3,x="a",y="e"}]}
 >   : {path:{n:int, x:string, y:string} list} variant
 
 (* .input directive --------------------------------------------------
@@ -712,12 +703,10 @@ Datalog.execute ".decl dept(deptno:int, dname:string, loc:string)
 .input dept \"data/scott/depts.csv\"
 .output dept";
 > val it =
->   {
->    dept=
->    [{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
->     {deptno=20,dname="RESEARCH",loc="DALLAS"},
->     {deptno=30,dname="SALES",loc="CHICAGO"},
->     {deptno=40,dname="OPERATIONS",loc="BOSTON"}]}
+>   {dept=[{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>          {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>          {deptno=30,dname="SALES",loc="CHICAGO"},
+>          {deptno=40,dname="OPERATIONS",loc="BOSTON"}]}
 >   : {dept:{deptno:int, dname:string, loc:string} list} variant
 
 (*) Which states adjoin both Florida and Tennessee?

@@ -37,14 +37,15 @@ Time;
 >    fromString=fn,now=fn,toMicroseconds=fn,toMilliseconds=fn,toNanoseconds=fn,
 >    toReal=fn,toSeconds=fn,toString=fn,zeroTime=0}
 >   : {+:time * time -> time, -:time * time -> time, <:time * time -> bool,
->      <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool,
->      compare:time * time -> order, fmt:int -> time -> string,
->      fromMicroseconds:int -> time, fromMilliseconds:int -> time,
->      fromNanoseconds:int -> time, fromReal:real -> time,
->      fromSeconds:int -> time, fromString:string -> time option,
->      now:unit -> time, toMicroseconds:time -> int, toMilliseconds:time -> int,
->      toNanoseconds:time -> int, toReal:time -> real, toSeconds:time -> int,
->      toString:time -> string, zeroTime:time}
+>       <=:time * time -> bool, >:time * time -> bool, >=:time * time -> bool,
+>       compare:time * time -> order, fmt:int -> time -> string,
+>       fromMicroseconds:int -> time, fromMilliseconds:int -> time,
+>       fromNanoseconds:int -> time, fromReal:real -> time,
+>       fromSeconds:int -> time, fromString:string -> time option,
+>       now:unit -> time, toMicroseconds:time -> int,
+>       toMilliseconds:time -> int, toNanoseconds:time -> int,
+>       toReal:time -> real, toSeconds:time -> int, toString:time -> string,
+>       zeroTime:time}
 
 Time.zeroTime;
 > val it = 0 : time

@@ -376,6 +376,8 @@ public class Generation {
       }
       if (segment.equals("ieee")) {
         sb.append("IEEE");
+      } else if (segment.equals("pp")) {
+        sb.append("PP");
       } else {
         sb.append(Character.toUpperCase(segment.charAt(0)));
         sb.append(segment, 1, segment.length());

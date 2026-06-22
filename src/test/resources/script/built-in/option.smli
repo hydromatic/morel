@@ -28,16 +28,17 @@ Sys.set ("stringDepth", ~1);
 
 Option;
 > val it =
->   {app=fn,compose=fn,composePartial=fn,filter=fn,getOpt=fn,isSome=fn,`join`=fn,
->    map=fn,mapPartial=fn,valOf=fn}
+>   {app=fn,compose=fn,composePartial=fn,filter=fn,getOpt=fn,isSome=fn,
+>    `join`=fn,map=fn,mapPartial=fn,valOf=fn}
 >   : {app:('a -> unit) -> 'a option -> unit,
->      compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option,
->      composePartial:('e -> 'f option) * ('g -> 'e option) -> 'g -> 'f option,
->      filter:('h -> bool) -> 'h -> 'h option, getOpt:'i option * 'i -> 'i,
->      isSome:'j option -> bool, `join`:'k option option -> 'k option,
->      map:('l -> 'm) -> 'l option -> 'm option,
->      mapPartial:('n -> 'o option) -> 'n option -> 'o option,
->      valOf:'p option -> 'p}
+>       compose:('b -> 'c) * ('d -> 'b option) -> 'd -> 'c option,
+>       composePartial:('e -> 'f option) * ('g -> 'e option)
+>                       -> 'g -> 'f option,
+>       filter:('h -> bool) -> 'h -> 'h option, getOpt:'i option * 'i -> 'i,
+>       isSome:'j option -> bool, `join`:'k option option -> 'k option,
+>       map:('l -> 'm) -> 'l option -> 'm option,
+>       mapPartial:('n -> 'o option) -> 'n option -> 'o option,
+>       valOf:'p option -> 'p}
 
 (*) val getOpt : 'a option * 'a -> 'a
 Option.getOpt (SOME 1, 2);

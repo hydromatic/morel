@@ -2919,6 +2919,211 @@ public enum BuiltIn {
       true,
       ts -> ts.forallType(1, h -> ts.fnType(h.option(0), h.get(0)))),
 
+  /** Function "PP.align", of type "doc &rarr; doc". */
+  PP_ALIGN(
+      "PP",
+      "align",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(doc, doc);
+      }),
+
+  /** Function "PP.beside", of type "doc * doc &rarr; doc". */
+  PP_BESIDE(
+      "PP",
+      "beside",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.tupleType(doc, doc), doc);
+      }),
+
+  /** Function "PP.braces", of type "doc &rarr; doc". */
+  PP_BRACES(
+      "PP",
+      "braces",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(doc, doc);
+      }),
+
+  /** Function "PP.brackets", of type "doc &rarr; doc". */
+  PP_BRACKETS(
+      "PP",
+      "brackets",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(doc, doc);
+      }),
+
+  /** Function "PP.cat", of type "doc list &rarr; doc". */
+  PP_CAT(
+      "PP",
+      "cat",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.listType(doc), doc);
+      }),
+
+  /** Value "PP.empty", of type "doc". */
+  PP_EMPTY("PP", "empty", ts -> ts.lookup(Datatype.DOC)),
+
+  /**
+   * Function "PP.encloseSep", of type "doc * doc * doc * doc list &rarr; doc".
+   */
+  PP_ENCLOSE_SEP(
+      "PP",
+      "encloseSep",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(
+            ts.tupleType(ImmutableList.of(doc, doc, doc, ts.listType(doc))),
+            doc);
+      }),
+
+  /** Function "PP.fillCat", of type "doc list &rarr; doc". */
+  PP_FILL_CAT(
+      "PP",
+      "fillCat",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.listType(doc), doc);
+      }),
+
+  /** Function "PP.fillSep", of type "doc list &rarr; doc". */
+  PP_FILL_SEP(
+      "PP",
+      "fillSep",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.listType(doc), doc);
+      }),
+
+  /** Function "PP.group", of type "doc &rarr; doc". */
+  PP_GROUP(
+      "PP",
+      "group",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(doc, doc);
+      }),
+
+  /** Function "PP.hang", of type "int * doc &rarr; doc". */
+  PP_HANG(
+      "PP",
+      "hang",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.tupleType(INT, doc), doc);
+      }),
+
+  /** Value "PP.hardLine", of type "doc". */
+  PP_HARD_LINE("PP", "hardLine", ts -> ts.lookup(Datatype.DOC)),
+
+  /** Function "PP.hcat", of type "doc list &rarr; doc". */
+  PP_HCAT(
+      "PP",
+      "hcat",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.listType(doc), doc);
+      }),
+
+  /** Function "PP.hsep", of type "doc list &rarr; doc". */
+  PP_HSEP(
+      "PP",
+      "hsep",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.listType(doc), doc);
+      }),
+
+  /** Function "PP.indent", of type "int * doc &rarr; doc". */
+  PP_INDENT(
+      "PP",
+      "indent",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.tupleType(INT, doc), doc);
+      }),
+
+  /** Value "PP.line", of type "doc". */
+  PP_LINE("PP", "line", ts -> ts.lookup(Datatype.DOC)),
+
+  /** Value "PP.lineBreak", of type "doc". */
+  PP_LINE_BREAK("PP", "lineBreak", ts -> ts.lookup(Datatype.DOC)),
+
+  /** Function "PP.nest", of type "int * doc &rarr; doc". */
+  PP_NEST(
+      "PP",
+      "nest",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.tupleType(INT, doc), doc);
+      }),
+
+  /** Function "PP.parens", of type "doc &rarr; doc". */
+  PP_PARENS(
+      "PP",
+      "parens",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(doc, doc);
+      }),
+
+  /** Function "PP.punctuate", of type "doc * doc list &rarr; doc list". */
+  PP_PUNCTUATE(
+      "PP",
+      "punctuate",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.tupleType(doc, ts.listType(doc)), ts.listType(doc));
+      }),
+
+  /** Function "PP.render", of type "int * doc &rarr; string". */
+  PP_RENDER(
+      "PP",
+      "render",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.tupleType(INT, doc), STRING);
+      }),
+
+  /** Function "PP.sep", of type "doc list &rarr; doc". */
+  PP_SEP(
+      "PP",
+      "sep",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.listType(doc), doc);
+      }),
+
+  /** Value "PP.softBreak", of type "doc". */
+  PP_SOFT_BREAK("PP", "softBreak", ts -> ts.lookup(Datatype.DOC)),
+
+  /** Value "PP.softLine", of type "doc". */
+  PP_SOFT_LINE("PP", "softLine", ts -> ts.lookup(Datatype.DOC)),
+
+  /** Function "PP.text", of type "string &rarr; doc". */
+  PP_TEXT("PP", "text", ts -> ts.fnType(STRING, ts.lookup(Datatype.DOC))),
+
+  /** Function "PP.vcat", of type "doc list &rarr; doc". */
+  PP_VCAT(
+      "PP",
+      "vcat",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.listType(doc), doc);
+      }),
+
+  /** Function "PP.vsep", of type "doc list &rarr; doc". */
+  PP_VSEP(
+      "PP",
+      "vsep",
+      ts -> {
+        final Type doc = ts.lookup(Datatype.DOC);
+        return ts.fnType(ts.listType(doc), doc);
+      }),
+
   /**
    * Function "Range.contains", of type "&alpha; range &rarr; &alpha; &rarr;
    * bool".
@@ -5205,6 +5410,9 @@ public enum BuiltIn {
         false,
         1,
         h -> h.tyCon(Constructor.DISCRETE_SET_DISCRETE_SET)),
+
+    /** The type of a pretty-printer document, {@code PP.doc}. */
+    DOC("PP", "doc", false, 0, h -> h),
 
     EITHER(
         "Either",

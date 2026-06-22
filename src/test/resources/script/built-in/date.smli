@@ -36,15 +36,14 @@ Date;
 >    fromTimeUniv=fn,hour=fn,isDst=fn,localOffset=fn,minute=fn,month=fn,
 >    second=fn,toString=fn,toTime=fn,weekDay=fn,year=fn,yearDay=fn}
 >   : {compare:date * date -> order,
->      date:
->           {day:int, hour:int, minute:int, month:month, offset:time option,
->            second:int, year:int} -> date, day:date -> int,
->      fmt:string -> date -> string, fromString:string -> date option,
->      fromTimeLocal:time -> date, fromTimeUniv:time -> date, hour:date -> int,
->      isDst:date -> bool option, localOffset:unit -> time, minute:date -> int,
->      month:date -> month, second:date -> int, toString:date -> string,
->      toTime:date -> time, weekDay:date -> weekday, year:date -> int,
->      yearDay:date -> int}
+>       date:{day:int, hour:int, minute:int, month:month, offset:time option,
+>              second:int, year:int}
+>             -> date, day:date -> int, fmt:string -> date -> string,
+>       fromString:string -> date option, fromTimeLocal:time -> date,
+>       fromTimeUniv:time -> date, hour:date -> int, isDst:date -> bool option,
+>       localOffset:unit -> time, minute:date -> int, month:date -> month,
+>       second:date -> int, toString:date -> string, toTime:date -> time,
+>       weekDay:date -> weekday, year:date -> int, yearDay:date -> int}
 
 Date.fromString "Wed Mar 08 19:06:45 1995";
 > val it = SOME 1995-03-08T19:06:45Z : date option

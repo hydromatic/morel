@@ -22,7 +22,7 @@
 val emps = scott.emps;
 > val emps = <relation>
 >   : {comm:real, deptno:int, empno:int, ename:string, hiredate:string,
->      job:string, mgr:int, sal:real} bag
+>       job:string, mgr:int, sal:real} bag
 val depts = scott.depts;
 > val depts = <relation> : {deptno:int, dname:string, loc:string} bag
 

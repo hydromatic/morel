@@ -29,24 +29,24 @@ Sys.set ("stringDepth", ~1);
 Char;
 > val it =
 >   {<=fn,<==fn,<>=fn,==fn,>=fn,>==fn,chr=fn,compare=fn,contains=fn,
->    fromCString=fn,fromInt=fn,fromString=fn,isAlpha=fn,isAlphaNum=fn,isAscii=fn,
->    isCntrl=fn,isDigit=fn,isGraph=fn,isHexDigit=fn,isLower=fn,isOctDigit=fn,
->    isPrint=fn,isPunct=fn,isSpace=fn,isUpper=fn,maxChar=#"\255",maxOrd=255,
->    minChar=#"\^@",notContains=fn,ord=fn,pred=fn,succ=fn,toCString=fn,
->    toLower=fn,toString=fn,toUpper=fn}
+>    fromCString=fn,fromInt=fn,fromString=fn,isAlpha=fn,isAlphaNum=fn,
+>    isAscii=fn,isCntrl=fn,isDigit=fn,isGraph=fn,isHexDigit=fn,isLower=fn,
+>    isOctDigit=fn,isPrint=fn,isPunct=fn,isSpace=fn,isUpper=fn,maxChar=#"\255",
+>    maxOrd=255,minChar=#"\^@",notContains=fn,ord=fn,pred=fn,succ=fn,
+>    toCString=fn,toLower=fn,toString=fn,toUpper=fn}
 >   : {<:char * char -> bool, <=:char * char -> bool, <>:char * char -> bool,
->      =:char * char -> bool, >:char * char -> bool, >=:char * char -> bool,
->      chr:int -> char, compare:char * char -> order,
->      contains:string -> char -> bool, fromCString:string -> char option,
->      fromInt:int -> char option, fromString:string -> char option,
->      isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool,
->      isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool,
->      isHexDigit:char -> bool, isLower:char -> bool, isOctDigit:char -> bool,
->      isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool,
->      isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char,
->      notContains:string -> char -> bool, ord:char -> int, pred:char -> char,
->      succ:char -> char, toCString:char -> string, toLower:char -> char,
->      toString:char -> string, toUpper:char -> char}
+>       =:char * char -> bool, >:char * char -> bool, >=:char * char -> bool,
+>       chr:int -> char, compare:char * char -> order,
+>       contains:string -> char -> bool, fromCString:string -> char option,
+>       fromInt:int -> char option, fromString:string -> char option,
+>       isAlpha:char -> bool, isAlphaNum:char -> bool, isAscii:char -> bool,
+>       isCntrl:char -> bool, isDigit:char -> bool, isGraph:char -> bool,
+>       isHexDigit:char -> bool, isLower:char -> bool, isOctDigit:char -> bool,
+>       isPrint:char -> bool, isPunct:char -> bool, isSpace:char -> bool,
+>       isUpper:char -> bool, maxChar:char, maxOrd:int, minChar:char,
+>       notContains:string -> char -> bool, ord:char -> int, pred:char -> char,
+>       succ:char -> char, toCString:char -> string, toLower:char -> char,
+>       toString:char -> string, toUpper:char -> char}
 
 (* Utility function used to test the functions below. *)
 fun testChar (p: char -> bool) =

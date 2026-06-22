@@ -772,9 +772,10 @@ from r in orders
 >     r={id=1,items=[{product="beer",units=1},{product="soda",units=3}]}},
 >    {i=SOME {product="milk",units=5},
 >     r={id=2,items=[{product="milk",units=5},{product="beer",units=2}]}},
->    {i=NONE,r={id=3,items=[{product="soda",units=1},{product="beer",units=1}]}}]
+>    {i=NONE,
+>     r={id=3,items=[{product="soda",units=1},{product="beer",units=1}]}}]
 >   : {i:{product:string, units:int} option,
->      r:{id:int, items:{product:string, units:int} list}} list
+>       r:{id:int, items:{product:string, units:int} list}} list
 
 (* A 'right join' wraps the input ('left') fields in 'option'. A source row
  * matching no input row is emitted with 'NONE' for the input fields; an input
@@ -2055,7 +2056,8 @@ order deptno;
 >   [{deptno=10,existsId=true,existsStar=true,notExistsId=false,sumId=100},
 >    {deptno=20,existsId=true,existsStar=true,notExistsId=false,sumId=101},
 >    {deptno=30,existsId=true,existsStar=true,notExistsId=false,sumId=205}]
->   : {deptno:int, existsId:bool, existsStar:bool, notExistsId:bool, sumId:int} list
+>   : {deptno:int, existsId:bool, existsStar:bool, notExistsId:bool, sumId:int}
+>     list
 
 (*) 'compute' with 'empty' and 'nonEmpty' as an aggregate functions
 from e in emps
@@ -2246,11 +2248,13 @@ order deptno;
 >    {deptno=20,
 >     rows=[{d={deptno=20,name="HR"},e={deptno=20,id=101,name="Velma"}}]},
 >    {deptno=30,
->     rows=
->     [{d={deptno=30,name="Engineering"},e={deptno=30,id=102,name="Shaggy"}},
->      {d={deptno=30,name="Engineering"},e={deptno=30,id=103,name="Scooby"}}]}]
+>     rows=[{d={deptno=30,name="Engineering"},
+>            e={deptno=30,id=102,name="Shaggy"}},
+>           {d={deptno=30,name="Engineering"},
+>            e={deptno=30,id=103,name="Scooby"}}]}]
 >   : {deptno:int,
->      rows:{d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}} list} list
+>       rows:{d:{deptno:int, name:string}, e:{deptno:int, id:int, name:string}}
+>            list} list
 
 (*) Group followed by yield
 from e in emps
@@ -2784,7 +2788,8 @@ from t1 in triples, t2 in triples
 >   [{t1={foo=fn,x=1,y=2},t2={foo=fn,x=1,y=2}},
 >    {t1={foo=fn,x=3,y=5},t2={foo=fn,x=3,y=5}},
 >    {t1={foo=fn,x=2,y=6},t2={foo=fn,x=2,y=6}}]
->   : {t1:{foo:int -> int, x:int, y:int}, t2:{foo:int -> int, x:int, y:int}} list
+>   : {t1:{foo:int -> int, x:int, y:int}, t2:{foo:int -> int, x:int, y:int}}
+>     list
  (* (~1+2,2) < (~3+5,5) < (~2+6,6) *)
 
 (*) A deep nested loop

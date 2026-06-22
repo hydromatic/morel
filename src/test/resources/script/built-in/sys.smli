@@ -31,12 +31,13 @@ Sys.set ("now", "2024-01-01T00:00:00Z");
 
 Sys;
 > val it =
->   {clearEnv=fn,env=fn,file={},parseTree=fn,plan=fn,planEx=fn,set=fn,show=fn,
->    showAll=fn,unset=fn}
+>   {clearEnv=fn,env=fn,file={},parseTree=fn,plan=fn,planEx=fn,set=fn,
+>    show=fn,showAll=fn,unset=fn}
 >   : {clearEnv:unit -> unit, env:unit -> (string * string) list, file:{...},
->      parseTree:string -> string, plan:unit -> string, planEx:string -> string,
->      set:string * 'a -> unit, show:string -> string option,
->      showAll:unit -> (string * string option) list, unset:string -> unit}
+>       parseTree:string -> string, plan:unit -> string,
+>       planEx:string -> string, set:string * 'a -> unit,
+>       show:string -> string option,
+>       showAll:unit -> (string * string option) list, unset:string -> unit}
 
 (*) val env : unit -> string list
 Sys.env;
@@ -104,6 +105,8 @@ Sys.env ();
 >    ("Option",
 >     "{app:forall 'a. ('a -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, `join`:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
 >    ("Overflow","exn"),("POINT","forall 'a. 'a -> 'a range"),
+>    ("PP",
+>     "{align:doc -> doc, beside:doc * doc -> doc, braces:doc -> doc, brackets:doc -> doc, cat:doc list -> doc, empty:doc, encloseSep:doc * doc * doc * doc list -> doc, fillCat:doc list -> doc, fillSep:doc list -> doc, `group`:doc -> doc, hang:int * doc -> doc, hardLine:doc, hcat:doc list -> doc, hsep:doc list -> doc, indent:int * doc -> doc, line:doc, lineBreak:doc, nest:int * doc -> doc, parens:doc -> doc, punctuate:doc * doc list -> doc list, render:int * doc -> string, sep:doc list -> doc, softBreak:doc, softLine:doc, text:string -> doc, vcat:doc list -> doc, vsep:doc list -> doc}"),
 >    ("REAL","real -> variant"),("RECORD","(string * variant) list -> variant"),
 >    ("Range",
 >     "{complement:forall 'a. 'a continuous_set -> 'a continuous_set, contains:forall 'a. 'a range -> 'a -> bool, continuousSetOf:forall 'a. 'a range list -> 'a continuous_set, discreteSetOf:forall 'a. 'a range list -> 'a discrete_set, flatten:forall 'a. 'a range list -> 'a list, ranges:forall 'a. 'a continuous_set -> 'a range list, toBag:forall 'a. 'a discrete_set -> 'a bag, toList:forall 'a. 'a discrete_set -> 'a list}"),
@@ -250,6 +253,8 @@ env ();
 >    ("Option",
 >     "{app:forall 'a. ('a -> unit) -> 'a option -> unit, compose:forall 'a 'b 'c. ('a -> 'b) * ('c -> 'a option) -> 'c -> 'b option, composePartial:forall 'a 'b 'c. ('a -> 'b option) * ('c -> 'a option) -> 'c -> 'b option, filter:forall 'a. ('a -> bool) -> 'a -> 'a option, getOpt:forall 'a. 'a option * 'a -> 'a, isSome:forall 'a. 'a option -> bool, `join`:forall 'a. 'a option option -> 'a option, map:forall 'a 'b. ('a -> 'b) -> 'a option -> 'b option, mapPartial:forall 'a 'b. ('a -> 'b option) -> 'a option -> 'b option, valOf:forall 'a. 'a option -> 'a}"),
 >    ("Overflow","exn"),("POINT","forall 'a. 'a -> 'a range"),
+>    ("PP",
+>     "{align:doc -> doc, beside:doc * doc -> doc, braces:doc -> doc, brackets:doc -> doc, cat:doc list -> doc, empty:doc, encloseSep:doc * doc * doc * doc list -> doc, fillCat:doc list -> doc, fillSep:doc list -> doc, `group`:doc -> doc, hang:int * doc -> doc, hardLine:doc, hcat:doc list -> doc, hsep:doc list -> doc, indent:int * doc -> doc, line:doc, lineBreak:doc, nest:int * doc -> doc, parens:doc -> doc, punctuate:doc * doc list -> doc list, render:int * doc -> string, sep:doc list -> doc, softBreak:doc, softLine:doc, text:string -> doc, vcat:doc list -> doc, vsep:doc list -> doc}"),
 >    ("REAL","real -> variant"),("RECORD","(string * variant) list -> variant"),
 >    ("Range",
 >     "{complement:forall 'a. 'a continuous_set -> 'a continuous_set, contains:forall 'a. 'a range -> 'a -> bool, continuousSetOf:forall 'a. 'a range list -> 'a continuous_set, discreteSetOf:forall 'a. 'a range list -> 'a discrete_set, flatten:forall 'a. 'a range list -> 'a list, ranges:forall 'a. 'a continuous_set -> 'a range list, toBag:forall 'a. 'a discrete_set -> 'a bag, toList:forall 'a. 'a discrete_set -> 'a list}"),
@@ -444,8 +449,9 @@ map
 >    ("output",SOME "CLASSIC"),("printDepth",SOME "5"),
 >    ("printLength",SOME "999"),("productName",SOME "morel-java"),
 >    ("productVersion",SOME "?"),("relationalize",SOME "false"),
->    ("scriptDirectory",SOME "?"),("stringDepth",SOME "-1"),("stringFold",NONE),
->    ("timeZone",SOME "UTC")] : (string * string option) list
+>    ("scriptDirectory",SOME "?"),("stringDepth",SOME "-1"),
+>    ("stringFold",NONE),("timeZone",SOME "UTC")]
+>   : (string * string option) list
 List.length (Sys.showAll ());
 > val it = 20 : int
 List.length (showAll ());

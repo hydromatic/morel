@@ -109,7 +109,7 @@ fun addQueen (i, n, qs, fc) =
   end;
 > val addQueen = fn
 >   : int * int * (int * int) list * (unit -> (int * int) list option)
->     -> (int * int) list option
+>      -> (int * int) list option
 
 fun queens n = addQueen (1, n, [], fn () => NONE);
 > val queens = fn : int -> (int * int) list option

@@ -31,9 +31,10 @@ Bool;
 >   {<=fn,<>=fn,==fn,>=fn,`andalso`=fn,fromString=fn,`implies`=fn,not=fn,
 >    `orelse`=fn,toString=fn}
 >   : {<:bool * bool -> bool, <>:bool * bool -> bool, =:bool * bool -> bool,
->      >:bool * bool -> bool, `andalso`:bool * bool -> bool,
->      fromString:string -> bool option, `implies`:bool * bool -> bool,
->      not:bool -> bool, `orelse`:bool * bool -> bool, toString:bool -> string}
+>       >:bool * bool -> bool, `andalso`:bool * bool -> bool,
+>       fromString:string -> bool option, `implies`:bool * bool -> bool,
+>       not:bool -> bool, `orelse`:bool * bool -> bool,
+>       toString:bool -> string}
 Bool.fromString;
 > val it = fn : string -> bool option
 Bool.fromString "true";
