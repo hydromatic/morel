@@ -1634,6 +1634,31 @@ public class LintTest {
   }
 
   /**
+   * Checks that every built-in structure has a corresponding {@code
+   * src/test/resources/script/built-in/{name}.smli} test script.
+   */
+  @Test
+  void testStructureScripts() {
+    final File baseDir = TestUtils.getBaseDir(TestUtils.class);
+    final File scriptDir =
+        new File(baseDir, "src/test/resources/script/built-in");
+    final List<String> missing = new ArrayList<>();
+    for (String structureName : MODEL.structureNames()) {
+      final String fileName = Generation.toKebab(structureName) + ".smli";
+      if (!new File(scriptDir, fileName).exists()) {
+        missing.add(fileName);
+      }
+    }
+    if (!missing.isEmpty()) {
+      fail(
+          format(
+              "Missing built-in test scripts: %s\n" //
+                  + "Create a file for each in %s",
+              missing, scriptDir.getAbsolutePath()));
+    }
+  }
+
+  /**
    * Validates that signature files in the lib directory are well-formed and
    * that their value and exception declarations match the corresponding entries
    * in the {@link net.hydromatic.morel.compile.BuiltIn} and {@link

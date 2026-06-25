@@ -1,0 +1,262 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Unit tests for the built-in `Datalog` structure.
+ *)
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+Datalog;
+> val it = {execute=fn,translate=fn,validate=fn}
+>   : {execute:string -> variant, translate:string -> string option,
+>       validate:string -> string}
+
+(*) Basic validation - valid program
+val program = ".decl edge(x:int, y:int)
+edge(1,2).
+edge(2,3).
+.output edge";
+> val program = ".decl edge(x:int, y:int)\nedge(1,2).\nedge(2,3).\n.output edge"
+>   : string
+Datalog.validate program;
+> val it = "{edge:{x:int, y:int} list}" : string
+Datalog.translate program;
+> val it =
+>   SOME
+>   "let\n  val edge = [(1, 2), (2, 3)]\nin\n  {edge = from (x, y) in edge}\nend"
+>   : string option
+Datalog.execute program;
+> val it = {edge=[{x=1,y=2},{x=2,y=3}]} : {edge:{x:int, y:int} list} variant
+
+(*) Basic validation - parse error
+Datalog.validate ".decl edge(x:int";
+> val it =
+>   "Parse error: Encountered \"<EOF>\" at line 1, column 16.\nWas expecting one of:\n    \")\" ...\n    \",\" ...\n    "
+>   : string
+
+(*) Schema validation - arity mismatch in fact
+Datalog.validate ".decl edge(x:int, y:int)
+edge(1,2,3).";
+> val it = "Compilation error: Atom edge/3 does not match declaration edge/2"
+>   : string
+
+(*) Schema validation - arity mismatch in rule head
+Datalog.validate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+path(X,Y,Z) :- edge(X,Y).";
+> val it = "Compilation error: Atom path/3 does not match declaration path/2"
+>   : string
+
+(*) Schema validation - arity mismatch in rule body
+Datalog.validate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+path(X,Y) :- edge(X).";
+> val it = "Compilation error: Atom edge/1 does not match declaration edge/2"
+>   : string
+
+(*) Schema validation - undeclared relation
+Datalog.validate ".decl edge(x:int, y:int)
+path(1,2).";
+> val it = "Compilation error: Relation 'path' used in fact but not declared"
+>   : string
+
+(*) Safety - unsafe rule (variable in head not in body)
+Datalog.validate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+path(X,Y) :- edge(X,Z).";
+> val it =
+>   "Compilation error: Rule is unsafe. Variable 'Y' in head does not appear in positive body atom"
+>   : string
+
+(*) Safety - unsafe negation (variable only in negated atom)
+Datalog.validate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+path(X,Y) :- edge(X,Z), !edge(Y,W).";
+> val it =
+>   "Compilation error: Rule is unsafe. Variable 'Y' in head does not appear in positive body atom"
+>   : string
+
+(*) Stratification - negation cycle
+Datalog.validate ".decl edge(x:int, y:int)
+.decl p(x:int)
+.decl q(x:int)
+edge(1,2).
+p(X) :- edge(X,Y), !q(X).
+q(X) :- edge(X,Y), !p(X).";
+> val it =
+>   "Compilation error: Program is not stratified. Negation cycle detected involving relation: p"
+>   : string
+
+(*) Type mismatch - number for string
+Datalog.validate ".decl person(name:string)
+person(42).";
+> val it =
+>   "Compilation error: Type mismatch in fact person(...): expected string, got int for parameter name"
+>   : string
+
+(*) Type mismatch - string for number
+Datalog.validate ".decl num(n:int)
+num(\"hello\").";
+> val it =
+>   "Compilation error: Type mismatch in fact num(...): expected int, got string for parameter n"
+>   : string
+
+(*) Variables in facts are not allowed
+Datalog.validate ".decl num(n:int)
+num(Foo).";
+> val it = "Compilation error: Argument in fact is not constant: Foo" : string
+
+(*) Empty relation: result type uses a polymorphic list element.
+Datalog.validate ".decl empty(x:int)
+.output empty";
+> val it = "{empty:'a list}" : string
+
+(*) Positive self-recursion is OK (transitive closure).
+Datalog.validate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+edge(1,2). edge(2,3).
+path(X,Y) :- edge(X,Y).
+path(X,Z) :- path(X,Y), edge(Y,Z).
+.output path";
+> val it = "{path:{x:int, y:int} list}" : string
+
+(* Arithmetic in head: variables inside arithmetic do not ground.
+ * Same as morel-java's fib test. *)
+Datalog.validate ".decl fib(idx:int, value:int)
+fib(1,1).
+fib(2,1).
+fib(idx, x + y) :- fib(idx - 1, x), fib(idx - 2, y), idx <= 10.
+.output fib";
+> val it =
+>   "Compilation error: Rule is unsafe. Variable 'idx' in head does not appear in positive body atom"
+>   : string
+
+(*) Translate: transitive closure (recursive rule).
+Datalog.translate ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+edge(1,2). edge(2,3).
+path(X,Y) :- edge(X,Y).
+path(X,Z) :- path(X,Y), edge(Y,Z).
+.output path";
+> val it =
+>   SOME
+>   "let\n  val edge = [(1, 2), (2, 3)]\n  val path =\n    Relational.iterate edge\n      (fn (allPath, newPath) =>\n        from (x, y) in newPath, (v0, z) in edge where y = v0 yield (x, z))\nin\n  {path = from (x, y) in path}\nend"
+>   : string option
+
+(*) Translate: arithmetic in head with grounded index (factorial-style).
+Datalog.translate ".decl fact(n:int, value:int)
+fact(0,1).
+fact(n + 1, value * (n + 1)) :- fact(n, value), n < 10.
+.output fact";
+> val it =
+>   SOME
+>   "let\n  val fact =\n    Relational.iterate [(0, 1)]\n      (fn (allFact, newFact) =>\n        from (n, value) in newFact where n < 10 yield (n + 1, value * (n + 1)))\nin\n  {fact = from (n, value) in fact}\nend"
+>   : string option
+
+(*) Translate: shifted-index Fibonacci (uses both newFib and allFib).
+Datalog.translate ".decl fib(idx:int, value:int)
+fib(1,1).
+fib(2,1).
+fib(idx + 1, x + y) :- fib(idx, x), fib(idx - 1, y), idx <= 9.
+.output fib";
+> val it =
+>   SOME
+>   "let\n  val fib =\n    Relational.iterate [(1, 1), (2, 1)]\n      (fn (allFib, newFib) =>\n        from (idx, x) in newFib, (v0, y) in allFib where v0 = idx - 1 andalso idx <= 9 yield (idx + 1, x + y))\nin\n  {fib = from (idx, value) in fib}\nend"
+>   : string option
+
+(*) Translate: parse failure returns NONE.
+Datalog.translate ".decl edge(x:int";
+> val it = NONE : string option
+
+(*) Translate: analysis failure returns NONE.
+Datalog.translate ".decl edge(x:int, y:int)
+edge(1,2,3).";
+> val it = NONE : string option
+
+(*) Execute: facts-only with arity-1 (single column, no tuple).
+Datalog.execute ".decl color(c:string)
+color(\"red\"). color(\"green\"). color(\"blue\").
+.output color";
+> val it = {color=["red","green","blue"]} : {color:string list} variant
+
+(*) Execute: facts-only with no .output emits unit-typed variant.
+Datalog.execute ".decl edge(x:int, y:int)
+edge(1,2). edge(2,3).";
+> val it = () : unit variant
+
+(*) Execute: analysis failure surfaces an ERROR variant.
+Datalog.execute ".decl edge(x:int, y:int)
+edge(1,2,3).";
+> net.hydromatic.morel.datalog.DatalogException: Compilation error: Atom edge/3 does not match declaration edge/2
+
+(*) Method-style call also works.
+".decl edge(x:int, y:int)
+edge(1,2).
+.output edge".validate ();
+> stdIn:-1.1-1.14 Error: reference to field validate of non-record type string
+>   raised at: stdIn:-1.1-1.14
+
+(*) Execute: transitive closure (recursive rule).
+Datalog.execute ".decl edge(x:int, y:int)
+.decl path(x:int, y:int)
+edge(1,2). edge(2,3).
+path(X,Y) :- edge(X,Y).
+path(X,Z) :- path(X,Y), edge(Y,Z).
+.output path";
+> val it = {path=[{x=1,y=2},{x=2,y=3},{x=1,y=3}]}
+>   : {path:{x:int, y:int} list} variant
+
+(*) Execute: factorial via head arithmetic.
+Datalog.execute ".decl fact(n:int, value:int)
+fact(0,1).
+fact(n + 1, value * (n + 1)) :- fact(n, value), n < 10.
+.output fact";
+> val it =
+>   {fact=[{n=0,value=1},{n=1,value=1},{n=2,value=2},{n=3,value=6},
+>          {n=4,value=24},{n=5,value=120},{n=6,value=720},{n=7,value=5040},
+>          {n=8,value=40320},{n=9,value=362880},{n=10,value=3628800}]}
+>   : {fact:{n:int, value:int} list} variant
+
+(*) Execute: shifted-index Fibonacci (uses both newFib and allFib).
+Datalog.execute ".decl fib(idx:int, value:int)
+fib(1,1).
+fib(2,1).
+fib(idx + 1, x + y) :- fib(idx, x), fib(idx - 1, y), idx <= 9.
+.output fib";
+> val it =
+>   {fib=[{idx=1,value=1},{idx=2,value=1},{idx=3,value=2},{idx=4,value=3},
+>         {idx=5,value=5},{idx=6,value=8},{idx=7,value=13},{idx=8,value=21},
+>         {idx=9,value=34},{idx=10,value=55}]}
+>   : {fib:{idx:int, value:int} list} variant
+
+(*) .input directive: load facts from a CSV (data/scott/depts.csv).
+Datalog.execute ".decl dept(deptno:int, dname:string, loc:string)
+.input dept \"data/scott/depts.csv\"
+.output dept";
+> val it =
+>   {dept=[{deptno=10,dname="ACCOUNTING",loc="NEW YORK"},
+>          {deptno=20,dname="RESEARCH",loc="DALLAS"},
+>          {deptno=30,dname="SALES",loc="CHICAGO"},
+>          {deptno=40,dname="OPERATIONS",loc="BOSTON"}]}
+>   : {dept:{deptno:int, dname:string, loc:string} list} variant
+
+(*) End datalog.smli
