@@ -190,6 +190,16 @@ from e in scott.emps
 group x compute {c = count over ()};
 > val it = [{c=6,x=20},{c=1,x=40},{c=4,x=10},{c=7,x=30}] : {c:int, x:int} bag
 
+(*) Three-way intersect
+from i in [1, 2, 3] intersect [1, 2, 3], [99];
+> val it = [] : int list
+String.isPrefix "calcite" (Sys.plan());
+> val it = true : bool
+from i in [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+  intersect [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33],
+    [5, 10, 15, 20, 25, 30, 35];
+> val it = [30] : int list
+
 (*) Recursive query
 (*
 let

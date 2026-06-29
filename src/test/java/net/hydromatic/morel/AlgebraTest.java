@@ -247,9 +247,9 @@ public class AlgebraTest {
       "from i in [1, 2, 3] union [2, 5, 4], [2, 1, 7]",
       "from i in [1, 2, 3] intersect [2, 5, 4]",
       "from i in [1, 2, 3] intersect [2, 5, 4], [2, 1, 6]",
+      "from i in [1, 2, 3] intersect [1, 2, 3], [99]",
       "from i in [1, 2, 3] except [2, 5, 4]",
-      // Disabled pending #402.
-      //   "from i in [1, 2, 3] except [2, 5, 4], [2, 1, 6]",
+      "from i in [1, 2, 3] except [2, 5, 4], [2, 1, 6]",
       "from i in [10, 15, 20] union (from d in scott.depts yield d.deptno)",
       "from i in [10, 15, 20] except (from d in scott.depts yield d.deptno)",
       "from i in [10, 15, 20] intersect (from d in scott.depts yield d.deptno)",
