@@ -253,6 +253,13 @@ public class AlgebraTest {
       "from i in [10, 15, 20] union (from d in scott.depts yield d.deptno)",
       "from i in [10, 15, 20] except (from d in scott.depts yield d.deptno)",
       "from i in [10, 15, 20] intersect (from d in scott.depts yield d.deptno)",
+      "List.`except` [[1, 2, 3], [2, 5, 4]]",
+      "List.`intersect` [[1, 2, 3], [2, 5, 4]]",
+      "List.`except` [[1, 2, 3], [2, 5, 4], [2, 1, 6]]",
+      "List.`intersect` [[1, 2, 3], [2, 5, 4], [2, 1, 6]]",
+      "List.`except` [[1, 1, 2, 3], [1]]",
+      "List.`intersect` [[1, 1, 2, 3], [1, 1, 5]]",
+      "List.concat [[1, 2], [3], [4, 5]]",
 
       // the following 4 are equivalent
       "from e in scott.emps where e.deptno = 30 yield e.empno",

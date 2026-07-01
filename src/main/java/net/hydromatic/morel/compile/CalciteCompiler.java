@@ -339,26 +339,32 @@ public class CalciteCompiler extends Compiler {
               case LIST_CONCAT:
               case LIST_EXCEPT:
               case LIST_INTERSECT:
-                // For example, '[1, 2, 3] union (from scott.depts yield
-                // deptno)'
-                final Core.Tuple tuple = (Core.Tuple) apply.arg;
-                for (Core.Exp arg : tuple.args) {
+                // For example, 'List.concat [[1, 2, 3],
+                // from d in scott.depts yield d.deptno]'. The argument is a
+                // list of collections, represented as a call to Z_LIST.
+                if (!apply.arg.isCallTo(BuiltIn.Z_LIST)) {
+                  break;
+                }
+                final List<Core.Exp> collections =
+                    ((Core.Apply) apply.arg).args();
+                for (Core.Exp arg : collections) {
                   if (!CalciteCompiler.this.toRel3(cx, arg, false)) {
                     return false;
                   }
                 }
-                harmonizeRowTypes(cx.relBuilder, tuple.args.size());
+                harmonizeRowTypes(cx.relBuilder, collections.size());
                 switch (builtIn) {
                   case BAG_CONCAT:
                   case LIST_CONCAT:
-                    cx.relBuilder.union(true, tuple.args.size());
+                    cx.relBuilder.union(true, collections.size());
                     return true;
                   case LIST_EXCEPT:
-                    foldSetOp(cx.relBuilder, Op.MINUS, true, tuple.args.size());
+                    foldSetOp(
+                        cx.relBuilder, Op.EXCEPT, true, collections.size());
                     return true;
                   case LIST_INTERSECT:
                     foldSetOp(
-                        cx.relBuilder, Op.EXCEPT, true, tuple.args.size());
+                        cx.relBuilder, Op.INTERSECT, true, collections.size());
                     return true;
                   default:
                     throw new AssertionError(builtIn);
