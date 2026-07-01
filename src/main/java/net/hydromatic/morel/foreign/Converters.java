@@ -158,6 +158,12 @@ public class Converters {
     if (type instanceof RecordLikeType) {
       return (Converter<E>) ofRow2(fromType, (RecordLikeType) type);
     }
+    if (fromType.isStruct() && fromType.getFieldCount() == 1) {
+      // A single-column row whose Morel type is not a record, e.g. a
+      // collection. The column already holds the Morel value; unwrap it
+      // rather than leaking the Object[] row.
+      return (Converter<E>) (Converter<Object[]>) values -> values[0];
+    }
     if (fromType.isNullable()) {
       return o -> o == null ? BigDecimal.ZERO : o;
     }
@@ -473,6 +479,11 @@ public class Converters {
           }
 
         default:
+          if (morelType.isCollection()) {
+            // The value of a collection-typed column is already a Morel
+            // collection (a List); no conversion is required.
+            return v -> v;
+          }
           throw new AssertionError("unknown type " + morelType);
       }
     }
