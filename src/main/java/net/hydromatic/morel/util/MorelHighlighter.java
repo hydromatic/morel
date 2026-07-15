@@ -641,7 +641,9 @@ public class MorelHighlighter {
     while (i < n) {
       char c = s.charAt(i);
       if (c == '\\') {
-        i += 2; // skip escape sequence
+        // Skip escape sequence; clamp so that a trailing backslash in an
+        // unterminated string does not return an index past the buffer.
+        i = Math.min(i + 2, n);
       } else if (c == '"') {
         i++; // skip closing "
         break;

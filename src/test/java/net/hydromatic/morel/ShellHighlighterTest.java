@@ -78,6 +78,23 @@ public class ShellHighlighterTest {
         is(ColorScheme.DARK.style(Category.CONSTANT)));
   }
 
+  /**
+   * An unterminated string ending in a backslash, the state the buffer passes
+   * through when an escape sequence is typed interactively, must not crash the
+   * highlighter.
+   */
+  @Test
+  void testHighlightUnterminatedStringEscape() {
+    final ShellHighlighter h = highlighter("dark");
+    final AttributedStyle string = ColorScheme.DARK.style(Category.STRING);
+    // '"' then '\': the escape skip must not run past the buffer.
+    assertThat(h.highlight(null, "\"\\").styleAt(1), is(string));
+    // Longer prefix of a typed escape, e.g. '"ab\'.
+    assertThat(h.highlight(null, "\"ab\\").styleAt(3), is(string));
+    // A complete escape in an unterminated string.
+    assertThat(h.highlight(null, "\"a\\n").styleAt(3), is(string));
+  }
+
   /** Word, real and scientific literals are styled as numeric. */
   @Test
   void testHighlightNumbers() {
