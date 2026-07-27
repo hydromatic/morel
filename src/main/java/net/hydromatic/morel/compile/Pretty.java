@@ -445,7 +445,7 @@ class Pretty {
       case ID:
       case ALIAS_TYPE:
       case TY_VAR:
-        return text(type.moniker());
+        return text(typeSystem.displayMoniker(type));
 
       case LIST:
         return collectionTypeDoc(
@@ -523,7 +523,7 @@ class Pretty {
                         beside(HARD_LINE, beside(text("-> "), resultDoc))))));
 
       default:
-        return text(type.moniker());
+        return text(typeSystem.displayMoniker(type));
     }
   }
 

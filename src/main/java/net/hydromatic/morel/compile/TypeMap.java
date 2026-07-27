@@ -70,15 +70,25 @@ public class TypeMap {
    */
   private List<QualifiedType.Predicate> predicates = ImmutableList.of();
 
+  /**
+   * Datatypes whose name has been taken over by a later declaration, by the
+   * name they had. A term identifies a datatype only by name, so these are
+   * consulted before the type system when converting a term back to a type; the
+   * type system would return whatever now holds the name.
+   */
+  final ImmutableMap<String, Type> displacedTypes;
+
   TypeMap(
       TypeSystem typeSystem,
       Map<AstNode, Unifier.Term> nodeTypeTerms,
       Unifier.Substitution substitution,
-      Map<Ast.Pat, Type> realTypes) {
+      Map<Ast.Pat, Type> realTypes,
+      Map<String, Type> displacedTypes) {
     this.typeSystem = requireNonNull(typeSystem);
     this.nodeTypeTerms = ImmutableMap.copyOf(nodeTypeTerms);
     this.substitution = requireNonNull(substitution.resolve());
     this.realTypes = ImmutableMap.copyOf(realTypes);
+    this.displacedTypes = ImmutableMap.copyOf(displacedTypes);
   }
 
   @Override
@@ -230,7 +240,13 @@ public class TypeMap {
         case "string":
         case "unit":
         default:
-          type = typeMap.typeSystem.lookupOpt(sequence.operator);
+          // A displaced datatype is looked up first; the type system would
+          // return whatever has taken over its name.
+          final Type displaced = typeMap.displacedTypes.get(sequence.operator);
+          type =
+              displaced != null
+                  ? displaced
+                  : typeMap.typeSystem.lookupOpt(sequence.operator);
           if (type != null) {
             if (sequence.terms.isEmpty()) {
               return type;

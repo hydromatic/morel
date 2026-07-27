@@ -61,4 +61,86 @@ type myInt = int and myRealList = real list;
 val reals = [1.0, 2.0, 3.0]: myRealList;
 > val reals = [1,2,3] : myRealList
 
+(* A "type" declaration is not recursive, and the bindings in a
+ * "type ... and ..." group are simultaneous, so a name that the
+ * declaration itself introduces is not in scope in its body.
+ * Expanding such a name once overflowed the stack. *)
+type t = t list;
+> stdIn:1.10 Error: unbound type constructor: t
+>   raised at: stdIn:1.10
+type a = int and b = a list;
+> stdIn:1.22 Error: unbound type constructor: a
+>   raised at: stdIn:1.22
+
+(* A name that the declaration itself rebinds means the definition
+ * being displaced, not the one being declared. A type alias is
+ * transparent, so it is expanded. *)
+type t2 = int;
+> type t2 = int
+type t2 = t2 list;
+> type t2 = int list
+val x2 : t2 = [1,2];
+> val x2 = [1,2] : t2
+
+(*) The bindings of a 'type ... and ...' group are simultaneous.
+type u2 = int;
+> type u2 = int
+type u2 = u2 list and v2 = u2;
+> type u2 = int list
+> type v2 = int
+
+(* A datatype is generative, so it cannot be expanded; the displaced
+ * type is displayed '?.d2', as in Standard ML. *)
+datatype d2 = A2 | B2;
+> datatype d2 = A2 | B2
+type d2 = d2 list;
+> type d2 = ?.d2 list
+
+(* Shadowing the same name twice gives two distinct displaced types.
+ * Standard ML displays both '?.d3', which does not distinguish them;
+ * we expand the alias, which does. *)
+datatype d3 = A3 | B3;
+> datatype d3 = A3 | B3
+type d3 = d3 list;
+> type d3 = ?.d3 list
+type d3 = d3 list;
+> type d3 = ?.d3 list list
+
+(*) Each displaced datatype is a separate type, though both print '?.e3'.
+datatype e3 = P3 | Q3;
+> datatype e3 = P3 | Q3
+type e3 = e3 list;
+> type e3 = ?.e3 list
+datatype e3 = R3 | S3;
+> datatype e3 = R3 | S3
+type e3 = e3 list;
+> type e3 = ?.e3 list
+
+(* A displaced datatype keeps its identity: its constructors still
+ * belong to it, and match against it. Whether a name still refers to
+ * a type is decided when the type is displayed, so the same value
+ * prints 'e4' before the name is taken over and '?.e4' after. *)
+datatype d4 = A4 | B4;
+> datatype d4 = A4 | B4
+type d4 = d4 list;
+> type d4 = ?.d4 list
+B4;
+> val it = B4 : ?.d4
+[A4];
+> val it = [A4] : ?.d4 list
+case A4 of A4 => 1 | B4 => 2;
+> val it = 1 : int
+
+(*) A datatype displaced by another datatype behaves the same way.
+datatype e4 = P4 | Q4;
+> datatype e4 = P4 | Q4
+val x4 = P4;
+> val x4 = P4 : e4
+datatype e4 = R4 | S4;
+> datatype e4 = R4 | S4
+x4;
+> val it = P4 : ?.e4
+val y4 = R4;
+> val y4 = R4 : e4
+
 (*) End type-alias.smli

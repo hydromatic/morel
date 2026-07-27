@@ -300,6 +300,72 @@ public class TypeSystem {
   }
 
   /**
+   * Returns the name under which a type is displayed once a later declaration
+   * has taken over its name, following Standard ML. Two types that have been
+   * displaced from the same name are both displayed this way; Standard ML does
+   * not tell them apart either.
+   */
+  public static String shadowName(String name) {
+    return "?." + name;
+  }
+
+  /**
+   * Returns how to display {@code type}: its moniker, unless its name now
+   * belongs to something else, in which case "?.d".
+   *
+   * <p>Whether a name still refers to a type can change after the type is
+   * created, so this is decided when the type is displayed, as in Standard ML:
+   *
+   * <pre>{@code
+   * datatype d = A | B;
+   * A;
+   * > val it = A : d
+   * datatype d = C;
+   * A;
+   * > val it = A : ?.d
+   * }</pre>
+   *
+   * <p>Only the type's own name is rewritten; a caller that renders a compound
+   * type recurses into the parts itself.
+   */
+  public String displayMoniker(Type type) {
+    if (type instanceof DataType) {
+      final DataType dataType = (DataType) type;
+      if (isDisplaced(dataType)) {
+        return ParameterizedType.computeMoniker(
+            shadowName(dataType.name), dataType.arguments);
+      }
+    }
+    return type.moniker();
+  }
+
+  /**
+   * Returns whether {@code dataType}'s name now refers to something else.
+   *
+   * <p>Compares constructors rather than identity, because an applied generic
+   * such as {@code bool option} is a different object from the {@code option}
+   * registered under the name, but is not displaced.
+   */
+  public boolean isDisplaced(DataType dataType) {
+    Type type = typeByName.get(dataType.name);
+    if (type == null) {
+      // An internal type such as '$list' is reached only via builtInTypes, so
+      // it never held the name and nothing can have taken it over.
+      return false;
+    }
+    if (type instanceof ForallType) {
+      // A generic datatype is registered as a type scheme; 'option' is
+      // registered as "forall 'a. 'a option".
+      type = ((ForallType) type).type;
+    }
+    return !(type instanceof DataType)
+        || !((DataType) type)
+            .typeConstructors
+            .keySet()
+            .equals(dataType.typeConstructors.keySet());
+  }
+
+  /**
    * Converts a regular type to an internal type. Throws if the type is not
    * known.
    */

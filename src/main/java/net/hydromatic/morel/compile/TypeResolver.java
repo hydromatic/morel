@@ -136,6 +136,15 @@ public class TypeResolver {
   private final Deque<AggFrame> aggregateTripleStack = new ArrayDeque<>();
 
   /**
+   * Datatypes encountered whose name has since been taken over by a later
+   * declaration. A unifier term identifies a datatype only by name, so without
+   * these the type could not be recovered from the term.
+   *
+   * @see TypeMap#displacedTypes
+   */
+  private final Map<String, Type> displacedTypes = new HashMap<>();
+
+  /**
    * Names of user-defined functions whose first parameter is named {@code self}
    * (curried form); these can be invoked as methods.
    */
@@ -259,7 +268,11 @@ public class TypeResolver {
 
       final TypeMap typeMap0 =
           new TypeMap(
-              typeSystem, map, (Substitution) result, ImmutableMap.of());
+              typeSystem,
+              map,
+              (Substitution) result,
+              ImmutableMap.of(),
+              displacedTypes);
 
       // If any value bindings have aliased types (e.g. 'myInt' rather than
       // the expanded type 'int'), populate a map with those types.
@@ -268,7 +281,12 @@ public class TypeResolver {
       final TypeMap typeMap =
           realTypes.isEmpty()
               ? typeMap0
-              : new TypeMap(typeSystem, map, (Substitution) result, realTypes);
+              : new TypeMap(
+                  typeSystem,
+                  map,
+                  (Substitution) result,
+                  realTypes,
+                  displacedTypes);
 
       while (!preferredTypes.isEmpty()) {
         Map.Entry<Variable, PrimitiveType> x = preferredTypes.remove(0);
@@ -787,9 +805,14 @@ public class TypeResolver {
   }
 
   /**
-   * Walks an AST type and checks that every type-constructor reference has the
-   * right number of arguments. Used for type aliases, where {@link
-   * TypeToTermConverter#typeTerm} is not invoked.
+   * Walks an AST type and checks that every type-constructor reference is bound
+   * and has the right number of arguments. Used for type aliases, where {@link
+   * TypeToTermConverter#typeTerm} is not invoked and therefore unification
+   * would never see the error.
+   *
+   * <p>A {@code type} declaration is not recursive, and the bindings in a
+   * {@code type ... and ...} group are simultaneous, so a name declared by the
+   * declaration itself is not yet bound and is rejected here.
    */
   static void checkTypeConstructorArities(
       TypeSystem typeSystem, Ast.Type type) {
@@ -797,8 +820,14 @@ public class TypeResolver {
         new Visitor() {
           @Override
           protected void visit(Ast.NamedType namedType) {
-            checkTypeConstructorArity(
-                namedType, typeSystem.lookupOpt(namedType.name));
+            final Type resolved = typeSystem.lookupOpt(namedType.name);
+            if (resolved == null) {
+              throw new CompileException(
+                  "unbound type constructor: " + namedType.name,
+                  false,
+                  namedType.pos);
+            }
+            checkTypeConstructorArity(namedType, resolved);
             super.visit(namedType);
           }
         });
@@ -3482,7 +3511,7 @@ public class TypeResolver {
       return null;
     }
     final TypeMap tempTypeMap =
-        new TypeMap(typeSystem, map, subst, ImmutableMap.of());
+        new TypeMap(typeSystem, map, subst, ImmutableMap.of(), displacedTypes);
     final List<QualifiedType.Predicate> predicates = new ArrayList<>();
     for (Constraint c : ((SubstitutionResult) result).residualConstraints) {
       if (c.name == null || c.result == null) {
@@ -3666,6 +3695,18 @@ public class TypeResolver {
 
   private Ast.Decl deduceTypeDeclType(
       TypeEnv env, Ast.TypeDecl typeDecl, PairList<Ast.IdPat, Term> termMap) {
+    // The bindings in a 'type ... and ...' group are simultaneous, so every
+    // name the group binds is displaced throughout it, not just in the body
+    // of its own binding. Resolve them all before converting any body.
+    final Map<String, Type.Key> displacedKeys = new LinkedHashMap<>();
+    typeDecl.binds.forEach(
+        bind -> {
+          final Type.Key key = displacedKey(bind.name.name);
+          if (key != null) {
+            displacedKeys.put(bind.name.name, key);
+          }
+        });
+
     final List<Type.Key> keys = new ArrayList<>();
     for (Ast.TypeBind bind : typeDecl.binds) {
       // Check that every type-constructor reference in the body has the right
@@ -3673,7 +3714,7 @@ public class TypeResolver {
       checkTypeConstructorArities(typeSystem, bind.type);
       // The body may not use a type variable that is not in the head.
       checkBoundTyVars(bind.tyVars, ImmutableList.of(bind.type));
-      final KeyBuilder keyBuilder = new KeyBuilder();
+      final KeyBuilder keyBuilder = new KeyBuilder(displacedKeys);
       bind.tyVars.forEach(keyBuilder::toTypeKey);
 
       keys.add(
@@ -3686,6 +3727,31 @@ public class TypeResolver {
 
     map.put(typeDecl, toTerm(PrimitiveType.UNIT));
     return typeDecl;
+  }
+
+  /**
+   * Returns the key to use for a reference to {@code name} in the body of a
+   * {@code type} declaration that binds {@code name}, or null if {@code name}
+   * is not currently bound (in which case {@link #checkTypeConstructorArities}
+   * has already reported it).
+   */
+  private Type.@Nullable Key displacedKey(String name) {
+    final Type type = typeSystem.lookupOpt(name);
+    if (type == null) {
+      return null;
+    }
+    if (type instanceof AliasType) {
+      // A type alias is transparent, so expand it. Standard ML displays
+      // 'type t = int; type t = t list' as 'type t = int list'.
+      return ((AliasType) type).type.key();
+    }
+    // A datatype is generative, so it cannot be expanded. Wrap it in an alias
+    // that renders '?.d', as Standard ML does. The wrapper holds the
+    // datatype's own key rather than its name, so that shadowing the same name
+    // twice gives two distinct types, both displayed '?.d' -- again as in
+    // Standard ML, which does not tell them apart either.
+    return Keys.alias(
+        TypeSystem.shadowName(name), type.key(), ImmutableList.of());
   }
 
   private Ast.Decl deduceDataTypeDeclType(
@@ -3830,6 +3896,32 @@ public class TypeResolver {
   private static class KeyBuilder {
     final Map<String, Integer> tyVarMap = new HashMap<>();
 
+    /**
+     * Keys to use for names that the declaration being converted is about to
+     * rebind, resolved from the environment before the declaration. Left as
+     * names, they would later find the new definition and be self-referential.
+     *
+     * @see TypeResolver#displacedKey(String)
+     */
+    final ImmutableMap<String, Type.Key> displacedKeys;
+
+    KeyBuilder() {
+      this(ImmutableMap.of());
+    }
+
+    KeyBuilder(Map<String, Type.Key> displacedKeys) {
+      this.displacedKeys = ImmutableMap.copyOf(displacedKeys);
+    }
+
+    /**
+     * Converts a type name into a key, using the displaced definition if the
+     * declaration being converted is about to rebind the name.
+     */
+    Type.Key nameKey(String name) {
+      final Type.Key key = displacedKeys.get(name);
+      return key != null ? key : Keys.name(name);
+    }
+
     /** Converts an AST type into a type key. */
     Type.Key toTypeKey(Ast.Type type) {
       if (type instanceof Ast.CompositeType) {
@@ -3878,9 +3970,9 @@ public class TypeResolver {
             return Keys.list(typeList.get(0));
           }
           if (typeList.isEmpty()) {
-            return Keys.name(namedType.name);
+            return nameKey(namedType.name);
           } else {
-            return Keys.apply(Keys.name(namedType.name), typeList);
+            return Keys.apply(nameKey(namedType.name), typeList);
           }
 
         case TY_VAR:
@@ -4565,6 +4657,12 @@ public class TypeResolver {
         if (dataType.name.equals(BAG_TY_CON)) {
           assert dataType.arguments.size() == 1;
           return bagTerm(toTerm(dataType.elementType(), subst));
+        }
+        // A term identifies a datatype by name, so a datatype whose name now
+        // belongs to something else could not be recovered from the term.
+        // Remember it, for TypeMap to convert back.
+        if (typeSystem.isDisplaced(dataType)) {
+          displacedTypes.put(dataType.name(), dataType);
         }
         return unifier.apply(
             dataType.name(), toTerms(dataType.arguments, subst));
