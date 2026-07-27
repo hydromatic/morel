@@ -414,6 +414,17 @@ Relational.compare (Node (2, Leaf 4, Leaf 10), Node (2, Leaf 4, Leaf 11));
 Relational.compare (Node (2, Leaf 5, Leaf 10), Node (2, Leaf 4, Leaf 11));
 > val it = GREATER : order
 
+(* Equality is structural: two values are equal if they have the
+ * same constructor and equal arguments. *)
+SOME 1 = SOME 1;
+> val it = true : bool
+SOME 1 = SOME 2;
+> val it = false : bool
+SOME 1 = NONE;
+> val it = false : bool
+LESS = EQUAL;
+> val it = false : bool
+
 (*) Datatype with a record member.
 datatype foo = Foo of {a: int, b: string} | Bar of int;
 > datatype foo = Foo of {a:int, b:string} | Bar of int
@@ -435,5 +446,32 @@ datatype `foo bar baz` = `Foo Bar` of {a: int, b: string} | Baz of int;
 > val it = Foo Bar {a=1,b="x"} : foo bar baz
 `Foo Bar`;
 > val it = fn : {a:int, b:string} -> foo bar baz
+
+(* Printing a constructed value: a compound argument is
+ * parenthesized, an atom is not. *)
+SOME (SOME 4);
+> val it = SOME (SOME 4) : int option option
+SOME [1, 2];
+> val it = SOME [1,2] : int list option
+SOME ~1;
+> val it = SOME ~1 : int option
+SOME "a";
+> val it = SOME "a" : string option
+datatype color = RED | GREEN | BLUE;
+> datatype color = RED | GREEN | BLUE
+SOME RED;
+> val it = SOME RED : color option
+
+(*) A constructor is a function value, so it can be passed to "map".
+map SOME [1, 2];
+> val it = [SOME 1,SOME 2] : int option list
+
+(*) "case" dispatches on the constructor, and binds its argument.
+case RED of RED => 1 | _ => 2;
+> val it = 1 : int
+case GREEN of RED => 1 | _ => 2;
+> val it = 2 : int
+case SOME 3 of NONE => 0 | SOME n => n + 1;
+> val it = 4 : int
 
 (*) End datatype.smli

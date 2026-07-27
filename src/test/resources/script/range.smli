@@ -428,6 +428,11 @@ Range.flatten ([] : int range list);
 [1 .. 5];
 > val it = [1,2,3,4,5] : int list
 
+(* A range up to Int.maxInt terminates; the enumeration once stepped
+ * past the bound, wrapping int32, and looped forever. *)
+[2147483646 .. 2147483647];
+> val it = [2147483646,2147483647] : int list
+
 (*) CLOSED_OPEN.
 [1 ..^ 5];
 > val it = [1,2,3,4] : int list

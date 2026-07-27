@@ -28,7 +28,7 @@
 
 (*) Number of values in initial environment.
 val eLen = List.length (Sys.env());
-> val eLen = 181 : int
+> val eLen = 182 : int
 
 (*) Now we have one more (due to "eLen").
 List.length (Sys.env()) - eLen;
@@ -63,7 +63,7 @@ Sys.clearEnv();
 > val it = () : unit
 (*) Back down to the original eLen plus one (for "it").
 List.length (Sys.env());
-> val it = 182 : int
+> val it = 183 : int
 List.last (Sys.env());
 > val it = ("vector","forall 'a. 'a list -> 'a vector") : string * string
 
@@ -235,5 +235,27 @@ Sys.clearEnv ();
 Test.foo 1;
 > stdIn:1.1-1.5 Error: unbound variable or constructor: Test
 >   raised at: stdIn:1.1-1.5
+
+(* -------------------------------------------------------------------
+ * A "let" body can use earlier declarations of the same "let".
+ *)
+let val x = 1 in x end;
+> val it = 1 : int
+let val x = 1 val y = x in y end;
+> val it = 1 : int
+let val s = "morel" in size s end;
+> val it = 5 : int
+
+(* -------------------------------------------------------------------
+ * "val rec", top-level and in "let", singly and mutually recursive.
+ *)
+val rec r = fn 0 => 1 | _ => r 0;
+> val r = fn : int -> int
+r 9;
+> val it = 1 : int
+let val rec g = fn 0 => 2 | _ => g 0 in g 7 end;
+> val it = 2 : int
+let val rec fm = fn () => gm 0 and gm = fn 0 => 6 | _ => fm () in fm () end;
+> val it = 6 : int
 
 (*) End misc.smli

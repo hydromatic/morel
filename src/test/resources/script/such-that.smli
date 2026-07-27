@@ -191,6 +191,14 @@ from i, j where i elem [1, 2] andalso j elem [i + 1 .. i + 2];
 >
 > val it : {i:int, j:int} bag
 
+(*) Collection inversion of "elem".
+from x where x elem [1,2,3] andalso x > 1;
+> val it = [2,3] : int bag
+from x where x elem [1,2,2,3];
+> val it = [1,2,2,3] : int bag
+from y where y elem [1,2] andalso y elem [2,3];
+> val it = [2] : int bag
+
 (*) An 'elem' over an infinite range does not ground the variable.
 from j where j elem [1 ..];
 > stdIn:1.6 Error: pattern 'j' is not grounded
@@ -327,6 +335,35 @@ from x, y where (x, y) elem [(1,true),(2,false)];
 > 2 false
 >
 > val it : {x:int, y:bool} bag
+
+(*) A tuple elem grounds all its variables.
+from x, y where (x, y) elem [(1,10),(2,20)];
+> x y
+> - --
+> 1 10
+> 2 20
+>
+> val it : {x:int, y:int} bag
+from x where (x, 20) elem [(1,10),(2,20)];
+> val it = [2] : int bag
+
+(*) A bound variable joins in a projected scan.
+from x in [1,2,3], y where (x, y) elem [(1,10),(2,20)];
+> x y
+> - --
+> 1 10
+> 2 20
+>
+> val it : {x:int, y:int} bag
+from x in [1,2], y where y elem [x, x+1];
+> x y
+> - -
+> 1 1
+> 1 2
+> 2 2
+> 2 3
+>
+> val it : {x:int, y:int} bag
 
 (*) Reversed pattern
 from x, y where (y, x) elem [(1,true),(2,false)];
@@ -520,6 +557,18 @@ end;
 > val it : {d:int, n:string} bag
 
 (* Unbounded variables with `take` and other clauses -------------- *)
+
+(*) A dependent point orders after its dependency.
+from x, y where x = 1 andalso y = x + 1;
+> x y
+> - -
+> 1 2
+>
+> val it : {x:int, y:int} bag
+
+(*) An unused unbounded variable is dropped.
+exists w, x where x = 3;
+> val it = true : bool
 
 (* Odd and even numbers that are not a multiple of 6. *)
 from i
@@ -772,6 +821,27 @@ yield {dno = #deptno v, name = #dname v};
 >  30 SALES
 >
 > val it : {dno:int, name:string} bag
+
+(*) Finite-type extent materialization.
+from b where b orelse not b;
+> val it = [false,true] : bool bag
+
+(*) Datatype extent, constructors in name order.
+from ob where Option.getOpt (ob, false) orelse true;
+> val it = [NONE,SOME false,SOME true] : bool option bag
+
+(*) Tuple extent, a cartesian product.
+from bc where bc = (true, ()) orelse true;
+> 1     2
+> ----- --
+> false {}
+> true  {}
+>
+> val it : (bool * unit) bag
+
+(*) A quantifier over a finite extent.
+exists b where b;
+> val it = true : bool
 
 (*) We can iterate over a finite datatype
 from i

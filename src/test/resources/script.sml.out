@@ -160,12 +160,11 @@ fun gray_code n =
   else let val prev = gray_code (n-1)
         in (map (fn s => "0" ^ s) prev) @ (rev (map (fn s => "1" ^ s) prev))
        end;
-stdIn:3.14-3.17 Error: unbound variable or constructor: nil
-  raised at: stdIn:3.14-3.17
+val gray_code = fn : int -> string list
 
 val gray_code_3 = gray_code 3;
-stdIn:1.19-1.28 Error: unbound variable or constructor: gray_code
-  raised at: stdIn:1.19-1.28
+val gray_code_3 = ["000","001","011","010","110","111","101","100"]
+  : string list
 
 
 (* Type declarations ---------------------------------------------- *)

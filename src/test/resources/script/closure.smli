@@ -150,4 +150,94 @@ in
 end;
 > val it = 60 : int
 
+(* Lambdas -------------------------------------------------------- *)
+
+(*) A polymorphic function is reusable at several types.
+val f = fn x => x;
+> val f = fn : 'a -> 'a
+f 3;
+> val it = 3 : int
+f "a";
+> val it = "a" : string
+
+(*) A lambda can be applied directly, including to unit and via wildcard.
+(fn x => x) 5;
+> val it = 5 : int
+val g = fn s => size s;
+> val g = fn : string -> int
+g "abc";
+> val it = 3 : int
+(fn () => 3) ();
+> val it = 3 : int
+(fn _ => 9) 1;
+> val it = 9 : int
+
+(*) Captured variables outlive their scope, across statements.
+val k = let val a = 7 in fn x => a end;
+> val k = fn : 'a -> int
+k 100;
+> val it = 7 : int
+val add = fn x => fn y => x;
+> val add = fn : 'a -> 'b -> 'a
+add 1 2;
+> val it = 1 : int
+val p = add true;
+> val p = fn : 'a -> bool
+p ();
+> val it = true : bool
+val t = let val a = 4 in fn x => fn y => a end;
+> val t = fn : 'a -> 'b -> int
+t 1 2;
+> val it = 4 : int
+case (fn x => x) of f => f 8;
+> val it = 8 : int
+
+(*) Curried functions and partial application, across statements.
+fun add x y = x + y;
+> val add = fn : int -> int -> int
+add 3 4;
+> val it = 7 : int
+val inc = add 1;
+> val inc = fn : int -> int
+inc 10;
+> val it = 11 : int
+
+(*) Escaping closures and recursion that cross statement boundaries.
+fun a x = fn () => b x and b x = x + 1;
+> val a = fn : int -> unit -> int
+> val b = fn : int -> int
+val g = a 41;
+> val g = fn : unit -> int
+g ();
+> val it = 42 : int
+fun countdown n = if n = 0 then (fn () => 0) else (fn () => countdown (n - 1) ());
+> val countdown = fn : int -> unit -> int
+(countdown 3) ();
+> val it = 0 : int
+val rec f = (fn g => g) (fn x => if x = 0 then 1 else f (x - 1));
+> val f = fn : int -> int
+f 3;
+> val it = 1 : int
+fun outer n = let fun inner 0 = n | inner k = inner (k - 1) in fn () => inner 5 end;
+> val outer = fn : 'a -> unit -> 'a
+(outer 7) ();
+> val it = 7 : int
+val fs = [fn x => x + 1, fn x => x * 2];
+> val fs = [fn,fn] : (int -> int) list
+hd fs 10;
+> val it = 11 : int
+fn x => x + 1;
+> val it = fn : int -> int
+it 5;
+> val it = 6 : int
+fun isEven 0 = true | isEven n = isOdd (n - 1) and isOdd 0 = false | isOdd n = isEven (n - 1);
+> val isEven = fn : int -> bool
+> val isOdd = fn : int -> bool
+val checker = isOdd;
+> val checker = fn : int -> bool
+checker 9;
+> val it = true : bool
+isEven 10;
+> val it = true : bool
+
 (*) End closure.smli

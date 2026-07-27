@@ -1502,11 +1502,12 @@ public class TypeResolver {
     requireNonNull(p.c);
     final Variable rv = unifier.variable();
     final Ast.Exp intoExp;
-    switch (aggKind(p.env, into.exp)) {
+    switch (aggKind(p.rootEnv, into.exp)) {
       case USER_UNKNOWN:
         // User-defined function whose type is not yet available.
         // Link directly to p.c to preserve record type propagation.
-        intoExp = deduceExpType(p.env, into.exp, toVariable(fnTerm(p.c, rv)));
+        intoExp =
+            deduceExpType(p.rootEnv, into.exp, toVariable(fnTerm(p.c, rv)));
         break;
       case BAG:
         {
@@ -1515,7 +1516,8 @@ public class TypeResolver {
           final Variable intoCArg0 = unifier.variable();
           equiv(intoCArg0, bagTerm(p.v));
           intoExp =
-              deduceExpType(p.env, into.exp, toVariable(fnTerm(intoCArg0, rv)));
+              deduceExpType(
+                  p.rootEnv, into.exp, toVariable(fnTerm(intoCArg0, rv)));
           break;
         }
       case LIST:
@@ -1524,7 +1526,8 @@ public class TypeResolver {
           final Variable intoCArg1 = unifier.variable();
           equiv(intoCArg1, listTerm(p.v));
           intoExp =
-              deduceExpType(p.env, into.exp, toVariable(fnTerm(intoCArg1, rv)));
+              deduceExpType(
+                  p.rootEnv, into.exp, toVariable(fnTerm(intoCArg1, rv)));
           break;
         }
       default:
@@ -1534,7 +1537,8 @@ public class TypeResolver {
           final Variable intoCArg = unifier.variable();
           sameOrderedness(intoCArg, p.v, p.c, p.v);
           final Variable intoVFn = unifier.variable();
-          intoExp = deduceApplyFnType(p.env, into.exp, intoVFn, intoCArg, rv);
+          intoExp =
+              deduceApplyFnType(p.rootEnv, into.exp, intoVFn, intoCArg, rv);
           reg(into.exp, intoVFn);
           equiv(intoVFn, fnTerm(intoCArg, rv));
           break;

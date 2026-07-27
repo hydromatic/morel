@@ -5135,6 +5135,7 @@ public enum BuiltIn {
     consumer.accept("hd", LIST_HD);
     consumer.accept("length", LIST_LENGTH);
     consumer.accept("map", LIST_MAP);
+    consumer.accept("nil", LIST_NIL);
     consumer.accept("null", LIST_NULL);
     consumer.accept("rev", LIST_REV);
     consumer.accept("tl", LIST_TL);

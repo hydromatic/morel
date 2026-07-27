@@ -36,6 +36,11 @@ raise Bind;
 > uncaught exception Bind [nonexhaustive binding failure]
 >   raised at: stdIn:1.1-1.11
 
+(*) A built-in operation raises in the same way; division by zero raises Div.
+7 div 0;
+> uncaught exception Div [divide by zero]
+>   raised at: stdIn:1.1-1.8
+
 (*) 'raise' on a built-in exception with a payload prints the payload.
 raise Fail "Function not yet implemented";
 > uncaught exception Fail [Fail: Function not yet implemented]

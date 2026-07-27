@@ -95,6 +95,9 @@ Int.`div` (~14, ~3);
 > val it = 4 : int
 Int.`div` (0, ~3);
 > val it = 0 : int
+(*) The infix operator rounds toward negative infinity, as `div` does.
+~7 div 2;
+> val it = ~4 : int
 Int.fromInt;
 > val it = fn : int -> int
 Int.fromInt 3;
@@ -121,6 +124,11 @@ Int.fromString;
 > val it = fn : string -> int option
 Int.fromString "~345";
 > val it = SOME ~345 : int option
+(*) A numeric prefix is accepted; anything else gives NONE.
+Int.fromString "83a";
+> val it = SOME 83 : int option
+Int.fromString "bad";
+> val it = NONE : int option
 Int.max;
 > val it = fn : int * int -> int
 Int.max (4, 3);
@@ -147,6 +155,9 @@ Int.`mod` (~14, ~3);
 > val it = ~2 : int
 Int.`mod` (0, ~3);
 > val it = 0 : int
+(*) The infix operator takes the sign of the divisor, as `mod` does.
+7 mod ~2;
+> val it = ~1 : int
 Int.quot;
 > val it = fn : int * int -> int
 Int.quot (14, 3);

@@ -543,6 +543,24 @@ plan;
 Sys.plan;
 > val it = fn : unit -> string
 
+(* It reports the last statement's plan. A "fun" is a recursive val
+ * binding, so its plan is that of the first function it binds; it
+ * once returned "" and cleared the previous plan. A declaration that
+ * binds no expression, such as a datatype, leaves the previous plan
+ * in place. *)
+fun pf x = x + 1;
+> val pf = fn : int -> int
+Sys.plan ();
+> val it =
+>   "match(x, apply2(fnValue Int.+, stack(offset 1, name x), constant(1)))"
+>   : string
+1 + 2;
+> val it = 3 : int
+datatype color = RED | GREEN;
+> datatype color = RED | GREEN
+Sys.plan ();
+> val it = "apply2(fnValue Int.+, constant(1), constant(2))" : string
+
 (* "set" is a Morel alias for "Sys.set". *)
 set;
 > val it = fn : string * 'a -> unit

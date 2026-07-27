@@ -84,4 +84,24 @@ val it = 42;
 it;
 > val it = 42 : int
 
+(* Each bare expression reassigns 'it', so it tracks the latest
+ * value, and its type can change. (These come last because they
+ * change 'it', which the tests above pin.) *)
+val x = 2;
+> val x = 2 : int
+x;
+> val it = 2 : int
+it;
+> val it = 2 : int
+val x = "b";
+> val x = "b" : string
+x;
+> val it = "b" : string
+
+(*) 'it' holds a function value like any other, and can be applied.
+(fn x => x + 1) o (fn x => x * 2);
+> val it = fn : int -> int
+it 5;
+> val it = 11 : int
+
 (*) End it.smli

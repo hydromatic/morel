@@ -293,6 +293,14 @@ type_string (String.size "hi");
 type_string ("x" ^ "y") ^ "z";
 > val it = "stringz" : string
 
+(* The operand has precedence 9 -- an atom and its field selections
+ * -- not a whole application, so "type_string f x" is
+ * "(type_string f) x", which applies x to the resulting string,
+ * rather than the type of "f x". *)
+type_string String.size "abc";
+> stdIn:1.1-1.30 Error: Cannot deduce type: conflict: fn(T2, T0) vs string
+>   raised at: stdIn:1.1-1.30
+
 fun foo list = (size list, type_string (true, list));
 > val foo = fn : string -> int * string
 foo "abc";

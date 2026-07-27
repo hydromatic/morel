@@ -101,6 +101,12 @@ val emps = [
 >    {empno=7900,ename="JAMES",mgr=7698},{empno=7934,ename="MILLER",mgr=7782},
 >    {empno=7876,ename="ADAMS",mgr=7788},{empno=7369,ename="SMITH",mgr=7902}]
 >   : {empno:int, ename:string, mgr:int} list
+(* "iterate" computes a fixed point: starting from the initial rows,
+ * the rows the update function returns are added each round, until a
+ * round produces none. *)
+Relational.iterate (bag [1]) (fn (oldList, newList) => (from n in newList where n < 4 yield n + 1));
+> val it = [1,2,3,4] : int bag
+
 Relational.iterate
   (from e in emps where e.mgr = 0)
   fn (oldList, newList) =>

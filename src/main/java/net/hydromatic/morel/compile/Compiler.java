@@ -1079,11 +1079,14 @@ public class Compiler {
       Core.StepEnv stepEnv,
       List<Core.FromStep> remainingSteps,
       Type elementType) {
+    final int[] ordinalSlots = {0};
     final ImmutableList.Builder<Code> groupCodesB = ImmutableList.builder();
-    for (Core.Exp exp : group.groupExps.values()) {
-      // Group key codes evaluated at accept() time (scan vars on stack), use
-      // cx.
-      groupCodesB.add(compile(cx, exp));
+    try (TryThreadLocal.Memo ignored = ORDINAL_CODE.push(ordinalSlots)) {
+      for (Core.Exp exp : group.groupExps.values()) {
+        // Group key codes evaluated at accept() time (scan vars on stack), use
+        // cx.
+        groupCodesB.add(compile(cx, exp));
+      }
     }
     // Compute inSlots first so we can use inSlots.leftList() for
     // Codes.aggregate. The name order in which values are captured (by slot
@@ -1136,7 +1139,16 @@ public class Compiler {
               scanDepth));
     }
     final ImmutableList<Code> groupCodes = groupCodesB.build();
-    final Code keyCode = Codes.tuple(groupCodes);
+    final Code tupleCode = Codes.tuple(groupCodes);
+    final Code keyCode;
+    if (ordinalSlots[0] > 0) {
+      // A group key uses the ordinal. The key is evaluated once per input row,
+      // so wrapping it advances the ordinal in step with the rows.
+      ordinalSlots[0] = -1;
+      keyCode = Codes.ordinalInc(ordinalSlots, tupleCode);
+    } else {
+      keyCode = tupleCode;
+    }
     final ImmutableList<Applicable> aggregateCodes = aggregateCodesB.build();
     final ImmutableList<String> outNames =
         transformEager(group.env.bindings, b -> b.id.name);

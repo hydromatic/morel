@@ -1487,7 +1487,8 @@ public abstract class Codes {
       };
 
   /** @see BuiltIn#INT_DIV */
-  private static final Applicable2 INT_DIV = new IntDiv(BuiltIn.INT_DIV);
+  private static final Applicable2 INT_DIV =
+      new IntDiv(BuiltIn.INT_DIV, Pos.ZERO);
 
   /** @see BuiltIn#INT_FMT */
   private static final Applicable2 INT_FMT =
@@ -1552,29 +1553,46 @@ public abstract class Codes {
 
   /** Implements {@link #INT_DIV}. */
   private static class IntDiv
-      extends BaseApplicable2<Integer, Integer, Integer> {
-    IntDiv(BuiltIn builtIn) {
-      super(builtIn);
+      extends BasePositionedApplicable2<Integer, Integer, Integer> {
+    IntDiv(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new IntDiv(builtIn, pos);
     }
 
     @Override
     public Integer apply(Integer a0, Integer a1) {
+      if (a1 == 0) {
+        throw new MorelRuntimeException(BuiltInExn.DIV, pos);
+      }
       return Math.floorDiv(a0, a1);
     }
   }
 
   /** @see BuiltIn#INT_MOD */
-  private static final Applicable2 INT_MOD = new IntMod(BuiltIn.INT_MOD);
+  private static final Applicable2 INT_MOD =
+      new IntMod(BuiltIn.INT_MOD, Pos.ZERO);
 
   /** Implements {@link #INT_MOD}. */
   private static class IntMod
-      extends BaseApplicable2<Integer, Integer, Integer> {
-    IntMod(BuiltIn builtIn) {
-      super(builtIn);
+      extends BasePositionedApplicable2<Integer, Integer, Integer> {
+    IntMod(BuiltIn builtIn, Pos pos) {
+      super(builtIn, pos);
+    }
+
+    @Override
+    public Applicable withPos(Pos pos) {
+      return new IntMod(builtIn, pos);
     }
 
     @Override
     public Integer apply(Integer a0, Integer a1) {
+      if (a1 == 0) {
+        throw new MorelRuntimeException(BuiltInExn.DIV, pos);
+      }
       return Math.floorMod(a0, a1);
     }
   }

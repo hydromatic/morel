@@ -225,6 +225,10 @@ List.map (fn x => (x, Math.ln x))
 >   [(1,0),(2.718,0.9998963),(2.7182817,0.99999994),(0,~inf),(~0,~inf),
 >    (~3,nan),(inf,inf),(~inf,nan),(nan,nan)] : (real * real) list
 
+(*) ln e is slightly below 1 in 32-bit floats.
+Math.ln Math.e;
+> val it = 0.99999994 : real
+
 (* "log10 x" returns the decimal logarithm (base 10) of x. If x < 0,
    returns NaN; if x = 0, returns -infinity; if x is infinity, returns
    infinity. *)

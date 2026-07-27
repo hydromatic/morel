@@ -78,6 +78,14 @@ true;
 > val it = true : bool
 [1,2,3];
 > val it = [1,2,3] : int list
+(*) A cons chain is right-associative, so it builds the same list.
+1 :: 2 :: nil;
+> val it = [1,2] : int list
+(*) Equality on tuples and lists is structural.
+(1, 2) = (1, 3);
+> val it = false : bool
+[1, 2] = [1, 2];
+> val it = true : bool
 (1,2);
 > val it = (1,2) : int * int
 (1,(2,"three"),true);
@@ -1066,6 +1074,10 @@ bag [1.5, 2.5, 3.5];
 (*) bag of tuples; elements reordered
 bag [(1, "a"), (2, "b"), (3, "c")];
 > val it = [(3,"c"),(1,"a"),(2,"b")] : (int * string) bag
+
+(*) record fields print in alphabetical order, whatever the input order
+{b=2, a=1};
+> val it = {a=1,b=2} : {a:int, b:int}
 
 (*) bag of records, elements reordered but fields still alphabetical
 bag [{name="bob", age=30}, {name="alice", age=25}];

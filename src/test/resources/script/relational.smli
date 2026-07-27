@@ -737,6 +737,31 @@ from i in [1,2]
 > val it = [{i=1,j=0},{i=1,j=1},{i=1,j=2},{i=2,j=0},{i=2,j=1},{i=2,j=2}]
 >   : {i:int, j:int} list
 
+(* "ordinal" is the input row's position where a group key reads
+ * it, so the enumeration must advance per row -- the position once
+ * stuck, collapsing every row into one group. *)
+from i in [10,20,30] group {m = ordinal};
+> val it = [{m=0},{m=1},{m=2}] : {m:int} list
+from i in [10,20,30] group k = ordinal mod 2;
+> val it = [0,1] : int list
+
+(* An aggregate argument reads the same input-row position, even
+ * though it is evaluated after the rows have been collected into
+ * groups. A 3-element input would not pin this: 0 + 1 + 2 and
+ * 1 + 1 + 1 are both 3. *)
+from i in [5,6,7,8] group {} compute sum over ordinal;
+> val it = [6] : int list
+from i in [1,2,3,4] group {k = i mod 2} compute {s = sum over ordinal};
+> val it = [{k=1,s=2},{k=0,s=4}] : {k:int, s:int} list
+
+(*) An argument-less aggregate still sees whole rows.
+from i in [1,2,3,4] group {} compute {c = count over (), s = sum over ordinal};
+> val it = [{c=4,s=6}] : {c:int, s:int} list
+
+(*) A key and an argument that both read it agree.
+from i in [10,20,30] group {m = ordinal} compute {s = sum over ordinal};
+> val it = [{m=0,s=0},{m=1,s=1},{m=2,s=2}] : {m:int, s:int} list
+
 (* Outer joins ---------------------------------------------------- *)
 
 (* The source of a 'right join' or 'full join' generates null rows on its
@@ -1927,6 +1952,11 @@ from deptno in (from e in emps yield e.deptno)
   union distinct (from d in depts yield d.deptno);
 > val it = [10,20,30,40] : int list
 
+(* A wildcard scan binds no variables, so each row is unit; a set
+ * operation once read row[0] and panicked, printing nothing. *)
+from _ in [1,2] union [(),()];
+> val it = [(),(),(),()] : unit list
+
 (*) except (matches SQL's EXCEPT ALL)
 from d in depts
   yield d.deptno
@@ -2137,6 +2167,15 @@ hcf (38024, 16296);
 (* Group ---------------------------------------------------------- *)
 
 (* We can simulate "group" using "foldl". *)
+
+(* An empty collection reveals no element type, so "sum" once
+ * returned the int zero for every type; a real sum then panicked
+ * when combined with a real. The zero must match the static
+ * element type. *)
+sum (bag [] : real bag) + 1.5;
+> val it = 1.5 : real
+from r in (from e in ([] : {x:real} list) group {} compute sum over e.x) yield r + 1.5;
+> val it = [1.5] : real list
 
 (*) foldl function (built into SML)
 let
@@ -3110,6 +3149,14 @@ from i in [1,2,3]
   through i2 in (map (fn x => [x]))
   through i3 in (map (fn x => [x]));
 > val it = [[[1]],[[2]],[[3]]] : int list list list
+
+(* An "into" function is applied to the whole query result in the
+ * enclosing scope, so a query variable is out of scope inside it:
+ * referencing one is an unbound-variable error, not a read of a
+ * leftover row slot. *)
+from i in [1,2,3] into (fn l => i);
+> stdIn:1.33 Error: unbound variable or constructor: i
+>   raised at: stdIn:1.33
 
 (* The function in a 'through' may be a structure member such as
    'List.map'; resolving it rewrites the expression, which once left the

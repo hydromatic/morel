@@ -91,6 +91,17 @@ ack 2 3;
 ack 3 3;
 > val it = 61 : int
 
+(* A layered pattern "x as pat" matches exactly what pat matches, so
+ * it must not count as a wildcard for coverage: "l as h :: t" leaves
+ * [] uncovered (nonexhaustive), and an "as" clause before [] is not
+ * redundant. *)
+fun f (l as h :: t) = 1;
+> stdIn:1.5-1.24 Warning: match nonexhaustive
+>   raised at: stdIn:1.5-1.24
+> val f = fn : 'a list -> int
+fun g (l as h :: t) = 1 | g [] = 0;
+> val g = fn : 'a list -> int
+
 (* Various types, exhaustive & non-exhaustive --------------------- *)
 (*) From https://smlhelp.github.io/book/docs/start/syntax/
 
@@ -294,5 +305,51 @@ fun classify (C01, RED) = "first, red"
   | classify (C01, _) = "first, other";
 > stdIn:7.5-7.39 Error: match redundant
 >   raised at: stdIn:7.5-7.39
+
+(* Matching values ------------------------------------------------ *)
+
+(*) "case" with constant, variable and wildcard patterns.
+case 3 of 0 => "zero" | _ => "nonzero";
+> val it = "nonzero" : string
+case 0 of 0 => "zero" | _ => "nonzero";
+> val it = "zero" : string
+case 42 of n => n;
+> val it = 42 : int
+case 7 of 0 => 0 | n => n;
+> val it = 7 : int
+case "a" of "a" => 1 | _ => 2;
+> val it = 1 : int
+val n = 5;
+> val n = 5 : int
+case n of 5 => true | _ => false;
+> val it = true : bool
+
+(*) List patterns in "case".
+case [1] of [x] => x | _ => 0;
+> val it = 1 : int
+case [1, 2] of [x] => x | _ => 0;
+> val it = 0 : int
+
+(*) Multi-clause "fn" expressions.
+val h = fn 0 => "zero" | _ => "other";
+> val h = fn : int -> string
+h 0;
+> val it = "zero" : string
+h 5;
+> val it = "other" : string
+(fn 1 => true | n => false) 3;
+> val it = false : bool
+
+(*) Nested-tuple and record "val" patterns, and one that binds nothing.
+val (a, (b, c)) = (1, (2, 3));
+> val a = 1 : int
+> val b = 2 : int
+> val c = 3 : int
+val {a=p, b=q} = {a=4, b=5};
+> val p = 4 : int
+> val q = 5 : int
+val _ = 9;
+let val (i, j) = (2, 3) in (j, i) end;
+> val it = (3,2) : int * int
 
 (*) End match.smli

@@ -426,8 +426,82 @@ public class FromBuilder {
       boolean atom,
       SortedMap<Core.IdPat, Core.Exp> groupExps,
       SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
+    for (Core.Aggregate aggregate : aggregates.values()) {
+      if (aggregate.argument != null && containsOrdinal(aggregate.argument)) {
+        return groupOverOrdinal(atom, groupExps, aggregates);
+      }
+    }
     final Core.StepEnv env = stepEnv();
     return addStep(core.group(atom, env.ordered, groupExps, aggregates));
+  }
+
+  /**
+   * Creates a "group" step in which at least one aggregate argument reads
+   * {@code ordinal}.
+   *
+   * <p>An aggregate argument is evaluated once the rows have been collected
+   * into their groups, by which time the input row it came from is no longer
+   * current and its position is unrecoverable. So we prefix the step with a
+   * "yield" that materializes the ordinal as an ordinary field -- evaluated
+   * once per input row, like any other yield expression -- and rewrite the
+   * arguments to read that field.
+   */
+  private FromBuilder groupOverOrdinal(
+      boolean atom,
+      SortedMap<Core.IdPat, Core.Exp> groupExps,
+      SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
+    final Core.StepEnv env = stepEnv();
+    final Core.IdPat ordinalPat =
+        core.idPat(PrimitiveType.INT, typeSystem.nameGenerator::get);
+    final PairList<String, Core.Exp> nameExps = PairList.of();
+    bindings.forEach(b -> nameExps.add(b.id.name, core.id(b.id)));
+    nameExps.add(ordinalPat.name, ordinalExp());
+    yield_(
+        false,
+        Core.StepEnv.of(
+            append(bindings, Binding.of(ordinalPat)), false, env.ordered),
+        core.record(typeSystem, nameExps),
+        false);
+
+    // Both the keys and the arguments must read the materialized field; a key
+    // that still called 'ordinal' would start a second, independent count.
+    final Shuttle shuttle =
+        new Shuttle(typeSystem) {
+          @Override
+          protected Core.Exp visit(Core.Apply apply) {
+            return apply.isCallTo(BuiltIn.Z_ORDINAL)
+                ? core.id(ordinalPat)
+                : super.visit(apply);
+          }
+        };
+    final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExps2 =
+        ImmutableSortedMap.naturalOrder();
+    groupExps.forEach((id, exp) -> groupExps2.put(id, exp.accept(shuttle)));
+    final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates2 =
+        ImmutableSortedMap.naturalOrder();
+    aggregates.forEach(
+        (id, aggregate) ->
+            aggregates2.put(
+                id,
+                aggregate.argument == null
+                    ? aggregate
+                    : core.aggregate(
+                        aggregate.pos,
+                        aggregate.type,
+                        aggregate.aggregate,
+                        aggregate.argument.accept(shuttle))));
+    return addStep(
+        core.group(
+            atom, stepEnv().ordered, groupExps2.build(), aggregates2.build()));
+  }
+
+  /** Creates the expression {@code ordinal}. */
+  private Core.Exp ordinalExp() {
+    return core.apply(
+        Pos.ZERO,
+        PrimitiveType.INT,
+        core.functionLiteral(typeSystem, BuiltIn.Z_ORDINAL),
+        core.tuple(typeSystem));
   }
 
   public FromBuilder order(Core.Exp exp) {
