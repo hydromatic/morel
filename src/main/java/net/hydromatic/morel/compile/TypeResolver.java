@@ -53,6 +53,7 @@ import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -61,6 +62,7 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -69,7 +71,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import net.hydromatic.morel.ast.Ast;
+import net.hydromatic.morel.ast.Ast.ModifierVerb;
 import net.hydromatic.morel.ast.AstNode;
 import net.hydromatic.morel.ast.Core;
 import net.hydromatic.morel.ast.Op;
@@ -159,6 +163,23 @@ public class TypeResolver {
   /** Type variable scopes for val/fun declarations (innermost last). */
   private final Deque<Map<String, Variable>> tyVarScopes = new ArrayDeque<>();
 
+  /**
+   * Field names of expressions that a record modifier is applied to, in the
+   * order they occur in the record type. Survives between attempts, which is
+   * how an attempt that discovers the fields of a base hands them to the next
+   * one, which can then desugar the record.
+   *
+   * @see #desugarModifiers
+   */
+  private final Map<Ast.Exp, List<String>> fieldNames = new IdentityHashMap<>();
+
+  /**
+   * Number of times a record's fields have become known. If it changes during
+   * an attempt, the declaration is deduced again, and this time the record
+   * desugars.
+   */
+  private int desugarCount;
+
   static final String BAG_TY_CON = BuiltIn.Eqtype.BAG.mlName();
   static final String TUPLE_TY_CON = "tuple";
   static final String ARG_TY_CON = "$arg";
@@ -223,9 +244,16 @@ public class TypeResolver {
       Environment env, Ast.Decl decl, TypeSystem typeSystem) {
     int attempt = 0;
     for (; ; ) {
-      int original = typeSystem.expandCount.get();
+      final int expandCount = typeSystem.expandCount.get();
+      final int desugarCount0 = desugarCount;
       final Resolved resolved = deduceType_(env, decl);
-      if (typeSystem.expandCount.get() == original || attempt++ > 1) {
+      if (desugarCount != desugarCount0) {
+        // A record modifier learned the fields of its base; deduce again, and
+        // this time the record will desugar. Each attempt learns at least one
+        // more, so the loop terminates.
+        continue;
+      }
+      if (typeSystem.expandCount.get() == expandCount || attempt++ > 1) {
         return resolved;
       }
     }
@@ -235,6 +263,7 @@ public class TypeResolver {
   private Resolved deduceType_(Environment env, Ast.Decl decl) {
     // Clean up from previous attempt.
     validations.clear();
+    final int desugarCount0 = desugarCount;
 
     final TypeEnvHolder typeEnvs =
         new TypeEnvHolder(new EnvironmentTypeEnv(env, EmptyTypeEnv.INSTANCE));
@@ -297,6 +326,13 @@ public class TypeResolver {
         }
       }
 
+      if (desugarCount != desugarCount0) {
+        // A record modifier learned the fields of its base. The tree we have
+        // just deduced still contains the record, and the checks below would
+        // make nothing of it; the caller deduces the declaration again.
+        return Resolved.of(env, decl, node2, typeMap);
+      }
+
       final AtomicBoolean progressive = new AtomicBoolean();
       forEachUnresolvedField(
           node2,
@@ -313,6 +349,7 @@ public class TypeResolver {
         node2.accept(FieldExpander.create(typeSystem, env));
       } else {
         checkNoUnresolvedFieldRefs(node2, typeMap);
+        checkRecordModifiers(node2);
       }
       checkNumericOperators(node2, typeMap);
 
@@ -409,6 +446,36 @@ public class TypeResolver {
               }
             }
             super.visit(apply);
+          }
+        });
+  }
+
+  /**
+   * Checks that every record with modifiers has been desugared. One that has
+   * not is a record whose base's fields never became known, for the same reason
+   * that the argument of "#f" must be known.
+   */
+  private static void checkRecordModifiers(Ast.Decl decl) {
+    decl.accept(
+        new Visitor() {
+          @Override
+          protected void visit(Ast.Record record) {
+            if (!record.modifiers.isEmpty()) {
+              final SortedSet<String> labels = new TreeSet<>();
+              record.modifiers.forEach(
+                  modifier -> modifier.forEachLabel(labels::add));
+              throw new TypeException(
+                  "unresolved flex record (can't tell what fields there are"
+                      + (labels.isEmpty()
+                          ? ""
+                          : " besides "
+                              + labels.stream()
+                                  .map(label -> "#" + label)
+                                  .collect(Collectors.joining(", ")))
+                      + ")",
+                  requireNonNull(record.base).pos);
+            }
+            super.visit(record);
           }
         });
   }
@@ -1877,12 +1944,13 @@ public class TypeResolver {
     final Variable c6 = unifier.variable();
     sameOrderedness(c6, v6, requireNonNull(p.c), p.v);
 
-    if (yield.binder == null && yieldExp2.op == Op.RECORD) {
-      final Ast.Record record2 = (Ast.Record) yieldExp2;
-      Term term = map.get(yieldExp2);
-      if (record2.with != null) {
-        term = map.get(record2.with);
-      }
+    final Ast.Exp yieldExp3 = letBody(yieldExp2);
+    if (yield.binder == null && yieldExp3.op == Op.RECORD) {
+      // A record whose modifiers are not desugared yet has no fields to
+      // bind; it will be desugared, and this step deduced again, or the
+      // attempt will end in an error.
+      final Ast.Record record2 = (Ast.Record) yieldExp3;
+      final Term term = record2.base == null ? map.get(yieldExp3) : null;
       if (term instanceof Sequence) {
         final Sequence sequence = (Sequence) term;
         fieldVars.clear();
@@ -1901,6 +1969,26 @@ public class TypeResolver {
       fieldVars.add(label, v6);
     }
     return Triple.of(p.rootEnv, envs.typeEnv, v6, c6);
+  }
+
+  /**
+   * Returns the body of a chain of {@code let} expressions; {@code exp} itself
+   * if it is not a {@code let}.
+   *
+   * <p>A {@code yield} step binds the fields of the record it yields, and the
+   * {@code let}s in between do not change that. {@link #desugarModifiers} turns
+   * a record with modifiers into one {@code let} per modifier, whose body is
+   * the record that the last modifier produced, and its fields are the step's
+   * fields; the same goes for a {@code let} the user wrote.
+   *
+   * <p>{@link Resolver} applies the same test to the same tree, so that the
+   * bindings it creates for the step are the ones deduced here.
+   */
+  static Ast.Exp letBody(Ast.Exp exp) {
+    while (exp.op == Op.LET) {
+      exp = ((Ast.Let) exp).exp;
+    }
+    return exp;
   }
 
   /** Derives the row label. */
@@ -1997,12 +2085,12 @@ public class TypeResolver {
     if (groupExps.size() == 1 && group.isAtom()) {
       group2 = groupExps.right(0);
     } else {
-      group2 = key.copy(key.with, groupExps);
+      group2 = key.copy(key.base, groupExps);
     }
     final Ast.Exp compute2 =
         args2.size() == 1 && group.isAtom()
             ? args2.right(0)
-            : compute.copy(compute.with, args2.immutable());
+            : compute.copy(compute.base, args2.immutable());
 
     final Variable v2 = fieldVar(fieldVars, group.isAtom());
     if (group.binder != null) {
@@ -2124,69 +2212,453 @@ public class TypeResolver {
   }
 
   /** Deduces a record constructor expression's type. */
-  private Ast.Record deduceRecordType(
+  private Ast.Exp deduceRecordType(
       TypeEnv env, Ast.Record record0, Variable v) {
-    Ast.Record record = record0.validate();
+    final Ast.Record record = record0.validate();
 
-    final NavigableMap<String, Term> labelTypes = new TreeMap<>();
-    final PairList<Ast.Id, Ast.Exp> map = PairList.of();
-    deduceFieldTypes(env, record, labelTypes::put, map::add);
-    if (record.with == null) {
+    if (record.base == null) {
+      final NavigableMap<String, Term> labelTypes = new TreeMap<>();
+      final PairList<Ast.Id, Ast.Exp> map = PairList.of();
+      deduceFieldTypes(env, record.sortedArgs(), labelTypes::put, map::add);
       return reg(record.copy(null, map), v, recordTerm(labelTypes));
     }
 
-    final Variable v2 = unifier.variable();
-    final Ast.Exp with2 = deduceExpType(env, record.with, v2);
-    actionMap.put(
-        v2,
-        (v0, t, substitution, termPairs) -> {
-          // Now we know the type of the expression before 'with', we can unify
-          // the types of the common fields.
-          //
-          // For example, if we have the expression {r with b = SOME "string"}
-          // we have just deduced the type of r. Let's suppose that type is
-          // {a: int, b: alpha option}.
-          //
-          // The common fields are {b}. We need to unify the types "string
-          // option" and "alpha option".
-          if (t instanceof Sequence) {
-            final Sequence sequence = (Sequence) t;
-            final List<String> fieldList = fieldList(sequence);
-            if (fieldList != null) {
-              forEach(
-                  fieldList,
-                  sequence.terms,
-                  (fieldName, term) -> {
-                    final Term labelTerm = labelTypes.get(fieldName);
-                    if (labelTerm != null) {
-                      // This is a common field. Unify the types.
-                      final Term term2 = substitution.resolve(term);
-                      final Term labelTerm2 = substitution.resolve(labelTerm);
-                      termPairs.accept(labelTerm2, term2);
-                    }
-                  });
+    // A record with modifiers becomes nested 'let's, but only once we know
+    // which fields there are to destructure.
+    final Map<Ast.Exp, List<String>> fieldNames =
+        modifierFieldNames(env, record);
+    if (fieldNames == null) {
+      return deduceUnresolvedRecordType(env, record, v);
+    }
+    return deduceExpType(env, desugarModifiers(record, fieldNames), v);
+  }
+
+  /**
+   * Deduces the type of a record whose modifiers cannot be desugared yet,
+   * because the fields of the base (or of the argument of an {@code all}
+   * modifier) are not known.
+   *
+   * <p>Deduces the modifiers' expressions -- in the enclosing environment,
+   * because without the field names there is nothing to shadow them -- so that
+   * the checks that run after unification see a tree in which every expression
+   * has a type. The record's own type is left unconstrained: if a later attempt
+   * does not desugar it, {@link #checkRecordModifiers} reports an unresolved
+   * flex record.
+   */
+  private Ast.Exp deduceUnresolvedRecordType(
+      TypeEnv env, Ast.Record record, Variable v) {
+    final Ast.Exp base2 = deduceExpType(env, record.base, unifier.variable());
+    final List<Ast.Modifier> modifiers =
+        transformEager(
+            record.modifiers, modifier -> deduceModifierTypes(env, modifier));
+    return reg(record.copy(base2, ImmutableList.of(), modifiers), v);
+  }
+
+  /** Deduces the types of the expressions of a modifier. */
+  private Ast.Modifier deduceModifierTypes(TypeEnv env, Ast.Modifier modifier) {
+    switch (modifier.op) {
+      case ASSIGN_MODIFIER:
+        final Ast.AssignModifier assign = (Ast.AssignModifier) modifier;
+        final PairList<Ast.Id, Ast.Exp> args = PairList.of();
+        assign.args.forEach(
+            (id, exp) ->
+                args.add(id, deduceExpType(env, exp, unifier.variable())));
+        return assign.copy(args);
+
+      case ALL_MODIFIER:
+        final Ast.AllModifier all = (Ast.AllModifier) modifier;
+        return all.copy(deduceExpType(env, all.exp, unifier.variable()));
+
+      default:
+        // The arguments of 'rename' and 'remove' are labels, not expressions.
+        return modifier;
+    }
+  }
+
+  /**
+   * Returns the field names of the base of {@code record}, and of the argument
+   * of each of its {@code all} modifiers; or null if any of them is unknown.
+   *
+   * <p>A name that is unknown now may become known when the type of the
+   * expression is unified with something concrete -- as when a lambda's
+   * parameter type is settled by a call further down the declaration. An action
+   * then records the names and bumps {@link #desugarCount}, and the declaration
+   * is deduced again.
+   */
+  private @Nullable Map<Ast.Exp, List<String>> modifierFieldNames(
+      TypeEnv env, Ast.Record record) {
+    final List<Ast.Exp> exps = new ArrayList<>();
+    exps.add(requireNonNull(record.base));
+    record.modifiers.forEach(
+        modifier -> {
+          if (modifier instanceof Ast.AllModifier) {
+            exps.add(((Ast.AllModifier) modifier).exp);
+          }
+        });
+
+    final Map<Ast.Exp, List<String>> map = new IdentityHashMap<>();
+    final PairList<Ast.Exp, Variable> unknown = PairList.of();
+    for (Ast.Exp exp : exps) {
+      final List<String> names = fieldNames.get(exp);
+      if (names != null) {
+        map.put(exp, names);
+      } else {
+        final Variable v = unifier.variable();
+        deduceExpType(env, exp, v);
+        unknown.add(exp, v);
+      }
+    }
+    if (!unknown.isEmpty()) {
+      // Solve the constraints accumulated so far. As in bindDeclGeneralized,
+      // the solve is local and side-effect free, so we can run it as often as
+      // we like.
+      final @Nullable Substitution substitution = solve();
+      unknown.forEach(
+          (exp, variable) -> {
+            final List<String> names =
+                substitution == null
+                    ? null
+                    : termFieldNames(substitution.resolve(variable));
+            if (names != null) {
+              fieldNames.put(exp, names);
+              map.put(exp, names);
+            } else {
+              actionMap.put(
+                  variable,
+                  (v0, t, substitution2, termPairs) -> rememberFields(exp, t));
+            }
+          });
+    }
+    return map.size() == exps.size() ? map : null;
+  }
+
+  /**
+   * Records the field names of an expression whose type has just become known,
+   * and asks for the declaration to be deduced again, so that the record that
+   * needs them can be desugared.
+   */
+  private void rememberFields(Ast.Exp exp, Term t) {
+    final List<String> names = termFieldNames(t);
+    if (names != null && fieldNames.putIfAbsent(exp, names) == null) {
+      ++desugarCount;
+    }
+  }
+
+  /**
+   * Returns the field names of a record or tuple term, otherwise null.
+   *
+   * <p>{@code unit} is the record with no fields -- {@code recordTerm} maps
+   * {@code {}} onto it -- so its field names are the empty list, not null. Were
+   * it null, {@code {{} extend i = 1}} would never be desugared, and would end
+   * as an unresolved flex record.
+   */
+  private static @Nullable List<String> termFieldNames(Term t) {
+    if (!(t instanceof Sequence)) {
+      return null;
+    }
+    final Sequence sequence = (Sequence) t;
+    if (sequence.operator.equals(PrimitiveType.UNIT.moniker)) {
+      return ImmutableList.of();
+    }
+    return fieldList(sequence);
+  }
+
+  /**
+   * Solves the constraints accumulated so far, or returns null if they have no
+   * solution.
+   */
+  private @Nullable Substitution solve() {
+    final List<TermTerm> termPairs = new ArrayList<>();
+    terms.forEach(tv -> termPairs.add(new TermTerm(tv.term, tv.variable)));
+    final Result result =
+        unifier.unify(termPairs, actionMap, constraints, Tracers.nullTracer());
+    return result instanceof Substitution ? (Substitution) result : null;
+  }
+
+  /**
+   * Converts a record with modifiers into an expression: one {@code let} per
+   * modifier, each destructuring the record that the modifier before it
+   * produced.
+   *
+   * <p>Destructuring is what makes the fields visible to the assignments, and
+   * makes them shadow the enclosing environment; nesting is what makes a
+   * modifier see the result of the one before it; and the bindings of one
+   * {@code let} being simultaneous is what makes the assignments of one
+   * modifier simultaneous. For example, {@code {r replace i = j, j = i remove
+   * j}} becomes
+   *
+   * <blockquote>
+   *
+   * <pre>{@code
+   * let val {i = i, j = j} = r in
+   *   let val {i = i, j = j} = {i = j, j = i} in
+   *     {i = i}
+   *   end
+   * end
+   * }</pre>
+   *
+   * </blockquote>
+   *
+   * <p>Each modifier also checks the labels it mentions against the fields it
+   * is applied to.
+   */
+  private Ast.Exp desugarModifiers(
+      Ast.Record record, Map<Ast.Exp, List<String>> fieldNames) {
+    final Pos pos = record.pos;
+    Ast.Exp exp = requireNonNull(record.base);
+    List<String> fields = requireNonNull(fieldNames.get(record.base));
+    for (Ast.Modifier modifier : record.modifiers) {
+      final PairList<String, Ast.Exp> args = PairList.of();
+      final List<Ast.ValBind> valBinds = new ArrayList<>();
+      valBinds.add(ast.valBind(pos, fieldsPat(pos, fields), exp));
+      switch (modifier.op) {
+        case ASSIGN_MODIFIER:
+          assignFields(pos, (Ast.AssignModifier) modifier, fields, args);
+          break;
+
+        case ALL_MODIFIER:
+          final Ast.AllModifier all = (Ast.AllModifier) modifier;
+          final String name = freeName(fields);
+          valBinds.add(ast.valBind(pos, ast.idPat(pos, name), all.exp));
+          assignAllFields(
+              pos,
+              all,
+              fields,
+              requireNonNull(fieldNames.get(all.exp)),
+              name,
+              args);
+          break;
+
+        case REMOVE_MODIFIER:
+          removeFields(pos, (Ast.RemoveModifier) modifier, fields, args);
+          break;
+
+        case RENAME_MODIFIER:
+          renameFields(pos, (Ast.RenameModifier) modifier, fields, args);
+          break;
+
+        default:
+          throw new AssertionError(modifier.op);
+      }
+      final PairList<Ast.Id, Ast.Exp> args2 = PairList.of();
+      args.forEach((label, e) -> args2.add(ast.id(pos, label), e));
+      exp =
+          ast.let(
+              pos,
+              ImmutableList.of(ast.valDecl(pos, false, false, valBinds)),
+              ast.record(pos, null, args2));
+      fields = ImmutableList.sortedCopyOf(RecordType.ORDERING, args.leftList());
+    }
+    return exp;
+  }
+
+  /** Returns a pattern that destructures a record into its fields. */
+  private static Ast.Pat fieldsPat(Pos pos, List<String> fields) {
+    final Map<String, Ast.Pat> pats = new LinkedHashMap<>();
+    fields.forEach(field -> pats.put(field, ast.idPat(pos, field)));
+    return ast.recordPat(pos, false, pats);
+  }
+
+  /** Returns a name that is not one of {@code fields}. */
+  private static String freeName(List<String> fields) {
+    String name = "$all";
+    while (fields.contains(name)) {
+      name += "_";
+    }
+    return name;
+  }
+
+  /**
+   * Applies an {@code extend} or {@code replace} modifier, in either case
+   * taking each label to whichever of the verb's two cases it falls in: the
+   * record has the label already, or it does not.
+   */
+  private static void assignFields(
+      Pos pos,
+      Ast.AssignModifier modifier,
+      List<String> fields,
+      PairList<String, Ast.Exp> args) {
+    final Map<String, Ast.Exp> assigned = new LinkedHashMap<>();
+    modifier.args.forEach(
+        (id, exp) -> {
+          if (fields.contains(id.name)) {
+            if (modifier.verb.exists == ModifierVerb.Exists.ERROR) {
+              throw fieldExists(id.name, id.pos);
+            }
+          } else {
+            if (modifier.verb.absent == ModifierVerb.Absent.ERROR) {
+              throw fieldNotFound(id.name, id.pos);
+            }
+          }
+          assigned.put(id.name, exp);
+        });
+
+    // Fields the record has: assigned, kept as they were, or removed.
+    fields.forEach(
+        field -> {
+          final Ast.Exp exp = assigned.get(field);
+          if (exp == null || modifier.verb.exists == ModifierVerb.Exists.SKIP) {
+            args.add(field, ast.id(pos, field));
+          } else {
+            args.add(field, modifier.lenient ? exp : sameType(exp, field));
+          }
+        });
+
+    // Labels the record does not have: added, or ignored.
+    if (modifier.verb.absent == ModifierVerb.Absent.ADD) {
+      modifier.args.forEach(
+          (id, exp) -> {
+            if (!fields.contains(id.name)) {
+              args.add(id.name, exp);
+            }
+          });
+    }
+  }
+
+  /**
+   * Applies an {@code extend all} or {@code replace all} modifier: the same
+   * rules as {@link #assignFields}, for every field of the modifier's
+   * record-valued argument.
+   */
+  private static void assignAllFields(
+      Pos pos,
+      Ast.AllModifier modifier,
+      List<String> fields,
+      List<String> allFields,
+      String name,
+      PairList<String, Ast.Exp> args) {
+    allFields.forEach(
+        field -> {
+          if (fields.contains(field)) {
+            if (modifier.verb.exists == ModifierVerb.Exists.ERROR) {
+              throw fieldExists(field, modifier.exp.pos);
+            }
+          } else {
+            if (modifier.verb.absent == ModifierVerb.Absent.ERROR) {
+              throw fieldNotFound(field, modifier.exp.pos);
             }
           }
         });
 
-    equiv(v, v2);
-    return reg(record.copy(with2, map), v);
+    fields.forEach(
+        field -> {
+          if (!allFields.contains(field)
+              || modifier.verb.exists == ModifierVerb.Exists.SKIP) {
+            args.add(field, ast.id(pos, field));
+          } else {
+            final Ast.Exp exp = field(pos, name, field);
+            args.add(field, modifier.lenient ? exp : sameType(exp, field));
+          }
+        });
+
+    if (modifier.verb.absent == ModifierVerb.Absent.ADD) {
+      allFields.forEach(
+          field -> {
+            if (!fields.contains(field)) {
+              args.add(field, field(pos, name, field));
+            }
+          });
+    }
+  }
+
+  /**
+   * Applies a {@code rename} modifier. It takes the value of each label on the
+   * right, which must exist, and gives it to the label on the left, which must
+   * not survive the renaming.
+   */
+  private static void renameFields(
+      Pos pos,
+      Ast.RenameModifier modifier,
+      List<String> fields,
+      PairList<String, Ast.Exp> args) {
+    final Set<String> sources = new LinkedHashSet<>();
+    modifier.args.forEach(
+        (target, source) -> {
+          if (!fields.contains(source.name)) {
+            throw fieldNotFound(source.name, source.pos);
+          }
+          if (!sources.add(source.name)) {
+            throw new TypeException(
+                format("duplicate field '%s' in record", source.name),
+                source.pos);
+          }
+        });
+    fields.forEach(
+        field -> {
+          if (!sources.contains(field)) {
+            args.add(field, ast.id(pos, field));
+          }
+        });
+    modifier.args.forEach(
+        (target, source) -> {
+          if (args.leftList().contains(target.name)) {
+            throw fieldExists(target.name, target.pos);
+          }
+          args.add(target.name, ast.id(pos, source.name));
+        });
+  }
+
+  /** Applies a {@code remove} modifier. */
+  private static void removeFields(
+      Pos pos,
+      Ast.RemoveModifier modifier,
+      List<String> fields,
+      PairList<String, Ast.Exp> args) {
+    final Set<String> removed = new LinkedHashSet<>();
+    modifier.labels.forEach(
+        id -> {
+          if (!fields.contains(id.name)
+              && modifier.verb.absent == ModifierVerb.Absent.ERROR) {
+            throw fieldNotFound(id.name, id.pos);
+          }
+          if (!removed.add(id.name)) {
+            throw new TypeException(
+                format("duplicate field '%s' in record", id.name), id.pos);
+          }
+        });
+    fields.forEach(
+        field -> {
+          if (!removed.contains(field)) {
+            args.add(field, ast.id(pos, field));
+          }
+        });
+  }
+
+  /**
+   * Returns "exp : typeof field", which gives an assigned value the type of the
+   * field it replaces. Assignment does not change a field's type, unless the
+   * modifier is {@code lenient}.
+   */
+  private static Ast.Exp sameType(Ast.Exp exp, String field) {
+    return ast.annotatedExp(
+        exp.pos, exp, ast.expressionType(exp.pos, ast.id(exp.pos, field)));
+  }
+
+  /** Returns the expression "#field name". */
+  private static Ast.Exp field(Pos pos, String name, String field) {
+    return ast.apply(ast.recordSelector(pos, field), ast.id(pos, name));
+  }
+
+  private static TypeException fieldNotFound(String field, Pos pos) {
+    return new TypeException(format("field '%s' does not exist", field), pos);
+  }
+
+  private static TypeException fieldExists(String field, Pos pos) {
+    return new TypeException(format("field '%s' already exists", field), pos);
   }
 
   private void deduceFieldTypes(
       TypeEnv env,
-      Ast.Record record,
+      SortedMap<Ast.Id, Ast.Exp> args,
       BiConsumer<String, Term> labelTypes,
       BiConsumer<Ast.Id, Ast.Exp> map) {
-    record
-        .sortedArgs()
-        .forEach(
-            (id, exp) -> {
-              final Variable vArg = unifier.variable();
-              final Ast.Exp e2 = deduceExpType(env, exp, vArg);
-              labelTypes.accept(id.name, vArg);
-              map.accept(id, e2);
-            });
+    args.forEach(
+        (id, exp) -> {
+          final Variable vArg = unifier.variable();
+          final Ast.Exp e2 = deduceExpType(env, exp, vArg);
+          labelTypes.accept(id.name, vArg);
+          map.accept(id, e2);
+        });
   }
 
   /**

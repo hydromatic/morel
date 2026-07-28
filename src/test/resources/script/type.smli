@@ -33,19 +33,384 @@
 ("a", false) = {1 = "a", 2 = true};
 > val it = false : bool
 
-(*) Records with 'with'
-{{a = 1, b = 2} with a = 3};
+(* A tuple is a record whose labels are ordinals, so a record pattern
+ * matches one, and a modifier applies to one. *)
+val {1=a,2=b} = ("a", true);
+> val a = "a" : string
+> val b = true : bool
+{("a", true) replace 1 = "b"};
+> val it = ("b",true) : string * bool
+{("a", true) remove 2};
+> val it = {1="a"} : {1:string}
+{("a", true) extend c = 1};
+> val it = {1="a",2=true,c=1} : {1:string, 2:bool, c:int}
+
+(*) Records with 'replace'
+{{a = 1, b = 2} replace a = 3};
 > val it = {a=3,b=2} : {a:int, b:int}
-{{a = "1", b = 2} with a = "3", b = 4};
+{{a = "1", b = 2} replace a = "3", b = 4};
 > val it = {a="3",b=4} : {a:string, b:int}
-{{a = "1", b = 2} with a = "3"};
+{{a = "1", b = 2} replace a = "3"};
 > val it = {a="3",b=2} : {a:string, b:int}
-{{a = "1", b = NONE} with b = SOME "3"};
+{{a = "1", b = NONE} replace b = SOME "3"};
 > val it = {a="1",b=SOME "3"} : {a:string, b:string option}
-{{a = "1", b = SOME true} with b = NONE};
+{{a = "1", b = SOME true} replace b = NONE};
 > val it = {a="1",b=NONE} : {a:string, b:bool option}
-{{a = "1", b = 2, c = true, d = false} with c = false, b = 3};
+{{a = "1", b = 2, c = true, d = false} replace c = false, b = 3};
 > val it = {a="1",b=3,c=false,d=false} : {a:string, b:int, c:bool, d:bool}
+
+(*) 'replace' does not permit a field to change type.
+{{i=1,j="a"} replace i="b"};
+> stdIn:1.1-1.28 Error: Cannot deduce type: conflict: string vs int
+>   raised at: stdIn:1.1-1.28
+
+(*) A field that does not exist is an error.
+{{i=1,j="a"} replace k=2};
+> stdIn:1.22 Error: field 'k' does not exist
+>   raised at: stdIn:1.22
+{{i=1,j="a"} replace i=2, k=3};
+> stdIn:1.27 Error: field 'k' does not exist
+>   raised at: stdIn:1.27
+
+(*) A label may not occur twice in the same 'replace'.
+{{i=1} replace i=2, i=3};
+> stdIn:1.21 Error: duplicate field 'i' in record
+>   raised at: stdIn:1.21
+
+(*) An assignment sees the enclosing environment.
+val k = 100;
+> val k = 100 : int
+{{i=1,j=2} replace i=k};
+> val it = {i=100,j=2} : {i:int, j:int}
+
+(* An assignment sees the record's own fields, and they shadow the
+ * environment; 'j' here is the field, not the variable. *)
+val j = 100;
+> val j = 100 : int
+{{i=1,j=2} replace i=j};
+> val it = {i=2,j=2} : {i:int, j:int}
+
+(* The record being updated is itself visible, so its fields can be
+ * reached by qualifying them. *)
+val r = {i=1,j=100};
+> val r = {i=1,j=100} : {i:int, j:int}
+{r replace j = r.i + 1};
+> val it = {i=1,j=2} : {i:int, j:int}
+
+(*) Qualified, the assignments see the old values, so this swaps.
+{r replace i = r.j, j = r.i};
+> val it = {i=100,j=1} : {i:int, j:int}
+
+(* Here the record has a field named 'r', which shadows the variable
+ * 'r' above; 'r' is therefore the field, of type int, and 'r.i' is an
+ * error. *)
+val t = {i=1,r=100};
+> val t = {i=1,r=100} : {i:int, r:int}
+{t replace i = r.i};
+> stdIn:1.16 Error: reference to field i of non-record type int
+>   raised at: stdIn:1.16
+
+(* If that field is itself a record, both readings are well-typed, so
+ * shadowing changes the answer rather than raising an error: 'r.i' is
+ * 99, the field, not 1, the variable. *)
+val u = {i=0,r={i=99}};
+> val u = {i=0,r={i=99}} : {i:int, r:{i:int}}
+{u replace i = r.i};
+> val it = {i=99,r={i=99}} : {i:int, r:{i:int}}
+
+(*) Qualifying by the record's own name is unambiguous either way.
+{u replace i = u.r.i};
+> val it = {i=99,r={i=99}} : {i:int, r:{i:int}}
+
+(* The other record modifiers: 'replace all', 'extend', 'extend all',
+ * 'remove' and 'rename'. Each is applied to the record that the
+ * modifier before it produced.
+ *)
+
+(*) 'replace all' assigns every field of its argument.
+{{i=1,j="a"} replace all {i=2}};
+> val it = {i=2,j="a"} : {i:int, j:string}
+{{i=1,j="a"} replace all {i=2,j="b"}};
+> val it = {i=2,j="b"} : {i:int, j:string}
+
+(*) A field of the argument that the base does not have is an error.
+{{i=1} replace all {k=2}};
+> stdIn:1.20-1.25 Error: field 'k' does not exist
+>   raised at: stdIn:1.20-1.25
+
+(*) Nor may a field change type.
+{{i=1} replace all {i="a"}};
+> stdIn:1.1-1.28 Error: Cannot deduce type: conflict: int vs string
+>   raised at: stdIn:1.1-1.28
+
+(*) 'extend' adds a field; the assignment sees the fields.
+{{i=1,j="a"} extend k=true};
+> val it = {i=1,j="a",k=true} : {i:int, j:string, k:bool}
+{{i=1} extend j=i+1};
+> val it = {i=1,j=2} : {i:int, j:int}
+
+(*) A field that already exists is an error.
+{{i=1,j="a"} extend i=2};
+> stdIn:1.21 Error: field 'i' already exists
+>   raised at: stdIn:1.21
+
+(* Assignments in one modifier are simultaneous, so the 'j' that 'k'
+ * reads is not the field being added but the variable bound above. *)
+{{i=1} extend j=i+1, k=j+1};
+> val it = {i=1,j=2,k=101} : {i:int, j:int, k:int}
+
+(*) A second modifier sees the first, so this is how to chain.
+{{i=1} extend j=i+1 extend k=j+1};
+> val it = {i=1,j=2,k=3} : {i:int, j:int, k:int}
+
+(*) 'extend all' adds every field of its argument.
+{{i=1} extend all {j="a",k=true}};
+> val it = {i=1,j="a",k=true} : {i:int, j:string, k:bool}
+
+(*) The labels must be disjoint.
+{{i=1} extend all {i=2}};
+> stdIn:1.19-1.24 Error: field 'i' already exists
+>   raised at: stdIn:1.19-1.24
+
+(*) SQL's 'e.*, d.*' less the duplicate join key.
+{{deptno=10,ename="Shaggy"} extend all {{deptno=10,dname="Sales"} remove deptno}};
+> val it = {deptno=10,dname="Sales",ename="Shaggy"}
+>   : {deptno:int, dname:string, ename:string}
+
+(*) 'remove' removes fields.
+{{i=1,j="a"} remove j};
+> val it = {i=1} : {i:int}
+{{i=1,j="a",k=true} remove j, k};
+> val it = {i=1} : {i:int}
+{{i=1,j="a",k=true} remove j, k, i};
+> val it = () : unit
+{{i=1} remove i};
+> val it = () : unit
+{{} extend i = 1 remove i};
+> val it = () : unit
+{{i=1} remove k};
+> stdIn:1.15 Error: field 'k' does not exist
+>   raised at: stdIn:1.15
+
+(*) 'rename' gives the value of the right label to the left one.
+{{i=1,j="a"} rename k=j};
+> val it = {i=1,k="a"} : {i:int, k:string}
+
+(*) All pairs apply simultaneously, so this swaps two labels.
+{{i=1,j=2} rename i=j, j=i};
+> val it = {i=2,j=1} : {i:int, j:int}
+
+(* A chain: 'k' takes i's value, 'i' takes j's, and 'j' is left over
+ * and removed. Equivalent to {e extend k=i replace i=j remove j}. *)
+{{i=1,j=2} rename k=i, i=j};
+> val it = {i=2,k=1} : {i:int, k:int}
+
+(*) The right-hand label must exist.
+{{i=1} rename k=z};
+> stdIn:1.17 Error: field 'z' does not exist
+>   raised at: stdIn:1.17
+
+(* The left-hand label must be absent once every right-hand label is
+ * removed; 'i' survives here, so it collides. *)
+{{i=1,j=2} rename i=j};
+> stdIn:1.19 Error: field 'i' already exists
+>   raised at: stdIn:1.19
+
+(*) Labels must be distinct within each side, so a rename is injective.
+{{i=1,j=2} rename k=i, k=j};
+> stdIn:1.24 Error: field 'k' already exists
+>   raised at: stdIn:1.24
+{{i=1,j=2} rename k=i, m=i};
+> stdIn:1.26 Error: duplicate field 'i' in record
+>   raised at: stdIn:1.26
+
+(*) To duplicate a value under a second label, use 'extend'.
+{{i=1} extend k=i};
+> val it = {i=1,k=1} : {i:int, k:int}
+
+(*) A later modifier sees the result of an earlier one.
+{{i=1,j=2} replace i=j remove j};
+> val it = {i=2} : {i:int}
+
+(* The same modifiers in the other order. The field 'j' is gone before
+ * 'replace' runs, so the 'j' it assigns is the variable bound above. *)
+{{i=1,j=2} remove j replace i=j};
+> val it = {i=100} : {i:int}
+
+(*) 'rename' then 'replace': the assignment sees the new label.
+{{i=1,j=2} rename k=j replace k=k+1};
+> val it = {i=1,k=3} : {i:int, k:int}
+
+(*) 'replace' then 'rename': the assignment sees the old label.
+{{i=1,j=2} replace j=j+1 rename k=j};
+> val it = {i=1,k=3} : {i:int, k:int}
+
+(*) 'extend' then 'remove' of the field the extension read.
+{{i=1} extend j=i+1 remove i};
+> val it = {j=2} : {j:int}
+
+(*) The base may be any expression; a modifier ends it.
+val es = [{deptno=10,ename="Shaggy"}];
+> val es = [{deptno=10,ename="Shaggy"}] : {deptno:int, ename:string} list
+{hd es remove deptno};
+> val it = {ename="Shaggy"} : {ename:string}
+{hd es remove deptno, ename};
+> val it = () : unit
+
+(*) A second 'replace' sees the result of the first, so this does not swap.
+{{i=1,j=2} replace i=j replace j=i};
+> val it = {i=2,j=2} : {i:int, j:int}
+
+(*) The argument of 'replace all' may be any record-valued expression.
+val patch = {i=9};
+> val patch = {i=9} : {i:int}
+{{i=1,j=2} replace all patch};
+> val it = {i=9,j=2} : {i:int, j:int}
+
+(* 'all' is not a reserved word; it is a keyword only after 'replace' and
+ * 'extend', and a label, variable or pattern anywhere else. *)
+{all = 4};
+> val it = {all=4} : {all:int}
+{{all=1} replace all = 2};
+> val it = {all=2} : {all:int}
+val all = 7;
+> val all = 7 : int
+val id = fn x => x;
+> val id = fn : 'a -> 'a
+id all;
+> val it = 7 : int
+{{i=1} replace i = id all};
+> val it = {i=7} : {i:int}
+{{i=1} replace i = (fn all => all) 5};
+> val it = {i=5} : {i:int}
+
+(* 'extend', 'remove' and 'rename' are reserved, so as identifiers they
+ * need back-ticks, and are printed with them. *)
+{`extend` = 1, `remove` = 2, `rename` = 3};
+> val it = {`extend`=1,`remove`=2,`rename`=3}
+>   : {`extend`:int, `remove`:int, `rename`:int}
+{{`extend`=1, all=2} replace `extend` = 3};
+> val it = {all=2,`extend`=3} : {all:int, `extend`:int}
+{{`extend`=1, all=2} remove `extend`, all};
+> val it = () : unit
+val `remove` = fn x => x + 1;
+> val `remove` = fn : int -> int
+`remove` 1;
+> val it = 2 : int
+
+(* A modifier applies to a base expression, so a field whose value is a
+ * modified record needs braces of its own; unlabeled, the field takes
+ * the label its base implies. *)
+val v = {x=1,y=2};
+> val v = {x=1,y=2} : {x:int, y:int}
+{a = 1, {v remove x}};
+> val it = {a=1,v={y=2}} : {a:int, v:{y:int}}
+{a = 1, v = {v remove x}};
+> val it = {a=1,v={y=2}} : {a:int, v:{y:int}}
+{c = {v extend z = 3}};
+> val it = {c={x=1,y=2,z=3}} : {c:{x:int, y:int, z:int}}
+
+(*) A modified record may itself be the base of another modifier.
+{a = 1, {{v remove x} replace y = 3}};
+> val it = {a=1,v={y=3}} : {a:int, v:{y:int}}
+
+(* Without braces there is no base for the modifiers to apply to: they
+ * need a single field, and it may not have a label of its own. *)
+{a = 1, v remove x};
+> stdIn:1.1-1.20 Error: a record modifier applies to a base expression; enclose the expression and its modifiers in braces
+>   raised at: stdIn:1.1-1.20
+{v = v remove x};
+> stdIn:1.1-1.17 Error: a record modifier applies to a base expression; enclose the expression and its modifiers in braces
+>   raised at: stdIn:1.1-1.17
+{a = 1, b = 2 remove a};
+> stdIn:1.1-1.24 Error: a record modifier applies to a base expression; enclose the expression and its modifiers in braces
+>   raised at: stdIn:1.1-1.24
+
+(* A verb pair joined by 'or' names both cases -- the record has the
+ * label already, or it does not -- so neither is an error. Each verb
+ * names its own case, so the pair is unordered. *)
+{{i=1} extend or replace i=2};
+> val it = {i=2} : {i:int}
+{{i=1} extend or replace j=2};
+> val it = {i=1,j=2} : {i:int, j:int}
+{{i=1} extend or skip i=2};
+> val it = {i=1} : {i:int}
+{{i=1} extend or skip j=2};
+> val it = {i=1,j=2} : {i:int, j:int}
+{{i=1} replace or skip i=2};
+> val it = {i=2} : {i:int}
+{{i=1} replace or skip j=2};
+> val it = {i=1} : {i:int}
+{{i=1} remove or skip i};
+> val it = () : unit
+{{i=1} remove or skip j};
+> val it = {i=1} : {i:int}
+
+(* 'replace' preserves a field's type; 'lenient' relaxes that, and is
+ * allowed only where a field can be assigned. *)
+{{i=1,j="a"} replace lenient i="b"};
+> val it = {i="b",j="a"} : {i:string, j:string}
+{{i=1} extend or replace lenient i="b"};
+> val it = {i="b"} : {i:string}
+{{i=1} replace lenient or skip i="b"};
+> val it = {i="b"} : {i:string}
+
+(*) The 'all' forms take each field of a record-valued expression.
+val patch2 = {i=2,k=3};
+> val patch2 = {i=2,k=3} : {i:int, k:int}
+{{i=1,j="a"} extend or replace all patch2};
+> val it = {i=2,j="a",k=3} : {i:int, j:string, k:int}
+{{i=1,j="a"} extend or skip all patch2};
+> val it = {i=1,j="a",k=3} : {i:int, j:string, k:int}
+{{i=1,j="a"} replace or skip all patch2};
+> val it = {i=2,j="a"} : {i:int, j:string}
+{{i=1,j="a"} replace lenient all {i="b"}};
+> val it = {i="b",j="a"} : {i:string, j:string}
+
+(*) A worked example.
+{{comm=2.0,ename="Shaggy",sal=10.0} replace sal=sal*12.0 extend tax=sal*0.3 extend net=sal-tax remove comm};
+> val it = {ename="Shaggy",net=84,sal=120,tax=36}
+>   : {ename:string, net:real, sal:real, tax:real}
+
+(* A 'yield' of a modified record binds the fields of the record it
+ * produced, so the steps that follow can see them. *)
+val es2 = [{deptno=10,empno=1,ename="Alice"},{deptno=20,empno=2,ename="Bob"}];
+> val es2 =
+>   [{deptno=10,empno=1,ename="Alice"},{deptno=20,empno=2,ename="Bob"}]
+>   : {deptno:int, empno:int, ename:string} list
+from e in es2 yield {e replace deptno = deptno + 1} where deptno = 11;
+> val it = [{deptno=11,empno=1,ename="Alice"}]
+>   : {deptno:int, empno:int, ename:string} list
+from e in es2 yield {e remove deptno} where empno = 2 yield ename;
+> val it = ["Bob"] : string list
+from e in es2 yield {e rename dno = deptno} order dno yield dno;
+> val it = [10,20] : int list
+from e in es2 yield {e extend bonus = empno * 10} where deptno = 20 yield {ename, bonus};
+> val it = [{bonus=20,ename="Bob"}] : {bonus:int, ename:string} list
+
+(*) The same goes for a 'let' the user wrote.
+from e in es2 yield (let val d = e.deptno in {dept = d, big = d > 15} end) where big yield dept;
+> val it = [20] : int list
+
+(* 'unit' is the record with no fields, so it is a base like any other,
+ * and a modifier may leave a record with no fields. *)
+{{} extend i = 1 remove i};
+> val it = () : unit
+{{} extend i = 1, j = 2};
+> val it = {i=1,j=2} : {i:int, j:int}
+{() extend i = 1};
+> val it = {i=1} : {i:int}
+{{i=1} remove i extend j = 2};
+> val it = {j=2} : {j:int}
+{{} extend all {a=1,b=2}};
+> val it = {a=1,b=2} : {a:int, b:int}
+{{a=1} replace all {}};
+> val it = {a=1} : {a:int}
+
+(*) A field of 'unit' does not exist, so it cannot be removed or replaced.
+{{} remove i};
+> stdIn:1.12 Error: field 'i' does not exist
+>   raised at: stdIn:1.12
 
 (*) Empty record and empty tuple are equivalent, and of type 'unit'.
 {};

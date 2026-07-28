@@ -92,7 +92,9 @@ In Morel but not Standard ML:
   whose first parameter is named `self`
 * identifiers and type names may be quoted
   (for example, <code>\`an identifier\`</code>)
-* `with` functional update for record values (from OCaml)
+* record modifiers: `replace` (functional update for record values, as
+  OCaml's `with`), `extend`, `remove`, `rename`, their `or` pairs, `all`
+  and `lenient`
 * overloaded functions may be declared using `over` and `inst`
 * attributes (`[@attr]` / `[@@attr]` / `[@@@attr]`) based on OCaml
 * `(*)` line comments (syntax as SML/NJ and MLton)
@@ -184,6 +186,8 @@ In Standard ML but not in Morel:
     | '<b>(</b>' <i>exp</i> '<b>)</b>'               parentheses
     | '<b>(</b>' <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>n</sub></i> '<b>)</b>' tuple (n &ne; 1)
     | <b>{</b> [ <i>exprow</i> ] <b>}</b>            record
+    | <b>{</b> <i>exp</i> <i>modifier<sub>1</sub></i> ... <i>modifier<sub>n</sub></i> <b>}</b>
+                                modified record (<i>n</i> &ge; 1)
     | <b>#</b><i>lab</i>                      record selector
     | '<b>[</b>' <i>exp<sub>1</sub></i> <b>,</b> ... <b>,</b> <i>exp<sub>n</sub></i> '<b>]</b>' list (n &ge; 0)
     | '<b>(</b>' <i>exp<sub>1</sub></i> <b>;</b> ... <b>;</b> <i>exp<sub>n</sub></i> '<b>)</b>' sequence (n &ge; 2)
@@ -212,9 +216,17 @@ In Standard ML but not in Morel:
                                 universal quantification (<i>s</i> &ge; 0, <i>t</i> &ge; 0)
     | <i>exp</i> <i>expAttr<sub>1</sub></i> ... <i>expAttr<sub>n</sub></i>
                                 attributed expression (n &ge; 1)
-<i>exprow</i> &rarr; [ <i>exp</i> <b>with</b> ] <i>exprowItem</i> [<b>,</b> <i>exprowItem</i> ]*
+<i>exprow</i> &rarr; <i>exprowItem</i> [<b>,</b> <i>exprowItem</i> ]*
                                 expression row
 <i>exprowItem</i> &rarr; [ <i>lab</i> <b>=</b> ] <i>exp</i>
+<i>modifier</i> &rarr; <i>assignVerb</i> <i>exprow</i>          assign to fields
+    | <i>assignVerb</i> <b>all</b> <i>exp</i>        assign to every field of <i>exp</i>
+    | <b>remove</b> [ <b>or skip</b> ] <i>lab</i> [<b>,</b> <i>lab</i> ]*
+                                remove fields
+    | <b>rename</b> <i>lab</i> <b>=</b> <i>lab</i> [<b>,</b> <i>lab</i> <b>=</b> <i>lab</i> ]*
+                                rename fields
+<i>assignVerb</i> &rarr; <b>extend</b> [ <b>or</b> ( <b>skip</b> | <b>replace</b> [ <b>lenient</b> ] ) ]
+    | <b>replace</b> [ <b>lenient</b> ] [ <b>or skip</b> ]
 <i>match</i> &rarr; <i>matchItem</i> [ '<b>|</b>' <i>matchItem</i> ]*
                                 match
 <i>matchItem</i> &rarr; <i>pat</i> <b>=&gt;</b> <i>exp</i>
@@ -244,6 +256,65 @@ In Standard ML but not in Morel:
 <i>groupKey</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i>
 <i>agg</i> &rarr; [ <i>id</i> <b>=</b> ] <i>exp</i> [ <b>of</b> <i>exp</i> ]
 </pre>
+
+#### Record modifiers
+
+Inside braces, an expression may be followed by modifiers, each applied
+to the record that the modifier before it produced:
+
+```sml
+{{comm = 2.0, ename = "Shaggy", sal = 10.0}
+    replace sal = sal * 12.0
+    extend tax = sal * 0.3
+    remove comm};
+> val it = {ename="Shaggy",sal=120,tax=36} : {ename:string, sal:real, tax:real}
+```
+
+A modifier is one or two verbs, an optional `lenient`, an optional
+`all`, and an operand. The verbs are `replace`, `remove` and `skip`,
+which act on a label the record has, and `extend` and `skip`, which act
+on one it does not have. A single verb makes the other case a
+compile-time error; a pair joined by `or` handles both, and since each
+verb names its own case the pair is unordered. `skip` does nothing, and
+takes whichever case the other verb does not.
+
+| modifier | label exists | label absent |
+|---|---|---|
+| `extend` | error | add |
+| `replace` | replace | error |
+| `remove` | remove | error |
+| `extend or replace` | replace | add |
+| `extend or skip` | keep | add |
+| `replace or skip` | replace | skip |
+| `remove or skip` | remove | skip |
+
+Assignment preserves a field's type; `lenient` relaxes that check, and
+is allowed only after `replace` or `extend or replace`. `all` <i>exp</i>
+applies the verbs to every field of the record <i>exp</i> instead of to
+a list of assignments. `rename` gives the value of each right-hand label
+to the left-hand one, and removes the right-hand labels; labels may
+therefore be swapped or chained.
+
+Within one modifier the assignments are simultaneous, so
+`{r replace i = j, j = i}` swaps two fields; a later modifier sees the
+result of an earlier one, so `{r replace i = j replace j = i}` does not.
+An assignment sees the fields of the record the modifier is applied to,
+and they shadow the enclosing environment.
+
+A modifier always applies to a base expression, so it belongs to the
+braces it is written in, never to a field of the record being built:
+the arguments of a modifier are plain fields, and a modifier keyword
+among them starts another modifier of the same record, so in
+`{r replace i = 1 remove j}` the `remove` applies to `r`, not to `1`. To
+modify a field's value, give it braces of its own --
+`{a = 1, b = {b remove x}}` -- or, as elsewhere, leave the label out
+and let the field take the one its base implies:
+`{a = 1, {b remove x}}`.
+
+`extend`, `remove`, `rename` and `replace` are reserved words, and need
+back-ticks to be used as identifiers. `all`, `lenient` and `or` are
+not: they are keywords only in the positions above, and are ordinary
+identifiers everywhere else.
 
 ### Patterns
 

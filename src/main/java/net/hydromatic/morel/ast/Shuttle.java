@@ -19,6 +19,7 @@
 package net.hydromatic.morel.ast;
 
 import static net.hydromatic.morel.ast.AstBuilder.ast;
+import static net.hydromatic.morel.util.Static.transformEager;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -245,8 +246,13 @@ public class Shuttle {
   protected Ast.Exp visit(Ast.Record record) {
     return ast.record(
         record.pos,
-        record.with == null ? null : record.with.accept(this),
-        visitPairList(record.args));
+        record.base == null ? null : record.base.accept(this),
+        visitPairList(record.args),
+        transformEager(record.modifiers, this::visit));
+  }
+
+  protected Ast.Modifier visit(Ast.Modifier modifier) {
+    return modifier.accept(this);
   }
 
   // functions and matches

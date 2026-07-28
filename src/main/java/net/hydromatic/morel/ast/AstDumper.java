@@ -403,12 +403,40 @@ public class AstDumper {
 
   private static void dumpRecord(StringBuilder b, Ast.Record r) {
     b.append("(record");
+    if (r.base != null) {
+      b.append(' ');
+      dump(b, r.base);
+    }
     r.args.forEach(
         (id, exp) -> {
           b.append(' ').append('(').append(id.name).append(' ');
           dump(b, exp);
           b.append(')');
         });
+    r.modifiers.forEach(modifier -> dumpModifier(b, modifier));
+    b.append(')');
+  }
+
+  private static void dumpModifier(StringBuilder b, Ast.Modifier modifier) {
+    b.append(' ').append('(').append(modifier.toString().trim().split(" ")[0]);
+    if (modifier instanceof Ast.AssignModifier) {
+      ((Ast.AssignModifier) modifier)
+          .args.forEach(
+              (id, exp) -> {
+                b.append(' ').append('(').append(id.name).append(' ');
+                dump(b, exp);
+                b.append(')');
+              });
+    } else if (modifier instanceof Ast.RemoveModifier) {
+      ((Ast.RemoveModifier) modifier)
+          .labels.forEach(label -> b.append(' ').append(label.name));
+    } else {
+      modifier.forEachExp(
+          exp -> {
+            b.append(' ');
+            dump(b, exp);
+          });
+    }
     b.append(')');
   }
 

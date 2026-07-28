@@ -59,6 +59,7 @@ import net.hydromatic.morel.parse.MorelParserImplConstants;
 import net.hydromatic.morel.parse.Parsers;
 import net.hydromatic.morel.util.Generation;
 import net.hydromatic.morel.util.JavaVersion;
+import net.hydromatic.morel.util.MorelHighlighter;
 import net.hydromatic.morel.util.PairList;
 import net.hydromatic.morel.util.WordComparator;
 import org.apache.calcite.util.Puffin;
@@ -1255,9 +1256,10 @@ public class LintTest {
   }
 
   /**
-   * Tests that {@link Parsers#RESERVED_WORDS} matches the alphabetic keyword
-   * tokens generated from {@code MorelParser.jj}. If this fails, a keyword was
-   * added or removed; update {@code RESERVED_WORDS} to match.
+   * Tests that {@link Parsers#RESERVED_WORDS} and {@link
+   * Parsers#NON_RESERVED_KEYWORDS} together match the alphabetic keyword tokens
+   * generated from {@code MorelParser.jj}. If this fails, a keyword was added
+   * or removed; update one of those sets to match.
    */
   @Test
   void testReservedWords() {
@@ -1273,7 +1275,28 @@ public class LintTest {
         }
       }
     }
-    assertThat(new TreeSet<>(Parsers.RESERVED_WORDS), is(fromGrammar));
+    final TreeSet<String> declared = new TreeSet<>(Parsers.RESERVED_WORDS);
+    declared.addAll(Parsers.NON_RESERVED_KEYWORDS);
+    assertThat(declared, is(fromGrammar));
+  }
+
+  /**
+   * Tests that the highlighter knows every keyword the parser does.
+   *
+   * <p>It knows more, and may: {@link MorelHighlighter#SML_KEYWORDS} contains
+   * the Standard ML keywords that Morel does not implement, so that Standard ML
+   * code is highlighted correctly too. But a keyword the parser knows and the
+   * highlighter does not is a bug -- the word is a keyword on the screen and
+   * back-ticked on output, yet displayed as an identifier.
+   */
+  @Test
+  void testHighlighterKeywords() {
+    final TreeSet<String> declared = new TreeSet<>(Parsers.RESERVED_WORDS);
+    declared.addAll(Parsers.NON_RESERVED_KEYWORDS);
+    // testReservedWords checks that 'declared' is the grammar's keywords.
+    declared.removeAll(MorelHighlighter.ALL_KEYWORDS);
+    assertThat(
+        "keywords that MorelHighlighter does not highlight", declared, empty());
   }
 
   /** Tests the primary-constructor rule against synthetic source code. */

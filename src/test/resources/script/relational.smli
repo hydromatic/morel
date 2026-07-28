@@ -118,17 +118,29 @@ from e in emps yield {e.deptno, one = 1};
 >   [{deptno=10,one=1},{deptno=20,one=1},{deptno=30,one=1},{deptno=30,one=1}]
 >   : {deptno:int, one:int} list
 
-from e in emps yield {e with deptno = 0};
+from e in emps yield {e replace deptno = 0};
 > val it =
 >   [{deptno=0,id=100,name="Fred"},{deptno=0,id=101,name="Velma"},
 >    {deptno=0,id=102,name="Shaggy"},{deptno=0,id=103,name="Scooby"}]
 >   : {deptno:int, id:int, name:string} list
 
-from e in emps yield {e with deptno = e.deptno + 1, name = e.name ^ "!"};
+from e in emps yield {e replace deptno = e.deptno + 1, name = e.name ^ "!"};
 > val it =
 >   [{deptno=11,id=100,name="Fred!"},{deptno=21,id=101,name="Velma!"},
 >    {deptno=31,id=102,name="Shaggy!"},{deptno=31,id=103,name="Scooby!"}]
 >   : {deptno:int, id:int, name:string} list
+
+(* A yielded record may use any of the modifiers, chained; an assignment
+ * sees the fields of the record the modifier is applied to. *)
+from e in emps
+  yield {e replace deptno = deptno * 2
+           extend initial = String.sub (name, 0)
+           rename empno = id
+           remove name};
+> val it =
+>   [{deptno=20,empno=100,initial=#"F"},{deptno=40,empno=101,initial=#"V"},
+>    {deptno=60,empno=102,initial=#"S"},{deptno=60,empno=103,initial=#"S"}]
+>   : {deptno:int, empno:int, initial:char} list
 
 from e in emps yield {x = e.deptno} where x > 10 yield {y = x} where y < 30;
 > val it = [{y=20}] : {y:int} list
@@ -312,6 +324,34 @@ from i in [1,2] yieldAll r in [i, i*10] join u in [3,4];
 > val it =
 >   [{r=1,u=3},{r=1,u=4},{r=10,u=3},{r=10,u=4},{r=2,u=3},{r=2,u=4},{r=20,u=3},
 >    {r=20,u=4}] : {r:int, u:int} list
+
+(* A record with modifiers is an ordinary element expression. It too is
+ * named as a whole, not by its fields. *)
+from i in [{a=1},{a=2}]
+  yieldAll [{i extend b = a * 10}, {i extend b = 0}]
+  where current.b > 5;
+> val it = [{a=1,b=10},{a=2,b=20}] : {a:int, b:int} list
+from i in [{a=1},{a=2}]
+  yieldAll r in [{i replace a = a + 10}]
+  where r.a > 11;
+> val it = [{a=12}] : {a:int} list
+
+(* A 'let' around the collection does not change how the element is
+ * named: 'yieldAll' names the whole element, whereas 'yield' of a
+ * record binds the record's fields. *)
+from i in [{a=1},{a=2}]
+  yieldAll (let val d = i.a in [{y=d}, {y=d+10}] end)
+  where current.y > 5;
+> val it = [{y=11},{y=12}] : {y:int} list
+from i in [{a=1},{a=2}]
+  yieldAll r in (let val d = i.a in [{y=d}, {y=d+10}] end)
+  where r.y > 5;
+> val it = [{y=11},{y=12}] : {y:int} list
+from i in [{a=1},{a=2}]
+  yieldAll (let val d = i.a in [{y=d}] end)
+  where y > 5;
+> stdIn:3.9 Error: unbound variable or constructor: y
+>   raised at: stdIn:3.9
 
 (* 'yieldAll' over a correlated subquery (the LATERAL/flatMap case):
  * the subquery references the outer row. This works because

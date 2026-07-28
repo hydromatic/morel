@@ -1443,7 +1443,7 @@ val emps3 = from e in emps2 union
 val emps4 =
   from e in emps3
     yield if e.job = "MANAGER"
-      then {e with sal = e.sal * 2.0}
+      then {e replace sal = e.sal * 2.0}
       else e;
 > val emps4 =
 >   [{comm=0,deptno=20,empno=7369,ename="SMITH",hiredate="1980-12-17",

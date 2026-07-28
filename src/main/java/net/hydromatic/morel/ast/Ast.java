@@ -26,6 +26,7 @@ import static net.hydromatic.morel.ast.AstBuilder.ast;
 import static net.hydromatic.morel.type.RecordType.ORDERING;
 import static net.hydromatic.morel.type.RecordType.compareNames;
 import static net.hydromatic.morel.util.Ord.forEachIndexed;
+import static net.hydromatic.morel.util.Static.transformEager;
 import static org.apache.calcite.util.Util.firstDuplicate;
 
 import com.google.common.collect.ImmutableList;
@@ -41,6 +42,7 @@ import java.util.Objects;
 import java.util.SortedMap;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
+import net.hydromatic.morel.compile.CompileException;
 import net.hydromatic.morel.compile.TypeResolver;
 import net.hydromatic.morel.util.ImmutablePairList;
 import net.hydromatic.morel.util.Ord;
@@ -2504,6 +2506,370 @@ public class Ast {
     }
   }
 
+  /** Writes "label = expression", omitting a label that is implicit. */
+  private static void unparseArg(AstWriter w, Id id, Exp exp) {
+    if (!(id.name.isEmpty() || id.name.equals(ast.implicitLabelOpt(exp)))) {
+      w.append(id, 0, 0).append(" = ");
+    }
+    w.append(exp, 0, 0);
+  }
+
+  /**
+   * Returns a copy of {@code args} with implicit labels made explicit.
+   *
+   * <p>Throws if two labels are the same.
+   */
+  private static PairList<Id, Exp> validateArgs(PairList<Id, Exp> args) {
+    final PairList<Id, Exp> args2 = PairList.of();
+    args.forEach(
+        (id, exp) -> {
+          if (id.name.isEmpty()) {
+            // Throws if no implicit label can be derived.
+            id = ast.implicitLabel(exp);
+          }
+          args2.add(id, exp);
+        });
+
+    // Lazy transform - we are unlikely to access each element more than once
+    final List<String> names = args2.transform((id, e) -> id.name);
+    final int i = firstDuplicate(names);
+    if (i >= 0) {
+      final int j = names.lastIndexOf(names.get(i));
+      throw new TypeResolver.TypeException(
+          format("duplicate field '%s' in record", names.get(i)),
+          args.left(j).pos);
+    }
+    return args2;
+  }
+
+  /**
+   * What a record modifier does to a label, in each of the two cases: the
+   * record has the label already, or it does not.
+   *
+   * <p>A verb names one case, and makes the other an error; a pair joined by
+   * {@code or} names both, and since each verb names its own case the pair is
+   * unordered. {@code skip} does nothing, and takes whichever case the other
+   * verb does not.
+   */
+  public enum ModifierVerb {
+    /** {@code extend}: adds a label, and rejects one that exists. */
+    EXTEND("extend", "", Exists.ERROR, Absent.ADD),
+    /** {@code extend or skip}: adds a label, and keeps one that exists. */
+    EXTEND_OR_SKIP("extend or skip", "", Exists.SKIP, Absent.ADD),
+    /** {@code extend or replace}: adds a label, or assigns to it. */
+    EXTEND_OR_REPLACE("extend or replace", "", Exists.REPLACE, Absent.ADD),
+    /** {@code replace}: assigns to a label, and rejects one that is absent. */
+    REPLACE("replace", "", Exists.REPLACE, Absent.ERROR),
+    /**
+     * {@code replace or skip}: assigns to a label, and ignores one that is
+     * absent.
+     */
+    REPLACE_OR_SKIP("replace", " or skip", Exists.REPLACE, Absent.SKIP),
+    /** {@code remove}: removes a label, and rejects one that is absent. */
+    REMOVE("remove", "", Exists.REMOVE, Absent.ERROR),
+    /**
+     * {@code remove or skip}: removes a label, and ignores one that is absent.
+     */
+    REMOVE_OR_SKIP("remove or skip", "", Exists.REMOVE, Absent.SKIP);
+
+    /** What to do with a label the record has. */
+    public final Exists exists;
+
+    /** What to do with a label the record does not have. */
+    public final Absent absent;
+
+    /** Text before {@code lenient}, if the modifier is lenient. */
+    private final String before;
+
+    /** Text after {@code lenient}. */
+    private final String after;
+
+    ModifierVerb(String before, String after, Exists exists, Absent absent) {
+      this.before = before;
+      this.after = after;
+      this.exists = exists;
+      this.absent = absent;
+    }
+
+    /** Returns the keywords of this verb, such as "extend or replace". */
+    public String verbs(boolean lenient) {
+      return lenient ? before + " lenient" + after : before + after;
+    }
+
+    /**
+     * Returns whether {@code lenient} is allowed after this verb; it is allowed
+     * only where a field can be assigned, because it relaxes the rule that
+     * assignment preserves the field's type.
+     */
+    public boolean allowsLenient() {
+      return exists == Exists.REPLACE;
+    }
+
+    /** What a modifier does to a label that the record has. */
+    public enum Exists {
+      /** Assigns the value the modifier gives. */
+      REPLACE,
+      /** Removes the field. */
+      REMOVE,
+      /** Leaves the field as it was. */
+      SKIP,
+      /** Reports that the field exists. */
+      ERROR
+    }
+
+    /** What a modifier does to a label that the record does not have. */
+    public enum Absent {
+      /** Adds a field with the value the modifier gives. */
+      ADD,
+      /** Does nothing. */
+      SKIP,
+      /** Reports that the field does not exist. */
+      ERROR
+    }
+  }
+
+  /**
+   * Operator applied to a record value inside braces. Modifiers are applied
+   * left to right, and each sees the result of the previous one.
+   */
+  public abstract static class Modifier {
+    public final Op op;
+
+    Modifier(Op op) {
+      this.op = requireNonNull(op);
+    }
+
+    @Override
+    public String toString() {
+      return unparse(new AstWriter()).toString();
+    }
+
+    /** Writes this modifier, including the leading space and its verbs. */
+    AstWriter unparse(AstWriter w) {
+      return unparseArgs(w.append(" ").append(verbs()).append(" "));
+    }
+
+    /** Returns the keywords that introduce this modifier. */
+    abstract String verbs();
+
+    /** Writes the part after the verbs. */
+    abstract AstWriter unparseArgs(AstWriter w);
+
+    /** Calls {@code consumer} for each expression this modifier contains. */
+    public abstract void forEachExp(Consumer<Exp> consumer);
+
+    /**
+     * Calls {@code consumer} for each label this modifier names. An {@code all}
+     * modifier names none; the labels of its argument are not known until it
+     * has a type.
+     */
+    public void forEachLabel(Consumer<String> consumer) {}
+
+    /** Accepts a shuttle, returning a modifier with transformed expressions. */
+    public abstract Modifier accept(Shuttle shuttle);
+
+    /**
+     * Returns a copy of this modifier with implicit labels made explicit.
+     *
+     * <p>Throws if two labels are the same.
+     */
+    public Modifier validate() {
+      return this;
+    }
+  }
+
+  /**
+   * Modifier that assigns to the labels of an expression row: {@code extend},
+   * {@code replace} and their {@code or} pairs.
+   */
+  public static class AssignModifier extends Modifier {
+    public final ModifierVerb verb;
+    public final boolean lenient;
+    public final PairList<Id, Exp> args;
+
+    AssignModifier(
+        ModifierVerb verb,
+        boolean lenient,
+        Iterable<? extends Map.Entry<Id, ? extends Exp>> args) {
+      super(Op.ASSIGN_MODIFIER);
+      this.verb = requireNonNull(verb);
+      this.lenient = lenient;
+      checkArgument(!lenient || verb.allowsLenient(), "verb %s", verb);
+      checkArgument(verb.exists != ModifierVerb.Exists.REMOVE, "verb %s", verb);
+      this.args = ImmutablePairList.copyOf(args);
+    }
+
+    @Override
+    String verbs() {
+      return verb.verbs(lenient);
+    }
+
+    @Override
+    AstWriter unparseArgs(AstWriter w) {
+      args.forEachIndexed(
+          (i, k, v) -> {
+            if (i > 0) {
+              w.append(", ");
+            }
+            unparseArg(w, k, v);
+          });
+      return w;
+    }
+
+    @Override
+    public void forEachExp(Consumer<Exp> consumer) {
+      args.rightList().forEach(consumer);
+    }
+
+    @Override
+    public Modifier accept(Shuttle shuttle) {
+      return copy(shuttle.visitPairList(args));
+    }
+
+    @Override
+    public void forEachLabel(Consumer<String> consumer) {
+      args.leftList().forEach(id -> consumer.accept(id.name));
+    }
+
+    @Override
+    public AssignModifier validate() {
+      return copy(validateArgs(args));
+    }
+
+    public AssignModifier copy(Collection<Map.Entry<Id, Exp>> args) {
+      return args.equals(this.args)
+          ? this
+          : new AssignModifier(verb, lenient, args);
+    }
+  }
+
+  /**
+   * Modifier that applies its verb to every field of a record-valued
+   * expression: {@code extend all}, {@code replace all} and their {@code or}
+   * pairs.
+   */
+  public static class AllModifier extends Modifier {
+    public final ModifierVerb verb;
+    public final boolean lenient;
+    public final Exp exp;
+
+    AllModifier(ModifierVerb verb, boolean lenient, Exp exp) {
+      super(Op.ALL_MODIFIER);
+      this.verb = requireNonNull(verb);
+      this.lenient = lenient;
+      checkArgument(!lenient || verb.allowsLenient(), "verb %s", verb);
+      checkArgument(verb.exists != ModifierVerb.Exists.REMOVE, "verb %s", verb);
+      this.exp = requireNonNull(exp);
+    }
+
+    @Override
+    String verbs() {
+      return verb.verbs(lenient) + " all";
+    }
+
+    @Override
+    AstWriter unparseArgs(AstWriter w) {
+      return exp.unparse(w, 0, 0);
+    }
+
+    @Override
+    public void forEachExp(Consumer<Exp> consumer) {
+      consumer.accept(exp);
+    }
+
+    @Override
+    public Modifier accept(Shuttle shuttle) {
+      return copy(exp.accept(shuttle));
+    }
+
+    public AllModifier copy(Exp exp) {
+      return exp.equals(this.exp) ? this : new AllModifier(verb, lenient, exp);
+    }
+  }
+
+  /**
+   * Modifier that removes labels: {@code remove} and {@code remove or skip}.
+   */
+  public static class RemoveModifier extends Modifier {
+    public final ModifierVerb verb;
+    public final ImmutableList<Id> labels;
+
+    RemoveModifier(ModifierVerb verb, List<Id> labels) {
+      super(Op.REMOVE_MODIFIER);
+      this.verb = requireNonNull(verb);
+      checkArgument(verb.exists == ModifierVerb.Exists.REMOVE, "verb %s", verb);
+      this.labels = ImmutableList.copyOf(labels);
+    }
+
+    @Override
+    String verbs() {
+      return verb.verbs(false);
+    }
+
+    @Override
+    AstWriter unparseArgs(AstWriter w) {
+      forEachIndexed(
+          labels, (label, i) -> w.append(i > 0 ? ", " : "").append(label.name));
+      return w;
+    }
+
+    @Override
+    public void forEachExp(Consumer<Exp> consumer) {}
+
+    @Override
+    public void forEachLabel(Consumer<String> consumer) {
+      labels.forEach(label -> consumer.accept(label.name));
+    }
+
+    @Override
+    public Modifier accept(Shuttle shuttle) {
+      return this;
+    }
+  }
+
+  /**
+   * Modifier that relabels fields: {@code rename}. Each pair gives the value of
+   * the label on the right to the label on the left, and all pairs apply
+   * simultaneously.
+   */
+  public static class RenameModifier extends Modifier {
+    public final PairList<Id, Id> args;
+
+    RenameModifier(Iterable<? extends Map.Entry<Id, ? extends Id>> args) {
+      super(Op.RENAME_MODIFIER);
+      this.args = ImmutablePairList.copyOf(args);
+    }
+
+    @Override
+    String verbs() {
+      return "rename";
+    }
+
+    @Override
+    AstWriter unparseArgs(AstWriter w) {
+      args.forEachIndexed(
+          (i, k, v) ->
+              w.append(i > 0 ? ", " : "")
+                  .append(k.name)
+                  .append(" = ")
+                  .append(v.name));
+      return w;
+    }
+
+    @Override
+    public void forEachExp(Consumer<Exp> consumer) {}
+
+    @Override
+    public void forEachLabel(Consumer<String> consumer) {
+      args.leftList().forEach(id -> consumer.accept(id.name));
+    }
+
+    @Override
+    public Modifier accept(Shuttle shuttle) {
+      return this;
+    }
+  }
+
   /**
    * Record.
    *
@@ -2512,20 +2878,43 @@ public class Ast {
    * @see AstBuilder#fieldCount(Exp)
    */
   public static class Record extends Exp {
-    public final @Nullable Exp with;
+    /**
+     * The expression the modifiers are applied to, or null if this is a plain
+     * record expression, or if the record has not been validated yet.
+     */
+    public final @Nullable Exp base;
+
+    /** Fields, if {@link #base} is null; otherwise empty. */
     public final PairList<Id, Exp> args;
+
+    /**
+     * Operators applied to {@link #base}, left to right; empty if {@code base}
+     * is null and this record has been validated.
+     *
+     * <p>As it comes from the parser a record is a list of fields and a list of
+     * modifiers, because which of the two forms was written is not a question
+     * for the grammar: the modifiers apply to the single unlabeled field, if
+     * that is what there is, and are an error otherwise. {@link #validate()}
+     * settles it, moving that field to {@link #base}.
+     */
+    public final ImmutableList<Modifier> modifiers;
 
     /** The empty record expression, {@code {}}. */
     public static final Record EMPTY =
-        new Record(Pos.ZERO, null, ImmutablePairList.of());
+        new Record(Pos.ZERO, null, ImmutablePairList.of(), ImmutableList.of());
 
     Record(
         Pos pos,
-        @Nullable Exp with,
-        Iterable<? extends Map.Entry<Id, ? extends Exp>> args) {
+        @Nullable Exp base,
+        Iterable<? extends Map.Entry<Id, ? extends Exp>> args,
+        List<Modifier> modifiers) {
       super(pos, Op.RECORD);
-      this.with = with;
+      this.base = base;
       this.args = ImmutablePairList.copyOf(args);
+      this.modifiers = ImmutableList.copyOf(modifiers);
+      checkArgument(
+          base == null || this.args.isEmpty(),
+          "a record with a base has no fields of its own");
     }
 
     @Override
@@ -2545,28 +2934,34 @@ public class Ast {
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       w.append("{");
-      if (with != null) {
-        with.unparse(w, 0, 0);
-        w.append(" with ");
+      if (base != null) {
+        base.unparse(w, 0, 0);
       }
       args.forEachIndexed(
           (i, k, v) -> {
             if (i > 0) {
               w.append(", ");
             }
-            if (!(k.name.isEmpty() || k.name.equals(ast.implicitLabelOpt(v)))) {
-              w.append(k, 0, 0).append(" = ");
-            }
-            w.append(v, 0, 0);
+            unparseArg(w, k, v);
           });
+      modifiers.forEach(modifier -> modifier.unparse(w));
       return w.append("}");
     }
 
     public Record copy(
-        @Nullable Exp with, Collection<Map.Entry<Id, Exp>> args) {
-      return Objects.equals(with, this.with) && args.equals(this.args)
+        @Nullable Exp base, Collection<Map.Entry<Id, Exp>> args) {
+      return copy(base, args, modifiers);
+    }
+
+    public Record copy(
+        @Nullable Exp base,
+        Collection<Map.Entry<Id, Exp>> args,
+        List<Modifier> modifiers) {
+      return Objects.equals(base, this.base)
+              && args.equals(this.args)
+              && modifiers.equals(this.modifiers)
           ? this
-          : ast.record(pos, with, args);
+          : ast.record(pos, base, args, modifiers);
     }
 
     public SortedMap<Id, Exp> sortedArgs() {
@@ -2574,31 +2969,28 @@ public class Ast {
     }
 
     /**
-     * Returns a copy of this Record with implicit labels made explicit.
+     * Returns a copy of this Record with implicit labels made explicit, in its
+     * fields and in each of its modifiers, and with the field the modifiers
+     * apply to moved to {@link #base}.
      *
-     * <p>Throws if there are duplicate field names.
+     * <p>Throws if there are duplicate field names, or if there are modifiers
+     * and no single unlabeled field for them to apply to.
      */
     public Record validate() {
-      final PairList<Ast.Id, Ast.Exp> args2 = PairList.of();
-      args.forEach(
-          (id, exp) -> {
-            if (id.name.isEmpty()) {
-              // Throws if no implicit label can be derived.
-              id = ast.implicitLabel(exp);
-            }
-            args2.add(id, exp);
-          });
-
-      // Lazy transform - we are unlikely to access each element more than once
-      final List<String> names = args2.transform((id, e) -> id.name);
-      final int i = firstDuplicate(names);
-      if (i >= 0) {
-        final int j = names.lastIndexOf(names.get(i));
-        throw new TypeResolver.TypeException(
-            format("duplicate field '%s' in record", names.get(i)),
-            args.left(j).pos);
+      if (base == null && !modifiers.isEmpty()) {
+        // The builder moves the field the modifiers apply to into 'base', so
+        // if there still are fields here, there was not exactly one, or it
+        // had a label of its own.
+        throw new CompileException(
+            "a record modifier applies to a base expression; enclose the"
+                + " expression and its modifiers in braces",
+            false,
+            pos);
       }
-      return copy(with, args2);
+      return copy(
+          base,
+          validateArgs(args),
+          transformEager(modifiers, Modifier::validate));
     }
   }
 

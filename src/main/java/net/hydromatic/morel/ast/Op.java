@@ -99,6 +99,13 @@ public enum Op {
   RECORD(Assoc.ATOM),
   FN(" -> ", 6, Assoc.RIGHT),
 
+  // modifiers of a record expression (see Ast.Modifier). The verb -- extend,
+  // replace, remove, and the 'or' pairs -- is in Ast.ModifierVerb, not here.
+  ASSIGN_MODIFIER,
+  ALL_MODIFIER,
+  REMOVE_MODIFIER,
+  RENAME_MODIFIER,
+
   // types
   TY_VAR(Assoc.ATOM),
   RECORD_TYPE(Assoc.ATOM),

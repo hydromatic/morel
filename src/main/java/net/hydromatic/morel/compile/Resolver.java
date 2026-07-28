@@ -828,28 +828,13 @@ public class Resolver {
         transformEager(tuple.args, this::toCore));
   }
 
+  /**
+   * Converts a record expression. It has no modifiers; {@link TypeResolver}
+   * replaces a record that has them with the {@code let}s they desugar to.
+   */
   private Core.Tuple toCore(Ast.Record record) {
-    RecordLikeType type = (RecordLikeType) typeMap.getType(record);
-    List<Core.Exp> args;
-    if (record.with != null) {
-      args = new ArrayList<>();
-      final Core.Exp coreWith = toCore(record.with);
-      final Map<String, Ast.Exp> nameArgs = new HashMap<>();
-      record.args.forEach((id, exp) -> nameArgs.put(id.name, exp));
-      forEachIndexed(
-          type.argNames(),
-          (field, i) -> {
-            Ast.Exp exp = nameArgs.get(field);
-            if (exp != null) {
-              args.add(toCore(exp));
-            } else {
-              args.add(core.field(typeMap.typeSystem, coreWith, i));
-            }
-          });
-    } else {
-      args = transformEager(record.args(), this::toCore);
-    }
-    return core.tuple(type, args);
+    final RecordLikeType type = (RecordLikeType) typeMap.getType(record);
+    return core.tuple(type, transformEager(record.args(), this::toCore));
   }
 
   private Core.Exp toCore(Ast.ListExp list) {
@@ -1509,16 +1494,24 @@ public class Resolver {
           // Its type is not RecordType, but RecordLikeType.
           return core.wildcardPat(targetType);
         }
-        final RecordType recordType = (RecordType) targetType;
+        // The target may be a tuple type; a tuple is a record whose labels
+        // are ordinals, and "{1 = x, 2 = y}" is a valid pattern for it.
+        final RecordLikeType recordLikeType = (RecordLikeType) targetType;
         final ImmutableList.Builder<Core.Pat> args = ImmutableList.builder();
-        recordType.argNameTypes.forEach(
-            (label, argType) -> {
-              final Ast.Pat argPat = recordPat.args.get(label);
-              final Core.Pat corePat =
-                  argPat != null ? toCore(argPat) : core.wildcardPat(argType);
-              args.add(corePat);
-            });
-        return core.recordPat(recordType, args.build());
+        recordLikeType
+            .argNameTypes()
+            .forEach(
+                (label, argType) -> {
+                  final Ast.Pat argPat = recordPat.args.get(label);
+                  final Core.Pat corePat =
+                      argPat != null
+                          ? toCore(argPat)
+                          : core.wildcardPat(argType);
+                  args.add(corePat);
+                });
+        return recordLikeType instanceof RecordType
+            ? core.recordPat((RecordType) recordLikeType, args.build())
+            : core.tuplePat(recordLikeType, args.build());
 
       case TUPLE_PAT:
         final Ast.TuplePat tuplePat = (Ast.TuplePat) pat;
@@ -1853,7 +1846,7 @@ public class Resolver {
     }
 
     private Core.Exp run(List<Ast.FromStep> steps) {
-      forEachIndexed(steps, (step, i) -> acceptStep(step, i));
+      forEachIndexed(steps, this::acceptStep);
       return fromBuilder.buildSimplify();
     }
 
@@ -2095,7 +2088,12 @@ public class Resolver {
       final Resolver r = withStepEnv(fromBuilder.stepEnv());
       final Core.Exp exp = r.toCore(yield.exp);
       final String binder = yield.binder == null ? null : yield.binder.name;
-      fromBuilder.yield_(binder, exp);
+      // The step binds the fields of the record it yields. The record may be
+      // wrapped in 'let's -- 'TypeResolver.desugarModifiers' puts it there --
+      // and 'exp' is then a 'let' or 'case', so ask the Ast, as TypeResolver
+      // did when it deduced the bindings.
+      final boolean record = TypeResolver.letBody(yield.exp).op == Op.RECORD;
+      fromBuilder.yield_(binder, exp, record);
     }
 
     @Override

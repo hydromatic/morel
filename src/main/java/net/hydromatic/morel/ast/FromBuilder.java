@@ -19,6 +19,7 @@
 package net.hydromatic.morel.ast;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static net.hydromatic.morel.ast.CoreBuilder.core;
 import static net.hydromatic.morel.util.Pair.forEach;
 import static net.hydromatic.morel.util.Static.allMatch;
@@ -43,6 +44,7 @@ import net.hydromatic.morel.compile.RefChecker;
 import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.ListType;
 import net.hydromatic.morel.type.PrimitiveType;
+import net.hydromatic.morel.type.RecordLikeType;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.Pair;
 import net.hydromatic.morel.util.PairList;
@@ -521,10 +523,45 @@ public class FromBuilder {
 
   /** Yields {@code exp} with optional binder. */
   public FromBuilder yield_(@Nullable String binder, Core.Exp exp) {
+    return yield_(binder, exp, exp.op == Op.TUPLE);
+  }
+
+  /**
+   * Yields {@code exp} with optional binder.
+   *
+   * <p>{@code record} is whether the value of {@code exp} is a record whose
+   * fields become the step's bindings. It is usually the same as whether {@code
+   * exp} is a {@link Core.Tuple}, but not always: a record with modifiers is a
+   * record, yet {@code TypeResolver.desugarModifiers} has turned it into one
+   * {@code let} per modifier, and the {@code let}s are {@code case}s by the
+   * time they get here. Only the caller, which has the {@link Ast} node, can
+   * tell.
+   *
+   * <p>A record that is not a {@link Core.Tuple} becomes two steps -- one that
+   * binds the whole row, and one that projects its fields -- because the rest
+   * of the pipeline reads a step's fields off a {@code Tuple}. Splitting also
+   * keeps {@code exp} to one evaluation per row.
+   */
+  public FromBuilder yield_(
+      @Nullable String binder, Core.Exp exp, boolean record) {
+    if (binder == null
+        && record
+        && exp.op != Op.TUPLE
+        && exp.type.op() == Op.RECORD_TYPE) {
+      final String name = typeSystem.nameGenerator.get();
+      yield_(name, exp);
+      final Core.Id id = core.id(getOnlyElement(stepEnv().bindings).id);
+      final RecordLikeType recordType = (RecordLikeType) exp.type;
+      final List<Core.Exp> fields = new ArrayList<>();
+      for (int i = 0; i < recordType.argNameTypes().size(); i++) {
+        fields.add(core.field(typeSystem, id, i));
+      }
+      return yield_(null, core.tuple(recordType, fields), true);
+    }
     final boolean atom;
     final Core.StepEnv env;
     if (binder == null) {
-      atom = exp.op != Op.TUPLE || exp.type.op() != Op.RECORD_TYPE;
+      atom = !record || exp.type.op() != Op.RECORD_TYPE;
       env = null;
     } else {
       final Core.IdPat binderId =

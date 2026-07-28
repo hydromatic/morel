@@ -68,6 +68,7 @@ public class MorelHighlighter {
           "do",
           "else",
           "end",
+          "eqtype",
           "exception",
           "fn",
           "fun",
@@ -106,30 +107,47 @@ public class MorelHighlighter {
    */
   private static final Set<String> MOREL_KEYWORDS =
       ImmutableSet.of(
+          "all",
           "compute",
           "current",
           "desc",
           "distinct",
           "elem",
+          "elements",
           "except",
           "exists",
+          "extend",
           "forall",
           "from",
+          "full",
           "group",
           "implies",
           "inst",
           "intersect",
+          "into",
           "join",
+          "left",
+          "lenient",
           "not",
+          "notelem",
+          "o",
           "on",
+          "or",
           "order",
           "ordinal",
           "over",
+          "remove",
+          "rename",
+          "replace",
           "require",
+          "right",
           "skip",
           "take",
-          "unorder",
+          "through",
+          "type_string",
+          "typeof",
           "union",
+          "unorder",
           "yield",
           "yieldAll");
 
@@ -140,8 +158,14 @@ public class MorelHighlighter {
   public static final Set<String> DML_KEYWORDS =
       ImmutableSet.of("assign", "commit", "delete", "insert", "update");
 
-  /** Union of {@link #SML_KEYWORDS} and {@link #MOREL_KEYWORDS}. */
-  private static final Set<String> ALL_KEYWORDS =
+  /**
+   * Union of {@link #SML_KEYWORDS} and {@link #MOREL_KEYWORDS}.
+   *
+   * <p>It must contain every keyword of the Morel grammar, which {@code
+   * LintTest.testHighlighterKeywords} checks; it contains more, because it also
+   * highlights the Standard ML keywords that Morel does not implement.
+   */
+  public static final Set<String> ALL_KEYWORDS =
       ImmutableSet.<String>builder()
           .addAll(SML_KEYWORDS)
           .addAll(MOREL_KEYWORDS)

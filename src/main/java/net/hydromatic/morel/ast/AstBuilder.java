@@ -75,6 +75,12 @@ public enum AstBuilder {
       case AGGREGATE:
         final Ast.Aggregate aggregate = (Ast.Aggregate) exp;
         return implicitLabelOpt(aggregate.aggregate);
+      case RECORD:
+        // A record with modifiers takes the label its base implies, so
+        // "{a = 1, {b remove x}}" labels the second field "b". A record
+        // without them has no implicit label.
+        final Ast.Record record = (Ast.Record) exp;
+        return record.base == null ? null : implicitLabelOpt(record.base);
       case APPLY:
         final Ast.Apply apply = (Ast.Apply) exp;
         if (apply.fn instanceof Ast.RecordSelector) {
@@ -355,15 +361,63 @@ public enum AstBuilder {
   }
 
   public Ast.Record record(
-      Pos pos, Ast.@Nullable Exp with, PairList<Ast.Id, Ast.Exp> args) {
-    return new Ast.Record(pos, with, ImmutablePairList.copyOf(args));
+      Pos pos, Ast.@Nullable Exp base, PairList<Ast.Id, Ast.Exp> args) {
+    return record(pos, base, args, ImmutableList.of());
   }
 
   public Ast.Record record(
       Pos pos,
-      Ast.@Nullable Exp with,
+      Ast.@Nullable Exp base,
+      PairList<Ast.Id, Ast.Exp> args,
+      List<Ast.Modifier> modifiers) {
+    if (base == null
+        && !modifiers.isEmpty()
+        && args.size() == 1
+        && args.left(0).name.isEmpty()) {
+      // The record is "{exp modifier ...}": the one field, which has no label
+      // of its own, is the base that the modifiers apply to.
+      return new Ast.Record(
+          pos, args.right(0), ImmutablePairList.of(), modifiers);
+    }
+    return new Ast.Record(pos, base, ImmutablePairList.copyOf(args), modifiers);
+  }
+
+  public Ast.Record record(
+      Pos pos,
+      Ast.@Nullable Exp base,
       Collection<Map.Entry<Ast.Id, Ast.Exp>> args) {
-    return record(pos, with, PairList.copyOf(args));
+    return record(pos, base, PairList.copyOf(args));
+  }
+
+  public Ast.Record record(
+      Pos pos,
+      Ast.@Nullable Exp base,
+      Collection<Map.Entry<Ast.Id, Ast.Exp>> args,
+      List<Ast.Modifier> modifiers) {
+    return record(pos, base, PairList.copyOf(args), modifiers);
+  }
+
+  /** Creates an "extend" or "replace" modifier. */
+  public Ast.AssignModifier assignModifier(
+      Ast.ModifierVerb verb, boolean lenient, PairList<Ast.Id, Ast.Exp> args) {
+    return new Ast.AssignModifier(verb, lenient, args);
+  }
+
+  /** Creates an "extend all" or "replace all" modifier. */
+  public Ast.AllModifier allModifier(
+      Ast.ModifierVerb verb, boolean lenient, Ast.Exp exp) {
+    return new Ast.AllModifier(verb, lenient, exp);
+  }
+
+  /** Creates a "remove" modifier. */
+  public Ast.RemoveModifier removeModifier(
+      Ast.ModifierVerb verb, List<Ast.Id> labels) {
+    return new Ast.RemoveModifier(verb, labels);
+  }
+
+  /** Creates a "rename" modifier. */
+  public Ast.RenameModifier renameModifier(PairList<Ast.Id, Ast.Id> args) {
+    return new Ast.RenameModifier(args);
   }
 
   public Ast.Exp equal(Ast.Exp a0, Ast.Exp a1) {
