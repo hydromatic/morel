@@ -75,7 +75,7 @@ jobs:
           then
             GOALS="$GOALS javadoc:javadoc javadoc:test-javadoc"
           fi
-          DEFS="-Dmorel.ci"
+          DEFS=
           if [ "${{ matrix.checkstyle-version }}" ]
           then
             DEFS="$DEFS -Dcheckstyle.version=${{ matrix.checkstyle-version }}"

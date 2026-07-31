@@ -22,12 +22,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static net.hydromatic.morel.TestUtils.findDirectory;
 import static net.hydromatic.morel.TestUtils.plus;
-import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.StringContains.containsString;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -58,26 +56,6 @@ public class ShellTest {
   /** Creates a Fixture. */
   static Fixture fixture() {
     return new FixtureImpl(Fixture.DEFAULT_ARG_LIST, "?", false, new File(""));
-  }
-
-  static void pauseForTenMilliseconds() {
-    try {
-      Thread.sleep(10);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * Throws "assumption failed" if the environment variable 'morel.ci' is set
-   * and is not 0 or false. Allows us to skip tests that are non-deterministic
-   * when run in GitHub actions or Travis CI.
-   */
-  static void assumeNotInCi() {
-    final String ci = System.getProperty("morel.ci");
-    assumeTrue(
-        ci == null || ci.equalsIgnoreCase("false") || ci.equals("0"),
-        "test skipped during CI (morel.ci is " + ci + ")");
   }
 
   static File getUseDirectory() {
@@ -159,14 +137,13 @@ public class ShellTest {
     final ByteArrayInputStream bais = new ByteArrayInputStream(new byte[0]);
     final Shell.Config config =
         Shell.parse(
-                Shell.Config.DEFAULT,
-                ImmutableList.of(
-                    "--system=false",
-                    "--terminal=dumb",
-                    "--banner=false",
-                    "-e",
-                    "from i in [1,2] yield i + 3"))
-            .withPauseFn(ShellTest::pauseForTenMilliseconds);
+            Shell.Config.DEFAULT,
+            ImmutableList.of(
+                "--system=false",
+                "--terminal=dumb",
+                "--banner=false",
+                "-e",
+                "from i in [1,2] yield i + 3"));
     final Shell shell = Shell.create(config, bais, baos);
     shell.run();
     final String outString = baos.toString(UTF_8.name()).replace("\r\n", "\n");
@@ -180,13 +157,12 @@ public class ShellTest {
     final ByteArrayInputStream bais = new ByteArrayInputStream(new byte[0]);
     final Shell.Config config =
         Shell.parse(
-                Shell.Config.DEFAULT,
-                ImmutableList.of(
-                    "--system=false",
-                    "--terminal=dumb",
-                    "--banner=false",
-                    "--eval=1 + 2"))
-            .withPauseFn(ShellTest::pauseForTenMilliseconds);
+            Shell.Config.DEFAULT,
+            ImmutableList.of(
+                "--system=false",
+                "--terminal=dumb",
+                "--banner=false",
+                "--eval=1 + 2"));
     final Shell shell = Shell.create(config, bais, baos);
     shell.run();
     final String outString = baos.toString(UTF_8.name()).replace("\r\n", "\n");
@@ -196,39 +172,32 @@ public class ShellTest {
   /** Tests {@link Shell} with empty input and banner disabled. */
   @Test
   void testShellNoBanner() {
-    fixture().withInputString("").assertOutput(containsString("- \r\r\n"));
+    fixture().withInputString("").assertOutput(containsString("- \r\n"));
   }
 
   /** Tests {@link Shell} with one line. */
   @Test
   void testOneLine() {
-    assumeNotInCi();
     final String in = "1 + 2;\n";
     final String expected =
-        "1 + 2;\r\n"
-            + "- 1 + 2;\r\r\n"
-            + "\u001B[?2004lval it = 3 : int\r\n"
-            + "- \r\r\n"
-            + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is2(expected));
+        "- 1 + 2;\r\n" //
+            + "val it = 3 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /** Tests {@link Shell} with a continued line. */
   @Test
   void testTwoLines() {
-    assumeNotInCi();
     final String in =
         "1 +\n" //
             + "2;\n";
     final String expected =
-        "1 +\r\n"
-            + "2;\r\n"
-            + "- 1 +\r\r\n"
-            + "\u001B[?2004l= 2;\r\r\n"
-            + "\u001B[?2004lval it = 3 : int\r\n"
-            + "- \r\r\n"
-            + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is2(expected));
+        "- 1 +\r\n" //
+            + "= 2;\r\n"
+            + "val it = 3 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /**
@@ -238,7 +207,6 @@ public class ShellTest {
    */
   @Test
   void testTypeVariableIsComplete() {
-    assumeNotInCi();
     fixture()
         .withInputString("fn x: 'a => x;\n")
         .assertOutput(containsString("val it = fn : 'a -> 'a"));
@@ -250,61 +218,72 @@ public class ShellTest {
    */
   @Test
   void testEmptyLines() {
-    assumeNotInCi();
     final String in =
         "(* a comment followed by empty *)\n" //
             + "\n"
             + ";\n";
     final String expected =
-        "(* a comment followed by empty *)\r\n"
-            + "\r\n"
-            + ";\r\n"
-            + "- (* a comment followed by empty *)\r\r\n"
-            + "\u001B[?2004l- \r\r\n"
-            + "\u001B[?2004l- ;\r\r\n"
-            + "\u001B[?2004l- \r\r\n"
-            + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is2(expected));
+        "- (* a comment followed by empty *)\r\n" //
+            + "- \r\n"
+            + "- ;\r\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
-  private Matcher<String> is2(String expected) {
-    return anyOf(is(expected), is(expected.replace("\u001B[?2004l", "")));
+  /**
+   * Tests that the shell writes each line of input once.
+   *
+   * <p>A terminal built over streams rather than a tty echoes the input from a
+   * pump thread of its own. That thread and the one that renders the line the
+   * reader has read both write to the output, in whatever order they are
+   * scheduled, so the output was not deterministic: usually the echo came first
+   * and the input appeared twice, but under load the pump could be descheduled
+   * after a character or two and the two interleaved, which made these tests
+   * fail once in a while. {@link Shell#create} now turns the echo off, leaving
+   * one writer.
+   */
+  @Test
+  void testInputWrittenOnce() {
+    final String in =
+        "1 + 2;\n" //
+            + "3 + 4;\n";
+    fixture()
+        .withInputString(in)
+        .assertOutput(
+            is(
+                "- 1 + 2;\r\n"
+                    + "val it = 3 : int\n"
+                    + "- 3 + 4;\r\n"
+                    + "val it = 7 : int\n"
+                    + "- \r\n"));
   }
 
   /** Tests {@link Shell} with a single-line comment. */
   @Test
   void testSingleLineComment() {
-    assumeNotInCi();
     final String in =
         "(*) line comment\n" //
             + "1 + 2;\n";
     final String expected =
-        "(*) line comment\r\n"
-            + "1 + 2;\r\n"
-            + "- (*) line comment\r\r\n"
-            + "\u001B[?2004l- 1 + 2;\r\r\n"
-            + "\u001B[?2004lval it = 3 : int\r\n"
-            + "- \r\r\n"
-            + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is2(expected));
+        "- (*) line comment\r\n" //
+            + "- 1 + 2;\r\n"
+            + "val it = 3 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /** Tests {@link Shell} with a single-line comment that contains a quote. */
   @Test
   void testSingleLineCommentWithQuote() {
-    assumeNotInCi();
     final String in =
         "(*) it's a single-line comment with a quote\n" //
             + "2 + 3;\n";
     final String expected =
-        "(*) it's a single-line comment with a quote\r\n"
-            + "2 + 3;\r\n"
-            + "- (*) it's a single-line comment with a quote\r\r\n"
-            + "\u001B[?2004l- 2 + 3;\r\r\n"
-            + "\u001B[?2004lval it = 5 : int\r\n"
-            + "- \r\r\n"
-            + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is2(expected));
+        "- (*) it's a single-line comment with a quote\r\n" //
+            + "- 2 + 3;\r\n"
+            + "val it = 5 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /**
@@ -312,7 +291,6 @@ public class ShellTest {
    */
   @Test
   void testMultiLineLet() {
-    assumeNotInCi();
     final String in =
         "let\n" //
             + "  val x = 1\n"
@@ -320,26 +298,19 @@ public class ShellTest {
             + "  x + 2\n"
             + "end;\n";
     final String expected =
-        "let\r\n"
-            + "  val x = 1\r\n"
-            + "in\r\n"
-            + "  x + 2\r\n"
-            + "end;\r\n"
-            + "- let\r\r\n"
-            + "\u001B[?2004l=   val x = 1\r\r\n"
-            + "\u001B[?2004l= in\r\r\n"
-            + "\u001B[?2004l=   x + 2\r\r\n"
-            + "\u001B[?2004l= end;\r\r\n"
-            + "\u001B[?2004lval it = 3 : int\r\n"
-            + "- \r\r\n"
-            + "\u001B[?2004l";
-    fixture().withInputString(in).assertOutput(is2(expected));
+        "- let\r\n" //
+            + "=   val x = 1\r\n"
+            + "= in\r\n"
+            + "=   x + 2\r\n"
+            + "= end;\r\n"
+            + "val it = 3 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
   }
 
   /** Tests the {@code use} function. */
   @Test
   void testUse() {
-    assumeNotInCi();
     // In SML-NJ, given x.sml as follows:
     //   val x = 2;
     //   val y = x + 3;
@@ -371,25 +342,23 @@ public class ShellTest {
     // and that z has been assigned after /tmp/z.sml has finished.
     final String in = "use \"x.sml\";\n";
     final String expected =
-        "use \"x.sml\";\r\n"
-            + "- use \"x.sml\";\r\r\n"
-            + "\u001B[?2004l[opening x.sml]\r\n"
-            + "val x = 2 : int\r\n"
-            + "val y = 5 : int\r\n"
-            + "val it = 7 : int\r\n"
-            + "[opening z.sml]\r\n"
-            + "val z = 7 : int\r\n"
-            + "val x = 1 : int\r\n"
-            + "val it = 8 : int\r\n"
-            + "val it = () : unit\r\n"
-            + "val it = 13 : int\r\n"
-            + "val it = () : unit\r\n"
-            + "- \r\r\n"
-            + "\u001B[?2004l";
+        "- use \"x.sml\";\r\n"
+            + "[opening x.sml]\n"
+            + "val x = 2 : int\n"
+            + "val y = 5 : int\n"
+            + "val it = 7 : int\n"
+            + "[opening z.sml]\n"
+            + "val z = 7 : int\n"
+            + "val x = 1 : int\n"
+            + "val it = 8 : int\n"
+            + "val it = () : unit\n"
+            + "val it = 13 : int\n"
+            + "val it = () : unit\n"
+            + "- \r\n";
     fixture()
         .withArgListPlusDirectory()
         .withInputString(in)
-        .assertOutput(is2(expected));
+        .assertOutput(is(expected));
 
     final String expectedRaw =
         "[opening x.sml]\n"
@@ -417,7 +386,7 @@ public class ShellTest {
         "fun f 1 = 1;\n" //
             + "f 1;\n";
     final String expected =
-        "stdIn:1.5-1.12 Warning: match nonexhaustive\n"
+        "stdIn:1.5-1.12 Warning: match nonexhaustive\n" //
             + "  raised at: stdIn:1.5-1.12\n"
             + "val f = fn : int -> int\n"
             + "val it = 1 : int\n";
@@ -427,25 +396,21 @@ public class ShellTest {
   /** Tests the {@code use} function on an empty file. */
   @Test
   void testUseEmpty() {
-    assumeNotInCi();
     final String in = "use \"empty.sml\";\n";
     final String expected =
-        "use \"empty.sml\";\r\n"
-            + "- use \"empty.sml\";\r\r\n"
-            + "\u001B[?2004l[opening empty.sml]\r\n"
-            + "val it = () : unit\r\n"
-            + "- \r\r\n"
-            + "\u001B[?2004l";
+        "- use \"empty.sml\";\r\n"
+            + "[opening empty.sml]\n"
+            + "val it = () : unit\n"
+            + "- \r\n";
     fixture()
         .withArgListPlusDirectory()
         .withInputString(in)
-        .assertOutput(is2(expected));
+        .assertOutput(is(expected));
   }
 
   /** Tests the {@code use} function on a missing file. */
   @Test
   void testUseMissing() {
-    assumeNotInCi();
     // SML-NJ gives:
     //   [opening missing.sml]
     //   [use failed: Io: openIn failed on "missing.sml", No such file or
@@ -455,25 +420,21 @@ public class ShellTest {
 
     final String in = "use \"missing.sml\";\n";
     final String expected =
-        "use \"missing.sml\";\r\n"
-            + "- use \"missing.sml\";\r\r\n"
-            + "\u001B[?2004l[opening missing.sml]\r\n"
-            + "[use failed: Io: openIn failed on missing.sml,"
-            + " No such file or directory]\r\n"
-            + "uncaught exception Error\r\n"
-            + "  raised at: stdIn:1.1-1.18\r\n"
-            + "- \r\r\n"
-            + "\u001B[?2004l";
+        "- use \"missing.sml\";\r\n"
+            + "[opening missing.sml]\n"
+            + "[use failed: Io: openIn failed on missing.sml, No such file or directory]\n"
+            + "uncaught exception Error\n"
+            + "  raised at: stdIn:1.1-1.18\n"
+            + "- \r\n";
     fixture()
         .withArgListPlusDirectory()
         .withInputString(in)
-        .assertOutput(is2(expected));
+        .assertOutput(is(expected));
   }
 
   /** Tests the {@code use} function on a file that uses itself. */
   @Test
   void testUseSelfReferential() {
-    assumeNotInCi();
     // SML-NJ gives:
     //   [opening self-referential.sml]
     //   [use failed: Io: openIn failed on "self-referential.sml", Too many
@@ -483,24 +444,21 @@ public class ShellTest {
 
     final String in = "use \"self-referential.sml\";\n";
     final String expected =
-        "use \"self-referential.sml\";\r\n"
-            + "- use \"self-referential.sml\";\r\r\n"
-            + "\u001B[?2004l[opening self-referential.sml]\r\n"
-            + "[opening self-referential.sml]\r\n"
-            + "[opening self-referential.sml]\r\n"
-            + "[opening self-referential.sml]\r\n"
-            + "[use failed: Io: openIn failed on self-referential.sml,"
-            + " Too many open files]\r\n"
-            + "uncaught exception Error\r\n"
-            + "  raised at: stdIn:1.1-1.27\r\n"
-            + "val it = () : unit\r\n"
-            + "- \r\r\n"
-            + "\u001B[?2004l";
+        "- use \"self-referential.sml\";\r\n"
+            + "[opening self-referential.sml]\n"
+            + "[opening self-referential.sml]\n"
+            + "[opening self-referential.sml]\n"
+            + "[opening self-referential.sml]\n"
+            + "[use failed: Io: openIn failed on self-referential.sml, Too many open files]\n"
+            + "uncaught exception Error\n"
+            + "  raised at: stdIn:1.1-1.27\n"
+            + "val it = () : unit\n"
+            + "- \r\n";
     fixture()
         .withArgListPlusDirectory()
         .withArgList(list -> plus(list, "--maxUseDepth=3"))
         .withInputString(in)
-        .assertOutput(is2(expected));
+        .assertOutput(is(expected));
   }
 
   /**
@@ -660,8 +618,7 @@ public class ShellTest {
         final ByteArrayInputStream bais =
             new ByteArrayInputStream(inputString().getBytes(UTF_8));
         final Shell.Config config =
-            Shell.parse(Shell.Config.DEFAULT, argList())
-                .withPauseFn(ShellTest::pauseForTenMilliseconds);
+            Shell.parse(Shell.Config.DEFAULT, argList());
         final Shell shell = Shell.create(config, bais, baos);
         shell.run();
         final String outString = baos.toString(UTF_8.name());
