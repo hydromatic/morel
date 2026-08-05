@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import net.hydromatic.morel.ast.Ast;
 import net.hydromatic.morel.ast.AstNode;
@@ -90,6 +91,30 @@ public class Resolver {
   final Environment env;
   final @Nullable Session session;
   final Core.@Nullable Exp current;
+
+  /**
+   * The field that holds the ordinal of the current row, if the step being
+   * resolved reads {@code ordinal}.
+   *
+   * <p>A step cannot compute its own ordinal &mdash; only a "yield" evaluates
+   * an expression exactly once per input row &mdash; so the step is preceded by
+   * a "yield" that materializes the ordinal as a field, and references to
+   * {@code ordinal} resolve to this pattern. Null if the step does not read
+   * {@code ordinal}.
+   *
+   * <p>Propagates into sub-resolvers, and therefore into a nested query. That
+   * is deliberate: in
+   *
+   * <pre>{@code
+   * from i in [10,20]
+   *   yield {i, js = (from j in [i + ordinal])}
+   * }</pre>
+   *
+   * <p>the nested query's scan expression is evaluated once per row of the
+   * enclosing query, so its {@code ordinal} is the enclosing row's.
+   */
+  final Core.@Nullable IdPat ordinalPat;
+
   final AggregateResolver aggregateResolver;
   final Map<String, Pair<Core.IdPat, List<Core.IdPat>>> resolvedOverloads;
 
@@ -127,6 +152,7 @@ public class Resolver {
       Environment env,
       @Nullable Session session,
       Core.@Nullable Exp current,
+      Core.@Nullable IdPat ordinalPat,
       AggregateResolver aggregateResolver) {
     this.typeMap = typeMap;
     this.nameGenerator = nameGenerator;
@@ -136,6 +162,7 @@ public class Resolver {
     this.env = env;
     this.session = session;
     this.current = current;
+    this.ordinalPat = ordinalPat;
     this.aggregateResolver = aggregateResolver;
   }
 
@@ -152,6 +179,7 @@ public class Resolver {
         new HashMap<>(),
         env,
         session,
+        null,
         null,
         AggregateResolver.UNSUPPORTED);
   }
@@ -170,6 +198,7 @@ public class Resolver {
         env,
         session,
         current,
+        ordinalPat,
         aggregateResolver);
   }
 
@@ -194,6 +223,29 @@ public class Resolver {
         env,
         session,
         current,
+        ordinalPat,
+        aggregateResolver);
+  }
+
+  /**
+   * Binds a Resolver to the field that holds the current row's ordinal.
+   *
+   * @see #ordinalPat
+   */
+  private Resolver withOrdinalPat(Core.@Nullable IdPat ordinalPat) {
+    if (ordinalPat == this.ordinalPat) {
+      return this;
+    }
+    return new Resolver(
+        typeMap,
+        nameGenerator,
+        variantIdMap,
+        resolvedOverloads,
+        dictionaryParams,
+        env,
+        session,
+        current,
+        ordinalPat,
         aggregateResolver);
   }
 
@@ -237,6 +289,7 @@ public class Resolver {
             innerEnv,
             session,
             current,
+            ordinalPat,
             AggregateResolver.UNSUPPORTED);
     final AggregateResolver aggregateResolver =
         new AggregateResolverImpl(
@@ -250,6 +303,7 @@ public class Resolver {
         outerEnv,
         session,
         current,
+        ordinalPat,
         aggregateResolver);
   }
 
@@ -734,6 +788,12 @@ public class Resolver {
   }
 
   private Core.Exp toCore(Ast.Ordinal ordinal) {
+    if (ordinalPat != null) {
+      // The step is preceded by a "yield" that materialized the ordinal as a
+      // field; read that field.
+      return core.id(ordinalPat);
+    }
+    // The step is itself a "yield", and can hold the call.
     Core.Literal fn =
         core.functionLiteral(typeMap.typeSystem, BuiltIn.Z_ORDINAL);
     Core.Tuple arg = core.tuple(typeMap.typeSystem);
@@ -1694,10 +1754,46 @@ public class Resolver {
    * Ast.FromStep} calling {@link FromBuilder} appropriately.
    */
   private class FromResolver extends Visitor {
-    final FromBuilder fromBuilder =
-        core.fromBuilder(
-            typeMap.typeSystem,
-            () -> env.bindAll(aggregateResolver.bindings()));
+    final FromBuilder fromBuilder;
+
+    /**
+     * The step environment before {@link FromBuilder#materializeOrdinal()}
+     * added the ordinal field; null unless the step being converted reads
+     * {@code ordinal}.
+     *
+     * <p>{@code current} is built from this environment, not from the one that
+     * contains the ordinal field. The field is an implementation detail, and
+     * must not change the type of the row that the user sees.
+     */
+    private final Core.@Nullable StepEnv stepPriorEnv;
+
+    FromResolver() {
+      this(
+          core.fromBuilder(
+              typeMap.typeSystem,
+              () -> env.bindAll(aggregateResolver.bindings())),
+          null);
+    }
+
+    private FromResolver(
+        FromBuilder fromBuilder, Core.@Nullable StepEnv stepPriorEnv) {
+      this.fromBuilder = fromBuilder;
+      this.stepPriorEnv = stepPriorEnv;
+    }
+
+    /**
+     * Returns a resolver for a step that reads {@code ordinal}, sharing this
+     * resolver's {@link FromBuilder}. Steps are converted through {@link
+     * Visitor#accept}, whose signature has no room for the extra context, so it
+     * travels in a resolver rather than in a parameter.
+     *
+     * <p>The field itself travels in the enclosing {@link Resolver}, which is
+     * where a nested query will look for it (see {@link Resolver#ordinalPat}).
+     */
+    private FromResolver withOrdinal(
+        Core.IdPat ordinalPat, Core.StepEnv priorEnv) {
+      return withOrdinalPat(ordinalPat).new FromResolver(fromBuilder, priorEnv);
+    }
 
     Core.Exp run(Ast.Query query) {
       if (query.isInto()) {
@@ -1757,19 +1853,47 @@ public class Resolver {
     }
 
     private Core.Exp run(List<Ast.FromStep> steps) {
-      steps.forEach(this::accept);
+      forEachIndexed(steps, (step, i) -> acceptStep(step, i));
       return fromBuilder.buildSimplify();
+    }
+
+    /**
+     * Converts one step, materializing the ordinal as a field first if the step
+     * reads {@code ordinal}.
+     *
+     * <p>The first step is never a reader: it has no input rows of its own, so
+     * an {@code ordinal} in it either belongs to an enclosing query (see {@link
+     * Resolver#ordinalPat}) or has already been rejected by the type resolver.
+     */
+    private void acceptStep(Ast.FromStep step, int i) {
+      if (i == 0 || !usesOrdinal(step)) {
+        accept(step);
+        return;
+      }
+      if (step instanceof Ast.Yield) {
+        // A "yield" is evaluated once per input row, so it can hold the call
+        // itself and needs no field. This is the common case -
+        // 'yield {ordinal, e.name}' - and it costs no extra step.
+        accept(step);
+        return;
+      }
+      final Core.StepEnv priorEnv = fromBuilder.stepEnv();
+      final Core.IdPat ordinalPat = fromBuilder.materializeOrdinal();
+      withOrdinal(ordinalPat, priorEnv).accept(step);
+      fromBuilder.dropOrdinal(ordinalPat, priorEnv);
     }
 
     /** Creates a new resolver, adding the bindings from the current step. */
     private Resolver withStepEnv(Core.StepEnv stepEnv) {
+      // 'current' is the row as the user sees it, which excludes a
+      // materialized ordinal field; but that field must still be in the
+      // environment, so that references to it resolve.
+      final Core.StepEnv rowEnv = stepPriorEnv == null ? stepEnv : stepPriorEnv;
       Core.Exp f;
-      if (stepEnv.atom) {
-        f = core.id(stepEnv.bindings.get(0).id);
+      if (rowEnv.atom) {
+        f = core.id(rowEnv.bindings.get(0).id);
       } else {
-        final PairList<String, Core.Exp> nameExps = PairList.of();
-        stepEnv.bindings.forEach(b -> nameExps.add(b.id.name, core.id(b.id)));
-        f = core.record(typeMap.typeSystem, nameExps);
+        f = core.record(typeMap.typeSystem, rowEnv.bindings);
       }
       return withEnv(stepEnv.bindings).withCurrent(f);
     }
@@ -1777,6 +1901,91 @@ public class Resolver {
     @Override
     protected void visit(Ast.From from) {
       // Do not traverse into the sub-"from".
+    }
+
+    /**
+     * Returns whether a step reads {@code ordinal}.
+     *
+     * <p>A nested query is evaluated once per row of the enclosing step, so an
+     * {@code ordinal} in one of the expressions that the nested query evaluates
+     * before its first row belongs to the enclosing step and counts here. An
+     * {@code ordinal} anywhere else in the nested query belongs to a step of
+     * that query, and does not.
+     *
+     * <p>By the same rule, a {@code take}, {@code skip}, {@code union}, {@code
+     * except}, {@code intersect}, {@code through} or {@code into} step is
+     * answered no whatever it contains: its expressions are evaluated before
+     * <i>this</i> query's first row, so an {@code ordinal} in them belongs to
+     * the step enclosing this query, which finds it through its own lookahead.
+     *
+     * <p>A step that reads {@code ordinal} several times needs one field, not
+     * several, so the answer is yes or no rather than a count.
+     *
+     * <p>The compiler applies the same rule: only a "yield" installs a
+     * row-ordinal counter, so a call compiled anywhere else has nothing to
+     * read, and throws. The two must agree.
+     */
+    private boolean usesOrdinal(Ast.FromStep step) {
+      if (isRootStep(step)) {
+        return false;
+      }
+      final AtomicBoolean b = new AtomicBoolean();
+      step.accept(
+          new Visitor() {
+            @Override
+            protected void visit(Ast.Ordinal ordinal) {
+              b.set(true);
+            }
+
+            @Override
+            protected void visit(Ast.From from) {
+              visitQuery(from.steps);
+            }
+
+            @Override
+            protected void visit(Ast.Exists exists) {
+              visitQuery(exists.steps);
+            }
+
+            @Override
+            protected void visit(Ast.Forall forall) {
+              visitQuery(forall.steps);
+            }
+
+            /**
+             * Visits the expressions that a nested query evaluates before its
+             * first row, and nothing else.
+             */
+            private void visitQuery(List<Ast.FromStep> steps) {
+              forEachIndexed(
+                  steps,
+                  (s, i) -> {
+                    if (i == 0 && s instanceof Ast.Scan) {
+                      final Ast.Scan scan = (Ast.Scan) s;
+                      if (scan.exp != null) {
+                        scan.exp.accept(this);
+                      }
+                    } else if (isRootStep(s)) {
+                      s.accept(this);
+                    }
+                  });
+            }
+          });
+      return b.get();
+    }
+
+    /**
+     * Returns whether every expression of a step is evaluated before its
+     * query's first row.
+     *
+     * @see #usesOrdinal(Ast.FromStep)
+     */
+    private boolean isRootStep(Ast.FromStep step) {
+      return step instanceof Ast.Skip
+          || step instanceof Ast.Take
+          || step instanceof Ast.SetStep
+          || step instanceof Ast.Through
+          || step instanceof Ast.Into;
     }
 
     @Override
@@ -1793,7 +2002,13 @@ public class Resolver {
                 corePat.type,
                 ImmutableRangeSet.of(Range.all()));
       } else {
-        coreExp = r.toCore(scan.exp);
+        // The first step's extent is evaluated before the query's first row,
+        // so 'current' in it is the enclosing query's row, not this query's
+        // (which has no rows yet). The type resolver read it that way too, in
+        // the root environment.
+        final Resolver rExp =
+            fromBuilder.stepEnv().bindings.isEmpty() ? Resolver.this : r;
+        coreExp = rExp.toCore(scan.exp);
         final Type elementType = coreExp.type.elementType();
         corePat = r.toCore(scan.pat, elementType);
       }

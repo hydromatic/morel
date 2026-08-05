@@ -580,6 +580,54 @@ public class FromBuilderTest {
     final Core.Exp e3 = fromBuilder3.buildSimplify();
     assertThat(e3, is(from3));
   }
+
+  /**
+   * Tests the shape that {@link FromBuilder#materializeOrdinal()} produces: a
+   * call to "ordinal" in a "yield", and a later step that reads the field it
+   * binds.
+   */
+  @Test
+  void testMaterializeOrdinal() {
+    // from i in [1, 2] yield {i = i, v$0 = ordinal} where v$0 < 2
+    final Fixture f = new Fixture();
+    final FromBuilder fromBuilder = f.fromBuilder();
+    fromBuilder.scan(f.iPat, f.list12);
+    final Core.IdPat ordinalPat = fromBuilder.materializeOrdinal();
+    fromBuilder.where(
+        core.lessThan(f.typeSystem, core.id(ordinalPat), f.intLiteral(2)));
+
+    final Core.From from = fromBuilder.build();
+    assertThat(
+        from,
+        hasToString(
+            "from i in [1, 2] yield {i = i, v$0 = $ordinal ()} where v$0 < 2"));
+  }
+
+  /**
+   * Tests that a "yield" may contain several calls to "ordinal". The increment
+   * belongs to the step, not to the call, so the calls are reads of one counter
+   * and all see the same value; merging, inlining or duplicating expressions
+   * within a "yield" is therefore safe.
+   */
+  @Test
+  void testSeveralOrdinalCallsInOneYield() {
+    // from i in [1, 2] yield {a = ordinal, b = ordinal}
+    final Fixture f = new Fixture();
+    final FromBuilder fromBuilder = f.fromBuilder();
+    final PairList<String, Core.Exp> nameExps =
+        PairList.copyOf(
+            "a", fromBuilder.ordinalExp(),
+            "b", fromBuilder.ordinalExp());
+    fromBuilder
+        .scan(f.iPat, f.list12)
+        .yield_(core.record(f.typeSystem, nameExps));
+
+    final Core.From from = fromBuilder.build();
+    assertThat(
+        from,
+        hasToString(
+            "from i in [1, 2] yield {a = $ordinal (), b = $ordinal ()}"));
+  }
 }
 
 // End FromBuilderTest.java

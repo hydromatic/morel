@@ -1048,6 +1048,13 @@ public enum CoreBuilder {
     return tuple(typeSystem, recordType, sortedNameExps.values());
   }
 
+  /** Creates a record whose fields are the values of a list of bindings. */
+  public Core.Exp record(TypeSystem typeSystem, List<Binding> bindings) {
+    return record(
+        typeSystem,
+        fromTransformed(bindings, (b, c) -> c.accept(b.id.name, id(b.id))));
+  }
+
   /**
    * Creates an expression for a list of named patterns.
    *

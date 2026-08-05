@@ -426,30 +426,24 @@ public class FromBuilder {
       boolean atom,
       SortedMap<Core.IdPat, Core.Exp> groupExps,
       SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
-    for (Core.Aggregate aggregate : aggregates.values()) {
-      if (aggregate.argument != null && containsOrdinal(aggregate.argument)) {
-        return groupOverOrdinal(atom, groupExps, aggregates);
-      }
-    }
     final Core.StepEnv env = stepEnv();
     return addStep(core.group(atom, env.ordered, groupExps, aggregates));
   }
 
   /**
-   * Creates a "group" step in which at least one aggregate argument reads
-   * {@code ordinal}.
+   * Adds a "yield" step that materializes {@code ordinal} as a field of the
+   * row, and returns the pattern that names it.
    *
-   * <p>An aggregate argument is evaluated once the rows have been collected
-   * into their groups, by which time the input row it came from is no longer
-   * current and its position is unrecoverable. So we prefix the step with a
-   * "yield" that materializes the ordinal as an ordinary field -- evaluated
-   * once per input row, like any other yield expression -- and rewrite the
-   * arguments to read that field.
+   * <p>The step to be added next reads that field rather than calling {@code
+   * ordinal} itself. Only a "yield" evaluates an expression exactly once per
+   * input row, so only a "yield" can generate the value; a "where" condition is
+   * evaluated per row but yields no fields, and an aggregate argument is
+   * evaluated after the rows have been collected into their groups, by which
+   * time the input row's position is unrecoverable.
+   *
+   * @see #dropOrdinal(Core.IdPat, Core.StepEnv)
    */
-  private FromBuilder groupOverOrdinal(
-      boolean atom,
-      SortedMap<Core.IdPat, Core.Exp> groupExps,
-      SortedMap<Core.IdPat, Core.Aggregate> aggregates) {
+  public Core.IdPat materializeOrdinal() {
     final Core.StepEnv env = stepEnv();
     final Core.IdPat ordinalPat =
         core.idPat(PrimitiveType.INT, typeSystem.nameGenerator::get);
@@ -462,41 +456,54 @@ public class FromBuilder {
             append(bindings, Binding.of(ordinalPat)), false, env.ordered),
         core.record(typeSystem, nameExps),
         false);
+    return ordinalPat;
+  }
 
-    // Both the keys and the arguments must read the materialized field; a key
-    // that still called 'ordinal' would start a second, independent count.
-    final Shuttle shuttle =
-        new Shuttle(typeSystem) {
-          @Override
-          protected Core.Exp visit(Core.Apply apply) {
-            return apply.isCallTo(BuiltIn.Z_ORDINAL)
-                ? core.id(ordinalPat)
-                : super.visit(apply);
+  /**
+   * Adds a "yield" step that projects away the field added by {@link
+   * #materializeOrdinal()}.
+   *
+   * <p>The field is an implementation detail, and must not reach the query's
+   * result. Does nothing unless the step just added passed its bindings
+   * through, as "where" and "order" do; a step that replaced them, such as
+   * "group" or "yield", has already removed the field. The test for that is
+   * that the field, and everything that was in scope before it, are still in
+   * scope: after "yield ordinal" the field's own pattern survives as the step's
+   * single binding, but the prior bindings do not.
+   */
+  public FromBuilder dropOrdinal(Core.IdPat ordinalPat, Core.StepEnv priorEnv) {
+    if (!containsBinding(ordinalPat)
+        || !allMatch(priorEnv.bindings, b -> containsBinding(b.id))) {
+      return this;
+    }
+    final List<Binding> remaining = new ArrayList<>();
+    bindings.forEach(
+        b -> {
+          if (!b.id.equals(ordinalPat)) {
+            remaining.add(b);
           }
-        };
-    final ImmutableSortedMap.Builder<Core.IdPat, Core.Exp> groupExps2 =
-        ImmutableSortedMap.naturalOrder();
-    groupExps.forEach((id, exp) -> groupExps2.put(id, exp.accept(shuttle)));
-    final ImmutableSortedMap.Builder<Core.IdPat, Core.Aggregate> aggregates2 =
-        ImmutableSortedMap.naturalOrder();
-    aggregates.forEach(
-        (id, aggregate) ->
-            aggregates2.put(
-                id,
-                aggregate.argument == null
-                    ? aggregate
-                    : core.aggregate(
-                        aggregate.pos,
-                        aggregate.type,
-                        aggregate.aggregate,
-                        aggregate.argument.accept(shuttle))));
-    return addStep(
-        core.group(
-            atom, stepEnv().ordered, groupExps2.build(), aggregates2.build()));
+        });
+    // The row is an atom only if it was an atom before, and the step added no
+    // bindings of its own (as a join would).
+    final boolean atom =
+        priorEnv.atom && Binding.listsEqual(remaining, priorEnv.bindings, true);
+    final Core.Exp exp;
+    if (atom) {
+      exp = core.id(remaining.get(0).id);
+    } else {
+      exp = core.record(typeSystem, remaining);
+    }
+    return yield_(
+        false, Core.StepEnv.of(remaining, atom, stepEnv().ordered), exp, atom);
+  }
+
+  /** Returns whether a pattern is currently in scope. */
+  private boolean containsBinding(Core.NamedPat pat) {
+    return bindings.stream().anyMatch(b -> b.id.equals(pat));
   }
 
   /** Creates the expression {@code ordinal}. */
-  private Core.Exp ordinalExp() {
+  public Core.Exp ordinalExp() {
     return core.apply(
         Pos.ZERO,
         PrimitiveType.INT,

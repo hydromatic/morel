@@ -122,7 +122,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class TypeResolver {
   private final TypeSystem typeSystem;
   private final Consumer<CompileException> warningConsumer;
-  private final PairList<Ast.FromStep, Triple> stepStack = PairList.of();
   private final PairList<Ast.Group, Triple> computeStack = PairList.of();
   private final List<Consumer<Resolved>> validations = new ArrayList<>();
   private final Unifier unifier = new MartelliUnifier();
@@ -1245,16 +1244,25 @@ public class TypeResolver {
         typeSystem, BuiltIn.Z_CURRENT.mlName, TypeEnv.onlyValidInQuery(node));
   }
 
-  /** Deduces the type of an {@code ordinal} keyword: {@code int}. */
+  /**
+   * Deduces the type of an {@code ordinal} keyword: {@code int}.
+   *
+   * <p>What the environment binds is not that type but the collection whose
+   * rows the occurrence counts, put there by the step that produced it (see
+   * {@link Triple#of}). Reading it here is what decides which step an {@code
+   * ordinal} belongs to, and the collection must be ordered for it to mean
+   * anything &mdash; which is not known until the types are resolved.
+   */
   private Ast.Exp deduceOrdinalType(
       TypeEnv env, Ast.Ordinal ordinal, Variable v) {
-    checkInQuery(env, ordinal);
-    final Triple step = last(stepStack.rightList());
+    final Term c =
+        env.get(
+            typeSystem,
+            BuiltIn.Z_ORDINAL.mlName,
+            TypeEnv.onlyValidInQuery(ordinal));
     validations.add(
         resolved -> {
-          requireNonNull(step.c);
-          Type stepType = resolved.typeMap.termToType(step.c);
-          if (stepType.op() != Op.LIST) {
+          if (resolved.typeMap.termToType(c).op() != Op.LIST) {
             throw new TypeException(
                 "cannot use 'ordinal' in unordered query", ordinal.pos);
           }
@@ -1303,12 +1311,7 @@ public class TypeResolver {
       // Whether this is the last step. (The synthetic "yield" counts as a last
       // step.)
       final boolean lastStep = step.i == query.steps.size() - 1;
-      try {
-        stepStack.add(step.e, p);
-        p = deduceStepType(step.e, p, fieldVars, steps2);
-      } finally {
-        stepStack.remove(stepStack.size() - 1);
-      }
+      p = deduceStepType(step.e, p, fieldVars, steps2);
       switch (step.e.op) {
         case COMPUTE:
         case INTO:
@@ -1420,7 +1423,7 @@ public class TypeResolver {
         final Variable c4 = unifier.variable();
         meetCollections(terms, c4, p.v);
         steps.add(setStep.copy(setStep.distinct, args2));
-        return new Triple(p.rootEnv, p.env, p.v, c4);
+        return Triple.of(p.rootEnv, p.env, p.v, c4);
 
       case YIELD:
         return deduceYieldStepType((Ast.Yield) step, p, fieldVars, steps);
@@ -1469,7 +1472,10 @@ public class TypeResolver {
             deducePatType(
                 p.rootEnv, through.pat, termMap::add, null, v18, t -> t);
         final Variable v17 = toVariable(fnTerm(p.c, c18));
-        final Ast.Exp throughExp = deduceExpType(p.env, through.exp, v17);
+        // "f" is applied to the whole collection - 'through p in f' is
+        // 'from p in f (from ...)' - so it is evaluated before the query's
+        // first row, and cannot see the query's own rows.
+        final Ast.Exp throughExp = deduceExpType(p.rootEnv, through.exp, v17);
         isCollectionOf(c18, v18);
         // Register the rewritten node (the one added to 'steps', which the
         // resolver later looks up), not only the original: type resolution may
@@ -5348,12 +5354,23 @@ public class TypeResolver {
       return new Triple(rootEnv, env, v, null);
     }
 
+    /**
+     * Creates a triple for the output of a step, binding what the next step
+     * will read: {@code current} is its row, {@code ordinal} the collection
+     * whose rows it counts.
+     *
+     * <p>Binding them here is what attributes an occurrence to a step. An
+     * expression evaluated before a query's first row is deduced in {@link
+     * #rootEnv}, which no step of this query has touched, so it reads the
+     * bindings the <i>enclosing</i> step left &mdash; which is the rule.
+     */
     static Triple of(TypeEnv rootEnv, TypeEnv env, Variable v, Variable c) {
-      return new Triple(rootEnv, env.bind(BuiltIn.Z_CURRENT.mlName, v), v, c);
-    }
-
-    Triple withV(Variable v) {
-      return v == this.v ? this : new Triple(rootEnv, env, v, c);
+      return new Triple(
+          rootEnv,
+          env.bind(BuiltIn.Z_CURRENT.mlName, v)
+              .bind(BuiltIn.Z_ORDINAL.mlName, c),
+          v,
+          c);
     }
 
     Triple withEnv(TypeEnv env) {

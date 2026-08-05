@@ -8053,12 +8053,7 @@ public abstract class Codes {
 
     @Override
     public Describer describe(Describer describer) {
-      describer.addStartAction(this::resetOrdinal);
       return describer.start("ordinal", d -> {});
-    }
-
-    private void resetOrdinal() {
-      ordinalSlots[0] = -1;
     }
   }
 

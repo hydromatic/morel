@@ -515,59 +515,115 @@ from e in emps,
   order (current mod 2, current);
 > val it = [110,132,121,133] : int list
 
-(*) "current" is not available in "skip", "take", "union", "intersect", "except"
+(* Current before the first row ----------------------------------- *)
+
+(*) "current" is not available outside a query
 1 + current;
 > stdIn:1.5-1.12 Error: 'current' is only valid in a query
 >   raised at: stdIn:1.5-1.12
 
-(*) "current" can't be used in the first step of a query
-from i in [current + 1, current + 2, current + 3];
+(* The expressions that a query evaluates before its first row - the
+ * collection that its first step scans, a 'take' or 'skip' count, the
+ * operands of 'union', 'except' and 'intersect', and the function of a
+ * 'through' or an 'into' - have no row to read. *)
+from i in [current];
 > stdIn:1.12-1.19 Error: 'current' is only valid in a query
 >   raised at: stdIn:1.12-1.19
+from i in [1,2] take current;
+> stdIn:1.22-1.29 Error: 'current' is only valid in a query
+>   raised at: stdIn:1.22-1.29
+from i in [1,2] skip current;
+> stdIn:1.22-1.29 Error: 'current' is only valid in a query
+>   raised at: stdIn:1.22-1.29
+from i in [1,2] union [current];
+> stdIn:1.24-1.31 Error: 'current' is only valid in a query
+>   raised at: stdIn:1.24-1.31
+from i in [1,2] except [current];
+> stdIn:1.25-1.32 Error: 'current' is only valid in a query
+>   raised at: stdIn:1.25-1.32
+from i in [1,2] intersect [current];
+> stdIn:1.28-1.35 Error: 'current' is only valid in a query
+>   raised at: stdIn:1.28-1.35
+from i in [1,2] through j in (fn y => [current]);
+> stdIn:1.40-1.47 Error: 'current' is only valid in a query
+>   raised at: stdIn:1.40-1.47
+from i in [1,2] into (fn y => current);
+> stdIn:1.31-1.38 Error: 'current' is only valid in a query
+>   raised at: stdIn:1.31-1.38
 
-(*) ... but it can be used in the second
+(*) ... but a scan that is not the first step of a query has a row.
 from i in [1, 2],
   j in [current + 10, current + 20];
 > val it = [{i=1,j=11},{i=1,j=21},{i=2,j=12},{i=2,j=22}] : {i:int, j:int} list
 
-from i in [1,2,3,4,5]
-  skip current;
-> stdIn:2.8-2.15 Error: 'current' is only valid in a query
->   raised at: stdIn:2.8-2.15
+(* In a subquery each of them is evaluated once per execution of that
+ * subquery, hence once per row of the enclosing step, and reads that row. *)
+from x in [10,20] yield (from i in [current]);
+> val it = [[10],[20]] : int list list
+from x in [10,20] yield (from i in [1,2] take current);
+> val it = [[1,2],[1,2]] : int list list
+from x in [10,20] yield (from i in [1,2] skip current);
+> val it = [[],[]] : int list list
+from x in [10,20] yield (from i in [1,2] union [current]);
+> val it = [[1,2,10],[1,2,20]] : int list list
+from x in [10,20] yield (from i in [1,2] except [current]);
+> val it = [[1,2],[1,2]] : int list list
+from x in [10,20] yield (from i in [1,2] intersect [current]);
+> val it = [[],[]] : int list list
+from x in [10,20] yield (from i in [1,2] through j in (fn y => [current]));
+> val it = [[10],[20]] : int list list
+from x in [10,20] yield (from i in [1,2] into (fn y => current));
+> val it = [10,20] : int list
 
-from i in [1,2,3,4,5]
-  take current;
-> stdIn:2.8-2.15 Error: 'current' is only valid in a query
->   raised at: stdIn:2.8-2.15
+(*) 'current' only names a row, so the enclosing step need not be ordered.
+from x in bag [10,20] yield (from i in [current]);
+> val it = [[10],[20]] : int list bag
+from x in bag [10,20] yield (from i in [1,2] take current);
+> val it = [[1,2],[1,2]] : int list bag
+from x in bag [10,20] yield (from i in [1,2] skip current);
+> val it = [[],[]] : int list bag
+from x in bag [10,20] yield (from i in [1,2] union [current]);
+> val it = [[1,2,10],[1,2,20]] : int list bag
+from x in bag [10,20] yield (from i in [1,2] except [current]);
+> val it = [[1,2],[1,2]] : int list bag
+from x in bag [10,20] yield (from i in [1,2] intersect [current]);
+> val it = [[],[]] : int list bag
+from x in bag [10,20] yield (from i in [1,2] through j in (fn y => [current]));
+> val it = [[10],[20]] : int list bag
+from x in bag [10,20] yield (from i in [1,2] into (fn y => current));
+> val it = [10,20] : int bag
 
-from i in [1,2,3,4,5]
-  union [current + 10];
-> stdIn:2.10-2.17 Error: 'current' is only valid in a query
->   raised at: stdIn:2.10-2.17
+(* The subquery's own orderedness is not consulted; the row being read
+ * belongs to the enclosing step. *)
+from x in [10,20] yield (from i in bag [current]);
+> val it = [[10],[20]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] take current);
+> val it = [[1,2],[1,2]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] skip current);
+> val it = [[],[]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] union [current]);
+> val it = [[1,2,10],[1,2,20]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] except [current]);
+> val it = [[1,2],[1,2]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] intersect [current]);
+> val it = [[],[]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] through j in (fn y => [current]));
+> val it = [[10],[20]] : int list list
+from x in [10,20] yield (from i in bag [1,2] into (fn y => current));
+> val it = [10,20] : int list
 
-from i in [1,2,3,4,5]
-  intersect [current + 1];
-> stdIn:2.14-2.21 Error: 'current' is only valid in a query
->   raised at: stdIn:2.14-2.21
-
-from i in [1,2,3,4,5]
-  except [current + 1];
-> stdIn:2.11-2.18 Error: 'current' is only valid in a query
->   raised at: stdIn:2.11-2.18
-
-(*) But "current" is available in a subquery
-from i in [1,2,3,4,5]
-  yield {i, js = (from j in ["a","b","c"] take current)};
-> val it =
->   [{i=1,js=["a"]},{i=2,js=["a","b"]},{i=3,js=["a","b","c"]},
->    {i=4,js=["a","b","c"]},{i=5,js=["a","b","c"]}]
->   : {i:int, js:string list} list
-
-from i in [1,2,3,4,5]
-  yield {i, js = (from j in ["a","b","c"] skip current)};
-> val it =
->   [{i=1,js=["b","c"]},{i=2,js=["c"]},{i=3,js=[]},{i=4,js=[]},{i=5,js=[]}]
->   : {i:int, js:string list} list
+(* A subquery in one of those positions is itself evaluated before its
+ * enclosing query's first row, so the reading skips that query too. *)
+from i in [1,2] take (from j in [3,4] into (fn y => current));
+> stdIn:1.53-1.60 Error: 'current' is only valid in a query
+>   raised at: stdIn:1.53-1.60
+from i in [1,2] union [(from j in [3,4] into (fn y => current))];
+> stdIn:1.55-1.62 Error: 'current' is only valid in a query
+>   raised at: stdIn:1.55-1.62
+from x in [10,20] yield (from i in [1,2] take (from j in [3,4] into (fn y => current)));
+> val it = [[1,2],[1,2]] : int list list
+from x in [10,20] yield (from i in [1,2] union [(from j in [3,4] into (fn y => current))]);
+> val it = [[1,2,10],[1,2,20]] : int list list
 
 from i in [1,2,3,4,5]
   yield (from j in ["a","b","ccc","dd"] where size(j) = i skip current);
@@ -582,17 +638,6 @@ from i in [1,2,3,4,5]
 1 + ordinal;
 > stdIn:1.5-1.12 Error: 'ordinal' is only valid in a query
 >   raised at: stdIn:1.5-1.12
-
-(*) 'ordinal' cannot be used in the first step of a query
-from i in [ordinal, ordinal + 1, ordinal + 2];
-> stdIn:1.12-1.19 Error: 'ordinal' is only valid in a query
->   raised at: stdIn:1.12-1.19
-
-(*) 'ordinal' is available in a subquery
-from i in [10,20,30]
-  yield {i, js = (from j in [i + ordinal, i + ordinal + 1])};
-> val it = [{i=10,js=[10,11]},{i=20,js=[21,22]},{i=30,js=[32,33]}]
->   : {i:int, js:int list} list
 
 from e in emps
   order e.deptno
@@ -658,6 +703,44 @@ from e in emps
   where ordinal > 1;
 > val it = [{deptno=30,id=102,name="Shaggy"},{deptno=30,id=103,name="Scooby"}]
 >   : {deptno:int, id:int, name:string} list
+
+(* 'ordinal' in an 'order' key counts the rows arriving at the 'order'
+   step, so sorting on its negation reverses the input. *)
+from e in emps
+  order (~ordinal)
+  yield e.name;
+> val it = ["Scooby","Shaggy","Velma","Fred"] : string list
+
+(* 'ordinal' in a join condition counts the rows arriving at the join,
+   that is, one per left row, not one per pair. *)
+from e in emps
+  join i in [1,2] on i = ordinal mod 2
+  yield {e.name, i};
+> val it = [{i=1,name="Velma"},{i=1,name="Scooby"}] : {i:int, name:string} list
+
+(* Reading 'ordinal' twice in one step reads one counter twice; it does
+   not advance it twice. *)
+from i in [10,20,30]
+  yield {a = ordinal, b = ordinal};
+> val it = [{a=0,b=0},{a=1,b=1},{a=2,b=2}] : {a:int, b:int} list
+
+(* A 'yield' holds the counter, so a call must still find it after the
+   contexts that compiling the expression creates: a 'let', a recursive
+   function, and a mutually recursive one. *)
+from i in [10,20] yield (let val x = ordinal in x + 1 end);
+> val it = [1,2] : int list
+from i in [10,20] yield (let fun f y = if y = 0 then ordinal else f (y - 1) in f 2 end);
+> val it = [0,1] : int list
+from i in [10,20] yield (let fun g y = y + ordinal and h y = g y in h 1 end);
+> val it = [1,2] : int list
+from i in [10,20] yield (let fun f y = y in f 1 + ordinal end);
+> val it = [1,2] : int list
+
+(* The count advances once per row, even on a row that does not read it:
+   the ordinals on either side of a row that yields ~1 differ by 2. *)
+from i in [10,11,20,21,30]
+  yield (if i mod 10 = 0 then ordinal else ~1);
+> val it = [0,~1,2,~1,4] : int list
 
 (*) When there is a field called 'ordinal', it doesn't get used unless you quote it.
 from i in [3,1,4,5,3,5,8,9,7]
@@ -737,6 +820,19 @@ from i in [1,2]
 > val it = [{i=1,j=0},{i=1,j=1},{i=1,j=2},{i=2,j=0},{i=2,j=1},{i=2,j=2}]
 >   : {i:int, j:int} list
 
+(* A correlated subquery is evaluated afresh for each outer row, so its
+   ordinal restarts; here the number of rows it produces varies. *)
+from i in [1,2,3]
+  join j in (from k in [10,20,30] where k > i * 10 yield ordinal);
+> val it = [{i=1,j=0},{i=1,j=1},{i=2,j=0}] : {i:int, j:int} list
+
+(* Two counters are live at once: the outer one advances while the
+   inner one restarts for each outer row. *)
+from i in [10,20,30]
+  yield {a = ordinal, ks = (from k in ["p","q"] yield ordinal)};
+> val it = [{a=0,ks=[0,1]},{a=1,ks=[0,1]},{a=2,ks=[0,1]}]
+>   : {a:int, ks:int list} list
+
 (* "ordinal" is the input row's position where a group key reads
  * it, so the enumeration must advance per row -- the position once
  * stuck, collapsing every row into one group. *)
@@ -761,6 +857,131 @@ from i in [1,2,3,4] group {} compute {c = count over (), s = sum over ordinal};
 (*) A key and an argument that both read it agree.
 from i in [10,20,30] group {m = ordinal} compute {s = sum over ordinal};
 > val it = [{m=0,s=0},{m=1,s=1},{m=2,s=2}] : {m:int, s:int} list
+
+(* Ordinal before the first row ----------------------------------- *)
+
+(* The expressions that a query evaluates before its first row - the
+ * collection that its first step scans, a 'take' or 'skip' count, the
+ * operands of 'union', 'except' and 'intersect', and the function of a
+ * 'through' or an 'into' - have no row to read. *)
+from i in [ordinal];
+> stdIn:1.12-1.19 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.12-1.19
+from i in [1,2] take ordinal;
+> stdIn:1.22-1.29 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.22-1.29
+from i in [1,2] skip ordinal;
+> stdIn:1.22-1.29 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.22-1.29
+from i in [1,2] union [ordinal];
+> stdIn:1.24-1.31 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.24-1.31
+from i in [1,2] except [ordinal];
+> stdIn:1.25-1.32 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.25-1.32
+from i in [1,2] intersect [ordinal];
+> stdIn:1.28-1.35 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.28-1.35
+from i in [1,2] through j in (fn y => [ordinal]);
+> stdIn:1.40-1.47 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.40-1.47
+from i in [1,2] into (fn y => ordinal);
+> stdIn:1.31-1.38 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.31-1.38
+
+(* In a subquery each of them is evaluated once per execution of that
+ * subquery, hence once per row of the enclosing step, and reads that row. *)
+from x in [10,20] yield (from i in [ordinal]);
+> val it = [[0],[1]] : int list list
+from x in [10,20] yield (from i in [1,2] take ordinal);
+> val it = [[],[1]] : int list list
+from x in [10,20] yield (from i in [1,2] skip ordinal);
+> val it = [[1,2],[2]] : int list list
+from x in [10,20] yield (from i in [1,2] union [ordinal]);
+> val it = [[1,2,0],[1,2,1]] : int list list
+from x in [10,20] yield (from i in [1,2] except [ordinal]);
+> val it = [[1,2],[2]] : int list list
+from x in [10,20] yield (from i in [1,2] intersect [ordinal]);
+> val it = [[],[1]] : int list list
+from x in [10,20] yield (from i in [1,2] through j in (fn y => [ordinal]));
+> val it = [[0],[1]] : int list list
+from x in [10,20] yield (from i in [1,2] into (fn y => ordinal));
+> val it = [0,1] : int list
+
+(*) 'ordinal' counts the enclosing step's rows, so that step must be ordered.
+from x in bag [10,20] yield (from i in [ordinal]);
+> stdIn:1.41-1.48 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.41-1.48
+from x in bag [10,20] yield (from i in [1,2] take ordinal);
+> stdIn:1.51-1.58 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.51-1.58
+from x in bag [10,20] yield (from i in [1,2] skip ordinal);
+> stdIn:1.51-1.58 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.51-1.58
+from x in bag [10,20] yield (from i in [1,2] union [ordinal]);
+> stdIn:1.53-1.60 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.53-1.60
+from x in bag [10,20] yield (from i in [1,2] except [ordinal]);
+> stdIn:1.54-1.61 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.54-1.61
+from x in bag [10,20] yield (from i in [1,2] intersect [ordinal]);
+> stdIn:1.57-1.64 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.57-1.64
+from x in bag [10,20] yield (from i in [1,2] through j in (fn y => [ordinal]));
+> stdIn:1.69-1.76 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.69-1.76
+from x in bag [10,20] yield (from i in [1,2] into (fn y => ordinal));
+> stdIn:1.60-1.67 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.60-1.67
+
+(* The subquery's own orderedness is not consulted; the row being read
+ * belongs to the enclosing step. *)
+from x in [10,20] yield (from i in bag [ordinal]);
+> val it = [[0],[1]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] take ordinal);
+> val it = [[],[1]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] skip ordinal);
+> val it = [[1,2],[2]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] union [ordinal]);
+> val it = [[1,2,0],[1,2,1]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] except [ordinal]);
+> val it = [[1,2],[2]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] intersect [ordinal]);
+> val it = [[],[1]] : int bag list
+from x in [10,20] yield (from i in bag [1,2] through j in (fn y => [ordinal]));
+> val it = [[0],[1]] : int list list
+from x in [10,20] yield (from i in bag [1,2] into (fn y => ordinal));
+> val it = [0,1] : int list
+
+(*) The preceding steps may include a 'group' or an 'order'.
+from x in [1,2] yield (from k in [10,20,30] group {m = k mod 2} take ordinal);
+> val it = [[],[{m=0}]] : {m:int} list list
+from x in [1,2] yield (from k in [30,10,20] group {m = k} order m take ordinal);
+> val it = [[],[{m=10}]] : {m:int} list list
+from x in [1,2] yield (from k in [30,10,20] order k skip ordinal);
+> val it = [[10,20,30],[20,30]] : int list list
+
+(* A subquery in one of those positions is itself evaluated before its
+ * enclosing query's first row, so the reading skips that query too. *)
+from i in [1,2] take (from j in [3,4] into (fn y => ordinal));
+> stdIn:1.53-1.60 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.53-1.60
+from i in [1,2] union [(from j in [3,4] into (fn y => ordinal))];
+> stdIn:1.55-1.62 Error: 'ordinal' is only valid in a query
+>   raised at: stdIn:1.55-1.62
+from x in [10,20] yield (from i in [1,2] take (from j in [3,4] into (fn y => ordinal)));
+> val it = [[],[1]] : int list list
+from x in [10,20] yield (from i in [1,2] union [(from j in [3,4] into (fn y => ordinal))]);
+> val it = [[1,2,0],[1,2,1]] : int list list
+
+(*) Two counters at once: the enclosing row, and the subquery's own.
+from x in [1,2,3] yield (from k in [10,20,30] yield k + ordinal take ordinal);
+> val it = [[],[10],[10,21]] : int list list
+from i in [1,2] join j in (from k in ["a","b","c"] take ordinal);
+> val it = [{i=2,j="a"}] : {i:int, j:string} list
+from i in [10,20,30] yield {i, js = (from j in [i + ordinal, i + ordinal + 1])};
+> val it = [{i=10,js=[10,11]},{i=20,js=[21,22]},{i=30,js=[32,33]}]
+>   : {i:int, js:int list} list
 
 (* Outer joins ---------------------------------------------------- *)
 

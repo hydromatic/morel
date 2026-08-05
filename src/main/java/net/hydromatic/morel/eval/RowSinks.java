@@ -54,31 +54,11 @@ public abstract class RowSinks {
   /**
    * Creates a {@link Code} that implements a query.
    *
-   * @see #first(RowSink)
+   * <p>The factory is called once per execution, so each execution gets its own
+   * row sinks, and therefore its own row-ordinal counters.
    */
   public static Code from(Supplier<RowSink> rowSinkFactory) {
     return new FromCode(rowSinkFactory);
-  }
-
-  /** Creates a {@link RowSink} that starts all downstream row sinks. */
-  public static RowSink first(RowSink rowSink) {
-    // Use a Describer to walk over the downstream sinks and their codes, and
-    // collect the start actions. The only start action, currently, resets
-    // ordinals to -1.
-    final List<Runnable> startActions = new ArrayList<>();
-    rowSink.describe(
-        new CodeVisitor() {
-          @Override
-          public void addStartAction(Runnable runnable) {
-            startActions.add(runnable);
-          }
-        });
-    if (startActions.isEmpty()) {
-      // There are no start actions, so there's no need to wrap the in a
-      // FirstRowSink.
-      return rowSink;
-    }
-    return new FirstRowSink(rowSink, startActions);
   }
 
   /** Creates a {@link RowSink} for an {@code except} step. */
@@ -205,10 +185,14 @@ public abstract class RowSinks {
   }
 
   /** Creates a {@link RowSink} for a non-terminal {@code yield} step. */
-  public static RowSink yield(Map<String, Code> yieldCodes, RowSink rowSink) {
+  public static RowSink yield(
+      Map<String, Code> yieldCodes,
+      int @Nullable [] ordinalSlots,
+      RowSink rowSink) {
     return new YieldRowSink(
         ImmutableList.copyOf(yieldCodes.keySet()),
         ImmutableList.copyOf(yieldCodes.values()),
+        ordinalSlots,
         rowSink);
   }
 
@@ -216,8 +200,8 @@ public abstract class RowSinks {
    * Creates a {@link RowSink} to collect the results of a {@code from}
    * expression.
    */
-  public static RowSink collect(Code code) {
-    return new CollectRowSink(code);
+  public static RowSink collect(Code code, int @Nullable [] ordinalSlots) {
+    return new CollectRowSink(code, ordinalSlots);
   }
 
   /** Code that evaluates a query. */
@@ -1367,15 +1351,29 @@ public abstract class RowSinks {
     final ImmutableList<String> names;
     final ImmutableList<Code> codes;
     final Object @Nullable [] values;
+    final int @Nullable [] ordinalSlots;
 
     YieldRowSink(
         ImmutableList<String> names,
         ImmutableList<Code> codes,
+        int @Nullable [] ordinalSlots,
         RowSink rowSink) {
       super(rowSink);
       this.names = names;
       this.codes = codes;
       this.values = names.size() == 1 ? null : new Object[names.size()];
+      this.ordinalSlots = ordinalSlots;
+    }
+
+    @Override
+    public void start(Stack stack) {
+      if (ordinalSlots != null) {
+        // The counter is shared with the codes that read it. Each execution
+        // starts its own count, so a subquery that is evaluated once per row
+        // of an enclosing query restarts at zero every time.
+        ordinalSlots[0] = -1;
+      }
+      super.start(stack);
     }
 
     @Override
@@ -1419,9 +1417,11 @@ public abstract class RowSinks {
   private static class CollectRowSink implements RowSink {
     final List<Object> list = new ArrayList<>();
     final Code code;
+    final int @Nullable [] ordinalSlots;
 
-    CollectRowSink(Code code) {
+    CollectRowSink(Code code, int @Nullable [] ordinalSlots) {
       this.code = requireNonNull(code);
+      this.ordinalSlots = ordinalSlots;
     }
 
     @Override
@@ -1432,6 +1432,9 @@ public abstract class RowSinks {
     @Override
     public void start(Stack stack) {
       list.clear();
+      if (ordinalSlots != null) {
+        ordinalSlots[0] = -1;
+      }
     }
 
     @Override
@@ -1442,27 +1445,6 @@ public abstract class RowSinks {
     @Override
     public List<Object> result(Stack stack) {
       return list;
-    }
-  }
-
-  /** First row sink in the chain. */
-  private static class FirstRowSink extends BaseRowSink {
-    final ImmutableList<Runnable> startActions;
-
-    FirstRowSink(RowSink rowSink, List<Runnable> startActions) {
-      super(rowSink);
-      this.startActions = ImmutableList.copyOf(startActions);
-    }
-
-    @Override
-    public Describer describe(Describer describer) {
-      return rowSink.describe(describer);
-    }
-
-    @Override
-    public void start(Stack stack) {
-      startActions.forEach(Runnable::run);
-      rowSink.start(stack);
     }
   }
 }
