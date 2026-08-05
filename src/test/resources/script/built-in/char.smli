@@ -108,7 +108,7 @@ Char.succ (chr 254);
 > val it = #"\255" : char
 Char.succ (chr 255);
 > uncaught exception Chr
->   raised at: stdIn:1.1-1.19
+>   raised at: stdIn:1.1-1.20
 
 (* [pred c] returns the character immediately preceding c, or raises
    Chr if c = minChar. *)
@@ -118,7 +118,7 @@ Char.pred #"B";
 > val it = #"A" : char
 Char.pred (chr 0);
 > uncaught exception Chr
->   raised at: stdIn:1.1-1.17
+>   raised at: stdIn:1.1-1.18
 
 (* [isAscii c] returns true if c is an ASCII character (0 to 127). *)
 Char.isAscii;

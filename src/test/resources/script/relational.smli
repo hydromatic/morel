@@ -362,8 +362,9 @@ fun singleUnitItems (items: {product: string, units: int} list) =
 
 from r in orders
   yieldAll singleUnitItems r.items;
->   [{product="beer",units=1},{product="soda",units=1},{product="beer",units=1}]
->   : {product:string, units:int} list
+> val it =
+>   [{product="beer",units=1},{product="soda",units=1},
+>    {product="beer",units=1}] : {product:string, units:int} list
 
 (* Order ---------------------------------------------------------- *)
 
@@ -1510,39 +1511,39 @@ from (x, y) in [(1,2),(3,4),(3,0)]
 (* "over" is only valid inside "compute" *)
 from i in [2, 1, 2]
   where (sum over i) > 3;
-> stdIn:2.10-2.20 Error: 'over' is only valid in 'compute'
->   raised at: stdIn:2.10-2.20
+> stdIn:2.9-2.21 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.9-2.21
 from i in [2, 1, 2]
   group (sum over i);
-> stdIn:2.10-2.20 Error: 'over' is only valid in 'compute'
->   raised at: stdIn:2.10-2.20
+> stdIn:2.9-2.21 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.9-2.21
 from i in [2, 1, 2]
   yield (sum over i);
-> stdIn:2.10-2.20 Error: 'over' is only valid in 'compute'
->   raised at: stdIn:2.10-2.20
+> stdIn:2.9-2.21 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.9-2.21
 from i in [2, 1, 2]
   skip (sum over i);
-> stdIn:2.9-2.19 Error: 'over' is only valid in 'compute'
->   raised at: stdIn:2.9-2.19
+> stdIn:2.8-2.20 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.8-2.20
 from i in [2, 1, 2]
   take (sum over i);
-> stdIn:2.9-2.19 Error: 'over' is only valid in 'compute'
->   raised at: stdIn:2.9-2.19
+> stdIn:2.8-2.20 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.8-2.20
 from i in [2, 1, 2]
   order (sum over i);
-> stdIn:2.10-2.20 Error: 'over' is only valid in 'compute'
->   raised at: stdIn:2.10-2.20
+> stdIn:2.9-2.21 Error: 'over' is only valid in 'compute'
+>   raised at: stdIn:2.9-2.21
 
 (* "over" is not valid inside "over" *)
 from (i, j) in [(2, 5), (1, 1), (2, 7)]
   group i compute {min over (max over j)};
-> stdIn:2.30-2.40 Error: 'over' is not valid in 'over'
->   raised at: stdIn:2.30-2.40
+> stdIn:2.29-2.41 Error: 'over' is not valid in 'over'
+>   raised at: stdIn:2.29-2.41
 
 from (i, j) in [(2, 5), (1, 1), (2, 7)]
   group i compute {min over (count over ())};
-> stdIn:2.30-2.43 Error: 'over' is not valid in 'over'
->   raised at: stdIn:2.30-2.43
+> stdIn:2.29-2.44 Error: 'over' is not valid in 'over'
+>   raised at: stdIn:2.29-2.44
 
 from i in [2, 1, 2]
   compute sum over i;

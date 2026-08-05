@@ -1390,7 +1390,7 @@ Exp atom() :
   |
     e = expression()
     (
-      <RPAREN> { return e; }
+      <RPAREN> { return e.withPos(span.end(this)); }
     |
       {
         final List<Exp> list = new ArrayList<>();
@@ -2099,7 +2099,7 @@ Pat atomPat() :
   ]
   <RPAREN> {
     if (list.size() == 1) {
-      return list.get(0);
+      return list.get(0).withPos(span.end(this));
     } else {
       return ast.tuplePat(span.end(this), list);
     }
@@ -2176,7 +2176,7 @@ Ast.Type atomicType() :
   }
   type = type()
   (
-    <RPAREN> { return type; }
+    <RPAREN> { return type.withPos(span.end(this)); }
   |
     {
       final List<Type> list = new ArrayList<>();

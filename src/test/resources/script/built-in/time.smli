@@ -187,7 +187,7 @@ Time.fromReal Real.negInf;
 (*) Time exception: NaN
 Time.fromReal (0.0/0.0);
 > uncaught exception Time
->   raised at: stdIn:1.1-1.23
+>   raised at: stdIn:1.1-1.24
 
 (*) Time.now uses the 'now' property (set to 2024-01-01T00:00:00Z above)
 Time.now ();

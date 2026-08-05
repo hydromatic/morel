@@ -73,6 +73,11 @@ public class Ast {
       consumer.accept(this);
       forEachArg((arg, i) -> arg.visit(consumer));
     }
+
+    @Override
+    public Pat withPos(Pos pos) {
+      return (Pat) super.withPos(pos);
+    }
   }
 
   /**
@@ -99,6 +104,11 @@ public class Ast {
 
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.idQuoted(name);
+    }
+
+    @Override
+    public Pat withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : new IdPat(pos, name);
     }
   }
 
@@ -217,6 +227,11 @@ public class Ast {
           ? this
           : ast.infixPat(pos, op, p0, p1);
     }
+
+    @Override
+    public InfixPat withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.infixPat(pos, op, p0, p1);
+    }
   }
 
   /**
@@ -266,6 +281,11 @@ public class Ast {
           ? this
           : ast.conPat(pos, tyCon, pat);
     }
+
+    @Override
+    public ConPat withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.conPat(pos, tyCon, pat);
+    }
   }
 
   /**
@@ -313,6 +333,11 @@ public class Ast {
       return this.id.equals(id) && this.pat.equals(pat)
           ? this
           : ast.asPat(pos, id, pat);
+    }
+
+    @Override
+    public AsPat withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.asPat(pos, id, pat);
     }
   }
 
@@ -532,6 +557,11 @@ public class Ast {
           ? this
           : ast.annotatedPat(pos, pat, type);
     }
+
+    @Override
+    public AnnotatedPat withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.annotatedPat(pos, pat, type);
+    }
   }
 
   /** Base class for parse tree nodes that represent types. */
@@ -543,6 +573,11 @@ public class Ast {
 
     @Override
     public abstract Type accept(Shuttle shuttle);
+
+    @Override
+    public Type withPos(Pos pos) {
+      return (Type) super.withPos(pos);
+    }
   }
 
   /** Parse tree node of an expression annotated with a type. */
@@ -591,6 +626,11 @@ public class Ast {
       return this.exp.equals(exp) && this.type.equals(type)
           ? this
           : ast.annotatedExp(pos, exp, type);
+    }
+
+    @Override
+    public AnnotatedExp withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.annotatedExp(pos, exp, type);
     }
   }
 
@@ -825,6 +865,11 @@ public class Ast {
     public Type copy(List<Type> types) {
       return types.equals(this.types) ? this : ast.namedType(pos, types, name);
     }
+
+    @Override
+    public Type withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.namedType(pos, types, name);
+    }
   }
 
   /** Parse tree node of a type variable. */
@@ -926,7 +971,7 @@ public class Ast {
 
   /** Tuple type. */
   public static class TupleType extends Type {
-    public final List<Type> types;
+    public final ImmutableList<Type> types;
 
     TupleType(Pos pos, ImmutableList<Type> types) {
       super(pos, Op.TUPLE_TYPE);
@@ -955,6 +1000,11 @@ public class Ast {
 
     public Type copy(List<Type> types) {
       return types.equals(this.types) ? this : ast.tupleType(pos, types);
+    }
+
+    @Override
+    public Type withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.tupleType(pos, types);
     }
   }
 
@@ -1067,6 +1117,13 @@ public class Ast {
           ? this
           : ast.functionType(pos, paramType, resultType);
     }
+
+    @Override
+    public FunctionType withPos(Pos pos) {
+      return pos.equals(this.pos)
+          ? this
+          : ast.functionType(pos, paramType, resultType);
+    }
   }
 
   /** Base class of expression ASTs. */
@@ -1087,6 +1144,11 @@ public class Ast {
       final ImmutableList.Builder<Exp> args = ImmutableList.builder();
       forEachArg((exp, value) -> args.add(exp));
       return args.build();
+    }
+
+    @Override
+    public Exp withPos(Pos pos) {
+      return (Exp) super.withPos(pos);
     }
   }
 
@@ -1113,6 +1175,11 @@ public class Ast {
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.idQuoted(name);
+    }
+
+    @Override
+    public Id withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : new Id(pos, name);
     }
 
     @Override
@@ -1149,6 +1216,11 @@ public class Ast {
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.append("op ").id(name);
+    }
+
+    @Override
+    public OpSection withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : new OpSection(pos, name);
     }
   }
 
@@ -1358,6 +1430,11 @@ public class Ast {
             UnsignedLong.valueOf(((BigDecimal) value).toBigIntegerExact()));
       }
       return w.appendLiteral(value);
+    }
+
+    @Override
+    public Literal withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : new Literal(pos, op, value);
     }
   }
 
@@ -2300,6 +2377,11 @@ public class Ast {
     public ListExp copy(List<Exp> args) {
       return args.equals(this.args) ? this : ast.list(pos, args);
     }
+
+    @Override
+    public Exp withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.list(pos, args);
+    }
   }
 
   /**
@@ -2560,6 +2642,11 @@ public class Ast {
           ? this
           : new InfixCall(pos, op, a0, a1);
     }
+
+    @Override
+    public InfixCall withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : new InfixCall(pos, op, a0, a1);
+    }
   }
 
   /** Call to a prefix operator. */
@@ -2588,6 +2675,11 @@ public class Ast {
     @Override
     AstWriter unparse(AstWriter w, int left, int right) {
       return w.prefix(left, op, a, right);
+    }
+
+    @Override
+    public PrefixCall withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : new PrefixCall(pos, op, a);
     }
   }
 
@@ -2631,6 +2723,13 @@ public class Ast {
       return this.condition.equals(condition)
               && this.ifTrue.equals(ifTrue)
               && this.ifFalse.equals(ifFalse)
+          ? this
+          : new If(pos, condition, ifTrue, ifFalse);
+    }
+
+    @Override
+    public If withPos(Pos pos) {
+      return pos.equals(this.pos)
           ? this
           : new If(pos, condition, ifTrue, ifFalse);
     }
@@ -2701,6 +2800,11 @@ public class Ast {
               && Objects.equals(this.exp, exp)
           ? this
           : ast.let(pos, decls, exp);
+    }
+
+    @Override
+    public Let withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.let(pos, decls, exp);
     }
   }
 
@@ -2809,12 +2913,17 @@ public class Ast {
     public Fn copy(List<Match> matchList) {
       return this.matchList.equals(matchList) ? this : ast.fn(pos, matchList);
     }
+
+    @Override
+    public Fn withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.fn(pos, matchList);
+    }
   }
 
   /** Case expression. */
   public static class Case extends Exp {
     public final Exp exp;
-    public final List<Match> matchList;
+    public final ImmutableList<Match> matchList;
 
     Case(Pos pos, Exp exp, ImmutableList<Match> matchList) {
       super(pos, Op.CASE);
@@ -2843,6 +2952,11 @@ public class Ast {
       return this.exp.equals(exp) && this.matchList.equals(matchList)
           ? this
           : ast.caseOf(pos, exp, matchList);
+    }
+
+    @Override
+    public Case withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.caseOf(pos, exp, matchList);
     }
   }
 
@@ -2933,6 +3047,11 @@ public class Ast {
     }
 
     @Override
+    public From withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.from(pos, steps);
+    }
+
+    @Override
     public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
@@ -2955,6 +3074,11 @@ public class Ast {
     }
 
     @Override
+    public Exists withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.exists(pos, steps);
+    }
+
+    @Override
     public Exp accept(Shuttle shuttle) {
       return shuttle.visit(this);
     }
@@ -2974,6 +3098,11 @@ public class Ast {
     @Override
     public Forall copy(List<FromStep> steps) {
       return this.steps.equals(steps) ? this : ast.forall(pos, steps);
+    }
+
+    @Override
+    public Forall withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : ast.forall(pos, steps);
     }
 
     @Override
@@ -3657,6 +3786,11 @@ public class Ast {
           ? this
           : new Apply(pos, fn, arg);
     }
+
+    @Override
+    public Apply withPos(Pos pos) {
+      return pos.equals(this.pos) ? this : new Apply(pos, fn, arg);
+    }
   }
 
   /** Postfix method call: {@code x.f ()} or {@code x.f arg}. */
@@ -3708,6 +3842,13 @@ public class Ast {
           ? this
           : new PostfixApp(pos, receiver, methodName, arg);
     }
+
+    @Override
+    public PostfixApp withPos(Pos pos) {
+      return pos.equals(this.pos)
+          ? this
+          : new PostfixApp(pos, receiver, methodName, arg);
+    }
   }
 
   /**
@@ -3743,6 +3884,13 @@ public class Ast {
 
     public Aggregate copy(Exp aggregate, Exp argument) {
       return this.aggregate.equals(aggregate) && this.argument.equals(argument)
+          ? this
+          : ast.aggregate(pos, aggregate, argument);
+    }
+
+    @Override
+    public Aggregate withPos(Pos pos) {
+      return pos.equals(this.pos)
           ? this
           : ast.aggregate(pos, aggregate, argument);
     }

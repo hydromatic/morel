@@ -2836,9 +2836,8 @@ public class MainTest {
     mlE("from e in [{deptno=10, empid=1}] group {$1$}")
         .assertTypeThrowsCompileException(
             "cannot derive label for expression 1");
-    // Nit: error region should start before '('
     mlE("from e in [{deptno=10, empid=1}]\n"
-            + "  group e.deptno compute {($fn x => x) over e.job$}")
+            + "  group e.deptno compute {$(fn x => x) over e.job$}")
         .assertTypeThrowsCompileException(
             "cannot derive label for expression fn x => x over #job e");
     // If there is only one expression in the group, we do not require that
@@ -2849,7 +2848,7 @@ public class MainTest {
     // expression must have a derivable name.
     mlE("from e in [{empno=1,deptno=10,job=\"Analyst\"},\n"
             + "        {empno=2,deptno=10,job=\"Manager\"}]\n"
-            + "group e.deptno compute ($fn x => x) over e.job$")
+            + "group e.deptno compute $(fn x => x) over e.job$")
         .assertTypeThrowsTypeException(
             "cannot derive label for compute expression");
     // And vice versa.
@@ -2882,7 +2881,7 @@ public class MainTest {
                 list(0, list(list(0, 1)))));
 
     mlE("from e in [{a = 1, b = 5}, {a = 0, b = 1}, {a = 1, b = 1}]\n"
-            + "  group e.a compute ($fn x => x) over e$")
+            + "  group e.a compute $(fn x => x) over e$")
         .assertTypeThrowsTypeException(
             "cannot derive label for compute expression");
   }

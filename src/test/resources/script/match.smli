@@ -111,8 +111,8 @@ fun g (l as h :: t) = 1 | g [] = 0;
 
 (*) bool, non-exhaustive
 (fn true => 1);
-> stdIn:1.2-1.14 Warning: match nonexhaustive
->   raised at: stdIn:1.2-1.14
+> stdIn:1.1-1.15 Warning: match nonexhaustive
+>   raised at: stdIn:1.1-1.15
 > val it = fn : bool -> int
 
 (*) bool, exhaustive
@@ -122,15 +122,15 @@ fun g (l as h :: t) = 1 | g [] = 0;
 
 (*) order, non-exhaustive
 (fn LESS => ~1);
-> stdIn:1.2-1.15 Warning: match nonexhaustive
->   raised at: stdIn:1.2-1.15
+> stdIn:1.1-1.16 Warning: match nonexhaustive
+>   raised at: stdIn:1.1-1.16
 > val it = fn : order -> int
 
 (*) order, non-exhaustive
 (fn LESS  => ~1
   | EQUAL => 0);
-> stdIn:1.2-2.15 Warning: match nonexhaustive
->   raised at: stdIn:1.2-2.15
+> stdIn:1.1-2.16 Warning: match nonexhaustive
+>   raised at: stdIn:1.1-2.16
 > val it = fn : order -> int
 
 (*) order, exhaustive
@@ -141,8 +141,8 @@ fun g (l as h :: t) = 1 | g [] = 0;
 
 (*) int, non-exhaustive
 (fn 0 => true);
-> stdIn:1.2-1.14 Warning: match nonexhaustive
->   raised at: stdIn:1.2-1.14
+> stdIn:1.1-1.15 Warning: match nonexhaustive
+>   raised at: stdIn:1.1-1.15
 > val it = fn : int -> bool
 
 (*) order, exhaustive
@@ -152,8 +152,8 @@ fun g (l as h :: t) = 1 | g [] = 0;
 
 (*) int list, non-exhaustive
 (fn x::_ => x + 1);
-> stdIn:1.2-1.18 Warning: match nonexhaustive
->   raised at: stdIn:1.2-1.18
+> stdIn:1.1-1.19 Warning: match nonexhaustive
+>   raised at: stdIn:1.1-1.19
 > val it = fn : int list -> int
 
 (*) int list, exhaustive
@@ -163,8 +163,8 @@ fun g (l as h :: t) = 1 | g [] = 0;
 
 (*) int * bool, non-exhaustive
 (fn (0,b) => true andalso b);
-> stdIn:1.2-1.28 Warning: match nonexhaustive
->   raised at: stdIn:1.2-1.28
+> stdIn:1.1-1.29 Warning: match nonexhaustive
+>   raised at: stdIn:1.1-1.29
 > val it = fn : int * bool -> bool
 
 (*) int * bool, exhaustive
@@ -294,7 +294,7 @@ fn (C01, RED) => "first"
   | (_, GREEN) => "green"
   | (_, BLUE) => "blue"
   | (_, RED) => "red";
-> val classify = fn : big * color -> string
+> val it = fn : big * color -> string
 
 fun classify (C01, RED) = "first, red"
   | classify (C01, GREEN) = "first, green"

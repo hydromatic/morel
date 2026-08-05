@@ -76,7 +76,7 @@ Int.abs ~3;
 > val it = 3 : int
 Int.abs (valOf Int.minInt);
 > uncaught exception Overflow [overflow]
->   raised at: stdIn:1.1-1.26
+>   raised at: stdIn:1.1-1.27
 Int.compare;
 > val it = fn : int * int -> order
 Int.compare (4, 3);

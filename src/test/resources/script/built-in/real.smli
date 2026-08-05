@@ -1204,13 +1204,13 @@ Real.fmt (GEN (SOME ~1)) 1.0;
  * before the second argument arrives. *)
 Real.fmt (SCI (SOME ~1));
 > uncaught exception Size [size]
->   raised at: stdIn:1.1-1.23
+>   raised at: stdIn:1.1-1.25
 Real.fmt (FIX (SOME ~1));
 > uncaught exception Size [size]
->   raised at: stdIn:1.1-1.23
+>   raised at: stdIn:1.1-1.25
 Real.fmt (GEN (SOME 0));
 > uncaught exception Size [size]
->   raised at: stdIn:1.1-1.22
+>   raised at: stdIn:1.1-1.24
 Real.fmt EXACT;
 > val it = fn : real -> string
 

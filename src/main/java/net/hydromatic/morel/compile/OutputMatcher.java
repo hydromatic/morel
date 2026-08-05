@@ -74,6 +74,15 @@ public class OutputMatcher {
       return false;
     }
 
+    // The prefix is everything before the value: the warnings that the
+    // statement raised, and the name that the value is bound to. Only its
+    // whitespace may differ; a different warning (or a different name) is a
+    // different output, not an equivalent one.
+    if (!normalizeWhitespace(split0.prefix)
+        .equals(normalizeWhitespace(split1.prefix))) {
+      return false;
+    }
+
     return codeEqual(type, split0.val, split1.val);
   }
 

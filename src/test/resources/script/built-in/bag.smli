@@ -74,10 +74,10 @@ Bag.only (bag [2]);
 > val it = 2 : int
 Bag.only (bag [1, 2, 3]);
 > uncaught exception Size [size]
->   raised at: stdIn:1.1-1.24
+>   raised at: stdIn:1.1-1.25
 Bag.only (bag []);
 > uncaught exception Empty
->   raised at: stdIn:1.1-1.17
+>   raised at: stdIn:1.1-1.18
 
 (*) val nth : 'a bag * int -> 'a
 Bag.nth (bag [1, 2, 3], 0);
@@ -146,7 +146,7 @@ Bag.hd (bag [1,2,3]);
 > val it = 1 : int
 Bag.hd (bag []);
 > uncaught exception Empty
->   raised at: stdIn:1.1-1.15
+>   raised at: stdIn:1.1-1.16
 Sys.plan ();
 > val it =
 >   "apply(fnValue List.hd, argCode apply(fnValue Bag.fromList, argCode tuple))"
@@ -159,7 +159,7 @@ Bag.tl (bag [1,2,3]);
 > val it = [2,3] : int bag
 Bag.tl (bag []);
 > uncaught exception Empty
->   raised at: stdIn:1.1-1.15
+>   raised at: stdIn:1.1-1.16
 Sys.plan ();
 > val it =
 >   "apply(fnValue List.tl, argCode apply(fnValue Bag.fromList, argCode tuple))"

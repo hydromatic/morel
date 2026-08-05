@@ -18,6 +18,7 @@
  */
 package net.hydromatic.morel.ast;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -33,6 +34,21 @@ public abstract class AstNode {
   public AstNode(Pos pos, Op op) {
     this.pos = requireNonNull(pos);
     this.op = requireNonNull(op);
+  }
+
+  /**
+   * Returns a copy of this node with a given position.
+   *
+   * <p>Only implemented for certain node types. Intended to be called only by
+   * the parser, right after node creation. Returns this node if the position is
+   * already correct, and in any case returns a node of the same type.
+   */
+  public AstNode withPos(Pos pos) {
+    if (pos.equals(this.pos)) {
+      return this;
+    }
+    throw new IllegalArgumentException(
+        format("cannot change position: %s %s", op, getClass()));
   }
 
   /**

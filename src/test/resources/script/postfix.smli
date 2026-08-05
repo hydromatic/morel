@@ -257,8 +257,8 @@ let val n = 5 in n?.x end;
 
 (*) Functor whose innermost type is not a record.
 (SOME 1)?.a;
-> stdIn:1.2-1.8 Error: reference to field a of non-record type int
->   raised at: stdIn:1.2-1.8
+> stdIn:1.1-1.9 Error: reference to field a of non-record type int
+>   raised at: stdIn:1.1-1.9
 
 (*) Record, but no such field.
 (SOME {a=1})?.b;

@@ -413,8 +413,8 @@ id_list (true, 1);
 > stdIn:1.1-1.18 Error: Cannot deduce type: conflict: tuple(bool, int) vs list(T6)
 >   raised at: stdIn:1.1-1.18
 id_list (bag [false,true]);
-> stdIn:1.1-1.26 Error: Cannot deduce type: conflict: list(T9) vs bag(T7)
->   raised at: stdIn:1.1-1.26
+> stdIn:1.1-1.27 Error: Cannot deduce type: conflict: list(T9) vs bag(T7)
+>   raised at: stdIn:1.1-1.27
 
 (*) Same, without parentheses around the argument.
 fun id_list x: 'a list = x;
@@ -453,8 +453,8 @@ first_pair [("a",true),("c",false)];
 > stdIn:1.1-1.36 Error: Cannot deduce type: conflict: string vs bool
 >   raised at: stdIn:1.1-1.36
 first_pair (bag [("a","b"),("c","d")]);
-> stdIn:1.1-1.38 Error: Cannot deduce type: conflict: bag(T11) vs list(tuple(T13, T13))
->   raised at: stdIn:1.1-1.38
+> stdIn:1.1-1.39 Error: Cannot deduce type: conflict: bag(T11) vs list(tuple(T13, T13))
+>   raised at: stdIn:1.1-1.39
 
 (* Function that uses its argument in a query and therefore requires
  * it to be a list or a bag. With no other constraints, the argument

@@ -248,12 +248,76 @@ List.concat [[1],[2,3],[4,5,6]];
 > val it = [1,2,3,4,5,6] : int list
 List.concat [[1],[],[4,5,6]];
 > val it = [1,4,5,6] : int list
+List.concat [[1, 2], [3], [], [4, 2, 5]];
+> val it = [1,2,3,4,2,5] : int list
 List.concat [[],[],[]];
 > val it = [] : 'a list
+List.concat [[], []];
+> val it = [] : 'a list
+Sys.plan ();
+> val it = "apply(fnValue List.concat, argCode tuple(tuple, tuple))" : string
 List.concat [];
 > val it = [] : 'a list
 Sys.plan ();
 > val it = "apply(fnValue List.concat, argCode tuple)" : string
+
+(*) val except : 'a list list -> 'a list
+List.`except`;
+> val it = fn : 'a list list -> 'a list
+List.`except` [[1, 2], [2], [3], []];
+> val it = [1] : int list
+List.`except` [[], []];
+> val it = [] : 'a list
+List.`except` [["a"], ["a"]];
+> val it = [] : string list
+List.`except` [["a", "b", "c", "a"], ["a"]];
+> val it = ["b","c","a"] : string list
+List.`except` [["a", "b", "c", "a"], ["c", "b", "c"]];
+> val it = ["a","a"] : string list
+List.`except` [[1,1,1,1,1], [1,1], [1,1]];
+> val it = [1] : int list
+List.`except` [[1,1,1,1,1], [1,1], [], [1,1]];
+> val it = [1] : int list
+List.`except` [[1,1,1,1,1], [1,2], [3,3], [1,1]];
+> val it = [1,1] : int list
+List.`except` [["a", "b"], ["a", "c"], ["a"]];
+> val it = ["b"] : string list
+Sys.plan ();
+> val it =
+>   "apply(fnValue List.except, argCode tuple(tuple(constant(a), constant(b)), tuple(constant(a), constant(c)), tuple(constant(a))))"
+>   : string
+
+(*) val intersect : 'a list list -> 'a list
+List.`intersect`;
+> val it = fn : 'a list list -> 'a list
+List.`intersect` [[1, 2], [2], [0, 2, 4]];
+> val it = [2] : int list
+List.`intersect` [[1, 2], []];
+> val it = [] : int list
+List.`intersect` [[1, 2, 1]];
+> val it = [1,2,1] : int list
+List.`intersect` [[], [1, 2]];
+> val it = [] : int list
+List.`intersect` [[2, 1, 2, 4, 2], [2, 2, 1, 3]];
+> val it = [2,1,2] : int list
+List.`intersect` [[1,1,1], [1,1], [1,1,1,1], [1,1,1,1,1]];
+> val it = [1,1] : int list
+List.`intersect` [[1,1,1], [1,1], [], [1,1,1,1,1]];
+> val it = [] : int list
+List.`intersect` [[1,1,1], [1,1], [2,1], [1,1,1,1,1]];
+> val it = [1] : int list
+List.`intersect` [["a", "b", "a"], ["b", "a"]];
+> val it = ["a","b"] : string list
+List.`intersect` [[(1, 2), (2, 3)], [(2, 4), (1, 2)]];
+> val it = [(1,2)] : (int * int) list
+List.`except` [List.`intersect` [[1, 2, 3], [2, 3, 4]], [1, 3, 5]];
+> val it = [2] : int list
+List.`except` [[1, 2, 3], List.`intersect` [[1, 3, 5], [2, 3, 4]]];
+> val it = [1,2] : int list
+Sys.plan ();
+> val it =
+>   "apply(fnValue List.except, argCode tuple(tuple(constant(1), constant(2), constant(3)), apply(fnValue List.intersect, argCode tuple(tuple(constant(1), constant(3), constant(5)), tuple(constant(2), constant(3), constant(4))))))"
+>   : string
 
 (*) val revAppend : 'a list * 'a list -> 'a list
 List.revAppend;
