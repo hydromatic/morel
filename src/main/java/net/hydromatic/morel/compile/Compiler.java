@@ -879,7 +879,13 @@ public class Compiler {
     Compiles.acceptBinding(typeSystem, scan.pat, scanBindings);
     final Context cxScan =
         new Context(cx.env.bindAll(scanBindings), scanLayout, depth);
-    final Code conditionCode = compile(cxScan, scan.condition);
+    // The condition is evaluated once per candidate pair, so a counter
+    // installed here counts pairs. It is the only counter that a step other
+    // than a "yield" installs: the pairs do not exist until the scan runs, so
+    // no preceding step could have materialized the value as a field.
+    final int[] slots = {0};
+    final Code conditionCode = compileRow(cxScan, scan.condition, slots);
+    final int @Nullable [] liveSlots = slots[0] == 0 ? null : slots;
     final ImmutableMap<String, Binding> scanAllScope =
         shadowMerge(allScope, scan.env.bindings);
     final Supplier<RowSink> scanNextFactory =
@@ -899,6 +905,7 @@ public class Compiler {
               leftSlotCount,
               code,
               conditionCode,
+              liveSlots,
               scanNextFactory.get());
     }
     return () ->
@@ -908,6 +915,7 @@ public class Compiler {
             scanVarCount,
             code,
             conditionCode,
+            liveSlots,
             scanNextFactory.get());
   }
 

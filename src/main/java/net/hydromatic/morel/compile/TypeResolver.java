@@ -1611,10 +1611,20 @@ public class TypeResolver {
     // The 'on' clause sees the non-optional ('unwrapped') types, so resolve it
     // before wrapping any fields in 'option' below.
     final TypeEnv env4 = typeEnvs.typeEnv;
+    // The collection of candidate pairs. It is created here, before the
+    // constraints that give it a type, because the 'on' condition is evaluated
+    // once per candidate pair: an 'ordinal' in it counts pairs, so this is the
+    // collection whose orderedness decides whether it means anything. (Both
+    // inputs must be ordered for the pairs to be.) An 'ordinal' in the extent
+    // still counts input rows, reading the binding the previous step left; no
+    // pair exists when the extent is evaluated.
+    final Variable c = unifier.variable();
     final Ast.Exp scanCondition2;
     if (scan.condition != null) {
       final Variable v5 = unifier.variable();
-      scanCondition2 = deduceExpType(env4, scan.condition, v5);
+      scanCondition2 =
+          deduceExpType(
+              env4.bind(BuiltIn.Z_ORDINAL.mlName, c), scan.condition, v5);
       equiv(v5, toTerm(PrimitiveType.BOOL));
     } else {
       scanCondition2 = null;
@@ -1644,10 +1654,9 @@ public class TypeResolver {
     }
 
     final Variable v = fieldVar(fieldVars, true);
-    final Variable c;
     switch (sourceKind) {
       case NONE:
-        c = toVariable(bagTerm(v));
+        equiv(c, bagTerm(v));
         break;
       case SCALAR:
         // Consider "from ... yield {i=1} join b = false".
@@ -1657,11 +1666,9 @@ public class TypeResolver {
         // v0 is "bool" - the element type of the input
         // c is "{i:int, b:bool} list" or "bag" - collection type of the query
         // v is "{i:int, b:bool}" - the element type of the query
-        c = unifier.variable();
         sameOrderedness(p.c, p.v, c, v);
         break;
       default:
-        c = unifier.variable();
         if (steps.isEmpty()) {
           // Consider "from (i, j) in [(1, true), (2, false)]".
           // c0 is "(int * bool) list" - the collection type of the input

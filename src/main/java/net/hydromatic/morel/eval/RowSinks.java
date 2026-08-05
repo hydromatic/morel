@@ -123,8 +123,10 @@ public abstract class RowSinks {
       int varCount,
       Code code,
       Code conditionCode,
+      int @Nullable [] ordinalSlots,
       RowSink rowSink) {
-    return new ScanRowSink(op, pat, varCount, code, conditionCode, rowSink);
+    return new ScanRowSink(
+        op, pat, varCount, code, conditionCode, ordinalSlots, rowSink);
   }
 
   /**
@@ -140,9 +142,17 @@ public abstract class RowSinks {
       int leftSlotCount,
       Code code,
       Code conditionCode,
+      int @Nullable [] ordinalSlots,
       RowSink rowSink) {
     return new BuildJoinRowSink(
-        op, pat, varCount, leftSlotCount, code, conditionCode, rowSink);
+        op,
+        pat,
+        varCount,
+        leftSlotCount,
+        code,
+        conditionCode,
+        ordinalSlots,
+        rowSink);
   }
 
   /** Creates a {@link RowSink} for a {@code skip} step. */
@@ -271,6 +281,11 @@ public abstract class RowSinks {
 
     final Code code;
     final Code conditionCode;
+    /**
+     * Counts candidate pairs, for an {@code ordinal} in the condition; null if
+     * the condition does not call it.
+     */
+    final int @Nullable [] ordinalSlots;
 
     ScanRowSink(
         Op op,
@@ -278,6 +293,7 @@ public abstract class RowSinks {
         int varCount,
         Code code,
         Code conditionCode,
+        int @Nullable [] ordinalSlots,
         RowSink rowSink) {
       super(rowSink);
       checkArgument(
@@ -290,6 +306,17 @@ public abstract class RowSinks {
       this.optionalRight = op.optionalizesRight();
       this.code = code;
       this.conditionCode = conditionCode;
+      this.ordinalSlots = ordinalSlots;
+    }
+
+    @Override
+    public void start(Stack stack) {
+      if (ordinalSlots != null) {
+        // The count runs across the whole join, not per input row, so it is
+        // reset here rather than in accept.
+        ordinalSlots[0] = -1;
+      }
+      super.start(stack);
     }
 
     @Override
@@ -378,6 +405,12 @@ public abstract class RowSinks {
 
     final Code code;
     final Code conditionCode;
+    /**
+     * Counts candidate pairs, for an {@code ordinal} in the condition; null if
+     * the condition does not call it.
+     */
+    final int @Nullable [] ordinalSlots;
+
     /** Whether the source fields are optional downstream (full join). */
     final boolean optionalRight;
 
@@ -399,6 +432,7 @@ public abstract class RowSinks {
         int leftSlotCount,
         Code code,
         Code conditionCode,
+        int @Nullable [] ordinalSlots,
         RowSink rowSink) {
       super(rowSink);
       checkArgument(
@@ -413,6 +447,7 @@ public abstract class RowSinks {
       this.conditionCode = conditionCode;
       this.optionalRight = op.optionalizesRight();
       this.fullJoin = op == Op.FULL_JOIN;
+      this.ordinalSlots = ordinalSlots;
     }
 
     @Override
@@ -436,6 +471,10 @@ public abstract class RowSinks {
 
     @Override
     public void start(Stack stack) {
+      if (ordinalSlots != null) {
+        // The count runs across the whole join, not per input row.
+        ordinalSlots[0] = -1;
+      }
       // Materialize the source ('right') side. It is independent of the input,
       // so a single evaluation suffices.
       final Iterable<Object> elements = (Iterable<Object>) code.eval(stack);

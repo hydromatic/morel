@@ -711,13 +711,6 @@ from e in emps
   yield e.name;
 > val it = ["Scooby","Shaggy","Velma","Fred"] : string list
 
-(* 'ordinal' in a join condition counts the rows arriving at the join,
-   that is, one per left row, not one per pair. *)
-from e in emps
-  join i in [1,2] on i = ordinal mod 2
-  yield {e.name, i};
-> val it = [{i=1,name="Velma"},{i=1,name="Scooby"}] : {i:int, name:string} list
-
 (* Reading 'ordinal' twice in one step reads one counter twice; it does
    not advance it twice. *)
 from i in [10,20,30]
@@ -982,6 +975,41 @@ from i in [1,2] join j in (from k in ["a","b","c"] take ordinal);
 from i in [10,20,30] yield {i, js = (from j in [i + ordinal, i + ordinal + 1])};
 > val it = [{i=10,js=[10,11]},{i=20,js=[21,22]},{i=30,js=[32,33]}]
 >   : {i:int, js:int list} list
+
+(* Ordinal in a join condition ------------------------------------ *)
+
+(* An 'on' condition is evaluated once per candidate pair, so 'ordinal'
+   in it counts pairs, continuously across the join. *)
+from i in [0..4] join j in ["a","b","c"] on ordinal mod 2 = 0;
+> val it =
+>   [{i=0,j="a"},{i=0,j="c"},{i=1,j="b"},{i=2,j="a"},{i=2,j="c"},{i=3,j="b"},
+>    {i=4,j="a"},{i=4,j="c"}] : {i:int, j:string} list
+
+(*) Which is what materializing the ordinal after the join gives.
+from i in [0..4] join j in ["a","b","c"] yield {i, j, k = ordinal} where k mod 2 = 0 yield {i, j};
+> val it =
+>   [{i=0,j="a"},{i=0,j="c"},{i=1,j="b"},{i=2,j="a"},{i=2,j="c"},{i=3,j="b"},
+>    {i=4,j="a"},{i=4,j="c"}] : {i:int, j:string} list
+
+(*) So 'on ordinal = 0' is the join's first pair, not the first per input row.
+from i in [1,2,3] join j in [1,2] on ordinal = 0;
+> val it = [{i=1,j=1}] : {i:int, j:int} list
+
+(*) The extent is evaluated before any pair exists, and counts input rows.
+from i in [1,2,3], j in [ordinal];
+> val it = [{i=1,j=0},{i=2,j=1},{i=3,j=2}] : {i:int, j:int} list
+
+(*) Pairs are ordered only if both sides are.
+from i in [1,2] join j in bag ["a"] on ordinal = 0;
+> stdIn:1.40-1.47 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.40-1.47
+from i in bag [1,2] join j in ["a"] on ordinal = 0;
+> stdIn:1.40-1.47 Error: cannot use 'ordinal' in unordered query
+>   raised at: stdIn:1.40-1.47
+
+(*) A 'left join' counts candidate pairs too, including those that fail.
+from i in [1,2] left join j in ["a","b"] on ordinal mod 2 = 0;
+> val it = [{i=1,j=SOME "a"},{i=2,j=SOME "a"}] : {i:int, j:string option} list
 
 (* Outer joins ---------------------------------------------------- *)
 

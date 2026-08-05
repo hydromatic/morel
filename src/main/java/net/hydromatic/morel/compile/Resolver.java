@@ -1930,7 +1930,13 @@ public class Resolver {
         return false;
       }
       final AtomicBoolean b = new AtomicBoolean();
-      step.accept(
+      // A scan's condition has its own counter (see visit(Ast.Scan)), so only
+      // the extent can make the scan a reader.
+      final AstNode node =
+          step instanceof Ast.Scan && ((Ast.Scan) step).exp != null
+              ? ((Ast.Scan) step).exp
+              : step;
+      node.accept(
           new Visitor() {
             @Override
             protected void visit(Ast.Ordinal ordinal) {
@@ -2015,10 +2021,16 @@ public class Resolver {
       final List<Binding> bindings2 =
           new ArrayList<>(fromBuilder.stepEnv().bindings);
       Compiles.acceptBinding(typeMap.typeSystem, corePat, bindings2);
+      // An 'ordinal' in the condition counts candidate pairs, which do not
+      // exist until the scan runs, so no preceding step can materialize it as
+      // a field. Clear the field: the call stays a call, and the compiler
+      // binds it to a counter that the scan itself advances.
       Core.Exp coreCondition =
           scan.condition == null
               ? core.boolLiteral(true)
-              : r.withEnv(bindings2).toCore(scan.condition);
+              : r.withEnv(bindings2)
+                  .withOrdinalPat(null)
+                  .toCore(scan.condition);
       fromBuilder.scan(scan.op, corePat, coreExp, coreCondition);
       if (scan.exp == null) {
         // This is an extent scan. Extents are unordered, which makes the query
