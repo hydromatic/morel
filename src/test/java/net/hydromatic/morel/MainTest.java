@@ -139,6 +139,35 @@ public class MainTest {
   }
 
   /**
+   * Tests that the script-test harness emits the output of a statement that has
+   * no expected output, wherever in the script it occurs.
+   *
+   * <p>Expected output is looked up by position, and a statement that occurs
+   * before the first expected output in the script has none to find. If its
+   * output were dropped rather than emitted, the script would pass however that
+   * statement behaved.
+   *
+   * <p>This cannot be tested from within a script: a script that is missing
+   * expected output is exactly the one that the omission makes pass.
+   */
+  @Test
+  void testScriptStatementWithoutExpectedOutput() {
+    // No statement has expected output; both must be echoed.
+    final String input =
+        "1 + 2;\n" //
+            + "3 + 4;\n";
+    final String none = runIdempotent(input, false);
+    assertThat(none, containsString("> val it = 3 : int"));
+    assertThat(none, containsString("> val it = 7 : int"));
+
+    // Only the second statement has expected output; the first must still be
+    // echoed, and the second must keep the text it was given.
+    final String second = runIdempotent(input + "> val it = 7 : int\n", false);
+    assertThat(second, containsString("> val it = 3 : int"));
+    assertThat(second, containsString("> val it = 7 : int"));
+  }
+
+  /**
    * Runs {@code input} through the idempotent (script-test) harness, with or
    * without strict output matching, and returns the regenerated output.
    */

@@ -70,6 +70,7 @@ import net.hydromatic.morel.foreign.ForeignValue;
 import net.hydromatic.morel.parse.MorelParseException;
 import net.hydromatic.morel.parse.MorelParserImpl;
 import net.hydromatic.morel.type.Binding;
+import net.hydromatic.morel.type.Type;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.MorelException;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -754,7 +755,13 @@ public class Main {
         LineConsumer outLines,
         boolean typeOnly,
         @Nullable String expectedOutput) {
-      if (expectedOutput != null) {
+      // In a script, buffer the output of every statement, and emit it below
+      // whether or not the script gave the statement an expected output. (A
+      // statement that has none must still be echoed; otherwise a script
+      // whose first statement lacks one would pass however it behaved.) In
+      // the REPL, lines are written as they are produced.
+      final boolean buffered = main.idempotent;
+      if (buffered) {
         outLines.start();
       }
 
@@ -789,27 +796,8 @@ public class Main {
           }
         }
 
-        if (expectedOutput != null) {
-          // Expected output is provided. If the expected and actual output are
-          // same modulo whitespace, line endings and re-ordered elements of
-          // bags, emit the expected output.
-          final List<String> actualLines = outLines.bufferedLines();
-          final String actualOutput = String.join("\n", actualLines);
-          // In strict mode, output must match character-for-character;
-          // otherwise it may differ in whitespace and bag-element order.
-          final boolean strict =
-              Prop.MATCH_STRICT.booleanValue(main.session.map);
-          if (actualOutput.equals(expectedOutput)
-              || !strict
-                  && new OutputMatcher(main.typeSystem)
-                      .equivalent(
-                          compiled.getType(), actualOutput, expectedOutput)) {
-            // Expected and actual are equivalent; emit expected verbatim
-            Arrays.stream(expectedOutput.split("\n", -1))
-                .forEach(outLines.consumer());
-          } else {
-            actualLines.forEach(outLines.consumer());
-          }
+        if (buffered) {
+          emit(outLines, expectedOutput, compiled.getType());
         }
 
         // Add the new bindings to the map. Overloaded bindings (INST) add to
@@ -828,7 +816,39 @@ public class Main {
         }
       } catch (Codes.MorelRuntimeException e) {
         appendToOutput(e, outLines);
+        if (buffered) {
+          outLines.bufferedLines().forEach(outLines.consumer());
+        }
       }
+    }
+
+    /**
+     * Emits a statement's output.
+     *
+     * <p>If the statement has an expected output, and the actual output is
+     * equivalent to it - the same modulo whitespace, line endings and the order
+     * of the elements of a bag - emits the expected output verbatim, so that
+     * the script keeps the form it was written in. Otherwise emits the actual
+     * output.
+     */
+    private void emit(
+        LineConsumer outLines, @Nullable String expectedOutput, Type type) {
+      final List<String> actualLines = outLines.bufferedLines();
+      if (expectedOutput != null) {
+        final String actualOutput = String.join("\n", actualLines);
+        // In strict mode, output must match character-for-character;
+        // otherwise it may differ in whitespace and bag-element order.
+        final boolean strict = Prop.MATCH_STRICT.booleanValue(main.session.map);
+        if (actualOutput.equals(expectedOutput)
+            || !strict
+                && new OutputMatcher(main.typeSystem)
+                    .equivalent(type, actualOutput, expectedOutput)) {
+          Arrays.stream(expectedOutput.split("\n", -1))
+              .forEach(outLines.consumer());
+          return;
+        }
+      }
+      actualLines.forEach(outLines.consumer());
     }
 
     private void appendToOutput(MorelException e, LineConsumer outLines) {
