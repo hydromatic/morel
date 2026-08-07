@@ -1,0 +1,214 @@
+(*
+ * Licensed to Julian Hyde under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work
+ * for additional information regarding copyright ownership.
+ * Julian Hyde licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied.  See the License for the specific
+ * language governing permissions and limitations under the
+ * License.
+ *
+ * Tests the syntax highlighter, via Test.highlight.
+ *
+ * Test.highlight tokenizes its argument and writes each token as its
+ * CSS class followed by the token's text in braces; for example,
+ * 'val x = 1' becomes 'kr{val} nv{x} p{=} mi{1}'. The classes are
+ * c (opening of a comment), cm (rest of a comment), kr (keyword),
+ * mi (numeric literal), n (plain identifier), nf (name bound by
+ * 'fun'), nn (type variable, or a structure name before '.'), nv
+ * (name bound by 'val' or by a generator), o (operator), p
+ * (punctuation) and s2 (string literal). Whitespace is written
+ * verbatim.
+ *
+ * The highlighter is a lenient scanner, separate from the parser:
+ * it never fails, whatever it is given, because the shell
+ * re-highlights the buffer on every keystroke, and a partly typed
+ * line is not valid Morel.
+ *
+ * The classes are finer than the categories that the shell colors by:
+ * they tell a name that is being bound from one that is being used,
+ * and punctuation from operators. The shell's own tests, which work
+ * in categories, are in ShellHighlighterTest.
+ *)
+(*) The Test structure is excluded by default.
+Sys.set ("excludeStructures", "");
+> val it = () : unit
+Sys.clearEnv ();
+> val it = () : unit
+Sys.set ("lineWidth", 78);
+> val it = () : unit
+Sys.set ("printLength", 999);
+> val it = () : unit
+Sys.set ("stringDepth", ~1);
+> val it = () : unit
+
+(* --- Basics ----------------------------------------------------- *)
+Test.highlight "val x = 1;";
+> val it = "kr{val} nv{x} p{=} mi{1}p{;}" : string
+Test.highlight "fun f x = x + 1";
+> val it = "kr{fun} nf{f} n{x} p{=} n{x} o{+} mi{1}" : string
+
+(*) The scanner does not single out constants; the shell colors them.
+Test.highlight "true";
+> val it = "n{true}" : string
+Test.highlight "nil";
+> val it = "n{nil}" : string
+
+(*) Only a whole word matches.
+Test.highlight "truest";
+> val it = "n{truest}" : string
+
+(* An identifier immediately before '.' is a structure name, and
+ * shares its class with type variables. *)
+Test.highlight "List.map";
+> val it = "nn{List}p{.}n{map}" : string
+Test.highlight "'a list";
+> val it = "nn{'a} n{list}" : string
+
+(*) A lone quote is not the start of a type variable.
+Test.highlight "'";
+> val it = "o{'}" : string
+
+(* --- Numeric literals ------------------------------------------- *)
+Test.highlight "1";
+> val it = "mi{1}" : string
+Test.highlight "1.5";
+> val it = "mi{1.5}" : string
+Test.highlight "1e~7";
+> val it = "mi{1e~7}" : string
+Test.highlight "0w7";
+> val it = "mi{0w7}" : string
+Test.highlight "0wx1F";
+> val it = "mi{0wx1F}" : string
+
+(*) The '.' is punctuation here, because 'map' is not a digit.
+Test.highlight "1.map";
+> val it = "mi{1}p{.}n{map}" : string
+
+(*) '0w' is not a word literal; it is the number 0 and the identifier 'w'.
+Test.highlight "0w";
+> val it = "mi{0}n{w}" : string
+Test.highlight "0w7 0wx1F 1.5 1e~7 42";
+> val it = "mi{0w7} mi{0wx1F} mi{1.5} mi{1e~7} mi{42}" : string
+
+(* --- Comments --------------------------------------------------- *)
+Test.highlight "(* hi *)";
+> val it = "c{(*}cm{ hi *)}" : string
+
+(*) Block comments nest.
+Test.highlight "(* a (* b *) c *)";
+> val it = "c{(*}cm{ a (* b *) c *)}" : string
+
+(*) A line comment ends at the newline; the next line is code.
+Test.highlight "(*) to end";
+> val it = "c{(*}cm{) to end}" : string
+Test.highlight "1 (*) two";
+> val it = "mi{1} c{(*}cm{) two}" : string
+Test.highlight "(*) End of line\nval x = 1";
+> val it = "c{(*}cm{) End of line}\nkr{val} nv{x} p{=} mi{1}" : string
+
+(*) A block comment spans lines, up to its close.
+Test.highlight "(* a\nb *) c";
+> val it = "c{(*}cm{ a\nb *)} n{c}" : string
+
+(* --- String literals -------------------------------------------- *)
+Test.highlight "\"abc\"";
+> val it = "s2{\"abc\"}" : string
+
+(*) An escaped quote does not end the string.
+Test.highlight "\"a\\\"b\"";
+> val it = "s2{\"a\\\"b\"}" : string
+
+(* --- Incomplete input ------------------------------------------- *)
+(*) Each of these is a prefix that the shell sees while the user types.
+Test.highlight "\"";
+> val it = "s2{\"}" : string
+Test.highlight "\"a";
+> val it = "s2{\"a}" : string
+Test.highlight "\"a\\";
+> val it = "s2{\"a\\}" : string
+Test.highlight "\"a\\n";
+> val it = "s2{\"a\\n}" : string
+Test.highlight "\"a\\n\"";
+> val it = "s2{\"a\\n\"}" : string
+Test.highlight "\\";
+> val it = "o{\\}" : string
+Test.highlight "(*";
+> val it = "c{(*}" : string
+Test.highlight "(* a";
+> val it = "c{(*}cm{ a}" : string
+Test.highlight "(* a *";
+> val it = "c{(*}cm{ a *}" : string
+Test.highlight "(* a *)";
+> val it = "c{(*}cm{ a *)}" : string
+
+(* --- Quoted identifiers ----------------------------------------- *)
+(* A quoted identifier is a name, even when it spells a keyword,
+ * and the backticks belong to the name. *)
+Test.highlight "from `from` in [1,2];";
+> val it = "kr{from} nv{`from`} kr{in} p{[}mi{1}p{,}mi{2}p{];}" : string
+Test.highlight "val `o` = 1";
+> val it = "kr{val} nv{`o`} p{=} mi{1}" : string
+
+(*) A quoted identifier is one name however many words it contains.
+Test.highlight "val `let val` = 2;";
+> val it = "kr{val} nv{`let val`} p{=} mi{2}p{;}" : string
+Test.highlight "`x`";
+> val it = "n{`x`}" : string
+
+(*) A doubled backtick is an escaped backtick, not the end of the name.
+Test.highlight "`a``b`";
+> val it = "n{`a``b`}" : string
+Test.highlight "x=`y`";
+> val it = "n{x}p{=}n{`y`}" : string
+
+(*) Quoted identifiers are names in every position.
+Test.highlight "fun `a``b` x = `let val`;";
+> val it = "kr{fun} nf{`a``b`} n{x} p{=} n{`let val`}p{;}" : string
+Test.highlight "List.`take` (xs, 3)";
+> val it = "nn{List}p{.}n{`take`} p{(}n{xs}p{,} mi{3}p{)}" : string
+
+(*) Unterminated quoted identifiers, as seen while typing.
+Test.highlight "`";
+> val it = "n{`}" : string
+Test.highlight "`ab";
+> val it = "n{`ab}" : string
+Test.highlight "`a``";
+> val it = "n{`a``}" : string
+
+(* --- Queries and declarations ----------------------------------- *)
+Test.highlight "fun gcd (m, n) = from f in factorize m intersect factorize n compute product;";
+> val it =
+>   "kr{fun} nf{gcd} p{(}n{m}p{,} n{n}p{)} p{=} kr{from} nv{f} kr{in} n{factorize} n{m} kr{intersect} n{factorize} n{n} kr{compute} n{product}p{;}"
+>   : string
+Test.highlight "fun lcm (m, n) = (m * n) div gcd (m, n);";
+> val it =
+>   "kr{fun} nf{lcm} p{(}n{m}p{,} n{n}p{)} p{=} p{(}n{m} o{*} n{n}p{)} kr{div} n{gcd} p{(}n{m}p{,} n{n}p{);}"
+>   : string
+Test.highlight "from (i, j) in pairs order i desc, j";
+> val it =
+>   "kr{from} p{(}nv{i}p{,} nv{j}p{)} kr{in} n{pairs} kr{order} n{i} kr{desc}p{,} n{j}"
+>   : string
+Test.highlight "val (i, j) = (1, 2)";
+> val it = "kr{val} p{(}nv{i}p{,} nv{j}p{)} p{=} p{(}mi{1}p{,} mi{2}p{)}"
+>   : string
+Test.highlight "fun compareInt (x: int, y: int) = if x < y then LESS else if x > y then GREATER else EQUAL";
+> val it =
+>   "kr{fun} nf{compareInt} p{(}n{x}p{:} n{int}p{,} n{y}p{:} n{int}p{)} p{=} kr{if} n{x} o{<} n{y} kr{then} n{LESS} kr{else} kr{if} n{x} o{>} n{y} kr{then} n{GREATER} kr{else} n{EQUAL}"
+>   : string
+
+(*) Every token class at once.
+Test.highlight "val s = \"a\\\"b\" (* c *) 0wx1F ~1.5e~7 'a List.map;";
+> val it =
+>   "kr{val} nv{s} p{=} s2{\"a\\\"b\"} c{(*}cm{ c *)} mi{0wx1F} o{~}mi{1.5e~7} nn{'a} nn{List}p{.}n{map}p{;}"
+>   : string
+
+(*) End highlight.smli

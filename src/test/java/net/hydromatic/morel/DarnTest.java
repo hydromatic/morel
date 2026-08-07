@@ -25,6 +25,7 @@ import static org.hamcrest.core.Is.is;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import java.io.File;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -41,6 +42,10 @@ public class DarnTest {
   /** Kernel supplier for tests that execute Morel code. */
   private static final Supplier<Kernel> KERNEL =
       () -> Main.kernel(ImmutableMap.of());
+
+  /** Keywords that Morel does not have, for testing keyword amendment. */
+  private static final List<String> PIVOT_KEYWORDS =
+      ImmutableList.of("pivot", "unpivot");
 
   // -----------------------------------------------------------------------
   // ProcessResult statistics
@@ -334,6 +339,9 @@ public class DarnTest {
         is(false));
   }
 
+  // -----------------------------------------------------------------------
+  // Rouge output
+
   @Test
   void testHighlightRouge0() {
     // Exercises keyword→kr, val-binding→nv, fun-binding→nf, number→mi,
@@ -434,10 +442,17 @@ public class DarnTest {
     assertThat(MorelHighlighter.DEFAULT.highlightRouge(code), is(expected));
   }
 
+  /**
+   * Exercises keyword&rarr;kr, val-binding&rarr;nv, fun-binding&rarr;nf,
+   * number&rarr;mi, plain identifier&rarr;n and punctuation&rarr;p in the
+   * concise Rouge format.
+   *
+   * <p>This is the only test of that format here; the rest live in {@code
+   * script/highlight.smli}, which reaches it via {@code Test.highlight} and
+   * which the Morel implementations in other languages run too.
+   */
   @Test
   void testHighlightRouge() {
-    // Exercises keyword→kr, val-binding→nv, fun-binding→nf, number→mi,
-    // plain identifier→n, and punctuation→p in the Rouge output format.
     String code =
         "let\n" //
             + "  val edge_facts = [(1, 2), (2, 3)]\n"
@@ -465,106 +480,41 @@ public class DarnTest {
     assertThat(MorelHighlighter.DEFAULT.highlightRouge2(code), is(expected));
   }
 
-  /** Tests highlighting the {@code gcd} function. */
-  @Test
-  void testHighlightRougeFunGcd() {
-    String code =
-        "fun gcd (m, n) = from f in factorize m intersect factorize n"
-            + " compute product;\n";
-    final String expected =
-        "kr{fun} nf{gcd} p{(}n{m}p{,} n{n}p{)} p{=} kr{from} nv{f} kr{in}"
-            + " n{factorize} n{m} kr{intersect} n{factorize} n{n}"
-            + " kr{compute} n{product}p{;}\n";
-    assertThat(MorelHighlighter.DEFAULT.highlightRouge2(code), is(expected));
-  }
-
   /**
-   * Tests that tuple patterns in {@code from} generators highlight as {@code
-   * nv}.
+   * A highlighter can be given extra keywords, leaving the default highlighter
+   * alone. {@link Darn} does this so that the blog post about DML highlights
+   * {@code delete}, {@code insert} and {@code update}, which are not keywords
+   * of the language as it stands.
    */
   @Test
-  void testHighlightRougeFromTuplePattern() {
-    // (i, j) in from-pattern position: both i and j are bound variables.
-    String code = "from (i, j) in pairs order i desc, j";
-    final String expected =
-        "kr{from} p{(}nv{i}p{,} nv{j}p{)} kr{in} n{pairs}"
-            + " kr{order} n{i} kr{desc}p{,} n{j}";
-    assertThat(MorelHighlighter.DEFAULT.highlightRouge2(code), is(expected));
-  }
+  void testHighlightRougeExtraKeywords() {
+    final MorelHighlighter pivotal =
+        MorelHighlighter.DEFAULT.amendKeywords(
+            keywords -> Iterables.concat(keywords, PIVOT_KEYWORDS));
+    final String code = "from d in depts pivot deptno";
 
-  /**
-   * Tests that tuple patterns in {@code val} bindings highlight as {@code nv}.
-   */
-  @Test
-  void testHighlightRougeValTuplePattern() {
-    // (i, j) in val-pattern position: both i and j are bound variables.
-    String code = "val (i, j) = (1, 2)";
-    final String expected =
-        "kr{val} p{(}nv{i}p{,} nv{j}p{)} p{=} p{(}mi{1}p{,} mi{2}p{)}";
-    assertThat(MorelHighlighter.DEFAULT.highlightRouge2(code), is(expected));
-  }
+    // 'pivot' is an ordinary identifier to the default highlighter, and a
+    // keyword to one that has been given it. 'depts' and 'deptno', which
+    // neither highlighter was given, stay identifiers in both.
+    assertThat(
+        MorelHighlighter.DEFAULT.highlightRouge2(code),
+        is("kr{from} nv{d} kr{in} n{depts} n{pivot} n{deptno}"));
+    assertThat(
+        pivotal.highlightRouge2(code),
+        is("kr{from} nv{d} kr{in} n{depts} kr{pivot} n{deptno}"));
 
-  /** Tests highlighting the {@code lcm} function. */
-  @Test
-  void testHighlightRougeFunLcm() {
-    String code = "fun lcm (m, n) = (m * n) div gcd (m, n);\n";
-    final String expected =
-        "kr{fun} nf{lcm} p{(}n{m}p{,} n{n}p{)} p{=} p{(}n{m} o{*} n{n}p{)}"
-            + " kr{div} n{gcd} p{(}n{m}p{,} n{n}p{);}\n";
-    assertThat(MorelHighlighter.DEFAULT.highlightRouge2(code), is(expected));
-  }
-
-  /**
-   * Tests highlighting the {@code compareInt} function, including type
-   * annotation, {@code <} and {@code >} operators.
-   */
-  @Test
-  void testHighlightRougeCompareInt() {
-    String code =
-        "fun compareInt (x: int, y: int) ="
-            + " if x < y then LESS else if x > y then GREATER else EQUAL\n";
-    final String expected =
-        "kr{fun} nf{compareInt} p{(}n{x}p{:} n{int}p{,} n{y}p{:}"
-            + " n{int}p{)} p{=}"
-            + " kr{if} n{x} o{<} n{y} kr{then} n{LESS}"
-            + " kr{else} kr{if} n{x} o{>} n{y} kr{then} n{GREATER}"
-            + " kr{else} n{EQUAL}\n";
-    assertThat(MorelHighlighter.DEFAULT.highlightRouge2(code), is(expected));
-  }
-
-  /** Word, real and scientific literals are highlighted as numbers. */
-  @Test
-  void testHighlightRougeNumbers() {
-    final String code = "0w7 0wx1F 1.5 1e~7 42";
-    final String expected = "mi{0w7} mi{0wx1F} mi{1.5} mi{1e~7} mi{42}";
-    assertThat(MorelHighlighter.DEFAULT.highlightRouge2(code), is(expected));
-  }
-
-  /**
-   * A {@code (*)} line comment ends at the newline, so the code on the next
-   * line is highlighted normally, not swallowed as part of the comment.
-   */
-  @Test
-  void testHighlightRougeLineComment() {
-    final String code =
-        "(*) End of line\n" //
-            + "val x = 1";
-    final String expected =
-        "c{(*}cm{) End of line}\n" //
-            + "kr{val} nv{x} p{=} mi{1}";
-    assertThat(MorelHighlighter.DEFAULT.highlightRouge2(code), is(expected));
-  }
-
-  /** A {@code (* ... *)} block comment still spans to its close. */
-  @Test
-  void testHighlightRougeBlockComment() {
-    final String code =
-        "(* a\n" //
-            + "b *) c";
-    final String expected =
-        "c{(*}cm{ a\n" //
-            + "b *)} n{c}";
-    assertThat(MorelHighlighter.DEFAULT.highlightRouge2(code), is(expected));
+    // Amending again is cumulative, and still does not affect DEFAULT.
+    final MorelHighlighter both =
+        pivotal.amendKeywords(
+            keywords ->
+                Iterables.concat(keywords, MorelHighlighter.DML_KEYWORDS));
+    final String code2 = "delete from d in depts pivot deptno";
+    assertThat(
+        both.highlightRouge2(code2),
+        is("kr{delete} kr{from} nv{d} kr{in} n{depts} kr{pivot} n{deptno}"));
+    assertThat(
+        MorelHighlighter.DEFAULT.highlightRouge2(code2),
+        is("n{delete} kr{from} nv{d} kr{in} n{depts} n{pivot} n{deptno}"));
   }
 
   @Test

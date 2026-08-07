@@ -4243,6 +4243,17 @@ public enum BuiltIn {
   TEST_FOO("Test", "foo", ts -> ts.fnType(INT, INT)),
 
   /**
+   * Function "Test.highlight", of type "string &rarr; string".
+   *
+   * <p>{@code highlight s} tokenizes {@code s} as Morel code and returns the
+   * tokens in a concise textual form, each token written as its CSS class
+   * followed by its text in braces; for example, {@code highlight "val x = 1"}
+   * returns {@code "kr{val} nv{x} p{=} mi{1}"}. Useful for testing the syntax
+   * highlighter from {@code .smli} scripts.
+   */
+  TEST_HIGHLIGHT("Test", "highlight", ts -> ts.fnType(STRING, STRING)),
+
+  /**
    * Test-only aggregate "Test.listSum", of type "&alpha; list &rarr; &alpha;".
    * Accepts ONLY list.
    */

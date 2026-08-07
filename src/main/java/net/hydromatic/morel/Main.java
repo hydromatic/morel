@@ -260,7 +260,8 @@ public class Main {
       int j3 = s.indexOf(":t", i);
       int j4 = s.indexOf("(*)", i);
       int j5 = s.indexOf("(*", i);
-      int j = min(j0, j1, j2, j3, j4, j5);
+      int j6 = s.indexOf("\"", i);
+      int j = min(j0, j1, j2, j3, j4, j5, j6);
       if (j < 0) {
         b.append(s, i, n);
         break;
@@ -350,6 +351,12 @@ public class Main {
         int k = skipBlockComment(s, j + "(*".length(), n);
         b.append(s, i, k);
         i = k;
+      } else {
+        // A string literal. Copy it verbatim, so that "(*" inside a string
+        // does not start a comment.
+        int k = skipStringLiteral(s, j + 1, n);
+        b.append(s, i, k);
+        i = k;
       }
     }
     return new StripResult(b.toString(), expectedMap);
@@ -358,6 +365,31 @@ public class Main {
   /** Strips output lines without capturing expected output (for sub-shells). */
   private static Reader stripOutLines(Reader in) {
     return new StringReader(stripAndCaptureOutLines(in).code);
+  }
+
+  /**
+   * Skips a string literal in the input string.
+   *
+   * @param s Input string
+   * @param pos Position after the opening quote
+   * @param n Length of the string
+   * @return Position after the closing quote; or, if the literal is not closed
+   *     before the end of the line, the position of the newline
+   */
+  private static int skipStringLiteral(String s, int pos, int n) {
+    while (pos < n) {
+      char c = s.charAt(pos);
+      if (c == '\\') {
+        pos = Math.min(pos + 2, n);
+      } else if (c == '"') {
+        return pos + 1;
+      } else if (c == '\n') {
+        return pos;
+      } else {
+        pos++;
+      }
+    }
+    return pos;
   }
 
   /**

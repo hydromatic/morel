@@ -365,7 +365,13 @@ public class MorelHighlighter {
   }
 
   /**
-   * As {@link #highlightRouge(String)} but more concise output. For testing.
+   * As {@link #highlightRouge(String)} but more concise output. For testing; it
+   * is what {@code Test.highlight} returns.
+   *
+   * <p>Each token becomes its CSS class followed by its text in braces, for
+   * example {@code kr{val} nv{x} p{=} mi{1}}. Whitespace is written verbatim.
+   * Because a token's text is never parsed back out, a token that contains a
+   * brace - a record's punctuation, say - is written as is, unescaped.
    */
   public String highlightRouge2(String code) {
     StringBuilder sb = new StringBuilder();
@@ -404,16 +410,7 @@ public class MorelHighlighter {
   public void highlightCode(String s, Sink sink) {
     int i = 0;
     int n = s.length();
-    // State for context-sensitive identifier classification.
-    boolean awaitingFunName = false;
-    // valPatDepth: -1=inactive, 0+=in val pattern (depth of brackets). All
-    // identifiers in val pattern mode are emitted as nv. Exits on '=' at
-    // depth 0. fromState: 0=NONE, 1=PAT (expecting bound variables), 2=EXPR
-    // (in source expression after 'in'). fromDepth tracks parenthesis nesting
-    // in EXPR state so that a top-level comma triggers a new generator.
-    int valPatDepth = -1;
-    int fromState = 0;
-    int fromDepth = 0;
+    final Context context = new Context();
 
     while (i < n) {
       char c = s.charAt(i);
@@ -447,63 +444,39 @@ public class MorelHighlighter {
         sink.ct(i, end);
         i = end;
 
-      } else if (Character.isLetter(c) || c == '_') {
-        // Identifier or keyword
-        int end = i + 1;
-        while (end < n
-            && (Character.isLetterOrDigit(s.charAt(end))
-                || s.charAt(end) == '_'
-                || s.charAt(end) == '\'')) {
-          end++;
+      } else if (Character.isLetter(c) || c == '_' || c == '`') {
+        // Identifier, quoted identifier, or keyword.
+        final boolean quoted = c == '`';
+        int end;
+        if (quoted) {
+          // A quoted identifier such as `from` or `let val` is a single name,
+          // whatever it contains; it is never a keyword.
+          end = scanQuotedIdentifier(s, i, n);
+        } else {
+          end = i + 1;
+          while (end < n
+              && (Character.isLetterOrDigit(s.charAt(end))
+                  || s.charAt(end) == '_'
+                  || s.charAt(end) == '\'')) {
+            end++;
+          }
         }
         String word = s.substring(i, end);
-        if (keywords.contains(word)) {
+        if (!quoted && keywords.contains(word)) {
           sink.kr(i, end);
-          if (word.equals("val")) {
-            valPatDepth = 0;
-            awaitingFunName = false;
-            fromState = 0;
-          } else if (word.equals("fun")) {
-            awaitingFunName = true;
-            valPatDepth = -1;
-            fromState = 0;
-          } else if (word.equals("from")) {
-            fromState = 1; // PAT
-            fromDepth = 0;
-            valPatDepth = -1;
-            awaitingFunName = false;
-          } else if (word.equals("in") && fromState == 1) {
-            // 'in' after a from-pattern: switch to expression mode.
-            fromState = 2; // EXPR
-            fromDepth = 0;
-            awaitingFunName = false;
-          } else if (word.equals("join") && fromState == 2) {
-            // 'join' introduces a new generator pattern.
-            fromState = 1; // PAT
-            awaitingFunName = false;
-          } else if ((word.equals("where")
-                  || word.equals("yield")
-                  || word.equals("group")
-                  || word.equals("order"))
-              && (fromState == 1 || fromState == 2 && fromDepth == 0)) {
-            // End of the generator list; no more patterns expected.
-            fromState = 0;
-            awaitingFunName = false;
-          } else {
-            awaitingFunName = false;
-          }
+          context.keyword(word);
         } else if (end < n && s.charAt(end) == '.') {
           // Identifier immediately followed by '.' is a structure name → ctor
           sink.ct(i, end);
-          valPatDepth = -1;
-          awaitingFunName = false;
-        } else if (valPatDepth >= 0) {
+          context.valPatDepth = -1;
+          context.awaitingFunName = false;
+        } else if (context.valPatDepth >= 0) {
           // Bound variable in a val pattern.
           sink.nv(i, end);
-        } else if (awaitingFunName) {
+        } else if (context.awaitingFunName) {
           sink.nf(i, end);
-          awaitingFunName = false;
-        } else if (fromState == 1) {
+          context.awaitingFunName = false;
+        } else if (context.fromState == 1) {
           // Bound variable in a from-generator pattern.
           sink.nv(i, end);
         } else {
@@ -545,31 +518,7 @@ public class MorelHighlighter {
         while (end < n && PUNCT_CHARS.indexOf(s.charAt(end)) >= 0) {
           end++;
         }
-        if (valPatDepth >= 0 || fromState == 2) {
-          // Track bracket depth; ',' in EXPR starts a new generator; '=' at
-          // depth 0 ends a val pattern. valPatDepth and fromState==2 are
-          // mutually exclusive (from clears valPatDepth).
-          for (int j = i; j < end; j++) {
-            char p = s.charAt(j);
-            if (p == '(' || p == '[' || p == '{') {
-              if (valPatDepth >= 0) {
-                valPatDepth++;
-              } else {
-                fromDepth++;
-              }
-            } else if (p == ')' || p == ']' || p == '}') {
-              if (valPatDepth > 0) {
-                valPatDepth--;
-              } else if (fromDepth > 0) {
-                fromDepth--;
-              }
-            } else if (p == ',' && fromState == 2 && fromDepth == 0) {
-              fromState = 1; // PAT
-            } else if (p == '=' && valPatDepth == 0) {
-              valPatDepth = -1;
-            }
-          }
-        }
+        context.punct(s, i, end);
         sink.p(i, end);
         i = end;
 
@@ -588,14 +537,111 @@ public class MorelHighlighter {
         sink.o(i, i + 1);
         i++;
 
-      } else if (c == '\n') {
+      } else if (Character.isWhitespace(c)) {
         sink.plain(i, i + 1);
         i++;
 
       } else {
-        // Whitespace, &, and other characters.
-        sink.plain(i, i + 1);
+        // Any other character - '~', '&', '\', a lone '\'' - is a symbol.
+        sink.o(i, i + 1);
         i++;
+      }
+    }
+  }
+
+  /**
+   * The context that {@link #highlightCode} carries as it scans, so that it can
+   * tell an identifier that is being bound from one that is being used.
+   */
+  private static class Context {
+    /**
+     * Whether the previous keyword was {@code fun}, so the next name is the
+     * name of the function being declared.
+     */
+    boolean awaitingFunName;
+
+    /**
+     * -1 if not in a {@code val} pattern; otherwise the bracket depth within
+     * it. Every identifier in a {@code val} pattern is being bound. The pattern
+     * ends at an {@code =} at depth 0.
+     */
+    int valPatDepth = -1;
+
+    /**
+     * 0 if not in a {@code from}; 1 if in a generator pattern, where
+     * identifiers are being bound; 2 if in the expression after the generator's
+     * {@code in}.
+     */
+    int fromState;
+
+    /**
+     * Bracket depth while {@link #fromState} is 2, so that only a top-level
+     * {@code ,} starts another generator.
+     */
+    int fromDepth;
+
+    /** Notes that {@code word}, a keyword, has been scanned. */
+    void keyword(String word) {
+      awaitingFunName = false;
+      if (word.equals("val")) {
+        valPatDepth = 0;
+        fromState = 0;
+      } else if (word.equals("fun")) {
+        awaitingFunName = true;
+        valPatDepth = -1;
+        fromState = 0;
+      } else if (word.equals("from")) {
+        fromState = 1; // PAT
+        fromDepth = 0;
+        valPatDepth = -1;
+      } else if (word.equals("in") && fromState == 1) {
+        // 'in' after a from-pattern: switch to expression mode.
+        fromState = 2; // EXPR
+        fromDepth = 0;
+      } else if (word.equals("join") && fromState == 2) {
+        // 'join' introduces a new generator pattern.
+        fromState = 1; // PAT
+      } else if ((word.equals("where")
+              || word.equals("yield")
+              || word.equals("group")
+              || word.equals("order"))
+          && (fromState == 1 || fromState == 2 && fromDepth == 0)) {
+        // End of the generator list; no more patterns expected.
+        fromState = 0;
+      }
+    }
+
+    /**
+     * Notes that {@code s[start..end)}, a run of punctuation, has been scanned.
+     *
+     * <p>Tracks bracket depth; a {@code ,} in EXPR starts a new generator, and
+     * an {@code =} at depth 0 ends a val pattern. {@link #valPatDepth} being
+     * active and {@link #fromState} being 2 are mutually exclusive, because
+     * {@code from} clears {@code valPatDepth}.
+     */
+    void punct(String s, int start, int end) {
+      if (valPatDepth < 0 && fromState != 2) {
+        return;
+      }
+      for (int j = start; j < end; j++) {
+        char p = s.charAt(j);
+        if (p == '(' || p == '[' || p == '{') {
+          if (valPatDepth >= 0) {
+            valPatDepth++;
+          } else {
+            fromDepth++;
+          }
+        } else if (p == ')' || p == ']' || p == '}') {
+          if (valPatDepth > 0) {
+            valPatDepth--;
+          } else if (fromDepth > 0) {
+            fromDepth--;
+          }
+        } else if (p == ',' && fromState == 2 && fromDepth == 0) {
+          fromState = 1; // PAT
+        } else if (p == '=' && valPatDepth == 0) {
+          valPatDepth = -1;
+        }
       }
     }
   }
@@ -649,6 +695,25 @@ public class MorelHighlighter {
         break;
       } else {
         i++;
+      }
+    }
+    return i;
+  }
+
+  /**
+   * Scans a quoted identifier {@code `...`} and returns the end index. A
+   * doubled backtick is an escaped backtick and does not end the identifier; an
+   * unterminated identifier runs to the end of the input.
+   */
+  private static int scanQuotedIdentifier(String s, int start, int n) {
+    int i = start + 1; // skip opening `
+    while (i < n) {
+      if (s.charAt(i) != '`') {
+        i++;
+      } else if (i + 1 < n && s.charAt(i + 1) == '`') {
+        i += 2; // escaped backtick
+      } else {
+        return i + 1; // skip closing `
       }
     }
     return i;

@@ -92,6 +92,7 @@ import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.Lindig;
 import net.hydromatic.morel.util.MapList;
 import net.hydromatic.morel.util.MorelException;
+import net.hydromatic.morel.util.MorelHighlighter;
 import net.hydromatic.morel.util.Ord;
 import net.hydromatic.morel.util.PairList;
 import org.apache.calcite.runtime.FlatLists;
@@ -4830,6 +4831,15 @@ public abstract class Codes {
         }
       };
 
+  /** @see BuiltIn#TEST_HIGHLIGHT */
+  private static final Applicable TEST_HIGHLIGHT =
+      new ApplicableImpl(BuiltIn.TEST_HIGHLIGHT) {
+        @Override
+        public Object apply(Stack stack, Object arg) {
+          return MorelHighlighter.DEFAULT.highlightRouge2((String) arg);
+        }
+      };
+
   /** @see BuiltIn#TEST_LIST_SUM */
   private static final Macro TEST_LIST_SUM = RELATIONAL_SUM;
 
@@ -6593,6 +6603,7 @@ public abstract class Codes {
     b.add(BuiltIn.SYS_UNSET, SYS_UNSET);
     b.add(BuiltIn.TEST_BAG_SUM, TEST_BAG_SUM);
     b.add(BuiltIn.TEST_FOO, TEST_FOO);
+    b.add(BuiltIn.TEST_HIGHLIGHT, TEST_HIGHLIGHT);
     b.add(BuiltIn.TEST_LIST_SUM, TEST_LIST_SUM);
     b.add(BuiltIn.TEST_OVER_COUNT, TEST_OVER_COUNT);
     b.add(BuiltIn.TEST_OVER_SUM, TEST_OVER_SUM);
