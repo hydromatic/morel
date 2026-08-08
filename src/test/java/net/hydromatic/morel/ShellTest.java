@@ -259,6 +259,105 @@ public class ShellTest {
   }
 
   /** Tests {@link Shell} with a single-line comment. */
+  /**
+   * Tests that a statement followed, on the same line, by a comment does not
+   * swallow the statement that comes after it. The line does not end with
+   * {@code ;}, so the buffer holds two statements when it is finally parsed,
+   * and both must be evaluated.
+   */
+  @Test
+  void testStatementFollowedByComment() {
+    final String in =
+        "val a = 1; (* a comment *)\n" //
+            + "val b = 2;\n";
+    final String expected =
+        "- val a = 1; (* a comment *)\r\n" //
+            + "val a = 1 : int\n"
+            + "- val b = 2;\r\n"
+            + "val b = 2 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
+  }
+
+  /**
+   * Tests that a statement followed, on the same line, by trailing whitespace
+   * does not swallow the statement that comes after it.
+   */
+  @Test
+  void testStatementFollowedBySpaces() {
+    final String in =
+        "val a = 1;  \n" //
+            + "val b = 2;\n";
+    final String expected =
+        "- val a = 1;  \r\n" //
+            + "val a = 1 : int\n"
+            + "- val b = 2;\r\n"
+            + "val b = 2 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
+  }
+
+  /** Tests that two statements on the same line are both evaluated. */
+  @Test
+  void testTwoStatementsOnOneLine() {
+    final String in = "val a = 1; val b = 2;\n";
+    final String expected =
+        "- val a = 1; val b = 2;\r\n" //
+            + "val a = 1 : int\n"
+            + "val b = 2 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
+  }
+
+  /**
+   * Tests that an unmatched bracket inside a comment does not make the shell
+   * wait for a line that never comes. Brackets do not decide where a statement
+   * ends, and one inside a comment is not even code; if the reader treated the
+   * input as incomplete it would swallow the rest of the session.
+   */
+  @Test
+  void testBracketInComment() {
+    final String in =
+        "(* ) *)\n" //
+            + "val a = 1;\n";
+    final String expected =
+        "- (* ) *)\r\n" //
+            + "- val a = 1;\r\n"
+            + "val a = 1 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
+    // The same for an unmatched open bracket.
+    final String in2 =
+        "(* ( *)\n" //
+            + "val b = 2;\n";
+    final String expected2 =
+        "- (* ( *)\r\n" //
+            + "- val b = 2;\r\n"
+            + "val b = 2 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in2).assertOutput(is(expected2));
+  }
+
+  /**
+   * Tests that a semicolon inside a comment does not end the statement. If it
+   * did, the parser would be given a comment that is not yet closed, and would
+   * report an unterminated comment at end of input.
+   */
+  @Test
+  void testSemicolonInComment() {
+    final String in =
+        "(* a );\n" //
+            + "*)\n"
+            + "val a = 1;\n";
+    final String expected =
+        "- (* a );\r\n" //
+            + "= *)\r\n"
+            + "= val a = 1;\r\n"
+            + "val a = 1 : int\n"
+            + "- \r\n";
+    fixture().withInputString(in).assertOutput(is(expected));
+  }
+
   @Test
   void testSingleLineComment() {
     final String in =

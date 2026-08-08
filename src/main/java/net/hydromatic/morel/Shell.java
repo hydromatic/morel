@@ -63,6 +63,7 @@ import net.hydromatic.morel.type.Binding;
 import net.hydromatic.morel.type.TypeSystem;
 import net.hydromatic.morel.util.JavaVersion;
 import net.hydromatic.morel.util.MorelException;
+import net.hydromatic.morel.util.MorelHighlighter;
 import net.hydromatic.morel.util.Pair;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jline.reader.EndOfFileException;
@@ -261,6 +262,25 @@ public class Shell {
   }
 
   /**
+   * Returns whether {@code buf} ends with a semicolon, and therefore holds at
+   * least one complete statement.
+   *
+   * <p>A semicolon inside a comment does not count. If it did, the shell would
+   * hand the parser a comment that is not yet closed, and the parser would
+   * report an unterminated comment at end of input.
+   */
+  private static boolean endsWithSemicolon(CharSequence buf) {
+    final String code = MorelHighlighter.DEFAULT.blankComments(buf.toString());
+    for (int i = code.length() - 1; i >= 0; i--) {
+      final char c = code.charAt(i);
+      if (!Character.isWhitespace(c)) {
+        return c == ';';
+      }
+    }
+    return false;
+  }
+
+  /**
    * Returns whether we can ignore a line. We can ignore a line if it consists
    * only of comments, spaces, and optionally semicolon, and if we are not on a
    * continuation line.
@@ -311,10 +331,11 @@ public class Shell {
             // an identifier or type variable (e.g. 'a), not a quote.
             setQuoteChars(new char[] {'"'});
             setEofOnUnclosedQuote(true);
-            setEofOnUnclosedBracket(
-                DefaultParser.Bracket.CURLY,
-                DefaultParser.Bracket.ROUND,
-                DefaultParser.Bracket.SQUARE);
+            // Brackets do not decide where a statement ends; a semicolon
+            // does, and the shell finds it (see SubShell.extracted). Were
+            // brackets to decide, a bracket inside a comment would count as
+            // code: an unmatched one would make the reader wait for a line
+            // that never comes, and swallow the rest of the input.
           }
 
           @Override
@@ -882,46 +903,56 @@ public class Shell {
           case REGULAR:
             try {
               buf.append(line.right);
-              if (line.right.endsWith(";")) {
+              if (endsWithSemicolon(buf)) {
                 final String code = str(buf);
                 final MorelParserImpl smlParser =
                     new MorelParserImpl(new StringReader(code));
-                final AstNode statement;
                 try {
                   smlParser.zero("stdIn");
-                  statement = smlParser.statementSemicolonSafe();
-                  final Environment env0 = env1;
-                  final List<CompileException> warningList = new ArrayList<>();
-                  final Tracer tracer = Tracers.empty();
-                  final CompiledStatement compiled =
-                      Compiles.prepareStatement(
-                          typeSystem,
-                          session,
-                          env0,
-                          statement,
-                          null,
-                          warningList::add,
-                          tracer);
-                  final Use shell = new Use(env0, bindingMap);
-                  session.withShell(
-                      shell,
-                      outLines,
-                      session1 ->
-                          compiled.eval(
-                              session1, env0, outLines, bindings::add));
-                  warningList.forEach(
-                      w -> {
-                        final StringBuilder buf2 = new StringBuilder();
-                        shell.handle(w, buf2);
-                        outLines.accept(buf2.toString());
-                      });
-                  bindings.forEach(b -> bindingMap.put(b.id.name, b));
-                  env1 = env0.bindAll(bindingMap.values());
-                  if (outBindings != null) {
-                    outBindings.putAll(bindingMap);
+                  // The buffer may hold more than one statement - a line can
+                  // contain several, and a statement followed by a comment
+                  // leaves the rest of the line in the buffer - so evaluate
+                  // statements until the buffer is exhausted.
+                  for (; ; ) {
+                    final AstNode statement =
+                        smlParser.statementSemicolonOrEofSafe();
+                    if (statement == null) {
+                      break;
+                    }
+                    final Environment env0 = env1;
+                    final List<CompileException> warningList =
+                        new ArrayList<>();
+                    final Tracer tracer = Tracers.empty();
+                    final CompiledStatement compiled =
+                        Compiles.prepareStatement(
+                            typeSystem,
+                            session,
+                            env0,
+                            statement,
+                            null,
+                            warningList::add,
+                            tracer);
+                    final Use shell = new Use(env0, bindingMap);
+                    session.withShell(
+                        shell,
+                        outLines,
+                        session1 ->
+                            compiled.eval(
+                                session1, env0, outLines, bindings::add));
+                    warningList.forEach(
+                        w -> {
+                          final StringBuilder buf2 = new StringBuilder();
+                          shell.handle(w, buf2);
+                          outLines.accept(buf2.toString());
+                        });
+                    bindings.forEach(b -> bindingMap.put(b.id.name, b));
+                    env1 = env0.bindAll(bindingMap.values());
+                    if (outBindings != null) {
+                      outBindings.putAll(bindingMap);
+                    }
+                    bindingMap.clear();
+                    bindings.clear();
                   }
-                  bindingMap.clear();
-                  bindings.clear();
                 } catch (MorelParseException | CompileException e) {
                   outLines.accept(e.description());
                 }

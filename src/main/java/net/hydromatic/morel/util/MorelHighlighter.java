@@ -332,6 +332,66 @@ public class MorelHighlighter {
   }
 
   /**
+   * {@link Sink} that overwrites the text of each comment with spaces. Used by
+   * {@link #blankComments}; every other kind of token is left alone.
+   */
+  private static class BlankingSink implements Sink {
+    private final char[] chars;
+
+    BlankingSink(char[] chars) {
+      this.chars = chars;
+    }
+
+    private void blank(int start, int end) {
+      for (int i = start; i < end; i++) {
+        if (chars[i] != '\n' && chars[i] != '\r') {
+          chars[i] = ' ';
+        }
+      }
+    }
+
+    @Override
+    public void c(int start, int end) {
+      blank(start, end);
+    }
+
+    @Override
+    public void cm(int start, int end) {
+      blank(start, end);
+    }
+
+    @Override
+    public void kr(int start, int end) {}
+
+    @Override
+    public void s(int start, int end) {}
+
+    @Override
+    public void ct(int start, int end) {}
+
+    @Override
+    public void n(int start, int end) {}
+
+    @Override
+    public void o(int start, int end) {}
+
+    @Override
+    public void nv(int start, int end) {}
+
+    @Override
+    public void nf(int start, int end) {}
+
+    @Override
+    public void id(int start, int end) {}
+
+    @Override
+    public void p(int start, int end) {}
+
+    @Override
+    public void plain(int start, int end) {}
+  }
+
+  /**
    * Highlights Morel input code using span classes.
    *
    * <p>Keywords become {@code kw}, type variables and structure names {@code
@@ -377,6 +437,23 @@ public class MorelHighlighter {
     StringBuilder sb = new StringBuilder();
     highlightCode(code, new ConciseRougeSink(code, sb));
     return sb.toString();
+  }
+
+  /**
+   * Returns {@code code} with the text of comments replaced by spaces,
+   * preserving line endings.
+   *
+   * <p>The result has the same length as {@code code}, and a scan of it for
+   * brackets, semicolons and the like sees only code. String literals are left
+   * as they are, so that a scan can still see where they start and end; a
+   * {@code (*} inside a string is not a comment, and is not blanked. An
+   * unterminated comment runs to the end of the input, as it does while a
+   * statement is being typed.
+   */
+  public String blankComments(String code) {
+    final char[] chars = code.toCharArray();
+    highlightCode(code, new BlankingSink(chars));
+    return String.valueOf(chars);
   }
 
   /**
