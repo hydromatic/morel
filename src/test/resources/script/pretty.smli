@@ -116,6 +116,30 @@ Sys.set ("output", "tabular");
 >
 > val it : {s:string option} list
 
+(* An enum (a datatype all of whose constructors are nullary) is a scalar,
+ * and so occupies a column, as do a list and an 'option' of an enum. A
+ * 'NONE' prints as a blank cell, as for other scalars. *)
+datatype suit = CLUBS | DIAMONDS | HEARTS | SPADES;
+> datatype suit = CLUBS | DIAMONDS | HEARTS | SPADES
+from s in [CLUBS, HEARTS]
+  yield {s, red = s elem [DIAMONDS, HEARTS],
+      pair = SOME s, none = (NONE: suit option), all = [s, SPADES]};
+> all    none pair   red   s
+> ------ ---- ------ ----- ------
+> CLUBS       CLUBS  false CLUBS
+> SPADES
+> HEARTS      HEARTS true  HEARTS
+> SPADES
+>
+> val it : {all:suit list, none:suit option, pair:suit option, red:bool, s:suit} list
+
+(* A datatype whose constructors are not all nullary is not a scalar, so
+ * a record containing one is not tabular, and falls back to classic style. *)
+datatype shape = CIRCLE of int | SQUARE;
+> datatype shape = CIRCLE of int | SQUARE
+from t in [CIRCLE 1, SQUARE] yield {t, i = 0};
+> val it = [{i=0,t=CIRCLE 1},{i=0,t=SQUARE}] : {i:int, t:shape} list
+
 (* List of records with a tuple field: the tuple is a nested sub-table. *)
 [{id=1, address=(94705,"CA")}, {id=2, address=(94618,"CA")}];
 > address  id

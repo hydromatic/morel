@@ -1678,12 +1678,14 @@ where q = RED
   andalso sa <> nsw
   andalso sa <> v
   andalso nsw <> v;
-> val it =
->   [{nsw=BLUE,nt=BLUE,q=RED,sa=GREEN,t=GREEN,v=RED,wa=RED},
->    {nsw=RED,nt=BLUE,q=RED,sa=GREEN,t=GREEN,v=BLUE,wa=RED},
->    {nsw=GREEN,nt=GREEN,q=RED,sa=BLUE,t=GREEN,v=RED,wa=RED},
->    {nsw=RED,nt=GREEN,q=RED,sa=BLUE,t=GREEN,v=GREEN,wa=RED}]
->   : {nsw:Color, nt:Color, q:Color, sa:Color, t:Color, v:Color, wa:Color} bag
+> nsw   nt    q   sa    t     v     wa
+> ----- ----- --- ----- ----- ----- ---
+> BLUE  BLUE  RED GREEN GREEN RED   RED
+> RED   BLUE  RED GREEN GREEN BLUE  RED
+> GREEN GREEN RED BLUE  GREEN RED   RED
+> RED   GREEN RED BLUE  GREEN GREEN RED
+>
+> val it : {nsw:Color, nt:Color, q:Color, sa:Color, t:Color, v:Color, wa:Color} bag
 
 (* Arithmetic optimization -------------------------------------------
  *

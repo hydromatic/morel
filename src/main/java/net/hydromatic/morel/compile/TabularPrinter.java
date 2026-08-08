@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
+import net.hydromatic.morel.ast.Op;
 import net.hydromatic.morel.eval.Codes;
 import net.hydromatic.morel.type.DataType;
 import net.hydromatic.morel.type.PrimitiveType;
@@ -136,14 +137,17 @@ class TabularPrinter {
    *
    * <ul>
    *   <li>a primitive (scalar leaf);
-   *   <li>an option of a primitive (scalar leaf; {@code NONE} prints as blank);
-   *   <li>a collection of primitives (scalar list);
+   *   <li>an enum, that is, a datatype all of whose constructors are nullary
+   *       (scalar leaf; prints as the constructor name);
+   *   <li>an option of a primitive or enum (scalar leaf; {@code NONE} prints as
+   *       blank);
+   *   <li>a collection of primitives or enums (scalar list);
    *   <li>a collection of records or tuples, each field of which is itself
    *       tabular-printable as a field (recursive).
    * </ul>
    */
   private static boolean canPrintField(Type type) {
-    if (type instanceof PrimitiveType) {
+    if (isScalar(type)) {
       return true;
     }
     if (optionScalar(type) != null) {
@@ -163,7 +167,7 @@ class TabularPrinter {
     }
     if (type.isCollection()) {
       Type elementType = type.elementType();
-      if (elementType instanceof PrimitiveType) {
+      if (isScalar(elementType)) {
         return true;
       }
       if (elementType instanceof RecordType
@@ -172,6 +176,34 @@ class TabularPrinter {
       }
     }
     return false;
+  }
+
+  /**
+   * Returns whether a type prints as a single-token scalar, namely a primitive
+   * or an enum (see {@link #isEnum}).
+   */
+  private static boolean isScalar(Type type) {
+    return type instanceof PrimitiveType || isEnum(type);
+  }
+
+  /**
+   * Returns whether {@code type} is an enum, that is, a datatype every
+   * constructor of which is nullary (such as {@code order}, or a user-defined
+   * {@code datatype color = BLUE | GREEN | RED}). Its values print as the bare
+   * constructor name, and so occupy a scalar column.
+   *
+   * <p>Collections ({@code bag}) are datatypes with no constructors, and are
+   * excluded; they are handled as collections.
+   */
+  private static boolean isEnum(Type type) {
+    if (!(type instanceof DataType)) {
+      return false;
+    }
+    final DataType dataType = (DataType) type;
+    return !dataType.isCollection()
+        && !dataType.typeConstructors.isEmpty()
+        && dataType.typeConstructors.values().stream()
+            .allMatch(key -> key.op == Op.DUMMY_TYPE);
   }
 
   /**
@@ -202,16 +234,16 @@ class TabularPrinter {
   }
 
   /**
-   * If {@code type} is {@code T option} where {@code T} is a primitive, returns
-   * {@code T}; otherwise returns null. Such a field is rendered as a scalar
-   * column: {@code SOME x} as {@code x}, and {@code NONE} as a blank cell.
+   * If {@code type} is {@code T option} where {@code T} is a scalar (see {@link
+   * #isScalar}), returns {@code T}; otherwise returns null. Such a field is
+   * rendered as a scalar column: {@code SOME x} as {@code x}, and {@code NONE}
+   * as a blank cell.
    */
-  private static @Nullable PrimitiveType optionScalar(Type type) {
+  private static @Nullable Type optionScalar(Type type) {
     if (type instanceof DataType) {
       final DataType dataType = (DataType) type;
-      if (dataType.name.equals("option")
-          && dataType.arg(0) instanceof PrimitiveType) {
-        return (PrimitiveType) dataType.arg(0);
+      if (dataType.name.equals("option") && isScalar(dataType.arg(0))) {
+        return dataType.arg(0);
       }
     }
     return null;
@@ -273,6 +305,15 @@ class TabularPrinter {
    * {@code #} (matching classic mode's behavior).
    */
   private static String stringifyScalar(Object value, int stringDepth) {
+    if (value instanceof List) {
+      // An enum value: a nullary constructor is a singleton list holding the
+      // constructor name, e.g. ["BLUE"]. ('unit' is also a list, but is empty,
+      // and falls through to print as "()".)
+      final List<?> list = (List<?>) value;
+      if (list.size() == 1) {
+        return String.valueOf(list.get(0));
+      }
+    }
     if (value instanceof Float) {
       return Codes.floatToString((Float) value);
     }
@@ -451,15 +492,11 @@ class TabularPrinter {
 
     /** Builds a Section for one field of a record-like type. */
     static Section forField(String name, Type type) {
-      if (type instanceof PrimitiveType) {
+      if (isScalar(type)) {
         return new Section(
-            Kind.SCALAR,
-            name,
-            isNumeric((PrimitiveType) type),
-            false,
-            ImmutableList.of());
+            Kind.SCALAR, name, isNumeric(type), false, ImmutableList.of());
       }
-      final PrimitiveType optionType = optionScalar(type);
+      final Type optionType = optionScalar(type);
       if (optionType != null) {
         return new Section(
             Kind.SCALAR, name, isNumeric(optionType), true, ImmutableList.of());
@@ -475,11 +512,11 @@ class TabularPrinter {
         return forRecord(name, optionRecord, RecordShape.OPTION);
       }
       final Type elementType = type.elementType();
-      if (elementType instanceof PrimitiveType) {
+      if (isScalar(elementType)) {
         return new Section(
             Kind.SCALAR_LIST,
             name,
-            isNumeric((PrimitiveType) elementType),
+            isNumeric(elementType),
             false,
             ImmutableList.of());
       }
@@ -487,7 +524,8 @@ class TabularPrinter {
       return forRecord(name, (RecordLikeType) elementType);
     }
 
-    private static boolean isNumeric(PrimitiveType type) {
+    /** Whether values of this type are right-aligned in their column. */
+    private static boolean isNumeric(Type type) {
       return type == PrimitiveType.INT
           || type == PrimitiveType.REAL
           || type == PrimitiveType.WORD;
